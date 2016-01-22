@@ -350,7 +350,7 @@ public class DisplacementMap extends CoreEffect<RenderState> {
     public DirtyRegionContainer getDirtyRegions(Effect defaultInput, DirtyRegionPool regionPool) {
         DirtyRegionContainer drc = regionPool.checkOut();
         drc.deriveWithNewRegion((RectBounds) getBounds(BaseTransform.IDENTITY_TRANSFORM, defaultInput));
-        
+
         return drc;
     }
 }

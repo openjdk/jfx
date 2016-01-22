@@ -59,12 +59,12 @@ public class SSEBackend extends TreeScanner {
         resetStatics();
 
         this.parser = parser;
-        
+
         SSETreeScanner scanner = new SSETreeScanner();
         scanner.scan(program);
         this.body = scanner.getResult();
     }
-    
+
     public static class GenCode {
         public String javaCode;
         public String nativeCode;
@@ -114,7 +114,7 @@ public class SSEBackend extends TreeScanner {
         StringBuilder arrayRelease = new StringBuilder();
 
         appendGetRelease(arrayGet, arrayRelease, "int", "dst", "dst_arr");
-        
+
         // TODO: only need to declare these if pixcoord is referenced
         // somewhere in the program...
         pixInitY.append("float pixcoord_y = (float)dy;\n");
@@ -131,7 +131,7 @@ public class SSEBackend extends TreeScanner {
                 // these are handled elsewhere, so just continue...
                 continue;
             }
-            
+
             Type t = v.getType();
             BaseType bt = t.getBaseType();
             String vtype = bt.toString();
@@ -209,16 +209,16 @@ public class SSEBackend extends TreeScanner {
 
                     // TODO: for now, assume [0,0,1,1]
                     srcRects.append("float[] src" + i + "Rect = new float[] {0,0,1,1};\n");
-                    
+
                     jparams.append(",\n");
                     jparams.append(vname);
-                    
+
                     jparamDecls.append(",\n");
                     jparamDecls.append("float[] " + vname + "_arr");
-                    
+
                     cparamDecls.append(",\n");
                     cparamDecls.append("jfloatArray " + vname + "_arr");
-                    
+
                     appendGetRelease(arrayGet, arrayRelease, "float", vname, vname + "_arr");
                 } else {
                     if (t == Type.LSAMPLER) {
@@ -272,13 +272,13 @@ public class SSEBackend extends TreeScanner {
 
                     jparams.append(",\n");
                     jparams.append(vname);
-                    
+
                     jparamDecls.append(",\n");
                     jparamDecls.append("int[] " + vname + "_arr");
-                    
+
                     cparamDecls.append(",\n");
                     cparamDecls.append("jintArray " + vname + "_arr");
-                    
+
                     appendGetRelease(arrayGet, arrayRelease, "int", vname, vname + "_arr");
                 }
 
@@ -294,7 +294,7 @@ public class SSEBackend extends TreeScanner {
                 jparams.append("src" + i + "Rect[0], src" + i + "Rect[1],\n");
                 jparams.append("src" + i + "Rect[2], src" + i + "Rect[3],\n");
                 jparams.append("src" + i + "w, src" + i + "h, src" + i + "scan");
-                
+
                 jparamDecls.append(",\n");
                 jparamDecls.append("float src" + i + "Rect_x1, float src" + i + "Rect_y1,\n");
                 jparamDecls.append("float src" + i + "Rect_x2, float src" + i + "Rect_y2,\n");
@@ -346,13 +346,13 @@ public class SSEBackend extends TreeScanner {
         cglue.setAttribute("posIncrX", posIncrX.toString());
         cglue.setAttribute("posInitX", posInitX.toString());
         cglue.setAttribute("body", body);
-        
+
         GenCode gen = new GenCode();
         gen.javaCode = jglue.toString();
         gen.nativeCode = cglue.toString();
         return gen;
     }
-    
+
     // TODO: need better mechanism for querying fields
     private static char[] fields = {'x', 'y', 'z', 'w'};
     public static String getSuffix(int i) {
@@ -377,7 +377,7 @@ public class SSEBackend extends TreeScanner {
             throw new InternalError();
         }
     }
-    
+
     // TODO: these shouldn't be implemented as a static method
     private static Map<String, FuncDef> funcDefs = new HashMap<String, FuncDef>();
     static void putFuncDef(FuncDef def) {
@@ -386,7 +386,7 @@ public class SSEBackend extends TreeScanner {
     static FuncDef getFuncDef(String name) {
         return funcDefs.get(name);
     }
-    
+
     private static Set<String> resultVars = new HashSet<String>();
     static boolean isResultVarDeclared(String vname) {
         return resultVars.contains(vname);
@@ -394,12 +394,12 @@ public class SSEBackend extends TreeScanner {
     static void declareResultVar(String vname) {
         resultVars.add(vname);
     }
-    
+
     private static StringBuilder usercode = new StringBuilder();
     static void addGlueBlock(String block) {
         usercode.append(block);
     }
-    
+
     private static void resetStatics() {
         funcDefs.clear();
         resultVars.clear();

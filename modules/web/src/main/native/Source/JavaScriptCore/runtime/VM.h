@@ -6,13 +6,13 @@
  * are met:
  *
  * 1.  Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer. 
+ *     notice, this list of conditions and the following disclaimer.
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
- *     documentation and/or other materials provided with the distribution. 
+ *     documentation and/or other materials provided with the distribution.
  * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
- *     from this software without specific prior written permission. 
+ *     from this software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY APPLE AND ITS CONTRIBUTORS "AS IS" AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
@@ -127,7 +127,7 @@ namespace JSC {
             , increment(0.0)
         {
         }
-        
+
         void reset()
         {
             offset = LocalTimeOffset();
@@ -192,7 +192,7 @@ namespace JSC {
         // than the old singleton APIShared VM created for use by
         // the original API.
         enum VMType { Default, APIContextGroup, APIShared };
-        
+
         struct ClientData {
             JS_EXPORT_PRIVATE virtual ~ClientData() = 0;
         };
@@ -208,7 +208,7 @@ namespace JSC {
         JS_EXPORT_PRIVATE ~VM();
 
         void makeUsableFromMultipleThreads() { heap.machineThreads().makeUsableFromMultipleThreads(); }
-        
+
     private:
         RefPtr<JSLock> m_apiLock;
 
@@ -343,7 +343,7 @@ namespace JSC {
             return jitStubs->ctiStub(this, generator);
         }
         NativeExecutable* getHostFunction(NativeFunction, Intrinsic);
-        
+
         std::unique_ptr<ArityCheckFailReturnThunks> arityCheckFailReturnThunks;
 #endif // ENABLE(JIT)
         std::unique_ptr<CommonSlowPaths::ArityCheckData> arityCheckData;
@@ -377,7 +377,7 @@ namespace JSC {
 
         JS_EXPORT_PRIVATE JSValue throwException(ExecState*, JSValue);
         JS_EXPORT_PRIVATE JSObject* throwException(ExecState*, JSObject*);
-        
+
         void* stackPointerAtVMEntry() const { return m_stackPointerAtVMEntry; }
         void setStackPointerAtVMEntry(void*);
 
@@ -419,12 +419,12 @@ namespace JSC {
         void* osrExitJumpDestination;
         Vector<ScratchBuffer*> scratchBuffers;
         size_t sizeOfLastScratchBuffer;
-        
+
         ScratchBuffer* scratchBufferForSize(size_t size)
         {
             if (!size)
                 return 0;
-            
+
             if (size > sizeOfLastScratchBuffer) {
                 // Protect against a N^2 memory usage pathology by ensuring
                 // that at worst, we get a geometric series, meaning that the
@@ -449,7 +449,7 @@ namespace JSC {
         HashSet<JSObject*> stringRecursionCheckVisitedObjects;
 
         LocalTimeOffsetCache localTimeOffsetCache;
-        
+
         String cachedDateString;
         double cachedDateStringValue;
 
@@ -480,7 +480,7 @@ namespace JSC {
         JS_EXPORT_PRIVATE void releaseExecutableMemory();
 
 #if ENABLE(GC_VALIDATION)
-        bool isInitializingObject() const; 
+        bool isInitializingObject() const;
         void setInitializingObjectClass(const ClassInfo*);
 #endif
 
@@ -500,20 +500,20 @@ namespace JSC {
         CodeCache* codeCache() { return m_codeCache.get(); }
 
         void prepareToDiscardCode();
-        
+
         JS_EXPORT_PRIVATE void discardAllCode();
 
         void registerWatchpointForImpureProperty(const Identifier&, Watchpoint*);
         // FIXME: Use AtomicString once it got merged with Identifier.
         JS_EXPORT_PRIVATE void addImpureProperty(const String&);
-        
+
         BuiltinExecutables* builtinExecutables() { return m_builtinExecutables.get(); }
 
     private:
         friend class LLIntOffsetsExtractor;
         friend class ClearExceptionScope;
         friend class RecursiveAllocationScope;
-        
+
         VM(VMType, HeapType);
         static VM*& sharedInstanceInternal();
         void createNativeThunk();

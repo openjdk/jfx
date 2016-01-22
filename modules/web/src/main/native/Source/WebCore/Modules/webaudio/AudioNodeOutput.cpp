@@ -95,7 +95,7 @@ void AudioNodeOutput::updateNumberOfChannels()
 void AudioNodeOutput::propagateChannelCount()
 {
     ASSERT(context()->isAudioThread() && context()->isGraphOwner());
-    
+
     if (isChannelCountKnown()) {
         // Announce to any nodes we're connected to that we changed our channel count for its input.
         for (InputsIterator i = m_inputs.begin(); i != m_inputs.end(); ++i) {
@@ -110,13 +110,13 @@ AudioBus* AudioNodeOutput::pull(AudioBus* inPlaceBus, size_t framesToProcess)
 {
     ASSERT(context()->isAudioThread());
     ASSERT(m_renderingFanOutCount > 0 || m_renderingParamFanOutCount > 0);
-    
+
     // Causes our AudioNode to process if it hasn't already for this render quantum.
     // We try to do in-place processing (using inPlaceBus) if at all possible,
     // but we can't process in-place if we're connected to more than one input (fan-out > 1).
     // In this case pull() is called multiple times per rendering quantum, and the processIfNecessary() call below will
-    // cause our node to process() only the first time, caching the output in m_internalOutputBus for subsequent calls.    
-    
+    // cause our node to process() only the first time, caching the output in m_internalOutputBus for subsequent calls.
+
     m_isInPlace = inPlaceBus && inPlaceBus->numberOfChannels() == numberOfChannels() && (m_renderingFanOutCount + m_renderingParamFanOutCount) == 1;
 
     m_inPlaceBus = m_isInPlace ? inPlaceBus : 0;
@@ -178,7 +178,7 @@ void AudioNodeOutput::removeInput(AudioNodeInput* input)
 void AudioNodeOutput::disconnectAllInputs()
 {
     ASSERT(context()->isGraphOwner());
-    
+
     // AudioNodeInput::disconnect() changes m_inputs by calling removeInput().
     while (!m_inputs.isEmpty()) {
         AudioNodeInput* input = *m_inputs.begin();

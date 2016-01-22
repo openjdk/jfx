@@ -365,7 +365,7 @@ void JIT::emit_op_unsigned(Instruction* currentInstruction)
 {
     int result = currentInstruction[1].u.operand;
     int op1 = currentInstruction[2].u.operand;
-    
+
     emitGetVirtualRegister(op1, regT0);
     emitJumpSlowCaseIfNotImmediateInteger(regT0);
     addSlowCase(branch32(LessThan, regT0, TrustedImm32(0)));
@@ -377,7 +377,7 @@ void JIT::emitSlow_op_unsigned(Instruction* currentInstruction, Vector<SlowCaseE
 {
     linkSlowCase(iter);
     linkSlowCase(iter);
-    
+
     JITSlowPathCall slowPathCall(this, currentInstruction, slow_path_unsigned);
     slowPathCall.call();
 }
@@ -435,7 +435,7 @@ void JIT::emit_compareAndJumpSlow(int op1, int op2, unsigned target, DoubleCondi
     COMPILE_ASSERT(OPCODE_LENGTH(op_jless) == OPCODE_LENGTH(op_jgreatereq), OPCODE_LENGTH_op_jgreatereq_equals_op_jless);
     COMPILE_ASSERT(OPCODE_LENGTH(op_jless) == OPCODE_LENGTH(op_jngreater), OPCODE_LENGTH_op_jngreater_equals_op_jless);
     COMPILE_ASSERT(OPCODE_LENGTH(op_jless) == OPCODE_LENGTH(op_jngreatereq), OPCODE_LENGTH_op_jngreatereq_equals_op_jless);
-    
+
     // We generate inline code for the following cases in the slow path:
     // - floating-point number to constant int immediate
     // - constant int immediate to floating-point number
@@ -918,18 +918,18 @@ void JIT::emit_op_div(Instruction* currentInstruction)
         skipDoubleLoad.link(this);
     }
     divDouble(fpRegT1, fpRegT0);
-    
+
     // Is the result actually an integer? The DFG JIT would really like to know. If it's
     // not an integer, we increment a count. If this together with the slow case counter
     // are below threshold then the DFG JIT will compile this division with a specualtion
     // that the remainder is zero.
-    
+
     // As well, there are cases where a double result here would cause an important field
     // in the heap to sometimes have doubles in it, resulting in double predictions getting
     // propagated to a use site where it might cause damage (such as the index to an array
     // access). So if we are DFG compiling anything in the program, we want this code to
     // ensure that it produces integers whenever possible.
-    
+
     JumpList notInteger;
     branchConvertDoubleToInt32(fpRegT0, regT0, notInteger, fpRegT1);
     // If we've got an integer, we might as well make that the result of the division.

@@ -542,7 +542,7 @@ bool MediaPlayer::update(const String& sessionID, Uint8Array* key, RefPtr<Uint8A
     return m_private->update(sessionID, key, nextMessage, error, systemCode);
 }
 #endif
-    
+
 double MediaPlayer::duration() const
 {
     return m_private->durationDouble();
@@ -781,7 +781,7 @@ PassNativeImagePtr MediaPlayer::nativeImageForCurrentTime()
 
 MediaPlayer::SupportsType MediaPlayer::supportsType(const MediaEngineSupportParameters& parameters, const MediaPlayerSupportsTypeClient* client)
 {
-    // 4.8.10.3 MIME types - The canPlayType(type) method must return the empty string if type is a type that the 
+    // 4.8.10.3 MIME types - The canPlayType(type) method must return the empty string if type is a type that the
     // user agent knows it cannot render or is the type "application/octet-stream"
     if (parameters.type == applicationOctetStream())
         return IsNotSupported;
@@ -1018,7 +1018,7 @@ void MediaPlayer::setPrivateBrowsingMode(bool privateBrowsingMode)
 }
 
 #if PLATFORM(IOS)
-void MediaPlayer::attributeChanged(const String& name, const String& value) 
+void MediaPlayer::attributeChanged(const String& name, const String& value)
 {
     m_private->attributeChanged(name, value);
 }
@@ -1295,7 +1295,7 @@ String MediaPlayer::languageOfPrimaryAudioTrack() const
 {
     if (!m_private)
         return emptyString();
-    
+
     return m_private->languageOfPrimaryAudioTrack();
 }
 
@@ -1311,7 +1311,7 @@ unsigned long long MediaPlayer::fileSize() const
 {
     if (!m_private)
         return 0;
-    
+
     return m_private->fileSize();
 }
 

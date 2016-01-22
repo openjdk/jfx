@@ -46,7 +46,7 @@ import javafx.scene.paint.Color;
  *
  */
 public class ColorInputPropertyMetadata extends ComplexPropertyMetadata<ColorInput> {
-    
+
     private final DoublePropertyMetadata heightMetadata
             = new DoublePropertyMetadata(new PropertyName("height"), //NOI18N
             DoublePropertyMetadata.DoubleKind.COORDINATE, true /* readWrite */, 0.0, InspectorPath.UNUSED);
@@ -63,7 +63,7 @@ public class ColorInputPropertyMetadata extends ComplexPropertyMetadata<ColorInp
             = new PaintPropertyMetadata(new PropertyName("paint"), //NOI18N
             true /* readWrite */, Color.RED, InspectorPath.UNUSED);
 
-    public ColorInputPropertyMetadata(PropertyName name, boolean readWrite, 
+    public ColorInputPropertyMetadata(PropertyName name, boolean readWrite,
             ColorInput defaultValue, InspectorPath inspectorPath) {
         super(name, ColorInput.class, readWrite, defaultValue, inspectorPath);
     }
@@ -71,11 +71,11 @@ public class ColorInputPropertyMetadata extends ComplexPropertyMetadata<ColorInp
     /*
      * ComplexPropertyMetadata
      */
-    
+
     @Override
     public FXOMInstance makeFxomInstanceFromValue(ColorInput value, FXOMDocument fxomDocument) {
         final FXOMInstance result = new FXOMInstance(fxomDocument, value.getClass());
-        
+
         paintMetadata.setValue(result, value.getPaint());
         heightMetadata.setValue(result, value.getHeight());
         widthMetadata.setValue(result, value.getWidth());

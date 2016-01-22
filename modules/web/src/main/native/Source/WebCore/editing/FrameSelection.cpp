@@ -20,9 +20,9 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-  
+
 #include "config.h"
 #include "FrameSelection.h"
 
@@ -456,8 +456,8 @@ void FrameSelection::respondToNodeModification(Node* node, bool baseRemoved, boo
         ExceptionCode ec = 0;
         Range::CompareResults compareResult = range->compareNode(node, ec);
         if (!ec && (compareResult == Range::NODE_BEFORE_AND_AFTER || compareResult == Range::NODE_INSIDE)) {
-            // If we did nothing here, when this node's renderer was destroyed, the rect that it 
-            // occupied would be invalidated, but, selection gaps that change as a result of 
+            // If we did nothing here, when this node's renderer was destroyed, the rect that it
+            // occupied would be invalidated, but, selection gaps that change as a result of
             // the removal wouldn't be invalidated.
             // FIXME: Don't do so much unnecessary invalidation.
             clearRenderTreeSelection = true;
@@ -875,7 +875,7 @@ VisiblePosition FrameSelection::modifyExtendingLeft(TextGranularity granularity)
 #endif
     return pos;
 }
-       
+
 VisiblePosition FrameSelection::modifyExtendingBackward(TextGranularity granularity)
 {
     VisiblePosition pos(m_selection.extent(), m_selection.affinity());
@@ -1017,7 +1017,7 @@ VisiblePosition FrameSelection::modifyMovingBackward(TextGranularity granularity
 static bool isBoundary(TextGranularity granularity)
 {
     return granularity == LineBoundary || granularity == ParagraphBoundary || granularity == DocumentBoundary;
-}    
+}
 
 bool FrameSelection::modify(EAlteration alter, SelectionDirection direction, TextGranularity granularity, EUserTriggered userTriggered)
 {
@@ -1112,7 +1112,7 @@ bool FrameSelection::modify(EAlteration alter, SelectionDirection direction, Tex
         }
         break;
     }
-    
+
     if (granularity == LineGranularity || granularity == ParagraphGranularity)
         m_xPosForVerticalArrowNavigation = x;
 
@@ -1242,7 +1242,7 @@ LayoutUnit FrameSelection::lineDirectionPointForBlockDirectionNavigation(EPositi
     Frame* frame = pos.anchorNode()->document().frame();
     if (!frame)
         return x;
-        
+
     if (m_xPosForVerticalArrowNavigation == NoXPosForVerticalArrowNavigation()) {
         VisiblePosition visiblePosition(pos, m_selection.affinity());
         // VisiblePosition creation can fail here if a node containing the selection becomes visibility:hidden
@@ -1251,7 +1251,7 @@ LayoutUnit FrameSelection::lineDirectionPointForBlockDirectionNavigation(EPositi
         m_xPosForVerticalArrowNavigation = x;
     } else
         x = m_xPosForVerticalArrowNavigation;
-        
+
     return x;
 }
 
@@ -1439,15 +1439,15 @@ void FrameSelection::invalidateCaretRect()
 void CaretBase::invalidateCaretRect(Node* node, bool caretRectChanged)
 {
     // EDIT FIXME: This is an unfortunate hack.
-    // Basically, we can't trust this layout position since we 
-    // can't guarantee that the check to see if we are in unrendered 
+    // Basically, we can't trust this layout position since we
+    // can't guarantee that the check to see if we are in unrendered
     // content will work at this point. We may have to wait for
     // a layout and re-render of the document to happen. So, resetting this
     // flag will cause another caret layout to happen the first time
     // that we try to paint the caret after this call. That one will work since
     // it happens after the document has accounted for any editing
     // changes which may have been done.
-    // And, we need to leave this layout here so the caret moves right 
+    // And, we need to leave this layout here so the caret moves right
     // away after clicking.
     m_caretRectNeedsUpdate = true;
 
@@ -1510,7 +1510,7 @@ void FrameSelection::debugRenderer(RenderObject* r, bool selected) const
             fprintf(stderr, "%s#text (empty)\n", selected ? "==> " : "    ");
             return;
         }
-        
+
         static const int max = 36;
         String text = textRenderer->text();
         int textLength = text.length();
@@ -1524,11 +1524,11 @@ void FrameSelection::debugRenderer(RenderObject* r, bool selected) const
             int pos;
             InlineTextBox* box = textRenderer->findNextInlineTextBox(offset, pos);
             text = text.substring(box->start(), box->len());
-            
+
             String show;
             int mid = max / 2;
             int caret = 0;
-            
+
             // text is shorter than max
             if (textLength < max) {
                 show = text;
@@ -1546,7 +1546,7 @@ void FrameSelection::debugRenderer(RenderObject* r, bool selected) const
                 show = "..." + text.right(max - 3);
                 caret = pos - (textLength - show.length());
             }
-            
+
             show.replace('\n', ' ');
             show.replace('\r', ' ');
             fprintf(stderr, "==> #text : \"%s\" at offset %d\n", show.utf8().data(), pos);
@@ -1567,27 +1567,27 @@ void FrameSelection::debugRenderer(RenderObject* r, bool selected) const
 bool FrameSelection::contains(const LayoutPoint& point)
 {
     Document* document = m_frame->document();
-    
+
     // Treat a collapsed selection like no selection.
     if (!isRange())
         return false;
-    if (!document->renderView()) 
+    if (!document->renderView())
         return false;
-    
+
     HitTestRequest request(HitTestRequest::ReadOnly | HitTestRequest::Active | HitTestRequest::DisallowShadowContent);
     HitTestResult result(point);
     document->renderView()->hitTest(request, result);
     Node* innerNode = result.innerNode();
     if (!innerNode || !innerNode->renderer())
         return false;
-    
+
     VisiblePosition visiblePos(innerNode->renderer()->positionForPoint(result.localPoint()));
     if (visiblePos.isNull())
         return false;
-        
+
     if (m_selection.visibleStart().isNull() || m_selection.visibleEnd().isNull())
         return false;
-        
+
     Position start(m_selection.visibleStart().deepEquivalent());
     Position end(m_selection.visibleEnd().deepEquivalent());
     Position p(visiblePos.deepEquivalent());
@@ -1625,7 +1625,7 @@ void FrameSelection::selectFrameElementInParentIfFullySelected()
     ContainerNode* ownerElementParent = ownerElement->parentNode();
     if (!ownerElementParent)
         return;
-        
+
     // This method's purpose is it to make it easier to select iframes (in order to delete them).  Don't do anything if the iframe isn't deletable.
     if (!ownerElementParent->hasEditableStyle())
         return;
@@ -2167,7 +2167,7 @@ PassRefPtr<Range> FrameSelection::elementRangeContainingCaretSelection() const
 
     Position startPos = createLegacyEditingPosition(element, 0);
     Position endPos = createLegacyEditingPosition(element, element->childNodeCount());
-    
+
     VisiblePosition startVisiblePos(startPos, VP_DEFAULT_AFFINITY);
     VisiblePosition endVisiblePos(endPos, VP_DEFAULT_AFFINITY);
     if (startVisiblePos.isNull() || endVisiblePos.isNull())
@@ -2181,7 +2181,7 @@ PassRefPtr<Range> FrameSelection::elementRangeContainingCaretSelection() const
 
 void FrameSelection::expandSelectionToWordContainingCaretSelection()
 {
-    VisibleSelection selection(wordSelectionContainingCaretSelection(m_selection));        
+    VisibleSelection selection(wordSelectionContainingCaretSelection(m_selection));
     if (selection.isCaretOrRange())
         setSelection(selection);
 }
@@ -2222,11 +2222,11 @@ UChar FrameSelection::characterInRelationToCaretSelection(int amount) const
     if (amount < 0) {
         int count = abs(amount);
         for (int i = 0; i < count; i++)
-            visiblePosition = visiblePosition.previous();    
+            visiblePosition = visiblePosition.previous();
         return visiblePosition.characterBefore();
     }
     for (int i = 0; i < amount; i++)
-        visiblePosition = visiblePosition.next();    
+        visiblePosition = visiblePosition.next();
     return visiblePosition.characterAfter();
 }
 
@@ -2323,7 +2323,7 @@ bool FrameSelection::selectionAtWordStart() const
 
     if (isStartOfParagraph(pos))
         return true;
-        
+
     bool result = true;
     unsigned previousCount = 0;
     for (pos = pos.previous(); !pos.isNull(); pos = pos.previous()) {
@@ -2474,7 +2474,7 @@ VisibleSelection FrameSelection::wordSelectionContainingCaretSelection(const Vis
     if (endVisiblePos < endVisiblePosBeforeExpansion)
         endVisiblePos = endVisiblePosBeforeExpansion;
 
-    return VisibleSelection(startVisiblePos, endVisiblePos);    
+    return VisibleSelection(startVisiblePos, endVisiblePos);
 }
 
 bool FrameSelection::actualSelectionAtSentenceStart(const VisibleSelection& sel) const
@@ -2486,7 +2486,7 @@ bool FrameSelection::actualSelectionAtSentenceStart(const VisibleSelection& sel)
 
     if (isStartOfParagraph(pos))
         return true;
- 
+
     bool result = true;
     bool sawSpace = false;
     unsigned previousCount = 0;
@@ -2508,7 +2508,7 @@ bool FrameSelection::actualSelectionAtSentenceStart(const VisibleSelection& sel)
             }
         }
     }
-    
+
     return result;
 }
 
@@ -2538,10 +2538,10 @@ void FrameSelection::setCaretBlinks(bool caretBlinks)
     if (m_caretBlinks == caretBlinks)
         return;
 #if ENABLE(TEXT_CARET)
-    m_frame->document()->updateLayoutIgnorePendingStylesheets(); 
+    m_frame->document()->updateLayoutIgnorePendingStylesheets();
     if (m_caretPaint) {
-        m_caretPaint = false; 
-        invalidateCaretRect(); 
+        m_caretPaint = false;
+        invalidateCaretRect();
     }
 #endif
     if (caretBlinks)

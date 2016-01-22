@@ -49,7 +49,7 @@ static String testPathFromURL(WKURLRef url)
 
     String schemeString(schemeCFString.get());
     String pathString(pathCFString.get());
-    
+
     if (equalIgnoringCase(schemeString, "file")) {
         String layoutTests("/LayoutTests/");
         size_t layoutTestsOffset = pathString.find(layoutTests);
@@ -76,7 +76,7 @@ void InjectedBundlePage::platformDidStartProvisionalLoadForFrame(WKBundleFrameRe
         return;
 
     WKRetainPtr<WKURLRef> mainFrameURL = adoptWK(WKBundleFrameCopyProvisionalURL(frame));
-    
+
     String testPath = testPathFromURL(mainFrameURL.get());
     if (!testPath.isNull()) {
         StringBuilder builder;

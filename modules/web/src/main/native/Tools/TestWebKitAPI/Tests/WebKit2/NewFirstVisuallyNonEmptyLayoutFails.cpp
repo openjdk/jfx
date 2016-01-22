@@ -35,7 +35,7 @@ namespace TestWebKitAPI {
 static bool didHitRelevantRepaintedObjectsAreaThresholdAchieved;
 static bool test1Done;
 static bool test2Done;
-    
+
 static void didForceRepaint(WKErrorRef error, void*)
 {
     EXPECT_NULL(error);
@@ -80,7 +80,7 @@ TEST(WebKit2, NewFirstVisuallyNonEmptyLayoutFails)
     Util::run(&test1Done);
     Util::run(&test2Done);
 
-    // By the time the forced repaint has finished, the counter would have been hit 
+    // By the time the forced repaint has finished, the counter would have been hit
     // if it was sized reasonably for the page.
     EXPECT_FALSE(didHitRelevantRepaintedObjectsAreaThresholdAchieved);
 }

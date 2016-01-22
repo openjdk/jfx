@@ -36,10 +36,10 @@ import javafx.scene.control.Button;
 import javafx.scene.control.MenuItem;
 
 /**
- * A PropertyEditor based on a list handles a list of EditorItem 
+ * A PropertyEditor based on a list handles a list of EditorItem
  * (for instance StyleEditor handles a list of styles).
  *
- * 
+ *
  */
 public interface EditorItem {
 
@@ -52,15 +52,15 @@ public interface EditorItem {
     public void reset();
 
     public void setValueAsIndeterminate();
-    
+
     public MenuItem getMoveUpMenuItem();
-    
+
     public MenuItem getMoveDownMenuItem();
-    
+
     public MenuItem getRemoveMenuItem();
-    
+
     public Button getPlusButton();
-    
+
     public Button getMinusButton();
-    
+
 }

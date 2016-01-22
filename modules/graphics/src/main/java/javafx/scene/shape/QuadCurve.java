@@ -343,7 +343,7 @@ public  class QuadCurve extends Shape {
      */
     @Deprecated
     @Override
-	public QuadCurve2D impl_configShape() {
+    public QuadCurve2D impl_configShape() {
         shape.x1 = (float)getStartX();
         shape.y1 = (float)getStartY();
         shape.ctrlx = (float)getControlX();

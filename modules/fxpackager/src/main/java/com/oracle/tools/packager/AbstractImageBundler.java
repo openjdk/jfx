@@ -52,7 +52,7 @@ public abstract class AbstractImageBundler extends AbstractBundler {
 
     public static final String CFG_FORMAT_PROPERTIES="prop";
     public static final String CFG_FORMAT_INI="ini";
-    
+
     public static final BundlerParamInfo<String> LAUNCHER_CFG_FORMAT =
             new StandardBundlerParam<>(
                     I18N.getString("param.launcher-cfg-format.name"),
@@ -98,13 +98,13 @@ public abstract class AbstractImageBundler extends AbstractBundler {
                     I18N.getString("error.no-application-jar"),
                     I18N.getString("error.no-application-jar.advice"));
         }
-        
+
         extractRuntimeFlags(p);
-        
+
         if (ENABLE_APP_CDS.fetchFrom(p)) {
             if (UNLOCK_COMMERCIAL_FEATURES.fetchFrom(p)) {
                 if (p.containsKey(BundleParams.PARAM_RUNTIME)
-                        && (p.get(BundleParams.PARAM_RUNTIME) == null)) 
+                        && (p.get(BundleParams.PARAM_RUNTIME) == null))
                 {
                     throw new ConfigException(
                             I18N.getString("error.app-cds-requires-runtime"),
@@ -131,17 +131,17 @@ public abstract class AbstractImageBundler extends AbstractBundler {
                         I18N.getString("error.app-cds-no-commercial-unlock.advice"));
             }
         }
-        
+
     }
-    
+
     public void writeCfgFile(Map<String, ? super Object> params, File cfgFileName, String runtimeLocation) throws IOException {
         cfgFileName.delete();
 
         boolean appCDEnabled = UNLOCK_COMMERCIAL_FEATURES.fetchFrom(params) && ENABLE_APP_CDS.fetchFrom(params);
         String appCDSCacheMode = APP_CDS_CACHE_MODE.fetchFrom(params);
-        
+
         PrintStream out = new PrintStream(cfgFileName);
-        
+
         out.println("[Application]");
         out.println("app.name=" + APP_NAME.fetchFrom(params));
         out.println("app.mainjar=" + MAIN_JAR.fetchFrom(params).getIncludedFiles().iterator().next());
@@ -173,7 +173,7 @@ public abstract class AbstractImageBundler extends AbstractBundler {
             out.println("-Djavafx.preloader="+preloader);
         }
 
-        
+
         out.println();
         out.println("[JVMUserOptions]");
         Map<String, String> overridableJVMOptions = USER_JVM_OPTIONS.fetchFrom(params);
@@ -188,7 +188,7 @@ public abstract class AbstractImageBundler extends AbstractBundler {
         if (appCDEnabled) {
             prepareAppCDS(params, out);
         }
-        
+
         out.println();
         out.println("[ArgOptions]");
         List<String> args = ARGUMENTS.fetchFrom(params);
@@ -201,12 +201,12 @@ public abstract class AbstractImageBundler extends AbstractBundler {
             }
         }
 
-        
+
         out.close();
     }
 
     protected abstract String getCacheLocation(Map<String, ? super Object> params);
-    
+
     void prepareAppCDS(Map<String, ? super Object> params, PrintStream out) throws IOException {
         //TODO check 8u40 or later
 
@@ -238,7 +238,7 @@ public abstract class AbstractImageBundler extends AbstractBundler {
             out.println("-XX:+UnlockDiagnosticVMOptions");
         }
         out.println("");
-        
+
         out.println("[AppCDSGenerateCacheJVMOptions]");
         out.println("-XX:+UnlockCommercialFeatures");
         out.println("-Xshare:dump");
@@ -253,8 +253,8 @@ public abstract class AbstractImageBundler extends AbstractBundler {
         }
     }
 
-    abstract public void extractRuntimeFlags(Map<String, ? super Object> params); 
-    
+    abstract public void extractRuntimeFlags(Map<String, ? super Object> params);
+
     public static void extractFlagsFromVersion(Map<String, ? super Object> params, String versionOutput) {
         Pattern bitArchPattern = Pattern.compile("(\\d*)[- ]?[bB]it");
         Matcher matcher = bitArchPattern.matcher(versionOutput);

@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -143,7 +143,7 @@ IntRect ScrollbarThemeWin::backButtonRect(ScrollbarThemeClient* scrollbar, Scrol
         return IntRect();
 
     // Our desired rect is essentially 17x17.
-    
+
     // Our actual rect will shrink to half the available space when
     // we have < 34 pixels left.  This allows the scrollbar
     // to scale down and function even at tiny sizes.
@@ -160,9 +160,9 @@ IntRect ScrollbarThemeWin::forwardButtonRect(ScrollbarThemeClient* scrollbar, Sc
     // Windows just has single arrows.
     if (part == ForwardButtonStartPart)
         return IntRect();
-    
+
     // Our desired rect is essentially 17x17.
-    
+
     // Our actual rect will shrink to half the available space when
     // we have < 34 pixels left.  This allows the scrollbar
     // to scale down and function even at tiny sizes.
@@ -171,7 +171,7 @@ IntRect ScrollbarThemeWin::forwardButtonRect(ScrollbarThemeClient* scrollbar, Sc
         int w = scrollbar->width() < 2 * thickness ? scrollbar->width() / 2 : thickness;
         return IntRect(scrollbar->x() + scrollbar->width() - w, scrollbar->y(), w, thickness);
     }
-    
+
     int h = scrollbar->height() < 2 * thickness ? scrollbar->height() / 2 : thickness;
     return IntRect(scrollbar->x(), scrollbar->y() + scrollbar->height() - h, thickness, h);
 }
@@ -338,7 +338,7 @@ static void paintGripper(ScrollbarThemeClient* scrollbar, HDC hdc, const IntRect
 {
     if (!scrollbarTheme)
         return;  // Classic look has no gripper.
-   
+
     int state;
     if (!scrollbar->enabled())
         state = TS_DISABLED;

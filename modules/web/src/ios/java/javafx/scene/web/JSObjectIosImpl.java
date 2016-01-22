@@ -27,15 +27,15 @@ package javafx.scene.web;
 import netscape.javascript.JSException;
 
 class JSObjectIosImpl extends netscape.javascript.JSObject {
-    
+
     final JS2JavaBridge owner;
     final String jsObjectId; // JSObject's index to exportedObjects[] JS Array
-    
+
     JSObjectIosImpl(JS2JavaBridge owner, String id) {
         this.owner = owner;
         this.jsObjectId = id;
     }
-    
+
     @Override
     public Object eval(String script) throws JSException {
         if (script == null) {
@@ -43,7 +43,7 @@ class JSObjectIosImpl extends netscape.javascript.JSObject {
         }
         return owner.executeScript(script);
     }
-    
+
     @Override
     public Object getMember(String name) {
         if (name == null) {
@@ -76,7 +76,7 @@ class JSObjectIosImpl extends netscape.javascript.JSObject {
         sb.append(".").append(name);
         eval(sb.toString());
     }
-    
+
     @Override
     public Object getSlot(int index) throws JSException {
         StringBuilder sb = toScript();
@@ -97,13 +97,13 @@ class JSObjectIosImpl extends netscape.javascript.JSObject {
         script.append(owner.getJavaBridge()).append(".exportedJSObjects[").append(jsObjectId).append("]");
         return script;
     }
-    
+
     @Override
     public Object call(String methodName, Object... args) throws JSException {
         if (methodName == null) {
             throw new NullPointerException("JSObject.call() called with 'null' methodName");
         }
-        
+
         StringBuilder script = toScript();
         script.append(".").append(methodName).append("(");
         int i = 1;
@@ -125,7 +125,7 @@ class JSObjectIosImpl extends netscape.javascript.JSObject {
         }
         return "null"; // shouldn't happen
     }
-    
+
     @Override
     public boolean equals(Object other) {
         return other == this

@@ -400,7 +400,7 @@ public class StageTest {
         peer.setMaximized(false);
         assertFalse(s.isMaximized());
     }
-    
+
     @Test
     public void testAlwaysOnTopNotLostForAsyncNotifications() {
         peer.holdNotifications();

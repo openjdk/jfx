@@ -38,7 +38,7 @@ public abstract class Window {
     public static class EventHandler {
         public void handleWindowEvent(Window window, long time, int type) {
         }
-        
+
         /**
          * Notifies a listener that the screen object for this Window instance
          * has been updated.
@@ -251,7 +251,7 @@ public abstract class Window {
             default:
                 throw new RuntimeException("The functional type should be NORMAL, POPUP, or UTILITY, but not a combination of these");
         }
-        
+
         if (((styleMask & UNIFIED) != 0)
                 && !Application.GetApplication().supportsUnifiedWindows()) {
            styleMask &= ~UNIFIED;
@@ -347,7 +347,7 @@ public abstract class Window {
         return this.delegatePtr != 0L ? this.delegatePtr : this.ptr;
     }
 
-    /** 
+    /**
      * return the "raw' pointer needed by subclasses to pass to native routines
      * @return the native pointer.
      */
@@ -1390,7 +1390,7 @@ public abstract class Window {
                         (y >= this.y) && (y < (this.y + this.height)));
         }
     }
-    
+
     protected void notifyLevelChanged(int level) {
         this.level = level;
         if (this.eventHandler != null) {

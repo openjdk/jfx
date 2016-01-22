@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -33,7 +33,7 @@
 namespace WebCore {
 
 enum Mode { Explicit, Fallback, OnlineWhitelist, Unknown };
-    
+
 bool parseManifest(const URL& manifestURL, const char* data, int length, Manifest& manifest)
 {
     ASSERT(manifest.explicitURLs.isEmpty());
@@ -46,13 +46,13 @@ bool parseManifest(const URL& manifestURL, const char* data, int length, Manifes
     RefPtr<TextResourceDecoder> decoder = TextResourceDecoder::create("text/cache-manifest", "UTF-8");
     String s = decoder->decode(data, length);
     s.append(decoder->flush());
-    
+
     // Look for the magic signature: "^\xFEFF?CACHE MANIFEST[ \t]?" (the BOM is removed by TextResourceDecoder).
     // Example: "CACHE MANIFEST #comment" is a valid signature.
     // Example: "CACHE MANIFEST;V2" is not.
     if (!s.startsWith("CACHE MANIFEST"))
         return false;
-    
+
     const UChar* end = s.deprecatedCharacters() + s.length();
     const UChar* p = s.deprecatedCharacters() + 14; // "CACHE MANIFEST" is 14 characters.
 
@@ -67,28 +67,28 @@ bool parseManifest(const URL& manifestURL, const char* data, int length, Manifes
         // Skip whitespace
         while (p < end && (*p == '\n' || *p == '\r' || *p == ' ' || *p == '\t'))
             p++;
-        
+
         if (p == end)
             break;
-        
+
         const UChar* lineStart = p;
-        
+
         // Find the end of the line
         while (p < end && *p != '\r' && *p != '\n')
             p++;
-        
+
         // Check if we have a comment
         if (*lineStart == '#')
             continue;
-        
+
         // Get rid of trailing whitespace
         const UChar* tmp = p - 1;
         while (tmp > lineStart && (*tmp == ' ' || *tmp == '\t'))
             tmp--;
-        
+
         String line(lineStart, tmp - lineStart + 1);
 
-        if (line == "CACHE:") 
+        if (line == "CACHE:")
             mode = Explicit;
         else if (line == "FALLBACK:")
             mode = Fallback;
@@ -101,9 +101,9 @@ bool parseManifest(const URL& manifestURL, const char* data, int length, Manifes
         else if (mode == Explicit || mode == OnlineWhitelist) {
             const UChar* p = line.deprecatedCharacters();
             const UChar* lineEnd = p + line.length();
-            
+
             // Look for whitespace separating the URL from subsequent ignored tokens.
-            while (p < lineEnd && *p != '\t' && *p != ' ') 
+            while (p < lineEnd && *p != '\t' && *p != ' ')
                 p++;
 
             if (mode == OnlineWhitelist && p - line.deprecatedCharacters() == 1 && *line.deprecatedCharacters() == '*') {
@@ -113,37 +113,37 @@ bool parseManifest(const URL& manifestURL, const char* data, int length, Manifes
             }
 
             URL url(manifestURL, String(line.deprecatedCharacters(), p - line.deprecatedCharacters()));
-            
+
             if (!url.isValid())
                 continue;
 
             if (url.hasFragmentIdentifier())
                 url.removeFragmentIdentifier();
-            
+
             if (!equalIgnoringCase(url.protocol(), manifestURL.protocol()))
                 continue;
-            
+
             if (mode == Explicit && manifestURL.protocolIs("https") && !protocolHostAndPortAreEqual(manifestURL, url))
                 continue;
-            
+
             if (mode == Explicit)
                 manifest.explicitURLs.add(url.string());
             else
                 manifest.onlineWhitelistedURLs.append(url);
-            
+
         } else if (mode == Fallback) {
             const UChar* p = line.deprecatedCharacters();
             const UChar* lineEnd = p + line.length();
-            
+
             // Look for whitespace separating the two URLs
-            while (p < lineEnd && *p != '\t' && *p != ' ') 
+            while (p < lineEnd && *p != '\t' && *p != ' ')
                 p++;
 
             if (p == lineEnd) {
                 // There was no whitespace separating the URLs.
                 continue;
             }
-            
+
             URL namespaceURL(manifestURL, String(line.deprecatedCharacters(), p - line.deprecatedCharacters()));
             if (!namespaceURL.isValid())
                 continue;
@@ -152,14 +152,14 @@ bool parseManifest(const URL& manifestURL, const char* data, int length, Manifes
 
             if (!protocolHostAndPortAreEqual(manifestURL, namespaceURL))
                 continue;
-                                   
+
             // Skip whitespace separating fallback namespace from URL.
             while (p < lineEnd && (*p == '\t' || *p == ' '))
                 p++;
 
             // Look for whitespace separating the URL from subsequent ignored tokens.
             const UChar* fallbackStart = p;
-            while (p < lineEnd && *p != '\t' && *p != ' ') 
+            while (p < lineEnd && *p != '\t' && *p != ' ')
                 p++;
 
             URL fallbackURL(manifestURL, String(fallbackStart, p - fallbackStart));
@@ -171,8 +171,8 @@ bool parseManifest(const URL& manifestURL, const char* data, int length, Manifes
             if (!protocolHostAndPortAreEqual(manifestURL, fallbackURL))
                 continue;
 
-            manifest.fallbackURLs.append(std::make_pair(namespaceURL, fallbackURL));            
-        } else 
+            manifest.fallbackURLs.append(std::make_pair(namespaceURL, fallbackURL));
+        } else
             ASSERT_NOT_REACHED();
     }
 

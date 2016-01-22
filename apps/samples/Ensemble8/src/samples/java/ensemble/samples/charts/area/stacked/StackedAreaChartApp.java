@@ -101,7 +101,7 @@ import javafx.stage.Stage;
  * @highlight
  */
 public class StackedAreaChartApp extends Application {
-    
+
     private StackedAreaChart chart;
     private NumberAxis xAxis;
     private NumberAxis yAxis;
@@ -109,7 +109,7 @@ public class StackedAreaChartApp extends Application {
     public Parent createContent() {
         xAxis = new NumberAxis("X Values", 1.0d, 9.0d, 2.0d);
         yAxis = new NumberAxis("Y Values", 0.0d, 30.0d, 2.0d);
-                
+
         ObservableList<StackedAreaChart.Series> areaChartData = FXCollections.observableArrayList(
                 new StackedAreaChart.Series("Series 1",FXCollections.observableArrayList(
                     new StackedAreaChart.Data(0,4),
@@ -139,7 +139,7 @@ public class StackedAreaChartApp extends Application {
         chart = new StackedAreaChart(xAxis, yAxis, areaChartData);
         return chart;
     }
-    
+
     @Override public void start(Stage primaryStage) throws Exception {
         primaryStage.setScene(new Scene(createContent()));
         primaryStage.show();

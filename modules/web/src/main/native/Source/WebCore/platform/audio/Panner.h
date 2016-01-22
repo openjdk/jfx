@@ -45,7 +45,7 @@ public:
         PanningModelHRTF = 1,
         PanningModelSoundField = 2
     };
-    
+
     typedef unsigned PanningModel;
 
     static std::unique_ptr<Panner> create(PanningModel, float sampleRate, HRTFDatabaseLoader*);

@@ -31,7 +31,7 @@
 #include <wtf/Assertions.h>
 #include <wtf/MainThread.h>
 
-namespace WebCore 
+namespace WebCore
 {
 
 String MIMETypeRegistry::getMIMETypeForExtension(const String &ext)

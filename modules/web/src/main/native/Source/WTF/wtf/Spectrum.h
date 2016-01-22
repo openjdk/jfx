@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef Spectrum_h
@@ -37,16 +37,16 @@ class Spectrum {
 public:
     typedef typename HashMap<T, unsigned long>::iterator iterator;
     typedef typename HashMap<T, unsigned long>::const_iterator const_iterator;
-    
+
     Spectrum() { }
-    
+
     void add(const T& key, unsigned long count = 1)
     {
         typename HashMap<T, unsigned long>::AddResult result = m_map.add(key, count);
         if (!result.isNewEntry)
             result.iterator->value += count;
     }
-    
+
     unsigned long get(const T& key) const
     {
         const_iterator iter = m_map.find(key);
@@ -54,21 +54,21 @@ public:
             return 0;
         return iter->value;
     }
-    
+
     iterator begin() { return m_map.begin(); }
     iterator end() { return m_map.end(); }
     const_iterator begin() const { return m_map.begin(); }
     const_iterator end() const { return m_map.end(); }
-    
+
     struct KeyAndCount {
         KeyAndCount() { }
-        
+
         KeyAndCount(const T& key, unsigned long count)
             : key(key)
             , count(count)
         {
         }
-        
+
         bool operator<(const KeyAndCount& other) const
         {
             if (count != other.count)
@@ -82,18 +82,18 @@ public:
         T key;
         unsigned long count;
     };
-    
+
     // Returns a list ordered from lowest-count to highest-count.
     Vector<KeyAndCount> buildList() const
     {
         Vector<KeyAndCount> list;
         for (const_iterator iter = begin(); iter != end(); ++iter)
             list.append(KeyAndCount(iter->key, iter->value));
-        
+
         std::sort(list.begin(), list.end());
         return list;
     }
-    
+
 private:
     HashMap<T, unsigned long> m_map;
 };

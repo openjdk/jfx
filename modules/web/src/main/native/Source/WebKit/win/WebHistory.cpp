@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -247,7 +247,7 @@ WebHistory* WebHistory::sharedHistory()
     return sharedHistoryStorage().get();
 }
 
-HRESULT STDMETHODCALLTYPE WebHistory::optionalSharedHistory( 
+HRESULT STDMETHODCALLTYPE WebHistory::optionalSharedHistory(
     /* [retval][out] */ IWebHistory** history)
 {
     *history = sharedHistory();
@@ -256,7 +256,7 @@ HRESULT STDMETHODCALLTYPE WebHistory::optionalSharedHistory(
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE WebHistory::setOptionalSharedHistory( 
+HRESULT STDMETHODCALLTYPE WebHistory::setOptionalSharedHistory(
     /* [in] */ IWebHistory* history)
 {
     if (sharedHistoryStorage() == history)
@@ -279,7 +279,7 @@ HRESULT STDMETHODCALLTYPE WebHistory::unused2()
     return E_FAIL;
 }
 
-HRESULT STDMETHODCALLTYPE WebHistory::addItems( 
+HRESULT STDMETHODCALLTYPE WebHistory::addItems(
     /* [in] */ int itemCount,
     /* [in] */ IWebHistoryItem** items)
 {
@@ -299,7 +299,7 @@ HRESULT STDMETHODCALLTYPE WebHistory::addItems(
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE WebHistory::removeItems( 
+HRESULT STDMETHODCALLTYPE WebHistory::removeItems(
     /* [in] */ int itemCount,
     /* [in] */ IWebHistoryItem** items)
 {
@@ -329,7 +329,7 @@ HRESULT STDMETHODCALLTYPE WebHistory::removeAllItems( void)
 }
 
 // FIXME: This function should be removed from the IWebHistory interface.
-HRESULT STDMETHODCALLTYPE WebHistory::orderedLastVisitedDays( 
+HRESULT STDMETHODCALLTYPE WebHistory::orderedLastVisitedDays(
     /* [out][in] */ int* count,
     /* [in] */ DATE* calendarDates)
 {
@@ -337,7 +337,7 @@ HRESULT STDMETHODCALLTYPE WebHistory::orderedLastVisitedDays(
 }
 
 // FIXME: This function should be removed from the IWebHistory interface.
-HRESULT STDMETHODCALLTYPE WebHistory::orderedItemsLastVisitedOnDay( 
+HRESULT STDMETHODCALLTYPE WebHistory::orderedItemsLastVisitedOnDay(
     /* [out][in] */ int* count,
     /* [in] */ IWebHistoryItem** items,
     /* [in] */ DATE calendarDate)
@@ -345,7 +345,7 @@ HRESULT STDMETHODCALLTYPE WebHistory::orderedItemsLastVisitedOnDay(
     return E_NOTIMPL;
 }
 
-HRESULT STDMETHODCALLTYPE WebHistory::allItems( 
+HRESULT STDMETHODCALLTYPE WebHistory::allItems(
     /* [out][in] */ int* count,
     /* [out][retval] */ IWebHistoryItem** items)
 {
@@ -383,7 +383,7 @@ HRESULT WebHistory::removeAllVisitedLinks()
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE WebHistory::setHistoryItemLimit( 
+HRESULT STDMETHODCALLTYPE WebHistory::setHistoryItemLimit(
     /* [in] */ int limit)
 {
     if (!m_preferences)
@@ -391,7 +391,7 @@ HRESULT STDMETHODCALLTYPE WebHistory::setHistoryItemLimit(
     return m_preferences->setHistoryItemLimit(limit);
 }
 
-HRESULT STDMETHODCALLTYPE WebHistory::historyItemLimit( 
+HRESULT STDMETHODCALLTYPE WebHistory::historyItemLimit(
     /* [retval][out] */ int* limit)
 {
     if (!m_preferences)
@@ -399,7 +399,7 @@ HRESULT STDMETHODCALLTYPE WebHistory::historyItemLimit(
     return m_preferences->historyItemLimit(limit);
 }
 
-HRESULT STDMETHODCALLTYPE WebHistory::setHistoryAgeInDaysLimit( 
+HRESULT STDMETHODCALLTYPE WebHistory::setHistoryAgeInDaysLimit(
     /* [in] */ int limit)
 {
     if (!m_preferences)
@@ -407,7 +407,7 @@ HRESULT STDMETHODCALLTYPE WebHistory::setHistoryAgeInDaysLimit(
     return m_preferences->setHistoryAgeInDaysLimit(limit);
 }
 
-HRESULT STDMETHODCALLTYPE WebHistory::historyAgeInDaysLimit( 
+HRESULT STDMETHODCALLTYPE WebHistory::historyAgeInDaysLimit(
     /* [retval][out] */ int* limit)
 {
     if (!m_preferences)
@@ -512,7 +512,7 @@ void WebHistory::visitedURL(const URL& url, const String& title, const String& h
 
         if (FAILED(entry->initWithURLString(BString(url.string()), BString(title), lastVisited)))
             return;
-        
+
         m_entriesByURL.set(url.string(), entry);
     }
 

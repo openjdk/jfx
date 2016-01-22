@@ -16,7 +16,7 @@
 
 /**
  * \file
- * \brief C API: API for accessing ICU version numbers. 
+ * \brief C API: API for accessing ICU version numbers.
  */
 /*===========================================================================*/
 /* Main ICU version information                                              */

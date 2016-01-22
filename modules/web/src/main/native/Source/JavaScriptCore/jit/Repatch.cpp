@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -140,7 +140,7 @@ static void addStructureTransitionCheck(
 #endif
         return;
     }
-    
+
     jit.move(MacroAssembler::TrustedImmPtr(object), scratchGPR);
     failureCases.append(
         jit.branchPtr(
@@ -155,9 +155,9 @@ static void addStructureTransitionCheck(
 {
     if (prototype.isNull())
         return;
-    
+
     ASSERT(prototype.isCell());
-    
+
     addStructureTransitionCheck(
         prototype.asCell(), prototype.asCell()->structure(), codeBlock, stubInfo, jit,
         failureCases, scratchGPR);
@@ -173,7 +173,7 @@ static void replaceWithJump(RepatchBuffer& repatchBuffer, StructureStubInfo& stu
             CodeLocationLabel(target));
         return;
     }
-    
+
     repatchBuffer.relink(
         stubInfo.callReturnLocation.jumpAtOffset(
             stubInfo.patch.deltaCallToJump),
@@ -184,30 +184,30 @@ static void emitRestoreScratch(MacroAssembler& stubJit, bool needToRestoreScratc
 {
     if (needToRestoreScratch) {
         stubJit.popToRestore(scratchGPR);
-        
+
         success = stubJit.jump();
-        
+
         // link failure cases here, so we can pop scratchGPR, and then jump back.
         failureCases.link(&stubJit);
-        
+
         stubJit.popToRestore(scratchGPR);
-        
+
         fail = stubJit.jump();
         return;
     }
-    
+
     success = stubJit.jump();
 }
 
 static void linkRestoreScratch(LinkBuffer& patchBuffer, bool needToRestoreScratch, MacroAssembler::Jump success, MacroAssembler::Jump fail, MacroAssembler::JumpList failureCases, CodeLocationLabel successLabel, CodeLocationLabel slowCaseBegin)
 {
     patchBuffer.link(success, successLabel);
-        
+
     if (needToRestoreScratch) {
         patchBuffer.link(fail, slowCaseBegin);
         return;
     }
-    
+
     // link failure cases directly back to normal path
     patchBuffer.link(failureCases, slowCaseBegin);
 }
@@ -235,7 +235,7 @@ static ProtoChainGenerationResult generateProtoChainAccessStub(ExecState* exec, 
     bool needToRestoreScratch = scratchGPR == InvalidGPRReg;
     if (needToRestoreScratch && !slot.isCacheableValue())
         return ProtoChainGenerationFailed;
-    
+
     CCallHelpers stubJit(&exec->vm(), exec->codeBlock());
     if (needToRestoreScratch) {
 #if USE(JSVALUE64)
@@ -246,9 +246,9 @@ static ProtoChainGenerationResult generateProtoChainAccessStub(ExecState* exec, 
         stubJit.pushToSave(scratchGPR);
         needToRestoreScratch = true;
     }
-    
+
     MacroAssembler::JumpList failureCases;
-    
+
     failureCases.append(stubJit.branchPtr(MacroAssembler::NotEqual, MacroAssembler::Address(baseGPR, JSCell::structureOffset()), MacroAssembler::TrustedImmPtr(structure)));
 
     CodeBlock* codeBlock = exec->codeBlock();
@@ -268,7 +268,7 @@ static ProtoChainGenerationResult generateProtoChainAccessStub(ExecState* exec, 
             failureCases, scratchGPR);
         currStructure = it->get();
     }
-    
+
     bool isAccessor = slot.isCacheableGetter() || slot.isCacheableCustom();
     if (isAccessor)
         stubJit.move(baseGPR, scratchGPR);
@@ -329,19 +329,19 @@ static ProtoChainGenerationResult generateProtoChainAccessStub(ExecState* exec, 
         stubJit.setupArguments(CCallHelpers::TrustedImmPtr(vm), GPRInfo::callFrameRegister);
         handlerCall = stubJit.call();
         stubJit.jumpToExceptionHandler();
-        
+
         noException.link(&stubJit);
     }
     emitRestoreScratch(stubJit, needToRestoreScratch, scratchGPR, success, fail, failureCases);
-    
+
     LinkBuffer patchBuffer(*vm, &stubJit, exec->codeBlock());
-    
+
     linkRestoreScratch(patchBuffer, needToRestoreScratch, success, fail, failureCases, successLabel, slowCaseLabel);
     if (isAccessor) {
         patchBuffer.link(operationCall, operationFunction);
         patchBuffer.link(handlerCall, lookupExceptionHandler);
     }
-    
+
     stubRoutine = FINALIZE_CODE_FOR_STUB(
         exec->codeBlock(), patchBuffer,
         ("Prototype chain access stub for %s, return point %p",
@@ -356,7 +356,7 @@ static bool tryCacheGetByID(ExecState* exec, JSValue baseValue, const Identifier
 
     CodeBlock* codeBlock = exec->codeBlock();
     VM* vm = &exec->vm();
-    
+
     if (isJSArray(baseValue) && propertyName == exec->propertyNames().length) {
         GPRReg baseGPR = static_cast<GPRReg>(stubInfo.patch.baseGPR);
 #if USE(JSVALUE32_64)
@@ -365,9 +365,9 @@ static bool tryCacheGetByID(ExecState* exec, JSValue baseValue, const Identifier
         GPRReg resultGPR = static_cast<GPRReg>(stubInfo.patch.valueGPR);
         GPRReg scratchGPR = TempRegisterSet(stubInfo.patch.usedRegisters).getFreeGPR();
         bool needToRestoreScratch = false;
-        
+
         MacroAssembler stubJit;
-        
+
         if (scratchGPR == InvalidGPRReg) {
 #if USE(JSVALUE64)
             scratchGPR = AssemblyHelpers::selectScratchGPR(baseGPR, resultGPR);
@@ -377,14 +377,14 @@ static bool tryCacheGetByID(ExecState* exec, JSValue baseValue, const Identifier
             stubJit.pushToSave(scratchGPR);
             needToRestoreScratch = true;
         }
-        
+
         MacroAssembler::JumpList failureCases;
-       
-        stubJit.loadPtr(MacroAssembler::Address(baseGPR, JSCell::structureOffset()), scratchGPR); 
+
+        stubJit.loadPtr(MacroAssembler::Address(baseGPR, JSCell::structureOffset()), scratchGPR);
         stubJit.load8(MacroAssembler::Address(scratchGPR, Structure::indexingTypeOffset()), scratchGPR);
         failureCases.append(stubJit.branchTest32(MacroAssembler::Zero, scratchGPR, MacroAssembler::TrustedImm32(IsArray)));
         failureCases.append(stubJit.branchTest32(MacroAssembler::Zero, scratchGPR, MacroAssembler::TrustedImm32(IndexingShapeMask)));
-        
+
         stubJit.loadPtr(MacroAssembler::Address(baseGPR, JSObject::butterflyOffset()), scratchGPR);
         stubJit.load32(MacroAssembler::Address(scratchGPR, ArrayStorage::lengthOffset()), scratchGPR);
         failureCases.append(stubJit.branch32(MacroAssembler::LessThan, scratchGPR, MacroAssembler::TrustedImm32(0)));
@@ -397,26 +397,26 @@ static bool tryCacheGetByID(ExecState* exec, JSValue baseValue, const Identifier
 #endif
 
         MacroAssembler::Jump success, fail;
-        
+
         emitRestoreScratch(stubJit, needToRestoreScratch, scratchGPR, success, fail, failureCases);
-        
+
         LinkBuffer patchBuffer(*vm, &stubJit, codeBlock);
-        
+
         linkRestoreScratch(patchBuffer, needToRestoreScratch, stubInfo, success, fail, failureCases);
-        
+
         stubInfo.stubRoutine = FINALIZE_CODE_FOR_STUB(
             exec->codeBlock(), patchBuffer,
             ("GetById array length stub for %s, return point %p",
                 toCString(*exec->codeBlock()).data(), stubInfo.callReturnLocation.labelAtOffset(
                     stubInfo.patch.deltaCallToDone).executableAddress()));
-        
+
         RepatchBuffer repatchBuffer(codeBlock);
         replaceWithJump(repatchBuffer, stubInfo, stubInfo.stubRoutine->code().code());
         repatchCall(repatchBuffer, stubInfo.callReturnLocation, operationGetById);
-        
+
         return true;
     }
-    
+
     // FIXME: should support length access for String.
 
     // FIXME: Cache property access for immediates.
@@ -441,7 +441,7 @@ static bool tryCacheGetByID(ExecState* exec, JSValue baseValue, const Identifier
         stubInfo.initGetByIdSelf(*vm, codeBlock->ownerExecutable(), structure);
         return true;
     }
-    
+
     if (structure->isDictionary())
         return false;
 
@@ -452,7 +452,7 @@ static bool tryCacheGetByID(ExecState* exec, JSValue baseValue, const Identifier
         if (!slot.isCacheableValue())
             return false;
     }
-    
+
     PropertyOffset offset = slot.cachedOffset();
     size_t count = normalizePrototypeChainForChainAccess(exec, baseValue, slot.slotBase(), propertyName, offset);
     if (count == InvalidPrototypeChain)
@@ -463,11 +463,11 @@ static bool tryCacheGetByID(ExecState* exec, JSValue baseValue, const Identifier
         structure, stubInfo.callReturnLocation.labelAtOffset(stubInfo.patch.deltaCallToDone),
         stubInfo.callReturnLocation.labelAtOffset(stubInfo.patch.deltaCallToSlowCase), stubInfo.stubRoutine) == ProtoChainGenerationFailed)
         return false;
-    
+
     RepatchBuffer repatchBuffer(codeBlock);
     replaceWithJump(repatchBuffer, stubInfo, stubInfo.stubRoutine->code().code());
     repatchCall(repatchBuffer, stubInfo.callReturnLocation, operationGetByIdBuildList);
-    
+
     stubInfo.initGetByIdChain(*vm, codeBlock->ownerExecutable(), structure, prototypeChain, count, slot.isCacheableValue());
     return true;
 }
@@ -475,7 +475,7 @@ static bool tryCacheGetByID(ExecState* exec, JSValue baseValue, const Identifier
 void repatchGetByID(ExecState* exec, JSValue baseValue, const Identifier& propertyName, const PropertySlot& slot, StructureStubInfo& stubInfo)
 {
     GCSafeConcurrentJITLocker locker(exec->codeBlock()->m_lock, exec->vm().heap);
-    
+
     bool cached = tryCacheGetByID(exec, baseValue, propertyName, slot, stubInfo);
     if (!cached)
         repatchCall(exec->codeBlock(), stubInfo.callReturnLocation, operationGetById);
@@ -487,7 +487,7 @@ static bool getPolymorphicStructureList(
     CodeLocationLabel& slowCase)
 {
     slowCase = stubInfo.callReturnLocation.labelAtOffset(stubInfo.patch.deltaCallToSlowCase);
-    
+
     if (stubInfo.accessType == access_unset) {
         RELEASE_ASSERT(!stubInfo.stubRoutine);
         polymorphicStructureList = new PolymorphicAccessStructureList();
@@ -511,10 +511,10 @@ static bool getPolymorphicStructureList(
         listIndex = stubInfo.u.getByIdSelfList.listSize;
         slowCase = CodeLocationLabel(polymorphicStructureList->list[listIndex - 1].stubRoutine->code().code());
     }
-    
+
     if (listIndex == POLYMORPHIC_LIST_CACHE_SIZE)
         return false;
-    
+
     RELEASE_ASSERT(listIndex < POLYMORPHIC_LIST_CACHE_SIZE);
     return true;
 }
@@ -530,7 +530,7 @@ static void patchJumpToGetByIdStub(CodeBlock* codeBlock, StructureStubInfo& stub
             CodeLocationLabel(stubRoutine->code().code()));
         return;
     }
-    
+
     replaceWithJump(repatchBuffer, stubInfo, stubRoutine->code().code());
 }
 
@@ -545,7 +545,7 @@ static bool tryBuildGetByIDList(ExecState* exec, JSValue baseValue, const Identi
     VM* vm = &exec->vm();
     JSCell* baseCell = baseValue.asCell();
     Structure* structure = baseCell->structure();
-    
+
     if (slot.slotBase() == baseValue) {
         if (!stubInfo.patch.registersFlushed) {
             // We cannot do as much inline caching if the registers were not flushed prior to this GetById. In particular,
@@ -554,43 +554,43 @@ static bool tryBuildGetByIDList(ExecState* exec, JSValue baseValue, const Identi
             if (!slot.isCacheableValue())
                 return false;
         }
-    
+
         PolymorphicAccessStructureList* polymorphicStructureList;
         int listIndex;
         CodeLocationLabel slowCase;
 
         if (!getPolymorphicStructureList(vm, codeBlock, stubInfo, polymorphicStructureList, listIndex, slowCase))
             return false;
-        
+
         stubInfo.u.getByIdSelfList.listSize++;
-        
+
         GPRReg baseGPR = static_cast<GPRReg>(stubInfo.patch.baseGPR);
 #if USE(JSVALUE32_64)
         GPRReg resultTagGPR = static_cast<GPRReg>(stubInfo.patch.valueTagGPR);
 #endif
         GPRReg resultGPR = static_cast<GPRReg>(stubInfo.patch.valueGPR);
         GPRReg scratchGPR = TempRegisterSet(stubInfo.patch.usedRegisters).getFreeGPR();
-        
+
         CCallHelpers stubJit(vm, codeBlock);
-        
+
         MacroAssembler::Jump wrongStruct = stubJit.branchPtr(MacroAssembler::NotEqual, MacroAssembler::Address(baseGPR, JSCell::structureOffset()), MacroAssembler::TrustedImmPtr(structure));
-        
+
         // The strategy we use for stubs is as follows:
         // 1) Call DFG helper that calls the getter.
         // 2) Check if there was an exception, and if there was, call yet another
         //    helper.
-        
+
         bool isDirect = false;
         MacroAssembler::Call operationCall;
         MacroAssembler::Call handlerCall;
         FunctionPtr operationFunction;
         MacroAssembler::Jump success;
-        
+
         if (slot.isCacheableGetter() || slot.isCacheableCustom()) {
             // FIXME: This code shouldn't be assuming that the top of stack is set up for JSC
             // JIT-style C calls, since we may be currently on top of an FTL frame.
             // https://bugs.webkit.org/show_bug.cgi?id=125711
-            
+
             if (slot.isCacheableGetter()) {
                 ASSERT(scratchGPR != InvalidGPRReg);
                 ASSERT(baseGPR != scratchGPR);
@@ -619,7 +619,7 @@ static bool tryBuildGetByIDList(ExecState* exec, JSValue baseValue, const Identi
 #endif
                 operationFunction = FunctionPtr(slot.customGetter());
             }
-            
+
             // Need to make sure that whenever this call is made in the future, we remember the
             // place that we made it from. It just so happens to be the place that we are at
             // right now!
@@ -627,7 +627,7 @@ static bool tryBuildGetByIDList(ExecState* exec, JSValue baseValue, const Identi
                 MacroAssembler::TrustedImm32(exec->locationAsRawBits()),
                 CCallHelpers::tagFor(static_cast<VirtualRegister>(JSStack::ArgumentCount)));
             stubJit.storePtr(GPRInfo::callFrameRegister, &vm->topCallFrame);
-            
+
             operationCall = stubJit.call();
 #if USE(JSVALUE64)
             stubJit.move(GPRInfo::returnValueGPR, resultGPR);
@@ -635,7 +635,7 @@ static bool tryBuildGetByIDList(ExecState* exec, JSValue baseValue, const Identi
             stubJit.setupResults(resultGPR, resultTagGPR);
 #endif
             success = stubJit.emitExceptionCheck(CCallHelpers::InvertedExceptionCheck);
-            
+
             stubJit.setupArguments(CCallHelpers::TrustedImmPtr(vm), GPRInfo::callFrameRegister);
             handlerCall = stubJit.call();
             stubJit.jumpToExceptionHandler();
@@ -666,14 +666,14 @@ static bool tryBuildGetByIDList(ExecState* exec, JSValue baseValue, const Identi
         }
 
         LinkBuffer patchBuffer(*vm, &stubJit, codeBlock);
-        
+
         patchBuffer.link(wrongStruct, slowCase);
         patchBuffer.link(success, stubInfo.callReturnLocation.labelAtOffset(stubInfo.patch.deltaCallToDone));
         if (!isDirect) {
             patchBuffer.link(operationCall, operationFunction);
             patchBuffer.link(handlerCall, lookupExceptionHandler);
         }
-        
+
         RefPtr<JITStubRoutine> stubRoutine =
             createJITStubRoutine(
                 FINALIZE_CODE_FOR(
@@ -684,17 +684,17 @@ static bool tryBuildGetByIDList(ExecState* exec, JSValue baseValue, const Identi
                 *vm,
                 codeBlock->ownerExecutable(),
                 slot.isCacheableGetter() || slot.isCacheableCustom());
-        
+
         polymorphicStructureList->list[listIndex].set(*vm, codeBlock->ownerExecutable(), stubRoutine, structure, isDirect);
-        
+
         patchJumpToGetByIdStub(codeBlock, stubInfo, stubRoutine.get());
         return listIndex < (POLYMORPHIC_LIST_CACHE_SIZE - 1);
     }
-    
+
     if (baseValue.asCell()->structure()->typeInfo().prohibitsPropertyCaching()
         || baseValue.asCell()->structure()->isDictionary())
         return false;
-    
+
     if (!stubInfo.patch.registersFlushed) {
         // We cannot do as much inline caching if the registers were not flushed prior to this GetById. In particular,
         // non-Value cached properties require planting calls, which requires registers to have been flushed. Thus,
@@ -702,7 +702,7 @@ static bool tryBuildGetByIDList(ExecState* exec, JSValue baseValue, const Identi
         if (!slot.isCacheableValue())
             return false;
     }
-    
+
 
     PropertyOffset offset = slot.cachedOffset();
     size_t count = normalizePrototypeChainForChainAccess(exec, baseValue, slot.slotBase(), ident, offset);
@@ -710,33 +710,33 @@ static bool tryBuildGetByIDList(ExecState* exec, JSValue baseValue, const Identi
         return false;
 
     StructureChain* prototypeChain = structure->prototypeChain(exec);
-    
+
     PolymorphicAccessStructureList* polymorphicStructureList;
     int listIndex;
     CodeLocationLabel slowCase;
     if (!getPolymorphicStructureList(vm, codeBlock, stubInfo, polymorphicStructureList, listIndex, slowCase))
         return false;
-    
+
     stubInfo.u.getByIdProtoList.listSize++;
-    
+
     RefPtr<JITStubRoutine> stubRoutine;
-    
+
     if (generateProtoChainAccessStub(exec, slot, ident, stubInfo, prototypeChain, count, offset, structure,
         stubInfo.callReturnLocation.labelAtOffset(stubInfo.patch.deltaCallToDone),
         slowCase, stubRoutine) == ProtoChainGenerationFailed)
         return false;
-    
+
     polymorphicStructureList->list[listIndex].set(*vm, codeBlock->ownerExecutable(), stubRoutine, structure, prototypeChain, slot.isCacheableValue(), count);
-    
+
     patchJumpToGetByIdStub(codeBlock, stubInfo, stubRoutine.get());
-    
+
     return listIndex < (POLYMORPHIC_LIST_CACHE_SIZE - 1);
 }
 
 void buildGetByIDList(ExecState* exec, JSValue baseValue, const Identifier& propertyName, const PropertySlot& slot, StructureStubInfo& stubInfo)
 {
     GCSafeConcurrentJITLocker locker(exec->codeBlock()->m_lock, exec->vm().heap);
-    
+
     bool dontChangeCall = tryBuildGetByIDList(exec, baseValue, propertyName, slot, stubInfo);
     if (!dontChangeCall)
         repatchCall(exec->codeBlock(), stubInfo.callReturnLocation, operationGetById);
@@ -798,7 +798,7 @@ static MacroAssembler::Call storeToWriteBarrierBuffer(CCallHelpers& jit, GPRReg 
     bytesToSubtract += currentAlignment;
 
     if (bytesToSubtract)
-        jit.subPtr(MacroAssembler::TrustedImm32(bytesToSubtract), MacroAssembler::stackPointerRegister); 
+        jit.subPtr(MacroAssembler::TrustedImm32(bytesToSubtract), MacroAssembler::stackPointerRegister);
 
     jit.setupArgumentsWithExecState(cell);
     MacroAssembler::Call call = jit.call();
@@ -848,7 +848,7 @@ static void emitPutReplaceStub(
     allocator.lock(valueTagGPR);
 #endif
     allocator.lock(valueGPR);
-    
+
     GPRReg scratchGPR1 = allocator.allocateScratchGPR();
 #if ENABLE(GGC)
     GPRReg scratchGPR2 = allocator.allocateScratchGPR();
@@ -880,18 +880,18 @@ static void emitPutReplaceStub(
         stubJit.store32(valueTagGPR, MacroAssembler::Address(scratchGPR1, offsetInButterfly(slot.cachedOffset()) * sizeof(JSValue) + OBJECT_OFFSETOF(EncodedValueDescriptor, asBits.tag)));
     }
 #endif
-    
+
 #if ENABLE(GGC)
     MacroAssembler::Call writeBarrierOperation = writeBarrier(stubJit, baseGPR, scratchGPR1, scratchGPR2, allocator);
 #endif
-    
+
     MacroAssembler::Jump success;
     MacroAssembler::Jump failure;
-    
+
     if (allocator.didReuseRegisters()) {
         allocator.restoreReusedRegistersByPopping(stubJit);
         success = stubJit.jump();
-        
+
         badStructure.link(&stubJit);
         allocator.restoreReusedRegistersByPopping(stubJit);
         failure = stubJit.jump();
@@ -899,14 +899,14 @@ static void emitPutReplaceStub(
         success = stubJit.jump();
         failure = badStructure;
     }
-    
+
     LinkBuffer patchBuffer(*vm, &stubJit, exec->codeBlock());
 #if ENABLE(GGC)
     patchBuffer.link(writeBarrierOperation, operationFlushWriteBarrierBuffer);
 #endif
     patchBuffer.link(success, stubInfo.callReturnLocation.labelAtOffset(stubInfo.patch.deltaCallToDone));
     patchBuffer.link(failure, failureLabel);
-            
+
     stubRoutine = FINALIZE_CODE_FOR_STUB(
         exec->codeBlock(), patchBuffer,
         ("PutById replace stub for %s, return point %p",
@@ -934,16 +934,16 @@ static void emitPutTransitionStub(
     GPRReg valueTagGPR = static_cast<GPRReg>(stubInfo.patch.valueTagGPR);
 #endif
     GPRReg valueGPR = static_cast<GPRReg>(stubInfo.patch.valueGPR);
-    
+
     ScratchRegisterAllocator allocator(stubInfo.patch.usedRegisters);
     allocator.lock(baseGPR);
 #if USE(JSVALUE32_64)
     allocator.lock(valueTagGPR);
 #endif
     allocator.lock(valueGPR);
-    
+
     CCallHelpers stubJit(vm);
-    
+
     bool needThirdScratch = false;
     if (structure->outOfLineCapacity() != oldStructure->outOfLineCapacity()
         && oldStructure->outOfLineCapacity()) {
@@ -953,7 +953,7 @@ static void emitPutTransitionStub(
     GPRReg scratchGPR1 = allocator.allocateScratchGPR();
     ASSERT(scratchGPR1 != baseGPR);
     ASSERT(scratchGPR1 != valueGPR);
-    
+
     GPRReg scratchGPR2 = allocator.allocateScratchGPR();
     ASSERT(scratchGPR2 != baseGPR);
     ASSERT(scratchGPR2 != valueGPR);
@@ -968,19 +968,19 @@ static void emitPutTransitionStub(
         ASSERT(scratchGPR3 != scratchGPR2);
     } else
         scratchGPR3 = InvalidGPRReg;
-    
+
     allocator.preserveReusedRegistersByPushing(stubJit);
 
     MacroAssembler::JumpList failureCases;
-            
+
     ASSERT(oldStructure->transitionWatchpointSetHasBeenInvalidated());
-    
+
     failureCases.append(stubJit.branchPtr(MacroAssembler::NotEqual, MacroAssembler::Address(baseGPR, JSCell::structureOffset()), MacroAssembler::TrustedImmPtr(oldStructure)));
-    
+
     addStructureTransitionCheck(
         oldStructure->storedPrototype(), exec->codeBlock(), stubInfo, stubJit, failureCases,
         scratchGPR1);
-            
+
     if (putKind == NotDirect) {
         for (WriteBarrier<Structure>* it = prototypeChain->head(); *it; ++it) {
             addStructureTransitionCheck(
@@ -990,13 +990,13 @@ static void emitPutTransitionStub(
     }
 
     MacroAssembler::JumpList slowPath;
-    
+
     bool scratchGPR1HasStorage = false;
-    
+
     if (structure->outOfLineCapacity() != oldStructure->outOfLineCapacity()) {
         size_t newSize = structure->outOfLineCapacity() * sizeof(JSValue);
         CopiedAllocator* copiedAllocator = &vm->heap.storageAllocator();
-        
+
         if (!oldStructure->outOfLineCapacity()) {
             stubJit.loadPtr(&copiedAllocator->m_currentRemaining, scratchGPR1);
             slowPath.append(stubJit.branchSubPtr(MacroAssembler::Signed, MacroAssembler::TrustedImm32(newSize), scratchGPR1));
@@ -1007,7 +1007,7 @@ static void emitPutTransitionStub(
         } else {
             size_t oldSize = oldStructure->outOfLineCapacity() * sizeof(JSValue);
             ASSERT(newSize > oldSize);
-            
+
             stubJit.loadPtr(MacroAssembler::Address(baseGPR, JSObject::butterflyOffset()), scratchGPR3);
             stubJit.loadPtr(&copiedAllocator->m_currentRemaining, scratchGPR1);
             slowPath.append(stubJit.branchSubPtr(MacroAssembler::Signed, MacroAssembler::TrustedImm32(newSize), scratchGPR1));
@@ -1021,7 +1021,7 @@ static void emitPutTransitionStub(
                 stubJit.storePtr(scratchGPR2, MacroAssembler::Address(scratchGPR1, -static_cast<ptrdiff_t>(offset + sizeof(JSValue) + sizeof(void*))));
             }
         }
-        
+
         stubJit.storePtr(scratchGPR1, MacroAssembler::Address(baseGPR, JSObject::butterflyOffset()));
         scratchGPR1HasStorage = true;
     }
@@ -1046,14 +1046,14 @@ static void emitPutTransitionStub(
         stubJit.store32(valueTagGPR, MacroAssembler::Address(scratchGPR1, offsetInButterfly(slot.cachedOffset()) * sizeof(JSValue) + OBJECT_OFFSETOF(EncodedValueDescriptor, asBits.tag)));
     }
 #endif
-    
+
 #if ENABLE(GGC)
     MacroAssembler::Call writeBarrierOperation = writeBarrier(stubJit, baseGPR, scratchGPR1, scratchGPR2, allocator);
 #endif
-    
+
     MacroAssembler::Jump success;
     MacroAssembler::Jump failure;
-            
+
     if (allocator.didReuseRegisters()) {
         allocator.restoreReusedRegistersByPopping(stubJit);
         success = stubJit.jump();
@@ -1063,13 +1063,13 @@ static void emitPutTransitionStub(
         failure = stubJit.jump();
     } else
         success = stubJit.jump();
-    
+
     MacroAssembler::Call operationCall;
     MacroAssembler::Jump successInSlowPath;
-    
+
     if (structure->outOfLineCapacity() != oldStructure->outOfLineCapacity()) {
         slowPath.link(&stubJit);
-        
+
         allocator.restoreReusedRegistersByPopping(stubJit);
         ScratchBuffer* scratchBuffer = vm->scratchBufferForSize(allocator.desiredScratchBufferSize());
         allocator.preserveUsedRegistersToScratchBuffer(stubJit, scratchBuffer, scratchGPR1);
@@ -1082,7 +1082,7 @@ static void emitPutTransitionStub(
         allocator.restoreUsedRegistersFromScratchBuffer(stubJit, scratchBuffer, scratchGPR1);
         successInSlowPath = stubJit.jump();
     }
-    
+
     LinkBuffer patchBuffer(*vm, &stubJit, exec->codeBlock());
 #if ENABLE(GGC)
     patchBuffer.link(writeBarrierOperation, operationFlushWriteBarrierBuffer);
@@ -1096,7 +1096,7 @@ static void emitPutTransitionStub(
         patchBuffer.link(operationCall, operationReallocateStorageAndFinishPut);
         patchBuffer.link(successInSlowPath, stubInfo.callReturnLocation.labelAtOffset(stubInfo.patch.deltaCallToDone));
     }
-    
+
     stubRoutine =
         createJITStubRoutine(
             FINALIZE_CODE_FOR(
@@ -1122,7 +1122,7 @@ static bool tryCachePutByID(ExecState* exec, JSValue baseValue, const Identifier
     JSCell* baseCell = baseValue.asCell();
     Structure* structure = baseCell->structure();
     Structure* oldStructure = structure->previousID();
-    
+
     if (!slot.isCacheable())
         return false;
     if (!structure->propertyAccessesAreCacheable())
@@ -1133,39 +1133,39 @@ static bool tryCachePutByID(ExecState* exec, JSValue baseValue, const Identifier
         if (slot.type() == PutPropertySlot::NewProperty) {
             if (structure->isDictionary())
                 return false;
-            
+
             // Skip optimizing the case where we need a realloc, if we don't have
             // enough registers to make it happen.
             if (GPRInfo::numberOfRegisters < 6
                 && oldStructure->outOfLineCapacity() != structure->outOfLineCapacity()
                 && oldStructure->outOfLineCapacity())
                 return false;
-            
+
             // Skip optimizing the case where we need realloc, and the structure has
             // indexing storage.
             if (oldStructure->couldHaveIndexingHeader())
                 return false;
-            
+
             if (normalizePrototypeChain(exec, baseCell) == InvalidPrototypeChain)
                 return false;
-            
+
             StructureChain* prototypeChain = structure->prototypeChain(exec);
-            
+
             emitPutTransitionStub(
                 exec, baseValue, ident, slot, stubInfo, putKind,
                 structure, oldStructure, prototypeChain,
                 stubInfo.callReturnLocation.labelAtOffset(stubInfo.patch.deltaCallToSlowCase),
                 stubInfo.stubRoutine);
-            
+
             RepatchBuffer repatchBuffer(codeBlock);
             repatchBuffer.relink(
                 stubInfo.callReturnLocation.jumpAtOffset(
                     stubInfo.patch.deltaCallToJump),
                 CodeLocationLabel(stubInfo.stubRoutine->code().code()));
             repatchCall(repatchBuffer, stubInfo.callReturnLocation, appropriateListBuildingPutByIdFunction(slot, putKind));
-            
+
             stubInfo.initPutByIdTransition(*vm, codeBlock->ownerExecutable(), oldStructure, structure, prototypeChain, putKind == Direct);
-            
+
             return true;
         }
 
@@ -1183,7 +1183,7 @@ static bool tryCachePutByID(ExecState* exec, JSValue baseValue, const Identifier
 void repatchPutByID(ExecState* exec, JSValue baseValue, const Identifier& propertyName, const PutPropertySlot& slot, StructureStubInfo& stubInfo, PutKind putKind)
 {
     GCSafeConcurrentJITLocker locker(exec->codeBlock()->m_lock, exec->vm().heap);
-    
+
     bool cached = tryCachePutByID(exec, baseValue, propertyName, slot, stubInfo, putKind);
     if (!cached)
         repatchCall(exec->codeBlock(), stubInfo.callReturnLocation, appropriateGenericPutByIdFunction(slot, putKind));
@@ -1199,7 +1199,7 @@ static bool tryBuildPutByIdList(ExecState* exec, JSValue baseValue, const Identi
     JSCell* baseCell = baseValue.asCell();
     Structure* structure = baseCell->structure();
     Structure* oldStructure = structure->previousID();
-    
+
     if (!slot.isCacheable())
         return false;
     if (!structure->propertyAccessesAreCacheable())
@@ -1209,39 +1209,39 @@ static bool tryBuildPutByIdList(ExecState* exec, JSValue baseValue, const Identi
     if (slot.base() == baseValue) {
         PolymorphicPutByIdList* list;
         RefPtr<JITStubRoutine> stubRoutine;
-        
+
         if (slot.type() == PutPropertySlot::NewProperty) {
             if (structure->isDictionary())
                 return false;
-            
+
             // Skip optimizing the case where we need a realloc, if we don't have
             // enough registers to make it happen.
             if (GPRInfo::numberOfRegisters < 6
                 && oldStructure->outOfLineCapacity() != structure->outOfLineCapacity()
                 && oldStructure->outOfLineCapacity())
                 return false;
-            
+
             // Skip optimizing the case where we need realloc, and the structure has
             // indexing storage.
             if (oldStructure->couldHaveIndexingHeader())
                 return false;
-            
+
             if (normalizePrototypeChain(exec, baseCell) == InvalidPrototypeChain)
                 return false;
-            
+
             StructureChain* prototypeChain = structure->prototypeChain(exec);
-            
+
             // We're now committed to creating the stub. Mogrify the meta-data accordingly.
             list = PolymorphicPutByIdList::from(
                 putKind, stubInfo,
                 stubInfo.callReturnLocation.labelAtOffset(stubInfo.patch.deltaCallToSlowCase));
-            
+
             emitPutTransitionStub(
                 exec, baseValue, propertyName, slot, stubInfo, putKind,
                 structure, oldStructure, prototypeChain,
                 CodeLocationLabel(list->currentSlowPathTarget()),
                 stubRoutine);
-            
+
             list->addAccess(
                 PutByIdAccess::transition(
                     *vm, codeBlock->ownerExecutable(),
@@ -1252,33 +1252,33 @@ static bool tryBuildPutByIdList(ExecState* exec, JSValue baseValue, const Identi
             list = PolymorphicPutByIdList::from(
                 putKind, stubInfo,
                 stubInfo.callReturnLocation.labelAtOffset(stubInfo.patch.deltaCallToSlowCase));
-            
+
             emitPutReplaceStub(
                 exec, baseValue, propertyName, slot, stubInfo, putKind,
                 structure, CodeLocationLabel(list->currentSlowPathTarget()), stubRoutine);
-            
+
             list->addAccess(
                 PutByIdAccess::replace(
                     *vm, codeBlock->ownerExecutable(),
                     structure, stubRoutine));
         }
-        
+
         RepatchBuffer repatchBuffer(codeBlock);
         repatchBuffer.relink(stubInfo.callReturnLocation.jumpAtOffset(stubInfo.patch.deltaCallToJump), CodeLocationLabel(stubRoutine->code().code()));
-        
+
         if (list->isFull())
             repatchCall(repatchBuffer, stubInfo.callReturnLocation, appropriateGenericPutByIdFunction(slot, putKind));
-        
+
         return true;
     }
-    
+
     return false;
 }
 
 void buildPutByIdList(ExecState* exec, JSValue baseValue, const Identifier& propertyName, const PutPropertySlot& slot, StructureStubInfo& stubInfo, PutKind putKind)
 {
     GCSafeConcurrentJITLocker locker(exec->codeBlock()->m_lock, exec->vm().heap);
-    
+
     bool cached = tryBuildPutByIdList(exec, baseValue, propertyName, slot, stubInfo, putKind);
     if (!cached)
         repatchCall(exec->codeBlock(), stubInfo.callReturnLocation, appropriateGenericPutByIdFunction(slot, putKind));
@@ -1290,27 +1290,27 @@ static bool tryRepatchIn(
 {
     if (!base->structure()->propertyAccessesAreCacheable())
         return false;
-    
+
     if (wasFound) {
         if (!slot.isCacheable())
             return false;
     }
-    
+
     CodeBlock* codeBlock = exec->codeBlock();
     VM* vm = &exec->vm();
     Structure* structure = base->structure();
-    
+
     PropertyOffset offsetIgnored;
     size_t count = normalizePrototypeChainForChainAccess(exec, base, wasFound ? slot.slotBase() : JSValue(), ident, offsetIgnored);
     if (count == InvalidPrototypeChain)
         return false;
-    
+
     PolymorphicAccessStructureList* polymorphicStructureList;
     int listIndex;
-    
+
     CodeLocationLabel successLabel = stubInfo.callReturnLocation.labelAtOffset(stubInfo.patch.deltaCallToDone);
     CodeLocationLabel slowCaseLabel;
-    
+
     if (stubInfo.accessType == access_unset) {
         polymorphicStructureList = new PolymorphicAccessStructureList();
         stubInfo.initInList(polymorphicStructureList, 0);
@@ -1322,21 +1322,21 @@ static bool tryRepatchIn(
         polymorphicStructureList = stubInfo.u.inList.structureList;
         listIndex = stubInfo.u.inList.listSize;
         slowCaseLabel = CodeLocationLabel(polymorphicStructureList->list[listIndex - 1].stubRoutine->code().code());
-        
+
         if (listIndex == POLYMORPHIC_LIST_CACHE_SIZE)
             return false;
     }
-    
+
     StructureChain* chain = structure->prototypeChain(exec);
     RefPtr<JITStubRoutine> stubRoutine;
-    
+
     {
         GPRReg baseGPR = static_cast<GPRReg>(stubInfo.patch.baseGPR);
         GPRReg resultGPR = static_cast<GPRReg>(stubInfo.patch.valueGPR);
         GPRReg scratchGPR = TempRegisterSet(stubInfo.patch.usedRegisters).getFreeGPR();
-        
+
         CCallHelpers stubJit(vm);
-        
+
         bool needToRestoreScratch;
         if (scratchGPR == InvalidGPRReg) {
             scratchGPR = AssemblyHelpers::selectScratchGPR(baseGPR, resultGPR);
@@ -1344,7 +1344,7 @@ static bool tryRepatchIn(
             needToRestoreScratch = true;
         } else
             needToRestoreScratch = false;
-        
+
         MacroAssembler::JumpList failureCases;
         failureCases.append(stubJit.branchPtr(
             MacroAssembler::NotEqual,
@@ -1367,34 +1367,34 @@ static bool tryRepatchIn(
                 vm->registerWatchpointForImpureProperty(ident, stubInfo.addWatchpoint(codeBlock));
             currStructure = it->get();
         }
-        
+
 #if USE(JSVALUE64)
         stubJit.move(MacroAssembler::TrustedImm64(JSValue::encode(jsBoolean(wasFound))), resultGPR);
 #else
         stubJit.move(MacroAssembler::TrustedImm32(wasFound), resultGPR);
 #endif
-        
+
         MacroAssembler::Jump success, fail;
-        
+
         emitRestoreScratch(stubJit, needToRestoreScratch, scratchGPR, success, fail, failureCases);
-        
+
         LinkBuffer patchBuffer(*vm, &stubJit, exec->codeBlock());
 
         linkRestoreScratch(patchBuffer, needToRestoreScratch, success, fail, failureCases, successLabel, slowCaseLabel);
-        
+
         stubRoutine = FINALIZE_CODE_FOR_STUB(
             exec->codeBlock(), patchBuffer,
             ("In (found = %s) stub for %s, return point %p",
                 wasFound ? "yes" : "no", toCString(*exec->codeBlock()).data(),
                 successLabel.executableAddress()));
     }
-    
+
     polymorphicStructureList->list[listIndex].set(*vm, codeBlock->ownerExecutable(), stubRoutine, structure, true);
     stubInfo.u.inList.listSize++;
-    
+
     RepatchBuffer repatchBuffer(codeBlock);
     repatchBuffer.relink(stubInfo.callReturnLocation.jumpAtOffset(stubInfo.patch.deltaCallToJump), CodeLocationLabel(stubRoutine->code().code()));
-    
+
     return listIndex < (POLYMORPHIC_LIST_CACHE_SIZE - 1);
 }
 
@@ -1422,31 +1422,31 @@ void linkFor(
     RegisterPreservationMode registers)
 {
     ASSERT(!callLinkInfo.stub);
-    
+
     // If you're being call-linked from a DFG caller then you obviously didn't get inlined.
     if (calleeCodeBlock)
         calleeCodeBlock->m_shouldAlwaysBeInlined = false;
-    
+
     CodeBlock* callerCodeBlock = exec->callerFrame()->codeBlock();
     VM* vm = callerCodeBlock->vm();
-    
+
     RepatchBuffer repatchBuffer(callerCodeBlock);
-    
+
     ASSERT(!callLinkInfo.isLinked());
     callLinkInfo.callee.set(exec->callerFrame()->vm(), callLinkInfo.hotPathBegin, callerCodeBlock->ownerExecutable(), callee);
     callLinkInfo.lastSeenCallee.set(exec->callerFrame()->vm(), callerCodeBlock->ownerExecutable(), callee);
     if (shouldShowDisassemblyFor(callerCodeBlock))
         dataLog("Linking call in ", *callerCodeBlock, " at ", callLinkInfo.codeOrigin, " to ", pointerDump(calleeCodeBlock), ", entrypoint at ", codePtr, "\n");
     repatchBuffer.relink(callLinkInfo.hotPathOther, codePtr);
-    
+
     if (calleeCodeBlock)
         calleeCodeBlock->linkIncomingCall(exec->callerFrame(), &callLinkInfo);
-    
+
     if (kind == CodeForCall) {
         repatchBuffer.relink(callLinkInfo.callReturnLocation, vm->getCTIStub(linkClosureCallThunkGeneratorFor(registers)).code());
         return;
     }
-    
+
     ASSERT(kind == CodeForConstruct);
     linkSlowFor(repatchBuffer, vm, callLinkInfo, CodeForConstruct, registers);
 }
@@ -1457,9 +1457,9 @@ void linkSlowFor(
 {
     CodeBlock* callerCodeBlock = exec->callerFrame()->codeBlock();
     VM* vm = callerCodeBlock->vm();
-    
+
     RepatchBuffer repatchBuffer(callerCodeBlock);
-    
+
     linkSlowFor(repatchBuffer, vm, callLinkInfo, kind, registers);
 }
 
@@ -1469,16 +1469,16 @@ void linkClosureCall(
     RegisterPreservationMode registers)
 {
     ASSERT(!callLinkInfo.stub);
-    
+
     CodeBlock* callerCodeBlock = exec->callerFrame()->codeBlock();
     VM* vm = callerCodeBlock->vm();
-    
+
     GPRReg calleeGPR = static_cast<GPRReg>(callLinkInfo.calleeGPR);
-    
+
     CCallHelpers stubJit(vm, callerCodeBlock);
-    
+
     CCallHelpers::JumpList slowPath;
-    
+
     ptrdiff_t offsetToFrame = -sizeof(CallerFrameAndPC);
 
     if (!ASSERT_DISABLED) {
@@ -1497,23 +1497,23 @@ void linkClosureCall(
 #else
     // We would have already checked that the callee is a cell.
 #endif
-    
+
     slowPath.append(
         stubJit.branchPtr(
             CCallHelpers::NotEqual,
             CCallHelpers::Address(calleeGPR, JSCell::structureOffset()),
             CCallHelpers::TrustedImmPtr(structure)));
-    
+
     slowPath.append(
         stubJit.branchPtr(
             CCallHelpers::NotEqual,
             CCallHelpers::Address(calleeGPR, JSFunction::offsetOfExecutable()),
             CCallHelpers::TrustedImmPtr(executable)));
-    
+
     stubJit.loadPtr(
         CCallHelpers::Address(calleeGPR, JSFunction::offsetOfScopeChain()),
         GPRInfo::returnValueGPR);
-    
+
 #if USE(JSVALUE64)
     stubJit.store64(
         GPRInfo::returnValueGPR,
@@ -1526,29 +1526,29 @@ void linkClosureCall(
         CCallHelpers::TrustedImm32(JSValue::CellTag),
         CCallHelpers::Address(MacroAssembler::stackPointerRegister, static_cast<ptrdiff_t>(sizeof(Register) * JSStack::ScopeChain) + OBJECT_OFFSETOF(EncodedValueDescriptor, asBits.tag) + offsetToFrame));
 #endif
-    
+
     AssemblyHelpers::Call call = stubJit.nearCall();
     AssemblyHelpers::Jump done = stubJit.jump();
-    
+
     slowPath.link(&stubJit);
     stubJit.move(calleeGPR, GPRInfo::regT0);
 #if USE(JSVALUE32_64)
     stubJit.move(CCallHelpers::TrustedImm32(JSValue::CellTag), GPRInfo::regT1);
 #endif
     stubJit.move(CCallHelpers::TrustedImmPtr(callLinkInfo.callReturnLocation.executableAddress()), GPRInfo::regT2);
-    
+
     stubJit.restoreReturnAddressBeforeReturn(GPRInfo::regT2);
     AssemblyHelpers::Jump slow = stubJit.jump();
-    
+
     LinkBuffer patchBuffer(*vm, &stubJit, callerCodeBlock);
-    
+
     patchBuffer.link(call, FunctionPtr(codePtr.executableAddress()));
     if (JITCode::isOptimizingJIT(callerCodeBlock->jitType()))
         patchBuffer.link(done, callLinkInfo.callReturnLocation.labelAtOffset(0));
     else
         patchBuffer.link(done, callLinkInfo.hotPathOther.labelAtOffset(0));
     patchBuffer.link(slow, CodeLocationLabel(vm->getCTIStub(virtualThunkGeneratorFor(CodeForCall, registers)).code()));
-    
+
     RefPtr<ClosureCallStubRoutine> stubRoutine = adoptRef(new ClosureCallStubRoutine(
         FINALIZE_CODE_FOR(
             callerCodeBlock, patchBuffer,
@@ -1556,16 +1556,16 @@ void linkClosureCall(
                 toCString(*callerCodeBlock).data(), callLinkInfo.callReturnLocation.labelAtOffset(0).executableAddress(),
                 codePtr.executableAddress(), toCString(pointerDump(calleeCodeBlock)).data())),
         *vm, callerCodeBlock->ownerExecutable(), structure, executable, callLinkInfo.codeOrigin));
-    
+
     RepatchBuffer repatchBuffer(callerCodeBlock);
-    
+
     repatchBuffer.replaceWithJump(
         RepatchBuffer::startOfBranchPtrWithPatchOnRegister(callLinkInfo.hotPathBegin),
         CodeLocationLabel(stubRoutine->code().code()));
     linkSlowFor(repatchBuffer, vm, callLinkInfo, CodeForCall, registers);
-    
+
     callLinkInfo.stub = stubRoutine.release();
-    
+
     ASSERT(!calleeCodeBlock || calleeCodeBlock->isIncomingCallAlreadyLinked(&callLinkInfo));
 }
 

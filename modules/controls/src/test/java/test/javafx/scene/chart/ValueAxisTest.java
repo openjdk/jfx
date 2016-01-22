@@ -45,17 +45,17 @@ import org.junit.Before;
 import org.junit.Test;
 
 /**
- * All public members of ValueAxis are tested here . 
+ * All public members of ValueAxis are tested here .
  * @author srikalyc
  */
 public class ValueAxisTest {
     private ValueAxis axis;//Empty string
     private ValueAxis twoValueAxis;//Empty string
     private StringConverter<Number> formatter;
-    
+
     public ValueAxisTest() {
     }
-    
+
     @Before public void setup() {
         if (axis == null) {
               axis = new ValueAxis() {
@@ -93,9 +93,9 @@ public class ValueAxisTest {
             public Number fromString(String string) { return null; }
         };
     }
-    
-   
-   
+
+
+
     /*********************************************************************
      * Tests for default values                                         *
      ********************************************************************/
@@ -141,8 +141,8 @@ public class ValueAxisTest {
     /*********************************************************************
      * Tests for property binding                                        *
      ********************************************************************/
-    
-    
+
+
     @Test public void checkMinorTickVisiblePropertyBind() {
         BooleanProperty objPr = new SimpleBooleanProperty(true);
         axis.minorTickVisibleProperty().bind(objPr);
@@ -150,8 +150,8 @@ public class ValueAxisTest {
         objPr.setValue(false);
         assertFalse("minorTickVisibleProperty cannot be bound", axis.minorTickVisibleProperty().getValue());
     }
-    
-    
+
+
     @Test public void checkMinorTickLengthPropertyBind() {
         DoubleProperty objPr = new SimpleDoubleProperty(56.0);
         axis.minorTickLengthProperty().bind(objPr);
@@ -159,7 +159,7 @@ public class ValueAxisTest {
         objPr.setValue(23.0);
         assertEquals("minorTickLengthProperty cannot be bound", axis.minorTickLengthProperty().getValue(),23.0,0.0);
     }
-    
+
     @Test public void checkMinorTickCountPropertyBind() {
         DoubleProperty objPr = new SimpleDoubleProperty(56.0);
         axis.minorTickCountProperty().bind(objPr);
@@ -167,11 +167,11 @@ public class ValueAxisTest {
         objPr.setValue(23.0);
         assertEquals("minorTickCountProperty cannot be bound", axis.minorTickCountProperty().getValue(),23.0,0.0);
     }
-    
+
     @Test public void checkScaleIsReadOnlyPropertyAndHenceCannotBeBound() {
         assertTrue(axis.scaleProperty() instanceof ReadOnlyDoubleProperty);
     }
-    
+
     @Test public void checkUpperBoundPropertyBind() {
         DoubleProperty objPr = new SimpleDoubleProperty(56.0);
         axis.upperBoundProperty().bind(objPr);
@@ -179,7 +179,7 @@ public class ValueAxisTest {
         objPr.setValue(23.0);
         assertEquals("upperBoundProperty cannot be bound", axis.upperBoundProperty().getValue(),23.0,0.0);
     }
-    
+
     @Test public void checkLowerBoundPropertyBind() {
         DoubleProperty objPr = new SimpleDoubleProperty(56.0);
         axis.lowerBoundProperty().bind(objPr);
@@ -187,7 +187,7 @@ public class ValueAxisTest {
         objPr.setValue(23.0);
         assertEquals("lowerBoundProperty cannot be bound", axis.lowerBoundProperty().getValue(),23.0,0.0);
     }
-    
+
     @Test public void checkTickLabelFormatterPropertyBind() {
         ObjectProperty objPr = new SimpleObjectProperty<StringConverter<Number>>(null);
         axis.tickLabelFormatterProperty().bind(objPr);
@@ -195,8 +195,8 @@ public class ValueAxisTest {
         objPr.setValue(formatter);
         assertSame("tickLabelFormatterProperty cannot be bound", axis.tickLabelFormatterProperty().getValue(), formatter);
     }
-    
-    
+
+
     @Test public void minorTickVisiblePropertyHasBeanReference() {
         assertSame(axis, axis.minorTickVisibleProperty().getBean());
     }
@@ -255,7 +255,7 @@ public class ValueAxisTest {
 
 
 
-    
+
     /*********************************************************************
      * CSS related Tests                                                 *
      ********************************************************************/
@@ -316,62 +316,62 @@ public class ValueAxisTest {
     /*********************************************************************
      * Miscellaneous Tests                                         *
      ********************************************************************/
-    
+
     @Test public void setMinorTickVisibleAndSeeValueIsReflectedInModel() {
         axis.setMinorTickVisible(false);
         assertFalse(axis.minorTickVisibleProperty().getValue());
     }
-    
+
     @Test public void setMinorTickVisibleAndSeeValue() {
         axis.setMinorTickVisible(true);
         assertTrue(axis.isMinorTickVisible());
     }
-    
+
     @Test public void setMinorTickLengthAndSeeValueIsReflectedInModel() {
         axis.setMinorTickLength(30.0);
         assertEquals(axis.minorTickLengthProperty().getValue(), 30.0, 0.0);
     }
-    
+
     @Test public void setMinorTickLengthAndSeeValue() {
         axis.setMinorTickLength(30.0);
         assertEquals(axis.getMinorTickLength(), 30.0, 0.0);
     }
-    
+
     @Test public void setMinorTickCountAndSeeValueIsReflectedInModel() {
         axis.setMinorTickCount(30);
         assertEquals(axis.minorTickCountProperty().getValue(), 30.0, 0.0);
     }
-    
+
     @Test public void setMinorTickCountAndSeeValue() {
         axis.setMinorTickCount(30);
         assertEquals(axis.getMinorTickCount(), 30.0, 0.0);
     }
-    
+
     @Test public void setScaleAndSeeValueIsReflectedInModel() {
         ValueAxisShim.setScale(axis, 30);
         assertEquals(axis.scaleProperty().getValue(), 30.0, 0.0);
     }
-    
+
     @Test public void setScaleTickCountAndSeeValue() {
         ValueAxisShim.setScale(axis, 30);
         assertEquals(axis.getScale(), 30.0, 0.0);
     }
-    
+
     @Test public void setUpperBoundAndSeeValueIsReflectedInModel() {
         axis.setUpperBound(30);
         assertEquals(axis.upperBoundProperty().getValue(), 30.0, 0.0);
     }
-    
+
     @Test public void setUpperBoundAndSeeValue() {
         axis.setUpperBound(30);
         assertEquals(axis.getUpperBound(), 30.0, 0.0);
     }
-    
+
     @Test public void setLowerBoundAndSeeValueIsReflectedInModel() {
         axis.setLowerBound(30);
         assertEquals(axis.lowerBoundProperty().getValue(), 30.0, 0.0);
     }
-    
+
     @Test public void setLowerBoundAndSeeValue() {
         axis.setLowerBound(30);
         assertEquals(axis.getLowerBound(), 30.0, 0.0);
@@ -380,7 +380,7 @@ public class ValueAxisTest {
         axis.setTickLabelFormatter(formatter);
         assertSame(axis.tickLabelFormatterProperty().getValue(), formatter);
     }
-    
+
     @Test public void setTickLabelFormatterAndSeeValue() {
         axis.setTickLabelFormatter(formatter);
         assertSame(axis.getTickLabelFormatter(), formatter);

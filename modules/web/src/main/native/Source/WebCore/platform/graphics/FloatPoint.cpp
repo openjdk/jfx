@@ -21,7 +21,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -91,7 +91,7 @@ float findSlope(const FloatPoint& p1, const FloatPoint& p2, float& c)
     return slope;
 }
 
-bool findIntersection(const FloatPoint& p1, const FloatPoint& p2, const FloatPoint& d1, const FloatPoint& d2, FloatPoint& intersection) 
+bool findIntersection(const FloatPoint& p1, const FloatPoint& p2, const FloatPoint& d1, const FloatPoint& d2, FloatPoint& intersection)
 {
     float pOffset = 0;
     float pSlope = findSlope(p1, p2, pOffset);
@@ -101,7 +101,7 @@ bool findIntersection(const FloatPoint& p1, const FloatPoint& p2, const FloatPoi
 
     if (dSlope == pSlope)
         return false;
-    
+
     if (pSlope == std::numeric_limits<float>::infinity()) {
         intersection.setX(p1.x());
         intersection.setY(dSlope * intersection.x() + dOffset);
@@ -112,7 +112,7 @@ bool findIntersection(const FloatPoint& p1, const FloatPoint& p2, const FloatPoi
         intersection.setY(pSlope * intersection.x() + pOffset);
         return true;
     }
-    
+
     // Find x at intersection, where ys overlap; x = (c' - c) / (m - m')
     intersection.setX((dOffset - pOffset) / (pSlope - dSlope));
     intersection.setY(pSlope * intersection.x() + pOffset);

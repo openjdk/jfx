@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "config.h"
 #include "ProtectionSpace.h"
@@ -44,7 +44,7 @@ ProtectionSpace::ProtectionSpace()
     , m_isHashTableDeletedValue(false)
 {
 }
- 
+
 // Need to enforce empty, non-null strings due to the pickiness of the String == String operator
 // combined with the semantics of the String(NSString*) constructor
 ProtectionSpace::ProtectionSpace(const String& host, int port, ProtectionSpaceServerType serverType, const String& realm, ProtectionSpaceAuthenticationScheme authenticationScheme)
@@ -54,22 +54,22 @@ ProtectionSpace::ProtectionSpace(const String& host, int port, ProtectionSpaceSe
     , m_realm(realm.length() ? realm : "")
     , m_authenticationScheme(authenticationScheme)
     , m_isHashTableDeletedValue(false)
-{    
-}
-    
-const String& ProtectionSpace::host() const 
-{ 
-    return m_host; 
+{
 }
 
-int ProtectionSpace::port() const 
+const String& ProtectionSpace::host() const
 {
-    return m_port; 
+    return m_host;
 }
 
-ProtectionSpaceServerType ProtectionSpace::serverType() const 
+int ProtectionSpace::port() const
 {
-    return m_serverType; 
+    return m_port;
+}
+
+ProtectionSpaceServerType ProtectionSpace::serverType() const
+{
+    return m_serverType;
 }
 
 bool ProtectionSpace::isProxy() const
@@ -80,14 +80,14 @@ bool ProtectionSpace::isProxy() const
             m_serverType == ProtectionSpaceProxySOCKS);
 }
 
-const String& ProtectionSpace::realm() const 
-{ 
-    return m_realm; 
+const String& ProtectionSpace::realm() const
+{
+    return m_realm;
 }
 
-ProtectionSpaceAuthenticationScheme ProtectionSpace::authenticationScheme() const 
-{ 
-    return m_authenticationScheme; 
+ProtectionSpaceAuthenticationScheme ProtectionSpace::authenticationScheme() const
+{
+    return m_authenticationScheme;
 }
 
 bool ProtectionSpace::receivesCredentialSecurely() const
@@ -96,10 +96,10 @@ bool ProtectionSpace::receivesCredentialSecurely() const
     RetainPtr<CFURLProtectionSpaceRef> cfSpace = adoptCF(createCF(*this));
     return cfSpace && CFURLProtectionSpaceReceivesCredentialSecurely(cfSpace.get());
 #else
-    return (m_serverType == ProtectionSpaceServerHTTPS || 
-            m_serverType == ProtectionSpaceServerFTPS || 
-            m_serverType == ProtectionSpaceProxyHTTPS || 
-            m_authenticationScheme == ProtectionSpaceAuthenticationSchemeHTTPDigest); 
+    return (m_serverType == ProtectionSpaceServerHTTPS ||
+            m_serverType == ProtectionSpaceServerFTPS ||
+            m_serverType == ProtectionSpaceProxyHTTPS ||
+            m_authenticationScheme == ProtectionSpaceAuthenticationSchemeHTTPDigest);
 #endif
 }
 
@@ -116,7 +116,7 @@ bool operator==(const ProtectionSpace& a, const ProtectionSpace& b)
         return false;
     if (a.authenticationScheme() != b.authenticationScheme())
         return false;
-    
+
     return true;
 }
 

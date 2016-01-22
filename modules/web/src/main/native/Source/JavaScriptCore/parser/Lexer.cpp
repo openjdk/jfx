@@ -534,10 +534,10 @@ template <typename T>
 void Lexer<T>::setCode(const SourceCode& source, ParserArena* arena)
 {
     m_arena = &arena->identifierArena();
-    
+
     m_lineNumber = source.firstLine();
     m_lastToken = -1;
-    
+
     const String& sourceString = source.provider()->source();
 
     if (!sourceString.isNull())
@@ -554,10 +554,10 @@ void Lexer<T>::setCode(const SourceCode& source, ParserArena* arena)
     m_atLineStart = true;
     m_lineStart = m_code;
     m_lexErrorMessage = String();
-    
+
     m_buffer8.reserveInitialCapacity(initialReadBufferCapacity);
     m_buffer16.reserveInitialCapacity((m_codeEnd - m_code) / 2);
-    
+
     if (LIKELY(m_code < m_codeEnd))
         m_current = *m_code;
     else
@@ -756,7 +756,7 @@ inline void Lexer<T>::record16(int c)
     ASSERT(c <= static_cast<int>(USHRT_MAX));
     m_buffer16.append(static_cast<UChar>(c));
 }
-    
+
 #if !ASSERT_DISABLED
 bool isSafeBuiltinIdentifier(VM& vm, const Identifier* ident)
 {
@@ -776,7 +776,7 @@ bool isSafeBuiltinIdentifier(VM& vm, const Identifier* ident)
     return true;
 }
 #endif
-    
+
 template <>
 template <bool shouldCreateIdentifier> ALWAYS_INLINE JSTokenType Lexer<LChar>::parseIdentifier(JSTokenData* tokenData, unsigned lexerFlags, bool strictMode)
 {
@@ -788,24 +788,24 @@ template <bool shouldCreateIdentifier> ALWAYS_INLINE JSTokenType Lexer<LChar>::p
             return keyword == RESERVED_IF_STRICT && !strictMode ? IDENT : keyword;
         }
     }
-    
+
     bool isPrivateName = m_current == '@' && m_parsingBuiltinFunction;
     if (isPrivateName)
         shift();
-    
+
     const LChar* identifierStart = currentSourcePtr();
     unsigned identifierLineStart = currentLineStartOffset();
-    
+
     while (isIdentPart(m_current))
         shift();
-    
+
     if (UNLIKELY(m_current == '\\')) {
         setOffsetFromSourcePtr(identifierStart, identifierLineStart);
         return parseIdentifierSlowCase<shouldCreateIdentifier>(tokenData, lexerFlags, strictMode);
     }
 
     const Identifier* ident = 0;
-    
+
     if (shouldCreateIdentifier || m_parsingBuiltinFunction) {
         int identifierLength = currentSourcePtr() - identifierStart;
         ident = makeIdentifier(identifierStart, identifierLength);
@@ -852,7 +852,7 @@ template <bool shouldCreateIdentifier> ALWAYS_INLINE JSTokenType Lexer<UChar>::p
             return keyword == RESERVED_IF_STRICT && !strictMode ? IDENT : keyword;
         }
     }
-    
+
     bool isPrivateName = m_current == '@' && m_parsingBuiltinFunction;
     if (isPrivateName)
         shift();
@@ -861,12 +861,12 @@ template <bool shouldCreateIdentifier> ALWAYS_INLINE JSTokenType Lexer<UChar>::p
     int identifierLineStart = currentLineStartOffset();
 
     UChar orAllChars = 0;
-    
+
     while (isIdentPart(m_current)) {
         orAllChars |= m_current;
         shift();
     }
-    
+
     if (UNLIKELY(m_current == '\\')) {
         ASSERT(!isPrivateName);
         setOffsetFromSourcePtr(identifierStart, identifierLineStart);
@@ -879,7 +879,7 @@ template <bool shouldCreateIdentifier> ALWAYS_INLINE JSTokenType Lexer<UChar>::p
         isAll8Bit = true;
 
     const Identifier* ident = 0;
-    
+
     if (shouldCreateIdentifier || m_parsingBuiltinFunction) {
         int identifierLength = currentSourcePtr() - identifierStart;
         if (isAll8Bit)
@@ -901,7 +901,7 @@ template <bool shouldCreateIdentifier> ALWAYS_INLINE JSTokenType Lexer<UChar>::p
         tokenData->ident = ident;
     } else
         tokenData->ident = 0;
-    
+
     if (UNLIKELY((remaining < maxTokenLength) && !(lexerFlags & LexerFlagsIgnoreReservedWords)) && !isPrivateName) {
         ASSERT(shouldCreateIdentifier);
         if (remaining < maxTokenLength) {
@@ -1352,7 +1352,7 @@ bool Lexer<T>::nextTokenIsColon()
     const T* code = m_code;
     while (code < m_codeEnd && (isWhiteSpace(*code) || isLineTerminator(*code)))
         code++;
-    
+
     return code < m_codeEnd && *code == ':';
 }
 
@@ -1374,7 +1374,7 @@ start:
 
     if (atEnd())
         return EOFTOK;
-    
+
     tokenLocation->startOffset = currentOffset();
     ASSERT(currentOffset() >= currentLineStartOffset());
     tokenRecord->m_startPosition = currentPosition();
@@ -1815,7 +1815,7 @@ bool Lexer<T>::scanRegExp(const Identifier*& pattern, const Identifier*& flags, 
         }
 
         T prev = m_current;
-        
+
         shift();
 
         if (prev == '/' && !lastWasEscape && !inBrackets)
@@ -1870,7 +1870,7 @@ bool Lexer<T>::skipRegExp()
             return false;
 
         T prev = m_current;
-        
+
         shift();
 
         if (prev == '/' && !lastWasEscape && !inBrackets)

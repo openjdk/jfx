@@ -192,7 +192,7 @@ namespace WTF {
         {
             return Iterator(*this, 0, SegmentSize);
         }
-        
+
         void shrinkToFit()
         {
             m_segments.shrinkToFit();

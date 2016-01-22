@@ -74,9 +74,9 @@ bool IDBEventDispatcher::dispatch(Event* event, Vector<RefPtr<EventTarget>>& eve
     //        prevent the transaction from being aborted. It's purely there for
     //        error reporting and distinctly different from the event propagating to
     //        the window.
-    //        
+    //
     //        This is similar to how "error" events are handled in workers.
-    //        
+    //
     //        (I think that so far webkit hasn't implemented the window.onerror
     //        feature yet, so you probably don't want to fire the separate error
     //        event on the window until that has been implemented)." -- Jonas Sicking

@@ -6,13 +6,13 @@
  * are met:
  *
  * 1.  Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer. 
+ *     notice, this list of conditions and the following disclaimer.
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
- *     documentation and/or other materials provided with the distribution. 
+ *     documentation and/or other materials provided with the distribution.
  * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
- *     from this software without specific prior written permission. 
+ *     from this software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY APPLE AND ITS CONTRIBUTORS "AS IS" AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
@@ -86,7 +86,7 @@
 /*!
     @property initialRequest
     @abstract A reference to the original request that created the
-    datasource.  This request will be unmodified by WebKit. 
+    datasource.  This request will be unmodified by WebKit.
 */
 @property (nonatomic, readonly, strong) NSURLRequest *initialRequest;
 
@@ -124,7 +124,7 @@
 /*!
     @property unreachableURL
     @abstract The unreachableURL for which this dataSource is showing alternate content, or nil.
-    @discussion This will be non-nil only for dataSources created by calls to the 
+    @discussion This will be non-nil only for dataSources created by calls to the
     WebFrame method loadAlternateHTMLString:baseURL:forUnreachableURL:.
 */
 @property (nonatomic, readonly, strong) NSURL *unreachableURL;

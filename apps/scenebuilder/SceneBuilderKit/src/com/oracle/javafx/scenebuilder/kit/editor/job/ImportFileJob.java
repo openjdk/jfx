@@ -75,9 +75,9 @@ public class ImportFileJob extends BatchSelectionJob {
 
             // newObject is null when file is empty
             if (newObject != null) {
-                // If the document is empty (root object is null), then we 
+                // If the document is empty (root object is null), then we
                 // insert the new object as root.
-                // Otherwise, we insert the new object under the common parent 
+                // Otherwise, we insert the new object under the common parent
                 // of the selected objects.
                 final FXOMObject rootObject = targetDocument.getFxomRoot();
 

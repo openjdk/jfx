@@ -51,7 +51,7 @@ public:
     DesiredWriteBarrier(Type, CodeBlock*, InlineCallFrame*, JSCell* owner);
 
     void trigger(VM&);
-    
+
     void visitChildren(SlotVisitor&);
 
 private:
@@ -81,7 +81,7 @@ public:
     }
 
     void trigger(VM&);
-    
+
     void visitChildren(SlotVisitor&);
 
 private:

@@ -40,7 +40,7 @@
 #include <wtf/text/CString.h>
 
 
-// The Life-Cycle of a SQLStatement i.e. Who's keeping the SQLStatement alive? 
+// The Life-Cycle of a SQLStatement i.e. Who's keeping the SQLStatement alive?
 // ==========================================================================
 // The RefPtr chain goes something like this:
 //

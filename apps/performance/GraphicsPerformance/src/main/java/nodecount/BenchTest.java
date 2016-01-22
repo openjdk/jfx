@@ -50,7 +50,7 @@ public abstract class BenchTest {
     private final BenchBase benchmark;
     private final int rows, cols;
     private final boolean pixelSnap;
-    
+
     public BenchTest(BenchBase benchmark, int rows, int cols, boolean pixelSnap) {
         this.benchmark = benchmark;
         this.rows = rows;
@@ -66,7 +66,7 @@ public abstract class BenchTest {
 
     public int getCols() { return cols; }
     public int getRows() { return rows; }
-    
+
     protected Animation createBenchmarkDriver(Scene scene) {
         Rectangle background = (Rectangle) scene.getRoot().getChildrenUnmodifiable().get(0);
         FillTransition t = new FillTransition(Duration.seconds(5), background, Color.WHITE, Color.BLACK);

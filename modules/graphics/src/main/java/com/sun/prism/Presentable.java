@@ -38,7 +38,7 @@ public interface Presentable extends RenderTarget {
      * so no resource should need to be locked in that case.
      * The resources will be unlocked in either {@link #prepare()} or
      * {@link #present()}.
-     * 
+     *
      * @param pState The presentation state for the upcoming pulse
      * @return true if the caller should recreate the Presentable
      */

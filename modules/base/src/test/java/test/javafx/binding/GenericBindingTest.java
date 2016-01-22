@@ -362,7 +362,7 @@ public class GenericBindingTest<T> {
 
         @Override
         public Object getValue() {
-			return null;
+            return null;
         }
     }
 

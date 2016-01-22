@@ -287,7 +287,7 @@ void HTMLPlugInElement::swapRendererTimerFired(Timer<HTMLPlugInElement>&)
     ASSERT(displayState() == PreparingPluginReplacement || displayState() == DisplayingSnapshot);
     if (userAgentShadowRoot())
         return;
-    
+
     // Create a shadow root, which will trigger the code to add a snapshot container
     // and reattach, thus making a new Renderer.
     ensureUserAgentShadowRoot();
@@ -296,7 +296,7 @@ void HTMLPlugInElement::swapRendererTimerFired(Timer<HTMLPlugInElement>&)
 void HTMLPlugInElement::setDisplayState(DisplayState state)
 {
     m_displayState = state;
-    
+
     if ((state == DisplayingSnapshot || displayState() == PreparingPluginReplacement) && !m_swapRendererTimer.isActive())
         m_swapRendererTimer.startOneShot(0);
 }
@@ -305,7 +305,7 @@ void HTMLPlugInElement::didAddUserAgentShadowRoot(ShadowRoot* root)
 {
     if (!m_pluginReplacement || !document().page() || displayState() != PreparingPluginReplacement)
         return;
-    
+
     root->setResetStyleInheritance(true);
     if (m_pluginReplacement->installReplacement(root)) {
         setDisplayState(DisplayingPluginReplacement);
@@ -321,7 +321,7 @@ static Vector<ReplacementPlugin*>& registeredPluginReplacements()
 {
     DEFINE_STATIC_LOCAL(Vector<ReplacementPlugin*>, registeredReplacements, ());
     static bool enginesQueried = false;
-    
+
     if (enginesQueried)
         return registeredReplacements;
     enginesQueried = true;
@@ -329,7 +329,7 @@ static Vector<ReplacementPlugin*>& registeredPluginReplacements()
 #if PLATFORM(COCOA)
     QuickTimePluginReplacement::registerPluginReplacement(registrar);
 #endif
-    
+
     return registeredReplacements;
 }
 
@@ -355,13 +355,13 @@ static ReplacementPlugin* pluginReplacementForType(const URL& url, const String&
     String type = mimeType;
     if (type.isEmpty() && url.protocolIsData())
         type = mimeTypeFromDataURL(url.string());
-    
+
     if (type.isEmpty() && !extension.isEmpty()) {
         for (size_t i = 0; i < replacements.size(); i++)
             if (replacements[i]->supportsFileExtension(extension))
                 return replacements[i];
     }
-    
+
     if (type.isEmpty()) {
         if (extension.isEmpty())
             return nullptr;

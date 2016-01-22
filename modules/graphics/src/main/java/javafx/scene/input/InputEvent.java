@@ -37,7 +37,7 @@ import javafx.event.EventType;
 public class InputEvent extends Event {
 
     private static final long serialVersionUID = 20121107L;
-    
+
     /**
      * Common supertype for all input event types.
      */
@@ -68,5 +68,5 @@ public class InputEvent extends Event {
     public EventType<? extends InputEvent> getEventType() {
         return (EventType<? extends InputEvent>) super.getEventType();
     }
-    
+
 }

@@ -57,7 +57,7 @@ OpcodeStats::OpcodeStats()
 {
     for (int i = 0; i < numOpcodeIDs; ++i)
         opcodeCounts[i] = 0;
-    
+
     for (int i = 0; i < numOpcodeIDs; ++i)
         for (int j = 0; j < numOpcodeIDs; ++j)
             opcodePairCounts[i][j] = 0;
@@ -67,7 +67,7 @@ static int compareOpcodeIndices(const void* left, const void* right)
 {
     long long leftValue = OpcodeStats::opcodeCounts[*(int*) left];
     long long rightValue = OpcodeStats::opcodeCounts[*(int*) right];
-    
+
     if (leftValue < rightValue)
         return 1;
     else if (leftValue > rightValue)
@@ -82,7 +82,7 @@ static int compareOpcodePairIndices(const void* left, const void* right)
     long long leftValue = OpcodeStats::opcodePairCounts[leftPair.first][leftPair.second];
     std::pair<int, int> rightPair = *(pair<int, int>*) right;
     long long rightValue = OpcodeStats::opcodePairCounts[rightPair.first][rightPair.second];
-    
+
     if (leftValue < rightValue)
         return 1;
     else if (leftValue > rightValue)
@@ -96,7 +96,7 @@ OpcodeStats::~OpcodeStats()
     long long totalInstructions = 0;
     for (int i = 0; i < numOpcodeIDs; ++i)
         totalInstructions += opcodeCounts[i];
-    
+
     long long totalInstructionPairs = 0;
     for (int i = 0; i < numOpcodeIDs; ++i)
         for (int j = 0; j < numOpcodeIDs; ++j)
@@ -106,38 +106,38 @@ OpcodeStats::~OpcodeStats()
     for (int i = 0; i < numOpcodeIDs; ++i)
         sortedIndices[i] = i;
     qsort(sortedIndices.data(), numOpcodeIDs, sizeof(int), compareOpcodeIndices);
-    
+
     std::pair<int, int> sortedPairIndices[numOpcodeIDs * numOpcodeIDs];
     std::pair<int, int>* currentPairIndex = sortedPairIndices;
     for (int i = 0; i < numOpcodeIDs; ++i)
         for (int j = 0; j < numOpcodeIDs; ++j)
             *(currentPairIndex++) = std::make_pair(i, j);
     qsort(sortedPairIndices, numOpcodeIDs * numOpcodeIDs, sizeof(std::pair<int, int>), compareOpcodePairIndices);
-    
-    dataLogF("\nExecuted opcode statistics\n"); 
-    
+
+    dataLogF("\nExecuted opcode statistics\n");
+
     dataLogF("Total instructions executed: %lld\n\n", totalInstructions);
 
     dataLogF("All opcodes by frequency:\n\n");
 
     for (int i = 0; i < numOpcodeIDs; ++i) {
         int index = sortedIndices[i];
-        dataLogF("%s:%s %lld - %.2f%%\n", opcodeNames[index], padOpcodeName((OpcodeID)index, 28), opcodeCounts[index], ((double) opcodeCounts[index]) / ((double) totalInstructions) * 100.0);    
+        dataLogF("%s:%s %lld - %.2f%%\n", opcodeNames[index], padOpcodeName((OpcodeID)index, 28), opcodeCounts[index], ((double) opcodeCounts[index]) / ((double) totalInstructions) * 100.0);
     }
-    
+
     dataLogF("\n");
     dataLogF("2-opcode sequences by frequency: %lld\n\n", totalInstructions);
-    
+
     for (int i = 0; i < numOpcodeIDs * numOpcodeIDs; ++i) {
         std::pair<int, int> indexPair = sortedPairIndices[i];
         long long count = opcodePairCounts[indexPair.first][indexPair.second];
-        
+
         if (!count)
             break;
-        
+
         dataLogF("%s%s %s:%s %lld %.2f%%\n", opcodeNames[indexPair.first], padOpcodeName((OpcodeID)indexPair.first, 28), opcodeNames[indexPair.second], padOpcodeName((OpcodeID)indexPair.second, 28), count, ((double) count) / ((double) totalInstructionPairs) * 100.0);
     }
-    
+
     dataLogF("\n");
     dataLogF("Most common opcodes and sequences:\n");
 
@@ -153,7 +153,7 @@ OpcodeStats::~OpcodeStats()
             std::pair<int, int> indexPair = sortedPairIndices[j];
             long long pairCount = opcodePairCounts[indexPair.first][indexPair.second];
             double pairProportion = ((double) pairCount) / ((double) totalInstructionPairs);
-        
+
             if (!pairCount || pairProportion < 0.0001 || pairProportion < opcodeProportion / 100)
                 break;
 
@@ -162,7 +162,7 @@ OpcodeStats::~OpcodeStats()
 
             dataLogF("    %s%s %s:%s %lld - %.2f%%\n", opcodeNames[indexPair.first], padOpcodeName((OpcodeID)indexPair.first, 28), opcodeNames[indexPair.second], padOpcodeName((OpcodeID)indexPair.second, 28), pairCount, pairProportion * 100.0);
         }
-        
+
     }
     dataLogF("\n");
 }
@@ -170,10 +170,10 @@ OpcodeStats::~OpcodeStats()
 void OpcodeStats::recordInstruction(int opcode)
 {
     opcodeCounts[opcode]++;
-    
+
     if (lastOpcode != -1)
         opcodePairCounts[lastOpcode][opcode]++;
-    
+
     lastOpcode = opcode;
 }
 

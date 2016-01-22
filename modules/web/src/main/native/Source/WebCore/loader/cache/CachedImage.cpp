@@ -114,7 +114,7 @@ void CachedImage::didAddClient(CachedResourceClient* c)
         createImage();
         m_image->setData(m_data->sharedBuffer(), true);
     }
-    
+
     ASSERT(c->resourceClientType() == CachedImageClient::expectedType());
     if (m_image && !m_image->isNull())
         static_cast<CachedImageClient*>(c)->imageChanged(this);
@@ -184,8 +184,8 @@ Image* CachedImage::image()
 
     if (errorOccurred() && m_shouldPaintBrokenImage) {
         // Returning the 1x broken image is non-ideal, but we cannot reliably access the appropriate
-        // deviceScaleFactor from here. It is critical that callers use CachedImage::brokenImage() 
-        // when they need the real, deviceScaleFactor-appropriate broken image icon. 
+        // deviceScaleFactor from here. It is critical that callers use CachedImage::brokenImage()
+        // when they need the real, deviceScaleFactor-appropriate broken image icon.
         return brokenImage(1).first;
     }
 
@@ -201,8 +201,8 @@ Image* CachedImage::imageForRenderer(const RenderObject* renderer)
 
     if (errorOccurred() && m_shouldPaintBrokenImage) {
         // Returning the 1x broken image is non-ideal, but we cannot reliably access the appropriate
-        // deviceScaleFactor from here. It is critical that callers use CachedImage::brokenImage() 
-        // when they need the real, deviceScaleFactor-appropriate broken image icon. 
+        // deviceScaleFactor from here. It is critical that callers use CachedImage::brokenImage()
+        // when they need the real, deviceScaleFactor-appropriate broken image icon.
         return brokenImage(1).first;
     }
 
@@ -295,7 +295,7 @@ LayoutSize CachedImage::imageSizeForRenderer(const RenderObject* renderer, float
 
     if (multiplier == 1.0f)
         return imageSize;
-        
+
     // Don't let images that have a width/height >= 1 shrink below 1 when zoomed.
     float widthScale = m_image->hasRelativeWidth() ? 1.0f : multiplier;
     float heightScale = m_image->hasRelativeHeight() ? 1.0f : multiplier;
@@ -469,7 +469,7 @@ void CachedImage::destroyDecodedData()
 {
     bool canDeleteImage = !m_image || (m_image->hasOneRef() && m_image->isBitmapImage());
     if (isSafeToMakePurgeable() && canDeleteImage && !isLoading()) {
-        // Image refs the data buffer so we should not make it purgeable while the image is alive. 
+        // Image refs the data buffer so we should not make it purgeable while the image is alive.
         // Invoking addClient() will reconstruct the image object.
         m_image = 0;
         setDecodedSize(0);
@@ -483,7 +483,7 @@ void CachedImage::decodedSizeChanged(const Image* image, int delta)
 {
     if (!image || image != m_image)
         return;
-    
+
     setDecodedSize(decodedSize() + delta);
 }
 
@@ -491,11 +491,11 @@ void CachedImage::didDraw(const Image* image)
 {
     if (!image || image != m_image)
         return;
-    
+
     double timeStamp = FrameView::currentPaintTimeStamp();
     if (!timeStamp) // If didDraw is called outside of a Frame paint.
         timeStamp = monotonicallyIncreasingTime();
-    
+
     CachedResource::didAccessDecodedData(timeStamp);
 }
 

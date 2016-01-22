@@ -12,7 +12,7 @@
  *    copyright notice, this list of conditions and the following
  *    disclaimer in the documentation and/or other materials
  *    provided with the distribution.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDER "AS IS" AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
@@ -52,7 +52,7 @@ typedef HashMap<RenderLayer*, RenderNamedFlowFragment*> LayerToRegionMap;
 
 // RenderFlowThread is used to collect all the render objects that participate in a
 // flow thread. It will also help in doing the layout. However, it will not render
-// directly to screen. Instead, RenderRegion objects will redirect their paint 
+// directly to screen. Instead, RenderRegion objects will redirect their paint
 // and nodeAtPoint methods to this object. Each RenderRegion will actually be a viewPort
 // of the RenderFlowThread.
 
@@ -86,7 +86,7 @@ public:
     virtual void styleDidChange(StyleDifference, const RenderStyle* oldStyle) override;
 
     void repaintRectangleInRegions(const LayoutRect&, bool immediate) const;
-    
+
     LayoutPoint adjustedPositionRelativeToOffsetParent(const RenderBoxModelObject&, const LayoutPoint&);
 
     LayoutUnit pageLogicalTopForOffset(LayoutUnit);
@@ -117,7 +117,7 @@ public:
     LayoutUnit contentLogicalWidthOfFirstRegion() const;
     LayoutUnit contentLogicalHeightOfFirstRegion() const;
     LayoutUnit contentLogicalLeftOfFirstRegion() const;
-    
+
     RenderRegion* firstRegion() const;
     RenderRegion* lastRegion() const;
 
@@ -129,7 +129,7 @@ public:
 
     // Check if the object is in region and the region is part of this flow thread.
     bool objectInFlowRegion(const RenderObject*, const RenderRegion*) const;
-    
+
     // Check if the object should be painted in this region and if the region is part of this flow thread.
     bool objectShouldPaintInFlowRegion(const RenderObject*, const RenderRegion*) const;
 
@@ -199,14 +199,14 @@ public:
 
     LayoutRect mapFromFlowThreadToLocal(const RenderBox*, const LayoutRect&) const;
     LayoutRect mapFromLocalToFlowThread(const RenderBox*, const LayoutRect&) const;
-    
+
     LayoutRect decorationsClipRectForBoxInRegion(const RenderBox&, RenderRegion&) const;
-    
+
     void flipForWritingModeLocalCoordinates(LayoutRect&) const;
 
     // Used to estimate the maximum height of the flow thread.
     static LayoutUnit maxLogicalHeight() { return LayoutUnit::max() / 2; }
-    
+
     bool regionInRange(const RenderRegion* targetRegion, const RenderRegion* startRegion, const RenderRegion* endRegion) const;
 
 private:
@@ -241,10 +241,10 @@ protected:
 
     void setDispatchRegionLayoutUpdateEvent(bool value) { m_dispatchRegionLayoutUpdateEvent = value; }
     bool shouldDispatchRegionLayoutUpdateEvent() { return m_dispatchRegionLayoutUpdateEvent; }
-    
+
     void setDispatchRegionOversetChangeEvent(bool value) { m_dispatchRegionOversetChangeEvent = value; }
     bool shouldDispatchRegionOversetChangeEvent() const { return m_dispatchRegionOversetChangeEvent; }
-    
+
     // Override if the flow thread implementation supports dispatching events when the flow layout is updated (e.g. for named flows)
     virtual void dispatchRegionLayoutUpdateEvent() { m_dispatchRegionLayoutUpdateEvent = false; }
     virtual void dispatchRegionOversetChangeEvent() { m_dispatchRegionOversetChangeEvent = false; }
@@ -274,7 +274,7 @@ protected:
         {
             setRange(start, end);
         }
-        
+
         void setRange(RenderRegion* start, RenderRegion* end)
         {
             m_startRegion = start;
@@ -303,7 +303,7 @@ protected:
             , m_result(0)
         {
         }
-        
+
         const LayoutUnit& lowValue() const { return m_offset; }
         const LayoutUnit& highValue() const { return m_offset; }
         void collectIfNeeded(const RegionInterval&);
@@ -325,7 +325,7 @@ protected:
     typedef HashMap<const RenderBox*, RenderRegionRange> RenderRegionRangeMap;
     RenderRegionRangeMap m_regionRangeMap;
 
-    // Map a box with a region break to the auto height region affected by that break. 
+    // Map a box with a region break to the auto height region affected by that break.
     typedef HashMap<RenderBox*, RenderRegion*> RenderBoxToRegionMap;
     RenderBoxToRegionMap m_breakBeforeToRegionMap;
     RenderBoxToRegionMap m_breakAfterToRegionMap;

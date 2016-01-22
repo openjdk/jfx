@@ -41,7 +41,7 @@ public interface PrinterJobImpl {
 
     public boolean showPrintDialog(Window owner);
     public boolean showPageDialog(Window owner);
- 
+
     public PageLayout validatePageLayout(PageLayout pageLayout);
     public boolean print(PageLayout pageLayout, Node node);
 

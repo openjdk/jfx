@@ -81,12 +81,12 @@ public enum DirtyBits {
     // Dirty bits for Camera class
     NODE_CAMERA,
     NODE_CAMERA_TRANSFORM,
-    
+
     // Dirty bits for Light class
     NODE_LIGHT,
     NODE_LIGHT_SCOPE,
     NODE_LIGHT_TRANSFORM,
-    
+
     // Dirty bits for Material class (non Node type)
     MATERIAL,
 

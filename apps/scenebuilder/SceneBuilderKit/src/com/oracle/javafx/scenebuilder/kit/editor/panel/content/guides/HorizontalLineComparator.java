@@ -46,9 +46,9 @@ class HorizontalLineComparator implements Comparator<HorizontalSegment> {
         assert o2 != null;
         assert MathUtils.equals(o1.getY1(), o1.getY2());
         assert MathUtils.equals(o2.getY1(), o2.getY2());
-        
+
         final int result;
-        
+
         if (o1 == o2) {
             result = 0;
         } else if (MathUtils.equals(o1.getY1(), o2.getY1())) {
@@ -58,8 +58,8 @@ class HorizontalLineComparator implements Comparator<HorizontalSegment> {
         } else {
             result = -1;
         }
-        
+
         return result;
     }
-    
+
 }

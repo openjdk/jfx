@@ -268,7 +268,7 @@ public class InspectorPanelController extends AbstractFxmlPanelController {
     private final HashMap<Class<? extends Editor>, Stack<Editor>> editorPools = new HashMap<>();
     //
     // Editors currently in use
-    //   Could be a HashMap<SectionId, PropertyEditor> 
+    //   Could be a HashMap<SectionId, PropertyEditor>
     //   if we want to optimize a bit more the property editors usage,
     //   by re-using them directly in the GridPane, instead of using the pools.
     private final List<Editor> editorsInUse = new ArrayList<>();
@@ -295,7 +295,7 @@ public class InspectorPanelController extends AbstractFxmlPanelController {
     public InspectorPanelController(EditorController editorController) {
         super(InspectorPanelController.class.getResource(fxmlFile), I18N.getBundle(), editorController);
         this.editorController = editorController;
-        
+
         viewModeProperty.setValue(ViewMode.SECTION);
         viewModeProperty.addListener(new ChangeListener<ViewMode>() {
             @Override
@@ -389,12 +389,12 @@ public class InspectorPanelController extends AbstractFxmlPanelController {
     public ViewMode getViewMode() {
         return viewModeProperty.getValue();
     }
-    
+
     public void setViewMode(ViewMode mode) {
         assert mode != null;
         viewModeProperty.setValue(mode);
     }
-    
+
     private void viewModeChanged(ViewMode previousMode, ViewMode mode) {
         if (!isInspectorLoaded()) {
             return;
@@ -430,7 +430,7 @@ public class InspectorPanelController extends AbstractFxmlPanelController {
         assert mode != null;
         showModeProperty.setValue(mode);
     }
-    
+
     private void showModeChanged() {
         if (!isInspectorLoaded()) {
             return;
@@ -446,7 +446,7 @@ public class InspectorPanelController extends AbstractFxmlPanelController {
         assert sectionId != null;
         expandedSectionProperty.setValue(sectionId);
     }
-    
+
     private void expandedSectionChanged() {
         if (!isInspectorLoaded()) {
             return;
@@ -576,18 +576,18 @@ public class InspectorPanelController extends AbstractFxmlPanelController {
                 updateInspector();
             }
         });
-        
+
         // Listen the Scene stylesheets changes
         getEditorController().sceneStyleSheetProperty().addListener((ChangeListener<ObservableList<File>>) (ov, t, t1) -> updateInspector());
-        
+
         selectionState = new SelectionState(editorController);
         viewModeChanged(null, getViewMode());
         expandedSectionChanged();
-        
+
         accordion.expandedPaneProperty().addListener((ChangeListener<TitledPane>) (ov, t, t1) -> {
             expandedSectionProperty.setValue(getExpandedSectionId());
         });
-        
+
         accordion.setPrefSize(300, 700);
         buildExpandedSection();
         updateClassNameInSectionTitles();
@@ -650,7 +650,7 @@ public class InspectorPanelController extends AbstractFxmlPanelController {
         // - search pattern changed
         // - SceneGraphObject resolved state changed
         // ==> the current section is to be fully rebuilt
-        // TBD: we could optimize this by only refreshing values if 
+        // TBD: we could optimize this by only refreshing values if
         //      same element class + same container class + same search pattern.
         clearSections();
         if (getViewMode() == ViewMode.SECTION) {
@@ -666,7 +666,7 @@ public class InspectorPanelController extends AbstractFxmlPanelController {
 
     private void reset() {
 //        System.out.println("Inspector reset() called !");
-        // A property has changed, a reference has changed (e.g. css file). 
+        // A property has changed, a reference has changed (e.g. css file).
         // or a selection of an identical node appears
         // ==> For all the editors currently in use:
         // - reset (state, suggested list, ...)
@@ -1557,7 +1557,7 @@ public class InspectorPanelController extends AbstractFxmlPanelController {
         }
         return 0;
     }
-    
+
     private boolean isMultiLinesSupported(Set<Class<?>> selectedClasses, ValuePropertyMetadata propMeta) {
         String propertyNameStr = propMeta.getName().getName();
         if (selectedClasses.contains(TextField.class) || selectedClasses.contains(PasswordField.class)) {
@@ -1596,7 +1596,7 @@ public class InspectorPanelController extends AbstractFxmlPanelController {
         }
         return maxIndex;
     }
-    
+
     private GridPane getGridPane(String propNameStr) {
         assert propNameStr.contains("columnIndex") || propNameStr.contains("columnSpan") //NOI18N
                 || propNameStr.contains("rowIndex") || propNameStr.contains("rowSpan");//NOI18N
@@ -2056,7 +2056,7 @@ public class InspectorPanelController extends AbstractFxmlPanelController {
         return getEditorController().getFxomDocument().getFxomRoot().getFxController();
     }
 
-    // 
+    //
     // Helper methods for SelectionState class
     //
     private Set<FXOMInstance> getSelectedInstances() {
@@ -2087,19 +2087,19 @@ public class InspectorPanelController extends AbstractFxmlPanelController {
 
     private boolean isBoundedByProperties(ValuePropertyMetadata propMeta) {
         // Only ScrollPane.hValue and ScrollPane.vValue for now
-        if (propMeta.getName().toString().equals(Editor.hValuePropName) 
+        if (propMeta.getName().toString().equals(Editor.hValuePropName)
                 || propMeta.getName().toString().equals(Editor.vValuePropName)) {
             return true;
         }
         return false;
     }
-    
+
     /*
-     *   This class represents the selection state: 
-     *   - the selected instances, 
+     *   This class represents the selection state:
+     *   - the selected instances,
      *   - the selected classes,
      *   - the common parent for the selected instances (if any),
-     *   - the unresolved selected instances (if any), 
+     *   - the unresolved selected instances (if any),
      *      in case of an instance is missing its corresponding object (for instance a png file)
      */
     private final class SelectionState {

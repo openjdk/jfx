@@ -69,7 +69,7 @@ public class ScaleTransitionApp extends Application {
         root.setPrefSize(180, 180);
         root.setMinSize(Pane.USE_PREF_SIZE, Pane.USE_PREF_SIZE);
         root.setMaxSize(Pane.USE_PREF_SIZE, Pane.USE_PREF_SIZE);
-        
+
         Rectangle rect = new Rectangle(50, 50, 50, 50);
         rect.setArcHeight(15);
         rect.setArcWidth(15);
@@ -80,7 +80,7 @@ public class ScaleTransitionApp extends Application {
         scaleTransition.setToY(3);
         scaleTransition.setCycleCount(Timeline.INDEFINITE);
         scaleTransition.setAutoReverse(true);
-        
+
         return root;
     }
 

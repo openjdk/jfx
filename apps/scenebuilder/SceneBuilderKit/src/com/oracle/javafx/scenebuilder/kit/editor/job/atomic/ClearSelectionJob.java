@@ -39,7 +39,7 @@ import java.util.Collections;
  *
  */
 public class ClearSelectionJob extends UpdateSelectionJob {
-    
+
     public ClearSelectionJob(EditorController editorController) {
         super(Collections.emptyList(), editorController);
     }

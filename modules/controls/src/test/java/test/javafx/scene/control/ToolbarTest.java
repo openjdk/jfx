@@ -52,12 +52,12 @@ import org.junit.Test;
  * @author srikalyc
  */
 public class ToolbarTest {
-    private ToolBar toolBar;//Empty 
+    private ToolBar toolBar;//Empty
     private ToolBar toolBarWithItems;//Items
     private Toolkit tk;
     private Node node1;
     private Node node2;
-    
+
     @Before public void setup() {
         tk = (StubToolkit)Toolkit.getToolkit();//This step is not needed (Just to make sure StubToolkit is loaded into VM)
         toolBar = new ToolBar();
@@ -65,24 +65,24 @@ public class ToolbarTest {
         node2 = new Rectangle(2.0,4.0);
         toolBarWithItems = new ToolBar(node1,node2);
     }
-    
-   
-   
+
+
+
     /*********************************************************************
      * Tests for default values                                         *
      ********************************************************************/
-    
+
     @Test public void defaultConstructorShouldSetStyleClassTo_toolbar() {
         assertStyleClassContains(toolBar, "tool-bar");
     }
-    
+
     @Test public void defaultFocusTraversibleIsFalse() {
         assertFalse(toolBar.isFocusTraversable());
     }
     @Test public void defaultVarArgConstructorShouldSetStyleClassTo_toolbar() {
         assertStyleClassContains(toolBarWithItems, "tool-bar");
     }
-    
+
     @Test public void defaultVarArgConstructorCheckItems() {
         assertNotNull(toolBarWithItems.getItems());
         assertEquals(toolBarWithItems.getItems().size(), 2.0, 0.0);
@@ -94,7 +94,7 @@ public class ToolbarTest {
         assertSame(toolBar.getOrientation(), Orientation.HORIZONTAL);
     }
 
-    
+
     /*********************************************************************
      * Tests for property binding                                        *
      ********************************************************************/
@@ -136,7 +136,7 @@ public class ToolbarTest {
         toolBar.setOrientation(Orientation.HORIZONTAL);
         assertSame(toolBar.orientationProperty().getValue(), Orientation.HORIZONTAL);
     }
-    
+
     @Test public void setOrientationAndSeeValue() {
         toolBar.setOrientation(Orientation.VERTICAL);
         assertSame(toolBar.getOrientation(), Orientation.VERTICAL);
@@ -166,5 +166,5 @@ public class ToolbarTest {
 
         b3.fire();
     }
-    
+
 }

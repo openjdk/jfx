@@ -61,7 +61,7 @@ void GeolocationController::addObserver(Geolocation* observer, bool enableHighAc
     if (enableHighAccuracy)
         m_highAccuracyObservers.add(observer);
 
-    if (m_client) {        
+    if (m_client) {
         if (enableHighAccuracy)
             m_client->setEnableHighAccuracy(true);
         if (wasEmpty)
@@ -134,7 +134,7 @@ void provideGeolocationTo(Page* page, GeolocationClient* client)
 {
     Supplement<Page>::provideTo(page, GeolocationController::supplementName(), GeolocationController::create(client));
 }
-    
+
 } // namespace WebCore
 
 #endif // ENABLE(GEOLOCATION)

@@ -33,11 +33,11 @@ namespace WebCore {
     class XMLSerializer : public RefCounted<XMLSerializer> {
     public:
         static PassRefPtr<XMLSerializer> create() { return adoptRef(new XMLSerializer); }
-        
+
         String serializeToString(Node*, ExceptionCode&);
-        
+
     private:
-        XMLSerializer()  { }        
+        XMLSerializer()  { }
     };
 
 } // namespace WebCore

@@ -48,8 +48,8 @@ public class BatchJob extends Job {
     private final boolean shouldUpdateSelection;
     private final String description;
 
-    public BatchJob(EditorController editorController, 
-            boolean shouldRefreshSceneGraph, 
+    public BatchJob(EditorController editorController,
+            boolean shouldRefreshSceneGraph,
             boolean shouldUpdateSelection,
             String description) {
         super(editorController);
@@ -57,29 +57,29 @@ public class BatchJob extends Job {
         this.shouldRefreshSceneGraph = shouldRefreshSceneGraph;
         this.shouldUpdateSelection = shouldUpdateSelection;
     }
-    
-    public BatchJob(EditorController editorController, 
+
+    public BatchJob(EditorController editorController,
             boolean shouldRefreshSceneGraph, String description) {
         super(editorController);
         this.description = description;
         this.shouldRefreshSceneGraph = shouldRefreshSceneGraph;
         this.shouldUpdateSelection = true;
     }
-    
+
      public BatchJob(EditorController editorController, String description) {
          super(editorController);
          this.description = description;
          this.shouldRefreshSceneGraph = true;
          this.shouldUpdateSelection = true;
     }
-    
+
    public BatchJob(EditorController editorController) {
         super(editorController);
         this.description = getClass().getSimpleName();
         this.shouldRefreshSceneGraph = true;
         this.shouldUpdateSelection = true;
     }
-    
+
     public void addSubJob(Job subJob) {
         assert subJob != null;
         this.subJobs.add(subJob);
@@ -98,11 +98,11 @@ public class BatchJob extends Job {
     public List<Job> getSubJobs() {
         return Collections.unmodifiableList(subJobs);
     }
-    
+
     /*
      * Job
      */
-    
+
     @Override
     public boolean isExecutable() {
         return subJobs.isEmpty() == false;
@@ -154,7 +154,7 @@ public class BatchJob extends Job {
     public void redo() {
         final Selection selection = getEditorController().getSelection();
         final FXOMDocument fxomDocument = getEditorController().getFxomDocument();
-        
+
         if (shouldUpdateSelection) {
             selection.beginUpdate();
         }
@@ -176,5 +176,5 @@ public class BatchJob extends Job {
     public String getDescription() {
         return description;
     }
-    
+
 }

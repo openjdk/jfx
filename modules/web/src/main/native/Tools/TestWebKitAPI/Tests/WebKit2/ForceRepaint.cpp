@@ -33,7 +33,7 @@ namespace TestWebKitAPI {
 
 static bool test1Done;
 static bool test2Done;
-    
+
 void didForceRepaint(WKErrorRef error, void*)
 {
     EXPECT_NULL(error);

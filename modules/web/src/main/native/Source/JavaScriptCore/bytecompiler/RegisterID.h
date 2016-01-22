@@ -57,7 +57,7 @@ namespace JSC {
 #endif
         {
         }
-        
+
         explicit RegisterID(int index)
             : m_refCount(0)
             , m_virtualRegister(VirtualRegister(index))

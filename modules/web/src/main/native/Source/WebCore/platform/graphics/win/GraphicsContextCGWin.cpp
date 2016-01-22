@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -45,10 +45,10 @@ static CGContextRef CGContextWithHDC(HDC hdc, bool hasAlpha)
     DIBPixelData pixelData(bitmap);
 
     // FIXME: We can get here because we asked for a bitmap that is too big
-    // when we have a tiled layer and we're compositing. In that case 
+    // when we have a tiled layer and we're compositing. In that case
     // bmBitsPixel will be 0. This seems to be benign, so for now we will
     // exit gracefully and look at it later:
-    //  https://bugs.webkit.org/show_bug.cgi?id=52041   
+    //  https://bugs.webkit.org/show_bug.cgi?id=52041
     // ASSERT(bitmapBits.bitsPerPixel() == 32);
     if (pixelData.bitsPerPixel() != 32)
         return 0;
@@ -60,10 +60,10 @@ static CGContextRef CGContextWithHDC(HDC hdc, bool hasAlpha)
     // Flip coords
     CGContextTranslateCTM(context, 0, pixelData.size().height());
     CGContextScaleCTM(context, 1, -1);
-    
+
     // Put the HDC In advanced mode so it will honor affine transforms.
     SetGraphicsMode(hdc, GM_ADVANCED);
-    
+
     return context;
 }
 
@@ -112,7 +112,7 @@ void GraphicsContext::releaseWindowsContext(HDC hdc, const IntRect& dstRect, boo
 
     CGImageRef image = CGBitmapContextCreateImage(bitmapContext);
     CGContextDrawImage(m_data->m_cgContext.get(), dstRect, image);
-    
+
     // Delete all our junk.
     CGImageRelease(image);
     CGContextRelease(bitmapContext);
@@ -121,13 +121,13 @@ void GraphicsContext::releaseWindowsContext(HDC hdc, const IntRect& dstRect, boo
 
 void GraphicsContext::drawWindowsBitmap(WindowsBitmap* image, const IntPoint& point)
 {
-    // FIXME: Creating CFData is non-optimal, but needed to avoid crashing when printing.  Ideally we should 
+    // FIXME: Creating CFData is non-optimal, but needed to avoid crashing when printing.  Ideally we should
     // make a custom CGDataProvider that controls the WindowsBitmap lifetime.  see <rdar://6394455>
     RetainPtr<CFDataRef> imageData = adoptCF(CFDataCreate(kCFAllocatorDefault, image->buffer(), image->bufferLength()));
     RetainPtr<CGDataProviderRef> dataProvider = adoptCF(CGDataProviderCreateWithCFData(imageData.get()));
     RetainPtr<CGImageRef> cgImage = adoptCF(CGImageCreate(image->size().width(), image->size().height(), 8, 32, image->bytesPerRow(), deviceRGBColorSpaceRef(),
                                                          kCGBitmapByteOrder32Little | kCGImageAlphaFirst, dataProvider.get(), 0, true, kCGRenderingIntentDefault));
-    CGContextDrawImage(m_data->m_cgContext.get(), CGRectMake(point.x(), point.y(), image->size().width(), image->size().height()), cgImage.get());   
+    CGContextDrawImage(m_data->m_cgContext.get(), CGRectMake(point.x(), point.y(), image->size().width(), image->size().height()), cgImage.get());
 }
 
 void GraphicsContext::drawFocusRing(const Path& path, int width, int offset, const Color& color)
@@ -210,7 +210,7 @@ void GraphicsContext::drawLineForDocumentMarker(const FloatPoint& point, float w
     float widthMod = fmodf(width, patternWidth);
     if (patternWidth - widthMod > cMisspellingLinePatternGapWidth)
         width -= widthMod;
-      
+
     // Draw the underline
     CGContextRef context = platformContext();
     CGContextSaveGState(context);
@@ -220,12 +220,12 @@ void GraphicsContext::drawLineForDocumentMarker(const FloatPoint& point, float w
 
     wkSetPatternPhaseInUserSpace(context, point);
     CGContextSetBlendMode(context, kCGBlendModeNormal);
-    
+
     // 3 rows, each offset by half a pixel for blending purposes
     const CGPoint upperPoints [] = {{point.x(), point.y() + patternHeight - 2.5 }, {point.x() + width, point.y() + patternHeight - 2.5}};
     const CGPoint middlePoints [] = {{point.x(), point.y() + patternHeight - 1.5 }, {point.x() + width, point.y() + patternHeight - 1.5}};
     const CGPoint lowerPoints [] = {{point.x(), point.y() + patternHeight - 0.5 }, {point.x() + width, point.y() + patternHeight - 0.5 }};
-    
+
     // Dash lengths for the top and bottom of the error underline are the same.
     // These are magic.
     static const CGFloat edge_dash_lengths[] = {2.0f, 2.0f};
@@ -242,12 +242,12 @@ void GraphicsContext::drawLineForDocumentMarker(const FloatPoint& point, float w
     CGContextSetLineDash(context, edge_offset, edge_dash_lengths, WTF_ARRAY_LENGTH(edge_dash_lengths));
     CGContextSetAlpha(context, upperOpacity);
     CGContextStrokeLineSegments(context, upperPoints, 2);
- 
+
     // Middle line
     CGContextSetLineDash(context, middle_offset, middle_dash_lengths, WTF_ARRAY_LENGTH(middle_dash_lengths));
     CGContextSetAlpha(context, middleOpacity);
     CGContextStrokeLineSegments(context, middlePoints, 2);
-    
+
     // Bottom line
     CGContextSetLineDash(context, edge_offset, edge_dash_lengths, WTF_ARRAY_LENGTH(edge_dash_lengths));
     CGContextSetAlpha(context, lowerOpacity);

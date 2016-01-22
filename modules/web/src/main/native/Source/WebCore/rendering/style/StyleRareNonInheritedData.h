@@ -63,7 +63,7 @@ struct StyleDashboardRegion;
 #endif
 
 // Page size type.
-// StyleRareNonInheritedData::m_pageSize is meaningful only when 
+// StyleRareNonInheritedData::m_pageSize is meaningful only when
 // StyleRareNonInheritedData::m_pageSizeType is PAGE_SIZE_RESOLVED.
 enum PageSizeType {
     PAGE_SIZE_AUTO, // size: auto
@@ -80,7 +80,7 @@ public:
     static PassRef<StyleRareNonInheritedData> create() { return adoptRef(*new StyleRareNonInheritedData); }
     PassRef<StyleRareNonInheritedData> copy() const;
     ~StyleRareNonInheritedData();
-    
+
     bool operator==(const StyleRareNonInheritedData&) const;
     bool operator!=(const StyleRareNonInheritedData& o) const { return !(*this == o); }
 
@@ -125,7 +125,7 @@ public:
     String m_altText;
 
     std::unique_ptr<ShadowData> m_boxShadow; // For box-shadow decorations.
-    
+
     RefPtr<StyleReflection> m_boxReflect;
 
     OwnPtr<AnimationList> m_animations;

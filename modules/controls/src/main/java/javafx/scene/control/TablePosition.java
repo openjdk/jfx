@@ -49,19 +49,19 @@ import javafx.beans.NamedArg;
  * @since JavaFX 2.0
  */
 public class TablePosition<S,T> extends TablePositionBase<TableColumn<S,T>> {
-    
+
     /***************************************************************************
      *                                                                         *
      * Constructors                                                            *
      *                                                                         *
-     **************************************************************************/  
+     **************************************************************************/
 
     /**
      * Constructs a TablePosition instance to represent the given row/column
-     * position in the given TableView instance. Both the TableView and 
+     * position in the given TableView instance. Both the TableView and
      * TableColumn are referenced weakly in this class, so it is possible that
      * they will be null when their respective getters are called.
-     * 
+     *
      * @param tableView The TableView that this position is related to.
      * @param row The row that this TablePosition is representing.
      * @param tableColumn The TableColumn instance that this TablePosition represents.
@@ -74,9 +74,9 @@ public class TablePosition<S,T> extends TablePositionBase<TableColumn<S,T>> {
         this.itemRef = new WeakReference<>(
                 items != null && row >= 0 && row < items.size() ? items.get(row) : null);
     }
-    
-    
-    
+
+
+
     /***************************************************************************
      *                                                                         *
      * Instance Variables                                                      *
@@ -92,7 +92,7 @@ public class TablePosition<S,T> extends TablePositionBase<TableColumn<S,T>> {
      * Public API                                                              *
      *                                                                         *
      **************************************************************************/
-    
+
     /**
      * The column index that this TablePosition represents in the TableView. It
      * is -1 if the TableView or TableColumn instances are null.
@@ -104,17 +104,17 @@ public class TablePosition<S,T> extends TablePositionBase<TableColumn<S,T>> {
 
         TableView<S> tableView = getTableView();
         TableColumn<S,T> tableColumn = getTableColumn();
-        return tableView == null || tableColumn == null ? -1 : 
+        return tableView == null || tableColumn == null ? -1 :
                 tableView.getVisibleLeafIndex(tableColumn);
     }
-    
+
     /**
      * The TableView that this TablePosition is related to.
      */
     public final TableView<S> getTableView() {
         return controlRef.get();
     }
-    
+
     /** {@inheritDoc} */
     @Override public final TableColumn<S,T> getTableColumn() {
         // Forcing the return type to be TableColumn<S,T>, not TableColumnBase<S,T>
@@ -132,7 +132,7 @@ public class TablePosition<S,T> extends TablePositionBase<TableColumn<S,T>> {
     /**
      * Returns a string representation of this {@code TablePosition} object.
      * @return a string representation of this {@code TablePosition} object.
-     */ 
+     */
     @Override public String toString() {
         return "TablePosition [ row: " + getRow() + ", column: " + getTableColumn() + ", "
                 + "tableView: " + getTableView() + " ]";

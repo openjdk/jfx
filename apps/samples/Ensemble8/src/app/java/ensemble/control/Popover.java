@@ -238,7 +238,7 @@ public class Popover extends Region implements EventHandler<Event>{
 
         int pageWidth = width - left - right;
         int pageHeight = height - top - bottom;
-        
+
         frameBorder.resize(width, height);
 
         pagesPane.resizeRelocate(left, top, pageWidth, pageHeight);
@@ -269,7 +269,7 @@ public class Popover extends Region implements EventHandler<Event>{
             title.setTranslateY((int) (top / 2d));
         }
     }
-    
+
     public final void clearPages() {
         while (!pages.isEmpty()) {
             pages.pop().handleHidden();
@@ -284,7 +284,7 @@ public class Popover extends Region implements EventHandler<Event>{
         titlesPane.setTranslateX(0);
         titlesClipRect.setTranslateX(0);
     }
-    
+
     public final void popPage() {
         Page oldPage = pages.pop();
         oldPage.handleHidden();
@@ -318,7 +318,7 @@ public class Popover extends Region implements EventHandler<Event>{
             hide();
         }
     }
-    
+
     public final void pushPage(final Page page) {
         final Node pageNode = page.getPageNode();
         pageNode.setManaged(false);
@@ -330,14 +330,14 @@ public class Popover extends Region implements EventHandler<Event>{
         leftButton.setText(page.leftButtonText());
         rightButton.setVisible(page.rightButtonText() != null);
         rightButton.setText(page.rightButtonText());
-        
+
         title = new Text(page.getPageTitle());
         title.getStyleClass().add("popover-title");
         //debtest title.setFill(Color.WHITE);
         title.setTextOrigin(VPos.CENTER);
         title.setTranslateX(newPageX + (int) ((pageWidth - title.getLayoutBounds().getWidth()) / 2d));
         titlesPane.getChildren().add(title);
-        
+
         if (!pages.isEmpty() && isVisible()) {
             final Timeline timeline = new Timeline(
                     new KeyFrame(Duration.millis(350), (ActionEvent t) -> {
@@ -356,7 +356,7 @@ public class Popover extends Region implements EventHandler<Event>{
         page.handleShown();
         pages.push(page);
     }
-    
+
     private void resizePopoverToNewPage(final Node newPageNode) {
         final Insets insets = getInsets();
         final double width = prefWidth(-1);
@@ -369,7 +369,7 @@ public class Popover extends Region implements EventHandler<Event>{
             )
         ).play();
     }
-    
+
     public void show(){
         show(null);
     }
@@ -405,7 +405,7 @@ public class Popover extends Region implements EventHandler<Event>{
             tx.play();
         }
     }
-    
+
     public void hide(){
         if (isVisible() || fadeAnimation != null) {
             getScene().removeEventFilter(MouseEvent.MOUSE_CLICKED, popoverHideHandler);
@@ -433,7 +433,7 @@ public class Popover extends Region implements EventHandler<Event>{
             tx.play();
         }
     }
-    
+
     /**
      * Represents a page in a popover.
      */
@@ -443,14 +443,14 @@ public class Popover extends Region implements EventHandler<Event>{
 
         /**
          * Get the node that represents the page.
-         * 
+         *
          * @return the page node.
          */
         public Node getPageNode();
-        
+
         /**
          * Get the title to display for this page.
-         * 
+         *
          * @return The page title
          */
         public String getPageTitle();

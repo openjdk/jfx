@@ -47,5 +47,5 @@ public class ParentShim extends Parent {
     public static List<Node> test_getRemoved(Parent p) {
         return p.test_getRemoved();
     }
-    
+
 }

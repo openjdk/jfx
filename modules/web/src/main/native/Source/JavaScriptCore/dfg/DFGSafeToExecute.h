@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef DFGSafeToExecute_h
@@ -42,7 +42,7 @@ public:
         , m_result(true)
     {
     }
-    
+
     void operator()(Node*, Edge edge)
     {
         switch (edge.useKind()) {
@@ -63,34 +63,34 @@ public:
         case OtherUse:
         case MachineIntUse:
             return;
-            
+
         case KnownInt32Use:
             if (m_state.forNode(edge).m_type & ~SpecInt32)
                 m_result = false;
             return;
-            
+
         case KnownNumberUse:
             if (m_state.forNode(edge).m_type & ~SpecFullNumber)
                 m_result = false;
             return;
-            
+
         case KnownCellUse:
             if (m_state.forNode(edge).m_type & ~SpecCell)
                 m_result = false;
             return;
-            
+
         case KnownStringUse:
             if (m_state.forNode(edge).m_type & ~SpecString)
                 m_result = false;
             return;
-            
+
         case LastUseKind:
             RELEASE_ASSERT_NOT_REACHED();
             break;
         }
         RELEASE_ASSERT_NOT_REACHED();
     }
-    
+
     bool result() const { return m_result; }
 private:
     AbstractStateType& m_state;
@@ -255,7 +255,7 @@ bool safeToExecute(AbstractStateType& state, Graph& graph, Node* node)
     case Check:
     case MultiGetByOffset:
         return true;
-        
+
     case GetByVal:
     case GetIndexedPropertyStorage:
     case GetArrayLength:
@@ -264,10 +264,10 @@ bool safeToExecute(AbstractStateType& state, Graph& graph, Node* node)
     case StringCharAt:
     case StringCharCodeAt:
         return node->arrayMode().alreadyChecked(graph, node, state.forNode(node->child1()));
-        
+
     case GetTypedArrayByteOffset:
         return !(state.forNode(node->child1()).m_type & ~(SpecTypedArrayView));
-            
+
     case PutByValDirect:
     case PutByVal:
     case PutByValAlias:
@@ -277,24 +277,24 @@ bool safeToExecute(AbstractStateType& state, Graph& graph, Node* node)
     case StructureTransitionWatchpoint:
         return state.forNode(node->child1()).m_futurePossibleStructure.isSubsetOf(
             StructureSet(node->structure()));
-        
+
     case PutStructure:
     case PhantomPutStructure:
     case AllocatePropertyStorage:
     case ReallocatePropertyStorage:
         return state.forNode(node->child1()).m_currentKnownStructure.isSubsetOf(
             StructureSet(node->structureTransitionData().previousStructure));
-        
+
     case GetByOffset:
     case PutByOffset:
         return state.forNode(node->child1()).m_currentKnownStructure.isValidOffset(
             graph.m_storageAccessData[node->storageAccessDataIndex()].offset);
-        
+
     case LastNodeType:
         RELEASE_ASSERT_NOT_REACHED();
         return false;
     }
-    
+
     RELEASE_ASSERT_NOT_REACHED();
     return false;
 }

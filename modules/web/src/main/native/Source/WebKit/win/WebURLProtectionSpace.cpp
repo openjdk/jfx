@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -144,10 +144,10 @@ static ProtectionSpaceAuthenticationScheme coreScheme(BSTR authenticationMethod)
 }
 
 HRESULT STDMETHODCALLTYPE WebURLProtectionSpace::initWithHost(
-    /* [in] */ BSTR host, 
-    /* [in] */ int port, 
-    /* [in] */ BSTR protocol, 
-    /* [in] */ BSTR realm, 
+    /* [in] */ BSTR host,
+    /* [in] */ int port,
+    /* [in] */ BSTR protocol,
+    /* [in] */ BSTR realm,
     /* [in] */ BSTR authenticationMethod)
 {
     static BString& webURLProtectionSpaceHTTPBString = *new BString(WebURLProtectionSpaceHTTP);
@@ -165,17 +165,17 @@ HRESULT STDMETHODCALLTYPE WebURLProtectionSpace::initWithHost(
     else if (BString(protocol) == webURLProtectionSpaceFTPSBString)
         serverType = ProtectionSpaceServerFTPS;
 
-    m_protectionSpace = ProtectionSpace(String(host, SysStringLen(host)), port, serverType, 
+    m_protectionSpace = ProtectionSpace(String(host, SysStringLen(host)), port, serverType,
         String(realm, SysStringLen(realm)), coreScheme(authenticationMethod));
 
     return S_OK;
 }
 
 HRESULT STDMETHODCALLTYPE WebURLProtectionSpace::initWithProxyHost(
-    /* [in] */ BSTR host, 
-    /* [in] */ int port, 
-    /* [in] */ BSTR proxyType, 
-    /* [in] */ BSTR realm, 
+    /* [in] */ BSTR host,
+    /* [in] */ int port,
+    /* [in] */ BSTR proxyType,
+    /* [in] */ BSTR realm,
     /* [in] */ BSTR authenticationMethod)
 {
     static BString& webURLProtectionSpaceHTTPProxyBString = *new BString(WebURLProtectionSpaceHTTPProxy);
@@ -195,7 +195,7 @@ HRESULT STDMETHODCALLTYPE WebURLProtectionSpace::initWithProxyHost(
     else
         ASSERT_NOT_REACHED();
 
-    m_protectionSpace = ProtectionSpace(String(host, SysStringLen(host)), port, serverType, 
+    m_protectionSpace = ProtectionSpace(String(host, SysStringLen(host)), port, serverType,
         String(realm, SysStringLen(realm)), coreScheme(authenticationMethod));
 
     return S_OK;

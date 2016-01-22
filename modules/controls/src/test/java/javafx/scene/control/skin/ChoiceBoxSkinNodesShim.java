@@ -26,8 +26,8 @@
 package javafx.scene.control.skin;
 
 public class ChoiceBoxSkinNodesShim {
-    
-    // can only access the getChoiceBoxSelectedText method in ChoiceBoxSkin 
+
+    // can only access the getChoiceBoxSelectedText method in ChoiceBoxSkin
     // from this package.
     public static String getChoiceBoxSelectedText(ChoiceBoxSkin skin) {
         return skin.getChoiceBoxSelectedText();

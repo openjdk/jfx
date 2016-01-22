@@ -63,7 +63,7 @@ final class WCMediaPlayerImpl extends WCMediaPlayer
     private volatile MediaPlayer player;
     private volatile CreateThread createThread;
     private volatile PrismMediaFrameHandler frameHandler;
-    
+
     private final MediaFrameListener frameListener;
 
     // we need this flag to handle a case when 1st frame arrives before onReady
@@ -130,7 +130,7 @@ final class WCMediaPlayerImpl extends WCMediaPlayer
                     log.log(Level.WARNING, "CreateThread ERROR: {0}", ex.toString());
                     ex.printStackTrace(System.out);
                 }
-                onError(this, 0, ex.getMessage());                
+                onError(this, 0, ex.getMessage());
                 return;
             }
 
@@ -213,7 +213,7 @@ final class WCMediaPlayerImpl extends WCMediaPlayer
             player.getVideoRenderControl().addVideoRendererListener(frameListener);
         }
     }
-    
+
     private void removeListeners() {
         if (null != player) {
             player.removeMediaPlayerListener(this);
@@ -223,7 +223,7 @@ final class WCMediaPlayerImpl extends WCMediaPlayer
             player.getVideoRenderControl().removeVideoRendererListener(frameListener);
         }
     }
-    
+
     protected void prepareToPlay() {
         synchronized (lock) {
             if (player == null) {
@@ -345,14 +345,14 @@ final class WCMediaPlayerImpl extends WCMediaPlayer
 
         Texture texture = null;
         VideoDataBuffer currentFrame = frameListener.getLatestFrame();
-        
+
         if (null != currentFrame) {
             if (null != frameHandler) {
                 texture = frameHandler.getTexture(g, currentFrame);
             }
             currentFrame.releaseFrame();
         }
-        
+
         if (texture != null) {
             g.drawTexture(texture,
                     x, y, x + w, y + h,
@@ -553,7 +553,7 @@ final class WCMediaPlayerImpl extends WCMediaPlayer
         private final Object frameLock = new Object();
         private VideoDataBuffer currentFrame;
         private VideoDataBuffer nextFrame;
-        
+
         public void videoFrameUpdated(NewFrameEvent nfe) {
             synchronized (frameLock) {
                 if (null != nextFrame) {
@@ -564,7 +564,7 @@ final class WCMediaPlayerImpl extends WCMediaPlayer
                     nextFrame.holdFrame();
                 }
             }
-            
+
             // and finally notify the base player that we have a new frame
             notifyFrameArrived();
         }
@@ -575,14 +575,14 @@ final class WCMediaPlayerImpl extends WCMediaPlayer
                     nextFrame.releaseFrame();
                     nextFrame = null;
                 }
-                
+
                 if (null != currentFrame) {
                     currentFrame.releaseFrame();
                     currentFrame = null;
                 }
             }
         }
-        
+
         public VideoDataBuffer getLatestFrame() {
             synchronized (frameLock) {
                 if (null != nextFrame) {
@@ -592,7 +592,7 @@ final class WCMediaPlayerImpl extends WCMediaPlayer
                     currentFrame = nextFrame;
                     nextFrame = null;
                 }
-                
+
                 // avoid premature release
                 if (null != currentFrame) {
                     currentFrame.holdFrame();

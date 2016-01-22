@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -37,7 +37,7 @@ namespace WebCore {
 
 static const double animationFrameDelay = 0.025;
 
-SMILTimeContainer::SMILTimeContainer(SVGSVGElement* owner) 
+SMILTimeContainer::SMILTimeContainer(SVGSVGElement* owner)
     : m_beginTime(0)
     , m_pauseTime(0)
     , m_accumulatedActiveTime(0)
@@ -271,7 +271,7 @@ void SMILTimeContainer::updateAnimations(SMILTime elapsed, bool seekToTime)
         AnimationsVector* scheduled = it->value.get();
 
         // Sort according to priority. Elements with later begin time have higher priority.
-        // In case of a tie, document order decides. 
+        // In case of a tie, document order decides.
         // FIXME: This should also consider timing relationships between the elements. Dependents
         // have higher priority.
         sortByPriority(*scheduled, elapsed);

@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -92,7 +92,7 @@ static double calcHue(double temp1, double temp2, double hueVal)
 
 // Explanation of this algorithm can be found in the CSS3 Color Module
 // specification at http://www.w3.org/TR/css3-color/#hsl-color with further
-// explanation available at http://en.wikipedia.org/wiki/HSL_color_space 
+// explanation available at http://en.wikipedia.org/wiki/HSL_color_space
 
 // all values are in the range of 0 to 1.0
 RGBA32 makeRGBAFromHSLA(double hue, double saturation, double lightness, double alpha)
@@ -106,8 +106,8 @@ RGBA32 makeRGBAFromHSLA(double hue, double saturation, double lightness, double 
 
     double temp2 = lightness < 0.5 ? lightness * (1.0 + saturation) : lightness + saturation - lightness * saturation;
     double temp1 = 2.0 * lightness - temp2;
-    
-    return makeRGBA(static_cast<int>(calcHue(temp1, temp2, hue + 1.0 / 3.0) * scaleFactor), 
+
+    return makeRGBA(static_cast<int>(calcHue(temp1, temp2, hue + 1.0 / 3.0) * scaleFactor),
                     static_cast<int>(calcHue(temp1, temp2, hue) * scaleFactor),
                     static_cast<int>(calcHue(temp1, temp2, hue - 1.0 / 3.0) * scaleFactor),
                     static_cast<int>(alpha * scaleFactor));
@@ -160,7 +160,7 @@ bool Color::parseHexColor(const UChar* name, unsigned length, RGBA32& rgb)
 bool Color::parseHexColor(const String& name, RGBA32& rgb)
 {
     unsigned length = name.length();
-    
+
     if (!length)
         return false;
     if (name.is8Bit())
@@ -270,7 +270,7 @@ Color Color::light() const
     // Hardcode this common case for speed.
     if (m_color == black)
         return lightenedBlack;
-    
+
     const float scaleFactor = nextafterf(256.0f, 0.0f);
 
     float r, g, b, a;
@@ -295,7 +295,7 @@ Color Color::dark() const
     // Hardcode this common case for speed.
     if (m_color == white)
         return darkenedWhite;
-    
+
     const float scaleFactor = nextafterf(256.0f, 0.0f);
 
     float r, g, b, a;
@@ -363,7 +363,7 @@ Color Color::blendWithWhite() const
         int r = blendComponent(red(), alpha);
         int g = blendComponent(green(), alpha);
         int b = blendComponent(blue(), alpha);
-        
+
         newColor = Color(r, g, b, alpha);
 
         if (r >= 0 && g >= 0 && b >= 0)

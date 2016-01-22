@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef StructureStubInfo_h
@@ -75,7 +75,7 @@ inline bool isGetByIdAccess(AccessType accessType)
         return false;
     }
 }
-    
+
 inline bool isPutByIdAccess(AccessType accessType)
 {
     switch (accessType) {
@@ -151,23 +151,23 @@ struct StructureStubInfo {
     void initPutByIdReplace(VM& vm, JSCell* owner, Structure* baseObjectStructure)
     {
         accessType = access_put_by_id_replace;
-    
+
         u.putByIdReplace.baseObjectStructure.set(vm, owner, baseObjectStructure);
     }
-        
+
     void initPutByIdList(PolymorphicPutByIdList* list)
     {
         accessType = access_put_by_id_list;
         u.putByIdList.list = list;
     }
-    
+
     void initInList(PolymorphicAccessStructureList* list, int listSize)
     {
         accessType = access_in_list;
         u.inList.structureList = list;
         u.inList.listSize = listSize;
     }
-        
+
     void reset()
     {
         deref();
@@ -179,7 +179,7 @@ struct StructureStubInfo {
     void deref();
 
     bool visitWeakReferences();
-        
+
     bool seenOnce()
     {
         return seen;
@@ -189,13 +189,13 @@ struct StructureStubInfo {
     {
         seen = true;
     }
-        
+
     StructureStubClearingWatchpoint* addWatchpoint(CodeBlock* codeBlock)
     {
         return WatchpointsOnStructureStubInfo::ensureReferenceAndAddWatchpoint(
             watchpoints, codeBlock, this);
     }
-    
+
     int8_t accessType;
     bool seen : 1;
     bool resetByGC : 1;

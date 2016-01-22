@@ -32,9 +32,9 @@ namespace JSC {
     // important to lock before doing anything that allocates a
     // JavaScript data structure or that interacts with shared state
     // such as the protect count hash table. The simplest way to lock
-    // is to create a local JSLockHolder object in the scope where the lock 
-    // must be held and pass it the context that requires protection. 
-    // The lock is recursive so nesting is ok. The JSLock 
+    // is to create a local JSLockHolder object in the scope where the lock
+    // must be held and pass it the context that requires protection.
+    // The lock is recursive so nesting is ok. The JSLock
     // object also acts as a convenience short-hand for running important
     // initialization routines.
 
@@ -43,14 +43,14 @@ namespace JSC {
     // release all locks held by your thread. This is safe to do if
     // you are executing code that doesn't require the lock, and you
     // reacquire the right number of locks at the end. You can do this
-    // by constructing a locally scoped JSLock::DropAllLocks object. The 
+    // by constructing a locally scoped JSLock::DropAllLocks object. The
     // DropAllLocks object takes care to release the JSLock only if your
     // thread acquired it to begin with.
 
     class ExecState;
     class VM;
 
-    // This class is used to protect the initialization of the legacy single 
+    // This class is used to protect the initialization of the legacy single
     // shared VM.
     class GlobalJSLock {
         WTF_MAKE_NONCOPYABLE(GlobalJSLock);
@@ -102,7 +102,7 @@ namespace JSC {
             JS_EXPORT_PRIVATE DropAllLocks(ExecState*);
             JS_EXPORT_PRIVATE DropAllLocks(VM*);
             JS_EXPORT_PRIVATE ~DropAllLocks();
-            
+
 #if ENABLE(LLINT_C_LOOP)
             void setDropDepth(unsigned depth) { m_dropDepth = depth; }
             unsigned dropDepth() const { return m_dropDepth; }

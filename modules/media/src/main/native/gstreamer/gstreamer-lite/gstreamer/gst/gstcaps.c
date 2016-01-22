@@ -91,14 +91,14 @@ typedef struct _GstCapsImpl
   (GST_CAPS_REFCOUNT_VALUE (caps) == 1)
 
 /* same as gst_caps_is_any () */
-#define CAPS_IS_ANY(caps)				\
+#define CAPS_IS_ANY(caps)               \
   (!!(GST_CAPS_FLAGS(caps) & GST_CAPS_FLAG_ANY))
 
 /* same as gst_caps_is_empty () */
-#define CAPS_IS_EMPTY(caps)				\
+#define CAPS_IS_EMPTY(caps)             \
   (!CAPS_IS_ANY(caps) && CAPS_IS_EMPTY_SIMPLE(caps))
 
-#define CAPS_IS_EMPTY_SIMPLE(caps)					\
+#define CAPS_IS_EMPTY_SIMPLE(caps)                  \
   ((GST_CAPS_ARRAY (caps) == NULL) || (GST_CAPS_LEN (caps) == 0))
 
 #define gst_caps_features_copy_conditional(f) ((f && (gst_caps_features_is_any (f) || !gst_caps_features_is_equal (f, GST_CAPS_FEATURES_MEMORY_SYSTEM_MEMORY))) ? gst_caps_features_copy (f) : NULL)

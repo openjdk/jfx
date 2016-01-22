@@ -130,16 +130,16 @@ CachedResourceLoader::~CachedResourceLoader()
     ASSERT(m_requestCount == 0);
 }
 
-CachedResource* CachedResourceLoader::cachedResource(const String& resourceURL) const 
+CachedResource* CachedResourceLoader::cachedResource(const String& resourceURL) const
 {
     URL url = m_document->completeURL(resourceURL);
-    return cachedResource(url); 
+    return cachedResource(url);
 }
 
 CachedResource* CachedResourceLoader::cachedResource(const URL& resourceURL) const
 {
     URL url = MemoryCache::removeFragmentIdentifierIfNeeded(resourceURL);
-    return m_documentResources.get(url).get(); 
+    return m_documentResources.get(url).get();
 }
 
 Frame* CachedResourceLoader::frame() const
@@ -157,7 +157,7 @@ CachedResourceHandle<CachedImage> CachedResourceLoader::requestImage(CachedResou
             return nullptr;
         }
     }
-    
+
     request.setDefer(clientDefersImage(request.resourceRequest().url()) ? CachedResourceRequest::DeferredByClient : CachedResourceRequest::NoDefer);
     return toCachedImage(requestResource(CachedResource::ImageResource, request).get());
 }
@@ -201,7 +201,7 @@ CachedResourceHandle<CachedCSSStyleSheet> CachedResourceLoader::requestUserCSSSt
     // FIXME: loadResource calls setOwningCachedResourceLoader() if the resource couldn't be added to cache. Does this function need to call it, too?
 
     userSheet->load(this, ResourceLoaderOptions(DoNotSendCallbacks, SniffContent, BufferData, AllowStoredCredentials, AskClientForAllCredentials, SkipSecurityCheck, UseDefaultOriginRestrictionsForType));
-    
+
     return userSheet;
 }
 
@@ -389,7 +389,7 @@ bool CachedResourceLoader::shouldContinueAfterNotifyingLoadedFromMemoryCache(Cac
 
     ResourceRequest newRequest;
     frame()->loader().loadedResourceFromMemoryCache(resource, newRequest);
-    
+
     // FIXME <http://webkit.org/b/113251>: If the delegate modifies the request's
     // URL, it is no longer appropriate to use this CachedResource.
     return !newRequest.isNull();
@@ -398,9 +398,9 @@ bool CachedResourceLoader::shouldContinueAfterNotifyingLoadedFromMemoryCache(Cac
 CachedResourceHandle<CachedResource> CachedResourceLoader::requestResource(CachedResource::Type type, CachedResourceRequest& request)
 {
     URL url = request.resourceRequest().url();
-    
+
     LOG(ResourceLoading, "CachedResourceLoader::requestResource '%s', charset '%s', priority=%d, forPreload=%u", url.stringCenterEllipsizedToLength().latin1().data(), request.charset().latin1().data(), request.priority(), request.forPreload());
-    
+
     // If only the fragment identifiers differ, it is the same resource.
     url = MemoryCache::removeFragmentIdentifierIfNeeded(url);
 
@@ -480,14 +480,14 @@ CachedResourceHandle<CachedResource> CachedResourceLoader::revalidateResource(co
     ASSERT(!memoryCache()->disabled());
     ASSERT(resource->canUseCacheValidator());
     ASSERT(!resource->resourceToRevalidate());
-    
+
     // Copy the URL out of the resource to be revalidated in case it gets deleted by the remove() call below.
     String url = resource->url();
     CachedResourceHandle<CachedResource> newResource = createResource(resource->type(), resource->resourceRequest(), resource->encoding());
-    
+
     LOG(ResourceLoading, "Resource %p created to revalidate %p", newResource.get(), resource);
     newResource->setResourceToRevalidate(resource);
-    
+
     memoryCache()->remove(resource);
     memoryCache()->add(newResource.get());
 #if ENABLE(RESOURCE_TIMING)
@@ -555,15 +555,15 @@ CachedResourceLoader::RevalidationPolicy CachedResourceLoader::determineRevalida
     // in CachedImage::load.
     if (CachedResourceRequest::DeferredByClient == defer)
         return Reload;
-    
+
     // Don't reload resources while pasting.
     if (m_allowStaleResources)
         return Use;
-    
+
     // Alwaus use preloads.
     if (existingResource->isPreloaded())
         return Use;
-    
+
     // CachePolicyHistoryBuffer uses the cache no matter what.
     if (cachePolicy(type) == CachePolicyHistoryBuffer)
         return Use;
@@ -594,13 +594,13 @@ CachedResourceLoader::RevalidationPolicy CachedResourceLoader::determineRevalida
         LOG(ResourceLoading, "CachedResourceLoader::determineRevalidationPolicy reloading due to CachePolicyReload.");
         return Reload;
     }
-    
+
     // We'll try to reload the resource if it failed last time.
     if (existingResource->errorOccurred()) {
         LOG(ResourceLoading, "CachedResourceLoader::determineRevalidationPolicye reloading due to resource being in the error state");
         return Reload;
     }
-    
+
     // For resources that are not yet loaded we ignore the cache policy.
     if (existingResource->isLoading())
         return Use;
@@ -610,9 +610,9 @@ CachedResourceLoader::RevalidationPolicy CachedResourceLoader::determineRevalida
         // See if the resource has usable ETag or Last-modified headers.
         if (existingResource->canUseCacheValidator())
             return Revalidate;
-        
+
         // No, must reload.
-        LOG(ResourceLoading, "CachedResourceLoader::determineRevalidationPolicy reloading due to missing cache validators.");            
+        LOG(ResourceLoading, "CachedResourceLoader::determineRevalidationPolicy reloading due to missing cache validators.");
         return Reload;
     }
 
@@ -689,7 +689,7 @@ CachePolicy CachedResourceLoader::cachePolicy(CachedResource::Type type) const
 
     if (type != CachedResource::MainResource)
         return frame()->loader().subresourceCachePolicy();
-    
+
     if (frame()->loader().loadType() == FrameLoadTypeReloadFromOrigin || frame()->loader().loadType() == FrameLoadTypeReload)
         return CachePolicyReload;
     return CachePolicyVerify;
@@ -809,7 +809,7 @@ void CachedResourceLoader::preload(CachedResource::Type type, CachedResourceRequ
     requestPreload(type, request, charset);
 }
 
-void CachedResourceLoader::checkForPendingPreloads() 
+void CachedResourceLoader::checkForPendingPreloads()
 {
     if (m_pendingPreloads.isEmpty() || !m_document->body() || !m_document->body()->renderer())
         return;
@@ -915,7 +915,7 @@ void CachedResourceLoader::printPreloadStats()
             printf("HIT COMPLETE PRELOAD %s\n", res->url().latin1().data());
         else if (res->preloadResult() == CachedResource::PreloadReferencedWhileLoading)
             printf("HIT LOADING PRELOAD %s\n", res->url().latin1().data());
-        
+
         if (res->type() == CachedResource::Script) {
             scripts++;
             if (res->preloadResult() < CachedResource::PreloadReferencedWhileLoading)
@@ -929,14 +929,14 @@ void CachedResourceLoader::printPreloadStats()
             if (res->preloadResult() < CachedResource::PreloadReferencedWhileLoading)
                 imageMisses++;
         }
-        
+
         if (res->errorOccurred())
             memoryCache()->remove(res);
-        
+
         res->decreasePreloadCount();
     }
     m_preloads.clear();
-    
+
     if (scripts)
         printf("SCRIPTS: %d (%d hits, hit rate %d%%)\n", scripts, scripts - scriptMisses, (scripts - scriptMisses) * 100 / scripts);
     if (stylesheets)

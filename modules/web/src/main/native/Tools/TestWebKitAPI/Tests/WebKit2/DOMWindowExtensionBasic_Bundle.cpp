@@ -60,15 +60,15 @@ typedef struct {
     const char* name;
     ExtensionState state;
 } ExtensionRecord;
-    
+
 class DOMWindowExtensionBasic : public InjectedBundleTest {
 public:
     DOMWindowExtensionBasic(const std::string& identifier);
-    
+
     virtual void initialize(WKBundleRef, WKTypeRef userData);
     virtual void didCreatePage(WKBundleRef, WKBundlePageRef);
     virtual void willDestroyPage(WKBundleRef, WKBundlePageRef);
-    
+
     void globalObjectIsAvailableForFrame(WKBundleFrameRef, WKBundleScriptWorldRef);
     void willDisconnectDOMWindowExtensionFromGlobalObject(WKBundleDOMWindowExtensionRef);
     void didReconnectDOMWindowExtensionToGlobalObject(WKBundleDOMWindowExtensionRef);
@@ -99,7 +99,7 @@ DOMWindowExtensionBasic::DOMWindowExtensionBasic(const std::string& identifier)
     m_extensionRecords[3].name = "First page, subframe, non-standard world";
     m_extensionRecords[4].name = "Second page, main frame, standard world";
     m_extensionRecords[5].name = "Second page, main frame, non-standard world";
-    
+
     for (size_t i = 0; i < 6; ++i)
         m_extensionRecords[i].state = Uncreated;
 }
@@ -112,14 +112,14 @@ void DOMWindowExtensionBasic::frameLoadFinished(WKBundleFrameRef frame)
 
     char body[16384];
     sprintf(body, "%s finished loading", mainFrame ? "Main frame" : "Subframe");
-    
+
     // Only consider load finished for the main frame
     const char* name = mainFrame ? "DidFinishLoadForMainFrame" : "DidFinishLoadForFrame";
 
     WKRetainPtr<WKStringRef> messageName = adoptWK(WKStringCreateWithUTF8CString(name));
     WKRetainPtr<WKStringRef> messageBody = adoptWK(WKStringCreateWithUTF8CString(body));
     WKBundlePostMessage(m_bundle, messageName.get(), messageBody.get());
-    
+
     sendExtensionStateMessage();
 }
 
@@ -149,12 +149,12 @@ void DOMWindowExtensionBasic::initialize(WKBundleRef bundle, WKTypeRef userData)
 }
 
 void DOMWindowExtensionBasic::didCreatePage(WKBundleRef bundle, WKBundlePageRef page)
-{    
+{
     m_bundle = bundle;
 
     WKBundlePageLoaderClientV1 pageLoaderClient;
     memset(&pageLoaderClient, 0, sizeof(pageLoaderClient));
-    
+
     pageLoaderClient.base.version = 1;
     pageLoaderClient.base.clientInfo = this;
     pageLoaderClient.didFinishLoadForFrame = didFinishLoadForFrameCallback;
@@ -162,7 +162,7 @@ void DOMWindowExtensionBasic::didCreatePage(WKBundleRef bundle, WKBundlePageRef 
     pageLoaderClient.willDisconnectDOMWindowExtensionFromGlobalObject = willDisconnectDOMWindowExtensionFromGlobalObjectCallback;
     pageLoaderClient.didReconnectDOMWindowExtensionToGlobalObject = didReconnectDOMWindowExtensionToGlobalObjectCallback;
     pageLoaderClient.willDestroyGlobalObjectForDOMWindowExtension = willDestroyGlobalObjectForDOMWindowExtensionCallback;
-    
+
     WKBundlePageSetPageLoaderClient(page, &pageLoaderClient.base);
 }
 
@@ -180,7 +180,7 @@ void DOMWindowExtensionBasic::willDestroyPage(WKBundleRef, WKBundlePageRef)
     sendExtensionStateMessage();
     sendBundleMessage("TestComplete");
 }
-    
+
 void DOMWindowExtensionBasic::updateExtensionStateRecord(WKBundleDOMWindowExtensionRef extension, ExtensionState state)
 {
     int index = m_extensionToRecordMap.get(extension);

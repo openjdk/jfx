@@ -60,7 +60,7 @@ void WebStorageTrackerClient::dispatchDidModifyOrigin(PassRefPtr<SecurityOrigin>
 {
     RetainPtr<WebSecurityOrigin> webSecurityOrigin = adoptNS([[WebSecurityOrigin alloc] _initWithWebCoreSecurityOrigin:origin.get()]);
 
-    [[NSNotificationCenter defaultCenter] postNotificationName:WebStorageDidModifyOriginNotification 
+    [[NSNotificationCenter defaultCenter] postNotificationName:WebStorageDidModifyOriginNotification
                                                         object:webSecurityOrigin.get()];
 }
 

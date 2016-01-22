@@ -78,7 +78,7 @@ public:
     enum StopBehavior { StopTrackAndStopSource, StopTrackOnly };
     void stop(StopBehavior);
     bool stopped() const { return m_stopped; }
-    
+
     void setClient(MediaStreamTrackPrivateClient* client) { m_client = client; }
 
     MediaStreamSource::Type type() const;
@@ -103,7 +103,7 @@ private:
     virtual void sourceMutedChanged() override final;
     virtual void sourceEnabledChanged() override final;
     virtual bool observerIsEnabled() override final;
-    
+
     RefPtr<MediaStreamSource> m_source;
     MediaStreamTrackPrivateClient* m_client;
     RefPtr<MediaConstraints> m_constraints;

@@ -81,7 +81,7 @@ public:
     String valueAsString() const;
     void setValueAsString(const String&, ExceptionCode&);
     void setValueAsString(const String&, SVGLengthMode, ExceptionCode&);
-    
+
     void newValueSpecifiedUnits(unsigned short, float valueInSpecifiedUnits, ExceptionCode&);
     void convertToSpecifiedUnits(unsigned short, const SVGLengthContext&, ExceptionCode&);
 
@@ -92,8 +92,8 @@ public:
         return type == LengthTypePercentage || type == LengthTypeEMS || type == LengthTypeEXS;
     }
 
-    bool isZero() const 
-    { 
+    bool isZero() const
+    {
         return !m_valueInSpecifiedUnits;
     }
 

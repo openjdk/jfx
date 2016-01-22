@@ -93,7 +93,7 @@ public class StubFilterable implements Filterable {
     public int getMaxContentHeight() {
         return image.getImageInfo().getHeight();
     }
-    
+
     @Override
     public void setContentWidth(int contentW) {
         throw new UnsupportedOperationException("Not supported.");

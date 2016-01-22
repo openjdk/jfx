@@ -47,7 +47,7 @@ import javafx.stage.Stage;
 import javafx.util.Duration;
 
 /**
- * A sample that demonstrates an animated rotation of 3D cubes. 
+ * A sample that demonstrates an animated rotation of 3D cubes.
  *
  * @sampleName 3D Cubes
  * @preview preview.png
@@ -100,10 +100,10 @@ public class CubeApp extends Application {
 
         Group root = new Group();
         root.getChildren().addAll(c, c2, c3);
-        
+
         SubScene subScene = new SubScene(root, 640, 480, true, SceneAntialiasing.BALANCED);
         subScene.setCamera(camera);
-        
+
         return new Group(subScene);
     }
 

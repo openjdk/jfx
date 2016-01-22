@@ -96,9 +96,9 @@ RetainPtr<CFDataRef> WebFrameNetworkingContext::sourceApplicationAuditData() con
 {
     if (!frame() || !frame()->page())
         return 0;
-    
+
     WebView *webview = kit(frame()->page());
-    
+
     if (!webview)
         return 0;
     return reinterpret_cast<CFDataRef>(webview._sourceApplicationAuditData);

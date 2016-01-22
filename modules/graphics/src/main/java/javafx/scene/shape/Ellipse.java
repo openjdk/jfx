@@ -314,7 +314,7 @@ public class Ellipse extends Shape {
      */
     @Deprecated
     @Override
-	public Ellipse2D impl_configShape() {
+    public Ellipse2D impl_configShape() {
         shape.setFrame(
             (float)(getCenterX() - getRadiusX()), // x
             (float)(getCenterY() - getRadiusY()), // y

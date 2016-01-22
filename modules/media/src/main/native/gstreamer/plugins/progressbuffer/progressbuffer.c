@@ -133,7 +133,7 @@ GType progress_buffer_get_type (void)
                sizeof (ProgressBufferClass),
                (GClassInitFunc) progress_buffer_class_intern_init,
                sizeof(ProgressBuffer),
-               (GInstanceInitFunc) progress_buffer_init,               
+               (GInstanceInitFunc) progress_buffer_init,
                (GTypeFlags) 0);
         g_once_init_leave (&gonce_data, (gsize) _type);
     }
@@ -353,7 +353,7 @@ static inline void reset_eos(ProgressBuffer *element, gboolean clear_pending_eve
 {
     element->eos_status.eos = FALSE;
     element->eos_status.signal_limit = EOS_SIGNAL_LIMIT;
-        
+
     if (clear_pending_event)
         progress_buffer_set_pending_event(element, NULL);
 }
@@ -589,7 +589,7 @@ static GstFlowReturn progress_buffer_enqueue_item(ProgressBuffer *element, GstMi
                 element->eos_status.eos = TRUE;
                 if (element->sink_segment.position < element->sink_segment.stop)
                     element->sink_segment.stop = element->sink_segment.position;
-                
+
                 progress_buffer_set_pending_event(element, NULL);
 
                 signal = send_position_message(element, TRUE);
@@ -603,7 +603,7 @@ static GstFlowReturn progress_buffer_enqueue_item(ProgressBuffer *element, GstMi
                 element->unexpected = FALSE;
 
                 gst_event_copy_segment (event, &segment);
-                
+
                 if (segment.format != GST_FORMAT_BYTES)
                 {
                     gst_element_message_full(GST_ELEMENT(element), GST_MESSAGE_ERROR, GST_STREAM_ERROR, GST_STREAM_ERROR_FORMAT,

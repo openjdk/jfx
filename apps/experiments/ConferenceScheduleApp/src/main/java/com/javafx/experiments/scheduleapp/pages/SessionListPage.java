@@ -44,7 +44,7 @@ import javafx.scene.Node;
 public class SessionListPage extends PopoverTreeList<SessionTime> implements Popover.Page {
     private Popover popover;
     private DataService dataService;
-    
+
     public SessionListPage(List<SessionTime> sessionTimes, DataService dataService) {
         this.dataService = dataService;
         getItems().addAll(sessionTimes);

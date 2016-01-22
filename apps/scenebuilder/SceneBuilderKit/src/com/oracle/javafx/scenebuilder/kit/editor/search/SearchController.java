@@ -44,13 +44,13 @@ import javafx.scene.layout.StackPane;
 
 /**
  *
- * 
+ *
  */
 public class SearchController extends AbstractFxmlController {
 
     @FXML
     private TextField searchField;
-    
+
     // This StackPane contains the searchImage.
     @FXML
     private StackPane searchIcon;
@@ -62,7 +62,7 @@ public class SearchController extends AbstractFxmlController {
     public final StringProperty textProperty() {
         return searchField.textProperty();
     }
-    
+
     public void requestFocus() {
         searchField.requestFocus();
     }
@@ -72,7 +72,7 @@ public class SearchController extends AbstractFxmlController {
         if (searchField.getLength() == 0) {
             searchIcon.getStyleClass().add("search-magnifying-glass"); //NOI18N
         }
-        
+
         // For SQE tests
         searchField.setId("Search Text"); //NOI18N
 
@@ -85,13 +85,13 @@ public class SearchController extends AbstractFxmlController {
                 searchIcon.getStyleClass().add("search-clear"); //NOI18N
             }
         });
-        
+
         searchField.addEventHandler(KeyEvent.KEY_PRESSED, event -> {
             if (event.getCode() == KeyCode.ESCAPE) {
                 searchField.clear();
             }
         });
-        
+
         searchIcon.setOnMouseClicked(t -> searchField.clear());
     }
 }

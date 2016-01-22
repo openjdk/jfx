@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -46,13 +46,13 @@ void SplitElementCommand::executeApply()
 {
     if (m_atChild->parentNode() != m_element2)
         return;
-    
+
     Vector<RefPtr<Node>> children;
     for (Node* node = m_element2->firstChild(); node != m_atChild; node = node->nextSibling())
         children.append(node);
-    
+
     ExceptionCode ec = 0;
-    
+
     ContainerNode* parent = m_element2->parentNode();
     if (!parent || !parent->hasEditableStyle())
         return;
@@ -67,11 +67,11 @@ void SplitElementCommand::executeApply()
     for (size_t i = 0; i < size; ++i)
         m_element1->appendChild(children[i], ec);
 }
-    
+
 void SplitElementCommand::doApply()
 {
     m_element1 = m_element2->cloneElementWithoutChildren();
-    
+
     executeApply();
 }
 
@@ -101,7 +101,7 @@ void SplitElementCommand::doReapply()
 {
     if (!m_element1)
         return;
-    
+
     executeApply();
 }
 
@@ -113,5 +113,5 @@ void SplitElementCommand::getNodesInCommand(HashSet<Node*>& nodes)
     addNodeAndDescendants(m_atChild.get(), nodes);
 }
 #endif
-    
+
 } // namespace WebCore

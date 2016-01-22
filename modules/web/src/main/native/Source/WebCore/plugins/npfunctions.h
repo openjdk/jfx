@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #ifndef NPFUNCTIONS_H
 #define NPFUNCTIONS_H
@@ -94,7 +94,7 @@ typedef bool (*NPN_HasMethodProcPtr) (NPP npp, NPObject *npobj, NPIdentifier met
 typedef bool (*NPN_RemovePropertyProcPtr) (NPP npp, NPObject *obj, NPIdentifier propertyName);
 typedef void (*NPN_SetExceptionProcPtr) (NPObject *obj, const NPUTF8 *message);
 typedef bool (*NPN_EnumerateProcPtr) (NPP npp, NPObject *npobj, NPIdentifier **identifier, uint32_t *count);
-typedef bool (*NPN_ConstructProcPtr)(NPP npp, NPObject* obj, const NPVariant *args, uint32_t argCount, NPVariant *result);    
+typedef bool (*NPN_ConstructProcPtr)(NPP npp, NPObject* obj, const NPVariant *args, uint32_t argCount, NPVariant *result);
 
 typedef NPError (*NPP_NewProcPtr)(NPMIMEType pluginType, NPP instance, uint16_t mode, int16_t argc, char* argn[], char* argv[], NPSavedData* saved);
 typedef NPError (*NPP_DestroyProcPtr)(NPP instance, NPSavedData** save);
@@ -121,7 +121,7 @@ typedef void* JRIGlobalRef; //not using this right now
 typedef struct _NPNetscapeFuncs {
     uint16_t size;
     uint16_t version;
-    
+
     NPN_GetURLProcPtr geturl;
     NPN_PostURLProcPtr posturl;
     NPN_RequestReadProcPtr requestread;
@@ -143,7 +143,7 @@ typedef struct _NPNetscapeFuncs {
     NPN_InvalidateRectProcPtr invalidaterect;
     NPN_InvalidateRegionProcPtr invalidateregion;
     NPN_ForceRedrawProcPtr forceredraw;
-    
+
     NPN_GetStringIdentifierProcPtr getstringidentifier;
     NPN_GetStringIdentifiersProcPtr getstringidentifiers;
     NPN_GetIntIdentifierProcPtr getintidentifier;
@@ -202,7 +202,7 @@ typedef struct _NPPluginFuncs {
 } NPPluginFuncs;
 
 typedef EXPORTED_CALLBACK(NPError, NP_GetEntryPointsFuncPtr)(NPPluginFuncs*);
-typedef EXPORTED_CALLBACK(void, NPP_ShutdownProcPtr)(void);    
+typedef EXPORTED_CALLBACK(void, NPP_ShutdownProcPtr)(void);
 
 #if defined(XP_MACOSX)
 typedef void (*BP_CreatePluginMIMETypesPreferencesFuncPtr)(void);

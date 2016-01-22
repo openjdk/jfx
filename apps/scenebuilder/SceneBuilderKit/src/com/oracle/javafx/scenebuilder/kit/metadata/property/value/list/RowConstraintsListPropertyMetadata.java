@@ -48,8 +48,8 @@ public class RowConstraintsListPropertyMetadata extends ListValuePropertyMetadat
     private static final RowConstraintsPropertyMetadata itemMetadata
             = new RowConstraintsPropertyMetadata(new PropertyName("unused"), //NOI18N
             true /* readWrite */, null, InspectorPath.UNUSED);
-    
-    public RowConstraintsListPropertyMetadata(PropertyName name, boolean readWrite, 
+
+    public RowConstraintsListPropertyMetadata(PropertyName name, boolean readWrite,
             List<RowConstraints> defaultValue, InspectorPath inspectorPath) {
         super(name, RowConstraints.class, itemMetadata, readWrite, defaultValue, inspectorPath);
     }
@@ -58,7 +58,7 @@ public class RowConstraintsListPropertyMetadata extends ListValuePropertyMetadat
         this(new PropertyName("rowConstraints"), true /* readWrite */,  //NOI18N
                 Collections.emptyList(), InspectorPath.UNUSED);
     }
-    
+
     public void pack(FXOMInstance fxomInstance) {
         final RowConstraints def = new RowConstraints();
         final List<RowConstraints> v = new ArrayList<>(getValue(fxomInstance));
@@ -75,7 +75,7 @@ public class RowConstraintsListPropertyMetadata extends ListValuePropertyMetadat
             setValue(fxomInstance, v);
         }
     }
-    
+
     public void unpack(FXOMInstance fxomInstance, int rowCount) {
         final List<RowConstraints> value = new ArrayList<>(getValue(fxomInstance));
         if (value.size() < rowCount) {
@@ -87,12 +87,12 @@ public class RowConstraintsListPropertyMetadata extends ListValuePropertyMetadat
             setValue(fxomInstance, newValue);
         }
     }
-    
+
     public static boolean equals(List<RowConstraints> l1, List<RowConstraints> l2) {
-        
+
         assert l1 != null;
         assert l2 != null;
-        
+
         boolean result;
         if (l1.size() != l2.size()) {
             result = false;
@@ -104,7 +104,7 @@ public class RowConstraintsListPropertyMetadata extends ListValuePropertyMetadat
                 result = RowConstraintsPropertyMetadata.equals(c1, c2);
             }
         }
-        
+
         return result;
     }
 

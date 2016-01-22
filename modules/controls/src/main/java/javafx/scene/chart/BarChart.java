@@ -66,7 +66,7 @@ import javafx.css.StyleableProperty;
 public class BarChart<X,Y> extends XYChart<X,Y> {
 
     // -------------- PRIVATE FIELDS -------------------------------------------
-    
+
     private Map<Series<X,Y>, Map<String, Data<X,Y>>> seriesCategoryMap = new HashMap<>();
     private Legend legend = new Legend();
     private final Orientation orientation;
@@ -77,7 +77,7 @@ public class BarChart<X,Y> extends XYChart<X,Y> {
     private static String NEGATIVE_STYLE = "negative";
     private ParallelTransition pt;
     // For storing data values in case removed and added immediately.
-    private Map<Data<X,Y>, Double> XYValueMap = 
+    private Map<Data<X,Y>, Double> XYValueMap =
                                 new HashMap<Data<X,Y>, Double>();
     // -------------- PUBLIC PROPERTIES ----------------------------------------
 
@@ -87,7 +87,7 @@ public class BarChart<X,Y> extends XYChart<X,Y> {
             get();
             requestChartLayout();
         }
-        
+
         public Object getBean() {
             return BarChart.this;
         }
@@ -187,9 +187,9 @@ public class BarChart<X,Y> extends XYChart<X,Y> {
         setData(data);
         setCategoryGap(categoryGap);
     }
-     
+
     // -------------- PROTECTED METHODS ----------------------------------------
-     
+
     @Override protected void dataItemAdded(Series<X,Y> series, int itemIndex, Data<X,Y> item) {
         String category;
         if (orientation == Orientation.VERTICAL) {
@@ -284,7 +284,7 @@ public class BarChart<X,Y> extends XYChart<X,Y> {
             if (shouldAnimate()) {
                 animateDataAdd(item, bar);
             } else {
-                // RT-21164 check if bar value is negative to add NEGATIVE_STYLE style class 
+                // RT-21164 check if bar value is negative to add NEGATIVE_STYLE style class
                 double barVal = (orientation == Orientation.VERTICAL) ? ((Number)item.getYValue()).doubleValue() :
                         ((Number)item.getXValue()).doubleValue();
                 if (barVal < 0) {
@@ -295,7 +295,7 @@ public class BarChart<X,Y> extends XYChart<X,Y> {
         }
         if (categoryMap.size() > 0) seriesCategoryMap.put(series, categoryMap);
     }
-    
+
     @Override protected void seriesRemoved(final Series<X,Y> series) {
         updateDefaultColorIndex(series);
         // remove all symbol nodes
@@ -304,7 +304,7 @@ public class BarChart<X,Y> extends XYChart<X,Y> {
             pt.setOnFinished(event -> {
                 removeSeriesFromDisplay(series);
             });
-            
+
             boolean lastSeries = (getSeriesSize() > 1) ? false : true;
             XYValueMap.clear();
             for (final Data<X,Y> d : series.getData()) {
@@ -343,7 +343,7 @@ public class BarChart<X,Y> extends XYChart<X,Y> {
         final double avilableBarSpace = catSpace - (getCategoryGap() + getBarGap());
         double barWidth = (avilableBarSpace / getSeriesSize()) - getBarGap();
         final double barOffset = -((catSpace - getCategoryGap()) / 2);
-        final double zeroPos = (valueAxis.getLowerBound() > 0) ? 
+        final double zeroPos = (valueAxis.getLowerBound() > 0) ?
                 valueAxis.getDisplayPosition(valueAxis.getLowerBound()) : valueAxis.getZeroPosition();
         // RT-24813 : if the data in a series gets too large, barWidth can get negative.
         if (barWidth <= 0) barWidth = 1;
@@ -409,9 +409,9 @@ public class BarChart<X,Y> extends XYChart<X,Y> {
             setLegend(null);
         }
     }
-    
+
     // -------------- PRIVATE METHODS ------------------------------------------
-    
+
     private void updateMap(Series<X,Y> series, Data<X,Y> item) {
         final String category = (orientation == Orientation.VERTICAL) ? (String)item.getXValue() :
                                      (String)item.getYValue();
@@ -422,13 +422,13 @@ public class BarChart<X,Y> extends XYChart<X,Y> {
         }
         if (seriesCategoryMap.isEmpty() && categoryAxis.isAutoRanging()) categoryAxis.getCategories().clear();
     }
-    
+
     private void processDataRemove(final Series<X,Y> series, final Data<X,Y> item) {
         Node bar = item.getNode();
         getPlotChildren().remove(bar);
         updateMap(series, item);
     }
-     
+
     private void animateDataAdd(Data<X,Y> item, Node bar) {
         double barVal;
         if (orientation == Orientation.VERTICAL) {
@@ -466,7 +466,7 @@ public class BarChart<X,Y> extends XYChart<X,Y> {
         Timeline t = new Timeline();
         if (orientation == Orientation.VERTICAL) {
 //            item.setYValue(getYAxis().toRealValue(getYAxis().getZeroPosition()));
-            
+
             // save data values in case the same data item gets added immediately.
             XYValueMap.put(item, ((Number)item.getYValue()).doubleValue());
             item.setYValue(getYAxis().toRealValue(bottomPos));
@@ -492,7 +492,7 @@ public class BarChart<X,Y> extends XYChart<X,Y> {
         }
         return t;
     }
-    
+
     @Override void dataBeingRemovedIsAdded(Data<X,Y> item, Series<X,Y> series) {
         if (dataRemoveTimeline != null) {
             dataRemoveTimeline.setOnFinished(null);
@@ -504,11 +504,11 @@ public class BarChart<X,Y> extends XYChart<X,Y> {
         restoreDataValues(item);
         XYValueMap.clear();
     }
-    
+
     private void restoreDataValues(Data item) {
         Double value = XYValueMap.get(item);
         if (value != null) {
-            // Restoring original X/Y values 
+            // Restoring original X/Y values
             if (orientation.equals(Orientation.VERTICAL)) {
                 item.setYValue(value);
                 item.setCurrentY(value);
@@ -540,7 +540,7 @@ public class BarChart<X,Y> extends XYChart<X,Y> {
             removeSeriesFromDisplay(series);
         }
     }
-     
+
     private void updateDefaultColorIndex(final Series<X,Y> series) {
         int clearIndex = seriesColorMap.get(series);
         for (Data<X,Y> d : series.getData()) {
@@ -568,7 +568,7 @@ public class BarChart<X,Y> extends XYChart<X,Y> {
         Map<String, Data<X,Y>> catmap = seriesCategoryMap.get(series);
         return (catmap != null) ? catmap.get(category) : null;
     }
-    
+
     // -------------- STYLESHEET HANDLING ------------------------------------------------------------------------------
 
     /**
@@ -576,7 +576,7 @@ public class BarChart<X,Y> extends XYChart<X,Y> {
       * @treatAsPrivate implementation detail
       */
      private static class StyleableProperties {
-         private static final CssMetaData<BarChart<?,?>,Number> BAR_GAP = 
+         private static final CssMetaData<BarChart<?,?>,Number> BAR_GAP =
              new CssMetaData<BarChart<?,?>,Number>("-fx-bar-gap",
                  SizeConverter.getInstance(), 4.0) {
 
@@ -590,8 +590,8 @@ public class BarChart<X,Y> extends XYChart<X,Y> {
                 return (StyleableProperty<Number>)(WritableValue<Number>)node.barGapProperty();
             }
         };
-         
-         private static final CssMetaData<BarChart<?,?>,Number> CATEGORY_GAP = 
+
+         private static final CssMetaData<BarChart<?,?>,Number> CATEGORY_GAP =
              new CssMetaData<BarChart<?,?>,Number>("-fx-category-gap",
                  SizeConverter.getInstance(), 10.0)  {
 
@@ -640,7 +640,7 @@ public class BarChart<X,Y> extends XYChart<X,Y> {
             PseudoClass.getPseudoClass("vertical");
 
     /** Pseudoclass indicating this is a horizontal chart. */
-    private static final PseudoClass HORIZONTAL_PSEUDOCLASS_STATE = 
+    private static final PseudoClass HORIZONTAL_PSEUDOCLASS_STATE =
             PseudoClass.getPseudoClass("horizontal");
 
 }

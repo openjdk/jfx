@@ -300,7 +300,7 @@ id variantToID(JNIEnv *env, jobject variant) {
         NSArray* keys = jArrayToNSArray(env, longArray, jLongToID);
         NSArray* values = jArrayToNSArray(env, objectArray, jVariantToID);
         if (keys != NULL && values != NULL && [keys count] == [values count]) {
-            return [NSDictionary dictionaryWithObjects: values forKeys: keys]; 
+            return [NSDictionary dictionaryWithObjects: values forKeys: keys];
         }
         return NULL;
     }

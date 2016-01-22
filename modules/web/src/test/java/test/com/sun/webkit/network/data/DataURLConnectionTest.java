@@ -65,7 +65,7 @@ public class DataURLConnectionTest {
                 "text/plain;charset=US-ASCII",
                 "".getBytes("US-ASCII")));
     }
-    
+
     /**
      * Tests {@link DataURLConnection} on a URL with metadata consisting
      * only of the mime type.
@@ -89,7 +89,7 @@ public class DataURLConnectionTest {
                 "text/plain;charset=UTF-8",
                 "a".getBytes("UTF-8")));
     }
-    
+
     /**
      * Tests {@link DataURLConnection} on a URL with a newline character
      * in "text/html" data.
@@ -136,7 +136,7 @@ public class DataURLConnectionTest {
                 "text/plain;charset=US-ASCII",
                 "%A".getBytes("US-ASCII")));
     }
-    
+
     /**
      * Tests {@link DataURLConnection} on a URL with a base64-encoded data
      * section containing a plus sign.
@@ -196,7 +196,7 @@ public class DataURLConnectionTest {
             fail("UnsupportedEncodingException expected but not thrown");
         } catch (UnsupportedEncodingException expected) {}
     }
-    
+
     /**
      * Tests {@link DataURLConnection} on some important URLs.
      */

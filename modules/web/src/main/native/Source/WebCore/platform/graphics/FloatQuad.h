@@ -6,13 +6,13 @@
  * are met:
  *
  * 1.  Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer. 
+ *     notice, this list of conditions and the following disclaimer.
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
- *     documentation and/or other materials provided with the distribution. 
+ *     documentation and/or other materials provided with the distribution.
  * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
- *     from this software without specific prior written permission. 
+ *     from this software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY APPLE AND ITS CONTRIBUTORS "AS IS" AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
@@ -160,7 +160,7 @@ inline FloatQuad& operator-=(FloatQuad& a, const FloatSize& b)
 inline bool operator==(const FloatQuad& a, const FloatQuad& b)
 {
     return a.p1() == b.p1() &&
-           a.p2() == b.p2() && 
+           a.p2() == b.p2() &&
            a.p3() == b.p3() &&
            a.p4() == b.p4();
 }
@@ -168,7 +168,7 @@ inline bool operator==(const FloatQuad& a, const FloatQuad& b)
 inline bool operator!=(const FloatQuad& a, const FloatQuad& b)
 {
     return a.p1() != b.p1() ||
-           a.p2() != b.p2() || 
+           a.p2() != b.p2() ||
            a.p3() != b.p3() ||
            a.p4() != b.p4();
 }

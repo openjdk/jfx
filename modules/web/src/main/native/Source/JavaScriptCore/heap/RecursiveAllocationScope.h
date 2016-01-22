@@ -44,7 +44,7 @@ public:
 #endif
         m_heap.m_deferralDepth++; // Make sure that we don't GC.
     }
-    
+
     ~RecursiveAllocationScope()
     {
         m_heap.m_deferralDepth--; // Decrement deferal manually so we don't GC when we do so since we are already GCing!.

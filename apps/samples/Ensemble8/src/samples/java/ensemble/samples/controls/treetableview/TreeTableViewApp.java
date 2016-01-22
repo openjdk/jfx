@@ -76,7 +76,7 @@ public class TreeTableViewApp extends Application {
     }
 
     public Parent createContent() {
-        
+
         final TreeTableColumn<Inventory, String> nameColumn = new TreeTableColumn<>("Name");
         nameColumn.setEditable(false);
         nameColumn.setMinWidth(130);

@@ -43,7 +43,7 @@ public class QueryMovesRsp extends MessageRsp {
     public QueryMovesRsp(String gameId) {
         super(gameId);
     }
-    
+
     public QueryMovesRsp(List<String> moves) {
         this.moves = moves;
     }

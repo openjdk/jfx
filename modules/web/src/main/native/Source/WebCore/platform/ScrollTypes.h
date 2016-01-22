@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef ScrollTypes_h
@@ -43,9 +43,9 @@ namespace WebCore {
         ScrollInlineDirectionBackward,
         ScrollInlineDirectionForward
     };
-    
-    
-    inline ScrollDirection logicalToPhysical(ScrollLogicalDirection direction, bool isVertical, bool isFlipped) 
+
+
+    inline ScrollDirection logicalToPhysical(ScrollLogicalDirection direction, bool isVertical, bool isFlipped)
     {
         switch (direction) {
         case ScrollBlockDirectionBackward: {
@@ -152,7 +152,7 @@ namespace WebCore {
         ScrollbarButtonsDoubleEnd,
         ScrollbarButtonsDoubleBoth
     };
-    
+
     enum ScrollbarOverlayStyle {
         ScrollbarOverlayStyleDefault,
         ScrollbarOverlayStyleDark,

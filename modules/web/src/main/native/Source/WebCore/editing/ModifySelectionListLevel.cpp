@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -60,7 +60,7 @@ static bool getStartEndListChildren(const VisibleSelection& selection, Node*& st
     Node* endListChild = selection.isRange() ? enclosingListChild(selection.end().anchorNode()) : startListChild;
     if (!endListChild)
         return false;
-    
+
     // For a range selection we want the following behavior:
     //      - the start and end must be within the same overall list
     //      - the start must be at or above the level of the rest of the range
@@ -75,7 +75,7 @@ static bool getStartEndListChildren(const VisibleSelection& selection, Node*& st
         if (!endListChild)
             return false;
     }
-    
+
     // if the selection ends on a list item with a sublist, include the entire sublist
     if (endListChild->renderer()->isListItem()) {
         RenderObject* r = endListChild->renderer()->nextSibling();
@@ -145,12 +145,12 @@ static bool canIncreaseListLevel(const VisibleSelection& selection, Node*& start
 {
     if (!getStartEndListChildren(selection, start, end))
         return false;
-        
+
     // start must not be the first child (because you need a prior one
     // to increase relative to)
     if (!start->renderer()->previousSibling())
         return false;
-    
+
     return true;
 }
 
@@ -243,11 +243,11 @@ static bool canDecreaseListLevel(const VisibleSelection& selection, Node*& start
 {
     if (!getStartEndListChildren(selection, start, end))
         return false;
-    
+
     // there must be a destination list to move the items to
     if (!isListElement(start->parentNode()->parentNode()))
         return false;
-        
+
     return true;
 }
 
@@ -270,7 +270,7 @@ void DecreaseSelectionListLevelCommand::doApply()
             removeNode(listNode);
     } else if (!nextItem) {
         // at end of list, move the child(ren) to after the sublist
-        insertSiblingNodeRangeAfter(startListChild, endListChild, listNode);    
+        insertSiblingNodeRangeAfter(startListChild, endListChild, listNode);
     } else if (listNode) {
         // in the middle of list, split the list and move the children to the divide
         splitElement(listNode, startListChild);

@@ -60,7 +60,7 @@ import javafx.beans.value.WritableValue;
 /**
  * A {@link TableView} is made up of a number of TableColumn instances. Each
  * TableColumn in a table is responsible for displaying (and editing) the contents
- * of that column. As well as being responsible for displaying and editing data 
+ * of that column. As well as being responsible for displaying and editing data
  * for a single column, a TableColumn also contains the necessary properties to:
  * <ul>
  *    <li>Be resized (using {@link #minWidthProperty() minWidth}/{@link #prefWidthProperty() prefWidth}/{@link #maxWidthProperty() maxWidth}
@@ -68,25 +68,25 @@ import javafx.beans.value.WritableValue;
  *    <li>Have its {@link #visibleProperty() visibility} toggled
  *    <li>Display {@link #textProperty() header text}
  *    <li>Display any {@link #getColumns() nested columns} it may contain
- *    <li>Have a {@link #contextMenuProperty() context menu} when the user 
+ *    <li>Have a {@link #contextMenuProperty() context menu} when the user
  *      right-clicks the column header area
- *    <li>Have the contents of the table be sorted (using 
+ *    <li>Have the contents of the table be sorted (using
  *      {@link #comparatorProperty() comparator}, {@link #sortable sortable} and
  *      {@link #sortTypeProperty() sortType})
  * </ul>
  * </p>
- * 
+ *
  * When creating a TableColumn instance, perhaps the two most important properties
  * to set are the column {@link #textProperty() text} (what to show in the column
  * header area), and the column {@link #cellValueFactory cell value factory}
- * (which is used to populate individual cells in the column). This can be 
+ * (which is used to populate individual cells in the column). This can be
  * achieved using some variation on the following code:
- * 
+ *
  * <pre>
- * {@code 
+ * {@code
  * ObservableList<Person> data = ...
  * TableView<Person> tableView = new TableView<Person>(data);
- * 
+ *
  * TableColumn<Person,String> firstNameCol = new TableColumn<Person,String>("First Name");
  * firstNameCol.setCellValueFactory(new Callback<CellDataFeatures<Person, String>, ObservableValue<String>>() {
  *     public ObservableValue<String> call(CellDataFeatures<Person, String> p) {
@@ -96,37 +96,37 @@ import javafx.beans.value.WritableValue;
  *  });
  * }
  * tableView.getColumns().add(firstNameCol);}</pre>
- * 
+ *
  * This approach assumes that the object returned from <code>p.getValue()</code>
  * has a JavaFX {@link ObservableValue} that can simply be returned. The benefit of this
  * is that the TableView will internally create bindings to ensure that,
  * should the returned {@link ObservableValue} change, the cell contents will be
- * automatically refreshed. 
- * 
+ * automatically refreshed.
+ *
  * <p>In situations where a TableColumn must interact with classes created before
  * JavaFX, or that generally do not wish to use JavaFX apis for properties, it is
  * possible to wrap the returned value in a {@link ReadOnlyObjectWrapper} instance. For
  * example:
- * 
+ *
  * <pre>
- * {@code 
+ * {@code
  * firstNameCol.setCellValueFactory(new Callback<CellDataFeatures<Person, String>, ObservableValue<String>>() {
  *     public ObservableValue<String> call(CellDataFeatures<Person, String> p) {
  *         return new ReadOnlyObjectWrapper(p.getValue().getFirstName());
  *     }
  *  });}</pre>
- * 
- * It is hoped that over time there will be convenience cell value factories 
- * developed and made available to developers. As of the JavaFX 2.0 release, 
+ *
+ * It is hoped that over time there will be convenience cell value factories
+ * developed and made available to developers. As of the JavaFX 2.0 release,
  * there is one such convenience class: {@link PropertyValueFactory}. This class
- * removes the need to write the code above, instead relying on reflection to 
- * look up a given property from a String. Refer to the 
+ * removes the need to write the code above, instead relying on reflection to
+ * look up a given property from a String. Refer to the
  * <code>PropertyValueFactory</code> class documentation for more information
  * on how to use this with a TableColumn.
- * 
+ *
  * Finally, for more detail on how to use TableColumn, there is further documentation in
  * the {@link TableView} class documentation.
- * 
+ *
  * @param <S> The type of the TableView generic type (i.e. S == TableView&lt;S&gt;)
  * @param <T> The type of the content in all cells in this TableColumn.
  * @see TableView
@@ -135,7 +135,7 @@ import javafx.beans.value.WritableValue;
  * @since JavaFX 2.0
  */
 public class TableColumn<S,T> extends TableColumnBase<S,T> implements EventTarget {
-    
+
     /***************************************************************************
      *                                                                         *
      * Static properties and methods                                           *
@@ -186,20 +186,20 @@ public class TableColumn<S,T> extends TableColumnBase<S,T> implements EventTarge
     }
     private static final EventType<?> EDIT_COMMIT_EVENT =
             new EventType<>(editAnyEvent(), "EDIT_COMMIT");
-    
-    
-    
+
+
+
     /**
      * If no cellFactory is specified on a TableColumn instance, then this one
-     * will be used by default. At present it simply renders the TableCell item 
+     * will be used by default. At present it simply renders the TableCell item
      * property within the {@link TableCell#graphicProperty() graphic} property
-     * if the {@link Cell#item item} is a Node, or it simply calls 
+     * if the {@link Cell#item item} is a Node, or it simply calls
      * <code>toString()</code> if it is not null, setting the resulting string
      * inside the {@link Cell#textProperty() text} property.
      */
-    public static final Callback<TableColumn<?,?>, TableCell<?,?>> DEFAULT_CELL_FACTORY = 
+    public static final Callback<TableColumn<?,?>, TableCell<?,?>> DEFAULT_CELL_FACTORY =
             new Callback<TableColumn<?,?>, TableCell<?,?>>() {
-                
+
         @Override public TableCell<?,?> call(TableColumn<?,?> param) {
             return new TableCell<Object,Object>() {
                 @Override protected void updateItem(Object item, boolean empty) {
@@ -222,13 +222,13 @@ public class TableColumn<S,T> extends TableColumnBase<S,T> implements EventTarge
         }
     };
 
-    
-    
+
+
     /***************************************************************************
      *                                                                         *
      * Constructors                                                            *
      *                                                                         *
-     **************************************************************************/    
+     **************************************************************************/
 
     /**
      * Creates a default TableColumn with default cell factory, comparator, and
@@ -236,7 +236,7 @@ public class TableColumn<S,T> extends TableColumnBase<S,T> implements EventTarge
      */
     public TableColumn() {
         getStyleClass().add(DEFAULT_STYLE_CLASS);
-        
+
         setOnEditCommit(DEFAULT_EDIT_COMMIT_HANDLER);
 
         // we listen to the columns list here to ensure that widths are
@@ -269,15 +269,15 @@ public class TableColumn<S,T> extends TableColumnBase<S,T> implements EventTarge
         this();
         setText(text);
     }
-    
-    
-    
+
+
+
     /***************************************************************************
      *                                                                         *
      * Listeners                                                               *
      *                                                                         *
      **************************************************************************/
-    
+
     private EventHandler<CellEditEvent<S,T>> DEFAULT_EDIT_COMMIT_HANDLER = t -> {
         int index = t.getTablePosition().getRow();
         List<S> list = t.getTableView().getItems();
@@ -289,7 +289,7 @@ public class TableColumn<S,T> extends TableColumnBase<S,T> implements EventTarge
             ((WritableValue)ov).setValue(t.getNewValue());
         }
     };
-    
+
     private ListChangeListener<TableColumn<S,?>> columnsListener = c -> {
         while (c.next()) {
             // update the TableColumn.tableView property
@@ -313,12 +313,12 @@ public class TableColumn<S,T> extends TableColumnBase<S,T> implements EventTarge
             updateColumnWidths();
         }
     };
-    
-    private WeakListChangeListener<TableColumn<S,?>> weakColumnsListener = 
+
+    private WeakListChangeListener<TableColumn<S,?>> weakColumnsListener =
             new WeakListChangeListener<TableColumn<S,?>>(columnsListener);
 
-    
-    
+
+
     /***************************************************************************
      *                                                                         *
      * Instance Variables                                                      *
@@ -328,8 +328,8 @@ public class TableColumn<S,T> extends TableColumnBase<S,T> implements EventTarge
     // Contains any children columns that should be nested within this column
     private final ObservableList<TableColumn<S,?>> columns = FXCollections.<TableColumn<S,?>>observableArrayList();
 
-    
-    
+
+
     /***************************************************************************
      *                                                                         *
      * Properties                                                              *
@@ -347,8 +347,8 @@ public class TableColumn<S,T> extends TableColumnBase<S,T> implements EventTarge
     final void setTableView(TableView<S> value) { tableView.set(value); }
     public final TableView<S> getTableView() { return tableView.get(); }
 
-    
-    
+
+
     // --- Cell value factory
     /**
      * The cell value factory needs to be set to specify how to populate all
@@ -357,9 +357,9 @@ public class TableColumn<S,T> extends TableColumnBase<S,T> implements EventTarge
      * {@link ObservableValue} to be returned. The returned ObservableValue instance
      * will be observed internally to allow for immediate updates to the value
      * to be reflected on screen.
-     * 
+     *
      * An example of how to set a cell value factory is:
-     * 
+     *
      * <pre><code>
      * lastNameCol.setCellValueFactory(new Callback&lt;CellDataFeatures&lt;Person, String&gt;, ObservableValue&lt;String&gt;&gt;() {
      *     public ObservableValue&lt;String&gt; call(CellDataFeatures&lt;Person, String&gt; p) {
@@ -369,17 +369,17 @@ public class TableColumn<S,T> extends TableColumnBase<S,T> implements EventTarge
      *  });
      * }
      * </code></pre>
-     * 
+     *
      * A common approach is to want to populate cells in a TableColumn using
      * a single value from a Java bean. To support this common scenario, there
-     * is the {@link PropertyValueFactory} class. Refer to this class for more 
+     * is the {@link PropertyValueFactory} class. Refer to this class for more
      * information on how to use it, but briefly here is how the above use case
      * could be simplified using the PropertyValueFactory class:
-     * 
+     *
      * <pre><code>
      * lastNameCol.setCellValueFactory(new PropertyValueFactory&lt;Person,String&gt;("lastName"));
      * </code></pre>
-     * 
+     *
      * @see PropertyValueFactory
      */
     private ObjectProperty<Callback<CellDataFeatures<S,T>, ObservableValue<T>>> cellValueFactory;
@@ -395,17 +395,17 @@ public class TableColumn<S,T> extends TableColumnBase<S,T> implements EventTarge
         }
         return cellValueFactory;
     }
-    
-    
+
+
     // --- Cell Factory
     /**
      * The cell factory for all cells in this column. The cell factory
      * is responsible for rendering the data contained within each TableCell for
      * a single table column.
-     * 
+     *
      * <p>By default TableColumn uses the {@link #DEFAULT_CELL_FACTORY default cell
-     * factory}, but this can be replaced with a custom implementation, for 
-     * example to show data in a different way or to support editing.There is a 
+     * factory}, but this can be replaced with a custom implementation, for
+     * example to show data in a different way or to support editing.There is a
      * lot of documentation on creating custom cell factories
      * elsewhere (see {@link Cell} and {@link TableView} for example).</p>
      *
@@ -438,15 +438,15 @@ public class TableColumn<S,T> extends TableColumnBase<S,T> implements EventTarge
         return cellFactory;
     }
 
-    
-    
+
+
     // --- Sort Type
     /**
      * Used to state whether this column, if it is part of a sort order (see
-     * {@link TableView#getSortOrder()} for more details), should be sorted in 
-     * ascending or descending order. 
-     * Simply toggling this property will result in the sort order changing in 
-     * the TableView, assuming of course that this column is in the 
+     * {@link TableView#getSortOrder()} for more details), should be sorted in
+     * ascending or descending order.
+     * Simply toggling this property will result in the sort order changing in
+     * the TableView, assuming of course that this column is in the
      * sortOrder ObservableList to begin with.
      */
     private ObjectProperty<SortType> sortType;
@@ -462,9 +462,9 @@ public class TableColumn<S,T> extends TableColumnBase<S,T> implements EventTarge
     public final SortType getSortType() {
         return sortType == null ? SortType.ASCENDING : sortType.get();
     }
-    
-    
-    
+
+
+
     // --- On Edit Start
     private ObjectProperty<EventHandler<CellEditEvent<S,T>>> onEditStart;
     public final void setOnEditStart(EventHandler<CellEditEvent<S,T>> value) {
@@ -535,14 +535,14 @@ public class TableColumn<S,T> extends TableColumnBase<S,T> implements EventTarge
         return onEditCancel;
     }
 
-    
-    
+
+
     /***************************************************************************
      *                                                                         *
      * Public API                                                              *
      *                                                                         *
-     **************************************************************************/    
-    
+     **************************************************************************/
+
     /** {@inheritDoc} */
     @Override public final ObservableList<TableColumn<S,?>> getColumns() {
         return columns;
@@ -551,15 +551,15 @@ public class TableColumn<S,T> extends TableColumnBase<S,T> implements EventTarge
     /** {@inheritDoc} */
     @Override public final ObservableValue<T> getCellObservableValue(int index) {
         if (index < 0) return null;
-        
+
         // Get the table
         final TableView<S> table = getTableView();
         if (table == null || table.getItems() == null) return null;
-        
+
         // Get the rowData
         final List<S> items = table.getItems();
         if (index >= items.size()) return null; // Out of range
-        
+
         final S rowData = items.get(index);
         return getCellObservableValue(rowData);
     }
@@ -569,18 +569,18 @@ public class TableColumn<S,T> extends TableColumnBase<S,T> implements EventTarge
         // Get the factory
         final Callback<CellDataFeatures<S,T>, ObservableValue<T>> factory = getCellValueFactory();
         if (factory == null) return null;
-        
+
         // Get the table
         final TableView<S> table = getTableView();
         if (table == null) return null;
-        
+
         // Call the factory
         final CellDataFeatures<S,T> cdf = new CellDataFeatures<S,T>(table, this, item);
         return factory.call(cdf);
     }
 
-    
-    
+
+
     /***************************************************************************
      *                                                                         *
      * Stylesheet Handling                                                     *
@@ -616,7 +616,7 @@ public class TableColumn<S,T> extends TableColumnBase<S,T> implements EventTarge
     @Override
     public List<CssMetaData<? extends Styleable, ?>> getCssMetaData() {
         return getClassCssMetaData();
-    }                
+    }
 
     /**
      * @return The CssMetaData associated with this class, which may include the
@@ -669,8 +669,8 @@ public class TableColumn<S,T> extends TableColumnBase<S,T> implements EventTarge
         return null;
     }
 
-    
-    
+
+
     /***************************************************************************
      *                                                                         *
      * Support Interfaces                                                      *
@@ -678,10 +678,10 @@ public class TableColumn<S,T> extends TableColumnBase<S,T> implements EventTarge
      **************************************************************************/
 
     /**
-     * A support class used in TableColumn as a wrapper class 
+     * A support class used in TableColumn as a wrapper class
      * to provide all necessary information for a particular {@link Cell}. Once
      * instantiated, this class is immutable.
-     * 
+     *
      * @param <S> The TableView type
      * @param <T> The TableColumn type
      * @since JavaFX 2.0
@@ -694,7 +694,7 @@ public class TableColumn<S,T> extends TableColumnBase<S,T> implements EventTarge
         /**
          * Instantiates a CellDataFeatures instance with the given properties
          * set as read-only values of this instance.
-         * 
+         *
          * @param tableView The TableView that this instance refers to.
          * @param tableColumn The TableColumn that this instance refers to.
          * @param value The value for a row in the TableView.
@@ -727,9 +727,9 @@ public class TableColumn<S,T> extends TableColumnBase<S,T> implements EventTarge
             return tableView;
         }
     }
-    
-    
-    
+
+
+
     /**
      * An event that is fired when a user performs an edit on a table cell.
      * @since JavaFX 2.0
@@ -825,7 +825,7 @@ public class TableColumn<S,T> extends TableColumnBase<S,T> implements EventTarge
             // if we are here, we now need to get the data for the specific column
             return (T) pos.getTableColumn().getCellData(rowData);
         }
-        
+
         /**
          * Convenience method that returns the value for the row (that is, from
          * the TableView {@link TableView#itemsProperty() items} list), for the
@@ -842,7 +842,7 @@ public class TableColumn<S,T> extends TableColumnBase<S,T> implements EventTarge
             return items.get(row);
         }
     }
-    
+
     /**
      * Enumeration that specifies the type of sorting being applied to a specific
      * column.
@@ -853,12 +853,12 @@ public class TableColumn<S,T> extends TableColumnBase<S,T> implements EventTarge
          * Column will be sorted in an ascending order.
          */
         ASCENDING,
-        
+
         /**
          * Column will be sorted in a descending order.
          */
         DESCENDING;
-        
+
         // UNSORTED
     }
 }

@@ -66,7 +66,7 @@ namespace JSC {
 // The value BASE_VECTOR_LEN is the maximum number of vector elements we'll allocate
 // for an array that was created with a sepcified length (e.g. a = new Array(123))
 #define BASE_VECTOR_LEN 4U
-    
+
 // The upper bound to the size we'll grow a zero length array when the first element
 // is added.
 #define FIRST_VECTOR_GROW 4U

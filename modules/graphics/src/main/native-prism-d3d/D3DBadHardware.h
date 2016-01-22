@@ -115,7 +115,7 @@ static const ADAPTER_INFO badHardware[] = {
     { 0x8086, 0x27A6, NO_VERSION, OS_ALL},
     { 0x8086, 0x27AE, NO_VERSION, OS_ALL},
     { 0x8086, 0x29B2, NO_VERSION, OS_ALL},
-    { 0x8086, 0x29B3, NO_VERSION, OS_ALL},        
+    { 0x8086, 0x29B3, NO_VERSION, OS_ALL},
     { 0x8086, 0x29C2, NO_VERSION, OS_ALL},
     { 0x8086, 0x29C3, NO_VERSION, OS_ALL},
     { 0x8086, 0x29D2, NO_VERSION, OS_ALL},
@@ -135,7 +135,7 @@ static const ADAPTER_INFO badHardware[] = {
     { 0x8086, 0x2E5B, NO_VERSION, OS_ALL},
     { 0x8086, 0x4102, NO_VERSION, OS_ALL},
     { 0x8086, 0x8108, NO_VERSION, OS_ALL},
-    { 0x8086, 0x8109, NO_VERSION, OS_ALL},    
+    { 0x8086, 0x8109, NO_VERSION, OS_ALL},
     { 0x8086, 0xA001, NO_VERSION, OS_ALL},
     { 0x8086, 0xA002, NO_VERSION, OS_ALL},
     { 0x8086, 0xA011, NO_VERSION, OS_ALL},
@@ -280,7 +280,7 @@ static const ADAPTER_INFO badHardware[] = {
     // Reason: workaround for 6653860
     { 0x10DE, 0x00FD, D_VERSION(6,14,10,6573), OS_WINXP },
 
-    // Disable a range Nvidia GeForce 5 series cards that are too old to 
+    // Disable a range Nvidia GeForce 5 series cards that are too old to
     // be usable for JavaFX
     { 0x10DE, 0x001D, NO_VERSION, OS_ALL},
     { 0x10DE, 0x00FA, NO_VERSION, OS_ALL},
@@ -303,7 +303,7 @@ static const ADAPTER_INFO badHardware[] = {
     { 0x10DE, 0x0327, NO_VERSION, OS_ALL},
     { 0x10DE, 0x0328, NO_VERSION, OS_ALL},
     { 0x10DE, 0x032C, NO_VERSION, OS_ALL},
-    { 0x10DE, 0x032D, NO_VERSION, OS_ALL}, 
+    { 0x10DE, 0x032D, NO_VERSION, OS_ALL},
     { 0x10DE, 0x0330, NO_VERSION, OS_ALL},
     { 0x10DE, 0x0331, NO_VERSION, OS_ALL},
     { 0x10DE, 0x0332, NO_VERSION, OS_ALL},
@@ -316,7 +316,7 @@ static const ADAPTER_INFO badHardware[] = {
     { 0x10DE, 0x0347, NO_VERSION, OS_ALL},
     { 0x10DE, 0x0348, NO_VERSION, OS_ALL},
 
-    // Disable a range Nvidia GeForce 6 series cards that are too old to 
+    // Disable a range Nvidia GeForce 6 series cards that are too old to
     // be usable for JavaFX
     { 0x10DE, 0x0040, NO_VERSION, OS_ALL},
     { 0x10DE, 0x0041, NO_VERSION, OS_ALL},
@@ -366,7 +366,7 @@ static const ADAPTER_INFO badHardware[] = {
     { 0x10DE, 0x0245, NO_VERSION, OS_ALL},
     { 0x10DE, 0x0247, NO_VERSION, OS_ALL},
 
-    // Disable a range Nvidia Quadro cards (mainly 5 and 6 series core) 
+    // Disable a range Nvidia Quadro cards (mainly 5 and 6 series core)
     // that are too old to be usable for JavaFX
     { 0x10DE, 0x004D, NO_VERSION, OS_ALL},
     { 0x10DE, 0x004E, NO_VERSION, OS_ALL},

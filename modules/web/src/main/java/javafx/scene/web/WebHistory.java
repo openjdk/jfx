@@ -43,25 +43,25 @@ import javafx.collections.ObservableList;
 /**
  * The {@code WebHistory} class represents a session history associated with
  * a {@link WebEngine} instance.
- * 
+ *
  * A single instance of {@code WebHistory} for a particular web engine can be
  * obtained through the {@link WebEngine#getHistory()} method.
- * 
+ *
  * The history is basically a list of entries. Each entry represents a visited page
  * and it provides access to relevant page info, such as URL, title, and the date
  * the page was last visited. Entries in the list are arranged in the order
  * in which the corresponding pages were visited from oldest to newest. The list can
  * be obtained by using the {@link #getEntries()} method.
- * 
+ *
  * The history and the corresponding list of entries change as {@code WebEngine} navigates
  * across the web. The list may expand or shrink depending on browser actions. These
  * changes can be listened to by the {@link javafx.collections.ObservableList}
  * API that the list exposes.
- * 
- * The index of the history entry associated with the currently visited page 
+ *
+ * The index of the history entry associated with the currently visited page
  * is represented by the {@link #currentIndexProperty}. The current index can be
- * used to navigate to any entry in the history by using the {@link #go(int)} method. 
- * 
+ * used to navigate to any entry in the history by using the {@link #go(int)} method.
+ *
  * The {@link #maxSizeProperty()} sets the maximum history size, which is the size of the
  * history list.
  *
@@ -79,13 +79,13 @@ public final class WebHistory {
         private final ReadOnlyObjectWrapper<String> title = new ReadOnlyObjectWrapper(this, "title");
         private final ReadOnlyObjectWrapper<Date> lastVisitedDate = new ReadOnlyObjectWrapper(this, "lastVisitedDate");
         private final BackForwardList.Entry peer;
-        
+
         private Entry(final BackForwardList.Entry entry) {
             this.url = entry.getURL();
             this.title.set(entry.getTitle());
             this.lastVisitedDate.set(entry.getLastVisitedDate());
             this.peer = entry;
-            
+
             entry.addChangeListener(e -> {
                 String _title = entry.getTitle();
                 // null title is acceptable
@@ -100,43 +100,43 @@ public final class WebHistory {
                 }
             });
         }
-         
-        /** 
-         * Returns the URL of the page. 
-         * 
-         * @return the url of the page 
-         */ 
+
+        /**
+         * Returns the URL of the page.
+         *
+         * @return the url of the page
+         */
         public String getUrl() {
             assert url != null;
             return url.toString();
         }
-         
-        /** 
-         * Defines the title of the page. 
-         */ 
+
+        /**
+         * Defines the title of the page.
+         */
         public ReadOnlyObjectProperty<String> titleProperty() {
             return title.getReadOnlyProperty();
         }
-         
+
         public String getTitle() {
             return title.get();
         }
-         
-        /** 
-         * Defines the {@link java.util.Date} the page was last visited. 
-         */ 
+
+        /**
+         * Defines the {@link java.util.Date} the page was last visited.
+         */
         public ReadOnlyObjectProperty<Date> lastVisitedDateProperty() {
             return lastVisitedDate.getReadOnlyProperty();
         }
-         
+
         public Date getLastVisitedDate() {
             return lastVisitedDate.get();
         }
-        
+
         boolean isPeer(BackForwardList.Entry entry) {
             return peer == entry;
         }
-        
+
         @Override
         public String toString() {
             return "[url: " + getUrl()
@@ -145,19 +145,19 @@ public final class WebHistory {
                  + "]";
         }
     }
-    
+
     private final BackForwardList bfl; // backend history impl
-    
+
     private final ObservableList<Entry> list;
     private final ObservableList<Entry> ulist; // unmodifiable wrapper
-    
+
     WebHistory(WebPage page) {
         this.list = FXCollections.<Entry>observableArrayList();
         this.ulist = FXCollections.unmodifiableObservableList(list);
         this.bfl = page.createBackForwardList();
-        
+
         setMaxSize(getMaxSize()); // init default
-        
+
         this.bfl.addChangeListener(e -> {
             // 1. Size has increased
             //    - one new entry is appended.
@@ -209,7 +209,7 @@ public final class WebHistory {
             WebHistory.this.setCurrentIndex(bfl.getCurrentIndex());
         });
     }
-    
+
     private final ReadOnlyIntegerWrapper currentIndex =
             new ReadOnlyIntegerWrapper(this, "currentIndex");
 
@@ -221,17 +221,17 @@ public final class WebHistory {
     public ReadOnlyIntegerProperty currentIndexProperty() {
         return currentIndex.getReadOnlyProperty();
     }
-     
+
     public int getCurrentIndex() {
         return currentIndexProperty().get();
     }
-    
+
     private void setCurrentIndex(int value) {
         currentIndex.set(value);
     }
-    
+
     private IntegerProperty maxSize;
-     
+
     /**
      * Defines the maximum size of the history list.
      * If the list reaches its maximum and a new entry is added,
@@ -239,7 +239,7 @@ public final class WebHistory {
      * <p>
      * The value specified for this property can not be negative, otherwise
      * {@code IllegalArgumentException} is thrown.
-     * 
+     *
      * @defaultValue 100
      */
     public IntegerProperty maxSizeProperty()  {
@@ -256,19 +256,19 @@ public final class WebHistory {
         }
         return maxSize;
     }
-     
+
     public void setMaxSize(int value) {
         maxSizeProperty().set(value);
         bfl.setMaximumSize(value);
     }
-     
+
     public int getMaxSize() {
         return maxSizeProperty().get();
     }
 
     /**
      * Returns an unmodifiable observable list of all entries in the history.
-     * 
+     *
      * @return list of all history entries
      */
     public ObservableList<Entry> getEntries() {
@@ -298,7 +298,7 @@ public final class WebHistory {
     public void go(int offset) throws IndexOutOfBoundsException {
         if (offset == 0)
             return;
-        
+
         int index = getCurrentIndex() + offset;
         if (index < 0 || index >= list.size()) {
             throw new IndexOutOfBoundsException("the effective index " + index

@@ -55,7 +55,7 @@ public class JobSettingsTest {
              System.out.println("No printers installed. Tests cannot run.");
          } else {
              System.out.println("job="+job);
-         } 
+         }
      } catch (SecurityException e) {
          System.out.println("Security exception creating job");
      }
@@ -88,13 +88,13 @@ public class JobSettingsTest {
         Printer printer = job.getPrinter();
         assertNotNull(printer);
         PrinterAttributes pa = printer.getPrinterAttributes();
-        assertNotNull(pa); 
+        assertNotNull(pa);
         if (pa.supportsPageRanges()) {
             PageRange[] newpr = {new PageRange (1, 1)};
             System.out.println("newpr= "+newpr);
-            js.setPageRanges(newpr);      
+            js.setPageRanges(newpr);
             assertEquals(newpr[0], js.getPageRanges()[0]);
-        } 
+        }
   }
 
   @Test public void testPrintColorSettings() {
@@ -116,7 +116,7 @@ public class JobSettingsTest {
      if (s != null) {
         for (PrintColor newColor : s) {
             System.out.println("new color= "+newColor);
-            js.setPrintColor(newColor);      
+            js.setPrintColor(newColor);
             assertEquals(newColor, js.getPrintColor());
         }
      }
@@ -168,7 +168,7 @@ public class JobSettingsTest {
      if (s != null) {
         for (PrintSides newSides : s) {
             System.out.println("newprintsides= "+newSides);
-            js.setPrintSides(newSides);      
+            js.setPrintSides(newSides);
             assertEquals(newSides, js.getPrintSides());
         }
      }
@@ -191,7 +191,7 @@ public class JobSettingsTest {
      assertNotNull(pa);
      PageOrientation newpageorientation = pa.getDefaultPageOrientation();
      PageLayout newPL = printer.createPageLayout(pagelayout.getPaper(), newpageorientation,   pagelayout.getTopMargin(), pagelayout.getBottomMargin(), pagelayout.getLeftMargin(), pagelayout.getRightMargin());
-     js.setPageLayout(newPL);      
+     js.setPageLayout(newPL);
      pagelayout = js.getPageLayout();
      assertEquals(newpageorientation, pagelayout.getPageOrientation());
   }
@@ -219,7 +219,7 @@ public class JobSettingsTest {
             js.setPageLayout(newPL);
             pagelayout = js.getPageLayout();
             assertEquals(newPaper, pagelayout.getPaper());
-        } 
+        }
      }
   }
 
@@ -241,9 +241,9 @@ public class JobSettingsTest {
      if (s != null) {
         for (PaperSource newPaperSource : s) {
             System.out.println("newpapersource= "+newPaperSource);
-            js.setPaperSource(newPaperSource);      
+            js.setPaperSource(newPaperSource);
             assertEquals(newPaperSource, js.getPaperSource());
-        } 
+        }
      }
   }
 
@@ -261,7 +261,7 @@ public class JobSettingsTest {
      js.setCollation(collation);
      assertEquals(collation, collationProp.get());
      assertEquals(collation, js.getCollation());
-    
+
   }
 
 }

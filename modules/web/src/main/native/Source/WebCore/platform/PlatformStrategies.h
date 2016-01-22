@@ -59,7 +59,7 @@ public:
             m_loaderStrategy = createLoaderStrategy();
         return m_loaderStrategy;
     }
-    
+
     PasteboardStrategy* pasteboardStrategy()
     {
         if (!m_pasteboardStrategy)
@@ -135,7 +135,7 @@ private:
 PlatformStrategies* platformStrategies();
 void setPlatformStrategies(PlatformStrategies*);
 bool hasPlatformStrategies();
-    
+
 } // namespace WebCore
 
 #endif // PlatformStrategies_h

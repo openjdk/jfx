@@ -43,15 +43,15 @@
 //
 // |----------------|----------------------------------------------------------------|----------------|
 //
-//                                              blockSize + kernelSize / 2                           
+//                                              blockSize + kernelSize / 2
 //                   <-------------------------------------------------------------------------------->
 //                                                  r0
 //
-//   kernelSize / 2   kernelSize / 2                                 kernelSize / 2     kernelSize / 2 
+//   kernelSize / 2   kernelSize / 2                                 kernelSize / 2     kernelSize / 2
 // <---------------> <--------------->                              <---------------> <--------------->
 //         r1                r2                                             r3                r4
-// 
-//                                              blockSize                           
+//
+//                                              blockSize
 //                                     <-------------------------------------------------------------->
 //                                                  r5
 
@@ -130,13 +130,13 @@ void SincResampler::consumeSource(float* buffer, unsigned numberOfSourceFrames)
     ASSERT(m_sourceProvider);
     if (!m_sourceProvider)
         return;
-    
+
     // Wrap the provided buffer by an AudioBus for use by the source provider.
     RefPtr<AudioBus> bus = AudioBus::create(1, numberOfSourceFrames, false);
 
     // FIXME: Find a way to make the following const-correct:
     bus->setChannelMemory(0, buffer, numberOfSourceFrames);
-    
+
     m_sourceProvider->provideInput(bus.get(), numberOfSourceFrames);
 }
 
@@ -151,14 +151,14 @@ public:
         , m_sourceFramesAvailable(numberOfSourceFrames)
     {
     }
-    
+
     // Consumes samples from the in-memory buffer.
     virtual void provideInput(AudioBus* bus, size_t framesToProcess)
     {
         ASSERT(m_source && bus);
         if (!m_source || !bus)
             return;
-            
+
         float* buffer = bus->channel(0)->mutableData();
 
         // Clamp to number of frames available and zero-pad.
@@ -172,7 +172,7 @@ public:
         m_sourceFramesAvailable -= framesToCopy;
         m_source += framesToCopy;
     }
-    
+
 private:
     const float* m_source;
     size_t m_sourceFramesAvailable;
@@ -187,11 +187,11 @@ void SincResampler::process(const float* source, float* destination, unsigned nu
 
     unsigned numberOfDestinationFrames = static_cast<unsigned>(numberOfSourceFrames / m_scaleFactor);
     unsigned remaining = numberOfDestinationFrames;
-    
+
     while (remaining) {
         unsigned framesThisTime = std::min(remaining, m_blockSize);
         process(&sourceProvider, destination, framesThisTime);
-        
+
         destination += framesThisTime;
         remaining -= framesThisTime;
     }
@@ -203,11 +203,11 @@ void SincResampler::process(AudioSourceProvider* sourceProvider, float* destinat
     ASSERT(isGood);
     if (!isGood)
         return;
-    
+
     m_sourceProvider = sourceProvider;
 
     unsigned numberOfDestinationFrames = framesToProcess;
-    
+
     // Setup various region pointers in the buffer (see diagram above).
     float* r0 = m_inputBuffer.data() + m_kernelSize / 2;
     float* r1 = m_inputBuffer.data();
@@ -222,7 +222,7 @@ void SincResampler::process(AudioSourceProvider* sourceProvider, float* destinat
         consumeSource(r0, m_blockSize + m_kernelSize / 2);
         m_isBufferPrimed = true;
     }
-    
+
     // Step (2)
 
     while (numberOfDestinationFrames) {
@@ -233,7 +233,7 @@ void SincResampler::process(AudioSourceProvider* sourceProvider, float* destinat
 
             double virtualOffsetIndex = subsampleRemainder * m_numberOfKernelOffsets;
             int offsetIndex = static_cast<int>(virtualOffsetIndex);
-            
+
             float* k1 = m_kernelStorage.data() + offsetIndex * m_kernelSize;
             float* k2 = k1 + m_kernelSize;
 
@@ -247,7 +247,7 @@ void SincResampler::process(AudioSourceProvider* sourceProvider, float* destinat
             // Figure out how much to weight each kernel's "convolution".
             double kernelInterpolationFactor = virtualOffsetIndex - offsetIndex;
 
-            // Generate a single output sample. 
+            // Generate a single output sample.
             int n = m_kernelSize;
 
 #define CONVOLVE_ONE_SAMPLE      \
@@ -329,10 +329,10 @@ void SincResampler::process(AudioSourceProvider* sourceProvider, float* destinat
                 }
 #else
                 // FIXME: add ARM NEON optimizations for the following. The scalar code-path can probably also be optimized better.
-                
+
                 // Optimize size 32 and size 64 kernels by unrolling the while loop.
                 // A 20 - 30% speed improvement was measured in some cases by using this approach.
-                
+
                 if (n == 32) {
                     CONVOLVE_ONE_SAMPLE // 1
                     CONVOLVE_ONE_SAMPLE // 2

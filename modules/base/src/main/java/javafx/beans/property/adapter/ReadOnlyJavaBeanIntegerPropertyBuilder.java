@@ -41,7 +41,7 @@ import java.lang.reflect.Method;
  * combinations possible. As a minimum the {@link #name(java.lang.String)} of
  * the property and the {@link #bean(java.lang.Object)} have to be specified.
  * If the name of the getter follows the conventions, this is sufficient.
- * Otherwise it is possible to specify an alternative name for the getter 
+ * Otherwise it is possible to specify an alternative name for the getter
  * ({@link #getter(java.lang.String)}) or
  * the getter {@code Methods} directly ({@link #getter(java.lang.reflect.Method)}).
  * <p>
@@ -52,7 +52,7 @@ import java.lang.reflect.Method;
  * of the same class, you can reuse a {@code ReadOnlyJavaBeanIntegerPropertyBuilder}.
  * by switching the Java Bean instance (with {@link #bean(java.lang.Object)} and
  * calling {@link #build()}.
- * 
+ *
  * @see ReadOnlyJavaBeanIntegerProperty
  * @since JavaFX 2.1
  */
@@ -62,8 +62,8 @@ public final class ReadOnlyJavaBeanIntegerPropertyBuilder {
 
     /**
      * Create a new instance of {@code ReadOnlyJavaBeanIntegerPropertyBuilder}
-     * 
-     * @return the new {@code ReadOnlyJavaBeanIntegerPropertyBuilder} 
+     *
+     * @return the new {@code ReadOnlyJavaBeanIntegerPropertyBuilder}
      */
     public static ReadOnlyJavaBeanIntegerPropertyBuilder create() {
         return new ReadOnlyJavaBeanIntegerPropertyBuilder();
@@ -71,7 +71,7 @@ public final class ReadOnlyJavaBeanIntegerPropertyBuilder {
 
     /**
      * Generate a new {@link ReadOnlyJavaBeanIntegerProperty} with the current settings.
-     * 
+     *
      * @return the new {@code ReadOnlyJavaBeanIntegerProperty}
      * @throws NoSuchMethodException if the settings were not sufficient to find
      * the getter of the Java Bean property
@@ -88,7 +88,7 @@ public final class ReadOnlyJavaBeanIntegerPropertyBuilder {
 
     /**
      * Set the name of the property
-     * 
+     *
      * @param name the name of the property
      * @return a reference to this builder to enable method chaining
      */
@@ -99,7 +99,7 @@ public final class ReadOnlyJavaBeanIntegerPropertyBuilder {
 
     /**
      * Set the Java Bean instance the adapter should connect to
-     * 
+     *
      * @param bean the Java Bean instance
      * @return a reference to this builder to enable method chaining
      */
@@ -107,12 +107,12 @@ public final class ReadOnlyJavaBeanIntegerPropertyBuilder {
         helper.bean(bean);
         return this;
     }
-    
+
     /**
      * Set the Java Bean class in which the getter should be searched.
      * This can be useful, if the builder should generate adapters for several
      * Java Beans of different types.
-     * 
+     *
      * @param beanClass the Java Bean class
      * @return a reference to this builder to enable method chaining
      */
@@ -122,9 +122,9 @@ public final class ReadOnlyJavaBeanIntegerPropertyBuilder {
     }
 
     /**
-     * Set an alternative name for the getter. This can be omitted, if the 
+     * Set an alternative name for the getter. This can be omitted, if the
      * name of the getter follows Java Bean naming conventions.
-     * 
+     *
      * @param getter the alternative name of the getter
      * @return a reference to this builder to enable method chaining
      */
@@ -134,9 +134,9 @@ public final class ReadOnlyJavaBeanIntegerPropertyBuilder {
     }
 
     /**
-     * Set the getter method directly. This can be omitted, if the 
+     * Set the getter method directly. This can be omitted, if the
      * name of the getter follows Java Bean naming conventions.
-     * 
+     *
      * @param getter the getter
      * @return a reference to this builder to enable method chaining
      */

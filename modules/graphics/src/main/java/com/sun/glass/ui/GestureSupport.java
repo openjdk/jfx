@@ -282,7 +282,7 @@ public final class GestureSupport {
         // documentation at
         // http://developer.apple.com/library/mac/#documentation/cocoa/conceptual/EventOverview/HandlingTouchEvents/HandlingTouchEvents.html
         //
-        // Important: when used on other platforms "totalScale" may be out of 
+        // Important: when used on other platforms "totalScale" may be out of
         // [0.0; 1.0] range as value of "scale" parameter is platform specific.
         totalScale = baseScale * (1.0 + scale);
         if (zoomWithExpansion) {

@@ -53,7 +53,7 @@ public interface TextLayout {
     static final int ALIGN_RIGHT    = 1 << 20;
     static final int ALIGN_JUSTIFY  = 1 << 21;
 
-    static final int ALIGN_MASK = ALIGN_LEFT | ALIGN_CENTER | 
+    static final int ALIGN_MASK = ALIGN_LEFT | ALIGN_CENTER |
                                   ALIGN_RIGHT | ALIGN_JUSTIFY;
 
     public static final int DIRECTION_LTR          = 1 << 10;
@@ -61,8 +61,8 @@ public interface TextLayout {
     public static final int DIRECTION_DEFAULT_LTR  = 1 << 12;
     public static final int DIRECTION_DEFAULT_RTL  = 1 << 13;
 
-    static final int DIRECTION_MASK = DIRECTION_LTR | DIRECTION_RTL | 
-                                      DIRECTION_DEFAULT_LTR | 
+    static final int DIRECTION_MASK = DIRECTION_LTR | DIRECTION_RTL |
+                                      DIRECTION_DEFAULT_LTR |
                                       DIRECTION_DEFAULT_RTL;
 
     public static final int BOUNDS_CENTER       = 1 << 14;
@@ -77,7 +77,7 @@ public interface TextLayout {
 
     /**
      * Sets the content for the TextLayout. Supports multiple spans (rich text).
-     * 
+     *
      * @return returns true is the call modifies the layout internal state.
      */
     public boolean setContent(TextSpan[] spans);
@@ -85,28 +85,28 @@ public interface TextLayout {
     /**
      * Sets the content for the TextLayout. Shorthand for single span text
      * (no rich text).
-     * 
+     *
      * @return returns true is the call modifies the layout internal state.
      */
     public boolean setContent(String string, Object font);
-    
+
     /**
      * Sets the alignment for the TextLayout.
-     * 
+     *
      * @return returns true is the call modifies the layout internal state.
      */
     public boolean setAlignment(/*TextAlignment*/ int alignment);
 
     /**
      * Sets the wrap width for the TextLayout.
-     * 
+     *
      * @return returns true is the call modifies the layout internal state.
      */
     public boolean setWrapWidth(float wrapWidth);
 
     /**
      * Sets the line spacing for the TextLayout.
-     * 
+     *
      * @return returns true is the call modifies the layout internal state.
      */
     public boolean setLineSpacing(float spacing);
@@ -120,20 +120,20 @@ public interface TextLayout {
 
     /**
      * Sets the bounds type for the TextLayout.
-     * 
+     *
      * @return returns true is the call modifies the layout internal state.
      */
     public boolean setBoundsType(int type);
 
-    /** 
+    /**
      * Returns the (logical) bounds of the layout
      * minX is always zero
      * minY is the ascent of the first line (negative)
      * width the width of the widest line
      * height the sum of all lines height
-     * 
+     *
      * Note that this width is different the wrapping width!
-     * 
+     *
      * @return the layout bounds
      */
     public BaseBounds getBounds();
@@ -149,7 +149,7 @@ public interface TextLayout {
 
     /**
      * Returns the lines of text layout.
-     * 
+     *
      * @return the text lines
      */
     public TextLine[] getLines();
@@ -157,8 +157,8 @@ public interface TextLayout {
     /**
      * Returns the GlyphList of text layout.
      * The runs are returned order visually (rendering order), starting
-     * from the first line. 
-     * 
+     * from the first line.
+     *
      * @return the runs
      */
     public GlyphList[] getRuns();
@@ -166,15 +166,15 @@ public interface TextLayout {
     /**
      * Returns the shape of the entire text layout relative to the baseline
      * of the first line.
-     * 
-     * @param type the type of the shapes to include 
+     *
+     * @param type the type of the shapes to include
      * @return the shape
      */
     public Shape getShape(int type, TextSpan filter);
 
     public HitInfo getHitInfo(float x, float y);
-    public PathElement[] getCaretShape(int offset, boolean isLeading, 
+    public PathElement[] getCaretShape(int offset, boolean isLeading,
                                        float x, float y);
-    public PathElement[] getRange(int start, int end, int type, 
+    public PathElement[] getRange(int start, int end, int type,
                                   float x, float y);
 }

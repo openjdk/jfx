@@ -36,9 +36,9 @@ import org.junit.Test;
 import static org.junit.Assert.*;
 
 public class TextFieldListCellTest {
-    
+
     private StringConverter<Object> converter;
-    
+
     @Before public void setup() {
         converter = new StringConverter<Object>() {
             @Override public String toString(Object object) {
@@ -50,22 +50,22 @@ public class TextFieldListCellTest {
             }
         };
     }
-    
+
     /**************************************************************************
-     * 
+     *
      * Test for public static Callback<ListView<String>, ListCell<String>> forListView()
-     * 
+     *
      **************************************************************************/
 
-    
+
     @Test public void testStatic_forListView_noArgs_ensureCellFactoryIsNotNull() {
         Callback<ListView<String>, ListCell<String>> cellFactory = TextFieldListCell.forListView();
         assertNotNull(cellFactory);
     }
-    
+
     @Test public void testStatic_forListView_noArgs_ensureCellFactoryCreatesCells() {
         Callback<ListView<String>, ListCell<String>> cellFactory = TextFieldListCell.forListView();
-        
+
         ListView<String> listView = new ListView<>();
         TextFieldListCell<String> cell = (TextFieldListCell<String>)cellFactory.call(listView);
         assertNotNull(cell);
@@ -73,30 +73,30 @@ public class TextFieldListCellTest {
 
     @Test public void testStatic_forListView_callback_ensureCellHasNonNullStringConverter() {
         Callback<ListView<String>, ListCell<String>> cellFactory = TextFieldListCell.forListView();
-        
+
         ListView<String> listView = new ListView<>();
         TextFieldListCell<String> cell = (TextFieldListCell<String>)cellFactory.call(listView);
         assertNotNull(cell.getConverter());
     }
-    
-    
-    
+
+
+
     /**************************************************************************
-     * 
+     *
      * Test for public static <T> Callback<ListView<T>, ListCell<T>> forListView(
      *       final StringConverter<T> converter)
-     * 
+     *
      **************************************************************************/
 
-    
+
     @Test public void testStatic_forListView_converter_ensureCellFactoryIsNotNull() {
         Callback<ListView<Object>, ListCell<Object>> cellFactory = TextFieldListCell.forListView(converter);
         assertNotNull(cellFactory);
     }
-    
+
     @Test public void testStatic_forListView_converter_ensureCellFactoryCreatesCells() {
         Callback<ListView<Object>, ListCell<Object>> cellFactory = TextFieldListCell.forListView(converter);
-        
+
         ListView<Object> listView = new ListView<>();
         TextFieldListCell<Object> cell = (TextFieldListCell<Object>)cellFactory.call(listView);
         assertNotNull(cell);
@@ -104,63 +104,63 @@ public class TextFieldListCellTest {
 
     @Test public void testStatic_forListView_converter_ensureCellHasSetStringConverter() {
         Callback<ListView<Object>, ListCell<Object>> cellFactory = TextFieldListCell.forListView(converter);
-        
+
         ListView<Object> listView = new ListView<>();
         TextFieldListCell<Object> cell = (TextFieldListCell<Object>)cellFactory.call(listView);
         assertNotNull(cell.getConverter());
         assertEquals(converter, cell.getConverter());
     }
-    
-    
-    
+
+
+
     /**************************************************************************
-     * 
+     *
      * Constructor tests for default constructor
-     * 
+     *
      **************************************************************************/
 
     @Test public void testConstructor_noArgs_defaultStringConverterIsNull() {
         TextFieldListCell<Object> cell = new TextFieldListCell<>();
         assertNull(cell.getConverter());
     }
-    
+
     @Test public void testConstructor_noArgs_defaultStyleClass() {
         TextFieldListCell<Object> cell = new TextFieldListCell<>();
         assertTrue(cell.getStyleClass().contains("text-field-list-cell"));
     }
-    
+
     @Test public void testConstructor_noArgs_defaultGraphicIsNull() {
         TextFieldListCell<Object> cell = new TextFieldListCell<>();
         assertNull(cell.getGraphic());
     }
-    
-    
+
+
     /**************************************************************************
-     * 
+     *
      * Constructor tests for one-arg constructor
-     * 
+     *
      **************************************************************************/
-    
+
     @Test public void testConstructor_converter_defaultStringConverterIsNotNull() {
         TextFieldListCell<Object> cell = new TextFieldListCell<>(converter);
         assertNotNull(cell.getConverter());
     }
-    
+
     @Test public void testConstructor_converter_defaultStyleClass() {
         TextFieldListCell<Object> cell = new TextFieldListCell<>(converter);
         assertTrue(cell.getStyleClass().contains("text-field-list-cell"));
     }
-    
+
     @Test public void testConstructor_converter_defaultGraphicIsACheckBox() {
         TextFieldListCell<Object> cell = new TextFieldListCell<>(converter);
         assertNull(cell.getGraphic());
     }
-    
-    
+
+
     /**************************************************************************
-     * 
+     *
      * updateItem tests
-     * 
+     *
      **************************************************************************/
 
     @Test public void test_updateItem_isEmpty_graphicIsNull() {
@@ -168,20 +168,20 @@ public class TextFieldListCellTest {
         cell.updateItem("TEST", true);
         assertNull(cell.getGraphic());
     }
-    
+
     @Test public void test_updateItem_isEmpty_textIsNull() {
         TextFieldListCell<Object> cell = new TextFieldListCell<>();
         cell.updateItem("TEST", true);
         assertNull(cell.getText());
     }
-    
+
     @Test public void test_updateItem_isNotEmpty_textIsNotNull() {
         TextFieldListCell<Object> cell = new TextFieldListCell<>();
         cell.updateItem("TEST", false);
         assertNotNull(cell.getText());
         assertEquals("TEST", cell.getText());
     }
-    
+
     @Test public void test_updateItem_isNotEmpty_textIsNotNull_nullConverter() {
         TextFieldListCell<Object> cell = new TextFieldListCell<>();
         cell.setConverter(null);
@@ -189,7 +189,7 @@ public class TextFieldListCellTest {
         assertNotNull(cell.getText());
         assertEquals("TEST", cell.getText());
     }
-    
+
     @Test public void test_updateItem_isNotEmpty_textIsNotNull_nonNullConverter() {
         TextFieldListCell<Object> cell = new TextFieldListCell<>();
         cell.setConverter(

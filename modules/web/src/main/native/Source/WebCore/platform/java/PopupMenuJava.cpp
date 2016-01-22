@@ -53,7 +53,7 @@ PopupMenuJava::~PopupMenuJava()
         return;
 
     WC_GETJAVAENV_CHKRET(env);
-    
+
     static jmethodID mid = env->GetMethodID(getJPopupMenuClass(),
         "fwkDestroy", "()V");
     ASSERT(mid);

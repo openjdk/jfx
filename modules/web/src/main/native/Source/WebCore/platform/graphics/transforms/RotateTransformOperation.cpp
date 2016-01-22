@@ -32,20 +32,20 @@ PassRefPtr<TransformOperation> RotateTransformOperation::blend(const TransformOp
 {
     if (from && !from->isSameType(*this))
         return this;
-    
+
     if (blendToIdentity)
         return RotateTransformOperation::create(m_x, m_y, m_z, m_angle - m_angle * progress, m_type);
-    
+
     const RotateTransformOperation* fromOp = static_cast<const RotateTransformOperation*>(from);
-    
+
     // Optimize for single axis rotation
-    if (!fromOp || (fromOp->m_x == 0 && fromOp->m_y == 0 && fromOp->m_z == 1) || 
-                   (fromOp->m_x == 0 && fromOp->m_y == 1 && fromOp->m_z == 0) || 
+    if (!fromOp || (fromOp->m_x == 0 && fromOp->m_y == 0 && fromOp->m_z == 1) ||
+                   (fromOp->m_x == 0 && fromOp->m_y == 1 && fromOp->m_z == 0) ||
                    (fromOp->m_x == 1 && fromOp->m_y == 0 && fromOp->m_z == 0)) {
         double fromAngle = fromOp ? fromOp->m_angle : 0;
-        return RotateTransformOperation::create(fromOp ? fromOp->m_x : m_x, 
-                                                fromOp ? fromOp->m_y : m_y, 
-                                                fromOp ? fromOp->m_z : m_z, 
+        return RotateTransformOperation::create(fromOp ? fromOp->m_x : m_x,
+                                                fromOp ? fromOp->m_y : m_y,
+                                                fromOp ? fromOp->m_z : m_z,
                                                 WebCore::blend(fromAngle, m_angle, progress), m_type);
     }
 
@@ -63,21 +63,21 @@ PassRefPtr<TransformOperation> RotateTransformOperation::blend(const TransformOp
         (toOp ? toOp->m_y : 0),
         (toOp ? toOp->m_z : 1),
         (toOp ? toOp->m_angle : 0));
-    
+
     // Blend them
     toT.blend(fromT, progress);
-    
+
     // Extract the result as a quaternion
     TransformationMatrix::Decomposed4Type decomp;
     toT.decompose4(decomp);
-    
+
     // Convert that to Axis/Angle form
     double x = -decomp.quaternionX;
     double y = -decomp.quaternionY;
     double z = -decomp.quaternionZ;
     double length = sqrt(x * x + y * y + z * z);
     double angle = 0;
-    
+
     if (length > 0.00001) {
         x /= length;
         y /= length;

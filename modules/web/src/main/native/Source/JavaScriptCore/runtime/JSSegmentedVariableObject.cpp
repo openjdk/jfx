@@ -6,13 +6,13 @@
  * are met:
  *
  * 1.  Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer. 
+ *     notice, this list of conditions and the following disclaimer.
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
- *     documentation and/or other materials provided with the distribution. 
+ *     documentation and/or other materials provided with the distribution.
  * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
- *     from this software without specific prior written permission. 
+ *     from this software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY APPLE AND ITS CONTRIBUTORS "AS IS" AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
@@ -36,7 +36,7 @@ namespace JSC {
 int JSSegmentedVariableObject::findRegisterIndex(void* registerAddress)
 {
     ConcurrentJITLocker locker(m_lock);
-    
+
     for (int i = m_registers.size(); i--;) {
         if (&m_registers[i] != registerAddress)
             continue;
@@ -49,15 +49,15 @@ int JSSegmentedVariableObject::findRegisterIndex(void* registerAddress)
 int JSSegmentedVariableObject::addRegisters(int numberOfRegistersToAdd)
 {
     ConcurrentJITLocker locker(m_lock);
-    
+
     ASSERT(numberOfRegistersToAdd >= 0);
-    
+
     size_t oldSize = m_registers.size();
     m_registers.grow(oldSize + numberOfRegistersToAdd);
-    
+
     for (size_t i = numberOfRegistersToAdd; i--;)
         m_registers[oldSize + i].setWithoutWriteBarrier(jsUndefined());
-    
+
     return static_cast<int>(oldSize);
 }
 
@@ -68,7 +68,7 @@ void JSSegmentedVariableObject::visitChildren(JSCell* cell, SlotVisitor& slotVis
     COMPILE_ASSERT(StructureFlags & OverridesVisitChildren, OverridesVisitChildrenWithoutSettingFlag);
     ASSERT(thisObject->structure()->typeInfo().overridesVisitChildren());
     JSSymbolTableObject::visitChildren(thisObject, slotVisitor);
-    
+
     for (unsigned i = thisObject->m_registers.size(); i--;)
         slotVisitor.append(&thisObject->m_registers[i]);
 }

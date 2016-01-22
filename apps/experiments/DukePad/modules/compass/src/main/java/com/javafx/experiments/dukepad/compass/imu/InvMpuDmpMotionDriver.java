@@ -49,7 +49,7 @@ public class InvMpuDmpMotionDriver {
 
     public static final short DMP_INT_GESTURE     = 0x01;
     public static final short DMP_INT_CONTINUOUS  = 0x02;
-    
+
     public static final int DMP_FEATURE_TAP             = 0x001;
     public static final int DMP_FEATURE_ANDROID_ORIENT  = 0x002;
     public static final int DMP_FEATURE_LP_QUAT         = 0x004;
@@ -59,9 +59,9 @@ public class InvMpuDmpMotionDriver {
     public static final int DMP_FEATURE_SEND_RAW_ACCEL  = 0x040;
     public static final int DMP_FEATURE_SEND_RAW_GYRO   = 0x080;
     public static final int DMP_FEATURE_SEND_CAL_GYRO   = 0x100;
-    
+
     public static final int INV_WXYZ_QUAT       = 0x100;
-    
+
     /* These defines are copied from dmpDefaultMPU6050.c in the general MPL
      * releases. These defines may change for each DMP image, so be sure to modify
      * these values when switching to a new image.
@@ -116,10 +116,10 @@ public class InvMpuDmpMotionDriver {
     private static final int CFG_ANDROID_ORIENT_INT  = 1853;
     private static final int CFG_GYRO_RAW_DATA       = 2722;
     private static final int X_GRT_Y_TMP2            = 1379;
-    
+
     private static final int D_0_22                  = 22+512;
     private static final int D_0_24                  = 24+512;
-    
+
     private static final int D_0_36                  = 36;
     private static final int D_0_52                  = 52;
     private static final int D_0_96                  = 96;
@@ -132,7 +132,7 @@ public class InvMpuDmpMotionDriver {
     private static final int D_0_228                 = 228;
     private static final int D_0_232                 = 232;
     private static final int D_0_236                 = 236;
-    
+
     private static final int D_1_2                   = 256 + 2;
     private static final int D_1_4                   = 256 + 4;
     private static final int D_1_8                   = 256 + 8;
@@ -174,7 +174,7 @@ public class InvMpuDmpMotionDriver {
     private static final int D_2_244                 = 512 + 244;
     private static final int D_2_248                 = 512 + 248;
     private static final int D_2_252                 = 512 + 252;
-    
+
     private static final int CPASS_BIAS_X            = 35 * 16 + 4;
     private static final int CPASS_BIAS_Y            = 35 * 16 + 8;
     private static final int CPASS_BIAS_Z            = 35 * 16 + 12;
@@ -194,17 +194,17 @@ public class InvMpuDmpMotionDriver {
     private static final int D_ACSX                  = 40 * 16 + 4;
     private static final int D_ACSY                  = 40 * 16 + 8;
     private static final int D_ACSZ                  = 40 * 16 + 12;
-    
+
     private static final int FLICK_MSG               = 45 * 16 + 4;
     private static final int FLICK_COUNTER           = 45 * 16 + 8;
     private static final int FLICK_LOWER             = 45 * 16 + 12;
     private static final int FLICK_UPPER             = 46 * 16 + 12;
-    
+
     private static final int D_AUTH_OUT              = 992;
     private static final int D_AUTH_IN               = 996;
     private static final int D_AUTH_A                = 1000;
     private static final int D_AUTH_B                = 1004;
-    
+
     private static final int D_PEDSTD_BP_B           = 768 + 0x1C;
     private static final int D_PEDSTD_HP_A           = 768 + 0x78;
     private static final int D_PEDSTD_HP_B           = 768 + 0x7C;
@@ -223,12 +223,12 @@ public class InvMpuDmpMotionDriver {
     private static final int D_PEDSTD_STEPCTR        = 768 + 0x60;
     private static final int D_PEDSTD_TIMECTR        = 964;
     private static final int D_PEDSTD_DECI           = 768 + 0xA0;
-    
+
     private static final int D_HOST_NO_MOT           = 976;
     private static final int D_ACCEL_BIAS            = 660;
-    
+
     private static final int D_ORIENT_GAP            = 76;
-    
+
     private static final int D_TILT0_H               = 48;
     private static final int D_TILT0_L               = 50;
     private static final int D_TILT1_H               = 52;
@@ -237,9 +237,9 @@ public class InvMpuDmpMotionDriver {
     private static final int D_TILT2_L               = 58;
     private static final int D_TILT3_H               = 60;
     private static final int D_TILT3_L               = 62;
-    
+
     private static final int DMP_CODE_SIZE           = 3062;
-    
+
     // first define as short[] and then cast to byte[]
     private static final short[] dmp_memory_short = {
         /* bank # 0 */
@@ -310,7 +310,7 @@ public class InvMpuDmpMotionDriver {
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
         0x00, 0x00, 0x00, 0x00, 0x67, 0x7d, 0xdf, 0x7e, 0x72, 0x90, 0x2e, 0x55, 0x4c, 0xf6, 0xe6, 0x88,
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        
+
         /* bank # 4 */
         0xd8, 0xdc, 0xb4, 0xb8, 0xb0, 0xd8, 0xb9, 0xab, 0xf3, 0xf8, 0xfa, 0xb3, 0xb7, 0xbb, 0x8e, 0x9e,
         0xae, 0xf1, 0x32, 0xf5, 0x1b, 0xf1, 0xb4, 0xb8, 0xb0, 0x80, 0x97, 0xf1, 0xa9, 0xdf, 0xdf, 0xdf,
@@ -454,26 +454,26 @@ public class InvMpuDmpMotionDriver {
             dmp_memory[i] = (byte) dmp_memory_short[i];
         }
     }
-    
+
     private static final short sStartAddress = 0x0400;
-    
+
     /* END OF SECTION COPIED FROM dmpDefaultMPU6050.c */
-    
+
     private static final int INT_SRC_TAP             = 0x01;
     private static final int INT_SRC_ANDROID_ORIENT  = 0x08;
-    
+
     private static final int DMP_FEATURE_SEND_ANY_GYRO   = DMP_FEATURE_SEND_RAW_GYRO | DMP_FEATURE_SEND_CAL_GYRO;
-    
+
     private static final int MAX_PACKET_LENGTH   = 32;
-    
+
     private static final int DMP_SAMPLE_RATE     = 200;
     private static final int GYRO_SF             = (int) (46850825L * 200 / DMP_SAMPLE_RATE);
-    
+
     private static final int QUAT_ERROR_THRESH       = 1<<24;
     private static final int QUAT_MAG_SQ_NORMALIZED  = 1<<28;
     private static final int QUAT_MAG_SQ_MIN         = QUAT_MAG_SQ_NORMALIZED - QUAT_ERROR_THRESH;
     private static final int QUAT_MAG_SQ_MAX         = QUAT_MAG_SQ_NORMALIZED + QUAT_ERROR_THRESH;
-    
+
     private static class dmp_s {
         int orient;
         int feature_mask;
@@ -487,13 +487,13 @@ public class InvMpuDmpMotionDriver {
         dmp.fifo_rate = 0;
         dmp.packet_length = 0;
     }
-    
+
     private final InvMpu invMpu;
-    
+
     public InvMpuDmpMotionDriver(InvMpu invMpu) {
         this.invMpu = invMpu;
     }
-    
+
     /**
      *  @brief  Load the DMP with this image.
      *  @return 0 if successful.
@@ -502,7 +502,7 @@ public class InvMpuDmpMotionDriver {
     {
         return invMpu.mpu_load_firmware(DMP_CODE_SIZE, dmp_memory, sStartAddress, DMP_SAMPLE_RATE);
     }
-    
+
     /**
      *  @brief      Push gyro and accel orientation to the DMP.
      *  The orientation is represented here as the output of
@@ -518,20 +518,20 @@ public class InvMpuDmpMotionDriver {
         byte[] accel_axes = {(byte)DmpKey.DINA0C, (byte)DmpKey.DINAC9, (byte)DmpKey.DINA2C};
         byte[] gyro_sign = {(byte)DmpKey.DINA36, (byte)DmpKey.DINA56, (byte)DmpKey.DINA76};
         byte[] accel_sign = {(byte)DmpKey.DINA26, (byte)DmpKey.DINA46, (byte)DmpKey.DINA66};
-        
+
         gyro_regs[0] = gyro_axes[orient & 3];
         gyro_regs[1] = gyro_axes[(orient >> 3) & 3];
         gyro_regs[2] = gyro_axes[(orient >> 6) & 3];
         accel_regs[0] = accel_axes[orient & 3];
         accel_regs[1] = accel_axes[(orient >> 3) & 3];
         accel_regs[2] = accel_axes[(orient >> 6) & 3];
-        
+
         /* Chip-to-body, axes only. */
         if (!invMpu.mpu_write_mem((short)FCFG_1, gyro_regs, 0, 3))
             return false;
         if (!invMpu.mpu_write_mem((short)FCFG_2, accel_regs, 0, 3))
             return false;
-        
+
         gyro_regs = Arrays.copyOf(gyro_sign, 3);
         accel_regs = Arrays.copyOf(accel_sign, 3);
         if ((orient & 4) != 0) {
@@ -546,7 +546,7 @@ public class InvMpuDmpMotionDriver {
             gyro_regs[2] |= 1;
             accel_regs[2] |= 1;
         }
-        
+
         /* Chip-to-body, sign only. */
         if (!invMpu.mpu_write_mem((short)FCFG_3, gyro_regs, 0, 3))
             return false;
@@ -555,7 +555,7 @@ public class InvMpuDmpMotionDriver {
         dmp.orient = orient;
         return true;
     }
-    
+
     /**
      *  @brief      Set DMP output rate.
      *  Only used when DMP is on.
@@ -566,26 +566,26 @@ public class InvMpuDmpMotionDriver {
     {
         if (rate > DMP_SAMPLE_RATE)
             return false;
-        
+
         byte[] regs_end = {(byte)DmpKey.DINAFE, (byte)DmpKey.DINAF2, (byte)DmpKey.DINAAB,
             (byte)0xc4, (byte)DmpKey.DINAAA, (byte)DmpKey.DINAF1, (byte)DmpKey.DINADF,
             (byte)DmpKey.DINADF, (byte)0xBB, (byte)0xAF, (byte)DmpKey.DINADF, (byte)DmpKey.DINADF};
-        
+
         short div = (short)(DMP_SAMPLE_RATE / rate - 1);
         byte[] tmp = new byte[2];
         ByteBuffer.wrap(tmp).order(ByteOrder.BIG_ENDIAN).asShortBuffer().put(div);
         assert tmp[0] == ((div >> 8) & 0xFF);
         assert tmp[1] == (div & 0xFF);
-        
+
         if (!invMpu.mpu_write_mem((short)D_0_22, tmp, 0, 2))
             return false;
         if (!invMpu.mpu_write_mem((short)CFG_6, regs_end, 0, 12))
             return false;
-        
+
         dmp.fifo_rate = rate;
         return true;
     }
-    
+
     /**
      *  @brief      Set tap threshold for a specific axis.
      *  @param[in]  axis    1, 2, and 4 for XYZ accel, respectively.
@@ -776,7 +776,7 @@ public class InvMpuDmpMotionDriver {
         tmp[1] = (byte) (time & 0xFF);
         return invMpu.mpu_write_mem((short)D_1_88, tmp, 0, 2);
     }
-    
+
     /**
      *  @brief      Enable DMP features.
      *  The following \#define's are used in the input mask:
@@ -797,7 +797,7 @@ public class InvMpuDmpMotionDriver {
     boolean dmp_enable_feature(int mask)
     {
         byte[] tmp = new byte[10];
-        
+
         /* TODO: All of these settings can probably be integrated into the default
          * DMP image.
          */
@@ -807,9 +807,9 @@ public class InvMpuDmpMotionDriver {
         assert tmp[1] == (byte)((GYRO_SF >> 16) & 0xFF);
         assert tmp[2] == (byte)((GYRO_SF >> 8) & 0xFF);
         assert tmp[3] == (byte)(GYRO_SF & 0xFF);
-        
+
         invMpu.mpu_write_mem((short)D_0_104, tmp, 0, 4);
-        
+
         /* Send sensor data to the FIFO. */
         tmp[0] = (byte)0xA3;
         if ((mask & DMP_FEATURE_SEND_RAW_ACCEL) != 0) {
@@ -834,19 +834,19 @@ public class InvMpuDmpMotionDriver {
         tmp[8] = (byte)0xA3;
         tmp[9] = (byte)0xA3;
         invMpu.mpu_write_mem((short)CFG_15, tmp, 0, 10);
-        
+
         /* Send gesture data to the FIFO. */
         if ((mask & (DMP_FEATURE_TAP | DMP_FEATURE_ANDROID_ORIENT)) != 0)
             tmp[0] = DmpKey.DINA20;
         else
             tmp[0] = (byte)0xD8;
         invMpu.mpu_write_mem((short)CFG_27, tmp, 0, 1);
-        
+
         if ((mask & DMP_FEATURE_GYRO_CAL) != 0)
             dmp_enable_gyro_cal(true);
         else
             dmp_enable_gyro_cal(false);
-        
+
         if ((mask & DMP_FEATURE_SEND_ANY_GYRO) != 0) {
             if ((mask & DMP_FEATURE_SEND_CAL_GYRO) != 0) {
                 tmp[0] = (byte)0xB2;
@@ -861,8 +861,8 @@ public class InvMpuDmpMotionDriver {
             }
             invMpu.mpu_write_mem((short)CFG_GYRO_RAW_DATA, tmp, 0, 4);
         }
-        
-        
+
+
         if ((mask & DMP_FEATURE_TAP) != 0) {
             /* Enable tap. */
             tmp[0] = (byte)0xF8;
@@ -880,27 +880,27 @@ public class InvMpuDmpMotionDriver {
             tmp[0] = (byte)0xD8;
             invMpu.mpu_write_mem((short)CFG_20, tmp, 0, 1);
         }
-        
+
         if ((mask & DMP_FEATURE_ANDROID_ORIENT) != 0) {
             tmp[0] = (byte)0xD9;
         } else
             tmp[0] = (byte)0xD8;
         invMpu.mpu_write_mem((short)CFG_ANDROID_ORIENT_INT, tmp, 0, 1);
-        
+
         if ((mask & DMP_FEATURE_LP_QUAT) != 0)
             dmp_enable_lp_quat(true);
         else
             dmp_enable_lp_quat(false);
-        
+
         if ((mask & DMP_FEATURE_6X_LP_QUAT) != 0)
             dmp_enable_6x_lp_quat(true);
         else
             dmp_enable_6x_lp_quat(false);
-        
+
         /* Pedometer is always enabled. */
         dmp.feature_mask = mask | DMP_FEATURE_PEDOMETER;
         invMpu.mpu_reset_fifo();
-        
+
         dmp.packet_length = 0;
         if ((mask & DMP_FEATURE_SEND_RAW_ACCEL) != 0)
             dmp.packet_length += 6;
@@ -910,10 +910,10 @@ public class InvMpuDmpMotionDriver {
             dmp.packet_length += 16;
         if ((mask & (DMP_FEATURE_TAP | DMP_FEATURE_ANDROID_ORIENT)) != 0)
             dmp.packet_length += 4;
-        
+
         return true;
     }
-    
+
     /**
      *  @brief      Calibrate the gyro data in the DMP.
      *  After eight seconds of no motion, the DMP will compute gyro biases and
@@ -933,7 +933,7 @@ public class InvMpuDmpMotionDriver {
             return invMpu.mpu_write_mem((short)CFG_MOTION_BIAS, regs, 0, 9);
         }
     }
-    
+
     /**
      *  @brief      Generate 3-axis quaternions from the DMP.
      *  In this driver, the 3-axis and 6-axis DMP quaternion features are mutually
@@ -956,10 +956,10 @@ public class InvMpuDmpMotionDriver {
             regs[3] = (byte)0x8B;
         }
         invMpu.mpu_write_mem((short)CFG_LP_QUAT, regs, 0, 4);
-        
+
         return invMpu.mpu_reset_fifo();
     }
-    
+
     /**
      *  @brief       Generate 6-axis quaternions from the DMP.
      *  In this driver, the 3-axis and 6-axis DMP quaternion features are mutually
@@ -982,10 +982,10 @@ public class InvMpuDmpMotionDriver {
             regs[3] = (byte)0xA3;
         }
         invMpu.mpu_write_mem((short)CFG_8, regs, 0, 4);
-        
+
         return invMpu.mpu_reset_fifo();
     }
-    
+
     /**
      *  @brief      Decode the four-byte gesture data and execute any callbacks.
      *  @param[in]  gesture Gesture data from DMP packet.
@@ -997,7 +997,7 @@ public class InvMpuDmpMotionDriver {
         short tap = (short) ((0x3F & gesture[3]) & 0xFF);
 
 //        System.out.println("decode_gesture " + gesture[1]);
-        
+
         if ((gesture[1] & INT_SRC_TAP) != 0) {
             byte direction = (byte) (tap >> 3);
             byte count = (byte) ((tap % 8) + 1);
@@ -1038,24 +1038,24 @@ public class InvMpuDmpMotionDriver {
      */
     boolean dmp_read_fifo(short[] gyro, short[] accel, int[] quat,
             long[] timestamp, short[] sensors, short[] more) {
-        
+
         byte[] fifo_data = new byte[dmp.packet_length];
         short ii = 0;
-        
+
         /* TODO: sensors[0] only changes when dmp_enable_feature is called. We can
          * cache this value and save some cycles.
          */
         sensors[0] = 0;
-        
+
         /* Get a packet. */
         if (!invMpu.mpu_read_fifo_stream(fifo_data, more))
             return false;
-        
+
         /* Parse DMP packet. */
         if ((dmp.feature_mask & (DMP_FEATURE_LP_QUAT | DMP_FEATURE_6X_LP_QUAT)) != 0) {
             if (quat.length != 4)
                 return false;
-            
+
             ByteBuffer.wrap(fifo_data, ii, 4*quat.length).order(ByteOrder.BIG_ENDIAN).asIntBuffer().get(quat); // 4 bytes in an int
             assert quat[0] == (((fifo_data[0]&0xFF) << 24) | ((fifo_data[1]&0xFF) << 16) | ((fifo_data[2]&0xFF) << 8) | (fifo_data[3]&0xFF));
             assert quat[1] == (((fifo_data[4]&0xFF) << 24) | ((fifo_data[5]&0xFF) << 16) | ((fifo_data[6]&0xFF) << 8) | (fifo_data[7]&0xFF));
@@ -1086,7 +1086,7 @@ public class InvMpuDmpMotionDriver {
             }
             sensors[0] |= INV_WXYZ_QUAT;
         }
-        
+
         if ((dmp.feature_mask & DMP_FEATURE_SEND_RAW_ACCEL) != 0) {
             if (accel.length != 3)
                 return false;
@@ -1097,7 +1097,7 @@ public class InvMpuDmpMotionDriver {
             ii += 2*accel.length;
             sensors[0] |= InvMpu.INV_XYZ_ACCEL;
         }
-        
+
         if ((dmp.feature_mask & DMP_FEATURE_SEND_ANY_GYRO) != 0) {
             if (gyro.length != 3)
                 return false;
@@ -1108,14 +1108,14 @@ public class InvMpuDmpMotionDriver {
             ii += 2*gyro.length;
             sensors[0] |= InvMpu.INV_XYZ_GYRO;
         }
-        
+
         /* Gesture data is at the end of the DMP packet. Parse it and call
          * the gesture callbacks (if registered).
          */
         if ((dmp.feature_mask & (DMP_FEATURE_TAP | DMP_FEATURE_ANDROID_ORIENT)) != 0) {
             decode_gesture(Arrays.copyOfRange(fifo_data, ii, ii+4));
         }
-        
+
         if (timestamp != null && timestamp.length > 0)
             timestamp[0] = System.currentTimeMillis();
         return true;

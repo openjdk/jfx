@@ -78,7 +78,7 @@ public class CompositeGlyphMapper extends CharToGlyphMapper {
     }
 
     public int getMissingGlyphCode() {
-        return missingGlyph; 
+        return missingGlyph;
     }
 
     /* Making the glyph codes of a composite including the first

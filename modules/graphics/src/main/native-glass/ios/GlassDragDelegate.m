@@ -45,7 +45,7 @@
 
 #else
 
-#define DNDLOG(...) 
+#define DNDLOG(...)
 
 #endif
 
@@ -81,26 +81,26 @@ static jint operation; // Dragging operation supported in this session
     if (dragging == NO) {
         DNDLOG(@"Starting drag - operation == %ld", operation);
         dragging = YES;
-        
+
         operation = _operation;
         dragSourceView = _glassView;
-        
+
         dragSourceLocation = _dragSourceLocation;
-        
+
         lastJavaViewDragTarget = NULL;
-        
+
         // Create and show drag bitmap for better DnD feeling
         if (dragImage == nil) {
             dragImage = [[UIImageView alloc] initWithImage:[UIImage imageNamed:@"drag.png"] highlightedImage:[UIImage imageNamed:@"drop.png"]];
         }
-        
+
         // move drag image a little bit away from under the finger so it is visible
         dragImage.transform = CGAffineTransformMakeTranslation(dragImage.bounds.size.width/3, - dragImage.bounds.size.height/3);
-        
+
         [dragImage setCenter:dragSourceLocation];
-        
+
         [GlassDragDelegate showImage:NO];
-        
+
         DNDLOG(@"[GlassDragDelegate getMask] == %ld",[GlassDragDelegate getMask]);
     }
 }
@@ -111,7 +111,7 @@ static jint operation; // Dragging operation supported in this session
 }
 
 // we are draging already; new touches are not interesting for us at the moment
-+ (void) touchesBegan:(NSSet *)touches withEvent:(UIEvent *)event withMouse:(UITouch *)mouse 
++ (void) touchesBegan:(NSSet *)touches withEvent:(UIEvent *)event withMouse:(UITouch *)mouse
 {
     DNDLOG(@"DRAGGING - touchesBegan");
 }
@@ -124,7 +124,7 @@ static jint operation; // Dragging operation supported in this session
         for (UIView * gw in [hostView subviews]) {
             CGPoint mousePoint = [mouse locationInView:gw];
             UIView * hitView = [gw hitTest:mousePoint withEvent:nil];
-            
+
             if ([hitView isKindOfClass:[GlassViewGL class]]) {
                 topMostView = hitView;
             }
@@ -133,16 +133,16 @@ static jint operation; // Dragging operation supported in this session
     return topMostView;
 }
 
-+ (void) touchesMoved:(NSSet *)touches withEvent:(UIEvent *)event withMouse:(UITouch *)mouse 
++ (void) touchesMoved:(NSSet *)touches withEvent:(UIEvent *)event withMouse:(UITouch *)mouse
 {
     DNDLOG(@"DRAGGING - touchesMoved");
     if (dragging == YES) {
         [dragImage setCenter:[mouse locationInView:dragViewParent]];
-        
+
         GlassViewGL * dragTargetView = (GlassViewGL *)[GlassDragDelegate getDragTargetView:mouse];
         jobject javaDragTargetView = dragTargetView->delegate.jView;
         CGPoint point = [mouse locationInView:dragTargetView.superview];
-        
+
         if (lastJavaViewDragTarget != javaDragTargetView) { //We are entering View
             if (lastJavaViewDragTarget != NULL) { //... and leaving previous view
                 [GlassDragDelegate sendJavaDndEvent:lastDragPositionInDragTarget jView:lastJavaViewDragTarget type:com_sun_glass_events_DndEvent_EXIT];
@@ -156,16 +156,16 @@ static jint operation; // Dragging operation supported in this session
     }
 }
 
-+ (void) touchesEnded:(NSSet *)touches withEvent:(UIEvent *)event withMouse:(UITouch *)mouse 
++ (void) touchesEnded:(NSSet *)touches withEvent:(UIEvent *)event withMouse:(UITouch *)mouse
 {
     if (dragging == YES) {
         DNDLOG(@"MAIN VIEW IS DRAGGING - touchesEnded");
         [dragImage setCenter:[mouse locationInView:dragViewParent]];
-        
+
         GlassViewGL * dragTargetView = (GlassViewGL *)[GlassDragDelegate getDragTargetView:mouse];
         jobject javaDragTargetView = dragTargetView->delegate.jView;
         CGPoint point = [mouse locationInView:dragTargetView.superview];
-        
+
         if (([GlassDragDelegate getMask] & com_sun_glass_ui_Clipboard_ACTION_COPY) != 0) {
             [GlassDragDelegate sendJavaDndEvent:point jView:javaDragTargetView type:com_sun_glass_events_DndEvent_PERFORM];
             [GlassDragDelegate sendJavaDndEvent:point jView:javaDragTargetView type:com_sun_glass_events_DndEvent_END];
@@ -180,7 +180,7 @@ static jint operation; // Dragging operation supported in this session
     }
 }
 
-+ (void) touchesCancelled:(NSSet *)touches withEvent:(UIEvent *)event withMouse:(UITouch *)mouse 
++ (void) touchesCancelled:(NSSet *)touches withEvent:(UIEvent *)event withMouse:(UITouch *)mouse
 {
     if (dragging == YES) {
         DNDLOG(@"MAIN VIEW IS DRAGGING - touchesCancelled");
@@ -195,7 +195,7 @@ static jint operation; // Dragging operation supported in this session
         [dragViewParent addSubview:dragImage];
     }
     [dragImage setHidden:NO];
-    
+
 }
 
 
@@ -223,7 +223,7 @@ static jint operation; // Dragging operation supported in this session
     int yAbs = y;
     int mask;
     jint recommendedActions = com_sun_glass_ui_Clipboard_ACTION_COPY;
-    
+
     DNDLOG(@"dragging source operation %d, recommendedActions %d", (int)operation, (int)recommendedActions);
     [GlassDragDelegate setMask:recommendedActions];
     switch (type)
@@ -267,21 +267,21 @@ static jint operation; // Dragging operation supported in this session
             [GlassDragDelegate setMask:com_sun_glass_ui_Clipboard_ACTION_NONE];
             break;
     }
-    
+
     GLASS_CHECK_EXCEPTION(env);
 }
 
 + (void)setDelegate:(NSObject<GlassDragSourceDelegate>*)delegate
 {
     DNDLOG(@"GlassDragDelegate:setDelegate");
-    
+
     gDelegate = delegate; // notice, there is no retain
 }
 
 + (void)flushWithMask:(jint)mask
 {
     DNDLOG(@"GlassDragDelegate:flushWithMask: %ld", mask);
-    
+
     if ([NSThread isMainThread] == YES)
     {
         if (mask != com_sun_glass_ui_Clipboard_ACTION_NONE)
@@ -304,14 +304,14 @@ static jint operation; // Dragging operation supported in this session
 + (void)setMask:(jint)mask
 {
     DNDLOG(@"GlassDragDelegate:mask");
-    
+
     gMask = mask;
 }
 
 + (jint)getMask
 {
     DNDLOG(@"GlassDragDelegate:getMask");
-    
+
     return gMask;
 }
 

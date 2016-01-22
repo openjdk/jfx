@@ -171,7 +171,7 @@ public final class QuantumToolkit extends Toolkit {
                 boolean isSWT = "swt".equals(System.getProperty("glass.platform"));
                 String result = PlatformUtil.isMac() && isSWT ? "true" : "false";
                 return "true".equals(System.getProperty("javafx.draw.in.paint", result));});
-    
+
     private static boolean singleThreaded =
             AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> {
                 Boolean result = Boolean.getBoolean("quantum.singlethreaded");
@@ -180,7 +180,7 @@ public final class QuantumToolkit extends Toolkit {
                 }
                 return result;
             });
-    
+
     private static boolean noRenderJobs =
             AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> {
                 Boolean result = Boolean.getBoolean("quantum.norenderjobs");
@@ -280,7 +280,7 @@ public final class QuantumToolkit extends Toolkit {
     }
 
     boolean shouldWaitForRenderingToComplete() {
-        return !multithreaded; 
+        return !multithreaded;
     }
 
     /**
@@ -585,7 +585,7 @@ public final class QuantumToolkit extends Toolkit {
         if (!isNestedLoopRunning()) {
             notifyLastNestedLoopExited();
         }
-        
+
         return ret;
     }
 

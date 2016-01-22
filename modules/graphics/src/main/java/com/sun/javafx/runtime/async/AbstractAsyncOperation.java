@@ -39,7 +39,7 @@ import javafx.application.Platform;
  * "fetch a resource over the web".  Async operations should not access any JFX state except the immutable parameters
  * passed in, and should not have side effects other than those managed by thread-safe Java classes.
  *
- * Async operations are one-time use; subclasses should not attempt to reuse them.  
+ * Async operations are one-time use; subclasses should not attempt to reuse them.
  *
  */
 public abstract class AbstractAsyncOperation<V> implements AsyncOperation,

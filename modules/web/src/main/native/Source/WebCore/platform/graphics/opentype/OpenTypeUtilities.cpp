@@ -21,7 +21,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -31,13 +31,13 @@
 
 namespace WebCore {
 
-struct BigEndianUShort { 
+struct BigEndianUShort {
     operator unsigned short() const { return (v & 0x00ff) << 8 | v >> 8; }
     BigEndianUShort(unsigned short u) : v((u & 0x00ff) << 8 | u >> 8) { }
     unsigned short v;
 };
 
-struct BigEndianULong { 
+struct BigEndianULong {
     operator unsigned() const { return (v & 0xff) << 24 | (v & 0xff00) << 8 | (v & 0xff0000) >> 8 | v >> 24; }
     BigEndianULong(unsigned u) : v((u & 0xff) << 24 | (u & 0xff00) << 8 | (u & 0xff0000) >> 8 | u >> 24) { }
     unsigned v;
@@ -249,7 +249,7 @@ bool getEOTHeader(SharedBuffer* fontData, EOTHeader& eotHeader, size_t& overlayD
                     prefix->weight = OS2->weightClass;
                     // FIXME: Should use OS2->fsType, but some TrueType fonts set it to an over-restrictive value.
                     // Since ATS does not enforce this on Mac OS X, we do not enforce it either.
-                    prefix->fsType = 0;            
+                    prefix->fsType = 0;
                     for (unsigned j = 0; j < 4; j++)
                         prefix->unicodeRange[j] = OS2->unicodeRange[j];
                     for (unsigned j = 0; j < 2; j++)
@@ -282,7 +282,7 @@ bool getEOTHeader(SharedBuffer* fontData, EOTHeader& eotHeader, size_t& overlayD
 
                             unsigned short nameLength = name->nameRecords[j].length;
                             const BigEndianUShort* nameString = reinterpret_cast<const BigEndianUShort*>(data + tableOffset + name->stringOffset + name->nameRecords[j].offset);
-                            
+
                             switch (name->nameRecords[j].nameID) {
                                 case 1:
                                     familyNameLength = nameLength;

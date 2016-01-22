@@ -23,7 +23,7 @@ bool LoadItem::invoke() const
     ASSERT(loadUrlMID);
     env->CallStaticObjectMethod(getDRTClass(env), loadUrlMID, (jstring)jUrl);
     CheckAndClearException(env);
-    
+
     return true;
 }
 

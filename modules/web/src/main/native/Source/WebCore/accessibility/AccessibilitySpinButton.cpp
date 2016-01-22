@@ -35,7 +35,7 @@ PassRefPtr<AccessibilitySpinButton> AccessibilitySpinButton::create()
 {
     return adoptRef(new AccessibilitySpinButton);
 }
-    
+
 AccessibilitySpinButton::AccessibilitySpinButton()
     : m_spinButtonElement(0)
 {
@@ -44,7 +44,7 @@ AccessibilitySpinButton::AccessibilitySpinButton()
 AccessibilitySpinButton::~AccessibilitySpinButton()
 {
 }
-    
+
 AccessibilityObject* AccessibilitySpinButton::incrementButton()
 {
     if (!m_haveChildren)
@@ -54,24 +54,24 @@ AccessibilityObject* AccessibilitySpinButton::incrementButton()
 
     return m_children[0].get();
 }
-   
+
 AccessibilityObject* AccessibilitySpinButton::decrementButton()
 {
     if (!m_haveChildren)
         addChildren();
-    
+
     ASSERT(m_children.size() == 2);
-    
-    return m_children[1].get();    
+
+    return m_children[1].get();
 }
-    
+
 LayoutRect AccessibilitySpinButton::elementRect() const
 {
     ASSERT(m_spinButtonElement);
-    
+
     if (!m_spinButtonElement || !m_spinButtonElement->renderer())
         return LayoutRect();
-    
+
     Vector<FloatQuad> quads;
     m_spinButtonElement->renderer()->absoluteFocusRingQuads(quads);
 
@@ -81,7 +81,7 @@ LayoutRect AccessibilitySpinButton::elementRect() const
 void AccessibilitySpinButton::addChildren()
 {
     m_haveChildren = true;
-    
+
     AccessibilitySpinButtonPart* incrementor = toAccessibilitySpinButtonPart(axObjectCache()->getOrCreate(SpinButtonPartRole));
     incrementor->setIsIncrementor(true);
     incrementor->setParent(this);
@@ -92,23 +92,23 @@ void AccessibilitySpinButton::addChildren()
     decrementor->setParent(this);
     m_children.append(decrementor);
 }
-    
+
 void AccessibilitySpinButton::step(int amount)
 {
     ASSERT(m_spinButtonElement);
     if (!m_spinButtonElement)
         return;
-    
+
     m_spinButtonElement->step(amount);
 }
 
-// AccessibilitySpinButtonPart 
+// AccessibilitySpinButtonPart
 
 AccessibilitySpinButtonPart::AccessibilitySpinButtonPart()
     : m_isIncrementor(false)
 {
 }
-    
+
 PassRefPtr<AccessibilitySpinButtonPart> AccessibilitySpinButtonPart::create()
 {
     return adoptRef(new AccessibilitySpinButtonPart);
@@ -118,15 +118,15 @@ LayoutRect AccessibilitySpinButtonPart::elementRect() const
 {
     // FIXME: This logic should exist in the render tree or elsewhere, but there is no
     // relationship that exists that can be queried.
-    
+
     LayoutRect parentRect = parentObject()->elementRect();
     if (m_isIncrementor)
         parentRect.setHeight(parentRect.height() / 2);
     else {
-        parentRect.setY(parentRect.y() + parentRect.height() / 2);        
-        parentRect.setHeight(parentRect.height() / 2);        
+        parentRect.setY(parentRect.y() + parentRect.height() / 2);
+        parentRect.setHeight(parentRect.height() / 2);
     }
-        
+
     return parentRect;
 }
 
@@ -134,13 +134,13 @@ bool AccessibilitySpinButtonPart::press() const
 {
     if (!m_parent || !m_parent->isSpinButton())
         return false;
-    
+
     AccessibilitySpinButton* spinButton = toAccessibilitySpinButton(parentObject());
     if (m_isIncrementor)
         spinButton->step(1);
     else
         spinButton->step(-1);
-    
+
     return true;
 }
 

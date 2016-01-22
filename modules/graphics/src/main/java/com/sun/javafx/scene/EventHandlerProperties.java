@@ -54,7 +54,7 @@ public final class EventHandlerProperties {
         this.eventDispatcher = eventDispatcher;
         this.bean = bean;
     }
-    
+
     private EventHandlerProperty<ContextMenuEvent> onMenuContextRequested;
 
     public final EventHandler<? super ContextMenuEvent> onContextMenuRequested() {

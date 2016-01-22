@@ -51,34 +51,34 @@ import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 
 /**
- * 
+ *
  */
 public class MessagePanelController extends AbstractFxmlPanelController {
 
     private double panelWidth;
-    
+
     @FXML private ScrollPane scrollPane;
     @FXML private GridPane gridPane;
     @FXML private Button clearButton;
-    
+
     @FXML
     public void onClear(ActionEvent event) {
         getEditorController().getMessageLog().clear();
     }
-    
+
     public MessagePanelController(EditorController editorController) {
         super(MessagePanelController.class.getResource("MessagePanel.fxml"), I18N.getBundle(), editorController); //NOI18N
     }
-    
-    
+
+
     public void setPanelWidth(double panelWidth) {
         this.panelWidth = panelWidth;
         if (scrollPane != null) {
             updateScrollPaneWidth();
         }
     }
-    
-    
+
+
     /*
      * AbstractPanelController
      */
@@ -113,26 +113,26 @@ public class MessagePanelController extends AbstractFxmlPanelController {
      */
     @Override
     protected void controllerDidLoadFxml() {
-        
+
         // Sanity checks
         assert scrollPane != null;
         assert gridPane != null;
         assert clearButton != null;
-                
-        // Listens to the message log 
+
+        // Listens to the message log
         getEditorController().getMessageLog().revisionProperty().addListener(
                 (ChangeListener<Number>) (ov, t, t1) -> messageLogDidChange());
-        
+
         updateScrollPaneWidth();
         messageLogDidChange();
     }
-    
-    
-    
+
+
+
     /*
      * Private
      */
-    
+
     private void messageLogDidChange() {
         assert gridPane != null;
         gridPane.getChildren().clear();
@@ -165,8 +165,8 @@ public class MessagePanelController extends AbstractFxmlPanelController {
             }
         }
     }
-    
-    
+
+
     private void updateScrollPaneWidth() {
         assert scrollPane != null;
         scrollPane.setPrefWidth(panelWidth);

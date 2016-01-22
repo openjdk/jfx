@@ -38,5 +38,5 @@ public class FontPostureTest {
         assertEquals(FontPosture.REGULAR, FontPosture.findByName("regular"));
         assertEquals(FontPosture.ITALIC, FontPosture.findByName("italic"));
     }
-    
+
 }

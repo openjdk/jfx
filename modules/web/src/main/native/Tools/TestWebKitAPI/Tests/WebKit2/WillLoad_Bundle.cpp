@@ -69,12 +69,12 @@ private:
     {
         WKBundlePageLoaderClientV6 pageLoaderClient;
         memset(&pageLoaderClient, 0, sizeof(pageLoaderClient));
-        
+
         pageLoaderClient.base.version = 6;
         pageLoaderClient.base.clientInfo = this;
         pageLoaderClient.willLoadURLRequest = willLoadURLRequest;
         pageLoaderClient.willLoadDataRequest = willLoadDataRequest;
-        
+
         WKBundlePageSetPageLoaderClient(bundlePage, &pageLoaderClient.base);
     }
 };

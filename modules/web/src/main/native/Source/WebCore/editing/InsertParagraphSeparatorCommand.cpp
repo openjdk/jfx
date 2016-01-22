@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -108,7 +108,7 @@ bool InsertParagraphSeparatorCommand::shouldUseDefaultParagraphElement(Node* enc
 {
     if (m_mustUseDefaultParagraphElement)
         return true;
-    
+
     // Assumes that if there was a range selection, it was already deleted.
     if (!isEndOfBlock(endingSelection().visibleStart()))
         return false;
@@ -123,7 +123,7 @@ bool InsertParagraphSeparatorCommand::shouldUseDefaultParagraphElement(Node* enc
 void InsertParagraphSeparatorCommand::getAncestorsInsideBlock(const Node* insertionNode, Element* outerBlock, Vector<RefPtr<Element>>& ancestors)
 {
     ancestors.clear();
-    
+
     // Build up list of ancestors elements between the insertion node and the outer block.
     if (insertionNode != outerBlock) {
         for (Element* n = insertionNode->parentElement(); n && n != outerBlock; n = n->parentElement())
@@ -142,7 +142,7 @@ PassRefPtr<Element> InsertParagraphSeparatorCommand::cloneHierarchyUnderNewBlock
         appendNode(child, parent);
         parent = child.release();
     }
-    
+
     return parent.release();
 }
 
@@ -150,11 +150,11 @@ void InsertParagraphSeparatorCommand::doApply()
 {
     if (!endingSelection().isNonOrphanedCaretOrRange())
         return;
-    
+
     Position insertionPosition = endingSelection().start();
-        
+
     EAffinity affinity = endingSelection().affinity();
-        
+
     // Delete the current selection.
     if (endingSelection().isRange()) {
         calculateStyleBeforeInsertion(insertionPosition);
@@ -162,7 +162,7 @@ void InsertParagraphSeparatorCommand::doApply()
         insertionPosition = endingSelection().start();
         affinity = endingSelection().affinity();
     }
-    
+
     // FIXME: The parentAnchoredEquivalent conversion needs to be moved into enclosingBlock.
     RefPtr<Element> startBlock = enclosingBlock(insertionPosition.parentAnchoredEquivalent().containerNode());
     Position canonicalPos = VisiblePosition(insertionPosition).deepEquivalent();
@@ -176,7 +176,7 @@ void InsertParagraphSeparatorCommand::doApply()
         applyCommandToComposite(InsertLineBreakCommand::create(document()));
         return;
     }
-    
+
     // Use the leftmost candidate.
     insertionPosition = insertionPosition.upstream();
     if (!insertionPosition.isCandidate())
@@ -204,14 +204,14 @@ void InsertParagraphSeparatorCommand::doApply()
     if (startBlock->isRootEditableElement()) {
         blockToInsert = createDefaultParagraphElement(document());
         nestNewBlock = true;
-    } else if (shouldUseDefaultParagraphElement(startBlock.get())) 
+    } else if (shouldUseDefaultParagraphElement(startBlock.get()))
         blockToInsert = createDefaultParagraphElement(document());
     else
         blockToInsert = startBlock->cloneElementWithoutChildren();
 
     //---------------------------------------------------------------------
     // Handle case when position is in the last visible position in its block,
-    // including when the block is empty. 
+    // including when the block is empty.
     if (isLastInBlock) {
         if (nestNewBlock) {
             if (isFirstInBlock && !lineBreakExistsAtVisiblePosition(visiblePos)) {
@@ -239,24 +239,24 @@ void InsertParagraphSeparatorCommand::doApply()
         }
 
         // Recreate the same structure in the new paragraph.
-        
+
         Vector<RefPtr<Element>> ancestors;
-        getAncestorsInsideBlock(positionOutsideTabSpan(insertionPosition).deprecatedNode(), startBlock.get(), ancestors);      
+        getAncestorsInsideBlock(positionOutsideTabSpan(insertionPosition).deprecatedNode(), startBlock.get(), ancestors);
         RefPtr<Element> parent = cloneHierarchyUnderNewBlock(ancestors, blockToInsert);
-        
+
         appendBlockPlaceholder(parent);
 
         setEndingSelection(VisibleSelection(firstPositionInNode(parent.get()), DOWNSTREAM, endingSelection().isDirectional()));
         return;
     }
-    
+
 
     //---------------------------------------------------------------------
     // Handle case when position is in the first visible position in its block, and
     // similar case where previous position is in another, presumeably nested, block.
     if (isFirstInBlock || !inSameBlock(visiblePos, visiblePos.previous())) {
         Node *refNode;
-        
+
         insertionPosition = positionOutsideTabSpan(insertionPosition);
 
         if (isFirstInBlock && !nestNewBlock)
@@ -274,16 +274,16 @@ void InsertParagraphSeparatorCommand::doApply()
 
         // find ending selection position easily before inserting the paragraph
         insertionPosition = insertionPosition.downstream();
-        
+
         insertNodeBefore(blockToInsert, refNode);
 
         // Recreate the same structure in the new paragraph.
 
         Vector<RefPtr<Element>> ancestors;
         getAncestorsInsideBlock(positionAvoidingSpecialElementBoundary(positionOutsideTabSpan(insertionPosition)).deprecatedNode(), startBlock.get(), ancestors);
-        
+
         appendBlockPlaceholder(cloneHierarchyUnderNewBlock(ancestors, blockToInsert));
-        
+
         // In this case, we need to set the new ending selection.
         setEndingSelection(VisibleSelection(insertionPosition, DOWNSTREAM, endingSelection().isDirectional()));
         return;
@@ -293,8 +293,8 @@ void InsertParagraphSeparatorCommand::doApply()
     // Handle the (more complicated) general case,
 
     // All of the content in the current block after visiblePos is
-    // about to be wrapped in a new paragraph element.  Add a br before 
-    // it if visiblePos is at the start of a paragraph so that the 
+    // about to be wrapped in a new paragraph element.  Add a br before
+    // it if visiblePos is at the start of a paragraph so that the
     // content will move down a line.
     if (isStartOfParagraph(visiblePos)) {
         RefPtr<Element> br = createBreakElement(document());
@@ -307,8 +307,8 @@ void InsertParagraphSeparatorCommand::doApply()
             return;
         }
     }
-    
-    // Move downstream. Typing style code will take care of carrying along the 
+
+    // Move downstream. Typing style code will take care of carrying along the
     // style of the upstream position.
     insertionPosition = insertionPosition.downstream();
 
@@ -336,7 +336,7 @@ void InsertParagraphSeparatorCommand::doApply()
         ASSERT(!textNode->renderer() || textNode->renderer()->style().collapseWhiteSpace());
         replaceTextInNodePreservingMarkers(textNode, leadingWhitespace.deprecatedEditingOffset(), 1, nonBreakingSpaceString());
     }
-    
+
     // Split at pos if in the middle of a text node.
     Position positionAfterSplit;
     if (insertionPosition.anchorType() == Position::PositionIsOffsetInAnchor && insertionPosition.containerNode()->isTextNode()) {
@@ -365,7 +365,7 @@ void InsertParagraphSeparatorCommand::doApply()
     document().updateLayoutIgnorePendingStylesheets();
 
     // If the paragraph separator was inserted at the end of a paragraph, an empty line must be
-    // created.  All of the nodes, starting at visiblePos, are about to be added to the new paragraph 
+    // created.  All of the nodes, starting at visiblePos, are about to be added to the new paragraph
     // element.  If the first node to be inserted won't be one that will hold an empty line open, add a br.
     if (isEndOfParagraph(visiblePos) && !lineBreakExistsAtVisiblePosition(visiblePos))
         appendNode(createBreakElement(document()).get(), blockToInsert.get());
@@ -390,7 +390,7 @@ void InsertParagraphSeparatorCommand::doApply()
         }
 
         moveRemainingSiblingsToNewParent(n, blockToInsert.get(), blockToInsert);
-    }            
+    }
 
     // Handle whitespace that occurs after the split
     if (positionAfterSplit.isNotNull()) {

@@ -96,7 +96,7 @@ public:
     const LChar* characters8() const { return m_string.characters8(); }
     const UChar* characters16() const { return m_string.characters16(); }
     unsigned length() const { return m_string.length(); }
-    
+
     UChar operator[](unsigned int i) const { return m_string[i]; }
 
     WTF_EXPORT_STRING_API static AtomicString number(int);
@@ -115,7 +115,7 @@ public:
         { return m_string.find(s, start, caseSentitive); }
     size_t find(const String& s, unsigned start = 0, bool caseSentitive = true) const
         { return m_string.find(s, start, caseSentitive); }
-    
+
     bool startsWith(const String& s, bool caseSensitive = true) const
         { return m_string.startsWith(s, caseSensitive); }
     bool startsWith(UChar character) const
@@ -131,10 +131,10 @@ public:
     template<unsigned matchLength>
     bool endsWith(const char (&prefix)[matchLength], bool caseSensitive = true) const
         { return m_string.endsWith<matchLength>(prefix, caseSensitive); }
-    
+
     WTF_EXPORT_STRING_API AtomicString lower() const;
     AtomicString upper() const { return AtomicString(impl()->upper()); }
-    
+
     int toInt(bool* ok = 0) const { return m_string.toInt(ok); }
     double toDouble(bool* ok = 0) const { return m_string.toDouble(ok); }
     float toFloat(bool* ok = 0) const { return m_string.toFloat(ok); }
@@ -144,10 +144,10 @@ public:
     bool isEmpty() const { return m_string.isEmpty(); }
 
     static void remove(StringImpl*);
-    
+
 #if USE(CF)
     AtomicString(CFStringRef s) :  m_string(add(s)) { }
-#endif    
+#endif
 #ifdef __OBJC__
     AtomicString(NSString* s) : m_string(add((CFStringRef)s)) { }
     operator NSString*() const { return m_string; }
@@ -167,7 +167,7 @@ private:
     AtomicString(ASCIILiteral);
 
     String m_string;
-    
+
     WTF_EXPORT_STRING_API static PassRefPtr<StringImpl> add(const LChar*);
     ALWAYS_INLINE static PassRefPtr<StringImpl> add(const char* s) { return add(reinterpret_cast<const LChar*>(s)); };
     WTF_EXPORT_STRING_API static PassRefPtr<StringImpl> add(const LChar*, unsigned length);
@@ -200,7 +200,7 @@ private:
 inline bool operator==(const AtomicString& a, const AtomicString& b) { return a.impl() == b.impl(); }
 bool operator==(const AtomicString&, const LChar*);
 inline bool operator==(const AtomicString& a, const char* b) { return WTF::equal(a.impl(), reinterpret_cast<const LChar*>(b)); }
-inline bool operator==(const AtomicString& a, const Vector<UChar>& b) { return a.impl() && equal(a.impl(), b.data(), b.size()); }    
+inline bool operator==(const AtomicString& a, const Vector<UChar>& b) { return a.impl() && equal(a.impl(), b.data(), b.size()); }
 inline bool operator==(const AtomicString& a, const String& b) { return equal(a.impl(), b.impl()); }
 inline bool operator==(const LChar* a, const AtomicString& b) { return b == a; }
 inline bool operator==(const String& a, const AtomicString& b) { return equal(a.impl(), b.impl()); }

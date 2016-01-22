@@ -44,14 +44,14 @@ import javafx.scene.shape.Circle;
 
 /**
  *
- * 
+ *
  */
 public class CircleResizer extends AbstractResizer<Circle> {
 
     private final double originalRadius;
     private final PropertyName radiusName = new PropertyName("radius"); //NOI18N
     private final List<PropertyName> propertyNames = new ArrayList<>();
-    
+
     public CircleResizer(Circle sceneGraphObject) {
         super(sceneGraphObject);
         originalRadius = sceneGraphObject.getRadius();
@@ -61,7 +61,7 @@ public class CircleResizer extends AbstractResizer<Circle> {
     /*
      * AbstractResizer
      */
-    
+
     @Override
     public final Bounds computeBounds(double width, double height) {
         final double radius = Math.round(Math.min(width, height) / 2.0);
@@ -69,7 +69,7 @@ public class CircleResizer extends AbstractResizer<Circle> {
         final double minY = sceneGraphObject.getCenterY() - radius;
         return new BoundingBox(minX, minY, 2 * radius, 2 * radius);
     }
- 
+
     @Override
     public Feature getFeature() {
         return Feature.SCALING;
@@ -99,7 +99,7 @@ public class CircleResizer extends AbstractResizer<Circle> {
     public Object getValue(PropertyName propertyName) {
         assert propertyName != null;
         assert propertyNames.contains(propertyName);
-        
+
         final Object result;
         if (propertyName.equals(radiusName)) {
             result = sceneGraphObject.getRadius();
@@ -107,7 +107,7 @@ public class CircleResizer extends AbstractResizer<Circle> {
             // Emergency code
             result = null;
         }
-        
+
         return result;
     }
 

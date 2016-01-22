@@ -123,7 +123,7 @@ public class CallbackTest extends TestBase {
         popupUi.checkCalled(RESIZED);
         popupUi.checkCalled(VISIBILITY_CHANGED, true);
     }
-    
+
     // Tests that no exceptions occur when createPopupHandler is null (RT-15512).
     // Exceptions are cleared in native code and we cannot catch them at Java
     // level. So we check stderr output to detect them.
@@ -131,28 +131,28 @@ public class CallbackTest extends TestBase {
         PrintStream err = System.err;
         ByteArrayOutputStream bytes = new ByteArrayOutputStream();
         System.setErr(new PrintStream(bytes));
-        
+
         getEngine().setCreatePopupHandler(null);
         executeScript(JS_OPEN_DEFAULT);
 
         System.setErr(err);
         checkErrorOutput(bytes);
     }
-    
+
     // Tests that no exceptions occur when createPopupHandler returns null (RT-15512).
     // See comment to testNullPopupHandler().
     @Test public void testBlockingPopupHandler() {
         PrintStream err = System.err;
         ByteArrayOutputStream bytes = new ByteArrayOutputStream();
         System.setErr(new PrintStream(bytes));
-        
+
         getEngine().setCreatePopupHandler(features -> null);
         executeScript(JS_OPEN_DEFAULT);
 
         System.setErr(err);
         checkErrorOutput(bytes);
     }
-    
+
     private void checkErrorOutput(ByteArrayOutputStream bytes) {
         String s = bytes.toString();
         if (s.contains("Exception") || s.contains("Error")) {
@@ -221,7 +221,7 @@ public class CallbackTest extends TestBase {
         loadContent(html);
         mainUi.checkCalled(STATUS_CHANGED, status);
     }
-    
+
     class TestUI {
         private List<List<Object>> calls = new LinkedList<List<Object>>();
 

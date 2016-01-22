@@ -58,7 +58,7 @@ enum GIFState {
     GIFType,
     GIFGlobalHeader,
     GIFGlobalColormap,
-    GIFImageStart,            
+    GIFImageStart,
     GIFImageHeader,
     GIFImageColormap,
     GIFImageBody,
@@ -161,7 +161,7 @@ public:
     size_t localColormapPosition; // Per-image colormap.
     int localColormapSize; // Size of local colormap array.
     int datasize;
-    
+
     bool isLocalColormapDefined : 1;
     bool progressiveDisplay : 1; // If true, do Haeberli interlace hack.
     bool interlaced : 1; // True, if scanlines arrive interlaced order.
@@ -191,7 +191,7 @@ public:
         , m_isDataSizeDefined(false)
     {
     }
-    
+
     ~GIFFrameContext()
     {
     }
@@ -308,7 +308,7 @@ private:
     GIFState m_state; // Current decoder master state.
     size_t m_bytesToConsume; // Number of bytes to consume for next stage of parsing.
     size_t m_bytesRead; // Number of bytes processed.
-    
+
     // Global (multi-image) state.
     int m_screenBgcolor; // Logical screen background color.
     int m_version; // Either 89 for GIF89 or 87 for GIF87.
@@ -318,7 +318,7 @@ private:
     size_t m_globalColormapPosition; // (3* MAX_COLORS in size) Default colormap if local not supplied, 3 bytes for each color.
     int m_globalColormapSize; // Size of global colormap array.
     int m_loopCount; // Netscape specific extension block to control the number of animation loops a GIF renders.
-    
+
     Vector<OwnPtr<GIFFrameContext> > m_frames;
     size_t m_currentDecodingFrame;
 

@@ -6,13 +6,13 @@
  * are met:
  *
  * 1.  Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer. 
+ *     notice, this list of conditions and the following disclaimer.
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
- *     documentation and/or other materials provided with the distribution. 
+ *     documentation and/or other materials provided with the distribution.
  * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
- *     from this software without specific prior written permission. 
+ *     from this software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY APPLE AND ITS CONTRIBUTORS "AS IS" AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
@@ -64,12 +64,12 @@ NSString *filenameByFixingIllegalCharacters(NSString *string)
 
     // Replace ":" with "-".
     [filename replaceOccurrencesOfString:@":" withString:@"-" options:0 range:NSMakeRange(0, [filename length])];
-    
+
     // Strip leading dots.
     while ([filename hasPrefix:@"."]) {
         [filename deleteCharactersInRange:NSMakeRange(0,1)];
     }
-    
+
     return filename;
 }
 
@@ -85,13 +85,13 @@ CFStringEncoding stringEncodingForResource(Handle resource)
     short resRef = HomeResFile(resource);
     if (ResError() != noErr)
         return NSMacOSRomanStringEncoding;
-    
+
     // Get the FSRef for the current resource file
     FSRef fref;
     OSStatus error = FSGetForkCBInfo(resRef, 0, NULL, NULL, NULL, &fref, NULL);
     if (error != noErr)
         return NSMacOSRomanStringEncoding;
-    
+
     RetainPtr<CFURLRef> url = adoptCF(CFURLCreateFromFSRef(NULL, &fref));
     if (!url)
         return NSMacOSRomanStringEncoding;
@@ -102,7 +102,7 @@ CFStringEncoding stringEncodingForResource(Handle resource)
     path = [path stringByDeletingLastPathComponent];
     if (!stringIsCaseInsensitiveEqualToString([path pathExtension], @"lproj"))
         return NSMacOSRomanStringEncoding;
-    
+
     NSString *directoryName = [[path stringByDeletingPathExtension] lastPathComponent];
     RetainPtr<CFStringRef> locale = adoptCF(CFLocaleCreateCanonicalLocaleIdentifierFromString(NULL, (CFStringRef)directoryName));
     if (!locale)
@@ -118,7 +118,7 @@ CFStringEncoding stringEncodingForResource(Handle resource)
     error = UpgradeScriptInfoToTextEncoding(kTextScriptDontCare, lang, region, NULL, &encoding);
     if (error != noErr)
         return NSMacOSRomanStringEncoding;
-    
+
     return encoding;
 }
 

@@ -108,7 +108,7 @@ public class MeshViewer extends Application {
         float points[] = new float[numVerts * pointSize];
         float texCoords[] = new float[numVerts * texCoordSize];
         int faceCount = subDivX * subDivY * 2;
-        int faces[] = new int[ faceCount * faceSize]; 
+        int faces[] = new int[ faceCount * faceSize];
 
         // Create points and texCoords
         for (int y = 0; y <= subDivY; y++) {

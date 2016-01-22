@@ -31,7 +31,7 @@
 #include "StringPrototype.h"
 
 namespace JSC {
-    
+
 const ClassInfo JSString::s_info = { "string", 0, 0, 0, CREATE_METHOD_TABLE(JSString) };
 
 void JSRopeString::RopeBuilder::expand()
@@ -53,7 +53,7 @@ void JSString::visitChildren(JSCell* cell, SlotVisitor& visitor)
 {
     JSString* thisObject = jsCast<JSString*>(cell);
     Base::visitChildren(thisObject, visitor);
-    
+
     MARK_LOG_MESSAGE1("[%u]: ", thisObject->length());
 
 #if ENABLE(OBJECT_MARK_LOGGING)
@@ -153,12 +153,12 @@ void JSRopeString::resolveRope(ExecState* exec) const
 // we would likely have to place all of the constituent StringImpls into the
 // Vector before performing any concatenation, but by working backwards we likely
 // only fill the queue with the number of substrings at any given level in a
-// rope-of-ropes.)    
+// rope-of-ropes.)
 void JSRopeString::resolveRopeSlowCase8(LChar* buffer) const
 {
     LChar* position = buffer + m_length; // We will be working backwards over the rope.
     Vector<JSString*, 32, UnsafeVectorOverflow> workQueue; // Putting strings into a Vector is only OK because there are no GC points in this method.
-    
+
     for (size_t i = 0; i < s_maxInternalRopeLength && m_fibers[i]; ++i) {
         workQueue.append(m_fibers[i].get());
         // Clearing here works only because there are no GC points in this method.
@@ -287,14 +287,14 @@ bool JSString::getStringPropertyDescriptor(ExecState* exec, PropertyName propert
         descriptor.setDescriptor(jsNumber(m_length), DontEnum | DontDelete | ReadOnly);
         return true;
     }
-    
+
     unsigned i = propertyName.asIndex();
     if (i < m_length) {
         ASSERT(i != PropertyName::NotAnIndex); // No need for an explicit check, the above test would always fail!
         descriptor.setDescriptor(getIndex(exec, i), DontDelete | ReadOnly);
         return true;
     }
-    
+
     return false;
 }
 

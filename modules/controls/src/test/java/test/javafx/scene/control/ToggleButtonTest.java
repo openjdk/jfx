@@ -67,40 +67,40 @@ public class ToggleButtonTest {
         toggleWithText = new ToggleButton("text");
         toggleWithGraphic = new ToggleButton("graphic", node);
     }
-    
-   
-   
+
+
+
     /*********************************************************************
      * Tests for default values                                         *
      ********************************************************************/
-    
+
     @Test public void defaultConstructorShouldSetStyleClassTo_togglebutton() {
         assertStyleClassContains(toggle, "toggle-button");
     }
-    
+
     @Test public void defaultOneArgConstructorShouldSetStyleClassTo_togglebutton() {
         assertStyleClassContains(toggleWithText, "toggle-button");
     }
-    
+
     @Test public void defaultTwoArgConstructorShouldSetStyleClassTo_togglebutton() {
         assertStyleClassContains(toggleWithGraphic, "toggle-button");
     }
-    
+
     @Test public void defaultConstructorTextGraphicCheck() {
         assertEquals(toggle.getText(), "");
         assertNull(toggle.getGraphic());
     }
-    
+
     @Test public void defaultOneArgConstructorTextGraphicCheck() {
         assertEquals(toggleWithText.getText(), "text");
         assertNull(toggleWithText.getGraphic());
     }
-    
+
     @Test public void defaultTwoArgConstructorTextGraphicCheck() {
         assertEquals(toggleWithGraphic.getText(), "graphic");
         assertSame(toggleWithGraphic.getGraphic(), node);
     }
-    
+
     @Test public void defaultSelected() {
         assertFalse(toggle.isSelected());
     }
@@ -108,11 +108,11 @@ public class ToggleButtonTest {
     @Test public void defaultAlignment() {
         assertSame(toggle.getAlignment(), Pos.CENTER);
     }
-    
+
     @Test public void defaultMnemonicParsing() {
         assertTrue(toggle.isMnemonicParsing());
     }
-    
+
     /*********************************************************************
      * Tests for property binding                                        *
      ********************************************************************/
@@ -155,29 +155,29 @@ public class ToggleButtonTest {
         toggle.setSelected(true);
         assertTrue(toggle.selectedProperty().getValue());
     }
-    
+
     @Test public void setSelectedAndSeeValue() {
         toggle.setSelected(false);
         assertFalse(toggle.isSelected());
     }
-    
+
     @Test public void setToggleGroupAndSeeValueIsReflectedInModel() {
         toggle.setToggleGroup(toggleGroup);
         assertSame(toggle.toggleGroupProperty().getValue(), toggleGroup);
     }
-    
+
     @Test public void setToggleGroupAndSeeValue() {
         toggle.setToggleGroup(toggleGroup);
         assertSame(toggle.getToggleGroup(), toggleGroup);
     }
-    
+
     @Test public void fireAndCheckSelectionToggled() {
         toggle.fire();
         assertTrue(toggle.isSelected());
         toggle.fire();
         assertFalse(toggle.isSelected());
     }
-    
+
     @Test public void fireAndCheckActionEventFired() {
         final Boolean []flag = new Boolean[1];
         flag[0] = false;
@@ -194,5 +194,5 @@ public class ToggleButtonTest {
         }
         assertTrue("fire() doesnt emit ActionEvent!", flag[0]);
     }
-    
+
 }

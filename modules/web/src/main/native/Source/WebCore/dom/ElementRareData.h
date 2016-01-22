@@ -48,7 +48,7 @@ public:
 
     void resetComputedStyle();
     void resetDynamicRestyleObservations();
-    
+
     short tabIndex() const { return m_tabIndex; }
     void setTabIndexExplicitly(short index) { m_tabIndex = index; m_tabIndexWasSetExplicitly = true; }
     bool tabIndexSetExplicitly() const { return m_tabIndexWasSetExplicitly; }

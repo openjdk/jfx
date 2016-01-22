@@ -57,7 +57,7 @@ import javafx.stage.Stage;
  * @embedded
  */
 public class TaskApp extends Application {
-   
+
     public Parent createContent() {
        TableView<DailySales> tableView = new TableView<>();
         Region veil = new Region();
@@ -83,7 +83,7 @@ public class TaskApp extends Application {
         tableView.setMinSize(240, 200);
         StackPane stack = new StackPane();
         stack.getChildren().addAll(tableView, veil, p);
-     
+
         // Use binding to be notified whenever the data source chagnes
         Task<ObservableList<DailySales>> task = new GetDailySalesTask();
         p.progressProperty().bind(task.progressProperty());
@@ -94,7 +94,7 @@ public class TaskApp extends Application {
         new Thread(task).start();
         return stack;
     }
-   
+
     @Override public void start(Stage primaryStage) throws Exception {
         primaryStage.setScene(new Scene(createContent()));
         primaryStage.show();

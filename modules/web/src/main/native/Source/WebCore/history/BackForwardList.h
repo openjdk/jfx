@@ -22,7 +22,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef BackForwardList_h
@@ -50,7 +50,7 @@ class BackForwardList : public BackForwardClient {
 #if PLATFORM(JAVA)
     friend BackForwardListImpl;
 #endif
-public: 
+public:
     static PassRefPtr<BackForwardList> create(Page* page) { return adoptRef(new BackForwardList(page)); }
     virtual ~BackForwardList();
 
@@ -66,7 +66,7 @@ public:
     JLObject hostObject();
     void setHostObject(const JLObject&);
 #endif
-        
+
     HistoryItem* backItem();
     HistoryItem* currentItem();
     HistoryItem* forwardItem();
@@ -111,7 +111,7 @@ private:
     bool m_closed;
     bool m_enabled;
 };
-    
+
 } // namespace WebCore
 
 #endif // BackForwardList_h

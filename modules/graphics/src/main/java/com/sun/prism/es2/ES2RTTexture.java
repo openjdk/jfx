@@ -42,7 +42,7 @@ class ES2RTTexture extends ES2Texture<ES2RTTextureData>
 {
 
     private boolean opaque;
-  
+
     private ES2RTTexture(ES2Context context, ES2TextureResource<ES2RTTextureData> resource,
                          WrapMode wrapMode,
                          int physicalWidth, int physicalHeight,
@@ -93,7 +93,7 @@ class ES2RTTexture extends ES2Texture<ES2RTTextureData>
             return;
         }
         GLContext glContext = context.getGLContext();
-        rbID = glContext.createRenderBuffer(getPhysicalWidth(), 
+        rbID = glContext.createRenderBuffer(getPhysicalWidth(),
                 getPhysicalHeight(), glContext.getSampleSize());
 
         // Add to disposer record so that we can cleanup the MSAA
@@ -260,7 +260,7 @@ class ES2RTTexture extends ES2Texture<ES2RTTextureData>
             contentW = w;
             contentH = h;
         }
-        
+
         // save current texture
         glContext.setActiveTextureUnit(0);
         int savedFBO = glContext.getBoundFBO();

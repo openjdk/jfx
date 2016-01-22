@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -45,7 +45,7 @@ void GCThreadSharedData::resetChildren()
 }
 
 size_t GCThreadSharedData::childVisitCount()
-{       
+{
     unsigned long result = 0;
     for (unsigned i = 0; i < m_gcThreads.size(); ++i)
         result += m_gcThreads[i]->slotVisitor()->visitCount();
@@ -53,7 +53,7 @@ size_t GCThreadSharedData::childVisitCount()
 }
 
 size_t GCThreadSharedData::childBytesVisited()
-{       
+{
     size_t result = 0;
     for (unsigned i = 0; i < m_gcThreads.size(); ++i)
         result += m_gcThreads[i]->slotVisitor()->bytesVisited();
@@ -61,7 +61,7 @@ size_t GCThreadSharedData::childBytesVisited()
 }
 
 size_t GCThreadSharedData::childBytesCopied()
-{       
+{
     size_t result = 0;
     for (unsigned i = 0; i < m_gcThreads.size(); ++i)
         result += m_gcThreads[i]->slotVisitor()->bytesCopied();
@@ -102,7 +102,7 @@ GCThreadSharedData::GCThreadSharedData(VM* vm)
 
 GCThreadSharedData::~GCThreadSharedData()
 {
-#if ENABLE(PARALLEL_GC)    
+#if ENABLE(PARALLEL_GC)
     // Destroy our marking threads.
     {
         std::lock_guard<std::mutex> markingLock(m_markingMutex);
@@ -123,7 +123,7 @@ GCThreadSharedData::~GCThreadSharedData()
 void GCThreadSharedData::reset()
 {
     ASSERT(m_sharedMarkStack.isEmpty());
-    
+
     m_weakReferenceHarvesters.removeAll();
 
     if (m_shouldHashCons) {
@@ -194,9 +194,9 @@ void GCThreadSharedData::didStartCopying()
         m_copyIndex = 0;
     }
 
-    // We do this here so that we avoid a race condition where the main thread can 
-    // blow through all of the copying work before the GCThreads fully wake up. 
-    // The GCThreads then request a block from the CopiedSpace when the copying phase 
+    // We do this here so that we avoid a race condition where the main thread can
+    // blow through all of the copying work before the GCThreads fully wake up.
+    // The GCThreads then request a block from the CopiedSpace when the copying phase
     // has completed, which isn't allowed.
     for (size_t i = 0; i < m_gcThreads.size(); i++)
         m_gcThreads[i]->copyVisitor()->startCopying();

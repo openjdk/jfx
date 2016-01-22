@@ -113,13 +113,13 @@ G_DEFINE_QUARK (g-spawn-exit-error-quark, g_spawn_exit_error)
  * @user_data: (closure): user data for @child_setup
  * @child_pid: (out) (allow-none): return location for child process reference, or %NULL
  * @error: return location for error
- * 
+ *
  * See g_spawn_async_with_pipes() for a full description; this function
  * simply calls the g_spawn_async_with_pipes() without any pipes.
  *
  * You should call g_spawn_close_pid() on the returned child process
  * reference when you don't need it any more.
- * 
+ *
  * If you are writing a GTK+ application, and the program you are
  * spawning is a graphical application, too, then you may want to
  * use gdk_spawn_on_screen() instead to ensure that the spawned program
@@ -142,7 +142,7 @@ g_spawn_async (const gchar          *working_directory,
                GError              **error)
 {
   g_return_val_if_fail (argv != NULL, FALSE);
-  
+
   return g_spawn_async_with_pipes (working_directory,
                                    argv, envp,
                                    flags,
@@ -228,7 +228,7 @@ read_data (GString *str,
  *
  * Executes a child synchronously (waits for the child to exit before returning).
  * All output from the child is stored in @standard_output and @standard_error,
- * if those parameters are non-%NULL. Note that you must set the  
+ * if those parameters are non-%NULL. Note that you must set the
  * %G_SPAWN_STDOUT_TO_DEV_NULL and %G_SPAWN_STDERR_TO_DEV_NULL flags when
  * passing %NULL for @standard_output and @standard_error.
  *
@@ -244,7 +244,7 @@ read_data (GString *str,
  * This function calls g_spawn_async_with_pipes() internally; see that
  * function for full details on the other parameters and details on
  * how these functions work on Windows.
- * 
+ *
  * Returns: %TRUE on success, %FALSE if an error was set
  */
 gboolean
@@ -257,7 +257,7 @@ g_spawn_sync (const gchar          *working_directory,
               gchar               **standard_output,
               gchar               **standard_error,
               gint                 *exit_status,
-              GError              **error)     
+              GError              **error)
 {
   gint outpipe = -1;
   gint errpipe = -1;
@@ -268,14 +268,14 @@ g_spawn_sync (const gchar          *working_directory,
   GString *errstr = NULL;
   gboolean failed;
   gint status;
-  
+
   g_return_val_if_fail (argv != NULL, FALSE);
   g_return_val_if_fail (!(flags & G_SPAWN_DO_NOT_REAP_CHILD), FALSE);
   g_return_val_if_fail (standard_output == NULL ||
                         !(flags & G_SPAWN_STDOUT_TO_DEV_NULL), FALSE);
   g_return_val_if_fail (standard_error == NULL ||
                         !(flags & G_SPAWN_STDERR_TO_DEV_NULL), FALSE);
-  
+
   /* Just to ensure segfaults if callers try to use
    * these when an error is reported.
    */
@@ -284,7 +284,7 @@ g_spawn_sync (const gchar          *working_directory,
 
   if (standard_error)
     *standard_error = NULL;
-  
+
   if (!fork_exec_with_pipes (FALSE,
                              working_directory,
                              argv,
@@ -307,14 +307,14 @@ g_spawn_sync (const gchar          *working_directory,
     return FALSE;
 
   /* Read data from child. */
-  
+
   failed = FALSE;
 
   if (outpipe >= 0)
     {
       outstr = g_string_new (NULL);
     }
-      
+
   if (errpipe >= 0)
     {
       errstr = g_string_new (NULL);
@@ -326,13 +326,13 @@ g_spawn_sync (const gchar          *working_directory,
           errpipe >= 0))
     {
       ret = 0;
-          
+
       FD_ZERO (&fds);
       if (outpipe >= 0)
         FD_SET (outpipe, &fds);
       if (errpipe >= 0)
         FD_SET (errpipe, &fds);
-          
+
       ret = select (MAX (outpipe, errpipe) + 1,
                     &fds,
                     NULL, NULL,
@@ -342,8 +342,8 @@ g_spawn_sync (const gchar          *working_directory,
         {
           int errsv = errno;
 
-	  if (errno == EINTR)
-	    continue;
+      if (errno == EINTR)
+        continue;
 
           failed = TRUE;
 
@@ -352,7 +352,7 @@ g_spawn_sync (const gchar          *working_directory,
                        G_SPAWN_ERROR_READ,
                        _("Unexpected error in select() reading data from a child process (%s)"),
                        g_strerror (errsv));
-              
+
           break;
         }
 
@@ -396,17 +396,17 @@ g_spawn_sync (const gchar          *working_directory,
     }
 
   /* These should only be open still if we had an error.  */
-  
+
   if (outpipe >= 0)
     close_and_invalidate (&outpipe);
   if (errpipe >= 0)
     close_and_invalidate (&errpipe);
-  
+
   /* Wait for child to exit, even if we have
    * an error pending.
    */
  again:
-      
+
   ret = waitpid (pid, &status, 0);
 
   if (ret < 0)
@@ -431,7 +431,7 @@ g_spawn_sync (const gchar          *working_directory,
               int errsv = errno;
 
               failed = TRUE;
-                  
+
               g_set_error (error,
                            G_SPAWN_ERROR,
                            G_SPAWN_ERROR_READ,
@@ -440,7 +440,7 @@ g_spawn_sync (const gchar          *working_directory,
             }
         }
     }
-  
+
   if (failed)
     {
       if (outstr)
@@ -454,8 +454,8 @@ g_spawn_sync (const gchar          *working_directory,
     {
       if (exit_status)
         *exit_status = status;
-      
-      if (standard_output)        
+
+      if (standard_output)
         *standard_output = g_string_free (outstr, FALSE);
 
       if (standard_error)
@@ -488,7 +488,7 @@ g_spawn_sync (const gchar          *working_directory,
  * name of the program must be a full path. If @flags contains the
  * %G_SPAWN_SEARCH_PATH flag, the `PATH` environment variable is
  * used to search for the executable. If @flags contains the
- * %G_SPAWN_SEARCH_PATH_FROM_ENVP flag, the `PATH` variable from 
+ * %G_SPAWN_SEARCH_PATH_FROM_ENVP flag, the `PATH` variable from
  * @envp is used to search for the executable. If both the
  * %G_SPAWN_SEARCH_PATH and %G_SPAWN_SEARCH_PATH_FROM_ENVP flags
  * are set, the `PATH` variable from @envp takes precedence over
@@ -561,7 +561,7 @@ g_spawn_sync (const gchar          *working_directory,
  * @envp. If both %G_SPAWN_SEARCH_PATH and %G_SPAWN_SEARCH_PATH_FROM_ENVP
  * are used, the value from @envp takes precedence over the environment.
  * %G_SPAWN_STDOUT_TO_DEV_NULL means that the child's standard output
- * will be discarded, instead of going to the same location as the parent's 
+ * will be discarded, instead of going to the same location as the parent's
  * standard output. If you use this flag, @standard_output must be %NULL.
  * %G_SPAWN_STDERR_TO_DEV_NULL means that the child's standard error
  * will be discarded, instead of going to the same location as the parent's
@@ -605,15 +605,15 @@ g_spawn_sync (const gchar          *working_directory,
  * when they are no longer in use. If these parameters are %NULL, the
  * corresponding pipe won't be created.
  *
- * If @standard_input is NULL, the child's standard input is attached to 
+ * If @standard_input is NULL, the child's standard input is attached to
  * /dev/null unless %G_SPAWN_CHILD_INHERITS_STDIN is set.
  *
- * If @standard_error is NULL, the child's standard error goes to the same 
- * location as the parent's standard error unless %G_SPAWN_STDERR_TO_DEV_NULL 
+ * If @standard_error is NULL, the child's standard error goes to the same
+ * location as the parent's standard error unless %G_SPAWN_STDERR_TO_DEV_NULL
  * is set.
  *
- * If @standard_output is NULL, the child's standard output goes to the same 
- * location as the parent's standard output unless %G_SPAWN_STDOUT_TO_DEV_NULL 
+ * If @standard_output is NULL, the child's standard output goes to the same
+ * location as the parent's standard output unless %G_SPAWN_STDOUT_TO_DEV_NULL
  * is set.
  *
  * @error can be %NULL to ignore errors, or non-%NULL to report errors.
@@ -629,11 +629,11 @@ g_spawn_sync (const gchar          *working_directory,
  * If @child_pid is not %NULL and an error does not occur then the returned
  * process reference must be closed using g_spawn_close_pid().
  *
- * If you are writing a GTK+ application, and the program you 
+ * If you are writing a GTK+ application, and the program you
  * are spawning is a graphical application, too, then you may
  * want to use gdk_spawn_on_screen_with_pipes() instead to ensure that
  * the spawned program opens its windows on the right screen.
- * 
+ *
  * Returns: %TRUE on success, %FALSE if an error was set
  */
 gboolean
@@ -657,7 +657,7 @@ g_spawn_async_with_pipes (const gchar          *working_directory,
   /* can't inherit stdin if we have an input pipe. */
   g_return_val_if_fail (standard_input == NULL ||
                         !(flags & G_SPAWN_CHILD_INHERITS_STDIN), FALSE);
-  
+
   return fork_exec_with_pipes (!(flags & G_SPAWN_DO_NOT_REAP_CHILD),
                                working_directory,
                                argv,
@@ -681,7 +681,7 @@ g_spawn_async_with_pipes (const gchar          *working_directory,
 
 /**
  * g_spawn_command_line_sync:
- * @command_line: a command line 
+ * @command_line: a command line
  * @standard_output: (out) (array zero-terminated=1) (element-type guint8) (allow-none): return location for child output
  * @standard_error: (out) (array zero-terminated=1) (element-type guint8) (allow-none): return location for child errors
  * @exit_status: (out) (allow-none): return location for child exit status, as returned by waitpid()
@@ -699,9 +699,9 @@ g_spawn_async_with_pipes (const gchar          *working_directory,
  * If @exit_status is non-%NULL, the platform-specific exit status of
  * the child is stored there; see the documentation of
  * g_spawn_check_exit_status() for how to use and interpret this.
- * 
+ *
  * On Windows, please note the implications of g_shell_parse_argv()
- * parsing @command_line. Parsing is done according to Unix shell rules, not 
+ * parsing @command_line. Parsing is done according to Unix shell rules, not
  * Windows command interpreter rules.
  * Space is a separator, and backslashes are
  * special. Thus you cannot simply pass a @command_line containing
@@ -723,12 +723,12 @@ g_spawn_command_line_sync (const gchar  *command_line,
   gchar **argv = NULL;
 
   g_return_val_if_fail (command_line != NULL, FALSE);
-  
+
   if (!g_shell_parse_argv (command_line,
                            NULL, &argv,
                            error))
     return FALSE;
-  
+
   retval = g_spawn_sync (NULL,
                          argv,
                          NULL,
@@ -748,7 +748,7 @@ g_spawn_command_line_sync (const gchar  *command_line,
  * g_spawn_command_line_async:
  * @command_line: a command line
  * @error: return location for errors
- * 
+ *
  * A simple version of g_spawn_async() that parses a command line with
  * g_shell_parse_argv() and passes it to g_spawn_async(). Runs a
  * command line in the background. Unlike g_spawn_async(), the
@@ -756,7 +756,7 @@ g_spawn_command_line_sync (const gchar  *command_line,
  * that %G_SPAWN_SEARCH_PATH can have security implications, so
  * consider using g_spawn_async() directly if appropriate. Possible
  * errors are those from g_shell_parse_argv() and g_spawn_async().
- * 
+ *
  * The same concerns on Windows apply as for g_spawn_command_line_sync().
  *
  * Returns: %TRUE on success, %FALSE if error is set
@@ -774,7 +774,7 @@ g_spawn_command_line_async (const gchar *command_line,
                            NULL, &argv,
                            error))
     return FALSE;
-  
+
   retval = g_spawn_async (NULL,
                           argv,
                           NULL,
@@ -837,38 +837,38 @@ g_spawn_command_line_async (const gchar *command_line,
  */
 gboolean
 g_spawn_check_exit_status (gint      exit_status,
-			   GError  **error)
+               GError  **error)
 {
   gboolean ret = FALSE;
 
   if (WIFEXITED (exit_status))
     {
       if (WEXITSTATUS (exit_status) != 0)
-	{
-	  g_set_error (error, G_SPAWN_EXIT_ERROR, WEXITSTATUS (exit_status),
-		       _("Child process exited with code %ld"),
-		       (long) WEXITSTATUS (exit_status));
-	  goto out;
-	}
+    {
+      g_set_error (error, G_SPAWN_EXIT_ERROR, WEXITSTATUS (exit_status),
+               _("Child process exited with code %ld"),
+               (long) WEXITSTATUS (exit_status));
+      goto out;
+    }
     }
   else if (WIFSIGNALED (exit_status))
     {
       g_set_error (error, G_SPAWN_ERROR, G_SPAWN_ERROR_FAILED,
-		   _("Child process killed by signal %ld"),
-		   (long) WTERMSIG (exit_status));
+           _("Child process killed by signal %ld"),
+           (long) WTERMSIG (exit_status));
       goto out;
     }
   else if (WIFSTOPPED (exit_status))
     {
       g_set_error (error, G_SPAWN_ERROR, G_SPAWN_ERROR_FAILED,
-		   _("Child process stopped by signal %ld"),
-		   (long) WSTOPSIG (exit_status));
+           _("Child process stopped by signal %ld"),
+           (long) WSTOPSIG (exit_status));
       goto out;
     }
   else
     {
       g_set_error (error, G_SPAWN_ERROR, G_SPAWN_ERROR_FAILED,
-		   _("Child process exited abnormally"));
+           _("Child process exited abnormally"));
       goto out;
     }
 
@@ -935,7 +935,7 @@ exec_err_to_g_error (gint en)
       return G_SPAWN_ERROR_LOOP;
       break;
 #endif
-      
+
 #ifdef ETXTBUSY
     case ETXTBUSY:
       return G_SPAWN_ERROR_TXTBUSY;
@@ -977,7 +977,7 @@ exec_err_to_g_error (gint en)
       return G_SPAWN_ERROR_LIBBAD;
       break;
 #endif
-      
+
     default:
       return G_SPAWN_ERROR_FAILED;
       break;
@@ -988,7 +988,7 @@ static gssize
 write_all (gint fd, gconstpointer vbuf, gsize to_write)
 {
   gchar *buf = (gchar *) vbuf;
-  
+
   while (to_write > 0)
     {
       gssize count = write (fd, buf, to_write);
@@ -1003,7 +1003,7 @@ write_all (gint fd, gconstpointer vbuf, gsize to_write)
           buf += count;
         }
     }
-  
+
   return TRUE;
 }
 
@@ -1012,10 +1012,10 @@ static void
 write_err_and_exit (gint fd, gint msg)
 {
   gint en = errno;
-  
+
   write_all (fd, &msg, sizeof(msg));
   write_all (fd, &en, sizeof(en));
-  
+
   _exit (1);
 }
 
@@ -1035,12 +1035,12 @@ fdwalk (int (*cb)(void *data, int fd), void *data)
   gint open_max;
   gint fd;
   gint res = 0;
-  
+
 #ifdef HAVE_SYS_RESOURCE_H
   struct rlimit rl;
 #endif
 
-#ifdef __linux__  
+#ifdef __linux__
   DIR *d;
 
   if ((d = opendir("/proc/self/fd"))) {
@@ -1052,7 +1052,7 @@ fdwalk (int (*cb)(void *data, int fd), void *data)
 
           if (de->d_name[0] == '.')
               continue;
-            
+
           errno = 0;
           l = strtol(de->d_name, &e, 10);
           if (errno != 0 || !e || *e)
@@ -1069,7 +1069,7 @@ fdwalk (int (*cb)(void *data, int fd), void *data)
           if ((res = cb (data, fd)) != 0)
               break;
         }
-      
+
       closedir(d);
       return res;
   }
@@ -1078,9 +1078,9 @@ fdwalk (int (*cb)(void *data, int fd), void *data)
    * rlimit trick */
 
 #endif
-  
+
 #ifdef HAVE_SYS_RESOURCE_H
-      
+
   if (getrlimit(RLIMIT_NOFILE, &rl) == 0 && rl.rlim_max != RLIM_INFINITY)
       open_max = rl.rlim_max;
   else
@@ -1165,13 +1165,13 @@ do_exec (gint                  child_err_report_fd,
       /* We need to do child_err_report_fd anyway */
       set_cloexec (GINT_TO_POINTER(0), child_err_report_fd);
     }
-  
+
   /* Redirect pipes as required */
-  
+
   if (stdin_fd >= 0)
     {
       /* dup2 can't actually fail here I don't think */
-          
+
       if (sane_dup2 (stdin_fd, 0) < 0)
         write_err_and_exit (child_err_report_fd,
                             CHILD_DUP2_FAILED);
@@ -1191,7 +1191,7 @@ do_exec (gint                  child_err_report_fd,
   if (stdout_fd >= 0)
     {
       /* dup2 can't actually fail here I don't think */
-          
+
       if (sane_dup2 (stdout_fd, 1) < 0)
         write_err_and_exit (child_err_report_fd,
                             CHILD_DUP2_FAILED);
@@ -1210,7 +1210,7 @@ do_exec (gint                  child_err_report_fd,
   if (stderr_fd >= 0)
     {
       /* dup2 can't actually fail here I don't think */
-          
+
       if (sane_dup2 (stderr_fd, 2) < 0)
         write_err_and_exit (child_err_report_fd,
                             CHILD_DUP2_FAILED);
@@ -1224,7 +1224,7 @@ do_exec (gint                  child_err_report_fd,
       sane_dup2 (write_null, 2);
       close_and_invalidate (&write_null);
     }
-  
+
   /* Call user function just before we exec */
   if (child_setup)
     {
@@ -1243,28 +1243,28 @@ do_exec (gint                  child_err_report_fd,
 static gboolean
 read_ints (int      fd,
            gint*    buf,
-           gint     n_ints_in_buf,    
-           gint    *n_ints_read,      
+           gint     n_ints_in_buf,
+           gint    *n_ints_read,
            GError **error)
 {
-  gsize bytes = 0;    
-  
+  gsize bytes = 0;
+
   while (TRUE)
     {
-      gssize chunk;    
+      gssize chunk;
 
       if (bytes >= sizeof(gint)*2)
         break; /* give up, who knows what happened, should not be
                 * possible.
                 */
-          
+
     again:
       chunk = read (fd,
                     ((gchar*)buf) + bytes,
                     sizeof(gint) * n_ints_in_buf - bytes);
       if (chunk < 0 && errno == EINTR)
         goto again;
-          
+
       if (chunk < 0)
         {
           int errsv = errno;
@@ -1281,7 +1281,7 @@ read_ints (int      fd,
       else if (chunk == 0)
         break; /* EOF */
       else /* chunk > 0 */
-	bytes += chunk;
+    bytes += chunk;
     }
 
   *n_ints_read = (gint)(bytes / sizeof(gint));
@@ -1308,7 +1308,7 @@ fork_exec_with_pipes (gboolean              intermediate_child,
                       gint                 *standard_input,
                       gint                 *standard_output,
                       gint                 *standard_error,
-                      GError              **error)     
+                      GError              **error)
 {
   GPid pid = -1;
   gint stdin_pipe[2] = { -1, -1 };
@@ -1318,16 +1318,16 @@ fork_exec_with_pipes (gboolean              intermediate_child,
   gint child_pid_report_pipe[2] = { -1, -1 };
   guint pipe_flags = cloexec_pipes ? FD_CLOEXEC : 0;
   gint status;
-  
+
   if (!g_unix_open_pipe (child_err_report_pipe, pipe_flags, error))
     return FALSE;
 
   if (intermediate_child && !g_unix_open_pipe (child_pid_report_pipe, pipe_flags, error))
     goto cleanup_and_fail;
-  
+
   if (standard_input && !g_unix_open_pipe (stdin_pipe, pipe_flags, error))
     goto cleanup_and_fail;
-  
+
   if (standard_output && !g_unix_open_pipe (stdout_pipe, pipe_flags, error))
     goto cleanup_and_fail;
 
@@ -1359,7 +1359,7 @@ fork_exec_with_pipes (gboolean              intermediate_child,
       signal (SIGINT, SIG_DFL);
       signal (SIGTERM, SIG_DFL);
       signal (SIGHUP, SIG_DFL);
-      
+
       /* Be sure we crash if the parent exits
        * and we write to the err_report_pipe
        */
@@ -1374,7 +1374,7 @@ fork_exec_with_pipes (gboolean              intermediate_child,
       close_and_invalidate (&stdin_pipe[1]);
       close_and_invalidate (&stdout_pipe[0]);
       close_and_invalidate (&stderr_pipe[0]);
-      
+
       if (intermediate_child)
         {
           /* We need to fork an intermediate child that launches the
@@ -1391,9 +1391,9 @@ fork_exec_with_pipes (gboolean              intermediate_child,
               /* report -1 as child PID */
               write_all (child_pid_report_pipe[1], &grandchild_pid,
                          sizeof(grandchild_pid));
-              
+
               write_err_and_exit (child_err_report_pipe[1],
-                                  CHILD_FORK_FAILED);              
+                                  CHILD_FORK_FAILED);
             }
           else if (grandchild_pid == 0)
             {
@@ -1419,7 +1419,7 @@ fork_exec_with_pipes (gboolean              intermediate_child,
             {
               write_all (child_pid_report_pipe[1], &grandchild_pid, sizeof(grandchild_pid));
               close_and_invalidate (&child_pid_report_pipe[1]);
-              
+
               _exit (0);
             }
         }
@@ -1449,9 +1449,9 @@ fork_exec_with_pipes (gboolean              intermediate_child,
   else
     {
       /* Parent */
-      
+
       gint buf[2];
-      gint n_ints = 0;    
+      gint n_ints = 0;
 
       /* Close the uncared-about ends of the pipes */
       close_and_invalidate (&child_err_report_pipe[1]);
@@ -1472,16 +1472,16 @@ fork_exec_with_pipes (gboolean              intermediate_child,
                 ; /* do nothing, child already reaped */
               else
                 g_warning ("waitpid() should not fail in "
-			   "'fork_exec_with_pipes'");
+               "'fork_exec_with_pipes'");
             }
         }
-      
+
 
       if (!read_ints (child_err_report_pipe[0],
                       buf, 2, &n_ints,
                       error))
         goto cleanup_and_fail;
-        
+
       if (n_ints >= 2)
         {
           /* Error from the child. */
@@ -1497,7 +1497,7 @@ fork_exec_with_pipes (gboolean              intermediate_child,
                            g_strerror (buf[1]));
 
               break;
-              
+
             case CHILD_EXEC_FAILED:
               g_set_error (error,
                            G_SPAWN_ERROR,
@@ -1507,7 +1507,7 @@ fork_exec_with_pipes (gboolean              intermediate_child,
                            g_strerror (buf[1]));
 
               break;
-              
+
             case CHILD_DUP2_FAILED:
               g_set_error (error,
                            G_SPAWN_ERROR,
@@ -1524,7 +1524,7 @@ fork_exec_with_pipes (gboolean              intermediate_child,
                            _("Failed to fork child process (%s)"),
                            g_strerror (buf[1]));
               break;
-              
+
             default:
               g_set_error (error,
                            G_SPAWN_ERROR,
@@ -1541,7 +1541,7 @@ fork_exec_with_pipes (gboolean              intermediate_child,
       if (intermediate_child)
         {
           n_ints = 0;
-          
+
           if (!read_ints (child_pid_report_pipe[0],
                           buf, 1, &n_ints, error))
             goto cleanup_and_fail;
@@ -1563,11 +1563,11 @@ fork_exec_with_pipes (gboolean              intermediate_child,
               pid = buf[0];
             }
         }
-      
+
       /* Success against all odds! return the information */
       close_and_invalidate (&child_err_report_pipe[0]);
       close_and_invalidate (&child_pid_report_pipe[0]);
- 
+
       if (child_pid)
         *child_pid = pid;
 
@@ -1577,7 +1577,7 @@ fork_exec_with_pipes (gboolean              intermediate_child,
         *standard_output = stdout_pipe[0];
       if (standard_error)
         *standard_error = stderr_pipe[0];
-      
+
       return TRUE;
     }
 
@@ -1627,19 +1627,19 @@ script_execute (const gchar *file,
   int argc = 0;
   while (argv[argc])
     ++argc;
-  
+
   /* Construct an argument list for the shell.  */
   {
     gchar **new_argv;
 
     new_argv = g_new0 (gchar*, argc + 2); /* /bin/sh and NULL */
-    
+
     new_argv[0] = (char *) "/bin/sh";
     new_argv[1] = (char *) file;
     while (argc > 0)
       {
-	new_argv[argc + 1] = argv[argc];
-	--argc;
+    new_argv[argc + 1] = argv[argc];
+    --argc;
       }
 
     /* Execute the shell. */
@@ -1647,7 +1647,7 @@ script_execute (const gchar *file,
       execve (new_argv[0], new_argv, envp);
     else
       execv (new_argv[0], new_argv);
-    
+
     g_free (new_argv);
   }
 }
@@ -1683,9 +1683,9 @@ g_execute (const gchar *file,
         execve (file, argv, envp);
       else
         execv (file, argv);
-      
+
       if (errno == ENOEXEC)
-	script_execute (file, argv, envp);
+    script_execute (file, argv, envp);
     }
   else
     {
@@ -1702,24 +1702,24 @@ g_execute (const gchar *file,
         path = g_getenv ("PATH");
 
       if (path == NULL)
-	{
-	  /* There is no 'PATH' in the environment.  The default
-	   * search path in libc is the current directory followed by
-	   * the path 'confstr' returns for '_CS_PATH'.
+    {
+      /* There is no 'PATH' in the environment.  The default
+       * search path in libc is the current directory followed by
+       * the path 'confstr' returns for '_CS_PATH'.
            */
 
           /* In GLib we put . last, for security, and don't use the
            * unportable confstr(); UNIX98 does not actually specify
            * what to search if PATH is unset. POSIX may, dunno.
            */
-          
+
           path = "/bin:/usr/bin:.";
-	}
+    }
 
       len = strlen (file) + 1;
       pathlen = strlen (path);
       freeme = name = g_malloc (pathlen + len + 1);
-      
+
       /* Copy the file name at the top, including '\0'  */
       memcpy (name + pathlen + 1, file, len);
       name = name + pathlen;
@@ -1728,75 +1728,75 @@ g_execute (const gchar *file,
 
       p = path;
       do
-	{
-	  char *startp;
+    {
+      char *startp;
 
-	  path = p;
-	  p = my_strchrnul (path, ':');
+      path = p;
+      p = my_strchrnul (path, ':');
 
-	  if (p == path)
-	    /* Two adjacent colons, or a colon at the beginning or the end
+      if (p == path)
+        /* Two adjacent colons, or a colon at the beginning or the end
              * of 'PATH' means to search the current directory.
              */
-	    startp = name + 1;
-	  else
-	    startp = memcpy (name - (p - path), path, p - path);
+        startp = name + 1;
+      else
+        startp = memcpy (name - (p - path), path, p - path);
 
-	  /* Try to execute this name.  If it works, execv will not return.  */
+      /* Try to execute this name.  If it works, execv will not return.  */
           if (envp)
             execve (startp, argv, envp);
           else
             execv (startp, argv);
-          
-	  if (errno == ENOEXEC)
-	    script_execute (startp, argv, envp);
 
-	  switch (errno)
-	    {
-	    case EACCES:
-	      /* Record the we got a 'Permission denied' error.  If we end
+      if (errno == ENOEXEC)
+        script_execute (startp, argv, envp);
+
+      switch (errno)
+        {
+        case EACCES:
+          /* Record the we got a 'Permission denied' error.  If we end
                * up finding no executable we can use, we want to diagnose
                * that we did find one but were denied access.
                */
-	      got_eacces = TRUE;
+          got_eacces = TRUE;
 
               /* FALL THRU */
-              
-	    case ENOENT:
+
+        case ENOENT:
 #ifdef ESTALE
-	    case ESTALE:
+        case ESTALE:
 #endif
 #ifdef ENOTDIR
-	    case ENOTDIR:
+        case ENOTDIR:
 #endif
-	      /* Those errors indicate the file is missing or not executable
+          /* Those errors indicate the file is missing or not executable
                * by us, in which case we want to just try the next path
                * directory.
                */
-	      break;
+          break;
 
-	    case ENODEV:
-	    case ETIMEDOUT:
-	      /* Some strange filesystems like AFS return even
-	       * stranger error numbers.  They cannot reasonably mean anything
-	       * else so ignore those, too.
-	       */
-	      break;
+        case ENODEV:
+        case ETIMEDOUT:
+          /* Some strange filesystems like AFS return even
+           * stranger error numbers.  They cannot reasonably mean anything
+           * else so ignore those, too.
+           */
+          break;
 
-	    default:
-	      /* Some other error means we found an executable file, but
+        default:
+          /* Some other error means we found an executable file, but
                * something went wrong executing it; return the error to our
                * caller.
                */
               g_free (freeme);
-	      return -1;
-	    }
-	}
+          return -1;
+        }
+    }
       while (*p++ != '\0');
 
       /* We tried every element and none of them worked.  */
       if (got_eacces)
-	/* At least one failure was due to permissions, so report that
+    /* At least one failure was due to permissions, so report that
          * error.
          */
         errno = EACCES;

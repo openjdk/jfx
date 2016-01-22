@@ -28,10 +28,10 @@ package javafx.beans.property;
 /**
  * This class provides a full implementation of a {@link Property} wrapping an
  * arbitrary {@code Object}.
- * 
+ *
  * @see ObjectPropertyBase
- * 
- * 
+ *
+ *
  * @param <T>
  *            the type of the wrapped {@code Object}
  * @since JavaFX 2.0
@@ -69,7 +69,7 @@ public class SimpleObjectProperty<T> extends ObjectPropertyBase<T> {
 
     /**
      * The constructor of {@code ObjectProperty}
-     * 
+     *
      * @param initialValue
      *            the initial value of the wrapped value
      */
@@ -79,7 +79,7 @@ public class SimpleObjectProperty<T> extends ObjectPropertyBase<T> {
 
     /**
      * The constructor of {@code ObjectProperty}
-     * 
+     *
      * @param bean
      *            the bean of this {@code ObjectProperty}
      * @param name
@@ -92,7 +92,7 @@ public class SimpleObjectProperty<T> extends ObjectPropertyBase<T> {
 
     /**
      * The constructor of {@code ObjectProperty}
-     * 
+     *
      * @param bean
      *            the bean of this {@code ObjectProperty}
      * @param name

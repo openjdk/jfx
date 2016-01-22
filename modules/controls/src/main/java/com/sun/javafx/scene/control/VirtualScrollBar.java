@@ -62,7 +62,7 @@ public class VirtualScrollBar extends ScrollBar {
      */
     public VirtualScrollBar(final VirtualFlow flow) {
         this.flow = flow;
-        
+
         super.valueProperty().addListener(valueModel -> {
             if (isVirtual()/* && oldValue != newValue*/) {
                 if (adjusting) {
@@ -120,7 +120,7 @@ public class VirtualScrollBar extends ScrollBar {
             super.increment();
         }
     }
-    
+
     // this method is called when the user clicks in the scrollbar track, so
     // we special-case it to allow for page-up and page-down clicking to work
     // as expected.
@@ -129,7 +129,7 @@ public class VirtualScrollBar extends ScrollBar {
         if (isVirtual()) {
             adjusting = true;
             double oldValue = flow.getPosition();
-            
+
             double newValue = ((getMax() - getMin()) * Utils.clamp(0, pos, 1))+getMin();
             if (newValue < oldValue) {
                 IndexedCell cell = flow.getFirstVisibleCell();

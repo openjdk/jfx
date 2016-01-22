@@ -32,8 +32,8 @@ public final class CalculatedValue {
 
 
     public CalculatedValue(Object value, StyleOrigin origin, boolean relative) {
-            
-        this.value = value;            
+
+        this.value = value;
         this.origin = origin;
         this.relative = relative;
     }

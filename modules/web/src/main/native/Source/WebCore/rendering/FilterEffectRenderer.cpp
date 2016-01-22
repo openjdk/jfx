@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -122,8 +122,8 @@ PassRefPtr<FilterEffect> FilterEffectRenderer::buildReferenceFilter(RenderElemen
 
     // FIXME: Figure out what to do with SourceAlpha. Right now, we're
     // using the alpha of the original input layer, which is obviously
-    // wrong. We should probably be extracting the alpha from the 
-    // previousEffect, but this requires some more processing.  
+    // wrong. We should probably be extracting the alpha from the
+    // previousEffect, but this requires some more processing.
     // This may need a spec clarification.
     auto builder = std::make_unique<SVGFilterBuilder>(previousEffect, SourceAlpha::create(this));
 
@@ -272,7 +272,7 @@ bool FilterEffectRenderer::build(RenderElement* renderer, const FilterOperations
             float amount = narrowPrecisionToFloat(componentTransferOperation->amount());
             transferFunction.slope = amount;
             transferFunction.intercept = -0.5 * amount + 0.5;
-            
+
             ComponentTransferFunction nullFunction;
             effect = FEComponentTransfer::create(this, transferFunction, transferFunction, transferFunction, nullFunction);
             break;
@@ -298,7 +298,7 @@ bool FilterEffectRenderer::build(RenderElement* renderer, const FilterOperations
             // property applied here should not clip to their primitive subregions.
             effect->setClipsToBounds(consumer == FilterFunction);
             effect->setOperatingColorSpace(ColorSpaceDeviceRGB);
-            
+
             if (filterOperation->type() != FilterOperation::REFERENCE) {
                 effect->inputEffects().append(previousEffect);
                 m_effects.append(effect);
@@ -312,7 +312,7 @@ bool FilterEffectRenderer::build(RenderElement* renderer, const FilterOperations
         return false;
 
     setMaxEffectRects(m_sourceDrawingRegion);
-    
+
     return true;
 }
 
@@ -384,7 +384,7 @@ bool FilterEffectRendererHelper::prepareFilterEffect(RenderLayer* renderLayer, c
         m_haveFilterEffect = false;
         return false;
     }
-    
+
     bool hasUpdatedBackingStore = filter->updateBackingStoreRect(filterSourceRect);
     if (filter->hasFilterThatMovesPixels()) {
         if (hasUpdatedBackingStore)
@@ -409,7 +409,7 @@ GraphicsContext* FilterEffectRendererHelper::filterContext() const
 bool FilterEffectRendererHelper::beginFilterEffect()
 {
     ASSERT(m_renderLayer);
-    
+
     FilterEffectRenderer* filter = m_renderLayer->filterRenderer();
     filter->allocateBackingStoreIfNeeded();
     // Paint into the context that represents the SourceGraphic of the filter.
@@ -419,7 +419,7 @@ bool FilterEffectRendererHelper::beginFilterEffect()
         m_haveFilterEffect = false;
         return false;
     }
-    
+
     // Translate the context so that the contents of the layer is captuterd in the offscreen memory buffer.
     sourceGraphicsContext->save();
     sourceGraphicsContext->translate(-m_paintOffset.x(), -m_paintOffset.y());
@@ -437,13 +437,13 @@ void FilterEffectRendererHelper::applyFilterEffect(GraphicsContext* destinationC
     filter->inputContext()->restore();
 
     filter->apply();
-    
+
     // Get the filtered output and draw it in place.
     LayoutRect destRect = filter->outputRect();
     destRect.move(m_paintOffset.x(), m_paintOffset.y());
-    
+
     destinationContext->drawImageBuffer(filter->output(), m_renderLayer->renderer().style().colorSpace(), pixelSnappedIntRect(destRect), CompositeSourceOver);
-    
+
     filter->clearIntermediateResults();
 }
 

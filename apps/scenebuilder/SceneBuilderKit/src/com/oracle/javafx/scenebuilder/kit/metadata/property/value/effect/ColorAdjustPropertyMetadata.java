@@ -44,7 +44,7 @@ import javafx.scene.effect.ColorAdjust;
  *
  */
 public class ColorAdjustPropertyMetadata extends ComplexPropertyMetadata<ColorAdjust> {
-    
+
     private final EffectPropertyMetadata inputMetadata
             = new EffectPropertyMetadata(new PropertyName("input"), //NOI18N
             true /* readWrite */, null, InspectorPath.UNUSED);
@@ -61,7 +61,7 @@ public class ColorAdjustPropertyMetadata extends ComplexPropertyMetadata<ColorAd
             = new DoublePropertyMetadata(new PropertyName("saturation"), //NOI18N
             DoublePropertyMetadata.DoubleKind.COORDINATE, true /* readWrite */, 0.0, InspectorPath.UNUSED);
 
-    public ColorAdjustPropertyMetadata(PropertyName name, boolean readWrite, 
+    public ColorAdjustPropertyMetadata(PropertyName name, boolean readWrite,
             ColorAdjust defaultValue, InspectorPath inspectorPath) {
         super(name, ColorAdjust.class, readWrite, defaultValue, inspectorPath);
     }
@@ -69,11 +69,11 @@ public class ColorAdjustPropertyMetadata extends ComplexPropertyMetadata<ColorAd
     /*
      * ComplexPropertyMetadata
      */
-    
+
     @Override
     public FXOMInstance makeFxomInstanceFromValue(ColorAdjust value, FXOMDocument fxomDocument) {
         final FXOMInstance result = new FXOMInstance(fxomDocument, getValueClass());
-        
+
         inputMetadata.setValue(result, value.getInput());
         brightnessMetadata.setValue(result, value.getBrightness());
         contrastMetadata.setValue(result, value.getContrast());

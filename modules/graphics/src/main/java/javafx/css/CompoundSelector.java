@@ -38,24 +38,24 @@ import java.util.Set;
 
 
 /**
- * A compound selector which behaves according to the CSS standard. The selector is 
- * composed of one or more <code>Selectors</code>, along with an array of 
- * <code>CompoundSelectorRelationships</code> indicating the required relationship at each 
- * stage.  There must be exactly one less <code>Combinator</code> than 
+ * A compound selector which behaves according to the CSS standard. The selector is
+ * composed of one or more <code>Selectors</code>, along with an array of
+ * <code>CompoundSelectorRelationships</code> indicating the required relationship at each
+ * stage.  There must be exactly one less <code>Combinator</code> than
  * there are selectors.
  * <p>
  * For example, the parameters <code>[selector1, selector2, selector3]</code>
- * and <code>[Combinator.CHILD, Combinator.DESCENDANT]</code> will match 
+ * and <code>[Combinator.CHILD, Combinator.DESCENDANT]</code> will match
  * a component when all of the following conditions hold:
  * <ol>
  * <li>The component itself is matched by selector3
  * <li>The component has an ancestor which is matched by selector2
- * <li>The ancestor matched in step 2 is a direct CHILD of a component 
+ * <li>The ancestor matched in step 2 is a direct CHILD of a component
  * matched by selector1
  * </ol>
- * In other words, the compound selector specified above is (in CSS syntax) 
- * <code>selector1 &gt; selector2 selector3</code>.  The greater-than (&gt;) 
- * between selector1 and selector2 specifies a direct CHILD, whereas the 
+ * In other words, the compound selector specified above is (in CSS syntax)
+ * <code>selector1 &gt; selector2 selector3</code>.  The greater-than (&gt;)
+ * between selector1 and selector2 specifies a direct CHILD, whereas the
  * whitespace between selector2 and selector3 corresponds to
  * <code>Combinator.DESCENDANT</code>.
  *
@@ -87,20 +87,20 @@ final public class CompoundSelector extends Selector {
      * less <code>Combinator</code> than there are selectors.
      */
     CompoundSelector(List<SimpleSelector> selectors, List<Combinator> relationships) {
-        this.selectors = 
-            (selectors != null) 
-                ? Collections.unmodifiableList(selectors) 
+        this.selectors =
+            (selectors != null)
+                ? Collections.unmodifiableList(selectors)
                 : Collections.EMPTY_LIST;
         this.relationships =
-            (relationships != null) 
-                ? Collections.unmodifiableList(relationships) 
+            (relationships != null)
+                ? Collections.unmodifiableList(relationships)
                 : Collections.EMPTY_LIST;
     }
-        
+
     private CompoundSelector() {
         this(null, null);
     }
-    
+
 
     @Override public Match createMatch() {
         final PseudoClassState allPseudoClasses = new PseudoClassState();
@@ -123,39 +123,39 @@ final public class CompoundSelector extends Selector {
     }
 
     @Override public boolean applies(final Styleable styleable, Set<PseudoClass>[] triggerStates, int depth) {
-        
+
         assert (triggerStates == null || depth < triggerStates.length);
         if (triggerStates != null && triggerStates.length <= depth) {
             return false;
         }
-        
-        // 
+
+        //
         // We only care about pseudo-class if the selector applies. But in
         // the case of a compound selector, we don't know whether it applies
         // until all the selectors have been checked (in the worse case). So
         // the setting of pseudo-class has to be deferred until we know
-        // that this compound selector applies. So we'll send a new 
-        // PseudoClassSet[] and if the compound selector applies, 
-        // just copy the state back. 
+        // that this compound selector applies. So we'll send a new
+        // PseudoClassSet[] and if the compound selector applies,
+        // just copy the state back.
         //
-        final Set<PseudoClass>[] tempStates = triggerStates != null 
+        final Set<PseudoClass>[] tempStates = triggerStates != null
                 ? new PseudoClassState[triggerStates.length] : null;
-        
+
         final boolean applies = applies(styleable, selectors.size()-1, tempStates, depth);
-        
+
         if (applies && tempStates != null) {
-            
+
             for(int n=0; n<triggerStates.length; n++) {
-                                
+
                 final Set<PseudoClass> pseudoClassOut = triggerStates[n];
                 final Set<PseudoClass> pseudoClassIn = tempStates[n];
-                
+
                 if (pseudoClassOut != null) {
                     pseudoClassOut.addAll(pseudoClassIn);
                 } else {
                     triggerStates[n] = pseudoClassIn;
-                } 
-            
+                }
+
             }
         }
         return applies;
@@ -239,7 +239,7 @@ final public class CompoundSelector extends Selector {
         } else {
             Styleable parent = styleable.getStyleableParent();
             while (parent != null) {
-                if (selectors.get(index-1).applies(parent)) { 
+                if (selectors.get(index-1).applies(parent)) {
                     Set<PseudoClass> parentStates = parent.getPseudoClassStates();
                     return stateMatches(parent, parentStates, index - 1);
                 }
@@ -257,9 +257,9 @@ final public class CompoundSelector extends Selector {
        code is used by StyleHelper */
     @Override public int hashCode() {
         if (hash == -1) {
-            for (int i = 0, max=selectors.size(); i<max; i++) 
+            for (int i = 0, max=selectors.size(); i<max; i++)
                 hash = 31 * (hash + selectors.get(i).hashCode());
-            for (int i = 0, max=relationships.size(); i<max; i++) 
+            for (int i = 0, max=relationships.size(); i<max; i++)
                 hash = 31 * (hash + relationships.get(i).hashCode());
         }
         return hash;
@@ -287,7 +287,7 @@ final public class CompoundSelector extends Selector {
     }
 
     @Override public String toString() {
-        StringBuilder sbuf = new StringBuilder(); 
+        StringBuilder sbuf = new StringBuilder();
         sbuf.append(selectors.get(0));
         for(int n=1; n<selectors.size(); n++) {
             sbuf.append(relationships.get(n-1));
@@ -321,9 +321,9 @@ final public class CompoundSelector extends Selector {
         final List<Combinator> relationships = new ArrayList<Combinator>();
         for (int n=0; n<nRelationships; n++) {
             final int ordinal = is.readByte();
-            if (ordinal == Combinator.CHILD.ordinal()) 
+            if (ordinal == Combinator.CHILD.ordinal())
                 relationships.add(Combinator.CHILD);
-            else if (ordinal == Combinator.DESCENDANT.ordinal()) 
+            else if (ordinal == Combinator.DESCENDANT.ordinal())
                 relationships.add(Combinator.DESCENDANT);
             else {
                 assert false : "error deserializing CompoundSelector: Combinator = " + ordinal;

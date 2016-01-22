@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -92,7 +92,7 @@ ULONG STDMETHODCALLTYPE WebCoreStatistics::Release(void)
 
 // IWebCoreStatistics ------------------------------------------------------------------------------
 
-HRESULT STDMETHODCALLTYPE WebCoreStatistics::javaScriptObjectsCount( 
+HRESULT STDMETHODCALLTYPE WebCoreStatistics::javaScriptObjectsCount(
     /* [retval][out] */ UINT* count)
 {
     if (!count)
@@ -103,7 +103,7 @@ HRESULT STDMETHODCALLTYPE WebCoreStatistics::javaScriptObjectsCount(
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE WebCoreStatistics::javaScriptGlobalObjectsCount( 
+HRESULT STDMETHODCALLTYPE WebCoreStatistics::javaScriptGlobalObjectsCount(
     /* [retval][out] */ UINT* count)
 {
     if (!count)
@@ -114,7 +114,7 @@ HRESULT STDMETHODCALLTYPE WebCoreStatistics::javaScriptGlobalObjectsCount(
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE WebCoreStatistics::javaScriptProtectedObjectsCount( 
+HRESULT STDMETHODCALLTYPE WebCoreStatistics::javaScriptProtectedObjectsCount(
     /* [retval][out] */ UINT* count)
 {
     if (!count)
@@ -125,7 +125,7 @@ HRESULT STDMETHODCALLTYPE WebCoreStatistics::javaScriptProtectedObjectsCount(
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE WebCoreStatistics::javaScriptProtectedGlobalObjectsCount( 
+HRESULT STDMETHODCALLTYPE WebCoreStatistics::javaScriptProtectedGlobalObjectsCount(
     /* [retval][out] */ UINT* count)
 {
     if (!count)
@@ -136,7 +136,7 @@ HRESULT STDMETHODCALLTYPE WebCoreStatistics::javaScriptProtectedGlobalObjectsCou
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE WebCoreStatistics::javaScriptProtectedObjectTypeCounts( 
+HRESULT STDMETHODCALLTYPE WebCoreStatistics::javaScriptProtectedObjectTypeCounts(
     /* [retval][out] */ IPropertyBag2** typeNamesAndCounts)
 {
     JSLockHolder lock(JSDOMWindow::commonVM());
@@ -152,7 +152,7 @@ HRESULT STDMETHODCALLTYPE WebCoreStatistics::javaScriptProtectedObjectTypeCounts
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE WebCoreStatistics::iconPageURLMappingCount( 
+HRESULT STDMETHODCALLTYPE WebCoreStatistics::iconPageURLMappingCount(
     /* [retval][out] */ UINT* count)
 {
     if (!count)
@@ -161,7 +161,7 @@ HRESULT STDMETHODCALLTYPE WebCoreStatistics::iconPageURLMappingCount(
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE WebCoreStatistics::iconRetainedPageURLCount( 
+HRESULT STDMETHODCALLTYPE WebCoreStatistics::iconRetainedPageURLCount(
     /* [retval][out] */ UINT *count)
 {
     if (!count)
@@ -170,7 +170,7 @@ HRESULT STDMETHODCALLTYPE WebCoreStatistics::iconRetainedPageURLCount(
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE WebCoreStatistics::iconRecordCount( 
+HRESULT STDMETHODCALLTYPE WebCoreStatistics::iconRecordCount(
     /* [retval][out] */ UINT *count)
 {
     if (!count)
@@ -179,7 +179,7 @@ HRESULT STDMETHODCALLTYPE WebCoreStatistics::iconRecordCount(
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE WebCoreStatistics::iconsWithDataCount( 
+HRESULT STDMETHODCALLTYPE WebCoreStatistics::iconsWithDataCount(
     /* [retval][out] */ UINT *count)
 {
     if (!count)
@@ -188,7 +188,7 @@ HRESULT STDMETHODCALLTYPE WebCoreStatistics::iconsWithDataCount(
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE WebCoreStatistics::cachedFontDataCount( 
+HRESULT STDMETHODCALLTYPE WebCoreStatistics::cachedFontDataCount(
     /* [retval][out] */ UINT *count)
 {
     if (!count)
@@ -197,7 +197,7 @@ HRESULT STDMETHODCALLTYPE WebCoreStatistics::cachedFontDataCount(
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE WebCoreStatistics::cachedFontDataInactiveCount( 
+HRESULT STDMETHODCALLTYPE WebCoreStatistics::cachedFontDataInactiveCount(
     /* [retval][out] */ UINT *count)
 {
     if (!count)
@@ -212,7 +212,7 @@ HRESULT STDMETHODCALLTYPE WebCoreStatistics::purgeInactiveFontData(void)
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE WebCoreStatistics::glyphPageCount( 
+HRESULT STDMETHODCALLTYPE WebCoreStatistics::glyphPageCount(
     /* [retval][out] */ UINT *count)
 {
     if (!count)

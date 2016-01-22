@@ -66,7 +66,7 @@ public class SpanJob extends BatchDocumentJob {
     protected List<Job> makeSubJobs() {
         final List<Job> jobList = new ArrayList<>();
         final AbstractSelectionGroup selectionGroup = getEditorController().getSelection().getGroup();
-        
+
         // Do we have an asset selected which is a standard one (not a grid) ?
         if (selectionGroup instanceof ObjectSelectionGroup) {
             // Is that asset enclosed in a grid ?
@@ -76,7 +76,7 @@ public class SpanJob extends BatchDocumentJob {
                 int columnCount = gridDHM.getColumnsSize();
                 int rowCount = gridDHM.getRowsSize();
                 List<FXOMObject> items = ((ObjectSelectionGroup)selectionGroup).getSortedItems();
-                
+
                 // Create a job for all items then check each is executable.
                 // As soon as one is not executable the job list is made empty
                 // so that no change will be performed by the job, eventually.
@@ -94,14 +94,14 @@ public class SpanJob extends BatchDocumentJob {
                 }
             }
         }
-        
+
         return jobList;
     }
 
     @Override
     protected String makeDescription() {
         String description = ""; //NOI18N
-        
+
         switch (editAction) {
             default:
             case DECREASE_COLUMN_SPAN:
@@ -117,15 +117,15 @@ public class SpanJob extends BatchDocumentJob {
                 description = I18N.getString("job.increase.row.span");
                 break;
         }
-        
+
         assert ! description.isEmpty();
         return description;
     }
-    
+
     private Job createJob(FXOMInstance candidate, int columnCount, int rowCount) {
         PropertyName propName = null;
         int newSpan = 1;
-        
+
         switch (editAction) {
             default:
             case DECREASE_COLUMN_SPAN:
@@ -161,7 +161,7 @@ public class SpanJob extends BatchDocumentJob {
 
         return columnSpanJob;
     }
-    
+
     // May return a value identical to given span one.
     private int getNewSpan(TREND trend, int index, int span, int count) {
         int newSpan = span;
@@ -177,32 +177,32 @@ public class SpanJob extends BatchDocumentJob {
                 }
                 break;
         }
-        
+
         return newSpan;
     }
 
     private enum TREND {DECREASE, INCREASE};
     private enum PROPERTY {COLUMN_INDEX, COLUMN_SPAN, ROW_INDEX, ROW_SPAN};
-    
+
     private int getValue(PROPERTY property, FXOMInstance candidate) {
         String propertyName = getName(property);
         final PropertyName propName = new PropertyName(propertyName, GridPane.class);
         final ValuePropertyMetadata vpm
                 = Metadata.getMetadata().queryValueProperty(candidate, propName);
         Object value = vpm.getValueObject(candidate);
-        
+
         // Span value can be null
         if (value == null && (property == PROPERTY.COLUMN_SPAN || property == PROPERTY.ROW_SPAN)) {
             value = Integer.valueOf(1);
         }
         assert value instanceof Integer;
-        
+
         return (Integer)value;
     }
-    
+
     private String getName(PROPERTY property) {
         String propertyName = ""; //NOI18N
-        
+
         switch (property) {
             case COLUMN_INDEX:
                 propertyName = "columnIndex"; //NOI18N
@@ -217,9 +217,9 @@ public class SpanJob extends BatchDocumentJob {
                 propertyName = "rowSpan"; //NOI18N
                 break;
         }
-        
+
         assert ! propertyName.isEmpty();
         return propertyName;
     }
-    
+
 }

@@ -36,7 +36,7 @@
  *                                                                             *
  ******************************************************************************/
 
-.touch-sizes .button, 
+.touch-sizes .button,
 .touch-sizes .toggle-button,
 .touch-sizes .label {
     -fx-padding: 0.5em 1.1em 0.5em 1.1em;
@@ -81,7 +81,7 @@
 .map-pin {
     -fx-shape: "M13.558,0C6.07,0,0,6.07,0,13.558s13.558,22.346,13.558,22.346s13.558-14.858,13.558-22.346S21.045,0,13.558,0z
 M13.558,20.762c-4.084,0-7.395-3.311-7.395-7.395s3.311-7.395,7.395-7.395c4.084,0,7.396,3.311,7.396,7.395
-S17.642,20.762,13.558,20.762z";    
+S17.642,20.762,13.558,20.762z";
     -fx-background-color: black, white;
     -fx-background-insets: 0, 2;
     -fx-effect: dropshadow( two-pass-box, rgba(0, 0, 0, 0.5), 10, 0.0, 0, 10 );
@@ -122,7 +122,7 @@ S17.642,20.762,13.558,20.762z";
 
 /*-------------------------- labels -------------------------- */
 
-.contrast .label {    
+.contrast .label {
     -fx-text-fill: -app-color-hi;
 }
 
@@ -130,10 +130,10 @@ S17.642,20.762,13.558,20.762z";
 
 .contrast .slider .track {
     -fx-background-color: -app-color-hi, -app-color-lo;
-    -fx-background-insets: 0, 1;    
+    -fx-background-insets: 0, 1;
 }
 .contrast .slider .thumb {
-    -fx-background-color: -app-color-hi, -app-color-lo;    
+    -fx-background-color: -app-color-hi, -app-color-lo;
     -fx-background-insets: 0, 2;
 }
 .contrast .slider .thumb:hover {

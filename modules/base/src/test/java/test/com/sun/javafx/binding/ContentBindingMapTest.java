@@ -38,7 +38,7 @@ import java.util.Map;
 import static org.junit.Assert.*;
 
 public class ContentBindingMapTest {
-    
+
     private static final String key1 = "Key1";
     private static final String key2_1 = "Key2_1";
     private static final String key2_2 = "Key2_2";
@@ -157,7 +157,7 @@ public class ContentBindingMapTest {
         assertEquals(map1, op2);
         assertEquals(map1, op3);
 
-        // now unbind 
+        // now unbind
         Bindings.unbindContent(op1, op2);
         System.gc(); // making sure we did not not overdo weak references
         assertEquals(map1, op1);

@@ -455,7 +455,7 @@ public class DropShadowTest extends EffectsTestBase {
     }
 
     // test whether width/radius are changing correctly if height is bound
-    // and one of them is changed    
+    // and one of them is changed
     @Test
     public void testHeightBound() throws Exception {
         DoubleProperty boundHeight = new SimpleDoubleProperty();
@@ -589,7 +589,7 @@ public class DropShadowTest extends EffectsTestBase {
         assertEquals(9, ((com.sun.scenario.effect.DropShadow) effect.impl_getImpl()).getGaussianWidth(), 1e-100);
         assertEquals(4, ((com.sun.scenario.effect.DropShadow) effect.impl_getImpl()).getGaussianRadius(), 1e-100);
     }
-    
+
     @Test
     public void testCreateWithParams() {
         effect = new DropShadow(4, Color.RED);
@@ -629,7 +629,7 @@ public class DropShadowTest extends EffectsTestBase {
         Color4f actual = ((com.sun.scenario.effect.DropShadow) effect.impl_getImpl()).getColor();
         assertColor4fEquals(red, actual);
     }
-    
+
     @Test
     public void testCreateWithParams6() {
         effect = new DropShadow(BlurType.GAUSSIAN, Color.RED, 4, 0.5, 1, 2);

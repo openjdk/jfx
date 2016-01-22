@@ -103,7 +103,7 @@ public:
     JS_EXPORT_PRIVATE String getString(ExecState*) const; // null string if not a string
     JS_EXPORT_PRIVATE JSObject* getObject(); // NULL if not an object
     const JSObject* getObject() const; // NULL if not an object
-        
+
     JS_EXPORT_PRIVATE static CallType getCallData(JSCell*, CallData&);
     JS_EXPORT_PRIVATE static ConstructType getConstructData(JSCell*, ConstructData&);
 
@@ -124,7 +124,7 @@ public:
     const MethodTable* methodTableForDestruction() const;
     static void put(JSCell*, ExecState*, PropertyName, JSValue, PutPropertySlot&);
     static void putByIndex(JSCell*, ExecState*, unsigned propertyName, JSValue, bool shouldThrow);
-        
+
     static bool deleteProperty(JSCell*, ExecState*, PropertyName);
     static bool deletePropertyByIndex(JSCell*, ExecState*, unsigned propertyName);
 
@@ -144,11 +144,11 @@ public:
     {
         return &m_structure;
     }
-        
+
 #if ENABLE(GC_VALIDATION)
     Structure* unvalidatedStructure() const { return m_structure.unvalidatedGet(); }
 #endif
-        
+
     static const TypedArrayType TypedArrayStorageType = NotTypedArray;
 protected:
 
@@ -170,7 +170,7 @@ protected:
 
 private:
     friend class LLIntOffsetsExtractor;
-        
+
     WriteBarrier<Structure> m_structure;
 };
 
@@ -180,7 +180,7 @@ inline To jsCast(From* from)
     ASSERT(!from || from->JSCell::inherits(std::remove_pointer<To>::type::info()));
     return static_cast<To>(from);
 }
-    
+
 template<typename To>
 inline To jsCast(JSValue from)
 {

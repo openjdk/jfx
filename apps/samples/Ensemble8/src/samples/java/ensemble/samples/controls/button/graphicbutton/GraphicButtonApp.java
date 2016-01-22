@@ -45,26 +45,26 @@ import javafx.stage.Stage;
  *
  * @sampleName Graphic Button
  * @preview preview.png
- * 
+ *
  * @see javafx.scene.control.Button
  * @related /Controls/Button/Colored Buttons
  * @embedded
  */
 public class GraphicButtonApp extends Application {
-    private static final Image ICON_48 = new Image(GraphicButtonApp.class.getResourceAsStream("/ensemble/samples/shared-resources/icon-48x48.png"));   
+    private static final Image ICON_48 = new Image(GraphicButtonApp.class.getResourceAsStream("/ensemble/samples/shared-resources/icon-48x48.png"));
     public Parent createContent() {
         ImageView imageView = new ImageView(ICON_48);
         Button button = new Button("button", imageView);
         button.setContentDisplay(ContentDisplay.LEFT);
         return button;
     }
-  
+
     @Override public void start(Stage primaryStage) throws Exception {
         primaryStage.setScene(new Scene(createContent()));
         primaryStage.show();
     }
-    
-    /** Java main for when running without JavaFX launcher 
+
+    /** Java main for when running without JavaFX launcher
      * @param args command line arguments
      */
     public static void main(String[] args) { launch(args); }

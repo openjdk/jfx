@@ -21,7 +21,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -195,11 +195,11 @@ void PluginStream::startStream()
     NPError npErr = m_pluginFuncs->newstream(m_instance, (NPMIMEType)mimeTypeStr.data(), &m_stream, false, &m_transferMode);
     if (m_loader)
         m_loader->setDefersLoading(false);
-    
+
     // If the stream was destroyed in the call to newstream we return
     if (m_reason != WebReasonNone)
         return;
-        
+
     if (npErr != NPERR_NO_ERROR) {
         cancelAndDestroyStream(npErr);
         return;
@@ -330,7 +330,7 @@ void PluginStream::delayDeliveryTimerFired(Timer<PluginStream>* timer)
 void PluginStream::deliverData()
 {
     ASSERT(m_deliveryData);
-    
+
     if (m_streamState == StreamStopped)
         // FIXME: We should cancel our job in the SubresourceLoader on error so we don't reach this case
         return;
@@ -383,7 +383,7 @@ void PluginStream::deliverData()
             if (m_reason != WebReasonNone)
                 destroyStream();
         }
-    } 
+    }
 }
 
 void PluginStream::sendJavaScriptStream(const URL& requestURL, const CString& resultString)
@@ -419,7 +419,7 @@ void PluginStream::didReceiveData(NetscapePlugInStreamLoader* loader, const char
     ASSERT_UNUSED(loader, loader == m_loader);
     ASSERT(m_streamState == StreamStarted);
 
-    // If the plug-in cancels the stream in deliverData it could be deleted, 
+    // If the plug-in cancels the stream in deliverData it could be deleted,
     // so protect it here.
     RefPtr<PluginStream> protect(this);
 

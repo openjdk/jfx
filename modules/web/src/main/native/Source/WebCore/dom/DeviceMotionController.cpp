@@ -61,7 +61,7 @@ void DeviceMotionController::resumeUpdates()
         m_client->startUpdating();
 }
 #endif
-    
+
 void DeviceMotionController::didChangeDeviceMotion(DeviceMotionData* deviceMotionData)
 {
     dispatchDeviceEvent(DeviceMotionEvent::create(eventNames().devicemotionEvent, deviceMotionData));

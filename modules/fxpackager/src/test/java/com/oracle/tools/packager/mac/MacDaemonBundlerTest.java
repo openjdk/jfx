@@ -115,7 +115,7 @@ public class MacDaemonBundlerTest {
         }
     }
 
-    
+
     /**
      * See if smoke comes out
      */
@@ -133,7 +133,7 @@ public class MacDaemonBundlerTest {
         bundleParams.put(BUILD_ROOT.getID(), tmpBase);
 
         bundleParams.put(APP_NAME.getID(), "Smoke Test App");
-        bundleParams.put(IDENTIFIER.getID(), "smoke.app");        
+        bundleParams.put(IDENTIFIER.getID(), "smoke.app");
         bundleParams.put(VERBOSE.getID(), true);
         bundleParams.put(SYSTEM_WIDE.getID(), true);
 
@@ -149,7 +149,7 @@ public class MacDaemonBundlerTest {
         assertNotNull(result);
         assertTrue(result.exists());
     }
-    
+
     /*
      * Test that bundler doesn't support per-user daemons (RT-37985)
      */

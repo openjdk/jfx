@@ -56,21 +56,21 @@ namespace JSC {
 
 struct BytecodeAndMachineOffset {
     BytecodeAndMachineOffset() { }
-    
+
     BytecodeAndMachineOffset(unsigned bytecodeIndex, unsigned machineCodeOffset)
         : m_bytecodeIndex(bytecodeIndex)
         , m_machineCodeOffset(machineCodeOffset)
     {
     }
-    
+
     unsigned m_bytecodeIndex;
     unsigned m_machineCodeOffset;
-    
+
     static inline unsigned getBytecodeIndex(BytecodeAndMachineOffset* mapping)
     {
         return mapping->m_bytecodeIndex;
     }
-    
+
     static inline unsigned getMachineCodeOffset(BytecodeAndMachineOffset* mapping)
     {
         return mapping->m_machineCodeOffset;
@@ -85,14 +85,14 @@ public:
         if (m_buffer)
             fastFree(m_buffer);
     }
-    
+
     unsigned numberOfEntries() const
     {
         return m_numberOfEntries;
     }
-    
+
     void decode(Vector<BytecodeAndMachineOffset>& result) const;
-    
+
 private:
     CompactJITCodeMap(uint8_t* buffer, unsigned size, unsigned numberOfEntries)
         : m_buffer(buffer)
@@ -103,13 +103,13 @@ private:
     {
         UNUSED_PARAM(size);
     }
-    
+
     uint8_t at(unsigned index) const
     {
         ASSERT(index < m_size);
         return m_buffer[index];
     }
-    
+
     unsigned decodeNumber(unsigned& index) const
     {
         uint8_t headValue = at(index++);
@@ -122,45 +122,45 @@ private:
         unsigned fourth = at(index++);
         return (static_cast<unsigned>(headValue & ~(128 + 64)) << 24) | (second << 16) | (third << 8) | fourth;
     }
-    
+
     uint8_t* m_buffer;
 #if !ASSERT_DISABLED
     unsigned m_size;
 #endif
     unsigned m_numberOfEntries;
-    
+
 public:
     class Encoder {
         WTF_MAKE_NONCOPYABLE(Encoder);
     public:
         Encoder();
         ~Encoder();
-        
+
         void ensureCapacityFor(unsigned numberOfEntriesToAdd);
         void append(unsigned bytecodeIndex, unsigned machineCodeOffset);
         PassOwnPtr<CompactJITCodeMap> finish();
-        
+
     private:
         void appendByte(uint8_t value);
         void encodeNumber(uint32_t value);
-    
+
         uint8_t* m_buffer;
         unsigned m_size;
         unsigned m_capacity;
         unsigned m_numberOfEntries;
-        
+
         unsigned m_previousBytecodeIndex;
         unsigned m_previousMachineCodeOffset;
     };
-    
+
     class Decoder {
         WTF_MAKE_NONCOPYABLE(Decoder);
     public:
         Decoder(const CompactJITCodeMap*);
-        
+
         unsigned numberOfEntriesRemaining() const;
         void read(unsigned& bytecodeIndex, unsigned& machineCodeOffset);
-        
+
     private:
         const CompactJITCodeMap* m_jitCodeMap;
         unsigned m_previousBytecodeIndex;
@@ -180,7 +180,7 @@ inline void CompactJITCodeMap::decode(Vector<BytecodeAndMachineOffset>& result) 
     result.resize(decoder.numberOfEntriesRemaining());
     for (unsigned i = 0; i < result.size(); ++i)
         decoder.read(result[i].m_bytecodeIndex, result[i].m_machineCodeOffset);
-    
+
     ASSERT(!decoder.numberOfEntriesRemaining());
 }
 
@@ -199,7 +199,7 @@ inline CompactJITCodeMap::Encoder::~Encoder()
     if (m_buffer)
         fastFree(m_buffer);
 }
-        
+
 inline void CompactJITCodeMap::Encoder::append(unsigned bytecodeIndex, unsigned machineCodeOffset)
 {
     ASSERT(bytecodeIndex >= m_previousBytecodeIndex);
@@ -225,13 +225,13 @@ inline PassOwnPtr<CompactJITCodeMap> CompactJITCodeMap::Encoder::finish()
     m_previousMachineCodeOffset = 0;
     return result.release();
 }
-        
+
 inline void CompactJITCodeMap::Encoder::appendByte(uint8_t value)
 {
     ASSERT(m_size + 1 <= m_capacity);
     m_buffer[m_size++] = value;
 }
-    
+
 inline void CompactJITCodeMap::Encoder::encodeNumber(uint32_t value)
 {
     ASSERT(m_size + 4 <= m_capacity);
@@ -284,7 +284,7 @@ inline unsigned CompactJITCodeMap::Decoder::numberOfEntriesRemaining() const
 inline void CompactJITCodeMap::Decoder::read(unsigned& bytecodeIndex, unsigned& machineCodeOffset)
 {
     ASSERT(numberOfEntriesRemaining());
-    
+
     m_previousBytecodeIndex += m_jitCodeMap->decodeNumber(m_bufferIndex);
     m_previousMachineCodeOffset += m_jitCodeMap->decodeNumber(m_bufferIndex);
     bytecodeIndex = m_previousBytecodeIndex;

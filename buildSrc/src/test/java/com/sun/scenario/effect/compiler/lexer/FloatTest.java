@@ -37,7 +37,7 @@ public class FloatTest extends LexerBase {
             assertRecognized(String.valueOf(i));
         }
     }
-    
+
     @Test
     public void noLeadingZero() throws Exception {
         assertRecognized(".1234567890");

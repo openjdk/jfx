@@ -324,7 +324,7 @@ typedef struct _gst_riff_strf_auds {       /* == WaveHeader (?) */
 #define GST_RIFF_WAVE_FORMAT_DOLBY_AC2      (0x0030)
 #define GST_RIFF_WAVE_FORMAT_GSM610         (0x0031)
 #define GST_RIFF_WAVE_FORMAT_MSN            (0x0032)
-#define GST_RIFF_WAVE_FORMAT_ANTEX_ADPCME   (0x0033 
+#define GST_RIFF_WAVE_FORMAT_ANTEX_ADPCME   (0x0033
 #define GST_RIFF_WAVE_FORMAT_CONTROL_RES_VQLPC (0x0034)
 #define GST_RIFF_WAVE_FORMAT_DIGIREAL       (0x0035)
 #define GST_RIFF_WAVE_FORMAT_DIGIADPCM      (0x0036)
@@ -466,7 +466,7 @@ typedef struct _gst_riff_strf_auds {       /* == WaveHeader (?) */
 #endif
 } gst_riff_strf_auds;
 
-typedef struct _gst_riff_strf_iavs {    
+typedef struct _gst_riff_strf_iavs {
   guint32 DVAAuxSrc;
   guint32 DVAAuxCtl;
   guint32 DVAAuxSrc1;
@@ -477,7 +477,7 @@ typedef struct _gst_riff_strf_iavs {
   guint32 DVReserved2;
 } gst_riff_strf_iavs;
 
-typedef struct _gst_riff_index_entry {  
+typedef struct _gst_riff_index_entry {
   guint32 id;
   guint32 flags;
 #define GST_RIFF_IF_LIST                (0x00000001L)

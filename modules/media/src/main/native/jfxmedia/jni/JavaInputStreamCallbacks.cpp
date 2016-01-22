@@ -73,9 +73,9 @@ bool CJavaInputStreamCallbacks::Init(JNIEnv *env, jobject jLocator)
     if (!methodIDsInitialized)
     {
         // Get the parent abstract class. It's wrong to get method ids from the concrete implementation
-        // because it crashes jvm when it tries to call virtual methods. 
+        // because it crashes jvm when it tries to call virtual methods.
         // See https://javafx-jira.kenai.com/browse/RT-37115
-        jclass klass = env->FindClass("com/sun/media/jfxmedia/locator/ConnectionHolder"); 
+        jclass klass = env->FindClass("com/sun/media/jfxmedia/locator/ConnectionHolder");
 
         m_BufferFID = env->GetFieldID(klass, "buffer", "Ljava/nio/ByteBuffer;");
         m_NeedBufferMID = env->GetMethodID(klass, "needBuffer", "()Z");

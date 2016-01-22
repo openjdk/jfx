@@ -47,7 +47,7 @@ public class Help {
             "second and is the sum of the incoming rate minus the outgoing rates." +
             "\n\n" +
             "There is a high and low water mark indicated on the tank. " +
-            "When the fill level drops below the low water mark, the pump will "+ 
+            "When the fill level drops below the low water mark, the pump will "+
             "be changed to full (10) and above the high water mark, the pump " +
             "will be turned off (0).\n\n" +
             "The high and low water marks can be controlled with the sliders " +
@@ -71,7 +71,7 @@ public class Help {
         return  new Group(
                 fd
         );
-        
+
     }
-    
+
 }

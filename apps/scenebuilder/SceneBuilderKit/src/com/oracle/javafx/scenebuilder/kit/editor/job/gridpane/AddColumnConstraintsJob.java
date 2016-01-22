@@ -61,7 +61,7 @@ public class AddColumnConstraintsJob extends BatchDocumentJob {
     // Value = list of target column indexes for this GridPane
     private final Map<FXOMObject, Set<Integer>> targetGridPanes;
     private final Position position;
-    // If the selected column is associated to an existing constraints, 
+    // If the selected column is associated to an existing constraints,
     // we duplicate the existing constraints.
     // Otherwise, we use the default values below.
     private static final double defaultMinWidth = 10.0;
@@ -88,15 +88,15 @@ public class AddColumnConstraintsJob extends BatchDocumentJob {
             final Set<Integer> targetIndexes = targetGridPanes.get(targetGridPane);
             result.addAll(addColumnConstraints((FXOMInstance) targetGridPane, targetIndexes));
         }
-        
+
         return result;
     }
-    
+
     @Override
     protected String makeDescription() {
         return "Add Column Constraints"; //NOI18N
     }
-    
+
     private Set<Job> addColumnConstraints(
             final FXOMInstance targetGridPane,
             final Set<Integer> targetIndexes) {
@@ -177,7 +177,7 @@ public class AddColumnConstraintsJob extends BatchDocumentJob {
                     -1, getEditorController());
             result.add(addPropertyJob);
         }
-        
+
         return result;
     }
 

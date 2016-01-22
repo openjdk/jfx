@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -38,18 +38,18 @@ namespace JSC {
 static EncodedJSValue JSC_HOST_CALL arrayBufferProtoFuncSlice(ExecState* exec)
 {
     JSFunction* callee = jsCast<JSFunction*>(exec->callee());
-    
+
     JSArrayBuffer* thisObject = jsDynamicCast<JSArrayBuffer*>(exec->thisValue());
     if (!thisObject)
         return throwVMError(exec, createTypeError(exec, "Receiver of slice must be an array buffer."));
-    
+
     if (!exec->argumentCount())
         return throwVMError(exec, createTypeError(exec, "Slice requires at least one argument."));
-    
+
     int32_t begin = exec->argument(0).toInt32(exec);
     if (exec->hadException())
         return JSValue::encode(jsUndefined());
-    
+
     int32_t end;
     if (exec->argumentCount() >= 2) {
         end = exec->uncheckedArgument(1).toInt32(exec);
@@ -57,15 +57,15 @@ static EncodedJSValue JSC_HOST_CALL arrayBufferProtoFuncSlice(ExecState* exec)
             return JSValue::encode(jsUndefined());
     } else
         end = thisObject->impl()->byteLength();
-    
+
     RefPtr<ArrayBuffer> newBuffer = thisObject->impl()->slice(begin, end);
     if (!newBuffer)
         return throwVMError(exec, createOutOfMemoryError(callee->globalObject()));
-    
+
     Structure* structure = callee->globalObject()->arrayBufferStructure();
-    
+
     JSArrayBuffer* result = JSArrayBuffer::create(exec->vm(), structure, newBuffer);
-    
+
     return JSValue::encode(result);
 }
 
@@ -81,7 +81,7 @@ JSArrayBufferPrototype::JSArrayBufferPrototype(VM& vm, Structure* structure)
 void JSArrayBufferPrototype::finishCreation(VM& vm, JSGlobalObject* globalObject)
 {
     Base::finishCreation(vm);
-    
+
     JSC_NATIVE_FUNCTION(vm.propertyNames->slice, arrayBufferProtoFuncSlice, DontEnum, 2);
 }
 

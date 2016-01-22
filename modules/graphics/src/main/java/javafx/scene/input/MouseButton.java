@@ -28,7 +28,7 @@ package javafx.scene.input;
 /**
  * Mapping for Button Names
  * @since JavaFX 2.0
- */          
+ */
 public enum MouseButton {
 
     /**
@@ -42,7 +42,7 @@ public enum MouseButton {
     PRIMARY,
 
     /**
-     * Represents middle (button 2) mouse button.     
+     * Represents middle (button 2) mouse button.
      */
     MIDDLE,
 

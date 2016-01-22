@@ -49,7 +49,7 @@ public class CurveFittedAreaChart extends AreaChart<Number, Number> {
 
     public CurveFittedAreaChart(NumberAxis xAxis, NumberAxis yAxis) {
         super(xAxis, yAxis);
-    }   
+    }
     @Override protected void layoutPlotChildren() {
         super.layoutPlotChildren();
         for (int seriesIndex = 0; seriesIndex < getDataSize(); seriesIndex++) {

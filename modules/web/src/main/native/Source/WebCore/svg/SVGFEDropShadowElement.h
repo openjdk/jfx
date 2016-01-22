@@ -26,24 +26,24 @@
 #include "SVGFilterPrimitiveStandardAttributes.h"
 
 namespace WebCore {
-    
+
 class SVGFEDropShadowElement final : public SVGFilterPrimitiveStandardAttributes {
 public:
     static PassRefPtr<SVGFEDropShadowElement> create(const QualifiedName&, Document&);
-    
+
     void setStdDeviation(float stdDeviationX, float stdDeviationY);
-    
+
 private:
     SVGFEDropShadowElement(const QualifiedName&, Document&);
-    
+
     bool isSupportedAttribute(const QualifiedName&);
     virtual void parseAttribute(const QualifiedName&, const AtomicString&) override;
     virtual void svgAttributeChanged(const QualifiedName&) override;
     virtual PassRefPtr<FilterEffect> build(SVGFilterBuilder*, Filter*) override;
-    
+
     static const AtomicString& stdDeviationXIdentifier();
     static const AtomicString& stdDeviationYIdentifier();
-    
+
     BEGIN_DECLARE_ANIMATED_PROPERTIES(SVGFEDropShadowElement)
         DECLARE_ANIMATED_STRING(In1, in1)
         DECLARE_ANIMATED_NUMBER(Dx, dx)
@@ -52,7 +52,7 @@ private:
         DECLARE_ANIMATED_NUMBER(StdDeviationY, stdDeviationY)
     END_DECLARE_ANIMATED_PROPERTIES
 };
-    
+
 } // namespace WebCore
 
 #endif // ENABLE(FILTERS)

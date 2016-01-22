@@ -68,7 +68,7 @@ public:
     virtual HRESULT STDMETHODCALLTYPE Read(LPCOLESTR pszPropName, VARIANT* pVar, IErrorLog* pErrorLog);
     virtual HRESULT STDMETHODCALLTYPE Write(LPCOLESTR pszPropName, VARIANT* pVar);
 private:
-    DatabaseDetailsPropertyBag(const DatabaseDetails& details) 
+    DatabaseDetailsPropertyBag(const DatabaseDetails& details)
         : m_refCount(0)
         , m_details(details) { }
     ~DatabaseDetailsPropertyBag() { }
@@ -151,7 +151,7 @@ WebDatabaseManager* WebDatabaseManager::createInstance()
 {
     WebDatabaseManager* manager = new WebDatabaseManager();
     manager->AddRef();
-    return manager;    
+    return manager;
 }
 
 WebDatabaseManager::WebDatabaseManager()
@@ -199,7 +199,7 @@ ULONG STDMETHODCALLTYPE WebDatabaseManager::Release()
 template<> struct COMVariantSetter<RefPtr<SecurityOrigin> > : COMIUnknownVariantSetter<WebSecurityOrigin, RefPtr<SecurityOrigin> > {};
 
 // IWebDatabaseManager -------------------------------------------------------------
-HRESULT STDMETHODCALLTYPE WebDatabaseManager::sharedWebDatabaseManager( 
+HRESULT STDMETHODCALLTYPE WebDatabaseManager::sharedWebDatabaseManager(
     /* [retval][out] */ IWebDatabaseManager** result)
 {
     if (!s_sharedWebDatabaseManager) {
@@ -210,7 +210,7 @@ HRESULT STDMETHODCALLTYPE WebDatabaseManager::sharedWebDatabaseManager(
     return s_sharedWebDatabaseManager.copyRefTo(result);
 }
 
-HRESULT STDMETHODCALLTYPE WebDatabaseManager::origins( 
+HRESULT STDMETHODCALLTYPE WebDatabaseManager::origins(
     /* [retval][out] */ IEnumVARIANT** result)
 {
     if (!result)
@@ -228,8 +228,8 @@ HRESULT STDMETHODCALLTYPE WebDatabaseManager::origins(
     *result = enumVariant.leakRef();
     return S_OK;
 }
-    
-HRESULT STDMETHODCALLTYPE WebDatabaseManager::databasesWithOrigin( 
+
+HRESULT STDMETHODCALLTYPE WebDatabaseManager::databasesWithOrigin(
     /* [in] */ IWebSecurityOrigin* origin,
     /* [retval][out] */ IEnumVARIANT** result)
 {
@@ -254,7 +254,7 @@ HRESULT STDMETHODCALLTYPE WebDatabaseManager::databasesWithOrigin(
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE WebDatabaseManager::detailsForDatabase( 
+HRESULT STDMETHODCALLTYPE WebDatabaseManager::detailsForDatabase(
     /* [in] */ BSTR databaseName,
     /* [in] */ IWebSecurityOrigin* origin,
     /* [retval][out] */ IPropertyBag** result)
@@ -280,7 +280,7 @@ HRESULT STDMETHODCALLTYPE WebDatabaseManager::detailsForDatabase(
     *result = DatabaseDetailsPropertyBag::createInstance(details);
     return S_OK;
 }
-    
+
 HRESULT STDMETHODCALLTYPE WebDatabaseManager::deleteAllDatabases()
 {
     if (this != s_sharedWebDatabaseManager)
@@ -291,7 +291,7 @@ HRESULT STDMETHODCALLTYPE WebDatabaseManager::deleteAllDatabases()
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE WebDatabaseManager::deleteOrigin( 
+HRESULT STDMETHODCALLTYPE WebDatabaseManager::deleteOrigin(
     /* [in] */ IWebSecurityOrigin* origin)
 {
     if (!origin)
@@ -308,8 +308,8 @@ HRESULT STDMETHODCALLTYPE WebDatabaseManager::deleteOrigin(
 
     return S_OK;
 }
-    
-HRESULT STDMETHODCALLTYPE WebDatabaseManager::deleteDatabase( 
+
+HRESULT STDMETHODCALLTYPE WebDatabaseManager::deleteDatabase(
     /* [in] */ BSTR databaseName,
     /* [in] */ IWebSecurityOrigin* origin)
 {

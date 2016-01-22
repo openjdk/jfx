@@ -116,7 +116,7 @@ public class TreeViewMouseInputTest {
         child9.setExpanded(false);
         child10.getChildren().clear();
         child10.setExpanded(false);
-        
+
         // recreate treeview and gather models
         treeView = new TreeView<String>();
         treeView.setRoot(root);
@@ -124,30 +124,30 @@ public class TreeViewMouseInputTest {
         sm.setSelectionMode(SelectionMode.MULTIPLE);
         fm = treeView.getFocusModel();
     }
-    
+
     @After public void tearDown() {
         treeView.getSkin().dispose();
     }
-    
-    
+
+
     /***************************************************************************
      * Util methods
      **************************************************************************/
-    
+
     private String debug() {
         StringBuilder sb = new StringBuilder("Selected Indices: [");
-        
+
         List<Integer> indices = sm.getSelectedIndices();
         for (Integer index : indices) {
             sb.append(index);
             sb.append(", ");
         }
-        
+
         sb.append("] \nFocus: " + fm.getFocusedIndex());
         sb.append(" \nAnchor: " + getAnchor());
         return sb.toString();
     }
-    
+
     // Returns true if ALL indices are selected
     private boolean isSelected(int... indices) {
         for (int index : indices) {
@@ -155,7 +155,7 @@ public class TreeViewMouseInputTest {
         }
         return true;
     }
-    
+
     // Returns true if ALL indices are NOT selected
     private boolean isNotSelected(int... indices) {
         for (int index : indices) {
@@ -163,47 +163,47 @@ public class TreeViewMouseInputTest {
         }
         return true;
     }
-    
+
     private int getAnchor() {
         return TreeViewAnchorRetriever.getAnchor(treeView);
     }
-    
+
     private boolean isAnchor(int index) {
         return getAnchor() == index;
     }
-    
+
     private int getItemCount() {
         return root.getChildren().size() + child3.getChildren().size();
     }
-    
-    
+
+
     /***************************************************************************
      * Tests for specific bug reports
      **************************************************************************/
-    
+
     @Test public void test_rt29833_mouse_select_upwards() {
         sm.setSelectionMode(SelectionMode.MULTIPLE);
-        
+
         sm.clearAndSelect(9);
-        
+
         // select all from 9 - 7
         VirtualFlowTestUtils.clickOnRow(treeView, 7, KeyModifier.SHIFT);
         assertTrue(debug(), isSelected(7,8,9));
-        
+
         // select all from 9 - 7 - 5
         VirtualFlowTestUtils.clickOnRow(treeView, 5, KeyModifier.SHIFT);
         assertTrue(debug(),isSelected(5,6,7,8,9));
     }
-    
+
     @Test public void test_rt29833_mouse_select_downwards() {
         sm.setSelectionMode(SelectionMode.MULTIPLE);
-        
+
         sm.clearAndSelect(5);
-        
+
         // select all from 5 - 7
         VirtualFlowTestUtils.clickOnRow(treeView, 7, KeyModifier.SHIFT);
         assertTrue(debug(), isSelected(5,6,7));
-        
+
         // select all from 5 - 7 - 9
         VirtualFlowTestUtils.clickOnRow(treeView, 9, KeyModifier.SHIFT);
         assertTrue(debug(),isSelected(5,6,7,8,9));

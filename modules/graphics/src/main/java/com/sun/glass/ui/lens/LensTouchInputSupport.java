@@ -42,22 +42,22 @@ final class LensTouchInputSupport {
 
     /**
      * This property define the size of the tap radius which can be seen as the
-     * 'finger size'. After the first tap, a touch point will be considered 
-     * STILL as long as the point coordinates are within the tap radius. When the 
+     * 'finger size'. After the first tap, a touch point will be considered
+     * STILL as long as the point coordinates are within the tap radius. When the
      * point coordinates move outside the tap radius the point will be considered
-     * as 'dragging' and all move events will be reported as long as they are 
-     * greater then the touchMoveSensitivity property 
-     * Property is used by Lens native input driver 
-     * 
+     * as 'dragging' and all move events will be reported as long as they are
+     * greater then the touchMoveSensitivity property
+     * Property is used by Lens native input driver
+     *
      */
     static final int touchTapRadius;
     /**
-     * This property determine the sensitivity of move events from touch. The 
+     * This property determine the sensitivity of move events from touch. The
      * bigger the value the less sensitive is the touch screen. In practice move
-     * events with a delta smaller then the value of this property will be 
-     * filtered out.The value of the property is in pixels. 
-     * Property is used by Lens native input driver 
-     */    
+     * events with a delta smaller then the value of this property will be
+     * filtered out.The value of the property is in pixels.
+     * Property is used by Lens native input driver
+     */
     private static final int touchMoveSensitivity;
 
     /**
@@ -73,17 +73,17 @@ final class LensTouchInputSupport {
     /**
      * This property enable/disable multi touch support by the input driver.
      * When the property is disabled and a multitouch screen is connected, the
-     * input driver will 'downgrade' the screen events to a single touch 
-     * point, as if a single touch screen was connected 
-     * 
+     * input driver will 'downgrade' the screen events to a single touch
+     * point, as if a single touch screen was connected
+     *
      */
     private static final boolean useMultiTouch;
 
     /**
-     * This property is used for printing raw events, device properties, device 
-     * attach / detach, low level Lens input driver decisions etc. Useful for 
-     * debugging a new input device that is not recognized or behave wrongly by 
-     * the Lens input driver. Property is disabled by default 
+     * This property is used for printing raw events, device properties, device
+     * attach / detach, low level Lens input driver decisions etc. Useful for
+     * debugging a new input device that is not recognized or behave wrongly by
+     * the Lens input driver. Property is disabled by default
                                         */
     private static final boolean enableDeviceTrace;
 

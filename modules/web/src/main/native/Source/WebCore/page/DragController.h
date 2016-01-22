@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef DragController_h
@@ -62,10 +62,10 @@ namespace WebCore {
         void dragExited(DragData&);
         DragSession dragUpdated(DragData&);
         bool performDrag(DragData&);
-        
+
         // FIXME: It should be possible to remove a number of these accessors once all
         // drag logic is in WebCore.
-        void setDidInitiateDrag(bool initiated) { m_didInitiateDrag = initiated; } 
+        void setDidInitiateDrag(bool initiated) { m_didInitiateDrag = initiated; }
         bool didInitiateDrag() const { return m_didInitiateDrag; }
         DragOperation sourceDragOperation() const { return m_sourceDragOperation; }
         const URL& draggingImageURL() const { return m_draggingImageURL; }
@@ -76,19 +76,19 @@ namespace WebCore {
         Document* documentUnderMouse() const { return m_documentUnderMouse.get(); }
         DragDestinationAction dragDestinationAction() const { return m_dragDestinationAction; }
         DragSourceAction delegateDragSourceAction(const IntPoint& rootViewPoint);
-        
+
         Element* draggableElement(const Frame*, Element* start, const IntPoint&, DragState&) const;
         void dragEnded();
-        
+
         void placeDragCaret(const IntPoint&);
-        
+
         bool startDrag(Frame& src, const DragState&, DragOperation srcOp, const PlatformMouseEvent& dragEvent, const IntPoint& dragOrigin);
         static const IntSize& maxDragImageSize();
-        
+
         static const int LinkDragBorderInset;
         static const int MaxOriginalImageArea;
         static const int DragIconRightInset;
-        static const int DragIconBottomInset;        
+        static const int DragIconBottomInset;
         static const float DragImageAlpha;
 
     private:

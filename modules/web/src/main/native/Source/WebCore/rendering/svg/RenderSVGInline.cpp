@@ -29,7 +29,7 @@
 #include "SVGResourcesCache.h"
 
 namespace WebCore {
-    
+
 RenderSVGInline::RenderSVGInline(SVGGraphicsElement& element, PassRef<RenderStyle> style)
     : RenderInline(element, std::move(style))
 {

@@ -731,7 +731,7 @@ public class CacheFilter {
         if (clip == null || !clip.isRectClip(BaseTransform.IDENTITY_TRANSFORM, false)) {
             return false;
         }
-        
+
         if (node instanceof NGRegion) {
             NGRegion region = (NGRegion) node;
             if (!region.getBorder().isEmpty()) {
@@ -753,7 +753,7 @@ public class CacheFilter {
                         && clipBounds.getMaxX() == region.getWidth() && clipBounds.getMaxY() == region.getHeight();
             }
         }
-        
+
         return true;
     }
 
@@ -806,7 +806,7 @@ public class CacheFilter {
         bounds.setBounds(b);
         return bounds;
     }
-    
+
     BaseBounds computeDirtyBounds(BaseBounds region, BaseTransform tx, GeneralTransform3D pvTx) {
         // For now, we just use the computed dirty bounds of the Node and
         // round them out before the transforms.

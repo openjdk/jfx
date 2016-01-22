@@ -28,7 +28,7 @@ static PlatformKeyboardEvent::Type toPlatformKeyboardEventType(jint type)
             return PlatformKeyboardEvent::RawKeyDown;
     }
 }
-    
+
 PlatformKeyboardEvent::PlatformKeyboardEvent(
     jint type,
     jstring text,
@@ -52,12 +52,12 @@ PlatformKeyboardEvent::PlatformKeyboardEvent(
 {
     JNIEnv* env = WebCore_GetJavaEnv();
 
-    m_text = text 
-        ? String(env, text) 
+    m_text = text
+        ? String(env, text)
         : String();
     m_unmodifiedText = m_text;
-    m_keyIdentifier = keyIdentifier 
-        ? String(env, keyIdentifier) 
+    m_keyIdentifier = keyIdentifier
+        ? String(env, keyIdentifier)
         : String();
 }
 

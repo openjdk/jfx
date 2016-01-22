@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #import "config.h"
@@ -143,7 +143,7 @@ void GraphicsContext::drawLineForDocumentMarker(const FloatPoint& point, float w
 {
     if (paintingDisabled())
         return;
-        
+
     // These are the same for misspelling or bad grammar.
     int patternHeight = cMisspellingLineThickness;
     float patternWidth = cMisspellingLinePatternWidth;
@@ -217,7 +217,7 @@ void GraphicsContext::drawLineForDocumentMarker(const FloatPoint& point, float w
 #endif // PLATFORM(IOS)
             return;
     }
-    
+
     FloatPoint offsetPoint = point;
 
     // Make sure to draw only complete dots.
@@ -232,7 +232,7 @@ void GraphicsContext::drawLineForDocumentMarker(const FloatPoint& point, float w
             width -= widthMod;
         }
     }
-    
+
     // FIXME: This code should not use NSGraphicsContext currentContext
     // In order to remove this requirement we will need to use CGPattern instead of NSColor
     // FIXME: This code should not be using wkSetPatternPhaseInUserSpace, as this approach is wrong
@@ -261,7 +261,7 @@ void GraphicsContext::drawLineForDocumentMarker(const FloatPoint& point, float w
 #else
     WKRectFillUsingOperation(context, CGRectMake(offsetPoint.x(), offsetPoint.y(), width, patternHeight), kCGCompositeSover);
 #endif
-    
+
     CGContextRestoreGState(context);
 }
 

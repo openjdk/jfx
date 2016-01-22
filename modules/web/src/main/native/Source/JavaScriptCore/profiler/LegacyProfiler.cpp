@@ -56,7 +56,7 @@ LegacyProfiler* LegacyProfiler::profiler()
     if (!s_sharedLegacyProfiler)
         s_sharedLegacyProfiler = new LegacyProfiler();
     return s_sharedLegacyProfiler;
-}   
+}
 
 void LegacyProfiler::startProfiling(ExecState* exec, const String& title)
 {
@@ -95,7 +95,7 @@ PassRefPtr<Profile> LegacyProfiler::stopProfiling(ExecState* exec, const String&
             m_currentProfiles.remove(i);
             if (!m_currentProfiles.size())
                 exec->vm().setEnabledProfiler(nullptr);
-            
+
             return returnProfile;
         }
     }

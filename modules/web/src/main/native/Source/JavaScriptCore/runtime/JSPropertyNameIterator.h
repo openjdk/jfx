@@ -51,7 +51,7 @@ namespace JSC {
         static const bool needsDestruction = true;
         static const bool hasImmortalStructure = true;
         static void destroy(JSCell*);
-       
+
         static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype)
         {
             return Structure::create(vm, globalObject, prototype, TypeInfo(CompoundType, OverridesVisitChildren), info());
@@ -72,7 +72,7 @@ namespace JSC {
 
         void setCachedPrototypeChain(VM& vm, StructureChain* cachedPrototypeChain) { m_cachedPrototypeChain.set(vm, this, cachedPrototypeChain); }
         StructureChain* cachedPrototypeChain() { return m_cachedPrototypeChain.get(); }
-        
+
         DECLARE_EXPORT_INFO;
 
     protected:
@@ -87,7 +87,7 @@ namespace JSC {
 
     private:
         friend class LLIntOffsetsExtractor;
-        
+
         JSPropertyNameIterator(ExecState*, PropertyNameArrayData* propertyNameArrayData, size_t numCacheableSlot);
 
         WriteBarrier<Structure> m_cachedStructure;
@@ -107,7 +107,7 @@ namespace JSC {
     {
         return m_enumerationCache.get();
     }
-    
+
     inline void StructureRareData::setEnumerationCache(VM& vm, const Structure*, JSPropertyNameIterator* value)
     {
         m_enumerationCache.set(vm, this, value);

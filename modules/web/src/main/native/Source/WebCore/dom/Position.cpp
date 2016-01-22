@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -48,7 +48,7 @@
 #include <stdio.h>
 #include <wtf/text/CString.h>
 #include <wtf/unicode/CharacterNames.h>
-  
+
 namespace WebCore {
 
 using namespace HTMLNames;
@@ -217,7 +217,7 @@ Position Position::parentAnchoredEquivalent() const
 {
     if (!m_anchorNode)
         return Position();
-    
+
     // FIXME: This should only be necessary for legacy positions, but is also needed for positions before and after Tables
     if (m_offset <= 0 && (m_anchorType != PositionIsAfterAnchor && m_anchorType != PositionIsAfterChildren)) {
         if (findParent(m_anchorNode.get()) && (editingIgnoresContent(m_anchorNode.get()) || isRenderedTable(m_anchorNode.get())))
@@ -420,11 +420,11 @@ bool Position::atEditingBoundary() const
     Position nextPosition = downstream(CanCrossEditingBoundary);
     if (atFirstEditingPositionForNode() && nextPosition.isNotNull() && !nextPosition.deprecatedNode()->hasEditableStyle())
         return true;
-        
+
     Position prevPosition = upstream(CanCrossEditingBoundary);
     if (atLastEditingPositionForNode() && prevPosition.isNotNull() && !prevPosition.deprecatedNode()->hasEditableStyle())
         return true;
-        
+
     return nextPosition.isNotNull() && !nextPosition.deprecatedNode()->hasEditableStyle()
         && prevPosition.isNotNull() && !prevPosition.deprecatedNode()->hasEditableStyle();
 }
@@ -441,7 +441,7 @@ Node* Position::parentEditingBoundary() const
     Node* boundary = m_anchorNode.get();
     while (boundary != documentElement && boundary->nonShadowBoundaryParentNode() && m_anchorNode->hasEditableStyle() == boundary->parentNode()->hasEditableStyle())
         boundary = boundary->nonShadowBoundaryParentNode();
-    
+
     return boundary;
 }
 
@@ -470,7 +470,7 @@ Position Position::previousCharacterPosition(EAffinity affinity) const
 
     bool atStartOfLine = isStartOfLine(VisiblePosition(*this, affinity));
     bool rendered = isCandidate();
-    
+
     Position currentPos = *this;
     while (!currentPos.atStartOfTree()) {
         currentPos = currentPos.previous();
@@ -484,7 +484,7 @@ Position Position::previousCharacterPosition(EAffinity affinity) const
         } else if (rendersInDifferentPosition(currentPos))
             return currentPos;
     }
-    
+
     return *this;
 }
 
@@ -498,7 +498,7 @@ Position Position::nextCharacterPosition(EAffinity affinity) const
 
     bool atEndOfLine = isEndOfLine(VisiblePosition(*this, affinity));
     bool rendered = isCandidate();
-    
+
     Position currentPos = *this;
     while (!currentPos.atEndOfTree()) {
         currentPos = currentPos.next();
@@ -512,7 +512,7 @@ Position Position::nextCharacterPosition(EAffinity affinity) const
         } else if (rendersInDifferentPosition(currentPos))
             return currentPos;
     }
-    
+
     return *this;
 }
 
@@ -524,14 +524,14 @@ static bool endsOfNodeAreVisuallyDistinctPositions(Node* node)
 {
     if (!node || !node->renderer())
         return false;
-        
+
     if (!node->renderer()->isInline())
         return true;
-        
+
     // Don't include inline tables.
     if (isHTMLTableElement(node))
         return false;
-    
+
     // There is a VisiblePosition inside an empty inline-block container.
     return node->renderer()->isReplaced() && canHaveChildrenForEditing(node) && toRenderBox(node->renderer())->height() != 0 && !node->firstChild();
 }
@@ -540,7 +540,7 @@ static Node* enclosingVisualBoundary(Node* node)
 {
     while (node && !endsOfNodeAreVisuallyDistinctPositions(node))
         node = node->parentNode();
-        
+
     return node;
 }
 
@@ -550,16 +550,16 @@ static bool isStreamer(const PositionIterator& pos)
 {
     if (!pos.node())
         return true;
-        
+
     if (isAtomicNode(pos.node()))
         return true;
-        
+
     return pos.atStartOfNode();
 }
 
 // This function and downstream() are used for moving back and forth between visually equivalent candidates.
-// For example, for the text node "foo     bar" where whitespace is collapsible, there are two candidates 
-// that map to the VisiblePosition between 'b' and the space.  This function will return the left candidate 
+// For example, for the text node "foo     bar" where whitespace is collapsible, there are two candidates
+// that map to the VisiblePosition between 'b' and the space.  This function will return the left candidate
 // and downstream() will return the right one.
 // Also, upstream() will return [boundary, 0] for any of the positions from [boundary, 0] to the first candidate
 // in boundary, where endsOfNodeAreVisuallyDistinctPositions(boundary) is true.
@@ -568,7 +568,7 @@ Position Position::upstream(EditingBoundaryCrossingRule rule) const
     Node* startNode = deprecatedNode();
     if (!startNode)
         return Position();
-    
+
     // iterate backward from there, looking for a qualified position
     Node* boundary = enclosingVisualBoundary(startNode);
     // FIXME: PositionIterator should respect Before and After positions.
@@ -579,7 +579,7 @@ Position Position::upstream(EditingBoundaryCrossingRule rule) const
     bool boundaryCrossed = false;
     for (; !currentPos.atStart(); currentPos.decrement()) {
         Node* currentNode = currentPos.node();
-        
+
         // Don't check for an editability change if we haven't moved to a different node,
         // to avoid the expense of computing hasEditableStyle().
         if (currentNode != lastNode) {
@@ -593,7 +593,7 @@ Position Position::upstream(EditingBoundaryCrossingRule rule) const
             lastNode = currentNode;
         }
 
-        // If we've moved to a position that is visually distinct, return the last saved position. There 
+        // If we've moved to a position that is visually distinct, return the last saved position. There
         // is code below that terminates early if we're *about* to move to a visually distinct position.
         if (endsOfNodeAreVisuallyDistinctPositions(currentNode) && currentNode != boundary)
             return lastVisible;
@@ -602,17 +602,17 @@ Position Position::upstream(EditingBoundaryCrossingRule rule) const
         RenderObject* renderer = currentNode->renderer();
         if (!renderer || renderer->style().visibility() != VISIBLE)
             continue;
-                 
+
         if (rule == CanCrossEditingBoundary && boundaryCrossed) {
             lastVisible = currentPos;
             break;
         }
-        
+
         // track last visible streamer position
         if (isStreamer(currentPos))
             lastVisible = currentPos;
-        
-        // Don't move past a position that is visually distinct.  We could rely on code above to terminate and 
+
+        // Don't move past a position that is visually distinct.  We could rely on code above to terminate and
         // return lastVisible on the next iteration, but we terminate early to avoid doing a nodeIndex() call.
         if (endsOfNodeAreVisuallyDistinctPositions(currentNode) && currentPos.atStartOfNode())
             return lastVisible;
@@ -684,8 +684,8 @@ Position Position::upstream(EditingBoundaryCrossingRule rule) const
 }
 
 // This function and upstream() are used for moving back and forth between visually equivalent candidates.
-// For example, for the text node "foo     bar" where whitespace is collapsible, there are two candidates 
-// that map to the VisiblePosition between 'b' and the space.  This function will return the right candidate 
+// For example, for the text node "foo     bar" where whitespace is collapsible, there are two candidates
+// that map to the VisiblePosition between 'b' and the space.  This function will return the right candidate
 // and upstream() will return the left one.
 // Also, downstream() will return the last position in the last atomic node in boundary for all of the positions
 // in boundary after the last candidate, where endsOfNodeAreVisuallyDistinctPositions(boundary).
@@ -704,9 +704,9 @@ Position Position::downstream(EditingBoundaryCrossingRule rule) const
     bool startEditable = startNode->hasEditableStyle();
     Node* lastNode = startNode;
     bool boundaryCrossed = false;
-    for (; !currentPos.atEnd(); currentPos.increment()) {   
+    for (; !currentPos.atEnd(); currentPos.increment()) {
         Node* currentNode = currentPos.node();
-        
+
         // Don't check for an editability change if we haven't moved to a different node,
         // to avoid the expense of computing hasEditableStyle().
         if (currentNode != lastNode) {
@@ -717,7 +717,7 @@ Position Position::downstream(EditingBoundaryCrossingRule rule) const
                     break;
                 boundaryCrossed = true;
             }
-                
+
             lastNode = currentNode;
         }
 
@@ -725,7 +725,7 @@ Position Position::downstream(EditingBoundaryCrossingRule rule) const
         // return the last visible streamer position
         if (currentNode->hasTagName(bodyTag) && currentPos.atEndOfNode())
             break;
-            
+
         // Do not move to a visually distinct position.
         if (endsOfNodeAreVisuallyDistinctPositions(currentNode) && currentNode != boundary)
             return lastVisible;
@@ -739,12 +739,12 @@ Position Position::downstream(EditingBoundaryCrossingRule rule) const
         RenderObject* renderer = currentNode->renderer();
         if (!renderer || renderer->style().visibility() != VISIBLE)
             continue;
-            
+
         if (rule == CanCrossEditingBoundary && boundaryCrossed) {
             lastVisible = currentPos;
             break;
         }
-        
+
         // track last visible streamer position
         if (isStreamer(currentPos))
             lastVisible = currentPos;
@@ -807,7 +807,7 @@ Position Position::downstream(EditingBoundaryCrossingRule rule) const
             }
         }
     }
-    
+
     return lastVisible;
 }
 
@@ -815,7 +815,7 @@ unsigned Position::positionCountBetweenPositions(const Position& a, const Positi
 {
     if (a.isNull() || b.isNull())
         return UINT_MAX;
-    
+
     Position endPos;
     Position pos;
     if (a > b) {
@@ -826,7 +826,7 @@ unsigned Position::positionCountBetweenPositions(const Position& a, const Positi
         pos = a;
     } else
         return 0;
-    
+
     unsigned posCount = 0;
     while (!pos.atEndOfTree() && pos != endPos) {
         pos = pos.next();
@@ -914,11 +914,11 @@ bool Position::isCandidate() const
 {
     if (isNull())
         return false;
-        
+
     RenderObject* renderer = deprecatedNode()->renderer();
     if (!renderer)
         return false;
-    
+
     if (renderer->style().visibility() != VISIBLE)
         return false;
 
@@ -934,7 +934,7 @@ bool Position::isCandidate() const
 
     if (m_anchorNode->hasTagName(htmlTag))
         return false;
-        
+
     if (isRendererReplacedElement(renderer))
         return !nodeIsUserSelectNone(deprecatedNode()) && atFirstEditingPositionForNode();
 
@@ -955,11 +955,11 @@ bool Position::isRenderedCharacter() const
 {
     if (isNull() || !deprecatedNode()->isTextNode())
         return false;
-        
+
     RenderText* renderer = toText(deprecatedNode())->renderer();
     if (!renderer)
         return false;
-    
+
     return renderer->containsRenderedCharacterOffset(m_offset);
 }
 
@@ -976,7 +976,7 @@ bool Position::rendersInDifferentPosition(const Position &pos) const
     RenderObject* renderer = deprecatedNode()->renderer();
     if (!renderer)
         return false;
-    
+
     RenderObject* posRenderer = pos.deprecatedNode()->renderer();
     if (!posRenderer)
         return false;
@@ -984,26 +984,26 @@ bool Position::rendersInDifferentPosition(const Position &pos) const
     if (renderer->style().visibility() != VISIBLE ||
         posRenderer->style().visibility() != VISIBLE)
         return false;
-    
+
     if (deprecatedNode() == pos.deprecatedNode()) {
         if (deprecatedNode()->hasTagName(brTag))
             return false;
 
         if (m_offset == pos.deprecatedEditingOffset())
             return false;
-            
+
         if (!deprecatedNode()->isTextNode() && !pos.deprecatedNode()->isTextNode()) {
             if (m_offset != pos.deprecatedEditingOffset())
                 return true;
         }
     }
-    
+
     if (deprecatedNode()->hasTagName(brTag) && pos.isCandidate())
         return true;
-                
+
     if (pos.deprecatedNode()->hasTagName(brTag) && isCandidate())
         return true;
-                
+
     if (!inSameEnclosingBlockFlowElement(deprecatedNode(), pos.deprecatedNode()))
         return true;
 
@@ -1045,7 +1045,7 @@ bool Position::rendersInDifferentPosition(const Position &pos) const
         && thisRenderedOffset == caretMaxOffset(deprecatedNode()) && !posRenderedOffset) {
         return false;
     }
-    
+
     if (previousRenderedEditable(deprecatedNode()) == pos.deprecatedNode()
         && !thisRenderedOffset && posRenderedOffset == caretMaxOffset(pos.deprecatedNode())) {
         return false;
@@ -1060,7 +1060,7 @@ Position Position::leadingWhitespacePosition(EAffinity affinity, bool considerNo
     ASSERT(isEditablePosition(*this));
     if (isNull())
         return Position();
-    
+
     if (upstream().deprecatedNode()->hasTagName(brTag))
         return Position();
 
@@ -1082,14 +1082,14 @@ Position Position::trailingWhitespacePosition(EAffinity, bool considerNonCollaps
     ASSERT(isEditablePosition(*this));
     if (isNull())
         return Position();
-    
+
     VisiblePosition v(*this);
     UChar c = v.characterAfter();
     // The space must not be in another paragraph and it must be editable.
     if (!isEndOfParagraph(v) && v.next(CannotCrossEditingBoundary).isNotNull())
         if (considerNonCollapsibleWhitespace ? (isSpaceOrNewline(c) || c == noBreakSpace) : isCollapsibleWhitespace(c))
             return *this;
-    
+
     return Position();
 }
 

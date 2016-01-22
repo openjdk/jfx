@@ -65,7 +65,7 @@ void JSPromise::finishCreation(VM& vm, JSPromiseConstructor* constructor)
 {
     Base::finishCreation(vm);
     ASSERT(inherits(info()));
-    
+
     m_constructor.set(vm, this, constructor);
 }
 
@@ -128,7 +128,7 @@ void JSPromise::resolve(VM& vm, JSValue resolution)
     // 2. Let 'reactions' be the value of promise's [[ResolveReactions]] internal slot.
     Vector<WriteBarrier<JSPromiseReaction>> reactions;
     reactions.swap(m_resolveReactions);
-    
+
     // 3. Set the value of promise's [[Result]] internal slot to resolution.
     m_result.set(vm, this, resolution);
 
@@ -162,7 +162,7 @@ void triggerPromiseReactions(VM& vm, JSGlobalObject* globalObject, Vector<WriteB
         // i. Call QueueMicrotask(ExecutePromiseReaction, (reaction, argument)).
         globalObject->queueMicrotask(createExecutePromiseReactionMicrotask(vm, reaction.get(), argument));
     }
-    
+
     // 2. Return.
 }
 

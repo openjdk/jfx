@@ -32,7 +32,7 @@ G_BEGIN_DECLS
  * Use this flag on GObject properties to signal they can make sense to be.
  * controlled over time. This hint is used by the GstController.
  */
-#define	GST_PARAM_CONTROLLABLE	(1 << (G_PARAM_USER_SHIFT + 1))
+#define GST_PARAM_CONTROLLABLE  (1 << (G_PARAM_USER_SHIFT + 1))
 
 /**
  * GST_PARAM_MUTABLE_READY:
@@ -65,7 +65,7 @@ G_BEGIN_DECLS
  *
  * Bits based on GST_PARAM_USER_SHIFT can be used by 3rd party applications.
  */
-#define	GST_PARAM_USER_SHIFT	(1 << (G_PARAM_USER_SHIFT + 8))
+#define GST_PARAM_USER_SHIFT    (1 << (G_PARAM_USER_SHIFT + 8))
 
 
 /* --- type macros --- */

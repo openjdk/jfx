@@ -48,7 +48,7 @@ public class PasteboardTest  {
 //        assertFalse(pb.hasFile());
 //        assertFalse(pb.hasString());
     }
-    
+
     @Test
     public void testPasteboardString() {
 //        Pasteboard pb = new Pasteboard();

@@ -219,7 +219,7 @@ public class HomePage extends ListView<HomePage.HomePageRow> implements Callback
                     case Highlights:
                         if (oldRowType != RowType.Highlights) {
                             height = HIGHLIGHTS_HEIGHT;
-                            Pagination pagination = paginationCache == null ? null 
+                            Pagination pagination = paginationCache == null ? null
                                     : paginationCache.get();
                             if (pagination == null) {
                                 pagination = new Pagination(Samples.HIGHLIGHTS.length);

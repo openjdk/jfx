@@ -57,7 +57,7 @@ inline SVGEllipseElement::SVGEllipseElement(const QualifiedName& tagName, Docume
 {
     ASSERT(hasTagName(SVGNames::ellipseTag));
     registerAnimatedPropertiesForSVGEllipseElement();
-}    
+}
 
 PassRefPtr<SVGEllipseElement> SVGEllipseElement::create(const QualifiedName& tagName, Document& document)
 {
@@ -134,7 +134,7 @@ void SVGEllipseElement::svgAttributeChanged(const QualifiedName& attrName)
 
     ASSERT_NOT_REACHED();
 }
- 
+
 bool SVGEllipseElement::selfHasRelativeLengths() const
 {
     return cx().isRelative()

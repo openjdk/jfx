@@ -88,7 +88,7 @@ public:
 private:
     ExecState* m_exec;
     bool m_hasSkippedFirstFrame;
-    bool m_foundParent; 
+    bool m_foundParent;
     RefPtr<ProfileNode>& m_head;
     RefPtr<ProfileNode>& m_currentNode;
 };

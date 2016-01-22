@@ -21,7 +21,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -195,10 +195,10 @@ unsigned Gradient::hash() const
     // StringHasher requires that the memory it hashes be a multiple of two in size.
     COMPILE_ASSERT(!(sizeof(parameters) % 2), Gradient_parameters_size_should_be_multiple_of_two);
     COMPILE_ASSERT(!(sizeof(ColorStop) % 2), Color_stop_size_should_be_multiple_of_two);
-    
+
     // Ensure that any padding in the struct is zero-filled, so it will not affect the hash value.
     memset(&parameters, 0, sizeof(parameters));
-    
+
     parameters.gradientSpaceTransformation = m_gradientSpaceTransformation;
     parameters.p0 = m_p0;
     parameters.p1 = m_p1;

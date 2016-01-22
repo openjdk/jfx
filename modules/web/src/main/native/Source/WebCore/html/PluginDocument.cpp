@@ -19,7 +19,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -40,7 +40,7 @@
 #include "Settings.h"
 
 namespace WebCore {
-    
+
 using namespace HTMLNames;
 
 // FIXME: Share more code with MediaDocumentParser.
@@ -89,16 +89,16 @@ void PluginDocumentParser::createDocumentStructure()
 #endif
 
     rootElement->appendChild(body, IGNORE_EXCEPTION);
-        
+
     RefPtr<Element> embedElement = document()->createElement(embedTag, false);
-        
+
     m_embedElement = toHTMLEmbedElement(embedElement.get());
     m_embedElement->setAttribute(widthAttr, "100%");
     m_embedElement->setAttribute(heightAttr, "100%");
-    
+
     m_embedElement->setAttribute(nameAttr, "plugin");
     m_embedElement->setAttribute(srcAttr, document()->url().string());
-    
+
     DocumentLoader* loader = document()->loader();
     ASSERT(loader);
     if (loader)
@@ -123,7 +123,7 @@ void PluginDocumentParser::appendBytes(DocumentWriter&, const char*, size_t)
     document()->updateLayout();
 
     // Below we assume that renderer->widget() to have been created by
-    // document()->updateLayout(). However, in some cases, updateLayout() will 
+    // document()->updateLayout(). However, in some cases, updateLayout() will
     // recurse too many times and delay its post-layout tasks (such as creating
     // the widget). Here we kick off the pending post-layout tasks so that we
     // can synchronously redirect data to the plugin.

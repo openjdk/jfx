@@ -60,7 +60,7 @@
  * "Extended Grapheme Clusters", which are groupings of codepoints
  * that should be treated as character-like units for many text operations.
  * Please see Unicode Standard Annex #29, Unicode Text Segmentation,
- * http://www.unicode.org/reports/tr29/ for additional information 
+ * http://www.unicode.org/reports/tr29/ for additional information
  * on grapheme clusters and guidelines on their use.
  * <p>
  * Title boundary analysis locates all positions,

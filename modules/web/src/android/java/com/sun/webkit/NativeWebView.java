@@ -67,7 +67,7 @@ public class NativeWebView {
         _setEncoding(this.id, encoding);
     }
 
-    void dispose() {        
+    void dispose() {
         _dispose(this.id);
         views.remove(this);
     }
@@ -90,7 +90,7 @@ public class NativeWebView {
             final String url, final String contenType,
             final int progress, final int errorCode) {
         final NativeWebView nwv = NativeWebView.getViewByID(id);
-        if (nwv == null) {            
+        if (nwv == null) {
             return;
         }
         Invoker.getInvoker().invokeOnEventThread(new Runnable() {

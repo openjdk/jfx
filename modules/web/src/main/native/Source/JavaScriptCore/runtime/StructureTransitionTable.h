@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef StructureTransitionTable_h
@@ -92,10 +92,10 @@ inline IndexingType newIndexingType(IndexingType oldType, NonPropertyTransition 
 class StructureTransitionTable {
     static const intptr_t UsingSingleSlotFlag = 1;
 
-    
+
     struct Hash {
         typedef std::pair<StringImpl*, unsigned> Key;
-        
+
         static unsigned hash(const Key& p)
         {
             return PtrHash<StringImpl*>::hash(p.first) + p.second;
@@ -155,7 +155,7 @@ private:
     void setMap(TransitionMap* map)
     {
         ASSERT(isUsingSingleSlot());
-        
+
         if (WeakImpl* impl = this->weakImpl())
             WeakSet::deallocate(impl);
 
@@ -174,7 +174,7 @@ private:
         }
         return 0;
     }
-    
+
     void setSingleTransition(VM&, Structure* structure)
     {
         ASSERT(isUsingSingleSlot());

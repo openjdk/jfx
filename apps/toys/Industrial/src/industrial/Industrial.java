@@ -25,7 +25,7 @@
 package industrial;
 
 /*
- Todo: 
+ Todo:
  Add emergency button
  Add help text ?
  */
@@ -87,7 +87,7 @@ public class Industrial extends Application {
     Group chartFillGroup;
     Group chartFlowGroup;
     Group helpGroup;
-    
+
 // FIXME: Needs public performance tracker API else remove this FPS feature
 //    PerformanceTracker tracker;
 
@@ -333,12 +333,12 @@ public class Industrial extends Application {
         model.getFillPercentHistory().getData().addListener((ListChangeListener.Change c) -> {
             XYChart.Data get = (XYChart.Data) model.getFillPercentHistory().getData().get(0);
             if (get != null) {
-                
+
                 long low = (long) get.getXValue();
                 long high = low + historyPointsToKeep * historyInterval;
                 xAxisFill.setLowerBound(low);
                 xAxisFill.setUpperBound(high);
-                
+
                 // a bit of a cheat, but these are in lock step
                 // and it saves us a listener
                 xAxisFlow.setLowerBound(low);

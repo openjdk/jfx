@@ -21,7 +21,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -128,7 +128,7 @@ bool LiteralParser<CharType>::tryJSONPParse(Vector<JSONPData>& results, bool nee
     } while (m_lexer.currentToken().type == TokIdentifier);
     return m_lexer.currentToken().type == TokEnd;
 }
-    
+
 template <typename CharType>
 ALWAYS_INLINE const Identifier LiteralParser<CharType>::makeIdentifier(const LChar* characters, size_t length)
 {
@@ -400,7 +400,7 @@ template <ParserMode mode, char terminator> ALWAYS_INLINE TokenType LiteralParse
                     break;
 
                 case 'u':
-                    if ((m_end - m_ptr) < 5) { 
+                    if ((m_end - m_ptr) < 5) {
                         m_lexErrorMessage = ASCIILiteral("\\u must be followed by 4 hex digits");
                         return TokError;
                     } // uNNNN == 5 characters
@@ -470,7 +470,7 @@ TokenType LiteralParser<CharType>::Lexer::lexNumber(LiteralParserToken<CharType>
 
     if (m_ptr < m_end && *m_ptr == '-') // -?
         ++m_ptr;
-    
+
     // (0 | [1-9][0-9]*)
     if (m_ptr < m_end && *m_ptr == '0') // 0
         ++m_ptr;
@@ -506,7 +506,7 @@ TokenType LiteralParser<CharType>::Lexer::lexNumber(LiteralParserToken<CharType>
             negative = -1;
             digit++;
         }
-        
+
         while (digit < m_ptr)
             result = result * 10 + (*digit++) - '0';
         result *= negative;
@@ -527,12 +527,12 @@ TokenType LiteralParser<CharType>::Lexer::lexNumber(LiteralParserToken<CharType>
             m_lexErrorMessage = ASCIILiteral("Exponent symbols should be followed by an optional '+' or '-' and then by at least one number");
             return TokError;
         }
-        
+
         ++m_ptr;
         while (m_ptr < m_end && isASCIIDigit(*m_ptr))
             ++m_ptr;
     }
-    
+
     token.type = TokNumber;
     token.end = m_ptr;
     size_t parsedLength;
@@ -576,7 +576,7 @@ JSValue LiteralParser<CharType>::parse(ParserState initialState)
             case DoParseArrayEndExpression: {
                 JSArray* array = asArray(objectStack.last());
                 array->putDirectIndex(m_exec, array->length(), lastValue);
-                
+
                 if (m_lexer.currentToken().type == TokComma)
                     goto doParseArrayStartExpression;
 
@@ -584,7 +584,7 @@ JSValue LiteralParser<CharType>::parse(ParserState initialState)
                     m_parseErrorMessage = ASCIILiteral("Expected ']'");
                     return JSValue();
                 }
-                
+
                 m_lexer.next();
                 lastValue = objectStack.last();
                 objectStack.removeLast();
@@ -604,7 +604,7 @@ JSValue LiteralParser<CharType>::parse(ParserState initialState)
                         m_parseErrorMessage = ASCIILiteral("Expected ':' before value in object property definition");
                         return JSValue();
                     }
-                    
+
                     m_lexer.next();
                     if (identifierToken.stringIs8Bit)
                         identifierStack.append(makeIdentifier(identifierToken.stringToken8, identifierToken.stringLength));

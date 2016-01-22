@@ -33,5 +33,5 @@ public class ParallelTransitionShim {
             AbstractMasterTimer timer) {
         return new ParallelTransition(timer);
     }
-    
+
 }

@@ -99,7 +99,7 @@ public class Preferences extends DataType {
     /**
      * If true then installer adds a dialog to let the user choose a directory
      * where the product will be installed.
-     * 
+     *
      * @ant.not-required    Default is null.
      */
     public void setInstalldirChooser(Boolean b) {
@@ -124,7 +124,7 @@ public class Preferences extends DataType {
     boolean getInstall() {
         return get().installRequested;
     }
-    
+
     Boolean getInstalldirChooser() {
         return get().installdirChooserRequested;
     }

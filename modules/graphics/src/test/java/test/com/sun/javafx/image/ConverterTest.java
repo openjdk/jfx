@@ -433,7 +433,7 @@ public class ConverterTest {
         }
     }
 
-    
+
     static ByteFormat ByteFormats[] = {
         new ByteFormat(ByteArgb.getter,    ByteArgb.setter,     0, 1, 2, 3),
         new ByteFormat(ByteBgra.getter,    ByteBgra.setter,     3, 2, 1, 0),
@@ -661,7 +661,7 @@ public class ConverterTest {
         testIntAccessors(directIntBuffer(0, 2));
         testIntAccessors(directIntBuffer(1, 2));
     }
-    
+
     private void testIntAccessors(IntBuffer ibuf) {
         int iarr[] = new int[2];
         for (IntFormat ifmt : IntFormats) {
@@ -716,7 +716,7 @@ public class ConverterTest {
         testB2BConverterTypes(0);
         testB2BConverterTypes(1);
     }
-    
+
     private void testB2BConverterTypes(int off) {
         ByteBuffer srchbuf = heapByteBuffer(off, 4 * TestColors.length);
         ByteBuffer srcdbuf = directByteBuffer(off, 4 * TestColors.length);

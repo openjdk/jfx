@@ -36,7 +36,7 @@ namespace WebCore {
 
 class AccessibilityTableCell;
 class RenderTableSection;
-    
+
 class AccessibilityTable : public AccessibilityRenderObject {
 
 protected:
@@ -49,28 +49,28 @@ public:
 
     virtual AccessibilityRole roleValue() const override;
     virtual bool isAriaTable() const { return false; }
-    
+
     virtual void addChildren() override;
     virtual void clearChildren() override;
-    
+
     const AccessibilityChildrenVector& columns();
     const AccessibilityChildrenVector& rows();
-    
+
     virtual bool supportsSelectedRows() { return false; }
     unsigned columnCount();
     unsigned rowCount();
     virtual int tableLevel() const override;
-    
+
     virtual String title() const override;
-    
+
     // all the cells in the table
     void cells(AccessibilityChildrenVector&);
     AccessibilityTableCell* cellForColumnAndRow(unsigned column, unsigned row);
-    
+
     void columnHeaders(AccessibilityChildrenVector&);
     void rowHeaders(AccessibilityChildrenVector&);
     void visibleRows(AccessibilityChildrenVector&);
-    
+
     // an object that contains, as children, all the objects that act as headers
     AccessibilityObject* headerContainer();
 
@@ -100,6 +100,6 @@ private:
 
 ACCESSIBILITY_OBJECT_TYPE_CASTS(AccessibilityTable, isTable())
 
-} // namespace WebCore 
+} // namespace WebCore
 
 #endif // AccessibilityTable_h

@@ -41,7 +41,7 @@ import com.oracle.javafx.scenebuilder.kit.metadata.util.PropertyName;
  */
 public class ObjectPropertyMetadata extends SingleValuePropertyMetadata<Object> {
 
-    public ObjectPropertyMetadata(PropertyName name, boolean readWrite, 
+    public ObjectPropertyMetadata(PropertyName name, boolean readWrite,
             Object defaultValue, InspectorPath inspectorPath) {
         super(name, Object.class, readWrite, defaultValue, inspectorPath);
     }
@@ -73,5 +73,5 @@ public class ObjectPropertyMetadata extends SingleValuePropertyMetadata<Object> 
     public FXOMInstance makeFxomInstanceFromValue(Object value, FXOMDocument fxomDocument) {
         throw new RuntimeException("Bug"); //NOI18N
     }
-    
+
 }

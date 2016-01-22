@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #if USE(PLUGIN_HOST_PROCESS) && ENABLE(NETSCAPE_PLUGIN_API)
@@ -91,7 +91,7 @@ void HostedNetscapePluginStream::startStreamWithResponse(NSURLResponse *response
 {
     didReceiveResponse(0, response);
 }
-    
+
 void HostedNetscapePluginStream::startStream(NSURL *responseURL, long long expectedContentLength, NSDate *lastModifiedDate, NSString *mimeType, NSData *headers)
 {
     m_responseURL = responseURL;
@@ -99,10 +99,10 @@ void HostedNetscapePluginStream::startStream(NSURL *responseURL, long long expec
 
     char* mimeTypeUTF8 = const_cast<char*>([mimeType UTF8String]);
     int mimeTypeUTF8Length = mimeTypeUTF8 ? strlen (mimeTypeUTF8) + 1 : 0;
-    
+
     const char *url = [responseURL _web_URLCString];
     int urlLength = url ? strlen(url) + 1 : 0;
-    
+
     _WKPHStartStream(m_instance->hostProxy()->port(),
                      m_instance->pluginID(),
                      m_streamID,
@@ -112,7 +112,7 @@ void HostedNetscapePluginStream::startStream(NSURL *responseURL, long long expec
                      mimeTypeUTF8, mimeTypeUTF8Length,
                      const_cast<char*>(reinterpret_cast<const char*>([headers bytes])), [headers length]);
 }
-                     
+
 void HostedNetscapePluginStream::didReceiveData(WebCore::NetscapePlugInStreamLoader*, const char* bytes, int length)
 {
     _WKPHStreamDidReceiveData(m_instance->hostProxy()->port(),
@@ -120,7 +120,7 @@ void HostedNetscapePluginStream::didReceiveData(WebCore::NetscapePlugInStreamLoa
                               m_streamID,
                               const_cast<char*>(bytes), length);
 }
-    
+
 void HostedNetscapePluginStream::didFinishLoading(WebCore::NetscapePlugInStreamLoader*)
 {
     _WKPHStreamDidFinishLoading(m_instance->hostProxy()->port(),
@@ -128,38 +128,38 @@ void HostedNetscapePluginStream::didFinishLoading(WebCore::NetscapePlugInStreamL
                                 m_streamID);
     m_instance->disconnectStream(this);
 }
-    
+
 void HostedNetscapePluginStream::didReceiveResponse(NetscapePlugInStreamLoader*, const ResourceResponse& response)
 {
     NSURLResponse *r = response.nsURLResponse();
-    
+
     NSMutableData *theHeaders = nil;
     long long expectedContentLength = [r expectedContentLength];
-    
+
     if ([r isKindOfClass:[NSHTTPURLResponse class]]) {
         NSHTTPURLResponse *httpResponse = (NSHTTPURLResponse *)r;
         theHeaders = [NSMutableData dataWithCapacity:1024];
-        
+
         // FIXME: it would be nice to be able to get the raw HTTP header block.
         // This includes the HTTP version, the real status text,
         // all headers in their original order and including duplicates,
         // and all original bytes verbatim, rather than sent through Unicode translation.
         // Unfortunately NSHTTPURLResponse doesn't provide access at that low a level.
-        
+
         [theHeaders appendBytes:"HTTP " length:5];
         char statusStr[10];
         long statusCode = [httpResponse statusCode];
         snprintf(statusStr, sizeof(statusStr), "%ld", statusCode);
         [theHeaders appendBytes:statusStr length:strlen(statusStr)];
         [theHeaders appendBytes:" OK\n" length:4];
-        
+
         // HACK: pass the headers through as UTF-8.
         // This is not the intended behavior; we're supposed to pass original bytes verbatim.
         // But we don't have the original bytes, we have NSStrings built by the URL loading system.
         // It hopefully shouldn't matter, since RFC2616/RFC822 require ASCII-only headers,
         // but surely someone out there is using non-ASCII characters, and hopefully UTF-8 is adequate here.
         // It seems better than NSASCIIStringEncoding, which will lose information if non-ASCII is used.
-        
+
         NSDictionary *headerDict = [httpResponse allHeaderFields];
         NSArray *keys = [[headerDict allKeys] sortedArrayUsingSelector:@selector(caseInsensitiveCompare:)];
         NSEnumerator *i = [keys objectEnumerator];
@@ -171,7 +171,7 @@ void HostedNetscapePluginStream::didReceiveResponse(NetscapePlugInStreamLoader*,
             [theHeaders appendData:[v dataUsingEncoding:NSUTF8StringEncoding]];
             [theHeaders appendBytes:"\n" length:1];
         }
-        
+
         // If the content is encoded (most likely compressed), then don't send its length to the plugin,
         // which is only interested in the decoded length, not yet known at the moment.
         // <rdar://problem/4470599> tracks a request for -[NSURLResponse expectedContentLength] to incorporate this logic.
@@ -181,7 +181,7 @@ void HostedNetscapePluginStream::didReceiveResponse(NetscapePlugInStreamLoader*,
 
         [theHeaders appendBytes:"\0" length:1];
     }
-    
+
     startStream([r URL], expectedContentLength, WKGetNSURLResponseLastModifiedDate(r), [r MIMEType], theHeaders);
 }
 
@@ -214,18 +214,18 @@ void HostedNetscapePluginStream::start()
     ASSERT(m_request);
     ASSERT(!m_frameLoader);
     ASSERT(!m_loader);
-    
+
     m_loader = resourceLoadScheduler()->schedulePluginStreamLoad(core([m_instance->pluginView() webFrame]), this, m_request.get());
 }
 
 void HostedNetscapePluginStream::stop()
 {
     ASSERT(!m_frameLoader);
-    
+
     if (!m_loader->isDone())
         m_loader->cancel(m_loader->cancelledError());
 }
-    
+
 void HostedNetscapePluginStream::cancelLoad(NPReason reason)
 {
     cancelLoad(errorForReason(reason));
@@ -235,7 +235,7 @@ void HostedNetscapePluginStream::cancelLoad(NSError *error)
 {
     if (m_frameLoader) {
         ASSERT(!m_loader);
-        
+
         DocumentLoader* documentLoader = m_frameLoader->activeDocumentLoader();
         if (documentLoader && documentLoader->isLoadingMainResource())
             documentLoader->cancelMainResourceLoad(error);
@@ -265,7 +265,7 @@ NSError *HostedNetscapePluginStream::errorForReason(NPReason reason) const
 
     if (reason == NPRES_USER_BREAK)
         return [NSError _webKitErrorWithDomain:NSURLErrorDomain
-                                          code:NSURLErrorCancelled 
+                                          code:NSURLErrorCancelled
                                            URL:m_responseURL ? m_responseURL.get() : m_requestURL.get()];
 
     return pluginCancelledConnectionError();

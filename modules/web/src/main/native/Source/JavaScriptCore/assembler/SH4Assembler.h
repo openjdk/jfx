@@ -804,7 +804,7 @@ public:
         uint16_t opc = getOpcodeGroup1(EXTUB_OPCODE, dst, src);
         oneShortOp(opc);
     }
-    
+
     void extuw(RegisterID src, RegisterID dst)
     {
         uint16_t opc = getOpcodeGroup1(EXTUW_OPCODE, dst, src);

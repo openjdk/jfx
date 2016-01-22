@@ -61,18 +61,18 @@ UnlinkedFunctionExecutable* BuiltinExecutables::createBuiltinExecutable(const So
     RELEASE_ASSERT(funcExpr->isFuncExprNode());
     FunctionBodyNode* body = static_cast<FuncExprNode*>(funcExpr)->body();
     RELEASE_ASSERT(!program->hasCapturedVariables());
-    
+
     body->setEndPosition(positionBeforeLastNewline);
     RELEASE_ASSERT(body);
     RELEASE_ASSERT(body->ident().isNull());
-    
+
     // This function assumes an input string that would result in a single anonymous function expression.
     body->setEndPosition(positionBeforeLastNewline);
     RELEASE_ASSERT(body);
     for (const auto& closedVariable : program->closedVariables()) {
         if (closedVariable == m_vm.propertyNames->arguments.impl())
         continue;
-        
+
         if (closedVariable == m_vm.propertyNames->undefinedKeyword.impl())
             continue;
         RELEASE_ASSERT(closedVariable->isEmptyUnique());

@@ -241,7 +241,7 @@ class ES2Context extends BaseShaderContext {
         } else {
             projViewTx.set(scratchTx);
         }
-        
+
         // update camera position; this will be uploaded to the shader
         // when we switch to 3D state
         cameraPos = camera.getPositionInWorld(cameraPos);
@@ -472,7 +472,7 @@ class ES2Context extends BaseShaderContext {
             scratchTx = scratchTx.set(projViewTx);
             scratchTx.scale(pixelScaleFactor, pixelScaleFactor, 1.0);
             updateRawMatrix(scratchTx);
-        } else { 
+        } else {
             updateRawMatrix(projViewTx);
         }
         shader.setMatrix("viewProjectionMatrix", rawMatrix);

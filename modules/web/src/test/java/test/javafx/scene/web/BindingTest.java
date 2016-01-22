@@ -38,7 +38,7 @@ import org.junit.Test;
 import org.w3c.dom.Document;
 
 public class BindingTest extends TestBase {
-    
+
     @Test public void testWebView() throws InterruptedException {
         submit(() -> {
             WebView main = getView();
@@ -118,7 +118,7 @@ public class BindingTest extends TestBase {
 
         });
     }
-    
+
     @Test public void testWebEngineReadonlyProperties() {
         ObjectProperty<Document> doc = new SimpleObjectProperty<Document>();
         ObjectProperty<String> title = new SimpleObjectProperty<String>();

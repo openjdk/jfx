@@ -157,7 +157,7 @@ public class Event extends EventObject implements Cloneable {
 
     /**
      * Creates and returns a copy of this {@code Event}.
-     * @return a new instance of {@code Event} with all values copied from 
+     * @return a new instance of {@code Event} with all values copied from
      * this {@code Event}.
      */
     @Override

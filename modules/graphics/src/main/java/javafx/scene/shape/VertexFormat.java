@@ -52,7 +52,7 @@ public final class VertexFormat {
     private final int pointIndexOffset;
     private final int normalIndexOffset;
     private final int texCoordIndexOffset;
-      
+
     private VertexFormat(String name, int vertexIndexSize,
             int pointIndexOffset, int normalIndexOffset, int texCoordIndexOffset) {
         this.name = name;
@@ -78,7 +78,7 @@ public final class VertexFormat {
      * Returns the number of component indices that represents a vertex. For example,
      * a POINT_TEXCOORD vertex consists of 2 indices, one for point component and
      * the other for texture coordinates component. Hence its value will be 2.
-     * 
+     *
      * @return the number of component indices
      */
     public int getVertexIndexSize() {

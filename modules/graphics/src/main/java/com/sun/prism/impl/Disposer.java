@@ -95,7 +95,7 @@ public class Disposer {
 //    }
 
     /**
-     * Registers the target object and the native data for later disposal when 
+     * Registers the target object and the native data for later disposal when
      * the target is unreachable.
      * .
      * @param target Object to be registered
@@ -105,15 +105,15 @@ public class Disposer {
     public static void addRecord(Object target, Disposer.Record rec) {
         disposerInstance.add(target, rec);
     }
- 
+
     /**
      * Add the object to the disposal queue. The object will be disposed
      * the next time cleanup is called.
-     * 
+     *
      * @param rec the DisposerRecord object to be disposed
      */
     public static void disposeRecord(Disposer.Record rec) {
-        disposerInstance.addToDisposalQueue(rec);       
+        disposerInstance.addToDisposalQueue(rec);
     }
 
     /**
@@ -152,15 +152,15 @@ public class Disposer {
         }
         records.put(ref, rec);
     }
-    
+
     synchronized private void addToDisposalQueue(Disposer.Record rec) {
         disposalQueue.add(rec);
     }
 
     /**
      * Polls the reference queue to see if there are any unreachable objects
-     * to be disposed.  If there is work to be done, this method disposes all 
-     * unreachable objects in the queue, otherwise it returns immediately. 
+     * to be disposed.  If there is work to be done, this method disposes all
+     * unreachable objects in the queue, otherwise it returns immediately.
      */
     synchronized private void disposeUnreachables() {
         Object obj;
@@ -179,7 +179,7 @@ public class Disposer {
     }
 
     synchronized private void processDisposalQueue() {
-        // disposalQueue is always empty in the case of Windows using the d3d pipe. 
+        // disposalQueue is always empty in the case of Windows using the d3d pipe.
         while (!disposalQueue.isEmpty()) {
             disposalQueue.remove().dispose();
         }

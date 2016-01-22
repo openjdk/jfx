@@ -5,13 +5,13 @@
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
  * are met:
- * 
+ *
  * 1. Redistributions of source code must retain the above copyright
  *    notice, this list of conditions and the following disclaimer.
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
  * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
  * OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
@@ -150,7 +150,7 @@ Node* XPathResult::singleNodeValue(ExceptionCode& ec) const
         ec = XPathException::TYPE_ERR;
         return 0;
     }
-  
+
     const NodeSet& nodes = m_value.toNodeSet();
     if (resultType() == FIRST_ORDERED_NODE_TYPE)
         return nodes.firstNode();
@@ -183,17 +183,17 @@ Node* XPathResult::iterateNext(ExceptionCode& ec)
         ec = XPathException::TYPE_ERR;
         return 0;
     }
-    
+
     if (invalidIteratorState()) {
         ec = INVALID_STATE_ERR;
         return 0;
     }
-    
+
     if (m_nodeSetPosition + 1 > m_nodeSet.size())
         return 0;
 
     Node* node = m_nodeSet[m_nodeSetPosition];
-    
+
     m_nodeSetPosition++;
 
     return node;
@@ -205,11 +205,11 @@ Node* XPathResult::snapshotItem(unsigned long index, ExceptionCode& ec)
         ec = XPathException::TYPE_ERR;
         return 0;
     }
-    
+
     const NodeSet& nodes = m_value.toNodeSet();
     if (index >= nodes.size())
         return 0;
-    
+
     return nodes[index];
 }
 

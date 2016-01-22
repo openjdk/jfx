@@ -14,21 +14,21 @@ namespace WebCore {
 PluginInfo* PluginInfoStore::createPluginInfoForPluginAtIndex(unsigned i)
 {
     JNIEnv* env = WebCore_GetJavaEnv();
- 
+
     jclass cls = env->FindClass(
         "com/sun/webkit/plugin/PluginManager");
     ASSERT(cls);
 
     static jmethodID pluginMgrGetEnabledPlugin = 0;
     if (!pluginMgrGetEnabledPlugin) {
-        pluginMgrGetEnabledPlugin = env->GetStaticMethodID(cls, 
-            "getEnabledPlugin", 
+        pluginMgrGetEnabledPlugin = env->GetStaticMethodID(cls,
+            "getEnabledPlugin",
             "(I)Lcom/sun/webkit/plugin/PluginHandler;");
     }
     ASSERT(pluginMgrGetEnabledPlugin);
 
     jobject hnd = env->CallStaticObjectMethod(
-        cls, pluginMgrGetEnabledPlugin, (jint)i); 
+        cls, pluginMgrGetEnabledPlugin, (jint)i);
     CheckAndClearException(env);
     ASSERT(hnd);
 
@@ -41,7 +41,7 @@ PluginInfo* PluginInfoStore::createPluginInfoForPluginAtIndex(unsigned i)
             cls, "getName", "()Ljava/lang/String;");
     }
     ASSERT(pluginHndGetNameMID);
- 
+
     jstring pluginName = (jstring) env->CallObjectMethod(
         hnd, pluginHndGetNameMID);
     CheckAndClearException(env);
@@ -115,7 +115,7 @@ PluginInfo* PluginInfoStore::createPluginInfoForPluginAtIndex(unsigned i)
 unsigned PluginInfoStore::pluginCount() const
 {
     JNIEnv* env = WebCore_GetJavaEnv();
- 
+
     jclass cls = env->FindClass("com/sun/webkit/plugin/PluginManager");
 
     static jmethodID pluginMgrGetEnabledPluginCount = 0;
@@ -126,7 +126,7 @@ unsigned PluginInfoStore::pluginCount() const
     ASSERT(pluginMgrGetEnabledPluginCount);
 
 
-    jint res = env->CallStaticIntMethod(cls, pluginMgrGetEnabledPluginCount); 
+    jint res = env->CallStaticIntMethod(cls, pluginMgrGetEnabledPluginCount);
     CheckAndClearException(env);
 
     return res;
@@ -137,19 +137,19 @@ unsigned PluginInfoStore::pluginCount() const
 String PluginInfoStore::pluginNameForMIMEType(const String& mimeType)
 {
     JNIEnv* env = WebCore_GetJavaEnv();
- 
+
     jclass cls = env->FindClass("com/sun/webkit/plugin/PluginManager");
     ASSERT(cls);
 
     static jmethodID pluginMgrGetPluginNameForMIMEType = 0;
     if (!pluginMgrGetPluginNameForMIMEType) {
-        env->GetStaticMethodID(cls, "getPluginNameForMIMEType", 
+        env->GetStaticMethodID(cls, "getPluginNameForMIMEType",
             "(Ljava/lang/String;)Ljava/lang/String;");
     }
     ASSERT(pluginMgrGetPluginNameForMIMEType);
 
     jstring name = (jstring)env->CallStaticObjectMethod(
-        cls, pluginMgrGetPluginNameForMIMEType, mimeType.toJavaString(env)); 
+        cls, pluginMgrGetPluginNameForMIMEType, mimeType.toJavaString(env));
     CheckAndClearException(env);
 
     String res = String(env, name);
@@ -157,12 +157,12 @@ String PluginInfoStore::pluginNameForMIMEType(const String& mimeType)
     return res;
 }
 */
-    
+
 /*
 bool PluginInfoStore::supportsMIMEType(const String& mimeType)
 {
     JNIEnv* env = WebCore_GetJavaEnv();
- 
+
     jclass cls = env->FindClass("com/sun/webkit/plugin/PluginManager");
     ASSERT(cls);
 
@@ -174,7 +174,7 @@ bool PluginInfoStore::supportsMIMEType(const String& mimeType)
     ASSERT(pluginMgrSupportsMIMEType);
 
     jboolean res = env->CallStaticBooleanMethod(
-        cls, pluginMgrSupportsMIMEType, mimeType.toJavaString(env)); 
+        cls, pluginMgrSupportsMIMEType, mimeType.toJavaString(env));
      CheckAndClearException(env);
 
     return res == JNI_TRUE;

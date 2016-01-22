@@ -22,7 +22,7 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
- 
+
 #include <fcntl.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -321,10 +321,10 @@ void fbOmapSetNativeCursor(jlong nativeCursorPointer) {
     if (cursor.isVisible) {
         fbOmapCursorClose();
         fbOmapCreateCursor(cursorImage->buffer, cursorImage->width, cursorImage->height, cursorImage->bpp);
-        // reset the visibility - because closing the cursor also makes it 
+        // reset the visibility - because closing the cursor also makes it
         // not visible
         cursor.isVisible = 1;
-    } 
+    }
 }
 
 void fbOmapReleaseNativeCursor(jlong nativeCursorPointer) {
@@ -342,9 +342,9 @@ void fbOmapReleaseNativeCursor(jlong nativeCursorPointer) {
 void fbOmapSetVisible(jboolean isVisible) {
     if (isVisible) {
         if (!cursor.isVisible && cursor.currentCursor != 0) {
-            FBCursorImage *cursorImage = 
+            FBCursorImage *cursorImage =
                 (FBCursorImage *)jlong_to_ptr(cursor.currentCursor);
-            fbOmapCreateCursor(cursorImage->buffer, cursorImage->width, 
+            fbOmapCreateCursor(cursorImage->buffer, cursorImage->width,
                                cursorImage->height, cursorImage->bpp);
         }
     } else {

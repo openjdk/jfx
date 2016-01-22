@@ -21,7 +21,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 #import "config.h"
@@ -168,19 +168,19 @@ static BOOL _allowsScriptsFullAccess = NO;
     return nil;
 }
 
-+ (NSString *)webScriptNameForKey:(const char *)key 
++ (NSString *)webScriptNameForKey:(const char *)key
 {
     if (strcmp(key, "throwOnDealloc") == 0)
       return @"throwOnDealloc";
-    
+
     return nil;
 }
 
-+ (BOOL)isKeyExcludedFromWebScript:(const char *)key 
++ (BOOL)isKeyExcludedFromWebScript:(const char *)key
 {
     if (strcmp(key, "throwOnDealloc") == 0)
       return NO;
-    
+
     return YES;
 }
 
@@ -188,7 +188,7 @@ static BOOL _allowsScriptsFullAccess = NO;
 {
     // let scripts invoke any selector
     [NSObject setAllowsScriptsFullAccess:YES];
-    
+
     // store a JSObjC instance into the provided container
     JSObjC *objc = [[JSObjC alloc] init];
     [container setValue:objc forKey:@"objc"];
@@ -200,9 +200,9 @@ static BOOL _allowsScriptsFullAccess = NO;
     return obj;
 }
 
-- (void)throwIfArgumentIsNotHello:(NSString *)str 
+- (void)throwIfArgumentIsNotHello:(NSString *)str
 {
-    if (![str isEqualToString:@"Hello"]) 
+    if (![str isEqualToString:@"Hello"])
         [WebScriptObject throwException:[NSString stringWithFormat:@"%@ != Hello", str]];
 }
 
@@ -225,7 +225,7 @@ static BOOL _allowsScriptsFullAccess = NO;
 {
     if (throwOnDealloc)
         [WebScriptObject throwException:@"Throwing exception on dealloc of ObjCPlugin"];
-    
+
     [super dealloc];
 }
 

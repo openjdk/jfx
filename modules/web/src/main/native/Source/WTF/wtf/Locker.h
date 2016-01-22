@@ -42,7 +42,7 @@ public:
         if (m_lockable)
             m_lockable->unlock();
     }
-    
+
     void unlockEarly()
     {
         m_lockable->unlock();
@@ -54,7 +54,7 @@ private:
         if (m_lockable)
             m_lockable->lock();
     }
-    
+
     T* m_lockable;
 };
 

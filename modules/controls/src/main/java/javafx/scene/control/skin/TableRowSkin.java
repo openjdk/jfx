@@ -88,7 +88,7 @@ public class TableRowSkin<T> extends TableRowSkinBase<T, TableRow<T>, TableCell<
         // install default input map for the TableRow control
         behavior = new TableRowBehavior<>(control);
 //        control.setInputMap(behavior.getInputMap());
-        
+
         updateTableViewSkin();
 
         registerChangeListener(control.tableViewProperty(), e -> {
@@ -183,7 +183,7 @@ public class TableRowSkin<T> extends TableRowSkinBase<T, TableRow<T>, TableCell<
         cell.updateTableColumn(tableColumn);
         cell.updateTableView(tableColumn.getTableView());
         cell.updateTableRow(getSkinnable());
-        
+
         return cell;
     }
 

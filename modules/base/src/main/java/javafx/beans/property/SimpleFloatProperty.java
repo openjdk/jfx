@@ -28,9 +28,9 @@ package javafx.beans.property;
 /**
  * This class provides a full implementation of a {@link Property} wrapping a
  * {@code float} value.
- * 
+ *
  * @see FloatPropertyBase
- * 
+ *
  * @since JavaFX 2.0
  */
 public class SimpleFloatProperty extends FloatPropertyBase {
@@ -66,7 +66,7 @@ public class SimpleFloatProperty extends FloatPropertyBase {
 
     /**
      * The constructor of {@code FloatProperty}
-     * 
+     *
      * @param initialValue
      *            the initial value of the wrapped value
      */
@@ -76,7 +76,7 @@ public class SimpleFloatProperty extends FloatPropertyBase {
 
     /**
      * The constructor of {@code FloatProperty}
-     * 
+     *
      * @param bean
      *            the bean of this {@code FloatProperty}
      * @param name
@@ -89,7 +89,7 @@ public class SimpleFloatProperty extends FloatPropertyBase {
 
     /**
      * The constructor of {@code FloatProperty}
-     * 
+     *
      * @param bean
      *            the bean of this {@code FloatProperty}
      * @param name

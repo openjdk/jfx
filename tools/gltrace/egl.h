@@ -22,7 +22,7 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
- 
+
 #ifndef GLTRACE_EGL_H
 #define GLTRACE_EGL_H
 
@@ -37,6 +37,6 @@
         DLFCN_HOOK_PUSH(); \
     }
 
-#define EGLEPILOG() 
+#define EGLEPILOG()
 
 #endif /* GLTRACE_EGL_H */

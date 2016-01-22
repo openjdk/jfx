@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef RenderLayerBacking_h
@@ -49,7 +49,7 @@ enum CompositingLayerType {
 // RenderLayerBacking controls the compositing behavior for a single RenderLayer.
 // It holds the various GraphicsLayers, and makes decisions about intra-layer rendering
 // optimizations.
-// 
+//
 // There is one RenderLayerBacking for each RenderLayer that is composited.
 
 class RenderLayerBacking : public GraphicsLayerClient {
@@ -71,14 +71,14 @@ public:
     };
     typedef unsigned UpdateAfterLayoutFlags;
     void updateAfterLayout(UpdateAfterLayoutFlags);
-    
+
     // Returns true if layer configuration changed.
     bool updateGraphicsLayerConfiguration();
     // Update graphics layer position and bounds.
     void updateGraphicsLayerGeometry(); // make private
     // Update contents and clipping structure.
     void updateDrawsContent();
-    
+
     GraphicsLayer* graphicsLayer() const { return m_graphicsLayer.get(); }
 
     // Layer to clip children
@@ -96,7 +96,7 @@ public:
 
     GraphicsLayer* backgroundLayer() const { return m_backgroundLayer.get(); }
     bool backgroundLayerPaintsFixedRootBackground() const { return m_backgroundLayerPaintsFixedRootBackground; }
-    
+
     bool hasScrollingLayer() const { return m_scrollingLayer != nullptr; }
     GraphicsLayer* scrollingLayer() const { return m_scrollingLayer.get(); }
     GraphicsLayer* scrollingContentsLayer() const { return m_scrollingContentsLayer.get(); }
@@ -104,7 +104,7 @@ public:
     void attachToScrollingCoordinatorWithParent(RenderLayerBacking* parent);
     void detachFromScrollingCoordinator();
     uint64_t scrollLayerID() const { return m_scrollLayerID; }
-    
+
     bool hasMaskLayer() const { return m_maskLayer != 0; }
 
     GraphicsLayer* parentForSublayers() const;
@@ -117,7 +117,7 @@ public:
     // This returns false for other layers, and when the document layer actually needs to paint into its backing store
     // for some reason.
     bool paintsIntoWindow() const;
-    
+
     // Returns true for a composited layer that has no backing store of its own, so
     // paints into some ancestor layer.
     bool paintsIntoCompositedAncestor() const { return !m_requiresOwnBackingStore; }
@@ -146,7 +146,7 @@ public:
     LayoutRect compositedBounds() const;
     void setCompositedBounds(const LayoutRect&);
     void updateCompositedBounds();
-    
+
     void updateAfterWidgetResize();
     void positionOverflowControlsLayers();
     bool hasUnpositionedOverflowControlsLayers() const;
@@ -155,7 +155,7 @@ public:
     TiledBacking* tiledBacking() const;
     void adjustTiledBackingCoverage();
     void setTiledBackingHasMargins(bool);
-    
+
     void updateDebugIndicators(bool showBorder, bool showRepaintCounter);
 
     // GraphicsLayerClient interface
@@ -188,10 +188,10 @@ public:
 
     LayoutRect contentsBox() const;
     IntRect backgroundBox() const;
-    
+
     // For informative purposes only.
     CompositingLayerType compositingLayerType() const;
-    
+
     GraphicsLayer* layerForHorizontalScrollbar() const { return m_layerForHorizontalScrollbar.get(); }
     GraphicsLayer* layerForVerticalScrollbar() const { return m_layerForVerticalScrollbar.get(); }
     GraphicsLayer* layerForScrollCorner() const { return m_layerForScrollCorner.get(); }
@@ -210,11 +210,11 @@ public:
 private:
     void createPrimaryGraphicsLayer();
     void destroyGraphicsLayers();
-    
+
     void willDestroyLayer(const GraphicsLayer*);
 
     LayoutRect compositedBoundsIncludingMargin() const;
-    
+
     std::unique_ptr<GraphicsLayer> createGraphicsLayer(const String&);
 
     RenderLayerModelObject& renderer() const { return m_owningLayer.renderer(); }
@@ -232,13 +232,13 @@ private:
     bool requiresScrollCornerLayer() const;
     bool updateScrollingLayers(bool scrollingLayers);
     void updateDrawsContent(bool isSimpleContainer);
-    
+
     void updateRootLayerConfiguration();
 
     void setBackgroundLayerPaintsFixedRootBackground(bool);
 
     GraphicsLayerPaintingPhase paintingPhaseForPrimaryLayer() const;
-    
+
     LayoutSize contentOffsetInCompostingLayer() const;
     // Result is transform origin in pixels.
     FloatPoint3D computeTransformOrigin(const IntRect& borderBox) const;
@@ -255,9 +255,9 @@ private:
 #endif
     // Return the opacity value that this layer should use for compositing.
     float compositingOpacity(float rendererOpacity) const;
-    
+
     bool isMainFrameRenderViewLayer() const;
-    
+
     bool paintsBoxDecorations() const;
     bool paintsChildren() const;
 

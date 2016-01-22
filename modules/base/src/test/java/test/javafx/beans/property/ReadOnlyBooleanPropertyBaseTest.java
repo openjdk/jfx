@@ -33,12 +33,12 @@ import org.junit.Before;
 import org.junit.Test;
 
 public class ReadOnlyBooleanPropertyBaseTest {
-    
+
     private static final Boolean UNDEFINED = null;
     private static final boolean DEFAULT = false;
     private static final boolean VALUE_1 = true;
     private static final boolean VALUE_2 = false;
-    
+
     private ReadOnlyPropertyMock property;
     private InvalidationListenerMock invalidationListener;
     private ChangeListenerMock<Boolean> changeListener;
@@ -49,7 +49,7 @@ public class ReadOnlyBooleanPropertyBaseTest {
         invalidationListener = new InvalidationListenerMock();
         changeListener = new ChangeListenerMock<Boolean>(UNDEFINED);
     }
-    
+
     @Test
     public void testInvalidationListener() {
         property.addListener(invalidationListener);
@@ -75,11 +75,11 @@ public class ReadOnlyBooleanPropertyBaseTest {
         property.set(VALUE_2);
         changeListener.check(null, UNDEFINED, UNDEFINED, 0);
     }
-    
+
     private static class ReadOnlyPropertyMock extends ReadOnlyBooleanPropertyBase {
 
         private boolean value;
-        
+
         @Override
         public Object getBean() {
             // not used
@@ -91,7 +91,7 @@ public class ReadOnlyBooleanPropertyBaseTest {
             // not used
             return null;
         }
-        
+
         private void set(boolean value) {
             this.value = value;
             fireValueChangedEvent();
@@ -101,7 +101,7 @@ public class ReadOnlyBooleanPropertyBaseTest {
         public boolean get() {
             return value;
         }
-        
+
     }
 
 }

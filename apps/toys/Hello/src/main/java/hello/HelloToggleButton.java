@@ -47,12 +47,12 @@ public class HelloToggleButton extends Application {
 
     @Override public void start(Stage stage) {
 //        Scene scene = newScene();
-        
+
         final ToggleGroup group = new ToggleGroup();
         group.selectedToggleProperty().addListener(ov -> System.out.println("UserData for selected Toggle: " +
                 (group.getSelectedToggle() == null ? "****** no selected toggle******" :
                     group.getSelectedToggle().getUserData())));
-        
+
         ToggleButton button1 = new ToggleButton("No, *I* am your father");
         button1.setUserData("Button 1");
         button1.setToggleGroup(group);
@@ -93,7 +93,7 @@ public class HelloToggleButton extends Application {
 //        stage.setHeight(450);
 //        return stage;
 //    }
-    
+
 //    private static Scene newScene() {
 //        Scene scene = new Scene(new Group());
 //        scene.setFill(GHOSTWHITE);

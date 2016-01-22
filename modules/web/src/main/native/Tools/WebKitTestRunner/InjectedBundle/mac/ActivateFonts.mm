@@ -160,7 +160,7 @@ static NSSet *allowedFontFamilySet()
         @"Zapf Dingbats",
         @"Zapfino",
         nil] retain];
-    
+
     return fontFamilySet;
 }
 
@@ -181,7 +181,7 @@ static NSArray *wtr_NSFontManager_availableFontFamilies(id self, SEL _cmd)
     static NSArray *availableFontFamilies;
     if (availableFontFamilies)
         return availableFontFamilies;
-    
+
     NSArray *availableFamilies = wtfCallIMP<id>(appKitAvailableFontFamiliesIMP, self, _cmd);
 
     NSMutableSet *prunedFamiliesSet = [NSMutableSet setWithArray:availableFamilies];
@@ -196,7 +196,7 @@ static NSArray *wtr_NSFontManager_availableFonts(id self, SEL _cmd)
     static NSArray *availableFonts;
     if (availableFonts)
         return availableFonts;
-    
+
     NSSet *allowedFamilies = allowedFontFamilySet();
     NSMutableArray *availableFontList = [[NSMutableArray alloc] initWithCapacity:[allowedFamilies count] * 2];
     for (NSString *fontFamily in allowedFontFamilySet()) {
@@ -223,7 +223,7 @@ static void swizzleNSFontManagerMethods()
         NSLog(@"Failed to swizzle the \"availableFontFamilies\" method on NSFontManager");
         return;
     }
-    
+
     appKitAvailableFontFamiliesIMP = method_setImplementation(availableFontFamiliesMethod, (IMP)wtr_NSFontManager_availableFontFamilies);
 
     Method availableFontsMethod = class_getInstanceMethod(objc_getClass("NSFontManager"), @selector(availableFonts));
@@ -232,7 +232,7 @@ static void swizzleNSFontManagerMethods()
         NSLog(@"Failed to swizzle the \"availableFonts\" method on NSFontManager");
         return;
     }
-    
+
     appKitAvailableFontsIMP = method_setImplementation(availableFontsMethod, (IMP)wtr_NSFontManager_availableFonts);
 }
 

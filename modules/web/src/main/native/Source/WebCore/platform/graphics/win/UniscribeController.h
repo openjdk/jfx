@@ -51,7 +51,7 @@ public:
     float minGlyphBoundingBoxY() const { return m_minGlyphBoundingBoxY; }
     float maxGlyphBoundingBoxY() const { return m_maxGlyphBoundingBoxY; }
 
-private:    
+private:
     void resetControlAndState();
 
     void itemizeShapeAndPlace(const UChar*, unsigned length, const SimpleFontData*, GlyphBuffer*);
@@ -72,7 +72,7 @@ private:
     SCRIPT_CONTROL m_control;
     SCRIPT_STATE m_state;
     Vector<SCRIPT_ITEM> m_items;
- 
+
     unsigned m_currentCharacter;
     int m_end;
 

@@ -33,10 +33,10 @@ package com.oracle.javafx.scenebuilder.kit.fxom.glue;
 
 /**
  *
- * 
+ *
  */
 public class GlueInstruction extends GlueAuxiliary {
-    
+
     private final String target;
     private final String data;
 
@@ -53,6 +53,6 @@ public class GlueInstruction extends GlueAuxiliary {
     public String getData() {
         return data;
     }
-    
+
 
 }

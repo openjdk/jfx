@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -52,7 +52,7 @@ using namespace WebCore;
 // WebDataSource ----------------------------------------------------------------
 
 // {F230854D-7091-428a-8DB5-37CABA44C105}
-const GUID IID_WebDataSource = 
+const GUID IID_WebDataSource =
 { 0x5c2f9099, 0xe65e, 0x4a0f, { 0x9c, 0xa0, 0x6a, 0xd6, 0x92, 0x52, 0xa6, 0x2a } };
 
 WebDataSource::WebDataSource(WebDocumentLoader* loader)
@@ -87,14 +87,14 @@ WebDocumentLoader* WebDataSource::documentLoader() const
 
 // IWebDataSourcePrivate ------------------------------------------------------
 
-HRESULT STDMETHODCALLTYPE WebDataSource::overrideEncoding( 
+HRESULT STDMETHODCALLTYPE WebDataSource::overrideEncoding(
     /* [retval][out] */ BSTR* /*encoding*/)
 {
     ASSERT_NOT_REACHED();
     return E_NOTIMPL;
 }
 
-HRESULT STDMETHODCALLTYPE WebDataSource::setOverrideEncoding( 
+HRESULT STDMETHODCALLTYPE WebDataSource::setOverrideEncoding(
     /* [in] */ BSTR /*encoding*/)
 {
     ASSERT_NOT_REACHED();
@@ -167,14 +167,14 @@ ULONG STDMETHODCALLTYPE WebDataSource::Release(void)
 
 // IWebDataSource --------------------------------------------------------------
 
-HRESULT STDMETHODCALLTYPE WebDataSource::initWithRequest( 
+HRESULT STDMETHODCALLTYPE WebDataSource::initWithRequest(
     /* [in] */ IWebURLRequest* /*request*/)
 {
     ASSERT_NOT_REACHED();
     return E_NOTIMPL;
 }
 
-HRESULT STDMETHODCALLTYPE WebDataSource::data( 
+HRESULT STDMETHODCALLTYPE WebDataSource::data(
     /* [retval][out] */ IStream** stream)
 {
     *stream = 0;
@@ -204,28 +204,28 @@ HRESULT WebDataSource::webFrame(/* [retval][out] */ IWebFrame** frame)
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE WebDataSource::initialRequest( 
+HRESULT STDMETHODCALLTYPE WebDataSource::initialRequest(
     /* [retval][out] */ IWebURLRequest** request)
 {
     *request = WebMutableURLRequest::createInstance(m_loader->originalRequest());
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE WebDataSource::request( 
+HRESULT STDMETHODCALLTYPE WebDataSource::request(
     /* [retval][out] */ IWebMutableURLRequest** request)
 {
     *request = WebMutableURLRequest::createInstance(m_loader->request());
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE WebDataSource::response( 
+HRESULT STDMETHODCALLTYPE WebDataSource::response(
     /* [retval][out] */ IWebURLResponse** response)
 {
     *response = WebURLResponse::createInstance(m_loader->response());
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE WebDataSource::textEncodingName( 
+HRESULT STDMETHODCALLTYPE WebDataSource::textEncodingName(
     /* [retval][out] */ BSTR* name)
 {
     String encoding = m_loader->overrideEncoding();
@@ -237,21 +237,21 @@ HRESULT STDMETHODCALLTYPE WebDataSource::textEncodingName(
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE WebDataSource::isLoading( 
+HRESULT STDMETHODCALLTYPE WebDataSource::isLoading(
     /* [retval][out] */ BOOL* loading)
 {
     *loading = m_loader->isLoadingInAPISense();
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE WebDataSource::pageTitle( 
+HRESULT STDMETHODCALLTYPE WebDataSource::pageTitle(
     /* [retval][out] */ BSTR* title)
 {
     *title = BString(m_loader->title().string()).release();
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE WebDataSource::unreachableURL( 
+HRESULT STDMETHODCALLTYPE WebDataSource::unreachableURL(
     /* [retval][out] */ BSTR* url)
 {
     URL unreachableURL = m_loader->unreachableURL();
@@ -261,28 +261,28 @@ HRESULT STDMETHODCALLTYPE WebDataSource::unreachableURL(
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE WebDataSource::webArchive( 
+HRESULT STDMETHODCALLTYPE WebDataSource::webArchive(
     /* [retval][out] */ IWebArchive** /*archive*/)
 {
     ASSERT_NOT_REACHED();
     return E_NOTIMPL;
 }
 
-HRESULT STDMETHODCALLTYPE WebDataSource::mainResource( 
+HRESULT STDMETHODCALLTYPE WebDataSource::mainResource(
     /* [retval][out] */ IWebResource** /*resource*/)
 {
     ASSERT_NOT_REACHED();
     return E_NOTIMPL;
 }
 
-HRESULT STDMETHODCALLTYPE WebDataSource::subresources( 
+HRESULT STDMETHODCALLTYPE WebDataSource::subresources(
     /* [retval][out] */ IEnumVARIANT** /*result*/)
 {
     ASSERT_NOT_REACHED();
     return E_NOTIMPL;
 }
 
-HRESULT STDMETHODCALLTYPE WebDataSource::subresourceForURL( 
+HRESULT STDMETHODCALLTYPE WebDataSource::subresourceForURL(
     /* [in] */ BSTR url,
     /* [retval][out] */ IWebResource** resource)
 {
@@ -308,7 +308,7 @@ HRESULT STDMETHODCALLTYPE WebDataSource::subresourceForURL(
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE WebDataSource::addSubresource( 
+HRESULT STDMETHODCALLTYPE WebDataSource::addSubresource(
     /* [in] */ IWebResource* /*subresource*/)
 {
     ASSERT_NOT_REACHED();

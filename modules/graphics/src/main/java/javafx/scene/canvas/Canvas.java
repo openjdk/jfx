@@ -40,14 +40,14 @@ import com.sun.javafx.sg.prism.NGCanvas;
 import com.sun.javafx.sg.prism.NGNode;
 
 /**
- * {@code Canvas} is an image that can be drawn on using a set of graphics 
- * commands provided by a {@code GraphicsContext}. 
- * 
+ * {@code Canvas} is an image that can be drawn on using a set of graphics
+ * commands provided by a {@code GraphicsContext}.
+ *
  * <p>
- * A {@code Canvas} node is constructed with a width and height that specifies the size 
- * of the image into which the canvas drawing commands are rendered. All drawing 
+ * A {@code Canvas} node is constructed with a width and height that specifies the size
+ * of the image into which the canvas drawing commands are rendered. All drawing
  * operations are clipped to the bounds of that image.
- * 
+ *
  * <p>Example:</p>
  *
  * <p>
@@ -61,10 +61,10 @@ Scene s = new Scene(root, 300, 300, Color.BLACK);
 
 final Canvas canvas = new Canvas(250,250);
 GraphicsContext gc = canvas.getGraphicsContext2D();
- 
+
 gc.setFill(Color.BLUE);
 gc.fillRect(75,75,100,100);
- 
+
 root.getChildren().add(canvas);
  * </pre>
  * </p>
@@ -93,7 +93,7 @@ public class Canvas extends Node {
 
     /**
      * Creates a new instance of Canvas with the given size.
-     * 
+     *
      * @param width width of the canvas
      * @param height height of the canvas
      */
@@ -281,7 +281,7 @@ public class Canvas extends Node {
     @Deprecated
     @Override
     public BaseBounds impl_computeGeomBounds(BaseBounds bounds, BaseTransform tx) {
-        bounds = new RectBounds(0f, 0f, (float) getWidth(), (float) getHeight());  
+        bounds = new RectBounds(0f, 0f, (float) getWidth(), (float) getHeight());
         bounds = tx.transform(bounds, bounds);
         return bounds;
     }

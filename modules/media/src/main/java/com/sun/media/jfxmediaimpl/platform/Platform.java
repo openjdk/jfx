@@ -59,7 +59,7 @@ public abstract class Platform {
         }
         return false;
     }
-    
+
     public boolean canPlayProtocol(String protocol) {
         String[] protocols = getSupportedProtocols();
         if (protocols != null) {
@@ -78,11 +78,11 @@ public abstract class Platform {
     public String[] getSupportedContentTypes() {
         return new String[0];
     }
-    
+
     public String[] getSupportedProtocols() {
         return new String[0];
     }
-    
+
     // XXX javadoc
     public MetadataParser createMetadataParser(Locator source) {
         return null;

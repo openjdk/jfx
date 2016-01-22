@@ -48,90 +48,90 @@ import javafx.scene.layout.GridPane;
  * Selection class represents the selected objects for an editor controller.
  * <p>
  * Selected objects are represented an instance of {@link AbstractSelectionGroup}.
- * 
- * 
+ *
+ *
  */
 public class Selection {
-    
+
     private AbstractSelectionGroup group;
     private final SimpleIntegerProperty revision = new SimpleIntegerProperty();
     private boolean lock;
     private long lastListenerInvocationTime;
     private int updateDepth;
-    
+
     /**
      * Returns the property holding the revision number of this selection.
      * Selection class adds +1 to this number each time the selection changes.
-     * 
+     *
      * @return the property holding the revision number of this selection.
      */
     public ReadOnlyIntegerProperty revisionProperty() {
         return revision;
     }
-    
+
     /**
      * Returns the revision number of this selection.
-     * 
+     *
      * @return the revision number of this selection.
      */
     public int getRevision() {
         return revision.get();
     }
-    
+
     /**
      * Replaces the selected items by the specified fxom object.
      * This routine adds +1 to the revision number.
-     * 
+     *
      * @param fxomObject the object to be selected
      */
     public void select(FXOMObject fxomObject) {
         assert fxomObject != null;
-        
+
         select(fxomObject, null);
     }
-    
+
     /**
      * Replaces the selected items by the specified fxom object and hit node.
      * This routine adds +1 to the revision number.
-     * 
+     *
      * @param fxomObject the object to be selected
      * @param hitNode null or the node hit by the mouse during selection
      */
     public void select(FXOMObject fxomObject, Node hitNode) {
         select(new ObjectSelectionGroup(fxomObject, hitNode));
     }
-    
+
     /**
      * Replaces the selected items by the specified fxom objects.
      * This routine adds +1 to the revision number.
-     * 
+     *
      * @param fxomObjects the objects to be selected
      */
     public void select(Collection<FXOMObject> fxomObjects) {
         assert fxomObjects != null;
-        
+
         final FXOMObject hitObject;
         if (fxomObjects.isEmpty()) {
             hitObject = null;
         } else {
             hitObject = fxomObjects.iterator().next();
         }
-        
+
         select(fxomObjects, hitObject, null);
     }
-    
+
     /**
      * Replaces the selected items by the specified fxom objects.
      * This routine adds +1 to the revision number.
-     * 
+     *
      * @param fxomObjects the objects to be selected
      * @param hitObject the object hit by the mouse during selection
      * @param hitNode null or the node hit by the mouse during selection
      */
     public void select(Collection<FXOMObject> fxomObjects, FXOMObject hitObject, Node hitNode) {
-        
+
         assert fxomObjects != null;
-        
+
         final ObjectSelectionGroup newGroup;
         if (fxomObjects.isEmpty()) {
             newGroup = null;
@@ -140,28 +140,28 @@ public class Selection {
         }
         select(newGroup);
     }
-    
+
     /**
      * Adds/removes the specified object from the selected items.
      * This routine adds +1 to the revision number.
-     * 
+     *
      * @param fxomObject the object to be added/removed
      */
     public void toggleSelection(FXOMObject fxomObject) {
         toggleSelection(fxomObject, null);
     }
-    
+
     /**
      * Adds/removes the specified object from the selected items.
      * This routine adds +1 to the revision number.
-     * 
+     *
      * @param fxomObject the object to be added/removed
      * @param hitNode null or the node hit by the mouse during selection
      */
     public void toggleSelection(FXOMObject fxomObject, Node hitNode) {
-        
+
         assert fxomObject != null;
-        
+
         final ObjectSelectionGroup newGroup;
         if (group instanceof ObjectSelectionGroup) {
             final ObjectSelectionGroup osg = (ObjectSelectionGroup) group;
@@ -186,13 +186,13 @@ public class Selection {
         } else {
             newGroup = new ObjectSelectionGroup(fxomObject, hitNode);
         }
-        
+
         select(newGroup);
     }
-    
+
     /**
      * Update the hit object and hit point of the current selection.
-     * 
+     *
      * @param hitObject the object hit by the mouse during selection
      * @param hitNode null or the node hit by the mouse during selection
      */
@@ -205,36 +205,36 @@ public class Selection {
             select(hitObject, hitNode);
         }
     }
-    
+
     /**
      * Returns true if the specified fxom object is part of this selection.
      * Conditions must be met:
      * 1) this selection should an ObjectSelectionGroup
      * 2) the fxom object should belong to this group.
-     * 
+     *
      * @param fxomObject an fxom object
-     * 
+     *
      * @return  true if this foxm object is selected.
      */
     public boolean isSelected(FXOMObject fxomObject) {
         final boolean result;
-        
+
         assert fxomObject != null;
-        
+
         if (group instanceof ObjectSelectionGroup) {
             final ObjectSelectionGroup osg = (ObjectSelectionGroup) group;
             result = osg.getItems().contains(fxomObject);
         } else {
             result = false;
         }
-        
+
         return result;
     }
-    
-    
+
+
     public FXOMObject getHitItem() {
         final FXOMObject result;
-        
+
         if (group instanceof ObjectSelectionGroup) {
             final ObjectSelectionGroup osg = (ObjectSelectionGroup) group;
             result = osg.getHitItem();
@@ -244,52 +244,52 @@ public class Selection {
         } else {
             result = null;
         }
-        
+
         return result;
     }
-    
+
     public Node getCheckedHitNode() {
         final Node result;
-        
+
         if (group instanceof ObjectSelectionGroup) {
             final ObjectSelectionGroup osg = (ObjectSelectionGroup) group;
             result = osg.getCheckedHitNode();
         } else {
             result = null;
         }
-        
+
         return result;
     }
-    
+
     /**
      * Replaces the selected items by the specified column/row.
      * This routine adds +1 to the revision number.
-     * 
+     *
      * @param gridPaneObject fxom object of the gridpane holding the column/row
      * @param feature column/row
      * @param featureIndex index of the column/row to be selected
      */
     public void select(FXOMInstance gridPaneObject, Type feature, int featureIndex) {
-        
+
         assert gridPaneObject != null;
         assert gridPaneObject.getSceneGraphObject() instanceof GridPane;
-        
+
         select(new GridSelectionGroup(gridPaneObject, feature, featureIndex));
     }
-    
+
     /**
      * Adds/removes the specified column/row to/from the selected items.
      * This routine adds +1 to the revision number.
-     * 
+     *
      * @param gridPaneObject fxom object of the gridpane holding the column/row
      * @param feature column/row
      * @param featureIndex index of the column/row to be selected
      */
     public void toggleSelection(FXOMInstance gridPaneObject, Type feature, int featureIndex) {
-        
+
         assert gridPaneObject != null;
         assert gridPaneObject.getSceneGraphObject() instanceof GridPane;
-        
+
         final AbstractSelectionGroup newGroup;
         if (group instanceof GridSelectionGroup) {
             final GridSelectionGroup gsg = (GridSelectionGroup) group;
@@ -318,18 +318,18 @@ public class Selection {
         } else {
             newGroup = new GridSelectionGroup(gridPaneObject, feature, featureIndex);
         }
-        
+
         select(newGroup);
     }
-    
-    
+
+
     /**
      * Returns true if the specified column/row is part of the selection.
      * Conditions must be met:
      * 1) this selection should an GridSelectionGroup
      * 2) GridSelectionGroup.type matches feature
      * 3) GridSelectionGroup.indexes contains featureIndex
-     * 
+     *
      * @param gridPaneObject fxom object of the gridpane holding the column/row
      * @param feature column/row
      * @param featureIndex index of the column/row to be checked
@@ -337,10 +337,10 @@ public class Selection {
      */
     public boolean isSelected(FXOMInstance gridPaneObject, Type feature, int featureIndex) {
         final boolean result;
-        
+
         assert gridPaneObject != null;
         assert gridPaneObject.getSceneGraphObject() instanceof GridPane;
-        
+
         if (group instanceof GridSelectionGroup) {
             final GridSelectionGroup gsg = (GridSelectionGroup) group;
             result = (gsg.getType() == feature)
@@ -348,56 +348,56 @@ public class Selection {
         } else {
             result = false;
         }
-        
+
         return result;
     }
-    
+
     /**
      * Replaces the selected items by the one from the specified selection group.
-     * 
+     *
      * @param newGroup null or the selection group defining items to be selected
      */
     public void select(AbstractSelectionGroup newGroup) {
-        
+
         if (lock) {
             // Method is called from a revision property listener
             throw new IllegalStateException("Changing selection from a selection listener is forbidden");
         }
-        
+
         if (Objects.equals(this.group, newGroup) == false) {
             beginUpdate();
             this.group = newGroup;
             endUpdate();
         }
     }
-    
+
     /**
      * Returns null or the first selected ancestor of the specified fxom object.
-     * 
+     *
      * @param fxomObject an fxom object
      * @return null or the first selected ancestor of the specified fxom object.
      */
     public FXOMObject lookupSelectedAncestor(FXOMObject fxomObject) {
         assert fxomObject != null;
-        
+
         FXOMObject result = null;
         FXOMObject parent = fxomObject.getParentObject();
-        
+
         while ((parent != null) && (result == null)) {
             if (isSelected(parent)) {
                 result = parent;
             }
             parent = parent.getParentObject();
         }
-        
+
         return result;
     }
-    
-    
+
+
     /**
      * Empties this selection.
      * This routine adds +1 to the revision number.
-     * 
+     *
      */
     public void clear() {
         if (group != null) {
@@ -406,7 +406,7 @@ public class Selection {
             endUpdate();
         }
     }
-    
+
     /**
      * Returns true if this selection is empty ie its selection group is null.
      * s
@@ -415,27 +415,27 @@ public class Selection {
     public boolean isEmpty() {
         return getGroup() == null;
     }
-    
+
     /**
      * Returns the group associated to this selection.
      * If this selection is empty, null is returned.
-     * 
+     *
      * @return  the group containing the selected items or null if selection is empty.
      */
     public AbstractSelectionGroup getGroup() {
         return group;
     }
-    
+
     /**
      * Returns number of nanoseconds taken to execute selection listeners.
-     * 
+     *
      * @return number of nanoseconds taken to execute selection listeners.
      */
     public long getLastListenerInvocationTime() {
         return lastListenerInvocationTime;
     }
-    
-    
+
+
     /**
      * Begins an update sequence. Subsequent calls to select() and clear()
      * do not trigger any revision incrementation.
@@ -443,7 +443,7 @@ public class Selection {
     public void beginUpdate() {
         updateDepth++;
     }
-    
+
     /**
      * Ends an update sequence. Revision is incremented.
      */
@@ -454,51 +454,51 @@ public class Selection {
             incrementRevision();
         }
     }
-    
+
     /**
      * Returns the common ancestor of the selected items or null if selection
      * is empty or root object is selected.
-     * 
-     * @return 
+     *
+     * @return
      */
     public FXOMObject getAncestor() {
         final FXOMObject result;
-        
+
         if (group == null) {
             // Selection is emtpy
             result = null;
         } else {
             result = group.getAncestor();
         }
-        
+
         return result;
     }
 
     /**
-     * Returns true if the selected objects are all connected to the 
+     * Returns true if the selected objects are all connected to the
      * specified documents.
-     * 
+     *
      * @param fxomDocument an fxom document (not null)
-     * @return true if the selected objects are all connected to the 
+     * @return true if the selected objects are all connected to the
      * specified documents.
      */
     public boolean isValid(FXOMDocument fxomDocument) {
         assert fxomDocument != null;
-        
+
         final boolean result;
         if (group == null) {
             result = true;
         } else {
             result = group.isValid(fxomDocument);
         }
-        
+
         return result;
     }
-    
+
     /*
      * Private
      */
-    
+
     private void incrementRevision() {
         lock = true;
         final long startTime = System.nanoTime();

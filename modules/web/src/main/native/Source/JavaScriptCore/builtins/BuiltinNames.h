@@ -30,7 +30,7 @@
 #include "JSCBuiltins.h"
 
 namespace JSC {
-    
+
 #define INITIALISE_BUILTIN_NAMES(name) , m_##name(vm, #name), m_##name##PrivateName(Identifier::from(PrivateName()))
 #define DECLARE_BUILTIN_NAMES(name) const Identifier m_##name; const Identifier m_##name##PrivateName;;
 #define DECLARE_BUILTIN_IDENTIFIER_ACCESSOR(name) \
@@ -39,10 +39,10 @@ namespace JSC {
 
 #define INITIALISE_PRIVATE_TO_PUBLIC_ENTRY(name) m_privateToPublicMap.add(m_##name##PrivateName.impl(), &m_##name);
 #define INITIALISE_PUBLIC_TO_PRIVATE_ENTRY(name) m_publicToPrivateMap.add(m_##name.impl(), &m_##name##PrivateName);
-    
+
 class BuiltinNames {
     WTF_MAKE_NONCOPYABLE(BuiltinNames); WTF_MAKE_FAST_ALLOCATED;
-    
+
 public:
     BuiltinNames(VM* vm, CommonIdentifiers* commonIdentifiers)
         : m_emptyIdentifier(commonIdentifiers->emptyIdentifier)
@@ -57,7 +57,7 @@ public:
 
     const Identifier* getPrivateName(const Identifier&) const;
     const Identifier& getPublicName(const Identifier&) const;
-    
+
     JSC_FOREACH_BUILTIN_FUNCTION_NAME(DECLARE_BUILTIN_IDENTIFIER_ACCESSOR)
     JSC_COMMON_PRIVATE_IDENTIFIERS_EACH_PROPERTY_NAME(DECLARE_BUILTIN_IDENTIFIER_ACCESSOR)
 
@@ -91,7 +91,7 @@ inline const Identifier& BuiltinNames::getPublicName(const Identifier& ident) co
     return m_emptyIdentifier;
 }
 
-    
+
 }
 
 #endif

@@ -169,7 +169,7 @@ final class BMPImageLoader extends ImageLoaderImpl {
     int   bfOffBits;
     byte  bgra_palette[];
     BitmapInfoHeader bih;
-    
+
     // BI_BITFIELDS support
     int bitMasks[];
     int bitOffsets[];
@@ -202,7 +202,7 @@ final class BMPImageLoader extends ImageLoaderImpl {
                 data.skipBytes(length - read);
             }
         }
-        
+
         if (bih.biCompression == BitmapInfoHeader.BI_BITFIELDS) {
             parseBitfields();
         } else if (bih.biCompression == BitmapInfoHeader.BI_RGB &&

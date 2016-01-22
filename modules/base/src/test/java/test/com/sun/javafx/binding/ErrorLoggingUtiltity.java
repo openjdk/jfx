@@ -74,13 +74,13 @@ public class ErrorLoggingUtiltity {
         logger.setLevel(level);
         logger.removeHandler(handler);
     }
-    
+
     public void reset() {
         lastRecord = null;
     }
 
     public void checkFine(Class expectedException) {
-        check(Level.FINE, expectedException);        
+        check(Level.FINE, expectedException);
     }
 
     public void check(Level expectedLevel, Class expectedException) {

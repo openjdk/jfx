@@ -815,8 +815,8 @@ gst_message_new_element (GstObject * src, GstStructure * structure)
  * that know the duration of a stream when the duration changes. This message
  * is received by bins and is used to calculate the total duration of a
  * pipeline. Elements may post a duration message with a duration of
- * GST_CLOCK_TIME_NONE to indicate that the duration has changed and the 
- * cached duration should be discarded. The new duration can then be 
+ * GST_CLOCK_TIME_NONE to indicate that the duration has changed and the
+ * cached duration should be discarded. The new duration can then be
  * retrieved via a query.
  *
  * Returns: (transfer full): The new duration-changed message.
@@ -987,7 +987,7 @@ gst_message_has_name (GstMessage * message, const gchar * name)
  *   switch (GST_MESSAGE_TYPE (msg)) {
  *     case GST_MESSAGE_TAG: {
  *       GstTagList *tags = NULL;
- *       
+ *
  *       gst_message_parse_tag (msg, &amp;tags);
  *       g_print ("Got tags from element %s\n", GST_OBJECT_NAME (msg->src));
  *       handle_tags (tags);
@@ -1037,7 +1037,7 @@ gst_message_parse_buffering (GstMessage * message, gint * percent)
 /**
  * gst_message_set_buffering_stats:
  * @message: A valid #GstMessage of type GST_MESSAGE_BUFFERING.
- * @mode: a buffering mode 
+ * @mode: a buffering mode
  * @avg_in: the average input rate
  * @avg_out: the average output rate
  * @buffering_left: amount of buffering time left in milliseconds
@@ -1109,7 +1109,7 @@ gst_message_parse_buffering_stats (GstMessage * message,
  *   switch (GST_MESSAGE_TYPE (msg)) {
  *     case GST_MESSAGE_STATE_CHANGED: {
  *       GstState old_state, new_state;
- *       
+ *
  *       gst_message_parse_state_changed (msg, &amp;old_state, &amp;new_state, NULL);
  *       g_print ("Element %s changed state from %s to %s.\n",
  *           GST_OBJECT_NAME (msg->src),
@@ -1297,7 +1297,7 @@ gst_message_parse_structure_change (GstMessage * message,
  *     case GST_MESSAGE_ERROR: {
  *       GError *err = NULL;
  *       gchar *dbg_info = NULL;
- *       
+ *
  *       gst_message_parse_error (msg, &amp;err, &amp;dbg_info);
  *       g_printerr ("ERROR from element %s: %s\n",
  *           GST_OBJECT_NAME (msg->src), err->message);
@@ -1487,7 +1487,7 @@ gst_message_parse_request_state (GstMessage * message, GstState * state)
  *
  * Create a new stream status message. This message is posted when a streaming
  * thread is created/destroyed or when the state changed.
- * 
+ *
  * Returns: (transfer full): the new stream status message.
  *
  * MT safe.
@@ -1677,7 +1677,7 @@ gst_message_parse_step_done (GstMessage * message, GstFormat * format,
  * @intermediate: is this an intermediate step
  *
  * This message is posted by elements when they accept or activate a new step
- * event for @amount in @format. 
+ * event for @amount in @format.
  *
  * @active is set to %FALSE when the element accepted the new step event and has
  * queued it for execution in the streaming threads.
@@ -1687,7 +1687,7 @@ gst_message_parse_step_done (GstMessage * message, GstFormat * format,
  * message is emitted, the application can queue a new step operation in the
  * element.
  *
- * Returns: (transfer full): The new step_start message. 
+ * Returns: (transfer full): The new step_start message.
  *
  * MT safe.
  */
@@ -2369,7 +2369,7 @@ gst_message_new_device_added (GstObject * src, GstDevice * device)
  * @message: a #GstMessage of type %GST_MESSAGE_DEVICE_ADDED
  * @device: (out) (allow-none) (transfer none): A location where to store a
  *  pointer to the new #GstDevice, or %NULL
- * 
+ *
  * Parses a device-added message. The device-added message is produced by
  * #GstDeviceProvider or a #GstDeviceMonitor. It announces the appearance
  * of monitored devices.

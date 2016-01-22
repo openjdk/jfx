@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -73,7 +73,7 @@ void LayerPool::addLayer(const RefPtr<PlatformCALayer>& layer)
 
     listOfLayersWithSize(layerSize).prepend(layer);
     m_totalBytes += backingStoreBytesForSize(layerSize);
-    
+
     m_lastAddTime = monotonicallyIncreasingTime();
     schedulePrune();
 }
@@ -88,7 +88,7 @@ RefPtr<PlatformCALayer> LayerPool::takeLayerWithSize(const IntSize& size)
     m_totalBytes -= backingStoreBytesForSize(size);
     return reuseList.takeFirst();
 }
-    
+
 unsigned LayerPool::decayedCapacity() const
 {
     // Decay to one quarter over capacityDecayTime

@@ -353,7 +353,7 @@ public final class Printer {
         double ptm = imgArea.getMinY();
         double prm = width - imgArea.getMaxX();
         double pbm = height - imgArea.getMaxY();
-        
+
         lMargin /= 72.0;
         rMargin /= 72.0;
         tMargin /= 72.0;

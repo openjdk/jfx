@@ -96,17 +96,17 @@ public class DataFormat {
      * and breaking our drag view implementation.
      */
     private static final DataFormat DRAG_IMAGE_OFFSET = new DataFormat("application/x-java-drag-image-offset");
-    
+
     /**
-     * A set of identifiers, typically mime types, for this DataFormat. 
+     * A set of identifiers, typically mime types, for this DataFormat.
      * In most cases this will be a single String.
      */
     private final Set<String> identifier;
 
     /**
      * Create a new DataFormat, specifying the set of ids that are associated with
-     * this data format. Typically the ids are one or more mime types. For each 
-     * id, any data associated with this DataFormat will be registered on the 
+     * this data format. Typically the ids are one or more mime types. For each
+     * id, any data associated with this DataFormat will be registered on the
      * clipboard. For example, suppose I had the following:
      * <pre><code>
      *     DataFormat fmt = new DataFormat("text/foo", "text/bar");
@@ -154,11 +154,11 @@ public class DataFormat {
     public final Set<String> getIdentifiers() {
         return identifier;
     }
-    
+
     /**
      * Returns a string representation of this {@code DataFormat} object.
      * @return a string representation of this {@code DataFormat} object.
-     */ 
+     */
     @Override public String toString() {
         if (identifier.isEmpty()) {
             return "[]";

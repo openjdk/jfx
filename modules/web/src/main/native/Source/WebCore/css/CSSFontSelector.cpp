@@ -63,7 +63,7 @@ CSSFontSelector::CSSFontSelector(Document* document)
     , m_beginLoadingTimer(this, &CSSFontSelector::beginLoadTimerFired)
     , m_uniqueId(++fontSelectorId)
     , m_version(0)
-    
+
 {
     // FIXME: An old comment used to say there was no need to hold a reference to m_document
     // because "we are guaranteed to be destroyed before the document". But there does not
@@ -316,7 +316,7 @@ void CSSFontSelector::addFontFaceRule(const StyleRuleFontFace* fontFaceRule)
         }
 
         familyFontFaces->append(fontFace);
-        
+
         ++m_version;
     }
 }
@@ -622,7 +622,7 @@ bool CSSFontSelector::resolvesFamilyFor(const FontDescription& description) cons
         DEFINE_STATIC_LOCAL(String, webkitPrefix, ("-webkit-"));
         if (familyName.startsWith(webkitPrefix))
             return true;
-            
+
     }
     return false;
 }

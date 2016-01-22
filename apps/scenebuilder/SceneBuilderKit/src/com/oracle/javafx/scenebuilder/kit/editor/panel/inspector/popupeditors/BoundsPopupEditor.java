@@ -75,7 +75,7 @@ public class BoundsPopupEditor extends PopupEditor {
     // Interface from PopupEditor.
     // Methods called by PopupEditor.
     //
-    
+
     @Override
     public void initializePopupContent() {
         root = EditorUtils.loadPopupFxml("BoundsPopupEditor.fxml", this); //NOI18N
@@ -114,7 +114,7 @@ public class BoundsPopupEditor extends PopupEditor {
     public Node getPopupContentNode() {
         return root;
     }
-    
+
     private void updateValues() {
         minX.setText(EditorUtils.valAsStr((bounds != null) ? bounds.getMinX() : ""));//NOI18N
         minY.setText(EditorUtils.valAsStr((bounds != null) ? bounds.getMinY() : ""));//NOI18N

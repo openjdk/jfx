@@ -47,43 +47,43 @@ public abstract class AbstractKeyGesture extends AbstractGesture {
     private KeyEvent firstKeyPressedEvent;
     private KeyEvent lastKeyEvent;
     private Observer observer;
-    
-    
+
+
     public AbstractKeyGesture(ContentPanelController contentPanelController) {
         super(contentPanelController);
     }
 
-    
+
     /*
      * For subclasses
      */
-    
+
     protected abstract void keyPressed();
     protected abstract void keyReleased();
-    
+
     protected KeyEvent getFirstKeyPressedEvent() {
         return firstKeyPressedEvent;
     }
-    
+
     protected KeyEvent getLastKeyEvent() {
         return lastKeyEvent;
     }
-    
+
     /*
      * AbstractGesture
      */
-    
+
     @Override
     public void start(InputEvent e, Observer observer) {
         assert e != null;
         assert e instanceof KeyEvent;
         assert e.getEventType() == KeyEvent.KEY_PRESSED;
         assert observer != null;
-        
+
         final Node glassLayer = contentPanelController.getGlassLayer();
         assert glassLayer.getOnKeyPressed() == null;
         assert glassLayer.getOnKeyReleased() == null;
-        
+
         glassLayer.setOnKeyPressed(e1 -> {
             if (e1.getCode() == firstKeyPressedEvent.getCode()) {
                 lastKeyEvent = e1;
@@ -105,12 +105,12 @@ public abstract class AbstractKeyGesture extends AbstractGesture {
                 }
             }
         });
-        
-        
+
+
         this.firstKeyPressedEvent = (KeyEvent)e;
         this.lastKeyEvent = this.firstKeyPressedEvent;
         this.observer = observer;
-        
+
         try {
             keyPressed();
         } catch(RuntimeException x) {
@@ -118,17 +118,17 @@ public abstract class AbstractKeyGesture extends AbstractGesture {
             throw x;
         }
     }
-    
-    
+
+
     /*
      * Private
      */
-    
+
     private void performTermination() {
         final Node glassLayer = contentPanelController.getGlassLayer();
         glassLayer.setOnKeyPressed(null);
         glassLayer.setOnKeyReleased(null);
-        
+
         try {
             observer.gestureDidTerminate(this);
         } finally {
@@ -137,5 +137,5 @@ public abstract class AbstractKeyGesture extends AbstractGesture {
             lastKeyEvent = null;
         }
     }
-    
+
 }

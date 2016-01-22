@@ -239,7 +239,7 @@ struct OpcodeStats {
     static long long opcodeCounts[numOpcodeIDs];
     static long long opcodePairCounts[numOpcodeIDs][numOpcodeIDs];
     static int lastOpcode;
-    
+
     static void recordInstruction(int opcode);
     static void resetLastInstruction();
 };

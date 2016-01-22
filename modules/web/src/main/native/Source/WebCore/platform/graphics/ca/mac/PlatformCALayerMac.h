@@ -35,7 +35,7 @@ namespace WebCore {
 class PlatformCALayerMac final : public PlatformCALayer {
 public:
     static PassRefPtr<PlatformCALayer> create(LayerType, PlatformCALayerClient*);
-    
+
     // This function passes the layer as a void* rather than a PlatformLayer because PlatformLayer
     // is defined differently for Obj C and C++. This allows callers from both languages.
     static PassRefPtr<PlatformCALayer> create(void* platformLayer, PlatformCALayerClient*);

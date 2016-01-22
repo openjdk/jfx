@@ -53,7 +53,7 @@ using namespace JSC;
 
 namespace JSC {
 
-namespace { 
+namespace {
 
 static const size_t largeHeapSize = 32 * MB; // About 1.5X the average webpage.
 static const size_t smallHeapSize = 1 * MB; // Matches the FastMalloc per-thread cache.
@@ -122,7 +122,7 @@ struct GCCounter {
         , m_max(0)
     {
     }
-    
+
     void count(size_t amount)
     {
         m_count++;
@@ -146,7 +146,7 @@ struct GCCounter {
 #define GCPHASE(name) DEFINE_GC_LOGGING_GLOBAL(GCTimer, name##Timer, (#name)); GCTimerScope name##TimerScope(&name##Timer)
 #define COND_GCPHASE(cond, name1, name2) DEFINE_GC_LOGGING_GLOBAL(GCTimer, name1##Timer, (#name1)); DEFINE_GC_LOGGING_GLOBAL(GCTimer, name2##Timer, (#name2)); GCTimerScope name1##CondTimerScope(cond ? &name1##Timer : &name2##Timer)
 #define GCCOUNTER(name, value) do { DEFINE_GC_LOGGING_GLOBAL(GCCounter, name##Counter, (#name)); name##Counter.count(value); } while (false)
-    
+
 #else
 
 #define GCPHASE(name) do { } while (false)
@@ -325,10 +325,10 @@ void Heap::reportAbandonedObjectGraph()
     // are abandoning so we just guess for them.
     double abandonedBytes = 0.10 * m_sizeAfterLastCollect;
 
-    // We want to accelerate the next collection. Because memory has just 
-    // been abandoned, the next collection has the potential to 
-    // be more profitable. Since allocation is the trigger for collection, 
-    // we hasten the next collection by pretending that we've allocated more memory. 
+    // We want to accelerate the next collection. Because memory has just
+    // been abandoned, the next collection has the potential to
+    // be more profitable. Since allocation is the trigger for collection,
+    // we hasten the next collection by pretending that we've allocated more memory.
     didAbandon(abandonedBytes);
 }
 
@@ -560,21 +560,21 @@ void Heap::markRoots()
             heapRootVisitor.visit(m_vm->addressOfException());
             visitor.donateAndDrain();
         }
-    
+
         {
             GCPHASE(VisitStrongHandles);
             MARK_LOG_ROOT(visitor, "Strong Handles");
             m_handleSet.visitStrongHandles(heapRootVisitor);
             visitor.donateAndDrain();
         }
-    
+
         {
             GCPHASE(HandleStack);
             MARK_LOG_ROOT(visitor, "Handle Stack");
             m_handleStack.visit(heapRootVisitor);
             visitor.donateAndDrain();
         }
-    
+
         {
             GCPHASE(TraceCodeBlocksAndJITStubRoutines);
             MARK_LOG_ROOT(visitor, "Trace Code Blocks and JIT Stub Routines");
@@ -582,7 +582,7 @@ void Heap::markRoots()
             m_jitStubRoutines.traceMarkedStubRoutines(visitor);
             visitor.donateAndDrain();
         }
-    
+
 #if ENABLE(PARALLEL_GC)
         {
             GCPHASE(Convergence);
@@ -661,7 +661,7 @@ void Heap::copyBackingStores()
         m_copyVisitor.startCopying();
         m_copyVisitor.copyFromShared();
         m_copyVisitor.doneCopying();
-        // We need to wait for everybody to finish and return their CopiedBlocks 
+        // We need to wait for everybody to finish and return their CopiedBlocks
         // before signaling that the phase is complete.
         m_storageSpace.doneCopying();
         m_sharedData.didFinishCopying();
@@ -691,10 +691,10 @@ size_t Heap::capacity()
 
 size_t Heap::sizeAfterCollect()
 {
-    // The result here may not agree with the normal Heap::size(). 
+    // The result here may not agree with the normal Heap::size().
     // This is due to the fact that we only count live copied bytes
-    // rather than all used (including dead) copied bytes, thus it's 
-    // always the case that m_totalBytesCopied <= m_storageSpace.size(). 
+    // rather than all used (including dead) copied bytes, thus it's
+    // always the case that m_totalBytesCopied <= m_storageSpace.size().
     ASSERT(m_totalBytesCopied <= m_storageSpace.size());
     return m_totalBytesVisited + m_totalBytesCopied + extraSize();
 }
@@ -732,7 +732,7 @@ void Heap::deleteAllCompiledCode()
     // up deleting code that is live on the stack.
     if (m_vm->entryScope)
         return;
-    
+
     // If we have things on any worklist, then don't delete code. This is kind of
     // a weird heuristic. It's definitely not safe to throw away code that is on
     // the worklist. But this change was made in a hurry so we just avoid throwing
@@ -808,15 +808,15 @@ void Heap::collect()
 #if ENABLE(ALLOCATION_LOGGING)
     dataLogF("JSC GC starting collection.\n");
 #endif
-    
+
     double before = 0;
     if (Options::logGC()) {
         dataLog("[GC: ");
         before = currentTimeMS();
     }
-    
+
     SamplingRegion samplingRegion("Garbage Collection");
-    
+
     RELEASE_ASSERT(!m_deferralDepth);
     GCPHASE(Collect);
     ASSERT(vm()->currentThreadIsHoldingAPILock());
@@ -824,7 +824,7 @@ void Heap::collect()
     ASSERT(m_isSafeToCollect);
     JAVASCRIPTCORE_GC_BEGIN();
     RELEASE_ASSERT(m_operationInProgress == NoOperation);
-    
+
 #if ENABLE(DFG_JIT)
     for (unsigned i = DFG::numberOfWorklists(); i--;) {
         if (DFG::Worklist* worklist = DFG::worklistForIndexOrNull(i))
@@ -879,14 +879,14 @@ void Heap::collect()
     }
 
     markRoots();
-    
+
     {
         GCPHASE(ReapingWeakHandles);
         m_objectSpace.reapWeakSets();
     }
 
     JAVASCRIPTCORE_GC_MARKED();
-    
+
     {
         GCPHASE(SweepingArrayBuffers);
         m_arrayBuffers.sweep();
@@ -932,7 +932,7 @@ void Heap::collect()
         GCPHASE(ResetAllocators);
         m_objectSpace.resetAllocators();
     }
-    
+
     size_t currentHeapSize = sizeAfterCollect();
     if (Options::gcMaxHeapSize() && currentHeapSize > Options::gcMaxHeapSize())
         HeapStatistics::exitWithFailure();
@@ -975,7 +975,7 @@ void Heap::collect()
 
     if (Options::showObjectStatistics())
         HeapStatistics::showObjectStatistics(this);
-    
+
 #if ENABLE(DFG_JIT)
     for (unsigned i = DFG::numberOfWorklists(); i--;) {
         if (DFG::Worklist* worklist = DFG::worklistForIndexOrNull(i))
@@ -1047,7 +1047,7 @@ bool Heap::isValidAllocation(size_t)
 
     if (m_operationInProgress != NoOperation)
         return false;
-    
+
     return true;
 }
 
@@ -1075,7 +1075,7 @@ public:
     {
         void** current = reinterpret_cast<void**>(cell);
 
-        // We want to maintain zapped-ness because that's how we know if we've called 
+        // We want to maintain zapped-ness because that's how we know if we've called
         // the destructor.
         if (cell->isZapped())
             current++;
@@ -1097,14 +1097,14 @@ void Heap::zombifyDeadObjects()
 void Heap::incrementDeferralDepth()
 {
     RELEASE_ASSERT(m_deferralDepth < 100); // Sanity check to make sure this doesn't get ridiculous.
-    
+
     m_deferralDepth++;
 }
 
 void Heap::decrementDeferralDepth()
 {
     RELEASE_ASSERT(m_deferralDepth >= 1);
-    
+
     m_deferralDepth--;
 }
 

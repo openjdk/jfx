@@ -40,7 +40,7 @@ inline void CopyVisitor::visitItem(CopyWorklistItem item)
         JSObject::copyBackingStore(item.cell(), *this, ButterflyCopyToken);
         return;
     }
-    
+
     item.cell()->methodTable()->copyBackingStore(item.cell(), *this, item.token());
 }
 
@@ -57,11 +57,11 @@ inline void* CopyVisitor::allocateNewSpace(size_t bytes)
     void* result = 0; // Compilers don't realize that this will be assigned.
     if (LIKELY(m_copiedAllocator.tryAllocateDuringCopying(bytes, &result)))
         return result;
-    
+
     result = allocateNewSpaceSlow(bytes);
     ASSERT(result);
     return result;
-}       
+}
 
 inline void* CopyVisitor::allocateNewSpaceSlow(size_t bytes)
 {

@@ -90,7 +90,7 @@
 
 .key-text {
     -fx-font-weight: bold;
-    -fx-font: bold 24px "Amble";    
+    -fx-font: bold 24px "Amble";
     -fx-text-fill: #333333;
 }
 
@@ -105,11 +105,11 @@
     -fx-text-origin: top;
 }
 
-.key-text.multi-char-text { 
+.key-text.multi-char-text {
     -fx-font: bold 20px "Amble";
 }
 
-.key-alttext.multi-char-text { 
+.key-alttext.multi-char-text {
     -fx-font: bold 12px "Amble";
 }
 

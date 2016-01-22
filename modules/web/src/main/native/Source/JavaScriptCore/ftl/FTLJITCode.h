@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef FTLJITCode_h
@@ -46,33 +46,33 @@ class JITCode : public JSC::JITCode {
 public:
     JITCode();
     ~JITCode();
-    
+
     CodePtr addressForCall(VM&, ExecutableBase*, ArityCheckMode, RegisterPreservationMode) override;
     void* executableAddressAtOffset(size_t offset) override;
     void* dataAddressAtOffset(size_t offset) override;
     unsigned offsetOf(void* pointerIntoCode) override;
     size_t size() override;
     bool contains(void*) override;
-    
+
     void initializeExitThunks(CodeRef);
     void addHandle(PassRefPtr<ExecutableMemoryHandle>);
     void addDataSection(RefCountedArray<LSectionWord>);
     void initializeArityCheckEntrypoint(CodeRef);
     void initializeAddressForCall(CodePtr);
-    
+
     const Vector<RefPtr<ExecutableMemoryHandle>>& handles() const { return m_handles; }
     const Vector<RefCountedArray<LSectionWord>>& dataSections() const { return m_dataSections; }
-    
+
     CodePtr exitThunks();
-    
+
     JITCode* ftl();
     DFG::CommonData* dfgCommon();
-    
+
     DFG::CommonData common;
     SegmentedVector<OSRExit, 8> osrExit;
     StackMaps stackmaps;
     UnwindInfo unwindInfo;
-    
+
 private:
     Vector<RefCountedArray<LSectionWord>> m_dataSections;
     Vector<RefPtr<ExecutableMemoryHandle>> m_handles;

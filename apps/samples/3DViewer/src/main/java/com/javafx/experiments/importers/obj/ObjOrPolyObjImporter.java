@@ -45,26 +45,26 @@ public class ObjOrPolyObjImporter extends Importer {
     @Override
     public void load(String fileUrl, boolean asPolygonMesh) throws IOException {
 
-	if (asPolygonMesh) {
-	    PolyObjImporter reader = new PolyObjImporter(fileUrl);
-	    for (String mesh : reader.getMeshes()) {
-		res.getChildren().add(reader.buildPolygonMeshView(mesh));
-	    };
-	} else {
-	    ObjImporter reader = new ObjImporter(fileUrl);
-	    for (String mesh : reader.getMeshes()) {
-		res.getChildren().add(reader.buildMeshView(mesh));
-	    };
-	}
+    if (asPolygonMesh) {
+        PolyObjImporter reader = new PolyObjImporter(fileUrl);
+        for (String mesh : reader.getMeshes()) {
+        res.getChildren().add(reader.buildPolygonMeshView(mesh));
+        };
+    } else {
+        ObjImporter reader = new ObjImporter(fileUrl);
+        for (String mesh : reader.getMeshes()) {
+        res.getChildren().add(reader.buildMeshView(mesh));
+        };
+    }
     }
 
     @Override
     public Group getRoot() {
-	return res;
+    return res;
     }
 
     @Override
     public boolean isSupported(String extension) {
-	return extension != null && extension.equals("obj");
+    return extension != null && extension.equals("obj");
     }
 }

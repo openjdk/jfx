@@ -50,7 +50,7 @@ public class ShortStringConverter extends StringConverter<Short> {
 
     /** {@inheritDoc} */
     @Override public String toString(Short value) {
-        // If the specified value is null, return a 
+        // If the specified value is null, return a
         // zero-length String
         if (value == null) {
             return "";

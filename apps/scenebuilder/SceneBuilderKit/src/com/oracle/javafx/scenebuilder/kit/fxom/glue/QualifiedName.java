@@ -35,10 +35,10 @@ import java.util.Objects;
 
 /**
  *
- * 
+ *
  */
 class QualifiedName implements Comparable<QualifiedName> {
-    
+
     private final String qualifier;
     private final String name;
 
@@ -47,7 +47,7 @@ class QualifiedName implements Comparable<QualifiedName> {
         this.qualifier = qualifier;
         this.name = name;
     }
-    
+
     public QualifiedName(String qualifiedName) {
         final int dotIndex = qualifiedName.indexOf('.');
         if (dotIndex == -1) {
@@ -66,11 +66,11 @@ class QualifiedName implements Comparable<QualifiedName> {
     public String getName() {
         return name;
     }
-    
+
     /*
      * Object
      */
-    
+
     @Override
     public int hashCode() {
         int hash = 7;
@@ -100,11 +100,11 @@ class QualifiedName implements Comparable<QualifiedName> {
     /*
      * Comparable
      */
-    
+
     @Override
     public int compareTo(QualifiedName o) {
         int result;
-        
+
         if (this == o) {
             result = 0;
         } else if (o == null) {
@@ -125,9 +125,9 @@ class QualifiedName implements Comparable<QualifiedName> {
                 result = this.name.compareTo(o.name);
             }
         }
-        
+
         return result;
     }
-    
-    
+
+
 }

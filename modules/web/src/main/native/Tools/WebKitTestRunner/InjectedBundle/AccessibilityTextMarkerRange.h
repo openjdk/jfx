@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef AccessibilityTextMarkerRange_h
@@ -39,35 +39,35 @@ typedef void* PlatformTextMarkerRange;
 #endif
 
 namespace WTR {
-    
+
 class AccessibilityTextMarkerRange : public JSWrappable {
 public:
     static PassRefPtr<AccessibilityTextMarkerRange> create(PlatformTextMarkerRange);
     static PassRefPtr<AccessibilityTextMarkerRange> create(const AccessibilityTextMarkerRange&);
-    
+
     ~AccessibilityTextMarkerRange();
-    
+
     PlatformTextMarkerRange platformTextMarkerRange() const;
     virtual JSClassRef wrapperClass();
-    
+
     static JSObjectRef makeJSAccessibilityTextMarkerRange(JSContextRef, const AccessibilityTextMarkerRange&);
     bool isEqual(AccessibilityTextMarkerRange*);
-    
+
 private:
     AccessibilityTextMarkerRange(PlatformTextMarkerRange);
     AccessibilityTextMarkerRange(const AccessibilityTextMarkerRange&);
-    
+
 #if PLATFORM(COCOA)
     RetainPtr<PlatformTextMarkerRange> m_textMarkerRange;
 #else
     PlatformTextMarkerRange m_textMarkerRange;
 #endif
 };
-    
+
 #if !PLATFORM(COCOA)
 inline bool AccessibilityTextMarkerRange::isEqual(AccessibilityTextMarkerRange*) { return false; }
 #endif
-    
+
 } // namespace WTR
 
 #endif // AccessibilityTextMarkerRange_h

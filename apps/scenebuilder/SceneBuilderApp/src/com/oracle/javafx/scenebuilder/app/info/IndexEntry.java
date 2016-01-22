@@ -39,14 +39,14 @@ import java.util.Objects;
  *
  */
 public class IndexEntry {
-    
+
     public enum Type {
         FX_ID,
         HANDLER,
         RESOURCE_KEY,
         STYLECLASS
     }
-    
+
     private final String key;
     private final Type type;
     private final FXOMObject fxomObject;
@@ -64,7 +64,7 @@ public class IndexEntry {
     public Type getType() {
         return type;
     }
-    
+
     public FXOMObject getFxomObject() {
         return fxomObject;
     }
@@ -101,6 +101,6 @@ public class IndexEntry {
         }
         return true;
     }
-    
-    
+
+
 }

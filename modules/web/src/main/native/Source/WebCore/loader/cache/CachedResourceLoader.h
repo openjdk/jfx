@@ -58,7 +58,7 @@ class URL;
 // and enforces a bunch of security checks and rules for resource revalidation.
 // Its lifetime is roughly per-DocumentLoader, in that it is generally created
 // in the DocumentLoader constructor and loses its ability to generate network
-// requests when the DocumentLoader is destroyed. Documents also hold a 
+// requests when the DocumentLoader is destroyed. Documents also hold a
 // RefPtr<CachedResourceLoader> for their lifetime (and will create one if they
 // are initialized without a Frame), so a Document can keep a CachedResourceLoader
 // alive past detach if scripts still reference the Document.
@@ -94,7 +94,7 @@ public:
 
     CachedResource* cachedResource(const String& url) const;
     CachedResource* cachedResource(const URL& url) const;
-    
+
     typedef HashMap<String, CachedResourceHandle<CachedResource>> DocumentResourceMap;
     const DocumentResourceMap& allCachedResources() const { return m_documentResources; }
 
@@ -104,9 +104,9 @@ public:
     void setImagesEnabled(bool);
 
     bool shouldDeferImageLoad(const URL&) const;
-    
+
     CachePolicy cachePolicy(CachedResource::Type) const;
-    
+
     Frame* frame() const; // Can be null
     Document* document() const { return m_document; } // Can be null
     void setDocument(Document* document) { m_document = document; }
@@ -117,7 +117,7 @@ public:
     void loadDone(CachedResource*, bool shouldPerformPostLoadActions = true);
 
     void garbageCollectDocumentResources();
-    
+
     void incrementRequestCount(const CachedResource*);
     void decrementRequestCount(const CachedResource*);
     int requestCount() const { return m_requestCount; }
@@ -145,7 +145,7 @@ private:
 
     enum RevalidationPolicy { Use, Revalidate, Reload, Load };
     RevalidationPolicy determineRevalidationPolicy(CachedResource::Type, ResourceRequest&, bool forPreload, CachedResource* existingResource, CachedResourceRequest::DeferOption) const;
-    
+
     bool shouldContinueAfterNotifyingLoadedFromMemoryCache(CachedResource*);
     bool checkInsecureContent(CachedResource::Type, const URL&) const;
 
@@ -154,14 +154,14 @@ private:
 
     bool clientDefersImage(const URL&) const;
     void reloadImagesIfNotDeferred();
-    
+
     HashSet<String> m_validatedURLs;
     mutable DocumentResourceMap m_documentResources;
     Document* m_document;
     DocumentLoader* m_documentLoader;
-    
+
     int m_requestCount;
-    
+
     OwnPtr<ListHashSet<CachedResource*>> m_preloads;
     struct PendingPreload {
         CachedResource::Type m_type;

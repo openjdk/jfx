@@ -59,9 +59,9 @@ public class TableViewDesignInfoX /* extends TableViewDesignInfo */ {
         final TableView<?> tv = tableColumn.getTableView();
         final Bounds tb = tv.getLayoutBounds();
         final Bounds hb = getColumnHeaderBounds(tableColumn);
-        
+
         //
-        //           x0             x1          
+        //           x0             x1
         //
         //     +--------------------------------------+
         // y0  |     +--------------+                 |
@@ -73,32 +73,32 @@ public class TableViewDesignInfoX /* extends TableViewDesignInfo */ {
         //     |                                      |
         // y1  +--------------------------------------+
         //
-        
+
         final double x0 = hb.getMinX();
         final double x1 = hb.getMaxX();
         final double y0 = hb.getMinY();
         final double y1 = tb.getMaxY();
-        
+
         return new BoundingBox(x0, y0, x1 - x0, y1 - y0);
     }
-    
-    
+
+
     public Bounds getColumnHeaderBounds(TableColumn<?,?> tableColumn) {
         final TableView<?> tv = tableColumn.getTableView();
         final Node hn = getColumnNode(tableColumn);
         return Deprecation.localToLocal(hn, hn.getLayoutBounds(), tv);
     }
-    
-    
+
+
     public Node getColumnNode(TableColumn<?,?> tableColumn) {
         assert tableColumn != null;
         assert tableColumn.getTableView() != null;
-        
+
 
         // Looks for the sub nodes which match the .column-header CSS selector
         final TableView<?> tableView = tableColumn.getTableView();
         final Set<Node> set = tableView.lookupAll(".column-header"); //NOI18N
-        
+
         // Searches the result for the node associated to 'tableColumn'.
         // This item has (TableColumn.class, tableColumn) in its property list.
         Node result = null;
@@ -114,11 +114,11 @@ public class TableViewDesignInfoX /* extends TableViewDesignInfo */ {
 
         return result;
     }
-    
-    
+
+
     public <T> TableColumn<T,?> lookupColumn(TableView<T>  tableView, double sceneX, double sceneY) {
         TableColumn<T,?> result = null;
-        
+
         //
         //                     x
         //          +--------------------------------------+
@@ -134,7 +134,7 @@ public class TableViewDesignInfoX /* extends TableViewDesignInfo */ {
         //          |                                      |
         //          +--------------------------------------+
         //
-        
+
         // Walk through the column to see if one contains 'x' vertical
         List<TableColumn<T,?>> tableColumns = tableView.getColumns();
         List<TableColumn<T,?>> columnPath = new ArrayList<>();
@@ -147,7 +147,7 @@ public class TableViewDesignInfoX /* extends TableViewDesignInfo */ {
                 tableColumns = Collections.emptyList(); // To stop the loop
             }
         }
-        
+
         if (columnPath.isEmpty()) {
             // No column contains sceneX
             result = null;
@@ -164,29 +164,29 @@ public class TableViewDesignInfoX /* extends TableViewDesignInfo */ {
                 }
             }
         }
-        
+
         return result;
     }
-    
-    
+
+
     private <T> TableColumn<T,?> lookupColumn(
             List<TableColumn<T,?>> tableColumns, double sceneX) {
         TableColumn<T,?> result = null;
-        
+
         // Walk through the columns to see if one contains 'x' vertical
         for (TableColumn<T,?> tc : tableColumns) {
             final Node headerNode = getColumnNode(tc);
             if (headerNode != null) {
                 final Bounds headerBounds = headerNode.getLayoutBounds();
                 final Point2D p = headerNode.sceneToLocal(sceneX, 0, true /* rootScene */);
-                if ((headerBounds.getMinX() <= p.getX()) 
+                if ((headerBounds.getMinX() <= p.getX())
                         && (p.getX() < headerBounds.getMaxX())) {
                     result = tc;
                     break;
                 }
             }
         }
-        
+
         return result;
     }
 }

@@ -45,9 +45,9 @@ import javafx.scene.effect.DisplacementMap;
  *
  */
 public class DisplacementMapPropertyMetadata extends ComplexPropertyMetadata<DisplacementMap> {
-    
+
     private final DisplacementMap DEFAULT = new DisplacementMap();
-    
+
     private final EffectPropertyMetadata inputMetadata
             = new EffectPropertyMetadata(new PropertyName("input"), //NOI18N
             true /* readWrite */, null, InspectorPath.UNUSED);
@@ -70,7 +70,7 @@ public class DisplacementMapPropertyMetadata extends ComplexPropertyMetadata<Dis
             = new FloatMapPropertyMetadata(new PropertyName("mapData"), //NOI18N
             true /* readWrite */, DEFAULT.getMapData(), InspectorPath.UNUSED);
 
-    public DisplacementMapPropertyMetadata(PropertyName name, boolean readWrite, 
+    public DisplacementMapPropertyMetadata(PropertyName name, boolean readWrite,
             DisplacementMap defaultValue, InspectorPath inspectorPath) {
         super(name, DisplacementMap.class, readWrite, defaultValue, inspectorPath);
     }
@@ -78,11 +78,11 @@ public class DisplacementMapPropertyMetadata extends ComplexPropertyMetadata<Dis
     /*
      * ComplexPropertyMetadata
      */
-    
+
     @Override
     public FXOMInstance makeFxomInstanceFromValue(DisplacementMap value, FXOMDocument fxomDocument) {
         final FXOMInstance result = new FXOMInstance(fxomDocument, value.getClass());
-        
+
         inputMetadata.setValue(result, value.getInput());
         offsetXMetadata.setValue(result, value.getOffsetX());
         offsetYMetadata.setValue(result, value.getOffsetY());

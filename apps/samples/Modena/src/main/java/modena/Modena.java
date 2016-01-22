@@ -98,7 +98,7 @@ public class Modena extends Application {
         System.getProperties().put("javafx.pseudoClassOverrideEnabled", "true");
     }
     private static final String testAppCssUrl = Modena.class.getResource("TestApp.css").toExternalForm();
-    
+
     public Scene scene;
     private BorderPane outerRoot;
     private BorderPane root;
@@ -126,13 +126,13 @@ public class Modena extends Application {
                   contentTabs.getSelectionModel().getSelectedIndex(),
                   samplePageNavigation.getCurrentSection());
     });
-    
+
     private static Modena instance;
 
     public static Modena getInstance() {
         return instance;
     }
-    
+
     public Map<String, Node> getContent() {
         return samplePage.getContent();
     }
@@ -145,7 +145,7 @@ public class Modena extends Application {
         }
         contentTabs.requestLayout();
     }
-    
+
     public void restart() {
         mainStage.close();
         root = null;
@@ -160,7 +160,7 @@ public class Modena extends Application {
             throw new RuntimeException("Failed to start another Modena window", ex);
         }
     }
-    
+
     @Override public void start(Stage stage) throws Exception {
         if (getParameters().getRaw().contains(TEST)) {
             test = true;
@@ -174,7 +174,7 @@ public class Modena extends Application {
         rebuildUI(true,false,0, null);
         // show UI
         scene = new Scene(outerRoot, 1024, 768);
-        
+
         // set user agent stylesheet
         updateUserAgentStyleSheet(true);
 
@@ -185,7 +185,7 @@ public class Modena extends Application {
         stage.show(); // see SamplePage.java:110 comment on how test fails without having stage shown
         instance = this;
     }
-    
+
     private MenuBar buildMenuBar() {
         MenuBar menuBar = new MenuBar();
         menuBar.setUseSystemMenuBar(true);
@@ -204,11 +204,11 @@ public class Modena extends Application {
         menuBar.getMenus().add(fontSizeMenu);
         return menuBar;
     }
-    
+
     private void updateUserAgentStyleSheet() {
         updateUserAgentStyleSheet(modenaButton.isSelected());
     }
-    
+
     private void updateUserAgentStyleSheet(boolean modena) {
         final SamplePage.Section scrolledSection = (samplePageNavigation== null ?
                                                         null : samplePageNavigation.getCurrentSection());
@@ -217,7 +217,7 @@ public class Modena extends Application {
         } else {
             scene.setUserAgentStylesheet(SKINBASE + "caspian/caspian.css");
         }
-        
+
         if (!modena &&
             (baseColor == null || baseColor == Color.TRANSPARENT) &&
             (backgroundColor == null || backgroundColor == Color.TRANSPARENT) &&
@@ -253,21 +253,21 @@ public class Modena extends Application {
             styleSheetContent += "    -fx-font:"+fontSize+"px \""+fontName+"\";\n";
         }
         styleSheetContent += "}\n";
-        
+
         // set white background for caspian
         if (!modena) {
             styleSheetContent += ".needs-background {\n-fx-background-color: white;\n}";
         }
-            
+
         // load theme
         setUserAgentStylesheet("internal:stylesheet"+Math.random()+".css");
-        
+
         if (root != null) root.requestLayout();
 
         // restore scrolled section
         Platform.runLater(() -> samplePageNavigation.setCurrentSection(scrolledSection));
     }
-    
+
     private void rebuildUI(boolean modena, boolean retina, int selectedTab, final SamplePage.Section scrolledSection) {
         try {
             if (root == null) {
@@ -307,7 +307,7 @@ public class Modena extends Application {
             contentTabs.getTabs().addAll(tab1, tab2, tab3, tab4, tab5, tab6);
             contentTabs.getSelectionModel().select(selectedTab);
             samplePage.setMouseTransparent(test);
-            // height test set selection for 
+            // height test set selection for
             Platform.runLater(() -> {
                 for (Node n: heightTest.lookupAll(".choice-box")) {
                     ((ChoiceBox)n).getSelectionModel().selectFirst();
@@ -377,7 +377,7 @@ public class Modena extends Application {
             // populate root
             root.setTop(toolBar);
             root.setCenter(contentGroup);
-            
+
             samplePage.getStyleClass().add("needs-background");
             mosaic.getStyleClass().add("needs-background");
             heightTest.getStyleClass().add("needs-background");
@@ -407,7 +407,7 @@ public class Modena extends Application {
         rmItem.setToggleGroup(tg);
         return rmItem;
     }
-    
+
     public void setFont(String in_fontName, int in_fontSize) {
         System.out.println("===================================================================");
         System.out.println("==   SETTING FONT TO "+in_fontName+" "+in_fontSize+"px");
@@ -416,7 +416,7 @@ public class Modena extends Application {
         fontSize = in_fontSize;
         updateUserAgentStyleSheet();
     }
-    
+
     private ColorPicker createBaseColorPicker() {
         ColorPicker colorPicker = new ColorPicker(Color.TRANSPARENT);
         colorPicker.getCustomColors().addAll(
@@ -440,7 +440,7 @@ public class Modena extends Application {
         colorPicker.setDisable(true);
         return colorPicker;
     }
-    
+
     public void setBaseColor(Color c) {
         if (c == null) {
             baseColor = null;
@@ -449,7 +449,7 @@ public class Modena extends Application {
         }
         updateUserAgentStyleSheet();
     }
-    
+
     private ColorPicker createBackgroundColorPicker() {
         ColorPicker colorPicker = new ColorPicker(Color.TRANSPARENT);
         colorPicker.getCustomColors().addAll(
@@ -480,7 +480,7 @@ public class Modena extends Application {
         colorPicker.setDisable(true);
         return colorPicker;
     }
-    
+
     private ColorPicker createAccentColorPicker() {
         ColorPicker colorPicker = new ColorPicker(Color.web("#0096C9"));
         colorPicker.getCustomColors().addAll(
@@ -515,7 +515,7 @@ public class Modena extends Application {
         }
         updateUserAgentStyleSheet();
     }
-    
+
     private EventHandler<ActionEvent> saveBtnHandler = event -> {
         FileChooser fc = new FileChooser();
         fc.getExtensionFilters().add(new FileChooser.ExtensionFilter("PNG", "*.png"));
@@ -542,11 +542,11 @@ public class Modena extends Application {
             }
         }
     };
-    
+
     public static void main(String[] args) {
         launch(args);
     }
-    
+
 
     // =========================================================================
     // URL Handler to create magic "internal:stylesheet.css" url for our css string buffer
@@ -556,8 +556,8 @@ public class Modena extends Application {
 
     private String colorToRGBA(Color color) {
         return String.format((Locale) null, "rgba(%d, %d, %d, %f)",
-            (int) Math.round(color.getRed() * 255), 
-            (int) Math.round(color.getGreen() * 255), 
+            (int) Math.round(color.getRed() * 255),
+            (int) Math.round(color.getGreen() * 255),
             (int) Math.round(color.getBlue() * 255),
             color.getOpacity());
     }
@@ -569,14 +569,14 @@ public class Modena extends Application {
         public StringURLConnection(URL url){
             super(url);
         }
-        
+
         @Override public void connect() throws IOException {}
 
         @Override public InputStream getInputStream() throws IOException {
             return new ByteArrayInputStream(styleSheetContent.getBytes("UTF-8"));
         }
     }
-    
+
     private class StringURLStreamHandlerFactory implements URLStreamHandlerFactory {
         URLStreamHandler streamHandler = new URLStreamHandler(){
             @Override protected URLConnection openConnection(URL url) throws IOException {

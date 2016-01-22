@@ -43,15 +43,15 @@ public class CoreSymbols {
     static Set<Variable> getAllVariables() {
         return vars;
     }
-    
+
     static Set<Function> getAllFunctions() {
         return funcs;
     }
-    
+
     public static Function getFunction(String name, List<Type> ptypes) {
         return SymbolTable.getFunctionForSignature(funcs, name, ptypes);
     }
-    
+
     static {
         // pos0/1, pixcoord, and jsl_vertexColor are declared "const"
         // (read-only) to prevent accidental assignment
@@ -62,7 +62,7 @@ public class CoreSymbols {
         declareVariable("pixcoord",        FLOAT2, null, true);
         declareVariable("jsl_vertexColor", FLOAT4, LOWP, true);
         declareVariable("color",           FLOAT4, LOWP, false);
-        
+
         // float4 sample(sampler s, float2 loc)
         declareFunction(FLOAT4, "sample", SAMPLER, "s", FLOAT2, "loc");
 
@@ -142,7 +142,7 @@ public class CoreSymbols {
         // <ftype> mix(<ftype> x, <ftype> y, <ftype> a)
         // <ftype> mix(<ftype> x, <ftype> y, float a)
         declareOverloadsMix();
-        
+
         // <ftype> normalize(<ftype> x)
         declareOverloadsSimple("normalize");
 
@@ -160,7 +160,7 @@ public class CoreSymbols {
         Qualifier qual = readonly ? Qualifier.CONST : null;
         vars.add(new Variable(name, type, qual, precision, -1, -1, null, false));
     }
-    
+
     private static void declareFunction(Type returnType,
                                         String name,
                                         Object... params)

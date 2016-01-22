@@ -53,7 +53,7 @@ static GlassTouches* glassTouches = nil;
 - (void)enableTouchInputEventTap;
 
 - (void)sendJavaTouchEvent:(NSEvent *)theEvent;
-- (void)notifyTouch:(JNIEnv*)env    identity:(const id)identity 
+- (void)notifyTouch:(JNIEnv*)env    identity:(const id)identity
                                     phase:(NSUInteger)phase
                                     pos:(const NSPoint*)pos;
 @end
@@ -61,7 +61,7 @@ static GlassTouches* glassTouches = nil;
 
 static jint getTouchStateFromPhase(NSUInteger phase)
 {
-    switch (phase) 
+    switch (phase)
     {
         case NSTouchPhaseBegan:
             return com_sun_glass_events_TouchEvent_TOUCH_PRESSED;
@@ -96,7 +96,7 @@ static BOOL hasTouchWithIdentity(const id identity, const NSSet* touchPoints)
 }
 
 
-typedef struct 
+typedef struct
 {
     jlong touchId;
     jfloat x;
@@ -104,11 +104,11 @@ typedef struct
 } TouchPoint;
 
 
-static CGEventRef listenTouchEvents(CGEventTapProxy proxy, CGEventType type, 
+static CGEventRef listenTouchEvents(CGEventTapProxy proxy, CGEventType type,
                              CGEventRef event, void* refcon)
 {
     if (type == kCGEventTapDisabledByTimeout)
-    {   // OS may disable event tap if it handles events too slowly. 
+    {   // OS may disable event tap if it handles events too slowly.
         // This is undesirable, so enable event tap after such a reset.
         [glassTouches enableTouchInputEventTap];
         LOG("TOUCHES: listenTouchEvents: recover after timeout\n");
@@ -123,7 +123,7 @@ static CGEventRef listenTouchEvents(CGEventTapProxy proxy, CGEventType type,
             [glassTouches sendJavaTouchEvent:theEvent];
         }
     }
-    
+
     return event;
 }
 
@@ -132,7 +132,7 @@ static CGEventRef listenTouchEvents(CGEventTapProxy proxy, CGEventType type,
 
 + (void)startTracking:(GlassViewDelegate *)delegate
 {
-    if (!glassTouches) 
+    if (!glassTouches)
     {
         glassTouches = [[GlassTouches alloc] init];
     }
@@ -141,7 +141,7 @@ static CGEventRef listenTouchEvents(CGEventTapProxy proxy, CGEventType type,
     {
         glassTouches->curConsumer = delegate;
     }
-    
+
     LOG("TOUCHES: startTracking: delegate=%p\n", glassTouches->curConsumer);
 }
 
@@ -154,7 +154,7 @@ static CGEventRef listenTouchEvents(CGEventTapProxy proxy, CGEventType type,
 
     // Keep updating java touch point counter, just have no view to notify.
     glassTouches->curConsumer = nil;
-    
+
     LOG("TOUCHES: stopTracking: delegate=%p\n", glassTouches->curConsumer);
 }
 
@@ -175,21 +175,21 @@ static CGEventRef listenTouchEvents(CGEventTapProxy proxy, CGEventType type,
         self->runLoopSource = nil;
         self->touches       = nil;
         self->lastTouchId   = 0;
-        
+
         //
         // Notes after fixing RT-23199:
-        // 
-        //  Don't use NSMachPort and NSRunLoop to integrate CFMachPortRef 
+        //
+        //  Don't use NSMachPort and NSRunLoop to integrate CFMachPortRef
         //  instance into run loop.
         //
-        // Ignoring the above "don't"s results into performance degradation 
+        // Ignoring the above "don't"s results into performance degradation
         // referenced in the bug.
         //
 
-        self->eventTap = CGEventTapCreate(kCGHIDEventTap, 
-                                          kCGHeadInsertEventTap, 
-                                          kCGEventTapOptionListenOnly, 
-                                          CGEventMaskBit(NSEventTypeGesture), 
+        self->eventTap = CGEventTapCreate(kCGHIDEventTap,
+                                          kCGHeadInsertEventTap,
+                                          kCGEventTapOptionListenOnly,
+                                          CGEventMaskBit(NSEventTypeGesture),
                                           listenTouchEvents, nil);
 
         LOG("TOUCHES: eventTap=%p\n", self->eventTap);
@@ -197,13 +197,13 @@ static CGEventRef listenTouchEvents(CGEventTapProxy proxy, CGEventType type,
         if (self->eventTap)
         {   // Create a run loop source.
             self->runLoopSource = CFMachPortCreateRunLoopSource(
-                                                        kCFAllocatorDefault, 
+                                                        kCFAllocatorDefault,
                                                         self->eventTap, 0);
 
             LOG("TOUCHES: runLoopSource=%p\n", self->runLoopSource);
 
             // Add to the current run loop.
-            CFRunLoopAddSource(CFRunLoopGetCurrent(), self->runLoopSource, 
+            CFRunLoopAddSource(CFRunLoopGetCurrent(), self->runLoopSource,
                                kCFRunLoopCommonModes);
         }
     }
@@ -216,18 +216,18 @@ static CGEventRef listenTouchEvents(CGEventTapProxy proxy, CGEventType type,
 @implementation GlassTouches (hidden)
 - (void)terminateImpl
 {
-    LOG("TOUCHES: terminateImpl eventTap=%p runLoopSource=%p\n", self->eventTap, 
+    LOG("TOUCHES: terminateImpl eventTap=%p runLoopSource=%p\n", self->eventTap,
         self->runLoopSource);
-    
+
     if (self->runLoopSource)
     {
-        CFRunLoopRemoveSource(CFRunLoopGetCurrent(), self->runLoopSource, 
+        CFRunLoopRemoveSource(CFRunLoopGetCurrent(), self->runLoopSource,
                               kCFRunLoopCommonModes);
         CFRelease(self->runLoopSource);
         self->runLoopSource = nil;
     }
 
-    if (self->eventTap) 
+    if (self->eventTap)
     {
         CFRelease(self->eventTap);
         self->eventTap = nil;
@@ -245,18 +245,18 @@ static CGEventRef listenTouchEvents(CGEventTapProxy proxy, CGEventType type,
 {
     jint modifiers = GetJavaModifiers(theEvent);
 
-    const NSSet* touchPoints = 
+    const NSSet* touchPoints =
             [theEvent touchesMatchingPhase:NSTouchPhaseAny inView:nil];
 
     //
     // Known issues with OSX touch input:
     // - multiple 'NSTouchPhaseBegan' for the same touch point;
-    // - missing 'NSTouchPhaseEnded' for released touch points 
+    // - missing 'NSTouchPhaseEnded' for released touch points
     //  (RT-20139, RT-20375);
     //
 
     //
-    // Find just released touch points that are not in the cache already. 
+    // Find just released touch points that are not in the cache already.
     // Don't send TouchEvent#TOUCH_RELEASED for these touch points.
     //
     jint noReleaseTouchPointCount = 0;
@@ -265,24 +265,24 @@ static CGEventRef listenTouchEvents(CGEventTapProxy proxy, CGEventType type,
         NSUInteger phase = touch.phase;
         BOOL isPhaseEnded = isTouchEnded(phase);
 
-        if (!isPhaseEnded) 
+        if (!isPhaseEnded)
         {
             continue;
         }
-        
-        if (self->touches == nil || 
+
+        if (self->touches == nil ||
             [self->touches objectForKey:touch.identity] == nil)
         {
             ++noReleaseTouchPointCount;
         }
     }
-    
+
     //
     // Find cached touch points that are not in the curent set of touch points.
     // Should send TouchEvent#TOUCH_RELEASED for these touch points.
     //
     NSMutableArray* releaseTouchIds = nil;
-    if (self->touches != nil) 
+    if (self->touches != nil)
     {
         for (id identity in self->touches)
         {
@@ -296,9 +296,9 @@ static CGEventRef listenTouchEvents(CGEventTapProxy proxy, CGEventType type,
             }
         }
     }
-    
+
     const jint touchPointCount =
-            (jint)touchPoints.count 
+            (jint)touchPoints.count
                 - (jint)noReleaseTouchPointCount  + (jint)(releaseTouchIds == nil ? 0 : releaseTouchIds.count);
     if (!touchPointCount)
     {
@@ -317,18 +317,18 @@ static CGEventRef listenTouchEvents(CGEventTapProxy proxy, CGEventType type,
     }
     GLASS_CHECK_EXCEPTION(env);
 
-    if (self->touches == nil && touchPointCount) 
+    if (self->touches == nil && touchPointCount)
     {
         self->touches = [[NSMutableDictionary alloc] init];
     }
-    
+
     if (releaseTouchIds != nil)
     {
         for (id identity in releaseTouchIds)
         {
-            [self notifyTouch:env 
-                            identity:identity 
-                            phase:NSTouchPhaseEnded 
+            [self notifyTouch:env
+                            identity:identity
+                            phase:NSTouchPhaseEnded
                             pos:nil];
         }
     }
@@ -336,9 +336,9 @@ static CGEventRef listenTouchEvents(CGEventTapProxy proxy, CGEventType type,
     for (NSTouch* touch in touchPoints)
     {
         const NSPoint pos = touch.normalizedPosition;
-        [self notifyTouch:env 
-                        identity:touch.identity 
-                        phase:touch.phase 
+        [self notifyTouch:env
+                        identity:touch.identity
+                        phase:touch.phase
                         pos:&pos];
     }
 
@@ -371,8 +371,8 @@ static CGEventRef listenTouchEvents(CGEventTapProxy proxy, CGEventType type,
             return;
         }
         tp.touchId = ++(self->lastTouchId);
-        
-        if (phase != NSTouchPhaseBegan) 
+
+        if (phase != NSTouchPhaseBegan)
         {   // Adjust 'phase'. By some reason OS X sometimes doesn't send
             // 'NSTouchPhaseBegan' for the just appeared touch point.
             phase = NSTouchPhaseBegan;
@@ -381,7 +381,7 @@ static CGEventRef listenTouchEvents(CGEventTapProxy proxy, CGEventType type,
     else
     {
         [ctnr getValue:&tp];
-        
+
         if (phase == NSTouchPhaseBegan)
         {   // Adjust 'phase'. This is needed as OS X sometimes sends
             // multiple 'NSTouchPhaseBegan' for the same touch point.
@@ -394,7 +394,7 @@ static CGEventRef listenTouchEvents(CGEventTapProxy proxy, CGEventType type,
         tp.x = (jfloat)pos->x;
         tp.y = (jfloat)pos->y;
     }
-    
+
     if (isPhaseEnded)
     {
         [self->touches removeObjectForKey:identity];

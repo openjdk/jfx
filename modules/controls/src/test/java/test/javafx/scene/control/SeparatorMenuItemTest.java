@@ -54,13 +54,13 @@ public class SeparatorMenuItemTest {
         node = new Rectangle();
         separatorMenuItem = smi = new SeparatorMenuItem();
     }
-    
-   
-   
+
+
+
     /*********************************************************************
      * Tests for default values                                         *
      ********************************************************************/
-    
+
     @Test public void defaultConstructorShouldSetStyleClassTo_separatormenuitem() {
         assertStyleClassContains(separatorMenuItem, "separator-menu-item");
     }

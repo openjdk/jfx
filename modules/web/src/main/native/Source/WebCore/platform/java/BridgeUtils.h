@@ -11,7 +11,7 @@
 
 
 namespace WebCore {
-  
+
     /* Returns a local reference to a fresh Java String. */
     jstring JSValue_to_Java_String(JSValueRef value, JNIEnv* env, JSContextRef ctx);
     jobject JSValue_to_Java_Object(JSValueRef value, JNIEnv* env, JSContextRef ctx, JSC::Bindings::RootObject* rootPeer);

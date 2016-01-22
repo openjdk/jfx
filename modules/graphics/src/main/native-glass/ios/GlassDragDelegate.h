@@ -35,7 +35,7 @@
 
 @interface GlassDragDelegate : NSObject
 {
-    
+
 }
 
 + (void) setDragViewParent:(UIView *)parent;

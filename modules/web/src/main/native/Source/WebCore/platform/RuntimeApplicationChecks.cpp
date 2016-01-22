@@ -34,7 +34,7 @@
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
-    
+
 static bool mainBundleIsEqualTo(const String& bundleIdentifierString)
 {
     // FIXME: We should consider merging this file with RuntimeApplicationChecksIOS.mm.

@@ -36,7 +36,7 @@ import javafx.beans.value.ObservableValue;
 import org.junit.Test;
 
 public class WeakInvalidationListenerTest {
-	
+
     @Test(expected=NullPointerException.class)
     public void testConstructWithNull() {
         new WeakInvalidationListener(null);
@@ -74,25 +74,25 @@ public class WeakInvalidationListenerTest {
             return null;
         }
 
-		@Override
-		public void addListener(InvalidationListener listener) {
-			// not used
-		}
+        @Override
+        public void addListener(InvalidationListener listener) {
+            // not used
+        }
 
-		@Override
-		public void addListener(ChangeListener<? super Object> listener) {
-			// not used
-		}
+        @Override
+        public void addListener(ChangeListener<? super Object> listener) {
+            // not used
+        }
 
-		@Override
-		public void removeListener(InvalidationListener listener) {
+        @Override
+        public void removeListener(InvalidationListener listener) {
             removeCounter++;
-		}
+        }
 
-		@Override
-		public void removeListener(ChangeListener<? super Object> listener) {
-			// not used
-		}
+        @Override
+        public void removeListener(ChangeListener<? super Object> listener) {
+            // not used
+        }
 
     }
 

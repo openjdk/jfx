@@ -44,7 +44,7 @@ import javafx.scene.media.Track;
 import javafx.stage.Stage;
 
 public class HelloMedia extends Application {
-    private static final String DEFAULT_SOURCE = 
+    private static final String DEFAULT_SOURCE =
         "http://download.oracle.com/otndocs/products/javafx/oow2010-2.flv";
     private static String argSource = null;
 
@@ -81,7 +81,7 @@ public class HelloMedia extends Application {
                         }
                     }
                 });
-                
+
                 media.getTracks().addListener(new ListChangeListener<Track>() {
                     public void onChanged(Change<? extends Track> change) {
                         try {
@@ -97,7 +97,7 @@ public class HelloMedia extends Application {
                         }
                     }
                 });
-                
+
                 try {
                     final MediaPlayer mediaPlayer = new MediaPlayer(media);
                     mediaPlayer.setOnError(new Runnable() {

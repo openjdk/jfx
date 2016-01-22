@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -91,7 +91,7 @@ ULONG STDMETHODCALLTYPE WebCache::Release(void)
 
 // IWebCache ------------------------------------------------------------------------------
 
-HRESULT STDMETHODCALLTYPE WebCache::statistics( 
+HRESULT STDMETHODCALLTYPE WebCache::statistics(
     /* [in][out] */ int* count,
     /* [retval][out] */ IPropertyBag ** s)
 {
@@ -116,10 +116,10 @@ HRESULT STDMETHODCALLTYPE WebCache::statistics(
 
     RetainPtr<CFNumberRef> value = adoptCF(CFNumberCreate(0, kCFNumberIntType, &stat.images.count));
     CFDictionaryAddValue(dictionary.get(), imagesKey, value.get());
-    
+
     value = adoptCF(CFNumberCreate(0, kCFNumberIntType, &stat.cssStyleSheets.count));
     CFDictionaryAddValue(dictionary.get(), stylesheetsKey, value.get());
-    
+
 #if ENABLE(XSLT)
     value = adoptCF(CFNumberCreate(0, kCFNumberIntType, &stat.xslStyleSheets.count));
 #else
@@ -138,10 +138,10 @@ HRESULT STDMETHODCALLTYPE WebCache::statistics(
 
     value = adoptCF(CFNumberCreate(0, kCFNumberIntType, &stat.images.size));
     CFDictionaryAddValue(dictionary.get(), imagesKey, value.get());
-    
+
     value = adoptCF(CFNumberCreate(0, kCFNumberIntType, &stat.cssStyleSheets.size));
     CFDictionaryAddValue(dictionary.get(), stylesheetsKey, value.get());
-    
+
 #if ENABLE(XSLT)
     value = adoptCF(CFNumberCreate(0, kCFNumberIntType, &stat.xslStyleSheets.size));
 #else
@@ -160,10 +160,10 @@ HRESULT STDMETHODCALLTYPE WebCache::statistics(
 
     value = adoptCF(CFNumberCreate(0, kCFNumberIntType, &stat.images.liveSize));
     CFDictionaryAddValue(dictionary.get(), imagesKey, value.get());
-    
+
     value = adoptCF(CFNumberCreate(0, kCFNumberIntType, &stat.cssStyleSheets.liveSize));
     CFDictionaryAddValue(dictionary.get(), stylesheetsKey, value.get());
-    
+
 #if ENABLE(XSLT)
     value = adoptCF(CFNumberCreate(0, kCFNumberIntType, &stat.xslStyleSheets.liveSize));
 #else
@@ -182,10 +182,10 @@ HRESULT STDMETHODCALLTYPE WebCache::statistics(
 
     value = adoptCF(CFNumberCreate(0, kCFNumberIntType, &stat.images.decodedSize));
     CFDictionaryAddValue(dictionary.get(), imagesKey, value.get());
-    
+
     value = adoptCF(CFNumberCreate(0, kCFNumberIntType, &stat.cssStyleSheets.decodedSize));
     CFDictionaryAddValue(dictionary.get(), stylesheetsKey, value.get());
-    
+
 #if ENABLE(XSLT)
     value = adoptCF(CFNumberCreate(0, kCFNumberIntType, &stat.xslStyleSheets.decodedSize));
 #else
@@ -219,7 +219,7 @@ HRESULT STDMETHODCALLTYPE WebCache::empty( void)
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE WebCache::setDisabled( 
+HRESULT STDMETHODCALLTYPE WebCache::setDisabled(
     /* [in] */ BOOL disabled)
 {
     WebCore::memoryCache()->setDisabled(!!disabled);

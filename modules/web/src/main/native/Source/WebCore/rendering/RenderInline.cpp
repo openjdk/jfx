@@ -88,7 +88,7 @@ void RenderInline::willBeDestroyed()
         continuation->destroy();
         setContinuation(0);
     }
-    
+
     if (!documentBeingDestroyed()) {
         if (firstLineBox()) {
             // We can't wait for RenderBoxModelObject::destroy to clear the selection,
@@ -107,7 +107,7 @@ void RenderInline::willBeDestroyed()
                 for (auto box = firstLineBox(); box; box = box->nextLineBox())
                     box->removeFromParent();
             }
-        } else if (parent()) 
+        } else if (parent())
             parent()->dirtyLinesFromChangedChild(this);
     }
 
@@ -130,7 +130,7 @@ void RenderInline::updateFromStyle()
 
     // FIXME: Support transforms and reflections on inline flows someday.
     setHasTransform(false);
-    setHasReflection(false);    
+    setHasReflection(false);
 }
 
 static RenderElement* inFlowPositionedInlineAncestor(RenderElement* p)
@@ -149,7 +149,7 @@ static void updateStyleOfAnonymousBlockContinuations(RenderBlock* block, const R
         if (!block->isAnonymousBlockContinuation() || block->style().position() == newStyle->position())
             continue;
         // If we are no longer in-flow positioned but our descendant block(s) still have an in-flow positioned ancestor then
-        // their containing anonymous block should keep its in-flow positioning. 
+        // their containing anonymous block should keep its in-flow positioning.
         RenderInline* cont = block->inlineElementContinuation();
         if (oldStyle->hasInFlowPosition() && inFlowPositionedInlineAncestor(cont))
             continue;
@@ -308,7 +308,7 @@ void RenderInline::addChildIgnoringContinuation(RenderObject* newChild, RenderOb
         // |newChild|.  We then make that block box a continuation of this inline.  We take all of
         // the children after |beforeChild| and put them in a clone of this object.
         auto newStyle = RenderStyle::createAnonymousStyleWithDisplay(&style(), BLOCK);
-        
+
         // If inside an inline affected by in-flow positioning the block needs to be affected by it too.
         // Giving the block a layer like this allows it to collect the x/y offsets from inline parents later.
         if (auto positionedAncestor = inFlowPositionedInlineAncestor(this))
@@ -374,13 +374,13 @@ void RenderInline::splitInlines(RenderBlock* fromBlock, RenderBlock* toBlock,
     // Once we hit the containing block we're done.
     RenderBoxModelObject* curr = toRenderBoxModelObject(parent());
     RenderBoxModelObject* currChild = this;
-    
+
     // FIXME: Because splitting is O(n^2) as tags nest pathologically, we cap the depth at which we're willing to clone.
     // There will eventually be a better approach to this problem that will let us nest to a much
     // greater depth (see bugzilla bug 13430) but for now we have a limit.  This *will* result in
     // incorrect rendering, but the alternative is to hang forever.
     unsigned splitDepth = 1;
-    const unsigned cMaxSplitDepth = 200; 
+    const unsigned cMaxSplitDepth = 200;
     while (curr && curr != fromBlock) {
         ASSERT(curr->isRenderInline());
         if (splitDepth < cMaxSplitDepth) {
@@ -408,7 +408,7 @@ void RenderInline::splitInlines(RenderBlock* fromBlock, RenderBlock* toBlock,
                 tmp->setNeedsLayoutAndPrefWidthsRecalc();
             }
         }
-        
+
         // Keep walking up the chain.
         currChild = curr;
         curr = toRenderBoxModelObject(curr->parent());
@@ -434,10 +434,10 @@ void RenderInline::splitFlow(RenderObject* beforeChild, RenderBlock* newBlockBox
 {
     RenderBlock* pre = 0;
     RenderBlock* block = containingBlock();
-    
+
     // Delete our line boxes before we do the inline split into continuations.
     block->deleteLines();
-    
+
     bool madeNewBeforeBlock = false;
     if (block->isAnonymousBlock() && (!block->parent() || !block->parent()->createsAnonymousWrapper())) {
         // We can reuse this block and make it the preBlock of the next continuation.
@@ -463,7 +463,7 @@ void RenderInline::splitFlow(RenderObject* beforeChild, RenderBlock* newBlockBox
     block->insertChildInternal(newBlockBox, boxFirst, NotifyChildren);
     block->insertChildInternal(post, boxFirst, NotifyChildren);
     block->setChildrenInline(false);
-    
+
     if (madeNewBeforeBlock) {
         RenderObject* o = boxFirst;
         while (o) {
@@ -562,7 +562,7 @@ void RenderInline::generateCulledLineBoxRects(GeneratorContext& yield, const Ren
     for (RenderObject* curr = firstChild(); curr; curr = curr->nextSibling()) {
         if (curr->isFloatingOrOutOfFlowPositioned())
             continue;
-            
+
         // We want to get the margin box in the inline direction, and then use our font ascent/descent in the block
         // direction (aligned to the root box's baseline).
         if (curr->isBox()) {
@@ -844,7 +844,7 @@ VisiblePosition RenderInline::positionForPoint(const LayoutPoint& point)
     }
 
     // Translate the coords from the pre-anonymous block to the post-anonymous block.
-    LayoutPoint parentBlockPoint = cb->location() + point;  
+    LayoutPoint parentBlockPoint = cb->location() + point;
     RenderBoxModelObject* c = continuation();
     while (c) {
         RenderBox* contBlock = c->isInline() ? c->containingBlock() : toRenderBlock(c);
@@ -852,7 +852,7 @@ VisiblePosition RenderInline::positionForPoint(const LayoutPoint& point)
             return c->positionForPoint(parentBlockPoint - contBlock->locationOffset());
         c = toRenderBlock(c)->inlineElementContinuation();
     }
-    
+
     return RenderBoxModelObject::positionForPoint(point);
 }
 
@@ -882,7 +882,7 @@ IntRect RenderInline::linesBoundingBox() const
     }
 
     IntRect result;
-    
+
     // See <rdar://problem/5289721>, for an unknown reason the linked list here is sometimes inconsistent, first is non-zero and last is zero.  We have been
     // unable to reproduce this at all (and consequently unable to figure ot why this is happening).  The assert will hopefully catch the problem in debug
     // builds and help us someday figure out why.  We also put in a redundant check of lastLineBox() to avoid the crash for now.
@@ -897,9 +897,9 @@ IntRect RenderInline::linesBoundingBox() const
             if (curr == firstLineBox() || curr->logicalRight() > logicalRightSide)
                 logicalRightSide = curr->logicalRight();
         }
-        
+
         bool isHorizontal = style().isHorizontalWritingMode();
-        
+
         float x = isHorizontal ? logicalLeftSide : firstLineBox()->x();
         float y = isHorizontal ? firstLineBox()->y() : logicalLeftSide;
         float width = isHorizontal ? logicalRightSide - logicalLeftSide : lastLineBox()->logicalBottom() - x;
@@ -915,7 +915,7 @@ InlineBox* RenderInline::culledInlineFirstLineBox() const
     for (RenderObject* curr = firstChild(); curr; curr = curr->nextSibling()) {
         if (curr->isFloatingOrOutOfFlowPositioned())
             continue;
-            
+
         // We want to get the margin box in the inline direction, and then use our font ascent/descent in the block
         // direction (aligned to the root box's baseline).
         if (curr->isBox())
@@ -943,7 +943,7 @@ InlineBox* RenderInline::culledInlineLastLineBox() const
     for (RenderObject* curr = lastChild(); curr; curr = curr->previousSibling()) {
         if (curr->isFloatingOrOutOfFlowPositioned())
             continue;
-            
+
         // We want to get the margin box in the inline direction, and then use our font ascent/descent in the block
         // direction (aligned to the root box's baseline).
         if (curr->isBox())
@@ -976,7 +976,7 @@ LayoutRect RenderInline::culledInlineVisualOverflowBoundingBox() const
     for (RenderObject* curr = firstChild(); curr; curr = curr->nextSibling()) {
         if (curr->isFloatingOrOutOfFlowPositioned())
             continue;
-            
+
         // For overflow we just have to propagate by hand and recompute it all.
         if (curr->isBox()) {
             RenderBox* currBox = toRenderBox(curr);
@@ -1025,11 +1025,11 @@ LayoutRect RenderInline::linesVisualOverflowBoundingBox() const
 
     const RootInlineBox& firstRootBox = firstLineBox()->root();
     const RootInlineBox& lastRootBox = lastLineBox()->root();
-    
+
     LayoutUnit logicalTop = firstLineBox()->logicalTopVisualOverflow(firstRootBox.lineTop());
     LayoutUnit logicalWidth = logicalRightSide - logicalLeftSide;
     LayoutUnit logicalHeight = lastLineBox()->logicalBottomVisualOverflow(lastRootBox.lineBottom()) - logicalTop;
-    
+
     LayoutRect rect(logicalLeftSide, logicalTop, logicalWidth, logicalHeight);
     if (!style().isHorizontalWritingMode())
         rect = rect.transposedRect();
@@ -1071,9 +1071,9 @@ LayoutRect RenderInline::linesVisualOverflowBoundingBoxInRegion(const RenderRegi
         return LayoutRect();
 
     logicalHeight = lastInlineInRegion->logicalBottomVisualOverflow(lastInlineInRegion->root().lineBottom()) - logicalTop;
-    
+
     LayoutUnit logicalWidth = logicalRightSide - logicalLeftSide;
-    
+
     LayoutRect rect(logicalLeftSide, logicalTop, logicalWidth, logicalHeight);
     if (!style().isHorizontalWritingMode())
         rect = rect.transposedRect();
@@ -1179,7 +1179,7 @@ void RenderInline::computeRectForRepaint(const RenderLayerModelObject* repaintCo
         // flag on the RenderObject has been cleared, so use the one on the style().
         topLeft += layer()->offsetForInFlowPosition();
     }
-    
+
     // FIXME: We ignore the lightweight clipping rect that controls use, since if |o| is in mid-layout,
     // its controlClipRect will be wrong. For overflow clip we use the values cached by the layer.
     rect.setLocation(topLeft);
@@ -1196,15 +1196,15 @@ void RenderInline::computeRectForRepaint(const RenderLayerModelObject* repaintCo
         rect.move(-containerOffset);
         return;
     }
-    
+
     o->computeRectForRepaint(repaintContainer, rect, fixed);
 }
 
 LayoutSize RenderInline::offsetFromContainer(RenderObject* container, const LayoutPoint& point, bool* offsetDependsOnPoint) const
 {
     ASSERT(container == this->container());
-    
-    LayoutSize offset;    
+
+    LayoutSize offset;
     if (isInFlowPositioned())
         offset += offsetForInFlowPosition();
 
@@ -1298,7 +1298,7 @@ const RenderObject* RenderInline::pushMappingToContainer(const RenderLayerModelO
         containerOffset += adjustmentForSkippedAncestor;
         geometryMap.push(this, containerOffset, preserve3D, offsetDependsOnPoint);
     }
-    
+
     return ancestorSkipped ? ancestorToStopAt : container;
 }
 
@@ -1331,7 +1331,7 @@ void RenderInline::updateHitTestResult(HitTestResult& result, const LayoutPoint&
             // We're in the continuation of a split inline.  Adjust our local point to be in the coordinate space
             // of the principal renderer's containing block.  This will end up being the innerNonSharedNode.
             RenderBlock* firstBlock = element->renderer()->containingBlock();
-            
+
             // Get our containing block.
             RenderBox* block = containingBlock();
             localPoint.moveBy(block->location() - firstBlock->locationOffset());
@@ -1461,7 +1461,7 @@ void RenderInline::imageChanged(WrappedImagePtr, const IntRect*)
 {
     if (!parent())
         return;
-        
+
     // FIXME: We can do better.
     repaint();
 }
@@ -1495,7 +1495,7 @@ void RenderInline::paintOutline(PaintInfo& paintInfo, const LayoutPoint& paintOf
 {
     if (!hasOutline())
         return;
-    
+
     RenderStyle& styleToUse = style();
     if (styleToUse.outlineStyleIsAuto() || hasOutlineAnnotation()) {
         if (!theme().supportsFocusRing(&styleToUse)) {
@@ -1556,7 +1556,7 @@ void RenderInline::paintOutlineForLine(GraphicsContext* graphicsContext, const L
         return;
     IntRect pixelSnappedLastLine = pixelSnappedIntRect(paintOffset.x() + lastline.x(), 0, lastline.width(), 0);
     IntRect pixelSnappedNextLine = pixelSnappedIntRect(paintOffset.x() + nextline.x(), 0, nextline.width(), 0);
-    
+
     // left edge
     drawLineForBoxSide(graphicsContext,
         pixelSnappedBox.x() - outlineWidth,
@@ -1568,7 +1568,7 @@ void RenderInline::paintOutlineForLine(GraphicsContext* graphicsContext, const L
         (lastline.isEmpty() || thisline.x() < lastline.x() || (lastline.maxX() - 1) <= thisline.x() ? outlineWidth : -outlineWidth),
         (nextline.isEmpty() || thisline.x() <= nextline.x() || (nextline.maxX() - 1) <= thisline.x() ? outlineWidth : -outlineWidth),
         antialias);
-    
+
     // right edge
     drawLineForBoxSide(graphicsContext,
         pixelSnappedBox.maxX(),
@@ -1591,7 +1591,7 @@ void RenderInline::paintOutlineForLine(GraphicsContext* graphicsContext, const L
             outlineWidth,
             (!lastline.isEmpty() && paintOffset.x() + lastline.x() + 1 < pixelSnappedBox.maxX() + outlineWidth) ? -outlineWidth : outlineWidth,
             antialias);
-    
+
     if (lastline.maxX() < thisline.maxX())
         drawLineForBoxSide(graphicsContext,
             std::max(lastline.isEmpty() ? -1000000 : pixelSnappedLastLine.maxX(), pixelSnappedBox.x() - outlineWidth),
@@ -1624,7 +1624,7 @@ void RenderInline::paintOutlineForLine(GraphicsContext* graphicsContext, const L
             outlineWidth,
             (!nextline.isEmpty() && paintOffset.x() + nextline.x() + 1 < pixelSnappedBox.maxX() + outlineWidth) ? -outlineWidth : outlineWidth,
             antialias);
-    
+
     if (nextline.maxX() < thisline.maxX())
         drawLineForBoxSide(graphicsContext,
             std::max(!nextline.isEmpty() ? pixelSnappedNextLine.maxX() : -1000000, pixelSnappedBox.x() - outlineWidth),

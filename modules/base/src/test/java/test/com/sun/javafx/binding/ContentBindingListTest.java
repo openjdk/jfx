@@ -152,7 +152,7 @@ public class ContentBindingListTest {
         assertEquals(list1, op2);
         assertEquals(list1, op3);
 
-        // now unbind 
+        // now unbind
         Bindings.unbindContent(op1, op2);
         System.gc(); // making sure we did not not overdo weak references
         assertEquals(list1, op1);

@@ -8,13 +8,13 @@
  * are met:
  *
  * 1.  Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer. 
+ *     notice, this list of conditions and the following disclaimer.
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
- *     documentation and/or other materials provided with the distribution. 
+ *     documentation and/or other materials provided with the distribution.
  * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
- *     from this software without specific prior written permission. 
+ *     from this software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY APPLE AND ITS CONTRIBUTORS "AS IS" AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
@@ -67,15 +67,15 @@ public:
     enum JoinableState {
         Joinable, // The default thread state. The thread can be joined on.
 
-        Joined, // Somebody waited on this thread to exit and this thread finally exited. This state is here because there can be a 
-                // period of time between when the thread exits (which causes pthread_join to return and the remainder of waitOnThreadCompletion to run) 
-                // and when threadDidExit is called. We need threadDidExit to take charge and delete the thread data since there's 
+        Joined, // Somebody waited on this thread to exit and this thread finally exited. This state is here because there can be a
+                // period of time between when the thread exits (which causes pthread_join to return and the remainder of waitOnThreadCompletion to run)
+                // and when threadDidExit is called. We need threadDidExit to take charge and delete the thread data since there's
                 // nobody else to pick up the slack in this case (since waitOnThreadCompletion has already returned).
 
         Detached // The thread has been detached and can no longer be joined on. At this point, the thread must take care of cleaning up after itself.
     };
 
-    // Currently all threads created by WTF start out as joinable. 
+    // Currently all threads created by WTF start out as joinable.
     PthreadState(pthread_t handle)
         : m_joinableState(Joinable)
         , m_didExit(false)
@@ -265,7 +265,7 @@ void threadDidExit(ThreadIdentifier threadID)
     MutexLocker locker(threadMapMutex());
     PthreadState* state = threadMap().get(threadID);
     ASSERT(state);
-    
+
     state->didExit();
 
     if (state->joinableState() != PthreadState::Joinable)
@@ -328,7 +328,7 @@ void Mutex::unlock()
 }
 
 ThreadCondition::ThreadCondition()
-{ 
+{
     pthread_cond_init(&m_condition, NULL);
 }
 
@@ -336,7 +336,7 @@ ThreadCondition::~ThreadCondition()
 {
     pthread_cond_destroy(&m_condition);
 }
-    
+
 void ThreadCondition::wait(Mutex& mutex)
 {
     int result = pthread_cond_wait(&m_condition, &mutex.impl());

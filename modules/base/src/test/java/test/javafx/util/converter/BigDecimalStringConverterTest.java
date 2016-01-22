@@ -48,21 +48,21 @@ import org.junit.runners.Parameterized;
  */
 public class BigDecimalStringConverterTest {
     private BigDecimalStringConverter converter;
-    
+
     private final BigDecimal bigDecimal = new BigDecimal(BigInteger.TEN);
-    
+
     @Before public void setup() {
         converter = new BigDecimalStringConverter();
     }
-    
+
     @Test public void fromString_testValidStringInput() {
         assertEquals(bigDecimal, converter.fromString("10"));
     }
-    
+
     @Test public void fromString_testValidStringInputWithWhiteSpace() {
         assertEquals(bigDecimal, converter.fromString("      10      "));
     }
-    
+
     @Test public void toString_testStringInput() {
         assertEquals("10", converter.toString(bigDecimal));
     }

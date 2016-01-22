@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -99,10 +99,10 @@ ULONG STDMETHODCALLTYPE DefaultPolicyDelegate::Release()
 }
 
 HRESULT STDMETHODCALLTYPE DefaultPolicyDelegate::decidePolicyForNavigationAction(
-    /*[in]*/ IWebView* webView, 
-    /*[in]*/ IPropertyBag* actionInformation, 
-    /*[in]*/ IWebURLRequest* request, 
-    /*[in]*/ IWebFrame* /*frame*/, 
+    /*[in]*/ IWebView* webView,
+    /*[in]*/ IPropertyBag* actionInformation,
+    /*[in]*/ IWebURLRequest* request,
+    /*[in]*/ IWebFrame* /*frame*/,
     /*[in]*/ IWebPolicyDecisionListener* listener)
 {
     int navType = 0;
@@ -133,10 +133,10 @@ HRESULT STDMETHODCALLTYPE DefaultPolicyDelegate::decidePolicyForNavigationAction
 }
 
 HRESULT STDMETHODCALLTYPE DefaultPolicyDelegate::decidePolicyForNewWindowAction(
-    /*[in]*/ IWebView* /*webView*/, 
-    /*[in]*/ IPropertyBag* /*actionInformation*/, 
-    /*[in]*/ IWebURLRequest* /*request*/, 
-    /*[in]*/ BSTR /*frameName*/, 
+    /*[in]*/ IWebView* /*webView*/,
+    /*[in]*/ IPropertyBag* /*actionInformation*/,
+    /*[in]*/ IWebURLRequest* /*request*/,
+    /*[in]*/ BSTR /*frameName*/,
     /*[in]*/ IWebPolicyDecisionListener* listener)
 {
     listener->use();
@@ -144,10 +144,10 @@ HRESULT STDMETHODCALLTYPE DefaultPolicyDelegate::decidePolicyForNewWindowAction(
 }
 
 HRESULT STDMETHODCALLTYPE DefaultPolicyDelegate::decidePolicyForMIMEType(
-    /*[in]*/ IWebView* webView, 
-    /*[in]*/ BSTR type, 
-    /*[in]*/ IWebURLRequest* request, 
-    /*[in]*/ IWebFrame* /*frame*/, 
+    /*[in]*/ IWebView* webView,
+    /*[in]*/ BSTR type,
+    /*[in]*/ IWebURLRequest* request,
+    /*[in]*/ IWebFrame* /*frame*/,
     /*[in]*/ IWebPolicyDecisionListener* listener)
 {
     BOOL canShowMIMEType;
@@ -177,8 +177,8 @@ HRESULT STDMETHODCALLTYPE DefaultPolicyDelegate::decidePolicyForMIMEType(
 }
 
 HRESULT STDMETHODCALLTYPE DefaultPolicyDelegate::unableToImplementPolicyWithError(
-    /*[in]*/ IWebView* /*webView*/, 
-    /*[in]*/ IWebError* error, 
+    /*[in]*/ IWebView* /*webView*/,
+    /*[in]*/ IWebError* error,
     /*[in]*/ IWebFrame* frame)
 {
     BString errorStr;

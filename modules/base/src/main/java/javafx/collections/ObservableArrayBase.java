@@ -39,7 +39,7 @@ import javafx.beans.InvalidationListener;
  * @since JavaFX 8.0
  */
 public abstract class ObservableArrayBase<T extends ObservableArray<T>> implements ObservableArray<T> {
-    
+
     private ArrayListenerHelper<T> listenerHelper;
 
     @Override public final void addListener(InvalidationListener listener) {
@@ -49,7 +49,7 @@ public abstract class ObservableArrayBase<T extends ObservableArray<T>> implemen
     @Override public final void removeListener(InvalidationListener listener) {
         listenerHelper = ArrayListenerHelper.removeListener(listenerHelper, listener);
     }
-    
+
     @Override public final void addListener(ArrayChangeListener<T> listener) {
         listenerHelper = ArrayListenerHelper.<T>addListener(listenerHelper, (T) this, listener);
     }
@@ -57,12 +57,12 @@ public abstract class ObservableArrayBase<T extends ObservableArray<T>> implemen
     @Override public final void removeListener(ArrayChangeListener<T> listener) {
         listenerHelper = ArrayListenerHelper.removeListener(listenerHelper, listener);
     }
-    
+
     /**
      * Notifies all listeners of a change
      * @param change
      */
     protected final void fireChange(boolean sizeChanged, int from, int to) {
         ArrayListenerHelper.fireValueChangedEvent(listenerHelper, sizeChanged, from, to);
-    }    
+    }
 }

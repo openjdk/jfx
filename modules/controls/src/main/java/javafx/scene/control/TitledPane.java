@@ -99,13 +99,13 @@ public class TitledPane extends Labeled {
      * @param title The title of the TitledPane.
      * @param content The content of the TitledPane.
      */
-    public TitledPane(String title, Node content) {  
+    public TitledPane(String title, Node content) {
         this();
         setText(title);
         setContent(content);
     }
 
-    
+
     /***************************************************************************
      *                                                                         *
      * Properties                                                              *
@@ -175,7 +175,7 @@ public class TitledPane extends Labeled {
     public final void setExpanded(boolean value) { expandedProperty().set(value); }
 
     /*
-     * Returns the expanded state of the TitledPane.  
+     * Returns the expanded state of the TitledPane.
      *
      * @return The expanded state of the TitledPane.
      */
@@ -204,13 +204,13 @@ public class TitledPane extends Labeled {
         public CssMetaData<TitledPane,Boolean> getCssMetaData() {
             return StyleableProperties.ANIMATED;
         }
-        
+
     };
 
     /**
      * Specifies how the TitledPane should open and close.  The panel will be
      * animated out when this value is set to {@code true}.  The default is {@code true}.
-     *     
+     *
      */
     public final void setAnimated(boolean value) { animatedProperty().set(value); }
 
@@ -244,7 +244,7 @@ public class TitledPane extends Labeled {
         public CssMetaData<TitledPane,Boolean> getCssMetaData() {
             return StyleableProperties.COLLAPSIBLE;
         }
-        
+
     };
 
     /**
@@ -306,7 +306,7 @@ public class TitledPane extends Labeled {
                 return (StyleableProperty<Boolean>)(WritableValue<Boolean>)n.collapsibleProperty();
             }
         };
-               
+
         private static final CssMetaData<TitledPane,Boolean> ANIMATED =
            new CssMetaData<TitledPane,Boolean>("-fx-animated",
                BooleanConverter.getInstance(), Boolean.TRUE) {

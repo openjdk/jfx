@@ -30,7 +30,7 @@ import com.sun.javafx.geom.transform.BaseTransform;
 /**
  * The <code>RoundRectangle2D</code> class defines a rectangle with
  * rounded corners defined by a location {@code (x,y)}, a
- * dimension {@code (w x h)}, and the width and height of an arc 
+ * dimension {@code (w x h)}, and the width and height of an arc
  * with which to round the corners.
  *
  * @version 1.29, 05/05/07
@@ -75,7 +75,7 @@ public class RoundRectangle2D extends RectangularShape {
     }
 
     /**
-     * Constructs and initializes a <code>RoundRectangle2D</code> 
+     * Constructs and initializes a <code>RoundRectangle2D</code>
      * from the specified <code>float</code> coordinates.
      *
      * @param x the X coordinate of the newly
@@ -107,7 +107,7 @@ public class RoundRectangle2D extends RectangularShape {
 
     /**
      * {@inheritDoc}
-     */ 
+     */
     @Override
     public float getY() {
         return y;
@@ -115,7 +115,7 @@ public class RoundRectangle2D extends RectangularShape {
 
     /**
      * {@inheritDoc}
-     */ 
+     */
     @Override
     public float getWidth() {
         return width;
@@ -138,8 +138,8 @@ public class RoundRectangle2D extends RectangularShape {
     }
 
     /**
-     * Sets the location, size, and corner radii of this 
-     * <code>RoundRectangle2D</code> to the specified 
+     * Sets the location, size, and corner radii of this
+     * <code>RoundRectangle2D</code> to the specified
      * <code>float</code> values.
      *
      * @param x the X coordinate to which to set the

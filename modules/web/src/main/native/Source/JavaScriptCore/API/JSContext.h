@@ -140,13 +140,13 @@ OBJC_VISIBLE
 /*!
 @property
 @discussion The <code>exception</code> property may be used to throw an exception to JavaScript.
- 
+
  Before a callback is made from JavaScript to an Objective-C block or method,
  the prior value of the exception property will be preserved and the property
  will be set to nil. After the callback has completed the new value of the
  exception property will be read, and prior value restored. If the new value
  of exception is not nil, the callback will result in that value being thrown.
- 
+
  This property may also be used to check for uncaught exceptions arising from
  API function calls (since the default behaviour of <code>exceptionHandler</code> is to
  assign an uncaught exception to this property).

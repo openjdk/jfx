@@ -83,7 +83,7 @@ void RenderCombineText::getStringToRender(int start, String& string, int& length
         length = string.length();
         return;
     }
- 
+
     string = text();
     string = string.substringSharingImpl(static_cast<unsigned>(start), length);
 }

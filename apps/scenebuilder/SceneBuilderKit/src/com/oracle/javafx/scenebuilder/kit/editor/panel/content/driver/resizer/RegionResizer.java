@@ -43,7 +43,7 @@ import javafx.scene.layout.Region;
 
 /**
  *
- * 
+ *
  */
 public class RegionResizer extends AbstractResizer<Region> {
 
@@ -60,7 +60,7 @@ public class RegionResizer extends AbstractResizer<Region> {
     private final PropertyName maxWidthName  = new PropertyName("maxWidth"); //NOI18N
     private final PropertyName maxHeightName = new PropertyName("maxHeight"); //NOI18N
     private final List<PropertyName> propertyNames = new ArrayList<>();
-    
+
     public RegionResizer(Region sceneGraphObject) {
         super(sceneGraphObject);
         originalMinWidth   = sceneGraphObject.getMinWidth();
@@ -76,7 +76,7 @@ public class RegionResizer extends AbstractResizer<Region> {
         propertyNames.add(maxWidthName);
         propertyNames.add(maxHeightName);
     }
-    
+
     public static String makeSizeString(double size) {
         final String result;
         if (size == Double.MAX_VALUE) {
@@ -86,7 +86,7 @@ public class RegionResizer extends AbstractResizer<Region> {
         }
         return result;
     }
-    
+
     public static String makeComputedSizeString(double size) {
         final String result;
         if (size == Region.USE_COMPUTED_SIZE) {
@@ -96,7 +96,7 @@ public class RegionResizer extends AbstractResizer<Region> {
         }
         return result;
     }
-    
+
     public static String makePrefSizeString(double size) {
         final String result;
         if (size == Region.USE_PREF_SIZE) {
@@ -110,13 +110,13 @@ public class RegionResizer extends AbstractResizer<Region> {
     /*
      * AbstractResizer
      */
-    
+
     @Override
     public final Bounds computeBounds(double width, double height) {
         return new BoundingBox(0, 0, Math.round(width), Math.round(height));
     }
 
-    
+
     @Override
     public Feature getFeature() {
         return Feature.FREE;
@@ -125,9 +125,9 @@ public class RegionResizer extends AbstractResizer<Region> {
     @Override
     public void changeWidth(double weight) {
         final double w = Math.round(weight);
-        
+
         sceneGraphObject.setPrefWidth(w);
-        
+
         if ((originalMinWidth != Region.USE_COMPUTED_SIZE) && (originalMinWidth != Region.USE_PREF_SIZE)) {
             sceneGraphObject.setMinWidth(Math.min(w, originalMinWidth));
         }
@@ -139,9 +139,9 @@ public class RegionResizer extends AbstractResizer<Region> {
     @Override
     public void changeHeight(double height) {
         final double h = Math.round(height);
-        
+
         sceneGraphObject.setPrefHeight(h);
-        
+
         if ((originalMinHeight != Region.USE_COMPUTED_SIZE) && (originalMinHeight != Region.USE_PREF_SIZE)) {
             sceneGraphObject.setMinHeight(Math.min(h, originalMinHeight));
         }
@@ -169,7 +169,7 @@ public class RegionResizer extends AbstractResizer<Region> {
     public Object getValue(PropertyName propertyName) {
         assert propertyName != null;
         assert propertyNames.contains(propertyName);
-        
+
         final Object result;
         if (propertyName.equals(minWidthName)) {
             result = makePrefSizeString(sceneGraphObject.getMinWidth());
@@ -187,7 +187,7 @@ public class RegionResizer extends AbstractResizer<Region> {
             // Emergency code
             result = null;
         }
-        
+
         return result;
     }
 

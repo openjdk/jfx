@@ -78,7 +78,7 @@ final class MacApplication extends Application implements InvokeLaterDispatcher.
                 String taskbarAppProp = System.getProperty("glass.taskbarApplication");
                 return  !"false".equalsIgnoreCase(taskbarAppProp);
             });
-        
+
         ClassLoader classLoader = MacApplication.class.getClassLoader();
         _runLoop(classLoader, launchable, isTaskbarApplication);
     }
@@ -172,7 +172,7 @@ final class MacApplication extends Application implements InvokeLaterDispatcher.
 
         menubar.add(this.appleMenu);
     }
-    
+
     public Menu getAppleMenu() {
         return this.appleMenu;
     }
@@ -187,7 +187,7 @@ final class MacApplication extends Application implements InvokeLaterDispatcher.
     @Override public Window createWindow(Window owner, Screen screen, int styleMask) {
         return new MacWindow(owner, screen, styleMask);
     }
-    
+
     final static long BROWSER_PARENT_ID = -1L;
     @Override public Window createWindow(long parent) {
         Window window = new MacWindow(parent);
@@ -317,7 +317,7 @@ final class MacApplication extends Application implements InvokeLaterDispatcher.
     public String getRemoteLayerServerName() {
         return _getRemoteLayerServerName();
     }
-    
+
     private native String _getDataDirectory();
     public String getDataDirectory() {
         checkEventThread();

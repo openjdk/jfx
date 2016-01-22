@@ -56,14 +56,14 @@ ShouldGoToBackForwardListItemTest::ShouldGoToBackForwardListItemTest(const std::
 }
 
 void ShouldGoToBackForwardListItemTest::didCreatePage(WKBundleRef bundle, WKBundlePageRef page)
-{    
+{
     WKBundlePageLoaderClientV1 pageLoaderClient;
     memset(&pageLoaderClient, 0, sizeof(pageLoaderClient));
-    
+
     pageLoaderClient.base.version = 1;
     pageLoaderClient.base.clientInfo = this;
     pageLoaderClient.shouldGoToBackForwardListItem = shouldGoToBackForwardListItemCallback;
-    
+
     WKBundlePageSetPageLoaderClient(page, &pageLoaderClient.base);
 }
 

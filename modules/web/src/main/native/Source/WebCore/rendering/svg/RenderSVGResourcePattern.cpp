@@ -220,7 +220,7 @@ bool RenderSVGResourcePattern::buildTileImageTransform(RenderObject* renderer,
     ASSERT(renderer);
 
     FloatRect objectBoundingBox = renderer->objectBoundingBox();
-    patternBoundaries = calculatePatternBoundaries(attributes, objectBoundingBox, patternElement); 
+    patternBoundaries = calculatePatternBoundaries(attributes, objectBoundingBox, patternElement);
     if (patternBoundaries.width() <= 0 || patternBoundaries.height() <= 0)
         return false;
 

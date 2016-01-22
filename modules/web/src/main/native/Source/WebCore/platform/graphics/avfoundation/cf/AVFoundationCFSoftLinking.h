@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "SoftLinking.h"
@@ -217,7 +217,7 @@ SOFT_LINK_DLL_IMPORT_OPTIONAL(AVFoundationCF, AVCFPlayerSetDirect3DDevice, void,
 #if HAVE(AVFOUNDATION_MEDIA_SELECTION_GROUP) && HAVE(AVFOUNDATION_LEGIBLE_OUTPUT_SUPPORT)
 
 SOFT_LINK_DLL_IMPORT(AVFoundationCF, AVCFAssetGetSelectionGroupForMediaCharacteristic , AVCFMediaSelectionGroupRef, __cdecl, (AVCFAssetRef asset, CFStringRef mediaCharacteristic), (asset, mediaCharacteristic))
-#define AVCFAssetGetSelectionGroupForMediaCharacteristic  softLink_AVCFAssetGetSelectionGroupForMediaCharacteristic 
+#define AVCFAssetGetSelectionGroupForMediaCharacteristic  softLink_AVCFAssetGetSelectionGroupForMediaCharacteristic
 
 SOFT_LINK_DLL_IMPORT(AVFoundationCF, AVCFMediaSelectionCopyPlayableOptionsFromArray, CFArrayRef, __cdecl, (CFArrayRef selectionOptions), (selectionOptions))
 #define AVCFMediaSelectionCopyPlayableOptionsFromArray softLink_AVCFMediaSelectionCopyPlayableOptionsFromArray

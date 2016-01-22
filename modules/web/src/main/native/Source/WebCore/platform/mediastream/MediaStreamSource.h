@@ -54,7 +54,7 @@ public:
     class Observer {
     public:
         virtual ~Observer() { }
-        
+
         // Source state changes.
         virtual void sourceReadyStateChanged() = 0;
         virtual void sourceMutedChanged() = 0;
@@ -79,7 +79,7 @@ public:
 
     virtual RefPtr<MediaStreamSourceCapabilities> capabilities() const = 0;
     virtual const MediaStreamSourceStates& states() = 0;
-    
+
     enum ReadyState { New = 0, Live = 1, Ended = 2 };
     virtual ReadyState readyState() const { return m_readyState; }
     virtual void setReadyState(ReadyState);
@@ -98,7 +98,7 @@ public:
 
     void addObserver(Observer*);
     void removeObserver(Observer*);
-    
+
     virtual void startProducingData() { }
     virtual void stopProducingData() { }
 

@@ -44,8 +44,8 @@ PassRefPtr<ChannelMergerNode> ChannelMergerNode::create(AudioContext* context, f
 {
     if (!numberOfInputs || numberOfInputs > AudioContext::maxNumberOfChannels())
         return nullptr;
-    
-    return adoptRef(new ChannelMergerNode(context, sampleRate, numberOfInputs));      
+
+    return adoptRef(new ChannelMergerNode(context, sampleRate, numberOfInputs));
 }
 
 ChannelMergerNode::ChannelMergerNode(AudioContext* context, float sampleRate, unsigned numberOfInputs)
@@ -57,9 +57,9 @@ ChannelMergerNode::ChannelMergerNode(AudioContext* context, float sampleRate, un
         addInput(std::make_unique<AudioNodeInput>(this));
 
     addOutput(std::make_unique<AudioNodeOutput>(this, 1));
-    
+
     setNodeType(NodeTypeChannelMerger);
-    
+
     initialize();
 }
 
@@ -74,25 +74,25 @@ void ChannelMergerNode::process(size_t framesToProcess)
         output->bus()->zero();
         return;
     }
-    
+
     // Merge all the channels from all the inputs into one output.
     unsigned outputChannelIndex = 0;
     for (unsigned i = 0; i < numberOfInputs(); ++i) {
         AudioNodeInput* input = this->input(i);
         if (input->isConnected()) {
             unsigned numberOfInputChannels = input->bus()->numberOfChannels();
-            
+
             // Merge channels from this particular input.
             for (unsigned j = 0; j < numberOfInputChannels; ++j) {
                 AudioChannel* inputChannel = input->bus()->channel(j);
                 AudioChannel* outputChannel = output->bus()->channel(outputChannelIndex);
                 outputChannel->copyFrom(inputChannel);
-                
+
                 ++outputChannelIndex;
             }
         }
     }
-    
+
     ASSERT(outputChannelIndex == output->numberOfChannels());
 }
 

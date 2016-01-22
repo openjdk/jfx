@@ -31,7 +31,7 @@
 #include "RenderProgress.h"
 
 namespace WebCore {
-    
+
 using namespace HTMLNames;
 
 #if ENABLE(PROGRESS_ELEMENT)
@@ -44,8 +44,8 @@ PassRefPtr<AccessibilityProgressIndicator> AccessibilityProgressIndicator::creat
 {
     return adoptRef(new AccessibilityProgressIndicator(renderer));
 }
-#endif 
-    
+#endif
+
 #if ENABLE(METER_ELEMENT)
 AccessibilityProgressIndicator::AccessibilityProgressIndicator(RenderMeter* renderer)
     : AccessibilityRenderObject(renderer)
@@ -62,12 +62,12 @@ bool AccessibilityProgressIndicator::computeAccessibilityIsIgnored() const
 {
     return accessibilityIsIgnoredByDefault();
 }
-    
+
 float AccessibilityProgressIndicator::valueForRange() const
 {
     if (!m_renderer)
         return 0.0;
-    
+
 #if ENABLE(PROGRESS_ELEMENT)
     if (m_renderer->isProgress()) {
         HTMLProgressElement* progress = progressElement();
@@ -98,7 +98,7 @@ float AccessibilityProgressIndicator::maxValueForRange() const
             return narrowPrecisionToFloat(progress->max());
     }
 #endif
-    
+
 #if ENABLE(METER_ELEMENT)
     if (m_renderer->isMeter()) {
         if (HTMLMeterElement* meter = meterElement())
@@ -113,19 +113,19 @@ float AccessibilityProgressIndicator::minValueForRange() const
 {
     if (!m_renderer)
         return 0.0;
-    
+
 #if ENABLE(PROGRESS_ELEMENT)
     if (m_renderer->isProgress())
         return 0.0;
 #endif
-    
+
 #if ENABLE(METER_ELEMENT)
     if (m_renderer->isMeter()) {
         if (HTMLMeterElement* meter = meterElement())
             return narrowPrecisionToFloat(meter->min());
     }
 #endif
-    
+
     return 0.0;
 }
 
@@ -134,7 +134,7 @@ HTMLProgressElement* AccessibilityProgressIndicator::progressElement() const
 {
     if (!m_renderer->isProgress())
         return 0;
-    
+
     return toRenderProgress(m_renderer)->progressElement();
 }
 #endif

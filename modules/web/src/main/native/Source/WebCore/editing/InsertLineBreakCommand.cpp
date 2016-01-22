@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -92,9 +92,9 @@ void InsertLineBreakCommand::doApply()
     VisibleSelection selection = endingSelection();
     if (!selection.isNonOrphanedCaretOrRange())
         return;
-    
+
     VisiblePosition caret(selection.visibleStart());
-    // FIXME: If the node is hidden, we should still be able to insert text. 
+    // FIXME: If the node is hidden, we should still be able to insert text.
     // For now, we return to avoid a crash.  https://bugs.webkit.org/show_bug.cgi?id=40342
     if (caret.isNull())
         return;
@@ -102,7 +102,7 @@ void InsertLineBreakCommand::doApply()
     Position pos(caret.deepEquivalent());
 
     pos = positionAvoidingSpecialElementBoundary(pos);
-    
+
     pos = positionOutsideTabSpan(pos);
 
     RefPtr<Node> nodeToInsert;
@@ -110,26 +110,26 @@ void InsertLineBreakCommand::doApply()
         nodeToInsert = createBreakElement(document());
     else
         nodeToInsert = document().createTextNode("\n");
-    
+
     // FIXME: Need to merge text nodes when inserting just after or before text.
-    
+
     if (isEndOfParagraph(caret) && !lineBreakExistsAtVisiblePosition(caret)) {
         bool needExtraLineBreak = !pos.deprecatedNode()->hasTagName(hrTag) && !isHTMLTableElement(pos.deprecatedNode());
-        
+
         insertNodeAt(nodeToInsert.get(), pos);
-        
+
         if (needExtraLineBreak)
             insertNodeBefore(nodeToInsert->cloneNode(false), nodeToInsert);
-        
+
         VisiblePosition endingPosition(positionBeforeNode(nodeToInsert.get()));
         setEndingSelection(VisibleSelection(endingPosition, endingSelection().isDirectional()));
     } else if (pos.deprecatedEditingOffset() <= caretMinOffset(pos.deprecatedNode())) {
         insertNodeAt(nodeToInsert.get(), pos);
-        
+
         // Insert an extra br or '\n' if the just inserted one collapsed.
         if (!isStartOfParagraph(positionBeforeNode(nodeToInsert.get())))
             insertNodeBefore(nodeToInsert->cloneNode(false).get(), nodeToInsert.get());
-        
+
         setEndingSelection(VisibleSelection(positionInParentAfterNode(nodeToInsert.get()), DOWNSTREAM, endingSelection().isDirectional()));
     // If we're inserting after all of the rendered text in a text node, or into a non-text node,
     // a simple insertion is sufficient.
@@ -142,7 +142,7 @@ void InsertLineBreakCommand::doApply()
         splitTextNode(textNode, pos.deprecatedEditingOffset());
         insertNodeBefore(nodeToInsert, textNode);
         Position endingPosition = firstPositionInNode(textNode);
-        
+
         // Handle whitespace that occurs after the split
         document().updateLayoutIgnorePendingStylesheets();
         if (!endingPosition.isRenderedCharacter()) {
@@ -159,7 +159,7 @@ void InsertLineBreakCommand::doApply()
                 endingPosition = firstPositionInNode(nbspNode.get());
             }
         }
-        
+
         setEndingSelection(VisibleSelection(endingPosition, DOWNSTREAM, endingSelection().isDirectional()));
     }
 
@@ -175,9 +175,9 @@ void InsertLineBreakCommand::doApply()
         applyStyle(typingStyle.get(), firstPositionInOrBeforeNode(nodeToInsert.get()), lastPositionInOrAfterNode(nodeToInsert.get()));
         // Even though this applyStyle operates on a Range, it still sets an endingSelection().
         // It tries to set a VisibleSelection around the content it operated on. So, that VisibleSelection
-        // will either (a) select the line break we inserted, or it will (b) be a caret just 
+        // will either (a) select the line break we inserted, or it will (b) be a caret just
         // before the line break (if the line break is at the end of a block it isn't selectable).
-        // So, this next call sets the endingSelection() to a caret just after the line break 
+        // So, this next call sets the endingSelection() to a caret just after the line break
         // that we inserted, or just before it if it's at the end of a block.
         setEndingSelection(endingSelection().visibleEnd());
     }

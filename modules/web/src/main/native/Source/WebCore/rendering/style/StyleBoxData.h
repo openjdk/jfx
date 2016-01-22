@@ -45,18 +45,18 @@ public:
 
     const Length& width() const { return m_width; }
     const Length& height() const { return m_height; }
-    
+
     const Length& minWidth() const { return m_minWidth; }
     const Length& minHeight() const { return m_minHeight; }
-    
+
     const Length& maxWidth() const { return m_maxWidth; }
     const Length& maxHeight() const { return m_maxHeight; }
-    
+
     const Length& verticalAlign() const { return m_verticalAlign; }
-    
+
     int zIndex() const { return m_zIndex; }
     bool hasAutoZIndex() const { return m_hasAutoZIndex; }
-    
+
     EBoxSizing boxSizing() const { return static_cast<EBoxSizing>(m_boxSizing); }
 #if ENABLE(CSS_BOX_DECORATION_BREAK)
     EBoxDecorationBreak boxDecorationBreak() const { return static_cast<EBoxDecorationBreak>(m_boxDecorationBreak); }

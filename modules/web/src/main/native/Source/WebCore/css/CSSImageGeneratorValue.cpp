@@ -239,7 +239,7 @@ bool CSSImageGeneratorValue::subimageIsPending(CSSValue* value)
 {
     if (value->isImageValue())
         return toCSSImageValue(value)->cachedOrPendingImage()->isPendingImage();
-    
+
     if (value->isImageGeneratorValue())
         return toCSSImageGeneratorValue(value)->isPending();
 
@@ -247,7 +247,7 @@ bool CSSImageGeneratorValue::subimageIsPending(CSSValue* value)
         return false;
 
     ASSERT_NOT_REACHED();
-    
+
     return false;
 }
 
@@ -263,7 +263,7 @@ CachedImage* CSSImageGeneratorValue::cachedImageForCSSValue(CSSValue* value, Cac
 
         return styleCachedImage->cachedImage();
     }
-    
+
     if (value->isImageGeneratorValue()) {
         toCSSImageGeneratorValue(value)->loadSubimages(cachedResourceLoader);
         // FIXME: Handle CSSImageGeneratorValue (and thus cross-fades with gradients and canvas).
@@ -274,7 +274,7 @@ CachedImage* CSSImageGeneratorValue::cachedImageForCSSValue(CSSValue* value, Cac
         return nullptr;
 
     ASSERT_NOT_REACHED();
-    
+
     return nullptr;
 }
 } // namespace WebCore

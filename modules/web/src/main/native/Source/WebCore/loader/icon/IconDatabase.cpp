@@ -21,7 +21,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -61,15 +61,15 @@ namespace WebCore {
 static int databaseCleanupCounter = 0;
 
 // This version number is in the DB and marks the current generation of the schema
-// Currently, a mismatched schema causes the DB to be wiped and reset.  This isn't 
+// Currently, a mismatched schema causes the DB to be wiped and reset.  This isn't
 // so bad during development but in the future, we would need to write a conversion
 // function to advance older released schemas to "current"
 static const int currentDatabaseVersion = 6;
 
 // Icons expire once every 4 days
-static const int iconExpirationTime = 60*60*24*4; 
+static const int iconExpirationTime = 60*60*24*4;
 
-static const int updateTimerDelay = 5; 
+static const int updateTimerDelay = 5;
 
 static bool checkIntegrityOnOpen = false;
 
@@ -93,14 +93,14 @@ static String urlForLogging(const String& url)
 class DefaultIconDatabaseClient : public IconDatabaseClient {
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    virtual void didImportIconURLForPageURL(const String&) { } 
+    virtual void didImportIconURLForPageURL(const String&) { }
     virtual void didImportIconDataForPageURL(const String&) { }
     virtual void didChangeIconForPageURL(const String&) { }
     virtual void didRemoveAllIcons() { }
     virtual void didFinishURLImport() { }
 };
 
-static IconDatabaseClient* defaultClient() 
+static IconDatabaseClient* defaultClient()
 {
     static IconDatabaseClient* defaultClient = new DefaultIconDatabaseClient();
     return defaultClient;
@@ -113,13 +113,13 @@ static IconDatabaseClient* defaultClient()
 void IconDatabase::setClient(IconDatabaseClient* client)
 {
     // We don't allow a null client, because we never null check it anywhere in this code
-    // Also don't allow a client change after the thread has already began 
+    // Also don't allow a client change after the thread has already began
     // (setting the client should occur before the database is opened)
     ASSERT(client);
     ASSERT(!m_syncThreadRunning);
     if (!client || m_syncThreadRunning)
         return;
-        
+
     m_client = client;
 }
 
@@ -140,7 +140,7 @@ bool IconDatabase::open(const String& directory, const String& filename)
     // Formulate the full path for the database file
     m_completeDatabasePath = pathByAppendingComponent(m_databaseDirectory, filename);
 
-    // Lock here as well as first thing in the thread so the thread doesn't actually commence until the createThread() call 
+    // Lock here as well as first thing in the thread so the thread doesn't actually commence until the createThread() call
     // completes and m_syncThreadRunning is properly set
     m_syncLock.lock();
     m_syncThread = createThread(IconDatabase::iconDatabaseSyncThreadStart, this, "WebCore: IconDatabase");
@@ -154,19 +154,19 @@ bool IconDatabase::open(const String& directory, const String& filename)
 void IconDatabase::close()
 {
     ASSERT_NOT_SYNC_THREAD();
-    
+
     if (m_syncThreadRunning) {
         // Set the flag to tell the sync thread to wrap it up
         m_threadTerminationRequested = true;
 
         // Wake up the sync thread if it's waiting
         wakeSyncThread();
-        
+
         // Wait for the sync thread to terminate
         waitForThreadCompletion(m_syncThread);
     }
 
-    m_syncThreadRunning = false;    
+    m_syncThreadRunning = false;
     m_threadTerminationRequested = false;
     m_removeIconsRequested = false;
 
@@ -177,33 +177,33 @@ void IconDatabase::close()
 void IconDatabase::removeAllIcons()
 {
     ASSERT_NOT_SYNC_THREAD();
-    
+
     if (!isOpen())
         return;
 
     LOG(IconDatabase, "Requesting background thread to remove all icons");
-    
+
     // Clear the in-memory record of every IconRecord, anything waiting to be read from disk, and anything waiting to be written to disk
     {
         MutexLocker locker(m_urlAndIconLock);
-        
+
         // Clear the IconRecords for every page URL - RefCounting will cause the IconRecords themselves to be deleted
         // We don't delete the actual PageRecords because we have the "retain icon for url" count to keep track of
         HashMap<String, PageURLRecord*>::iterator iter = m_pageURLToRecordMap.begin();
         HashMap<String, PageURLRecord*>::iterator end = m_pageURLToRecordMap.end();
         for (; iter != end; ++iter)
             (*iter).value->setIconRecord(0);
-            
+
         // Clear the iconURL -> IconRecord map
         m_iconURLToRecordMap.clear();
-                    
+
         // Clear all in-memory records of things that need to be synced out to disk
         {
             MutexLocker locker(m_pendingSyncLock);
             m_pageURLsPendingSync.clear();
             m_iconsPendingSync.clear();
         }
-        
+
         // Clear all in-memory records of things that need to be read in from disk
         {
             MutexLocker locker(m_pendingReadingLock);
@@ -213,49 +213,49 @@ void IconDatabase::removeAllIcons()
             m_loadersPendingDecision.clear();
         }
     }
-    
+
     m_removeIconsRequested = true;
     wakeSyncThread();
 }
 
 Image* IconDatabase::synchronousIconForPageURL(const String& pageURLOriginal, const IntSize& size)
-{   
+{
     ASSERT_NOT_SYNC_THREAD();
 
-    // pageURLOriginal cannot be stored without being deep copied first.  
+    // pageURLOriginal cannot be stored without being deep copied first.
     // We should go our of our way to only copy it if we have to store it
-    
+
     if (!isOpen() || !documentCanHaveIcon(pageURLOriginal))
         return 0;
 
     MutexLocker locker(m_urlAndIconLock);
 
     performPendingRetainAndReleaseOperations();
-    
+
     String pageURLCopy; // Creates a null string for easy testing
-    
+
     PageURLRecord* pageRecord = m_pageURLToRecordMap.get(pageURLOriginal);
     if (!pageRecord) {
         pageURLCopy = pageURLOriginal.isolatedCopy();
         pageRecord = getOrCreatePageURLRecord(pageURLCopy);
     }
-    
+
     // If pageRecord is NULL, one of two things is true -
     // 1 - The initial url import is incomplete and this pageURL was marked to be notified once it is complete if an iconURL exists
     // 2 - The initial url import IS complete and this pageURL has no icon
     if (!pageRecord) {
         MutexLocker locker(m_pendingReadingLock);
-        
+
         // Import is ongoing, there might be an icon.  In this case, register to be notified when the icon comes in
         // If we ever reach this condition, we know we've already made the pageURL copy
         if (!m_iconURLImportComplete)
             m_pageURLsInterestedInIcons.add(pageURLCopy);
-        
+
         return 0;
     }
 
     IconRecord* iconRecord = pageRecord->iconRecord();
-    
+
     // If the initial URL import isn't complete, it's possible to have a PageURL record without an associated icon
     // In this case, the pageURL is already in the set to alert the client when the iconURL mapping is complete so
     // we can just bail now
@@ -265,37 +265,37 @@ Image* IconDatabase::synchronousIconForPageURL(const String& pageURLOriginal, co
     // Assuming we're done initializing and cleanup is allowed,
     // the only way we should *not* have an icon record is if this pageURL is retained but has no icon yet.
     ASSERT(iconRecord || databaseCleanupCounter || m_retainedPageURLs.contains(pageURLOriginal));
-    
+
     if (!iconRecord)
         return 0;
-        
+
     // If it's a new IconRecord object that doesn't have its imageData set yet,
     // mark it to be read by the background thread
     if (iconRecord->imageDataStatus() == ImageDataStatusUnknown) {
         if (pageURLCopy.isNull())
             pageURLCopy = pageURLOriginal.isolatedCopy();
-    
+
         MutexLocker locker(m_pendingReadingLock);
         m_pageURLsInterestedInIcons.add(pageURLCopy);
         m_iconsPendingReading.add(iconRecord);
         wakeSyncThread();
         return 0;
     }
-    
+
     // If the size parameter was (0, 0) that means the caller of this method just wanted the read from disk to be kicked off
     // and isn't actually interested in the image return value
     if (size == IntSize(0, 0))
         return 0;
-        
+
     // PARANOID DISCUSSION: This method makes some assumptions.  It returns a WebCore::image which the icon database might dispose of at anytime in the future,
     // and Images aren't ref counted.  So there is no way for the client to guarantee continued existence of the image.
     // This has *always* been the case, but in practice clients would always create some other platform specific representation of the image
     // and drop the raw Image*.  On Mac an NSImage, and on windows drawing into an HBITMAP.
     // The async aspect adds a huge question - what if the image is deleted before the platform specific API has a chance to create its own
     // representation out of it?
-    // If an image is read in from the icondatabase, we do *not* overwrite any image data that exists in the in-memory cache.  
+    // If an image is read in from the icondatabase, we do *not* overwrite any image data that exists in the in-memory cache.
     // This is because we make the assumption that anything in memory is newer than whatever is in the database.
-    // So the only time the data will be set from the second thread is when it is INITIALLY being read in from the database, but we would never 
+    // So the only time the data will be set from the second thread is when it is INITIALLY being read in from the database, but we would never
     // delete the image on the secondary thread if the image already exists.
     return iconRecord->image(size);
 }
@@ -313,33 +313,33 @@ PassNativeImagePtr IconDatabase::synchronousNativeIconForPageURL(const String& p
 void IconDatabase::readIconForPageURLFromDisk(const String& pageURL)
 {
     // The effect of asking for an Icon for a pageURL automatically queues it to be read from disk
-    // if it hasn't already been set in memory.  The special IntSize (0, 0) is a special way of telling 
+    // if it hasn't already been set in memory.  The special IntSize (0, 0) is a special way of telling
     // that method "I don't care about the actual Image, i just want you to make sure you're getting it from disk.
     synchronousIconForPageURL(pageURL, IntSize(0, 0));
 }
 
 String IconDatabase::synchronousIconURLForPageURL(const String& pageURLOriginal)
-{    
-    ASSERT_NOT_SYNC_THREAD(); 
-        
+{
+    ASSERT_NOT_SYNC_THREAD();
+
     // Cannot do anything with pageURLOriginal that would end up storing it without deep copying first
     // Also, in the case we have a real answer for the caller, we must deep copy that as well
-    
+
     if (!isOpen() || !documentCanHaveIcon(pageURLOriginal))
         return String();
-        
+
     MutexLocker locker(m_urlAndIconLock);
-    
+
     PageURLRecord* pageRecord = m_pageURLToRecordMap.get(pageURLOriginal);
     if (!pageRecord)
         pageRecord = getOrCreatePageURLRecord(pageURLOriginal.isolatedCopy());
-    
+
     // If pageRecord is NULL, one of two things is true -
     // 1 - The initial url import is incomplete and this pageURL has already been marked to be notified once it is complete if an iconURL exists
     // 2 - The initial url import IS complete and this pageURL has no icon
     if (!pageRecord)
         return String();
-    
+
     // Possible the pageRecord is around because it's a retained pageURL with no iconURL, so we have to check
     return pageRecord->iconRecord() ? pageRecord->iconRecord()->iconURL().isolatedCopy() : String();
 }
@@ -352,44 +352,44 @@ static inline void loadDefaultIconRecord(IconRecord* defaultIconRecord)
 #else
 static inline void loadDefaultIconRecord(IconRecord* defaultIconRecord)
 {
-    static const unsigned char defaultIconData[] = { 0x4D, 0x4D, 0x00, 0x2A, 0x00, 0x00, 0x03, 0x32, 0x80, 0x00, 0x20, 0x50, 0x38, 0x24, 0x16, 0x0D, 0x07, 0x84, 0x42, 0x61, 0x50, 0xB8, 
-        0x64, 0x08, 0x18, 0x0D, 0x0A, 0x0B, 0x84, 0xA2, 0xA1, 0xE2, 0x08, 0x5E, 0x39, 0x28, 0xAF, 0x48, 0x24, 0xD3, 0x53, 0x9A, 0x37, 0x1D, 0x18, 0x0E, 0x8A, 0x4B, 0xD1, 0x38, 
-        0xB0, 0x7C, 0x82, 0x07, 0x03, 0x82, 0xA2, 0xE8, 0x6C, 0x2C, 0x03, 0x2F, 0x02, 0x82, 0x41, 0xA1, 0xE2, 0xF8, 0xC8, 0x84, 0x68, 0x6D, 0x1C, 0x11, 0x0A, 0xB7, 0xFA, 0x91, 
-        0x6E, 0xD1, 0x7F, 0xAF, 0x9A, 0x4E, 0x87, 0xFB, 0x19, 0xB0, 0xEA, 0x7F, 0xA4, 0x95, 0x8C, 0xB7, 0xF9, 0xA9, 0x0A, 0xA9, 0x7F, 0x8C, 0x88, 0x66, 0x96, 0xD4, 0xCA, 0x69, 
-        0x2F, 0x00, 0x81, 0x65, 0xB0, 0x29, 0x90, 0x7C, 0xBA, 0x2B, 0x21, 0x1E, 0x5C, 0xE6, 0xB4, 0xBD, 0x31, 0xB6, 0xE7, 0x7A, 0xBF, 0xDD, 0x6F, 0x37, 0xD3, 0xFD, 0xD8, 0xF2, 
-        0xB6, 0xDB, 0xED, 0xAC, 0xF7, 0x03, 0xC5, 0xFE, 0x77, 0x53, 0xB6, 0x1F, 0xE6, 0x24, 0x8B, 0x1D, 0xFE, 0x26, 0x20, 0x9E, 0x1C, 0xE0, 0x80, 0x65, 0x7A, 0x18, 0x02, 0x01, 
-        0x82, 0xC5, 0xA0, 0xC0, 0xF1, 0x89, 0xBA, 0x23, 0x30, 0xAD, 0x1F, 0xE7, 0xE5, 0x5B, 0x6D, 0xFE, 0xE7, 0x78, 0x3E, 0x1F, 0xEE, 0x97, 0x8B, 0xE7, 0x37, 0x9D, 0xCF, 0xE7, 
-        0x92, 0x8B, 0x87, 0x0B, 0xFC, 0xA0, 0x8E, 0x68, 0x3F, 0xC6, 0x27, 0xA6, 0x33, 0xFC, 0x36, 0x5B, 0x59, 0x3F, 0xC1, 0x02, 0x63, 0x3B, 0x74, 0x00, 0x03, 0x07, 0x0B, 0x61, 
-        0x00, 0x20, 0x60, 0xC9, 0x08, 0x00, 0x1C, 0x25, 0x9F, 0xE0, 0x12, 0x8A, 0xD5, 0xFE, 0x6B, 0x4F, 0x35, 0x9F, 0xED, 0xD7, 0x4B, 0xD9, 0xFE, 0x8A, 0x59, 0xB8, 0x1F, 0xEC, 
-        0x56, 0xD3, 0xC1, 0xFE, 0x63, 0x4D, 0xF2, 0x83, 0xC6, 0xB6, 0x1B, 0xFC, 0x34, 0x68, 0x61, 0x3F, 0xC1, 0xA6, 0x25, 0xEB, 0xFC, 0x06, 0x58, 0x5C, 0x3F, 0xC0, 0x03, 0xE4, 
-        0xC3, 0xFC, 0x04, 0x0F, 0x1A, 0x6F, 0xE0, 0xE0, 0x20, 0xF9, 0x61, 0x7A, 0x02, 0x28, 0x2B, 0xBC, 0x46, 0x25, 0xF3, 0xFC, 0x66, 0x3D, 0x99, 0x27, 0xF9, 0x7E, 0x6B, 0x1D, 
-        0xC7, 0xF9, 0x2C, 0x5E, 0x1C, 0x87, 0xF8, 0xC0, 0x4D, 0x9A, 0xE7, 0xF8, 0xDA, 0x51, 0xB2, 0xC1, 0x68, 0xF2, 0x64, 0x1F, 0xE1, 0x50, 0xED, 0x0A, 0x04, 0x23, 0x79, 0x8A, 
-        0x7F, 0x82, 0xA3, 0x39, 0x80, 0x7F, 0x80, 0xC2, 0xB1, 0x5E, 0xF7, 0x04, 0x2F, 0xB2, 0x10, 0x02, 0x86, 0x63, 0xC9, 0xCC, 0x07, 0xBF, 0x87, 0xF8, 0x4A, 0x38, 0xAF, 0xC1, 
-        0x88, 0xF8, 0x66, 0x1F, 0xE1, 0xD9, 0x08, 0xD4, 0x8F, 0x25, 0x5B, 0x4A, 0x49, 0x97, 0x87, 0x39, 0xFE, 0x25, 0x12, 0x10, 0x68, 0xAA, 0x4A, 0x2F, 0x42, 0x29, 0x12, 0x69, 
-        0x9F, 0xE1, 0xC1, 0x00, 0x67, 0x1F, 0xE1, 0x58, 0xED, 0x00, 0x83, 0x23, 0x49, 0x82, 0x7F, 0x81, 0x21, 0xE0, 0xFC, 0x73, 0x21, 0x00, 0x50, 0x7D, 0x2B, 0x84, 0x03, 0x83, 
-        0xC2, 0x1B, 0x90, 0x06, 0x69, 0xFE, 0x23, 0x91, 0xAE, 0x50, 0x9A, 0x49, 0x32, 0xC2, 0x89, 0x30, 0xE9, 0x0A, 0xC4, 0xD9, 0xC4, 0x7F, 0x94, 0xA6, 0x51, 0xDE, 0x7F, 0x9D, 
-        0x07, 0x89, 0xF6, 0x7F, 0x91, 0x85, 0xCA, 0x88, 0x25, 0x11, 0xEE, 0x50, 0x7C, 0x43, 0x35, 0x21, 0x60, 0xF1, 0x0D, 0x82, 0x62, 0x39, 0x07, 0x2C, 0x20, 0xE0, 0x80, 0x72, 
-        0x34, 0x17, 0xA1, 0x80, 0xEE, 0xF0, 0x89, 0x24, 0x74, 0x1A, 0x2C, 0x93, 0xB3, 0x78, 0xCC, 0x52, 0x9D, 0x6A, 0x69, 0x56, 0xBB, 0x0D, 0x85, 0x69, 0xE6, 0x7F, 0x9E, 0x27, 
+    static const unsigned char defaultIconData[] = { 0x4D, 0x4D, 0x00, 0x2A, 0x00, 0x00, 0x03, 0x32, 0x80, 0x00, 0x20, 0x50, 0x38, 0x24, 0x16, 0x0D, 0x07, 0x84, 0x42, 0x61, 0x50, 0xB8,
+        0x64, 0x08, 0x18, 0x0D, 0x0A, 0x0B, 0x84, 0xA2, 0xA1, 0xE2, 0x08, 0x5E, 0x39, 0x28, 0xAF, 0x48, 0x24, 0xD3, 0x53, 0x9A, 0x37, 0x1D, 0x18, 0x0E, 0x8A, 0x4B, 0xD1, 0x38,
+        0xB0, 0x7C, 0x82, 0x07, 0x03, 0x82, 0xA2, 0xE8, 0x6C, 0x2C, 0x03, 0x2F, 0x02, 0x82, 0x41, 0xA1, 0xE2, 0xF8, 0xC8, 0x84, 0x68, 0x6D, 0x1C, 0x11, 0x0A, 0xB7, 0xFA, 0x91,
+        0x6E, 0xD1, 0x7F, 0xAF, 0x9A, 0x4E, 0x87, 0xFB, 0x19, 0xB0, 0xEA, 0x7F, 0xA4, 0x95, 0x8C, 0xB7, 0xF9, 0xA9, 0x0A, 0xA9, 0x7F, 0x8C, 0x88, 0x66, 0x96, 0xD4, 0xCA, 0x69,
+        0x2F, 0x00, 0x81, 0x65, 0xB0, 0x29, 0x90, 0x7C, 0xBA, 0x2B, 0x21, 0x1E, 0x5C, 0xE6, 0xB4, 0xBD, 0x31, 0xB6, 0xE7, 0x7A, 0xBF, 0xDD, 0x6F, 0x37, 0xD3, 0xFD, 0xD8, 0xF2,
+        0xB6, 0xDB, 0xED, 0xAC, 0xF7, 0x03, 0xC5, 0xFE, 0x77, 0x53, 0xB6, 0x1F, 0xE6, 0x24, 0x8B, 0x1D, 0xFE, 0x26, 0x20, 0x9E, 0x1C, 0xE0, 0x80, 0x65, 0x7A, 0x18, 0x02, 0x01,
+        0x82, 0xC5, 0xA0, 0xC0, 0xF1, 0x89, 0xBA, 0x23, 0x30, 0xAD, 0x1F, 0xE7, 0xE5, 0x5B, 0x6D, 0xFE, 0xE7, 0x78, 0x3E, 0x1F, 0xEE, 0x97, 0x8B, 0xE7, 0x37, 0x9D, 0xCF, 0xE7,
+        0x92, 0x8B, 0x87, 0x0B, 0xFC, 0xA0, 0x8E, 0x68, 0x3F, 0xC6, 0x27, 0xA6, 0x33, 0xFC, 0x36, 0x5B, 0x59, 0x3F, 0xC1, 0x02, 0x63, 0x3B, 0x74, 0x00, 0x03, 0x07, 0x0B, 0x61,
+        0x00, 0x20, 0x60, 0xC9, 0x08, 0x00, 0x1C, 0x25, 0x9F, 0xE0, 0x12, 0x8A, 0xD5, 0xFE, 0x6B, 0x4F, 0x35, 0x9F, 0xED, 0xD7, 0x4B, 0xD9, 0xFE, 0x8A, 0x59, 0xB8, 0x1F, 0xEC,
+        0x56, 0xD3, 0xC1, 0xFE, 0x63, 0x4D, 0xF2, 0x83, 0xC6, 0xB6, 0x1B, 0xFC, 0x34, 0x68, 0x61, 0x3F, 0xC1, 0xA6, 0x25, 0xEB, 0xFC, 0x06, 0x58, 0x5C, 0x3F, 0xC0, 0x03, 0xE4,
+        0xC3, 0xFC, 0x04, 0x0F, 0x1A, 0x6F, 0xE0, 0xE0, 0x20, 0xF9, 0x61, 0x7A, 0x02, 0x28, 0x2B, 0xBC, 0x46, 0x25, 0xF3, 0xFC, 0x66, 0x3D, 0x99, 0x27, 0xF9, 0x7E, 0x6B, 0x1D,
+        0xC7, 0xF9, 0x2C, 0x5E, 0x1C, 0x87, 0xF8, 0xC0, 0x4D, 0x9A, 0xE7, 0xF8, 0xDA, 0x51, 0xB2, 0xC1, 0x68, 0xF2, 0x64, 0x1F, 0xE1, 0x50, 0xED, 0x0A, 0x04, 0x23, 0x79, 0x8A,
+        0x7F, 0x82, 0xA3, 0x39, 0x80, 0x7F, 0x80, 0xC2, 0xB1, 0x5E, 0xF7, 0x04, 0x2F, 0xB2, 0x10, 0x02, 0x86, 0x63, 0xC9, 0xCC, 0x07, 0xBF, 0x87, 0xF8, 0x4A, 0x38, 0xAF, 0xC1,
+        0x88, 0xF8, 0x66, 0x1F, 0xE1, 0xD9, 0x08, 0xD4, 0x8F, 0x25, 0x5B, 0x4A, 0x49, 0x97, 0x87, 0x39, 0xFE, 0x25, 0x12, 0x10, 0x68, 0xAA, 0x4A, 0x2F, 0x42, 0x29, 0x12, 0x69,
+        0x9F, 0xE1, 0xC1, 0x00, 0x67, 0x1F, 0xE1, 0x58, 0xED, 0x00, 0x83, 0x23, 0x49, 0x82, 0x7F, 0x81, 0x21, 0xE0, 0xFC, 0x73, 0x21, 0x00, 0x50, 0x7D, 0x2B, 0x84, 0x03, 0x83,
+        0xC2, 0x1B, 0x90, 0x06, 0x69, 0xFE, 0x23, 0x91, 0xAE, 0x50, 0x9A, 0x49, 0x32, 0xC2, 0x89, 0x30, 0xE9, 0x0A, 0xC4, 0xD9, 0xC4, 0x7F, 0x94, 0xA6, 0x51, 0xDE, 0x7F, 0x9D,
+        0x07, 0x89, 0xF6, 0x7F, 0x91, 0x85, 0xCA, 0x88, 0x25, 0x11, 0xEE, 0x50, 0x7C, 0x43, 0x35, 0x21, 0x60, 0xF1, 0x0D, 0x82, 0x62, 0x39, 0x07, 0x2C, 0x20, 0xE0, 0x80, 0x72,
+        0x34, 0x17, 0xA1, 0x80, 0xEE, 0xF0, 0x89, 0x24, 0x74, 0x1A, 0x2C, 0x93, 0xB3, 0x78, 0xCC, 0x52, 0x9D, 0x6A, 0x69, 0x56, 0xBB, 0x0D, 0x85, 0x69, 0xE6, 0x7F, 0x9E, 0x27,
         0xB9, 0xFD, 0x50, 0x54, 0x47, 0xF9, 0xCC, 0x78, 0x9F, 0x87, 0xF9, 0x98, 0x70, 0xB9, 0xC2, 0x91, 0x2C, 0x6D, 0x1F, 0xE1, 0xE1, 0x00, 0xBF, 0x02, 0xC1, 0xF5, 0x18, 0x84,
-        0x01, 0xE1, 0x48, 0x8C, 0x42, 0x07, 0x43, 0xC9, 0x76, 0x7F, 0x8B, 0x04, 0xE4, 0xDE, 0x35, 0x95, 0xAB, 0xB0, 0xF0, 0x5C, 0x55, 0x23, 0xF9, 0x7E, 0x7E, 0x9F, 0xE4, 0x0C, 
-        0xA7, 0x55, 0x47, 0xC7, 0xF9, 0xE6, 0xCF, 0x1F, 0xE7, 0x93, 0x35, 0x52, 0x54, 0x63, 0x19, 0x46, 0x73, 0x1F, 0xE2, 0x61, 0x08, 0xF0, 0x82, 0xE1, 0x80, 0x92, 0xF9, 0x20, 
-        0xC0, 0x28, 0x18, 0x0A, 0x05, 0xA1, 0xA2, 0xF8, 0x6E, 0xDB, 0x47, 0x49, 0xFE, 0x3E, 0x17, 0xB6, 0x61, 0x13, 0x1A, 0x29, 0x26, 0xA9, 0xFE, 0x7F, 0x92, 0x70, 0x69, 0xFE, 
-        0x4C, 0x2F, 0x55, 0x01, 0xF1, 0x54, 0xD4, 0x35, 0x49, 0x4A, 0x69, 0x59, 0x83, 0x81, 0x58, 0x76, 0x9F, 0xE2, 0x20, 0xD6, 0x4C, 0x9B, 0xA0, 0x48, 0x1E, 0x0B, 0xB7, 0x48, 
-        0x58, 0x26, 0x11, 0x06, 0x42, 0xE8, 0xA4, 0x40, 0x17, 0x27, 0x39, 0x00, 0x60, 0x2D, 0xA4, 0xC3, 0x2C, 0x7F, 0x94, 0x56, 0xE4, 0xE1, 0x77, 0x1F, 0xE5, 0xB9, 0xD7, 0x66, 
-        0x1E, 0x07, 0xB3, 0x3C, 0x63, 0x1D, 0x35, 0x49, 0x0E, 0x63, 0x2D, 0xA2, 0xF1, 0x12, 0x60, 0x1C, 0xE0, 0xE0, 0x52, 0x1B, 0x8B, 0xAC, 0x38, 0x0E, 0x07, 0x03, 0x60, 0x28, 
-        0x1C, 0x0E, 0x87, 0x00, 0xF0, 0x66, 0x27, 0x11, 0xA2, 0xC1, 0x02, 0x5A, 0x1C, 0xE4, 0x21, 0x83, 0x1F, 0x13, 0x86, 0xFA, 0xD2, 0x55, 0x1D, 0xD6, 0x61, 0xBC, 0x77, 0xD3, 
-        0xE6, 0x91, 0xCB, 0x4C, 0x90, 0xA6, 0x25, 0xB8, 0x2F, 0x90, 0xC5, 0xA9, 0xCE, 0x12, 0x07, 0x02, 0x91, 0x1B, 0x9F, 0x68, 0x00, 0x16, 0x76, 0x0D, 0xA1, 0x00, 0x08, 0x06, 
-        0x03, 0x81, 0xA0, 0x20, 0x1A, 0x0D, 0x06, 0x80, 0x30, 0x24, 0x12, 0x89, 0x20, 0x98, 0x4A, 0x1F, 0x0F, 0x21, 0xA0, 0x9E, 0x36, 0x16, 0xC2, 0x88, 0xE6, 0x48, 0x9B, 0x83, 
-        0x31, 0x1C, 0x55, 0x1E, 0x43, 0x59, 0x1A, 0x56, 0x1E, 0x42, 0xF0, 0xFA, 0x4D, 0x1B, 0x9B, 0x08, 0xDC, 0x5B, 0x02, 0xA1, 0x30, 0x7E, 0x3C, 0xEE, 0x5B, 0xA6, 0xDD, 0xB8, 
-        0x6D, 0x5B, 0x62, 0xB7, 0xCD, 0xF3, 0x9C, 0xEA, 0x04, 0x80, 0x80, 0x00, 0x00, 0x0E, 0x01, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00, 0x01, 0x00, 0x10, 0x00, 0x00, 0x01, 0x01, 
-        0x00, 0x03, 0x00, 0x00, 0x00, 0x01, 0x00, 0x10, 0x00, 0x00, 0x01, 0x02, 0x00, 0x03, 0x00, 0x00, 0x00, 0x04, 0x00, 0x00, 0x03, 0xE0, 0x01, 0x03, 0x00, 0x03, 0x00, 0x00, 
-        0x00, 0x01, 0x00, 0x05, 0x00, 0x00, 0x01, 0x06, 0x00, 0x03, 0x00, 0x00, 0x00, 0x01, 0x00, 0x02, 0x00, 0x00, 0x01, 0x11, 0x00, 0x04, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 
-        0x00, 0x08, 0x01, 0x15, 0x00, 0x03, 0x00, 0x00, 0x00, 0x01, 0x00, 0x04, 0x00, 0x00, 0x01, 0x16, 0x00, 0x04, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x02, 0x00, 0x01, 0x17, 
-        0x00, 0x04, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x03, 0x29, 0x01, 0x1A, 0x00, 0x05, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x03, 0xE8, 0x01, 0x1B, 0x00, 0x05, 0x00, 0x00, 
-        0x00, 0x01, 0x00, 0x00, 0x03, 0xF0, 0x01, 0x1C, 0x00, 0x03, 0x00, 0x00, 0x00, 0x01, 0x00, 0x01, 0x00, 0x00, 0x01, 0x28, 0x00, 0x03, 0x00, 0x00, 0x00, 0x01, 0x00, 0x02, 
-        0x00, 0x00, 0x01, 0x52, 0x00, 0x03, 0x00, 0x00, 0x00, 0x01, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x08, 0x00, 0x08, 0x00, 0x08, 0x00, 0x08, 0x00, 0x0A, 
+        0x01, 0xE1, 0x48, 0x8C, 0x42, 0x07, 0x43, 0xC9, 0x76, 0x7F, 0x8B, 0x04, 0xE4, 0xDE, 0x35, 0x95, 0xAB, 0xB0, 0xF0, 0x5C, 0x55, 0x23, 0xF9, 0x7E, 0x7E, 0x9F, 0xE4, 0x0C,
+        0xA7, 0x55, 0x47, 0xC7, 0xF9, 0xE6, 0xCF, 0x1F, 0xE7, 0x93, 0x35, 0x52, 0x54, 0x63, 0x19, 0x46, 0x73, 0x1F, 0xE2, 0x61, 0x08, 0xF0, 0x82, 0xE1, 0x80, 0x92, 0xF9, 0x20,
+        0xC0, 0x28, 0x18, 0x0A, 0x05, 0xA1, 0xA2, 0xF8, 0x6E, 0xDB, 0x47, 0x49, 0xFE, 0x3E, 0x17, 0xB6, 0x61, 0x13, 0x1A, 0x29, 0x26, 0xA9, 0xFE, 0x7F, 0x92, 0x70, 0x69, 0xFE,
+        0x4C, 0x2F, 0x55, 0x01, 0xF1, 0x54, 0xD4, 0x35, 0x49, 0x4A, 0x69, 0x59, 0x83, 0x81, 0x58, 0x76, 0x9F, 0xE2, 0x20, 0xD6, 0x4C, 0x9B, 0xA0, 0x48, 0x1E, 0x0B, 0xB7, 0x48,
+        0x58, 0x26, 0x11, 0x06, 0x42, 0xE8, 0xA4, 0x40, 0x17, 0x27, 0x39, 0x00, 0x60, 0x2D, 0xA4, 0xC3, 0x2C, 0x7F, 0x94, 0x56, 0xE4, 0xE1, 0x77, 0x1F, 0xE5, 0xB9, 0xD7, 0x66,
+        0x1E, 0x07, 0xB3, 0x3C, 0x63, 0x1D, 0x35, 0x49, 0x0E, 0x63, 0x2D, 0xA2, 0xF1, 0x12, 0x60, 0x1C, 0xE0, 0xE0, 0x52, 0x1B, 0x8B, 0xAC, 0x38, 0x0E, 0x07, 0x03, 0x60, 0x28,
+        0x1C, 0x0E, 0x87, 0x00, 0xF0, 0x66, 0x27, 0x11, 0xA2, 0xC1, 0x02, 0x5A, 0x1C, 0xE4, 0x21, 0x83, 0x1F, 0x13, 0x86, 0xFA, 0xD2, 0x55, 0x1D, 0xD6, 0x61, 0xBC, 0x77, 0xD3,
+        0xE6, 0x91, 0xCB, 0x4C, 0x90, 0xA6, 0x25, 0xB8, 0x2F, 0x90, 0xC5, 0xA9, 0xCE, 0x12, 0x07, 0x02, 0x91, 0x1B, 0x9F, 0x68, 0x00, 0x16, 0x76, 0x0D, 0xA1, 0x00, 0x08, 0x06,
+        0x03, 0x81, 0xA0, 0x20, 0x1A, 0x0D, 0x06, 0x80, 0x30, 0x24, 0x12, 0x89, 0x20, 0x98, 0x4A, 0x1F, 0x0F, 0x21, 0xA0, 0x9E, 0x36, 0x16, 0xC2, 0x88, 0xE6, 0x48, 0x9B, 0x83,
+        0x31, 0x1C, 0x55, 0x1E, 0x43, 0x59, 0x1A, 0x56, 0x1E, 0x42, 0xF0, 0xFA, 0x4D, 0x1B, 0x9B, 0x08, 0xDC, 0x5B, 0x02, 0xA1, 0x30, 0x7E, 0x3C, 0xEE, 0x5B, 0xA6, 0xDD, 0xB8,
+        0x6D, 0x5B, 0x62, 0xB7, 0xCD, 0xF3, 0x9C, 0xEA, 0x04, 0x80, 0x80, 0x00, 0x00, 0x0E, 0x01, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00, 0x01, 0x00, 0x10, 0x00, 0x00, 0x01, 0x01,
+        0x00, 0x03, 0x00, 0x00, 0x00, 0x01, 0x00, 0x10, 0x00, 0x00, 0x01, 0x02, 0x00, 0x03, 0x00, 0x00, 0x00, 0x04, 0x00, 0x00, 0x03, 0xE0, 0x01, 0x03, 0x00, 0x03, 0x00, 0x00,
+        0x00, 0x01, 0x00, 0x05, 0x00, 0x00, 0x01, 0x06, 0x00, 0x03, 0x00, 0x00, 0x00, 0x01, 0x00, 0x02, 0x00, 0x00, 0x01, 0x11, 0x00, 0x04, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00,
+        0x00, 0x08, 0x01, 0x15, 0x00, 0x03, 0x00, 0x00, 0x00, 0x01, 0x00, 0x04, 0x00, 0x00, 0x01, 0x16, 0x00, 0x04, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x02, 0x00, 0x01, 0x17,
+        0x00, 0x04, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x03, 0x29, 0x01, 0x1A, 0x00, 0x05, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x03, 0xE8, 0x01, 0x1B, 0x00, 0x05, 0x00, 0x00,
+        0x00, 0x01, 0x00, 0x00, 0x03, 0xF0, 0x01, 0x1C, 0x00, 0x03, 0x00, 0x00, 0x00, 0x01, 0x00, 0x01, 0x00, 0x00, 0x01, 0x28, 0x00, 0x03, 0x00, 0x00, 0x00, 0x01, 0x00, 0x02,
+        0x00, 0x00, 0x01, 0x52, 0x00, 0x03, 0x00, 0x00, 0x00, 0x01, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x08, 0x00, 0x08, 0x00, 0x08, 0x00, 0x08, 0x00, 0x0A,
         0xFC, 0x80, 0x00, 0x00, 0x27, 0x10, 0x00, 0x0A, 0xFC, 0x80, 0x00, 0x00, 0x27, 0x10 };
-        
+
     static SharedBuffer* defaultIconBuffer = SharedBuffer::create(defaultIconData, sizeof(defaultIconData)).leakRef();
     defaultIconRecord->setImageData(defaultIconBuffer);
 }
@@ -399,12 +399,12 @@ Image* IconDatabase::defaultIcon(const IntSize& size)
 {
     ASSERT_NOT_SYNC_THREAD();
 
-    
+
     if (!m_defaultIconRecord) {
         m_defaultIconRecord = IconRecord::create("urlIcon");
         loadDefaultIconRecord(m_defaultIconRecord.get());
     }
-    
+
     return m_defaultIconRecord->image(size);
 }
 
@@ -427,16 +427,16 @@ void IconDatabase::retainIconForPageURL(const String& pageURL)
 void IconDatabase::performRetainIconForPageURL(const String& pageURLOriginal, int retainCount)
 {
     PageURLRecord* record = m_pageURLToRecordMap.get(pageURLOriginal);
-    
+
     String pageURL;
-    
+
     if (!record) {
         pageURL = pageURLOriginal.isolatedCopy();
 
         record = new PageURLRecord(pageURL);
         m_pageURLToRecordMap.set(pageURL, record);
     }
-    
+
     if (!record->retain(retainCount)) {
         if (pageURL.isNull())
             pageURL = pageURLOriginal.isolatedCopy();
@@ -444,7 +444,7 @@ void IconDatabase::performRetainIconForPageURL(const String& pageURLOriginal, in
         // This page just had its retain count bumped from 0 to 1 - Record that fact
         m_retainedPageURLs.add(pageURL);
 
-        // If we read the iconURLs yet, we want to avoid any pageURL->iconURL lookups and the pageURLsPendingDeletion is moot, 
+        // If we read the iconURLs yet, we want to avoid any pageURL->iconURL lookups and the pageURLsPendingDeletion is moot,
         // so we bail here and skip those steps
         if (!m_iconURLImportComplete)
             return;
@@ -462,9 +462,9 @@ void IconDatabase::performRetainIconForPageURL(const String& pageURLOriginal, in
 void IconDatabase::releaseIconForPageURL(const String& pageURL)
 {
     ASSERT_NOT_SYNC_THREAD();
-        
+
     // Cannot do anything with pageURLOriginal that would end up storing it without deep copying first
-    
+
     if (!isEnabled() || !documentCanHaveIcon(pageURL))
         return;
 
@@ -483,72 +483,72 @@ void IconDatabase::performReleaseIconForPageURL(const String& pageURLOriginal, i
         LOG_ERROR("Attempting to release icon for URL %s which is not retained", urlForLogging(pageURLOriginal).ascii().data());
         return;
     }
-    
+
     // Get its retain count - if it's retained, we'd better have a PageURLRecord for it
     PageURLRecord* pageRecord = m_pageURLToRecordMap.get(pageURLOriginal);
     ASSERT(pageRecord);
     LOG(IconDatabase, "Releasing pageURL %s to a retain count of %i", urlForLogging(pageURLOriginal).ascii().data(), pageRecord->retainCount() - 1);
     ASSERT(pageRecord->retainCount() > 0);
-        
+
     // If it still has a positive retain count, store the new count and bail
     if (pageRecord->release(releaseCount))
         return;
-        
+
     // This pageRecord has now been fully released.  Do the appropriate cleanup
     LOG(IconDatabase, "No more retainers for PageURL %s", urlForLogging(pageURLOriginal).ascii().data());
     m_pageURLToRecordMap.remove(pageURLOriginal);
-    m_retainedPageURLs.remove(pageURLOriginal);       
-    
+    m_retainedPageURLs.remove(pageURLOriginal);
+
     // Grab the iconRecord for later use (and do a sanity check on it for kicks)
     IconRecord* iconRecord = pageRecord->iconRecord();
-    
+
     ASSERT(!iconRecord || (iconRecord && m_iconURLToRecordMap.get(iconRecord->iconURL()) == iconRecord));
 
     {
         MutexLocker locker(m_pendingReadingLock);
-        
-        // Since this pageURL is going away, there's no reason anyone would ever be interested in its read results    
+
+        // Since this pageURL is going away, there's no reason anyone would ever be interested in its read results
         if (!m_iconURLImportComplete)
             m_pageURLsPendingImport.remove(pageURLOriginal);
         m_pageURLsInterestedInIcons.remove(pageURLOriginal);
-        
+
         // If this icon is down to it's last retainer, we don't care about reading it in from disk anymore
         if (iconRecord && iconRecord->hasOneRef()) {
             m_iconURLToRecordMap.remove(iconRecord->iconURL());
             m_iconsPendingReading.remove(iconRecord);
         }
     }
-    
+
     // Mark stuff for deletion from the database only if we're not in private browsing
     if (!m_privateBrowsingEnabled) {
         MutexLocker locker(m_pendingSyncLock);
         m_pageURLsPendingSync.set(pageURLOriginal.isolatedCopy(), pageRecord->snapshot(true));
-    
+
         // If this page is the last page to refer to a particular IconRecord, that IconRecord needs to
         // be marked for deletion
         if (iconRecord && iconRecord->hasOneRef())
             m_iconsPendingSync.set(iconRecord->iconURL(), iconRecord->snapshot(true));
     }
-    
+
     delete pageRecord;
 }
 
 void IconDatabase::setIconDataForIconURL(PassRefPtr<SharedBuffer> dataOriginal, const String& iconURLOriginal)
-{    
+{
     ASSERT_NOT_SYNC_THREAD();
-    
+
     // Cannot do anything with dataOriginal or iconURLOriginal that would end up storing them without deep copying first
-    
+
     if (!isOpen() || iconURLOriginal.isEmpty())
         return;
-    
+
     RefPtr<SharedBuffer> data = dataOriginal ? dataOriginal->copy() : PassRefPtr<SharedBuffer>(0);
     String iconURL = iconURLOriginal.isolatedCopy();
-    
+
     Vector<String> pageURLs;
     {
         MutexLocker locker(m_urlAndIconLock);
-    
+
         // If this icon was pending a read, remove it from that set because this new data should override what is on disk
         RefPtr<IconRecord> icon = m_iconURLToRecordMap.get(iconURL);
         if (icon) {
@@ -556,14 +556,14 @@ void IconDatabase::setIconDataForIconURL(PassRefPtr<SharedBuffer> dataOriginal, 
             m_iconsPendingReading.remove(icon.get());
         } else
             icon = getOrCreateIconRecord(iconURL);
-    
+
         // Update the data and set the time stamp
         icon->setImageData(data.release());
         icon->setTimestamp((int)currentTime());
-        
+
         // Copy the current retaining pageURLs - if any - to notify them of the change
         pageURLs.appendRange(icon->retainingPageURLs().begin(), icon->retainingPageURLs().end());
-        
+
         // Mark the IconRecord as requiring an update to the database only if private browsing is disabled
         if (!m_privateBrowsingEnabled) {
             MutexLocker locker(m_pendingSyncLock);
@@ -594,28 +594,28 @@ void IconDatabase::setIconDataForIconURL(PassRefPtr<SharedBuffer> dataOriginal, 
 }
 
 void IconDatabase::setIconURLForPageURL(const String& iconURLOriginal, const String& pageURLOriginal)
-{    
+{
     ASSERT_NOT_SYNC_THREAD();
 
     // Cannot do anything with iconURLOriginal or pageURLOriginal that would end up storing them without deep copying first
-    
+
     ASSERT(!iconURLOriginal.isEmpty());
-        
+
     if (!isOpen() || !documentCanHaveIcon(pageURLOriginal))
         return;
-    
+
     String iconURL, pageURL;
-    
+
     {
         MutexLocker locker(m_urlAndIconLock);
 
         PageURLRecord* pageRecord = m_pageURLToRecordMap.get(pageURLOriginal);
-        
+
         // If the urls already map to each other, bail.
         // This happens surprisingly often, and seems to cream iBench performance
         if (pageRecord && pageRecord->iconRecord() && pageRecord->iconRecord()->iconURL() == iconURLOriginal)
             return;
-            
+
         pageURL = pageURLOriginal.isolatedCopy();
         iconURL = iconURLOriginal.isolatedCopy();
 
@@ -629,7 +629,7 @@ void IconDatabase::setIconURLForPageURL(const String& iconURLOriginal, const Str
         // Otherwise, set the new icon record for this page
         pageRecord->setIconRecord(getOrCreateIconRecord(iconURL));
 
-        // If the current icon has only a single ref left, it is about to get wiped out. 
+        // If the current icon has only a single ref left, it is about to get wiped out.
         // Remove it from the in-memory records and don't bother reading it in from disk anymore
         if (iconRecord && iconRecord->hasOneRef()) {
             ASSERT(iconRecord->retainingPageURLs().size() == 0);
@@ -638,12 +638,12 @@ void IconDatabase::setIconURLForPageURL(const String& iconURLOriginal, const Str
             MutexLocker locker(m_pendingReadingLock);
             m_iconsPendingReading.remove(iconRecord.get());
         }
-        
+
         // And mark this mapping to be added to the database
         if (!m_privateBrowsingEnabled) {
             MutexLocker locker(m_pendingSyncLock);
             m_pageURLsPendingSync.set(pageURL, pageRecord->snapshot());
-            
+
             // If the icon is on its last ref, mark it for deletion
             if (iconRecord && iconRecord->hasOneRef())
                 m_iconsPendingSync.set(iconRecord->iconURL(), iconRecord->snapshot(true));
@@ -655,7 +655,7 @@ void IconDatabase::setIconURLForPageURL(const String& iconURLOriginal, const Str
     if (!IS_ICON_SYNC_THREAD()) {
         // Start the timer to commit this change - or further delay the timer if it was already started
         scheduleOrDeferSyncTimer();
-        
+
         LOG(IconDatabase, "Dispatching notification that we changed an icon mapping for url %s", urlForLogging(pageURL).ascii().data());
         AutodrainedPool pool;
         m_client->didChangeIconForPageURL(pageURL);
@@ -668,7 +668,7 @@ IconLoadDecision IconDatabase::synchronousLoadDecisionForIconURL(const String& i
 
     if (!isOpen() || iconURL.isEmpty())
         return IconLoadNo;
-    
+
     // If we have a IconRecord, it should also have its timeStamp marked because there is only two times when we create the IconRecord:
     // 1 - When we read the icon urls from disk, getting the timeStamp at the same time
     // 2 - When we get a new icon from the loader, in which case the timestamp is set at that time
@@ -679,17 +679,17 @@ IconLoadDecision IconDatabase::synchronousLoadDecisionForIconURL(const String& i
             return static_cast<int>(currentTime()) - static_cast<int>(icon->getTimestamp()) > iconExpirationTime ? IconLoadYes : IconLoadNo;
         }
     }
-    
+
     // If we don't have a record for it, but we *have* imported all iconURLs from disk, then we should load it now
     MutexLocker readingLocker(m_pendingReadingLock);
     if (m_iconURLImportComplete)
         return IconLoadYes;
-        
+
     // Otherwise - since we refuse to perform I/O on the main thread to find out for sure - we return the answer that says
     // "You might be asked to load this later, so flag that"
     LOG(IconDatabase, "Don't know if we should load %s or not - adding %p to the set of document loaders waiting on a decision", iconURL.ascii().data(), notificationDocumentLoader);
     if (notificationDocumentLoader)
-        m_loadersPendingDecision.add(notificationDocumentLoader);    
+        m_loadersPendingDecision.add(notificationDocumentLoader);
 
     return IconLoadUnknown;
 }
@@ -697,7 +697,7 @@ IconLoadDecision IconDatabase::synchronousLoadDecisionForIconURL(const String& i
 bool IconDatabase::synchronousIconDataKnownForIconURL(const String& iconURL)
 {
     ASSERT_NOT_SYNC_THREAD();
-    
+
     MutexLocker locker(m_urlAndIconLock);
     if (IconRecord* icon = m_iconURLToRecordMap.get(iconURL))
         return icon->imageDataStatus() != ImageDataStatusUnknown;
@@ -708,7 +708,7 @@ bool IconDatabase::synchronousIconDataKnownForIconURL(const String& iconURL)
 void IconDatabase::setEnabled(bool enabled)
 {
     ASSERT_NOT_SYNC_THREAD();
-    
+
     if (!enabled && isOpen())
         close();
     m_isEnabled = enabled;
@@ -717,7 +717,7 @@ void IconDatabase::setEnabled(bool enabled)
 bool IconDatabase::isEnabled() const
 {
     ASSERT_NOT_SYNC_THREAD();
-    
+
      return m_isEnabled;
 }
 
@@ -774,13 +774,13 @@ size_t IconDatabase::iconRecordCountWithData()
 {
     MutexLocker locker(m_urlAndIconLock);
     size_t result = 0;
-    
+
     HashMap<String, IconRecord*>::iterator i = m_iconURLToRecordMap.begin();
     HashMap<String, IconRecord*>::iterator end = m_iconURLToRecordMap.end();
-    
+
     for (; i != end; ++i)
         result += ((*i).value->imageDataStatus() == ImageDataStatusPresent);
-            
+
     return result;
 }
 
@@ -815,18 +815,18 @@ void IconDatabase::notifyPendingLoadDecisionsOnMainThread(void* context)
 void IconDatabase::notifyPendingLoadDecisions()
 {
     ASSERT_NOT_SYNC_THREAD();
-    
+
     // This method should only be called upon completion of the initial url import from the database
     ASSERT(m_iconURLImportComplete);
     LOG(IconDatabase, "Notifying all DocumentLoaders that were waiting on a load decision for their icons");
-    
+
     HashSet<RefPtr<DocumentLoader>>::iterator i = m_loadersPendingDecision.begin();
     HashSet<RefPtr<DocumentLoader>>::iterator end = m_loadersPendingDecision.end();
-    
+
     for (; i != end; ++i)
         if ((*i)->refCount() > 1)
             (*i)->iconLoadDecisionAvailable();
-            
+
     m_loadersPendingDecision.clear();
 }
 
@@ -921,7 +921,7 @@ PageURLRecord* IconDatabase::getOrCreatePageURLRecord(const String& pageURL)
         return 0;
 
     PageURLRecord* pageRecord = m_pageURLToRecordMap.get(pageURL);
-    
+
     MutexLocker locker(m_pendingReadingLock);
     if (!m_iconURLImportComplete) {
         // If the initial import of all URLs hasn't completed and we have no page record, we assume we *might* know about this later and create a record for it
@@ -939,7 +939,7 @@ PageURLRecord* IconDatabase::getOrCreatePageURLRecord(const String& pageURL)
         }
     }
 
-    // We've done the initial import of all URLs known in the database.  If this record doesn't exist now, it never will    
+    // We've done the initial import of all URLs known in the database.  If this record doesn't exist now, it never will
      return pageRecord;
 }
 
@@ -951,28 +951,28 @@ PageURLRecord* IconDatabase::getOrCreatePageURLRecord(const String& pageURL)
 bool IconDatabase::shouldStopThreadActivity() const
 {
     ASSERT_ICON_SYNC_THREAD();
-    
+
     return m_threadTerminationRequested || m_removeIconsRequested;
 }
 
 void IconDatabase::iconDatabaseSyncThreadStart(void* vIconDatabase)
-{    
+{
     IconDatabase* iconDB = static_cast<IconDatabase*>(vIconDatabase);
-    
+
     iconDB->iconDatabaseSyncThread();
 }
 
 void IconDatabase::iconDatabaseSyncThread()
 {
-    // The call to create this thread might not complete before the thread actually starts, so we might fail this ASSERT_ICON_SYNC_THREAD() because the pointer 
+    // The call to create this thread might not complete before the thread actually starts, so we might fail this ASSERT_ICON_SYNC_THREAD() because the pointer
     // to our thread structure hasn't been filled in yet.
-    // To fix this, the main thread acquires this lock before creating us, then releases the lock after creation is complete.  A quick lock/unlock cycle here will 
+    // To fix this, the main thread acquires this lock before creating us, then releases the lock after creation is complete.  A quick lock/unlock cycle here will
     // prevent us from running before that call completes
     m_syncLock.lock();
     m_syncLock.unlock();
 
     ASSERT_ICON_SYNC_THREAD();
-    
+
     LOG(IconDatabase, "(THREAD) IconDatabase sync thread started");
 
 #if !LOG_DISABLED
@@ -989,7 +989,7 @@ void IconDatabase::iconDatabaseSyncThread()
         AutodrainedPool pool;
         checkIntegrityOnOpen = fileExists(journalFilename);
     }
-    
+
     {
         MutexLocker locker(m_syncLock);
         if (!m_syncDB.open(m_completeDatabasePath)) {
@@ -997,36 +997,36 @@ void IconDatabase::iconDatabaseSyncThread()
             return;
         }
     }
-    
+
     if (shouldStopThreadActivity()) {
         syncThreadMainLoop();
         return;
     }
-        
+
 #if !LOG_DISABLED
     double timeStamp = monotonicallyIncreasingTime();
     LOG(IconDatabase, "(THREAD) Open took %.4f seconds", timeStamp - startTime);
-#endif    
+#endif
 
     performOpenInitialization();
     if (shouldStopThreadActivity()) {
         syncThreadMainLoop();
         return;
     }
-        
+
 #if !LOG_DISABLED
     double newStamp = monotonicallyIncreasingTime();
     LOG(IconDatabase, "(THREAD) performOpenInitialization() took %.4f seconds, now %.4f seconds from thread start", newStamp - timeStamp, newStamp - startTime);
     timeStamp = newStamp;
-#endif 
-        
+#endif
+
     // Uncomment the following line to simulate a long lasting URL import (*HUGE* icon databases, or network home directories)
     // while (monotonicallyIncreasingTime() - timeStamp < 10);
 
-    // Read in URL mappings from the database          
+    // Read in URL mappings from the database
     LOG(IconDatabase, "(THREAD) Starting iconURL import");
     performURLImport();
-    
+
     if (shouldStopThreadActivity()) {
         syncThreadMainLoop();
         return;
@@ -1035,7 +1035,7 @@ void IconDatabase::iconDatabaseSyncThread()
 #if !LOG_DISABLED
     newStamp = monotonicallyIncreasingTime();
     LOG(IconDatabase, "(THREAD) performURLImport() took %.4f seconds.  Entering main loop %.4f seconds from thread start", newStamp - timeStamp, newStamp - startTime);
-#endif 
+#endif
 
     LOG(IconDatabase, "(THREAD) Beginning sync");
     syncThreadMainLoop();
@@ -1051,12 +1051,12 @@ static bool isValidDatabase(SQLiteDatabase& db)
     // These four tables should always exist in a valid db
     if (!db.tableExists("IconInfo") || !db.tableExists("IconData") || !db.tableExists("PageURL") || !db.tableExists("IconDatabaseInfo"))
         return false;
-    
+
     if (databaseVersionNumber(db) < currentDatabaseVersion) {
         LOG(IconDatabase, "DB version is not found or below expected valid version");
         return false;
     }
-    
+
     return true;
 }
 
@@ -1102,46 +1102,46 @@ static void createDatabaseTables(SQLiteDatabase& db)
         db.close();
         return;
     }
-}    
+}
 
 void IconDatabase::performOpenInitialization()
 {
     ASSERT_ICON_SYNC_THREAD();
-    
+
     if (!isOpen())
         return;
-    
+
     if (checkIntegrityOnOpen) {
         checkIntegrityOnOpen = false;
         if (!checkIntegrity()) {
             LOG(IconDatabase, "Integrity check was bad - dumping IconDatabase");
 
             m_syncDB.close();
-            
+
             {
                 MutexLocker locker(m_syncLock);
                 // Should've been consumed by SQLite, delete just to make sure we don't see it again in the future;
                 deleteFile(m_completeDatabasePath + "-journal");
                 deleteFile(m_completeDatabasePath);
             }
-            
+
             // Reopen the write database, creating it from scratch
             if (!m_syncDB.open(m_completeDatabasePath)) {
                 LOG_ERROR("Unable to open icon database at path %s - %s", m_completeDatabasePath.ascii().data(), m_syncDB.lastErrorMsg());
                 return;
-            }          
+            }
         }
     }
-    
+
     int version = databaseVersionNumber(m_syncDB);
-    
+
     if (version > currentDatabaseVersion) {
         LOG(IconDatabase, "Database version number %i is greater than our current version number %i - closing the database to prevent overwriting newer versions", version, currentDatabaseVersion);
         m_syncDB.close();
         m_threadTerminationRequested = true;
         return;
     }
-    
+
     if (!isValidDatabase(m_syncDB)) {
         LOG(IconDatabase, "%s is missing or in an invalid state - reconstructing", m_completeDatabasePath.ascii().data());
         m_syncDB.clearAllTables();
@@ -1149,12 +1149,12 @@ void IconDatabase::performOpenInitialization()
     }
 
     // Reduce sqlite RAM cache size from default 2000 pages (~1.5kB per page). 3MB of cache for icon database is overkill
-    if (!SQLiteStatement(m_syncDB, "PRAGMA cache_size = 200;").executeCommand())         
+    if (!SQLiteStatement(m_syncDB, "PRAGMA cache_size = 200;").executeCommand())
         LOG_ERROR("SQLite database could not set cache_size");
 
-    // Tell backup software (i.e., Time Machine) to never back up the icon database, because  
-    // it's a large file that changes frequently, thus using a lot of backup disk space, and 
-    // it's unlikely that many users would be upset about it not being backed up. We could 
+    // Tell backup software (i.e., Time Machine) to never back up the icon database, because
+    // it's a large file that changes frequently, thus using a lot of backup disk space, and
+    // it's unlikely that many users would be upset about it not being backed up. We could
     // make this configurable on a per-client basis some day if some clients don't want this.
     if (canExcludeFromBackup() && !wasExcludedFromBackup() && excludeFromBackup(m_completeDatabasePath))
         setWasExcludedFromBackup();
@@ -1163,17 +1163,17 @@ void IconDatabase::performOpenInitialization()
 bool IconDatabase::checkIntegrity()
 {
     ASSERT_ICON_SYNC_THREAD();
-    
+
     SQLiteStatement integrity(m_syncDB, "PRAGMA integrity_check;");
     if (integrity.prepare() != SQLResultOk) {
         LOG_ERROR("checkIntegrity failed to execute");
         return false;
     }
-    
+
     int resultCode = integrity.step();
     if (resultCode == SQLResultOk)
         return true;
-        
+
     if (resultCode != SQLResultRow)
         return false;
 
@@ -1182,13 +1182,13 @@ bool IconDatabase::checkIntegrity()
         LOG_ERROR("Received %i columns performing integrity check, should be 1", columns);
         return false;
     }
-        
+
     String resultText = integrity.getColumnText(0);
-        
+
     // A successful, no-error integrity check will be "ok" - all other strings imply failure
     if (resultText == "ok")
         return true;
-    
+
     LOG_ERROR("Icon database integrity check failed - \n%s", resultText.ascii().data());
     return false;
 }
@@ -1208,12 +1208,12 @@ void IconDatabase::performURLImport()
 #endif
 
     SQLiteStatement query(m_syncDB, importQuery);
-    
+
     if (query.prepare() != SQLResultOk) {
         LOG_ERROR("Unable to prepare icon url import query");
         return;
     }
-    
+
     int result = query.step();
     while (result == SQLResultRow) {
         AutodrainedPool pool;
@@ -1224,7 +1224,7 @@ void IconDatabase::performURLImport()
             MutexLocker locker(m_urlAndIconLock);
 
             PageURLRecord* pageRecord = m_pageURLToRecordMap.get(pageURL);
-            
+
             // If the pageRecord doesn't exist in this map, then no one has retained this pageURL
             // If the s_databaseCleanupCounter count is non-zero, then we're not supposed to be pruning the database in any manner,
             // so go ahead and actually create a pageURLRecord for this url even though it's not retained.
@@ -1234,7 +1234,7 @@ void IconDatabase::performURLImport()
                 pageRecord = new PageURLRecord(pageURL);
                 m_pageURLToRecordMap.set(pageURL, pageRecord);
             }
-            
+
             if (pageRecord) {
                 IconRecord* currentIcon = pageRecord->iconRecord();
 
@@ -1242,14 +1242,14 @@ void IconDatabase::performURLImport()
                     pageRecord->setIconRecord(getOrCreateIconRecord(iconURL));
                     currentIcon = pageRecord->iconRecord();
                 }
-            
+
                 // Regardless, the time stamp from disk still takes precedence.  Until we read this icon from disk, we didn't think we'd seen it before
                 // so we marked the timestamp as "now", but it's really much older
                 currentIcon->setTimestamp(query.getColumnInt(2));
-            }            
+            }
         }
-        
-        // FIXME: Currently the WebKit API supports 1 type of notification that is sent whenever we get an Icon URL for a Page URL.  We might want to re-purpose it to work for 
+
+        // FIXME: Currently the WebKit API supports 1 type of notification that is sent whenever we get an Icon URL for a Page URL.  We might want to re-purpose it to work for
         // getting the actually icon itself also (so each pageurl would get this notification twice) or we might want to add a second type of notification -
         // one for the URL and one for the Image itself
         // Note that WebIconDatabase is not neccessarily API so we might be able to make this change
@@ -1260,32 +1260,32 @@ void IconDatabase::performURLImport()
                 m_pageURLsPendingImport.remove(pageURL);
             }
         }
-        
+
         // Stop the import at any time of the thread has been asked to shutdown
         if (shouldStopThreadActivity()) {
             LOG(IconDatabase, "IconDatabase asked to terminate during performURLImport()");
             return;
         }
-        
+
         result = query.step();
     }
-    
+
     if (result != SQLResultDone)
         LOG(IconDatabase, "Error reading page->icon url mappings from database");
 
-    // Clear the m_pageURLsPendingImport set - either the page URLs ended up with an iconURL (that we'll notify about) or not, 
+    // Clear the m_pageURLsPendingImport set - either the page URLs ended up with an iconURL (that we'll notify about) or not,
     // but after m_iconURLImportComplete is set to true, we don't care about this set anymore
     Vector<String> urls;
     {
         MutexLocker locker(m_pendingReadingLock);
 
         urls.appendRange(m_pageURLsPendingImport.begin(), m_pageURLsPendingImport.end());
-        m_pageURLsPendingImport.clear();        
+        m_pageURLsPendingImport.clear();
         m_iconURLImportComplete = true;
     }
-    
+
     Vector<String> urlsToNotify;
-    
+
     // Loop through the urls pending import
     // Remove unretained ones if database cleanup is allowed
     // Keep a set of ones that are retained and pending notification
@@ -1300,12 +1300,12 @@ void IconDatabase::performURLImport()
                 if (record && !databaseCleanupCounter) {
                     m_pageURLToRecordMap.remove(urls[i]);
                     IconRecord* iconRecord = record->iconRecord();
-                    
+
                     // If this page is the only remaining retainer of its icon, mark that icon for deletion and don't bother
-                    // reading anything related to it 
+                    // reading anything related to it
                     if (iconRecord && iconRecord->hasOneRef()) {
                         m_iconURLToRecordMap.remove(iconRecord->iconURL());
-                        
+
                         {
                             MutexLocker locker(m_pendingReadingLock);
                             m_pageURLsInterestedInIcons.remove(urls[i]);
@@ -1313,10 +1313,10 @@ void IconDatabase::performURLImport()
                         }
                         {
                             MutexLocker locker(m_pendingSyncLock);
-                            m_iconsPendingSync.set(iconRecord->iconURL(), iconRecord->snapshot(true));                    
+                            m_iconsPendingSync.set(iconRecord->iconURL(), iconRecord->snapshot(true));
                         }
                     }
-                    
+
                     delete record;
                 }
             } else {
@@ -1335,10 +1335,10 @@ void IconDatabase::performURLImport()
         if (shouldStopThreadActivity())
             return;
     }
-    
+
     // Notify the client that the URL import is complete in case it's managing its own pending notifications.
     dispatchDidFinishURLImportOnMainThread();
-    
+
     // Notify all DocumentLoaders that were waiting for an icon load decision on the main thread
     callOnMainThread(notifyPendingLoadDecisionsOnMainThread, this);
 }
@@ -1369,7 +1369,7 @@ void IconDatabase::syncThreadMainLoop()
             removeAllIconsOnThread();
             m_removeIconsRequested = false;
         }
-        
+
         // Then, if the thread should be quitting, quit now!
         if (m_threadTerminationRequested)
             break;
@@ -1378,17 +1378,17 @@ void IconDatabase::syncThreadMainLoop()
             MutexLocker locker(m_urlAndIconLock);
             performPendingRetainAndReleaseOperations();
         }
-        
+
         bool didAnyWork = true;
         while (didAnyWork) {
             bool didWrite = writeToDatabase();
             if (shouldStopThreadActivity())
                 break;
-                
+
             didAnyWork = readFromDatabase();
             if (shouldStopThreadActivity())
                 break;
-                
+
             // Prune unretained icons after the first time we sync anything out to the database
             // This way, pruning won't be the only operation we perform to the database by itself
             // We also don't want to bother doing this if the thread should be terminating (the user is quitting)
@@ -1401,28 +1401,28 @@ void IconDatabase::syncThreadMainLoop()
                 double time = monotonicallyIncreasingTime();
 #endif
                 LOG(IconDatabase, "(THREAD) Starting pruneUnretainedIcons()");
-                
+
                 pruneUnretainedIcons();
-                
+
                 LOG(IconDatabase, "(THREAD) pruneUnretainedIcons() took %.4f seconds", monotonicallyIncreasingTime() - time);
-                
+
                 // If pruneUnretainedIcons() returned early due to requested thread termination, its still okay
                 // to mark prunedUnretainedIcons true because we're about to terminate anyway
                 prunedUnretainedIcons = true;
             }
-            
+
             didAnyWork = didAnyWork || didWrite;
             if (shouldStopThreadActivity())
                 break;
         }
-        
+
 #if !LOG_DISABLED
         double newstamp = monotonicallyIncreasingTime();
         LOG(IconDatabase, "(THREAD) Main work loop ran for %.4f seconds, %s requested to terminate", newstamp - timeStamp, shouldStopThreadActivity() ? "was" : "was not");
 #endif
-                    
+
         m_syncLock.lock();
-        
+
         // There is some condition that is asking us to stop what we're doing now and handle a special case
         // This is either removing all icons, or shutting down the thread to quit the app
         // We handle those at the top of this main loop so continue to jump back up there
@@ -1441,7 +1441,7 @@ void IconDatabase::syncThreadMainLoop()
     }
 
     m_syncLock.unlock();
-    
+
     // Thread is terminating at this point
     cleanupSyncThread();
 }
@@ -1481,7 +1481,7 @@ void IconDatabase::performPendingRetainAndReleaseOperations()
 bool IconDatabase::readFromDatabase()
 {
     ASSERT_ICON_SYNC_THREAD();
-    
+
 #if !LOG_DISABLED
     double timeStamp = monotonicallyIncreasingTime();
 #endif
@@ -1495,10 +1495,10 @@ bool IconDatabase::readFromDatabase()
         MutexLocker locker(m_pendingReadingLock);
         icons.appendRange(m_iconsPendingReading.begin(), m_iconsPendingReading.end());
     }
-    
-    // Keep track of icons we actually read to notify them of the new icon    
+
+    // Keep track of icons we actually read to notify them of the new icon
     HashSet<String> urlsToNotify;
-    
+
     for (unsigned i = 0; i < icons.size(); ++i) {
         didAnyWork = true;
         RefPtr<SharedBuffer> imageData = getImageDataForIconURLFromSQLDatabase(icons[i]->iconURL());
@@ -1508,20 +1508,20 @@ bool IconDatabase::readFromDatabase()
             MutexLocker urlLocker(m_urlAndIconLock);
             {
                 MutexLocker readLocker(m_pendingReadingLock);
-                
+
                 if (m_iconsPendingReading.contains(icons[i])) {
                     // Set the new data
                     icons[i]->setImageData(imageData.release());
-                    
+
                     // Remove this icon from the set that needs to be read
                     m_iconsPendingReading.remove(icons[i]);
-                    
+
                     // We have a set of all Page URLs that retain this icon as well as all PageURLs waiting for an icon
                     // We want to find the intersection of these two sets to notify them
                     // Check the sizes of these two sets to minimize the number of iterations
                     const HashSet<String>* outerHash;
                     const HashSet<String>* innerHash;
-                    
+
                     if (icons[i]->retainingPageURLs().size() > m_pageURLsInterestedInIcons.size()) {
                         outerHash = &m_pageURLsInterestedInIcons;
                         innerHash = &(icons[i]->retainingPageURLs());
@@ -1529,7 +1529,7 @@ bool IconDatabase::readFromDatabase()
                         innerHash = &m_pageURLsInterestedInIcons;
                         outerHash = &(icons[i]->retainingPageURLs());
                     }
-                    
+
                     HashSet<String>::const_iterator iter = outerHash->begin();
                     HashSet<String>::const_iterator end = outerHash->end();
                     for (; iter != end; ++iter) {
@@ -1537,12 +1537,12 @@ bool IconDatabase::readFromDatabase()
                             LOG(IconDatabase, "%s is interested in the icon we just read. Adding it to the notification list and removing it from the interested set", urlForLogging(*iter).ascii().data());
                             urlsToNotify.add(*iter);
                         }
-                        
+
                         // If we ever get to the point were we've seen every url interested in this icon, break early
                         if (urlsToNotify.size() == m_pageURLsInterestedInIcons.size())
                             break;
                     }
-                    
+
                     // We don't need to notify a PageURL twice, so all the ones we're about to notify can be removed from the interested set
                     if (urlsToNotify.size() == m_pageURLsInterestedInIcons.size())
                         m_pageURLsInterestedInIcons.clear();
@@ -1555,10 +1555,10 @@ bool IconDatabase::readFromDatabase()
                 }
             }
         }
-    
+
         if (shouldStopThreadActivity())
             return didAnyWork;
-        
+
         // Now that we don't hold any locks, perform the actual notifications
         for (HashSet<String>::const_iterator it = urlsToNotify.begin(), end = urlsToNotify.end(); it != end; ++it) {
             AutodrainedPool pool;
@@ -1571,7 +1571,7 @@ bool IconDatabase::readFromDatabase()
 
         LOG(IconDatabase, "Done notifying %i pageURLs who just received their icons", urlsToNotify.size());
         urlsToNotify.clear();
-        
+
         if (shouldStopThreadActivity())
             return didAnyWork;
     }
@@ -1590,7 +1590,7 @@ bool IconDatabase::writeToDatabase()
 #endif
 
     bool didAnyWork = false;
-    
+
     // We can copy the current work queue then clear it out - If any new work comes in while we're writing out,
     // we'll pick it up on the next pass.  This greatly simplifies the locking strategy for this method and remains cohesive with changes
     // asked for by the database on the main thread
@@ -1646,8 +1646,8 @@ void IconDatabase::pruneUnretainedIcons()
     ASSERT_ICON_SYNC_THREAD();
 
     if (!isOpen())
-        return;        
-    
+        return;
+
     // This method should only be called once per run
     ASSERT(!m_initialPruningComplete);
 
@@ -1655,28 +1655,28 @@ void IconDatabase::pruneUnretainedIcons()
     ASSERT(m_iconURLImportComplete);
 
     // Get the known PageURLs from the db, and record the ID of any that are not in the retain count set.
-    Vector<int64_t> pageIDsToDelete; 
+    Vector<int64_t> pageIDsToDelete;
 
     SQLiteStatement pageSQL(m_syncDB, "SELECT rowid, url FROM PageURL;");
     pageSQL.prepare();
-    
+
     int result;
     while ((result = pageSQL.step()) == SQLResultRow) {
         MutexLocker locker(m_urlAndIconLock);
         if (!m_pageURLToRecordMap.contains(pageSQL.getColumnText(1)))
             pageIDsToDelete.append(pageSQL.getColumnInt64(0));
     }
-    
+
     if (result != SQLResultDone)
         LOG_ERROR("Error reading PageURL table from on-disk DB");
     pageSQL.finalize();
-    
+
     // Delete page URLs that were in the table, but not in our retain count set.
     size_t numToDelete = pageIDsToDelete.size();
     if (numToDelete) {
         SQLiteTransaction pruningTransaction(m_syncDB);
         pruningTransaction.begin();
-        
+
         SQLiteStatement pageDeleteSQL(m_syncDB, "DELETE FROM PageURL WHERE rowid = (?);");
         pageDeleteSQL.prepare();
         for (size_t i = 0; i < numToDelete; ++i) {
@@ -1686,7 +1686,7 @@ void IconDatabase::pruneUnretainedIcons()
             if (result != SQLResultDone)
                 LOG_ERROR("Unabled to delete page with id %lli from disk", static_cast<long long>(pageIDsToDelete[i]));
             pageDeleteSQL.reset();
-            
+
             // If the thread was asked to terminate, we should commit what pruning we've done so far, figuring we can
             // finish the rest later (hopefully)
             if (shouldStopThreadActivity()) {
@@ -1697,22 +1697,22 @@ void IconDatabase::pruneUnretainedIcons()
         pruningTransaction.commit();
         pageDeleteSQL.finalize();
     }
-    
-    // Deleting unreferenced icons from the Icon tables has to be atomic - 
+
+    // Deleting unreferenced icons from the Icon tables has to be atomic -
     // If the user quits while these are taking place, they might have to wait.  Thankfully this will rarely be an issue
     // A user on a network home directory with a wildly inconsistent database might see quite a pause...
 
     SQLiteTransaction pruningTransaction(m_syncDB);
     pruningTransaction.begin();
-    
+
     // Wipe Icons that aren't retained
     if (!m_syncDB.executeCommand("DELETE FROM IconData WHERE iconID NOT IN (SELECT iconID FROM PageURL);"))
-        LOG_ERROR("Failed to execute SQL to prune unretained icons from the on-disk IconData table");    
+        LOG_ERROR("Failed to execute SQL to prune unretained icons from the on-disk IconData table");
     if (!m_syncDB.executeCommand("DELETE FROM IconInfo WHERE iconID NOT IN (SELECT iconID FROM PageURL);"))
-        LOG_ERROR("Failed to execute SQL to prune unretained icons from the on-disk IconInfo table");    
-    
+        LOG_ERROR("Failed to execute SQL to prune unretained icons from the on-disk IconInfo table");
+
     pruningTransaction.commit();
-        
+
     checkForDanglingPageURLs(true);
 
     m_initialPruningComplete = true;
@@ -1744,24 +1744,24 @@ void IconDatabase::removeAllIconsOnThread()
     ASSERT_ICON_SYNC_THREAD();
 
     LOG(IconDatabase, "Removing all icons on the sync thread");
-        
+
     // Delete all the prepared statements so they can start over
-    deleteAllPreparedStatements();    
-    
+    deleteAllPreparedStatements();
+
     // To reset the on-disk database, we'll wipe all its tables then vacuum it
     // This is easier and safer than closing it, deleting the file, and recreating from scratch
     m_syncDB.clearAllTables();
     m_syncDB.runVacuumCommand();
     createDatabaseTables(m_syncDB);
-    
+
     LOG(IconDatabase, "Dispatching notification that we removed all icons");
-    dispatchDidRemoveAllIconsOnMainThread();    
+    dispatchDidRemoveAllIconsOnMainThread();
 }
 
 void IconDatabase::deleteAllPreparedStatements()
 {
     ASSERT_ICON_SYNC_THREAD();
-    
+
     m_setIconIDForPageURLStatement.clear();
     m_removePageURLStatement.clear();
     m_getIconIDForIconURLStatement.clear();
@@ -1781,10 +1781,10 @@ void IconDatabase::deleteAllPreparedStatements()
 void* IconDatabase::cleanupSyncThread()
 {
     ASSERT_ICON_SYNC_THREAD();
-    
+
 #if !LOG_DISABLED
     double timeStamp = monotonicallyIncreasingTime();
-#endif 
+#endif
 
     // If the removeIcons flag is set, remove all icons from the db.
     if (m_removeIconsRequested)
@@ -1793,19 +1793,19 @@ void* IconDatabase::cleanupSyncThread()
     // Sync remaining icons out
     LOG(IconDatabase, "(THREAD) Doing final writeout and closure of sync thread");
     writeToDatabase();
-    
+
     // Close the database
     MutexLocker locker(m_syncLock);
-    
+
     m_databaseDirectory = String();
     m_completeDatabasePath = String();
-    deleteAllPreparedStatements();    
+    deleteAllPreparedStatements();
     m_syncDB.close();
-    
+
 #if !LOG_DISABLED
     LOG(IconDatabase, "(THREAD) Final closure took %.4f seconds", monotonicallyIncreasingTime() - timeStamp);
 #endif
-    
+
     m_syncThreadRunning = false;
     return 0;
 }
@@ -1831,25 +1831,25 @@ inline void readySQLiteStatement(OwnPtr<SQLiteStatement>& statement, SQLiteDatab
 void IconDatabase::setIconURLForPageURLInSQLDatabase(const String& iconURL, const String& pageURL)
 {
     ASSERT_ICON_SYNC_THREAD();
-    
+
     int64_t iconID = getIconIDForIconURLFromSQLDatabase(iconURL);
 
     if (!iconID)
         iconID = addIconURLToSQLDatabase(iconURL);
-    
+
     if (!iconID) {
         LOG_ERROR("Failed to establish an ID for iconURL %s", urlForLogging(iconURL).ascii().data());
         ASSERT_NOT_REACHED();
         return;
     }
-    
+
     setIconIDForPageURLInSQLDatabase(iconID, pageURL);
 }
 
 void IconDatabase::setIconIDForPageURLInSQLDatabase(int64_t iconID, const String& pageURL)
 {
     ASSERT_ICON_SYNC_THREAD();
-    
+
     readySQLiteStatement(m_setIconIDForPageURLStatement, m_syncDB, "INSERT INTO PageURL (url, iconID) VALUES ((?), ?);");
     m_setIconIDForPageURLStatement->bindText(1, pageURL);
     m_setIconIDForPageURLStatement->bindInt64(2, iconID);
@@ -1866,13 +1866,13 @@ void IconDatabase::setIconIDForPageURLInSQLDatabase(int64_t iconID, const String
 void IconDatabase::removePageURLFromSQLDatabase(const String& pageURL)
 {
     ASSERT_ICON_SYNC_THREAD();
-    
+
     readySQLiteStatement(m_removePageURLStatement, m_syncDB, "DELETE FROM PageURL WHERE url = (?);");
     m_removePageURLStatement->bindText(1, pageURL);
 
     if (m_removePageURLStatement->step() != SQLResultDone)
         LOG_ERROR("removePageURLFromSQLDatabase failed for url %s", urlForLogging(pageURL).ascii().data());
-    
+
     m_removePageURLStatement->reset();
 }
 
@@ -1880,10 +1880,10 @@ void IconDatabase::removePageURLFromSQLDatabase(const String& pageURL)
 int64_t IconDatabase::getIconIDForIconURLFromSQLDatabase(const String& iconURL)
 {
     ASSERT_ICON_SYNC_THREAD();
-    
+
     readySQLiteStatement(m_getIconIDForIconURLStatement, m_syncDB, "SELECT IconInfo.iconID FROM IconInfo WHERE IconInfo.url = (?);");
     m_getIconIDForIconURLStatement->bindText(1, iconURL);
-    
+
     int64_t result = m_getIconIDForIconURLStatement->step();
     if (result == SQLResultRow)
         result = m_getIconIDForIconURLStatement->getColumnInt64(0);
@@ -1900,14 +1900,14 @@ int64_t IconDatabase::getIconIDForIconURLFromSQLDatabase(const String& iconURL)
 int64_t IconDatabase::addIconURLToSQLDatabase(const String& iconURL)
 {
     ASSERT_ICON_SYNC_THREAD();
-    
+
     // There would be a transaction here to make sure these two inserts are atomic
     // In practice the only caller of this method is always wrapped in a transaction itself so placing another
     // here is unnecessary
-    
+
     readySQLiteStatement(m_addIconToIconInfoStatement, m_syncDB, "INSERT INTO IconInfo (url, stamp) VALUES (?, 0);");
     m_addIconToIconInfoStatement->bindText(1, iconURL);
-    
+
     int result = m_addIconToIconInfoStatement->step();
     m_addIconToIconInfoStatement->reset();
     if (result != SQLResultDone) {
@@ -1915,29 +1915,29 @@ int64_t IconDatabase::addIconURLToSQLDatabase(const String& iconURL)
         return 0;
     }
     int64_t iconID = m_syncDB.lastInsertRowID();
-    
+
     readySQLiteStatement(m_addIconToIconDataStatement, m_syncDB, "INSERT INTO IconData (iconID, data) VALUES (?, ?);");
     m_addIconToIconDataStatement->bindInt64(1, iconID);
-    
+
     result = m_addIconToIconDataStatement->step();
     m_addIconToIconDataStatement->reset();
     if (result != SQLResultDone) {
         LOG_ERROR("addIconURLToSQLDatabase failed to insert %s into IconData", urlForLogging(iconURL).ascii().data());
         return 0;
     }
-    
+
     return iconID;
 }
 
 PassRefPtr<SharedBuffer> IconDatabase::getImageDataForIconURLFromSQLDatabase(const String& iconURL)
 {
     ASSERT_ICON_SYNC_THREAD();
-    
+
     RefPtr<SharedBuffer> imageData;
-    
+
     readySQLiteStatement(m_getImageDataForIconURLStatement, m_syncDB, "SELECT IconData.data FROM IconData WHERE IconData.iconID IN (SELECT iconID FROM IconInfo WHERE IconInfo.url = (?));");
     m_getImageDataForIconURLStatement->bindText(1, iconURL);
-    
+
     int result = m_getImageDataForIconURLStatement->step();
     if (result == SQLResultRow) {
         Vector<char> data;
@@ -1947,44 +1947,44 @@ PassRefPtr<SharedBuffer> IconDatabase::getImageDataForIconURLFromSQLDatabase(con
         LOG_ERROR("getImageDataForIconURLFromSQLDatabase failed for url %s", urlForLogging(iconURL).ascii().data());
 
     m_getImageDataForIconURLStatement->reset();
-    
+
     return imageData.release();
 }
 
 void IconDatabase::removeIconFromSQLDatabase(const String& iconURL)
 {
     ASSERT_ICON_SYNC_THREAD();
-    
+
     if (iconURL.isEmpty())
         return;
 
     // There would be a transaction here to make sure these removals are atomic
     // In practice the only caller of this method is always wrapped in a transaction itself so placing another here is unnecessary
-    
+
     // It's possible this icon is not in the database because of certain rapid browsing patterns (such as a stress test) where the
     // icon is marked to be added then marked for removal before it is ever written to disk.  No big deal, early return
     int64_t iconID = getIconIDForIconURLFromSQLDatabase(iconURL);
     if (!iconID)
         return;
-    
+
     readySQLiteStatement(m_deletePageURLsForIconURLStatement, m_syncDB, "DELETE FROM PageURL WHERE PageURL.iconID = (?);");
     m_deletePageURLsForIconURLStatement->bindInt64(1, iconID);
-    
+
     if (m_deletePageURLsForIconURLStatement->step() != SQLResultDone)
         LOG_ERROR("m_deletePageURLsForIconURLStatement failed for url %s", urlForLogging(iconURL).ascii().data());
-    
+
     readySQLiteStatement(m_deleteIconFromIconInfoStatement, m_syncDB, "DELETE FROM IconInfo WHERE IconInfo.iconID = (?);");
     m_deleteIconFromIconInfoStatement->bindInt64(1, iconID);
-    
+
     if (m_deleteIconFromIconInfoStatement->step() != SQLResultDone)
         LOG_ERROR("m_deleteIconFromIconInfoStatement failed for url %s", urlForLogging(iconURL).ascii().data());
-        
+
     readySQLiteStatement(m_deleteIconFromIconDataStatement, m_syncDB, "DELETE FROM IconData WHERE IconData.iconID = (?);");
     m_deleteIconFromIconDataStatement->bindInt64(1, iconID);
-    
+
     if (m_deleteIconFromIconDataStatement->step() != SQLResultDone)
         LOG_ERROR("m_deleteIconFromIconDataStatement failed for url %s", urlForLogging(iconURL).ascii().data());
-        
+
     m_deletePageURLsForIconURLStatement->reset();
     m_deleteIconFromIconInfoStatement->reset();
     m_deleteIconFromIconDataStatement->reset();
@@ -1993,10 +1993,10 @@ void IconDatabase::removeIconFromSQLDatabase(const String& iconURL)
 void IconDatabase::writeIconSnapshotToSQLDatabase(const IconSnapshot& snapshot)
 {
     ASSERT_ICON_SYNC_THREAD();
-    
+
     if (snapshot.iconURL().isEmpty())
         return;
-        
+
     // A nulled out timestamp and data means this icon is destined to be deleted - do that instead of writing it out
     if (!snapshot.timestamp() && !snapshot.data()) {
         LOG(IconDatabase, "Removing %s from on-disk database", urlForLogging(snapshot.iconURL()).ascii().data());
@@ -2006,13 +2006,13 @@ void IconDatabase::writeIconSnapshotToSQLDatabase(const IconSnapshot& snapshot)
 
     // There would be a transaction here to make sure these removals are atomic
     // In practice the only caller of this method is always wrapped in a transaction itself so placing another here is unnecessary
-        
+
     // Get the iconID for this url
     int64_t iconID = getIconIDForIconURLFromSQLDatabase(snapshot.iconURL());
-    
-    // If there is already an iconID in place, update the database.  
+
+    // If there is already an iconID in place, update the database.
     // Otherwise, insert new records
-    if (iconID) {    
+    if (iconID) {
         readySQLiteStatement(m_updateIconInfoStatement, m_syncDB, "UPDATE IconInfo SET stamp = ?, url = ? WHERE iconID = ?;");
         m_updateIconInfoStatement->bindInt64(1, snapshot.timestamp());
         m_updateIconInfoStatement->bindText(2, snapshot.iconURL());
@@ -2020,45 +2020,45 @@ void IconDatabase::writeIconSnapshotToSQLDatabase(const IconSnapshot& snapshot)
 
         if (m_updateIconInfoStatement->step() != SQLResultDone)
             LOG_ERROR("Failed to update icon info for url %s", urlForLogging(snapshot.iconURL()).ascii().data());
-        
+
         m_updateIconInfoStatement->reset();
-        
+
         readySQLiteStatement(m_updateIconDataStatement, m_syncDB, "UPDATE IconData SET data = ? WHERE iconID = ?;");
         m_updateIconDataStatement->bindInt64(2, iconID);
-                
-        // If we *have* image data, bind it to this statement - Otherwise bind "null" for the blob data, 
-        // signifying that this icon doesn't have any data    
+
+        // If we *have* image data, bind it to this statement - Otherwise bind "null" for the blob data,
+        // signifying that this icon doesn't have any data
         if (snapshot.data() && snapshot.data()->size())
             m_updateIconDataStatement->bindBlob(1, snapshot.data()->data(), snapshot.data()->size());
         else
             m_updateIconDataStatement->bindNull(1);
-        
+
         if (m_updateIconDataStatement->step() != SQLResultDone)
             LOG_ERROR("Failed to update icon data for url %s", urlForLogging(snapshot.iconURL()).ascii().data());
 
         m_updateIconDataStatement->reset();
-    } else {    
+    } else {
         readySQLiteStatement(m_setIconInfoStatement, m_syncDB, "INSERT INTO IconInfo (url,stamp) VALUES (?, ?);");
         m_setIconInfoStatement->bindText(1, snapshot.iconURL());
         m_setIconInfoStatement->bindInt64(2, snapshot.timestamp());
 
         if (m_setIconInfoStatement->step() != SQLResultDone)
             LOG_ERROR("Failed to set icon info for url %s", urlForLogging(snapshot.iconURL()).ascii().data());
-        
+
         m_setIconInfoStatement->reset();
-        
+
         int64_t iconID = m_syncDB.lastInsertRowID();
 
         readySQLiteStatement(m_setIconDataStatement, m_syncDB, "INSERT INTO IconData (iconID, data) VALUES (?, ?);");
         m_setIconDataStatement->bindInt64(1, iconID);
 
-        // If we *have* image data, bind it to this statement - Otherwise bind "null" for the blob data, 
-        // signifying that this icon doesn't have any data    
+        // If we *have* image data, bind it to this statement - Otherwise bind "null" for the blob data,
+        // signifying that this icon doesn't have any data
         if (snapshot.data() && snapshot.data()->size())
             m_setIconDataStatement->bindBlob(2, snapshot.data()->data(), snapshot.data()->size());
         else
             m_setIconDataStatement->bindNull(2);
-        
+
         if (m_setIconDataStatement->step() != SQLResultDone)
             LOG_ERROR("Failed to set icon data for url %s", urlForLogging(snapshot.iconURL()).ascii().data());
 
@@ -2099,7 +2099,7 @@ public:
         : ClientWorkItem(client)
         , m_pageURL(new String(pageURL.isolatedCopy()))
     { }
-    
+
     virtual ~ImportedIconURLForPageURLWorkItem()
     {
         delete m_pageURL;
@@ -2111,7 +2111,7 @@ public:
         m_client->didImportIconURLForPageURL(*m_pageURL);
         m_client = 0;
     }
-    
+
 private:
     String* m_pageURL;
 };
@@ -2122,7 +2122,7 @@ public:
         : ClientWorkItem(client)
         , m_pageURL(new String(pageURL.isolatedCopy()))
     { }
-    
+
     virtual ~ImportedIconDataForPageURLWorkItem()
     {
         delete m_pageURL;
@@ -2134,7 +2134,7 @@ public:
         m_client->didImportIconDataForPageURL(*m_pageURL);
         m_client = 0;
     }
-    
+
 private:
     String* m_pageURL;
 };

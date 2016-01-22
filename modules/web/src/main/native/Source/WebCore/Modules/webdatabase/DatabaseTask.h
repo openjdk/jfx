@@ -106,7 +106,7 @@ public:
     {
         return std::unique_ptr<DatabaseOpenTask>(new DatabaseOpenTask(db, setVersionInNewDatabase, synchronizer, error, errorMessage, success));
     }
-    
+
 #if PLATFORM(IOS)
     virtual bool shouldPerformWhilePaused() const override { return true; }
 #endif

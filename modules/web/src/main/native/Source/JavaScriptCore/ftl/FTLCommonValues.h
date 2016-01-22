@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef FTLCommonValues_h
@@ -38,12 +38,12 @@ namespace JSC { namespace FTL {
 class CommonValues {
 public:
     CommonValues(LContext context);
-    
+
     void initialize(LModule module)
     {
         m_module = module;
     }
-    
+
     const LType voidType;
     const LType boolean;
     const LType int8;
@@ -74,11 +74,11 @@ public:
     const LValue intPtrEight;
     const LValue intPtrPtr;
     const LValue doubleZero;
-    
+
     const unsigned rangeKind;
-    
+
     const ValueRange nonNegativeInt32;
-    
+
     LContext const m_context;
     LModule m_module;
 };

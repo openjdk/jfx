@@ -21,7 +21,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -109,7 +109,7 @@ static void copyClosingSubpathsApplierFunction(void* info, const CGPathElement* 
 {
     CGMutablePathRef path = static_cast<CGMutablePathRef>(info);
     CGPoint* points = element->points;
-    
+
     switch (element->type) {
     case kCGPathElementMoveToPoint:
         if (!CGPathIsEmpty(path)) // to silence a warning when trying to close an empty path
@@ -171,7 +171,7 @@ bool Path::strokeContains(StrokeStyleApplier* applier, const FloatPoint& point) 
 
     bool hitSuccess = CGContextPathContainsPoint(context, point, kCGPathStroke);
     CGContextRestoreGState(context);
-    
+
     return hitSuccess;
 }
 
@@ -312,8 +312,8 @@ bool Path::hasCurrentPoint() const
 {
     return !isEmpty();
 }
-    
-FloatPoint Path::currentPoint() const 
+
+FloatPoint Path::currentPoint() const
 {
     if (isNull())
         return FloatPoint();

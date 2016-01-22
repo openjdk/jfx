@@ -39,14 +39,14 @@ import java.util.Map;
  *
  */
 public class InspectorPathComparator implements Comparator<InspectorPath> {
-    
+
     private final List<String> sectionNames;
     private final Map<String, List<String>> subSectionMap;
-    
+
     /*
      * Public
      */
-    
+
     public InspectorPathComparator(List<String> sectionNames, Map<String, List<String>> subSectionMap) {
         this.sectionNames = sectionNames;
         this.subSectionMap = subSectionMap;
@@ -55,7 +55,7 @@ public class InspectorPathComparator implements Comparator<InspectorPath> {
     /*
      * Comparator
      */
-    
+
     @Override
     public int compare(InspectorPath p1, InspectorPath p2) {
         assert p1 != null;
@@ -68,7 +68,7 @@ public class InspectorPathComparator implements Comparator<InspectorPath> {
         } else {
             final int sectionIndex1 = sectionNames.indexOf(p1.getSectionTag());
             final int sectionIndex2 = sectionNames.indexOf(p2.getSectionTag());
-            
+
             assert sectionIndex1 != -1 : "sectionTag=" + p1.getSectionTag();
             assert sectionIndex2 != -1 : "sectionTag=" + p2.getSectionTag();
 
@@ -80,12 +80,12 @@ public class InspectorPathComparator implements Comparator<InspectorPath> {
                 assert sectionIndex1 == sectionIndex2;
                 assert p1.getSectionTag().equals(p2.getSectionTag());
                 final List<String> subSections = subSectionMap.get(p1.getSectionTag());
-                
+
                 assert subSections != null : "sectionTag=" + p1.getSectionTag();
-                
+
                 final int subSectionIndex1 = subSections.indexOf(p1.getSubSectionTag());
                 final int subSectionIndex2 = subSections.indexOf(p2.getSubSectionTag());
-                
+
                 assert subSectionIndex1 != -1 : "subSectionTag=" + p1.getSubSectionTag();
                 assert subSectionIndex2 != -1 : "subSectionTag=" + p2.getSubSectionTag();
 

@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
 
@@ -113,14 +113,14 @@ ResourceRequest createAccessControlPreflightRequest(const ResourceRequest& reque
 
     if (!requestHeaderFields.isEmpty()) {
         StringBuilder headerBuffer;
-        
+
         bool appendComma = false;
         for (const auto& headerName : requestHeaderFields.keys()) {
             if (appendComma)
                 headerBuffer.appendLiteral(", ");
             else
                 appendComma = true;
-            
+
             headerBuffer.append(headerName);
         }
 

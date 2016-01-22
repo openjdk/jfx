@@ -59,7 +59,7 @@ void StyleKeyframe::parseKeyString(const String& s, Vector<double>& keys)
     for (size_t i = 0; i < strings.size(); ++i) {
         double key = -1;
         String cur = strings[i].stripWhiteSpace();
-        
+
         // For now the syntax MUST be 'xxx%' or 'from' or 'to', where xxx is a legal floating point number
         if (cur == "from")
             key = 0;

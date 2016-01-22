@@ -40,9 +40,9 @@ import org.junit.Test;
 import static org.junit.Assert.*;
 
 public class ChoiceBoxTreeCellTest {
-    
+
     private StringConverter<Object> converter;
-    
+
     @Before public void setup() {
         converter = new StringConverter<Object>() {
             @Override public String toString(Object object) {
@@ -54,22 +54,22 @@ public class ChoiceBoxTreeCellTest {
             }
         };
     }
-    
+
     /**************************************************************************
-     * 
+     *
      * Test for public static Callback<TreeView<T>, TreeCell<T>> forTreeView(T... items)
-     * 
+     *
      **************************************************************************/
 
-    
+
     @Test public void testStatic_forTreeView_noArgs_ensureCellFactoryIsNotNull() {
         Callback<TreeView<String>, TreeCell<String>> cellFactory = ChoiceBoxTreeCell.forTreeView();
         assertNotNull(cellFactory);
     }
-    
+
     @Test public void testStatic_forTreeView_noArgs_ensureCellFactoryCreatesCells() {
         Callback<TreeView<String>, TreeCell<String>> cellFactory = ChoiceBoxTreeCell.forTreeView();
-        
+
         TreeView<String> treeView = new TreeView<>();
         ChoiceBoxTreeCell<String> cell = (ChoiceBoxTreeCell<String>)cellFactory.call(treeView);
         assertNotNull(cell);
@@ -77,19 +77,19 @@ public class ChoiceBoxTreeCellTest {
 
     @Test public void testStatic_forTreeView_noArgs_ensureCellHasNonNullStringConverter() {
         Callback<TreeView<String>, TreeCell<String>> cellFactory = ChoiceBoxTreeCell.forTreeView();
-        
+
         TreeView<String> treeView = new TreeView<>();
         ChoiceBoxTreeCell<String> cell = (ChoiceBoxTreeCell<String>)cellFactory.call(treeView);
         assertNotNull(cell.getConverter());
     }
-    
-    
-    
+
+
+
     /**************************************************************************
-     * 
+     *
      * Test for public static <T> Callback<TreeView<T>, TreeCell<T>> forTreeView(
      *       final ObservableList<T> items)
-     * 
+     *
      **************************************************************************/
 
     @Test public void testStatic_forTreeView_items_ensureSuccessWhenItemsIsNull() {
@@ -123,53 +123,53 @@ public class ChoiceBoxTreeCellTest {
     }
 
     /**************************************************************************
-     * 
+     *
      * Constructor tests for default constructor
-     * 
+     *
      **************************************************************************/
 
     @Test public void testConstructor_noArgs_defaultStringConverterIsNotNull() {
         ChoiceBoxTreeCell<Object> cell = new ChoiceBoxTreeCell<>();
         assertNotNull(cell.getConverter());
     }
-    
+
     @Test public void testConstructor_noArgs_defaultStyleClass() {
         ChoiceBoxTreeCell<Object> cell = new ChoiceBoxTreeCell<>();
         assertTrue(cell.getStyleClass().contains("choice-box-tree-cell"));
     }
-    
+
     @Test public void testConstructor_noArgs_defaultGraphicIsNull() {
         ChoiceBoxTreeCell<Object> cell = new ChoiceBoxTreeCell<>();
         assertNull(cell.getGraphic());
     }
-    
-    
+
+
     /**************************************************************************
-     * 
+     *
      * Constructor tests for one-arg constructor
-     * 
+     *
      **************************************************************************/
-    
+
     @Test public void testConstructor_converter_defaultStringConverterIsNotNull() {
         ChoiceBoxTreeCell<Object> cell = new ChoiceBoxTreeCell<>(converter);
         assertNotNull(cell.getConverter());
     }
-    
+
     @Test public void testConstructor_converter_defaultStyleClass() {
         ChoiceBoxTreeCell<Object> cell = new ChoiceBoxTreeCell<>(converter);
         assertTrue(cell.getStyleClass().contains("choice-box-tree-cell"));
     }
-    
+
     @Test public void testConstructor_converter_defaultGraphicIsACheckBox() {
         ChoiceBoxTreeCell<Object> cell = new ChoiceBoxTreeCell<>(converter);
         assertNull(cell.getGraphic());
     }
-    
-    
+
+
     /**************************************************************************
-     * 
+     *
      * updateItem tests
-     * 
+     *
      **************************************************************************/
 
     @Test public void test_updateItem_isEmpty_graphicIsNull() {
@@ -177,20 +177,20 @@ public class ChoiceBoxTreeCellTest {
         cell.updateItem("TEST", true);
         assertNull(cell.getGraphic());
     }
-    
+
     @Test public void test_updateItem_isEmpty_textIsNull() {
         ChoiceBoxTreeCell<Object> cell = new ChoiceBoxTreeCell<>();
         cell.updateItem("TEST", true);
         assertNull(cell.getText());
     }
-    
+
     @Test public void test_updateItem_isNotEmpty_textIsNotNull() {
         ChoiceBoxTreeCell<Object> cell = new ChoiceBoxTreeCell<>();
         cell.updateItem("TEST", false);
         assertNotNull(cell.getText());
         assertEquals("TEST", cell.getText());
     }
-    
+
     @Test public void test_updateItem_isNotEmpty_textIsNotNull_nullConverter() {
         ChoiceBoxTreeCell<Object> cell = new ChoiceBoxTreeCell<>();
         cell.setConverter(null);
@@ -198,7 +198,7 @@ public class ChoiceBoxTreeCellTest {
         assertNotNull(cell.getText());
         assertEquals("TEST", cell.getText());
     }
-    
+
     @Test public void test_updateItem_isNotEmpty_textIsNotNull_nonNullConverter() {
         ChoiceBoxTreeCell<Object> cell = new ChoiceBoxTreeCell<>();
         cell.setConverter(

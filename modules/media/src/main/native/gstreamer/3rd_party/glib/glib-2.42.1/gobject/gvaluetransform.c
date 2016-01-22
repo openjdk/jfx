@@ -151,7 +151,7 @@ value_transform_##func_name (const GValue *src_value,                       \
                              GValue       *dest_value)                      \
 {                                                                           \
   dest_value->data[0].v_pointer = g_strdup_printf ((format),                \
-						   src_value->data[0].from_member);             \
+                           src_value->data[0].from_member);             \
 } extern void glib_dummy_decl (void)
 DEFINE_SPRINTF (int_string,     v_int,    "%d");
 DEFINE_SPRINTF (uint_string,    v_uint,   "%u");
@@ -185,12 +185,12 @@ value_transform_enum_string (const GValue *src_value,
 {
   GEnumClass *class = g_type_class_ref (G_VALUE_TYPE (src_value));
   GEnumValue *enum_value = g_enum_get_value (class, src_value->data[0].v_long);
-  
+
   if (enum_value)
     dest_value->data[0].v_pointer = g_strdup (enum_value->value_name);
   else
     dest_value->data[0].v_pointer = g_strdup_printf ("%ld", src_value->data[0].v_long);
-  
+
   g_type_class_unref (class);
 }
 static void
@@ -199,23 +199,23 @@ value_transform_flags_string (const GValue *src_value,
 {
   GFlagsClass *class = g_type_class_ref (G_VALUE_TYPE (src_value));
   GFlagsValue *flags_value = g_flags_get_first_value (class, src_value->data[0].v_ulong);
-  
+
   if (flags_value)
     {
       GString *gstring = g_string_new (NULL);
       guint v_flags = src_value->data[0].v_ulong;
-      
+
       do
         {
           v_flags &= ~flags_value->value;
-          
+
           if (gstring->str[0])
             g_string_append (gstring, " | ");
           g_string_append (gstring, flags_value->value_name);
           flags_value = g_flags_get_first_value (class, v_flags);
         }
       while (flags_value && v_flags);
-      
+
       if (v_flags)
         dest_value->data[0].v_pointer = g_strdup_printf ("%s | %u",
                                                          gstring->str,
@@ -226,7 +226,7 @@ value_transform_flags_string (const GValue *src_value,
     }
   else
     dest_value->data[0].v_pointer = g_strdup_printf ("%lu", src_value->data[0].v_ulong);
-  
+
   g_type_class_unref (class);
 }
 
@@ -241,7 +241,7 @@ _g_value_transforms_init (void)
    */
 #define SKIP____register_transform_func(type1,type2,transform_func)     /* skip questionable transforms */ \
   (void)0
-  
+
   /* numeric types (plus to string) */
   g_value_register_transform_func (G_TYPE_CHAR,         G_TYPE_CHAR,            value_transform_int_int);
   g_value_register_transform_func (G_TYPE_CHAR,         G_TYPE_UCHAR,           value_transform_int_u8);

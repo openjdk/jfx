@@ -223,7 +223,7 @@ public abstract class PropertiesTestBase {
                  beanB, propertyBName, propertyBValue1, propertyBValue2,
                  ValueComparator.DEFAULT);
         }
-        
+
         public Configuration(final Object beanA,
                              final String propertyAName,
                              final Object propertyAValue1,
@@ -264,7 +264,7 @@ public abstract class PropertiesTestBase {
             Assert.assertSame(beanA, propertyA.getBean());
             Assert.assertSame(beanB, propertyB.getBean());
         }
-        
+
         public void getNameTest() {
             final ReadOnlyProperty<?> propertyA =
                     (ReadOnlyProperty<?>) BindingHelper.getPropertyModel(

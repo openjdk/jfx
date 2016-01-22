@@ -39,11 +39,11 @@ import javafx.scene.Scene;
  */
 public class ScenicViewStarter implements Runnable {
 //        private final Scene targetScene;
-        
+
         public ScenicViewStarter(Scene targetScene) {
 //            this.targetScene = targetScene;
         }
-        
+
         @Override
         public void run() {
 //            org.scenicview.ScenicView.show(targetScene);

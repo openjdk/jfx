@@ -50,7 +50,7 @@ static void didLayout(WKPageRef, WKLayoutMilestones type, WKTypeRef, const void 
     default:
         break;
     }
-    
+
     if (didFirstLayoutAchieved && didFirstVisuallyNonEmptyLayoutAchieved && didHitRelevantRepaintedObjectsAreaThresholdAchieved)
         didUnlockAllLayoutMilestones = true;
 }

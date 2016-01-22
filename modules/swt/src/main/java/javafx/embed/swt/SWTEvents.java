@@ -117,10 +117,10 @@ class SWTEvents {
     static final int [] [] KeyTable = {
 
         {0x0 /*KeyEvent.VK_UNDEFINED*/,     SWT.NULL},
-        
+
         // SWT only
         {'\n' /*KeyEvent.VK_?????*/,         SWT.CR},
-        
+
         // Misc
         {'\n' /*KeyEvent.VK_ENTER*/,         SWT.LF},
         {'\b' /*KeyEvent.VK_BACKSPACE*/,     SWT.BS},
@@ -134,7 +134,7 @@ class SWTEvents {
 //      {KeyEvent.VK_PRINTSCREEN    SWT.???;
         {0x9B /*KeyEvent.VK_INSERT*/,        SWT.INSERT},
         {0x9C /*KeyEvent.VK_HELP*/,          SWT.HELP},
-        
+
         // Modifiers
         {0x10 /*KeyEvent.VK_SHIFT*/,         SWT.SHIFT},
         {0x11 /*KeyEvent.VK_CONTROL*/,       SWT.CONTROL},
@@ -144,7 +144,7 @@ class SWTEvents {
         {0x14 /*KeyEvent.VK_CAPS_LOCK*/,     SWT.CAPS_LOCK},
         {0x90 /*KeyEvent.VK_NUM_LOCK*/,      SWT.NUM_LOCK},
         {0x91 /*KeyEvent.VK_SCROLL_LOCK*/,   SWT.SCROLL_LOCK},
-        
+
         // Navigation keys
         {0x21 /*KeyEvent.VK_PAGE_UP*/,       SWT.PAGE_UP},
         {0x22 /*KeyEvent.VK_PAGE_DOWN*/,     SWT.PAGE_DOWN},
@@ -154,7 +154,7 @@ class SWTEvents {
         {0x26 /*KeyEvent.VK_UP*/,            SWT.ARROW_UP},
         {0x27 /*KeyEvent.VK_RIGHT*/,         SWT.ARROW_RIGHT},
         {0x28 /*KeyEvent.VK_DOWN*/,          SWT.ARROW_DOWN},
-    
+
         // Misc 2
         // NOTE: suspect this only works for English keyboard
         {0x2C /*KeyEvent.VK_COMMA*/,                 ','}, // ','
@@ -253,7 +253,7 @@ class SWTEvents {
         {0x67 /*KeyEvent.VK_NUMPAD7*/,   SWT.KEYPAD_7},
         {0x68 /*KeyEvent.VK_NUMPAD8*/,   SWT.KEYPAD_8},
         {0x69 /*KeyEvent.VK_NUMPAD9*/,   SWT.KEYPAD_9},
-        
+
         // Function keys
         {0x70 /*KeyEvent.VK_F1*/,    SWT.F1},
         {0x71 /*KeyEvent.VK_F2*/,    SWT.F2},
@@ -278,7 +278,7 @@ class SWTEvents {
 //    {KeyEvent.VK_DECIMAL,     SWT.KEYPAD_DECIMAL},
 //    {KeyEvent.VK_DIVIDE,      SWT.KEYPAD_DIVIDE},
 ////  {KeyEvent.VK_????,        SWT.KEYPAD_EQUAL},
-    
+
     static int keyCodeToEmbedKeyCode(int keyCode) {
         for (int i=0; i<KeyTable.length; i++) {
             if (KeyTable [i] [1] == keyCode) return KeyTable [i] [0];

@@ -85,7 +85,7 @@ void xsltUnicodeSortFunction(xsltTransformContextPtr ctxt, xmlNodePtr *sorts, in
     int tst;
     int depth;
     xmlNodePtr node;
-    xmlXPathObjectPtr tmp;    
+    xmlXPathObjectPtr tmp;
     int tempstype[XSLT_MAX_SORT], temporder[XSLT_MAX_SORT];
 
     if ((ctxt == NULL) || (sorts == NULL) || (nbsorts <= 0) ||
@@ -171,7 +171,7 @@ void xsltUnicodeSortFunction(xsltTransformContextPtr ctxt, xmlNodePtr *sorts, in
             j = i - incr;
             if (results[i] == NULL)
                 continue;
-            
+
             while (j >= 0) {
                 if (results[j] == NULL)
                     tst = 1;
@@ -189,7 +189,7 @@ void xsltUnicodeSortFunction(xsltTransformContextPtr ctxt, xmlNodePtr *sorts, in
                         else if (results[j]->floatval ==
                                 results[j + incr]->floatval)
                             tst = 0;
-                        else if (results[j]->floatval > 
+                        else if (results[j]->floatval >
                                 results[j + incr]->floatval)
                             tst = 1;
                         else tst = -1;
@@ -216,11 +216,11 @@ void xsltUnicodeSortFunction(xsltTransformContextPtr ctxt, xmlNodePtr *sorts, in
                          * Compute the result of the next level for the
                          * full set, this might be optimized ... or not
                          */
-                        if (resultsTab[depth] == NULL) 
+                        if (resultsTab[depth] == NULL)
                             resultsTab[depth] = xsltComputeSortResult(ctxt,
                                                         sorts[depth]);
                         res = resultsTab[depth];
-                        if (res == NULL) 
+                        if (res == NULL)
                             break;
                         if (res[j] == NULL) {
                             if (res[j+incr] != NULL)
@@ -241,7 +241,7 @@ void xsltUnicodeSortFunction(xsltTransformContextPtr ctxt, xmlNodePtr *sorts, in
                                 else if (res[j]->floatval == res[j + incr]->
                                                 floatval)
                                     tst = 0;
-                                else if (res[j]->floatval > 
+                                else if (res[j]->floatval >
                                         res[j + incr]->floatval)
                                     tst = 1;
                                 else tst = -1;

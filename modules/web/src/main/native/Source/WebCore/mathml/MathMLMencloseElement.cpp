@@ -51,7 +51,7 @@ PassRefPtr<MathMLMencloseElement> MathMLMencloseElement::create(const QualifiedN
 }
 
 RenderPtr<RenderElement> MathMLMencloseElement::createElementRenderer(PassRef<RenderStyle> style)
-{    
+{
     return createRenderer<RenderMathMLMenclose>(*this, std::move(style));
 }
 
@@ -65,7 +65,7 @@ bool MathMLMencloseElement::isPresentationAttribute(const QualifiedName& name) c
 void MathMLMencloseElement::finishParsingChildren()
 {
     MathMLInlineContainerElement::finishParsingChildren();
-    // When notation value is a radical and menclose does not have any child 
+    // When notation value is a radical and menclose does not have any child
     // then we add anonymous squareroot child to menclose so that square root
     // symbol can be rendered.
     if (m_isRadicalValue && !firstElementChild())

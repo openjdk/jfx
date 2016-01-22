@@ -37,48 +37,48 @@ public:
         : m_value(0)
     {
     }
-    
+
     CopyWriteBarrier(VM& vm, const JSCell* owner, T& value)
     {
         this->set(vm, owner, &value);
     }
-    
+
     CopyWriteBarrier(VM& vm, const JSCell* owner, T* value)
     {
         this->set(vm, owner, value);
     }
-    
+
     bool operator!() const { return !m_value; }
-    
+
     typedef T* (CopyWriteBarrier::*UnspecifiedBoolType);
     operator UnspecifiedBoolType*() const { return m_value ? reinterpret_cast<UnspecifiedBoolType*>(1) : 0; }
-    
+
     T* get() const
     {
         return m_value;
     }
-    
+
     T* operator*() const
     {
         return get();
     }
-    
+
     T* operator->() const
     {
         return get();
     }
-    
+
     void set(VM& vm, const JSCell* owner, T* value)
     {
         this->m_value = value;
         vm.heap.writeBarrier(owner);
     }
-    
+
     void setWithoutWriteBarrier(T* value)
     {
         this->m_value = value;
     }
-    
+
     void clear() { m_value = 0; }
 
 private:

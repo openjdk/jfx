@@ -18,19 +18,19 @@
 
 G_BEGIN_DECLS
 
-#define G_MINFLOAT	FLT_MIN
-#define G_MAXFLOAT	FLT_MAX
-#define G_MINDOUBLE	DBL_MIN
-#define G_MAXDOUBLE	DBL_MAX
-#define G_MINSHORT	SHRT_MIN
-#define G_MAXSHORT	SHRT_MAX
-#define G_MAXUSHORT	USHRT_MAX
-#define G_MININT	INT_MIN
-#define G_MAXINT	INT_MAX
-#define G_MAXUINT	UINT_MAX
-#define G_MINLONG	LONG_MIN
-#define G_MAXLONG	LONG_MAX
-#define G_MAXULONG	ULONG_MAX
+#define G_MINFLOAT  FLT_MIN
+#define G_MAXFLOAT  FLT_MAX
+#define G_MINDOUBLE DBL_MIN
+#define G_MAXDOUBLE DBL_MAX
+#define G_MINSHORT  SHRT_MIN
+#define G_MAXSHORT  SHRT_MAX
+#define G_MAXUSHORT USHRT_MAX
+#define G_MININT    INT_MIN
+#define G_MAXINT    INT_MAX
+#define G_MAXUINT   UINT_MAX
+#define G_MINLONG   LONG_MIN
+#define G_MAXLONG   LONG_MAX
+#define G_MAXULONG  ULONG_MAX
 
 typedef signed char gint8;
 typedef unsigned char guint8;
@@ -55,14 +55,14 @@ typedef unsigned __int64 guint64;
 #endif /* _MSC_VER */
 
 #ifndef _MSC_VER
-#define G_GINT64_CONSTANT(val)	(G_GNUC_EXTENSION (val##LL))
+#define G_GINT64_CONSTANT(val)  (G_GNUC_EXTENSION (val##LL))
 #else /* _MSC_VER */
-#define G_GINT64_CONSTANT(val)	(val##i64)
+#define G_GINT64_CONSTANT(val)  (val##i64)
 #endif /* _MSC_VER */
 #ifndef _MSC_VER
-#define G_GUINT64_CONSTANT(val)	(G_GNUC_EXTENSION (val##ULL))
+#define G_GUINT64_CONSTANT(val) (G_GNUC_EXTENSION (val##ULL))
 #else /* _MSC_VER */
-#define G_GUINT64_CONSTANT(val)	(val##Ui64)
+#define G_GUINT64_CONSTANT(val) (val##Ui64)
 #endif /* _MSC_VER */
 #define G_GINT64_MODIFIER "I64"
 #define G_GINT64_FORMAT "I64i"
@@ -80,9 +80,9 @@ typedef unsigned long long gsize;
 #define G_GSSIZE_FORMAT "I64d"
 #define G_GSIZE_FORMAT "I64u"
 
-#define G_MAXSIZE	G_MAXUINT64
-#define G_MINSSIZE	G_MININT64
-#define G_MAXSSIZE	G_MAXINT64
+#define G_MAXSIZE   G_MAXUINT64
+#define G_MINSSIZE  G_MININT64
+#define G_MAXSSIZE  G_MAXINT64
 
 #else
 
@@ -96,15 +96,15 @@ typedef unsigned int gsize;
 #define G_GSSIZE_FORMAT "i"
 #define G_GSIZE_FORMAT "u"
 
-#define G_MAXSIZE	G_MAXUINT
-#define G_MINSSIZE	G_MININT
-#define G_MAXSSIZE	G_MAXINT
+#define G_MAXSIZE   G_MAXUINT
+#define G_MINSSIZE  G_MININT
+#define G_MAXSSIZE  G_MAXINT
 
 #endif
 
 typedef gint64 goffset;
-#define G_MINOFFSET	G_MININT64
-#define G_MAXOFFSET	G_MAXINT64
+#define G_MINOFFSET G_MININT64
+#define G_MAXOFFSET G_MAXINT64
 
 #define G_GOFFSET_MODIFIER      G_GINT64_MODIFIER
 #define G_GOFFSET_FORMAT        G_GINT64_FORMAT
@@ -113,11 +113,11 @@ typedef gint64 goffset;
 
 #ifndef _WIN64
 
-#define GPOINTER_TO_INT(p)	((gint)   (p))
-#define GPOINTER_TO_UINT(p)	((guint)  (p))
+#define GPOINTER_TO_INT(p)  ((gint)   (p))
+#define GPOINTER_TO_UINT(p) ((guint)  (p))
 
-#define GINT_TO_POINTER(i)	((gpointer)  (i))
-#define GUINT_TO_POINTER(u)	((gpointer)  (u))
+#define GINT_TO_POINTER(i)  ((gpointer)  (i))
+#define GUINT_TO_POINTER(u) ((gpointer)  (u))
 
 typedef signed int gintptr;
 typedef unsigned int guintptr;
@@ -128,11 +128,11 @@ typedef unsigned int guintptr;
 
 #else
 
-#define GPOINTER_TO_INT(p)	((gint)  (gint64) (p))
-#define GPOINTER_TO_UINT(p)	((guint) (guint64) (p))
+#define GPOINTER_TO_INT(p)  ((gint)  (gint64) (p))
+#define GPOINTER_TO_UINT(p) ((guint) (guint64) (p))
 
-#define GINT_TO_POINTER(i)	((gpointer) (gint64) (i))
-#define GUINT_TO_POINTER(u)	((gpointer) (guint64) (u))
+#define GINT_TO_POINTER(i)  ((gpointer) (gint64) (i))
+#define GUINT_TO_POINTER(u) ((gpointer) (guint64) (u))
 
 #ifndef _MSC_VER
 typedef signed long long gintptr;
@@ -148,7 +148,7 @@ typedef unsigned __int64 guintptr;
 
 #endif
 
-#define g_ATEXIT(proc)	(atexit (proc))
+#define g_ATEXIT(proc)  (atexit (proc))
 
 #define g_memmove(dest,src,len) G_STMT_START { memmove ((dest), (src), (len)); } G_STMT_END
 
@@ -161,12 +161,12 @@ typedef unsigned __int64 guintptr;
 
 
 #ifndef _MSC_VER
-#define G_VA_COPY	va_copy
+#define G_VA_COPY   va_copy
 #endif /* not _MSC_VER */
 
-#ifdef	__cplusplus
-#define	G_HAVE_INLINE	1
-#else	/* !__cplusplus */
+#ifdef  __cplusplus
+#define G_HAVE_INLINE   1
+#else   /* !__cplusplus */
 #ifndef _MSC_VER
 #define G_HAVE_INLINE 1
 #endif /* _MSC_VER */
@@ -174,9 +174,9 @@ typedef unsigned __int64 guintptr;
 #if !defined(_MSC_VER) && !defined(__DMC__)
 #define G_HAVE___INLINE__ 1
 #endif /* !_MSC_VER and !__DMC__ */
-#endif	/* !__cplusplus */
+#endif  /* !__cplusplus */
 
-#define G_CAN_INLINE	1
+#define G_CAN_INLINE    1
 
 #ifndef _MSC_VER
 #define G_HAVE_ISO_VARARGS 1
@@ -205,30 +205,30 @@ typedef unsigned __int64 guintptr;
 
 #define G_ATOMIC_LOCK_FREE
 
-#define GINT16_TO_LE(val)	((gint16) (val))
-#define GUINT16_TO_LE(val)	((guint16) (val))
-#define GINT16_TO_BE(val)	((gint16) GUINT16_SWAP_LE_BE (val))
-#define GUINT16_TO_BE(val)	(GUINT16_SWAP_LE_BE (val))
-#define GINT32_TO_LE(val)	((gint32) (val))
-#define GUINT32_TO_LE(val)	((guint32) (val))
-#define GINT32_TO_BE(val)	((gint32) GUINT32_SWAP_LE_BE (val))
-#define GUINT32_TO_BE(val)	(GUINT32_SWAP_LE_BE (val))
-#define GINT64_TO_LE(val)	((gint64) (val))
-#define GUINT64_TO_LE(val)	((guint64) (val))
-#define GINT64_TO_BE(val)	((gint64) GUINT64_SWAP_LE_BE (val))
-#define GUINT64_TO_BE(val)	(GUINT64_SWAP_LE_BE (val))
-#define GLONG_TO_LE(val)	((glong) GINT32_TO_LE (val))
-#define GULONG_TO_LE(val)	((gulong) GUINT32_TO_LE (val))
-#define GLONG_TO_BE(val)	((glong) GINT32_TO_BE (val))
-#define GULONG_TO_BE(val)	((gulong) GUINT32_TO_BE (val))
-#define GINT_TO_LE(val)		((gint) GINT32_TO_LE (val))
-#define GUINT_TO_LE(val)	((guint) GUINT32_TO_LE (val))
-#define GINT_TO_BE(val)		((gint) GINT32_TO_BE (val))
-#define GUINT_TO_BE(val)	((guint) GUINT32_TO_BE (val))
-#define GSIZE_TO_LE(val)	((gsize) GUINT32_TO_LE (val))
-#define GSSIZE_TO_LE(val)	((gssize) GINT32_TO_LE (val))
-#define GSIZE_TO_BE(val)	((gsize) GUINT32_TO_BE (val))
-#define GSSIZE_TO_BE(val)	((gssize) GINT32_TO_BE (val))
+#define GINT16_TO_LE(val)   ((gint16) (val))
+#define GUINT16_TO_LE(val)  ((guint16) (val))
+#define GINT16_TO_BE(val)   ((gint16) GUINT16_SWAP_LE_BE (val))
+#define GUINT16_TO_BE(val)  (GUINT16_SWAP_LE_BE (val))
+#define GINT32_TO_LE(val)   ((gint32) (val))
+#define GUINT32_TO_LE(val)  ((guint32) (val))
+#define GINT32_TO_BE(val)   ((gint32) GUINT32_SWAP_LE_BE (val))
+#define GUINT32_TO_BE(val)  (GUINT32_SWAP_LE_BE (val))
+#define GINT64_TO_LE(val)   ((gint64) (val))
+#define GUINT64_TO_LE(val)  ((guint64) (val))
+#define GINT64_TO_BE(val)   ((gint64) GUINT64_SWAP_LE_BE (val))
+#define GUINT64_TO_BE(val)  (GUINT64_SWAP_LE_BE (val))
+#define GLONG_TO_LE(val)    ((glong) GINT32_TO_LE (val))
+#define GULONG_TO_LE(val)   ((gulong) GUINT32_TO_LE (val))
+#define GLONG_TO_BE(val)    ((glong) GINT32_TO_BE (val))
+#define GULONG_TO_BE(val)   ((gulong) GUINT32_TO_BE (val))
+#define GINT_TO_LE(val)     ((gint) GINT32_TO_LE (val))
+#define GUINT_TO_LE(val)    ((guint) GUINT32_TO_LE (val))
+#define GINT_TO_BE(val)     ((gint) GINT32_TO_BE (val))
+#define GUINT_TO_BE(val)    ((guint) GUINT32_TO_BE (val))
+#define GSIZE_TO_LE(val)    ((gsize) GUINT32_TO_LE (val))
+#define GSSIZE_TO_LE(val)   ((gssize) GINT32_TO_LE (val))
+#define GSIZE_TO_BE(val)    ((gsize) GUINT32_TO_BE (val))
+#define GSSIZE_TO_BE(val)   ((gssize) GINT32_TO_BE (val))
 #define G_BYTE_ORDER G_LITTLE_ENDIAN
 
 #define GLIB_SYSDEF_POLLIN =1

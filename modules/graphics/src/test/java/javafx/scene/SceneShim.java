@@ -42,5 +42,5 @@ public class SceneShim {
     public static void scenePulseListener_pulse(Scene s) {
         s.scenePulseListener.pulse();
     }
-    
+
 }

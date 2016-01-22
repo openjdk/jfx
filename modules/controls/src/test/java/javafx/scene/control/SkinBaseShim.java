@@ -35,7 +35,7 @@ public class SkinBaseShim<C extends Control> extends SkinBase {
     }
 
     //--------------- statics --------------
-    
+
     public static List<Node> getChildren(SkinBase skin) {
         return skin.getChildren();
     }

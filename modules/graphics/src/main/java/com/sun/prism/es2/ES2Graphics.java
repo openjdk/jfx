@@ -99,7 +99,7 @@ public class ES2Graphics extends BaseShaderGraphics {
     public void transform(BaseTransform transform) {
         // Treat transform as identity matrix if platform doesn't support 3D
         // and transform isn't a 2D matrix
-        if (!GraphicsPipeline.getPipeline().is3DSupported() 
+        if (!GraphicsPipeline.getPipeline().is3DSupported()
                 && !transform.is2D()) {
             return;
         }
@@ -112,7 +112,7 @@ public class ES2Graphics extends BaseShaderGraphics {
         // and it isn't a 2D translate
         if (!GraphicsPipeline.getPipeline().is3DSupported() &&  tz != 0.0f) {
             return;
-        } 
+        }
         super.translate(tx, ty, tz);
     }
 
@@ -122,7 +122,7 @@ public class ES2Graphics extends BaseShaderGraphics {
         // and it isn't a 2D scale
         if (!GraphicsPipeline.getPipeline().is3DSupported() &&  sz != 1.0f) {
             return;
-        } 
+        }
         super.scale(sx, sy, sz);
     }
 

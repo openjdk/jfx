@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -61,13 +61,13 @@ HRESULT STDMETHODCALLTYPE WebURLAuthenticationChallengeSender::continueWithoutCr
 }
 
 HRESULT STDMETHODCALLTYPE WebURLAuthenticationChallengeSender::useCredential(
-        /* [in] */ IWebURLCredential* credential, 
+        /* [in] */ IWebURLCredential* credential,
         /* [in] */ IWebURLAuthenticationChallenge* challenge)
 {
     COMPtr<WebURLAuthenticationChallenge> webChallenge(Query, challenge);
     if (!webChallenge)
         return E_FAIL;
-    
+
     COMPtr<WebURLCredential> webCredential;
     if (!credential || FAILED(credential->QueryInterface(__uuidof(WebURLCredential), (void**)&webCredential)))
         return E_FAIL;

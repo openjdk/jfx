@@ -39,9 +39,9 @@
 #include "RenderTableRow.h"
 
 namespace WebCore {
-    
+
 using namespace HTMLNames;
-    
+
 AccessibilityTableRow::AccessibilityTableRow(RenderObject* renderer)
     : AccessibilityRenderObject(renderer)
 {
@@ -75,30 +75,30 @@ bool AccessibilityTableRow::isTableRow() const
     AccessibilityObject* table = parentTable();
     if (!table || !table->isAccessibilityTable())
         return false;
-    
+
     return true;
 }
-    
+
 AccessibilityObject* AccessibilityTableRow::observableObject() const
 {
     // This allows the table to be the one who sends notifications about tables.
     return parentTable();
 }
-    
+
 bool AccessibilityTableRow::computeAccessibilityIsIgnored() const
-{    
+{
     AccessibilityObjectInclusion decision = defaultObjectInclusion();
     if (decision == IncludeObject)
         return false;
     if (decision == IgnoreObject)
         return true;
-    
+
     if (!isTableRow())
         return AccessibilityRenderObject::computeAccessibilityIsIgnored();
 
     return false;
 }
-    
+
 AccessibilityTable* AccessibilityTableRow::parentTable() const
 {
     // The parent table might not be the direct ancestor of the row unfortunately. ARIA states that role="grid" should
@@ -109,33 +109,33 @@ AccessibilityTable* AccessibilityTableRow::parentTable() const
         if (parent->isTable())
             return parent->isAccessibilityTable() ? toAccessibilityTable(parent) : 0;
     }
-    
+
     return 0;
 }
-    
+
 AccessibilityObject* AccessibilityTableRow::headerObject()
 {
     if (!m_renderer || !m_renderer->isTableRow())
         return 0;
-    
+
     const auto& rowChildren = children();
     if (!rowChildren.size())
         return 0;
-    
+
     // check the first element in the row to see if it is a TH element
     AccessibilityObject* cell = rowChildren[0].get();
     if (!cell->isTableCell())
         return 0;
-    
+
     RenderObject* cellRenderer = toAccessibilityTableCell(cell)->renderer();
     if (!cellRenderer)
         return 0;
-    
+
     Node* cellNode = cellRenderer->node();
     if (!cellNode || !cellNode->hasTagName(thTag))
         return 0;
-    
+
     return cell;
 }
-    
+
 } // namespace WebCore

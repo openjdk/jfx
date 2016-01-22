@@ -30,7 +30,7 @@ import org.antlr.runtime.RecognitionException;
 import org.junit.Test;
 
 public class BoolTest extends LexerBase {
-    
+
     @Test
     public void trueLit() throws Exception {
         assertRecognized("true");

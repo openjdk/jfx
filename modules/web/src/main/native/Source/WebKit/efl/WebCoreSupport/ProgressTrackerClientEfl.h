@@ -39,7 +39,7 @@ namespace WebCore {
 class ProgressTrackerClientEfl final : public WebCore::ProgressTrackerClient {
 public:
     explicit ProgressTrackerClientEfl(Evas_Object*);
-    
+
 private:
     virtual void progressTrackerDestroyed() override;
 

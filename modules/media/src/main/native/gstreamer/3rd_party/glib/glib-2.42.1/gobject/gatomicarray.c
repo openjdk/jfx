@@ -64,13 +64,13 @@ freelist_alloc (gsize size, gboolean reuse)
   if (reuse)
     {
       for (free = freelist, prev = &freelist; free != NULL; prev = &free->next, free = free->next)
-	{
-	  if (G_ATOMIC_ARRAY_DATA_SIZE (free) == size)
-	    {
-	      *prev = free->next;
-	      return (gpointer)free;
-	    }
-	}
+    {
+      if (G_ATOMIC_ARRAY_DATA_SIZE (free) == size)
+        {
+          *prev = free->next;
+          return (gpointer)free;
+        }
+    }
     }
 
   real_size = sizeof (gsize) + MAX (size, sizeof (FreeListNode));
@@ -120,8 +120,8 @@ _g_atomic_array_init (GAtomicArray *array)
  */
 gpointer
 _g_atomic_array_copy (GAtomicArray *array,
-		      gsize header_size,
-		      gsize additional_element_size)
+              gsize header_size,
+              gsize additional_element_size)
 {
   guint8 *new, *old;
   gsize old_size, new_size;
@@ -133,8 +133,8 @@ _g_atomic_array_copy (GAtomicArray *array,
       old_size = G_ATOMIC_ARRAY_DATA_SIZE (old);
       new_size = old_size + additional_element_size;
       /* Don't reuse if copying to same size, as this may end
-	 up reusing the same pointer for the same array thus
-	 confusing the transaction check */
+     up reusing the same pointer for the same array thus
+     confusing the transaction check */
       new = freelist_alloc (new_size, additional_element_size != 0);
       memcpy (new, old, old_size);
     }
@@ -155,7 +155,7 @@ _g_atomic_array_copy (GAtomicArray *array,
  */
 void
 _g_atomic_array_update (GAtomicArray *array,
-			gpointer new_data)
+            gpointer new_data)
 {
   guint8 *old;
 

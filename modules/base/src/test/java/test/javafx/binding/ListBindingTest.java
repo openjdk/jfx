@@ -289,7 +289,7 @@ public class ListBindingTest {
 
 
     private class ListChangeListenerMock implements ListChangeListener<Object> {
-        
+
         private Change<? extends Object> change;
         private int counter;
 
@@ -298,7 +298,7 @@ public class ListBindingTest {
             this.change = change;
             counter++;
         }
-        
+
         private void reset() {
             change = null;
             counter = 0;

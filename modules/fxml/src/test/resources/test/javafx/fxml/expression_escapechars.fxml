@@ -31,7 +31,7 @@ questions.
     <fx:define>
         <String fx:id="abc" fx:value="ABC"/>
     </fx:define>
-    
+
     <Widget fx:id="widget1" name="$abc"/>
     <Widget fx:id="widget2" name="\$abc"/>
     <Widget fx:id="widget3" name="$$abc"/>

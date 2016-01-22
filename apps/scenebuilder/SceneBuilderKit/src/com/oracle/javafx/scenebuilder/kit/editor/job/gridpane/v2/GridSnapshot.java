@@ -42,24 +42,24 @@ import java.util.Map;
  *
  */
 public class GridSnapshot {
-    
+
     private final Map<FXOMObject, GridSnapshotItem> items = new HashMap<>();
-    
+
     public GridSnapshot(Collection<FXOMObject> fxomObjects) {
         assert fxomObjects != null;
         assert fxomObjects.isEmpty() == false; // (1)
-        
+
         for (FXOMObject fxomObject : fxomObjects) {
             assert items.containsKey(fxomObject) == false;
             items.put(fxomObject, new GridSnapshotItem(fxomObject));
         }
     }
-    
+
     public GridSnapshot(Collection<FXOMObject> fxomObjects, int columnCount) {
         assert fxomObjects != null;
         assert fxomObjects.isEmpty() == false;
         assert columnCount >= 1;
-        
+
         int columnIndex = 0;
         int rowIndex = 0;
         for (FXOMObject fxomObject : fxomObjects) {
@@ -71,22 +71,22 @@ public class GridSnapshot {
             }
         }
     }
-    
+
     public int getColumnIndex(FXOMObject fxomObject) {
         assert fxomObject != null;
         assert items.containsKey(fxomObject);
         return items.get(fxomObject).getColumnIndex();
     }
-    
+
     public int getRowIndex(FXOMObject fxomObject) {
         assert fxomObject != null;
         assert items.containsKey(fxomObject);
         return items.get(fxomObject).getRowIndex();
     }
-    
+
     public GridBounds getBounds() {
         GridBounds result = null;
-        
+
         for (Map.Entry<FXOMObject, GridSnapshotItem> e : items.entrySet()) {
             if (result == null) {
                 result = e.getValue().getBounds();
@@ -94,9 +94,9 @@ public class GridSnapshot {
                 result = result.union(e.getValue().getBounds());
             }
         }
-        
+
         assert result != null; // Because (1)
-        
+
         return result;
     }
 }

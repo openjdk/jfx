@@ -40,9 +40,9 @@ import org.junit.Test;
 import static org.junit.Assert.*;
 
 public class ComboBoxTableCellTest {
-    
+
     private StringConverter<Object> converter;
-    
+
     @Before public void setup() {
         converter = new StringConverter<Object>() {
             @Override public String toString(Object object) {
@@ -54,22 +54,22 @@ public class ComboBoxTableCellTest {
             }
         };
     }
-    
+
     /**************************************************************************
-     * 
+     *
      * Test for public static Callback<TableColumn<T>, TableCell<T>> forTableColumn(T... items)
-     * 
+     *
      **************************************************************************/
 
-    
+
     @Test public void testStatic_forTableColumn_noArgs_ensureCellFactoryIsNotNull() {
         Callback<TableColumn<String,String>, TableCell<String,String>> cellFactory = ComboBoxTableCell.forTableColumn();
         assertNotNull(cellFactory);
     }
-    
+
     @Test public void testStatic_forTableColumn_noArgs_ensureCellFactoryCreatesCells() {
         Callback<TableColumn<String,String>, TableCell<String,String>> cellFactory = ComboBoxTableCell.forTableColumn();
-        
+
         TableColumn<String,String> tableColumn = new TableColumn<>();
         ComboBoxTableCell<String,String> cell = (ComboBoxTableCell<String,String>)cellFactory.call(tableColumn);
         assertNotNull(cell);
@@ -82,14 +82,14 @@ public class ComboBoxTableCellTest {
         ComboBoxTableCell<String,String> cell = (ComboBoxTableCell<String,String>)cellFactory.call(tableColumn);
         assertNotNull(cell.getConverter());
     }
-    
-    
-    
+
+
+
     /**************************************************************************
-     * 
+     *
      * Test for public static <T> Callback<TableColumn<T>, TableCell<T>> forTableColumn(
      *       final ObservableList<T> items)
-     * 
+     *
      **************************************************************************/
 
     @Test public void testStatic_forTableColumn_items_ensureSuccessWhenItemsIsNull() {
@@ -123,21 +123,21 @@ public class ComboBoxTableCellTest {
     }
 
     /**************************************************************************
-     * 
+     *
      * Constructor tests for default constructor
-     * 
+     *
      **************************************************************************/
 
     @Test public void testConstructor_noArgs_defaultStringConverterIsNotNull() {
         ComboBoxTableCell<Object, Object> cell = new ComboBoxTableCell<>();
         assertNotNull(cell.getConverter());
     }
-    
+
     @Test public void testConstructor_noArgs_defaultStyleClass() {
         ComboBoxTableCell<Object, Object> cell = new ComboBoxTableCell<>();
         assertTrue(cell.getStyleClass().contains("combo-box-table-cell"));
     }
-    
+
     @Test public void testConstructor_noArgs_defaultGraphicIsNull() {
         ComboBoxTableCell<Object, Object> cell = new ComboBoxTableCell<>();
         assertNull(cell.getGraphic());
@@ -148,24 +148,24 @@ public class ComboBoxTableCellTest {
         assertNotNull(cell.getItems());
         assertTrue(cell.getItems().isEmpty());
     }
-    
-    
+
+
     /**************************************************************************
-     * 
+     *
      * Constructor tests for one-arg (converter, no varargs items) constructor
-     * 
+     *
      **************************************************************************/
-    
+
     @Test public void testConstructor_converter_defaultStringConverterIsNotNull() {
         ComboBoxTableCell<Object, Object> cell = new ComboBoxTableCell<>(converter);
         assertNotNull(cell.getConverter());
     }
-    
+
     @Test public void testConstructor_converter_defaultStyleClass() {
         ComboBoxTableCell<Object, Object> cell = new ComboBoxTableCell<>(converter);
         assertTrue(cell.getStyleClass().contains("combo-box-table-cell"));
     }
-    
+
     @Test public void testConstructor_converter_defaultGraphicIsACheckBox() {
         ComboBoxTableCell<Object, Object> cell = new ComboBoxTableCell<>(converter);
         assertNull(cell.getGraphic());
@@ -229,12 +229,12 @@ public class ComboBoxTableCellTest {
         cell.setComboBoxEditable(false);
         assertFalse(cell.isComboBoxEditable());
     }
-    
-    
+
+
     /**************************************************************************
-     * 
+     *
      * updateItem tests
-     * 
+     *
      **************************************************************************/
 
     @Test public void test_updateItem_isEmpty_graphicIsNull() {
@@ -242,20 +242,20 @@ public class ComboBoxTableCellTest {
         cell.updateItem("TEST", true);
         assertNull(cell.getGraphic());
     }
-    
+
     @Test public void test_updateItem_isEmpty_textIsNull() {
         ComboBoxTableCell<Object, Object> cell = new ComboBoxTableCell<>();
         cell.updateItem("TEST", true);
         assertNull(cell.getText());
     }
-    
+
     @Test public void test_updateItem_isNotEmpty_textIsNotNull() {
         ComboBoxTableCell<Object, Object> cell = new ComboBoxTableCell<>();
         cell.updateItem("TEST", false);
         assertNotNull(cell.getText());
         assertEquals("TEST", cell.getText());
     }
-    
+
     @Test public void test_updateItem_isNotEmpty_textIsNotNull_nullConverter() {
         ComboBoxTableCell<Object, Object> cell = new ComboBoxTableCell<>();
         cell.setConverter(null);
@@ -263,7 +263,7 @@ public class ComboBoxTableCellTest {
         assertNotNull(cell.getText());
         assertEquals("TEST", cell.getText());
     }
-    
+
     @Test public void test_updateItem_isNotEmpty_textIsNotNull_nonNullConverter() {
         ComboBoxTableCell<Object, Object> cell = new ComboBoxTableCell<>();
         cell.setConverter(

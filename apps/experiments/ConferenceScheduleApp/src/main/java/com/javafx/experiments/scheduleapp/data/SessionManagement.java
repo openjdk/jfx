@@ -38,20 +38,20 @@ import javafx.beans.property.SimpleBooleanProperty;
  * Session Management for user login
  */
 public class SessionManagement {
-    
+
     private BooleanProperty isGuest = new SimpleBooleanProperty(true);
     public BooleanProperty isGuestProperty() { return isGuest; }
-    
+
     public void login() {
         isGuest.set(false);
     }
-    
+
     public void loginGuest() {
         isGuest.set(true);
     }
-    
+
     public void logout() {
         isGuest.set(true);
     }
-    
+
 }

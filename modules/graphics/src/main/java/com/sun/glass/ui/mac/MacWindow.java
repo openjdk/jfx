@@ -107,25 +107,25 @@ final class MacWindow extends Window {
 
     @Override native protected int _getEmbeddedX(long ptr);
     @Override native protected int _getEmbeddedY(long ptr);
-    
+
     @Override
     protected void _setCursor(long ptr, Cursor cursor) {
         ((MacCursor)cursor).set();
     }
-    
+
     @Override
     public void dispatchNpapiEvent(Map eventInfo) {
         NpapiEvent.dispatchCocoaNpapiEvent(this, eventInfo);
     }
 
     @Override
-    protected void _requestInput(long ptr, String text, int type, double width, double height, 
+    protected void _requestInput(long ptr, String text, int type, double width, double height,
                                     double Mxx, double Mxy, double Mxz, double Mxt,
-                                    double Myx, double Myy, double Myz, double Myt, 
+                                    double Myx, double Myy, double Myz, double Myt,
                                     double Mzx, double Mzy, double Mzz, double Mzt) {
         throw new UnsupportedOperationException("Not supported yet.");
     }
-    
+
     @Override
     protected void _releaseInput(long ptr) {
         throw new UnsupportedOperationException("Not supported yet.");

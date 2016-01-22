@@ -106,7 +106,7 @@ public class ScaleTest {
                  0, 67,  0, -5082,
                  0,  0, 10,   -45);
     }
-    
+
     @Test public void testScalePivotCtor() {
         final Scale trans = new Scale(11, 22, 33, 44);
         final Rectangle n = new Rectangle();

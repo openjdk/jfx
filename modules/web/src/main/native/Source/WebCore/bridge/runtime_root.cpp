@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -39,9 +39,9 @@
 
 namespace JSC { namespace Bindings {
 
-// This code attempts to solve two problems: (1) plug-ins leaking references to 
-// JS and the DOM; (2) plug-ins holding stale references to JS and the DOM. Previous 
-// comments in this file claimed that problem #1 was an issue in Java, in particular, 
+// This code attempts to solve two problems: (1) plug-ins leaking references to
+// JS and the DOM; (2) plug-ins holding stale references to JS and the DOM. Previous
+// comments in this file claimed that problem #1 was an issue in Java, in particular,
 // because Java, allegedly, didn't always call finalize when collecting an object.
 
 typedef HashSet<RootObject*> RootObjectSet;
@@ -52,7 +52,7 @@ static RootObjectSet* rootObjectSet()
     return &staticRootObjectSet;
 }
 
-// FIXME:  These two functions are a potential performance problem.  We could 
+// FIXME:  These two functions are a potential performance problem.  We could
 // fix them by adding a JSObject to RootObject dictionary.
 
 RootObject* findProtectingRootObject(JSObject* jsObject)
@@ -140,7 +140,7 @@ void RootObject::invalidate()
 void RootObject::gcProtect(JSObject* jsObject)
 {
     ASSERT(m_isValid);
-    
+
     if (!m_protectCountSet.contains(jsObject)) {
         JSC::JSLockHolder holder(&globalObject()->vm());
         JSC::gcProtect(jsObject);
@@ -151,7 +151,7 @@ void RootObject::gcProtect(JSObject* jsObject)
 void RootObject::gcUnprotect(JSObject* jsObject)
 {
     ASSERT(m_isValid);
-    
+
     if (!jsObject)
         return;
 
@@ -168,10 +168,10 @@ bool RootObject::gcIsProtected(JSObject* jsObject)
     return m_protectCountSet.contains(jsObject);
 }
 
-const void* RootObject::nativeHandle() const 
-{ 
+const void* RootObject::nativeHandle() const
+{
     ASSERT(m_isValid);
-    return m_nativeHandle; 
+    return m_nativeHandle;
 }
 
 JSGlobalObject* RootObject::globalObject() const

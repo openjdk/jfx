@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef StackVisitor_h
@@ -80,7 +80,7 @@ public:
         Arguments* createArguments();
         Arguments* existingArguments();
         CallFrame* callFrame() const { return m_callFrame; }
-        
+
 #ifndef NDEBUG
         JS_EXPORT_PRIVATE void print(int indentLevel);
 #endif

@@ -43,27 +43,27 @@ import javafx.scene.control.TableView;
 
 /**
  *
- * 
+ *
  */
 public class TableColumnPring extends AbstractGenericPring<Object> {
 
     private final TableViewDesignInfoX tableViewDesignInfo
             = new TableViewDesignInfoX();
-    
+
     public TableColumnPring(ContentPanelController contentPanelController, FXOMInstance fxomInstance) {
         super(contentPanelController, fxomInstance, Object.class);
         assert fxomInstance.getSceneGraphObject() instanceof TableColumn;
     }
-    
+
     public FXOMInstance getFxomInstance() {
         return (FXOMInstance) getFxomObject();
     }
 
-    
+
     /*
      * AbstractGenericPring
      */
-    
+
     @Override
     public Bounds getSceneGraphObjectBounds() {
         return tableViewDesignInfo.getColumnBounds(getTableColumn());
@@ -91,14 +91,14 @@ public class TableColumnPring extends AbstractGenericPring<Object> {
     @Override
     public AbstractGesture findGesture(Node node) {
         final AbstractGesture result;
-        
+
         if (node == ringPath) {
-            result = new SelectWithPringGesture(getContentPanelController(), 
+            result = new SelectWithPringGesture(getContentPanelController(),
                     getFxomInstance());
         } else {
             result = null;
         }
-        
+
         return result;
     }
 
@@ -106,7 +106,7 @@ public class TableColumnPring extends AbstractGenericPring<Object> {
     /*
      * Private
      */
-    
+
     private TableColumn<?,?> getTableColumn() {
         assert getSceneGraphObject() instanceof TableColumn;
         return (TableColumn<?,?>) getSceneGraphObject();

@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -121,7 +121,7 @@ int AccessibilityUIElement::rowCount()
     // FIXME: implement
     return 0;
 }
- 
+
 int AccessibilityUIElement::columnCount()
 {
     // FIXME: implement
@@ -156,7 +156,7 @@ AccessibilityUIElement AccessibilityUIElement::getChildAtIndex(unsigned index)
 }
 
 unsigned AccessibilityUIElement::indexOfChild(AccessibilityUIElement* element)
-{ 
+{
     // FIXME: implement
     return 0;
 }
@@ -433,7 +433,7 @@ bool AccessibilityUIElement::ariaIsGrabbed() const
 {
     return false;
 }
- 
+
 JSStringRef AccessibilityUIElement::ariaDropEffects() const
 {
     return 0;
@@ -625,7 +625,7 @@ AccessibilityUIElement AccessibilityUIElement::cellForColumnAndRow(unsigned colu
 
 JSStringRef AccessibilityUIElement::selectedTextRange()
 {
-    return JSStringCreateWithCharacters(0, 0);    
+    return JSStringCreateWithCharacters(0, 0);
 }
 
 void AccessibilityUIElement::setSelectedTextRange(unsigned location, unsigned length)

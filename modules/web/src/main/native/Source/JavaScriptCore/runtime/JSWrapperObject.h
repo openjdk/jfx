@@ -41,11 +41,11 @@ namespace JSC {
         JSValue internalValue() const;
         void setInternalValue(VM&, JSValue);
 
-        static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype) 
-        { 
+        static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype)
+        {
             return Structure::create(vm, globalObject, prototype, TypeInfo(ObjectType, StructureFlags), info());
         }
-        
+
         static ptrdiff_t internalValueOffset() { return OBJECT_OFFSETOF(JSWrapperObject, m_internalValue); }
         static ptrdiff_t internalValueCellOffset()
         {

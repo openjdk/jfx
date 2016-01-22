@@ -25,21 +25,21 @@
 package com.sun.glass.ui.monocle;
 
 class AndroidInputProcessor {
-    
+
     private final AndroidInputDevice device;
     final TouchPipeline touchPipeline;
     private final KeyInput keyInput = new KeyInput();
 
     AndroidInputProcessor(AndroidInputDevice device) {
         this.device = device;
-        touchPipeline = new TouchPipeline();       
+        touchPipeline = new TouchPipeline();
         touchPipeline.add(TouchInput.getInstance().getBasePipeline());
     }
-    
+
     void pushEvent(TouchState state) {
         touchPipeline.pushState(state);
     }
-    
+
     /**
      * Called when events are waiting on the input device to be processed.
      * Called on the runnable processor provided to the input device.

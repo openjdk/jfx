@@ -42,9 +42,9 @@ import com.oracle.javafx.scenebuilder.kit.fxom.FXOMPropertyT;
  *
  */
 public class CombineReferenceJob  extends Job {
-    
+
     private final Job subJob;
-    
+
     public CombineReferenceJob(FXOMNode reference, EditorController editorController) {
         super(editorController);
         if (reference instanceof FXOMIntrinsic) {
@@ -57,7 +57,7 @@ public class CombineReferenceJob  extends Job {
             throw new RuntimeException("Bug"); //NOI18N
         }
     }
-    
+
     /*
      * Job
      */
@@ -87,5 +87,5 @@ public class CombineReferenceJob  extends Job {
     }
 
 
-    
+
 }

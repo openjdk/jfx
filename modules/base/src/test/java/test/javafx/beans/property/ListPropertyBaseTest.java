@@ -163,48 +163,48 @@ public class ListPropertyBaseTest {
         final ObservableList<Object> source2 = FXCollections.observableArrayList();
         final Object value1 = new Object();
         final Object value2 = new Object();
-        
+
         // constructor
         property = new ListPropertyBaseTest.ListPropertyMock(source1);
         property.reset();
         attachInvalidationListener();
-        
+
         // add element
         source1.add(value1);
         assertEquals(value1, property.get(0));
         property.check(1);
         invalidationListener.check(property, 1);
-        
+
         // replace element
         source1.set(0, value2);
         assertEquals(value2, property.get(0));
         property.check(1);
         invalidationListener.check(property, 1);
-        
+
         // remove element
         source1.remove(0);
         assertTrue(property.isEmpty());
         property.check(1);
         invalidationListener.check(property, 1);
-        
+
         // set
         property.set(source2);
         property.get();
         property.reset();
         invalidationListener.reset();
-        
+
         // add element
         source2.add(0, value1);
         assertEquals(value1, property.get(0));
         property.check(1);
         invalidationListener.check(property, 1);
-        
+
         // replace element
         source2.set(0, value2);
         assertEquals(value2, property.get(0));
         property.check(1);
         invalidationListener.check(property, 1);
-        
+
         // remove element
         source2.remove(0);
         assertTrue(property.isEmpty());
@@ -218,48 +218,48 @@ public class ListPropertyBaseTest {
         final ObservableList<Object> source2 = FXCollections.observableArrayList();
         final Object value1 = new Object();
         final Object value2 = new Object();
-        
+
         // constructor
         property = new ListPropertyBaseTest.ListPropertyMock(source1);
         property.reset();
         attachChangeListener();
-        
+
         // add element
         source1.add(value1);
         assertEquals(value1, property.get(0));
         property.check(1);
         changeListener.check(property, source1, source1, 1);
-        
+
         // replace element
         source1.set(0, value2);
         assertEquals(value2, property.get(0));
         property.check(1);
         changeListener.check(property, source1, source1, 1);
-        
+
         // remove element
         source1.remove(0);
         assertTrue(property.isEmpty());
         property.check(1);
         changeListener.check(property, source1, source1, 1);
-        
+
         // set
         property.set(source2);
         property.get();
         property.reset();
         changeListener.reset();
-        
+
         // add element
         source2.add(0, value1);
         assertEquals(value1, property.get(0));
         property.check(1);
         changeListener.check(property, source2, source2, 1);
-        
+
         // replace element
         source2.set(0, value2);
         assertEquals(value2, property.get(0));
         property.check(1);
         changeListener.check(property, source2, source2, 1);
-        
+
         // remove element
         source2.remove(0);
         assertTrue(property.isEmpty());
@@ -273,53 +273,53 @@ public class ListPropertyBaseTest {
         final ObservableList<Object> source2 = FXCollections.observableArrayList();
         final Object value1 = new Object();
         final Object value2 = new Object();
-        
+
         // constructor
         property = new ListPropertyBaseTest.ListPropertyMock(source1);
         property.reset();
         attachListChangeListener();
-        
+
         // add element
         source1.add(value1);
         assertEquals(value1, property.get(0));
         property.check(1);
         listChangeListener.check1AddRemove(property, EMPTY_LIST, 0, 1);
         listChangeListener.clear();
-        
+
         // replace element
         source1.set(0, value2);
         assertEquals(value2, property.get(0));
         property.check(1);
         listChangeListener.check1AddRemove(property, Arrays.asList(value1), 0, 1);
         listChangeListener.clear();
-        
+
         // remove element
         source1.remove(0);
         assertTrue(property.isEmpty());
         property.check(1);
         listChangeListener.check1AddRemove(property, Arrays.asList(value2), 0, 0);
         listChangeListener.clear();
-        
+
         // set
         property.set(source2);
         property.get();
         property.reset();
         listChangeListener.clear();
-        
+
         // add element
         source2.add(0, value1);
         assertEquals(value1, property.get(0));
         property.check(1);
         listChangeListener.check1AddRemove(property, EMPTY_LIST, 0, 1);
         listChangeListener.clear();
-        
+
         // replace element
         source2.set(0, value2);
         assertEquals(value2, property.get(0));
         property.check(1);
         listChangeListener.check1AddRemove(property, Arrays.asList(value1), 0, 1);
         listChangeListener.clear();
-        
+
         // remove element
         source2.remove(0);
         assertTrue(property.isEmpty());
@@ -792,7 +792,7 @@ public class ListPropertyBaseTest {
             this.bean = bean;
             this.name = name;
         }
-        
+
         private ListPropertyMock(ObservableList<Object> initialValue) {
             super(initialValue);
             this.bean = NO_BEAN;

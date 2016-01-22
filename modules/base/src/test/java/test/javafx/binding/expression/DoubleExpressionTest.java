@@ -162,12 +162,12 @@ public class DoubleExpressionTest {
         final DoubleBinding binding6 = op1.divide(byte1);
         assertEquals(data / byte1, binding6.doubleValue(), EPSILON);
     }
-    
+
     @Test
-    public void testAsObject() { 
+    public void testAsObject() {
         final ObservableDoubleValueStub valueModel = new ObservableDoubleValueStub();
         final ObjectExpression<Double> exp = DoubleExpression.doubleExpression(valueModel).asObject();
-        
+
         assertEquals(0.0, exp.getValue(), EPSILON);
         valueModel.set(data);
         assertEquals(data, exp.getValue(), EPSILON);
@@ -192,7 +192,7 @@ public class DoubleExpressionTest {
         // make sure we do not create unnecessary bindings
         assertEquals(op1, DoubleExpression.doubleExpression(op1));
     }
-    
+
     @Test
     public void testObjectToDouble() {
         final ObservableValueStub<Double> valueModel = new ObservableValueStub<Double>();

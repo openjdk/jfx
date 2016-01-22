@@ -169,9 +169,9 @@ public class TreeViewSkin<T> extends VirtualContainerBase<TreeView<T>, TreeCell<
         flow.setCellFactory(flow1 -> createCell());
         flow.setFixedCellSize(control.getFixedCellSize());
         getChildren().add(flow);
-        
+
         setRoot(getSkinnable().getRoot());
-        
+
         EventHandler<MouseEvent> ml = event -> {
             // RT-15127: cancel editing on scroll. This is a bit extreme
             // (we are cancelling editing on touching the scrollbars).
@@ -219,7 +219,7 @@ public class TreeViewSkin<T> extends VirtualContainerBase<TreeView<T>, TreeCell<
         });
         registerChangeListener(control.cellFactoryProperty(), e -> flow.recreateCells());
         registerChangeListener(control.fixedCellSizeProperty(), e -> flow.setFixedCellSize(getSkinnable().getFixedCellSize()));
-        
+
         updateRowCount();
     }
 
@@ -429,20 +429,20 @@ public class TreeViewSkin<T> extends VirtualContainerBase<TreeView<T>, TreeCell<
     private TreeCell<T> createDefaultCellImpl() {
         return new TreeCell<T>() {
             private HBox hbox;
-            
+
             private WeakReference<TreeItem<T>> treeItemRef;
-            
+
             private InvalidationListener treeItemGraphicListener = observable -> {
                 updateDisplay(getItem(), isEmpty());
             };
-            
+
             private InvalidationListener treeItemListener = new InvalidationListener() {
                 @Override public void invalidated(Observable observable) {
                     TreeItem<T> oldTreeItem = treeItemRef == null ? null : treeItemRef.get();
                     if (oldTreeItem != null) {
                         oldTreeItem.graphicProperty().removeListener(weakTreeItemGraphicListener);
                     }
-                    
+
                     TreeItem<T> newTreeItem = getTreeItem();
                     if (newTreeItem != null) {
                         newTreeItem.graphicProperty().addListener(weakTreeItemGraphicListener);
@@ -450,21 +450,21 @@ public class TreeViewSkin<T> extends VirtualContainerBase<TreeView<T>, TreeCell<
                     }
                 }
             };
-            
+
             private WeakInvalidationListener weakTreeItemGraphicListener =
                     new WeakInvalidationListener(treeItemGraphicListener);
-            
+
             private WeakInvalidationListener weakTreeItemListener =
                     new WeakInvalidationListener(treeItemListener);
-            
+
             {
                 treeItemProperty().addListener(weakTreeItemListener);
-                
+
                 if (getTreeItem() != null) {
                     getTreeItem().graphicProperty().addListener(weakTreeItemGraphicListener);
                 }
             }
-            
+
             private void updateDisplay(T item, boolean empty) {
                 if (item == null || empty) {
                     hbox = null;
@@ -477,8 +477,8 @@ public class TreeViewSkin<T> extends VirtualContainerBase<TreeView<T>, TreeCell<
                     if (graphic != null) {
                         if (item instanceof Node) {
                             setText(null);
-                            
-                            // the item is a Node, and the graphic exists, so 
+
+                            // the item is a Node, and the graphic exists, so
                             // we must insert both into an HBox and present that
                             // to the user (see RT-15910)
                             if (hbox == null) {
@@ -501,16 +501,16 @@ public class TreeViewSkin<T> extends VirtualContainerBase<TreeView<T>, TreeCell<
                             setGraphic(null);
                         }
                     }
-                }                
+                }
             }
-            
+
             @Override public void updateItem(T item, boolean empty) {
                 super.updateItem(item, empty);
                 updateDisplay(item, empty);
             }
         };
     }
-    
+
     private void onFocusPreviousCell() {
         FocusModel<TreeItem<T>> fm = getSkinnable().getFocusModel();
         if (fm == null) return;

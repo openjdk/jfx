@@ -39,7 +39,7 @@ class AccessibilityListBox;
 class Element;
 class HTMLElement;
 class HTMLSelectElement;
-    
+
 class AccessibilityListBoxOption : public AccessibilityObject {
 
 private:
@@ -47,9 +47,9 @@ private:
 public:
     static PassRefPtr<AccessibilityListBoxOption> create();
     virtual ~AccessibilityListBoxOption();
-    
+
     void setHTMLElement(HTMLElement* element) { m_optionElement = element; }
-    
+
     virtual AccessibilityRole roleValue() const override { return ListBoxOptionRole; }
     virtual bool isSelected() const override;
     virtual bool isEnabled() const override;
@@ -66,7 +66,7 @@ public:
 
 private:
     HTMLElement* m_optionElement;
-    
+
     virtual bool canHaveChildren() const override { return false; }
     HTMLSelectElement* listBoxOptionParentNode() const;
     int listBoxOptionIndex() const;
@@ -76,7 +76,7 @@ private:
 };
 
 ACCESSIBILITY_OBJECT_TYPE_CASTS(AccessibilityListBoxOption, isListBoxOption())
-    
-} // namespace WebCore 
+
+} // namespace WebCore
 
 #endif // AccessibilityListBoxOption_h

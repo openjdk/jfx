@@ -107,7 +107,7 @@ public final class KeyboardShortcutsHandler extends BasicEventDispatcher {
             if (!((KeyEvent)event).isMetaDown() && !((KeyEvent)event).isControlDown() && !((KeyEvent)event).isAltDown()) {
                 Object obj = event.getTarget();
                 if (obj instanceof Node) {
-                
+
                     switch (((KeyEvent)event).getCode()) {
                       case TAB :
                           if (((KeyEvent)event).isShiftDown()) {
@@ -360,7 +360,7 @@ public final class KeyboardShortcutsHandler extends BasicEventDispatcher {
         if (mnemonics != null) {
             for (Map.Entry<KeyCombination, ObservableList<Mnemonic>> mnemonic: mnemonics.entrySet()) {
                 mnemonicsList = (ObservableList) mnemonic.getValue();
-         
+
                 if (mnemonicsList != null) {
                     for (int i = 0 ; i < mnemonicsList.size() ; i++) {
                         Node currentNode = (Node)mnemonicsList.get(i).getNode();

@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef FTLInlineCacheDescriptor_h
@@ -38,23 +38,23 @@ namespace JSC { namespace FTL {
 class InlineCacheDescriptor {
 public:
     InlineCacheDescriptor() { }
-    
+
     InlineCacheDescriptor(unsigned stackmapID, CodeOrigin codeOrigin, StringImpl* uid)
         : m_stackmapID(stackmapID)
         , m_codeOrigin(codeOrigin)
         , m_uid(uid)
     {
     }
-    
+
     unsigned stackmapID() const { return m_stackmapID; }
     CodeOrigin codeOrigin() const { return m_codeOrigin; }
     StringImpl* uid() const { return m_uid; }
-    
+
 private:
     unsigned m_stackmapID;
     CodeOrigin m_codeOrigin;
     StringImpl* m_uid;
-    
+
 public:
     Vector<MacroAssembler::Jump> m_slowPathDone;
 };
@@ -62,19 +62,19 @@ public:
 class GetByIdDescriptor : public InlineCacheDescriptor {
 public:
     GetByIdDescriptor() { }
-    
+
     GetByIdDescriptor(unsigned stackmapID, CodeOrigin codeOrigin, StringImpl* uid)
         : InlineCacheDescriptor(stackmapID, codeOrigin, uid)
     {
     }
-    
+
     Vector<JITGetByIdGenerator> m_generators;
 };
 
 class PutByIdDescriptor : public InlineCacheDescriptor {
 public:
     PutByIdDescriptor() { }
-    
+
     PutByIdDescriptor(
         unsigned stackmapID, CodeOrigin codeOrigin, StringImpl* uid,
         ECMAMode ecmaMode, PutKind putKind)
@@ -83,9 +83,9 @@ public:
         , m_putKind(putKind)
     {
     }
-    
+
     Vector<JITPutByIdGenerator> m_generators;
-    
+
     ECMAMode ecmaMode() const { return m_ecmaMode; }
     PutKind putKind() const { return m_putKind; }
 

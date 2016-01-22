@@ -494,7 +494,7 @@ bool TestRunner::findString(JSContextRef context, JSStringRef target, JSObjectRe
     ASSERT(webView);
 
     JSRetainPtr<JSStringRef> lengthPropertyName(Adopt, JSStringCreateWithUTF8CString("length"));
-    JSValueRef lengthValue = JSObjectGetProperty(context, optionsArray, lengthPropertyName.get(), 0); 
+    JSValueRef lengthValue = JSObjectGetProperty(context, optionsArray, lengthPropertyName.get(), 0);
     if (!JSValueIsNumber(context, lengthValue))
         return false;
 
@@ -502,10 +502,10 @@ bool TestRunner::findString(JSContextRef context, JSStringRef target, JSObjectRe
 
     size_t length = static_cast<size_t>(JSValueToNumber(context, lengthValue, 0));
     for (size_t i = 0; i < length; ++i) {
-        JSValueRef value = JSObjectGetPropertyAtIndex(context, optionsArray, i, 0); 
+        JSValueRef value = JSObjectGetPropertyAtIndex(context, optionsArray, i, 0);
         if (!JSValueIsString(context, value))
             continue;
-    
+
         JSRetainPtr<JSStringRef> optionName(Adopt, JSValueToStringCopy(context, value, 0));
 
         if (JSStringIsEqualToUTF8CString(optionName.get(), "CaseInsensitive"))
@@ -520,9 +520,9 @@ bool TestRunner::findString(JSContextRef context, JSStringRef target, JSObjectRe
             findOptions |= WebKit::WebFindOptionsWrapAround;
         else if (JSStringIsEqualToUTF8CString(optionName.get(), "StartInSelection"))
             findOptions |= WebKit::WebFindOptionsStartInSelection;
-    }   
+    }
 
-    return DumpRenderTreeSupportGtk::findString(webView, targetString.get(), findOptions); 
+    return DumpRenderTreeSupportGtk::findString(webView, targetString.get(), findOptions);
 }
 
 bool TestRunner::isCommandEnabled(JSStringRef name)
@@ -596,7 +596,7 @@ void TestRunner::clearAllDatabases()
 {
     webkit_remove_all_web_databases();
 }
- 
+
 void TestRunner::setDatabaseQuota(unsigned long long quota)
 {
     WebKitSecurityOrigin* origin = webkit_web_frame_get_security_origin(mainFrame);

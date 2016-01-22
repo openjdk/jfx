@@ -41,7 +41,7 @@ int32_t SimpleJumpTable::offsetForValue(int32_t value, int32_t defaultOffset)
         if (offset)
             return offset;
     }
-    return defaultOffset;        
+    return defaultOffset;
 }
 
 } // namespace JSC

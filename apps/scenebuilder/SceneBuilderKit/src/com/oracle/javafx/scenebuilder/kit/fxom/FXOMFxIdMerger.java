@@ -42,88 +42,88 @@ import java.util.Set;
  *
  */
 public class FXOMFxIdMerger {
-    
+
     private final Set<String> existingFxIds = new HashSet<>();
     private final Map<String, String> renamings;
-    
+
     public FXOMFxIdMerger(Collection<String> existingFxIds, Collection<String> importedFxIds) {
         assert existingFxIds != null;
         assert importedFxIds != null;
-        
+
         this.existingFxIds.addAll(existingFxIds);
         this.renamings = makeRenamings(importedFxIds);
     }
-    
+
     public String getRenamedFxId(String importedFxId) {
         return renamings.get(importedFxId);
     }
-    
-    
+
+
     /*
      * Private
      */
-    
+
     private Map<String, String> makeRenamings(Collection<String> importedFxIds) {
         final Map<String, String> result = new HashMap<>();
-        
+
         /*
          * Let's create three sets:
-         * 
+         *
          * 1) currentFxIds     : fxIds defined in existingFxIds but not in importedFxIds
          * 2) newFxIds         : fxIds defined in importedFxIds but not in existingFxIds
          * 3) conflictingFxIds : fxIds defined in both importedFxIds and existingFxIds
          */
-        
+
         final Set<String> currentFxIds = new HashSet<>();
         currentFxIds.addAll(existingFxIds);
         currentFxIds.removeAll(importedFxIds);
-        
+
         final Set<String> newFxIds = new HashSet<>();
         newFxIds.addAll(importedFxIds);
         newFxIds.removeAll(existingFxIds);
-        
+
         final Set<String> conflictingFxIds = new HashSet<>();
         conflictingFxIds.addAll(existingFxIds);
         conflictingFxIds.retainAll(importedFxIds);
-        
+
         // No renaming for items in newFxIds
         for (String fxId : newFxIds) {
             result.put(fxId, fxId);
         }
-        
+
         // For items in conflictingFxIds, we generate a new name.
         // This new name must not conflict with :
         //  - other fxIds from currentFxIds
         //  - other fxIds from newFxIds
         //  - other generated fxIds
-        
+
         if (conflictingFxIds.isEmpty() == false) {
             final Set<String> nameSpace = new HashSet<>();
             nameSpace.addAll(currentFxIds);
             nameSpace.addAll(newFxIds);
-            
+
             for (String fxId : conflictingFxIds) {
                 final String renamedFxId = generateFxId(fxId, nameSpace);
                 result.put(fxId, renamedFxId);
                 nameSpace.add(renamedFxId);
             }
         }
-        
+
         return result;
     }
-    
-    
+
+
     private String generateFxId(String conflictFxId, Set<String> nameSpace) {
         assert conflictFxId != null;
         assert nameSpace != null;
         assert nameSpace.contains(conflictFxId) == false;
-        
+
         /*
-         * We a numeric suffix to conflictFxId and checks that is not 
+         * We a numeric suffix to conflictFxId and checks that is not
          * already in nameSpace. We increment the suffix and retry if there is
          * conflict.
          */
-        
+
         int suffix = 1;
         final int conflictFxIdLength = conflictFxId.length();
         final StringBuilder sb = new StringBuilder();
@@ -133,7 +133,7 @@ public class FXOMFxIdMerger {
             sb.delete(conflictFxIdLength, sb.length());
             sb.append(++suffix);
         }
-        
+
         return sb.toString();
     }
 }

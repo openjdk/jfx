@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef IndexingHeaderInlines_h
@@ -36,7 +36,7 @@ inline size_t IndexingHeader::preCapacity(Structure* structure)
 {
     if (LIKELY(!hasArrayStorage(structure->indexingType())))
         return 0;
-    
+
     return arrayStorage()->m_indexBias;
 }
 
@@ -48,10 +48,10 @@ inline size_t IndexingHeader::indexingPayloadSizeInBytes(Structure* structure)
     case ALL_DOUBLE_INDEXING_TYPES:
     case ALL_CONTIGUOUS_INDEXING_TYPES:
         return vectorLength() * sizeof(EncodedJSValue);
-        
+
     case ALL_ARRAY_STORAGE_INDEXING_TYPES:
         return ArrayStorage::sizeFor(arrayStorage()->vectorLength());
-        
+
     default:
         ASSERT(!hasIndexedProperties(structure->indexingType()));
         return 0;

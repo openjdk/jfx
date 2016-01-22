@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef DFGInsertionSet_h
@@ -44,19 +44,19 @@ public:
         : m_graph(graph)
     {
     }
-    
+
     Node* insert(const Insertion& insertion)
     {
         ASSERT(!m_insertions.size() || m_insertions.last().index() <= insertion.index());
         m_insertions.append(insertion);
         return insertion.element();
     }
-    
+
     Node* insert(size_t index, Node* element)
     {
         return insert(Insertion(index, element));
     }
-    
+
 #define DFG_DEFINE_INSERT_NODE(templatePre, templatePost, typeParams, valueParamsComma, valueParams, valueArgs) \
     templatePre typeParams templatePost Node* insertNode(size_t index, SpeculatedType type valueParamsComma valueParams) \
     { \
@@ -64,7 +64,7 @@ public:
     }
     DFG_VARIADIC_TEMPLATE_FUNCTION(DFG_DEFINE_INSERT_NODE)
 #undef DFG_DEFINE_INSERT_NODE
-    
+
     Node* insertConstant(size_t index, NodeOrigin origin, JSValue value)
     {
         unsigned constantReg =
@@ -73,7 +73,7 @@ public:
             index, speculationFromValue(value), JSConstant, origin,
             OpInfo(constantReg));
     }
-    
+
     Node* insertConstant(size_t index, CodeOrigin origin, JSValue value)
     {
         return insertConstant(index, NodeOrigin(origin), value);

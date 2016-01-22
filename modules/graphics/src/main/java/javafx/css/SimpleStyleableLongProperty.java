@@ -30,7 +30,7 @@ import javafx.beans.property.SimpleLongProperty;
 
 /**
  * This class extends {@code SimpleLongProperty} and provides a full
- * implementation of a {@code StyleableProperty}.  
+ * implementation of a {@code StyleableProperty}.
  *
  * This class is used to make a {@link javafx.beans.property.LongProperty},
  * that would otherwise be implemented as a {@link SimpleLongProperty},

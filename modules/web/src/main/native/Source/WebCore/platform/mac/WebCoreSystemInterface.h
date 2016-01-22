@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef WebCoreSystemInterface_h
@@ -137,13 +137,13 @@ extern void (*wkCGContextResetClip)(CGContextRef);
 extern bool (*wkCGContextDrawsWithCorrectShadowOffsets)(CGContextRef);
 #endif
 extern CGPatternRef (*wkCGPatternCreateWithImageAndTransform)(CGImageRef, CGAffineTransform, int);
-extern CFReadStreamRef (*wkCreateCustomCFReadStream)(void *(*formCreate)(CFReadStreamRef, void *), 
-    void (*formFinalize)(CFReadStreamRef, void *), 
-    Boolean (*formOpen)(CFReadStreamRef, CFStreamError *, Boolean *, void *), 
-    CFIndex (*formRead)(CFReadStreamRef, UInt8 *, CFIndex, CFStreamError *, Boolean *, void *), 
-    Boolean (*formCanRead)(CFReadStreamRef, void *), 
-    void (*formClose)(CFReadStreamRef, void *), 
-    void (*formSchedule)(CFReadStreamRef, CFRunLoopRef, CFStringRef, void *), 
+extern CFReadStreamRef (*wkCreateCustomCFReadStream)(void *(*formCreate)(CFReadStreamRef, void *),
+    void (*formFinalize)(CFReadStreamRef, void *),
+    Boolean (*formOpen)(CFReadStreamRef, CFStreamError *, Boolean *, void *),
+    CFIndex (*formRead)(CFReadStreamRef, UInt8 *, CFIndex, CFStreamError *, Boolean *, void *),
+    Boolean (*formCanRead)(CFReadStreamRef, void *),
+    void (*formClose)(CFReadStreamRef, void *),
+    void (*formSchedule)(CFReadStreamRef, CFRunLoopRef, CFStringRef, void *),
     void (*formUnschedule)(CFReadStreamRef, CFRunLoopRef, CFStringRef, void *),
     void *context);
 extern CFStringRef (*wkCopyCFLocalizationPreferredName)(CFStringRef);
@@ -278,13 +278,13 @@ extern NSURL *(*wkAVAssetResolvedURL)(AVAsset*);
 
 extern NSCursor *(*wkCursor)(const char*);
 #endif // !PLATFORM(IOS)
-    
+
 #if !PLATFORM(IOS)
 extern NSArray *(*wkSpeechSynthesisGetVoiceIdentifiers)(void);
 extern NSString *(*wkSpeechSynthesisGetDefaultVoiceIdentifierForLocale)(NSLocale *);
 
 extern void (*wkUnregisterUniqueIdForElement)(id element);
-extern void (*wkAccessibilityHandleFocusChanged)(void);    
+extern void (*wkAccessibilityHandleFocusChanged)(void);
 extern CFTypeID (*wkGetAXTextMarkerTypeID)(void);
 extern CFTypeID (*wkGetAXTextMarkerRangeTypeID)(void);
 extern CFTypeRef (*wkCreateAXTextMarkerRange)(CFTypeRef start, CFTypeRef end);
@@ -344,7 +344,7 @@ extern dispatch_source_t (*wkCreateVMPressureDispatchOnMainQueue)(void);
 #if !PLATFORM(IOS) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 1090
 extern dispatch_source_t (*wkCreateMemoryStatusPressureCriticalDispatchOnMainQueue)(void);
 #endif
-    
+
 #if !PLATFORM(IOS) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 1080
 extern bool (*wkExecutableWasLinkedOnOrBeforeLion)(void);
 #endif

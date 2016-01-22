@@ -49,31 +49,31 @@ public class ReadOnlyMapPropertyTest {
     public void testToString() {
         final ReadOnlyMapProperty<Object, Object> v1 = new ReadOnlyMapPropertyStub(null, "");
         assertEquals("ReadOnlyMapProperty [value: " + DEFAULT + "]", v1.toString());
-        
+
         final ReadOnlyMapProperty<Object, Object> v2 = new ReadOnlyMapPropertyStub(null, null);
         assertEquals("ReadOnlyMapProperty [value: " + DEFAULT + "]", v2.toString());
-        
+
         final Object bean = new Object();
         final String name = "My name";
         final ReadOnlyMapProperty<Object, Object> v3 = new ReadOnlyMapPropertyStub(bean, name);
         assertEquals("ReadOnlyMapProperty [bean: " + bean.toString() + ", name: My name, value: " + DEFAULT + "]", v3.toString());
-        
+
         final ReadOnlyMapProperty<Object, Object> v4 = new ReadOnlyMapPropertyStub(bean, "");
         assertEquals("ReadOnlyMapProperty [bean: " + bean.toString() + ", value: " + DEFAULT + "]", v4.toString());
-        
+
         final ReadOnlyMapProperty<Object, Object> v5 = new ReadOnlyMapPropertyStub(bean, null);
         assertEquals("ReadOnlyMapProperty [bean: " + bean.toString() + ", value: " + DEFAULT + "]", v5.toString());
-        
+
         final ReadOnlyMapProperty<Object, Object> v6 = new ReadOnlyMapPropertyStub(null, name);
         assertEquals("ReadOnlyMapProperty [name: My name, value: " + DEFAULT + "]", v6.toString());
-        
+
     }
-    
+
     private static class ReadOnlyMapPropertyStub extends ReadOnlyMapProperty<Object, Object> {
-        
+
         private final Object bean;
         private final String name;
-        
+
         private ReadOnlyMapPropertyStub(Object bean, String name) {
             this.bean = bean;
             this.name = name;

@@ -46,11 +46,11 @@
 #include "StyleResolver.h"
 #include <CoreGraphics/CoreGraphics.h>
 #include <wtf/RetainPtr.h>
- 
+
 using std::min;
 
-// FIXME: The platform-independent code in this class should be factored out and merged with RenderThemeMac. 
- 
+// FIXME: The platform-independent code in this class should be factored out and merged with RenderThemeMac.
+
 namespace WebCore {
 
 using namespace HTMLNames;
@@ -138,7 +138,7 @@ static NSControlSize controlSizeFromRect(const IntRect& rect, const IntSize size
         return NSRegularControlSize;
     else if (sizes[NSMiniControlSize].height() == rect.height())
         return NSMiniControlSize;
-    
+
     return NSSmallControlSize;
 }
 
@@ -185,7 +185,7 @@ Color RenderThemeSafari::platformFocusRingColor() const
 static float systemFontSizeForControlSize(NSControlSize controlSize)
 {
     static float sizes[] = { 13.0f, 11.0f, 9.0f };
-    
+
     return sizes[controlSize];
 }
 
@@ -419,7 +419,7 @@ bool RenderThemeSafari::paintCheckbox(RenderObject* o, const PaintInfo& paintInf
 
     NSControlSize controlSize = controlSizeForFont(&o->style());
 
-    IntRect inflatedRect = inflateRect(r, checkboxSizes()[controlSize], checkboxMargins(controlSize));  
+    IntRect inflatedRect = inflateRect(r, checkboxSizes()[controlSize], checkboxMargins(controlSize));
     paintThemePart(SafariTheme::CheckboxPart, paintInfo.context->platformContext(), inflatedRect, controlSize, determineState(o));
 
     return false;
@@ -457,8 +457,8 @@ bool RenderThemeSafari::paintRadio(RenderObject* o, const PaintInfo& paintInfo, 
     ASSERT(SafariThemeLibrary());
 
     NSControlSize controlSize = controlSizeForFont(&o->style());
- 
-    IntRect inflatedRect = inflateRect(r, radioSizes()[controlSize], radioMargins(controlSize));    
+
+    IntRect inflatedRect = inflateRect(r, radioSizes()[controlSize], radioMargins(controlSize));
     paintThemePart(RadioButtonPart, paintInfo.context->platformContext(), inflatedRect, controlSize, determineState(o));
 
     return false;
@@ -622,7 +622,7 @@ void RenderThemeSafari::adjustTextFieldStyle(StyleResolver*, RenderStyle*, Eleme
 }
 
 bool RenderThemeSafari::paintCapsLockIndicator(RenderObject* o, const PaintInfo& paintInfo, const IntRect& r)
-{    
+{
 #if defined(SAFARI_THEME_VERSION) && SAFARI_THEME_VERSION >= 1
     ASSERT(SafariThemeLibrary());
 
@@ -867,7 +867,7 @@ void RenderThemeSafari::adjustMenuListStyle(StyleResolver* styleResolver, Render
 
     style->resetBorder();
     style->resetPadding();
-    
+
     // Height is locked to auto.
     style->setHeight(Length(Auto));
 
@@ -929,13 +929,13 @@ int RenderThemeSafari::popupInternalPaddingBottom(RenderStyle* style) const
 void RenderThemeSafari::adjustMenuListButtonStyle(StyleResolver*, RenderStyle* style, Element*) const
 {
     float fontScale = style->fontSize() / baseFontSize;
-    
+
     style->resetPadding();
     style->setBorderRadius(IntSize(int(baseBorderRadius + fontScale - 1), int(baseBorderRadius + fontScale - 1))); // FIXME: Round up?
 
     const int minHeight = 15;
     style->setMinHeight(Length(minHeight, Fixed));
-    
+
     style->setLineHeight(RenderStyle::initialLineHeight());
 }
 
@@ -966,7 +966,7 @@ bool RenderThemeSafari::paintSliderTrack(RenderObject* o, const PaintInfo& paint
     else if (o->style().appearance() == SliderVerticalPart)
         bounds.setRect(IntRect(r.x() + r.width() / 2 - trackWidth / 2,
                                r.y(),
-                               trackWidth, 
+                               trackWidth,
                                r.height()));
 
     CGContextRef context = paintInfo.context->platformContext();
@@ -986,15 +986,15 @@ bool RenderThemeSafari::paintSliderTrack(RenderObject* o, const PaintInfo& paint
     paintInfo.context->clipRoundedRect(bounds);
     CGContextDrawShading(context, mainShading.get());
     paintInfo.context->restore();
-    
+
     return false;
 }
 
-void RenderThemeSafari::adjustSliderThumbStyle(StyleResolver* styleResolver, RenderStyle* style, Element* e) const 
-{ 
+void RenderThemeSafari::adjustSliderThumbStyle(StyleResolver* styleResolver, RenderStyle* style, Element* e) const
+{
     RenderTheme::adjustSliderThumbStyle(styleResolver, style, e);
-    style->setBoxShadow(nullptr); 
-} 
+    style->setBoxShadow(nullptr);
+}
 
 const float verticalSliderHeightPadding = 0.1f;
 
@@ -1013,9 +1013,9 @@ void RenderThemeSafari::adjustSliderThumbSize(RenderStyle* style, Element*) cons
     if (style->appearance() == SliderThumbHorizontalPart || style->appearance() == SliderThumbVerticalPart) {
         style->setWidth(Length(sliderThumbWidth, Fixed));
         style->setHeight(Length(sliderThumbHeight, Fixed));
-    } 
+    }
 #if ENABLE(VIDEO)
-    else if (style->appearance() == MediaSliderThumbPart) 
+    else if (style->appearance() == MediaSliderThumbPart)
         RenderMediaControls::adjustMediaSliderThumbSize(style);
 #endif
 }
@@ -1039,7 +1039,7 @@ void RenderThemeSafari::setSearchFieldSize(RenderStyle* style) const
     // If the width and height are both specified, then we have nothing to do.
     if (!style->width().isIntrinsicOrAuto() && !style->height().isAuto())
         return;
-    
+
     // Use the font size to determine the intrinsic width of the control.
     setSizeFromFont(style, searchFieldSizes());
 }
@@ -1056,19 +1056,19 @@ void RenderThemeSafari::adjustSearchFieldStyle(StyleResolver* styleResolver, Ren
     style->setBorderBottomWidth(borderWidth);
     style->setBorderBottomStyle(INSET);
     style->setBorderTopWidth(borderWidth);
-    style->setBorderTopStyle(INSET);    
-    
+    style->setBorderTopStyle(INSET);
+
     // Override height.
     style->setHeight(Length(Auto));
     setSearchFieldSize(style);
-    
+
     // Override padding size to match AppKit text positioning.
     const int padding = 1;
     style->setPaddingLeft(Length(padding, Fixed));
     style->setPaddingRight(Length(padding, Fixed));
     style->setPaddingTop(Length(padding, Fixed));
     style->setPaddingBottom(Length(padding, Fixed));
-    
+
     NSControlSize controlSize = controlSizeForFont(style);
     setFontFromControlSize(styleResolver, style, controlSize);
 }

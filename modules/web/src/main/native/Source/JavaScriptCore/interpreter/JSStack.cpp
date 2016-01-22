@@ -43,7 +43,7 @@ static Mutex& stackStatisticsMutex()
 {
     DEFINE_STATIC_LOCAL(Mutex, staticMutex, ());
     return staticMutex;
-}    
+}
 #endif // ENABLE(LLINT_C_LOOP)
 
 JSStack::JSStack(VM& vm)
@@ -61,7 +61,7 @@ JSStack::JSStack(VM& vm)
     m_reservation = PageReservation::reserve(WTF::roundUpToMultipleOf(commitSize, capacity), OSAllocator::JSVMStackPages);
     setStackLimit(highAddress());
     m_commitTop = highAddress();
-    
+
     m_lastStackTop = baseOfStack();
 #endif // ENABLE(LLINT_C_LOOP)
 
@@ -120,13 +120,13 @@ void JSStack::sanitizeStack()
 {
 #if !defined(ADDRESS_SANITIZER)
     ASSERT(topOfStack() <= baseOfStack());
-    
+
     if (m_lastStackTop < topOfStack()) {
         char* begin = reinterpret_cast<char*>(m_lastStackTop + 1);
         char* end = reinterpret_cast<char*>(topOfStack() + 1);
         memset(begin, 0, end - begin);
     }
-    
+
     m_lastStackTop = topOfStack();
 #endif
 }

@@ -45,7 +45,7 @@ public class HelloSanity extends Application {
     public static void main(String[] args) {
         launch(args);
     }
-    
+
     //@Override
     public void start(final Stage primaryStage) {
 
@@ -78,17 +78,17 @@ public class HelloSanity extends Application {
 
         Button bgestures = new Button("Gesture Actions");
         bgestures.setOnAction(e -> builder.GestureTest(globalScene, mainBox));
-        
+
         Button bquit = new Button("Quit");
         bquit.setOnAction(e -> primaryStage.close());
-        
+
         mainBox.getChildren().addAll(welcome, bControls, bTabs, bWins,
                                      bAnim, bEffs, bgestures, bquit);
         globalScene.setRoot(mainBox);
         globalScene.getStylesheets().add("hello/HelloSanityStyles.css");
         primaryStage.setScene(globalScene);
         primaryStage.show();
-    }   
+    }
 }
 
 

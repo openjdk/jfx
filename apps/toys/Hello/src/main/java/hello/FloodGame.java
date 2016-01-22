@@ -53,7 +53,7 @@ public class FloodGame extends Application {
 
     final int NUMROWS = 6;
     final int NUMCOLS = 8;
-            
+
     static final Color[] colors = {
         Color.web("#d02020"),
         Color.web("#ff8010"),
@@ -68,7 +68,7 @@ public class FloodGame extends Application {
     private Color newColor;
     private Cell[] cells = Cell.createCells();
     private Set<Cell> changingCells = new HashSet<Cell>();
-  
+
     boolean gameWon() {
         Paint iColor = cells[0].getFill();
         int count = 0;
@@ -83,7 +83,7 @@ public class FloodGame extends Application {
     public static Color randColor() {
         return colors[rand.nextInt(colors.length)];
     }
-   
+
     private Cell cellAt(int r, int c) {
         if (r < 0 || c < 0 || r >= NUMROWS || c >= NUMCOLS) {
             return null;
@@ -93,7 +93,7 @@ public class FloodGame extends Application {
     }
 
     private Set findMatchingCells() {
-        Set set = new HashSet<Cell>(); 
+        Set set = new HashSet<Cell>();
         flood(0, 0, (Color)cellAt(0, 0).getFill() , set);
         return set;
     }
@@ -116,7 +116,7 @@ public class FloodGame extends Application {
     int numMoves = 0;
     Label label ;
     Label doneLabel;
-    
+
     public void animate() {
         for (Cell cell : changingCells) {
               final Cell cellf = cell;
@@ -145,10 +145,10 @@ public class FloodGame extends Application {
 
             SequentialTransition st = new SequentialTransition();
             st.getChildren().addAll(fadeOut, fadeIn);
-                 
+
             st.play();
-        }  
-       
+        }
+
         //timeline.playFromStart();
     }
 
@@ -188,7 +188,7 @@ public class FloodGame extends Application {
         effect.setTopOpacity(0.7f);
         effect.setFraction(0.5f);
         group.setEffect(effect);
-        
+
         group.getChildren().add(group2);
         hbox.getChildren().add(group);
 
@@ -205,7 +205,7 @@ public class FloodGame extends Application {
             rect.setFill(c);
             button.setGraphic(rect);
             vbox.getChildren().add(button);
-          
+
             button.setOnAction(e -> {
                 System.out.println("Action on Button");
                 changingCells.clear();
@@ -237,9 +237,9 @@ public class FloodGame extends Application {
         //            kf1.setAction( new Function0<Void>() {
         //                @Override
         //                public Void invoke() {
-        //                   
+        //
         //                        cell.setFill(newColor);
-        //                    
+        //
         //                    return null;
         //                }
         //            });
@@ -250,7 +250,7 @@ public class FloodGame extends Application {
         //            timeline.getKeyFrames().addAll(kf1, kf2);
      }
      */
-    
+
     /**
      * @param args the command line arguments
      */
@@ -258,7 +258,7 @@ public class FloodGame extends Application {
         Application.launch(args);
     }
 
-   
+
 }
 
 class Cell extends Rectangle {

@@ -62,7 +62,7 @@ import javafx.css.StyleableProperty;
  * @since JavaFX 2.1
  */
 public class StackedBarChart<X, Y> extends XYChart<X, Y> {
-        
+
     // -------------- PRIVATE FIELDS -------------------------------------------
     private Map<Series, Map<String, List<Data<X, Y>>>> seriesCategoryMap =
                          new HashMap<Series, Map<String, List<Data<X, Y>>>>();
@@ -79,7 +79,7 @@ public class StackedBarChart<X, Y> extends XYChart<X, Y> {
                 for(String cat : c.getRemoved()) {
                     for (Series<X,Y> series : getData()) {
                         for (Data<X, Y> data : series.getData()) {
-                            if ((cat).equals((orientation == orientation.VERTICAL) ? 
+                            if ((cat).equals((orientation == orientation.VERTICAL) ?
                                     data.getXValue() : data.getYValue())) {
                                 boolean animatedOn = getAnimated();
                                 setAnimated(false);
@@ -93,7 +93,7 @@ public class StackedBarChart<X, Y> extends XYChart<X, Y> {
             }
         }
     };
-    
+
     // -------------- PUBLIC PROPERTIES ----------------------------------------
     /** The gap to leave between bars in separate categories */
     private DoubleProperty categoryGap = new StyleableDoubleProperty(10) {
@@ -330,7 +330,7 @@ public class StackedBarChart<X, Y> extends XYChart<X, Y> {
         if (orientation == Orientation.VERTICAL) {
             item.setYValue(getYAxis().toRealValue(getYAxis().getZeroPosition()));
             t.getKeyFrames().addAll(
-                    new KeyFrame(Duration.ZERO, new KeyValue(currentDisplayedYValueProperty(item), 
+                    new KeyFrame(Duration.ZERO, new KeyValue(currentDisplayedYValueProperty(item),
                     getCurrentDisplayedYValue(item))),
                     new KeyFrame(Duration.millis(700), actionEvent -> {
                         getPlotChildren().remove(bar);
@@ -339,7 +339,7 @@ public class StackedBarChart<X, Y> extends XYChart<X, Y> {
         } else {
             item.setXValue(getXAxis().toRealValue(getXAxis().getZeroPosition()));
             t.getKeyFrames().addAll(
-                    new KeyFrame(Duration.ZERO, new KeyValue(currentDisplayedXValueProperty(item), 
+                    new KeyFrame(Duration.ZERO, new KeyValue(currentDisplayedXValueProperty(item),
                     getCurrentDisplayedXValue(item))),
                     new KeyFrame(Duration.millis(700), actionEvent -> {
                         getPlotChildren().remove(bar);
@@ -556,7 +556,7 @@ public class StackedBarChart<X, Y> extends XYChart<X, Y> {
     */
     private static class StyleableProperties {
 
-        private static final CssMetaData<StackedBarChart<?,?>,Number> CATEGORY_GAP = 
+        private static final CssMetaData<StackedBarChart<?,?>,Number> CATEGORY_GAP =
             new CssMetaData<StackedBarChart<?,?>,Number>("-fx-category-gap",
                 SizeConverter.getInstance(), 10.0)  {
 
@@ -600,10 +600,10 @@ public class StackedBarChart<X, Y> extends XYChart<X, Y> {
     }
 
     /** Pseudoclass indicating this is a vertical chart. */
-    private static final PseudoClass VERTICAL_PSEUDOCLASS_STATE = 
+    private static final PseudoClass VERTICAL_PSEUDOCLASS_STATE =
             PseudoClass.getPseudoClass("vertical");
     /** Pseudoclass indicating this is a horizontal chart. */
-    private static final PseudoClass HORIZONTAL_PSEUDOCLASS_STATE = 
+    private static final PseudoClass HORIZONTAL_PSEUDOCLASS_STATE =
             PseudoClass.getPseudoClass("horizontal");
 
 }

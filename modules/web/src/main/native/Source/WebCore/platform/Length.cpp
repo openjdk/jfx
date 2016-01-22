@@ -149,15 +149,15 @@ std::unique_ptr<Length[]> newLengthArray(const String& string, int& len)
 
     return r;
 }
-        
+
 class CalculationValueHandleMap {
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    CalculationValueHandleMap() 
-        : m_index(1) 
+    CalculationValueHandleMap()
+        : m_index(1)
     {
     }
-    
+
     int insert(PassRefPtr<CalculationValue> calcValue)
     {
         ASSERT(m_index);
@@ -166,9 +166,9 @@ public:
         // of the handle space. Consider reusing empty handles.
         while (m_map.contains(m_index))
             m_index++;
-        
-        m_map.set(m_index, calcValue);       
-        
+
+        m_map.set(m_index, calcValue);
+
         return m_index;
     }
 
@@ -196,11 +196,11 @@ public:
         return m_map.find(index);
     }
 
-private:        
+private:
     int m_index;
     HashMap<int, RefPtr<CalculationValue>> m_map;
 };
-    
+
 static CalculationValueHandleMap& calcHandles()
 {
     DEFINE_STATIC_LOCAL(CalculationValueHandleMap, handleMap, ());
@@ -214,25 +214,25 @@ Length::Length(PassRefPtr<CalculationValue> calc)
 {
     m_intValue = calcHandles().insert(calc);
 }
-        
+
 Length Length::blendMixedTypes(const Length& from, double progress) const
 {
     if (progress <= 0.0)
         return from;
-        
+
     if (progress >= 1.0)
         return *this;
-        
+
     auto blend = std::make_unique<CalcExpressionBlendLength>(from, *this, progress);
     return Length(CalculationValue::create(std::move(blend), CalculationRangeAll));
 }
-          
+
 PassRefPtr<CalculationValue> Length::calculationValue() const
 {
     ASSERT(isCalculated());
     return calcHandles().get(calculationHandle());
 }
-    
+
 void Length::incrementCalculatedRef() const
 {
     ASSERT(isCalculated());

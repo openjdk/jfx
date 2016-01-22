@@ -33,12 +33,12 @@
 #include "RenderMathMLRow.h"
 
 namespace WebCore {
-    
+
 class RenderMathMLFenced final : public RenderMathMLRow {
 public:
     RenderMathMLFenced(MathMLInlineContainerElement&, PassRef<RenderStyle>);
     MathMLInlineContainerElement& element() { return static_cast<MathMLInlineContainerElement&>(nodeForNonAnonymous()); }
-    
+
 private:
     virtual bool isRenderMathMLFenced() const override { return true; }
     virtual const char* renderName() const override { return "RenderMathMLFenced"; }
@@ -53,10 +53,10 @@ private:
     UChar m_open;
     UChar m_close;
     RefPtr<StringImpl> m_separators;
-    
+
     RenderMathMLOperator* m_closeFenceRenderer;
 };
-    
+
 }
 
 #endif // ENABLE(MATHML)

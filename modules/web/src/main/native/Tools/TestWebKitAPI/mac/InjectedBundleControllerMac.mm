@@ -36,7 +36,7 @@ void InjectedBundleController::platformInitialize()
     NSMutableDictionary *argumentDomain = [[[NSUserDefaults standardUserDefaults] volatileDomainForName:NSArgumentDomain] mutableCopy];
     if (!argumentDomain)
         argumentDomain = [[NSMutableDictionary alloc] init];
-    
+
     NSDictionary *dict = [NSDictionary dictionaryWithObjectsAndKeys:
                           [NSNumber numberWithInteger:4],   @"AppleAntiAliasingThreshold",
                           [NSNumber numberWithInteger:0],   @"AppleFontSmoothing",

@@ -28,7 +28,7 @@ package javafx.scene.control;
 /**
  * The abstract base class for FocusModel implementations that are used within
  * table-like controls (most notably {@link TableView} and {@link TreeTableView}.
- * 
+ *
  * @param <T> The type of the underlying data model for the UI control.
  * @param <TC> The concrete subclass of {@link TableColumnBase} that is used by the
  *      underlying UI control (e.g. {@link TableColumn} or {@link TreeTableColumn}.
@@ -41,7 +41,7 @@ public abstract class TableFocusModel<T, TC extends TableColumnBase<T,?>> extend
      * Public API                                                          *
      *                                                                     *
      **********************************************************************/
-    
+
     /**
      * Causes the item at the given index to receive the focus.
      *

@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #import <JavaScriptCore/JavaScriptCore.h>
@@ -56,19 +56,19 @@ OBJC_VISIBLE
 /*!
 @method
 @abstract Notify the JSVirtualMachine of an external object relationship.
-@discussion Allows clients of JSVirtualMachine to make the JavaScript runtime aware of 
- arbitrary external Objective-C object graphs. The runtime can then use 
- this information to retain any JavaScript values that are referenced 
+@discussion Allows clients of JSVirtualMachine to make the JavaScript runtime aware of
+ arbitrary external Objective-C object graphs. The runtime can then use
+ this information to retain any JavaScript values that are referenced
  from somewhere in said object graph.
 
- For correct behavior clients must make their external object graphs 
- reachable from within the JavaScript runtime. If an Objective-C object is 
- reachable from within the JavaScript runtime, all managed references 
+ For correct behavior clients must make their external object graphs
+ reachable from within the JavaScript runtime. If an Objective-C object is
+ reachable from within the JavaScript runtime, all managed references
  transitively reachable from it as recorded using
  -addManagedReference:withOwner: will be scanned by the garbage collector.
 @param object The object that the owner points to.
 @param owner The object that owns the pointed to object.
-*/ 
+*/
 - (void)addManagedReference:(id)object withOwner:(id)owner;
 
 /*!

@@ -36,11 +36,11 @@ public class Move {
     };
 
     private Point from;
-    
+
     private Point to;
-    
+
     private Piece piece;
-    
+
     private Piece captured;
 
     private boolean promoted;
@@ -88,7 +88,7 @@ public class Move {
     public Color getColor() {
         return piece.getColor();
     }
-    
+
     public Piece getCaptured() {
         return captured;
     }
@@ -144,11 +144,11 @@ public class Move {
     }
 
     public boolean isRightCastling() {
-        return (piece == Piece.WHITE_KING 
-                && from.equals(King.W_START_CASTLING) 
+        return (piece == Piece.WHITE_KING
+                && from.equals(King.W_START_CASTLING)
                 && to.equals(King.W_START_CASTLING.incrementX(2))) ||
-                (piece == Piece.BLACK_KING 
-                && from.equals(King.B_START_CASTLING) 
+                (piece == Piece.BLACK_KING
+                && from.equals(King.B_START_CASTLING)
                 && to.equals(King.B_START_CASTLING.incrementX(2)));
     }
 

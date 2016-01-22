@@ -60,7 +60,7 @@ import javafx.stage.Stage;
 public class MultiTouchApp extends Application {
 
     private MultiTouchPane multiTouchPane;
-    
+
     public Parent createContent() {
         multiTouchPane = new MultiTouchPane();
         multiTouchPane.setPrefSize(800, 400);

@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -35,7 +35,7 @@ PassRefPtr<AccessibilityUIElement> AccessibilityUIElement::create(PlatformUIElem
 {
     return adoptRef(new AccessibilityUIElement(uiElement));
 }
-    
+
 PassRefPtr<AccessibilityUIElement> AccessibilityUIElement::create(const AccessibilityUIElement& uiElement)
 {
     return adoptRef(new AccessibilityUIElement(uiElement));
@@ -45,12 +45,12 @@ JSClassRef AccessibilityUIElement::wrapperClass()
 {
     return JSAccessibilityUIElement::accessibilityUIElementClass();
 }
-    
+
 // Implementation
 
 bool AccessibilityUIElement::isValid() const
 {
-    return m_element;            
+    return m_element;
 }
 
 // Unsupported methods on various platforms. As they're implemented on other platforms this list should be modified.

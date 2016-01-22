@@ -36,7 +36,7 @@ import javafx.collections.ObservableList;
 public class ImmutableObservableList<E> extends AbstractList<E> implements ObservableList<E> {
 
     private final E[] elements;
-    
+
     public ImmutableObservableList(E... elements) {
         this.elements = ((elements == null) || (elements.length == 0))?
                 null : Arrays.copyOf(elements, elements.length);

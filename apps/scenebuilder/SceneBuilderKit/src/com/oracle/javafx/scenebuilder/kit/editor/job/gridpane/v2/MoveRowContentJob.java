@@ -49,7 +49,7 @@ import javafx.scene.layout.GridPane;
  *
  */
 public class MoveRowContentJob extends BatchDocumentJob {
-    
+
     private final IntegerPropertyMetadata rowIndexMeta =
             new IntegerPropertyMetadata(
                 new PropertyName("rowIndex", GridPane.class), //NOI18N
@@ -66,37 +66,37 @@ public class MoveRowContentJob extends BatchDocumentJob {
         assert gridPaneObject instanceof FXOMInstance;
         assert gridPaneObject.getSceneGraphObject() instanceof GridPane;
         assert movingRowIndex >= 0;
-        
+
         this.gridPaneObject = (FXOMInstance)gridPaneObject;
         this.movingRowIndex = movingRowIndex;
         this.rowIndexDelta = rowIndexDelta;
     }
 
 
-    
-    
+
+
     /*
      * CompositeJob
      */
-    
+
     @Override
     protected List<Job> makeSubJobs() {
         final List<Job> result = new ArrayList<>();
-        
+
         final DesignHierarchyMask m = new DesignHierarchyMask(gridPaneObject);
         assert m.isAcceptingSubComponent();
-        
+
         for (int i = 0, count = m.getSubComponentCount(); i <  count; i++) {
             assert m.getSubComponentAtIndex(i) instanceof FXOMInstance; // Because children of GridPane are nodes
             final FXOMInstance child = (FXOMInstance) m.getSubComponentAtIndex(i);
             if (rowIndexMeta.getValue(child) == movingRowIndex) {
                 // child belongs to column at movingRowIndex
-                final MoveCellContentJob subJob 
+                final MoveCellContentJob subJob
                         = new MoveCellContentJob(child, 0, rowIndexDelta, getEditorController());
                 result.add(subJob);
             }
         }
-        
+
         return result;
     }
 
@@ -104,5 +104,5 @@ public class MoveRowContentJob extends BatchDocumentJob {
     protected String makeDescription() {
         return getClass().getSimpleName();
     }
-    
+
 }

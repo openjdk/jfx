@@ -84,7 +84,7 @@ public class ColorButtonApp extends Application {
         vBox.setMinSize(VBox.USE_PREF_SIZE, VBox.USE_PREF_SIZE);
         return vBox;
     }
-   
+
     @Override public void start(Stage primaryStage) throws Exception {
         primaryStage.setScene(new Scene(createContent()));
         primaryStage.show();

@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef DFGNodeOrigin_h
@@ -34,24 +34,24 @@ namespace JSC { namespace DFG {
 
 struct NodeOrigin {
     NodeOrigin() { }
-    
+
     explicit NodeOrigin(CodeOrigin codeOrigin)
         : semantic(codeOrigin)
         , forExit(codeOrigin)
     {
     }
-    
+
     NodeOrigin(CodeOrigin semantic, CodeOrigin forExit)
         : semantic(semantic)
         , forExit(forExit)
     {
     }
-    
+
     bool isSet() const
     {
         return semantic.isSet();
     }
-    
+
     // Used for determining what bytecode this came from. This is important for
     // debugging, exceptions, and even basic execution semantics.
     CodeOrigin semantic;

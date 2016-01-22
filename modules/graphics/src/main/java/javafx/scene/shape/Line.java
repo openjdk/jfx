@@ -354,7 +354,7 @@ public class Line extends Shape {
      */
     @Deprecated
     @Override
-	public Line2D impl_configShape() {
+    public Line2D impl_configShape() {
         shape.setLine((float)getStartX(), (float)getStartY(), (float)getEndX(), (float)getEndY());
         return shape;
     }
@@ -383,7 +383,7 @@ public class Line extends Shape {
      *                                                                         *
      **************************************************************************/
 
-    /** 
+    /**
      * Some sub-class of Shape, such as {@link Line}, override the
      * default value for the {@link Shape#fill} property. This allows
      * CSS to get the correct initial value.
@@ -393,9 +393,9 @@ public class Line extends Shape {
     @Deprecated
     protected Paint impl_cssGetFillInitialValue() {
         return null;
-    }    
-    
-    /** 
+    }
+
+    /**
      * Some sub-class of Shape, such as {@link Line}, override the
      * default value for the {@link Shape#stroke} property. This allows
      * CSS to get the correct initial value.
@@ -405,8 +405,8 @@ public class Line extends Shape {
     @Deprecated
     protected Paint impl_cssGetStrokeInitialValue() {
         return Color.BLACK;
-    }    
-    
+    }
+
     /**
      * Returns a string representation of this {@code Line} object.
      * @return a string representation of this {@code Line} object.

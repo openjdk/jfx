@@ -47,7 +47,7 @@ import javafx.stage.Stage;
 /**
  * A pie chart that provides the ability to drill down through data. Selecting a
  * segment in the initial pie chart causes the pie chart to display detailed data
- * for the selected segment. 
+ * for the selected segment.
  *
  * @sampleName Drilldown Pie Chart
  * @preview preview.png
@@ -88,7 +88,7 @@ public class DrilldownPieChartApp extends Application {
                     new PieChart.Data(labelPrefix + "-5", 2)));
         });
     }
-    
+
     @Override public void start(Stage primaryStage) throws Exception {
         primaryStage.setScene(new Scene(createContent()));
         primaryStage.show();
@@ -100,5 +100,5 @@ public class DrilldownPieChartApp extends Application {
      */
     public static void main(String[] args) {
         launch(args);
-    }    
+    }
 }

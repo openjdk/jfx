@@ -74,7 +74,7 @@ public class TreeCellSkin<T> extends CellSkinBase<TreeCell<T>> {
      * To work around this, we create a single WeakHashMap to store a max
      * disclosureNode width per TreeView. We use WeakHashMap to help prevent
      * any memory leaks.
-     * 
+     *
      * RT-19656 identifies a related issue, which is that we may not provide
      * indentation to any TreeItems because we have not yet encountered a cell
      * which has a disclosureNode. Once we scroll and encounter one, indentation
@@ -89,14 +89,14 @@ public class TreeCellSkin<T> extends CellSkinBase<TreeCell<T>> {
      * Private fields                                                          *
      *                                                                         *
      **************************************************************************/
-    
+
     private boolean disclosureNodeDirty = true;
     private TreeItem<?> treeItem;
     private final BehaviorBase<TreeCell<T>> behavior;
 
     private double fixedCellSize;
     private boolean fixedCellSizeEnabled;
-    
+
     private InvalidationListener expandedListener = o -> updateDisclosureNodeRotation(true);
 
 
@@ -123,10 +123,10 @@ public class TreeCellSkin<T> extends CellSkinBase<TreeCell<T>> {
 
         this.fixedCellSize = control.getTreeView().getFixedCellSize();
         this.fixedCellSizeEnabled = fixedCellSize > 0;
-        
+
         updateTreeItem();
         updateDisclosureNodeRotation(false);
-        
+
         registerChangeListener(control.treeItemProperty(), e -> {
             updateTreeItem();
             disclosureNodeDirty = true;
@@ -338,14 +338,14 @@ public class TreeCellSkin<T> extends CellSkinBase<TreeCell<T>> {
     private void updateDisclosureNodeRotation(boolean animate) {
         // no-op, this is now handled in CSS (although we no longer animate)
 //        if (treeItem == null || treeItem.isLeaf()) return;
-//        
+//
 //        Node disclosureNode = getSkinnable().getDisclosureNode();
 //        if (disclosureNode == null) return;
-//        
+//
 //        final boolean isExpanded = treeItem.isExpanded();
 //        int fromAngle = isExpanded ? 0 : 90;
 //        int toAngle = isExpanded ? 90 : 0;
-// 
+//
 //        if (animate) {
 //            RotateTransition rt = new RotateTransition(Duration.millis(200), disclosureNode);
 //            rt.setFromAngle(fromAngle);
@@ -355,7 +355,7 @@ public class TreeCellSkin<T> extends CellSkinBase<TreeCell<T>> {
 //            disclosureNode.setRotate(toAngle);
 //        }
     }
-    
+
     private void updateTreeItem() {
         if (treeItem != null) {
             treeItem.expandedProperty().removeListener(expandedListener);
@@ -367,16 +367,16 @@ public class TreeCellSkin<T> extends CellSkinBase<TreeCell<T>> {
 
         updateDisclosureNodeRotation(false);
     }
-    
+
     private void updateDisclosureNode() {
         if (getSkinnable().isEmpty()) return;
 
         Node disclosureNode = getSkinnable().getDisclosureNode();
         if (disclosureNode == null) return;
-        
+
         boolean disclosureVisible = treeItem != null && ! treeItem.isLeaf();
         disclosureNode.setVisible(disclosureVisible);
-            
+
         if (! disclosureVisible) {
             getChildren().remove(disclosureNode);
         } else if (disclosureNode.getParent() == null) {
@@ -385,7 +385,7 @@ public class TreeCellSkin<T> extends CellSkinBase<TreeCell<T>> {
         } else {
             disclosureNode.toBack();
         }
-        
+
         // RT-26625: [TreeView, TreeTableView] can lose arrows while scrolling
         // RT-28668: Ensemble tree arrow disappears
         if (disclosureNode.getScene() != null) {
@@ -403,11 +403,11 @@ public class TreeCellSkin<T> extends CellSkinBase<TreeCell<T>> {
 
     /** @treatAsPrivate */
     private static class StyleableProperties {
-        
-        private static final CssMetaData<TreeCell<?>,Number> INDENT = 
+
+        private static final CssMetaData<TreeCell<?>,Number> INDENT =
             new CssMetaData<TreeCell<?>,Number>("-fx-indent",
                 SizeConverter.getInstance(), 10.0) {
-                    
+
             @Override public boolean isSettable(TreeCell<?> n) {
                 DoubleProperty p = ((TreeCellSkin<?>) n.getSkin()).indentProperty();
                 return p == null || !p.isBound();
@@ -418,7 +418,7 @@ public class TreeCellSkin<T> extends CellSkinBase<TreeCell<T>> {
                 return (StyleableProperty<Number>)(WritableValue<Number>)skin.indentProperty();
             }
         };
-        
+
         private static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES;
         static {
             final List<CssMetaData<? extends Styleable, ?>> styleables =

@@ -33,7 +33,7 @@
 #include "RenderMathMLMenclose.h"
 
 namespace WebCore {
-    
+
 RenderMathMLSquareRoot::RenderMathMLSquareRoot(Element& element, PassRef<RenderStyle> style)
     : RenderMathMLRoot(element, std::move(style))
 {

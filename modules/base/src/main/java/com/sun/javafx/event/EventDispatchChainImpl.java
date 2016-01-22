@@ -72,7 +72,7 @@ public class EventDispatchChainImpl implements EventDispatchChain {
 
         ++activeCount;
         ++reservedCount;
-        
+
         return this;
     }
 
@@ -110,7 +110,7 @@ public class EventDispatchChainImpl implements EventDispatchChain {
         final EventDispatcher nextEventDispatcher = dispatchers[headIndex];
         headIndex = nextLinks[headIndex];
         --activeCount;
-        final Event returnEvent = 
+        final Event returnEvent =
                 nextEventDispatcher.dispatchEvent(event, this);
 
         // pop saved state
@@ -139,7 +139,7 @@ public class EventDispatchChainImpl implements EventDispatchChain {
         }
 
         if ((dispatchers == null) || (dispatchers.length < newCapacity)) {
-            final EventDispatcher[] newDispatchers = 
+            final EventDispatcher[] newDispatchers =
                     new EventDispatcher[newCapacity];
             final int[] newLinks = new int[newCapacity];
 

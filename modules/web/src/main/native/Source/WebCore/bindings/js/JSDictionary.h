@@ -97,7 +97,7 @@ private:
         NoPropertyFound,
         PropertyFound
     };
-    
+
     template <typename T, typename Result>
     GetPropertyResult tryGetPropertyAndResult(const char* propertyName, T* context, void (*setter)(T* context, const Result&)) const;
     GetPropertyResult tryGetProperty(const char* propertyName, JSC::JSValue&) const;

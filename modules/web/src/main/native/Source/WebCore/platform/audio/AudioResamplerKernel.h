@@ -59,7 +59,7 @@ private:
 
     AudioResampler* m_resampler;
     AudioFloatArray m_sourceBuffer;
-    
+
     // This is a (floating point) read index on the input stream.
     double m_virtualReadIndex;
 

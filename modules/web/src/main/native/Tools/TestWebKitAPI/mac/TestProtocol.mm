@@ -53,7 +53,7 @@ static NSString *testScheme = @"test";
 - (void)startLoading
 {
     EXPECT_TRUE([[[[self request] URL] scheme] isEqualToString:testScheme]);
-    
+
     NSData *data = [@"PASS" dataUsingEncoding:NSASCIIStringEncoding];
     NSURLResponse *response = [[NSURLResponse alloc] initWithURL:[[self request] URL] MIMEType:@"text/html" expectedContentLength:[data length] textEncodingName:nil];
     [[self client] URLProtocol:self didReceiveResponse:response cacheStoragePolicy:NSURLCacheStorageNotAllowed];

@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -42,23 +42,23 @@ void ProfiledCodeBlockJettisoningWatchpoint::fireInternal()
             "Firing profiled watchpoint ", RawPointer(this), " on ", *m_codeBlock, " due to ",
             m_exitKind, " at ", m_codeOrigin, "\n");
     }
-    
+
     // FIXME: Maybe this should call alternative().
     // https://bugs.webkit.org/show_bug.cgi?id=123677
     CodeBlock* machineBaselineCodeBlock = m_codeBlock->baselineAlternative();
     CodeBlock* sourceBaselineCodeBlock =
         baselineCodeBlockForOriginAndBaselineCodeBlock(
             m_codeOrigin, machineBaselineCodeBlock);
-    
+
     if (sourceBaselineCodeBlock) {
         sourceBaselineCodeBlock->addFrequentExitSite(
             DFG::FrequentExitSite(
                 m_codeOrigin.bytecodeIndex, m_exitKind,
                 exitingJITTypeFor(m_codeBlock->jitType())));
     }
-    
+
     m_codeBlock->jettison(Profiler::JettisonDueToProfiledWatchpoint, CountReoptimization);
-    
+
     if (isOnList())
         remove();
 }

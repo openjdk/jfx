@@ -36,7 +36,7 @@
 namespace WebCore {
 
 // FIXME: As a recursive linear filter, depending on its parameters, a biquad filter can have
-// an infinite tailTime. In practice, Biquad filters do not usually (except for very high resonance values) 
+// an infinite tailTime. In practice, Biquad filters do not usually (except for very high resonance values)
 // have a tailTime of longer than approx. 200ms. This value could possibly be calculated based on the
 // settings of the Biquad.
 static const double MaxBiquadDelayTime = 0.2;
@@ -114,7 +114,7 @@ void BiquadDSPKernel::updateCoefficientsIfNecessary(bool useSmoothing, bool forc
 void BiquadDSPKernel::process(const float* source, float* destination, size_t framesToProcess)
 {
     ASSERT(source && destination && biquadProcessor());
-    
+
     // Recompute filter coefficients if any of the parameters have changed.
     // FIXME: as an optimization, implement a way that a Biquad object can simply copy its internal filter coefficients from another Biquad object.
     // Then re-factor this code to only run for the first BiquadDSPKernel of each BiquadProcessor.

@@ -161,7 +161,7 @@ JSValue JSSubtleCrypto::encrypt(ExecState* exec)
         return jsUndefined();
     }
 
-    
+
     DeferredWrapper wrapper(exec, globalObject());
     auto successCallback = [wrapper](const Vector<uint8_t>& result) mutable {
         wrapper.resolve(result);

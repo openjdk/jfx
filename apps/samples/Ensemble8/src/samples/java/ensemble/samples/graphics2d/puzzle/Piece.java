@@ -187,5 +187,5 @@ public class Piece extends Parent{
 
         public double getCorrectX() { return correctX; }
 
-        public double getCorrectY() { return correctY; }    
+        public double getCorrectY() { return correctY; }
 }

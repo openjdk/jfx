@@ -176,7 +176,7 @@ public final class Scenegraph_eventHandlers_Test {
         assertEquals(0, lNodeHandler.getCounter());
         assertEquals(3, rNodeHandler.getCounter());
         assertEquals(1, rlNodeHandler.getCounter());
-        
+
         Event.fireEvent(TEST_L_NODE, triggeringEvent);
         assertEquals(4, sceneHandler.getCounter());
         assertEquals(1, lNodeHandler.getCounter());
@@ -344,7 +344,7 @@ public final class Scenegraph_eventHandlers_Test {
     private static final EventHandler<Event> EVENT_CONSUMING_HANDLER =
             event -> event.consume();
 
-    private static final class EventCountingHandler 
+    private static final class EventCountingHandler
             implements EventHandler<Event> {
         private int counter;
 

@@ -58,7 +58,7 @@ import javafx.geometry.Point3D;
  * @since JavaFX 2.0
  */
 public class Shear extends Transform {
-    
+
     /**
      * Creates a default Shear (identity).
      */
@@ -178,7 +178,7 @@ public class Shear extends Transform {
 
     /**
      * Defines the X coordinate of the shear pivot point.
-     * 
+     *
      * @defaultValue 0.0
      */
     private DoubleProperty pivotX;
@@ -217,7 +217,7 @@ public class Shear extends Transform {
 
     /**
      * Defines the Y coordinate of the shear pivot point.
-     * 
+     *
      * @defaultValue 0.0
      */
     private DoubleProperty pivotY;
@@ -576,9 +576,9 @@ public class Shear extends Transform {
 
     @Override
     void inverseTransform3DPointsImpl(double[] srcPts, int srcOff,
-            double[] dstPts, int dstOff, int numPts) 
+            double[] dstPts, int dstOff, int numPts)
             throws NonInvertibleTransformException{
-        
+
         final double px = getPivotX();
         final double py = getPivotY();
 

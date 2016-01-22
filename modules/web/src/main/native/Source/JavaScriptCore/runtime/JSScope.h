@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef JSScope_h
@@ -203,26 +203,26 @@ private:
 
 inline ScopeChainIterator JSScope::begin()
 {
-    return ScopeChainIterator(this); 
+    return ScopeChainIterator(this);
 }
 
 inline ScopeChainIterator JSScope::end()
-{ 
-    return ScopeChainIterator(0); 
+{
+    return ScopeChainIterator(0);
 }
 
 inline JSScope* JSScope::next()
-{ 
+{
     return m_next.get();
 }
 
 inline JSGlobalObject* JSScope::globalObject()
-{ 
+{
     return structure()->globalObject();
 }
 
 inline VM* JSScope::vm()
-{ 
+{
     return MarkedBlock::blockFor(this)->vm();
 }
 

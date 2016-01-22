@@ -45,11 +45,11 @@ class WCWidget {
     WCWidget(WebPage page) {
         this.page = page;
     }
-    
+
     WebPage getPage() {
         return page;
     }
-    
+
     WCRectangle getBounds() {
         return new WCRectangle(x, y, width, height);
     }
@@ -108,7 +108,7 @@ class WCWidget {
                 ? pageClient.getScreenDepth()
                 : 24;
     }
-    
+
     protected WCRectangle fwkGetScreenRect(boolean available) {
         if (log.isLoggable(Level.FINER)) {
             log.log(Level.FINER, "getScreenRect({0})", available);

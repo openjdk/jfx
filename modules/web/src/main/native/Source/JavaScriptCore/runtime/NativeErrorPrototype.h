@@ -29,7 +29,7 @@ namespace JSC {
     class NativeErrorPrototype : public ErrorPrototype {
     private:
         NativeErrorPrototype(VM&, Structure*);
-    
+
     public:
         typedef ErrorPrototype Base;
 

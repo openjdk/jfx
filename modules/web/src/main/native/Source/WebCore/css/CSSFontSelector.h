@@ -54,7 +54,7 @@ public:
         return adoptRef(new CSSFontSelector(document));
     }
     virtual ~CSSFontSelector();
-    
+
     virtual unsigned version() const override { return m_version; }
     virtual unsigned uniqueId() const override { return m_uniqueId; }
 

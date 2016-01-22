@@ -41,9 +41,9 @@ import javafx.stage.Stage;
 
 public class EmbeddedApplication {
     private static Stage TEMP_STAGE = new Stage() {
-        
+
     };
-    
+
     public static Node createApplication(String className) {
             System.out.println("EmbeddedApplication.createApplication()");
         Node node = null;

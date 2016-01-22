@@ -51,7 +51,7 @@ public:
     LayoutRect(const IntRect& rect) : m_location(rect.location()), m_size(rect.size()) { }
 
     explicit LayoutRect(const FloatRect&); // don't do this implicitly since it's lossy
-        
+
     LayoutPoint location() const { return m_location; }
     LayoutSize size() const { return m_size; }
 
@@ -86,9 +86,9 @@ public:
     // center point.
     LayoutPoint center() const { return LayoutPoint(x() + width() / 2, y() + height() / 2); }
 
-    void move(const LayoutSize& size) { m_location += size; } 
+    void move(const LayoutSize& size) { m_location += size; }
     void moveBy(const LayoutPoint& offset) { m_location.move(offset.x(), offset.y()); }
-    void move(LayoutUnit dx, LayoutUnit dy) { m_location.move(dx, dy); } 
+    void move(LayoutUnit dx, LayoutUnit dy) { m_location.move(dx, dy); }
 
     void expand(const LayoutSize& size) { m_size += size; }
     void expand(const LayoutBoxExtent& box)
@@ -132,7 +132,7 @@ public:
     LayoutPoint maxXMinYCorner() const { return LayoutPoint(m_location.x() + m_size.width(), m_location.y()); } // typically topRight
     LayoutPoint minXMaxYCorner() const { return LayoutPoint(m_location.x(), m_location.y() + m_size.height()); } // typically bottomLeft
     LayoutPoint maxXMaxYCorner() const { return LayoutPoint(m_location.x() + m_size.width(), m_location.y() + m_size.height()); } // typically bottomRight
-    
+
     bool intersects(const LayoutRect&) const;
     bool contains(const LayoutRect&) const;
 
@@ -167,7 +167,7 @@ public:
         // Return a rect that is slightly smaller than the true max rect to allow pixelSnapping to round up to the nearest IntRect without overflowing.
         return LayoutRect(LayoutUnit::nearlyMin() / 2, LayoutUnit::nearlyMin() / 2, LayoutUnit::nearlyMax(), LayoutUnit::nearlyMax());
     }
-    
+
     operator FloatRect() const { return FloatRect(m_location, m_size); }
 
 private:

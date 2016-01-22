@@ -19,10 +19,10 @@
  * Modified by the GLib Team and others 1997-2000.  See the AUTHORS
  * file for a list of people on the GLib Team.  See the ChangeLog
  * files for a list of changes.  These files are distributed with
- * GLib at ftp://ftp.gtk.org/pub/gtk/. 
+ * GLib at ftp://ftp.gtk.org/pub/gtk/.
  */
 
-/* 
+/*
  * MT safe
  */
 
@@ -187,7 +187,7 @@ g_array_sized_new (gboolean zero_terminated,
                    guint    reserved_size)
 {
   GRealArray *array;
-  
+
   g_return_val_if_fail (elt_size > 0, NULL);
 
   array = g_slice_new (GRealArray);
@@ -195,7 +195,7 @@ g_array_sized_new (gboolean zero_terminated,
   if (array == NULL) {
     return NULL;
   }
-#endif // GSTREAMER_LITE 
+#endif // GSTREAMER_LITE
 
   array->data            = NULL;
   array->len             = 0;
@@ -422,7 +422,7 @@ g_array_append_vals (GArray       *farray,
 
   g_array_maybe_expand (array, len);
 
-  memcpy (g_array_elt_pos (array, array->len), data, 
+  memcpy (g_array_elt_pos (array, array->len), data,
           g_array_elt_len (array, len));
 
   array->len += len;
@@ -558,17 +558,17 @@ g_array_set_size (GArray *farray,
   if (length > array->len)
     {
       g_array_maybe_expand (array, length - array->len);
-      
+
       if (array->clear)
         g_array_elt_zero (array, array->len, length - array->len);
     }
   else if (length < array->len)
     g_array_remove_range (farray, length, array->len - length);
-  
+
   array->len = length;
-  
+
   g_array_zero_terminate (array);
-  
+
   return farray;
 }
 
@@ -639,7 +639,7 @@ g_array_remove_index_fast (GArray *farray,
     memcpy (g_array_elt_pos (array, index_),
             g_array_elt_pos (array, array->len - 1),
             g_array_elt_len (array, 1));
-  
+
   array->len -= 1;
 
   if (G_UNLIKELY (g_mem_gc_friendly))
@@ -773,7 +773,7 @@ static void
 g_array_maybe_expand (GRealArray *array,
                       gint        len)
 {
-  guint want_alloc = g_array_elt_len (array, array->len + len + 
+  guint want_alloc = g_array_elt_len (array, array->len + len +
                                       array->zero_terminated);
 
   if (want_alloc > array->alloc)
@@ -897,7 +897,7 @@ g_ptr_array_new (void)
  *
  * Returns: the new #GPtrArray
  */
-GPtrArray*  
+GPtrArray*
 g_ptr_array_sized_new (guint reserved_size)
 {
   GRealPtrArray *array;
@@ -918,7 +918,7 @@ g_ptr_array_sized_new (guint reserved_size)
   if (reserved_size != 0)
     g_ptr_array_maybe_expand (array, reserved_size);
 
-  return (GPtrArray*) array;  
+  return (GPtrArray*) array;
 }
 
 /**
@@ -1154,7 +1154,7 @@ g_ptr_array_set_size  (GPtrArray *array,
     {
       int i;
       g_ptr_array_maybe_expand (rarray, (length - rarray->len));
-      /* This is not 
+      /* This is not
        *     memset (array->pdata + array->len, 0,
        *            sizeof (gpointer) * (length - array->len));
        * to make it really portable. Remember (void*)NULL needn't be
@@ -1193,14 +1193,14 @@ g_ptr_array_remove_index (GPtrArray *array,
   g_return_val_if_fail (index_ < rarray->len, NULL);
 
   result = rarray->pdata[index_];
-  
+
   if (rarray->element_free_func != NULL)
     rarray->element_free_func (rarray->pdata[index_]);
 
   if (index_ != rarray->len - 1)
     memmove (rarray->pdata + index_, rarray->pdata + index_ + 1,
              sizeof (gpointer) * (rarray->len - index_ - 1));
-  
+
   rarray->len -= 1;
 
   if (G_UNLIKELY (g_mem_gc_friendly))
@@ -1400,7 +1400,7 @@ g_ptr_array_add (GPtrArray *array,
  * @index_: the index to place the new element at, or -1 to append
  * @data: the pointer to add.
  *
- * Inserts an element into the pointer array at the given index. The 
+ * Inserts an element into the pointer array at the given index. The
  * array will grow in size automatically if necessary.
  *
  * Since: 2.40
@@ -1494,7 +1494,7 @@ g_ptr_array_sort_with_data (GPtrArray        *array,
  * @array: a #GPtrArray
  * @func: the function to call for each array element
  * @user_data: user data to pass to the function
- * 
+ *
  * Calls a function for each element of a #GPtrArray.
  *
  * Since: 2.4

@@ -59,7 +59,7 @@ public:
         BackgroundPlaybackNotPermitted = 1 << 4,
     };
     typedef unsigned SessionRestrictions;
-    
+
     void addRestriction(MediaSession::MediaType, SessionRestrictions);
     void removeRestriction(MediaSession::MediaType, SessionRestrictions);
     SessionRestrictions restrictions(MediaSession::MediaType);

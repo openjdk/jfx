@@ -67,15 +67,15 @@ public class SWTFXUtils {
      * A new {@code Image} will be created if the supplied object is null,
      * is too small or of a type which the image pixels cannot be easily
      * converted into.
-     * 
+     *
      * @param imageData the {@code ImageData} object to be converted
      * @param image an optional {@code WritableImage} object that can be
      *        used to store the returned pixel data
      * @return an {@code Image} object representing a snapshot of the
-     *         current pixels in the {@code ImageData}, or null if 
+     *         current pixels in the {@code ImageData}, or null if
      *         the {@code Image} is not readable.
      */
-    public static WritableImage toFXImage(ImageData imageData, 
+    public static WritableImage toFXImage(ImageData imageData,
                                           WritableImage image) {
         byte[] data = convertImage(imageData);
         if (data == null) return null;
@@ -128,7 +128,7 @@ public class SWTFXUtils {
      * A new {@code ImageData} will be created if the supplied object
      * is null, is too small or of a type which the image pixels cannot
      * be easily converted into.
-     * 
+     *
      * @param image the JavaFX {@code Image} to be converted
      * @param imageData an optional {@code ImageData} object that may be
      *        used to store the returned pixel data
@@ -206,7 +206,7 @@ public class SWTFXUtils {
             byte[] srcData, int srcDepth, int srcStride, int srcOrder,
             int srcX, int srcY, int srcWidth, int srcHeight,
             int srcRedMask, int srcGreenMask, int srcBlueMask,
-            int alphaMode, byte[] alphaData, int alphaStride, 
+            int alphaMode, byte[] alphaData, int alphaStride,
             int alphaX, int alphaY,
             byte[] destData, int destDepth, int destStride, int destOrder,
             int destX, int destY, int destWidth, int destHeight,
@@ -215,7 +215,7 @@ public class SWTFXUtils {
         final Class<?> clazz = ImageData.class;
         if (blitDirect == null) {
             Class<?> I = Integer.TYPE, B = Boolean.TYPE, BA = byte[].class;
-            final Class<?>[] argClasses = {I, 
+            final Class<?>[] argClasses = {I,
                     BA, I, I, I,
                     I, I, I, I,
                     I, I, I,
@@ -258,7 +258,7 @@ public class SWTFXUtils {
         final Class<?> clazz = ImageData.class;
         if (blitPalette == null) {
             Class<?> I = Integer.TYPE, B = Boolean.TYPE, BA = byte[].class;
-            final Class<?>[] argClasses = {I, 
+            final Class<?>[] argClasses = {I,
                     BA, I, I, I,
                     I, I, I, I,
                     BA, BA, BA,
@@ -286,7 +286,7 @@ public class SWTFXUtils {
                     flipX, flipY);
         }
     }
-    
+
     private static Method getByteOrderMethod;
     private static int getByteOrder(ImageData image) throws Exception {
         final Class<?> clazz = ImageData.class;
@@ -308,11 +308,11 @@ public class SWTFXUtils {
         byte[] buffer = null;
         try {
             PaletteData palette = image.palette;
-            if (!(((image.depth == 1 || image.depth == 2 || 
-                    image.depth == 4 || image.depth == 8) && 
+            if (!(((image.depth == 1 || image.depth == 2 ||
+                    image.depth == 4 || image.depth == 8) &&
                     !palette.isDirect) ||
-                    ((image.depth == 8) || (image.depth == 16 || 
-                    image.depth == 24 || image.depth == 32) 
+                    ((image.depth == 8) || (image.depth == 16 ||
+                    image.depth == 24 || image.depth == 32)
                     && palette.isDirect))) {
                     return null;
             }
@@ -334,11 +334,11 @@ public class SWTFXUtils {
 
             if (palette.isDirect) {
                 blit(BLIT_SRC,
-                    image.data, image.depth, image.bytesPerLine, byteOrder, 
-                    0, 0, width, height, 
+                    image.data, image.depth, image.bytesPerLine, byteOrder,
+                    0, 0, width, height,
                     palette.redMask, palette.greenMask, palette.blueMask,
-                    ALPHA_OPAQUE, null, 0, 0, 0, 
-                    buffer, 32, bpr, MSB_FIRST, 0, 0, width, height, 
+                    ALPHA_OPAQUE, null, 0, 0, 0,
+                    buffer, 32, bpr, MSB_FIRST, 0, 0, width, height,
                     redMask, greenMask, blueMask,
                     false, false);
             } else {
@@ -355,10 +355,10 @@ public class SWTFXUtils {
                     srcBlues[i] = (byte)rgb.blue;
                 }
                 blit(BLIT_SRC,
-                    image.data, image.depth, image.bytesPerLine, byteOrder, 
+                    image.data, image.depth, image.bytesPerLine, byteOrder,
                     0, 0, width, height, srcReds, srcGreens, srcBlues,
                     ALPHA_OPAQUE, null, 0, 0, 0,
-                    buffer, 32, bpr, MSB_FIRST, 0, 0, width, height, 
+                    buffer, 32, bpr, MSB_FIRST, 0, 0, width, height,
                     redMask, greenMask, blueMask,
                     false, false);
             }
@@ -366,7 +366,7 @@ public class SWTFXUtils {
             /* Initialize transparency */
             int transparency = image.getTransparencyType();
             boolean hasAlpha = transparency != SWT.TRANSPARENCY_NONE;
-            if (transparency == SWT.TRANSPARENCY_MASK || 
+            if (transparency == SWT.TRANSPARENCY_MASK ||
                 image.transparentPixel != -1) {
                 ImageData maskImage = image.getTransparencyMask();
                 byte[] maskData = maskImage.data;

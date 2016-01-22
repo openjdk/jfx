@@ -6,13 +6,13 @@
  * are met:
  *
  * 1.  Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer. 
+ *     notice, this list of conditions and the following disclaimer.
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
- *     documentation and/or other materials provided with the distribution. 
+ *     documentation and/or other materials provided with the distribution.
  * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
- *     from this software without specific prior written permission. 
+ *     from this software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY APPLE AND ITS CONTRIBUTORS "AS IS" AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
@@ -31,28 +31,28 @@
 /*!
 @enum WebCacheModel
 
-@abstract Specifies a usage model for a WebView, which WebKit will use to 
+@abstract Specifies a usage model for a WebView, which WebKit will use to
 determine its caching behavior.
 
-@constant WebCacheModelDocumentViewer Appropriate for a WebView displaying 
-a fixed document -- like a splash screen, a chat document, or a word processing 
-document -- with no UI for navigation. The WebView will behave like any other 
-view, releasing resources when they are no longer referenced. Remote resources, 
+@constant WebCacheModelDocumentViewer Appropriate for a WebView displaying
+a fixed document -- like a splash screen, a chat document, or a word processing
+document -- with no UI for navigation. The WebView will behave like any other
+view, releasing resources when they are no longer referenced. Remote resources,
 if any, will be cached to disk. This is the most memory-efficient setting.
 
 Examples: iChat, Mail, TextMate, Growl.
 
-@constant WebCacheModelDocumentBrowser Appropriate for a WebView displaying 
-a browsable series of documents with a UI for navigating between them -- for 
-example, a reference materials browser or a website designer. The WebView will 
-cache a reasonable number of resources and previously viewed documents in 
+@constant WebCacheModelDocumentBrowser Appropriate for a WebView displaying
+a browsable series of documents with a UI for navigating between them -- for
+example, a reference materials browser or a website designer. The WebView will
+cache a reasonable number of resources and previously viewed documents in
 memory and/or on disk.
 
 Examples: Dictionary, Help Viewer, Coda.
 
-@constant WebCacheModelPrimaryWebBrowser Appropriate for a WebView in the 
+@constant WebCacheModelPrimaryWebBrowser Appropriate for a WebView in the
 application that acts as the user's primary web browser. The WebView will cache
-a very large number of resources and previously viewed documents in memory 
+a very large number of resources and previously viewed documents in memory
 and/or on disk.
 
 Examples: Safari, OmniWeb, Shiira.
@@ -234,7 +234,7 @@ extern NSString *WebPreferencesChangedNotification;
     @abstract Whether the receiver's associated WebViews use the shared
     page cache.
     @discussion Pages are cached as they are added to a WebBackForwardList, and
-    removed from the cache as they are removed from a WebBackForwardList. Because 
+    removed from the cache as they are removed from a WebBackForwardList. Because
     the page cache is global, caching a page in one WebBackForwardList may cause
     a page in another WebBackForwardList to be evicted from the cache.
 */

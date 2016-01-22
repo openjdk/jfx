@@ -59,7 +59,7 @@ enum {
 - (IBAction)newWindow:(id)sender
 {
     BrowserWindowController *controller = nil;
-    
+
     if (![sender respondsToSelector:@selector(tag)] || [sender tag] == WebKit1NewWindowTag)
         controller = [[WK1BrowserWindowController alloc] initWithWindowNibName:@"BrowserWindow"];
 #if WK_API_ENABLED
@@ -72,7 +72,7 @@ enum {
 
     [[controller window] makeKeyAndOrderFront:sender];
     [_browserWindows addObject:[controller window]];
-    
+
     [controller loadURLString:defaultURL];
 }
 

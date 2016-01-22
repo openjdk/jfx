@@ -146,7 +146,7 @@ public class ShellConsole extends Application
                         }
                     }
                 }
-            }; 
+            };
         th.start();
     }
 

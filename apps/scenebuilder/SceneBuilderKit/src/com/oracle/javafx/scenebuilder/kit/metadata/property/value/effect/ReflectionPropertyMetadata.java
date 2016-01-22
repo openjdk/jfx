@@ -44,7 +44,7 @@ import javafx.scene.effect.Reflection;
  *
  */
 public class ReflectionPropertyMetadata extends ComplexPropertyMetadata<Reflection> {
-    
+
     private final DoublePropertyMetadata bottomOpacityMetadata
             = new DoublePropertyMetadata(new PropertyName("bottomOpacity"), //NOI18N
             DoublePropertyMetadata.DoubleKind.OPACITY, true /* readWrite */, 0.0, InspectorPath.UNUSED);
@@ -61,7 +61,7 @@ public class ReflectionPropertyMetadata extends ComplexPropertyMetadata<Reflecti
             = new DoublePropertyMetadata(new PropertyName("topOpacity"), //NOI18N
             DoublePropertyMetadata.DoubleKind.OPACITY, true /* readWrite */, 0.5, InspectorPath.UNUSED);
 
-    public ReflectionPropertyMetadata(PropertyName name, boolean readWrite, 
+    public ReflectionPropertyMetadata(PropertyName name, boolean readWrite,
             Reflection defaultValue, InspectorPath inspectorPath) {
         super(name, Reflection.class, readWrite, defaultValue, inspectorPath);
     }
@@ -69,11 +69,11 @@ public class ReflectionPropertyMetadata extends ComplexPropertyMetadata<Reflecti
     /*
      * ComplexPropertyMetadata
      */
-    
+
     @Override
     public FXOMInstance makeFxomInstanceFromValue(Reflection value, FXOMDocument fxomDocument) {
         final FXOMInstance result = new FXOMInstance(fxomDocument, value.getClass());
-        
+
         bottomOpacityMetadata.setValue(result, value.getBottomOpacity());
         fractionMetadata.setValue(result, value.getFraction());
         inputMetadata.setValue(result, value.getInput());

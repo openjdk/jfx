@@ -45,13 +45,13 @@ import javafx.scene.layout.Pane;
 import javafx.scene.layout.Priority;
 
 /**
- * A simple tool bar that has left and right justified items with a title in the 
+ * A simple tool bar that has left and right justified items with a title in the
  * center if there is enough space for it.
  */
 public class TitledToolBar extends HBox {
     private String defaultTitle = "JavaFX Ensemble";
     private Label titleLabel = new Label(defaultTitle);
-    
+
     private StringProperty titleText = new SimpleStringProperty(null);
     public StringProperty titleTextProperty() { return titleText; };
     public String getTitleText() { return titleText.get(); }
@@ -67,11 +67,11 @@ public class TitledToolBar extends HBox {
         setHgrow(spacer, Priority.ALWAYS);
         getChildren().add(spacer);
     }
-    
+
     public void addLeftItems(Node ... items) {
         getChildren().addAll(0, Arrays.asList(items));
     }
-    
+
     public void addRightItems(Node ... items) {
         getChildren().addAll(items);
     }

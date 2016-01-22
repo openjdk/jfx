@@ -36,7 +36,7 @@ MemoryPressureHandler& memoryPressureHandler()
     return staticMemoryPressureHandler;
 }
 
-MemoryPressureHandler::MemoryPressureHandler() 
+MemoryPressureHandler::MemoryPressureHandler()
     : m_installed(false)
     , m_lastRespondTime(0)
     , m_lowMemoryHandler(releaseMemory)

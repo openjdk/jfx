@@ -31,7 +31,7 @@
 #include <wtf/Forward.h>
 
 namespace WebCore {
-    
+
 class WaveShaperNode : public AudioBasicProcessorNode {
 public:
     static PassRefPtr<WaveShaperNode> create(AudioContext* context)
@@ -48,8 +48,8 @@ public:
 
     double latency() const { return latencyTime(); }
 
-private:    
-    explicit WaveShaperNode(AudioContext*);    
+private:
+    explicit WaveShaperNode(AudioContext*);
 
     WaveShaperProcessor* waveShaperProcessor() { return static_cast<WaveShaperProcessor*>(processor()); }
 };

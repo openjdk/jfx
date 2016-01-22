@@ -97,7 +97,7 @@ inline DocumentMarkerTextMatch* toDocumentMarkerTextMatch(DocumentMarkerDetails*
 }
 
 
-DocumentMarker::DocumentMarker() 
+DocumentMarker::DocumentMarker()
     : m_type(Spelling), m_startOffset(0), m_endOffset(0)
 {
 }

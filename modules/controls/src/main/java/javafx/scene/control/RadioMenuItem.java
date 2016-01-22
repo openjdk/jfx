@@ -100,7 +100,7 @@ public class RadioMenuItem extends MenuItem implements Toggle {
      * Constructors                                                            *
      *                                                                         *
      **************************************************************************/
-    
+
     /**
      * Constructs a RadioMenuItem with no display text.
      */
@@ -131,7 +131,7 @@ public class RadioMenuItem extends MenuItem implements Toggle {
      * Properties                                                              *
      *                                                                         *
      **************************************************************************/
-    
+
     // --- Toggle Group
     /**
      * Represents the {@link ToggleGroup} that this RadioMenuItem belongs to.
@@ -195,7 +195,7 @@ public class RadioMenuItem extends MenuItem implements Toggle {
                             getToggleGroup().selectToggle(null);
                         }
                     }
-                    
+
                     if (isSelected()) {
                         getStyleClass().add(STYLE_CLASS_SELECTED);
                     } else {
@@ -217,15 +217,15 @@ public class RadioMenuItem extends MenuItem implements Toggle {
         return selected;
     }
 
-    
-    
+
+
     /***************************************************************************
      *                                                                         *
      * Inherited Public API                                                    *
      *                                                                         *
      **************************************************************************/
 
-    
+
     /***************************************************************************
      *                                                                         *
      * Stylesheet Handling                                                     *

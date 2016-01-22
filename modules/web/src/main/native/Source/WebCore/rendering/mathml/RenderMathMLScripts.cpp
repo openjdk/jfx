@@ -33,7 +33,7 @@
 #include "MathMLNames.h"
 
 namespace WebCore {
-    
+
 using namespace MathMLNames;
 
 // RenderMathMLScripts implements various MathML elements drawing scripts attached to a base. For valid MathML elements, the structure of the render tree should be:
@@ -167,7 +167,7 @@ void RenderMathMLScripts::addChildInternal(bool doNotRestructure, RenderObject* 
         m_baseWrapper->addChildInternal(false, child, m_baseWrapper->firstChild());
         return;
     }
-    
+
     if (isPrescript(child)) {
         // The new child becomes an <mprescripts/> separator.
         RenderMathMLBlock::addChild(child, beforeChild);
@@ -247,14 +247,14 @@ void RenderMathMLScripts::removeChild(RenderObject& child)
     }
 
     removeChildInternal(false, child);
-    
+
     fixAnonymousStyles();
 }
 
 void RenderMathMLScripts::styleDidChange(StyleDifference diff, const RenderStyle* oldStyle)
 {
     RenderMathMLBlock::styleDidChange(diff, oldStyle);
-    
+
     if (!isEmpty())
         fixAnonymousStyles();
 }
@@ -517,6 +517,6 @@ void RenderMathMLScriptsWrapper::removeChild(RenderObject& child)
     parentNode->fixAnonymousStyles();
 }
 
-}    
+}
 
 #endif // ENABLE(MATHML)

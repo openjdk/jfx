@@ -235,7 +235,7 @@ void RenderImage::imageChanged(WrappedImagePtr newImage, const IntRect* rect)
 
     if (newImage != imageResource().imagePtr() || !newImage)
         return;
-    
+
     if (!m_didIncrementVisuallyNonEmptyPixelCount) {
         // At a zoom level of 1 the image is guaranteed to have an integer size.
         view().frameView().incrementVisuallyNonEmptyPixelCount(flooredIntSize(imageResource().imageSize(1.0f)));
@@ -353,7 +353,7 @@ void RenderImage::imageDimensionsChanged(bool imageSizeChanged, const IntRect* r
             repaintRect.intersect(contentBoxRect());
         } else
             repaintRect = contentBoxRect();
-        
+
         repaintRectangle(repaintRect);
 
         // Tell any potential compositing layers that the image needs updating.
@@ -475,9 +475,9 @@ void RenderImage::paintReplaced(PaintInfo& paintInfo, const LayoutPoint& paintOf
             context->clip(contentRect);
 
         paintIntoRect(context, paintRect);
-        
+
         if (cachedImage() && page && paintInfo.phase == PaintPhaseForeground) {
-            // For now, count images as unpainted if they are still progressively loading. We may want 
+            // For now, count images as unpainted if they are still progressively loading. We may want
             // to refine this in the future to account for the portion of the image that has painted.
             LayoutRect visibleRect = intersection(paintRect, contentRect);
             if (cachedImage()->isLoading())
@@ -491,11 +491,11 @@ void RenderImage::paintReplaced(PaintInfo& paintInfo, const LayoutPoint& paintOf
 void RenderImage::paint(PaintInfo& paintInfo, const LayoutPoint& paintOffset)
 {
     RenderReplaced::paint(paintInfo, paintOffset);
-    
+
     if (paintInfo.phase == PaintPhaseOutline)
         paintAreaElementFocusRing(paintInfo);
 }
-    
+
 void RenderImage::paintAreaElementFocusRing(PaintInfo& paintInfo)
 {
 #if PLATFORM(IOS)
@@ -503,7 +503,7 @@ void RenderImage::paintAreaElementFocusRing(PaintInfo& paintInfo)
 #else
     if (document().printing() || !frame().selection().isFocusedAndActive())
         return;
-    
+
     if (paintInfo.context->paintingDisabled() && !paintInfo.context->updatingControlTints())
         return;
 
@@ -602,7 +602,7 @@ bool RenderImage::computeBackgroundIsKnownToBeObscured()
 {
     if (!hasBackground())
         return false;
-    
+
     LayoutRect paintedExtent;
     if (!getBackgroundPaintedExtent(paintedExtent))
         return false;

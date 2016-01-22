@@ -115,13 +115,13 @@ static EncodedJSValue JSC_HOST_CALL constructPromise(ExecState* exec)
     // 6. Set promise's [[PromiseStatus]] internal slot to "unresolved".
     // 7. Set promise's [[ResolveReactions]] internal slot to a new empty List.
     // 8. Set promise's [[RejectReactions]] internal slot to a new empty List.
-    
+
     // 9. Let 'resolve' be a new built-in function object as defined in Resolve Promise Functions.
     JSFunction* resolve = createResolvePromiseFunction(vm, globalObject);
 
     // 10. Set the [[Promise]] internal slot of 'resolve' to 'promise'.
     resolve->putDirect(vm, vm.propertyNames->promisePrivateName, promise);
-    
+
     // 11. Let 'reject' be a new built-in function object as defined in Reject Promise Functions
     JSFunction* reject = createRejectPromiseFunction(vm, globalObject);
 
@@ -184,7 +184,7 @@ EncodedJSValue JSC_HOST_CALL JSPromiseConstructorFuncCast(ExecState* exec)
 
     // 3. Let 'deferred' be the result of calling GetDeferred(C).
     JSValue deferredValue = createJSPromiseDeferredFromConstructor(exec, C);
-    
+
     // 4. ReturnIfAbrupt(deferred).
     if (exec->hadException())
         return JSValue::encode(jsUndefined());
@@ -225,7 +225,7 @@ EncodedJSValue JSC_HOST_CALL JSPromiseConstructorFuncResolve(ExecState* exec)
     //    of deferred.[[Resolve]] with undefined as thisArgument and a List containing x
     //    as argumentsList.
     performDeferredResolve(exec, deferred, x);
-    
+
     // 5. ReturnIfAbrupt(resolveResult).
     if (exec->hadException())
         return JSValue::encode(jsUndefined());
@@ -318,16 +318,16 @@ EncodedJSValue JSC_HOST_CALL JSPromiseConstructorFuncRace(ExecState* exec)
         MarkedArgumentBuffer nextFunctionArguments;
         nextFunctionArguments.append(jsUndefined());
         JSValue next = call(exec, nextFunction, nextFunctionCallType, nextFunctionCallData, iterator, nextFunctionArguments);
-        
+
         // ii. RejectIfAbrupt(next, deferred).
         if (exec->hadException())
             return JSValue::encode(abruptRejection(exec, deferred));
-    
+
         // iii. If 'next' is false, return deferred.[[Promise]].
         // Note: We implement this as an iterationTerminator
         if (next == vm.iterationTerminator.get())
             return JSValue::encode(deferred->promise());
-        
+
         // iv. Let 'nextValue' be the result of calling IteratorValue(next).
         // v. RejectIfAbrupt(nextValue, deferred).
         // Note: 'next' is already the value, so there is nothing to do here.
@@ -419,13 +419,13 @@ EncodedJSValue JSC_HOST_CALL JSPromiseConstructorFuncAll(ExecState* exec)
 
     // 6. Let 'values' be the result of calling ArrayCreate(0).
     JSArray* values = constructEmptyArray(exec, nullptr, thisObject->globalObject());
-    
+
     // 7. Let 'countdownHolder' be Record { [[Countdown]]: 0 }.
     NumberObject* countdownHolder = constructNumber(exec, thisObject->globalObject(), JSValue(0));
-    
+
     // 8. Let 'index' be 0.
     unsigned index = 0;
-    
+
     // 9. Repeat.
     do {
         // i. Let 'next' be the result of calling IteratorStep(iterator).
@@ -443,7 +443,7 @@ EncodedJSValue JSC_HOST_CALL JSPromiseConstructorFuncAll(ExecState* exec)
         MarkedArgumentBuffer nextFunctionArguments;
         nextFunctionArguments.append(jsUndefined());
         JSValue next = call(exec, nextFunction, nextFunctionCallType, nextFunctionCallData, iterator, nextFunctionArguments);
-        
+
         // ii. RejectIfAbrupt(next, deferred).
         if (exec->hadException())
             return JSValue::encode(abruptRejection(exec, deferred));
@@ -462,11 +462,11 @@ EncodedJSValue JSC_HOST_CALL JSPromiseConstructorFuncAll(ExecState* exec)
                 if (exec->hadException())
                     return JSValue::encode(jsUndefined());
             }
-            
+
             // b. Return deferred.[[Promise]].
             return JSValue::encode(deferred->promise());
         }
-        
+
         // iv. Let 'nextValue' be the result of calling IteratorValue(next).
         // v. RejectIfAbrupt(nextValue, deferred).
         // Note: 'next' is already the value, so there is nothing to do here.
@@ -493,7 +493,7 @@ EncodedJSValue JSC_HOST_CALL JSPromiseConstructorFuncAll(ExecState* exec)
 
         // viii. Let 'countdownFunction' be a new built-in function object as defined in Promise.all Countdown Functions.
         JSFunction* countdownFunction = createPromiseAllCountdownFunction(vm, thisObject->globalObject());
-        
+
         // ix. Set the [[Index]] internal slot of 'countdownFunction' to 'index'.
         countdownFunction->putDirect(vm, vm.propertyNames->indexPrivateName, JSValue(index));
 

@@ -179,7 +179,7 @@ public class Application extends DataType implements Cloneable {
     public void setDaemon(boolean b) {
         daemon = b;
     }
-    
+
     //return instance that actually has data. Could be referenced object ...
     public Application get() {
         return isReference() ?

@@ -55,8 +55,8 @@ public class Variable {
     public void setNext(Object value) {next.set(value);}
     public ObjectProperty<Object> nextProperty() {return next;}
 
-    
-    
+
+
     private final StringProperty name = new SimpleStringProperty() {
         @Override
         public void addListener(InvalidationListener listener) {
@@ -72,6 +72,6 @@ public class Variable {
     public final String getName() {return name.get();}
     public void setName(String value) {name.set(value);}
     public StringProperty nameProperty() {return name;}
-    
+
     @Override public String toString() {return name.get();}
 }

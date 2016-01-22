@@ -41,7 +41,7 @@
 namespace WebCore {
 
 using namespace VectorMath;
-    
+
 DirectConvolver::DirectConvolver(size_t inputBlockSize)
     : m_inputBlockSize(inputBlockSize)
 #if USE(WEBAUDIO_IPP)
@@ -105,7 +105,7 @@ void DirectConvolver::process(AudioFloatArray* convolutionKernel, const float* s
     while (i < framesToProcess) {
         size_t j = 0;
         float sum = 0;
-        
+
         // FIXME: SSE optimization may be applied here.
         if (kernelSize == 32) {
             CONVOLVE_ONE_SAMPLE // 1

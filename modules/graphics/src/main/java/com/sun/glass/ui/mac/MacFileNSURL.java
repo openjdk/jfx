@@ -31,7 +31,7 @@ import java.io.File;
 /**
  * A descendant of the {@code File} class that also provides access to the
  * underlying native NSURL object associated with this File instance.
- * 
+ *
  * Objects of this type are returned as a result of invoking the
  * {@code CommonDialogs.show[File|Folder]Chooser()} methods if
  * the "glass.macosx.enableFileNSURL" system property is {@code true}.

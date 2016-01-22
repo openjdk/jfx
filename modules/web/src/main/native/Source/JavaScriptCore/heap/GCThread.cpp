@@ -88,7 +88,7 @@ void GCThread::gcThreadMain()
 #if ENABLE(PARALLEL_GC)
     WTF::registerGCThread();
 #endif
-    // Wait for the main thread to finish creating and initializing us. The main thread grabs this lock before 
+    // Wait for the main thread to finish creating and initializing us. The main thread grabs this lock before
     // creating this thread. We aren't guaranteed to have a valid threadID until the main thread releases this lock.
     {
         std::lock_guard<std::mutex> lock(m_shared.m_phaseMutex);
@@ -96,24 +96,24 @@ void GCThread::gcThreadMain()
     {
         ParallelModeEnabler enabler(*m_slotVisitor);
         while ((currentPhase = waitForNextPhase()) != Exit) {
-            // Note: Each phase is responsible for its own termination conditions. The comments below describe 
+            // Note: Each phase is responsible for its own termination conditions. The comments below describe
             // how each phase reaches termination.
             switch (currentPhase) {
             case Mark:
                 m_slotVisitor->drainFromShared(SlotVisitor::SlaveDrain);
-                // GCThreads only return from drainFromShared() if the main thread sets the m_parallelMarkersShouldExit 
-                // flag in the GCThreadSharedData. The only way the main thread sets that flag is if it realizes 
-                // that all of the various subphases in Heap::markRoots() have been fully finished and there is 
+                // GCThreads only return from drainFromShared() if the main thread sets the m_parallelMarkersShouldExit
+                // flag in the GCThreadSharedData. The only way the main thread sets that flag is if it realizes
+                // that all of the various subphases in Heap::markRoots() have been fully finished and there is
                 // no more marking work to do and all of the GCThreads are idle, meaning no more work can be generated.
                 break;
             case Copy:
-                // We don't have to call startCopying() because it's called for us on the main thread to avoid a 
+                // We don't have to call startCopying() because it's called for us on the main thread to avoid a
                 // race condition.
                 m_copyVisitor->copyFromShared();
-                // We know we're done copying when we return from copyFromShared() because we would 
-                // only do so if there were no more chunks of copying work left to do. When there is no 
-                // more copying work to do, the main thread will wait in CopiedSpace::doneCopying() until 
-                // all of the blocks that the GCThreads borrowed have been returned. doneCopying() 
+                // We know we're done copying when we return from copyFromShared() because we would
+                // only do so if there were no more chunks of copying work left to do. When there is no
+                // more copying work to do, the main thread will wait in CopiedSpace::doneCopying() until
+                // all of the blocks that the GCThreads borrowed have been returned. doneCopying()
                 // returns our borrowed CopiedBlock, allowing the copying phase to finish.
                 m_copyVisitor->doneCopying();
                 break;

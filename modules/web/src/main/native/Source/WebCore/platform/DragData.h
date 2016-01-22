@@ -38,7 +38,7 @@
 #include <wtf/RetainPtr.h>
 #include <wtf/text/WTFString.h>
 
-#ifdef __OBJC__ 
+#ifdef __OBJC__
 #import <Foundation/Foundation.h>
 #import <AppKit/NSDragging.h>
 typedef id <NSDraggingInfo> DragDataRef;
@@ -146,7 +146,7 @@ private:
     DragDataMap m_dragDataMap;
 #endif
 };
-    
+
 }
 
 #endif // !DragData_h

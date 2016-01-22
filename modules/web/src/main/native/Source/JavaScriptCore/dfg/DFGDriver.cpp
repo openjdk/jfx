@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -61,20 +61,20 @@ static CompilationResult compileImpl(
     PassRefPtr<DeferredCompilationCallback> callback)
 {
     SamplingRegion samplingRegion("DFG Compilation (Driver)");
-    
+
     numCompilations++;
-    
+
     ASSERT(codeBlock);
     ASSERT(codeBlock->alternative());
     ASSERT(codeBlock->alternative()->jitType() == JITCode::BaselineJIT);
     ASSERT(!profiledDFGCodeBlock || profiledDFGCodeBlock->jitType() == JITCode::DFGJIT);
-    
+
     if (!Options::useDFGJIT() || !MacroAssembler::supportsFloatingPoint())
         return CompilationFailed;
 
     if (!Options::bytecodeRangeToDFGCompile().isInRange(codeBlock->instructionCount()))
         return CompilationFailed;
-    
+
     if (vm.enabledProfiler())
         return CompilationInvalidated;
 
@@ -84,7 +84,7 @@ static CompilationResult compileImpl(
 
     if (logCompilationChanges(mode))
         dataLog("DFG(Driver) compiling ", *codeBlock, " with ", mode, ", number of instructions = ", codeBlock->instructionCount(), "\n");
-    
+
     // Make sure that any stubs that the DFG is going to use are initialized. We want to
     // make sure that all JIT code generation does finalization on the main thread.
     vm.getCTIStub(osrExitGenerationThunkGenerator);
@@ -102,10 +102,10 @@ static CompilationResult compileImpl(
         vm.getCTIStub(virtualCallThatPreservesRegsThunkGenerator);
         vm.getCTIStub(virtualConstructThatPreservesRegsThunkGenerator);
     }
-    
+
     RefPtr<Plan> plan = adoptRef(
         new Plan(codeBlock, profiledDFGCodeBlock, mode, osrEntryBytecodeIndex, mustHandleValues));
-    
+
     bool enableConcurrentJIT;
 #if ENABLE(CONCURRENT_JIT)
     enableConcurrentJIT = Options::enableConcurrentJIT();
@@ -120,7 +120,7 @@ static CompilationResult compileImpl(
         worklist->enqueue(plan);
         return CompilationDeferred;
     }
-    
+
     plan->compileInThread(*vm.dfgState, 0);
     return plan->finalizeWithoutNotifyingCallback();
 }

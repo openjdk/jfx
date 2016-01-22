@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -80,7 +80,7 @@ void WebDownload::init(const URL& url, IWebDownloadDelegate* delegate)
 // IWebDownload -------------------------------------------------------------------
 
 HRESULT STDMETHODCALLTYPE WebDownload::initWithRequest(
-        /* [in] */ IWebURLRequest* request, 
+        /* [in] */ IWebURLRequest* request,
         /* [in] */ IWebDownloadDelegate* delegate)
 {
    notImplemented();
@@ -88,7 +88,7 @@ HRESULT STDMETHODCALLTYPE WebDownload::initWithRequest(
 }
 
 HRESULT STDMETHODCALLTYPE WebDownload::initToResumeWithBundle(
-        /* [in] */ BSTR bundlePath, 
+        /* [in] */ BSTR bundlePath,
         /* [in] */ IWebDownloadDelegate* delegate)
 {
    notImplemented();
@@ -135,7 +135,7 @@ HRESULT STDMETHODCALLTYPE WebDownload::setDeletesFileUponFailure(
 }
 
 HRESULT STDMETHODCALLTYPE WebDownload::setDestination(
-        /* [in] */ BSTR path, 
+        /* [in] */ BSTR path,
         /* [in] */ BOOL allowOverwrite)
 {
     size_t len = wcslen(path);
@@ -161,7 +161,7 @@ HRESULT STDMETHODCALLTYPE WebDownload::continueWithoutCredentialForAuthenticatio
 }
 
 HRESULT STDMETHODCALLTYPE WebDownload::useCredential(
-        /* [in] */ IWebURLCredential* credential, 
+        /* [in] */ IWebURLCredential* credential,
         /* [in] */ IWebURLAuthenticationChallenge* challenge)
 {
    notImplemented();

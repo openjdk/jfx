@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef DFGJITCode_h
@@ -48,10 +48,10 @@ class JITCode : public DirectJITCode {
 public:
     JITCode();
     virtual ~JITCode();
-    
+
     virtual CommonData* dfgCommon() override;
     virtual JITCode* dfg() override;
-    
+
     OSREntryData* appendOSREntryData(unsigned bytecodeIndex, unsigned machineCodeOffset)
     {
         DFG::OSREntryData entry;
@@ -60,36 +60,36 @@ public:
         osrEntry.append(entry);
         return &osrEntry.last();
     }
-    
+
     OSREntryData* osrEntryDataForBytecodeIndex(unsigned bytecodeIndex)
     {
         return tryBinarySearch<OSREntryData, unsigned>(
             osrEntry, osrEntry.size(), bytecodeIndex,
             getOSREntryDataBytecodeIndex);
     }
-    
+
     unsigned appendOSRExit(const OSRExit& exit)
     {
         unsigned result = osrExit.size();
         osrExit.append(exit);
         return result;
     }
-    
+
     OSRExit& lastOSRExit()
     {
         return osrExit.last();
     }
-    
+
     unsigned appendSpeculationRecovery(const SpeculationRecovery& recovery)
     {
         unsigned result = speculationRecovery.size();
         speculationRecovery.append(recovery);
         return result;
     }
-    
+
     void reconstruct(
         CodeBlock*, CodeOrigin, unsigned streamIndex, Operands<ValueRecovery>& result);
-    
+
     // This is only applicable if we're at a point where all values are spilled to the
     // stack. Currently, it also has the restriction that the values must be in their
     // bytecode-designated stack slots.
@@ -99,7 +99,7 @@ public:
 #if ENABLE(FTL_JIT)
     // NB. All of these methods take CodeBlock* because they may want to use
     // CodeBlock's logic about scaling thresholds. It should be a DFG CodeBlock.
-    
+
     bool checkIfOptimizationThresholdReached(CodeBlock*);
     void optimizeNextInvocation(CodeBlock*);
     void dontOptimizeAnytimeSoon(CodeBlock*);
@@ -108,9 +108,9 @@ public:
     void forceOptimizationSlowPathConcurrently(CodeBlock*);
     void setOptimizationThresholdBasedOnCompilationResult(CodeBlock*, CompilationResult);
 #endif // ENABLE(FTL_JIT)
-    
+
     void shrinkToFit();
-    
+
 private:
     friend class JITCompiler; // Allow JITCompiler to call setCodeRef().
 

@@ -34,7 +34,7 @@
 #include "ResourceHandleTypes.h"
 
 namespace WebCore {
-    
+
 enum SendCallbackPolicy {
     SendCallbacks,
     DoNotSendCallbacks
@@ -92,6 +92,6 @@ struct ResourceLoaderOptions {
     RequestOriginPolicy requestOriginPolicy : 2;
 };
 
-} // namespace WebCore    
+} // namespace WebCore
 
 #endif // ResourceLoaderOptions_h

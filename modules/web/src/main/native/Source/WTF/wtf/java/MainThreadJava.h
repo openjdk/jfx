@@ -15,7 +15,7 @@ namespace WTF {
  *
  * Timer is needed to schedule function invocation not only on Main Thread, but
  * in a dedicated time slot via SharedTimer invocation mechanism managed by the
- * platform (overall, this serves the purpose of throttling JS execution). 
+ * platform (overall, this serves the purpose of throttling JS execution).
  *
  * Timer is tight to the thread it has been created on. By its contract it should
  * be operated on the same thread (including its destruction). So, all the

@@ -218,7 +218,7 @@ void ScrollingStateScrollingNode::setScrolledContentsLayer(const LayerRepresenta
 {
     if (layerRepresentation == m_scrolledContentsLayer)
         return;
-    
+
     m_scrolledContentsLayer = layerRepresentation;
     setPropertyChanged(ScrolledContentsLayer);
 }
@@ -227,7 +227,7 @@ void ScrollingStateScrollingNode::setCounterScrollingLayer(const LayerRepresenta
 {
     if (layerRepresentation == m_counterScrollingLayer)
         return;
-    
+
     m_counterScrollingLayer = layerRepresentation;
     setPropertyChanged(CounterScrollingLayer);
 }
@@ -236,7 +236,7 @@ void ScrollingStateScrollingNode::setHeaderLayer(const LayerRepresentation& laye
 {
     if (layerRepresentation == m_headerLayer)
         return;
-    
+
     m_headerLayer = layerRepresentation;
     setPropertyChanged(HeaderLayer);
 }
@@ -246,7 +246,7 @@ void ScrollingStateScrollingNode::setFooterLayer(const LayerRepresentation& laye
 {
     if (layerRepresentation == m_footerLayer)
         return;
-    
+
     m_footerLayer = layerRepresentation;
     setPropertyChanged(FooterLayer);
 }

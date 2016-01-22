@@ -147,7 +147,7 @@ public class AddRowJob extends BatchSelectionJob {
             int targetIndex = iterator.next();
             while (targetIndex != -1) {
                 // Move the rows content :
-                // - from the target index 
+                // - from the target index
                 // - to the next target index if any or the last row index otherwise
                 int fromIndex, toIndex;
 
@@ -181,7 +181,7 @@ public class AddRowJob extends BatchSelectionJob {
                         return result;
                 }
 
-                // If fromIndex >= rowsSize, we are below the last existing row 
+                // If fromIndex >= rowsSize, we are below the last existing row
                 // => no row content to move
                 if (fromIndex < rowsSize) {
                     final int offset = 1 + shiftIndex;

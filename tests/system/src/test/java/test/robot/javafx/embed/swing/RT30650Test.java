@@ -33,14 +33,14 @@ import org.junit.Test;
  * RT-30650: SwingNode is not Resizable
  */
 public class RT30650Test {
-    
+
     @Test(timeout=10000)
     public void test() {
         Assert.assertTrue(RT30650GUI.test());
-        
+
         System.out.println("Passed.");
     }
-    
+
     public static void main(String[] args) {
         new RT30650Test().test();
     }

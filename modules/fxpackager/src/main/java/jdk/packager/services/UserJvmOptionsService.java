@@ -32,21 +32,21 @@ import java.util.ServiceLoader;
 
 /**
  * Runtime access to the UserJVMOptions.
- * 
- * This class is not typically available in the Java Runtime, you must 
+ *
+ * This class is not typically available in the Java Runtime, you must
  * explicitly include the 'packager.jar' file from the lib directory
- * of the JDK as part of your application bundle. 
+ * of the JDK as part of your application bundle.
  *
  * @since 8u40
  */
 public interface UserJvmOptionsService {
 
     /**
-     * Get the instance of UserJvmOptionService to use.  Which one to use is 
-     * configured by the packager and the launcher.  Do not directly 
+     * Get the instance of UserJvmOptionService to use.  Which one to use is
+     * configured by the packager and the launcher.  Do not directly
      * instantiate any instance of this interface, use this method to get
      * an appropriate instance.
-     * 
+     *
      * @return the instance of UserJvmOptionsService for your application.
      */
     static UserJvmOptionsService getUserJVMDefaults() {

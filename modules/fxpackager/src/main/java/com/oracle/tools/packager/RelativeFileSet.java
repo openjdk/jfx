@@ -44,7 +44,7 @@ public class RelativeFileSet {
 
     private File basedir;
     Set<String> files = new LinkedHashSet<>();
-    
+
     public RelativeFileSet(RelativeFileSet copy) {
         type = copy.type;
         mode = copy.mode;
@@ -68,7 +68,7 @@ public class RelativeFileSet {
             }
         }
     }
-    
+
     public void upshift() {
         String root = basedir.getName();
         basedir = basedir.getParentFile();
@@ -81,7 +81,7 @@ public class RelativeFileSet {
 
     public RelativeFileSet(File base, Set<File> files) {
         this(base, (Collection<File>) files);
-    }    
+    }
 
     public boolean contains(String[] requiredFiles) {
         boolean result = true;

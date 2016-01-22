@@ -45,7 +45,7 @@ ResourceBuffer::ResourceBuffer(PassRefPtr<SharedBuffer> sharedBuffer)
 {
     ASSERT(m_sharedBuffer);
 }
-    
+
 ResourceBuffer::~ResourceBuffer()
 {
 }

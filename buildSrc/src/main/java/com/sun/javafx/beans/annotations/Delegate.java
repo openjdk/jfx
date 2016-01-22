@@ -34,7 +34,7 @@ import java.lang.annotation.*;
  * Indicates that a field is a "delegate": public methods of the type of such
  * field are present in the type containing the field, and their implementation
  * simply delegates to the field.
- * 
+ *
  */
 @Target(FIELD)
 @Retention(SOURCE)

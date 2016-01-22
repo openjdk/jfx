@@ -90,13 +90,13 @@ EMarqueeDirection RenderMarquee::direction() const
         result = (dir == LTR) ? MRIGHT : MLEFT;
     if (result == MBACKWARD)
         result = (dir == LTR) ? MLEFT : MRIGHT;
-    
+
     // Now we have the real direction.  Next we check to see if the increment is negative.
     // If so, then we reverse the direction.
     Length increment = m_layer->renderer().style().marqueeIncrement();
     if (increment.isNegative())
         result = static_cast<EMarqueeDirection>(-result);
-    
+
     return result;
 }
 
@@ -145,10 +145,10 @@ int RenderMarquee::computePosition(EMarqueeDirection dir, bool stopAtContentEdge
         else {
             if (stopAtContentEdge)
                 return std::max(contentHeight - clientHeight, 0);
-            else 
+            else
                 return contentHeight;
         }
-    }    
+    }
 }
 
 void RenderMarquee::start()
@@ -197,19 +197,19 @@ void RenderMarquee::updateMarqueePosition()
 void RenderMarquee::updateMarqueeStyle()
 {
     RenderStyle& style = m_layer->renderer().style();
-    
+
     if (m_direction != style.marqueeDirection() || (m_totalLoops != style.marqueeLoopCount() && m_currentLoop >= m_totalLoops))
         m_currentLoop = 0; // When direction changes or our loopCount is a smaller number than our current loop, reset our loop.
-    
+
     m_totalLoops = style.marqueeLoopCount();
     m_direction = style.marqueeDirection();
-    
+
     if (m_layer->renderer().isHTMLMarquee()) {
         // Hack for WinIE.  In WinIE, a value of 0 or lower for the loop count for SLIDE means to only do
         // one loop.
         if (m_totalLoops <= 0 && style.marqueeBehavior() == MSLIDE)
             m_totalLoops = 1;
-        
+
         // Hack alert: Set the white-space value to nowrap for horizontal marquees with inline children, thus ensuring
         // all the text ends up on one line by default.  Limit this hack to the <marquee> element to emulate
         // WinIE's behavior.  Someone using CSS3 can use white-space: nowrap on their own to get this effect.
@@ -221,17 +221,17 @@ void RenderMarquee::updateMarqueeStyle()
             style.setTextAlign(TASTART);
         }
     }
-    
+
     // Legacy hack - multiple browsers default vertical marquees to 200px tall.
     if (!isHorizontal() && style.height().isAuto())
-        style.setHeight(Length(200, Fixed)); 
-   
+        style.setHeight(Length(200, Fixed));
+
     if (speed() != marqueeSpeed()) {
         m_speed = marqueeSpeed();
         if (m_timer.isActive())
             m_timer.startRepeating(speed() * 0.001);
     }
-    
+
     // Check the loop count to see if we should now stop.
     bool activate = (m_totalLoops <= 0 || m_currentLoop < m_totalLoops);
     if (activate && !m_timer.isActive())
@@ -244,7 +244,7 @@ void RenderMarquee::timerFired(Timer<RenderMarquee>&)
 {
     if (m_layer->renderer().view().needsLayout())
         return;
-    
+
     if (m_reset) {
         m_reset = false;
         if (isHorizontal())
@@ -253,15 +253,15 @@ void RenderMarquee::timerFired(Timer<RenderMarquee>&)
             m_layer->scrollToYOffset(m_start);
         return;
     }
-    
+
     const RenderStyle& style = m_layer->renderer().style();
-    
+
     int endPoint = m_end;
     int range = m_end - m_start;
     int newPos;
     if (range == 0)
         newPos = m_end;
-    else {  
+    else {
         bool addIncrement = direction() == MUP || direction() == MLEFT;
         bool isReversed = style.marqueeBehavior() == MALTERNATE && m_currentLoop % 2;
         if (isReversed) {
@@ -288,7 +288,7 @@ void RenderMarquee::timerFired(Timer<RenderMarquee>&)
         else if (style.marqueeBehavior() != MALTERNATE)
             m_reset = true;
     }
-    
+
     if (isHorizontal())
         m_layer->scrollToXOffset(newPos);
     else

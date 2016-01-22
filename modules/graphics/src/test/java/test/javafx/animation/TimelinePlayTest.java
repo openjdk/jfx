@@ -75,7 +75,7 @@ public class TimelinePlayTest {
         timeline.play();
         assertEquals(Duration.seconds(10), timeline.getCurrentTime());
         assertEquals(10000, property.get());
-        
+
         timeline.jumpTo(Duration.seconds(30));
         assertEquals(Duration.seconds(30), timeline.getCurrentTime());
         assertEquals(30000, property.get());

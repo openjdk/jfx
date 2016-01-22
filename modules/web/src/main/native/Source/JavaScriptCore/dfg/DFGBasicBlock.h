@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef DFGBasicBlock_h
@@ -50,9 +50,9 @@ typedef Vector<BasicBlock*, 2> PredecessorList;
 struct BasicBlock : RefCounted<BasicBlock> {
     BasicBlock(unsigned bytecodeBegin, unsigned numArguments, unsigned numLocals);
     ~BasicBlock();
-    
+
     void ensureLocals(unsigned newNumLocals);
-    
+
     size_t size() const { return m_nodes.size(); }
     bool isEmpty() const { return !size(); }
     Node*& at(size_t i) { return m_nodes[i]; }
@@ -62,14 +62,14 @@ struct BasicBlock : RefCounted<BasicBlock> {
     Node* last() const { return at(size() - 1); }
     void resize(size_t size) { m_nodes.resize(size); }
     void grow(size_t size) { m_nodes.grow(size); }
-    
+
     void append(Node* node) { m_nodes.append(node); }
     void insertBeforeLast(Node* node)
     {
         append(last());
         at(size() - 2) = node;
     }
-    
+
     size_t numNodes() const { return phis.size() + size(); }
     Node* node(size_t i) const
     {
@@ -78,12 +78,12 @@ struct BasicBlock : RefCounted<BasicBlock> {
         return at(i - phis.size());
     }
     bool isPhiIndex(size_t i) const { return i < phis.size(); }
-    
+
     bool isInPhis(Node* node) const;
     bool isInBlock(Node* myNode) const;
-    
+
     unsigned numSuccessors() { return last()->numSuccessors(); }
-    
+
     BasicBlock*& successor(unsigned index)
     {
         return last()->successor(index);
@@ -92,7 +92,7 @@ struct BasicBlock : RefCounted<BasicBlock> {
     {
         return last()->successorForCondition(condition);
     }
-    
+
     void removePredecessor(BasicBlock* block);
     void replacePredecessor(BasicBlock* from, BasicBlock* to);
 
@@ -100,20 +100,20 @@ struct BasicBlock : RefCounted<BasicBlock> {
     templatePre typeParams templatePost Node* appendNode(Graph&, SpeculatedType valueParamsComma valueParams);
     DFG_VARIADIC_TEMPLATE_FUNCTION(DFG_DEFINE_APPEND_NODE)
 #undef DFG_DEFINE_APPEND_NODE
-    
+
 #define DFG_DEFINE_APPEND_NODE(templatePre, templatePost, typeParams, valueParamsComma, valueParams, valueArgs) \
     templatePre typeParams templatePost Node* appendNonTerminal(Graph&, SpeculatedType valueParamsComma valueParams);
     DFG_VARIADIC_TEMPLATE_FUNCTION(DFG_DEFINE_APPEND_NODE)
 #undef DFG_DEFINE_APPEND_NODE
-    
+
     void dump(PrintStream& out) const;
-    
+
     // This value is used internally for block linking and OSR entry. It is mostly meaningless
     // for other purposes due to inlining.
     unsigned bytecodeBegin;
-    
+
     BlockIndex index;
-    
+
     bool isOSRTarget;
     bool cfaHasVisited;
     bool cfaShouldRevisit;
@@ -124,16 +124,16 @@ struct BasicBlock : RefCounted<BasicBlock> {
     bool isLinked;
 #endif
     bool isReachable;
-    
+
     Vector<Node*> phis;
     PredecessorList predecessors;
-    
+
     Operands<Node*, NodePointerTraits> variablesAtHead;
     Operands<Node*, NodePointerTraits> variablesAtTail;
-    
+
     Operands<AbstractValue> valuesAtHead;
     Operands<AbstractValue> valuesAtTail;
-    
+
     // These fields are reserved for NaturalLoops.
     static const unsigned numberOfInnerMostLoopIndices = 2;
     unsigned innerMostLoopIndices[numberOfInnerMostLoopIndices];
@@ -147,7 +147,7 @@ struct BasicBlock : RefCounted<BasicBlock> {
         HashSet<Node*> liveAtTail;
         HashMap<Node*, AbstractValue> valuesAtHead;
         HashMap<Node*, AbstractValue> valuesAtTail;
-        
+
         SSAData(BasicBlock*);
         ~SSAData();
     };
@@ -162,9 +162,9 @@ struct UnlinkedBlock {
     BasicBlock* m_block;
     bool m_needsNormalLinking;
     bool m_needsEarlyReturnLinking;
-    
+
     UnlinkedBlock() { }
-    
+
     explicit UnlinkedBlock(BasicBlock* block)
         : m_block(block)
         , m_needsNormalLinking(true)
@@ -172,7 +172,7 @@ struct UnlinkedBlock {
     {
     }
 };
-    
+
 static inline unsigned getBytecodeBeginForBlock(BasicBlock** basicBlock)
 {
     return (*basicBlock)->bytecodeBegin;

@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #import "config.h"
@@ -60,7 +60,7 @@ static NSMapTable *s_instanceWrapperCache;
 #if COMPILER(CLANG)
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
-#endif    
+#endif
 
 static NSMapTable *createInstanceWrapperCache()
 {
@@ -106,7 +106,7 @@ void ObjcInstance::moveGlobalExceptionToExecState(ExecState* exec)
     s_exceptionEnvironment = 0;
 }
 
-ObjcInstance::ObjcInstance(id instance, PassRefPtr<RootObject> rootObject) 
+ObjcInstance::ObjcInstance(id instance, PassRefPtr<RootObject> rootObject)
     : Instance(rootObject)
     , _instance(instance)
     , _class(0)
@@ -126,7 +126,7 @@ PassRefPtr<ObjcInstance> ObjcInstance::create(id instance, PassRefPtr<RootObject
     return wrapper.release();
 }
 
-ObjcInstance::~ObjcInstance() 
+ObjcInstance::~ObjcInstance()
 {
     // Both -finalizeForWebScript and -dealloc/-finalize of _instance may require autorelease pools.
     NSAutoreleasePool* pool = [[NSAutoreleasePool alloc] init];
@@ -170,7 +170,7 @@ void ObjcInstance::virtualEnd()
     }
 }
 
-Bindings::Class* ObjcInstance::getClass() const 
+Bindings::Class* ObjcInstance::getClass() const
 {
     if (!_instance)
         return 0;
@@ -240,11 +240,11 @@ JSValue ObjcInstance::invokeMethod(ExecState* exec, RuntimeMethod* runtimeMethod
 JSValue ObjcInstance::invokeObjcMethod(ExecState* exec, ObjcMethod* method)
 {
     JSValue result = jsUndefined();
-    
+
     JSLock::DropAllLocks dropAllLocks(exec); // Can't put this inside the @try scope because it unwinds incorrectly.
 
     setGlobalException(nil);
-    
+
 @try {
     NSMethodSignature* signature = method->getMethodSignature();
     NSInvocation* invocation = [NSInvocation invocationWithMethodSignature:signature];
@@ -361,7 +361,7 @@ JSValue ObjcInstance::invokeDefaultMethod(ExecState* exec)
 
     JSLock::DropAllLocks dropAllLocks(exec); // Can't put this inside the @try scope because it unwinds incorrectly.
     setGlobalException(nil);
-    
+
 @try {
     if (![_instance.get() respondsToSelector:@selector(invokeDefaultMethodWithArguments:)])
         return result;
@@ -423,7 +423,7 @@ bool ObjcInstance::setValueOfUndefinedField(ExecState* exec, PropertyName proper
     // throws an exception.
     if ([targetObject respondsToSelector:@selector(setValue:forUndefinedKey:)]){
         setGlobalException(nil);
-    
+
         ObjcValue objcValue = convertValueToObjcValue(exec, aValue, ObjcObjectType);
 
         @try {
@@ -434,7 +434,7 @@ bool ObjcInstance::setValueOfUndefinedField(ExecState* exec, PropertyName proper
 
         moveGlobalExceptionToExecState(exec);
     }
-    
+
     return true;
 }
 
@@ -445,7 +445,7 @@ JSValue ObjcInstance::getValueOfUndefinedField(ExecState* exec, PropertyName pro
         return jsUndefined();
 
     JSValue result = jsUndefined();
-    
+
     id targetObject = getObject();
 
     JSLock::DropAllLocks dropAllLocks(exec); // Can't put this inside the @try scope because it unwinds incorrectly.
@@ -455,7 +455,7 @@ JSValue ObjcInstance::getValueOfUndefinedField(ExecState* exec, PropertyName pro
     // throws an exception.
     if ([targetObject respondsToSelector:@selector(valueForUndefinedKey:)]){
         setGlobalException(nil);
-    
+
         @try {
             id objcValue = [targetObject valueForUndefinedKey:[NSString stringWithCString:name.ascii().data() encoding:NSASCIIStringEncoding]];
             result = convertObjcValueToValue(exec, &objcValue, ObjcObjectType, m_rootObject.get());
@@ -501,7 +501,7 @@ JSValue ObjcInstance::booleanValue() const
     return jsBoolean(false);
 }
 
-JSValue ObjcInstance::valueOf(ExecState* exec) const 
+JSValue ObjcInstance::valueOf(ExecState* exec) const
 {
     return stringValue(exec);
 }

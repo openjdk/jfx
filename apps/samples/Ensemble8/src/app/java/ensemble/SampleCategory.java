@@ -52,7 +52,7 @@ public class SampleCategory {
         this.samplesAll = FeatureChecker.filterSamples(samplesAll);
         this.subCategories = FeatureChecker.filterEmptyCategories(subCategories);
     }
-    
+
     public SampleInfo sampleForPath(String path) {
         if (path.charAt(0) == '/') { // absolute path
             return Samples.ROOT.sampleForPath(path.split("/"),1);
@@ -60,7 +60,7 @@ public class SampleCategory {
             return sampleForPath(path.split("/"),0);
         }
     }
-    
+
     private SampleInfo sampleForPath(String[] pathParts, int index) {
         String part = pathParts[index];
         if (samples!=null) for (SampleInfo sample: samples) {
@@ -71,7 +71,7 @@ public class SampleCategory {
         }
         return null;
     }
-    
+
     @Override public String toString() {
         return name;
     }

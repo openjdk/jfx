@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -42,16 +42,16 @@ using namespace DFG;
 MacroAssemblerCodeRef osrExitGenerationThunkGenerator(VM* vm)
 {
     AssemblyHelpers jit(vm, 0);
-    
+
     // Note that the "return address" will be the OSR exit ID.
-    
+
     ptrdiff_t stackMisalignment = MacroAssembler::pushToSaveByteOffset();
-    
+
     // Pretend that we're a C call frame.
     jit.pushToSave(MacroAssembler::framePointerRegister);
     jit.move(MacroAssembler::stackPointerRegister, MacroAssembler::framePointerRegister);
     stackMisalignment += MacroAssembler::pushToSaveByteOffset();
-    
+
     // Now create ourselves enough stack space to give saveAllRegisters() a scratch slot.
     unsigned numberOfRequiredPops = 0;
     do {
@@ -59,12 +59,12 @@ MacroAssemblerCodeRef osrExitGenerationThunkGenerator(VM* vm)
         stackMisalignment += MacroAssembler::pushToSaveByteOffset();
         numberOfRequiredPops++;
     } while (stackMisalignment % stackAlignmentBytes());
-    
+
     ScratchBuffer* scratchBuffer = vm->scratchBufferForSize(requiredScratchMemorySizeInBytes());
     char* buffer = static_cast<char*>(scratchBuffer->dataBuffer());
-    
+
     saveAllRegisters(jit, buffer);
-    
+
     // Tell GC mark phase how much of the scratch buffer is active during call.
     jit.move(MacroAssembler::TrustedImmPtr(scratchBuffer->activeLengthPtr()), GPRInfo::nonArgGPR1);
     jit.storePtr(MacroAssembler::TrustedImmPtr(requiredScratchMemorySizeInBytes()), GPRInfo::nonArgGPR1);
@@ -72,33 +72,33 @@ MacroAssemblerCodeRef osrExitGenerationThunkGenerator(VM* vm)
     jit.loadPtr(GPRInfo::callFrameRegister, GPRInfo::argumentGPR0);
     jit.peek(GPRInfo::argumentGPR1, (stackMisalignment / sizeof(void*)) - 1);
     MacroAssembler::Call functionCall = jit.call();
-    
+
     // At this point we want to make a tail call to what was returned to us in the
     // returnValueGPR. But at the same time as we do this, we must restore all registers.
     // The way we will accomplish this is by arranging to have the tail call target in the
     // return address "slot" (be it a register or the stack).
-    
+
     jit.move(GPRInfo::returnValueGPR, GPRInfo::regT0);
-    
+
     // Make sure we tell the GC that we're not using the scratch buffer anymore.
     jit.move(MacroAssembler::TrustedImmPtr(scratchBuffer->activeLengthPtr()), GPRInfo::regT1);
     jit.storePtr(MacroAssembler::TrustedImmPtr(0), GPRInfo::regT1);
-    
+
     // Prepare for tail call.
     while (numberOfRequiredPops--)
         jit.popToRestore(GPRInfo::regT1);
     jit.popToRestore(MacroAssembler::framePointerRegister);
-    
+
     // At this point we're sitting on the return address - so if we did a jump right now, the
     // tail-callee would be happy. Instead we'll stash the callee in the return address and then
     // restore all registers.
-    
+
     jit.restoreReturnAddressBeforeReturn(GPRInfo::regT0);
 
     restoreAllRegisters(jit, buffer);
 
     jit.ret();
-    
+
     LinkBuffer patchBuffer(*vm, &jit, GLOBAL_THUNK_ID);
     patchBuffer.link(functionCall, compileFTLOSRExit);
     return FINALIZE_CODE(patchBuffer, ("FTL OSR exit generation thunk"));
@@ -107,41 +107,41 @@ MacroAssemblerCodeRef osrExitGenerationThunkGenerator(VM* vm)
 MacroAssemblerCodeRef slowPathCallThunkGenerator(VM& vm, const SlowPathCallKey& key)
 {
     AssemblyHelpers jit(&vm, 0);
-    
+
     // We want to save the given registers at the given offset, then we want to save the
     // old return address somewhere past that offset, and then finally we want to make the
     // call.
-    
+
     size_t currentOffset = key.offset() + sizeof(void*);
-    
+
 #if CPU(X86) || CPU(X86_64)
     currentOffset += sizeof(void*);
 #endif
-    
+
     for (MacroAssembler::RegisterID reg = MacroAssembler::firstRegister(); reg <= MacroAssembler::lastRegister(); reg = static_cast<MacroAssembler::RegisterID>(reg + 1)) {
         if (!key.usedRegisters().get(reg))
             continue;
         jit.storePtr(reg, AssemblyHelpers::Address(MacroAssembler::stackPointerRegister, currentOffset));
         currentOffset += sizeof(void*);
     }
-    
+
     for (MacroAssembler::FPRegisterID reg = MacroAssembler::firstFPRegister(); reg <= MacroAssembler::lastFPRegister(); reg = static_cast<MacroAssembler::FPRegisterID>(reg + 1)) {
         if (!key.usedRegisters().get(reg))
             continue;
         jit.storeDouble(reg, AssemblyHelpers::Address(MacroAssembler::stackPointerRegister, currentOffset));
         currentOffset += sizeof(double);
     }
-    
+
     // FIXME: CStack - Need to do soemething like jit.emitFunctionPrologue();
     jit.preserveReturnAddressAfterCall(GPRInfo::nonArgGPR0);
     jit.storePtr(GPRInfo::nonArgGPR0, AssemblyHelpers::Address(MacroAssembler::stackPointerRegister, key.offset()));
-    
+
     AssemblyHelpers::Call call = jit.call();
 
     // FIXME: CStack - Need to do something like jit.emitFunctionEpilogue();
     jit.loadPtr(AssemblyHelpers::Address(MacroAssembler::stackPointerRegister, key.offset()), GPRInfo::nonPreservedNonReturnGPR);
     jit.restoreReturnAddressBeforeReturn(GPRInfo::nonPreservedNonReturnGPR);
-    
+
     for (MacroAssembler::FPRegisterID reg = MacroAssembler::lastFPRegister(); ; reg = static_cast<MacroAssembler::FPRegisterID>(reg - 1)) {
         if (key.usedRegisters().get(reg)) {
             currentOffset -= sizeof(double);
@@ -150,7 +150,7 @@ MacroAssemblerCodeRef slowPathCallThunkGenerator(VM& vm, const SlowPathCallKey& 
         if (reg == MacroAssembler::firstFPRegister())
             break;
     }
-    
+
     for (MacroAssembler::RegisterID reg = MacroAssembler::lastRegister(); ; reg = static_cast<MacroAssembler::RegisterID>(reg - 1)) {
         if (key.usedRegisters().get(reg)) {
             currentOffset -= sizeof(void*);
@@ -159,7 +159,7 @@ MacroAssemblerCodeRef slowPathCallThunkGenerator(VM& vm, const SlowPathCallKey& 
         if (reg == MacroAssembler::firstRegister())
             break;
     }
-    
+
     jit.ret();
 
     LinkBuffer patchBuffer(vm, &jit, GLOBAL_THUNK_ID);

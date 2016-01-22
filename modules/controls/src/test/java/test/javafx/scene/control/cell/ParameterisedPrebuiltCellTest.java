@@ -58,16 +58,16 @@ public class ParameterisedPrebuiltCellTest {
 
     private Class<? extends Cell> cellClass;
     private Cell cell;
-    
+
     private int count = 0;
-    
+
     public ParameterisedPrebuiltCellTest(Class<? extends Cell> cellClass) {
         this.cellClass = cellClass;
     }
-    
+
     @Before public void setup() {
         count = 0;
-        
+
         try {
             cell = cellClass.newInstance();
         } catch (InstantiationException e) {
@@ -76,20 +76,20 @@ public class ParameterisedPrebuiltCellTest {
             e.printStackTrace();
         }
     }
-    
-    
+
+
     /**************************************************************************
-     * 
+     *
      * Text
-     * 
+     *
      **************************************************************************/
-    
+
     @Test public void testSetText() {
         assertNull(cell.getText());
         cell.setText("TEST");
         assertEquals("TEST", cell.getText());
     }
-    
+
     @Test public void testTextProperty() {
         assertEquals(0, count);
         cell.textProperty().addListener((observable, oldValue, newValue) -> {
@@ -98,48 +98,48 @@ public class ParameterisedPrebuiltCellTest {
 
         cell.setText("TEST");
         assertEquals(1, count);
-        
+
         cell.setText("TEST");
         assertEquals(1, count);
-        
+
         cell.setText("TEST 2");
         assertEquals(2, count);
-        
+
         cell.textProperty().set("TEST");
         assertEquals(3, count);
     }
-    
-    
+
+
     /**************************************************************************
-     * 
+     *
      * Graphics
-     * 
+     *
      **************************************************************************/
-    
+
     @Test public void testSetGraphic() {
         Rectangle rect = new Rectangle(10, 10, Color.RED);
         cell.setGraphic(rect);
         assertEquals(rect, cell.getGraphic());
     }
-    
+
     @Test public void testGraphicProperty() {
         assertEquals(0, count);
         cell.graphicProperty().addListener((observable, oldValue, newValue) -> {
             count++;
         });
-        
+
         Rectangle rect1 = new Rectangle(10, 10, Color.RED);
         Rectangle rect2 = new Rectangle(10, 10, Color.GREEN);
 
         cell.setGraphic(rect1);
         assertEquals(1, count);
-        
+
         cell.setGraphic(rect1);
         assertEquals(1, count);
-        
+
         cell.setGraphic(rect2);
         assertEquals(2, count);
-        
+
         cell.graphicProperty().set(rect1);
         assertEquals(3, count);
     }

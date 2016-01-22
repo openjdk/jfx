@@ -219,7 +219,7 @@ enum
   LAST_SIGNAL
 };
 
-#define DEFAULT_PROP_QOS	FALSE
+#define DEFAULT_PROP_QOS    FALSE
 
 enum
 {
@@ -666,7 +666,7 @@ gst_base_transform_transform_size (GstBaseTransform * trans,
 /* get the caps that can be handled by @pad. We perform:
  *
  *  - take the caps of peer of otherpad,
- *  - filter against the padtemplate of otherpad, 
+ *  - filter against the padtemplate of otherpad,
  *  - calculate all transforms of remaining caps
  *  - filter against template of @pad
  *
@@ -2358,7 +2358,7 @@ gst_base_transform_activate (GstBaseTransform * trans, gboolean active)
     GST_PAD_STREAM_UNLOCK (trans->sinkpad);
 
     priv->have_same_caps = FALSE;
-    /* We can only reset the passthrough mode if the instance told us to 
+    /* We can only reset the passthrough mode if the instance told us to
        handle it in configure_caps */
     if (bclass->passthrough_on_same_caps) {
       gst_base_transform_set_passthrough (trans, FALSE);

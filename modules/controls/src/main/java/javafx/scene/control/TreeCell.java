@@ -48,7 +48,7 @@ import javafx.beans.value.ObservableValue;
 import javafx.beans.value.WeakChangeListener;
 
 /**
- * The {@link Cell} type used with the {@link TreeView} control. In addition to 
+ * The {@link Cell} type used with the {@link TreeView} control. In addition to
  * the API defined on {@link IndexedCell}, the TreeCell
  * exposes additional states and pseudo classes for use by CSS.
  * <p>
@@ -58,8 +58,8 @@ import javafx.beans.value.WeakChangeListener;
  * {@link #selectedProperty() selected} property, as well as via the 'selected'
  * CSS pseudo class state.
  * <p>
- * Due to the fact that TreeCell extends from {@link IndexedCell}, each TreeCell 
- * also provides an {@link #indexProperty() index} property. The index will be 
+ * Due to the fact that TreeCell extends from {@link IndexedCell}, each TreeCell
+ * also provides an {@link #indexProperty() index} property. The index will be
  * updated as cells are expanded and collapsed, and therefore should be
  * considered a view index rather than a model index.
  * <p>
@@ -68,7 +68,7 @@ import javafx.beans.value.WeakChangeListener;
  *
  * @see TreeView
  * @see TreeItem
- * @param <T> The type of the value contained within the 
+ * @param <T> The type of the value contained within the
  *      {@link #treeItemProperty() TreeItem} property.
  * @since JavaFX 2.0
  */
@@ -95,11 +95,11 @@ public class TreeCell<T> extends IndexedCell<T> {
      * Callbacks and events                                                    *
      *                                                                         *
      **************************************************************************/
-    
+
     private final ListChangeListener<Integer> selectedListener = c -> {
         updateSelection();
     };
-    
+
     /**
      * Listens to the selectionModel property on the TreeView. Whenever the entire model is changed,
      * we have to unhook the weakSelectedListener and update the selection.
@@ -116,12 +116,12 @@ public class TreeCell<T> extends IndexedCell<T> {
             }
             updateSelection();
         }
-    };    
+    };
 
     private final InvalidationListener focusedListener = valueModel -> {
         updateFocus();
     };
-    
+
     /**
      * Listens to the focusModel property on the TreeView. Whenever the entire model is changed,
      * we have to unhook the weakFocusedListener and update the focus.
@@ -143,7 +143,7 @@ public class TreeCell<T> extends IndexedCell<T> {
     private final InvalidationListener editingListener = valueModel -> {
         updateEditing();
     };
-    
+
     private final InvalidationListener leafListener = new InvalidationListener() {
         @Override public void invalidated(Observable valueModel) {
             // necessary to update the disclosure node in the skin when the
@@ -154,7 +154,7 @@ public class TreeCell<T> extends IndexedCell<T> {
             }
         }
     };
-    
+
     /* proxy pseudo-class state change from treeItem's expandedProperty */
     private boolean oldIsExpanded;
     private final InvalidationListener treeItemExpandedInvalidationListener = new InvalidationListener() {
@@ -172,7 +172,7 @@ public class TreeCell<T> extends IndexedCell<T> {
     private final InvalidationListener rootPropertyListener = observable -> {
         updateItem(-1);
     };
-    
+
     private final WeakListChangeListener<Integer> weakSelectedListener = new WeakListChangeListener<Integer>(selectedListener);
     private final WeakChangeListener<MultipleSelectionModel<TreeItem<T>>> weakSelectionModelPropertyListener = new WeakChangeListener<MultipleSelectionModel<TreeItem<T>>>(selectionModelPropertyListener);
     private final WeakInvalidationListener weakFocusedListener = new WeakInvalidationListener(focusedListener);
@@ -183,46 +183,46 @@ public class TreeCell<T> extends IndexedCell<T> {
             new WeakInvalidationListener(treeItemExpandedInvalidationListener);
     private final WeakInvalidationListener weakRootPropertyListener = new WeakInvalidationListener(rootPropertyListener);
 
-    
-    
-    
+
+
+
     /***************************************************************************
      *                                                                         *
      * Properties                                                              *
      *                                                                         *
      **************************************************************************/
-    
+
     // --- TreeItem
-    private ReadOnlyObjectWrapper<TreeItem<T>> treeItem = 
+    private ReadOnlyObjectWrapper<TreeItem<T>> treeItem =
         new ReadOnlyObjectWrapper<TreeItem<T>>(this, "treeItem") {
 
             TreeItem<T> oldValue = null;
-            
+
             @Override protected void invalidated() {
                 if (oldValue != null) {
                     oldValue.expandedProperty().removeListener(weakTreeItemExpandedInvalidationListener);
                 }
-                
-                oldValue = get(); 
-                
+
+                oldValue = get();
+
                 if (oldValue != null) {
                     oldIsExpanded = oldValue.isExpanded();
                     oldValue.expandedProperty().addListener(weakTreeItemExpandedInvalidationListener);
                     // fake an invalidation to ensure updated pseudo-class state
-                    weakTreeItemExpandedInvalidationListener.invalidated(oldValue.expandedProperty());            
+                    weakTreeItemExpandedInvalidationListener.invalidated(oldValue.expandedProperty());
                 }
-                
+
             }
     };
     private void setTreeItem(TreeItem<T> value) {
-        treeItem.set(value); 
+        treeItem.set(value);
     }
-    
+
     /**
      * Returns the TreeItem currently set in this TreeCell.
      */
     public final TreeItem<T> getTreeItem() { return treeItem.get(); }
-    
+
     /**
      * Each TreeCell represents at most a single {@link TreeItem}, which is
      * represented by this property.
@@ -230,7 +230,7 @@ public class TreeCell<T> extends IndexedCell<T> {
     public final ReadOnlyObjectProperty<TreeItem<T>> treeItemProperty() { return treeItem.getReadOnlyProperty(); }
 
 
-    
+
     // --- Disclosure Node
     private ObjectProperty<Node> disclosureNode = new SimpleObjectProperty<Node>(this, "disclosureNode");
 
@@ -242,27 +242,27 @@ public class TreeCell<T> extends IndexedCell<T> {
      * disclosure node.
      */
     public final void setDisclosureNode(Node value) { disclosureNodeProperty().set(value); }
-    
+
     /**
      * Returns the current disclosure node set in this TreeCell.
      */
     public final Node getDisclosureNode() { return disclosureNode.get(); }
-    
+
     /**
      * The disclosure node is commonly seen represented as a triangle that rotates
      * on screen to indicate whether or not the TreeItem that it is placed
      * beside is expanded or collapsed.
      */
     public final ObjectProperty<Node> disclosureNodeProperty() { return disclosureNode; }
-    
-    
+
+
     // --- TreeView
     private ReadOnlyObjectWrapper<TreeView<T>> treeView = new ReadOnlyObjectWrapper<TreeView<T>>() {
         private WeakReference<TreeView<T>> weakTreeViewRef;
         @Override protected void invalidated() {
             MultipleSelectionModel<TreeItem<T>> sm;
             FocusModel<TreeItem<T>> fm;
-            
+
             if (weakTreeViewRef != null) {
                 TreeView<T> oldTreeView = weakTreeViewRef.get();
                 if (oldTreeView != null) {
@@ -282,7 +282,7 @@ public class TreeCell<T> extends IndexedCell<T> {
                     oldTreeView.selectionModelProperty().removeListener(weakSelectionModelPropertyListener);
                     oldTreeView.rootProperty().removeListener(weakRootPropertyListener);
                 }
-                
+
                 weakTreeViewRef = null;
             }
 
@@ -323,14 +323,14 @@ public class TreeCell<T> extends IndexedCell<T> {
             return "treeView";
         }
     };
-    
+
     private void setTreeView(TreeView<T> value) { treeView.set(value); }
 
     /**
      * Returns the TreeView associated with this TreeCell.
      */
     public final TreeView<T> getTreeView() { return treeView.get(); }
-    
+
     /**
      * A TreeCell is explicitly linked to a single {@link TreeView} instance,
      * which is represented by this property.
@@ -361,12 +361,12 @@ public class TreeCell<T> extends IndexedCell<T> {
         }
 
         updateItem(-1);
-        
+
         // it makes sense to get the cell into its editing state before firing
         // the event to the TreeView below, so that's what we're doing here
         // by calling super.startEdit().
         super.startEdit();
-        
+
          // Inform the TreeView of the edit starting.
         if (tree != null) {
             tree.fireEvent(new TreeView.EditEvent<T>(tree,
@@ -374,7 +374,7 @@ public class TreeCell<T> extends IndexedCell<T> {
                     getTreeItem(),
                     getItem(),
                     null));
-            
+
             tree.requestFocus();
         }
     }
@@ -406,7 +406,7 @@ public class TreeCell<T> extends IndexedCell<T> {
             updateTreeItem(treeItem);
             updateItem(newValue, false);
         }
-        
+
         if (tree != null) {
             // reset the editing item in the TreetView
             tree.edit(null);
@@ -422,7 +422,7 @@ public class TreeCell<T> extends IndexedCell<T> {
     /** {@inheritDoc} */
     @Override public void cancelEdit() {
         if (! isEditing()) return;
-        
+
         TreeView<T> tree = getTreeView();
 
         super.cancelEdit();
@@ -436,7 +436,7 @@ public class TreeCell<T> extends IndexedCell<T> {
             // clicked out of the tree entirely and given focus to something else.
             // It would be rude of us to request it back again.
             ControlUtils.requestFocusOnControlOnlyIfCurrentFocusOwnerIsChild(tree);
-        
+
             tree.fireEvent(new TreeView.EditEvent<T>(tree,
                     TreeView.<T>editCancelEvent(),
                     getTreeItem(),
@@ -481,7 +481,7 @@ public class TreeCell<T> extends IndexedCell<T> {
     private void updateItem(int oldIndex) {
         TreeView<T> tv = getTreeView();
         if (tv == null) return;
-        
+
         // Compute whether the index for this cell is for a real item
         int index = getIndex();
         boolean valid = index >=0 && index < tv.getExpandedItemCount();
@@ -538,10 +538,10 @@ public class TreeCell<T> extends IndexedCell<T> {
             updateSelected(false);
             return;
         }
-        
+
         boolean isSelected = sm.isSelected(getIndex());
         if (isSelected() == isSelected) return;
-        
+
         updateSelected(isSelected);
     }
 
@@ -553,7 +553,7 @@ public class TreeCell<T> extends IndexedCell<T> {
             setFocused(false);
             return;
         }
-        
+
         setFocused(fm.isFocused(getIndex()));
     }
 
@@ -564,11 +564,11 @@ public class TreeCell<T> extends IndexedCell<T> {
         final TreeItem<T> treeItem = getTreeItem();
         final TreeItem<T> editItem = tree == null ? null : tree.getEditingItem();
         final boolean editing = isEditing();
-        
+
         if (index == -1 || tree == null || treeItem == null) return;
-        
+
         final boolean match = treeItem.equals(editItem);
-        
+
         // If my tree item is the item being edited and I'm not currently in
         // the edit mode, then I need to enter the edit mode
         if (match && !editing) {
@@ -593,25 +593,25 @@ public class TreeCell<T> extends IndexedCell<T> {
      * Expert API                                                              *
      *                                                                         *
      **************************************************************************/
-    
-    
+
+
 
     /**
      * Updates the TreeView associated with this TreeCell.
-     * 
+     *
      * @param tree The new TreeView that should be associated with this TreeCell.
      * @expert This function is intended to be used by experts, primarily
      *         by those implementing new Skins. It is not common
      *         for developers or designers to access this function directly.
      */
     public final void updateTreeView(TreeView<T> tree) {
-        setTreeView(tree); 
+        setTreeView(tree);
     }
 
     /**
      * Updates the TreeItem associated with this TreeCell.
      *
-     * @param treeItem The new TreeItem that should be associated with this 
+     * @param treeItem The new TreeItem that should be associated with this
      *      TreeCell.
      * @expert This function is intended to be used by experts, primarily
      *      by those implementing new Skins. It is not common
@@ -629,7 +629,7 @@ public class TreeCell<T> extends IndexedCell<T> {
     }
 
 
-    
+
     /***************************************************************************
      *                                                                         *
      * Stylesheet Handling                                                     *

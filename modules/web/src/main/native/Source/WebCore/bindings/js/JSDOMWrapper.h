@@ -37,7 +37,7 @@ public:
     ScriptExecutionContext* scriptExecutionContext() const { return globalObject()->scriptExecutionContext(); }
 
 protected:
-    JSDOMWrapper(JSC::Structure* structure, JSC::JSGlobalObject* globalObject) 
+    JSDOMWrapper(JSC::Structure* structure, JSC::JSGlobalObject* globalObject)
         : JSDestructibleObject(globalObject->vm(), structure)
     {
         ASSERT(scriptExecutionContext());

@@ -619,7 +619,7 @@ public:
     {
         m_assembler.sqrtd(dst, src);
     }
-    
+
     void absDouble(FPRegisterID, FPRegisterID)
     {
         RELEASE_ASSERT_NOT_REACHED();
@@ -864,7 +864,7 @@ public:
         m_fixedWidth = false;
         return dataLabel;
     }
-    
+
     DataLabelCompact load32WithCompactAddressOffsetPatch(Address address, RegisterID dest)
     {
         DataLabelCompact dataLabel(this);
@@ -2749,7 +2749,7 @@ public:
     {
         MIPSAssembler::replaceWithJump(instructionStart.dataLocation(), destination.dataLocation());
     }
-    
+
     static ptrdiff_t maxJumpReplacementSize()
     {
         MIPSAssembler::maxJumpReplacementSize();

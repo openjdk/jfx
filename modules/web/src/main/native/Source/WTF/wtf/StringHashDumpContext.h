@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef StringHashDumpContext_h
@@ -38,16 +38,16 @@ template<typename T>
 class StringHashDumpContext {
 public:
     StringHashDumpContext() { }
-    
+
     CString getID(const T* value)
     {
         typename HashMap<const T*, CString>::iterator iter = m_forwardMap.find(value);
         if (iter != m_forwardMap.end())
             return iter->value;
-        
+
         for (unsigned hashValue = toCString(*value).hash(); ; hashValue++) {
             CString fullHash = integerToSixCharacterHashString(hashValue).data();
-            
+
             for (unsigned length = 2; length < 6; ++length) {
                 CString shortHash = CString(fullHash.data(), length);
                 if (!m_backwardMap.contains(shortHash)) {
@@ -58,27 +58,27 @@ public:
             }
         }
     }
-    
+
     void dumpBrief(const T* value, PrintStream& out)
     {
         value->dumpBrief(out, getID(value));
     }
-    
+
     CString brief(const T* value)
     {
         StringPrintStream out;
         dumpBrief(value, out);
         return out.toCString();
     }
-    
+
     bool isEmpty() const { return m_forwardMap.isEmpty(); }
-    
+
     void dump(PrintStream& out, const char* prefix = "") const
     {
         out.print(prefix);
         T::dumpContextHeader(out);
         out.print("\n");
-        
+
         Vector<CString> keys;
         unsigned maxKeySize = 0;
         for (
@@ -88,9 +88,9 @@ public:
             keys.append(iter->key);
             maxKeySize = std::max(maxKeySize, static_cast<unsigned>(brief(iter->value, iter->key).length()));
         }
-        
+
         std::sort(keys.begin(), keys.end());
-        
+
         for (unsigned i = 0; i < keys.size(); ++i) {
             const T* value = m_backwardMap.get(keys[i]);
             out.print(prefix, "    ");
@@ -101,7 +101,7 @@ public:
             out.print(" = ", *value, "\n");
         }
     }
-    
+
 public:
     static CString brief(const T* value, const CString& string)
     {
@@ -109,7 +109,7 @@ public:
         value->dumpBrief(out, string);
         return out.toCString();
     }
-    
+
     HashMap<const T*, CString> m_forwardMap;
     HashMap<CString, const T*> m_backwardMap;
 };

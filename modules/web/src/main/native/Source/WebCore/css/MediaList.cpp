@@ -62,7 +62,7 @@ namespace WebCore {
  * document.styleSheets[0].cssRules[0].media.mediaText = "screen and resolution > 40dpi" will
  * throw SYNTAX_ERR exception.
  */
-    
+
 MediaQuerySet::MediaQuerySet()
     : m_fallbackToDescriptor(false)
     , m_lastLine(0)
@@ -82,7 +82,7 @@ MediaQuerySet::MediaQuerySet(const String& mediaString, bool fallbackToDescripto
     // for both html and svg, even though svg:style doesn't use media descriptors
     // Currently the only places where parsing can fail are
     // creating <svg:style>, creating css media / import rules from js
-    
+
     // FIXME: This doesn't make much sense.
     if (!success)
         parse("invalid");
@@ -124,7 +124,7 @@ static String parseMediaDescriptor(const String& string)
 bool MediaQuerySet::parse(const String& mediaString)
 {
     CSSParser parser(CSSStrictMode);
-    
+
     Vector<std::unique_ptr<MediaQuery>> result;
     Vector<String> list;
     mediaString.split(',', list);
@@ -185,7 +185,7 @@ bool MediaQuerySet::remove(const String& queryStringToRemove)
     }
     if (!parsedQuery)
         return false;
-    
+
     for (size_t i = 0; i < m_queries.size(); ++i) {
         MediaQuery* query = m_queries[i].get();
         if (*query == *parsedQuery) {
@@ -204,7 +204,7 @@ void MediaQuerySet::addMediaQuery(std::unique_ptr<MediaQuery> mediaQuery)
 String MediaQuerySet::mediaText() const
 {
     StringBuilder text;
-    
+
     bool first = true;
     for (size_t i = 0; i < m_queries.size(); ++i) {
         if (!first)

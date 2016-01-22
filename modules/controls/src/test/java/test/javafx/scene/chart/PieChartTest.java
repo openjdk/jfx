@@ -47,14 +47,14 @@ public class PieChartTest extends ChartTestBase {
 
     ObservableList<PieChart.Data> data;
     PieChart pc;
-    
+
     @Override
     protected Chart createChart() {
         data = FXCollections.observableArrayList();
         pc = new PieChart(data);
         return pc;
     }
-    
+
     @Test
     public void testLabelsVisibleFalse_RT24106() {
         data.add(new PieChart.Data("Sun", 20));
@@ -65,7 +65,7 @@ public class PieChartTest extends ChartTestBase {
         pc.setLabelsVisible(false);
         assertEquals(false, pc.getLabelsVisible());
     }
-    
+
     @Test
     public void testLegendUpdateAfterPieNameChange_RT26854() {
         startApp();
@@ -88,7 +88,7 @@ public class PieChartTest extends ChartTestBase {
             }
         }
     }
-    
+
     @Test
     public void testDataItemRemovedWithAnimation() {
         startApp();

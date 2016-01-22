@@ -89,7 +89,7 @@ final class AboutURLConnection extends URLConnection {
             if (record.contentEncoding != null) {
                 return record.contentEncoding;
             }
-        } catch (IOException ex) { 
+        } catch (IOException ex) {
         }
         return DEFAULT_CHARSET;
     }

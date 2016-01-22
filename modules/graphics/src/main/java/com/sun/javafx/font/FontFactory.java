@@ -35,11 +35,11 @@ public interface FontFactory {
                              boolean bold, boolean italic, float size);
 
     /**
-     * Creates a new Font object by replicating the current Font object 
+     * Creates a new Font object by replicating the current Font object
      * and applying a new bold style, italic style, and size to it.
      * <p>
      * NOTE: bold and italic are hints.
-     * 
+     *
      * @param font the original font.
      * @param bold the bold style for the new font.
      * @param italic the italic style fort the new font.
@@ -67,14 +67,14 @@ public interface FontFactory {
      * will result in a <code>null</code> return. It is the application's
      * responsibility to check this before use.
      * <p>
-     * If the <code>register</code> flag is true, and the loading operation  
+     * If the <code>register</code> flag is true, and the loading operation
      * completes successfully, then the returned font is registered
      * with the FX graphics system for creation by available constructors
      * and factory methods, and the application should use it in this
      * manner rather than calling this method again, which would
      * repeat the overhead of re-reading and installing the font.
      * <p>
-     * When the font is registered, an alternative <code>name</code> can be 
+     * When the font is registered, an alternative <code>name</code> can be
      * supplied. This name can be used for creation by available constructors
      * and factory methods.
      * <p>
@@ -84,7 +84,7 @@ public interface FontFactory {
      * are those <=0 and will result in a default size.
      * <p>
      * This method does not close the input stream.
-     * 
+     *
      * @param name the name for font, it can be <code>null</code>.
      * @param stream the stream from which to load the font.
      * @param size the size for the font.
@@ -104,14 +104,14 @@ public interface FontFactory {
      * a <code>null</code> return. It is the application's responsibility
      * to check this before use.
      * <p>
-     * If the <code>register</code> flag is true, and the loading operation  
+     * If the <code>register</code> flag is true, and the loading operation
      * completes successfully, then the returned font is registered
      * with the FX graphics system for creation by available constructors
      * and factory methods, and the application should use it in this
      * manner rather than calling this method again, which would
      * repeat the overhead of re-reading and installing the font.
      * <p>
-     * When the font is registered, an alternative <code>name</code> can be 
+     * When the font is registered, an alternative <code>name</code> can be
      * supplied. This name can be used for creation by available constructors
      * and factory methods.
      * <p>
@@ -119,14 +119,14 @@ public interface FontFactory {
      * typical usage the application can directly use the returned (non-null)
      * font rather than needing to create one via a constructor. Invalid sizes
      * are those <=0 and will result in a default size.
-     * 
+     *
      * @param name the name for font, it can be <code>null</code>.
      * @param path the path from which to load the font.
      * @param size the size for the font.
      * @param register whether the font should be register.
      * @return the Font, or null if the font cannot be created.
      */
-    public PGFont loadEmbeddedFont(String name, String path, 
+    public PGFont loadEmbeddedFont(String name, String path,
                                    float size, boolean register);
 
     public boolean isPlatformFont(String name);

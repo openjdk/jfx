@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef NetworkStateNotifier_h
@@ -62,7 +62,7 @@ public:
     void addNetworkStateChangeListener(std::function<void (bool isOnLine)>);
 
     bool onLine() const { return m_isOnLine; }
-    
+
 #if PLATFORM(IOS)
     void setIsOnLine(bool);
 #endif
@@ -77,7 +77,7 @@ private:
 #if PLATFORM(MAC)
     void networkStateChangeTimerFired(Timer<NetworkStateNotifier>&);
 
-    static void dynamicStoreCallback(SCDynamicStoreRef, CFArrayRef changedKeys, void *info); 
+    static void dynamicStoreCallback(SCDynamicStoreRef, CFArrayRef changedKeys, void *info);
 
     RetainPtr<SCDynamicStoreRef> m_store;
     Timer<NetworkStateNotifier> m_networkStateChangeTimer;

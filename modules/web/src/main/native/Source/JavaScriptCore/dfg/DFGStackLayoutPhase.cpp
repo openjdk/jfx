@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -37,13 +37,13 @@ namespace JSC { namespace DFG {
 
 class StackLayoutPhase : public Phase {
     static const bool verbose = false;
-    
+
 public:
     StackLayoutPhase(Graph& graph)
         : Phase(graph, "stack layout")
     {
     }
-    
+
     bool run()
     {
         SymbolTable* symbolTable = codeBlock()->symbolTable();
@@ -52,9 +52,9 @@ public:
         // if we use local 1, 3, 4, 5, 7, then we remap them: 1->0, 3->1, 4->2, 5->3, 7->4. We
         // treat a variable as being "used" if there exists an access to it (SetLocal, GetLocal,
         // Flush, PhantomLocal).
-        
+
         BitVector usedLocals;
-        
+
         // Collect those variables that are used from IR.
         bool hasGetLocalUnlinked = false;
         for (BlockIndex blockIndex = m_graph.numBlocks(); blockIndex--;) {
@@ -74,7 +74,7 @@ public:
                     usedLocals.set(variable->local().toLocal());
                     break;
                 }
-                    
+
                 case GetLocalUnlinked: {
                     VirtualRegister operand = node->unlinkedLocal();
                     if (operand.isArgument())
@@ -83,13 +83,13 @@ public:
                     hasGetLocalUnlinked = true;
                     break;
                 }
-                    
+
                 default:
                     break;
                 }
             }
         }
-        
+
         // Ensure that captured variables and captured inline arguments are pinned down.
         // They should have been because of flushes, except that the flushes can be optimized
         // away.
@@ -107,18 +107,18 @@ public:
             InlineCallFrame* inlineCallFrame = *iter;
             if (!inlineCallFrame->executable->usesArguments())
                 continue;
-            
+
             VirtualRegister argumentsRegister = m_graph.argumentsRegisterFor(inlineCallFrame);
             usedLocals.set(argumentsRegister.toLocal());
             usedLocals.set(unmodifiedArgumentsRegister(argumentsRegister).toLocal());
-            
+
             for (unsigned argument = inlineCallFrame->arguments.size(); argument-- > 1;) {
                 usedLocals.set(VirtualRegister(
                     virtualRegisterForArgument(argument).offset() +
                     inlineCallFrame->stackOffset).toLocal());
             }
         }
-        
+
         Vector<unsigned> allocation(usedLocals.size());
         m_graph.m_nextMachineLocal = 0;
         for (unsigned i = 0; i < usedLocals.size(); ++i) {
@@ -126,31 +126,31 @@ public:
                 allocation[i] = UINT_MAX;
                 continue;
             }
-            
+
             allocation[i] = m_graph.m_nextMachineLocal++;
         }
-        
+
         for (unsigned i = m_graph.m_variableAccessData.size(); i--;) {
             VariableAccessData* variable = &m_graph.m_variableAccessData[i];
             if (!variable->isRoot())
                 continue;
-            
+
             if (variable->local().isArgument()) {
                 variable->machineLocal() = variable->local();
                 continue;
             }
-            
+
             size_t local = variable->local().toLocal();
             if (local >= allocation.size())
                 continue;
-            
+
             if (allocation[local] == UINT_MAX)
                 continue;
-            
+
             variable->machineLocal() = virtualRegisterForLocal(
                 allocation[variable->local().toLocal()]);
         }
-        
+
         if (codeBlock()->usesArguments()) {
             VirtualRegister argumentsRegister = virtualRegisterForLocal(
                 allocation[codeBlock()->argumentsRegister().toLocal()]);
@@ -161,16 +161,16 @@ public:
                 == unmodifiedArgumentsRegister(argumentsRegister));
             codeBlock()->setArgumentsRegister(argumentsRegister);
         }
-        
+
         if (codeBlock()->uncheckedActivationRegister().isValid()) {
             codeBlock()->setActivationRegister(
                 virtualRegisterForLocal(allocation[codeBlock()->activationRegister().toLocal()]));
         }
-        
+
         for (unsigned i = m_graph.m_inlineVariableData.size(); i--;) {
             InlineVariableData data = m_graph.m_inlineVariableData[i];
             InlineCallFrame* inlineCallFrame = data.inlineCallFrame;
-            
+
             if (inlineCallFrame->executable->usesArguments()) {
                 inlineCallFrame->argumentsRegister = virtualRegisterForLocal(
                     allocation[m_graph.argumentsRegisterFor(inlineCallFrame).toLocal()]);
@@ -180,7 +180,7 @@ public:
                         m_graph.argumentsRegisterFor(inlineCallFrame)).toLocal()])
                     == unmodifiedArgumentsRegister(inlineCallFrame->argumentsRegister));
             }
-            
+
             for (unsigned argument = inlineCallFrame->arguments.size(); argument-- > 1;) {
                 ArgumentPosition& position = m_graph.m_argumentPositions[
                     data.argumentPositionStart + argument];
@@ -194,7 +194,7 @@ public:
                 }
                 inlineCallFrame->arguments[argument] = source.valueRecovery();
             }
-            
+
             RELEASE_ASSERT(inlineCallFrame->isClosureCall == !!data.calleeVariable);
             if (inlineCallFrame->isClosureCall) {
                 ValueSource source = ValueSource::forFlushFormat(
@@ -204,7 +204,7 @@ public:
             } else
                 RELEASE_ASSERT(inlineCallFrame->calleeRecovery.isConstant());
         }
-        
+
         if (symbolTable) {
             if (symbolTable->captureCount()) {
                 unsigned captureStartLocal = allocation[
@@ -213,7 +213,7 @@ public:
                 m_graph.m_machineCaptureStart = virtualRegisterForLocal(captureStartLocal).offset();
             } else
                 m_graph.m_machineCaptureStart = virtualRegisterForLocal(0).offset();
-        
+
             // This is an abomination. If we had captured an argument then the argument ends
             // up being "slow", meaning that loads of the argument go through an extra lookup
             // table.
@@ -226,11 +226,11 @@ public:
                     if (reg.isLocal())
                         newSlowArguments[i].index = virtualRegisterForLocal(allocation[reg.toLocal()]).offset();
                 }
-            
+
                 m_graph.m_slowArguments = std::move(newSlowArguments);
             }
         }
-        
+
         // Fix GetLocalUnlinked's variable references.
         if (hasGetLocalUnlinked) {
             for (BlockIndex blockIndex = m_graph.numBlocks(); blockIndex--;) {
@@ -247,14 +247,14 @@ public:
                         node->setUnlinkedMachineLocal(operand);
                         break;
                     }
-                        
+
                     default:
                         break;
                     }
                 }
             }
         }
-        
+
         return true;
     }
 };

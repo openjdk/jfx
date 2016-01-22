@@ -47,127 +47,127 @@ import org.junit.Before;
 import org.junit.Test;
 
 public class StrokeTransitionTest {
-	
-	private static Duration DEFAULT_DURATION = Duration.millis(400);
-	private static Interpolator DEFAULT_INTERPOLATOR = Interpolator.EASE_BOTH;
-	
-	private static float EPSILON = 1e-6f;
-	private static Duration ONE_SEC = Duration.millis(1000);
-	private static Duration TWO_SECS = Duration.millis(2000);
-	
-	private Shape shape;
-	
-	@Before
-	public void setUp() {
-		shape = new Rectangle();
-	}
-	
-	private void assertColorEquals(Color expected, Paint actualPaint) {
-		assertTrue(actualPaint instanceof Color);
-		final Color actual = (Color)actualPaint;
-		assertEquals(expected.getRed(), actual.getRed(), EPSILON);
-		assertEquals(expected.getGreen(), actual.getGreen(), EPSILON);
-		assertEquals(expected.getBlue(), actual.getBlue(), EPSILON);
-		assertEquals(expected.getOpacity(), actual.getOpacity(), EPSILON);
-	}
-	
-	@Test
-	public void testDefaultValues() {
-		// empty ctor
-		StrokeTransition t0 = new StrokeTransition();
-		assertEquals(DEFAULT_DURATION, t0.getDuration());
-        assertEquals(DEFAULT_DURATION, t0.getCycleDuration());
-		assertNull(t0.getFromValue());
-		assertNull(t0.getToValue());
-		assertNull(t0.getShape());
-		assertEquals(DEFAULT_INTERPOLATOR, t0.getInterpolator());
-		assertNull(t0.getOnFinished());
-		
-		// duration only
-		t0 = new StrokeTransition(ONE_SEC);
-		assertEquals(ONE_SEC, t0.getDuration());
-		assertNull(t0.getFromValue());
-		assertNull(t0.getToValue());
-		assertNull(t0.getShape());
-		assertEquals(DEFAULT_INTERPOLATOR, t0.getInterpolator());
-		assertNull(t0.getOnFinished());
-		
-		// duration and shape
-		t0 = new StrokeTransition(TWO_SECS, shape);
-		assertEquals(TWO_SECS, t0.getDuration());
-		assertNull(t0.getFromValue());
-		assertNull(t0.getToValue());
-		assertEquals(shape, t0.getShape());
-		assertEquals(DEFAULT_INTERPOLATOR, t0.getInterpolator());
-		assertNull(t0.getOnFinished());
-		
-		// duration and values
-		t0 = new StrokeTransition(TWO_SECS, null, Color.BLACK, Color.WHITE);
-		assertEquals(TWO_SECS, t0.getDuration());
-		assertColorEquals(Color.BLACK, t0.getFromValue());
-		assertColorEquals(Color.WHITE, t0.getToValue());
-		assertNull(t0.getShape());
-		assertEquals(DEFAULT_INTERPOLATOR, t0.getInterpolator());
-		assertNull(t0.getOnFinished());
-		
-		// duration, shape, and values
-		t0 = new StrokeTransition(TWO_SECS, shape, Color.BLACK, Color.WHITE);
-		assertEquals(TWO_SECS, t0.getDuration());
-		assertColorEquals(Color.BLACK, t0.getFromValue());
-		assertColorEquals(Color.WHITE, t0.getToValue());
-		assertEquals(shape, t0.getShape());
-		assertEquals(DEFAULT_INTERPOLATOR, t0.getInterpolator());
-		assertNull(t0.getOnFinished());
-	}
 
-	@Test
-	public void testInterpolate() {
-		final Color fromValue = Color.color(0.2, 0.3, 0.7, 0.1);
-		final Color toValue = Color.color(0.8, 0.4, 0.2, 0.9);
-		final StrokeTransition t0 = new StrokeTransition(ONE_SEC, shape, fromValue, toValue);
-		
-		assertTrue(AnimationShim.impl_startable(t0,true));
-		AnimationShim.impl_start(t0,true);
-		TransitionShim.interpolate(t0,0.0);
-		assertColorEquals(Color.color(0.2, 0.3, 0.7, 0.1), shape.getStroke());
-		TransitionShim.interpolate(t0,0.4);
-		assertColorEquals(Color.color(0.44, 0.34, 0.5, 0.42), shape.getStroke());
-		TransitionShim.interpolate(t0,1.0);
-		assertColorEquals(Color.color(0.8, 0.4, 0.2, 0.9), shape.getStroke());
+    private static Duration DEFAULT_DURATION = Duration.millis(400);
+    private static Interpolator DEFAULT_INTERPOLATOR = Interpolator.EASE_BOTH;
+
+    private static float EPSILON = 1e-6f;
+    private static Duration ONE_SEC = Duration.millis(1000);
+    private static Duration TWO_SECS = Duration.millis(2000);
+
+    private Shape shape;
+
+    @Before
+    public void setUp() {
+        shape = new Rectangle();
+    }
+
+    private void assertColorEquals(Color expected, Paint actualPaint) {
+        assertTrue(actualPaint instanceof Color);
+        final Color actual = (Color)actualPaint;
+        assertEquals(expected.getRed(), actual.getRed(), EPSILON);
+        assertEquals(expected.getGreen(), actual.getGreen(), EPSILON);
+        assertEquals(expected.getBlue(), actual.getBlue(), EPSILON);
+        assertEquals(expected.getOpacity(), actual.getOpacity(), EPSILON);
+    }
+
+    @Test
+    public void testDefaultValues() {
+        // empty ctor
+        StrokeTransition t0 = new StrokeTransition();
+        assertEquals(DEFAULT_DURATION, t0.getDuration());
+        assertEquals(DEFAULT_DURATION, t0.getCycleDuration());
+        assertNull(t0.getFromValue());
+        assertNull(t0.getToValue());
+        assertNull(t0.getShape());
+        assertEquals(DEFAULT_INTERPOLATOR, t0.getInterpolator());
+        assertNull(t0.getOnFinished());
+
+        // duration only
+        t0 = new StrokeTransition(ONE_SEC);
+        assertEquals(ONE_SEC, t0.getDuration());
+        assertNull(t0.getFromValue());
+        assertNull(t0.getToValue());
+        assertNull(t0.getShape());
+        assertEquals(DEFAULT_INTERPOLATOR, t0.getInterpolator());
+        assertNull(t0.getOnFinished());
+
+        // duration and shape
+        t0 = new StrokeTransition(TWO_SECS, shape);
+        assertEquals(TWO_SECS, t0.getDuration());
+        assertNull(t0.getFromValue());
+        assertNull(t0.getToValue());
+        assertEquals(shape, t0.getShape());
+        assertEquals(DEFAULT_INTERPOLATOR, t0.getInterpolator());
+        assertNull(t0.getOnFinished());
+
+        // duration and values
+        t0 = new StrokeTransition(TWO_SECS, null, Color.BLACK, Color.WHITE);
+        assertEquals(TWO_SECS, t0.getDuration());
+        assertColorEquals(Color.BLACK, t0.getFromValue());
+        assertColorEquals(Color.WHITE, t0.getToValue());
+        assertNull(t0.getShape());
+        assertEquals(DEFAULT_INTERPOLATOR, t0.getInterpolator());
+        assertNull(t0.getOnFinished());
+
+        // duration, shape, and values
+        t0 = new StrokeTransition(TWO_SECS, shape, Color.BLACK, Color.WHITE);
+        assertEquals(TWO_SECS, t0.getDuration());
+        assertColorEquals(Color.BLACK, t0.getFromValue());
+        assertColorEquals(Color.WHITE, t0.getToValue());
+        assertEquals(shape, t0.getShape());
+        assertEquals(DEFAULT_INTERPOLATOR, t0.getInterpolator());
+        assertNull(t0.getOnFinished());
+    }
+
+    @Test
+    public void testInterpolate() {
+        final Color fromValue = Color.color(0.2, 0.3, 0.7, 0.1);
+        final Color toValue = Color.color(0.8, 0.4, 0.2, 0.9);
+        final StrokeTransition t0 = new StrokeTransition(ONE_SEC, shape, fromValue, toValue);
+
+        assertTrue(AnimationShim.impl_startable(t0,true));
+        AnimationShim.impl_start(t0,true);
+        TransitionShim.interpolate(t0,0.0);
+        assertColorEquals(Color.color(0.2, 0.3, 0.7, 0.1), shape.getStroke());
+        TransitionShim.interpolate(t0,0.4);
+        assertColorEquals(Color.color(0.44, 0.34, 0.5, 0.42), shape.getStroke());
+        TransitionShim.interpolate(t0,1.0);
+        assertColorEquals(Color.color(0.8, 0.4, 0.2, 0.9), shape.getStroke());
         AnimationShim.impl_finished(t0);
-	}
-	
-	@Test
-	public void testRedValueCombinations() {
-		final StrokeTransition t0 = new StrokeTransition(ONE_SEC, shape, null, Color.WHITE);
-		final double originalRed = 0.6;
-		final double fromRed = 0.4;
-		final Color originalValue = Color.color(originalRed, 1.0, 1.0);
-		final Color fromValue = Color.color(fromRed, 1.0, 1.0);
-		
-		// no from value set
-		shape.setStroke(originalValue);
-		t0.setFromValue(null);
-		assertTrue(AnimationShim.impl_startable(t0,true));
-		AnimationShim.impl_start(t0,true);
-		TransitionShim.interpolate(t0,0.0);
-		assertColorEquals(originalValue, shape.getStroke());
-		AnimationShim.impl_finished(t0);
-		
-		// from-value set
-		shape.setStroke(originalValue);
-		t0.setFromValue(fromValue);
-		assertTrue(AnimationShim.impl_startable(t0,true));
-		AnimationShim.impl_start(t0,true);
-		TransitionShim.interpolate(t0,0.0);
-		assertColorEquals(fromValue, shape.getStroke());
-		AnimationShim.impl_finished(t0);
-	}
-	
+    }
+
+    @Test
+    public void testRedValueCombinations() {
+        final StrokeTransition t0 = new StrokeTransition(ONE_SEC, shape, null, Color.WHITE);
+        final double originalRed = 0.6;
+        final double fromRed = 0.4;
+        final Color originalValue = Color.color(originalRed, 1.0, 1.0);
+        final Color fromValue = Color.color(fromRed, 1.0, 1.0);
+
+        // no from value set
+        shape.setStroke(originalValue);
+        t0.setFromValue(null);
+        assertTrue(AnimationShim.impl_startable(t0,true));
+        AnimationShim.impl_start(t0,true);
+        TransitionShim.interpolate(t0,0.0);
+        assertColorEquals(originalValue, shape.getStroke());
+        AnimationShim.impl_finished(t0);
+
+        // from-value set
+        shape.setStroke(originalValue);
+        t0.setFromValue(fromValue);
+        assertTrue(AnimationShim.impl_startable(t0,true));
+        AnimationShim.impl_start(t0,true);
+        TransitionShim.interpolate(t0,0.0);
+        assertColorEquals(fromValue, shape.getStroke());
+        AnimationShim.impl_finished(t0);
+    }
+
     @Test
     public void testGetTargetNode() {
-    	final Color fromValue = Color.color(0.0, 0.4, 0.8, 1.0);
-		final Color toValue = Color.color(1.0, 0.8, 0.6, 0.4);
+        final Color fromValue = Color.color(0.0, 0.4, 0.8, 1.0);
+        final Color toValue = Color.color(1.0, 0.8, 0.6, 0.4);
         final StrokeTransition ft = new StrokeTransition(ONE_SEC, shape, fromValue, toValue);
         ft.setInterpolator(Interpolator.LINEAR);
         final Shape shape2 = new Rectangle();
@@ -193,7 +193,7 @@ public class StrokeTransitionTest {
         assertColorEquals(Color.color(0.5, 0.6, 0.7, 0.7), shape.getStroke());
         assertColorEquals(Color.color(0.4, 0.56, 0.72, 0.76), shape2.getStroke());
         AnimationShim.impl_finished(ft);
-        
+
         // node null, parent not shape set
         pt.setNode(new Group());
         assertFalse(AnimationShim.impl_startable(ft,true));
@@ -217,7 +217,7 @@ public class StrokeTransitionTest {
         TransitionShim.interpolate(ft,0.5);
         assertColorEquals(Color.color(0.5, 0.6, 0.7, 0.3), shape.getStroke());
         AnimationShim.impl_finished(ft);
-		ft.setFromValue(fromValue);
+        ft.setFromValue(fromValue);
 
         // end
         assertTrue(AnimationShim.impl_startable(ft,true));
@@ -247,69 +247,69 @@ public class StrokeTransitionTest {
         ft.setInterpolator(Interpolator.LINEAR);
     }
 
-	@Test
-	public void testStartable() {
-		final StrokeTransition t0 = new StrokeTransition(Duration.ONE, shape, Color.WHITE, Color.BLACK);
-		final Paint paint2 = new LinearGradient(0, 0, 1, 1, false, null,
+    @Test
+    public void testStartable() {
+        final StrokeTransition t0 = new StrokeTransition(Duration.ONE, shape, Color.WHITE, Color.BLACK);
+        final Paint paint2 = new LinearGradient(0, 0, 1, 1, false, null,
                 new Stop[] { new Stop(0, Color.RED) });
-		assertTrue(AnimationShim.impl_startable(t0,true));
-		
-		// duration is 0
-		t0.setDuration(Duration.ZERO);
-		assertFalse(AnimationShim.impl_startable(t0,true));
-		t0.setDuration(Duration.ONE);
-		assertTrue(AnimationShim.impl_startable(t0,true));
-		
-		// shape is null
-		t0.setShape(null);
-		assertFalse(AnimationShim.impl_startable(t0,true));
-		t0.setShape(shape);
-		assertTrue(AnimationShim.impl_startable(t0,true));
-		
-		// interpolator is null
-		t0.setInterpolator(null);
-		assertFalse(AnimationShim.impl_startable(t0,true));
-		t0.setInterpolator(Interpolator.LINEAR);
-		assertTrue(AnimationShim.impl_startable(t0,true));
-		
-		// fromValue
-		t0.setFromValue(null);
-		shape.setStroke(paint2);
-		assertFalse(AnimationShim.impl_startable(t0,true));
-		shape.setStroke(Color.BLACK);
-		assertTrue(AnimationShim.impl_startable(t0,true));
-		t0.setFromValue(Color.WHITE);
-		shape.setStroke(paint2);
-		assertTrue(AnimationShim.impl_startable(t0,true));
-		
-		// toValue
-		t0.setToValue(null);
-		assertFalse(AnimationShim.impl_startable(t0,true));
-		t0.setToValue(Color.BLACK);
-		assertTrue(AnimationShim.impl_startable(t0,true));
-	}
+        assertTrue(AnimationShim.impl_startable(t0,true));
 
-	@Test
-	public void testEvaluateStartValue() {
-		final StrokeTransition t0 = new StrokeTransition(Duration.INDEFINITE, shape, null, Color.WHITE);
-		
-		// first run
-		shape.setStroke(Color.GREY);
-		assertTrue(AnimationShim.impl_startable(t0,true));
-		AnimationShim.impl_start(t0,true);
-		shape.setStroke(Color.TRANSPARENT);
-		TransitionShim.interpolate(t0,0.0);
-		assertColorEquals(Color.GREY, shape.getStroke());
-		AnimationShim.impl_finished(t0);
-		
-		// second run
-		shape.setStroke(Color.BLACK);
-		assertTrue(AnimationShim.impl_startable(t0,true));
-		AnimationShim.impl_start(t0,true);
-		shape.setStroke(Color.WHITE);
-		TransitionShim.interpolate(t0,0.0);
-		assertColorEquals(Color.BLACK, shape.getStroke());
-		AnimationShim.impl_finished(t0);
-	}
+        // duration is 0
+        t0.setDuration(Duration.ZERO);
+        assertFalse(AnimationShim.impl_startable(t0,true));
+        t0.setDuration(Duration.ONE);
+        assertTrue(AnimationShim.impl_startable(t0,true));
+
+        // shape is null
+        t0.setShape(null);
+        assertFalse(AnimationShim.impl_startable(t0,true));
+        t0.setShape(shape);
+        assertTrue(AnimationShim.impl_startable(t0,true));
+
+        // interpolator is null
+        t0.setInterpolator(null);
+        assertFalse(AnimationShim.impl_startable(t0,true));
+        t0.setInterpolator(Interpolator.LINEAR);
+        assertTrue(AnimationShim.impl_startable(t0,true));
+
+        // fromValue
+        t0.setFromValue(null);
+        shape.setStroke(paint2);
+        assertFalse(AnimationShim.impl_startable(t0,true));
+        shape.setStroke(Color.BLACK);
+        assertTrue(AnimationShim.impl_startable(t0,true));
+        t0.setFromValue(Color.WHITE);
+        shape.setStroke(paint2);
+        assertTrue(AnimationShim.impl_startable(t0,true));
+
+        // toValue
+        t0.setToValue(null);
+        assertFalse(AnimationShim.impl_startable(t0,true));
+        t0.setToValue(Color.BLACK);
+        assertTrue(AnimationShim.impl_startable(t0,true));
+    }
+
+    @Test
+    public void testEvaluateStartValue() {
+        final StrokeTransition t0 = new StrokeTransition(Duration.INDEFINITE, shape, null, Color.WHITE);
+
+        // first run
+        shape.setStroke(Color.GREY);
+        assertTrue(AnimationShim.impl_startable(t0,true));
+        AnimationShim.impl_start(t0,true);
+        shape.setStroke(Color.TRANSPARENT);
+        TransitionShim.interpolate(t0,0.0);
+        assertColorEquals(Color.GREY, shape.getStroke());
+        AnimationShim.impl_finished(t0);
+
+        // second run
+        shape.setStroke(Color.BLACK);
+        assertTrue(AnimationShim.impl_startable(t0,true));
+        AnimationShim.impl_start(t0,true);
+        shape.setStroke(Color.WHITE);
+        TransitionShim.interpolate(t0,0.0);
+        assertColorEquals(Color.BLACK, shape.getStroke());
+        AnimationShim.impl_finished(t0);
+    }
 
 }

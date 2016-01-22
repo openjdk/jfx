@@ -183,19 +183,19 @@ public class IntegerExpressionTest {
         // make sure we do not create unnecessary bindings
         assertEquals(op1, IntegerExpression.integerExpression(op1));
     }
-    
+
     @Test
-    public void testAsObject() { 
+    public void testAsObject() {
         final ObservableIntegerValueStub valueModel = new ObservableIntegerValueStub();
         final ObjectExpression<Integer> exp = IntegerExpression.integerExpression(valueModel).asObject();
-        
+
         assertEquals(Integer.valueOf(0), exp.getValue());
         valueModel.set(data);
         assertEquals(Integer.valueOf(data), exp.getValue());
         valueModel.set(integer1);
         assertEquals(Integer.valueOf(integer1), exp.getValue());
     }
-    
+
     @Test
     public void testObjectToInteger() {
         final ObservableValueStub<Integer> valueModel = new ObservableValueStub<Integer>();

@@ -413,7 +413,7 @@ public class Optimizer {
             p.add(value);
         }
     }
-    
+
     private void parseTimeline() {
         bound.clear();
         if (timeline == null) {

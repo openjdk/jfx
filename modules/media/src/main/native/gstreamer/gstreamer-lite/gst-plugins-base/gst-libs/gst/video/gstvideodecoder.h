@@ -4,7 +4,7 @@
  * Copyright (C) 2011 Nokia Corporation. All rights reserved.
  *   Contact: Stefan Kost <stefan.kost@nokia.com>
  * Copyright (C) 2012 Collabora Ltd.
- *	Author : Edward Hervey <edward@collabora.com>
+ *  Author : Edward Hervey <edward@collabora.com>
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -276,26 +276,26 @@ struct _GstVideoDecoderClass
   gboolean      (*stop)           (GstVideoDecoder *decoder);
 
   GstFlowReturn (*parse)          (GstVideoDecoder *decoder,
-				   GstVideoCodecFrame *frame,
-				   GstAdapter *adapter,
-				   gboolean at_eos);
+                   GstVideoCodecFrame *frame,
+                   GstAdapter *adapter,
+                   gboolean at_eos);
 
   gboolean      (*set_format)     (GstVideoDecoder *decoder,
-				   GstVideoCodecState * state);
+                   GstVideoCodecState * state);
 
   gboolean      (*reset)          (GstVideoDecoder *decoder,
-				   gboolean hard);
+                   gboolean hard);
 
   GstFlowReturn (*finish)         (GstVideoDecoder *decoder);
 
   GstFlowReturn (*handle_frame)   (GstVideoDecoder *decoder,
-				   GstVideoCodecFrame *frame);
+                   GstVideoCodecFrame *frame);
 
   gboolean      (*sink_event)     (GstVideoDecoder *decoder,
-				   GstEvent *event);
+                   GstEvent *event);
 
   gboolean      (*src_event)      (GstVideoDecoder *decoder,
-				   GstEvent *event);
+                   GstEvent *event);
 
   gboolean      (*negotiate)      (GstVideoDecoder *decoder);
 
@@ -306,10 +306,10 @@ struct _GstVideoDecoderClass
   gboolean      (*flush)              (GstVideoDecoder *decoder);
 
   gboolean      (*sink_query)     (GstVideoDecoder *decoder,
-				   GstQuery *query);
+                   GstQuery *query);
 
   gboolean      (*src_query)      (GstVideoDecoder *decoder,
-				   GstQuery *query);
+                   GstQuery *query);
 
 
   /*< private >*/
@@ -320,17 +320,17 @@ GType    gst_video_decoder_get_type (void);
 
 /* Context parameters */
 void     gst_video_decoder_set_packetized (GstVideoDecoder * decoder,
-					   gboolean packetized);
+                       gboolean packetized);
 
 gboolean gst_video_decoder_get_packetized (GstVideoDecoder * decoder);
 
 void     gst_video_decoder_set_estimate_rate (GstVideoDecoder * dec,
-					      gboolean          enabled);
+                          gboolean          enabled);
 
 gint     gst_video_decoder_get_estimate_rate (GstVideoDecoder * dec);
 
 void     gst_video_decoder_set_max_errors (GstVideoDecoder * dec,
-					   gint              num);
+                       gint              num);
 
 gint     gst_video_decoder_get_max_errors (GstVideoDecoder * dec);
 
@@ -340,11 +340,11 @@ void     gst_video_decoder_set_needs_format (GstVideoDecoder * dec,
 gboolean gst_video_decoder_get_needs_format (GstVideoDecoder * dec);
 
 void     gst_video_decoder_set_latency (GstVideoDecoder *decoder,
-					GstClockTime min_latency,
-					GstClockTime max_latency);
+                    GstClockTime min_latency,
+                    GstClockTime max_latency);
 void     gst_video_decoder_get_latency (GstVideoDecoder *decoder,
-					GstClockTime *min_latency,
-					GstClockTime *max_latency);
+                    GstClockTime *min_latency,
+                    GstClockTime *max_latency);
 
 void     gst_video_decoder_get_allocator (GstVideoDecoder *decoder,
                                           GstAllocator **allocator,
@@ -354,7 +354,7 @@ GstBufferPool *gst_video_decoder_get_buffer_pool (GstVideoDecoder *decoder);
 /* Object methods */
 
 GstVideoCodecFrame *gst_video_decoder_get_frame        (GstVideoDecoder *decoder,
-						        int frame_number);
+                                int frame_number);
 
 GstVideoCodecFrame *gst_video_decoder_get_oldest_frame (GstVideoDecoder *decoder);
 
@@ -362,36 +362,36 @@ GList *             gst_video_decoder_get_frames       (GstVideoDecoder *decoder
 
 /* Parsing related methods */
 void           gst_video_decoder_add_to_frame     (GstVideoDecoder *decoder,
-						   int n_bytes);
+                           int n_bytes);
 GstFlowReturn  gst_video_decoder_have_frame       (GstVideoDecoder *decoder);
 gsize          gst_video_decoder_get_pending_frame_size (GstVideoDecoder *decoder);
 
 GstBuffer     *gst_video_decoder_allocate_output_buffer (GstVideoDecoder * decoder);
 
 GstFlowReturn  gst_video_decoder_allocate_output_frame  (GstVideoDecoder *decoder,
-						         GstVideoCodecFrame *frame);
+                                 GstVideoCodecFrame *frame);
 
 GstVideoCodecState *gst_video_decoder_set_output_state (GstVideoDecoder *decoder,
-							GstVideoFormat fmt, guint width, guint height,
-							GstVideoCodecState *reference);
+                            GstVideoFormat fmt, guint width, guint height,
+                            GstVideoCodecState *reference);
 
 GstVideoCodecState *gst_video_decoder_get_output_state (GstVideoDecoder *decoder);
 
 gboolean         gst_video_decoder_negotiate           (GstVideoDecoder * decoder);
 
 GstClockTimeDiff gst_video_decoder_get_max_decode_time (GstVideoDecoder *decoder,
-							GstVideoCodecFrame *frame);
+                            GstVideoCodecFrame *frame);
 
 gdouble          gst_video_decoder_get_qos_proportion (GstVideoDecoder * decoder);
 
 GstFlowReturn    gst_video_decoder_finish_frame (GstVideoDecoder *decoder,
-						 GstVideoCodecFrame *frame);
+                         GstVideoCodecFrame *frame);
 
 GstFlowReturn    gst_video_decoder_drop_frame (GstVideoDecoder *dec,
-					       GstVideoCodecFrame *frame);
+                           GstVideoCodecFrame *frame);
 
 void             gst_video_decoder_release_frame (GstVideoDecoder * dec,
-						  GstVideoCodecFrame * frame);
+                          GstVideoCodecFrame * frame);
 
 void             gst_video_decoder_merge_tags (GstVideoDecoder *decoder,
                                                const GstTagList *tags,

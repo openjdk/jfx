@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -33,7 +33,7 @@ namespace WebCore {
 
 void HitTestingTransformState::translate(int x, int y, TransformAccumulation accumulate)
 {
-    m_accumulatedTransform.translate(x, y);    
+    m_accumulatedTransform.translate(x, y);
     if (accumulate == FlattenTransform)
         flattenWithTransform(m_accumulatedTransform);
 

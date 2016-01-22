@@ -96,7 +96,7 @@ void cache_write_buffer(Cache* cache, GstBuffer* buffer)
     {
         ssize_t written = write(cache->writeHandle, info.data, info.size);
         if (written > 0)
-            cache->write_position += written;        
+            cache->write_position += written;
         gst_buffer_unmap(buffer, &info);
     }
 }

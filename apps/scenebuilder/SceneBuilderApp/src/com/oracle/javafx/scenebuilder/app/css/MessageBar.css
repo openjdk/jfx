@@ -58,7 +58,7 @@
 }
 
 .message-bar .message-warning {
-    -fx-background-color: 
+    -fx-background-color:
         linear-gradient( to bottom, derive(-sb-warning-panel, 20%) 0%, -sb-warning-panel 100% );
 }
 

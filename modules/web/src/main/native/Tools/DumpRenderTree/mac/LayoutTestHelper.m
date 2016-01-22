@@ -55,9 +55,9 @@ static void installLayoutTestColorProfile()
     // To make sure we get consistent colors (not dependent on the chosen color
     // space of the main display), we force the generic RGB color profile.
     // This causes a change the user can see.
-    
+
     CFUUIDRef mainDisplayID = CGDisplayCreateUUIDFromDisplayID(CGMainDisplayID());
-    
+
     if (!sUserColorProfileURL) {
         CFDictionaryRef deviceInfo = ColorSyncDeviceCopyDeviceInfo(kColorSyncDisplayDeviceClass, mainDisplayID);
 
@@ -77,7 +77,7 @@ static void installLayoutTestColorProfile()
             sUserColorProfileURL = (CFURLRef)CFDictionaryGetValue(factoryProfile, kColorSyncDeviceProfileURL);
             CFRetain(sUserColorProfileURL);
         }
-        
+
         CFRelease(deviceInfo);
     }
 
@@ -86,29 +86,29 @@ static void installLayoutTestColorProfile()
     CFURLRef profileURL = ColorSyncProfileGetURL(genericRGBProfile, &error);
     if (!profileURL) {
         NSLog(@"Failed to get URL of Generic RGB color profile! Many pixel tests may fail as a result. Error: %@", error);
-        
+
         if (sUserColorProfileURL) {
             CFRelease(sUserColorProfileURL);
             sUserColorProfileURL = 0;
         }
-        
+
         CFRelease(genericRGBProfile);
         CFRelease(mainDisplayID);
         return;
     }
-        
+
     CFMutableDictionaryRef profileInfo = CFDictionaryCreateMutable(kCFAllocatorDefault, 0, &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks);
     CFDictionarySetValue(profileInfo, kColorSyncDeviceDefaultProfileID, profileURL);
-    
+
     if (!ColorSyncDeviceSetCustomProfiles(kColorSyncDisplayDeviceClass, mainDisplayID, profileInfo)) {
         NSLog(@"Failed to set color profile for main display! Many pixel tests may fail as a result.");
-        
+
         if (sUserColorProfileURL) {
             CFRelease(sUserColorProfileURL);
             sUserColorProfileURL = 0;
         }
     }
-    
+
     CFRelease(profileInfo);
     CFRelease(genericRGBProfile);
     CFRelease(mainDisplayID);
@@ -121,10 +121,10 @@ static void restoreUserColorProfile(void)
 
     // This is used as a signal handler, and thus the calls into ColorSync are unsafe.
     // But we might as well try to restore the user's color profile, we're going down anyway...
-    
+
     if (!sUserColorProfileURL)
         return;
-    
+
     CFUUIDRef mainDisplayID = CGDisplayCreateUUIDFromDisplayID(CGMainDisplayID());
     CFMutableDictionaryRef profileInfo = CFDictionaryCreateMutable(kCFAllocatorDefault, 0, &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks);
     CFDictionarySetValue(profileInfo, kColorSyncDeviceDefaultProfileID, sUserColorProfileURL);

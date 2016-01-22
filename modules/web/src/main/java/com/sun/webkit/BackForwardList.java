@@ -79,7 +79,7 @@ public final class BackForwardList {
         private void notifyItemDestroyed() {
             pitem = 0;
         }
-        
+
         // Called from the native code as well.
         private void notifyItemChanged() {
             for (WCChangeListener l : listenerList) {
@@ -110,7 +110,7 @@ public final class BackForwardList {
         public Date getLastVisitedDate() {
             return lastVisitedDate == null ? null : (Date)lastVisitedDate.clone();
         }
-        
+
         private void updateLastVisitedDate() {
             lastVisitedDate = new Date(System.currentTimeMillis());
             notifyItemChanged();
@@ -130,11 +130,11 @@ public final class BackForwardList {
                     ",title=" + getTitle() +
                     ",date=" + getLastVisitedDate();
         }
-        
-        
+
+
         private final List<WCChangeListener> listenerList =
             new LinkedList<WCChangeListener>();
-        
+
         public void addChangeListener(WCChangeListener l) {
             if (l == null)
                 return;
@@ -143,7 +143,7 @@ public final class BackForwardList {
 
         public void removeChangeListener(WCChangeListener l) {
             if (l == null)
-                return;            
+                return;
             listenerList.remove(l);
         }
     }
@@ -151,10 +151,10 @@ public final class BackForwardList {
     private final WebPage page;
     private final List<WCChangeListener> listenerList =
         new LinkedList<WCChangeListener>();
-    
+
     BackForwardList(WebPage page) {
         this.page = page;
-        
+
         // WebKit doesn't set a page's visiting date. We do it here as workaround.
         // This way it works for page reload as well.
         page.addLoadListenerClient(new LoadListenerClient() {
@@ -307,7 +307,7 @@ public final class BackForwardList {
             l.stateChanged(new WCChangeEvent(this));
         }
     }
-    
+
     native private static String bflItemGetURL(long item);
     native private static String bflItemGetTitle(long item);
     native private static WCImage bflItemGetIcon(long item);

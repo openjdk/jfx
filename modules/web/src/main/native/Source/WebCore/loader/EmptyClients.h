@@ -216,9 +216,9 @@ public:
 #if ENABLE(TOUCH_EVENTS)
     virtual void needTouchEvents(bool) override { }
 #endif
-    
+
     virtual void numWheelEventHandlersChanged(unsigned) override { }
-    
+
     virtual bool isEmptyChromeClient() const override { return true; }
 
     virtual void didAssociateFormControls(const Vector<RefPtr<Element>>&) override { }
@@ -587,7 +587,7 @@ public:
     virtual ~EmptyInspectorClient() { }
 
     virtual void inspectorDestroyed() override { }
-    
+
     virtual InspectorFrontendChannel* openInspectorFrontend(InspectorController*) override { return 0; }
     virtual void closeInspectorFrontend() override { }
     virtual void bringFrontendToFront() override { }

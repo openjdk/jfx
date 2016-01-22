@@ -254,7 +254,7 @@ final class EmbeddedStage extends GlassStage implements EmbeddedStageInterface {
             notifyStageListenerLater(r);
         }
     }
-    
+
     @Override
     public void focusUngrab() {
         Runnable r = () -> {
@@ -270,9 +270,9 @@ final class EmbeddedStage extends GlassStage implements EmbeddedStageInterface {
     }
 
     @Override
-    public void requestInput(String text, int type, double width, double height, 
+    public void requestInput(String text, int type, double width, double height,
                                 double Mxx, double Mxy, double Mxz, double Mxt,
-                                double Myx, double Myy, double Myz, double Myt, 
+                                double Myx, double Myy, double Myz, double Myt,
                                 double Mzx, double Mzy, double Mzz, double Mzt) {
         throw new UnsupportedOperationException("Not supported yet.");
     }
@@ -284,5 +284,5 @@ final class EmbeddedStage extends GlassStage implements EmbeddedStageInterface {
 
     @Override public void setRTL(boolean b) {
     }
-    
+
 }

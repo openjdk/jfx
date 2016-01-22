@@ -44,7 +44,7 @@ import javafx.scene.effect.Glow;
  *
  */
 public class GlowPropertyMetadata extends ComplexPropertyMetadata<Glow> {
-    
+
     private final EffectPropertyMetadata inputMetadata
             = new EffectPropertyMetadata(new PropertyName("input"), //NOI18N
             true /* readWrite */, null, InspectorPath.UNUSED);
@@ -52,7 +52,7 @@ public class GlowPropertyMetadata extends ComplexPropertyMetadata<Glow> {
             = new DoublePropertyMetadata(new PropertyName("level"), //NOI18N
             DoublePropertyMetadata.DoubleKind.OPACITY, true /* readWrite */, 0.3, InspectorPath.UNUSED);
 
-    public GlowPropertyMetadata(PropertyName name, boolean readWrite, 
+    public GlowPropertyMetadata(PropertyName name, boolean readWrite,
             Glow defaultValue, InspectorPath inspectorPath) {
         super(name, Glow.class, readWrite, defaultValue, inspectorPath);
     }
@@ -60,14 +60,14 @@ public class GlowPropertyMetadata extends ComplexPropertyMetadata<Glow> {
     /*
      * ComplexPropertyMetadata
      */
-    
+
     @Override
     public FXOMInstance makeFxomInstanceFromValue(Glow value, FXOMDocument fxomDocument) {
         final FXOMInstance result = new FXOMInstance(fxomDocument, value.getClass());
-        
+
         inputMetadata.setValue(result, value.getInput());
         levelMetadata.setValue(result, value.getLevel());
-        
+
         return result;
     }
 }

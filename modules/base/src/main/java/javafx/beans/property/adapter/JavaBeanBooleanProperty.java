@@ -44,21 +44,21 @@ import sun.reflect.misc.MethodUtil;
 
 /**
  * A {@code JavaBeanBooleanProperty} provides an adapter between a regular
- * Java Bean property of type {@code boolean} or {@code Boolean} and a JavaFX 
- * {@code BooleanProperty}. It cannot be created directly, but a 
+ * Java Bean property of type {@code boolean} or {@code Boolean} and a JavaFX
+ * {@code BooleanProperty}. It cannot be created directly, but a
  * {@link JavaBeanBooleanPropertyBuilder} has to be used.
  * <p>
  * As a minimum, the Java Bean must implement a getter and a setter for the
- * property. If the getter of an instance of this class is called, the property of 
+ * property. If the getter of an instance of this class is called, the property of
  * the Java Bean is returned. If the setter is called, the value will be passed
  * to the Java Bean property. If the Java Bean property is bound (i.e. it supports
- * PropertyChangeListeners), this {@code JavaBeanBooleanProperty} will be 
+ * PropertyChangeListeners), this {@code JavaBeanBooleanProperty} will be
  * aware of changes in the Java Bean. Otherwise it can be notified about
- * changes by calling {@link #fireValueChangedEvent()}. If the Java Bean property 
- * is also constrained (i.e. it supports VetoableChangeListeners), this 
- * {@code JavaBeanBooleanProperty} will reject changes, if it is bound to an 
+ * changes by calling {@link #fireValueChangedEvent()}. If the Java Bean property
+ * is also constrained (i.e. it supports VetoableChangeListeners), this
+ * {@code JavaBeanBooleanProperty} will reject changes, if it is bound to an
  * {@link javafx.beans.value.ObservableValue ObservableValue&lt;Boolean&gt;}.
- * 
+ *
  * @see javafx.beans.property.BooleanProperty
  * @see JavaBeanBooleanPropertyBuilder
  * @since JavaFX 2.1
@@ -82,9 +82,9 @@ public final class JavaBeanBooleanProperty extends BooleanProperty implements Ja
 
     /**
      * {@inheritDoc}
-     * 
+     *
      * @throws UndeclaredThrowableException if calling the getter of the Java Bean
-     * property throws an {@code IllegalAccessException} or an 
+     * property throws an {@code IllegalAccessException} or an
      * {@code InvocationTargetException}.
      */
     @Override
@@ -102,9 +102,9 @@ public final class JavaBeanBooleanProperty extends BooleanProperty implements Ja
 
     /**
      * {@inheritDoc}
-     * 
+     *
      * @throws UndeclaredThrowableException if calling the getter of the Java Bean
-     * property throws an {@code IllegalAccessException} or an 
+     * property throws an {@code IllegalAccessException} or an
      * {@code InvocationTargetException}.
      */
     @Override

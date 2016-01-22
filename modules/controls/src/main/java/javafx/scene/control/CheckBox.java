@@ -103,11 +103,11 @@ public class CheckBox extends ButtonBase {
         setAccessibleRole(AccessibleRole.CHECK_BOX);
         setAlignment(Pos.CENTER_LEFT);
         setMnemonicParsing(true);     // enable mnemonic auto-parsing by default
-        
+
         // initialize pseudo-class state
         pseudoClassStateChanged(PSEUDO_CLASS_DETERMINATE, true);
     }
-    
+
     /***************************************************************************
      *                                                                         *
      * Properties                                                              *
@@ -253,11 +253,11 @@ public class CheckBox extends ButtonBase {
      **************************************************************************/
 
     private static final String DEFAULT_STYLE_CLASS = "check-box";
-    private static final PseudoClass PSEUDO_CLASS_DETERMINATE = 
+    private static final PseudoClass PSEUDO_CLASS_DETERMINATE =
             PseudoClass.getPseudoClass("determinate");
-    private static final PseudoClass PSEUDO_CLASS_INDETERMINATE = 
+    private static final PseudoClass PSEUDO_CLASS_INDETERMINATE =
             PseudoClass.getPseudoClass("indeterminate");
-    private static final PseudoClass PSEUDO_CLASS_SELECTED = 
+    private static final PseudoClass PSEUDO_CLASS_SELECTED =
             PseudoClass.getPseudoClass("selected");
 
 

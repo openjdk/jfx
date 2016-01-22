@@ -74,14 +74,14 @@ import com.sun.javafx.geom.transform.BaseTransform;
  *     KeyFrames morphFrames = KeyFrames.create(s, "shape", k0, k1, k2);
  *     Clip.create(5000, 1, morphFrames).start();
  * </pre>
- * 
+ *
  */
 class ShapeEvaluator {
     private Shape savedv0;
     private Shape savedv1;
     private Geometry geom0;
     private Geometry geom1;
-    
+
     public Shape evaluate(Shape v0, Shape v1, float fraction) {
         if (savedv0 != v0 || savedv1 != v1) {
             if (savedv0 == v1 && savedv1 == v0) {
@@ -597,7 +597,7 @@ class ShapeEvaluator {
         public boolean contains(float x, float y, float width, float height) {
             return Path2D.contains(getPathIterator(null), x, y, width, height);
         }
-        
+
         public PathIterator getPathIterator(BaseTransform at) {
             return new Iterator(at, geom0, geom1, t);
         }

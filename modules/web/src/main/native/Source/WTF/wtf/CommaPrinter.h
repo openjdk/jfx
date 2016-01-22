@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef CommaPrinter_h
@@ -37,17 +37,17 @@ public:
         , m_isFirst(true)
     {
     }
-    
+
     void dump(PrintStream& out) const
     {
         if (m_isFirst) {
             m_isFirst = false;
             return;
         }
-        
+
         out.print(m_comma);
     }
-    
+
 private:
     const char* m_comma;
     mutable bool m_isFirst;

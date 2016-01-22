@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -259,7 +259,7 @@ bool TextCodecUTF8::handlePartialSequence<UChar>(UChar*& destination, const uint
 
     return false;
 }
-    
+
 String TextCodecUTF8::decode(const char* bytes, size_t length, bool flush, bool stopOnError, bool& sawError)
 {
     // Each input byte might turn into a character.
@@ -328,7 +328,7 @@ String TextCodecUTF8::decode(const char* bytes, size_t length, bool flush, bool 
                 sawError = true;
                 if (stopOnError)
                     break;
-                
+
                 goto upConvertTo16Bit;
             }
             if (character > 0xff)
@@ -365,7 +365,7 @@ upConvertTo16Bit:
             if (m_partialSequenceSize)
                 break;
         }
-        
+
         while (source < end) {
             if (isASCII(*source)) {
                 // Fast path for ASCII. Most UTF-8 text will be ASCII.
@@ -414,9 +414,9 @@ upConvertTo16Bit:
             destination16 = appendCharacter(destination16, character);
         }
     } while (flush && m_partialSequenceSize);
-    
+
     buffer16.shrink(destination16 - buffer16.characters());
-    
+
     return String::adopt(buffer16);
 }
 

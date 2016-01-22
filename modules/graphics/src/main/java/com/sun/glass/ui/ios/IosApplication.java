@@ -45,13 +45,13 @@ public final class IosApplication extends Application {
         });
         _initIDs();
     }
-    
+
     /**
      * @inheritDoc
      */
     @Override
     protected void runLoop(final Runnable launchable) {
-        ClassLoader ccl = IosApplication.class.getClassLoader(); 
+        ClassLoader ccl = IosApplication.class.getClassLoader();
         _runLoop(launchable, ccl);
     }
     private native void _runLoop(Runnable launchable, ClassLoader contextClassLoader);
@@ -64,7 +64,7 @@ public final class IosApplication extends Application {
         setEventThread(null);
         super.finishTerminating();
     }
-    
+
     // Called from the native code
     private void setEventThread() {
         setEventThread(Thread.currentThread());
@@ -153,12 +153,12 @@ public final class IosApplication extends Application {
         return new IosRobot();
     }
 
-    @Override 
+    @Override
     protected native double staticScreen_getVideoRefreshPeriod();
 
     @Override
     protected native Screen[] staticScreen_getScreens();
-    
+
     /**
      * @inheritDoc
      */
@@ -186,39 +186,39 @@ public final class IosApplication extends Application {
     protected File staticCommonDialogs_showFolderChooser(Window owner, String folder, String title) {
         return null;
     }
-    
+
     private native Object _enterNestedEventLoopImpl();
     private native void _leaveNestedEventLoopImpl();
-    
-    @Override 
+
+    @Override
     protected Object _enterNestedEventLoop() {
         return _enterNestedEventLoopImpl();
     }
-    
-    @Override 
+
+    @Override
     protected void _leaveNestedEventLoop(Object retValue) {
         _leaveNestedEventLoopImpl();
     }
 
-    @Override 
+    @Override
     protected long staticView_getMultiClickTime() {
         return IosView._getMultiClickTime();
     }
 
-    @Override 
+    @Override
     protected int staticView_getMultiClickMaxX() {
         return IosView._getMultiClickMaxX();
     }
 
-    @Override 
+    @Override
     protected int staticView_getMultiClickMaxY() {
         return IosView._getMultiClickMaxY();
     }
 
-    @Override 
+    @Override
     native protected void _invokeAndWait(Runnable runnable);
 
-    @Override 
+    @Override
     native protected void _invokeLater(Runnable runnable);
 
     @Override
@@ -232,43 +232,43 @@ public final class IosApplication extends Application {
 
     /**
      * Hides / Shows iOS status bar.
-     * @param hidden 
+     * @param hidden
      */
     public native static void _setStatusBarHidden(boolean hidden);
-    
+
     /**
      * Hides / Shows iOS status bar, possibly animating transition.
      * @param hidden
      * @param animation - 0 none, 1 fade, 2 slide
      */
     public native static void _setStatusBarHiddenWithAnimation(boolean hidden, int animation);
-    
+
     /**
-     * Adjust status bar orientation with animation. See iOS UIApplication developers 
+     * Adjust status bar orientation with animation. See iOS UIApplication developers
      * documentation for details.
      * @param interfaceOrientation
-     * @param animated 
+     * @param animated
      */
     public native static void _setStatusBarOrientationAnimated(int interfaceOrientation, boolean animated);
-    
+
     /**
      * See iOS developers documentation. (UIApplication).
      * @param statusBarStyle
-     * @param animated 
+     * @param animated
      */
     public native static void _setStatusBarStyleAnimated(int statusBarStyle, boolean animated);
-    
+
     /**
      * Status bar visibility getter.
      * @return true if hidden
      */
     public native static boolean _getStatusBarHidden();
-    
+
     /**
      * See iOS developers documentation.
      */
     public native static int _getStatusBarStyle();
-    
+
     /**
      * See iOS developers documentation.
      */
@@ -282,7 +282,7 @@ public final class IosApplication extends Application {
     @Override
     public boolean hasMultiTouch() {
         return true;
-    }   
+    }
 
     @Override
     protected native int _getKeyCodeForChar(char c);

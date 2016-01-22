@@ -40,7 +40,7 @@ public abstract class ServiceTestBase {
             new ConcurrentLinkedQueue<Runnable>();
     protected TestServiceFactory factory;
     protected Service<String> service;
-    
+
     protected abstract TestServiceFactory setupServiceFactory();
     protected Executor createExecutor() {
         return command -> {
@@ -60,7 +60,7 @@ public abstract class ServiceTestBase {
             th.start();
         };
     }
-    
+
     @Before public void setup() {
         factory = setupServiceFactory();
         factory.test = this;

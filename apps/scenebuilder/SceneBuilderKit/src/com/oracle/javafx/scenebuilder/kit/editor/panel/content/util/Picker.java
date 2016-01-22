@@ -43,19 +43,19 @@ import javafx.scene.Parent;
 
 /**
  * This class allows to pick objects at a given position in scene graph.
- * 
- * 
+ *
+ *
  */
 public class Picker {
-    
+
     private final Set<Node> excludes = new HashSet<>();
     private final List<Node> matches = new ArrayList<>();
-    
+
     /**
      * Returns the list of nodes below (sceneX, sceneY).
      * Topmost node is at index 0.
      * Search starts from startNode.
-     * 
+     *
      * @param startNode
      * @param sceneX
      * @param sceneY
@@ -66,17 +66,17 @@ public class Picker {
         assert startNode.getScene() != null;
         assert Double.isNaN(sceneX) == false;
         assert Double.isNaN(sceneY) == false;
-        
+
         final Point2D localXY = startNode.sceneToLocal(sceneX, sceneY, true /* rootScene */);
         return pickInLocal(startNode, localXY.getX(), localXY.getY());
     }
-    
+
     public List<Node> pickInLocal(Node startNode, double localX, double localY) {
         assert startNode != null;
         assert startNode.getScene() != null;
         assert Double.isNaN(localX) == false;
         assert Double.isNaN(localY) == false;
-        
+
         this.matches.clear();
         performPick(startNode, localX, localY);
         return matches.isEmpty() ? null : Collections.unmodifiableList(matches);
@@ -85,7 +85,7 @@ public class Picker {
     public Set<Node> getExcludes() {
         return excludes;
     }
-    
+
 
     private void performPick(Node startNode, double localX, double localY) {
 
@@ -93,7 +93,7 @@ public class Picker {
             if (startNode.getLayoutBounds().contains(localX, localY)) {
                 matches.add(0, startNode);
             }
-        
+
             if (startNode instanceof Parent) {
                 final Parent startParent = (Parent) startNode;
                 for (Node child : startParent.getChildrenUnmodifiable()) {

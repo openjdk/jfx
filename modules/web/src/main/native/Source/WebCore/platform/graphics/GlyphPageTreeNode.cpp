@@ -6,13 +6,13 @@
  * are met:
  *
  * 1.  Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer. 
+ *     notice, this list of conditions and the following disclaimer.
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
- *     documentation and/or other materials provided with the distribution. 
+ *     documentation and/or other materials provided with the distribution.
  * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
- *     from this software without specific prior written permission. 
+ *     from this software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY APPLE AND ITS CONTRIBUTORS "AS IS" AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
@@ -76,7 +76,7 @@ size_t GlyphPageTreeNode::treeGlyphPageCount()
         for (HashMap<int, GlyphPageTreeNode*>::iterator it = roots->begin(); it != end; ++it)
             count += it->value->pageCount();
     }
-    
+
     if (pageZeroRoot)
         count += pageZeroRoot->pageCount();
 
@@ -101,7 +101,7 @@ void GlyphPageTreeNode::pruneTreeCustomFontData(const FontData* fontData)
         for (HashMap<int, GlyphPageTreeNode*>::iterator it = roots->begin(); it != end; ++it)
             it->value->pruneCustomFontData(fontData);
     }
-    
+
     if (pageZeroRoot)
         pageZeroRoot->pruneCustomFontData(fontData);
 }
@@ -113,7 +113,7 @@ void GlyphPageTreeNode::pruneTreeFontData(const SimpleFontData* fontData)
         for (HashMap<int, GlyphPageTreeNode*>::iterator it = roots->begin(); it != end; ++it)
             it->value->pruneFontData(fontData);
     }
-    
+
     if (pageZeroRoot)
         pageZeroRoot->pruneFontData(fontData);
 }
@@ -201,7 +201,7 @@ void GlyphPageTreeNode::initializePage(const FontData* fontData, unsigned pageNu
             }
 
             // Now that we have a buffer full of characters, we want to get back an array
-            // of glyph indices.  This part involves calling into the platform-specific 
+            // of glyph indices.  This part involves calling into the platform-specific
             // routine of our glyph map for actually filling in the page with the glyphs.
             // Success is not guaranteed. For example, Times fails to fill page 260, giving glyph data
             // for only 128 out of 256 characters.
@@ -356,7 +356,7 @@ void GlyphPageTreeNode::pruneCustomFontData(const FontData* fontData)
 {
     if (!fontData || !m_customFontCount)
         return;
-        
+
     // Prune any branch that contains this FontData.
     if (OwnPtr<GlyphPageTreeNode> node = m_children.take(fontData)) {
         if (unsigned customFontCount = node->m_customFontCount + 1) {
@@ -364,7 +364,7 @@ void GlyphPageTreeNode::pruneCustomFontData(const FontData* fontData)
                 curr->m_customFontCount -= customFontCount;
         }
     }
-    
+
     // Check any branches that remain that still have custom fonts underneath them.
     if (!m_customFontCount)
         return;

@@ -51,14 +51,14 @@ EncodedJSValue JSC_HOST_CALL JSAudioContextConstructor::constructJSAudioContext(
     ScriptExecutionContext* scriptExecutionContext = jsConstructor->scriptExecutionContext();
     if (!scriptExecutionContext)
         return throwVMError(exec, createReferenceError(exec, "AudioContext constructor script execution context is unavailable"));
-        
+
     if (!scriptExecutionContext->isDocument())
         return throwVMError(exec, createReferenceError(exec, "AudioContext constructor called in a script execution context which is not a document"));
 
     Document& document = toDocument(*scriptExecutionContext);
 
     RefPtr<AudioContext> audioContext;
-    
+
     if (!exec->argumentCount()) {
         // Constructor for default AudioContext which talks to audio hardware.
         ExceptionCode ec = 0;
@@ -81,7 +81,7 @@ EncodedJSValue JSC_HOST_CALL JSAudioContextConstructor::constructJSAudioContext(
         int32_t numberOfChannels = exec->argument(0).toInt32(exec);
         int32_t numberOfFrames = exec->argument(1).toInt32(exec);
         float sampleRate = exec->argument(2).toFloat(exec);
-        
+
         if (numberOfChannels <= 0 || numberOfChannels > 10)
             return throwVMError(exec, createSyntaxError(exec, "Invalid number of channels"));
 

@@ -439,7 +439,7 @@ public abstract class Axis<T> extends Region {
     protected final boolean shouldAnimate(){
         return getAnimated() && impl_isTreeVisible() && getScene() != null;
     }
-    
+
     /**
      * We suppress requestLayout() calls here by doing nothing as we don't want changes to our children to cause
      * layout. If you really need to request layout then call requestAxisLayout().

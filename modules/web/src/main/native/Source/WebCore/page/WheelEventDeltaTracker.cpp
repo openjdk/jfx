@@ -73,13 +73,13 @@ DominantScrollGestureDirection WheelEventDeltaTracker::dominantScrollGestureDire
         allVertical &= isVertical;
         allHorizontal &= !isVertical;
     }
-    
+
     if (allVertical)
         return DominantScrollGestureDirection::Vertical;
 
     if (allHorizontal)
         return DominantScrollGestureDirection::Horizontal;
-    
+
     return DominantScrollGestureDirection::None;
 }
 

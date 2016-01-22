@@ -123,7 +123,7 @@ namespace JSC {
             setIs8Bit(true);
             vm.m_newStringsSinceLastHashCons++;
         }
-            
+
     public:
         static JSString* create(VM& vm, PassRefPtr<StringImpl> value)
         {
@@ -153,7 +153,7 @@ namespace JSC {
         bool getPrimitiveNumber(ExecState*, double& number, JSValue&) const;
         JSObject* toObject(ExecState*, JSGlobalObject*) const;
         double toNumber(ExecState*) const;
-            
+
         bool getStringPropertySlot(ExecState*, PropertyName, PropertySlot&);
         bool getStringPropertySlot(ExecState*, unsigned propertyName, PropertySlot&);
         bool getStringPropertyDescriptor(ExecState*, PropertyName, PropertyDescriptor&);
@@ -182,7 +182,7 @@ namespace JSC {
 
     protected:
         friend class JSValue;
-            
+
         bool isRope() const { return m_value.isNull(); }
         bool is8Bit() const { return m_flags & Is8Bit; }
         void setIs8Bit(bool flag)
@@ -200,14 +200,14 @@ namespace JSC {
         void releaseHashConsLock();
 
         unsigned m_flags;
-            
+
         // A string is represented either by a String or a rope of fibers.
         unsigned m_length;
         mutable String m_value;
 
     private:
         friend class LLIntOffsetsExtractor;
-            
+
         static JSValue toThis(JSCell*, ExecState*, ECMAMode);
 
         String& string() { ASSERT(!isRope()); return m_value; }
@@ -248,12 +248,12 @@ namespace JSC {
 
         private:
             void expand();
-                
+
             VM& m_vm;
             JSRopeString* m_jsString;
             size_t m_index;
         };
-            
+
     private:
         JSRopeString(VM& vm)
             : JSString(vm)
@@ -268,7 +268,7 @@ namespace JSC {
             m_fibers[0].set(vm, this, s1);
             m_fibers[1].set(vm, this, s2);
         }
-            
+
         void finishCreation(VM& vm, JSString* s1, JSString* s2, JSString* s3)
         {
             Base::finishCreation(vm);
@@ -313,11 +313,11 @@ namespace JSC {
         }
 
         void visitFibers(SlotVisitor&);
-            
+
         static ptrdiff_t offsetOfFibers() { return OBJECT_OFFSETOF(JSRopeString, m_fibers); }
 
         static const unsigned s_maxInternalRopeLength = 3;
-            
+
     private:
         friend JSValue jsStringFromRegisterArray(ExecState*, Register*, unsigned);
         friend JSValue jsStringFromArguments(ExecState*, JSValue);
@@ -326,7 +326,7 @@ namespace JSC {
         void resolveRopeSlowCase8(LChar*) const;
         void resolveRopeSlowCase(UChar*) const;
         void outOfMemory(ExecState*) const;
-            
+
         JS_EXPORT_PRIVATE JSString* getIndexSlowCase(ExecState*, unsigned);
 
         mutable std::array<WriteBarrier<JSString>, s_maxInternalRopeLength> m_fibers;
@@ -515,7 +515,7 @@ namespace JSC {
 
         return false;
     }
-            
+
     ALWAYS_INLINE bool JSString::getStringPropertySlot(ExecState* exec, unsigned propertyName, PropertySlot& slot)
     {
         if (propertyName < m_length) {
@@ -529,7 +529,7 @@ namespace JSC {
     inline bool isJSString(JSValue v) { return v.isCell() && v.asCell()->classInfo() == JSString::info(); }
 
     // --- JSValue inlines ----------------------------
-        
+
     inline bool JSValue::toBoolean(ExecState* exec) const
     {
         if (isInt32())

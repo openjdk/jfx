@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -41,7 +41,7 @@ BinarySwitch::BinarySwitch(GPRReg value, const Vector<int64_t>& cases, Type type
 {
     if (cases.isEmpty())
         return;
-    
+
     for (unsigned i = 0; i < cases.size(); ++i)
         m_cases.append(Case(cases[i], i));
     std::sort(m_cases.begin(), m_cases.end());
@@ -54,12 +54,12 @@ bool BinarySwitch::advance(MacroAssembler& jit)
         m_fallThrough.append(jit.jump());
         return false;
     }
-    
+
     if (m_index == m_branches.size()) {
         RELEASE_ASSERT(m_jumpStack.isEmpty());
         return false;
     }
-    
+
     for (;;) {
         const BranchCode& code = m_branches[m_index++];
         switch (code.kind) {
@@ -118,13 +118,13 @@ bool BinarySwitch::advance(MacroAssembler& jit)
 void BinarySwitch::build(unsigned start, unsigned end)
 {
     unsigned size = end - start;
-    
+
     switch (size) {
     case 0: {
         RELEASE_ASSERT_NOT_REACHED();
         break;
     }
-        
+
     case 1: {
         if (start
             && m_cases[start - 1].value == m_cases[start].value - 1
@@ -133,12 +133,12 @@ void BinarySwitch::build(unsigned start, unsigned end)
             m_branches.append(BranchCode(ExecuteCase, start));
             break;
         }
-        
+
         m_branches.append(BranchCode(NotEqualToFallThrough, start));
         m_branches.append(BranchCode(ExecuteCase, start));
         break;
     }
-        
+
     case 2: {
         if (m_cases[start].value + 1 == m_cases[start + 1].value
             && start
@@ -151,13 +151,13 @@ void BinarySwitch::build(unsigned start, unsigned end)
             m_branches.append(BranchCode(ExecuteCase, start + 1));
             break;
         }
-        
+
         unsigned firstCase = start;
         unsigned secondCase = start + 1;
         if (m_medianBias)
             std::swap(firstCase, secondCase);
         m_medianBias ^= 1;
-        
+
         m_branches.append(BranchCode(NotEqualToPush, firstCase));
         m_branches.append(BranchCode(ExecuteCase, firstCase));
         m_branches.append(BranchCode(Pop));
@@ -165,7 +165,7 @@ void BinarySwitch::build(unsigned start, unsigned end)
         m_branches.append(BranchCode(ExecuteCase, secondCase));
         break;
     }
-        
+
     default: {
         unsigned medianIndex = (start + end) / 2;
         if (!(size & 1)) {
@@ -175,17 +175,17 @@ void BinarySwitch::build(unsigned start, unsigned end)
             medianIndex -= m_medianBias;
             m_medianBias ^= 1;
         }
-        
+
         RELEASE_ASSERT(medianIndex > start);
         RELEASE_ASSERT(medianIndex + 1 < end);
-        
+
         m_branches.append(BranchCode(LessThanToPush, medianIndex));
         m_branches.append(BranchCode(NotEqualToPush, medianIndex));
         m_branches.append(BranchCode(ExecuteCase, medianIndex));
-        
+
         m_branches.append(BranchCode(Pop));
         build(medianIndex + 1, end);
-        
+
         m_branches.append(BranchCode(Pop));
         build(start, medianIndex);
         break;

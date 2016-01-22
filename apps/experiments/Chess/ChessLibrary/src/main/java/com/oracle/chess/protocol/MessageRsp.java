@@ -68,7 +68,7 @@ public abstract class MessageRsp extends Message {
     };
 
     public static class Alert {
-        
+
         private AlertType type;
         private String message;
 
@@ -96,7 +96,7 @@ public abstract class MessageRsp extends Message {
             this.message = message;
         }
     }
-    
+
     private Error error;
 
     private Alert alert;

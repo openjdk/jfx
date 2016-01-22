@@ -40,7 +40,7 @@
 #include <wtf/StdLibExtras.h>
 
 namespace WebCore {
-    
+
 using namespace SVGNames;
 
 inline SVGAnimateMotionElement::SVGAnimateMotionElement(const QualifiedName& tagName, Document& document)
@@ -119,7 +119,7 @@ void SVGAnimateMotionElement::parseAttribute(const QualifiedName& name, const At
 
     ASSERT_NOT_REACHED();
 }
-    
+
 SVGAnimateMotionElement::RotateMode SVGAnimateMotionElement::rotateMode() const
 {
     DEFINE_STATIC_LOCAL(const AtomicString, autoVal, ("auto", AtomicString::ConstructFromLiteral));
@@ -158,24 +158,24 @@ static bool parsePoint(const String& s, FloatPoint& point)
         return false;
     const UChar* cur = s.deprecatedCharacters();
     const UChar* end = cur + s.length();
-    
+
     if (!skipOptionalSVGSpaces(cur, end))
         return false;
-    
+
     float x = 0;
     if (!parseNumber(cur, end, x))
         return false;
-    
+
     float y = 0;
     if (!parseNumber(cur, end, y))
         return false;
-    
+
     point = FloatPoint(x, y);
-    
+
     // disallow anything except spaces at the end
     return !skipOptionalSVGSpaces(cur, end);
 }
-    
+
 void SVGAnimateMotionElement::resetAnimatedType()
 {
     if (!hasValidAttributeType())
@@ -209,7 +209,7 @@ bool SVGAnimateMotionElement::calculateFromAndToValues(const String& fromString,
     parsePoint(toString, m_toPoint);
     return true;
 }
-    
+
 bool SVGAnimateMotionElement::calculateFromAndByValues(const String& fromString, const String& byString)
 {
     m_hasToPointAtEndOfDuration = false;

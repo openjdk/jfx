@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef JSClassRef_h
@@ -40,7 +40,7 @@ public:
     : getProperty(_getProperty), setProperty(_setProperty), attributes(_attributes), propertyNameRef(OpaqueJSString::create(propertyName))
     {
     }
-    
+
     JSObjectGetPropertyCallback getProperty;
     JSObjectSetPropertyCallback setProperty;
     JSPropertyAttributes attributes;
@@ -88,7 +88,7 @@ struct OpaqueJSClass : public ThreadSafeRefCounted<OpaqueJSClass> {
     static PassRefPtr<OpaqueJSClass> create(const JSClassDefinition*);
     static PassRefPtr<OpaqueJSClass> createNoAutomaticPrototype(const JSClassDefinition*);
     JS_EXPORT_PRIVATE ~OpaqueJSClass();
-    
+
     String className();
     OpaqueJSClassStaticValuesTable* staticValues(JSC::ExecState*);
     OpaqueJSClassStaticFunctionsTable* staticFunctions(JSC::ExecState*);
@@ -96,7 +96,7 @@ struct OpaqueJSClass : public ThreadSafeRefCounted<OpaqueJSClass> {
 
     OpaqueJSClass* parentClass;
     OpaqueJSClass* prototypeClass;
-    
+
     JSObjectInitializeCallback initialize;
     JSObjectFinalizeCallback finalize;
     JSObjectHasPropertyCallback hasProperty;

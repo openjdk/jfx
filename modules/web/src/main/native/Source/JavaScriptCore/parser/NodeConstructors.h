@@ -160,7 +160,7 @@ inline ResolveNode::ResolveNode(const JSTokenLocation& location, const Identifie
         , m_type(type)
     {
     }
-    
+
     inline PropertyNode::PropertyNode(VM*, ExpressionNode* name, ExpressionNode* assign, Type type)
         : m_name(0)
         , m_expression(name)
@@ -210,8 +210,8 @@ inline ResolveNode::ResolveNode(const JSTokenLocation& location, const Identifie
         , m_ident(ident)
     {
     }
-    
-    
+
+
     inline SpreadExpressionNode::SpreadExpressionNode(const JSTokenLocation& location, ExpressionNode* expression)
         : ExpressionNode(location)
         , m_expression(expression)
@@ -643,7 +643,7 @@ inline ResolveNode::ResolveNode(const JSTokenLocation& location, const Identifie
         : StatementNode(location)
     {
     }
-    
+
     inline ExprStatementNode::ExprStatementNode(const JSTokenLocation& location, ExpressionNode* expr)
         : StatementNode(location)
         , m_expr(expr)
@@ -655,7 +655,7 @@ inline ResolveNode::ResolveNode(const JSTokenLocation& location, const Identifie
         , m_expr(expr)
     {
     }
-    
+
     inline IfElseNode::IfElseNode(const JSTokenLocation& location, ExpressionNode* condition, StatementNode* ifBlock, StatementNode* elseBlock)
         : StatementNode(location)
         , m_condition(condition)
@@ -699,7 +699,7 @@ inline ResolveNode::ResolveNode(const JSTokenLocation& location, const Identifie
         , m_ident(ident)
     {
     }
-    
+
     inline BreakNode::BreakNode(VM* vm, const JSTokenLocation& location)
         : StatementNode(location)
         , m_ident(vm->propertyNames->nullIdentifier)
@@ -711,7 +711,7 @@ inline ResolveNode::ResolveNode(const JSTokenLocation& location, const Identifie
         , m_ident(ident)
     {
     }
-    
+
     inline ReturnNode::ReturnNode(const JSTokenLocation& location, ExpressionNode* value)
         : StatementNode(location)
         , m_value(value)
@@ -834,7 +834,7 @@ inline ResolveNode::ResolveNode(const JSTokenLocation& location, const Identifie
     {
         ASSERT(l);
     }
-    
+
     inline EnumerationNode::EnumerationNode(VM* vm, const JSTokenLocation& location, DeconstructionPatternNode* pattern, ExpressionNode* expr, StatementNode* statement)
         : StatementNode(location)
         , m_lexpr(new (vm) DeconstructingAssignmentNode(location, pattern, 0))
@@ -843,27 +843,27 @@ inline ResolveNode::ResolveNode(const JSTokenLocation& location, const Identifie
     {
         ASSERT(pattern);
     }
-    
+
     inline ForInNode::ForInNode(const JSTokenLocation& location, ExpressionNode* l, ExpressionNode* expr, StatementNode* statement)
         : EnumerationNode(location, l, expr, statement)
     {
     }
-    
+
     inline ForInNode::ForInNode(VM* vm, const JSTokenLocation& location, DeconstructionPatternNode* pattern, ExpressionNode* expr, StatementNode* statement)
         : EnumerationNode(vm, location, pattern, expr, statement)
     {
     }
-    
+
     inline ForOfNode::ForOfNode(const JSTokenLocation& location, ExpressionNode* l, ExpressionNode* expr, StatementNode* statement)
         : EnumerationNode(location, l, expr, statement)
     {
     }
-    
+
     inline ForOfNode::ForOfNode(VM* vm, const JSTokenLocation& location, DeconstructionPatternNode* pattern, ExpressionNode* expr, StatementNode* statement)
         : EnumerationNode(vm, location, pattern, expr, statement)
     {
     }
-    
+
     inline DeconstructionPatternNode::DeconstructionPatternNode(VM*)
     {
     }
@@ -872,17 +872,17 @@ inline ResolveNode::ResolveNode(const JSTokenLocation& location, const Identifie
         : DeconstructionPatternNode(vm)
     {
     }
-    
+
     inline PassRefPtr<ArrayPatternNode> ArrayPatternNode::create(VM* vm)
     {
         return adoptRef(new ArrayPatternNode(vm));
     }
-    
+
     inline ObjectPatternNode::ObjectPatternNode(VM* vm)
         : DeconstructionPatternNode(vm)
     {
     }
-    
+
     inline PassRefPtr<ObjectPatternNode> ObjectPatternNode::create(VM* vm)
     {
         return adoptRef(new ObjectPatternNode(vm));
@@ -892,7 +892,7 @@ inline ResolveNode::ResolveNode(const JSTokenLocation& location, const Identifie
     {
         return adoptRef(new BindingNode(vm, boundProperty, start, end));
     }
-    
+
     inline BindingNode::BindingNode(VM* vm, const Identifier& boundProperty, const JSTextPosition& start, const JSTextPosition& end)
         : DeconstructionPatternNode(vm)
         , m_divotStart(start)
@@ -900,14 +900,14 @@ inline ResolveNode::ResolveNode(const JSTokenLocation& location, const Identifie
         , m_boundProperty(boundProperty)
     {
     }
-    
+
     inline DeconstructingAssignmentNode::DeconstructingAssignmentNode(const JSTokenLocation& location, PassRefPtr<DeconstructionPatternNode> bindings, ExpressionNode* initializer)
         : ExpressionNode(location)
         , m_bindings(bindings)
         , m_initializer(initializer)
     {
     }
-    
+
 } // namespace JSC
 
 #endif // NodeConstructors_h

@@ -56,7 +56,7 @@ typedef struct _GstARGBControlBindingClass GstARGBControlBindingClass;
  */
 struct _GstARGBControlBinding {
   GstControlBinding parent;
-  
+
   /*< private >*/
   GstControlSource *cs_a;       /* GstControlSources for this property */
   GstControlSource *cs_r;

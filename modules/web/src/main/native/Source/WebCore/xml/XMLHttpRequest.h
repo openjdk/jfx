@@ -64,7 +64,7 @@ public:
         LOADING = 3,
         DONE = 4
     };
-    
+
     enum ResponseTypeCode {
         ResponseTypeDefault,
         ResponseTypeText,
@@ -235,7 +235,7 @@ private:
     StringBuilder m_responseBuilder;
     bool m_createdDocument;
     RefPtr<Document> m_responseDocument;
-    
+
     RefPtr<SharedBuffer> m_binaryResponseBuilder;
     RefPtr<JSC::ArrayBuffer> m_responseArrayBuffer;
 

@@ -36,7 +36,7 @@ public class JFRInputEvent extends TimedEvent {
 
     @ValueDefinition(name="inputType", description="Input event type", contentType=ContentType.None)
     private String input;
-    
+
     public JFRInputEvent(EventToken eventToken) {
         super(eventToken);
     }
@@ -44,8 +44,8 @@ public class JFRInputEvent extends TimedEvent {
     public String getInput() {
         return input;
     }
-    
+
     public void setInput(String s) {
         input = s;
-    }    
+    }
 }

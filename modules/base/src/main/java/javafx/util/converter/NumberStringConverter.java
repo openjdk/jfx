@@ -37,34 +37,34 @@ import javafx.util.StringConverter;
  * @since JavaFX 2.1
  */
 public class NumberStringConverter extends StringConverter<Number> {
-    
+
     // ------------------------------------------------------ Private properties
 
     final Locale locale;
     final String pattern;
     final NumberFormat numberFormat;
-    
+
     // ------------------------------------------------------------ Constructors
     public NumberStringConverter() {
         this(Locale.getDefault());
     }
-    
+
     public NumberStringConverter(Locale locale) {
         this(locale, null);
     }
-    
+
     public NumberStringConverter(String pattern) {
         this(Locale.getDefault(), pattern);
     }
-    
+
     public NumberStringConverter(Locale locale, String pattern) {
         this(locale, pattern, null);
     }
-    
+
     public NumberStringConverter(NumberFormat numberFormat) {
         this(null, null, numberFormat);
     }
-    
+
     NumberStringConverter(Locale locale, String pattern, NumberFormat numberFormat) {
         this.locale = locale;
         this.pattern = pattern;
@@ -117,7 +117,7 @@ public class NumberStringConverter extends StringConverter<Number> {
      */
     protected NumberFormat getNumberFormat() {
         Locale _locale = locale == null ? Locale.getDefault() : locale;
-        
+
         if (numberFormat != null) {
             return numberFormat;
         } else if (pattern != null) {

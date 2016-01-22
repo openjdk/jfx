@@ -35,17 +35,17 @@ import javafx.scene.Node;
 
 /**
  *
- * 
+ *
  */
 public class JarReportEntry {
-    
+
     public enum Status {
         IGNORED,
         CANNOT_LOAD,
         CANNOT_INSTANTIATE,
         OK
     }
-    
+
     private final String name;
     private final Status status;
     private final Class<?> klass;
@@ -55,7 +55,7 @@ public class JarReportEntry {
         assert name != null;
         assert (klass != null) || (status != Status.OK);
         assert (exception == null) || (status != Status.OK);
-        
+
         this.name = name;
         this.status = status;
         this.klass = klass;
@@ -77,19 +77,19 @@ public class JarReportEntry {
     public Throwable getException() {
         return exception;
     }
-    
+
     public boolean isNode() {
         return (klass == null) ? false : Node.class.isAssignableFrom(klass);
     }
-    
+
     /*
      * Object
      */
-    
+
     @Override
     public String toString() {
         final StringBuilder sb = new StringBuilder();
-        
+
         switch(status) {
             case OK:
                 assert klass != null;
@@ -117,7 +117,7 @@ public class JarReportEntry {
             default:
                 throw new IllegalStateException("Unexpected status " + status); //NOI18N
         }
-        
+
         return sb.toString();
     }
 }

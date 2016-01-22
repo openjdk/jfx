@@ -56,13 +56,13 @@ public:
     RenderBlockFlow(Element&, PassRef<RenderStyle>);
     RenderBlockFlow(Document&, PassRef<RenderStyle>);
     virtual ~RenderBlockFlow();
-        
+
     virtual void layoutBlock(bool relayoutChildren, LayoutUnit pageLogicalHeight = 0) override;
 
 protected:
     virtual void insertedIntoTree() override;
     virtual void willBeDestroyed() override;
-    
+
     // This method is called at the start of layout to wipe away all of the floats in our floating objects list. It also
     // repopulates the list with any floats that intrude from previous siblings or parents. Floats that were added by
     // descendants are gone when this call completes and will get added back later on after the children have gotten
@@ -91,17 +91,17 @@ public:
             , m_negativeMarginAfter(afterNeg)
         {
         }
-        
+
         LayoutUnit positiveMarginBefore() const { return m_positiveMarginBefore; }
         LayoutUnit negativeMarginBefore() const { return m_negativeMarginBefore; }
         LayoutUnit positiveMarginAfter() const { return m_positiveMarginAfter; }
         LayoutUnit negativeMarginAfter() const { return m_negativeMarginAfter; }
-        
+
         void setPositiveMarginBefore(LayoutUnit pos) { m_positiveMarginBefore = pos; }
         void setNegativeMarginBefore(LayoutUnit neg) { m_negativeMarginBefore = neg; }
         void setPositiveMarginAfter(LayoutUnit pos) { m_positiveMarginAfter = pos; }
         void setNegativeMarginAfter(LayoutUnit neg) { m_negativeMarginAfter = neg; }
-    
+
     private:
         LayoutUnit m_positiveMarginBefore;
         LayoutUnit m_negativeMarginBefore;
@@ -122,7 +122,7 @@ public:
             , m_discardMarginBefore(false)
             , m_discardMarginAfter(false)
             , m_didBreakAtLineToAvoidWidow(false)
-        { 
+        {
         }
 
         ~RenderBlockFlowRareData()
@@ -130,11 +130,11 @@ public:
         }
 
         static LayoutUnit positiveMarginBeforeDefault(const RenderBlock& block)
-        { 
+        {
             return std::max<LayoutUnit>(block.marginBefore(), 0);
         }
         static LayoutUnit negativeMarginBeforeDefault(const RenderBlock& block)
-        { 
+        {
             return std::max<LayoutUnit>(-block.marginBefore(), 0);
         }
         static LayoutUnit positiveMarginAfterDefault(const RenderBlock& block)
@@ -145,14 +145,14 @@ public:
         {
             return std::max<LayoutUnit>(-block.marginAfter(), 0);
         }
-        
+
         MarginValues m_margins;
         int m_lineBreakToAvoidWidow;
         std::unique_ptr<RootInlineBox> m_lineGridBox;
         RenderNamedFlowFragment* m_renderNamedFlowFragment;
 
         RenderMultiColumnFlowThread* m_multiColumnFlowThread;
-        
+
         bool m_discardMarginBefore : 1;
         bool m_discardMarginAfter : 1;
         bool m_didBreakAtLineToAvoidWidow : 1;
@@ -169,9 +169,9 @@ public:
         // also have a custom style property for Safari RSS to deal with TypePad blog articles.
         bool m_quirkContainer : 1;
 
-        // This flag tracks whether we are still looking at child margins that can all collapse together at the beginning of a block.  
+        // This flag tracks whether we are still looking at child margins that can all collapse together at the beginning of a block.
         // They may or may not collapse with the top margin of the block (|m_canCollapseTopWithChildren| tells us that), but they will
-        // always be collapsing with one another. This variable can remain set to true through multiple iterations 
+        // always be collapsing with one another. This variable can remain set to true through multiple iterations
         // as long as we keep encountering self-collapsing blocks.
         bool m_atBeforeSideOfBlock : 1;
 
@@ -276,7 +276,7 @@ public:
 
     RenderMultiColumnFlowThread* multiColumnFlowThread() const { return hasRareBlockFlowData() ? rareBlockFlowData()->m_multiColumnFlowThread : nullptr; }
     void setMultiColumnFlowThread(RenderMultiColumnFlowThread*);
-    
+
     bool containsFloats() const override { return m_floatingObjects && !m_floatingObjects->set().isEmpty(); }
     bool containsFloat(RenderBox&) const;
 
@@ -375,10 +375,10 @@ public:
     bool hasNextPage(LayoutUnit logicalOffset, PageBoundaryRule = ExcludePageBoundary) const;
 
     void addChild(RenderObject* newChild, RenderObject* beforeChild = 0) override;
-    
+
     void createMultiColumnFlowThread();
     void destroyMultiColumnFlowThread();
-    
+
     virtual void updateColumnProgressionFromStyle(RenderStyle*) override;
 
 protected:
@@ -436,12 +436,12 @@ protected:
     virtual int inlineBlockBaseline(LineDirectionMode) const override;
 
     virtual bool isMultiColumnBlockFlow() const override { return multiColumnFlowThread(); }
-    
+
     virtual void setComputedColumnCountAndWidth(int, LayoutUnit) override;
 
     virtual LayoutUnit computedColumnWidth() const override;
     virtual unsigned computedColumnCount() const override;
-    
+
     bool isTopLayoutOverflowAllowed() const override;
     bool isLeftLayoutOverflowAllowed() const override;
 
@@ -453,7 +453,7 @@ private:
     virtual RenderObject* layoutSpecialExcludedChild(bool /*relayoutChildren*/);
 
     void checkForPaginationLogicalHeightChange(LayoutUnit& pageLogicalHeight, bool& pageLogicalHeightChanged, bool& hasSpecifiedPageLogicalHeight);
-    
+
     virtual void paintInlineChildren(PaintInfo&, const LayoutPoint&) override;
     virtual void paintFloats(PaintInfo&, const LayoutPoint&, bool preservePhase = false) override;
 
@@ -478,10 +478,10 @@ private:
     LayoutUnit logicalRightOffsetForPositioningFloat(LayoutUnit logicalTop, LayoutUnit fixedOffset, bool applyTextIndent, LayoutUnit* heightRemaining) const;
     LayoutUnit logicalLeftOffsetForPositioningFloat(LayoutUnit logicalTop, LayoutUnit fixedOffset, bool applyTextIndent, LayoutUnit* heightRemaining) const;
 
-    LayoutUnit lowestFloatLogicalBottom(FloatingObject::Type = FloatingObject::FloatLeftRight) const; 
+    LayoutUnit lowestFloatLogicalBottom(FloatingObject::Type = FloatingObject::FloatLeftRight) const;
     LayoutUnit nextFloatLogicalBottomBelow(LayoutUnit) const;
     LayoutUnit nextFloatLogicalBottomBelowForBlock(LayoutUnit) const;
-    
+
     LayoutUnit addOverhangingFloats(RenderBlockFlow& child, bool makeChildPaintOtherFloats);
     bool hasOverhangingFloat(RenderBox&);
     void addIntrudingFloats(RenderBlockFlow* prev, LayoutUnit xoffset, LayoutUnit yoffset);
@@ -489,13 +489,13 @@ private:
     LayoutUnit getClearDelta(RenderBox& child, LayoutUnit yPos);
 
     void determineLogicalLeftPositionForChild(RenderBox& child, ApplyLayoutDeltaMode = DoNotApplyLayoutDelta);
-    
+
     virtual bool hitTestFloats(const HitTestRequest&, HitTestResult&, const HitTestLocation& locationInContainer, const LayoutPoint& accumulatedOffset) override;
     virtual bool hitTestInlineChildren(const HitTestRequest&, HitTestResult&, const HitTestLocation& locationInContainer, const LayoutPoint& accumulatedOffset, HitTestAction) override;
 
     void addOverflowFromFloats();
     virtual void addOverflowFromInlineChildren();
-    
+
     void fitBorderToLinesIfNeeded(); // Shrink the box in which the border paints if border-fit is set.
     void adjustForBorderFit(LayoutUnit x, LayoutUnit& left, LayoutUnit& right) const;
 
@@ -503,7 +503,7 @@ private:
 
     virtual GapRects inlineSelectionGaps(RenderBlock& rootBlock, const LayoutPoint& rootBlockPhysicalPosition, const LayoutSize& offsetFromRootBlock,
         LayoutUnit& lastLogicalTop, LayoutUnit& lastLogicalLeft, LayoutUnit& lastLogicalRight, const LogicalSelectionOffsetCaches&, const PaintInfo*) override;
-    
+
     Position positionForBox(InlineBox*, bool start = true) const;
     virtual VisiblePosition positionForPointWithInlineChildren(const LayoutPoint& pointInLogicalContents) override;
     virtual void addFocusRingRectsForInlineChildren(Vector<IntRect>& rects, const LayoutPoint& additionalOffset, const RenderLayerModelObject*) override;

@@ -30,9 +30,9 @@ import javafx.animation.Animation.Status;
 import javafx.util.Duration;
 
 public class SingleLoopClipEnvelope extends ClipEnvelope {
-    
+
     private int cycleCount;
-    
+
     @Override
     public void setRate(double rate) {
         final Status status = animation.getStatus();
@@ -55,7 +55,7 @@ public class SingleLoopClipEnvelope extends ClipEnvelope {
     protected double calculateCurrentRate() {
         return rate;
     }
-    
+
     protected SingleLoopClipEnvelope(Animation animation) {
         super(animation);
         if (animation != null) {
@@ -97,7 +97,7 @@ public class SingleLoopClipEnvelope extends ClipEnvelope {
         try {
             ticks = ClipEnvelope.checkBounds(deltaTicks + Math.round(currentTick * currentRate), cycleTicks);
             AnimationAccessor.getDefault().playTo(animation, ticks, cycleTicks);
-    
+
             final boolean reachedEnd = (currentRate > 0)? (ticks == cycleTicks) : (ticks == 0);
             if(reachedEnd && !aborted) {
                 AnimationAccessor.getDefault().finished(animation);

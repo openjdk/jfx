@@ -77,7 +77,7 @@ public abstract class DoubleExpression extends NumberExpressionBase implements
      * will be returned. Otherwise a new
      * {@link javafx.beans.binding.DoubleBinding} is created that is bound to
      * the {@code ObservableDoubleValue}.
-     * 
+     *
      * @param value
      *            The source {@code ObservableDoubleValue}
      * @return A {@code DoubleExpression} that wraps the
@@ -113,7 +113,7 @@ public abstract class DoubleExpression extends NumberExpressionBase implements
                     }
                 };
     }
-    
+
     /**
      * Returns a {@code DoubleExpression} that wraps an
      * {@link javafx.beans.value.ObservableValue}. If the
@@ -121,20 +121,20 @@ public abstract class DoubleExpression extends NumberExpressionBase implements
      * will be returned. Otherwise a new
      * {@link javafx.beans.binding.DoubleBinding} is created that is bound to
      * the {@code ObservableValue}.
-     * 
+     *
      * <p>
      * Note: this method can be used to convert an {@link ObjectExpression} or
      * {@link javafx.beans.property.ObjectProperty} of specific number type to DoubleExpression, which
      * is essentially an {@code ObservableValue<Number>}. See sample below.
-     * 
+     *
      * <blockquote><pre>
      *   DoubleProperty doubleProperty = new SimpleDoubleProperty(1.0);
      *   ObjectProperty&lt;Double&gt; objectProperty = new SimpleObjectProperty&lt;&gt;(2.0);
      *   BooleanBinding binding = doubleProperty.greaterThan(DoubleExpression.doubleExpression(objectProperty));
      * </pre></blockquote>
-     * 
+     *
      * Note: null values will be interpreted as 0.0
-     * 
+     *
      * @param value
      *            The source {@code ObservableValue}
      * @return A {@code DoubleExpression} that wraps the
@@ -276,13 +276,13 @@ public abstract class DoubleExpression extends NumberExpressionBase implements
     public DoubleBinding divide(final int other) {
         return (DoubleBinding) Bindings.divide(this, other);
     }
-    
+
     /**
      * Creates an {@link javafx.beans.binding.ObjectExpression} that holds the value
      * of this {@code DoubleExpression}. If the
      * value of this {@code DoubleExpression} changes, the value of the
      * {@code ObjectExpression} will be updated automatically.
-     * 
+     *
      * @return the new {@code ObjectExpression}
      * @since JavaFX 8.0
      */
@@ -296,7 +296,7 @@ public abstract class DoubleExpression extends NumberExpressionBase implements
             public void dispose() {
                 unbind(DoubleExpression.this);
             }
-            
+
             @Override
             protected Double computeValue() {
                 return DoubleExpression.this.getValue();

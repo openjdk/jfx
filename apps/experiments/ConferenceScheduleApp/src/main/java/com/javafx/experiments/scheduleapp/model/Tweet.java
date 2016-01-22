@@ -34,7 +34,7 @@ package com.javafx.experiments.scheduleapp.model;
 import java.util.Date;
 
 /**
- * Simple data object for a tweet from twitter 
+ * Simple data object for a tweet from twitter
  */
 public class Tweet {
     private final Date createdAt;

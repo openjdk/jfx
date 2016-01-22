@@ -49,7 +49,7 @@ public class MotionBlurTest extends EffectsTestBase {
         pulse();
         assertEquals(1.5f, Math.toDegrees(((com.sun.scenario.effect.MotionBlur)effect.impl_getImpl()).getAngle()), 1e-5);
     }
-    
+
     @Test
     public void testDefaultAngle() {
         // default value should be 0
@@ -58,7 +58,7 @@ public class MotionBlurTest extends EffectsTestBase {
         pulse();
         assertEquals(0f, ((com.sun.scenario.effect.MotionBlur)effect.impl_getImpl()).getAngle(), 1e-100);
     }
-    
+
     @Test
     public void testSetRadius() {
         // try setting correct value
@@ -67,7 +67,7 @@ public class MotionBlurTest extends EffectsTestBase {
         pulse();
         assertEquals(0.5f, ((com.sun.scenario.effect.MotionBlur)effect.impl_getImpl()).getRadius(), 1e-100);
     }
-    
+
     @Test
     public void testDefaultRadius() {
         // default value should be 10
@@ -76,7 +76,7 @@ public class MotionBlurTest extends EffectsTestBase {
         pulse();
         assertEquals(10f, ((com.sun.scenario.effect.MotionBlur)effect.impl_getImpl()).getRadius(), 1e-100);
     }
-    
+
     @Test
     public void testMinRadius() {
         // 0 should be ok
@@ -85,18 +85,18 @@ public class MotionBlurTest extends EffectsTestBase {
         effect.setRadius(-0.1f);
         assertEquals(-0.1f, effect.getRadius(), 1e-100);
         pulse();
-        assertEquals(0f, ((com.sun.scenario.effect.MotionBlur)effect.impl_getImpl()).getRadius(), 1e-100);        
+        assertEquals(0f, ((com.sun.scenario.effect.MotionBlur)effect.impl_getImpl()).getRadius(), 1e-100);
     }
-    
+
     @Test
     public void testMaxRadius() {
         // 63 should be ok
         effect.setRadius(63);
         // try setting value greater than maximal
-        effect.setRadius(63.1f); 
+        effect.setRadius(63.1f);
         assertEquals(63.1f, effect.getRadius(), 1e-100);
         pulse();
-        assertEquals(63f, ((com.sun.scenario.effect.MotionBlur)effect.impl_getImpl()).getRadius(), 1e-100);        
+        assertEquals(63f, ((com.sun.scenario.effect.MotionBlur)effect.impl_getImpl()).getRadius(), 1e-100);
     }
 
     @Test
@@ -122,7 +122,7 @@ public class MotionBlurTest extends EffectsTestBase {
                 "com.sun.scenario.effect.MotionBlur", "input",
                 blur, (com.sun.scenario.effect.BoxBlur)blur.impl_getImpl());
     }
-    
+
     @Test
     public void testCreateWithParams() {
         effect = new MotionBlur(1, 2);

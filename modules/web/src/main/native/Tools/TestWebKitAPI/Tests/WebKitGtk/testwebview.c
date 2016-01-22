@@ -345,25 +345,25 @@ static void test_webkit_web_view_window_features()
 {
     GtkWidget* window;
     GtkWidget* web_view;
-    
+
     window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
     web_view = webkit_web_view_new();
-    
+
     gtk_container_add(GTK_CONTAINER(window), web_view);
-    
+
     gtk_widget_show_all(window);
-    
+
     loop = g_main_loop_new(NULL, TRUE);
 
     g_signal_connect(window, "map-event",
                      G_CALLBACK(map_event_cb), loop);
     g_main_loop_run(loop);
-    
+
     /* Bug #36144 */
     g_object_set(G_OBJECT(web_view), "window-features", NULL, NULL);
-    
+
     gtk_widget_destroy(window);
-}    
+}
 
 static void test_webkit_web_view_in_offscreen_window_does_not_crash()
 {

@@ -32,11 +32,11 @@ import javafx.beans.binding.LongExpression;
 
 /**
  * Super class for all readonly properties wrapping a {@code long}.
- * 
+ *
  * @see javafx.beans.value.ObservableLongValue
  * @see javafx.beans.binding.LongExpression
  * @see ReadOnlyProperty
- * 
+ *
  * @since JavaFX 2.0
  */
 public abstract class ReadOnlyLongProperty extends LongExpression implements
@@ -51,7 +51,7 @@ public abstract class ReadOnlyLongProperty extends LongExpression implements
     /**
      * Returns a string representation of this {@code ReadOnlyLongProperty} object.
      * @return a string representation of this {@code ReadOnlyLongProperty} object.
-     */ 
+     */
     @Override
     public String toString() {
         final Object bean = getBean();
@@ -66,7 +66,7 @@ public abstract class ReadOnlyLongProperty extends LongExpression implements
         result.append("value: ").append(get()).append("]");
         return result.toString();
     }
-    
+
     /**
      * Returns a {@code ReadOnlyLongProperty} that wraps a
      * {@link javafx.beans.property.ReadOnlyProperty}. If the
@@ -74,9 +74,9 @@ public abstract class ReadOnlyLongProperty extends LongExpression implements
      * will be returned. Otherwise a new
      * {@code ReadOnlyLongProperty} is created that is bound to
      * the {@code ReadOnlyProperty}.
-     * 
+     *
      * Note: null values will be interpreted as 0L
-     * 
+     *
      * @param property
      *            The source {@code ReadOnlyProperty}
      * @return A {@code ReadOnlyLongProperty} that wraps the
@@ -89,7 +89,7 @@ public abstract class ReadOnlyLongProperty extends LongExpression implements
         if (property == null) {
             throw new NullPointerException("Property cannot be null");
         }
-        
+
         return property instanceof ReadOnlyLongProperty ? (ReadOnlyLongProperty) property:
            new ReadOnlyLongPropertyBase() {
             private boolean valid = true;
@@ -103,7 +103,7 @@ public abstract class ReadOnlyLongProperty extends LongExpression implements
             {
                 property.addListener(new WeakInvalidationListener(listener));
             }
-                    
+
             @Override
             public long get() {
                 valid = true;
@@ -128,7 +128,7 @@ public abstract class ReadOnlyLongProperty extends LongExpression implements
      * of this {@code ReadOnlyLongProperty}. If the
      * value of this {@code ReadOnlyLongProperty} changes, the value of the
      * {@code ReadOnlyObjectProperty} will be updated automatically.
-     * 
+     *
      * @return the new {@code ReadOnlyObjectProperty}
      * @since JavaFX 8.0
      */
@@ -147,7 +147,7 @@ public abstract class ReadOnlyLongProperty extends LongExpression implements
             {
                 ReadOnlyLongProperty.this.addListener(new WeakInvalidationListener(listener));
             }
-            
+
             @Override
             public Object getBean() {
                 return null; // Virtual property, does not exist on a bean

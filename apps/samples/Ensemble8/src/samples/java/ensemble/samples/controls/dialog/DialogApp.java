@@ -63,7 +63,7 @@ import javafx.stage.Stage;
  * @related /Controls/Dialog
  */
 public class DialogApp extends Application {
-    
+
     /**
      * Java main for when running without JavaFX launcher
      * @param args command line arguments
@@ -71,18 +71,18 @@ public class DialogApp extends Application {
     public static void main(String[] args) {
         Application.launch(args);
     }
-    
+
     @Override
     public void start(Stage primaryStage) throws Exception {
         primaryStage.setScene(new Scene(createContent()));
         primaryStage.show();
-        
+
         stage = primaryStage;
     }
-    
+
     private AlertType type = AlertType.INFORMATION;
     private Stage     stage;
-    
+
     public void setAlertType(AlertType at) {
         type = at;
     }
@@ -94,16 +94,16 @@ public class DialogApp extends Application {
         alert.getDialogPane().setContentText(type + " text.");
         alert.getDialogPane().setHeaderText(null);
         alert.showAndWait()
-      		.filter(response -> response == ButtonType.OK)
-      		.ifPresent(response -> System.out.println("The alert was approved"));
+            .filter(response -> response == ButtonType.OK)
+            .ifPresent(response -> System.out.println("The alert was approved"));
         return alert;
     }
-    
+
     protected Dialog<ButtonType> createExceptionDialog(Throwable th) {
         Dialog<ButtonType> dialog = new Dialog<ButtonType>();
-        
+
         dialog.setTitle("Program exception");
-        
+
         final DialogPane dialogPane = dialog.getDialogPane();
         dialogPane.setContentText("Details of the problem:");
         dialogPane.getButtonTypes().addAll(ButtonType.OK);
@@ -115,16 +115,16 @@ public class DialogApp extends Application {
         PrintWriter pw = new PrintWriter(sw);
         th.printStackTrace(pw);
         pw.close();
-        
+
         TextArea textArea = new TextArea(sw.toString());
         textArea.setEditable(false);
         textArea.setWrapText(true);
-        
+
         textArea.setMaxWidth(Double.MAX_VALUE);
         textArea.setMaxHeight(Double.MAX_VALUE);
         GridPane.setVgrow(textArea, Priority.ALWAYS);
         GridPane.setHgrow(textArea, Priority.ALWAYS);
-        
+
         GridPane root = new GridPane();
         root.setVisible(false);
         root.setMaxWidth(Double.MAX_VALUE);
@@ -136,7 +136,7 @@ public class DialogApp extends Application {
                 .ifPresent(response -> System.out.println("The exception was approved"));
         return dialog;
     }
-    
+
     protected Dialog createTextInputDialog() {
         TextInputDialog textInput = new TextInputDialog("");
         textInput.setTitle("Text Input Dialog");
@@ -184,19 +184,19 @@ public class DialogApp extends Application {
             }
             createAlert();
         });
-        
+
         alertBox.getChildren().addAll(alert_types, create);
-        
+
         Button exception = new Button("Create Exception Dialog");
         exception.setTooltip(new Tooltip("Create an Exception Dialog"));
         exception.setOnAction(e -> createExceptionDialog(new RuntimeException("oops")));
-        
+
         Button input = new Button("Create Text Input Dialog");
         input.setTooltip(new Tooltip("Create an Text Input Dialog"));
         input.setOnAction(e -> createTextInputDialog());
 
         dialogCreators.getChildren().addAll(alertBox, exception, input);
-        
+
         group.getChildren().add(dialogCreators);
 
         return group;

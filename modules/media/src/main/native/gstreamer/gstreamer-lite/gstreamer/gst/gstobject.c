@@ -1237,7 +1237,7 @@ gst_object_get_control_binding (GstObject * object, const gchar * property_name)
  * @binding: the binding
  *
  * Removes the corresponding #GstControlBinding. If it was the
- * last ref of the binding, it will be disposed.  
+ * last ref of the binding, it will be disposed.
  *
  * Returns: %TRUE if the binding could be removed.
  */
@@ -1311,7 +1311,7 @@ gst_object_get_value (GstObject * object, const gchar * property_name,
  * This function is useful if one wants to e.g. draw a graph of the control
  * curve or apply a control curve sample by sample.
  *
- * The values are unboxed and ready to be used. The similar function 
+ * The values are unboxed and ready to be used. The similar function
  * gst_object_get_g_value_array() returns the array as #GValues and is
  * better suites for bindings.
  *

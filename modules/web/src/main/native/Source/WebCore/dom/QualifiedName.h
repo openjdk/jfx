@@ -67,7 +67,7 @@ public:
             , m_namespace(namespaceURI)
         {
             ASSERT(!namespaceURI.isEmpty() || namespaceURI.isNull());
-        }        
+        }
     };
 
     QualifiedName(const AtomicString& prefix, const AtomicString& localName, const AtomicString& namespaceURI);
@@ -104,16 +104,16 @@ public:
 #if ENABLE(CSS_SELECTOR_JIT)
     static ptrdiff_t implMemoryOffset() { return OBJECT_OFFSETOF(QualifiedName, m_impl); }
 #endif // ENABLE(CSS_SELECTOR_JIT)
-    
+
     // Init routine for globals
     static void init();
-    
+
 private:
     void ref() const { m_impl->ref(); }
     void deref();
 
     static QualifiedNameImpl* hashTableDeletedValue() { return RefPtr<QualifiedNameImpl>::hashTableDeletedValue(); }
-    
+
     QualifiedNameImpl* m_impl;
 };
 
@@ -137,7 +137,7 @@ inline unsigned hashComponents(const QualifiedNameComponents& buf)
 struct QualifiedNameHash {
     static unsigned hash(const QualifiedName& name) { return hash(name.impl()); }
 
-    static unsigned hash(const QualifiedName::QualifiedNameImpl* name) 
+    static unsigned hash(const QualifiedName::QualifiedNameImpl* name)
     {
         if (!name->m_existingHash)
             name->m_existingHash = name->computeHash();
@@ -156,13 +156,13 @@ void createQualifiedName(void* targetAddress, StringImpl* name, const AtomicStri
 }
 
 namespace WTF {
-    
+
     template<typename T> struct DefaultHash;
 
     template<> struct DefaultHash<WebCore::QualifiedName> {
         typedef WebCore::QualifiedNameHash Hash;
     };
-    
+
     template<> struct HashTraits<WebCore::QualifiedName> : SimpleClassHashTraits<WebCore::QualifiedName> {
         static const bool emptyValueIsZero = false;
         static WebCore::QualifiedName emptyValue() { return WebCore::nullQName(); }

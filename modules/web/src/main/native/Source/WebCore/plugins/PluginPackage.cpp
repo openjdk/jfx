@@ -355,7 +355,7 @@ int PluginPackage::compareFileVersion(const PlatformModuleVersion& compareVersio
         return m_moduleVersion.mostSig > compareVersion.mostSig ? 1 : -1;
     if (m_moduleVersion.leastSig != compareVersion.leastSig)
         return m_moduleVersion.leastSig > compareVersion.leastSig ? 1 : -1;
-#else    
+#else
     if (m_moduleVersion != compareVersion)
         return m_moduleVersion > compareVersion ? 1 : -1;
 #endif

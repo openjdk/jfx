@@ -29,14 +29,14 @@
 #include "AccessibilityObject.h"
 
 namespace WebCore {
-    
+
 class AccessibilityScrollbar;
 class Scrollbar;
 class ScrollView;
-    
+
 class AccessibilityScrollView : public AccessibilityObject {
 public:
-    static PassRefPtr<AccessibilityScrollView> create(ScrollView*);    
+    static PassRefPtr<AccessibilityScrollView> create(ScrollView*);
     virtual AccessibilityRole roleValue() const override { return ScrollAreaRole; }
     ScrollView* scrollView() const { return m_scrollView; }
 
@@ -46,17 +46,17 @@ public:
 protected:
     virtual ScrollableArea* getScrollableAreaIfScrollable() const override;
     virtual void scrollTo(const IntPoint&) const override;
-    
+
 private:
     explicit AccessibilityScrollView(ScrollView*);
-    
+
     virtual bool computeAccessibilityIsIgnored() const override;
     virtual bool isAccessibilityScrollView() const override { return true; }
     virtual bool isEnabled() const override { return true; }
-    
+
     virtual bool isAttachment() const override;
     virtual Widget* widgetForAttachmentView() const override;
-    
+
     virtual AccessibilityObject* scrollBar(AccessibilityOrientation) override;
     virtual void addChildren() override;
     virtual void clearChildren() override;
@@ -67,17 +67,17 @@ private:
     virtual void setFocused(bool) override;
     virtual bool canSetFocusAttribute() const override;
     virtual bool isFocused() const override;
-    
+
     virtual FrameView* documentFrameView() const override;
     virtual LayoutRect elementRect() const override;
     virtual AccessibilityObject* parentObject() const override;
     virtual AccessibilityObject* parentObjectIfExists() const override;
-    
+
     AccessibilityObject* webAreaObject() const;
     virtual AccessibilityObject* firstChild() const override { return webAreaObject(); }
     AccessibilityScrollbar* addChildScrollbar(Scrollbar*);
     void removeChildScrollbar(AccessibilityObject*);
-    
+
     ScrollView* m_scrollView;
     RefPtr<AccessibilityObject> m_horizontalScrollbar;
     RefPtr<AccessibilityObject> m_verticalScrollbar;
@@ -85,7 +85,7 @@ private:
 };
 
 ACCESSIBILITY_OBJECT_TYPE_CASTS(AccessibilityScrollView, isAccessibilityScrollView())
-    
+
 } // namespace WebCore
 
 #endif // AccessibilityScrollView_h

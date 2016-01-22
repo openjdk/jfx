@@ -34,8 +34,8 @@ import java.util.prefs.Preferences;
 
 /**
  * Access to old preferences based UserJvmOptions
- * 
- * Do not instantiate this class directly, instead use 
+ *
+ * Do not instantiate this class directly, instead use
  * {@see jdk.packager.services.UserJvmOptionsService#getUserJVMDefaults()}
  * to get an instance.
  *

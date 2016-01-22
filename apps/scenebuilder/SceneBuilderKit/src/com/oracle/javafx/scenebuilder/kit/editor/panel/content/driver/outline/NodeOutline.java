@@ -41,17 +41,17 @@ import javafx.scene.Node;
  *
  */
 public class NodeOutline extends AbstractOutline<Node> {
-    
-    public NodeOutline(ContentPanelController contentPanelController, 
+
+    public NodeOutline(ContentPanelController contentPanelController,
             FXOMInstance fxomInstance) {
         super(contentPanelController, fxomInstance, Node.class);
     }
-    
-    
+
+
     /*
      * AbstractOutline
      */
-    
+
     @Override
     public Bounds getSceneGraphObjectBounds() {
         return getSceneGraphObject().getLayoutBounds();
@@ -73,5 +73,5 @@ public class NodeOutline extends AbstractOutline<Node> {
         stopListeningToLayoutBounds(getSceneGraphObject());
         stopListeningToLocalToSceneTransform(getSceneGraphObject());
     }
-    
+
 }

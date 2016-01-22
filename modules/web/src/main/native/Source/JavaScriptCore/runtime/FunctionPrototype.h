@@ -35,9 +35,9 @@ namespace JSC {
             prototype->finishCreation(vm, String());
             return prototype;
         }
-        
+
         void addFunctionProperties(ExecState*, JSGlobalObject*, JSFunction** callFunction, JSFunction** applyFunction);
-        
+
         static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue proto)
         {
             return Structure::create(vm, globalObject, proto, TypeInfo(ObjectType, StructureFlags), info());

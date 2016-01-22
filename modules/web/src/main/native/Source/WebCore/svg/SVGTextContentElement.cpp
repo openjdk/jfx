@@ -35,7 +35,7 @@
 #include "XMLNames.h"
 
 namespace WebCore {
- 
+
 // Define custom animated property 'textLength'.
 const SVGPropertyInfo* SVGTextContentElement::textLengthPropertyInfo()
 {

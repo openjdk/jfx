@@ -162,7 +162,7 @@ static bool planCounter(RenderElement* object, const AtomicString& identifier, b
     return false;
 }
 
-// - Finds the insertion point for the counter described by counterOwner, isReset and 
+// - Finds the insertion point for the counter described by counterOwner, isReset and
 // identifier in the CounterNode tree for identifier and sets parent and
 // previousSibling accordingly.
 // - The function returns true if the counter whose insertion point is searched is NOT
@@ -173,7 +173,7 @@ static bool planCounter(RenderElement* object, const AtomicString& identifier, b
 // children or subsequent siblings of the renderer that owns the root of the tree
 // form the rest of of the nodes of the tree.
 // - The root of the tree is always a reset type reference.
-// - A subtree rooted at any reset node in the tree is equivalent to all counter 
+// - A subtree rooted at any reset node in the tree is equivalent to all counter
 // references that are in the scope of the counter or nested counter defined by that
 // reset node.
 // - Non-reset CounterNodes cannot have descendants.
@@ -230,9 +230,9 @@ static bool findPlaceForCounter(RenderObject* counterOwner, const AtomicString& 
                         previousSibling = previousSiblingProtector.get();
                         return true;
                     }
-                } else { 
+                } else {
                     // We are at the potential end of the search, but we had no previous sibling candidate
-                    // In this case we follow pretty much the same logic as above but no ASSERTs about 
+                    // In this case we follow pretty much the same logic as above but no ASSERTs about
                     // previousSibling, and when we are a sibling of the end counter we must set previousSibling
                     // to currentCounter.
                     if (currentCounter->actsAsReset()) {
@@ -264,7 +264,7 @@ static bool findPlaceForCounter(RenderObject* counterOwner, const AtomicString& 
             if (currentCounter) {
                 // We found a suitable counter.
                 if (previousSiblingProtector) {
-                    // Since we had a suitable previous counter before, we should only consider this one as our 
+                    // Since we had a suitable previous counter before, we should only consider this one as our
                     // previousSibling if it is a reset counter and hence the current previousSibling is its child.
                     if (currentCounter->actsAsReset()) {
                         previousSiblingProtector = currentCounter;
@@ -280,7 +280,7 @@ static bool findPlaceForCounter(RenderObject* counterOwner, const AtomicString& 
             }
         }
         // This function is designed so that the same test is not done twice in an iteration, except for this one
-        // which may be done twice in some cases. Rearranging the decision points though, to accommodate this 
+        // which may be done twice in some cases. Rearranging the decision points though, to accommodate this
         // performance improvement would create more code duplication than is worthwhile in my oppinion and may further
         // impede the readability of this already complex algorithm.
         if (previousSiblingProtector)
@@ -493,7 +493,7 @@ void RenderCounter::destroyCounterNode(RenderObject* owner, const AtomicString& 
     // a style change for the renderer involving removal of all counter
     // directives must occur, in which case, RenderCounter::destroyCounterNodes()
     // must be called.
-    // The destruction of the Renderer (possibly caused by the removal of its 
+    // The destruction of the Renderer (possibly caused by the removal of its
     // associated DOM node) is the other case that leads to the permanent
     // destruction of all counters attached to a Renderer. In this case
     // RenderCounter::destroyCounterNodes() must be and is now called, too.
@@ -537,7 +537,7 @@ static void updateCounters(RenderObject* renderer)
         }
         RefPtr<CounterNode> newParent = 0;
         RefPtr<CounterNode> newPreviousSibling = 0;
-        
+
         findPlaceForCounter(renderer, it->key, node->hasResetType(), newParent, newPreviousSibling);
         if (node != counterMap->get(it->key))
             continue;

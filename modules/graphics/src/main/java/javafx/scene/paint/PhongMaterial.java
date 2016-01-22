@@ -38,20 +38,20 @@ import javafx.scene.PointLight;
 import javafx.scene.image.Image;
 
 /**
- * The {@code PhongMaterial} class provides definitions of properties that 
+ * The {@code PhongMaterial} class provides definitions of properties that
  * represent a Phong shaded material. It describes the interaction of
  * light with the surface of the {@code Mesh} it is applied to. The {@code PhongMaterial}
- * reflects light in terms of a diffuse and specular component together with 
+ * reflects light in terms of a diffuse and specular component together with
  * an ambient and a self illumination term. The color of a point on a geometric
- * surface is mathematical function of these four components. 
- * <p> 
+ * surface is mathematical function of these four components.
+ * <p>
  * The color is computed by the following equation:
  * <p>
  * <ul><pre>
  * for each ambient light source i {
  *     ambient += lightColor[i]
  * }
- * 
+ *
  * for each point light source i {
  *     diffuse += (L[i] . N) * lightColor[i]
  *     specular += ((R[i] . V) ^ (specularPower * intensity(specularMap))) * lightColor[i]
@@ -87,14 +87,14 @@ public class PhongMaterial extends Material {
      * Color.WHITE {@code diffuseColor} property.
      */
     public PhongMaterial() {
-        setDiffuseColor(Color.WHITE);        
+        setDiffuseColor(Color.WHITE);
     }
 
     /**
      * Creates a new instance of {@code PhongMaterial} class using the specified
      * color for its {@code diffuseColor} property.
      *
-     * @param diffuseColor the color of the diffuseColor property 
+     * @param diffuseColor the color of the diffuseColor property
      */
     public PhongMaterial(Color diffuseColor) {
         setDiffuseColor(diffuseColor);
@@ -109,7 +109,7 @@ public class PhongMaterial extends Material {
      * @param specularMap the image of the specularMap property
      * @param bumpMap the image of the bumpMap property
      * @param selfIlluminationMap the image of the selfIlluminationMap property
-     * 
+     *
      */
     public PhongMaterial(Color diffuseColor, Image diffuseMap,
             Image specularMap, Image bumpMap, Image selfIlluminationMap) {
@@ -148,7 +148,7 @@ public class PhongMaterial extends Material {
         }
         return diffuseColor;
     }
-    
+
     /**
      * The specular color of this {@code PhongMaterial}.
      *
@@ -195,7 +195,7 @@ public class PhongMaterial extends Material {
 
     public final DoubleProperty specularPowerProperty() {
         if (specularPower == null) {
-            specularPower = new SimpleDoubleProperty(PhongMaterial.this, 
+            specularPower = new SimpleDoubleProperty(PhongMaterial.this,
                     "specularPower", 32.0) {
                 @Override
                 public void invalidated() {
@@ -262,7 +262,7 @@ public class PhongMaterial extends Material {
 
                     needsListeners = _image != null && (Toolkit.getImageAccessor().isAnimation(_image)
                             || _image.getProgress() < 1);
-                    
+
                     if (needsListeners) {
                         Toolkit.getImageAccessor().getImageProperty(_image).
                                 addListener(platformImageChangeListener.getWeakListener());
@@ -311,7 +311,7 @@ public class PhongMaterial extends Material {
 
                     needsListeners = _image != null && (Toolkit.getImageAccessor().isAnimation(_image)
                             || _image.getProgress() < 1);
-                    
+
                     if (needsListeners) {
                         Toolkit.getImageAccessor().getImageProperty(_image).
                                 addListener(platformImageChangeListener.getWeakListener());
@@ -348,7 +348,7 @@ public class PhongMaterial extends Material {
         if (bumpMap == null) {
             bumpMap = new SimpleObjectProperty<Image>(PhongMaterial.this,
                     "bumpMap") {
-                        
+
                 private boolean needsListeners = false;
 
                 @Override
@@ -388,7 +388,7 @@ public class PhongMaterial extends Material {
     public final void setSelfIlluminationMap(Image value) {
         selfIlluminationMapProperty().set(value);
     }
- 
+
     public final Image getSelfIlluminationMap() {
         return selfIlluminationMap == null ? null : selfIlluminationMap.get();
     }
@@ -400,7 +400,7 @@ public class PhongMaterial extends Material {
                     "selfIlluminationMap") {
 
                 private boolean needsListeners = false;
-                
+
                 @Override
                 public void invalidated() {
                     Image _image = get();
@@ -409,7 +409,7 @@ public class PhongMaterial extends Material {
                         Toolkit.getImageAccessor().getImageProperty(oldSelfIlluminationMap).
                                 removeListener(platformImageChangeListener.getWeakListener());
                     }
-                    
+
                     needsListeners = _image != null && (Toolkit.getImageAccessor().isAnimation(_image)
                             || _image.getProgress() < 1);
 
@@ -440,10 +440,10 @@ public class PhongMaterial extends Material {
             selfIlluminationMapDirty = false;
         }
     }
-    
+
     /** The peer node created by the graphics Toolkit/Pipeline implementation */
     private NGPhongMaterial peer;
-    
+
     /**
      * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
@@ -510,4 +510,4 @@ public class PhongMaterial extends Material {
                 ", selfIlluminationMap=" + getSelfIlluminationMap() + "]";
     }
 
-}       
+}

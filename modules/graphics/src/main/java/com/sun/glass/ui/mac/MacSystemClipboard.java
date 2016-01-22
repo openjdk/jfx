@@ -43,18 +43,18 @@ class MacSystemClipboard extends SystemClipboard {
     static final String FILE_SCHEME = "file";
     static final private String BAD_URI_MSG = "bad URI in com.sun.glass.ui.mac.MacSystemClipboard for file: ";
     static final private String BAD_URL_MSG = "bad URL in com.sun.glass.ui.mac.MacSystemClipboard for file: ";
-    
+
     // if true we'll synthesize a file list
     static final boolean SUPPORT_10_5_API = true;
 
     // if true we'll force the synthesized file list into 1st item as Plain text,
     // regardless of whether such attribute already exists or not
     static final boolean SUPPORT_10_5_API_FORCE = false;
-    
+
     // http://javafx-jira.kenai.com/browse/RT-12187
     // Mac OS X 10.6 supports more than one nonhomogenous item, however, JFX currently does not
     static final boolean SUPPORT_10_6_API = false;
-    
+
     long seed = 0;
 
     final MacPasteboard pasteboard;
@@ -72,22 +72,22 @@ class MacSystemClipboard extends SystemClipboard {
                 break;
         }
     }
-    
+
     @Override
     protected boolean isOwner() {
         return (this.seed == this.pasteboard.getSeed());
     }
-    
+
     @Override
     protected int supportedSourceActionsFromSystem() {
         return this.pasteboard.getAllowedOperation();
     }
-    
+
     @Override
     protected void pushTargetActionToSystem(int actionDone) {
         // TODO
     }
-    
+
     @Override
     protected void pushToSystem(HashMap<String, Object> data, int supportedActions) {
         HashMap<String,Object> itemFirst = null; // used to handle paste as one item if we can
@@ -209,7 +209,7 @@ class MacSystemClipboard extends SystemClipboard {
                 }
             }
         }
-        
+
         if (itemFirst != null) {
             if (itemList == null || itemList.length == 0) {
                 itemList = new HashMap[1];
@@ -218,7 +218,7 @@ class MacSystemClipboard extends SystemClipboard {
                 itemList[0].putAll(itemFirst);
             }
         }
-        
+
         if (itemList != null) {
             this.seed = this.pasteboard.putItems(itemList, supportedActions);
         }
@@ -333,7 +333,7 @@ class MacSystemClipboard extends SystemClipboard {
         mimes.toArray(strings);
         return strings;
     }
-    
+
     @Override public String toString() {
         return "Mac OS X "+this.pasteboard.getName()+" Clipboard";
     }
@@ -446,7 +446,7 @@ class MacSystemClipboard extends SystemClipboard {
     }
 
     private static native String _convertFileReferencePath(String path);
-    
+
     private byte[] serialize(Object object) {
         if (object instanceof String) {
             String string = (String)object;

@@ -43,7 +43,7 @@ public interface EmbeddedStageInterface {
     /*
      * A notification about the embedding container received or lost
      * input focus because of various reasons, for example, it was
-     * traversed forward in the focus chain in embedding app. 
+     * traversed forward in the focus chain in embedding app.
      */
     public void setFocused(boolean focused, int focusCause);
 

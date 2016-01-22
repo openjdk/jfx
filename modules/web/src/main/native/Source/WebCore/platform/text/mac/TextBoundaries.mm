@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #import "config.h"
@@ -80,7 +80,7 @@ static CFStringTokenizerRef tokenizerForString(CFStringRef str)
             return nullptr;
     }
 
-    CFRange entireRange = CFRangeMake(0, CFStringGetLength(str));    
+    CFRange entireRange = CFRangeMake(0, CFStringGetLength(str));
 
     static CFStringTokenizerRef tokenizer = nullptr;
     if (!tokenizer)
@@ -116,7 +116,7 @@ static void findSimpleWordBoundary(StringView text, int position, int* start, in
         }
         U16_BACK_1(text, 0, startPos);
     }
-    
+
     unsigned endPos = position;
     while (endPos < text.length()) {
         UChar32 character;
@@ -191,7 +191,7 @@ void findWordBoundary(StringView text, int position, int* start, int* end)
     if (pos == text.length() && pos)
         --pos;
 
-    // For complex text (Thai, Japanese, Chinese), visible_units will pass the text in as a 
+    // For complex text (Thai, Japanese, Chinese), visible_units will pass the text in as a
     // single contiguous run of characters, providing as much context as is possible.
     // We only need one character to determine if the text is complex.
     UChar32 ch;
@@ -219,7 +219,7 @@ void findWordBoundary(StringView text, int position, int* start, int* end)
     auto foundWord = text.substring(*start, *end - *start).createCFStringWithoutCopying();
     NSLog(@"%s_BREAK '%@' (%d,%d) in '%@' (%p) at %d, length=%d", isComplex ? "COMPLEX" : "SIMPLE", foundWord.get(), *start, *end, uniString.get(), uniString.get(), position, text.length());
 #endif
-    
+
 #endif
 }
 
@@ -230,7 +230,7 @@ void findEndWordBoundary(StringView text, int position, int* end)
 }
 
 int findNextWordFromIndex(StringView text, int position, bool forward)
-{   
+{
 #if USE(APPKIT)
     NSAttributedString *attributedString = [[NSAttributedString alloc] initWithString:text.createNSStringWithoutCopying().get()];
     int result = [attributedString nextWordFromIndex:position forward:forward];

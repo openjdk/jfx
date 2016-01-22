@@ -6,13 +6,13 @@
  * are met:
  *
  * 1.  Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer. 
+ *     notice, this list of conditions and the following disclaimer.
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
- *     documentation and/or other materials provided with the distribution. 
+ *     documentation and/or other materials provided with the distribution.
  * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
- *     from this software without specific prior written permission. 
+ *     from this software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY APPLE AND ITS CONTRIBUTORS "AS IS" AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
@@ -109,9 +109,9 @@ static WebIconDatabaseClient* defaultClient()
     if (!self)
         return nil;
     WebCoreThreadViolationCheckRoundOne();
-        
+
     _private = [[WebIconDatabasePrivate alloc] init];
-    
+
     // Check the user defaults and see if the icon database should even be enabled.
     // Inform the bridge and, if we're disabled, bail from init right here
     NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
@@ -138,7 +138,7 @@ static WebIconDatabaseClient* defaultClient()
     // FIXME - <rdar://problem/4697934> - Move the handling of FileURLs to WebCore and implement in ObjC++
     if ([URL _webkit_isFileURL])
         return [self _iconForFileURL:URL withSize:size];
-    
+
     if (Image* image = iconDatabase().synchronousIconForPageURL(URL, IntSize(size)))
         if (NSImage *icon = webGetNSImage(image, size))
             return icon;
@@ -164,7 +164,7 @@ static WebIconDatabaseClient* defaultClient()
     ASSERT_MAIN_THREAD();
     ASSERT(size.width);
     ASSERT(size.height);
-    
+
     Image* image = iconDatabase().defaultIcon(IntSize(size));
     return image ? image->getNSImage() : nil;
 }
@@ -269,7 +269,7 @@ static WebIconDatabaseClient* defaultClient()
 - (void)_sendNotificationForURL:(NSString *)URL
 {
     ASSERT(URL);
-    
+
     dispatch_async(dispatch_get_main_queue(), ^{
         NSDictionary *userInfo = @{ WebIconNotificationUserInfoURLKey : URL };
         [[NSNotificationCenter defaultCenter] postNotificationName:WebIconDatabaseDidAddIconNotification object:self userInfo:userInfo];
@@ -286,10 +286,10 @@ static WebIconDatabaseClient* defaultClient()
 - (void)_startUpIconDatabase
 {
     iconDatabase().setClient(defaultClient());
-    
+
     // Figure out the directory we should be using for the icon.db
     NSString *databaseDirectory = [self _databaseDirectory];
-    
+
     // Rename legacy icon database files to the new icon database name
     BOOL isDirectory = NO;
     NSString *legacyDB = [databaseDirectory stringByAppendingPathComponent:@"icon.db"];
@@ -299,12 +299,12 @@ static WebIconDatabaseClient* defaultClient()
         if (![defaultManager fileExistsAtPath:newDB])
             rename([legacyDB fileSystemRepresentation], [newDB fileSystemRepresentation]);
     }
-    
+
     // Set the private browsing pref then open the WebCore icon database
     iconDatabase().setPrivateBrowsingEnabled([[WebPreferences standardPreferences] privateBrowsingEnabled]);
     if (!iconDatabase().open(databaseDirectory, IconDatabase::defaultDatabaseFilename()))
         LOG_ERROR("Unable to open icon database");
-    
+
     // Register for important notifications
     [[NSNotificationCenter defaultCenter] addObserver:self
                                              selector:@selector(_applicationWillTerminate:)
@@ -342,7 +342,7 @@ static WebIconDatabaseClient* defaultClient()
     NSString *path = [[NSURL _web_URLWithDataAsString:file] path];
     NSString *suffix = [path pathExtension];
     NSImage *icon = nil;
-    
+
     if ([suffix _webkit_isCaseInsensitiveEqualToString:@"htm"] || [suffix _webkit_isCaseInsensitiveEqualToString:@"html"]) {
         if (!_private->htmlIcons) {
             icon = [workspace iconForFileType:@"html"];
@@ -371,7 +371,7 @@ static WebIconDatabaseClient* defaultClient()
 - (NSImage *)_largestIconFromDictionary:(NSMutableDictionary *)icons
 {
     ASSERT(icons);
-    
+
     NSEnumerator *enumerator = [icons keyEnumerator];
     NSValue *currentSize, *largestSize=nil;
     float largestSizeArea=0;
@@ -408,7 +408,7 @@ static WebIconDatabaseClient* defaultClient()
         return icons;
 
     LOG_ERROR("icon has no representations");
-    
+
     return nil;
 }
 
@@ -435,17 +435,17 @@ static WebIconDatabaseClient* defaultClient()
 {
     ASSERT(size.width);
     ASSERT(size.height);
-    
+
 #if !LOG_DISABLED
     double start = CFAbsoluteTimeGetCurrent();
 #endif
-    
+
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
     [icon setScalesWhenResized:YES];
 #pragma clang diagnostic pop
     [icon setSize:size];
-    
+
 #if !LOG_DISABLED
     double duration = CFAbsoluteTimeGetCurrent() - start;
     LOG(Timing, "scaling icon took %f seconds.", duration);
@@ -462,7 +462,7 @@ static WebIconDatabaseClient* defaultClient()
         databaseDirectory = WebIconDatabasePath;
         [defaults setObject:databaseDirectory forKey:WebIconDatabaseDirectoryDefaultsKey];
     }
-    
+
     return [[databaseDirectory stringByExpandingTildeInPath] stringByStandardizingPath];
 }
 

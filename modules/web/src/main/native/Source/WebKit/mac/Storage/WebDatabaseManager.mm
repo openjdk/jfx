@@ -107,7 +107,7 @@ static NSString *databasesDirectoryPath();
     Vector<String> nameVector;
     if (!DatabaseManager::manager().databaseNamesForOrigin([origin _core], nameVector))
         return nil;
-    
+
     NSMutableArray *names = [[NSMutableArray alloc] initWithCapacity:nameVector.size()];
 
     for (unsigned i = 0; i < nameVector.size(); ++i)
@@ -119,16 +119,16 @@ static NSString *databasesDirectoryPath();
 - (NSDictionary *)detailsForDatabase:(NSString *)databaseIdentifier withOrigin:(WebSecurityOrigin *)origin
 {
     static id keys[3] = {WebDatabaseDisplayNameKey, WebDatabaseExpectedSizeKey, WebDatabaseUsageKey};
-    
+
     DatabaseDetails details = DatabaseManager::manager().detailsForNameAndOrigin(databaseIdentifier, [origin _core]);
     if (details.name().isNull())
         return nil;
-        
+
     id objects[3];
     objects[0] = details.displayName().isEmpty() ? databaseIdentifier : (NSString *)details.displayName();
     objects[1] = [NSNumber numberWithUnsignedLongLong:details.expectedUsage()];
     objects[2] = [NSNumber numberWithUnsignedLongLong:details.currentUsage()];
-    
+
     return [[[NSDictionary alloc] initWithObjects:objects forKeys:keys count:3] autorelease];
 }
 
@@ -166,25 +166,25 @@ static bool isFileHidden(NSString *file)
     NSArray *array = [fileManager contentsOfDirectoryAtPath:databasesDirectory error:0];
     if (!array)
         return;
-    
+
     NSUInteger count = [array count];
     for (NSUInteger i = 0; i < count; ++i) {
         NSString *fileName = [array objectAtIndex:i];
         // Skip hidden files.
         if (![fileName length] || isFileHidden(fileName))
             continue;
-        
+
         NSString *path = [databasesDirectory stringByAppendingPathComponent:fileName];
         // Look for directories that contain database files belonging to the same origins.
         BOOL isDirectory;
         if (![fileManager fileExistsAtPath:path isDirectory:&isDirectory] || !isDirectory)
             continue;
-        
+
         // Make sure the directory is not a symbolic link that points to something else.
         NSDictionary *attributes = [fileManager attributesOfItemAtPath:path error:0];
         if ([attributes fileType] == NSFileTypeSymbolicLink)
             continue;
-        
+
         NSArray *databaseFilesInOrigin = [fileManager contentsOfDirectoryAtPath:path error:0];
         NSUInteger databaseFileCount = [databaseFilesInOrigin count];
         NSUInteger deletedDatabaseFileCount = 0;
@@ -193,17 +193,17 @@ static bool isFileHidden(NSString *file)
             // Skip hidden files.
             if (![dbFileName length] || isFileHidden(dbFileName))
                 continue;
-            
+
             NSString *dbFilePath = [path stringByAppendingPathComponent:dbFileName];
-            
+
             // There shouldn't be any directories in this folder - but check for it anyway.
             if (![fileManager fileExistsAtPath:dbFilePath isDirectory:&isDirectory] || isDirectory)
                 continue;
-            
+
             if (DatabaseTracker::deleteDatabaseFileIfEmpty(dbFilePath))
                 ++deletedDatabaseFileCount;
         }
-        
+
         // If we have removed every database file for this origin, delete the folder for this origin.
         if (databaseFileCount == deletedDatabaseFileCount) {
             // Use rmdir - we don't want the deletion to happen if the folder is not empty.
@@ -215,7 +215,7 @@ static bool isFileHidden(NSString *file)
 + (void)scheduleEmptyDatabaseRemoval
 {
     DatabaseTracker::emptyDatabaseFilesRemovalTaskWillBeScheduled();
-    
+
     dispatch_async(dispatch_get_global_queue(0, 0), ^{
         [WebDatabaseManager removeEmptyDatabaseFiles];
         DatabaseTracker::emptyDatabaseFilesRemovalTaskDidFinish();
@@ -247,7 +247,7 @@ static WebBackgroundTaskIdentifier getTransactionBackgroundTaskIdentifier()
     dispatch_once(&pred, ^{
         setTransactionBackgroundTaskIdentifier(invalidWebBackgroundTaskIdentifier());
     });
-    
+
     return transactionBackgroundTaskIdentifier;
 }
 
@@ -268,7 +268,7 @@ static WebBackgroundTaskIdentifier getTransactionBackgroundTaskIdentifier()
     // If there's already an existing background task going on, there's no need to start a new one.
     if (getTransactionBackgroundTaskIdentifier() != invalidWebBackgroundTaskIdentifier())
         return;
-    
+
     setTransactionBackgroundTaskIdentifier(startBackgroundTask(^ { [WebDatabaseManager endBackgroundTask]; }));
 }
 
@@ -283,7 +283,7 @@ static WebBackgroundTaskIdentifier getTransactionBackgroundTaskIdentifier()
     // will be invalid for the second caller.
     if (getTransactionBackgroundTaskIdentifier() == invalidWebBackgroundTaskIdentifier())
         return;
-        
+
     endBackgroundTask(getTransactionBackgroundTaskIdentifier());
     setTransactionBackgroundTaskIdentifier(invalidWebBackgroundTaskIdentifier());
 }
@@ -302,7 +302,7 @@ static NSString *databasesDirectoryPath()
     NSString *databasesDirectory = [defaults objectForKey:WebDatabaseDirectoryDefaultsKey];
     if (!databasesDirectory || ![databasesDirectory isKindOfClass:[NSString class]])
         databasesDirectory = @"~/Library/WebKit/Databases";
-    
+
     return [databasesDirectory stringByStandardizingPath];
 }
 

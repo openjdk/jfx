@@ -48,13 +48,13 @@ public final class Game<P, O> {
         DRAW("Game ended by draw"),
         WHITE_WINS("White player wins"),
         BLACK_WINS("Black player wins");
-        
+
         private String msg;
-        
+
         State(String msg) {
             this.msg = msg;
         }
-        
+
         @Override
         public String toString() {
             return msg;
@@ -558,7 +558,7 @@ public final class Game<P, O> {
 
         // Update timestamp
         updateStamp = System.currentTimeMillis();
-        
+
         return move;
     }
 

@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "config.h"
 
@@ -51,7 +51,7 @@ public:
 
     void setMovie(PassRefPtr<QTMovie>);
     QTMovie* movie() const;
-    
+
     static void imageAvailableCallback(QTVisualContextRef visualContext, const CVTimeStamp *timeStamp, void *refCon);
 
 private:
@@ -76,14 +76,14 @@ static CFDictionaryRef pixelBufferCreationOptions(QTPixelBuffer::Type contextTyp
     if (contextType == QTPixelBuffer::ConfigureForCAImageQueue) {
         static CFDictionaryRef imageQueueOptions = createPixelBufferOptionsDictionary(contextType);
         return imageQueueOptions;
-    } 
+    }
 
     ASSERT(contextType == QTPixelBuffer::ConfigureForCGImage);
     static CFDictionaryRef cgImageOptions = createPixelBufferOptionsDictionary(contextType);
     return cgImageOptions;
 }
 
-QTMovieVisualContextPriv::QTMovieVisualContextPriv(QTMovieVisualContext* parent, QTMovieVisualContextClient* client, QTPixelBuffer::Type contextType) 
+QTMovieVisualContextPriv::QTMovieVisualContextPriv(QTMovieVisualContext* parent, QTMovieVisualContextClient* client, QTPixelBuffer::Type contextType)
         : m_parent(parent)
         , m_client(client)
         , m_visualContext(0)
@@ -95,7 +95,7 @@ QTMovieVisualContextPriv::QTMovieVisualContextPriv(QTMovieVisualContext* parent,
         if (!qtmlDLL)
             return;
         pPixelBufferContextCreate = reinterpret_cast<pfnQTPixelBufferContextCreate>(GetProcAddress(qtmlDLL, "QTPixelBufferContextCreate"));
-        if (!pPixelBufferContextCreate) 
+        if (!pPixelBufferContextCreate)
             return;
     }
 
@@ -115,7 +115,7 @@ bool QTMovieVisualContextPriv::isImageAvailableForTime(const QTCVTimeStamp* time
     if (!m_visualContext)
         return false;
 
-    return QTVisualContextIsNewImageAvailable(m_visualContext, reinterpret_cast<const CVTimeStamp*>(timeStamp)); 
+    return QTVisualContextIsNewImageAvailable(m_visualContext, reinterpret_cast<const CVTimeStamp*>(timeStamp));
 }
 
 QTPixelBuffer QTMovieVisualContextPriv::imageForTime(const QTCVTimeStamp* timeStamp)
@@ -136,7 +136,7 @@ void QTMovieVisualContextPriv::task()
         QTVisualContextTask(m_visualContext);
 }
 
-QTVisualContextRef QTMovieVisualContextPriv::visualContextRef() 
+QTVisualContextRef QTMovieVisualContextPriv::visualContextRef()
 {
     return m_visualContext;
 }
@@ -153,7 +153,7 @@ void QTMovieVisualContextPriv::setMovie(PassRefPtr<QTMovie> movie)
 
     if (movie)
         OSStatus status = SetMovieVisualContext(movie->getMovieHandle(), m_visualContext);
-    
+
     m_movie = movie;
 }
 
@@ -162,7 +162,7 @@ QTMovie* QTMovieVisualContextPriv::movie() const
     return m_movie.get();
 }
 
-void QTMovieVisualContextPriv::imageAvailableCallback(QTVisualContextRef visualContext, const CVTimeStamp *timeStamp, void *refCon) 
+void QTMovieVisualContextPriv::imageAvailableCallback(QTVisualContextRef visualContext, const CVTimeStamp *timeStamp, void *refCon)
 {
     if (!refCon)
         return;
@@ -179,7 +179,7 @@ PassRefPtr<QTMovieVisualContext> QTMovieVisualContext::create(QTMovieVisualConte
     return adoptRef(new QTMovieVisualContext(client, contextType));
 }
 
-QTMovieVisualContext::QTMovieVisualContext(QTMovieVisualContextClient* client, QTPixelBuffer::Type contextType) 
+QTMovieVisualContext::QTMovieVisualContext(QTMovieVisualContextClient* client, QTPixelBuffer::Type contextType)
     : m_private(adoptPtr(new QTMovieVisualContextPriv(this, client, contextType)))
 {
 }
@@ -203,7 +203,7 @@ void QTMovieVisualContext::task()
     m_private->task();
 }
 
-QTVisualContextRef QTMovieVisualContext::visualContextRef() 
+QTVisualContextRef QTMovieVisualContext::visualContextRef()
 {
     return m_private->visualContextRef();
 }

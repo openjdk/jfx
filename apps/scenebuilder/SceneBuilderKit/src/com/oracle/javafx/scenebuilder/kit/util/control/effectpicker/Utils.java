@@ -333,7 +333,7 @@ public abstract class Utils {
      * @param min
      * @param value
      * @param max
-     * @return 
+     * @return
      */
     public static double clamp(double min, double value, double max) {
         if (value < min) return min;

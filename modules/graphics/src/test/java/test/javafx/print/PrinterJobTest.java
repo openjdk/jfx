@@ -55,7 +55,7 @@ public class PrinterJobTest {
              System.out.println("No printers installed. Tests cannot run.");
          } else {
              System.out.println("job="+job);
-         } 
+         }
      } catch (SecurityException e) {
          System.out.println("Security exception creating job");
      }

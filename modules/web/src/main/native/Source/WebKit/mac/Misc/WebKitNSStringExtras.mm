@@ -6,13 +6,13 @@
  * are met:
  *
  * 1.  Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer. 
+ *     notice, this list of conditions and the following disclaimer.
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
- *     documentation and/or other materials provided with the distribution. 
+ *     documentation and/or other materials provided with the distribution.
  * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
- *     from this software without specific prior written permission. 
+ *     from this software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY APPLE AND ITS CONTRIBUTORS "AS IS" AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
@@ -94,7 +94,7 @@ static BOOL canUseFastRenderer(const UniChar *buffer, unsigned length)
 
         NSGraphicsContext *nsContext = [NSGraphicsContext currentContext];
         CGContextRef cgContext = static_cast<CGContextRef>([nsContext graphicsPort]);
-        GraphicsContext graphicsContext(cgContext);    
+        GraphicsContext graphicsContext(cgContext);
 
         // Safari doesn't flip the NSGraphicsContext before calling WebKit, yet WebCore requires a flipped graphics context.
         BOOL flipped = [nsContext isFlipped];
@@ -165,14 +165,14 @@ static BOOL canUseFastRenderer(const UniChar *buffer, unsigned length)
 {
     NSString *resolvedHomeDirectory = [NSHomeDirectory() stringByResolvingSymlinksInPath];
     NSString *path;
-    
+
     if ([self hasPrefix:resolvedHomeDirectory]) {
         NSString *relativePath = [self substringFromIndex:[resolvedHomeDirectory length]];
         path = [NSHomeDirectory() stringByAppendingPathComponent:relativePath];
     } else {
         path = self;
     }
-        
+
     return [path stringByAbbreviatingWithTildeInPath];
 }
 
@@ -228,7 +228,7 @@ static BOOL canUseFastRenderer(const UniChar *buffer, unsigned length)
     NSMutableString *result = [NSMutableString string];
     static NSCharacterSet *charactersToTurnIntoSpaces = nil;
     static NSCharacterSet *charactersToNotTurnIntoSpaces = nil;
-    
+
     if (charactersToTurnIntoSpaces == nil) {
         NSMutableCharacterSet *set = [[NSMutableCharacterSet alloc] init];
         [set addCharactersInRange:NSMakeRange(0x00, 0x21)];
@@ -237,7 +237,7 @@ static BOOL canUseFastRenderer(const UniChar *buffer, unsigned length)
         [set release];
         charactersToNotTurnIntoSpaces = [[charactersToTurnIntoSpaces invertedSet] retain];
     }
-    
+
     unsigned length = [self length];
     unsigned position = 0;
     while (position != length) {
@@ -263,7 +263,7 @@ static BOOL canUseFastRenderer(const UniChar *buffer, unsigned length)
 
         position = space.location;
     }
-    
+
     return result;
 }
 
@@ -361,7 +361,7 @@ static BOOL canUseFastRenderer(const UniChar *buffer, unsigned length)
 #else
         char cacheDirectory[MAXPATHLEN];
         size_t cacheDirectoryLen = confstr(_CS_DARWIN_USER_CACHE_DIR, cacheDirectory, MAXPATHLEN);
-    
+
         if (cacheDirectoryLen)
             cacheDir = [[NSFileManager defaultManager] stringWithFileSystemRepresentation:cacheDirectory length:cacheDirectoryLen - 1];
 #endif

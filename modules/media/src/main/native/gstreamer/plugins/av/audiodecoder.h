@@ -56,12 +56,12 @@ struct _AudioDecoder {
 #if !DECODE_AUDIO4
     guint8       *samples;          // temporary output buffer
 #endif
-    
+
     gboolean     is_synced;         // whether the first audio frame has been found
     gboolean     is_discont;        // whether the next frame is a discontinuity
 
     CodecIDType  codec_id;
-    
+
     gint         num_channels;      // channels / stream
     guint        bytes_per_sample;  // bytes / sample
     gint         sample_rate;       // samples / second

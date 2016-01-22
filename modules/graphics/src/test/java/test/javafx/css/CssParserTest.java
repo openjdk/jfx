@@ -55,25 +55,25 @@ import static org.junit.Assert.*;
 
 
 public class CssParserTest {
-    
+
     @Test
     public void testRT_16959() {
 
         CssParser instance = new CssParser();
-        
+
         // RT-16959 is an infinite loop on incomplete linear gradient
         ParsedValue result = instance.parseExpr("-fx-background-color", "linear-gradient(from 0% 0% to 0% 100%, )");
         assertNull("parseExpr", result);
 
         // The bad syntax should be skipped. The stylesheet should have one
         // linear gradient with colors red, white, blue.
-        Stylesheet ss = instance.parse( 
+        Stylesheet ss = instance.parse(
             "* { "
             +   "-fx-background-color: linear-gradient(from 0% 0% to 0% 100%, ); "
             +   "-fx-background-color: linear-gradient(from 0% 0% to 0% 100%, red, white, blue); "
-            + "}" 
+            + "}"
         );
-        
+
         assertNotNull(ss);
         List<Rule> rules = ss.getRules();
         assertEquals(1,rules.size(),0);
@@ -82,26 +82,26 @@ public class CssParserTest {
         Declaration decl = decls.get(0);
         ParsedValue value = decl.getParsedValue();
         assertTrue(value != null);
-        
+
         Paint[] layers = (Paint[])value.convert(null);
         assertTrue(layers.length == 1);
-        
+
         LinearGradient lg = (LinearGradient)layers[0];
         List<Stop> stops = lg.getStops();
         assertTrue(stops.size()==3);
         assertEquals(Color.RED, stops.get(0).getColor());
         assertEquals(Color.WHITE, stops.get(1).getColor());
         assertEquals(Color.BLUE, stops.get(2).getColor());
-        
+
     }
-    
-    
+
+
     @Test
     public void testRT_17770() {
 
         // RT-17770 is an infinite loop on a dangling comma.
         // Missing term should be ignored
-        String stylesheetText = 
+        String stylesheetText =
             "* {"
             +   "-fx-background-color: linear-gradient( "
             +   "to right, "
@@ -112,11 +112,11 @@ public class CssParserTest {
             +   "rgba(141, 138, 125, 0.0), "
             +   "); "
             + "}";
-                
+
         CssParser instance = new CssParser();
-        
+
         Stylesheet ss = instance.parse(stylesheetText);
-        
+
         assertNotNull(ss);
         List<Rule> rules = ss.getRules();
         assertEquals(1,rules.size(),0);
@@ -125,10 +125,10 @@ public class CssParserTest {
         Declaration decl = decls.get(0);
         ParsedValue value = decl.getParsedValue();
         assertTrue(value != null);
-        
+
         Paint[] layers = (Paint[])value.convert(null);
         assertTrue(layers.length == 1);
-        
+
         LinearGradient lg = (LinearGradient)layers[0];
         List<Stop> stops = lg.getStops();
         assertTrue(stops.size()==5);
@@ -137,14 +137,14 @@ public class CssParserTest {
         assertEquals(Color.rgb(248, 248, 246, 0.8), stops.get(2).getColor());
         assertEquals(Color.rgb(248, 248, 246, 0.3), stops.get(3).getColor());
         assertEquals(Color.rgb(141, 138, 125, 0.0), stops.get(4).getColor());
-        
-    }    
-    
+
+    }
+
     @Test
     public void testParseSizeWithInvalidDigits() {
 
         CssParser instance = new CssParser();
-        
+
         // RT-16959 is an infinite loop on incomplete linear gradient
         ParsedValue result = instance.parseExpr("-fx-font-size", "10ptx");
         assertNull("parseExpr", result);
@@ -156,7 +156,7 @@ public class CssParserTest {
             +  "-fx-font-size: 12px; "
             + "}"
         );
-        
+
         assertNotNull(ss);
         List<Rule> rules = ss.getRules();
         assertEquals(1,rules.size(),0);
@@ -165,51 +165,51 @@ public class CssParserTest {
         Declaration decl = decls.get(0);
         ParsedValue value = decl.getParsedValue();
         assertTrue(value != null);
-        
+
         Double size = (Double)value.convert(Font.font("Amble", 12));
         assertTrue(Double.compare(size, 12) == 0);
     }
-    
+
 
     @Test
     public void testRT_17830() {
 
         CssParser instance = new CssParser();
-        
+
         // The empty declaration should be skipped. The stylesheet should have
         // two declarations.
         Stylesheet ss = instance.parse(".rt17830 {-fx-fill: red;; -fx-stroke: yellow; }");
-        
+
         assertNotNull(ss);
         List<Rule> rules = ss.getRules();
         assertEquals(1,rules.size(),0);
         List<Declaration> decls = RuleShim.getUnobservedDeclarationList(ss.getRules().get(0));
         assertEquals(2,decls.size(),0);
-        
+
         Declaration decl = decls.get(0);
         ParsedValue value = decl.getParsedValue();
         assertTrue(value != null);
         Paint paint = (Paint)value.convert(null);
         assertEquals(Color.RED, paint);
-        
+
         decl = decls.get(1);
         value = decl.getParsedValue();
         assertTrue(value != null);
         paint = (Paint)value.convert(null);
         assertEquals(Color.YELLOW, paint);
     }
-    
+
     @Test
     public void testRT_20311() {
 
         CssParser instance = new CssParser();
-        
+
         try {
             instance.parse(".rt-20311 {  -fx-background-color:red\n-fx-border-color:black; }");
         } catch (Exception e) {
             fail(e.toString());
         }
-        
+
     }
 
     @Test public void testFontFace() {

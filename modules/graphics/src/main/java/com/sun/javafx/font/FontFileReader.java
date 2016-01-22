@@ -50,7 +50,7 @@ class FontFileReader implements FontConstants {
 
     /**
      * Opens the file.
-     * @return returns true if the file opened, false if the file was opened 
+     * @return returns true if the file opened, false if the file was opened
      *  already or if it failed to open the file.
      * @throws PrivilegedActionException
      */
@@ -176,7 +176,7 @@ class FontFileReader implements FontConstants {
         byte get() {
             return data[pos++];
         }
-        
+
         byte get(int tpos) {
             tpos += orig;
             return data[tpos];
@@ -242,7 +242,7 @@ class FontFileReader implements FontConstants {
                 return new Buffer(readBuffer, offset - readBufferStart);
             } else { /* fill cache */
                 readBufferStart = offset;
-                readBufferLen = (offset+READBUFFERSIZE > filesize) ? 
+                readBufferLen = (offset+READBUFFERSIZE > filesize) ?
                     (int)filesize - offset : READBUFFERSIZE;
                 readFromFile(readBuffer, readBufferStart, readBufferLen);
                 return new Buffer(readBuffer, 0);

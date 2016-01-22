@@ -145,7 +145,7 @@ int main(int argc, char** argv)
 
     g_test_bug_base("https://bugs.webkit.org/");
 
-    g_test_add("/webkit/hittestresult/document", HitTestResultFixture, 
+    g_test_add("/webkit/hittestresult/document", HitTestResultFixture,
                test_info_new("<html><body><h1>WebKitGTK+!</h1></body></html>",
                              WEBKIT_HIT_TEST_RESULT_CONTEXT_DOCUMENT),
                hit_test_result_fixture_setup, test_webkit_hit_test_result, hit_test_result_fixture_teardown);
@@ -163,7 +163,7 @@ int main(int argc, char** argv)
                test_info_new("<html><body><a style='position:absolute; left:0; top:0' href='http://www.example.com'>HELLO WORLD</a></body></html>",
                              WEBKIT_HIT_TEST_RESULT_CONTEXT_LINK),
                hit_test_result_fixture_setup, test_webkit_hit_test_result, hit_test_result_fixture_teardown);
-               
+
     return g_test_run ();
 }
 

@@ -40,7 +40,7 @@ public class Point3DTest {
         Point3D p1 = new Point3D(0, 0, 0);
         Point3D p2 = new Point3D(1, 0, 0);
         Point3D p3 = new Point3D(1, 1, 1);
-        
+
         assertEquals(1, p2.distance(p1), 1e-100);
         assertEquals(1, p2.distance(0, 0, 0), 1e-100);
         assertEquals(1.41421356, p2.distance(p3), 1e-5);

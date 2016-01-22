@@ -357,7 +357,7 @@ bool isWordTextBreak(TextBreakIterator* iterator)
 unsigned numGraphemeClusters(const String& s)
 {
     unsigned stringLength = s.length();
-    
+
     if (!stringLength)
         return 0;
 

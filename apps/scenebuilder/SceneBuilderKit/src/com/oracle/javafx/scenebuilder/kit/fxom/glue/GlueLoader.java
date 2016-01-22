@@ -52,11 +52,11 @@ import org.xml.sax.helpers.XMLReaderFactory;
 
 /**
  *
- * 
+ *
  */
 class GlueLoader implements ContentHandler, ErrorHandler, LexicalHandler {
-    
-    
+
+
     private final GlueDocument document;
     private GlueElement currentElement;
     private int currentElementDepth = -1;
@@ -66,23 +66,23 @@ class GlueLoader implements ContentHandler, ErrorHandler, LexicalHandler {
     public GlueLoader(GlueDocument document) {
         this.document = document;
     }
-    
+
     public void load(String xmlText) throws IOException {
         assert xmlText != null;
         assert GlueDocument.isEmptyXmlText(xmlText) == false;
-        
+
         final Charset utf8 = Charset.forName("UTF-8"); //NOI18N
         try (final InputStream is = new ByteArrayInputStream(xmlText.getBytes(utf8))) {
             load(is);
         }
     }
-    
+
     public void load(InputStream is) throws IOException {
         assert currentElement == null;
         assert currentElementDepth == -1;
         assert auxiliaries.isEmpty();
         assert prefixMappings.isEmpty();
-        
+
         try {
             XMLReader xr = XMLReaderFactory.createXMLReader();
             xr.setContentHandler(this);
@@ -92,7 +92,7 @@ class GlueLoader implements ContentHandler, ErrorHandler, LexicalHandler {
         } catch(SAXException x) {
             throw new IOException(x);
         }
-        
+
         assert currentElement == null;
         assert currentElementDepth == -1;
         assert auxiliaries.isEmpty();
@@ -102,7 +102,7 @@ class GlueLoader implements ContentHandler, ErrorHandler, LexicalHandler {
     /*
      * ContentHandler
      */
-    
+
     @Override
     public void setDocumentLocator(Locator locator) {
     }
@@ -134,12 +134,12 @@ class GlueLoader implements ContentHandler, ErrorHandler, LexicalHandler {
 
     @Override
     public void startElement(String uri, String localName, String qName, Attributes atts) throws SAXException {
-        
+
         // Creates a new glue element and:
         // - puts atts content in GlueElement.attributes map
         // - puts prefixMappings content in GlueElement.attributes map
         // - puts this.auxiliaries content in GlueElement.front
-        
+
         currentElementDepth++;
         final GlueElement newElement = new GlueElement(document, qName, currentElementDepth, false /* preset */);
         final Map<String, String> attributes = newElement.getAttributes();
@@ -154,7 +154,7 @@ class GlueLoader implements ContentHandler, ErrorHandler, LexicalHandler {
             }
         }
         newElement.getFront().addAll(auxiliaries);
-        
+
         if (currentElement == null) {
             // newElement is the root element
             assert currentElementDepth == 0;
@@ -162,7 +162,7 @@ class GlueLoader implements ContentHandler, ErrorHandler, LexicalHandler {
         } else {
             newElement.addToParent(currentElement);
         }
-        
+
         currentElement = newElement;
         auxiliaries.clear();
         prefixMappings.clear();
@@ -173,13 +173,13 @@ class GlueLoader implements ContentHandler, ErrorHandler, LexicalHandler {
         assert currentElement != null;
         assert currentElement.getTagName().equals(qName);
         assert currentElementDepth >= 0;
-        
+
         if (currentElement.getChildren().isEmpty()) {
             currentElement.getContent().addAll(auxiliaries);
         } else {
             currentElement.getTail().addAll(auxiliaries);
         }
-        
+
         currentElement = currentElement.getParent();
         currentElementDepth--;
         auxiliaries.clear();
@@ -189,7 +189,7 @@ class GlueLoader implements ContentHandler, ErrorHandler, LexicalHandler {
     public void characters(char[] ch, int start, int length) throws SAXException {
         final String data = new String(ch, start, length);
         final GlueAuxiliary auxiliary = new GlueCharacters(document, GlueCharacters.Type.TEXT, data);
-        
+
         if (currentElement == null) {
             document.getHeader().add(auxiliary);
         } else {
@@ -213,11 +213,11 @@ class GlueLoader implements ContentHandler, ErrorHandler, LexicalHandler {
     public void skippedEntity(String name) throws SAXException {
         throw new UnsupportedOperationException("name=" + name); //NOI18N
     }
-    
+
     /*
      * ErrorHandler
      */
-    
+
     @Override
     public void warning(SAXParseException exception) throws SAXException {
         throw exception;
@@ -232,8 +232,8 @@ class GlueLoader implements ContentHandler, ErrorHandler, LexicalHandler {
     public void fatalError(SAXParseException exception) throws SAXException {
         throw exception;
     }
-    
-    
+
+
     /*
      * LexicalHandler
      */
@@ -273,7 +273,7 @@ class GlueLoader implements ContentHandler, ErrorHandler, LexicalHandler {
     public void comment(char[] ch, int start, int length) throws SAXException {
         final String data = new String(ch, start, length);
         final GlueAuxiliary auxiliary = new GlueCharacters(document, GlueCharacters.Type.COMMENT, data);
-        
+
         if (currentElement == null) {
             document.getHeader().add(auxiliary);
         } else {

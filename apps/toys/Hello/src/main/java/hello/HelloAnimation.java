@@ -52,7 +52,7 @@ public class HelloAnimation extends Application {
         ((Group)scene.getRoot()).getChildren().add(rect);
         stage.setScene(scene);
         stage.show();
-        
+
         final Timeline timeline = new Timeline();
         timeline.setCycleCount(Timeline.INDEFINITE);
         timeline.setAutoReverse(true);

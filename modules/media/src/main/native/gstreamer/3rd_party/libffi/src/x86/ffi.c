@@ -102,7 +102,7 @@ unsigned int ffi_prep_args(char *stack, extended_cif *ecif)
 #ifdef GSTREAMER_LITE
       size_t z = 0;
 #endif // GSTREAMER_LITE
-      
+
       /* Align if necessary */
       if ((sizeof(void*) - 1) & (size_t) argp)
         argp = (char *) ALIGN(argp, sizeof(void*));
@@ -366,7 +366,7 @@ void ffi_call(ffi_cif *cif, void (*fn)(void), void *rvalue, void **avalue)
 
   ecif.cif = cif;
   ecif.avalue = avalue;
-  
+
   /* If the return value is a struct and we don't have a return */
   /* value address then we need to make one                     */
 
@@ -387,9 +387,9 @@ void ffi_call(ffi_cif *cif, void (*fn)(void), void *rvalue, void **avalue)
 #endif
   else
     ecif.rvalue = rvalue;
-    
-  
-  switch (cif->abi) 
+
+
+  switch (cif->abi)
     {
 #ifdef X86_WIN64
     case FFI_WIN64:
@@ -460,16 +460,16 @@ ffi_closure_win64_inner (ffi_closure *closure, void *args) {
   void          *resp = &result;
 
   cif         = closure->cif;
-  arg_area    = (void**) alloca (cif->nargs * sizeof (void*));  
+  arg_area    = (void**) alloca (cif->nargs * sizeof (void*));
 
   /* this call will initialize ARG_AREA, such that each
-   * element in that array points to the corresponding 
+   * element in that array points to the corresponding
    * value on the stack; and if the function returns
    * a structure, it will change RESP to point to the
    * structure return address.  */
 
   ffi_prep_incoming_args(args, &resp, arg_area, cif);
-  
+
   (closure->fun) (cif, resp, arg_area, closure->user_data);
 
   /* The result is returned in rax.  This does the right thing for
@@ -489,10 +489,10 @@ ffi_closure_SYSV_inner (ffi_closure *closure, void **respp, void *args)
   void         **arg_area;
 
   cif         = closure->cif;
-  arg_area    = (void**) alloca (cif->nargs * sizeof (void*));  
+  arg_area    = (void**) alloca (cif->nargs * sizeof (void*));
 
   /* this call will initialize ARG_AREA, such that each
-   * element in that array points to the corresponding 
+   * element in that array points to the corresponding
    * value on the stack; and if the function returns
    * a structure, it will change RESP to point to the
    * structure return address.  */
@@ -513,10 +513,10 @@ ffi_closure_WIN32_inner (ffi_closure *closure, void **respp, void *args)
   unsigned int   ret;
 
   cif         = closure->cif;
-  arg_area    = (void**) alloca (cif->nargs * sizeof (void*));  
+  arg_area    = (void**) alloca (cif->nargs * sizeof (void*));
 
   /* this call will initialize ARG_AREA, such that each
-   * element in that array points to the corresponding 
+   * element in that array points to the corresponding
    * value on the stack; and if the function returns
    * a structure, it will change RESP to point to the
    * structure return address.  */
@@ -578,7 +578,7 @@ ffi_prep_incoming_args(char *stack, void **rvalue, void **avalue,
 
 #ifndef X86_WIN64
   /* Do register arguments first  */
-  for (i = 0, p_arg = cif->arg_types; 
+  for (i = 0, p_arg = cif->arg_types;
        i < cif->nargs && passed_regs < max_stack_count;
        i++, p_arg++)
   {
@@ -753,7 +753,7 @@ ffi_prep_closure_loc (ffi_closure* closure,
 #ifdef X86_WIN64
 #define ISFLOAT(IDX) (cif->arg_types[IDX]->type == FFI_TYPE_FLOAT || cif->arg_types[IDX]->type == FFI_TYPE_DOUBLE)
 #define FLAG(IDX) (cif->nargs>(IDX)&&ISFLOAT(IDX)?(1<<(IDX)):0)
-  if (cif->abi == FFI_WIN64) 
+  if (cif->abi == FFI_WIN64)
     {
       int mask = FLAG(0)|FLAG(1)|FLAG(2)|FLAG(3);
       FFI_INIT_TRAMPOLINE_WIN64 (&closure->tramp[0],
@@ -805,7 +805,7 @@ ffi_prep_closure_loc (ffi_closure* closure,
     {
       return FFI_BAD_ABI;
     }
-    
+
   closure->cif  = cif;
   closure->user_data = user_data;
   closure->fun  = fun;
@@ -843,7 +843,7 @@ ffi_prep_raw_closure_loc (ffi_raw_closure* closure,
       FFI_ASSERT (cif->arg_types[i]->type != FFI_TYPE_STRUCT);
       FFI_ASSERT (cif->arg_types[i]->type != FFI_TYPE_LONGDOUBLE);
     }
-  
+
 #ifdef X86_WIN32
   if (cif->abi == FFI_SYSV)
     {
@@ -864,12 +864,12 @@ ffi_prep_raw_closure_loc (ffi_raw_closure* closure,
   return FFI_OK;
 }
 
-static unsigned int 
+static unsigned int
 ffi_prep_args_raw(char *stack, extended_cif *ecif)
 {
   const ffi_cif *cif = ecif->cif;
   unsigned int i, passed_regs = 0;
-  
+
 #ifndef X86_WIN64
   const unsigned int abi = cif->abi;
   const unsigned int max_regs = (abi == FFI_THISCALL) ? 1
@@ -879,7 +879,7 @@ ffi_prep_args_raw(char *stack, extended_cif *ecif)
 
   if (cif->flags == FFI_TYPE_STRUCT)
     ++passed_regs;
-  
+
   for (i = 0; i < cif->nargs && passed_regs <= max_regs; i++)
     {
 #ifdef GSTREAMER_LITE
@@ -918,7 +918,7 @@ ffi_raw_call(ffi_cif *cif, void (*fn)(void), void *rvalue, ffi_raw *fake_avalue)
 
   ecif.cif = cif;
   ecif.avalue = avalue;
-  
+
   /* If the return value is a struct and we don't have a return */
   /* value address then we need to make one                     */
 
@@ -930,9 +930,9 @@ ffi_raw_call(ffi_cif *cif, void (*fn)(void), void *rvalue, ffi_raw *fake_avalue)
     }
   else
     ecif.rvalue = rvalue;
-    
-  
-  switch (cif->abi) 
+
+
+  switch (cif->abi)
     {
 #ifndef X86_WIN32
     case FFI_SYSV:

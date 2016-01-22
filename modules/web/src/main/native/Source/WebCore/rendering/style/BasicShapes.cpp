@@ -274,7 +274,7 @@ void BasicShapePolygon::path(Path& path, const FloatRect& boundingBox)
     ASSERT(path.isEmpty());
     ASSERT(!(m_values.size() % 2));
     size_t length = m_values.size();
-    
+
     if (!length)
         return;
 

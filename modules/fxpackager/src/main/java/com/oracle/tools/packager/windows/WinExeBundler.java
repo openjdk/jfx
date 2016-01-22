@@ -43,7 +43,7 @@ public class WinExeBundler extends AbstractBundler {
 
     private static final ResourceBundle I18N =
             ResourceBundle.getBundle(WinExeBundler.class.getName());
-    
+
     public static final BundlerParamInfo<WinAppBundler> APP_BUNDLER = new WindowsBundlerParam<>(
             I18N.getString("param.app-bundler.name"),
             I18N.getString("param.app-bundler.description"),
@@ -59,7 +59,7 @@ public class WinExeBundler extends AbstractBundler {
             WinServiceBundler.class,
             params -> new WinServiceBundler(),
             null);
-    
+
     public static final BundlerParamInfo<File> CONFIG_ROOT = new WindowsBundlerParam<>(
             I18N.getString("param.config-root.name"),
             I18N.getString("param.config-root.description"),
@@ -296,7 +296,7 @@ public class WinExeBundler extends AbstractBundler {
         if (appOutputDir == null) {
             return false;
         }
-        
+
         List<String> licenseFiles = LICENSE_FILE.fetchFrom(params);
         if (licenseFiles != null) {
             //need to copy license file to the root of win.app.image
@@ -318,7 +318,7 @@ public class WinExeBundler extends AbstractBundler {
                 IOUtils.copyFile(icon, new File(appOutputDir, icon.getName()));
             }
         }
-        
+
         if (SERVICE_HINT.fetchFrom(params)) {
             // copies the service launcher to the app root folder
             appOutputDir = SERVICE_BUNDLER.fetchFrom(params).doBundle(params, appOutputDir, true);
@@ -469,7 +469,7 @@ public class WinExeBundler extends AbstractBundler {
         data.put("DISABLE_DIR_PAGE", INSTALLDIR_CHOOSER.fetchFrom(params) ? "No" : "Yes");
 
         Boolean isSystemWide = EXE_SYSTEM_WIDE.fetchFrom(params);
-        
+
         if (isSystemWide) {
             data.put("APPLICATION_INSTALL_ROOT", "{pf}");
             data.put("APPLICATION_INSTALL_PRIVILEGE", "admin");
@@ -492,8 +492,8 @@ public class WinExeBundler extends AbstractBundler {
         validateValueAndPut(data, "APPLICATION_DESCRIPTION", DESCRIPTION, params);
         data.put("APPLICATION_SERVICE", SERVICE_HINT.fetchFrom(params) ? "returnTrue" : "returnFalse");
         data.put("APPLICATION_NOT_SERVICE", SERVICE_HINT.fetchFrom(params) ? "returnFalse" : "returnTrue");
-        data.put("APPLICATION_APP_CDS_INSTALL", 
-                (UNLOCK_COMMERCIAL_FEATURES.fetchFrom(params) && ENABLE_APP_CDS.fetchFrom(params) 
+        data.put("APPLICATION_APP_CDS_INSTALL",
+                (UNLOCK_COMMERCIAL_FEATURES.fetchFrom(params) && ENABLE_APP_CDS.fetchFrom(params)
                         && ("install".equals(APP_CDS_CACHE_MODE.fetchFrom(params))
                             || "auto+install".equals(APP_CDS_CACHE_MODE.fetchFrom(params))))
                 ? "returnTrue"
@@ -541,7 +541,7 @@ public class WinExeBundler extends AbstractBundler {
             if (i > 0) {
                 entryName += "." + i;
             }
-            
+
             if (extensions == null) {
                 Log.info(I18N.getString("message.creating-association-with-null-extension"));
             } else {
@@ -597,7 +597,7 @@ public class WinExeBundler extends AbstractBundler {
                     .append("\"; ValueType: string; ValueName: \"\"; ValueData: \"")
                     .append(description)
                     .append("\"; Flags: uninsdeletekey\r\n");
-                
+
             }
 
             if (icon != null && icon.exists()) {

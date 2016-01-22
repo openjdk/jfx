@@ -71,7 +71,7 @@ import javafx.util.Duration;
  * Page with all the info about the venues
  */
 public class VenuesPage extends Page{
-    
+
     private ScrollPane scrollPane = new ScrollPane();
     private Rectangle workaroundClip;
     private VenueRoomPage roomPage;
@@ -96,7 +96,7 @@ public class VenuesPage extends Page{
         getChildren().setAll(scrollPane, roomPage);
         // cache the venues page when it becomes visible
         box.cacheProperty().bind(visibleProperty());
-        
+
         // Major wicked hack for the sake of getting the page to layout right.
         Platform.runLater(new Runnable() {
             @Override public void run() {
@@ -117,7 +117,7 @@ public class VenuesPage extends Page{
     @Override public void pageTabClicked() {
         scrollPane.setVisible(true);
         new Timeline(
-            new KeyFrame(Duration.ZERO, 
+            new KeyFrame(Duration.ZERO,
                 new KeyValue(scrollPane.translateXProperty(), scrollPane.getTranslateX()),
                 new KeyValue(roomPage.translateXProperty(), roomPage.getTranslateX())
             ),
@@ -133,13 +133,13 @@ public class VenuesPage extends Page{
             )
         ).play();
     }
-    
+
     private void showRoom(Room room) {
         roomPage.setRoom(room);
         roomPage.setTranslateX(getWidth());
         roomPage.setVisible(true);
         new Timeline(
-            new KeyFrame(Duration.ZERO, 
+            new KeyFrame(Duration.ZERO,
                 new KeyValue(scrollPane.translateXProperty(), scrollPane.getTranslateX()),
                 new KeyValue(roomPage.translateXProperty(), roomPage.getTranslateX())
             ),
@@ -155,7 +155,7 @@ public class VenuesPage extends Page{
             )
         ).play();
     }
-    
+
     @Override public void reset() {
         scrollPane.setHvalue(0);
         scrollPane.setVvalue(0);
@@ -167,7 +167,7 @@ public class VenuesPage extends Page{
         scrollPane.resizeRelocate(0, 0, w, h);
         roomPage.resizeRelocate(0, 0, w, h);
     }
-    
+
     private class VenueInfo extends Region {
         private Venue venue;
         private Region venueImg;
@@ -177,17 +177,17 @@ public class VenuesPage extends Page{
         public VenueInfo(final Venue venue) {
             this.venue = venue;
             String venueImgUrl = venue.getImageUrl();
-            venueImgUrl = venueImgUrl.indexOf(':') != -1 ? venueImgUrl : 
+            venueImgUrl = venueImgUrl.indexOf(':') != -1 ? venueImgUrl :
                     ConferenceScheduleApp.class.getResource(venue.getImageUrl()).toExternalForm();
             venueImg = new Region();
             venueImg.setStyle("-fx-background-image: url(\""+venueImgUrl+"\"); -fx-background-size: cover; -fx-border-color: white; -fx-border-width: 4px;");
             shadowImg = new ImageView(SHADOW_PIC);
-            
+
             Text title = new Text(venue.getName());
             title.setFont(LARGE_FONT);
             title.setFill(BLUE);
             box.getChildren().addAll(title);
-            
+
             if (PlatformIntegration.supportsMapRouting()) {
                 Hyperlink address = new Hyperlink(venue.getAddress());
                 address.setFont(BASE_FONT);
@@ -204,7 +204,7 @@ public class VenuesPage extends Page{
                 address.setFill(DARK_GREY);
                 box.getChildren().add(address);
             }
-            
+
             final List<Room> rooms =  venue.getRooms();
             if (rooms != null && rooms.size() > 0) {
                 Text roomsText = new Text("Rooms:");
@@ -220,12 +220,12 @@ public class VenuesPage extends Page{
                     listOfRooms.getChildren().addAll(new RoomRow(room, r!=0));
                 }
             }
-            
+
             box.setFillWidth(false);
             getChildren().addAll(venueImg, shadowImg,box);
             setMinHeight(USE_PREF_SIZE);
         }
-       
+
         @Override protected double computePrefWidth(double height) {
             return 300;
         }
@@ -246,7 +246,7 @@ public class VenuesPage extends Page{
             box.resize(getWidth()-180, getHeight()-10);
         }
     }
-    
+
     private class RoomRow extends Region implements EventHandler<MouseEvent>{
         private final Room room;
         private final Text roomText;
@@ -270,7 +270,7 @@ public class VenuesPage extends Page{
             }
             setOnMouseClicked(this);
         }
-        
+
         @Override public void handle(MouseEvent t) {
             showRoom(room);
         }
@@ -278,7 +278,7 @@ public class VenuesPage extends Page{
         @Override protected double computePrefWidth(double height) {
             return 150;
         }
-        
+
         @Override protected double computePrefHeight(double width) {
             return 44;
         }
@@ -292,5 +292,5 @@ public class VenuesPage extends Page{
             arrow.setLayoutY((int)((height-RIGHT_ARROW.getHeight())/2));
             if(line!=null) line.setWidth(width);
         }
-    } 
+    }
 }

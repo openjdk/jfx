@@ -159,7 +159,7 @@ EncodedJSValue JSC_HOST_CALL setProtoFuncSize(CallFrame* callFrame)
         return JSValue::encode(jsUndefined());
     return JSValue::encode(jsNumber(data->size(callFrame)));
 }
-    
+
 EncodedJSValue JSC_HOST_CALL setProtoFuncValues(CallFrame* callFrame)
 {
     JSSet* thisObj = jsDynamicCast<JSSet*>(callFrame->thisValue());

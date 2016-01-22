@@ -6,13 +6,13 @@
  * are met:
  *
  * 1.  Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer. 
+ *     notice, this list of conditions and the following disclaimer.
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
- *     documentation and/or other materials provided with the distribution. 
+ *     documentation and/or other materials provided with the distribution.
  * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
- *     from this software without specific prior written permission. 
+ *     from this software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY APPLE AND ITS CONTRIBUTORS "AS IS" AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
@@ -65,14 +65,14 @@ static void checkCandidate(WebBasePluginPackage **currentPlugin, WebBasePluginPa
 
 static WebPluginDatabase *sharedDatabase = nil;
 
-+ (WebPluginDatabase *)sharedDatabase 
++ (WebPluginDatabase *)sharedDatabase
 {
     if (!sharedDatabase) {
         sharedDatabase = [[WebPluginDatabase alloc] init];
         [sharedDatabase setPlugInPaths:[self _defaultPlugInPaths]];
         [sharedDatabase refresh];
     }
-    
+
     return sharedDatabase;
 }
 
@@ -81,7 +81,7 @@ static WebPluginDatabase *sharedDatabase = nil;
     return sharedDatabase;
 }
 
-+ (void)closeSharedDatabase 
++ (void)closeSharedDatabase
 {
     [sharedDatabase close];
 }
@@ -93,7 +93,7 @@ static void checkCandidate(WebBasePluginPackage **currentPlugin, WebBasePluginPa
         return;
     }
 
-    if ([*currentPlugin bundleIdentifier] == [*candidatePlugin bundleIdentifier] && [*candidatePlugin versionNumber] > [*currentPlugin versionNumber]) 
+    if ([*currentPlugin bundleIdentifier] == [*candidatePlugin bundleIdentifier] && [*candidatePlugin versionNumber] > [*currentPlugin versionNumber])
         *currentPlugin = *candidatePlugin;
 }
 
@@ -103,14 +103,14 @@ struct PluginPackageCandidates {
         , netscapePlugin(nil)
     {
     }
-    
+
     void update(WebBasePluginPackage *plugin)
     {
         if ([plugin isKindOfClass:[WebPluginPackage class]]) {
             checkCandidate(&webPlugin, &plugin);
             return;
         }
-            
+
 #if ENABLE(NETSCAPE_PLUGIN_API)
         if([plugin isKindOfClass:[WebNetscapePluginPackage class]]) {
             checkCandidate(&netscapePlugin, &plugin);
@@ -119,17 +119,17 @@ struct PluginPackageCandidates {
 #endif
         ASSERT_NOT_REACHED();
     }
-    
+
     WebBasePluginPackage *bestCandidate()
     {
         // Allow other plug-ins to win over QT because if the user has installed a plug-in that can handle a type
         // that the QT plug-in can handle, they probably intended to override QT.
         if (webPlugin && ![webPlugin isQuickTimePlugIn])
             return webPlugin;
-    
+
         if (netscapePlugin && ![netscapePlugin isQuickTimePlugIn])
             return netscapePlugin;
-        
+
         if (webPlugin)
             return webPlugin;
         if (netscapePlugin)
@@ -137,7 +137,7 @@ struct PluginPackageCandidates {
 
         return nil;
     }
-    
+
     WebBasePluginPackage *webPlugin;
     WebBasePluginPackage *netscapePlugin;
 };
@@ -145,32 +145,32 @@ struct PluginPackageCandidates {
 - (WebBasePluginPackage *)pluginForMIMEType:(NSString *)MIMEType
 {
     PluginPackageCandidates candidates;
-    
+
     MIMEType = [MIMEType lowercaseString];
     NSEnumerator *pluginEnumerator = [plugins objectEnumerator];
-    
+
     while (WebBasePluginPackage *plugin = [pluginEnumerator nextObject]) {
         if ([plugin supportsMIMEType:MIMEType])
             candidates.update(plugin);
     }
-    
+
     return candidates.bestCandidate();
 }
 
 - (WebBasePluginPackage *)pluginForExtension:(NSString *)extension
 {
     PluginPackageCandidates candidates;
-    
+
     extension = [extension lowercaseString];
     NSEnumerator *pluginEnumerator = [plugins objectEnumerator];
-    
+
     while (WebBasePluginPackage *plugin = [pluginEnumerator nextObject]) {
         if ([plugin supportsExtension:extension])
             candidates.update(plugin);
     }
-    
+
     WebBasePluginPackage *plugin = candidates.bestCandidate();
-    
+
     if (!plugin) {
         // If no plug-in was found from the extension, attempt to map from the extension to a MIME type
         // and find the a plug-in from the MIME type. This is done in case the plug-in has not fully specified
@@ -193,7 +193,7 @@ static NSArray *additionalWebPlugInPaths;
 {
     if (additionalPaths == additionalWebPlugInPaths)
         return;
-    
+
     [additionalWebPlugInPaths release];
     additionalWebPlugInPaths = [additionalPaths copy];
 
@@ -208,7 +208,7 @@ static NSArray *additionalWebPlugInPaths;
 {
     if (plugInPaths == newPaths)
         return;
-        
+
     [plugInPaths release];
     plugInPaths = [newPaths copy];
 }
@@ -227,10 +227,10 @@ static NSArray *additionalWebPlugInPaths;
 {
     if (!(self = [super init]))
         return nil;
-        
+
     registeredMIMETypes = [[NSMutableSet alloc] init];
     pluginInstanceViews = [[NSMutableSet alloc] init];
-    
+
     return self;
 }
 
@@ -240,7 +240,7 @@ static NSArray *additionalWebPlugInPaths;
     [plugins release];
     [registeredMIMETypes release];
     [pluginInstanceViews release];
-    
+
     [super dealloc];
 }
 
@@ -249,7 +249,7 @@ static NSArray *additionalWebPlugInPaths;
     // This method does a bit of autoreleasing, so create an autorelease pool to ensure that calling
     // -refresh multiple times does not bloat the default pool.
     NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
-    
+
     // Create map from plug-in path to WebBasePluginPackage
     if (!plugins)
         plugins = [[NSMutableDictionary alloc] initWithCapacity:12];
@@ -266,7 +266,7 @@ static NSArray *additionalWebPlugInPaths;
         // the database.
         if (![newPlugins containsObject:plugin])
             [pluginsToRemove addObject:plugin];
-            
+
         // Remove every member of 'plugins' from 'newPlugins'.  After this loop exits, 'newPlugins'
         // will be the set of new plug-ins that should be added to the database.
         [newPlugins removeObject:plugin];
@@ -281,9 +281,9 @@ static NSArray *additionalWebPlugInPaths;
 
     // Remove plugins from database
     pluginEnumerator = [pluginsToRemove objectEnumerator];
-    while ((plugin = [pluginEnumerator nextObject]) != nil) 
+    while ((plugin = [pluginEnumerator nextObject]) != nil)
         [self _removePlugin:plugin];
-    
+
     // Add new plugins to database
     pluginEnumerator = [newPlugins objectEnumerator];
     while ((plugin = [pluginEnumerator nextObject]) != nil)
@@ -297,7 +297,7 @@ static NSArray *additionalWebPlugInPaths;
         for (size_t i = 0; i < pluginInfo.mimes.size(); ++i)
             [MIMETypes addObject:pluginInfo.mimes[i].type];
     }
-    
+
     // Register plug-in views and representations.
     NSEnumerator *MIMEEnumerator = [MIMETypes objectEnumerator];
     NSString *MIMEType;
@@ -314,12 +314,12 @@ static NSArray *additionalWebPlugInPaths;
         if ([plugin isQuickTimePlugIn] && [[WebFrameView _viewTypesAllowImageTypeOmission:NO] objectForKey:MIMEType])
             // Don't allow the QT plug-in to override any types because it claims many that we can handle ourselves.
             continue;
-        
+
         if (self == sharedDatabase)
             [WebView _registerPluginMIMEType:MIMEType];
     }
     [MIMETypes release];
-    
+
     [pool drain];
 }
 
@@ -341,24 +341,24 @@ static NSArray *additionalWebPlugInPaths;
 - (void)removePluginInstanceViewsFor:(WebFrame*)webFrame
 {
     // This handles handles the case where a frame or view is being destroyed and the plugin needs to be removed from the list first
-    
+
     if( [pluginInstanceViews count] == 0 )
         return;
 
-    NSView <WebDocumentView> *documentView = [[webFrame frameView] documentView]; 
+    NSView <WebDocumentView> *documentView = [[webFrame frameView] documentView];
     if ([documentView isKindOfClass:[WebHTMLView class]]) {
-        NSArray *subviews = [documentView subviews]; 
-        unsigned int subviewCount = [subviews count]; 
-        unsigned int subviewIndex; 
-        
-        for (subviewIndex = 0; subviewIndex < subviewCount; subviewIndex++) { 
-            NSView *subview = [subviews objectAtIndex:subviewIndex]; 
+        NSArray *subviews = [documentView subviews];
+        unsigned int subviewCount = [subviews count];
+        unsigned int subviewIndex;
+
+        for (subviewIndex = 0; subviewIndex < subviewCount; subviewIndex++) {
+            NSView *subview = [subviews objectAtIndex:subviewIndex];
 #if ENABLE(NETSCAPE_PLUGIN_API)
             if ([subview isKindOfClass:[WebBaseNetscapePluginView class]] || [WebPluginController isPlugInView:subview])
 #else
             if ([WebPluginController isPlugInView:subview])
 #endif
-                [pluginInstanceViews removeObject:subview]; 
+                [pluginInstanceViews removeObject:subview];
         }
     }
 }
@@ -379,11 +379,11 @@ static NSArray *additionalWebPlugInPaths;
             ASSERT([[view superview] isKindOfClass:[WebHTMLView class]]);
             ASSERT([[view superview] respondsToSelector:@selector(_destroyAllWebPlugins)]);
             // this will actually destroy all plugin instances for a webHTMLView and remove them from this list
-            [[view superview] performSelector:@selector(_destroyAllWebPlugins)]; 
+            [[view superview] performSelector:@selector(_destroyAllWebPlugins)];
         }
     }
 }
-    
+
 @end
 
 @implementation WebPluginDatabase (Internal)
@@ -421,7 +421,7 @@ static NSArray *additionalWebPlugInPaths;
     if (self == sharedDatabase && additionalWebPlugInPaths) {
         // Add additionalWebPlugInPaths to the global WebPluginDatabase.  We do this here for
         // backward compatibility with earlier versions of the +setAdditionalWebPlugInPaths: SPI,
-        // which simply saved a copy of the additional paths and did not cause the plugin DB to 
+        // which simply saved a copy of the additional paths and did not cause the plugin DB to
         // refresh.  See Radars 4608487 and 4609047.
         NSMutableArray *modifiedPlugInPaths = [[plugInPaths mutableCopy] autorelease];
         [modifiedPlugInPaths addObjectsFromArray:additionalWebPlugInPaths];
@@ -440,7 +440,7 @@ static NSArray *additionalWebPlugInPaths;
 }
 
 - (void)_removePlugin:(WebBasePluginPackage *)plugin
-{    
+{
     ASSERT(plugin);
 
     // Unregister plug-in's MIME type registrations
@@ -480,7 +480,7 @@ static NSArray *additionalWebPlugInPaths;
             if ([uniqueFilenames containsObject:filename])
                 continue;
             [uniqueFilenames addObject:filename];
-            
+
             // Create a plug-in package for this path
             NSString *pluginPath = [pluginDirectory stringByAppendingPathComponent:filename];
             WebBasePluginPackage *pluginPackage = [plugins objectForKey:pluginPath];
@@ -491,7 +491,7 @@ static NSArray *additionalWebPlugInPaths;
         }
     }
     [uniqueFilenames release];
-    
+
     return newPlugins;
 }
 

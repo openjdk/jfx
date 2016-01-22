@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -93,10 +93,10 @@ ULONG STDMETHODCALLTYPE WebArchive::Release()
 }
 
 HRESULT STDMETHODCALLTYPE WebArchive::initWithMainResource(
-        /* [in] */ IWebResource*, 
-        /* [in, size_is(cSubResources)] */ IWebResource**, 
-        /* [in] */ int, 
-        /* in, size_is(cSubFrameArchives)] */ IWebArchive**, 
+        /* [in] */ IWebResource*,
+        /* [in, size_is(cSubResources)] */ IWebResource**,
+        /* [in] */ int,
+        /* in, size_is(cSubFrameArchives)] */ IWebArchive**,
         /* [in] */ int)
 {
     return E_NOTIMPL;
@@ -119,7 +119,7 @@ HRESULT STDMETHODCALLTYPE WebArchive::initWithNode(
         return E_NOINTERFACE;
 
     m_archive = LegacyWebArchive::create(domNode->node());
-    
+
     return S_OK;
 }
 

@@ -50,7 +50,7 @@ Cursor::Cursor(Image* image, const IntPoint& hotspot)
     static jmethodID mid = env->GetMethodID(getJCursorManagerClass(), "getCustomCursorID",
                                             "(Lcom/sun/webkit/graphics/WCImageFrame;II)J");
     ASSERT(mid);
-        
+
     RefPtr<RQRef> cursorImageFrame(image->javaImage());
     if (!cursorImageFrame) {
         return;

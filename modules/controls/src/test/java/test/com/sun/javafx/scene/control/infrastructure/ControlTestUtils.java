@@ -54,11 +54,11 @@ public final class ControlTestUtils {
                 "The style class " + styleClass + " was not set on the Tab " + tab,
                 tab, styleClass);
     }
-    
+
     public static void assertStyleClassContains(String message, Tab tab, String styleClass) {
         assertTrue(message, tab.getStyleClass().contains(styleClass));
     }
-    
+
     /*********************************************************************
      * Following 2 methods are for MenuItem                                   *
      ********************************************************************/
@@ -67,11 +67,11 @@ public final class ControlTestUtils {
                 "The style class " + styleClass + " was not set on the MenuItem " + mi,
                 mi, styleClass);
     }
-    
+
     public static void assertStyleClassContains(String message, MenuItem mi, String styleClass) {
         assertTrue(message, mi.getStyleClass().contains(styleClass));
     }
-    
+
     /*********************************************************************
      * Following 2 methods are for Popup controls like Tooltip etc       *
      ********************************************************************/
@@ -80,11 +80,11 @@ public final class ControlTestUtils {
                 "The style class " + styleClass + " was not set on the Popupcontrol " + control,
                 control, styleClass);
     }
-    
+
     public static void assertStyleClassContains(String message, PopupControl control, String styleClass) {
         assertTrue(message, control.getStyleClass().contains(styleClass));
     }
-    
+
     /****************************************************************************
      * Following 2 methods are for normal controls like Button, TextField etc   *
      ****************************************************************************/
@@ -93,11 +93,11 @@ public final class ControlTestUtils {
                 "The style class " + styleClass + " was not set on the control " + control,
                 control, styleClass);
     }
-    
+
     public static void assertStyleClassContains(String message, Control control, String styleClass) {
         assertTrue(message, control.getStyleClass().contains(styleClass));
     }
-    
+
     /****************************************************************************
      * Following 4 methods are for normal controls like Button, TextField etc   *
      ****************************************************************************/
@@ -106,13 +106,13 @@ public final class ControlTestUtils {
                 "The pseudo class " + pseudoClass + " was not set on control " + control,
                 control, pseudoClass);
     }
-    
+
     public static void assertPseudoClassExists(String message, Control control, String pseudoClass) {
         Set<PseudoClass> allStates = control.getPseudoClassStates();
         PseudoClass state = PseudoClass.getPseudoClass(pseudoClass);
         assertTrue(message, allStates.contains(state));
     }
-    
+
     public static void assertPseudoClassDoesNotExist(Control control, String pseudoClass) {
         assertPseudoClassDoesNotExist(
                 "The pseudo class " + pseudoClass + " was unexpectedly set on control " + control,
@@ -123,7 +123,7 @@ public final class ControlTestUtils {
         Set<PseudoClass> allStates = control.getPseudoClassStates();
         PseudoClass state = PseudoClass.getPseudoClass(pseudoClass);
         assertFalse(message, allStates.contains(state));
-    }    
+    }
 
     /****************************************************************************
      * Following 4 methods are for axis type like ValueAxis, NumberAxis, CategoryAxis etc*
@@ -133,13 +133,13 @@ public final class ControlTestUtils {
                 "The pseudo class " + pseudoClass + " was not set on axis " + axis,
                 axis, pseudoClass);
     }
-    
+
     public static void assertPseudoClassExists(String message, Axis axis, String pseudoClass) {
         Set<PseudoClass> allStates = axis.getPseudoClassStates();
         PseudoClass state = PseudoClass.getPseudoClass(pseudoClass);
         assertTrue(message, allStates.contains(state));
     }
-    
+
     public static void assertPseudoClassDoesNotExist(Axis axis, String pseudoClass) {
         assertPseudoClassDoesNotExist(
                 "The pseudo class " + pseudoClass + " was unexpectedly set on axis " + axis,
@@ -150,8 +150,8 @@ public final class ControlTestUtils {
         Set<PseudoClass> allStates = axis.getPseudoClassStates();
         PseudoClass state = PseudoClass.getPseudoClass(pseudoClass);
         assertFalse(message, allStates.contains(state));
-    }    
-    
+    }
+
     /*********************************************************************
      * Following 2 methods are for the Pagination controls               *
      ********************************************************************/
@@ -160,11 +160,11 @@ public final class ControlTestUtils {
                 "The style class " + styleClass + " was not set on the Pagination " + control,
                 control, styleClass);
     }
-    
+
     public static void assertStyleClassContains(String message, Pagination control, String styleClass) {
         assertTrue(message, control.getStyleClass().contains(styleClass));
     }
-    
+
     public static void assertListenerListContains(ObservableList list, ListChangeListener listener) {
         assertListenerListContains("The listener " + listener + " was not contained in " + list, list, listener);
     }

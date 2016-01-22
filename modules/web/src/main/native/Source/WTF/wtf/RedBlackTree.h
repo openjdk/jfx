@@ -49,11 +49,11 @@ private:
         Red = 1,
         Black
     };
-    
+
 public:
     class Node {
         friend class RedBlackTree;
-        
+
     public:
         const NodeType* successor() const
         {
@@ -67,7 +67,7 @@ public:
             }
             return y;
         }
-        
+
         const NodeType* predecessor() const
         {
             const Node* x = this;
@@ -80,7 +80,7 @@ public:
             }
             return y;
         }
-        
+
         NodeType* successor()
         {
             return const_cast<NodeType*>(const_cast<const Node*>(this)->successor());
@@ -98,46 +98,46 @@ public:
             m_right = 0;
             m_parentAndRed = 1; // initialize to red
         }
-        
+
         // NOTE: these methods should pack the parent and red into a single
         // word. But doing so appears to reveal a bug in the compiler.
         NodeType* parent() const
         {
             return reinterpret_cast<NodeType*>(m_parentAndRed & ~static_cast<uintptr_t>(1));
         }
-        
+
         void setParent(NodeType* newParent)
         {
             m_parentAndRed = reinterpret_cast<uintptr_t>(newParent) | (m_parentAndRed & 1);
         }
-        
+
         NodeType* left() const
         {
             return m_left;
         }
-        
+
         void setLeft(NodeType* node)
         {
             m_left = node;
         }
-        
+
         NodeType* right() const
         {
             return m_right;
         }
-        
+
         void setRight(NodeType* node)
         {
             m_right = node;
         }
-        
+
         Color color() const
         {
             if (m_parentAndRed & 1)
                 return Red;
             return Black;
         }
-        
+
         void setColor(Color value)
         {
             if (value == Red)
@@ -145,7 +145,7 @@ public:
             else
                 m_parentAndRed &= ~static_cast<uintptr_t>(1);
         }
-        
+
         NodeType* m_left;
         NodeType* m_right;
         uintptr_t m_parentAndRed;
@@ -155,7 +155,7 @@ public:
         : m_root(0)
     {
     }
-    
+
     void insert(NodeType* x)
     {
         x->reset();
@@ -212,7 +212,7 @@ public:
     {
         ASSERT(z);
         ASSERT(z->parent() || z == m_root);
-        
+
         // Y is the node to be unlinked from the tree.
         NodeType* y;
         if (!z->left() || !z->right())
@@ -243,16 +243,16 @@ public:
             else
                 y->parent()->setRight(x);
         }
-            
+
         if (y != z) {
             if (y->color() == Black)
                 removeFixup(x, xParent);
-            
+
             y->setParent(z->parent());
             y->setColor(z->color());
             y->setLeft(z->left());
             y->setRight(z->right());
-            
+
             if (z->left())
                 z->left()->setParent(y);
             if (z->right())
@@ -271,7 +271,7 @@ public:
 
         return z;
     }
-    
+
     NodeType* remove(const KeyType& key)
     {
         NodeType* result = findExact(key);
@@ -279,7 +279,7 @@ public:
             return 0;
         return remove(result);
     }
-    
+
     NodeType* findExact(const KeyType& key) const
     {
         for (NodeType* current = m_root; current;) {
@@ -292,7 +292,7 @@ public:
         }
         return 0;
     }
-    
+
     NodeType* findLeastGreaterThanOrEqual(const KeyType& key) const
     {
         NodeType* best = 0;
@@ -308,7 +308,7 @@ public:
         }
         return best;
     }
-    
+
     NodeType* findGreatestLessThanOrEqual(const KeyType& key) const
     {
         NodeType* best = 0;
@@ -324,21 +324,21 @@ public:
         }
         return best;
     }
-    
+
     NodeType* first() const
     {
         if (!m_root)
             return 0;
         return treeMinimum(m_root);
     }
-    
+
     NodeType* last() const
     {
         if (!m_root)
             return 0;
         return treeMaximum(m_root);
     }
-    
+
     // This is an O(n) operation.
     size_t size()
     {
@@ -347,13 +347,13 @@ public:
             result++;
         return result;
     }
-    
+
     // This is an O(1) operation.
     bool isEmpty()
     {
         return !m_root;
     }
-    
+
 private:
     // Finds the minimum element in the sub-tree rooted at the given
     // node.
@@ -363,7 +363,7 @@ private:
             x = x->left();
         return x;
     }
-    
+
     static NodeType* treeMaximum(NodeType* x)
     {
         while (x->right())
@@ -377,7 +377,7 @@ private:
             x = x->left();
         return x;
     }
-    
+
     static const NodeType* treeMaximum(const NodeType* x)
     {
         while (x->right())
@@ -391,7 +391,7 @@ private:
         ASSERT(!z->right());
         ASSERT(!z->parent());
         ASSERT(z->color() == Red);
-        
+
         NodeType* y = 0;
         NodeType* x = m_root;
         while (x) {

@@ -35,7 +35,7 @@ public:
     void setLocation(const String&);
 
     virtual ScrollbarMode scrollingMode() const override { return m_scrolling; }
-    
+
     int marginWidth() const { return m_marginWidth; }
     int marginHeight() const { return m_marginHeight; }
 
@@ -57,7 +57,7 @@ protected:
 private:
     virtual bool supportsFocus() const override;
     virtual void setFocus(bool) override;
-    
+
     virtual bool isURLAttribute(const Attribute&) const override;
     virtual bool isHTMLContentAttribute(const Attribute&) const override;
 

@@ -6,13 +6,13 @@
  * are met:
  *
  * 1.  Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer. 
+ *     notice, this list of conditions and the following disclaimer.
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
- *     documentation and/or other materials provided with the distribution. 
+ *     documentation and/or other materials provided with the distribution.
  * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
- *     from this software without specific prior written permission. 
+ *     from this software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY APPLE AND ITS CONTRIBUTORS "AS IS" AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
@@ -66,7 +66,7 @@ using namespace WebCore;
     [_popupWindow release];
     [_completions release];
     [_originalString release];
-    
+
     [super dealloc];
 }
 
@@ -83,7 +83,7 @@ using namespace WebCore;
 - (void)_buildUI
 {
     NSRect scrollFrame = NSMakeRect(0, 0, 100, 100);
-    NSRect tableFrame = NSZeroRect;    
+    NSRect tableFrame = NSZeroRect;
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
     tableFrame.size = [NSScrollView contentSizeForFrameSize:scrollFrame.size hasHorizontalScroller:NO hasVerticalScroller:YES borderType:NSNoBorder];
@@ -91,7 +91,7 @@ using namespace WebCore;
     NSTableColumn *column = [[NSTableColumn alloc] init];
     [column setWidth:tableFrame.size.width];
     [column setEditable:NO];
-    
+
     _tableView = [[NSTableView alloc] initWithFrame:tableFrame];
     [_tableView setAutoresizingMask:NSViewWidthSizable];
     [_tableView addTableColumn:column];
@@ -104,14 +104,14 @@ using namespace WebCore;
     [_tableView setDataSource:self];
     [_tableView setTarget:self];
     [_tableView setDoubleAction:@selector(tableAction:)];
-    
+
     NSScrollView *scrollView = [[NSScrollView alloc] initWithFrame:scrollFrame];
     [scrollView setBorderType:NSNoBorder];
     [scrollView setHasVerticalScroller:YES];
     [scrollView setAutoresizingMask:NSViewWidthSizable | NSViewHeightSizable];
     [scrollView setDocumentView:_tableView];
     [_tableView release];
-    
+
     _popupWindow = [[NSWindow alloc] initWithContentRect:scrollFrame styleMask:NSBorderlessWindowMask backing:NSBackingStoreBuffered defer:NO];
     [_popupWindow setAlphaValue:0.88f];
     [_popupWindow setContentView:scrollView];
@@ -159,13 +159,13 @@ using namespace WebCore;
         windowFrame.size.width = std::max(maxWidth, windowFrame.size.width);
     }
     [_popupWindow setFrame:windowFrame display:NO];
-    
+
     [_tableView reloadData];
     [_tableView selectRowIndexes:[NSIndexSet indexSetWithIndex:0] byExtendingSelection:NO];
     [_tableView scrollRowToVisible:0];
     [self _reflectSelection];
     [_popupWindow setLevel:NSPopUpMenuWindowLevel];
-    [_popupWindow orderFront:nil];    
+    [_popupWindow orderFront:nil];
     [[_view window] addChildWindow:_popupWindow ordered:NSWindowAbove];
 }
 
@@ -203,7 +203,7 @@ using namespace WebCore;
         [_completions release];
         _completions = [checker completionsForPartialWordRange:NSMakeRange(0, [prefixStr length]) inString:prefixStr language:nil inSpellDocumentWithTag:[_view spellCheckerDocumentTag]];
         [_completions retain];
-    
+
         if (!_completions || [_completions count] == 0) {
             NSBeep();
         } else if ([_completions count] == 1) {

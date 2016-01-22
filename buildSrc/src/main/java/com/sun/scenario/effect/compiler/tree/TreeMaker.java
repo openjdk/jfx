@@ -45,11 +45,11 @@ import static com.sun.scenario.effect.compiler.model.Type.*;
 public class TreeMaker {
 
     private final SymbolTable symbols;
-    
+
     public TreeMaker(SymbolTable symbols) {
         this.symbols = symbols;
     }
-    
+
     public BinaryExpr binary(BinaryOpType op, Expr left, Expr right) {
         if (op.isAssignment()) {
             if (left instanceof VariableExpr) {
@@ -98,7 +98,7 @@ public class TreeMaker {
     public LiteralExpr literal(Type type, Object value) {
         return new LiteralExpr(type, value);
     }
-    
+
     public VariableExpr variable(String id) {
         Map<String, Variable> vars = symbols.getVariablesForScope();
         Variable var = vars.get(id);
@@ -111,7 +111,7 @@ public class TreeMaker {
         var.incrementRefCount();
         return new VariableExpr(var);
     }
-    
+
     public VectorCtorExpr vectorCtor(Type type, List<Expr> params) {
         if (!type.isVector()) {
             throw new RuntimeException("Cannot use constructor with scalar type " + type);
@@ -136,25 +136,25 @@ public class TreeMaker {
         }
         return new VectorCtorExpr(type, params);
     }
-    
+
     public ParenExpr parenExpr(Expr expr) {
         return new ParenExpr(expr);
     }
-    
+
     public FieldSelectExpr fieldSelect(Expr expr, String fields) {
         if (!expr.getResultType().isVector()) {
             throw new RuntimeException("Cannot use field selection with scalar types");
         }
         return new FieldSelectExpr(expr, fields.substring(1));
     }
-    
+
     public ArrayAccessExpr arrayAccess(Expr expr, Expr index) {
         if (index.getResultType() != Type.INT) {
             throw new RuntimeException("Array index must be an integer");
         }
         return new ArrayAccessExpr(expr, index);
     }
-    
+
     public CallExpr call(String id, List<Expr> params) {
         if (params == null) {
             params = new ArrayList<Expr>();
@@ -180,23 +180,23 @@ public class TreeMaker {
         }
         return new CallExpr(func, params);
     }
-    
+
     public ContinueStmt continueStmt() {
         return new ContinueStmt();
     }
-    
+
     public BreakStmt breakStmt() {
         return new BreakStmt();
     }
-    
+
     public DiscardStmt discardStmt() {
         return new DiscardStmt();
     }
-    
+
     public ReturnStmt returnStmt(Expr expr) {
         return new ReturnStmt(expr);
     }
-    
+
     public SelectStmt selectStmt(Expr ifExpr, Stmt thenStmt, Stmt elseStmt) {
         return new SelectStmt(ifExpr, thenStmt, elseStmt);
     }
@@ -207,14 +207,14 @@ public class TreeMaker {
         }
         return new WhileStmt(cond, stmt);
     }
-    
+
     public DoWhileStmt doWhileStmt(Stmt stmt, Expr expr) {
         if (expr.getResultType() != Type.BOOL) {
             throw new RuntimeException("Condition for 'do/while' loop must be a boolean expression");
         }
         return new DoWhileStmt(stmt, expr);
     }
-    
+
     public ForStmt forStmt(Stmt init, Expr cond, Expr expr, Stmt stmt,
                            int unrollMax, int unrollCheck)
     {
@@ -226,23 +226,23 @@ public class TreeMaker {
         }
         return new ForStmt(init, cond, expr, stmt, unrollMax, unrollCheck);
     }
-    
+
     public ExprStmt exprStmt(Expr expr) {
         return new ExprStmt(expr);
     }
-    
+
     public DeclStmt declStmt(List<VarDecl> decls) {
         return new DeclStmt(decls);
     }
-    
+
     public CompoundStmt compoundStmt(List<Stmt> stmts) {
         return new CompoundStmt(stmts);
     }
-    
+
     public FuncDef funcDef(Function func, Stmt stmt) {
         return new FuncDef(func, stmt);
     }
-    
+
     public VarDecl varDecl(Variable var, Expr init) {
         if (init != null && init.getResultType() != var.getType()) {
             throw new RuntimeException("Initializer result type must match that of variable");
@@ -252,11 +252,11 @@ public class TreeMaker {
         }
         return new VarDecl(var, init);
     }
-    
+
     public GlueBlock glueBlock(String text) {
         return new GlueBlock(text);
     }
-    
+
     public ProgramUnit programUnit(List<ExtDecl> decls) {
         return new ProgramUnit(decls);
     }

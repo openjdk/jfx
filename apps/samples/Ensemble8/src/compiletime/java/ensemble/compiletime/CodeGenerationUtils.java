@@ -92,7 +92,7 @@ public class CodeGenerationUtils {
         sb.append(playgroundPropertyArrayToCode(sample.playgroundProperties)); sb.append(',');
         sb.append(conditionalFeatureArrayToCode(sample.conditionalFeatures)); sb.append(',');
         sb.append(Boolean.toString(sample.runsOnEmbedded));
-        sb.append(")");      
+        sb.append(")");
         return sb.toString();
     }
 
@@ -115,7 +115,7 @@ public class CodeGenerationUtils {
         sb.append("}");
         return sb.toString();
     }
- 
+
     public static String conditionalFeatureArrayToCode(List<ConditionalFeature> array) {
         StringBuilder sb = new StringBuilder();
         sb.append("new ConditionalFeature[]{");
@@ -127,7 +127,7 @@ public class CodeGenerationUtils {
         sb.append("}");
         return sb.toString();
     }
-    
+
     public static String sampleArrayToCode(List<Sample> array) {
         if (array == null || array.isEmpty()) return "null";
         StringBuilder sb = new StringBuilder();

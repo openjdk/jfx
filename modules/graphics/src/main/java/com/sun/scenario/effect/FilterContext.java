@@ -31,14 +31,14 @@ package com.sun.scenario.effect;
 public class FilterContext {
 
     private Object referent;
-    
+
     protected FilterContext(Object referent) {
         if (referent == null) {
             throw new IllegalArgumentException("Referent must be non-null");
         }
         this.referent = referent;
     }
-    
+
     public final Object getReferent() {
         return referent;
     }

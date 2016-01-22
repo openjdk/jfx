@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef DFGDesiredWatchpoints_h
@@ -48,7 +48,7 @@ struct WatchpointForGenericWatchpointSet {
         , m_set(0)
     {
     }
-    
+
     WatchpointForGenericWatchpointSet(
         CodeOrigin codeOrigin, ExitKind exitKind, WatchpointSetType* set)
         : m_codeOrigin(codeOrigin)
@@ -56,7 +56,7 @@ struct WatchpointForGenericWatchpointSet {
         , m_set(set)
     {
     }
-    
+
     CodeOrigin m_codeOrigin;
     ExitKind m_exitKind;
     WatchpointSetType* m_set;
@@ -92,29 +92,29 @@ public:
         : m_reallyAdded(false)
     {
     }
-    
+
     void addLazily(WatchpointSetType* set)
     {
         m_sets.add(set);
     }
-    
+
     void addLazily(CodeOrigin codeOrigin, ExitKind exitKind, WatchpointSetType* set)
     {
         m_profiledWatchpoints.append(
             WatchpointForGenericWatchpointSet<WatchpointSetType>(codeOrigin, exitKind, set));
     }
-    
+
     void reallyAdd(CodeBlock* codeBlock, CommonData& common)
     {
         RELEASE_ASSERT(!m_reallyAdded);
-        
+
         typename HashSet<WatchpointSetType*>::iterator iter = m_sets.begin();
         typename HashSet<WatchpointSetType*>::iterator end = m_sets.end();
         for (; iter != end; ++iter) {
             common.watchpoints.append(CodeBlockJettisoningWatchpoint(codeBlock));
             Adaptor::add(codeBlock, *iter, &common.watchpoints.last());
         }
-        
+
         for (unsigned i = m_profiledWatchpoints.size(); i--;) {
             WatchpointForGenericWatchpointSet<WatchpointSetType> watchpoint =
                 m_profiledWatchpoints[i];
@@ -122,10 +122,10 @@ public:
                 ProfiledCodeBlockJettisoningWatchpoint(watchpoint.m_codeOrigin, watchpoint.m_exitKind, codeBlock));
             Adaptor::add(codeBlock, watchpoint.m_set, &common.profiledWatchpoints.last());
         }
-        
+
         m_reallyAdded = true;
     }
-    
+
     bool areStillValid() const
     {
         typename HashSet<WatchpointSetType*>::iterator iter = m_sets.begin();
@@ -134,21 +134,21 @@ public:
             if (Adaptor::hasBeenInvalidated(*iter))
                 return false;
         }
-        
+
         for (unsigned i = m_profiledWatchpoints.size(); i--;) {
             if (Adaptor::hasBeenInvalidated(m_profiledWatchpoints[i].m_set))
                 return false;
         }
-        
+
         return true;
     }
-    
+
 #if ASSERT_DISABLED
     bool isStillValid(WatchpointSetType* set)
     {
         return !Adaptor::hasBeenInvalidated(set);
     }
-    
+
     bool shouldAssumeMixedState(WatchpointSetType*)
     {
         return true;
@@ -160,17 +160,17 @@ public:
         m_firstKnownState.add(set, result);
         return result;
     }
-    
+
     bool shouldAssumeMixedState(WatchpointSetType* set)
     {
         typename StateMap::iterator iter = m_firstKnownState.find(set);
         if (iter == m_firstKnownState.end())
             return false;
-        
+
         return iter->value != !Adaptor::hasBeenInvalidated(set);
     }
 #endif
-    
+
     bool isValidOrMixed(WatchpointSetType* set)
     {
         return isStillValid(set) || shouldAssumeMixedState(set);
@@ -189,17 +189,17 @@ class DesiredWatchpoints {
 public:
     DesiredWatchpoints();
     ~DesiredWatchpoints();
-    
+
     void addLazily(WatchpointSet*);
     void addLazily(InlineWatchpointSet&);
     void addLazily(JSArrayBufferView*);
     void addLazily(CodeOrigin, ExitKind, WatchpointSet*);
     void addLazily(CodeOrigin, ExitKind, InlineWatchpointSet&);
-    
+
     void reallyAdd(CodeBlock*, CommonData&);
-    
+
     bool areStillValid() const;
-    
+
     bool isStillValid(WatchpointSet* set)
     {
         return m_sets.isStillValid(set);
@@ -236,7 +236,7 @@ public:
     {
         return m_bufferViews.isValidOrMixed(view);
     }
-    
+
 private:
     GenericDesiredWatchpoints<WatchpointSet> m_sets;
     GenericDesiredWatchpoints<InlineWatchpointSet> m_inlineSets;

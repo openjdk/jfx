@@ -32,9 +32,9 @@ import javafx.collections.ObservableIntegerArray;
  * ObservableIntegerArray default implementation.
  */
 public class ObservableIntegerArrayImpl extends ObservableArrayBase<ObservableIntegerArray> implements ObservableIntegerArray {
-    
+
     private static final int[] INITIAL = new int[0];
-    
+
     private int[] array = INITIAL;
     private int size = 0;
 
@@ -43,7 +43,7 @@ public class ObservableIntegerArrayImpl extends ObservableArrayBase<ObservableIn
      */
     public ObservableIntegerArrayImpl() {
     }
-    
+
     /**
      * Creates observable integer array with copy of given initial values
      * @param elements initial values to copy to observable integer array
@@ -178,7 +178,7 @@ public class ObservableIntegerArrayImpl extends ObservableArrayBase<ObservableIn
         System.arraycopy(array, 0, dest, 0, size());
         return dest;
     }
-    
+
     @Override
     public int get(int index) {
         rangeCheck(index + 1);
@@ -200,8 +200,8 @@ public class ObservableIntegerArrayImpl extends ObservableArrayBase<ObservableIn
         }
         System.arraycopy(array, index, dest, 0, length);
         return dest;
-    }    
-    
+    }
+
     @Override
     public void copyTo(int srcIndex, int[] dest, int destIndex, int length) {
         rangeCheck(srcIndex + length);

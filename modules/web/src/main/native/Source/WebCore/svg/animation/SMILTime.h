@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef SMILTime_h
@@ -36,17 +36,17 @@ public:
     SMILTime() : m_time(0) { }
     SMILTime(double time) : m_time(time) { ASSERT(!std::isnan(time)); }
     SMILTime(const SMILTime& o) : m_time(o.m_time) { }
-    
+
     static SMILTime unresolved() { return unresolvedValue; }
     static SMILTime indefinite() { return indefiniteValue; }
-    
+
     SMILTime& operator=(const SMILTime& o) { m_time = o.m_time; return *this; }
     double value() const { return m_time; }
-    
+
     bool isFinite() const { return m_time < indefiniteValue; }
     bool isIndefinite() const { return m_time == indefiniteValue; }
     bool isUnresolved() const { return m_time == unresolvedValue; }
-    
+
 private:
     static const double unresolvedValue;
     static const double indefiniteValue;

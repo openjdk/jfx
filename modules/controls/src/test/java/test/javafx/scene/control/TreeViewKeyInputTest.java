@@ -63,10 +63,10 @@ public class TreeViewKeyInputTest {
     private TreeView<String> treeView;
     private MultipleSelectionModel<TreeItem<String>> sm;
     private FocusModel<TreeItem<String>> fm;
-    
+
     private KeyEventFirer keyboard;
     private StageLoader stageLoader;
-    
+
     private final TreeItem<String> root = new TreeItem<String>("Root");                     // 0
         private final TreeItem<String> child1 = new TreeItem<String>("Child 1");            // 1
         private final TreeItem<String> child2 = new TreeItem<String>("Child 2");            // 2
@@ -108,7 +108,7 @@ public class TreeViewKeyInputTest {
         child9.setExpanded(false);
         child10.getChildren().clear();
         child10.setExpanded(false);
-        
+
         // recreate treeview and gather models
         treeView = new TreeView<String>();
         treeView.setRoot(root);
@@ -118,36 +118,36 @@ public class TreeViewKeyInputTest {
 
         // set up keyboard event firer
         keyboard = new KeyEventFirer(treeView);
-        
+
         // create a simple UI that will be shown (to send the keyboard events to)
         stageLoader = new StageLoader(treeView);
         stageLoader.getStage().show();
     }
-    
+
     @After public void tearDown() {
         treeView.getSkin().dispose();
         stageLoader.dispose();
     }
-    
-    
+
+
     /***************************************************************************
      * Util methods
      **************************************************************************/
-    
+
     private String debug() {
         StringBuilder sb = new StringBuilder("Selected Indices: [");
-        
+
         List<Integer> indices = sm.getSelectedIndices();
         for (Integer index : indices) {
             sb.append(index);
             sb.append(", ");
         }
-        
+
         sb.append("] \nFocus: " + fm.getFocusedIndex());
         sb.append(" \nAnchor: " + getAnchor());
         return sb.toString();
     }
-    
+
     // Returns true if ALL indices are selected
     private boolean isSelected(int... indices) {
         for (int index : indices) {
@@ -155,7 +155,7 @@ public class TreeViewKeyInputTest {
         }
         return true;
     }
-    
+
     // Returns true if ALL indices are NOT selected
     private boolean isNotSelected(int... indices) {
         for (int index : indices) {
@@ -163,41 +163,41 @@ public class TreeViewKeyInputTest {
         }
         return true;
     }
-    
+
     private int getAnchor() {
         return TreeViewAnchorRetriever.getAnchor(treeView);
     }
-    
+
     private boolean isAnchor(int index) {
         return getAnchor() == index;
     }
-    
+
     private int getItemCount() {
         return root.getChildren().size() + child3.getChildren().size();
     }
-    
-    
+
+
     /***************************************************************************
      * General tests
-     **************************************************************************/    
-    
+     **************************************************************************/
+
     @Test public void testInitialState() {
         assertEquals(-1, sm.getSelectedIndex());
         assertEquals(0, sm.getSelectedIndices().size());
         assertEquals(0, sm.getSelectedItems().size());
     }
-    
+
     /***************************************************************************
      * Tests for row-based single selection
      **************************************************************************/
-    
+
     @Test public void testDownArrowChangesSelection() {
         sm.clearAndSelect(0);
         keyboard.doDownArrowPress();
         assertFalse(sm.isSelected(0));
         assertTrue(sm.isSelected(1));
     }
-    
+
     @Test public void testDownArrowDoesNotChangeSelectionWhenAtLastIndex() {
         int endIndex = getItemCount();
         sm.clearAndSelect(endIndex);
@@ -205,7 +205,7 @@ public class TreeViewKeyInputTest {
         keyboard.doDownArrowPress();
         assertTrue(sm.isSelected(endIndex));
     }
-    
+
     @Test public void testUpArrowDoesNotChangeSelectionWhenAt0Index() {
         sm.clearAndSelect(0);
         keyboard.doUpArrowPress();
@@ -213,14 +213,14 @@ public class TreeViewKeyInputTest {
         assertEquals(1, sm.getSelectedIndices().size());
         assertEquals(1, sm.getSelectedItems().size());
     }
-    
+
     @Test public void testUpArrowChangesSelection() {
         sm.clearAndSelect(1);
         keyboard.doUpArrowPress();
         assertFalse(sm.isSelected(1));
         assertTrue(sm.isSelected(0));
     }
-    
+
     @Test public void testLeftArrowDoesNotChangeState() {
         sm.clearAndSelect(0);
         keyboard.doLeftArrowPress();
@@ -228,7 +228,7 @@ public class TreeViewKeyInputTest {
         assertEquals(1, sm.getSelectedIndices().size());
         assertEquals(1, sm.getSelectedItems().size());
     }
-    
+
     // test 19
     @Test public void testCtrlDownMovesFocusButLeavesSelectionAlone() {
         sm.clearAndSelect(0);
@@ -238,7 +238,7 @@ public class TreeViewKeyInputTest {
         assertTrue(sm.isSelected(0));
         assertFalse(sm.isSelected(1));
     }
-    
+
     // test 20
     @Test public void testCtrlUpDoesNotMoveFocus() {
         sm.clearAndSelect(0);
@@ -247,7 +247,7 @@ public class TreeViewKeyInputTest {
         assertTrue(fm.isFocused(0));
         assertTrue(sm.isSelected(0));
     }
-    
+
     // test 21
     @Test public void testCtrlLeftDoesNotMoveFocus() {
         sm.clearAndSelect(0);
@@ -256,7 +256,7 @@ public class TreeViewKeyInputTest {
         assertTrue(fm.isFocused(0));
         assertTrue(sm.isSelected(0));
     }
-    
+
     // test 22
     @Test public void testCtrlRightDoesNotMoveFocus() {
         sm.clearAndSelect(0);
@@ -265,7 +265,7 @@ public class TreeViewKeyInputTest {
         assertTrue(fm.isFocused(0));
         assertTrue(sm.isSelected(0));
     }
-    
+
     // test 23
     @Test public void testCtrlUpMovesFocus() {
         sm.clearAndSelect(1);
@@ -275,7 +275,7 @@ public class TreeViewKeyInputTest {
         assertTrue(fm.isFocused(0));
         assertTrue(sm.isSelected(1));
     }
-    
+
     // test 24
     @Test public void testCtrlDownDoesNotMoveFocusWhenAtLastIndex() {
         int endIndex = getItemCount();
@@ -286,7 +286,7 @@ public class TreeViewKeyInputTest {
         assertTrue(fm.isFocused(endIndex));
         assertTrue(sm.isSelected(endIndex));
     }
-    
+
     // test 25
     @Test public void testCtrlDownArrowWithSpaceChangesAnchor() {
         sm.clearAndSelect(0);
@@ -298,7 +298,7 @@ public class TreeViewKeyInputTest {
         assertTrue(isNotSelected(1));
         assertTrue(isAnchor(2));
     }
-    
+
     // test 26
     @Test public void testCtrlUpArrowWithSpaceChangesAnchor() {
         sm.clearAndSelect(2);
@@ -310,7 +310,7 @@ public class TreeViewKeyInputTest {
         assertTrue(isNotSelected(1));
         assertTrue(isAnchor(0));
     }
-    
+
     // test 44
     @Test public void testHomeKey() {
         sm.clearAndSelect(3);
@@ -318,15 +318,15 @@ public class TreeViewKeyInputTest {
         assertTrue(isSelected(0));
         assertTrue(isNotSelected(1,2,3));
     }
-    
+
     // test 45
     @Test public void testEndKey() {
-        sm.clearAndSelect(3); 
+        sm.clearAndSelect(3);
         keyboard.doKeyPress(KeyCode.END);
         assertTrue(debug(), isSelected(getItemCount()));
         assertTrue(isNotSelected(1,2,3));
     }
-    
+
     // test 53
     @Test public void testCtrlHome() {
         sm.clearAndSelect(5);
@@ -334,7 +334,7 @@ public class TreeViewKeyInputTest {
         assertTrue(isSelected(5));
         assertTrue(fm.isFocused(0));
     }
-    
+
     // test 54
     @Test public void testCtrlEnd() {
         sm.clearAndSelect(5);
@@ -342,7 +342,7 @@ public class TreeViewKeyInputTest {
         assertTrue(isSelected(5));
         assertTrue(fm.isFocused(getItemCount()));
     }
-    
+
     // test 68
     @Test public void testCtrlSpaceToClearSelection() {
         sm.clearAndSelect(5);
@@ -354,20 +354,20 @@ public class TreeViewKeyInputTest {
         assertTrue(debug(), fm.isFocused(5));
         assertTrue(isAnchor(5));
     }
-    
-    
-    
+
+
+
     /***************************************************************************
      * Tests for row-based multiple selection
      **************************************************************************/
-    
+
     @Test public void testShiftDownArrowIncreasesSelection() {
         sm.clearAndSelect(0);
         keyboard.doDownArrowPress(KeyModifier.SHIFT);
         assertTrue(sm.isSelected(0));
         assertTrue(sm.isSelected(1));
     }
-    
+
     @Test public void testShiftDownArrowDoesNotChangeSelectionWhenAtLastIndex() {
         int endIndex = getItemCount() - 1;
         sm.clearAndSelect(endIndex);
@@ -375,34 +375,34 @@ public class TreeViewKeyInputTest {
         keyboard.doDownArrowPress(KeyModifier.SHIFT);
         assertTrue(sm.isSelected(endIndex));
     }
-    
+
     @Test public void testShiftUpArrowIncreasesSelection() {
         sm.clearAndSelect(1);
         keyboard.doUpArrowPress(KeyModifier.SHIFT);
         assertTrue(sm.isSelected(0));
         assertTrue(sm.isSelected(1));
     }
-    
+
     @Test public void testShiftUpArrowWhenAt0Index() {
         sm.clearAndSelect(0);
         keyboard.doUpArrowPress(KeyModifier.SHIFT);
         assertTrue(sm.isSelected(0));
     }
-    
+
     @Test public void testShiftLeftArrowWhenAt0Index() {
         sm.clearAndSelect(0);
         keyboard.doLeftArrowPress(KeyModifier.SHIFT);
         assertTrue(sm.isSelected(0));
         assertFalse(sm.isSelected(1));
     }
-    
+
     @Test public void testShiftRightArrowWhenAt0Index() {
         sm.clearAndSelect(0);
         keyboard.doRightArrowPress(KeyModifier.SHIFT);
         assertTrue(sm.isSelected(0));
         assertFalse(sm.isSelected(1));
     }
-    
+
     @Test public void testShiftDownTwiceThenShiftUp() {
         sm.clearAndSelect(0);
         keyboard.doDownArrowPress(KeyModifier.SHIFT);
@@ -412,7 +412,7 @@ public class TreeViewKeyInputTest {
         assertTrue(sm.isSelected(1));
         assertFalse(sm.isSelected(2));
     }
-    
+
     @Test public void testShiftUpTwiceThenShiftDownFrom0Index() {
         sm.clearAndSelect(0);
         keyboard.doUpArrowPress(KeyModifier.SHIFT);
@@ -422,7 +422,7 @@ public class TreeViewKeyInputTest {
         assertTrue(sm.isSelected(1));
         assertFalse(sm.isSelected(2));
     }
-    
+
     @Test public void testShiftLeftTwiceThenShiftRight() {
         sm.clearAndSelect(0);
         keyboard.doLeftArrowPress(KeyModifier.SHIFT);
@@ -432,7 +432,7 @@ public class TreeViewKeyInputTest {
         assertFalse(sm.isSelected(1));
         assertFalse(sm.isSelected(2));
     }
-    
+
     @Test public void testShiftRightTwiceThenShiftLeft() {
         sm.clearAndSelect(0);
         keyboard.doRightArrowPress(KeyModifier.SHIFT);
@@ -442,7 +442,7 @@ public class TreeViewKeyInputTest {
         assertFalse(sm.isSelected(1));
         assertFalse(sm.isSelected(2));
     }
-    
+
     @Test public void testShiftUpTwiceThenShiftDown() {
         sm.clearAndSelect(2);
         keyboard.doUpArrowPress(KeyModifier.SHIFT);
@@ -453,7 +453,7 @@ public class TreeViewKeyInputTest {
         assertTrue(sm.isSelected(2));
         assertFalse(sm.isSelected(3));
     }
-    
+
     // test 18 from Jindra's testcases.rtf file
     @Test public void testShiftDownTwiceThenShiftUpWhenAtLastIndex() {
         int endIndex = getItemCount();
@@ -465,7 +465,7 @@ public class TreeViewKeyInputTest {
         assertTrue(sm.isSelected(endIndex - 1));
         assertFalse(sm.isSelected(endIndex - 2));
     }
-    
+
     // test 27
     @Test public void testCtrlDownArrowWithSpaceChangesAnchor_extended() {
         sm.clearAndSelect(0);
@@ -473,7 +473,7 @@ public class TreeViewKeyInputTest {
         keyboard.doDownArrowPress(KeyModifier.getShortcutKey());    // move focus to 2
         keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.getShortcutKey(),
                 (Utils.isMac()  ? KeyModifier.CTRL : null));  // select 2
-        
+
         keyboard.doUpArrowPress(KeyModifier.getShortcutKey());    // move focus to 1
         keyboard.doUpArrowPress(KeyModifier.getShortcutKey());    // move focus to 0
         keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.getShortcutKey(),
@@ -482,7 +482,7 @@ public class TreeViewKeyInputTest {
         assertTrue(isNotSelected(0, 1));
         assertTrue(isAnchor(0));
     }
-    
+
     // test 28
     @Test public void testCtrlUpArrowWithSpaceChangesAnchor_extended() {
         sm.clearAndSelect(2);
@@ -490,7 +490,7 @@ public class TreeViewKeyInputTest {
         keyboard.doUpArrowPress(KeyModifier.getShortcutKey());    // move focus to 0
         keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.getShortcutKey(),
                 (Utils.isMac()  ? KeyModifier.CTRL : null));  // select 0
-        
+
         keyboard.doDownArrowPress(KeyModifier.getShortcutKey());    // move focus to 1
         keyboard.doDownArrowPress(KeyModifier.getShortcutKey());    // move focus to 2
         keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.getShortcutKey(),
@@ -499,7 +499,7 @@ public class TreeViewKeyInputTest {
         assertTrue(isNotSelected(1, 2));
         assertTrue(isAnchor(2));
     }
-    
+
     // test 29
     @Test public void testCtrlDownArrowWithSpaceChangesAnchor_extended2() {
         sm.clearAndSelect(0);
@@ -507,7 +507,7 @@ public class TreeViewKeyInputTest {
         keyboard.doDownArrowPress(KeyModifier.getShortcutKey());    // move focus to 2
         keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.getShortcutKey(),
                 (Utils.isMac()  ? KeyModifier.CTRL : null));  // select 2
-        
+
         keyboard.doDownArrowPress(KeyModifier.getShortcutKey());    // move focus to 3
         keyboard.doDownArrowPress(KeyModifier.getShortcutKey());    // move focus to 4
         keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.getShortcutKey(),
@@ -516,7 +516,7 @@ public class TreeViewKeyInputTest {
         assertTrue(isNotSelected(1, 3, 5));
         assertTrue(isAnchor(4));
     }
-    
+
     // test 30
     @Test public void testCtrlUpArrowWithSpaceChangesAnchor_extended2() {
         sm.clearAndSelect(4);
@@ -524,7 +524,7 @@ public class TreeViewKeyInputTest {
         keyboard.doUpArrowPress(KeyModifier.getShortcutKey());    // move focus to 2
         keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.getShortcutKey(),
                 (Utils.isMac()  ? KeyModifier.CTRL : null));  // select 2
-        
+
         keyboard.doUpArrowPress(KeyModifier.getShortcutKey());    // move focus to 1
         keyboard.doUpArrowPress(KeyModifier.getShortcutKey());    // move focus to 0
         keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.getShortcutKey(),
@@ -533,7 +533,7 @@ public class TreeViewKeyInputTest {
         assertTrue(isNotSelected(1, 3));
         assertTrue(isAnchor(0));
     }
-    
+
     // test 31
     @Test public void testCtrlDownArrowThenShiftSpaceToSelectRange() {
         sm.clearAndSelect(0);
@@ -544,7 +544,7 @@ public class TreeViewKeyInputTest {
         assertTrue(isNotSelected(3));
         assertTrue(isAnchor(0));
     }
-    
+
     // test 32
     @Test public void testCtrlUpArrowThenShiftSpaceToSelectRange() {
         sm.clearAndSelect(2);
@@ -555,7 +555,7 @@ public class TreeViewKeyInputTest {
         assertTrue(isNotSelected(3));
         assertTrue(debug(), isAnchor(2));
     }
-    
+
     // test 33
     @Test public void testCtrlDownArrowThenSpaceToChangeSelection() {
         sm.clearAndSelect(0);
@@ -566,7 +566,7 @@ public class TreeViewKeyInputTest {
         assertTrue(isSelected(0, 2));
         assertTrue(isNotSelected(1, 3));
         assertTrue(isAnchor(2));
-        
+
         keyboard.doDownArrowPress(KeyModifier.getShortcutKey());    // move focus to 3
         keyboard.doDownArrowPress(KeyModifier.getShortcutKey());    // move focus to 4
         keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.SHIFT);  // select 2,3,4
@@ -574,7 +574,7 @@ public class TreeViewKeyInputTest {
         assertTrue(isNotSelected(0, 1));
         assertTrue(isAnchor(2));
     }
-    
+
     // test 34
     @Test public void testCtrlUpArrowThenSpaceToChangeSelection() {
         sm.clearAndSelect(4);
@@ -585,7 +585,7 @@ public class TreeViewKeyInputTest {
         assertTrue(isSelected(2, 4));
         assertTrue(isNotSelected(0, 1, 3));
         assertTrue(isAnchor(2));
-        
+
         keyboard.doUpArrowPress(KeyModifier.getShortcutKey());    // move focus to 1
         keyboard.doUpArrowPress(KeyModifier.getShortcutKey());    // move focus to 0
         keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.SHIFT);  // select 0,1,2
@@ -593,7 +593,7 @@ public class TreeViewKeyInputTest {
         assertTrue(isNotSelected(3, 4));
         assertTrue(debug(), isAnchor(2));
     }
-    
+
     // test 35
     @Test public void testCtrlDownTwiceThenShiftDown() {
         sm.clearAndSelect(0);
@@ -602,7 +602,7 @@ public class TreeViewKeyInputTest {
         keyboard.doKeyPress(KeyCode.DOWN, KeyModifier.SHIFT);  // select 0,1,2,3
         assertTrue(isSelected(0, 1, 2, 3));
     }
-    
+
     // test 36
     @Test public void testCtrlUpTwiceThenShiftDown() {
         sm.clearAndSelect(3);
@@ -613,7 +613,7 @@ public class TreeViewKeyInputTest {
         assertTrue(isSelected(1, 2, 3));
         assertTrue(isNotSelected(0));
     }
-    
+
     // test 37
     @Test public void testCtrlDownThriceThenShiftUp() {
         sm.clearAndSelect(0);
@@ -624,7 +624,7 @@ public class TreeViewKeyInputTest {
         assertTrue(isSelected(0, 1, 2));
         assertTrue(isNotSelected(3, 4));
     }
-    
+
     // test 38
     @Test public void testCtrlUpTwiceThenShiftUp() {
         sm.clearAndSelect(3);
@@ -634,7 +634,7 @@ public class TreeViewKeyInputTest {
         assertTrue(isSelected(0, 1, 2, 3));
         assertTrue(isNotSelected(4));
     }
-    
+
     // test 39
     @Test public void testCtrlDownTwiceThenSpace_extended() {
         sm.clearAndSelect(0);
@@ -645,7 +645,7 @@ public class TreeViewKeyInputTest {
         assertTrue(isSelected(0, 2));
         assertTrue(isNotSelected(1, 3));
         assertTrue(isAnchor(2));
-        
+
         keyboard.doDownArrowPress(KeyModifier.getShortcutKey());    // move focus to 3
         keyboard.doDownArrowPress(KeyModifier.getShortcutKey());    // move focus to 4
         keyboard.doDownArrowPress(KeyModifier.SHIFT);   // select 2,3,4,5
@@ -653,7 +653,7 @@ public class TreeViewKeyInputTest {
         assertTrue(isNotSelected(0, 1));
         assertTrue(isAnchor(2));
     }
-    
+
     // test 40
     @Test public void testCtrlUpTwiceThenSpace_extended() {
         sm.clearAndSelect(5);
@@ -664,7 +664,7 @@ public class TreeViewKeyInputTest {
         assertTrue(isSelected(3,5));
         assertTrue(isNotSelected(0,1,2,4));
         assertTrue(isAnchor(3));
-        
+
         keyboard.doUpArrowPress(KeyModifier.getShortcutKey());    // move focus to 2
         keyboard.doUpArrowPress(KeyModifier.getShortcutKey());    // move focus to 1
         keyboard.doUpArrowPress(KeyModifier.getShortcutKey());    // move focus to 0
@@ -673,7 +673,7 @@ public class TreeViewKeyInputTest {
         assertTrue(isNotSelected(0,4,5));
         assertTrue(isAnchor(3));
     }
-    
+
     // test 41
     @Test public void testCtrlDownTwiceThenSpace_extended2() {
         sm.clearAndSelect(0);
@@ -684,7 +684,7 @@ public class TreeViewKeyInputTest {
         assertTrue(isSelected(0,2));
         assertTrue(isNotSelected(1,3,4));
         assertTrue(isAnchor(2));
-        
+
         keyboard.doDownArrowPress(KeyModifier.getShortcutKey());    // move focus to 3
         keyboard.doDownArrowPress(KeyModifier.getShortcutKey());    // move focus to 4
         keyboard.doDownArrowPress(KeyModifier.getShortcutKey());    // move focus to 5
@@ -693,7 +693,7 @@ public class TreeViewKeyInputTest {
         assertTrue(isNotSelected(0,1,5));
         assertTrue(isAnchor(2));
     }
-    
+
     // test 50
     @Test public void testCtrlDownThenShiftHome() {
         sm.clearAndSelect(0);
@@ -704,7 +704,7 @@ public class TreeViewKeyInputTest {
         assertTrue(isSelected(0,2));
         assertTrue(isNotSelected(1,3,4));
         assertTrue(isAnchor(2));
-        
+
         keyboard.doDownArrowPress(KeyModifier.getShortcutKey());    // move focus to 3
         keyboard.doDownArrowPress(KeyModifier.getShortcutKey());    // move focus to 4
         keyboard.doKeyPress(KeyCode.HOME, KeyModifier.SHIFT);
@@ -712,7 +712,7 @@ public class TreeViewKeyInputTest {
         assertTrue(isNotSelected(3,4));
         assertTrue(debug(),isAnchor(2));
     }
-    
+
     // test 51
     @Test public void testCtrlUpThenShiftEnd() {
         sm.clearAndSelect(5);
@@ -723,7 +723,7 @@ public class TreeViewKeyInputTest {
         assertTrue(isSelected(3,5));
         assertTrue(isNotSelected(1,2,4));
         assertTrue(isAnchor(3));
-        
+
         keyboard.doUpArrowPress(KeyModifier.getShortcutKey());    // move focus to 2
         keyboard.doUpArrowPress(KeyModifier.getShortcutKey());    // move focus to 1
         keyboard.doKeyPress(KeyCode.END, KeyModifier.SHIFT);
@@ -731,7 +731,7 @@ public class TreeViewKeyInputTest {
         assertTrue(isNotSelected(0,1,2));
         assertTrue(debug(),isAnchor(3));
     }
-    
+
     // test 42
     @Test public void testCtrlUpTwiceThenSpace_extended2() {
         sm.clearAndSelect(5);
@@ -742,7 +742,7 @@ public class TreeViewKeyInputTest {
         assertTrue(isSelected(3,5));
         assertTrue(isNotSelected(0,1,2,4));
         assertTrue(isAnchor(3));
-        
+
         keyboard.doUpArrowPress(KeyModifier.getShortcutKey());    // move focus to 2
         keyboard.doUpArrowPress(KeyModifier.getShortcutKey());    // move focus to 1
         keyboard.doUpArrowPress(KeyModifier.SHIFT);     // select 0,1,2,3
@@ -750,7 +750,7 @@ public class TreeViewKeyInputTest {
         assertTrue(isNotSelected(4,5));
         assertTrue(isAnchor(3));
     }
-    
+
     // test 46
     @Test public void testHomeKey_withSelectedItems() {
         sm.clearSelection();
@@ -759,7 +759,7 @@ public class TreeViewKeyInputTest {
         assertTrue(isSelected(0));
         assertTrue(isNotSelected(1,2,3,4,5,6,7,8,9,10,11));
     }
-    
+
     // test 47
     @Test public void testEndKey_withSelectedItems() {
         sm.clearSelection();
@@ -768,7 +768,7 @@ public class TreeViewKeyInputTest {
         assertTrue(isSelected(getItemCount()));
         assertTrue(isNotSelected(1,2,3,4,5,6,7,8));
     }
-    
+
     // test 48
     @Test public void testShiftHome() {
         sm.clearAndSelect(3);
@@ -777,7 +777,7 @@ public class TreeViewKeyInputTest {
         assertTrue(isNotSelected(4,5));
         assertTrue(debug(), isAnchor(3));
     }
-    
+
     // test 49
     @Test public void testShiftEnd() {
         sm.clearAndSelect(3);
@@ -786,19 +786,19 @@ public class TreeViewKeyInputTest {
         assertTrue(isNotSelected(0,1,2));
         assertTrue(isAnchor(3));
     }
-    
+
     // test 52
     @Test public void testShiftHomeThenShiftEnd() {
         sm.clearAndSelect(5);
         keyboard.doKeyPress(KeyCode.HOME, KeyModifier.SHIFT);
         assertTrue(isSelected(0,1,2,3,4,5));
         assertTrue(isAnchor(5));
-        
+
         keyboard.doKeyPress(KeyCode.END, KeyModifier.SHIFT);
         assertTrue(isSelected(5,6,7,8,9));
         assertTrue(isAnchor(5));
     }
-    
+
     // test 65
     @Test public void testShiftPageUp() {
         sm.clearAndSelect(0);
@@ -808,26 +808,26 @@ public class TreeViewKeyInputTest {
                 (Utils.isMac()  ? KeyModifier.CTRL : null));
         assertTrue(isSelected(0,2));
         assertTrue(isAnchor(2));
-        
+
         keyboard.doDownArrowPress(KeyModifier.getShortcutKey());
         keyboard.doDownArrowPress(KeyModifier.getShortcutKey());
         keyboard.doKeyPress(KeyCode.PAGE_UP, KeyModifier.SHIFT);
         assertTrue(isSelected(0,1,2));
         assertTrue(isAnchor(2));
     }
-    
+
     // test 67
     @Test public void testCtrlAToSelectAll() {
         sm.clearAndSelect(5);
         keyboard.doKeyPress(KeyCode.A, KeyModifier.getShortcutKey());
         assertTrue(isSelected(0,1,2,3,4,5,6,7,8,9));
     }
-    
-    
+
+
     /***************************************************************************
      * Tests for discontinuous multiple selection (RT-18952)
-     **************************************************************************/  
-    
+     **************************************************************************/
+
     // Test 1
     @Test public void test_rt18952_1() {
         sm.clearAndSelect(0);
@@ -837,13 +837,13 @@ public class TreeViewKeyInputTest {
                 (Utils.isMac()  ? KeyModifier.CTRL : null));
         assertTrue(isSelected(0,2));
         assertTrue(isAnchor(2));
-        
+
         keyboard.doDownArrowPress(KeyModifier.getShortcutKey(), KeyModifier.SHIFT);
         keyboard.doDownArrowPress(KeyModifier.getShortcutKey(), KeyModifier.SHIFT);
         assertTrue(debug(),isSelected(0,2,3,4));
         assertTrue(isAnchor(2));
     }
-    
+
     // Test 2
     @Test public void test_rt18952_2() {
         sm.clearAndSelect(5);
@@ -853,13 +853,13 @@ public class TreeViewKeyInputTest {
                 (Utils.isMac()  ? KeyModifier.CTRL : null));
         assertTrue(isSelected(3,5));
         assertTrue(isAnchor(3));
-        
+
         keyboard.doUpArrowPress(KeyModifier.getShortcutKey(), KeyModifier.SHIFT);
         keyboard.doUpArrowPress(KeyModifier.getShortcutKey(), KeyModifier.SHIFT);
         assertTrue(isSelected(1,2,3,5));
         assertTrue(isAnchor(3));
     }
-    
+
     // Test 3
     @Test public void test_rt18952_3() {
         sm.clearAndSelect(0);
@@ -869,19 +869,19 @@ public class TreeViewKeyInputTest {
                 (Utils.isMac()  ? KeyModifier.CTRL : null));
         assertTrue(isSelected(0,2));
         assertTrue(isAnchor(2));
-        
+
         keyboard.doDownArrowPress(KeyModifier.getShortcutKey(), KeyModifier.SHIFT);
         keyboard.doDownArrowPress(KeyModifier.getShortcutKey(), KeyModifier.SHIFT);
         assertTrue(isSelected(0,2,3,4));
         assertTrue(isAnchor(2));
-        
+
         keyboard.doUpArrowPress(KeyModifier.getShortcutKey(), KeyModifier.SHIFT);
         keyboard.doUpArrowPress(KeyModifier.getShortcutKey(), KeyModifier.SHIFT);
         keyboard.doUpArrowPress(KeyModifier.getShortcutKey(), KeyModifier.SHIFT);
         assertTrue(isSelected(0,1,2,3,4));
         assertTrue(isAnchor(2));
     }
-    
+
     // Test 4
     @Test public void test_rt18952_4() {
         sm.clearAndSelect(5);
@@ -891,21 +891,21 @@ public class TreeViewKeyInputTest {
                 (Utils.isMac()  ? KeyModifier.CTRL : null));
         assertTrue(isSelected(3,5));
         assertTrue(isAnchor(3));
-        
+
         keyboard.doUpArrowPress(KeyModifier.getShortcutKey(), KeyModifier.SHIFT);
         keyboard.doUpArrowPress(KeyModifier.getShortcutKey(), KeyModifier.SHIFT);
         assertTrue(isSelected(1,2,3,5));
         assertTrue(isAnchor(3));
-        
+
         keyboard.doDownArrowPress(KeyModifier.getShortcutKey(), KeyModifier.SHIFT);
         keyboard.doDownArrowPress(KeyModifier.getShortcutKey(), KeyModifier.SHIFT);
         keyboard.doDownArrowPress(KeyModifier.getShortcutKey(), KeyModifier.SHIFT);
         assertTrue(isSelected(1,2,3,4,5));
         assertTrue(isAnchor(3));
     }
-    
+
     // TODO skipped some tests here (5-8)
-    
+
     // Test 9
     @Test public void test_rt18952_9() {
         sm.clearAndSelect(0);
@@ -915,12 +915,12 @@ public class TreeViewKeyInputTest {
                 (Utils.isMac()  ? KeyModifier.CTRL : null));
         assertTrue(isSelected(0,2));
         assertTrue(isAnchor(2));
-        
+
         keyboard.doKeyPress(KeyCode.END, KeyModifier.getShortcutKey(), KeyModifier.SHIFT);
         assertTrue(isSelected(0,2,3,4,5,6,7,8,9));
         assertTrue(isAnchor(2));
     }
-    
+
     // Test 10
     @Test public void test_rt18952_10() {
         sm.clearAndSelect(9);
@@ -930,24 +930,24 @@ public class TreeViewKeyInputTest {
                 (Utils.isMac()  ? KeyModifier.CTRL : null));
         assertTrue(isSelected(7,9));
         assertTrue(isAnchor(7));
-        
+
         keyboard.doKeyPress(KeyCode.HOME, KeyModifier.getShortcutKey(), KeyModifier.SHIFT);
         assertTrue(isSelected(0,1,2,3,4,5,6,7,9));
         assertTrue(isAnchor(7));
     }
-    
+
     // Test 11
     @Test public void test_rt18952_11() {
         sm.clearAndSelect(5);
         keyboard.doKeyPress(KeyCode.HOME, KeyModifier.getShortcutKey(), KeyModifier.SHIFT);
         assertTrue(isSelected(0,1,2,3,4,5));
         assertTrue(isAnchor(5));
-        
+
         keyboard.doKeyPress(KeyCode.END, KeyModifier.getShortcutKey(), KeyModifier.SHIFT);
         assertTrue(isSelected(0,1,2,3,4,5,6,7,8,9));
         assertTrue(isAnchor(5));
     }
-    
+
     // Test 12
     @Test public void test_rt18952_12() {
         sm.clearAndSelect(0);
@@ -957,12 +957,12 @@ public class TreeViewKeyInputTest {
                 (Utils.isMac()  ? KeyModifier.CTRL : null));
         assertTrue(isSelected(0,2));
         assertTrue(isAnchor(2));
-        
+
         keyboard.doDownArrowPress(KeyModifier.getShortcutKey(), KeyModifier.SHIFT);
         keyboard.doDownArrowPress(KeyModifier.getShortcutKey(), KeyModifier.SHIFT);
         assertTrue(isSelected(0,2,3,4));
         assertTrue(isAnchor(2));
-        
+
         keyboard.doUpArrowPress(KeyModifier.getShortcutKey(), KeyModifier.SHIFT);
         keyboard.doUpArrowPress(KeyModifier.getShortcutKey(), KeyModifier.SHIFT);
         keyboard.doUpArrowPress(KeyModifier.getShortcutKey(), KeyModifier.SHIFT);
@@ -976,41 +976,41 @@ public class TreeViewKeyInputTest {
         assertTrue(fm.isFocused(0));
         assertTrue(isAnchor(0));
     }
-    
-    
-    
+
+
+
     /***************************************************************************
      * Tests for editing
      **************************************************************************/
-    
+
     // test 43 (part 1)
     @Test public void testF2EntersEditModeAndEscapeCancelsEdit_part1() {
         treeView.setEditable(true);
-        
+
         sm.clearAndSelect(0);
         assertNull(treeView.getEditingItem());
         keyboard.doKeyPress(KeyCode.F2);
         assertEquals(root, treeView.getEditingItem());
-        
+
         keyboard.doKeyPress(KeyCode.ESCAPE);
         assertNull(treeView.getEditingItem());
     }
-    
+
 //    // test 43 (part 2)
 //    @Test public void testF2EntersEditModeAndEscapeCancelsEdit_part2() {
 //        treeView.setEditable(true);
-//        
+//
 //        sm.clearAndSelect(0);
 //        keyboard.doKeyPress(KeyCode.F2);
-//        
-//        
+//
+//
 //    }
-    
-    
+
+
     /***************************************************************************
      * Tests for TreeView-specific functionality
-     **************************************************************************/ 
-    
+     **************************************************************************/
+
     // Test 1 (TreeView test cases)
     @Test public void testRightArrowExpandsBranch() {
         sm.clearAndSelect(0);
@@ -1019,7 +1019,7 @@ public class TreeViewKeyInputTest {
         keyboard.doRightArrowPress();
         assertTrue(root.isExpanded());
     }
-    
+
     // Test 2 (TreeView test cases)
     @Test public void testRightArrowOnExpandedBranch() {
         sm.clearAndSelect(0);
@@ -1027,7 +1027,7 @@ public class TreeViewKeyInputTest {
         assertTrue(isNotSelected(0));
         assertTrue(isSelected(1));
     }
-    
+
     // Test 3 (TreeView test cases)
     @Test public void testRightArrowOnLeafNode() {
         sm.clearAndSelect(1);
@@ -1036,7 +1036,7 @@ public class TreeViewKeyInputTest {
         assertTrue(isSelected(1));
         assertTrue(isNotSelected(2));
     }
-    
+
     // Test 4 (TreeView test cases)
     @Test public void testLeftArrowCollapsesBranch() {
         sm.clearAndSelect(0);
@@ -1044,7 +1044,7 @@ public class TreeViewKeyInputTest {
         keyboard.doLeftArrowPress();
         assertFalse(root.isExpanded());
     }
-    
+
     // Test 5 (TreeView test cases)
     @Test public void testLeftArrowOnLeafMovesSelectionToParent() {
         sm.clearAndSelect(2);
@@ -1054,7 +1054,7 @@ public class TreeViewKeyInputTest {
         assertTrue(isSelected(0));
         assertTrue(isNotSelected(2));
     }
-    
+
     // Test 6 (TreeView test cases)
     @Test public void testLeftArrowMultipleTimes() {
         sm.clearAndSelect(5);
@@ -1062,20 +1062,20 @@ public class TreeViewKeyInputTest {
         assertTrue(child3.isExpanded());
         assertTrue(isSelected(3));
         assertTrue(isNotSelected(5));
-        
+
         keyboard.doLeftArrowPress();
         assertFalse(child3.isExpanded());
         assertTrue(isSelected(3));
-        
+
         keyboard.doLeftArrowPress();
         assertTrue(isSelected(0));
         assertTrue(root.isExpanded());
-        
+
         keyboard.doLeftArrowPress();
         assertTrue(isSelected(0));
         assertFalse(root.isExpanded());
     }
-    
+
     // Test 7 (TreeView test cases)
     @Test public void testDownArrowTwice() {
         sm.clearAndSelect(0);
@@ -1084,13 +1084,13 @@ public class TreeViewKeyInputTest {
         assertTrue(isSelected(2));
         assertTrue(isNotSelected(0));
     }
-    
+
     // Test 8 (TreeView test cases)
     @Test public void testDownArrowFourTimes() {
         // adding children to child2, but not expanding it
         child2.getChildren().addAll(new TreeItem("another child"), new TreeItem("And another!"));
         child2.setExpanded(false);
-        
+
         child3.setExpanded(true);
         sm.clearAndSelect(0);
         keyboard.doDownArrowPress();
@@ -1100,7 +1100,7 @@ public class TreeViewKeyInputTest {
         assertTrue(isSelected(4));
         assertTrue(isNotSelected(0));
     }
-    
+
     // Test 9 (TreeView test cases)
     @Test public void testUpArrow() {
         sm.clearAndSelect(1);
@@ -1108,23 +1108,23 @@ public class TreeViewKeyInputTest {
         assertTrue(isSelected(0));
         assertTrue(isNotSelected(1));
     }
-    
+
     // Test 9 (TreeView test cases)
     @Test public void testUpArrowFourTimes() {
         // adding children to child2, but not expanding it
         child2.getChildren().addAll(new TreeItem("another child"), new TreeItem("And another!"));
         child2.setExpanded(false);
-        
+
         sm.clearAndSelect(5);
         keyboard.doUpArrowPress();
         keyboard.doUpArrowPress();
         keyboard.doUpArrowPress();
         keyboard.doUpArrowPress();
-        
+
         assertTrue(isSelected(1));
         assertTrue(isNotSelected(5));
     }
-    
+
     // Test 20 (TreeView test cases)
     // NOTE: this used to be isSelected but changed when we removed functionality
     // for KeyCode.SLASH. Rather than remove the test I'm now testing to make
@@ -1135,7 +1135,7 @@ public class TreeViewKeyInputTest {
         assertTrue(isSelected(1));
         assertTrue(isNotSelected(0,2,3,4,5,6,7,8,9));
     }
-    
+
     // Test 21 (TreeView test cases)
     // NOTE: this used to be isNotSelected but changed when we removed functionality
     // for KeyCode.BACK_SLASH. Rather than remove the test I'm now testing to make
@@ -1147,7 +1147,7 @@ public class TreeViewKeyInputTest {
         assertTrue(isSelected(0,1,2,3,4,5,6,7,8,9));
         assertTrue(fm.isFocused(1));
     }
-    
+
     // Test 24 (TreeView test cases)
     @Ignore("Not yet working")
     @Test public void testExpandCollapseImpactOnSelection() {
@@ -1156,31 +1156,31 @@ public class TreeViewKeyInputTest {
         keyboard.doUpArrowPress(KeyModifier.SHIFT);
         keyboard.doUpArrowPress(KeyModifier.SHIFT);
         assertTrue(isSelected(3,4,5));
-        
+
         keyboard.doLeftArrowPress();
         assertFalse(child3.isExpanded());
         assertTrue(isSelected(3));
-        
+
         keyboard.doRightArrowPress();
         assertTrue(child3.isExpanded());
         assertTrue(isSelected(3,4,5));
     }
-    
+
     // Test 54 (TreeView test cases)
     @Test public void testAsteriskExpandsAllBranchesFromRoot() {
         // adding children to child2, but not expanding it
         child2.getChildren().addAll(new TreeItem("another child"), new TreeItem("And another!"));
         child2.setExpanded(false);
-        
+
         sm.clearAndSelect(0);
         assertFalse(child2.isExpanded());
         assertTrue(child3.isExpanded());
         keyboard.doKeyPress(KeyCode.MULTIPLY);
-        
+
         assertTrue(child2.isExpanded());
         assertTrue(child3.isExpanded());
     }
-    
+
     // Test 57 (TreeView test cases)
     @Test public void testMinusCollapsesBranch() {
         sm.clearAndSelect(3);
@@ -1188,7 +1188,7 @@ public class TreeViewKeyInputTest {
         keyboard.doKeyPress(KeyCode.SUBTRACT);
         assertFalse(child3.isExpanded());
     }
-    
+
     // Test 58 (TreeView test cases)
     @Test public void testPlusCollapsesBranch() {
         sm.clearAndSelect(3);
@@ -1197,12 +1197,12 @@ public class TreeViewKeyInputTest {
         keyboard.doKeyPress(KeyCode.ADD);
         assertTrue(child3.isExpanded());
     }
-    
-    
+
+
     /***************************************************************************
      * Tests for specific bug reports
      **************************************************************************/
-    
+
     @Test public void test_rt18642() {
         sm.clearAndSelect(1);                          // select 1
         keyboard.doDownArrowPress(KeyModifier.getShortcutKey());   // shift focus to 2
@@ -1213,88 +1213,88 @@ public class TreeViewKeyInputTest {
         keyboard.doDownArrowPress(KeyModifier.getShortcutKey());   // shift focus to 5
         keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.getShortcutKey(),
                 (Utils.isMac()  ? KeyModifier.CTRL : null)); // set anchor, and also select, 5
-        
+
         assertTrue(isSelected(1, 3, 5));
         assertTrue(isNotSelected(0, 2, 4));
-        
+
         // anchor is at 5, so shift+UP should select rows 4 and 5 only
-        keyboard.doUpArrowPress(KeyModifier.SHIFT);   
+        keyboard.doUpArrowPress(KeyModifier.SHIFT);
         assertTrue(isSelected(4, 5));
         assertTrue(isNotSelected(0, 1, 2, 3));
     }
-    
-    @Test public void test_rt14451_1() {
-        sm.clearAndSelect(5);                          
 
-        keyboard.doKeyPress(KeyCode.HOME, KeyModifier.SHIFT); 
+    @Test public void test_rt14451_1() {
+        sm.clearAndSelect(5);
+
+        keyboard.doKeyPress(KeyCode.HOME, KeyModifier.SHIFT);
         assertTrue(isSelected(0,1,2,3,4,5));
         assertTrue(isNotSelected(6,7,8,9));
-        
-        keyboard.doKeyPress(KeyCode.END, KeyModifier.SHIFT); 
-        assertTrue(isNotSelected(0,1,2,3,4));
-        assertTrue(isSelected(5,6,7,8,9));
-        
-        keyboard.doKeyPress(KeyCode.HOME, KeyModifier.SHIFT); 
-        assertTrue(isSelected(0,1,2,3,4,5));
-        assertTrue(debug(), isNotSelected(6,7,8,9));
-    } 
-    
-    @Test public void test_rt14451_2() {
-        sm.clearAndSelect(5);                          
 
-        keyboard.doKeyPress(KeyCode.END, KeyModifier.SHIFT); 
+        keyboard.doKeyPress(KeyCode.END, KeyModifier.SHIFT);
         assertTrue(isNotSelected(0,1,2,3,4));
         assertTrue(isSelected(5,6,7,8,9));
-        
-        keyboard.doKeyPress(KeyCode.HOME, KeyModifier.SHIFT); 
+
+        keyboard.doKeyPress(KeyCode.HOME, KeyModifier.SHIFT);
         assertTrue(isSelected(0,1,2,3,4,5));
         assertTrue(debug(), isNotSelected(6,7,8,9));
-        
-        keyboard.doKeyPress(KeyCode.END, KeyModifier.SHIFT); 
+    }
+
+    @Test public void test_rt14451_2() {
+        sm.clearAndSelect(5);
+
+        keyboard.doKeyPress(KeyCode.END, KeyModifier.SHIFT);
         assertTrue(isNotSelected(0,1,2,3,4));
         assertTrue(isSelected(5,6,7,8,9));
-    } 
-    
+
+        keyboard.doKeyPress(KeyCode.HOME, KeyModifier.SHIFT);
+        assertTrue(isSelected(0,1,2,3,4,5));
+        assertTrue(debug(), isNotSelected(6,7,8,9));
+
+        keyboard.doKeyPress(KeyCode.END, KeyModifier.SHIFT);
+        assertTrue(isNotSelected(0,1,2,3,4));
+        assertTrue(isSelected(5,6,7,8,9));
+    }
+
     @Test public void test_rt26835_1() {
-        sm.clearAndSelect(5);                          
-        keyboard.doKeyPress(KeyCode.HOME, KeyModifier.getShortcutKey()); 
+        sm.clearAndSelect(5);
+        keyboard.doKeyPress(KeyCode.HOME, KeyModifier.getShortcutKey());
         assertTrue(fm.isFocused(0));
-    } 
-    
+    }
+
     @Test public void test_rt26835_2() {
-        sm.clearAndSelect(5);                          
-        keyboard.doKeyPress(KeyCode.END, KeyModifier.getShortcutKey()); 
+        sm.clearAndSelect(5);
+        keyboard.doKeyPress(KeyCode.END, KeyModifier.getShortcutKey());
         assertTrue(debug(), fm.isFocused(getItemCount()));
-    } 
-    
+    }
+
     @Test public void test_rt27175() {
-        sm.clearAndSelect(5);                          
-        keyboard.doKeyPress(KeyCode.HOME, KeyModifier.SHIFT, KeyModifier.getShortcutKey()); 
+        sm.clearAndSelect(5);
+        keyboard.doKeyPress(KeyCode.HOME, KeyModifier.SHIFT, KeyModifier.getShortcutKey());
         assertTrue(debug(), fm.isFocused(0));
         assertTrue(isSelected(0,1,2,3,4,5));
     }
-    
+
     @Test public void test_rt28065() {
         sm.setSelectionMode(SelectionMode.MULTIPLE);
-        
+
         treeView.getSelectionModel().select(0);
         assertEquals(0, treeView.getSelectionModel().getSelectedIndex());
         assertEquals(root, treeView.getSelectionModel().getSelectedItem());
         assertEquals(0, treeView.getFocusModel().getFocusedIndex());
         assertEquals(root, treeView.getFocusModel().getFocusedItem());
-        
+
         keyboard.doKeyPress(KeyCode.A, KeyModifier.getShortcutKey());
         assertEquals(0, treeView.getSelectionModel().getSelectedIndex());
         assertEquals(root, treeView.getSelectionModel().getSelectedItem());
         assertEquals(0, treeView.getFocusModel().getFocusedIndex());
         assertEquals(root, treeView.getFocusModel().getFocusedItem());
     }
-    
+
     @Test public void test_rt29930() {
         sm.setSelectionMode(SelectionMode.MULTIPLE);
-        
+
         sm.clearAndSelect(0);
-        
+
         keyboard.doDownArrowPress(KeyModifier.SHIFT); // select rows [0,1]
         keyboard.doDownArrowPress(KeyModifier.SHIFT); // select rows [0,1,2]
         assertTrue(isSelected(0,1,2));
@@ -1306,7 +1306,7 @@ public class TreeViewKeyInputTest {
         assertTrue(isSelected(0,1));
         assertEquals(2, fm.getFocusedIndex());
         assertEquals(2, getAnchor());
-        
+
         keyboard.doDownArrowPress(KeyModifier.SHIFT); // select rows [2,3]
         assertTrue(isSelected(2,3));
         assertTrue(isNotSelected(0,1));

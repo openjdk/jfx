@@ -33,13 +33,13 @@
 #include "AudioNodeOutput.h"
 
 namespace WebCore {
-    
+
 PassRefPtr<ChannelSplitterNode> ChannelSplitterNode::create(AudioContext* context, float sampleRate, unsigned numberOfOutputs)
 {
     if (!numberOfOutputs || numberOfOutputs > AudioContext::maxNumberOfChannels())
         return nullptr;
 
-    return adoptRef(new ChannelSplitterNode(context, sampleRate, numberOfOutputs));      
+    return adoptRef(new ChannelSplitterNode(context, sampleRate, numberOfOutputs));
 }
 
 ChannelSplitterNode::ChannelSplitterNode(AudioContext* context, float sampleRate, unsigned numberOfOutputs)
@@ -50,9 +50,9 @@ ChannelSplitterNode::ChannelSplitterNode(AudioContext* context, float sampleRate
     // Create a fixed number of outputs (able to handle the maximum number of channels fed to an input).
     for (unsigned i = 0; i < numberOfOutputs; ++i)
         addOutput(std::make_unique<AudioNodeOutput>(this, 1));
-    
+
     setNodeType(NodeTypeChannelSplitter);
-    
+
     initialize();
 }
 
@@ -61,13 +61,13 @@ void ChannelSplitterNode::process(size_t framesToProcess)
     AudioBus* source = input(0)->bus();
     ASSERT(source);
     ASSERT_UNUSED(framesToProcess, framesToProcess == source->length());
-    
+
     unsigned numberOfSourceChannels = source->numberOfChannels();
-    
+
     for (unsigned i = 0; i < numberOfOutputs(); ++i) {
         AudioBus* destination = output(i)->bus();
         ASSERT(destination);
-        
+
         if (i < numberOfSourceChannels) {
             // Split the channel out if it exists in the source.
             // It would be nice to avoid the copy and simply pass along pointers, but this becomes extremely difficult with fanout and fanin.

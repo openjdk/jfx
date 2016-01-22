@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -42,48 +42,48 @@ public:
         : Phase(graph, "tier-up check injection")
     {
     }
-    
+
     bool run()
     {
         RELEASE_ASSERT(m_graph.m_plan.mode == DFGMode);
-        
+
         if (!Options::useFTLJIT())
             return false;
-        
+
         if (m_graph.m_profiledBlock->m_didFailFTLCompilation)
             return false;
-        
+
 #if ENABLE(FTL_JIT)
         FTL::CapabilityLevel level = FTL::canCompile(m_graph);
         if (level == FTL::CannotCompile)
             return false;
-        
+
         if (!Options::enableOSREntryToFTL())
             level = FTL::CanCompile;
-        
+
         InsertionSet insertionSet(m_graph);
         for (BlockIndex blockIndex = m_graph.numBlocks(); blockIndex--;) {
             BasicBlock* block = m_graph.block(blockIndex);
             if (!block)
                 continue;
-            
+
             for (unsigned nodeIndex = 0; nodeIndex < block->size(); ++nodeIndex) {
                 Node* node = block->at(nodeIndex);
                 if (node->op() != LoopHint)
                     continue;
-                
+
                 // We only put OSR checks for the first LoopHint in the block. Note that
                 // more than one LoopHint could happen in cases where we did a lot of CFG
                 // simplification in the bytecode parser, but it should be very rare.
-                
+
                 NodeOrigin origin = node->origin;
-                
+
                 if (level != FTL::CanCompileAndOSREnter || origin.semantic.inlineCallFrame) {
                     insertionSet.insertNode(
                         nodeIndex + 1, SpecNone, CheckTierUpInLoop, origin);
                     break;
                 }
-                
+
                 bool isAtTop = true;
                 for (unsigned subNodeIndex = nodeIndex; subNodeIndex--;) {
                     if (!block->at(subNodeIndex)->isSemanticallySkippable()) {
@@ -91,26 +91,26 @@ public:
                         break;
                     }
                 }
-                
+
                 if (!isAtTop) {
                     insertionSet.insertNode(
                         nodeIndex + 1, SpecNone, CheckTierUpInLoop, origin);
                     break;
                 }
-                
+
                 insertionSet.insertNode(
                     nodeIndex + 1, SpecNone, CheckTierUpAndOSREnter, origin);
                 break;
             }
-            
+
             if (block->last()->op() == Return) {
                 insertionSet.insertNode(
                     block->size() - 1, SpecNone, CheckTierUpAtReturn, block->last()->origin);
             }
-            
+
             insertionSet.execute(block);
         }
-        
+
         m_graph.m_plan.willTryToTierUp = true;
         return true;
 #else // ENABLE(FTL_JIT)

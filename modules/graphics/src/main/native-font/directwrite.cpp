@@ -1133,7 +1133,7 @@ IFACEMETHODIMP JFXTextAnalysisSink::GetNumberSubstitution(
     UINT32 textPosition,
     OUT UINT32* textLength,
     OUT IDWriteNumberSubstitution** numberSubstitution) {
-    
+
     if (numberSubstitution_ != NULL)
         numberSubstitution_->AddRef();
 
@@ -1564,7 +1564,7 @@ JNIEXPORT jint JNICALL OS_NATIVE(JFXTextRendererGetGlyphOffsets)
     const DWRITE_GLYPH_OFFSET* offsets = renderer->GetGlyphOffsets();
     UINT32 i = 0, j = 0;
     while (i < copiedCount) {
-    	DWRITE_GLYPH_OFFSET offset = offsets[j++];
+        DWRITE_GLYPH_OFFSET offset = offsets[j++];
         data[start + i++] = offset.advanceOffset;
         data[start + i++] = offset.ascenderOffset;
     }

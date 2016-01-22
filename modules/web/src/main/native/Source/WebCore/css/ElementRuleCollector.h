@@ -61,7 +61,7 @@ public:
 
     void setMode(SelectorChecker::Mode mode) { m_mode = mode; }
     void setPseudoStyleRequest(const PseudoStyleRequest& request) { m_pseudoStyleRequest = request; }
-    void setSameOriginOnly(bool f) { m_sameOriginOnly = f; } 
+    void setSameOriginOnly(bool f) { m_sameOriginOnly = f; }
     void setRegionForStyling(RenderRegion* regionForStyling) { m_regionForStyling = regionForStyling; }
     void setMedium(const MediaQueryEvaluator* medium) { m_isPrintStyle = medium->mediaTypeMatchSpecific("print"); }
 

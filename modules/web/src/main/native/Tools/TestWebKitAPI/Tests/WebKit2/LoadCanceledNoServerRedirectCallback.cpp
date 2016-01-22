@@ -58,7 +58,7 @@ static void didPerformServerRedirect(WKContextRef context, WKPageRef page, WKURL
 TEST(WebKit2, LoadCanceledNoServerRedirectCallback)
 {
     WKRetainPtr<WKContextRef> context(AdoptWK, Util::createContextForInjectedBundleTest("LoadCanceledNoServerRedirectCallbackTest"));
-    
+
     WKContextInjectedBundleClientV0 injectedBundleClient;
     memset(&injectedBundleClient, 0, sizeof(injectedBundleClient));
 
@@ -70,15 +70,15 @@ TEST(WebKit2, LoadCanceledNoServerRedirectCallback)
 
     WKPageLoaderClientV0 loaderClient;
     memset(&loaderClient, 0, sizeof(loaderClient));
-    
+
     loaderClient.base.version = 0;
     loaderClient.didFinishLoadForFrame = didFinishLoadForFrame;
 
     WKPageSetPageLoaderClient(webView.page(), &loaderClient.base);
-    
+
     WKContextHistoryClientV0 historyClient;
     memset(&historyClient, 0, sizeof(historyClient));
-    
+
     historyClient.base.version = 0;
     historyClient.didPerformServerRedirect = didPerformServerRedirect;
 
@@ -87,7 +87,7 @@ TEST(WebKit2, LoadCanceledNoServerRedirectCallback)
     WKRetainPtr<WKURLRef> url(AdoptWK, Util::createURLForResource("simple-iframe", "html"));
     WKPageLoadURL(webView.page(), url.get());
     Util::run(&loadedAllFrames);
-    
+
     // We shouldn't have performed a server redirect when the iframe load was cancelled.
     EXPECT_FALSE(performedServerRedirect);
 }

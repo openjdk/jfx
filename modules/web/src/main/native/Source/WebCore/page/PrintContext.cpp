@@ -139,7 +139,7 @@ void PrintContext::computePageRectsWithPageSizeInternal(const FloatSize& pageSiz
     unsigned pageCount = ceilf((float)docLogicalHeight / pageLogicalHeight);
     for (unsigned i = 0; i < pageCount; ++i) {
         int pageLogicalTop = blockDirectionEnd > blockDirectionStart ?
-                                blockDirectionStart + i * pageLogicalHeight : 
+                                blockDirectionStart + i * pageLogicalHeight :
                                 blockDirectionStart - (i + 1) * pageLogicalHeight;
         if (allowInlineDirectionTiling) {
             for (int currentInlinePosition = inlineDirectionStart;

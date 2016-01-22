@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef ApplicationCacheResource_h
@@ -39,7 +39,7 @@ public:
         Foreign = 1 << 3,
         Fallback = 1 << 4
     };
-        
+
     static PassRefPtr<ApplicationCacheResource> create(const URL& url, const ResourceResponse& response, unsigned type, PassRefPtr<SharedBuffer> buffer = SharedBuffer::create(), const String& path = String())
     {
         ASSERT(!url.hasFragmentIdentifier());
@@ -48,7 +48,7 @@ public:
 
     unsigned type() const { return m_type; }
     void addType(unsigned type);
-    
+
     void setStorageID(unsigned storageID) { m_storageID = storageID; }
     unsigned storageID() const { return m_storageID; }
     void clearStorageID() { m_storageID = 0; }
@@ -60,7 +60,7 @@ public:
 #ifndef NDEBUG
     static void dumpType(unsigned type);
 #endif
-    
+
 private:
     ApplicationCacheResource(const URL&, const ResourceResponse&, unsigned type, PassRefPtr<SharedBuffer>, const String& path);
 
@@ -69,7 +69,7 @@ private:
     int64_t m_estimatedSizeInStorage;
     String m_path;
 };
-    
+
 } // namespace WebCore
 
 #endif // ApplicationCacheResource_h

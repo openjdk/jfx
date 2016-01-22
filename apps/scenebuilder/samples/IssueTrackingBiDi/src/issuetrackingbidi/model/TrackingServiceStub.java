@@ -67,7 +67,7 @@ public class TrackingServiceStub implements TrackingService {
         if (change.wasAdded()) projectNames.add(change.getKey());
         if (change.wasRemoved()) projectNames.remove(change.getKey());
     };
-    
+
     {
         projectNames.addAll(projectsMap.keySet());
         projectsMap.addListener(projectsMapChangeListener);
@@ -81,13 +81,13 @@ public class TrackingServiceStub implements TrackingService {
         private final SimpleStringProperty description;
         private final SimpleObjectProperty<IssueStatus> status =
                 new SimpleObjectProperty<>(IssueStatus.NEW);
-        private final SimpleObjectProperty<LocalDate> neededBy = 
+        private final SimpleObjectProperty<LocalDate> neededBy =
                 new SimpleObjectProperty<>(LocalDate.now());
 
         IssueStub(String projectName, String id) {
             this(projectName, id, null);
         }
-        
+
         IssueStub(String projectName, String id, String title) {
             assert projectNames.contains(projectName);
             assert ! projectsMap.get(projectName).contains(id);
@@ -106,7 +106,7 @@ public class TrackingServiceStub implements TrackingService {
         private void setStatus(IssueStatus issueStatus) {
             this.status.set(issueStatus);
         }
-        
+
         @Override
         public String getId() {
             return id.get();
@@ -168,7 +168,7 @@ public class TrackingServiceStub implements TrackingService {
         public ObservableValue<String> descriptionProperty() {
             return description;
         }
-        
+
         @Override
         public ObservableValue<LocalDate> neededByProperty() {
             return neededBy;
@@ -189,7 +189,7 @@ public class TrackingServiceStub implements TrackingService {
             projectsMap.get(val2.getProjectName()).remove(val2.getId());
         }
     };
-    
+
     final AtomicInteger issueCounter = new AtomicInteger(0);
     final ObservableMap<String, IssueStub> issuesMap;
     {

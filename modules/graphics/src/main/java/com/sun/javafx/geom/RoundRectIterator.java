@@ -119,7 +119,7 @@ class RoundRectIterator implements PathIterator {
            0.0,  0.0,  0.0,  0.5 },
         {},
     };
-    
+
     private static final int types[] = {
         SEG_MOVETO,
         SEG_LINETO, SEG_CUBICTO,

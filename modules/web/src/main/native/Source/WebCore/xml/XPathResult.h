@@ -5,13 +5,13 @@
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
  * are met:
- * 
+ *
  * 1. Redistributions of source code must retain the above copyright
  *    notice, this list of conditions and the following disclaimer.
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
  * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
  * OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
@@ -52,10 +52,10 @@ namespace WebCore {
             ANY_UNORDERED_NODE_TYPE = 8,
             FIRST_ORDERED_NODE_TYPE = 9
         };
-        
+
         static PassRefPtr<XPathResult> create(Document* document, const XPath::Value& value) { return adoptRef(new XPathResult(document, value)); }
         ~XPathResult();
-        
+
         void convertTo(unsigned short type, ExceptionCode&);
 
         unsigned short resultType() const;
@@ -74,7 +74,7 @@ namespace WebCore {
 
     private:
         XPathResult(Document*, const XPath::Value&);
-        
+
         XPath::Value m_value;
         unsigned m_nodeSetPosition;
         XPath::NodeSet m_nodeSet; // FIXME: why duplicate the node set stored in m_value?

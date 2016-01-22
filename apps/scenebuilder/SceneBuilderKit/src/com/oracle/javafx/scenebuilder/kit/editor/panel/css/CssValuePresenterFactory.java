@@ -63,14 +63,14 @@ public class CssValuePresenterFactory {
             }
             return node;
         }
-        
+
         public Label getTextPresenter() {
             return new Label(CssValueConverter.toCssString(value));
         }
 
         protected abstract Node doGetPresenter();
     }
-    
+
     private static final CssValuePresenterFactory singleton = new CssValuePresenterFactory();
 
     protected CssValuePresenterFactory() {
@@ -95,12 +95,12 @@ public class CssValuePresenterFactory {
         final CssValuePresenter<T> castedRet = (CssValuePresenter<T>)ret;
         return castedRet;
     }
-    
+
     private class PaintValuePresenter extends CssValuePresenter<Paint> {
         private PaintValuePresenter(Paint p){
             super(p);
         }
-        
+
         @Override
         protected Node doGetPresenter() {
             Rectangle rect = new Rectangle(10, 10);
@@ -109,12 +109,12 @@ public class CssValuePresenterFactory {
             return rect;
         }
     }
-    
+
     private class ImageValuePresenter extends CssValuePresenter<Image> {
         private ImageValuePresenter(Image img){
             super(img);
         }
-        
+
         @Override
         protected Node doGetPresenter() {
             ImageView imgView = new ImageView((getValue()));
@@ -123,7 +123,7 @@ public class CssValuePresenterFactory {
             return imgView;
         }
     }
-    
+
     private class DefaultValuePresenter extends CssValuePresenter<Object> {
         private DefaultValuePresenter(Object val){
             super(val);

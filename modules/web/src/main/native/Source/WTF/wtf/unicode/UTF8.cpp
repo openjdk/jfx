@@ -21,7 +21,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -126,7 +126,7 @@ int decodeUTF8Sequence(const char* sequence)
 static const unsigned char firstByteMark[7] = { 0x00, 0x00, 0xC0, 0xE0, 0xF0, 0xF8, 0xFC };
 
 ConversionResult convertLatin1ToUTF8(
-                                     const LChar** sourceStart, const LChar* sourceEnd, 
+                                     const LChar** sourceStart, const LChar* sourceEnd,
                                      char** targetStart, char* targetEnd)
 {
     ConversionResult result = conversionOK;
@@ -136,7 +136,7 @@ ConversionResult convertLatin1ToUTF8(
         UChar32 ch;
         unsigned short bytesToWrite = 0;
         const UChar32 byteMask = 0xBF;
-        const UChar32 byteMark = 0x80; 
+        const UChar32 byteMark = 0x80;
         const LChar* oldSource = source; // In case we have to back up because of target overflow.
         ch = static_cast<unsigned short>(*source++);
 
@@ -169,7 +169,7 @@ ConversionResult convertLatin1ToUTF8(
 }
 
 ConversionResult convertUTF16ToUTF8(
-    const UChar** sourceStart, const UChar* sourceEnd, 
+    const UChar** sourceStart, const UChar* sourceEnd,
     char** targetStart, char* targetEnd, bool strict)
 {
     ConversionResult result = conversionOK;
@@ -179,7 +179,7 @@ ConversionResult convertUTF16ToUTF8(
         UChar32 ch;
         unsigned short bytesToWrite = 0;
         const UChar32 byteMask = 0xBF;
-        const UChar32 byteMark = 0x80; 
+        const UChar32 byteMark = 0x80;
         const UChar* oldSource = source; // In case we have to back up because of target overflow.
         ch = static_cast<unsigned short>(*source++);
         // If we have a surrogate pair, convert to UChar32 first.
@@ -297,7 +297,7 @@ static inline UChar32 readUTF8Sequence(const char*& sequence, unsigned length)
 }
 
 ConversionResult convertUTF8ToUTF16(
-    const char** sourceStart, const char* sourceEnd, 
+    const char** sourceStart, const char* sourceEnd,
     UChar** targetStart, UChar* targetEnd, bool* sourceAllASCII, bool strict)
 {
     ConversionResult result = conversionOK;

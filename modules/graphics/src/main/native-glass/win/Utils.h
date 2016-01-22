@@ -182,7 +182,7 @@ public:
 
         // "-1" because this is a _double_ null terminated string
         wcsncpy_s(wszStr + m_length, m_limit - m_length - 1, wszSrc, count);
-        m_length += count; 
+        m_length += count;
         if (m_length > m_limit) {
             m_length = m_limit;
         }
@@ -315,7 +315,7 @@ public:
         if (m_globalJRef) {
             env->DeleteGlobalRef((jobject)m_globalJRef);
         }
-        m_globalJRef = (T)(localJRef 
+        m_globalJRef = (T)(localJRef
             ? env->NewGlobalRef((jobject)localJRef)
             : NULL);
     }
@@ -486,7 +486,7 @@ typedef struct _tagJavaIDs {
     } CommonDialogs;
     struct {
         jmethodID run;
-    } Runnable; 
+    } Runnable;
     struct {
         jmethodID add;
     } List;

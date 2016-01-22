@@ -44,8 +44,8 @@
   #include "dalvikInput.h"
 #else
   #include "androidInput.h"
-#endif 
-#endif 
+#endif
+#endif
 //********************************************************
 
 // JNI handles ******************************************
@@ -186,11 +186,11 @@ static void initIDs(JNIEnv *env) {
             (*env)->NewGlobalRef(env,
                                  (*env)->FindClass(env, "com/sun/glass/ui/Window"));
     CHECK_AND_RET_VOID(env);
-    jGlassWindowClass_Add =  
+    jGlassWindowClass_Add =
         (*env)->GetStaticMethodID(env, jGlassWindowClass, "add",
                                   "(Lcom/sun/glass/ui/Window;)V");
     CHECK_AND_RET_VOID(env);
-    jGlassWindowClass_Remove =  
+    jGlassWindowClass_Remove =
         (*env)->GetStaticMethodID(env, jGlassWindowClass, "remove",
                                   "(Lcom/sun/glass/ui/Window;)V");
 
@@ -215,15 +215,15 @@ static void load_porting_library() {
     jboolean (*lens_platform_init)(LensNativePort*) = 0;
     const char* liblens_porting = "liblens_porting.so";
 
-#ifdef ANDROID_NDK    
+#ifdef ANDROID_NDK
     //Get the data path. All .so are installed in lib.
     const char *path = android_getDataDir();
-    char *libpath = (char *) calloc(strlen(path) + strlen(liblens_porting) + 
+    char *libpath = (char *) calloc(strlen(path) + strlen(liblens_porting) +
                                     + strlen("/lib/") + 1, 1);
     strcpy(libpath, path);
     strcat(libpath, "/lib/");
     strcat(libpath, liblens_porting);
-    
+
     void *dlhand = dlopen(libpath, RTLD_LAZY | RTLD_GLOBAL);
     if (!dlhand) {
         LOGE("GLASS", "dlopen failed. %s", dlerror());
@@ -233,11 +233,11 @@ static void load_porting_library() {
         if (!lens_platform_init) {
             LOGE("GLASS", "lens_platform_initialize missing. %s", dlerror());
             exit(-1);
-        }    
+        }
     }
     free(path);
     free(libpath);
-#else    
+#else
     Dl_info dlinfo;
     if (dladdr(&lens_wm_initialize, &dlinfo)) {
 
@@ -248,7 +248,7 @@ static void load_porting_library() {
             strncpy(b, dlinfo.dli_fname,rslash);
             strcpy(b + rslash, liblens_porting);
 
-            void *dlhand = dlopen(b,RTLD_NOW); 
+            void *dlhand = dlopen(b,RTLD_NOW);
             if (dlhand) {
                 lens_platform_init = dlsym(dlhand, "lens_platform_initialize");
                 if (!lens_platform_init) {
@@ -521,7 +521,7 @@ void glass_application_notifyMouseEvent(JNIEnv *env,
         }
 
         if (isPopupTrigger && window->view) {
-            //we need to explictly notify the view for menu event in order 
+            //we need to explictly notify the view for menu event in order
             //for the application's OnContextMenuRequested handler to be called
             glass_application_notifyMenuEvent(env, window->view,
                                               x, y, absx, absy,

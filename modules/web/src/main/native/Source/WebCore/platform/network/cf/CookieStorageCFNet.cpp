@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -56,11 +56,11 @@ static void notifyCookiesChanged(CFHTTPCookieStorageRef, void *)
 
 static inline CFRunLoopRef cookieStorageObserverRunLoop()
 {
-    // We're using the loader run loop because we need a CFRunLoop to 
+    // We're using the loader run loop because we need a CFRunLoop to
     // call the CFNetwork cookie storage APIs with. Re-using the loader
     // run loop is less overhead than starting a new thread to just listen
     // for changes in cookies.
-    
+
     // FIXME: The loaderRunLoop function name should be a little more generic.
     return loaderRunLoop();
 }

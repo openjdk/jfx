@@ -274,9 +274,9 @@ public class ContentModel {
         double SHIFT_MULTIPLIER = 0.1;
         double ALT_MULTIPLIER = 0.5;
         //System.out.println("--> handleKeyboard>handle");
-        
+
         // event.getEventType();
-        
+
         switch (event.getCode()) {
             case F:
                 if (event.isControlDown()) {
@@ -293,7 +293,7 @@ public class ContentModel {
                     cameraXform.ry.setAngle(0.0);
                     cameraXform.rx.setAngle(0.0);
                     camera.setTranslateZ(-300.0);
-                }   
+                }
                 cameraXform2.t.setX(0.0);
                 cameraXform2.t.setY(0.0);
                 break;
@@ -311,16 +311,16 @@ public class ContentModel {
             */
             case UP:
                 if (event.isControlDown() && event.isShiftDown()) {
-                    cameraXform2.t.setY(cameraXform2.t.getY() - 10.0*CONTROL_MULTIPLIER);  
-                }  
+                    cameraXform2.t.setY(cameraXform2.t.getY() - 10.0*CONTROL_MULTIPLIER);
+                }
                 else if (event.isAltDown() && event.isShiftDown()) {
-                    cameraXform.rx.setAngle(cameraXform.rx.getAngle() - 10.0*ALT_MULTIPLIER);  
+                    cameraXform.rx.setAngle(cameraXform.rx.getAngle() - 10.0*ALT_MULTIPLIER);
                 }
                 else if (event.isControlDown()) {
-                    cameraXform2.t.setY(cameraXform2.t.getY() - 1.0*CONTROL_MULTIPLIER);  
+                    cameraXform2.t.setY(cameraXform2.t.getY() - 1.0*CONTROL_MULTIPLIER);
                 }
                 else if (event.isAltDown()) {
-                    cameraXform.rx.setAngle(cameraXform.rx.getAngle() - 2.0*ALT_MULTIPLIER);  
+                    cameraXform.rx.setAngle(cameraXform.rx.getAngle() - 2.0*ALT_MULTIPLIER);
                 }
                 else if (event.isShiftDown()) {
                     double z = camera.getTranslateZ();
@@ -330,16 +330,16 @@ public class ContentModel {
                 break;
             case DOWN:
                 if (event.isControlDown() && event.isShiftDown()) {
-                    cameraXform2.t.setY(cameraXform2.t.getY() + 10.0*CONTROL_MULTIPLIER);  
-                }  
+                    cameraXform2.t.setY(cameraXform2.t.getY() + 10.0*CONTROL_MULTIPLIER);
+                }
                 else if (event.isAltDown() && event.isShiftDown()) {
-                    cameraXform.rx.setAngle(cameraXform.rx.getAngle() + 10.0*ALT_MULTIPLIER);  
+                    cameraXform.rx.setAngle(cameraXform.rx.getAngle() + 10.0*ALT_MULTIPLIER);
                 }
                 else if (event.isControlDown()) {
-                    cameraXform2.t.setY(cameraXform2.t.getY() + 1.0*CONTROL_MULTIPLIER);  
+                    cameraXform2.t.setY(cameraXform2.t.getY() + 1.0*CONTROL_MULTIPLIER);
                 }
                 else if (event.isAltDown()) {
-                    cameraXform.rx.setAngle(cameraXform.rx.getAngle() + 2.0*ALT_MULTIPLIER);  
+                    cameraXform.rx.setAngle(cameraXform.rx.getAngle() + 2.0*ALT_MULTIPLIER);
                 }
                 else if (event.isShiftDown()) {
                     double z = camera.getTranslateZ();
@@ -349,13 +349,13 @@ public class ContentModel {
                 break;
             case RIGHT:
                 if (event.isControlDown() && event.isShiftDown()) {
-                    cameraXform2.t.setX(cameraXform2.t.getX() + 10.0*CONTROL_MULTIPLIER);  
-                }  
+                    cameraXform2.t.setX(cameraXform2.t.getX() + 10.0*CONTROL_MULTIPLIER);
+                }
                 else if (event.isAltDown() && event.isShiftDown()) {
-                    cameraXform.ry.setAngle(cameraXform.ry.getAngle() - 10.0*ALT_MULTIPLIER);  
+                    cameraXform.ry.setAngle(cameraXform.ry.getAngle() - 10.0*ALT_MULTIPLIER);
                 }
                 else if (event.isControlDown()) {
-                    cameraXform2.t.setX(cameraXform2.t.getX() + 1.0*CONTROL_MULTIPLIER);  
+                    cameraXform2.t.setX(cameraXform2.t.getX() + 1.0*CONTROL_MULTIPLIER);
                 }
                 else if (event.isShiftDown()) {
                     currentTime = timeline.getCurrentTime();
@@ -363,7 +363,7 @@ public class ContentModel {
                     // timeline.jumpTo(Duration.seconds(currentTime.toSeconds() + ONE_FRAME));
                 }
                 else if (event.isAltDown()) {
-                    cameraXform.ry.setAngle(cameraXform.ry.getAngle() - 2.0*ALT_MULTIPLIER);  
+                    cameraXform.ry.setAngle(cameraXform.ry.getAngle() - 2.0*ALT_MULTIPLIER);
                 }
                 else {
                     currentTime = timeline.getCurrentTime();
@@ -373,13 +373,13 @@ public class ContentModel {
                 break;
             case LEFT:
                 if (event.isControlDown() && event.isShiftDown()) {
-                    cameraXform2.t.setX(cameraXform2.t.getX() - 10.0*CONTROL_MULTIPLIER);  
-                }  
+                    cameraXform2.t.setX(cameraXform2.t.getX() - 10.0*CONTROL_MULTIPLIER);
+                }
                 else if (event.isAltDown() && event.isShiftDown()) {
                     cameraXform.ry.setAngle(cameraXform.ry.getAngle() + 10.0*ALT_MULTIPLIER);  // -
                 }
                 else if (event.isControlDown()) {
-                    cameraXform2.t.setX(cameraXform2.t.getX() - 1.0*CONTROL_MULTIPLIER);  
+                    cameraXform2.t.setX(cameraXform2.t.getX() - 1.0*CONTROL_MULTIPLIER);
                 }
                 else if (event.isShiftDown()) {
                     currentTime = timeline.getCurrentTime();
@@ -460,10 +460,10 @@ public class ContentModel {
         // subScene.addEventFilter(KeyEvent.ANY, keyEventHandler);
         subScene.addEventHandler(ZoomEvent.ANY, zoomEventHandler);
         subScene.addEventHandler(ScrollEvent.ANY, scrollEventHandler);
-        
+
         // Scene scene = subScene.getScene();
         // scene.addEventFilter(KeyEvent.ANY, keyEventHandler);
-        
+
         /*
         subScene.sceneProperty().addListener(new ChangeListener() {
             @Override
@@ -663,7 +663,7 @@ public class ContentModel {
             for (Node child: ((Parent)node).getChildrenUnmodifiable()) setBoundaryMode(child, boundaryMode);
         }
     }
-    
+
     public SubdivisionMesh.MapBorderMode getMapBorderMode() {
         return mapBorderMode;
     }
@@ -707,18 +707,18 @@ public class ContentModel {
         final PhongMaterial blueMaterial = new PhongMaterial();
         blueMaterial.setDiffuseColor(Color.DARKBLUE);
         blueMaterial.setSpecularColor(Color.BLUE);
-        
+
         xSphere = new Sphere(radius);
         ySphere = new Sphere(radius);
         zSphere = new Sphere(radius);
         xSphere.setMaterial(redMaterial);
         ySphere.setMaterial(greenMaterial);
         zSphere.setMaterial(blueMaterial);
-        
+
         xSphere.setTranslateX(100.0);
         ySphere.setTranslateY(100.0);
         zSphere.setTranslateZ(100.0);
-        
+
         xAxis = new Box(length, width, width);
         yAxis = new Box(width, length, width);
         zAxis = new Box(width, width, length);

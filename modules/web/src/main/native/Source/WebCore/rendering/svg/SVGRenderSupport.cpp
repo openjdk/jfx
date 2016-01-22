@@ -87,8 +87,8 @@ void SVGRenderSupport::mapLocalToContainer(const RenderElement& renderer, const 
 
     ASSERT(renderer.parent());
     auto& parent = *renderer.parent();
-    
-    // At the SVG/HTML boundary (aka RenderSVGRoot), we apply the localToBorderBoxTransform 
+
+    // At the SVG/HTML boundary (aka RenderSVGRoot), we apply the localToBorderBoxTransform
     // to map an element from SVG viewport coordinates to CSS box coordinates.
     // RenderSVGRoot's mapLocalToContainer method expects CSS box coordinates.
     if (parent.isSVGRoot())
@@ -105,7 +105,7 @@ const RenderElement* SVGRenderSupport::pushMappingToContainer(const RenderElemen
     ASSERT(renderer.parent());
     auto& parent = *renderer.parent();
 
-    // At the SVG/HTML boundary (aka RenderSVGRoot), we apply the localToBorderBoxTransform 
+    // At the SVG/HTML boundary (aka RenderSVGRoot), we apply the localToBorderBoxTransform
     // to map an element from SVG viewport coordinates to CSS box coordinates.
     // RenderSVGRoot's mapLocalToContainer method expects CSS box coordinates.
     if (parent.isSVGRoot()) {

@@ -6,13 +6,13 @@
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
  * are met:
- * 
+ *
  * 1. Redistributions of source code must retain the above copyright
  *    notice, this list of conditions and the following disclaimer.
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
  * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
  * OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
@@ -345,7 +345,7 @@ inline Parser::Token Parser::nextTokenInternal()
         // Any chance it's an axis name?
         if (peekCurHelper() == ':') {
             m_nextPos++;
-            
+
             //It might be an axis name.
             Step::Axis axis;
             if (parseAxisName(name, axis))
@@ -360,12 +360,12 @@ inline Parser::Token Parser::nextTokenInternal()
             m_nextPos++;
             return Token(NAMETEST, name + ":*");
         }
-        
+
         // Make a full qname.
         String n2;
         if (!lexNCName(n2))
             return Token(XPATH_ERROR);
-        
+
         name = name + ":" + n2;
     }
 

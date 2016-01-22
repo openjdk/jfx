@@ -124,7 +124,7 @@ public class TableViewTest {
                 new Person("Emma", "Jones", "emma.jones@example.com"),
                 new Person("Michael", "Brown", "michael.brown@example.com"));
     }
-    
+
 
     /*********************************************************************
      * Tests for the constructors                                        *
@@ -141,15 +141,15 @@ public class TableViewTest {
     @Test public void noArgConstructorSetsNonNullItems() {
         assertNotNull(table.getItems());
     }
-    
+
     @Test public void noArgConstructorSetsNonNullSortPolicy() {
         assertNotNull(table.getSortPolicy());
     }
-    
+
     @Test public void noArgConstructorSetsNullComparator() {
         assertNull(table.getComparator());
     }
-    
+
     @Test public void noArgConstructorSetsNullOnSort() {
         assertNull(table.getOnSort());
     }
@@ -243,86 +243,86 @@ public class TableViewTest {
         assertEquals(1, sm.getSelectedIndex());
         assertSame("Orange", sm.getSelectedItem());
     }
-    
+
     @Test public void ensureSelectionClearsWhenAllItemsAreRemoved_selectIndex0() {
         table.getItems().addAll("Apple", "Orange", "Banana");
         sm.select(0);
         table.getItems().clear();
         assertEquals(-1, sm.getSelectedIndex());
     }
-    
+
     @Test public void ensureSelectionClearsWhenAllItemsAreRemoved_selectIndex2() {
         table.getItems().addAll("Apple", "Orange", "Banana");
         sm.select(2);
         table.getItems().clear();
         assertEquals(-1, sm.getSelectedIndex());
     }
-    
+
     @Test public void ensureSelectedItemRemainsAccurateWhenItemsAreCleared() {
         table.getItems().addAll("Apple", "Orange", "Banana");
         sm.select(2);
         table.getItems().clear();
         assertNull("Selected Item: " + sm.getSelectedItem(), sm.getSelectedItem());
         assertEquals(-1, sm.getSelectedIndex());
-        
+
         table.getItems().addAll("Kiwifruit", "Mandarin", "Pineapple");
         sm.select(2);
         assertEquals("Pineapple", sm.getSelectedItem());
     }
-    
+
     @Ignore("Not fixed yet")
     @Test public void ensureSelectionShiftsDownWhenOneNewItemIsAdded() {
         table.getItems().addAll("Apple", "Orange", "Banana");
         sm.select(1);
         assertEquals(1, sm.getSelectedIndex());
         assertEquals("Orange", sm.getSelectedItem());
-        
+
         table.getItems().add(0, "Kiwifruit");
         assertEquals(2, sm.getSelectedIndex());
         assertEquals("Orange", sm.getSelectedItem());
     }
-    
+
     @Ignore("Not fixed yet")
     @Test public void ensureSelectionShiftsDownWhenMultipleNewItemAreAdded() {
         table.getItems().addAll("Apple", "Orange", "Banana");
         sm.select(1);
         assertEquals(1, sm.getSelectedIndex());
         assertEquals("Orange", sm.getSelectedItem());
-        
+
         table.getItems().addAll(0, Arrays.asList("Kiwifruit", "Pineapple", "Mandarin"));
         assertEquals("Orange", sm.getSelectedItem());
         assertEquals(4, sm.getSelectedIndex());
     }
-    
+
     @Ignore("Not fixed yet")
     @Test public void ensureSelectionShiftsDownWhenOneItemIsRemoved() {
         table.getItems().addAll("Apple", "Orange", "Banana");
         sm.select(1);
         assertEquals(1, sm.getSelectedIndex());
         assertEquals("Orange", sm.getSelectedItem());
-        
+
         table.getItems().remove("Apple");
         assertEquals(0, sm.getSelectedIndex());
         assertEquals("Orange", sm.getSelectedItem());
     }
-    
+
     @Ignore("Not fixed yet")
     @Test public void ensureSelectionShiftsDownWheMultipleItemsAreRemoved() {
         table.getItems().addAll("Apple", "Orange", "Banana");
         sm.select(2);
         assertEquals(2, sm.getSelectedIndex());
         assertEquals("Banana", sm.getSelectedItem());
-        
+
         table.getItems().removeAll(Arrays.asList("Apple", "Orange"));
         assertEquals(0, sm.getSelectedIndex());
         assertEquals("Banana", sm.getSelectedItem());
     }
-    
+
     @Test public void ensureSelectionIsCorrectWhenItemsChange() {
         table.setItems(FXCollections.observableArrayList("Item 1"));
         sm.select(0);
         assertEquals("Item 1", sm.getSelectedItem());
-        
+
         table.setItems(FXCollections.observableArrayList("Item 2"));
         assertEquals(-1, sm.getSelectedIndex());
         assertNull(sm.getSelectedItem());
@@ -359,7 +359,7 @@ public class TableViewTest {
         table.getColumns().remove(col1);
         assertEquals(0, table.getVisibleLeafColumns().size());
     }
-    
+
     @Test public void testSortOrderCleanup() {
 //        ObservableList<ObservablePerson> persons = ObservablePerson.createFXPersonList();
         TableView table = new TableView();
@@ -371,20 +371,20 @@ public class TableViewTest {
         table.getSortOrder().setAll(first, second);
         table.getColumns().remove(first);
         assertFalse(table.getSortOrder().contains(first));
-    } 
-    
-    
+    }
+
+
     /*********************************************************************
      * Tests for new sorting API in JavaFX 8.0                           *
      ********************************************************************/
-    
+
     // TODO test for sort policies returning null
     // TODO test for changing column sortType out of order
     // TODO test comparator returns to original when sort fails / is consumed
-    
+
     private static final Callback<TableView<String>, Boolean> NO_SORT_FAILED_SORT_POLICY =
             tableView -> false;
-    
+
     private static final Callback<TableView<String>, Boolean> SORT_SUCCESS_ASCENDING_SORT_POLICY =
             tableView -> {
                 if (tableView.getSortOrder().isEmpty()) return true;
@@ -395,7 +395,7 @@ public class TableViewTest {
                 });
                 return true;
             };
-    
+
     private TableColumn<String, String> initSortTestStructure() {
         TableColumn<String, String> col = new TableColumn<String, String>("column");
         col.setSortType(ASCENDING);
@@ -404,35 +404,35 @@ public class TableViewTest {
         table.getItems().addAll("Apple", "Orange", "Banana");
         return col;
     }
-    
+
     @Ignore("This test is only valid if sort event consumption should revert changes")
     @Test public void testSortEventCanBeConsumedToStopSortOccurring_changeSortOrderList() {
         TableColumn<String, String> col = initSortTestStructure();
         table.setOnSort(event -> {
             event.consume();
         });
-        
+
         VirtualFlowTestUtils.assertListContainsItemsInOrder(table.getItems(), "Apple", "Orange", "Banana");
         table.getSortOrder().add(col);
         VirtualFlowTestUtils.assertListContainsItemsInOrder(table.getItems(), "Apple", "Orange", "Banana");
-        
+
         // the sort order list should be returned back to its original state
         assertTrue(table.getSortOrder().isEmpty());
     }
-    
+
     @Test public void testSortEventCanBeNotConsumedToAllowSortToOccur_changeSortOrderList() {
         TableColumn<String, String> col = initSortTestStructure();
         table.setOnSort(event -> {
             // do not consume here - this allows the sort to happen
         });
-        
+
         VirtualFlowTestUtils.assertListContainsItemsInOrder(table.getItems(), "Apple", "Orange", "Banana");
         table.getSortOrder().add(col);
         VirtualFlowTestUtils.assertListContainsItemsInOrder(table.getItems(), "Apple", "Banana", "Orange");
-        
+
         VirtualFlowTestUtils.assertListContainsItemsInOrder(table.getSortOrder(), col);
     }
-    
+
     @Ignore("This test is only valid if sort event consumption should revert changes")
     @Test public void testSortEventCanBeConsumedToStopSortOccurring_changeColumnSortType_AscendingToDescending() {
         TableColumn<String, String> col = initSortTestStructure();
@@ -441,19 +441,19 @@ public class TableViewTest {
         table.setOnSort(event -> {
             event.consume();
         });
-        
+
         VirtualFlowTestUtils.assertListContainsItemsInOrder(table.getItems(), "Apple", "Banana", "Orange");
-        
+
         // when we change from ASCENDING to DESCENDING we don't expect the sort
         // to actually change (and in fact we expect the sort type to resort
         // back to being ASCENDING)
         col.setSortType(DESCENDING);
         VirtualFlowTestUtils.assertListContainsItemsInOrder(table.getItems(), "Apple", "Banana", "Orange");
         assertEquals(ASCENDING, col.getSortType());
-        
+
         VirtualFlowTestUtils.assertListContainsItemsInOrder(table.getSortOrder(), col);
     }
-    
+
     @Test public void testSortEventCanBeNotConsumedToAllowSortToOccur_changeColumnSortType_AscendingToDescending() {
         TableColumn<String, String> col = initSortTestStructure();
         assertEquals(ASCENDING, col.getSortType());
@@ -461,16 +461,16 @@ public class TableViewTest {
         table.setOnSort(event -> {
             // do not consume here - this allows the sort to happen
         });
-        
+
         VirtualFlowTestUtils.assertListContainsItemsInOrder(table.getItems(), "Apple", "Banana", "Orange");
-        
+
         col.setSortType(DESCENDING);
         VirtualFlowTestUtils.assertListContainsItemsInOrder(table.getItems(), "Orange", "Banana", "Apple");
         assertEquals(DESCENDING, col.getSortType());
-        
+
         VirtualFlowTestUtils.assertListContainsItemsInOrder(table.getSortOrder(), col);
     }
-    
+
     @Ignore("This test is only valid if sort event consumption should revert changes")
     @Test public void testSortEventCanBeConsumedToStopSortOccurring_changeColumnSortType_DescendingToNull() {
         TableColumn<String, String> col = initSortTestStructure();
@@ -480,16 +480,16 @@ public class TableViewTest {
         table.setOnSort(event -> {
             event.consume();
         });
-        
+
         VirtualFlowTestUtils.assertListContainsItemsInOrder(table.getItems(), "Orange", "Banana", "Apple");
-        
+
         col.setSortType(null);
         VirtualFlowTestUtils.assertListContainsItemsInOrder(table.getItems(), "Orange", "Banana", "Apple");
         assertEquals(DESCENDING, col.getSortType());
-        
+
         VirtualFlowTestUtils.assertListContainsItemsInOrder(table.getSortOrder(), col);
     }
-    
+
     @Test public void testSortEventCanBeNotConsumedToAllowSortToOccur_changeColumnSortType_DescendingToNull() {
         TableColumn<String, String> col = initSortTestStructure();
         col.setSortType(DESCENDING);
@@ -498,16 +498,16 @@ public class TableViewTest {
         table.setOnSort(event -> {
             // do not consume here - this allows the sort to happen
         });
-        
+
         VirtualFlowTestUtils.assertListContainsItemsInOrder(table.getItems(), "Orange", "Banana", "Apple");
-        
+
         col.setSortType(null);
         VirtualFlowTestUtils.assertListContainsItemsInOrder(table.getItems(), "Orange", "Banana", "Apple");
         assertNull(col.getSortType());
-        
+
         VirtualFlowTestUtils.assertListContainsItemsInOrder(table.getSortOrder(), col);
     }
-    
+
     @Ignore("This test is only valid if sort event consumption should revert changes")
     @Test public void testSortEventCanBeConsumedToStopSortOccurring_changeColumnSortType_NullToAscending() {
         TableColumn<String, String> col = initSortTestStructure();
@@ -517,16 +517,16 @@ public class TableViewTest {
         table.setOnSort(event -> {
             event.consume();
         });
-        
+
         VirtualFlowTestUtils.assertListContainsItemsInOrder(table.getItems(), "Apple", "Orange", "Banana");
-        
+
         col.setSortType(ASCENDING);
         VirtualFlowTestUtils.assertListContainsItemsInOrder(table.getItems(), "Apple", "Orange", "Banana");
         assertNull(col.getSortType());
-        
+
         VirtualFlowTestUtils.assertListContainsItemsInOrder(table.getSortOrder(), col);
     }
-    
+
     @Test public void testSortEventCanBeNotConsumedToAllowSortToOccur_changeColumnSortType_NullToAscending() {
         TableColumn<String, String> col = initSortTestStructure();
         col.setSortType(null);
@@ -535,13 +535,13 @@ public class TableViewTest {
         table.setOnSort(event -> {
             // do not consume here - this allows the sort to happen
         });
-        
+
         VirtualFlowTestUtils.assertListContainsItemsInOrder(table.getItems(), "Apple", "Orange", "Banana");
-        
+
         col.setSortType(ASCENDING);
         VirtualFlowTestUtils.assertListContainsItemsInOrder(table.getItems(), "Apple", "Banana", "Orange");
         assertEquals(ASCENDING, col.getSortType());
-        
+
         VirtualFlowTestUtils.assertListContainsItemsInOrder(table.getSortOrder(), col);
     }
 
@@ -551,7 +551,7 @@ public class TableViewTest {
         assertNull(table.getSortPolicy());
         table.sort();
     }
-    
+
     @Test public void testChangingSortPolicyUpdatesItemsList() {
         TableColumn<String, String> col = initSortTestStructure();
         col.setSortType(DESCENDING);
@@ -561,36 +561,36 @@ public class TableViewTest {
         table.setSortPolicy(SORT_SUCCESS_ASCENDING_SORT_POLICY);
         VirtualFlowTestUtils.assertListContainsItemsInOrder(table.getItems(), "Apple", "Banana", "Orange");
     }
-    
+
     @Test public void testChangingSortPolicyDoesNotUpdateItemsListWhenTheSortOrderListIsEmpty() {
         TableColumn<String, String> col = initSortTestStructure();
         col.setSortType(DESCENDING);
         VirtualFlowTestUtils.assertListContainsItemsInOrder(table.getItems(), "Apple", "Orange", "Banana");
-        
+
         table.setSortPolicy(SORT_SUCCESS_ASCENDING_SORT_POLICY);
         VirtualFlowTestUtils.assertListContainsItemsInOrder(table.getItems(), "Apple", "Orange", "Banana");
     }
-    
+
     @Test public void testFailedSortPolicyBacksOutLastChange_sortOrderAddition() {
         TableColumn<String, String> col = initSortTestStructure();
         col.setSortType(DESCENDING);
         VirtualFlowTestUtils.assertListContainsItemsInOrder(table.getItems(), "Apple", "Orange", "Banana");
         table.setSortPolicy(NO_SORT_FAILED_SORT_POLICY);
-        
+
         table.getSortOrder().add(col);
-        
-        // no sort should be run (as we have a custom sort policy), and the 
+
+        // no sort should be run (as we have a custom sort policy), and the
         // sortOrder list should be empty as the sortPolicy failed
         VirtualFlowTestUtils.assertListContainsItemsInOrder(table.getItems(), "Apple", "Orange", "Banana");
         assertTrue(table.getSortOrder().isEmpty());
     }
-    
+
     @Test public void testFailedSortPolicyBacksOutLastChange_sortOrderRemoval() {
         TableColumn<String, String> col = initSortTestStructure();
         col.setSortType(DESCENDING);
         table.getSortOrder().add(col);
         VirtualFlowTestUtils.assertListContainsItemsInOrder(table.getItems(), "Orange", "Banana", "Apple");
-        
+
         table.setSortPolicy(NO_SORT_FAILED_SORT_POLICY);
 
         // even though we remove the column from the sort order here, because the
@@ -600,88 +600,88 @@ public class TableViewTest {
         VirtualFlowTestUtils.assertListContainsItemsInOrder(table.getItems(), "Orange", "Banana", "Apple");
         VirtualFlowTestUtils.assertListContainsItemsInOrder(table.getSortOrder(), col);
     }
-    
+
     @Test public void testFailedSortPolicyBacksOutLastChange_sortTypeChange_ascendingToDescending() {
         TableColumn<String, String> col = initSortTestStructure();
         col.setSortType(ASCENDING);
         table.getSortOrder().add(col);
         VirtualFlowTestUtils.assertListContainsItemsInOrder(table.getItems(), "Apple", "Banana", "Orange");
-        
+
         table.setSortPolicy(NO_SORT_FAILED_SORT_POLICY);
 
         col.setSortType(DESCENDING);
         VirtualFlowTestUtils.assertListContainsItemsInOrder(table.getItems(), "Apple", "Banana", "Orange");
         assertEquals(ASCENDING, col.getSortType());
     }
-    
+
     @Test public void testFailedSortPolicyBacksOutLastChange_sortTypeChange_descendingToNull() {
         TableColumn<String, String> col = initSortTestStructure();
         col.setSortType(DESCENDING);
         table.getSortOrder().add(col);
         VirtualFlowTestUtils.assertListContainsItemsInOrder(table.getItems(), "Orange", "Banana", "Apple");
-        
+
         table.setSortPolicy(NO_SORT_FAILED_SORT_POLICY);
 
         col.setSortType(null);
         VirtualFlowTestUtils.assertListContainsItemsInOrder(table.getItems(), "Orange", "Banana", "Apple");
         assertEquals(DESCENDING, col.getSortType());
     }
-    
+
     @Test public void testFailedSortPolicyBacksOutLastChange_sortTypeChange_nullToAscending() {
         TableColumn<String, String> col = initSortTestStructure();
         col.setSortType(null);
         table.getSortOrder().add(col);
         VirtualFlowTestUtils.assertListContainsItemsInOrder(table.getItems(), "Apple", "Orange", "Banana");
-        
+
         table.setSortPolicy(NO_SORT_FAILED_SORT_POLICY);
 
         col.setSortType(ASCENDING);
         VirtualFlowTestUtils.assertListContainsItemsInOrder(table.getItems(), "Apple", "Orange", "Banana");
         assertNull(col.getSortType());
     }
-    
+
     @Test public void testComparatorChangesInSyncWithSortOrder_1() {
         TableColumn<String, String> col = initSortTestStructure();
         assertNull(table.getComparator());
         assertTrue(table.getSortOrder().isEmpty());
-        
+
         table.getSortOrder().add(col);
         TableColumnComparator c = (TableColumnComparator)table.getComparator();
         assertNotNull(c);
         VirtualFlowTestUtils.assertListContainsItemsInOrder(c.getColumns(), col);
     }
-    
+
     @Ignore
     @Test public void testComparatorChangesInSyncWithSortOrder_2() {
         // same as test above
         TableColumn<String, String> col = initSortTestStructure();
         assertNull(table.getComparator());
         assertTrue(table.getSortOrder().isEmpty());
-        
+
         table.getSortOrder().add(col);
         TableColumnComparator c = (TableColumnComparator)table.getComparator();
         assertNotNull(c);
         VirtualFlowTestUtils.assertListContainsItemsInOrder(c.getColumns(), col);
-        
+
         // now remove column from sort order, and the comparator should go to
         // being null
         table.getSortOrder().remove(col);
         assertNull(table.getComparator());
     }
-    
+
     @Test public void testFailedSortPolicyBacksOutComparatorChange_sortOrderAddition() {
         TableColumn<String, String> col = initSortTestStructure();
         final TableColumnComparator oldComparator = (TableColumnComparator)table.getComparator();
-        
+
         col.setSortType(DESCENDING);
         VirtualFlowTestUtils.assertListContainsItemsInOrder(table.getItems(), "Apple", "Orange", "Banana");
         table.setSortPolicy(NO_SORT_FAILED_SORT_POLICY);
-        
+
         table.getSortOrder().add(col);
-        
+
         assertEquals(oldComparator, table.getComparator());
     }
-    
+
     @Test public void testFailedSortPolicyBacksOutComparatorChange_sortOrderRemoval() {
         TableColumn<String, String> col = initSortTestStructure();
         TableColumnComparator oldComparator = (TableColumnComparator)table.getComparator();
@@ -692,23 +692,23 @@ public class TableViewTest {
         VirtualFlowTestUtils.assertListContainsItemsInOrder(table.getItems(), "Orange", "Banana", "Apple");
         oldComparator = (TableColumnComparator)table.getComparator();
         VirtualFlowTestUtils.assertListContainsItemsInOrder(oldComparator.getColumns(), col);
-        
+
         table.setSortPolicy(NO_SORT_FAILED_SORT_POLICY);
         table.getSortOrder().remove(col);
-        
+
         assertTrue(table.getSortOrder().contains(col));
         VirtualFlowTestUtils.assertListContainsItemsInOrder(oldComparator.getColumns(), col);
     }
-    
+
     @Test public void testFailedSortPolicyBacksOutComparatorChange_sortTypeChange() {
         TableColumn<String, String> col = initSortTestStructure();
         final TableColumnComparator oldComparator = (TableColumnComparator)table.getComparator();
         assertNull(oldComparator);
-        
+
         table.setSortPolicy(NO_SORT_FAILED_SORT_POLICY);
         table.getSortOrder().add(col);
         col.setSortType(ASCENDING);
-        
+
         assertTrue(table.getSortOrder().isEmpty());
         assertNull(oldComparator);
     }
@@ -726,21 +726,21 @@ public class TableViewTest {
         assertTrue(table.getSortOrder().isEmpty());
         assertNull(table.getComparator());
     }
-    
-    
-    
+
+
+
     /*********************************************************************
      * Tests for specific bugs                                           *
      ********************************************************************/
     @Test public void test_rt16019() {
-        // RT-16019: NodeMemory TableView tests fail with 
+        // RT-16019: NodeMemory TableView tests fail with
         // IndexOutOfBoundsException (ObservableListWrapper.java:336)
         TableView table = new TableView();
         for (int i = 0; i < 1000; i++) {
             table.getItems().add("data " + i);
         }
     }
-    
+
     @Test public void test_rt15793() {
         // ListView/TableView selectedIndex is 0 although the items list is empty
         final TableView tv = new TableView();
@@ -760,14 +760,14 @@ public class TableViewTest {
         FocusModel fm = lv.getFocusModel();
         lv.getItems().add("row1");
         assertTrue(fm.isFocused(0));
-        
+
         lv.getItems().add(0, "row0");
         assertTrue("Focus is on " + fm.getFocusedIndex(), fm.isFocused(1));
         assertFalse(fm.isFocused(0));
 
         sl.dispose();
     }
-    
+
     @Test public void test_rt17522_focusShouldMoveWhenItemAddedBeforeFocusIndex() {
         final TableView lv = new TableView();
         FocusModel fm = lv.getFocusModel();
@@ -775,13 +775,13 @@ public class TableViewTest {
         fm.focus(1);
         assertTrue(fm.isFocused(1));
         assertEquals("row2", fm.getFocusedItem());
-        
+
         lv.getItems().add(1, "row0");
         assertTrue(fm.isFocused(2));
         assertEquals("row2", fm.getFocusedItem());
         assertFalse(fm.isFocused(1));
     }
-    
+
     @Test public void test_rt17522_focusShouldNotMoveWhenItemAddedAfterFocusIndex() {
         final TableView lv = new TableView();
         FocusModel fm = lv.getFocusModel();
@@ -789,13 +789,13 @@ public class TableViewTest {
         fm.focus(0);
         assertTrue(fm.isFocused(0));
         assertEquals("row1", fm.getFocusedItem());
-        
+
         lv.getItems().add(1, "row2");
         assertTrue(fm.isFocused(0));
         assertEquals("row1", fm.getFocusedItem());
         assertFalse(fm.isFocused(1));
     }
-    
+
     @Test public void test_rt17522_focusShouldBeResetWhenFocusedItemIsRemoved() {
         final TableView lv = new TableView();
         FocusModel fm = lv.getFocusModel();
@@ -806,7 +806,7 @@ public class TableViewTest {
         assertTrue(fm.getFocusedIndex() == -1);
         assertNull(fm.getFocusedItem());
     }
-    
+
     @Test public void test_rt17522_focusShouldMoveWhenItemRemovedBeforeFocusIndex() {
         final TableView lv = new TableView();
         FocusModel fm = lv.getFocusModel();
@@ -816,12 +816,12 @@ public class TableViewTest {
         fm.focus(1);
         assertTrue(fm.isFocused(1));
         assertEquals("row2", fm.getFocusedItem());
-        
+
         lv.getItems().remove("row1");
         assertTrue(fm.isFocused(0));
         assertEquals("row2", fm.getFocusedItem());
     }
-    
+
     @Test public void test_rt17522_focusShouldNotMoveWhenItemRemovedAfterFocusIndex() {
         final TableView lv = new TableView();
         FocusModel fm = lv.getFocusModel();
@@ -829,12 +829,12 @@ public class TableViewTest {
         fm.focus(0);
         assertTrue(fm.isFocused(0));
         assertEquals("row1", fm.getFocusedItem());
-        
+
         lv.getItems().remove("row2");
         assertTrue(fm.isFocused(0));
         assertEquals("row1", fm.getFocusedItem());
     }
-    
+
     @Test public void test_rt18385() {
         table.getItems().addAll("row1", "row2", "row3");
         sm.select(1);
@@ -843,7 +843,7 @@ public class TableViewTest {
         assertEquals(1, sm.getSelectedItems().size());
         assertEquals(1, sm.getSelectedCells().size());
     }
-    
+
     @Test public void test_rt18339_onlyEditWhenTableViewIsEditable_tableEditableIsFalse_columnEditableIsFalse() {
         TableColumn<String,String> first = new TableColumn<String,String>("first");
         first.setEditable(false);
@@ -852,7 +852,7 @@ public class TableViewTest {
         table.edit(1, first);
         assertEquals(null, table.getEditingCell());
     }
-    
+
     @Test public void test_rt18339_onlyEditWhenTableViewIsEditable_tableEditableIsFalse_columnEditableIsTrue() {
         TableColumn<String,String> first = new TableColumn<String,String>("first");
         first.setEditable(true);
@@ -861,7 +861,7 @@ public class TableViewTest {
         table.edit(1, first);
         assertEquals(null, table.getEditingCell());
     }
-    
+
     @Test public void test_rt18339_onlyEditWhenTableViewIsEditable_tableEditableIsTrue_columnEditableIsFalse() {
         TableColumn<String,String> first = new TableColumn<String,String>("first");
         first.setEditable(false);
@@ -870,7 +870,7 @@ public class TableViewTest {
         table.edit(1, first);
         assertEquals(null, table.getEditingCell());
     }
-    
+
     @Test public void test_rt18339_onlyEditWhenTableViewIsEditable_tableEditableIsTrue_columnEditableIsTrue() {
         TableColumn<String,String> first = new TableColumn<String,String>("first");
         first.setEditable(true);
@@ -879,53 +879,53 @@ public class TableViewTest {
         table.edit(1, first);
         assertEquals(new TablePosition(table, 1, first), table.getEditingCell());
     }
-    
+
     @Test public void test_rt14451() {
         table.getItems().addAll("Apple", "Orange", "Banana");
         sm.setSelectionMode(SelectionMode.MULTIPLE);
         sm.selectRange(0, 2); // select from 0 (inclusive) to 2 (exclusive)
         assertEquals(2, sm.getSelectedIndices().size());
     }
-    
+
     @Test public void test_rt21586() {
         table.getItems().setAll("Apple", "Orange", "Banana");
         table.getSelectionModel().select(1);
         assertEquals(1, table.getSelectionModel().getSelectedIndex());
         assertEquals("Orange", table.getSelectionModel().getSelectedItem());
-        
+
         table.getItems().setAll("Kiwifruit", "Pineapple", "Grape");
         assertEquals(-1, table.getSelectionModel().getSelectedIndex());
         assertNull(table.getSelectionModel().getSelectedItem());
         assertEquals(0, table.getFocusModel().getFocusedIndex());
         assertEquals("Kiwifruit", table.getFocusModel().getFocusedItem());
     }
-    
+
     @Test public void test_rt27820_1() {
         table.getItems().setAll("Apple", "Orange");
         table.getSelectionModel().select(0);
         assertEquals(1, table.getSelectionModel().getSelectedItems().size());
         assertEquals("Apple", table.getSelectionModel().getSelectedItem());
-        
+
         table.getItems().clear();
         assertEquals(0, table.getSelectionModel().getSelectedItems().size());
         assertNull(table.getSelectionModel().getSelectedItem());
     }
-    
+
     @Test public void test_rt27820_2() {
         table.getItems().setAll("Apple", "Orange");
         table.getSelectionModel().select(1);
         assertEquals(1, table.getSelectionModel().getSelectedItems().size());
         assertEquals("Orange", table.getSelectionModel().getSelectedItem());
-        
+
         table.getItems().clear();
         assertEquals(0, table.getSelectionModel().getSelectedItems().size());
         assertNull(table.getSelectionModel().getSelectedItem());
     }
-    
+
     @Test public void test_rt28534() {
         TableView<Person> table = new TableView<Person>();
         table.setItems(personTestData);
-        
+
         TableColumn firstNameCol = new TableColumn("First Name");
         firstNameCol.setCellValueFactory(new PropertyValueFactory<Person, String>("firstName"));
 
@@ -936,20 +936,20 @@ public class TableViewTest {
         emailCol.setCellValueFactory(new PropertyValueFactory<Person, String>("email"));
 
         table.getColumns().addAll(firstNameCol, lastNameCol, emailCol);
-        
+
         VirtualFlowTestUtils.assertRowsNotEmpty(table, 0, 5); // rows 0 - 5 should be filled
         VirtualFlowTestUtils.assertRowsEmpty(table, 5, -1); // rows 5+ should be empty
-        
+
         // now we replace the data and expect the cells that have no data
         // to be empty
         table.setItems(FXCollections.observableArrayList(
             new Person("*_*Emma", "Jones", "emma.jones@example.com"),
             new Person("_Michael", "Brown", "michael.brown@example.com")));
-        
+
         VirtualFlowTestUtils.assertRowsNotEmpty(table, 0, 2); // rows 0 - 2 should be filled
         VirtualFlowTestUtils.assertRowsEmpty(table, 2, -1); // rows 2+ should be empty
     }
-    
+
     @Test public void test_rt22463() {
         final TableView<RT_22463_Person> table = new TableView<RT_22463_Person>();
         table.setTableMenuButtonVisible(true);
@@ -958,7 +958,7 @@ public class TableViewTest {
         c1.setCellValueFactory(new PropertyValueFactory<Person, Long>("id"));
         c2.setCellValueFactory(new PropertyValueFactory<Person, String>("name"));
         table.getColumns().addAll(c1, c2);
-        
+
         // before the change things display fine
         RT_22463_Person p1 = new RT_22463_Person();
         p1.setId(1l);
@@ -969,7 +969,7 @@ public class TableViewTest {
         table.setItems(FXCollections.observableArrayList(p1, p2));
         VirtualFlowTestUtils.assertCellTextEquals(table, 0, "1", "name1");
         VirtualFlowTestUtils.assertCellTextEquals(table, 1, "2", "name2");
-        
+
         // now we change the persons but they are still equal as the ID's don't
         // change - but the items list is cleared so the cells should update
         RT_22463_Person new_p1 = new RT_22463_Person();
@@ -983,31 +983,31 @@ public class TableViewTest {
         VirtualFlowTestUtils.assertCellTextEquals(table, 0, "1", "updated name1");
         VirtualFlowTestUtils.assertCellTextEquals(table, 1, "2", "updated name2");
     }
-    
+
     @Test public void test_rt28637() {
         ObservableList<String> items = FXCollections.observableArrayList("String1", "String2", "String3", "String4");
-        
+
         final TableView<String> tableView = new TableView<String>();
         final MultipleSelectionModel sm = tableView.getSelectionModel();
         tableView.setItems(items);
-        
+
         tableView.getSelectionModel().select(0);
         assertEquals("String1", sm.getSelectedItem());
         assertEquals(1, sm.getSelectedItems().size());
         assertEquals("String1", sm.getSelectedItems().get(0));
         assertEquals(0, sm.getSelectedIndex());
-        
+
         items.remove(sm.getSelectedItem());
         assertEquals("String2", sm.getSelectedItem());
         assertEquals(1, sm.getSelectedItems().size());
         assertEquals("String2", sm.getSelectedItems().get(0));
         assertEquals(0, sm.getSelectedIndex());
     }
-    
+
     @Test public void test_rt24844() {
         // p1 == lowest first name
         Person p0, p1, p2, p3, p4;
-        
+
         TableView<Person> table = new TableView<Person>();
         table.setItems(FXCollections.observableArrayList(
             p3 = new Person("Jacob", "Smith", "jacob.smith@example.com"),
@@ -1015,23 +1015,23 @@ public class TableViewTest {
             p1 = new Person("Ethan", "Williams", "ethan.williams@example.com"),
             p0 = new Person("Emma", "Jones", "emma.jones@example.com"),
             p4 = new Person("Michael", "Brown", "michael.brown@example.com")));
-        
+
         TableColumn firstNameCol = new TableColumn("First Name");
         firstNameCol.setCellValueFactory(new PropertyValueFactory<Person, String>("firstName"));
-        
+
         // set dummy comparator to lock items in place until new comparator is set
         firstNameCol.setComparator((t, t1) -> 0);
 
         table.getColumns().addAll(firstNameCol);
         table.getSortOrder().add(firstNameCol);
-        
+
         // ensure the existing order is as expected
         assertEquals(p3, table.getItems().get(0));
         assertEquals(p2, table.getItems().get(1));
         assertEquals(p1, table.getItems().get(2));
         assertEquals(p0, table.getItems().get(3));
         assertEquals(p4, table.getItems().get(4));
-        
+
         // set a new comparator
         firstNameCol.setComparator(new Comparator() {
             Random r =  new Random();
@@ -1039,7 +1039,7 @@ public class TableViewTest {
                 return t.toString().compareTo(t1.toString());
             }
         });
-        
+
         // ensure the new order is as expected
         assertEquals(p0, table.getItems().get(0));
         assertEquals(p1, table.getItems().get(1));
@@ -1047,10 +1047,10 @@ public class TableViewTest {
         assertEquals(p3, table.getItems().get(3));
         assertEquals(p4, table.getItems().get(4));
     }
-    
+
     @Test public void test_rt29331() {
         TableView<Person> table = new TableView<Person>();
-        
+
         TableColumn firstNameCol = new TableColumn("First Name");
         firstNameCol.setCellValueFactory(new PropertyValueFactory<Person, String>("firstName"));
 
@@ -1059,59 +1059,59 @@ public class TableViewTest {
 
         TableColumn emailCol = new TableColumn("Email");
         emailCol.setCellValueFactory(new PropertyValueFactory<Person, String>("email"));
-        
+
         TableColumn parentColumn = new TableColumn<>("Parent");
         parentColumn.getColumns().addAll(firstNameCol, lastNameCol, emailCol);
-        
+
         table.getColumns().addAll(parentColumn);
-        
+
         // table is setup, now hide the 'last name' column
         emailCol.setVisible(false);
         assertFalse(emailCol.isVisible());
-        
+
         // reorder columns inside the parent column
         parentColumn.getColumns().setAll(emailCol, firstNameCol, lastNameCol);
-        
+
         // the email column should not become visible after this, but it does
         assertFalse(emailCol.isVisible());
     }
-    
+
     private int rt29330_count = 0;
     @Test public void test_rt29330_1() {
         TableView<Person> table = new TableView<>(personTestData);
 
         TableColumn parentColumn = new TableColumn<>("Parent");
         table.getColumns().addAll(parentColumn);
-        
+
         TableColumn firstNameCol = new TableColumn("First Name");
         firstNameCol.setCellValueFactory(new PropertyValueFactory<Person, String>("firstName"));
 
         TableColumn lastNameCol = new TableColumn("Last Name");
         lastNameCol.setCellValueFactory(new PropertyValueFactory<Person, String>("lastName"));
-        
+
         parentColumn.getColumns().addAll(firstNameCol, lastNameCol);
 
         table.setOnSort(event -> {
             rt29330_count++;
         });
-        
+
         // test preconditions
         assertEquals(ASCENDING, lastNameCol.getSortType());
         assertEquals(0, rt29330_count);
-        
+
         table.getSortOrder().add(lastNameCol);
         assertEquals(1, rt29330_count);
-        
+
         lastNameCol.setSortType(DESCENDING);
         assertEquals(2, rt29330_count);
-        
+
         lastNameCol.setSortType(null);
         assertEquals(3, rt29330_count);
-        
+
         lastNameCol.setSortType(ASCENDING);
         assertEquals(4, rt29330_count);
     }
-    
+
     @Test public void test_rt29330_2() {
         TableView<Person> table = new TableView<>(personTestData);
 
@@ -1120,7 +1120,7 @@ public class TableViewTest {
 
         TableColumn lastNameCol = new TableColumn("Last Name");
         lastNameCol.setCellValueFactory(new PropertyValueFactory<Person, String>("lastName"));
-        
+
         // this test differs from the previous one by installing the parent column
         // into the tableview after it has the children added into it
         TableColumn parentColumn = new TableColumn<>("Parent");
@@ -1130,38 +1130,38 @@ public class TableViewTest {
         table.setOnSort(event -> {
             rt29330_count++;
         });
-        
+
         // test preconditions
         assertEquals(ASCENDING, lastNameCol.getSortType());
         assertEquals(0, rt29330_count);
-        
+
         table.getSortOrder().add(lastNameCol);
         assertEquals(1, rt29330_count);
-        
+
         lastNameCol.setSortType(DESCENDING);
         assertEquals(2, rt29330_count);
-        
+
         lastNameCol.setSortType(null);
         assertEquals(3, rt29330_count);
-        
+
         lastNameCol.setSortType(ASCENDING);
         assertEquals(4, rt29330_count);
     }
-    
+
     @Test public void test_rt29313_selectedIndices() {
         TableView<Person> table = new TableView<>(personTestData);
 
         TableSelectionModel sm = table.getSelectionModel();
-        
+
         TableColumn firstNameCol = new TableColumn("First Name");
         firstNameCol.setCellValueFactory(new PropertyValueFactory<Person, String>("firstName"));
 
         TableColumn lastNameCol = new TableColumn("Last Name");
         lastNameCol.setCellValueFactory(new PropertyValueFactory<Person, String>("lastName"));
-        
+
         TableColumn emailCol = new TableColumn("Email");
         emailCol.setCellValueFactory(new PropertyValueFactory<Person, String>("email"));
-        
+
         table.getColumns().addAll(firstNameCol, lastNameCol, emailCol);
         sm.setCellSelectionEnabled(true);
         sm.setSelectionMode(SelectionMode.MULTIPLE);
@@ -1171,12 +1171,12 @@ public class TableViewTest {
         // only (0,0) should be selected, so selected indices should be [0]
         sm.select(0, firstNameCol);
         assertEquals(1, sm.getSelectedIndices().size());
-        
+
         // now (0,0) and (1,0) should be selected, so selected indices should be [0, 1]
         sm.select(1, firstNameCol);
         assertEquals(2, sm.getSelectedIndices().size());
-        
-        // now (0,0), (1,0) and (1,1) should be selected, but selected indices 
+
+        // now (0,0), (1,0) and (1,1) should be selected, but selected indices
         // should remain as [0, 1], as we don't want selected indices to become
         // [0,1,1] (which is what RT-29313 is about)
         sm.select(1, lastNameCol);
@@ -1184,7 +1184,7 @@ public class TableViewTest {
         assertEquals(0, sm.getSelectedIndices().get(0));
         assertEquals(1, sm.getSelectedIndices().get(1));
     }
-    
+
     @Test public void test_rt29313_selectedItems() {
         Person p0, p1;
         TableView<Person> table = new TableView<>();
@@ -1194,18 +1194,18 @@ public class TableViewTest {
               new Person("Ethan", "Williams", "ethan.williams@example.com"),
               new Person("Emma", "Jones", "emma.jones@example.com"),
               new Person("Michael", "Brown", "michael.brown@example.com")));
-        
+
         TableSelectionModel sm = table.getSelectionModel();
-        
+
         TableColumn firstNameCol = new TableColumn("First Name");
         firstNameCol.setCellValueFactory(new PropertyValueFactory<Person, String>("firstName"));
 
         TableColumn lastNameCol = new TableColumn("Last Name");
         lastNameCol.setCellValueFactory(new PropertyValueFactory<Person, String>("lastName"));
-        
+
         TableColumn emailCol = new TableColumn("Email");
         emailCol.setCellValueFactory(new PropertyValueFactory<Person, String>("email"));
-        
+
         table.getColumns().addAll(firstNameCol, lastNameCol, emailCol);
         sm.setCellSelectionEnabled(true);
         sm.setSelectionMode(SelectionMode.MULTIPLE);
@@ -1215,12 +1215,12 @@ public class TableViewTest {
         // only (0,0) should be selected, so selected items should be [p0]
         sm.select(0, firstNameCol);
         assertEquals(1, sm.getSelectedItems().size());
-        
+
         // now (0,0) and (1,0) should be selected, so selected items should be [p0, p1]
         sm.select(1, firstNameCol);
         assertEquals(2, sm.getSelectedItems().size());
-        
-        // now (0,0), (1,0) and (1,1) should be selected, but selected items 
+
+        // now (0,0), (1,0) and (1,1) should be selected, but selected items
         // should remain as [p0, p1], as we don't want selected items to become
         // [p0,p1,p1] (which is what RT-29313 is about)
         sm.select(1, lastNameCol);
@@ -1228,30 +1228,30 @@ public class TableViewTest {
         assertEquals(p0, sm.getSelectedItems().get(0));
         assertEquals(p1, sm.getSelectedItems().get(1));
     }
-    
+
     @Test public void test_rt29566() {
         TableView<Person> table = new TableView<>(personTestData);
 
         TableSelectionModel sm = table.getSelectionModel();
-        
+
         TableColumn firstNameCol = new TableColumn("First Name");
         firstNameCol.setCellValueFactory(new PropertyValueFactory<Person, String>("firstName"));
 
         TableColumn lastNameCol = new TableColumn("Last Name");
         lastNameCol.setCellValueFactory(new PropertyValueFactory<Person, String>("lastName"));
-        
+
         TableColumn emailCol = new TableColumn("Email");
         emailCol.setCellValueFactory(new PropertyValueFactory<Person, String>("email"));
-        
+
         table.getColumns().addAll(firstNameCol, lastNameCol, emailCol);
-        
+
         // test the state before we hide and re-add a column
         VirtualFlowTestUtils.assertCellTextEquals(table, 0, "Jacob", "Smith", "jacob.smith@example.com");
         VirtualFlowTestUtils.assertCellTextEquals(table, 1, "Isabella", "Johnson", "isabella.johnson@example.com");
         VirtualFlowTestUtils.assertCellTextEquals(table, 2, "Ethan", "Williams", "ethan.williams@example.com");
         VirtualFlowTestUtils.assertCellTextEquals(table, 3, "Emma", "Jones", "emma.jones@example.com");
         VirtualFlowTestUtils.assertCellTextEquals(table, 4, "Michael", "Brown", "michael.brown@example.com");
-        
+
         // hide the last name column, and test cells again
         table.getColumns().remove(lastNameCol);
         VirtualFlowTestUtils.assertCellTextEquals(table, 0, "Jacob", "jacob.smith@example.com");
@@ -1259,7 +1259,7 @@ public class TableViewTest {
         VirtualFlowTestUtils.assertCellTextEquals(table, 2, "Ethan", "ethan.williams@example.com");
         VirtualFlowTestUtils.assertCellTextEquals(table, 3, "Emma", "emma.jones@example.com");
         VirtualFlowTestUtils.assertCellTextEquals(table, 4, "Michael", "michael.brown@example.com");
-        
+
         // re-add the last name column - we should go back to the original state.
         // However, what appears to be happening is that, for some reason, some
         // of the cells from the removed column do not reappear - meaning in this case
@@ -1272,7 +1272,7 @@ public class TableViewTest {
         VirtualFlowTestUtils.assertCellTextEquals(table, 3, "Emma", "Jones", "emma.jones@example.com");
         VirtualFlowTestUtils.assertCellTextEquals(table, 4, "Michael", "Brown", "michael.brown@example.com");
     }
-    
+
     @Test public void test_rt29390() {
         final TableView<Person> tableView = new TableView<Person>();
         tableView.setMaxHeight(50);
@@ -1295,20 +1295,20 @@ public class TableViewTest {
             new Person("Ethan", "Williams", "ethan.williams@example.com"),
             new Person("Emma", "Jones", "emma.jones@example.com")
         ));
-        
+
         TableColumn firstNameCol = new TableColumn("First Name");
         firstNameCol.setCellValueFactory(new PropertyValueFactory<Person, String>("firstName"));
-        
+
         tableView.getColumns().add(firstNameCol);
-        
+
         // we want the vertical scrollbar
         VirtualScrollBar scrollBar = VirtualFlowTestUtils.getVirtualFlowVerticalScrollbar(tableView);
-        
+
         assertNotNull(scrollBar);
         assertTrue(scrollBar.isVisible());
         assertTrue(scrollBar.getVisibleAmount() > 0.0);
         assertTrue(scrollBar.getVisibleAmount() < 1.0);
-        
+
         // this next test is likely to be brittle, but we'll see...If it is the
         // cause of failure then it can be commented out
         assertEquals(0.0625, scrollBar.getVisibleAmount(), 0.0);
@@ -1789,7 +1789,7 @@ public class TableViewTest {
 
         first.setPrefWidth(200);
 
-        final double newWidth = ControlShim.computePrefWidth(rowCell, -1); 
+        final double newWidth = ControlShim.computePrefWidth(rowCell, -1);
         assertEquals(200, newWidth, 0.0);
         assertTrue(initialWidth != newWidth);
     }

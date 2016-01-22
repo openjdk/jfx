@@ -1287,17 +1287,17 @@ public class BindingsEqualsTest<T> {
                 object1, object2,
                 new Functions<Object>() {
                     @SuppressWarnings("unchecked")
-					@Override
+                    @Override
                     public BooleanBinding generateExpressionExpression(Object op1, Object op2) {
                         return Bindings.equal((ObservableObjectValue<Object>)op1, (ObservableObjectValue<Object>)op2);
                     }
                     @SuppressWarnings("unchecked")
-					@Override
+                    @Override
                     public BooleanBinding generateExpressionPrimitive(Object op1, Object op2) {
                         return Bindings.equal((ObservableObjectValue<Object>)op1, op2);
                     }
                     @SuppressWarnings("unchecked")
-					@Override
+                    @Override
                     public BooleanBinding generatePrimitiveExpression(Object op1, Object op2) {
                         return Bindings.equal(op1, (ObservableObjectValue<Object>)op2);
                     }
@@ -1316,17 +1316,17 @@ public class BindingsEqualsTest<T> {
                 object1, object2,
                 new Functions<Object>() {
                     @SuppressWarnings("unchecked")
-					@Override
+                    @Override
                     public BooleanBinding generateExpressionExpression(Object op1, Object op2) {
                         return Bindings.notEqual((ObservableObjectValue<Object>)op1, (ObservableObjectValue<Object>)op2);
                     }
                     @SuppressWarnings("unchecked")
-					@Override
+                    @Override
                     public BooleanBinding generateExpressionPrimitive(Object op1, Object op2) {
                         return Bindings.notEqual((ObservableObjectValue<Object>)op1, op2);
                     }
                     @SuppressWarnings("unchecked")
-					@Override
+                    @Override
                     public BooleanBinding generatePrimitiveExpression(Object op1, Object op2) {
                         return Bindings.notEqual(op1, (ObservableObjectValue<Object>)op2);
                     }

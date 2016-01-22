@@ -85,7 +85,7 @@ ALWAYS_INLINE static void visitChildren(SlotVisitor& visitor, const JSCell* cell
     StackStats::probe();
 
     ASSERT(Heap::isMarked(cell));
-    
+
     if (isJSString(cell)) {
         JSString::visitChildren(const_cast<JSCell*>(cell), visitor);
         return;
@@ -136,7 +136,7 @@ void SlotVisitor::drain()
 {
     StackStats::probe();
     ASSERT(m_isInParallelMode);
-   
+
 #if ENABLE(PARALLEL_GC)
     if (Options::numberOfGCMarkers() > 1) {
         while (!m_stack.isEmpty()) {
@@ -145,12 +145,12 @@ void SlotVisitor::drain()
                 visitChildren(*this, m_stack.removeLast());
             donateKnownParallel();
         }
-        
+
         mergeOpaqueRootsIfNecessary();
         return;
     }
 #endif
-    
+
     while (!m_stack.isEmpty()) {
         m_stack.refill();
         while (m_stack.canRemoveLast())
@@ -162,9 +162,9 @@ void SlotVisitor::drainFromShared(SharedDrainMode sharedDrainMode)
 {
     StackStats::probe();
     ASSERT(m_isInParallelMode);
-    
+
     ASSERT(Options::numberOfGCMarkers());
-    
+
     bool shouldBeParallel;
 
 #if ENABLE(PARALLEL_GC)
@@ -173,7 +173,7 @@ void SlotVisitor::drainFromShared(SharedDrainMode sharedDrainMode)
     ASSERT(Options::numberOfGCMarkers() == 1);
     shouldBeParallel = false;
 #endif
-    
+
     if (!shouldBeParallel) {
         // This call should be a no-op.
         ASSERT_UNUSED(sharedDrainMode, sharedDrainMode == MasterDrain);
@@ -181,7 +181,7 @@ void SlotVisitor::drainFromShared(SharedDrainMode sharedDrainMode)
         ASSERT(m_shared.m_sharedMarkStack.isEmpty());
         return;
     }
-    
+
 #if ENABLE(PARALLEL_GC)
     {
         std::lock_guard<std::mutex> lock(m_shared.m_markingMutex);
@@ -203,33 +203,33 @@ void SlotVisitor::drainFromShared(SharedDrainMode sharedDrainMode)
                         m_shared.m_markingConditionVariable.notify_all();
                         return;
                     }
-                    
+
                     // Is there work to be done?
                     if (!m_shared.m_sharedMarkStack.isEmpty())
                         break;
-                    
+
                     // Otherwise wait.
                     m_shared.m_markingConditionVariable.wait(lock);
                 }
             } else {
                 ASSERT(sharedDrainMode == SlaveDrain);
-                
+
                 // Did we detect termination? If so, let the master know.
                 if (!m_shared.m_numberOfActiveParallelMarkers && m_shared.m_sharedMarkStack.isEmpty())
                     m_shared.m_markingConditionVariable.notify_all();
 
                 m_shared.m_markingConditionVariable.wait(lock, [this] { return !m_shared.m_sharedMarkStack.isEmpty() || m_shared.m_parallelMarkersShouldExit; });
-                
+
                 // Is the current phase done? If so, return from this function.
                 if (m_shared.m_parallelMarkersShouldExit)
                     return;
             }
-           
+
             size_t idleThreadCount = Options::numberOfGCMarkers() - m_shared.m_numberOfActiveParallelMarkers;
             m_stack.stealSomeCellsFrom(m_shared.m_sharedMarkStack, idleThreadCount);
             m_shared.m_numberOfActiveParallelMarkers++;
         }
-        
+
         drain();
     }
 #endif

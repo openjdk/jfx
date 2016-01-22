@@ -210,7 +210,7 @@ void Biquad::setLowpassParams(double cutoff, double resonance)
 {
     // Limit cutoff to 0 to 1.
     cutoff = std::max(0.0, std::min(cutoff, 1.0));
-    
+
     if (cutoff == 1) {
         // When cutoff is 1, the z-transform is 1.
         setNormalizedCoefficients(1, 0, 0,
@@ -283,7 +283,7 @@ void Biquad::setHighpassParams(double cutoff, double resonance)
 void Biquad::setNormalizedCoefficients(double b0, double b1, double b2, double a0, double a1, double a2)
 {
     double a0Inverse = 1 / a0;
-    
+
     m_b0 = b0 * a0Inverse;
     m_b1 = b1 * a0Inverse;
     m_b2 = b2 * a0Inverse;
@@ -308,7 +308,7 @@ void Biquad::setLowShelfParams(double frequency, double dbGain)
 {
     // Clip frequencies to between 0 and 1, inclusive.
     frequency = std::max(0.0, std::min(frequency, 1.0));
-    
+
     double A = pow(10.0, dbGain / 40);
 
     if (frequency == 1) {
@@ -497,7 +497,7 @@ void Biquad::setBandpassParams(double frequency, double Q)
         if (Q > 0) {
             double alpha = sin(w0) / (2 * Q);
             double k = cos(w0);
-    
+
             double b0 = alpha;
             double b1 = 0;
             double b2 = -alpha;
@@ -572,7 +572,7 @@ void Biquad::getFrequencyResponse(int nFrequencies,
     double b2 = m_b2;
     double a1 = m_a1;
     double a2 = m_a2;
-    
+
     for (int k = 0; k < nFrequencies; ++k) {
         double omega = -piDouble * frequency[k];
         std::complex<double> z = std::complex<double>(cos(omega), sin(omega));

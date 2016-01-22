@@ -40,7 +40,7 @@ public:
     String fileTextValue() const;
 
     HTMLInputElement& inputElement() const;
-    
+
 private:
     void element() const = delete;
 
@@ -56,7 +56,7 @@ private:
     virtual bool requiresForcedStyleRecalcPropagation() const override { return true; }
 
     int maxFilenameWidth() const;
-    
+
     virtual VisiblePosition positionForPoint(const LayoutPoint&) override;
 
     HTMLInputElement* uploadButton() const;

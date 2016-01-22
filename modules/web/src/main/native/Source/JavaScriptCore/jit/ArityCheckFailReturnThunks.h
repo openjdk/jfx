@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef ArityCheckFailReturnThunks_h
@@ -38,12 +38,12 @@ class ArityCheckFailReturnThunks {
 public:
     ArityCheckFailReturnThunks();
     ~ArityCheckFailReturnThunks();
-    
+
     // Returns a pointer to an array of return labels indexed by missingArgs.
     CodeLocationLabel* returnPCsFor(VM&, unsigned numExpectedArgumentsIncludingThis);
-    
+
     CodeLocationLabel returnPCFor(VM&, unsigned slotsToAdd);
-    
+
 private:
     Vector<std::unique_ptr<CodeLocationLabel[]>> m_returnPCArrays;
     unsigned m_nextSize;

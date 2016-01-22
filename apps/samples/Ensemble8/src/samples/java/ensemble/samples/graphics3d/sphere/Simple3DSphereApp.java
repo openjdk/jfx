@@ -58,9 +58,9 @@ import javafx.stage.Stage;
 import javafx.util.Duration;
 
 /**
- * A sample that demonstrates features of PhongMaterial applied to a 3D Sphere. 
- * Provided is a playground to exercise the following properties of material: 
- * diffuse map and color, specular map, color and power, bump map, 
+ * A sample that demonstrates features of PhongMaterial applied to a 3D Sphere.
+ * Provided is a playground to exercise the following properties of material:
+ * diffuse map and color, specular map, color and power, bump map,
  * self illumination map.
  * @sampleName 3D Sphere
  * @preview preview.png
@@ -103,7 +103,7 @@ import javafx.util.Duration;
  * @conditionalFeatures SCENE3D
  */
 public class Simple3DSphereApp extends Application {
-    
+
     private Sphere earth;
     private PhongMaterial material;
     private PointLight sun;
@@ -113,14 +113,14 @@ public class Simple3DSphereApp extends Application {
     private final BooleanProperty specularMap = new SimpleBooleanProperty(true);
     private final BooleanProperty bumpMap = new SimpleBooleanProperty(true);
     private final BooleanProperty selfIlluminationMap = new SimpleBooleanProperty(true);
-   
+
     public Parent createContent() throws Exception {
-        
+
         Image dImage = new Image(Simple3DSphereApp.class.getResource("earth-d.jpg").toExternalForm());
         Image nImage = new Image(Simple3DSphereApp.class.getResource("earth-n.jpg").toExternalForm());
         Image sImage = new Image(Simple3DSphereApp.class.getResource("earth-s.jpg").toExternalForm());
         Image siImage = new Image(Simple3DSphereApp.class.getResource("earth-l.jpg").toExternalForm());
-               
+
         material = new PhongMaterial();
         material.setDiffuseColor(Color.WHITE);
         material.diffuseMapProperty().bind(
@@ -132,45 +132,45 @@ public class Simple3DSphereApp extends Application {
                 Bindings.when(bumpMap).then(nImage).otherwise((Image) null));
         material.selfIlluminationMapProperty().bind(
                 Bindings.when(selfIlluminationMap).then(siImage).otherwise((Image) null));
-        
+
         earth = new Sphere(5);
         earth.setMaterial(material);
         earth.setRotationAxis(Rotate.Y_AXIS);
-        
-        
+
+
         // Create and position camera
         PerspectiveCamera camera = new PerspectiveCamera(true);
         camera.getTransforms().addAll(
                 new Rotate(-20, Rotate.Y_AXIS),
                 new Rotate(-20, Rotate.X_AXIS),
                 new Translate(0, 0, -20));
-        
+
         sun = new PointLight(Color.rgb(255, 243, 234));
         sun.translateXProperty().bind(sunDistance.multiply(-0.82));
         sun.translateYProperty().bind(sunDistance.multiply(-0.41));
         sun.translateZProperty().bind(sunDistance.multiply(-0.41));
         sun.lightOnProperty().bind(sunLight);
-        
+
         AmbientLight ambient = new AmbientLight(Color.rgb(1, 1, 1));
-        
+
         // Build the Scene Graph
-        Group root = new Group();       
+        Group root = new Group();
         root.getChildren().add(camera);
         root.getChildren().add(earth);
         root.getChildren().add(sun);
         root.getChildren().add(ambient);
-        
+
         RotateTransition rt = new RotateTransition(Duration.seconds(24), earth);
         rt.setByAngle(360);
         rt.setInterpolator(Interpolator.LINEAR);
         rt.setCycleCount(Animation.INDEFINITE);
         rt.play();
-        
-        // Use a SubScene       
+
+        // Use a SubScene
         SubScene subScene = new SubScene(root, 400, 300, true, SceneAntialiasing.BALANCED);
         subScene.setFill(Color.TRANSPARENT);
         subScene.setCamera(camera);
-        
+
         return new Group(subScene);
     }
 

@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -79,7 +79,7 @@ static bool getSymbolInfo(ShHandle compiler, ShShaderInfo symbolType, Vector<ANG
     // The maximum allowed symbol name length is 256 characters.
     Vector<char, 256> nameBuffer(maxNameLength);
     Vector<char, 256> mappedNameBuffer(maxMappedNameLength);
-    
+
     for (ANGLEGetInfoType i = 0; i < numSymbols; ++i) {
         ANGLEShaderSymbol symbol;
         ANGLEGetInfoType nameLength = 0;
@@ -104,7 +104,7 @@ static bool getSymbolInfo(ShHandle compiler, ShShaderInfo symbolType, Vector<ANG
         }
         if (!nameLength)
             return false;
-        
+
         // The ShGetActive* calls above are guaranteed to produce null-terminated strings for
         // nameBuffer and mappedNameBuffer. Also, the character set for symbol names
         // is a subset of Latin-1 as specified by the OpenGL ES Shading Language, Section 3.1 and
@@ -113,7 +113,7 @@ static bool getSymbolInfo(ShHandle compiler, ShShaderInfo symbolType, Vector<ANG
         String name = String(nameBuffer.data());
         String mappedName = String(mappedNameBuffer.data());
         LOG(WebGL, "Map shader symbol %s -> %s\n", name.utf8().data(), mappedName.utf8().data());
-        
+
         // ANGLE returns array names in the format "array[0]".
         // The only way to know if a symbol is an array is to check if it ends with "[0]".
         // We can't check the size because regular symbols and arrays of length 1 both have a size of 1.
@@ -129,7 +129,7 @@ static bool getSymbolInfo(ShHandle compiler, ShShaderInfo symbolType, Vector<ANG
         symbol.precision = precision;
         symbol.staticUse = staticUse;
         symbols.append(symbol);
-    
+
         if (symbol.isArray) {
             // Add symbols for each array element.
             symbol.isArray = false;
@@ -171,12 +171,12 @@ void ANGLEWebKitBridge::cleanupCompilers()
 
     builtCompilers = false;
 }
-    
+
 void ANGLEWebKitBridge::setResources(ShBuiltInResources resources)
 {
     // Resources are (possibly) changing - cleanup compilers if we had them already
     cleanupCompilers();
-    
+
     m_resources = resources;
 }
 
@@ -192,7 +192,7 @@ bool ANGLEWebKitBridge::compileShaderSource(const char* shaderSource, ANGLEShade
 
         builtCompilers = true;
     }
-    
+
     ShHandle compiler;
 
     if (shaderType == SHADER_TYPE_VERTEX)
@@ -223,7 +223,7 @@ bool ANGLEWebKitBridge::compileShaderSource(const char* shaderSource, ANGLEShade
         ShGetObjectCode(compiler, translationBuffer.get());
         translatedShaderSource = translationBuffer.get();
     }
-    
+
     if (!getSymbolInfo(compiler, SH_ACTIVE_ATTRIBUTES, symbols))
         return false;
     if (!getSymbolInfo(compiler, SH_ACTIVE_UNIFORMS, symbols))

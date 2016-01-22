@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef AccessibilityUIElement_h
@@ -73,7 +73,7 @@ public:
     static JSObjectRef makeJSAccessibilityUIElement(JSContextRef, const AccessibilityUIElement&);
 
     bool isEqual(AccessibilityUIElement* otherElement);
-    
+
     PassRefPtr<AccessibilityUIElement> elementAtPoint(int x, int y);
     PassRefPtr<AccessibilityUIElement> childAtIndex(unsigned);
     unsigned indexOfChild(AccessibilityUIElement*);
@@ -90,7 +90,7 @@ public:
     JSRetainPtr<JSStringRef> allAttributes();
     JSRetainPtr<JSStringRef> attributesOfLinkedUIElements();
     PassRefPtr<AccessibilityUIElement> linkedUIElementAtIndex(unsigned);
-    
+
     JSRetainPtr<JSStringRef> attributesOfDocumentLinks();
     JSRetainPtr<JSStringRef> attributesOfChildren();
     JSRetainPtr<JSStringRef> parameterizedAttributeNames();
@@ -133,7 +133,7 @@ public:
     JSRetainPtr<JSStringRef> selectedTextRange();
     bool isEnabled();
     bool isRequired() const;
-    
+
     bool isFocused() const;
     bool isFocusable() const;
     bool isSelected() const;
@@ -143,7 +143,7 @@ public:
     void setSelectedChild(AccessibilityUIElement*) const;
     unsigned selectedChildrenCount() const;
     PassRefPtr<AccessibilityUIElement> selectedChildAtIndex(unsigned) const;
-    
+
     bool isValid() const;
     bool isExpanded() const;
     bool isChecked() const;
@@ -163,7 +163,7 @@ public:
 
     // CSS3-speech properties.
     JSRetainPtr<JSStringRef> speak();
-    
+
     // Table-specific attributes
     JSRetainPtr<JSStringRef> attributesOfColumnHeaders();
     JSRetainPtr<JSStringRef> attributesOfRowHeaders();
@@ -194,7 +194,7 @@ public:
     bool ariaIsGrabbed() const;
     // A space concatentated string of all the drop effects.
     JSRetainPtr<JSStringRef> ariaDropEffects() const;
-    
+
     // Parameterized attributes
     int lineForIndex(int);
     JSRetainPtr<JSStringRef> rangeForLine(int);
@@ -213,7 +213,7 @@ public:
     JSRetainPtr<JSStringRef> wordAtOffset(int offset);
     JSRetainPtr<JSStringRef> lineAtOffset(int offset);
     JSRetainPtr<JSStringRef> sentenceAtOffset(int offset);
-    
+
     // Table-specific
     PassRefPtr<AccessibilityUIElement> cellForColumnAndRow(unsigned column, unsigned row);
 
@@ -222,9 +222,9 @@ public:
     PassRefPtr<AccessibilityUIElement> verticalScrollbar() const;
 
     void scrollToMakeVisible();
-    
+
     // Text markers.
-    PassRefPtr<AccessibilityTextMarkerRange> textMarkerRangeForElement(AccessibilityUIElement*);    
+    PassRefPtr<AccessibilityTextMarkerRange> textMarkerRangeForElement(AccessibilityUIElement*);
     PassRefPtr<AccessibilityTextMarkerRange> textMarkerRangeForMarkers(AccessibilityTextMarker* startMarker, AccessibilityTextMarker* endMarker);
     PassRefPtr<AccessibilityTextMarker> startTextMarkerForTextMarkerRange(AccessibilityTextMarkerRange*);
     PassRefPtr<AccessibilityTextMarker> endTextMarkerForTextMarkerRange(AccessibilityTextMarkerRange*);
@@ -249,19 +249,19 @@ public:
     JSRetainPtr<JSStringRef> mathPrescriptsDescription() const;
 
     JSRetainPtr<JSStringRef> pathDescription() const;
-    
+
     // Notifications
     // Function callback should take one argument, the name of the notification.
     bool addNotificationListener(JSValueRef functionCallback);
     // Make sure you call remove, because you can't rely on objects being deallocated in a timely fashion.
     bool removeNotificationListener();
-    
+
 private:
     AccessibilityUIElement(PlatformUIElement);
     AccessibilityUIElement(const AccessibilityUIElement&);
 
     PlatformUIElement m_element;
-    
+
     // A retained, platform specific object used to help manage notifications for this object.
 #if HAVE(ACCESSIBILITY)
 #if PLATFORM(COCOA)
@@ -269,7 +269,7 @@ private:
 
     void getLinkedUIElements(Vector<RefPtr<AccessibilityUIElement> >&);
     void getDocumentLinks(Vector<RefPtr<AccessibilityUIElement> >&);
-    
+
     void getUIElementsWithAttribute(JSStringRef, Vector<RefPtr<AccessibilityUIElement> >&) const;
 #endif
 
@@ -283,7 +283,7 @@ private:
 #endif
 #endif
 };
-    
+
 } // namespace WTR
-    
+
 #endif // AccessibilityUIElement_h

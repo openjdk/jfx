@@ -120,7 +120,7 @@ void WebNotificationClient::clearNotifications(ScriptExecutionContext* context)
     NotificationContextMap::iterator it = m_notificationContextMap.find(context);
     if (it == m_notificationContextMap.end())
         return;
-    
+
     Vector<RetainPtr<WebNotification>>& webNotifications = it->value;
     NSMutableArray *nsIDs = [NSMutableArray array];
     size_t count = webNotifications.size();
@@ -170,11 +170,11 @@ void WebNotificationClient::requestPermission(ScriptExecutionContext* context, W
     SEL selector = @selector(webView:decidePolicyForNotificationRequestFromOrigin:listener:);
     if (![[m_webView UIDelegate] respondsToSelector:selector])
         return;
-    
+
     WebSecurityOrigin *webOrigin = [[WebSecurityOrigin alloc] _initWithWebCoreSecurityOrigin:context->securityOrigin()];
-    
+
     CallUIDelegate(m_webView, selector, webOrigin, listener);
-    
+
     [webOrigin release];
 }
 #endif

@@ -103,7 +103,7 @@ public:
     const FloatPoint& requestedScrollPosition() const { return m_requestedScrollPosition; }
     bool requestedScrollPositionRepresentsProgrammaticScroll() const { return m_requestedScrollPositionRepresentsProgrammaticScroll; }
     void setRequestedScrollPosition(const FloatPoint&, bool representsProgrammaticScroll);
-    
+
     int headerHeight() const { return m_headerHeight; }
     void setHeaderHeight(int);
 
@@ -152,7 +152,7 @@ private:
     IntSize m_totalContentsSize;
     FloatPoint m_scrollPosition;
     IntPoint m_scrollOrigin;
-    
+
     ScrollableAreaParameters m_scrollableAreaParameters;
     Region m_nonFastScrollableRegion;
     float m_frameScaleFactor;

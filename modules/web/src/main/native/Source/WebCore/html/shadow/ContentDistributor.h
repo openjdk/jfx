@@ -58,7 +58,7 @@ public:
     ~ContentDistributor();
 
     void invalidateInsertionPointList();
-    
+
     InsertionPoint* findInsertionPointFor(const Node* key) const;
 
     void distributeSelectionsTo(InsertionPoint*, Element* host);

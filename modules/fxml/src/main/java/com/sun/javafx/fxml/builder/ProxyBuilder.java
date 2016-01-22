@@ -276,12 +276,12 @@ public class ProxyBuilder<T> extends AbstractMap<String, Object> implements Buil
             }
 
             // all properties of this constructor which the user didn't
-            // specify in FXML 
+            // specify in FXML
             // we try to minimize this set
             Set<String> propertiesToSetInConstructor = new HashSet<>(argumentNames);
             propertiesToSetInConstructor.removeAll(propertyNames);
 
-            // all mutable properties which the user did specify in FXML 
+            // all mutable properties which the user did specify in FXML
             // but are not settable with this constructor
             // we try to minimize this too (but only if we have more constructors with
             // the same propertiesToSetCount)
@@ -411,7 +411,7 @@ public class ProxyBuilder<T> extends AbstractMap<String, Object> implements Buil
 
         // we currently don't have proper support support for arrays
         // in FXML so we use lists instead
-        // the user provides us with a list and here we convert it to 
+        // the user provides us with a list and here we convert it to
         // array to pass to the constructor
         if (type.isArray()) {
             try {
@@ -428,7 +428,7 @@ public class ProxyBuilder<T> extends AbstractMap<String, Object> implements Buil
 
         if (ArrayListWrapper.class.equals(val.getClass())) {
             // user given value is an ArrayList but the constructor doesn't
-            // accept an ArrayList so the ArrayList comes from 
+            // accept an ArrayList so the ArrayList comes from
             // the getTemporaryContainer method
             // we take the first argument
             List l = (List) val;

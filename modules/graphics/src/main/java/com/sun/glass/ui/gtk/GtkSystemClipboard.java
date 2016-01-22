@@ -40,11 +40,11 @@ final class GtkSystemClipboard extends SystemClipboard {
         super.close();
         dispose();
     }
-    
+
     private native void init();
-    
+
     private native void dispose();
-    
+
     @Override
     protected native boolean isOwner();
 
@@ -62,5 +62,5 @@ final class GtkSystemClipboard extends SystemClipboard {
 
     @Override
     protected native String[] mimesFromSystem();
-    
+
 }

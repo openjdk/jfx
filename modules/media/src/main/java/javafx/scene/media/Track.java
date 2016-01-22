@@ -62,14 +62,14 @@ public abstract class Track {
      * this will be the language spoken, for {@link SubtitleTrack}s this will be
      * the language presented in the captions. Not all <code>Track</code>s will
      * have an associated language, in which case this method will return null.
-     * 
+     *
      * @return the <code>Track</code>s language information or null
      * @since JavaFX 8.0
      */
     public final Locale getLocale() {
         return locale;
     }
-    
+
     /**
      * Get the track ID as defined by the media container format. The ID of each
      * <code>Track</code> must be unique for its source {@link Media}.
@@ -79,7 +79,7 @@ public abstract class Track {
     public final long getTrackID() {
         return trackID;
     }
-    
+
     /**
      * @return a Map containing all known metadata for this <code>Track</code>
      * @since JavaFX 8.0
@@ -87,23 +87,23 @@ public abstract class Track {
     public final Map<String,Object> getMetadata() {
         return metadata;
     }
-    
+
     Track(long trackID, Map<String,Object> metadata) {
         this.trackID = trackID;
-        
+
         Object value = metadata.get("name");
         if (null != value && value instanceof String) {
             name = (String)value;
         }
-        
+
         value = metadata.get("locale");
         if (null != value && value instanceof Locale) {
             locale = (Locale)value;
         }
-        
+
         this.metadata = Collections.unmodifiableMap(metadata);
     }
-    
+
     private String description;
     @Override
     public final String toString() {
@@ -115,7 +115,7 @@ public abstract class Track {
                 sb.append(this.getClass().getName());
                 sb.append("[ track id = ");
                 sb.append(trackID);
-                
+
                 for (Map.Entry<String,Object> entry : md.entrySet()) {
                     Object value = entry.getValue();
                     if (null != value) {

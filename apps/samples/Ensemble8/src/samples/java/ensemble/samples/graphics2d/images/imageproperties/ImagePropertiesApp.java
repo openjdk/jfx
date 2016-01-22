@@ -94,7 +94,7 @@ public class ImagePropertiesApp extends Application {
         vb.getChildren().addAll(hBox, sample2);
         vb.setMinSize(VBox.USE_PREF_SIZE, VBox.USE_PREF_SIZE);
         vb.setMaxSize(VBox.USE_PREF_SIZE, VBox.USE_PREF_SIZE);
- 
+
         return vb;
     }
 

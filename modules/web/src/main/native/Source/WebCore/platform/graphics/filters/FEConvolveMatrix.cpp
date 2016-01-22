@@ -74,17 +74,17 @@ void FEConvolveMatrix::setKernelSize(const IntSize& kernelSize)
 
 const Vector<float>& FEConvolveMatrix::kernel() const
 {
-    return m_kernelMatrix; 
+    return m_kernelMatrix;
 }
 
 void FEConvolveMatrix::setKernel(const Vector<float>& kernel)
 {
-    m_kernelMatrix = kernel; 
+    m_kernelMatrix = kernel;
 }
 
 float FEConvolveMatrix::divisor() const
 {
-    return m_divisor; 
+    return m_divisor;
 }
 
 bool FEConvolveMatrix::setDivisor(float divisor)
@@ -98,7 +98,7 @@ bool FEConvolveMatrix::setDivisor(float divisor)
 
 float FEConvolveMatrix::bias() const
 {
-    return m_bias; 
+    return m_bias;
 }
 
 bool FEConvolveMatrix::setBias(float bias)
@@ -111,7 +111,7 @@ bool FEConvolveMatrix::setBias(float bias)
 
 IntPoint FEConvolveMatrix::targetOffset() const
 {
-    return m_targetOffset; 
+    return m_targetOffset;
 }
 
 bool FEConvolveMatrix::setTargetOffset(const IntPoint& targetOffset)
@@ -137,7 +137,7 @@ bool FEConvolveMatrix::setEdgeMode(EdgeModeType edgeMode)
 
 FloatPoint FEConvolveMatrix::kernelUnitLength() const
 {
-    return m_kernelUnitLength; 
+    return m_kernelUnitLength;
 }
 
 bool FEConvolveMatrix::setKernelUnitLength(const FloatPoint& kernelUnitLength)
@@ -152,7 +152,7 @@ bool FEConvolveMatrix::setKernelUnitLength(const FloatPoint& kernelUnitLength)
 
 bool FEConvolveMatrix::preserveAlpha() const
 {
-    return m_preserveAlpha; 
+    return m_preserveAlpha;
 }
 
 bool FEConvolveMatrix::setPreserveAlpha(bool preserveAlpha)

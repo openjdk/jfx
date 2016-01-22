@@ -38,10 +38,10 @@ import javafx.scene.input.MouseEvent;
 
 /**
  *
- * 
+ *
  */
 public class SelectWithPringGesture extends AbstractMouseDragGesture {
-    
+
     private final FXOMInstance fxomInstance;
 
     public SelectWithPringGesture(ContentPanelController contentPanelController,
@@ -49,7 +49,7 @@ public class SelectWithPringGesture extends AbstractMouseDragGesture {
         super(contentPanelController);
         this.fxomInstance = fxomInstance;
     }
-    
+
     /*
      * AbstractMouseDragGesture
      */
@@ -57,11 +57,11 @@ public class SelectWithPringGesture extends AbstractMouseDragGesture {
     @Override
     protected void mousePressed(MouseEvent e) {
         contentPanelController.getEditorController().getSelection().select(fxomInstance);
-        
+
         /*
          * This selection operation will callback EditModeController
          * which will remove the pring where mouse has been pressed.
-         * Thus mouseExited() will be called. But not mouseDragDetected() 
+         * Thus mouseExited() will be called. But not mouseDragDetected()
          * neither mouseReleased().
          */
     }
@@ -83,25 +83,25 @@ public class SelectWithPringGesture extends AbstractMouseDragGesture {
         // Mouse has exited pring because it has been removed from the
         // scene graph by the selection operation in mousePressed().
 
-//        final Selection selection 
+//        final Selection selection
 //                = contentPanelController.getEditorController().getSelection();
-//        
+//
 //        if (selection.getAncestor() != null) {
-//            
+//
 //            assert selection.isSelected(fxomInstance);
 //            assert selection.getGroup() instanceof ObjectSelectionGroup;
-//        
-//            final ObjectSelectionGroup 
+//
+//            final ObjectSelectionGroup
 //                    osg = (ObjectSelectionGroup) selection.getGroup();
-//            
+//
 //            assert osg.hasSingleParent();
-//            
+//
 //            final EditorController editorController
 //                    = contentPanelController.getEditorController();
 //            final DocumentDragSource dragSource
 //                    = new DocumentDragSource(osg.getItems());
 //
-//            final Dragboard db 
+//            final Dragboard db
 //                    = contentPanelController.getGlassLayer().startDragAndDrop(TransferMode.ANY);
 //            db.setContent(dragSource.makeClipboardContent());
 //            db.setDragView(dragSource.makeDragView());

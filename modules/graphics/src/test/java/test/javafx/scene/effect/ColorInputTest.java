@@ -61,7 +61,7 @@ public class ColorInputTest extends EffectsTestBase {
         assertEquals(0, effect.getX(), 1e-100);
         assertEquals(0, effect.xProperty().get(), 1e-100);
         pulse();
-        assertEquals(0, ((com.sun.scenario.effect.Flood) 
+        assertEquals(0, ((com.sun.scenario.effect.Flood)
                 EffectShim.impl_getImpl(effect)).getFloodBounds().getMinX(), 1e-100);
     }
 
@@ -71,7 +71,7 @@ public class ColorInputTest extends EffectsTestBase {
         effect.setY(1.0f);
         assertEquals(1.0f, effect.getY(), 1e-100);
         pulse();
-        assertEquals(1.0f, ((com.sun.scenario.effect.Flood) 
+        assertEquals(1.0f, ((com.sun.scenario.effect.Flood)
                 EffectShim.impl_getImpl(effect)).getFloodBounds().getMinY(), 1e-100);
     }
 
@@ -81,7 +81,7 @@ public class ColorInputTest extends EffectsTestBase {
         assertEquals(0, effect.getY(), 1e-100);
         assertEquals(0, effect.yProperty().get(), 1e-100);
         pulse();
-        assertEquals(0, ((com.sun.scenario.effect.Flood) 
+        assertEquals(0, ((com.sun.scenario.effect.Flood)
                 EffectShim.impl_getImpl(effect)).getFloodBounds().getMinY(), 1e-100);
     }
 
@@ -91,7 +91,7 @@ public class ColorInputTest extends EffectsTestBase {
         effect.setWidth(1.0f);
         assertEquals(1.0f, effect.getWidth(), 1e-100);
         pulse();
-        assertEquals(1.0f, ((com.sun.scenario.effect.Flood) 
+        assertEquals(1.0f, ((com.sun.scenario.effect.Flood)
                 EffectShim.impl_getImpl(effect)).getFloodBounds().getWidth(), 1e-100);
     }
 
@@ -101,7 +101,7 @@ public class ColorInputTest extends EffectsTestBase {
         assertEquals(0, effect.getWidth(), 1e-100);
         assertEquals(0, effect.widthProperty().get(), 1e-100);
         pulse();
-        assertEquals(0, ((com.sun.scenario.effect.Flood) 
+        assertEquals(0, ((com.sun.scenario.effect.Flood)
                 EffectShim.impl_getImpl(effect)).getFloodBounds().getWidth(), 1e-100);
     }
 
@@ -111,7 +111,7 @@ public class ColorInputTest extends EffectsTestBase {
         effect.setHeight(1.0f);
         assertEquals(1.0f, effect.getHeight(), 1e-100);
         pulse();
-        assertEquals(1.0f, ((com.sun.scenario.effect.Flood) 
+        assertEquals(1.0f, ((com.sun.scenario.effect.Flood)
                 EffectShim.impl_getImpl(effect)).getFloodBounds().getHeight(), 1e-100);
     }
 
@@ -121,27 +121,27 @@ public class ColorInputTest extends EffectsTestBase {
         assertEquals(0, effect.getHeight(), 1e-100);
         assertEquals(0, effect.heightProperty().get(), 1e-100);
         pulse();
-        assertEquals(0, ((com.sun.scenario.effect.Flood) 
+        assertEquals(0, ((com.sun.scenario.effect.Flood)
                 EffectShim.impl_getImpl(effect)).getFloodBounds().getHeight(), 1e-100);
     }
-     
+
     @Test
     public void testSetPaint() {
         // try setting correct value
         effect.setPaint(Color.BLUE);
         assertEquals(Color.BLUE, effect.getPaint());
         pulse();
-        assertEquals(Toolkit.getPaintAccessor().getPlatformPaint(Color.BLUE), 
+        assertEquals(Toolkit.getPaintAccessor().getPlatformPaint(Color.BLUE),
                 ((com.sun.scenario.effect.Flood) EffectShim.impl_getImpl(effect)).getPaint());
     }
-    
+
     @Test
     public void testDefaultPaint() {
         // default value should be RED
         assertEquals(Color.RED, effect.getPaint());
         assertEquals(Color.RED, effect.paintProperty().get());
         pulse();
-        assertEquals(Toolkit.getPaintAccessor().getPlatformPaint(Color.RED), 
+        assertEquals(Toolkit.getPaintAccessor().getPlatformPaint(Color.RED),
                 ((com.sun.scenario.effect.Flood) EffectShim.impl_getImpl(effect)).getPaint());
     }
 
@@ -152,7 +152,7 @@ public class ColorInputTest extends EffectsTestBase {
         assertNull(effect.getPaint());
         assertNull(effect.paintProperty().get());
         pulse();
-        assertEquals(Toolkit.getPaintAccessor().getPlatformPaint(Color.RED), 
+        assertEquals(Toolkit.getPaintAccessor().getPlatformPaint(Color.RED),
                 ((com.sun.scenario.effect.Flood) EffectShim.impl_getImpl(effect)).getPaint());
     }
 
@@ -207,18 +207,18 @@ public class ColorInputTest extends EffectsTestBase {
         assertEquals(4, effect.getHeight(), 1e-100);
         assertEquals(Color.BLUE, effect.getPaint());
         pulse();
-        assertEquals(1f, ((com.sun.scenario.effect.Flood) 
+        assertEquals(1f, ((com.sun.scenario.effect.Flood)
                 EffectShim.impl_getImpl(effect)).getFloodBounds().getMinX(), 1e-100);
-        assertEquals(2f, ((com.sun.scenario.effect.Flood) 
+        assertEquals(2f, ((com.sun.scenario.effect.Flood)
                 EffectShim.impl_getImpl(effect)).getFloodBounds().getMinY(), 1e-100);
-        assertEquals(3f, ((com.sun.scenario.effect.Flood) 
+        assertEquals(3f, ((com.sun.scenario.effect.Flood)
                 EffectShim.impl_getImpl(effect)).getFloodBounds().getWidth(), 1e-100);
-        assertEquals(4f, ((com.sun.scenario.effect.Flood) 
+        assertEquals(4f, ((com.sun.scenario.effect.Flood)
                 EffectShim.impl_getImpl(effect)).getFloodBounds().getHeight(), 1e-100);
-        assertEquals(Toolkit.getPaintAccessor().getPlatformPaint(Color.BLUE), 
+        assertEquals(Toolkit.getPaintAccessor().getPlatformPaint(Color.BLUE),
                 ((com.sun.scenario.effect.Flood) EffectShim.impl_getImpl(effect)).getPaint());
     }
-    
+
     @Test
     public void testCreateWithDefaultParams() {
         effect = new ColorInput(0, 0, 0, 0, Color.RED);
@@ -229,15 +229,15 @@ public class ColorInputTest extends EffectsTestBase {
         assertEquals(0, effect.getHeight(), 1e-100);
         assertEquals(Color.RED, effect.getPaint());
         pulse();
-        assertEquals(0f, ((com.sun.scenario.effect.Flood) 
+        assertEquals(0f, ((com.sun.scenario.effect.Flood)
                 EffectShim.impl_getImpl(effect)).getFloodBounds().getMinX(), 1e-100);
-        assertEquals(0f, ((com.sun.scenario.effect.Flood) 
+        assertEquals(0f, ((com.sun.scenario.effect.Flood)
                 EffectShim.impl_getImpl(effect)).getFloodBounds().getMinY(), 1e-100);
-        assertEquals(0f, ((com.sun.scenario.effect.Flood) 
+        assertEquals(0f, ((com.sun.scenario.effect.Flood)
                 EffectShim.impl_getImpl(effect)).getFloodBounds().getWidth(), 1e-100);
-        assertEquals(0f, ((com.sun.scenario.effect.Flood) 
+        assertEquals(0f, ((com.sun.scenario.effect.Flood)
                 EffectShim.impl_getImpl(effect)).getFloodBounds().getHeight(), 1e-100);
-        assertEquals(Toolkit.getPaintAccessor().getPlatformPaint(Color.RED), ((com.sun.scenario.effect.Flood) 
+        assertEquals(Toolkit.getPaintAccessor().getPlatformPaint(Color.RED), ((com.sun.scenario.effect.Flood)
                 EffectShim.impl_getImpl(effect)).getPaint());
     }
 }

@@ -47,21 +47,21 @@ static inline jobject createJavaScreen(JNIEnv *env, UIScreen* screen)
                                       (jint)[screen bounds].origin.y,
                                       (jint)[screen bounds].size.width,
                                       (jint)[screen bounds].size.height,
-                                      
+
                                       (jint)[screen applicationFrame].origin.x,
                                       (jint)[screen applicationFrame].origin.y,
                                       (jint)[screen applicationFrame].size.width,
                                       (jint)[screen applicationFrame].size.height,
-                                      
-                                      
+
+
                                       (jint)[screen currentMode].size.width,
                                       (jint)[screen currentMode].size.height,
                                       (jfloat)[screen scale]);
-    
+
 }
 
 void GlassScreenDidChangeScreenParameters(JNIEnv *env)
-{    
+{
     jmethodID jScreenNotifySettingsChanged = (*env)->GetStaticMethodID(env, mat_jScreenClass, "notifySettingsChanged", "()V");
 
     (*env)->CallStaticVoidMethod(env, mat_jScreenClass, jScreenNotifySettingsChanged);

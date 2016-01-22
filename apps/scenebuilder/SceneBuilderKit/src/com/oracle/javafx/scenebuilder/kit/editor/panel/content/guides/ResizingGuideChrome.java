@@ -42,9 +42,9 @@ import javafx.scene.shape.PathElement;
  *
  */
 public class ResizingGuideChrome extends Path {
-    
+
     /*
-     * 
+     *
      *      moveTo0                                  moveTo1
      *         |                                        |
      *         |                                        |
@@ -52,9 +52,9 @@ public class ResizingGuideChrome extends Path {
      *         |                                        |
      *         |                                        |
      *      lineTo0                                  lineTo1
-     * 
+     *
      */
-    
+
     private final MoveTo moveTo = new MoveTo();
     private final LineTo lineTo = new LineTo();
     private final MoveTo moveTo0 = new MoveTo();
@@ -62,10 +62,10 @@ public class ResizingGuideChrome extends Path {
     private final MoveTo moveTo1 = new MoveTo();
     private final LineTo lineTo1 = new LineTo();
     private final double sideLength;
-    
+
     public ResizingGuideChrome(double sideLength) {
         this.sideLength = sideLength;
-        
+
         final List<PathElement> elements = getElements();
         elements.add(moveTo);
         elements.add(lineTo);
@@ -74,13 +74,13 @@ public class ResizingGuideChrome extends Path {
         elements.add(moveTo1);
         elements.add(lineTo1);
     }
-    
+
     public void setup(double x1, double y1, double x2, double y2) {
         moveTo.setX(x1);
         moveTo.setY(y1);
         lineTo.setX(x2);
         lineTo.setY(y2);
-        
+
         if (x1 == x2) {  // Chrome is vertical
             moveTo0.setX(x1 - sideLength);
             moveTo0.setY(y1);
@@ -105,7 +105,7 @@ public class ResizingGuideChrome extends Path {
             final double distance = Math.sqrt(dx * dx + dy * dy);
             final double leftX = -dy / distance;
             final double leftY = +dx / distance;
-            
+
             moveTo0.setX(x1 + leftX * sideLength);
             moveTo0.setY(y1 + leftY * sideLength);
             lineTo0.setX(x1 - leftX * sideLength);

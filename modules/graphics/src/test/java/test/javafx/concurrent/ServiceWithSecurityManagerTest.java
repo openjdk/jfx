@@ -46,10 +46,10 @@ import sun.awt.AWTSecurityManager;
 @RunWith(ServiceWithSecurityManagerTest.ServiceTestRunner.class)
 @Ignore("This class doesn't appear to run correctly, often s.evaluate isn't called. Likely bogus test at present.")
 public class ServiceWithSecurityManagerTest extends ServiceLifecycleTest {
-    
+
     public static final class ServiceTestRunner extends BlockJUnit4ClassRunner {
         private ThreadGroup mainThreadGroup;
-        
+
         public ServiceTestRunner(Class<?> klass) throws InitializationError {
             super(klass);
         }
@@ -69,7 +69,7 @@ public class ServiceWithSecurityManagerTest extends ServiceLifecycleTest {
                                 throwable = t;
                             }
                         });
-                        
+
                         System.setSecurityManager(new StrictSecurityManager());
                         thread.start();
                         thread.join();
@@ -83,7 +83,7 @@ public class ServiceWithSecurityManagerTest extends ServiceLifecycleTest {
                 }
             };
         }
-        
+
         /**
          */
         private final class StrictSecurityManager extends AWTSecurityManager {

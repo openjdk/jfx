@@ -21,7 +21,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef ResourceResponseBase_h
@@ -74,10 +74,10 @@ public:
 
     int httpStatusCode() const;
     void setHTTPStatusCode(int);
-    
+
     const String& httpStatusText() const;
     void setHTTPStatusText(const String&);
-    
+
     String httpHeaderField(const AtomicString& name) const;
     String httpHeaderField(const char* name) const;
     void setHTTPHeaderField(const AtomicString& name, const String& value);
@@ -87,7 +87,7 @@ public:
     bool isMultipart() const { return mimeType() == "multipart/x-mixed-replace"; }
 
     bool isAttachment() const;
-    
+
     // These functions return parsed values of the corresponding response headers.
     // NaN means that the header was not present or had invalid value.
     bool cacheControlContainsNoCache() const;
@@ -164,7 +164,7 @@ public:
     bool m_connectionReused : 1;
 
     bool m_isNull : 1;
-    
+
 private:
     const ResourceResponse& asResourceResponse() const;
     void parseCacheControlDirectives() const;

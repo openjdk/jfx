@@ -1831,14 +1831,14 @@ gst_buffer_memset (GstBuffer * buffer, gsize offset, guint8 val, gsize size)
  * gst_buffer_copy_region:
  * @parent: a #GstBuffer.
  * @flags: the #GstBufferCopyFlags
- * @offset: the offset into parent #GstBuffer at which the new sub-buffer 
+ * @offset: the offset into parent #GstBuffer at which the new sub-buffer
  *          begins.
  * @size: the size of the new #GstBuffer sub-buffer, in bytes.
  *
  * Creates a sub-buffer from @parent at @offset and @size.
  * This sub-buffer uses the actual memory space of the parent buffer.
  * This function will copy the offset and timestamp fields when the
- * offset is 0. If not, they will be set to #GST_CLOCK_TIME_NONE and 
+ * offset is 0. If not, they will be set to #GST_CLOCK_TIME_NONE and
  * #GST_BUFFER_OFFSET_NONE.
  * If @offset equals 0 and @size equals the total size of @buffer, the
  * duration and offset end fields are also copied. If not they will be set

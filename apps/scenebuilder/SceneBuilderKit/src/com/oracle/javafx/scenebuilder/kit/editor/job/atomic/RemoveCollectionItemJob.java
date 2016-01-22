@@ -42,7 +42,7 @@ import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
 public class RemoveCollectionItemJob extends Job {
 
     private final FXOMObject targetValue;
-    
+
     private FXOMCollection parentCollection;
     private int indexInParentCollection;
 
@@ -50,12 +50,12 @@ public class RemoveCollectionItemJob extends Job {
         super(editorController);
         this.targetValue = value;
     }
-    
-    
+
+
     /*
      * Job
      */
-    
+
     @Override
     public boolean isExecutable() {
         return targetValue.getParentCollection() != null;
@@ -65,10 +65,10 @@ public class RemoveCollectionItemJob extends Job {
     public void execute() {
         assert parentCollection == null;
         assert isExecutable();
-        
+
         parentCollection = targetValue.getParentCollection();
         indexInParentCollection = targetValue.getIndexInParentCollection();
-        
+
         // Now same as redo()
         redo();
     }
@@ -76,7 +76,7 @@ public class RemoveCollectionItemJob extends Job {
     @Override
     public void undo() {
         assert targetValue.getParentCollection() == null;
-        
+
         getEditorController().getFxomDocument().beginUpdate();
         targetValue.addToParentCollection(indexInParentCollection, parentCollection);
         getEditorController().getFxomDocument().endUpdate();
@@ -89,7 +89,7 @@ public class RemoveCollectionItemJob extends Job {
     public void redo() {
         assert targetValue.getParentCollection() == parentCollection;
         assert targetValue.getIndexInParentCollection() == indexInParentCollection;
-        
+
         getEditorController().getFxomDocument().beginUpdate();
         targetValue.removeFromParentCollection();
         getEditorController().getFxomDocument().endUpdate();
@@ -100,10 +100,10 @@ public class RemoveCollectionItemJob extends Job {
     @Override
     public String getDescription() {
         // Should normally not reach the user
-        return getClass().getSimpleName() 
+        return getClass().getSimpleName()
                 + "[" //NOI18N
                 + targetValue.getGlueElement().getTagName()
                 + "]"; //NOI18N
     }
-    
+
 }

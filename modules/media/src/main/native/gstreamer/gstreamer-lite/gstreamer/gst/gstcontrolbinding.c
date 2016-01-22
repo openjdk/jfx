@@ -297,7 +297,7 @@ gst_control_binding_get_value (GstControlBinding * binding,
  * This function is useful if one wants to e.g. draw a graph of the control
  * curve or apply a control curve sample by sample.
  *
- * The values are unboxed and ready to be used. The similar function 
+ * The values are unboxed and ready to be used. The similar function
  * gst_control_binding_get_g_value_array() returns the array as #GValues and is
  * more suitable for bindings.
  *

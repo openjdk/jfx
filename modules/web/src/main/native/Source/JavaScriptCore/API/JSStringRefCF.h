@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef JSStringRefCF_h
@@ -38,7 +38,7 @@ extern "C" {
 /*!
 @function
 @abstract         Creates a JavaScript string from a CFString.
-@discussion       This function is optimized to take advantage of cases when 
+@discussion       This function is optimized to take advantage of cases when
  CFStringGetCharactersPtr returns a valid pointer.
 @param string     The CFString to copy into the new JSString.
 @result           A JSString containing string. Ownership follows the Create Rule.

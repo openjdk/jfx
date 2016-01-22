@@ -45,18 +45,18 @@ static jint supportedActions = com_sun_glass_ui_Clipboard_ACTION_NONE;
 + (void)setDelegate:(NSObject<GlassDragSourceDelegate>*)delegate
 {
     LOG("GlassDragSource:setDelegate");
-    
+
     gDelegate = delegate; // notice, there is no retain
 }
 
 + (void)flushWithMask:(jint)mask
 {
     LOG("GlassDragSource:flushWithMask: %d", mask);
-    
+
     if ([NSThread isMainThread] == YES)
     {
         supportedActions = mask;
-        NSDragOperation operation = [GlassDragSource mapJavaMaskToNsOperation:mask];        
+        NSDragOperation operation = [GlassDragSource mapJavaMaskToNsOperation:mask];
         if (operation != NSDragOperationNone)
         {
             LOG("[gDelegate startDrag:operation]");
@@ -78,19 +78,19 @@ static jint supportedActions = com_sun_glass_ui_Clipboard_ACTION_NONE;
     LOG("GlassDragSource:mapJavaMaskToNsOperation: %d", mask);
 
     NSDragOperation operation = NSDragOperationNone;
-  
+
     if ((com_sun_glass_ui_Clipboard_ACTION_COPY&mask)==com_sun_glass_ui_Clipboard_ACTION_COPY)
     {
         LOG("   masked com_sun_glass_ui_Clipboard_ACTION_COPY");
         operation |= NSDragOperationCopy;
     }
-    
+
     if ((com_sun_glass_ui_Clipboard_ACTION_MOVE&mask)==com_sun_glass_ui_Clipboard_ACTION_MOVE)
     {
         LOG("   masked com_sun_glass_ui_Clipboard_ACTION_MOVE");
         operation |= NSDragOperationMove;
     }
-    
+
     if ((com_sun_glass_ui_Clipboard_ACTION_COPY_OR_MOVE&mask)==com_sun_glass_ui_Clipboard_ACTION_COPY_OR_MOVE)
     {
         LOG("   masked com_sun_glass_ui_Clipboard_ACTION_COPY_OR_MOVE");
@@ -145,11 +145,11 @@ static jint supportedActions = com_sun_glass_ui_Clipboard_ACTION_NONE;
 + (jint)getRecommendedActionForMask:(NSDragOperation)operation
 {
     LOG("GlassDragSource:getRecommendedActionForMask: %d", operation);
-    
+
     switch (operation) {
-        case NSDragOperationNone: 
+        case NSDragOperationNone:
             return com_sun_glass_ui_Clipboard_ACTION_NONE;
-        case NSDragOperationCopy: 
+        case NSDragOperationCopy:
         case NSDragOperationGeneric:
         case NSDragOperationEvery:
             return com_sun_glass_ui_Clipboard_ACTION_COPY;
@@ -176,14 +176,14 @@ static jint supportedActions = com_sun_glass_ui_Clipboard_ACTION_NONE;
 + (void)setMask:(jint)mask
 {
     LOG("GlassDragSource:mask");
-    
+
     gMask = mask;
 }
 
 + (jint)getMask
 {
     LOG("GlassDragSource:getMask");
-    
+
     return gMask;
 }
 

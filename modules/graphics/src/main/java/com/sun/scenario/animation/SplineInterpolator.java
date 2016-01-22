@@ -43,7 +43,7 @@ import javafx.animation.Interpolator;
  * is applied to the curve to solve for Y. As X increases from 0 to 1, t also
  * increases from 0 to 1, and correspondingly Y increases from 0 to 1. The
  * X-to-Y mapping is not a function of path/curve length.
- * 
+ *
  */
 public class SplineInterpolator extends Interpolator {
 
@@ -81,7 +81,7 @@ public class SplineInterpolator extends Interpolator {
     /**
      * Creates a new instance with control points (0,0) (px1,py1) (px2,py2)
      * (1,1) -- px1, py1, px2, py2 all in range [0,1].
-     * 
+     *
      * @param px1
      *            X coordinate of first control point, in range [0,1]
      * @param py1
@@ -169,7 +169,7 @@ public class SplineInterpolator extends Interpolator {
     /**
      * Returns the y-value of the cubic bezier curve that corresponds to the x
      * input.
-     * 
+     *
      * @param x
      *            is x-value of cubic bezier curve, in range [0,1]
      * @return corresponding y-value of cubic bezier curve -- in range [0,1]
@@ -196,7 +196,7 @@ public class SplineInterpolator extends Interpolator {
      * numerically stable than power basis) -- 1D control coordinates are (0,
      * p1, p2, 1), where p1 and p2 are in range [0,1], and there is no ordering
      * constraint on p1 and p2, i.e., p1 &lt;= p2 does not have to be true.
-     * 
+     *
      * @param t
      *            is the paramaterized value in range [0,1]
      * @param p1
@@ -219,7 +219,7 @@ public class SplineInterpolator extends Interpolator {
      * control points are (0, p1, p2, 1), where p1 and p2 are in range [0,1],
      * and there is no ordering constraint on p1 and p2, i.e., p1 &lt;= p2 does
      * not have to be true.
-     * 
+     *
      * @param t
      *            is the paramaterized value in range [0,1]
      * @param p1
@@ -242,7 +242,7 @@ public class SplineInterpolator extends Interpolator {
      * Find an initial good guess for what parameter t might produce the x-value
      * on the Bezier curve -- uses linear interpolation on the x-value sample
      * array that was created on construction.
-     * 
+     *
      * @param x
      *            is x-value of cubic bezier curve, in range [0,1]
      * @return a good initial guess for parameter t (in range [0,1]) that gives
@@ -277,7 +277,7 @@ public class SplineInterpolator extends Interpolator {
      * Finds the parameter t that produces the given x-value for the curve --
      * uses Newton-Raphson to refine the value as opposed to subdividing until
      * we are within some tolerance.
-     * 
+     *
      * @param x
      *            is x-value of cubic bezier curve, in range [0,1]
      * @return the parameter t (in range [0,1]) that produces x

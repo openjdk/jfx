@@ -70,7 +70,7 @@ final class GtkPixels extends Pixels {
             this.ints.rewind();
         }
     }
-    
+
     protected native void _copyPixels(Buffer dst, Buffer src, int size);
 
     @Override
@@ -78,5 +78,5 @@ final class GtkPixels extends Pixels {
 
     @Override
     protected native void _attachByte(long ptr, int w, int h, ByteBuffer bytes, byte[] array, int offset);
-    
+
 }

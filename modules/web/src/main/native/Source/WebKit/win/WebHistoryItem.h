@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef WebHistoryItem_H
@@ -55,30 +55,30 @@ public:
     virtual ULONG STDMETHODCALLTYPE Release(void);
 
     // IWebHistoryItem
-    virtual HRESULT STDMETHODCALLTYPE initWithURLString( 
+    virtual HRESULT STDMETHODCALLTYPE initWithURLString(
         /* [in] */ BSTR urlString,
         /* [in] */ BSTR title,
         /* [in] */ DATE lastVisited);
-    
-    virtual HRESULT STDMETHODCALLTYPE originalURLString( 
+
+    virtual HRESULT STDMETHODCALLTYPE originalURLString(
         /* [retval][out] */ BSTR *url);
-    
-    virtual HRESULT STDMETHODCALLTYPE URLString( 
+
+    virtual HRESULT STDMETHODCALLTYPE URLString(
         /* [retval][out] */ BSTR *url);
-    
-    virtual HRESULT STDMETHODCALLTYPE title( 
+
+    virtual HRESULT STDMETHODCALLTYPE title(
         /* [retval][out] */ BSTR *pageTitle);
-    
-    virtual HRESULT STDMETHODCALLTYPE lastVisitedTimeInterval( 
+
+    virtual HRESULT STDMETHODCALLTYPE lastVisitedTimeInterval(
         /* [retval][out] */ DATE *lastVisited);
-    
-    virtual HRESULT STDMETHODCALLTYPE setAlternateTitle( 
+
+    virtual HRESULT STDMETHODCALLTYPE setAlternateTitle(
         /* [in] */ BSTR title);
-    
-    virtual HRESULT STDMETHODCALLTYPE alternateTitle( 
+
+    virtual HRESULT STDMETHODCALLTYPE alternateTitle(
         /* [retval][out] */ BSTR* title);
-    
-    virtual HRESULT STDMETHODCALLTYPE icon( 
+
+    virtual HRESULT STDMETHODCALLTYPE icon(
         /* [out, retval] */ OLE_HANDLE *hBitmap);
 
     // IWebHistoryItemPrivate

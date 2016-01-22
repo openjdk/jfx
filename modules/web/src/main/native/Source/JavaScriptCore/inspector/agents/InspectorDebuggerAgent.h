@@ -88,7 +88,7 @@ public:
     virtual void setOverlayMessage(ErrorString*, const String*) override;
 
     bool isPaused();
-    
+
     void handleConsoleAssert();
 
     void schedulePauseOnNextStatement(InspectorDebuggerFrontendDispatcher::Reason::Enum breakReason, PassRefPtr<InspectorObject> data);

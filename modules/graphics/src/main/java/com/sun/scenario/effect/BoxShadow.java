@@ -389,7 +389,7 @@ public class BoxShadow extends AbstractShadow {
     public DirtyRegionContainer getDirtyRegions(Effect defaultInput, DirtyRegionPool regionPool) {
         Effect di = getDefaultedInput(0, defaultInput);
         DirtyRegionContainer drc = di.getDirtyRegions(defaultInput, regionPool);
-        
+
         drc.grow(state.getKernelSize(0) / 2, state.getKernelSize(1) / 2);
 
         return drc;

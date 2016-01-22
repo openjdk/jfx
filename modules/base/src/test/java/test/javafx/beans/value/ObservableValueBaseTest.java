@@ -37,10 +37,10 @@ import org.junit.Test;
 
 public class ObservableValueBaseTest {
 
-	private static final Object UNDEFINED_VALUE = new Object();
+    private static final Object UNDEFINED_VALUE = new Object();
     private static final Object V1 = new Object();
     private static final Object V2 = new Object();
-	
+
     private ObservableObjectValueStub<Object> valueModel;
     private InvalidationListenerMock invalidationListener;
     private ChangeListenerMock<Object> changeListener;
@@ -54,7 +54,7 @@ public class ObservableValueBaseTest {
 
     @Test
     public void testInitialState() {
-    	// no exceptions etc.
+        // no exceptions etc.
         valueModel.fireValueChangedEvent();
     }
 
@@ -84,11 +84,11 @@ public class ObservableValueBaseTest {
         System.gc(); // making sure we did not not overdo weak references
         valueModel.set(V1);
         changeListener.check(valueModel, null, V1, 1);
-        
+
         // set same value again
         valueModel.set(V1);
         changeListener.check(null, UNDEFINED_VALUE, UNDEFINED_VALUE, 0);
-        
+
         // set null
         valueModel.set(null);
         changeListener.check(valueModel, V1, null, 1);

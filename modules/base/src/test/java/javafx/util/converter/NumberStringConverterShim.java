@@ -46,5 +46,5 @@ public class NumberStringConverterShim {
     public static Locale getLocale(NumberStringConverter nsc) {
         return nsc.locale;
     }
-    
+
 }

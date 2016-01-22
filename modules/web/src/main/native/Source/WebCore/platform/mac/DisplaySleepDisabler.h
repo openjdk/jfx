@@ -36,10 +36,10 @@ class DisplaySleepDisabler {
 public:
     static PassOwnPtr<DisplaySleepDisabler> create(const char* reason) { return adoptPtr(new DisplaySleepDisabler(reason)); }
     ~DisplaySleepDisabler();
-    
+
 private:
     DisplaySleepDisabler(const char* reason);
-    
+
 #if !PLATFORM(IOS)
     uint32_t m_disableDisplaySleepAssertion;
 #endif // !PLATFORM(IOS)

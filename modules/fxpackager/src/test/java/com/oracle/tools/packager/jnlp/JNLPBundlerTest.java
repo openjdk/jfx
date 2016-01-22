@@ -66,7 +66,7 @@ public class JNLPBundlerTest {
     static boolean retain = false;
 
     static final File FAKE_CERT_ROOT = new File("build/tmp/tests/cert/").getAbsoluteFile();
-    
+
     @BeforeClass
     public static void prepareApp() {
         Log.setLogger(new Log.Logger(true));
@@ -149,7 +149,7 @@ public class JNLPBundlerTest {
         bundleParams.put(OUT_FILE.getID(), "Smoke");
         bundleParams.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
         bundleParams.put(VERBOSE.getID(), true);
-        bundleParams.put(SIGN_BUNDLE.getID(), false); 
+        bundleParams.put(SIGN_BUNDLE.getID(), false);
 
         boolean valid = bundler.validate(bundleParams);
         assertTrue(valid);
@@ -171,9 +171,9 @@ public class JNLPBundlerTest {
         Assume.assumeTrue(Boolean.parseBoolean(System.getProperty("FULL_TEST")));
 
         testFileAssociation("FASmoke 1", "Bogus File", "bogus", "application/x-vnd.test-bogus",
-                            new File(appResourcesDir, "test.icns"));        
+                            new File(appResourcesDir, "test.icns"));
     }
-    
+
     @Test
     public void testFileAssociationWithNullExtension()
         throws IOException, ConfigException, UnsupportedPlatformException
@@ -280,7 +280,7 @@ public class JNLPBundlerTest {
         System.err.println("Bundle at - " + result);
         assertNotNull(result);
         assertTrue(result.exists());
-        
+
         //TODO verify file associations present
     }
 
@@ -323,7 +323,7 @@ public class JNLPBundlerTest {
 
         bundleParams.put(BUILD_ROOT.getID(), tmpBase);
 
-        bundleParams.put(OUT_FILE.getID(), "хелловорлд"); 
+        bundleParams.put(OUT_FILE.getID(), "хелловорлд");
         bundleParams.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
 
         bundleParams.put(APP_NAME.getID(), "хелловорлд");
@@ -439,7 +439,7 @@ public class JNLPBundlerTest {
 
         bundleParams.put(OUT_FILE.getID(), "Escape");
         bundleParams.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
-        
+
         // turn on some generation options
         bundleParams.put(EMBED_JNLP.getID(), true);
         bundleParams.put(INCLUDE_DT.getID(), false);

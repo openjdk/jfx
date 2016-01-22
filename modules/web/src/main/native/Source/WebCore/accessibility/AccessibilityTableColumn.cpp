@@ -37,7 +37,7 @@
 #include "RenderTableSection.h"
 
 namespace WebCore {
-    
+
 using namespace HTMLNames;
 
 AccessibilityTableColumn::AccessibilityTableColumn()
@@ -46,7 +46,7 @@ AccessibilityTableColumn::AccessibilityTableColumn()
 
 AccessibilityTableColumn::~AccessibilityTableColumn()
 {
-}    
+}
 
 PassRefPtr<AccessibilityTableColumn> AccessibilityTableColumn::create()
 {
@@ -56,10 +56,10 @@ PassRefPtr<AccessibilityTableColumn> AccessibilityTableColumn::create()
 void AccessibilityTableColumn::setParent(AccessibilityObject* parent)
 {
     AccessibilityMockObject::setParent(parent);
-    
+
     clearChildren();
 }
-    
+
 LayoutRect AccessibilityTableColumn::elementRect() const
 {
     // this will be filled in when addChildren is called
@@ -70,37 +70,37 @@ AccessibilityObject* AccessibilityTableColumn::headerObject()
 {
     if (!m_parent)
         return 0;
-    
+
     RenderObject* renderer = m_parent->renderer();
     if (!renderer)
         return 0;
-    
+
     if (!m_parent->isAccessibilityTable())
         return 0;
-    
+
     AccessibilityTable* parentTable = toAccessibilityTable(m_parent);
     if (parentTable->isAriaTable()) {
         for (const auto& cell : children()) {
             if (cell->ariaRoleAttribute() == ColumnHeaderRole)
                 return cell.get();
         }
-        
+
         return 0;
     }
 
     if (!renderer->isTable())
         return 0;
-    
+
     RenderTable* table = toRenderTable(renderer);
-    
+
     AccessibilityObject* headerObject = 0;
-    
+
     // try the <thead> section first. this doesn't require th tags
     headerObject = headerObjectForSection(table->header(), false);
 
     if (headerObject)
         return headerObject;
-    
+
     // now try for <th> tags in the first body
     headerObject = headerObjectForSection(table->firstBody(), true);
 
@@ -111,76 +111,76 @@ AccessibilityObject* AccessibilityTableColumn::headerObjectForSection(RenderTabl
 {
     if (!section)
         return 0;
-    
+
     unsigned numCols = section->numColumns();
     if (m_columnIndex >= numCols)
         return 0;
-    
+
     if (!section->numRows())
         return 0;
-    
+
     RenderTableCell* cell = 0;
     // also account for cells that have a span
     for (int testCol = m_columnIndex; testCol >= 0; --testCol) {
         RenderTableCell* testCell = section->primaryCellAt(0, testCol);
         if (!testCell)
             continue;
-        
-        // we've reached a cell that doesn't even overlap our column 
+
+        // we've reached a cell that doesn't even overlap our column
         // it can't be our header
         if ((testCell->col() + (testCell->colSpan()-1)) < m_columnIndex)
             break;
-        
+
         if (!testCell->element())
             continue;
-        
+
         if (thTagRequired && !testCell->element()->hasTagName(thTag))
             continue;
-        
+
         cell = testCell;
     }
-    
+
     if (!cell)
         return 0;
 
     return axObjectCache()->getOrCreate(cell);
 }
-    
+
 bool AccessibilityTableColumn::computeAccessibilityIsIgnored() const
 {
     if (!m_parent)
         return true;
-    
+
 #if PLATFORM(IOS) || PLATFORM(GTK) || PLATFORM(EFL)
     return true;
 #endif
-    
+
     return m_parent->accessibilityIsIgnored();
 }
-    
+
 void AccessibilityTableColumn::addChildren()
 {
-    ASSERT(!m_haveChildren); 
-    
+    ASSERT(!m_haveChildren);
+
     m_haveChildren = true;
     if (!m_parent || !m_parent->isAccessibilityTable())
         return;
-    
+
     AccessibilityTable* parentTable = toAccessibilityTable(m_parent);
     int numRows = parentTable->rowCount();
-    
+
     for (int i = 0; i < numRows; i++) {
         AccessibilityTableCell* cell = parentTable->cellForColumnAndRow(m_columnIndex, i);
         if (!cell)
             continue;
-        
+
         // make sure the last one isn't the same as this one (rowspan cells)
         if (m_children.size() > 0 && m_children.last() == cell)
             continue;
-            
+
         m_children.append(cell);
         m_columnRect.unite(cell->elementRect());
     }
 }
-    
+
 } // namespace WebCore

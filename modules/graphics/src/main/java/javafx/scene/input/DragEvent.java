@@ -188,12 +188,12 @@ rect.setOnDragDropped(new EventHandler<DragEvent>() {
  *
  * <p>
  * After the gesture has been finished, whether by successful or unsuccessful
- * data transfer or being canceled, the {@code DRAG_DONE} event is sent to 
+ * data transfer or being canceled, the {@code DRAG_DONE} event is sent to
  * the gesture source. The {@code getTransferMode()} method of the event
  * indicates to the gesture source how the transfer of data was completed.
  * If the transfer mode has the value {@code MOVE}, then this allows the source
  * to clear out its data. Clearing the source's data gives the appropriate
- * appearance to a user that the data has been moved by the drag and drop 
+ * appearance to a user that the data has been moved by the drag and drop
  * gesture. If it has the value {@code null}, then the drag and drop gesture
  * ended without any data being transferred.  This could happen as a result of
  * a mouse release event over a node that is not a drop target, or the user
@@ -205,7 +205,7 @@ rect.setOnDragDropped(new EventHandler<DragEvent>() {
 public final class DragEvent extends InputEvent {
 
     private static final long serialVersionUID = 20121107L;
-    
+
     /**
      * Common supertype for all drag event types.
      */
@@ -417,7 +417,7 @@ public final class DragEvent extends InputEvent {
         newEvent.y = newCoordinates.getY();
         newEvent.z = newCoordinates.getZ();
     }
-    
+
     @Override
     public DragEvent copyFor(Object newSource, EventTarget newTarget) {
         DragEvent e = (DragEvent) super.copyFor(newSource, newTarget);
@@ -453,7 +453,7 @@ public final class DragEvent extends InputEvent {
     /**
      * Horizontal position of the event relative to the
      * origin of the DragEvent's source.
-     * 
+     *
      * @return horizontal position of the event relative to the
      * origin of the DragEvent's source.
      */
@@ -470,7 +470,7 @@ public final class DragEvent extends InputEvent {
     /**
      * Vertical position of the event relative to the
      * origin of the DragEvent's source.
-     * 
+     *
      * @return vertical position of the event relative to the
      * origin of the DragEvent's source.
      */
@@ -537,7 +537,7 @@ public final class DragEvent extends InputEvent {
      * the boundsInParent of the root-most parent of the DragEvent's node.
      * Note that in 3D scene, this represents the flat coordinates after
      * applying the projection transformations.
-     * 
+     *
      * @return horizontal position of the event relative to the
      * origin of the {@code Scene} that contains the DragEvent's source
      */
@@ -560,7 +560,7 @@ public final class DragEvent extends InputEvent {
      * the boundsInParent of the root-most parent of the DragEvent's node.
      * Note that in 3D scene, this represents the flat coordinates after
      * applying the projection transformations.
-     * 
+     *
      * @return vertical position of the event relative to the
      * origin of the {@code Scene} that contains the DragEvent's source
      */

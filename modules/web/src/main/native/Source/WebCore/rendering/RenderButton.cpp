@@ -73,7 +73,7 @@ void RenderButton::addChild(RenderObject* newChild, RenderObject* beforeChild)
         setupInnerStyle(&m_inner->style());
         RenderFlexibleBox::addChild(m_inner);
     }
-    
+
     m_inner->addChild(newChild, beforeChild);
 }
 
@@ -123,7 +123,7 @@ void RenderButton::styleDidChange(StyleDifference diff, const RenderStyle* oldSt
     }
 }
 
-void RenderButton::setupInnerStyle(RenderStyle* innerStyle) 
+void RenderButton::setupInnerStyle(RenderStyle* innerStyle)
 {
     ASSERT(innerStyle->refCount() == 1);
     // RenderBlock::createAnonymousBlock creates a new RenderStyle, so this is

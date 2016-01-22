@@ -26,12 +26,12 @@
 #include <JNIUtil.h>
 
 jboolean
-initializeFieldIds(jfieldID* dest, JNIEnv* env, jclass classHandle, 
+initializeFieldIds(jfieldID* dest, JNIEnv* env, jclass classHandle,
                    const FieldDesc* fields) {
     jboolean retVal = JNI_TRUE;
 
     while (fields->name != NULL) {
-        *dest = (*env)->GetFieldID(env, classHandle, fields->name, 
+        *dest = (*env)->GetFieldID(env, classHandle, fields->name,
                                    fields->signature);
         checkAndClearException(env);
         if (*dest == NULL) {
@@ -46,7 +46,7 @@ initializeFieldIds(jfieldID* dest, JNIEnv* env, jclass classHandle,
 }
 
 jboolean
-initializeStaticFieldIds(jfieldID* dest, JNIEnv* env, jclass classHandle, 
+initializeStaticFieldIds(jfieldID* dest, JNIEnv* env, jclass classHandle,
                          const FieldDesc* fields) {
     jboolean retVal = JNI_TRUE;
 

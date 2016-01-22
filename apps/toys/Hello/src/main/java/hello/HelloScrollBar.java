@@ -85,7 +85,7 @@ public class HelloScrollBar extends Application {
         scene.setFill(Color.CHOCOLATE);
 
         Group root = (Group)scene.getRoot();
-        
+
         ScrollBar sbarV1 = new ScrollBar();
         sbarV1.setFocusTraversable(true);
         sbarV1.setMax(100);

@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -56,12 +56,12 @@ JITByIdGenerator::JITByIdGenerator(
 {
     m_stubInfo->patch.registersFlushed = registersFlushed;
     m_stubInfo->patch.usedRegisters = usedRegisters;
-    
+
     // This is a convenience - in cases where the only registers you're using are base/value,
     // it allows you to pass RegisterSet() as the usedRegisters argument.
     m_stubInfo->patch.usedRegisters.set(base);
     m_stubInfo->patch.usedRegisters.set(value);
-    
+
     m_stubInfo->patch.baseGPR = static_cast<int8_t>(base.payloadGPR());
     m_stubInfo->patch.valueGPR = static_cast<int8_t>(value.payloadGPR());
 #if USE(JSVALUE32_64)
@@ -105,7 +105,7 @@ void JITByIdGenerator::generateFastPathChecks(MacroAssembler& jit, GPRReg butter
         MacroAssembler::NotEqual,
         MacroAssembler::Address(m_base.payloadGPR(), JSCell::structureOffset()),
         m_structureImm, MacroAssembler::TrustedImmPtr(reinterpret_cast<void*>(unusedPointer)));
-    
+
     m_propertyStorageLoad = jit.convertibleLoadPtr(
         MacroAssembler::Address(m_base.payloadGPR(), JSObject::butterflyOffset()), butterfly);
 }
@@ -113,7 +113,7 @@ void JITByIdGenerator::generateFastPathChecks(MacroAssembler& jit, GPRReg butter
 void JITGetByIdGenerator::generateFastPath(MacroAssembler& jit)
 {
     generateFastPathChecks(jit, m_value.payloadGPR());
-    
+
 #if USE(JSVALUE64)
     m_loadOrStore = jit.load64WithCompactAddressOffsetPatch(
         MacroAssembler::Address(m_value.payloadGPR(), 0), m_value.payloadGPR()).label();
@@ -123,7 +123,7 @@ void JITGetByIdGenerator::generateFastPath(MacroAssembler& jit)
     m_loadOrStore = jit.load32WithCompactAddressOffsetPatch(
         MacroAssembler::Address(m_value.payloadGPR(), 0), m_value.payloadGPR()).label();
 #endif
-    
+
     m_done = jit.label();
 }
 
@@ -142,7 +142,7 @@ JITPutByIdGenerator::JITPutByIdGenerator(
 void JITPutByIdGenerator::generateFastPath(MacroAssembler& jit)
 {
     generateFastPathChecks(jit, m_scratch);
-    
+
 #if USE(JSVALUE64)
     m_loadOrStore = jit.store64WithAddressOffsetPatch(
         m_value.payloadGPR(), MacroAssembler::Address(m_scratch, 0)).label();
@@ -152,7 +152,7 @@ void JITPutByIdGenerator::generateFastPath(MacroAssembler& jit)
     m_loadOrStore = jit.store32WithAddressOffsetPatch(
         m_value.payloadGPR(), MacroAssembler::Address(m_scratch, 0)).label();
 #endif
-    
+
     m_done = jit.label();
 }
 

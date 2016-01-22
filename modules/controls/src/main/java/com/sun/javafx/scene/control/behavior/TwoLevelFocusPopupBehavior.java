@@ -88,7 +88,7 @@ public class TwoLevelFocusPopupBehavior extends TwoLevelFocusBehavior {
     /*
     ** don't allow the Node to handle a key event if it is in externalFocus mode.
     ** the only keyboard actions allowed are the navigation keys......
-    */ 
+    */
     final EventDispatcher preemptiveEventDispatcher = (event, tail) -> {
 
         // block the event from being passed down to children
@@ -242,7 +242,7 @@ public class TwoLevelFocusPopupBehavior extends TwoLevelFocusBehavior {
                       case RIGHT :
                           event.consume();
                           break;
-                        
+
                       case ENTER :
                           setExternalFocus(true);
                           event.consume();

@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -475,10 +475,10 @@ static JSC::JSValue dataFunctionf(DataFunctionToCall f, JSC::ExecState* exec, We
 {
     if (exec->argumentCount() != 2)
         return exec->vm().throwException(exec, createNotEnoughArgumentsError(exec));
-    
+
     WebGLUniformLocation* location = 0;
     long index = -1;
-    
+
     if (functionForUniform(f)) {
         location = toWebGLUniformLocation(exec->uncheckedArgument(0));
         if (!location && !exec->uncheckedArgument(0).isUndefinedOrNull())
@@ -488,11 +488,11 @@ static JSC::JSValue dataFunctionf(DataFunctionToCall f, JSC::ExecState* exec, We
 
     if (exec->hadException())
         return jsUndefined();
-        
+
     RefPtr<Float32Array> webGLArray = toFloat32Array(exec->uncheckedArgument(1));
-    if (exec->hadException())    
+    if (exec->hadException())
         return jsUndefined();
-        
+
     ExceptionCode ec = 0;
     if (webGLArray) {
         switch (f) {
@@ -521,7 +521,7 @@ static JSC::JSValue dataFunctionf(DataFunctionToCall f, JSC::ExecState* exec, We
             context.vertexAttrib4fv(index, webGLArray.get());
             break;
         }
-        
+
         setDOMException(exec, ec);
         return jsUndefined();
     }
@@ -556,7 +556,7 @@ static JSC::JSValue dataFunctionf(DataFunctionToCall f, JSC::ExecState* exec, We
         context.vertexAttrib4fv(index, array.data(), array.size());
         break;
     }
-    
+
     setDOMException(exec, ec);
     return jsUndefined();
 }
@@ -569,7 +569,7 @@ static JSC::JSValue dataFunctioni(DataFunctionToCall f, JSC::ExecState* exec, We
     WebGLUniformLocation* location = toWebGLUniformLocation(exec->uncheckedArgument(0));
     if (!location && !exec->uncheckedArgument(0).isUndefinedOrNull())
         return throwTypeError(exec);
-  
+
     RefPtr<Int32Array> webGLArray = toInt32Array(exec->uncheckedArgument(1));
 
     ExceptionCode ec = 0;
@@ -590,7 +590,7 @@ static JSC::JSValue dataFunctioni(DataFunctionToCall f, JSC::ExecState* exec, We
         default:
             break;
         }
-        
+
         setDOMException(exec, ec);
         return jsUndefined();
     }
@@ -616,7 +616,7 @@ static JSC::JSValue dataFunctioni(DataFunctionToCall f, JSC::ExecState* exec, We
     default:
         break;
     }
-    
+
     setDOMException(exec, ec);
     return jsUndefined();
 }
@@ -631,11 +631,11 @@ static JSC::JSValue dataFunctionMatrix(DataFunctionMatrixToCall f, JSC::ExecStat
         return throwTypeError(exec);
 
     bool transpose = exec->uncheckedArgument(1).toBoolean(exec);
-    if (exec->hadException())    
+    if (exec->hadException())
         return jsUndefined();
-        
+
     RefPtr<Float32Array> webGLArray = toFloat32Array(exec->uncheckedArgument(2));
-        
+
     ExceptionCode ec = 0;
     if (webGLArray) {
         switch (f) {
@@ -649,7 +649,7 @@ static JSC::JSValue dataFunctionMatrix(DataFunctionMatrixToCall f, JSC::ExecStat
             context.uniformMatrix4fv(location, transpose, webGLArray.get(), ec);
             break;
         }
-        
+
         setDOMException(exec, ec);
         return jsUndefined();
     }

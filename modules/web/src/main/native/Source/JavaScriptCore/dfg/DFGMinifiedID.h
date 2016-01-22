@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef DFGMinifiedID_h
@@ -45,42 +45,42 @@ public:
     MinifiedID() : m_id(invalidID()) { }
     MinifiedID(WTF::HashTableDeletedValueType) : m_id(otherInvalidID()) { }
     explicit MinifiedID(Node* node) : m_id(bitwise_cast<uintptr_t>(node)) { }
-    
+
     bool operator!() const { return m_id == invalidID(); }
-    
+
     // This takes Graph& to remind you, that you should only be calling this method
     // when you're in the main compilation pass (i.e. you have a graph) and not later,
     // like during OSR exit compilation.
     Node* node(const Graph&) const { return bitwise_cast<Node*>(m_id); }
-    
+
     bool operator==(const MinifiedID& other) const { return m_id == other.m_id; }
     bool operator!=(const MinifiedID& other) const { return m_id != other.m_id; }
     bool operator<(const MinifiedID& other) const { return m_id < other.m_id; }
     bool operator>(const MinifiedID& other) const { return m_id > other.m_id; }
     bool operator<=(const MinifiedID& other) const { return m_id <= other.m_id; }
     bool operator>=(const MinifiedID& other) const { return m_id >= other.m_id; }
-    
+
     unsigned hash() const { return WTF::IntHash<uintptr_t>::hash(m_id); }
-    
+
     void dump(PrintStream& out) const { out.print(RawPointer(reinterpret_cast<void*>(m_id))); }
-    
+
     bool isHashTableDeletedValue() const { return m_id == otherInvalidID(); }
-    
+
     static MinifiedID fromBits(uintptr_t value)
     {
         MinifiedID result;
         result.m_id = value;
         return result;
     }
-    
+
     uintptr_t bits() const { return m_id; }
 
 private:
     friend class MinifiedNode;
-    
+
     static uintptr_t invalidID() { return static_cast<uintptr_t>(static_cast<intptr_t>(-1)); }
     static uintptr_t otherInvalidID() { return static_cast<uintptr_t>(static_cast<intptr_t>(-2)); }
-    
+
     uintptr_t m_id;
 };
 

@@ -74,7 +74,7 @@ public final class Screen {
     }
 
     private static EventHandler eventHandler;
-    
+
     private volatile long ptr;
     private volatile int adapter;
 
@@ -285,7 +285,7 @@ public final class Screen {
         Application.checkEventThread();
         eventHandler = eh;
     }
-    
+
     /**
      * Called from native when the Screen definitions change.
      */
@@ -314,7 +314,7 @@ public final class Screen {
                 }
             }
         }
-        
+
         // Dispose the old screens
         if (oldScreens != null) {
             for (Screen screen : oldScreens) {

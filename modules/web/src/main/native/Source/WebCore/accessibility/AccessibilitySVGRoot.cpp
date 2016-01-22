@@ -47,16 +47,16 @@ PassRefPtr<AccessibilitySVGRoot> AccessibilitySVGRoot::create(RenderObject* rend
 {
     return adoptRef(new AccessibilitySVGRoot(renderer));
 }
-    
+
 AccessibilityObject* AccessibilitySVGRoot::parentObject() const
 {
     // If a parent was set because this is a remote SVG resource, use that
     // but otherwise, we should rely on the standard render tree for the parent.
     if (m_parent)
         return m_parent;
-    
+
     return AccessibilityRenderObject::parentObject();
 }
 
-    
+
 } // namespace WebCore

@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef FTLJSCall_h
@@ -45,17 +45,17 @@ class JSCall {
 public:
     JSCall();
     JSCall(unsigned stackmapID, DFG::Node*);
-    
+
     void emit(CCallHelpers&);
     void link(VM&, LinkBuffer&, CallLinkInfo&);
-    
+
     unsigned stackmapID() const { return m_stackmapID; }
-    
+
     bool operator<(const JSCall& other) const
     {
         return m_instructionOffset < other.m_instructionOffset;
     }
-    
+
 private:
     unsigned m_stackmapID;
     DFG::Node* m_node;

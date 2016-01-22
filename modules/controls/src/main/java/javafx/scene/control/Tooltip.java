@@ -71,14 +71,14 @@ import javafx.util.Duration;
 
 /**
  * Tooltips are common UI elements which are typically used for showing
- * additional information about a Node in the scenegraph when the Node is 
- * hovered over by the mouse. Any Node can show a tooltip. In most cases a 
+ * additional information about a Node in the scenegraph when the Node is
+ * hovered over by the mouse. Any Node can show a tooltip. In most cases a
  * Tooltip is created and its {@link #textProperty() text} property is modified
  * to show plain text to the user. However, a Tooltip is able to show within it
  * an arbitrary scenegraph of nodes - this is done by creating the scenegraph
- * and setting it inside the Tooltip {@link #graphicProperty() graphic} 
- * property. 
- * 
+ * and setting it inside the Tooltip {@link #graphicProperty() graphic}
+ * property.
+ *
  * <p>You use the following approach to set a Tooltip on any node:
  *
  * <pre>
@@ -88,15 +88,15 @@ import javafx.util.Duration;
  * </pre>
  *
  * This tooltip will then participate with the typical tooltip semantics (i.e.
- * appearing on hover, etc). Note that the Tooltip does not have to be 
+ * appearing on hover, etc). Note that the Tooltip does not have to be
  * uninstalled: it will be garbage collected when it is not referenced by any
  * Node. It is possible to manually uninstall the tooltip, however.
  *
  * <p>A single tooltip can be installed on multiple target nodes or multiple
  * controls.
- * 
+ *
  * <p>Because most Tooltips are shown on UI controls, there is special API
- * for all controls to make installing a Tooltip less verbose. The example below 
+ * for all controls to make installing a Tooltip less verbose. The example below
  * shows how to create a tooltip for a Button control:
  *
  * <pre>
@@ -143,13 +143,13 @@ public class Tooltip extends PopupControl {
     public static void uninstall(Node node, Tooltip t) {
         BEHAVIOR.uninstall(node);
     }
-    
+
     /***************************************************************************
      *                                                                         *
      * Constructors                                                            *
      *                                                                         *
      **************************************************************************/
-    
+
     /**
      * Creates a tooltip with an empty string for its text.
      */
@@ -199,11 +199,11 @@ public class Tooltip extends PopupControl {
 
     /**
      * Specifies the behavior for lines of text <em>when text is multiline</em>.
-     * Unlike {@link #contentDisplayProperty() contentDisplay} which affects the 
-     * graphic and text, this setting only affects multiple lines of text 
+     * Unlike {@link #contentDisplayProperty() contentDisplay} which affects the
+     * graphic and text, this setting only affects multiple lines of text
      * relative to the text bounds.
      */
-    public final ObjectProperty<TextAlignment> textAlignmentProperty() {  
+    public final ObjectProperty<TextAlignment> textAlignmentProperty() {
         return textAlignment;
     }
     public final void setTextAlignment(TextAlignment value) {
@@ -312,7 +312,7 @@ public class Tooltip extends PopupControl {
 
     /**
      * An optional icon for the Tooltip. This can be positioned relative to the
-     * text by using the {@link #contentDisplayProperty() content display} 
+     * text by using the {@link #contentDisplayProperty() content display}
      * property.
      * The node specified for this variable cannot appear elsewhere in the
      * scene graph, otherwise the {@code IllegalArgumentException} is thrown.

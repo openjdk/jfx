@@ -152,7 +152,7 @@ public:
     // tailTime() is the length of time (not counting latency time) where non-zero output may occur after continuous silent input.
     virtual double tailTime() const = 0;
     // latencyTime() is the length of time it takes for non-zero output to appear after non-zero input is provided. This only applies to
-    // processing delay which is an artifact of the processing algorithm chosen and is *not* part of the intrinsic desired effect. For 
+    // processing delay which is an artifact of the processing algorithm chosen and is *not* part of the intrinsic desired effect. For
     // example, a "delay" effect is expected to delay the signal, and thus would not be considered latency.
     virtual double latencyTime() const = 0;
 
@@ -186,7 +186,7 @@ protected:
     // Inputs and outputs must be created before the AudioNode is initialized.
     void addInput(std::unique_ptr<AudioNodeInput>);
     void addOutput(std::unique_ptr<AudioNodeOutput>);
-    
+
     // Called by processIfNecessary() to cause all parts of the rendering graph connected to us to process.
     // Each rendering quantum, the audio data for each of the AudioNode's inputs will be available after this method is called.
     // Called from context's audio thread.
@@ -209,7 +209,7 @@ private:
     // Ref-counting
     std::atomic<int> m_normalRefCount;
     std::atomic<int> m_connectionRefCount;
-    
+
     bool m_isMarkedForDeletion;
     bool m_isDisabled;
 

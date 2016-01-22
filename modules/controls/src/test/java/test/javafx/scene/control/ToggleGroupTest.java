@@ -442,9 +442,9 @@ public class ToggleGroupTest {
         try {
             g1.getToggles().addAll(b1, b2);
             fail("Duplicates are not allowed");
-        } catch(IllegalArgumentException iae) {            
+        } catch(IllegalArgumentException iae) {
             assertNotNull(iae);
-        }        
+        }
     }
 
     @Test public void addingDuplicateTogglesUsingToggleGroupGetTogglesSetAllTwice() {
@@ -527,7 +527,7 @@ public class ToggleGroupTest {
         assertFalse(b2.isSelected());
         assertEquals(g1.getSelectedToggle(), b1);
     }
-    
+
     @Test public void testProperties() {
         javafx.collections.ObservableMap<Object, Object> properties = g1.getProperties();
 

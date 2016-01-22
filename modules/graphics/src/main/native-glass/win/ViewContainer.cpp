@@ -106,7 +106,7 @@ void ViewContainer::InitDropTarget(HWND hwnd)
         return;
     }
 
-    m_spDropTarget = 
+    m_spDropTarget =
         std::auto_ptr<IDropTarget>(new GlassDropTarget(this, hwnd));
 }
 
@@ -134,8 +134,8 @@ void ViewContainer::InitManipProcessor(HWND hwnd)
                                IID_IUnknown,
                                (VOID**)(&m_inertiaProc)
                                );
-        
-            m_manipEventSink = 
+
+            m_manipEventSink =
                 new ManipulationEventSinkWithInertia(m_manipProc, m_inertiaProc, this, hwnd);
         }
 
@@ -173,7 +173,7 @@ void ViewContainer::ReleaseManipProcessor()
             m_manipEventSink = NULL;
         }
     }
-    
+
     if (m_gestureSupportCls) {
         JNIEnv *env = GetEnv();
         env->DeleteGlobalRef(m_gestureSupportCls);
@@ -303,7 +303,7 @@ void ViewContainer::HandleViewMenuEvent(HWND hwnd, UINT msg, WPARAM wParam, LPAR
     if ((HWND)wParam != hwnd) {
         return;
     }
-    jboolean isKeyboardTrigger = lParam == (LPARAM)-1; 
+    jboolean isKeyboardTrigger = lParam == (LPARAM)-1;
     if (isKeyboardTrigger) {
         lParam = ::GetMessagePos ();
     }
@@ -376,7 +376,7 @@ void ViewContainer::HandleViewKeyEvent(HWND hwnd, UINT msg, WPARAM wParam, LPARA
     wchar_t wChar[4] = {0};
     int unicodeConverted = ::ToUnicodeEx(wKey, scancode, kbState,
                                 wChar, 4, 0, m_kbLayout);
-    
+
     // Some virtual codes require special handling
     switch (wKey) {
         case 0x00BA:// VK_OEM_1
@@ -541,7 +541,7 @@ void ViewContainer::HandleViewKeyEvent(HWND hwnd, UINT msg, WPARAM wParam, LPARA
     }
 }
 
-void ViewContainer::SendViewTypedEvent(int repCount, jchar wChar) 
+void ViewContainer::SendViewTypedEvent(int repCount, jchar wChar)
 {
     if (!GetGlassView()) {
         return;
@@ -559,7 +559,7 @@ void ViewContainer::SendViewTypedEvent(int repCount, jchar wChar)
 
             env->CallVoidMethod(GetView(), javaIDs.View.notifyKey,
                                 com_sun_glass_events_KeyEvent_TYPED,
-                                com_sun_glass_events_KeyEvent_VK_UNDEFINED, jKeyChars, 
+                                com_sun_glass_events_KeyEvent_VK_UNDEFINED, jKeyChars,
                                 GetModifiers());
             CheckAndClearException(env);
         }
@@ -567,7 +567,7 @@ void ViewContainer::SendViewTypedEvent(int repCount, jchar wChar)
     }
 }
 
-void ViewContainer::HandleViewDeadKeyEvent(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) 
+void ViewContainer::HandleViewDeadKeyEvent(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
     if (!GetGlassView()) {
         return;
@@ -598,7 +598,7 @@ void ViewContainer::HandleViewDeadKeyEvent(HWND hwnd, UINT msg, WPARAM wParam, L
             kbState, &ignored, 0, m_kbLayout);
 }
 
-void ViewContainer::HandleViewTypedEvent(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) 
+void ViewContainer::HandleViewTypedEvent(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
     if (!GetGlassView()) {
         return;
@@ -606,7 +606,7 @@ void ViewContainer::HandleViewTypedEvent(HWND hwnd, UINT msg, WPARAM wParam, LPA
 
     int repCount = LOWORD(lParam);
     jchar wChar;
-    
+
     if (!m_deadKeyWParam) {
         wChar = (jchar)wParam;
     } else {
@@ -634,10 +634,10 @@ void ViewContainer::HandleViewTypedEvent(HWND hwnd, UINT msg, WPARAM wParam, LPA
 
                 case L'`':   comp[1] = 0x308; comp[2] = 0x300; break; // dialytika varia
                 case L'\\':  comp[1] = 0x313; comp[2] = 0x300; break; // psili varia
-                case L'/':   comp[1] = 0x313; comp[2] = 0x301; break; // psili oxia 
+                case L'/':   comp[1] = 0x313; comp[2] = 0x301; break; // psili oxia
                 case L'=':   comp[1] = 0x313; comp[2] = 0x342; break; // psili perispomeni
                 case L'|':   comp[1] = 0x314; comp[2] = 0x300; break; // dasia varia
-                case L'?':   comp[1] = 0x314; comp[2] = 0x301; break; // dasia oxia 
+                case L'?':   comp[1] = 0x314; comp[2] = 0x301; break; // dasia oxia
                 case L'+':   comp[1] = 0x314; comp[2] = 0x342; break; // dasia perispomeni
 
                 // AltGr dead chars don't work. Maybe kbd isn't reset properly?
@@ -708,7 +708,7 @@ void ViewContainer::HandleViewTypedEvent(HWND hwnd, UINT msg, WPARAM wParam, LPA
         }
         wchar_t out[3];
         int res = ::FoldString(MAP_PRECOMPOSED, (LPWSTR)comp, compSize, (LPWSTR)out, 3);
-        
+
         if (res > 0) {
             wChar = (jchar)out[0];
 
@@ -873,7 +873,7 @@ BOOL ViewContainer::HandleViewMouseEvent(HWND hwnd, UINT msg, WPARAM wParam, LPA
     }
 
     jint jModifiers = GetModifiers();
-    
+
     const jboolean isSynthesized = jboolean(IsTouchEvent());
 
     JNIEnv *env = GetEnv();
@@ -1041,7 +1041,7 @@ BOOL ViewContainer::HandleViewInputMethodEvent(HWND hwnd, UINT msg, WPARAM wPara
     return FALSE;
 }
 
-void ViewContainer::WmImeComposition(HWND hwnd, WPARAM wParam, LPARAM lParam) 
+void ViewContainer::WmImeComposition(HWND hwnd, WPARAM wParam, LPARAM lParam)
 {
     BOOL ret = FALSE;
 
@@ -1094,7 +1094,7 @@ void ViewContainer::WmImeComposition(HWND hwnd, WPARAM wParam, LPARAM lParam)
     CheckAndClearException(env);
 }
 
-void ViewContainer::WmImeNotify(HWND hwnd, WPARAM wParam, LPARAM lParam) 
+void ViewContainer::WmImeNotify(HWND hwnd, WPARAM wParam, LPARAM lParam)
 {
     if (wParam == IMN_OPENCANDIDATE || wParam == IMN_CHANGECANDIDATE) {
         JNIEnv *env = GetEnv();
@@ -1183,9 +1183,9 @@ void ViewContainer::SendInputMethodEvent(jstring text,
 void ViewContainer::GetCandidatePos(LPPOINT curPos)
 {
     JNIEnv *env = GetEnv();
-    double* nativePos; 
+    double* nativePos;
 
-    jdoubleArray pos = (jdoubleArray)env->CallObjectMethod(GetView(), 
+    jdoubleArray pos = (jdoubleArray)env->CallObjectMethod(GetView(),
                         javaIDs.View.notifyInputMethodCandidatePosRequest,
                         0);
     nativePos = env->GetDoubleArrayElements(pos, NULL);
@@ -1233,21 +1233,21 @@ static char * touchEventName(unsigned int dwFlags) {
 }
 
 void NotifyTouchInput(
-        HWND hWnd, jobject view, jclass gestureSupportCls, 
-        const TOUCHINPUT* ti, unsigned count) 
+        HWND hWnd, jobject view, jclass gestureSupportCls,
+        const TOUCHINPUT* ti, unsigned count)
 {
 
     JNIEnv *env = GetEnv();
-    
-    // TBD: set to 'true' if source device is a touch screen 
+
+    // TBD: set to 'true' if source device is a touch screen
     // and to 'false' if source device is a touch pad.
     // So far assume source device on Windows is always a touch screen.
     const bool isDirect = true;
 
     jint modifiers = GetModifiers();
-    env->CallStaticObjectMethod(gestureSupportCls, 
+    env->CallStaticObjectMethod(gestureSupportCls,
                                 javaIDs.Gestures.notifyBeginTouchEventMID,
-                                view, modifiers, jboolean(isDirect), 
+                                view, modifiers, jboolean(isDirect),
                                 jint(count));
     CheckAndClearException(env);
 
@@ -1278,10 +1278,10 @@ void NotifyTouchInput(
             ::GetClientRect(hWnd, &rect);
             client.x = max(0, rect.right - rect.left) - client.x;
         }
-        
-        env->CallStaticObjectMethod(gestureSupportCls, 
+
+        env->CallStaticObjectMethod(gestureSupportCls,
                                     javaIDs.Gestures.notifyNextTouchEventMID,
-                                    view, eventID, touchID, 
+                                    view, eventID, touchID,
                                     jint(client.x), jint(client.y),
                                     jint(screen.x), jint(screen.y));
         CheckAndClearException(env);
@@ -1293,8 +1293,8 @@ void NotifyTouchInput(
 }
 
 void NotifyManipulationProcessor(
-        IManipulationProcessor& manipProc, 
-        const TOUCHINPUT* ti, unsigned count) 
+        IManipulationProcessor& manipProc,
+        const TOUCHINPUT* ti, unsigned count)
 {
     for (; count; --count, ++ti) {
         if (ti->dwFlags & TOUCHEVENTF_DOWN) {
@@ -1462,22 +1462,22 @@ void ViewContainer::HandleViewTimerEvent(HWND hwnd, UINT_PTR timerID)
         HRESULT hr = m_inertiaProc->Process(&completed);
         if (SUCCEEDED(hr) && completed) {
             StopTouchInputInertia(hwnd);
-            
+
             JNIEnv *env = GetEnv();
-            env->CallStaticVoidMethod(m_gestureSupportCls, 
+            env->CallStaticVoidMethod(m_gestureSupportCls,
                     javaIDs.Gestures.inertiaGestureFinishedMID, GetView());
             CheckAndClearException(env);
         }
     }
 }
 
-void ViewContainer::NotifyGesturePerformed(HWND hWnd, 
+void ViewContainer::NotifyGesturePerformed(HWND hWnd,
         bool isDirect, bool isInertia,
         FLOAT x, FLOAT y, FLOAT deltaX, FLOAT deltaY,
         FLOAT scaleDelta, FLOAT expansionDelta, FLOAT rotationDelta,
         FLOAT cumulativeDeltaX, FLOAT cumulativeDeltaY,
-        FLOAT cumulativeScale, FLOAT cumulativeExpansion, 
-        FLOAT cumulativeRotation) 
+        FLOAT cumulativeScale, FLOAT cumulativeExpansion,
+        FLOAT cumulativeRotation)
 {
     JNIEnv *env = GetEnv();
 
@@ -1499,15 +1499,15 @@ void ViewContainer::NotifyGesturePerformed(HWND hWnd,
     }
 
     jint modifiers = GetModifiers();
-    env->CallStaticVoidMethod(m_gestureSupportCls, 
+    env->CallStaticVoidMethod(m_gestureSupportCls,
                               javaIDs.Gestures.gesturePerformedMID,
-                              GetView(), modifiers, 
+                              GetView(), modifiers,
                               jboolean(isDirect), jboolean(isInertia),
                               jint(client.x), jint(client.y),
                               jint(screen.x), jint(screen.y),
                               deltaX / 100, deltaY / 100,
                               cumulativeDeltaX / 100, cumulativeDeltaY / 100,
-                              cumulativeScale, cumulativeExpansion / 100, 
+                              cumulativeScale, cumulativeExpansion / 100,
                               cumulativeRotation);
     CheckAndClearException(env);
 }
@@ -1517,13 +1517,13 @@ void ViewContainer::StartTouchInputInertia(HWND hwnd)
     // TBD: check errors
 
     //
-    // Collect initial inertia data 
+    // Collect initial inertia data
     //
 
     FLOAT vX, vY;
     m_manipProc->GetVelocityX(&vX);
     m_manipProc->GetVelocityY(&vY);
-    
+
     const FLOAT VELOCITY_THRESHOLD = 10.0f;
 
     if (fabs(vX) < VELOCITY_THRESHOLD && fabs(vY) < VELOCITY_THRESHOLD) {
@@ -1537,7 +1537,7 @@ void ViewContainer::StartTouchInputInertia(HWND hwnd)
     //
     // Setup inertia.
     //
-    
+
     m_inertiaProc->Reset();
 
     m_inertiaProc->put_DesiredDeceleration(0.23f);
@@ -1545,11 +1545,11 @@ void ViewContainer::StartTouchInputInertia(HWND hwnd)
     // Set initial origins.
     m_inertiaProc->put_InitialOriginX(origin.x * 100.0f);
     m_inertiaProc->put_InitialOriginY(origin.y * 100.0f);
-    
-    // Set initial velocities.    
+
+    // Set initial velocities.
     m_inertiaProc->put_InitialVelocityX(vX);
     m_inertiaProc->put_InitialVelocityY(vY);
-    
+
     // TBD: check errors
     ::SetTimer(hwnd, IDT_GLASS_INERTIAPROCESSOR, 16, NULL);
 }
@@ -1563,30 +1563,30 @@ void ViewContainer::StopTouchInputInertia(HWND hwnd)
 
 extern "C" {
 JNIEXPORT void JNICALL Java_com_sun_glass_ui_win_WinGestureSupport__1initIDs(
-        JNIEnv *env, jclass cls) 
+        JNIEnv *env, jclass cls)
 {
-    javaIDs.Gestures.gesturePerformedMID = 
+    javaIDs.Gestures.gesturePerformedMID =
         env->GetStaticMethodID(cls, "gesturePerformed",
                                 "(Lcom/sun/glass/ui/View;IZZIIIIFFFFFFF)V");
     CheckAndClearException(env);
-    
-    javaIDs.Gestures.inertiaGestureFinishedMID = 
+
+    javaIDs.Gestures.inertiaGestureFinishedMID =
         env->GetStaticMethodID(cls, "inertiaGestureFinished",
                                 "(Lcom/sun/glass/ui/View;)V");
     CheckAndClearException(env);
 
-    javaIDs.Gestures.notifyBeginTouchEventMID = 
-        env->GetStaticMethodID(cls, "notifyBeginTouchEvent", 
+    javaIDs.Gestures.notifyBeginTouchEventMID =
+        env->GetStaticMethodID(cls, "notifyBeginTouchEvent",
                                 "(Lcom/sun/glass/ui/View;IZI)V");
     CheckAndClearException(env);
 
-    javaIDs.Gestures.notifyNextTouchEventMID = 
-        env->GetStaticMethodID(cls, "notifyNextTouchEvent", 
+    javaIDs.Gestures.notifyNextTouchEventMID =
+        env->GetStaticMethodID(cls, "notifyNextTouchEvent",
                                 "(Lcom/sun/glass/ui/View;IJIIII)V");
     CheckAndClearException(env);
 
-    javaIDs.Gestures.notifyEndTouchEventMID = 
-        env->GetStaticMethodID(cls, "notifyEndTouchEvent", 
+    javaIDs.Gestures.notifyEndTouchEventMID =
+        env->GetStaticMethodID(cls, "notifyEndTouchEvent",
                                 "(Lcom/sun/glass/ui/View;)V");
     CheckAndClearException(env);
 }

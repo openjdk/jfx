@@ -37,7 +37,7 @@ import org.junit.Test;
 public class KeyValue_TS200_03_Test extends AnimationFunctionalTestBase {
     public static class XYZ extends AbstractBean {
         public XYZ() {}
-        
+
         private String s= "abc";
         private Integer i = 0;
         private Boolean b = true;

@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -58,49 +58,49 @@ Database::~Database()
 Bytecodes* Database::ensureBytecodesFor(CodeBlock* codeBlock)
 {
     Locker locker(m_lock);
-    
+
     codeBlock = codeBlock->baselineVersion();
-    
+
     HashMap<CodeBlock*, Bytecodes*>::iterator iter = m_bytecodesMap.find(codeBlock);
     if (iter != m_bytecodesMap.end())
         return iter->value;
-    
+
     m_bytecodes.append(Bytecodes(m_bytecodes.size(), codeBlock));
     Bytecodes* result = &m_bytecodes.last();
-    
+
     m_bytecodesMap.add(codeBlock, result);
-    
+
     return result;
 }
 
 void Database::notifyDestruction(CodeBlock* codeBlock)
 {
     Locker locker(m_lock);
-    
+
     m_bytecodesMap.remove(codeBlock);
 }
 
 void Database::addCompilation(PassRefPtr<Compilation> compilation)
 {
     ASSERT(!isCompilationThread());
-    
+
     m_compilations.append(compilation);
 }
 
 JSValue Database::toJS(ExecState* exec) const
 {
     JSObject* result = constructEmptyObject(exec);
-    
+
     JSArray* bytecodes = constructEmptyArray(exec, 0);
     for (unsigned i = 0; i < m_bytecodes.size(); ++i)
         bytecodes->putDirectIndex(exec, i, m_bytecodes[i].toJS(exec));
     result->putDirect(exec->vm(), exec->propertyNames().bytecodes, bytecodes);
-    
+
     JSArray* compilations = constructEmptyArray(exec, 0);
     for (unsigned i = 0; i < m_compilations.size(); ++i)
         compilations->putDirectIndex(exec, i, m_compilations[i]->toJS(exec));
     result->putDirect(exec->vm(), exec->propertyNames().compilations, compilations);
-    
+
     return result;
 }
 
@@ -108,7 +108,7 @@ String Database::toJSON() const
 {
     JSGlobalObject* globalObject = JSGlobalObject::create(
         m_vm, JSGlobalObject::createStructure(m_vm, jsNull()));
-    
+
     return JSONStringify(globalObject->globalExec(), toJS(globalObject->globalExec()), 0);
 }
 
@@ -117,7 +117,7 @@ bool Database::save(const char* filename) const
     auto out = FilePrintStream::open(filename, "w");
     if (!out)
         return false;
-    
+
     out->print(toJSON());
     return true;
 }
@@ -125,10 +125,10 @@ bool Database::save(const char* filename) const
 void Database::registerToSaveAtExit(const char* filename)
 {
     m_atExitSaveFilename = filename;
-    
+
     if (m_shouldSaveAtExit)
         return;
-    
+
     addDatabaseToAtExit();
     m_shouldSaveAtExit = true;
 }
@@ -137,7 +137,7 @@ void Database::addDatabaseToAtExit()
 {
     if (++didRegisterAtExit == 1)
         atexit(atExitCallback);
-    
+
     TCMalloc_SpinLockHolder holder(&registrationLock);
     m_nextRegisteredDatabase = firstDatabase;
     firstDatabase = this;

@@ -79,7 +79,7 @@ public class ToysVec3f {
         this.y *= s;
         this.z *= s;
     }
-    
+
     /**
      * Sets the value of this vector to the difference
      * of vectors t1 and t2 (this = t1 - t2).

@@ -30,13 +30,13 @@ package javafx.scene.control;
  * @since JavaFX 8.0
  */
 public enum TreeSortMode {
-    /** 
+    /**
      * Default; sort all nodes.
      */
     ALL_DESCENDANTS,
 
     /**
-     * Sort first level nodes only regardless of whether the root is 
+     * Sort first level nodes only regardless of whether the root is
      * actually being shown or not.
      */
     ONLY_FIRST_LEVEL;

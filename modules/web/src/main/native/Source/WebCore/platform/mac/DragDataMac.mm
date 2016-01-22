@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #import "config.h"
@@ -42,7 +42,7 @@
 
 namespace WebCore {
 
-DragData::DragData(DragDataRef data, const IntPoint& clientPosition, const IntPoint& globalPosition, 
+DragData::DragData(DragDataRef data, const IntPoint& clientPosition, const IntPoint& globalPosition,
     DragOperation sourceOperationMask, DragApplicationFlags flags)
     : m_clientPosition(clientPosition)
     , m_globalPosition(globalPosition)
@@ -63,7 +63,7 @@ DragData::DragData(const String& dragStorageName, const IntPoint& clientPosition
     , m_pasteboardName(dragStorageName)
 {
 }
-    
+
 bool DragData::canSmartReplace() const
 {
     return Pasteboard(m_pasteboardName).canSmartReplace();
@@ -133,7 +133,7 @@ bool DragData::containsCompatibleContent() const
         || types.contains(String(NSColorPboardType))
         || types.contains(String(kUTTypePNG));
 }
-    
+
 bool DragData::containsURL(Frame* frame, FilenameConversionPolicy filenamePolicy) const
 {
     return !asURL(frame, filenamePolicy).isEmpty();
@@ -148,14 +148,14 @@ String DragData::asURL(Frame* frame, FilenameConversionPolicy, String* title) co
         if (!URLTitleString.isEmpty())
             *title = URLTitleString;
     }
-    
+
     Vector<String> types;
     platformStrategies()->pasteboardStrategy()->getTypes(types, m_pasteboardName);
-    
-    // FIXME: using the editorClient to call into WebKit, for now, since 
-    // calling webkit_canonicalize from WebCore involves migrating a sizable amount of 
+
+    // FIXME: using the editorClient to call into WebKit, for now, since
+    // calling webkit_canonicalize from WebCore involves migrating a sizable amount of
     // helper code that should either be done in a separate patch or figured out in another way.
-    
+
     if (types.contains(String(NSURLPboardType))) {
         NSURL *URLFromPasteboard = [NSURL URLWithString:platformStrategies()->pasteboardStrategy()->stringForType(String(NSURLPboardType), m_pasteboardName)];
         NSString *scheme = [URLFromPasteboard scheme];
@@ -163,7 +163,7 @@ String DragData::asURL(Frame* frame, FilenameConversionPolicy, String* title) co
         if ([scheme isEqualToString:@"http"] || [scheme isEqualToString:@"https"])
             return [frame->editor().client()->canonicalizeURL(URLFromPasteboard) absoluteString];
     }
-    
+
     if (types.contains(String(NSStringPboardType))) {
         NSURL *URLFromPasteboard = [NSURL URLWithString:platformStrategies()->pasteboardStrategy()->stringForType(String(NSStringPboardType), m_pasteboardName)];
         NSString *scheme = [URLFromPasteboard scheme];
@@ -173,7 +173,7 @@ String DragData::asURL(Frame* frame, FilenameConversionPolicy, String* title) co
         if ([scheme isEqualToString:@"http"] || [scheme isEqualToString:@"https"])
             return [frame->editor().client()->canonicalizeURL(URLFromPasteboard) absoluteString];
     }
-    
+
     if (types.contains(String(NSFilenamesPboardType))) {
         Vector<String> files;
         platformStrategies()->pasteboardStrategy()->getPathnamesForType(files, String(NSFilenamesPboardType), m_pasteboardName);
@@ -184,8 +184,8 @@ String DragData::asURL(Frame* frame, FilenameConversionPolicy, String* title) co
             return [frame->editor().client()->canonicalizeURL([NSURL fileURLWithPath:files[0]]) absoluteString];
         }
     }
-    
-    return String();        
+
+    return String();
 }
 
 PassRefPtr<DocumentFragment> DragData::asFragment(Frame* frame, Range& range, bool allowPlainText, bool& chosePlainText) const
@@ -193,7 +193,7 @@ PassRefPtr<DocumentFragment> DragData::asFragment(Frame* frame, Range& range, bo
     Pasteboard pasteboard(m_pasteboardName);
     return frame->editor().webContentFromPasteboard(pasteboard, range, allowPlainText, chosePlainText);
 }
-    
+
 } // namespace WebCore
 
 #endif // ENABLE(DRAG_SUPPORT)

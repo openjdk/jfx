@@ -170,7 +170,7 @@ class PangoGlyphLayout extends GlyphLayout {
                             int gg = g.glyphs[i];
 
                             /* Ignoring any glyphs outside the GLYPHMASK range.
-                             * Note that Pango uses PANGO_GLYPH_EMPTY (0x0FFFFFFF), PANGO_GLYPH_INVALID_INPUT (0xFFFFFFFF), 
+                             * Note that Pango uses PANGO_GLYPH_EMPTY (0x0FFFFFFF), PANGO_GLYPH_INVALID_INPUT (0xFFFFFFFF),
                              * and other values with special meaning.
                              */
                             if (0 <= gg && gg <= CompositeGlyphMapper.GLYPHMASK) {

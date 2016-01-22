@@ -37,11 +37,11 @@
 #include <wtf/text/StringBuilder.h>
 
 namespace WebCore {
-    
+
 using namespace MathMLNames;
-    
+
 enum Braces { OpeningBraceChar = 0x28, ClosingBraceChar = 0x29 };
-    
+
 static const float gSeparatorMarginEndEms = 0.25f;
 static const float gFenceMarginEms = 0.1f;
 
@@ -56,7 +56,7 @@ RenderMathMLFenced::RenderMathMLFenced(MathMLInlineContainerElement& element, Pa
 void RenderMathMLFenced::updateFromElement()
 {
     const auto& fenced = element();
- 
+
     // FIXME: Handle open/close values with more than one character (they should be treated like text).
     AtomicString openValue = fenced.getAttribute(MathMLNames::openAttr);
     if (openValue.length() > 0)
@@ -64,7 +64,7 @@ void RenderMathMLFenced::updateFromElement()
     AtomicString closeValue = fenced.getAttribute(MathMLNames::closeAttr);
     if (closeValue.length() > 0)
         m_close = closeValue[0];
-    
+
     AtomicString separators = fenced.getAttribute(MathMLNames::separatorsAttr);
     if (!separators.isNull()) {
         StringBuilder characters;
@@ -77,7 +77,7 @@ void RenderMathMLFenced::updateFromElement()
         // The separator defaults to a single comma.
         m_separators = StringImpl::create(",");
     }
-    
+
     if (isEmpty())
         makeFences();
 }
@@ -114,10 +114,10 @@ void RenderMathMLFenced::addChild(RenderObject* child, RenderObject* beforeChild
     // make the fences if the render object is empty
     if (isEmpty())
         updateFromElement();
-    
+
     // FIXME: Adding or removing a child should possibly cause all later separators to shift places if they're different,
     // as later child positions change by +1 or -1.
-    
+
     RenderPtr<RenderMathMLOperator> separatorRenderer;
     if (m_separators.get()) {
         unsigned int count = 0;
@@ -130,20 +130,20 @@ void RenderMathMLFenced::addChild(RenderObject* child, RenderObject* beforeChild
             --count;
         }
         // |count| is now the number of element children that will be before our new separator, i.e. it's the 1-based index of the separator.
-        
+
         if (count > 0) {
             UChar separator;
-            
+
             // Use the last separator if we've run out of specified separators.
             if (count > m_separators.get()->length())
                 separator = (*m_separators.get())[m_separators.get()->length() - 1];
             else
                 separator = (*m_separators.get())[count - 1];
-                
+
             separatorRenderer = createMathMLOperator(separator, RenderMathMLOperator::Separator);
         }
     }
-    
+
     if (beforeChild) {
         // Adding |x| before an existing |y| e.g. in element (y) - first insert our new child |x|, then its separator, to get (x, y).
         RenderMathMLRow::addChild(child, beforeChild);
@@ -161,7 +161,7 @@ void RenderMathMLFenced::addChild(RenderObject* child, RenderObject* beforeChild
 void RenderMathMLFenced::styleDidChange(StyleDifference diff, const RenderStyle* oldStyle)
 {
     RenderMathMLBlock::styleDidChange(diff, oldStyle);
-    
+
     for (RenderObject* child = firstChild(); child; child = child->nextSibling()) {
         if (child->node() == &element()) {
             ASSERT(child->style().refCount() == 1);
@@ -177,6 +177,6 @@ void RenderMathMLFenced::styleDidChange(StyleDifference diff, const RenderStyle*
     }
 }
 
-}    
+}
 
 #endif

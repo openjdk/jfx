@@ -204,13 +204,13 @@ class SkeletonBuffer {
         if (textFormat == FORMAT_TYPE.FULL) {
             addImportsFor(imports, URL.class, ResourceBundle.class);
         }
-        
+
         // Event handlers
         final TreeSet<String> uniqMethodNames = new TreeSet<>();
         for (FXOMPropertyT handler : document.getFxomRoot().collectEventHandlers()) {
             uniqMethodNames.add(handler.getValue());
         }
-        
+
         for (String rawMethodName : uniqMethodNames) {
             handlers.append(INDENT).append("@FXML\n").append(INDENT).append("void "); //NOI18N
             final String methodName = rawMethodName.replace("#", ""); //NOI18N

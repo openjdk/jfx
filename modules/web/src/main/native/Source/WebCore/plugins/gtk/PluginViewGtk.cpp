@@ -23,7 +23,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -270,7 +270,7 @@ void PluginView::handleMouseEvent(MouseEvent* event)
 
 void PluginView::updateWidgetAllocationAndClip()
 {
-    // If the window has not been embedded yet (the plug added), we delay setting its allocation until 
+    // If the window has not been embedded yet (the plug added), we delay setting its allocation until
     // that point. This fixes issues with some Java plugin instances not rendering immediately.
     if (!m_plugAdded || m_delayedAllocation.isEmpty())
         return;

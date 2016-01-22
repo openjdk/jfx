@@ -37,10 +37,10 @@ import com.oracle.javafx.scenebuilder.kit.fxom.FXOMPropertyT;
 
 /**
  *
- * 
+ *
  */
 public class ErrorReportEntry {
-    
+
     public enum Type {
         UNRESOLVED_CLASS,
         UNRESOLVED_LOCATION,
@@ -48,15 +48,15 @@ public class ErrorReportEntry {
         INVALID_CSS_CONTENT,
         UNSUPPORTED_EXPRESSION
     }
-    
+
     private final FXOMNode fxomNode;
     private final Type type;
     private final CSSParsingReport cssParsingReport; // relevant for INVALID_CSS_CONTENT
-    
+
     public ErrorReportEntry(FXOMNode fxomNode, Type type, CSSParsingReport cssParsingReport) {
         assert fxomNode != null;
         assert (type == Type.INVALID_CSS_CONTENT) == (cssParsingReport != null);
-        
+
         this.fxomNode = fxomNode;
         this.type = type;
         this.cssParsingReport = cssParsingReport;
@@ -77,15 +77,15 @@ public class ErrorReportEntry {
     public CSSParsingReport getCssParsingReport() {
         return cssParsingReport;
     }
-    
+
     /*
      * Object
      */
-    
+
     @Override
     public String toString() {
         final StringBuilder result = new StringBuilder();
-        
+
         result.append(getClass().getSimpleName());
         result.append("(fxomNode="); //NOI18N
         result.append(fxomNode.getClass().getSimpleName());
@@ -117,8 +117,8 @@ public class ErrorReportEntry {
             result.append("?"); //NOI18N
         }
         result.append(")"); //NOI18N
-        
+
         return result.toString();
     }
-    
+
 }

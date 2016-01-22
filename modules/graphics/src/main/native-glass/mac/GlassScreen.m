@@ -102,10 +102,10 @@ jobject createJavaScreen(JNIEnv *env, NSScreen* screen)
                                              (jint)resolution.width,
                                              (jint)resolution.height,
                                              (jfloat)GetScreenScaleFactor(screen));
-        
+
         GLASS_CHECK_EXCEPTION(env);
     }
-    
+
     return jscreen;
 }
 
@@ -136,12 +136,12 @@ jobjectArray createJavaScreens(JNIEnv* env) {
 
 void GlassScreenDidChangeScreenParameters(JNIEnv *env)
 {
-    if (jScreenNotifySettingsChanged == NULL) 
+    if (jScreenNotifySettingsChanged == NULL)
     {
         jScreenNotifySettingsChanged = (*env)->GetStaticMethodID(env, jScreenClass, "notifySettingsChanged", "()V");
         GLASS_CHECK_EXCEPTION(env);
     }
-    
+
     (*env)->CallStaticVoidMethod(env, jScreenClass, jScreenNotifySettingsChanged);
     GLASS_CHECK_EXCEPTION(env);
 }
@@ -151,7 +151,7 @@ void GlassScreenDidChangeScreenParameters(JNIEnv *env)
 - (CGDirectDisplayID)enterFullscreenAndHideCursor:(BOOL)hide
 {
     CGDirectDisplayID displayID = 0;
-    
+
     CGDisplayCount displayCount = 0;
     CGDirectDisplayID activeDisplays[MAX_DISPLAY_COUNT];
     CGDisplayErr err = CGGetActiveDisplayList(MAX_DISPLAY_COUNT, activeDisplays, &displayCount);
@@ -162,7 +162,7 @@ void GlassScreenDidChangeScreenParameters(JNIEnv *env)
     else
     {
         NSRect nsrect = [self frame];
-        
+
         for (CGDisplayCount i=0; i<displayCount; i++)
         {
             CGRect cgrect = CGDisplayBounds(activeDisplays[i]);
@@ -173,7 +173,7 @@ void GlassScreenDidChangeScreenParameters(JNIEnv *env)
                 break;
             }
         }
-        
+
 #if 0
         err = CGDisplayCapture(displayID);
 #endif
@@ -181,7 +181,7 @@ void GlassScreenDidChangeScreenParameters(JNIEnv *env)
         {
             [NSMenu setMenuBarVisible:NO];
         }
-        
+
         if (err != kCGErrorSuccess)
         {
             NSLog(@"CGDisplayCapture returned error: %d", err);
@@ -195,7 +195,7 @@ void GlassScreenDidChangeScreenParameters(JNIEnv *env)
             }
         }
     }
-    
+
     return displayID;
 }
 

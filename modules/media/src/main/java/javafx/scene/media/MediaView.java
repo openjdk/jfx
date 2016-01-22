@@ -148,57 +148,57 @@ public class MediaView extends Node {
     /***************************************** iOS specific stuff ***************************/
 
     private /*volatile*/ boolean mediaPlayerReady;
-    
+
     private ChangeListener<Parent> parentListener;
     private ChangeListener<Boolean> treeVisibleListener;
     private ChangeListener<Number> opacityListener;
-    
+
     private void createListeners() {
         parentListener = (ov2, oldParent, newParent) -> {
             updateOverlayVisibility();
         };
-        
+
         treeVisibleListener = (ov1, oldVisible, newVisible) -> {
             updateOverlayVisibility();
         };
-        
+
         opacityListener = (ov, oldOpacity, newOpacity) -> {
             updateOverlayOpacity();
         };
     }
-    
+
     private IOSMediaPlayer getIOSPlayer() {
         return (IOSMediaPlayer) getMediaPlayer().retrieveJfxPlayer();
     }
-    
+
     private boolean determineVisibility() {
         return (getParent() != null && isVisible());
     }
-    
+
     private synchronized void updateOverlayVisibility() {
         if (mediaPlayerReady) {
             getIOSPlayer().setOverlayVisible(determineVisibility());
         }
     }
-    
+
     private synchronized void updateOverlayOpacity() {
         if (mediaPlayerReady) {
             getIOSPlayer().setOverlayOpacity(getOpacity());
         }
     }
-    
+
     private synchronized void updateOverlayX() {
         if (mediaPlayerReady) {
             getIOSPlayer().setOverlayX(getX());
         }
     }
-    
+
     private synchronized void updateOverlayY() {
         if (mediaPlayerReady) {
             getIOSPlayer().setOverlayY(getY());
         }
     }
-    
+
     private synchronized void updateOverlayWidth() {
         if (mediaPlayerReady) {
             getIOSPlayer().setOverlayWidth(getFitWidth());
@@ -210,23 +210,23 @@ public class MediaView extends Node {
             getIOSPlayer().setOverlayHeight(getFitHeight());
         }
     }
-    
+
     private synchronized void updateOverlayPreserveRatio() {
         if (mediaPlayerReady) {
             getIOSPlayer().setOverlayPreserveRatio(isPreserveRatio());
         }
     }
-    
+
     private static Affine3D calculateNodeToSceneTransform(Node node) {
         final Affine3D transform = new Affine3D();
         do {
             transform.preConcatenate(node.impl_getLeafTransform());
             node = node.getParent();
         } while (node != null);
-        
+
         return transform;
     }
-    
+
     private void updateOverlayTransformDirectly() {
         final Affine3D trans = MediaView.calculateNodeToSceneTransform(this);
         getIOSPlayer().setOverlayTransform(
@@ -234,13 +234,13 @@ public class MediaView extends Node {
                 trans.getMyx(), trans.getMyy(), trans.getMyz(), trans.getMyt(),
                 trans.getMzx(), trans.getMzy(), trans.getMzz(), trans.getMzt());
     }
-    
+
     private synchronized void updateOverlayTransform() {
         if (mediaPlayerReady) {
             updateOverlayTransformDirectly();
         }
     }
-    
+
     private void updateIOSOverlay() {
         getIOSPlayer().setOverlayX(getX());
         getIOSPlayer().setOverlayY(getY());
@@ -264,9 +264,9 @@ public class MediaView extends Node {
             updateOverlayTransform();
         }
     }
-    
+
     /******************************************* End of iOS specific stuff ***************************/
-    
+
     /**
      * @return reference to MediaView
      */
@@ -826,7 +826,7 @@ public class MediaView extends Node {
         decodedFrameCount++;
         impl_markDirty(DirtyBits.NODE_CONTENTS);
     }
-    
+
     /**
      * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
@@ -971,10 +971,10 @@ public class MediaView extends Node {
         }
     }
 
-    
+
     private int decodedFrameCount;
     private int renderedFrameCount;
-    
+
     /**
      * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
@@ -984,7 +984,7 @@ public class MediaView extends Node {
         decodedFrameCount = 0;
         renderedFrameCount = 0;
     }
-    
+
     /**
      * @return number of frames that have been submitted for rendering
      * @treatAsPrivate implementation detail
@@ -994,7 +994,7 @@ public class MediaView extends Node {
     public int impl_perfGetDecodedFrameCount() {
         return decodedFrameCount;
     }
-    
+
     /**
      * @return number of frames that have been rendered
      * @treatAsPrivate implementation detail
@@ -1004,7 +1004,7 @@ public class MediaView extends Node {
     public int impl_perfGetRenderedFrameCount() {
         return renderedFrameCount;
     }
-    
+
     private class MediaViewFrameTracker implements MediaFrameTracker {
         @Override
         public void incrementDecodedFrameCount(int count) {

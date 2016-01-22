@@ -50,7 +50,7 @@ public final class InputMethodClientImpl
 
     // the state of the last setInputMethodState() call.
     private boolean state;
-    
+
     public InputMethodClientImpl(WebView wv, WebPage webPage) {
         this.wvRef = new WeakReference<WebView>(wv);
         this.webPage = webPage;

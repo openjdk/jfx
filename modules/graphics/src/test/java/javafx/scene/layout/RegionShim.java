@@ -1,23 +1,23 @@
 /*
  * Copyright (c) 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
- * 
+ *
  * This code is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 only, as
  * published by the Free Software Foundation.  Oracle designates this
  * particular file as subject to the "Classpath" exception as provided
  * by Oracle in the LICENSE file that accompanied this code.
- * 
+ *
  * This code is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
  * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * version 2 for more details (a copy is included in the LICENSE file that
  * accompanied this code).
- * 
+ *
  * You should have received a copy of the GNU General Public License version
  * 2 along with this work; if not, write to the Free Software Foundation,
  * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
- * 
+ *
  * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
  * or visit www.oracle.com if you need additional information or have any
  * questions.
@@ -54,23 +54,23 @@ public class RegionShim extends Region {
     }
 
     public static double computeChildMinAreaHeight(Region r,
-            Node child, double minBaselineComplement, 
+            Node child, double minBaselineComplement,
             Insets margin, double width) {
-        return r.computeChildMinAreaHeight(child, 
-                minBaselineComplement, 
+        return r.computeChildMinAreaHeight(child,
+                minBaselineComplement,
                 margin, width );
     }
 
-    public static double computeChildMinAreaWidth(Region r, 
+    public static double computeChildMinAreaWidth(Region r,
             Node child, Insets margin) {
         return r.computeChildMinAreaWidth(child, margin);
     }
 
     public static double computeChildMinAreaWidth(Region r,
-            Node child, double baselineComplement, 
+            Node child, double baselineComplement,
             Insets margin, double height, boolean fillHeight) {
-        return r.computeChildMinAreaWidth(child, 
-                baselineComplement, 
+        return r.computeChildMinAreaWidth(child,
+                baselineComplement,
                 margin, height, fillHeight);
     }
 
@@ -79,22 +79,22 @@ public class RegionShim extends Region {
         return r.computeChildPrefAreaHeight(child, margin);
     }
 
-    public static double computeChildPrefAreaHeight(Region r, 
-            Node child, double prefBaselineComplement, 
+    public static double computeChildPrefAreaHeight(Region r,
+            Node child, double prefBaselineComplement,
             Insets margin, double width) {
-        return r.computeChildPrefAreaHeight(child, 
+        return r.computeChildPrefAreaHeight(child,
                 prefBaselineComplement, margin, width);
     }
 
-    public static double computeChildPrefAreaWidth(Region r, 
+    public static double computeChildPrefAreaWidth(Region r,
             Node child, Insets margin) {
         return r.computeChildPrefAreaWidth(child, margin);
     }
 
     public static double computeChildPrefAreaWidth(Region r,
-            Node child, double baselineComplement, Insets margin, 
+            Node child, double baselineComplement, Insets margin,
             double height, boolean fillHeight) {
-        return r.computeChildPrefAreaWidth(child, baselineComplement, 
+        return r.computeChildPrefAreaWidth(child, baselineComplement,
                 margin, height, fillHeight);
     }
 

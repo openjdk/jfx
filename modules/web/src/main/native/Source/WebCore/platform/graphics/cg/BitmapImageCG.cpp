@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -187,7 +187,7 @@ RetainPtr<CFArrayRef> BitmapImage::getCGImageArray()
     size_t count = frameCount();
     if (!count)
         return 0;
-    
+
     CFMutableArrayRef array = CFArrayCreateMutable(NULL, count, &kCFTypeArrayCallBacks);
     for (size_t i = 0; i < count; ++i) {
         if (CGImageRef currFrame = frameAtIndex(i))
@@ -213,12 +213,12 @@ void BitmapImage::draw(GraphicsContext* ctxt, const FloatRect& destRect, const F
         imagePossiblyCopied = adoptCF(copyUnscaledFrameAtIndex(m_currentFrame));
     else
         imagePossiblyCopied = frameAtIndex(m_currentFrame, std::min<float>(1.0f, std::max(transformedDestinationRect.size.width  / srcRect.width(), transformedDestinationRect.size.height / srcRect.height())));
-    
+
     image = imagePossiblyCopied.get();
 #endif
     if (!image) // If it's too early we won't have an image yet.
         return;
-    
+
     if (mayFillWithSolidColor()) {
         fillWithSolidColor(ctxt, destRect, solidColor(), styleColorSpace, compositeOp);
         return;

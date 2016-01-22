@@ -120,7 +120,7 @@ jobjectArray ConvertFiles(DNTString &files)
         JLString dirWithBackslash(env, ConcatJStrings(env, dir, backslash));
 
         for (UINT i = 1; i < count; i++)
-        {           
+        {
             JLString shortname(env, CreateJString(env, files.substring(i)));
             JLString name(env, ConcatJStrings(env, dirWithBackslash, shortname));
 
@@ -171,7 +171,7 @@ UINT_PTR CALLBACK DialogHook(HWND hwnd, UINT uMsg, WPARAM wParam,
             break;
     }
     return (0);
-} 
+}
 
 jobject StandardFileChooser_Show(HWND owner, LPCTSTR folder, LPCTSTR filename, LPCTSTR title, jint type,
                                       jboolean multipleMode, jobjectArray jFilters, jint defaultFilterIndex)
@@ -234,7 +234,7 @@ jobject StandardFileChooser_Show(HWND owner, LPCTSTR folder, LPCTSTR filename, L
     }
 
     jclass jc = env->FindClass("com/sun/glass/ui/CommonDialogs");
-    JLClass cls(env, jc);    
+    JLClass cls(env, jc);
     if (CheckAndClearException(env)) return NULL;
     return env->CallStaticObjectMethod(cls, javaIDs.CommonDialogs.createFileChooserResult,
             retValue, jFilters, (jint)(ofn.nFilterIndex - 1));
@@ -292,62 +292,62 @@ HRESULT SHILClone(LPCITEMIDLIST pidl, LPITEMIDLIST *ppidl)
         LPCITEMIDLIST pidl_temp = pidl;
         cbTotal += sizeof (pidl_temp->mkid.cb);
 
-        while (pidl_temp->mkid.cb) 
+        while (pidl_temp->mkid.cb)
         {
             cbTotal += pidl_temp->mkid.cb;
             pidl_temp = ILNext (pidl_temp);
         }
     }
-    
+
     *ppidl = (LPITEMIDLIST)CoTaskMemAlloc(cbTotal);
-    
+
     if (*ppidl)
         CopyMemory(*ppidl, pidl, cbTotal);
- 
+
     return  *ppidl ? S_OK: E_OUTOFMEMORY;
 }
 
-// Get the target PIDL for a folder PIDL. This also deals with cases of a folder  
+// Get the target PIDL for a folder PIDL. This also deals with cases of a folder
 // shortcut or an alias to a real folder.
 STDAPI SHGetTargetFolderIDList(LPCITEMIDLIST pidlFolder, LPITEMIDLIST *ppidl)
 {
     IShellLink *psl;
-        
+
     *ppidl = NULL;
-    
+
     HRESULT hr = SHGetUIObjectFromFullPIDL(pidlFolder, NULL, IID_IShellLink, (LPVOID*)&psl);
-    
+
     if (SUCCEEDED(hr))
     {
         hr = psl->GetIDList(ppidl);
         psl->Release();
     }
-    
+
     // It's not a folder shortcut so get the PIDL normally.
     if (FAILED(hr))
         hr = SHILClone(pidlFolder, ppidl);
-    
+
     return hr;
 }
 
 // Get the target folder for a folder PIDL. This deals with cases where a folder
-// is an alias to a real folder, folder shortcuts, the My Documents folder, and 
+// is an alias to a real folder, folder shortcuts, the My Documents folder, and
 // other items of that nature.
 
 STDAPI SHGetTargetFolderPath(LPCITEMIDLIST pidlFolder, LPWSTR pszPath)
 {
     LPITEMIDLIST pidlTarget;
-        
+
     *pszPath = 0;
 
     HRESULT hr = SHGetTargetFolderIDList(pidlFolder, &pidlTarget);
-    
+
     if (SUCCEEDED(hr))
     {
         SHGetPathFromIDListW(pidlTarget, pszPath);   // Make sure it is a path
         CoTaskMemFree(pidlTarget);
     }
-    
+
     return *pszPath ? S_OK : E_FAIL;
 }
 

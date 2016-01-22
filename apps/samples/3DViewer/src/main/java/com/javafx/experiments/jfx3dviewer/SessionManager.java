@@ -65,7 +65,7 @@ public class SessionManager {
     public static SessionManager createSessionManager(String name) {
         return sessionManager = new SessionManager(name);
     }
-    
+
     public static SessionManager getSessionManager() {
         return sessionManager;
     }

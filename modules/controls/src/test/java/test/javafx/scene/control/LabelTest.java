@@ -47,34 +47,34 @@ import org.junit.Test;
 
 public class LabelTest {
     private Label label;
-    
+
     @Before public void setup() {
         label = new Label();
     }
-    
+
     /*********************************************************************
      * Tests for the constructors                                        *
      ********************************************************************/
-    
+
     @Test public void defaultConstructorShouldHaveNoGraphicAndEmptyString() {
         assertNull(label.getGraphic());
         assertEquals("", label.getText());
     }
-    
+
     @Test public void oneArgConstructorShouldHaveNoGraphicAndSpecifiedString() {
         Label label2 = new Label(null);
         assertNull(label2.getGraphic());
         assertNull(label2.getText());
-        
+
         label2 = new Label("");
         assertNull(label2.getGraphic());
         assertEquals("", label2.getText());
-        
+
         label2 = new Label("Hello");
         assertNull(label2.getGraphic());
         assertEquals("Hello", label2.getText());
     }
-    
+
     @Test public void twoArgConstructorShouldHaveSpecifiedGraphicAndSpecifiedString() {
         Label label2 = new Label(null, null);
         assertNull(label2.getGraphic());
@@ -89,31 +89,31 @@ public class LabelTest {
     @Test public void defaultConstructorShouldSetStyleClassTo_label() {
         assertStyleClassContains(label, "label");
     }
-    
+
     @Test public void oneArgConstructorShouldSetStyleClassTo_label() {
         Label label2 = new Label(null);
         assertStyleClassContains(label2, "label");
     }
-    
+
     @Test public void twoArgConstructorShouldSetStyleClassTo_label() {
         Label label2 = new Label(null, null);
         assertStyleClassContains(label2, "label");
     }
-    
+
     @Test public void defaultConstructorShouldSetFocusTraversableToFalse() {
         assertFalse(label.isFocusTraversable());
     }
-    
+
     @Test public void oneArgConstructorShouldSetFocusTraversableToFalse() {
         Label label2 = new Label(null);
         assertFalse(label2.isFocusTraversable());
     }
-    
+
     @Test public void twoArgConstructorShouldSetFocusTraversableToFalse() {
         Label label2 = new Label(null, null);
         assertFalse(label2.isFocusTraversable());
     }
-    
+
     /********************************************************************************
      *                                                                              *
      *                         Tests for labelFor property                          *
@@ -124,19 +124,19 @@ public class LabelTest {
         assertNull(label.getLabelFor());
         assertNull(label.labelForProperty().get());
     }
-    
+
     @Test public void settingLabelForValueShouldWork() {
         TextField textField = new TextField();
         label.setLabelFor(textField);
         assertSame(textField, label.getLabelFor());
     }
-    
+
     @Test public void settingLabelForAndThenCreatingAModelAndReadingTheValueStillWorks() {
         TextField textField = new TextField();
         label.setLabelFor(textField);
         assertSame(textField, label.labelForProperty().get());
     }
-    
+
     @Test public void labelForCanBeBound() {
         TextField textField = new TextField();
         ObjectProperty<TextField> other = new SimpleObjectProperty<TextField>(textField);
@@ -145,7 +145,7 @@ public class LabelTest {
         other.set(null);
         assertNull(label.getLabelFor());
     }
-    
+
     @Test public void impl_cssSettable_AlwaysReturnsFalseForLabelFor() {
         try {
             CssMetaData styleable = ((StyleableProperty)label.labelForProperty()).getCssMetaData();
@@ -156,7 +156,7 @@ public class LabelTest {
             org.junit.Assert.fail(e.toString());
         }
     }
-    
+
     @Test public void labelForBeanIsCorrect() {
         assertSame(label, label.labelForProperty().getBean());
     }

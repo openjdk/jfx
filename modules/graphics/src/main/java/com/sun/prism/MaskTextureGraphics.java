@@ -47,7 +47,7 @@ public interface MaskTextureGraphics extends Graphics {
      * <pre>
      *     dst.argb = (img.argb * mask.a) Composite dst.argb
      * </pre>
-     * 
+     *
      * @param imgtex  the texture containing the source image pixels
      * @param masktex the texture containing the mask pixels, only the
      *                alpha channel is used from this texture
@@ -87,7 +87,7 @@ public interface MaskTextureGraphics extends Graphics {
      *     dst.argb = (mask.a * img.argb) + ((1 - mask.a) * dst.argb)
      * </pre>
      * Note that the current composite mode is ignored during this operation.
-     * 
+     *
      * @param imgtex  the texture containing the source image pixels
      * @param masktex the texture containing the mask pixels, only the
      *                alpha channel is used from this texture

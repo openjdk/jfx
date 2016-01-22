@@ -206,8 +206,8 @@ public class StyleablePropertyFactory<S extends Styleable> {
      * @param propertyName The field name of the StyleableProperty&lt;Boolean&gt;
      * @param cssProperty The CSS property name
      * @param function A function that returns the StyleableProperty&lt;Boolean&gt; that was created by this method call.
-     * @param initialValue The initial value of the property. CSS may reset the property to this value. 
-     * @param inherits Whether or not the CSS style can be inherited by child nodes                     
+     * @param initialValue The initial value of the property. CSS may reset the property to this value.
+     * @param inherits Whether or not the CSS style can be inherited by child nodes
      */
     public final StyleableProperty<Boolean> createStyleableBooleanProperty(
             S styleable,
@@ -227,7 +227,7 @@ public class StyleablePropertyFactory<S extends Styleable> {
      * @param propertyName The field name of the StyleableProperty&lt;Boolean&gt;
      * @param cssProperty The CSS property name
      * @param function A function that returns the StyleableProperty&lt;Boolean&gt; that was created by this method call.
-     * @param initialValue The initial value of the property. CSS may reset the property to this value. 
+     * @param initialValue The initial value of the property. CSS may reset the property to this value.
      */
     public final StyleableProperty<Boolean> createStyleableBooleanProperty(
             S styleable,
@@ -287,9 +287,9 @@ public class StyleablePropertyFactory<S extends Styleable> {
      * @param propertyName The field name of the StyleableProperty&lt;Color&gt;
      * @param cssProperty The CSS property name
      * @param function A function that returns the StyleableProperty&lt;Color&gt; that was created by this method call.
-     * @param initialValue The initial value of the property. CSS may reset the property to this value. 
-     * @param inherits Whether or not the CSS style can be inherited by child nodes                     
-     */    
+     * @param initialValue The initial value of the property. CSS may reset the property to this value.
+     * @param inherits Whether or not the CSS style can be inherited by child nodes
+     */
     public final StyleableProperty<Color> createStyleableColorProperty(
             S styleable,
             String propertyName,
@@ -308,7 +308,7 @@ public class StyleablePropertyFactory<S extends Styleable> {
      * @param propertyName The field name of the StyleableProperty&lt;Color&gt;
      * @param cssProperty The CSS property name
      * @param function A function that returns the StyleableProperty&lt;Color&gt; that was created by this method call.
-     * @param initialValue The initial value of the property. CSS may reset the property to this value. 
+     * @param initialValue The initial value of the property. CSS may reset the property to this value.
      */
     public final StyleableProperty<Color> createStyleableColorProperty(
             S styleable,
@@ -320,7 +320,7 @@ public class StyleablePropertyFactory<S extends Styleable> {
     }
 
     /**
-     * Create a StyleableProperty&lt;Color&gt;. The initial value defaults to Color.BLACK and the 
+     * Create a StyleableProperty&lt;Color&gt;. The initial value defaults to Color.BLACK and the
      * inherit flag defaults to false.
      * @param styleable The <code>this</code> reference of the returned property. This is also the property bean.
      * @param propertyName The field name of the StyleableProperty&lt;Color&gt;
@@ -369,8 +369,8 @@ public class StyleablePropertyFactory<S extends Styleable> {
      * @param propertyName The field name of the StyleableProperty&lt;Duration&gt;
      * @param cssProperty The CSS property name
      * @param function A function that returns the StyleableProperty&lt;Duration&gt; that was created by this method call.
-     * @param initialValue The initial value of the property. CSS may reset the property to this value. 
-     * @param inherits Whether or not the CSS style can be inherited by child nodes                     
+     * @param initialValue The initial value of the property. CSS may reset the property to this value.
+     * @param inherits Whether or not the CSS style can be inherited by child nodes
      */
     public final StyleableProperty<Duration> createStyleableDurationProperty(
             S styleable,
@@ -390,7 +390,7 @@ public class StyleablePropertyFactory<S extends Styleable> {
      * @param propertyName The field name of the StyleableProperty&lt;Duration&gt;
      * @param cssProperty The CSS property name
      * @param function A function that returns the StyleableProperty&lt;Duration&gt; that was created by this method call.
-     * @param initialValue The initial value of the property. CSS may reset the property to this value. 
+     * @param initialValue The initial value of the property. CSS may reset the property to this value.
      */
     public final StyleableProperty<Duration> createStyleableDurationProperty(
             S styleable,
@@ -402,7 +402,7 @@ public class StyleablePropertyFactory<S extends Styleable> {
     }
 
     /**
-     * Create a StyleableProperty&lt;Duration&gt;. The initial value defaults to Duration.BLACK and the 
+     * Create a StyleableProperty&lt;Duration&gt;. The initial value defaults to Duration.BLACK and the
      * inherit flag defaults to false.
      * @param styleable The <code>this</code> reference of the returned property. This is also the property bean.
      * @param propertyName The field name of the StyleableProperty&lt;Duration&gt;
@@ -451,8 +451,8 @@ public class StyleablePropertyFactory<S extends Styleable> {
      * @param propertyName The field name of the StyleableProperty&lt;Effect&gt;
      * @param cssProperty The CSS property name
      * @param function A function that returns the StyleableProperty&lt;Effect&gt; that was created by this method call.
-     * @param initialValue The initial value of the property. CSS may reset the property to this value. 
-     * @param inherits Whether or not the CSS style can be inherited by child nodes                     
+     * @param initialValue The initial value of the property. CSS may reset the property to this value.
+     * @param inherits Whether or not the CSS style can be inherited by child nodes
      */
     public final <E extends Effect> StyleableProperty<E> createStyleableEffectProperty(
             S styleable,
@@ -472,7 +472,7 @@ public class StyleablePropertyFactory<S extends Styleable> {
      * @param propertyName The field name of the StyleableProperty&lt;Effect&gt;
      * @param cssProperty The CSS property name
      * @param function A function that returns the StyleableProperty&lt;Effect&gt; that was created by this method call.
-     * @param initialValue The initial value of the property. CSS may reset the property to this value. 
+     * @param initialValue The initial value of the property. CSS may reset the property to this value.
      */
     public final <E extends Effect> StyleableProperty<E> createStyleableEffectProperty(
             S styleable,
@@ -519,7 +519,7 @@ public class StyleablePropertyFactory<S extends Styleable> {
         CssMetaData<S,Effect> cssMetaData = (CssMetaData<S,Effect>)getCssMetaData(Effect.class, cssProperty);
         return new SimpleStyleableObjectProperty<Effect>(cssMetaData, styleable, propertyName, cssMetaData.getInitialValue(styleable));
     }
-    
+
     //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     //
     // create StyleableProperty<? extends Enum<?>>
@@ -527,15 +527,15 @@ public class StyleablePropertyFactory<S extends Styleable> {
     //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
     /**
-     * Create a StyleableProperty&lt;E extends Enum&lt;E&gt;&gt; with initial value and inherit flag. 
-     * The <code>enumClass</code> parameter is the Class of the Enum that is the value of the property. For example, 
+     * Create a StyleableProperty&lt;E extends Enum&lt;E&gt;&gt; with initial value and inherit flag.
+     * The <code>enumClass</code> parameter is the Class of the Enum that is the value of the property. For example,
      * <code><pre>
      *     private static final StyleablePropertyFactory&lt;MyControl&gt; FACTORY = new StyleablePropertyFactory&lt;&gt;();
      *     StyleableProperty&lt;Orientation&gt; orientation =
      *         FACTORY.createStyleableEnumProperty(
-     *             this, 
-     *             "orientation", 
-     *             "-my-orientation", 
+     *             this,
+     *             "orientation",
+     *             "-my-orientation",
      *             s -> ((MyControl)s).orientation,
      *             Orientation.class,
      *             Orientation.HORIZONTAL,
@@ -546,8 +546,8 @@ public class StyleablePropertyFactory<S extends Styleable> {
      * @param cssProperty The CSS property name
      * @param function A function that returns the StyleableProperty&lt;E extends Enum&lt;E&gt;&gt; that was created by this method call.
      * @param enumClass The Enum class that is the type of the StyleableProperty&lt;E extends Enum&lt;E&gt;&gt;.
-     * @param initialValue The initial value of the property. CSS may reset the property to this value. 
-     * @param inherits Whether or not the CSS style can be inherited by child nodes                     
+     * @param initialValue The initial value of the property. CSS may reset the property to this value.
+     * @param inherits Whether or not the CSS style can be inherited by child nodes
      */
     public final <E extends Enum<E>> StyleableProperty<E> createStyleableEnumProperty(
             S styleable,
@@ -563,15 +563,15 @@ public class StyleablePropertyFactory<S extends Styleable> {
     }
 
     /**
-     * Create a StyleableProperty&lt;E extends Enum&lt;E&gt;&gt; with initial value. The inherit flag defaults to false. 
-     * The <code>enumClass</code> parameter is the Class of the Enum that is the value of the property. For example, 
+     * Create a StyleableProperty&lt;E extends Enum&lt;E&gt;&gt; with initial value. The inherit flag defaults to false.
+     * The <code>enumClass</code> parameter is the Class of the Enum that is the value of the property. For example,
      * <code><pre>
      *     private static final StyleablePropertyFactory&lt;MyControl&gt; FACTORY = new StyleablePropertyFactory&lt;&gt;();
      *     StyleableProperty&lt;Orientation&gt; orientation =
      *         FACTORY.createStyleableEnumProperty(
-     *             this, 
-     *             "orientation", 
-     *             "-my-orientation", 
+     *             this,
+     *             "orientation",
+     *             "-my-orientation",
      *             s -> ((MyControl)s).orientation,
      *             Orientation.class,
      *             Orientation.HORIZONTAL);
@@ -581,7 +581,7 @@ public class StyleablePropertyFactory<S extends Styleable> {
      * @param cssProperty The CSS property name
      * @param function A function that returns the StyleableProperty&lt;E extends Enum&lt;E&gt;&gt; that was created by this method call.
      * @param enumClass The Enum class that is the type of the StyleableProperty&lt;E extends Enum&lt;E&gt;&gt;.
-     * @param initialValue The initial value of the property. CSS may reset the property to this value. 
+     * @param initialValue The initial value of the property. CSS may reset the property to this value.
      */
     public final <E extends Enum<E>> StyleableProperty<E> createStyleableEnumProperty(
             S styleable,
@@ -594,15 +594,15 @@ public class StyleablePropertyFactory<S extends Styleable> {
     }
 
     /**
-     * Create a StyleableProperty&lt;E extends Enum&lt;E&gt;&gt;. The initial value is null and inherit flag defaults to false. 
-     * The <code>enumClass</code> parameter is the Class of the Enum that is the value of the property. For example, 
+     * Create a StyleableProperty&lt;E extends Enum&lt;E&gt;&gt;. The initial value is null and inherit flag defaults to false.
+     * The <code>enumClass</code> parameter is the Class of the Enum that is the value of the property. For example,
      * <code><pre>
      *     private static final StyleablePropertyFactory&lt;MyControl&gt; FACTORY = new StyleablePropertyFactory&lt;&gt;();
      *     StyleableProperty&lt;Orientation&gt; orientation =
      *         FACTORY.createStyleableEnumProperty(
-     *             this, 
-     *             "orientation", 
-     *             "-my-orientation", 
+     *             this,
+     *             "orientation",
+     *             "-my-orientation",
      *             s -> ((MyControl)s).orientation,
      *             Orientation.class);
      * </pre></code>
@@ -656,8 +656,8 @@ public class StyleablePropertyFactory<S extends Styleable> {
      * @param propertyName The field name of the StyleableProperty&lt;Font&gt;
      * @param cssProperty The CSS property name
      * @param function A function that returns the StyleableProperty&lt;Font&gt; that was created by this method call.
-     * @param initialValue The initial value of the property. CSS may reset the property to this value. 
-     * @param inherits Whether or not the CSS style can be inherited by child nodes                     
+     * @param initialValue The initial value of the property. CSS may reset the property to this value.
+     * @param inherits Whether or not the CSS style can be inherited by child nodes
      */
     public final StyleableProperty<Font> createStyleableFontProperty(
             S styleable,
@@ -677,7 +677,7 @@ public class StyleablePropertyFactory<S extends Styleable> {
      * @param propertyName The field name of the StyleableProperty&lt;Font&gt;
      * @param cssProperty The CSS property name
      * @param function A function that returns the StyleableProperty&lt;Font&gt; that was created by this method call.
-     * @param initialValue The initial value of the property. CSS may reset the property to this value. 
+     * @param initialValue The initial value of the property. CSS may reset the property to this value.
      */
     public final StyleableProperty<Font> createStyleableFontProperty(
             S styleable,
@@ -738,8 +738,8 @@ public class StyleablePropertyFactory<S extends Styleable> {
      * @param propertyName The field name of the StyleableProperty&lt;Inset&gt;
      * @param cssProperty The CSS property name
      * @param function A function that returns the StyleableProperty&lt;Inset&gt; that was created by this method call.
-     * @param initialValue The initial value of the property. CSS may reset the property to this value. 
-     * @param inherits Whether or not the CSS style can be inherited by child nodes                     
+     * @param initialValue The initial value of the property. CSS may reset the property to this value.
+     * @param inherits Whether or not the CSS style can be inherited by child nodes
      */
     public final StyleableProperty<Insets> createStyleableInsetsProperty(
             S styleable,
@@ -759,7 +759,7 @@ public class StyleablePropertyFactory<S extends Styleable> {
      * @param propertyName The field name of the StyleableProperty&lt;Inset&gt;
      * @param cssProperty The CSS property name
      * @param function A function that returns the StyleableProperty&lt;Inset&gt; that was created by this method call.
-     * @param initialValue The initial value of the property. CSS may reset the property to this value. 
+     * @param initialValue The initial value of the property. CSS may reset the property to this value.
      */
     public final StyleableProperty<Insets> createStyleableInsetsProperty(
             S styleable,
@@ -819,8 +819,8 @@ public class StyleablePropertyFactory<S extends Styleable> {
      * @param propertyName The field name of the StyleableProperty&lt;Paint&gt;
      * @param cssProperty The CSS property name
      * @param function A function that returns the StyleableProperty&lt;Paint&gt; that was created by this method call.
-     * @param initialValue The initial value of the property. CSS may reset the property to this value. 
-     * @param inherits Whether or not the CSS style can be inherited by child nodes                     
+     * @param initialValue The initial value of the property. CSS may reset the property to this value.
+     * @param inherits Whether or not the CSS style can be inherited by child nodes
      */
     public final StyleableProperty<Paint> createStyleablePaintProperty(
             S styleable,
@@ -840,7 +840,7 @@ public class StyleablePropertyFactory<S extends Styleable> {
      * @param propertyName The field name of the StyleableProperty&lt;Paint&gt;
      * @param cssProperty The CSS property name
      * @param function A function that returns the StyleableProperty&lt;Paint&gt; that was created by this method call.
-     * @param initialValue The initial value of the property. CSS may reset the property to this value. 
+     * @param initialValue The initial value of the property. CSS may reset the property to this value.
      */
     public final StyleableProperty<Paint> createStyleablePaintProperty(
             S styleable,
@@ -887,7 +887,7 @@ public class StyleablePropertyFactory<S extends Styleable> {
         CssMetaData<S,Paint> cssMetaData = (CssMetaData<S,Paint>)getCssMetaData(Paint.class, cssProperty);
         return new SimpleStyleableObjectProperty<Paint>(cssMetaData, styleable, propertyName, cssMetaData.getInitialValue(styleable));
     }
-    
+
     //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     //
     // create StyleableProperty<Number>
@@ -968,7 +968,7 @@ public class StyleablePropertyFactory<S extends Styleable> {
         CssMetaData<S,Number> cssMetaData = (CssMetaData<S,Number>)getCssMetaData(Number.class, cssProperty);
         return new SimpleStyleableObjectProperty<Number>(cssMetaData, styleable, propertyName, cssMetaData.getInitialValue(styleable));
     }
-    
+
     //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     //
     // create StyleableProperty<String>
@@ -981,8 +981,8 @@ public class StyleablePropertyFactory<S extends Styleable> {
      * @param propertyName The field name of the StyleableProperty&lt;String&gt;
      * @param cssProperty The CSS property name
      * @param function A function that returns the StyleableProperty&lt;String&gt; that was created by this method call.
-     * @param initialValue The initial value of the property. CSS may reset the property to this value. 
-     * @param inherits Whether or not the CSS style can be inherited by child nodes                     
+     * @param initialValue The initial value of the property. CSS may reset the property to this value.
+     * @param inherits Whether or not the CSS style can be inherited by child nodes
      */
     public final StyleableProperty<String> createStyleableStringProperty(
             S styleable,
@@ -1049,7 +1049,7 @@ public class StyleablePropertyFactory<S extends Styleable> {
         CssMetaData<S,String> cssMetaData = (CssMetaData<S,String>)getCssMetaData(String.class, cssProperty);
         return new SimpleStyleableStringProperty(cssMetaData, styleable, propertyName, cssMetaData.getInitialValue(styleable));
     }
-    
+
     //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     //
     // create StyleableProperty<String> where String is a URL
@@ -1063,8 +1063,8 @@ public class StyleablePropertyFactory<S extends Styleable> {
      * @param propertyName The field name of the StyleableProperty&lt;String&gt;
      * @param cssProperty The CSS property name
      * @param function A function that returns the StyleableProperty&lt;String&gt; that was created by this method call.
-     * @param initialValue The initial value of the property. CSS may reset the property to this value. 
-     * @param inherits Whether or not the CSS style can be inherited by child nodes                     
+     * @param initialValue The initial value of the property. CSS may reset the property to this value.
+     * @param inherits Whether or not the CSS style can be inherited by child nodes
      */
     public final StyleableProperty<String> createStyleableUrlProperty(
             S styleable,
@@ -1855,5 +1855,5 @@ public class StyleablePropertyFactory<S extends Styleable> {
     private final Map<String,Pair<Class,CssMetaData<S,?>>> metaDataMap;
     private final List<CssMetaData<? extends Styleable,?>> unmodifiableMetaDataList;
     private final List<CssMetaData<? extends Styleable,?>> metaDataList;
-    
+
 }

@@ -76,7 +76,7 @@ public abstract class FloatExpression extends NumberExpressionBase implements
      * will be returned. Otherwise a new
      * {@link javafx.beans.binding.FloatBinding} is created that is bound to the
      * {@code ObservableFloatValue}.
-     * 
+     *
      * @param value
      *            The source {@code ObservableFloatValue}
      * @return A {@code FloatExpression} that wraps the
@@ -112,7 +112,7 @@ public abstract class FloatExpression extends NumberExpressionBase implements
                     }
                 };
     }
-    
+
     /**
      * Returns a {@code FloatExpression} that wraps an
      * {@link javafx.beans.value.ObservableValue}. If the
@@ -120,20 +120,20 @@ public abstract class FloatExpression extends NumberExpressionBase implements
      * will be returned. Otherwise a new
      * {@link javafx.beans.binding.FloatBinding} is created that is bound to
      * the {@code ObservableValue}.
-     * 
+     *
      * <p>
      * Note: this method can be used to convert an {@link ObjectExpression} or
      * {@link javafx.beans.property.ObjectProperty} of specific number type to FloatExpression, which
      * is essentially an {@code ObservableValue<Number>}. See sample below.
-     * 
+     *
      * <blockquote><pre>
      *   FloatProperty floatProperty = new SimpleFloatProperty(1.0f);
      *   ObjectProperty&lt;Float&gt; objectProperty = new SimpleObjectProperty&lt;&gt;(2.0f);
      *   BooleanBinding binding = floatProperty.greaterThan(FloatExpression.floatExpression(objectProperty));
      * </pre></blockquote>
-     * 
+     *
      *  Note: null values will be interpreted as 0f
-     * 
+     *
      * @param value
      *            The source {@code ObservableValue}
      * @return A {@code FloatExpression} that wraps the
@@ -256,13 +256,13 @@ public abstract class FloatExpression extends NumberExpressionBase implements
     public FloatBinding divide(final int other) {
         return (FloatBinding) Bindings.divide(this, other);
     }
-    
+
     /**
      * Creates an {@link javafx.beans.binding.ObjectExpression} that holds the value
      * of this {@code FloatExpression}. If the
      * value of this {@code FloatExpression} changes, the value of the
      * {@code ObjectExpression} will be updated automatically.
-     * 
+     *
      * @return the new {@code ObjectExpression}
      * @since JavaFX 8.0
      */
@@ -276,7 +276,7 @@ public abstract class FloatExpression extends NumberExpressionBase implements
             public void dispose() {
                 unbind(FloatExpression.this);
             }
-            
+
             @Override
             protected Float computeValue() {
                 return FloatExpression.this.getValue();

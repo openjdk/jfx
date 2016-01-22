@@ -81,7 +81,7 @@
  *
  * The API is designed to handle creation and registration of test suites
  * and test cases implicitly. A simple call like
- * |[<!-- language="C" --> 
+ * |[<!-- language="C" -->
  *   g_test_add_func ("/misc/assertions", test_assertions);
  * ]|
  * creates a test suite called "misc" with a single test case named
@@ -406,7 +406,7 @@
  * The advantage of this macro is that it can produce a message that
  * includes the actual values of @s1 and @s2.
  *
- * |[<!-- language="C" --> 
+ * |[<!-- language="C" -->
  *   g_assert_cmpstr (mystring, ==, "fubar");
  * ]|
  *
@@ -1185,7 +1185,7 @@ g_test_rand_int (void)
  * see g_test_rand_int() for details on test case random numbers.
  *
  * Returns: a number with @begin <= number < @end.
- * 
+ *
  * Since: 2.16
  */
 gint32
@@ -1640,7 +1640,7 @@ g_test_add_vtable (const char       *testpath,
  * Indicates that a test failed. This function can be called
  * multiple times from the same test. You can use this function
  * if your test failed in a recoverable way.
- * 
+ *
  * Do not use this function if the failure of a test could cause
  * other tests to malfunction.
  *
@@ -2364,13 +2364,13 @@ g_assertion_message_cmpstr (const char     *domain,
 
 void
 g_assertion_message_error (const char     *domain,
-			   const char     *file,
-			   int             line,
-			   const char     *func,
-			   const char     *expr,
-			   const GError   *error,
-			   GQuark          error_domain,
-			   int             error_code)
+               const char     *file,
+               int             line,
+               const char     *func,
+               const char     *expr,
+               const GError   *error,
+               GQuark          error_domain,
+               int             error_code)
 {
   GString *gstring;
 
@@ -2382,13 +2382,13 @@ g_assertion_message_error (const char     *domain,
   gstring = g_string_new ("assertion failed ");
   if (error_domain)
       g_string_append_printf (gstring, "(%s == (%s, %d)): ", expr,
-			      g_quark_to_string (error_domain), error_code);
+                  g_quark_to_string (error_domain), error_code);
   else
     g_string_append_printf (gstring, "(%s == NULL): ", expr);
 
   if (error)
       g_string_append_printf (gstring, "%s (%s, %d)", error->message,
-			      g_quark_to_string (error->domain), error->code);
+                  g_quark_to_string (error->domain), error->code);
   else
     g_string_append_printf (gstring, "%s is NULL", expr);
 
@@ -2636,7 +2636,7 @@ wait_for_child (GPid pid,
  * The forking parent process then asserts successful child program
  * termination and validates child program outputs.
  *
- * |[<!-- language="C" --> 
+ * |[<!-- language="C" -->
  *   static void
  *   test_fork_patterns (void)
  *   {
@@ -2745,7 +2745,7 @@ g_test_trap_fork (guint64        usec_timeout,
  * check the results of the subprocess. (But note that
  * g_test_trap_assert_stdout() and g_test_trap_assert_stderr()
  * cannot be used if @test_flags specifies that the child should
- * inherit the parent stdout/stderr.) 
+ * inherit the parent stdout/stderr.)
  *
  * If your `main ()` needs to behave differently in
  * the subprocess, you can call g_test_subprocess() (after calling
@@ -2755,7 +2755,7 @@ g_test_trap_fork (guint64        usec_timeout,
  * `my_object_new(1000000)` will abort with an error
  * message.
  *
- * |[<!-- language="C" --> 
+ * |[<!-- language="C" -->
  *   static void
  *   test_create_large_object_subprocess (void)
  *   {

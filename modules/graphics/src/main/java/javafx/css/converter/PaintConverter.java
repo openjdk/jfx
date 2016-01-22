@@ -116,7 +116,7 @@ public final class PaintConverter extends StyleConverter<ParsedValue<?, Paint>, 
             super();
         }
 
-        @Override 
+        @Override
         public Paint convert(ParsedValue<ParsedValue[], Paint> value, Font font) {
 
             Paint paint = super.getCachedValue(value);

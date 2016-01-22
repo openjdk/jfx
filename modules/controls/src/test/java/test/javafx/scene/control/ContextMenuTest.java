@@ -119,8 +119,8 @@ public class ContextMenuTest {
     @Before public void setup() {
         // earlier test items
         menuItem0 = new MenuItem();
-        menuItem1 = new MenuItem(); 
-        menuItem2 = new MenuItem(); 
+        menuItem1 = new MenuItem();
+        menuItem2 = new MenuItem();
         menuItem3 = new MenuItem();
 
         contextMenu = new ContextMenu();

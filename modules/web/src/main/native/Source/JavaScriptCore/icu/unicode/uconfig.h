@@ -1,4 +1,4 @@
-/*  
+/*
 **********************************************************************
 *   Copyright (C) 2002-2009, International Business Machines
 *   Corporation and others.  All Rights Reserved.
@@ -38,9 +38,9 @@
 /**
  * If this switch is defined, ICU will attempt to load a header file named "uconfig_local.h"
  * prior to determining default settings for uconfig variables.
- * 
+ *
  * @internal ICU 4.0
- * 
+ *
  */
 #if defined(UCONFIG_USE_LOCAL)
 #include "uconfig_local.h"

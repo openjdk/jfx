@@ -43,9 +43,9 @@ namespace JSC {
 
         DECLARE_INFO;
 
-        static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue proto) 
-        { 
-            return Structure::create(vm, globalObject, proto, TypeInfo(ObjectType, StructureFlags), info()); 
+        static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue proto)
+        {
+            return Structure::create(vm, globalObject, proto, TypeInfo(ObjectType, StructureFlags), info());
         }
 
         enum { NaNValue, NegInfinity, PosInfinity, MaxValue, MinValue };

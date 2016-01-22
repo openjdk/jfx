@@ -42,26 +42,26 @@
         JNIEnv *env;                                                        \
         JavaVM *vm = glass_application_GetVM();                             \
         if (!vm) return;                                                    \
-        (*vm)->AttachCurrentThreadAsDaemon(vm, (JNIEnv **) &env, NULL);     
+        (*vm)->AttachCurrentThreadAsDaemon(vm, (JNIEnv **) &env, NULL);
 
     #define DETACH_JNI_THREAD()  \
         (*vm)->DetachCurrentThread(vm);
 #endif
 
-jboolean lens_input_initialize(JNIEnv *_env) {    
+jboolean lens_input_initialize(JNIEnv *_env) {
     uint32_t flags = 0;
 #ifdef DALVIK_VM
     if (!env) {
         env = _env;
-    } 
-#endif    
+    }
+#endif
     flags |= 1 << com_sun_glass_ui_lens_LensApplication_DEVICE_MULTITOUCH;
     glass_application_notifyDeviceEvent(_env, flags, 1);
     return JNI_TRUE;
 }
 
 void lens_input_shutdown() {
-    android_shutdown();    
+    android_shutdown();
 }
 
 void notifyWindowEvent_resize(
@@ -69,7 +69,7 @@ void notifyWindowEvent_resize(
         int eventType,
         int width,
         int height) {
-   
+
    ATTACH_JNI_THREAD();
    glass_application_notifyWindowEvent_resize(env,
         window,
@@ -85,7 +85,7 @@ void notifyTouchEvent(
         int  sendAlsoButtonEvent,
         int  xabs,
         int  yabs) {
-    
+
    ATTACH_JNI_THREAD();
    jlong jlid = id;
    lens_wm_notifyMultiTouchEvent(env,
@@ -95,7 +95,7 @@ void notifyTouchEvent(
            &xabs,
            &yabs,
            0 /*primary point index*/);
-                   
+
    if (sendAlsoButtonEvent) {
         lens_wm_notifyButtonEvent(env,
                 (state == com_sun_glass_events_TouchEvent_TOUCH_PRESSED),
@@ -112,10 +112,10 @@ void notifyMultiTouchEvent(
         int *ids,
         int *xs,
         int *ys) {
-    
+
     ATTACH_JNI_THREAD();
     jlong jids[count];
-    
+
     for(int i=0;i<count;i++) jids[i] = ids[i];
     lens_wm_notifyMultiTouchEvent(env,
            count,
@@ -132,7 +132,7 @@ void notifyMotionEvent(
         int mousePosY,
         int isTouch,
         int touchId) {
-   
+
    ATTACH_JNI_THREAD();
    lens_wm_notifyMotionEvent(env,
            mousePosX,
@@ -144,7 +144,7 @@ void notifyButtonEvent(
         int pressed,
         int button,
         int xabs, int yabs) {
-   
+
    ATTACH_JNI_THREAD();
    lens_wm_notifyButtonEvent(env,
            pressed,
@@ -158,7 +158,7 @@ void notifyKeyEvent(
         int eventType,
         int platformKeycode,
         int isRepeatEvent) {
-    
+
    ATTACH_JNI_THREAD();
    NativeWindow window = glass_window_getFocusedWindow();
    if (!window) {

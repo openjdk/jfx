@@ -66,7 +66,7 @@ import javafx.scene.Parent;
  * options to users. MenuItem serves as the base class for the bulk of JavaFX menus
  * API.
  * It has a display {@link #getText() text} property, as well as an optional {@link #getGraphic() graphic} node
- * that can be set on it. 
+ * that can be set on it.
  * The {@link #getAccelerator() accelerator} property enables accessing the
  * associated action in one keystroke. Also, as with the {@link Button} control,
  * by using the {@link #setOnAction} method, you can have an instance of MenuItem
@@ -134,17 +134,17 @@ public class MenuItem implements EventTarget, Styleable {
         setGraphic(graphic);
         styleClass.add(DEFAULT_STYLE_CLASS);
     }
-    
 
-    
+
+
     /***************************************************************************
      *                                                                         *
      * Instance Variables                                                      *
      *                                                                         *
-     **************************************************************************/    
-    
+     **************************************************************************/
+
     private final ObservableList<String> styleClass = FXCollections.observableArrayList();
-    
+
     final EventHandlerManager eventHandlerManager =
             new EventHandlerManager(this);
 
@@ -156,10 +156,10 @@ public class MenuItem implements EventTarget, Styleable {
      * Properties                                                              *
      *                                                                         *
      **************************************************************************/
-    
+
     /**
      * The id of this MenuItem. This simple string identifier is useful for finding
-     * a specific MenuItem within the scene graph. 
+     * a specific MenuItem within the scene graph.
      */
     private StringProperty id;
     public final void setId(String value) { idProperty().set(value); }
@@ -170,11 +170,11 @@ public class MenuItem implements EventTarget, Styleable {
         }
         return id;
     }
-    
+
     /**
-     * A string representation of the CSS style associated with this specific MenuItem. 
-     * This is analogous to the "style" attribute of an HTML element. Note that, 
-     * like the HTML style attribute, this variable contains style properties and 
+     * A string representation of the CSS style associated with this specific MenuItem.
+     * This is analogous to the "style" attribute of an HTML element. Note that,
+     * like the HTML style attribute, this variable contains style properties and
      * values and not the selector portion of a style rule.
      */
     private StringProperty style;
@@ -186,7 +186,7 @@ public class MenuItem implements EventTarget, Styleable {
         }
         return style;
     }
-    
+
     // --- Parent Menu (useful for submenus)
     /**
      * This is the {@link Menu} in which this {@code MenuItem} exists. It is
@@ -276,7 +276,7 @@ public class MenuItem implements EventTarget, Styleable {
      * the case.
      */
     private ObjectProperty<Node> graphic;
-    
+
     public final void setGraphic(Node value) {
         graphicProperty().set(value);
     }
@@ -291,7 +291,7 @@ public class MenuItem implements EventTarget, Styleable {
         }
         return graphic;
     }
-    
+
 
     // --- OnAction
     /**
@@ -330,22 +330,22 @@ public class MenuItem implements EventTarget, Styleable {
         }
         return onAction;
     }
-    
+
     /**
      * <p>Called when a accelerator for the Menuitem is invoked</p>
      * @since JavaFX 2.2
      */
     public static final EventType<Event> MENU_VALIDATION_EVENT = new EventType<Event>
             (Event.ANY, "MENU_VALIDATION_EVENT");
-    
+
     /**
-     * The event handler that is associated with invocation of an accelerator for a MenuItem. This 
-     * can happen when a key sequence for an accelerator is pressed. The event handler is also  
-     * invoked when onShowing event handler is called. 
+     * The event handler that is associated with invocation of an accelerator for a MenuItem. This
+     * can happen when a key sequence for an accelerator is pressed. The event handler is also
+     * invoked when onShowing event handler is called.
      * @since JavaFX 2.2
      */
     private ObjectProperty<EventHandler<Event>> onMenuValidation;
-    
+
     public final void setOnMenuValidation(EventHandler<Event> value) {
         onMenuValidationProperty().set( value);
     }
@@ -370,9 +370,9 @@ public class MenuItem implements EventTarget, Styleable {
         }
         return onMenuValidation;
     }
-    
+
     // --- Disable
-    /** 
+    /**
      * Sets the individual disabled state of this MenuItem.
      * Setting disable to true will cause this MenuItem to become disabled.
      */
@@ -389,7 +389,7 @@ public class MenuItem implements EventTarget, Styleable {
 
     // --- Visible
     /**
-     * Specifies whether this MenuItem should be rendered as part of the scene graph. 
+     * Specifies whether this MenuItem should be rendered as part of the scene graph.
      */
     private BooleanProperty visible;
     public final void setVisible(boolean value) { visibleProperty().set(value); }
@@ -403,7 +403,7 @@ public class MenuItem implements EventTarget, Styleable {
 
     /**
      * The accelerator property enables accessing the associated action in one keystroke.
-     * It is a convenience offered to perform quickly a given action. 
+     * It is a convenience offered to perform quickly a given action.
      */
     private ObjectProperty<KeyCombination> accelerator;
     public final void setAccelerator(KeyCombination value) {
@@ -426,7 +426,7 @@ public class MenuItem implements EventTarget, Styleable {
      * When a mnemonic is detected the key combination will
      * be determined based on the succeeding character, and the mnemonic
      * added.
-     * 
+     *
      * <p>
      * The default value for MenuItem is true.
      * </p>
@@ -450,11 +450,11 @@ public class MenuItem implements EventTarget, Styleable {
      * Public API                                                              *
      *                                                                         *
      **************************************************************************/
-    
+
     @Override public ObservableList<String> getStyleClass() {
         return styleClass;
     }
-    
+
     /**
      * Fires a new ActionEvent.
      */
@@ -515,7 +515,7 @@ public class MenuItem implements EventTarget, Styleable {
     public Object getUserData() {
         return userData;
     }
- 
+
     /**
      * Convenience method for setting a single Object property that can be
      * retrieved at a later date. This is functionally equivalent to calling
@@ -542,7 +542,7 @@ public class MenuItem implements EventTarget, Styleable {
         }
         return properties;
     }
-    
+
     /***************************************************************************
      *                                                                         *
      * Stylesheet Handling                                                     *
@@ -563,13 +563,13 @@ public class MenuItem implements EventTarget, Styleable {
 
     /**
      * {@inheritDoc}
-     * @return {@code getParentMenu()}, or {@code getParentPopup()} 
+     * @return {@code getParentMenu()}, or {@code getParentPopup()}
      * if {@code parentMenu} is null
      * @since JavaFX 8.0
      */
     @Override
     public Styleable getStyleableParent() {
-        
+
         if(getParentMenu() == null) {
             return getParentPopup();
         } else {

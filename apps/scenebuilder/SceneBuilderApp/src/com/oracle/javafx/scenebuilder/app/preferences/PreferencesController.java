@@ -102,7 +102,7 @@ public class PreferencesController {
         // Create the root node for all documents preferences
         documentsRootPreferences = applicationRootPreferences.node(DOCUMENTS);
 
-        // Cleanup document preferences at start time : 
+        // Cleanup document preferences at start time :
         // We keep only document preferences for the documents defined in RECENT_ITEMS
         final String items = applicationRootPreferences.get(RECENT_ITEMS, null); //NOI18N
         if (items != null && items.isEmpty() == false) {

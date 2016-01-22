@@ -70,7 +70,7 @@ public class ChangeListenerApp extends Application {
     Rectangle rect1 = new Rectangle(25, 25, 40, 40);
     // Stroked rectangle
     Rectangle rect2 = new Rectangle(135, 25, 40, 40);
-    
+
     public Parent createContent() {
         HBox outerHbox = new HBox();
         outerHbox.setAlignment(Pos.CENTER);
@@ -115,7 +115,7 @@ public class ChangeListenerApp extends Application {
         outerHbox.setPadding(new Insets(5,5,5,5));
         return outerHbox;
     }
-    
+
     @Override
     public void start(Stage primaryStage) throws Exception {
         primaryStage.setScene(new Scene(createContent()));

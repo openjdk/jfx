@@ -33,9 +33,9 @@
 #include <WebKit2/WKRetainPtr.h>
 
 namespace TestWebKitAPI {
-    
+
 static bool didFinishLoad = false;
-    
+
 static void didFinishLoadForFrame(WKPageRef page, WKFrameRef frame, WKTypeRef userData, const void* clientInfo)
 {
     didFinishLoad = true;
@@ -48,17 +48,17 @@ TEST(WebKit2, LoadAlternateHTMLStringWithNonDirectoryURL)
 
     WKPageLoaderClientV0 loaderClient;
     memset(&loaderClient, 0, sizeof(loaderClient));
-    
+
     loaderClient.base.version = 0;
     loaderClient.didFinishLoadForFrame = didFinishLoadForFrame;
     WKPageSetPageLoaderClient(webView.page(), &loaderClient.base);
 
     WKRetainPtr<WKURLRef> fileURL(AdoptWK, Util::createURLForResource("simple", "html"));
     WKRetainPtr<WKStringRef> alternateHTMLString(AdoptWK, WKStringCreateWithUTF8CString("<html><body><img src='icon.png'></body></html>"));
-    
+
     // Call WKPageLoadAlternateHTMLString() with fileURL which does not point to a directory
     WKPageLoadAlternateHTMLString(webView.page(), alternateHTMLString.get(), fileURL.get(), fileURL.get());
-    
+
     // If we can finish loading the html without resulting in an invalid message being sent from the WebProcess, this test passes.
     Util::run(&didFinishLoad);
 }

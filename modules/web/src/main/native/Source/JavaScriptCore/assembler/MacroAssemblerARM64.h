@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef MacroAssemblerARM64_h
@@ -45,7 +45,7 @@ class MacroAssemblerARM64 : public AbstractMacroAssembler<ARM64Assembler> {
 
     // 4 instructions - 3 to load the function pointer, + blr.
     static const ptrdiff_t REPATCH_OFFSET_CALL_TO_POINTER = -16;
-    
+
 public:
     MacroAssemblerARM64()
         : m_dataMemoryTempRegister(this, dataTempRegister)
@@ -367,7 +367,7 @@ public:
         move(imm, getCachedDataTempRegisterIDAndInvalidate());
         m_assembler.and_<64>(dest, dest, dataTempRegister);
     }
-    
+
     void countLeadingZeros32(RegisterID src, RegisterID dest)
     {
         m_assembler.clz<32>(dest, src);
@@ -412,12 +412,12 @@ public:
     {
         lshift64(dest, imm, dest);
     }
-    
+
     void mul32(RegisterID src, RegisterID dest)
     {
         m_assembler.mul<32>(dest, dest, src);
     }
-    
+
     void mul64(RegisterID src, RegisterID dest)
     {
         m_assembler.mul<64>(dest, dest, src);
@@ -501,7 +501,7 @@ public:
         signExtend32ToPtr(imm, getCachedDataTempRegisterIDAndInvalidate());
         m_assembler.orr<64>(dest, src, dataTempRegister);
     }
-    
+
     void or64(TrustedImm64 imm, RegisterID dest)
     {
         LogicalImmediate logicalImm = LogicalImmediate::create64(static_cast<intptr_t>(static_cast<int64_t>(imm.m_value)));
@@ -534,27 +534,27 @@ public:
     {
         rshift32(dest, shiftAmount, dest);
     }
-    
+
     void rshift32(TrustedImm32 imm, RegisterID dest)
     {
         rshift32(dest, imm, dest);
     }
-    
+
     void rshift64(RegisterID src, RegisterID shiftAmount, RegisterID dest)
     {
         m_assembler.lsr<64>(dest, src, shiftAmount);
     }
-    
+
     void rshift64(RegisterID src, TrustedImm32 imm, RegisterID dest)
     {
         m_assembler.lsr<64>(dest, src, imm.m_value & 0x3f);
     }
-    
+
     void rshift64(RegisterID shiftAmount, RegisterID dest)
     {
         rshift64(dest, shiftAmount, dest);
     }
-    
+
     void rshift64(TrustedImm32 imm, RegisterID dest)
     {
         rshift64(dest, imm, dest);
@@ -627,7 +627,7 @@ public:
     {
         m_assembler.sub<64>(dest, dest, src);
     }
-    
+
     void sub64(TrustedImm32 imm, RegisterID dest)
     {
         if (isUInt12(imm.m_value)) {
@@ -642,7 +642,7 @@ public:
         signExtend32ToPtr(imm, getCachedDataTempRegisterIDAndInvalidate());
         m_assembler.sub<64>(dest, dest, dataTempRegister);
     }
-    
+
     void sub64(TrustedImm64 imm, RegisterID dest)
     {
         intptr_t immediate = imm.m_value;
@@ -664,7 +664,7 @@ public:
     {
         m_assembler.lsr<32>(dest, src, shiftAmount);
     }
-    
+
     void urshift32(RegisterID src, TrustedImm32 imm, RegisterID dest)
     {
         m_assembler.lsr<32>(dest, src, imm.m_value & 0x1f);
@@ -674,7 +674,7 @@ public:
     {
         urshift32(dest, shiftAmount, dest);
     }
-    
+
     void urshift32(TrustedImm32 imm, RegisterID dest)
     {
         urshift32(dest, imm, dest);
@@ -787,7 +787,7 @@ public:
         m_assembler.ldr<64>(dest, address.base, memoryTempRegister, ARM64Assembler::SXTW, 0);
         return label;
     }
-    
+
     DataLabelCompact load64WithCompactAddressOffsetPatch(Address address, RegisterID dest)
     {
         ASSERT(isCompactPtrAlignedAddressOffset(address.offset));
@@ -837,7 +837,7 @@ public:
         m_assembler.ldr<32>(dest, address.base, memoryTempRegister, ARM64Assembler::SXTW, 0);
         return label;
     }
-    
+
     DataLabelCompact load32WithCompactAddressOffsetPatch(Address address, RegisterID dest)
     {
         ASSERT(isCompactPtrAlignedAddressOffset(address.offset));
@@ -859,7 +859,7 @@ public:
         signExtend32ToPtr(TrustedImm32(address.offset), getCachedMemoryTempRegisterIDAndInvalidate());
         m_assembler.ldrh(dest, address.base, memoryTempRegister);
     }
-    
+
     void load16(BaseIndex address, RegisterID dest)
     {
         if (!address.offset && (!address.scale || address.scale == 1)) {
@@ -871,7 +871,7 @@ public:
         m_assembler.add<64>(memoryTempRegister, memoryTempRegister, address.index, ARM64Assembler::UXTX, address.scale);
         m_assembler.ldrh(dest, address.base, memoryTempRegister);
     }
-    
+
     void load16Unaligned(BaseIndex address, RegisterID dest)
     {
         load16(address, dest);
@@ -909,7 +909,7 @@ public:
         m_assembler.add<64>(memoryTempRegister, memoryTempRegister, address.index, ARM64Assembler::UXTX, address.scale);
         m_assembler.ldrb(dest, address.base, memoryTempRegister);
     }
-    
+
     void load8(const void* address, RegisterID dest)
     {
         moveToCachedReg(TrustedImmPtr(address), m_cachedMemoryTempRegister);
@@ -950,7 +950,7 @@ public:
         m_assembler.add<64>(memoryTempRegister, memoryTempRegister, address.index, ARM64Assembler::UXTX, address.scale);
         m_assembler.str<64>(src, address.base, memoryTempRegister);
     }
-    
+
     void store64(RegisterID src, const void* address)
     {
         store<64>(src, address);
@@ -977,7 +977,7 @@ public:
         moveToCachedReg(imm, m_dataMemoryTempRegister);
         store64(dataTempRegister, address);
     }
-    
+
     DataLabel32 store64WithAddressOffsetPatch(RegisterID src, Address address)
     {
         DataLabel32 label(this);
@@ -1221,13 +1221,13 @@ public:
     {
         m_assembler.fcvt<64, 32>(dest, src);
     }
-    
+
     void convertInt32ToDouble(TrustedImm32 imm, FPRegisterID dest)
     {
         move(imm, getCachedDataTempRegisterIDAndInvalidate());
         convertInt32ToDouble(dataTempRegister, dest);
     }
-    
+
     void convertInt32ToDouble(RegisterID src, FPRegisterID dest)
     {
         m_assembler.scvtf<64, 32>(dest, src);
@@ -1244,12 +1244,12 @@ public:
         load32(address.m_ptr, getCachedDataTempRegisterIDAndInvalidate());
         convertInt32ToDouble(dataTempRegister, dest);
     }
-    
+
     void convertInt64ToDouble(RegisterID src, FPRegisterID dest)
     {
         m_assembler.scvtf<64, 64>(dest, src);
     }
-    
+
     void divDouble(FPRegisterID src, FPRegisterID dest)
     {
         divDouble(dest, src, dest);
@@ -1280,7 +1280,7 @@ public:
         m_assembler.add<64>(memoryTempRegister, memoryTempRegister, address.index, ARM64Assembler::UXTX, address.scale);
         m_assembler.ldr<64>(dest, address.base, memoryTempRegister);
     }
-    
+
     void loadDouble(const void* address, FPRegisterID dest)
     {
         moveToCachedReg(TrustedImmPtr(address), m_cachedMemoryTempRegister);
@@ -1366,7 +1366,7 @@ public:
         m_assembler.add<64>(memoryTempRegister, memoryTempRegister, address.index, ARM64Assembler::UXTX, address.scale);
         m_assembler.str<64>(src, address.base, memoryTempRegister);
     }
-    
+
     void storeFloat(FPRegisterID src, BaseIndex address)
     {
         if (!address.offset && (!address.scale || address.scale == 2)) {
@@ -1419,7 +1419,7 @@ public:
     // designed just for quick-and-dirty saving and restoring of
     // temporary values. These operations don't claim to have any
     // ABI compatibility.
-    
+
     void pop(RegisterID) NO_RETURN_DUE_TO_CRASH
     {
         CRASH();
@@ -1459,7 +1459,7 @@ public:
     {
         m_assembler.str<64>(src, ARM64Registers::sp, PreIndex(-16));
     }
-    
+
     void pushToSaveImmediateWithoutTouchingRegisters(TrustedImm32 imm)
     {
         RegisterID reg = dataTempRegister;
@@ -1480,13 +1480,13 @@ public:
         move(imm, getCachedDataTempRegisterIDAndInvalidate());
         pushToSave(dataTempRegister);
     }
-    
+
     void popToRestore(FPRegisterID dest)
     {
         loadDouble(stackPointerRegister, dest);
         add64(TrustedImm32(16), stackPointerRegister);
     }
-    
+
     void pushToSave(FPRegisterID src)
     {
         sub64(TrustedImm32(16), stackPointerRegister);
@@ -1524,7 +1524,7 @@ public:
         move(reg2, reg1);
         move(dataTempRegister, reg2);
     }
-    
+
     void signExtend32ToPtr(RegisterID src, RegisterID dest)
     {
         m_assembler.sxtw(dest, src);
@@ -1666,14 +1666,14 @@ public:
         load8(left, getCachedMemoryTempRegisterIDAndInvalidate());
         return branch32(cond, memoryTempRegister, right);
     }
-    
+
     Jump branch8(RelationalCondition cond, AbsoluteAddress left, TrustedImm32 right)
     {
         ASSERT(!(0xffffff00 & right.m_value));
         load8(left.m_ptr, getCachedMemoryTempRegisterIDAndInvalidate());
         return branch32(cond, memoryTempRegister, right);
     }
-    
+
     Jump branchTest32(ResultCondition cond, RegisterID reg, RegisterID mask)
     {
         m_assembler.tst<32>(reg, mask);
@@ -1810,7 +1810,7 @@ public:
     // * jz operations branch if the result is zero.
     // * jo operations branch if the (signed) arithmetic
     //   operation caused an overflow to occur.
-    
+
     Jump branchAdd32(ResultCondition cond, RegisterID op1, RegisterID op2, RegisterID dest)
     {
         m_assembler.add<32, S>(dest, op1, op2);
@@ -2135,7 +2135,7 @@ public:
         m_assembler.cmp<64>(left, right);
         m_assembler.cset<32>(dest, ARM64Condition(cond));
     }
-    
+
     void compare64(RelationalCondition cond, RegisterID left, TrustedImm32 right, RegisterID dest)
     {
         signExtend32ToPtr(right, getCachedDataTempRegisterIDAndInvalidate());
@@ -2149,7 +2149,7 @@ public:
         move(right, getCachedDataTempRegisterIDAndInvalidate());
         compare32(cond, memoryTempRegister, dataTempRegister, dest);
     }
-    
+
     void test32(ResultCondition cond, RegisterID src, TrustedImm32 mask, RegisterID dest)
     {
         if (mask.m_value == -1)
@@ -2290,7 +2290,7 @@ public:
     {
         m_assembler.nop();
     }
-    
+
     void memoryFence()
     {
         m_assembler.dmbSY();
@@ -2314,7 +2314,7 @@ public:
     {
         ARM64Assembler::replaceWithJump(instructionStart.dataLocation(), destination.dataLocation());
     }
-    
+
     static ptrdiff_t maxJumpReplacementSize()
     {
         return ARM64Assembler::maxJumpReplacementSize();
@@ -2323,23 +2323,23 @@ public:
     RegisterID scratchRegisterForBlinding() { return getCachedDataTempRegisterIDAndInvalidate(); }
 
     static bool canJumpReplacePatchableBranchPtrWithPatch() { return false; }
-    
+
     static CodeLocationLabel startOfBranchPtrWithPatchOnRegister(CodeLocationDataLabelPtr label)
     {
         return label.labelAtOffset(0);
     }
-    
+
     static CodeLocationLabel startOfPatchableBranchPtrWithPatchOnAddress(CodeLocationDataLabelPtr)
     {
         UNREACHABLE_FOR_PLATFORM();
         return CodeLocationLabel();
     }
-    
+
     static void revertJumpReplacementToBranchPtrWithPatch(CodeLocationLabel instructionStart, RegisterID, void* initialValue)
     {
         reemitInitialMoveWithPatch(instructionStart.dataLocation(), initialValue);
     }
-    
+
     static void revertJumpReplacementToPatchableBranchPtrWithPatch(CodeLocationLabel, Address, void*)
     {
         UNREACHABLE_FOR_PLATFORM();
@@ -2396,7 +2396,7 @@ protected:
     {
         return static_cast<ARM64Assembler::Condition>(cond);
     }
-    
+
 private:
     ALWAYS_INLINE RegisterID getCachedDataTempRegisterIDAndInvalidate() { return m_dataMemoryTempRegister.registerIDInvalidate(); }
     ALWAYS_INLINE RegisterID getCachedMemoryTempRegisterIDAndInvalidate() { return m_cachedMemoryTempRegister.registerIDInvalidate(); }

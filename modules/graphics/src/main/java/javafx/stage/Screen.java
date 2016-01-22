@@ -247,14 +247,14 @@ public final class Screen {
 
     /**
      * The visual bounds of this {@code Screen}.
-     * 
+     *
      * These bounds account for objects in the native windowing system such as
      * task bars and menu bars. These bounds are contained by {@code Screen.bounds}.
      */
     private Rectangle2D visualBounds = Rectangle2D.EMPTY;
     /**
      * Gets the visual bounds of this {@code Screen}.
-     * 
+     *
      * These bounds account for objects in the native windowing system such as
      * task bars and menu bars. These bounds are contained by {@code Screen.bounds}.
      * @return The visual bounds of this {@code Screen}
@@ -292,7 +292,7 @@ public final class Screen {
     /**
      * Returns a hash code for this {@code Screen} object.
      * @return a hash code for this {@code Screen} object.
-     */ 
+     */
     @Override public int hashCode() {
         long bits = 7L;
         bits = 37L * bits + bounds.hashCode();
@@ -321,7 +321,7 @@ public final class Screen {
     /**
      * Returns a string representation of this {@code Screen} object.
      * @return a string representation of this {@code Screen} object.
-     */ 
+     */
     @Override public String toString() {
         return super.toString() + " bounds:" + bounds + " visualBounds:" + visualBounds + " dpi:" + dpi + " renderScale:" + renderScale;
     }

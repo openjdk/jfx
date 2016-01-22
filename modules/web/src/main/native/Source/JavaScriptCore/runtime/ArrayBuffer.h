@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef ArrayBuffer_h
@@ -45,18 +45,18 @@ class JSArrayBuffer;
 class ArrayBufferContents {
     WTF_MAKE_NONCOPYABLE(ArrayBufferContents);
 public:
-    ArrayBufferContents() 
+    ArrayBufferContents()
         : m_data(0)
         , m_sizeInBytes(0)
     { }
 
     inline ~ArrayBufferContents();
-    
+
     void* data() { return m_data; }
     unsigned sizeInBytes() { return m_sizeInBytes; }
 
 private:
-    ArrayBufferContents(void* data, unsigned sizeInBytes) 
+    ArrayBufferContents(void* data, unsigned sizeInBytes)
         : m_data(data)
         , m_sizeInBytes(sizeInBytes)
     { }
@@ -106,18 +106,18 @@ public:
     inline void* data();
     inline const void* data() const;
     inline unsigned byteLength() const;
-    
+
     inline size_t gcSizeEstimateInBytes() const;
 
     inline PassRefPtr<ArrayBuffer> slice(int begin, int end) const;
     inline PassRefPtr<ArrayBuffer> slice(int begin) const;
-    
+
     inline void pin();
     inline void unpin();
 
     JS_EXPORT_PRIVATE bool transfer(ArrayBufferContents&);
     bool isNeutered() { return !m_contents.m_data; }
-    
+
     static ptrdiff_t offsetOfData() { return OBJECT_OFFSETOF(ArrayBuffer, m_contents) + OBJECT_OFFSETOF(ArrayBufferContents, m_data); }
 
     ~ArrayBuffer() { }

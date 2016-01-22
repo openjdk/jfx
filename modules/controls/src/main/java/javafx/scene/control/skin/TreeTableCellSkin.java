@@ -116,7 +116,7 @@ public class TreeTableCellSkin<S,T> extends TableCellSkinBase<TreeTableCell<S,T>
     /** {@inheritDoc} */
     @Override double leftLabelPadding() {
         double leftPadding = super.leftLabelPadding();
-        
+
         // RT-27167: we must take into account the disclosure node and the
         // indentation (which is not taken into account by the LabeledSkinBase.
         final double height = getCellSize();
@@ -126,7 +126,7 @@ public class TreeTableCellSkin<S,T> extends TableCellSkinBase<TreeTableCell<S,T>
         TreeTableColumn<S,T> tableColumn = cell.getTableColumn();
         if (tableColumn == null) return leftPadding;
 
-        // check if this column is the TreeTableView treeColumn (i.e. the 
+        // check if this column is the TreeTableView treeColumn (i.e. the
         // column showing the disclosure node and graphic).
         TreeTableView<S> treeTable = cell.getTreeTableView();
         if (treeTable == null) return leftPadding;
@@ -143,7 +143,7 @@ public class TreeTableCellSkin<S,T> extends TableCellSkinBase<TreeTableCell<S,T>
 
         TreeItem<S> treeItem = treeTableRow.getTreeItem();
         if (treeItem == null) return leftPadding;
-        
+
         int nodeLevel = treeTable.getTreeItemLevel(treeItem);
         if (! treeTable.isShowRoot()) nodeLevel--;
 
@@ -160,7 +160,7 @@ public class TreeTableCellSkin<S,T> extends TableCellSkinBase<TreeTableCell<S,T>
         // adding in the width of the graphic on the tree item
         Node graphic = treeItem.getGraphic();
         leftPadding += graphic == null ? 0 : graphic.prefWidth(height);
-        
+
         return leftPadding;
     }
 

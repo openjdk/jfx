@@ -223,7 +223,7 @@ public class UnwrapJob extends BatchSelectionJob {
                             = new ModifyFxControllerJob(oldContainer, null, getEditorController());
                     result.add(fxControllerJob);
                 }
-                // Then set the new container as root object            
+                // Then set the new container as root object
                 final FXOMObject child = oldContainerChildren.iterator().next();
                 final Job setDocumentRoot = new SetDocumentRootJob(
                         child, getEditorController());

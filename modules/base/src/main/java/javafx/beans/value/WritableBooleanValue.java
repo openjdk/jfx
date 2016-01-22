@@ -27,10 +27,10 @@ package javafx.beans.value;
 
 /**
  * A writable boolean value.
- * 
+ *
  * @see WritableValue
- * 
- * 
+ *
+ *
  * @since JavaFX 2.0
  */
 public interface WritableBooleanValue extends WritableValue<Boolean> {
@@ -40,7 +40,7 @@ public interface WritableBooleanValue extends WritableValue<Boolean> {
      * Unlike {@link #getValue()},
      * this method returns primitive boolean.
      * Needs to be identical to {@link #getValue()}.
-     * 
+     *
      * @return The current value
      */
     boolean get();
@@ -49,7 +49,7 @@ public interface WritableBooleanValue extends WritableValue<Boolean> {
      * Set the wrapped value.
      * Unlike {@link #setValue(java.lang.Boolean) },
      * this method uses primitive boolean.
-     * 
+     *
      * @param value
      *            The new value
      */

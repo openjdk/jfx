@@ -61,14 +61,14 @@ public class TabDriver extends AbstractDriver {
     /*
      * AbstractDriver
      */
-    
+
     @Override
     public AbstractHandles<?> makeHandles(FXOMObject fxomObject) {
         assert fxomObject.getSceneGraphObject() instanceof Tab;
         assert fxomObject instanceof FXOMInstance;
         return new TabHandles(contentPanelController, (FXOMInstance) fxomObject);
     }
-    
+
     @Override
     public AbstractTring<?> makeTring(AbstractDropTarget dropTarget) {
         assert dropTarget != null;
@@ -83,13 +83,13 @@ public class TabDriver extends AbstractDriver {
         assert fxomObject instanceof FXOMInstance;
         return new TabPring(contentPanelController, (FXOMInstance) fxomObject);
     }
-    
+
     @Override
     public AbstractResizer<?> makeResizer(FXOMObject fxomObject) {
         // Resize gesture does not apply to Tab objects
         return null;
     }
-    
+
     @Override
     public FXOMObject refinePick(Node hitNode, double sceneX, double sceneY, FXOMObject fxomObject) {
         return fxomObject;
@@ -112,20 +112,20 @@ public class TabDriver extends AbstractDriver {
     @Override
     public boolean intersectsBounds(FXOMObject fxomObject, Bounds bounds) {
         assert fxomObject.getSceneGraphObject() instanceof Tab;
-        
+
         final Tab tab = (Tab) fxomObject.getSceneGraphObject();
         final boolean result;
         if (tab.isSelected()) {
             final TabPane tabPane
                     = tab.getTabPane();
-            final Bounds sceneGraphNodeBounds 
+            final Bounds sceneGraphNodeBounds
                     = tabPane.localToScene(tabPane.getLayoutBounds(), true /* rootScene */);
             result = sceneGraphNodeBounds.intersects(bounds);
         } else {
             result = false;
         }
-        
+
         return result;
     }
-    
+
 }

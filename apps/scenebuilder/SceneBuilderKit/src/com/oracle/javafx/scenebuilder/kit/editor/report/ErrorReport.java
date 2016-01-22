@@ -53,30 +53,30 @@ import java.util.Map;
 
 /**
  *
- * 
+ *
  */
 public class ErrorReport {
-    
+
     private final Map<FXOMNode, List<ErrorReportEntry>> entries = new HashMap<>();
     private final Map<Path, CSSParsingReport> cssParsingReports = new HashMap<>();
     private FXOMDocument fxomDocument;
     private boolean dirty = true;
-    
+
     public void setFxomDocument(FXOMDocument fxomDocument) {
         this.fxomDocument = fxomDocument;
         forget();
     }
-    
+
     public void forget() {
         this.entries.clear();
         this.dirty = true;
     }
-    
+
     public List<ErrorReportEntry> query(FXOMObject fxomObject, boolean recursive) {
         final List<ErrorReportEntry> result;
-        
+
         updateReport();
-        
+
         final List<ErrorReportEntry> collected = new ArrayList<>();
         if (recursive) {
             collectEntries(fxomObject, collected);
@@ -93,36 +93,36 @@ public class ErrorReport {
                 }
             }
         }
-        
+
         if (collected.isEmpty()) {
             result = null;
         } else {
             result = collected;
         }
-        
+
         assert (result == null) || (result.size() >= 1);
-        
+
         return result;
     }
-    
+
     public Map<FXOMNode, List<ErrorReportEntry>> getEntries() {
         updateReport();
         return Collections.unmodifiableMap(entries);
     }
-    
+
     public void cssFileDidChange(Path cssPath) {
         if (cssParsingReports.containsKey(cssPath)) {
             cssParsingReports.remove(cssPath);
             forget();
         }
     }
-    
-    
+
+
     /*
      * Private
      */
-    
-    
+
+
     private void updateReport() {
         if (dirty) {
             assert entries.isEmpty();
@@ -134,14 +134,14 @@ public class ErrorReport {
             dirty = false;
         }
     }
-    
-    
+
+
     private void verifyAssets() {
         final FXOMAssetIndex assetIndex = new FXOMAssetIndex(fxomDocument);
         for (Map.Entry<Path, FXOMNode> e : assetIndex.getFileAssets().entrySet()) {
             final Path assetPath = e.getKey();
             if (assetPath.toFile().canRead() == false) {
-                final ErrorReportEntry newEntry 
+                final ErrorReportEntry newEntry
                         = new ErrorReportEntry(e.getValue(), ErrorReportEntry.Type.UNRESOLVED_LOCATION);
                 addEntry(e.getValue(), newEntry);
             } else {
@@ -151,7 +151,7 @@ public class ErrorReport {
                     final CSSParsingReport r = getCSSParsingReport(assetPath);
                     assert r != null;
                     if (r.isEmpty() == false) {
-                        final ErrorReportEntry newEntry 
+                        final ErrorReportEntry newEntry
                                 = new ErrorReportEntry(e.getValue(), ErrorReportEntry.Type.INVALID_CSS_CONTENT, r);
                         addEntry(e.getValue(), newEntry);
                     }
@@ -159,7 +159,7 @@ public class ErrorReport {
             }
         }
     }
-    
+
     private void verifyUnresolvedObjects() {
         for (FXOMObject fxomObject : FXOMNodes.serializeObjects(fxomDocument.getFxomRoot())) {
             final Object sceneGraphObject;
@@ -170,24 +170,24 @@ public class ErrorReport {
                 sceneGraphObject = fxomObject.getSceneGraphObject();
             }
             if (sceneGraphObject == null) {
-                final ErrorReportEntry newEntry 
+                final ErrorReportEntry newEntry
                         = new ErrorReportEntry(fxomObject, ErrorReportEntry.Type.UNRESOLVED_CLASS);
                 addEntry(fxomObject, newEntry);
             }
         }
     }
-    
+
     private void verifyBindingExpressions() {
         for (FXOMPropertyT p : fxomDocument.getFxomRoot().collectPropertiesT()) {
             final PrefixedValue pv = new PrefixedValue(p.getValue());
             if (pv.isBindingExpression()) {
-                final ErrorReportEntry newEntry 
+                final ErrorReportEntry newEntry
                         = new ErrorReportEntry(p, ErrorReportEntry.Type.UNSUPPORTED_EXPRESSION);
                 addEntry(p, newEntry);
             }
         }
     }
-    
+
     private void addEntry(FXOMNode fxomNode, ErrorReportEntry newEntry) {
         List<ErrorReportEntry> nodeEntries = entries.get(fxomNode);
         if (nodeEntries == null) {
@@ -196,7 +196,7 @@ public class ErrorReport {
         }
         nodeEntries.add(newEntry);
     }
-    
+
     private CSSParsingReport getCSSParsingReport(Path assetPath) {
         CSSParsingReport result = cssParsingReports.get(assetPath);
         if (result == null) {
@@ -205,16 +205,16 @@ public class ErrorReport {
         }
         return result;
     }
-    
+
     private void collectEntries(FXOMNode fxomNode, List<ErrorReportEntry> collected) {
         assert fxomNode != null;
         assert collected != null;
-        
+
         final List<ErrorReportEntry> nodeEntries = entries.get(fxomNode);
         if (nodeEntries != null) {
             collected.addAll(nodeEntries);
         }
-        
+
         if (fxomNode instanceof FXOMCollection) {
             final FXOMCollection fxomCollection = (FXOMCollection) fxomNode;
             for (FXOMObject item : fxomCollection.getItems()) {

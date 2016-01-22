@@ -34,7 +34,7 @@ questions.
             </Widget>
         </Gadget>
     </fx:define>
-    
+
     <Gadget.bar>abcdef</Gadget.bar>
     <Gadget.baz>
         <Widget/>

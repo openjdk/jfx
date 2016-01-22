@@ -51,7 +51,7 @@ public class RadioButtonSkinTest {
 
     }
 
-    @Test public void maxWidthTracksPreferred() {        
+    @Test public void maxWidthTracksPreferred() {
         radiobutton.setPrefWidth(500);
         assertEquals(500, radiobutton.maxWidth(-1), 0);
     }
@@ -60,7 +60,7 @@ public class RadioButtonSkinTest {
         radiobutton.setPrefHeight(500);
         assertEquals(500, radiobutton.maxHeight(-1), 0);
     }
-    
+
     public static final class RadioButtonSkinMock extends RadioButtonSkin {
         boolean propertyChanged = false;
         int propertyChangeCount = 0;

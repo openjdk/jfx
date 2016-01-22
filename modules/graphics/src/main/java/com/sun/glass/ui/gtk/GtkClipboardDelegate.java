@@ -41,5 +41,5 @@ class GtkClipboardDelegate implements ClipboardDelegate {
         }
         return null;
     }
-    
+
 }

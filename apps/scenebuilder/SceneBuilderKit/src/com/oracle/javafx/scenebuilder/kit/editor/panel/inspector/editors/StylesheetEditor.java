@@ -94,7 +94,7 @@ public class StylesheetEditor extends InlineListEditor {
         super(propMeta, selectedClasses);
         initialize(fxmlFileLocation);
     }
-    
+
     private void initialize(URL fxmlFileLocation) {
         this.fxmlFileLocation = fxmlFileLocation;
         setLayoutFormat(PropertyEditor.LayoutFormat.DOUBLE_LINE);
@@ -376,7 +376,7 @@ public class StylesheetEditor extends InlineListEditor {
             absoluteMenuItem.setDisable(true);
         }
     }
-    
+
     /**
      ***************************************************************************
      *

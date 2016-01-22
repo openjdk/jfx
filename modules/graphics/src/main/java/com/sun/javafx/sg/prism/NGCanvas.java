@@ -594,7 +594,7 @@ public class NGCanvas extends NGNode {
         g.drawTexture(tmpTex, 0, 0, tw, th);
         tmpTex.unlock();
         tmpTex.dispose();
-        return true;        
+        return true;
     }
 
     @Override

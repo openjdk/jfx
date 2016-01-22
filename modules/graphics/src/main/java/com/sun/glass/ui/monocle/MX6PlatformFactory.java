@@ -31,7 +31,7 @@ class MX6PlatformFactory extends NativePlatformFactory {
 
     @Override
     protected boolean matches() {
-        boolean retval = 
+        boolean retval =
             new File("/sys/devices/platform/mxc_sdc_fb.0").exists() ||
             new File("/sys/bus/platform/drivers/mxc_sdc_fb").exists();
         return retval;

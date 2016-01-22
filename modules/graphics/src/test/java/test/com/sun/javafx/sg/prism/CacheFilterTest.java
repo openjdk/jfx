@@ -138,9 +138,9 @@ public class CacheFilterTest {
         assertTrue(CacheFilterShim.isRotateHint(cf));
         assertTrue(CacheFilterShim.isScaleHint(cf));
     }
-    
+
     @Test public void cacheFilterReturnsCorrectDirtyBounds() {
-        
+
         NGRectangle r = new NGRectangle();
         r.updateRectangle(0.3f, 0.9f, 100.3f, 119.9f, 0, 0);
         r.setTransformMatrix(BaseTransform.IDENTITY_TRANSFORM);
@@ -149,9 +149,9 @@ public class CacheFilterTest {
         RectBounds result = new RectBounds();
         CacheFilterShim.computeDirtyBounds(cf, result, BaseTransform.IDENTITY_TRANSFORM, new GeneralTransform3D());
         assertEquals(new RectBounds(0, 0, 101, 121), result);
-        
+
         NGNodeShim.clearDirty(r);
-        
+
         final Translate2D translation = new Translate2D(10, 10);
         r.setTransformMatrix(translation);
         r.setTransformedBounds(new RectBounds(10.3f, 10, 110.6f, 130.8f), false);

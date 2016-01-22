@@ -33,7 +33,7 @@ public class CookieShim {
     private CookieShim(Cookie cookie) {
         this.cookie = cookie;
     }
-    
+
     public static CookieShim parse(String setCookieString, ExtendedTimeShim currentTime) {
         Cookie c = Cookie.parse(setCookieString, currentTime.getExtendedTime());
         if (c == null) {
@@ -64,16 +64,16 @@ public class CookieShim {
 
     public ExtendedTimeShim getCreationTime() {
         return new ExtendedTimeShim(cookie.getCreationTime());
-    }    
-    
+    }
+
     public long getLastAccessTime() {
         return cookie.getLastAccessTime();
     }
-    
+
     public boolean getPersistent() {
         return cookie.getPersistent();
     }
-    
+
     public boolean getHostOnly() {
         return cookie.getHostOnly();
     }
@@ -81,7 +81,7 @@ public class CookieShim {
     public boolean getSecureOnly() {
         return cookie.getSecureOnly();
     }
-    
+
     public boolean getHttpOnly() {
         return cookie.getHttpOnly();
     }

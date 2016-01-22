@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef JSGenericTypedArrayViewInlines_h
@@ -125,7 +125,7 @@ bool JSGenericTypedArrayView<Adaptor>::validateRange(
 {
     if (canAccessRangeQuickly(offset, length))
         return true;
-    
+
     exec->vm().throwException(exec, createRangeError(exec, "Range consisting of offset and length are out of bounds"));
     return false;
 }
@@ -143,15 +143,15 @@ bool JSGenericTypedArrayView<Adaptor>::setWithSpecificType(
     // check. Worst case, if we're wrong, people start seeing less things get copied
     // but we won't have a security vulnerability.
     length = std::min(length, other->length());
-    
+
     if (!validateRange(exec, offset, length))
         return false;
-    
+
     if (other->length() != length) {
         exec->vm().throwException(exec, createRangeError(exec, "Length of incoming array changed unexpectedly."));
         return false;
     }
-    
+
     // This method doesn't support copying between the same array. Note that
     // set() will only call this if the types differ, which implicitly guarantees
     // that we can't be the same array. This is relevant because the way we detect
@@ -160,7 +160,7 @@ bool JSGenericTypedArrayView<Adaptor>::setWithSpecificType(
     // catch the case where it's the *same* array - fortunately though, this code
     // path never needs to worry about that case.
     ASSERT(static_cast<JSCell*>(this) != static_cast<JSCell*>(other));
-    
+
     // 1) If the two arrays are non-overlapping, we can copy in any order we like
     //    and we don't need an intermediate buffer. Arrays are definitely
     //    non-overlapping if either one of them has no backing buffer (that means
@@ -175,12 +175,12 @@ bool JSGenericTypedArrayView<Adaptor>::setWithSpecificType(
     //       copy is in order.
     // 3) If we have different element sizes and there is a chance of overlap then
     //    we need an intermediate vector.
-    
+
     // NB. Comparisons involving elementSize will be constant-folded by template
     // specialization.
 
     unsigned otherElementSize = sizeof(typename OtherAdaptor::Type);
-    
+
     // Handle cases (1) and (2B).
     if (!hasArrayBuffer() || !other->hasArrayBuffer()
         || existingBuffer() != other->existingBuffer()
@@ -192,7 +192,7 @@ bool JSGenericTypedArrayView<Adaptor>::setWithSpecificType(
         }
         return true;
     }
-    
+
     // Now we either have (2A) or (3) - so first we try to cover (2A).
     if (elementSize == otherElementSize) {
         for (unsigned i = 0; i < length; ++i) {
@@ -202,7 +202,7 @@ bool JSGenericTypedArrayView<Adaptor>::setWithSpecificType(
         }
         return true;
     }
-    
+
     // Fail: we need an intermediate transfer buffer (i.e. case (3)).
     Vector<typename Adaptor::Type, 32> transferBuffer(length);
     for (unsigned i = length; i--;) {
@@ -211,7 +211,7 @@ bool JSGenericTypedArrayView<Adaptor>::setWithSpecificType(
     }
     for (unsigned i = length; i--;)
         setIndexQuicklyToNativeValue(offset + i, transferBuffer[i]);
-    
+
     return true;
 }
 
@@ -224,14 +224,14 @@ bool JSGenericTypedArrayView<Adaptor>::set(
         // The super fast case: we can just memcpy since we're the same type.
         JSGenericTypedArrayView* other = jsCast<JSGenericTypedArrayView*>(object);
         length = std::min(length, other->length());
-        
+
         if (!validateRange(exec, offset, length))
             return false;
-        
+
         memmove(typedVector() + offset, other->typedVector(), other->byteLength());
         return true;
     }
-    
+
     switch (ci->typedArrayStorageType) {
     case TypeInt8:
         return setWithSpecificType<Int8Adaptor>(
@@ -271,7 +271,7 @@ bool JSGenericTypedArrayView<Adaptor>::set(
         }
         return true;
     } }
-    
+
     RELEASE_ASSERT_NOT_REACHED();
     return false;
 }
@@ -291,18 +291,18 @@ bool JSGenericTypedArrayView<Adaptor>::getOwnPropertySlot(
         slot.setValue(thisObject, DontDelete | ReadOnly, jsNumber(thisObject->length()));
         return true;
     }
-    
+
     if (propertyName == exec->propertyNames().byteLength) {
         slot.setValue(thisObject, DontDelete | ReadOnly, jsNumber(thisObject->byteLength()));
         return true;
     }
-    
+
     unsigned index = propertyName.asIndex();
     if (index != PropertyName::NotAnIndex && thisObject->canGetIndexQuickly(index)) {
         slot.setValue(thisObject, DontDelete | ReadOnly, thisObject->getIndexQuickly(index));
         return true;
     }
-    
+
     return Base::getOwnPropertySlot(thisObject, exec, propertyName, slot);
 }
 
@@ -312,19 +312,19 @@ void JSGenericTypedArrayView<Adaptor>::put(
     PutPropertySlot& slot)
 {
     JSGenericTypedArrayView* thisObject = jsCast<JSGenericTypedArrayView*>(cell);
-    
+
     if (propertyName == exec->propertyNames().length) {
         // Firefox appears to simply ignore attempts to store to the length property.
         // Even in strict mode. I will do the same.
         return;
     }
-    
+
     unsigned index = propertyName.asIndex();
     if (index != PropertyName::NotAnIndex) {
         putByIndex(thisObject, exec, index, value, slot.isStrictMode());
         return;
     }
-    
+
     Base::put(thisObject, exec, propertyName, value, slot);
 }
 
@@ -334,14 +334,14 @@ bool JSGenericTypedArrayView<Adaptor>::defineOwnProperty(
     const PropertyDescriptor& descriptor, bool shouldThrow)
 {
     JSGenericTypedArrayView* thisObject = jsCast<JSGenericTypedArrayView*>(object);
-    
+
     // This is matching Firefox behavior. In particular, it rejects all attempts to
     // defineOwnProperty for indexed properties on typed arrays, even if they're out
     // of bounds.
     if (propertyName == exec->propertyNames().length
         || propertyName.asIndex() != PropertyName::NotAnIndex)
         return reject(exec, shouldThrow, "Attempting to write to a read-only typed array property.");
-    
+
     return Base::defineOwnProperty(thisObject, exec, propertyName, descriptor, shouldThrow);
 }
 
@@ -350,11 +350,11 @@ bool JSGenericTypedArrayView<Adaptor>::deleteProperty(
     JSCell* cell, ExecState* exec, PropertyName propertyName)
 {
     JSGenericTypedArrayView* thisObject = jsCast<JSGenericTypedArrayView*>(cell);
-    
+
     if (propertyName == exec->propertyNames().length
         || propertyName.asIndex() != PropertyName::NotAnIndex)
         return false;
-    
+
     return Base::deleteProperty(thisObject, exec, propertyName);
 }
 
@@ -363,15 +363,15 @@ bool JSGenericTypedArrayView<Adaptor>::getOwnPropertySlotByIndex(
     JSObject* object, ExecState* exec, unsigned propertyName, PropertySlot& slot)
 {
     JSGenericTypedArrayView* thisObject = jsCast<JSGenericTypedArrayView*>(object);
-    
+
     if (propertyName > MAX_ARRAY_INDEX) {
         return thisObject->methodTable()->getOwnPropertySlot(
             thisObject, exec, Identifier::from(exec, propertyName), slot);
     }
-    
+
     if (!thisObject->canGetIndexQuickly(propertyName))
         return false;
-    
+
     slot.setValue(thisObject, None, thisObject->getIndexQuickly(propertyName));
     return true;
 }
@@ -381,20 +381,20 @@ void JSGenericTypedArrayView<Adaptor>::putByIndex(
     JSCell* cell, ExecState* exec, unsigned propertyName, JSValue value, bool shouldThrow)
 {
     JSGenericTypedArrayView* thisObject = jsCast<JSGenericTypedArrayView*>(cell);
-    
+
     if (propertyName > MAX_ARRAY_INDEX) {
         PutPropertySlot slot(JSValue(thisObject), shouldThrow);
         thisObject->methodTable()->put(
             thisObject, exec, Identifier::from(exec, propertyName), value, slot);
         return;
     }
-    
+
     if (!thisObject->canSetIndexQuickly(propertyName)) {
         // Yes, really. Firefox returns without throwing anything if you store beyond
         // the bounds.
         return;
     }
-    
+
     thisObject->setIndexQuickly(exec, propertyName, value);
 }
 
@@ -406,7 +406,7 @@ bool JSGenericTypedArrayView<Adaptor>::deletePropertyByIndex(
         return cell->methodTable()->deleteProperty(
             cell, exec, Identifier::from(exec, propertyName));
     }
-    
+
     return false;
 }
 
@@ -415,10 +415,10 @@ void JSGenericTypedArrayView<Adaptor>::getOwnNonIndexPropertyNames(
     JSObject* object, ExecState* exec, PropertyNameArray& array, EnumerationMode mode)
 {
     JSGenericTypedArrayView* thisObject = jsCast<JSGenericTypedArrayView*>(object);
-    
+
     if (mode == IncludeDontEnumProperties)
         array.add(exec->propertyNames().length);
-    
+
     Base::getOwnNonIndexPropertyNames(thisObject, exec, array, mode);
 }
 
@@ -427,10 +427,10 @@ void JSGenericTypedArrayView<Adaptor>::getOwnPropertyNames(
     JSObject* object, ExecState* exec, PropertyNameArray& array, EnumerationMode mode)
 {
     JSGenericTypedArrayView* thisObject = jsCast<JSGenericTypedArrayView*>(object);
-    
+
     for (unsigned i = 0; i < thisObject->m_length; ++i)
         array.add(Identifier::from(exec, i));
-    
+
     return Base::getOwnPropertyNames(object, exec, array, mode);
 }
 
@@ -438,27 +438,27 @@ template<typename Adaptor>
 void JSGenericTypedArrayView<Adaptor>::visitChildren(JSCell* cell, SlotVisitor& visitor)
 {
     JSGenericTypedArrayView* thisObject = jsCast<JSGenericTypedArrayView*>(cell);
-    
+
     switch (thisObject->m_mode) {
     case FastTypedArray: {
         if (thisObject->m_vector)
             visitor.copyLater(thisObject, TypedArrayVectorCopyToken, thisObject->m_vector, thisObject->byteSize());
         break;
     }
-        
+
     case OversizeTypedArray: {
         visitor.reportExtraMemoryUsage(thisObject, thisObject->byteSize());
         break;
     }
-        
+
     case WastefulTypedArray:
         break;
-        
+
     case DataViewMode:
         RELEASE_ASSERT_NOT_REACHED();
         break;
     }
-    
+
     Base::visitChildren(thisObject, visitor);
 }
 
@@ -467,7 +467,7 @@ void JSGenericTypedArrayView<Adaptor>::copyBackingStore(
     JSCell* cell, CopyVisitor& visitor, CopyToken token)
 {
     JSGenericTypedArrayView* thisObject = jsCast<JSGenericTypedArrayView*>(cell);
-    
+
     if (token == TypedArrayVectorCopyToken
         && visitor.checkIfShouldCopy(thisObject->m_vector)) {
         ASSERT(thisObject->m_vector);
@@ -477,7 +477,7 @@ void JSGenericTypedArrayView<Adaptor>::copyBackingStore(
         thisObject->m_vector = newVector;
         visitor.didCopy(oldVector, thisObject->byteSize());
     }
-    
+
     Base::copyBackingStore(thisObject, visitor, token);
 }
 
@@ -485,7 +485,7 @@ template<typename Adaptor>
 ArrayBuffer* JSGenericTypedArrayView<Adaptor>::slowDownAndWasteMemory(JSArrayBufferView* object)
 {
     JSGenericTypedArrayView* thisObject = jsCast<JSGenericTypedArrayView*>(object);
-    
+
     // We play this game because we want this to be callable even from places that
     // don't have access to ExecState* or the VM, and we only allocate so little
     // memory here that it's not necessary to trigger a GC - just accounting what
@@ -500,11 +500,11 @@ ArrayBuffer* JSGenericTypedArrayView<Adaptor>::slowDownAndWasteMemory(JSArrayBuf
     // that you *had* done those allocations and it will GC appropriately.
     Heap* heap = Heap::heap(thisObject);
     DeferGCForAWhile deferGC(*heap);
-    
+
     ASSERT(!thisObject->hasIndexingHeader());
 
     size_t size = thisObject->byteSize();
-    
+
     if (thisObject->m_mode == FastTypedArray
         && !thisObject->butterfly() && size >= sizeof(IndexingHeader)) {
         ASSERT(thisObject->m_vector);
@@ -519,19 +519,19 @@ ArrayBuffer* JSGenericTypedArrayView<Adaptor>::slowDownAndWasteMemory(JSArrayBuf
     }
 
     RefPtr<ArrayBuffer> buffer;
-    
+
     switch (thisObject->m_mode) {
     case FastTypedArray:
         buffer = ArrayBuffer::create(thisObject->m_vector, thisObject->byteLength());
         break;
-        
+
     case OversizeTypedArray:
         // FIXME: consider doing something like "subtracting" from extra memory
         // cost, since right now this case will cause the GC to think that we reallocated
         // the whole buffer.
         buffer = ArrayBuffer::createAdopted(thisObject->m_vector, thisObject->byteLength());
         break;
-        
+
     default:
         RELEASE_ASSERT_NOT_REACHED();
         break;
@@ -541,7 +541,7 @@ ArrayBuffer* JSGenericTypedArrayView<Adaptor>::slowDownAndWasteMemory(JSArrayBuf
     thisObject->m_vector = buffer->data();
     thisObject->m_mode = WastefulTypedArray;
     heap->addReference(thisObject, buffer.get());
-    
+
     return buffer.get();
 }
 

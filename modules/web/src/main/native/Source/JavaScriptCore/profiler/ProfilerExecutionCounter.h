@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef ProfilerExecutionCounter_h
@@ -35,9 +35,9 @@ class ExecutionCounter {
     WTF_MAKE_FAST_ALLOCATED; WTF_MAKE_NONCOPYABLE(ExecutionCounter);
 public:
     ExecutionCounter() : m_counter(0) { }
-    
+
     uint64_t* address() { return &m_counter; }
-    
+
     uint64_t count() const { return m_counter; }
 
 private:

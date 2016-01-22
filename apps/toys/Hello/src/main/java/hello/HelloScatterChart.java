@@ -59,7 +59,7 @@ public class HelloScatterChart extends Application {
         series.setName("Data Series 1");
         for (int i=0; i<10; i++) series.getData().add(new XYChart.Data(Math.random()*100, Math.random()*100));
         sc.getData().add(series);
-       
+
         return sc;
     }
 

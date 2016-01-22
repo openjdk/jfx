@@ -66,7 +66,7 @@ public class NULL3DPipeline extends GraphicsPipeline {
     public int getAdapterOrdinal(Screen screen) {
         return Screen.getScreens().indexOf(screen);
     }
-    
+
     @Override
     public ResourceFactory getResourceFactory(Screen screen) {
         Integer index = new Integer(screen.getAdapterOrdinal());
@@ -102,7 +102,7 @@ public class NULL3DPipeline extends GraphicsPipeline {
     public boolean supportsShaderType(ShaderType type) {
         switch (type) {
             case HLSL: return PlatformUtil.isWindows();
-	    case GLSL: return !PlatformUtil.isWindows();
+        case GLSL: return !PlatformUtil.isWindows();
             default: return false;
         }
     }

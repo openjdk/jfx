@@ -188,7 +188,7 @@ private:
     AudioFloatArray m_realData;
     AudioFloatArray m_imagData;
 #endif
-    
+
 #endif // !USE_ACCELERATE_FFT
 };
 

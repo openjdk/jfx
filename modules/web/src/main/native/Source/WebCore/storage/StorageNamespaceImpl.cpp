@@ -175,7 +175,7 @@ void StorageNamespaceImpl::clearAllOriginsForDeletion()
     for (StorageAreaMap::iterator it = m_storageAreaMap.begin(); it != end; ++it)
         it->value->clearForOriginDeletion();
 }
-    
+
 void StorageNamespaceImpl::sync()
 {
     ASSERT(isMainThread());

@@ -43,13 +43,13 @@ using namespace HTMLNames;
 static String urlForLoggingTrack(const URL& url)
 {
     static const unsigned maximumURLLengthForLogging = 128;
-    
+
     if (url.string().length() < maximumURLLengthForLogging)
         return url.string();
     return url.string().substring(0, maximumURLLengthForLogging) + "...";
 }
 #endif
-    
+
 inline HTMLTrackElement::HTMLTrackElement(const QualifiedName& tagName, Document& document)
     : HTMLElement(tagName, document)
     , m_loadTimer(this, &HTMLTrackElement::loadTimerFired)
@@ -242,17 +242,17 @@ bool HTMLTrackElement::canLoadURL(const URL& url)
         LOG(Media, "HTMLTrackElement::canLoadURL(%s) -> rejected by Content Security Policy", urlForLoggingTrack(url).utf8().data());
         return false;
     }
-    
+
     return dispatchBeforeLoadEvent(url.string());
 }
 
 void HTMLTrackElement::didCompleteLoad(LoadStatus status)
 {
     // 4.8.10.12.3 Sourcing out-of-band text tracks (continued)
-    
+
     // 4. Download: ...
-    // If the fetching algorithm fails for any reason (network error, the server returns an error 
-    // code, a cross-origin check fails, etc), or if URL is the empty string or has the wrong origin 
+    // If the fetching algorithm fails for any reason (network error, the server returns an error
+    // code, a cross-origin check fails, etc), or if URL is the empty string or has the wrong origin
     // as determined by the condition at the start of this step, or if the fetched resource is not in
     // a supported format, then queue a task to first change the text track readiness state to failed
     // to load and then fire a simple event named error at the track element; and then, once that task
@@ -269,7 +269,7 @@ void HTMLTrackElement::didCompleteLoad(LoadStatus status)
     //     1. Change the text track readiness state to loaded.
     setReadyState(HTMLTrackElement::LOADED);
 
-    //     2. If the file was successfully processed, fire a simple event named load at the 
+    //     2. If the file was successfully processed, fire a simple event named load at the
     //        track element.
     dispatchEvent(Event::create(eventNames().loadEvent, false, false), IGNORE_EXCEPTION);
 }
@@ -287,7 +287,7 @@ void HTMLTrackElement::setReadyState(ReadyState state)
         return parent->textTrackReadyStateChanged(m_track.get());
 }
 
-HTMLTrackElement::ReadyState HTMLTrackElement::readyState() 
+HTMLTrackElement::ReadyState HTMLTrackElement::readyState()
 {
     return static_cast<ReadyState>(ensureTrack().readinessState());
 }
@@ -296,7 +296,7 @@ const AtomicString& HTMLTrackElement::mediaElementCrossOriginAttribute() const
 {
     if (HTMLMediaElement* parent = mediaElement())
         return parent->fastGetAttribute(HTMLNames::crossoriginAttr);
-    
+
     return nullAtom;
 }
 
@@ -321,19 +321,19 @@ void HTMLTrackElement::textTrackAddCues(TextTrack* track, const TextTrackCueList
     if (HTMLMediaElement* parent = mediaElement())
         return parent->textTrackAddCues(track, cues);
 }
-    
+
 void HTMLTrackElement::textTrackRemoveCues(TextTrack* track, const TextTrackCueList* cues)
 {
     if (HTMLMediaElement* parent = mediaElement())
         return parent->textTrackRemoveCues(track, cues);
 }
-    
+
 void HTMLTrackElement::textTrackAddCue(TextTrack* track, PassRefPtr<TextTrackCue> cue)
 {
     if (HTMLMediaElement* parent = mediaElement())
         return parent->textTrackAddCue(track, cue);
 }
-    
+
 void HTMLTrackElement::textTrackRemoveCue(TextTrack* track, PassRefPtr<TextTrackCue> cue)
 {
     if (HTMLMediaElement* parent = mediaElement())

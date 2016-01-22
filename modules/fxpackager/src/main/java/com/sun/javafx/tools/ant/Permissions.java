@@ -48,7 +48,7 @@ public class Permissions extends DataType {
     public void setElevated(boolean v) {
         elevated = v;
     }
-    
+
     public boolean getElevated() {
         return get().elevated;
     }
@@ -67,7 +67,7 @@ public class Permissions extends DataType {
             Log.info("JavaFX Ant Tasks no longer support caching certificates in JNLP.  Setting ignored.");
         }
     }
-    
+
     private Permissions get() {
         if (isReference()) {
             return (Permissions) getRefid().getReferencedObject();

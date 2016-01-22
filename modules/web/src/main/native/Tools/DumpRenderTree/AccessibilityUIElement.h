@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef AccessibilityUIElement_h
@@ -77,7 +77,7 @@ public:
     void getDocumentLinks(Vector<AccessibilityUIElement>&);
     void getChildren(Vector<AccessibilityUIElement>&);
     void getChildrenWithRange(Vector<AccessibilityUIElement>&, unsigned location, unsigned length);
-    
+
     AccessibilityUIElement elementAtPoint(int x, int y);
     AccessibilityUIElement getChildAtIndex(unsigned);
     unsigned indexOfChild(AccessibilityUIElement*);
@@ -94,7 +94,7 @@ public:
     JSStringRef allAttributes();
     JSStringRef attributesOfLinkedUIElements();
     AccessibilityUIElement linkedUIElementAtIndex(unsigned);
-    
+
     JSStringRef attributesOfDocumentLinks();
     JSStringRef attributesOfChildren();
     JSStringRef parameterizedAttributeNames();
@@ -107,7 +107,7 @@ public:
     JSStringRef stringAttributeValue(JSStringRef attribute);
     double numberAttributeValue(JSStringRef attribute);
     void uiElementArrayAttributeValue(JSStringRef attribute, Vector<AccessibilityUIElement>& elements) const;
-    AccessibilityUIElement uiElementAttributeValue(JSStringRef attribute) const;    
+    AccessibilityUIElement uiElementAttributeValue(JSStringRef attribute) const;
     bool boolAttributeValue(JSStringRef attribute);
     bool isAttributeSupported(JSStringRef attribute);
     bool isAttributeSettable(JSStringRef attribute);
@@ -138,7 +138,7 @@ public:
     JSStringRef selectedTextRange();
     bool isEnabled();
     bool isRequired() const;
-    
+
     bool isFocused() const;
     bool isFocusable() const;
     bool isSelected() const;
@@ -148,7 +148,7 @@ public:
     void setSelectedChild(AccessibilityUIElement*) const;
     unsigned selectedChildrenCount() const;
     AccessibilityUIElement selectedChildAtIndex(unsigned) const;
-    
+
     bool isExpanded() const;
     bool isChecked() const;
     bool isVisible() const;
@@ -167,7 +167,7 @@ public:
 
     // CSS3-speech properties.
     JSStringRef speak();
-    
+
     // Table-specific attributes
     JSStringRef attributesOfColumnHeaders();
     JSStringRef attributesOfRowHeaders();
@@ -182,7 +182,7 @@ public:
     int columnCount();
     void rowHeaders(Vector<AccessibilityUIElement>& elements) const;
     void columnHeaders(Vector<AccessibilityUIElement>& elements) const;
-    
+
     // Tree/Outline specific attributes
     AccessibilityUIElement selectedRowAtIndex(unsigned);
     AccessibilityUIElement disclosedByRow();
@@ -198,7 +198,7 @@ public:
     bool ariaIsGrabbed() const;
     // A space concatentated string of all the drop effects.
     JSStringRef ariaDropEffects() const;
-    
+
     // Parameterized attributes
     int lineForIndex(int);
     JSStringRef rangeForLine(int);
@@ -235,7 +235,7 @@ public:
     AccessibilityUIElement verticalScrollbar() const;
 
     // Text markers.
-    AccessibilityTextMarkerRange textMarkerRangeForElement(AccessibilityUIElement*);    
+    AccessibilityTextMarkerRange textMarkerRangeForElement(AccessibilityUIElement*);
     AccessibilityTextMarkerRange textMarkerRangeForMarkers(AccessibilityTextMarker* startMarker, AccessibilityTextMarker* endMarker);
     AccessibilityTextMarker startTextMarkerForTextMarkerRange(AccessibilityTextMarkerRange*);
     AccessibilityTextMarker endTextMarkerForTextMarkerRange(AccessibilityTextMarkerRange*);
@@ -247,14 +247,14 @@ public:
     AccessibilityUIElement accessibilityElementForTextMarker(AccessibilityTextMarker*);
     AccessibilityTextMarker startTextMarker();
     AccessibilityTextMarker endTextMarker();
-    
+
     JSStringRef stringForTextMarkerRange(AccessibilityTextMarkerRange*);
     int textMarkerRangeLength(AccessibilityTextMarkerRange*);
     bool attributedStringForTextMarkerRangeContainsAttribute(JSStringRef, AccessibilityTextMarkerRange*);
     int indexForTextMarker(AccessibilityTextMarker*);
     bool isTextMarkerValid(AccessibilityTextMarker*);
     AccessibilityTextMarker textMarkerForIndex(int);
-    
+
     void scrollToMakeVisible();
     void scrollToMakeVisibleWithSubFocus(int x, int y, int width, int height);
     void scrollToGlobalPoint(int x, int y);
@@ -264,7 +264,7 @@ public:
     bool addNotificationListener(JSObjectRef functionCallback);
     // Make sure you call remove, because you can't rely on objects being deallocated in a timely fashion.
     void removeNotificationListener();
-    
+
 #if PLATFORM(IOS)
     JSStringRef iphoneLabel();
     JSStringRef iphoneValue();
@@ -282,17 +282,17 @@ public:
 #if PLATFORM(MAC) && !PLATFORM(IOS)
     // Returns an ordered list of supported actions for an element.
     JSStringRef supportedActions();
-    
+
     // A general description of the elements making up multiscript pre/post objects.
     JSStringRef mathPostscriptsDescription() const;
     JSStringRef mathPrescriptsDescription() const;
 #endif
-    
+
 private:
     static JSClassRef getJSClass();
     PlatformUIElement m_element;
-    
-#if PLATFORM(IOS) 
+
+#if PLATFORM(IOS)
     JSObjectRef m_notificationFunctionCallback;
 #elif PLATFORM(MAC)
     // A retained, platform specific object used to help manage notifications for this object.

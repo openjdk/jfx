@@ -21,7 +21,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -68,12 +68,12 @@ static LRESULT CALLBACK PasteboardOwnerWndProc(HWND hWnd, UINT message, WPARAM w
 
     switch (message) {
     case WM_RENDERFORMAT:
-        // This message comes when SetClipboardData was sent a null data handle 
+        // This message comes when SetClipboardData was sent a null data handle
         // and now it's come time to put the data on the clipboard.
         break;
     case WM_RENDERALLFORMATS:
         // This message comes when SetClipboardData was sent a null data handle
-        // and now this application is about to quit, so it must put data on 
+        // and now this application is about to quit, so it must put data on
         // the clipboard before it exits.
         break;
     case WM_DESTROY:
@@ -453,7 +453,7 @@ void Pasteboard::writeSelection(Range& selectedRange, bool canSmartCopyOrDelete,
 {
     clear();
 
-    // Put CF_HTML format on the pasteboard 
+    // Put CF_HTML format on the pasteboard
     if (::OpenClipboard(m_owner)) {
         Vector<char> data;
         markupToCFHTML(createMarkup(selectedRange, 0, AnnotateForInterchange),
@@ -463,7 +463,7 @@ void Pasteboard::writeSelection(Range& selectedRange, bool canSmartCopyOrDelete,
             ::GlobalFree(cbData);
         ::CloseClipboard();
     }
-    
+
     // Put plain string on the pasteboard. CF_UNICODETEXT covers CF_TEXT as well
     String str = shouldSerializeSelectedTextForClipboard == IncludeImageAltTextForClipboard ? frame.editor().selectedTextForClipboard() : frame.editor().selectedText();
     replaceNewlinesWithWindowsStyleNewlines(str);
@@ -499,7 +499,7 @@ void Pasteboard::writePlainTextToDataObject(const String& text, SmartReplaceOpti
     replaceNBSPWithSpace(str);
     medium.hGlobal = createGlobalData(str);
     if (medium.hGlobal && FAILED(m_writableDataObject->SetData(plainTextWFormat(), &medium, TRUE)))
-        ::GlobalFree(medium.hGlobal);        
+        ::GlobalFree(medium.hGlobal);
 }
 
 void Pasteboard::writePlainText(const String& text, SmartReplaceOption smartReplaceOption)
@@ -566,7 +566,7 @@ static String filesystemPathFromUrlOrTitle(const String& url, const String& titl
     if (!lstrlen(fsPathBuffer)) {
         URL kurl(URL(), url);
         usedURL = true;
-        // The filename for any content based drag or file url should be the last element of 
+        // The filename for any content based drag or file url should be the last element of
         // the path. If we can't find it, or we're coming up with the name for a link
         // we just use the entire url.
         DWORD len = fsPathMaxLengthExcludingExtension;
@@ -767,7 +767,7 @@ void Pasteboard::writePasteboard(const Pasteboard& sourcePasteboard)
 }
 
 bool Pasteboard::canSmartReplace()
-{ 
+{
     return ::IsClipboardFormatAvailable(WebSmartPasteFormat);
 }
 
@@ -798,7 +798,7 @@ void Pasteboard::read(PasteboardPlainText& text)
 PassRefPtr<DocumentFragment> Pasteboard::documentFragment(Frame& frame, Range& context, bool allowPlainText, bool& chosePlainText)
 {
     chosePlainText = false;
-    
+
     if (::IsClipboardFormatAvailable(HTMLClipboardFormat) && ::OpenClipboard(m_owner)) {
         // get data off of clipboard
         HANDLE cbData = ::GetClipboardData(HTMLClipboardFormat);
@@ -811,10 +811,10 @@ PassRefPtr<DocumentFragment> Pasteboard::documentFragment(Frame& frame, Range& c
             RefPtr<DocumentFragment> fragment = fragmentFromCFHTML(frame.document(), cfhtml);
             if (fragment)
                 return fragment.release();
-        } else 
+        } else
             ::CloseClipboard();
     }
-     
+
     if (allowPlainText && ::IsClipboardFormatAvailable(CF_UNICODETEXT)) {
         chosePlainText = true;
         if (::OpenClipboard(m_owner)) {
@@ -827,7 +827,7 @@ PassRefPtr<DocumentFragment> Pasteboard::documentFragment(Frame& frame, Range& c
                 RefPtr<DocumentFragment> fragment = createFragmentFromText(context, str);
                 if (fragment)
                     return fragment.release();
-            } else 
+            } else
                 ::CloseClipboard();
         }
     }
@@ -848,7 +848,7 @@ PassRefPtr<DocumentFragment> Pasteboard::documentFragment(Frame& frame, Range& c
                 ::CloseClipboard();
         }
     }
-    
+
     return 0;
 }
 
@@ -893,7 +893,7 @@ static HGLOBAL createGlobalImageFileDescriptor(const String& url, const String& 
     const String& preferredTitle = title.isEmpty() ? image->response().suggestedFilename() : title;
     String extension = image->image()->filenameExtension();
     if (extension.isEmpty()) {
-        // Do not continue processing in the rare and unusual case where a decoded image is not able 
+        // Do not continue processing in the rare and unusual case where a decoded image is not able
         // to provide a filename extension. Something tricky (like a bait-n-switch) is going on
         return 0;
     }
@@ -916,7 +916,7 @@ static HGLOBAL createGlobalImageFileDescriptor(const String& url, const String& 
 static HGLOBAL createGlobalImageFileContent(SharedBuffer* data)
 {
     HGLOBAL memObj = GlobalAlloc(GPTR, data->size());
-    if (!memObj) 
+    if (!memObj)
         return 0;
 
     char* fileContents = (PSTR)GlobalLock(memObj);
@@ -985,13 +985,13 @@ static HGLOBAL createGlobalHDropContent(const URL& url, String& fileName, Shared
 
     SIZE_T dropFilesSize = sizeof(DROPFILES) + (sizeof(WCHAR) * (wcslen(filePath) + 2));
     HGLOBAL memObj = GlobalAlloc(GHND | GMEM_SHARE, dropFilesSize);
-    if (!memObj) 
+    if (!memObj)
         return 0;
 
     DROPFILES* dropFiles = (DROPFILES*) GlobalLock(memObj);
     dropFiles->pFiles = sizeof(DROPFILES);
     dropFiles->fWide = TRUE;
-    wcscpy((LPWSTR)(dropFiles + 1), filePath);    
+    wcscpy((LPWSTR)(dropFiles + 1), filePath);
     GlobalUnlock(memObj);
 
     return memObj;

@@ -37,7 +37,7 @@ public class SendMoveRsp extends MessageRsp {
 
     public SendMoveRsp() {
     }
-    
+
     public SendMoveRsp(String gameId) {
         super(gameId);
     }

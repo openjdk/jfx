@@ -82,8 +82,8 @@ public class ScrollBar extends Control {
 
     /**
      * Creates a new horizontal ScrollBar (ie getOrientation() == Orientation.HORIZONTAL).
-     *  
-     * 
+     *
+     *
      */
     public ScrollBar() {
         // TODO : we need to ensure we have a width and height
@@ -92,14 +92,14 @@ public class ScrollBar extends Control {
         getStyleClass().setAll(DEFAULT_STYLE_CLASS);
         setAccessibleRole(AccessibleRole.SCROLL_BAR);
         // focusTraversable is styleable through css. Calling setFocusTraversable
-        // makes it look to css like the user set the value and css will not 
+        // makes it look to css like the user set the value and css will not
         // override. Initializing focusTraversable by calling applyStyle with null
         // for StyleOrigin ensures that css will be able to override the value.
         ((StyleableProperty<Boolean>)(WritableValue<Boolean>)focusTraversableProperty()).applyStyle(null,Boolean.FALSE);
 
         // set pseudo-class state to horizontal
         pseudoClassStateChanged(HORIZONTAL_PSEUDOCLASS_STATE, true);
-        
+
     }
     /***************************************************************************
      *                                                                         *
@@ -185,11 +185,11 @@ public class ScrollBar extends Control {
                     pseudoClassStateChanged(HORIZONTAL_PSEUDOCLASS_STATE, !vertical);
                 }
 
-                @Override 
+                @Override
                 public CssMetaData<ScrollBar,Orientation> getCssMetaData() {
                     return StyleableProperties.ORIENTATION;
                 }
-                    
+
                 @Override
                 public Object getBean() {
                     return ScrollBar.this;
@@ -203,7 +203,7 @@ public class ScrollBar extends Control {
         }
         return orientation;
     }
-    
+
     /**
      * The amount by which to adjust the ScrollBar when the {@link #increment() increment} or
      * {@link #decrement() decrement} methods are called.
@@ -302,15 +302,15 @@ public class ScrollBar extends Control {
      **************************************************************************/
 
     /**
-     * Adjusts the {@link #valueProperty() value} property by 
-     * {@link #blockIncrementProperty() blockIncrement}. The {@code position} is the fractional amount 
+     * Adjusts the {@link #valueProperty() value} property by
+     * {@link #blockIncrementProperty() blockIncrement}. The {@code position} is the fractional amount
      * between the {@link #minProperty min} and {@link #maxProperty max}. For
      * example, it might be 50%. If {@code #minProperty min} were 0 and {@code #maxProperty max}
      * were 100 and {@link #valueProperty() value} were 25, then a position of .5 would indicate
-     * that we should increment {@link #valueProperty() value} by 
+     * that we should increment {@link #valueProperty() value} by
      * {@code blockIncrement}. If {@link #valueProperty() value} were 75, then a
      * position of .5 would indicate that we
-     * should decrement {@link #valueProperty() value} by {@link #blockIncrementProperty blockIncrement}. 
+     * should decrement {@link #valueProperty() value} by {@link #blockIncrementProperty blockIncrement}.
      *
      * @expert This function is intended to be used by experts, primarily
      *         by those implementing new Skins or Behaviors. It is not common
@@ -327,7 +327,7 @@ public class ScrollBar extends Control {
             else {
                 newValue = getValue() - getBlockIncrement();
             }
-            
+
             boolean incrementing = position > ((getValue() - getMin())/(getMax() - getMin()));
             if (incrementing && newValue > posValue) newValue = posValue;
             if (! incrementing && newValue < posValue) newValue = posValue;
@@ -379,17 +379,17 @@ public class ScrollBar extends Control {
     private static final String DEFAULT_STYLE_CLASS = "scroll-bar";
 
     private static class StyleableProperties {
-        private static final CssMetaData<ScrollBar,Orientation> ORIENTATION = 
+        private static final CssMetaData<ScrollBar,Orientation> ORIENTATION =
             new CssMetaData<ScrollBar,Orientation>("-fx-orientation",
                 new EnumConverter<Orientation>(Orientation.class),
                 Orientation.HORIZONTAL) {
 
             @Override
             public Orientation getInitialValue(ScrollBar node) {
-                // A vertical ScrollBar should remain vertical 
+                // A vertical ScrollBar should remain vertical
                 return node.getOrientation();
             }
-                    
+
             @Override
             public boolean isSettable(ScrollBar n) {
                 return n.orientation == null || !n.orientation.isBound();
@@ -400,8 +400,8 @@ public class ScrollBar extends Control {
                 return (StyleableProperty<Orientation>)(WritableValue<Orientation>)n.orientationProperty();
             }
         };
-        
-        private static final CssMetaData<ScrollBar,Number> UNIT_INCREMENT = 
+
+        private static final CssMetaData<ScrollBar,Number> UNIT_INCREMENT =
             new CssMetaData<ScrollBar,Number>("-fx-unit-increment",
                 SizeConverter.getInstance(), 1.0) {
 
@@ -414,10 +414,10 @@ public class ScrollBar extends Control {
             public StyleableProperty<Number> getStyleableProperty(ScrollBar n) {
                 return (StyleableProperty<Number>)(WritableValue<Number>)n.unitIncrementProperty();
             }
-                    
+
         };
-        
-        private static final CssMetaData<ScrollBar,Number> BLOCK_INCREMENT = 
+
+        private static final CssMetaData<ScrollBar,Number> BLOCK_INCREMENT =
             new CssMetaData<ScrollBar,Number>("-fx-block-increment",
                 SizeConverter.getInstance(), 10.0) {
 
@@ -430,12 +430,12 @@ public class ScrollBar extends Control {
             public StyleableProperty<Number> getStyleableProperty(ScrollBar n) {
                 return (StyleableProperty<Number>)(WritableValue<Number>)n.blockIncrementProperty();
             }
-                    
+
         };
-        
+
         private static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES;
         static {
-            final List<CssMetaData<? extends Styleable, ?>> styleables = 
+            final List<CssMetaData<? extends Styleable, ?>> styleables =
                 new ArrayList<CssMetaData<? extends Styleable, ?>>(Control.getClassCssMetaData());
             styleables.add(ORIENTATION);
             styleables.add(UNIT_INCREMENT);

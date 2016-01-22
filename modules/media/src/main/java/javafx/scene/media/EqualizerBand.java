@@ -93,7 +93,7 @@ public final class EqualizerBand {
      */
     private DoubleProperty centerFrequency;
 
-    
+
     /**
      * Set the center frequency on the band in Hertz.
      * @param value the center frequency which must be a positive value in Hz.

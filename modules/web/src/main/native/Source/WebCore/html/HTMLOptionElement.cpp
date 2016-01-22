@@ -146,7 +146,7 @@ void HTMLOptionElement::setText(const String &text, ExceptionCode& ec)
         removeChildren();
         appendChild(Text::create(document(), text), ec);
     }
-    
+
     if (selectIsMenuList && select->selectedIndex() != oldSelectedIndex)
         select->setSelectedIndex(oldSelectedIndex);
 }
@@ -291,7 +291,7 @@ String HTMLOptionElement::label() const
 {
     const AtomicString& label = fastGetAttribute(labelAttr);
     if (!label.isNull())
-        return label; 
+        return label;
     return collectOptionInnerText().stripWhiteSpace(isHTMLSpace).simplifyWhiteSpace(isHTMLSpace);
 }
 

@@ -38,7 +38,7 @@
 #include <WebCore/NotificationClient.h>
 
 DRTDesktopNotificationPresenter::DRTDesktopNotificationPresenter()
-    : m_refCount(1) {} 
+    : m_refCount(1) {}
 
 HRESULT STDMETHODCALLTYPE DRTDesktopNotificationPresenter::QueryInterface(REFIID riid, void** ppvObject)
 {
@@ -75,15 +75,15 @@ HRESULT STDMETHODCALLTYPE DRTDesktopNotificationPresenter::showDesktopNotificati
     BOOL html;
 
     if (!notification->isHTML(&html) && html) {
-        notification->contentsURL(&url);    
+        notification->contentsURL(&url);
         printf("DESKTOP NOTIFICATION: contents at %S\n", url ? url : L"");
     } else {
         notification->iconURL(&url);
         notification->title(&title);
         notification->text(&text);
-        printf("DESKTOP NOTIFICATION: icon %S, title %S, text %S\n", 
-            url ? url : L"", 
-            title ? title : L"", 
+        printf("DESKTOP NOTIFICATION: icon %S, title %S, text %S\n",
+            url ? url : L"",
+            title ? title : L"",
             text ? text : L"");
     }
 
@@ -120,7 +120,7 @@ HRESULT STDMETHODCALLTYPE DRTDesktopNotificationPresenter::notificationDestroyed
 }
 
 HRESULT STDMETHODCALLTYPE DRTDesktopNotificationPresenter::checkNotificationPermission(
-        /* [in] */ BSTR origin, 
+        /* [in] */ BSTR origin,
         /* [out, retval] */ int* result)
 {
 #if ENABLE(NOTIFICATIONS) || ENABLE(LEGACY_NOTIFICATIONS)

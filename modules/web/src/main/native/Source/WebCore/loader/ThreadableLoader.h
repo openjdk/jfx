@@ -49,7 +49,7 @@ namespace WebCore {
     class ScriptExecutionContext;
     class SecurityOrigin;
     class ThreadableLoaderClient;
-    
+
     enum CrossOriginRequestPolicy {
         DenyCrossOriginRequests,
         UseAccessControl,
@@ -74,7 +74,7 @@ namespace WebCore {
 #endif
     };
 
-    // Useful for doing loader operations from any thread (not threadsafe, 
+    // Useful for doing loader operations from any thread (not threadsafe,
     // just able to run on threads other than the main thread).
     class ThreadableLoader {
         WTF_MAKE_NONCOPYABLE(ThreadableLoader);

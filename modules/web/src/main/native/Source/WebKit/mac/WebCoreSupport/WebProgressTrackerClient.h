@@ -36,7 +36,7 @@ public:
 
 private:
     virtual void progressTrackerDestroyed() override;
-    
+
 #if !PLATFORM(IOS)
     virtual void willChangeEstimatedProgress() override;
     virtual void didChangeEstimatedProgress() override;

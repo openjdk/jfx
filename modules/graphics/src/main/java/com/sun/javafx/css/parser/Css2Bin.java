@@ -36,7 +36,7 @@ import java.io.IOException;
  */
 public final class Css2Bin {
     public static void main(String args[]) throws Exception {
-        
+
         if ( args.length < 1 ) throw new IllegalArgumentException("expected file name as argument");
 
         try {
@@ -50,7 +50,7 @@ public final class Css2Bin {
             System.err.println(e.toString());
             e.printStackTrace(System.err);
             System.exit(-1);
-        } 
+        }
     }
 
     public static void convertToBinary(String ifname, String ofname) throws IOException {

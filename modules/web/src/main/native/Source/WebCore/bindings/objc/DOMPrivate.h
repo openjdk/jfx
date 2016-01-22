@@ -21,7 +21,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #import <WebCore/DOM.h>
@@ -97,7 +97,7 @@
 @end
 
 // All the methods in this category are used by Safari forms autofill and should not be used for any other purpose.
-// Each one should eventually be replaced by public DOM API, and when that happens Safari will switch to implementations 
+// Each one should eventually be replaced by public DOM API, and when that happens Safari will switch to implementations
 // using that public API, and these will be deleted.
 @interface DOMHTMLInputElement (FormAutoFillTransition)
 - (BOOL)_isAutofilled;

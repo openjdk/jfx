@@ -60,5 +60,5 @@ Vector<String> platformUserPreferredLanguages()
     userPreferredLanguages.append(platformLanguage());
     return userPreferredLanguages;
 }
-    
+
 }

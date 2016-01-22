@@ -56,17 +56,17 @@ bool AccessibilityARIAGrid::addTableCellChild(AccessibilityObject* child, HashSe
 {
     if (!child || !child->isTableRow() || child->ariaRoleAttribute() != RowRole)
         return false;
-        
+
     AccessibilityTableRow* row = toAccessibilityTableRow(child);
     if (appendedRows.contains(row))
         return false;
-        
+
     // store the maximum number of columns
     unsigned rowCellCount = row->children().size();
     if (rowCellCount > columnCount)
         columnCount = rowCellCount;
-    
-    row->setRowIndex((int)m_rows.size());        
+
+    row->setRowIndex((int)m_rows.size());
     m_rows.append(row);
 
     // Try adding the row if it's not ignoring accessibility,
@@ -96,25 +96,25 @@ void AccessibilityARIAGrid::addRowDescendant(AccessibilityObject* rowChild, Hash
 
 void AccessibilityARIAGrid::addChildren()
 {
-    ASSERT(!m_haveChildren); 
-    
+    ASSERT(!m_haveChildren);
+
     if (!isAccessibilityTable()) {
         AccessibilityRenderObject::addChildren();
         return;
     }
-    
+
     m_haveChildren = true;
     if (!m_renderer)
         return;
-    
+
     AXObjectCache* axCache = m_renderer->document().axObjectCache();
-    
+
     // add only rows that are labeled as aria rows
     HashSet<AccessibilityObject*> appendedRows;
     unsigned columnCount = 0;
     for (RefPtr<AccessibilityObject> child = firstChild(); child; child = child->nextSibling())
         addRowDescendant(child.get(), appendedRows, columnCount);
-    
+
     // make the columns based on the number of columns in the first body
     for (unsigned i = 0; i < columnCount; ++i) {
         AccessibilityTableColumn* column = toAccessibilityTableColumn(axCache->getOrCreate(ColumnRole));
@@ -124,10 +124,10 @@ void AccessibilityARIAGrid::addChildren()
         if (!column->accessibilityIsIgnored())
             m_children.append(column);
     }
-    
+
     AccessibilityObject* headerContainerObject = headerContainer();
     if (headerContainerObject && !headerContainerObject->accessibilityIsIgnored())
         m_children.append(headerContainerObject);
 }
-    
+
 } // namespace WebCore

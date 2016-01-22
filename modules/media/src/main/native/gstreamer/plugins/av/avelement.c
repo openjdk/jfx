@@ -53,7 +53,7 @@ GType avelement_get_type (void)
                sizeof (AVElementClass),
                (GClassInitFunc) avelement_class_intern_init,
                sizeof(AVElement),
-               (GInstanceInitFunc) avelement_init,               
+               (GInstanceInitFunc) avelement_init,
                (GTypeFlags) 0);
         g_once_init_leave (&gonce_data, (gsize) _type);
     }
@@ -62,7 +62,7 @@ GType avelement_get_type (void)
 
 static void avelement_init(AVElement *self)
 {
-    
+
 }
 
 // Init avcodec library and set the logger callback.

@@ -51,9 +51,9 @@ public final class SelectorPartitioning {
      * the innards of the key might be a String or long[]
      */
     private final static class PartitionKey<K> {
-    
+
         private final K key;
-        
+
         private PartitionKey(K key) {
             this.key = key;
         }
@@ -78,11 +78,11 @@ public final class SelectorPartitioning {
             int hash = 7;
             hash = 71 * hash + (this.key != null ? this.key.hashCode() : 0);
             return hash;
-        }                
-        
-    }   
-    
-    /** 
+        }
+
+    }
+
+    /**
      * A Partition corresponds to a selector type, id or styleclass. For any
      * given id (for example) there will be one Partition held in the
      * corresponding map (idMap, for example). Each Partition has Slots which
@@ -92,21 +92,21 @@ public final class SelectorPartitioning {
      * corresponding to .b. Each Slot is capable of pointing to more than one
      * Partition. If another selector A.#c.z were partitioned, then the Slot
      * for A in Partition #c would now have Slots for both .b and .z.
-     * <p> 
-     * Rules are added to the last Slot or to the Partition. If there is a 
+     * <p>
+     * Rules are added to the last Slot or to the Partition. If there is a
      * selector #c { -fx-fill: red; }, then the selector will be added to the
      * Partition for #c. If the selector were for A.b#c, then selector would be added
-     * to the slot for '.b' which is in the slot for A in partion #c. 
+     * to the slot for '.b' which is in the slot for A in partion #c.
      * <p>
      * When Node is matched, it picks up the Selectors from the Partition and Slot
-     * as the graph is traversed. 
+     * as the graph is traversed.
      */
     private static final class Partition {
-        
+
         private final PartitionKey key;
         private final Map<PartitionKey, Slot> slots;
         private List<Selector> selectors;
-        
+
         private Partition(PartitionKey key) {
            this.key = key;
             slots = new HashMap<PartitionKey,Slot>();
@@ -120,11 +120,11 @@ public final class SelectorPartitioning {
         }
 
         /**
-         * This routine finds the slot corresponding to the PartitionKey, 
-         * creating a Partition and Slot if necessary. 
+         * This routine finds the slot corresponding to the PartitionKey,
+         * creating a Partition and Slot if necessary.
          */
         private Slot partition(PartitionKey id, Map<PartitionKey, Partition> map) {
-            
+
             Slot slot = slots.get(id);
             if (slot == null) {
                 Partition partition = getPartition(id,map);
@@ -133,9 +133,9 @@ public final class SelectorPartitioning {
             }
             return slot;
         }
-        
+
     }
-             
+
     /**
      * A Slot is pointer to the next piece of the selector.
      */
@@ -150,12 +150,12 @@ public final class SelectorPartitioning {
 
         // Selectors that match the path to this slot
         private List<Selector> selectors;
-        
+
         private Slot(Partition partition) {
             this.partition = partition;
-            this.referents = new HashMap<PartitionKey, Slot>();            
+            this.referents = new HashMap<PartitionKey, Slot>();
         }
-        
+
         private void addSelector(Selector pair) {
             if (selectors == null) {
                 selectors = new ArrayList<Selector>();
@@ -164,38 +164,38 @@ public final class SelectorPartitioning {
         }
 
         /**
-         * This routine finds the slot corresponding to the PartitionKey, 
-         * creating a Partition and Slot if necessary. 
+         * This routine finds the slot corresponding to the PartitionKey,
+         * creating a Partition and Slot if necessary.
          */
         private Slot partition(PartitionKey id, Map<PartitionKey, Partition> map) {
             Slot slot = referents.get(id);
             if (slot == null) {
-                
+
                 Partition p = getPartition(id, map);
                 slot = new Slot(p);
                 referents.put(id, slot);
-                
+
             }
             return slot;
         }
-        
+
     }
 
     /* A Map for selectors that have an id */
     private final Map<PartitionKey, Partition> idMap = new HashMap<PartitionKey,Partition>();
-    
+
     /* A Map for selectors that have an element type */
     private final Map<PartitionKey, Partition> typeMap = new HashMap<PartitionKey,Partition>();
-    
+
     /* A Map for selectors that have style classes */
     private final Map<PartitionKey, Partition> styleClassMap = new HashMap<PartitionKey,Partition>();
 
-    /** 
+    /**
      * Keep track of the order in which a selector is added to the mapping so
      * the original order can be restored for the cascade.
      */
     private int ordinal;
-    
+
     /** clear current partitioning */
     public void reset() {
         idMap.clear();
@@ -203,14 +203,14 @@ public final class SelectorPartitioning {
         styleClassMap.clear();
         ordinal = 0;
     }
-    
-    
-    /** 
+
+
+    /**
      * Helper to lookup an id in the given map, creating and adding a Partition
-     * 
+     *
      */
     private static Partition getPartition(PartitionKey id, Map<PartitionKey,Partition> map) {
-        
+
         Partition treeNode = map.get(id);
         if (treeNode == null) {
             treeNode = new Partition(id);
@@ -227,10 +227,10 @@ public final class SelectorPartitioning {
     private static final int STYLECLASS_BIT = 1;
     /* If there is no type part, then * is the default. */
     private static final PartitionKey WILDCARD = new PartitionKey<String>("*");
-    
+
     /* Place this selector into the partitioning map. Package accessible */
     public void partition(Selector selector) {
-        
+
         SimpleSelector simpleSelector = null;
         if (selector instanceof CompoundSelector) {
             final List<SimpleSelector> selectors = ((CompoundSelector)selector).getSelectors();
@@ -241,27 +241,27 @@ public final class SelectorPartitioning {
         }
 
         final String selectorId = simpleSelector.getId();
-        final boolean hasId = 
+        final boolean hasId =
             (selectorId != null && selectorId.isEmpty() == false);
         final PartitionKey idKey = hasId
                 ? new PartitionKey(selectorId)
                 : null;
-                
+
         final String selectorType = simpleSelector.getName();
-        final boolean hasType = 
+        final boolean hasType =
             (selectorType != null && selectorType.isEmpty() == false);
         final PartitionKey typeKey = hasType
                 ? new PartitionKey(selectorType)
                 : null;
-        
+
         final Set<StyleClass> selectorStyleClass = simpleSelector.getStyleClassSet();
-        final boolean hasStyleClass = 
+        final boolean hasStyleClass =
             (selectorStyleClass != null && selectorStyleClass.size() > 0);
-        final PartitionKey styleClassKey = hasStyleClass 
+        final PartitionKey styleClassKey = hasStyleClass
                 ? new PartitionKey<Set<StyleClass>>(selectorStyleClass)
                 : null;
-        
-        final int c = 
+
+        final int c =
             (hasId ? ID_BIT : 0) | (hasType ? TYPE_BIT : 0) | (hasStyleClass ? STYLECLASS_BIT : 0);
 
         Partition partition = null;
@@ -270,20 +270,20 @@ public final class SelectorPartitioning {
         selector.setOrdinal(ordinal++);
 
         switch(c) {
-            case ID_BIT | TYPE_BIT | STYLECLASS_BIT: 
-            case ID_BIT | TYPE_BIT: 
-                
+            case ID_BIT | TYPE_BIT | STYLECLASS_BIT:
+            case ID_BIT | TYPE_BIT:
+
                 partition = getPartition(idKey, idMap);
                 slot = partition.partition(typeKey, typeMap);
                 if ((c & STYLECLASS_BIT) == STYLECLASS_BIT) {
                     slot = slot.partition(styleClassKey, styleClassMap);
-                }                
+                }
                 slot.addSelector(selector);
                 break;
-                
+
             case TYPE_BIT | STYLECLASS_BIT:
-            case TYPE_BIT: 
-                
+            case TYPE_BIT:
+
                 partition = getPartition(typeKey, typeMap);
                 if ((c & STYLECLASS_BIT) == STYLECLASS_BIT) {
                     slot = partition.partition(styleClassKey, styleClassMap);
@@ -292,50 +292,50 @@ public final class SelectorPartitioning {
                     partition.addSelector(selector);
                 }
                 break;
-                
+
             // SimpleSelector always has a type which defaults to '*'
-            case ID_BIT | STYLECLASS_BIT:                 
-            case ID_BIT: 
-            case STYLECLASS_BIT: 
+            case ID_BIT | STYLECLASS_BIT:
+            case ID_BIT:
+            case STYLECLASS_BIT:
             default:
                 assert(false);
         }
-        
+
     }
-    
+
     /** Get the list of selectors that match this selector. Package accessible */
     public List<Selector> match(String selectorId, String selectorType, Set<StyleClass> selectorStyleClass) {
-        
-        final boolean hasId = 
+
+        final boolean hasId =
             (selectorId != null && selectorId.isEmpty() == false);
         final PartitionKey idKey = hasId
                 ? new PartitionKey(selectorId)
                 : null;
-                
-        final boolean hasType = 
+
+        final boolean hasType =
             (selectorType != null && selectorType.isEmpty() == false);
         final PartitionKey typeKey = hasType
                 ? new PartitionKey(selectorType)
                 : null;
-        
-        final boolean hasStyleClass = 
+
+        final boolean hasStyleClass =
             (selectorStyleClass != null && selectorStyleClass.size() > 0);
-        final PartitionKey styleClassKey = hasStyleClass 
+        final PartitionKey styleClassKey = hasStyleClass
                 ? new PartitionKey<Set<StyleClass>>(selectorStyleClass)
                 : null;
-        
-        int c = 
+
+        int c =
             (hasId ? ID_BIT : 0) | (hasType ? TYPE_BIT : 0) | (hasStyleClass ? STYLECLASS_BIT : 0);
 
         Partition partition = null;
         Slot slot = null;
         List<Selector> selectors = new ArrayList<Selector>();
-        
+
         while (c != 0) {
-            
+
             switch(c) {
-                case ID_BIT | TYPE_BIT | STYLECLASS_BIT: 
-                case ID_BIT | TYPE_BIT: 
+                case ID_BIT | TYPE_BIT | STYLECLASS_BIT:
+                case ID_BIT | TYPE_BIT:
                 {
 
                     partition = idMap.get(idKey);
@@ -347,7 +347,7 @@ public final class SelectorPartitioning {
                         // doing A.b#c then doing *.b#c
                         PartitionKey typePK = typeKey;
                         do {
-                            slot = partition.slots.get(typePK);                    
+                            slot = partition.slots.get(typePK);
                             if (slot != null) {
 
                                 if (slot.selectors != null) {
@@ -363,27 +363,27 @@ public final class SelectorPartitioning {
                                         }
                                     }
                                 }
-                                
+
                             }
                             // if typePK is 'A', make it '*', if it is '*' make it null
                             typePK=WILDCARD.equals(typePK) == false ? WILDCARD : null;
 
                         } while(typePK != null);
                     }
-                    
+
                     c -= ID_BIT;
                     continue;
                 }
-                    
+
 
                 // SimpleSelector always has a type which defaults to '*'
-                case ID_BIT | STYLECLASS_BIT: 
-                case ID_BIT: 
+                case ID_BIT | STYLECLASS_BIT:
+                case ID_BIT:
                     c -= ID_BIT;
                     break;
-                                        
-                case TYPE_BIT | STYLECLASS_BIT: 
-                case TYPE_BIT: 
+
+                case TYPE_BIT | STYLECLASS_BIT:
+                case TYPE_BIT:
                 {
 
                     // do-while handles A.b also matches .b by first
@@ -408,18 +408,18 @@ public final class SelectorPartitioning {
                         }
                         // if typePK is 'A', make it '*', if it is '*' make it null
                         typePK=WILDCARD.equals(typePK) == false ? WILDCARD : null;
-                        
+
                     } while(typePK != null);
-                    
+
                     c -= TYPE_BIT;
                     continue;
                 }
-                    
+
                 // SimpleSelector always has a type which defaults to '*'
-                case STYLECLASS_BIT: 
+                case STYLECLASS_BIT:
                     c -= STYLECLASS_BIT;
                     break;
-                    
+
                 default:
                     assert(false);
             }

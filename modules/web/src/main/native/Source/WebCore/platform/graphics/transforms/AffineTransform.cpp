@@ -21,7 +21,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -120,7 +120,7 @@ AffineTransform AffineTransform::inverse() const
 AffineTransform& AffineTransform::multiply(const AffineTransform& other)
 {
     AffineTransform trans;
-    
+
     trans.m_transform[0] = other.m_transform[0] * m_transform[0] + other.m_transform[1] * m_transform[2];
     trans.m_transform[1] = other.m_transform[0] * m_transform[1] + other.m_transform[1] * m_transform[3];
     trans.m_transform[2] = other.m_transform[2] * m_transform[0] + other.m_transform[3] * m_transform[2];
@@ -166,7 +166,7 @@ AffineTransform& AffineTransform::translate(double tx, double ty)
         m_transform[5] += ty;
         return *this;
     }
-        
+
     m_transform[4] += tx * m_transform[0] + ty * m_transform[2];
     m_transform[5] += tx * m_transform[1] + ty * m_transform[3];
     return *this;
@@ -238,7 +238,7 @@ IntPoint AffineTransform::mapPoint(const IntPoint& point) const
 {
     double x2, y2;
     map(point.x(), point.y(), x2, y2);
-    
+
     // Round the point.
     return IntPoint(lround(x2), lround(y2));
 }
@@ -328,7 +328,7 @@ void AffineTransform::blend(const AffineTransform& from, double progress)
         else
             srB.angle -= piDouble * 2;
     }
-    
+
     srA.scaleX += progress * (srB.scaleX - srA.scaleX);
     srA.scaleY += progress * (srB.scaleY - srA.scaleY);
     srA.angle += progress * (srB.angle - srA.angle);
@@ -351,11 +351,11 @@ TransformationMatrix AffineTransform::toTransformationMatrix() const
 bool AffineTransform::decompose(DecomposedType& decomp) const
 {
     AffineTransform m(*this);
-    
+
     // Compute scaling factors
     double sx = xScale();
     double sy = yScale();
-    
+
     // Compute cross product of transformed unit vectors. If negative,
     // one axis was flipped.
     if (m.a() * m.d() - m.c() * m.b() < 0) {
@@ -365,17 +365,17 @@ bool AffineTransform::decompose(DecomposedType& decomp) const
         else
             sy = -sy;
     }
-    
+
     // Remove scale from matrix
     m.scale(1 / sx, 1 / sy);
-    
+
     // Compute rotation
     double angle = atan2(m.b(), m.a());
-    
+
     // Remove rotation from matrix
     m.rotate(rad2deg(-angle));
-    
-    // Return results    
+
+    // Return results
     decomp.scaleX = sx;
     decomp.scaleY = sy;
     decomp.angle = angle;
@@ -385,7 +385,7 @@ bool AffineTransform::decompose(DecomposedType& decomp) const
     decomp.remainderD = m.d();
     decomp.translateX = m.e();
     decomp.translateY = m.f();
-    
+
     return true;
 }
 

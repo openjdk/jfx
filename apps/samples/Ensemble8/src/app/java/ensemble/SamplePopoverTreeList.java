@@ -59,7 +59,7 @@ public class SamplePopoverTreeList extends PopoverTreeList implements Popover.Pa
         if (category.subCategories!=null) getItems().addAll((Object[])category.subCategories);
         if (category.samples!=null) getItems().addAll((Object[])category.samples);
         getItems().sort(new Comparator() {
-            
+
             private String getName(Object o) {
                 if (o instanceof SampleCategory) {
                     return ((SampleCategory) o).name;
@@ -76,7 +76,7 @@ public class SamplePopoverTreeList extends PopoverTreeList implements Popover.Pa
             }
         });
     }
-    
+
     @Override public ListCell call(ListView p) {
         return new SampleItemListCell();
     }
@@ -124,8 +124,8 @@ public class SamplePopoverTreeList extends PopoverTreeList implements Popover.Pa
 
     @Override public void handleShown() { }
     @Override public void handleHidden() { }
-    
-    
+
+
     private class SampleItemListCell extends ListCell implements EventHandler<MouseEvent> {
         private ImageView arrow = new ImageView(RIGHT_ARROW);
         private Region icon = new Region();
@@ -136,7 +136,7 @@ public class SamplePopoverTreeList extends PopoverTreeList implements Popover.Pa
             setOnMouseClicked(this);
             setGraphic(icon);
         }
-        
+
         @Override public void handle(MouseEvent t) {
             itemClicked(getItem());
         }
@@ -158,7 +158,7 @@ public class SamplePopoverTreeList extends PopoverTreeList implements Popover.Pa
             arrow.setLayoutX(w - arrowBounds.getWidth() - 12);
             arrow.setLayoutY((int)((h - arrowBounds.getHeight())/2d));
         }
-        
+
         // CELL METHODS
         @Override protected void updateItem(Object item, boolean empty) {
             // let super do its work

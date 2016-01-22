@@ -35,15 +35,15 @@ class SlotVisitor;
 template<typename T>
 class ListableHandler {
     WTF_MAKE_NONCOPYABLE(ListableHandler);
-    
+
 protected:
     ListableHandler()
         : m_nextAndFlag(0)
     {
     }
-    
+
     virtual ~ListableHandler() { }
-    
+
     T* next() const
     {
         return reinterpret_cast<T*>(m_nextAndFlag & ~1);
@@ -54,7 +54,7 @@ private:
     friend class MarkStack;
     friend class GCThreadSharedData;
     friend class SlotVisitor;
-    
+
     class List {
         WTF_MAKE_NONCOPYABLE(List);
     public:
@@ -63,23 +63,23 @@ private:
         {
             m_lock.Init();
         }
-        
+
         void addThreadSafe(T* handler)
         {
             SpinLockHolder locker(&m_lock);
             addNotThreadSafe(handler);
         }
-        
+
         bool hasNext()
         {
             return !!m_first;
         }
-        
+
         T* head()
         {
             return m_first;
         }
-        
+
         T* removeNext()
         {
             T* current = m_first;
@@ -88,13 +88,13 @@ private:
             m_first = next;
             return current;
         }
-        
+
         void removeAll()
         {
             while (hasNext())
                 removeNext();
         }
-        
+
     private:
         void addNotThreadSafe(T* handler)
         {
@@ -103,11 +103,11 @@ private:
             handler->m_nextAndFlag = reinterpret_cast<uintptr_t>(m_first) | 1;
             m_first = handler;
         }
-        
+
         SpinLock m_lock;
         T* m_first;
     };
-    
+
     uintptr_t m_nextAndFlag;
 };
 

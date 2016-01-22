@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -46,9 +46,9 @@ OriginStack::OriginStack(const Origin& origin)
 OriginStack::OriginStack(Database& database, CodeBlock* codeBlock, const CodeOrigin& codeOrigin)
 {
     Vector<CodeOrigin> stack = codeOrigin.inlineStack();
-    
+
     append(Origin(database, codeBlock, stack[0].bytecodeIndex));
-    
+
     for (unsigned i = 1; i < stack.size(); ++i) {
         append(Origin(
             database.ensureBytecodesFor(stack[i].inlineCallFrame->baselineCodeBlock()),
@@ -67,24 +67,24 @@ bool OriginStack::operator==(const OriginStack& other) const
 {
     if (m_stack.size() != other.m_stack.size())
         return false;
-    
+
     for (unsigned i = m_stack.size(); i--;) {
         if (m_stack[i] != other.m_stack[i])
             return false;
     }
-    
+
     return true;
 }
 
 unsigned OriginStack::hash() const
 {
     unsigned result = m_stack.size();
-    
+
     for (unsigned i = m_stack.size(); i--;) {
         result *= 3;
         result += m_stack[i].hash();
     }
-    
+
     return result;
 }
 
@@ -100,10 +100,10 @@ void OriginStack::dump(PrintStream& out) const
 JSValue OriginStack::toJS(ExecState* exec) const
 {
     JSArray* result = constructEmptyArray(exec, 0);
-    
+
     for (unsigned i = 0; i < m_stack.size(); ++i)
         result->putDirectIndex(exec, i, m_stack[i].toJS(exec));
-    
+
     return result;
 }
 

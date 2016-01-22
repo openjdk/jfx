@@ -670,7 +670,7 @@ public class TabPaneTest {
         tabPane.requestFocus();
 
         assertTrue(tabPane.isFocused());
-        
+
         tab2.setDisable(true);
         assertEquals(0, tabPane.getSelectionModel().getSelectedIndex());
         assertEquals(tab1, tabPane.getSelectionModel().getSelectedItem());
@@ -687,55 +687,55 @@ public class TabPaneTest {
         assertEquals(0, tabPane.getSelectionModel().getSelectedIndex());
         assertEquals(tab1, tabPane.getSelectionModel().getSelectedItem());
     }
-    
+
     @Ignore
-    @Test public void mousePressSelectsATab_RT20476() {        
+    @Test public void mousePressSelectsATab_RT20476() {
         tabPane.getTabs().add(tab1);
         tabPane.getTabs().add(tab2);
-        tabPane.getTabs().add(tab3);        
-        
+        tabPane.getTabs().add(tab3);
+
         tab1.setContent(new Button("TAB1"));
         tab2.setContent(new Button("TAB2"));
         tab3.setContent(new Button("TAB3"));
-        
+
         root.getChildren().add(tabPane);
         show();
 
         root.applyCss();
         root.resize(300, 300);
         root.layout();
-        
-        tk.firePulse();        
+
+        tk.firePulse();
         assertTrue(tabPane.isFocused());
-        
+
         double xval = (tabPane.localToScene(tabPane.getLayoutBounds())).getMinX();
         double yval = (tabPane.localToScene(tabPane.getLayoutBounds())).getMinY();
-   
+
         scene.impl_processMouseEvent(
             MouseEventGenerator.generateMouseEvent(MouseEvent.MOUSE_PRESSED, xval+75, yval+20));
-        tk.firePulse();        
-        
+        tk.firePulse();
+
         assertEquals(1, tabPane.getSelectionModel().getSelectedIndex());
-        assertEquals(tab2, tabPane.getSelectionModel().getSelectedItem());        
+        assertEquals(tab2, tabPane.getSelectionModel().getSelectedItem());
     }
-    
+
     private int counter = 0;
     @Ignore
     @Test public void setOnSelectionChangedFiresTwice_RT21089() {
         tabPane.getTabs().add(tab1);
         tabPane.getTabs().add(tab2);
-        
+
         tab1.setContent(new Button("TAB1"));
         tab2.setContent(new Button("TAB2"));
-        
+
         root.getChildren().add(tabPane);
         show();
 
         root.applyCss();
         root.resize(300, 300);
         root.layout();
-        
-        tk.firePulse();        
+
+        tk.firePulse();
         assertTrue(tabPane.isFocused());
 
         tab2.setOnSelectionChanged(event -> {
@@ -744,19 +744,19 @@ public class TabPaneTest {
 
         double xval = (tabPane.localToScene(tabPane.getLayoutBounds())).getMinX();
         double yval = (tabPane.localToScene(tabPane.getLayoutBounds())).getMinY();
-   
+
         scene.impl_processMouseEvent(
             MouseEventGenerator.generateMouseEvent(MouseEvent.MOUSE_PRESSED, xval+75, yval+20));
         tk.firePulse();
-        
+
         assertEquals(tab2, tabPane.getSelectionModel().getSelectedItem());
-                
+
         scene.impl_processMouseEvent(
             MouseEventGenerator.generateMouseEvent(MouseEvent.MOUSE_PRESSED, xval+75, yval+20));
-        tk.firePulse();        
+        tk.firePulse();
         assertEquals(tab2, tabPane.getSelectionModel().getSelectedItem());
     }
-    
+
     @Test public void unableToSelectNextTabWhenFirstTabIsClosed_RT22326() {
         tabPane.getTabs().add(tab1);
         tabPane.getTabs().add(tab2);
@@ -765,7 +765,7 @@ public class TabPaneTest {
         assertEquals("one", tabPane.getTabs().get(0).getText());
         assertEquals("two", tabPane.getTabs().get(1).getText());
         assertEquals("three", tabPane.getTabs().get(2).getText());
-        
+
         tabPane.getTabs().remove(tab1);
 
         assertEquals(2, tabPane.getTabs().size());
@@ -774,43 +774,43 @@ public class TabPaneTest {
         tabPane.getSelectionModel().selectNext();
         assertEquals(tab3, tabPane.getSelectionModel().getSelectedItem());
     }
-    
+
     @Test public void removeFirstTabNextTabShouldBeSelected() {
         tabPane.getTabs().add(tab1);
         tabPane.getTabs().add(tab2);
-        tabPane.getTabs().add(tab3);        
+        tabPane.getTabs().add(tab3);
 
         assertEquals("one", tabPane.getTabs().get(0).getText());
         assertEquals("two", tabPane.getTabs().get(1).getText());
         assertEquals("three", tabPane.getTabs().get(2).getText());
-        
+
         tabPane.getTabs().remove(tab1);
 
         assertEquals(2, tabPane.getTabs().size());
         assertEquals(0, tabPane.getSelectionModel().getSelectedIndex());
-        assertEquals(tab2, tabPane.getSelectionModel().getSelectedItem());        
+        assertEquals(tab2, tabPane.getSelectionModel().getSelectedItem());
     }
-    
+
     @Test public void selectionModelShouldNotBeNullWhenClosingFirstTab_RT22925() {
         tabPane.getTabs().add(tab1);
         tabPane.getTabs().add(tab2);
-        tabPane.getTabs().add(tab3);        
+        tabPane.getTabs().add(tab3);
 
         tabPane.getSelectionModel().selectedItemProperty().addListener((ov, t, t1) -> {
             assertEquals(t.getText(), "one");
             assertEquals(t1.getText(), "two");
         });
-        
+
         assertEquals("one", tabPane.getTabs().get(0).getText());
         assertEquals("two", tabPane.getTabs().get(1).getText());
         assertEquals("three", tabPane.getTabs().get(2).getText());
-        
+
         tabPane.getTabs().remove(tab1);
 
         assertEquals(2, tabPane.getTabs().size());
         assertEquals(0, tabPane.getSelectionModel().getSelectedIndex());
-        assertEquals(tab2, tabPane.getSelectionModel().getSelectedItem());        
-    }    
+        assertEquals(tab2, tabPane.getSelectionModel().getSelectedItem());
+    }
 
 
     boolean button1Focused = false;
@@ -837,7 +837,7 @@ public class TabPaneTest {
 
         final Scene scene1 = new Scene(new Group(), 400, 400);
         ((Group)scene1.getRoot()).getChildren().add(tabPane);
-        
+
         stage.setScene(scene1);
         stage.show();
         stage.requestFocus();

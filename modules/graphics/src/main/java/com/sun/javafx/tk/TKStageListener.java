@@ -68,10 +68,10 @@ public interface TKStageListener {
      * @param maximized True if the stage's peer is now maximized
      */
     public void changedMaximized(boolean maximized);
-    
+
     /**
      * The stages peer has changed it's "always on top" flag.
-     * @param alwaysOnTop 
+     * @param alwaysOnTop
      */
     public void changedAlwaysOnTop(boolean alwaysOnTop);
 

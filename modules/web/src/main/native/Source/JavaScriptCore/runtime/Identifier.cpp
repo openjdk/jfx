@@ -72,12 +72,12 @@ struct IdentifierLCharFromUCharTranslator {
     {
         return StringHasher::computeHashAndMaskTop8Bits(buf.s, buf.length);
     }
-    
+
     static bool equal(StringImpl* str, const CharBuffer<UChar>& buf)
     {
         return Identifier::equal(str, buf.s, buf.length);
     }
-    
+
     static void translate(StringImpl*& location, const CharBuffer<UChar>& buf, unsigned hash)
     {
         LChar* d;
@@ -119,12 +119,12 @@ PassRef<StringImpl> Identifier::add8(VM* vm, const UChar* s, int length)
         if (canUseSingleCharacterString(c))
             return add(vm, vm->smallStrings.singleCharacterStringRep(c));
     }
-    
+
     if (!length)
         return *StringImpl::empty();
     CharBuffer<UChar> buf = { s, static_cast<unsigned>(length) };
     HashSet<StringImpl*>::AddResult addResult = vm->identifierTable->add<CharBuffer<UChar>, IdentifierLCharFromUCharTranslator >(buf);
-    
+
     // If the string is newly-translated, then we need to adopt it.
     // The boolean in the pair tells us if that is so.
     return addResult.isNewEntry ? adoptRef(**addResult.iterator) : **addResult.iterator;

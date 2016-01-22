@@ -65,17 +65,17 @@ public class ResizeTreeTableColumnGesture extends AbstractMouseGesture {
     public ResizeTreeTableColumnGesture(ContentPanelController contentPanelController,
             FXOMInstance fxomInstance) {
         super(contentPanelController);
-        
+
         assert fxomInstance != null;
         assert fxomInstance.getSceneGraphObject() instanceof TreeTableColumn;
-        
+
         this.columnInstance = fxomInstance;
     }
 
     /*
      * AbstractMouseGesture
      */
-    
+
     @Override
     protected void mousePressed() {
         // Everthing is done in mouseDragStarted
@@ -85,9 +85,9 @@ public class ResizeTreeTableColumnGesture extends AbstractMouseGesture {
     protected void mouseDragStarted() {
         assert resizer == null;
         assert columnInstance.getSceneGraphObject() instanceof TreeTableColumn;
-        
+
         resizer = new TreeTableColumnResizer((TreeTableColumn<?,?>)columnInstance.getSceneGraphObject());
-        
+
         // Now same as mouseDragged
         mouseDragged();
     }
@@ -95,7 +95,7 @@ public class ResizeTreeTableColumnGesture extends AbstractMouseGesture {
     @Override
     protected void mouseDragged() {
         assert resizer != null;
-        
+
         final double startSceneX = getMousePressedEvent().getSceneX();
         final double startSceneY = getMousePressedEvent().getSceneY();
         final double currentSceneX = getLastMouseEvent().getSceneX();
@@ -104,7 +104,7 @@ public class ResizeTreeTableColumnGesture extends AbstractMouseGesture {
         final Point2D start = treeTableView.sceneToLocal(startSceneX, startSceneY, true /* rootScene */);
         final Point2D current = treeTableView.sceneToLocal(currentSceneX, currentSceneY, true /* rootScene */);
         final double dx = current.getX() - start.getX();
-        
+
         resizer.updateWidth(dx);
         treeTableView.layout();
     }
@@ -112,26 +112,26 @@ public class ResizeTreeTableColumnGesture extends AbstractMouseGesture {
     @Override
     protected void mouseDragEnded() {
         assert resizer != null;
-        
+
         /*
          * Three steps
-         * 
+         *
          * 1) Collects sizing properties that have changed
          * 2) Reverts to initial sizing
          *    => this step is equivalent to userDidCancel()
          * 3) Push a BatchModifyObjectJob to officially resize the columns
          */
-        
+
         // Step #1
         final Map<PropertyName, Object> changeMap = resizer.getChangeMap();
         final Map<PropertyName, Object> changeMapNext = resizer.getChangeMapNext();
-        
+
 
         // Step #2
         userDidCancel();
-        
+
         // Step #3
-        final EditorController editorController 
+        final EditorController editorController
                 = contentPanelController.getEditorController();
         final BatchJob batchJob
                 = new BatchJob(editorController, true,
@@ -145,7 +145,7 @@ public class ResizeTreeTableColumnGesture extends AbstractMouseGesture {
         if (batchJob.isExecutable()) {
             editorController.getJobManager().push(batchJob);
         }
-        
+
         resizer = null; // For sake of symetry...
     }
 
@@ -164,18 +164,18 @@ public class ResizeTreeTableColumnGesture extends AbstractMouseGesture {
         resizer.revertToOriginalSize();
         resizer.getTreeTableColumn().getTreeTableView().layout();
     }
-    
-    
+
+
     /*
      * Private
      */
-    
+
     private List<Job> makeResizeJob(FXOMObject columnObject, Map<PropertyName, Object> changeMap) {
         assert columnObject.getSceneGraphObject() instanceof TreeTableColumn;
         assert columnObject instanceof FXOMInstance;
-        
+
         final List<Job> result = new ArrayList<>();
-        
+
         final Metadata metadata = Metadata.getMetadata();
         final Map<ValuePropertyMetadata, Object> metaValueMap = new HashMap<>();
         for (Map.Entry<PropertyName,Object> e : changeMap.entrySet()) {
@@ -191,7 +191,7 @@ public class ResizeTreeTableColumnGesture extends AbstractMouseGesture {
                     e.getValue(),
                     contentPanelController.getEditorController());
             result.add(job);
-        }        
+        }
         return result;
     }
 }

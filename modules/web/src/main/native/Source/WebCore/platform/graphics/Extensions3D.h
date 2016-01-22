@@ -101,13 +101,13 @@ public:
 
         // GL_EXT/OES_packed_depth_stencil enums
         DEPTH24_STENCIL8 = 0x88F0,
-        
+
         // GL_ANGLE_framebuffer_blit names
         READ_FRAMEBUFFER = 0x8CA8,
         DRAW_FRAMEBUFFER = 0x8CA9,
-        DRAW_FRAMEBUFFER_BINDING = 0x8CA6, 
+        DRAW_FRAMEBUFFER_BINDING = 0x8CA6,
         READ_FRAMEBUFFER_BINDING = 0x8CAA,
-        
+
         // GL_ANGLE_framebuffer_multisample names
         RENDERBUFFER_SAMPLES = 0x8CAB,
         FRAMEBUFFER_INCOMPLETE_MULTISAMPLE = 0x8D56,
@@ -119,7 +119,7 @@ public:
         // GL_OES_rgb8_rgba8 names
         RGB8_OES = 0x8051,
         RGBA8_OES = 0x8058,
-        
+
         // GL_OES_vertex_array_object names
         VERTEX_ARRAY_BINDING_OES = 0x85B5,
 
@@ -207,13 +207,13 @@ public:
     // returning the same error. Restoring the GraphicsContext3D is handled
     // externally.
     virtual int getGraphicsResetStatusARB() = 0;
-    
+
     // GL_ANGLE_framebuffer_blit
     virtual void blitFramebuffer(long srcX0, long srcY0, long srcX1, long srcY1, long dstX0, long dstY0, long dstX1, long dstY1, unsigned long mask, unsigned long filter) = 0;
-    
+
     // GL_ANGLE_framebuffer_multisample
     virtual void renderbufferStorageMultisample(unsigned long target, unsigned long samples, unsigned long internalformat, unsigned long width, unsigned long height) = 0;
-    
+
     // GL_OES_vertex_array_object
     virtual Platform3DObject createVertexArrayOES() = 0;
     virtual void deleteVertexArrayOES(Platform3DObject) = 0;

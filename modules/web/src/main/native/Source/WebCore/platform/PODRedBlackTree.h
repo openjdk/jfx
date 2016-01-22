@@ -149,12 +149,12 @@ public:
         m_arena = 0;
         m_root = 0;
     }
-    
+
     bool isInitialized() const
     {
         return m_arena;
     }
-    
+
     void initIfNeeded()
     {
         if (!m_arena)

@@ -35,7 +35,7 @@ namespace TestWebKitAPI {
 
 static bool didFinishLoad;
 static bool didReceiveMessage;
-    
+
 static void didReceiveMessageFromInjectedBundle(WKContextRef, WKStringRef messageName, WKTypeRef body, const void*)
 {
     didReceiveMessage = true;
@@ -44,43 +44,43 @@ static void didReceiveMessageFromInjectedBundle(WKContextRef, WKStringRef messag
     EXPECT_TRUE(body);
     EXPECT_EQ(WKDataGetTypeID(), WKGetTypeID(body));
     WKDataRef receivedData = static_cast<WKDataRef>(body);
-        
+
     // Do basic sanity checks on the returned webarchive. We have more thorough checks in LayoutTests.
     size_t size = WKDataGetSize(receivedData);
     const unsigned char* bytes = WKDataGetBytes(receivedData);
     RetainPtr<CFDataRef> data = adoptCF(CFDataCreate(0, bytes, size));
     RetainPtr<CFPropertyListRef> propertyList = adoptCF(CFPropertyListCreateWithData(0, data.get(), kCFPropertyListImmutable, 0, 0));
     EXPECT_TRUE(propertyList);
-    
+
     // It should be a dictionary.
     EXPECT_EQ(CFDictionaryGetTypeID(), CFGetTypeID(propertyList.get()));
     CFDictionaryRef dictionary = (CFDictionaryRef)propertyList.get();
-    
+
     // It should have a main resource.
     CFTypeRef mainResource = CFDictionaryGetValue(dictionary, CFSTR("WebMainResource"));
     EXPECT_TRUE(mainResource);
     EXPECT_EQ(CFDictionaryGetTypeID(), CFGetTypeID(mainResource));
     CFDictionaryRef mainResourceDictionary = (CFDictionaryRef)mainResource;
-    
+
     // Main resource should have a non-empty url and mime type.
     CFTypeRef url = CFDictionaryGetValue(mainResourceDictionary, CFSTR("WebResourceURL"));
     EXPECT_TRUE(url);
     EXPECT_EQ(CFStringGetTypeID(), CFGetTypeID(url));
     EXPECT_NE(CFStringGetLength((CFStringRef)url), 0);
-    
+
     CFTypeRef mimeType = CFDictionaryGetValue(mainResourceDictionary, CFSTR("WebResourceMIMEType"));
     EXPECT_TRUE(mimeType);
     EXPECT_EQ(CFStringGetTypeID(), CFGetTypeID(mimeType));
     EXPECT_NE(CFStringGetLength((CFStringRef)mimeType), 0);
-    
+
     // Main resource dictionary should have a "WebResourceData" key.
     CFTypeRef resourceData = CFDictionaryGetValue(mainResourceDictionary, CFSTR("WebResourceData"));
     EXPECT_TRUE(resourceData);
     EXPECT_EQ(CFDataGetTypeID(), CFGetTypeID(resourceData));
-    
+
     RetainPtr<CFStringRef> stringData = adoptCF(CFStringCreateFromExternalRepresentation(0, (CFDataRef)resourceData, kCFStringEncodingUTF8));
     EXPECT_TRUE(stringData);
-    
+
     // It should contain the string "Simple HTML file." in it.
     bool foundString = CFStringFind(stringData.get(), CFSTR("Simple HTML file."), 0).location != kCFNotFound;
     EXPECT_TRUE(foundString);
@@ -111,7 +111,7 @@ TEST(WebKit2, WebArchive)
 
     WKPageLoaderClientV3 loaderClient;
     memset(&loaderClient, 0, sizeof(loaderClient));
-    
+
     loaderClient.base.version = 3;
     loaderClient.didFinishLoadForFrame = didFinishLoadForFrame;
 

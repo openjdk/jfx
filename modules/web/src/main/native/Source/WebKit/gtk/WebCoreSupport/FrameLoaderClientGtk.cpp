@@ -921,7 +921,7 @@ void FrameLoaderClient::didFinishLoad() {
     notImplemented();
 }
 
-void FrameLoaderClient::prepareForDataSourceReplacement() 
+void FrameLoaderClient::prepareForDataSourceReplacement()
 {
     notImplemented();
 }

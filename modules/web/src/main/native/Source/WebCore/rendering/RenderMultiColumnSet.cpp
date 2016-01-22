@@ -201,7 +201,7 @@ void RenderMultiColumnSet::updateLogicalWidth()
 {
     RenderBlockFlow* parentBlock = toRenderBlockFlow(parent());
     setComputedColumnWidthAndCount(parentBlock->multiColumnFlowThread()->columnWidth(), parentBlock->multiColumnFlowThread()->columnCount()); // FIXME: This will eventually vary if we are contained inside regions.
-    
+
     // FIXME: When we add regions support, we'll start it off at the width of the multi-column
     // block in that particular region.
     setLogicalWidth(parentBox()->contentLogicalWidth());
@@ -270,7 +270,7 @@ unsigned RenderMultiColumnSet::columnCount() const
     LayoutUnit logicalHeightInColumns = flowThread()->isHorizontalWritingMode() ? flowThreadPortionRect().height() : flowThreadPortionRect().width();
     if (!logicalHeightInColumns)
         return 1;
-    
+
     unsigned count = ceil(static_cast<float>(logicalHeightInColumns) / computedColumnHeight());
     ASSERT(count >= 1);
     return count;
@@ -283,11 +283,11 @@ LayoutRect RenderMultiColumnSet::columnRectAt(unsigned index) const
     LayoutUnit colLogicalTop = borderAndPaddingBefore();
     LayoutUnit colLogicalLeft = borderAndPaddingLogicalLeft();
     LayoutUnit colGap = columnGap();
-    
+
     RenderBlockFlow* parentFlow = toRenderBlockFlow(parent());
     bool progressionReversed = parentFlow->multiColumnFlowThread()->progressionIsReversed();
     bool progressionInline = parentFlow->multiColumnFlowThread()->progressionIsInline();
-    
+
     if (progressionInline) {
         if (style().isLeftToRightDirection() ^ progressionReversed)
             colLogicalLeft += index * (colLogicalWidth + colGap);
@@ -299,7 +299,7 @@ LayoutRect RenderMultiColumnSet::columnRectAt(unsigned index) const
         else
             colLogicalTop += contentLogicalHeight() - colLogicalHeight - index * (colLogicalHeight + colGap);
     }
-    
+
     if (isHorizontalWritingMode())
         return LayoutRect(colLogicalLeft, colLogicalTop, colLogicalWidth, colLogicalHeight);
     return LayoutRect(colLogicalTop, colLogicalLeft, colLogicalHeight, colLogicalWidth);
@@ -347,10 +347,10 @@ LayoutRect RenderMultiColumnSet::flowThreadPortionOverflowRect(const LayoutRect&
     // FIXME: Eventually we will know overflow on a per-column basis, but we can't do this until we have a painting
     // mode that understands not to paint contents from a previous column in the overflow area of a following column.
     // This problem applies to regions and pages as well and is not unique to columns.
-    
+
     RenderBlockFlow* parentFlow = toRenderBlockFlow(parent());
     bool progressionReversed = parentFlow->multiColumnFlowThread()->progressionIsReversed();
-    
+
     bool isFirstColumn = !index;
     bool isLastColumn = index == colCount - 1;
     bool isLeftmostColumn = style().isLeftToRightDirection() ^ progressionReversed ? isFirstColumn : isLastColumn;
@@ -445,7 +445,7 @@ void RenderMultiColumnSet::paintColumnRules(PaintInfo& paintInfo, const LayoutPo
                 IntRect pixelSnappedRuleRect = pixelSnappedIntRectFromEdges(ruleLeft, ruleTop, ruleRight, ruleBottom);
                 drawLineForBoxSide(paintInfo.context, pixelSnappedRuleRect.x(), pixelSnappedRuleRect.y(), pixelSnappedRuleRect.maxX(), pixelSnappedRuleRect.maxY(), boxSide, ruleColor, ruleStyle, 0, 0, antialias);
             }
-            
+
             ruleLogicalLeft = currLogicalLeftOffset;
         }
     } else {
@@ -485,27 +485,27 @@ void RenderMultiColumnSet::repaintFlowThreadContent(const LayoutRect& repaintRec
     // entire column set. Put the repaint rect into flow thread coordinates by flipping it first.
     LayoutRect flowThreadRepaintRect(repaintRect);
     flowThread()->flipForWritingMode(flowThreadRepaintRect);
-    
+
     // Now we can compare this rect with the flow thread portions owned by each column. First let's
     // just see if the repaint rect intersects our flow thread portion at all.
     LayoutRect clippedRect(flowThreadRepaintRect);
     clippedRect.intersect(RenderRegion::flowThreadPortionOverflowRect());
     if (clippedRect.isEmpty())
         return;
-    
+
     // Now we know we intersect at least one column. Let's figure out the logical top and logical
     // bottom of the area we're repainting.
     LayoutUnit repaintLogicalTop = isHorizontalWritingMode() ? flowThreadRepaintRect.y() : flowThreadRepaintRect.x();
     LayoutUnit repaintLogicalBottom = (isHorizontalWritingMode() ? flowThreadRepaintRect.maxY() : flowThreadRepaintRect.maxX()) - 1;
-    
+
     unsigned startColumn = columnIndexAtOffset(repaintLogicalTop);
     unsigned endColumn = columnIndexAtOffset(repaintLogicalBottom);
-    
+
     LayoutUnit colGap = columnGap();
     unsigned colCount = columnCount();
     for (unsigned i = startColumn; i <= endColumn; i++) {
         LayoutRect colRect = columnRectAt(i);
-        
+
         // Get the portion of the flow thread that corresponds to this column.
         LayoutRect flowThreadPortion = flowThreadPortionRectAt(i);
 
@@ -522,7 +522,7 @@ LayoutUnit RenderMultiColumnSet::initialBlockOffsetForPainting() const
     RenderBlockFlow* parentFlow = toRenderBlockFlow(parent());
     bool progressionReversed = parentFlow->multiColumnFlowThread()->progressionIsReversed();
     bool progressionIsInline = parentFlow->multiColumnFlowThread()->progressionIsInline();
-    
+
     LayoutUnit result = 0;
     if (!progressionIsInline && progressionReversed) {
         LayoutRect colRect = columnRectAt(0);
@@ -571,31 +571,31 @@ void RenderMultiColumnSet::collectLayerFragments(LayerFragments& fragments, cons
     clippedRect.intersect(RenderRegion::flowThreadPortionOverflowRect());
     if (clippedRect.isEmpty())
         return;
-    
+
     // Now we know we intersect at least one column. Let's figure out the logical top and logical
     // bottom of the area we're checking.
     LayoutUnit layerLogicalTop = isHorizontalWritingMode() ? layerBoundsInFlowThread.y() : layerBoundsInFlowThread.x();
     LayoutUnit layerLogicalBottom = (isHorizontalWritingMode() ? layerBoundsInFlowThread.maxY() : layerBoundsInFlowThread.maxX()) - 1;
-    
+
     // Figure out the start and end columns and only check within that range so that we don't walk the
     // entire column set.
     unsigned startColumn = columnIndexAtOffset(layerLogicalTop);
     unsigned endColumn = columnIndexAtOffset(layerLogicalBottom);
-    
+
     LayoutUnit colLogicalWidth = computedColumnWidth();
     LayoutUnit colGap = columnGap();
     unsigned colCount = columnCount();
-    
+
     RenderBlockFlow* parentFlow = toRenderBlockFlow(parent());
     bool progressionReversed = parentFlow->multiColumnFlowThread()->progressionIsReversed();
     bool progressionIsInline = parentFlow->multiColumnFlowThread()->progressionIsInline();
-    
+
     LayoutUnit initialBlockOffset = initialBlockOffsetForPainting();
-    
+
     for (unsigned i = startColumn; i <= endColumn; i++) {
         // Get the portion of the flow thread that corresponds to this column.
         LayoutRect flowThreadPortion = flowThreadPortionRectAt(i);
-        
+
         // Now get the overflow rect that corresponds to the column.
         LayoutRect flowThreadOverflowPortion = flowThreadPortionOverflowRect(flowThreadPortion, i, colCount, colGap);
 
@@ -604,12 +604,12 @@ void RenderMultiColumnSet::collectLayerFragments(LayerFragments& fragments, cons
         clippedRect.intersect(flowThreadOverflowPortion);
         if (clippedRect.isEmpty())
             continue;
-        
+
         // We also need to intersect the dirty rect. We have to apply a translation and shift based off
         // our column index.
         LayoutPoint translationOffset;
         LayoutUnit inlineOffset = progressionIsInline ? i * (colLogicalWidth + colGap) : LayoutUnit();
-        
+
         bool leftToRight = style().isLeftToRightDirection() ^ progressionReversed;
         if (!leftToRight) {
             inlineOffset = -inlineOffset;
@@ -635,13 +635,13 @@ void RenderMultiColumnSet::collectLayerFragments(LayerFragments& fragments, cons
         // Shift the dirty rect to be in flow thread coordinates with this translation applied.
         LayoutRect translatedDirtyRect(dirtyRect);
         translatedDirtyRect.moveBy(-translationOffset);
-        
+
         // See if we intersect the dirty rect.
         clippedRect = layerBoundingBox;
         clippedRect.intersect(translatedDirtyRect);
         if (clippedRect.isEmpty())
             continue;
-        
+
         // Something does need to paint in this column. Make a fragment now and supply the physical translation
         // offset and the clip rect for the column with that offset applied.
         LayerFragment fragment;
@@ -659,21 +659,21 @@ void RenderMultiColumnSet::adjustRegionBoundsFromFlowThreadPortionRect(const Int
 {
     LayoutUnit layerLogicalTop = isHorizontalWritingMode() ? layerOffset.y() : layerOffset.x();
     unsigned startColumn = columnIndexAtOffset(layerLogicalTop);
-    
+
     LayoutUnit colGap = columnGap();
     LayoutUnit colLogicalWidth = computedColumnWidth();
-    
+
     LayoutRect flowThreadPortion = flowThreadPortionRectAt(startColumn);
     LayoutPoint translationOffset;
-    
+
     RenderBlockFlow* parentFlow = toRenderBlockFlow(parent());
     bool progressionReversed = parentFlow->multiColumnFlowThread()->progressionIsReversed();
     bool progressionIsInline = parentFlow->multiColumnFlowThread()->progressionIsInline();
-    
+
     LayoutUnit initialBlockOffset = initialBlockOffsetForPainting();
-    
+
     LayoutUnit inlineOffset = progressionIsInline ? startColumn * (colLogicalWidth + colGap) : LayoutUnit();
-    
+
     bool leftToRight = style().isLeftToRightDirection() ^ progressionReversed;
     if (!leftToRight) {
         inlineOffset = -inlineOffset;
@@ -691,13 +691,13 @@ void RenderMultiColumnSet::adjustRegionBoundsFromFlowThreadPortionRect(const Int
     if (isFlippedBlocksWritingMode(style().writingMode()))
         blockOffset = -blockOffset;
     translationOffset.setY(blockOffset);
-    
+
     if (!isHorizontalWritingMode())
         translationOffset = translationOffset.transposedPoint();
 
     // FIXME: The translation needs to include the multicolumn set's content offset within the
     // multicolumn block as well. This won't be an issue until we start creating multiple multicolumn sets.
-    
+
     regionBounds.moveBy(roundedIntPoint(-translationOffset));
 }
 
@@ -707,7 +707,7 @@ void RenderMultiColumnSet::addOverflowFromChildren()
     unsigned colCount = columnCount();
     if (!colCount)
         return;
-    
+
     LayoutRect lastRect = columnRectAt(colCount - 1);
     addLayoutOverflow(lastRect);
     if (!hasOverflowClip())
@@ -715,7 +715,7 @@ void RenderMultiColumnSet::addOverflowFromChildren()
 }
 
 const char* RenderMultiColumnSet::renderName() const
-{    
+{
     return "RenderMultiColumnSet";
 }
 

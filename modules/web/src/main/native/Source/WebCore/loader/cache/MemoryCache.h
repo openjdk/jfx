@@ -49,7 +49,7 @@ struct SecurityOriginHash;
 
 // This cache holds subresources used by Web pages: images, scripts, stylesheets, etc.
 
-// The cache keeps a flexible but bounded window of dead resources that grows/shrinks 
+// The cache keeps a flexible but bounded window of dead resources that grows/shrinks
 // depending on the live resource load. Here's an example of cache growth over time,
 // with a min dead resource capacity of 25% and a max dead resource capacity of 50%:
 
@@ -109,7 +109,7 @@ public:
 #endif
         void addResource(CachedResource*);
     };
-    
+
     struct Statistics {
         TypeStatistic images;
         TypeStatistic cssStyleSheets;
@@ -120,16 +120,16 @@ public:
 
     CachedResource* resourceForURL(const URL&);
     CachedResource* resourceForRequest(const ResourceRequest&);
-    
+
     bool add(CachedResource* resource);
     void remove(CachedResource* resource) { evict(resource); }
 
     static URL removeFragmentIdentifierIfNeeded(const URL& originalURL);
-    
+
     void revalidationSucceeded(CachedResource* revalidatingResource, const ResourceResponse&);
     void revalidationFailed(CachedResource* revalidatingResource);
-    
-    // Sets the cache's memory capacities, in bytes. These will hold only approximately, 
+
+    // Sets the cache's memory capacities, in bytes. These will hold only approximately,
     // since the decoded cost of resources like scripts and stylesheets is not known.
     //  - minDeadBytes: The maximum number of bytes that dead resources should consume when the cache is under pressure.
     //  - maxDeadBytes: The maximum number of bytes that dead resources should consume when the cache is not under pressure.
@@ -142,7 +142,7 @@ public:
     bool disabled() const { return m_disabled; }
 
     void evictResources();
-    
+
     void setPruneEnabled(bool enabled) { m_pruneEnabled = enabled; }
     void prune();
     void pruneToPercentage(float targetPercentLive);
@@ -175,7 +175,7 @@ public:
 
     // Function to collect cache statistics for the caches window in the Safari Debug menu.
     Statistics getStatistics();
-    
+
     void resourceAccessed(CachedResource*);
 
     typedef HashSet<RefPtr<SecurityOrigin>> SecurityOriginSet;
@@ -240,11 +240,11 @@ private:
     // more resources than the cached resource map, since it can also hold "stale" multiple versions of objects that are
     // waiting to die when the clients referencing them go away.
     Vector<LRUList, 32> m_allResources;
-    
+
     // List just for live resources with decoded data.  Access to this list is based off of painting the resource.
     LRUList m_liveDecodedResources;
-    
-    // A URL-based map of all resources that are in the cache (including the freshest version of objects that are currently being 
+
+    // A URL-based map of all resources that are in the cache (including the freshest version of objects that are currently being
     // referenced by a Web page).
     CachedResourceMap m_resources;
 };

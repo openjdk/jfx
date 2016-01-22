@@ -159,7 +159,7 @@ public abstract class HierarchyTreeViewUtils {
 
         assert treeItems != null && !treeItems.isEmpty();
 
-        // TreeItems contains ROOT 
+        // TreeItems contains ROOT
         // => return ROOT as the common parent
         for (TreeItem<T> treeItem : treeItems) {
             if (Deprecation.getNodeLevel(treeItem) == 0) {
@@ -214,7 +214,7 @@ public abstract class HierarchyTreeViewUtils {
             if (parent1 == parent2) {
                 return parent1;
             } else {
-                // At this step, parent1 and parent2 have same node level 
+                // At this step, parent1 and parent2 have same node level
                 // within the TreeView
                 while (parent1 != parent2) {
                     parent1 = parent1.getParent();
@@ -231,7 +231,7 @@ public abstract class HierarchyTreeViewUtils {
             if (parent1 == parent2) {
                 return parent1;
             } else {
-                // At this step, parent1 and parent2 have same node level 
+                // At this step, parent1 and parent2 have same node level
                 // within the TreeView
                 while (parent1 != parent2) {
                     parent1 = parent1.getParent();

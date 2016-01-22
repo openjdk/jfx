@@ -857,7 +857,7 @@ PassRef<RenderStyle> StyleResolver::styleForKeyframe(const RenderStyle* elementS
 
     // Start loading resources referenced by this style.
     loadPendingResources();
-    
+
     // Add all the animating properties to the keyframe.
     unsigned propertyCount = keyframe->properties().propertyCount();
     for (unsigned i = 0; i < propertyCount; ++i) {
@@ -1110,7 +1110,7 @@ static EDisplay equivalentBlockDisplay(EDisplay display, bool isFloating, bool s
     return BLOCK;
 }
 
-// CSS requires text-decoration to be reset at each DOM element for tables, 
+// CSS requires text-decoration to be reset at each DOM element for tables,
 // inline blocks, inline tables, shadow DOM crossings, floating elements,
 // and absolute or relatively positioned elements.
 static bool doesNotInheritTextDecoration(const RenderStyle& style, Element* e)
@@ -1461,7 +1461,7 @@ Vector<RefPtr<StyleRuleBase>> StyleResolver::pseudoStyleRulesForElement(Element*
     if (rulesToInclude & UAAndUserCSSRules) {
         // First we match rules from the user agent sheet.
         collector.matchUARules();
-        
+
         // Now we check user sheet rules.
         if (m_matchAuthorAndUserStyles)
             collector.matchUserRules(rulesToInclude & EmptyCSSRules);
@@ -1663,7 +1663,7 @@ void StyleResolver::applyMatchedProperties(const MatchResult& matchResult, const
     const MatchedPropertiesCacheItem* cacheItem = 0;
     if (cacheHash && (cacheItem = findFromMatchedPropertiesCache(cacheHash, matchResult))) {
         // We can build up the style by copying non-inherited properties from an earlier style object built using the same exact
-        // style declarations. We then only need to apply the inherited properties, if any, as their values can depend on the 
+        // style declarations. We then only need to apply the inherited properties, if any, as their values can depend on the
         // element context. This is fast and saves memory by reusing the style data structures.
         state.style()->copyNonInheritedFrom(cacheItem->renderStyle.get());
         if (state.parentStyle()->inheritedDataShared(cacheItem->parentRenderStyle.get()) && !isAtShadowBoundary(element)) {
@@ -1676,7 +1676,7 @@ void StyleResolver::applyMatchedProperties(const MatchResult& matchResult, const
             state.style()->setInsideLink(linkStatus);
             return;
         }
-        applyInheritedOnly = true; 
+        applyInheritedOnly = true;
     }
 
     // Directional properties (*-before/after) are aliases that depend on the TextDirection and WritingMode.
@@ -1740,9 +1740,9 @@ void StyleResolver::applyMatchedProperties(const MatchResult& matchResult, const
 
     // Start loading resources referenced by this style.
     loadPendingResources();
-    
+
     ASSERT(!state.fontDirty());
-    
+
     if (cacheItem || !cacheHash)
         return;
     if (!isCacheableInMatchedPropertiesCache(state.element(), state.style(), state.parentStyle()))
@@ -2164,7 +2164,7 @@ void StyleResolver::applyProperty(CSSPropertyID id, CSSValue* value)
                 state.style()->setContentAltText(emptyAtom);
             return;
         }
-        
+
     case CSSPropertyQuotes:
         if (isInherit) {
             state.style()->setQuotes(state.parentStyle()->quotes());
@@ -2568,7 +2568,7 @@ void StyleResolver::applyProperty(CSSPropertyID id, CSSValue* value)
     // CSS Text Layout Module Level 3: Vertical writing support
     case CSSPropertyWebkitWritingMode: {
         HANDLE_INHERIT_AND_INITIAL(writingMode, WritingMode);
-        
+
         if (primitiveValue)
             setWritingMode(*primitiveValue);
 
@@ -3116,7 +3116,7 @@ void StyleResolver::checkForZoomChange(RenderStyle* style, RenderStyle* parentSt
 {
     if (!parentStyle)
         return;
-    
+
     if (style->effectiveZoom() == parentStyle->effectiveZoom())
         return;
 
@@ -3333,16 +3333,16 @@ bool StyleResolver::createFilterOperations(CSSValue* inValue, FilterOperations& 
     RenderStyle* style = state.style();
     RenderStyle* rootStyle = state.rootElementStyle();
     ASSERT(outOperations.isEmpty());
-    
+
     if (!inValue)
         return false;
-    
+
     if (inValue->isPrimitiveValue()) {
         CSSPrimitiveValue* primitiveValue = toCSSPrimitiveValue(inValue);
         if (primitiveValue->getValueID() == CSSValueNone)
             return true;
     }
-    
+
     if (!inValue->isValueList())
         return false;
 

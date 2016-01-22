@@ -29,7 +29,7 @@
 #include "StyleResolver.h"
 
 namespace WebCore {
-    
+
 StyleGeneratedImage::StyleGeneratedImage(PassRef<CSSImageGeneratorValue> value)
     : m_imageGeneratorValue(std::move(value))
     , m_fixedSize(m_imageGeneratorValue->isFixedSize())
@@ -61,7 +61,7 @@ LayoutSize StyleGeneratedImage::imageSize(const RenderElement* renderer, float m
 
         return LayoutSize(width, height);
     }
-    
+
     return m_containerSize;
 }
 

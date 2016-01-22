@@ -21,7 +21,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -117,8 +117,8 @@
 #if USE(CG)
 // CG SPI used for printing
 extern "C" {
-    CGAffineTransform CGContextGetBaseCTM(CGContextRef c); 
-    void CGContextSetBaseCTM(CGContextRef c, CGAffineTransform m); 
+    CGAffineTransform CGContextGetBaseCTM(CGContextRef c);
+    void CGContextSetBaseCTM(CGContextRef c, CGAffineTransform m);
 }
 #endif
 
@@ -229,7 +229,7 @@ static HTMLInputElement* inputElementFromDOMElement(IDOMElement* element)
 
 class WebFrame::WebFramePrivate {
 public:
-    WebFramePrivate() 
+    WebFramePrivate()
         : frame(0)
         , webView(0)
     {
@@ -412,7 +412,7 @@ ULONG STDMETHODCALLTYPE WebFrame::Release(void)
 
 // IWebFrame -------------------------------------------------------------------
 
-HRESULT STDMETHODCALLTYPE WebFrame::name( 
+HRESULT STDMETHODCALLTYPE WebFrame::name(
     /* [retval][out] */ BSTR* frameName)
 {
     if (!frameName) {
@@ -430,7 +430,7 @@ HRESULT STDMETHODCALLTYPE WebFrame::name(
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE WebFrame::webView( 
+HRESULT STDMETHODCALLTYPE WebFrame::webView(
     /* [retval][out] */ IWebView** view)
 {
     *view = 0;
@@ -448,7 +448,7 @@ HRESULT STDMETHODCALLTYPE WebFrame::frameView(
     return E_NOTIMPL;
 }
 
-HRESULT STDMETHODCALLTYPE WebFrame::DOMDocument( 
+HRESULT STDMETHODCALLTYPE WebFrame::DOMDocument(
     /* [retval][out] */ IDOMDocument** result)
 {
     if (!result) {
@@ -483,7 +483,7 @@ HRESULT WebFrame::DOMWindow(/* [retval][out] */ IDOMWindow** window)
     return *window ? S_OK : E_FAIL;
 }
 
-HRESULT STDMETHODCALLTYPE WebFrame::frameElement( 
+HRESULT STDMETHODCALLTYPE WebFrame::frameElement(
     /* [retval][out] */ IDOMHTMLElement** frameElement)
 {
     if (!frameElement)
@@ -501,7 +501,7 @@ HRESULT STDMETHODCALLTYPE WebFrame::frameElement(
     return htmlElement.copyRefTo(frameElement);
 }
 
-HRESULT STDMETHODCALLTYPE WebFrame::currentForm( 
+HRESULT STDMETHODCALLTYPE WebFrame::currentForm(
         /* [retval][out] */ IDOMElement **currentForm)
 {
     if (!currentForm) {
@@ -541,7 +541,7 @@ JSGlobalContextRef WebFrame::globalContextForScriptWorld(IWebScriptWorld* iWorld
     return toGlobalRef(coreFrame->script().globalObject(world->world())->globalExec());
 }
 
-HRESULT STDMETHODCALLTYPE WebFrame::loadRequest( 
+HRESULT STDMETHODCALLTYPE WebFrame::loadRequest(
     /* [in] */ IWebURLRequest* request)
 {
     COMPtr<WebMutableURLRequest> requestImpl;
@@ -549,7 +549,7 @@ HRESULT STDMETHODCALLTYPE WebFrame::loadRequest(
     HRESULT hr = request->QueryInterface(&requestImpl);
     if (FAILED(hr))
         return hr;
- 
+
     Frame* coreFrame = core(this);
     if (!coreFrame)
         return E_FAIL;
@@ -582,7 +582,7 @@ void WebFrame::loadData(PassRefPtr<WebCore::SharedBuffer> data, BSTR mimeType, B
 }
 
 
-HRESULT STDMETHODCALLTYPE WebFrame::loadData( 
+HRESULT STDMETHODCALLTYPE WebFrame::loadData(
     /* [in] */ IStream* data,
     /* [in] */ BSTR mimeType,
     /* [in] */ BSTR textEncodingName,
@@ -624,7 +624,7 @@ void WebFrame::loadHTMLString(BSTR string, BSTR baseURL, BSTR unreachableURL)
     loadData(sharedBuffer.release(), 0, utf16Encoding, baseURL, unreachableURL);
 }
 
-HRESULT STDMETHODCALLTYPE WebFrame::loadHTMLString( 
+HRESULT STDMETHODCALLTYPE WebFrame::loadHTMLString(
     /* [in] */ BSTR string,
     /* [in] */ BSTR baseURL)
 {
@@ -632,7 +632,7 @@ HRESULT STDMETHODCALLTYPE WebFrame::loadHTMLString(
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE WebFrame::loadAlternateHTMLString( 
+HRESULT STDMETHODCALLTYPE WebFrame::loadAlternateHTMLString(
     /* [in] */ BSTR str,
     /* [in] */ BSTR baseURL,
     /* [in] */ BSTR unreachableURL)
@@ -641,7 +641,7 @@ HRESULT STDMETHODCALLTYPE WebFrame::loadAlternateHTMLString(
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE WebFrame::loadArchive( 
+HRESULT STDMETHODCALLTYPE WebFrame::loadArchive(
     /* [in] */ IWebArchive* /*archive*/)
 {
     ASSERT_NOT_REACHED();
@@ -653,7 +653,7 @@ static inline WebDataSource *getWebDataSource(DocumentLoader* loader)
     return loader ? static_cast<WebDocumentLoader*>(loader)->dataSource() : 0;
 }
 
-HRESULT STDMETHODCALLTYPE WebFrame::dataSource( 
+HRESULT STDMETHODCALLTYPE WebFrame::dataSource(
     /* [retval][out] */ IWebDataSource** source)
 {
     if (!source) {
@@ -672,12 +672,12 @@ HRESULT STDMETHODCALLTYPE WebFrame::dataSource(
     *source = webDataSource;
 
     if (webDataSource)
-        webDataSource->AddRef(); 
+        webDataSource->AddRef();
 
     return *source ? S_OK : E_FAIL;
 }
 
-HRESULT STDMETHODCALLTYPE WebFrame::provisionalDataSource( 
+HRESULT STDMETHODCALLTYPE WebFrame::provisionalDataSource(
     /* [retval][out] */ IWebDataSource** source)
 {
     if (!source) {
@@ -696,7 +696,7 @@ HRESULT STDMETHODCALLTYPE WebFrame::provisionalDataSource(
     *source = webDataSource;
 
     if (webDataSource)
-        webDataSource->AddRef(); 
+        webDataSource->AddRef();
 
     return *source ? S_OK : E_FAIL;
 }
@@ -727,7 +727,7 @@ HRESULT STDMETHODCALLTYPE WebFrame::reload( void)
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE WebFrame::findFrameNamed( 
+HRESULT STDMETHODCALLTYPE WebFrame::findFrameNamed(
     /* [in] */ BSTR name,
     /* [retval][out] */ IWebFrame** frame)
 {
@@ -753,7 +753,7 @@ HRESULT STDMETHODCALLTYPE WebFrame::findFrameNamed(
     return foundWebFrame->QueryInterface(IID_IWebFrame, (void**)frame);
 }
 
-HRESULT STDMETHODCALLTYPE WebFrame::parentFrame( 
+HRESULT STDMETHODCALLTYPE WebFrame::parentFrame(
     /* [retval][out] */ IWebFrame** frame)
 {
     HRESULT hr = S_OK;
@@ -850,7 +850,7 @@ private:
     Frame* m_curChild;
 };
 
-HRESULT STDMETHODCALLTYPE WebFrame::childFrames( 
+HRESULT STDMETHODCALLTYPE WebFrame::childFrames(
     /* [retval][out] */ IEnumVARIANT **enumFrames)
 {
     if (!enumFrames)
@@ -950,7 +950,7 @@ HRESULT STDMETHODCALLTYPE WebFrame::firstLayoutDone(
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE WebFrame::loadType( 
+HRESULT STDMETHODCALLTYPE WebFrame::loadType(
     /* [retval][out] */ WebFrameLoadType* type)
 {
     if (!type) {
@@ -968,7 +968,7 @@ HRESULT STDMETHODCALLTYPE WebFrame::loadType(
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE WebFrame::pendingFrameUnloadEventCount( 
+HRESULT STDMETHODCALLTYPE WebFrame::pendingFrameUnloadEventCount(
     /* [retval][out] */ UINT* result)
 {
     if (!result) {
@@ -1030,14 +1030,14 @@ HRESULT WebFrame::setTextDirection(BSTR direction)
 
 // IWebDocumentText -----------------------------------------------------------
 
-HRESULT STDMETHODCALLTYPE WebFrame::supportsTextEncoding( 
+HRESULT STDMETHODCALLTYPE WebFrame::supportsTextEncoding(
     /* [retval][out] */ BOOL* result)
 {
     *result = FALSE;
     return E_NOTIMPL;
 }
 
-HRESULT STDMETHODCALLTYPE WebFrame::selectedString( 
+HRESULT STDMETHODCALLTYPE WebFrame::selectedString(
     /* [retval][out] */ BSTR* result)
 {
     *result = 0;
@@ -1365,7 +1365,7 @@ HRESULT WebFrame::searchForLabelsBeforeElement(const BSTR* labels, unsigned cLab
     size_t resultDistance;
     bool resultIsInCellAbove;
     String label = coreFrame->searchForLabelsBeforeElement(labelStrings, coreElement, &resultDistance, &resultIsInCellAbove);
-    
+
     *result = SysAllocStringLen(label.deprecatedCharacters(), label.length());
     if (label.length() && !*result)
         return E_OUTOFMEMORY;
@@ -1403,7 +1403,7 @@ HRESULT WebFrame::matchLabelsAgainstElement(const BSTR* labels, int cLabels, IDO
         return E_FAIL;
 
     String label = coreFrame->matchLabelsAgainstElement(labelStrings, coreElement);
-    
+
     *result = SysAllocStringLen(label.deprecatedCharacters(), label.length());
     if (label.length() && !*result)
         return E_OUTOFMEMORY;
@@ -1458,7 +1458,7 @@ void WebFrame::frameLoaderDestroyed()
 
 static IntRect printerRect(HDC printDC)
 {
-    return IntRect(0, 0, 
+    return IntRect(0, 0,
                    GetDeviceCaps(printDC, PHYSICALWIDTH)  - 2 * GetDeviceCaps(printDC, PHYSICALOFFSETX),
                    GetDeviceCaps(printDC, PHYSICALHEIGHT) - 2 * GetDeviceCaps(printDC, PHYSICALOFFSETY));
 }
@@ -1470,7 +1470,7 @@ void WebFrame::setPrinting(bool printing, const FloatSize& pageSize, const Float
     coreFrame->setPrinting(printing, pageSize, originalPageSize, maximumShrinkRatio, adjustViewSize ? AdjustViewSize : DoNotAdjustViewSize);
 }
 
-HRESULT STDMETHODCALLTYPE WebFrame::setInPrintingMode( 
+HRESULT STDMETHODCALLTYPE WebFrame::setInPrintingMode(
     /* [in] */ BOOL value,
     /* [in] */ HDC printDC)
 {
@@ -1551,7 +1551,7 @@ IntRect WebFrame::printerMarginRect(HDC printDC)
 const Vector<WebCore::IntRect>& WebFrame::computePageRects(HDC printDC)
 {
     ASSERT(m_inPrintingMode);
-    
+
     Frame* coreFrame = core(this);
     ASSERT(coreFrame);
     ASSERT(coreFrame->document());
@@ -1571,11 +1571,11 @@ const Vector<WebCore::IntRect>& WebFrame::computePageRects(HDC printDC)
         pageRect.height() - marginRect.y() - marginRect.maxY());
 
     computePageRectsForFrame(coreFrame, adjustedRect, headerHeight, footerHeight, 1.0,m_pageRects, m_pageHeight);
-    
+
     return m_pageRects;
 }
 
-HRESULT STDMETHODCALLTYPE WebFrame::getPrintedPageCount( 
+HRESULT STDMETHODCALLTYPE WebFrame::getPrintedPageCount(
     /* [in] */ HDC printDC,
     /* [retval][out] */ UINT *pageCount)
 {
@@ -1597,7 +1597,7 @@ HRESULT STDMETHODCALLTYPE WebFrame::getPrintedPageCount(
 
     const Vector<IntRect>& pages = computePageRects(printDC);
     *pageCount = (UINT) pages.size();
-    
+
     return S_OK;
 }
 
@@ -1692,7 +1692,7 @@ void WebFrame::drawHeader(PlatformGraphicsContext* pctx, IWebUIDelegate* ui, con
 void WebFrame::drawFooter(PlatformGraphicsContext* pctx, IWebUIDelegate* ui, const IntRect& pageRect, UINT page, UINT pageCount, float headerHeight, float footerHeight)
 {
     HDC hdc = hdcFromContext(pctx);
-    
+
     int x = pageRect.x();
     int y = max(static_cast<int>(headerHeight) + pageRect.height(), m_pageHeight  -static_cast<int>(footerHeight));
     RECT footerRect = {x, y, x + pageRect.width(), y + static_cast<int>(footerHeight)};
@@ -1706,8 +1706,8 @@ static XFORM buildXFORMFromCairo(HDC targetDC, cairo_t* previewContext)
     GetWorldTransform(targetDC, &scaled);
 
     cairo_matrix_t ctm;
-    cairo_get_matrix(previewContext, &ctm);    
-        
+    cairo_get_matrix(previewContext, &ctm);
+
     // Scale to the preview screen bounds
     scaled.eM11 = ctm.xx;
     scaled.eM22 = ctm.yy;
@@ -1726,10 +1726,10 @@ void WebFrame::spoolPage(PlatformGraphicsContext* pctx, GraphicsContext* spoolCt
     HDC hdc = hdcFromContext(pctx);
 
     spoolCtx->save();
-    
+
     XFORM original, scaled;
     GetWorldTransform(hdc, &original);
-    
+
     cairo_t* cr = pctx->cr();
     bool preview = (hdc != printDC);
     if (preview) {
@@ -1741,7 +1741,7 @@ void WebFrame::spoolPage(PlatformGraphicsContext* pctx, GraphicsContext* spoolCt
     }
 
     float scale = scaleFactor(printDC, marginRect, pageRect);
-    
+
     IntRect cairoMarginRect(marginRect);
     cairoMarginRect.scale(1 / scale);
 
@@ -1754,7 +1754,7 @@ void WebFrame::spoolPage(PlatformGraphicsContext* pctx, GraphicsContext* spoolCt
     cairo_translate(cr, -pageRect.x(), -pageRect.y());
     coreFrame->view()->paintContents(spoolCtx, pageRect);
     cairo_translate(cr, pageRect.x(), pageRect.y());
-    
+
     if (preview) {
         // If this is a preview, the Windows HDC was set to a non-scaled state so that Cairo would
         // draw correctly.  We need to rescale the HDC to the correct preview scale so our GDI-based
@@ -1762,13 +1762,13 @@ void WebFrame::spoolPage(PlatformGraphicsContext* pctx, GraphicsContext* spoolCt
         // (see https://bugs.freedesktop.org/show_bug.cgi?id=28161)
         SetWorldTransform(hdc, &scaled);
     }
-    
+
     XFORM xform = TransformationMatrix().translate(marginRect.x(), marginRect.y()).scale(scale);
     ModifyWorldTransform(hdc, &xform, MWT_LEFTMULTIPLY);
-   
+
     if (headerHeight)
         drawHeader(pctx, ui, pageRect, headerHeight);
-    
+
     if (footerHeight)
         drawFooter(pctx, ui, pageRect, page, pageCount, headerHeight, footerHeight);
 
@@ -1789,7 +1789,7 @@ static void setCairoTransformToPreviewHDC(cairo_t* previewCtx, HDC previewDC)
     XFORM unscaledCTM = passedCTM;
     unscaledCTM.eM11 = 1.0;
     unscaledCTM.eM22 = 1.0;
-        
+
     SetWorldTransform(previewDC, &unscaledCTM);
 
     // Make the Cairo transform match the information passed to WebKit
@@ -1797,12 +1797,12 @@ static void setCairoTransformToPreviewHDC(cairo_t* previewCtx, HDC previewDC)
     cairo_matrix_t ctm = { passedCTM.eM11, passedCTM.eM12, passedCTM.eM21,
                            passedCTM.eM22, passedCTM.eDx, passedCTM.eDy };
 
-    cairo_set_matrix(previewCtx, &ctm);    
+    cairo_set_matrix(previewCtx, &ctm);
 }
 
 #endif
 
-HRESULT STDMETHODCALLTYPE WebFrame::spoolPages( 
+HRESULT STDMETHODCALLTYPE WebFrame::spoolPages(
     /* [in] */ HDC printDC,
     /* [in] */ UINT startPage,
     /* [in] */ UINT endPage,
@@ -1818,7 +1818,7 @@ HRESULT STDMETHODCALLTYPE WebFrame::spoolPages(
         ASSERT_NOT_REACHED();
         return E_POINTER;
     }
-    
+
     HDC targetDC = (ctx) ? (HDC)ctx : printDC;
 
     cairo_surface_t* printSurface = 0;
@@ -1826,10 +1826,10 @@ HRESULT STDMETHODCALLTYPE WebFrame::spoolPages(
         printSurface = cairo_win32_surface_create(targetDC); // in-memory
     else
         printSurface = cairo_win32_printing_surface_create(targetDC); // metafile
-    
+
     cairo_t* cr = cairo_create(printSurface);
     if (!cr) {
-        cairo_surface_destroy(printSurface);    
+        cairo_surface_destroy(printSurface);
         return E_FAIL;
     }
 
@@ -1843,7 +1843,7 @@ HRESULT STDMETHODCALLTYPE WebFrame::spoolPages(
         // for a bug in Cairo (see https://bugs.freedesktop.org/show_bug.cgi?id=28161)
         setCairoTransformToPreviewHDC(cr, targetDC);
     }
-    
+
     cairo_surface_set_fallback_resolution(printSurface, 72.0, 72.0);
 #endif
 
@@ -1893,7 +1893,7 @@ HRESULT STDMETHODCALLTYPE WebFrame::spoolPages(
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE WebFrame::isFrameSet( 
+HRESULT STDMETHODCALLTYPE WebFrame::isFrameSet(
     /* [retval][out] */ BOOL* result)
 {
     *result = FALSE;
@@ -1906,7 +1906,7 @@ HRESULT STDMETHODCALLTYPE WebFrame::isFrameSet(
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE WebFrame::string( 
+HRESULT STDMETHODCALLTYPE WebFrame::string(
     /* [retval][out] */ BSTR *result)
 {
     *result = 0;
@@ -1921,7 +1921,7 @@ HRESULT STDMETHODCALLTYPE WebFrame::string(
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE WebFrame::size( 
+HRESULT STDMETHODCALLTYPE WebFrame::size(
     /* [retval][out] */ SIZE *size)
 {
     if (!size)
@@ -1939,7 +1939,7 @@ HRESULT STDMETHODCALLTYPE WebFrame::size(
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE WebFrame::hasScrollBars( 
+HRESULT STDMETHODCALLTYPE WebFrame::hasScrollBars(
     /* [retval][out] */ BOOL *result)
 {
     if (!result)
@@ -1960,7 +1960,7 @@ HRESULT STDMETHODCALLTYPE WebFrame::hasScrollBars(
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE WebFrame::contentBounds( 
+HRESULT STDMETHODCALLTYPE WebFrame::contentBounds(
     /* [retval][out] */ RECT *result)
 {
     if (!result)
@@ -1980,7 +1980,7 @@ HRESULT STDMETHODCALLTYPE WebFrame::contentBounds(
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE WebFrame::frameBounds( 
+HRESULT STDMETHODCALLTYPE WebFrame::frameBounds(
     /* [retval][out] */ RECT *result)
 {
     if (!result)
@@ -2001,7 +2001,7 @@ HRESULT STDMETHODCALLTYPE WebFrame::frameBounds(
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE WebFrame::isDescendantOfFrame( 
+HRESULT STDMETHODCALLTYPE WebFrame::isDescendantOfFrame(
     /* [in] */ IWebFrame *ancestor,
     /* [retval][out] */ BOOL *result)
 {
@@ -2051,7 +2051,7 @@ HRESULT WebFrame::stringByEvaluatingJavaScriptInScriptWorld(IWebScriptWorld* iWo
         return S_OK;
 
     // This bizarre set of rules matches behavior from WebKit for Safari 2.0.
-    // If you don't like it, use -[WebScriptObject evaluateWebScript:] or 
+    // If you don't like it, use -[WebScriptObject evaluateWebScript:] or
     // JSEvaluateScript instead, since they have less surprising semantics.
     if (!result || !result.isBoolean() && !result.isString() && !result.isNumber())
         return S_OK;

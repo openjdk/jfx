@@ -64,7 +64,7 @@ public class EnumControl<T> extends GridPane {
         this.effectPickerController = effectPickerController;
         initialize(label, values, initValue);
     }
-    
+
     public ObjectProperty<T> valueProperty() {
         return value;
     }
@@ -100,9 +100,9 @@ public class EnumControl<T> extends GridPane {
             // Then notify the controller a change occured
             effectPickerController.incrementRevision();
         });
-        
+
         setValue(initValue);
-        
+
         editor_choicebox.addEventHandler(ActionEvent.ACTION, (Event event) -> {
             event.consume();
         });

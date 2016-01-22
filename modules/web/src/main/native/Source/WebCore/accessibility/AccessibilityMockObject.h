@@ -29,14 +29,14 @@
 #include "AccessibilityObject.h"
 
 namespace WebCore {
-    
+
 class AccessibilityMockObject : public AccessibilityObject {
-    
+
 protected:
     AccessibilityMockObject();
 public:
     virtual ~AccessibilityMockObject();
-    
+
     virtual AccessibilityObject* parentObject() const override { return m_parent; }
     virtual void setParent(AccessibilityObject* parent) { m_parent = parent; };
     virtual bool isEnabled() const override { return true; }
@@ -51,10 +51,10 @@ private:
     virtual bool isMockObject() const override { return true; }
 
     virtual bool computeAccessibilityIsIgnored() const override;
-}; 
+};
 
 ACCESSIBILITY_OBJECT_TYPE_CASTS(AccessibilityMockObject, isMockObject())
-    
-} // namespace WebCore 
+
+} // namespace WebCore
 
 #endif // AccessibilityMockObject_h

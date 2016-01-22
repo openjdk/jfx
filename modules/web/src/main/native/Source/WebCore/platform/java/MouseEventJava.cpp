@@ -38,6 +38,6 @@ PlatformEvent::Type getWebCoreMouseEventType(jint eventID)
     default:
         return PlatformEvent::MouseMoved;
     }
-}    
+}
 
 } // namespace WebCore

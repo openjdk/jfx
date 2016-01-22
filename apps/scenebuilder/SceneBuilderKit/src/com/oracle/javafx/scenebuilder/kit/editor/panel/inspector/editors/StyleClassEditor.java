@@ -83,7 +83,7 @@ public class StyleClassEditor extends InlineListEditor {
         super(propMeta, selectedClasses);
         initialize(selectedInstances, editorController);
     }
-    
+
     private void initialize(Set<FXOMInstance> selectedInstances, EditorController editorController) {
         this.selectedInstances = selectedInstances;
         this.editorController = editorController;
@@ -147,7 +147,7 @@ public class StyleClassEditor extends InlineListEditor {
             if (item.isEmpty()) {
                 continue;
             }
-            
+
             // We don't want to show the default theme classes
             // (e.g. combo-box, combo-box-base for ComboBox)
             Object defaultValue = getPropertyMeta().getDefaultValueObject();
@@ -156,7 +156,7 @@ public class StyleClassEditor extends InlineListEditor {
             if (defaultClasses.contains(item)) {
                 continue;
             }
-            
+
             EditorItem editorItem;
             if (itemsIter.hasNext()) {
                 // re-use the current items first
@@ -284,7 +284,7 @@ public class StyleClassEditor extends InlineListEditor {
             moveUpMi.setText(I18N.getString("inspector.list.moveup"));
             moveDownMi.setText(I18N.getString("inspector.list.movedown"));
 
-            // Add suggested classes in the already existing action menu button, 
+            // Add suggested classes in the already existing action menu button,
             // since we do not use the AutoSuggestEditor menu button for this editor.
             if (!cssClassesMap.isEmpty()) {
                 actionMb.getItems().add(new SeparatorMenuItem());

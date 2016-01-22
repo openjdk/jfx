@@ -19,7 +19,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -73,7 +73,7 @@ private:
 
     ImageDocument* m_doc;
 };
-    
+
 class ImageDocumentParser final : public RawDataDocumentParser {
 public:
     static PassRefPtr<ImageDocumentParser> create(ImageDocument& document)
@@ -85,7 +85,7 @@ public:
     {
         return toImageDocument(RawDataDocumentParser::document());
     }
-    
+
 private:
     ImageDocumentParser(ImageDocument& document)
         : RawDataDocumentParser(document)
@@ -172,7 +172,7 @@ void ImageDocumentParser::finish()
 
     document()->finishedParsing();
 }
-    
+
 // --------
 
 ImageDocument::ImageDocument(Frame* frame, const URL& url)
@@ -185,7 +185,7 @@ ImageDocument::ImageDocument(Frame* frame, const URL& url)
     setCompatibilityMode(QuirksMode);
     lockCompatibilityMode();
 }
-    
+
 PassRefPtr<DocumentParser> ImageDocument::createParser()
 {
     return ImageDocumentParser::create(*this);
@@ -202,17 +202,17 @@ void ImageDocument::createDocumentStructure()
 
     RefPtr<Element> body = Document::createElement(bodyTag, false);
     body->setAttribute(styleAttr, "margin: 0px;");
-    
+
     rootElement->appendChild(body, IGNORE_EXCEPTION);
-    
+
     RefPtr<ImageDocumentElement> imageElement = ImageDocumentElement::create(*this);
-    
-    imageElement->setAttribute(styleAttr, "-webkit-user-select: none");        
+
+    imageElement->setAttribute(styleAttr, "-webkit-user-select: none");
     imageElement->setLoadManually(true);
     imageElement->setSrc(url().string());
-    
+
     body->appendChild(imageElement, IGNORE_EXCEPTION);
-    
+
     if (shouldShrinkToFit()) {
         // Add event listeners
         RefPtr<EventListener> listener = ImageEventListener::create(this);
@@ -301,15 +301,15 @@ void ImageDocument::imageClicked(int x, int y)
 void ImageDocument::imageUpdated()
 {
     ASSERT(m_imageElement);
-    
+
     if (m_imageSizeIsKnown)
         return;
 
     if (m_imageElement->cachedImage()->imageSizeForRenderer(m_imageElement->renderer(), pageZoomFactor(this)).isEmpty())
         return;
-    
+
     m_imageSizeIsKnown = true;
-    
+
     if (shouldShrinkToFit()) {
         // Force resizing of the image
         windowSizeChanged();
@@ -320,16 +320,16 @@ void ImageDocument::restoreImageSize()
 {
     if (!m_imageElement || !m_imageSizeIsKnown)
         return;
-    
+
     LayoutSize imageSize = m_imageElement->cachedImage()->imageSizeForRenderer(m_imageElement->renderer(), pageZoomFactor(this));
     m_imageElement->setWidth(imageSize.width());
     m_imageElement->setHeight(imageSize.height());
-    
+
     if (imageFitsInWindow())
         m_imageElement->removeInlineStyleProperty(CSSPropertyCursor);
     else
         m_imageElement->setInlineStyleProperty(CSSPropertyCursor, CSSValueWebkitZoomOut);
-        
+
     m_didShrinkImage = false;
 }
 
@@ -400,10 +400,10 @@ void ImageDocument::windowSizeChanged()
 }
 
 CachedImage* ImageDocument::cachedImage()
-{ 
+{
     if (!m_imageElement)
         createDocumentStructure();
-    
+
     return m_imageElement->cachedImage();
 }
 

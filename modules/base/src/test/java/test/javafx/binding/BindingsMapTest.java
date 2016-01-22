@@ -42,7 +42,7 @@ import org.junit.Test;
 import static org.junit.Assert.*;
 
 public class BindingsMapTest {
-    
+
     private static final double EPSILON_DOUBLE = 1e-12;
     private static final float EPSILON_FLOAT = 1e-5f;
 
@@ -83,7 +83,7 @@ public class BindingsMapTest {
     public void testSize() {
         final IntegerBinding size = Bindings.size(property);
         DependencyUtils.checkDependencies(size.getDependencies(), property);
-        
+
         assertEquals(0, size.get());
         property.set(map1);
         assertEquals(2, size.get());
@@ -194,17 +194,17 @@ public class BindingsMapTest {
     public void testValueAt_Constant_Null() {
         Bindings.valueAt(null, key1);
     }
-    
+
     @Test
     public void testValueAt_Variable() {
         final ObjectBinding<Object> binding = Bindings.valueAt(property, index);
         DependencyUtils.checkDependencies(binding.getDependencies(), property, index);
-        
+
         index.set(null);
         assertNull(binding.get());
         index.set(key1);
         assertNull(binding.get());
-        
+
         property.set(map1);
         index.set(null);
         assertNull(binding.get());
@@ -214,7 +214,7 @@ public class BindingsMapTest {
         assertEquals(data2, binding.get());
         index.set(key3);
         assertNull(binding.get());
-        
+
         property.remove(key2);
         index.set(null);
         assertNull(binding.get());
@@ -222,7 +222,7 @@ public class BindingsMapTest {
         assertEquals(data1, binding.get());
         index.set(key2);
         assertNull(binding.get());
-        
+
         property.set(map2);
         index.set(null);
         assertNull(binding.get());
@@ -251,12 +251,12 @@ public class BindingsMapTest {
     public void testValueAt_Variable_Null() {
         Bindings.valueAt((ObservableMap<String, Object>)null, index);
     }
-    
+
     @Test(expected = NullPointerException.class)
     public void testValueAt_Variable_Null_2() {
         Bindings.valueAt(property, (ObservableValue<String>)null);
     }
-    
+
     @Test
     public void testBooleanValueAt_Constant() {
         final boolean defaultData = false;
@@ -322,7 +322,7 @@ public class BindingsMapTest {
     public void testBooleanValueAt_Constant_Null() {
         Bindings.booleanValueAt(null, key1);
     }
-    
+
     @Test
     public void testBooleanValueAt_Variable() {
         final boolean defaultData = false;
@@ -400,13 +400,13 @@ public class BindingsMapTest {
     public void testBooleanValueAt_Variable_Null() {
         Bindings.booleanValueAt((ObservableMap<String, Boolean>)null, index);
     }
-    
+
     @Test(expected = NullPointerException.class)
     public void testBooleanValueAt_Variable_Null_2() {
         final MapProperty<String, Boolean> localProperty = new SimpleMapProperty<String, Boolean>();
         Bindings.booleanValueAt(localProperty, (ObservableValue<String>)null);
     }
-    
+
     @Test
     public void testDoubleValueAt_Constant() {
         final double defaultData = 0.0;
@@ -472,7 +472,7 @@ public class BindingsMapTest {
     public void testDoubleValueAt_Constant_Null() {
         Bindings.doubleValueAt(null, key1);
     }
-    
+
     @Test
     public void testDoubleValueAt_Variable() {
         final double defaultData = 0.0;
@@ -550,13 +550,13 @@ public class BindingsMapTest {
     public void testDoubleValueAt_Variable_Null_1() {
         Bindings.doubleValueAt((ObservableMap<String, Double>)null, index);
     }
-    
+
     @Test(expected = NullPointerException.class)
     public void testDoubleValueAt_Variable_Null_2() {
         final MapProperty<String, Double> localProperty = new SimpleMapProperty<String, Double>();
         Bindings.doubleValueAt(localProperty, (ObservableValue<String>)null);
     }
-    
+
     @Test
     public void testFloatValueAt_Constant() {
         final float defaultData = 0.0f;
@@ -622,7 +622,7 @@ public class BindingsMapTest {
     public void testFloatValueAt_Constant_Null() {
         Bindings.floatValueAt(null, key1);
     }
-    
+
     @Test
     public void testFloatValueAt_Variable() {
         final float defaultData = 0.0f;
@@ -700,13 +700,13 @@ public class BindingsMapTest {
     public void testFloatValueAt_Variable_Null_1() {
         Bindings.floatValueAt((ObservableMap<String, Float>)null, index);
     }
-    
+
     @Test(expected = NullPointerException.class)
     public void testFloatValueAt_Variable_Null_2() {
         final MapProperty<String, Float> localProperty = new SimpleMapProperty<String, Float>();
         Bindings.floatValueAt(localProperty, (ObservableValue<String>)null);
     }
-    
+
     @Test
     public void testIntegerValueAt_Constant() {
         final int defaultData = 0;
@@ -772,7 +772,7 @@ public class BindingsMapTest {
     public void testIntegerValueAt_Constant_Null() {
         Bindings.integerValueAt(null, key1);
     }
-    
+
     @Test
     public void testIntegerValueAt_Variable() {
         final int defaultData = 0;
@@ -850,13 +850,13 @@ public class BindingsMapTest {
     public void testIntegerValueAt_Variable_Null_1() {
         Bindings.integerValueAt((ObservableMap<String, Integer>)null, index);
     }
-    
+
     @Test(expected = NullPointerException.class)
     public void testIntegerValueAt_Variable_Null_2() {
         final MapProperty<String, Integer> localProperty = new SimpleMapProperty<String, Integer>();
         Bindings.integerValueAt(localProperty, (ObservableValue<String>)null);
     }
-    
+
     @Test
     public void testLongValueAt_Constant() {
         final long defaultData = 0L;
@@ -922,7 +922,7 @@ public class BindingsMapTest {
     public void testLongValueAt_Constant_Null() {
         Bindings.longValueAt(null, key1);
     }
-    
+
     @Test
     public void testLongValueAt_Variable() {
         final long defaultData = 0;
@@ -1000,13 +1000,13 @@ public class BindingsMapTest {
     public void testLongValueAt_Variable_Null() {
         Bindings.longValueAt((ObservableMap<String, Long>)null, index);
     }
-    
+
     @Test(expected = NullPointerException.class)
     public void testLongValueAt_Variable_Null_2() {
         final MapProperty<String, Long> localProperty = new SimpleMapProperty<String, Long>();
         Bindings.longValueAt(localProperty, (ObservableValue<String>)null);
     }
-    
+
     @Test
     public void testStringValueAt_Constant() {
         final String defaultData = null;
@@ -1017,7 +1017,7 @@ public class BindingsMapTest {
         localMap1.put(key1, localData1);
         localMap1.put(key2, localData2);
         final ObservableMap<String, String> localMap2 = FXCollections.observableHashMap();
-        
+
         final StringBinding binding0 = Bindings.stringValueAt(localProperty, key1);
         final StringBinding binding1 = Bindings.stringValueAt(localProperty, key2);
         final StringBinding binding2 = Bindings.stringValueAt(localProperty, key3);
@@ -1027,17 +1027,17 @@ public class BindingsMapTest {
         assertEquals(defaultData, binding0.get());
         assertEquals(defaultData, binding1.get());
         assertEquals(defaultData, binding2.get());
-        
+
         localProperty.set(localMap1);
         assertEquals(localData1, binding0.get());
         assertEquals(localData2, binding1.get());
         assertEquals(defaultData, binding2.get());
-        
+
         localProperty.remove(key2);
         assertEquals(localData1, binding0.get());
         assertEquals(defaultData, binding1.get());
         assertEquals(defaultData, binding2.get());
-        
+
         localProperty.set(localMap2);
         assertEquals(defaultData, binding0.get());
         assertEquals(defaultData, binding1.get());
@@ -1059,7 +1059,7 @@ public class BindingsMapTest {
     public void testStringValueAt_Constant_Null() {
         Bindings.stringValueAt(null, key1);
     }
-    
+
     @Test
     public void testStringValueAt_Variable() {
         final String defaultData = null;
@@ -1078,7 +1078,7 @@ public class BindingsMapTest {
         assertEquals(defaultData, binding.get());
         index.set(key1);
         assertEquals(defaultData, binding.get());
-        
+
         localProperty.set(localMap1);
         index.set(null);
         assertEquals(defaultData, binding.get());
@@ -1088,7 +1088,7 @@ public class BindingsMapTest {
         assertEquals(localData2, binding.get());
         index.set(key3);
         assertEquals(defaultData, binding.get());
-        
+
         localProperty.remove(key2);
         index.set(null);
         assertEquals(defaultData, binding.get());
@@ -1096,7 +1096,7 @@ public class BindingsMapTest {
         assertEquals(localData1, binding.get());
         index.set(key2);
         assertEquals(defaultData, binding.get());
-        
+
         localProperty.set(localMap2);
         index.set(null);
         assertEquals(defaultData, binding.get());
@@ -1125,12 +1125,12 @@ public class BindingsMapTest {
     public void testStringValueAt_Variable_Null() {
         Bindings.stringValueAt((ObservableMap<String, String>)null, index);
     }
-    
+
     @Test(expected = NullPointerException.class)
     public void testStringValueAt_Variable_Null_2() {
         final MapProperty<String, String> localProperty = new SimpleMapProperty<String, String>();
         Bindings.stringValueAt(localProperty, (ObservableValue<String>)null);
     }
-    
-    
+
+
 }

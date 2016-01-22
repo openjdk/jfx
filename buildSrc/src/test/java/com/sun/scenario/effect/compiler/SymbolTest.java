@@ -45,8 +45,8 @@ public class SymbolTest {
         jslcinfo.peerName = "Foo";
         jslcinfo.outTypes = JSLC.OUT_ALL;
         JSLC.compile(jslcinfo, s, Long.MAX_VALUE);
-    }    
-    
+    }
+
     @Test(expected = RuntimeException.class)
     public void specialVarUsedOutsideOfMain() throws Exception {
         String s =

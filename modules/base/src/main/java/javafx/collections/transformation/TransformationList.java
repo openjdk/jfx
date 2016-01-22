@@ -34,10 +34,10 @@ import javafx.collections.WeakListChangeListener;
 /**
  * A base class for all lists that wraps other lists in a way that changes the list's
  * elements, order, size or generally it's structure.
- * 
+ *
  * If the source list is observable, a listener is automatically added to it
  * and the events are delegated to {@link #onSourceChanged(javafx.collections.ListChangeListener.Change)}
- * 
+ *
  * @param <E> the type parameter of this list
  * @param <F> the upper bound of the type of the source list
  * @since JavaFX 8.0
@@ -57,7 +57,7 @@ public abstract class TransformationList<E, F> extends ObservableListBase<E> imp
 
     /**
      * Creates a new Transformation list wrapped around the source list.
-     * @param source the wrapped list 
+     * @param source the wrapped list
      */
     @SuppressWarnings("unchecked")
     protected TransformationList(ObservableList<? extends F> source) {
@@ -75,12 +75,12 @@ public abstract class TransformationList<E, F> extends ObservableListBase<E> imp
     public final ObservableList<? extends F> getSource() {
         return source;
     }
-    
+
     /**
      * Checks whether the provided list is in the chain under this
      * {@code TransformationList}.
-     * 
-     * This means the list is either the direct source as returned by 
+     *
+     * This means the list is either the direct source as returned by
      * {@link #getSource()} or the direct source is a {@code TransformationList},
      * and the list is in it's transformation chain.
      * @param list the list to check
@@ -114,24 +114,24 @@ public abstract class TransformationList<E, F> extends ObservableListBase<E> imp
      * @param c the change
      */
     protected abstract void sourceChanged(Change<? extends F> c);
-    
+
     /**
      * Maps the index of this list's element to an index in the direct source list.
      * @param index the index in this list
      * @return the index of the element's origin in the source list
-     * @see #getSource() 
+     * @see #getSource()
      */
     public abstract int getSourceIndex(int index);
-    
+
     /**
      * Maps the index of this list's element to an index of the provided {@code list}.
-     * 
+     *
      * The {@code list} must be in the transformation chain.
-     * 
+     *
      * @param list a list from the transformation chain
      * @param index the index of an element in this list
      * @return the index of the element's origin in the provided list
-     * @see #isInTransformationChain(javafx.collections.ObservableList) 
+     * @see #isInTransformationChain(javafx.collections.ObservableList)
      */
     public final int getSourceIndexFor(ObservableList<?> list, int index) {
         if (!isInTransformationChain(list)) {
@@ -147,5 +147,5 @@ public abstract class TransformationList<E, F> extends ObservableListBase<E> imp
         }
         return idx;
     }
-    
+
 }

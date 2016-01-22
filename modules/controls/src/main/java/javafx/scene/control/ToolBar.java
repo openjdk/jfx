@@ -114,14 +114,14 @@ public class ToolBar extends Control {
         getStyleClass().setAll(DEFAULT_STYLE_CLASS);
         setAccessibleRole(AccessibleRole.TOOL_BAR);
         // focusTraversable is styleable through css. Calling setFocusTraversable
-        // makes it look to css like the user set the value and css will not 
-        // override. Initializing focusTraversable by calling set on the 
+        // makes it look to css like the user set the value and css will not
+        // override. Initializing focusTraversable by calling set on the
         // CssMetaData ensures that css will be able to override the value.
         ((StyleableProperty<Boolean>)(WritableValue<Boolean>)focusTraversableProperty()).applyStyle(null, Boolean.FALSE);
-        
+
         // initialize css pseudo-class state
         pseudoClassStateChanged(HORIZONTAL_PSEUDOCLASS_STATE, true);
-        
+
     }
 
     /***************************************************************************
@@ -200,17 +200,17 @@ public class ToolBar extends Control {
     private static final String DEFAULT_STYLE_CLASS = "tool-bar";
 
     private static class StyleableProperties {
-        private static final CssMetaData<ToolBar,Orientation> ORIENTATION = 
+        private static final CssMetaData<ToolBar,Orientation> ORIENTATION =
                 new CssMetaData<ToolBar,Orientation>("-fx-orientation",
-                new EnumConverter<Orientation>(Orientation.class), 
+                new EnumConverter<Orientation>(Orientation.class),
                 Orientation.HORIZONTAL) {
 
             @Override
             public Orientation getInitialValue(ToolBar node) {
-                // A vertical ToolBar should remain vertical 
+                // A vertical ToolBar should remain vertical
                 return node.getOrientation();
             }
-            
+
             @Override
             public boolean isSettable(ToolBar n) {
                 return n.orientation == null || !n.orientation.isBound();

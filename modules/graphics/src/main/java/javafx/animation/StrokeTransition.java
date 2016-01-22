@@ -43,37 +43,37 @@ import javafx.util.Duration;
  * {@link javafx.scene.paint.Color} in this case).
  * <p>
  * It stops at the {@code toValue} value.
- * 
+ *
  * <p>
  * Code Segment Example:
  * </p>
- * 
+ *
  * <pre>
  * <code>
  * import javafx.scene.shape.*;
  * import javafx.animation.transition.*;
- * 
+ *
  * ...
- * 
+ *
  *     Rectangle rect = new Rectangle (100, 40, 100, 100);
  *     rect.setArcHeight(50);
  *     rect.setArcWidth(50);
  *     rect.setFill(null);
- * 
+ *
  *     StrokeTransition st = new StrokeTransition(Duration.millis(3000), rect, Color.RED, Color.BLUE);
  *     st.setCycleCount(4);
  *     st.setAutoReverse(true);
- * 
+ *
  *     st.play();
- * 
+ *
  * ...
- * 
+ *
  * </code>
  * </pre>
- * 
+ *
  * @see Transition
  * @see Animation
- * 
+ *
  * @since JavaFX 2.0
  */
 public final class StrokeTransition extends Transition {
@@ -126,7 +126,7 @@ public final class StrokeTransition extends Transition {
      *
      * Setting duration to value lower than {@link Duration#ZERO} will result
      * in {@link IllegalArgumentException}.
-     * 
+     *
      * @defaultValue 400ms
      */
     private ObjectProperty<Duration> duration;
@@ -180,7 +180,7 @@ public final class StrokeTransition extends Transition {
      * {@code StrokeTransition}. If the value of {@code fromValue} is changed
      * for a running {@code StrokeTransition}, the animation has to be stopped
      * and started again to pick up the new value.
-     * 
+     *
      * @defaultValue {@code null}
      */
     private ObjectProperty<Color> fromValue;
@@ -210,7 +210,7 @@ public final class StrokeTransition extends Transition {
      * {@code StrokeTransition}. If the value of {@code toValue} is changed for
      * a running {@code StrokeTransition}, the animation has to be stopped and
      * started again to pick up the new value.
-     * 
+     *
      * @defaultValue {@code null}
      */
     private ObjectProperty<Color> toValue;
@@ -234,12 +234,12 @@ public final class StrokeTransition extends Transition {
     }
 
 /**
-	 * The constructor of {@code StrokeTransition}
-	 * @param duration The duration of the {@code StrokeTransition}
-	 * @param shape The {@code shape} which filling will be animated
-	 * @param fromValue The start value of the color-animation
-	 * @param toValue The end value of the color-animation
-	 */
+     * The constructor of {@code StrokeTransition}
+     * @param duration The duration of the {@code StrokeTransition}
+     * @param shape The {@code shape} which filling will be animated
+     * @param fromValue The start value of the color-animation
+     * @param toValue The end value of the color-animation
+     */
     public StrokeTransition(Duration duration, Shape shape, Color fromValue,
             Color toValue) {
         setDuration(duration);
@@ -250,18 +250,18 @@ public final class StrokeTransition extends Transition {
     }
 
 /**
-	 * The constructor of {@code StrokeTransition}
-	 * @param duration The duration of the {@code StrokeTransition}
-	 * @param fromValue The start value of the color-animation
-	 * @param toValue The end value of the color-animation
-	 */
+     * The constructor of {@code StrokeTransition}
+     * @param duration The duration of the {@code StrokeTransition}
+     * @param fromValue The start value of the color-animation
+     * @param toValue The end value of the color-animation
+     */
     public StrokeTransition(Duration duration, Color fromValue, Color toValue) {
         this(duration, null, fromValue, toValue);
     }
 
     /**
      * The constructor of {@code StrokeTransition}
-     * 
+     *
      * @param duration
      *            The duration of the {@code StrokeTransition}
      * @param shape
@@ -273,7 +273,7 @@ public final class StrokeTransition extends Transition {
 
     /**
      * The constructor of {@code StrokeTransition}
-     * 
+     *
      * @param duration
      *            The duration of the {@code StrokeTransition}
      */

@@ -275,7 +275,7 @@ public class SingleTouchTest extends ParameterizedTestBase {
         TestLogShim.waitForLog("Mouse clicked: %d, %d", x1, y1);
         TestLogShim.waitForLog("Touch released: %d, %d", x1, y1);
     }
-	
+
     /**
      * Touch down, change scene, release finger.
      */

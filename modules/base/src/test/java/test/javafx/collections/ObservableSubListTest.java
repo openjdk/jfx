@@ -38,7 +38,7 @@ import org.junit.runners.Parameterized;
 
 /**
  * Tests for sublists of ObservableList.
- * 
+ *
  */
 @RunWith(Parameterized.class)
 public class ObservableSubListTest {
@@ -230,7 +230,7 @@ public class ObservableSubListTest {
         list = FXCollections.observableList(new ArrayList<String>());
         list.addAll(Arrays.asList("a", null, "a", null, "a", null, "a"));
         sublist = list.subList(1, 5);
-        
+
         assertEquals(3, sublist.lastIndexOf("a"));
         assertEquals(2, sublist.lastIndexOf(null));
     }
@@ -398,7 +398,7 @@ public class ObservableSubListTest {
         try { sublist.containsAll(Collections.singletonList("x")); } catch (ConcurrentModificationException e) {return;}
         fail("Expected ConcurrentModificationException");
     }
-    
+
     @Test
     public void testConcurrencyIsEmpty() {
         list.add("x");
@@ -440,7 +440,7 @@ public class ObservableSubListTest {
         try { sublist.removeAll(Arrays.asList("c", "d")); } catch (ConcurrentModificationException e) {return;}
         fail("Expected ConcurrentModificationException");
     }
-    
+
     @Test
     public void testConcurrencyRetainAll() {
         list.add("x");

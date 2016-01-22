@@ -64,7 +64,7 @@ public final class StubPlatformImageInfo {
     public int getWidth() {
         return width;
     }
-    
+
     public boolean contains(final int x, final int y) {
         final int i = (2 * x / width) & 1;
         final int j = (2 * y / height) & 1;

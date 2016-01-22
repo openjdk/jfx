@@ -466,7 +466,7 @@ public class Affine3D extends AffineBase {
             return createInverse().transform(src, dst);
         }
     }
-    
+
     @Override
     public Vec3d inverseDeltaTransform(Vec3d src, Vec3d dst)
         throws NoninvertibleTransformException
@@ -738,7 +738,7 @@ public class Affine3D extends AffineBase {
         } else {
             rotate(theta, 0, 0, 1);
         }
-    } 
+    }
 
     public void rotate(double theta, double axisX, double axisY, double axisZ) {
         if ((state & APPLY_3D) == 0 && almostZero(axisX) && almostZero(axisY)) {

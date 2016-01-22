@@ -127,7 +127,7 @@ bool RenderEmbeddedObject::requiresLayer() const
 {
     if (RenderWidget::requiresLayer())
         return true;
-    
+
     return allowsAcceleratedCompositing();
 }
 
@@ -428,16 +428,16 @@ bool RenderEmbeddedObject::isReplacementObscured() const
         return true;
 
     IntRect rootViewRect = view().frameView().convertToRootView(pixelSnappedIntRect(rect));
-    
+
     HitTestRequest request(HitTestRequest::ReadOnly | HitTestRequest::Active | HitTestRequest::IgnoreClipping | HitTestRequest::DisallowShadowContent | HitTestRequest::AllowChildFrameContent);
     HitTestResult result;
     HitTestLocation location;
-    
+
     LayoutUnit x = rootViewRect.x();
     LayoutUnit y = rootViewRect.y();
     LayoutUnit width = rootViewRect.width();
     LayoutUnit height = rootViewRect.height();
-    
+
     // Hit test the center and near the corners of the replacement text to ensure
     // it is visible and is not masked by other elements.
     bool hit = false;
@@ -445,22 +445,22 @@ bool RenderEmbeddedObject::isReplacementObscured() const
     hit = rootRenderView->hitTest(request, location, result);
     if (!hit || result.innerNode() != &frameOwnerElement())
         return true;
-    
+
     location = LayoutPoint(x, y);
     hit = rootRenderView->hitTest(request, location, result);
     if (!hit || result.innerNode() != &frameOwnerElement())
         return true;
-    
+
     location = LayoutPoint(x + width, y);
     hit = rootRenderView->hitTest(request, location, result);
     if (!hit || result.innerNode() != &frameOwnerElement())
         return true;
-    
+
     location = LayoutPoint(x + width, y + height);
     hit = rootRenderView->hitTest(request, location, result);
     if (!hit || result.innerNode() != &frameOwnerElement())
         return true;
-    
+
     location = LayoutPoint(x, y + height);
     hit = rootRenderView->hitTest(request, location, result);
     if (!hit || result.innerNode() != &frameOwnerElement())
@@ -523,19 +523,19 @@ void RenderEmbeddedObject::layout()
 
     if (newSize == oldSize && !childBox->needsLayout())
         return;
-    
+
     // When calling layout() on a child node, a parent must either push a LayoutStateMaintainter, or
     // instantiate LayoutStateDisabler. Since using a LayoutStateMaintainer is slightly more efficient,
     // and this method will be called many times per second during playback, use a LayoutStateMaintainer:
     LayoutStateMaintainer statePusher(view(), *this, locationOffset(), hasTransform() || hasReflection() || style().isFlippedBlocksWritingMode());
-    
+
     childBox->setLocation(LayoutPoint(borderLeft(), borderTop()) + LayoutSize(paddingLeft(), paddingTop()));
     childBox->style().setHeight(Length(newSize.height(), Fixed));
     childBox->style().setWidth(Length(newSize.width(), Fixed));
     childBox->setNeedsLayout(MarkOnlyThis);
     childBox->layout();
     clearChildNeedsLayout();
-    
+
     statePusher.pop();
 }
 

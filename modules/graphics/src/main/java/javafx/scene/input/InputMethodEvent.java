@@ -41,8 +41,8 @@ import javafx.scene.Node;
  * An event which indicates that the underlying input method notifies its
  * text change in a {@link Node}.
  * <p>
- * This event is delivered to the {@link Node} object that extends 
- * {@link javafx.scene.control.TextInputControl}, when the text under composition 
+ * This event is delivered to the {@link Node} object that extends
+ * {@link javafx.scene.control.TextInputControl}, when the text under composition
  * (composed text) is generated/changed/removed, the input method commits
  * the result text, or the input method caret position changes.
  * <p>
@@ -57,7 +57,7 @@ import javafx.scene.Node;
 public final class InputMethodEvent extends InputEvent{
 
     private static final long serialVersionUID = 20121107L;
-    
+
     /**
      * The only valid EventType for the InputMethodEvent.
      */
@@ -102,7 +102,7 @@ public final class InputMethodEvent extends InputEvent{
             @NamedArg("caretPosition") int caretPosition) {
         this(null, null, eventType, composed, committed, caretPosition);
     }
-    
+
 
     /**
      * The text under composition.  This text should be displayed with the
@@ -163,7 +163,7 @@ public final class InputMethodEvent extends InputEvent{
     /**
      * Returns a string representation of this {@code InputMethodEvent} object.
      * @return a string representation of this {@code InputMethodEvent} object.
-     */ 
+     */
     @Override public String toString() {
         final StringBuilder sb = new StringBuilder("InputMethodEvent [");
 
@@ -188,7 +188,7 @@ public final class InputMethodEvent extends InputEvent{
     public EventType<InputMethodEvent> getEventType() {
         return (EventType<InputMethodEvent>) super.getEventType();
     }
-    
+
     private void writeObject(ObjectOutputStream oos) throws IOException {
         oos.defaultWriteObject();
         oos.writeObject(new ArrayList(composed));

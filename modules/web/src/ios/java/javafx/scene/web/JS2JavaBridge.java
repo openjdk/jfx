@@ -39,9 +39,9 @@ import java.util.UUID;
 
 
 class JS2JavaBridge {
-    private String TOKEN = null;//Security token; used to secure JavaBridge in JavaScript 
+    private String TOKEN = null;//Security token; used to secure JavaBridge in JavaScript
     private String javaBridge = null; //"window.mustek('"+TOKEN+"')"
-    
+
     private final WebEngine webEngine;
     private static AtomicInteger objectIdCounter = new AtomicInteger(0);
     // map for call (key is objId)
@@ -75,7 +75,7 @@ class JS2JavaBridge {
 
     // used by exportObject() and by JSONEncoder
     public ExportedJavaObject createExportedJavaObject(Object object) {
-        ExportedJavaObject jsObj = exportedObjectsByJavaObject.get(object);   
+        ExportedJavaObject jsObj = exportedObjectsByJavaObject.get(object);
         if (jsObj == null) {
             String objId = Integer.toString(objectIdCounter.incrementAndGet());
             jsObj = new ExportedJavaObject(this, objId, object);
@@ -98,15 +98,15 @@ class JS2JavaBridge {
 
     Object executeScript(String script) {
         return webEngine.executeScript(script);
-    } 
+    }
     String getJavaBridge() {
         return javaBridge;
     }
-    
+
     AccessControlContext getAccessControlContext() {
         return webEngine.getAccessControlContext();
     }
-    
+
     private void populateObject(String jsName, ExportedJavaObject jsObj) {
         if (exportedObjectsByJSIds.containsValue(jsObj)) {
             return;
@@ -120,15 +120,15 @@ class JS2JavaBridge {
         sb.delete(0, sb.length());
         sb = sb.append(getJavaBridge()).append(".exportJSObject(").append(
              getJavaBridge()).append("['").append(jsName).append("'])");
-        
+
         Integer jsId = (Integer) webEngine.executeScript(sb.toString());
-	if (jsId != null) {
+    if (jsId != null) {
             exportedObjectsByJSIds.put(jsId.toString(), jsObj);
             jsIdsByExportedObjects.put(jsObj, jsId.toString());
-	}
-	else {
+    }
+    else {
             System.out.println("[JVDBG] Error, jsId = null for "+jsName);
-	}
+    }
         log("populateObject<<executeScript");
     }
 
@@ -145,16 +145,16 @@ class JS2JavaBridge {
     Object decode(String retVal) {
         return decoder.decode(retVal);
     }
-    
+
     void encode(Object arg, StringBuilder script) {
         encoder.encode(script, arg);
     }
 
-    
+
     String getjsIdForJavaObject(Object object) {
-        
+
         exportObject("helper_export_Object", object);
-        
+
         if (exportedObjectsByJavaObject.containsKey(object)) {
             ExportedJavaObject ejo = exportedObjectsByJavaObject.get(object);
             if (jsIdsByExportedObjects.containsKey(ejo)) {

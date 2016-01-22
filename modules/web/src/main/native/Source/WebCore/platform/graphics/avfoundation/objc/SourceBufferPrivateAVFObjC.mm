@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #import "config.h"
@@ -291,7 +291,7 @@ public:
     virtual bool isVideo() const override { return m_isVideo; }
     virtual bool isAudio() const override { return m_isAudio; }
     virtual bool isText() const override { return m_isText; }
-    
+
 protected:
     MediaDescriptionAVFObjC(AVAssetTrack* track)
         : m_isVideo([track hasMediaCharacteristic:AVMediaCharacteristicVisual])

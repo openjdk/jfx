@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -41,7 +41,7 @@ inline CapabilityLevel canCompile(Node* node)
 {
     // NOTE: If we ever have phantom arguments, we can compile them but we cannot
     // OSR enter.
-    
+
     switch (node->op()) {
     case JSConstant:
     case WeakJSConstant:
@@ -283,7 +283,7 @@ CapabilityLevel canCompile(Graph& graph)
             dataLog("FTL rejecting ", *graph.m_codeBlock, " because it doesn't belong to a function.\n");
         return CannotCompile;
     }
-    
+
     if (graph.m_codeBlock->needsActivation()) {
         // Need this because although we also don't support
         // CreateActivation/TearOffActivation, we might not see those nodes in case of
@@ -292,21 +292,21 @@ CapabilityLevel canCompile(Graph& graph)
             dataLog("FTL rejecting ", *graph.m_codeBlock, " because it uses activations.\n");
         return CannotCompile;
     }
-    
+
     CapabilityLevel result = CanCompileAndOSREnter;
-    
+
     for (BlockIndex blockIndex = graph.numBlocks(); blockIndex--;) {
         BasicBlock* block = graph.block(blockIndex);
         if (!block)
             continue;
-        
+
         // We don't care if we can compile blocks that the CFA hasn't visited.
         if (!block->cfaHasVisited)
             continue;
-        
+
         for (unsigned nodeIndex = 0; nodeIndex < block->size(); ++nodeIndex) {
             Node* node = block->at(nodeIndex);
-            
+
             for (unsigned childIndex = graph.numChildren(node); childIndex--;) {
                 Edge edge = graph.child(node, childIndex);
                 if (!edge)
@@ -341,15 +341,15 @@ CapabilityLevel canCompile(Graph& graph)
                     return CannotCompile;
                 }
             }
-            
+
             switch (canCompile(node)) {
-            case CannotCompile: 
+            case CannotCompile:
                 if (verboseCapabilities()) {
                     dataLog("FTL rejecting node in ", *graph.m_codeBlock, ":\n");
                     graph.dump(WTF::dataFile(), "    ", node);
                 }
                 return CannotCompile;
-                
+
             case CanCompile:
                 if (result == CanCompileAndOSREnter && verboseCompilationEnabled()) {
                     dataLog("FTL disabling OSR entry because of node:\n");
@@ -357,16 +357,16 @@ CapabilityLevel canCompile(Graph& graph)
                 }
                 result = CanCompile;
                 break;
-                
+
             case CanCompileAndOSREnter:
                 break;
             }
-            
+
             if (node->op() == ForceOSRExit)
                 break;
         }
     }
-    
+
     return result;
 }
 

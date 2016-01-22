@@ -283,7 +283,7 @@ public:
     {
         m_assembler.movs(dest, m_assembler.lsr(dest, imm.m_value & 0x1f));
     }
-    
+
     void urshift32(RegisterID src, TrustedImm32 imm, RegisterID dest)
     {
         m_assembler.movs(dest, m_assembler.lsr(src, imm.m_value & 0x1f));
@@ -339,7 +339,7 @@ public:
     {
         if (imm.m_value == -1)
             m_assembler.mvns(dest, src);
-        else    
+        else
             m_assembler.eors(dest, src, m_assembler.getImm(imm.m_value, ARMRegisters::S0));
     }
 
@@ -1197,7 +1197,7 @@ public:
     {
         m_assembler.vsqrt_f64(dest, src);
     }
-    
+
     void absDouble(FPRegisterID src, FPRegisterID dest)
     {
         m_assembler.vabs_f64(dest, src);
@@ -1346,7 +1346,7 @@ public:
     {
         ARMAssembler::replaceWithJump(instructionStart.dataLocation(), destination.dataLocation());
     }
-    
+
     static ptrdiff_t maxJumpReplacementSize()
     {
         ARMAssembler::maxJumpReplacementSize();

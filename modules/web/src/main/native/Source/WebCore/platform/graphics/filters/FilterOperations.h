@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef FilterOperations_h
@@ -42,20 +42,20 @@ class FilterOperations {
 public:
     FilterOperations();
     FilterOperations(const FilterOperations& other) { *this = other; }
-    
+
     FilterOperations& operator=(const FilterOperations&);
-    
+
     bool operator==(const FilterOperations&) const;
     bool operator!=(const FilterOperations& o) const
     {
         return !(*this == o);
     }
-    
+
     void clear()
     {
         m_operations.clear();
     }
-    
+
     Vector<RefPtr<FilterOperation>>& operations() { return m_operations; }
     const Vector<RefPtr<FilterOperation>>& operations() const { return m_operations; }
 

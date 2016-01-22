@@ -99,7 +99,7 @@ public class NestedTableColumnHeader extends TableColumnHeader {
     boolean updateColumns = true;
 
 
-    
+
     /***************************************************************************
      *                                                                         *
      * Constructor                                                             *
@@ -115,7 +115,7 @@ public class NestedTableColumnHeader extends TableColumnHeader {
      */
     public NestedTableColumnHeader(final TableViewSkinBase skin, final TableColumnBase tc) {
         super(skin, tc);
-        
+
         getStyleClass().setAll("nested-column-header");
         setFocusTraversable(false);
 
@@ -133,18 +133,18 @@ public class NestedTableColumnHeader extends TableColumnHeader {
         changeListenerHandler.registerChangeListener(skin.columnResizePolicyProperty(), e -> updateContent());
     }
 
-    
-    
+
+
     /***************************************************************************
      *                                                                         *
      * Listeners                                                               *
      *                                                                         *
      **************************************************************************/
-    
+
     private final ListChangeListener<TableColumnBase> columnsListener = c -> {
         setHeadersNeedUpdate();
     };
-    
+
     private final WeakListChangeListener weakColumnsListener =
             new WeakListChangeListener(columnsListener);
 
@@ -224,7 +224,7 @@ public class NestedTableColumnHeader extends TableColumnHeader {
                     column.isResizable() ? Cursor.H_RESIZE : null);
         }
     };
-    
+
 
 
     /***************************************************************************
@@ -236,11 +236,11 @@ public class NestedTableColumnHeader extends TableColumnHeader {
     /** {@inheritDoc} */
     @Override void dispose() {
         super.dispose();
-        
+
         if (label != null) {
             label.dispose();
         }
-        
+
         if (getColumns() != null) {
             getColumns().removeListener(weakColumnsListener);
         }
@@ -257,7 +257,7 @@ public class NestedTableColumnHeader extends TableColumnHeader {
         }
         dragRects.clear();
         getChildren().clear();
-        
+
         changeListenerHandler.dispose();
     }
 
@@ -522,12 +522,12 @@ public class NestedTableColumnHeader extends TableColumnHeader {
 
         getChildren().setAll(content);
     }
-    
+
     private void rebuildDragRects() {
         if (! isColumnResizingEnabled()) return;
-        
+
         getChildren().removeAll(dragRects.values());
-        
+
         for (Rectangle rect : dragRects.values()) {
             rect.visibleProperty().unbind();
         }
@@ -588,7 +588,7 @@ public class NestedTableColumnHeader extends TableColumnHeader {
         newCol.setParentHeader(this);
         return newCol;
     }
-    
+
 
 
     /***************************************************************************

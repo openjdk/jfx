@@ -33,7 +33,7 @@
 namespace WTF {
 
 namespace double_conversion {
-    
+
     class DoubleToStringConverter {
     public:
         // When calling ToFixed with a double > 10^kMaxFixedDigitsBeforePoint
@@ -41,17 +41,17 @@ namespace double_conversion {
         // function returns false.
         static const int kMaxFixedDigitsBeforePoint = 60;
         static const int kMaxFixedDigitsAfterPoint = 60;
-        
+
         // When calling ToExponential with a requested_digits
         // parameter > kMaxExponentialDigits then the function returns false.
         static const int kMaxExponentialDigits = 120;
-        
+
         // When calling ToPrecision with a requested_digits
         // parameter < kMinPrecisionDigits or requested_digits > kMaxPrecisionDigits
         // then the function returns false.
         static const int kMinPrecisionDigits = 1;
         static const int kMaxPrecisionDigits = 120;
-        
+
         enum Flags {
             NO_FLAGS = 0,
             EMIT_POSITIVE_EXPONENT_SIGN = 1,
@@ -59,7 +59,7 @@ namespace double_conversion {
             EMIT_TRAILING_ZERO_AFTER_POINT = 4,
             UNIQUE_ZERO = 8
         };
-        
+
         // Flags should be a bit-or combination of the possible Flags-enum.
         //  - NO_FLAGS: no special flags.
         //  - EMIT_POSITIVE_EXPONENT_SIGN: when the number is converted into exponent
@@ -129,10 +129,10 @@ namespace double_conversion {
             ASSERT(((flags & EMIT_TRAILING_DECIMAL_POINT) != 0) ||
                    !((flags & EMIT_TRAILING_ZERO_AFTER_POINT) != 0));
         }
-        
+
         // Returns a converter following the EcmaScript specification.
         WTF_EXPORT_PRIVATE static const DoubleToStringConverter& EcmaScriptConverter();
-        
+
         // Computes the shortest string of digits that correctly represent the input
         // number. Depending on decimal_in_shortest_low and decimal_in_shortest_high
         // (see constructor) it then either returns a decimal representation, or an
@@ -157,8 +157,8 @@ namespace double_conversion {
         // except when the input value is special and no infinity_symbol or
         // nan_symbol has been given to the constructor.
         bool ToShortest(double value, StringBuilder* result_builder) const;
-        
-        
+
+
         // Computes a decimal representation with a fixed number of digits after the
         // decimal point. The last emitted digit is rounded.
         //
@@ -195,7 +195,7 @@ namespace double_conversion {
         bool ToFixed(double value,
                      int requested_digits,
                      StringBuilder* result_builder) const;
-        
+
         // Computes a representation in exponential format with requested_digits
         // after the decimal point. The last emitted digit is rounded.
         // If requested_digits equals -1, then the shortest exponential representation
@@ -227,7 +227,7 @@ namespace double_conversion {
         WTF_EXPORT_PRIVATE bool ToExponential(double value,
                            int requested_digits,
                            StringBuilder* result_builder) const;
-        
+
         // Computes 'precision' leading digits of the given 'value' and returns them
         // either in exponential or decimal format, depending on
         // max_{leading|trailing}_padding_zeroes_in_precision_mode (given to the
@@ -265,7 +265,7 @@ namespace double_conversion {
         bool ToPrecision(double value,
                          int precision,
                          StringBuilder* result_builder) const;
-        
+
         enum DtoaMode {
             // Produce the shortest correct representation.
             // For example the output of 0.299999999999999988897 is (the less accurate
@@ -278,7 +278,7 @@ namespace double_conversion {
             // Fixed number of digits (independent of the decimal point).
             PRECISION
         };
-        
+
         // The maximal number of digits that are needed to emit a double in base 10.
         // A higher precision can be achieved by using more digits, but the shortest
         // accurate representation of any double will never use more digits than
@@ -286,7 +286,7 @@ namespace double_conversion {
         // Note that DoubleToAscii null-terminates its input. So the given buffer
         // should be at least kBase10MaximalLength + 1 characters long.
         static const int kBase10MaximalLength = 17;
-        
+
         // Converts the given double 'v' to ascii.
         // The result should be interpreted as buffer * 10^(point-length).
         //
@@ -326,7 +326,7 @@ namespace double_conversion {
                                   bool* sign,
                                   int* length,
                                   int* point);
-        
+
     private:
         // If the value is a special value (NaN or Infinity) constructs the
         // corresponding string using the configured infinity/nan-symbol.
@@ -345,7 +345,7 @@ namespace double_conversion {
                                          int decimal_point,
                                          int digits_after_point,
                                          StringBuilder* result_builder) const;
-        
+
         const int flags_;
         const char* const infinity_symbol_;
         const char* const nan_symbol_;
@@ -354,22 +354,22 @@ namespace double_conversion {
         const int decimal_in_shortest_high_;
         const int max_leading_padding_zeroes_in_precision_mode_;
         const int max_trailing_padding_zeroes_in_precision_mode_;
-        
+
         DISALLOW_IMPLICIT_CONSTRUCTORS(DoubleToStringConverter);
     };
-    
-    
+
+
     class StringToDoubleConverter {
     public:
         // Performs the conversion.
         // The output parameter 'processed_characters_count' is set to the number
         // of characters that have been processed to read the number.
         WTF_EXPORT_PRIVATE static double StringToDouble(const char* buffer, size_t length, size_t* processed_characters_count);
-        
+
     private:
         DISALLOW_IMPLICIT_CONSTRUCTORS(StringToDoubleConverter);
     };
-    
+
 }  // namespace double_conversion
 
 } // namespace WTF

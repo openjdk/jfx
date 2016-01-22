@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -41,7 +41,7 @@ SpeculatedType resultOfToPrimitive(SpeculatedType type)
         // the output will have hinsts of stringiness.
         return mergeSpeculations(type & ~SpecObject, SpecString);
     }
-    
+
     return type;
 }
 
@@ -51,23 +51,23 @@ public:
         : Phase(graph, "prediction propagation")
     {
     }
-    
+
     bool run()
     {
         ASSERT(m_graph.m_form == ThreadedCPS);
         ASSERT(m_graph.m_unificationState == GloballyUnified);
-        
+
         // 1) propagate predictions
 
         do {
             m_changed = false;
-            
+
             // Forward propagation is near-optimal for both topologically-sorted and
             // DFS-sorted code.
             propagateForward();
             if (!m_changed)
                 break;
-            
+
             // Backward propagation reduces the likelihood that pathological code will
             // cause slowness. Loops (especially nested ones) resemble backward flow.
             // This pass captures two cases: (1) it detects if the forward fixpoint
@@ -75,7 +75,7 @@ public:
             m_changed = false;
             propagateBackward();
         } while (m_changed);
-        
+
         // 2) repropagate predictions while doing double voting.
 
         do {
@@ -86,31 +86,31 @@ public:
             m_changed = false;
             propagateForward();
         } while (m_changed);
-        
+
         return true;
     }
-    
+
 private:
     bool setPrediction(SpeculatedType prediction)
     {
         ASSERT(m_currentNode->hasResult());
-        
+
         // setPrediction() is used when we know that there is no way that we can change
         // our minds about what the prediction is going to be. There is no semantic
         // difference between setPrediction() and mergeSpeculation() other than the
         // increased checking to validate this property.
         ASSERT(m_currentNode->prediction() == SpecNone || m_currentNode->prediction() == prediction);
-        
+
         return m_currentNode->predict(prediction);
     }
-    
+
     bool mergePrediction(SpeculatedType prediction)
     {
         ASSERT(m_currentNode->hasResult());
-        
+
         return m_currentNode->predict(prediction);
     }
-    
+
     SpeculatedType speculatedDoubleTypeForPrediction(SpeculatedType value)
     {
         if (!isFullNumberSpeculation(value))
@@ -130,7 +130,7 @@ private:
         NodeType op = node->op();
 
         bool changed = false;
-        
+
         switch (op) {
         case JSConstant:
         case WeakJSConstant: {
@@ -140,7 +140,7 @@ private:
             changed |= setPrediction(type);
             break;
         }
-            
+
         case GetLocal: {
             VariableAccessData* variable = node->variableAccessData();
             SpeculatedType prediction = variable->prediction();
@@ -150,13 +150,13 @@ private:
                 changed |= mergePrediction(prediction);
             break;
         }
-            
+
         case SetLocal: {
             VariableAccessData* variableAccessData = node->variableAccessData();
             changed |= variableAccessData->predict(node->child1()->prediction());
             break;
         }
-            
+
         case BitAnd:
         case BitOr:
         case BitXor:
@@ -167,7 +167,7 @@ private:
             changed |= setPrediction(SpecInt32);
             break;
         }
-            
+
         case ArrayPop:
         case ArrayPush:
         case RegExpExec:
@@ -203,7 +203,7 @@ private:
         case ValueAdd: {
             SpeculatedType left = node->child1()->prediction();
             SpeculatedType right = node->child2()->prediction();
-            
+
             if (left && right) {
                 if (isFullNumberSpeculationExpectingDefined(left) && isFullNumberSpeculationExpectingDefined(right)) {
                     if (m_graph.addSpeculationMode(node) != DontSpeculateInt32)
@@ -220,11 +220,11 @@ private:
             }
             break;
         }
-            
+
         case ArithAdd: {
             SpeculatedType left = node->child1()->prediction();
             SpeculatedType right = node->child2()->prediction();
-            
+
             if (left && right) {
                 if (m_graph.addSpeculationMode(node) != DontSpeculateInt32)
                     changed |= mergePrediction(SpecInt32);
@@ -235,11 +235,11 @@ private:
             }
             break;
         }
-            
+
         case ArithSub: {
             SpeculatedType left = node->child1()->prediction();
             SpeculatedType right = node->child2()->prediction();
-            
+
             if (left && right) {
                 if (m_graph.addSpeculationMode(node) != DontSpeculateInt32)
                     changed |= mergePrediction(SpecInt32);
@@ -250,7 +250,7 @@ private:
             }
             break;
         }
-            
+
         case ArithNegate:
             if (node->child1()->prediction()) {
                 if (m_graph.negateShouldSpeculateInt32(node))
@@ -261,12 +261,12 @@ private:
                     changed |= mergePrediction(speculatedDoubleTypeForPrediction(node->child1()->prediction()));
             }
             break;
-            
+
         case ArithMin:
         case ArithMax: {
             SpeculatedType left = node->child1()->prediction();
             SpeculatedType right = node->child2()->prediction();
-            
+
             if (left && right) {
                 if (Node::shouldSpeculateInt32ForArithmetic(node->child1().node(), node->child2().node())
                     && nodeCanSpeculateInt32(node->arithNodeFlags()))
@@ -280,7 +280,7 @@ private:
         case ArithMul: {
             SpeculatedType left = node->child1()->prediction();
             SpeculatedType right = node->child2()->prediction();
-            
+
             if (left && right) {
                 if (m_graph.mulShouldSpeculateInt32(node))
                     changed |= mergePrediction(SpecInt32);
@@ -291,11 +291,11 @@ private:
             }
             break;
         }
-            
+
         case ArithDiv: {
             SpeculatedType left = node->child1()->prediction();
             SpeculatedType right = node->child2()->prediction();
-            
+
             if (left && right) {
                 if (Node::shouldSpeculateInt32ForArithmetic(node->child1().node(), node->child2().node())
                     && nodeCanSpeculateInt32(node->arithNodeFlags()))
@@ -305,11 +305,11 @@ private:
             }
             break;
         }
-            
+
         case ArithMod: {
             SpeculatedType left = node->child1()->prediction();
             SpeculatedType right = node->child2()->prediction();
-            
+
             if (left && right) {
                 if (Node::shouldSpeculateInt32ForArithmetic(node->child1().node(), node->child2().node())
                     && nodeCanSpeculateInt32(node->arithNodeFlags()))
@@ -319,14 +319,14 @@ private:
             }
             break;
         }
-            
+
         case ArithSqrt:
         case ArithSin:
         case ArithCos: {
             changed |= setPrediction(SpecDouble);
             break;
         }
-            
+
         case ArithAbs: {
             SpeculatedType child = node->child1()->prediction();
             if (isInt32SpeculationForArithmetic(child)
@@ -336,7 +336,7 @@ private:
                 changed |= mergePrediction(speculatedDoubleTypeForPrediction(child));
             break;
         }
-            
+
         case LogicalNot:
         case CompareLess:
         case CompareLessEq:
@@ -367,7 +367,7 @@ private:
                 break;
             if (!node->getHeapPrediction())
                 break;
-            
+
             if (node->child1()->shouldSpeculateFloat32Array()
                 || node->child1()->shouldSpeculateFloat64Array())
                 changed |= mergePrediction(SpecDouble);
@@ -380,14 +380,14 @@ private:
                 changed |= mergePrediction(node->getHeapPrediction());
             break;
         }
-            
+
         case GetMyArgumentsLengthSafe: {
             changed |= setPrediction(SpecInt32);
             break;
         }
 
-        case GetClosureRegisters:            
-        case GetButterfly: 
+        case GetClosureRegisters:
+        case GetButterfly:
         case GetIndexedPropertyStorage:
         case AllocatePropertyStorage:
         case ReallocatePropertyStorage: {
@@ -406,46 +406,46 @@ private:
             }
             break;
         }
-            
+
         case GetMyScope:
         case SkipTopScope:
         case SkipScope: {
             changed |= setPrediction(SpecObjectOther);
             break;
         }
-            
+
         case GetCallee: {
             changed |= setPrediction(SpecFunction);
             break;
         }
-            
+
         case CreateThis:
         case NewObject: {
             changed |= setPrediction(SpecFinalObject);
             break;
         }
-            
+
         case NewArray:
         case NewArrayWithSize:
         case NewArrayBuffer: {
             changed |= setPrediction(SpecArray);
             break;
         }
-            
+
         case NewTypedArray: {
             changed |= setPrediction(speculationFromTypedArrayType(node->typedArrayType()));
             break;
         }
-            
+
         case NewRegexp:
         case CreateActivation: {
             changed |= setPrediction(SpecObjectOther);
             break;
         }
-        
+
         case StringFromCharCode: {
             changed |= setPrediction(SpecString);
-            changed |= node->child1()->mergeFlags(NodeBytecodeUsesAsNumber | NodeBytecodeUsesAsInt);            
+            changed |= node->child1()->mergeFlags(NodeBytecodeUsesAsNumber | NodeBytecodeUsesAsInt);
             break;
         }
         case StringCharAt:
@@ -454,24 +454,24 @@ private:
             changed |= setPrediction(SpecString);
             break;
         }
-            
+
         case ToPrimitive: {
             SpeculatedType child = node->child1()->prediction();
             if (child)
                 changed |= mergePrediction(resultOfToPrimitive(child));
             break;
         }
-            
+
         case NewStringObject: {
             changed |= setPrediction(SpecStringObject);
             break;
         }
-            
+
         case CreateArguments: {
             changed |= setPrediction(SpecArguments);
             break;
         }
-            
+
         case NewFunction: {
             SpeculatedType child = node->child1()->prediction();
             if (child & SpecEmpty)
@@ -480,13 +480,13 @@ private:
                 changed |= mergePrediction(child);
             break;
         }
-            
+
         case NewFunctionNoCheck:
         case NewFunctionExpression: {
             changed |= setPrediction(SpecFunction);
             break;
         }
-            
+
         case PutByValAlias:
         case GetArrayLength:
         case GetTypedArrayByteOffset:
@@ -514,13 +514,13 @@ private:
             RELEASE_ASSERT_NOT_REACHED();
             break;
         }
-        
+
         case Phi:
             // Phis should not be visible here since we're iterating the all-but-Phi's
             // part of basic blocks.
             RELEASE_ASSERT_NOT_REACHED();
             break;
-            
+
         case Upsilon:
         case GetArgument:
             // These don't get inserted until we go into SSA.
@@ -530,7 +530,7 @@ private:
         case GetScope:
             changed |= setPrediction(SpecObjectOther);
             break;
-            
+
         case In:
             changed |= setPrediction(SpecBoolean);
             break;
@@ -586,17 +586,17 @@ private:
         case MovHint:
         case ZombieHint:
             break;
-            
+
         // This gets ignored because it already has a prediction.
         case ExtractOSREntryLocal:
             break;
-            
+
         // These gets ignored because it doesn't do anything.
         case CountExecution:
         case PhantomLocal:
         case Flush:
             break;
-            
+
         case LastNodeType:
             RELEASE_ASSERT_NOT_REACHED();
             break;
@@ -608,7 +608,7 @@ private:
 
         m_changed |= changed;
     }
-        
+
     void propagateForward()
     {
         for (BlockIndex blockIndex = 0; blockIndex < m_graph.numBlocks(); ++blockIndex) {
@@ -622,7 +622,7 @@ private:
             }
         }
     }
-    
+
     void propagateBackward()
     {
         for (BlockIndex blockIndex = m_graph.numBlocks(); blockIndex--;) {
@@ -636,7 +636,7 @@ private:
             }
         }
     }
-    
+
     void doDoubleVoting(Node* node)
     {
         switch (node->op()) {
@@ -645,34 +645,34 @@ private:
         case ArithSub: {
             SpeculatedType left = node->child1()->prediction();
             SpeculatedType right = node->child2()->prediction();
-                
+
             DoubleBallot ballot;
-                
+
             if (isFullNumberSpeculationExpectingDefined(left) && isFullNumberSpeculationExpectingDefined(right)
                 && !m_graph.addShouldSpeculateInt32(node)
                 && !m_graph.addShouldSpeculateMachineInt(node))
                 ballot = VoteDouble;
             else
                 ballot = VoteValue;
-                
+
             m_graph.voteNode(node->child1(), ballot);
             m_graph.voteNode(node->child2(), ballot);
             break;
         }
-                
+
         case ArithMul: {
             SpeculatedType left = node->child1()->prediction();
             SpeculatedType right = node->child2()->prediction();
-                
+
             DoubleBallot ballot;
-                
+
             if (isFullNumberSpeculation(left) && isFullNumberSpeculation(right)
                 && !m_graph.mulShouldSpeculateInt32(node)
                 && !m_graph.mulShouldSpeculateMachineInt(node))
                 ballot = VoteDouble;
             else
                 ballot = VoteValue;
-                
+
             m_graph.voteNode(node->child1(), ballot);
             m_graph.voteNode(node->child2(), ballot);
             break;
@@ -684,36 +684,36 @@ private:
         case ArithDiv: {
             SpeculatedType left = node->child1()->prediction();
             SpeculatedType right = node->child2()->prediction();
-                
+
             DoubleBallot ballot;
-                
+
             if (isFullNumberSpeculation(left) && isFullNumberSpeculation(right)
                 && !(Node::shouldSpeculateInt32ForArithmetic(node->child1().node(), node->child2().node()) && node->canSpeculateInt32()))
                 ballot = VoteDouble;
             else
                 ballot = VoteValue;
-                
+
             m_graph.voteNode(node->child1(), ballot);
             m_graph.voteNode(node->child2(), ballot);
             break;
         }
-                
+
         case ArithAbs:
             DoubleBallot ballot;
             if (!(node->child1()->shouldSpeculateInt32ForArithmetic() && node->canSpeculateInt32()))
                 ballot = VoteDouble;
             else
                 ballot = VoteValue;
-                
+
             m_graph.voteNode(node->child1(), ballot);
             break;
-                
+
         case ArithSqrt:
         case ArithCos:
         case ArithSin:
             m_graph.voteNode(node->child1(), VoteDouble);
             break;
-                
+
         case SetLocal: {
             SpeculatedType prediction = node->child1()->prediction();
             if (isDoubleSpeculation(prediction))
@@ -743,17 +743,17 @@ private:
             }
             break;
         }
-            
+
         case MovHint:
             // Ignore these since they have no effect on in-DFG execution.
             break;
-            
+
         default:
             m_graph.voteChildren(node, VoteValue);
             break;
         }
     }
-    
+
     void doRoundOfDoubleVoting()
     {
         for (unsigned i = 0; i < m_graph.m_variableAccessData.size(); ++i)
@@ -783,11 +783,11 @@ private:
             m_changed |= variableAccessData->makePredictionForDoubleFormat();
         }
     }
-    
+
     Node* m_currentNode;
     bool m_changed;
 };
-    
+
 bool performPredictionPropagation(Graph& graph)
 {
     SamplingRegion samplingRegion("DFG Prediction Propagation Phase");

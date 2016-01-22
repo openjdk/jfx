@@ -49,7 +49,7 @@ void ReverbAccumulationBuffer::readAndClear(float* destination, size_t numberOfF
 {
     size_t bufferLength = m_buffer.size();
     bool isCopySafe = m_readIndex <= bufferLength && numberOfFrames <= bufferLength;
-    
+
     ASSERT(isCopySafe);
     if (!isCopySafe)
         return;
@@ -81,7 +81,7 @@ void ReverbAccumulationBuffer::updateReadIndex(int* readIndex, size_t numberOfFr
 int ReverbAccumulationBuffer::accumulate(float* source, size_t numberOfFrames, int* readIndex, size_t delayFrames)
 {
     size_t bufferLength = m_buffer.size();
-    
+
     size_t writeIndex = (*readIndex + delayFrames) % bufferLength;
 
     // Update caller's readIndex
@@ -101,7 +101,7 @@ int ReverbAccumulationBuffer::accumulate(float* source, size_t numberOfFrames, i
     vadd(source, 1, destination + writeIndex, 1, destination + writeIndex, 1, numberOfFrames1);
 
     // Handle wrap-around if necessary
-    if (numberOfFrames2 > 0)       
+    if (numberOfFrames2 > 0)
         vadd(source + numberOfFrames1, 1, destination, 1, destination, 1, numberOfFrames2);
 
     return writeIndex;

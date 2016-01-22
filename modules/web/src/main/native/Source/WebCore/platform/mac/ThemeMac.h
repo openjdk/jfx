@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef ThemeMac_h
@@ -38,11 +38,11 @@ class ThemeMac : public Theme {
 public:
     ThemeMac() { }
     virtual ~ThemeMac() { }
-    
+
     virtual int baselinePositionAdjustment(ControlPart) const;
 
     virtual FontDescription controlFont(ControlPart, const Font&, float zoomFactor) const;
-    
+
     virtual LengthSize controlSize(ControlPart, const Font&, const LengthSize&, float zoomFactor) const;
     virtual LengthSize minimumControlSize(ControlPart, const Font&, float zoomFactor) const;
 

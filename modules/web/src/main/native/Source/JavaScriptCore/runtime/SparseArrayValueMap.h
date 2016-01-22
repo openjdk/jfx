@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef SparseArrayValueMap_h
@@ -55,7 +55,7 @@ struct SparseArrayEntry : public WriteBarrier<Unknown> {
 class SparseArrayValueMap : public JSCell {
 public:
     typedef JSCell Base;
-    
+
 private:
     typedef HashMap<uint64_t, SparseArrayEntry, WTF::IntHash<uint64_t>, WTF::UnsignedWithZeroKeyHashTraits<uint64_t>> Map;
 
@@ -67,24 +67,24 @@ private:
 
     SparseArrayValueMap(VM&);
     ~SparseArrayValueMap();
-    
+
     void finishCreation(VM&);
 
     static const unsigned StructureFlags = OverridesVisitChildren | JSCell::StructureFlags;
 
 public:
     DECLARE_EXPORT_INFO;
-    
+
     typedef Map::iterator iterator;
     typedef Map::const_iterator const_iterator;
     typedef Map::AddResult AddResult;
 
     static SparseArrayValueMap* create(VM&);
-    
+
     static const bool needsDestruction = true;
     static const bool hasImmortalStructure = true;
     static void destroy(JSCell*);
-    
+
     static Structure* createStructure(VM&, JSGlobalObject*, JSValue prototype);
 
     static void visitChildren(JSCell*, SlotVisitor&);

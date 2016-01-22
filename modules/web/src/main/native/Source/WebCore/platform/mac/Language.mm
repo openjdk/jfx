@@ -111,7 +111,7 @@ Vector<String> platformUserPreferredLanguages()
         languageChangeObserverAdded = true;
     }
 #endif // !PLATFORM(IOS)
-    
+
     return userPreferredLanguages;
 
     END_BLOCK_OBJC_EXCEPTIONS;

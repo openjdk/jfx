@@ -56,7 +56,7 @@ public:
         , m_port(port)
     {
     }
-        
+
     Type type() const { return m_type; }
     const String& hostName() const { return m_hostName; }
     int port() const { return m_port; }
@@ -73,7 +73,7 @@ Vector<ProxyServer> proxyServersForURL(const URL&, const NetworkingContext*);
 // Converts the given vector of proxy servers to a PAC string, as described in
 // http://web.archive.org/web/20060424005037/wp.netscape.com/eng/mozilla/2.0/relnotes/demo/proxy-live.html
 String toString(const Vector<ProxyServer>&);
-    
+
 } // namespace WebCore
 
 #endif // ProxyServer_h

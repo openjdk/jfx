@@ -43,7 +43,7 @@ public class JumpPastEnd_Test extends AnimationFunctionalTestBase {
 
     @Before public void setUp() {
         set.timeline.setCycleCount(4);
-        
+
         tt = new SimpleTimeline(
                 new SimpleKeyFrame(2100) {
                     @Override protected void action() {

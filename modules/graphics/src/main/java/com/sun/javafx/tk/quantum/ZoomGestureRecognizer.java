@@ -52,7 +52,7 @@ class ZoomGestureRecognizer implements GestureRecognizer {
     private static double ZOOM_INERTIA_MILLIS = 500;
     private static double MAX_ZOOM_IN_FACTOR = 10;
     private static double MAX_ZOOM_OUT_FACTOR = 0.1;
-    
+
     static {
         AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
             String s = System.getProperty("com.sun.javafx.gestures.zoom.threshold");
@@ -65,7 +65,7 @@ class ZoomGestureRecognizer implements GestureRecognizer {
             }
             return null;
         });
-    }    
+    }
 
     private ViewScene scene;
     private Timeline inertiaTimeline = new Timeline();
@@ -85,7 +85,7 @@ class ZoomGestureRecognizer implements GestureRecognizer {
     private int currentTouchCount = 0;
     private boolean touchPointsSetChanged;
     private boolean touchPointsPressed;
-    
+
     private double centerX, centerY;
     private double centerAbsX, centerAbsY;
     private double currentDistance;
@@ -93,7 +93,7 @@ class ZoomGestureRecognizer implements GestureRecognizer {
     private double zoomFactor = 1.0;
     private double totalZoomFactor = 1.0;
     double inertiaLastTime = 0;
-    
+
     ZoomGestureRecognizer(final ViewScene scene) {
         this.scene = scene;
         inertiaZoomVelocity.addListener(valueModel -> {
@@ -155,7 +155,7 @@ class ZoomGestureRecognizer implements GestureRecognizer {
             totalY += tracker.getY();
             totalAbsX += tracker.getAbsX();
             totalAbsY += tracker.getAbsY();
-        }      
+        }
         centerX = totalX / currentTouchCount;
         centerY = totalY / currentTouchCount;
         centerAbsX = totalAbsX / currentTouchCount;
@@ -168,15 +168,15 @@ class ZoomGestureRecognizer implements GestureRecognizer {
         for (TouchPointTracker tracker : trackers.values()) {
             double deltaX = tracker.getAbsX() - centerAbsX;
             double deltaY = tracker.getAbsY() - centerAbsY;
-            
+
             double squareDist = deltaX * deltaX + deltaY * deltaY;
             if (squareDist > maxSquareDist) {
                 maxSquareDist = squareDist;
             }
-        }      
+        }
         return Math.sqrt(maxSquareDist);
     }
-    
+
     @Override
     public void notifyEndTouchEvent(long time) {
         lastTouchEventTime = time;
@@ -210,7 +210,7 @@ class ZoomGestureRecognizer implements GestureRecognizer {
                             duration = (newZoom - totalZoomFactor) / initialInertiaZoomVelocity;
                         }
                     }
-                    
+
                     inertiaTimeline.getKeyFrames().setAll(
                         new KeyFrame(
                             Duration.millis(0),
@@ -249,19 +249,19 @@ class ZoomGestureRecognizer implements GestureRecognizer {
                         reset();
                     }
                 }
-            
+
             } else {
                 // currentTouchCount >= 2
                 if (state == ZoomRecognitionState.IDLE) {
                     state = ZoomRecognitionState.TRACKING;
                     zoomStartTime = time;
                 }
-                
+
                 calculateCenter();
                 double currentDistance = calculateMaxDistance();
-                    
+
                 if (touchPointsSetChanged) {
-                    //No zoom event. 
+                    //No zoom event.
                     //Just update the distance reference. Keep the total zoomfactor
                     distanceReference = currentDistance;
                 } else {
@@ -289,7 +289,7 @@ class ZoomGestureRecognizer implements GestureRecognizer {
             }
         }
     }
-    
+
     private void sendZoomStartedEvent() {
         AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
             if (scene.sceneListener != null) {

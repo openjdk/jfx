@@ -109,7 +109,7 @@ class VerticalSegment extends AbstractSegment {
         }
         return true;
     }
-    
+
 
     /*
      * Comparable

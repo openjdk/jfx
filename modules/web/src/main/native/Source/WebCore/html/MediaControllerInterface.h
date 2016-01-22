@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef MediaControllerInterface_h
@@ -39,32 +39,32 @@ typedef int ExceptionCode;
 class MediaControllerInterface {
 public:
     virtual ~MediaControllerInterface() { };
-    
+
     // MediaController IDL:
     virtual PassRefPtr<TimeRanges> buffered() const = 0;
     virtual PassRefPtr<TimeRanges> seekable() const = 0;
     virtual PassRefPtr<TimeRanges> played() = 0;
-    
+
     virtual double duration() const = 0;
     virtual double currentTime() const = 0;
     virtual void setCurrentTime(double) = 0;
-    
+
     virtual bool paused() const = 0;
     virtual void play() = 0;
     virtual void pause() = 0;
-    
+
     virtual double defaultPlaybackRate() const = 0;
     virtual void setDefaultPlaybackRate(double) = 0;
-    
+
     virtual double playbackRate() const = 0;
     virtual void setPlaybackRate(double) = 0;
-    
+
     virtual double volume() const = 0;
     virtual void setVolume(double, ExceptionCode&) = 0;
-    
+
     virtual bool muted() const = 0;
     virtual void setMuted(bool) = 0;
-    
+
     enum ReadyState { HAVE_NOTHING, HAVE_METADATA, HAVE_CURRENT_DATA, HAVE_FUTURE_DATA, HAVE_ENOUGH_DATA };
     virtual ReadyState readyState() const = 0;
 

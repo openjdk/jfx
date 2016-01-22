@@ -51,48 +51,48 @@ import java.util.List;
  */
 
 public class ObjectDeleter {
-    
+
     private final EditorController editorController;
     private final FXOMDocument fxomDocument;
     private final List<Job> executedJobs = new LinkedList<>();
-    
+
     public ObjectDeleter(EditorController editorController) {
         assert editorController != null;
         assert editorController.getFxomDocument() != null;
         this.editorController = editorController;
         this.fxomDocument = editorController.getFxomDocument();
     }
-    
+
     public void delete(FXOMObject target) {
         final FXOMNode node = prepareDeleteObject(target, target);
-        
+
         if (node == target) {
             final RemoveObjectJob removeJob = new RemoveObjectJob(target, editorController);
             removeJob.execute();
             executedJobs.add(removeJob);
         }
     }
-    
+
     public void prepareDelete(FXOMObject target) {
         assert target != null;
         assert target.getFxomDocument() == fxomDocument;
         assert fxomDocument.getFxomRoot() != null; // At least target
-        
+
         prepareDeleteObject(target, target);
     }
-    
+
     public List<Job> getExecutedJobs() {
         return new LinkedList<>(executedJobs);
     }
-    
-    
+
+
     /*
      * Private
      */
-    
+
     private FXOMNode prepareDeleteObject(FXOMObject node, FXOMObject target) {
         final FXOMNode result;
-        
+
         final String nodeFxId = node.getFxId();
         if (nodeFxId == null) {
             // node has no fx:id : it can be deleted safely
@@ -122,13 +122,13 @@ public class ObjectDeleter {
                         break;
                     }
                 }
-                
+
                 if (firstReference == null) {
                     // node has only weak references ; those references have
                     // been removed => node can be delete safely
                     result = node;
                 } else {
-                    // we combine firstReference with node ie node is 
+                    // we combine firstReference with node ie node is
                     // disconnected from its parent and put in place of
                     // firstReference
                     final Job combineJob = new CombineReferenceJob(firstReference, editorController);
@@ -138,7 +138,7 @@ public class ObjectDeleter {
                 }
             }
         }
-        
+
         if (result == node) {
             if (node instanceof FXOMInstance) {
                 final FXOMInstance fxomInstance = (FXOMInstance) node;
@@ -157,7 +157,7 @@ public class ObjectDeleter {
                 }
             } // else no prework needed
         }
-        
+
         return result;
     }
 }

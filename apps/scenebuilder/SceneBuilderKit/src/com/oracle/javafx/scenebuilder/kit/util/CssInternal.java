@@ -321,7 +321,7 @@ public class CssInternal {
                 continue;
             }
             if (name.equals(prop.getName().getName())) {
-                // If the value has an origin of Author or Inline 
+                // If the value has an origin of Author or Inline
                 // then we have a property ruled by CSS, otherwise return null
                 // This is in sync because the map is not empty
                 StyleOrigin origin = beanProp.getStyleOrigin();

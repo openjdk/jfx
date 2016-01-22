@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef CompilationResult_h
@@ -36,7 +36,7 @@ enum CompilationResult {
     // internal error and decided to bail out gracefully. Either way, this implies
     // that we shouldn't try to compile this code block again.
     CompilationFailed,
-    
+
     // The profiling assumptions that were fed into the compiler were invalidated
     // even before we finished compiling. This means we should try again: in such
     // cases the profiling will now be updated and the next compilation won't
@@ -44,14 +44,14 @@ enum CompilationResult {
     // exponential back-off, to get even more profiling so that new profiling
     // pathologies aren't encountered.
     CompilationInvalidated,
-    
+
     // The compilation succeeded and the code block now has JITCode for the newly
     // compiled code. However, compilation success doesn't mean that the CodeBlock
     // will execute yet; you typically have to install it first, unless you plan
     // on invoking it manually (something that *could* be done for some kinds of
     // OSR entry).
     CompilationSuccessful,
-    
+
     // We decided to do the compilation asynchronously. This means that we haven't
     // yet compiled the code. This only happens when you pass a
     // DeferredCompilationCallback. That callback will get called with some

@@ -6,13 +6,13 @@
  * are met:
  *
  * 1.  Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer. 
+ *     notice, this list of conditions and the following disclaimer.
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
- *     documentation and/or other materials provided with the distribution. 
+ *     documentation and/or other materials provided with the distribution.
  * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
- *     from this software without specific prior written permission. 
+ *     from this software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY APPLE AND ITS CONTRIBUTORS "AS IS" AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
@@ -80,16 +80,16 @@ using namespace WebCore;
     unsigned char *p = (unsigned char *)*stringHandle;
     if (!p)
         return nil;
-    
+
     // Check the index against the length of the string list, then skip the length.
     if (index < 1 || index > *(SInt16 *)p)
         return nil;
     p += sizeof(SInt16);
-    
+
     // Skip any strings that come before the one we are looking for.
     while (--index)
         p += 1 + *p;
-    
+
     // Convert the one we found into an NSString.
     return [[[NSString alloc] initWithBytes:(p + 1) length:*p encoding:[NSString _web_encodingForResource:stringHandle]] autorelease];
 }
@@ -99,7 +99,7 @@ using namespace WebCore;
     SInt16 resRef = [self openResourceFile];
     if (resRef == -1)
         return NO;
-    
+
     UseResFile(resRef);
     if (ResError() != noErr)
         return NO;
@@ -107,7 +107,7 @@ using namespace WebCore;
     NSString *MIME, *extensionsList, *description;
     NSArray *extensions;
     unsigned i;
-    
+
     for (i=1; 1; i+=2) {
         MIME = [[self stringForStringListID:MIMEListStringStringNumber
                                    andIndex:i] lowercaseString];
@@ -123,7 +123,7 @@ using namespace WebCore;
             for (NSUInteger j = 0; j < [extensions count]; ++j)
                 mimeClassInfo.extensions.append((NSString *)[extensions objectAtIndex:j]);
         }
-        
+
         description = [self stringForStringListID:MIMEDescriptionStringNumber
                                          andIndex:pluginInfo.mimes.size() + 1];
         mimeClassInfo.desc = description;
@@ -133,22 +133,22 @@ using namespace WebCore;
 
     NSString *filename = [(NSString *)path lastPathComponent];
     pluginInfo.file = filename;
-    
+
     description = [self stringForStringListID:PluginNameOrDescriptionStringNumber andIndex:1];
     if (!description)
         description = filename;
     pluginInfo.desc = description;
-    
-    
+
+
     NSString *theName = [self stringForStringListID:PluginNameOrDescriptionStringNumber andIndex:2];
     if (!theName)
         theName = filename;
     pluginInfo.name = theName;
 
     pluginInfo.isApplicationPlugin = false;
-    
+
     [self closeResourceFile:resRef];
-    
+
     return YES;
 }
 #if COMPILER(CLANG)
@@ -158,14 +158,14 @@ using namespace WebCore;
 - (BOOL)_initWithPath:(NSString *)pluginPath
 {
     resourceRef = -1;
-    
+
     OSType type = 0;
 
     if (!cfBundle)
         return NO;
 
     CFBundleGetPackageInfo(cfBundle.get(), &type, NULL);
-    
+
     if (type != FOUR_CHAR_CODE('BRPL'))
         return NO;
 
@@ -193,7 +193,7 @@ using namespace WebCore;
 
     if (![self getPluginInfoFromPLists] && ![self getPluginInfoFromResources])
         return NO;
-    
+
     return YES;
 }
 
@@ -201,7 +201,7 @@ using namespace WebCore;
 {
     if (!(self = [super initWithPath:pluginPath]))
         return nil;
-    
+
     // Initializing a plugin package can cause it to be loaded.  If there was an error initializing the plugin package,
     // ensure that it is unloaded before deallocating it (WebBasePluginPackage requires & asserts this).
     if (![self _initWithPath:pluginPath]) {
@@ -209,7 +209,7 @@ using namespace WebCore;
         [self release];
         return nil;
     }
-        
+
     return self;
 }
 
@@ -246,7 +246,7 @@ using namespace WebCore;
 
     if (isLoaded)
         return YES;
-    
+
     if (!CFBundleLoadExecutable(cfBundle.get()))
         return NO;
 #if !LOG_DISABLED
@@ -368,7 +368,7 @@ using namespace WebCore;
 }
 
 - (BOOL)load
-{    
+{
     if ([self _tryLoad])
         return [super load];
 
@@ -389,7 +389,7 @@ using namespace WebCore;
 - (void)wasRemovedFromPluginDatabase:(WebPluginDatabase *)database
 {
     [super wasRemovedFromPluginDatabase:database];
-    
+
     // Unload when removed from final plug-in database
     if ([pluginDatabases count] == 0)
         [self _unloadWithShutdown:YES];
@@ -398,12 +398,12 @@ using namespace WebCore;
 - (void)open
 {
     instanceCount++;
-    
+
     // Handle the case where all instances close a plug-in package, but another
     // instance opens the package before it is unloaded (which only happens when
     // the plug-in database is refreshed)
     needsUnload = NO;
-    
+
     if (!isLoaded) {
         // Should load when the first instance opens the plug-in package
         ASSERT(instanceCount == 1);
@@ -424,13 +424,13 @@ using namespace WebCore;
 {
     if ([self bundleIdentifier] != "com.macromedia.Flash Player.plugin")
         return YES;
-    
+
     // Flash has a bogus Info.plist entry for CFBundleVersionString, so use CFBundleShortVersionString.
     NSString *versionString = (NSString *)CFDictionaryGetValue(CFBundleGetInfoDictionary(cfBundle.get()), CFSTR("CFBundleShortVersionString"));
-    
+
     if (![versionString hasPrefix:@"10.1"])
         return YES;
-    
+
     // Some prerelease versions of Flash 10.1 crash when sent a drawRect event using the CA drawing model: <rdar://problem/7739922>
     return CFStringCompare((CFStringRef)versionString, CFSTR("10.1.53.60"), kCFCompareNumerically) != kCFCompareLessThan;
 }
@@ -443,7 +443,7 @@ using namespace WebCore;
 {
     if (!isLoaded)
         return;
-    
+
     LOG(Plugins, "Unloading %@...", (NSString *)pluginInfo.name);
 
     // Cannot unload a plug-in package while an instance is still using it

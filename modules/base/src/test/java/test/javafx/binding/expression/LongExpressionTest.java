@@ -182,19 +182,19 @@ public class LongExpressionTest {
         // make sure we do not create unnecessary bindings
         assertEquals(op1, LongExpression.longExpression(op1));
     }
-    
+
     @Test
-    public void testAsObject() { 
+    public void testAsObject() {
         final ObservableLongValueStub valueModel = new ObservableLongValueStub();
         final ObjectExpression<Long> exp = LongExpression.longExpression(valueModel).asObject();
-        
+
         assertEquals(Long.valueOf(0L), exp.getValue());
         valueModel.set(data);
         assertEquals(Long.valueOf(data), exp.getValue());
         valueModel.set(long1);
         assertEquals(Long.valueOf(long1), exp.getValue());
     }
-    
+
     @Test
     public void testObjectToLong() {
         final ObservableValueStub<Long> valueModel = new ObservableValueStub<Long>();

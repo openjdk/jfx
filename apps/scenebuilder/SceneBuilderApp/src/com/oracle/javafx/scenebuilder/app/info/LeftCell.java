@@ -40,8 +40,8 @@ import javafx.util.Callback;
  *
  */
 class LeftCell extends TableCell<IndexEntry, String> {
-    
-    
+
+
     /*
      * TableCell
      */
@@ -51,11 +51,11 @@ class LeftCell extends TableCell<IndexEntry, String> {
         super.updateItem(leftValue, empty);
         setText(empty ? "" : leftValue); //NOI18N
     }
-    
-    
-    
-    
-    public static class Factory 
+
+
+
+
+    public static class Factory
     implements Callback<TableColumn<IndexEntry, String>, TableCell<IndexEntry, String>> {
 
         /*

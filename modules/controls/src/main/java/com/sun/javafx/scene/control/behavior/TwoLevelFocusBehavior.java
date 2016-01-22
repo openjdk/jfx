@@ -214,9 +214,9 @@ public class TwoLevelFocusBehavior {
         return externalFocus;
     }
 
-    private static final PseudoClass INTERNAL_PSEUDOCLASS_STATE = 
+    private static final PseudoClass INTERNAL_PSEUDOCLASS_STATE =
             PseudoClass.getPseudoClass("internal-focus");
-    private static final PseudoClass EXTERNAL_PSEUDOCLASS_STATE = 
+    private static final PseudoClass EXTERNAL_PSEUDOCLASS_STATE =
             PseudoClass.getPseudoClass("external-focus");
 
     public void setExternalFocus(boolean value) {

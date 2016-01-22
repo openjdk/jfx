@@ -150,18 +150,18 @@ namespace JSC {
         RefCountedArray<JSC::StackFrame> oldExceptionStack;
         VM* m_vm;
     };
-    
+
     class TopCallFrameSetter {
     public:
         TopCallFrameSetter(VM& currentVM, CallFrame* callFrame)
             : vm(currentVM)
-            , oldCallFrame(currentVM.topCallFrame) 
+            , oldCallFrame(currentVM.topCallFrame)
         {
             ASSERT(!callFrame->isVMEntrySentinel());
             currentVM.topCallFrame = callFrame;
         }
-        
-        ~TopCallFrameSetter() 
+
+        ~TopCallFrameSetter()
         {
             ASSERT(!oldCallFrame->isVMEntrySentinel());
             vm.topCallFrame = oldCallFrame;
@@ -170,7 +170,7 @@ namespace JSC {
         VM& vm;
         CallFrame* oldCallFrame;
     };
-    
+
     class NativeCallFrameTracer {
     public:
         ALWAYS_INLINE NativeCallFrameTracer(VM* vm, CallFrame* callFrame)
@@ -180,7 +180,7 @@ namespace JSC {
             ASSERT(!callFrame->isVMEntrySentinel());
             vm->topCallFrame = callFrame;
         }
-        
+
         enum VMEntrySentinelOKTag { VMEntrySentinelOK };
         ALWAYS_INLINE NativeCallFrameTracer(VM* vm, CallFrame* callFrame, VMEntrySentinelOKTag)
         {
@@ -201,11 +201,11 @@ namespace JSC {
     public:
         Interpreter(VM &);
         ~Interpreter();
-        
+
         void initialize(bool canUseJIT);
 
         JSStack& stack() { return m_stack; }
-        
+
         Opcode getOpcode(OpcodeID id)
         {
             ASSERT(m_initialized);
@@ -226,7 +226,7 @@ namespace JSC {
             return opcode;
 #endif
         }
-        
+
         bool isOpcode(Opcode);
 
         JSValue execute(ProgramExecutable*, CallFrame*, JSObject* thisObj);
@@ -235,7 +235,7 @@ namespace JSC {
         JSValue execute(EvalExecutable*, CallFrame*, JSValue thisValue, JSScope*);
 
         void getArgumentsData(CallFrame*, JSFunction*&, ptrdiff_t& firstParameterIndex, Register*& argv, int& argc);
-        
+
         SamplingTool* sampler() { return m_sampler.get(); }
 
         NEVER_INLINE HandlerInfo* unwind(CallFrame*&, JSValue&);
@@ -263,7 +263,7 @@ namespace JSC {
         void getStackTrace(Vector<StackFrame>& results, size_t maxStackSize = std::numeric_limits<size_t>::max());
 
         void dumpRegisters(CallFrame*);
-        
+
         bool isCallBytecode(Opcode opcode) { return opcode == getOpcode(op_call) || opcode == getOpcode(op_construct) || opcode == getOpcode(op_call_eval); }
 
         void enableSampler();
@@ -273,7 +273,7 @@ namespace JSC {
         VM& m_vm;
         JSStack m_stack;
         int m_errorHandlingModeReentry;
-        
+
 #if ENABLE(COMPUTED_GOTO_OPCODES) && ENABLE(LLINT)
         Opcode* m_opcodeTable; // Maps OpcodeID => Opcode for compiling
         HashMap<Opcode, OpcodeID> m_opcodeIDTable; // Maps Opcode => OpcodeID for decompiling

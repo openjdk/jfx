@@ -43,10 +43,10 @@ ffi_raw_size (ffi_cif *cif)
     {
 #if !FFI_NO_STRUCTS
       if ((*at)->type == FFI_TYPE_STRUCT)
-	result += ALIGN (sizeof (void*), FFI_SIZEOF_ARG);
+    result += ALIGN (sizeof (void*), FFI_SIZEOF_ARG);
       else
 #endif
-	result += ALIGN ((*at)->size, FFI_SIZEOF_ARG);
+    result += ALIGN ((*at)->size, FFI_SIZEOF_ARG);
     }
 
   return result;
@@ -62,44 +62,44 @@ ffi_raw_to_ptrarray (ffi_cif *cif, ffi_raw *raw, void **args)
 #if WORDS_BIGENDIAN
 
   for (i = 0; i < cif->nargs; i++, tp++, args++)
-    {	  
+    {
       switch ((*tp)->type)
-	{
-	case FFI_TYPE_UINT8:
-	case FFI_TYPE_SINT8:
-	  *args = (void*) ((char*)(raw++) + FFI_SIZEOF_ARG - 1);
-	  break;
-	  
-	case FFI_TYPE_UINT16:
-	case FFI_TYPE_SINT16:
-	  *args = (void*) ((char*)(raw++) + FFI_SIZEOF_ARG - 2);
-	  break;
+    {
+    case FFI_TYPE_UINT8:
+    case FFI_TYPE_SINT8:
+      *args = (void*) ((char*)(raw++) + FFI_SIZEOF_ARG - 1);
+      break;
 
-#if FFI_SIZEOF_ARG >= 4	  
-	case FFI_TYPE_UINT32:
-	case FFI_TYPE_SINT32:
-	  *args = (void*) ((char*)(raw++) + FFI_SIZEOF_ARG - 4);
-	  break;
-#endif
-	
-#if !FFI_NO_STRUCTS  
-	case FFI_TYPE_STRUCT:
-	  *args = (raw++)->ptr;
-	  break;
+    case FFI_TYPE_UINT16:
+    case FFI_TYPE_SINT16:
+      *args = (void*) ((char*)(raw++) + FFI_SIZEOF_ARG - 2);
+      break;
+
+#if FFI_SIZEOF_ARG >= 4
+    case FFI_TYPE_UINT32:
+    case FFI_TYPE_SINT32:
+      *args = (void*) ((char*)(raw++) + FFI_SIZEOF_ARG - 4);
+      break;
 #endif
 
-	case FFI_TYPE_COMPLEX:
-	  *args = (raw++)->ptr;
-	  break;
+#if !FFI_NO_STRUCTS
+    case FFI_TYPE_STRUCT:
+      *args = (raw++)->ptr;
+      break;
+#endif
 
-	case FFI_TYPE_POINTER:
-	  *args = (void*) &(raw++)->ptr;
-	  break;
-	  
-	default:
-	  *args = raw;
-	  raw += ALIGN ((*tp)->size, FFI_SIZEOF_ARG) / FFI_SIZEOF_ARG;
-	}
+    case FFI_TYPE_COMPLEX:
+      *args = (raw++)->ptr;
+      break;
+
+    case FFI_TYPE_POINTER:
+      *args = (void*) &(raw++)->ptr;
+      break;
+
+    default:
+      *args = raw;
+      raw += ALIGN ((*tp)->size, FFI_SIZEOF_ARG) / FFI_SIZEOF_ARG;
+    }
     }
 
 #else /* WORDS_BIGENDIAN */
@@ -108,23 +108,23 @@ ffi_raw_to_ptrarray (ffi_cif *cif, ffi_raw *raw, void **args)
 
   /* then assume little endian */
   for (i = 0; i < cif->nargs; i++, tp++, args++)
-    {	  
+    {
 #if !FFI_NO_STRUCTS
       if ((*tp)->type == FFI_TYPE_STRUCT)
-	{
-	  *args = (raw++)->ptr;
-	}
+    {
+      *args = (raw++)->ptr;
+    }
       else
 #endif
       if ((*tp)->type == FFI_TYPE_COMPLEX)
-	{
-	  *args = (raw++)->ptr;
-	}
+    {
+      *args = (raw++)->ptr;
+    }
       else
-	{
-	  *args = (void*) raw;
-	  raw += ALIGN ((*tp)->size, sizeof (void*)) / sizeof (void*);
-	}
+    {
+      *args = (void*) raw;
+      raw += ALIGN ((*tp)->size, sizeof (void*)) / sizeof (void*);
+    }
     }
 
 #else
@@ -141,53 +141,53 @@ ffi_ptrarray_to_raw (ffi_cif *cif, void **args, ffi_raw *raw)
   ffi_type **tp = cif->arg_types;
 
   for (i = 0; i < cif->nargs; i++, tp++, args++)
-    {	  
+    {
       switch ((*tp)->type)
-	{
-	case FFI_TYPE_UINT8:
-	  (raw++)->uint = *(UINT8*) (*args);
-	  break;
+    {
+    case FFI_TYPE_UINT8:
+      (raw++)->uint = *(UINT8*) (*args);
+      break;
 
-	case FFI_TYPE_SINT8:
-	  (raw++)->sint = *(SINT8*) (*args);
-	  break;
+    case FFI_TYPE_SINT8:
+      (raw++)->sint = *(SINT8*) (*args);
+      break;
 
-	case FFI_TYPE_UINT16:
-	  (raw++)->uint = *(UINT16*) (*args);
-	  break;
+    case FFI_TYPE_UINT16:
+      (raw++)->uint = *(UINT16*) (*args);
+      break;
 
-	case FFI_TYPE_SINT16:
-	  (raw++)->sint = *(SINT16*) (*args);
-	  break;
+    case FFI_TYPE_SINT16:
+      (raw++)->sint = *(SINT16*) (*args);
+      break;
 
 #if FFI_SIZEOF_ARG >= 4
-	case FFI_TYPE_UINT32:
-	  (raw++)->uint = *(UINT32*) (*args);
-	  break;
+    case FFI_TYPE_UINT32:
+      (raw++)->uint = *(UINT32*) (*args);
+      break;
 
-	case FFI_TYPE_SINT32:
-	  (raw++)->sint = *(SINT32*) (*args);
-	  break;
+    case FFI_TYPE_SINT32:
+      (raw++)->sint = *(SINT32*) (*args);
+      break;
 #endif
 
 #if !FFI_NO_STRUCTS
-	case FFI_TYPE_STRUCT:
-	  (raw++)->ptr = *args;
-	  break;
+    case FFI_TYPE_STRUCT:
+      (raw++)->ptr = *args;
+      break;
 #endif
 
-	case FFI_TYPE_COMPLEX:
-	  (raw++)->ptr = *args;
-	  break;
+    case FFI_TYPE_COMPLEX:
+      (raw++)->ptr = *args;
+      break;
 
-	case FFI_TYPE_POINTER:
-	  (raw++)->ptr = **(void***) args;
-	  break;
+    case FFI_TYPE_POINTER:
+      (raw++)->ptr = **(void***) args;
+      break;
 
-	default:
-	  memcpy ((void*) raw->data, (void*)*args, (*tp)->size);
-	  raw += ALIGN ((*tp)->size, FFI_SIZEOF_ARG) / FFI_SIZEOF_ARG;
-	}
+    default:
+      memcpy ((void*) raw->data, (void*)*args, (*tp)->size);
+      raw += ALIGN ((*tp)->size, FFI_SIZEOF_ARG) / FFI_SIZEOF_ARG;
+    }
     }
 }
 
@@ -208,11 +208,11 @@ void ffi_raw_call (ffi_cif *cif, void (*fn)(void), void *rvalue, ffi_raw *raw)
   ffi_call (cif, fn, rvalue, avalue);
 }
 
-#if FFI_CLOSURES		/* base system provides closures */
+#if FFI_CLOSURES        /* base system provides closures */
 
 static void
 ffi_translate_args (ffi_cif *cif, void *rvalue,
-		    void **avalue, void *user_data)
+            void **avalue, void *user_data)
 {
   ffi_raw *raw = (ffi_raw*)alloca (ffi_raw_size (cif));
   ffi_raw_closure *cl = (ffi_raw_closure*)user_data;
@@ -223,18 +223,18 @@ ffi_translate_args (ffi_cif *cif, void *rvalue,
 
 ffi_status
 ffi_prep_raw_closure_loc (ffi_raw_closure* cl,
-			  ffi_cif *cif,
-			  void (*fun)(ffi_cif*,void*,ffi_raw*,void*),
-			  void *user_data,
-			  void *codeloc)
+              ffi_cif *cif,
+              void (*fun)(ffi_cif*,void*,ffi_raw*,void*),
+              void *user_data,
+              void *codeloc)
 {
   ffi_status status;
 
   status = ffi_prep_closure_loc ((ffi_closure*) cl,
-				 cif,
-				 &ffi_translate_args,
-				 codeloc,
-				 codeloc);
+                 cif,
+                 &ffi_translate_args,
+                 codeloc,
+                 codeloc);
   if (status == FFI_OK)
     {
       cl->fun       = fun;
@@ -255,9 +255,9 @@ ffi_prep_raw_closure_loc (ffi_raw_closure* cl,
 
 ffi_status
 ffi_prep_raw_closure (ffi_raw_closure* cl,
-		      ffi_cif *cif,
-		      void (*fun)(ffi_cif*,void*,ffi_raw*,void*),
-		      void *user_data)
+              ffi_cif *cif,
+              void (*fun)(ffi_cif*,void*,ffi_raw*,void*),
+              void *user_data)
 {
   return ffi_prep_raw_closure_loc (cl, cif, fun, user_data, cl);
 }

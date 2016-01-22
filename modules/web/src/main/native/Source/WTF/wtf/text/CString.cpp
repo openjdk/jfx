@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 
@@ -65,7 +65,7 @@ void CString::init(const char* str, size_t length)
     ASSERT(str);
 
     m_buffer = CStringBuffer::createUninitialized(length);
-    memcpy(m_buffer->mutableData(), str, length); 
+    memcpy(m_buffer->mutableData(), str, length);
     m_buffer->mutableData()[length] = '\0';
 }
 
@@ -76,7 +76,7 @@ char* CString::mutableData()
         return 0;
     return m_buffer->mutableData();
 }
-    
+
 CString CString::newUninitialized(size_t length, char*& characterBuffer)
 {
     CString result;

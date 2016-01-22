@@ -738,7 +738,7 @@ void GraphicsContext::drawEllipse(const IntRect& rect)
     SelectObject(dc, oldBrush);
 }
 
-static inline bool equalAngle(double a, double b) 
+static inline bool equalAngle(double a, double b)
 {
     return fabs(a - b) < 1E-5;
 }
@@ -852,7 +852,7 @@ void GraphicsContext::clipConvexPolygon(size_t numPoints, const FloatPoint* poin
 
     if (numPoints <= 1)
         return;
-    
+
     // FIXME: IMPLEMENT!!
 }
 
@@ -1009,7 +1009,7 @@ void GraphicsContext::clearRect(const FloatRect& rect)
         IntRect trRect = enclosingIntRect(m_data->mapRect(rect));
         m_data->m_bitmap->clearPixels(trRect);
         return;
-    } 
+    }
 
     fillRect(rect, Color(Color::white), ColorSpaceDeviceRGB);
 }
@@ -1160,15 +1160,15 @@ void GraphicsContext::fillRoundedRect(const FloatRect& fillRect, const FloatSize
     float shadowBlur = 0;
     Color shadowColor;
     ColorSpace shadowColorSpace;
-        
+
     getShadow(shadowOffset, shadowBlur, shadowColor, shadowColorSpace);
-    
+
     IntRect dstRect = fillRect;
-    
+
     dstRect.move(stableRound(shadowOffset.width()), stableRound(shadowOffset.height()));
     dstRect.inflate(stableRound(shadowBlur));
     dstRect = m_data->mapRect(dstRect);
-  
+
     FloatSize newTopLeft(m_data->mapSize(topLeft));
     FloatSize newTopRight(m_data->mapSize(topRight));
     FloatSize newBottomLeft(m_data->mapSize(bottomLeft));
@@ -1356,8 +1356,8 @@ void GraphicsContext::fillRect(const FloatRect& r, const Gradient* gradient)
         Color color(stop.red, stop.green, stop.blue, stop.alpha);
         fillRect(r, color, ColorSpaceDeviceRGB);
         return;
-    } 
-    
+    }
+
     ScopeDCProvider dcProvider(m_data);
     if (!m_data->m_dc)
         return;

@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef DFGAbstractValue_h
@@ -48,7 +48,7 @@ struct AbstractValue {
         , m_arrayModes(0)
     {
     }
-    
+
     void clear()
     {
         m_type = SpecNone;
@@ -58,20 +58,20 @@ struct AbstractValue {
         m_value = JSValue();
         checkConsistency();
     }
-    
+
     bool isClear() const { return m_type == SpecNone; }
     bool operator!() const { return isClear(); }
-    
+
     void makeHeapTop()
     {
         makeTop(SpecHeapTop);
     }
-    
+
     void makeBytecodeTop()
     {
         makeTop(SpecBytecodeTop);
     }
-    
+
     void clobberStructures()
     {
         if (m_type & SpecCell) {
@@ -83,38 +83,38 @@ struct AbstractValue {
         }
         checkConsistency();
     }
-        
+
     void clobberValue()
     {
         m_value = JSValue();
     }
-    
+
     bool isHeapTop() const
     {
         return (m_type | SpecHeapTop) == m_type && m_currentKnownStructure.isTop() && m_futurePossibleStructure.isTop();
     }
-    
+
     bool valueIsTop() const
     {
         return !m_value && m_type;
     }
-    
+
     JSValue value() const
     {
         return m_value;
     }
-    
+
     static AbstractValue heapTop()
     {
         AbstractValue result;
         result.makeHeapTop();
         return result;
     }
-    
+
     void setMostSpecific(Graph&, JSValue);
     void set(Graph&, JSValue);
     void set(Graph&, Structure*);
-    
+
     void setType(SpeculatedType type)
     {
         if (type & SpecCell) {
@@ -130,7 +130,7 @@ struct AbstractValue {
         m_value = JSValue();
         checkConsistency();
     }
-    
+
     bool operator==(const AbstractValue& other) const
     {
         return m_type == other.m_type
@@ -143,12 +143,12 @@ struct AbstractValue {
     {
         return !(*this == other);
     }
-    
+
     bool merge(const AbstractValue& other)
     {
         if (other.isClear())
             return false;
-        
+
 #if !ASSERT_DISABLED
         AbstractValue oldMe = *this;
 #endif
@@ -170,11 +170,11 @@ struct AbstractValue {
         ASSERT(result == (*this != oldMe));
         return result;
     }
-    
+
     void merge(SpeculatedType type)
     {
         mergeSpeculation(m_type, type);
-        
+
         if (type & SpecCell) {
             m_currentKnownStructure.makeTop();
             m_futurePossibleStructure.makeTop();
@@ -184,41 +184,41 @@ struct AbstractValue {
 
         checkConsistency();
     }
-    
+
     bool couldBeType(SpeculatedType desiredType)
     {
         return !!(m_type & desiredType);
     }
-    
+
     bool isType(SpeculatedType desiredType)
     {
         return !(m_type & ~desiredType);
     }
-    
+
     FiltrationResult filter(Graph&, const StructureSet&);
-    
+
     FiltrationResult filterArrayModes(ArrayModes arrayModes);
-    
+
     FiltrationResult filter(SpeculatedType type);
-    
+
     FiltrationResult filterByValue(JSValue value);
-    
+
     bool validate(JSValue value) const
     {
         if (isHeapTop())
             return true;
-        
+
         if (!!m_value && m_value != value)
             return false;
-        
+
         if (mergeSpeculations(m_type, speculationFromValue(value)) != m_type)
             return false;
-        
+
         if (value.isEmpty()) {
             ASSERT(m_type & SpecEmpty);
             return true;
         }
-        
+
         if (!!value && value.isCell()) {
             ASSERT(m_type & SpecCell);
             Structure* structure = value.asCell()->structure();
@@ -226,10 +226,10 @@ struct AbstractValue {
                 && m_futurePossibleStructure.contains(structure)
                 && (m_arrayModes & asArrayModes(structure->indexingType()));
         }
-        
+
         return true;
     }
-    
+
     Structure* bestProvenStructure() const
     {
         if (m_currentKnownStructure.hasSingleton())
@@ -238,22 +238,22 @@ struct AbstractValue {
             return m_futurePossibleStructure.singleton();
         return 0;
     }
-    
+
     bool hasClobberableState() const
     {
         return m_currentKnownStructure.isNeitherClearNorTop()
             || !arrayModesAreClearOrTop(m_arrayModes);
     }
-    
+
 #if ASSERT_DISABLED
     void checkConsistency() const { }
 #else
     void checkConsistency() const;
 #endif
-    
+
     void dumpInContext(PrintStream&, DumpContext*) const;
     void dump(PrintStream&) const;
-    
+
     // A great way to think about the difference between m_currentKnownStructure and
     // m_futurePossibleStructure is to consider these four examples:
     //
@@ -288,7 +288,7 @@ struct AbstractValue {
     //    change x's structure and we have no way of proving otherwise, but
     //    x's m_futurePossibleStructure will be whatever structure we had checked
     //    when getting property 'f'.
-    
+
     // NB. All fields in this struct must have trivial destructors.
 
     // This is a proven constraint on the structures that this value can have right
@@ -305,7 +305,7 @@ struct AbstractValue {
     // this field is not subject to structure transition watchpoints - even if one
     // fires, we can be sure that this proof is still valid.
     StructureAbstractValue m_currentKnownStructure;
-    
+
     // This is a proven constraint on the structures that this value can have now
     // or any time in the future subject to the structure transition watchpoints of
     // all members of this set not having fired. This set is impervious to side-
@@ -321,7 +321,7 @@ struct AbstractValue {
     // result in m_currentKnownStructure being filtered according to
     // m_futurePossibleStructure.
     StructureAbstractValue m_futurePossibleStructure;
-    
+
     // This is a proven constraint on the possible types that this value can have
     // now or any time in the future, unless it is reassigned. This field is
     // impervious to side-effects unless the side-effect can reassign the value
@@ -337,14 +337,14 @@ struct AbstractValue {
     // [0x12345] then this abstract value corresponds to the set of all integers
     // unified with the set of all objects with structure 0x12345.
     SpeculatedType m_type;
-    
+
     // This is a proven constraint on the possible indexing types that this value
     // can have right now. It also implicitly constraints the set of structures
     // that the value may have right now, since a structure has an immutable
     // indexing type. This is subject to change upon reassignment, or any side
     // effect that makes non-obvious changes to the heap.
     ArrayModes m_arrayModes;
-    
+
     // This is a proven constraint on the possible values that this value can
     // have now or any time in the future, unless it is reassigned. Note that this
     // implies nothing about the structure. Oddly, JSValue() (i.e. the empty value)
@@ -360,30 +360,30 @@ private:
         // could have in the future. For now, just do the simple thing.
         m_arrayModes = ALL_ARRAY_MODES;
     }
-    
+
     bool validateType(JSValue value) const
     {
         if (isHeapTop())
             return true;
-        
+
         // Constant folding always represents Int52's in a double (i.e. Int52AsDouble).
         // So speculationFromValue(value) for an Int52 value will return Int52AsDouble,
         // and that's fine - the type validates just fine.
         SpeculatedType type = m_type;
         if (type & SpecInt52)
             type |= SpecInt52AsDouble;
-        
+
         if (mergeSpeculations(type, speculationFromValue(value)) != type)
             return false;
-        
+
         if (value.isEmpty()) {
             ASSERT(m_type & SpecEmpty);
             return true;
         }
-        
+
         return true;
     }
-    
+
     void makeTop(SpeculatedType top)
     {
         m_type |= top;
@@ -393,12 +393,12 @@ private:
         m_value = JSValue();
         checkConsistency();
     }
-    
+
     void setFuturePossibleStructure(Graph&, Structure* structure);
 
     void filterValueByType();
     void filterArrayModesByType();
-    
+
     bool shouldBeClear() const;
     FiltrationResult normalizeClarity();
 };

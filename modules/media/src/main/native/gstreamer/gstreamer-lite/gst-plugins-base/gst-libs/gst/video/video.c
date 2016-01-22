@@ -42,7 +42,7 @@
  *
  * <refsect2>
  * <para>
- * This library contains some helper functions and includes the 
+ * This library contains some helper functions and includes the
  * videosink and videofilter base classes.
  * </para>
  * </refsect2>
@@ -59,13 +59,13 @@
  * @display_par_n: Numerator of the pixel aspect ratio of the display device
  * @display_par_d: Denominator of the pixel aspect ratio of the display device
  *
- * Given the Pixel Aspect Ratio and size of an input video frame, and the 
- * pixel aspect ratio of the intended display device, calculates the actual 
+ * Given the Pixel Aspect Ratio and size of an input video frame, and the
+ * pixel aspect ratio of the intended display device, calculates the actual
  * display ratio the video will be rendered with.
  *
- * Returns: A boolean indicating success and a calculated Display Ratio in the 
- * dar_n and dar_d parameters. 
- * The return value is FALSE in the case of integer overflow or other error. 
+ * Returns: A boolean indicating success and a calculated Display Ratio in the
+ * dar_n and dar_d parameters.
+ * The return value is FALSE in the case of integer overflow or other error.
  */
 gboolean
 gst_video_calculate_display_ratio (guint * dar_n, guint * dar_d,

@@ -268,7 +268,7 @@ public class BoundedDoubleEditor extends AutoSuggestEditor {
     public void requestFocus() {
         EditorUtils.doNextFrame(() -> getTextField().requestFocus());
     }
-    
+
     private void handleSpecificCases(ValuePropertyMetadata propMeta, Set<FXOMInstance> selectedInstances) {
         // Specific case for ScrollPane hValue/vValue, that have their bounds
         // related to properties (hMin/hMax, vMin/Vmax)

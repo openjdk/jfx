@@ -202,7 +202,7 @@ void GraphicsContext3D::setContextLostCallback(PassOwnPtr<ContextLostCallback> c
     m_private->setContextLostCallback(callBack);
 }
 
-void GraphicsContext3D::setErrorMessageCallback(PassOwnPtr<ErrorMessageCallback>) 
+void GraphicsContext3D::setErrorMessageCallback(PassOwnPtr<ErrorMessageCallback>)
 {
     notImplemented();
 }
@@ -213,7 +213,7 @@ void GraphicsContext3D::paintToCanvas(const unsigned char* imagePixels, int imag
         return;
 
     cairo_t* cr = context->cr();
-    context->save(); 
+    context->save();
 
     RefPtr<cairo_surface_t> imageSurface = adoptRef(cairo_image_surface_create_for_data(
         const_cast<unsigned char*>(imagePixels), CAIRO_FORMAT_ARGB32, imageWidth, imageHeight, imageWidth * 4));

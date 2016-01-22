@@ -99,7 +99,7 @@ public final class Importer3D {
         // Reference all the importer jars
         ImporterFinder finder = new ImporterFinder();
         URLClassLoader classLoader = finder.addUrlToClassPath();
-        
+
         ServiceLoader<Importer> servantLoader = ServiceLoader.load(Importer.class, classLoader);
         // Check if we have an implementation for this file type
         Importer importer = null;
@@ -137,7 +137,7 @@ public final class Importer3D {
             }
             if (fail) throw new IOException("Unknown 3D file format [" + extension + "]");
         }
-        
+
         if (extension.equals("fxml")) {
             final Object fxmlRoot = FXMLLoader.load(new URL(fileUrl));
             if (fxmlRoot instanceof Node) {

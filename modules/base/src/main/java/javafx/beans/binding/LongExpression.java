@@ -74,7 +74,7 @@ public abstract class LongExpression extends NumberExpressionBase implements
      * {@code ObservableLongValue} is already a {@code LongExpression}, it will
      * be returned. Otherwise a new {@link javafx.beans.binding.LongBinding} is
      * created that is bound to the {@code ObservableLongValue}.
-     * 
+     *
      * @param value
      *            The source {@code ObservableLongValue}
      * @return A {@code LongExpression} that wraps the
@@ -117,20 +117,20 @@ public abstract class LongExpression extends NumberExpressionBase implements
      * will be returned. Otherwise a new
      * {@link javafx.beans.binding.LongBinding} is created that is bound to
      * the {@code ObservableValue}.
-     * 
+     *
      * <p>
      * Note: this method can be used to convert an {@link ObjectExpression} or
      * {@link javafx.beans.property.ObjectProperty} of specific number type to LongExpression, which
      * is essentially an {@code ObservableValue<Number>}. See sample below.
-     * 
+     *
      * <blockquote><pre>
      *   LongProperty longProperty = new SimpleLongProperty(1L);
      *   ObjectProperty&lt;Long&gt; objectProperty = new SimpleObjectProperty&lt;&gt;(2L);
      *   BooleanBinding binding = longProperty.greaterThan(LongExpression.longExpression(objectProperty));
      * </pre></blockquote>
-     * 
+     *
      * Note: null values will be interpreted as 0L
-     * 
+     *
      * @param value
      *            The source {@code ObservableValue}
      * @return A {@code LongExpression} that wraps the
@@ -253,13 +253,13 @@ public abstract class LongExpression extends NumberExpressionBase implements
     public LongBinding divide(final int other) {
         return (LongBinding) Bindings.divide(this, other);
     }
-    
+
     /**
      * Creates an {@link javafx.beans.binding.ObjectExpression} that holds the value
      * of this {@code LongExpression}. If the
      * value of this {@code LongExpression} changes, the value of the
      * {@code ObjectExpression} will be updated automatically.
-     * 
+     *
      * @return the new {@code ObjectExpression}
      * @since JavaFX 8.0
      */
@@ -273,7 +273,7 @@ public abstract class LongExpression extends NumberExpressionBase implements
             public void dispose() {
                 unbind(LongExpression.this);
             }
-            
+
             @Override
             protected Long computeValue() {
                 return LongExpression.this.getValue();

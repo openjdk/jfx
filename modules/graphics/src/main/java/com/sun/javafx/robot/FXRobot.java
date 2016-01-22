@@ -32,7 +32,7 @@ import javafx.scene.input.MouseButton;
  * Defines interface for generation of FX level events for purposes of test
  * automation, self running demos and other applications where control of the
  * mouse and keyboard is needed.
- * 
+ *
  */
 public abstract class FXRobot {
     protected boolean autoWait = false;
@@ -41,7 +41,7 @@ public abstract class FXRobot {
      * Block until events in the queue are processed.
      */
     public abstract void waitForIdle();
-    
+
     /**
      * Whether to wait for events to be processed after each robot command
      * @param wait if true, wait until events in the queue are processed
@@ -63,7 +63,7 @@ public abstract class FXRobot {
      * released,
      * {@link #keyType(javafx.scene.input.KeyCode, java.lang.String)} will
      * need to be called explicitly.
-     * 
+     *
      * @param code key code for this event
      */
     public abstract void keyRelease(KeyCode code);
@@ -76,13 +76,13 @@ public abstract class FXRobot {
      * otherwise it will be "a".
      *
      * @param code key code for this event
-     * @param keyChar char for this event 
+     * @param keyChar char for this event
      */
     public abstract void keyType(KeyCode code, String keyChar);
 
     /**
      * Generate a mouse moved event.
-     * 
+     *
      * @param x scene coordinate x
      * @param y scene coordinate y
      */
@@ -91,7 +91,7 @@ public abstract class FXRobot {
     /**
      * Generate a mouse press event with specified click count.
      *
-     * Note that a multi-click gesture consists of multiple sets of 
+     * Note that a multi-click gesture consists of multiple sets of
      * MousePressed/MouseReleased/MouseClicked events, with second and following
      * sets having appropriate click count set.
      * <br>
@@ -120,7 +120,7 @@ public abstract class FXRobot {
      * @param clickCount number of clicks for this event
      */
     public abstract void mouseRelease(MouseButton button, int clickCount);
-    
+
     /**
      * Generate a mouse clicked event with specified click count.
      *
@@ -144,7 +144,7 @@ public abstract class FXRobot {
     public void mousePress(MouseButton button) {
         mousePress(button, 1);
     }
-    
+
     /**
      * Generate a mouse pressed event with click count of 1.
      *
@@ -184,7 +184,7 @@ public abstract class FXRobot {
      * Returns pixel color at specified scene coordinates in IntARGB format,
      * {@code 0} if the passed coordinates are outside of the scene's bounds or
      * if pixel grabbing isn't supported.
-     * 
+     *
      * @param x scene coordinate
      * @param y scene coordinate
      * @return pixel color in IntARGB format or {@code 0} if outside of scene
@@ -193,13 +193,13 @@ public abstract class FXRobot {
     public abstract int getPixelColor(int x, int y);
 
     /**
-     * Returns a {@link FXRobotImage} object representing in image with contents 
+     * Returns a {@link FXRobotImage} object representing in image with contents
      * of the scene at specified coordinates, or null if scene pixel capturing
      * isn't supported.
      *
      * Implementation note: current implementation ignores passed parameters and
      * always captures complete scene.
-     * 
+     *
      * @param x scene coordinate
      * @param y scene coordinate
      * @param width of the area to capture

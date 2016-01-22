@@ -55,7 +55,7 @@ static CFStringRef getPostScriptName(CFStringRef faceName, HDC dc)
     DWORD bufferSize = GetFontData(dc, 'eman', 0, NULL, 0); // "name" backwards
     if (bufferSize == 0 || bufferSize == GDI_ERROR || bufferSize > cMaxNameTableSize)
         return NULL;
-   
+
     Vector<BYTE> bufferVector(bufferSize);
     BYTE* buffer = bufferVector.data();
     if (GetFontData(dc, 'eman', 0, buffer, bufferSize) == GDI_ERROR)

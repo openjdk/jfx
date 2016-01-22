@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #if USE(PLUGIN_HOST_PROCESS)
@@ -36,13 +36,13 @@
 @class WebPlaceholderModalWindow;
 
 namespace WebKit {
-    
+
 class NetscapePluginInstanceProxy;
 
 class NetscapePluginHostProxy {
 public:
     NetscapePluginHostProxy(mach_port_t clientPort, mach_port_t pluginHostPort, const ProcessSerialNumber& pluginHostPSN, bool shouldCacheMissingPropertiesAndMethods);
-    
+
     mach_port_t port() const { ASSERT(fastMallocSize(this)); return m_pluginHostPort; }
     mach_port_t clientPort() const { ASSERT(fastMallocSize(this)); return m_clientPort; }
 
@@ -60,10 +60,10 @@ public:
     void setModal(bool);
 
     void applicationDidBecomeActive();
-    
+
     bool processRequests();
     static bool isProcessingRequests() { return s_processingRequests; }
-    
+
     bool shouldCacheMissingPropertiesAndMethods() const { return m_shouldCacheMissingPropertiesAndMethods; }
 
     static void makeCurrentProcessFrontProcess();
@@ -85,14 +85,14 @@ private:
 
     typedef HashMap<uint32_t, RefPtr<NetscapePluginInstanceProxy>> PluginInstanceMap;
     PluginInstanceMap m_instances;
-    
+
     mach_port_t m_clientPort;
     mach_port_t m_portSet;
-    
+
     RetainPtr<CFRunLoopSourceRef> m_clientPortSource;
     mach_port_t m_pluginHostPort;
     RetainPtr<CFMachPortRef> m_deadNameNotificationPort;
-    
+
     RetainPtr<id> m_activationObserver;
     RetainPtr<WebPlaceholderModalWindow *> m_placeholderWindow;
     unsigned m_isModal;
@@ -104,7 +104,7 @@ private:
 
     bool m_shouldCacheMissingPropertiesAndMethods;
 };
-    
+
 } // namespace WebKit
 
 #endif // NetscapePluginHostProxy_h

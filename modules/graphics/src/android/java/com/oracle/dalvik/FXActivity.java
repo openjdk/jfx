@@ -44,22 +44,22 @@ import android.view.WindowManager;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.FrameLayout;
 
-public class FXActivity extends Activity implements SurfaceHolder.Callback, 
+public class FXActivity extends Activity implements SurfaceHolder.Callback,
         SurfaceHolder.Callback2 {
-	
+
     private static final String TAG     = "FXActivity";
-    
+
     private static final String GLASS_LENS_ANDROID_LIB      = "glass_lens_android";
     private static final String META_DATA_LAUNCHER_CLASS    = "launcher.class";
     private static final String DEFAULT_LAUNCHER_CLASS      = "com.oracle.dalvik.JavaSELauncher";
-    
+
     private static FXActivity   instance;
     private static Launcher     launcher;
     private static FrameLayout  mViewGroup;
     private static SurfaceView  mView;
 
     private static String       appDataDir;
-    private InputMethodManager  imm;   
+    private InputMethodManager  imm;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -74,16 +74,16 @@ public class FXActivity extends Activity implements SurfaceHolder.Callback,
         imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
 
         mView = new InternalSurfaceView(this);
-        mView.getHolder().addCallback(this);        
+        mView.getHolder().addCallback(this);
         mViewGroup = new FrameLayout(this);
         mViewGroup.addView(mView);
         setContentView(mViewGroup);
-        instance = this;     
+        instance = this;
         appDataDir = getApplicationInfo().dataDir;
         Log.v(TAG, "Loading glass native library.");
-        System.loadLibrary(GLASS_LENS_ANDROID_LIB);        
+        System.loadLibrary(GLASS_LENS_ANDROID_LIB);
     }
-    
+
     private Bundle getMetadata() {
         try {
             ActivityInfo ai = FXActivity.this.getPackageManager().getActivityInfo(
@@ -104,18 +104,18 @@ public class FXActivity extends Activity implements SurfaceHolder.Callback,
             Class clazz = Class.forName(launcherClass);
             launcher = (Launcher)clazz.newInstance();
             launcher.launchApp(this, metaData);
-            
+
         } catch (Exception ex) {
             throw new RuntimeException("Did not created correct launcher.", ex);
         }
     }
-    
+
     @Override
     protected void onDestroy() {
         android.os.Process.killProcess(android.os.Process.myPid());
         super.onDestroy();
     }
-    
+
     public static FXActivity getInstance() {
         return instance;
     }
@@ -123,11 +123,11 @@ public class FXActivity extends Activity implements SurfaceHolder.Callback,
     public static String getDataDir() {
         return appDataDir;
     }
-    
+
     public static ViewGroup getViewGroup() {
         return mViewGroup;
-    }    
-	
+    }
+
     @Override
     public void surfaceCreated(SurfaceHolder holder) {
         Log.v(TAG, "Surface created.");
@@ -150,7 +150,7 @@ public class FXActivity extends Activity implements SurfaceHolder.Callback,
 
     @Override
     public void surfaceRedrawNeeded(SurfaceHolder holder) {
-            _surfaceRedrawNeeded(holder.getSurface());		
+            _surfaceRedrawNeeded(holder.getSurface());
     }
 
     private native void _surfaceChanged(Surface surface);
@@ -168,23 +168,23 @@ public class FXActivity extends Activity implements SurfaceHolder.Callback,
         mView.requestFocus();
         imm.hideSoftInputFromWindow(mView.getWindowToken(), 0);
     }
-    
+
     private void shutdown() {
         Log.e(TAG, "VM SHUTDOWN");
         finish();
     }
-	
+
     class InternalSurfaceView extends SurfaceView {
 
         public InternalSurfaceView(Context context) {
             super(context);
             setFocusableInTouchMode(true);
-        }        
+        }
 
         private static final int ACTION_POINTER_STILL = -1;
-        
+
         @Override
-        public boolean dispatchTouchEvent(MotionEvent event) {      
+        public boolean dispatchTouchEvent(MotionEvent event) {
             int action = event.getAction();
             int actionCode = action & MotionEvent.ACTION_MASK;
             int pcount = event.getPointerCount();
@@ -193,7 +193,7 @@ public class FXActivity extends Activity implements SurfaceHolder.Callback,
             int[] touchXs = new int[pcount];
             int[] touchYs = new int[pcount];
 
-            if (pcount > 1) {                      
+            if (pcount > 1) {
                 //multitouch
                 if (actionCode == MotionEvent.ACTION_POINTER_DOWN ||
                     actionCode == MotionEvent.ACTION_POINTER_UP) {
@@ -203,23 +203,23 @@ public class FXActivity extends Activity implements SurfaceHolder.Callback,
                         actions[i] = pointerIndex == i ? actionCode : ACTION_POINTER_STILL;
                         ids[i] = event.getPointerId(i);
                         touchXs[i] = (int)event.getX(i);
-                        touchYs[i] = (int)event.getY(i);                        
-                    }                    
+                        touchYs[i] = (int)event.getY(i);
+                    }
                 } else if (actionCode == MotionEvent.ACTION_MOVE) {
                     for (int i = 0;i <pcount; i++) {
                         touchXs[i] = (int)event.getX(i);
-                        touchYs[i] = (int)event.getY(i);                    
+                        touchYs[i] = (int)event.getY(i);
                         actions[i] = MotionEvent.ACTION_MOVE;
-                        ids[i] = event.getPointerId(i);                        
-                    }                    
-                }                 
+                        ids[i] = event.getPointerId(i);
+                    }
+                }
             } else {
                 //single touch
                 actions[0] = actionCode;
                 ids[0] = event.getPointerId(0);
                 touchXs[0] = (int)event.getX();
-                touchYs[0] = (int)event.getY();                
-            }                 
+                touchYs[0] = (int)event.getY();
+            }
             onMultiTouchEventNative(pcount, actions, ids, touchXs, touchYs);
             return true;
         }
@@ -229,10 +229,10 @@ public class FXActivity extends Activity implements SurfaceHolder.Callback,
             onKeyEventNative(event.getAction(), event.getKeyCode(), event.getCharacters());
             return true;
         }
-        
-        private native void onMultiTouchEventNative(int count, int[] actions, 
+
+        private native void onMultiTouchEventNative(int count, int[] actions,
                 int[] ids, int[] touchXs, int[] touchYs);
-        
+
 
         private native void onKeyEventNative(int action, int keycode, String characters);
 

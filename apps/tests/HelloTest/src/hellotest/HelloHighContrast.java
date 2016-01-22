@@ -52,7 +52,7 @@ public class HelloHighContrast extends Application {
             }
             PlatformImpl.setAccessibilityTheme(null); // Reads the system property
         });
-        
+
         ToggleButton disableHighContrast = new ToggleButton("Disable High Contrast");
         disableHighContrast.setMaxWidth(Double.MAX_VALUE);
         disableHighContrast.setUserData(null);

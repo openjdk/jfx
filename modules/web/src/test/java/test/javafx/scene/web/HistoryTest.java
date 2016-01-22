@@ -46,12 +46,12 @@ import static org.junit.Assert.fail;
 
 public class HistoryTest extends TestBase {
     WebHistory history = getEngine().getHistory();
-    
+
     AtomicBoolean entriesChanged = new AtomicBoolean(false);
     AtomicBoolean titleChanged = new AtomicBoolean(false);
     AtomicBoolean dateChanged = new AtomicBoolean(false);
     AtomicBoolean indexChanged = new AtomicBoolean(false);
-    
+
     @Test public void test() {
 
         //
@@ -70,13 +70,13 @@ public class HistoryTest extends TestBase {
             history.setMaxSize(99);
             assertEquals("max size is wrong", history.getMaxSize(), 99);
         });
-        
+
         // [1*]
         checkLoad(new File("src/test/resources/test/html/h1.html"), 1, 0, "1");
-                        
+
         // [1, 2*]
         checkLoad(new File("src/test/resources/test/html/h2.html"), 2, 1, "2");
-        
+
         //
         // check the list update
         //
@@ -88,13 +88,13 @@ public class HistoryTest extends TestBase {
                 history.getEntries().removeListener(this);
                 entriesChanged.set(true);
             }
-        });        
-        
+        });
+
         // [1, 2, 3*]
         checkLoad(new File("src/test/resources/test/html/h3.html"), 3, 2, "3");
-        
+
         ensureValueChanged(entriesChanged, "entries not changed after load");
-        
+
         //
         // check the title update
         //
@@ -107,14 +107,14 @@ public class HistoryTest extends TestBase {
             }
         });
         executeScript("document.title='hello'");
-        
+
         ensureValueChanged(titleChanged, "title not changed from JS");
 
         //
         // check the date & index updates
         //
         history.getEntries().get(history.getCurrentIndex() - 1).lastVisitedDateProperty().addListener(newDateListener());
-        
+
         try { Thread.sleep(150); } catch (Exception e) {} // ensure the next date doesn't fit into the same millisecond
 
         history.currentIndexProperty().addListener(new ChangeListener<Number>() {
@@ -132,33 +132,33 @@ public class HistoryTest extends TestBase {
         });
         waitLoadFinished();
         check(new File("src/test/resources/test/html/h2.html"), 3, 1, "2");
-                
+
         ensureValueChanged(dateChanged, "date not changed after go(-1)");
         ensureValueChanged(indexChanged, "index not changed after go(-1)");
-        
+
         //
         // more go() checks
-        //        
-        
+        //
+
         submit(() -> {
             // [1, 2, 3*]
             history.go(1);
         });
         waitLoadFinished();
         check(new File("src/test/resources/test/html/h3.html"), 3, 2, "3");
-        
+
         submit(() -> {
             // [1*, 2, 3]
             history.go(-2);
         });
         waitLoadFinished();
         check(new File("src/test/resources/test/html/h1.html"), 3, 0, "1");
-        
+
         submit(() -> {
             // [1*, 2, 3]
             history.go(0); // no-op
         });
-        
+
         submit(() -> {
             // [1*, 2, 3]
             try {
@@ -166,14 +166,14 @@ public class HistoryTest extends TestBase {
                 fail("go: IndexOutOfBoundsException is not thrown");
             } catch (IndexOutOfBoundsException ex) {}
         });
-        
+
         submit(() -> {
             // [1, 2, 3*]
             history.go(2);
         });
         waitLoadFinished();
         check(new File("src/test/resources/test/html/h3.html"), 3, 2, "3");
-        
+
         submit(() -> {
             // [1, 2, 3*]
             try {
@@ -181,25 +181,25 @@ public class HistoryTest extends TestBase {
                 fail("go: IndexOutOfBoundsException is not thrown");
             } catch (IndexOutOfBoundsException ex) {}
         });
-        
+
         //
         // check the maxSize
         //
-        
+
         submit(() -> {
             // [1, 2, 3*]
             history.setMaxSize(3);
         });
         // [2, 3, 1*]
         checkLoad(new File("src/test/resources/test/html/h1.html"), 3, 2, "1");
-        
+
         submit(() -> {
             // [2, 3*]
             history.setMaxSize(2);
             assertEquals("entries: size is wrong", 2, history.getEntries().size());
             assertEquals("entries: title is wrong", "2", history.getEntries().get(0).getTitle());
         });
-        
+
         submit(() -> {
             // [2, 3*]
             history.setMaxSize(3);
@@ -207,44 +207,44 @@ public class HistoryTest extends TestBase {
             history.go(-1);
         });
         waitLoadFinished();
-        
+
         // [2, 1*]
         checkLoad(new File("src/test/resources/test/html/h1.html"), 2, 1, "1");
         // [2, 1, 3*]
         checkLoad(new File("src/test/resources/test/html/h3.html"), 3, 2, "3");
-        
+
         submit(() -> {
             // [2*, 1, 3]
             history.go(-2);
         });
         waitLoadFinished();
-        
+
         //
         // check for load in-beetwen
         //
-        
+
         // [2, 3*]
         checkLoad(new File("src/test/resources/test/html/h3.html"), 2, 1, "3");
 
         //
         // check the date update on reload
         //
-        
+
         // [2, 3, 4*]
         load(new File("src/test/resources/test/html/h4.html"));
-        
+
         history.getEntries().get(history.getCurrentIndex()).lastVisitedDateProperty().addListener(newDateListener());
-        
+
         try { Thread.sleep(150); } catch (Exception e) {} // ensure the next date doesn't fit into the same millisecond
-        
+
         reload();
-        
+
         ensureValueChanged(dateChanged, "date not changed after reload");
-        
+
         //
         // finally, check zero and invalid maxSize
         //
-        
+
         submit(() -> {
             // []
             history.setMaxSize(0);
@@ -257,32 +257,32 @@ public class HistoryTest extends TestBase {
             } catch (IllegalArgumentException ex) {}
         });
     }
-    
-    void checkLoad(File file, int size, int index, String title) {        
+
+    void checkLoad(File file, int size, int index, String title) {
         load(file);
         check(file, size, index, title);
     }
-    
+
     void check(File file, int size, int index, String title) {
         assertEquals("entries: size is wrong", size, history.getEntries().size());
         assertEquals("currentIndex: index is wrong", index, history.getCurrentIndex());
         assertEquals("entries: url is wrong", file.toURI().toString(), history.getEntries().get(index).getUrl());
         assertEquals("entries: title is wrong", title, history.getEntries().get(index).getTitle());
     }
-    
+
     void ensureValueChanged(AtomicBoolean value, String errMsg) {
         if (!value.compareAndSet(true, false)) {
             fail(errMsg);
         }
     }
-    
+
     ChangeListener newDateListener() {
         return new ChangeListener<Date>() {
             long startTime = System.currentTimeMillis();
-            
+
             public void changed(ObservableValue<? extends Date> observable, Date oldValue, Date newValue) {
                 long curTime = System.currentTimeMillis();
-                
+
                 if (newValue.before(oldValue) ||
                     newValue.getTime() < startTime ||
                     newValue.getTime() > curTime)
@@ -291,7 +291,7 @@ public class HistoryTest extends TestBase {
                                        ", newValue=" + newValue.getTime() +
                                        ", startTime=" + startTime +
                                        ", curTime=" + curTime);
-                    
+
                     fail("entries: date is wrong");
                 }
                 observable.removeListener(this);

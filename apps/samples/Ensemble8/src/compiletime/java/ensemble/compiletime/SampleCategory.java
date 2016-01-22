@@ -68,7 +68,7 @@ public class SampleCategory {
         // add sample to that categories all samples
         topCategory.samplesAll.add(sample);
     }
-    
+
     public String generateCode() {
         StringBuilder sb = new StringBuilder();
         sb.append("new SampleCategory(");
@@ -79,7 +79,7 @@ public class SampleCategory {
         sb.append(")");
         return sb.toString();
     }
-    
+
     private void categoryArrayToCode(StringBuilder sb, List<SampleCategory> array) {
         if (array == null || array.isEmpty()) {
             sb.append("null");

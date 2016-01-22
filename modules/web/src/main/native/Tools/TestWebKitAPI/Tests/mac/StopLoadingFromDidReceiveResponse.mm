@@ -65,7 +65,7 @@ TEST(WebKit1, StopLoadingFromDidReceiveResponse)
     [[webView.get() mainFrame] loadRequest:[NSURLRequest requestWithURL:[[NSBundle mainBundle] URLForResource:@"StopLoadingFromDidReceiveResponse" withExtension:@"html" subdirectory:@"TestWebKitAPI.resources"]]];
 
     Util::run(&didFinishLoad);
-    
+
     [pool drain];
     // If we finished without crashing, the test passed.
 }

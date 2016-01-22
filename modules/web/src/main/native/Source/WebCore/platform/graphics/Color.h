@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef Color_h
@@ -111,7 +111,7 @@ public:
     int green() const { return greenChannel(m_color); }
     int blue() const { return blueChannel(m_color); }
     int alpha() const { return alphaChannel(m_color); }
-    
+
     RGBA32 rgb() const { return m_color; } // Preserve the alpha.
     void setRGB(int r, int g, int b) { m_color = makeRGB(r, g, b); m_valid = true; }
     void setRGB(RGBA32 rgb) { m_color = rgb; m_valid = true; }
@@ -184,7 +184,7 @@ inline Color blend(const Color& from, const Color& to, double progress, bool ble
     // We need to preserve the state of the valid flag at the end of the animation
     if (progress == 1 && !to.isValid())
         return Color();
-    
+
     if (blendPremultiplied) {
         // Contrary to the name, RGBA32 actually stores ARGB, so we can initialize Color directly from premultipliedARGBFromColor().
         // Also, premultipliedARGBFromColor() bails on zero alpha, so special-case that.

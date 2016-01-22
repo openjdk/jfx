@@ -151,10 +151,10 @@ void StorageAreaSync::scheduleCloseDatabase()
         return;
 
     m_syncCloseDatabase = true;
-    
+
     if (!m_syncTimer.isActive()) {
         m_syncTimer.startOneShot(StorageSyncInterval);
-        
+
         // The following is balanced by the call to enableSuddenTermination in the
         // syncTimerFired function.
         disableSuddenTermination();
@@ -405,7 +405,7 @@ void StorageAreaSync::sync(bool clearItems, const HashMap<String, String>& items
         m_database.close();
         return;
     }
-    
+
     SQLiteTransactionInProgressAutoCounter transactionCounter;
 
     // If the clear flag is set, then we clear all items out before we write any new ones in.

@@ -74,7 +74,7 @@ public class WindowPeerListener implements TKStageListener {
     public void changedFullscreen(boolean fs) {
         // Overridden in subclasses
     }
-    
+
     public void changedAlwaysOnTop(boolean aot) {
         // Overridden in subclasses
     }
@@ -85,7 +85,7 @@ public class WindowPeerListener implements TKStageListener {
 
     @Override
     public void closing() {
-        Event.fireEvent(window, 
+        Event.fireEvent(window,
                         new WindowEvent(window,
                                         WindowEvent.WINDOW_CLOSE_REQUEST));
     }

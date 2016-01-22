@@ -38,13 +38,13 @@ import com.sun.javafx.animation.TickCalculation;
 
 /**
  * An instance of ClipCore handles the core part of a clip.
- * 
+ *
  * The functionality to react on a pulse-signal from the timer is implemented in
  * two classes: ClipEnvelope and ClipCore. ClipEnvelope is responsible for the
  * "loop-part" (keeping track of the number of cycles, handling the direction of
  * the clip etc.). ClipCore takes care of the inner part (interpolating the
  * values, triggering the action-functions, ...)
- * 
+ *
  * Both classes have an abstract public definition and can only be created using
  * the factory method create(). The intend is to provide a general
  * implementation plus eventually some fast-track implementations for common use
@@ -89,7 +89,7 @@ public class TimelineClipCore {
         final KeyFrame[] sortedKeyFrames = new KeyFrame[n];
         keyFrames.toArray(sortedKeyFrames);
         Arrays.sort(sortedKeyFrames, KEY_FRAME_COMPARATOR);
-        
+
         canSkipFrames = true;
         this.keyFrames = sortedKeyFrames;
         keyFrameTicks = new long[n];
@@ -217,7 +217,7 @@ public class TimelineClipCore {
 
     /**
      * Visit a single keyframe.
-     * 
+     *
      * @param kfIndex
      *            the index of the keyframe in the keyframe-array
      * @param kfTicks

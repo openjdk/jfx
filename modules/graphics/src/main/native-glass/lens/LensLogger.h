@@ -93,7 +93,7 @@ extern jint glass_log_level;
 #define GLASS_LOG(level,...) \
     GLASS_IF_LOG(level) \
     glass_logf(level, __func__, __FILE__, __LINE__, __VA_ARGS__)
-#endif 
+#endif
 
 #define GLASS_IF_LOG_SEVERE  GLASS_IF_LOG(GLASS_LOG_LEVEL_SEVERE)
 #define GLASS_IF_LOG_WARNING GLASS_IF_LOG(GLASS_LOG_LEVEL_WARNING)

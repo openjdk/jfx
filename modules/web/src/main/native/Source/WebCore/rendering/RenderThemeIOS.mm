@@ -133,7 +133,7 @@ static CGFunctionRef getSharedFunctionRef(IOSGradientRef gradient, Interpolation
             linearFunctionRefs = new HashMap<IOSGradientRef, CGFunctionRef>;
         else
             function = linearFunctionRefs->get(gradient);
-    
+
         if (!function) {
             static struct CGFunctionCallbacks linearFunctionCallbacks =  { 0, interpolateLinearGradient, 0 };
             linearFunctionRefs->set(gradient, function = CGFunctionCreate(gradient, 1, nullptr, 4, nullptr, &linearFunctionCallbacks));
@@ -329,7 +329,7 @@ void RenderThemeIOS::adjustCheckboxStyle(StyleResolver*, RenderStyle* style, Ele
         return;
 
     Length length = Length(static_cast<int>(ceilf(std::max(style->fontSize(), 10))), Fixed);
-    
+
     style->setWidth(length);
     style->setHeight(length);
 }
@@ -439,7 +439,7 @@ bool RenderThemeIOS::paintRadioDecorations(RenderObject* box, const PaintInfo& p
     if (isChecked(box)) {
         drawAxialGradient(cgContext, gradientWithName(ConcaveGradient), clip.location(), FloatPoint(clip.x(), clip.maxY()), LinearInterpolation);
 
-        // The inner circle is 6 / 14 the size of the surrounding circle, 
+        // The inner circle is 6 / 14 the size of the surrounding circle,
         // leaving 8 / 14 around it. (8 / 14) / 2 = 2 / 7.
 
         static float InnerInverseRatio = 2 / 7.0;
@@ -541,7 +541,7 @@ static void adjustInputElementButtonStyle(RenderStyle* style, HTMLInputElement* 
     // Enforce the width and set the box-sizing to content-box to not conflict with the padding.
     Font font = style->font();
     float maximumWidth = inputElement->locale().maximumWidthForDateType(dateType, font);
-    if (maximumWidth > 0) {    
+    if (maximumWidth > 0) {
         int width = static_cast<int>(maximumWidth + MenuListButtonPaddingRight);
         style->setWidth(Length(width, Fixed));
         style->setBoxSizing(CONTENT_BOX);
@@ -585,7 +585,7 @@ bool RenderThemeIOS::paintMenuListButtonDecorations(RenderObject* box, const Pai
 
         GraphicsContextStateSaver stateSaver(*paintInfo.context);
 
-        paintInfo.context->clipRoundedRect(titleClip, 
+        paintInfo.context->clipRoundedRect(titleClip,
             FloatSize(valueForLength(style.borderTopLeftRadius().width(), rect.width()) - style.borderLeftWidth(), valueForLength(style.borderTopLeftRadius().height(), rect.height()) - style.borderTopWidth()), FloatSize(0, 0),
             FloatSize(valueForLength(style.borderBottomLeftRadius().width(), rect.width()) - style.borderLeftWidth(), valueForLength(style.borderBottomLeftRadius().height(), rect.height()) - style.borderBottomWidth()), FloatSize(0, 0));
 
@@ -605,7 +605,7 @@ bool RenderThemeIOS::paintMenuListButtonDecorations(RenderObject* box, const Pai
     {
         GraphicsContextStateSaver stateSaver(*paintInfo.context);
 
-        paintInfo.context->clipRoundedRect(buttonClip, 
+        paintInfo.context->clipRoundedRect(buttonClip,
             FloatSize(0, 0), FloatSize(valueForLength(style.borderTopRightRadius().width(), rect.width()) - style.borderRightWidth(), valueForLength(style.borderTopRightRadius().height(), rect.height()) - style.borderTopWidth()),
             FloatSize(0, 0), FloatSize(valueForLength(style.borderBottomRightRadius().width(), rect.width()) - style.borderRightWidth(), valueForLength(style.borderBottomRightRadius().height(), rect.height()) - style.borderBottomWidth()));
 
@@ -1012,7 +1012,7 @@ bool RenderThemeIOS::paintFileUploadIconDecorations(RenderObject*, RenderObject*
 
     return false;
 }
-    
+
 Color RenderThemeIOS::platformActiveSelectionBackgroundColor() const
 {
     return Color::transparent;

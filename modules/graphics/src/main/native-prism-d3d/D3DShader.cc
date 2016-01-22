@@ -37,7 +37,7 @@ Java_com_sun_prism_d3d_D3DShader_init
 
     D3DContext *pCtx = (D3DContext*)jlong_to_ptr(ctx);
     RETURN_STATUS_IF_NULL(pCtx, 0L);
-    
+
     DWORD *buf = (DWORD *)env->GetDirectBufferAddress(bbuf);
     if (buf == NULL) {
         RlsTraceLn(NWT_TRACE_ERROR,
@@ -61,7 +61,7 @@ Java_com_sun_prism_d3d_D3DShader_enable
    jlong ctx, jlong pData)
 {
     TraceLn(NWT_TRACE_INFO, "D3DShader_enable");
-    
+
     D3DPixelShaderResource *pPSResource =
         (D3DPixelShaderResource *)jlong_to_ptr(pData);
     RETURN_STATUS_IF_NULL(pPSResource, E_FAIL);
@@ -99,9 +99,9 @@ Java_com_sun_prism_d3d_D3DShader_disable
     D3DContext *pCtx = (D3DContext*)jlong_to_ptr(ctx);
     RETURN_STATUS_IF_NULL(pCtx, E_FAIL);
 
-    IDirect3DDevice9 *pd3dDevice = pCtx->Get3DDevice();    
+    IDirect3DDevice9 *pd3dDevice = pCtx->Get3DDevice();
     RETURN_STATUS_IF_NULL(pd3dDevice, E_FAIL);
-    
+
     HRESULT res = pd3dDevice->SetPixelShader(NULL);
     if (FAILED(res)) {
         DebugPrintD3DError(res, "D3DShader_disable: SetPixelShader(NULL) failed");
@@ -120,17 +120,17 @@ Java_com_sun_prism_d3d_D3DShader_setConstantsI
 
     D3DContext *pCtx = (D3DContext*)jlong_to_ptr(ctx);
     RETURN_STATUS_IF_NULL(pCtx, E_FAIL);
-    
+
     jint *buf = (jint *)env->GetDirectBufferAddress(ibuf);
-    
+
     //in bytes
     jlong capacity = env->GetDirectBufferCapacity(ibuf);
-    
+
     if (off < 0 || count < 1 || off + count > capacity / sizeof(jint)) {
         RlsTraceLn(NWT_TRACE_ERROR, "  Array out of bounds access.");
         return E_FAIL;
     }
-    
+
     if (buf == NULL) {
         RlsTraceLn(NWT_TRACE_ERROR,
                    "D3DShader_setConstantsI: Could not get direct buffer address");
@@ -139,9 +139,9 @@ Java_com_sun_prism_d3d_D3DShader_setConstantsI
 
     buf += off * sizeof(jint);
 
-    IDirect3DDevice9 *pd3dDevice = pCtx->Get3DDevice();    
+    IDirect3DDevice9 *pd3dDevice = pCtx->Get3DDevice();
     RETURN_STATUS_IF_NULL(pd3dDevice, E_FAIL);
-    
+
     HRESULT res = pd3dDevice->SetPixelShaderConstantI(reg, (const int *)buf, count);
     if (FAILED(res)) {
         DebugPrintD3DError(res, "setConstantsI: SetPixelShaderConstantI failed");
@@ -157,19 +157,19 @@ Java_com_sun_prism_d3d_D3DShader_setConstantsF
 {
     TraceLn3(NWT_TRACE_INFO, "D3DShader_setConstantsF (reg=%d, off=%d, count=%d)", reg, off, count);
 
-    D3DContext *pCtx = (D3DContext*)jlong_to_ptr(ctx);    
+    D3DContext *pCtx = (D3DContext*)jlong_to_ptr(ctx);
     RETURN_STATUS_IF_NULL(pCtx, E_FAIL);
 
     jfloat *buf = (jfloat *)env->GetDirectBufferAddress(fbuf);
-    
+
     //in bytes
-    jlong capacity = env->GetDirectBufferCapacity(fbuf);    
-    
+    jlong capacity = env->GetDirectBufferCapacity(fbuf);
+
     if (off < 0 || count < 1 || off + count > capacity / sizeof(jfloat)) {
         RlsTraceLn(NWT_TRACE_ERROR, "  Array out of bounds access.");
         return E_FAIL;
     }
-    
+
     if (buf == NULL) {
         RlsTraceLn(NWT_TRACE_ERROR, "  Could not get direct buffer address");
         return E_FAIL;
@@ -179,9 +179,9 @@ Java_com_sun_prism_d3d_D3DShader_setConstantsF
 
     TraceLn4(NWT_TRACE_VERBOSE, "  vals: %f %f %f %f", buf[0], buf[1], buf[2], buf[3]);
 
-    IDirect3DDevice9 *pd3dDevice = pCtx->Get3DDevice();    
+    IDirect3DDevice9 *pd3dDevice = pCtx->Get3DDevice();
     RETURN_STATUS_IF_NULL(pd3dDevice, E_FAIL);
-    
+
     HRESULT res = pd3dDevice->SetPixelShaderConstantF(reg, (const float *)buf, count);
     if (FAILED(res)) {
         DebugPrintD3DError(res, "setConstantsI: SetPixelShaderConstantF failed");

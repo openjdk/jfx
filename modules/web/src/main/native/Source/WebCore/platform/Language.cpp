@@ -85,20 +85,20 @@ void overrideUserPreferredLanguages(const Vector<String>& override)
 {
     preferredLanguagesOverride() = override;
 }
-    
+
 Vector<String> userPreferredLanguages()
 {
     Vector<String>& override = preferredLanguagesOverride();
     if (!override.isEmpty())
         return override;
-    
+
     return platformUserPreferredLanguages();
 }
 
 static String canonicalLanguageIdentifier(const String& languageCode)
 {
     String lowercaseLanguageCode = languageCode.lower();
-    
+
     if (lowercaseLanguageCode.length() >= 3 && lowercaseLanguageCode[2] == '_')
         lowercaseLanguageCode.replace(2, 1, "-");
 

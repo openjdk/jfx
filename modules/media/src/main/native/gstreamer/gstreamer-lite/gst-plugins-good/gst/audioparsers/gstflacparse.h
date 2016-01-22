@@ -29,13 +29,13 @@
 
 G_BEGIN_DECLS
 
-#define GST_TYPE_FLAC_PARSE		   (gst_flac_parse_get_type())
-#define GST_FLAC_PARSE(obj)		   (G_TYPE_CHECK_INSTANCE_CAST((obj),GST_TYPE_FLAC_PARSE,GstFlacParse))
+#define GST_TYPE_FLAC_PARSE        (gst_flac_parse_get_type())
+#define GST_FLAC_PARSE(obj)        (G_TYPE_CHECK_INSTANCE_CAST((obj),GST_TYPE_FLAC_PARSE,GstFlacParse))
 #define GST_FLAC_PARSE_CLASS(klass)    (G_TYPE_CHECK_CLASS_CAST((klass),GST_TYPE_FLAC_PARSE,GstFlacParseClass))
 #define GST_FLAC_PARSE_GET_CLASS(obj)  (G_TYPE_INSTANCE_GET_CLASS((obj),GST_TYPE_FLAC_PARSE,GstFlacParseClass))
-#define GST_IS_FLAC_PARSE(obj)	   (G_TYPE_CHECK_INSTANCE_TYPE((obj),GST_TYPE_FLAC_PARSE))
+#define GST_IS_FLAC_PARSE(obj)     (G_TYPE_CHECK_INSTANCE_TYPE((obj),GST_TYPE_FLAC_PARSE))
 #define GST_IS_FLAC_PARSE_CLASS(klass) (G_TYPE_CHECK_CLASS_TYPE((klass),GST_TYPE_FLAC_PARSE))
-#define GST_FLAC_PARSE_CAST(obj)	((GstFlacParse *)(obj))
+#define GST_FLAC_PARSE_CAST(obj)    ((GstFlacParse *)(obj))
 
 typedef struct _GstFlacParse GstFlacParse;
 typedef struct _GstFlacParseClass GstFlacParseClass;

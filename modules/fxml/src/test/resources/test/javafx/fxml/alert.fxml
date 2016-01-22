@@ -11,4 +11,4 @@
         <ButtonType fx:constant="YES" />
         <ButtonType fx:constant="NO" />
     </buttonTypes>
-</Alert> 
+</Alert>

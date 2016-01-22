@@ -31,5 +31,5 @@ public class DateParserShim {
     public static long parse(String date) throws ParseException {
         return DateParser.parse(date);
     }
-    
+
 }

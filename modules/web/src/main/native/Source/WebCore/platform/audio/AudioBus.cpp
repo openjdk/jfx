@@ -144,7 +144,7 @@ AudioChannel* AudioBus::channelByType(unsigned channelType)
         default: return 0;
         }
     }
-    
+
     ASSERT_NOT_REACHED();
     return 0;
 }
@@ -289,7 +289,7 @@ void AudioBus::speakersCopyFrom(const AudioBus& sourceBus)
         float scale = 0.5;
         vsmul(destination, 1, &scale, destination, 1, length());
     } else if (numberOfDestinationChannels == 6 && numberOfSourceChannels == 1) {
-        // Handle mono -> 5.1 case, copy mono channel to center. 
+        // Handle mono -> 5.1 case, copy mono channel to center.
         channel(2)->copyFrom(sourceBus.channel(0));
         channel(0)->zero();
         channel(1)->zero();
@@ -310,7 +310,7 @@ void AudioBus::speakersSumFrom(const AudioBus& sourceBus)
 {
     // FIXME: Implement down mixing 5.1 to stereo.
     // https://bugs.webkit.org/show_bug.cgi?id=79192
-    
+
     unsigned numberOfSourceChannels = sourceBus.numberOfChannels();
     unsigned numberOfDestinationChannels = numberOfChannels();
 
@@ -377,14 +377,14 @@ void AudioBus::discreteCopyFrom(const AudioBus& sourceBus)
 {
     unsigned numberOfSourceChannels = sourceBus.numberOfChannels();
     unsigned numberOfDestinationChannels = numberOfChannels();
-    
+
     if (numberOfDestinationChannels < numberOfSourceChannels) {
         // Down-mix by copying channels and dropping the remaining.
         for (unsigned i = 0; i < numberOfDestinationChannels; ++i)
             channel(i)->copyFrom(sourceBus.channel(i));
     } else if (numberOfDestinationChannels > numberOfSourceChannels) {
         // Up-mix by copying as many channels as we have, then zeroing remaining channels.
-        for (unsigned i = 0; i < numberOfSourceChannels; ++i) 
+        for (unsigned i = 0; i < numberOfSourceChannels; ++i)
             channel(i)->copyFrom(sourceBus.channel(i));
         for (unsigned i = numberOfSourceChannels; i < numberOfDestinationChannels; ++i)
             channel(i)->zero();
@@ -398,11 +398,11 @@ void AudioBus::discreteSumFrom(const AudioBus& sourceBus)
 
     if (numberOfDestinationChannels < numberOfSourceChannels) {
         // Down-mix by summing channels and dropping the remaining.
-        for (unsigned i = 0; i < numberOfDestinationChannels; ++i) 
+        for (unsigned i = 0; i < numberOfDestinationChannels; ++i)
             channel(i)->sumFrom(sourceBus.channel(i));
     } else if (numberOfDestinationChannels > numberOfSourceChannels) {
         // Up-mix by summing as many channels as we have.
-        for (unsigned i = 0; i < numberOfSourceChannels; ++i) 
+        for (unsigned i = 0; i < numberOfSourceChannels; ++i)
             channel(i)->sumFrom(sourceBus.channel(i));
     }
 }
@@ -440,7 +440,7 @@ void AudioBus::copyWithGainFrom(const AudioBus &sourceBus, float* lastMixGain, f
 
     // We don't want to suddenly change the gain from mixing one time slice to the next,
     // so we "de-zipper" by slowly changing the gain each sample-frame until we've achieved the target gain.
-    
+
     // Take master bus gain into account as well as the targetGain.
     float totalDesiredGain = static_cast<float>(m_busGain * targetGain);
 
@@ -451,14 +451,14 @@ void AudioBus::copyWithGainFrom(const AudioBus &sourceBus, float* lastMixGain, f
     const float DezipperRate = 0.005f;
     unsigned framesToProcess = length();
 
-    // If the gain is within epsilon of totalDesiredGain, we can skip dezippering. 
+    // If the gain is within epsilon of totalDesiredGain, we can skip dezippering.
     // FIXME: this value may need tweaking.
-    const float epsilon = 0.001f; 
+    const float epsilon = 0.001f;
     float gainDiff = fabs(totalDesiredGain - gain);
 
     // Number of frames to de-zipper before we are close enough to the target gain.
     // FIXME: framesToDezipper could be smaller when target gain is close enough within this process loop.
-    unsigned framesToDezipper = (gainDiff < epsilon) ? 0 : framesToProcess; 
+    unsigned framesToDezipper = (gainDiff < epsilon) ? 0 : framesToProcess;
 
     if (framesToDezipper) {
         if (!m_dezipperGainValues.get() || m_dezipperGainValues->size() < framesToDezipper)
@@ -467,7 +467,7 @@ void AudioBus::copyWithGainFrom(const AudioBus &sourceBus, float* lastMixGain, f
         float* gainValues = m_dezipperGainValues->data();
         for (unsigned i = 0; i < framesToDezipper; ++i) {
             gain += (totalDesiredGain - gain) * DezipperRate;
-        
+
             // FIXME: If we are clever enough in calculating the framesToDezipper value, we can probably get
             // rid of this DenormalDisabler::flushDenormalFloatToZero() call.
             gain = DenormalDisabler::flushDenormalFloatToZero(gain);
@@ -535,7 +535,7 @@ PassRefPtr<AudioBus> AudioBus::createBySampleRateConverting(const AudioBus* sour
 
     if (numberOfSourceChannels == 1)
         mixToMono = false; // already mono
-        
+
     if (sourceSampleRate == destinationSampleRate) {
         // No sample-rate conversion is necessary.
         if (mixToMono)
@@ -580,7 +580,7 @@ PassRefPtr<AudioBus> AudioBus::createBySampleRateConverting(const AudioBus* sour
     }
 
     destinationBus->clearSilentFlag();
-    destinationBus->setSampleRate(newSampleRate);    
+    destinationBus->setSampleRate(newSampleRate);
     return destinationBus;
 }
 
@@ -601,13 +601,13 @@ PassRefPtr<AudioBus> AudioBus::createByMixingToMono(const AudioBus* sourceBus)
             const float* sourceL = sourceBus->channel(0)->data();
             const float* sourceR = sourceBus->channel(1)->data();
             float* destination = destinationBus->channel(0)->mutableData();
-        
+
             // Do the mono mixdown.
             for (unsigned i = 0; i < n; ++i)
                 destination[i] = (sourceL[i] + sourceR[i]) / 2;
 
             destinationBus->clearSilentFlag();
-            destinationBus->setSampleRate(sourceBus->sampleRate());    
+            destinationBus->setSampleRate(sourceBus->sampleRate());
             return destinationBus;
         }
     }

@@ -6,13 +6,13 @@
  * are met:
  *
  * 1.  Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer. 
+ *     notice, this list of conditions and the following disclaimer.
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
- *     documentation and/or other materials provided with the distribution. 
+ *     documentation and/or other materials provided with the distribution.
  * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
- *     from this software without specific prior written permission. 
+ *     from this software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY APPLE AND ITS CONTRIBUTORS "AS IS" AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
@@ -158,15 +158,15 @@ enum {
 - (void)_setDocumentView:(NSView <WebDocumentView> *)view
 {
     WebDynamicScrollBarsView *sv = [self _scrollView];
-    
+
 #if ENABLE(DRAG_SUPPORT)
     core([self _webView])->dragController().setDidInitiateDrag(false);
 #endif
-    
+
 #if !PLATFORM(IOS)
     [sv setSuppressLayout:YES];
-    
-    // If the old view is the first responder, transfer first responder status to the new view as 
+
+    // If the old view is the first responder, transfer first responder status to the new view as
     // a convenience and so that we don't leave the window pointing to a view that's no longer in it.
     NSWindow *window = [sv window];
     NSResponder *firstResponder = [window firstResponder];
@@ -214,10 +214,10 @@ enum {
             documentView = [[viewClass alloc] init];
     } else
         documentView = nil;
-    
+
     [self _setDocumentView:documentView];
     [documentView release];
-    
+
     return documentView;
 }
 
@@ -230,7 +230,7 @@ enum {
     }
 
     // Not retained because the WebView owns the WebFrame, which owns the WebFrameView.
-    _private->webFrame = webFrame;    
+    _private->webFrame = webFrame;
 
     if (!_private->includedInWebKitStatistics && [webFrame _isIncludedInWebKitStatistics]) {
         _private->includedInWebKitStatistics = YES;
@@ -269,7 +269,7 @@ static inline void addTypesFromClass(NSMutableDictionary *allTypes, Class objCCl
 {
     static NSMutableDictionary *viewTypes = nil;
     static BOOL addedImageTypes = NO;
-    
+
     if (!viewTypes) {
         viewTypes = [[NSMutableDictionary alloc] init];
         addTypesFromClass(viewTypes, [WebHTMLView class], [WebHTMLView supportedNonImageMIMETypes]);
@@ -285,12 +285,12 @@ static inline void addTypesFromClass(NSMutableDictionary *allTypes, Class objCCl
 #undef WebPDFView
 #endif
     }
-    
+
     if (!addedImageTypes && !allowImageTypeOmission) {
         addTypesFromClass(viewTypes, [WebHTMLView class], [WebHTMLView supportedImageMIMETypes]);
         addedImageTypes = YES;
     }
-    
+
     return viewTypes;
 }
 
@@ -309,11 +309,11 @@ static inline void addTypesFromClass(NSMutableDictionary *allTypes, Class objCCl
 {
     Class retVal = [[self class] _viewClassForMIMEType:MIMEType allowingPlugins:[[[self _webView] preferences] arePlugInsEnabled]];
 
-#if PLATFORM(IOS)   
+#if PLATFORM(IOS)
     if ([retVal respondsToSelector:@selector(_representationClassForWebFrame:)])
         retVal = [retVal performSelector:@selector(_representationClassForWebFrame:) withObject:[self webFrame]];
 #endif
-        
+
     return retVal;
 }
 
@@ -364,12 +364,12 @@ static inline void addTypesFromClass(NSMutableDictionary *allTypes, Class objCCl
     self = [super initWithFrame:frame];
     if (!self)
         return nil;
- 
+
     static bool didFirstTimeInitialization;
     if (!didFirstTimeInitialization) {
         didFirstTimeInitialization = true;
         InitWebCoreSystemInterface();
-        
+
         // Need to tell WebCore what function to call for the "History Item has Changed" notification.
         // Note: We also do this in WebHistoryItem's init method.
         WebCore::notifyHistoryItemChanged = WKNotifyHistoryItemChanged;
@@ -412,22 +412,22 @@ static inline void addTypesFromClass(NSMutableDictionary *allTypes, Class objCCl
     // link between us and our subview so that previousKeyView and previousValidKeyView work as expected.
     // This works together with our becomeFirstResponder and setNextKeyView overrides.
     [super setNextKeyView:scrollView];
-    
+
     return self;
 }
 
-- (void)dealloc 
+- (void)dealloc
 {
     if (_private && _private->includedInWebKitStatistics)
         --WebFrameViewCount;
-    
+
     [_private release];
     _private = nil;
-    
+
     [super dealloc];
 }
 
-- (void)finalize 
+- (void)finalize
 {
     if (_private && _private->includedInWebKitStatistics)
         --WebFrameViewCount;
@@ -481,7 +481,7 @@ static inline void addTypesFromClass(NSMutableDictionary *allTypes, Class objCCl
     // This works together with setNextKeyView to splice the WebFrameView into
     // the key loop similar to the way NSScrollView does this. Note that
     // WebView has similar code.
-    
+
     NSWindow *window = [self window];
     if ([window keyViewSelectionDirection] == NSSelectingPrevious) {
         NSView *previousValidKeyView = [self previousValidKeyView];
@@ -493,12 +493,12 @@ static inline void addTypesFromClass(NSMutableDictionary *allTypes, Class objCCl
         [window makeFirstResponder:previousValidKeyView];
     } else {
         // If the scroll view won't accept first-responderness now, then just become
-        // the first responder ourself like a normal view. This lets us be the first 
+        // the first responder ourself like a normal view. This lets us be the first
         // responder in cases where no page has yet been loaded.
         if ([[self _scrollView] acceptsFirstResponder])
             [window makeFirstResponder:[self _scrollView]];
     }
-    
+
     return YES;
 }
 
@@ -689,7 +689,7 @@ static inline void addTypesFromClass(NSMutableDictionary *allTypes, Class objCCl
     if (![self _isScrollable])
         return NO;
     NSRect frame = [(NSView *)[[self _scrollView] documentView] frame];
-    
+
     bool isVertical = [self _isVerticalDocument];
     bool isFlipped = [self _isFlippedDocument];
 
@@ -705,7 +705,7 @@ static inline void addTypesFromClass(NSMutableDictionary *allTypes, Class objCCl
         else
             point = NSMakePoint(NSMinX(frame), frame.origin.y);
     }
-    
+
     // Reset the position opposite to the block progression direction.
     if (isVertical)
         point.x += [[self _scrollView] scrollOrigin].x;
@@ -718,7 +718,7 @@ static inline void addTypesFromClass(NSMutableDictionary *allTypes, Class objCCl
 {
     if ([self _scrollToBeginningOfDocument])
         return;
-    
+
     if (WebFrameView *child = [self _largestScrollableChild]) {
         if ([child _scrollToBeginningOfDocument])
             return;
@@ -783,7 +783,7 @@ static inline void addTypesFromClass(NSMutableDictionary *allTypes, Class objCCl
 {
     if ([self _scrollOverflowInDirection:up ? ScrollUp : ScrollDown granularity:ScrollByPage])
         return YES;
-    
+
     if (![self _isScrollable])
         return [[self _largestScrollableChild] _pageVertically:up];
 
@@ -798,7 +798,7 @@ static inline void addTypesFromClass(NSMutableDictionary *allTypes, Class objCCl
 
     if (![self _isScrollable])
         return [[self _largestScrollableChild] _pageHorizontally:left];
-    
+
     float delta = [self _horizontalPageScrollDistance];
     return [self _scrollHorizontallyBy:left ? -delta : delta];
 }
@@ -820,7 +820,7 @@ static inline void addTypesFromClass(NSMutableDictionary *allTypes, Class objCCl
 
     if (![self _isScrollable])
         return [[self _largestScrollableChild] _scrollLineVertically:up];
-    
+
     float delta = [self _verticalKeyboardScrollDistance];
     return [self _scrollVerticallyBy:up ? -delta : delta];
 }
@@ -871,7 +871,7 @@ static inline void addTypesFromClass(NSMutableDictionary *allTypes, Class objCCl
     return NO;
 #else
     NSResponder *firstResponder = [[self window] firstResponder];
-    
+
     // WebHTMLView is an NSControl subclass these days, but it's not a form control
     if ([firstResponder isKindOfClass:[WebHTMLView class]]) {
         return NO;
@@ -928,7 +928,7 @@ static inline void addTypesFromClass(NSMutableDictionary *allTypes, Class objCCl
     BOOL callSuper = YES;
     Frame* coreFrame = [self _web_frame];
     BOOL maintainsBackForwardList = coreFrame && static_cast<BackForwardList*>(coreFrame->page()->backForward().client())->enabled() ? YES : NO;
-    
+
     count = [characters length];
     for (index = 0; index < count; ++index) {
         switch ([characters characterAtIndex:index]) {
@@ -947,7 +947,7 @@ static inline void addTypesFromClass(NSMutableDictionary *allTypes, Class objCCl
                 callSuper = NO;
                 break;
             case SpaceKey:
-                // Checking for a control will allow events to percolate 
+                // Checking for a control will allow events to percolate
                 // correctly when the focus is on a form control and we
                 // are in full keyboard access mode.
                 if ((![self allowsScrolling] && ![self _largestScrollableChild]) || [self _firstResponderIsFormControl]) {
@@ -1003,7 +1003,7 @@ static inline void addTypesFromClass(NSMutableDictionary *allTypes, Class objCCl
                 if ((![self allowsScrolling] && ![self _largestScrollableChild]) ||
                     [[[self window] firstResponder] isKindOfClass:[NSPopUpButton class]]) {
                     // Let arrow keys go through to pop up buttons
-                    // <rdar://problem/3455910>: hitting up or down arrows when focus is on a 
+                    // <rdar://problem/3455910>: hitting up or down arrows when focus is on a
                     // pop-up menu should pop the menu
                     callSuper = YES;
                     break;
@@ -1028,7 +1028,7 @@ static inline void addTypesFromClass(NSMutableDictionary *allTypes, Class objCCl
                 if ((![self allowsScrolling] && ![self _largestScrollableChild]) ||
                     [[[self window] firstResponder] isKindOfClass:[NSPopUpButton class]]) {
                     // Let arrow keys go through to pop up buttons
-                    // <rdar://problem/3455910>: hitting up or down arrows when focus is on a 
+                    // <rdar://problem/3455910>: hitting up or down arrows when focus is on a
                     // pop-up menu should pop the menu
                     callSuper = YES;
                     break;
@@ -1101,7 +1101,7 @@ static inline void addTypesFromClass(NSMutableDictionary *allTypes, Class objCCl
                 break;
         }
     }
-    
+
     if (callSuper) {
         [super keyDown:event];
     } else {
@@ -1144,7 +1144,7 @@ static inline void addTypesFromClass(NSMutableDictionary *allTypes, Class objCCl
     NSView *documentView = [[self _scrollView] documentView];
     if (documentView && [documentView respondsToSelector:@selector(documentViewShouldHandlePrint)])
         return [(id)documentView documentViewShouldHandlePrint];
-    
+
     return NO;
 }
 
@@ -1179,32 +1179,32 @@ static inline void addTypesFromClass(NSMutableDictionary *allTypes, Class objCCl
 {
     WebFrameView *largest = nil;
     NSArray *frameChildren = [[self webFrame] childFrames];
-    
+
     unsigned i;
     for (i=0; i < [frameChildren count]; i++) {
         WebFrameView *childFrameView = [[frameChildren objectAtIndex:i] frameView];
         WebFrameView *scrollableFrameView = [childFrameView _isScrollable] ? childFrameView : [childFrameView _largestScrollableChild];
         if (!scrollableFrameView)
             continue;
-        
+
         // Some ads lurk in child frames of zero width and height, see radar 4406994. These don't count as scrollable.
         // Maybe someday we'll discover that this minimum area check should be larger, but this covers the known cases.
         float area = [scrollableFrameView _area];
         if (area < 1.0)
             continue;
-        
+
         if (!largest || (area > [largest _area])) {
             largest = scrollableFrameView;
         }
     }
-    
+
     return largest;
 }
 
 - (BOOL)_hasScrollBars
 {
     // FIXME: This method was used by Safari 4.0.x and older versions, but has not been used by any other WebKit
-    // clients to my knowledge, and will not be used by future versions of Safari. It can probably be removed 
+    // clients to my knowledge, and will not be used by future versions of Safari. It can probably be removed
     // once we no longer need to keep nightly WebKit builds working with Safari 4.0.x and earlier.
     NSScrollView *scrollView = [self _scrollView];
     return [scrollView hasHorizontalScroller] || [scrollView hasVerticalScroller];
@@ -1213,29 +1213,29 @@ static inline void addTypesFromClass(NSMutableDictionary *allTypes, Class objCCl
 - (WebFrameView *)_largestChildWithScrollBars
 {
     // FIXME: This method was used by Safari 4.0.x and older versions, but has not been used by any other WebKit
-    // clients to my knowledge, and will not be used by future versions of Safari. It can probably be removed 
+    // clients to my knowledge, and will not be used by future versions of Safari. It can probably be removed
     // once we no longer need to keep nightly WebKit builds working with Safari 4.0.x and earlier.
     WebFrameView *largest = nil;
     NSArray *frameChildren = [[self webFrame] childFrames];
-    
+
     unsigned i;
     for (i=0; i < [frameChildren count]; i++) {
         WebFrameView *childFrameView = [[frameChildren objectAtIndex:i] frameView];
         WebFrameView *scrollableFrameView = [childFrameView _hasScrollBars] ? childFrameView : [childFrameView _largestChildWithScrollBars];
         if (!scrollableFrameView)
             continue;
-        
+
         // Some ads lurk in child frames of zero width and height, see radar 4406994. These don't count as scrollable.
         // Maybe someday we'll discover that this minimum area check should be larger, but this covers the known cases.
         float area = [scrollableFrameView _area];
         if (area < 1.0)
             continue;
-        
+
         if (!largest || (area > [largest _area])) {
             largest = scrollableFrameView;
         }
     }
-    
+
     return largest;
 }
 

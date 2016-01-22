@@ -16,8 +16,8 @@
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
-#ifndef GtkUtilities_h 
-#define GtkUtilities_h 
+#ifndef GtkUtilities_h
+#define GtkUtilities_h
 
 namespace WebCore {
 

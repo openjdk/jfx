@@ -53,7 +53,7 @@ private:
     }
 
     ErrorCode m_code;
-    String m_message; 
+    String m_message;
 };
 
 } // namespace WebCore

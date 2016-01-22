@@ -51,7 +51,7 @@ public class ScreenAndWindowTest extends TestBase {
         assertEquals("screen.height", (int)screenSize.getHeight(), height);
         assertEquals("screen.availWidth", (int)availSize.getWidth(), availWidth);
         assertEquals("screen.availHeight", (int)availSize.getHeight(), availHeight);
-        
+
         // do some basic checking, too
         assertTrue("screen.depth >= 0", depth >= 0);
         assertTrue("screen.width >= screen.availWidth", width >= availWidth);
@@ -72,7 +72,7 @@ public class ScreenAndWindowTest extends TestBase {
         if (windowHeight >= 0) {
             assertEquals("window.outerHeight", windowHeight, outerHeight);
         }
-        
+
         // do some sanity checks
         assertTrue("window.outerWidth >= window.innerWidth", outerWidth >= innerWidth);
         assertTrue("window.outerHeight >= window.innerHeight", outerHeight >= innerHeight);

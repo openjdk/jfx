@@ -49,9 +49,9 @@ JNIEXPORT void JNICALL Java_com_sun_javafx_ext_device_ios_ipod_MediaQuery_nCreat
  */
 JNIEXPORT void JNICALL Java_com_sun_javafx_ext_device_ios_ipod_MediaQuery_nAddNumberPredicate
 (JNIEnv *env, jobject obj, jint predicateKey, jint predicateValue) {
-    
+
     if (ipa) {
-        [ipa addNumberPredicateForKey: (int) predicateKey 
+        [ipa addNumberPredicateForKey: (int) predicateKey
                                 value: (int) predicateValue];
     }
 }
@@ -63,15 +63,15 @@ JNIEXPORT void JNICALL Java_com_sun_javafx_ext_device_ios_ipod_MediaQuery_nAddNu
  */
 JNIEXPORT void JNICALL Java_com_sun_javafx_ext_device_ios_ipod_MediaQuery_nAddStringPredicate
 (JNIEnv *env, jobject obj, jint predicateKey, jstring jsPredicateValue) {
-    
+
     if (ipa) {
-        
+
         const char *predicateNativeString = (*env)->GetStringUTFChars(env, jsPredicateValue, 0);
-        NSString *predicateValue = [NSString stringWithCString: predicateNativeString 
+        NSString *predicateValue = [NSString stringWithCString: predicateNativeString
                                                       encoding: NSUTF8StringEncoding];
         (*env)->ReleaseStringUTFChars(env, jsPredicateValue, predicateNativeString);
-        
-        [ipa addStringPredicateForKey: (int) predicateKey 
+
+        [ipa addStringPredicateForKey: (int) predicateKey
                                 value: predicateValue];
     }
 }
@@ -83,7 +83,7 @@ JNIEXPORT void JNICALL Java_com_sun_javafx_ext_device_ios_ipod_MediaQuery_nAddSt
  */
 JNIEXPORT void JNICALL Java_com_sun_javafx_ext_device_ios_ipod_MediaQuery_nSetGroupingType
 (JNIEnv *env, jobject obj, jint groupingType) {
-    
+
     if (ipa) {
         [ipa setGroupingType: (int) groupingType];
     }
@@ -96,7 +96,7 @@ JNIEXPORT void JNICALL Java_com_sun_javafx_ext_device_ios_ipod_MediaQuery_nSetGr
  */
 JNIEXPORT void JNICALL Java_com_sun_javafx_ext_device_ios_ipod_MediaQuery_nFillItemList
 (JNIEnv *env, jobject obj) {
-    
+
     if (ipa) {
         [ipa fillItemListOfMediaQuery: obj jniEnv: env];
     }

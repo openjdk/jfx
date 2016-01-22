@@ -22,7 +22,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef ResourceRequestBase_h
@@ -71,16 +71,16 @@ namespace WebCore {
 
         ResourceRequestCachePolicy cachePolicy() const;
         void setCachePolicy(ResourceRequestCachePolicy cachePolicy);
-        
+
         double timeoutInterval() const; // May return 0 when using platform default.
         void setTimeoutInterval(double timeoutInterval);
-        
+
         const URL& firstPartyForCookies() const;
         void setFirstPartyForCookies(const URL& firstPartyForCookies);
-        
+
         const String& httpMethod() const;
         void setHTTPMethod(const String& httpMethod);
-        
+
         const HTTPHeaderMap& httpHeaderFields() const;
         String httpHeaderField(const AtomicString& name) const;
         String httpHeaderField(const char* name) const;
@@ -88,7 +88,7 @@ namespace WebCore {
         void setHTTPHeaderField(const char* name, const String& value);
         void addHTTPHeaderField(const AtomicString& name, const String& value);
         void addHTTPHeaderFields(const HTTPHeaderMap& headerFields);
-        
+
         void clearHTTPAuthorization();
 
         String httpContentType() const { return httpHeaderField("Content-Type");  }
@@ -98,7 +98,7 @@ namespace WebCore {
         String httpReferrer() const { return httpHeaderField("Referer"); }
         void setHTTPReferrer(const String& httpReferrer) { setHTTPHeaderField("Referer", httpReferrer); }
         void clearHTTPReferrer();
-        
+
         String httpOrigin() const { return httpHeaderField("Origin"); }
         void setHTTPOrigin(const String& httpOrigin) { setHTTPHeaderField("Origin", httpOrigin); }
         void clearHTTPOrigin();
@@ -116,7 +116,7 @@ namespace WebCore {
 
         FormData* httpBody() const;
         void setHTTPBody(PassRefPtr<FormData> httpBody);
-        
+
         bool allowCookies() const;
         void setAllowCookies(bool allowCookies);
 
@@ -239,7 +239,7 @@ namespace WebCore {
         bool m_allowCookies;
         ResourceLoadPriority m_priority;
     };
-    
+
     unsigned initializeMaximumHTTPConnectionCountPerHost();
 #if PLATFORM(IOS)
     void initializeHTTPConnectionSettingsOnStartup();

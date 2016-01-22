@@ -48,7 +48,7 @@ import javafx.scene.shape.Line;
  *
  */
 public class MovingGuideRenderer {
-    
+
     private static final String NID_MOVING_GUIDE = "movingGuide"; //NOI18N
 
     private final Group guideGroup = new Group();
@@ -56,30 +56,30 @@ public class MovingGuideRenderer {
     private final Set<Line> reusableChromes = new HashSet<>();
     private final Paint chromeColor;
     private final Bounds scopeInScene;
-    
+
     public MovingGuideRenderer(Paint chromeColor, Bounds scopeInScene) {
         this.chromeColor = chromeColor;
         this.scopeInScene = scopeInScene;
         guideGroup.setMouseTransparent(true);
     }
-    
+
     public void setLines(List<? extends AbstractSegment> lines1, List<? extends AbstractSegment> lines2) {
         assert lines1 != null;
         assert lines2 != null;
         assert guideGroup.getScene() != null;
-        
+
         final Set<AbstractSegment> currentLines = chromeMap.keySet();
-        
+
         final Set<AbstractSegment> newLines = new HashSet<>();
         newLines.addAll(lines1);
         newLines.addAll(lines2);
         newLines.removeAll(currentLines);
-        
+
         final Set<AbstractSegment> obsoleteLines = new HashSet<>();
         obsoleteLines.addAll(currentLines);
         obsoleteLines.removeAll(lines1);
         obsoleteLines.removeAll(lines2);
-        
+
         for (AbstractSegment s : obsoleteLines) {
             final Line chrome = chromeMap.get(s);
             assert chrome != null;
@@ -87,7 +87,7 @@ public class MovingGuideRenderer {
             chromeMap.remove(s);
             chrome.setVisible(false);
         }
-        
+
         final Bounds scope = guideGroup.sceneToLocal(scopeInScene, true /* rootScene */);
         for (AbstractSegment s : newLines) {
             final Line chrome;
@@ -125,7 +125,7 @@ public class MovingGuideRenderer {
             assert chromeMap.containsKey(s) == false;
             chromeMap.put(s, chrome);
         }
-        
+
 //        assert chromeMap.keySet().size() == lines1.size() + lines2.size()
 //                : "chromeMap.keySet().size()=" + chromeMap.keySet().size()
 //                + ", lines1.size()=" + lines1.size()
@@ -135,8 +135,8 @@ public class MovingGuideRenderer {
 //                + ", obsoleteLines.size()=" + obsoleteLines.size();
 //        assert chromeMap.size() + reusableChromes.size() == guideGroup.getChildren().size();
     }
-    
-    
+
+
     public Group getGuideGroup() {
         return guideGroup;
     }

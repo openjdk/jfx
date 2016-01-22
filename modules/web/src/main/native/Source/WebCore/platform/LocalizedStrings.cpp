@@ -21,7 +21,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -520,7 +520,7 @@ String contextMenuItemTagMediaMute()
 {
     return WEB_UI_STRING("Mute", "Media Mute context menu item");
 }
-    
+
 String contextMenuItemTagInspectElement()
 {
     return WEB_UI_STRING("Inspect Element", "Inspect Element context menu item");
@@ -942,7 +942,7 @@ String localizedMediaControlElementHelpText(const String& name)
     // The description of this button is descriptive enough that it doesn't require help text.
     if (name == "EnterFullscreenButton")
         return String();
-    
+
     ASSERT_NOT_REACHED();
     return String();
 }
@@ -1073,7 +1073,7 @@ String textTrackNoLabelText()
 {
     return WEB_UI_STRING_KEY("Unknown", "Unknown (text track)", "Menu item label for a text track that has no other name");
 }
-    
+
 #if PLATFORM(COCOA) || PLATFORM(WIN)
 String textTrackCountryAndLanguageMenuItemText(const String& title, const String& country, const String& language)
 {

@@ -92,7 +92,7 @@ int SVGInlineTextBox::offsetForPositionInFragment(const SVGTextFragment& fragmen
 
 float SVGInlineTextBox::positionForOffset(int) const
 {
-    // SVG doesn't use the offset <-> position selection system. 
+    // SVG doesn't use the offset <-> position selection system.
     ASSERT_NOT_REACHED();
     return 0;
 }

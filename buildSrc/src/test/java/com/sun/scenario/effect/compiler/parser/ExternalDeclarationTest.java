@@ -79,7 +79,7 @@ public class ExternalDeclarationTest extends ParserBase {
         assertEquals(var.getName(), "bar");
         assertNull(d.getInit());
     }
-    
+
     @Test
     public void funcDefNoParam() throws Exception {
         ExtDecl tree = parseTreeFor("void test() { int i = 3; }").get(0);
@@ -109,7 +109,7 @@ public class ExternalDeclarationTest extends ParserBase {
         assertEquals(params.size(), 1);
         assertNotNull(d.getStmt());
     }
-    
+
     @Test
     public void funcDefTwoParam() throws Exception {
         ExtDecl tree = parseTreeFor("void test(float3 foo, float3 bar) { int i = 3; }").get(0);

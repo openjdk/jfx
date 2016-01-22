@@ -22,15 +22,15 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
- 
+
 #include "LensCommon.h"
 
 static jobject createJavaScreen(JNIEnv *env, NativeScreen screen) {
     // already allocated globally, leaving here only for reference
     //jclass jScreenClass = (*env)->FindClass(env, "com/sun/glass/ui/Screen");
 
-    jmethodID screenInit = (*env)->GetMethodID(env, jScreenClass, 
-        "<init>", 
+    jmethodID screenInit = (*env)->GetMethodID(env, jScreenClass,
+        "<init>",
         "(JIIIIIIIIIIIF)V");
     GLASS_CHECK_EXCEPTION(env);
 
@@ -77,9 +77,9 @@ jobjectArray createJavaScreens(JNIEnv *env) {
     // create our Screen[]
     // with only one element because we know that is all we currently support
     int screenCount = 1;
-    jobjectArray screenArray = (*env)->NewObjectArray(env, 
-            screenCount, 
-            jScreenClass, 
+    jobjectArray screenArray = (*env)->NewObjectArray(env,
+            screenCount,
+            jScreenClass,
             NULL);
     (*env)->SetObjectArrayElement(env, screenArray, 0, defScreen);
 

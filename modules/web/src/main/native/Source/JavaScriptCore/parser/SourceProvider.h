@@ -43,7 +43,7 @@ namespace JSC {
     class SourceProvider : public RefCounted<SourceProvider> {
     public:
         static const intptr_t nullID = 1;
-        
+
         JS_EXPORT_PRIVATE SourceProvider(const String& url, const TextPosition& startPosition);
 
         JS_EXPORT_PRIVATE virtual ~SourceProvider();
@@ -101,7 +101,7 @@ namespace JSC {
 
         String m_source;
     };
-    
+
 } // namespace JSC
 
 #endif // SourceProvider_h

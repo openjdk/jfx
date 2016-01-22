@@ -56,7 +56,7 @@ void JSPannerNode::setPanningModel(ExecState* exec, JSValue value)
             return;
         }
     }
-    
+
     exec->vm().throwException(exec, createTypeError(exec, "Illegal panningModel"));
 }
 
@@ -80,7 +80,7 @@ void JSPannerNode::setDistanceModel(ExecState* exec, JSValue value)
             return;
         }
     }
-    
+
     exec->vm().throwException(exec, createTypeError(exec, "Illegal distanceModel"));
 }
 

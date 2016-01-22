@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef ApplicationCacheStorage_h
@@ -55,7 +55,7 @@ public:
 
     void setCacheDirectory(const String&);
     const String& cacheDirectory() const;
-    
+
     void setMaximumSize(int64_t size);
     int64_t maximumSize() const;
     bool isMaximumSizeReached() const;
@@ -76,7 +76,7 @@ public:
     ApplicationCacheGroup* findInMemoryCacheGroup(const URL& manifestURL) const;
     void cacheGroupDestroyed(ApplicationCacheGroup*);
     void cacheGroupMadeObsolete(ApplicationCacheGroup*);
-        
+
     bool storeNewestCache(ApplicationCacheGroup*, ApplicationCache* oldCache, FailureReason& failureReason);
     bool storeNewestCache(ApplicationCacheGroup*); // Updates the cache group, but doesn't remove old cache.
     bool store(ApplicationCacheResource*, ApplicationCache*);
@@ -84,9 +84,9 @@ public:
 
     // Removes the group if the cache to be removed is the newest one (so, storeNewestCache() needs to be called beforehand when updating).
     void remove(ApplicationCache*);
-    
+
     void empty();
-    
+
     static bool storeCopyOfCache(const String& cacheDirectory, ApplicationCacheHost*);
 
     bool manifestURLs(Vector<URL>* urls);
@@ -103,7 +103,7 @@ private:
     ApplicationCacheStorage();
     PassRefPtr<ApplicationCache> loadCache(unsigned storageID);
     ApplicationCacheGroup* loadCacheGroup(const URL& manifestURL);
-    
+
     typedef StorageIDJournal<ApplicationCacheResource> ResourceStorageIDJournal;
     typedef StorageIDJournal<ApplicationCacheGroup> GroupStorageIDJournal;
 
@@ -117,18 +117,18 @@ private:
     bool writeDataToUniqueFileInDirectory(SharedBuffer*, const String& directory, String& outFilename, const String& fileExtension);
 
     void loadManifestHostHashes();
-    
+
     void verifySchemaVersion();
-    
+
     void openDatabase(bool createIfDoesNotExist);
-    
+
     bool executeStatement(SQLiteStatement&);
     bool executeSQLCommand(const String&);
 
     void checkForMaxSizeReached();
     void checkForDeletedResources();
     long long flatFileAreaSize();
-    
+
     String m_cacheDirectory;
     String m_cacheFile;
 
@@ -142,15 +142,15 @@ private:
     // In order to quickly determine if a given resource exists in an application cache,
     // we keep a hash set of the hosts of the manifest URLs of all non-obsolete cache groups.
     HashCountedSet<unsigned, AlreadyHashed> m_cacheHostSet;
-    
+
     typedef HashMap<String, ApplicationCacheGroup*> CacheGroupMap;
     CacheGroupMap m_cachesInMemory; // Excludes obsolete cache groups.
 
     friend ApplicationCacheStorage& cacheStorage();
 };
- 
+
 ApplicationCacheStorage& cacheStorage();
-    
+
 } // namespace WebCore
 
 #endif // ApplicationCacheStorage_h

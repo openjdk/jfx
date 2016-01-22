@@ -298,7 +298,7 @@ public class NGRegion extends NGGroup {
      * of the peers for any reason.
      * A null value means that the raw radii in the BorderStroke objects
      * themselves were already absolute and non-overflowing.
-     * 
+     *
      * @param normalizedStrokeCorners a precomputed copy of the radii in the
      *        BorderStroke objects that are not percentages and do not overflow
      */
@@ -312,7 +312,7 @@ public class NGRegion extends NGGroup {
      * If a List was synchronized from the Region object, the value from that
      * List, otherwise the raw radii are fetched from the indicated BorderStroke
      * object.
-     * 
+     *
      * @param index the index of the BorderStroke object being processed
      * @return the normalized radii for the indicated BorderStroke object
      */
@@ -388,7 +388,7 @@ public class NGRegion extends NGGroup {
      * of the peers for any reason.
      * A null value means that the raw radii in the BackgroundFill objects
      * themselves were already absolute and non-overflowing.
-     * 
+     *
      * @param normalizedStrokeCorners a precomputed copy of the radii in the
      *        BackgroundFill objects that are not percentages and do not overflow
      */
@@ -402,7 +402,7 @@ public class NGRegion extends NGGroup {
      * If a List was synchronized from the Region object, the value from that
      * List, otherwise the raw radii are fetched from the indicated BackgroundFill
      * object.
-     * 
+     *
      * @param index the index of the BackgroundFill object being processed
      * @return the normalized radii for the indicated BackgroundFill object
      */
@@ -1637,28 +1637,28 @@ public class NGRegion extends NGGroup {
     /**
      * Inserts geometry into the specified Path2D object for the specified
      * corner of a general rounded rectangle.
-     * 
+     *
      * The corner drawn is specified by the quadrant parameter, whose least
      * significant 2 bits specify the following corners and the associated
      * start, corner, and end points (which are always drawn clockwise):
-     * 
+     *
      * 0 - Top Left:      X + 0 , Y + VR,      X, Y,      X + HR, Y + 0
      * 1 - Top Right:     X - HR, Y + 0 ,      X, Y,      X + 0 , Y + VR
      * 2 - Bottom Right:  X + 0 , Y - VR,      X, Y,      X - HR, Y + 0
      * 3 - Bottom Left:   X + HR, Y + 0 ,      X, Y,      X + 0 , Y - VR
-     * 
+     *
      * The associated horizontal and vertical radii are fetched from the
      * indicated CornerRadii object which is assumed to be absolute (not
      * percentage based) and already scaled so that no pair of radii are
      * larger than the indicated width/height of the rounded rectangle being
      * expressed.
-     * 
+     *
      * The tstart and tend parameters specify what portion of the rounded
      * corner should be drawn with 0f => 1f being the entire rounded corner.
-     * 
+     *
      * The newPath parameter indicates whether the path should reach the
      * starting point with a moveTo() command or a lineTo() segment.
-     * 
+     *
      * @param path
      * @param radii
      * @param x
@@ -1666,7 +1666,7 @@ public class NGRegion extends NGGroup {
      * @param quadrant
      * @param tstart
      * @param tend
-     * @param newPath 
+     * @param newPath
      */
     private void doCorner(Path2D path, CornerRadii radii,
                           float x, float y, int quadrant,

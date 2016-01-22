@@ -133,7 +133,7 @@ void ResourceHandle::setClientCertificateInfo(const String& host, const String& 
 
 #if PLATFORM(WIN) && USE(CF)
 // FIXME:  The CFDataRef will need to be something else when
-// building without 
+// building without
 static HashMap<String, RetainPtr<CFDataRef> >& clientCerts()
 {
     static HashMap<String, RetainPtr<CFDataRef> > certs;
@@ -198,7 +198,7 @@ void ResourceHandle::didReceiveAuthenticationChallenge(const AuthenticationChall
         if (challenge.failureResponse().httpStatusCode() == 401)
             urlToStore = challenge.failureResponse().url();
         CredentialStorage::set(credential, challenge.protectionSpace(), urlToStore);
-        
+
         String userpass = credential.user() + ":" + credential.password();
         curl_easy_setopt(d->m_handle, CURLOPT_USERPWD, userpass.utf8().data());
 
@@ -232,7 +232,7 @@ void ResourceHandle::didReceiveAuthenticationChallenge(const AuthenticationChall
     }
 
     d->m_currentWebChallenge = challenge;
-    
+
     if (client())
         client()->didReceiveAuthenticationChallenge(this, d->m_currentWebChallenge);
 }

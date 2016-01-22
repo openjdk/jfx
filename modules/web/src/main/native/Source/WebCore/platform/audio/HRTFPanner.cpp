@@ -247,7 +247,7 @@ void HRTFPanner::pan(double desiredAzimuth, double elevation, const AudioBus* in
         m_delayLineR.process(segmentSourceR, segmentDestinationR, framesPerSegment);
 
         bool needsCrossfading = m_crossfadeIncr;
-        
+
         // Have the convolvers render directly to the final destination if we're not cross-fading.
         float* convolutionDestinationL1 = needsCrossfading ? m_tempL1.data() : segmentDestinationL;
         float* convolutionDestinationR1 = needsCrossfading ? m_tempR1.data() : segmentDestinationR;
@@ -256,7 +256,7 @@ void HRTFPanner::pan(double desiredAzimuth, double elevation, const AudioBus* in
 
         // Now do the convolutions.
         // Note that we avoid doing convolutions on both sets of convolvers if we're not currently cross-fading.
-        
+
         if (m_crossfadeSelection == CrossfadeSelection1 || needsCrossfading) {
             m_convolverL1.process(kernelL1->fftFrame(), segmentDestinationL, convolutionDestinationL1, framesPerSegment);
             m_convolverR1.process(kernelR1->fftFrame(), segmentDestinationR, convolutionDestinationR1, framesPerSegment);
@@ -266,7 +266,7 @@ void HRTFPanner::pan(double desiredAzimuth, double elevation, const AudioBus* in
             m_convolverL2.process(kernelL2->fftFrame(), segmentDestinationL, convolutionDestinationL2, framesPerSegment);
             m_convolverR2.process(kernelR2->fftFrame(), segmentDestinationR, convolutionDestinationR2, framesPerSegment);
         }
-        
+
         if (needsCrossfading) {
             // Apply linear cross-fade.
             float x = m_crossfadeX;

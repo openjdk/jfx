@@ -55,7 +55,7 @@ namespace WTF {
 
     enum AdoptCFTag { AdoptCF };
     enum AdoptNSTag { AdoptNS };
-    
+
 #if defined(__OBJC__) && !__has_feature(objc_arc)
 #ifdef OBJC_NO_GC
     inline void adoptNSReference(id)
@@ -98,7 +98,7 @@ namespace WTF {
             adoptNSReference(ptr);
         }
 #endif
-        
+
         RetainPtr(const RetainPtr& o) : m_ptr(o.m_ptr) { if (StorageType ptr = m_ptr) CFRetain(ptr); }
 
         RetainPtr(RetainPtr&& o) : m_ptr(toStorageType(o.leakRef())) { }
@@ -107,9 +107,9 @@ namespace WTF {
         // Hash table deleted values, which are only constructed and never copied or destroyed.
         RetainPtr(HashTableDeletedValueType) : m_ptr(hashTableDeletedValue()) { }
         bool isHashTableDeletedValue() const { return m_ptr == hashTableDeletedValue(); }
-        
+
         ~RetainPtr() { if (StorageType ptr = m_ptr) CFRelease(ptr); }
-        
+
         template<typename U> RetainPtr(const RetainPtr<U>&);
 
         void clear();
@@ -121,11 +121,11 @@ namespace WTF {
         explicit operator bool() const { return m_ptr; }
 
         bool operator!() const { return !m_ptr; }
-    
+
         // This conversion operator allows implicit conversion to bool but not to other integer types.
         typedef StorageType RetainPtr::*UnspecifiedBoolType;
         operator UnspecifiedBoolType() const { return m_ptr ? &RetainPtr::m_ptr : 0; }
-        
+
         RetainPtr& operator=(const RetainPtr&);
         template<typename U> RetainPtr& operator=(const RetainPtr<U>&);
         RetainPtr& operator=(PtrType);
@@ -240,33 +240,33 @@ namespace WTF {
     }
 
     template<typename T, typename U> inline bool operator==(const RetainPtr<T>& a, const RetainPtr<U>& b)
-    { 
-        return a.get() == b.get(); 
+    {
+        return a.get() == b.get();
     }
 
     template<typename T, typename U> inline bool operator==(const RetainPtr<T>& a, U* b)
     {
-        return a.get() == b; 
+        return a.get() == b;
     }
 
-    template<typename T, typename U> inline bool operator==(T* a, const RetainPtr<U>& b) 
+    template<typename T, typename U> inline bool operator==(T* a, const RetainPtr<U>& b)
     {
-        return a == b.get(); 
+        return a == b.get();
     }
 
     template<typename T, typename U> inline bool operator!=(const RetainPtr<T>& a, const RetainPtr<U>& b)
-    { 
-        return a.get() != b.get(); 
+    {
+        return a.get() != b.get();
     }
 
     template<typename T, typename U> inline bool operator!=(const RetainPtr<T>& a, U* b)
     {
-        return a.get() != b; 
+        return a.get() != b;
     }
 
     template<typename T, typename U> inline bool operator!=(T* a, const RetainPtr<U>& b)
-    { 
-        return a != b.get(); 
+    {
+        return a != b.get();
     }
 
     template<typename T> inline RetainPtr<T> adoptCF(T CF_RELEASES_ARGUMENT) WARN_UNUSED_RETURN;
@@ -289,7 +289,7 @@ namespace WTF {
     }
 
     template<typename P> struct HashTraits<RetainPtr<P>> : SimpleClassHashTraits<RetainPtr<P>> { };
-    
+
     template<typename P> struct PtrHash<RetainPtr<P>> : PtrHash<typename RetainPtr<P>::PtrType> {
         using PtrHash<typename RetainPtr<P>::PtrType>::hash;
         static unsigned hash(const RetainPtr<P>& key) { return hash(key.get()); }
@@ -298,7 +298,7 @@ namespace WTF {
         static bool equal(typename RetainPtr<P>::PtrType a, const RetainPtr<P>& b) { return a == b; }
         static bool equal(const RetainPtr<P>& a, typename RetainPtr<P>::PtrType b) { return a == b; }
     };
-    
+
     template<typename P> struct DefaultHash<RetainPtr<P>> { typedef PtrHash<RetainPtr<P>> Hash; };
 
     template <typename P>

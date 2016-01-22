@@ -22,7 +22,7 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
- 
+
 #define _GNU_SOURCE
 #include <errno.h>
 #include <stdarg.h>
@@ -67,7 +67,7 @@ static int texCount = 0;
 /*
  *    StringBuffer
  */
- 
+
 #define CHUNKSZ 2048
 static char *stringBuffer;
 static char *curPtr;
@@ -211,7 +211,7 @@ static void
 fps_total()
 {
     if (--curFrame <= 0) return;
-    
+
     int idx = curFrame % INST_FRAME_COUNT;
     fprintf(stdout, "Total FPS(rec): %f", curFrame*1e9/(tsRecorded[idx] - ts0Recorded));
     if (execFlag) {
@@ -228,13 +228,13 @@ fps_total()
 #ifdef RASPBERRYPI
 
 #include  <bcm_host.h>
- 
+
 static EGL_DISPMANX_WINDOW_T nativewindow;
 static DISPMANX_ELEMENT_HANDLE_T dispman_element;
 static DISPMANX_DISPLAY_HANDLE_T dispman_display;
 static DISPMANX_UPDATE_HANDLE_T dispman_update;
 
-static EGLNativeWindowType 
+static EGLNativeWindowType
 createNativeWindow()
 {
     bcm_host_init();
@@ -244,7 +244,7 @@ createNativeWindow()
     if (rc < 0) {
         fprintf(stderr, "FATAL: can't create native wondow\n");
     }
-    
+
     VC_RECT_T dst_rect;
     VC_RECT_T src_rect;
 
@@ -274,7 +274,7 @@ createNativeWindow()
 
 #elif BEAGLEBOARD
 
-static EGLNativeWindowType 
+static EGLNativeWindowType
 createNativeWindow()
 {
     return NULL;
@@ -289,7 +289,7 @@ createNativeWindow()
 #define NOT_IMPLEMENTED() {fprintf(stderr, "FATAL: not implemented %d\n", cmd); return;}
 
 /* XXX use glGet(GL_MAX_VERTEX_ATTRIBS) */
-#define MAX_VERTEX_ATTRIBS      128     
+#define MAX_VERTEX_ATTRIBS      128
 typedef struct VertexAttrib_t {
     GLboolean   enabled;
     GLint       size;
@@ -358,7 +358,7 @@ proc_glBindAttribLocation(GLuint program, GLuint index, const GLchar* name)
     }
 }
 
-static void 
+static void
 proc_glBindBuffer(GLenum target, GLuint buffer)
 {
     if (printFlag) {
@@ -431,7 +431,7 @@ proc_glBlendEquation(GLenum mode)
     if (execFlag) {
         glBlendEquation(mode);
     }
-    
+
 }
 
 static void
@@ -935,7 +935,7 @@ proc_glDetachShader(GLuint program, GLuint shader)
     }
 }
 
-static void 
+static void
 proc_glDisable(GLenum cap)
 {
     if (printFlag) {
@@ -1221,7 +1221,7 @@ static void proc_glGetActiveAttrib();
 
 static void
 proc_glGetActiveUniform(GLuint program, GLuint index, GLsizei bufsize, GLsizei* length, GLint* size, GLenum* type, GLchar* name)
-{    
+{
     if (printFlag) {
         sb_appendStr("glGetActiveUniform(");
         sb_appendInt(program);
@@ -1359,7 +1359,7 @@ proc_glGetFramebufferAttachmentParameteriv(GLenum target, GLenum attachment, GLe
         if (_params != params[0]) {
             fprintf(stderr, "ERROR: glGetFramebufferAttachmentParameteriv params mismatch\n");
         }
-    }    
+    }
 }
 
 static void
@@ -1478,9 +1478,9 @@ proc_glGetUniformLocation(GLuint program, const GLchar* name)
     if (printFlag) {
         sb_appendStr("glGetUniformLocation(");
         sb_appendInt(program);
-        sb_appendStr(", ");     
-        sb_appendStr(name);     
-        sb_appendStr(")");      
+        sb_appendStr(", ");
+        sb_appendStr(name);
+        sb_appendStr(")");
     }
     if (execFlag) {
         res = glGetUniformLocation(program, name);
@@ -1507,7 +1507,7 @@ proc_glLinkProgram(GLuint program)
     if (printFlag) {
         sb_appendStr("glLinkProgram(");
         sb_appendInt(program);
-        sb_appendStr(")");      
+        sb_appendStr(")");
     }
     if (execFlag) {
         glLinkProgram(program);
@@ -1522,7 +1522,7 @@ proc_glPixelStorei(GLenum pname, GLint param)
         sb_appendInt(pname);
         sb_appendStr(", ");
         sb_appendInt(param);
-        sb_appendStr(")");      
+        sb_appendStr(")");
     }
     if (execFlag) {
         glPixelStorei(pname, param);
@@ -1559,7 +1559,7 @@ proc_glRenderbufferStorage(GLenum target, GLenum internalformat, GLsizei width, 
         sb_appendInt(width);
         sb_appendStr(", ");
         sb_appendInt(height);
-        sb_appendStr(")");      
+        sb_appendStr(")");
     }
     if (execFlag) {
         glRenderbufferStorage(target, internalformat, width, height);
@@ -1580,7 +1580,7 @@ proc_glScissor(GLint x, GLint y, GLsizei width, GLsizei height)
         sb_appendInt(width);
         sb_appendStr(", ");
         sb_appendInt(height);
-        sb_appendStr(")");      
+        sb_appendStr(")");
     }
     if (execFlag) {
         glScissor(x, y, width, height);
@@ -1644,7 +1644,7 @@ proc_glTexImage2D(GLenum target, GLint level, GLint internalformat, GLsizei widt
         sb_appendStr(glEnum2str(type));
         sb_appendStr(", ");
         sb_appendStr(pixels ? "[...]" : "(null)");
-        sb_appendStr(")");      
+        sb_appendStr(")");
     }
     if (execFlag) {
         glTexImage2D(target, level, internalformat, width, height, border, format, type, pixels);
@@ -1664,7 +1664,7 @@ proc_glTexParameteri(GLenum target, GLenum pname, GLint param)
         sb_appendStr(glEnum2str(pname));
         sb_appendStr(", ");
         sb_appendInt(param);
-        sb_appendStr(")");      
+        sb_appendStr(")");
     }
     if (execFlag) {
         glTexParameteri(target, pname, param);
@@ -1696,7 +1696,7 @@ proc_glTexSubImage2D(GLenum target, GLint level, GLint xoffset, GLint yoffset, G
         sb_appendStr(", ");
         sb_appendPtr(pixels);
         sb_appendStr(")");
-    }   
+    }
     if (execFlag) {
         glTexSubImage2D(target, level, xoffset, yoffset, width, height, format, type, pixels);
     }
@@ -1711,7 +1711,7 @@ proc_glUniform1f(GLint location, GLfloat x)
         sb_appendStr(", ");
         sb_appendFloat(x);
         sb_appendStr(")");
-    }   
+    }
     if (execFlag) {
         glUniform1f(location, x);
     }
@@ -1741,7 +1741,7 @@ proc_glUniform1i(GLint location, GLint x)
         sb_appendStr(", ");
         sb_appendInt(x);
         sb_appendStr(")");
-    }   
+    }
     if (execFlag) {
         glUniform1i(location, x);
     }
@@ -1760,7 +1760,7 @@ proc_glUniform2f(GLint location, GLfloat x, GLfloat y)
         sb_appendStr(", ");
         sb_appendFloat(y);
         sb_appendStr(")");
-    }   
+    }
     if (execFlag) {
         glUniform2f(location, x, y);
     }
@@ -1783,7 +1783,7 @@ proc_glUniform3f(GLint location, GLfloat x, GLfloat y, GLfloat z)
         sb_appendStr(", ");
         sb_appendFloat(z);
         sb_appendStr(")");
-    }   
+    }
     if (execFlag) {
         glUniform3f(location, x, y, z);
     }
@@ -1808,7 +1808,7 @@ proc_glUniform4f(GLint location, GLfloat x, GLfloat y, GLfloat z, GLfloat w)
         sb_appendStr(", ");
         sb_appendFloat(w);
         sb_appendStr(")");
-    }   
+    }
     if (execFlag) {
         glUniform4f(location, x, y, z, w);
     }
@@ -1823,7 +1823,7 @@ proc_glUniform4fv(GLint location, GLsizei count, const GLfloat* v)
         sb_appendStr(", ");
         sb_appendInt(count);
         sb_appendStr(", [...])");
-    }   
+    }
     if (execFlag) {
         glUniform4fv(location, count, v);
     }
@@ -1892,7 +1892,7 @@ proc_glUniformMatrix3fv(GLint location, GLsizei count, GLboolean transpose, cons
     }
 }
 
-static void 
+static void
 proc_glUniformMatrix4fv(GLint location, GLsizei count, GLboolean transpose, const GLfloat* value)
 {
     if (printFlag) {
@@ -2215,7 +2215,7 @@ proc_eglQueryString(EGLDisplay dpy, EGLint name)
 
 static EGLBoolean proc_eglGetConfigs() { return EGL_FALSE; }
 
-static EGLBoolean 
+static EGLBoolean
 proc_eglChooseConfig(EGLDisplay dpy, const EGLint *attrib_list,
            EGLConfig *_configs, EGLint config_size,
            EGLint _num_config)
@@ -2279,7 +2279,7 @@ proc_eglGetConfigAttrib(EGLDisplay dpy, EGLConfig config, EGLint attribute, EGLi
         sb_appendStr(", ");
         sb_appendInt(_value);
         sb_appendStr(")");
-    }   
+    }
     if (execFlag) {
         EGLint value;
         res = eglGetConfigAttrib(dpy, config, attribute, &value);
@@ -2326,7 +2326,7 @@ static EGLBoolean proc_eglCreatePixmapSurface() { return EGL_FALSE; }
 static EGLBoolean proc_eglDestroySurface() { return EGL_FALSE; }
 static EGLBoolean proc_eglQuerySurface() { return EGL_FALSE; }
 
-static EGLBoolean 
+static EGLBoolean
 proc_eglBindAPI(EGLenum api)
 {
     EGLBoolean res = EGL_FALSE;
@@ -2358,7 +2358,7 @@ proc_eglSurfaceAttrib(EGLDisplay dpy, EGLSurface surface, EGLint attribute, EGLi
         sb_appendStr(", ");
         sb_appendStr(eglEnum2str(attribute));
         sb_appendStr(", ");
-        sb_appendInt(value);    
+        sb_appendInt(value);
         sb_appendStr(")");
     }
     if (execFlag) {
@@ -2400,7 +2400,7 @@ proc_eglCreateContext(EGLDisplay dpy, EGLConfig config, EGLContext share_context
     return res;
 }
 
-static EGLBoolean 
+static EGLBoolean
 proc_eglDestroyContext(EGLDisplay dpy, EGLContext ctx)
 {
     EGLBoolean res = EGL_FALSE;
@@ -2482,7 +2482,7 @@ process(int frames)
             }
             cmd = getCmd();
         }
-        
+
         switch (cmd) {
         case OPC_MARK: {
             const char *str = getString();
@@ -2808,7 +2808,7 @@ process(int frames)
                 int i;
                 for (i=0; i<MAX_VERTEX_ATTRIBS; ++i) {
                     if (!vertexAttrib[i].enabled) continue;
-                    const GLvoid *pointer = getBytes(); 
+                    const GLvoid *pointer = getBytes();
                     getVertexAttrib(i, count, pointer);
                 }
             }
@@ -2828,7 +2828,7 @@ process(int frames)
         case OPC_glFinish:
             proc_glFinish();
             break;
-        case OPC_glFlush: 
+        case OPC_glFlush:
             proc_glFlush();
             break;
         case OPC_glFramebufferRenderbuffer: {
@@ -2876,7 +2876,7 @@ process(int frames)
                 framebuffers[i] = getInt();
             }
             proc_glGenFramebuffers(n, framebuffers);
-            break;          
+            break;
         }
         case OPC_glGenRenderbuffers: {
             GLsizei n = getInt();
@@ -2886,7 +2886,7 @@ process(int frames)
                 renderbuffers[i] = getInt();
             }
             proc_glGenRenderbuffers(n, renderbuffers);
-            break;      
+            break;
         }
         case OPC_glGenTextures: {
             GLsizei n = getInt();
@@ -3386,10 +3386,10 @@ process(int frames)
             case OPC_glFramebufferRenderbufferEXT:      NOT_IMPLEMENTED();
             case OPC_glGetFramebufferAttachmentParameterivEXT:  NOT_IMPLEMENTED();
             case OPC_glGenerateMipmapEXT:       NOT_IMPLEMENTED();
-                
+
 #endif /* MACOSX */
 #if linux
-        case OPC_eglGetError:   NOT_IMPLEMENTED();          
+        case OPC_eglGetError:   NOT_IMPLEMENTED();
         case OPC_eglGetDisplay: {
             EGLDisplay curVal = proc_eglGetDisplay((EGLNativeDisplayType)getPtr());
             EGLDisplay oldVal = (EGLDisplay)getPtr();
@@ -3611,12 +3611,12 @@ process(int frames)
             EGLDisplay dpy = (EGLDisplay)getPtr();
             EGLSurface surface = (EGLSurface)getPtr();
             if (execFlag) surface = (EGLSurface)getMap(eglSurfaceMap, surface);
-            
+
             // not working
             if (frames == 1) {
                 readPixels();
             }
-            
+
             EGLBoolean curVal = proc_eglSwapBuffers(dpy, surface);
             EGLBoolean oldVal = getInt();
             if (printFlag) {
@@ -3638,14 +3638,14 @@ process(int frames)
             NOT_IMPLEMENTED();
             return;
         }
-        
+
         getTime(&tbgn, &tend);
         if (printFlag) {
             if (printThread == (uint64_t)0 || (printThread == curThread && cmd != OPC_THREAD)) {
                 fprintf(stdout, "%llu %10llu\t%s\n", tbgn, tend-tbgn, stringBuffer);
             }
         }
-        
+
         if (cmd == OPC_eglSwapBuffers) {
             if (fpsFlag) {
                 fps_newFrame(curFrame, tend);
@@ -3672,7 +3672,7 @@ readPixels()
 {
     GLint viewPort[4];
     glGetIntegerv(GL_VIEWPORT, viewPort);
-    
+
     wndWidth = viewPort[2];
     wndHeight = viewPort[3];
     GLint nsize = wndWidth * wndHeight * PIXEL_SIZE;
@@ -3684,10 +3684,10 @@ readPixels()
             return;
         }
     }
-     
+
     glFinish();
-    
-    glPixelStorei(GL_PACK_ALIGNMENT,1); 
+
+    glPixelStorei(GL_PACK_ALIGNMENT,1);
     glReadPixels(viewPort[0], viewPort[1], viewPort[2], viewPort[3], GL_RGBA, GL_UNSIGNED_BYTE, wndData);
     if (glGetError() != GL_NO_ERROR) {
         fprintf(stderr, "ERROR: can't read pixels\n");
@@ -3756,7 +3756,7 @@ savePNG(char *fName, GLenum format, GLenum type, uint32_t width, uint32_t height
             fprintf(stderr, "ERROR: savePNG: unknown format %s\n", glEnum2str(format));
             return 1;
     }
-    
+
     FILE *file = fopen(fName, "w+");
     if (file == NULL) {
         fprintf(stderr, "ERROR: can't write to file: %s\n", fName);
@@ -3768,7 +3768,7 @@ savePNG(char *fName, GLenum format, GLenum type, uint32_t width, uint32_t height
         fclose(file);
         return 1;
     }
-    
+
     png_infop info = png_create_info_struct(png);
     if (info == NULL) {
         fprintf(stderr, "ERROR: can't create PNG info\n");
@@ -3778,25 +3778,25 @@ savePNG(char *fName, GLenum format, GLenum type, uint32_t width, uint32_t height
     }
     else {
         png_init_io(png, file);
-        
+
         png_set_IHDR(png, info, width, height, 8,
                      png_type, PNG_INTERLACE_NONE,
                      PNG_COMPRESSION_TYPE_DEFAULT, PNG_FILTER_TYPE_DEFAULT);
-        
+
         png_byte *rows[height];
         int i;
         for (i=0; i<height; ++i) {
             rows[i] = (png_byte*)data + (height - 1 - i) * width * pixel_size;
         }
-        
+
         png_set_rows(png, info, rows);
         png_write_png(png, info, PNG_TRANSFORM_IDENTITY, NULL);
     }
-    
-    png_destroy_write_struct(&png, &info);    
+
+    png_destroy_write_struct(&png, &info);
     fclose(file);
     if (ldata) free(ldata);
-    
+
     return 0;
 }
 
@@ -3831,9 +3831,9 @@ interact()
                 }
             }
         }
-        
+
         if (repeat == -1 && cmd != ICMD_NONE) repeat = 1;
-        
+
         switch (cmd) {
             case ICMD_NONE:
                 if (repeat >= 0) {
@@ -3908,7 +3908,7 @@ main(int argc, const char *argv[])
                     return;
                 }
                 printThread = atoll(argv[i]);
-            }            
+            }
             else if (strcmp(arg, "-dumptextures") == 0) {
                 interactive = 0;
                 dumpTexturesFlag = 1;
@@ -3931,25 +3931,25 @@ main(int argc, const char *argv[])
 
     sb_init();
     iolib_init(IO_READ, fileName);
-    
+
     if (interactive) {
         fpsFlag = 0;
         execFlag = 1;
-        
+
         wndDataSize = 0;
         wndData = NULL;
-        
+
         interact();
     }
     else {
         process(-1);
     }
-    
+
     if (fpsFlag) {
         fps_total();
     }
     iolib_fini();
     sb_fini();
-    
+
     return 0;
 }

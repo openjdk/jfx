@@ -145,7 +145,7 @@ void WebUserMediaClient::cancelRequest(UserMediaRequest* request)
 
     _request = 0;
 #endif
-    
+
 }
 
 - (void)allow
@@ -164,7 +164,7 @@ void WebUserMediaClient::cancelRequest(UserMediaRequest* request)
 #if ENABLE(MEDIA_STREAM)
     if (!_request)
         return;
-    
+
     _request->userMediaAccessDenied();
     RemoveRequestFromMap(_request.get());
 #endif

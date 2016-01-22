@@ -40,7 +40,7 @@ import javafx.scene.Node;
 
 /**
  *
- * 
+ *
  */
 public abstract class AbstractCurveHandles<T extends Node> extends AbstractHandles<T> {
 
@@ -51,12 +51,12 @@ public abstract class AbstractCurveHandles<T extends Node> extends AbstractHandl
 
     protected final ChangeListener<Number> coordinateListener
         = (ov, v1, v2) -> layoutDecoration();
-    
-    
+
+
     /*
      * AbstractHandles
      */
-    
+
     @Override
     public Bounds getSceneGraphObjectBounds() {
         return getSceneGraphObject().getLayoutBounds();

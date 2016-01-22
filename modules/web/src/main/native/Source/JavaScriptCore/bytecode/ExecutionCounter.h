@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef ExecutionCounter_h
@@ -68,7 +68,7 @@ public:
         u.f = value;
         return u.i;
     }
-    
+
 private:
     bool hasCrossedThreshold(CodeBlock*) const;
     bool setThreshold(CodeBlock*);
@@ -76,7 +76,7 @@ private:
 
 public:
     // NB. These are intentionally public because it will be modified from machine code.
-    
+
     // This counter is incremented by the JIT or LLInt. It starts out negative and is
     // counted up until it becomes non-negative. At the start of a counting period,
     // the threshold we wish to reach is m_totalCount + m_counter, in the sense that

@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -71,7 +71,7 @@ PassOwnPtr<ContextMenu> WebContextMenuClient::customizeMenu(PassOwnPtr<ContextMe
         ::DestroyMenu(reinterpret_cast<HMENU>(nativeMenu));
         return menu.release();
     }
-    
+
     OwnPtr<ContextMenu> customizedMenu = adoptPtr(new ContextMenu(reinterpret_cast<HMENU>(nativeMenu)));
     ::DestroyMenu(reinterpret_cast<HMENU>(nativeMenu));
 
@@ -114,7 +114,7 @@ void WebContextMenuClient::searchWithGoogle(const Frame* frame)
     searchString.stripWhiteSpace();
     String encoded = encodeWithURLEscapeSequences(searchString);
     encoded.replace("%20", "+");
-    
+
     String url("http://www.google.com/search?q=");
     url.append(encoded);
     url.append("&ie=UTF-8&oe=UTF-8");

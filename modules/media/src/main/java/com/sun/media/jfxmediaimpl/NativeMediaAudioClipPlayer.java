@@ -351,7 +351,7 @@ final class NativeMediaAudioClipPlayer
                     mediaPlayer.dispose();
                 }
                 mediaPlayer = null;
-                
+
             }
         } catch (Throwable t) {
 //            System.err.println("Caught exception trying to invalidate AudioClip player: "+t);
@@ -475,7 +475,7 @@ final class NativeMediaAudioClipPlayer
             commandSignal = signal;
             mediaPlayer = null;
         }
-        
+
         // Dispose command constructor
         public SchedulerEntry(MediaPlayer mediaPlayer) {
             command = 2;
@@ -496,7 +496,7 @@ final class NativeMediaAudioClipPlayer
         public URI getClipURI() {
             return clipURI;
         }
-        
+
         public MediaPlayer getMediaPlayer() {
             return mediaPlayer;
         }

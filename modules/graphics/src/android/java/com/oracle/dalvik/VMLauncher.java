@@ -46,8 +46,8 @@ public class VMLauncher extends Thread {
             throw new NullPointerException();
         }
     }
-    
-    // java libs are located at architecture dependent 
+
+    // java libs are located at architecture dependent
     // paths
     // i386 for x86 arch
     // arm  for ARM arch
@@ -68,7 +68,7 @@ public class VMLauncher extends Thread {
         }
         System.load(sJavaHome + "/lib/" + getJvmArch() + "/jli/libjli.so");
     }
-    
+
     private static String getCmdLine() {
         // /proc/self/cmdline contains apk
         // package name
@@ -83,7 +83,7 @@ public class VMLauncher extends Thread {
         } catch (Exception e) {
             builder = new StringBuilder("dalvik.package");
         }
-        return builder.toString();        
+        return builder.toString();
     }
 
     private static void listDirToStandardOut(String dirpath) {
@@ -119,10 +119,10 @@ public class VMLauncher extends Thread {
                                       String[] args)
     {
         ArrayList<String> localArrayList = new ArrayList();
-        
+
         // need to add apk pkg name to head of arg list
-        localArrayList.add(getCmdLine()); 
-        
+        localArrayList.add(getCmdLine());
+
         if (debugPort.intValue() > 0) {
             localArrayList.add("-Xdebug");
             localArrayList.add("-agentlib:jdwp=server=y,suspend=y,transport=dt_socket,address=" + debugPort);

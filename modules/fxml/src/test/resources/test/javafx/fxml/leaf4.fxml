@@ -27,7 +27,7 @@ questions.
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
 
-<VBox fx:id="4" xmlns:fx="http://javafx.com/fxml"> 
+<VBox fx:id="4" xmlns:fx="http://javafx.com/fxml">
     <children>
         <fx:include source="cycle.fxml" />
     </children>

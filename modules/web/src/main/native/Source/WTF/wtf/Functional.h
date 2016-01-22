@@ -511,7 +511,7 @@ public:
     {
         RefAndDeref<P1, FunctionWrapper::shouldRefFirstParameter>::ref(m_p1);
     }
-    
+
     ~BoundFunctionImpl()
     {
         RefAndDeref<P1, FunctionWrapper::shouldRefFirstParameter>::deref(m_p1);
@@ -539,7 +539,7 @@ public:
     {
         RefAndDeref<P1, FunctionWrapper::shouldRefFirstParameter>::ref(m_p1);
     }
-    
+
     ~BoundFunctionImpl()
     {
         RefAndDeref<P1, FunctionWrapper::shouldRefFirstParameter>::deref(m_p1);
@@ -569,7 +569,7 @@ public:
     {
         RefAndDeref<P1, FunctionWrapper::shouldRefFirstParameter>::ref(m_p1);
     }
-    
+
     ~BoundFunctionImpl()
     {
         RefAndDeref<P1, FunctionWrapper::shouldRefFirstParameter>::deref(m_p1);
@@ -601,7 +601,7 @@ public:
     {
         RefAndDeref<P1, FunctionWrapper::shouldRefFirstParameter>::ref(m_p1);
     }
-    
+
     ~BoundFunctionImpl()
     {
         RefAndDeref<P1, FunctionWrapper::shouldRefFirstParameter>::deref(m_p1);
@@ -674,7 +674,7 @@ protected:
     }
 
     template<typename FunctionType> FunctionImpl<FunctionType>* impl() const
-    { 
+    {
         return static_cast<FunctionImpl<FunctionType>*>(m_impl.get());
     }
 

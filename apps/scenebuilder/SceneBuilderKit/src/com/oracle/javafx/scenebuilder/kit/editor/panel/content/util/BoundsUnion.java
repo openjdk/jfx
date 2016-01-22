@@ -36,13 +36,13 @@ import javafx.geometry.Bounds;
 
 /**
  * A BoundsUnion instance allows to compute the union of multiple bounds.
- * 
- * 
+ *
+ *
  */
 public class BoundsUnion {
-    
+
     private Bounds result;
-    
+
     public void add(Bounds b) {
         if (result == null) {
             result = b;
@@ -50,7 +50,7 @@ public class BoundsUnion {
             result = compute(result, b);
         }
     }
-    
+
     public Bounds getResult() {
         return result;
     }

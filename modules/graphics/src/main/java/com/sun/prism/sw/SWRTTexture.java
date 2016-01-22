@@ -67,14 +67,14 @@ class SWRTTexture extends SWArgbPreTexture implements RTTexture {
 
     @Override
     public boolean readPixels(Buffer pixels, int x, int y, int width, int height) {
-        if (x != getContentX() || y != getContentY() 
+        if (x != getContentX() || y != getContentY()
                 || width != getContentWidth() || height != getContentHeight())
         {
             throw new IllegalArgumentException("reading subtexture not yet supported!");
         }
         return readPixels(pixels);
     }
-    
+
     @Override
     public boolean readPixels(Buffer pixels) {
         if (PrismSettings.debug) {

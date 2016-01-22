@@ -63,7 +63,7 @@ public class CameraController {
         }
         // skip other event types
     }
-    
+
     private void handleMouseEvent(MouseEvent t) {
         if (t.getEventType() == MouseEvent.MOUSE_PRESSED) {
             handleMousePress(t);
@@ -427,7 +427,7 @@ public class CameraController {
         angle += d.y * yaw * speedFactor * 180;
         rotateX.setAngle(angle % 360); // just in case
     }
-    
+
     public void setObject(Node node) {
         rotateX = new Rotate(0, new Point3D(1, 0, 0));
         rotateY = new Rotate(0, new Point3D(0, 1, 0));
@@ -435,10 +435,10 @@ public class CameraController {
         // because max nodes are rotated during loading
         node.getTransforms().add(0, rotateX);
         node.getTransforms().add(1, rotateY);
-        
+
         this.node = node;
     }
-    
+
     public void setInvertMouse(boolean invert) {
         pitch = Math.abs(pitch) * (invert ? -1 : 1);
     }

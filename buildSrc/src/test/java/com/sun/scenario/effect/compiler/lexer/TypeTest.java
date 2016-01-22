@@ -30,7 +30,7 @@ import org.antlr.runtime.RecognitionException;
 import org.junit.Test;
 
 public class TypeTest extends LexerBase {
-    
+
     @Test
     public void floatScalar() throws Exception {
         assertRecognized("float");

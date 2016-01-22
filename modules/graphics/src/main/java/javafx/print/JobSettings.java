@@ -431,7 +431,7 @@ public final class JobSettings {
                 @Override
                 public void bind(ObservableValue<? extends String>
                                  rawObservable) {
-                    throw new 
+                    throw new
                         RuntimeException("Jobname property cannot be bound");
                 }
 
@@ -496,7 +496,7 @@ public final class JobSettings {
                 @Override
                 public void bind(ObservableValue<? extends Number>
                                  rawObservable) {
-                    throw new 
+                    throw new
                         RuntimeException("Copies property cannot be bound");
                 }
 

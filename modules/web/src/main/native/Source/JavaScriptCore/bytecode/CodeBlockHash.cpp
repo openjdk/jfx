@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -46,7 +46,7 @@ CodeBlockHash::CodeBlockHash(const SourceCode& sourceCode, CodeSpecializationKin
     sha1.computeHash(digest);
     m_hash += digest[0] | (digest[1] << 8) | (digest[2] << 16) | (digest[3] << 24);
     m_hash ^= static_cast<unsigned>(kind);
-    
+
     // Ensure that 0 corresponds to the hash not having been computed.
     if (!m_hash)
         m_hash = 1;
@@ -55,12 +55,12 @@ CodeBlockHash::CodeBlockHash(const SourceCode& sourceCode, CodeSpecializationKin
 void CodeBlockHash::dump(PrintStream& out) const
 {
     std::array<char, 7> buffer = integerToSixCharacterHashString(m_hash);
-    
+
 #if !ASSERT_DISABLED
     CodeBlockHash recompute(buffer.data());
     ASSERT(recompute == *this);
 #endif // !ASSERT_DISABLED
-    
+
     out.print(buffer.data());
 }
 

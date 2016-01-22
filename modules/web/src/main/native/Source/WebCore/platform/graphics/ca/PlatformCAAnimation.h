@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef PlatformCAAnimation_h
@@ -56,7 +56,7 @@ public:
 #elif PLATFORM(WIN)
     friend class PlatformCALayerWin;
 #endif
-    
+
     enum AnimationType { Basic, Keyframe };
     enum FillModeType { NoFillMode, Forwards, Backwards, Both };
     enum ValueFunctionType { NoValueFunction, RotateX, RotateY, RotateZ, ScaleX, ScaleY, ScaleZ, Scale, TranslateX, TranslateY, TranslateZ, Translate };
@@ -65,20 +65,20 @@ public:
     static PassRefPtr<PlatformCAAnimation> create(PlatformAnimationRef);
 
     ~PlatformCAAnimation();
-    
+
     PassRefPtr<PlatformCAAnimation> copy() const;
 
     PlatformAnimationRef platformAnimation() const;
-    
+
     AnimationType animationType() const { return m_type; }
     String keyPath() const;
-    
+
     CFTimeInterval beginTime() const;
     void setBeginTime(CFTimeInterval);
-    
+
     CFTimeInterval duration() const;
     void setDuration(CFTimeInterval);
-    
+
     float speed() const;
     void setSpeed(float);
 
@@ -93,7 +93,7 @@ public:
 
     FillModeType fillMode() const;
     void setFillMode(FillModeType);
-    
+
     void setTimingFunction(const TimingFunction*, bool reverse = false);
     void copyTimingFunctionFrom(const PlatformCAAnimation*);
 
@@ -153,7 +153,7 @@ protected:
 
 private:
     AnimationType m_type;
-    
+
 #if PLATFORM(COCOA)
     RetainPtr<CAPropertyAnimation> m_animation;
 #elif PLATFORM(WIN)

@@ -70,14 +70,14 @@ public class StackedAreaChartTest extends XYChartTestBase {
         series1.getData().add(new XYChart.Data(50d, 15d));
         series1.getData().add(new XYChart.Data(80d, 10d));
         }
-        
+
         xAxis.setLabel("X Axis");
         yAxis.setLabel("Y Axis");
         ac.setTitle("HelloStackedAreaChart");
-        
+
         return ac;
     }
-    
+
     private StringBuffer getSeriesLineFromPlot() {
         ObservableList<Node> childrenList = XYChartShim.getPlotChildren(ac);
         StringBuffer sb = new StringBuffer();
@@ -94,7 +94,7 @@ public class StackedAreaChartTest extends XYChartTestBase {
         }
         return sb;
     }
-    
+
     @Test @Ignore("pending RT-28373")
     public void testSeriesAdd() {
         startApp();
@@ -103,7 +103,7 @@ public class StackedAreaChartTest extends XYChartTestBase {
         StringBuffer sb = getSeriesLineFromPlot();
 //        assertEquals("L220.0 59.0 L264.0 175.0 L440.0 175.0 L704.0 291.0 ", sb.toString());
         assertEquals("L219.0 58.0 L263.0 173.0 L438.0 173.0 L700.0 289.0 ", sb.toString());
-    
+
     }
 
     @Test @Ignore
@@ -118,7 +118,7 @@ public class StackedAreaChartTest extends XYChartTestBase {
             assertEquals(sb.toString(), "L247.0 171.0 L412.0 171.0 L658.0 284.0 ");
         }
     }
-    
+
     @Test @Ignore
     public void testDataItemAdd() {
         startApp();
@@ -131,7 +131,7 @@ public class StackedAreaChartTest extends XYChartTestBase {
             assertEquals(sb.toString(), "L206.0 57.0 L247.0 171.0 L329.0 284.0 L412.0 171.0 L658.0 284.0 ");
         }
     }
-    
+
     @Test @Ignore
     public void testDataItemInsert() {
         startApp();
@@ -144,7 +144,7 @@ public class StackedAreaChartTest extends XYChartTestBase {
             assertEquals(sb.toString(), "L206.0 57.0 L247.0 171.0 L329.0 284.0 L412.0 171.0 L658.0 284.0 ");
         }
     }
-    
+
     @Test @Ignore
     public void testDataItemChange() {
         startApp();
@@ -159,8 +159,8 @@ public class StackedAreaChartTest extends XYChartTestBase {
             assertEquals(sb.toString(), "L206.0 197.0 L329.0 40.0 L412.0 276.0 L658.0 354.0 ");
         }
     }
-    
-    @Test 
+
+    @Test
     public void testStackedAreaChartWithCategoryAxis() {
         useCategoryAxis = true;
         startApp();
@@ -174,7 +174,7 @@ public class StackedAreaChartTest extends XYChartTestBase {
          ac.getData().addAll(series1);
          pulse();
          assertEquals(0, countSymbols(ac, "chart-area-symbol"));
-         
+
          ac.getData().clear();
          pulse();
          ac.setCreateSymbols(true);

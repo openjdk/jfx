@@ -37,8 +37,8 @@ import javafx.scene.Node;
 import javafx.scene.layout.Pane;
 
 /**
- * A much simpler and lightweight version of vbox. It also ignores invisible 
- * items. All items are layed out top to bottom with the pref height and the 
+ * A much simpler and lightweight version of vbox. It also ignores invisible
+ * items. All items are layed out top to bottom with the pref height and the
  * full width of this vbox;
  */
 public class SimpleVBox extends Pane{
@@ -69,7 +69,7 @@ public class SimpleVBox extends Pane{
                     height += spacing;
                     System.out.println("        adding spacing "+spacing);
                 }
-//            } 
+//            }
         }
         System.out.println("   ---->  "+height);
         return height;
@@ -90,7 +90,7 @@ public class SimpleVBox extends Pane{
                 child.resize(width, h);
                 y += h;
                 if (i!=0) y += spacing;
-            } 
+            }
         }
     }
 }

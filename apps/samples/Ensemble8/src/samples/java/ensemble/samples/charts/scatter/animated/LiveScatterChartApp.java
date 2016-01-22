@@ -121,8 +121,8 @@ public class LiveScatterChartApp extends Application {
 
     @Override public void stop() {
         animation.pause();
-    }    
-    
+    }
+
     @Override public void start(Stage primaryStage) throws Exception {
         primaryStage.setScene(new Scene(createContent()));
         primaryStage.show();

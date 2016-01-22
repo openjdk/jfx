@@ -168,9 +168,9 @@ public final class PrinterJob {
     }
 
     private ObjectProperty<Printer> createPrinterProperty(Printer printer) {
-        
+
         return new SimpleObjectProperty<Printer>(printer) {
-   
+
             @Override
             public void set(Printer value) {
                 if (value == get() || !isJobNew()) {
@@ -205,7 +205,7 @@ public final class PrinterJob {
             }
         };
     }
- 
+
     /**
      * Property representing the
      * <code>Printer</code> for this job.

@@ -6,13 +6,13 @@
  * are met:
  *
  * 1.  Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer. 
+ *     notice, this list of conditions and the following disclaimer.
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
- *     documentation and/or other materials provided with the distribution. 
+ *     documentation and/or other materials provided with the distribution.
  * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
- *     from this software without specific prior written permission. 
+ *     from this software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY APPLE AND ITS CONTRIBUTORS "AS IS" AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
@@ -146,7 +146,7 @@ Standard Nav:
  Restore scroll and focus state:  YES
  Cache policy: NSURLRequestUseProtocolCachePolicy
  Add to back/forward list: YES
- 
+
 Back/Forward:
 
  Restore form state:   YES
@@ -198,8 +198,8 @@ NSString *NSAccessibilityEnhancedUserInterfaceAttribute = @"AXEnhancedUserInterf
     [super finalize];
 }
 
-- (void)setWebFrameView:(WebFrameView *)v 
-{ 
+- (void)setWebFrameView:(WebFrameView *)v
+{
     [v retain];
     [webFrameView release];
     webFrameView = v;
@@ -245,30 +245,30 @@ PassOwnPtr<Vector<Vector<String>>> vectorForDictationPhrasesArray(NSArray *dicta
     NSUInteger dictationPhrasesCount = [dictationPhrases count];
     if (!dictationPhrasesCount)
         return PassOwnPtr<Vector<Vector<String> > >();
-    
+
     OwnPtr<Vector<Vector<String> > > dictationPhrasesVector = adoptPtr(new Vector<Vector<String> >(dictationPhrasesCount));
-    
+
     for (NSUInteger i = 0; i < dictationPhrasesCount; i++) {
-        
+
         id dictationPhrase = [dictationPhrases objectAtIndex:i];
         if (![dictationPhrase isKindOfClass:[NSArray class]])
             continue;
-        
+
         NSArray *interpretationsArray = (NSArray *)dictationPhrase;
         Vector<String>& interpretationsVector = dictationPhrasesVector->at(i);
-        
+
         NSUInteger interpretationsCount = [interpretationsArray count];
-        
+
         for (NSUInteger j = 0; j < interpretationsCount; j++) {
-            
+
             id interpretation = [interpretationsArray objectAtIndex:j];
             if (![interpretation isKindOfClass:[NSString class]])
                 continue;
-            
+
             interpretationsVector.append(String((NSString *)interpretation));
         }
     }
-    
+
     return dictationPhrasesVector.release();
 }
 #endif
@@ -369,7 +369,7 @@ static NSURL *createUniqueWebDataURL();
 + (void)_createMainFrameWithSimpleHTMLDocumentWithPage:(Page*)page frameView:(WebFrameView *)frameView style:(NSString *)style
 {
     WebView *webView = kit(page);
-    
+
     WebFrame *frame = [[self alloc] _initWithWebFrameView:frameView webView:webView];
     frame->_private->coreFrame = &page->mainFrame();
     static_cast<WebFrameLoaderClient&>(page->mainFrame().loader().client()).setWebFrame(frame);
@@ -500,7 +500,7 @@ static NSURL *createUniqueWebDataURL();
 
 - (BOOL)_hasSelection
 {
-    id documentView = [_private->webFrameView documentView];    
+    id documentView = [_private->webFrameView documentView];
 
     // optimization for common case to avoid creating potentially large selection string
     if ([documentView isKindOfClass:[WebHTMLView class]])
@@ -509,13 +509,13 @@ static NSURL *createUniqueWebDataURL();
 
     if ([documentView conformsToProtocol:@protocol(WebDocumentText)])
         return [[documentView selectedString] length] > 0;
-    
+
     return NO;
 }
 
 - (void)_clearSelection
 {
-    id documentView = [_private->webFrameView documentView];    
+    id documentView = [_private->webFrameView documentView];
     if ([documentView conformsToProtocol:@protocol(WebDocumentText)])
         [documentView deselectAll];
 }
@@ -549,8 +549,8 @@ static NSURL *createUniqueWebDataURL();
 
 - (void)_clearSelectionInOtherFrames
 {
-    // We rely on WebDocumentSelection protocol implementors to call this method when they become first 
-    // responder. It would be nicer to just notice first responder changes here instead, but there's no 
+    // We rely on WebDocumentSelection protocol implementors to call this method when they become first
+    // responder. It would be nicer to just notice first responder changes here instead, but there's no
     // notification sent when the first responder changes in general (Radar 2573089).
     WebFrame *frameWithSelection = [[getWebView(self) mainFrame] _findFrameWithSelection];
     if (frameWithSelection != self)
@@ -640,7 +640,7 @@ static inline WebDataSource *dataSource(DocumentLoader* loader)
 #endif
 
     FrameView* view = _private->coreFrame->view();
-    
+
     bool shouldFlatten = false;
     if (Frame* parentFrame = _private->coreFrame->tree().parent()) {
         // For subframes, we need to inherit the paint behavior from our parent
@@ -655,7 +655,7 @@ static inline WebDataSource *dataSource(DocumentLoader* loader)
         oldBehavior = view->paintBehavior();
         view->setPaintBehavior(oldBehavior | PaintBehaviorFlattenCompositingLayers);
     }
-    
+
     if (contentsOnly)
         view->paintContents(&context, enclosingIntRect(rect));
     else
@@ -690,7 +690,7 @@ static inline WebDataSource *dataSource(DocumentLoader* loader)
 
     ASSERT(_private->coreFrame->document());
     RetainPtr<WebFrame> protect(self); // Executing arbitrary JavaScript can destroy the frame.
-    
+
 #if PLATFORM(IOS)
     ASSERT(WebThreadIsLockedOrDisabled());
     JSC::ExecState* exec = _private->coreFrame->script().globalObject(mainThreadNormalWorld())->globalExec();
@@ -705,7 +705,7 @@ static inline WebDataSource *dataSource(DocumentLoader* loader)
         return @"";
 
     // This bizarre set of rules matches behavior from WebKit for Safari 2.0.
-    // If you don't like it, use -[WebScriptObject evaluateWebScript:] or 
+    // If you don't like it, use -[WebScriptObject evaluateWebScript:] or
     // JSEvaluateScript instead, since they have less surprising semantics.
     if (!result || (!result.isBoolean() && !result.isString() && !result.isNumber()))
         return @"";
@@ -730,9 +730,9 @@ static inline WebDataSource *dataSource(DocumentLoader* loader)
 
 - (void)_scrollDOMRangeToVisible:(DOMRange *)range
 {
-    NSRect rangeRect = [self _firstRectForDOMRange:range];    
+    NSRect rangeRect = [self _firstRectForDOMRange:range];
     Node *startNode = core([range startContainer]);
-        
+
     if (startNode && startNode->renderer()) {
 #if !PLATFORM(IOS)
         startNode->renderer()->scrollRectToVisible(enclosingIntRect(rangeRect), ScrollAlignment::alignToEdgeIfNeeded, ScrollAlignment::alignToEdgeIfNeeded);
@@ -851,7 +851,7 @@ static inline WebDataSource *dataSource(DocumentLoader* loader)
         return nil;
 
     ASSERT(&startContainer->document() == &endContainer->document());
-    
+
     _private->coreFrame->document()->updateLayoutIgnorePendingStylesheets();
 
     Position start = Position(startContainer, [proposedRange startOffset], Position::PositionIsOffsetInAnchor);
@@ -873,7 +873,7 @@ static inline WebDataSource *dataSource(DocumentLoader* loader)
     return kit(range.get());
 }
 
-- (DOMDocumentFragment *)_documentFragmentWithMarkupString:(NSString *)markupString baseURLString:(NSString *)baseURLString 
+- (DOMDocumentFragment *)_documentFragmentWithMarkupString:(NSString *)markupString baseURLString:(NSString *)baseURLString
 {
     Frame* frame = _private->coreFrame;
     if (!frame)
@@ -1090,17 +1090,17 @@ static inline WebDataSource *dataSource(DocumentLoader* loader)
 - (NSArray *)_rectsForRange:(DOMRange *)domRange
 {
     Range *range = core(domRange);
-    
-    
+
+
     Vector<IntRect> intRects;
     range->textRects(intRects, NO);
     unsigned size = intRects.size();
-    
+
     NSMutableArray *rectArray = [NSMutableArray arrayWithCapacity:size];
     for (unsigned i = 0; i < size; i++) {
         [rectArray addObject:[NSValue valueWithRect:(CGRect )intRects[i]]];
     }
-    
+
     return rectArray;
 }
 
@@ -1110,12 +1110,12 @@ static inline WebDataSource *dataSource(DocumentLoader* loader)
     VisiblePosition secondPos = [self _visiblePositionForPoint:second];
     VisibleSelection selection(firstPos, secondPos);
     DOMRange *range = kit(selection.toNormalizedRange().get());
-    return range;    
+    return range;
 }
 
 - (DOMRange *)_selectionRangeForPoint:(CGPoint)point
 {
-    VisiblePosition pos = [self _visiblePositionForPoint:point];    
+    VisiblePosition pos = [self _visiblePositionForPoint:point];
     VisibleSelection selection(pos);
     DOMRange *range = kit(selection.toNormalizedRange().get());
     return range;
@@ -1177,7 +1177,7 @@ static inline WebDataSource *dataSource(DocumentLoader* loader)
 
 - (void)setTimeoutsPaused:(BOOL)flag
 {
-    id documentView = [_private->webFrameView documentView];    
+    id documentView = [_private->webFrameView documentView];
     if ([documentView isKindOfClass:[WebHTMLView class]]) {
         if (Frame* coreFrame = _private->coreFrame)
             coreFrame->setTimersPaused(flag);
@@ -1198,7 +1198,7 @@ static inline WebDataSource *dataSource(DocumentLoader* loader)
 
 - (void)prepareForPause
 {
-    id documentView = [_private->webFrameView documentView];    
+    id documentView = [_private->webFrameView documentView];
     if ([documentView isKindOfClass:[WebHTMLView class]]) {
         if (Frame* coreFrame = _private->coreFrame)
             coreFrame->dispatchPageHideEventBeforePause();
@@ -1207,7 +1207,7 @@ static inline WebDataSource *dataSource(DocumentLoader* loader)
 
 - (void)resumeFromPause
 {
-    id documentView = [_private->webFrameView documentView];    
+    id documentView = [_private->webFrameView documentView];
     if ([documentView isKindOfClass:[WebHTMLView class]]) {
         if (Frame* coreFrame = _private->coreFrame)
             coreFrame->dispatchPageShowEventBeforeResume();
@@ -1225,7 +1225,7 @@ static inline WebDataSource *dataSource(DocumentLoader* loader)
     if (domRange) {
         const VisibleSelection& newSelection = VisibleSelection(domRange.get(), SEL_DEFAULT_AFFINITY);
         _private->coreFrame->selection().setSelection(newSelection, 0);
-        
+
         _private->coreFrame->editor().ensureLastEditCommandHasCurrentSelectionIfOpenForMoreTyping();
     }
 }
@@ -1554,36 +1554,36 @@ static inline WebDataSource *dataSource(DocumentLoader* loader)
 - (BOOL)selectionAtDocumentStart
 {
     WebCore::Frame *frame = core(self);
-    
+
     if (frame->selection().selection().isNone())
         return NO;
-        
+
     frame->document()->updateLayout();
-    
+
     return frame->selection().selectionAtDocumentStart();
 }
 
 - (BOOL)selectionAtSentenceStart
 {
     WebCore::Frame *frame = core(self);
-    
+
     if (frame->selection().selection().isNone())
         return NO;
-        
+
     frame->document()->updateLayout();
-    
+
     return frame->selection().selectionAtSentenceStart();
 }
 
 - (BOOL)selectionAtWordStart
 {
     WebCore::Frame *frame = core(self);
-    
+
     if (frame->selection().selection().isNone())
         return NO;
-        
+
     frame->document()->updateLayout();
-    
+
     return frame->selection().selectionAtWordStart();
 }
 
@@ -1612,7 +1612,7 @@ static inline WebDataSource *dataSource(DocumentLoader* loader)
     Node *node = core(element);
     if (!node->inDocument())
         return;
-        
+
     frame->selection().selectRangeOnElement(range.location, range.length, node);
 }
 
@@ -1630,7 +1630,7 @@ static inline WebDataSource *dataSource(DocumentLoader* loader)
     WebCore::Frame *frame = core(self);
     if (!frame)
         return;
-    
+
     Vector<CompositionUnderline> underlines;
     frame->page()->chrome().client().suppressFormNotifications();
     frame->editor().setComposition(text, underlines, newSelRange.location, NSMaxRange(newSelRange));
@@ -1642,7 +1642,7 @@ static inline WebDataSource *dataSource(DocumentLoader* loader)
     WebCore::Frame *frame = core(self);
     if (!frame)
         return;
-        
+
     Vector<CompositionUnderline> underlines;
     frame->editor().setComposition(text, underlines, 0, [text length]);
 }
@@ -1652,7 +1652,7 @@ static inline WebDataSource *dataSource(DocumentLoader* loader)
     WebCore::Frame *frame = core(self);
     if (!frame || !frame->editor().client())
         return;
-    
+
     frame->page()->chrome().client().suppressFormNotifications();
     if (text)
         frame->editor().confirmComposition(text);
@@ -1665,11 +1665,11 @@ static inline WebDataSource *dataSource(DocumentLoader* loader)
 {
     if (!element)
         return;
-        
+
     WebCore::Frame *frame = core(self);
     if (!frame || !frame->document())
         return;
-        
+
     frame->editor().setTextAsChildOfElement(text, core(element));
 }
 
@@ -1677,11 +1677,11 @@ static inline WebDataSource *dataSource(DocumentLoader* loader)
 {
     if (!element)
         return;
-    
+
     WebCore::Frame *frame = core(self);
     if (!frame)
         return;
-    
+
     frame->editor().setDictationPhrasesAsChildOfElement(vectorForDictationPhrasesArray(dictationPhrases), metadata, core(element));
 }
 
@@ -1696,50 +1696,50 @@ static inline WebDataSource *dataSource(DocumentLoader* loader)
     ASSERT(outRanges);
     if (!outRanges)
         return;
-    
+
     // *outRanges should not already point to an array.
     ASSERT(!(*outRanges));
     *outRanges = nil;
-    
+
     ASSERT(outMetadatas);
     if (!outMetadatas)
         return;
-    
+
     // *metadata should not already point to an array.
     ASSERT(!(*outMetadatas));
     *outMetadatas = nil;
-    
+
     NSMutableArray *ranges = [NSMutableArray array];
     NSMutableArray *metadatas = [NSMutableArray array];
-    
+
     Frame *frame = core(self);
     Document *document = frame->document();
 
     const VisibleSelection& selection = frame->selection().selection();
     Element *root = selection.selectionType() == VisibleSelection::NoSelection ? frame->document()->body() : selection.rootEditableElement();
-    
+
     DOMRange *previousDOMRange = nil;
     id previousMetadata = nil;
-    
+
     for (Node* node = root; node; node = NodeTraversal::next(node)) {
         Vector<DocumentMarker*> markers = document->markers().markersFor(node);
         Vector<DocumentMarker*>::const_iterator end = markers.end();
         for (Vector<DocumentMarker*>::const_iterator it = markers.begin(); it != end; ++it) {
-            
+
             if ((*it)->type() != DocumentMarker::DictationResult)
                 continue;
-            
+
             const DocumentMarker* marker = *it;
             id metadata = marker->metadata();
-            
+
             // All result markers should have metadata.
             ASSERT(metadata);
             if (!metadata)
                 continue;
-            
+
             RefPtr<Range> range = Range::create(*document, node, marker->startOffset(), node, marker->endOffset());
             DOMRange *domRange = kit(range.get());
-            
+
             if (metadata != previousMetadata) {
                 [metadatas addObject:metadata];
                 [ranges addObject:domRange];
@@ -1759,10 +1759,10 @@ static inline WebDataSource *dataSource(DocumentLoader* loader)
             }
         }
     }
-    
+
     *outRanges = ranges;
     *outMetadatas = metadatas;
-    
+
     return;
 }
 
@@ -1770,14 +1770,14 @@ static inline WebDataSource *dataSource(DocumentLoader* loader)
 {
     if (!range)
         return nil;
-    
+
     Vector<DocumentMarker*> markers = core(self)->document()->markers().markersInRange(core(range), DocumentMarker::DictationResult);
-    
+
     // UIKit should only ever give us a DOMRange for a phrase with alternatives, which should not be part of more than one result.
     ASSERT(markers.size() <= 1);
     if (markers.size() == 0)
         return nil;
-    
+
     return markers[0]->metadata();
 }
 
@@ -1833,7 +1833,7 @@ static inline WebDataSource *dataSource(DocumentLoader* loader)
         if (fd)
             font = fd->getCTFont();
     }
-    
+
     if (hasMultipleFonts)
         *hasMultipleFonts = multipleFonts;
     return font;
@@ -1872,7 +1872,7 @@ static inline WebDataSource *dataSource(DocumentLoader* loader)
 //
 // There's a second problem here, too, which is that ReplaceSelectionCommand sometimes adds
 // redundant style.
-// 
+//
 - (void)_replaceSelectionWithText:(NSString *)text selectReplacement:(BOOL)selectReplacement smartReplace:(BOOL)smartReplace matchStyle:(BOOL)matchStyle
 {
     RefPtr<Range> range = _private->coreFrame->selection().toNormalizedRange();
@@ -1898,10 +1898,10 @@ static inline WebDataSource *dataSource(DocumentLoader* loader)
 #if ENABLE(IOS_TEXT_AUTOSIZING)
 - (void)resetTextAutosizingBeforeLayout
 {
-    id documentView = [_private->webFrameView documentView];    
+    id documentView = [_private->webFrameView documentView];
     if (![documentView isKindOfClass:[WebHTMLView class]])
         return;
-    
+
     Frame* coreFrame = core(self);
     for (Frame* frame = coreFrame; frame; frame = frame->tree().traverseNext(coreFrame)) {
         Document *doc = frame->document();
@@ -1957,7 +1957,7 @@ static inline WebDataSource *dataSource(DocumentLoader* loader)
 - (void)_replaceSelectionWithText:(NSString *)text selectReplacement:(BOOL)selectReplacement smartReplace:(BOOL)smartReplace
 {
     RefPtr<Range> range = _private->coreFrame->selection().toNormalizedRange();
-    
+
     DOMDocumentFragment* fragment = range ? kit(createFragmentFromText(*range, text).get()) : nil;
     [self _replaceSelectionWithFragment:fragment selectReplacement:selectReplacement smartReplace:smartReplace matchStyle:YES];
 }
@@ -1980,7 +1980,7 @@ static inline WebDataSource *dataSource(DocumentLoader* loader)
         *beforeString = nil;
     if (afterString)
         *afterString = nil;
-        
+
     // inspect destination
     Node *startContainer = core([rangeToReplace startContainer]);
     Node *endContainer = core([rangeToReplace endContainer]);
@@ -1990,7 +1990,7 @@ static inline WebDataSource *dataSource(DocumentLoader* loader)
 
     VisiblePosition startVisiblePos = VisiblePosition(startPos, VP_DEFAULT_AFFINITY);
     VisiblePosition endVisiblePos = VisiblePosition(endPos, VP_DEFAULT_AFFINITY);
-    
+
     // this check also ensures startContainer, startPos, endContainer, and endPos are non-null
     if (startVisiblePos.isNull() || endVisiblePos.isNull())
         return;
@@ -1999,19 +1999,19 @@ static inline WebDataSource *dataSource(DocumentLoader* loader)
     if (addLeadingSpace)
         if (UChar previousChar = startVisiblePos.previous().characterAfter())
             addLeadingSpace = !isCharacterSmartReplaceExempt(previousChar, true);
-    
+
     bool addTrailingSpace = endPos.trailingWhitespacePosition(VP_DEFAULT_AFFINITY, true).isNull() && !isEndOfParagraph(endVisiblePos);
     if (addTrailingSpace)
         if (UChar thisChar = endVisiblePos.characterAfter())
             addTrailingSpace = !isCharacterSmartReplaceExempt(thisChar, false);
-    
+
     // inspect source
     bool hasWhitespaceAtStart = false;
     bool hasWhitespaceAtEnd = false;
     unsigned pasteLength = [pasteString length];
     if (pasteLength > 0) {
         NSCharacterSet *whiteSet = [NSCharacterSet whitespaceAndNewlineCharacterSet];
-        
+
         if ([whiteSet characterIsMember:[pasteString characterAtIndex:0]]) {
             hasWhitespaceAtStart = YES;
         }
@@ -2019,7 +2019,7 @@ static inline WebDataSource *dataSource(DocumentLoader* loader)
             hasWhitespaceAtEnd = YES;
         }
     }
-    
+
     // issue the verdict
     if (beforeString && addLeadingSpace && !hasWhitespaceAtStart)
         *beforeString = @" ";
@@ -2031,22 +2031,22 @@ static inline WebDataSource *dataSource(DocumentLoader* loader)
 - (NSMutableDictionary *)_cacheabilityDictionary
 {
     NSMutableDictionary *result = [NSMutableDictionary dictionary];
-    
+
     FrameLoader& frameLoader = _private->coreFrame->loader();
     DocumentLoader* documentLoader = frameLoader.documentLoader();
     if (documentLoader && !documentLoader->mainDocumentError().isNull())
         [result setObject:(NSError *)documentLoader->mainDocumentError() forKey:WebFrameMainDocumentError];
-        
+
     if (frameLoader.subframeLoader().containsPlugins())
         [result setObject:[NSNumber numberWithBool:YES] forKey:WebFrameHasPlugins];
-    
+
     if (DOMWindow* domWindow = _private->coreFrame->document()->domWindow()) {
         if (domWindow->hasEventListeners(eventNames().unloadEvent))
             [result setObject:[NSNumber numberWithBool:YES] forKey:WebFrameHasUnloadListener];
         if (domWindow->optionalApplicationCache())
             [result setObject:[NSNumber numberWithBool:YES] forKey:WebFrameUsesApplicationCache];
     }
-    
+
     if (Document* document = _private->coreFrame->document()) {
 #if ENABLE(SQL_DATABASE)
         if (DatabaseManager::manager().hasOpenDatabases(document))
@@ -2055,7 +2055,7 @@ static inline WebDataSource *dataSource(DocumentLoader* loader)
         if (!document->canSuspendActiveDOMObjects())
             [result setObject:[NSNumber numberWithBool:YES] forKey:WebFrameCanSuspendActiveDOMObjects];
     }
-    
+
     return result;
 }
 
@@ -2093,7 +2093,7 @@ static inline WebDataSource *dataSource(DocumentLoader* loader)
         return @"";
 
     // This bizarre set of rules matches behavior from WebKit for Safari 2.0.
-    // If you don't like it, use -[WebScriptObject evaluateWebScript:] or 
+    // If you don't like it, use -[WebScriptObject evaluateWebScript:] or
     // JSEvaluateScript instead, since they have less surprising semantics.
     if (!result || (!result.isBoolean() && !result.isString() && !result.isNumber()))
         return @"";
@@ -2148,10 +2148,10 @@ static inline WebDataSource *dataSource(DocumentLoader* loader)
 #if HAVE(ACCESSIBILITY)
     if (!AXObjectCache::accessibilityEnabled())
         return;
-    
+
     if (!_private->coreFrame || !_private->coreFrame->document())
         return;
-    
+
     AccessibilityObject* rootObject = _private->coreFrame->document()->axObjectCache()->rootObject();
     if (rootObject) {
         String strName(name);
@@ -2178,23 +2178,23 @@ static inline WebDataSource *dataSource(DocumentLoader* loader)
         AXObjectCache::setEnhancedUserInterfaceAccessibility([[NSApp accessibilityAttributeValue:NSAccessibilityEnhancedUserInterfaceAttribute] boolValue]);
 #endif
     }
-    
+
     if (!_private->coreFrame)
         return nil;
-    
+
     Document* document = _private->coreFrame->document();
     if (!document || !document->axObjectCache())
         return nil;
-    
+
     AccessibilityObject* rootObject = document->axObjectCache()->rootObjectForFrame(_private->coreFrame);
     if (!rootObject)
         return nil;
-    
+
     // The root object will be a WebCore scroll view object. In WK1, scroll views are handled
     // by the system and the root object should be the web area (instead of the scroll view).
     if (rootObject->isAttachment() && rootObject->firstChild())
         return rootObject->firstChild()->wrapper();
-    
+
     return rootObject->wrapper();
 #else
     return nil;
@@ -2270,7 +2270,7 @@ static inline WebDataSource *dataSource(DocumentLoader* loader)
 - (BOOL)focusedNodeHasContent
 {
     Frame* coreFrame = _private->coreFrame;
-   
+
     Element* root;
     const VisibleSelection& selection = coreFrame->selection().selection();
     if (selection.isNone() || !selection.isContentEditable())
@@ -2392,21 +2392,21 @@ static bool needsMicrosoftMessengerDOMDocumentWorkaround()
     Frame* coreFrame = _private->coreFrame;
     if (!coreFrame)
         return nil;
-    
-    // FIXME: <rdar://problem/5145841> When loading a custom view/representation 
+
+    // FIXME: <rdar://problem/5145841> When loading a custom view/representation
     // into a web frame, the old document can still be around. This makes sure that
     // we'll return nil in those cases.
-    if (![[self _dataSource] _isDocumentHTML]) 
-        return nil; 
+    if (![[self _dataSource] _isDocumentHTML])
+        return nil;
 
     Document* document = coreFrame->document();
-    
+
     // According to the documentation, we should return nil if the frame doesn't have a document.
     // While full-frame images and plugins do have an underlying HTML document, we return nil here to be
     // backwards compatible.
     if (document && (document->isPluginDocument() || document->isImageDocument()))
         return nil;
-    
+
     return kit(coreFrame->document());
 }
 
@@ -2437,7 +2437,7 @@ static bool needsMicrosoftMessengerDOMDocumentWorkaround()
         return;
 
     ResourceRequest resourceRequest(request);
-    
+
     // Some users of WebKit API incorrectly use "file path as URL" style requests which are invalid.
     // By re-writing those URLs here we technically break the -[WebDataSource initialRequest] API
     // but that is necessary to implement this quirk only at the API boundary.
@@ -2465,13 +2465,13 @@ static NSURL *createUniqueWebDataURL()
     if (!pthread_main_np())
         return [[self _webkit_invokeOnMainThread] _loadData:data MIMEType:MIMEType textEncodingName:encodingName baseURL:baseURL unreachableURL:unreachableURL];
 #endif
-    
+
     URL responseURL;
     if (!baseURL) {
         baseURL = blankURL();
         responseURL = createUniqueWebDataURL();
     }
-    
+
 #if USE(QUICK_LOOK)
     if (shouldUseQuickLookForMIMEType(MIMEType)) {
         URL qlURL = responseURL;
@@ -2501,7 +2501,7 @@ static NSURL *createUniqueWebDataURL()
 - (void)loadData:(NSData *)data MIMEType:(NSString *)MIMEType textEncodingName:(NSString *)encodingName baseURL:(NSURL *)baseURL
 {
     WebCoreThreadViolationCheckRoundTwo();
-    
+
     if (!MIMEType)
         MIMEType = @"text/html";
     [self _loadData:data MIMEType:MIMEType textEncodingName:encodingName baseURL:[baseURL _webkit_URLFromURLOrSchemelessFileURL] unreachableURL:nil];

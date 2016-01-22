@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef AbstractPC_h
@@ -42,16 +42,16 @@ public:
         , m_mode(None)
     {
     }
-    
+
     AbstractPC(VM&, ExecState*);
-    
+
 #if ENABLE(JIT)
     AbstractPC(ReturnAddressPtr ptr)
         : m_pointer(ptr.value())
         , m_mode(JIT)
     {
     }
-    
+
     bool hasJITReturnAddress() const { return m_mode == JIT; }
     ReturnAddressPtr jitReturnAddress() const
     {
@@ -65,7 +65,7 @@ public:
 
 private:
     void* m_pointer;
-    
+
     enum Mode { None, JIT, Interpreter };
     Mode m_mode;
 };

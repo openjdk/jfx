@@ -41,6 +41,6 @@ public abstract class ThemeClient {
     }
 
     protected abstract RenderTheme createRenderTheme();
-    
+
     protected abstract ScrollBarTheme createScrollBarTheme();
 }

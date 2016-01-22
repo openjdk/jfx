@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -47,10 +47,10 @@ bool ExecutionCounter::checkIfThresholdCrossedAndSet(CodeBlock* codeBlock)
 {
     if (hasCrossedThreshold(codeBlock))
         return true;
-    
+
     if (setThreshold(codeBlock))
         return true;
-    
+
     return false;
 }
 
@@ -87,12 +87,12 @@ int32_t ExecutionCounter::applyMemoryUsageHeuristicsAndConvertToInt(
     int32_t value, CodeBlock* codeBlock)
 {
     double doubleResult = applyMemoryUsageHeuristics(value, codeBlock);
-    
+
     ASSERT(doubleResult >= 0);
-    
+
     if (doubleResult > std::numeric_limits<int32_t>::max())
         return std::numeric_limits<int32_t>::max();
-    
+
     return static_cast<int32_t>(doubleResult);
 }
 
@@ -115,9 +115,9 @@ bool ExecutionCounter::hasCrossedThreshold(CodeBlock* codeBlock) const
     // total and our target according to memory heuristics is small. Our definition of
     // small is arbitrarily picked to be half of the original threshold (i.e.
     // m_activeThreshold).
-    
+
     double modifiedThreshold = applyMemoryUsageHeuristics(m_activeThreshold, codeBlock);
-    
+
     return static_cast<double>(m_totalCount) + m_counter >=
         modifiedThreshold - static_cast<double>(
             std::min(m_activeThreshold, Options::maximumExecutionCountsBetweenCheckpoints())) / 2;
@@ -129,22 +129,22 @@ bool ExecutionCounter::setThreshold(CodeBlock* codeBlock)
         deferIndefinitely();
         return false;
     }
-        
+
     ASSERT(!m_activeThreshold || !hasCrossedThreshold(codeBlock));
-        
+
     // Compute the true total count.
     double trueTotalCount = count();
-    
+
     // Correct the threshold for current memory usage.
     double threshold = applyMemoryUsageHeuristics(m_activeThreshold, codeBlock);
-        
+
     // Threshold must be non-negative and not NaN.
     ASSERT(threshold >= 0);
-        
+
     // Adjust the threshold according to the number of executions we have already
     // seen. This shouldn't go negative, but it might, because of round-off errors.
     threshold -= trueTotalCount;
-        
+
     if (threshold <= 0) {
         m_counter = 0;
         m_totalCount = trueTotalCount;
@@ -152,11 +152,11 @@ bool ExecutionCounter::setThreshold(CodeBlock* codeBlock)
     }
 
     threshold = clippedThreshold(codeBlock->globalObject(), threshold);
-    
+
     m_counter = static_cast<int32_t>(-threshold);
-        
+
     m_totalCount = trueTotalCount + threshold;
-        
+
     return false;
 }
 

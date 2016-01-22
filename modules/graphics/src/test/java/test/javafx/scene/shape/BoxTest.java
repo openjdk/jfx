@@ -38,18 +38,18 @@ public class BoxTest {
         box.impl_updatePeer(); // should not throw NPE
         assertTrue(box.getBoundsInLocal().isEmpty());
         assertEquals(box.getDepth(), -10, 0.00001);
-        
+
         box = new Box(10, -10, 10);
         box.impl_updatePeer(); // should not throw NPE
         assertTrue(box.getBoundsInLocal().isEmpty());
         assertEquals(box.getHeight(), -10, 0.00001);
-        
+
         box = new Box(-10, 10, 10);
         box.impl_updatePeer(); // should not throw NPE
         assertTrue(box.getBoundsInLocal().isEmpty());
         assertEquals(box.getWidth(), -10, 0.00001);
     }
-    
+
     @Test
     public void testImpl_computeGeomBoundsOnDegeneratedShape() {
         Box box = new Box(10, 0, 0);

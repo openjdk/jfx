@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef FTLRegisterAtOffset_h
@@ -39,32 +39,32 @@ public:
         : m_offset(0)
     {
     }
-    
+
     RegisterAtOffset(Reg reg, ptrdiff_t offset)
         : m_reg(reg)
         , m_offset(offset)
     {
     }
-    
+
     bool operator!() const { return !m_reg; }
-    
+
     Reg reg() const { return m_reg; }
     ptrdiff_t offset() const { return m_offset; }
-    
+
     bool operator==(const RegisterAtOffset& other) const
     {
         return reg() == other.reg() && offset() == other.offset();
     }
-    
+
     bool operator<(const RegisterAtOffset& other) const
     {
         if (reg() != other.reg())
             return reg() < other.reg();
         return offset() < other.offset();
     }
-    
+
     static Reg getReg(RegisterAtOffset* value) { return value->reg(); }
-    
+
     void dump(PrintStream& out) const;
 
 private:

@@ -64,7 +64,7 @@ void SVGPathTraversalStateBuilder::setDesiredLength(float desiredLength)
 
 bool SVGPathTraversalStateBuilder::continueConsuming()
 {
-    ASSERT(m_traversalState);    
+    ASSERT(m_traversalState);
     m_traversalState->processSegment();
     return !m_traversalState->m_success;
 }

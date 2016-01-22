@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -66,7 +66,7 @@ namespace WebCore {
 #if !defined(NDEBUG)
 
 #define PCLOG(...) LOG(PageCache, "%*s%s", indentLevel*4, "", makeString(__VA_ARGS__).utf8().data())
-    
+
 // Used in histograms, please only add at the end, and do not remove elements (renaming e.g. to "FooEnumUnused1" is fine).
 // This is because statistics may be gathered from histograms between versions over time, and re-using values causes collisions.
 enum ReasonFrameCannotBeInPageCache {
@@ -103,7 +103,7 @@ static unsigned logCanCacheFrameDecision(Frame* frame, int indentLevel)
         PCLOG(" Determining if frame can be cached navigating from (", currentURL.string(), ") to (", newURL.string(), "):");
     else
         PCLOG(" Determining if subframe with URL (", currentURL.string(), ") can be cached:");
-     
+
     unsigned rejectReasons = 0;
     if (!frame->loader().documentLoader()->mainDocumentError().isNull()) {
         PCLOG("   -Main document has an error");
@@ -192,10 +192,10 @@ static unsigned logCanCacheFrameDecision(Frame* frame, int indentLevel)
 
     for (Frame* child = frame->tree().firstChild(); child; child = child->tree().nextSibling())
         rejectReasons |= logCanCacheFrameDecision(child, indentLevel + 1);
-    
+
     PCLOG(rejectReasons ? " Frame CANNOT be cached" : " Frame CAN be cached");
     PCLOG("+---");
-    
+
     return rejectReasons;
 }
 
@@ -222,15 +222,15 @@ static void logCanCachePageDecision(Page* page)
     URL currentURL = page->mainFrame().loader().documentLoader() ? page->mainFrame().loader().documentLoader()->url() : URL();
     if (currentURL.isEmpty())
         return;
-    
-    int indentLevel = 0;    
+
+    int indentLevel = 0;
     PCLOG("--------\n Determining if page can be cached:");
-    
+
     unsigned rejectReasons = 0;
     unsigned frameRejectReasons = logCanCacheFrameDecision(&page->mainFrame(), indentLevel+1);
     if (frameRejectReasons)
         rejectReasons |= 1 << FrameCannotBeInPageCache;
-    
+
     if (!page->settings().usesPageCache()) {
         PCLOG("   -Page settings says b/f cache disabled");
         rejectReasons |= 1 << DisabledPageCache;
@@ -264,7 +264,7 @@ static void logCanCachePageDecision(Page* page)
         PCLOG("   -Load type is: Same");
         rejectReasons |= 1 << IsSameLoad;
     }
-    
+
     PCLOG(rejectReasons ? " Page CANNOT be cached\n--------" : " Page CAN be cached\n--------");
 
     HistogramSupport::histogramEnumeration("PageCache.PageCacheable", !rejectReasons, 2);
@@ -309,18 +309,18 @@ PageCache::PageCache()
     , m_shouldClearBackingStores(false)
 {
 }
-    
+
 bool PageCache::canCachePageContainingThisFrame(Frame* frame)
 {
     for (Frame* child = frame->tree().firstChild(); child; child = child->tree().nextSibling()) {
         if (!canCachePageContainingThisFrame(child))
             return false;
     }
-    
+
     FrameLoader& frameLoader = frame->loader();
     DocumentLoader* documentLoader = frameLoader.documentLoader();
     Document* document = frame->document();
-    
+
     return documentLoader
 #if !PLATFORM(IOS)
         && documentLoader->mainDocumentError().isNull()
@@ -350,12 +350,12 @@ bool PageCache::canCachePageContainingThisFrame(Frame* frame)
         && documentLoader->applicationCacheHost()->canCacheInPageCache()
         && frameLoader.client().canCachePage();
 }
-    
+
 bool PageCache::canCache(Page* page) const
 {
     if (!page)
         return false;
-    
+
 #if !defined(NDEBUG)
     logCanCachePageDecision(page);
 #endif
@@ -371,7 +371,7 @@ bool PageCache::canCache(Page* page) const
     // No point writing to the cache on a reload or loadSame, since we will just write
     // over it again when we leave that page.
     FrameLoadType loadType = page->mainFrame().loader().loadType();
-    
+
     return m_capacity > 0
         && canCachePageContainingThisFrame(&page->mainFrame())
         && page->settings().usesPageCache()
@@ -411,7 +411,7 @@ int PageCache::frameCount() const
         ASSERT(current->m_cachedPage);
         frameCount += current->m_cachedPage ? current->m_cachedPage->cachedMainFrame()->descendantFrameCount() : 0;
     }
-    
+
     return frameCount;
 }
 
@@ -455,7 +455,7 @@ void PageCache::add(PassRefPtr<HistoryItem> prpItem, Page& page)
 {
     ASSERT(prpItem);
     ASSERT(canCache(&page));
-    
+
     HistoryItem* item = prpItem.leakRef(); // Balanced in remove().
 
     // Remove stale cache entry if necessary.
@@ -465,7 +465,7 @@ void PageCache::add(PassRefPtr<HistoryItem> prpItem, Page& page)
     item->m_cachedPage = std::make_unique<CachedPage>(page);
     addToLRUList(item);
     ++m_size;
-    
+
     prune();
 }
 
@@ -500,7 +500,7 @@ CachedPage* PageCache::get(HistoryItem* item)
     if (CachedPage* cachedPage = item->m_cachedPage.get()) {
         if (!cachedPage->hasExpired())
             return cachedPage;
-        
+
         LOG(PageCache, "Not restoring page for %s from back/forward cache because cache entry has expired", item->url().string().ascii().data());
         pageCache()->remove(item);
     }

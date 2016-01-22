@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -69,12 +69,12 @@ bool JSArrayBuffer::getOwnPropertySlot(
     JSObject* object, ExecState* exec, PropertyName propertyName, PropertySlot& slot)
 {
     JSArrayBuffer* thisObject = jsCast<JSArrayBuffer*>(object);
-    
+
     if (propertyName == exec->propertyNames().byteLength) {
         slot.setValue(thisObject, DontDelete | ReadOnly, jsNumber(thisObject->impl()->byteLength()));
         return true;
     }
-    
+
     return Base::getOwnPropertySlot(thisObject, exec, propertyName, slot);
 }
 
@@ -83,12 +83,12 @@ void JSArrayBuffer::put(
     PutPropertySlot& slot)
 {
     JSArrayBuffer* thisObject = jsCast<JSArrayBuffer*>(cell);
-    
+
     if (propertyName == exec->propertyNames().byteLength) {
         reject(exec, slot.isStrictMode(), "Attempting to write to a read-only array buffer property.");
         return;
     }
-    
+
     Base::put(thisObject, exec, propertyName, value, slot);
 }
 
@@ -97,20 +97,20 @@ bool JSArrayBuffer::defineOwnProperty(
     const PropertyDescriptor& descriptor, bool shouldThrow)
 {
     JSArrayBuffer* thisObject = jsCast<JSArrayBuffer*>(object);
-    
+
     if (propertyName == exec->propertyNames().byteLength)
         return reject(exec, shouldThrow, "Attempting to define read-only array buffer property.");
-    
+
     return Base::defineOwnProperty(thisObject, exec, propertyName, descriptor, shouldThrow);
 }
 
 bool JSArrayBuffer::deleteProperty(JSCell* cell, ExecState* exec, PropertyName propertyName)
 {
     JSArrayBuffer* thisObject = jsCast<JSArrayBuffer*>(cell);
-    
+
     if (propertyName == exec->propertyNames().byteLength)
         return false;
-    
+
     return Base::deleteProperty(thisObject, exec, propertyName);
 }
 
@@ -118,10 +118,10 @@ void JSArrayBuffer::getOwnNonIndexPropertyNames(
     JSObject* object, ExecState* exec, PropertyNameArray& array, EnumerationMode mode)
 {
     JSArrayBuffer* thisObject = jsCast<JSArrayBuffer*>(object);
-    
+
     if (mode == IncludeDontEnumProperties)
         array.add(exec->propertyNames().byteLength);
-    
+
     Base::getOwnNonIndexPropertyNames(thisObject, exec, array, mode);
 }
 

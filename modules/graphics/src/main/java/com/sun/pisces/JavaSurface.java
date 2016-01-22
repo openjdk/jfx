@@ -40,7 +40,7 @@ public final class JavaSurface extends AbstractSurface {
 
         initialize(dataType, width, height);
     }
-    
+
     public IntBuffer getDataIntBuffer() {
         return this.dataBuffer;
     }

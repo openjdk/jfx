@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef ScrollbarThemeMac_h
@@ -42,7 +42,7 @@ public:
     virtual bool paint(ScrollbarThemeClient*, GraphicsContext*, const IntRect& damageRect);
 
     virtual int scrollbarThickness(ScrollbarControlSize = RegularScrollbar);
-    
+
     virtual bool supportsControlTints() const { return true; }
     virtual bool usesOverlayScrollbars() const;
     virtual void usesOverlayScrollbarsChanged() override;
@@ -83,7 +83,7 @@ protected:
     virtual int maxOverlapBetweenPages() { return 40; }
 
     virtual int minimumThumbLength(ScrollbarThemeClient*);
-    
+
     virtual bool shouldCenterOnThumb(ScrollbarThemeClient*, const PlatformMouseEvent&);
     virtual bool shouldDragDocumentInsteadOfThumb(ScrollbarThemeClient*, const PlatformMouseEvent&);
     int scrollbarPartToHIPressedState(ScrollbarPart);

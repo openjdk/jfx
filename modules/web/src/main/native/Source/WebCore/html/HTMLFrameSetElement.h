@@ -76,7 +76,7 @@ private:
     virtual void willAttachRenderers() override;
     virtual bool rendererIsNeeded(const RenderStyle&) override;
     virtual RenderPtr<RenderElement> createElementRenderer(PassRef<RenderStyle>) override;
-    
+
     virtual void defaultEventHandler(Event*) override;
 
     virtual bool willRecalcStyle(Style::Change) override;
@@ -89,10 +89,10 @@ private:
 
     int m_totalRows;
     int m_totalCols;
-    
+
     int m_border;
     bool m_borderSet;
-    
+
     bool m_borderColorSet;
 
     bool m_frameborder;

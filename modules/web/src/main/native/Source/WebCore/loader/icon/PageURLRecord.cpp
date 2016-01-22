@@ -6,13 +6,13 @@
  * are met:
  *
  * 1.  Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer. 
+ *     notice, this list of conditions and the following disclaimer.
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
- *     documentation and/or other materials provided with the distribution. 
+ *     documentation and/or other materials provided with the distribution.
  * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
- *     from this software without specific prior written permission. 
+ *     from this software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY APPLE AND ITS CONTRIBUTORS "AS IS" AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
@@ -48,14 +48,14 @@ void PageURLRecord::setIconRecord(PassRefPtr<IconRecord> icon)
 {
     if (m_iconRecord)
         m_iconRecord->m_retainingPageURLs.remove(m_pageURL);
-        
+
     m_iconRecord = icon;
-    
+
     if (m_iconRecord)
         m_iconRecord->m_retainingPageURLs.add(m_pageURL);
 }
-    
-PageURLSnapshot PageURLRecord::snapshot(bool forDeletion) const 
+
+PageURLSnapshot PageURLRecord::snapshot(bool forDeletion) const
 {
     return PageURLSnapshot(m_pageURL, (m_iconRecord && !forDeletion) ? m_iconRecord->iconURL() : String());
 }

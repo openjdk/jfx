@@ -172,7 +172,7 @@ GdkCursor* get_native_cursor(int type)
 }
 
 extern "C" {
-    
+
 /*
  * Class:     com_sun_glass_ui_gtk_GtkCursor
  * Method:    _createCursor
@@ -194,13 +194,13 @@ JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_gtk_GtkCursor__1createCursor
     return PTR_TO_JLONG(cursor);
 }
 
-/*                                                                                                                                                       
+/*
  * Class:     com_sun_glass_ui_gtk_GtkCursor
- * Method:    _getBestSize                                                                                                                 
+ * Method:    _getBestSize
  * Signature: (II)Lcom.sun.glass.ui.Size
  */
 JNIEXPORT jobject JNICALL Java_com_sun_glass_ui_gtk_GtkCursor__1getBestSize
-        (JNIEnv *env, jclass jCursorClass, jint width, jint height)                                                                              
+        (JNIEnv *env, jclass jCursorClass, jint width, jint height)
 {
     (void)jCursorClass;
     (void)width;

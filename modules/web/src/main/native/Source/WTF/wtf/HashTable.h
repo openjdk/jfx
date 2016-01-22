@@ -346,25 +346,25 @@ namespace WTF {
 #endif
 
         HashTable();
-        ~HashTable() 
+        ~HashTable()
         {
 
-#if PLATFORM(JAVA) 
+#if PLATFORM(JAVA)
 #if CHECK_HASHTABLE_ITERATORS
-			// does the same as invalidateIterators() but without 
-			// taking a lock since the destructor may be invoked 
-			// during atexit() handler which may lead to crash
-			const_iterator* next;
-			for (const_iterator* p = m_iterators; p; p = next) {
-	            next = p->m_next;
-		        p->m_table = 0;
-			    p->m_next = 0;
-				p->m_previous = 0;
-			}
-			m_iterators = 0;
+            // does the same as invalidateIterators() but without
+            // taking a lock since the destructor may be invoked
+            // during atexit() handler which may lead to crash
+            const_iterator* next;
+            for (const_iterator* p = m_iterators; p; p = next) {
+                next = p->m_next;
+                p->m_table = 0;
+                p->m_next = 0;
+                p->m_previous = 0;
+            }
+            m_iterators = 0;
 #endif
 #else
-            invalidateIterators(); 
+            invalidateIterators();
 #endif
 
             if (m_table)
@@ -622,18 +622,18 @@ namespace WTF {
 
         while (1) {
             ValueType* entry = table + i;
-                
+
             // we count on the compiler to optimize out this branch
             if (HashFunctions::safeToCompareToEmptyOrDeleted) {
                 if (HashTranslator::equal(Extractor::extract(*entry), key))
                     return entry;
-                
+
                 if (isEmptyBucket(*entry))
                     return 0;
             } else {
                 if (isEmptyBucket(*entry))
                     return 0;
-                
+
                 if (!isDeletedBucket(*entry) && HashTranslator::equal(Extractor::extract(*entry), key))
                     return entry;
             }
@@ -678,21 +678,21 @@ namespace WTF {
 
         while (1) {
             ValueType* entry = table + i;
-            
+
             // we count on the compiler to optimize out this branch
             if (HashFunctions::safeToCompareToEmptyOrDeleted) {
                 if (isEmptyBucket(*entry))
                     return LookupType(deletedEntry ? deletedEntry : entry, false);
-                
+
                 if (HashTranslator::equal(Extractor::extract(*entry), key))
                     return LookupType(entry, true);
-                
+
                 if (isDeletedBucket(*entry))
                     deletedEntry = entry;
             } else {
                 if (isEmptyBucket(*entry))
                     return LookupType(deletedEntry ? deletedEntry : entry, false);
-            
+
                 if (isDeletedBucket(*entry))
                     deletedEntry = entry;
                 else if (HashTranslator::equal(Extractor::extract(*entry), key))
@@ -739,21 +739,21 @@ namespace WTF {
 
         while (1) {
             ValueType* entry = table + i;
-            
+
             // we count on the compiler to optimize out this branch
             if (HashFunctions::safeToCompareToEmptyOrDeleted) {
                 if (isEmptyBucket(*entry))
                     return makeLookupResult(deletedEntry ? deletedEntry : entry, false, h);
-                
+
                 if (HashTranslator::equal(Extractor::extract(*entry), key))
                     return makeLookupResult(entry, true, h);
-                
+
                 if (isDeletedBucket(*entry))
                     deletedEntry = entry;
             } else {
                 if (isEmptyBucket(*entry))
                     return makeLookupResult(deletedEntry ? deletedEntry : entry, false, h);
-            
+
                 if (isDeletedBucket(*entry))
                     deletedEntry = entry;
                 else if (HashTranslator::equal(Extractor::extract(*entry), key))
@@ -792,7 +792,7 @@ namespace WTF {
             memset(&bucket, 0, sizeof(bucket));
         }
     };
-    
+
     template<typename Key, typename Value, typename Extractor, typename HashFunctions, typename Traits, typename KeyTraits>
     inline void HashTable<Key, Value, Extractor, HashFunctions, Traits, KeyTraits>::initializeBucket(ValueType& bucket)
     {
@@ -833,21 +833,21 @@ namespace WTF {
         ValueType* entry;
         while (1) {
             entry = table + i;
-            
+
             // we count on the compiler to optimize out this branch
             if (HashFunctions::safeToCompareToEmptyOrDeleted) {
                 if (isEmptyBucket(*entry))
                     break;
-                
+
                 if (HashTranslator::equal(Extractor::extract(*entry), key))
                     return AddResult(makeKnownGoodIterator(entry), false);
-                
+
                 if (isDeletedBucket(*entry))
                     deletedEntry = entry;
             } else {
                 if (isEmptyBucket(*entry))
                     break;
-            
+
                 if (isDeletedBucket(*entry))
                     deletedEntry = entry;
                 else if (HashTranslator::equal(Extractor::extract(*entry), key))
@@ -870,17 +870,17 @@ namespace WTF {
         if (deletedEntry) {
             initializeBucket(*deletedEntry);
             entry = deletedEntry;
-            --m_deletedCount; 
+            --m_deletedCount;
         }
 
         HashTranslator::translate(*entry, std::forward<T>(key), std::forward<Extra>(extra));
         ++m_keyCount;
-        
+
         if (shouldExpand())
             entry = expand(entry);
 
         internalCheckTableConsistency();
-        
+
         return AddResult(makeKnownGoodIterator(entry), true);
     }
 
@@ -902,10 +902,10 @@ namespace WTF {
         ValueType* entry = lookupResult.first.first;
         bool found = lookupResult.first.second;
         unsigned h = lookupResult.second;
-        
+
         if (found)
             return AddResult(makeKnownGoodIterator(entry), false);
-        
+
         if (isDeletedBucket(*entry)) {
             initializeBucket(*entry);
             --m_deletedCount;
@@ -943,7 +943,7 @@ namespace WTF {
     }
 
     template<typename Key, typename Value, typename Extractor, typename HashFunctions, typename Traits, typename KeyTraits>
-    template <typename HashTranslator, typename T> 
+    template <typename HashTranslator, typename T>
     auto HashTable<Key, Value, Extractor, HashFunctions, Traits, KeyTraits>::find(const T& key) -> iterator
     {
         if (!m_table)
@@ -957,7 +957,7 @@ namespace WTF {
     }
 
     template<typename Key, typename Value, typename Extractor, typename HashFunctions, typename Traits, typename KeyTraits>
-    template <typename HashTranslator, typename T> 
+    template <typename HashTranslator, typename T>
     auto HashTable<Key, Value, Extractor, HashFunctions, Traits, KeyTraits>::find(const T& key) const -> const_iterator
     {
         if (!m_table)
@@ -971,7 +971,7 @@ namespace WTF {
     }
 
     template<typename Key, typename Value, typename Extractor, typename HashFunctions, typename Traits, typename KeyTraits>
-    template <typename HashTranslator, typename T> 
+    template <typename HashTranslator, typename T>
     bool HashTable<Key, Value, Extractor, HashFunctions, Traits, KeyTraits>::contains(const T& key) const
     {
         if (!m_table)

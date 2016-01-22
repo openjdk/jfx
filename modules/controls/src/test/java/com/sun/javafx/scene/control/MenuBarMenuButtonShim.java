@@ -38,40 +38,40 @@ import javafx.scene.layout.VBox;
  *
  */
 public class MenuBarMenuButtonShim {
-    
+
 //    // can only access the getNodeForMenu method in MenuBarSkin from this package.
 //    public static MenuButton getNodeForMenu(MenuBarSkin skin, int i) {
 //        return skin.getNodeForMenu(i);
 //    }
-    
+
     public static ContextMenu getSubMenu(ContextMenuContent cmc) {
       return cmc.getSubMenu();
     }
-    
+
 //    public static Skin getPopupSkin(MenuButton mb) {
 //        return ((MenuButtonSkinBase)mb.getSkin()).popup.getSkin();
 //    }
-    
+
 //    public static ContextMenuContent getMenuContent(MenuButton mb) {
 //        ContextMenuContent cmc = (ContextMenuContent)getPopupSkin(mb).getNode();
 //        return cmc;
 //    }
-    
+
     public static ContextMenuContent getSubMenuContent(ContextMenuContent cmc) {
         ContextMenu cm = cmc.getSubMenu();
         return (cm != null) ? (ContextMenuContent)cm.getSkin().getNode() : null;
     }
-    
+
     public static ContextMenuContent.MenuItemContainer getDisplayNodeForMenuItem(ContextMenuContent cmc, int i) {
         VBox itemsContainer = cmc.getItemsContainer();
-        return (i < itemsContainer.getChildren().size()) ? 
+        return (i < itemsContainer.getChildren().size()) ?
             (ContextMenuContent.MenuItemContainer)itemsContainer.getChildren().get(i) : null;
     }
-    
+
     public static void setCurrentFocusedIndex(ContextMenuContent cmc, int i) {
         cmc.setCurrentFocusedIndex(i);
     }
-    
+
 //    public static int getFocusedIndex(MenuBarSkin skin) {
 //        return skin.getFocusedMenuIndex();
 //    }

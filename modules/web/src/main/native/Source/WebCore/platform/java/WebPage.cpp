@@ -776,8 +776,8 @@ void WebPage::enableWatchdog() {
 void WebPage::disableWatchdog() {
     if (globalDebugSessionCounter > 0) {
         JSContextGroupRef contextGroup = toRef(mainThreadNormalWorld().vm());
-	    JSContextGroupClearExecutionTimeLimit(contextGroup);
-	}
+        JSContextGroupClearExecutionTimeLimit(contextGroup);
+    }
 }
 
 
@@ -857,7 +857,7 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkInit
 //    settings->setShowsURLsInToolTips(true);
 
     page->setDeviceScaleFactor(devicePixelScale);
-    
+
     dynamic_cast<FrameLoaderClientJava*>(&page->mainFrame().loader().client())->setFrame(&page->mainFrame());
 
     page->mainFrame().init();
@@ -1043,7 +1043,7 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkOpen
     }
 
     static const URL emptyParent;
-    
+
     frame->loader().load(FrameLoadRequest(
         frame,
         ResourceRequest(URL(emptyParent, String(env, url)))
@@ -1157,8 +1157,8 @@ JNIEXPORT jboolean JNICALL Java_com_sun_webkit_WebPage_twkFindInPage
     Page* page = WebPage::pageFromJLong(pPage);
     if (page) {
         unsigned opts = matchCase ? 0 : CaseInsensitive;
-	opts = forward ? opts : opts | Backwards;
-	opts = wrap ? opts | WrapAround : opts;
+    opts = forward ? opts : opts | Backwards;
+    opts = wrap ? opts | WrapAround : opts;
         return bool_to_jbool(page->findString(String(env, toFind), opts));
     }
     return JNI_FALSE;
@@ -1899,7 +1899,7 @@ JNIEXPORT jint JNICALL Java_com_sun_webkit_WebPage_twkProcessDrag
         setCopyKeyState(ACTION_COPY == javaAction);
         switch(actionId){
         case com_sun_webkit_WebPage_DND_DST_EXIT:
-	    dc.dragExited(dragData);
+        dc.dragExited(dragData);
             return 0;
         case com_sun_webkit_WebPage_DND_DST_ENTER:
             return dragOperationToDragCursor( dc.dragEntered(dragData).operation);
@@ -2178,10 +2178,10 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkConnectInspectorFrontend
     Page *page = WebPage::pageFromJLong(pPage);
     if (page) {
         InspectorController& ic = page->inspectorController();
-	InspectorClientJava *icj = static_cast<InspectorClientJava *>(ic.inspectorClient());
-	if (icj) {
-	  ic.connectFrontend(icj);
-	}
+    InspectorClientJava *icj = static_cast<InspectorClientJava *>(ic.inspectorClient());
+    if (icj) {
+      ic.connectFrontend(icj);
+    }
 
     }
     WebPage::webPageFromJLong(pPage)->debugStarted();

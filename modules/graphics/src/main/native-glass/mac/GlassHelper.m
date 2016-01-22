@@ -54,7 +54,7 @@ static volatile jobject glassClassLoader = NULL;
         if (jcls == NULL)
         {
             NSLog(@"GlassHelper error: jcls == NULL");
-            return NULL;            
+            return NULL;
         }
         classCls = (*env)->NewGlobalRef(env, jcls);
     }
@@ -308,19 +308,19 @@ static volatile jobject glassClassLoader = NULL;
         NSInvocation *invocation = [NSInvocation invocationWithMethodSignature:[aClass methodSignatureForSelector:aSelector]];
         [invocation setSelector:aSelector];
         [invocation setTarget:aClass];
-        
+
         if (anArgument != NULL)
         {
             [invocation setArgument:anArgument atIndex:2]; // arguments 0 and 1 are self and _cmd respectively, which are set automatically by NSInvocation
         }
-        
+
         [invocation invoke];
-       
+
         if (aReturnValue != NULL)
         {
             [invocation getReturnValue:aReturnValue];
         }
-        
+
         return YES;
     }
     else

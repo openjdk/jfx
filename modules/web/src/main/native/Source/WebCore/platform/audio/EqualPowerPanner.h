@@ -46,7 +46,7 @@ private:
     // For smoothing / de-zippering
     bool m_isFirstRender;
     double m_smoothingConstant;
-    
+
     double m_gainL;
     double m_gainR;
 };

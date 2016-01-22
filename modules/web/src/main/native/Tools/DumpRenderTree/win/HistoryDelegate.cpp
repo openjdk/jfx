@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -137,13 +137,13 @@ HRESULT HistoryDelegate::didNavigateWithNavigationData(IWebView* webView, IWebNa
     SysFreeString(clientRedirectSourceBSTR);
 
     bool wasFailure = hasSubstituteData || (httpResponse && statusCode >= 400);
-        
-    printf("WebView navigated to url \"%S\" with title \"%S\" with HTTP equivalent method \"%S\".  The navigation was %s and was %s%S.\n", 
-        url.c_str(), 
-        title.c_str(), 
+
+    printf("WebView navigated to url \"%S\" with title \"%S\" with HTTP equivalent method \"%S\".  The navigation was %s and was %s%S.\n",
+        url.c_str(),
+        title.c_str(),
         httpMethod.c_str(),
-        wasFailure ? "a failure" : "successful", 
-        hasClientRedirect ? "a client redirect from " : "not a client redirect", 
+        wasFailure ? "a failure" : "successful",
+        hasClientRedirect ? "a client redirect from " : "not a client redirect",
         redirectSource.c_str());
 
     return S_OK;
@@ -157,7 +157,7 @@ HRESULT HistoryDelegate::didPerformClientRedirectFromURL(IWebView*, BSTR sourceU
     wstring source;
     if (sourceURL)
         source = urlSuitableForTestResult(wstringFromBSTR(sourceURL));
-    
+
     wstring destination;
     if (destinationURL)
         destination = urlSuitableForTestResult(wstringFromBSTR(destinationURL));
@@ -165,7 +165,7 @@ HRESULT HistoryDelegate::didPerformClientRedirectFromURL(IWebView*, BSTR sourceU
     printf("WebView performed a client redirect from \"%S\" to \"%S\".\n", source.c_str(), destination.c_str());
     return S_OK;
 }
-    
+
 HRESULT HistoryDelegate::didPerformServerRedirectFromURL(IWebView* webView, BSTR sourceURL, BSTR destinationURL, IWebFrame* webFrame)
 {
     if (!gTestRunner->dumpHistoryDelegateCallbacks())
@@ -174,7 +174,7 @@ HRESULT HistoryDelegate::didPerformServerRedirectFromURL(IWebView* webView, BSTR
     wstring source;
     if (sourceURL)
         source = urlSuitableForTestResult(wstringFromBSTR(sourceURL));
-    
+
     wstring destination;
     if (destinationURL)
         destination = urlSuitableForTestResult(wstringFromBSTR(destinationURL));
@@ -187,7 +187,7 @@ HRESULT HistoryDelegate::updateHistoryTitle(IWebView* webView, BSTR titleBSTR, B
 {
     if (!gTestRunner->dumpHistoryDelegateCallbacks())
         return S_OK;
-    
+
     wstring url;
     if (urlBSTR)
         url = urlSuitableForTestResult(wstringFromBSTR(urlBSTR));
@@ -199,7 +199,7 @@ HRESULT HistoryDelegate::updateHistoryTitle(IWebView* webView, BSTR titleBSTR, B
     printf("WebView updated the title for history URL \"%S\" to \"%S\".\n", url.c_str(), title.c_str());
     return S_OK;
 }
-    
+
 HRESULT HistoryDelegate::populateVisitedLinksForWebView(IWebView* webView)
 {
     if (!gTestRunner->dumpHistoryDelegateCallbacks())

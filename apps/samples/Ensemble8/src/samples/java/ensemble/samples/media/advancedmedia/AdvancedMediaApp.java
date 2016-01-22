@@ -72,7 +72,7 @@ public class AdvancedMediaApp extends Application {
         primaryStage.setScene(new Scene(createContent()));
         primaryStage.show();
     }
-    
+
     @Override
     public void stop() {
         mediaPlayer.stop();

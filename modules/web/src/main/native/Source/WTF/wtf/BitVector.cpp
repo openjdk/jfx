@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -54,13 +54,13 @@ void BitVector::resize(size_t numBits)
     if (numBits <= maxInlineBits()) {
         if (isInline())
             return;
-    
+
         OutOfLineBits* myOutOfLineBits = outOfLineBits();
         m_bitsOrPointer = makeInlineBits(*myOutOfLineBits->bits());
         OutOfLineBits::destroy(myOutOfLineBits);
         return;
     }
-    
+
     resizeOutOfLine(numBits);
 }
 
@@ -113,11 +113,11 @@ void BitVector::mergeSlow(const BitVector& other)
         *bits() |= cleanseInlineBits(other.m_bitsOrPointer);
         return;
     }
-    
+
     ensureSize(other.size());
     ASSERT(!isInline());
     ASSERT(!other.isInline());
-    
+
     OutOfLineBits* a = outOfLineBits();
     const OutOfLineBits* b = other.outOfLineBits();
     for (unsigned i = a->numWords(); i--;)
@@ -131,7 +131,7 @@ void BitVector::filterSlow(const BitVector& other)
         *bits() &= cleanseInlineBits(other.m_bitsOrPointer);
         return;
     }
-    
+
     if (isInline()) {
         ASSERT(!other.isInline());
         m_bitsOrPointer &= *other.outOfLineBits()->bits();
@@ -139,12 +139,12 @@ void BitVector::filterSlow(const BitVector& other)
         ASSERT(isInline());
         return;
     }
-    
+
     OutOfLineBits* a = outOfLineBits();
     const OutOfLineBits* b = other.outOfLineBits();
     for (unsigned i = std::min(a->numWords(), b->numWords()); i--;)
         a->bits()[i] &= b->bits()[i];
-    
+
     for (unsigned i = b->numWords(); i < a->numWords(); ++i)
         a->bits()[i] = 0;
 }
@@ -156,7 +156,7 @@ void BitVector::excludeSlow(const BitVector& other)
         *bits() &= ~cleanseInlineBits(other.m_bitsOrPointer);
         return;
     }
-    
+
     if (isInline()) {
         ASSERT(!other.isInline());
         m_bitsOrPointer &= ~*other.outOfLineBits()->bits();
@@ -164,7 +164,7 @@ void BitVector::excludeSlow(const BitVector& other)
         ASSERT(isInline());
         return;
     }
-    
+
     OutOfLineBits* a = outOfLineBits();
     const OutOfLineBits* b = other.outOfLineBits();
     for (unsigned i = std::min(a->numWords(), b->numWords()); i--;)

@@ -25,13 +25,13 @@ namespace WebCore {
 
 Icon::Icon(const JLObject &jicon)
     : m_jicon(RQRef::create(jicon))
-{   
+{
 }
 
 Icon::~Icon()
 {
 }
-  
+
 PassRefPtr<Icon> Icon::createIconForFiles(const Vector<String>& filenames)
 {
     notImplemented();
@@ -40,8 +40,8 @@ PassRefPtr<Icon> Icon::createIconForFiles(const Vector<String>& filenames)
 
 void Icon::paint(GraphicsContext* gc, const IntRect& rect)
 {
-    gc->platformContext()->rq().freeSpace(16)    
-    << (jint)com_sun_webkit_graphics_GraphicsDecoder_DRAWICON  
+    gc->platformContext()->rq().freeSpace(16)
+    << (jint)com_sun_webkit_graphics_GraphicsDecoder_DRAWICON
     << *m_jicon << (jint)rect.x() <<  (jint)rect.y();
 }
 

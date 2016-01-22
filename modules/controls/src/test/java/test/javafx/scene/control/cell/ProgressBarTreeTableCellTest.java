@@ -40,13 +40,13 @@ import org.junit.Test;
 import static org.junit.Assert.*;
 
 public class ProgressBarTreeTableCellTest {
-    
+
     private SimpleBooleanProperty booleanProperty;
     private Callback<Integer, ObservableValue<Boolean>> callback;
     private StringConverter<Object> converter;
     private TreeTableView<Object> tableView;
     private TreeTableColumn<Object, Object> tableColumn;
-    
+
     @Before public void setup() {
         tableView = new TreeTableView<>();
         tableColumn = new TreeTableColumn<>();
@@ -56,55 +56,55 @@ public class ProgressBarTreeTableCellTest {
             @Override public String toString(Object object) {
                 return null;
             }
-            
+
             @Override public Object fromString(String string) {
                 return null;
             }
         };
     }
-    
+
     private void setTableViewAndTreeTableColumn(TreeTableCell cell) {
         cell.updateTreeTableView(tableView);
         cell.updateTreeTableColumn(tableColumn);
     }
-    
-    
-    
+
+
+
     /**************************************************************************
-     * 
+     *
      * Test for public static <T> Callback<TreeTableColumn<S,Double>, TreeTableCell<T,Double>> forTreeTableColumn()
-     * 
+     *
      **************************************************************************/
 
-    
+
     @Test public void testStatic_forTreeTableColumn_noArgs_ensureCellFactoryIsNotNull() {
         assertFalse(booleanProperty.get());
         Callback<TreeTableColumn<Object, Double>, TreeTableCell<Object, Double>> cellFactory = ProgressBarTreeTableCell.forTreeTableColumn();
         assertNotNull(cellFactory);
     }
-    
+
     @Test public void testStatic_forTreeTableColumn_noArgs_ensureCellFactoryCreatesCells() {
         assertFalse(booleanProperty.get());
         Callback<TreeTableColumn<Object, Double>, TreeTableCell<Object, Double>> cellFactory = ProgressBarTreeTableCell.forTreeTableColumn();
-        
+
         TreeTableColumn tableColumn = new TreeTableColumn<>();
         ProgressBarTreeTableCell<Object> cell = (ProgressBarTreeTableCell<Object>)cellFactory.call(tableColumn);
         assertNotNull(cell);
     }
 
-    
+
     /**************************************************************************
-     * 
+     *
      * Constructor tests for default constructor
-     * 
+     *
      **************************************************************************/
 
-    
+
     @Test public void testConstructor_noArgs_defaultStyleClass() {
         ProgressBarTreeTableCell<Object> cell = new ProgressBarTreeTableCell<>();
         assertTrue(cell.getStyleClass().contains("progress-bar-tree-table-cell"));
     }
-    
+
     @Test public void testConstructor_noArgs_defaultGraphicIsNull() {
         ProgressBarTreeTableCell<Object> cell = new ProgressBarTreeTableCell<>();
         assertNull(cell.getGraphic());
@@ -113,9 +113,9 @@ public class ProgressBarTreeTableCellTest {
 
 
     /**************************************************************************
-     * 
+     *
      * updateItem tests
-     * 
+     *
      **************************************************************************/
 
     @Test public void test_updateItem_isEmpty_graphicIsNull() {
@@ -123,13 +123,13 @@ public class ProgressBarTreeTableCellTest {
         cell.updateItem(0.5, true);
         assertNull(cell.getGraphic());
     }
-    
+
     @Test public void test_updateItem_isEmpty_textIsNull() {
         ProgressBarTreeTableCell<Object> cell = new ProgressBarTreeTableCell<>();
         cell.updateItem(0.5, true);
         assertNull(cell.getText());
     }
-    
+
     @Test public void test_updateItem_isNotEmpty_graphicIsNotNull() {
         ProgressBarTreeTableCell<Object> cell = new ProgressBarTreeTableCell<>();
         setTableViewAndTreeTableColumn(cell);
@@ -156,17 +156,17 @@ public class ProgressBarTreeTableCellTest {
 
 
 //    /**************************************************************************
-//     * 
+//     *
 //     * test checkbox selection state is bound
-//     * 
+//     *
 //     **************************************************************************/
-//    
+//
 //    @Test public void test_booleanPropertyChangeUpdatesCheckBoxSelection() {
 //        ProgressBarTreeTableCell<Object, Object> cell = new ProgressBarTreeTableCell<>(callback);
 //        setTableViewAndTreeTableColumn(cell);
 //        cell.updateItem("TEST", false);
 //        CheckBox cb = (CheckBox)cell.getGraphic();
-//        
+//
 //        assertFalse(cb.isSelected());
 //        booleanProperty.set(true);
 //        assertTrue(cb.isScaleShape());
@@ -174,13 +174,13 @@ public class ProgressBarTreeTableCellTest {
 //        booleanProperty.set(false);
 //        assertFalse(cb.isSelected());
 //    }
-//    
+//
 //    @Test public void test_checkBoxSelectionUpdatesBooleanProperty() {
 //        ProgressBarTreeTableCell<Object, Object> cell = new ProgressBarTreeTableCell<>(callback);
 //        setTableViewAndTreeTableColumn(cell);
 //        cell.updateItem("TEST", false);
 //        CheckBox cb = (CheckBox)cell.getGraphic();
-//        
+//
 //        assertFalse(booleanProperty.get());
 //        cb.setSelected(true);
 //        assertTrue(booleanProperty.get());

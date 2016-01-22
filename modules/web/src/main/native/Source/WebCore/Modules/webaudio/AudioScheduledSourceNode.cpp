@@ -160,7 +160,7 @@ void AudioScheduledSourceNode::stop(double when, ExceptionCode& ec)
         ec = INVALID_STATE_ERR;
         return;
     }
-    
+
     when = std::max<double>(0, when);
     m_endTime = when;
 }

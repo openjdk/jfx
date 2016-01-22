@@ -78,7 +78,7 @@ const String& CachedScript::script()
         setDecodedSize(m_script.sizeInBytes());
     }
     m_decodedDataDeletionTimer.restart();
-    
+
     return m_script;
 }
 

@@ -42,9 +42,9 @@
 class WebChromeClient : public WebCore::ChromeClient {
 public:
     WebChromeClient(WebView*);
-    
+
     virtual void chromeDestroyed() override;
-    
+
     virtual void setWindowRect(const WebCore::FloatRect&) override;
     virtual WebCore::FloatRect windowRect() override;
 
@@ -52,7 +52,7 @@ public:
 
     virtual void focus() override;
     virtual void unfocus() override;
-    
+
     virtual bool canTakeFocus(WebCore::FocusDirection) override;
     virtual void takeFocus(WebCore::FocusDirection) override;
 
@@ -67,18 +67,18 @@ public:
 
     virtual void setToolbarsVisible(bool) override;
     virtual bool toolbarsVisible() override;
-    
+
     virtual void setStatusbarVisible(bool) override;
     virtual bool statusbarVisible() override;
-    
+
     virtual void setScrollbarsVisible(bool) override;
     virtual bool scrollbarsVisible() override;
-    
+
     virtual void setMenubarVisible(bool) override;
     virtual bool menubarVisible() override;
-    
+
     virtual void setResizable(bool) override;
-    
+
     virtual void addMessageToConsole(Inspector::MessageSource, Inspector::MessageLevel, const WTF::String& message, unsigned lineNumber, unsigned columnNumber, const WTF::String& sourceURL) override;
 
     virtual bool canRunBeforeUnloadConfirmPanel() override;
@@ -104,7 +104,7 @@ public:
     virtual PlatformPageClient platformPageClient() const override;
     virtual void contentsSizeChanged(WebCore::Frame*, const WebCore::IntSize&) const override;
     virtual void scrollRectIntoView(const WebCore::IntRect&) const override;
-    
+
     virtual void setStatusbarText(const WTF::String&) override;
 
     virtual void scrollbarsModeDidChange() const override { }
@@ -145,7 +145,7 @@ public:
 
     virtual void enableSuddenTermination() override;
     virtual void disableSuddenTermination() override;
-    
+
 #if ENABLE(TOUCH_EVENTS)
     virtual void needTouchEvents(bool) override { }
 #endif
@@ -167,7 +167,7 @@ public:
         return static_cast<CompositingTriggerFlags>(
             ThreeDTransformTrigger |
             VideoTrigger |
-            PluginTrigger| 
+            PluginTrigger|
             CanvasTrigger |
 #if PLATFORM(IOS)
             AnimatedOpacityTrigger | // Allow opacity animations to trigger compositing mode for iOS: <rdar://problem/7830677>
@@ -180,7 +180,7 @@ public:
     virtual void enterFullscreenForNode(WebCore::Node*) override;
     virtual void exitFullscreenForNode(WebCore::Node*) override;
 #endif
-    
+
 #if ENABLE(FULLSCREEN_API)
     virtual bool supportsFullScreenForElement(const WebCore::Element*, bool withKeyboard) override;
     virtual void enterFullScreenForElement(WebCore::Element*) override;

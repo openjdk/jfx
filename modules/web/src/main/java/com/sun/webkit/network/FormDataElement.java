@@ -36,7 +36,7 @@ import java.io.InputStream;
  * A form data element, such as a byte array or a local file.
  */
 abstract class FormDataElement {
-    
+
     /**
      * The input stream from which the content of this element
      * can be read.
@@ -61,7 +61,7 @@ abstract class FormDataElement {
         }
         return doGetSize();
     }
-    
+
     /**
      * Returns the input stream from which the content of this element
      * can be read.

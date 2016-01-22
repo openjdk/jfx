@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef CopiedSpaceInlines_h
@@ -74,19 +74,19 @@ inline void CopiedSpace::pinIfNecessary(void* opaquePointer)
     //     GC-to-compiler contract laid out in the C spec: a pointer to
     //     the end of a span of memory must be considered to be a
     //     pointer to that memory.
-    
+
     EncodedJSValue* pointer = reinterpret_cast<EncodedJSValue*>(opaquePointer);
     CopiedBlock* block;
 
     // Handle (1) and (3).
     if (contains(pointer, block))
         pin(block);
-    
+
     // Handle (4). We don't have to explicitly check and pin the block under this
     // pointer because it cannot possibly point to something that cases (1) and
     // (3) above or case (2) below wouldn't already catch.
     pointer--;
-    
+
     // Handle (2)
     pointer--;
     if (contains(pointer, block))
@@ -142,9 +142,9 @@ inline void CopiedSpace::allocateBlock()
     m_heap->collectIfNecessaryOrDefer();
 
     m_allocator.resetCurrentBlock();
-    
+
     CopiedBlock* block = CopiedBlock::create(m_heap->blockAllocator().allocate<CopiedBlock>());
-        
+
     m_newGen.toSpace->push(block);
     m_newGen.blockFilter.add(reinterpret_cast<Bits>(block));
     m_blockSet.add(block);
@@ -158,7 +158,7 @@ inline CheckedBoolean CopiedSpace::tryAllocate(size_t bytes, void** outPtr)
 
     if (!m_allocator.tryAllocate(bytes, outPtr))
         return tryAllocateSlowCase(bytes, outPtr);
-    
+
     ASSERT(*outPtr);
     return true;
 }
@@ -236,7 +236,7 @@ inline void CopiedSpace::startedCopying()
             oversizeBlocks->remove(block);
             m_blockSet.remove(block);
             m_heap->blockAllocator().deallocateCustomSize(CopiedBlock::destroy(block));
-        } 
+        }
         block = next;
     }
 

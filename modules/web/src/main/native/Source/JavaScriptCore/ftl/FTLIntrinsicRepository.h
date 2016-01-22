@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef FTLIntrinsicRepository_h
@@ -93,7 +93,7 @@ namespace JSC { namespace FTL {
 class IntrinsicRepository : public CommonValues {
 public:
     IntrinsicRepository(LContext);
-    
+
 #define INTRINSIC_GETTER(ourName, llvmName, type) \
     LValue ourName##Intrinsic() {                 \
         if (!m_##ourName)                         \
@@ -112,7 +112,7 @@ public:
     }
     FOR_EACH_FUNCTION_TYPE(FUNCTION_TYPE_GETTER)
 #undef FUNCTION_TYPE_GETTER
-    
+
 #define FUNCTION_TYPE_RESOLVER(typeName, type) \
     LType operationType(JSC::typeName)         \
     {                                          \
@@ -120,7 +120,7 @@ public:
     }
     FOR_EACH_FUNCTION_TYPE(FUNCTION_TYPE_RESOLVER)
 #undef FUNCTION_TYPE_RESOLVER
-    
+
 private:
 #define INTRINSIC_GETTER_SLOW_DECLARATION(ourName, llvmName, type) \
     LValue ourName##IntrinsicSlow();

@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef AccessibilityTextMarker_h
@@ -50,12 +50,12 @@ public:
     AccessibilityTextMarker(PlatformTextMarker);
     AccessibilityTextMarker(const AccessibilityTextMarker&);
     ~AccessibilityTextMarker();
-    
+
     PlatformTextMarker platformTextMarker() const;
-    
+
     static JSObjectRef makeJSAccessibilityTextMarker(JSContextRef, const AccessibilityTextMarker&);
     bool isEqual(AccessibilityTextMarker*);
-    
+
 private:
     static JSClassRef getJSClass();
 #if SUPPORTS_AX_TEXTMARKERS
@@ -70,12 +70,12 @@ public:
     AccessibilityTextMarkerRange(PlatformTextMarkerRange);
     AccessibilityTextMarkerRange(const AccessibilityTextMarkerRange&);
     ~AccessibilityTextMarkerRange();
-    
+
     PlatformTextMarkerRange platformTextMarkerRange() const;
-    
+
     static JSObjectRef makeJSAccessibilityTextMarkerRange(JSContextRef, const AccessibilityTextMarkerRange&);
     bool isEqual(AccessibilityTextMarkerRange*);
-    
+
 private:
     static JSClassRef getJSClass();
 #if SUPPORTS_AX_TEXTMARKERS

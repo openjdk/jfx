@@ -47,7 +47,7 @@ public class PropertyDescriptor extends ReadOnlyPropertyDescriptor {
     private static final String ADD_PREFIX = "add";
     private static final String REMOVE_PREFIX = "remove";
     private static final String SUFFIX = "Listener";
-    
+
     private static final int ADD_VETOABLE_LISTENER_TAKES_NAME = 1;
     private static final int REMOVE_VETOABLE_LISTENER_TAKES_NAME = 2;
 

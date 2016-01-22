@@ -348,16 +348,16 @@ JNI_OnLoad(JavaVM *jvm, void *reserved)
         return JNI_VERSION_1_6;
     }
 
-    clazz = env->FindClass("sun/misc/GThreadHelper");    
+    clazz = env->FindClass("sun/misc/GThreadHelper");
     if (env->ExceptionCheck()) return JNI_ERR;
     if (clazz) {
         jmethodID mid_getAndSetInitializationNeededFlag = env->GetStaticMethodID(clazz, "getAndSetInitializationNeededFlag", "()Z");
         if (env->ExceptionCheck()) return JNI_ERR;
         jmethodID mid_lock = env->GetStaticMethodID(clazz, "lock", "()V");
         if (env->ExceptionCheck()) return JNI_ERR;
-        jmethodID mid_unlock = env->GetStaticMethodID(clazz, "unlock", "()V");    
+        jmethodID mid_unlock = env->GetStaticMethodID(clazz, "unlock", "()V");
         if (env->ExceptionCheck()) return JNI_ERR;
-        
+
         env->CallStaticVoidMethod(clazz, mid_lock);
 
         if (!env->CallStaticBooleanMethod(clazz, mid_getAndSetInitializationNeededFlag)) {
@@ -382,7 +382,7 @@ glass_throw_exception(JNIEnv * env,
                       const char * exceptionMessage) {
     jclass throwableClass = env->FindClass(exceptionClass);
     if (check_and_clear_exception(env)) return;
-    env->ThrowNew(throwableClass, exceptionMessage);    
+    env->ThrowNew(throwableClass, exceptionMessage);
     check_and_clear_exception(env);
 }
 
@@ -440,7 +440,7 @@ gboolean check_and_clear_exception(JNIEnv *env) {
 // The returned string should be freed with g_free().
 gchar* get_application_name() {
     gchar* ret = NULL;
-    
+
     jobject japp = mainEnv->CallStaticObjectMethod(jApplicationCls, jApplicationGetApplication);
     CHECK_JNI_EXCEPTION_RET(mainEnv, NULL);
     jstring jname = (jstring) mainEnv->CallObjectMethod(japp, jApplicationGetName);
@@ -452,7 +452,7 @@ gchar* get_application_name() {
     return ret;
 }
 
-gpointer glass_try_malloc_n(gsize m, gsize n, 
+gpointer glass_try_malloc_n(gsize m, gsize n,
         gboolean zer0 /* initialized to 0 if true*/) {
     if (n > 0 && m > G_MAXSIZE / n) {
         return NULL;
@@ -464,7 +464,7 @@ gpointer glass_try_malloc_n(gsize m, gsize n,
 
 /*
  * Since we support glib 2.18 we can't use g_try_malloc_n and g_try_malloc0_n
- * which was introduced in 2.24. 
+ * which was introduced in 2.24.
  * glass_try_malloc_n and glass_try_malloc0_n is replacement for those functions
  */
 gpointer glass_try_malloc0_n(gsize m, gsize n) {
@@ -504,7 +504,7 @@ jobject uris_to_java(JNIEnv *env, gchar **uris, gboolean files) {
 
     if (files) {
         if (files_cnt) {
-            result = env->NewObjectArray(files_cnt, jStringCls, NULL);            
+            result = env->NewObjectArray(files_cnt, jStringCls, NULL);
             check_and_clear_exception(env);
 
             for (gsize i = 0; i < size; ++i) {

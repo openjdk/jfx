@@ -22,7 +22,7 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
- 
+
 #include <stdio.h>
 #include <string.h>
 
@@ -238,7 +238,7 @@ glEnum2str(GLenum val)
     case GL_DITHER:             return "GL_DITHER";
     case GL_STENCIL_TEST:       return "GL_STENCIL_TEST";
     case GL_DEPTH_TEST:         return "GL_DEPTH_TEST";
-    case GL_SCISSOR_TEST:       return "GL_SCISSOR_TEST"; 
+    case GL_SCISSOR_TEST:       return "GL_SCISSOR_TEST";
     case GL_POLYGON_OFFSET_FILL:return "GL_POLYGON_OFFSET_FILL";
     case GL_SAMPLE_ALPHA_TO_COVERAGE:return "GL_SAMPLE_ALPHA_TO_COVERAGE";
     case GL_SAMPLE_COVERAGE:    return "GL_SAMPLE_COVERAGE";
@@ -386,7 +386,7 @@ glEnum2str(GLenum val)
 
 /* TextureMagFilter */
     case GL_NEAREST:            return "GL_NEAREST";
-    case GL_LINEAR:             return "GL_LINEAR"; 
+    case GL_LINEAR:             return "GL_LINEAR";
 
 /* TextureMinFilter */
     case GL_NEAREST_MIPMAP_NEAREST:     return "GL_NEAREST_MIPMAP_NEAREST";

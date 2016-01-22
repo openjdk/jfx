@@ -116,21 +116,21 @@ static RetainPtr<CGImageRef> createDifferenceImage(CGImageRef baseImage, CGImage
             float blue = (pixel[2] - basePixel[2]) / max<float>(255 - basePixel[2], basePixel[2]);
             float alpha = (pixel[3] - basePixel[3]) / max<float>(255 - basePixel[3], basePixel[3]);
             float distance = sqrtf(red * red + green * green + blue * blue + alpha * alpha) / 2.0f;
-            
+
             *diff++ = (unsigned char)(distance * 255.0f);
-            
+
             if (distance >= 1.0f / 255.0f) {
                 count += 1.0f;
                 sum += distance;
                 if (distance > maxDistance)
                     maxDistance = distance;
             }
-            
+
             basePixel += 4;
             pixel += 4;
         }
     }
-    
+
     // Compute the difference as a percentage combining both the number of different pixels and their difference amount i.e. the average distance over the entire image
     if (count > 0.0f)
         difference = 100.0f * sum / (height * width);
@@ -145,27 +145,27 @@ static RetainPtr<CGImageRef> createDifferenceImage(CGImageRef baseImage, CGImage
             for(size_t p = 0; p < height * width; ++p)
                 diff[p] = diff[p] / maxDistance;
         }
-        
+
         static CGColorSpaceRef diffColorspace = CGColorSpaceCreateDeviceGray();
         RetainPtr<CGDataProviderRef> provider = adoptCF(CGDataProviderCreateWithData(0, diffBuffer, width * height, releaseMallocBuffer));
         diffImage = adoptCF(CGImageCreate(width, height, 8, 8, width, diffColorspace, 0, provider.get(), 0, false, kCGRenderingIntentDefault));
     }
     else
         free(diffBuffer);
-    
+
     // Destroy drawing buffers
     if (buffer)
         free(buffer);
     if (baseBuffer)
         free(baseBuffer);
-    
+
     return diffImage;
 }
 
 static inline bool imageHasAlpha(CGImageRef image)
 {
     CGImageAlphaInfo info = CGImageGetAlphaInfo(image);
-    
+
     return (info >= kCGImageAlphaPremultipliedLast) && (info <= kCGImageAlphaFirst);
 }
 
@@ -232,7 +232,7 @@ int main(int argc, const char* argv[])
                         imageHasAlpha(actualImage.get()) ? "has" : "does not have",
                         imageHasAlpha(baselineImage.get()) ? "has" : "does not have");
             }
-            
+
             if (difference > 0.0f) {
                 if (diffImage) {
                     RetainPtr<CFMutableDataRef> imageData = adoptCF(CFDataCreateMutable(0, 0));
@@ -246,7 +246,7 @@ int main(int argc, const char* argv[])
                 fprintf(stdout, "diff: %01.2f%% failed\n", difference);
             } else
                 fprintf(stdout, "diff: %01.2f%% passed\n", difference);
-            
+
             actualImage = 0;
             baselineImage = 0;
         }

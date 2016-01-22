@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -182,7 +182,7 @@ public:
         , m_buffer(encodedType)
     {
     }
-    
+
 private:
     virtual void set(NSInvocation *invocation, NSInteger argumentNumber, JSContext *context, JSValueRef argument, JSValueRef*) override
     {
@@ -316,7 +316,7 @@ public:
         , m_buffer(encodedType)
     {
     }
-    
+
 private:
     virtual JSValueRef get(NSInvocation *invocation, JSContext *context, JSValueRef*) override
     {
@@ -408,7 +408,7 @@ public:
 
     void destroy(Heap& heap)
     {
-        // We need to explicitly release the target since we didn't call 
+        // We need to explicitly release the target since we didn't call
         // -retainArguments on m_invocation (and we don't want to do so).
         if (m_type == CallbackBlock || m_type == CallbackClassMethod)
             heap.releaseSoon(adoptNS([m_invocation.get() target]));
@@ -546,7 +546,7 @@ String ObjCCallbackFunctionImpl::name()
 {
     if (m_type == CallbackInitMethod)
         return class_getName(m_instanceClass);
-    // FIXME: Maybe we could support having the selector as the name of the non-init 
+    // FIXME: Maybe we could support having the selector as the name of the non-init
     // functions to make it a bit more user-friendly from the JS side?
     return "";
 }
@@ -600,7 +600,7 @@ JSValueRef ObjCCallbackFunctionImpl::call(JSContext *context, JSObjectRef thisOb
     JSValueRef result = m_result->get(m_invocation.get(), context, exception);
 
     // Balance our call to -alloc with a call to -autorelease. We have to do this after calling -init
-    // because init family methods are allowed to release the allocated object and return something 
+    // because init family methods are allowed to release the allocated object and return something
     // else in its place.
     if (m_type == CallbackInitMethod) {
         id objcResult = tryUnwrapObjcObject(contextRef, result);
@@ -700,7 +700,7 @@ JSObjectRef objCCallbackFunctionForBlock(JSContext *context, id target)
     const char* signature = _Block_signature(target);
     NSInvocation *invocation = [NSInvocation invocationWithMethodSignature:[NSMethodSignature signatureWithObjCTypes:signature]];
 
-    // We don't want to use -retainArguments because that leaks memory. Arguments 
+    // We don't want to use -retainArguments because that leaks memory. Arguments
     // would be retained indefinitely between invocations of the callback.
     // Additionally, we copy the target because we want the block to stick around
     // until the ObjCCallbackFunctionImpl is destroyed.

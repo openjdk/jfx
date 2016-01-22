@@ -32,7 +32,7 @@ final class PredefinedMeshManager {
     private static final PredefinedMeshManager INSTANCE = new PredefinedMeshManager();
     private static final int INITAL_CAPACITY = 17; // TODO
     private static final float LOAD_FACTOR = 0.75f;
-    
+
     private HashMap<Integer, TriangleMesh> boxCache = null;
     private HashMap<Integer, TriangleMesh> sphereCache = null;
     private HashMap<Integer, TriangleMesh> cylinderCache = null;
@@ -145,7 +145,7 @@ final class PredefinedMeshManager {
         if (boxCache != null) {
             System.out.println("BoxCache size:  " +  boxCache.size());
         }
-        
+
         if (sphereCache != null) {
             System.out.println("SphereCache size:    " + sphereCache.size());
         }

@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -94,7 +94,7 @@ ULONG STDMETHODCALLTYPE WebResource::Release(void)
 
 // WebResource ------------------------------------------------------------------
 
-HRESULT STDMETHODCALLTYPE WebResource::initWithData( 
+HRESULT STDMETHODCALLTYPE WebResource::initWithData(
     /* [in] */ IStream *data,
     /* [in] */ BSTR url,
     /* [in] */ BSTR mimeType,
@@ -110,14 +110,14 @@ HRESULT STDMETHODCALLTYPE WebResource::initWithData(
     return S_OK;
 }
 
-    
-HRESULT STDMETHODCALLTYPE WebResource::data( 
+
+HRESULT STDMETHODCALLTYPE WebResource::data(
     /* [retval][out] */ IStream **data)
 {
     return m_data.copyRefTo(data);
 }
-   
-HRESULT STDMETHODCALLTYPE WebResource::URL( 
+
+HRESULT STDMETHODCALLTYPE WebResource::URL(
     /* [retval][out] */ BSTR *url)
 {
     if (!url) {
@@ -128,8 +128,8 @@ HRESULT STDMETHODCALLTYPE WebResource::URL(
     *url = BString(String(m_url.string())).release();
     return S_OK;
 }
-    
-HRESULT STDMETHODCALLTYPE WebResource::MIMEType( 
+
+HRESULT STDMETHODCALLTYPE WebResource::MIMEType(
     /* [retval][out] */ BSTR *mime)
 {
     if (!mime) {
@@ -140,8 +140,8 @@ HRESULT STDMETHODCALLTYPE WebResource::MIMEType(
     *mime = BString(m_mimeType).release();
     return S_OK;
 }
-   
-HRESULT STDMETHODCALLTYPE WebResource::textEncodingName( 
+
+HRESULT STDMETHODCALLTYPE WebResource::textEncodingName(
     /* [retval][out] */ BSTR *encodingName)
 {
     if (!encodingName) {
@@ -152,8 +152,8 @@ HRESULT STDMETHODCALLTYPE WebResource::textEncodingName(
     *encodingName = BString(m_textEncodingName).release();
     return S_OK;
 }
-    
-HRESULT STDMETHODCALLTYPE WebResource::frameName( 
+
+HRESULT STDMETHODCALLTYPE WebResource::frameName(
     /* [retval][out] */ BSTR *name)
 {
     if (!name) {

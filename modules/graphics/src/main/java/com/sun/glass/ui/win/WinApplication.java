@@ -286,7 +286,7 @@ final class WinApplication extends Application implements InvokeLaterDispatcher.
     }
 
     @Override native protected Screen[] staticScreen_getScreens();
-    
+
     @Override public Timer createTimer(Runnable runnable) {
         return new WinTimer(runnable);
     }
@@ -329,7 +329,7 @@ final class WinApplication extends Application implements InvokeLaterDispatcher.
     @Override protected int staticView_getMultiClickMaxY() {
         return WinView.getMultiClickMaxY_impl();
     }
-    
+
     @Override native protected void _invokeAndWait(Runnable runnable);
 
     native private void _submitForLaterInvocation(Runnable r);
@@ -348,10 +348,10 @@ final class WinApplication extends Application implements InvokeLaterDispatcher.
 
     private native String _getHighContrastTheme();
     @Override public String getHighContrastTheme() {
-    	checkEventThread();
+        checkEventThread();
         return _getHighContrastTheme();
     }
- 
+
     @Override
     protected boolean _supportsInputMethods() {
         return true;
@@ -363,7 +363,7 @@ final class WinApplication extends Application implements InvokeLaterDispatcher.
     }
 
     @Override native protected boolean _supportsUnifiedWindows();
-    
+
     public String getDataDirectory() {
         checkEventThread();
         String baseDirectory = AccessController.doPrivileged((PrivilegedAction<String>) () -> System.getenv("APPDATA"));

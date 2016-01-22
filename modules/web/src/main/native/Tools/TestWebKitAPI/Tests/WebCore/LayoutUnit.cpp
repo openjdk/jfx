@@ -42,7 +42,7 @@ TEST(WebCoreLayoutUnit, LayoutUnitInt)
 {
     ASSERT_EQ(LayoutUnit(INT_MIN).toInt(), intMinForLayoutUnit);
     ASSERT_EQ(LayoutUnit(INT_MIN / 2).toInt(), intMinForLayoutUnit);
-    ASSERT_EQ(LayoutUnit(intMinForLayoutUnit - 1).toInt(), intMinForLayoutUnit); 
+    ASSERT_EQ(LayoutUnit(intMinForLayoutUnit - 1).toInt(), intMinForLayoutUnit);
     ASSERT_EQ(LayoutUnit(intMinForLayoutUnit).toInt(), intMinForLayoutUnit);
     ASSERT_EQ(LayoutUnit(intMinForLayoutUnit + 1).toInt(), intMinForLayoutUnit + 1);
     ASSERT_EQ(LayoutUnit(intMinForLayoutUnit / 2).toInt(), intMinForLayoutUnit / 2);
@@ -76,7 +76,7 @@ TEST(WebCoreLayoutUnit, LayoutUnitFloat)
     ASSERT_NEAR(LayoutUnit(345634).toFloat(), 345634.0f, tolerance);
     ASSERT_NEAR(LayoutUnit(345634.12335f).toFloat(), 345634.12335f, tolerance);
     ASSERT_NEAR(LayoutUnit(-345634.12335f).toFloat(), -345634.12335f, tolerance);
-    ASSERT_NEAR(LayoutUnit(-345634).toFloat(), -345634.0f, tolerance);    
+    ASSERT_NEAR(LayoutUnit(-345634).toFloat(), -345634.0f, tolerance);
 }
 
 TEST(WebCoreLayoutUnit, LayoutUnitRounding)
@@ -114,13 +114,13 @@ TEST(WebCoreLayoutUnit, LayoutUnitSnapSizeToPixel)
     ASSERT_EQ(snapSizeToPixel(LayoutUnit(1.5), LayoutUnit(0.75)), 1);
     ASSERT_EQ(snapSizeToPixel(LayoutUnit(1.5), LayoutUnit(0.99)), 1);
     ASSERT_EQ(snapSizeToPixel(LayoutUnit(1.5), LayoutUnit(1)), 2);
-    
+
     ASSERT_EQ(snapSizeToPixel(LayoutUnit(0.5), LayoutUnit(1.5)), 0);
     ASSERT_EQ(snapSizeToPixel(LayoutUnit(0.99), LayoutUnit(1.5)), 0);
     ASSERT_EQ(snapSizeToPixel(LayoutUnit(1.0), LayoutUnit(1.5)), 1);
     ASSERT_EQ(snapSizeToPixel(LayoutUnit(1.49), LayoutUnit(1.5)), 1);
     ASSERT_EQ(snapSizeToPixel(LayoutUnit(1.5), LayoutUnit(1.5)), 1);
-    
+
     ASSERT_EQ(snapSizeToPixel(LayoutUnit(100.5), LayoutUnit(100)), 101);
     ASSERT_EQ(snapSizeToPixel(LayoutUnit(intMaxForLayoutUnit), LayoutUnit(0.3)), intMaxForLayoutUnit);
     ASSERT_EQ(snapSizeToPixel(LayoutUnit(intMinForLayoutUnit), LayoutUnit(-0.3)), intMinForLayoutUnit);
@@ -134,21 +134,21 @@ TEST(WebCoreLayoutUnit, LayoutUnitMultiplication)
     ASSERT_EQ((LayoutUnit(2) * LayoutUnit(0.5)).toInt(), 1);
     ASSERT_EQ((LayoutUnit(0.5) * LayoutUnit(2)).toInt(), 1);
     ASSERT_EQ((LayoutUnit(100) * LayoutUnit(1)).toInt(), 100);
-    
+
     ASSERT_EQ((LayoutUnit(-1) * LayoutUnit(1)).toInt(), -1);
     ASSERT_EQ((LayoutUnit(-1) * LayoutUnit(2)).toInt(), -2);
     ASSERT_EQ((LayoutUnit(-2) * LayoutUnit(1)).toInt(), -2);
     ASSERT_EQ((LayoutUnit(-2) * LayoutUnit(0.5)).toInt(), -1);
     ASSERT_EQ((LayoutUnit(-0.5) * LayoutUnit(2)).toInt(), -1);
     ASSERT_EQ((LayoutUnit(-100) * LayoutUnit(1)).toInt(), -100);
-    
+
     ASSERT_EQ((LayoutUnit(-1) * LayoutUnit(-1)).toInt(), 1);
     ASSERT_EQ((LayoutUnit(-1) * LayoutUnit(-2)).toInt(), 2);
     ASSERT_EQ((LayoutUnit(-2) * LayoutUnit(-1)).toInt(), 2);
     ASSERT_EQ((LayoutUnit(-2) * LayoutUnit(-0.5)).toInt(), 1);
     ASSERT_EQ((LayoutUnit(-0.5) * LayoutUnit(-2)).toInt(), 1);
     ASSERT_EQ((LayoutUnit(-100) * LayoutUnit(-1)).toInt(), 100);
-    
+
     ASSERT_EQ((LayoutUnit(100) * LayoutUnit(3.33)).round(), 333);
     ASSERT_EQ((LayoutUnit(-100) * LayoutUnit(3.33)).round(), -333);
     ASSERT_EQ((LayoutUnit(-100) * LayoutUnit(-3.33)).round(), 333);
@@ -180,7 +180,7 @@ TEST(WebCoreLayoutUnit, LayoutUnitDivision)
     ASSERT_EQ((LayoutUnit(100) / LayoutUnit(10)).toInt(), 10);
     ASSERT_FLOAT_EQ((LayoutUnit(1) / LayoutUnit(2)).toFloat(), 0.5f);
     ASSERT_FLOAT_EQ((LayoutUnit(0.5) / LayoutUnit(2)).toFloat(), 0.25f);
-    
+
     ASSERT_EQ((LayoutUnit(-1) / LayoutUnit(1)).toInt(), -1);
     ASSERT_EQ((LayoutUnit(-1) / LayoutUnit(2)).toInt(), 0);
     ASSERT_EQ((LayoutUnit(-2) / LayoutUnit(1)).toInt(), -2);
@@ -189,7 +189,7 @@ TEST(WebCoreLayoutUnit, LayoutUnitDivision)
     ASSERT_EQ((LayoutUnit(-100) / LayoutUnit(10)).toInt(), -10);
     ASSERT_FLOAT_EQ((LayoutUnit(-1) / LayoutUnit(2)).toFloat(), -0.5f);
     ASSERT_FLOAT_EQ((LayoutUnit(-0.5) / LayoutUnit(2)).toFloat(), -0.25f);
-    
+
     ASSERT_EQ((LayoutUnit(-1) / LayoutUnit(-1)).toInt(), 1);
     ASSERT_EQ((LayoutUnit(-1) / LayoutUnit(-2)).toInt(), 0);
     ASSERT_EQ((LayoutUnit(-2) / LayoutUnit(-1)).toInt(), 2);
@@ -198,7 +198,7 @@ TEST(WebCoreLayoutUnit, LayoutUnitDivision)
     ASSERT_EQ((LayoutUnit(-100) / LayoutUnit(-10)).toInt(), 10);
     ASSERT_FLOAT_EQ((LayoutUnit(-1) / LayoutUnit(-2)).toFloat(), 0.5f);
     ASSERT_FLOAT_EQ((LayoutUnit(-0.5) / LayoutUnit(-2)).toFloat(), 0.25f);
-    
+
     size_t aHundredSizeT = 100;
     ASSERT_EQ((LayoutUnit(aHundredSizeT) / LayoutUnit(2)).toInt(), 50);
     ASSERT_EQ((aHundredSizeT / LayoutUnit(4)).toInt(), 25);
@@ -216,12 +216,12 @@ TEST(WebCoreLayoutUnit, LayoutUnitCeil)
     ASSERT_EQ(LayoutUnit(0.9).ceil(), 1);
     ASSERT_EQ(LayoutUnit(1.0).ceil(), 1);
     ASSERT_EQ(LayoutUnit(1.1).ceil(), 2);
-    
+
     ASSERT_EQ(LayoutUnit(-0.1).ceil(), 0);
     ASSERT_EQ(LayoutUnit(-0.5).ceil(), 0);
     ASSERT_EQ(LayoutUnit(-0.9).ceil(), 0);
     ASSERT_EQ(LayoutUnit(-1.0).ceil(), -1);
-    
+
     ASSERT_EQ(LayoutUnit(intMaxForLayoutUnit).ceil(), intMaxForLayoutUnit);
     ASSERT_EQ((LayoutUnit(intMaxForLayoutUnit) - LayoutUnit(0.5)).ceil(), intMaxForLayoutUnit);
     ASSERT_EQ((LayoutUnit(intMaxForLayoutUnit) - LayoutUnit(1)).ceil(), intMaxForLayoutUnit - 1);
@@ -237,12 +237,12 @@ TEST(WebCoreLayoutUnit, LayoutUnitFloor)
     ASSERT_EQ(LayoutUnit(0.9).floor(), 0);
     ASSERT_EQ(LayoutUnit(1.0).floor(), 1);
     ASSERT_EQ(LayoutUnit(1.1).floor(), 1);
-    
+
     ASSERT_EQ(LayoutUnit(-0.1).floor(), -1);
     ASSERT_EQ(LayoutUnit(-0.5).floor(), -1);
     ASSERT_EQ(LayoutUnit(-0.9).floor(), -1);
     ASSERT_EQ(LayoutUnit(-1.0).floor(), -1);
-    
+
     ASSERT_EQ(LayoutUnit(intMaxForLayoutUnit).floor(), intMaxForLayoutUnit);
 
     ASSERT_EQ(LayoutUnit(intMinForLayoutUnit).floor(), intMinForLayoutUnit);

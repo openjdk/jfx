@@ -34,7 +34,7 @@
 #include <wtf/Forward.h>
 
 namespace WebCore {
-    
+
 class AXObjectCache;
 class Element;
 class Frame;
@@ -54,7 +54,7 @@ class RenderTextControl;
 class RenderView;
 class VisibleSelection;
 class Widget;
-    
+
 class AccessibilityNodeObject : public AccessibilityObject {
 protected:
     explicit AccessibilityNodeObject(Node*);
@@ -63,7 +63,7 @@ public:
     virtual ~AccessibilityNodeObject();
 
     virtual void init() override;
-    
+
     virtual bool isAccessibilityNodeObject() const override { return true; }
 
     virtual bool canvasHasFallbackContent() const override;
@@ -134,9 +134,9 @@ public:
     Element* mouseButtonListener() const;
     virtual Element* anchorElement() const override;
     AccessibilityObject* menuForMenuButton() const;
-   
+
     virtual void changeValueByPercent(float percentChange);
- 
+
     virtual AccessibilityObject* firstChild() const override;
     virtual AccessibilityObject* lastChild() const override;
     virtual AccessibilityObject* previousSibling() const override;
@@ -184,7 +184,7 @@ protected:
     String accessibilityDescriptionForElements(Vector<Element*> &elements) const;
     virtual LayoutRect boundingBoxRect() const override;
     virtual String ariaDescribedByAttribute() const override;
-    
+
     Element* menuElementForMenuButton() const;
     Element* menuItemElementForMenu() const;
     AccessibilityObject* menuButtonForMenu() const;

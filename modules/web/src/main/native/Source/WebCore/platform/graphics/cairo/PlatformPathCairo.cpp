@@ -24,12 +24,12 @@
 
 namespace WebCore {
 
-static cairo_surface_t* getPathSurface() 
+static cairo_surface_t* getPathSurface()
 {
     return cairo_image_surface_create(CAIRO_FORMAT_A8, 1, 1);
 }
 
-static cairo_surface_t* gPathSurface = getPathSurface(); 
+static cairo_surface_t* gPathSurface = getPathSurface();
 
 CairoPath::CairoPath()
     : m_cr(adoptRef(cairo_create(gPathSurface)))

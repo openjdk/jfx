@@ -127,7 +127,7 @@ namespace WTF {
     template<typename DataType>
     inline auto MessageQueue<DataType>::waitForMessage() -> std::unique_ptr<DataType>
     {
-        MessageQueueWaitResult exitReason; 
+        MessageQueueWaitResult exitReason;
         std::unique_ptr<DataType> result = waitForMessageFilteredWithTimeout(exitReason, [](const DataType&) { return true; }, infiniteTime());
         ASSERT(exitReason == MessageQueueTerminated || exitReason == MessageQueueMessageReceived);
         return result;

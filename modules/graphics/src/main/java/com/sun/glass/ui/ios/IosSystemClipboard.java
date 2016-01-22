@@ -35,8 +35,8 @@ import java.net.URL;
 import java.nio.ByteBuffer;
 import java.util.HashMap;
 
-/** 
- * System (copy/paste) UIPasteboard wrapper class. 
+/**
+ * System (copy/paste) UIPasteboard wrapper class.
  */
 class IosSystemClipboard extends SystemClipboard {
 
@@ -47,7 +47,7 @@ class IosSystemClipboard extends SystemClipboard {
     long seed = 0;
 
     final IosPasteboard pasteboard;
-    
+
     public IosSystemClipboard(String name) {
         super(name);
         if (name.equals(Clipboard.SYSTEM) == true) {
@@ -73,7 +73,7 @@ class IosSystemClipboard extends SystemClipboard {
         while (iterator.hasNext() == true) {
             String mime = (String)iterator.next();
             Object object = data.get(mime);
-        
+
             if (object != null) {
                 if (mime.equals(URI_TYPE) == true) {
                     // synthesize list of urls as seperate pasteboard items
@@ -279,7 +279,7 @@ class IosSystemClipboard extends SystemClipboard {
         return this.pasteboard.getAllowedOperation();
     }
 
-    
+
     @Override
     protected String[] mimesFromSystem() {
         String[][] all = this.pasteboard.getUTFs();
@@ -300,10 +300,10 @@ class IosSystemClipboard extends SystemClipboard {
                 }
             }
         }
-        
+
         String[] strings = new String[mimes.size()];
         mimes.toArray(strings);
-                
+
         return strings;
     }
 
@@ -363,7 +363,7 @@ class IosSystemClipboard extends SystemClipboard {
         }
         return uri;
     }
-    
+
     private URL createUrl(String path, String message) {
         URL url = null;
         try {

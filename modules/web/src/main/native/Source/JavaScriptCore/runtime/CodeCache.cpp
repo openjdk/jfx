@@ -158,7 +158,7 @@ UnlinkedFunctionExecutable* CodeCache::getFunctionExecutableFromGlobalCode(VM& v
     RELEASE_ASSERT(funcExpr->isFuncExprNode());
     FunctionBodyNode* body = static_cast<FuncExprNode*>(funcExpr)->body();
     RELEASE_ASSERT(!program->hasCapturedVariables());
-    
+
     body->setEndPosition(positionBeforeLastNewline);
     RELEASE_ASSERT(body);
     RELEASE_ASSERT(body->ident().isNull());

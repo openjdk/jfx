@@ -284,7 +284,7 @@ bool StyleRareNonInheritedData::counterDataEquivalent(const StyleRareNonInherite
 {
     if (m_counterDirectives.get() == o.m_counterDirectives.get())
         return true;
-        
+
     if (m_counterDirectives && o.m_counterDirectives && *m_counterDirectives == *o.m_counterDirectives)
         return true;
 

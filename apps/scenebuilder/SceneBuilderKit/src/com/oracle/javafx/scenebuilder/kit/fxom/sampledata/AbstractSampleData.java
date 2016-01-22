@@ -38,7 +38,7 @@ import javafx.scene.paint.Color;
  *
  */
 abstract class AbstractSampleData {
-    
+
     private static final String[] lorem = {
         "Lorem ipsum ", //NOI18N
         "dolor sit amet, ", //NOI18N
@@ -75,28 +75,28 @@ abstract class AbstractSampleData {
         "ut tristique sem. ", //NOI18N
         "Nunc in neque nulla. " //NOI18N
     };
-    
+
     private final static Color[] colors = {
         Color.AZURE, Color.CHARTREUSE, Color.CRIMSON, Color.DARKCYAN
     };
-    
+
     private static final String[] alphabet = {
         "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", //NOI18N
         "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z" //NOI18N
     };
-    
+
     public abstract void applyTo(Object sceneGraphObject);
     public abstract void removeFrom(Object sceneGraphObject);
-    
-    
+
+
     /*
      * Utilites for subclasses
      */
-    
+
     protected static String lorem(int index) {
         return lorem[index % lorem.length];
     }
-    
+
     protected static Color color(int index) {
         return colors[index % colors.length];
     }

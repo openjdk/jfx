@@ -57,11 +57,11 @@ import javafx.scene.layout.GridPane;
  *
  */
 public class GridPaneDropTarget extends AbstractDropTarget {
-    
+
     public enum ColumnArea {
         LEFT, CENTER, RIGHT
     }
-    
+
     public enum RowArea {
         TOP, CENTER, BOTTOM
     }
@@ -73,14 +73,14 @@ public class GridPaneDropTarget extends AbstractDropTarget {
     private final ColumnArea targetColumnArea;
     private final RowArea targetRowArea;
 
-    public GridPaneDropTarget(FXOMObject targetGridPane, 
-            int columnIndex, int rowIndex, 
+    public GridPaneDropTarget(FXOMObject targetGridPane,
+            int columnIndex, int rowIndex,
             ColumnArea targetColumnArea, RowArea targetRowArea) {
         assert targetGridPane != null;
         assert targetGridPane.getSceneGraphObject() instanceof GridPane;
         assert columnIndex >= 0;
         assert rowIndex >= 0;
-        
+
         this.targetGridPane = targetGridPane;
         this.targetIndex = -1;
         this.targetColumnIndex = columnIndex;
@@ -93,12 +93,12 @@ public class GridPaneDropTarget extends AbstractDropTarget {
         assert targetGridPane != null;
         assert targetGridPane.getSceneGraphObject() instanceof GridPane;
         assert targetIndex >= -1;
-        
+
         this.targetGridPane = targetGridPane;
         this.targetIndex = targetIndex;
         this.targetColumnIndex = 0;
         this.targetRowIndex = 0;
-        
+
         final GridPane gridPane = (GridPane) targetGridPane.getSceneGraphObject();
         if (Deprecation.getGridPaneColumnCount(gridPane) == 0) {
             this.targetColumnArea = ColumnArea.LEFT;
@@ -127,7 +127,7 @@ public class GridPaneDropTarget extends AbstractDropTarget {
     public RowArea getTargetRowArea() {
         return targetRowArea;
     }
-    
+
     /*
      * AbstractDropTarget
      */
@@ -139,7 +139,7 @@ public class GridPaneDropTarget extends AbstractDropTarget {
     @Override
     public boolean acceptDragSource(AbstractDragSource dragSource) {
         assert dragSource != null;
-        
+
         final boolean result;
         if (dragSource.getDraggedObjects().isEmpty()) {
             result = false;
@@ -148,14 +148,14 @@ public class GridPaneDropTarget extends AbstractDropTarget {
             if (m.isAcceptingSubComponent(dragSource.getDraggedObjects())) {
                 final FXOMObject draggedObject0 = dragSource.getDraggedObjects().get(0);
                 assert draggedObject0.getSceneGraphObject() instanceof Node;
-                
+
                 final Node draggedNode0 = (Node) draggedObject0.getSceneGraphObject();
                 final Integer columIndexObj = GridPane.getColumnIndex(draggedNode0);
                 final Integer rowIndexObj = GridPane.getRowIndex(draggedNode0);
                 final int currentColumnIndex = (columIndexObj == null) ? 0 : columIndexObj;
                 final int currentRowIndex = (rowIndexObj == null) ? 0 : rowIndexObj;
-                
-                final boolean sameContainer 
+
+                final boolean sameContainer
                         = targetGridPane == draggedObject0.getParentObject();
                 final boolean sameColumnIndex
                         = targetColumnIndex == currentColumnIndex;
@@ -164,8 +164,8 @@ public class GridPaneDropTarget extends AbstractDropTarget {
                 final boolean sameArea
                         = (targetColumnArea == ColumnArea.CENTER)
                         && (targetRowArea == RowArea.CENTER);
-                        
-                result = (sameContainer == false) 
+
+                result = (sameContainer == false)
                         || (sameColumnIndex == false)
                         || (sameRowIndex == false)
                         || (sameArea == false);
@@ -173,7 +173,7 @@ public class GridPaneDropTarget extends AbstractDropTarget {
                 result = false;
             }
         }
-        
+
         return result;
     }
 
@@ -181,11 +181,11 @@ public class GridPaneDropTarget extends AbstractDropTarget {
     public Job makeDropJob(AbstractDragSource dragSource, EditorController editorController) {
         assert acceptDragSource(dragSource); // (1)
         assert editorController != null;
-        
+
         final boolean shouldRefreshSceneGraph = true;
         final BatchJob result = new BatchJob(editorController,
                 shouldRefreshSceneGraph, dragSource.makeDropJobDescription());
-        
+
         final List<FXOMObject> draggedObjects = dragSource.getDraggedObjects();
         final FXOMObject hitObject = dragSource.getHitObject();
         final FXOMObject currentParent = hitObject.getParentObject();
@@ -204,21 +204,21 @@ public class GridPaneDropTarget extends AbstractDropTarget {
         //  7) select the dragged objects
         //
         //  Note: if source and target parents are the same, skip #2,#3,#5,#7 and #8
-                        
+
         // Step #1
         final GridSnapshot gridSnapshot;
-        if ((currentParent != null) 
+        if ((currentParent != null)
                 && (currentParent.getSceneGraphObject() instanceof GridPane)) {
             gridSnapshot = new GridSnapshot(draggedObjects);
         } else {
             gridSnapshot = new GridSnapshot(draggedObjects, 1);
         }
-            
+
         if (reparenting) {
-            
+
             // Step #2
             result.addSubJob(new ClearSelectionJob(editorController));
-            
+
             // Step #3
             if (currentParent != null) {
                 for (FXOMObject draggedObject : draggedObjects) {
@@ -227,7 +227,7 @@ public class GridPaneDropTarget extends AbstractDropTarget {
                 }
             }
         }
-        
+
         // Step #4
         final GridBounds snapshotBounds = gridSnapshot.getBounds();
         final int hitColumnIndex = gridSnapshot.getColumnIndex(hitObject);
@@ -237,13 +237,13 @@ public class GridPaneDropTarget extends AbstractDropTarget {
         final int columnDelta = destColumnIndex - hitColumnIndex;
         final int rowDelta = destRowIndex - hitRowIndex;
         final GridBounds adjustedBounds = snapshotBounds.move(columnDelta, rowDelta);
-        
+
         // Step #4.1 : columns
         switch(targetColumnArea) {
-            case LEFT: 
+            case LEFT:
             case RIGHT: { // Insert columns at destColumnIndex
                 final int insertCount = snapshotBounds.getColumnSpan();
-                result.addSubJob(new InsertColumnJob(targetGridPane, 
+                result.addSubJob(new InsertColumnJob(targetGridPane,
                         destColumnIndex, insertCount, editorController));
                 break;
             }
@@ -251,24 +251,24 @@ public class GridPaneDropTarget extends AbstractDropTarget {
                 final int targetColumnCount = Deprecation.getGridPaneColumnCount(gridPane);
                 if (adjustedBounds.getMaxColumnIndex() > targetColumnCount) {
                     final int insertCount = adjustedBounds.getMaxColumnIndex() - targetColumnCount;
-                    result.addSubJob(new InsertColumnJob(targetGridPane, 
+                    result.addSubJob(new InsertColumnJob(targetGridPane,
                             targetColumnCount, insertCount, editorController));
                 }
                 if (adjustedBounds.getMinColumnIndex() < 0) {
                     final int insertCount = -adjustedBounds.getMinColumnIndex();
-                    result.addSubJob(new InsertColumnJob(targetGridPane, 
+                    result.addSubJob(new InsertColumnJob(targetGridPane,
                             0, insertCount, editorController));
                 }
                 break;
             }
         }
-        
+
         // Step #4.2 : rows
         switch(targetRowArea) {
-            case TOP: 
+            case TOP:
             case BOTTOM: { // Insert rows at destRowIndex
                 final int insertCount = snapshotBounds.getRowSpan();
-                result.addSubJob(new InsertRowJob(targetGridPane, 
+                result.addSubJob(new InsertRowJob(targetGridPane,
                         destRowIndex, insertCount, editorController));
                 break;
             }
@@ -276,49 +276,49 @@ public class GridPaneDropTarget extends AbstractDropTarget {
                 final int targetRowCount = Deprecation.getGridPaneRowCount(gridPane);
                 if (adjustedBounds.getMaxRowIndex() > targetRowCount) {
                     final int insertCount = adjustedBounds.getMaxRowIndex() - targetRowCount;
-                    result.addSubJob(new InsertRowJob(targetGridPane, 
+                    result.addSubJob(new InsertRowJob(targetGridPane,
                             targetRowCount, insertCount, editorController));
                 }
                 if (adjustedBounds.getMinRowIndex() < 0) {
                     final int insertCount = -adjustedBounds.getMinRowIndex();
-                    result.addSubJob(new InsertRowJob(targetGridPane, 
+                    result.addSubJob(new InsertRowJob(targetGridPane,
                             0, insertCount, editorController));
                 }
                 break;
             }
         }
-        
+
         if (reparenting) {
-            
+
             // Step #5
             for (FXOMObject draggedObject : draggedObjects) {
-                final Job j = new InsertAsSubComponentJob(draggedObject, 
+                final Job j = new InsertAsSubComponentJob(draggedObject,
                         targetGridPane, targetIndex, editorController);
                 result.addSubJob(j);
             }
         }
-        
+
         // Step #6
         for (FXOMObject draggedObject : draggedObjects) {
             assert draggedObject instanceof FXOMInstance; // Because (1)
             result.addSubJob(new MoveCellContentJob((FXOMInstance) draggedObject,
                     columnDelta, rowDelta, editorController));
         }
-        
+
         if (reparenting) {
-        
+
             // Step #7
             result.addSubJob(new UpdateSelectionJob(draggedObjects, editorController));
         }
-        
+
         assert result.isExecutable();
-        
+
         return result;
     }
-    
+
     @Override
     public boolean isSelectRequiredAfterDrop() {
         return true;
     }
-    
+
 }

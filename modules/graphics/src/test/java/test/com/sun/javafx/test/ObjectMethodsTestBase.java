@@ -150,7 +150,7 @@ public abstract class ObjectMethodsTestBase {
                     }
                 }
             };
-            
+
     public static final TestInstance EQUAL_OBJECTS_TOSTRING_TEST =
             objects -> {
                 for (int i = 0; i < objects.length; ++i) {

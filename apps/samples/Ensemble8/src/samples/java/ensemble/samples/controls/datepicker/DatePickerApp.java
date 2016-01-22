@@ -104,13 +104,13 @@ public class DatePickerApp extends Application {
 
     public Parent createContent() {
         Text datePickerText = new Text("Date:");
-        
+
         hbox = new HBox(18);
         hbox.setAlignment(Pos.CENTER);
         hbox.getChildren().add(datePickerText);
-        
+
         datePicker = createDatePicker();
-        
+
         VBox vbox = new VBox(22);
         vbox.getChildren().addAll(datePickerMenuBar, hbox);
         vbox.setPrefSize(300, 200);
@@ -195,7 +195,7 @@ public class DatePickerApp extends Application {
                 datePicker.setDayCellFactory(null);
             }
         });
-                       
+
         //Set date to today
         final CheckMenuItem todayMenuItem = new CheckMenuItem("Set date to today");
         optionsMenu.getItems().add(todayMenuItem);
@@ -210,8 +210,8 @@ public class DatePickerApp extends Application {
         optionsMenu.getItems().add(showWeekNumMenuItem);
         showWeekNumMenuItem.setOnAction((ActionEvent t) -> {
             datePicker.setShowWeekNumbers(showWeekNumMenuItem.isSelected());
-        });        
-        
+        });
+
         localeToggleGroup.selectedToggleProperty().addListener((ObservableValue<? extends Toggle> ov,
                                                                 Toggle oldToggle, Toggle newToggle) -> {
             if (localeToggleGroup.getSelectedToggle() != null) {
@@ -221,28 +221,28 @@ public class DatePickerApp extends Application {
                 datePicker = createDatePicker();
                 datePicker.setShowWeekNumbers(showWeekNumMenuItem.isSelected());
             }
-        });       
+        });
 
         menuBar.getMenus().addAll(localeMenu, optionsMenu);
         return menuBar;
-    }    
- 
+    }
+
     public void play() {
         originalLocale = Locale.getDefault();
     }
-    
+
     @Override
     public void stop() {
         Locale.setDefault(originalLocale);
     }
-    
+
     @Override
-    public void start(Stage primaryStage) throws Exception { 
-        primaryStage.setScene(new Scene(createContent()));      
+    public void start(Stage primaryStage) throws Exception {
+        primaryStage.setScene(new Scene(createContent()));
         primaryStage.show();
         play();
     }
-    
+
     /**
      * Java main for when running without JavaFX launcher
      * @param args command line arguments

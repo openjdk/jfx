@@ -189,7 +189,7 @@ void Font::drawGlyphs(GraphicsContext* context, const SimpleFontData* font, cons
 
     bool shouldSmoothFonts;
     bool changeFontSmoothing;
-    
+
     switch(fontDescription().fontSmoothing()) {
     case Antialiased: {
         context->setShouldAntialias(true);
@@ -215,7 +215,7 @@ void Font::drawGlyphs(GraphicsContext* context, const SimpleFontData* font, cons
         break;
     }
     }
-    
+
     if (!shouldUseSmoothing()) {
         shouldSmoothFonts = false;
         changeFontSmoothing = true;
@@ -244,7 +244,7 @@ void Font::drawGlyphs(GraphicsContext* context, const SimpleFontData* font, cons
                 [[[platformData.font() fontDescriptor] fontAttributes] objectForKey:NSFontNameAttribute]);
     }
 #endif
-    
+
     CGContextSetFont(cgContext, platformData.cgFont());
 
     bool useLetterpressEffect = shouldUseLetterpressEffect(*context);

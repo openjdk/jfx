@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef JSCellInlines_h
@@ -93,7 +93,7 @@ void* allocateCell(Heap& heap, size_t size)
         result = static_cast<JSCell*>(heap.allocateWithImmortalStructureDestructor(size));
     else if (T::needsDestruction)
         result = static_cast<JSCell*>(heap.allocateWithNormalDestructor(size));
-    else 
+    else
         result = static_cast<JSCell*>(heap.allocateWithoutDestructor(size));
 #if ENABLE(GC_VALIDATION)
     ASSERT(!heap.vm()->isInitializingObject());
@@ -102,13 +102,13 @@ void* allocateCell(Heap& heap, size_t size)
     result->clearStructure();
     return result;
 }
-    
+
 template<typename T>
 void* allocateCell(Heap& heap)
 {
     return allocateCell<T>(heap, sizeof(T));
 }
-    
+
 inline bool isZapped(const JSCell* cell)
 {
     return cell->isZapped();
@@ -185,14 +185,14 @@ ALWAYS_INLINE JSValue JSCell::fastGetOwnProperty(VM& vm, const String& name)
 
 inline bool JSCell::toBoolean(ExecState* exec) const
 {
-    if (isString()) 
+    if (isString())
         return static_cast<const JSString*>(this)->toBoolean();
     return !structure()->masqueradesAsUndefined(exec->lexicalGlobalObject());
 }
 
 inline TriState JSCell::pureToBoolean() const
 {
-    if (isString()) 
+    if (isString())
         return static_cast<const JSString*>(this)->toBoolean() ? TrueTriState : FalseTriState;
     return MixedTriState;
 }

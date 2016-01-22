@@ -61,7 +61,7 @@ public class ImageOperationApp extends Application {
     private SimpleDoubleProperty gridSize = new SimpleDoubleProperty(3.0);
     private SimpleDoubleProperty hueFactor = new SimpleDoubleProperty(12.0);
     private SimpleDoubleProperty hueOffset = new SimpleDoubleProperty(240.0);
-    
+
        private static void renderImage(WritableImage img, double gridSize, double hueFactor, double hueOffset) {
         PixelWriter pw = img.getPixelWriter();
         double w = img.getWidth();
@@ -95,18 +95,18 @@ public class ImageOperationApp extends Application {
         renderImage(img, 3.0, 12.0, 240.0);
 
         ImageView view = new ImageView(img);
-       
+
          root.getChildren().add(view);
-             
+
         return root;
     }
-    
+
     @Override public void start(Stage primaryStage) throws Exception {
         primaryStage.setScene(new Scene(createContent()));
         primaryStage.show();
     }
-    
-    /** Java main for when running without JavaFX launcher 
+
+    /** Java main for when running without JavaFX launcher
      * @param args command line arguments
      */
     public static void main(String[] args) { launch(args); }

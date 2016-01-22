@@ -18,12 +18,12 @@ String MIMETypeRegistry::getMIMETypeForExtension(const String &ext)
     static JGClass cls(env->FindClass("com/sun/webkit/Utilities"));
     ASSERT(cls);
 
-    static jmethodID mid = env->GetStaticMethodID(cls, 
-        "fwkGetMIMETypeForExtension", 
+    static jmethodID mid = env->GetStaticMethodID(cls,
+        "fwkGetMIMETypeForExtension",
         "(Ljava/lang/String;)Ljava/lang/String;");
     ASSERT(mid);
 
-    JLString type(static_cast<jstring>(env->CallStaticObjectMethod(cls, mid, 
+    JLString type(static_cast<jstring>(env->CallStaticObjectMethod(cls, mid,
         (jstring)ext.toJavaString(env))));
     CheckAndClearException(env);
 

@@ -103,7 +103,7 @@ public class MultipleSelectionModelImplTest {
     private TreeItem<String> root;
     private TreeItem<String> ROW_2_TREE_VALUE;
     private TreeItem<String> ROW_5_TREE_VALUE;
-    
+
     // TreeTableView
     private TreeTableView treeTableView;
 
@@ -230,7 +230,7 @@ public class MultipleSelectionModelImplTest {
     private MultipleSelectionModel msModel() {
         return model;
     }
-    
+
     private boolean isTree() {
         return TreeViewShim.is_TreeViewBitSetSelectionModel(model) ||
                TreeTableViewShim.instanceof_TreeTableViewArrayListSelectionModel(model);
@@ -698,9 +698,9 @@ public class MultipleSelectionModelImplTest {
         } else {
             assertEquals(data.get(9), model.getSelectedItem());
         }
-       
+
         model.clearSelection();
-        
+
         // we should select the range from 10 - 4 inclusive
         model.selectRange(10, 3);
         assertEquals(7, model.getSelectedIndices().size());
@@ -790,7 +790,7 @@ public class MultipleSelectionModelImplTest {
         assertFalse(model.isSelected(3));
         assertTrue(model.isSelected(4));
     }
-    
+
     private int rt_28615_row_1_hit_count = 0;
     private int rt_28615_row_2_hit_count = 0;
     @Test public void test_rt_28615() {
@@ -821,16 +821,16 @@ public class MultipleSelectionModelImplTest {
 
         assertEquals(0, rt_28615_row_1_hit_count);
         assertEquals(0, rt_28615_row_2_hit_count);
-        
+
         msModel().select(0);
         assertEquals(1, rt_28615_row_1_hit_count);
         assertEquals(0, rt_28615_row_2_hit_count);
-        
+
         msModel().select(1);
         assertEquals(1, rt_28615_row_1_hit_count);
         assertEquals(1, rt_28615_row_2_hit_count);
     }
-    
+
     private int rt_29860_size_count = 0;
     @Test public void test_rt_29860_add() {
         model.clearSelection();
@@ -845,25 +845,25 @@ public class MultipleSelectionModelImplTest {
         });
 
         assertEquals(0, rt_29860_size_count);
-        
+
         // 0,1,2,3 are all selected. The bug is not that the msModel().getSelectedIndices()
         // list is wrong (it isn't - it's correct). The bug is that the addedSize
         // reported in the callback above is incorrect.
         msModel().selectIndices(0, 1, 2, 3);
-        assertEquals(msModel().getSelectedIndices().toString(), 4, rt_29860_size_count);   
+        assertEquals(msModel().getSelectedIndices().toString(), 4, rt_29860_size_count);
         rt_29860_size_count = 0;
-        
+
         msModel().selectIndices(0,1,2,3,4);
         assertEquals(msModel().getSelectedIndices().toString(), 1, rt_29860_size_count);   // only 4 was selected
         rt_29860_size_count = 0;
-        
+
         msModel().selectIndices(6,7,8);
         assertEquals(3, rt_29860_size_count);   // 6,7,8 was selected
     }
-    
+
     @Test public void test_rt_29821() {
         msModel().setSelectionMode(SelectionMode.MULTIPLE);
-        
+
         IndexedCell cell_3 = VirtualFlowTestUtils.getCell(currentControl, 3);
         assertNotNull(cell_3);
         assertFalse(cell_3.isSelected());
@@ -874,7 +874,7 @@ public class MultipleSelectionModelImplTest {
         assertEquals(1, msModel().getSelectedIndices().size());
 
         // in multiple selection passing in select(null) is a no-op. In single
-        // selection (tested elsewhere), this would result in a clearSelection() 
+        // selection (tested elsewhere), this would result in a clearSelection()
         // call
         msModel().select(null);
         assertTrue(msModel().isSelected(3));

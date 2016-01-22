@@ -73,12 +73,12 @@ public class DisplayShelfApp extends Application {
         // create display shelf
         DisplayShelf displayShelf = new DisplayShelf(images);
         displayShelf.setPrefSize(WIDTH, HEIGHT);
-        
+
         String displayShelfCss = DisplayShelfApp.class.getResource("DisplayShelf.css").toExternalForm();
-        displayShelf.getStylesheets().add(displayShelfCss);       
+        displayShelf.getStylesheets().add(displayShelfCss);
         return displayShelf;
     }
-      
+
     @Override
     public void start(Stage primaryStage) throws Exception {
         primaryStage.setResizable(false);

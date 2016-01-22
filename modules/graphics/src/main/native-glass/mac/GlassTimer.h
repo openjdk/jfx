@@ -35,7 +35,7 @@
 
     pthread_t   _thread;
     BOOL        _running;
-    
+
     int64_t     _period;
     JNIEnv*     _env;
     jobject     _runnable;
@@ -43,7 +43,7 @@
 
 @end
 
-CVReturn CVOutputCallback(CVDisplayLinkRef displayLink, 
-                          const CVTimeStamp *inNow, const CVTimeStamp *inOutputTime, 
-                          CVOptionFlags flagsIn, CVOptionFlags *flagsOut, 
+CVReturn CVOutputCallback(CVDisplayLinkRef displayLink,
+                          const CVTimeStamp *inNow, const CVTimeStamp *inOutputTime,
+                          CVOptionFlags flagsIn, CVOptionFlags *flagsOut,
                           void *displayLinkContext);

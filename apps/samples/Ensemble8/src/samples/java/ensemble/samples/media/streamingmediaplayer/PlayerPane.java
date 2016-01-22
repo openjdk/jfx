@@ -204,10 +204,10 @@ public class PlayerPane extends BorderPane {
         });
         volumeSlider.valueProperty().addListener((ObservableValue<? extends Number> observable,
                                                   Number old, Number now) -> {
-            
+
             mp.setVolume(volumeSlider.getValue() / 100.0);
         });
-        
+
         HBox.setHgrow(volumeSlider, Priority.ALWAYS);
         mediaTopBar.getChildren().add(volumeSlider);
 
@@ -233,23 +233,23 @@ public class PlayerPane extends BorderPane {
         Button backButton = new Button("Back");
         backButton.setId("back-button");
         backButton.setOnAction(backAction);
- 
+
         Button stopButton = new Button("Stop");
         stopButton.setId("stop-button");
         stopButton.setOnAction(stopAction);
- 
+
         Button playButton = new Button("Play");
         playButton.setId("play-button");
         playButton.setOnAction(playAction);
- 
+
         Button pauseButton = new Button("Pause");
         pauseButton.setId("pause-button");
         pauseButton.setOnAction(pauseAction);
- 
+
         Button forwardButton = new Button("Forward");
         forwardButton.setId("forward-button");
         forwardButton.setOnAction(forwardAction);
-        
+
         mediaBottomBar = new HBox();
         mediaBottomBar.setId("bottom");
         mediaBottomBar.setSpacing(0);

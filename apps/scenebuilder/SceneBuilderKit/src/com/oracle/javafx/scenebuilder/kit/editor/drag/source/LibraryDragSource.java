@@ -59,7 +59,7 @@ import com.oracle.javafx.scenebuilder.kit.library.LibraryItem;
  *
  */
 public class LibraryDragSource extends AbstractDragSource {
-    
+
     private final LibraryItem libraryItem;
     private final FXOMDocument targetDocument;
     private FXOMObject libraryItemObject; // Populated lazily
@@ -67,10 +67,10 @@ public class LibraryDragSource extends AbstractDragSource {
 
     public LibraryDragSource(LibraryItem libraryItem, FXOMDocument targetDocument, Window ownerWindow) {
         super(ownerWindow);
-        
+
         assert libraryItem != null;
         assert targetDocument != null;
-        
+
         this.libraryItem = libraryItem;
         this.targetDocument = targetDocument;
     }
@@ -78,7 +78,7 @@ public class LibraryDragSource extends AbstractDragSource {
     public LibraryItem getLibraryItem() {
         return libraryItem;
     }
-    
+
     public FXOMObject getLibraryItemObject() {
         if (libraryItemObject == null) {
             final FXOMDocument itemDocument = libraryItem.instantiate();
@@ -87,7 +87,7 @@ public class LibraryDragSource extends AbstractDragSource {
             libraryItemObject = itemDocument.getFxomRoot();
             libraryItemObject.moveToFxomDocument(targetDocument);
             assert itemDocument.getFxomRoot() == null;
-            
+
             if (libraryItemObject.getSceneGraphObject() instanceof Node) {
                 // We put the library item node in a Scene and layout it.
                 // This will allow ContainerXYDropTarget to measure this
@@ -101,40 +101,40 @@ public class LibraryDragSource extends AbstractDragSource {
                 group.layout();
             }
         }
-        
+
         return libraryItemObject;
     }
-    
+
     /*
      * AbstractDragSource
      */
-    
+
     @Override
     public boolean isAcceptable() {
         // All library drag sources are 'acceptable'
         return true;
     }
 
-    
+
     @Override
     public List<FXOMObject> getDraggedObjects() {
         if (draggedObjects == null) {
             draggedObjects = new ArrayList<>();
             draggedObjects.add(getLibraryItemObject());
         }
-        
+
         return draggedObjects;
     }
-    
+
     @Override
     public FXOMObject getHitObject() {
         return getDraggedObjects().get(0);
     }
-    
+
     @Override
     public double getHitX() {
         final double result;
-        
+
         final FXOMObject hitObject = getHitObject();
         if (hitObject == null) {
             result = Double.NaN;
@@ -145,14 +145,14 @@ public class LibraryDragSource extends AbstractDragSource {
         } else {
             result = 0.0;
         }
-        
+
         return result;
     }
 
     @Override
     public double getHitY() {
         final double result;
-        
+
         final FXOMObject hitObject = getHitObject();
         if (hitObject == null) {
             result = Double.NaN;
@@ -163,17 +163,17 @@ public class LibraryDragSource extends AbstractDragSource {
         } else {
             result = 0.0;
         }
-        
+
         return result;
     }
 
     @Override
     public ClipboardContent makeClipboardContent() {
         final ClipboardContent result = new ClipboardContent();
-        
+
         // Add to content a string which is the Lib Item as an FXML string
         result.putString(libraryItem.getFxmlText());
-        
+
         return result;
     }
 
@@ -193,14 +193,14 @@ public class LibraryDragSource extends AbstractDragSource {
         visualNode.setGraphic(new ImageView(imageFromIcon));
         visualNode.getStylesheets().add(EditorController.getStylesheet().toString());
         visualNode.getStyleClass().add("drag-preview"); //NOI18N
-        
+
         return ImageUtils.getImageFromNode(visualNode);
     }
 
     @Override
     public Node makeShadow() {
         final Group result = new Group();
-        
+
         result.getStylesheets().add(EditorController.getStylesheet().toString());
 
         if (getLibraryItemObject().getSceneGraphObject() instanceof Node) {
@@ -209,17 +209,17 @@ public class LibraryDragSource extends AbstractDragSource {
             shadowNode.setupForNode(sceneGraphNode);
             result.getChildren().add(shadowNode);
         }
-        
+
         // Translate the group so that it is centered above (layoutX, layoutY)
         final Bounds b = result.getBoundsInParent();
         final double centerX = (b.getMinX() + b.getMaxX()) / 2.0;
         final double centerY = (b.getMinY() + b.getMaxY()) / 2.0;
         result.setTranslateX(-centerX);
         result.setTranslateY(-centerY);
-        
+
         return result;
     }
-    
+
     @Override
     public String makeDropJobDescription() {
         return I18N.getString("drop.job.insert.library.item",
@@ -234,48 +234,48 @@ public class LibraryDragSource extends AbstractDragSource {
     @Override
     public boolean isSingleImageViewOnly() {
         final boolean result;
-        
+
         if (getLibraryItemObject() instanceof FXOMInstance) {
             result = getLibraryItemObject().getSceneGraphObject() instanceof ImageView;
         } else {
             result = false;
         }
-        
+
         return result;
     }
 
     @Override
     public boolean isSingleTooltipOnly() {
         final boolean result;
-        
+
         if (getLibraryItemObject() instanceof FXOMInstance) {
             result = getLibraryItemObject().getSceneGraphObject() instanceof Tooltip;
         } else {
             result = false;
         }
-        
+
         return result;
     }
 
     @Override
     public boolean isSingleContextMenuOnly() {
         final boolean result;
-        
+
         if (getLibraryItemObject() instanceof FXOMInstance) {
             result = getLibraryItemObject().getSceneGraphObject() instanceof ContextMenu;
         } else {
             result = false;
         }
-        
+
         return result;
     }
-    
-    
-    
+
+
+
     /*
      * Object
      */
-    
+
     @Override
     public String toString() {
         return getClass().getSimpleName() + ": libraryItem=(" + libraryItem + ")"; //NOI18N

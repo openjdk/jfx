@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #import "config.h"
@@ -95,7 +95,7 @@ void Widget::setFocus(bool focused)
         return;
 
     BEGIN_BLOCK_OBJC_EXCEPTIONS;
- 
+
     // Call this even when there is no platformWidget(). WK2 will focus on the widget in the UIProcess.
     NSView *view = [platformWidget() _webcore_effectiveFirstResponder];
     if (Page* page = frame->page())
@@ -144,7 +144,7 @@ IntRect Widget::frameRect() const
     BEGIN_BLOCK_OBJC_EXCEPTIONS;
     return enclosingIntRect([getOuterView() frame]);
     END_BLOCK_OBJC_EXCEPTIONS;
-    
+
     return m_frame;
 }
 

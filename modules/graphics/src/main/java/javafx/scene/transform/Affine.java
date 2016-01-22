@@ -73,7 +73,7 @@ public class Affine extends Transform {
      * Tracks atomic changes of more elements.
      */
     AffineAtomicChange atomicChange = new AffineAtomicChange();
-    
+
     /**
      * This constant is used for the internal state2d variable to indicate
      * that no calculations need to be performed and that the source
@@ -136,7 +136,7 @@ public class Affine extends Transform {
 
     /**
      * If this is a 2D transform, this field keeps track of which components
-     * of the matrix need to be applied when performing a transformation. 
+     * of the matrix need to be applied when performing a transformation.
      * If this is a 3D transform, its state is store in the state3d variable
      * and value of state2d is undefined.
      * @see #APPLY_IDENTITY
@@ -257,17 +257,17 @@ public class Affine extends Transform {
         xy = mxy;
         xz = mxz;
         xt = tx;
-        
+
         yx = myx;
         yy = myy;
         yz = myz;
         yt = ty;
-        
+
         zx = mzx;
         zy = mzy;
         zz = mzz;
         zt = tz;
-        
+
         updateState();
     }
 
@@ -1269,7 +1269,7 @@ public class Affine extends Transform {
 
         atomicChange.end();
     }
-    
+
     /**
      * 2D implementation of {@code invert()}.
      * The behavior is undefined for a 3D transform.
@@ -1279,7 +1279,7 @@ public class Affine extends Transform {
         double Myx, Myy, Myt;
         double det;
         // assert(state3d == APPLY_NON_3D)
-        
+
         switch (state2d) {
             default:
                 stateError();
@@ -1605,7 +1605,7 @@ public class Affine extends Transform {
         final double m_zy = getMzy();
         final double m_zz = getMzz();
         final double t_z = getTz();
-        
+
         setMxx(m_xx * mxx + m_xy * myx + m_xz * mzx);
         setMxy(m_xx * mxy + m_xy * myy + m_xz * mzy);
         setMxz(m_xx * mxz + m_xy * myz + m_xz * mzz);
@@ -2047,7 +2047,7 @@ public class Affine extends Transform {
             translate3D(tx, ty, 0.0);
             return;
         }
-        
+
         switch (state2d) {
             default:
                 stateError();
@@ -2381,7 +2381,7 @@ public class Affine extends Transform {
     /**
      * <p>
      * Appends the 2D scale with pivot to this instance.
-     * It is equivalent to 
+     * It is equivalent to
      * {@code append(new Scale(sx, sy, pivot.getX(), pivot.getY())}.
      * </p><p>
      * The operation modifies this transform in a way that applying it to a node
@@ -2431,7 +2431,7 @@ public class Affine extends Transform {
     /**
      * <p>
      * Appends the scale with pivot to this instance.
-     * It is equivalent to {@code append(new Scale(sx, sy, sz, pivotX, 
+     * It is equivalent to {@code append(new Scale(sx, sy, sz, pivotX,
      * pivotY, pivotZ))}.
      * </p><p>
      * The operation modifies this transform in a way that applying it to a node
@@ -2499,7 +2499,7 @@ public class Affine extends Transform {
             scale3D(sx, sy, 1.0);
             return;
         }
-        
+
         int mystate = state2d;
         switch (mystate) {
             default:
@@ -2728,7 +2728,7 @@ public class Affine extends Transform {
     /**
      * <p>
      * Prepends the scale with pivot to this instance.
-     * It is equivalent to 
+     * It is equivalent to
      * {@code prepend(new Scale(sx, sy, sz, pivotX, pivotY, pivotZ))}.
      * </p><p>
      * The operation modifies this transform in a way that applying it to a node
@@ -3405,7 +3405,7 @@ public class Affine extends Transform {
         atomicChange.start();
         rotate2D(angle);
         atomicChange.end();
-    } 
+    }
 
     /**
      * <p>
@@ -3576,7 +3576,7 @@ public class Affine extends Transform {
         if (mag == 0.0) {
             return;
         }
-        
+
         mag = 1.0 / mag;
         final double ax = axisX * mag;
         final double ay = axisY * mag;
@@ -3790,7 +3790,7 @@ public class Affine extends Transform {
         }
         state2d = newstate;
     }
-    
+
     /**
      * 2D implementation of {@code appendRotation} for 180 degrees rotation
      * around Z axis.
@@ -3815,7 +3815,7 @@ public class Affine extends Transform {
             }
         }
     }
-    
+
     /**
      * 2D implementation of {@code appendRotation} for 270 degrees rotation
      * around Z axis.
@@ -4462,7 +4462,7 @@ public class Affine extends Transform {
         M0 = getTx();
         setTx(-getTy());
         setTy(M0);
-        
+
         int newstate = rot90conversion[state2d];
         if ((newstate & (APPLY_SHEAR | APPLY_SCALE)) == APPLY_SCALE &&
                 getMxx() == 1.0 && getMyy() == 1.0) {
@@ -5066,7 +5066,7 @@ public class Affine extends Transform {
     }
 
     @Override
-    public Point2D inverseTransform(double x, double y) 
+    public Point2D inverseTransform(double x, double y)
             throws NonInvertibleTransformException {
         ensureCanTransform2DPoint();
 
@@ -5113,7 +5113,7 @@ public class Affine extends Transform {
     }
 
     @Override
-    public Point3D inverseTransform(double x, double y, double z) 
+    public Point3D inverseTransform(double x, double y, double z)
             throws NonInvertibleTransformException {
         switch(state3d) {
             default:

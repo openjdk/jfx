@@ -57,14 +57,14 @@ final class PresentingPainter extends ViewPainter {
                 paintImpl(null);
                 return;
             }
-            
+
             /*
              * As Glass is responsible for creating the rendering contexts,
              * locking should be done prior to the Prism calls.
              */
             sceneState.lock();
             locked = true;
-            
+
             if (factory == null) {
                 factory = GraphicsPipeline.getDefaultResourceFactory();
             }
@@ -82,7 +82,7 @@ final class PresentingPainter extends ViewPainter {
                 penHeight = viewHeight;
                 freshBackBuffer = true;
             }
-            
+
             if (presentable != null) {
                 Graphics g = presentable.createGraphics();
 
@@ -100,7 +100,7 @@ final class PresentingPainter extends ViewPainter {
                     sceneState.getScene().entireSceneNeedsRepaint();
                     return;
                 }
-                
+
                 /* present for vsync buffer swap */
                 if (vs.getDoPresent()) {
                     if (!presentable.present()) {

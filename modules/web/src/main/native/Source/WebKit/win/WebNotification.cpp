@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -101,7 +101,7 @@ ULONG STDMETHODCALLTYPE WebNotification::Release(void)
 
 // IWebNotification -----------------------------------------------------------
 
-HRESULT STDMETHODCALLTYPE WebNotification::notificationWithName( 
+HRESULT STDMETHODCALLTYPE WebNotification::notificationWithName(
     /* [in] */ BSTR /*aName*/,
     /* [in] */ IUnknown* /*anObject*/,
     /* [optional][in] */ IPropertyBag* /*userInfo*/)
@@ -110,7 +110,7 @@ HRESULT STDMETHODCALLTYPE WebNotification::notificationWithName(
     return E_NOTIMPL;
 }
 
-HRESULT STDMETHODCALLTYPE WebNotification::name( 
+HRESULT STDMETHODCALLTYPE WebNotification::name(
     /* [retval][out] */ BSTR* result)
 {
     *result = 0;
@@ -119,11 +119,11 @@ HRESULT STDMETHODCALLTYPE WebNotification::name(
         if (!*result)
             return E_OUTOFMEMORY;
     }
-    
+
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE WebNotification::getObject( 
+HRESULT STDMETHODCALLTYPE WebNotification::getObject(
     /* [retval][out] */ IUnknown** result)
 {
     *result = m_anObject;
@@ -134,7 +134,7 @@ HRESULT STDMETHODCALLTYPE WebNotification::getObject(
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE WebNotification::userInfo( 
+HRESULT STDMETHODCALLTYPE WebNotification::userInfo(
     /* [retval][out] */ IPropertyBag** result)
 {
     *result = m_userInfo;

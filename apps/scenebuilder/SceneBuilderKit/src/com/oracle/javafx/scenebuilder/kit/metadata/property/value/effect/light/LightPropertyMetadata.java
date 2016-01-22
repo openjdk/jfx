@@ -58,11 +58,11 @@ public class LightPropertyMetadata extends ComplexPropertyMetadata<Light> {
     /*
      * ComplexPropertyMetadata
      */
-    
+
     @Override
     public FXOMInstance makeFxomInstanceFromValue(Light value, FXOMDocument fxomDocument) {
         final FXOMInstance result;
-        
+
         if (value instanceof Light.Distant) {
             result = distantLightMetadata.makeFxomInstanceFromValue((Light.Distant) value, fxomDocument);
         } else if (value instanceof Light.Spot) { // Warning : Spot extends Point !
@@ -73,7 +73,7 @@ public class LightPropertyMetadata extends ComplexPropertyMetadata<Light> {
             assert false;
             result = distantLightMetadata.makeFxomInstanceFromValue(new Light.Distant(), fxomDocument);
         }
-        
+
         return result;
     }
 

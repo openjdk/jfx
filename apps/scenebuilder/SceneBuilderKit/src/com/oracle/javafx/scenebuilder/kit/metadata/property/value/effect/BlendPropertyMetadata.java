@@ -46,7 +46,7 @@ import javafx.scene.effect.BlendMode;
  *
  */
 public class BlendPropertyMetadata extends ComplexPropertyMetadata<Blend> {
-    
+
     private final EffectPropertyMetadata bottomInputMetadata
             = new EffectPropertyMetadata(new PropertyName("bottomInput"), //NOI18N
             true /* readWrite */, null, InspectorPath.UNUSED);
@@ -60,7 +60,7 @@ public class BlendPropertyMetadata extends ComplexPropertyMetadata<Blend> {
             = new EnumerationPropertyMetadata(new PropertyName("mode"), //NOI18N
             BlendMode.class, true, BlendMode.SRC_OVER, InspectorPath.UNUSED);
 
-    public BlendPropertyMetadata(PropertyName name, boolean readWrite, 
+    public BlendPropertyMetadata(PropertyName name, boolean readWrite,
             Blend defaultValue, InspectorPath inspectorPath) {
         super(name, Blend.class, readWrite, defaultValue, inspectorPath);
     }
@@ -68,16 +68,16 @@ public class BlendPropertyMetadata extends ComplexPropertyMetadata<Blend> {
     /*
      * ComplexPropertyMetadata
      */
-    
+
     @Override
     public FXOMInstance makeFxomInstanceFromValue(Blend value, FXOMDocument fxomDocument) {
         final FXOMInstance result = new FXOMInstance(fxomDocument, value.getClass());
-        
+
         bottomInputMetadata.setValue(result, value.getBottomInput());
         topInputMetadata.setValue(result, value.getTopInput());
         opacityMetadata.setValue(result, value.getOpacity());
         modeMetadata.setValue(result, value.getMode().toString());
-        
+
         return result;
     }
 }

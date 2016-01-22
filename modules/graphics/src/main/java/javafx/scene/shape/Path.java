@@ -106,7 +106,7 @@ public class Path extends Shape {
             this.elements.addAll(elements);
         }
     }
-    
+
     /**
      * Creates new instance of Path
      * @param elements The collection of the elements of the Path
@@ -245,7 +245,7 @@ public class Path extends Shape {
      */
     @Deprecated
     @Override
-	public Path2D impl_configShape() {
+    public Path2D impl_configShape() {
         if (isPathValid) {
             if (path2d == null) {
                 path2d = PathUtils.configShape(getElements(), getFillRule() == FillRule.EVEN_ODD);
@@ -321,7 +321,7 @@ public class Path extends Shape {
      *                                                                         *
      **************************************************************************/
 
-    /** 
+    /**
      * Some sub-class of Shape, such as {@link Line}, override the
      * default value for the {@link Shape#fill} property. This allows
      * CSS to get the correct initial value.
@@ -331,9 +331,9 @@ public class Path extends Shape {
     @Deprecated
     protected Paint impl_cssGetFillInitialValue() {
         return null;
-    }    
-    
-    /** 
+    }
+
+    /**
      * Some sub-class of Shape, such as {@link Line}, override the
      * default value for the {@link Shape#stroke} property. This allows
      * CSS to get the correct initial value.
@@ -343,7 +343,7 @@ public class Path extends Shape {
     @Deprecated
     protected Paint impl_cssGetStrokeInitialValue() {
         return Color.BLACK;
-    }    
+    }
 
     /**
      * Returns a string representation of this {@code Path} object.

@@ -50,7 +50,7 @@ import javafx.stage.Stage;
  * indicating a correlation.
  *
  * @sampleName Scatter Chart
- * @preview preview.png 
+ * @preview preview.png
  * @see javafx.scene.chart.ScatterChart
  * @see javafx.scene.chart.NumberAxis
  * @related /Charts/Line/Line Chart
@@ -106,7 +106,7 @@ import javafx.stage.Stage;
  * @embedded
  */
 public class ScatterChartApp extends Application {
-    
+
     private ScatterChart chart;
     private NumberAxis xAxis;
     private NumberAxis yAxis;
@@ -131,7 +131,7 @@ public class ScatterChartApp extends Application {
         chart = new ScatterChart(xAxis, yAxis, data);
         return chart;
     }
-    
+
 
     @Override public void start(Stage primaryStage) throws Exception {
         primaryStage.setScene(new Scene(createContent()));

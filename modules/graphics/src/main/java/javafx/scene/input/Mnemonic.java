@@ -67,10 +67,10 @@ public class Mnemonic {
     /**
      * Sets the {@link KeyCombination}
      */
-    public void setKeyCombination(KeyCombination keyCombination) { 
+    public void setKeyCombination(KeyCombination keyCombination) {
         this.keyCombination = keyCombination;
     }
-    
+
     private Node node;
 
     /**
@@ -90,7 +90,7 @@ public class Mnemonic {
      * Fire the {@link javafx.event.ActionEvent ActionEvent}
      */
     public void fire() {
-        if (node != null) 
+        if (node != null)
             node.fireEvent(new ActionEvent());
     }
 }

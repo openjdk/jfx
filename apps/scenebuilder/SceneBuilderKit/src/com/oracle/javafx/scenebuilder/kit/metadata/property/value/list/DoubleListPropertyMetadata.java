@@ -46,7 +46,7 @@ public class DoubleListPropertyMetadata extends ListValuePropertyMetadata<Double
             = new DoublePropertyMetadata(new PropertyName("unused"), //NOI18N
                     DoubleKind.COORDINATE, true, 0.0, InspectorPath.UNUSED);
 
-    public DoubleListPropertyMetadata(PropertyName name, boolean readWrite, 
+    public DoubleListPropertyMetadata(PropertyName name, boolean readWrite,
             List<Double> defaultValue, InspectorPath inspectorPath) {
         super(name, Double.class, itemMetadata, readWrite, defaultValue, inspectorPath);
     }

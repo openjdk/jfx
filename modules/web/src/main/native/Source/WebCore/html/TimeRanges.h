@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef TimeRanges_h
@@ -37,7 +37,7 @@ typedef int ExceptionCode;
 
 class TimeRanges : public RefCounted<TimeRanges> {
 public:
-    static PassRefPtr<TimeRanges> create() 
+    static PassRefPtr<TimeRanges> create()
     {
         return adoptRef(new TimeRanges);
     }
@@ -56,11 +56,11 @@ public:
     double end(unsigned index, ExceptionCode&) const;
 
     void add(double start, double end);
-    
+
     bool contain(double time) const;
 
     size_t find(double time) const;
-    
+
     double nearest(double time) const;
 
     double totalDuration() const;
@@ -85,7 +85,7 @@ private:
         {
             return m_start <= point && point < m_end;
         }
-        
+
         inline bool isOverlappingRange(const Range& range) const
         {
             return isPointInRange(range.m_start) || isPointInRange(range.m_end) || range.isPointInRange(m_start);
@@ -95,7 +95,7 @@ private:
         {
             return range.m_start == m_end || range.m_end == m_start;
         }
-        
+
         inline Range unionWithOverlappingOrContiguousRange(const Range& range) const
         {
             Range ret;
@@ -111,7 +111,7 @@ private:
             return range.m_start >= m_end;
         }
     };
-    
+
     Vector<Range> m_ranges;
 };
 

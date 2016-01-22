@@ -202,7 +202,7 @@ public class BidirectionalContentBindingSetTest {
         assertEquals(set0, op2);
         assertEquals(set0, op3);
 
-        // now unbind 
+        // now unbind
         Bindings.unbindContentBidirectional(op1, op2);
         System.gc(); // making sure we did not not overdo weak references
         assertEquals(set0, op1);

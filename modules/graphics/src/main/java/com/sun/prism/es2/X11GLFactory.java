@@ -54,7 +54,7 @@ class X11GLFactory extends GLFactory {
         new GLGPUInfo("ati", "radeon x1400"),
         new GLGPUInfo("ati", "radeon x1450"),
         new GLGPUInfo("ati", "radeon x1500"),
-        new GLGPUInfo("ati", "radeon x1550"), 
+        new GLGPUInfo("ati", "radeon x1550"),
         new GLGPUInfo("ati", "radeon x1600"),
         new GLGPUInfo("ati", "radeon x1650"),
         new GLGPUInfo("ati", "radeon x1700"),

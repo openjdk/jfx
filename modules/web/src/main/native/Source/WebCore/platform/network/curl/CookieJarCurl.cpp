@@ -168,7 +168,7 @@ static String getNetscapeCookieFormat(const URL& url, const String& value)
         // to treat this as <cookiename>=<empty>
         cookieName = *attribute;
     }
-    
+
     int expires = 0;
     String secure = "FALSE";
     String path = url.baseAsString().substring(url.pathStart());
@@ -188,9 +188,9 @@ static String getNetscapeCookieFormat(const URL& url, const String& value)
                 expires = WTF::parseDateFromNullTerminatedCharacters(dateStr.data()) / WTF::msPerSecond;
             } else if (key == "max-age")
                 expires = time(0) + val.toInt();
-            else if (key == "domain") 
+            else if (key == "domain")
                 domain = val;
-            else if (key == "path") 
+            else if (key == "path")
                 path = val;
         } else {
             String key = attribute->stripWhiteSpace().lower();
@@ -198,14 +198,14 @@ static String getNetscapeCookieFormat(const URL& url, const String& value)
                 secure = "TRUE";
         }
     }
-    
+
     String allowSubdomains = domain.startsWith('.') ? "TRUE" : "FALSE";
     String expiresStr = String::number(expires);
 
     int finalStringLength = domain.length() + path.length() + expiresStr.length() + cookieName.length();
     finalStringLength += cookieValue.length() + secure.length() + allowSubdomains.length();
     finalStringLength += 6; // Account for \t separators.
-    
+
     StringBuilder cookieStr;
     cookieStr.reserveCapacity(finalStringLength);
     cookieStr.append(domain + "\t");

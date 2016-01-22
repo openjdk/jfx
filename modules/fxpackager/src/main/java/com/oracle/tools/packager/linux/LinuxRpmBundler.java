@@ -48,7 +48,7 @@ public class LinuxRpmBundler extends AbstractBundler {
             ResourceBundle.getBundle(LinuxRpmBundler.class.getName());
 
     public static final BundlerParamInfo<LinuxAppBundler> APP_BUNDLER = new StandardBundlerParam<>(
-            I18N.getString("param.app-bundler.name"), 
+            I18N.getString("param.app-bundler.name"),
             I18N.getString("param.app-bundler.description"),
             "linux.app.bundler",
             LinuxAppBundler.class,
@@ -56,7 +56,7 @@ public class LinuxRpmBundler extends AbstractBundler {
             null);
 
     public static final BundlerParamInfo<File> RPM_IMAGE_DIR = new StandardBundlerParam<>(
-            I18N.getString("param.image-dir.name"), 
+            I18N.getString("param.image-dir.name"),
             I18N.getString("param.image-dir.description"),
             "linux.rpm.imageDir",
             File.class,
@@ -68,7 +68,7 @@ public class LinuxRpmBundler extends AbstractBundler {
             (s, p) -> new File(s));
 
     public static final BundlerParamInfo<File> CONFIG_ROOT = new StandardBundlerParam<>(
-            I18N.getString("param.config-root.name"), 
+            I18N.getString("param.config-root.name"),
             I18N.getString("param.config-root.description"),
             "configRoot",
             File.class,
@@ -87,7 +87,7 @@ public class LinuxRpmBundler extends AbstractBundler {
             Pattern.compile("[a-z\\d\\+\\-\\.\\_]+", Pattern.CASE_INSENSITIVE);
 
     public static final BundlerParamInfo<String> BUNDLE_NAME = new StandardBundlerParam<> (
-            I18N.getString("param.bundle-name.name"), 
+            I18N.getString("param.bundle-name.name"),
             I18N.getString("param.bundle-name.description"),
             "linux.bundleName",
             String.class,
@@ -219,7 +219,7 @@ public class LinuxRpmBundler extends AbstractBundler {
                         I18N.getString("error.no-support-for-peruser-daemons"),
                         I18N.getString("error.no-support-for-peruser-daemons.advice"));
             }
-            
+
             // only one mime type per association, at least one file extension
             List<Map<String, ? super Object>> associations = FILE_ASSOCIATIONS.fetchFrom(p);
             if (associations != null) {
@@ -305,7 +305,7 @@ public class LinuxRpmBundler extends AbstractBundler {
 
     /*
      * set permissions with a string like "rwxr-xr-x"
-     * 
+     *
      * This cannot be directly backport to 22u which is unfortunately built with 1.6
      */
     private void setPermissions(File file, String permissions) {
@@ -318,7 +318,7 @@ public class LinuxRpmBundler extends AbstractBundler {
             Logger.getLogger(LinuxDebBundler.class.getName()).log(Level.SEVERE, null, ex);
         }
     }
-    
+
     protected void saveConfigFiles(Map<String, ? super Object> params) {
         try {
             File configRoot = CONFIG_ROOT.fetchFrom(params);
@@ -450,9 +450,9 @@ public class LinuxRpmBundler extends AbstractBundler {
             cdsScript.append(data.get("APPLICATION_LAUNCHER_FILENAME"));
             cdsScript.append(" -Xappcds:generatecache\n");
         }
-        
+
         data.put("APP_CDS_CACHE", cdsScript.toString());
-        
+
         List<Map<String, ? super Object>> associations = FILE_ASSOCIATIONS.fetchFrom(params);
         data.put("FILE_ASSOCIATION_INSTALL", "");
         data.put("FILE_ASSOCIATION_REMOVE", "");
@@ -593,8 +593,8 @@ public class LinuxRpmBundler extends AbstractBundler {
             w = new BufferedWriter(new FileWriter(getConfig_InitScriptFile(params)));
             content = preprocessTextResource(
                     LinuxAppBundler.LINUX_BUNDLER_PREFIX + getConfig_InitScriptFile(params).getName(),
-                    I18N.getString("resource.rpm-init-script"), 
-                    DEFAULT_INIT_SCRIPT_TEMPLATE, 
+                    I18N.getString("resource.rpm-init-script"),
+                    DEFAULT_INIT_SCRIPT_TEMPLATE,
                     data,
                     VERBOSE.fetchFrom(params),
                     DROP_IN_RESOURCES_ROOT.fetchFrom(params));

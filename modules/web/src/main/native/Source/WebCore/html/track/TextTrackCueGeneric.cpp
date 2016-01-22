@@ -47,9 +47,9 @@ public:
     {
         return adoptRef(new TextTrackCueGenericBoxElement(document, cue));
     }
-    
+
     virtual void applyCSSProperties(const IntSize&) override;
-    
+
 private:
     TextTrackCueGenericBoxElement(Document&, VTTCue*);
 };
@@ -63,7 +63,7 @@ void TextTrackCueGenericBoxElement::applyCSSProperties(const IntSize& videoSize)
 {
     setInlineStyleProperty(CSSPropertyPosition, CSSValueAbsolute);
     setInlineStyleProperty(CSSPropertyUnicodeBidi, CSSValueWebkitPlaintext);
-    
+
     TextTrackCueGeneric* cue = static_cast<TextTrackCueGeneric*>(getCue());
     RefPtr<HTMLSpanElement> cueElement = cue->element();
 
@@ -137,7 +137,7 @@ void TextTrackCueGeneric::setFontSize(int fontSize, const IntSize& videoSize, bo
 {
     if (!hasDisplayTree() || !fontSize)
         return;
-    
+
     if (important || !baseFontSizeRelativeToVideoHeight()) {
         VTTCue::setFontSize(fontSize, videoSize, important);
         return;
@@ -150,7 +150,7 @@ void TextTrackCueGeneric::setFontSize(int fontSize, const IntSize& videoSize, bo
 
     LOG(Media, "TextTrackCueGeneric::setFontSize - setting cue font size to %li", lround(size));
 }
-    
+
 bool TextTrackCueGeneric::isEqual(const VTTCue& cue, VTTCue::CueMatchRules match) const
 {
     if (cue.cueType() != TextTrackCue::Generic)
@@ -186,7 +186,7 @@ bool TextTrackCueGeneric::isOrderedBefore(const TextTrackCue* that) const
 
     return false;
 }
-    
+
 } // namespace WebCore
 
 #endif

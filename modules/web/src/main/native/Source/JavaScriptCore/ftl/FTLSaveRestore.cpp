@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -74,15 +74,15 @@ void saveAllRegisters(MacroAssembler& jit, char* scratchMemory)
     // Get the first register out of the way, so that we can use it as a pointer.
     jit.poke64(MacroAssembler::firstRealRegister(), 0);
     jit.move(MacroAssembler::TrustedImmPtr(scratchMemory), MacroAssembler::firstRealRegister());
-    
+
     // Get all of the other GPRs out of the way.
     for (MacroAssembler::RegisterID reg = MacroAssembler::secondRealRegister(); reg <= MacroAssembler::lastRegister(); reg = MacroAssembler::nextRegister(reg))
         jit.store64(reg, MacroAssembler::Address(MacroAssembler::firstRealRegister(), offsetOfGPR(reg)));
-    
+
     // Restore the first register into the second one and save it.
     jit.peek64(MacroAssembler::secondRealRegister(), 0);
     jit.store64(MacroAssembler::secondRealRegister(), MacroAssembler::Address(MacroAssembler::firstRealRegister(), offsetOfGPR(MacroAssembler::firstRealRegister())));
-    
+
     // Finally save all FPR's.
     for (MacroAssembler::FPRegisterID reg = MacroAssembler::firstFPRegister(); reg <= MacroAssembler::lastFPRegister(); reg = MacroAssembler::nextFPRegister(reg))
         jit.storeDouble(reg, MacroAssembler::Address(MacroAssembler::firstRealRegister(), offsetOfFPR(reg)));
@@ -92,14 +92,14 @@ void restoreAllRegisters(MacroAssembler& jit, char* scratchMemory)
 {
     // Give ourselves a pointer to the scratch memory.
     jit.move(MacroAssembler::TrustedImmPtr(scratchMemory), MacroAssembler::firstRealRegister());
-    
+
     // Restore all FPR's.
     for (MacroAssembler::FPRegisterID reg = MacroAssembler::firstFPRegister(); reg <= MacroAssembler::lastFPRegister(); reg = MacroAssembler::nextFPRegister(reg))
         jit.loadDouble(MacroAssembler::Address(MacroAssembler::firstRealRegister(), offsetOfFPR(reg)), reg);
-    
+
     for (MacroAssembler::RegisterID reg = MacroAssembler::secondRealRegister(); reg <= MacroAssembler::lastRegister(); reg = MacroAssembler::nextRegister(reg))
         jit.load64(MacroAssembler::Address(MacroAssembler::firstRealRegister(), offsetOfGPR(reg)), reg);
-    
+
     jit.load64(MacroAssembler::Address(MacroAssembler::firstRealRegister(), offsetOfGPR(MacroAssembler::firstRealRegister())), MacroAssembler::firstRealRegister());
 }
 

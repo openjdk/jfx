@@ -60,7 +60,7 @@ import javafx.css.Styleable;
 import javafx.css.StyleableProperty;
 
 /**
- * A axis implementation that will works on string categories where each 
+ * A axis implementation that will works on string categories where each
  * value as a unique category(tick mark) along the axis.
  * @since JavaFX 2.0
  */
@@ -89,7 +89,7 @@ public final class CategoryAxis extends Axis<String> {
             requestAxisLayout();
         }
     };
-    
+
     // -------------- PUBLIC PROPERTIES ----------------------------------------
 
     /** The margin between the axis start and the first tick-mark */
@@ -101,7 +101,7 @@ public final class CategoryAxis extends Axis<String> {
         @Override public CssMetaData<CategoryAxis,Number> getCssMetaData() {
             return StyleableProperties.START_MARGIN;
         }
-        
+
         @Override
         public Object getBean() {
             return CategoryAxis.this;
@@ -153,7 +153,7 @@ public final class CategoryAxis extends Axis<String> {
         @Override public CssMetaData<CategoryAxis,Boolean> getCssMetaData() {
             return StyleableProperties.GAP_START_AND_END;
         }
-        
+
         @Override
         public Object getBean() {
             return CategoryAxis.this;
@@ -209,7 +209,7 @@ public final class CategoryAxis extends Axis<String> {
         }
         requestAxisLayout();
     }
-    
+
     private void checkAndRemoveDuplicates(String category) {
         if (getDuplicate() != null) {
             getCategories().remove(category);
@@ -218,7 +218,7 @@ public final class CategoryAxis extends Axis<String> {
     }
 
     private String getDuplicate() {
-        if (getCategories() != null) { 
+        if (getCategories() != null) {
             for (int i = 0; i < getCategories().size(); i++) {
                 for (int j = 0; j < getCategories().size(); j++) {
                     if (getCategories().get(i).equals(getCategories().get(j)) && i != j) {
@@ -253,7 +253,7 @@ public final class CategoryAxis extends Axis<String> {
     /**
      * Create a auto-ranging category axis with an empty list of categories.
      */
-    public CategoryAxis() { 
+    public CategoryAxis() {
         changeIsLocal = true;
         setCategories(FXCollections.<String>observableArrayList());
         changeIsLocal = false;
@@ -436,18 +436,18 @@ public final class CategoryAxis extends Axis<String> {
      */
     @Override public void invalidateRange(List<String> data) {
         super.invalidateRange(data);
-        // Create unique set of category names        
+        // Create unique set of category names
         List<String> categoryNames = new ArrayList<String>();
         categoryNames.addAll(allDataCategories);
         //RT-21141 allDataCategories needs to be updated based on data -
         // and should maintain the order it originally had for the categories already present.
         // and remove categories not present in data
         for(String cat : allDataCategories) {
-            if (!data.contains(cat)) categoryNames.remove(cat); 
+            if (!data.contains(cat)) categoryNames.remove(cat);
         }
         // add any new category found in data
 //        for(String cat : data) {
-        for (int i = 0; i < data.size(); i++) {    
+        for (int i = 0; i < data.size(); i++) {
            int len = categoryNames.size();
            if (!categoryNames.contains(data.get(i))) categoryNames.add((i > len) ? len : i, data.get(i));
         }
@@ -564,7 +564,7 @@ public final class CategoryAxis extends Axis<String> {
                 return (StyleableProperty<Number>)(WritableValue<Number>)n.startMarginProperty();
             }
         };
-        
+
         private static final CssMetaData<CategoryAxis,Number> END_MARGIN =
             new CssMetaData<CategoryAxis,Number>("-fx-end-margin",
                 SizeConverter.getInstance(), 5.0) {
@@ -579,7 +579,7 @@ public final class CategoryAxis extends Axis<String> {
                 return (StyleableProperty<Number>)(WritableValue<Number>)n.endMarginProperty();
             }
         };
-        
+
         private static final CssMetaData<CategoryAxis,Boolean> GAP_START_AND_END =
             new CssMetaData<CategoryAxis,Boolean>("-fx-gap-start-and-end",
                 BooleanConverter.getInstance(), Boolean.TRUE) {

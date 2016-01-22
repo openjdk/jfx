@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -60,7 +60,7 @@ void ToFTLForOSREntryDeferredCompilationCallback::compilationDidBecomeReadyAsync
             "Optimizing compilation of ", *codeBlock, " (for ", *m_dfgCodeBlock,
             ") did become ready.\n");
     }
-    
+
     m_dfgCodeBlock->jitCode()->dfg()->forceOptimizationSlowPathConcurrently(
         m_dfgCodeBlock.get());
 }
@@ -73,9 +73,9 @@ void ToFTLForOSREntryDeferredCompilationCallback::compilationDidComplete(
             "Optimizing compilation of ", *codeBlock, " (for ", *m_dfgCodeBlock,
             ") result: ", result, "\n");
     }
-    
+
     JITCode* jitCode = m_dfgCodeBlock->jitCode()->dfg();
-        
+
     switch (result) {
     case CompilationSuccessful:
         jitCode->osrEntryBlock = codeBlock;
@@ -90,7 +90,7 @@ void ToFTLForOSREntryDeferredCompilationCallback::compilationDidComplete(
         jitCode->osrEntryRetry = 0;
         return;
     }
-    
+
     RELEASE_ASSERT_NOT_REACHED();
 }
 

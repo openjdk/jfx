@@ -54,7 +54,7 @@ import javafx.stage.Stage;
  */
 public class PolygonApp extends Application {
 
-    // Will be a simple red-filled triangle         
+    // Will be a simple red-filled triangle
     private Polygon polygon1 = new Polygon(new double[]{
             45 , 10 ,
             10 , 80 ,

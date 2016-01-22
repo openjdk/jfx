@@ -52,7 +52,7 @@ public enum CssFlags {
      * Indicates that we must reapply all the styles from this point downwards
      * in the tree, including figuring out which styles apply to each Node. This
      * is the most expensive CSS operation that can occur, and usually only
-     * happens when the CSS tree has changed. 
+     * happens when the CSS tree has changed.
      */
     REAPPLY
 }

@@ -322,7 +322,7 @@ public class Path2DTest {
             }
         }
     }
-    
+
     private void testSmoothCurves(Path2D pabs, Path2D psmooth,
                                   int x0, int y0, int x1, int y1)
     {

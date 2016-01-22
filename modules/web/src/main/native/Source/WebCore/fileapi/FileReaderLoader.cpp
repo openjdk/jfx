@@ -302,7 +302,7 @@ String FileReaderLoader::stringResult()
     default:
         ASSERT_NOT_REACHED();
     }
-    
+
     return m_stringResult;
 }
 
@@ -314,7 +314,7 @@ void FileReaderLoader::convertToText()
     // Decode the data.
     // The File API spec says that we should use the supplied encoding if it is valid. However, we choose to ignore this
     // requirement in order to be consistent with how WebKit decodes the web content: always has the BOM override the
-    // provided encoding.     
+    // provided encoding.
     // FIXME: consider supporting incremental decoding to improve the perf.
     StringBuilder builder;
     if (!m_decoder)
@@ -360,5 +360,5 @@ void FileReaderLoader::setEncoding(const String& encoding)
 }
 
 } // namespace WebCore
- 
+
 #endif // ENABLE(BLOB)

@@ -335,12 +335,12 @@ public:
     typedef typename CrossThreadTaskTraits<P6>::ParamType Param6;
     typedef typename CrossThreadTaskTraits<P7>::ParamType Param7;
     typedef typename CrossThreadTaskTraits<P8>::ParamType Param8;
-    
+
     static PassOwnPtr<CrossThreadTask> create(Method method, Param1 parameter1, Param2 parameter2, Param3 parameter3, Param4 parameter4, Param5 parameter5, Param6 parameter6, Param7 parameter7, Param8 parameter8)
     {
         return adoptPtr(new CrossThreadTask(method, parameter1, parameter2, parameter3, parameter4, parameter5, parameter6, parameter7, parameter8));
     }
-    
+
 private:
     CrossThreadTask8(Method method, Param1 parameter1, Param2 parameter2, Param3 parameter3, Param4 parameter4, Param5 parameter5, Param6 parameter6, Param7 parameter7, Param8 parameter8)
     : m_method(method)
@@ -354,12 +354,12 @@ private:
     , m_parameter8(parameter8)
     {
     }
-    
+
     virtual void performTask(ScriptExecutionContext* context)
     {
         (*m_method)(context, m_parameter1, m_parameter2, m_parameter3, m_parameter4, m_parameter5, m_parameter6, m_parameter7, m_parameter8);
     }
-    
+
 private:
     Method m_method;
     P1 m_parameter1;

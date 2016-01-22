@@ -76,23 +76,23 @@ final class IosWindow extends Window {
     protected void _setCursor(long ptr, Cursor cursor) {
         ((IosCursor)cursor).set();
     }
-    
+
     @Override
     native protected void _requestInput(long ptr, String text, int type, double width, double height,
                                                     double Mxx, double Mxy, double Mxz, double Mxt,
                                                     double Myx, double Myy, double Myz, double Myt,
                                                     double Mzx, double Mzy, double Mzz, double Mzt);
-    
+
     @Override
     native protected void _releaseInput(long ptr);
-    
-    @Override 
+
+    @Override
     protected int _getEmbeddedX(long ptr) {
         // implement for child windows
         return 0;
     }
-    
-    @Override 
+
+    @Override
     protected int _getEmbeddedY(long ptr) {
         // implement for child windows
         return 0;

@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -42,7 +42,7 @@ bool PutByIdStatus::hasExitSite(const ConcurrentJITLocker& locker, CodeBlock* pr
         || profiledBlock->hasExitSite(locker, DFG::FrequentExitSite(bytecodeIndex, BadCacheWatchpoint, exitType))
         || profiledBlock->hasExitSite(locker, DFG::FrequentExitSite(bytecodeIndex, BadWeakConstantCache, exitType))
         || profiledBlock->hasExitSite(locker, DFG::FrequentExitSite(bytecodeIndex, BadWeakConstantCacheWatchpoint, exitType));
-    
+
 }
 #endif
 
@@ -57,32 +57,32 @@ PutByIdStatus PutByIdStatus::computeFromLLInt(CodeBlock* profiledBlock, unsigned
     Structure* structure = instruction[4].u.structure.get();
     if (!structure)
         return PutByIdStatus(NoInformation, 0, 0, 0, invalidOffset);
-    
+
     if (instruction[0].u.opcode == LLInt::getOpcode(llint_op_put_by_id)
         || instruction[0].u.opcode == LLInt::getOpcode(llint_op_put_by_id_out_of_line)) {
         PropertyOffset offset = structure->getConcurrently(*profiledBlock->vm(), uid);
         if (!isValidOffset(offset))
             return PutByIdStatus(NoInformation, 0, 0, 0, invalidOffset);
-        
+
         return PutByIdStatus(SimpleReplace, structure, 0, 0, offset);
     }
-    
+
     ASSERT(structure->transitionWatchpointSetHasBeenInvalidated());
-    
+
     ASSERT(instruction[0].u.opcode == LLInt::getOpcode(llint_op_put_by_id_transition_direct)
            || instruction[0].u.opcode == LLInt::getOpcode(llint_op_put_by_id_transition_normal)
            || instruction[0].u.opcode == LLInt::getOpcode(llint_op_put_by_id_transition_direct_out_of_line)
            || instruction[0].u.opcode == LLInt::getOpcode(llint_op_put_by_id_transition_normal_out_of_line));
-    
+
     Structure* newStructure = instruction[6].u.structure.get();
     StructureChain* chain = instruction[7].u.structureChain.get();
     ASSERT(newStructure);
     ASSERT(chain);
-    
+
     PropertyOffset offset = newStructure->getConcurrently(*profiledBlock->vm(), uid);
     if (!isValidOffset(offset))
         return PutByIdStatus(NoInformation, 0, 0, 0, invalidOffset);
-    
+
     return PutByIdStatus(
         SimpleTransition, structure, newStructure,
         chain ? adoptRef(new IntendedStructureChain(profiledBlock, structure, chain)) : 0,
@@ -95,7 +95,7 @@ PutByIdStatus PutByIdStatus::computeFromLLInt(CodeBlock* profiledBlock, unsigned
 PutByIdStatus PutByIdStatus::computeFor(CodeBlock* profiledBlock, StubInfoMap& map, unsigned bytecodeIndex, StringImpl* uid)
 {
     ConcurrentJITLocker locker(profiledBlock->m_lock);
-    
+
     UNUSED_PARAM(profiledBlock);
     UNUSED_PARAM(bytecodeIndex);
     UNUSED_PARAM(uid);
@@ -103,12 +103,12 @@ PutByIdStatus PutByIdStatus::computeFor(CodeBlock* profiledBlock, StubInfoMap& m
     if (profiledBlock->likelyToTakeSlowCase(bytecodeIndex)
         || hasExitSite(locker, profiledBlock, bytecodeIndex))
         return PutByIdStatus(TakesSlowPath, 0, 0, 0, invalidOffset);
-    
+
     StructureStubInfo* stubInfo = map.get(CodeOrigin(bytecodeIndex));
     PutByIdStatus result = computeForStubInfo(locker, profiledBlock, stubInfo, uid);
     if (!result)
         return computeFromLLInt(profiledBlock, bytecodeIndex, uid);
-    
+
     return result;
 #else // ENABLE(JIT)
     UNUSED_PARAM(map);
@@ -121,7 +121,7 @@ PutByIdStatus PutByIdStatus::computeForStubInfo(const ConcurrentJITLocker&, Code
 {
     if (!stubInfo || !stubInfo->seen)
         return PutByIdStatus();
-    
+
     if (stubInfo->resetByGC)
         return PutByIdStatus(TakesSlowPath, 0, 0, 0, invalidOffset);
 
@@ -129,7 +129,7 @@ PutByIdStatus PutByIdStatus::computeForStubInfo(const ConcurrentJITLocker&, Code
     case access_unset:
         // If the JIT saw it but didn't optimize it, then assume that this takes slow path.
         return PutByIdStatus(TakesSlowPath, 0, 0, 0, invalidOffset);
-        
+
     case access_put_by_id_replace: {
         PropertyOffset offset =
             stubInfo->u.putByIdReplace.baseObjectStructure->getConcurrently(
@@ -143,11 +143,11 @@ PutByIdStatus PutByIdStatus::computeForStubInfo(const ConcurrentJITLocker&, Code
         }
         return PutByIdStatus(TakesSlowPath, 0, 0, 0, invalidOffset);
     }
-        
+
     case access_put_by_id_transition_normal:
     case access_put_by_id_transition_direct: {
         ASSERT(stubInfo->u.putByIdTransition.previousStructure->transitionWatchpointSetHasBeenInvalidated());
-        PropertyOffset offset = 
+        PropertyOffset offset =
             stubInfo->u.putByIdTransition.structure->getConcurrently(
                 *profiledBlock->vm(), uid);
         if (isValidOffset(offset)) {
@@ -162,7 +162,7 @@ PutByIdStatus PutByIdStatus::computeForStubInfo(const ConcurrentJITLocker&, Code
         }
         return PutByIdStatus(TakesSlowPath, 0, 0, 0, invalidOffset);
     }
-        
+
     default:
         // FIXME: We should handle polymorphic PutById. We probably have some interesting things
         // we could do about it.
@@ -180,13 +180,13 @@ PutByIdStatus PutByIdStatus::computeFor(CodeBlock* baselineBlock, CodeBlock* dfg
             if (hasExitSite(locker, baselineBlock, codeOrigin.bytecodeIndex, ExitFromFTL))
                 return PutByIdStatus(TakesSlowPath);
         }
-            
+
         PutByIdStatus result;
         {
             ConcurrentJITLocker locker(dfgBlock->m_lock);
             result = computeForStubInfo(locker, dfgBlock, dfgMap.get(codeOrigin), uid);
         }
-        
+
         if (result.isSet())
             return result;
     }
@@ -205,13 +205,13 @@ PutByIdStatus PutByIdStatus::computeFor(VM& vm, JSGlobalObject* globalObject, St
 
     if (!structure)
         return PutByIdStatus(TakesSlowPath);
-    
+
     if (structure->typeInfo().overridesGetOwnPropertySlot() && structure->typeInfo().type() != GlobalObjectType)
         return PutByIdStatus(TakesSlowPath);
 
     if (!structure->propertyAccessesAreCacheable())
         return PutByIdStatus(TakesSlowPath);
-    
+
     unsigned attributes;
     JSCell* specificValue;
     PropertyOffset offset = structure->getConcurrently(vm, uid, attributes, specificValue);
@@ -225,10 +225,10 @@ PutByIdStatus PutByIdStatus::computeFor(VM& vm, JSGlobalObject* globalObject, St
         }
         return PutByIdStatus(SimpleReplace, structure, 0, 0, offset);
     }
-    
+
     // Our hypothesis is that we're doing a transition. Before we prove that this is really
     // true, we want to do some sanity checks.
-    
+
     // Don't cache put transitions on dictionaries.
     if (structure->isDictionary())
         return PutByIdStatus(TakesSlowPath);
@@ -237,15 +237,15 @@ PutByIdStatus PutByIdStatus::computeFor(VM& vm, JSGlobalObject* globalObject, St
     // we don't want to be adding properties to strings.
     if (structure->typeInfo().type() == StringType)
         return PutByIdStatus(TakesSlowPath);
-    
+
     RefPtr<IntendedStructureChain> chain;
     if (!isDirect) {
         chain = adoptRef(new IntendedStructureChain(globalObject, structure));
-        
+
         // If the prototype chain has setters or read-only properties, then give up.
         if (chain->mayInterceptStoreTo(vm, uid))
             return PutByIdStatus(TakesSlowPath);
-        
+
         // If the prototype chain hasn't been normalized (i.e. there are proxies or dictionaries)
         // then give up. The dictionary case would only happen if this structure has not been
         // used in an optimized put_by_id transition. And really the only reason why we would
@@ -256,7 +256,7 @@ PutByIdStatus PutByIdStatus::computeFor(VM& vm, JSGlobalObject* globalObject, St
         if (!chain->isNormalized())
             return PutByIdStatus(TakesSlowPath);
     }
-    
+
     // We only optimize if there is already a structure that the transition is cached to.
     // Among other things, this allows us to guard against a transition with a specific
     // value.
@@ -275,7 +275,7 @@ PutByIdStatus PutByIdStatus::computeFor(VM& vm, JSGlobalObject* globalObject, St
         return PutByIdStatus(TakesSlowPath); // This occurs in bizarre cases only. See above.
     ASSERT(!transition->transitionDidInvolveSpecificValue());
     ASSERT(isValidOffset(offset));
-    
+
     return PutByIdStatus(SimpleTransition, structure, transition, chain.release(), offset);
 }
 

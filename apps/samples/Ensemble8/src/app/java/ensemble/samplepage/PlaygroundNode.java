@@ -48,7 +48,7 @@ public class PlaygroundNode extends VBox {
         PlaygroundTabs playgroundTabs = new PlaygroundTabs(samplePage);
         setAlignment(Pos.TOP_LEFT);
         getChildren().setAll(
-                title("PLAYGROUND"), 
+                title("PLAYGROUND"),
                 playgroundTabs);
         VBox.setVgrow(playgroundTabs, Priority.ALWAYS);
         getStyleClass().add("sample-page-box");

@@ -92,7 +92,7 @@ public class ProxyBuilderTest {
         ClassWithCollection result2 = (ClassWithCollection) pb.build();
         assertEquals(123, result2.a, 1e-10);
         assertEquals(456, result2.b, 1e-10);
-        assertArrayEquals(inputList.toArray(), result2.propertyList.toArray());   
+        assertArrayEquals(inputList.toArray(), result2.propertyList.toArray());
     }
 
     @Test

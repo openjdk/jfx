@@ -16,17 +16,17 @@ namespace WebCore {
         {
         }
 
-        ResourceRequest(const URL& url) 
+        ResourceRequest(const URL& url)
             : ResourceRequestBase(url, UseProtocolCachePolicy)
         {
         }
 
-        ResourceRequest(const URL& url, const String& referrer, ResourceRequestCachePolicy policy = UseProtocolCachePolicy) 
+        ResourceRequest(const URL& url, const String& referrer, ResourceRequestCachePolicy policy = UseProtocolCachePolicy)
             : ResourceRequestBase(url, policy)
         {
             setHTTPReferrer(referrer);
         }
-        
+
         ResourceRequest()
             : ResourceRequestBase(URL(), UseProtocolCachePolicy)
         {

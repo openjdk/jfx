@@ -62,14 +62,14 @@ public class ProfileController extends AnchorPane {
     private CheckBox subscribed;
     @FXML
     private Hyperlink logout;
-    @FXML 
+    @FXML
     private Button update;
-    
-    @FXML 
+
+    @FXML
     private Label success;
-    
+
     private Main application;
-    
+
     public void setApp(Main application){
         this.application = application;
         User loggedUser = application.getLoggedUser();
@@ -86,15 +86,15 @@ public class ProfileController extends AnchorPane {
     @FXML // This method is called by the FXMLLoader when initialization is complete
     void initialize() {
     }
-    
+
     public void processLogout(ActionEvent event) {
         if (application == null){
             return;
         }
-        
+
         application.userLogout();
     }
-    
+
     public void processUpdate(ActionEvent event) {
         if (application == null){
             animateMessage();

@@ -128,7 +128,7 @@ public class InternalWebView {
         settings.setSupportZoom(true);
         settings.setJavaScriptEnabled(true);
         nativeWebView.addJavascriptInterface(new MyJavaScriptInterface(), "HTMLOUT");
-        initialized = true;        
+        initialized = true;
     }
 
     public String getHtmlContent() {
@@ -178,7 +178,7 @@ public class InternalWebView {
         if (iwv.initialized && iwv.isLayedOut) {
             FXActivity.getInstance().runOnUiThread(new Runnable() {
                 public void run() {
-                    int c = FXActivity.getViewGroup().getChildCount();                    
+                    int c = FXActivity.getViewGroup().getChildCount();
                     iwv.nativeWebView.loadUrl(iwv.url);
                 }
             });
@@ -196,7 +196,7 @@ public class InternalWebView {
         iwv.setContent(content, contentType);
         if (iwv.initialized && iwv.isLayedOut) {
             FXActivity.getInstance().runOnUiThread(new Runnable() {
-                public void run() {                          
+                public void run() {
                     iwv.nativeWebView.loadData(iwv.content, iwv.contentType, iwv.encoding);
                 }
             });
@@ -210,7 +210,7 @@ public class InternalWebView {
 
     public static void moveAndResize(int id, int x, int y, final int w, final int h) {
         final boolean move;
-        final boolean resize;        
+        final boolean resize;
 
         if (w == 0 || h == 0) {
             return;
@@ -240,7 +240,7 @@ public class InternalWebView {
         if (!iwv.visible) {
             return;
         }
-        
+
         if (!iwv.isLayedOut) {
             iwv.isLayedOut = true;
             FXActivity.getInstance().runOnUiThread(new Runnable() {
@@ -265,7 +265,7 @@ public class InternalWebView {
                     if (iwv.url != null && iwv.url.length() > 0) {
                         Log.v(TAG, "Loading url: " + iwv.url);
                         iwv.nativeWebView.loadUrl(iwv.url);
-                    } else if (iwv.content != null) {                        
+                    } else if (iwv.content != null) {
                         Log.v(TAG, String.format("Loading content: %s\ncontent type: %s\nencoding: %s",
                                 iwv.content, iwv.contentType, iwv.encoding));
                         iwv.nativeWebView.loadData(iwv.content, iwv.contentType, iwv.encoding);
@@ -288,10 +288,10 @@ public class InternalWebView {
                     }
                     if (move || resize) {
                         iwv.nativeWebView.invalidate();
-                    }                    
+                    }
                 }
             });
-        }        
+        }
     }
 
     public static void setVisible(int id, final boolean visible) {
@@ -345,7 +345,7 @@ public class InternalWebView {
         try {
             ClassLoader cl = Thread.currentThread().getContextClassLoader();
             Class clazz = Class.forName("com.sun.webkit.NativeWebView", true, cl);
-            Method m = clazz.getMethod("fire_load_event", int.class, int.class, int.class, 
+            Method m = clazz.getMethod("fire_load_event", int.class, int.class, int.class,
                                        String.class, String.class, int.class, int.class);
             m.invoke(null, id, frameID, state, url, contentType, progress, errorCode);
         }

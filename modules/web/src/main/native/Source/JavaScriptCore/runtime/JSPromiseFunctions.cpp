@@ -135,10 +135,10 @@ static EncodedJSValue JSC_HOST_CALL promiseResolutionHandlerFunction(ExecState* 
 
     // 2. Let 'fulfillmentHandler' be the value of F's [[FulfillmentHandler]] internal slot.
     JSValue fulfillmentHandler = F->get(exec, vm.propertyNames->fulfillmentHandlerPrivateName);
-    
+
     // 3. Let 'rejectionHandler' be the value of F's [[RejectionHandler]] internal slot.
     JSValue rejectionHandler = F->get(exec, vm.propertyNames->rejectionHandlerPrivateName);
-    
+
     // 4. If SameValue(x, promise) is true,
     if (sameValue(exec, x, promise)) {
         // i. Let 'selfResolutionError' be a newly-created TypeError object.
@@ -179,7 +179,7 @@ static EncodedJSValue JSC_HOST_CALL promiseResolutionHandlerFunction(ExecState* 
     // NOTE: Invoke does not seem to be defined anywhere, so I am guessing here.
     if (updateResult != NotAThenable) {
         JSObject* deferredPromise = deferred->promise();
-    
+
         JSValue thenValue = deferredPromise->get(exec, exec->vm().propertyNames->then);
         if (exec->hadException())
             return JSValue::encode(jsUndefined());
@@ -195,13 +195,13 @@ static EncodedJSValue JSC_HOST_CALL promiseResolutionHandlerFunction(ExecState* 
 
         return JSValue::encode(call(exec, thenValue, thenCallType, thenCallData, deferredPromise, arguments));
     }
-    
+
     // 11. Return the result of calling the [[Call]] internal method of fulfillmentHandler
     //     with undefined as thisArgument and a List containing x as argumentsList.
     CallData fulfillmentHandlerCallData;
     CallType fulfillmentHandlerCallType = getCallData(fulfillmentHandler, fulfillmentHandlerCallData);
     ASSERT(fulfillmentHandlerCallType != CallTypeNone);
-    
+
     MarkedArgumentBuffer fulfillmentHandlerArguments;
     fulfillmentHandlerArguments.append(x);
 

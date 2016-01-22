@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -40,7 +40,7 @@ JSArrayBuffer* SimpleTypedArrayController::toJS(
 {
     if (JSArrayBuffer* buffer = native->m_wrapper.get())
         return buffer;
-    
+
     JSArrayBuffer* result = JSArrayBuffer::create(
         exec->vm(), globalObject->arrayBufferStructure(), native);
     native->m_wrapper = Weak<JSArrayBuffer>(result);

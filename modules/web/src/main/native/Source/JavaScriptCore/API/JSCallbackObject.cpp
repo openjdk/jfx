@@ -21,7 +21,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -51,25 +51,25 @@ JSCallbackObject<JSGlobalObject>* JSCallbackObject<JSGlobalObject>::create(VM& v
 
 template <>
 Structure* JSCallbackObject<JSDestructibleObject>::createStructure(VM& vm, JSGlobalObject* globalObject, JSValue proto)
-{ 
-    return Structure::create(vm, globalObject, proto, TypeInfo(ObjectType, StructureFlags), info()); 
+{
+    return Structure::create(vm, globalObject, proto, TypeInfo(ObjectType, StructureFlags), info());
 }
-    
+
 template <>
 Structure* JSCallbackObject<JSGlobalObject>::createStructure(VM& vm, JSGlobalObject* globalObject, JSValue proto)
-{ 
-    return Structure::create(vm, globalObject, proto, TypeInfo(GlobalObjectType, StructureFlags), info()); 
+{
+    return Structure::create(vm, globalObject, proto, TypeInfo(GlobalObjectType, StructureFlags), info());
 }
 
 void JSCallbackObjectData::finalize(Handle<Unknown> handle, void* context)
 {
     JSClassRef jsClass = static_cast<JSClassRef>(context);
     JSObjectRef thisRef = toRef(static_cast<JSObject*>(handle.get().asCell()));
-    
+
     for (; jsClass; jsClass = jsClass->parentClass)
         if (JSObjectFinalizeCallback finalize = jsClass->finalize)
             finalize(thisRef);
     WeakSet::deallocate(WeakImpl::asWeakImpl(handle.slot()));
 }
-    
+
 } // namespace JSC

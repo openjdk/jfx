@@ -33,7 +33,7 @@
     mach_port_t _serverPort;
     CALayer *_remoteLayer;
     uint32_t _remoteLayerID;
-    
+
     GlassOffscreen *_glassOffscreen;
     GlassOffscreen *_painterOffscreen;
 

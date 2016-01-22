@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef FTLJITFinalizer_h
@@ -45,7 +45,7 @@ class JITFinalizer : public DFG::Finalizer {
 public:
     JITFinalizer(DFG::Plan&);
     virtual ~JITFinalizer();
-    
+
     size_t codeSize() override;
     bool finalize() override;
     bool finalizeFunction() override;

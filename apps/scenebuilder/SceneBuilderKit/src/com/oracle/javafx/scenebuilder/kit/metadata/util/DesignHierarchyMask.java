@@ -91,7 +91,7 @@ public class DesignHierarchyMask {
         CLIP,
         GRAPHIC,
         // Single-valued sub-components treated as accessories
-        // TODO(elp) : verify that it is complete 
+        // TODO(elp) : verify that it is complete
         CONTENT,
         TOP,
         BOTTOM,
@@ -166,7 +166,7 @@ public class DesignHierarchyMask {
 
     public URL getClassNameIconURL() {
         final Object sceneGraphObject;
-        
+
         // For FXOMIntrinsic, we use the source sceneGraphObject
         if (fxomObject instanceof FXOMIntrinsic) {
             sceneGraphObject = ((FXOMIntrinsic) fxomObject).getSourceSceneGraphObject();
@@ -364,7 +364,7 @@ public class DesignHierarchyMask {
                 || sceneGraphObject instanceof Tooltip
                 || sceneGraphObject instanceof TreeTableColumn;
     }
-    
+
     public boolean isResourceKey() {
         if (hasDescription()) { // (1)
             // Retrieve the unresolved description
@@ -599,7 +599,7 @@ public class DesignHierarchyMask {
 
         return getSubComponents().get(i);
     }
-    
+
     public List<FXOMObject> getSubComponents() {
 
         assert getSubComponentPropertyName() != null;
@@ -766,7 +766,7 @@ public class DesignHierarchyMask {
 
         final PropertyName propertyName = new PropertyName("columnConstraints"); //NOI18N
         final FXOMProperty fxomProperty = fxomInstance.getProperties().get(propertyName);
-        
+
         final int result;
         if (fxomProperty == null) {
             result = 0;
@@ -775,7 +775,7 @@ public class DesignHierarchyMask {
             final FXOMPropertyC fxomPropertyC = (FXOMPropertyC) fxomProperty;
             result = fxomPropertyC.getValues().size();
         }
-        
+
         return result;
     }
 
@@ -791,7 +791,7 @@ public class DesignHierarchyMask {
 
         final PropertyName propertyName = new PropertyName("rowConstraints"); //NOI18N
         final FXOMProperty fxomProperty = fxomInstance.getProperties().get(propertyName);
-        
+
         final int result;
         if (fxomProperty == null) {
             result = 0;
@@ -800,7 +800,7 @@ public class DesignHierarchyMask {
             final FXOMPropertyC fxomPropertyC = (FXOMPropertyC) fxomProperty;
             result = fxomPropertyC.getValues().size();
         }
-        
+
         return result;
     }
 
@@ -843,7 +843,7 @@ public class DesignHierarchyMask {
         assert sceneGraphObject instanceof GridPane;
         return Deprecation.getGridPaneRowCount((GridPane) sceneGraphObject);
     }
-    
+
     public List<FXOMObject> getColumnContentAtIndex(int index) {
         assert 0 <= index;
         assert fxomObject instanceof FXOMInstance;
@@ -937,7 +937,7 @@ public class DesignHierarchyMask {
      */
     public int getColumnIndex() {
         final int result;
-        
+
         if (fxomObject instanceof FXOMInstance) {
             assert fxomObject.getSceneGraphObject() != null;
             final FXOMInstance fxomInstance = (FXOMInstance) fxomObject;
@@ -959,7 +959,7 @@ public class DesignHierarchyMask {
         } else {
             result = 0;
         }
-        
+
         return result;
     }
 
@@ -992,7 +992,7 @@ public class DesignHierarchyMask {
         } else {
             result = 0;
         }
-        
+
         return result;
     }
 
@@ -1006,9 +1006,9 @@ public class DesignHierarchyMask {
         }
         return str.contains("\n"); //NOI18N
     }
-    
+
     /**
-     * 
+     *
      * @return true if the mask deserves a resizing while used as top element of
      * the layout.
      */

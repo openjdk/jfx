@@ -257,6 +257,6 @@ public final class ZoomEvent extends GestureEvent {
     public EventType<ZoomEvent> getEventType() {
         return (EventType<ZoomEvent>) super.getEventType();
     }
-    
-    
+
+
 }

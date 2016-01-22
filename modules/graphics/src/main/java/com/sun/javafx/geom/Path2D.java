@@ -57,7 +57,7 @@ import com.sun.javafx.geom.transform.BaseTransform;
  * of the types of segments that make up a path and the winding rules
  * that control how to determine which regions are inside or outside
  * the path.
- * 
+ *
  * @version 1.10, 05/05/07
  */
  public class Path2D extends Shape implements PathConsumer2D {
@@ -72,7 +72,7 @@ import com.sun.javafx.geom.transform.BaseTransform;
 
      /**
      * An even-odd winding rule for determining the interior of
-     * a path.  
+     * a path.
      *
      * @see PathIterator#WIND_EVEN_ODD
      */
@@ -80,7 +80,7 @@ import com.sun.javafx.geom.transform.BaseTransform;
 
     /**
      * A non-zero winding rule for determining the interior of a
-     * path.  
+     * path.
      *
      * @see PathIterator#WIND_NON_ZERO
      */
@@ -101,7 +101,7 @@ import com.sun.javafx.geom.transform.BaseTransform;
 
     static final int INIT_SIZE = 20;
     static final int EXPAND_MAX = 500;
- 
+
     float floatCoords[];
     float moveX, moveY;
     float prevX, prevY;
@@ -215,7 +215,7 @@ import com.sun.javafx.geom.transform.BaseTransform;
         }
     }
 
- 
+
      /**
       * Construct a Path2D from pre-composed data.
       * Used by internal font code which has obtained the path data
@@ -223,7 +223,7 @@ import com.sun.javafx.geom.transform.BaseTransform;
       * mess with the arrays, dropping all other references,
       so there's no need to clone them here.
       */
-    public Path2D(int windingRule, 
+    public Path2D(int windingRule,
                   byte[] pointTypes,
                   int numTypes,
                   float[] pointCoords,
@@ -255,7 +255,7 @@ import com.sun.javafx.geom.transform.BaseTransform;
      * tolerance of an integer coordinate, or if the resulting rectangle
      * cannot be safely represented by the integer attributes of the
      * {@code Rectangle} object.
-     * 
+     *
      * @param retrect the {@code Rectangle} to return the rectangular area,
      *                or null
      * @param tolerance the maximum difference from an integer allowed
@@ -387,7 +387,7 @@ import com.sun.javafx.geom.transform.BaseTransform;
     /**
      * Adds a point to the path by moving to the specified coordinates
      * relative to the current point, specified in float precision.
-     * 
+     *
      * @param relx the specified relative X coordinate
      * @param rely the specified relative Y coordinate
      * @see Path2D#moveTo
@@ -827,7 +827,7 @@ import com.sun.javafx.geom.transform.BaseTransform;
      *     path.appendOvalQuadrant(x0, by, x0, y0, lx, y0, 0f, 1f, LINE_THEN_CORNER);
      *     path.closePath();
      * </pre>
-     * 
+     *
      * @param sx the X coordinate of the midpoint of the leading edge
      *           interpolated by the oval
      * @param sy the Y coordinate of the midpoint of the leading edge
@@ -950,7 +950,7 @@ import com.sun.javafx.geom.transform.BaseTransform;
      * <pre>
      * http://www.w3.org/TR/SVG/paths.html#PathDataEllipticalArcCommands
      * </pre>
-     * 
+     *
      * @param radiusx the X radius of the tilted ellipse
      * @param radiusy the Y radius of the tilted ellipse
      * @param xAxisRotation the angle of tilt of the ellipse
@@ -1167,7 +1167,7 @@ import com.sun.javafx.geom.transform.BaseTransform;
      *           largeArcFlag, sweepFlag,
      *           getCurrentX() + rx, getCurrentY() + ry);
      * </pre>
-     * 
+     *
      * @param radiusx the X radius of the tilted ellipse
      * @param radiusy the Y radius of the tilted ellipse
      * @param xAxisRotation the angle of tilt of the ellipse
@@ -1561,7 +1561,7 @@ import com.sun.javafx.geom.transform.BaseTransform;
      * Appends the geometry of the specified {@code Shape} object to the
      * path, possibly connecting the new geometry to the existing path
      * segments with a line segment.
-     * If the {@code connect} parameter is {@code true} and the 
+     * If the {@code connect} parameter is {@code true} and the
      * path is not empty then any initial {@code moveTo} in the
      * geometry of the appended {@code Shape}
      * is turned into a {@code lineTo} segment.
@@ -1572,7 +1572,7 @@ import com.sun.javafx.geom.transform.BaseTransform;
      * and the appended geometry is governed by the winding
      * rule specified for this path.
      *
-     * @param s the {@code Shape} whose geometry is appended 
+     * @param s the {@code Shape} whose geometry is appended
      *          to this path
      * @param connect a boolean to control whether or not to turn an initial
      *                {@code moveTo} segment into a {@code lineTo} segment
@@ -1847,7 +1847,7 @@ import com.sun.javafx.geom.transform.BaseTransform;
      * Returns the fill style winding rule.
      *
      * @return an integer representing the current winding rule.
-     * @see #WIND_EVEN_ODD  
+     * @see #WIND_EVEN_ODD
      * @see #WIND_NON_ZERO
      * @see #setWindingRule
      */
@@ -1858,10 +1858,10 @@ import com.sun.javafx.geom.transform.BaseTransform;
     /**
      * Sets the winding rule for this path to the specified value.
      *
-     * @param rule an integer representing the specified 
+     * @param rule an integer representing the specified
      *             winding rule
-     * @exception IllegalArgumentException if 
-     *      {@code rule} is not either 
+     * @exception IllegalArgumentException if
+     *      {@code rule} is not either
      *      {@link #WIND_EVEN_ODD} or
      *      {@link #WIND_NON_ZERO}
      * @see #getWindingRule
@@ -1927,7 +1927,7 @@ import com.sun.javafx.geom.transform.BaseTransform;
      *
      * @param tx the {@code BaseTransform} used to transform a
      *           new {@code Shape}.
-     * @return a new {@code Shape}, transformed with the specified 
+     * @return a new {@code Shape}, transformed with the specified
      *         {@code BaseTransform}.
      */
     public final Shape createTransformedShape(BaseTransform tx) {
@@ -2259,7 +2259,7 @@ import com.sun.javafx.geom.transform.BaseTransform;
      * which means that this {@code Path2D} class does not
      * guarantee that modifications to the geometry of this
      * {@code Path2D} object do not affect any iterations of
-     * that geometry that are already in process. 
+     * that geometry that are already in process.
      */
     public PathIterator getPathIterator(BaseTransform tx,
                                         float flatness)
@@ -2289,7 +2289,7 @@ import com.sun.javafx.geom.transform.BaseTransform;
             pointIdx += curvecoords[type];
         }
     }
-    
+
     // jk16 dependency methods
     static byte[] copyOf(byte[] original, int newLength) {
         byte[] copy = new byte[newLength];

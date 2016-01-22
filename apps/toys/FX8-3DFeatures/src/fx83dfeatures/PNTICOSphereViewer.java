@@ -53,7 +53,7 @@ public class PNTICOSphereViewer extends Application {
 
     float resolution = 0.1f;
     float rotateAngle = 0.0f;
-    
+
     private PerspectiveCamera addCamera(Scene scene) {
         PerspectiveCamera perspectiveCamera = new PerspectiveCamera();
         scene.setCamera(perspectiveCamera);
@@ -142,13 +142,13 @@ public class PNTICOSphereViewer extends Application {
     public static void main(String[] args) {
         launch(args);
     }
-    
+
     TriangleMesh createICOSphere(float scale) {
         final int pointSize = 3; // x, y, z
         final int normalSize = 3; // nx, ny, nz
         final int texCoordSize = 2; // u, v
         final int faceSize = 9; // 3 point indices, 3 normal indices and 3 texCoord indices per triangle
-        
+
         // create 12 vertices of a icosahedron
         int numVerts = 12;
         float points[] = new float[numVerts * pointSize];
@@ -175,8 +175,8 @@ public class PNTICOSphereViewer extends Application {
         for(int i = 0; i < numVerts; i++) {
 //            System.err.println("arrV: [" + arrV[i].x + ", " + arrV[i].y + ", " + arrV[i].z);
             int pointIndex = i * pointSize;
-            points[pointIndex] = scale * arrV[i].x;    
-            points[pointIndex + 1] = scale * arrV[i].y;    
+            points[pointIndex] = scale * arrV[i].x;
+            points[pointIndex + 1] = scale * arrV[i].y;
             points[pointIndex + 2] = scale * arrV[i].z;
 //            System.err.println("points index = " + i);
 //            System.err.println("points: [" + points[pointIndex]
@@ -197,13 +197,13 @@ public class PNTICOSphereViewer extends Application {
             texCoords[texCoordIndex + 1] = 0f;
 //            System.err.println("texCoords index = " + texCoordIndex);
 //            System.err.println("texCoords: [" + texCoords[texCoordIndex]
-//                    + ", " + texCoords[texCoordIndex+1]);                
+//                    + ", " + texCoords[texCoordIndex+1]);
         }
 
         // create 20 triangles of the icosahedron
         int faces[] = {
             0, 0, 0, 11, 11, 0, 5, 5, 0,
-            0, 0, 0, 5, 5, 0, 1, 1, 0,            
+            0, 0, 0, 5, 5, 0, 1, 1, 0,
             0, 0, 0, 1, 1, 0, 7, 7, 0,
             0, 0, 0, 7, 7, 0, 10, 10, 0,
             0, 0, 0, 10, 10, 0, 11, 11, 0,
@@ -223,7 +223,7 @@ public class PNTICOSphereViewer extends Application {
             8, 8, 0, 6, 6, 0, 7, 7, 0,
             9, 9, 0, 8, 8, 0, 1, 1, 0
         };
-        
+
 //        for(int i = 0; i < points.length; i+=pointSize) {
 //            System.err.println("points[" + i/pointSize + "] = " + points[i] + ", " + points[i+1] + ", " + points[i+2]);
 //        }

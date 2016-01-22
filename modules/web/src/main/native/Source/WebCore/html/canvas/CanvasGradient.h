@@ -21,7 +21,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef CanvasGradient_h
@@ -46,7 +46,7 @@ namespace WebCore {
         {
             return adoptRef(new CanvasGradient(p0, r0, p1, r1));
         }
-        
+
         Gradient* gradient() const { return m_gradient.get(); }
 
         void addColorStop(float value, const String& color, ExceptionCode&);
@@ -58,7 +58,7 @@ namespace WebCore {
     private:
         CanvasGradient(const FloatPoint& p0, const FloatPoint& p1);
         CanvasGradient(const FloatPoint& p0, float r0, const FloatPoint& p1, float r1);
-        
+
         RefPtr<Gradient> m_gradient;
 #if ENABLE(DASHBOARD_SUPPORT)
         bool m_dashbardCompatibilityMode;

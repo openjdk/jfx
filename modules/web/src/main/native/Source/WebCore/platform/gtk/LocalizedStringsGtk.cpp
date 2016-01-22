@@ -500,7 +500,7 @@ String AXListItemActionVerb()
 {
     return String();
 }
-    
+
 String missingPluginText()
 {
     return String::fromUTF8(_("Missing Plug-in"));

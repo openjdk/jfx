@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #import "config.h"
@@ -93,19 +93,19 @@ PasteboardImage::~PasteboardImage()
 static const Vector<String> writableTypesForURL()
 {
     Vector<String> types;
-    
+
     types.append(WebURLsWithTitlesPboardType);
     types.append(String(NSURLPboardType));
     types.append(WebURLPboardType);
     types.append(WebURLNamePboardType);
-    types.append(String(NSStringPboardType));        
+    types.append(String(NSStringPboardType));
     return types;
 }
 
 static inline Vector<String> createWritableTypesForImage()
 {
     Vector<String> types;
-    
+
     types.append(String(NSTIFFPboardType));
     types.appendVector(writableTypesForURL());
     types.append(String(NSRTFDPboardType));
@@ -205,9 +205,9 @@ void Pasteboard::writePlainText(const String& text, SmartReplaceOption smartRepl
 static long writeURLForTypes(const Vector<String>& types, const String& pasteboardName, const PasteboardURL& pasteboardURL)
 {
     long newChangeCount = platformStrategies()->pasteboardStrategy()->setTypes(types, pasteboardName);
-    
+
     ASSERT(!pasteboardURL.url.isEmpty());
-    
+
     NSURL *cocoaURL = pasteboardURL.url;
     NSString *userVisibleString = pasteboardURL.userVisibleForm;
     NSString *title = (NSString *)pasteboardURL.title;
@@ -234,7 +234,7 @@ static long writeURLForTypes(const Vector<String>& types, const String& pasteboa
 
     return newChangeCount;
 }
-    
+
 void Pasteboard::write(const PasteboardURL& pasteboardURL)
 {
     m_changeCount = writeURLForTypes(writableTypesForURL(), m_pasteboardName, pasteboardURL);
@@ -292,13 +292,13 @@ void Pasteboard::read(PasteboardPlainText& text)
 
     Vector<String> types;
     strategy.getTypes(types, m_pasteboardName);
-    
+
     if (types.contains(String(NSStringPboardType))) {
         text.text = strategy.stringForType(NSStringPboardType, m_pasteboardName);
         text.isURL = false;
         return;
     }
-    
+
     if (types.contains(String(NSRTFDPboardType))) {
         if (RefPtr<SharedBuffer> data = strategy.bufferForType(NSRTFDPboardType, m_pasteboardName)) {
             if (auto attributedString = adoptNS([[NSAttributedString alloc] initWithRTFD:data->createNSData().get() documentAttributes:NULL])) {

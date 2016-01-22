@@ -40,6 +40,6 @@ JNIEXPORT jint JNICALL Java_com_sun_glass_ui_ios_IosApplication__1getKeyCodeForC
 (JNIEnv * env, jobject jApplication, jchar c)
 {
     GLASS_LOG("Java_com_sun_glass_ui_ios_IosApplication__1getKeyCodeForChar");
-    
+
     return com_sun_glass_events_KeyEvent_VK_UNDEFINED;
 }

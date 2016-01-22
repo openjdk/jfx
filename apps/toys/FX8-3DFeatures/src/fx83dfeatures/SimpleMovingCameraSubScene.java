@@ -47,7 +47,7 @@ public class SimpleMovingCameraSubScene extends Application {
     double fovValue;
     double rotateCamera = 0.0;
     double translateCamera = 0.0;
-    
+
     private SubScene buildSubScene() {
         PhongMaterial ssMaterial = new PhongMaterial();
         ssMaterial.setDiffuseColor(Color.SILVER);
@@ -59,7 +59,7 @@ public class SimpleMovingCameraSubScene extends Application {
         ssSphere.setMaterial(ssMaterial);
 
         ssSphere.setDrawMode(DrawMode.FILL);
-        
+
         subSceneCamera = new PerspectiveCamera();
 
         Group root = new Group(ssSphere);
@@ -86,7 +86,7 @@ public class SimpleMovingCameraSubScene extends Application {
         pointLight.setTranslateX(150);
         pointLight.setTranslateY(-100);
         pointLight.setTranslateZ(-1000);
-        
+
         camera = createCamera();
         cameraGroup = new Group(camera);
 
@@ -96,7 +96,7 @@ public class SimpleMovingCameraSubScene extends Application {
         scene.setFill(Color.GRAY);
         scene.setCamera(camera);
         System.err.println("Camera FOV = " + (fovValue = camera.getFieldOfView()));
-        
+
         transTrans = new TranslateTransition(Duration.seconds(5), cameraGroup);
         transTrans.setAutoReverse(true);
         transTrans.setCycleCount(Timeline.INDEFINITE);

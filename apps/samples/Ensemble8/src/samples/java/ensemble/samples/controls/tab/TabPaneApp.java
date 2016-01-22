@@ -98,7 +98,7 @@ public class TabPaneApp extends Application {
         setUpControlButtons(vbox);
         tab1.setContent(vbox);
         tabPane.getTabs().add(tab1);
-        // Tab2 has longer label and toggles tab closing 
+        // Tab2 has longer label and toggles tab closing
         tab2.setText("Longer Tab");
         final VBox vboxLongTab = new VBox();
         vboxLongTab.setSpacing(10);
@@ -138,7 +138,7 @@ public class TabPaneApp extends Application {
                 tab2.setText("Longer Tab");
                 tab3.setText("Tab 3");
                 internalTab.setText("Internal Tabs");
-                
+
             } else {
                 tab1.setText("");
                 tab2.setText("");
@@ -149,7 +149,7 @@ public class TabPaneApp extends Application {
         vboxTab3.getChildren().add(cb);
         tab3.setContent(vboxTab3);
         tabPane.getTabs().add(tab3);
-        //Internal Tabs   
+        //Internal Tabs
         internalTab.setText("Internal Tabs");
         setupInternalTab();
         tabPane.getTabs().add(internalTab);
@@ -245,7 +245,7 @@ public class TabPaneApp extends Application {
         });
         vbox.getChildren().add(addTabButton);
     }
-   
+
     @Override public void start(Stage primaryStage) throws Exception {
         primaryStage.setScene(new Scene(createContent()));
         primaryStage.show();

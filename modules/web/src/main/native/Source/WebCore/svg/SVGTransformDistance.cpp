@@ -28,7 +28,7 @@
 #include <math.h>
 
 namespace WebCore {
-    
+
 SVGTransformDistance::SVGTransformDistance()
     : m_type(SVGTransform::SVG_TRANSFORM_UNKNOWN)
     , m_angle(0)
@@ -53,7 +53,7 @@ SVGTransformDistance::SVGTransformDistance(const SVGTransform& fromSVGTransform,
     , m_cy(0)
 {
     ASSERT(m_type == toSVGTransform.type());
-    
+
     switch (m_type) {
     case SVGTransform::SVG_TRANSFORM_MATRIX:
         ASSERT_NOT_REACHED();
@@ -75,7 +75,7 @@ SVGTransformDistance::SVGTransformDistance(const SVGTransform& fromSVGTransform,
         break;
     }
     case SVGTransform::SVG_TRANSFORM_SCALE: {
-        float scaleX = toSVGTransform.scale().width() - fromSVGTransform.scale().width();        
+        float scaleX = toSVGTransform.scale().width() - fromSVGTransform.scale().width();
         float scaleY = toSVGTransform.scale().height() - fromSVGTransform.scale().height();
         m_transform.scaleNonUniform(scaleX, scaleY);
         break;
@@ -111,7 +111,7 @@ SVGTransformDistance SVGTransformDistance::scaledDistance(float scaleFactor) con
     case SVGTransform::SVG_TRANSFORM_SKEWY:
         return SVGTransformDistance(m_type, m_angle * scaleFactor, m_cx * scaleFactor, m_cy * scaleFactor, AffineTransform());
     }
-    
+
     ASSERT_NOT_REACHED();
     return SVGTransformDistance();
 }
@@ -119,9 +119,9 @@ SVGTransformDistance SVGTransformDistance::scaledDistance(float scaleFactor) con
 SVGTransform SVGTransformDistance::addSVGTransforms(const SVGTransform& first, const SVGTransform& second, unsigned repeatCount)
 {
     ASSERT(first.type() == second.type());
-    
+
     SVGTransform transform;
-    
+
     switch (first.type()) {
     case SVGTransform::SVG_TRANSFORM_MATRIX:
         ASSERT_NOT_REACHED();
@@ -161,9 +161,9 @@ SVGTransform SVGTransformDistance::addSVGTransforms(const SVGTransform& first, c
 SVGTransform SVGTransformDistance::addToSVGTransform(const SVGTransform& transform) const
 {
     ASSERT(m_type == transform.type() || transform == SVGTransform());
-    
+
     SVGTransform newTransform(transform);
-    
+
     switch (m_type) {
     case SVGTransform::SVG_TRANSFORM_MATRIX:
         ASSERT_NOT_REACHED();
@@ -196,7 +196,7 @@ SVGTransform SVGTransformDistance::addToSVGTransform(const SVGTransform& transfo
         newTransform.setSkewY(transform.angle() + m_angle);
         return newTransform;
     }
-    
+
     ASSERT_NOT_REACHED();
     return SVGTransform();
 }

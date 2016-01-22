@@ -57,8 +57,8 @@ import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
 
 /**
- * Descriptor for a ensemble sample. Everything the ui needs is determined at 
- * compile time from the sample sources and stored in these SampleInfo objects so 
+ * Descriptor for a ensemble sample. Everything the ui needs is determined at
+ * compile time from the sample sources and stored in these SampleInfo objects so
  * we don't have to calculate anything at runtime.
  */
 public class SampleInfo {
@@ -100,7 +100,7 @@ public class SampleInfo {
     public SampleInfo(String name, String description, String ensemblePath, String baseUri, String appClass,
                   String previewUrl, String[] resourceUrls, String[] apiClasspaths,
                   String[] docsUrls, String[] relatesSamplePaths, String mainFileUrl,
-                  PlaygroundProperty[] playgroundProperties, ConditionalFeature[] conditionalFeatures, 
+                  PlaygroundProperty[] playgroundProperties, ConditionalFeature[] conditionalFeatures,
                   boolean runsOnEmbedded) {
         this.name = name;
         this.description = description;
@@ -115,7 +115,7 @@ public class SampleInfo {
         this.playgroundProperties = playgroundProperties;
         this.conditionalFeatures = conditionalFeatures;
         this.runsOnEmbedded = runsOnEmbedded;
-        
+
         if (EnsembleApp.PRELOAD_PREVIEW_IMAGES) {
             // Note: there may be missing classes/resources due to some filtering
             if (PlatformFeatures.USE_EMBEDDED_FILTER && !runsOnEmbedded) {
@@ -134,7 +134,7 @@ public class SampleInfo {
 
         this.previewUrl = previewUrl;
     }
-    
+
     @Override public String toString() {
         return name;
     }
@@ -145,17 +145,17 @@ public class SampleInfo {
 //            String url = getClass().getResource(previewUrl).toExternalForm();
 //            label.setBackground(new Background(
 //                new BackgroundImage(
-//                    new Image(url), 
-//                    BackgroundRepeat.NO_REPEAT, 
-//                    BackgroundRepeat.NO_REPEAT, 
-//                    new BackgroundPosition(Side.LEFT,5,false, Side.TOP,5,false), 
+//                    new Image(url),
+//                    BackgroundRepeat.NO_REPEAT,
+//                    BackgroundRepeat.NO_REPEAT,
+//                    new BackgroundPosition(Side.LEFT,5,false, Side.TOP,5,false),
 //                    new BackgroundSize(450, 335, false, false, false, false)
 //                )));
 //        }
-        
+
         return new LargePreviewRegion();
     }
-    
+
     // 216x162 - 5+5px border = 206x152
     public Node getMediumPreview() {
         Region label = new Region();
@@ -191,7 +191,7 @@ public class SampleInfo {
             Class clz = Class.forName(appClass);
             final Object app = clz.newInstance();
             Parent root = (Parent) clz.getMethod("createContent").invoke(app);
-            
+
             for (Method m : clz.getMethods()) {
                 switch(m.getName()) {
                     case "play":
@@ -204,7 +204,7 @@ public class SampleInfo {
             }
             final Method fPlay = play;
             final Method fStop = stop;
-            
+
             root.sceneProperty().addListener((ObservableValue<? extends Scene> ov, Scene oldScene, Scene newScene) -> {
                 try {
                     if (oldScene != null && fStop != null) {
@@ -239,7 +239,7 @@ public class SampleInfo {
             label.setWrapText(true);
             getChildren().addAll(background,sampleNode,label);
         }
-        
+
         @Override protected double computeMinWidth(double height) { return 460; }
         @Override protected double computeMinHeight(double width) { return 345; }
         @Override protected double computePrefWidth(double height) { return 460; }
@@ -259,7 +259,7 @@ public class SampleInfo {
             label.resize(440, labelHeight);
         }
     }
-    
+
     private List<URL> relatedSampleURLs = new AbstractList<URL>() {
 
         @Override
@@ -284,11 +284,11 @@ public class SampleInfo {
             return relatesSamplePaths.length;
         }
     };
-    
+
     public List<URL> getRelatedSampleURLs() {
         return relatedSampleURLs;
     }
-    
+
     private List<URL> docURLs = new AbstractList<URL>() {
 
         @Override
@@ -316,7 +316,7 @@ public class SampleInfo {
     public List<URL> getDocURLs() {
         return docURLs;
     }
-    
+
     private List<URL> sources = new AbstractList<URL>() {
 
         @Override
@@ -345,18 +345,18 @@ public class SampleInfo {
     public List<URL> getSources() {
         return sources;
     }
-    
+
     public boolean needsPlayground() {
         return playgroundProperties.length > 0;
     }
-    
+
     public static interface URL {
         String getURL();
         String getName();
     }
-    
+
     private static Map<String, Image> imageCache;
-    
+
     private static Image getImage(String url) {
         if (imageCache == null) {
             imageCache = new WeakHashMap<>();

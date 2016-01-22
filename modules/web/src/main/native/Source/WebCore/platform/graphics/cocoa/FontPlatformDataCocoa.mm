@@ -183,7 +183,7 @@ void FontPlatformData::setFont(NSFont *font)
         CFRelease(m_font);
     m_font = font;
     m_size = [font pointSize];
-    
+
     CGFontRef cgFont = 0;
     NSFont* loadedFont = 0;
     loadFont(m_font, m_size, loadedFont, cgFont);

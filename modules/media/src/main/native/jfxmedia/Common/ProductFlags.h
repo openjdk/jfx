@@ -28,11 +28,11 @@
 
 #if defined(__APPLE__) || defined(__APPLE_CC__)
 #ifndef TARGET_OS_MAC
-#define TARGET_OS_MAC	1
+#define TARGET_OS_MAC   1
 #endif
 #elif defined(LINUX)
 #ifndef TARGET_OS_LINUX
-#define TARGET_OS_LINUX	1
+#define TARGET_OS_LINUX 1
 #endif
 #endif
 
@@ -41,7 +41,7 @@
 
 #define JFXMEDIA_ENABLE_GST_TRACE           0
 
-#define	PLAYBACK_DEMO                       1
+#define PLAYBACK_DEMO                       1
 
 #define ENABLE_APP_SINK                     1
 
@@ -50,7 +50,7 @@
 
 #define ENABLE_LOGGING                      1
 #define ENABLE_LOWLEVELPERF                 0
-#define	ENABLE_INSTRUMENTS                  0
+#define ENABLE_INSTRUMENTS                  0
 #define ENABLE_PROGRESS_BUFFER              1
 
 #define ENABLE_BREAK_MY_DATA                0

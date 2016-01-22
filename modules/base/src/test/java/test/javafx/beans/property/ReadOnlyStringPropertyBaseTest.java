@@ -33,12 +33,12 @@ import org.junit.Before;
 import org.junit.Test;
 
 public class ReadOnlyStringPropertyBaseTest {
-    
+
     private static final String UNDEFINED = null;
     private static final String DEFAULT = null;
     private static final String VALUE_1 = "Hello World!";
     private static final String VALUE_2 = "Goodbye World!";
-    
+
     private ReadOnlyPropertyMock property;
     private InvalidationListenerMock invalidationListener;
     private ChangeListenerMock<String> changeListener;
@@ -49,7 +49,7 @@ public class ReadOnlyStringPropertyBaseTest {
         invalidationListener = new InvalidationListenerMock();
         changeListener = new ChangeListenerMock<String>(UNDEFINED);
     }
-    
+
     @Test
     public void testInvalidationListener() {
         property.addListener(invalidationListener);
@@ -75,11 +75,11 @@ public class ReadOnlyStringPropertyBaseTest {
         property.set(VALUE_2);
         changeListener.check(null, UNDEFINED, UNDEFINED, 0);
     }
-    
+
     private static class ReadOnlyPropertyMock extends ReadOnlyStringPropertyBase {
 
         private String value;
-        
+
         @Override
         public Object getBean() {
             // not used
@@ -91,7 +91,7 @@ public class ReadOnlyStringPropertyBaseTest {
             // not used
             return null;
         }
-        
+
         private void set(String value) {
             this.value = value;
             fireValueChangedEvent();
@@ -101,7 +101,7 @@ public class ReadOnlyStringPropertyBaseTest {
         public String get() {
             return value;
         }
-        
+
     }
 
 }

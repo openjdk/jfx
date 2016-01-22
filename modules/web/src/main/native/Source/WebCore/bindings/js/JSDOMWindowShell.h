@@ -54,10 +54,10 @@ namespace WebCore {
         {
             JSDOMWindowShell* shell = new (NotNull, JSC::allocateCell<JSDOMWindowShell>(vm.heap)) JSDOMWindowShell(vm, structure, world);
             shell->finishCreation(vm, window);
-            return shell; 
+            return shell;
         }
 
-        static JSC::Structure* createStructure(JSC::VM& vm, JSC::JSValue prototype) 
+        static JSC::Structure* createStructure(JSC::VM& vm, JSC::JSValue prototype)
         {
             return JSC::Structure::create(vm, 0, prototype, JSC::TypeInfo(JSC::ProxyType, StructureFlags), info());
         }

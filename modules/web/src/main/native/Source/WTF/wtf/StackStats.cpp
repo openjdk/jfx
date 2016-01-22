@@ -20,13 +20,13 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
 #include "StackStats.h"
 
-#if ENABLE(STACK_STATS) 
+#if ENABLE(STACK_STATS)
 
 #include "Assertions.h"
 #include "DataLog.h"
@@ -243,7 +243,7 @@ StackStats::LayoutCheckPoint::LayoutCheckPoint()
     }
     StackStats::s_topLayoutCheckPoint = this;
 
-    // 
+    //
     char* current = reinterpret_cast<char*>(this);
     char* last = reinterpret_cast<char*>(m_prev);
     char* root = reinterpret_cast<char*>(StackStats::s_firstLayoutCheckPoint);

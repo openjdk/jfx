@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -87,7 +87,7 @@ PlatformCALayer* PlatformCALayer::platformCALayer(void* platformLayer)
 {
     if (!platformLayer)
         return 0;
-    
+
     PlatformCALayerWinInternal* layerIntern = intern(platformLayer);
     return layerIntern ? layerIntern->owner() : 0;
 }
@@ -98,7 +98,7 @@ static void displayCallback(CACFLayerRef caLayer, CGContextRef context)
     intern(caLayer)->displayCallback(caLayer, context);
 }
 
-static void layoutSublayersProc(CACFLayerRef caLayer) 
+static void layoutSublayersProc(CACFLayerRef caLayer)
 {
     PlatformCALayer* layer = PlatformCALayer::platformCALayer(caLayer);
     if (layer && layer->owner())
@@ -187,7 +187,7 @@ void PlatformCALayerWin::setNeedsDisplay(const FloatRect* dirtyRect)
 {
     intern(this)->setNeedsDisplay(dirtyRect);
 }
-    
+
 void PlatformCALayerWin::setNeedsCommit()
 {
     AbstractCACFLayerTreeHost* host = layerTreeHostForLayer(this);
@@ -558,9 +558,9 @@ static void printIndent(int indent)
 static void printTransform(const CATransform3D& transform)
 {
     fprintf(stderr, "[%g %g %g %g; %g %g %g %g; %g %g %g %g; %g %g %g %g]",
-                    transform.m11, transform.m12, transform.m13, transform.m14, 
-                    transform.m21, transform.m22, transform.m23, transform.m24, 
-                    transform.m31, transform.m32, transform.m33, transform.m34, 
+                    transform.m11, transform.m12, transform.m13, transform.m14,
+                    transform.m21, transform.m22, transform.m23, transform.m24,
+                    transform.m31, transform.m32, transform.m33, transform.m34,
                     transform.m41, transform.m42, transform.m43, transform.m44);
 }
 
@@ -583,7 +583,7 @@ static void printLayer(const PlatformCALayer* layer, int indent)
 
     fprintf(stderr, "(%s [%g %g %g] [%g %g %g %g] [%g %g %g] superlayer=%p\n",
         layerTypeName,
-        layerPosition.x(), layerPosition.y(), layerPosition.z(), 
+        layerPosition.x(), layerPosition.y(), layerPosition.z(),
         layerBounds.x(), layerBounds.y(), layerBounds.width(), layerBounds.height(),
         layerAnchorPoint.x(), layerAnchorPoint.y(), layerAnchorPoint.z(), layer->superlayer());
 
@@ -661,7 +661,7 @@ void PlatformCALayerWin::printTree() const
 {
     // Print heading info
     CGRect rootBounds = bounds();
-    fprintf(stderr, "\n\n** Render tree at time %g (bounds %g, %g %gx%g) **\n\n", 
+    fprintf(stderr, "\n\n** Render tree at time %g (bounds %g, %g %gx%g) **\n\n",
         monotonicallyIncreasingTime(), rootBounds.origin.x, rootBounds.origin.y, rootBounds.size.width, rootBounds.size.height);
 
     // Print layer tree from the root

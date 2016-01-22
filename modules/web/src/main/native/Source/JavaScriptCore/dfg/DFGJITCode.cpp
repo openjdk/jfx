@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -80,11 +80,11 @@ void JITCode::reconstruct(
 {
     Operands<ValueRecovery> recoveries;
     reconstruct(codeBlock, codeOrigin, streamIndex, recoveries);
-    
+
     result = Operands<JSValue>(OperandsLike, recoveries);
     for (size_t i = result.size(); i--;) {
         int operand = result.operandForIndex(i);
-        
+
         if (codeOrigin == CodeOrigin(0)
             && operandIsArgument(operand)
             && !VirtualRegister(operand).toArgument()
@@ -97,7 +97,7 @@ void JITCode::reconstruct(
             result[i] = jsUndefined();
             continue;
         }
-        
+
         result[i] = recoveries[i].recover(exec);
     }
 }

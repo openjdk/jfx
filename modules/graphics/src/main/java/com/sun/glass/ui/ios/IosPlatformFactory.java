@@ -35,7 +35,7 @@ import com.sun.glass.ui.delegate.MenuItemDelegate;
 public final class IosPlatformFactory extends PlatformFactory {
 
     /**
-     * @inheritDoc 
+     * @inheritDoc
      */
     @Override
     public Application createApplication(){
@@ -43,7 +43,7 @@ public final class IosPlatformFactory extends PlatformFactory {
     }
 
     /**
-     * @inheritDoc 
+     * @inheritDoc
      */
     @Override
     public MenuBarDelegate createMenuBarDelegate(final MenuBar menubar) {
@@ -51,7 +51,7 @@ public final class IosPlatformFactory extends PlatformFactory {
     }
 
     /**
-     * @inheritDoc 
+     * @inheritDoc
      */
     @Override
     public MenuDelegate createMenuDelegate(final Menu menu) {
@@ -59,7 +59,7 @@ public final class IosPlatformFactory extends PlatformFactory {
     }
 
     /**
-     * @inheritDoc 
+     * @inheritDoc
      */
     @Override
     public MenuItemDelegate createMenuItemDelegate(final MenuItem item) {
@@ -67,7 +67,7 @@ public final class IosPlatformFactory extends PlatformFactory {
     }
 
     /**
-     * @inheritDoc 
+     * @inheritDoc
      */
     @Override
     public ClipboardDelegate createClipboardDelegate() {

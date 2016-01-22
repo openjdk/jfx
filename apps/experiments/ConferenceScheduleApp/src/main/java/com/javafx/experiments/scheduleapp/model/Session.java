@@ -65,7 +65,7 @@ public class Session {
             }
         }
     }
-    
+
     public int getId() {
         return id;
     }
@@ -101,7 +101,7 @@ public class Session {
     public Track getTrack() {
         return track;
     }
-    
+
     public String getSpeakersDisplay() {
         if (speakers == null || speakers.length == 0) {
             return "";
@@ -121,7 +121,7 @@ public class Session {
         for(SessionTime sessionTime: schedules) {
             times.add(sessionTime.debugString());
         }
-        return abbreviation + " : " + title + "\n" + summary + "\nlevel: " + level + "\nspeakers: " + Arrays.toString(speakers) + 
+        return abbreviation + " : " + title + "\n" + summary + "\nlevel: " + level + "\nspeakers: " + Arrays.toString(speakers) +
                 "\ntimes: " + Arrays.toString(times.toArray()) + "\nsessionType: " + sessionType + "\ntrack: " + track;
     }
 }

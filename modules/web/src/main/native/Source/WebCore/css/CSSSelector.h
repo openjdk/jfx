@@ -262,7 +262,7 @@ namespace WebCore {
             AtomicString m_attributeCanonicalLocalName;
             AtomicString m_argument; // Used for :contains, :lang and :nth-*
             std::unique_ptr<CSSSelectorList> m_selectorList; // Used for :-webkit-any and :not
-        
+
         private:
             RareData(PassRefPtr<AtomicStringImpl> value);
         };

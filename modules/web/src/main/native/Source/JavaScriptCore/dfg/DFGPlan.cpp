@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -140,11 +140,11 @@ bool Plan::reportCompileTimes() const
 void Plan::compileInThread(LongLivedState& longLivedState, ThreadData* threadData)
 {
     this->threadData = threadData;
-    
+
     double before = 0;
     if (reportCompileTimes())
         before = currentTimeMS();
-    
+
     SamplingRegion samplingRegion("DFG Compilation (Plan)");
     CompilationScope compilationScope;
 
@@ -154,7 +154,7 @@ void Plan::compileInThread(LongLivedState& longLivedState, ThreadData* threadDat
     CompilationPath path = compileInThreadImpl(longLivedState);
 
     RELEASE_ASSERT(finalizer);
-    
+
     if (reportCompileTimes()) {
         const char* pathName;
         switch (path) {
@@ -187,14 +187,14 @@ Plan::CompilationPath Plan::compileInThreadImpl(LongLivedState& longLivedState)
         dataLog("Compiler must handle OSR entry from bc#", osrEntryBytecodeIndex, " with values: ", mustHandleValues, "\n");
         dataLog("\n");
     }
-    
+
     Graph dfg(vm, *this, longLivedState);
-    
+
     if (!parse(dfg)) {
         finalizer = adoptPtr(new FailedFinalizer(*this));
         return FailPath;
     }
-    
+
     // By this point the DFG bytecode parser will have potentially mutated various tables
     // in the CodeBlock. This is a good time to perform an early shrink, which is more
     // powerful than a late one. It's safe to do so because we haven't generated any code
@@ -203,11 +203,11 @@ Plan::CompilationPath Plan::compileInThreadImpl(LongLivedState& longLivedState)
 
     if (validationEnabled())
         validate(dfg);
-    
+
     performCPSRethreading(dfg);
     performUnification(dfg);
     performPredictionInjection(dfg);
-    
+
     if (mode == FTLForOSREntryMode) {
         bool result = performOSREntrypointCreation(dfg);
         if (!result) {
@@ -216,46 +216,46 @@ Plan::CompilationPath Plan::compileInThreadImpl(LongLivedState& longLivedState)
         }
         performCPSRethreading(dfg);
     }
-    
+
     if (validationEnabled())
         validate(dfg);
-    
+
     performBackwardsPropagation(dfg);
     performPredictionPropagation(dfg);
     performFixup(dfg);
     performInvalidationPointInjection(dfg);
     performTypeCheckHoisting(dfg);
-    
+
     unsigned count = 1;
     dfg.m_fixpointState = FixpointNotConverged;
     for (;; ++count) {
         if (logCompilationChanges(mode))
             dataLogF("DFG beginning optimization fixpoint iteration #%u.\n", count);
         bool changed = false;
-        
+
         if (validationEnabled())
             validate(dfg);
-        
+
         changed |= performStrengthReduction(dfg);
         performCFA(dfg);
         changed |= performConstantFolding(dfg);
         changed |= performArgumentsSimplification(dfg);
         changed |= performCFGSimplification(dfg);
         changed |= performCSE(dfg);
-        
+
         if (!changed)
             break;
-        
+
         performCPSRethreading(dfg);
     }
-    
+
     if (logCompilationChanges(mode))
         dataLogF("DFG optimization fixpoint converged in %u iterations.\n", count);
 
     dfg.m_fixpointState = FixpointConverged;
 
     performStoreBarrierElision(dfg);
-    
+
     // If we're doing validation, then run some analyses, to give them an opportunity
     // to self-validate. Now is as good a time as any to do this.
     if (validationEnabled()) {
@@ -274,7 +274,7 @@ Plan::CompilationPath Plan::compileInThreadImpl(LongLivedState& longLivedState)
         performVirtualRegisterAllocation(dfg);
         performWatchpointCollection(dfg);
         dumpAndVerifyGraph(dfg, "Graph after optimization:");
-        
+
         JITCompiler dataFlowJIT(dfg);
         if (codeBlock->codeType() == FunctionCode) {
             dataFlowJIT.compileFunction();
@@ -283,10 +283,10 @@ Plan::CompilationPath Plan::compileInThreadImpl(LongLivedState& longLivedState)
             dataFlowJIT.compile();
             dataFlowJIT.link();
         }
-        
+
         return DFGPath;
     }
-    
+
     case FTLMode:
     case FTLForOSREntryMode: {
 #if ENABLE(FTL_JIT)
@@ -294,7 +294,7 @@ Plan::CompilationPath Plan::compileInThreadImpl(LongLivedState& longLivedState)
             finalizer = adoptPtr(new FailedFinalizer(*this));
             return FailPath;
         }
-        
+
         performCriticalEdgeBreaking(dfg);
         performLoopPreHeaderCreation(dfg);
         performCPSRethreading(dfg);
@@ -316,27 +316,27 @@ Plan::CompilationPath Plan::compileInThreadImpl(LongLivedState& longLivedState)
         performFlushLivenessAnalysis(dfg);
         performOSRAvailabilityAnalysis(dfg);
         performWatchpointCollection(dfg);
-        
+
         dumpAndVerifyGraph(dfg, "Graph just before FTL lowering:");
-        
+
         {
             GraphSafepoint safepoint(dfg);
             initializeLLVM();
         }
-            
+
         FTL::State state(dfg);
         FTL::lowerDFGToLLVM(state);
-        
+
         if (reportCompileTimes())
             beforeFTL = currentTimeMS();
-        
+
         if (Options::llvmAlwaysFailsBeforeCompile()) {
             FTL::fail(state);
             return FTLPath;
         }
-        
+
         FTL::compile(state);
-            
+
         if (Options::llvmAlwaysFailsBeforeLink()) {
             FTL::fail(state);
             return FTLPath;
@@ -354,7 +354,7 @@ Plan::CompilationPath Plan::compileInThreadImpl(LongLivedState& longLivedState)
         return FailPath;
 #endif // ENABLE(FTL_JIT)
     }
-        
+
     default:
         RELEASE_ASSERT_NOT_REACHED();
         return FailPath;
@@ -399,12 +399,12 @@ CompilationResult Plan::finalizeWithoutNotifyingCallback()
         result = finalizer->finalizeFunction();
     else
         result = finalizer->finalize();
-    
+
     if (!result)
         return CompilationFailed;
-    
+
     reallyAdd(codeBlock->jitCode()->dfgCommon());
-    
+
     return CompilationSuccessful;
 }
 
@@ -422,10 +422,10 @@ void Plan::visitChildren(SlotVisitor& visitor, CodeBlockSet& codeBlocks)
 {
     for (unsigned i = mustHandleValues.size(); i--;)
         visitor.appendUnbarrieredValue(&mustHandleValues[i]);
-    
+
     codeBlocks.mark(codeBlock.get());
     codeBlocks.mark(profiledDFGCodeBlock.get());
-    
+
     chains.visitChildren(visitor);
     weakReferences.visitChildren(visitor);
     writeBarriers.visitChildren(visitor);

@@ -48,10 +48,10 @@ typedef struct {
 } udev_event_header_A;
 
 typedef struct {
-	char prefix[16];
-	unsigned int magic;
-	unsigned short propertiesOffset;
-	unsigned short propertiesLength;
+    char prefix[16];
+    unsigned int magic;
+    unsigned short propertiesOffset;
+    unsigned short propertiesLength;
 } udev_event_header_B;
 
 #define UDEV_MONITOR_MAGIC_A htonl(0xfeedcafe)

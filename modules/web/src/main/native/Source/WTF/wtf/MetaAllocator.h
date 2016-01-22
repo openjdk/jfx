@@ -6,13 +6,13 @@
  * are met:
  *
  * 1.  Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer. 
+ *     notice, this list of conditions and the following disclaimer.
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
- *     documentation and/or other materials provided with the distribution. 
+ *     documentation and/or other materials provided with the distribution.
  * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
- *     from this software without specific prior written permission. 
+ *     from this software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY APPLE AND ITS CONTRIBUTORS "AS IS" AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
@@ -65,21 +65,21 @@ class MetaAllocator {
 
 public:
     WTF_EXPORT_PRIVATE MetaAllocator(size_t allocationGranule, size_t pageSize = WTF::pageSize());
-    
+
     WTF_EXPORT_PRIVATE virtual ~MetaAllocator();
-    
+
     WTF_EXPORT_PRIVATE PassRefPtr<MetaAllocatorHandle> allocate(size_t sizeInBytes, void* ownerUID);
 
     void trackAllocations(MetaAllocatorTracker* tracker)
     {
         m_tracker = tracker;
     }
-    
+
     // Non-atomic methods for getting allocator statistics.
     size_t bytesAllocated() { return m_bytesAllocated; }
     size_t bytesReserved() { return m_bytesReserved; }
     size_t bytesCommitted() { return m_bytesCommitted; }
-    
+
     // Atomic method for getting allocator statistics.
     struct Statistics {
         size_t bytesAllocated;
@@ -96,7 +96,7 @@ public:
     // This is meant only for implementing tests. Never call this in release
     // builds.
     WTF_EXPORT_PRIVATE size_t debugFreeSpaceSize();
-    
+
 #if ENABLE(META_ALLOCATOR_PROFILE)
     void dumpProfile();
 #else
@@ -104,25 +104,25 @@ public:
 #endif
 
 protected:
-    
+
     // Allocate new virtual space, but don't commit. This may return more
     // pages than we asked, in which case numPages is changed.
     virtual void* allocateNewSpace(size_t& numPages) = 0;
-    
+
     // Commit a page.
     virtual void notifyNeedPage(void* page) = 0;
-    
+
     // Uncommit a page.
     virtual void notifyPageIsFree(void* page) = 0;
-    
+
     // NOTE: none of the above methods are called during allocator
     // destruction, in part because a MetaAllocator cannot die so long
     // as there are Handles that refer to it.
 
 private:
-    
+
     friend class MetaAllocatorHandle;
-    
+
     class FreeSpaceNode : public RedBlackTree<FreeSpaceNode, size_t>::Node {
     public:
         FreeSpaceNode(void* start, size_t sizeInBytes)
@@ -143,7 +143,7 @@ private:
 
     // Release a MetaAllocatorHandle.
     void release(MetaAllocatorHandle*);
-    
+
     // Remove free space from the allocator. This is effectively
     // the allocate() function, except that it does not mark the
     // returned space as being in-use.
@@ -151,38 +151,38 @@ private:
 
     // This is called when memory from an allocation is freed.
     void addFreeSpaceFromReleasedHandle(void* start, size_t sizeInBytes);
-    
+
     // This is the low-level implementation of adding free space; it
     // is called from both addFreeSpaceFromReleasedHandle and from
     // addFreshFreeSpace.
     void addFreeSpace(void* start, size_t sizeInBytes);
-    
+
     // Management of used space.
-    
+
     void incrementPageOccupancy(void* address, size_t sizeInBytes);
     void decrementPageOccupancy(void* address, size_t sizeInBytes);
 
     // Utilities.
-    
+
     size_t roundUp(size_t sizeInBytes);
-    
+
     FreeSpaceNode* allocFreeSpaceNode();
     WTF_EXPORT_PRIVATE void freeFreeSpaceNode(FreeSpaceNode*);
-    
+
     size_t m_allocationGranule;
     unsigned m_logAllocationGranule;
     size_t m_pageSize;
     unsigned m_logPageSize;
-    
+
     Tree m_freeSpaceSizeMap;
     HashMap<void*, FreeSpaceNode*> m_freeSpaceStartAddressMap;
     HashMap<void*, FreeSpaceNode*> m_freeSpaceEndAddressMap;
     HashMap<uintptr_t, size_t> m_pageOccupancyMap;
-    
+
     size_t m_bytesAllocated;
     size_t m_bytesReserved;
     size_t m_bytesCommitted;
-    
+
     SpinLock m_lock;
 
     MetaAllocatorTracker* m_tracker;

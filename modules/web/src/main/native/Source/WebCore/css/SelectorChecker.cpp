@@ -61,7 +61,7 @@
 namespace WebCore {
 
 using namespace HTMLNames;
-    
+
 static inline bool isFirstChildElement(const Element* element)
 {
     return !ElementTraversal::previousSibling(element);

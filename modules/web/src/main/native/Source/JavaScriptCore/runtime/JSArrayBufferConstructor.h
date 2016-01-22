@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef JSArrayBufferConstructor_h
@@ -42,9 +42,9 @@ protected:
 
 public:
     static JSArrayBufferConstructor* create(VM&, Structure*, JSArrayBufferPrototype*);
-    
+
     DECLARE_INFO;
-    
+
     static Structure* createStructure(VM&, JSGlobalObject*, JSValue prototype);
 
 protected:

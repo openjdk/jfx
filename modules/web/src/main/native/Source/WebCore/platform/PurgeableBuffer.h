@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef PurgeableBuffer_h
@@ -37,16 +37,16 @@ namespace WebCore {
     public:
         static PassOwnPtr<PurgeableBuffer> createUninitialized(size_t, char*& data);
         static PassOwnPtr<PurgeableBuffer> create(const char* data, size_t);
-        
+
         ~PurgeableBuffer();
 
         // Call makePurgeable(false) and check the return value before accessing the data.
         const char* data() const;
         size_t size() const { return m_size; }
-        
+
         PurgePriority purgePriority() const { return m_purgePriority; }
         void setPurgePriority(PurgePriority priority) { m_purgePriority = priority; }
-        
+
         bool isPurgeable() const { return m_state != NonVolatile; }
         bool wasPurged() const;
 
@@ -54,7 +54,7 @@ namespace WebCore {
 
     private:
         PurgeableBuffer(char* data, size_t);
-    
+
         char* m_data;
         size_t m_size;
         PurgePriority m_purgePriority;
@@ -71,7 +71,7 @@ namespace WebCore {
     inline bool PurgeableBuffer::wasPurged() const { return false; }
     inline bool PurgeableBuffer::makePurgeable(bool) { return false; }
 #endif
-    
+
 }
 
 #endif

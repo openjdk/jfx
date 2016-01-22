@@ -80,7 +80,7 @@ public class EventPopoverPage extends Region implements Popover.Page {
                 }
             });
     private static Task<Availability> CHECK_AVAIL_TASK;
-    
+
     private Popover popover;
     private final ScrollPane scrollPane;
     private final Node content;

@@ -56,9 +56,9 @@ public class BuildSamplesList {
     private static File samplesResourcesDir;
     private static List<Sample> highlightedSamples = new ArrayList<>();
     private static List<Sample> allSamples = new ArrayList<>();
-    
+
     public static List<Sample> build(File samplesSrcDir, File samplesResourcesDir, File samplesSourceFile) {
-        BuildSamplesList.samplesSrcDir = samplesSrcDir;                 
+        BuildSamplesList.samplesSrcDir = samplesSrcDir;
         File samplesDir = new File(samplesSrcDir,"ensemble/samples");
         BuildSamplesList.samplesResourcesDir = samplesResourcesDir; //Resources are in a different location from *.java files
         File resourcesDir = new File(samplesResourcesDir, "ensemble/samples");
@@ -83,7 +83,7 @@ public class BuildSamplesList {
             fout.println("import javafx.application.ConditionalFeature;");
             fout.println("import java.util.HashMap;");
             fout.println("public class Samples{");
-            // write samples         
+            // write samples
             for (int sampleIndex=0; sampleIndex < ALL_SAMPLES.size(); sampleIndex ++) {
                 fout.print("    private static final SampleInfo SAMPLE_"+sampleIndex+" = ");
                 fout.print(generateCode(ALL_SAMPLES.get(sampleIndex)));
@@ -117,7 +117,7 @@ public class BuildSamplesList {
         }
         return allSamples;
     }
-    
+
     private static void processCategoryOrSampleDir(SampleCategory category, File dir, File resourcesDir) {
         if (!dir.isDirectory()) {
             System.out.println("        found unexpected file: "+dir.getAbsolutePath());
@@ -137,7 +137,7 @@ public class BuildSamplesList {
             processCategoryDir(category, dir, resourcesDir);
         }
     }
-    
+
     private static void processCategoryDir(SampleCategory category, File dir, File resourcesDir) {
         System.out.println("========= CATEGORY ["+formatName(dir.getName())+"] ===============");
         // create new category
@@ -153,7 +153,7 @@ public class BuildSamplesList {
             }
         }
     }
-    
+
     private static void processSampleDir(SampleCategory category, File dir, File resourcesDir) {
         Sample sample = new Sample();
         Matcher matcher;
@@ -223,7 +223,7 @@ public class BuildSamplesList {
                             ConditionalFeature cf = ConditionalFeature.valueOf(feature.trim());
                             sample.conditionalFeatures.add(cf);
                         } catch (IllegalArgumentException ex) {
-                            System.err.println("@conditionalFeatures entry is not a feature: " + feature); 
+                            System.err.println("@conditionalFeatures entry is not a feature: " + feature);
                         }
                     }
                 } else if (trimedLine.startsWith("@embedded")) {
@@ -236,24 +236,24 @@ public class BuildSamplesList {
         }
         sample.description = descBuilder.toString();
         sample.ensemblePath = category.ensemblePath + "/" + sample.name;
-        // scan sample dir for resources 
+        // scan sample dir for resources
         compileResources(sample, dir, true, samplesSrcDir);
         // scan samples/resources dir for resources too
-        compileExtraResources(sample, resourcesDir, true, samplesResourcesDir); 
+        compileExtraResources(sample, resourcesDir, true, samplesResourcesDir);
         // add sample to category
         System.out.println(sample);
         category.addSample(sample);
         // add to all samples
         allSamples.add(sample);
     }
-    
+
     private static void compileResources(Sample sample, File dir, boolean root, File baseDir) {
         for (File file: dir.listFiles()) {
             if (file.getName().charAt(0) != '.') { // ignore hidden unix files
                 if (file.isDirectory()) {
                     compileResources(sample, file, false, baseDir);
                 } else {
-                    if (root && (file.getName().equalsIgnoreCase("preview.png") 
+                    if (root && (file.getName().equalsIgnoreCase("preview.png")
                             || file.getName().equalsIgnoreCase("preview@2x.png"))) {
                         continue; // ignore preview files
                     }
@@ -271,7 +271,7 @@ public class BuildSamplesList {
             }
         }
     }
-   
+
   private static void compileExtraResources(Sample sample, File dir, boolean root, File baseDir) {
       File specificResDir = new File(samplesResourcesDir, sample.baseUri.toString());
         for (File file: specificResDir.listFiles()) {
@@ -289,11 +289,11 @@ public class BuildSamplesList {
             }
         }
     }
-     
+
     private static String calculateRelativePath(File file, File baseDir) {
         return file.getAbsolutePath().substring(baseDir.getAbsolutePath().length()).replace('\\', '/');
     }
-    
+
     private static StringBuilder loadFile(File file) {
         StringBuilder builder = new StringBuilder();
         InputStream in = null;
@@ -318,7 +318,7 @@ public class BuildSamplesList {
         }
         return builder;
     }
-    
+
     private static String formatName(String dirName) {
         // remove ending "Sample" from name
         if(dirName.endsWith("Sample")) dirName = dirName.substring(0,dirName.length()-"Sample".length());

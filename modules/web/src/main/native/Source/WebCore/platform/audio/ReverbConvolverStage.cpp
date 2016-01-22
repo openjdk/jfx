@@ -106,7 +106,7 @@ void ReverbConvolverStage::process(const float* source, size_t framesToProcess)
     ASSERT(source);
     if (!source)
         return;
-    
+
     // Deal with pre-delay stream : note special handling of zero delay.
 
     const float* preDelayedSource;
@@ -124,16 +124,16 @@ void ReverbConvolverStage::process(const float* source, size_t framesToProcess)
 
         preDelayedDestination = m_preDelayBuffer.data() + m_preReadWriteIndex;
         preDelayedSource = preDelayedDestination;
-        temporaryBuffer = m_temporaryBuffer.data();        
+        temporaryBuffer = m_temporaryBuffer.data();
     } else {
         // Zero delay
         preDelayedDestination = 0;
         preDelayedSource = source;
         temporaryBuffer = m_preDelayBuffer.data();
-        
+
         isTemporaryBufferSafe = framesToProcess <= m_preDelayBuffer.size();
     }
-    
+
     ASSERT(isTemporaryBufferSafe);
     if (!isTemporaryBufferSafe)
         return;

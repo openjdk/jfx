@@ -131,7 +131,7 @@ bool RenderSVGResourceFilter::applyResource(RenderElement& renderer, const Rende
     if (filterData->boundaries.isEmpty())
         return false;
 
-    // Determine absolute transformation matrix for filter. 
+    // Determine absolute transformation matrix for filter.
     AffineTransform absoluteTransform;
     SVGRenderingContext::calculateTransformationToOutermostCoordinateSystem(renderer, absoluteTransform);
     if (!absoluteTransform.isInvertible())
@@ -209,13 +209,13 @@ bool RenderSVGResourceFilter::applyResource(RenderElement& renderer, const Rende
         m_filter.set(&renderer, std::move(filterData));
         return false;
     }
-    
+
     // Set the rendering mode from the page's settings.
     filterData->filter->setRenderingMode(renderingMode);
 
     GraphicsContext* sourceGraphicContext = sourceGraphic->context();
     ASSERT(sourceGraphicContext);
-  
+
     filterData->sourceGraphicBuffer = std::move(sourceGraphic);
     filterData->savedContext = context;
 

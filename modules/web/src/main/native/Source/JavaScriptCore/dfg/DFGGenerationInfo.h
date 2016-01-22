@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef DFGGenerationInfo_h
@@ -150,7 +150,7 @@ public:
 
     // Get the node that produced this value.
     Node* node() { return m_node; }
-    
+
     void noticeOSRBirth(VariableEventStream& stream, Node* node, VirtualRegister virtualRegister)
     {
         if (m_isConstant)
@@ -161,9 +161,9 @@ public:
             return;
         if (m_bornForOSR)
             return;
-        
+
         m_bornForOSR = true;
-        
+
         if (m_registerFormat != DataFormatNone)
             appendFill(BirthToFill, stream);
         else if (m_spillFormat != DataFormatNone)
@@ -177,12 +177,12 @@ public:
     {
         ASSERT(m_useCount);
         bool result = !--m_useCount;
-        
+
         if (result && m_bornForOSR) {
             ASSERT(m_node);
             stream.appendAndLog(VariableEvent::death(MinifiedID(m_node)));
         }
-        
+
         return result;
     }
 
@@ -199,47 +199,47 @@ public:
     DataFormat registerFormat() { return m_registerFormat; }
     // Get the format of the value as it is spilled in the JSStack (or 'none').
     DataFormat spillFormat() { return m_spillFormat; }
-    
+
     bool isFormat(DataFormat expectedFormat)
     {
         return registerFormat() == expectedFormat || spillFormat() == expectedFormat;
     }
-    
+
     bool isJSFormat(DataFormat expectedFormat)
     {
         return JSC::isJSFormat(registerFormat(), expectedFormat) || JSC::isJSFormat(spillFormat(), expectedFormat);
     }
-    
+
     bool isJSInt32()
     {
         return isJSFormat(DataFormatJSInt32);
     }
-    
+
     bool isInt52()
     {
         return isFormat(DataFormatInt52);
     }
-    
+
     bool isStrictInt52()
     {
         return isFormat(DataFormatStrictInt52);
     }
-    
+
     bool isJSDouble()
     {
         return isJSFormat(DataFormatJSDouble);
     }
-    
+
     bool isJSCell()
     {
         return isJSFormat(DataFormatJSCell);
     }
-    
+
     bool isJSBoolean()
     {
         return isJSFormat(DataFormatJSBoolean);
     }
-    
+
     bool isUnknownJS()
     {
         return spillFormat() == DataFormatNone
@@ -282,7 +282,7 @@ public:
         m_registerFormat = DataFormatNone;
         m_spillFormat = spillFormat;
         m_canFill = true;
-        
+
         if (m_bornForOSR)
             appendSpill(Spill, stream, virtualRegister);
     }
@@ -294,17 +294,17 @@ public:
         // Should only be called on values that don't need spilling, and are currently in registers.
         ASSERT(m_canFill && m_registerFormat != DataFormatNone);
         m_registerFormat = DataFormatNone;
-        
+
         if (m_bornForOSR)
             appendSpill(Spill, stream, virtualRegister);
     }
-    
+
     void killSpilled()
     {
         m_spillFormat = DataFormatNone;
         m_canFill = false;
     }
-    
+
     void fillGPR(VariableEventStream& stream, GPRReg gpr, DataFormat format)
     {
         ASSERT(gpr != InvalidGPRReg);
@@ -329,7 +329,7 @@ public:
         m_registerFormat = format;
         u.v.tagGPR = tagGPR; // FIXME: for JSValues with known type (boolean, integer, cell etc.) no tagGPR is needed?
         u.v.payloadGPR = payloadGPR;
-        
+
         if (m_bornForOSR)
             appendFill(Fill, stream);
     }
@@ -364,7 +364,7 @@ public:
         ASSERT(fpr != InvalidFPRReg);
         m_registerFormat = DataFormatDouble;
         u.fpr = fpr;
-        
+
         if (m_bornForOSR)
             appendFill(Fill, stream);
     }
@@ -382,7 +382,7 @@ private:
     void appendFill(VariableEventKind kind, VariableEventStream& stream)
     {
         ASSERT(m_bornForOSR);
-        
+
         if (m_registerFormat == DataFormatDouble) {
             stream.appendAndLog(VariableEvent::fillFPR(kind, MinifiedID(m_node), u.fpr));
             return;
@@ -395,12 +395,12 @@ private:
 #endif
         stream.appendAndLog(VariableEvent::fillGPR(kind, MinifiedID(m_node), u.gpr, m_registerFormat));
     }
-    
+
     void appendSpill(VariableEventKind kind, VariableEventStream& stream, VirtualRegister virtualRegister)
     {
         stream.appendAndLog(VariableEvent::spill(kind, MinifiedID(m_node), virtualRegister, m_spillFormat));
     }
-    
+
     // The node whose result is stored in this virtual register.
     Node* m_node;
     uint32_t m_useCount;

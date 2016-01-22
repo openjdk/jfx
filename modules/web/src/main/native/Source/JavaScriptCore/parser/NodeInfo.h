@@ -30,7 +30,7 @@ namespace JSC {
         int m_numConstants;
     };
 
-    typedef NodeInfo<FuncDeclNode*> FuncDeclNodeInfo;    
+    typedef NodeInfo<FuncDeclNode*> FuncDeclNodeInfo;
     typedef NodeInfo<FuncExprNode*> FuncExprNodeInfo;
     typedef NodeInfo<ExpressionNode*> ExpressionNodeInfo;
     typedef NodeInfo<ArgumentsNode*> ArgumentsNodeInfo;
@@ -39,7 +39,7 @@ namespace JSC {
     typedef NodeInfo<PropertyList> PropertyListInfo;
     typedef NodeInfo<ElementList> ElementListInfo;
     typedef NodeInfo<ArgumentList> ArgumentListInfo;
-    
+
     template <typename T> struct NodeDeclarationInfo {
         T m_node;
         ParserArenaData<DeclarationStacks::VarStack>* m_varDeclarations;
@@ -47,7 +47,7 @@ namespace JSC {
         CodeFeatures m_features;
         int m_numConstants;
     };
-    
+
     typedef NodeDeclarationInfo<StatementNode*> StatementNodeInfo;
     typedef NodeDeclarationInfo<CaseBlockNode*> CaseBlockNodeInfo;
     typedef NodeDeclarationInfo<CaseClauseNode*> CaseClauseNodeInfo;

@@ -46,7 +46,7 @@ public abstract class VirtualContainerBase<C extends Control, I extends IndexedC
      * Private fields                                                          *
      *                                                                         *
      **************************************************************************/
-    
+
     boolean rowCountDirty;
 
     /**
@@ -70,7 +70,7 @@ public abstract class VirtualContainerBase<C extends Control, I extends IndexedC
     public VirtualContainerBase(final C control) {
         super(control);
         flow = createVirtualFlow();
-        
+
         control.addEventHandler(ScrollToEvent.scrollToTopIndex(), event -> {
             // Fix for RT-24630: The row count in VirtualFlow was incorrect
             // (normally zero), so the scrollTo call was misbehaving.
@@ -96,7 +96,7 @@ public abstract class VirtualContainerBase<C extends Control, I extends IndexedC
      * that are currently hidden because they are out of view.
      */
     abstract int getItemCount();
-    
+
     abstract void updateRowCount();
 
 

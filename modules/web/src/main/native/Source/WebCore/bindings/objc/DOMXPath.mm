@@ -21,7 +21,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #import "config.h"
@@ -69,13 +69,13 @@ DOMNativeXPathNSResolver *kit(WebCore::XPathNSResolver* impl)
 {
     if (!impl)
         return nil;
-    
+
     if (DOMNativeXPathNSResolver *wrapper = getDOMWrapper(impl))
         return [[wrapper retain] autorelease];
-    
+
     DOMNativeXPathNSResolver *wrapper = [[DOMNativeXPathNSResolver alloc] _init];
     wrapper->_internal = reinterpret_cast<DOMObjectInternal*>(impl);
     impl->ref();
     addDOMWrapper(wrapper, impl);
-    return [wrapper autorelease];    
+    return [wrapper autorelease];
 }

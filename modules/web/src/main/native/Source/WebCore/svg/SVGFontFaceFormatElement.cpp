@@ -26,9 +26,9 @@
 #include "SVGNames.h"
 
 namespace WebCore {
-    
+
 using namespace SVGNames;
-    
+
 inline SVGFontFaceFormatElement::SVGFontFaceFormatElement(const QualifiedName& tagName, Document& document)
     : SVGElement(tagName, document)
 {
@@ -46,11 +46,11 @@ void SVGFontFaceFormatElement::childrenChanged(const ChildChange& change)
 
     if (!parentNode() || !parentNode()->hasTagName(font_face_uriTag))
         return;
-    
+
     ContainerNode* ancestor = parentNode()->parentNode();
     if (!ancestor || !ancestor->hasTagName(font_face_srcTag))
         return;
-    
+
     ancestor = ancestor->parentNode();
     if (ancestor && ancestor->hasTagName(font_faceTag))
         toSVGFontFaceElement(ancestor)->rebuildFontFace();

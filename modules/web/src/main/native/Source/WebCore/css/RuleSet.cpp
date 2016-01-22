@@ -151,7 +151,7 @@ static void collectFeaturesFromRuleData(RuleFeatureSet& features, const RuleData
     bool foundSiblingSelector = false;
     for (const CSSSelector* selector = ruleData.selector(); selector; selector = selector->tagHistory()) {
         features.collectFeaturesFromSelector(selector);
-        
+
         if (const CSSSelectorList* selectorList = selector->selectorList()) {
             for (const CSSSelector* subSelector = selectorList->first(); subSelector; subSelector = CSSSelectorList::next(subSelector)) {
                 if (!foundSiblingSelector && selector->isSiblingSelector())
@@ -166,7 +166,7 @@ static void collectFeaturesFromRuleData(RuleFeatureSet& features, const RuleData
     if (ruleData.containsUncommonAttributeSelector())
         features.uncommonAttributeRules.append(RuleFeature(ruleData.rule(), ruleData.selectorIndex(), ruleData.hasDocumentSecurityOrigin()));
 }
-    
+
 void RuleSet::addToRuleSet(AtomicStringImpl* key, AtomRuleMap& map, const RuleData& ruleData)
 {
     if (!key)

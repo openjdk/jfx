@@ -78,7 +78,7 @@ public class Bat extends Parent {
     }
 
     public Bat() {
-        height = (int)CENTER.getHeight() - Config.SHADOW_HEIGHT; 
+        height = (int)CENTER.getHeight() - Config.SHADOW_HEIGHT;
         Group group = new Group();
         leftImageView = new ImageView();
         leftImageView.setImage(LEFT);

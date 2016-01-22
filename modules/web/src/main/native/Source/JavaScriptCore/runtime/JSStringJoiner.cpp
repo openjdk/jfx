@@ -111,7 +111,7 @@ JSValue JSStringJoiner::join(ExecState* exec)
     size_t finalSize;
     if (outputStringSize.safeGet(finalSize) == CheckedState::DidOverflow)
         return throwOutOfMemoryError(exec);
-        
+
     if (!outputStringSize)
         return jsEmptyString(exec);
 

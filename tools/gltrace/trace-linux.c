@@ -22,7 +22,7 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
- 
+
 #define _GNU_SOURCE
 #include <dlfcn.h>
 #include <stdio.h>
@@ -83,7 +83,7 @@ trace_dlopen(const char *file, int mode, void *dl_caller)
     return result;
 }
 
-int   
+int
 trace_dlclose(void *handle)
 {
     DLFCN_HOOK_POP();
@@ -131,7 +131,7 @@ trace_dlerror(void)
     return result;
 }
 
-int   
+int
 trace_dladdr(const void *address, Dl_info *info)
 {
     DLFCN_HOOK_POP();
@@ -140,7 +140,7 @@ trace_dladdr(const void *address, Dl_info *info)
     return result;
 }
 
-int   
+int
 trace_dladdr1(const void *address, Dl_info *info, void **extra, int flags)
 {
     DLFCN_HOOK_POP();
@@ -149,7 +149,7 @@ trace_dladdr1(const void *address, Dl_info *info, void **extra, int flags)
     return result;
 }
 
-int   
+int
 trace_dlinfo(void *handle, int request, void *arg, void *dl_caller)
 {
     DLFCN_HOOK_POP();
@@ -182,7 +182,7 @@ init()
     }
 
     iolib_init(IO_WRITE, NULL);
-    
+
     DLFCN_HOOK_INIT();
     DLFCN_HOOK_PUSH();
 
@@ -196,7 +196,7 @@ static void fini()
 {
     DLFCN_HOOK_POP();
     iolib_fini();
-    
+
     if (tLevel >= dbgLevel) {
          fprintf(stderr, "INTERPOSITION FINISHED\n");
     }

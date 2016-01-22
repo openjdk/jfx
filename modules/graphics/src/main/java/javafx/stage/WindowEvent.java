@@ -37,7 +37,7 @@ import javafx.event.EventType;
 public class WindowEvent extends Event {
 
     private static final long serialVersionUID = 20121107L;
-    
+
     /**
      * Common supertype for all window event types.
      */
@@ -92,7 +92,7 @@ public class WindowEvent extends Event {
     /**
      * Returns a string representation of this {@code WindowEvent} object.
      * @return a string representation of this {@code WindowEvent} object.
-     */ 
+     */
     @Override public String toString() {
         final StringBuilder sb = new StringBuilder("WindowEvent [");
 
@@ -127,6 +127,6 @@ public class WindowEvent extends Event {
     public EventType<WindowEvent> getEventType() {
         return (EventType<WindowEvent>) super.getEventType();
     }
-    
-    
+
+
 }

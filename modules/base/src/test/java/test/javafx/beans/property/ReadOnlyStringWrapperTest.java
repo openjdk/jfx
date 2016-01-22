@@ -48,14 +48,14 @@ public class ReadOnlyStringWrapperTest {
     private static final String DEFAULT = null;
     private static final String VALUE_1 = "Hello World!";
     private static final String VALUE_2 = "Goodbye World!";
-    
+
     private ReadOnlyStringWrapperMock property;
     private ReadOnlyStringProperty readOnlyProperty;
     private InvalidationListenerMock internalInvalidationListener;
     private InvalidationListenerMock publicInvalidationListener;
     private ChangeListenerMock<String> internalChangeListener;
     private ChangeListenerMock<String> publicChangeListener;
-    
+
     @Before
     public void setUp() throws Exception {
         property = new ReadOnlyStringWrapperMock();
@@ -65,7 +65,7 @@ public class ReadOnlyStringWrapperTest {
         internalChangeListener = new ChangeListenerMock<String>(UNDEFINED);
         publicChangeListener = new ChangeListenerMock<String>(UNDEFINED);
     }
-    
+
     private void attachInvalidationListeners() {
         property.addListener(internalInvalidationListener);
         readOnlyProperty.addListener(publicInvalidationListener);
@@ -101,7 +101,7 @@ public class ReadOnlyStringWrapperTest {
         assertEquals(null, r1.getBean());
         assertEquals("", r1.getName());
     }
-    
+
     @Test
     public void testConstructor_InitialValue() {
         final ReadOnlyStringWrapper p1 = new ReadOnlyStringWrapper(VALUE_1);
@@ -116,7 +116,7 @@ public class ReadOnlyStringWrapperTest {
         assertEquals(null, r1.getBean());
         assertEquals("", r1.getName());
     }
-    
+
     @Test
     public void testConstructor_Bean_Name() {
         final Object bean = new Object();
@@ -133,7 +133,7 @@ public class ReadOnlyStringWrapperTest {
         assertEquals(bean, r1.getBean());
         assertEquals(name, r1.getName());
     }
-    
+
     @Test
     public void testConstructor_Bean_Name_InitialValue() {
         final Object bean = new Object();
@@ -154,7 +154,7 @@ public class ReadOnlyStringWrapperTest {
     @Test
     public void testLazySet() {
         attachInvalidationListeners();
-        
+
         // set value once
         property.set(VALUE_1);
         assertEquals(VALUE_1, property.get());
@@ -162,7 +162,7 @@ public class ReadOnlyStringWrapperTest {
         internalInvalidationListener.check(property, 1);
         assertEquals(VALUE_1, readOnlyProperty.get());
         publicInvalidationListener.check(readOnlyProperty, 1);
-        
+
         // set same value again
         property.set(VALUE_1);
         assertEquals(VALUE_1, property.get());
@@ -170,7 +170,7 @@ public class ReadOnlyStringWrapperTest {
         internalInvalidationListener.check(null, 0);
         assertEquals(VALUE_1, readOnlyProperty.get());
         publicInvalidationListener.check(null, 0);
-        
+
         // set value twice without reading
         property.set(VALUE_2);
         property.set(VALUE_1);
@@ -180,25 +180,25 @@ public class ReadOnlyStringWrapperTest {
         assertEquals(VALUE_1, readOnlyProperty.get());
         publicInvalidationListener.check(readOnlyProperty, 1);
     }
-    
+
     @Test
     public void testInternalEagerSet() {
         attachInternalChangeListener();
-        
+
         // set value once
         property.set(VALUE_1);
         assertEquals(VALUE_1, property.get());
         property.check(1);
         internalChangeListener.check(property, DEFAULT, VALUE_1, 1);
         assertEquals(VALUE_1, readOnlyProperty.get());
-        
+
         // set same value again
         property.set(VALUE_1);
         assertEquals(VALUE_1, property.get());
         property.check(0);
         internalChangeListener.check(null, UNDEFINED, UNDEFINED, 0);
         assertEquals(VALUE_1, readOnlyProperty.get());
-        
+
         // set value twice without reading
         property.set(VALUE_2);
         property.set(VALUE_1);
@@ -207,25 +207,25 @@ public class ReadOnlyStringWrapperTest {
         internalChangeListener.check(property, VALUE_2, VALUE_1, 2);
         assertEquals(VALUE_1, readOnlyProperty.get());
     }
-    
+
     @Test
     public void testPublicEagerSet() {
         attachPublicChangeListener();
-        
+
         // set value once
         property.set(VALUE_1);
         assertEquals(VALUE_1, property.get());
         property.check(1);
         assertEquals(VALUE_1, readOnlyProperty.get());
         publicChangeListener.check(readOnlyProperty, DEFAULT, VALUE_1, 1);
-        
+
         // set same value again
         property.set(VALUE_1);
         assertEquals(VALUE_1, property.get());
         property.check(0);
         assertEquals(VALUE_1, readOnlyProperty.get());
         publicChangeListener.check(null, UNDEFINED, UNDEFINED, 0);
-        
+
         // set value twice without reading
         property.set(VALUE_2);
         property.set(VALUE_1);
@@ -238,7 +238,7 @@ public class ReadOnlyStringWrapperTest {
     @Test
     public void testLazySetValue() {
         attachInvalidationListeners();
-        
+
         // set value once
         property.setValue(VALUE_1);
         assertEquals(VALUE_1, property.get());
@@ -246,7 +246,7 @@ public class ReadOnlyStringWrapperTest {
         internalInvalidationListener.check(property, 1);
         assertEquals(VALUE_1, readOnlyProperty.get());
         publicInvalidationListener.check(readOnlyProperty, 1);
-        
+
         // set same value again
         property.setValue(VALUE_1);
         assertEquals(VALUE_1, property.get());
@@ -254,7 +254,7 @@ public class ReadOnlyStringWrapperTest {
         internalInvalidationListener.check(null, 0);
         assertEquals(VALUE_1, readOnlyProperty.get());
         publicInvalidationListener.check(null, 0);
-        
+
         // set value twice without reading
         property.setValue(VALUE_2);
         property.setValue(VALUE_1);
@@ -264,25 +264,25 @@ public class ReadOnlyStringWrapperTest {
         assertEquals(VALUE_1, readOnlyProperty.get());
         publicInvalidationListener.check(readOnlyProperty, 1);
     }
-    
+
     @Test
     public void testInternalEagerSetValue() {
         attachInternalChangeListener();
-        
+
         // set value once
         property.setValue(VALUE_1);
         assertEquals(VALUE_1, property.get());
         property.check(1);
         internalChangeListener.check(property, DEFAULT, VALUE_1, 1);
         assertEquals(VALUE_1, readOnlyProperty.get());
-        
+
         // set same value again
         property.setValue(VALUE_1);
         assertEquals(VALUE_1, property.get());
         property.check(0);
         internalChangeListener.check(null, UNDEFINED, UNDEFINED, 0);
         assertEquals(VALUE_1, readOnlyProperty.get());
-        
+
         // set value twice without reading
         property.setValue(VALUE_2);
         property.setValue(VALUE_1);
@@ -291,25 +291,25 @@ public class ReadOnlyStringWrapperTest {
         internalChangeListener.check(property, VALUE_2, VALUE_1, 2);
         assertEquals(VALUE_1, readOnlyProperty.get());
     }
-    
+
     @Test
     public void testPublicEagerSetValue() {
         attachPublicChangeListener();
-        
+
         // set value once
         property.setValue(VALUE_1);
         assertEquals(VALUE_1, property.get());
         property.check(1);
         assertEquals(VALUE_1, readOnlyProperty.get());
         publicChangeListener.check(readOnlyProperty, DEFAULT, VALUE_1, 1);
-        
+
         // set same value again
         property.setValue(VALUE_1);
         assertEquals(VALUE_1, property.get());
         property.check(0);
         assertEquals(VALUE_1, readOnlyProperty.get());
         publicChangeListener.check(null, UNDEFINED, UNDEFINED, 0);
-        
+
         // set value twice without reading
         property.setValue(VALUE_2);
         property.setValue(VALUE_1);
@@ -318,7 +318,7 @@ public class ReadOnlyStringWrapperTest {
         assertEquals(VALUE_1, readOnlyProperty.get());
         publicChangeListener.check(readOnlyProperty, VALUE_2, VALUE_1, 2);
     }
-    
+
     @Test(expected=RuntimeException.class)
     public void testSetBoundValue() {
         final StringProperty v = new SimpleStringProperty(VALUE_1);
@@ -401,7 +401,7 @@ public class ReadOnlyStringWrapperTest {
         internalChangeListener.check(property, VALUE_2, VALUE_1, 1);
         assertEquals(VALUE_1, readOnlyProperty.get());
     }
-    
+
     @Test
     public void testPublicEagerBind_primitive() {
         attachPublicChangeListener();
@@ -437,7 +437,7 @@ public class ReadOnlyStringWrapperTest {
         assertEquals(VALUE_1, readOnlyProperty.get());
         publicChangeListener.check(readOnlyProperty, VALUE_2, VALUE_1, 1);
     }
-    
+
     @Test
     public void testLazyBind_generic() {
         attachInvalidationListeners();
@@ -549,7 +549,7 @@ public class ReadOnlyStringWrapperTest {
         assertEquals(VALUE_1, readOnlyProperty.get());
         publicChangeListener.check(readOnlyProperty, VALUE_2, VALUE_1, 1);
     }
-    
+
     @Test(expected=NullPointerException.class)
     public void testBindToNull() {
         property.bind(null);
@@ -566,7 +566,7 @@ public class ReadOnlyStringWrapperTest {
         property.reset();
         internalInvalidationListener.reset();
         publicInvalidationListener.reset();
-        
+
         // rebind causes invalidation event
         property.bind(v2);
         assertEquals(VALUE_2, property.get());
@@ -575,7 +575,7 @@ public class ReadOnlyStringWrapperTest {
         internalInvalidationListener.check(property, 1);
         assertEquals(VALUE_2, readOnlyProperty.get());
         publicInvalidationListener.check(readOnlyProperty, 1);
-        
+
         // change new binding
         v2.set(VALUE_1);
         assertEquals(VALUE_1, property.get());
@@ -583,7 +583,7 @@ public class ReadOnlyStringWrapperTest {
         internalInvalidationListener.check(property, 1);
         assertEquals(VALUE_1, readOnlyProperty.get());
         publicInvalidationListener.check(readOnlyProperty, 1);
-        
+
         // change old binding
         v1.set(VALUE_2);
         assertEquals(VALUE_1, property.get());
@@ -591,7 +591,7 @@ public class ReadOnlyStringWrapperTest {
         internalInvalidationListener.check(null, 0);
         assertEquals(VALUE_1, readOnlyProperty.get());
         publicInvalidationListener.check(null, 0);
-        
+
         // rebind to same observable should have no effect
         property.bind(v2);
         assertEquals(VALUE_1, property.get());
@@ -614,7 +614,7 @@ public class ReadOnlyStringWrapperTest {
         property.reset();
         internalInvalidationListener.reset();
         publicInvalidationListener.reset();
-        
+
         // change binding
         v.set(VALUE_2);
         assertEquals(VALUE_1, property.get());
@@ -622,7 +622,7 @@ public class ReadOnlyStringWrapperTest {
         internalInvalidationListener.check(null, 0);
         assertEquals(VALUE_1, readOnlyProperty.get());
         publicInvalidationListener.check(null, 0);
-        
+
         // set value
         property.set(VALUE_2);
         assertEquals(VALUE_2, property.get());
@@ -631,7 +631,7 @@ public class ReadOnlyStringWrapperTest {
         assertEquals(VALUE_2, readOnlyProperty.get());
         publicInvalidationListener.check(readOnlyProperty, 1);
     }
-    
+
     @Test
     public void testAddingListenerWillAlwaysReceiveInvalidationEvent() {
         final StringProperty v = new SimpleStringProperty(VALUE_1);
@@ -646,14 +646,14 @@ public class ReadOnlyStringWrapperTest {
         internalListener2.reset();
         property.set(VALUE_2);
         internalListener2.check(property, 1);
-        
+
         // setting the property, checking public
         property.set(VALUE_1);
         readOnlyProperty.addListener(publicListener2);
         publicListener2.reset();
         property.set(VALUE_2);
         publicListener2.check(readOnlyProperty, 1);
-        
+
         // binding the property, checking internal
         property.bind(v);
         v.set(VALUE_2);
@@ -662,7 +662,7 @@ public class ReadOnlyStringWrapperTest {
         internalListener3.reset();
         v.set(VALUE_1);
         internalListener3.check(property, 1);
-        
+
         // binding the property, checking public
         property.bind(v);
         v.set(VALUE_2);
@@ -672,7 +672,7 @@ public class ReadOnlyStringWrapperTest {
         v.set(VALUE_1);
         publicListener3.check(readOnlyProperty, 1);
     }
-    
+
     @Test
     public void testRemoveListeners() {
         attachInvalidationListeners();
@@ -682,37 +682,37 @@ public class ReadOnlyStringWrapperTest {
         property.get();
         internalInvalidationListener.reset();
         internalChangeListener.reset();
-        
+
         property.set(VALUE_1);
         internalInvalidationListener.check(null, 0);
         internalChangeListener.check(null, UNDEFINED, UNDEFINED, 0);
-        
+
         // no read only property created => no-op
         final ReadOnlyStringWrapper v1 = new ReadOnlyStringWrapper();
         v1.removeListener(internalInvalidationListener);
         v1.removeListener(internalChangeListener);
     }
-    
+
     @Test
     public void testNoReadOnlyPropertyCreated() {
         final StringProperty v1 = new SimpleStringProperty(VALUE_1);
         final ReadOnlyStringWrapper p1 = new ReadOnlyStringWrapper();
-        
+
         p1.set(VALUE_1);
         p1.bind(v1);
         assertEquals(VALUE_1, p1.get());
         v1.set(VALUE_2);
         assertEquals(VALUE_2, p1.get());
     }
-    
+
     @Test
     public void testToString() {
         final StringProperty v1 = new SimpleStringProperty(VALUE_1);
-        
+
         property.set(VALUE_1);
         assertEquals("StringProperty [value: " + VALUE_1 + "]", property.toString());
         assertEquals("ReadOnlyStringProperty [value: " + VALUE_1 + "]", readOnlyProperty.toString());
-        
+
         property.bind(v1);
         assertEquals("StringProperty [bound, invalid]", property.toString());
         assertEquals("ReadOnlyStringProperty [value: " + VALUE_1 + "]", readOnlyProperty.toString());
@@ -725,13 +725,13 @@ public class ReadOnlyStringWrapperTest {
         property.get();
         assertEquals("StringProperty [bound, value: " + VALUE_2 + "]", property.toString());
         assertEquals("ReadOnlyStringProperty [value: " + VALUE_2 + "]", readOnlyProperty.toString());
-        
+
         final Object bean = new Object();
         final String name = "My name";
         final ReadOnlyStringWrapper v2 = new ReadOnlyStringWrapper(bean, name);
         assertEquals("StringProperty [bean: " + bean.toString() + ", name: My name, value: " + DEFAULT + "]", v2.toString());
         assertEquals("ReadOnlyStringProperty [bean: " + bean.toString() + ", name: My name, value: " + DEFAULT + "]", v2.getReadOnlyProperty().toString());
-        
+
         final ReadOnlyStringWrapper v3 = new ReadOnlyStringWrapper(bean, "");
         assertEquals("StringProperty [bean: " + bean.toString() + ", value: " + DEFAULT + "]", v3.toString());
         assertEquals("ReadOnlyStringProperty [bean: " + bean.toString() + ", value: " + DEFAULT + "]", v3.getReadOnlyProperty().toString());
@@ -740,21 +740,21 @@ public class ReadOnlyStringWrapperTest {
         assertEquals("StringProperty [name: My name, value: " + DEFAULT + "]", v4.toString());
         assertEquals("ReadOnlyStringProperty [name: My name, value: " + DEFAULT + "]", v4.getReadOnlyProperty().toString());
     }
-    
+
     private static class ReadOnlyStringWrapperMock extends ReadOnlyStringWrapper {
-        
+
         private int counter;
-        
+
         @Override
         protected void invalidated() {
             counter++;
         }
-        
+
         private void check(int expected) {
             assertEquals(expected, counter);
             reset();
         }
-        
+
         private void reset() {
             counter = 0;
         }

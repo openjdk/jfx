@@ -233,7 +233,7 @@ public class StyleablePropertyFactory_createMethod_Test {
 
         static final StyleablePropertyFactory<MyStyleable> styleablePropertyFactory = new StyleablePropertyFactory<>(null);
         protected StyleablePropertyFactory<? extends MyStyleable> getFactory() { return MyStyleable.styleablePropertyFactory; }
-        
+
         protected StyleableProperty<T> prop = null;
         StyleableProperty<T> getProp() { return prop; }
 

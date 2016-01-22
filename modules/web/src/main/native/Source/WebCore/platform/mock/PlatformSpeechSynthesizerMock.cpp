@@ -35,13 +35,13 @@ PassOwnPtr<PlatformSpeechSynthesizerMock> PlatformSpeechSynthesizerMock::create(
 {
     return adoptPtr(new PlatformSpeechSynthesizerMock(client));
 }
-    
+
 PlatformSpeechSynthesizerMock::PlatformSpeechSynthesizerMock(PlatformSpeechSynthesizerClient* client)
     : PlatformSpeechSynthesizer(client)
     , m_speakingFinishedTimer(this, &PlatformSpeechSynthesizerMock::speakingFinished)
 {
 }
-    
+
 PlatformSpeechSynthesizerMock::~PlatformSpeechSynthesizerMock()
 {
 }
@@ -52,7 +52,7 @@ void PlatformSpeechSynthesizerMock::speakingFinished(Timer<PlatformSpeechSynthes
     client()->didFinishSpeaking(m_utterance);
     m_utterance = 0;
 }
-    
+
 void PlatformSpeechSynthesizerMock::initializeVoiceList()
 {
     m_voiceList.append(PlatformSpeechSynthesisVoice::create(String("mock.voice.bruce"), String("bruce"), String("en-US"), true, true));
@@ -65,20 +65,20 @@ void PlatformSpeechSynthesizerMock::speak(PassRefPtr<PlatformSpeechSynthesisUtte
     ASSERT(!m_utterance);
     m_utterance = utterance;
     client()->didStartSpeaking(m_utterance);
-    
+
     // Fire a fake word and then sentence boundary event.
     client()->boundaryEventOccurred(m_utterance, SpeechWordBoundary, 0);
     client()->boundaryEventOccurred(m_utterance, SpeechSentenceBoundary, m_utterance->text().length());
-    
+
     // Give the fake speech job some time so that pause and other functions have time to be called.
     m_speakingFinishedTimer.startOneShot(.1);
 }
-    
+
 void PlatformSpeechSynthesizerMock::cancel()
 {
     if (!m_utterance)
         return;
-    
+
     m_speakingFinishedTimer.stop();
     client()->speakingErrorOccurred(m_utterance);
     m_utterance = 0;

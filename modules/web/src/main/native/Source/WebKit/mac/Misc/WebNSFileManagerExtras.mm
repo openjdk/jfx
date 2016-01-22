@@ -6,13 +6,13 @@
  * are met:
  *
  * 1.  Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer. 
+ *     notice, this list of conditions and the following disclaimer.
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
- *     documentation and/or other materials provided with the distribution. 
+ *     documentation and/or other materials provided with the distribution.
  * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
- *     from this software without specific prior written permission. 
+ *     from this software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY APPLE AND ITS CONTRIBUTORS "AS IS" AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
@@ -78,17 +78,17 @@ static void *setMetaData(void* context)
     NSURL *URL = [NSURL _web_URLWithUserTypedString:URLString];
     if (URL)
         URLString = [[URL _web_URLByRemovingUserInfo] _web_userVisibleString];
- 
+
     // Spawn a background thread for WKSetMetadataURL because this function will not return until mds has
     // journaled the data we're're trying to set. Depending on what other I/O is going on, it can take some
-    // time. 
+    // time.
     pthread_t tid;
     pthread_attr_t attr;
     pthread_attr_init(&attr);
     pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
 
     MetaDataInfo *info = static_cast<MetaDataInfo *>(malloc(sizeof(MetaDataInfo)));
-    
+
     info->URLString = URLString ? CFStringCreateCopy(0, (CFStringRef)URLString) : 0;
     info->referrer = referrer ? CFStringCreateCopy(0, (CFStringRef)referrer) : 0;
     info->path = path ? CFStringCreateCopy(0, (CFStringRef)path) : 0;
@@ -127,7 +127,7 @@ static BOOL fileExists(NSString *path)
         NSString *pathWithoutExtensions;
         NSString *lastPathComponent = [path lastPathComponent];
         NSRange periodRange = [lastPathComponent rangeOfString:@"."];
-        
+
         if (periodRange.location == NSNotFound) {
             pathWithoutExtensions = path;
         } else {

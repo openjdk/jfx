@@ -36,7 +36,7 @@ import com.sun.scenario.effect.impl.state.RenderState;
 
 /**
  * The abstract base class for all {@code Effect} implementation peers.
- * 
+ *
  * @param <T> an optional subclass of RenderState that can be assumed as the
  *            return value for the getRenderState() method
  */

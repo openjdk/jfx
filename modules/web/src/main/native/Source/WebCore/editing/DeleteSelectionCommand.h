@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef DeleteSelectionCommand_h
@@ -32,7 +32,7 @@ namespace WebCore {
 
 class EditingStyle;
 
-class DeleteSelectionCommand : public CompositeEditCommand { 
+class DeleteSelectionCommand : public CompositeEditCommand {
 public:
     static PassRefPtr<DeleteSelectionCommand> create(Document& document, bool smartDelete = false, bool mergeBlocksAfterDelete = true, bool replace = false, bool expandForSpecialElements = false, bool sanitizeMarkup = true)
     {
@@ -51,7 +51,7 @@ private:
 
     virtual void doApply();
     virtual EditAction editingAction() const;
-    
+
     virtual bool preservesTypingStyle() const;
 
     void initializeStartEnd(Position&, Position&);

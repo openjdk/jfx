@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef TextEncoding_h
@@ -42,7 +42,7 @@ namespace WebCore {
         const char* domName() const; // name exposed via DOM
         bool usesVisualOrdering() const;
         bool isJapanese() const;
-        
+
         PassRefPtr<StringImpl> displayString(PassRefPtr<StringImpl> str) const
         {
             if (m_backslashAsCurrencySymbol == '\\' || !str)

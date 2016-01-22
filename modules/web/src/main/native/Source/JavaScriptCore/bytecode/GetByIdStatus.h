@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef GetByIdStatus_h
@@ -50,13 +50,13 @@ public:
         : m_state(NoInformation)
     {
     }
-    
+
     explicit GetByIdStatus(State state)
         : m_state(state)
     {
         ASSERT(state == NoInformation || state == TakesSlowPath || state == MakesCalls);
     }
-    
+
     GetByIdStatus(
         State state, bool wasSeenInJIT, const GetByIdVariant& variant = GetByIdVariant())
         : m_state(state)
@@ -65,14 +65,14 @@ public:
         ASSERT((state == Simple) == variant.isSet());
         m_variants.append(variant);
     }
-    
+
     static GetByIdStatus computeFor(CodeBlock*, StubInfoMap&, unsigned bytecodeIndex, StringImpl* uid);
     static GetByIdStatus computeFor(VM&, Structure*, StringImpl* uid);
-    
+
     static GetByIdStatus computeFor(CodeBlock* baselineBlock, CodeBlock* dfgBlock, StubInfoMap& baselineMap, StubInfoMap& dfgMap, CodeOrigin, StringImpl* uid);
-    
+
     State state() const { return m_state; }
-    
+
     bool isSet() const { return m_state != NoInformation; }
     bool operator!() const { return !isSet(); }
     bool isSimple() const { return m_state == Simple; }
@@ -84,11 +84,11 @@ public:
 
     bool takesSlowPath() const { return m_state == TakesSlowPath || m_state == MakesCalls; }
     bool makesCalls() const { return m_state == MakesCalls; }
-    
+
     bool wasSeenInJIT() const { return m_wasSeenInJIT; }
-    
+
     void dump(PrintStream&) const;
-    
+
 private:
 #if ENABLE(DFG_JIT)
     static bool hasExitSite(const ConcurrentJITLocker&, CodeBlock*, unsigned bytecodeIndex, ExitingJITType = ExitFromAnything);
@@ -98,7 +98,7 @@ private:
 #endif
     bool computeForChain(CodeBlock*, StringImpl* uid, PassRefPtr<IntendedStructureChain>);
     static GetByIdStatus computeFromLLInt(CodeBlock*, unsigned bytecodeIndex, StringImpl* uid);
-    
+
     State m_state;
     Vector<GetByIdVariant, 1> m_variants;
     bool m_wasSeenInJIT;

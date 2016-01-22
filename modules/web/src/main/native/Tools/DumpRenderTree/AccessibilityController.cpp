@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -51,7 +51,7 @@ static JSValueRef getRootElementCallback(JSContextRef context, JSObjectRef thisO
 void AccessibilityController::makeWindowObject(JSContextRef context, JSObjectRef windowObject, JSValueRef* exception)
 {
     JSRetainPtr<JSStringRef> accessibilityControllerStr(Adopt, JSStringCreateWithUTF8CString("accessibilityController"));
-    
+
     JSClassRef classRef = getJSClass();
     JSValueRef accessibilityControllerObject = JSObjectMake(context, classRef, this);
     JSClassRelease(classRef);
@@ -95,7 +95,7 @@ static JSValueRef getElementAtPointCallback(JSContextRef context, JSObjectRef fu
         x = JSValueToNumber(context, arguments[0], exception);
         y = JSValueToNumber(context, arguments[1], exception);
     }
-    
+
     AccessibilityController* controller = static_cast<AccessibilityController*>(JSObjectGetPrivate(thisObject));
     return AccessibilityUIElement::makeJSAccessibilityUIElement(context, controller->elementAtPoint(x, y));
 }
@@ -104,7 +104,7 @@ static JSValueRef getAccessibleElementByIdCallback(JSContextRef context, JSObjec
 {
     JSStringRef idAttribute = 0;
     if (argumentCount == 1)
-        idAttribute = JSValueToStringCopy(context, arguments[0], exception);    
+        idAttribute = JSValueToStringCopy(context, arguments[0], exception);
     AccessibilityController* controller = static_cast<AccessibilityController*>(JSObjectGetPrivate(thisObject));
     JSValueRef result = AccessibilityUIElement::makeJSAccessibilityUIElement(context, controller->accessibleElementById(idAttribute));
     if (idAttribute)
@@ -116,7 +116,7 @@ static JSValueRef addNotificationListenerCallback(JSContextRef context, JSObject
 {
     if (argumentCount != 1)
         return JSValueMakeBoolean(context, false);
-    
+
     AccessibilityController* controller = static_cast<AccessibilityController*>(JSObjectGetPrivate(thisObject));
     JSObjectRef callback = JSValueToObject(context, arguments[0], exception);
     bool succeeded = controller->addNotificationListener(callback);

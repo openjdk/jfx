@@ -136,10 +136,10 @@ static void addProxyServersForURL(Vector<ProxyServer>& proxyServers, const URL& 
 Vector<ProxyServer> proxyServersForURL(const URL& url, const NetworkingContext*)
 {
     Vector<ProxyServer> proxyServers;
-    
+
     addProxyServersForURL(proxyServers, url);
     return proxyServers;
-    
+
 }
 
 } // namespace WebCore

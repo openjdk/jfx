@@ -43,7 +43,7 @@ import javafx.scene.canvas.Canvas;
 
 /**
  *
- * 
+ *
  */
 public class CanvasResizer extends AbstractResizer<Canvas> {
 
@@ -52,7 +52,7 @@ public class CanvasResizer extends AbstractResizer<Canvas> {
     private final PropertyName widthName = new PropertyName("width"); //NOI18N
     private final PropertyName heightName = new PropertyName("height"); //NOI18N
     private final List<PropertyName> propertyNames = new ArrayList<>();
-    
+
     public CanvasResizer(Canvas sceneGraphObject) {
         super(sceneGraphObject);
         originalWidth   = sceneGraphObject.getWidth();
@@ -66,13 +66,13 @@ public class CanvasResizer extends AbstractResizer<Canvas> {
     /*
      * AbstractResizer
      */
-    
+
     @Override
     public final Bounds computeBounds(double width, double height) {
         return new BoundingBox(0, 0, Math.round(width), Math.round(height));
     }
 
-    
+
     @Override
     public Feature getFeature() {
         return Feature.FREE;
@@ -103,7 +103,7 @@ public class CanvasResizer extends AbstractResizer<Canvas> {
     public Object getValue(PropertyName propertyName) {
         assert propertyName != null;
         assert propertyNames.contains(propertyName);
-        
+
         final Object result;
         if (propertyName.equals(widthName)) {
             result = sceneGraphObject.getWidth();
@@ -113,7 +113,7 @@ public class CanvasResizer extends AbstractResizer<Canvas> {
             // Emergency code
             result = null;
         }
-        
+
         return result;
     }
 

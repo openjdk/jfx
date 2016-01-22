@@ -36,96 +36,96 @@ printf_fetchargs (va_list args, arguments *a)
     switch (ap->type)
       {
       case TYPE_SCHAR:
-	ap->a.a_schar = va_arg (args, /*signed char*/ int);
-	break;
+    ap->a.a_schar = va_arg (args, /*signed char*/ int);
+    break;
       case TYPE_UCHAR:
-	ap->a.a_uchar = va_arg (args, /*unsigned char*/ int);
-	break;
+    ap->a.a_uchar = va_arg (args, /*unsigned char*/ int);
+    break;
       case TYPE_SHORT:
-	ap->a.a_short = va_arg (args, /*short*/ int);
-	break;
+    ap->a.a_short = va_arg (args, /*short*/ int);
+    break;
       case TYPE_USHORT:
-	ap->a.a_ushort = va_arg (args, /*unsigned short*/ int);
-	break;
+    ap->a.a_ushort = va_arg (args, /*unsigned short*/ int);
+    break;
       case TYPE_INT:
-	ap->a.a_int = va_arg (args, int);
-	break;
+    ap->a.a_int = va_arg (args, int);
+    break;
       case TYPE_UINT:
-	ap->a.a_uint = va_arg (args, unsigned int);
-	break;
+    ap->a.a_uint = va_arg (args, unsigned int);
+    break;
       case TYPE_LONGINT:
-	ap->a.a_longint = va_arg (args, long int);
-	break;
+    ap->a.a_longint = va_arg (args, long int);
+    break;
       case TYPE_ULONGINT:
-	ap->a.a_ulongint = va_arg (args, unsigned long int);
-	break;
+    ap->a.a_ulongint = va_arg (args, unsigned long int);
+    break;
 #ifdef HAVE_LONG_LONG
       case TYPE_LONGLONGINT:
-	ap->a.a_longlongint = va_arg (args, long long int);
-	break;
+    ap->a.a_longlongint = va_arg (args, long long int);
+    break;
       case TYPE_ULONGLONGINT:
-	ap->a.a_ulonglongint = va_arg (args, unsigned long long int);
-	break;
+    ap->a.a_ulonglongint = va_arg (args, unsigned long long int);
+    break;
 #endif
 #ifdef HAVE_INT64_AND_I64
       case TYPE_INT64:
-	ap->a.a_int64 = va_arg (args, __int64);
-	break;
+    ap->a.a_int64 = va_arg (args, __int64);
+    break;
       case TYPE_UINT64:
-	ap->a.a_uint64 = va_arg (args, unsigned __int64);
-	break;
+    ap->a.a_uint64 = va_arg (args, unsigned __int64);
+    break;
 #endif
       case TYPE_DOUBLE:
-	ap->a.a_double = va_arg (args, double);
-	break;
+    ap->a.a_double = va_arg (args, double);
+    break;
 #ifdef HAVE_LONG_DOUBLE
       case TYPE_LONGDOUBLE:
-	ap->a.a_longdouble = va_arg (args, long double);
-	break;
+    ap->a.a_longdouble = va_arg (args, long double);
+    break;
 #endif
       case TYPE_CHAR:
-	ap->a.a_char = va_arg (args, int);
-	break;
+    ap->a.a_char = va_arg (args, int);
+    break;
 #ifdef HAVE_WINT_T
       case TYPE_WIDE_CHAR:
 #ifdef _WIN32
-	ap->a.a_wide_char = va_arg (args, int);
+    ap->a.a_wide_char = va_arg (args, int);
 #else
-	ap->a.a_wide_char = va_arg (args, wint_t);
+    ap->a.a_wide_char = va_arg (args, wint_t);
 #endif
-	break;
+    break;
 #endif
       case TYPE_STRING:
-	ap->a.a_string = va_arg (args, const char *);
-	break;
+    ap->a.a_string = va_arg (args, const char *);
+    break;
 #ifdef HAVE_WCHAR_T
       case TYPE_WIDE_STRING:
-	ap->a.a_wide_string = va_arg (args, const wchar_t *);
-	break;
+    ap->a.a_wide_string = va_arg (args, const wchar_t *);
+    break;
 #endif
       case TYPE_POINTER:
-	ap->a.a_pointer = va_arg (args, void *);
-	break;
+    ap->a.a_pointer = va_arg (args, void *);
+    break;
       case TYPE_COUNT_SCHAR_POINTER:
-	ap->a.a_count_schar_pointer = va_arg (args, signed char *);
-	break;
+    ap->a.a_count_schar_pointer = va_arg (args, signed char *);
+    break;
       case TYPE_COUNT_SHORT_POINTER:
-	ap->a.a_count_short_pointer = va_arg (args, short *);
-	break;
+    ap->a.a_count_short_pointer = va_arg (args, short *);
+    break;
       case TYPE_COUNT_INT_POINTER:
-	ap->a.a_count_int_pointer = va_arg (args, int *);
-	break;
+    ap->a.a_count_int_pointer = va_arg (args, int *);
+    break;
       case TYPE_COUNT_LONGINT_POINTER:
-	ap->a.a_count_longint_pointer = va_arg (args, long int *);
-	break;
+    ap->a.a_count_longint_pointer = va_arg (args, long int *);
+    break;
 #ifdef HAVE_LONG_LONG
       case TYPE_COUNT_LONGLONGINT_POINTER:
-	ap->a.a_count_longlongint_pointer = va_arg (args, long long int *);
-	break;
+    ap->a.a_count_longlongint_pointer = va_arg (args, long long int *);
+    break;
 #endif
       default:
-	/* Unknown type.  */
-	return -1;
+    /* Unknown type.  */
+    return -1;
       }
   return 0;
 }

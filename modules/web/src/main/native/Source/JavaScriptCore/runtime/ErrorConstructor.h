@@ -41,14 +41,14 @@ namespace JSC {
 
         DECLARE_INFO;
 
-        static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype) 
-        { 
-            return Structure::create(vm, globalObject, prototype, TypeInfo(ObjectType, StructureFlags), info()); 
+        static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype)
+        {
+            return Structure::create(vm, globalObject, prototype, TypeInfo(ObjectType, StructureFlags), info());
         }
 
     protected:
         void finishCreation(VM&, ErrorPrototype*);
-        
+
     private:
         ErrorConstructor(VM&, Structure*);
         static ConstructType getConstructData(JSCell*, ConstructData&);

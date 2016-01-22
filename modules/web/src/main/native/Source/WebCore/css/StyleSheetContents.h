@@ -55,7 +55,7 @@ public:
     }
 
     ~StyleSheetContents();
-    
+
     const CSSParserContext& parserContext() const { return m_parserContext; }
 
     const AtomicString& determineNamespace(const AtomicString& prefix);
@@ -90,7 +90,7 @@ public:
 
     void parserAddNamespace(const AtomicString& prefix, const AtomicString& uri);
     void parserAppendRule(PassRefPtr<StyleRuleBase>);
-    void parserSetEncodingFromCharsetRule(const String& encoding); 
+    void parserSetEncodingFromCharsetRule(const String& encoding);
     void parserSetUsesRemUnits(bool b) { m_usesRemUnits = b; }
 
     void clearRules();
@@ -102,11 +102,11 @@ public:
     const Vector<RefPtr<StyleRuleImport>>& importRules() const { return m_importRules; }
 
     void notifyLoadedSheet(const CachedCSSStyleSheet*);
-    
+
     StyleSheetContents* parentStyleSheet() const;
     StyleRuleImport* ownerRule() const { return m_ownerRule; }
     void clearOwnerRule() { m_ownerRule = 0; }
-    
+
     // Note that href is the URL that started the redirect chain that led to
     // this style sheet. This property probably isn't useful for much except
     // the JavaScript binding (which needs to use this value for security).
@@ -119,7 +119,7 @@ public:
     bool usesRemUnits() const { return m_usesRemUnits; }
 
     unsigned estimatedSizeInBytes() const;
-    
+
     bool wrapperInsertRule(PassRefPtr<StyleRuleBase>, unsigned index);
     void wrapperDeleteRule(unsigned index);
 
@@ -161,7 +161,7 @@ private:
     bool m_usesRemUnits : 1;
     bool m_isMutable : 1;
     bool m_isInMemoryCache : 1;
-    
+
     CSSParserContext m_parserContext;
 
     Vector<CSSStyleSheet*> m_clients;

@@ -71,21 +71,21 @@ public abstract class TableCellSkinBase<C extends IndexedCell> extends CellSkinB
      */
     public TableCellSkinBase(final C control) {
         super(control);
-        
+
         // RT-22038
         Rectangle clip = new Rectangle();
         clip.widthProperty().bind(control.widthProperty());
         clip.heightProperty().bind(control.heightProperty());
         getSkinnable().setClip(clip);
         // --- end of RT-22038
-        
+
         ReadOnlyDoubleProperty columnWidthProperty = columnWidthProperty();
         if (columnWidthProperty != null) {
             columnWidthProperty.addListener(weakColumnWidthListener);
         }
 
         registerChangeListener(control.visibleProperty(), e -> getSkinnable().setVisible(columnVisibleProperty().get()));
-        
+
         if (control.getProperties().containsKey(Properties.DEFER_TO_PARENT_PREF_WIDTH)) {
             isDeferToParentForPrefWidth = true;
         }
@@ -132,7 +132,7 @@ public abstract class TableCellSkinBase<C extends IndexedCell> extends CellSkinB
         if (columnWidthProperty != null) {
             columnWidthProperty.removeListener(weakColumnWidthListener);
         }
-        
+
         super.dispose();
     }
 

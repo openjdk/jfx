@@ -196,7 +196,7 @@ bool SVGAElement::isFocusable() const
 {
     if (renderer() && renderer()->absoluteClippedOverflowRect().isEmpty())
         return false;
-    
+
     return SVGElement::isFocusable();
 }
 
@@ -214,10 +214,10 @@ bool SVGAElement::isKeyboardFocusable(KeyboardEvent* event) const
 {
     if (!isFocusable())
         return false;
-    
+
     if (!document().frame())
         return false;
-    
+
     return document().frame()->eventHandler().tabsToLinks(event);
 }
 
@@ -234,8 +234,8 @@ bool SVGAElement::childShouldCreateRenderer(const Node& child) const
 }
 
 bool SVGAElement::willRespondToMouseClickEvents()
-{ 
-    return isLink() || SVGGraphicsElement::willRespondToMouseClickEvents(); 
+{
+    return isLink() || SVGGraphicsElement::willRespondToMouseClickEvents();
 }
 
 } // namespace WebCore

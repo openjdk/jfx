@@ -37,7 +37,7 @@ import javafx.scene.Node;
 
 /**
  *
- * 
+ *
  */
 public class NodeTring extends AbstractNodeTring<Node> {
 

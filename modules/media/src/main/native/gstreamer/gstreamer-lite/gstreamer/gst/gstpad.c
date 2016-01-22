@@ -289,7 +289,7 @@ gst_pad_link_get_name (GstPadLinkReturn ret)
   buffer_list_quark = g_quark_from_static_string ("bufferlist"); \
   event_quark = g_quark_from_static_string ("event"); \
   \
-  for (i = 0; i < G_N_ELEMENTS (flow_quarks); i++) {			\
+  for (i = 0; i < G_N_ELEMENTS (flow_quarks); i++) {            \
     flow_quarks[i].quark = g_quark_from_static_string (flow_quarks[i].name); \
   } \
   \
@@ -3213,33 +3213,33 @@ no_match:
 
 /* a probe that does not take or return any data */
 #define PROBE_NO_DATA(pad,mask,label,defaultval)                \
-  G_STMT_START {						\
-    if (G_UNLIKELY (pad->num_probes)) {				\
+  G_STMT_START {                        \
+    if (G_UNLIKELY (pad->num_probes)) {             \
       /* pass NULL as the data item */                          \
       GstPadProbeInfo info = { mask, 0, NULL, 0, 0 };           \
-      ret = do_probe_callbacks (pad, &info, defaultval);	\
-      if (G_UNLIKELY (ret != defaultval && ret != GST_FLOW_OK))	\
-        goto label;						\
-    }								\
+      ret = do_probe_callbacks (pad, &info, defaultval);    \
+      if (G_UNLIKELY (ret != defaultval && ret != GST_FLOW_OK)) \
+        goto label;                     \
+    }                               \
   } G_STMT_END
 
 #define PROBE_FULL(pad,mask,data,offs,size,label)               \
-  G_STMT_START {						\
-    if (G_UNLIKELY (pad->num_probes)) {				\
+  G_STMT_START {                        \
+    if (G_UNLIKELY (pad->num_probes)) {             \
       /* pass the data item */                                  \
       GstPadProbeInfo info = { mask, 0, data, offs, size };     \
-      ret = do_probe_callbacks (pad, &info, GST_FLOW_OK);	\
+      ret = do_probe_callbacks (pad, &info, GST_FLOW_OK);   \
       /* store the possibly updated data item */                \
       data = GST_PAD_PROBE_INFO_DATA (&info);                   \
       /* if something went wrong, exit */                       \
-      if (G_UNLIKELY (ret != GST_FLOW_OK))	                \
-        goto label;						\
-    }								\
+      if (G_UNLIKELY (ret != GST_FLOW_OK))                  \
+        goto label;                     \
+    }                               \
   } G_STMT_END
 
-#define PROBE_PUSH(pad,mask,data,label)		                 \
+#define PROBE_PUSH(pad,mask,data,label)                      \
   PROBE_FULL(pad, mask, data, -1, -1, label);
-#define PROBE_PULL(pad,mask,data,offs,size,label)		 \
+#define PROBE_PULL(pad,mask,data,offs,size,label)        \
   PROBE_FULL(pad, mask, data, offs, size, label);
 
 static GstFlowReturn

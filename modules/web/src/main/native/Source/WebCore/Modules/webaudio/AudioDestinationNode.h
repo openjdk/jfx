@@ -35,16 +35,16 @@ namespace WebCore {
 
 class AudioBus;
 class AudioContext;
-    
+
 class AudioDestinationNode : public AudioNode, public AudioIOCallback {
 public:
     AudioDestinationNode(AudioContext*, float sampleRate);
     virtual ~AudioDestinationNode();
-    
-    // AudioNode   
+
+    // AudioNode
     virtual void process(size_t) override { }; // we're pulled by hardware so this is never called
     virtual void reset() override { m_currentSampleFrame = 0; }
-    
+
     // The audio hardware calls render() to get the next render quantum of audio into destinationBus.
     // It will optionally give us local/live audio input in sourceBus (if it's not 0).
     virtual void render(AudioBus* sourceBus, AudioBus* destinationBus, size_t numberOfFrames) override;
@@ -60,7 +60,7 @@ public:
     virtual void startRendering() = 0;
 
     AudioSourceProvider* localAudioInputProvider() { return &m_localAudioInputProvider; }
-    
+
 protected:
     // LocalAudioInputProvider allows us to expose an AudioSourceProvider for local/live audio input.
     // If there is local/live audio input, we call set() with the audio input data every render quantum.

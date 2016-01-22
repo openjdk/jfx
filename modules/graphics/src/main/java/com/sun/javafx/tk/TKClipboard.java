@@ -81,7 +81,7 @@ public interface TKClipboard {
 
     // for DnD
     public Set<TransferMode> getTransferModes();
-    
+
     /**
      * Sets the visual representation of data being transfered in a drag and drop gesture.
      * @param image image to use for the drag view
@@ -97,7 +97,7 @@ public interface TKClipboard {
     /**
      * Sets the y position of the cursor of the drag view image.
      * @param offsetY x position of the cursor over the image
-     */    
+     */
     public void setDragViewOffsetY(double offsetY);
 
     /**

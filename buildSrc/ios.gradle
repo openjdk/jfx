@@ -26,8 +26,8 @@
 ext.IOS = [:]
 
 if (BUILD_CLOSED) {
-    fetchExternalTools('IOS', 
-      ["ios-libs-08.tgz"], 
+    fetchExternalTools('IOS',
+      ["ios-libs-08.tgz"],
       rootProject.CROSS_TOOLS_DIR, rootProject.IS_IMPORT_CROSS_TOOLS)
 }
 
@@ -67,22 +67,22 @@ IOS.jfxrtJarExcludes = [
     "com/sun/prism/es2/gl/win",
     "com/sun/prism/null3d",
     "com/sun/scenario/effect/impl/hw/d3d",
-    
+
     "com/sun/glass/events/mac",
     "com/sun/glass/ui/mac",
     "com/sun/prism/es2/gl/mac",
     "com/sun/glass/ui/android",
     "com/sun/glass/ui/gtk",
-    
+
     "com/sun/glass/ui/lens",
     "com/sun/prism/es2/gl/eglfb",
     "com/sun/prism/es2/gl/eglx11",
     "com/sun/prism/es2/gl/x11",
-    
+
     "com/sun/glass/ui/swt", // SWT glass
-    
+
     "javafx/embed/swing", // Swing Interop
-    
+
     "javafx/embed/swt", // SWT Interop
 ]
 

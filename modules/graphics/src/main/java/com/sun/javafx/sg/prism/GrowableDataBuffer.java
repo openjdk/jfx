@@ -33,17 +33,17 @@ import java.util.Arrays;
  * A growable buffer that can contain both byte-encoded primitive values
  * and a list of Objects stored for communication between a writer that fills
  * it with data and a reader that empties the data behind the writer.
- * 
+ *
  * Both buffers (the byte-encoded array and the Object array) grow as needed
  * with no hard limits and the two are kept separately so it is up to the
  * reader and writer to read the two streams in a predetermined synchronicity
  * of the two streams.
- * 
+ *
  * The methods on a given GrowableDataBuffer object are not synchronized or
  * thread-safe and writing to or reading from the object from more than one
  * thread at a time is unsupported.  In particular, multiple writer threads
  * and/or multiple reader threads will definitely cause problems.
- * 
+ *
  * The static getBuffer() factory methods and the static returnBuffer() method
  * are all synchronized so that they can be called from any thread at any
  * time, but any given buffer should only be returned to the pool once.
@@ -63,7 +63,7 @@ public class GrowableDataBuffer {
      * Retrieve a buffer with an initial byte-encoding capacity of at least
      * {@code minsize} bytes.
      * The initial capacity of the object buffer will be the default size.
-     * 
+     *
      * @param minsize the minimum initial size of the byte-encoding buffer
      * @return a {@code GrowableDataBuffer} object of the requested size
      */
@@ -75,7 +75,7 @@ public class GrowableDataBuffer {
      * Retrieve a buffer with an initial byte-encoding capacity of at least
      * {@code minvals} bytes and an initial object buffer capacity of at
      * least {@code minobjs} Objects.
-     * 
+     *
      * @param minvals the minimum initial size of the byte-encoding buffer
      * @param minobjs the minimum initial size of the Object buffer
      * @return a {@code GrowableDataBuffer} object of the requested sizes
@@ -105,7 +105,7 @@ public class GrowableDataBuffer {
      * for reuse.
      * A given {@code GrowableDataBuffer} object should only be returned to
      * the pool once per retrieval from the {@code getBuffer()} methods.
-     * 
+     *
      * @param gdb the {@code GrowableDataBuffer} object to be reused.
      */
     public synchronized static void returnBuffer(GrowableDataBuffer retgdb) {
@@ -158,7 +158,7 @@ public class GrowableDataBuffer {
      * buffer.
      * This must always be less than or equal to the
      * {@code writeValuePosition()}.
-     * 
+     *
      * @return the byte position of the next byte data to be read.
      */
     public int readValuePosition() {
@@ -168,7 +168,7 @@ public class GrowableDataBuffer {
     /**
      * The location of the next byte to be written to the encoded value
      * buffer.
-     * 
+     *
      * @return the byte position of the next byte data to be written.
      */
     public int writeValuePosition() {
@@ -179,7 +179,7 @@ public class GrowableDataBuffer {
      * The location of the next object to be read from the object buffer.
      * This must always be less than or equal to the
      * {@code writeObjectPosition()}.
-     * 
+     *
      * @return the position of the next object to be read.
      */
     public int readObjectPosition() {
@@ -188,7 +188,7 @@ public class GrowableDataBuffer {
 
     /**
      * The location of the next object to be written to the object buffer.
-     * 
+     *
      * @return the position of the next object to be written.
      */
     public int writeObjectPosition() {
@@ -197,7 +197,7 @@ public class GrowableDataBuffer {
 
     /**
      * The capacity, in bytes, of the byte-encoding buffer.
-     * 
+     *
      * @return the capacity of the byte-encoding buffer
      */
     public int valueCapacity() {
@@ -206,7 +206,7 @@ public class GrowableDataBuffer {
 
     /**
      * The capacity, in objects, of the {@code Object} buffer.
-     * 
+     *
      * @return the capacity of the {@code Object} buffer
      */
     public int objectCapacity() {
@@ -235,7 +235,7 @@ public class GrowableDataBuffer {
     /**
      * Indicates whether or not there are values in the byte-encoding
      * buffer waiting to be read.
-     * 
+     *
      * @return true iff there are data values to be read
      */
     public boolean hasValues() {
@@ -245,7 +245,7 @@ public class GrowableDataBuffer {
     /**
      * Indicates whether or not there are objects in the object
      * buffer waiting to be read.
-     * 
+     *
      * @return true iff there are objects to be read
      */
     public boolean hasObjects() {
@@ -257,7 +257,7 @@ public class GrowableDataBuffer {
      * Note that this is different from whether or not there is unread
      * data in the byte-encoding buffer.  A buffer which has been written
      * and then later fully emptied by reading is not considered "empty".
-     * 
+     *
      * @return true iff there is no data at all stored in the byte buffer
      */
     public boolean isEmpty() {
@@ -285,7 +285,7 @@ public class GrowableDataBuffer {
      * the indicated {@code GrowableDataBuffer} to this object.
      * The data in the other indicated {@code GrowableDataBuffer} object
      * is not disturbed in any way.
-     * 
+     *
      * @param gdb the {@code GrowableDataBuffer} to append to this object
      */
     public void append(GrowableDataBuffer gdb) {
@@ -320,7 +320,7 @@ public class GrowableDataBuffer {
 
     /**
      * Encode a boolean value and write it to the end of the byte-encoding array
-     * 
+     *
      * @param b the boolean value to be written
      */
     public void putBoolean(boolean b) {
@@ -329,7 +329,7 @@ public class GrowableDataBuffer {
 
     /**
      * Write a byte value to the end of the byte-encoding array
-     * 
+     *
      * @param b the byte value to be written
      */
     public void putByte(byte b) {
@@ -339,7 +339,7 @@ public class GrowableDataBuffer {
 
     /**
      * Encode a char value and write it to the end of the byte-encoding array
-     * 
+     *
      * @param c the char value to be written
      */
     public void putChar(char c) {
@@ -350,7 +350,7 @@ public class GrowableDataBuffer {
 
     /**
      * Encode a short value and write it to the end of the byte-encoding array
-     * 
+     *
      * @param s the short value to be written
      */
     public void putShort(short s) {
@@ -361,7 +361,7 @@ public class GrowableDataBuffer {
 
     /**
      * Encode an int value and write it to the end of the byte-encoding array
-     * 
+     *
      * @param i the int value to be written
      */
     public void putInt(int i) {
@@ -374,7 +374,7 @@ public class GrowableDataBuffer {
 
     /**
      * Encode a long value and write it to the end of the byte-encoding array
-     * 
+     *
      * @param l the long value to be written
      */
     public void putLong(long l) {
@@ -391,7 +391,7 @@ public class GrowableDataBuffer {
 
     /**
      * Encode a float value and write it to the end of the byte-encoding array
-     * 
+     *
      * @param f the float value to be written
      */
     public void putFloat(float f) {
@@ -400,7 +400,7 @@ public class GrowableDataBuffer {
 
     /**
      * Encode a double value and write it to the end of the byte-encoding array
-     * 
+     *
      * @param d the double value to be written
      */
     public void putDouble(double d) {
@@ -409,7 +409,7 @@ public class GrowableDataBuffer {
 
     /**
      * Write an {@code Object} to the end of the object array
-     * 
+     *
      * @param o the {@code Object} to be written
      */
     public void putObject(Object o) {
@@ -424,7 +424,7 @@ public class GrowableDataBuffer {
      * position, but honoring the current write position as a limit.
      * The read and saved positions are not used or modified in any way
      * by this method
-     * 
+     *
      * @param i the absolute byte location to return from the byte-encoding array
      * @return the byte stored at the indicated location in the byte array
      */
@@ -440,7 +440,7 @@ public class GrowableDataBuffer {
      * position, but honoring the current write position as a limit.
      * The read and saved positions are not used or modified in any way
      * by this method
-     * 
+     *
      * @param i the absolute index to return from the {@code Object} array
      * @return the {@code Object} stored at the indicated index
      */
@@ -455,7 +455,7 @@ public class GrowableDataBuffer {
      * Decodes and returns a single boolean value from the current read
      * position in the byte-encoded stream and bumps the read position
      * past the decoded value.
-     * 
+     *
      * @return the decoded boolean value
      */
     public boolean getBoolean() {
@@ -467,7 +467,7 @@ public class GrowableDataBuffer {
      * Returns a single byte value from the current read
      * position in the byte-encoded stream and bumps the read position
      * past the returned value.
-     * 
+     *
      * @return the decoded byte value
      */
     public byte getByte() {
@@ -480,7 +480,7 @@ public class GrowableDataBuffer {
      * position in the byte-encoded stream and returns the value cast to
      * an int and bumps the read position
      * past the decoded value.
-     * 
+     *
      * @return the decoded unsigned byte value as an int
      */
     public int getUByte() {
@@ -492,7 +492,7 @@ public class GrowableDataBuffer {
      * Decodes and returns a single char value from the current read
      * position in the byte-encoded stream and bumps the read position
      * past the decoded value.
-     * 
+     *
      * @return the decoded char value
      */
     public char getChar() {
@@ -506,7 +506,7 @@ public class GrowableDataBuffer {
      * Decodes and returns a single short value from the current read
      * position in the byte-encoded stream and bumps the read position
      * past the decoded value.
-     * 
+     *
      * @return the decoded short value
      */
     public short getShort() {
@@ -520,7 +520,7 @@ public class GrowableDataBuffer {
      * Decodes and returns a single int value from the current read
      * position in the byte-encoded stream and bumps the read position
      * past the decoded value.
-     * 
+     *
      * @return the decoded int value
      */
     public int getInt() {
@@ -536,7 +536,7 @@ public class GrowableDataBuffer {
      * Decodes and returns a single long value from the current read
      * position in the byte-encoded stream and bumps the read position
      * past the decoded value.
-     * 
+     *
      * @return the decoded long value
      */
     public long getLong() {
@@ -556,7 +556,7 @@ public class GrowableDataBuffer {
      * Decodes and returns a single float value from the current read
      * position in the byte-encoded stream and bumps the read position
      * past the decoded value.
-     * 
+     *
      * @return the decoded float value
      */
     public float getFloat() {
@@ -567,7 +567,7 @@ public class GrowableDataBuffer {
      * Decodes and returns a single double value from the current read
      * position in the byte-encoded stream and bumps the read position
      * past the decoded value.
-     * 
+     *
      * @return the decoded double value
      */
     public double getDouble() {
@@ -578,7 +578,7 @@ public class GrowableDataBuffer {
      * Returns a single {@code Object} from the current object read
      * position in the {@code Object} stream and bumps the read position
      * past the returned value.
-     * 
+     *
      * @return the {@code Object} read from the buffer
      */
     public Object getObject() {

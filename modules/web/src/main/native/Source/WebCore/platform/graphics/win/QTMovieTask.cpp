@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "config.h"
 
@@ -33,7 +33,7 @@
 #include <wtf/StdLibExtras.h>
 #include <wtf/Vector.h>
 
-QTMovieTask::QTMovieTask() 
+QTMovieTask::QTMovieTask()
     : m_setTaskTimerDelay(0)
     , m_stopTaskTimer(0)
 {
@@ -60,7 +60,7 @@ void QTMovieTask::updateTaskTimer(double maxInterval, double minInterval)
         m_stopTaskTimer();
         return;
     }
-    
+
     long intervalInMS;
     OSStatus status = QTGetTimeUntilNextTask(&intervalInMS, 1000);
     double interval = intervalInMS / 1000.0;
@@ -79,7 +79,7 @@ void QTMovieTask::fireTaskClients()
         (*i)->task();
 }
 
-void QTMovieTask::addTaskClient(QTMovieTaskClient* client) 
+void QTMovieTask::addTaskClient(QTMovieTaskClient* client)
 {
     ASSERT(client);
     if (!client)

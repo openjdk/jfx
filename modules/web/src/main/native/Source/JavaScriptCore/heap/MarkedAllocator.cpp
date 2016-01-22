@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -62,8 +62,8 @@ bool MarkedAllocator::isPagedOut(double deadline)
 
 inline void* MarkedAllocator::tryAllocateHelper(size_t bytes)
 {
-    // We need a while loop to check the free list because the DelayedReleaseScope 
-    // could cause arbitrary code to execute and exhaust the free list that we 
+    // We need a while loop to check the free list because the DelayedReleaseScope
+    // could cause arbitrary code to execute and exhaust the free list that we
     // thought had elements in it.
     while (!m_freeList.head) {
         DelayedReleaseScope delayedReleaseScope(*m_markedSpace);
@@ -78,7 +78,7 @@ inline void* MarkedAllocator::tryAllocateHelper(size_t bytes)
             next = block->next();
 
             MarkedBlock::FreeList freeList = block->sweep(MarkedBlock::SweepToFreeList);
-            
+
             if (!freeList.head) {
                 block->didConsumeEmptyFreeList();
                 m_blockList.remove(block);
@@ -97,7 +97,7 @@ inline void* MarkedAllocator::tryAllocateHelper(size_t bytes)
             m_freeList = freeList;
             break;
         }
-        
+
         if (!m_freeList.head) {
             m_currentBlock = 0;
             return 0;
@@ -129,7 +129,7 @@ inline void* MarkedAllocator::tryAllocate(size_t bytes)
     void* result = tryAllocateHelper(bytes);
 
     // Due to the DelayedReleaseScope in tryAllocateHelper, some other thread might have
-    // created a new block after we thought we didn't find any free cells. 
+    // created a new block after we thought we didn't find any free cells.
     while (!result && m_currentBlock) {
         // A new block was added by another thread so try popping the free list.
         result = tryPopFreeList(bytes);
@@ -143,7 +143,7 @@ inline void* MarkedAllocator::tryAllocate(size_t bytes)
     ASSERT(result || !m_currentBlock);
     return result;
 }
-    
+
 void* MarkedAllocator::allocateSlowCase(size_t bytes)
 {
     ASSERT(m_heap->vm()->currentThreadIsHoldingAPILock());
@@ -152,16 +152,16 @@ void* MarkedAllocator::allocateSlowCase(size_t bytes)
         m_heap->collectAllGarbage();
     ASSERT(m_heap->m_operationInProgress == NoOperation);
 #endif
-    
+
     ASSERT(!m_markedSpace->isIterating());
     ASSERT(!m_freeList.head);
     m_heap->didAllocate(m_freeList.bytes);
-    
+
     void* result = tryAllocate(bytes);
-    
+
     if (LIKELY(result != 0))
         return result;
-    
+
     if (m_heap->collectIfNecessaryOrDefer()) {
         result = tryAllocate(bytes);
         if (result)
@@ -169,11 +169,11 @@ void* MarkedAllocator::allocateSlowCase(size_t bytes)
     }
 
     ASSERT(!m_heap->shouldCollect());
-    
+
     MarkedBlock* block = allocateBlock(bytes);
     ASSERT(block);
     addBlock(block);
-        
+
     result = tryAllocate(bytes);
     ASSERT(result);
     return result;
@@ -196,7 +196,7 @@ void MarkedAllocator::addBlock(MarkedBlock* block)
 {
     ASSERT(!m_currentBlock);
     ASSERT(!m_freeList.head);
-    
+
     m_blockList.append(block);
     m_nextBlockToSweep = block;
     m_markedSpace->didAddBlock(block);
@@ -213,7 +213,7 @@ void MarkedAllocator::removeBlock(MarkedBlock* block)
 
     if (block == m_lastFullBlock)
         m_lastFullBlock = m_lastFullBlock->prev();
-    
+
     m_blockList.remove(block);
 }
 

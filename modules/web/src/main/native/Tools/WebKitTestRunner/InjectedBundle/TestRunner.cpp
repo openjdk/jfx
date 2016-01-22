@@ -457,7 +457,7 @@ void TestRunner::evaluateScriptInIsolatedWorld(JSContextRef context, unsigned wo
         frame = WKBundlePageGetMainFrame(InjectedBundle::shared().page()->page());
 
     JSGlobalContextRef jsContext = WKBundleFrameGetJavaScriptContextForWorld(frame, world.get());
-    JSEvaluateScript(jsContext, script, 0, 0, 0, 0); 
+    JSEvaluateScript(jsContext, script, 0, 0, 0, 0);
 }
 
 void TestRunner::setPOSIXLocale(JSStringRef locale)
@@ -472,7 +472,7 @@ void TestRunner::setTextDirection(JSStringRef direction)
     WKBundleFrameRef mainFrame = WKBundlePageGetMainFrame(InjectedBundle::shared().page()->page());
     return WKBundleFrameSetTextDirection(mainFrame, toWK(direction).get());
 }
-    
+
 void TestRunner::setShouldStayOnPageAfterHandlingBeforeUnload(bool shouldStayOnPage)
 {
     InjectedBundle::shared().postNewBeforeUnloadReturnValue(!shouldStayOnPage);

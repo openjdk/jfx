@@ -51,7 +51,7 @@ public class CheckBoxSkinTest {
 
     }
 
-    @Test public void maxWidthTracksPreferred() {        
+    @Test public void maxWidthTracksPreferred() {
         checkbox.setPrefWidth(500);
         assertEquals(500, checkbox.maxWidth(-1), 0);
     }
@@ -60,7 +60,7 @@ public class CheckBoxSkinTest {
         checkbox.setPrefHeight(500);
         assertEquals(500, checkbox.maxHeight(-1), 0);
     }
-    
+
     public static final class CheckBoxSkinMock extends CheckBoxSkin {
         boolean propertyChanged = false;
         int propertyChangeCount = 0;

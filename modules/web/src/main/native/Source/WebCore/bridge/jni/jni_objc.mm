@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -49,16 +49,16 @@ using namespace JSC::Bindings;
 bool JSC::Bindings::dispatchJNICall(ExecState* exec, const void* targetAppletView, jobject obj, bool isStatic, JavaType returnType, jmethodID methodID, jvalue* args, jvalue &result, const char*, JSValue& exceptionDescription)
 {
     id view = (id)targetAppletView;
-    
+
     // As JavaTypeArray is not known by the Mac JVM, change it to a compatible type.
     if (returnType == JavaTypeArray)
         returnType = JavaTypeObject;
-    
+
     if ([view respondsToSelector:@selector(webPlugInCallJava:isStatic:returnType:method:arguments:callingURL:exceptionDescription:)]) {
         NSString *_exceptionDescription = 0;
 
         // Passing nil as the calling URL will cause the Java plugin to use the URL
-        // of the page that contains the applet. The execution restrictions 
+        // of the page that contains the applet. The execution restrictions
         // implemented in WebCore will guarantee that only appropriate JavaScript
         // can reference the applet.
         {

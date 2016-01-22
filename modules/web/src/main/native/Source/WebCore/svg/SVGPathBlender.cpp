@@ -52,16 +52,16 @@ float SVGPathBlender::blendAnimatedDimensonalFloat(float from, float to, FloatBl
 
     if (m_fromMode == m_toMode)
         return blend(from, to, m_progress);
-    
+
     float fromValue = blendMode == BlendHorizontal ? m_fromCurrentPoint.x() : m_fromCurrentPoint.y();
     float toValue = blendMode == BlendHorizontal ? m_toCurrentPoint.x() : m_toCurrentPoint.y();
 
     // Transform toY to the coordinate mode of fromY
     float animValue = blend(from, m_fromMode == AbsoluteCoordinates ? to + toValue : to - toValue, m_progress);
-    
+
     if (m_isInFirstHalfOfAnimation)
         return animValue;
-    
+
     // Transform the animated point to the coordinate mode, needed for the current progress.
     float currentValue = blend(fromValue, toValue, m_progress);
     return m_toMode == AbsoluteCoordinates ? animValue + currentValue : animValue - currentValue;

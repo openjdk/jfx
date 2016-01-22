@@ -35,21 +35,21 @@ public interface TextLine {
 
     /**
      * Returns metrics information about the line as follow:
-     * 
+     *
      * bounds().getWidth() - the width of the line.
-     * The width for the line is sum of all run's width in the line, it is not 
+     * The width for the line is sum of all run's width in the line, it is not
      * affect by any wrapping width but it will include any changes caused by
      * justification.
-     * 
+     *
      * bounds().getHeight() - the height of the line.
-     * The height of the line is sum of the max ascent, max descent, and 
+     * The height of the line is sum of the max ascent, max descent, and
      * max line gap of all the fonts in the line.
-     * 
+     *
      * bounds.().getMinY() - the ascent of the line (negative).
      * The ascent of the line is the max ascent of all fonts in the line.
-     * 
+     *
      * bounds().getMinX() - the x origin of the line (relative to the layout).
-     * The x origin is defined by TextAlignment of the text layout, always zero 
+     * The x origin is defined by TextAlignment of the text layout, always zero
      * for left-aligned text.
      */
     public RectBounds getBounds();

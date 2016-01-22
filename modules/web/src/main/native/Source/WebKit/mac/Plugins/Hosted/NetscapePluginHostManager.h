@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #if USE(PLUGIN_HOST_PROCESS)
@@ -43,13 +43,13 @@ class NetscapePluginHostProxy;
 class NetscapePluginHostManager {
 public:
     static NetscapePluginHostManager& shared();
-    
+
     PassRefPtr<NetscapePluginInstanceProxy> instantiatePlugin(const String& pluginPath, cpu_type_t pluginArchitecture, const String& bundleIdentifier, WebHostedNetscapePluginView *, NSString *mimeType, NSArray *attributeKeys, NSArray *attributeValues, NSString *userAgent, NSURL *sourceURL, bool fullFrame, bool isPrivateBrowsingEnabled, bool isAcceleratedCompositingEnabled, bool hostLayersInWindowServer);
 
     void pluginHostDied(NetscapePluginHostProxy*);
 
     void createPropertyListFile(const String& pluginPath, cpu_type_t pluginArchitecture, const String& bundleIdentifier);
-    
+
     void didCreateWindow();
 
 private:
@@ -57,18 +57,18 @@ private:
 
     NetscapePluginHostManager();
     ~NetscapePluginHostManager();
-    
+
     bool spawnPluginHost(const String& pluginPath, cpu_type_t pluginArchitecture, mach_port_t clientPort, mach_port_t& pluginHostPort, ProcessSerialNumber& pluginHostPSN);
-    
+
     bool initializeVendorPort();
-    
+
     mach_port_t m_pluginVendorPort;
-    
+
     // FIXME: This should really be a HashMap of RetainPtrs, but that doesn't work right now.
     typedef HashMap<String, NetscapePluginHostProxy*> PluginHostMap;
     PluginHostMap m_pluginHosts;
 };
-    
+
 } // namespace WebKit
 
 #endif // NetscapePluginHostManager_h

@@ -63,7 +63,7 @@ PassRef<StyleFillData> StyleFillData::copy() const
 
 bool StyleFillData::operator==(const StyleFillData& other) const
 {
-    return opacity == other.opacity 
+    return opacity == other.opacity
         && paintType == other.paintType
         && paintColor == other.paintColor
         && paintUri == other.paintUri

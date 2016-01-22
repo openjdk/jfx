@@ -128,7 +128,7 @@ public class Node_LocalToSceneTransform_Test {
         n.getTransforms().add(new Translate(10, 20));
         assertTrue(notified);
     }
-    
+
     @Test
     public void shouldBeNotifiedWhenParentTransforms() {
         final Node n = new Rectangle(20, 20);

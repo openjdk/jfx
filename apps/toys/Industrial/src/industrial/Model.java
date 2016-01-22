@@ -33,7 +33,7 @@ import javafx.scene.chart.XYChart;
 
 /*
  This is a very simple "Model" for our MVC.
- It contains the data elements that are manipulated by our Contoller and 
+ It contains the data elements that are manipulated by our Contoller and
  are presented by our View.
  */
 public class Model {
@@ -56,7 +56,7 @@ public class Model {
     static final int VALVE_A = 1;
     static final int VALVE_B = 2;
 
-    // Tank 
+    // Tank
     private static final double initialFill = 50.0;
     private static final double initialHighWater = 90.0;
     private static final double initialLowWater = 10.0;

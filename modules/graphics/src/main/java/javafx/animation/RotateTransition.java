@@ -47,38 +47,38 @@ import javafx.util.Duration;
  * <p>
  * The {@code toAngle} takes precedence if both {@code toAngle} and
  * {@code byAngle} are specified.
- * 
+ *
  * <p>
  * Code Segment Example:
  * </p>
- * 
+ *
  * <pre>
  * <code>
  * import javafx.scene.shape.*;
  * import javafx.animation.transition.*;
- * 
+ *
  * ...
- * 
+ *
  *     Rectangle rect = new Rectangle (100, 40, 100, 100);
  *     rect.setArcHeight(50);
  *     rect.setArcWidth(50);
  *     rect.setFill(Color.VIOLET);
- * 
+ *
  *     RotateTransition rt = new RotateTransition(Duration.millis(3000), rect);
  *     rt.setByAngle(180);
  *     rt.setCycleCount(4);
  *     rt.setAutoReverse(true);
- * 
+ *
  *     rt.play();
- * 
+ *
  * ...
- * 
+ *
  * </code>
  * </pre>
- * 
+ *
  * @see Transition
  * @see Animation
- * 
+ *
  * @since JavaFX 2.0
  */
 public final class RotateTransition extends Transition {
@@ -133,7 +133,7 @@ public final class RotateTransition extends Transition {
      *
      * Setting duration to value lower than {@link Duration#ZERO} will result
      * in {@link IllegalArgumentException}.
-     * 
+     *
      * @defaultValue 400ms
      */
     private ObjectProperty<Duration> duration;
@@ -189,7 +189,7 @@ public final class RotateTransition extends Transition {
      * {@code RotateTransition}. If the value of {@code axis} is changed for a
      * running {@code RotateTransition}, the animation has to be stopped and
      * started again to pick up the new value.
-     * 
+     *
      * @defaultValue null
      */
     private ObjectProperty<Point3D> axis;
@@ -219,7 +219,7 @@ public final class RotateTransition extends Transition {
      * {@code RotateTransition}. If the value of {@code fromAngle} is changed
      * for a running {@code RotateTransition}, the animation has to be stopped
      * and started again to pick up the new value.
-     * 
+     *
      * @defaultValue {@code Double.NaN}
      */
     private DoubleProperty fromAngle;
@@ -249,7 +249,7 @@ public final class RotateTransition extends Transition {
      * {@code RotateTransition}. If the value of {@code toAngle} is changed for
      * a running {@code RotateTransition}, the animation has to be stopped and
      * started again to pick up the new value.
-     * 
+     *
      * @defaultValue {@code Double.NaN}
      */
     private DoubleProperty toAngle;
@@ -303,7 +303,7 @@ public final class RotateTransition extends Transition {
 
     /**
      * The constructor of {@code RotateTransition}
-     * 
+     *
      * @param duration
      *            The duration of the {@code RotateTransition}
      * @param node
@@ -317,7 +317,7 @@ public final class RotateTransition extends Transition {
 
     /**
      * The constructor of {@code RotateTransition}
-     * 
+     *
      * @param duration
      *            The duration of the {@code RotateTransition}
      */
@@ -327,7 +327,7 @@ public final class RotateTransition extends Transition {
 
     /**
      * The constructor of {@code RotateTransition}
-     * 
+     *
      */
     public RotateTransition() {
         this(DEFAULT_DURATION, null);

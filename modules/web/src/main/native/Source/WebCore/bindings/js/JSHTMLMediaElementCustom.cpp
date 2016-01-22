@@ -37,7 +37,7 @@ using namespace JSC;
 void JSHTMLMediaElement::setController(ExecState*, JSValue value)
 {
     // 4.8.10.11.2 Media controllers: controller attribute.
-    // On setting, it must first remove the element's mediagroup attribute, if any, 
+    // On setting, it must first remove the element's mediagroup attribute, if any,
     impl().setMediaGroup(String());
     // and then set the current media controller to the given value.
     impl().setController(toMediaController(value));

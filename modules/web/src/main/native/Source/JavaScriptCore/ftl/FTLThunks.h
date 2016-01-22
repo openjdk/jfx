@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef FTLThunks_h
@@ -49,7 +49,7 @@ struct ThunkMap {
     typedef KeyTypeArgument KeyType;
     typedef HashMap<KeyType, MacroAssemblerCodeRef> ToThunkMap;
     typedef HashMap<MacroAssemblerCodePtr, KeyType> FromThunkMap;
-    
+
     ToThunkMap m_toThunk;
     FromThunkMap m_fromThunk;
 };
@@ -61,7 +61,7 @@ MacroAssemblerCodeRef generateIfNecessary(
     typename MapType::ToThunkMap::iterator iter = map.m_toThunk.find(key);
     if (iter != map.m_toThunk.end())
         return iter->value;
-    
+
     MacroAssemblerCodeRef result = generator(vm, key);
     map.m_toThunk.add(key, result);
     map.m_fromThunk.add(result.code(), key);
@@ -83,12 +83,12 @@ public:
         return generateIfNecessary(
             vm, m_slowPathCallThunks, key, slowPathCallThunkGenerator);
     }
-    
+
     SlowPathCallKey keyForSlowPathCallThunk(MacroAssemblerCodePtr ptr)
     {
         return keyForThunk(m_slowPathCallThunks, ptr);
     }
-    
+
 private:
     ThunkMap<SlowPathCallKey> m_slowPathCallThunks;
 };

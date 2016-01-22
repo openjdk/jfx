@@ -36,7 +36,7 @@ import javafx.collections.WeakMapChangeListener;
 import static org.junit.Assert.*;
 
 public class WeakMapChangeListenerTest {
-	
+
     @Test(expected=NullPointerException.class)
     public void testConstructWithNull() {
         new WeakMapChangeListener<Object, Object>(null);
@@ -77,9 +77,9 @@ public class WeakMapChangeListenerTest {
         }
 
         @Override
-		public void removeListener(MapChangeListener<? super Object, ? super Object> listener) {
+        public void removeListener(MapChangeListener<? super Object, ? super Object> listener) {
             removeCounter++;
-		}
+        }
     }
 
 }

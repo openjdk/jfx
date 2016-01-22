@@ -33,7 +33,7 @@ namespace WebCore {
 
 class AudioBus;
 class AudioSourceProviderClient;
-    
+
 // Abstract base-class for a pull-model client.
 class AudioSourceProvider {
 public:

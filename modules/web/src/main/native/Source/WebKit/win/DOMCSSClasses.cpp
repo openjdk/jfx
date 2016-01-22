@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -79,14 +79,14 @@ HRESULT STDMETHODCALLTYPE DOMCSSStyleDeclaration::QueryInterface(REFIID riid, vo
 
 // DOMCSSStyleDeclaration - IDOMCSSStyleDeclaration ---------------------------
 
-HRESULT STDMETHODCALLTYPE DOMCSSStyleDeclaration::cssText( 
+HRESULT STDMETHODCALLTYPE DOMCSSStyleDeclaration::cssText(
     /* [retval][out] */ BSTR* /*result*/)
 {
     ASSERT_NOT_REACHED();
     return E_NOTIMPL;
 }
 
-HRESULT STDMETHODCALLTYPE DOMCSSStyleDeclaration::setCssText( 
+HRESULT STDMETHODCALLTYPE DOMCSSStyleDeclaration::setCssText(
     /* [in] */ BSTR cssText)
 {
     WTF::String cssTextString(cssText);
@@ -96,7 +96,7 @@ HRESULT STDMETHODCALLTYPE DOMCSSStyleDeclaration::setCssText(
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE DOMCSSStyleDeclaration::getPropertyValue( 
+HRESULT STDMETHODCALLTYPE DOMCSSStyleDeclaration::getPropertyValue(
     /* [in] */ BSTR propertyName,
     /* [retval][out] */ BSTR* result)
 {
@@ -108,7 +108,7 @@ HRESULT STDMETHODCALLTYPE DOMCSSStyleDeclaration::getPropertyValue(
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE DOMCSSStyleDeclaration::getPropertyCSSValue( 
+HRESULT STDMETHODCALLTYPE DOMCSSStyleDeclaration::getPropertyCSSValue(
     /* [in] */ BSTR /*propertyName*/,
     /* [retval][out] */ IDOMCSSValue** /*result*/)
 {
@@ -116,7 +116,7 @@ HRESULT STDMETHODCALLTYPE DOMCSSStyleDeclaration::getPropertyCSSValue(
     return E_NOTIMPL;
 }
 
-HRESULT STDMETHODCALLTYPE DOMCSSStyleDeclaration::removeProperty( 
+HRESULT STDMETHODCALLTYPE DOMCSSStyleDeclaration::removeProperty(
     /* [in] */ BSTR /*propertyName*/,
     /* [retval][out] */ BSTR* /*result*/)
 {
@@ -124,7 +124,7 @@ HRESULT STDMETHODCALLTYPE DOMCSSStyleDeclaration::removeProperty(
     return E_NOTIMPL;
 }
 
-HRESULT STDMETHODCALLTYPE DOMCSSStyleDeclaration::getPropertyPriority( 
+HRESULT STDMETHODCALLTYPE DOMCSSStyleDeclaration::getPropertyPriority(
     /* [in] */ BSTR /*propertyName*/,
     /* [retval][out] */ BSTR* /*result*/)
 {
@@ -132,7 +132,7 @@ HRESULT STDMETHODCALLTYPE DOMCSSStyleDeclaration::getPropertyPriority(
     return E_NOTIMPL;
 }
 
-HRESULT STDMETHODCALLTYPE DOMCSSStyleDeclaration::setProperty( 
+HRESULT STDMETHODCALLTYPE DOMCSSStyleDeclaration::setProperty(
     /* [in] */ BSTR propertyName,
     /* [in] */ BSTR value,
     /* [in] */ BSTR priority)
@@ -146,14 +146,14 @@ HRESULT STDMETHODCALLTYPE DOMCSSStyleDeclaration::setProperty(
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE DOMCSSStyleDeclaration::length( 
+HRESULT STDMETHODCALLTYPE DOMCSSStyleDeclaration::length(
     /* [retval][out] */ UINT* /*result*/)
 {
     ASSERT_NOT_REACHED();
     return E_NOTIMPL;
 }
 
-HRESULT STDMETHODCALLTYPE DOMCSSStyleDeclaration::item( 
+HRESULT STDMETHODCALLTYPE DOMCSSStyleDeclaration::item(
     /* [in] */ UINT /*index*/,
     /* [retval][out] */ BSTR* /*result*/)
 {
@@ -161,7 +161,7 @@ HRESULT STDMETHODCALLTYPE DOMCSSStyleDeclaration::item(
     return E_NOTIMPL;
 }
 
-HRESULT STDMETHODCALLTYPE DOMCSSStyleDeclaration::parentRule( 
+HRESULT STDMETHODCALLTYPE DOMCSSStyleDeclaration::parentRule(
     /* [retval][out] */ IDOMCSSRule** /*result*/)
 {
     ASSERT_NOT_REACHED();

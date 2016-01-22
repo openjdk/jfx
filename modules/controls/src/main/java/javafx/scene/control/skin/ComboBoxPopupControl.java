@@ -69,7 +69,7 @@ public abstract class ComboBoxPopupControl<T> extends ComboBoxBaseSkin<T> {
      * Private fields                                                          *
      *                                                                         *
      **************************************************************************/
-    
+
     PopupControl popup;
 
     private boolean popupNeedsReconfiguring = true;
@@ -123,14 +123,14 @@ public abstract class ComboBoxPopupControl<T> extends ComboBoxBaseSkin<T> {
 
         // editable input node
         this.textField = getEditor() != null ? getEditableInputNode() : null;
-        
+
         // Fix for RT-29565. Without this the textField does not have a correct
         // pref width at startup, as it is not part of the scenegraph (and therefore
         // has no pref width until after the first measurements have been taken).
         if (this.textField != null) {
             getChildren().add(textField);
         }
-        
+
         // move fake focus in to the textfield if the comboBox is editable
         comboBoxBase.focusedProperty().addListener((ov, t, hasFocus) -> {
             if (getEditor() != null) {
@@ -238,14 +238,14 @@ public abstract class ComboBoxPopupControl<T> extends ComboBoxBaseSkin<T> {
         if (getSkinnable() == null) {
             throw new IllegalStateException("ComboBox is null");
         }
-        
+
         Node content = getPopupContent();
         if (content == null) {
             throw new IllegalStateException("Popup node is null");
         }
-        
+
         if (getPopup().isShowing()) return;
-        
+
         positionAndShowPopup();
     }
 
@@ -393,7 +393,7 @@ public abstract class ComboBoxPopupControl<T> extends ComboBoxBaseSkin<T> {
     private Point2D getPrefPopupPosition() {
         return com.sun.javafx.util.Utils.pointRelativeTo(getSkinnable(), getPopupContent(), HPos.CENTER, VPos.BOTTOM, 0, 0, true);
     }
-    
+
     private void positionAndShowPopup() {
         final PopupControl _popup = getPopup();
         _popup.getScene().setNodeOrientation(getSkinnable().getEffectiveNodeOrientation());
@@ -406,7 +406,7 @@ public abstract class ComboBoxPopupControl<T> extends ComboBoxBaseSkin<T> {
 
         popupNeedsReconfiguring = true;
         reconfigurePopup();
-        
+
         final ComboBoxBase<T> comboBoxBase = getSkinnable();
         _popup.show(comboBoxBase.getScene().getWindow(),
                 snapPosition(p.getX()),
@@ -442,7 +442,7 @@ public abstract class ComboBoxPopupControl<T> extends ComboBoxBaseSkin<T> {
             popupContent.autosize();
         }
     }
-    
+
     private void createPopup() {
         popup = new PopupControl() {
             @Override public Styleable getStyleableParent() {
@@ -474,7 +474,7 @@ public abstract class ComboBoxPopupControl<T> extends ComboBoxBaseSkin<T> {
             // after the window closes.
             getSkinnable().notifyAccessibleAttributeChanged(AccessibleAttribute.FOCUS_NODE);
         });
-        
+
         // Fix for RT-21207
         InvalidationListener layoutPosListener = o -> {
             popupNeedsReconfiguring = true;

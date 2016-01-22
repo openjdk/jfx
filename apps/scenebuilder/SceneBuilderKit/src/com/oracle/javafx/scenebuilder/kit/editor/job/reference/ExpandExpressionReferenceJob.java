@@ -52,51 +52,51 @@ import java.util.List;
  *
  */
 public class ExpandExpressionReferenceJob extends InlineDocumentJob {
-    
+
     private final FXOMPropertyT reference;
     private final FXOMCloner cloner;
 
     public ExpandExpressionReferenceJob(
-            FXOMPropertyT reference, 
+            FXOMPropertyT reference,
             FXOMCloner cloner,
             EditorController editorController) {
         super(editorController);
-        
+
         assert reference != null;
         assert reference.getFxomDocument() == editorController.getFxomDocument();
         assert (cloner == null) || (cloner.getTargetDocument() == editorController.getFxomDocument());
-        
+
         this.reference = reference;
         this.cloner = cloner;
     }
-    
+
     /*
      * InlineDocumentJob
      */
     @Override
     protected List<Job> makeAndExecuteSubJobs() {
         final List<Job> result = new LinkedList<>();
-        
+
         // 1) remove the reference
         final FXOMInstance parentInstance = reference.getParentInstance();
         final Job removeReference = new RemovePropertyJob(reference, getEditorController());
         removeReference.execute();
         result.add(removeReference);
-        
-        // 2.1) clone the referee 
+
+        // 2.1) clone the referee
         final FXOMDocument fxomDocument = getEditorController().getFxomDocument();
         final String fxId = FXOMNodes.extractReferenceSource(reference);
         final FXOMObject referee = fxomDocument.searchWithFxId(fxId);
         final FXOMObject refereeClone = cloner.clone(referee);
-        
+
         // 3) insert the clone in place of the reference
-        final FXOMPropertyC cloneProperty 
+        final FXOMPropertyC cloneProperty
                 = new FXOMPropertyC(fxomDocument, reference.getName(), refereeClone);
-        final Job addCloneJob 
+        final Job addCloneJob
                 = new AddPropertyJob(cloneProperty, parentInstance, -1, getEditorController());
         addCloneJob.execute();
         result.add(addCloneJob);
-                
+
         return result;
     }
 
@@ -110,6 +110,6 @@ public class ExpandExpressionReferenceJob extends InlineDocumentJob {
         final PrefixedValue pv = new PrefixedValue(reference.getValue());
         return pv.isExpression();
     }
-    
-    
+
+
 }

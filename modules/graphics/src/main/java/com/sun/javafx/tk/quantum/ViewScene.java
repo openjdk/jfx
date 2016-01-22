@@ -39,7 +39,7 @@ import javafx.scene.Parent;
 
 class ViewScene extends GlassScene {
 
-    private static final String UNSUPPORTED_FORMAT = 
+    private static final String UNSUPPORTED_FORMAT =
         "Transparent windows only supported for BYTE_BGRA_PRE format on LITTLE_ENDIAN machines";
 
     private View platformView;
@@ -61,7 +61,7 @@ class ViewScene extends GlassScene {
     protected View getPlatformView() {
         return this.platformView;
     }
-    
+
     ViewPainter getPainter() {
         return painter;
     }
@@ -105,7 +105,7 @@ class ViewScene extends GlassScene {
         }
         super.dispose();
     }
-    
+
     @Override public void setRoot(NGNode root) {
         super.setRoot(root);
         if (painter != null) {
@@ -140,7 +140,7 @@ class ViewScene extends GlassScene {
             tk.addRenderJob(paintRenderJob);
         }
     }
-    
+
     @Override
     public void enableInputMethodEvents(boolean enable) {
         platformView.enableInputMethodEvents(enable);

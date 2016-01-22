@@ -36,7 +36,7 @@ import javafx.collections.WeakSetChangeListener;
 import static org.junit.Assert.*;
 
 public class WeakSetChangeListenerTest {
-	
+
     @Test(expected=NullPointerException.class)
     public void testConstructWithNull() {
         new WeakSetChangeListener<Object>(null);
@@ -76,9 +76,9 @@ public class WeakSetChangeListenerTest {
         }
 
         @Override
-		public void removeListener(SetChangeListener<? super Object> listener) {
+        public void removeListener(SetChangeListener<? super Object> listener) {
             removeCounter++;
-		}
+        }
     }
 
 }

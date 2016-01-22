@@ -63,7 +63,7 @@ TEST(WebKit1, DidRemoveFrameFromHierarchy)
 
     [mainFrame loadHTMLString:bodyWithIFrameString baseURL:aboutBlankURL];
     Util::run(&didFinishLoad);
-    
+
     EXPECT_FALSE(didRemoveFrame);
     [webView.get() stringByEvaluatingJavaScriptFromString:@"document.body.removeChild(document.getElementById('iframe'))"];
     EXPECT_TRUE(didRemoveFrame);

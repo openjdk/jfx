@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef JITThunks_h
@@ -54,7 +54,7 @@ public:
 
     MacroAssemblerCodePtr ctiNativeCall(VM*);
     MacroAssemblerCodePtr ctiNativeConstruct(VM*);
-    MacroAssemblerCodePtr ctiNativeTailCall(VM*);    
+    MacroAssemblerCodePtr ctiNativeTailCall(VM*);
 
     MacroAssemblerCodeRef ctiStub(VM*, ThunkGenerator);
 
@@ -67,7 +67,7 @@ private:
     // Main thread can hold this lock for a while, so use an adaptive mutex.
     typedef Mutex Lock;
     typedef MutexLocker Locker;
-    
+
     typedef HashMap<ThunkGenerator, MacroAssemblerCodeRef> CTIStubMap;
     CTIStubMap m_ctiStubMap;
     typedef HashMap<std::pair<NativeFunction, NativeFunction>, Weak<NativeExecutable>> HostFunctionStubMap;

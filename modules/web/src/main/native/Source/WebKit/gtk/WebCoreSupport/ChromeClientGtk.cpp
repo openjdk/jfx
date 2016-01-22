@@ -318,7 +318,7 @@ void ChromeClient::closeWindowSoon()
 
     // We need to remove the parent WebView from WebViewSets here, before it actually
     // closes, to make sure that JavaScript code that executes before it closes
-    // can't find it. Otherwise, window.open will select a closed WebView instead of 
+    // can't find it. Otherwise, window.open will select a closed WebView instead of
     // opening a new one <rdar://problem/3572585>.
     m_webView->priv->corePage->setGroupName("");
 

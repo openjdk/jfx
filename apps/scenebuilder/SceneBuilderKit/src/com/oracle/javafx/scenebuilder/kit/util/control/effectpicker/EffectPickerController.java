@@ -131,15 +131,15 @@ public class EffectPickerController {
     public boolean isLiveUpdate() {
         return liveUpdate.get();
     }
-    
+
     public void setLiveUpdate(boolean value) {
         liveUpdate.setValue(value);
     }
-    
+
     public EffectPicker.Delegate getEffectPickerDelegate() {
         return effectPickerDelegate;
     }
-    
+
     void setEffectPickerDelegate(EffectPicker.Delegate delegate) {
         this.effectPickerDelegate = delegate;
     }
@@ -147,7 +147,7 @@ public class EffectPickerController {
     public PaintPicker.Delegate getPaintPickerDelegate() {
         return paintPickerDelegate;
     }
-    
+
     void setPaintPickerDelegate(PaintPicker.Delegate delegate) {
         this.paintPickerDelegate = delegate;
     }
@@ -860,7 +860,7 @@ public class EffectPickerController {
             effectPickerController.setLiveUpdate(paintPicker.isLiveUpdate());
         }
     }
-    
+
     private static class LightControlLiveUpdateListener implements ChangeListener<Boolean> {
 
         private final LightControl lightControl;
@@ -878,7 +878,7 @@ public class EffectPickerController {
             effectPickerController.setLiveUpdate(lightControl.isLiveUpdate());
         }
     }
-    
+
     private static class ColorChangeListener implements ChangeListener<Paint> {
 
         private final EffectPickerController effectPickerController;

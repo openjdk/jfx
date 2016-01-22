@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -120,7 +120,7 @@ bool CaptionUserPreferences::userPrefersTextDescriptions() const
     Page* page = *(m_pageGroup.pages().begin());
     if (!page)
         return false;
-    
+
     return page->settings().shouldDisplayTextDescriptions();
 }
 
@@ -129,7 +129,7 @@ void CaptionUserPreferences::setUserPrefersTextDescriptions(bool preference)
     Page* page = *(m_pageGroup.pages().begin());
     if (!page)
         return;
-    
+
     page->settings().setShouldDisplayTextDescriptions(preference);
     notify();
 }
@@ -172,7 +172,7 @@ String CaptionUserPreferences::displayNameForTrack(TextTrack* track) const
 {
     return trackDisplayName(track);
 }
-    
+
 Vector<RefPtr<TextTrack>> CaptionUserPreferences::sortedTrackListForMenu(TextTrackList* trackList)
 {
     ASSERT(trackList);
@@ -202,15 +202,15 @@ int CaptionUserPreferences::textTrackSelectionScore(TextTrack* track, HTMLMediaE
 
     if (track->kind() != TextTrack::captionsKeyword() && track->kind() != TextTrack::subtitlesKeyword())
         return trackScore;
-    
+
     if (!userPrefersSubtitles() && !userPrefersCaptions())
         return trackScore;
-    
+
     if (track->kind() == TextTrack::subtitlesKeyword() && userPrefersSubtitles())
         trackScore = 1;
     else if (track->kind() == TextTrack::captionsKeyword() && userPrefersCaptions())
         trackScore = 1;
-    
+
     return trackScore + textTrackLanguageSelectionScore(track, preferredLanguages());
 }
 
@@ -255,7 +255,7 @@ String CaptionUserPreferences::primaryAudioTrackLanguageOverride() const
         return m_primaryAudioTrackLanguageOverride;
     return defaultLanguage();
 }
-    
+
 }
 
 #endif // ENABLE(VIDEO_TRACK)

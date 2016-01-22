@@ -137,7 +137,7 @@ private:
 
     String m_textAsOfLastFormControlChangeEvent;
     bool m_lastChangeWasUserEdit;
-    
+
     int m_cachedSelectionStart;
     int m_cachedSelectionEnd;
     TextFieldSelectionDirection m_cachedSelectionDirection;

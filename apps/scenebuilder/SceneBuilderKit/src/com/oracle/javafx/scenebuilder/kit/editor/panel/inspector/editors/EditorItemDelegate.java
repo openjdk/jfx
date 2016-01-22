@@ -35,8 +35,8 @@ import javafx.event.EventHandler;
 
 /**
  * Defines the communication interface between an EditorItem and its editor.
- * 
- * 
+ *
+ *
  */
 public interface EditorItemDelegate {
     public void commit(EditorItem source);

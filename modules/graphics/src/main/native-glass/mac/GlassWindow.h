@@ -30,7 +30,7 @@
 #import "GlassView.h"
 
 // normal Glass window delegate
-@interface GlassWindow : NSObject <NSWindowDelegate> 
+@interface GlassWindow : NSObject <NSWindowDelegate>
 {
     jobject             jWindow;
 
@@ -55,8 +55,8 @@
     BOOL                suppressWindowResizeEvent;
 
     NSPoint             lastReportedLocation; // which was sent to Java
-    
-    BOOL                isClosed;   
+
+    BOOL                isClosed;
 
     // We track whether an explicit size/location have been assigned to the window
     // in order to differentiate between an explicitly assigned zero bounds, and the
@@ -107,9 +107,9 @@
 @public
 
     NSWindow            *fullscreenWindow;
-    
+
     BOOL                isKeyWindow;
-    
+
     GlassEmbeddedWindow *parent;
     GlassEmbeddedWindow *child;
 }

@@ -32,7 +32,7 @@ namespace JSC {
         JS_EXPORT_PRIVATE void finishCreation(VM&, double);
 
         static void destroy(JSCell*);
- 
+
     public:
         typedef JSWrapperObject Base;
 
@@ -60,7 +60,7 @@ namespace JSC {
                 return &m_data->m_cachedGregorianDateTime;
             return calculateGregorianDateTime(exec);
         }
-        
+
         const GregorianDateTime* gregorianDateTimeUTC(ExecState* exec) const
         {
             if (m_data && m_data->m_gregorianDateTimeUTCCachedForMS == internalNumber())

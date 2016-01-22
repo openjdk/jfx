@@ -216,7 +216,7 @@ RefPtr<MediaStreamTrackPrivate> MediaStreamTrackPrivate::clone()
     return adoptRef(new MediaStreamTrackPrivate(*this));
 }
 
-    
+
 RefPtr<MediaConstraints> MediaStreamTrackPrivate::constraints() const
 {
     return m_constraints;
@@ -228,7 +228,7 @@ const MediaStreamSourceStates& MediaStreamTrackPrivate::states() const
         DEFINE_STATIC_LOCAL(const MediaStreamSourceStates, noState, ());
         return noState;
     }
-    
+
     return m_source->states();
 }
 
@@ -258,7 +258,7 @@ void MediaStreamTrackPrivate::sourceReadyStateChanged()
 {
     if (stopped())
         return;
-    
+
     setReadyState(m_source->readyState());
 }
 
@@ -266,7 +266,7 @@ void MediaStreamTrackPrivate::sourceMutedChanged()
 {
     if (stopped())
         return;
-    
+
     setMuted(m_source->muted());
 }
 
@@ -274,7 +274,7 @@ void MediaStreamTrackPrivate::sourceEnabledChanged()
 {
     if (stopped())
         return;
-    
+
     setEnabled(m_source->enabled());
 }
 

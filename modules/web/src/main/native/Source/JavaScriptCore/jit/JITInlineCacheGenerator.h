@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef JITInlineCacheGenerator_h
@@ -42,7 +42,7 @@ class JITInlineCacheGenerator {
 protected:
     JITInlineCacheGenerator() { }
     JITInlineCacheGenerator(CodeBlock*, CodeOrigin);
-    
+
 public:
     StructureStubInfo* stubInfo() const { return m_stubInfo; }
 
@@ -58,26 +58,26 @@ protected:
     JITByIdGenerator(
         CodeBlock*, CodeOrigin, const RegisterSet&, JSValueRegs base, JSValueRegs value,
         bool registersFlushed);
-    
+
 public:
     void reportSlowPathCall(MacroAssembler::Label slowPathBegin, MacroAssembler::Call call)
     {
         m_slowPathBegin = slowPathBegin;
         m_call = call;
     }
-    
+
     MacroAssembler::Label slowPathBegin() const { return m_slowPathBegin; }
     MacroAssembler::Jump slowPathJump() const { return m_structureCheck.m_jump; }
 
     void finalize(LinkBuffer& fastPathLinkBuffer, LinkBuffer& slowPathLinkBuffer);
     void finalize(LinkBuffer&);
-    
+
 protected:
     void generateFastPathChecks(MacroAssembler&, GPRReg butterfly);
-    
+
     JSValueRegs m_base;
     JSValueRegs m_value;
-    
+
     MacroAssembler::DataLabelPtr m_structureImm;
     MacroAssembler::PatchableJump m_structureCheck;
     MacroAssembler::ConvertibleLoadLabel m_propertyStorageLoad;
@@ -100,7 +100,7 @@ public:
         : JITByIdGenerator(codeBlock, codeOrigin, usedRegisters, base, value, registersFlushed)
     {
     }
-    
+
     void generateFastPath(MacroAssembler&);
 };
 
@@ -111,9 +111,9 @@ public:
     JITPutByIdGenerator(
         CodeBlock*, CodeOrigin, const RegisterSet& usedRegisters, JSValueRegs base,
         JSValueRegs value, GPRReg scratch, bool registersFlushed, ECMAMode, PutKind);
-    
+
     void generateFastPath(MacroAssembler&);
-    
+
     V_JITOperation_ESsiJJI slowPathFunction();
 
 private:

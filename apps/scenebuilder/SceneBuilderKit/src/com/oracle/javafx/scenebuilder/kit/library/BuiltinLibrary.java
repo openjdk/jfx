@@ -44,7 +44,7 @@ import javafx.scene.layout.Region;
  * @treatAsPrivate
  */
 public class BuiltinLibrary extends Library {
-    
+
     // In SB 1.1 the section names of the Library have been localized. We assume
     // for now we stick to this approach, but fact is the support of custom
     // sections could change the rules of the game.
@@ -56,66 +56,66 @@ public class BuiltinLibrary extends Library {
     public static final String TAG_CHARTS         = "Charts"; //NOI18N
     public static final String TAG_3D             = "3D"; //NOI18N
 
-    
+
     private static BuiltinLibrary library = null;
-    
+
     private final BuiltinSectionComparator sectionComparator
             = new BuiltinSectionComparator();
-    
+
     private static final String FX8_QUALIFIER = " (FX8)"; //NOI18N
-    
+
     // This qualifier is for use to provide a flavor of a component that has no
     // children, in addition to the one having children. Typical use is for
     // Accordion, ScrollPane, SplitPane, TabPane, TitledPane (see DTL-6274).
     private static final String EMPTY_QUALIFIER = " " //NOI18N
             + I18N.getString("label.qualifier.empty");
-    
+
     private static final String HORIZONTAL_QUALIFIER = " " //NOI18N
             + I18N.getString("label.qualifier.horizontal");
     private static final String VERTICAL_QUALIFIER = " " //NOI18N
             + I18N.getString("label.qualifier.vertical");
-    
+
     /*
      * Public
      */
-    
+
     public static synchronized BuiltinLibrary getLibrary() {
         if (library == null) {
             library = new BuiltinLibrary();
         }
         return library;
     }
-    
+
     public static String getFX8Qualifier() {
         return FX8_QUALIFIER;
     }
-    
+
     public static String getEmptyQualifier() {
         return EMPTY_QUALIFIER;
     }
-    
-    
+
+
     /*
      * Library
      */
-    
+
     @Override
     public Comparator<String> getSectionComparator() {
         return sectionComparator;
     }
-    
+
     /*
      * Debug
      */
-    
+
     public static void main(String[] args) {
         getLibrary();
     }
-    
+
     /*
      * Private
      */
-    
+
     private BuiltinLibrary() {
         // Containers
         addCustomizedItem(javafx.scene.control.Accordion.class, TAG_CONTAINERS);
@@ -149,7 +149,7 @@ public class BuiltinLibrary extends Library {
         addRegionItem200x200(javafx.scene.control.TitledPane.class, TAG_CONTAINERS, EMPTY_QUALIFIER);
         addCustomizedItem(javafx.scene.control.ToolBar.class, TAG_CONTAINERS);
         addRegionItem100x200(javafx.scene.layout.VBox.class, TAG_CONTAINERS);
-        
+
         // Controls
         addCustomizedItem(javafx.scene.control.Button.class, TAG_CONTROLS);
         addCustomizedItem(javafx.scene.control.CheckBox.class, TAG_CONTROLS);
@@ -193,7 +193,7 @@ public class BuiltinLibrary extends Library {
         addCustomizedItem(javafx.scene.control.TreeTableView.class, TAG_CONTROLS, FX8_QUALIFIER);
         addRegionItem200x200(javafx.scene.control.TreeView.class, TAG_CONTROLS);
         addCustomizedItem(javafx.scene.web.WebView.class, TAG_CONTROLS);
-        
+
         // Menu
         addCustomizedItem(javafx.scene.control.CheckMenuItem.class, TAG_MENU);
         addCustomizedItem(javafx.scene.control.ContextMenu.class, TAG_MENU);
@@ -202,7 +202,7 @@ public class BuiltinLibrary extends Library {
         addCustomizedItem(javafx.scene.control.MenuItem.class, TAG_MENU);
         addCustomizedItem(javafx.scene.control.RadioMenuItem.class, TAG_MENU);
         addCustomizedItem(javafx.scene.control.SeparatorMenuItem.class, TAG_MENU);
-        
+
         // Miscellaneous
         addCustomizedItem(javafx.scene.canvas.Canvas.class, TAG_MISCELLANEOUS);
         addDefaultItem(javafx.scene.Group.class, TAG_MISCELLANEOUS);
@@ -236,7 +236,7 @@ public class BuiltinLibrary extends Library {
         addCustomizedItem(javafx.scene.shape.SVGPath.class, TAG_SHAPES);
         addCustomizedItem(javafx.scene.text.Text.class, TAG_SHAPES);
         addDefaultItem(javafx.scene.shape.VLineTo.class, TAG_SHAPES);
-        
+
         // Charts
         addCustomizedItem(javafx.scene.chart.AreaChart.class, TAG_CHARTS);
         addCustomizedItem(javafx.scene.chart.BarChart.class, TAG_CHARTS);
@@ -246,15 +246,15 @@ public class BuiltinLibrary extends Library {
         addCustomizedItem(javafx.scene.chart.ScatterChart.class, TAG_CHARTS);
         addCustomizedItem(javafx.scene.chart.StackedAreaChart.class, TAG_CHARTS);
         addCustomizedItem(javafx.scene.chart.StackedBarChart.class, TAG_CHARTS);
-        
+
         // 3D
         addCustomizedItem(javafx.scene.AmbientLight.class, TAG_3D, FX8_QUALIFIER);
         addDefaultItem(javafx.scene.ParallelCamera.class, TAG_3D, FX8_QUALIFIER);
         addDefaultItem(javafx.scene.PerspectiveCamera.class, TAG_3D, FX8_QUALIFIER);
         addCustomizedItem(javafx.scene.PointLight.class, TAG_3D, FX8_QUALIFIER);
     }
-    
-    
+
+
     private void addDefaultItem(Class<?> componentClass, String section, String... qualifiers) {
         final String name = componentClass.getSimpleName();
         StringBuilder nameWithQualifier = new StringBuilder(name);
@@ -264,16 +264,16 @@ public class BuiltinLibrary extends Library {
         final String fxmlText = makeFxmlText(componentClass);
         addItem(nameWithQualifier.toString(), fxmlText, section, name);
     }
-    
-    
+
+
     private void addRegionItem200x200(Class<? extends Region> componentClass, String section) {
         addRegionItem200x200(componentClass, section, null);
     }
-    
+
     private void addRegionItem200x200(Class<? extends Region> componentClass, String section, String qualifier) {
         addRegionItem200x200(componentClass, section, qualifier, null);
     }
-    
+
     private void addRegionItem200x200(Class<? extends Region> componentClass, String section, String qualifier, String iconName) {
         final String name = componentClass.getSimpleName();
         StringBuilder nameWithQualifier = new StringBuilder(name);
@@ -287,39 +287,39 @@ public class BuiltinLibrary extends Library {
         }
         addItem(nameWithQualifier.toString(), fxmlText, section, theIconName);
     }
-    
-    
+
+
     private void addRegionItem200x100(Class<? extends Region> componentClass, String section) {
         final String name = componentClass.getSimpleName();
         final String fxmlText = makeRegionFxmlText(componentClass, 200.0, 100.0);
         addItem(name, fxmlText, section, name);
     }
-    
-    
+
+
     private void addRegionItem200x150(Class<? extends Region> componentClass, String section) {
         final String name = componentClass.getSimpleName();
         final String fxmlText = makeRegionFxmlText(componentClass, 200.0, 150.0);
         addItem(name, fxmlText, section, name);
     }
-    
-    
+
+
     private void addRegionItem100x200(Class<? extends Region> componentClass, String section) {
         final String name = componentClass.getSimpleName();
         final String fxmlText = makeRegionFxmlText(componentClass, 100.0, 200.0);
         addItem(name, fxmlText, section, name);
     }
-    
-    
+
+
     private void addCustomizedItem(Class<?> componentClass, String section) {
         addCustomizedItem(componentClass, section, null);
     }
-    
+
     private void addCustomizedItem(Class<?> componentClass, String section, String qualifier) {
         final String name = componentClass.getSimpleName();
         addCustomizedItem(componentClass, section, name, name, qualifier);
     }
-    
-    private void addCustomizedItem(Class<?> componentClass, String section, 
+
+    private void addCustomizedItem(Class<?> componentClass, String section,
             String fxmlBaseName, String iconName, String qualifier) {
         String nameWithQualifier = componentClass.getSimpleName();
         if (qualifier != null) {
@@ -329,52 +329,52 @@ public class BuiltinLibrary extends Library {
         assert fxmlText != null;
         addItem(nameWithQualifier, fxmlText, section, iconName);
     }
-    
-    
+
+
     private void addItem(String name, String fxmlText, String section, String iconName) {
         final URL iconURL = ImageUtils.getNodeIconURL(iconName + ".png"); //NOI18N
         final LibraryItem item = new LibraryItem(name, section, fxmlText, iconURL, this);
         itemsProperty.add(item);
     }
-    
-    
+
+
     private static String makeFxmlText(Class<?> componentClass) {
         final StringBuilder sb = new StringBuilder();
-        
+
         /*
          * <?xml version="1.0" encoding="UTF-8"?> //NOI18N
-         * 
+         *
          * <?import a.b.C?>
-         * 
+         *
          * <C/>
          */
-        
+
         sb.append("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"); //NOI18N
-        
+
         sb.append("<?import "); //NOI18N
         sb.append(componentClass.getCanonicalName());
         sb.append("?>"); //NOI18N
         sb.append("<"); //NOI18N
         sb.append(componentClass.getSimpleName());
         sb.append("/>\n"); //NOI18N
-        
+
         return sb.toString();
     }
-    
-    private static String makeRegionFxmlText(Class<? extends Region> componentClass, 
+
+    private static String makeRegionFxmlText(Class<? extends Region> componentClass,
             double pw, double ph) {
         final StringBuilder sb = new StringBuilder();
-        
+
         /*
          * <?xml version="1.0" encoding="UTF-8"?> //NOI18N
-         * 
+         *
          * <?import a.b.C?>
-         * 
+         *
          * <C prefWidth="pw" prefHeight="ph"/> //NOI18N
          */
-        
+
         sb.append("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"); //NOI18N
-        
+
         sb.append("<?import "); //NOI18N
         sb.append(componentClass.getCanonicalName());
         sb.append("?>"); //NOI18N
@@ -391,28 +391,28 @@ public class BuiltinLibrary extends Library {
             sb.append("\""); //NOI18N
         }
         sb.append(" />\n"); //NOI18N
-        
+
         return sb.toString();
     }
-    
-    
+
+
     private String readCustomizedFxmlText(String fxmlBaseName) {
-        
+
         final StringBuilder fxmlPath = new StringBuilder();
         fxmlPath.append("builtin/"); //NOI18N
         fxmlPath.append(fxmlBaseName);
         fxmlPath.append(".fxml"); //NOI18N
-        
+
         final URL fxmlURL = BuiltinLibrary.class.getResource(fxmlPath.toString());
         assert fxmlURL != null : "fxmlBaseName=" + fxmlBaseName; //NOI18N
         final String result;
-        
+
         try {
             result = FXOMDocument.readContentFromURL(fxmlURL);
         } catch(IOException x) {
             throw new IllegalStateException("Bug in " + getClass().getSimpleName(), x); //NOI18N
         }
-        
+
         return result;
     }
 }

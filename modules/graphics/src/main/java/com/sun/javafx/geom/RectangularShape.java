@@ -28,7 +28,7 @@ package com.sun.javafx.geom;
 import com.sun.javafx.geom.transform.BaseTransform;
 
 /**
- * <code>RectangularShape</code> is the base class for a number of 
+ * <code>RectangularShape</code> is the base class for a number of
  * {@link Shape} objects whose geometry is defined by a rectangular frame.
  * This class does not directly specify any specific geometry by
  * itself, but merely provides manipulation methods inherited by
@@ -52,7 +52,7 @@ public abstract class RectangularShape extends Shape {
     protected RectangularShape() { }
 
     /**
-     * Returns the X coordinate of the upper-left corner of 
+     * Returns the X coordinate of the upper-left corner of
      * the framing rectangle in <code>double</code> precision.
      * @return the X coordinate of the upper-left corner of
      * the framing rectangle.
@@ -60,7 +60,7 @@ public abstract class RectangularShape extends Shape {
     public abstract float getX();
 
     /**
-     * Returns the Y coordinate of the upper-left corner of 
+     * Returns the Y coordinate of the upper-left corner of
      * the framing rectangle in <code>double</code> precision.
      * @return the Y coordinate of the upper-left corner of
      * the framing rectangle.
@@ -68,7 +68,7 @@ public abstract class RectangularShape extends Shape {
     public abstract float getY();
 
     /**
-     * Returns the width of the framing rectangle in 
+     * Returns the width of the framing rectangle in
      * <code>double</code> precision.
      * @return the width of the framing rectangle.
      */
@@ -85,7 +85,7 @@ public abstract class RectangularShape extends Shape {
      * Returns the smallest X coordinate of the framing
      * rectangle of the <code>Shape</code> in <code>double</code>
      * precision.
-     * @return the smallest X coordinate of the framing 
+     * @return the smallest X coordinate of the framing
      *      rectangle of the <code>Shape</code>.
      */
     public float getMinX() {
@@ -94,9 +94,9 @@ public abstract class RectangularShape extends Shape {
 
     /**
      * Returns the smallest Y coordinate of the framing
-     * rectangle of the <code>Shape</code> in <code>double</code> 
+     * rectangle of the <code>Shape</code> in <code>double</code>
      * precision.
-     * @return the smallest Y coordinate of the framing 
+     * @return the smallest Y coordinate of the framing
      *      rectangle of the <code>Shape</code>.
      */
     public float getMinY() {
@@ -104,7 +104,7 @@ public abstract class RectangularShape extends Shape {
     }
 
     /**
-     * Returns the largest X coordinate of the framing 
+     * Returns the largest X coordinate of the framing
      * rectangle of the <code>Shape</code> in <code>double</code>
      * precision.
      * @return the largest X coordinate of the framing
@@ -115,10 +115,10 @@ public abstract class RectangularShape extends Shape {
     }
 
     /**
-     * Returns the largest Y coordinate of the framing 
-     * rectangle of the <code>Shape</code> in <code>double</code> 
+     * Returns the largest Y coordinate of the framing
+     * rectangle of the <code>Shape</code> in <code>double</code>
      * precision.
-     * @return the largest Y coordinate of the framing 
+     * @return the largest Y coordinate of the framing
      *      rectangle of the <code>Shape</code>.
      */
     public float getMaxY() {
@@ -129,7 +129,7 @@ public abstract class RectangularShape extends Shape {
      * Returns the X coordinate of the center of the framing
      * rectangle of the <code>Shape</code> in <code>double</code>
      * precision.
-     * @return the X coordinate of the center of the framing rectangle 
+     * @return the X coordinate of the center of the framing rectangle
      *      of the <code>Shape</code>.
      */
     public float getCenterX() {
@@ -137,10 +137,10 @@ public abstract class RectangularShape extends Shape {
     }
 
     /**
-     * Returns the Y coordinate of the center of the framing 
+     * Returns the Y coordinate of the center of the framing
      * rectangle of the <code>Shape</code> in <code>double</code>
      * precision.
-     * @return the Y coordinate of the center of the framing rectangle 
+     * @return the Y coordinate of the center of the framing rectangle
      *      of the <code>Shape</code>.
      */
     public float getCenterY() {
@@ -151,7 +151,7 @@ public abstract class RectangularShape extends Shape {
      * Determines whether the <code>RectangularShape</code> is empty.
      * When the <code>RectangularShape</code> is empty, it encloses no
      * area.
-     * @return <code>true</code> if the <code>RectangularShape</code> is empty; 
+     * @return <code>true</code> if the <code>RectangularShape</code> is empty;
      *      <code>false</code> otherwise.
      */
     public abstract boolean isEmpty();
@@ -171,10 +171,10 @@ public abstract class RectangularShape extends Shape {
     public abstract void setFrame(float x, float y, float w, float h);
 
     /**
-     * Sets the location and size of the framing rectangle of this 
-     * <code>Shape</code> to the specified {@link Point2D} and 
-     * {@link Dimension2D}, respectively.  The framing rectangle is used 
-     * by the subclasses of <code>RectangularShape</code> to define 
+     * Sets the location and size of the framing rectangle of this
+     * <code>Shape</code> to the specified {@link Point2D} and
+     * {@link Dimension2D}, respectively.  The framing rectangle is used
+     * by the subclasses of <code>RectangularShape</code> to define
      * their geometry.
      * @param loc the specified <code>Point2D</code>
      * @param size the specified <code>Dimension2D</code>
@@ -210,9 +210,9 @@ public abstract class RectangularShape extends Shape {
     }
 
     /**
-     * Sets the diagonal of the framing rectangle of this <code>Shape</code> 
-     * based on two specified <code>Point2D</code> objects.  The framing 
-     * rectangle is used by the subclasses of <code>RectangularShape</code> 
+     * Sets the diagonal of the framing rectangle of this <code>Shape</code>
+     * based on two specified <code>Point2D</code> objects.  The framing
+     * rectangle is used by the subclasses of <code>RectangularShape</code>
      * to define their geometry.
      *
      * @param p1 the start <code>Point2D</code> of the specified diagonal
@@ -225,7 +225,7 @@ public abstract class RectangularShape extends Shape {
     /**
      * Sets the framing rectangle of this <code>Shape</code>
      * based on the specified center point coordinates and corner point
-     * coordinates.  The framing rectangle is used by the subclasses of 
+     * coordinates.  The framing rectangle is used by the subclasses of
      * <code>RectangularShape</code> to define their geometry.
      *
      * @param centerX the X coordinate of the specified center point
@@ -242,9 +242,9 @@ public abstract class RectangularShape extends Shape {
     }
 
     /**
-     * Sets the framing rectangle of this <code>Shape</code> based on a 
-     * specified center <code>Point2D</code> and corner 
-     * <code>Point2D</code>.  The framing rectangle is used by the subclasses 
+     * Sets the framing rectangle of this <code>Shape</code> based on a
+     * specified center <code>Point2D</code> and corner
+     * <code>Point2D</code>.  The framing rectangle is used by the subclasses
      * of <code>RectangularShape</code> to define their geometry.
      * @param center the specified center <code>Point2D</code>
      * @param corner the specified corner <code>Point2D</code>
@@ -279,7 +279,7 @@ public abstract class RectangularShape extends Shape {
     }
 
     /**
-     * Returns an iterator object that iterates along the 
+     * Returns an iterator object that iterates along the
      * <code>Shape</code> object's boundary and provides access to a
      * flattened view of the outline of the <code>Shape</code>
      * object's geometry.
@@ -295,12 +295,12 @@ public abstract class RectangularShape extends Shape {
      * be specified so that the coordinates returned in the iteration are
      * transformed accordingly.
      * @param tx an optional <code>BaseTransform</code> to be applied to the
-     *      coordinates as they are returned in the iteration, 
+     *      coordinates as they are returned in the iteration,
      *      or <code>null</code> if untransformed coordinates are desired.
      * @param flatness the maximum distance that the line segments used to
      *          approximate the curved segments are allowed to deviate
      *          from any point on the original curve
-     * @return a <code>PathIterator</code> object that provides access to 
+     * @return a <code>PathIterator</code> object that provides access to
      *      the <code>Shape</code> object's flattened geometry.
      */
     public PathIterator getPathIterator(BaseTransform tx, float flatness) {

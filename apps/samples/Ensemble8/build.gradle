@@ -5,18 +5,18 @@ def mainClassName = "ensemble.EnsembleApp"
 
 def FileCollection apachecp = files(
    "./lib/lucene-grouping-3.2.0.jar",
-   "./lib/lucene-core-3.2.0.jar") 
+   "./lib/lucene-core-3.2.0.jar")
 
 sourceSets {
     main {
         java {
-            srcDirs 'src/app/java',  
-                    'src/generated/java', 
+            srcDirs 'src/app/java',
+                    'src/generated/java',
                     'src/samples/java'
         }
         resources {
-            srcDirs 'src/app/resources', 
-                    'src/generated/resources', 
+            srcDirs 'src/app/resources',
+                    'src/generated/resources',
                     'src/samples/resources'
         }
         compileClasspath += apachecp
@@ -31,7 +31,7 @@ jar {
 
     // Note: this would be the "gradle" way to add in the Lucene jars
     // BUT we run into total path length on Windows with the temp file in ./build
-    //apachecp.each { from zipTree(it) } 
+    //apachecp.each { from zipTree(it) }
     //exclude 'META-INF/*'
 }
 

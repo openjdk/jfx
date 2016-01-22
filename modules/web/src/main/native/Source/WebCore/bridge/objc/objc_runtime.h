@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef KJS_BINDINGS_OBJC_RUNTIME_H
@@ -44,7 +44,7 @@ class ObjcField : public Field {
 public:
     ObjcField(IvarStructPtr);
     ObjcField(CFStringRef name);
-    
+
     virtual JSValue valueFromInstance(ExecState*, const Instance*) const;
     virtual void setValueToInstance(ExecState*, const Instance*, JSValue) const;
 
@@ -61,11 +61,11 @@ public:
     virtual int numParameters() const;
 
     NSMethodSignature *getMethodSignature() const;
-    
+
     bool isFallbackMethod() const { return _selector == @selector(invokeUndefinedMethodFromWebScript:withArguments:); }
     void setJavaScriptName(CFStringRef n) { _javaScriptName = n; }
     CFStringRef javaScriptName() const { return _javaScriptName.get(); }
-    
+
     SEL selector() const { return _selector; }
 
 private:
@@ -81,7 +81,7 @@ public:
     virtual void setValueAt(ExecState *exec, unsigned int index, JSValue aValue) const;
     virtual JSValue valueAt(ExecState *exec, unsigned int index) const;
     virtual unsigned int getLength() const;
-    
+
     ObjectStructPtr getObjcArray() const { return _array.get(); }
 
     static JSValue convertObjcArrayToArray(ExecState *exec, ObjectStructPtr anObject);

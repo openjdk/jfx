@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -202,7 +202,7 @@ CapabilityLevel capabilityLevel(OpcodeID opcodeID, CodeBlock* codeBlock, Instruc
         // https://bugs.webkit.org/show_bug.cgi?id=127626
         return CannotCompile;
 
-    case op_new_regexp: 
+    case op_new_regexp:
     case op_create_activation:
     case op_tear_off_activation:
     case op_new_func:
@@ -222,7 +222,7 @@ CapabilityLevel capabilityLevel(CodeBlock* codeBlock)
     Instruction* instructionsBegin = codeBlock->instructions().begin();
     unsigned instructionCount = codeBlock->instructions().size();
     CapabilityLevel result = CanCompileAndInline;
-    
+
     for (unsigned bytecodeOffset = 0; bytecodeOffset < instructionCount; ) {
         switch (interpreter->getOpcodeID(instructionsBegin[bytecodeOffset].u.opcode)) {
 #define DEFINE_OP(opcode, length) \
@@ -242,7 +242,7 @@ CapabilityLevel capabilityLevel(CodeBlock* codeBlock)
             break;
         }
     }
-    
+
     return result;
 }
 

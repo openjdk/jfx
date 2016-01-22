@@ -70,7 +70,7 @@ namespace JSC {
         }
 
         void invalidateCode();
-        
+
 #if ENABLE(REGEXP_TRACING)
         void printTraceData();
 #endif
@@ -79,7 +79,7 @@ namespace JSC {
         {
             return Structure::create(vm, globalObject, prototype, TypeInfo(LeafType, 0), info());
         }
-        
+
         DECLARE_INFO;
 
         RegExpKey key() { return RegExpKey(m_flags, m_patternString); }

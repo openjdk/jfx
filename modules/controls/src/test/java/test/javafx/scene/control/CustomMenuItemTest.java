@@ -60,13 +60,13 @@ public class CustomMenuItemTest {
         customMenuItemOneArg = new CustomMenuItem(node);
         customMenuItemTwoArg = new CustomMenuItem(node, false);
     }
-    
-   
-   
+
+
+
     /*********************************************************************
      * Tests for default values                                         *
      ********************************************************************/
-    
+
     @Test public void defaultConstructorShouldSetStyleClassTo_custommenuitem() {
         assertStyleClassContains(customMenuItem, "custom-menu-item");
     }
@@ -76,7 +76,7 @@ public class CustomMenuItemTest {
     @Test public void twoArgConstructorShouldSetStyleClassTo_checkmenuitem() {
         assertStyleClassContains(customMenuItemTwoArg, "custom-menu-item");
     }
-    
+
     @Test public void defaultNodeNull() {
         assertNull(customMenuItem.getContent());
     }
@@ -87,11 +87,11 @@ public class CustomMenuItemTest {
     }
 
 
-    
+
     /*********************************************************************
      * Tests for property binding                                        *
      ********************************************************************/
-    
+
     @Test public void checkHideOnClickPropertyBind() {
         BooleanProperty objPr = new SimpleBooleanProperty(true);
         customMenuItem.hideOnClickProperty().bind(objPr);
@@ -99,7 +99,7 @@ public class CustomMenuItemTest {
         objPr.setValue(false);
         assertFalse("hideOnClickProperty cannot be bound", customMenuItem.hideOnClickProperty().getValue());
     }
-    
+
     @Test public void checkContentPropertyBind() {
         ObjectProperty objPr = new SimpleObjectProperty<Node>(null);
         customMenuItem.contentProperty().bind(objPr);
@@ -107,7 +107,7 @@ public class CustomMenuItemTest {
         objPr.setValue(node);
         assertSame("contentProperty cannot be bound", customMenuItem.contentProperty().getValue(), node);
     }
-    
+
     @Test public void contentPropertyHasBeanReference() {
         assertSame(customMenuItem, customMenuItem.contentProperty().getBean());
     }
@@ -123,7 +123,7 @@ public class CustomMenuItemTest {
         customMenuItem.setContent(node);
         assertSame(customMenuItem.contentProperty().getValue(), node);
     }
-    
+
     @Test public void setContentAndSeeValue() {
         customMenuItem.setContent(node);
         assertSame(customMenuItem.getContent(), node);
@@ -313,5 +313,5 @@ public class CustomMenuItemTest {
         cmi.hideOnClickProperty().bind(other);
         assertEquals(other.get(), cmi.isHideOnClick());
     }
-    
+
 }

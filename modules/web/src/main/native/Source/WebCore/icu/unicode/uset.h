@@ -51,7 +51,7 @@ enum {
      * Ignore white space within patterns unless quoted or escaped.
      * @stable ICU 2.4
      */
-    USET_IGNORE_SPACE = 1,  
+    USET_IGNORE_SPACE = 1,
 
     /**
      * Enable case insensitive matching.  E.g., "[ab]" with this flag
@@ -79,7 +79,7 @@ enum {
      *
      * @stable ICU 2.4
      */
-    USET_CASE_INSENSITIVE = 2,  
+    USET_CASE_INSENSITIVE = 2,
 
     /**
      * Enable case insensitive matching.  E.g., "[ab]" with this flag
@@ -90,7 +90,7 @@ enum {
      * @stable ICU 3.2
      */
     USET_ADD_CASE_MAPPINGS = 4,
-    
+
     /**
      * Enough for any single-code point set
      * @internal
@@ -251,7 +251,7 @@ uset_openEmpty();
 
 /**
  * Creates a USet object that contains the range of characters
- * start..end, inclusive.  If <code>start > end</code> 
+ * start..end, inclusive.  If <code>start > end</code>
  * then an empty set is created (same as using uset_openEmpty()).
  * @param start first character of the range, inclusive
  * @param end last character of the range, inclusive
@@ -388,11 +388,11 @@ uset_set(USet* set,
 
 /**
  * Modifies the set to represent the set specified by the given
- * pattern. See the UnicodeSet class description for the syntax of 
+ * pattern. See the UnicodeSet class description for the syntax of
  * the pattern language. See also the User Guide chapter about UnicodeSet.
  * <em>Empties the set passed before applying the pattern.</em>
  * A frozen set will not be modified.
- * @param set               The set to which the pattern is to be applied. 
+ * @param set               The set to which the pattern is to be applied.
  * @param pattern           A pointer to UChar string specifying what characters are in the set.
  *                          The character at pattern[0] must be a '['.
  * @param patternLength     The length of the UChar string. -1 if NUL terminated.
@@ -400,14 +400,14 @@ uset_set(USet* set,
  *                          Valid options are USET_IGNORE_SPACE and USET_CASE_INSENSITIVE.
  * @param status            Returns an error if the pattern cannot be parsed.
  * @return                  Upon successful parse, the value is either
- *                          the index of the character after the closing ']' 
+ *                          the index of the character after the closing ']'
  *                          of the parsed pattern.
- *                          If the status code indicates failure, then the return value 
+ *                          If the status code indicates failure, then the return value
  *                          is the index of the error in the source.
  *
  * @stable ICU 2.8
  */
-U_STABLE int32_t U_EXPORT2 
+U_STABLE int32_t U_EXPORT2
 uset_applyPattern(USet *set,
                   const UChar *pattern, int32_t patternLength,
                   uint32_t options,

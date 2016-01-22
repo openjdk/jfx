@@ -75,7 +75,7 @@
 - (IBAction)showHideWebView:(id)sender
 {
     BOOL hidden = ![_webView isHidden];
-    
+
     [_webView setHidden:hidden];
 }
 
@@ -83,7 +83,7 @@
 {
     if ([_webView window]) {
         [_webView retain];
-        [_webView removeFromSuperview]; 
+        [_webView removeFromSuperview];
     } else {
         [containerView addSubview:_webView];
         [_webView release];
@@ -141,10 +141,10 @@
 
     if (action == @selector(goBack:))
         return [_webView canGoBack];
-    
+
     if (action == @selector(goForward:))
         return [_webView canGoForward];
-    
+
     return YES;
 }
 
@@ -238,7 +238,7 @@
 {
     BOOL isTransparent = ![[self window] isOpaque];
     isTransparent = !isTransparent;
-    
+
     [[self window] setOpaque:!isTransparent];
     [[self window] setHasShadow:!isTransparent];
 

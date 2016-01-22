@@ -103,20 +103,20 @@ namespace JSC {
         ASSERT(static_cast<int>(virtualRegisterIndex) < FirstConstantRegisterIndex);
         return branch32(NotEqual, tagFor(virtualRegisterIndex), TrustedImm32(JSValue::CellTag));
     }
-    
+
     inline JSInterfaceJIT::Jump JSInterfaceJIT::emitLoadInt32(unsigned virtualRegisterIndex, RegisterID dst)
     {
         ASSERT(static_cast<int>(virtualRegisterIndex) < FirstConstantRegisterIndex);
         loadPtr(payloadFor(virtualRegisterIndex), dst);
         return branch32(NotEqual, tagFor(static_cast<int>(virtualRegisterIndex)), TrustedImm32(JSValue::Int32Tag));
     }
-    
+
     inline JSInterfaceJIT::Address JSInterfaceJIT::tagFor(int virtualRegisterIndex, RegisterID base)
     {
         ASSERT(virtualRegisterIndex < FirstConstantRegisterIndex);
         return Address(base, (static_cast<unsigned>(virtualRegisterIndex) * sizeof(Register)) + OBJECT_OFFSETOF(JSValue, u.asBits.tag));
     }
-    
+
     inline JSInterfaceJIT::Address JSInterfaceJIT::payloadFor(int virtualRegisterIndex, RegisterID base)
     {
         ASSERT(virtualRegisterIndex < FirstConstantRegisterIndex);
@@ -169,7 +169,7 @@ namespace JSC {
         load64(addressFor(virtualRegisterIndex), dst);
         return branchTest64(NonZero, dst, tagMaskRegister);
     }
-    
+
     inline JSInterfaceJIT::Jump JSInterfaceJIT::emitLoadInt32(unsigned virtualRegisterIndex, RegisterID dst)
     {
         load64(addressFor(virtualRegisterIndex), dst);
@@ -195,7 +195,7 @@ namespace JSC {
     ALWAYS_INLINE void JSInterfaceJIT::emitFastArithImmToInt(RegisterID)
     {
     }
-    
+
     // operand is int32_t, must have been zero-extended if register is 64-bit.
     ALWAYS_INLINE void JSInterfaceJIT::emitFastArithIntToImmNoCheck(RegisterID src, RegisterID dest)
     {

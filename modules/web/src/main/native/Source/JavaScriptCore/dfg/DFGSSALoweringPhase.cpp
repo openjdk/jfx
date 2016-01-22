@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -38,18 +38,18 @@ namespace JSC { namespace DFG {
 
 class SSALoweringPhase : public Phase {
     static const bool verbose = false;
-    
+
 public:
     SSALoweringPhase(Graph& graph)
         : Phase(graph, "SSA lowering")
         , m_insertionSet(graph)
     {
     }
-    
+
     bool run()
     {
         RELEASE_ASSERT(m_graph.m_form == SSA);
-        
+
         for (BlockIndex blockIndex = m_graph.numBlocks(); blockIndex--;) {
             m_block = m_graph.block(blockIndex);
             if (!m_block)
@@ -71,7 +71,7 @@ private:
         case GetByVal:
             lowerBoundsCheck(m_node->child1(), m_node->child2(), m_node->child3());
             break;
-            
+
         case PutByVal:
         case PutByValDirect: {
             Edge base = m_graph.varArgChild(m_node, 0);
@@ -79,31 +79,31 @@ private:
             Edge storage = m_graph.varArgChild(m_node, 3);
             if (lowerBoundsCheck(base, index, storage))
                 break;
-            
+
             if (m_node->arrayMode().typedArrayType() != NotTypedArray && m_node->arrayMode().isOutOfBounds()) {
                 Node* length = m_insertionSet.insertNode(
                     m_nodeIndex, SpecInt32, GetArrayLength, m_node->origin,
                     OpInfo(m_node->arrayMode().asWord()), base, storage);
-                
+
                 m_graph.varArgChild(m_node, 4) = Edge(length, KnownInt32Use);
                 break;
             }
             break;
         }
-            
+
         default:
             break;
         }
     }
-    
+
     bool lowerBoundsCheck(Edge base, Edge index, Edge storage)
     {
         if (!m_node->arrayMode().permitsBoundsCheckLowering())
             return false;
-        
+
         if (!m_node->arrayMode().lengthNeedsStorage())
             storage = Edge();
-        
+
         Node* length = m_insertionSet.insertNode(
             m_nodeIndex, SpecInt32, GetArrayLength, m_node->origin,
             OpInfo(m_node->arrayMode().asWord()), base, storage);
@@ -112,7 +112,7 @@ private:
             index, Edge(length, KnownInt32Use));
         return true;
     }
-    
+
     InsertionSet m_insertionSet;
     BasicBlock* m_block;
     unsigned m_nodeIndex;

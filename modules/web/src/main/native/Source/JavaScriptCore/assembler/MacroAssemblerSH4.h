@@ -289,7 +289,7 @@ public:
 
     void mul32(RegisterID src, RegisterID dest)
     {
-        mul32(src, dest, dest);    
+        mul32(src, dest, dest);
     }
 
     void mul32(RegisterID src1, RegisterID src2, RegisterID dest)
@@ -1039,7 +1039,7 @@ public:
         releaseScratch(scr);
         return label;
     }
-    
+
     DataLabel32 store32WithAddressOffsetPatch(RegisterID src, Address address)
     {
         RegisterID scr = claimScratch();
@@ -1554,7 +1554,7 @@ public:
         moveDouble(src, dest);
         m_assembler.dsqrt(dest);
     }
-    
+
     void absDouble(FPRegisterID src, FPRegisterID dest)
     {
         moveDouble(src, dest);
@@ -2477,7 +2477,7 @@ public:
     {
         SH4Assembler::replaceWithJump(instructionStart.dataLocation(), destination.dataLocation());
     }
-    
+
     static ptrdiff_t maxJumpReplacementSize()
     {
         return SH4Assembler::maxJumpReplacementSize();

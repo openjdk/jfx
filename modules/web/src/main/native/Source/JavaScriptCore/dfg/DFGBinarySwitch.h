@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef DFGBinarySwitch_h
@@ -65,21 +65,21 @@ public:
         Int32,
         IntPtr
     };
-    
+
     BinarySwitch(GPRReg value, const Vector<int64_t>& cases, Type);
-    
+
     unsigned caseIndex() const { return m_cases[m_caseIndex].index; }
     int64_t caseValue() const { return m_cases[m_caseIndex].value; }
-    
+
     bool advance(MacroAssembler&);
-    
+
     MacroAssembler::JumpList& fallThrough() { return m_fallThrough; }
-    
+
 private:
     void build(unsigned start, unsigned end);
-    
+
     GPRReg m_value;
-    
+
     struct Case {
         Case() { }
 
@@ -88,18 +88,18 @@ private:
             , index(index)
         {
         }
-        
+
         bool operator<(const Case& other) const
         {
             return value < other.value;
         }
-        
+
         int64_t value;
         unsigned index;
     };
-    
+
     Vector<Case> m_cases;
-    
+
     enum BranchKind {
         NotEqualToFallThrough,
         NotEqualToPush,
@@ -107,30 +107,30 @@ private:
         Pop,
         ExecuteCase
     };
-        
+
     struct BranchCode {
         BranchCode() { }
-        
+
         BranchCode(BranchKind kind, unsigned index = UINT_MAX)
             : kind(kind)
             , index(index)
         {
         }
-        
+
         BranchKind kind;
         unsigned index;
     };
-    
+
     Vector<BranchCode> m_branches;
 
     unsigned m_index;
     unsigned m_caseIndex;
     Vector<MacroAssembler::Jump> m_jumpStack;
-    
+
     MacroAssembler::JumpList m_fallThrough;
-    
+
     unsigned m_medianBias;
-    
+
     Type m_type;
 };
 

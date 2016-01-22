@@ -57,5 +57,5 @@ final class PseudoClassImpl extends PseudoClass {
 
     // index of this PseudoClass in pseudoClasses list.
     private final int index;
-   
+
 }

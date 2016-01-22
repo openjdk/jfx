@@ -356,7 +356,7 @@ public class StubToolkit extends Toolkit {
         }
         return false;
     }
-    
+
     /*
      * additional testing functions
      */

@@ -48,7 +48,7 @@ import javafx.scene.paint.Color;
  *
  */
 public class DropShadowPropertyMetadata extends ComplexPropertyMetadata<DropShadow> {
-    
+
     private final EnumerationPropertyMetadata blurTypeMetadata
             = new EnumerationPropertyMetadata(new PropertyName("blurType"), //NOI18N
             BlurType.class, true, BlurType.THREE_PASS_BOX, InspectorPath.UNUSED);
@@ -77,7 +77,7 @@ public class DropShadowPropertyMetadata extends ComplexPropertyMetadata<DropShad
             = new DoublePropertyMetadata(new PropertyName("width"), //NOI18N
             DoublePropertyMetadata.DoubleKind.OPACITY, true /* readWrite */, 21.0, InspectorPath.UNUSED);
 
-    public DropShadowPropertyMetadata(PropertyName name, boolean readWrite, 
+    public DropShadowPropertyMetadata(PropertyName name, boolean readWrite,
             DropShadow defaultValue, InspectorPath inspectorPath) {
         super(name, DropShadow.class, readWrite, defaultValue, inspectorPath);
     }
@@ -85,11 +85,11 @@ public class DropShadowPropertyMetadata extends ComplexPropertyMetadata<DropShad
     /*
      * ComplexPropertyMetadata
      */
-    
+
     @Override
     public FXOMInstance makeFxomInstanceFromValue(DropShadow value, FXOMDocument fxomDocument) {
         final FXOMInstance result = new FXOMInstance(fxomDocument, value.getClass());
-        
+
         blurTypeMetadata.setValue(result, value.getBlurType().toString());
         colorMetadata.setValue(result, value.getColor());
         heightMetadata.setValue(result, value.getHeight());

@@ -36,18 +36,18 @@
     GlassViewDelegate   *_delegate;
 
     NSUInteger          _drawCounter; // draw counter, so that we only bind/unbind offscreen once
-    
+
     NSTrackingArea      *_trackingArea;
-    
+
     GLuint              _texture;
     GLuint              _textureWidth;
     GLuint              _textureHeight;
-    
+
     CGFloat             _backgroundR;
     CGFloat             _backgroundG;
     CGFloat             _backgroundB;
     CGFloat             _backgroundA;
-    
+
     NSAttributedString *nsAttrBuffer;
     BOOL imEnabled;
     BOOL shouldProcessKeyEvent;

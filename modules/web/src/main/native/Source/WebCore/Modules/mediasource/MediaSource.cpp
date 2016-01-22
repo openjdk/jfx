@@ -274,7 +274,7 @@ void MediaSource::monitorSourceBuffers()
     // 3. Playback is suspended at this point since the media element doesn't have enough data to
     // advance the media timeline.
     m_private->setReadyState(MediaPlayer::HaveCurrentData);
-    
+
     // 4. Abort these steps.
 }
 
@@ -579,21 +579,21 @@ void MediaSource::removeSourceBuffer(SourceBuffer* buffer, ExceptionCode& ec)
             // cancelable, and that uses the TrackEvent interface, at the SourceBuffer textTracks list.
             textTracks->remove(track);
         }
-        
+
         // 9.4 If the removed enabled text track flag equals true, then queue a task to fire a simple event
         // named change at the HTMLMediaElement textTracks list.
         if (removedEnabledTextTrack)
             mediaElement()->textTracks()->scheduleChangeEvent();
     }
-    
-    
+
+
     // 10. If sourceBuffer is in activeSourceBuffers, then remove sourceBuffer from activeSourceBuffers ...
     m_activeSourceBuffers->remove(buffer);
-    
+
     // 11. Remove sourceBuffer from sourceBuffers and fire a removesourcebuffer event
     // on that object.
     m_sourceBuffers->remove(buffer);
-    
+
     // 12. Destroy all resources for sourceBuffer.
     buffer->removedFromMediaSource();
 }
@@ -703,7 +703,7 @@ void MediaSource::onReadyStateChange(const AtomicString& oldState, const AtomicS
     for (unsigned long i = 0, length =  m_sourceBuffers->length(); i < length; ++i)
         m_sourceBuffers->item(i)->removedFromMediaSource();
     m_sourceBuffers->clear();
-    
+
     scheduleEvent(eventNames().sourcecloseEvent);
 }
 

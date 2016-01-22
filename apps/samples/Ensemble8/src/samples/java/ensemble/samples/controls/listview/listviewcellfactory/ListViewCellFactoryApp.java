@@ -42,12 +42,12 @@ import javafx.stage.Stage;
 import javafx.util.Callback;
 
 /**
- * A simple implementation of the ListView control that uses a CellFactory to 
+ * A simple implementation of the ListView control that uses a CellFactory to
  * customize the ListView cell contents. Positive values in the list are green,
  * and negative values are red and enclosed in parentheses. Zero values are black.
  *
  * @sampleName ListViewCellFactory
- * @preview preview.png 
+ * @preview preview.png
  * @see javafx.scene.control.ListView
  * @see javafx.scene.control.SelectionModel
  * @related /Controls/Listview/HorizontalListView
@@ -64,9 +64,9 @@ public class ListViewCellFactoryApp extends Application {
                 15.00, 47.50, 12.11
 
         ));
-        
-        listView.setCellFactory((ListView<java.lang.Number> list) -> new MoneyFormatCell());        
-        
+
+        listView.setCellFactory((ListView<java.lang.Number> list) -> new MoneyFormatCell());
+
         listView.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
         return listView;
     }

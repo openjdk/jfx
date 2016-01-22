@@ -48,7 +48,7 @@ public class Parent_cssMethods_Test extends CssMethodsTestBase {
             config(TEST_PARENT, "translateX", 0.0, "-fx-translate-x", 10.0)
         });
     }
-    
+
     public Parent_cssMethods_Test(final Configuration configuration) {
         super(configuration);
     }

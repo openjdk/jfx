@@ -21,7 +21,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef WTF_StdLibExtras_h
@@ -198,7 +198,7 @@ inline ArrayElementType* binarySearchImpl(ArrayType& array, size_t size, KeyType
     while (size > 1) {
         size_t pos = (size - 1) >> 1;
         KeyType val = extractKey(&array[offset + pos]);
-        
+
         if (val == key)
             return &array[offset + pos];
         // The item we are looking for is smaller than the item being check; reduce the value of 'size',
@@ -213,10 +213,10 @@ inline ArrayElementType* binarySearchImpl(ArrayType& array, size_t size, KeyType
 
         ASSERT(mode != KeyMustBePresentInArray || size);
     }
-    
+
     if (mode == KeyMightNotBePresentInArray && !size)
         return 0;
-    
+
     ArrayElementType* result = &array[offset];
 
     if (mode == KeyMightNotBePresentInArray && key != extractKey(result))

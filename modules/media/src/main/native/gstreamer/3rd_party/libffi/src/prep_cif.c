@@ -52,8 +52,8 @@ static ffi_status initialize_aggregate(ffi_type *arg)
   while ((*ptr) != NULL)
     {
       if (UNLIKELY(((*ptr)->size == 0)
-		    && (initialize_aggregate((*ptr)) != FFI_OK)))
-	return FFI_BAD_TYPEDEF;
+            && (initialize_aggregate((*ptr)) != FFI_OK)))
+    return FFI_BAD_TYPEDEF;
 
       /* Perform a sanity check on the argument type */
       FFI_ASSERT_VALID_TYPE(*ptr);
@@ -62,7 +62,7 @@ static ffi_status initialize_aggregate(ffi_type *arg)
       arg->size += (*ptr)->size;
 
       arg->alignment = (arg->alignment > (*ptr)->alignment) ?
-	arg->alignment : (*ptr)->alignment;
+    arg->alignment : (*ptr)->alignment;
 
       ptr++;
     }
@@ -105,10 +105,10 @@ static ffi_status initialize_aggregate(ffi_type *arg)
 
 
 ffi_status FFI_HIDDEN ffi_prep_cif_core(ffi_cif *cif, ffi_abi abi,
-			     unsigned int isvariadic,
+                 unsigned int isvariadic,
                              unsigned int nfixedargs,
                              unsigned int ntotalargs,
-			     ffi_type *rtype, ffi_type **atypes)
+                 ffi_type *rtype, ffi_type **atypes)
 {
   unsigned bytes = 0;
   unsigned int i;
@@ -168,46 +168,46 @@ ffi_status FFI_HIDDEN ffi_prep_cif_core(ffi_cif *cif, ffi_abi abi,
 
       /* Initialize any uninitialized aggregate type definitions */
       if (((*ptr)->size == 0) && (initialize_aggregate((*ptr)) != FFI_OK))
-	return FFI_BAD_TYPEDEF;
+    return FFI_BAD_TYPEDEF;
 
 #ifndef FFI_TARGET_HAS_COMPLEX_TYPE
       if ((*ptr)->type == FFI_TYPE_COMPLEX)
-	abort();
+    abort();
 #endif
       /* Perform a sanity check on the argument type, do this
-	 check after the initialization.  */
+     check after the initialization.  */
       FFI_ASSERT_VALID_TYPE(*ptr);
 
 #if !defined FFI_TARGET_SPECIFIC_STACK_SPACE_ALLOCATION
 #ifdef SPARC
       if (((*ptr)->type == FFI_TYPE_STRUCT
-	   && ((*ptr)->size > 16 || cif->abi != FFI_V9))
-	  || ((*ptr)->type == FFI_TYPE_LONGDOUBLE
-	      && cif->abi != FFI_V9))
-	bytes += sizeof(void*);
+       && ((*ptr)->size > 16 || cif->abi != FFI_V9))
+      || ((*ptr)->type == FFI_TYPE_LONGDOUBLE
+          && cif->abi != FFI_V9))
+    bytes += sizeof(void*);
       else
 #endif
-	{
-	  /* Add any padding if necessary */
-	  if (((*ptr)->alignment - 1) & bytes)
-	    bytes = (unsigned)ALIGN(bytes, (*ptr)->alignment);
+    {
+      /* Add any padding if necessary */
+      if (((*ptr)->alignment - 1) & bytes)
+        bytes = (unsigned)ALIGN(bytes, (*ptr)->alignment);
 
 #ifdef TILE
-	  if (bytes < 10 * FFI_SIZEOF_ARG &&
-	      bytes + STACK_ARG_SIZE((*ptr)->size) > 10 * FFI_SIZEOF_ARG)
-	    {
-	      /* An argument is never split between the 10 parameter
-		 registers and the stack.  */
-	      bytes = 10 * FFI_SIZEOF_ARG;
-	    }
+      if (bytes < 10 * FFI_SIZEOF_ARG &&
+          bytes + STACK_ARG_SIZE((*ptr)->size) > 10 * FFI_SIZEOF_ARG)
+        {
+          /* An argument is never split between the 10 parameter
+         registers and the stack.  */
+          bytes = 10 * FFI_SIZEOF_ARG;
+        }
 #endif
 #ifdef XTENSA
-	  if (bytes <= 6*4 && bytes + STACK_ARG_SIZE((*ptr)->size) > 6*4)
-	    bytes = 6*4;
+      if (bytes <= 6*4 && bytes + STACK_ARG_SIZE((*ptr)->size) > 6*4)
+        bytes = 6*4;
 #endif
 
-	  bytes += STACK_ARG_SIZE((*ptr)->size);
-	}
+      bytes += STACK_ARG_SIZE((*ptr)->size);
+    }
 #endif
     }
 
@@ -216,7 +216,7 @@ ffi_status FFI_HIDDEN ffi_prep_cif_core(ffi_cif *cif, ffi_abi abi,
   /* Perform machine dependent cif processing */
 #ifdef FFI_TARGET_SPECIFIC_VARIADIC
   if (isvariadic)
-	return ffi_prep_cif_machdep_var(cif, nfixedargs, ntotalargs);
+    return ffi_prep_cif_machdep_var(cif, nfixedargs, ntotalargs);
 #endif
 
   return ffi_prep_cif_machdep(cif);
@@ -224,7 +224,7 @@ ffi_status FFI_HIDDEN ffi_prep_cif_core(ffi_cif *cif, ffi_abi abi,
 #endif /* not __CRIS__ */
 
 ffi_status ffi_prep_cif(ffi_cif *cif, ffi_abi abi, unsigned int nargs,
-			     ffi_type *rtype, ffi_type **atypes)
+                 ffi_type *rtype, ffi_type **atypes)
 {
   return ffi_prep_cif_core(cif, abi, 0, nargs, nargs, rtype, atypes);
 }
@@ -243,9 +243,9 @@ ffi_status ffi_prep_cif_var(ffi_cif *cif,
 
 ffi_status
 ffi_prep_closure (ffi_closure* closure,
-		  ffi_cif* cif,
-		  void (*fun)(ffi_cif*,void*,void**,void*),
-		  void *user_data)
+          ffi_cif* cif,
+          void (*fun)(ffi_cif*,void*,void**,void*),
+          void *user_data)
 {
   return ffi_prep_closure_loc (closure, cif, fun, user_data, closure);
 }

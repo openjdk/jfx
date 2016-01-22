@@ -37,7 +37,7 @@ enum ParserContentPolicy {
     AllowScriptingContentAndDoNotMarkAlreadyStarted,
 };
 
-static inline bool scriptingContentIsAllowed(ParserContentPolicy parserContentPolicy) 
+static inline bool scriptingContentIsAllowed(ParserContentPolicy parserContentPolicy)
 {
     return parserContentPolicy == AllowScriptingContent || parserContentPolicy == AllowScriptingContentAndDoNotMarkAlreadyStarted;
 }

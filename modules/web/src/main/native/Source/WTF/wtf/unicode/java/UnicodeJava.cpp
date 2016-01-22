@@ -61,11 +61,11 @@ static int stringCaseConvert(const char* methodName, jmethodID* mid,
         *err = true;
         return dstLength;
     }
-    
+
     if (srcLength == 0) {
         return 0;
     }
-    
+
     JNIEnv* env = setUpClass(&stringCaseClass,
                       "com/sun/webkit/text/StringCase");
 
@@ -77,7 +77,7 @@ static int stringCaseConvert(const char* methodName, jmethodID* mid,
 
     jstring jSrc = env->NewString(src, srcLength);
     ASSERT(jSrc);
-    
+
     jstring jDst = static_cast<jstring>(env->CallStaticObjectMethod(
                                                 stringCaseClass, *mid, jSrc));
     CheckAndClearException(env);
@@ -92,7 +92,7 @@ static int stringCaseConvert(const char* methodName, jmethodID* mid,
         memcpy(dst, chars, length * sizeof(jchar));
         env->ReleaseStringChars(jDst, chars);
     }
-    
+
     env->DeleteLocalRef(jDst);
     return length;
 }

@@ -56,11 +56,11 @@ HANDLE GetFileHandle()
     TCHAR buffer[MAX_PATH] = {0};
     HANDLE hFile = INVALID_HANDLE_VALUE;
     DWORD pid = GetCurrentProcessId();
-    
+
     HRESULT hr = StringCchPrintf(buffer, MAX_PATH, "jfxm_err_pid%d.log", pid);
     if (FAILED(hr))
         return INVALID_HANDLE_VALUE;
-    
+
     return CreateFile(buffer, GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
 }
 

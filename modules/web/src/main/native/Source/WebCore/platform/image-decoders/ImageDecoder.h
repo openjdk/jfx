@@ -133,7 +133,7 @@ namespace WebCore {
         {
             return m_bytes + (y * width()) + x;
         }
-        
+
 #if PLATFORM(JAVA)
     friend class BitmapImage;
 #endif

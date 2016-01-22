@@ -83,7 +83,7 @@ using namespace WebCore;
     ASSERT(_chooser);
     if (!_chooser)
         return;
-    int count = [filenames count]; 
+    int count = [filenames count];
     Vector<String> names(count);
     for (int i = 0; i < count; i++)
         names[i] = [filenames objectAtIndex:i];
@@ -111,7 +111,7 @@ using namespace WebCore;
     for (NSUInteger i = 0; i < count; ++i)
         names[i] = [filenames objectAtIndex:i];
     _chooser->chooseMediaFiles(names, displayString, icon.get());
-    
+
     // FIXME: we shouldn't be manually deref()'ing here.
     _chooser->deref();
     _chooser = nullptr;

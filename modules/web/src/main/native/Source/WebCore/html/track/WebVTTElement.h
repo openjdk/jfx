@@ -62,7 +62,7 @@ public:
         DEFINE_STATIC_LOCAL(QualifiedName, voiceAttr, (nullAtom, "voice", nullAtom));
         return voiceAttr;
     }
-    
+
     static const QualifiedName& langAttributeName()
     {
         DEFINE_STATIC_LOCAL(QualifiedName, voiceAttr, (nullAtom, "lang", nullAtom));
@@ -76,7 +76,7 @@ private:
 
     unsigned m_isPastNode : 1;
     unsigned m_webVTTNodeType : 4;
-    
+
     AtomicString m_language;
 };
 

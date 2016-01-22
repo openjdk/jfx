@@ -62,13 +62,13 @@ static CGContextRef createCGContextFromImage(WKImageRef wkImage, FlipGraphicsCon
     // Creating this bitmap in the device color space should prevent any color conversion when the image of the web view is drawn into it.
     RetainPtr<CGColorSpaceRef> colorSpace = adoptCF(CGColorSpaceCreateDeviceRGB());
     CGContextRef context = CGBitmapContextCreate(0, pixelsWide, pixelsHigh, 8, rowBytes, colorSpace.get(), kCGImageAlphaPremultipliedFirst | kCGBitmapByteOrder32Host);
-    
+
     if (flip == FlipGraphicsContext) {
         CGContextSaveGState(context);
         CGContextScaleCTM(context, 1, -1);
         CGContextTranslateCTM(context, 0, -static_cast<CGFloat>(pixelsHigh));
     }
-    
+
     CGContextDrawImage(context, CGRectMake(0, 0, pixelsWide, pixelsHigh), image.get());
     if (flip == FlipGraphicsContext)
         CGContextRestoreGState(context);
@@ -82,7 +82,7 @@ void computeMD5HashStringForContext(CGContextRef bitmapContext, char hashString[
     size_t pixelsHigh = CGBitmapContextGetHeight(bitmapContext);
     size_t pixelsWide = CGBitmapContextGetWidth(bitmapContext);
     size_t bytesPerRow = CGBitmapContextGetBytesPerRow(bitmapContext);
-    
+
     // We need to swap the bytes to ensure consistent hashes independently of endianness
     MD5 md5;
     unsigned char* bitmapData = static_cast<unsigned char*>(CGBitmapContextGetData(bitmapContext));
@@ -134,11 +134,11 @@ static void paintRepaintRectOverlay(CGContextRef context, WKImageRef image, WKAr
 
     // Using a transparency layer is easier than futzing with clipping.
     CGContextBeginTransparencyLayer(context, 0);
-    
+
     // Flip the context.
     CGContextScaleCTM(context, 1, -1);
     CGContextTranslateCTM(context, 0, -imageSize.height);
-    
+
     CGContextSetRGBFillColor(context, 0, 0, 0, static_cast<CGFloat>(0.66));
     CGContextFillRect(context, CGRectMake(0, 0, imageSize.width, imageSize.height));
 
@@ -149,7 +149,7 @@ static void paintRepaintRectOverlay(CGContextRef context, WKImageRef image, WKAr
         CGRect cgRect = CGRectMake(rect.origin.x, rect.origin.y, rect.size.width, rect.size.height);
         CGContextClearRect(context, cgRect);
     }
-    
+
     CGContextEndTransparencyLayer(context);
     CGContextRestoreGState(context);
 }

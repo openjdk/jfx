@@ -43,14 +43,14 @@ public:
     {
         return adoptPtr(new BuiltinExecutables(vm));
     }
-    
+
 #define EXPOSE_BUILTIN_EXECUTABLES(name, functionName, length) \
 UnlinkedFunctionExecutable* name##Executable(); \
 const SourceCode& name##Source() { return m_##name##Source; }
-    
+
     JSC_FOREACH_BUILTIN(EXPOSE_BUILTIN_EXECUTABLES)
 #undef EXPOSE_BUILTIN_SOURCES
-    
+
 private:
     BuiltinExecutables(VM&);
     VM& m_vm;

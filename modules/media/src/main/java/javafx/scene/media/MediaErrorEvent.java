@@ -36,7 +36,7 @@ import javafx.event.EventType;
 public class MediaErrorEvent extends Event {
 
     private static final long serialVersionUID = 20121107L;
-    
+
     /**
      * The only valid event type for the <code>MediaErrorEvent</code>.
      */
@@ -95,5 +95,5 @@ public class MediaErrorEvent extends Event {
     public EventType<MediaErrorEvent> getEventType() {
         return (EventType<MediaErrorEvent>) super.getEventType();
     }
-    
+
 }

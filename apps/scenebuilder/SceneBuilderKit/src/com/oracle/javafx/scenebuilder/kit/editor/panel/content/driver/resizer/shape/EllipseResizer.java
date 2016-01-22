@@ -44,7 +44,7 @@ import javafx.scene.shape.Ellipse;
 
 /**
  *
- * 
+ *
  */
 public class EllipseResizer extends AbstractResizer<Ellipse> {
 
@@ -53,7 +53,7 @@ public class EllipseResizer extends AbstractResizer<Ellipse> {
     private final PropertyName radiusXName  = new PropertyName("radiusX"); //NOI18N
     private final PropertyName radiusYName = new PropertyName("radiusY"); //NOI18N
     private final List<PropertyName> propertyNames = new ArrayList<>();
-    
+
     public EllipseResizer(Ellipse sceneGraphObject) {
         super(sceneGraphObject);
         originalRadiusX = sceneGraphObject.getRadiusX();
@@ -65,7 +65,7 @@ public class EllipseResizer extends AbstractResizer<Ellipse> {
     /*
      * AbstractResizer
      */
-    
+
     @Override
     public final Bounds computeBounds(double width, double height) {
         final double radiusX = Math.round(width / 2.0);
@@ -74,7 +74,7 @@ public class EllipseResizer extends AbstractResizer<Ellipse> {
         final double minY = sceneGraphObject.getCenterY() - radiusY;
         return new BoundingBox(minX, minY, 2 * radiusX, 2 * radiusY);
     }
- 
+
     @Override
     public Feature getFeature() {
         return Feature.FREE;
@@ -105,7 +105,7 @@ public class EllipseResizer extends AbstractResizer<Ellipse> {
     public Object getValue(PropertyName propertyName) {
         assert propertyName != null;
         assert propertyNames.contains(propertyName);
-        
+
         final Object result;
         if (propertyName.equals(radiusXName)) {
             result = sceneGraphObject.getRadiusX();
@@ -115,7 +115,7 @@ public class EllipseResizer extends AbstractResizer<Ellipse> {
             // Emergency code
             result = null;
         }
-        
+
         return result;
     }
 

@@ -161,7 +161,7 @@ public abstract class ReadOnlyJavaBeanPropertyTestBase<T> {
 
     public static abstract class BeanStub<U> {
         int listenerCount;
-        
+
         public abstract U getValue();
         public abstract void setValue(U value) throws PropertyVetoException;
         public abstract void setFailureMode(boolean failureMode);

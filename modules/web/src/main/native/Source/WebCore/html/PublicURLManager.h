@@ -54,7 +54,7 @@ public:
     // ActiveDOMObject interface.
     virtual void stop() override;
 private:
-    
+
     typedef HashSet<String> URLSet;
     typedef HashMap<URLRegistry*, URLSet > RegistryURLMap;
     RegistryURLMap m_registryToURL;

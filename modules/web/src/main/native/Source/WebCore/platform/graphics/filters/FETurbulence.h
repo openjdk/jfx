@@ -65,7 +65,7 @@ public:
     virtual bool platformApplyOpenCL();
 #endif
     virtual void dump();
-    
+
     virtual void determineAbsolutePaintRect() { setAbsolutePaintRect(enclosingIntRect(maxEffectRect())); }
 
     virtual TextStream& externalRepresentation(TextStream&, int indention) const;

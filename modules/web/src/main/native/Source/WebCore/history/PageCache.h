@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef PageCache_h
@@ -37,17 +37,17 @@ namespace WebCore {
     class Frame;
     class HistoryItem;
     class Page;
-    
+
     class PageCache {
         WTF_MAKE_NONCOPYABLE(PageCache); WTF_MAKE_FAST_ALLOCATED;
     public:
         friend PageCache* pageCache();
-        
+
         bool canCache(Page*) const;
 
         void setCapacity(int); // number of pages to cache
         int capacity() { return m_capacity; }
-        
+
         void add(PassRefPtr<HistoryItem>, Page&); // Prunes if capacity() is exceeded.
         void remove(HistoryItem*);
         CachedPage* get(HistoryItem* item);
@@ -75,7 +75,7 @@ namespace WebCore {
     private:
         PageCache(); // Use pageCache() instead.
         ~PageCache(); // Not implemented to make sure nobody accidentally calls delete -- WebCore does not delete singletons.
-        
+
         static bool canCachePageContainingThisFrame(Frame*);
 
         void addToLRUList(HistoryItem*); // Adds to the head of the list.
@@ -89,7 +89,7 @@ namespace WebCore {
         // LRU List
         HistoryItem* m_head;
         HistoryItem* m_tail;
-        
+
         bool m_shouldClearBackingStores;
      };
 

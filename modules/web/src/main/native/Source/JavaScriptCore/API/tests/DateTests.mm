@@ -75,7 +75,7 @@ static unsigned unitFlags = NSSecondCalendarUnit | NSMinuteCalendarUnit | NSHour
     NSDateComponents *components = [[NSCalendar currentCalendar] components:unitFlags fromDate:februaryFourth2014];
     // Months are 0-indexed for JavaScript Dates.
     JSValue *jsDate = [context[@"Date"] constructWithArguments:@[@2014, @1, @4, @11, @40, @3]];
-    
+
     int year = [[jsDate invokeMethod:@"getFullYear" withArguments:@[]] toInt32];
     int month = [[jsDate invokeMethod:@"getMonth" withArguments:@[]] toInt32] + 1;
     int day = [[jsDate invokeMethod:@"getDate" withArguments:@[]] toInt32];
@@ -99,7 +99,7 @@ static unsigned unitFlags = NSSecondCalendarUnit | NSMinuteCalendarUnit | NSHour
     [formatter setDateFormat:@"MMMM dd',' yyyy hh:mm:ss"];
     NSDate *februaryFourth2014 = [formatter dateFromString:@"February 4, 2014 11:40:03"];
     NSDateComponents *components = [[NSCalendar currentCalendar] components:unitFlags fromDate:februaryFourth2014];
-    
+
     JSValue *roundTripThroughJS = [context[@"jsReturnDate"] callWithArguments:@[februaryFourth2014]];
     int year = [[roundTripThroughJS invokeMethod:@"getFullYear" withArguments:@[]] toInt32];
     // Months are 0-indexed for JavaScript Dates.
@@ -134,7 +134,7 @@ static unsigned unitFlags = NSSecondCalendarUnit | NSMinuteCalendarUnit | NSHour
             && date.getSeconds() === result.getSeconds() \
             && date.getMilliseconds() === result.getMilliseconds();\
     }"];
-    
+
     checkResult(@"ObjC date round trip", [[context[@"test"] callWithArguments:@[]] toBool]);
 }
 

@@ -73,7 +73,7 @@ LabelableElement* HTMLLabelElement::control()
         }
         return nullptr;
     }
-    
+
     // Find the first element whose id is controlId. If it is found and it is a labelable form control,
     // return it, otherwise return 0.
     return nodeAsSupportedLabelableElement(treeScope().getElementById(controlId));
@@ -101,7 +101,7 @@ void HTMLLabelElement::setHovered(bool over)
 {
     if (over == hovered())
         return;
-        
+
     // Update our status first.
     HTMLElement::setHovered(over);
 
@@ -132,10 +132,10 @@ void HTMLLabelElement::defaultEventHandler(Event* evt)
             element->focus();
 
         processingClick = false;
-        
+
         evt->setDefaultHandled();
     }
-    
+
     HTMLElement::defaultEventHandler(evt);
 }
 

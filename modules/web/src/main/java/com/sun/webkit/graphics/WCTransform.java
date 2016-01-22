@@ -30,7 +30,7 @@ import java.util.Arrays;
 public final class WCTransform extends Ref {
     private final double[] m;
 
-    public WCTransform(double m00, double m10, double m01, double m11, 
+    public WCTransform(double m00, double m10, double m01, double m11,
                        double m02, double m12)
     {
         this.m = new double[6];

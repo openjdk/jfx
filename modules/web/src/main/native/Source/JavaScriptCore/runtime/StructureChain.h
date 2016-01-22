@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef StructureChain_h
@@ -47,7 +47,7 @@ namespace JSC {
         typedef JSCell Base;
 
         static StructureChain* create(VM& vm, Structure* head)
-        { 
+        {
             StructureChain* chain = new (NotNull, allocateCell<StructureChain>(vm.heap)) StructureChain(vm, vm.structureChainStructure.get());
             chain->finishCreation(vm, head);
             return chain;
@@ -56,7 +56,7 @@ namespace JSC {
         static void visitChildren(JSCell*, SlotVisitor&);
 
         static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype) { return Structure::create(vm, globalObject, prototype, TypeInfo(CompoundType, OverridesVisitChildren), info()); }
-        
+
         DECLARE_INFO;
 
         static const bool needsDestruction = true;
@@ -70,7 +70,7 @@ namespace JSC {
             size_t size = 0;
             for (Structure* current = head; current; current = current->storedPrototype().isNull() ? 0 : asObject(current->storedPrototype())->structure())
                 ++size;
-    
+
             m_vector = std::make_unique<WriteBarrier<Structure>[]>(size + 1);
 
             size_t i = 0;
@@ -80,7 +80,7 @@ namespace JSC {
 
     private:
         friend class LLIntOffsetsExtractor;
-        
+
         StructureChain(VM&, Structure*);
         std::unique_ptr<WriteBarrier<Structure>[]> m_vector;
     };

@@ -41,7 +41,7 @@ public class SimpleMeshTexCoordTest extends Application {
     TriangleMesh triMesh;
     PhongMaterial material;
     final Image diffuseMap = new Image("resources/cup_diffuseMap_1024.png");
-    
+
     static TriangleMesh buildTriangleMesh() {
 
         // Create points

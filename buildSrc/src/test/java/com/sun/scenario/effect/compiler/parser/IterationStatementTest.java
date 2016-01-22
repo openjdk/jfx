@@ -101,7 +101,7 @@ public class IterationStatementTest extends ParserBase {
         assertNull(s.getExpr());
         assertTrue(s.getStmt() instanceof ExprStmt);
     }
-    
+
     @Test(expected = RecognitionException.class)
     public void notAnIterationStmt() throws Exception {
         parseTreeFor("return;");

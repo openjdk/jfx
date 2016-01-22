@@ -64,7 +64,7 @@ import org.junit.runners.Parameterized;
 public class ParameterizedConverterTest {
     private final Class<? extends StringConverter> converterClass;
     private StringConverter converter;
-    
+
     @Parameterized.Parameters public static Collection implementations() {
         return Arrays.asList(new Object[][] {
             { BigDecimalStringConverter.class },
@@ -86,11 +86,11 @@ public class ParameterizedConverterTest {
             { TimeStringConverter.class },
         });
     }
-    
+
     public ParameterizedConverterTest(Class<? extends StringConverter> converterClass) {
         this.converterClass = converterClass;
     }
-    
+
     @Before public void setup() {
         try {
             converter = converterClass.newInstance();
@@ -98,11 +98,11 @@ public class ParameterizedConverterTest {
             ex.printStackTrace();
         }
     }
-    
+
     @Test public void toString_testNull() {
         assertEquals("", converter.toString(null));
     }
-    
+
     @Test public void fromString_testEmptyStringWithWhiteSpace() {
         if (converterClass == DefaultStringConverter.class) {
             assertEquals("      ", converter.fromString("      "));
@@ -110,11 +110,11 @@ public class ParameterizedConverterTest {
             assertNull(converter.fromString("      "));
         }
     }
-    
+
     @Test public void fromString_testNull() {
         assertNull(converter.fromString(null));
     }
-    
+
     @Test public void fromString_testEmptyString() {
         if (converterClass == DefaultStringConverter.class) {
             assertEquals("", converter.fromString(""));

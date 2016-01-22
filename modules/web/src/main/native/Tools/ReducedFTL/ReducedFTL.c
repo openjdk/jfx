@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 /*
@@ -89,7 +89,7 @@ static struct MemorySection* sectionHead;
 static size_t roundUpSize(size_t size)
 {
     size_t pageSize = getpagesize();
-    
+
     return (size + pageSize - 1) & ~pageSize;
 }
 
@@ -104,7 +104,7 @@ static uint8_t *mmAllocateCodeSection(
         fprintf(stderr, "Unable to allocate %" PRIuPTR " bytes of executable memory.\n", size);
         exit(1);
     }
-    
+
     struct MemorySection *section = malloc(sizeof(struct MemorySection));
     section->start = start;
     section->size = size;
@@ -135,7 +135,7 @@ static const char *symbolLookupCallback(
     const char **referenceName)
 {
     static char symbolString[20];
-    
+
     switch (*referenceType) {
     case LLVMDisassembler_ReferenceType_InOut_None:
         return 0;
@@ -177,10 +177,10 @@ int main(int c, char **v)
     bool fastIsel = false;
     int jitOptLevel = 2;
     struct MemorySection *section;
-    
+
     if (c == 1)
         usage();
-    
+
     moreOptions = true;
     while (moreOptions) {
         static struct option longOptions[] = {
@@ -194,17 +194,17 @@ int main(int c, char **v)
             {"jit-opt", required_argument, 0, 0},
             {"help", no_argument, 0, 0}
         };
-        
+
         int optionIndex;
         int optionValue;
-        
+
         optionValue = getopt_long(c, v, "", longOptions, &optionIndex);
-        
+
         switch (optionValue) {
         case -1:
             moreOptions = false;
             break;
-            
+
         case 0: {
             const char* thisOption = longOptions[optionIndex].name;
             if (!strcmp(thisOption, "help"))
@@ -237,18 +237,18 @@ int main(int c, char **v)
             }
             break;
         }
-            
+
         case '?':
             exit(0);
             break;
-            
+
         default:
             printf("optionValue = %d\n", optionValue);
             abort();
             break;
         }
     }
-    
+
     LLVMLinkInMCJIT();
     LLVMInitializeNativeTarget();
     LLVMInitializeX86AsmPrinter();
@@ -256,14 +256,14 @@ int main(int c, char **v)
 
     filenames = (const char **)(v + optind);
     numFiles = c - optind;
-    
+
     if (!numFiles)
         return 0;
-    
+
     do {
         contexts = malloc(sizeof(LLVMContextRef) * numFiles);
         modules = malloc(sizeof(LLVMModuleRef) * numFiles);
-    
+
         if (manyContexts) {
             for (i = 0; i < numFiles; ++i)
                 contexts[i] = LLVMContextCreate();
@@ -272,23 +272,23 @@ int main(int c, char **v)
             for (i = 0; i < numFiles; ++i)
                 contexts[i] = context;
         }
-    
+
         for (i = 0; i < numFiles; ++i) {
             LLVMMemoryBufferRef buffer;
             const char* filename = filenames[i];
-        
+
             if (LLVMCreateMemoryBufferWithContentsOfFile(filename, &buffer, &error)) {
                 fprintf(stderr, "Error reading file %s: %s\n", filename, error);
                 exit(1);
             }
-        
+
             if (LLVMParseBitcodeInContext(contexts[i], buffer, modules + i, &error)) {
                 fprintf(stderr, "Error parsing file %s: %s\n", filename, error);
                 exit(1);
             }
-        
+
             LLVMDisposeMemoryBuffer(buffer);
-        
+
             if (verboseFlag) {
                 printf("Module #%u (%s) after parsing:\n", i, filename);
                 LLVMDumpModule(modules[i]);
@@ -297,7 +297,7 @@ int main(int c, char **v)
 
         if (verboseFlag)
             printf("Generating code for modules...\n");
-    
+
         if (timingFlag)
             beforeAll = currentTime();
         for (i = 0; i < numFiles; ++i) {
@@ -307,12 +307,12 @@ int main(int c, char **v)
             LLVMValueRef value;
             LLVMPassManagerRef functionPasses = 0;
             LLVMPassManagerRef modulePasses = 0;
-        
+
             double before;
-        
+
             if (timingFlag)
                 before = currentTime();
-        
+
             module = modules[i];
 
             LLVMInitializeMCJITCompilerOptions(&options, sizeof(options));
@@ -320,12 +320,12 @@ int main(int c, char **v)
             options.EnableFastISel = fastIsel;
             options.MCJMM = LLVMCreateSimpleMCJITMemoryManager(
                 0, mmAllocateCodeSection, mmAllocateDataSection, mmApplyPermissions, mmDestroy);
-    
+
             if (LLVMCreateMCJITCompilerForModule(&engine, module, &options, sizeof(options), &error)) {
                 fprintf(stderr, "Error building MCJIT: %s\n", error);
                 exit(1);
             }
-    
+
             if (!strcasecmp(mode, "simple")) {
                 modulePasses = LLVMCreatePassManager();
                 LLVMAddTargetData(LLVMGetExecutionEngineTargetData(engine), modulePasses);
@@ -343,22 +343,22 @@ int main(int c, char **v)
                 passBuilder = LLVMPassManagerBuilderCreate();
                 LLVMPassManagerBuilderSetOptLevel(passBuilder, 2);
                 LLVMPassManagerBuilderSetSizeLevel(passBuilder, 0);
-        
+
                 functionPasses = LLVMCreateFunctionPassManagerForModule(module);
                 modulePasses = LLVMCreatePassManager();
-        
+
                 LLVMAddTargetData(LLVMGetExecutionEngineTargetData(engine), modulePasses);
-        
+
                 LLVMPassManagerBuilderPopulateFunctionPassManager(passBuilder, functionPasses);
                 LLVMPassManagerBuilderPopulateModulePassManager(passBuilder, modulePasses);
-        
+
                 LLVMPassManagerBuilderDispose(passBuilder);
-        
+
                 LLVMInitializeFunctionPassManager(functionPasses);
                 for (value = LLVMGetFirstFunction(module); value; value = LLVMGetNextFunction(value))
                     LLVMRunFunctionPassManager(functionPasses, value);
                 LLVMFinalizeFunctionPassManager(functionPasses);
-        
+
                 LLVMRunPassManager(modulePasses, module);
             } else {
                 fprintf(stderr, "Bad optimization mode: %s.\n", mode);
@@ -370,7 +370,7 @@ int main(int c, char **v)
                 printf("Module #%d (%s) after optimization:\n", i, filenames[i]);
                 LLVMDumpModule(module);
             }
-    
+
             for (value = LLVMGetFirstFunction(module); value; value = LLVMGetNextFunction(value)) {
                 if (LLVMIsDeclaration(value))
                     continue;
@@ -381,9 +381,9 @@ int main(int c, char **v)
                 LLVMDisposePassManager(functionPasses);
             if (modulePasses)
                 LLVMDisposePassManager(modulePasses);
-    
+
             LLVMDisposeExecutionEngine(engine);
-        
+
             if (timingFlag) {
                 double after = currentTime();
                 printf("Module #%d (%s) took %lf ms.\n", i, filenames[i], (after - before) * 1000);
@@ -395,63 +395,63 @@ int main(int c, char **v)
                 LLVMContextDispose(contexts[i]);
         } else
             LLVMContextDispose(contexts[0]);
-        
+
         if (timingFlag) {
             double after = currentTime();
             printf("Compilation took a total of %lf ms.\n", (after - beforeAll) * 1000);
         }
-    
+
         if (disassembleFlag) {
             LLVMDisasmContextRef disassembler;
-        
+
             disassembler = LLVMCreateDisasm("x86_64-apple-darwin", 0, 0, 0, symbolLookupCallback);
             if (!disassembler) {
                 fprintf(stderr, "Error building disassembler.\n");
                 exit(1);
             }
-    
+
             for (section = sectionHead; section; section = section->next) {
                 printf("Disassembly for section %p:\n", section);
-        
+
                 char pcString[20];
                 char instructionString[1000];
                 uint8_t *pc;
                 uint8_t *end;
-        
+
                 pc = section->start;
                 end = pc + section->size;
-        
+
                 while (pc < end) {
                     snprintf(
                         pcString, sizeof(pcString), "0x%lx",
                         (unsigned long)(uintptr_t)pc);
-            
+
                     size_t instructionSize = LLVMDisasmInstruction(
                         disassembler, pc, end - pc, (uintptr_t)pc,
                         instructionString, sizeof(instructionString));
-            
+
                     if (!instructionSize)
                         snprintf(instructionString, sizeof(instructionString), ".byte 0x%02x", *pc++);
                     else
                         pc += instructionSize;
-            
+
                     printf("    %16s: %s\n", pcString, instructionString);
                 }
             }
         }
-        
+
         for (section = sectionHead; section;) {
             struct MemorySection* nextSection = section->next;
-            
+
             munmap(section->start, roundUpSize(section->size));
             free(section);
-            
+
             section = nextSection;
         }
         sectionHead = 0;
-        
+
     } while (loop);
-    
+
     return 0;
 }
 

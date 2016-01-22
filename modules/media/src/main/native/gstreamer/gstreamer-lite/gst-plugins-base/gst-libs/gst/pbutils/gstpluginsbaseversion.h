@@ -59,7 +59,7 @@ G_BEGIN_DECLS
  * Check whether a GStreamer's gst-plugins-base libraries' version equal to
  * or greater than major.minor.micro is present.
  */
-#define	GST_CHECK_PLUGINS_BASE_VERSION(major,minor,micro)	\
+#define GST_CHECK_PLUGINS_BASE_VERSION(major,minor,micro)   \
     (GST_PLUGINS_BASE_VERSION_MAJOR > (major) || \
      (GST_PLUGINS_BASE_VERSION_MAJOR == (major) && GST_PLUGINS_BASE_VERSION_MINOR > (minor)) || \
      (GST_PLUGINS_BASE_VERSION_MAJOR == (major) && GST_PLUGINS_BASE_VERSION_MINOR == (minor) && \

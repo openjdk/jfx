@@ -170,7 +170,7 @@ public abstract class Light {
      * rect.setEffect(lighting);
      * </pre></code>
      *
-     * <p> The code above produces the following: </p> 
+     * <p> The code above produces the following: </p>
      * <p> <img src="doc-files/lightdistant.png"/> </p>
      * @since JavaFX 2.0
      */
@@ -193,7 +193,7 @@ public abstract class Light {
            setElevation(elevation);
            setColor(color);
         }
-    
+
         @Override
         com.sun.scenario.effect.light.DistantLight impl_createImpl() {
             return new com.sun.scenario.effect.light.DistantLight();
@@ -324,7 +324,7 @@ public abstract class Light {
      * text.setEffect(lighting);
      * </pre></code>
      *
-     * <p> The code above produces the following: </p> 
+     * <p> The code above produces the following: </p>
      * <p> <img src="doc-files/lightpoint.png"/> </p>
      * @since JavaFX 2.0
      */
@@ -503,7 +503,7 @@ public abstract class Light {
      *
      * <p>
      * Example:
-     * <pre><code>        
+     * <pre><code>
      * Light.Spot light = new Light.Spot();
      * light.setX(150);
      * light.setY(100);
@@ -531,7 +531,7 @@ public abstract class Light {
      * rect.setEffect(lighting);
      * </pre></code>
      *
-     * <p> The code above produces the following: </p> 
+     * <p> The code above produces the following: </p>
      * <p> <img src="doc-files/lightspot.png"/> </p>
      *
      * @since JavaFX 2.0
@@ -548,7 +548,7 @@ public abstract class Light {
         * @param x the x coordinate of the light position
         * @param y the y coordinate of the light position
         * @param z the z coordinate of the light position
-        * @param specularExponent the specular exponent, which controls the 
+        * @param specularExponent the specular exponent, which controls the
         * focus of the light source
         * @param color the color of the light
         * @since JavaFX 2.1

@@ -90,7 +90,7 @@
  * an error message, you can pass %NULL for the @error argument:
  * |[<!-- language="C" -->
  * if (g_file_get_contents ("foo.txt", &contents, NULL, NULL)) // ignore errors
- *   // no error occurred 
+ *   // no error occurred
  *   ;
  * else
  *   // error
@@ -280,7 +280,7 @@
  * Summary of rules for use of #GError:
  *
  * - Do not report programming errors via #GError.
- * 
+ *
  * - The last argument of a function that returns an error should
  *   be a location where a #GError can be placed (i.e. "#GError** error").
  *   If #GError is used with varargs, the #GError** should be the last
@@ -491,7 +491,7 @@ GError*
 g_error_copy (const GError *error)
 {
   GError *copy;
- 
+
   g_return_val_if_fail (error != NULL, NULL);
   /* See g_error_new_valist for why these don't return */
   g_warn_if_fail (error->domain != 0);
@@ -622,10 +622,10 @@ g_set_error_literal (GError      **err,
  */
 void
 g_propagate_error (GError **dest,
-		   GError  *src)
+           GError  *src)
 {
   g_return_if_fail (src != NULL);
- 
+
   if (dest == NULL)
     {
       if (src)

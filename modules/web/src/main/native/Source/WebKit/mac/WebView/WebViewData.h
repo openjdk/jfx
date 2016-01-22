@@ -7,13 +7,13 @@
  * are met:
  *
  * 1.  Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer. 
+ *     notice, this list of conditions and the following disclaimer.
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
- *     documentation and/or other materials provided with the distribution. 
+ *     documentation and/or other materials provided with the distribution.
  * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
- *     from this software without specific prior written permission. 
+ *     from this software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY APPLE AND ITS CONTRIBUTORS "AS IS" AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
@@ -93,7 +93,7 @@ private:
         RefPtr<LayerFlushController> protector = m_flushController;
         WebCore::LayerFlushScheduler::runLoopObserverCallback();
     }
-    
+
     LayerFlushController* m_flushController;
 };
 
@@ -103,15 +103,15 @@ public:
     {
         return adoptRef(new LayerFlushController(webView));
     }
-    
+
     virtual bool flushLayers();
-    
+
     void scheduleLayerFlush();
     void invalidate();
-    
+
 private:
     LayerFlushController(WebView*);
-    
+
     WebView* m_webView;
     WebViewLayerFlushScheduler m_layerFlushScheduler;
 };
@@ -120,7 +120,7 @@ private:
 @interface WebViewPrivate : NSObject {
 @public
     WebCore::Page* page;
-    
+
     id UIDelegate;
     id UIDelegateForwarder;
     id resourceProgressDelegate;
@@ -143,14 +143,14 @@ private:
     WebNodeHighlight *currentNodeHighlight;
 
     BOOL allowsUndo;
-        
+
     float zoomMultiplier;
     BOOL zoomsTextOnly;
 
     NSString *applicationNameForUserAgent;
     WTF::String userAgent;
     BOOL userAgentOverridden;
-    
+
     WebPreferences *preferences;
     BOOL useSiteSpecificSpoofing;
 #if PLATFORM(IOS)
@@ -160,14 +160,14 @@ private:
     NSWindow *hostWindow;
 
     int programmaticFocusCount;
-    
+
     WebResourceDelegateImplementationCache resourceLoadDelegateImplementations;
     WebFrameLoadDelegateImplementationCache frameLoadDelegateImplementations;
     WebScriptDebugDelegateImplementationCache scriptDebugDelegateImplementations;
     WebHistoryDelegateImplementationCache historyDelegateImplementations;
 
     void *observationInfo;
-    
+
     BOOL closed;
 #if PLATFORM(IOS)
     BOOL closing;
@@ -187,7 +187,7 @@ private:
 #endif
 
     NSString *mediaStyle;
-    
+
     BOOL hasSpellCheckerDocumentTag;
     NSInteger spellCheckerDocumentTag;
 
@@ -197,7 +197,7 @@ private:
     BOOL dashboardBehaviorAlwaysAcceptsFirstMouse;
     BOOL dashboardBehaviorAllowWheelScrolling;
 #endif
-    
+
 #if PLATFORM(IOS)
     BOOL isStopping;
 
@@ -221,7 +221,7 @@ private:
     // WebKit has both a global plug-in database and a separate, per WebView plug-in database. Dashboard uses the per WebView database.
     WebPluginDatabase *pluginDatabase;
 #endif
-    
+
     HashMap<unsigned long, RetainPtr<id>> identifierMap;
 
     BOOL _keyboardUIModeAccessed;
@@ -240,13 +240,13 @@ private:
 #if !PLATFORM(IOS)
     NSPasteboard *insertionPasteboard;
 #endif
-            
+
     NSSize lastLayoutSize;
 
 #if ENABLE(VIDEO)
     WebVideoFullscreenController *fullscreenController;
 #endif
-    
+
 #if ENABLE(FULLSCREEN_API)
     WebFullScreenController *newFullscreenController;
 #endif

@@ -57,12 +57,12 @@ public:
     Heap* heap() const;
 
     void append(ConservativeRoots&);
-    
+
     template<typename T> void append(JITWriteBarrier<T>*);
     template<typename T> void append(WriteBarrierBase<T>*);
     template<typename Iterator> void append(Iterator begin , Iterator end);
     void appendValues(WriteBarrierBase<Unknown>*, size_t count);
-    
+
     template<typename T>
     void appendUnbarrieredPointer(T**);
     void appendUnbarrieredValue(JSValue*);
@@ -72,7 +72,7 @@ public:
     void appendUnbarrieredReadOnlyPointer(T*);
     void appendUnbarrieredReadOnlyValue(JSValue);
     void unconditionallyAppend(JSCell*);
-    
+
     void addOpaqueRoot(void*);
     bool containsOpaqueRoot(void*);
     TriState containsOpaqueRootTriState(void*);
@@ -92,7 +92,7 @@ public:
     void donate();
     void drain();
     void donateAndDrain();
-    
+
     enum SharedDrainMode { SlaveDrain, MasterDrain };
     void drainFromShared(SharedDrainMode);
 
@@ -100,9 +100,9 @@ public:
     void finalizeUnconditionalFinalizers();
 
     void copyLater(JSCell*, CopyToken, void*, size_t);
-    
+
     void reportExtraMemoryUsage(JSCell* owner, size_t);
-    
+
     void addWeakReferenceHarvester(WeakReferenceHarvester*);
     void addUnconditionalFinalizer(UnconditionalFinalizer*);
 
@@ -114,31 +114,31 @@ public:
 
 private:
     friend class ParallelModeEnabler;
-    
+
     JS_EXPORT_PRIVATE static void validate(JSCell*);
 
     void append(JSValue*);
     void append(JSValue*, size_t count);
     void append(JSCell**);
-    
+
     void internalAppend(void* from, JSCell*);
     void internalAppend(void* from, JSValue);
     void internalAppend(void* from, JSValue*);
-    
+
     JS_EXPORT_PRIVATE void mergeOpaqueRoots();
     void mergeOpaqueRootsIfNecessary();
     void mergeOpaqueRootsIfProfitable();
-    
+
     void donateKnownParallel();
 
     MarkStackArray m_stack;
     HashSet<void*> m_opaqueRoots; // Handle-owning data structures not visible to the garbage collector.
-    
+
     size_t m_bytesVisited;
     size_t m_bytesCopied;
     size_t m_visitCount;
     bool m_isInParallelMode;
-    
+
     GCThreadSharedData& m_shared;
 
     bool m_shouldHashCons; // Local per-thread copy of shared flag for performance reasons
@@ -164,13 +164,13 @@ public:
         ASSERT(!m_stack.m_isInParallelMode);
         m_stack.m_isInParallelMode = true;
     }
-    
+
     ~ParallelModeEnabler()
     {
         ASSERT(m_stack.m_isInParallelMode);
         m_stack.m_isInParallelMode = false;
     }
-    
+
 private:
     SlotVisitor& m_stack;
 };

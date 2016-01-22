@@ -33,7 +33,7 @@ public:
     static PassRefPtr<HTMLButtonElement> create(const QualifiedName&, Document&, HTMLFormElement*);
 
     void setType(const AtomicString&);
-    
+
     String value() const;
 
     virtual bool willRespondToMouseClickEvents() override;

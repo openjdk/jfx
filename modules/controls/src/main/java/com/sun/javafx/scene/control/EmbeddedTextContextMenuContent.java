@@ -42,8 +42,8 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.StackPane;
 
 /**
- * The embedded context menu for a text input control.  
- * The menu will be displayed horizontally underneath the cursor 
+ * The embedded context menu for a text input control.
+ * The menu will be displayed horizontally underneath the cursor
  * with the available text editing options i.e. cut, copy, paste, select all.
  *
  */
@@ -118,7 +118,7 @@ public class EmbeddedTextContextMenuContent extends StackPane {
         final double menuBoxWidth = snapSize(menuBox.prefWidth(height));
         return snappedLeftInset() + menuBoxWidth + snappedRightInset();
     }
-    
+
     @Override protected void layoutChildren() {
         final double left = snappedLeftInset();
         final double right = snappedRightInset();

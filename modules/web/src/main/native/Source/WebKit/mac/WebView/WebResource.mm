@@ -6,13 +6,13 @@
  * are met:
  *
  * 1.  Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer. 
+ *     notice, this list of conditions and the following disclaimer.
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
- *     documentation and/or other materials provided with the distribution. 
+ *     documentation and/or other materials provided with the distribution.
  * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
- *     from this software without specific prior written permission. 
+ *     from this software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY APPLE AND ITS CONTRIBUTORS "AS IS" AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
@@ -136,7 +136,7 @@ static NSString * const WebResourceResponseKey =          @"WebResourceResponse"
     NSURL *url = nil;
     NSString *mimeType = nil, *textEncoding = nil, *frameName = nil;
     NSURLResponse *response = nil;
-    
+
     @try {
         id object = [decoder decodeObjectForKey:WebResourceDataKey];
         if ([object isKindOfClass:[NSData class]])
@@ -169,12 +169,12 @@ static NSString * const WebResourceResponseKey =          @"WebResourceResponse"
 - (void)encodeWithCoder:(NSCoder *)encoder
 {
     ArchiveResource *resource = _private->coreResource;
-    
+
     NSData *data = nil;
     NSURL *url = nil;
     NSString *mimeType = nil, *textEncoding = nil, *frameName = nil;
     NSURLResponse *response = nil;
-    
+
     if (resource) {
         if (resource->data())
             data = resource->data()->createNSData().get();
@@ -272,18 +272,18 @@ static NSString * const WebResourceResponseKey =          @"WebResourceResponse"
     self = [super init];
     if (!self)
         return nil;
-            
+
     ASSERT(coreResource);
-    
+
     // WebResources should not be init'ed with nil data, and doing so breaks certain uses of NSHTMLReader
     // See <rdar://problem/5820157> for more info
     if (!coreResource->data()) {
         [self release];
         return nil;
     }
-    
+
     _private = [[WebResourcePrivate alloc] initWithCoreResource:coreResource];
-            
+
     return self;
 }
 
@@ -307,11 +307,11 @@ static NSString * const WebResourceResponseKey =          @"WebResourceResponse"
     _private->coreResource->ignoreWhenUnarchiving();
 }
 
-- (id)_initWithData:(NSData *)data 
-                URL:(NSURL *)URL 
-           MIMEType:(NSString *)MIMEType 
-   textEncodingName:(NSString *)textEncodingName 
-          frameName:(NSString *)frameName 
+- (id)_initWithData:(NSData *)data
+                URL:(NSURL *)URL
+           MIMEType:(NSString *)MIMEType
+   textEncodingName:(NSString *)textEncodingName
+          frameName:(NSString *)frameName
            response:(NSURLResponse *)response
            copyData:(BOOL)copyData
 {
@@ -320,7 +320,7 @@ static NSString * const WebResourceResponseKey =          @"WebResourceResponse"
     self = [super init];
     if (!self)
         return nil;
-    
+
     if (!data || !URL || !MIMEType) {
         [self release];
         return nil;
@@ -373,7 +373,7 @@ static NSString * const WebResourceResponseKey =          @"WebResourceResponse"
     NSURLResponse *response = nil;
     if (_private->coreResource)
         response = _private->coreResource->response().nsURLResponse();
-    return response ? response : [[[NSURLResponse alloc] init] autorelease];        
+    return response ? response : [[[NSURLResponse alloc] init] autorelease];
 }
 
 - (NSString *)_stringValue
@@ -385,7 +385,7 @@ static NSString * const WebResourceResponseKey =          @"WebResourceResponse"
         encoding = _private->coreResource->textEncoding();
     if (!encoding.isValid())
         encoding = WindowsLatin1Encoding();
-    
+
     SharedBuffer* coreData = _private->coreResource ? _private->coreResource->data() : 0;
     return encoding.decode(reinterpret_cast<const char*>(coreData ? coreData->data() : 0), coreData ? coreData->size() : 0);
 }

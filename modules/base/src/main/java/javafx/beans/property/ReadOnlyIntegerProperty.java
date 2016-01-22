@@ -32,11 +32,11 @@ import javafx.beans.binding.IntegerExpression;
 
 /**
  * Super class for all readonly properties wrapping an {@code int}.
- * 
+ *
  * @see javafx.beans.value.ObservableIntegerValue
  * @see javafx.beans.binding.IntegerExpression
  * @see ReadOnlyProperty
- * 
+ *
  * @since JavaFX 2.0
  */
 public abstract class ReadOnlyIntegerProperty extends IntegerExpression
@@ -52,7 +52,7 @@ public abstract class ReadOnlyIntegerProperty extends IntegerExpression
     /**
      * Returns a string representation of this {@code ReadOnlyIntegerProperty} object.
      * @return a string representation of this {@code ReadOnlyIntegerProperty} object.
-     */ 
+     */
     @Override
     public String toString() {
         final Object bean = getBean();
@@ -68,7 +68,7 @@ public abstract class ReadOnlyIntegerProperty extends IntegerExpression
         result.append("value: ").append(get()).append("]");
         return result.toString();
     }
-    
+
     /**
      * Returns a {@code ReadOnlyIntegerProperty} that wraps a
      * {@link javafx.beans.property.ReadOnlyProperty}. If the
@@ -76,9 +76,9 @@ public abstract class ReadOnlyIntegerProperty extends IntegerExpression
      * will be returned. Otherwise a new
      * {@code ReadOnlyIntegerProperty} is created that is bound to
      * the {@code ReadOnlyProperty}.
-     * 
+     *
      * Note: null values will be interpreted as 0
-     * 
+     *
      * @param property
      *            The source {@code ReadOnlyProperty}
      * @return A {@code ReadOnlyIntegerProperty} that wraps the
@@ -91,7 +91,7 @@ public abstract class ReadOnlyIntegerProperty extends IntegerExpression
         if (property == null) {
             throw new NullPointerException("Property cannot be null");
         }
-        
+
         return property instanceof ReadOnlyIntegerProperty ? (ReadOnlyIntegerProperty) property:
            new ReadOnlyIntegerPropertyBase() {
             private boolean valid = true;
@@ -105,7 +105,7 @@ public abstract class ReadOnlyIntegerProperty extends IntegerExpression
             {
                 property.addListener(new WeakInvalidationListener(listener));
             }
-                    
+
             @Override
             public int get() {
                 valid = true;
@@ -130,7 +130,7 @@ public abstract class ReadOnlyIntegerProperty extends IntegerExpression
      * of this {@code ReadOnlyIntegerProperty}. If the
      * value of this {@code ReadOnlyIntegerProperty} changes, the value of the
      * {@code ReadOnlyObjectProperty} will be updated automatically.
-     * 
+     *
      * @return the new {@code ReadOnlyObjectProperty}
      * @since JavaFX 8.0
      */
@@ -149,7 +149,7 @@ public abstract class ReadOnlyIntegerProperty extends IntegerExpression
             {
                 ReadOnlyIntegerProperty.this.addListener(new WeakInvalidationListener(listener));
             }
-            
+
             @Override
             public Object getBean() {
                 return null; // Virtual property, does not exist on a bean

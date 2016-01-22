@@ -113,7 +113,7 @@ public class LightMotion extends Application {
         stationLightTL.setAutoReverse(true);
         stationLightTL.setCycleCount(Timeline.INDEFINITE);
 
-        // Create second light group and light  
+        // Create second light group and light
         final VisibleLight lightGroup2 = new VisibleLight(light2Color);
         lightGroup2.setTranslateX(-300);
         lightGroup2.setTranslateY(300);

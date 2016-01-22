@@ -215,7 +215,7 @@ void myGetProperty (MyObject *obj, NPIdentifier name, NPVariant *variant)
         return NPN_InitializeVariantAsNull (variant);
     }
     else if (name == myPropertyIdentifiers[ID_UNDEFINED_VALUE]){
-        return NPN_InitializeVariantAsUndefined (variant); 
+        return NPN_InitializeVariantAsUndefined (variant);
     }
     else
         NPN_InitializeVariantAsUndefined(variant);
@@ -282,27 +282,27 @@ void myInvoke (MyObject *obj, NPIdentifier name, NPVariant *args, unsigned argCo
     else if (name == myMethodIdentifiers[ID_GET_BOOLEAN_VALUE]) {
         getBooleanValue (obj, result);
     }
-    else 
+    else
         NPN_InitializeVariantAsUndefined (result);
 }
 
 NPObject *myAllocate ()
 {
     MyObject *newInstance = (MyObject *)malloc (sizeof(MyObject));
-    
+
     if (!identifiersInitialized) {
         identifiersInitialized = true;
         initializeIdentifiers();
     }
-    
-    
+
+
     newInstance->doubleValue = 666.666;
     newInstance->intValue = 1234;
     newInstance->boolValue = true;
     newInstance->stringValue.type = NPVariantType_String;
     newInstance->stringValue.value.stringValue.UTF8Length = strlen ("Hello world");
     newInstance->stringValue.value.stringValue.UTF8Characters = strdup ("Hello world");
-    
+
     return (NPObject *)newInstance;
 }
 
@@ -311,15 +311,15 @@ void myInvalidate ()
     // Make sure we've released any remaining references to JavaScript objects.
 }
 
-void myDeallocate (MyObject *obj) 
+void myDeallocate (MyObject *obj)
 {
     free ((void *)obj);
 }
 
-static NPClass _myFunctionPtrs = { 
+static NPClass _myFunctionPtrs = {
     kNPClassStructVersionCurrent,
-    (NPAllocateFunctionPtr) myAllocate, 
-    (NPDeallocateFunctionPtr) myDeallocate, 
+    (NPAllocateFunctionPtr) myAllocate,
+    (NPDeallocateFunctionPtr) myDeallocate,
     (NPInvalidateFunctionPtr) myInvalidate,
     (NPHasMethodFunctionPtr) myHasMethod,
     (NPInvokeFunctionPtr) myInvoke,
@@ -349,14 +349,14 @@ const char *readJavaScriptFromFile (const char *file)
         fprintf(stderr, "Error opening %s.\n", file);
         return 0;
     }
-    
+
     int num = fread(code, 1, BufferSize, f);
     code[num] = '\0';
     if(num >= BufferSize)
         fprintf(stderr, "Warning: File may have been too long.\n");
 
     fclose(f);
-    
+
     return code;
 }
 
@@ -367,28 +367,28 @@ int main(int argc, char **argv)
         fprintf(stderr, "You have to specify at least one filename\n");
         return -1;
     }
-    
+
     bool ret = true;
     {
         JSLock lock;
-        
+
         // create interpreter w/ global object
         Object global(new GlobalImp());
         Interpreter interp;
         interp.setGlobalObject(global);
         ExecState *exec = interp.globalExec();
-        
+
         MyObject *myObject = (MyObject *)NPN_CreateObject (myFunctionPtrs);
-        
+
         global.put(exec, Identifier("myInterface"), Instance::createRuntimeObject(Instance::CLanguage, (void *)myObject));
-        
+
         for (int i = 1; i < argc; i++) {
             const char *code = readJavaScriptFromFile(argv[i]);
-            
+
             if (code) {
                 // run
                 Completion comp(interp.evaluate(code));
-                
+
                 if (comp.complType() == Throw) {
                     Value exVal = comp.value();
                     char* msg = exVal.toString(exec)->value(exec).ascii();
@@ -410,10 +410,10 @@ int main(int argc, char **argv)
                 }
             }
         }
-                
+
         NPN_ReleaseObject ((NPObject *)myObject);
-        
+
     } // end block, so that Interpreter and global get deleted
-    
+
     return ret ? 0 : 3;
 }

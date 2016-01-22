@@ -49,13 +49,13 @@ static inline void *_GenerateNoise(int width, int height)
 {
     static int *pixels = NULL;
     pixels = realloc(pixels, width*height*4);
-    
+
     int *src = pixels;
     for (int i=0; i<width*height; i++)
     {
         *src++ = random();
     }
-    
+
     return (void*)pixels;
 }
 #endif
@@ -78,112 +78,112 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacView__1initIDs
 (JNIEnv *env, jclass jClass)
 {
     LOG("Java_com_sun_glass_ui_mac_MacView__1initIDs");
-    
+
     if (jViewClass == NULL)
     {
         jViewClass = (*env)->NewGlobalRef(env, jClass);
     }
-    
+
     if (jIntegerClass == NULL)
     {
         jclass jcls = (*env)->FindClass(env, "java/lang/Integer");
         if ((*env)->ExceptionCheck(env)) return;
         jIntegerClass = (*env)->NewGlobalRef(env, jcls);
     }
-    
+
     if (jMapClass == NULL)
     {
         jclass jcls = (*env)->FindClass(env, "java/util/Map");
         if ((*env)->ExceptionCheck(env)) return;
         jMapClass = (*env)->NewGlobalRef(env, jcls);
     }
-    
+
     if (jBooleanClass == NULL)
     {
         jclass jcls = (*env)->FindClass(env, "java/lang/Boolean");
         if ((*env)->ExceptionCheck(env)) return;
         jBooleanClass = (*env)->NewGlobalRef(env, jcls);
     }
-    
+
     if (jViewNotifyEvent == NULL)
     {
         jViewNotifyEvent = (*env)->GetMethodID(env, jViewClass, "notifyView", "(I)V");
         if ((*env)->ExceptionCheck(env)) return;
     }
-    
+
     if (jViewNotifyRepaint == NULL)
     {
         jViewNotifyRepaint = (*env)->GetMethodID(env, jViewClass, "notifyRepaint", "(IIII)V");
         if ((*env)->ExceptionCheck(env)) return;
     }
-    
+
     if (jViewNotifyResize == NULL)
     {
         jViewNotifyResize = (*env)->GetMethodID(env, jViewClass, "notifyResize", "(II)V");
         if ((*env)->ExceptionCheck(env)) return;
     }
-    
+
     if (jViewNotifyKey == NULL)
     {
         jViewNotifyKey = (*env)->GetMethodID(env, jViewClass, "notifyKey", "(II[CI)V");
         if ((*env)->ExceptionCheck(env)) return;
     }
-    
+
     if (jViewNotifyMenu == NULL)
     {
         jViewNotifyMenu = (*env)->GetMethodID(env, jViewClass, "notifyMenu", "(IIIIZ)V");
         if ((*env)->ExceptionCheck(env)) return;
     }
-    
+
     if (jViewNotifyMouse == NULL)
     {
         jViewNotifyMouse = (*env)->GetMethodID(env, jViewClass, "notifyMouse", "(IIIIIIIZZ)V");
         if ((*env)->ExceptionCheck(env)) return;
     }
-    
+
     if (jViewNotifyInputMethod == NULL)
     {
         jViewNotifyInputMethod = (*env)->GetMethodID(env, jViewClass, "notifyInputMethod", "(Ljava/lang/String;[I[I[BIII)V");
         if ((*env)->ExceptionCheck(env)) return;
     }
-    
+
     if (jViewNotifyInputMethodMac == NULL)
     {
         jclass jMacViewClass = [GlassHelper ClassForName:"com.sun.glass.ui.mac.MacView" withEnv:env];
         jViewNotifyInputMethodMac = (*env)->GetMethodID(env, jMacViewClass, "notifyInputMethodMac", "(Ljava/lang/String;IIIII)V");
         if ((*env)->ExceptionCheck(env)) return;
     }
-    
+
     if(jViewNotifyInputMethodCandidatePosRequest == NULL)
     {
         jViewNotifyInputMethodCandidatePosRequest = (*env)->GetMethodID(env, jViewClass, "notifyInputMethodCandidatePosRequest", "(I)[D");
         if ((*env)->ExceptionCheck(env)) return;
     }
-    
+
     if (jViewNotifyDragEnter == NULL)
     {
         jViewNotifyDragEnter = (*env)->GetMethodID(env, jViewClass, "notifyDragEnter", "(IIIII)I");
         if ((*env)->ExceptionCheck(env)) return;
     }
-    
+
     if (jViewNotifyDragOver == NULL)
     {
         jViewNotifyDragOver = (*env)->GetMethodID(env, jViewClass, "notifyDragOver", "(IIIII)I");
         if ((*env)->ExceptionCheck(env)) return;
     }
-    
+
     if (jViewNotifyDragLeave == NULL)
     {
         jViewNotifyDragLeave = (*env)->GetMethodID(env, jViewClass, "notifyDragLeave", "()V");
         if ((*env)->ExceptionCheck(env)) return;
     }
-    
+
     if (jViewNotifyDragDrop == NULL)
     {
         jViewNotifyDragDrop = (*env)->GetMethodID(env, jViewClass, "notifyDragDrop", "(IIIII)I");
         if ((*env)->ExceptionCheck(env)) return;
     }
-    
+
     if (jViewNotifyDragEnd == NULL)
     {
         jViewNotifyDragEnd = (*env)->GetMethodID(env, jViewClass, "notifyDragEnd", "(I)V");
@@ -195,38 +195,38 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacView__1initIDs
         jViewGetAccessible = (*env)->GetMethodID(env, jViewClass, "getAccessible", "()J");
         if ((*env)->ExceptionCheck(env)) return;
     }
-    
+
     if (jMapGetMethod == NULL)
     {
         jMapGetMethod = (*env)->GetMethodID(env, jMapClass, "get", "(Ljava/lang/Object;)Ljava/lang/Object;");
         if ((*env)->ExceptionCheck(env)) return;
     }
-    
+
     if (jBooleanValueMethod == NULL)
     {
         jBooleanValueMethod = (*env)->GetMethodID(env, jBooleanClass, "booleanValue", "()Z");
         if ((*env)->ExceptionCheck(env)) return;
     }
-    
+
     if (jIntegerInitMethod == NULL)
     {
         jIntegerInitMethod = (*env)->GetMethodID(env, jIntegerClass, "<init>", "(I)V");
         if ((*env)->ExceptionCheck(env)) return;
     }
-    
+
     if (jIntegerValueMethod == NULL)
     {
         jIntegerValueMethod = (*env)->GetMethodID(env, jIntegerClass, "intValue", "()I");
         if ((*env)->ExceptionCheck(env)) return;
     }
-        
+
     if (jLongClass == NULL)
     {
         jclass jcls = (*env)->FindClass(env, "java/lang/Long");
         if ((*env)->ExceptionCheck(env)) return;
         jLongClass = (*env)->NewGlobalRef(env, jcls);
     }
-    
+
     if (jLongValueMethod == NULL)
     {
         jLongValueMethod = (*env)->GetMethodID(env, jLongClass, "longValue", "()J");
@@ -242,9 +242,9 @@ JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_mac_MacView__1getMultiClickTime_1i
 (JNIEnv *env, jclass cls)
 {
     LOG("Java_com_sun_glass_ui_mac_MacView__1getMultiClickTime_1impl");
-    
+
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
-    
+
     // 10.6 API
     return (jlong)([NSEvent doubleClickInterval]*1000.0f);
 }
@@ -258,9 +258,9 @@ JNIEXPORT jint JNICALL Java_com_sun_glass_ui_mac_MacView__1getMultiClickMaxX_1im
 (JNIEnv *env, jclass cls)
 {
     LOG("Java_com_sun_glass_ui_mac_MacView__1getMultiClickMaxX_1impl");
-    
+
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
-    
+
     // gznote: there is no way to get this value out of the system
     // Most of the Mac machines use the value 3, so we hardcode this value
     return (jint)3;
@@ -275,9 +275,9 @@ JNIEXPORT jint JNICALL Java_com_sun_glass_ui_mac_MacView__1getMultiClickMaxY_1im
 (JNIEnv *env, jclass cls)
 {
     LOG("Java_com_sun_glass_ui_mac_MacView__1getMultiClickMaxY_1impl");
-    
+
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
-    
+
     // gznote: there is no way to get this value out of the system
     // Most of the Mac machines use the value 3, so we hardcode this value
     return (jint)3;
@@ -292,9 +292,9 @@ JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_mac_MacView__1create
 (JNIEnv *env, jobject jView, jobject jCapabilities)
 {
     LOG("Java_com_sun_glass_ui_mac_MacView__1create");
-    
+
     jlong value = 0L;
-    
+
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
     GLASS_POOL_ENTER;
     {
@@ -309,15 +309,15 @@ JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_mac_MacView__1create
         NSView *hostView = [[GlassHostView alloc] initWithFrame:NSMakeRect(0, 0, 0, 0)]; // alloc creates ref count of 1
         [hostView setAutoresizingMask:(NSViewWidthSizable|NSViewHeightSizable)];
         [hostView setAutoresizesSubviews:YES];
-        
+
         NSView* view = [[GlassView3D alloc] initWithFrame:[hostView bounds] withJview:jView withJproperties:jCapabilities];
         [view setAutoresizingMask:(NSViewWidthSizable|NSViewHeightSizable)];
-        
+
         [hostView addSubview:view];
         jfieldID jfID = (*env)->GetFieldID(env, jViewClass, "ptr", "J");
         GLASS_CHECK_EXCEPTION(env);
         (*env)->SetLongField(env, jView, jfID, ptr_to_jlong(view));
-        
+
         value = ptr_to_jlong(view);
 
         if (jCapabilities != NULL)
@@ -328,7 +328,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_mac_MacView__1create
     }
     GLASS_POOL_EXIT;
     GLASS_CHECK_EXCEPTION(env);
-    
+
     LOG("   view: %p", value);
     return value;
 }
@@ -344,9 +344,9 @@ JNIEXPORT jint JNICALL Java_com_sun_glass_ui_mac_MacView__1getNativeFrameBuffer
     LOG("Java_com_sun_glass_ui_mac_MacView__1_getNativeFrameBuffer");
     LOG("   view: %p", jPtr);
     if (!jPtr) return 0L;
-    
+
     jint fb = 0;
-    
+
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
     GLASS_POOL_ENTER;
     {
@@ -371,9 +371,9 @@ JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_mac_MacView__1getNativeLayer
     LOG("Java_com_sun_glass_ui_mac_MacView__1_getNativeLayer");
     LOG("   view: %p", jPtr);
     if (!jPtr) return 0L;
-    
+
     jlong ptr = 0L;
-    
+
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
     GLASS_POOL_ENTER;
     {
@@ -382,7 +382,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_mac_MacView__1getNativeLayer
     }
     GLASS_POOL_EXIT;
     GLASS_CHECK_EXCEPTION(env);
-    
+
     return ptr;
 }
 
@@ -397,9 +397,9 @@ JNIEXPORT jint JNICALL Java_com_sun_glass_ui_mac_MacView__1getNativeRemoteLayerI
     LOG("Java_com_sun_glass_ui_mac_MacView__1_getNativeLayerId");
     LOG("   layer: %p", jPtr);
     if (!jPtr) return 0;
-    
+
     jint layerId = 0;
-    
+
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
     GLASS_POOL_ENTER;
     {
@@ -408,7 +408,7 @@ JNIEXPORT jint JNICALL Java_com_sun_glass_ui_mac_MacView__1getNativeRemoteLayerI
     }
     GLASS_POOL_EXIT;
     GLASS_CHECK_EXCEPTION(env);
-    
+
     LOG("   layerId: %d", layerId);
     return layerId;
 }
@@ -423,7 +423,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacView__1hostRemoteLayerId
 {
     LOG("Java_com_sun_glass_ui_mac_MacView__1hostRemoteLayerId");
     if (!jPtr) return;
-    
+
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
     GLASS_POOL_ENTER;
     {
@@ -447,9 +447,9 @@ JNIEXPORT jint JNICALL Java_com_sun_glass_ui_mac_MacView__1getX
 {
     LOG("Java_com_sun_glass_ui_mac_MacView__1getX");
     if (!jPtr) return 0;
-    
+
     jint x = 0;
-    
+
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
     GLASS_POOL_ENTER;
     {
@@ -464,7 +464,7 @@ JNIEXPORT jint JNICALL Java_com_sun_glass_ui_mac_MacView__1getX
     }
     GLASS_POOL_EXIT;
     GLASS_CHECK_EXCEPTION(env);
-    
+
     return x;
 }
 
@@ -478,9 +478,9 @@ JNIEXPORT jint JNICALL Java_com_sun_glass_ui_mac_MacView__1getY
 {
     LOG("Java_com_sun_glass_ui_mac_MacView__1getY");
     if (!jPtr) return 0;
-    
+
     jint y = 0;
-    
+
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
     GLASS_POOL_ENTER;
     {
@@ -490,14 +490,14 @@ JNIEXPORT jint JNICALL Java_com_sun_glass_ui_mac_MacView__1getY
         {
             NSRect frame = [window frame];
             NSRect contentRect = [window contentRectForFrameRect:frame];
-            
+
             // Assume that the border in the bottom is zero-sized
             y = (jint)(frame.size.height - contentRect.size.height);
         }
     }
     GLASS_POOL_EXIT;
     GLASS_CHECK_EXCEPTION(env);
-    
+
     return y;
 }
 
@@ -513,7 +513,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacView__1setParent
     LOG("   view: %p", jPtr);
     LOG("   parent: %p", parentPtr);
     if (!jPtr) return;
-    
+
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
     // TODO: Java_com_sun_glass_ui_mac_MacView__1setParent
 }
@@ -556,7 +556,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacView__1begin
 {
     LOG("Java_com_sun_glass_ui_mac_MacView__1begin");
     if (!jPtr) return;
-    
+
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
     NSView<GlassView> *view = getGlassView(env, jPtr);
     GLASS_POOL_PUSH; // it will be popped by "_end"
@@ -577,7 +577,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacView__1end
 {
     LOG("Java_com_sun_glass_ui_mac_MacView__1end");
     if (!jPtr) return;
-    
+
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
     NSView<GlassView> *view = getGlassView(env, jPtr);
     {
@@ -598,7 +598,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacView__1scheduleRepaint
 {
     LOG("Java_com_sun_glass_ui_mac_MacView__1scheduleRepaint");
     if (!jPtr) return;
-    
+
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
     GLASS_POOL_ENTER;
     {
@@ -619,7 +619,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_mac_MacView__1enterFullscreen
 {
     LOG("Java_com_sun_glass_ui_mac_MacView__1enterFullscreen");
     if (!jPtr) return JNI_FALSE;
-    
+
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
     GLASS_POOL_ENTER;
     {
@@ -628,7 +628,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_mac_MacView__1enterFullscreen
     }
     GLASS_POOL_EXIT;
     GLASS_CHECK_EXCEPTION(env);
-    
+
     return JNI_TRUE; // gznote: remove this return value
 }
 
@@ -642,7 +642,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacView__1exitFullscreen
 {
     LOG("Java_com_sun_glass_ui_mac_MacView__1exitFullscreen");
     if (!jPtr) return;
-    
+
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
     GLASS_POOL_ENTER;
     {
@@ -663,16 +663,16 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacView__1uploadPixelsDirect
 {
     LOG("Java_com_sun_glass_ui_mac_MacView__1uploadPixelsDirect");
     if (!jPtr) return;
-    
+
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
     NSView<GlassView> *view = getGlassView(env, jPtr);
-    
+
 #ifndef FORCE_NOISE
     void *pixels = (*env)->GetDirectBufferAddress(env, jBuffer);
 #else
     void *pixels = _GenerateNoise(jWidth, jHeight);
 #endif
-    
+
     // must be in the middle of begin/end
     if ((jWidth > 0) && (jHeight > 0))
     {
@@ -690,22 +690,22 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacView__1uploadPixelsByteArray
 {
     LOG("Java_com_sun_glass_ui_mac_MacView__1uploadPixelsByteArray");
     if (!jPtr) return;
-    
+
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
-    
+
     jboolean isCopy = JNI_FALSE;
     u_int8_t *data = (*env)->GetPrimitiveArrayCritical(env, jArray, &isCopy);
     {
         assert((4*jWidth*jHeight + jOffset) == (*env)->GetArrayLength(env, jArray));
-        
+
         NSView<GlassView> *view = getGlassView(env, jPtr);
-        
+
 #ifndef FORCE_NOISE
         void *pixels = (data+jOffset);
 #else
         void *pixels = _GenerateNoise(jWidth, jHeight);
 #endif
-        
+
         // must be in the middle of begin/end
         if ((jWidth > 0) && (jHeight > 0))
         {
@@ -725,22 +725,22 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacView__1uploadPixelsIntArray
 {
     LOG("Java_com_sun_glass_ui_mac_MacView__1uploadPixelsIntArray");
     if (!jPtr) return;
-    
+
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
-    
+
     jboolean isCopy = JNI_FALSE;
     u_int32_t *data = (*env)->GetPrimitiveArrayCritical(env, jArray, &isCopy);
     {
         assert((jWidth*jHeight + jOffset) == (*env)->GetArrayLength(env, jArray));
-        
+
         NSView<GlassView> *view = getGlassView(env, jPtr);
-        
+
 #ifndef FORCE_NOISE
         void *pixels = (data+jOffset);
 #else
         void *pixels = _GenerateNoise(jWidth, jHeight);
 #endif
-        
+
         // must be in the middle of begin/end
         if ((jWidth > 0) && (jHeight > 0))
         {

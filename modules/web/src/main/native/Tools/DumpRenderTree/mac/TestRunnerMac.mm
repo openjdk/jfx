@@ -6,13 +6,13 @@
  * are met:
  *
  * 1.  Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer. 
+ *     notice, this list of conditions and the following disclaimer.
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
- *     documentation and/or other materials provided with the distribution. 
+ *     documentation and/or other materials provided with the distribution.
  * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
- *     from this software without specific prior written permission. 
+ *     from this software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY APPLE AND ITS CONTRIBUTORS "AS IS" AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
@@ -237,7 +237,7 @@ JSValueRef TestRunner::originsWithLocalStorage(JSContextRef context)
 void TestRunner::deleteLocalStorageForOrigin(JSStringRef URL)
 {
     RetainPtr<CFStringRef> urlCF = adoptCF(JSStringCopyCFString(kCFAllocatorDefault, URL));
-    
+
     WebSecurityOrigin *origin = [[WebSecurityOrigin alloc] initWithURL:[NSURL URLWithString:(NSString *)urlCF.get()]];
     [[WebStorageManager sharedWebStorageManager] deleteOrigin:origin];
     [origin release];
@@ -416,7 +416,7 @@ void TestRunner::setCustomPolicyDelegate(bool setDelegate, bool permissive)
 }
 
 void TestRunner::setDatabaseQuota(unsigned long long quota)
-{    
+{
     WebSecurityOrigin *origin = [[WebSecurityOrigin alloc] initWithURL:[NSURL URLWithString:@"file:///"]];
     [[origin databaseQuotaManager] setQuota:quota];
     [origin release];
@@ -513,7 +513,7 @@ void TestRunner::setMainFrameIsFirstResponder(bool flag)
 {
 #if !PLATFORM(IOS)
     NSView *documentView = [[mainFrame frameView] documentView];
-    
+
     NSResponder *firstResponder = flag ? documentView : nil;
     [[[mainFrame webView] window] makeFirstResponder:firstResponder];
 #endif
@@ -1012,7 +1012,7 @@ void TestRunner::apiTestNewWindowDataLoadBaseURL(JSStringRef utf8Data, JSStringR
 
     RetainPtr<CFStringRef> utf8DataCF = adoptCF(JSStringCopyCFString(kCFAllocatorDefault, utf8Data));
     RetainPtr<CFStringRef> baseURLCF = adoptCF(JSStringCopyCFString(kCFAllocatorDefault, baseURL));
-    
+
     WebView *webView = [[WebView alloc] initWithFrame:NSZeroRect frameName:@"" groupName:@""];
 
     bool done = false;
@@ -1020,7 +1020,7 @@ void TestRunner::apiTestNewWindowDataLoadBaseURL(JSStringRef utf8Data, JSStringR
     [webView setFrameLoadDelegate:delegate];
 
     [[webView mainFrame] loadData:[(NSString *)utf8DataCF.get() dataUsingEncoding:NSUTF8StringEncoding] MIMEType:@"text/html" textEncodingName:@"utf-8" baseURL:[NSURL URLWithString:(NSString *)baseURLCF.get()]];
-    
+
     while (!done) {
         NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
         [[NSRunLoop currentRunLoop] runMode:NSDefaultRunLoopMode beforeDate:[NSDate distantPast]];
@@ -1107,12 +1107,12 @@ static NSString *SynchronousLoaderRunLoopMode = @"DumpRenderTreeSynchronousLoade
     NSURLConnection *connection = [[NSURLConnection alloc] initWithRequest:request delegate:delegate startImmediately:NO];
     [connection scheduleInRunLoop:[NSRunLoop currentRunLoop] forMode:SynchronousLoaderRunLoopMode];
     [connection start];
-    
+
     while (!delegate->m_isDone)
         [[NSRunLoop currentRunLoop] runMode:SynchronousLoaderRunLoopMode beforeDate:[NSDate distantFuture]];
 
     [connection cancel];
-    
+
     [connection release];
     [delegate release];
 }
@@ -1162,7 +1162,7 @@ void TestRunner::addChromeInputField()
     textField.tag = 1;
     [[[[mainFrame webView] window] contentView] addSubview:textField];
     [textField release];
-    
+
     [textField setNextKeyView:[mainFrame webView]];
     [[mainFrame webView] setNextKeyView:textField];
 #endif

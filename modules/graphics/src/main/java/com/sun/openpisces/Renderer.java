@@ -346,9 +346,9 @@ public final class Renderer implements PathConsumer2D {
     }
 
     public Renderer(int subpixelLgPositionsX, int subpixelLgPositionsY,
-		    int pix_boundsX, int pix_boundsY,
-		    int pix_boundsWidth, int pix_boundsHeight,
-		    int windingRule)
+            int pix_boundsX, int pix_boundsY,
+            int pix_boundsWidth, int pix_boundsHeight,
+            int windingRule)
     {
         this(subpixelLgPositionsX, subpixelLgPositionsY);
         reset(pix_boundsX, pix_boundsY, pix_boundsWidth, pix_boundsHeight,
@@ -550,21 +550,21 @@ public final class Renderer implements PathConsumer2D {
     public int getSubpixMinX() {
         int sampleColMin = (int) Math.ceil(edgeMinX - 0.5f);
         if (sampleColMin < boundsMinX) sampleColMin = boundsMinX;
-	return sampleColMin;
+    return sampleColMin;
     }
 
     public int getSubpixMaxX() {
         int sampleColMax = (int) Math.ceil(edgeMaxX - 0.5f);
         if (sampleColMax > boundsMaxX) sampleColMax = boundsMaxX;
-	return sampleColMax;
+    return sampleColMax;
     }
 
     public int getSubpixMinY() {
-	return sampleRowMin;
+    return sampleRowMin;
     }
 
     public int getSubpixMaxY() {
-	return sampleRowMax;
+    return sampleRowMax;
     }
 
     public int getOutpixMinX() {

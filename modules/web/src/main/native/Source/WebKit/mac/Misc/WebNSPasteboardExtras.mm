@@ -6,13 +6,13 @@
  * are met:
  *
  * 1.  Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer. 
+ *     notice, this list of conditions and the following disclaimer.
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
- *     documentation and/or other materials provided with the distribution. 
+ *     documentation and/or other materials provided with the distribution.
  * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
- *     from this software without specific prior written permission. 
+ *     from this software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY APPLE AND ITS CONTRIBUTORS "AS IS" AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
@@ -98,7 +98,7 @@ static NSArray *_writableTypesForImageWithArchive (void)
 
 + (NSArray *)_web_writableTypesForImageIncludingArchive:(BOOL)hasArchive
 {
-    return hasArchive 
+    return hasArchive
         ? _writableTypesForImageWithArchive()
         : _writableTypesForImageWithoutArchive();
 }
@@ -165,7 +165,7 @@ static NSArray *_writableTypesForImageWithArchive (void)
         if ([title length] == 0)
             title = [URL _web_userVisibleString];
     }
-    
+
     if ([types containsObject:NSURLPboardType])
         [URL writeToPasteboard:self];
     if ([types containsObject:WebURLPboardType])
@@ -189,10 +189,10 @@ static NSArray *_writableTypesForImageWithArchive (void)
 - (void)_web_writeFileWrapperAsRTFDAttachment:(NSFileWrapper *)wrapper
 {
     NSTextAttachment *attachment = [[NSTextAttachment alloc] initWithFileWrapper:wrapper];
-    
+
     NSAttributedString *string = [NSAttributedString attributedStringWithAttachment:attachment];
     [attachment release];
-    
+
     NSData *RTFDData = [string RTFDFromRange:NSMakeRange(0, [string length]) documentAttributes:nil];
     [self setData:RTFDData forType:NSRTFDPboardType];
 }
@@ -205,15 +205,15 @@ static NSArray *_writableTypesForImageWithArchive (void)
     // or the main resource (standalone image case).
     NSArray *subresources = [archive subresources];
     WebResource *resource = [archive mainResource];
-    if (containsImage && [subresources count] > 0 
+    if (containsImage && [subresources count] > 0
         && MIMETypeRegistry::isSupportedImageResourceMIMEType([[subresources objectAtIndex:0] MIMEType]))
         resource = (WebResource *)[subresources objectAtIndex:0];
     ASSERT(resource != nil);
-    
+
     ASSERT(!containsImage || MIMETypeRegistry::isSupportedImageResourceMIMEType([resource MIMEType]));
     if (!containsImage || MIMETypeRegistry::isSupportedImageResourceMIMEType([resource MIMEType]))
         [self _web_writeFileWrapperAsRTFDAttachment:[resource _fileWrapperRepresentation]];
-    
+
 }
 
 static CachedImage* imageFromElement(DOMElement *domElement)
@@ -221,17 +221,17 @@ static CachedImage* imageFromElement(DOMElement *domElement)
     Element* element = core(domElement);
     if (!element)
         return 0;
-    
+
     RenderObject* renderer = element->renderer();
     RenderImage* imageRenderer = toRenderImage(renderer);
-    if (!imageRenderer->cachedImage() || imageRenderer->cachedImage()->errorOccurred()) 
-        return 0;        
+    if (!imageRenderer->cachedImage() || imageRenderer->cachedImage()->errorOccurred())
+        return 0;
     return imageRenderer->cachedImage();
 }
 
 - (void)_web_writeImage:(NSImage *)image
                 element:(DOMElement *)element
-                    URL:(NSURL *)URL 
+                    URL:(NSURL *)URL
                   title:(NSString *)title
                 archive:(WebArchive *)archive
                   types:(NSArray *)types
@@ -241,7 +241,7 @@ static CachedImage* imageFromElement(DOMElement *domElement)
     ASSERT(URL);
 
     [self _web_writeURL:URL andTitle:title types:types];
-    
+
     if ([types containsObject:NSTIFFPboardType]) {
         if (image)
             [self setData:[image TIFFRepresentation] forType:NSTIFFPboardType];
@@ -250,7 +250,7 @@ static CachedImage* imageFromElement(DOMElement *domElement)
         else if (element)
             [self setData:[element _imageTIFFRepresentation] forType:NSTIFFPboardType];
     }
-    
+
     if (archive) {
         if ([types containsObject:WebArchivePboardType])
             [self setData:[archive data] forType:WebArchivePboardType];
@@ -263,7 +263,7 @@ static CachedImage* imageFromElement(DOMElement *domElement)
 }
 
 - (id)_web_declareAndWriteDragImageForElement:(DOMElement *)element
-                                       URL:(NSURL *)URL 
+                                       URL:(NSURL *)URL
                                      title:(NSString *)title
                                    archive:(WebArchive *)archive
                                     source:(WebHTMLView *)source
@@ -283,7 +283,7 @@ static CachedImage* imageFromElement(DOMElement *domElement)
 
     NSMutableArray *types = [[NSMutableArray alloc] initWithObjects:NSFilesPromisePboardType, nil];
     [types addObjectsFromArray:[NSPasteboard _web_writableTypesForImageIncludingArchive:(archive != nil)]];
-    [self declareTypes:types owner:source];    
+    [self declareTypes:types owner:source];
     [self _web_writeImage:nil element:element URL:URL title:title archive:archive types:types source:source];
     [types release];
 

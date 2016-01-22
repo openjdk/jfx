@@ -55,7 +55,7 @@ private:
     friend class RenderStyle;
 
     StyleBackgroundData();
-    StyleBackgroundData(const StyleBackgroundData&); 
+    StyleBackgroundData(const StyleBackgroundData&);
 
     FillLayer m_background;
     Color m_color;

@@ -42,15 +42,15 @@ import javafx.scene.input.MouseEvent;
 
 /**
  *
- * 
+ *
  */
 public abstract class AbstractMouseGesture extends AbstractGesture {
-    
+
     private MouseEvent mousePressedEvent;
     private MouseEvent lastMouseEvent;
     private Observer observer;
     private boolean mouseDidDrag;
-    
+
     protected abstract void mousePressed();
     protected abstract void mouseDragStarted();
     protected abstract void mouseDragged();
@@ -62,31 +62,31 @@ public abstract class AbstractMouseGesture extends AbstractGesture {
     public AbstractMouseGesture(ContentPanelController contentPanelController) {
         super(contentPanelController);
     }
-    
+
     /*
      * For subclasses
      */
-    
+
     protected MouseEvent getMousePressedEvent() {
         return mousePressedEvent;
     }
-    
+
     protected MouseEvent getLastMouseEvent() {
         return lastMouseEvent;
     }
-    
+
     protected boolean isStarted() {
         return observer != null;
     }
-    
+
     protected boolean isMouseDidDrag() {
         return mouseDidDrag;
     }
-    
+
     /*
      * AbstractGesture
      */
-    
+
     @Override
     public void start(InputEvent e, Observer observer) {
         assert e != null;
@@ -94,14 +94,14 @@ public abstract class AbstractMouseGesture extends AbstractGesture {
         assert e.getEventType() == MouseEvent.MOUSE_PRESSED;
         assert observer != null;
         assert mouseDidDrag == false;
-        
+
         final Node glassLayer = contentPanelController.getGlassLayer();
         assert glassLayer.getOnDragDetected()== null;
         assert glassLayer.getOnMouseDragged() == null;
         assert glassLayer.getOnMouseReleased() == null;
         assert glassLayer.getOnKeyPressed() == null;
         assert glassLayer.getOnKeyReleased() == null;
-        
+
         glassLayer.setOnDragDetected(e1 -> {
             lastMouseEvent = e1;
             mouseDidDrag = true;
@@ -128,12 +128,12 @@ public abstract class AbstractMouseGesture extends AbstractGesture {
         });
         glassLayer.setOnKeyPressed(e1 -> handleKeyPressed(e1));
         glassLayer.setOnKeyReleased(e1 -> handleKeyReleased(e1));
-        
-        
+
+
         this.mousePressedEvent = (MouseEvent)e;
         this.lastMouseEvent = mousePressedEvent;
         this.observer = observer;
-        
+
         try {
             mousePressed();
         } catch(RuntimeException x) {
@@ -141,12 +141,12 @@ public abstract class AbstractMouseGesture extends AbstractGesture {
             throw x;
         }
     }
-    
-    
+
+
     /*
      * Private
      */
-    
+
     private void handleKeyPressed(KeyEvent e) {
         if (e.getCode() == KeyCode.ESCAPE) {
             if (mouseDidDrag) {
@@ -158,20 +158,20 @@ public abstract class AbstractMouseGesture extends AbstractGesture {
             keyEvent(e);
         }
     }
-    
-    
+
+
     private void handleKeyReleased(KeyEvent e) {
         keyEvent(e);
     }
-    
-    
+
+
     private void performTermination() {
         final Node glassLayer = contentPanelController.getGlassLayer();
         glassLayer.setOnDragDetected(null);
         glassLayer.setOnMouseReleased(null);
         glassLayer.setOnKeyPressed(null);
         glassLayer.setOnKeyReleased(null);
-        
+
         try {
             observer.gestureDidTerminate(this);
         } finally {

@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef MediaPlayerPrivate_h
@@ -49,13 +49,13 @@ public:
     virtual void load(const String& url, MediaSourcePrivateClient*) = 0;
 #endif
     virtual void cancelLoad() = 0;
-    
+
     virtual void prepareToPlay() { }
     virtual PlatformMedia platformMedia() const { return NoPlatformMedia; }
     virtual PlatformLayer* platformLayer() const { return 0; }
 
     virtual void play() = 0;
-    virtual void pause() = 0;    
+    virtual void pause() = 0;
 
     virtual bool supportsFullscreen() const { return false; }
     virtual bool supportsSave() const { return false; }
@@ -102,7 +102,7 @@ public:
     virtual bool supportsMuting() const { return false; }
     virtual void setMuted(bool) { }
 
-    virtual bool hasClosedCaptions() const { return false; }    
+    virtual bool hasClosedCaptions() const { return false; }
     virtual void setClosedCaptionsVisible(bool) { }
 
     virtual MediaPlayer::NetworkState networkState() const = 0;
@@ -235,7 +235,7 @@ public:
     virtual String languageOfPrimaryAudioTrack() const { return emptyString(); }
 
     virtual size_t extraMemoryCost() const { return 0; }
-    
+
     virtual unsigned long long fileSize() const { return 0; }
 
 #if ENABLE(MEDIA_SOURCE)

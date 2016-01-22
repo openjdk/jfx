@@ -1182,7 +1182,7 @@ public class Affine2D extends AffineBase {
                                 (float)(x * myx + y * myy + myt));
                 break;
             case (APPLY_SHEAR | APPLY_SCALE):
-                dst.setLocation((float)(x * mxx + y * mxy), 
+                dst.setLocation((float)(x * mxx + y * mxy),
                                 (float)(x * myx + y * myy));
                 break;
             case (APPLY_SHEAR | APPLY_TRANSLATE):

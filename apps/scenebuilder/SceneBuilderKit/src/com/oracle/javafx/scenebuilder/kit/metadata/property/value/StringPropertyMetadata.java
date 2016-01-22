@@ -46,46 +46,46 @@ import java.net.URL;
  *
  */
 public class StringPropertyMetadata extends TextEncodablePropertyMetadata<String> {
-    
+
     private static final PropertyName valueName = new PropertyName("value"); //NOI18N
 
     private final boolean detectFileURL;
-    
-    public StringPropertyMetadata(PropertyName name, boolean readWrite, 
+
+    public StringPropertyMetadata(PropertyName name, boolean readWrite,
             String defaultValue, InspectorPath inspectorPath, boolean detectFileURL) {
         super(name, String.class, readWrite, defaultValue, inspectorPath);
         this.detectFileURL = detectFileURL;
     }
 
-    public StringPropertyMetadata(PropertyName name, boolean readWrite, 
+    public StringPropertyMetadata(PropertyName name, boolean readWrite,
             String defaultValue, InspectorPath inspectorPath) {
         this(name, readWrite, defaultValue, inspectorPath, false);
     }
 
     /*
      * Values of a string property can be represented in multiple ways.
-     * 
+     *
      * Case 1 : as an XML attribute (ie an FXOMPropertyT)
-     *      text='Button'                                       
+     *      text='Button'
      *      url='@Desktop/Blah.css'
-     * 
+     *
      * Case 2 : as an XML element of type String (also an FXOMPropertyT)
      *      <text><String fx:value='Button'/><text>
-     * 
+     *
      * Case 3 : as an XML element of type URL/Boolean/Double... (ie an FXOMPropertyC)
      *      <text><URL value='@Desktop/Blah.css' /></text>
      *      <text><Double fx:value='12.0' /></text>
      */
 
-    
+
     /*
      * TextEncodablePropertyMetadata
      */
-    
+
     @Override
     public String makeValueFromFxomInstance(FXOMInstance valueFxomInstance) {
         final String result;
-        
+
         final Class<?> valueClass = valueFxomInstance.getDeclaredClass();
         if (valueClass == URL.class) {
             final FXOMProperty p = valueFxomInstance.getProperties().get(valueName);
@@ -115,7 +115,7 @@ public class StringPropertyMetadata extends TextEncodablePropertyMetadata<String
     @Override
     public FXOMInstance makeFxomInstanceFromValue(String value, FXOMDocument fxomDocument) {
         final FXOMInstance result;
-        
+
         boolean shouldEncodeAsURL;
         final PrefixedValue pv = new PrefixedValue(value);
         if (pv.isClassLoaderRelativePath() || pv.isDocumentRelativePath()) {
@@ -129,7 +129,7 @@ public class StringPropertyMetadata extends TextEncodablePropertyMetadata<String
         } else {
             shouldEncodeAsURL = false;
         }
-        
+
         if (shouldEncodeAsURL) {
             // String value must be expressed using a URL element
             // <URL value="@Desktop/IssueTracking.css" />
@@ -140,8 +140,8 @@ public class StringPropertyMetadata extends TextEncodablePropertyMetadata<String
             result = new FXOMInstance(fxomDocument, String.class);
             result.setFxValue(value);
         }
-        
+
         return result;
     }
-    
+
 }

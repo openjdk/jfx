@@ -39,7 +39,7 @@ public:
     PageBlock();
     PageBlock(const PageBlock&);
     PageBlock(void*, size_t, bool hasGuardPages);
-    
+
     void* base() const { return m_base; }
     size_t size() const { return m_size; }
 

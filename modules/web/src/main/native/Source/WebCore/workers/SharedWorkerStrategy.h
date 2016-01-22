@@ -27,7 +27,7 @@
 #define SharedWorkerStrategy_h
 
 namespace WebCore {
-    
+
 class SharedWorkerStrategy {
 public:
     virtual bool isAvailable() const { return true; }

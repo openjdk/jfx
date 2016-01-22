@@ -37,5 +37,5 @@ public class ReadOnlyListPropertyBaseShim {
             ListChangeListener.Change change) {
         base.fireValueChangedEvent(change);
     }
-    
+
 }

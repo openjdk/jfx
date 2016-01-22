@@ -90,7 +90,7 @@ ULONG STDMETHODCALLTYPE WebSecurityOrigin::Release()
 
 // IWebSecurityOrigin --------------------------------------------------------------
 
-HRESULT STDMETHODCALLTYPE WebSecurityOrigin::protocol( 
+HRESULT STDMETHODCALLTYPE WebSecurityOrigin::protocol(
     /* [retval][out] */ BSTR* result)
 {
     if (!result)
@@ -100,8 +100,8 @@ HRESULT STDMETHODCALLTYPE WebSecurityOrigin::protocol(
 
     return S_OK;
 }
-        
-HRESULT STDMETHODCALLTYPE WebSecurityOrigin::host( 
+
+HRESULT STDMETHODCALLTYPE WebSecurityOrigin::host(
     /* [retval][out] */ BSTR* result)
 {
     if (!result)
@@ -111,8 +111,8 @@ HRESULT STDMETHODCALLTYPE WebSecurityOrigin::host(
 
     return S_OK;
 }
-      
-HRESULT STDMETHODCALLTYPE WebSecurityOrigin::port( 
+
+HRESULT STDMETHODCALLTYPE WebSecurityOrigin::port(
     /* [retval][out] */ unsigned short* result)
 {
     if (!result)
@@ -122,8 +122,8 @@ HRESULT STDMETHODCALLTYPE WebSecurityOrigin::port(
 
     return S_OK;
 }
-        
-HRESULT STDMETHODCALLTYPE WebSecurityOrigin::usage( 
+
+HRESULT STDMETHODCALLTYPE WebSecurityOrigin::usage(
     /* [retval][out] */ unsigned long long* result)
 {
 #if ENABLE(SQL_DATABASE)
@@ -138,8 +138,8 @@ HRESULT STDMETHODCALLTYPE WebSecurityOrigin::usage(
     return E_NOTIMPL;
 #endif
 }
-        
-HRESULT STDMETHODCALLTYPE WebSecurityOrigin::quota( 
+
+HRESULT STDMETHODCALLTYPE WebSecurityOrigin::quota(
     /* [retval][out] */ unsigned long long* result)
 {
 #if ENABLE(SQL_DATABASE)
@@ -153,9 +153,9 @@ HRESULT STDMETHODCALLTYPE WebSecurityOrigin::quota(
     return E_NOTIMPL;
 #endif
 }
-        
-HRESULT STDMETHODCALLTYPE WebSecurityOrigin::setQuota( 
-    /* [in] */ unsigned long long quota) 
+
+HRESULT STDMETHODCALLTYPE WebSecurityOrigin::setQuota(
+    /* [in] */ unsigned long long quota)
 {
 #if ENABLE(SQL_DATABASE)
     DatabaseManager::manager().setQuota(m_securityOrigin.get(), quota);

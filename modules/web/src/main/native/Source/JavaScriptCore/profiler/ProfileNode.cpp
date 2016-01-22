@@ -104,7 +104,7 @@ void ProfileNode::removeChild(ProfileNode* node)
             break;
         }
     }
-    
+
     resetChildrensSiblings();
 }
 

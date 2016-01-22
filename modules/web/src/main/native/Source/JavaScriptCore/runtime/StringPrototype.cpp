@@ -352,7 +352,7 @@ static ALWAYS_INLINE JSValue jsSpliceSubstringsWithSeparators(ExecState* exec, J
                     bufferPos += sepLen;
                 }
             }
-        }        
+        }
 
         return jsString(exec, impl.release());
     }
@@ -884,7 +884,7 @@ EncodedJSValue JSC_HOST_CALL stringProtoFuncSearch(ExecState* exec)
     RegExp* reg;
     if (a0.inherits(RegExpObject::info()))
         reg = asRegExpObject(a0)->regExp();
-    else { 
+    else {
         /*
          *  ECMA 15.5.4.12 String.prototype.search (regexp)
          *  If regexp is not an object whose [[Class]] property is "RegExp", it is
@@ -1227,7 +1227,7 @@ EncodedJSValue JSC_HOST_CALL stringProtoFuncSubstring(ExecState* exec)
         start = len;
     if (a1.isUndefined())
         end = len;
-    else { 
+    else {
         end = a1.toNumber(exec);
         if (!(end >= 0)) // check for negative values or NaN
             end = 0;
@@ -1535,6 +1535,6 @@ EncodedJSValue JSC_HOST_CALL stringProtoFuncTrimRight(ExecState* exec)
     JSValue thisValue = exec->hostThisValue();
     return JSValue::encode(trimString(exec, thisValue, TrimRight));
 }
-    
-    
+
+
 } // namespace JSC

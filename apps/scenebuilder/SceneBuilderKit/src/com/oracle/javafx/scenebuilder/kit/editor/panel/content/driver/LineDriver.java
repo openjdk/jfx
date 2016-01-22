@@ -50,12 +50,12 @@ public class LineDriver extends AbstractNodeDriver {
     /*
      * AbstractDriver
      */
-    
+
     @Override
     public AbstractHandles<?> makeHandles(FXOMObject fxomObject) {
         assert fxomObject.getSceneGraphObject() instanceof Line;
         assert fxomObject instanceof FXOMInstance;
         return new LineHandles(contentPanelController, (FXOMInstance)fxomObject);
     }
-    
+
 }

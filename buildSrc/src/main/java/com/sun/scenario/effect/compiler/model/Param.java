@@ -50,7 +50,7 @@ public class Param {
     public Type getType() {
         return type;
     }
-    
+
     @Override
     public boolean equals(Object obj) {
         if (this == obj) {
@@ -69,5 +69,5 @@ public class Param {
         hash = 31 * hash + name.hashCode();
         hash = 31 * hash + type.hashCode();
         return hash;
-    }    
+    }
 }

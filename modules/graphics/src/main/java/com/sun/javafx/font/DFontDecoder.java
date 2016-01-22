@@ -48,7 +48,7 @@ class DFontDecoder extends FontFileWriter {
         super();
     }
 
-    public void decode(String fontName) throws IOException { 
+    public void decode(String fontName) throws IOException {
         if (fontName == null) {
             throw new IOException("Invalid font name");
         }
@@ -67,7 +67,7 @@ class DFontDecoder extends FontFileWriter {
             int size = TTCHEADERSIZE + (DIRECTORYENTRYSIZE * numTables);
             byte[][] tableData = new byte[numTables][];
             for (int i = 0; i < tags.length; i++) {
-                int tag = tags[i];          
+                int tag = tags[i];
                 tableData[i] = DFontDecoder.getCTFontTable(fontRef, tag);
                 int length = tableData[i].length;
                 size += (length + 3) & ~3;

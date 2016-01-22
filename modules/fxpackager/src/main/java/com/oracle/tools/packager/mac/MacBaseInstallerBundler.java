@@ -223,7 +223,7 @@ public abstract class MacBaseInstallerBundler extends AbstractBundler {
         AtomicReference<IOException> toThrow = new AtomicReference<>();
         String appExecutable = "/Contents/MacOS/" + APP_NAME.fetchFrom(params);
         String keyChain = SIGNING_KEYCHAIN.fetchFrom(params);
-        
+
         // sign all dylibs and jars
         Files.walk(appLocation.toPath())
                 // while we are searching let's fix permissions
@@ -239,7 +239,7 @@ public abstract class MacBaseInstallerBundler extends AbstractBundler {
                         Log.debug(e);
                     }
                 })
-                .filter(p -> Files.isRegularFile(p) && 
+                .filter(p -> Files.isRegularFile(p) &&
                                 !(p.toString().contains("/Contents/MacOS/libjli.dylib")
                                   || p.toString().contains("/Contents/MacOS/JavaAppletPlugin")
                                   || p.toString().endsWith(appExecutable))
@@ -252,9 +252,9 @@ public abstract class MacBaseInstallerBundler extends AbstractBundler {
                     "-s", signingIdentity, // sign with this key
                     "--prefix", identifierPrefix, // use the identifier as a prefix
                     "-vvvv"));
-            if (entitlementsFile != null && 
+            if (entitlementsFile != null &&
                     (p.toString().endsWith(".jar")
-                      || p.toString().endsWith(".dylib"))) 
+                      || p.toString().endsWith(".dylib")))
             {
                 args.add("--entitlements");
                 args.add(entitlementsFile); // entitlements
@@ -382,7 +382,7 @@ public abstract class MacBaseInstallerBundler extends AbstractBundler {
     public String getBundleType() {
         return "INSTALLER";
     }
-    
+
     public static String findKey(String key, String keychainName, boolean verbose) {
         if (!System.getProperty("os.name").toLowerCase().contains("os x")) {
             return null;

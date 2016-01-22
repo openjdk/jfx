@@ -33,23 +33,23 @@ package com.sun.javafx.runtime;
  * <p>
  * This class serves 3 purposes:
  *
- * 1. It creates the JavaFX version properties to be added into the Java 
+ * 1. It creates the JavaFX version properties to be added into the Java
  * System Properties at the loading of the JavaFX Toolkit. The JavaFX properties
- * are javafx.version and javafx.runtime.version. Their formats follow the 
+ * are javafx.version and javafx.runtime.version. Their formats follow the
  * specification of java.version and java.runtime.version respectively.
  * See http://openjdk.java.net/jeps/223 for details.
- * 
- * For example, an early access build of JavaFX 9 build 76 will contain 
+ *
+ * For example, an early access build of JavaFX 9 build 76 will contain
  * the following properties:
- * 
+ *
  * javafx.version = 9-ea
  * javafx.runtime.version = 9-ea+76
- * 
+ *
  * An fcs build of JavaFX 9 build 135 will contain the following properties:
- * 
+ *
  * javafx.version = 9
  * javafx.runtime.version = 9+135
- * 
+ *
  * 2. It provides methods to access Hudson build information and timestamp.
  * These methods can be used to uniquely identify a particular build
  * for internal test and deployment:
@@ -78,7 +78,7 @@ package com.sun.javafx.runtime;
  *
  * javafx.version = 9-internal
  * javafx.runtime.version = 9-internal+0-2015-08-10_22-08-04
- * 
+ *
  * <p>
  * The tags of the form @STRING@ are populated by ant when the project is built
  *
@@ -171,7 +171,7 @@ public class VersionInfo {
 
     /**
      * Returns the Hudson job name, an empty string is return if HUNDSON_JOB_NAME
-     * is set to "not_hudson". 
+     * is set to "not_hudson".
      * @return the Hudson job name
      */
     public static String getHudsonJobName() {

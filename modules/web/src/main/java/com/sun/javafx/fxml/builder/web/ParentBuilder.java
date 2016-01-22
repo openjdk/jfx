@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
@@ -38,15 +38,15 @@ Builder class for javafx.scene.Parent
 public abstract class ParentBuilder<B extends ParentBuilder<B>> extends NodeBuilder<B> {
     protected ParentBuilder() {
     }
-    
-    
+
+
     private int __set;
     public void applyTo(javafx.scene.Parent x) {
         super.applyTo(x);
         int set = __set;
         if ((set & (1 << 1)) != 0) x.getStylesheets().addAll(this.stylesheets);
     }
-    
+
     private java.util.Collection<? extends java.lang.String> stylesheets;
     /**
     Add the given items to the List of items in the {@link javafx.scene.Parent#getStylesheets() stylesheets} property for the instance constructed by this builder.
@@ -58,7 +58,7 @@ public abstract class ParentBuilder<B extends ParentBuilder<B>> extends NodeBuil
         __set |= 1 << 1;
         return (B) this;
     }
-    
+
     /**
     Add the given items to the List of items in the {@link javafx.scene.Parent#getStylesheets() stylesheets} property for the instance constructed by this builder.
     * @since JavaFX 2.1
@@ -66,5 +66,5 @@ public abstract class ParentBuilder<B extends ParentBuilder<B>> extends NodeBuil
     public B stylesheets(java.lang.String... x) {
         return stylesheets(java.util.Arrays.asList(x));
     }
-    
+
 }

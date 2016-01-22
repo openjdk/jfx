@@ -22,7 +22,7 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
- 
+
 #include "LensCommon.h"
 #include <linux/input.h>
 #include "com_sun_glass_events_MouseEvent.h"
@@ -236,7 +236,7 @@ void glass_inputEvents_updateKeyModifiers(int key, int eventType) {
                 shiftDown++;
                 GLASS_LOG_FINER("SHIFT was pressed shiftDown = %d", shiftDown);
             } else {
-       #ifdef ANDROID_NDK  
+       #ifdef ANDROID_NDK
                 shiftDown = 0;
        #else
                 shiftDown--;
@@ -281,7 +281,7 @@ void glass_inputEvents_updateKeyModifiers(int key, int eventType) {
             if (isPressed) {
                 altDown++;
                 GLASS_LOG_FINER("ALT was pressed");
-            } else {                
+            } else {
        #ifdef ANDROID_NDK
                 altDown = 0;
        #else

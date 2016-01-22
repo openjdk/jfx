@@ -51,32 +51,32 @@ import javafx.fxml.FXMLLoader;
  *
  */
 public class FXOMAssetIndex {
-    
+
     private final FXOMDocument fxomDocument;
     private final Map<Path, FXOMNode> fileAssets;
-    
+
     public FXOMAssetIndex(FXOMDocument fxomDocument) {
         assert fxomDocument != null;
         this.fxomDocument = fxomDocument;
         this.fileAssets = Collections.unmodifiableMap(collectAssets());
     }
-    
+
     public Map<Path, FXOMNode> getFileAssets() {
         return fileAssets;
     }
-    
+
     /*
      * Private
      */
-    
+
     private static final PropertyName valueName = new PropertyName("value"); //NOI18N
-    
+
     private Map<Path, FXOMNode> collectAssets() {
         final Map<Path, FXOMNode> result = new HashMap<>();
-        
+
         if (fxomDocument.getFxomRoot() != null) {
             final FXOMObject fxomRoot = fxomDocument.getFxomRoot();
-            
+
             /*
              * Collects properties containing prefixed values (ie @ expression).
              */
@@ -88,8 +88,8 @@ public class FXOMAssetIndex {
                     }
                 }
             }
-            
-            
+
+
             /*
              * Collects URL instances.
              */
@@ -108,28 +108,28 @@ public class FXOMAssetIndex {
                     }
                 }
             }
-            
+
             /*
              * Collects fx:include
              */
             for (FXOMIntrinsic fxomInclude : fxomRoot.collectIncludes(null)) {
-                final String equivalentValue 
+                final String equivalentValue
                         = FXMLLoader.RELATIVE_PATH_PREFIX + fxomInclude.getSource();
-                final Path path 
+                final Path path
                         = extractPath(equivalentValue);
                 if (path != null) {
                     result.put(path, fxomInclude);
                 }
             }
         }
-        
+
         return result;
     }
-    
-    
+
+
     private Path extractPath(String stringValue) {
         Path result;
-        
+
         final PrefixedValue pv = new PrefixedValue(stringValue);
         if (pv.isPlainString()) {
             try {
@@ -178,13 +178,13 @@ public class FXOMAssetIndex {
                         result = null;
                     }
                 }
-                
+
             }
         } else {
             result = null;
         }
-        
+
         return result;
     }
-    
+
 }

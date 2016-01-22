@@ -108,7 +108,7 @@ void InsertionPoint::removedFrom(ContainerNode& insertionPoint)
 
     HTMLElement::removedFrom(insertionPoint);
 }
-    
+
 Node* InsertionPoint::firstDistributed() const
 {
     if (!m_hasDistribution)

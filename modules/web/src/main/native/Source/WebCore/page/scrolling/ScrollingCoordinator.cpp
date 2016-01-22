@@ -105,7 +105,7 @@ Region ScrollingCoordinator::computeNonFastScrollableRegion(const Frame* frame, 
 
     Vector<IntRect> touchRects;
     document->getTouchRects(touchRects);
-    
+
     Region touchRegion;
     for (const auto& rect : touchRects)
         touchRegion.unite(rect);

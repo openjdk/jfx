@@ -6,13 +6,13 @@
  * are met:
  *
  * 1.  Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer. 
+ *     notice, this list of conditions and the following disclaimer.
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
- *     documentation and/or other materials provided with the distribution. 
+ *     documentation and/or other materials provided with the distribution.
  * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
- *     from this software without specific prior written permission. 
+ *     from this software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY APPLE AND ITS CONTRIBUTORS "AS IS" AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
@@ -43,28 +43,28 @@ public:
     virtual ULONG STDMETHODCALLTYPE Release(void);
 
     // IWebPolicyDelegate
-    virtual HRESULT STDMETHODCALLTYPE decidePolicyForNavigationAction( 
+    virtual HRESULT STDMETHODCALLTYPE decidePolicyForNavigationAction(
         /* [in] */ IWebView *webView,
         /* [in] */ IPropertyBag *actionInformation,
         /* [in] */ IWebURLRequest *request,
         /* [in] */ IWebFrame *frame,
         /* [in] */ IWebPolicyDecisionListener *listener);
-    
-    virtual HRESULT STDMETHODCALLTYPE decidePolicyForNewWindowAction( 
+
+    virtual HRESULT STDMETHODCALLTYPE decidePolicyForNewWindowAction(
         /* [in] */ IWebView *webView,
         /* [in] */ IPropertyBag *actionInformation,
         /* [in] */ IWebURLRequest *request,
         /* [in] */ BSTR frameName,
         /* [in] */ IWebPolicyDecisionListener *listener){ return E_NOTIMPL; }
-    
-    virtual HRESULT STDMETHODCALLTYPE decidePolicyForMIMEType( 
+
+    virtual HRESULT STDMETHODCALLTYPE decidePolicyForMIMEType(
         /* [in] */ IWebView *webView,
         /* [in] */ BSTR type,
         /* [in] */ IWebURLRequest *request,
         /* [in] */ IWebFrame *frame,
         /* [in] */ IWebPolicyDecisionListener *listener){ return E_NOTIMPL; }
-    
-    virtual HRESULT STDMETHODCALLTYPE unableToImplementPolicyWithError( 
+
+    virtual HRESULT STDMETHODCALLTYPE unableToImplementPolicyWithError(
         /* [in] */ IWebView *webView,
         /* [in] */ IWebError *error,
         /* [in] */ IWebFrame *frame);

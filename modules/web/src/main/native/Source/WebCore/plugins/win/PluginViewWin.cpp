@@ -22,7 +22,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -366,7 +366,7 @@ PluginView::wndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     }
 
     if (message == m_lastMessage &&
-        m_plugin->quirks().contains(PluginQuirkDontCallWndProcForSameMessageRecursively) && 
+        m_plugin->quirks().contains(PluginQuirkDontCallWndProcForSameMessageRecursively) &&
         m_isCallingPluginWndProc)
         return 1;
 
@@ -384,7 +384,7 @@ PluginView::wndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
     // If the plug-in doesn't explicitly support changing the pop-up state, we enable
     // popups for all user gestures.
-    // Note that we need to pop the state in a timer, because the Flash plug-in 
+    // Note that we need to pop the state in a timer, because the Flash plug-in
     // pops up windows in response to a posted message.
     if (m_plugin->pluginFuncs()->version < NPVERS_HAS_POPUPS_ENABLED_STATE &&
         isWindowsMessageUserGesture(message) && !m_popPopupsStateTimer.isActive()) {
@@ -520,7 +520,7 @@ bool PluginView::dispatchNPEvent(NPEvent& npEvent)
     bool accepted = !m_plugin->pluginFuncs()->event(m_instance, &npEvent);
     setCallingPlugin(false);
 
-    if (shouldPop) 
+    if (shouldPop)
         popPopupsEnabledState();
 
     return accepted;
@@ -700,7 +700,7 @@ void PluginView::handleMouseEvent(MouseEvent* event)
         npEvent.wParam |= MK_SHIFT;
 
     if (event->type() == eventNames().mousemoveEvent ||
-        event->type() == eventNames().mouseoutEvent || 
+        event->type() == eventNames().mouseoutEvent ||
         event->type() == eventNames().mouseoverEvent) {
         npEvent.event = WM_MOUSEMOVE;
         if (event->buttonDown())
@@ -777,7 +777,7 @@ void PluginView::setParent(ScrollView* parent)
         if (!platformPluginWidget())
             return;
 
-        // If the plug-in window or one of its children have the focus, we need to 
+        // If the plug-in window or one of its children have the focus, we need to
         // clear it to prevent the web view window from being focused because that can
         // trigger a layout while the plugin element is being detached.
         HWND focusedWindow = ::GetFocus();
@@ -880,7 +880,7 @@ NPError PluginView::handlePostReadFile(Vector<char>& buffer, uint32_t len, const
         return NPERR_FILE_NOT_FOUND;
 
     HANDLE fileHandle = CreateFileW(filename.charactersWithNullTermination().data(), FILE_READ_DATA, FILE_SHARE_READ, 0, OPEN_EXISTING, 0, 0);
-    
+
     if (fileHandle == INVALID_HANDLE_VALUE)
         return NPERR_FILE_NOT_FOUND;
 

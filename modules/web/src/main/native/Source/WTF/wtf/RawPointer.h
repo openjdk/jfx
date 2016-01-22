@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef RawPointer_h
@@ -34,19 +34,19 @@ public:
         : m_value(0)
     {
     }
-    
+
     explicit RawPointer(void* value)
         : m_value(value)
     {
     }
-    
+
     explicit RawPointer(const void* value)
         : m_value(value)
     {
     }
-    
+
     const void* value() const { return m_value; }
-    
+
 private:
     const void* m_value;
 };

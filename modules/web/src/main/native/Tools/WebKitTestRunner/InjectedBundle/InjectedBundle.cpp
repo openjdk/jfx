@@ -195,7 +195,7 @@ void InjectedBundle::didReceiveMessage(WKStringRef messageName, WKTypeRef messag
     if (WKStringIsEqualToUTF8CString(messageName, "CallSetBackingScaleFactorCallback")) {
         m_testRunner->callSetBackingScaleFactorCallback();
         return;
-    }   
+    }
     if (WKStringIsEqualToUTF8CString(messageName, "WorkQueueProcessedCallback")) {
         if (!topLoadingFrame() && !m_testRunner->waitToDump())
             page()->dump();

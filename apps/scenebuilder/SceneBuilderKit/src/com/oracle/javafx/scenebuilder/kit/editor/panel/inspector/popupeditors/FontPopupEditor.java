@@ -87,7 +87,7 @@ public class FontPopupEditor extends PopupEditor {
     private void initialize(EditorController editorController) {
         this.editorController = editorController;
     }
-    
+
     private void setStyle() {
         styleEditor.reset("", "", new ArrayList<>(getStyles(EditorUtils.toString(familyEditor.getValue()), false, editorController)));//NOI18N
         styleEditor.setUpdateFromModel(true);
@@ -214,7 +214,7 @@ public class FontPopupEditor extends PopupEditor {
             super(name, defaultValue, families);
             initialize(families, editorController);
         }
-        
+
         private void initialize(List<String> families, EditorController editorController) {
             this.families = families;
             EventHandler<ActionEvent> onActionListener = event -> {
@@ -248,14 +248,14 @@ public class FontPopupEditor extends PopupEditor {
     }
 
     private static class StyleEditor extends AutoSuggestEditor {
-        
+
         private String style = null;
 
         public StyleEditor(String name, String defaultValue, List<String> suggestedList, EditorController editorController) {
             super(name, defaultValue, suggestedList);
             initialize(editorController);
         }
-        
+
         private void initialize(EditorController editorController) {
             EventHandler<ActionEvent> onActionListener = event -> {
                 if (Objects.equals(style, getTextField().getText())) {
@@ -406,7 +406,7 @@ public class FontPopupEditor extends PopupEditor {
     }
 
     public static String getPersistentName(Font font) {
-        // The block below is an ugly workaround for 
+        // The block below is an ugly workaround for
         // RT-23021: Inconsitent naming for fonts in the 'Tahoma' family.
         final Map<String, String> problems = getPathologicalFonts();
         if (problems.containsKey(font.getName())) { // e.g. font.getName() is "Tahoma Bold" //NOI18N

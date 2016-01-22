@@ -52,7 +52,7 @@ public abstract class Piece {
 
     public static final Queen WHITE_QUEEN = new Queen(Color.W);
     public static final Queen BLACK_QUEEN = new Queen(Color.B);
-    
+
     protected Color color;
 
     protected Piece(Color color) {

@@ -472,7 +472,7 @@ public abstract class BaseShaderGraphics
                                         bx, by, bw, bh);
 
             paintTx = getPaintTextureTx(xform, shader, bx, by, bw, bh);
-        } else {        
+        } else {
             // the mask has been generated in device space, so we use
             // identity transform here
             context.validatePaintOp(this, IDENT, maskTex, bx, by, bw, bh);
@@ -1758,7 +1758,7 @@ public abstract class BaseShaderGraphics
         if (!isAntialiasedShape()) {
             scratchLine.setLine(x1, y1, x2, y2);
             renderShape(scratchLine, stroke, bx, by, bw, bh);
-            return;          
+            return;
         }
         int cap = stroke.getEndCap();
         if (stroke.isDashed()) {

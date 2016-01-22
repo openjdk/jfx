@@ -93,12 +93,12 @@ public class ContextMenuContent extends Region {
      * in keyboard navigation of menu items.
      */
     private int currentFocusedIndex = -1;
-    
+
     private boolean itemsDirty = true;
     private InvalidationListener popupShowingListener = arg0 -> {
         updateItems();
     };
-    private WeakInvalidationListener weakPopupShowingListener = 
+    private WeakInvalidationListener weakPopupShowingListener =
             new WeakInvalidationListener(popupShowingListener);
 
     /***************************************************************************
@@ -111,7 +111,7 @@ public class ContextMenuContent extends Region {
         itemsContainer = new MenuBox();
 //        itemsContainer = new VBox();
         itemsContainer.setClip(clipRect);
-        
+
         upArrow = new ArrowMenuItem(this);
         upArrow.setUp(true);
         upArrow.setFocusTraversable(false);
@@ -130,13 +130,13 @@ public class ContextMenuContent extends Region {
 
         /*
         ** only add this if we're on an embedded
-        ** platform that supports 5-button navigation 
+        ** platform that supports 5-button navigation
         */
         if (Utils.isTwoLevelFocus()) {
             new TwoLevelFocusPopupBehavior(this);
         }
     }
-    
+
     //For access from controls
     public VBox getItemsContainer() {
         return itemsContainer;
@@ -151,7 +151,7 @@ public class ContextMenuContent extends Region {
             currentFocusedIndex = index;
         }
     }
-    
+
     private void updateItems() {
         if (itemsDirty) {
             updateVisualItems();
@@ -170,9 +170,9 @@ public class ContextMenuContent extends Region {
             Node child = itemsContainer.getChildren().get(i);
             if (child instanceof MenuItemContainer) {
                 final MenuItemContainer menuItemContainer = (MenuItemContainer)itemsContainer.getChildren().get(i);
-                
+
                 if (! menuItemContainer.isVisible()) continue;
-                
+
                 double alt = -1;
                 Node n = menuItemContainer.left;
                 if (n != null) {
@@ -239,18 +239,18 @@ public class ContextMenuContent extends Region {
 
         oldWidth = newWidth;
     }
-    
+
     private void updateVisualItems() {
         ObservableList<Node> itemsContainerChilder = itemsContainer.getChildren();
 
         disposeVisualItems();
-        
+
         for (int row = 0; row < getItems().size(); row++) {
             final MenuItem item = getItems().get(row);
             if (item instanceof CustomMenuItem && ((CustomMenuItem) item).getContent() == null) {
                 continue;
             }
-            
+
             if (item instanceof SeparatorMenuItem) {
                 // we don't want the hover highlight for separators, so for
                 // now this is the simplest approach - just remove the
@@ -269,7 +269,7 @@ public class ContextMenuContent extends Region {
                 itemsContainerChilder.add(menuItemContainer);
             }
         }
-        
+
         // Add the Menu to properties map of this skin. Used by QA for testing
         // This enables associating a parent menu for this skin showing menu items.
         if (getItems().size() > 0) {
@@ -297,8 +297,8 @@ public class ContextMenuContent extends Region {
     }
 
     /**
-     * Can be called by Skins when they need to clean up the content of any 
-     * ContextMenu instances they might have created. This ensures that contents 
+     * Can be called by Skins when they need to clean up the content of any
+     * ContextMenu instances they might have created. This ensures that contents
      * of submenus if any, also get cleaned up.
      */
     public void dispose() {
@@ -406,7 +406,7 @@ public class ContextMenuContent extends Region {
         }
         return snapSize(com.sun.javafx.util.Utils.getScreen(
             contextMenu.getOwnerWindow().getScene().getRoot()).getVisualBounds().getHeight());
-        
+
     }
 
     private double getContentHeight() {
@@ -418,7 +418,7 @@ public class ContextMenuContent extends Region {
         }
         return h;
     }
-  
+
     // This handles shifting ty when doing keyboard navigation.
     private void ensureFocusedMenuItemIsVisible(Node node) {
         if (node == null) return;
@@ -434,7 +434,7 @@ public class ContextMenuContent extends Region {
             scroll(-nodeBounds.getMinY() + clipBounds.getMinY());
         }
     }
-    
+
     protected ObservableList<MenuItem> getItems() {
         return contextMenu.getItems();
     }
@@ -467,7 +467,7 @@ public class ContextMenuContent extends Region {
                 requestFocus();
             }
         });
-        
+
         // RT-19624 calling requestFocus inside layout was casuing repeated layouts.
         contextMenu.addEventHandler(Menu.ON_SHOWN, event -> {
             for (Node child : itemsContainer.getChildren()) {
@@ -702,7 +702,7 @@ public class ContextMenuContent extends Region {
         }
         return -1; // should not happen
     }
-    
+
     private void moveToNextSibling() {
         // If focusedIndex is -1 then start from 0th menu item.
         // Note that this will cycle through such that when you move to last item,
@@ -721,7 +721,7 @@ public class ContextMenuContent extends Region {
             ensureFocusedMenuItemIsVisible(n);
         }
     }
-    
+
     /*
      * Find the index the previous MenuItemContaner in the itemsContainer children.
      */
@@ -872,14 +872,14 @@ public class ContextMenuContent extends Region {
             });
         }
     }
-   
+
     private void showSubmenu(Menu menu) {
         openSubmenu = menu;
         createSubmenu();
         submenu.getItems().setAll(menu.getItems());
         submenu.show(selectedBackground, Side.RIGHT, 0, 0);
     }
-    
+
     private void hideSubmenu() {
         if (submenu == null) return;
 
@@ -891,10 +891,10 @@ public class ContextMenuContent extends Region {
         disposeContextMenu(submenu);
         submenu = null;
     }
-    
+
     private void hideAllMenus(MenuItem item) {
         if (contextMenu != null) contextMenu.hide();
-        
+
         Menu parentMenu;
         while ((parentMenu = item.getParentMenu()) != null) {
             parentMenu.hide();
@@ -904,16 +904,16 @@ public class ContextMenuContent extends Region {
             item.getParentPopup().hide();
         }
     }
-    
+
     private Menu openSubmenu;
     private ContextMenu submenu;
-    
+
     // FIXME: HACKY. We use this so that a submenu knows where to open from
     // but this will only work for mouse hovers currently - and won't work
     // programmatically.
     // package protected for testing only!
     Region selectedBackground;
-    
+
     void scroll(double delta) {
         double newTy = ty + delta;
         if (ty == newTy) return;
@@ -987,7 +987,7 @@ public class ContextMenuContent extends Region {
     public List<CssMetaData<? extends Styleable, ?>> getCssMetaData() {
         return getClassCssMetaData();
     }
-    
+
     public Label getLabelAt(int index) {
         return ((MenuItemContainer)itemsContainer.getChildren().get(index)).getLabel();
     }
@@ -1019,7 +1019,7 @@ public class ContextMenuContent extends Region {
             switch (attribute) {
                 case VISIBLE: return contextMenu.isShowing();
                 case PARENT_MENU: return contextMenu.getOwnerNode();
-                default: return super.queryAccessibleAttribute(attribute, parameters); 
+                default: return super.queryAccessibleAttribute(attribute, parameters);
             }
         }
     }
@@ -1100,10 +1100,10 @@ public class ContextMenuContent extends Region {
             scrollTimeline = null;
         }
     }
-    
+
     /*
      * Container responsible for laying out a single row in the menu - in other
-     * words, this contains and lays out a single MenuItem, regardless of it's 
+     * words, this contains and lays out a single MenuItem, regardless of it's
      * specific subtype.
      */
     public class MenuItemContainer extends Region {
@@ -1126,7 +1126,7 @@ public class ContextMenuContent extends Region {
         protected Label getLabel(){
             return (Label) label;
         }
-        
+
         public MenuItem getItem() {
             return item;
         }
@@ -1135,14 +1135,14 @@ public class ContextMenuContent extends Region {
             if (item == null) {
                 throw new NullPointerException("MenuItem can not be null");
             }
-            
+
             getStyleClass().addAll(item.getStyleClass());
             setId(item.getId());
             setFocusTraversable(!(item instanceof CustomMenuItem));
             this.item = item;
 
             createChildren();
-            
+
             // listen to changes in the state of certain MenuItem types
             ReadOnlyBooleanProperty pseudoProperty;
             if (item instanceof Menu) {
@@ -1166,15 +1166,15 @@ public class ContextMenuContent extends Region {
             } else {
                 setAccessibleRole(AccessibleRole.MENU_ITEM);
             }
-            
+
             pseudoClassStateChanged(DISABLED_PSEUDOCLASS_STATE, item.disableProperty().get());
             listener.registerChangeListener(item.disableProperty(),
                     e -> pseudoClassStateChanged(DISABLED_PSEUDOCLASS_STATE, item.isDisable()));
-            
+
             // Add the menu item to properties map of this node. Used by QA for testing
             // This allows associating this container with corresponding MenuItem.
             getProperties().put(MenuItem.class, item);
-            
+
             listener.registerChangeListener(item.graphicProperty(), e -> {
                 createChildren();
                 computeVisualMetrics();
@@ -1196,7 +1196,7 @@ public class ContextMenuContent extends Region {
             };
             addEventHandler(ActionEvent.ACTION, actionEventHandler);
         }
-        
+
         public void dispose() {
             if (item instanceof CustomMenuItem) {
                 Node node = ((CustomMenuItem)item).getContent();
@@ -1207,20 +1207,20 @@ public class ContextMenuContent extends Region {
 
             listener.dispose();
             removeEventHandler(ActionEvent.ACTION, actionEventHandler);
-            
+
             if (label != null) {
                 ((Label)label).textProperty().unbind();
             }
-            
+
             left = null;
             graphic = null;
             label = null;
             right = null;
         }
-        
+
         private void createChildren() {
             getChildren().clear();
-            
+
             // draw background region for hover effects. All content (other
             // than Nodes from NodeMenuItems) are set to be mouseTransparent, so
             // this background also acts as the receiver of user input
@@ -1255,7 +1255,7 @@ public class ContextMenuContent extends Region {
                     graphic = graphicPane;
                     getChildren().add(graphic);
                 }
-                
+
                 // --- add text to center column
                 label = new MenuLabel(item, this);  // make this a menulabel to handle mnemonics fire()
                 label.setStyle(item.getStyle());
@@ -1284,7 +1284,7 @@ public class ContextMenuContent extends Region {
                     Region rightNode = new Region();
                     rightNode.setMouseTransparent(true);
                     rightNode.getStyleClass().add("arrow");
-                    
+
                     StackPane rightPane = new StackPane();
                     rightPane.setMaxWidth(Math.max(rightNode.prefWidth(-1), 10));
                     rightPane.setMouseTransparent(true);
@@ -1318,7 +1318,7 @@ public class ContextMenuContent extends Region {
                     } else {
                         removeEventHandler(MouseEvent.MOUSE_RELEASED, mouseReleasedEventHandler);
                     }
-                    
+
                     // show submenu when the menu is hovered over
                     addEventHandler(MouseEvent.MOUSE_ENTERED, mouseEnteredEventHandler);
                     addEventHandler(MouseEvent.MOUSE_RELEASED, mouseReleasedEventHandler);
@@ -1355,7 +1355,7 @@ public class ContextMenuContent extends Region {
                 }
             }
         }
-        
+
         private void updateAccelerator() {
             if (item.getAccelerator() != null) {
                 if (right != null) {
@@ -1402,7 +1402,7 @@ public class ContextMenuContent extends Region {
         }
 
         private EventHandler<MouseEvent> customMenuItemMouseClickedHandler;
-        
+
         private void createNodeMenuItemChildren(final CustomMenuItem item) {
             Node node = item.getContent();
             getChildren().add(node);
@@ -1418,10 +1418,10 @@ public class ContextMenuContent extends Region {
             };
             node.addEventHandler(MouseEvent.MOUSE_CLICKED, customMenuItemMouseClickedHandler);
         }
-        
+
         @Override protected void layoutChildren() {
             double xOffset;
-        
+
             final double prefHeight = prefHeight(-1);
             if (left != null) {
                 xOffset = snappedLeftInset();
@@ -1435,21 +1435,21 @@ public class ContextMenuContent extends Region {
                 positionInArea(graphic, xOffset, 0,
                         maxGraphicWidth, prefHeight, 0, HPos.LEFT, VPos.CENTER);
             }
-            
+
             if (label != null) {
                 xOffset = snappedLeftInset() + maxLeftWidth + maxGraphicWidth;
                 label.resize(label.prefWidth(-1), label.prefHeight(-1));
                 positionInArea(label, xOffset, 0,
                         maxLabelWidth, prefHeight, 0, HPos.LEFT, VPos.CENTER);
             }
-            
+
             if (right != null) {
                 xOffset = snappedLeftInset() + maxLeftWidth + maxGraphicWidth + maxLabelWidth;
                 right.resize(right.prefWidth(-1), right.prefHeight(-1));
                 positionInArea(right, xOffset, 0,
                     maxRightWidth, prefHeight, 0, HPos.RIGHT, VPos.CENTER);
             }
-            
+
             if ( item instanceof CustomMenuItem) {
                 Node n = ((CustomMenuItem) item).getContent();
                 if (item instanceof SeparatorMenuItem) {
@@ -1458,12 +1458,12 @@ public class ContextMenuContent extends Region {
                     positionInArea(n, snappedLeftInset() + maxGraphicWidth, 0, prefWidth(-1), prefHeight, 0, HPos.LEFT, VPos.CENTER);
                 } else {
                     n.resize(n.prefWidth(-1), n.prefHeight(-1));
-                    //the node should be left aligned 
+                    //the node should be left aligned
                     positionInArea(n, snappedLeftInset(), 0, getWidth(), prefHeight, 0, HPos.LEFT, VPos.CENTER);
                 }
             }
         }
-        
+
         @Override protected double computePrefHeight(double width) {
             double prefHeight = 0;
             if (item instanceof CustomMenuItem || item instanceof SeparatorMenuItem) {
@@ -1500,8 +1500,8 @@ public class ContextMenuContent extends Region {
                 final StackPane _graphic = new StackPane();
                 _graphic.getStyleClass().add("check");
                 return _graphic;
-            } 
-            
+            }
+
             return null;
         }
 
@@ -1522,7 +1522,7 @@ public class ContextMenuContent extends Region {
                     if (graphic != null) {
                         String t = (String)graphic.queryAccessibleAttribute(AccessibleAttribute.TEXT);
                         if (t != null) title += t;
-                    }                  
+                    }
                     final Label label = getLabel();
                     if (label != null) {
                         String t = (String)label.queryAccessibleAttribute(AccessibleAttribute.TEXT);
@@ -1555,7 +1555,7 @@ public class ContextMenuContent extends Region {
                     }
                     ContextMenuContent cmContent = (ContextMenuContent)submenu.getSkin().getNode();
                     return cmContent.itemsContainer;
-                default: return super.queryAccessibleAttribute(attribute, parameters); 
+                default: return super.queryAccessibleAttribute(attribute, parameters);
             }
         }
 
@@ -1573,7 +1573,7 @@ public class ContextMenuContent extends Region {
                     }
                     break;
                 }
-                case FIRE: 
+                case FIRE:
                     doSelect();
                     break;
                 default: super.executeAccessibleAction(action);
@@ -1597,5 +1597,5 @@ public class ContextMenuContent extends Region {
             setLabelFor(mic);
         }
     }
-        
+
 }

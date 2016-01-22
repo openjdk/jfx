@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef ArrayBufferView_h
@@ -48,7 +48,7 @@ public:
     {
         return !m_buffer || m_buffer->isNeutered();
     }
-    
+
     PassRefPtr<ArrayBuffer> buffer() const
     {
         if (isNeutered())
@@ -97,9 +97,9 @@ public:
             return false;
         return true;
     }
-    
+
     virtual JSArrayBufferView* wrap(ExecState*, JSGlobalObject*) = 0;
-    
+
 protected:
     JS_EXPORT_PRIVATE ArrayBufferView(PassRefPtr<ArrayBuffer>, unsigned byteOffset);
 
@@ -153,7 +153,7 @@ bool ArrayBufferView::setImpl(ArrayBufferView* array, unsigned byteOffset)
         // Out of range offset or overflow
         return false;
     }
-    
+
     char* base = static_cast<char*>(baseAddress());
     memmove(base + byteOffset, array->baseAddress(), array->byteLength());
     return true;
@@ -167,7 +167,7 @@ bool ArrayBufferView::setRangeImpl(const char* data, size_t dataByteLength, unsi
         // Out of range offset or overflow
         return false;
     }
-    
+
     char* base = static_cast<char*>(baseAddress());
     memmove(base + byteOffset, data, dataByteLength);
     return true;
@@ -181,7 +181,7 @@ bool ArrayBufferView::zeroRangeImpl(unsigned byteOffset, size_t rangeByteLength)
         // Out of range offset or overflow
         return false;
     }
-    
+
     char* base = static_cast<char*>(baseAddress());
     memset(base + byteOffset, 0, rangeByteLength);
     return true;

@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -115,14 +115,14 @@ PassRefPtr<Uint8ClampedArray> ImageBufferData::getData(const IntRect& rect, cons
 
     RefPtr<Uint8ClampedArray> result = Uint8ClampedArray::createUninitialized(area.unsafeGet());
     unsigned char* data = result->data();
-    
+
     Checked<int> endx = rect.maxX();
     endx *= ceilf(resolutionScale);
     Checked<int> endy = rect.maxY();
     endy *= resolutionScale;
     if (rect.x() < 0 || rect.y() < 0 || endx.unsafeGet() > size.width() || endy.unsafeGet() > size.height())
         result->zeroFill();
-    
+
     int originx = rect.x();
     int destx = 0;
     Checked<int> destw = rect.width();
@@ -136,7 +136,7 @@ PassRefPtr<Uint8ClampedArray> ImageBufferData::getData(const IntRect& rect, cons
     if (endx.unsafeGet() > size.width())
         endx = size.width();
     Checked<int> width = endx - originx;
-    
+
     int originy = rect.y();
     int desty = 0;
     Checked<int> desth = rect.height();
@@ -150,20 +150,20 @@ PassRefPtr<Uint8ClampedArray> ImageBufferData::getData(const IntRect& rect, cons
     if (endy.unsafeGet() > size.height())
         endy = size.height();
     Checked<int> height = endy - originy;
-    
+
     if (width.unsafeGet() <= 0 || height.unsafeGet() <= 0)
         return result.release();
-    
+
     unsigned destBytesPerRow = 4 * rect.width();
     unsigned char* destRows = data + desty * destBytesPerRow + destx * 4;
-    
+
     unsigned srcBytesPerRow;
     unsigned char* srcRows;
-    
+
     if (!accelerateRendering) {
         srcBytesPerRow = m_bytesPerRow.unsafeGet();
         srcRows = reinterpret_cast<unsigned char*>(m_data) + originy * srcBytesPerRow + originx * 4;
-        
+
 #if USE(ACCELERATE)
         if (unmultiplied) {
 #if USE_ARGB32
@@ -181,7 +181,7 @@ PassRefPtr<Uint8ClampedArray> ImageBufferData::getData(const IntRect& rect, cons
             src.width = width.unsafeGet();
             src.rowBytes = srcBytesPerRow;
             src.data = srcRows;
-            
+
             vImage_Buffer dst;
             dst.height = desth.unsafeGet();
             dst.width = destw.unsafeGet();
@@ -327,7 +327,7 @@ PassRefPtr<Uint8ClampedArray> ImageBufferData::getData(const IntRect& rect, cons
             width = destw;
             height = desth;
         }
-        
+
         if ((width * 4).hasOverflowed())
             CRASH();
 
@@ -372,7 +372,7 @@ PassRefPtr<Uint8ClampedArray> ImageBufferData::getData(const IntRect& rect, cons
         ASSERT_NOT_REACHED();
 #endif // USE(IOSURFACE_CANVAS_BACKING_STORE)
     }
-    
+
     return result.release();
 }
 
@@ -384,7 +384,7 @@ void ImageBufferData::putData(Uint8ClampedArray*& source, const IntSize& sourceS
 
     ASSERT(sourceRect.width() > 0);
     ASSERT(sourceRect.height() > 0);
-    
+
     Checked<int> originx = sourceRect.x();
     Checked<int> destx = (Checked<int>(destPoint.x()) + sourceRect.x());
     destx *= resolutionScale;
@@ -392,11 +392,11 @@ void ImageBufferData::putData(Uint8ClampedArray*& source, const IntSize& sourceS
     ASSERT(destx.unsafeGet() < size.width());
     ASSERT(originx.unsafeGet() >= 0);
     ASSERT(originx.unsafeGet() <= sourceRect.maxX());
-    
+
     Checked<int> endx = (Checked<int>(destPoint.x()) + sourceRect.maxX());
     endx *= resolutionScale;
     ASSERT(endx.unsafeGet() <= size.width());
-    
+
     Checked<int> width = sourceRect.width();
     Checked<int> destw = endx - destx;
 
@@ -407,26 +407,26 @@ void ImageBufferData::putData(Uint8ClampedArray*& source, const IntSize& sourceS
     ASSERT(desty.unsafeGet() < size.height());
     ASSERT(originy.unsafeGet() >= 0);
     ASSERT(originy.unsafeGet() <= sourceRect.maxY());
-    
+
     Checked<int> endy = (Checked<int>(destPoint.y()) + sourceRect.maxY());
     endy *= resolutionScale;
     ASSERT(endy.unsafeGet() <= size.height());
 
     Checked<int> height = sourceRect.height();
     Checked<int> desth = endy - desty;
-    
+
     if (width <= 0 || height <= 0)
         return;
-    
+
     unsigned srcBytesPerRow = 4 * sourceSize.width();
     unsigned char* srcRows = source->data() + (originy * srcBytesPerRow + originx * 4).unsafeGet();
     unsigned destBytesPerRow;
     unsigned char* destRows;
-    
+
     if (!accelerateRendering) {
         destBytesPerRow = m_bytesPerRow.unsafeGet();
         destRows = reinterpret_cast<unsigned char*>(m_data) + (desty * destBytesPerRow + destx * 4).unsafeGet();
-        
+
 #if  USE(ACCELERATE)
         if (unmultiplied) {
 #if USE_ARGB32
@@ -445,7 +445,7 @@ void ImageBufferData::putData(Uint8ClampedArray*& source, const IntSize& sourceS
             src.width = width.unsafeGet();
             src.rowBytes = srcBytesPerRow;
             src.data = srcRows;
-            
+
             vImage_Buffer dst;
             dst.height = desth.unsafeGet();
             dst.width = destw.unsafeGet();

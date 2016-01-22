@@ -34,11 +34,11 @@ import com.sun.javafx.webkit.theme.PopupMenuImpl;
 
 
 public final class UtilitiesImpl extends Utilities {
-    
+
     @Override protected Pasteboard createPasteboard() {
         return new PasteboardImpl();
     }
-    
+
     @Override protected PopupMenu createPopupMenu() {
         return new PopupMenuImpl();
     }

@@ -42,7 +42,7 @@ import com.oracle.javafx.scenebuilder.kit.fxom.FXOMPropertyC;
  *
  */
 public class ReplaceObjectJob extends Job {
-    
+
     private final FXOMObject original;
     private final FXOMObject replacement;
     private FXOMPropertyC parentProperty;
@@ -55,13 +55,13 @@ public class ReplaceObjectJob extends Job {
         this.original = original;
         this.replacement = replacement;
     }
-    
+
     /*
      * Job
      */
     @Override
     public boolean isExecutable() {
-        return ((original.getParentCollection() != null) || 
+        return ((original.getParentCollection() != null) ||
                 (original.getParentProperty() != null))
               &&
                ((replacement.getParentCollection() == null) &&
@@ -74,7 +74,7 @@ public class ReplaceObjectJob extends Job {
         parentCollection = original.getParentCollection();
         indexInParentProperty = original.getIndexInParentProperty();
         indexInParentCollection = original.getIndexInParentCollection();
-        
+
         // Now same as redo()
         redo();
     }
@@ -87,7 +87,7 @@ public class ReplaceObjectJob extends Job {
         assert replacement.getParentCollection() == parentCollection;
         assert replacement.getIndexInParentProperty() == indexInParentProperty;
         assert replacement.getIndexInParentCollection() == indexInParentCollection;
-        
+
         if (parentProperty != null) {
             original.addToParentProperty(indexInParentProperty, parentProperty);
             replacement.removeFromParentProperty();
@@ -106,7 +106,7 @@ public class ReplaceObjectJob extends Job {
         assert original.getIndexInParentCollection() == indexInParentCollection;
         assert replacement.getParentProperty() == null;
         assert replacement.getParentCollection() == null;
-        
+
         if (parentProperty != null) {
             replacement.addToParentProperty(indexInParentProperty, parentProperty);
             original.removeFromParentProperty();
@@ -121,6 +121,6 @@ public class ReplaceObjectJob extends Job {
     public String getDescription() {
         return getClass().getSimpleName(); // Not intended for user
     }
-    
-    
+
+
 }

@@ -64,17 +64,17 @@ public:
     float textStrokeWidth;
     Color textFillColor;
     Color textEmphasisColor;
-    
+
     Color visitedLinkTextStrokeColor;
     Color visitedLinkTextFillColor;
-    Color visitedLinkTextEmphasisColor;    
+    Color visitedLinkTextEmphasisColor;
 
     std::unique_ptr<ShadowData> textShadow; // Our text shadow information for shadowed text drawing.
-    
+
     RefPtr<CursorList> cursorData;
     Length indent;
     float m_effectiveZoom;
-    
+
     Length wordSpacing;
 
     // Paged media properties.
@@ -82,7 +82,7 @@ public:
     short orphans;
     unsigned m_hasAutoWidows : 1;
     unsigned m_hasAutoOrphans : 1;
-    
+
     unsigned textSecurity : 2; // ETextSecurity
     unsigned userModify : 2; // EUserModify (editing)
     unsigned wordBreak : 2; // EWordBreak

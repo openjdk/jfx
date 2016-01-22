@@ -42,7 +42,7 @@ class VisiblePosition;
 @interface WebAccessibilityObjectWrapperBase : NSObject {
     WebCore::AccessibilityObject* m_object;
 }
- 
+
 - (id)initWithAccessibilityObject:(WebCore::AccessibilityObject*)axObject;
 - (void)detach;
 - (WebCore::AccessibilityObject*)accessibilityObject;

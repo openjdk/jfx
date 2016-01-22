@@ -32,17 +32,17 @@
 namespace WebCore {
 
 class DelayProcessor;
-    
+
 class DelayDSPKernel : public AudioDSPKernel {
-public:  
+public:
     explicit DelayDSPKernel(DelayProcessor*);
     DelayDSPKernel(double maxDelayTime, float sampleRate);
-    
+
     virtual void process(const float* source, float* destination, size_t framesToProcess) override;
     virtual void reset() override;
-    
+
     double maxDelayTime() const { return m_maxDelayTime; }
-    
+
     void setDelayFrames(double numberOfFrames) { m_desiredDelayFrames = numberOfFrames; }
 
     virtual double tailTime() const override;

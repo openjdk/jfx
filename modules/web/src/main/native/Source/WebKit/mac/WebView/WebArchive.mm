@@ -6,13 +6,13 @@
  * are met:
  *
  * 1.  Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer. 
+ *     notice, this list of conditions and the following disclaimer.
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
- *     documentation and/or other materials provided with the distribution. 
+ *     documentation and/or other materials provided with the distribution.
  * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
- *     from this software without specific prior written permission. 
+ *     from this software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY APPLE AND ITS CONTRIBUTORS "AS IS" AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
@@ -111,11 +111,11 @@ static NSString * const WebSubframeArchivesKey = @"WebSubframeArchives";
 {
     if (WebCoreObjCScheduleDeallocateOnMainThread([WebArchivePrivate class], self))
         return;
-    
+
     [cachedMainResource release];
     [cachedSubresources release];
     [cachedSubframeArchives release];
-    
+
     [super dealloc];
 }
 
@@ -161,7 +161,7 @@ static BOOL isArrayOfClass(id object, Class elementClass)
         [self release];
         return nil;
     }
-    
+
     if (!subresources || isArrayOfClass(subresources, [WebResource class]))
         _private->cachedSubresources = [subresources retain];
     else {
@@ -175,7 +175,7 @@ static BOOL isArrayOfClass(id object, Class elementClass)
         [self release];
         return nil;
     }
-    
+
     RefPtr<ArchiveResource> coreMainResource = mainResource ? [mainResource _coreResource] : 0;
 
     Vector<PassRefPtr<ArchiveResource>> coreResources;
@@ -206,7 +206,7 @@ static BOOL isArrayOfClass(id object, Class elementClass)
     self = [super init];
     if (!self)
         return nil;
-        
+
 #if !LOG_DISABLED
     CFAbsoluteTime start = CFAbsoluteTimeGetCurrent();
 #endif
@@ -217,24 +217,24 @@ static BOOL isArrayOfClass(id object, Class elementClass)
         [self release];
         return nil;
     }
-        
+
     [_private setCoreArchive:coreArchive.release()];
-        
+
 #if !LOG_DISABLED
     CFAbsoluteTime end = CFAbsoluteTimeGetCurrent();
     CFAbsoluteTime duration = end - start;
 #endif
     LOG(Timing, "Parsing web archive with [NSPropertyListSerialization propertyListFromData::::] took %f seconds", duration);
-    
+
     return self;
 }
 
 - (instancetype)initWithCoder:(NSCoder *)decoder
-{    
+{
     WebResource *mainResource = nil;
     NSArray *subresources = nil;
     NSArray *subframeArchives = nil;
-    
+
     @try {
         id object = [decoder decodeObjectForKey:WebMainResourceKey];
         if ([object isKindOfClass:[WebResource class]])
@@ -257,7 +257,7 @@ static BOOL isArrayOfClass(id object, Class elementClass)
 {
     [encoder encodeObject:[self mainResource] forKey:WebMainResourceKey];
     [encoder encodeObject:[self subresources] forKey:WebSubresourcesKey];
-    [encoder encodeObject:[self subframeArchives] forKey:WebSubframeArchivesKey];    
+    [encoder encodeObject:[self subframeArchives] forKey:WebSubframeArchivesKey];
 }
 
 - (void)dealloc
@@ -276,13 +276,13 @@ static BOOL isArrayOfClass(id object, Class elementClass)
     WebCoreThreadViolationCheckRoundTwo();
 
     // Currently from WebKit API perspective, WebArchives are entirely immutable once created
-    // If they ever become mutable, we'll need to rethink this. 
+    // If they ever become mutable, we'll need to rethink this.
     if (!_private->cachedMainResource) {
         LegacyWebArchive* coreArchive = [_private coreArchive];
         if (coreArchive)
             _private->cachedMainResource = [[WebResource alloc] _initWithCoreResource:coreArchive->mainResource()];
     }
-    
+
     return [[_private->cachedMainResource retain] autorelease];
 }
 
@@ -291,7 +291,7 @@ static BOOL isArrayOfClass(id object, Class elementClass)
     WebCoreThreadViolationCheckRoundTwo();
 
     // Currently from WebKit API perspective, WebArchives are entirely immutable once created
-    // If they ever become mutable, we'll need to rethink this.     
+    // If they ever become mutable, we'll need to rethink this.
     if (!_private->cachedSubresources) {
         LegacyWebArchive* coreArchive = [_private coreArchive];
         if (!coreArchive)
@@ -319,7 +319,7 @@ static BOOL isArrayOfClass(id object, Class elementClass)
     WebCoreThreadViolationCheckRoundTwo();
 
     // Currently from WebKit API perspective, WebArchives are entirely immutable once created
-    // If they ever become mutable, we'll need to rethink this.  
+    // If they ever become mutable, we'll need to rethink this.
     if (!_private->cachedSubframeArchives) {
         LegacyWebArchive* coreArchive = [_private coreArchive];
         if (!coreArchive)
@@ -335,7 +335,7 @@ static BOOL isArrayOfClass(id object, Class elementClass)
             }
         }
     }
-    
+
     return [[_private->cachedSubframeArchives retain] autorelease];
 }
 
@@ -348,13 +348,13 @@ static BOOL isArrayOfClass(id object, Class elementClass)
 #endif
 
     RetainPtr<CFDataRef> data = [_private coreArchive]->rawDataRepresentation();
-    
+
 #if !LOG_DISABLED
     CFAbsoluteTime end = CFAbsoluteTimeGetCurrent();
     CFAbsoluteTime duration = end - start;
 #endif
     LOG(Timing, "Serializing web archive to raw CFPropertyList data took %f seconds", duration);
-        
+
     return [[(NSData *)data.get() retain] autorelease];
 }
 
@@ -369,7 +369,7 @@ static BOOL isArrayOfClass(id object, Class elementClass)
     self = [super init];
     if (!self)
         return nil;
-    
+
     _private = [[WebArchivePrivate alloc] initWithCoreArchive:coreLegacyWebArchive];
     if (!_private) {
         [self release];

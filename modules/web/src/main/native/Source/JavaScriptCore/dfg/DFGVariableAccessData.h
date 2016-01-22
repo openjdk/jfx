@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef DFGVariableAccessData_h
@@ -62,7 +62,7 @@ public:
     {
         clearVotes();
     }
-    
+
     VariableAccessData(VirtualRegister local, bool isCaptured)
         : m_local(local)
         , m_prediction(SpecNone)
@@ -79,13 +79,13 @@ public:
     {
         clearVotes();
     }
-    
+
     VirtualRegister local()
     {
         ASSERT(m_local == find()->m_local);
         return m_local;
     }
-    
+
     VirtualRegister& machineLocal()
     {
         ASSERT(find() == this);
@@ -97,22 +97,22 @@ public:
         return checkAndSet(m_shouldNeverUnbox, m_shouldNeverUnbox | isCaptured)
             | checkAndSet(m_isCaptured, m_isCaptured | isCaptured);
     }
-    
+
     bool isCaptured()
     {
         return m_isCaptured;
     }
-    
+
     bool mergeIsProfitableToUnbox(bool isProfitableToUnbox)
     {
         return checkAndSet(m_isProfitableToUnbox, m_isProfitableToUnbox | isProfitableToUnbox);
     }
-    
+
     bool isProfitableToUnbox()
     {
         return m_isProfitableToUnbox;
     }
-    
+
     bool mergeShouldNeverUnbox(bool shouldNeverUnbox)
     {
         bool newShouldNeverUnbox = m_shouldNeverUnbox | shouldNeverUnbox;
@@ -121,7 +121,7 @@ public:
         m_shouldNeverUnbox = newShouldNeverUnbox;
         return true;
     }
-    
+
     // Returns true if it would be unsound to store the value in an unboxed fashion.
     // If this returns false, it simply means that it is sound to unbox; it doesn't
     // mean that we have actually done so.
@@ -130,7 +130,7 @@ public:
         ASSERT(!(m_isCaptured && !m_shouldNeverUnbox));
         return m_shouldNeverUnbox;
     }
-    
+
     // Returns true if we should be unboxing the value provided that the predictions
     // and double format vote say so. This may return false even if shouldNeverUnbox()
     // returns false, since this incorporates heuristics of profitability.
@@ -143,47 +143,47 @@ public:
     {
         return checkAndSet(m_structureCheckHoistingFailed, m_structureCheckHoistingFailed | failed);
     }
-    
+
     bool mergeCheckArrayHoistingFailed(bool failed)
     {
         return checkAndSet(m_checkArrayHoistingFailed, m_checkArrayHoistingFailed | failed);
     }
-    
+
     bool structureCheckHoistingFailed()
     {
         return m_structureCheckHoistingFailed;
     }
-    
+
     bool checkArrayHoistingFailed()
     {
         return m_checkArrayHoistingFailed;
     }
-    
+
     bool mergeIsArgumentsAlias(bool isArgumentsAlias)
     {
         return checkAndSet(m_isArgumentsAlias, m_isArgumentsAlias | isArgumentsAlias);
     }
-    
+
     bool isArgumentsAlias()
     {
         return m_isArgumentsAlias;
     }
-    
+
     bool mergeIsLoadedFrom(bool isLoadedFrom)
     {
         return checkAndSet(m_isLoadedFrom, m_isLoadedFrom | isLoadedFrom);
     }
-    
+
     void setIsLoadedFrom(bool isLoadedFrom)
     {
         m_isLoadedFrom = isLoadedFrom;
     }
-    
+
     bool isLoadedFrom()
     {
         return m_isLoadedFrom;
     }
-    
+
     bool predict(SpeculatedType prediction)
     {
         VariableAccessData* self = find();
@@ -192,53 +192,53 @@ public:
             mergeSpeculation(m_argumentAwarePrediction, m_prediction);
         return result;
     }
-    
+
     SpeculatedType nonUnifiedPrediction()
     {
         return m_prediction;
     }
-    
+
     SpeculatedType prediction()
     {
         return find()->m_prediction;
     }
-    
+
     SpeculatedType argumentAwarePrediction()
     {
         return find()->m_argumentAwarePrediction;
     }
-    
+
     bool mergeArgumentAwarePrediction(SpeculatedType prediction)
     {
         return mergeSpeculation(find()->m_argumentAwarePrediction, prediction);
     }
-    
+
     void clearVotes()
     {
         ASSERT(find() == this);
         m_votes[0] = 0;
         m_votes[1] = 0;
     }
-    
+
     void vote(unsigned ballot)
     {
         ASSERT(ballot < 2);
         m_votes[ballot]++;
     }
-    
+
     double voteRatio()
     {
         ASSERT(find() == this);
         return static_cast<double>(m_votes[1]) / m_votes[0];
     }
-    
+
     bool shouldUseDoubleFormatAccordingToVote()
     {
         // We don't support this facility for arguments, yet.
         // FIXME: make this work for arguments.
         if (local().isArgument())
             return false;
-        
+
         // If the variable is not a number prediction, then this doesn't
         // make any sense.
         if (!isFullNumberSpeculation(prediction())) {
@@ -247,30 +247,30 @@ public:
             // want doubles. https://bugs.webkit.org/show_bug.cgi?id=109511
             return false;
         }
-        
+
         // If the variable is predicted to hold only doubles, then it's a
         // no-brainer: it should be formatted as a double.
         if (isDoubleSpeculation(prediction()))
             return true;
-        
+
         // If the variable is known to be used as an integer, then be safe -
         // don't force it to be a double.
         if (flags() & NodeBytecodeUsesAsInt)
             return false;
-        
+
         // If the variable has been voted to become a double, then make it a
         // double.
         if (voteRatio() >= Options::doubleVoteRatioForDoubleFormat())
             return true;
-        
+
         return false;
     }
-    
+
     DoubleFormatState doubleFormatState()
     {
         return find()->m_doubleFormatState;
     }
-    
+
     bool shouldUseDoubleFormat()
     {
         ASSERT(isRoot());
@@ -279,81 +279,81 @@ public:
         ASSERT(!(doubleState && isCaptured()));
         return doubleState && isProfitableToUnbox();
     }
-    
+
     bool tallyVotesForShouldUseDoubleFormat()
     {
         ASSERT(isRoot());
-        
+
         if (local().isArgument() || shouldNeverUnbox())
             return DFG::mergeDoubleFormatState(m_doubleFormatState, NotUsingDoubleFormat);
-        
+
         if (m_doubleFormatState == CantUseDoubleFormat)
             return false;
-        
+
         bool newValueOfShouldUseDoubleFormat = shouldUseDoubleFormatAccordingToVote();
         if (!newValueOfShouldUseDoubleFormat) {
             // We monotonically convert to double. Hence, if the fixpoint leads us to conclude that we should
             // switch back to int, we instead ignore this and stick with double.
             return false;
         }
-        
+
         if (m_doubleFormatState == UsingDoubleFormat)
             return false;
-        
+
         return DFG::mergeDoubleFormatState(m_doubleFormatState, UsingDoubleFormat);
     }
-    
+
     bool mergeDoubleFormatState(DoubleFormatState doubleFormatState)
     {
         return DFG::mergeDoubleFormatState(find()->m_doubleFormatState, doubleFormatState);
     }
-    
+
     bool makePredictionForDoubleFormat()
     {
         ASSERT(isRoot());
-        
+
         if (m_doubleFormatState != UsingDoubleFormat)
             return false;
-        
+
         return mergeSpeculation(m_prediction, SpecDouble);
     }
-    
+
     NodeFlags flags() const { return m_flags; }
-    
+
     bool mergeFlags(NodeFlags newFlags)
     {
         return checkAndSet(m_flags, m_flags | newFlags);
     }
-    
+
     FlushFormat flushFormat()
     {
         ASSERT(find() == this);
-        
+
         if (isArgumentsAlias())
             return FlushedArguments;
-        
+
         if (!shouldUnboxIfPossible())
             return FlushedJSValue;
-        
+
         if (shouldUseDoubleFormat())
             return FlushedDouble;
-        
+
         SpeculatedType prediction = argumentAwarePrediction();
         if (isInt32Speculation(prediction))
             return FlushedInt32;
-        
+
         if (enableInt52() && !m_local.isArgument() && isMachineIntSpeculation(prediction))
             return FlushedInt52;
-        
+
         if (isCellSpeculation(prediction))
             return FlushedCell;
-        
+
         if (isBooleanSpeculation(prediction))
             return FlushedBoolean;
-        
+
         return FlushedJSValue;
     }
-    
+
     FlushedAt flushedAt()
     {
         return FlushedAt(flushFormat(), machineLocal());

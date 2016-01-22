@@ -9,13 +9,13 @@
  * are met:
  *
  * 1.  Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer. 
+ *     notice, this list of conditions and the following disclaimer.
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
- *     documentation and/or other materials provided with the distribution. 
+ *     documentation and/or other materials provided with the distribution.
  * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
- *     from this software without specific prior written permission. 
+ *     from this software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY APPLE AND ITS CONTRIBUTORS "AS IS" AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
@@ -168,13 +168,13 @@ BOOL replayingSavedEvents;
         @"paste",
         @"readystatechange",
         @"reset",
-        @"resize", 
-        @"scroll", 
+        @"resize",
+        @"scroll",
         @"search",
         @"select",
         @"selectstart",
-        @"submit", 
-        @"textInput", 
+        @"submit",
+        @"textInput",
         @"textzoomin",
         @"textzoomout",
         @"unload",
@@ -216,7 +216,7 @@ BOOL replayingSavedEvents;
             || aSelector == @selector(touchMove)
             || aSelector == @selector(touchEnd)
             || aSelector == @selector(touchCancel)
-#endif            
+#endif
             )
         return NO;
     return YES;
@@ -320,9 +320,9 @@ BOOL replayingSavedEvents;
         [invocation setTarget:self];
         [invocation setSelector:@selector(leapForward:)];
         [invocation setArgument:&milliseconds atIndex:2];
-        
+
         [EventSendingController saveEvent:invocation];
-        
+
         return;
     }
 
@@ -460,17 +460,17 @@ static int buildModifierFlags(const WebScriptObject* modifiers)
 {
     [[[mainFrame frameView] documentView] layout];
     [self updateClickCountForButton:buttonNumber];
-    
+
 #if !PLATFORM(IOS)
     NSEventType eventType = eventTypeForMouseButtonAndAction(buttonNumber, MouseDown);
     NSEvent *event = [NSEvent mouseEventWithType:eventType
-                                        location:lastMousePosition 
+                                        location:lastMousePosition
                                    modifierFlags:buildModifierFlags(modifiers)
                                        timestamp:[self currentEventTime]
-                                    windowNumber:[[[mainFrame webView] window] windowNumber] 
-                                         context:[NSGraphicsContext currentContext] 
-                                     eventNumber:++eventNumber 
-                                      clickCount:clickCount 
+                                    windowNumber:[[[mainFrame webView] window] windowNumber]
+                                         context:[NSGraphicsContext currentContext]
+                                     eventNumber:++eventNumber
+                                      clickCount:clickCount
                                         pressure:0.0];
 #else
     WebEvent *event = [[WebEvent alloc] initWithMouseEventType:WebEventMouseDown
@@ -538,7 +538,7 @@ static int buildModifierFlags(const WebScriptObject* modifiers)
         [invocation setSelector:@selector(mouseUp:withModifiers:)];
         [invocation setArgument:&buttonNumber atIndex:2];
         [invocation setArgument:&modifiers atIndex:3];
-        
+
         [EventSendingController saveEvent:invocation];
         [EventSendingController replaySavedEvents];
 
@@ -549,13 +549,13 @@ static int buildModifierFlags(const WebScriptObject* modifiers)
 #if !PLATFORM(IOS)
     NSEventType eventType = eventTypeForMouseButtonAndAction(buttonNumber, MouseUp);
     NSEvent *event = [NSEvent mouseEventWithType:eventType
-                                        location:lastMousePosition 
+                                        location:lastMousePosition
                                    modifierFlags:buildModifierFlags(modifiers)
                                        timestamp:[self currentEventTime]
-                                    windowNumber:[[[mainFrame webView] window] windowNumber] 
-                                         context:[NSGraphicsContext currentContext] 
-                                     eventNumber:++eventNumber 
-                                      clickCount:clickCount 
+                                    windowNumber:[[[mainFrame webView] window] windowNumber]
+                                         context:[NSGraphicsContext currentContext]
+                                     eventNumber:++eventNumber
+                                      clickCount:clickCount
                                         pressure:0.0];
 #else
     WebEvent *event = [[WebEvent alloc] initWithMouseEventType:WebEventMouseUp
@@ -565,7 +565,7 @@ static int buildModifierFlags(const WebScriptObject* modifiers)
 
     NSView *targetView = [[mainFrame webView] hitTest:[event locationInWindow]];
     // FIXME: Silly hack to teach DRT to respect capturing mouse events outside the WebView.
-    // The right solution is just to use NSApplication's built-in event sending methods, 
+    // The right solution is just to use NSApplication's built-in event sending methods,
     // instead of rolling our own algorithm for selecting an event target.
     targetView = targetView ? targetView : [[mainFrame frameView] documentView];
     assert(targetView);
@@ -583,9 +583,9 @@ static int buildModifierFlags(const WebScriptObject* modifiers)
 #if !PLATFORM(IOS)
     if (draggingInfo) {
         WebView *webView = [mainFrame webView];
-        
+
         NSDragOperation dragOperation = [webView draggingUpdated:draggingInfo];
-        
+
         if (dragOperation != NSDragOperationNone)
             [webView performDragOperation:draggingInfo];
         else
@@ -616,7 +616,7 @@ static int buildModifierFlags(const WebScriptObject* modifiers)
         [invocation setSelector:@selector(mouseMoveToX:Y:)];
         [invocation setArgument:&x atIndex:2];
         [invocation setArgument:&y atIndex:3];
-        
+
         [EventSendingController saveEvent:invocation];
         return;
     }
@@ -625,13 +625,13 @@ static int buildModifierFlags(const WebScriptObject* modifiers)
 #if !PLATFORM(IOS)
     lastMousePosition = [view convertPoint:NSMakePoint(x, [view frame].size.height - y) toView:nil];
     NSEvent *event = [NSEvent mouseEventWithType:(leftMouseButtonDown ? NSLeftMouseDragged : NSMouseMoved)
-                                        location:lastMousePosition 
-                                   modifierFlags:0 
+                                        location:lastMousePosition
+                                   modifierFlags:0
                                        timestamp:[self currentEventTime]
-                                    windowNumber:[[view window] windowNumber] 
-                                         context:[NSGraphicsContext currentContext] 
-                                     eventNumber:++eventNumber 
-                                      clickCount:(leftMouseButtonDown ? clickCount : 0) 
+                                    windowNumber:[[view window] windowNumber]
+                                         context:[NSGraphicsContext currentContext]
+                                     eventNumber:++eventNumber
+                                      clickCount:(leftMouseButtonDown ? clickCount : 0)
                                         pressure:0.0];
 #else
     lastMousePosition = [view convertPoint:NSMakePoint(x, y) toView:nil];
@@ -672,7 +672,7 @@ static int buildModifierFlags(const WebScriptObject* modifiers)
 #if !PLATFORM(IOS)
     CGScrollEventUnit unit = c?kCGScrollEventUnitPixel:kCGScrollEventUnitLine;
     CGEventRef cgScrollEvent = CGEventCreateScrollWheelEvent(NULL, unit, 2, y, x);
-    
+
     // CGEvent locations are in global display coordinates.
     CGPoint lastGlobalMousePosition = {
         lastMousePosition.x,
@@ -740,7 +740,7 @@ const uint32_t kCGScrollWheelEventMomentumPhase = 123;
     CGEventSetLocation(cgScrollEvent, lastGlobalMousePosition);
     CGEventSetIntegerValueField(cgScrollEvent, kCGScrollWheelEventScrollPhase, phase);
     CGEventSetIntegerValueField(cgScrollEvent, kCGScrollWheelEventMomentumPhase, momentum);
-    
+
     NSEvent* scrollEvent = [NSEvent eventWithCGEvent:cgScrollEvent];
     CFRelease(cgScrollEvent);
 
@@ -759,18 +759,18 @@ const uint32_t kCGScrollWheelEventMomentumPhase = 123;
     [self updateClickCountForButton:RightMouseButton];
 
     NSEvent *event = [NSEvent mouseEventWithType:NSRightMouseDown
-                                        location:lastMousePosition 
-                                   modifierFlags:0 
+                                        location:lastMousePosition
+                                   modifierFlags:0
                                        timestamp:[self currentEventTime]
-                                    windowNumber:[[[mainFrame webView] window] windowNumber] 
-                                         context:[NSGraphicsContext currentContext] 
-                                     eventNumber:++eventNumber 
-                                      clickCount:clickCount 
+                                    windowNumber:[[[mainFrame webView] window] windowNumber]
+                                         context:[NSGraphicsContext currentContext]
+                                     eventNumber:++eventNumber
+                                      clickCount:clickCount
                                         pressure:0.0];
 
     NSView *subView = [[mainFrame webView] hitTest:[event locationInWindow]];
     NSMutableArray *menuItemStrings = [NSMutableArray array];
-    
+
     if (subView) {
         [NSApp _setCurrentEvent:event];
         NSMenu* menu = [subView menuForEvent:event];
@@ -787,7 +787,7 @@ const uint32_t kCGScrollWheelEventMomentumPhase = 123;
                 [menuItemStrings addObject:[menuItem title]];
         }
     }
-    
+
     return menuItemStrings;
 #else
     return nil;
@@ -1108,47 +1108,47 @@ const uint32_t kCGScrollWheelEventMomentumPhase = 123;
 
     printf("event type:      %s\n", [[event type] UTF8String]);
     printf("  target:        <%s>\n", [[[target nodeName] lowercaseString] UTF8String]);
-    
+
     if ([event isKindOfClass:[DOMEvent class]]) {
         printf("  eventPhase:    %d\n", [event eventPhase]);
         printf("  bubbles:       %d\n", [event bubbles] ? 1 : 0);
         printf("  cancelable:    %d\n", [event cancelable] ? 1 : 0);
     }
-    
+
     if ([event isKindOfClass:[DOMUIEvent class]]) {
         printf("  detail:        %d\n", [(DOMUIEvent*)event detail]);
-        
+
         DOMAbstractView *view = [(DOMUIEvent*)event view];
         if (view) {
-            printf("  view:          OK");            
+            printf("  view:          OK");
             if ([view document])
                 printf(" (document: OK)");
             printf("\n");
         }
     }
-    
+
     if ([event isKindOfClass:[DOMKeyboardEvent class]]) {
         printf("  keyIdentifier: %s\n", [[(DOMKeyboardEvent*)event keyIdentifier] UTF8String]);
         printf("  keyLocation:   %d\n", [(DOMKeyboardEvent*)event location]);
-        printf("  modifier keys: c:%d s:%d a:%d m:%d\n", 
-               [(DOMKeyboardEvent*)event ctrlKey] ? 1 : 0, 
-               [(DOMKeyboardEvent*)event shiftKey] ? 1 : 0, 
-               [(DOMKeyboardEvent*)event altKey] ? 1 : 0, 
+        printf("  modifier keys: c:%d s:%d a:%d m:%d\n",
+               [(DOMKeyboardEvent*)event ctrlKey] ? 1 : 0,
+               [(DOMKeyboardEvent*)event shiftKey] ? 1 : 0,
+               [(DOMKeyboardEvent*)event altKey] ? 1 : 0,
                [(DOMKeyboardEvent*)event metaKey] ? 1 : 0);
         printf("  keyCode:       %d\n", [(DOMKeyboardEvent*)event keyCode]);
         printf("  charCode:      %d\n", [(DOMKeyboardEvent*)event charCode]);
     }
-    
+
     if ([event isKindOfClass:[DOMMouseEvent class]]) {
         printf("  button:        %d\n", [(DOMMouseEvent*)event button]);
         printf("  clientX:       %d\n", [(DOMMouseEvent*)event clientX]);
         printf("  clientY:       %d\n", [(DOMMouseEvent*)event clientY]);
         printf("  screenX:       %d\n", [(DOMMouseEvent*)event screenX]);
         printf("  screenY:       %d\n", [(DOMMouseEvent*)event screenY]);
-        printf("  modifier keys: c:%d s:%d a:%d m:%d\n", 
-               [(DOMMouseEvent*)event ctrlKey] ? 1 : 0, 
-               [(DOMMouseEvent*)event shiftKey] ? 1 : 0, 
-               [(DOMMouseEvent*)event altKey] ? 1 : 0, 
+        printf("  modifier keys: c:%d s:%d a:%d m:%d\n",
+               [(DOMMouseEvent*)event ctrlKey] ? 1 : 0,
+               [(DOMMouseEvent*)event shiftKey] ? 1 : 0,
+               [(DOMMouseEvent*)event altKey] ? 1 : 0,
                [(DOMMouseEvent*)event metaKey] ? 1 : 0);
         id relatedTarget = [(DOMMouseEvent*)event relatedTarget];
         if (relatedTarget) {
@@ -1158,7 +1158,7 @@ const uint32_t kCGScrollWheelEventMomentumPhase = 123;
             printf("\n");
         }
     }
-    
+
     if ([event isKindOfClass:[DOMMutationEvent class]]) {
         printf("  prevValue:     %s\n", [[(DOMMutationEvent*)event prevValue] UTF8String]);
         printf("  newValue:      %s\n", [[(DOMMutationEvent*)event newValue] UTF8String]);
@@ -1166,21 +1166,21 @@ const uint32_t kCGScrollWheelEventMomentumPhase = 123;
         printf("  attrChange:    %d\n", [(DOMMutationEvent*)event attrChange]);
         DOMNode *relatedNode = [(DOMMutationEvent*)event relatedNode];
         if (relatedNode) {
-            printf("  relatedNode:   %s (nodeName: %s)\n", 
+            printf("  relatedNode:   %s (nodeName: %s)\n",
                    [[[relatedNode class] description] UTF8String],
                    [[relatedNode nodeName] UTF8String]);
         }
     }
-    
+
     if ([event isKindOfClass:[DOMWheelEvent class]]) {
         printf("  clientX:       %d\n", [(DOMWheelEvent*)event clientX]);
         printf("  clientY:       %d\n", [(DOMWheelEvent*)event clientY]);
         printf("  screenX:       %d\n", [(DOMWheelEvent*)event screenX]);
         printf("  screenY:       %d\n", [(DOMWheelEvent*)event screenY]);
-        printf("  modifier keys: c:%d s:%d a:%d m:%d\n", 
-               [(DOMWheelEvent*)event ctrlKey] ? 1 : 0, 
-               [(DOMWheelEvent*)event shiftKey] ? 1 : 0, 
-               [(DOMWheelEvent*)event altKey] ? 1 : 0, 
+        printf("  modifier keys: c:%d s:%d a:%d m:%d\n",
+               [(DOMWheelEvent*)event ctrlKey] ? 1 : 0,
+               [(DOMWheelEvent*)event shiftKey] ? 1 : 0,
+               [(DOMWheelEvent*)event altKey] ? 1 : 0,
                [(DOMWheelEvent*)event metaKey] ? 1 : 0);
         printf("  isHorizontal:  %d\n", [(DOMWheelEvent*)event isHorizontal] ? 1 : 0);
         printf("  wheelDelta:    %d\n", [(DOMWheelEvent*)event wheelDelta]);
@@ -1191,58 +1191,58 @@ const uint32_t kCGScrollWheelEventMomentumPhase = 123;
 // Instead we need to get testing framework based on the Objective-C bindings
 // to work well enough that we can test that way instead.
 - (void)fireKeyboardEventsToElement:(WebScriptObject *)element {
-    
+
     if (![element isKindOfClass:[DOMHTMLElement class]])
         return;
-    
+
     DOMHTMLElement *target = (DOMHTMLElement*)element;
     DOMDocument *document = [target ownerDocument];
-    
+
     // Keyboard Event 1
-    
+
     DOMEvent *domEvent = [document createEvent:@"KeyboardEvent"];
-    [(DOMKeyboardEvent*)domEvent initKeyboardEvent:@"keydown" 
+    [(DOMKeyboardEvent*)domEvent initKeyboardEvent:@"keydown"
                                          canBubble:YES
                                         cancelable:YES
                                               view:[document defaultView]
-                                     keyIdentifier:@"U+000041" 
+                                     keyIdentifier:@"U+000041"
                                        location:0
                                            ctrlKey:YES
                                             altKey:NO
                                           shiftKey:NO
                                            metaKey:NO];
-    [target dispatchEvent:domEvent];  
-        
+    [target dispatchEvent:domEvent];
+
     // Keyboard Event 2
-    
+
     domEvent = [document createEvent:@"KeyboardEvent"];
-    [(DOMKeyboardEvent*)domEvent initKeyboardEvent:@"keypress" 
+    [(DOMKeyboardEvent*)domEvent initKeyboardEvent:@"keypress"
                                          canBubble:YES
                                         cancelable:YES
                                               view:[document defaultView]
-                                     keyIdentifier:@"U+000045" 
+                                     keyIdentifier:@"U+000045"
                                        location:1
                                            ctrlKey:NO
                                             altKey:YES
                                           shiftKey:NO
                                            metaKey:NO];
-    [target dispatchEvent:domEvent];    
-    
+    [target dispatchEvent:domEvent];
+
     // Keyboard Event 3
-    
+
     domEvent = [document createEvent:@"KeyboardEvent"];
-    [(DOMKeyboardEvent*)domEvent initKeyboardEvent:@"keyup" 
+    [(DOMKeyboardEvent*)domEvent initKeyboardEvent:@"keyup"
                                          canBubble:YES
                                         cancelable:YES
                                               view:[document defaultView]
-                                     keyIdentifier:@"U+000056" 
+                                     keyIdentifier:@"U+000056"
                                        location:0
                                            ctrlKey:NO
                                             altKey:NO
                                           shiftKey:NO
                                            metaKey:NO];
-    [target dispatchEvent:domEvent];   
-    
+    [target dispatchEvent:domEvent];
+
 }
 
 #if PLATFORM(IOS)
@@ -1291,7 +1291,7 @@ const uint32_t kCGScrollWheelEventMomentumPhase = 123;
 - (void)setTouchModifier:(NSString*)modifierName value:(BOOL)flag
 {
     unsigned modifier = 0;
-    
+
     if ([modifierName isEqualToString:@"alt"])
         modifier = WebEventFlagMaskAlternate;
     else if ([modifierName isEqualToString:@"shift"])
@@ -1315,7 +1315,7 @@ const uint32_t kCGScrollWheelEventMomentumPhase = 123;
     NSMutableArray *touchLocations = [[NSMutableArray alloc] initWithCapacity:[touches count]];
     NSMutableArray *touchIdentifiers = [[NSMutableArray alloc] initWithCapacity:[touches count]];
     NSMutableArray *touchPhases = [[NSMutableArray alloc] initWithCapacity:[touches count]];
-    
+
     CGPoint centroid = CGPointZero;
     NSUInteger touchesDownCount = 0;
 
@@ -1326,7 +1326,7 @@ const uint32_t kCGScrollWheelEventMomentumPhase = 123;
 
         if ((currTouch.phase == UITouchPhaseEnded) || (currTouch.phase == UITouchPhaseCancelled))
             continue;
-        
+
         centroid.x += currTouch.location.x;
         centroid.y += currTouch.location.y;
 
@@ -1353,11 +1353,11 @@ const uint32_t kCGScrollWheelEventMomentumPhase = 123;
     [mainFrame updateLayout];
     [[[mainFrame webView] window] sendEventSynchronously:event];
     [event release];
-    
+
     [touchLocations release];
     [touchIdentifiers release];
     [touchPhases release];
-    
+
     nextEventFlags = 0;
 }
 

@@ -63,7 +63,7 @@ public:
     {
         return !(*this == o);
     }
-    
+
     int x() const { return m_location.x(); }
     int y() const { return m_location.y(); }
     IntPoint location() const { return m_location; }

@@ -42,7 +42,7 @@ import javafx.stage.Stage;
 import javafx.scene.input.KeyCode;
 
 public class HelloSimpleTableView extends Application {
-    
+
     public class Item {
         public String item;
         public Item (String item) {
@@ -76,7 +76,7 @@ public class HelloSimpleTableView extends Application {
                 System.out.println("SelectedIndex: " + tableView.getSelectionModel().getSelectedIndex());
             }
         });
-        
+
         ToggleButton button1 = new ToggleButton("cell selection");
         tableView.getSelectionModel().cellSelectionEnabledProperty().bind(button1.selectedProperty());
         ToggleButton button2 = new ToggleButton("multi selection");
@@ -100,7 +100,7 @@ public class HelloSimpleTableView extends Application {
                 group.getChildren().add(tableView);
             }
         });
-        
+
         Scene scene = new Scene(group, 800, 600);
         scene.setOnKeyPressed(l -> {
             if (l.getCode() == KeyCode.DIGIT1) {
@@ -113,7 +113,7 @@ public class HelloSimpleTableView extends Application {
         stage.setScene(scene);
         stage.show();
     }
-    
+
     public static void main(String[] args) {
         launch(args);
     }

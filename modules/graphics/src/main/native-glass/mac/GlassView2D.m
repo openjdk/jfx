@@ -64,7 +64,7 @@
     [self removeTrackingArea: self->trackingArea];
     [self->trackingArea release];
     self->trackingArea = nil;
-    
+
     [super dealloc];
 }
 
@@ -278,13 +278,13 @@
 - (BOOL)performDragOperation:(id <NSDraggingInfo>)sender
 {
     [self->delegate sendJavaDndEvent:sender type:com_sun_glass_events_DndEvent_PERFORM];
-    
+
     return YES;
 }
 
 - (void)concludeDragOperation:(id <NSDraggingInfo>)sender
 {
-    
+
 }
 
 - (NSDragOperation)draggingEntered:(id <NSDraggingInfo>)sender
@@ -338,7 +338,7 @@
         fprintf(stderr, "bounds: %f,%f %fx%f\n", bounds.origin.x, bounds.origin.y, bounds.size.width, bounds.size.height);
         NSRect frame = [self frame];
         fprintf(stderr, "frame: %f,%f %fx%f\n", frame.origin.x, frame.origin.y, frame.size.width, frame.size.height);
-        
+
         CGRect bbox = CGContextGetClipBoundingBox(cgContext);
         fprintf(stderr, "bbox: %f,%f %fx%f\n", bbox.origin.x, bbox.origin.y, bbox.size.width, bbox.size.height);
         CGAffineTransform ctm = CGContextGetCTM(cgContext);
@@ -366,7 +366,7 @@
 #if 0
         CGContextFillRect(cgContext, CGRectMake(0, 0, 128, 128));
 #endif
-        
+
         CGContextFlush(cgContext);
     }
     CGContextRestoreGState(cgContext);
@@ -375,7 +375,7 @@
 - (void)pushPixels:(void*)pixels withWidth:(GLuint)width withHeight:(GLuint)height withScale:(GLfloat)scale withEnv:(JNIEnv *)env
 {
     assert([NSGraphicsContext currentContext] != nil);
-    
+
     CGContextRef cgContext = [[NSGraphicsContext currentContext] graphicsPort];
     {
         CGImageRef cgImage = NULL;
@@ -391,7 +391,7 @@
                         //NSLog(@"Glass View2D size: %dx%d, but pixels size: %dx%d", (int)size.width, (int)size.height, width, height);
                         //CGContextClearRect(cgContext, CGRectMake(0, 0, size.width, size.height));
                     }
-                    
+
                     CGContextSaveGState(cgContext);
                     {
                         CGContextTranslateCTM(cgContext, 0, size.height);

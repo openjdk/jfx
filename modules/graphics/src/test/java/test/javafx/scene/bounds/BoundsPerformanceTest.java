@@ -39,7 +39,7 @@ import javafx.geometry.Bounds;
 import org.junit.Test;
 
 public class BoundsPerformanceTest {
-   
+
     /***************************************************************************
      *                                                                         *
      *                            Performance Tests                            *

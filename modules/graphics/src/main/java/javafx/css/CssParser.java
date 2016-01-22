@@ -368,23 +368,23 @@ final public class CssParser {
      * parser, this Term stuff shouldn't be needed.
      */
     static class Term {
-    	final Token token;
-    	Term nextInSeries;
-    	Term nextLayer;
+        final Token token;
+        Term nextInSeries;
+        Term nextLayer;
         Term firstArg;
         Term nextArg;
-    	Term(Token token) {
+        Term(Token token) {
             this.token = token;
             this.nextLayer = null;
             this.nextInSeries = null;
             this.firstArg = null;
             this.nextArg = null;
-    	}
-    	Term() {
+        }
+        Term() {
             this(null);
-    	}
+        }
 
-    	@Override public String toString() {
+        @Override public String toString() {
             StringBuilder buf = new StringBuilder();
             if (token != null) buf.append(String.valueOf(token.getText()));
             if (nextInSeries != null) {
@@ -407,7 +407,7 @@ final public class CssParser {
             }
 
             return buf.toString();
-    	}
+        }
 
     }
 

@@ -40,18 +40,18 @@ import java.util.Map;
  *
  */
 public class Test {
-    
+
     public static void main(String[] args) throws FileNotFoundException, IOException {
         if (args.length == 0) {
             System.out.println("need a file");
             return;
         }
-        
+
         MaxData maxData = new MaxAseParser(args[0]).data;
-        
+
         for (Map.Entry<String, MaxData.Node> n : maxData.nodes.entrySet()) {
             System.out.println(n.getValue().name);
         }
     }
-    
+
 }

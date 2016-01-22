@@ -156,9 +156,9 @@ void EventSenderProxy::mouseDown(unsigned buttonNumber, WKEventModifiers modifie
                                    modifierFlags:buildModifierFlags(modifiers)
                                        timestamp:absoluteTimeForEventTime(currentEventTime())
                                     windowNumber:[m_testController->mainWebView()->platformWindow() windowNumber]
-                                         context:[NSGraphicsContext currentContext] 
-                                     eventNumber:++eventNumber 
-                                      clickCount:m_clickCount 
+                                         context:[NSGraphicsContext currentContext]
+                                     eventNumber:++eventNumber
+                                      clickCount:m_clickCount
                                         pressure:0.0];
 
     NSView *targetView = [m_testController->mainWebView()->platformView() hitTest:[event locationInWindow]];
@@ -179,14 +179,14 @@ void EventSenderProxy::mouseUp(unsigned buttonNumber, WKEventModifiers modifiers
                                    modifierFlags:buildModifierFlags(modifiers)
                                        timestamp:absoluteTimeForEventTime(currentEventTime())
                                     windowNumber:[m_testController->mainWebView()->platformWindow() windowNumber]
-                                         context:[NSGraphicsContext currentContext] 
-                                     eventNumber:++eventNumber 
-                                      clickCount:m_clickCount 
+                                         context:[NSGraphicsContext currentContext]
+                                     eventNumber:++eventNumber
+                                      clickCount:m_clickCount
                                         pressure:0.0];
 
     NSView *targetView = [m_testController->mainWebView()->platformView() hitTest:[event locationInWindow]];
     // FIXME: Silly hack to teach WKTR to respect capturing mouse events outside the WKView.
-    // The right solution is just to use NSApplication's built-in event sending methods, 
+    // The right solution is just to use NSApplication's built-in event sending methods,
     // instead of rolling our own algorithm for selecting an event target.
     targetView = targetView ? targetView : m_testController->mainWebView()->platformView();
     ASSERT(targetView);
@@ -207,12 +207,12 @@ void EventSenderProxy::mouseMoveTo(double x, double y)
     m_position.y = position.y;
     NSEvent *event = [NSEvent mouseEventWithType:(m_leftMouseButtonDown ? NSLeftMouseDragged : NSMouseMoved)
                                         location:position
-                                   modifierFlags:0 
+                                   modifierFlags:0
                                        timestamp:absoluteTimeForEventTime(currentEventTime())
-                                    windowNumber:[[view window] windowNumber] 
-                                         context:[NSGraphicsContext currentContext] 
-                                     eventNumber:++eventNumber 
-                                      clickCount:(m_leftMouseButtonDown ? m_clickCount : 0) 
+                                    windowNumber:[[view window] windowNumber]
+                                         context:[NSGraphicsContext currentContext]
+                                     eventNumber:++eventNumber
+                                      clickCount:(m_leftMouseButtonDown ? m_clickCount : 0)
                                         pressure:0.0];
 
     NSView *targetView = [m_testController->mainWebView()->platformView() hitTest:[event locationInWindow]];
@@ -230,7 +230,7 @@ void EventSenderProxy::leapForward(int milliseconds)
 
 void EventSenderProxy::keyDown(WKStringRef key, WKEventModifiers modifiers, unsigned keyLocation)
 {
-    NSString* character = [NSString stringWithCString:toSTD(key).c_str() 
+    NSString* character = [NSString stringWithCString:toSTD(key).c_str()
                                    encoding:[NSString defaultCStringEncoding]];
 
     NSString *eventCharacter = character;

@@ -55,7 +55,7 @@ namespace TestWebKitAPI {
 static void contextMenuCopyLink(WebView* webView, int itemIndex)
 {
     [[[[webView mainFrame] frameView] documentView] layout];
-    
+
     DOMDocument *document = [[webView mainFrame] DOMDocument];
     DOMElement *documentElement = [document documentElement];
     DOMHTMLAnchorElement *anchor = (DOMHTMLAnchorElement *)[[documentElement querySelectorAll:@"a"] item:itemIndex];
@@ -66,7 +66,7 @@ static void contextMenuCopyLink(WebView* webView, int itemIndex)
                                    modifierFlags:0
                                        timestamp:GetCurrentEventTime()
                                     windowNumber:[window windowNumber]
-                                         context:[NSGraphicsContext currentContext] 
+                                         context:[NSGraphicsContext currentContext]
                                      eventNumber:0
                                       clickCount:0
                                         pressure:0.0];
@@ -80,7 +80,7 @@ static void contextMenuCopyLink(WebView* webView, int itemIndex)
         NSMenuItem* menuItem = [menu itemAtIndex:i];
         if ([menuItem tag] != WebMenuItemTagCopyLinkToClipboard)
             continue;
-            
+
         [menu performActionForItemAtIndex:i];
     }
 }
@@ -96,16 +96,16 @@ TEST(WebKit1, ContextMenuCanCopyURL)
     webView.get().frameLoadDelegate = delegate.get();
 
     [webView.get().mainFrame loadRequest:[NSURLRequest requestWithURL:[[NSBundle mainBundle] URLForResource:@"ContextMenuCanCopyURL" withExtension:@"html" subdirectory:@"TestWebKitAPI.resources"]]];
-    
+
     Util::run(&didFinishLoad);
 
     contextMenuCopyLink(webView.get(), 0);
-    
+
     NSURL *url = [NSURL URLFromPasteboard:[NSPasteboard generalPasteboard]];
     EXPECT_EQ(String("http://www.webkit.org/"), String([url absoluteString]));
 
     contextMenuCopyLink(webView.get(), 1);
-    
+
     NSArray * urls = [WebURLsWithTitles URLsFromPasteboard: [NSPasteboard generalPasteboard]];
     NSArray * titles = [WebURLsWithTitles titlesFromPasteboard: [NSPasteboard generalPasteboard]];
     EXPECT_WK_STREQ(@"http://xn--ls8h.la/", [[urls objectAtIndex:0] absoluteString]);

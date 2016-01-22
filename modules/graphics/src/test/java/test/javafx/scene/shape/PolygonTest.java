@@ -110,7 +110,7 @@ public class PolygonTest {
 
         assertBoundsEqual(box(100, 100, 100, 100), polygon.getBoundsInLocal());
     }
-    
+
     @Test public void testConfigShape() throws Exception {
         final StubPolygon polygon =
                 new StubPolygon(new double[] { 0, 0, 0, 1, 1, 1, 1, 0 });

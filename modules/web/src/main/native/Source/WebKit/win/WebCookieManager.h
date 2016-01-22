@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef WebCookieManager_h
@@ -35,7 +35,7 @@ public:
     static WebCookieManager* createInstance();
 
     // IUnknown
-    virtual HRESULT STDMETHODCALLTYPE QueryInterface( 
+    virtual HRESULT STDMETHODCALLTYPE QueryInterface(
         /* [in] */ REFIID riid,
         /* [iid_is][out] */ void** ppvObject);
 
@@ -44,10 +44,10 @@ public:
     virtual ULONG STDMETHODCALLTYPE Release();
 
     // IWebCookieManager
-    virtual /* [local] */ HRESULT STDMETHODCALLTYPE cookieStorage( 
+    virtual /* [local] */ HRESULT STDMETHODCALLTYPE cookieStorage(
         /* [retval][out] */ CFHTTPCookieStorageRef* storage);
 
-    virtual /* [local] */ HRESULT STDMETHODCALLTYPE setCookieStorage( 
+    virtual /* [local] */ HRESULT STDMETHODCALLTYPE setCookieStorage(
         /* [in] */ CFHTTPCookieStorageRef storage);
 
 private:

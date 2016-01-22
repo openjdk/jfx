@@ -68,7 +68,7 @@ public:
         ASSERT((!!m_location) && m_location.executableAddress() != JITWriteBarrierFlag);
         return m_location;
     }
-    
+
     void clear() { clear(0); }
     void clearToUnusedPointer() { clear(reinterpret_cast<void*>(unusedPointer)); }
 

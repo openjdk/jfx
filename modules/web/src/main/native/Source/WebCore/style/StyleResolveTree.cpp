@@ -340,7 +340,7 @@ static bool textRendererIsNeeded(const Text& textNode, const RenderObject& paren
     RenderObject* previousRenderer = previousSiblingRenderer(textNode);
     if (previousRenderer && previousRenderer->isBR()) // <span><br/> <br/></span>
         return false;
-        
+
     if (parentRenderer.isRenderInline()) {
         // <span><div/> <div/></span>
         if (previousRenderer && !previousRenderer->isInline())
@@ -348,7 +348,7 @@ static bool textRendererIsNeeded(const Text& textNode, const RenderObject& paren
     } else {
         if (parentRenderer.isRenderBlock() && !parentRenderer.childrenInline() && (!previousRenderer || !previousRenderer->isInline()))
             return false;
-        
+
         RenderObject* first = toRenderElement(parentRenderer).firstChild();
         while (first && first->isFloatingOrOutOfFlowPositioned())
             first = first->nextSibling();
@@ -557,7 +557,7 @@ static void attachRenderTree(Element& current, PassRefPtr<RenderStyle> resolvedS
     attachBeforeOrAfterPseudoElementIfNeeded(current, AFTER);
 
     current.updateFocusAppearanceAfterAttachIfNeeded();
-    
+
     if (current.hasCustomStyleResolveCallbacks())
         current.didAttachRenderers();
 }
@@ -864,7 +864,7 @@ void resolveTree(Element& current, Change change)
 
     current.clearNeedsStyleRecalc();
     current.clearChildNeedsStyleRecalc();
-    
+
     if (current.hasCustomStyleResolveCallbacks())
         current.didRecalcStyle(change);
 }

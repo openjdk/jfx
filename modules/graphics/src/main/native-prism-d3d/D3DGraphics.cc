@@ -40,9 +40,9 @@ JNIEXPORT jint JNICALL Java_com_sun_prism_d3d_D3DSwapChain_nPresent
   (JNIEnv *, jclass, jlong ctx, jlong swapChain)
 {
     TraceLn(NWT_TRACE_INFO, "D3DSwapChain_nPresent");
-    
+
     D3DContext *pCtx = (D3DContext*)jlong_to_ptr(ctx);
-    
+
     RETURN_STATUS_IF_NULL(pCtx, E_FAIL);
 
     D3DResource *pSwapChainRes = (D3DResource*)jlong_to_ptr(swapChain);
@@ -69,9 +69,9 @@ JNIEXPORT jboolean JNICALL Java_com_sun_prism_d3d_D3DContext_nGetFrameStats
 
 #if defined PERF_COUNTERS
     D3DContext *pCtx = (D3DContext*)jlong_to_ptr(ctx);
-    
+
     RETURN_STATUS_IF_NULL(pCtx, false);
-    
+
     D3DContext::FrameStats &st = pCtx->getStats();
 
     jclass pResultClass = env->GetObjectClass(pResultObject);
@@ -111,7 +111,7 @@ JNIEXPORT jint JNICALL Java_com_sun_prism_d3d_D3DContext_nDrawIndexedQuads
     TraceLn(NWT_TRACE_INFO, "D3DContext_nDrawIndexedQuads");
 
     D3DContext *pCtx = (D3DContext *)jlong_to_ptr(ctx);
-    
+
     RETURN_STATUS_IF_NULL(pCtx, E_FAIL);
 
     PrismSourceVertex *pSrcFloats = (PrismSourceVertex *)env->GetPrimitiveArrayCritical(fbuf, 0);
@@ -162,7 +162,7 @@ void D3DContext::stretchRect(IDirect3DSurface9* pSrcSurface,
                                int dstX0, int dstY0, int dstX1, int dstY1)
 {
     RETURN_IF_NULL(pd3dDevice);
-    
+
     HRESULT res;
     IDirect3DSurface9* pDst = (pDstSurface == NULL) ? currentSurface : pDstSurface;
     RECT srcRect = {srcX0, srcY0, srcX1, srcY1};
@@ -180,7 +180,7 @@ void D3DContext::stretchRect(IDirect3DSurface9* pSrcSurface,
 HRESULT D3DContext::drawIndexedQuads(PrismSourceVertex const *pSrcFloats, BYTE const *pSrcColors, int numVerts) {
 
     RETURN_STATUS_IF_NULL(pd3dDevice, E_FAIL);
-    
+
     // pVertexBufferRes and pVertexBuffer is never null
     // it is checked in D3DContext::InitDevice
     IDirect3DVertexBuffer9 *pVertexBuffer = pVertexBufferRes->GetVertexBuffer();
@@ -245,7 +245,7 @@ JNIEXPORT jint JNICALL Java_com_sun_prism_d3d_D3DGraphics_nClear
      jboolean clearDepth, jboolean ignoreScissor)
 {
     TraceLn(NWT_TRACE_INFO, "D3DGraphics_nClear");
-    
+
     D3DContext *pCtx = (D3DContext*)jlong_to_ptr(ctx);
     RETURN_STATUS_IF_NULL(pCtx, E_FAIL);
 
@@ -264,14 +264,14 @@ JNIEXPORT jint JNICALL Java_com_sun_prism_d3d_D3DContext_nSetBlendEnabled
 {
     D3DContext *pCtx = (D3DContext*)jlong_to_ptr(ctx);
     RETURN_STATUS_IF_NULL(pCtx, E_FAIL);
-    
+
     IDirect3DDevice9 *pd3dDevice = pCtx->Get3DDevice();
     RETURN_STATUS_IF_NULL(pd3dDevice, E_FAIL);
 
     HRESULT res;
     D3DBLEND srcBlend, dstBlend;
     BOOL enable = TRUE;
-    
+
     switch (d3dmode) {
         case com_sun_prism_d3d_D3DContext_D3DCOMPMODE_CLEAR:
             srcBlend = D3DBLEND_ZERO;
@@ -376,7 +376,7 @@ JNIEXPORT jint JNICALL Java_com_sun_prism_d3d_D3DContext_nSetCameraPosition
 {
     D3DContext *pCtx = (D3DContext*)jlong_to_ptr(ctx);
     RETURN_STATUS_IF_NULL(pCtx, E_FAIL);
-    
+
     return pCtx->SetCameraPosition(camPosX, camPosY, camPosZ);
 }
 
@@ -393,7 +393,7 @@ JNIEXPORT jint JNICALL Java_com_sun_prism_d3d_D3DContext_nSetProjViewMatrix
 {
     D3DContext *pCtx = (D3DContext*)jlong_to_ptr(ctx);
     RETURN_STATUS_IF_NULL(pCtx, E_FAIL);
-    
+
     return pCtx->SetProjViewMatrix(isOrtho,
         m00, m01, m02, m03,
         m10, m11, m12, m13,
@@ -414,7 +414,7 @@ JNIEXPORT jint JNICALL Java_com_sun_prism_d3d_D3DContext_nSetTransform
 {
     D3DContext *pCtx = (D3DContext*)jlong_to_ptr(ctx);
     RETURN_STATUS_IF_NULL(pCtx, E_FAIL);
-    
+
     return pCtx->SetTransform(m00, m01, m02, m03,
                               m10, m11, m12, m13,
                               m20, m21, m22, m23,
@@ -430,7 +430,7 @@ JNIEXPORT jint JNICALL Java_com_sun_prism_d3d_D3DContext_nResetTransform
 {
     D3DContext *pCtx = (D3DContext*)jlong_to_ptr(ctx);
     RETURN_STATUS_IF_NULL(pCtx, E_FAIL);
-    
+
     return pCtx->ResetTransform();
 }
 
@@ -444,7 +444,7 @@ JNIEXPORT void JNICALL Java_com_sun_prism_d3d_D3DContext_nSetWorldTransformToIde
 {
     D3DContext *pCtx = (D3DContext*)jlong_to_ptr(ctx);
     RETURN_IF_NULL(pCtx);
-    
+
     pCtx->setWorldTransformIndentity();
 }
 
@@ -504,6 +504,6 @@ JNIEXPORT jboolean JNICALL Java_com_sun_prism_d3d_D3DContext_nIsRTTVolatile
 {
     D3DContext *pCtx = (D3DContext*)jlong_to_ptr(ctx);
     RETURN_STATUS_IF_NULL(pCtx, false);
-    
+
     return pCtx->Get3DExDevice() ? false : true;
 }

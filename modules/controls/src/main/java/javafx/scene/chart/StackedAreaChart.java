@@ -55,17 +55,17 @@ import javafx.css.StyleableBooleanProperty;
 import javafx.css.StyleableProperty;
 
 /**
- * StackedAreaChart is a variation of {@link AreaChart} that displays trends of the 
- * contribution of each value. (over time e.g.) The areas are stacked so that each 
- * series adjoins but does not overlap the preceding series. This contrasts with 
- * the Area chart where each series overlays the preceding series. 
- * 
- * The cumulative nature of the StackedAreaChart gives an idea of the total Y data 
+ * StackedAreaChart is a variation of {@link AreaChart} that displays trends of the
+ * contribution of each value. (over time e.g.) The areas are stacked so that each
+ * series adjoins but does not overlap the preceding series. This contrasts with
+ * the Area chart where each series overlays the preceding series.
+ *
+ * The cumulative nature of the StackedAreaChart gives an idea of the total Y data
  * value at any given point along the X axis.
- * 
+ *
  * Since data points across multiple series may not be common, StackedAreaChart
  * interpolates values along the line joining the data points whenever necessary.
- * 
+ *
  * @since JavaFX 2.1
  */
 public class StackedAreaChart<X,Y> extends XYChart<X,Y> {
@@ -127,7 +127,7 @@ public class StackedAreaChart<X,Y> extends XYChart<X,Y> {
     public final boolean getCreateSymbols() { return createSymbols.getValue(); }
     public final void setCreateSymbols(boolean value) { createSymbols.setValue(value); }
     public final BooleanProperty createSymbolsProperty() { return createSymbols; }
-    
+
     // -------------- CONSTRUCTORS ----------------------------------------------
 
     /**
@@ -179,10 +179,10 @@ public class StackedAreaChart<X,Y> extends XYChart<X,Y> {
                 double y1 = getYAxis().toNumericValue(p1.getYValue());
                 double x3 = getXAxis().toNumericValue(p2.getXValue());
                 double y3 = getYAxis().toNumericValue(p2.getYValue());
-                
+
                 double x2 = getXAxis().toNumericValue(item.getXValue());
                 double y2 = getYAxis().toNumericValue(item.getYValue());
-      
+
 //                //1. y intercept of the line : y = ((y3-y1)/(x3-x1)) * x2 + (x3y1 - y3x1)/(x3 -x1)
                 double y = ((y3-y1)/(x3-x1)) * x2 + (x3*y1 - y3*x1)/(x3-x1);
                 item.setCurrentY(getYAxis().toRealValue(y));
@@ -227,7 +227,7 @@ public class StackedAreaChart<X,Y> extends XYChart<X,Y> {
                                         item.getXValue(), Interpolator.EASE_BOTH))
                 );
             }
-            
+
         } else if (symbol != null) {
             getPlotChildren().add(symbol);
         }
@@ -395,7 +395,7 @@ public class StackedAreaChart<X,Y> extends XYChart<X,Y> {
             removeSeriesFromDisplay(series);
         }
     }
-    
+
     /** @inheritDoc */
     @Override protected void updateAxisRange() {
         // This override is necessary to update axis range based on cumulative Y value for the
@@ -496,7 +496,7 @@ public class StackedAreaChart<X,Y> extends XYChart<X,Y> {
         }
     }
 
-     
+
     /** @inheritDoc */
     @Override protected void layoutPlotChildren() {
         ArrayList<DataPointInfo<X, Y>> currentSeriesData = new ArrayList<>();
@@ -551,7 +551,7 @@ public class StackedAreaChart<X,Y> extends XYChart<X,Y> {
                 if (dataIndex == firstCurrentIndex) firstCurrent = true;
                 final Data<X,Y> item = dataInfo.dataItem;
                 if (dataInfo.partOf.equals(PartOf.CURRENT)) { // handle data from current series
-                    int pIndex = findPreviousPrevious(aggregateData, dataIndex); 
+                    int pIndex = findPreviousPrevious(aggregateData, dataIndex);
                     int nIndex = findNextPrevious(aggregateData, dataIndex);
                     DataPointInfo<X, Y> prevPoint;
                     DataPointInfo<X, Y> nextPoint;
@@ -582,7 +582,7 @@ public class StackedAreaChart<X,Y> extends XYChart<X,Y> {
                                 pIndex = findPreviousPrevious(aggregateData, pIndex);
                                 prevPoint = aggregateData.get(pIndex);
                                 // If lastCurrent - add this drop down
-                            } 
+                            }
                             if (prevPoint.x.equals(dataInfo.x)) { // simply add
                                 double x = xAxis.getDisplayPosition(item.getCurrentX());
                                 final double yv = yAxis.toNumericValue(item.getCurrentY()) + yAxis.toNumericValue(prevPoint.y);
@@ -595,7 +595,7 @@ public class StackedAreaChart<X,Y> extends XYChart<X,Y> {
                                 addDropDown(currentSeriesData, item, prevPoint.x, prevPoint.y, prevPoint.displayX, prevPoint.displayY);
                             }
                         } else {
-                            // interpolate 
+                            // interpolate
                             nextPoint = (nIndex == -1) ? null : aggregateData.get(nIndex);
                             prevPoint = (pIndex == -1) ? null : aggregateData.get(pIndex);
                             final double yValue = yAxis.toNumericValue(item.getCurrentY());
@@ -630,9 +630,9 @@ public class StackedAreaChart<X,Y> extends XYChart<X,Y> {
                             }
                         }
                     }
-                    
+
                 } else { // handle data from Previous series.
-                    int pIndex = findPreviousCurrent(aggregateData, dataIndex); 
+                    int pIndex = findPreviousCurrent(aggregateData, dataIndex);
                     int nIndex = findNextCurrent(aggregateData, dataIndex);
                     DataPointInfo<X, Y> prevPoint;
                     DataPointInfo<X, Y> nextPoint;
@@ -670,8 +670,8 @@ public class StackedAreaChart<X,Y> extends XYChart<X,Y> {
                 dataIndex++;
                 if (firstCurrent) firstCurrent = false;
                 if (lastCurrent) lastCurrent = false;
-            } // end of inner for loop 
-            
+            } // end of inner for loop
+
             // Draw the SeriesLine and Series fill
             if (!currentSeriesData.isEmpty()) {
                 seriesLine.getElements().add(new MoveTo(currentSeriesData.get(0).displayX, currentSeriesData.get(0).displayY));
@@ -685,7 +685,7 @@ public class StackedAreaChart<X,Y> extends XYChart<X,Y> {
                 }
                 fillPath.getElements().add(new  LineTo(point.displayX, point.displayY));
                 // draw symbols only for actual data points and skip for interpolated points.
-                if (!point.skipSymbol) { 
+                if (!point.skipSymbol) {
                     Node symbol = point.dataItem.getNode();
                     if (symbol != null) {
                         final double w = symbol.prefWidth(-1);
@@ -703,7 +703,7 @@ public class StackedAreaChart<X,Y> extends XYChart<X,Y> {
             if (!fillPath.getElements().isEmpty()) {
                 fillPath.getElements().add(new ClosePath());
             }
-             
+
         }  // end of out for loop
      }
 
@@ -730,7 +730,7 @@ public class StackedAreaChart<X,Y> extends XYChart<X,Y> {
         }
         return -1;
      }
-     
+
      private int findPreviousCurrent(ArrayList<DataPointInfo<X, Y>> points, int index) {
         for(int i = index-1; i >= 0; i--) {
             if (points.get(i).partOf.equals(PartOf.CURRENT)) {
@@ -739,8 +739,8 @@ public class StackedAreaChart<X,Y> extends XYChart<X,Y> {
         }
         return -1;
      }
-     
-     
+
+
     private int findPreviousPrevious(ArrayList<DataPointInfo<X, Y>> points, int index) {
        for(int i = index-1; i >= 0; i--) {
             if (points.get(i).partOf.equals(PartOf.PREVIOUS)) {
@@ -757,8 +757,8 @@ public class StackedAreaChart<X,Y> extends XYChart<X,Y> {
         }
         return -1;
     }
-     
-    
+
+
      private void sortAggregateList(ArrayList<DataPointInfo<X, Y>> aggregateList) {
         Collections.sort(aggregateList, (o1, o2) -> {
             Data<X,Y> d1 = o1.dataItem;
@@ -768,9 +768,9 @@ public class StackedAreaChart<X,Y> extends XYChart<X,Y> {
             return (val1 < val2 ? -1 : ( val1 == val2) ? 0 : 1);
         });
      }
-    
+
     private double interpolate(double lowX, double lowY, double highX, double highY, double x) {
-         // using y = mx+c find the y for the given x. 
+         // using y = mx+c find the y for the given x.
          return (((highY - lowY)/(highX - lowX))*(x - lowX))+lowY;
     }
 
@@ -815,8 +815,8 @@ public class StackedAreaChart<X,Y> extends XYChart<X,Y> {
     }
 
     // -------------- INNER CLASSES --------------------------------------------
-    /* 
-     * Helper class to hold data and display and other information for each 
+    /*
+     * Helper class to hold data and display and other information for each
      * data point
      */
     final static class DataPointInfo<X, Y> {
@@ -829,7 +829,7 @@ public class StackedAreaChart<X,Y> extends XYChart<X,Y> {
         boolean skipSymbol = false; // interpolated point - skip drawing symbol
         boolean lineTo = false; // should there be a lineTo to this point on SeriesLine.
         boolean dropDown = false; // Is this a drop down point ( non data point).
-        
+
         //----- Constructors --------------------
         DataPointInfo() {}
 
@@ -839,11 +839,11 @@ public class StackedAreaChart<X,Y> extends XYChart<X,Y> {
             this.y = y;
             this.partOf = partOf;
         }
-        
+
         DataPointInfo(boolean dropDown) {
             this.dropDown = dropDown;
         }
-        
+
         void setValues(Data<X,Y> item, X x, Y y, double dx, double dy,
                         PartOf partOf, boolean skipSymbol, boolean lineTo) {
             this.dataItem = item;
@@ -855,24 +855,24 @@ public class StackedAreaChart<X,Y> extends XYChart<X,Y> {
             this.skipSymbol = skipSymbol;
             this.lineTo = lineTo;
         }
-        
+
         public final X getX() {
             return x;
         }
-        
+
         public final Y getY() {
             return y;
         }
     }
 
     // To indicate if the data point belongs to the current or the previous series.
-    private static enum PartOf { 
+    private static enum PartOf {
         CURRENT,
         PREVIOUS
     }
-    
+
     // -------------- STYLESHEET HANDLING --------------------------------------
-    
+
     private static class StyleableProperties {
 
         private static final CssMetaData<StackedAreaChart<?, ?>, Boolean> CREATE_SYMBOLS =
@@ -888,9 +888,9 @@ public class StackedAreaChart<X,Y> extends XYChart<X,Y> {
                 return (StyleableProperty<Boolean>)(WritableValue<Boolean>)node.createSymbolsProperty();
             }
         };
-        
+
         private static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES;
-        
+
         static {
             final List<CssMetaData<? extends Styleable, ?>> styleables =
                 new ArrayList<CssMetaData<? extends Styleable, ?>>(XYChart.getClassCssMetaData());

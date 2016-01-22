@@ -32,7 +32,7 @@ import javafx.event.EventType;
 /**
  * Event related to dialog showing/hiding actions. In particular, this event is
  * used exclusively by the following methods:
- * 
+ *
  * <ul>
  *   <li>{@link Dialog#onShowingProperty()}
  *   <li>{@link Dialog#onShownProperty()}
@@ -40,14 +40,14 @@ import javafx.event.EventType;
  *   <li>{@link Dialog#onCloseRequestProperty()}
  *   <li>{@link Dialog#onHiddenProperty()()}
  * </ul>
- * 
+ *
  * @see Dialog
  * @since JavaFX 8u40
  */
 public class DialogEvent extends Event {
 
     private static final long serialVersionUID = 20140716L;
-    
+
     /**
      * Common supertype for all dialog event types.
      */
@@ -102,7 +102,7 @@ public class DialogEvent extends Event {
     /**
      * Returns a string representation of this {@code DialogEvent} object.
      * @return a string representation of this {@code DialogEvent} object.
-     */ 
+     */
     @Override public String toString() {
         final StringBuilder sb = new StringBuilder("DialogEvent [");
 

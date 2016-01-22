@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 
@@ -32,7 +32,7 @@
 #include "IntPoint.h"
 
 namespace WebCore {
-    
+
 class Clipboard;
 class DragData;
 class Element;
@@ -47,7 +47,7 @@ public:
     virtual void willPerformDragSourceAction(DragSourceAction, const IntPoint&, Clipboard&) = 0;
     virtual DragDestinationAction actionMaskForDrag(DragData&) = 0;
     virtual DragSourceAction dragSourceActionMaskForPoint(const IntPoint& rootViewPoint) = 0;
-    
+
     virtual void startDrag(DragImageRef, const IntPoint& dragImageOrigin, const IntPoint& eventPos, Clipboard&, Frame&, bool linkDrag = false) = 0;
     virtual void dragEnded() { }
 
@@ -59,7 +59,7 @@ public:
 
     virtual ~DragClient() { }
 };
-    
+
 } // namespace WebCore
 
 #endif // DragClient_h

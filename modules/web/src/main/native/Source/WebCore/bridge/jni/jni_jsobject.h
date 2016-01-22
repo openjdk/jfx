@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef JAVASCRIPTCORE_BINDINGS_JNI_JSOBJECT_H
@@ -78,7 +78,7 @@ class JavaJSObject
 {
 public:
     JavaJSObject(jlong nativeHandle);
-    
+
     static jlong createNative(jlong nativeHandle);
     jobject call(jstring methodName, jobjectArray args) const;
     jobject eval(jstring script) const;
@@ -89,15 +89,15 @@ public:
     void setSlot(jint index, jobject value) const;
     jstring toString() const;
     void finalize() const;
-    
+
     static jvalue invoke(JSObjectCallContext*);
 
     jobject convertValueToJObject(JSValue) const;
     JSValue convertJObjectToValue(ExecState*, jobject) const;
     void getListFromJArray(ExecState*, jobjectArray, MarkedArgumentBuffer&) const;
-    
+
     RootObject* rootObject() const;
-    
+
     // Must be called from the thread that will be used to access JavaScript.
     static void initializeJNIThreading();
 private:

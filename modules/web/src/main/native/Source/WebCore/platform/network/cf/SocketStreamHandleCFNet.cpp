@@ -624,7 +624,7 @@ void SocketStreamHandle::platformClose()
 {
     LOG(Network, "SocketStreamHandle %p platformClose", this);
 
-    if (m_pacRunLoopSource) 
+    if (m_pacRunLoopSource)
         removePACRunLoopSource();
 
     ASSERT(!m_readStream == !m_writeStream);
@@ -644,7 +644,7 @@ void SocketStreamHandle::platformClose()
 
     CFReadStreamClose(m_readStream.get());
     CFWriteStreamClose(m_writeStream.get());
-    
+
     m_readStream = 0;
     m_writeStream = 0;
 

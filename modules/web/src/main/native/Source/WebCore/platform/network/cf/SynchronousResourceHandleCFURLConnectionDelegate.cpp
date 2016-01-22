@@ -106,7 +106,7 @@ CFURLRequestRef SynchronousResourceHandleCFURLConnectionDelegate::willSendReques
 static void setDefaultMIMEType(CFURLResponseRef response)
 {
     static CFStringRef defaultMIMETypeString = defaultMIMEType().createCFString().leakRef();
-    
+
     CFURLResponseSetMIMEType(response, defaultMIMETypeString);
 }
 #endif // !PLATFORM(COCOA)

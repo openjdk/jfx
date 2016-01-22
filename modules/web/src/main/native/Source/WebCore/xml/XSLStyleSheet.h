@@ -37,7 +37,7 @@ namespace WebCore {
 
 class CachedResourceLoader;
 class XSLImportRule;
-    
+
 class XSLStyleSheet final : public StyleSheet {
 public:
     static PassRefPtr<XSLStyleSheet> create(XSLImportRule* parentImport, const String& originalURL, const URL& finalURL)
@@ -63,9 +63,9 @@ public:
     virtual ~XSLStyleSheet();
 
     bool parseString(const String&);
-    
+
     void checkLoaded();
-    
+
     const URL& finalURL() const { return m_finalURL; }
 
     void loadChildSheets();
@@ -85,7 +85,7 @@ public:
 
     void markAsProcessed();
     bool processed() const { return m_processed; }
-    
+
     virtual String type() const override { return "text/xml"; }
     virtual bool disabled() const override { return m_isDisabled; }
     virtual void setDisabled(bool b) override { m_isDisabled = b; }
@@ -102,7 +102,7 @@ public:
 private:
     XSLStyleSheet(Node* parentNode, const String& originalURL, const URL& finalURL, bool embedded);
     XSLStyleSheet(XSLImportRule* parentImport, const String& originalURL, const URL& finalURL);
-    
+
     Node* m_ownerNode;
     String m_originalURL;
     URL m_finalURL;
@@ -115,7 +115,7 @@ private:
 
     xmlDocPtr m_stylesheetDoc;
     bool m_stylesheetDocTaken;
-    
+
     XSLStyleSheet* m_parentStyleSheet;
 };
 

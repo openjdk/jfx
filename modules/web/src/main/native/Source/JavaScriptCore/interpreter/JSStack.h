@@ -73,7 +73,7 @@ namespace JSC {
         static const ptrdiff_t maxExcessCapacity = 8 * 1024;
 
         JSStack(VM&);
-        
+
         bool ensureCapacityFor(Register* newTopOfStack);
 
         bool containsAddress(Register* address) { return (lowAddress() <= address && address < highAddress()); }

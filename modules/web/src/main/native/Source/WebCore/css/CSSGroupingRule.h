@@ -42,14 +42,14 @@ public:
 
     unsigned insertRule(const String& rule, unsigned index, ExceptionCode&);
     void deleteRule(unsigned index, ExceptionCode&);
-        
+
     // For CSSRuleList
     unsigned length() const;
     CSSRule* item(unsigned index) const;
 
 protected:
     CSSGroupingRule(StyleRuleGroup* groupRule, CSSStyleSheet* parent);
-    
+
     void appendCssTextForItems(StringBuilder&) const;
 
     RefPtr<StyleRuleGroup> m_groupRule;

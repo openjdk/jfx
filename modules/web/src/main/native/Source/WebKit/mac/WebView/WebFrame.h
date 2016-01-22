@@ -6,13 +6,13 @@
  * are met:
  *
  * 1.  Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer. 
+ *     notice, this list of conditions and the following disclaimer.
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
- *     documentation and/or other materials provided with the distribution. 
+ *     documentation and/or other materials provided with the distribution.
  * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
- *     from this software without specific prior written permission. 
+ *     from this software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY APPLE AND ITS CONTRIBUTORS "AS IS" AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
@@ -54,7 +54,7 @@
 /*!
     @method initWithName:webFrameView:webView:
     @abstract The designated initializer of WebFrame.
-    @discussion WebFrames are normally created for you by the WebView.  You should 
+    @discussion WebFrames are normally created for you by the WebView.  You should
     not need to invoke this method directly.
     @param name The name of the frame.
     @param view The WebFrameView for the frame.
@@ -178,8 +178,8 @@
 
 /*!
     @method findFrameNamed:
-    @discussion This method returns a frame with the given name. findFrameNamed returns self 
-    for _self and _current, the parent frame for _parent and the main frame for _top. 
+    @discussion This method returns a frame with the given name. findFrameNamed returns self
+    for _self and _current, the parent frame for _parent and the main frame for _top.
     findFrameNamed returns self for _parent and _top if the receiver is the mainFrame.
     findFrameNamed first searches from the current frame to all descending frames then the
     rest of the frames in the WebView. If still not found, findFrameNamed searches the

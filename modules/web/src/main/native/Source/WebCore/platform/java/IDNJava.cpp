@@ -22,16 +22,16 @@ static void initRefs(JNIEnv* env)
         ASSERT(toASCIIMID);
     }
 }
-    
+
 namespace WebCore {
 
 namespace IDNJava {
-    
+
 String toASCII(const String& hostname)
 {
     JNIEnv* env = WebCore_GetJavaEnv();
     initRefs(env);
-    
+
     JLString result = static_cast<jstring>(env->CallStaticObjectMethod(
             idnClass,
             toASCIIMID,
@@ -39,7 +39,7 @@ String toASCII(const String& hostname)
             java_net_IDN_ALLOW_UNASSIGNED));
     CheckAndClearException(env);
 
-    return String(env, result);    
+    return String(env, result);
 }
 
 } // namespace IDNJava

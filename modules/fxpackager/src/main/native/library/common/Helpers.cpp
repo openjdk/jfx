@@ -271,7 +271,7 @@ std::list<TString> Helpers::MapToNameValueList(OrderedMap<TString, TString> Map)
        pair<TString, TString> *item = *iterator;
        TString key = item->first;
        TString value = item->second;
-       
+
        if (value.length() == 0) {
            result.push_back(key);
        } else {

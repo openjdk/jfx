@@ -51,7 +51,7 @@ class MacMenuDelegate implements MenuDelegate, MenuItemDelegate {
     public MacMenuDelegate(final Menu menu) {
         this.menu = menu;
     }
-    
+
     public MacMenuDelegate() {
     }
 
@@ -64,8 +64,8 @@ class MacMenuDelegate implements MenuDelegate, MenuItemDelegate {
     private native long _createMenuItem(String title, char shortcut, int modifiers,
                                         Pixels icon, boolean enabled, boolean checked,
                                         Callback callback);
-    
-    @Override public boolean createMenuItem(String title, Callback callback, 
+
+    @Override public boolean createMenuItem(String title, Callback callback,
                                             int shortcutKey, int shortcutModifiers, Pixels pixels,
                                             boolean enabled, boolean checked) {
         ptr = _createMenuItem(title, (char)shortcutKey, shortcutModifiers,

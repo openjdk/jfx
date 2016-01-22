@@ -22,7 +22,7 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
- 
+
 #include "LensCommon.h"
 #include "com_sun_glass_ui_lens_LensCursor.h"
 #include "LensCursorImages.h"

@@ -40,24 +40,24 @@ import javafx.scene.input.MouseEvent;
 
 /**
  *
- * 
+ *
  */
 public abstract class AbstractMouseDragGesture extends AbstractGesture {
-    
-    
+
+
     private Observer observer;
     private Node eventTarget;
 
     public AbstractMouseDragGesture(ContentPanelController contentPanelController) {
         super(contentPanelController);
     }
-    
-    
+
+
     protected abstract void mousePressed(MouseEvent e);
     protected abstract void mouseDragDetected(MouseEvent e);
     protected abstract void mouseReleased(MouseEvent e);
     protected abstract void mouseExited(MouseEvent e);
-    
+
     /*
      * AbstractGesture
      */
@@ -69,14 +69,14 @@ public abstract class AbstractMouseDragGesture extends AbstractGesture {
         assert e.getEventType() == MouseEvent.MOUSE_PRESSED;
         assert e.getTarget() instanceof Node;
         assert observer != null;
-        
+
         this.observer = observer;
         this.eventTarget = (Node) e.getTarget();
 
         assert eventTarget.getOnDragDetected() == null;
         assert eventTarget.getOnMouseReleased() == null;
         assert eventTarget.getOnMouseExited() == null;
-        
+
         eventTarget.setOnDragDetected(e1 -> {
             try {
                 mouseDragDetected(e1);
@@ -98,7 +98,7 @@ public abstract class AbstractMouseDragGesture extends AbstractGesture {
                 performTermination();
             }
         });
-        
+
         try {
             mousePressed((MouseEvent) e);
         } catch(RuntimeException x) {
@@ -106,17 +106,17 @@ public abstract class AbstractMouseDragGesture extends AbstractGesture {
             throw x;
         }
     }
-    
-    
+
+
     /*
      * Private
      */
-    
+
     private void performTermination() {
         eventTarget.setOnDragDetected(null);
         eventTarget.setOnMouseReleased(null);
         eventTarget.setOnMouseExited(null);
-        
+
         try {
             observer.gestureDidTerminate(this);
         } finally {
@@ -124,5 +124,5 @@ public abstract class AbstractMouseDragGesture extends AbstractGesture {
             eventTarget = null;
         }
     }
-    
+
 }

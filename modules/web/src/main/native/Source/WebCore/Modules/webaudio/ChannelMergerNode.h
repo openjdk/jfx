@@ -35,7 +35,7 @@
 namespace WebCore {
 
 class AudioContext;
-    
+
 class ChannelMergerNode : public AudioNode {
 public:
     static PassRefPtr<ChannelMergerNode> create(AudioContext*, float sampleRate, unsigned numberOfInputs);

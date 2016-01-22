@@ -92,7 +92,7 @@ void CrossfadeGeneratedImage::draw(GraphicsContext* context, const FloatRect& ds
     if (dstRect.size() != srcRect.size())
         context->scale(FloatSize(dstRect.width() / srcRect.width(), dstRect.height() / srcRect.height()));
     context->translate(-srcRect.x(), -srcRect.y());
-    
+
     drawCrossfade(context);
 }
 

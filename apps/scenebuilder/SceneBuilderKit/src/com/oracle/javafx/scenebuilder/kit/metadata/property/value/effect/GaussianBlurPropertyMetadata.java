@@ -44,7 +44,7 @@ import javafx.scene.effect.GaussianBlur;
  *
  */
 public class GaussianBlurPropertyMetadata extends ComplexPropertyMetadata<GaussianBlur> {
-    
+
     private final EffectPropertyMetadata inputMetadata
             = new EffectPropertyMetadata(new PropertyName("input"), //NOI18N
             true /* readWrite */, null, InspectorPath.UNUSED);
@@ -52,7 +52,7 @@ public class GaussianBlurPropertyMetadata extends ComplexPropertyMetadata<Gaussi
             = new DoublePropertyMetadata(new PropertyName("radius"), //NOI18N
             DoublePropertyMetadata.DoubleKind.COORDINATE, true /* readWrite */, 10.0, InspectorPath.UNUSED);
 
-    public GaussianBlurPropertyMetadata(PropertyName name, boolean readWrite, 
+    public GaussianBlurPropertyMetadata(PropertyName name, boolean readWrite,
             GaussianBlur defaultValue, InspectorPath inspectorPath) {
         super(name, GaussianBlur.class, readWrite, defaultValue, inspectorPath);
     }
@@ -60,11 +60,11 @@ public class GaussianBlurPropertyMetadata extends ComplexPropertyMetadata<Gaussi
     /*
      * ComplexPropertyMetadata
      */
-    
+
     @Override
     public FXOMInstance makeFxomInstanceFromValue(GaussianBlur value, FXOMDocument fxomDocument) {
         final FXOMInstance result = new FXOMInstance(fxomDocument, value.getClass());
-        
+
         inputMetadata.setValue(result, value.getInput());
         radiusMetadata.setValue(result, value.getRadius());
 

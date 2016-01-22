@@ -38,7 +38,7 @@ class FloatRect;
 class IntRect;
 class RenderObject;
 
-class SVGRenderStyle : public RefCounted<SVGRenderStyle> {    
+class SVGRenderStyle : public RefCounted<SVGRenderStyle> {
 public:
     static PassRef<SVGRenderStyle> createDefaultStyle();
     static PassRef<SVGRenderStyle> create() { return adoptRef(*new SVGRenderStyle); }
@@ -323,7 +323,7 @@ public:
     float fillOpacity() const { return fill->opacity; }
     const SVGPaint::SVGPaintType& fillPaintType() const { return fill->paintType; }
     const Color& fillPaintColor() const { return fill->paintColor; }
-    const String& fillPaintUri() const { return fill->paintUri; }    
+    const String& fillPaintUri() const { return fill->paintUri; }
     float strokeOpacity() const { return stroke->opacity; }
     const SVGPaint::SVGPaintType& strokePaintType() const { return stroke->paintType; }
     const Color& strokePaintColor() const { return stroke->paintColor; }
@@ -391,7 +391,7 @@ protected:
         }
 
         unsigned _colorRendering : 2; // EColorRendering
-        unsigned _shapeRendering : 2; // EShapeRendering 
+        unsigned _shapeRendering : 2; // EShapeRendering
         unsigned _clipRule : 1; // WindRule
         unsigned _fillRule : 1; // WindRule
         unsigned _capStyle : 2; // LineCap
@@ -412,7 +412,7 @@ protected:
 
         union {
             struct {
-                unsigned _alignmentBaseline : 4; // EAlignmentBaseline 
+                unsigned _alignmentBaseline : 4; // EAlignmentBaseline
                 unsigned _dominantBaseline : 4; // EDominantBaseline
                 unsigned _baselineShift : 2; // EBaselineShift
                 unsigned _vectorEffect: 1; // EVectorEffect
@@ -438,7 +438,7 @@ protected:
 
 private:
     enum CreateDefaultType { CreateDefault };
-        
+
     SVGRenderStyle();
     SVGRenderStyle(const SVGRenderStyle&);
     SVGRenderStyle(CreateDefaultType); // Used to create the default style.

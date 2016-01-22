@@ -6,13 +6,13 @@
  * are met:
  *
  * 1.  Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer. 
+ *     notice, this list of conditions and the following disclaimer.
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
- *     documentation and/or other materials provided with the distribution. 
+ *     documentation and/or other materials provided with the distribution.
  * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
- *     from this software without specific prior written permission. 
+ *     from this software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY APPLE AND ITS CONTRIBUTORS "AS IS" AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
@@ -85,7 +85,7 @@ extern NSString *WebActionOriginalURLKey; // NSURL
     decisions to be made, the resource will be displayed inline if
     possible. If there is no view available to display the resource
     inline, then unableToImplementPolicyWithError:frame: will be
-    called with an appropriate error. 
+    called with an appropriate error.
 
     <p>If a new window is going to be created for this navigation as a
     result of frame targetting, then it will be created once you call
@@ -163,7 +163,7 @@ extern NSString *WebActionOriginalURLKey; // NSURL
     @param listener The object to call when the decision is made
     @discussion This method is provided so that modified clicks on a targetted link which
     opens a new frame can prevent the new window from being opened if they decide to
-    do something else, like download or present the new frame in a specialized way. 
+    do something else, like download or present the new frame in a specialized way.
 
     <p>If this method picks a policy of Use, the new window will be
     opened, and decidePolicyForNavigationAction:request:frame:decisionListner:

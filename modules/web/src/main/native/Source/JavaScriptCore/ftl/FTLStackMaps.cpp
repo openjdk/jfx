@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -95,21 +95,21 @@ bool StackMaps::Record::parse(DataView* view, unsigned& offset)
     patchpointID = static_cast<uint32_t>(id);
     if (static_cast<int32_t>(patchpointID) < 0)
         return false;
-    
+
     instructionOffset = view->read<uint32_t>(offset, true);
     flags = view->read<uint16_t>(offset, true);
-    
+
     unsigned length = view->read<uint16_t>(offset, true);
     while (length--)
         locations.append(readObject<Location>(view, offset));
-    
+
     unsigned numLiveOuts = view->read<uint16_t>(offset, true);
     while (numLiveOuts--) {
         view->read<uint16_t>(offset, true); // regnum
         view->read<uint8_t>(offset, true); // reserved
         view->read<uint8_t>(offset, true); // size in bytes
     }
-    
+
     return true;
 }
 
@@ -123,19 +123,19 @@ void StackMaps::Record::dump(PrintStream& out) const
 bool StackMaps::parse(DataView* view)
 {
     unsigned offset = 0;
-    
+
     view->read<uint32_t>(offset, true); // Reserved (header)
-    
+
     uint32_t numFunctions = view->read<uint32_t>(offset, true);
     ASSERT(numFunctions == 1); // There should only be one stack size record
     while (numFunctions--) {
         stackSizes.append(readObject<StackSize>(view, offset));
     }
-    
+
     uint32_t numConstants = view->read<uint32_t>(offset, true);
     while (numConstants--)
         constants.append(readObject<Constant>(view, offset));
-    
+
     uint32_t numRecords = view->read<uint32_t>(offset, true);
     while (numRecords--) {
         Record record;
@@ -143,7 +143,7 @@ bool StackMaps::parse(DataView* view)
             return false;
         records.append(record);
     }
-    
+
     return true;
 }
 

@@ -198,7 +198,7 @@
  *
  * This means that in total, for our "a{sv}" example, 91 bytes of
  * type information would be allocated.
- * 
+ *
  * The type information cache, additionally, uses a #GHashTable to
  * store and lookup the cached items and stores a pointer to this
  * hash table in static storage.  The hash table is freed when there
@@ -2113,10 +2113,10 @@ g_variant_is_container (GVariant *value)
  * @G_VARIANT_CLASS_INT64: The #GVariant is a signed 64 bit integer.
  * @G_VARIANT_CLASS_UINT64: The #GVariant is an unsigned 64 bit integer.
  * @G_VARIANT_CLASS_HANDLE: The #GVariant is a file handle index.
- * @G_VARIANT_CLASS_DOUBLE: The #GVariant is a double precision floating 
+ * @G_VARIANT_CLASS_DOUBLE: The #GVariant is a double precision floating
  *                          point value.
  * @G_VARIANT_CLASS_STRING: The #GVariant is a normal string.
- * @G_VARIANT_CLASS_OBJECT_PATH: The #GVariant is a D-Bus object path 
+ * @G_VARIANT_CLASS_OBJECT_PATH: The #GVariant is a D-Bus object path
  *                               string.
  * @G_VARIANT_CLASS_SIGNATURE: The #GVariant is a D-Bus signature string.
  * @G_VARIANT_CLASS_VARIANT: The #GVariant is a variant.
@@ -2975,7 +2975,7 @@ GVariantIter *
 g_variant_iter_copy (GVariantIter *iter)
 {
   GVariantIter *copy;
-  
+
 #ifdef GSTREAMER_LITE
   if (iter == NULL) {
     return NULL;
@@ -3044,7 +3044,7 @@ g_variant_iter_free (GVariantIter *iter)
  * you no longer need it.
  *
  * Here is an example for iterating with g_variant_iter_next_value():
- * |[<!-- language="C" --> 
+ * |[<!-- language="C" -->
  *   // recursively iterate a container
  *   void
  *   iterate_container_recursive (GVariant *container)
@@ -5394,7 +5394,7 @@ g_variant_get_va (GVariant     *value,
  *
  * This function might be used as follows:
  *
- * |[<!-- language="C" --> 
+ * |[<!-- language="C" -->
  * GVariant *
  * make_pointless_dictionary (void)
  * {
@@ -5486,7 +5486,7 @@ g_variant_get_child (GVariant    *value,
  * the unpacking process.
  *
  * Here is an example for memory management with g_variant_iter_next():
- * |[<!-- language="C" --> 
+ * |[<!-- language="C" -->
  *   // Iterates a dictionary of type 'a{sv}'
  *   void
  *   iterate_dictionary (GVariant *dictionary)
@@ -5578,7 +5578,7 @@ g_variant_iter_next (GVariantIter *iter,
  * g_variant_get(). Failure to do so will cause a memory leak.
  *
  * Here is an example for memory management with g_variant_iter_loop():
- * |[<!-- language="C" --> 
+ * |[<!-- language="C" -->
  *   // Iterates a dictionary of type 'a{sv}'
  *   void
  *   iterate_dictionary (GVariant *dictionary)

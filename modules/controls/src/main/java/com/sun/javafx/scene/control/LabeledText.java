@@ -139,7 +139,7 @@ public class LabeledText extends Text {
             fillMirror = new StyleablePropertyMirror<Paint>(FILL, "fillMirror", Color.BLACK, (StyleableProperty<Paint>)(WritableValue<Paint>)labeled.textFillProperty());
             fillProperty().addListener(fillMirror);
         }
-        return fillMirror;        
+        return fillMirror;
     }
 
     private static final CssMetaData<LabeledText,Paint> FILL =
@@ -163,9 +163,9 @@ public class LabeledText extends Text {
             textAlignmentMirror = new StyleablePropertyMirror<TextAlignment>(TEXT_ALIGNMENT, "textAlignmentMirror", TextAlignment.LEFT, (StyleableProperty<TextAlignment>)(WritableValue<TextAlignment>)labeled.textAlignmentProperty());
             textAlignmentProperty().addListener(textAlignmentMirror);
         }
-        return textAlignmentMirror;        
+        return textAlignmentMirror;
     }
-    
+
     private static final CssMetaData<LabeledText,TextAlignment> TEXT_ALIGNMENT =
         new CssMetaData<LabeledText,TextAlignment>("-fx-text-alignment",
         new EnumConverter<TextAlignment>(TextAlignment.class),
@@ -188,14 +188,14 @@ public class LabeledText extends Text {
             underlineMirror = new StyleablePropertyMirror<Boolean>(UNDERLINE, "underLineMirror", Boolean.FALSE, (StyleableProperty<Boolean>)(WritableValue<Boolean>)labeled.underlineProperty());
             underlineProperty().addListener(underlineMirror);
         }
-        return underlineMirror;        
+        return underlineMirror;
     }
-    
+
     private static final CssMetaData<LabeledText,Boolean> UNDERLINE =
             new CssMetaData<LabeledText,Boolean>("-fx-underline",
             BooleanConverter.getInstance(),
             Boolean.FALSE) {
- 
+
             @Override
             public boolean isSettable(LabeledText node) {
                 return node.labeled.underlineProperty().isBound() == false;
@@ -213,9 +213,9 @@ public class LabeledText extends Text {
             lineSpacingMirror = new StyleablePropertyMirror<Number>(LINE_SPACING, "lineSpacingMirror", 0d, (StyleableProperty<Number>)(WritableValue<Number>)labeled.lineSpacingProperty());
             lineSpacingProperty().addListener(lineSpacingMirror);
         }
-        return lineSpacingMirror;        
+        return lineSpacingMirror;
     }
-    
+
     private static final CssMetaData<LabeledText,Number> LINE_SPACING =
         new CssMetaData<LabeledText,Number>("-fx-line-spacing",
             SizeConverter.getInstance(),
@@ -255,10 +255,10 @@ public class LabeledText extends Text {
        }
 
        STYLEABLES = Collections.unmodifiableList(styleables);
-    }       
+    }
 
     private class StyleablePropertyMirror<T> extends SimpleStyleableObjectProperty<T> implements InvalidationListener {
-        
+
         private StyleablePropertyMirror(CssMetaData<LabeledText, T> cssMetaData, String name, T initialValue, StyleableProperty<T> property) {
             super(cssMetaData, LabeledText.this, name, initialValue);
             this.property = property;
@@ -310,6 +310,6 @@ public class LabeledText extends Text {
 
         boolean applying;
         private final StyleableProperty<T> property;
-    } 
-       
+    }
+
 }

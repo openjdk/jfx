@@ -39,7 +39,7 @@ public:
     static WebDatabaseManager* createInstance();
 
     // IUnknown
-    virtual HRESULT STDMETHODCALLTYPE QueryInterface( 
+    virtual HRESULT STDMETHODCALLTYPE QueryInterface(
         /* [in] */ REFIID riid,
         /* [iid_is][out] */ void** ppvObject);
 
@@ -48,27 +48,27 @@ public:
     virtual ULONG STDMETHODCALLTYPE Release();
 
     // IWebDatabaseManager
-    virtual HRESULT STDMETHODCALLTYPE sharedWebDatabaseManager( 
+    virtual HRESULT STDMETHODCALLTYPE sharedWebDatabaseManager(
         /* [retval][out] */ IWebDatabaseManager** result);
-        
-    virtual HRESULT STDMETHODCALLTYPE origins( 
+
+    virtual HRESULT STDMETHODCALLTYPE origins(
         /* [retval][out] */ IEnumVARIANT** result);
-        
-    virtual HRESULT STDMETHODCALLTYPE databasesWithOrigin( 
+
+    virtual HRESULT STDMETHODCALLTYPE databasesWithOrigin(
         /* [in] */ IWebSecurityOrigin* origin,
         /* [retval][out] */ IEnumVARIANT** result);
-        
-    virtual HRESULT STDMETHODCALLTYPE detailsForDatabase( 
+
+    virtual HRESULT STDMETHODCALLTYPE detailsForDatabase(
         /* [in] */ BSTR databaseName,
         /* [in] */ IWebSecurityOrigin* origin,
         /* [retval][out] */ IPropertyBag** result);
-        
+
     virtual HRESULT STDMETHODCALLTYPE deleteAllDatabases();
-        
-    virtual HRESULT STDMETHODCALLTYPE deleteOrigin( 
+
+    virtual HRESULT STDMETHODCALLTYPE deleteOrigin(
         /* [in] */ IWebSecurityOrigin* origin);
-        
-    virtual HRESULT STDMETHODCALLTYPE deleteDatabase( 
+
+    virtual HRESULT STDMETHODCALLTYPE deleteDatabase(
         /* [in] */ BSTR databaseName,
         /* [in] */ IWebSecurityOrigin* origin);
 

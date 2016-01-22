@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef ApplicationCacheGroup_h
@@ -53,17 +53,17 @@ enum ApplicationCacheUpdateOption {
 class ApplicationCacheGroup : ResourceHandleClient {
     WTF_MAKE_NONCOPYABLE(ApplicationCacheGroup); WTF_MAKE_FAST_ALLOCATED;
 public:
-    ApplicationCacheGroup(const URL& manifestURL, bool isCopy = false);    
+    ApplicationCacheGroup(const URL& manifestURL, bool isCopy = false);
     virtual ~ApplicationCacheGroup();
-    
+
     enum UpdateStatus { Idle, Checking, Downloading };
 
     static ApplicationCache* cacheForMainRequest(const ResourceRequest&, DocumentLoader*);
     static ApplicationCache* fallbackCacheForMainRequest(const ResourceRequest&, DocumentLoader*);
-    
+
     static void selectCache(Frame*, const URL& manifestURL);
     static void selectCacheWithoutManifestURL(Frame*);
-    
+
     const URL& manifestURL() const { return m_manifestURL; }
     const SecurityOrigin* origin() const { return m_origin.get(); }
     UpdateStatus updateStatus() const { return m_updateStatus; }
@@ -72,10 +72,10 @@ public:
     void setStorageID(unsigned storageID) { m_storageID = storageID; }
     unsigned storageID() const { return m_storageID; }
     void clearStorageID();
-    
+
     void update(Frame*, ApplicationCacheUpdateOption); // FIXME: Frame should not be needed when updating without browsing context.
     void cacheDestroyed(ApplicationCache*);
-    
+
     void abort(Frame*);
 
     bool cacheIsBeingUpdated(const ApplicationCache* cache) const { return cache == m_cacheBeingUpdated; }
@@ -119,30 +119,30 @@ private:
     void didFinishLoadingManifest();
     void didReachMaxAppCacheSize();
     void didReachOriginQuota(int64_t totalSpaceNeeded);
-    
+
     void startLoadingEntry();
     void deliverDelayedMainResources();
     void checkIfLoadIsComplete();
     void cacheUpdateFailed();
     void recalculateAvailableSpaceInQuota();
     void manifestNotFound();
-    
+
     void addEntry(const String&, unsigned type);
-    
+
     void associateDocumentLoaderWithCache(DocumentLoader*, ApplicationCache*);
-    
+
     void stopLoading();
-    
+
     URL m_manifestURL;
     RefPtr<SecurityOrigin> m_origin;
     UpdateStatus m_updateStatus;
-    
+
     // This is the newest complete cache in the group.
     RefPtr<ApplicationCache> m_newestCache;
-    
+
     // All complete caches in this cache group.
     HashSet<ApplicationCache*> m_caches;
-    
+
     // The cache being updated (if any). Note that cache updating does not immediately create a new
     // ApplicationCache object, so this may be null even when update status is not Idle.
     RefPtr<ApplicationCache> m_cacheBeingUpdated;
@@ -151,14 +151,14 @@ private:
     HashSet<DocumentLoader*> m_pendingMasterResourceLoaders;
     // How many of the above pending master entries have not yet finished downloading.
     int m_downloadingPendingMasterResourceLoadersCount;
-    
+
     // These are all the document loaders that are associated with a cache in this group.
     HashSet<DocumentLoader*> m_associatedDocumentLoaders;
 
     // The URLs and types of pending cache entries.
     typedef HashMap<String, unsigned> EntryMap;
     EntryMap m_pendingEntries;
-    
+
     // The total number of items to be processed to update the cache group and the number that have been done.
     int m_progressTotal;
     int m_progressDone;
@@ -166,7 +166,7 @@ private:
     // Frame used for fetching resources when updating.
     // FIXME: An update started by a particular frame should not stop if it is destroyed, but there are other frames associated with the same cache group.
     Frame* m_frame;
-  
+
     // An obsolete cache group is never stored, but the opposite is not true - storing may fail for multiple reasons, such as exceeding disk quota.
     unsigned m_storageID;
     bool m_isObsolete;
@@ -187,7 +187,7 @@ private:
     // due to reaching the maximum size of the application cache database file. This flag is used by ApplicationCacheGroup::checkIfLoadIsComplete() to decide
     // the course of action in case of this failure (i.e. call the ChromeClient callback or run the failure steps).
     bool m_calledReachedMaxAppCacheSize;
-    
+
     RefPtr<ResourceHandle> m_currentHandle;
     RefPtr<ApplicationCacheResource> m_currentResource;
 

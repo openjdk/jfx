@@ -32,10 +32,10 @@ public:
     static PassRefPtr<SVGFontFaceSrcElement> create(const QualifiedName&, Document&);
 
     PassRefPtr<CSSValueList> srcValue() const;
-    
+
 private:
     SVGFontFaceSrcElement(const QualifiedName&, Document&);
-    
+
     virtual void childrenChanged(const ChildChange&) override;
     virtual bool rendererIsNeeded(const RenderStyle&) override { return false; }
 };

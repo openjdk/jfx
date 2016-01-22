@@ -35,7 +35,7 @@ import javafx.event.EventType;
  * touch screen or other similar device.
  * <p>
  * The event is delivered to the top-most
- * node picked on the gesture coordinates in time of the gesture start - the 
+ * node picked on the gesture coordinates in time of the gesture start - the
  * whole gesture is delivered to the same node even if the coordinates change
  * during the gesture.
  * <p>
@@ -245,11 +245,11 @@ public final class RotateEvent extends GestureEvent {
         e.eventType = type;
         return e;
     }
-    
+
     @Override
     public EventType<RotateEvent> getEventType() {
         return (EventType<RotateEvent>) super.getEventType();
     }
-    
-    
+
+
 }

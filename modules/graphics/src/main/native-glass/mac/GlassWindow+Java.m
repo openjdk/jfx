@@ -57,12 +57,12 @@ static NSWindow *s_grabWindow = nil;
 - (void)_sendJavaWindowMoveToAnotherScreenEventIfNeeded
 {
     NSScreen *newScreen = [self->nsWindow screen];
-    
+
     // Update only if the newScreen isn't nil
     if (self->currentScreen != newScreen && newScreen != nil)
     {
         self->currentScreen = newScreen;
-        
+
         GET_MAIN_JENV;
         (*env)->CallVoidMethod(env, jWindow, jWindowNotifyMoveToAnotherScreen, createJavaScreen(env, newScreen));
     }
@@ -148,11 +148,11 @@ static NSWindow *s_grabWindow = nil;
     CGFloat y = [screen frame].size.height - [screen visibleFrame].size.height;
     CGFloat w = [self->nsWindow frame].size.width;
     CGFloat h = [self->nsWindow frame].size.height;
-    [self _setFlipFrame:NSMakeRect(x, y, w, h) display:YES animate:NO]; 
+    [self _setFlipFrame:NSMakeRect(x, y, w, h) display:YES animate:NO];
 
     //[[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(windowDidMiniaturize:) name:NSWindowDidMiniaturizeNotification object:nil];
     //[[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(windowDidDeminiaturize:) name:NSWindowDidMiniaturizeNotification object:nil];
-        
+
     return self;
 }
 
@@ -164,14 +164,14 @@ static NSWindow *s_grabWindow = nil;
 - (void)_ungrabFocus
 {
     NSWindow *window = [self _getCurrentWindow];
-    
+
     if (s_grabWindow != window) {
         return;
     }
-    
+
     GET_MAIN_JENV;
     (*env)->CallVoidMethod(env, self->jWindow, jWindowNotifyFocusUngrab);
-    
+
     s_grabWindow = nil;
 }
 
@@ -189,7 +189,7 @@ static NSWindow *s_grabWindow = nil;
     if (!s_grabWindow) {
         return;
     }
-    
+
     // If this window doesn't belong to an owned windows hierarchy that
     // holds the grab currently, then the grab should be released.
     for (NSWindow * window = self->nsWindow; window; window = [window parentWindow]) {
@@ -197,18 +197,18 @@ static NSWindow *s_grabWindow = nil;
             return;
         }
     }
-    
+
     [GlassWindow _resetGrab];
 }
 
 - (void)_grabFocus
 {
     NSWindow *window = [self _getCurrentWindow];
-    
+
     if (s_grabWindow == window) {
         return;
     }
-    
+
     [GlassWindow _resetGrab];
     s_grabWindow = window;
 }
@@ -223,7 +223,7 @@ static NSWindow *s_grabWindow = nil;
             mask &= ~(NSUInteger)NSResizableWindowMask;
             [self->nsWindow setStyleMask: mask];
             [self->nsWindow setShowsResizeIndicator:NO];
-            
+
             NSButton *zoomButton = [self->nsWindow standardWindowButton:NSWindowZoomButton];
             [zoomButton setEnabled:NO];
         }
@@ -236,7 +236,7 @@ static NSWindow *s_grabWindow = nil;
             mask |= NSResizableWindowMask;
             [self->nsWindow setStyleMask: mask];
             [self->nsWindow setShowsResizeIndicator:YES];
-            
+
             NSButton *zoomButton = [self->nsWindow standardWindowButton:NSWindowZoomButton];
             [zoomButton setEnabled:YES];
         }
@@ -249,7 +249,7 @@ static NSWindow *s_grabWindow = nil;
     NSSize minSize = [self->nsWindow minSize];
     NSSize maxSize = [self->nsWindow maxSize];
     NSSize size = frame.size;
-    
+
     NSRect constrained = frame;
     {
         if (size.width < minSize.width)
@@ -260,7 +260,7 @@ static NSWindow *s_grabWindow = nil;
         {
             constrained.size.width = maxSize.width;
         }
-        
+
         if (size.height < minSize.height)
         {
             constrained.size.height = minSize.height;
@@ -276,7 +276,7 @@ static NSWindow *s_grabWindow = nil;
 - (void)_setVisible
 {
     LOG("_setVisible: focusable %d enabled %d", self->isFocusable, self->isEnabled);
-    
+
     if (self->isFocusable == YES && self->isEnabled == YES)
     {
         [self->nsWindow makeMainWindow];
@@ -286,7 +286,7 @@ static NSWindow *s_grabWindow = nil;
     {
         [self->nsWindow orderFront:nil];
     }
-    
+
     if ((self->owner != nil) && ([self->nsWindow parentWindow] == nil))
     {
         [self->owner addChildWindow:self->nsWindow ordered:NSWindowAbove];
@@ -337,19 +337,19 @@ static NSWindow *s_grabWindow = nil;
 }
 
 #pragma mark --- Flip
-     
+
 - (void)_setFlipFrame:(NSRect)frameRect display:(BOOL)displayFlag animate:(BOOL)animateFlag
 {
     //NSLog(@"_setFlipFrame:   %.2f,%.2f %.2fx%.2f", frameRect.origin.x, frameRect.origin.y, frameRect.size.width, frameRect.size.height);
     NSScreen * screen = [[NSScreen screens] objectAtIndex: 0];
     NSRect screenFrame = screen.frame;
     //NSLog(@"            screenFrame: %.2f,%.2f %.2fx%.2f", screenFrame.origin.x, screenFrame.origin.y, screenFrame.size.width, screenFrame.size.height);
-    
+
     frameRect.origin.y = screenFrame.size.height - frameRect.size.height - frameRect.origin.y;
     //NSLog(@"            set to frameRect:%.2f,%.2f %.2fx%.2f", frameRect.origin.x, frameRect.origin.y, frameRect.size.width, frameRect.size.height);
-    
+
     [self->nsWindow setFrame:frameRect display:displayFlag animate:animateFlag];
-    
+
     //frameRect = [self _flipFrame];
     //NSLog(@"            _flipFrame:%.2f,%.2f %.2fx%.2f", frameRect.origin.x, frameRect.origin.y, frameRect.size.width, frameRect.size.height);
     //frameRect = [super frame];
@@ -360,12 +360,12 @@ static NSWindow *s_grabWindow = nil;
 {
     NSScreen * screen = [[NSScreen screens] objectAtIndex: 0];
     NSRect screenFrame = screen.frame;
-    
+
     NSRect frame = [self->nsWindow frame];
     //NSLog(@"_flipFrame: v.s.h=%.2f f.s.h=%.2f f.o.y=%.2f", screenFrame.size.height, frame.size.height, frame.origin.y);
     frame.origin.y = screenFrame.size.height - frame.size.height - frame.origin.y;
     //NSLog(@"                            result: f.o.y=%.2f", frame.origin.y);
-    
+
     //NSLog(@"_flipFrame:   %.2f,%.2f %.2fx%.2f", frame.origin.x, frame.origin.y, frame.size.width, frame.size.height);
     return frame;
 }

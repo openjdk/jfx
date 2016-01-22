@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "config.h"
 
@@ -31,8 +31,8 @@
 
 class QTDecompressionSessionClient {
 public:
-    static void trackingCallback(void *decompressionTrackingRefCon, OSStatus, 
-        ICMDecompressionTrackingFlags decompressionTrackingFlags, CVPixelBufferRef pixelBuffer, 
+    static void trackingCallback(void *decompressionTrackingRefCon, OSStatus,
+        ICMDecompressionTrackingFlags decompressionTrackingFlags, CVPixelBufferRef pixelBuffer,
         TimeValue64, TimeValue64, ICMValidTimeFlags, void *, void *)
     {
         QTDecompressionSession* session = static_cast<QTDecompressionSession*>(decompressionTrackingRefCon);
@@ -71,12 +71,12 @@ void QTDecompressionSession::initializeSession()
     ICMPixelFormatInfo pixelFormatInfo = {sizeof(ICMPixelFormatInfo), 0};
     if (ICMGetPixelFormatInfo(m_pixelFormat, &pixelFormatInfo) != noErr) {
         // The ICM does not know anything about the pixelFormat contained in
-        // the pixel buffer, so it won't be able to convert it to RGBA.  
+        // the pixel buffer, so it won't be able to convert it to RGBA.
         return;
     }
 
-    // The depth and cType fields of the ImageDescriptionHandle are filled 
-    // out according to the instructions in Technical Q&A QA1183: 
+    // The depth and cType fields of the ImageDescriptionHandle are filled
+    // out according to the instructions in Technical Q&A QA1183:
     // http://developer.apple.com/library/mac/#qa/qa2001/qa1183.html
     bool isIndexed = pixelFormatInfo.formatFlags & kICMPixelFormatIsIndexed;
     bool isQD = pixelFormatInfo.formatFlags & kICMPixelFormatIsSupportedByQD;
@@ -94,11 +94,11 @@ void QTDecompressionSession::initializeSession()
     } else if (isIndexed) {
         // Indexed pixel formats get a depth of 1 through 8, depending on
         // the their bits per pixel.
-        depth = pixelFormatInfo.bitsPerPixel[0]; 
+        depth = pixelFormatInfo.bitsPerPixel[0];
     }
 
     // If QuickDraw supports the given pixel format, the cType should be kRawCodecType.
-    // Otherwise, use the pixel format code for the cType.  We are assuming the pixel 
+    // Otherwise, use the pixel format code for the cType.  We are assuming the pixel
     // buffer is uncompressed.
     unsigned long cType = isQD ? kRawCodecType : m_pixelFormat;
 
@@ -143,8 +143,8 @@ void QTDecompressionSession::initializeSession()
 
 bool QTDecompressionSession::canDecompress(QTPixelBuffer inBuffer)
 {
-    return m_session 
-        && inBuffer.pixelFormatType() == m_pixelFormat 
+    return m_session
+        && inBuffer.pixelFormatType() == m_pixelFormat
         && inBuffer.width() == m_width
         && inBuffer.height() == m_height;
 }
@@ -153,7 +153,7 @@ QTPixelBuffer QTDecompressionSession::decompress(QTPixelBuffer inBuffer)
 {
     if (!canDecompress(inBuffer))
         return QTPixelBuffer();
-    
+
     inBuffer.lockBaseAddress();
     ICMDecompressionSessionDecodeFrame(m_session,
         static_cast<UInt8*>(inBuffer.baseAddress()),

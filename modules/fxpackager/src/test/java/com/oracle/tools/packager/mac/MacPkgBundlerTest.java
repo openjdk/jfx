@@ -73,7 +73,7 @@ public class MacPkgBundlerTest {
     static Set<File> appResources;
     static boolean retain = false;
     static boolean signingKeysPresent = false;
-    
+
     static final File FAKE_CERT_ROOT = new File("build/tmp/tests/cert/").getAbsoluteFile();
 
     @BeforeClass
@@ -114,7 +114,7 @@ public class MacPkgBundlerTest {
         }
         tmpBase.mkdir();
     }
-    
+
     public String createFakeCerts(Map<String, ? super Object> p) {
         File config = new File(FAKE_CERT_ROOT, "pkg-cert.cfg");
         config.getParentFile().mkdirs();
@@ -159,7 +159,7 @@ public class MacPkgBundlerTest {
                     "c",
                     "p=");
             IOUtils.exec(pb, VERBOSE.fetchFrom(p));
-            
+
             // create the pkg SSL keys
             pb = new ProcessBuilder("openssl", "req",
                     "-newkey", "rsa:2048",
@@ -186,12 +186,12 @@ public class MacPkgBundlerTest {
                     "k=" + FAKE_CERT_ROOT + "/pkg.keychain",
                     "r=" + FAKE_CERT_ROOT + "/pkg-pkg.key");
             IOUtils.exec(pb, VERBOSE.fetchFrom(p));
-            
+
             return FAKE_CERT_ROOT + "/pkg.keychain";
         } catch (IOException e) {
             e.printStackTrace();
         }
-        
+
         return null;
     }
 
@@ -433,7 +433,7 @@ public class MacPkgBundlerTest {
                 appBundleParams.put(SIGNING_KEYCHAIN.getID(), keychain);
             }
         }
-        
+
         boolean valid = appBundler.validate(appBundleParams);
         assertTrue(valid);
 
@@ -474,7 +474,7 @@ public class MacPkgBundlerTest {
         if (signingKeysPresent || keychain != null) {
             validateSignatures(pkgOutput);
         }
-        
+
     }
 
     @Test(expected = ConfigException.class)
@@ -532,49 +532,49 @@ public class MacPkgBundlerTest {
         try {
             // first create the external app
             Bundler appBundler = new MacAppBundler();
-    
+
             Map<String, Object> appBundleParams = new HashMap<>();
-    
+
             appBundleParams.put(BUILD_ROOT.getID(), tmpBase);
-    
+
             appBundleParams.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
             appBundleParams.put(APP_NAME.getID(), "External APP PKG Negative Signature Test");
             appBundleParams.put(IDENTIFIER.getID(), "com.example.pkg.external");
             appBundleParams.put(VERBOSE.getID(), true);
-    
+
             if (runtimeJdk != null) {
                 appBundleParams.put(MAC_RUNTIME.getID(), runtimeJdk);
             }
-    
+
             boolean valid = appBundler.validate(appBundleParams);
             assertTrue(valid);
-    
+
             File appOutput = appBundler.execute(appBundleParams, new File(workDir, "PKGExternalAppSignTest"));
             System.err.println("App at - " + appOutput);
             assertNotNull(appOutput);
             assertTrue(appOutput.exists());
-    
+
             // now create the PKG referencing this external app
             Bundler pkgBundler = new MacPkgBundler();
-    
+
             Map<String, Object> pkgBundleParams = new HashMap<>();
-    
+
             pkgBundleParams.put(BUILD_ROOT.getID(), tmpBase);
-    
+
             pkgBundleParams.put(MAC_APP_IMAGE.getID(), appOutput);
             pkgBundleParams.put(APP_NAME.getID(), "Negative Signature Test");
             pkgBundleParams.put(IDENTIFIER.getID(), "com.example.pkg.external");
-    
+
             pkgBundleParams.put(SIGN_BUNDLE.getID(), true);
             pkgBundleParams.put(DEVELOPER_ID_INSTALLER_SIGNING_KEY.getID(), null);
-    
+
             pkgBundler.validate(pkgBundleParams);
 
             // if we get here we fail
             assertTrue("ConfigException should have been thrown", false);
         } catch (ConfigException ignore) {
             // expected
-        }            
+        }
     }
 
     @Test
@@ -668,7 +668,7 @@ public class MacPkgBundlerTest {
             }
             // failure was for bogus key
             if (ioe.getMessage().contains("Exec failed with code 1 ")) {
-                // this is likely because the key is not signed by apple, lets look 
+                // this is likely because the key is not signed by apple, lets look
                 // ok, look to see if our key is in the output
                 if (!baos.toString().contains("1. Developer ID Installer: Insecure Test Cert")) {
                     // didn't list our key as #1, must be some other error

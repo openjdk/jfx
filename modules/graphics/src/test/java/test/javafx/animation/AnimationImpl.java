@@ -38,7 +38,7 @@ public class AnimationImpl extends AnimationShim {
     public AnimationImpl() {
         super();
     }
-    
+
     public AnimationImpl(AbstractMasterTimer timer) {
         super(timer);
     }

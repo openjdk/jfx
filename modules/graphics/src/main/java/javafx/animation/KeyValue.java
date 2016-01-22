@@ -53,11 +53,11 @@ import javafx.beans.value.WritableValue;
  * Interpolator.TANGENT}).
  * <p>
  * By default, {@link Interpolator#LINEAR} is used in the interval.
- * 
+ *
  * @see Timeline
  * @see KeyFrame
  * @see Interpolator
- * 
+ *
  * @since JavaFX 2.0
  */
 public final class KeyValue {
@@ -87,7 +87,7 @@ public final class KeyValue {
 
     /**
      * Returns the target of this {@code KeyValue}
-     * 
+     *
      * @return the target
      */
     public WritableValue<?> getTarget() {
@@ -98,7 +98,7 @@ public final class KeyValue {
 
     /**
      * Returns the end value of this {@code KeyValue}
-     * 
+     *
      * @return the end value
      */
     public Object getEndValue() {
@@ -119,7 +119,7 @@ public final class KeyValue {
 
     /**
      * Creates a {@code KeyValue}.
-     * 
+     *
      * @param target
      *            the target
      * @param endValue
@@ -152,7 +152,7 @@ public final class KeyValue {
 
     /**
      * Creates a {@code KeyValue} that uses {@link Interpolator#LINEAR}.
-     * 
+     *
      * @param target
      *            the target
      * @param endValue
@@ -167,7 +167,7 @@ public final class KeyValue {
     /**
      * Returns a string representation of this {@code KeyValue} object.
      * @return a string representation of this {@code KeyValue} object.
-     */ 
+     */
     @Override
     public String toString() {
         return "KeyValue [target=" + target + ", endValue=" + endValue
@@ -177,7 +177,7 @@ public final class KeyValue {
     /**
      * Returns a hash code for this {@code KeyValue} object.
      * @return a hash code for this {@code KeyValue} object.
-     */ 
+     */
     @Override
     public int hashCode() {
         assert (target != null) && (interpolator != null);

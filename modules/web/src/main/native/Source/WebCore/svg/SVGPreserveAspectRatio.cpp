@@ -301,7 +301,7 @@ AffineTransform SVGPreserveAspectRatio::getCTM(float logicalX, float logicalY, f
             transform.translate(-extendedLogicalX - (extendedLogicalWidth - extendedPhysicalWidth * extendedLogicalHeight / extendedPhysicalHeight) / 2, -extendedLogicalY);
         else
             transform.translate(-extendedLogicalX - (extendedLogicalWidth - extendedPhysicalWidth * extendedLogicalHeight / extendedPhysicalHeight), -extendedLogicalY);
-        
+
         return transform;
     }
 

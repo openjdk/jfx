@@ -21,7 +21,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -211,7 +211,7 @@ STDMETHODIMP_(ULONG) DRTDataObject::Release()
 }
 
 STDMETHODIMP DRTDataObject::GetData(FORMATETC* pformatetcIn, STGMEDIUM* pmedium)
-{ 
+{
     if (!pformatetcIn || !pmedium)
         return E_POINTER;
     pmedium->hGlobal = 0;
@@ -226,12 +226,12 @@ STDMETHODIMP DRTDataObject::GetData(FORMATETC* pformatetcIn, STGMEDIUM* pmedium)
 }
 
 STDMETHODIMP DRTDataObject::GetDataHere(FORMATETC*, STGMEDIUM*)
-{ 
+{
     return E_NOTIMPL;
 }
 
 STDMETHODIMP DRTDataObject::QueryGetData(FORMATETC* pformatetc)
-{ 
+{
     if (!pformatetc)
         return E_POINTER;
 
@@ -248,12 +248,12 @@ STDMETHODIMP DRTDataObject::QueryGetData(FORMATETC* pformatetc)
 }
 
 STDMETHODIMP DRTDataObject::GetCanonicalFormatEtc(FORMATETC*, FORMATETC*)
-{ 
+{
     return DATA_S_SAMEFORMATETC;
 }
 
 STDMETHODIMP DRTDataObject::SetData(FORMATETC* pformatetc, STGMEDIUM* pmedium, BOOL fRelease)
-{ 
+{
     if (!pformatetc || !pmedium)
         return E_POINTER;
 
@@ -322,7 +322,7 @@ void DRTDataObject::CopyMedium(STGMEDIUM* pMedDest, STGMEDIUM* pMedSrc, FORMATET
     }
 }
 STDMETHODIMP DRTDataObject::EnumFormatEtc(DWORD dwDirection, IEnumFORMATETC** ppenumFormatEtc)
-{ 
+{
     if (!ppenumFormatEtc)
         return E_POINTER;
 
@@ -344,7 +344,7 @@ STDMETHODIMP DRTDataObject::EnumFormatEtc(DWORD dwDirection, IEnumFORMATETC** pp
 }
 
 STDMETHODIMP DRTDataObject::DAdvise(FORMATETC*, DWORD, IAdviseSink*, DWORD*)
-{ 
+{
     return OLE_E_ADVISENOTSUPPORTED;
 }
 

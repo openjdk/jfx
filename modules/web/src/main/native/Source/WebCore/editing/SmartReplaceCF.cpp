@@ -6,13 +6,13 @@
  * are met:
  *
  * 1.  Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer. 
+ *     notice, this list of conditions and the following disclaimer.
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
- *     documentation and/or other materials provided with the distribution. 
+ *     documentation and/or other materials provided with the distribution.
  * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
- *     from this software without specific prior written permission. 
+ *     from this software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY APPLE AND ITS CONTRIBUTORS "AS IS" AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
@@ -36,13 +36,13 @@ namespace WebCore {
 
 static CFMutableCharacterSetRef getSmartSet(bool isPreviousCharacter)
 {
-    static CFMutableCharacterSetRef preSmartSet = NULL; 
+    static CFMutableCharacterSetRef preSmartSet = NULL;
     static CFMutableCharacterSetRef postSmartSet = NULL;
     CFMutableCharacterSetRef smartSet = isPreviousCharacter ? preSmartSet : postSmartSet;
     if (!smartSet) {
         smartSet = CFCharacterSetCreateMutable(kCFAllocatorDefault);
         CFCharacterSetAddCharactersInString(smartSet, isPreviousCharacter ? CFSTR("([\"\'#$/-`{") : CFSTR(")].,;:?\'!\"%*-/}"));
-        CFCharacterSetUnion(smartSet, CFCharacterSetGetPredefined(kCFCharacterSetWhitespaceAndNewline));        
+        CFCharacterSetUnion(smartSet, CFCharacterSetGetPredefined(kCFCharacterSetWhitespaceAndNewline));
         // Adding CJK ranges
         CFCharacterSetAddCharactersInRange(smartSet, CFRangeMake(0x1100, 256)); // Hangul Jamo (0x1100 - 0x11FF)
         CFCharacterSetAddCharactersInRange(smartSet, CFRangeMake(0x2E80, 352)); // CJK & Kangxi Radicals (0x2E80 - 0x2FDF)
@@ -58,7 +58,7 @@ static CFMutableCharacterSetRef getSmartSet(bool isPreviousCharacter)
         if (isPreviousCharacter)
             preSmartSet = smartSet;
         else {
-            CFCharacterSetUnion(smartSet, CFCharacterSetGetPredefined(kCFCharacterSetPunctuation));       
+            CFCharacterSetUnion(smartSet, CFCharacterSetGetPredefined(kCFCharacterSetPunctuation));
             postSmartSet = smartSet;
         }
     }

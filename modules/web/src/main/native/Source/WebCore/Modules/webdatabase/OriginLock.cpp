@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -74,7 +74,7 @@ void OriginLock::unlock()
     // containing the lock has been deleted before we opened the lock file, or
     // we were given a path to a non-existant directory. Which, in turn, means
     // that there's nothing to unlock.
-    if (m_lockHandle == invalidPlatformFileHandle) 
+    if (m_lockHandle == invalidPlatformFileHandle)
         return;
 
     unlockFile(m_lockHandle);

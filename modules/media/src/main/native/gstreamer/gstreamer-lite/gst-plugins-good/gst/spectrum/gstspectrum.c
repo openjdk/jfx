@@ -123,13 +123,13 @@ GST_DEBUG_CATEGORY_STATIC (gst_spectrum_debug);
   "layout = (string) interleaved"
 
 /* Spectrum properties */
-#define DEFAULT_POST_MESSAGES	        TRUE
-#define DEFAULT_MESSAGE_MAGNITUDE	TRUE
-#define DEFAULT_MESSAGE_PHASE		FALSE
-#define DEFAULT_INTERVAL		(GST_SECOND / 10)
-#define DEFAULT_BANDS			128
-#define DEFAULT_THRESHOLD		-60
-#define DEFAULT_MULTI_CHANNEL		FALSE
+#define DEFAULT_POST_MESSAGES           TRUE
+#define DEFAULT_MESSAGE_MAGNITUDE   TRUE
+#define DEFAULT_MESSAGE_PHASE       FALSE
+#define DEFAULT_INTERVAL        (GST_SECOND / 10)
+#define DEFAULT_BANDS           128
+#define DEFAULT_THRESHOLD       -60
+#define DEFAULT_MULTI_CHANNEL       FALSE
 
 enum
 {
@@ -850,7 +850,7 @@ gst_spectrum_transform_ip (GstBaseTransform * trans, GstBuffer * buffer)
 {
 #ifdef GSTREAMER_LITE
   GstMessage *m;
-  
+
   GstSpectrum *spectrum = GST_SPECTRUM (trans);
   guint rate;
   guint channels;
@@ -870,19 +870,19 @@ gst_spectrum_transform_ip (GstBaseTransform * trans, GstBuffer * buffer)
   gboolean have_full_interval;
   GstSpectrumChannel *cd;
   GstSpectrumInputData input_data;
-          
+
   if (!spectrum->post_messages)
       return GST_FLOW_OK;
-  
+
   rate = GST_AUDIO_FILTER_RATE (spectrum);
   channels = GST_AUDIO_FILTER_CHANNELS (spectrum);
   bps = GST_AUDIO_FILTER_BPS (spectrum);
   bpf = GST_AUDIO_FILTER_BPF (spectrum);
-  output_channels = spectrum->multi_channel ? channels : 1;  
+  output_channels = spectrum->multi_channel ? channels : 1;
   max_value = (1UL << ((bps << 3) - 1)) - 1;
   bands = spectrum->bands;
-  nfft = 2 * bands - 2;  
-#else // GSTREAMER_LITE  
+  nfft = 2 * bands - 2;
+#else // GSTREAMER_LITE
 
   guint rate = GST_AUDIO_FILTER_RATE (spectrum);
   guint channels = GST_AUDIO_FILTER_CHANNELS (spectrum);
@@ -902,7 +902,7 @@ gst_spectrum_transform_ip (GstBaseTransform * trans, GstBuffer * buffer)
   gboolean have_full_interval;
   GstSpectrumChannel *cd;
   GstSpectrumInputData input_data;
-#endif // GSTREAMER_LITE  
+#endif // GSTREAMER_LITE
 
   g_mutex_lock (&spectrum->lock);
   gst_buffer_map (buffer, &map, GST_MAP_READ);
@@ -1053,7 +1053,7 @@ gst_spectrum_transform_ip (GstBaseTransform * trans, GstBuffer * buffer)
 }
 
 #ifdef GSTREAMER_LITE
-gboolean 
+gboolean
 plugin_init_spectrum (GstPlugin * plugin)
 #else // GSTREAMER_LITE
 static gboolean

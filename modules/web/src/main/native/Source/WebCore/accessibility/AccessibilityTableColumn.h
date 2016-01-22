@@ -34,40 +34,40 @@
 #include "IntRect.h"
 
 namespace WebCore {
-    
+
 class RenderTableSection;
 
 class AccessibilityTableColumn : public AccessibilityMockObject {
-    
+
 private:
     AccessibilityTableColumn();
 public:
     static PassRefPtr<AccessibilityTableColumn> create();
     virtual ~AccessibilityTableColumn();
-    
+
     AccessibilityObject* headerObject();
-        
+
     virtual AccessibilityRole roleValue() const override { return ColumnRole; }
     virtual bool isTableColumn() const override { return true; }
-    
+
     void setColumnIndex(int columnIndex) { m_columnIndex = columnIndex; }
-    int columnIndex() const { return m_columnIndex; }    
-    
+    int columnIndex() const { return m_columnIndex; }
+
     virtual void addChildren() override;
     virtual void setParent(AccessibilityObject*) override;
-    
+
     virtual LayoutRect elementRect() const override;
-    
-private:    
+
+private:
     unsigned m_columnIndex;
     LayoutRect m_columnRect;
-    
+
     AccessibilityObject* headerObjectForSection(RenderTableSection*, bool thTagRequired);
     virtual bool computeAccessibilityIsIgnored() const override;
 };
 
 ACCESSIBILITY_OBJECT_TYPE_CASTS(AccessibilityTableColumn, isTableColumn())
 
-} // namespace WebCore 
+} // namespace WebCore
 
 #endif // AccessibilityTableColumn_h

@@ -66,20 +66,20 @@ RenderNamedFlowThread::~RenderNamedFlowThread()
 }
 
 const char* RenderNamedFlowThread::renderName() const
-{    
+{
     return "RenderNamedFlowThread";
 }
-    
+
 void RenderNamedFlowThread::clearContentElements()
 {
     for (auto& contentElement : m_contentElements) {
         ASSERT(contentElement);
         ASSERT(contentElement->inNamedFlow());
         ASSERT(&contentElement->document() == &document());
-        
+
         contentElement->clearInNamedFlow();
     }
-    
+
     m_contentElements.clear();
 }
 
@@ -111,7 +111,7 @@ RenderElement* RenderNamedFlowThread::nextRendererForElement(Element& element) c
 
 void RenderNamedFlowThread::addFlowChild(RenderElement& newChild)
 {
-    // The child list is used to sort the flow thread's children render objects 
+    // The child list is used to sort the flow thread's children render objects
     // based on their corresponding nodes DOM order. The list is needed to avoid searching the whole DOM.
 
     if (newChild.isAnonymous())
@@ -313,11 +313,11 @@ void RenderNamedFlowThread::computeOversetStateForRegions(LayoutUnit oldClientAf
             || state == RegionFit
             || state == RegionOverset)
             setDispatchRegionLayoutUpdateEvent(true);
-        
+
         if (previousState != state)
             setDispatchRegionOversetChangeEvent(true);
     }
-    
+
     // If the number of regions has changed since we last computed the overset property, schedule the regionOversetChange event.
     if (previousRegionCountChanged()) {
         setDispatchRegionOversetChangeEvent(true);
@@ -436,7 +436,7 @@ bool RenderNamedFlowThread::hasContentElement(Element& contentElement) const
 {
     return m_contentElements.contains(&contentElement);
 }
-    
+
 const AtomicString& RenderNamedFlowThread::flowThreadName() const
 {
     return namedFlow().name();
@@ -469,7 +469,7 @@ void RenderNamedFlowThread::dispatchRegionOversetChangeEvent()
 {
     RenderFlowThread::dispatchRegionOversetChangeEvent();
     InspectorInstrumentation::didChangeRegionOverset(&document(), &namedFlow());
-    
+
     if (!m_regionOversetChangeEventTimer.isActive() && namedFlow().hasEventListeners())
         m_regionOversetChangeEventTimer.startOneShot(0);
 }

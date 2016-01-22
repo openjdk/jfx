@@ -26,7 +26,7 @@
 package com.sun.prism.impl.shape;
 
 public class NativePiscesRasterizerShim {
-    
+
     public static void produceFillAlphas(float coords[], byte commands[], int nsegs, boolean nonzero,
                                          double mxx, double mxy, double mxt,
                                          double myx, double myy, double myt,
@@ -52,5 +52,5 @@ public class NativePiscesRasterizerShim {
                 myx, myy, myt,
                 bounds, mask);
     }
-    
+
 }

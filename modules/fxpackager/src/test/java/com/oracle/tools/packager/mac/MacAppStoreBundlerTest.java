@@ -365,7 +365,7 @@ public class MacAppStoreBundlerTest {
         }
 
         bundleParams.put(SIGN_BUNDLE.getID(), false);
-        
+
         bundler.validate(bundleParams);
     }
 }

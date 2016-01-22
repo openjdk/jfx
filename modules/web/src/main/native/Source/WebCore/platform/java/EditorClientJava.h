@@ -26,7 +26,7 @@ public:
     virtual void pageDestroyed() override;
 
     virtual bool shouldDeleteRange(Range*) override;
-    virtual bool smartInsertDeleteEnabled() override; 
+    virtual bool smartInsertDeleteEnabled() override;
     virtual bool isSelectTrailingWhitespaceEnabled() override;
     virtual bool isContinuousSpellCheckingEnabled() override;
     virtual void toggleContinuousSpellChecking() override;

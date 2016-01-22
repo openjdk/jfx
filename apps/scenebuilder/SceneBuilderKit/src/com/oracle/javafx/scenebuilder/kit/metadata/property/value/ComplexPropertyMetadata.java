@@ -41,22 +41,22 @@ import com.oracle.javafx.scenebuilder.kit.metadata.util.PropertyName;
 
 /**
  *
- * 
+ *
  */
 public abstract class ComplexPropertyMetadata<T> extends SingleValuePropertyMetadata<T> {
 
-    public ComplexPropertyMetadata(PropertyName name, Class<T> valueClass, 
+    public ComplexPropertyMetadata(PropertyName name, Class<T> valueClass,
             boolean readWrite, T defaultValue, InspectorPath inspectorPath) {
         super(name, valueClass, readWrite, defaultValue, inspectorPath);
     }
-    
+
     /*
      * SingleValuePropertyMetadata
-     */  
+     */
     @Override
     public T makeValueFromProperty(FXOMPropertyT fxomProperty) {
         final T result;
-        
+
         final PrefixedValue pv = new PrefixedValue(fxomProperty.getValue());
         if (pv.isExpression()) {
             final String fxId = pv.getSuffix();
@@ -70,10 +70,10 @@ public abstract class ComplexPropertyMetadata<T> extends SingleValuePropertyMeta
         } else {
             result = makeValueFromString(fxomProperty.getValue());
         }
-        
+
         return result;
     }
-    
+
     @Override
     public T makeValueFromString(String string) {
         throw new RuntimeException("Bug"); //NOI18N

@@ -153,7 +153,7 @@ void MediaPlayerPrivate::registerMediaEngine(MediaEngineRegistrar registrar)
         LOG_ERROR0("<<registerMediaEngine ERROR: MediaPlayer class is unavailable\n");
         return;
     }
-    //CreateMediaEnginePlayer, MediaEngineSupportedTypes, MediaEngineSupportsType, 
+    //CreateMediaEnginePlayer, MediaEngineSupportedTypes, MediaEngineSupportsType,
     //MediaEngineGetSitesInMediaCache, MediaEngineClearMediaCache, MediaEngineClearMediaCacheForSite
     registrar(CreateMediaEnginePlayer, MediaEngineSupportedTypes, MediaEngineSupportsType, 0, 0, 0);
 }
@@ -599,7 +599,7 @@ void MediaPlayerPrivate::setPreload(MediaPlayer::Preload preload)
 //#endif
 
 //bool MediaPlayerPrivate::hasSingleSecurityOrigin() const { return false; }
-        
+
 //MediaPlayer::MovieLoadType MediaPlayerPrivate::movieLoadType() const { return MediaPlayer::Unknown; }
 
 void MediaPlayerPrivate::setNetworkState(MediaPlayer::NetworkState networkState)
@@ -826,7 +826,7 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_graphics_WCMediaPlayer_notifyBufferCh
     PassRefPtr<TimeRanges> timeRanges = TimeRanges::create();
     for (int i = 0; i < len; i+=2) {
         timeRanges->add(rangesElems[i], rangesElems[i+1]);
-    } 
+    }
     if (isCopy == JNI_TRUE) {
        env->ReleaseFloatArrayElements(ranges, rangesElems, JNI_ABORT);
     }

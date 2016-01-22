@@ -37,14 +37,14 @@ static JSObjectRef CallAsConstructor(JSContextRef ctx, JSObjectRef constructor, 
     NSDictionary *constructorDescriptor = constructorPrivateProperties[@"constructorDescriptor"];
     newObjectRef = JSObjectMake(ctx, NULL, NULL);
     NSDictionary *objectProperties = constructorDescriptor[@"objectProperties"];
-    
+
     if (objectProperties) {
         JSValue *newObject = [JSValue valueWithJSValueRef:newObjectRef inContext:[JSContext contextWithJSGlobalContextRef:JSContextGetGlobalContext(ctx)]];
         for (NSString *objectProperty in objectProperties) {
             [newObject defineProperty:objectProperty descriptor:objectProperties[objectProperty]];
         }
     }
-    
+
     return newObjectRef;
 }
 
@@ -58,7 +58,7 @@ static void ConstructorFinalize(JSObjectRef object)
 static JSClassRef ConstructorClass(void)
 {
     static JSClassRef constructorClass = NULL;
-    
+
     if (constructorClass == NULL) {
         JSClassDefinition classDefinition = kJSClassDefinitionEmpty;
         classDefinition.className = "Constructor";
@@ -66,7 +66,7 @@ static JSClassRef ConstructorClass(void)
         classDefinition.finalize = ConstructorFinalize;
         constructorClass = JSClassCreate(&classDefinition);
     }
-    
+
     return constructorClass;
 }
 
@@ -108,13 +108,13 @@ void currentThisInsideBlockGetterTest()
 {
     @autoreleasepool {
         JSContext *context = [[JSContext alloc] init];
-        
+
         JSValue *myConstructor = [context valueWithConstructorDescriptor:@{
             @"objectProperties" : @{
                 @"currentThis" : @{ JSPropertyDescriptorGetKey : ^{ return JSContext.currentThis; } },
             },
         }];
-        
+
         JSValue *myObj1 = [myConstructor constructWithArguments:nil];
         NSLog(@"myObj1.currentThis: %@", myObj1[@"currentThis"]);
         JSValue *myObj2 = [myConstructor constructWithArguments:@[ @"bar" ]];

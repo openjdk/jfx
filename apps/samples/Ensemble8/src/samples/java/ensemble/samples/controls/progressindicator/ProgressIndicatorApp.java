@@ -57,7 +57,7 @@ import javafx.util.Duration;
  */
 public class ProgressIndicatorApp extends Application {
     final Timeline timeline = new Timeline();
-    
+
     public Parent createContent() {
         GridPane gridPane = new GridPane();
 
@@ -75,7 +75,7 @@ public class ProgressIndicatorApp extends Application {
         ProgressIndicator p4 = new ProgressIndicator();
         p4.setPrefSize(50, 50);
         p4.setProgress(1.0F);
-        
+
         // styled ProgressIndicator
         final ProgressIndicator p5 = new ProgressIndicator();
         p5.setPrefSize(100, 100);
@@ -143,7 +143,7 @@ public class ProgressIndicatorApp extends Application {
     public void stop() {
         timeline.stop();
     }
-    
+
     @Override
     public void start(Stage primaryStage) throws Exception {
         primaryStage.setScene(new Scene(createContent()));

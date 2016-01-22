@@ -64,18 +64,18 @@ public class SearchPopover extends Popover {
     private Tooltip searchErrorTooltip = null;
     private Timeline searchErrorTooltipHidder = null;
     private SearchResultPopoverList searchResultPopoverList;
-    
+
     public SearchPopover(final SearchBox searchBox, PageBrowser pageBrowser) {
         super();
         this.searchBox = searchBox;
         this.pageBrowser = pageBrowser;
         getStyleClass().add("right-tooth");
         setPrefWidth(600);
-        
+
         searchBox.textProperty().addListener((ObservableValue<? extends String> ov, String t, String t1) -> {
             updateResults();
         });
-        
+
         searchBox.addEventFilter(KeyEvent.ANY, (KeyEvent t) -> {
             if (t.getCode() == KeyCode.DOWN
                     || t.getCode() == KeyCode.UP
@@ -102,7 +102,7 @@ public class SearchPopover extends Popover {
             }
         });
     }
-    
+
     private void updateResults() {
         if (searchBox.getText() == null || searchBox.getText().isEmpty()) {
             populateMenu(new EnumMap<DocumentType, List<SearchResult>>(DocumentType.class));
@@ -134,7 +134,7 @@ public class SearchPopover extends Popover {
             hide();
         }
     }
-    
+
     private void showError(String message) {
         if (searchErrorTooltip == null) {
             searchErrorTooltip = new Tooltip();
@@ -147,7 +147,7 @@ public class SearchPopover extends Popover {
             double y = toolTipPos.getY() + searchBox.getScene().getY() + searchBox.getScene().getWindow().getY();
             searchErrorTooltip.show( searchBox.getScene().getWindow(),x, y);
             searchErrorTooltipHidder = new Timeline();
-            searchErrorTooltipHidder.getKeyFrames().add( 
+            searchErrorTooltipHidder.getKeyFrames().add(
                 new KeyFrame(Duration.seconds(3), (ActionEvent t) -> {
                     searchErrorTooltip.hide();
                     searchErrorTooltip.setText(null);
@@ -158,9 +158,9 @@ public class SearchPopover extends Popover {
             searchErrorTooltip.hide();
         }
     }
-    
+
     private void populateMenu(Map<DocumentType, List<SearchResult>> results) {
-        searchResultPopoverList.getItems().clear();    
+        searchResultPopoverList.getItems().clear();
         for(Map.Entry<DocumentType, List<SearchResult>> entry: results.entrySet()) {
             searchResultPopoverList.getItems().addAll(entry.getValue());
         }

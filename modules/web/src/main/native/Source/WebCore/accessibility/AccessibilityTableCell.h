@@ -32,25 +32,25 @@
 #include "AccessibilityRenderObject.h"
 
 namespace WebCore {
-    
+
 class AccessibilityTable;
-    
+
 class AccessibilityTableCell : public AccessibilityRenderObject {
-    
+
 protected:
     explicit AccessibilityTableCell(RenderObject*);
 public:
     static PassRefPtr<AccessibilityTableCell> create(RenderObject*);
     virtual ~AccessibilityTableCell();
-    
+
     virtual bool isTableCell() const override;
     bool isTableHeaderCell() const;
-    
+
     // fills in the start location and row span of cell
     virtual void rowIndexRange(std::pair<unsigned, unsigned>& rowRange);
     // fills in the start location and column span of cell
     virtual void columnIndexRange(std::pair<unsigned, unsigned>& columnRange);
-    
+
     void columnHeaders(AccessibilityChildrenVector&);
     void rowHeaders(AccessibilityChildrenVector&);
 
@@ -64,13 +64,13 @@ private:
     virtual AccessibilityObject* titleUIElement() const override;
     virtual bool exposesTitleUIElement() const override { return true; }
     virtual bool computeAccessibilityIsIgnored() const override;
-    
+
     bool isTableCellInSameRowGroup(AccessibilityTableCell*);
     bool isTableCellInSameColGroup(AccessibilityTableCell*);
 };
 
 ACCESSIBILITY_OBJECT_TYPE_CASTS(AccessibilityTableCell, isTableCell())
 
-} // namespace WebCore 
+} // namespace WebCore
 
 #endif // AccessibilityTableCell_h

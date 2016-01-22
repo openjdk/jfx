@@ -75,8 +75,8 @@ public class AreaChart<X,Y> extends XYChart<X,Y> {
 
     // -------------- PUBLIC PROPERTIES ----------------------------------------
 
-    /** 
-     * When true, CSS styleable symbols are created for any data items that don't have a symbol node specified. 
+    /**
+     * When true, CSS styleable symbols are created for any data items that don't have a symbol node specified.
      * @since JavaFX 8.0
      */
     private BooleanProperty createSymbols = new StyleableBooleanProperty(true) {
@@ -123,8 +123,8 @@ public class AreaChart<X,Y> extends XYChart<X,Y> {
     public final boolean getCreateSymbols() { return createSymbols.getValue(); }
     public final void setCreateSymbols(boolean value) { createSymbols.setValue(value); }
     public final BooleanProperty createSymbolsProperty() { return createSymbols; }
-    
-    
+
+
     // -------------- CONSTRUCTORS ----------------------------------------------
 
     /**
@@ -180,7 +180,7 @@ public class AreaChart<X,Y> extends XYChart<X,Y> {
             }
         }
     }
-    
+
     @Override protected void dataItemAdded(Series<X,Y> series, int itemIndex, Data<X,Y> item) {
         final Node symbol = createSymbol(series, getData().indexOf(series), item, itemIndex);
         if (shouldAnimate()) {
@@ -193,10 +193,10 @@ public class AreaChart<X,Y> extends XYChart<X,Y> {
                 double y1 = getYAxis().toNumericValue(p1.getYValue());
                 double x3 = getXAxis().toNumericValue(p2.getXValue());
                 double y3 = getYAxis().toNumericValue(p2.getYValue());
-                
+
                 double x2 = getXAxis().toNumericValue(item.getXValue());
                 double y2 = getYAxis().toNumericValue(item.getYValue());
-      
+
 //                //1. y intercept of the line : y = ((y3-y1)/(x3-x1)) * x2 + (x3y1 - y3x1)/(x3 -x1)
                 double y = ((y3-y1)/(x3-x1)) * x2 + (x3*y1 - y3*x1)/(x3-x1);
                 item.setCurrentY(getYAxis().toRealValue(y));
@@ -215,7 +215,7 @@ public class AreaChart<X,Y> extends XYChart<X,Y> {
                 int last = series.getData().size() - 2;
                 item.setCurrentX(series.getData().get(last).getXValue());
                 item.setCurrentY(series.getData().get(last).getYValue());
-            }  
+            }
             if (symbol != null) {
                 // fade in new symbol
                 symbol.setOpacity(0);
@@ -242,7 +242,7 @@ public class AreaChart<X,Y> extends XYChart<X,Y> {
                                         item.getXValue(), Interpolator.EASE_BOTH))
                 );
             }
-            
+
         } else if (symbol != null) {
             getPlotChildren().add(symbol);
         }
@@ -535,7 +535,7 @@ public class AreaChart<X,Y> extends XYChart<X,Y> {
     // -------------- STYLESHEET HANDLING --------------------------------------
 
     private static class StyleableProperties {
-        private static final CssMetaData<AreaChart<?,?>,Boolean> CREATE_SYMBOLS = 
+        private static final CssMetaData<AreaChart<?,?>,Boolean> CREATE_SYMBOLS =
             new CssMetaData<AreaChart<?,?>,Boolean>("-fx-create-symbols",
                 BooleanConverter.getInstance(), Boolean.TRUE) {
 
@@ -575,6 +575,6 @@ public class AreaChart<X,Y> extends XYChart<X,Y> {
     @Override
     public List<CssMetaData<? extends Styleable, ?>> getCssMetaData() {
         return getClassCssMetaData();
-    }    
+    }
 
 }

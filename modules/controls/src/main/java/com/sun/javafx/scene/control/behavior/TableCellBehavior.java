@@ -36,24 +36,24 @@ import javafx.scene.control.TableView.TableViewFocusModel;
 /**
  */
 public class TableCellBehavior<S,T> extends TableCellBehaviorBase<S, T, TableColumn<S,?>, TableCell<S, T>> {
-    
+
     /***************************************************************************
      *                                                                         *
      * Constructors                                                            *
      *                                                                         *
-     **************************************************************************/    
+     **************************************************************************/
 
     public TableCellBehavior(TableCell<S,T> control) {
         super(control);
     }
-    
-    
-    
+
+
+
     /***************************************************************************
      *                                                                         *
      * Implement TableCellBehaviorBase Abstract API                            *
      *                                                                         *
-     **************************************************************************/          
+     **************************************************************************/
 
     /** @{@inheritDoc} */
     @Override protected TableView<S> getCellContainer() {

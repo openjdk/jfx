@@ -47,12 +47,12 @@ public class When_Double_Test extends WhenTestBase<Number, Property<Number>> {
     @SuppressWarnings("unchecked")
     @Override
     public Binding<Number>[] generatePropertyPropertyList(Property<Number> p0, Property<Number>[] props) {
-    	final int n = props.length;
-    	final Binding<Number>[] result = new Binding[n];
-    	for (int i=0; i<n; i++) {
-    		result[i] = Bindings.when(cond).then((ObservableNumberValue)p0).otherwise((ObservableNumberValue)props[i]);
-    	}
-    	return result;
+        final int n = props.length;
+        final Binding<Number>[] result = new Binding[n];
+        for (int i=0; i<n; i++) {
+            result[i] = Bindings.when(cond).then((ObservableNumberValue)p0).otherwise((ObservableNumberValue)props[i]);
+        }
+        return result;
     }
 
     @Override
@@ -63,24 +63,24 @@ public class When_Double_Test extends WhenTestBase<Number, Property<Number>> {
     @SuppressWarnings("unchecked")
     @Override
     public Binding<Number>[] generatePropertyPrimitive(Property<Number> op0, Number op1) {
-    	final ObservableNumberValue p0 = (ObservableNumberValue)op0;
+        final ObservableNumberValue p0 = (ObservableNumberValue)op0;
         return new Binding[] {
-        		Bindings.when(cond).then(p0).otherwise(op1.doubleValue()),
-        		Bindings.when(cond).then(p0).otherwise(op1.floatValue()),
-        		Bindings.when(cond).then(p0).otherwise(op1.longValue()),
-        		Bindings.when(cond).then(p0).otherwise(op1.intValue())
+                Bindings.when(cond).then(p0).otherwise(op1.doubleValue()),
+                Bindings.when(cond).then(p0).otherwise(op1.floatValue()),
+                Bindings.when(cond).then(p0).otherwise(op1.longValue()),
+                Bindings.when(cond).then(p0).otherwise(op1.intValue())
         };
     }
 
     @SuppressWarnings("unchecked")
     @Override
     public Binding<Number>[] generatePrimitiveProperty(Number op0, Property<Number> op1) {
-    	final ObservableNumberValue p1 = (ObservableNumberValue)op1;
+        final ObservableNumberValue p1 = (ObservableNumberValue)op1;
         return new Binding[] {
-        		Bindings.when(cond).then(op0.doubleValue()).otherwise(p1),
-        		Bindings.when(cond).then(op0.floatValue()).otherwise(p1),
-        		Bindings.when(cond).then(op0.longValue()).otherwise(p1),
-        		Bindings.when(cond).then(op0.intValue()).otherwise(p1)
+                Bindings.when(cond).then(op0.doubleValue()).otherwise(p1),
+                Bindings.when(cond).then(op0.floatValue()).otherwise(p1),
+                Bindings.when(cond).then(op0.longValue()).otherwise(p1),
+                Bindings.when(cond).then(op0.intValue()).otherwise(p1)
         };
     }
 
@@ -88,10 +88,10 @@ public class When_Double_Test extends WhenTestBase<Number, Property<Number>> {
     @Override
     public Binding<Number>[] generatePrimitivePrimitive(Number op0, Number op1) {
         return new Binding[] {
-        		Bindings.when(cond).then(op0.doubleValue()).otherwise(op1.doubleValue()),
-        		Bindings.when(cond).then(op0.doubleValue()).otherwise(op1.floatValue()),
-        		Bindings.when(cond).then(op0.doubleValue()).otherwise(op1.longValue()),
-        		Bindings.when(cond).then(op0.doubleValue()).otherwise(op1.intValue())
+                Bindings.when(cond).then(op0.doubleValue()).otherwise(op1.doubleValue()),
+                Bindings.when(cond).then(op0.doubleValue()).otherwise(op1.floatValue()),
+                Bindings.when(cond).then(op0.doubleValue()).otherwise(op1.longValue()),
+                Bindings.when(cond).then(op0.doubleValue()).otherwise(op1.intValue())
         };
     }
 

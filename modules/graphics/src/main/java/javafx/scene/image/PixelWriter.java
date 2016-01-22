@@ -41,7 +41,7 @@ public interface PixelWriter {
      * This method returns the {@code PixelFormat} in which the surface
      * stores its pixels, or a roughly equivalent pixel format from which
      * it can easily convert pixels for purposes of writing them.
-     * 
+     *
      * @return the {@code PixelFormat} that best describes the underlying
      *         pixels
      */
@@ -53,7 +53,7 @@ public interface PixelWriter {
      * The 32-bit integer {@code argb} parameter should contain the 4 color
      * components in separate 8-bit fields in ARGB order from the most
      * significant byte to the least significant byte.
-     * 
+     *
      * @param x the X coordinate of the pixel color to write
      * @param y the Y coordinate of the pixel color to write
      * @param argb the color information to write, specified in the format

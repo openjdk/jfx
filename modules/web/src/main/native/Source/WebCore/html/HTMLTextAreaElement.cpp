@@ -226,7 +226,7 @@ bool HTMLTextAreaElement::appendFormData(FormDataList& encoding, bool)
     const AtomicString& dirnameAttrValue = fastGetAttribute(dirnameAttr);
     if (!dirnameAttrValue.isNull())
         encoding.appendData(dirnameAttrValue, directionForFormData());
-    return true;    
+    return true;
 }
 
 void HTMLTextAreaElement::reset()
@@ -253,7 +253,7 @@ bool HTMLTextAreaElement::isMouseFocusable() const
 void HTMLTextAreaElement::updateFocusAppearance(bool restorePreviousSelection)
 {
     if (!restorePreviousSelection || !hasCachedSelection()) {
-        // If this is the first focus, set a caret at the beginning of the text.  
+        // If this is the first focus, set a caret at the beginning of the text.
         // This matches some browsers' behavior; see bug 11746 Comment #15.
         // http://bugs.webkit.org/show_bug.cgi?id=11746#c15
         setSelectionRange(0, 0);

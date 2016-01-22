@@ -52,7 +52,7 @@ public:
     bool get(const char* propertyName, Result&) const;
     template <typename Result>
     bool get(const String& propertyName, Result&) const;
-    
+
     template <typename T>
     PassRefPtr<EventListener> getEventListener(const char* propertyName, T* target) const;
     template <typename T>
@@ -67,7 +67,7 @@ public:
 private:
     template <typename T>
     JSC::JSObject* asJSObject(T*) const;
-    
+
     JSDictionary m_dictionary;
 };
 
@@ -76,7 +76,7 @@ bool Dictionary::get(const char* propertyName, Result& result) const
 {
     if (!m_dictionary.isValid())
         return false;
-    
+
     return m_dictionary.get(propertyName, result);
 }
 

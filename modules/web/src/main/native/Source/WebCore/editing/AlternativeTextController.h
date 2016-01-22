@@ -73,7 +73,7 @@ private:
     : m_dictationContext(dictationContext)
     , m_originalText(originalText)
     { }
- 
+
     uint64_t m_dictationContext;
     String m_originalText;
 };
@@ -148,7 +148,7 @@ private:
 
     AlternativeTextClient* alternativeTextClient();
     EditorClient* editorClient();
-    
+
     TextCheckerClient* textChecker();
     FloatRect rootViewRectForRange(const Range*) const;
     void markPrecedingWhitespaceForDeletedAutocorrectionAfterCommand(EditCommand*);

@@ -76,7 +76,7 @@ private:
     virtual float getAvgCharWidth(AtomicString family) override;
     virtual LayoutUnit preferredContentLogicalWidth(float charWidth) const override;
     virtual LayoutUnit computeControlLogicalHeight(LayoutUnit lineHeight, LayoutUnit nonContentHeight) const override;
-    
+
     virtual void styleDidChange(StyleDifference, const RenderStyle* oldStyle) override;
 
     bool textShouldBeTruncated() const;

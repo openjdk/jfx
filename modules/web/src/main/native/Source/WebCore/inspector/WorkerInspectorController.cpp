@@ -112,7 +112,7 @@ WorkerInspectorController::WorkerInspectorController(WorkerGlobalScope& workerGl
         );
     }
 }
- 
+
 WorkerInspectorController::~WorkerInspectorController()
 {
     m_instrumentingAgents->reset();

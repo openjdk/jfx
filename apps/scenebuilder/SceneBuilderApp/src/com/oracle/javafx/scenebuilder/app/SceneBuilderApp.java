@@ -97,7 +97,7 @@ public class SceneBuilderApp extends Application implements AppPlatform.AppNotif
         SHOW_PREFERENCES,
         EXIT
     }
-    
+
     public enum ToolTheme {
 
         DEFAULT {
@@ -117,7 +117,7 @@ public class SceneBuilderApp extends Application implements AppPlatform.AppNotif
     private static SceneBuilderApp singleton;
     private static String darkToolStylesheet;
     private static final CountDownLatch launchLatch = new CountDownLatch(1);
-    
+
     private final List<DocumentWindowController> windowList = new ArrayList<>();
     private final PreferencesWindowController preferencesWindowController
             = new PreferencesWindowController();
@@ -125,7 +125,7 @@ public class SceneBuilderApp extends Application implements AppPlatform.AppNotif
             = new AboutWindowController();
     private UserLibrary userLibrary;
     private ToolTheme toolTheme = ToolTheme.DEFAULT;
-    
+
 
     /*
      * Public
@@ -133,11 +133,11 @@ public class SceneBuilderApp extends Application implements AppPlatform.AppNotif
     public static SceneBuilderApp getSingleton() {
         return singleton;
     }
-    
+
     public SceneBuilderApp() {
         assert singleton == null;
         singleton = this;
-        
+
         /*
          * We spawn our two threads for handling background startup.
          */
@@ -154,13 +154,13 @@ public class SceneBuilderApp extends Application implements AppPlatform.AppNotif
         final Thread phase1 = new Thread(p1, "Phase 1"); //NOI18N
         phase0.setDaemon(true);
         phase1.setDaemon(true);
-        
+
         // Note : if you suspect a race condition bug, comment the two next
         // lines to make startup fully sequential.
         phase0.start();
         phase1.start();
     }
-    
+
     public void performControlAction(ApplicationControlAction a, DocumentWindowController source) {
         switch (a) {
             case ABOUT:
@@ -195,7 +195,7 @@ public class SceneBuilderApp extends Application implements AppPlatform.AppNotif
             case CLOSE_FRONT_WINDOW:
                 performCloseFrontWindow();
                 break;
-                
+
             case USE_DEFAULT_THEME:
                 performUseToolTheme(ToolTheme.DEFAULT);
                 break;
@@ -213,7 +213,7 @@ public class SceneBuilderApp extends Application implements AppPlatform.AppNotif
                 break;
         }
     }
-    
+
 
     public boolean canPerformControlAction(ApplicationControlAction a, DocumentWindowController source) {
         final boolean result;
@@ -238,7 +238,7 @@ public class SceneBuilderApp extends Application implements AppPlatform.AppNotif
             case CLOSE_FRONT_WINDOW:
                 result = windowList.isEmpty() == false;
                 break;
-                
+
             case USE_DEFAULT_THEME:
                 result = toolTheme != ToolTheme.DEFAULT;
                 break;
@@ -254,7 +254,7 @@ public class SceneBuilderApp extends Application implements AppPlatform.AppNotif
         }
         return result;
     }
-    
+
     public void performOpenRecent(DocumentWindowController source, final File fxmlFile) {
         assert fxmlFile != null && fxmlFile.exists();
 
@@ -298,14 +298,14 @@ public class SceneBuilderApp extends Application implements AppPlatform.AppNotif
 
     public DocumentWindowController lookupUnusedDocumentWindowController() {
         DocumentWindowController result = null;
-        
+
         for (DocumentWindowController dwc : windowList) {
             if (dwc.isUnused()) {
                 result = dwc;
                 break;
             }
         }
-        
+
         return result;
     }
 
@@ -341,7 +341,7 @@ public class SceneBuilderApp extends Application implements AppPlatform.AppNotif
      * Application
      */
     @Override
-    public void start(Stage stage) throws Exception {  
+    public void start(Stage stage) throws Exception {
         launchLatch.countDown();
         setApplicationUncaughtExceptionHandler();
 
@@ -365,7 +365,7 @@ public class SceneBuilderApp extends Application implements AppPlatform.AppNotif
             errorDialog.showAndWait();
             Platform.exit();
         }
-        
+
         logTimestamp(ACTION.START);
     }
 
@@ -378,11 +378,11 @@ public class SceneBuilderApp extends Application implements AppPlatform.AppNotif
 
         // Creates the user library
         userLibrary = new UserLibrary(AppPlatform.getUserLibraryFolder());
-        
+
         userLibrary.explorationCountProperty().addListener((ChangeListener<Number>) (ov, t, t1) -> userLibraryExplorationCountDidChange());
-        
+
         userLibrary.startWatching();
-        
+
         if (files.isEmpty()) {
             // Creates an empty document
             final DocumentWindowController newWindow = makeNewWindow();
@@ -397,8 +397,8 @@ public class SceneBuilderApp extends Application implements AppPlatform.AppNotif
         } else {
             // Open files passed as arguments by the platform
             handleOpenFilesAction(files);
-        }    
-        
+        }
+
         // On Mac, AppPlatform disables implicit exit.
         // So we need to set a default system menu bar.
         if (Platform.isImplicitExit() == false) {
@@ -435,14 +435,14 @@ public class SceneBuilderApp extends Application implements AppPlatform.AppNotif
         /*
          * Note : this callback is called on Mac OS X only when the user
          * selects the 'Quit App' command in the Application menu.
-         * 
+         *
          * Before calling this callback, FX automatically sends a close event
          * to each open window ie DocumentWindowController.performCloseAction()
          * is invoked for each open window.
-         * 
+         *
          * When we arrive here, windowList is empty if the user has confirmed
          * the close operation for each window : thus exit operation can
-         * be performed. If windowList is not empty,  this means the user has 
+         * be performed. If windowList is not empty,  this means the user has
          * cancelled at least one close operation : in that case, exit operation
          * should be not be executed.
          */
@@ -459,7 +459,7 @@ public class SceneBuilderApp extends Application implements AppPlatform.AppNotif
     public static void main(String[] args) {
         launch(args);
     }
-    
+
     /*
      * Private
      */
@@ -593,7 +593,7 @@ public class SceneBuilderApp extends Application implements AppPlatform.AppNotif
     }
 
     private void performExit() {
-        
+
         // Check if an editing session is on going
         for (DocumentWindowController dwc : windowList) {
             if (dwc.getEditorController().isTextEditingSessionOnGoing()) {
@@ -673,9 +673,9 @@ public class SceneBuilderApp extends Application implements AppPlatform.AppNotif
             Platform.exit();
         }
     }
-    
+
     private enum ACTION {START, STOP};
-    
+
     private void logTimestamp(ACTION type) {
         switch (type) {
             case START:
@@ -688,14 +688,14 @@ public class SceneBuilderApp extends Application implements AppPlatform.AppNotif
                 assert false;
         }
     }
-    
+
     private void setApplicationUncaughtExceptionHandler() {
         if (Thread.getDefaultUncaughtExceptionHandler() == null) {
             // Register a Default Uncaught Exception Handler for the application
             Thread.setDefaultUncaughtExceptionHandler(new SceneBuilderUncaughtExceptionHandler());
         }
     }
-    
+
     private static class SceneBuilderUncaughtExceptionHandler implements Thread.UncaughtExceptionHandler{
 
         @Override
@@ -704,82 +704,82 @@ public class SceneBuilderApp extends Application implements AppPlatform.AppNotif
             Logger.getLogger(this.getClass().getName()).log(Level.SEVERE, "An exception was thrown:", e); //NOI18N
         }
     }
-    
-    
+
+
     private void performUseToolTheme(ToolTheme toolTheme) {
         this.toolTheme = toolTheme;
-        
+
         final String toolStylesheet = getToolStylesheet();
-        
+
         for (DocumentWindowController dwc : windowList) {
             dwc.setToolStylesheet(toolStylesheet);
         }
         preferencesWindowController.setToolStylesheet(toolStylesheet);
         aboutWindowController.setToolStylesheet(toolStylesheet);
     }
-    
-    
+
+
     private String getToolStylesheet() {
         final String result;
-        
+
         switch(this.toolTheme) {
-            
+
             default:
             case DEFAULT:
                 result = EditorController.getBuiltinToolStylesheet();
                 break;
-                
+
             case DARK:
                 result = getDarkToolStylesheet();
                 break;
         }
-        
+
         return result;
     }
-    
-    
+
+
     /*
      * Background startup
-     * 
+     *
      * To speed SB startup, we create two threads which anticipate some
      * initialization tasks and offload the JFX thread:
      *  - 'Phase 0' thread executes tasks that do not require JFX initialization
      *  - 'Phase 1' thread executes tasks that requires JFX initialization
-     * 
+     *
      * Tasks executed here must be carefully chosen:
      * 1) they must be thread-safe
      * 2) they should be order-safe : whether they are executed in background
      *    or by the JFX thread should make no difference.
-     * 
+     *
      * Currently we simply anticipate creation of big singleton instances
      * (like Metadata, Preferences...)
      */
-    
+
     private void backgroundStartPhase0() {
-        assert Platform.isFxApplicationThread() == false; // Warning 
-        
+        assert Platform.isFxApplicationThread() == false; // Warning
+
         PreferencesController.getSingleton();
         Metadata.getMetadata();
     }
-    
+
     private void backgroundStartPhase2() {
-        assert Platform.isFxApplicationThread() == false; // Warning 
+        assert Platform.isFxApplicationThread() == false; // Warning
         assert launchLatch.getCount() == 0; // i.e JavaFX is initialized
-        
+
         BuiltinLibrary.getLibrary();
         if (EditorPlatform.IS_MAC) {
             MenuBarController.getSystemMenuBarController();
         }
         EffectPicker.getEffectClasses();
     }
-    
+
     private void userLibraryExplorationCountDidChange() {
         // We can have 0, 1 or N FXML file, same for JAR one.
         final int numOfFxmlFiles = userLibrary.getFxmlFileReports().size();
         final int numOfJarFiles = userLibrary.getJarReports().size();
         final int jarCount = userLibrary.getJarReports().size();
         final int fxmlCount = userLibrary.getFxmlFileReports().size();
-        
+
         switch (numOfFxmlFiles + numOfJarFiles) {
             case 0: // Case 0-0
                 final int previousNumOfJarFiles = userLibrary.getPreviousJarReports().size();
@@ -829,13 +829,13 @@ public class SceneBuilderApp extends Application implements AppPlatform.AppNotif
                 break;
         }
     }
-    
+
     private void logInfoMessage(String key) {
         for (DocumentWindowController dwc : windowList) {
             dwc.getEditorController().getMessageLog().logInfoMessage(key, I18N.getBundle());
         }
     }
-    
+
     private void logInfoMessage(String key, Object... args) {
         for (DocumentWindowController dwc : windowList) {
             dwc.getEditorController().getMessageLog().logInfoMessage(key, I18N.getBundle(), args);

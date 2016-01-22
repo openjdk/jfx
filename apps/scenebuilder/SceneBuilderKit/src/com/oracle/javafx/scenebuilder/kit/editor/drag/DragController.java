@@ -57,7 +57,7 @@ import com.oracle.javafx.scenebuilder.kit.metadata.util.DesignHierarchyPath;
  *
  */
 public class DragController {
-    
+
     private final EditorController editorController;
     private final ObjectProperty<AbstractDragSource> dragSourceProperty
             = new SimpleObjectProperty<>(null);
@@ -69,11 +69,11 @@ public class DragController {
     private boolean dropAccepted;
     private AbstractDropTarget committedDropTarget;
     private Timer mouseTimer;
-    
+
     public DragController(EditorController editorController) {
         this.editorController = editorController;
     }
-    
+
     public void begin(AbstractDragSource dragSource) {
         assert dragSource != null;
         assert dragSource.isAcceptable();
@@ -84,21 +84,21 @@ public class DragController {
         assert dropAccepted == false;
         assert committedDropTarget == null;
         assert mouseTimer == null;
-        
+
         liveUpdater = new LiveUpdater(dragSource, editorController);
         dragSourceProperty.set(dragSource);
         dropTargetProperty.set(null);
-        
+
         // Backup and clear the selection
         backupSelectionJob = new BackupSelectionJob(editorController);
         editorController.getSelection().clear();
     }
-    
+
     public void end() {
         assert getDragSource() != null;
-        
+
         liveUpdater.setDropTarget(null);
-        
+
         /*
          * Note 1: we reset the drop target before performing the drop operation.
          * This makes content panel hide the drop target ring before fxom update
@@ -111,11 +111,11 @@ public class DragController {
 
         if (committedDropTarget != null) {
             assert committedDropTarget.acceptDragSource(getDragSource());
-            final Job dropJob 
+            final Job dropJob
                     = committedDropTarget.makeDropJob(getDragSource(), editorController);
-            final Job selectJob 
+            final Job selectJob
                     = new UpdateSelectionJob(getDragSource().getDraggedObjects(), editorController);
-            final BatchJob batchJob 
+            final BatchJob batchJob
                     = new BatchJob(editorController, dropJob.getDescription());
             if (committedDropTarget.isSelectRequiredAfterDrop()) {
                 batchJob.addSubJob(backupSelectionJob);
@@ -126,7 +126,7 @@ public class DragController {
             }
             editorController.getJobManager().push(batchJob);
         }
-        
+
         if (mouseTimer != null) {
             mouseTimer.cancel();
             mouseTimer = null;
@@ -135,21 +135,21 @@ public class DragController {
         backupSelectionJob = null;
         committedDropTarget = null;
         dragSourceProperty.set(null);
-        
+
     }
 
     public AbstractDragSource getDragSource() {
         return dragSourceProperty.get();
     }
-    
+
     public Property<AbstractDragSource> dragSourceProperty() {
         return dragSourceProperty;
     }
-    
+
     public void setDropTarget(AbstractDropTarget newDropTarget) {
         assert getDragSource() != null;
         assert (newDropTarget == null) || (this.committedDropTarget == null);
-        
+
         /*
          * Update drop target property.
          * Note that this.dropAccepted is updated before so that
@@ -165,37 +165,37 @@ public class DragController {
         dropTargetProperty.set(newDropTarget);
 
         trackMouse();
-        
+
         if (dropAccepted) {
             assert getDropTarget() != null;
             assert getDropTarget().acceptDragSource(getDragSource());
             assert getDragSource().getDraggedObjects().isEmpty() == false;
-            
+
             final FXOMObject firstObject = getDragSource().getDraggedObjects().get(0);
             final FXOMObject currentParent = firstObject.getParentObject();
             final FXOMObject nextParent = getDropTarget().getTargetObject();
-            
+
             if ((currentParent == nextParent) && liveUpdateEnabled) {
                 liveUpdater.setDropTarget(newDropTarget);
             }
         }
     }
-    
+
     public AbstractDropTarget getDropTarget() {
         return dropTargetProperty.get();
     }
-    
+
     public Property<AbstractDropTarget> dropTargetProperty() {
         return dropTargetProperty;
     }
-    
+
     public boolean isDropAccepted() {
         return dropAccepted;
     }
-    
+
     public TransferMode[] getAcceptedTransferModes() {
         final TransferMode[] result;
-        
+
         if (getDropTarget() == null) {
             result = TransferMode.NONE;
         } else if (dropAccepted) {
@@ -207,46 +207,46 @@ public class DragController {
         } else {
             result = TransferMode.NONE;
         }
-        
+
         assert (result.length == 0) || (getDropTarget() != null);
-        
+
         return result;
     }
-    
+
     public void commit() {
         assert isDropAccepted();
         assert committedDropTarget == null;
-        
+
         committedDropTarget = getDropTarget();
     }
-    
+
     public boolean isLiveUpdated() {
         return getDropTarget() == liveUpdater.getDropTarget();
     }
-    
+
     /*
      * Private
      */
-    
+
     private void mouseDidStopMoving() {
-        if (dropAccepted 
-                && (getDropTarget() != liveUpdater.getDropTarget()) 
+        if (dropAccepted
+                && (getDropTarget() != liveUpdater.getDropTarget())
                 && liveUpdateEnabled) {
             liveUpdater.setDropTarget(getDropTarget());
         }
     }
-    
+
     private static final long MOUSE_TIMER_DELAY = 500; // ms
     private void trackMouse() {
         final boolean runAsDaemon = true;
-        
+
         if (mouseTimer == null) {
             mouseTimer = new Timer(runAsDaemon);
         } else {
             mouseTimer.cancel();
             mouseTimer = new Timer(runAsDaemon);
         }
-        
+
         mouseTimer.schedule(new TimerTask() {
             @Override public void run() {
                 Platform.runLater(() -> {
@@ -256,7 +256,7 @@ public class DragController {
             }
         }, MOUSE_TIMER_DELAY);
     }
-    
+
     /**
      * Returns true if one of the dragged object is in the parent chain of the
      * specified drop target, false otherwise.
@@ -268,7 +268,7 @@ public class DragController {
     private boolean isDragSourceInParentChain(AbstractDropTarget newDropTarget) {
         assert newDropTarget != null;
         boolean result;
-        
+
         if (newDropTarget instanceof RootDropTarget) {
             // dragSource is dragged over an empty document
             result = false;
@@ -277,14 +277,14 @@ public class DragController {
                     = getDragSource().getDraggedObjects();
             final DesignHierarchyPath dropTargetPath
                     = new DesignHierarchyPath(newDropTarget.getTargetObject());
-            
+
             result = false;
             for (FXOMObject draggedObject : draggedObjects) {
                 final DesignHierarchyPath draggedObjectPath
                         = new DesignHierarchyPath(draggedObject);
                 final DesignHierarchyPath commonPath
                         = draggedObjectPath.getCommonPathWith(dropTargetPath);
-                // If one of the dragged objects is in the parent chain 
+                // If one of the dragged objects is in the parent chain
                 // of the drop target, we abort the DND gesture
                 if (commonPath.equals(draggedObjectPath)) {
                     result = true;
@@ -292,7 +292,7 @@ public class DragController {
                 }
             }
         }
-        
+
         return result;
     }
 }

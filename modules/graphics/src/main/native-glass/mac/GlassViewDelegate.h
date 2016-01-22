@@ -35,31 +35,31 @@
 @interface GlassViewDelegate : NSObject <GlassDragSourceDelegate>
 {
     NSView                  *nsView;
-    
+
     NSTrackingRectTag       trackingRect;
-    
+
     GlassHostView           *parentHost;
     NSWindow                *parentWindow;
     CGFloat                 parentWindowAlpha;
-    
+
     GlassHostView           *fullscreenHost;
     // not nil when the FS mode is initiated with the OS X 10.7 widget
     NSWindow*               nativeFullScreenModeWindow;
-    
+
     BOOL                    mouseIsDown;
     BOOL                    mouseIsOver;
     int                     mouseDownMask; // bit 0 - left, 1 - right, 2 - other button
-    
+
     BOOL                    gestureInProgress;
-    
+
     NSEvent                 *lastEvent;
-    
+
     // The last processed key event
     NSEvent                 *s_lastKeyEvent;
-    
+
     NSDragOperation         dragOperation;
     NSInteger               lastTrackingNumber;
-    
+
 @public
     jobject                 jView;
     // not nil when we create a new FS window ourselves

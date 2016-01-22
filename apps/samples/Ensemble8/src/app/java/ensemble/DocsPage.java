@@ -59,7 +59,7 @@ public class DocsPage extends Region implements ChangeListener<String>, Page{
     private final PageBrowser pageBrowser;
     private boolean isLocalChange = false;
     private boolean showSideBar = false;
-    
+
     public DocsPage(PageBrowser pageBrowser) {
         this.pageBrowser = pageBrowser;
         getChildren().add(webView);
@@ -87,18 +87,18 @@ public class DocsPage extends Region implements ChangeListener<String>, Page{
     @Override public Node getNode() {
         return this;
     }
-    
+
     @Override public void changed(ObservableValue<? extends String> ov, String oldLocation, String newLocation) {
         if (!isLocalChange) pageBrowser.externalPageChange(newLocation);
         updateSidebar(newLocation);
     }
-    
+
     public void goToUrl(String url) {
         isLocalChange = true;
         webView.getEngine().load(url);
         isLocalChange = false;
     }
-    
+
     @Override protected void layoutChildren() {
         final double w = getWidth();
         final double h = getHeight();
@@ -111,7 +111,7 @@ public class DocsPage extends Region implements ChangeListener<String>, Page{
             webView.resize(w,h);
         }
     }
-    
+
     private void updateSidebar(String url) {
         String key = url;
         if (key.startsWith("https://docs.oracle.com/javase/8/javafx/api/")) {
@@ -120,7 +120,7 @@ public class DocsPage extends Region implements ChangeListener<String>, Page{
         } else if (key.startsWith("https://docs.oracle.com/javase/8/docs/api/")) {
             key = key.substring("https://docs.oracle.com/javase/8/docs/api/".length(), key.lastIndexOf('.'));
             key = key.replaceAll("/", ".");
-        } 
+        }
         SampleInfo[] samples = Samples.getSamplesForDoc(key);
         if (samples == null || samples.length == 0) {
             sideBar.getChildren().clear();

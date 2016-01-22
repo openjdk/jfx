@@ -82,7 +82,7 @@ public class MenuBarSkinTest {
         // Stage has to be focused in order for system menus to work
         stage.setFocused(true);
     }
-    
+
     @Test public void maxHeightTracksPreferred() {
         menubar.setPrefHeight(100);
         assertEquals(100, menubar.maxHeight(-1), 0);

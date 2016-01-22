@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #import "config.h"
 #import "AuthenticationMac.h"
@@ -213,7 +213,7 @@ AuthenticationClient* AuthenticationChallenge::authenticationClient() const
 {
     if ([m_sender.get() isMemberOfClass:[WebCoreAuthenticationClientAsChallengeSender class]])
         return [static_cast<WebCoreAuthenticationClientAsChallengeSender*>(m_sender.get()) client];
-    
+
     return 0;
 }
 
@@ -221,7 +221,7 @@ bool AuthenticationChallenge::platformCompare(const AuthenticationChallenge& a, 
 {
     if (a.sender() != b.sender())
         return false;
-        
+
     if (a.nsURLAuthenticationChallenge() != b.nsURLAuthenticationChallenge())
         return false;
 
@@ -232,7 +232,7 @@ NSURLAuthenticationChallenge *mac(const AuthenticationChallenge& coreChallenge)
 {
     if (coreChallenge.nsURLAuthenticationChallenge())
         return coreChallenge.nsURLAuthenticationChallenge();
-        
+
     return [[[NSURLAuthenticationChallenge alloc] initWithProtectionSpace:mac(coreChallenge.protectionSpace())
                                                        proposedCredential:mac(coreChallenge.proposedCredential())
                                                      previousFailureCount:coreChallenge.previousFailureCount()
@@ -273,7 +273,7 @@ NSURLProtectionSpace *mac(const ProtectionSpace& coreSpace)
         default:
             ASSERT_NOT_REACHED();
     }
-  
+
     NSString *method = nil;
     switch (coreSpace.authenticationScheme()) {
         case ProtectionSpaceAuthenticationSchemeDefault:
@@ -305,7 +305,7 @@ NSURLProtectionSpace *mac(const ProtectionSpace& coreSpace)
         default:
             ASSERT_NOT_REACHED();
     }
-    
+
     if (proxyType)
         return [[[NSURLProtectionSpace alloc] initWithProxyHost:coreSpace.host()
                                                            port:coreSpace.port()
@@ -361,7 +361,7 @@ AuthenticationChallenge core(NSURLAuthenticationChallenge *macChallenge)
 ProtectionSpace core(NSURLProtectionSpace *macSpace)
 {
     ProtectionSpaceServerType serverType = ProtectionSpaceProxyHTTP;
-    
+
     if ([macSpace isProxy]) {
         NSString *proxyType = [macSpace proxyType];
         if ([proxyType isEqualToString:NSURLProtectionSpaceHTTPProxy])
@@ -372,7 +372,7 @@ ProtectionSpace core(NSURLProtectionSpace *macSpace)
             serverType = ProtectionSpaceProxyFTP;
         else if ([proxyType isEqualToString:NSURLProtectionSpaceSOCKSProxy])
             serverType = ProtectionSpaceProxySOCKS;
-        else 
+        else
             ASSERT_NOT_REACHED();
     } else {
         NSString *protocol = [macSpace protocol];
@@ -412,7 +412,7 @@ ProtectionSpace core(NSURLProtectionSpace *macSpace)
         scheme = ProtectionSpaceAuthenticationSchemeUnknown;
         ASSERT_NOT_REACHED();
     }
-        
+
     return ProtectionSpace([macSpace host], [macSpace port], serverType, [macSpace realm], scheme);
 
 }
@@ -438,7 +438,7 @@ Credential core(NSURLCredential *macCredential)
     if (identity)
         return Credential(identity, (CFArrayRef)[macCredential certificates], persistence);
 #endif
-    
+
     return Credential([macCredential user], [macCredential password], persistence);
 }
 

@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -77,7 +77,7 @@ static EncodedJSValue JSC_HOST_CALL constructArrayBuffer(ExecState* exec)
 {
     JSArrayBufferConstructor* constructor =
         jsCast<JSArrayBufferConstructor*>(exec->callee());
-    
+
     unsigned length;
     if (exec->argumentCount()) {
         length = exec->uncheckedArgument(0).toUInt32(exec);
@@ -89,14 +89,14 @@ static EncodedJSValue JSC_HOST_CALL constructArrayBuffer(ExecState* exec)
         // with a zero length.
         length = 0;
     }
-    
+
     RefPtr<ArrayBuffer> buffer = ArrayBuffer::create(length, 1);
     if (!buffer)
         return throwVMError(exec, createOutOfMemoryError(constructor->globalObject()));
-    
+
     JSArrayBuffer* result = JSArrayBuffer::create(
         exec->vm(), constructor->globalObject()->arrayBufferStructure(), buffer);
-    
+
     return JSValue::encode(result);
 }
 
@@ -120,7 +120,7 @@ EncodedJSValue JSC_HOST_CALL arrayBufferFuncIsView(ExecState* exec)
 {
     return JSValue::encode(jsBoolean(jsDynamicCast<JSArrayBufferView*>(exec->argument(0))));
 }
-    
+
 
 } // namespace JSC
 

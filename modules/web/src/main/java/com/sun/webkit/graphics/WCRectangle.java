@@ -30,7 +30,7 @@ public final class WCRectangle {
     float y;
     float w;
     float h;
-    
+
     public WCRectangle(float x, float y, float w, float h) {
         this.x = x;
         this.y = y;
@@ -198,7 +198,7 @@ public final class WCRectangle {
         WCRectangle.union(this, r, dest);
         return dest;
     }
-    
+
     public static void union(WCRectangle src1,
                              WCRectangle src2,
                              WCRectangle dest)
@@ -238,7 +238,7 @@ public final class WCRectangle {
     public float getMaxX() {
         return getX() + getWidth();
     }
-    
+
     public float getMinY() {
         return getY();
     }

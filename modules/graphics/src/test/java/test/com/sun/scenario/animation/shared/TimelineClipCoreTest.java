@@ -184,7 +184,7 @@ public class TimelineClipCoreTest {
     @Ignore
     @Test
     public void testJumpTo() {
-    	// jumpTo on stopped timeline
+        // jumpTo on stopped timeline
         tmpBool = false;
         final KeyFrame newMiddle = new KeyFrame(
                 Duration.millis(500),
@@ -197,7 +197,7 @@ public class TimelineClipCoreTest {
         core.jumpTo(6 * 600, false);
         assertEquals(0, target.get());
         assertFalse(tmpBool);
-        
+
         // jumpTo on paused timeline
         tmpBool = false;
         timeline.play();
@@ -218,5 +218,5 @@ public class TimelineClipCoreTest {
         }
 
     }
-    
+
 }

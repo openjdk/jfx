@@ -67,7 +67,7 @@ public class JSLC {
     public static final int OUT_ALL        = OUT_SW_PEERS | OUT_HW_PEERS | OUT_HW_SHADERS;
 
     private static final String rootPkg = "com/sun/scenario/effect";
-    
+
     static {
         CommonGroupLoader loader = new CommonGroupLoader(rootPkg + "/compiler/backend", null);
         StringTemplateGroup.registerGroupLoader(loader);
@@ -108,7 +108,7 @@ public class JSLC {
      *   /foo/bar/ + rootPkg + /impl/hw/d3d/hlsl
      *   /foo/bar/ + rootPkg + /impl/es2/glsl
      *   /foo/bar/ + rootPkg + /impl/prism/ps
-     * 
+     *
      * Otherwise, we use the layout currently expected by decora-runtime
      * for core effects:
      *   ../decora-jsw/build/gensrc/     + rootPkg + /impl/sw/java
@@ -215,7 +215,7 @@ public class JSLC {
                 write(genCode, outFile);
             }
         }
-        
+
         if ((outTypes & OUT_SSE) != 0) {
             File outFile = jslcinfo.getOutputFile(OUT_SSE_JAVA);
             // TODO: native code is always generated into the same
@@ -241,7 +241,7 @@ public class JSLC {
                 }
             }
         }
-        
+
         if ((outTypes & OUT_ME) != 0) {
             File outFile = jslcinfo.getOutputFile(OUT_ME_JAVA);
             // TODO: native code is always generated into the same
@@ -267,7 +267,7 @@ public class JSLC {
                 }
             }
         }
-        
+
         if ((outTypes & OUT_PRISM) != 0) {
             File outFile = jslcinfo.getOutputFile(OUT_PRISM);
             if (jslcinfo.force || outOfDate(outFile, sourceTime)) {

@@ -57,7 +57,7 @@ public class BoundsTest {
         assertEquals(box(-25, -25, 25, 25), arc.getBoundsInLocal());
         assertEquals(arc.getBoundsInLocal(), arc.getLayoutBounds());
         assertEquals(arc.getBoundsInLocal(), arc.getBoundsInParent());
-        
+
         arc.setStroke(Color.BLACK);
         assertSimilar(box(-26, -26, 27, 27), arc.getBoundsInLocal());
         assertEquals(arc.getBoundsInLocal(), arc.getLayoutBounds());
@@ -66,17 +66,17 @@ public class BoundsTest {
 
     public @Test void testBoundsForCircle() {
         Circle circle = new Circle(50);
-        
+
         assertEquals(box(-50, -50, 100, 100), circle.getBoundsInLocal());
         assertEquals(circle.getBoundsInLocal(), circle.getLayoutBounds());
         assertEquals(circle.getBoundsInLocal(), circle.getBoundsInParent());
-        
+
         circle.setStroke(Color.BLACK);
         assertSimilar(box(-51, -51, 102, 102), circle.getBoundsInLocal());
         assertEquals(circle.getBoundsInLocal(), circle.getLayoutBounds());
         assertEquals(circle.getBoundsInLocal(), circle.getBoundsInParent());
     }
-    
+
     public @Test void testBoundsForCubicCurve() {
         CubicCurve cubic = new CubicCurve();
         cubic.setStartX(0);
@@ -98,7 +98,7 @@ public class BoundsTest {
         assertEquals(box(-50, -100, 100, 200), ellipse.getBoundsInLocal());
         assertEquals(ellipse.getBoundsInLocal(), ellipse.getLayoutBounds());
         assertEquals(ellipse.getBoundsInLocal(), ellipse.getBoundsInParent());
-        
+
         ellipse.setStroke(Color.BLACK);
         assertSimilar(box(-51, -101, 102, 202), ellipse.getBoundsInLocal());
         assertEquals(ellipse.getBoundsInLocal(), ellipse.getLayoutBounds());
@@ -132,7 +132,7 @@ public class BoundsTest {
         assertEquals(box(0, 0, 20, 20), polygon.getBoundsInLocal());
         assertEquals(polygon.getBoundsInLocal(), polygon.getLayoutBounds());
         assertEquals(polygon.getBoundsInLocal(), polygon.getBoundsInParent());
-        
+
         polygon.setStroke(Color.BLACK);
         assertSimilar(box(-1, -1, 22, 22), polygon.getBoundsInLocal());
         assertEquals(polygon.getBoundsInLocal(), polygon.getLayoutBounds());
@@ -153,28 +153,28 @@ public class BoundsTest {
         assertEquals(box(0, 25, 50, 25), quad.getBoundsInLocal());
         assertEquals(quad.getBoundsInLocal(), quad.getBoundsInParent());
     }
-    
+
     public @Test void testBoundsForRectangle() {
         Rectangle rect = new Rectangle(100, 100);
-        
+
         assertEquals(box(0, 0, 100, 100), rect.getBoundsInLocal());
         assertEquals(rect.getBoundsInLocal(), rect.getLayoutBounds());
         assertEquals(rect.getBoundsInLocal(), rect.getBoundsInParent());
-        
+
         rect.setX(50);
         rect.setY(50);
         assertEquals(box(50, 50, 100, 100), rect.getBoundsInLocal());
         assertEquals(rect.getBoundsInLocal(), rect.getLayoutBounds());
         assertEquals(rect.getBoundsInLocal(), rect.getBoundsInParent());
-        
+
         rect.setStroke(Color.BLACK);
         assertSimilar(box(49, 49, 102, 102), rect.getBoundsInLocal());
         assertEquals(rect.getBoundsInLocal(), rect.getLayoutBounds());
         assertEquals(rect.getBoundsInLocal(), rect.getBoundsInParent());
     }
-    
+
     // SVGPath
-    
+
     // we don't have a default impl of this is tests yet, so disabling for
     // now
     /*
@@ -186,10 +186,10 @@ public class BoundsTest {
  textOrigin            Font font { 42 size }
             "Testing"
  content        }
-        
+
         // this is hard to test. All I'm going to do is a brief sanity check
         // to make sure the bounds seem somewhat reasonable.
-        
+
         // check that the difference is less than 5 pixels here
         assertTrue(Math.abs(100 - text.getBoundsInLocal.minX) < 5);
         assertTrue(Math.abs(100 - text.getBoundsInLocal.minY) < 5);

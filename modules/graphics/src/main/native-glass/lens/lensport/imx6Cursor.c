@@ -22,7 +22,7 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
- 
+
 #ifdef IMX6_PLATFORM
 
 #include <stdio.h>
@@ -88,7 +88,7 @@ static void fbImx6BlankCursor(){
      if (lseek(cursor.fd, 0, SEEK_SET) == -1) {
          GLASS_LOG_SEVERE("Cannot rewrite cursor image");
          return;
-     } 
+     }
 
      bytesToWrite = cursor.width * cursor.height * (use32bit ? 4 : 2);
      while (bytesToWrite > 0) {
@@ -223,7 +223,7 @@ static void fbImx6CursorInitialize(int screenWidth, int screenHeight, int screen
     char * zero = "0\n";
     int fbc = -1;
     int fbo = -1;
- 
+
     //TODO : the following 2 settings can be moved to a setup script procedure
     if ((fbc = open("/sys/class/graphics/fbcon/cursor_blink",O_RDWR)) < 0) {
         GLASS_LOG_SEVERE("Error %s in opening /sys/class/graphics/fbcon/cursor_blink", strerror(errno));
@@ -311,7 +311,7 @@ static void fbImx6CursorInitialize(int screenWidth, int screenHeight, int screen
         loc_alpha.alpha_in_pixel = 1;
         if (ioctl(cursor.fd, MXCFB_SET_LOC_ALPHA, &loc_alpha) < 0) {
             GLASS_LOG_SEVERE("Error %s in setting local alpha", strerror(errno));
-        } 
+        }
 
     } else {
         struct mxcfb_color_key color_key;
@@ -370,7 +370,7 @@ static jlong fbImx6CreateNativeCursor(JNIEnv *env, jint x, jint y,  jbyte *srcAr
         }
     }
 
-    return ptr_to_jlong(cursorImage);   
+    return ptr_to_jlong(cursorImage);
 }
 
 
@@ -390,8 +390,8 @@ static void fbImx6SetNativeCursor(jlong nativeCursorHandle) {
 
     Imx6CursorImage *cursorImage = (Imx6CursorImage *)jlong_to_ptr(nativeCursorHandle);
 
-    if (cursor.fd != -1 && cursor.currentCursor != nativeCursorHandle && 
-        cursorImage != NULL && cursorImage->buffer != NULL) 
+    if (cursor.fd != -1 && cursor.currentCursor != nativeCursorHandle &&
+        cursorImage != NULL && cursorImage->buffer != NULL)
     {
         if (cursorImage->width != cursor.width || cursorImage->height != cursor.height) {
             fbImx6BlankCursor();
@@ -405,7 +405,7 @@ static void fbImx6SetNativeCursor(jlong nativeCursorHandle) {
 
         fbImx6AdjustShift();
         fbImx6WriteCursor(cursor.fd, cursorImage->buffer, use32bit ? 4 : 2);
-    } 
+    }
 }
 
 
@@ -496,8 +496,8 @@ jboolean check_imx6_cursor(LensNativePort *lensPort) {
         lensPort->cursorTranslucency = (use32bit ? JNI_TRUE : JNI_FALSE);
 
         return JNI_TRUE;
-    } 
-    
+    }
+
     return JNI_FALSE;
 }
 

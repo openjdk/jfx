@@ -21,14 +21,14 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef JSTypeInfo_h
 #define JSTypeInfo_h
 
 // This file would be called TypeInfo.h, but that conflicts with <typeinfo.h>
-// in the STL on systems without case-sensitive file systems. 
+// in the STL on systems without case-sensitive file systems.
 
 #include "JSType.h"
 
@@ -99,7 +99,7 @@ namespace JSC {
 
     private:
         friend class LLIntOffsetsExtractor;
-        
+
         bool isSetOnFlags1(unsigned flag) const { ASSERT(flag <= (1 << 7)); return m_flags & flag; }
         bool isSetOnFlags2(unsigned flag) const { ASSERT(flag >= (1 << 8)); return m_flags2 & (flag >> 8); }
 

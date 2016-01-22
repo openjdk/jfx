@@ -85,9 +85,9 @@ public class ObservableSetWrapper<E> implements ObservableSet<E> {
         public String toString() {
             return "added " + added;
         }
-        
+
     }
-    
+
     private class SimpleRemoveChange extends SetChangeListener.Change<E> {
 
         private final E removed;
@@ -121,7 +121,7 @@ public class ObservableSetWrapper<E> implements ObservableSet<E> {
         public String toString() {
             return "removed " + removed;
         }
-        
+
     }
 
     private void callObservers(SetChangeListener.Change<E> change) {

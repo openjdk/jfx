@@ -61,7 +61,7 @@ public class NodeWriter {
             return "writeNodeToString threw "+ex;
             }
     }
-    
+
     void writeNodeName(Node node) throws IOException {
         out.write(node.getNodeName());
     }
@@ -148,7 +148,7 @@ public class NodeWriter {
             writeData(at.getValue(), true);
             out.write('"');
             break;
-        
+
         case Node.TEXT_NODE:
             writeData(((Text) node).getData(), false);
             break;
@@ -156,7 +156,7 @@ public class NodeWriter {
         case Node.CDATA_SECTION_NODE:
             writeData(node.getNodeValue(), false);
             break;
-       
+
         case Node.DOCUMENT_TYPE_NODE:
         default:
             ;

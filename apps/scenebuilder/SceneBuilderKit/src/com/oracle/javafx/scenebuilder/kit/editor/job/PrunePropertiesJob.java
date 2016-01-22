@@ -47,28 +47,28 @@ import java.util.List;
  *
  */
 public class PrunePropertiesJob extends BatchDocumentJob {
-    
+
     private final FXOMObject fxomObject;
     private final FXOMObject targetParent;
 
     public PrunePropertiesJob(FXOMObject fxomObject, FXOMObject targetParent, EditorController editorController) {
         super(editorController);
-        
+
         assert fxomObject != null;
-        
+
         this.fxomObject = fxomObject;
         this.targetParent = targetParent;
     }
-    
+
 
     @Override
     protected List<Job> makeSubJobs() {
         final List<Job> result = new ArrayList<>();
         final Metadata metadata = Metadata.getMetadata();
-        
+
         if (fxomObject instanceof FXOMInstance) {
             final FXOMInstance fxomInstance = (FXOMInstance) fxomObject;
-            
+
             for (FXOMProperty p : fxomInstance.getProperties().values()) {
                 if (metadata.isPropertyTrimmingNeeded(p.getName())) {
                     final Class<?> residentClass = p.getName().getResidenceClass();
@@ -88,11 +88,11 @@ public class PrunePropertiesJob extends BatchDocumentJob {
                 }
             }
         }
-        
+
         if ((fxomObject.getFxController() != null) && (targetParent != null)) {
             result.add(new RemoveFxControllerJob(fxomObject, getEditorController()));
         }
-        
+
         return result;
     }
 
@@ -100,5 +100,5 @@ public class PrunePropertiesJob extends BatchDocumentJob {
     protected String makeDescription() {
         return getClass().getSimpleName(); // Should not reach user
     }
-    
+
 }

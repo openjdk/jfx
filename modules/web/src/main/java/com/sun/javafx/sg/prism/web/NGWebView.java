@@ -105,7 +105,7 @@ public final class NGWebView extends NGGroup {
     @Override public boolean hasOverlappingContents() {
         return false;
     }
-    
+
     @Override protected boolean hasVisuals() {
         return true;
     }

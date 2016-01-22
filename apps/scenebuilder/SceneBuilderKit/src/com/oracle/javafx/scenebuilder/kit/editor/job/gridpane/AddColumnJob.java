@@ -74,7 +74,7 @@ public class AddColumnJob extends BatchSelectionJob {
         assert position == Position.BEFORE || position == Position.AFTER;
         this.position = position;
     }
-    
+
     @Override
     protected List<Job> makeSubJobs() {
         final List<Job> result = new ArrayList<>();
@@ -124,7 +124,7 @@ public class AddColumnJob extends BatchSelectionJob {
             assert targetIndexes.size() >= 1;
             final Set<Integer> addedIndexes
                     = GridPaneJobUtils.getAddedIndexes(targetIndexes, position);
-            
+
             asg = new GridSelectionGroup(targetGridPane, Type.COLUMN, addedIndexes);
         }
         return asg;
@@ -146,7 +146,7 @@ public class AddColumnJob extends BatchSelectionJob {
             int targetIndex = iterator.next();
             while (targetIndex != -1) {
                 // Move the columns content :
-                // - from the target index 
+                // - from the target index
                 // - to the next target index if any or the last column index otherwise
                 int fromIndex, toIndex;
 
@@ -180,7 +180,7 @@ public class AddColumnJob extends BatchSelectionJob {
                         return result;
                 }
 
-                // If fromIndex >= columnsSize, we are below the last existing column 
+                // If fromIndex >= columnsSize, we are below the last existing column
                 // => no column content to move
                 if (fromIndex < columnsSize) {
                     final int offset = 1 + shiftIndex;

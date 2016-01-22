@@ -98,7 +98,7 @@ public:
 
     bool hasRel(uint32_t relation) const;
     void setRel(const String&);
-    
+
     LinkHash visitedLinkHash() const;
     void invalidateCachedVisitedLinkHash() { m_cachedVisitedLinkHash = 0; }
 
@@ -146,7 +146,7 @@ inline LinkHash HTMLAnchorElement::visitedLinkHash() const
 {
     if (!m_cachedVisitedLinkHash)
         m_cachedVisitedLinkHash = WebCore::visitedLinkHash(document().baseURL(), fastGetAttribute(HTMLNames::hrefAttr));
-    return m_cachedVisitedLinkHash; 
+    return m_cachedVisitedLinkHash;
 }
 
 // Functions shared with the other anchor elements (i.e., SVG).

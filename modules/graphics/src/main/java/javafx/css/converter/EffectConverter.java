@@ -55,11 +55,11 @@ public class EffectConverter extends StyleConverter<ParsedValue[], Effect> {
     public static StyleConverter<ParsedValue[], Effect> getInstance() {
         return Holder.EFFECT_CONVERTER;
     }
-    
+
     @Override
     public Effect convert(ParsedValue<ParsedValue[], Effect> value, Font font) {
         throw new IllegalArgumentException("Parsed value is not an Effect");
-    }    
+    }
 
     protected EffectConverter() {
         super();

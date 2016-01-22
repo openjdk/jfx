@@ -55,14 +55,14 @@ public:
         DidHandleEvent,
         SendToMainThread
     };
-    
+
     virtual bool isThreadedScrollingTree() const { return false; }
     virtual bool isRemoteScrollingTree() const { return false; }
     virtual bool isScrollingTreeIOS() const { return false; }
 
     virtual EventResult tryToHandleWheelEvent(const PlatformWheelEvent&) = 0;
     bool shouldHandleWheelEventSynchronously(const PlatformWheelEvent&);
-    
+
     virtual void scrollPositionChangedViaDelegatedScrolling(ScrollingNodeID, const IntPoint&);
 
     void setMainFrameIsRubberBanding(bool);
@@ -77,7 +77,7 @@ public:
     FloatPoint mainFrameScrollPosition();
 
     bool isPointInNonFastScrollableRegion(IntPoint);
-    
+
 #if PLATFORM(MAC)
     virtual void handleWheelEventPhase(PlatformWheelEventPhase) = 0;
 #endif
@@ -90,7 +90,7 @@ public:
     bool rubberBandsAtTop();
     bool rubberBandsAtBottom();
     bool isHandlingProgrammaticScroll();
-    
+
     void setScrollPinningBehavior(ScrollPinningBehavior);
     ScrollPinningBehavior scrollPinningBehavior();
 
@@ -107,7 +107,7 @@ public:
 
     bool hasLatchedNode() const { return m_latchedNode; }
     void setOrClearLatchedNode(const PlatformWheelEvent&, ScrollingNodeID);
-    
+
 protected:
     void setMainFrameScrollPosition(FloatPoint);
     virtual void handleWheelEvent(const PlatformWheelEvent&);
@@ -144,7 +144,7 @@ private:
     ScrollingNodeID m_latchedNode;
 
     bool m_scrollingPerformanceLoggingEnabled;
-    
+
     bool m_isHandlingProgrammaticScroll;
 };
 

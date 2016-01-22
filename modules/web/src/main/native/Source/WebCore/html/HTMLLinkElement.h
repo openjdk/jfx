@@ -92,7 +92,7 @@ private:
     virtual void linkLoadingErrored() override;
 
     bool isAlternate() const { return m_disabledState == Unset && m_relAttribute.m_isAlternate; }
-    
+
     void setDisabledState(bool);
 
     virtual bool isURLAttribute(const Attribute&) const override;

@@ -103,12 +103,12 @@ public:
     // flow thread portion we contain. For sets, we have to figure out the top of the nearest column or
     // page.
     virtual LayoutUnit pageLogicalTopForOffset(LayoutUnit offset) const;
-    
+
     virtual void expandToEncompassFlowThreadContentsIfNeeded() { };
 
     // Whether or not this region is a set.
     virtual bool isRenderRegionSet() const { return false; }
-    
+
     virtual void repaintFlowThreadContent(const LayoutRect& repaintRect, bool immediate);
 
     virtual void collectLayerFragments(LayerFragments&, const LayoutRect&, const LayoutRect&) { }
@@ -123,7 +123,7 @@ public:
     LayoutRect visualOverflowRectForBoxForPropagation(const RenderBoxModelObject*);
 
     LayoutRect rectFlowPortionForBox(const RenderBox*, const LayoutRect&) const;
-    
+
     void setRegionObjectsRegionStyle();
     void restoreRegionObjectsOriginalStyle();
 

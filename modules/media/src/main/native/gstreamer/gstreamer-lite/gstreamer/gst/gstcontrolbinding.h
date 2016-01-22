@@ -59,7 +59,7 @@ typedef void (* GstControlBindingConvert) (GstControlBinding *binding, gdouble s
  */
 struct _GstControlBinding {
   GstObject parent;
-  
+
   /*< public >*/
   gchar *name;
   GParamSpec *pspec;

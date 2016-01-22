@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -47,11 +47,11 @@ bool shouldShowDisassemblyFor(CodeBlock* codeBlock)
 LinkBuffer::CodeRef LinkBuffer::finalizeCodeWithoutDisassembly()
 {
     performFinalization();
-    
+
     ASSERT(m_didAllocate);
     if (m_executableMemory)
         return CodeRef(m_executableMemory);
-    
+
     return CodeRef::createSelfManagedCodeRef(MacroAssemblerCodePtr(m_code));
 }
 
@@ -66,13 +66,13 @@ LinkBuffer::CodeRef LinkBuffer::finalizeCodeWithDisassembly(const char* format, 
     WTF::dataLogFV(format, argList);
     va_end(argList);
     dataLogF(":\n");
-    
+
     dataLogF("    Code at [%p, %p):\n", result.code().executableAddress(), static_cast<char*>(result.code().executableAddress()) + result.size());
     disassemble(result.code(), m_size, "    ", WTF::dataFile());
 #else
     UNUSED_PARAM(format);
 #endif // ENABLE(DISASSEMBLER)
-    
+
     return result;
 }
 
@@ -91,7 +91,7 @@ void LinkBuffer::copyCompactAndLinkCode(void* ownerUID, JITCompilationEffort eff
     for (unsigned i = 0; i < jumpCount; ++i) {
         int offset = readPtr - writePtr;
         ASSERT(!(offset & 1));
-            
+
         // Copy the instructions from the last jump to the current one.
         size_t regionSize = jumpsToLink[i].from() - readPtr;
         InstructionType* copySource = reinterpret_cast_ptr<InstructionType*>(inData + readPtr);
@@ -105,7 +105,7 @@ void LinkBuffer::copyCompactAndLinkCode(void* ownerUID, JITCompilationEffort eff
         m_assembler->recordLinkOffsets(readPtr, jumpsToLink[i].from(), offset);
         readPtr += regionSize;
         writePtr += regionSize;
-            
+
         // Calculate absolute address of the jump target, in the case of backwards
         // branches we need to be precise, forward branches we are pessimistic
         const uint8_t* target;
@@ -113,7 +113,7 @@ void LinkBuffer::copyCompactAndLinkCode(void* ownerUID, JITCompilationEffort eff
             target = outData + jumpsToLink[i].to() - offset; // Compensate for what we have collapsed so far
         else
             target = outData + jumpsToLink[i].to() - m_assembler->executableOffsetFor(jumpsToLink[i].to());
-            
+
         JumpLinkType jumpLinkType = m_assembler->computeJumpType(jumpsToLink[i], outData + writePtr, target);
         // Compact branch if we can...
         if (m_assembler->canCompact(jumpsToLink[i].type())) {
@@ -129,7 +129,7 @@ void LinkBuffer::copyCompactAndLinkCode(void* ownerUID, JITCompilationEffort eff
     // Copy everything after the last jump
     memcpy(outData + writePtr, inData + readPtr, m_initialSize - readPtr);
     m_assembler->recordLinkOffsets(readPtr, m_initialSize, readPtr - writePtr);
-        
+
     for (unsigned i = 0; i < jumpCount; ++i) {
         uint8_t* location = outData + jumpsToLink[i].from();
         uint8_t* target = outData + jumpsToLink[i].to() - m_assembler->executableOffsetFor(jumpsToLink[i].to());
@@ -179,12 +179,12 @@ void LinkBuffer::allocate(size_t initialSize, void* ownerUID, JITCompilationEffo
     if (m_code) {
         if (initialSize > m_size)
             return;
-        
+
         m_didAllocate = true;
         m_size = initialSize;
         return;
     }
-    
+
     m_executableMemory = m_vm->executableAllocator.allocate(*m_vm, initialSize, ownerUID, effort);
     if (!m_executableMemory)
         return;
@@ -208,7 +208,7 @@ void LinkBuffer::performFinalization()
     ASSERT(isValid());
     m_completed = true;
 #endif
-    
+
 #if ENABLE(BRANCH_COMPACTION)
     ExecutableAllocator::makeExecutable(code(), m_initialSize);
 #else
@@ -226,11 +226,11 @@ void LinkBuffer::dumpLinkStatistics(void* code, size_t initializeSize, size_t fi
     linkCount++;
     totalInitialSize += initialSize;
     totalFinalSize += finalSize;
-    dataLogF("link %p: orig %u, compact %u (delta %u, %.2f%%)\n", 
+    dataLogF("link %p: orig %u, compact %u (delta %u, %.2f%%)\n",
             code, static_cast<unsigned>(initialSize), static_cast<unsigned>(finalSize),
             static_cast<unsigned>(initialSize - finalSize),
             100.0 * (initialSize - finalSize) / initialSize);
-    dataLogF("\ttotal %u: orig %u, compact %u (delta %u, %.2f%%)\n", 
+    dataLogF("\ttotal %u: orig %u, compact %u (delta %u, %.2f%%)\n",
             linkCount, totalInitialSize, totalFinalSize, totalInitialSize - totalFinalSize,
             100.0 * (totalInitialSize - totalFinalSize) / totalInitialSize);
 }
@@ -257,7 +257,7 @@ void LinkBuffer::dumpCode(void* code, size_t size)
             "\t.thumb_func\t%s\n"
             "# %p\n"
             "%s:\n", nameBuf, nameBuf, code, nameBuf);
-        
+
     for (unsigned i = 0; i < tsize; i++)
         dataLogF("\t.short\t0x%x\n", tcode[i]);
 #elif CPU(ARM_TRADITIONAL)

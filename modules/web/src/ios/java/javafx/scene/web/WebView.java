@@ -80,7 +80,7 @@ final public class WebView extends Parent {
     private static final double DEFAULT_PREF_HEIGHT = 600;
     private static final double DEFAULT_MAX_WIDTH = Double.MAX_VALUE;
     private static final double DEFAULT_MAX_HEIGHT = Double.MAX_VALUE;
-    
+
     private final WebEngine engine;
     // pointer to native WebViewImpl
     private final long handle;
@@ -248,7 +248,7 @@ final public class WebView extends Parent {
         focusedProperty().addListener((ov, t, t1) -> {
         });
         Toolkit.getToolkit().addStageTkPulseListener(stagePulseListener);
-        
+
         final ChangeListener<Bounds> chListener = new ChangeListener<Bounds>() {
 
             @Override
@@ -256,23 +256,23 @@ final public class WebView extends Parent {
                 WebView.this.impl_transformsChanged();
             }
         };
-        
+
         parentProperty().addListener(new ChangeListener<Parent>(){
-            
+
             @Override
-            public void changed(ObservableValue<? extends Parent> observable, Parent oldValue, Parent newValue) {                
+            public void changed(ObservableValue<? extends Parent> observable, Parent oldValue, Parent newValue) {
                 if (oldValue != null && newValue == null) {
                     // webview has been removed from scene
                     _removeWebView(handle);
                 }
-                
+
                 if (oldValue != null) {
                     do {
                         oldValue.boundsInParentProperty().removeListener(chListener);
                         oldValue = oldValue.getParent();
                     } while (oldValue != null);
                 }
-                
+
                 if (newValue != null) {
                     do {
                         final Node n = newValue;
@@ -281,9 +281,9 @@ final public class WebView extends Parent {
                     } while (newValue != null);
                 }
             }
-            
+
         });
-        
+
         layoutBoundsProperty().addListener(new ChangeListener<Bounds>() {
 
             @Override
@@ -293,11 +293,11 @@ final public class WebView extends Parent {
                 trans.getMxx(), trans.getMxy(), trans.getMxz(), trans.getMxt(),
                 trans.getMyx(), trans.getMyy(), trans.getMyz(), trans.getMyt(),
                 trans.getMzx(), trans.getMzy(), trans.getMzz(), trans.getMzt());
-                
+
             }
-            
+
         });
-        
+
         impl_treeVisibleProperty().addListener(new ChangeListener<Boolean>() {
 
             @Override
@@ -1043,7 +1043,7 @@ final public class WebView extends Parent {
     @Override public void impl_updatePeer() {
         super.impl_updatePeer();
         //PGWebView peer = getPGWebView();
-        
+
         if (impl_isDirty(DirtyBits.NODE_GEOMETRY)) {
             //peer.resize((float)getWidth(), (float)getHeight());
         }
@@ -1051,33 +1051,33 @@ final public class WebView extends Parent {
             //peer.requestRender();
         }
     }
-    
+
     private static Affine3D calculateNodeToSceneTransform(Node node) {
         final Affine3D transform = new Affine3D();
         do {
             transform.preConcatenate(node.impl_getLeafTransform());
             node = node.getParent();
         } while (node != null);
-        
+
         return transform;
     }
-    
+
     @Deprecated
     @Override public void impl_transformsChanged() {
         super.impl_transformsChanged();
-    
+
         Affine3D trans = calculateNodeToSceneTransform(this);
         _setTransform(handle,
                 trans.getMxx(), trans.getMxy(), trans.getMxz(), trans.getMxt(),
                 trans.getMyx(), trans.getMyy(), trans.getMyz(), trans.getMyt(),
                 trans.getMzx(), trans.getMzy(), trans.getMzz(), trans.getMzt());
     }
-    
+
     long getNativeHandle() {
         return handle;
     }
-    
-    
+
+
     // native callbacks
     private void notifyLoadStarted() {
         engine.notifyLoadStarted();
@@ -1091,23 +1091,23 @@ final public class WebView extends Parent {
     private void notifyJavaCall(String arg) {
         engine.notifyJavaCall(arg);
     }
-    
-    
+
+
     /* Inits native WebView and returns its pointer in the given array */
     private native void _initWebView(long[] nativeHandle);
-    
+
     /* Sets width of the native WebView  */
     private native void _setWidth(long handle, double w);
-    
+
     /* Sets height of the native WebView  */
     private native void _setHeight(long handle, double h);
-    
+
     /* Sets visibility of the native WebView  */
     private native void _setVisible(long handle, boolean v);
-    
+
     /* Removes the native WebView from scene */
     private native void _removeWebView(long handle);
-    
+
     /* Applies transform on the native WebView  */
     private native void _setTransform(long handle,
             double mxx, double mxy, double mxz, double mxt,

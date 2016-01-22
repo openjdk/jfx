@@ -41,7 +41,7 @@ import javafx.scene.AccessibleRole;
  * is sent. Your application can perform some action based
  * on this event by implementing an {@link javafx.event.EventHandler} to
  * process the {@link javafx.event.ActionEvent}.</p>
- * 
+ *
  * <p>
  * Only one RadioButton can be selected when placed in a {@link ToggleGroup}.
  * Clicking on a selected RadioButton will have no effect.  A RadioButton that is not
@@ -91,8 +91,8 @@ import javafx.scene.AccessibleRole;
         getStyleClass().setAll(DEFAULT_STYLE_CLASS);
         setAccessibleRole(AccessibleRole.RADIO_BUTTON);
         // alignment is styleable through css. Calling setAlignment
-        // makes it look to css like the user set the value and css will not 
-        // override. Initializing alignment by calling set on the 
+        // makes it look to css like the user set the value and css will not
+        // override. Initializing alignment by calling set on the
         // CssMetaData ensures that css will be able to override the value.
         ((StyleableProperty<Pos>)(WritableValue<Pos>)alignmentProperty()).applyStyle(null, Pos.CENTER_LEFT);
     }

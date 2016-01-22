@@ -67,7 +67,7 @@ struct _GstVolume {
   gint   current_vol_i24; /* the _i(nt) values get synchronized with the */
   gint   current_vol_i16; /* the _i(nt) values get synchronized with the */
   gint   current_vol_i8;   /* the _i(nt) values get synchronized with the */
-  
+
   GList *tracklist;
   gboolean negotiated;
 

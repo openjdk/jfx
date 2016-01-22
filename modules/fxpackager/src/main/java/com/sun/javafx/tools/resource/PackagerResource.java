@@ -155,8 +155,8 @@ public class PackagerResource {
         final File testFile = new File(path);
         return testFile.isAbsolute()
                    ? testFile
-                   : new File(baseDir == null 
-                                  ? null 
+                   : new File(baseDir == null
+                                  ? null
                                   : baseDir.getAbsolutePath(),
                               path);
     }

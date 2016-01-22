@@ -40,9 +40,9 @@ import javafx.scene.Node;
 import javafx.scene.control.Label;
 
 public class HelloComboBox extends Application {
-    
+
     private final ObservableList<String> strings = FXCollections.observableArrayList(
-            "Option 1", "Option 2", "Option 3", 
+            "Option 1", "Option 2", "Option 3",
             "Option 4", "Option 5", "Option 6",
             "Long ComboBox item 1 2 3 4 5 6 7 8 9",
             "Option 7", "Option 8", "Option 9", "Option 10", "Option 12", "Option 13",
@@ -58,33 +58,33 @@ public class HelloComboBox extends Application {
             "Option 68", "Option 69", "Option 70", "Option 71", "Option 72", "Option 73",
             "Option 74", "Option 75"
         );
-    
+
     private final ObservableList<String> fonts = FXCollections.observableArrayList(Font.getFamilies());
 
     public static void main(String[] args) {
         launch(args);
     }
-    
+
     @Override public void start(Stage stage) {
         stage.setTitle("ComboBox");
-        
+
         // non-editable column
         VBox nonEditBox = new VBox(15);
-        
+
         ComboBox emptyPromptComboBox = new ComboBox();
         emptyPromptComboBox.setPromptText("Prompting you here");
         emptyPromptComboBox.setPlaceholder(new Label("There are no options available!"));
         nonEditBox.getChildren().add(emptyPromptComboBox);
-        
+
         ComboBox shortComboBox = new ComboBox();
         shortComboBox.setItems(FXCollections.observableArrayList(strings.subList(0, 4)));
         nonEditBox.getChildren().add(shortComboBox);
-        
+
         ComboBox longComboBox = new ComboBox();
         longComboBox.setPromptText("Make a choice...");
         longComboBox.setItems(strings);
         nonEditBox.getChildren().add(longComboBox);
-        
+
         ComboBox fontComboBox = new ComboBox();
         fontComboBox.setItems(fonts);
         fontComboBox.setCellFactory(param -> {
@@ -100,20 +100,20 @@ public class HelloComboBox extends Application {
             return cell;
         });
         nonEditBox.getChildren().add(fontComboBox);
-        
+
 //        ColorPicker colorPicker = new ColorPicker();
 //        longComboBox.setItems(strings);
 //        nonEditBox.getChildren().add(colorPicker);
-        
+
         // editable column
         VBox editBox = new VBox(15);
-        
+
         ComboBox comboBox2 = new ComboBox();
         comboBox2.setId("first-editable");
         comboBox2.setItems(FXCollections.observableArrayList(strings.subList(0, 4)));
         comboBox2.setEditable(true);
         editBox.getChildren().add(comboBox2);
-        
+
         ComboBox<String> comboBox3 = new ComboBox<String>();
         comboBox3.setId("second-editable");
         comboBox3.setPromptText("Make a choice...");
@@ -121,7 +121,7 @@ public class HelloComboBox extends Application {
         comboBox3.setEditable(true);
         editBox.getChildren().add(comboBox3);
         comboBox3.valueProperty().addListener((ov, t, t1) -> System.out.println("new value: " + t1));
-        
+
         ComboBox editFontComboBox = new ComboBox();
         editFontComboBox.setId("third-editable");
         editFontComboBox.setItems(fonts);
@@ -139,18 +139,18 @@ public class HelloComboBox extends Application {
             return cell;
         });
         editBox.getChildren().add(editFontComboBox);
-        
-        
+
+
         HBox vbox = new HBox(10);
         vbox.setLayoutX(30);
         vbox.setLayoutY(25);
-        
+
         vbox.getChildren().addAll(nonEditBox, editBox);
         Scene scene = new Scene(new Group(vbox), 620, 190);
 
         stage.setScene(scene);
         stage.show();
-        
+
 //        scene.impl_focusOwnerProperty().addListener(new ChangeListener<Node>() {
 //            public void changed(ObservableValue<? extends Node> ov, Node t, Node t1) {
 //                System.out.println("focus moved from " + t + " to " + t1);

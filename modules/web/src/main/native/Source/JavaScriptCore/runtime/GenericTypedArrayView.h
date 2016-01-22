@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef GenericTypedArrayView_h
@@ -40,16 +40,16 @@ public:
     static PassRefPtr<GenericTypedArrayView> create(unsigned length);
     static PassRefPtr<GenericTypedArrayView> create(const typename Adaptor::Type* array, unsigned length);
     static PassRefPtr<GenericTypedArrayView> create(PassRefPtr<ArrayBuffer>, unsigned byteOffset, unsigned length);
-    
+
     static PassRefPtr<GenericTypedArrayView> createUninitialized(unsigned length);
-    
+
     typename Adaptor::Type* data() const { return static_cast<typename Adaptor::Type*>(baseAddress()); }
-    
+
     bool set(GenericTypedArrayView<Adaptor>* array, unsigned offset)
     {
         return setImpl(array, offset * sizeof(typename Adaptor::Type));
     }
-    
+
     bool setRange(const typename Adaptor::Type* data, size_t dataLength, unsigned offset)
     {
         return setRangeImpl(
@@ -57,21 +57,21 @@ public:
             dataLength * sizeof(typename Adaptor::Type),
             offset * sizeof(typename Adaptor::Type));
     }
-    
+
     bool zeroRange(unsigned offset, size_t length)
     {
         return zeroRangeImpl(offset * sizeof(typename Adaptor::Type), length * sizeof(typename Adaptor::Type));
     }
-    
+
     void zeroFill() { zeroRange(0, length()); }
-    
+
     unsigned length() const
     {
         if (isNeutered())
             return 0;
         return m_length;
     }
-    
+
     virtual unsigned byteLength() const override
     {
         return length() * sizeof(typename Adaptor::Type);
@@ -82,13 +82,13 @@ public:
         ASSERT_WITH_SECURITY_IMPLICATION(index < this->length());
         return data()[index];
     }
-    
+
     void set(unsigned index, double value) const
     {
         ASSERT_WITH_SECURITY_IMPLICATION(index < this->length());
         data()[index] = Adaptor::toNativeFromDouble(value);
     }
-    
+
     bool checkInboundData(unsigned offset, unsigned pos) const
     {
         unsigned length = this->length();
@@ -97,10 +97,10 @@ public:
             // check overflow
             && offset + pos >= offset);
     }
-    
+
     PassRefPtr<GenericTypedArrayView> subarray(int start) const;
     PassRefPtr<GenericTypedArrayView> subarray(int start, int end) const;
-    
+
     virtual TypedArrayType getType() const override
     {
         return Adaptor::typeValue;

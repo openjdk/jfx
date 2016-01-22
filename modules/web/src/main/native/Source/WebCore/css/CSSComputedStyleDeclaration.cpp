@@ -1402,7 +1402,7 @@ static PassRef<CSSValue> altTextToCSSValue(const RenderStyle* style)
 {
     return cssValuePool().createValue(style->contentAltText(), CSSPrimitiveValue::CSS_STRING);
 }
-    
+
 static PassRef<CSSValueList> contentToCSSValue(const RenderStyle* style)
 {
     auto list = CSSValueList::createSpaceSeparated();
@@ -1571,7 +1571,7 @@ static bool isLayoutDependent(CSSPropertyID propertyID, RenderStyle* style, Rend
     case CSSPropertyPaddingBottom:
         return paddingOrMarginIsRendererDependent<&RenderStyle::paddingBottom>(style, renderer);
     case CSSPropertyPaddingLeft:
-        return paddingOrMarginIsRendererDependent<&RenderStyle::paddingLeft>(style, renderer); 
+        return paddingOrMarginIsRendererDependent<&RenderStyle::paddingLeft>(style, renderer);
     default:
         return false;
     }
@@ -3198,7 +3198,7 @@ String CSSComputedStyleDeclaration::removeProperty(const String&, ExceptionCode&
     ec = NO_MODIFICATION_ALLOWED_ERR;
     return String();
 }
-    
+
 PassRefPtr<CSSValue> CSSComputedStyleDeclaration::getPropertyCSSValueInternal(CSSPropertyID propertyID)
 {
     return getPropertyCSSValue(propertyID);
@@ -3217,9 +3217,9 @@ void CSSComputedStyleDeclaration::setPropertyInternal(CSSPropertyID, const Strin
 PassRefPtr<CSSValueList> ComputedStyleExtractor::getBackgroundShorthandValue() const
 {
     static const CSSPropertyID propertiesBeforeSlashSeperator[5] = { CSSPropertyBackgroundColor, CSSPropertyBackgroundImage,
-                                                                     CSSPropertyBackgroundRepeat, CSSPropertyBackgroundAttachment,  
+                                                                     CSSPropertyBackgroundRepeat, CSSPropertyBackgroundAttachment,
                                                                      CSSPropertyBackgroundPosition };
-    static const CSSPropertyID propertiesAfterSlashSeperator[3] = { CSSPropertyBackgroundSize, CSSPropertyBackgroundOrigin, 
+    static const CSSPropertyID propertiesAfterSlashSeperator[3] = { CSSPropertyBackgroundSize, CSSPropertyBackgroundOrigin,
                                                                     CSSPropertyBackgroundClip };
 
     RefPtr<CSSValueList> list = CSSValueList::createSlashSeparated();

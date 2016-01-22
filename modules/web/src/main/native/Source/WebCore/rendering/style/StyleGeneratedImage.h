@@ -57,7 +57,7 @@ private:
     virtual bool knownToBeOpaque(const RenderElement*) const override;
 
     StyleGeneratedImage(PassRef<CSSImageGeneratorValue>);
-    
+
     Ref<CSSImageGeneratorValue> m_imageGeneratorValue;
     IntSize m_containerSize;
     bool m_fixedSize;

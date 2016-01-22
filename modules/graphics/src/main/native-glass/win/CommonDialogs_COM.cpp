@@ -131,7 +131,7 @@ void SetFilters(IFileDialogPtr pDialog, jobjectArray jFilters, jint defaultFilte
 jobjectArray GetFiles(IFileDialogPtr pDialog, BOOL isCancelled, jint type)
 {
     JNIEnv* env = GetEnv();
-    jclass jc = env->FindClass("java/lang/String");    
+    jclass jc = env->FindClass("java/lang/String");
     if (CheckAndClearException(env)) return NULL;
     JLClass cls(env, jc);
 
@@ -168,7 +168,7 @@ jobjectArray GetFiles(IFileDialogPtr pDialog, BOOL isCancelled, jint type)
     DWORD count = 0;
     OLE_HRT( pFiles->GetCount(&count) );
 
-    ret = env->NewObjectArray(count, cls, NULL);    
+    ret = env->NewObjectArray(count, cls, NULL);
     if (CheckAndClearException(env)) return NULL;
 
     for (DWORD i = 0; i < count; i++) {
@@ -245,7 +245,7 @@ jobject COMFileChooser_Show(HWND owner, LPCTSTR folder, LPCTSTR filename, LPCTST
     pDialog->GetFileTypeIndex(&index);
 
     JNIEnv* env = GetEnv();
-    jclass jc = env->FindClass("com/sun/glass/ui/CommonDialogs");    
+    jclass jc = env->FindClass("com/sun/glass/ui/CommonDialogs");
     if (CheckAndClearException(env)) return NULL;
     JLClass cls(env, jc);
     return env->CallStaticObjectMethod(cls, javaIDs.CommonDialogs.createFileChooserResult,

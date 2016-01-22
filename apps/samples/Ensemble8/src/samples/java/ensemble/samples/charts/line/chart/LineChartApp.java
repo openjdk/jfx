@@ -104,7 +104,7 @@ import javafx.stage.Stage;
  * @embedded
  */
 public class LineChartApp extends Application {
-    
+
     private LineChart chart;
     private NumberAxis xAxis;
     private NumberAxis yAxis;
@@ -144,5 +144,5 @@ public class LineChartApp extends Application {
     public static void main(String[] args) {
         launch(args);
     }
-    
+
 }

@@ -48,29 +48,29 @@ namespace WebCore {
 //     - Delete            (7F)
 
 static const bool needsEscaping[128] = {
-    /* 00-07 */ true,  true,  true,  true,  true,  true,  true,  true, 
-    /* 08-0F */ true,  true,  true,  true,  true,  true,  true,  true, 
+    /* 00-07 */ true,  true,  true,  true,  true,  true,  true,  true,
+    /* 08-0F */ true,  true,  true,  true,  true,  true,  true,  true,
 
-    /* 10-17 */ true,  true,  true,  true,  true,  true,  true,  true, 
-    /* 18-1F */ true,  true,  true,  true,  true,  true,  true,  true, 
+    /* 10-17 */ true,  true,  true,  true,  true,  true,  true,  true,
+    /* 18-1F */ true,  true,  true,  true,  true,  true,  true,  true,
 
-    /* 20-27 */ true,  false, true,  false, false, true,  false, false, 
-    /* 28-2F */ false, false, true,  false, false, false, false, true, 
-    
-    /* 30-37 */ false, false, false, false, false, false, false, false, 
-    /* 38-3F */ false, false, true,  false, true,  false, true,  true, 
-    
-    /* 40-47 */ false, false, false, false, false, false, false, false, 
+    /* 20-27 */ true,  false, true,  false, false, true,  false, false,
+    /* 28-2F */ false, false, true,  false, false, false, false, true,
+
+    /* 30-37 */ false, false, false, false, false, false, false, false,
+    /* 38-3F */ false, false, true,  false, true,  false, true,  true,
+
+    /* 40-47 */ false, false, false, false, false, false, false, false,
     /* 48-4F */ false, false, false, false, false, false, false, false,
-    
-    /* 50-57 */ false, false, false, false, false, false, false, false, 
+
+    /* 50-57 */ false, false, false, false, false, false, false, false,
     /* 58-5F */ false, false, false, false, true,  false, false, false,
-    
-    /* 60-67 */ false, false, false, false, false, false, false, false, 
+
+    /* 60-67 */ false, false, false, false, false, false, false, false,
     /* 68-6F */ false, false, false, false, false, false, false, false,
-    
-    /* 70-77 */ false, false, false, false, false, false, false, false, 
-    /* 78-7F */ false, false, false, false, true,  false, false, true, 
+
+    /* 70-77 */ false, false, false, false, false, false, false, false,
+    /* 78-7F */ false, false, false, false, true,  false, false, true,
 };
 
 static inline bool shouldEscapeUChar(UChar c)

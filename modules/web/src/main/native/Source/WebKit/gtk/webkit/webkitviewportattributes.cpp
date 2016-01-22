@@ -218,7 +218,7 @@ static void webkit_viewport_attributes_class_init(WebKitViewportAttributesClass*
      *
      * The width of viewport that works well for most web pages designed for
      * desktop. This value is initialized to 980 pixels by default and used
-     * during a viewport attributes recomputation. Also, it can be overriden by 
+     * during a viewport attributes recomputation. Also, it can be overriden by
      * the handler of WebKitWebView::viewport-attributes-recompute-requested.
      * You should not do that unless you have a very good reason.
      *

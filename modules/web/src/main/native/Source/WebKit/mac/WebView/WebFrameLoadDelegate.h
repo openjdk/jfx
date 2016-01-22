@@ -6,13 +6,13 @@
  * are met:
  *
  * 1.  Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer. 
+ *     notice, this list of conditions and the following disclaimer.
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
- *     documentation and/or other materials provided with the distribution. 
+ *     documentation and/or other materials provided with the distribution.
  * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
- *     from this software without specific prior written permission. 
+ *     from this software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY APPLE AND ITS CONTRIBUTORS "AS IS" AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
@@ -181,15 +181,15 @@
 
 /*!
     @method webView:didClearWindowObject:forFrame:
-    @abstract Notifies the delegate that the JavaScript window object in a frame has 
-    been cleared in preparation for a new load. This is the preferred place to set custom 
+    @abstract Notifies the delegate that the JavaScript window object in a frame has
+    been cleared in preparation for a new load. This is the preferred place to set custom
     properties on the window object using the WebScriptObject and JavaScriptCore APIs.
     @param webView The webView sending the message.
     @param windowObject The WebScriptObject representing the frame's JavaScript window object.
     @param frame The WebFrame to which windowObject belongs.
     @discussion If a delegate implements both webView:didClearWindowObject:forFrame:
-    and webView:windowScriptObjectAvailable:, only webView:didClearWindowObject:forFrame: 
-    will be invoked. This enables a delegate to implement both methods for backwards 
+    and webView:windowScriptObjectAvailable:, only webView:didClearWindowObject:forFrame:
+    will be invoked. This enables a delegate to implement both methods for backwards
     compatibility with older versions of WebKit.
 */
 - (void)webView:(WebView *)webView didClearWindowObject:(WebScriptObject *)windowObject forFrame:(WebFrame *)frame;
@@ -212,9 +212,9 @@
     @param webView The WebView sending the message.
     @param context The JSContext representing the frame's JavaScript window object.
     @param frame The WebFrame to which the context belongs.
-    @discussion If a delegate implements webView:didCreateJavaScriptContext:forFrame: along with either 
-    webView:didClearWindowObject:forFrame: or webView:windowScriptObjectAvailable:, only 
-    webView:didCreateJavaScriptContext:forFrame will be invoked. This enables a delegate to implement 
+    @discussion If a delegate implements webView:didCreateJavaScriptContext:forFrame: along with either
+    webView:didClearWindowObject:forFrame: or webView:windowScriptObjectAvailable:, only
+    webView:didCreateJavaScriptContext:forFrame will be invoked. This enables a delegate to implement
     multiple versions to maintain backwards compatibility with older versions of WebKit.
 */
 - (void)webView:(WebView *)webView didCreateJavaScriptContext:(JSContext *)context forFrame:(WebFrame *)frame;

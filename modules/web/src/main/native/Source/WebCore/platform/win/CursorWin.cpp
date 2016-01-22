@@ -21,7 +21,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -57,7 +57,7 @@ static PassRefPtr<SharedCursor> createSharedCursor(Image* img, const IntPoint& h
         auto hCursor = adoptGDIObject(::CreateDIBSection(dc, (BITMAPINFO *)&cursorImage, DIB_RGB_COLORS, 0, 0, 0));
         ASSERT(hCursor);
 
-        img->getHBITMAP(hCursor.get()); 
+        img->getHBITMAP(hCursor.get());
         HBITMAP hOldBitmap = (HBITMAP)SelectObject(workingDC.get(), hCursor.get());
         SetBkMode(workingDC.get(), TRANSPARENT);
         SelectObject(workingDC.get(), hOldBitmap);
@@ -81,7 +81,7 @@ static PassRefPtr<SharedCursor> createSharedCursor(Image* img, const IntPoint& h
         auto xorMaskDC = adoptGDIObject(::CreateCompatibleDC(dc));
         auto hCursor = adoptGDIObject(::CreateDIBSection(dc, &cursorImage, DIB_RGB_COLORS, 0, 0, 0));
         ASSERT(hCursor);
-        img->getHBITMAP(hCursor.get()); 
+        img->getHBITMAP(hCursor.get());
         BITMAP cursor;
         GetObject(hCursor.get(), sizeof(BITMAP), &cursor);
         auto andMask = adoptGDIObject(::CreateBitmap(cursor.bmWidth, cursor.bmHeight, 1, 1, 0));
@@ -90,9 +90,9 @@ static PassRefPtr<SharedCursor> createSharedCursor(Image* img, const IntPoint& h
         HBITMAP oldAndMask = (HBITMAP)SelectObject(andMaskDC.get(), andMask.get());
         HBITMAP oldXorMask = (HBITMAP)SelectObject(xorMaskDC.get(), xorMask.get());
 
-        SetBkColor(workingDC.get(), RGB(0, 0, 0));  
+        SetBkColor(workingDC.get(), RGB(0, 0, 0));
         BitBlt(andMaskDC.get(), 0, 0, cursor.bmWidth, cursor.bmHeight, workingDC.get(), 0, 0, SRCCOPY);
-    
+
         SetBkColor(xorMaskDC.get(), RGB(255, 255, 255));
         SetTextColor(xorMaskDC.get(), RGB(255, 255, 255));
         BitBlt(xorMaskDC.get(), 0, 0, cursor.bmWidth, cursor.bmHeight, andMaskDC.get(), 0, 0, SRCCOPY);

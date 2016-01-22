@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
 
@@ -95,7 +95,7 @@ using WebCore::VisiblePosition;
     Range *range = core(self);
     FrameSelection frameSelection;
     frameSelection.moveTo(range);
-    
+
     TextGranularity granularity = CharacterGranularity;
     // Until WebKit supports vertical layout, "down" is equivalent to "forward by a line" and
     // "up" is equivalent to "backward by a line".
@@ -106,10 +106,10 @@ using WebCore::VisiblePosition;
         direction = WebTextAdjustmentBackward;
         granularity = LineGranularity;
     }
-    
+
     for (UInt32 i = 0; i < amount; i++)
         frameSelection.modify(FrameSelection::AlterationMove, (SelectionDirection)direction, granularity);
-    
+
     ExceptionCode ignored;
     Position start = frameSelection.selection().start().parentAnchoredEquivalent();
     Position end = frameSelection.selection().end().parentAnchoredEquivalent();
@@ -122,10 +122,10 @@ using WebCore::VisiblePosition;
     Range *range = core(self);
     FrameSelection frameSelection;
     frameSelection.moveTo(range);
-    
+
     for (UInt32 i = 0; i < amount; i++)
-        frameSelection.modify(FrameSelection::AlterationExtend, (SelectionDirection)direction, CharacterGranularity);    
-    
+        frameSelection.modify(FrameSelection::AlterationExtend, (SelectionDirection)direction, CharacterGranularity);
+
     ExceptionCode ignored;
     Position start = frameSelection.selection().start().parentAnchoredEquivalent();
     Position end = frameSelection.selection().end().parentAnchoredEquivalent();
@@ -191,7 +191,7 @@ using WebCore::VisiblePosition;
 - (NSArray *)borderRadii
 {
     RenderObject* renderer = core(self)->renderer();
-    
+
 
     if (renderer && renderer->isBox()) {
         RoundedRect::Radii radii = toRenderBox(renderer)->borderRadii();
@@ -222,31 +222,31 @@ using WebCore::VisiblePosition;
 - (DOMRange *)rangeOfContainingParagraph
 {
     DOMRange *result = nil;
-    
-    Node *node = core(self);    
+
+    Node *node = core(self);
     VisiblePosition visiblePosition(createLegacyEditingPosition(node, 0), WebCore::DOWNSTREAM);
     VisiblePosition visibleParagraphStart = startOfParagraph(visiblePosition);
     VisiblePosition visibleParagraphEnd = endOfParagraph(visiblePosition);
-    
+
     Position paragraphStart = visibleParagraphStart.deepEquivalent().parentAnchoredEquivalent();
-    Position paragraphEnd = visibleParagraphEnd.deepEquivalent().parentAnchoredEquivalent();    
-    
+    Position paragraphEnd = visibleParagraphEnd.deepEquivalent().parentAnchoredEquivalent();
+
     if (paragraphStart.isNotNull() && paragraphEnd.isNotNull()) {
         PassRefPtr<Range> range = Range::create(*node->ownerDocument(), paragraphStart, paragraphEnd);
         result = kit(range.get());
     }
-    
+
     return result;
 }
 
 - (CGFloat)textHeight
-{  
+{
     RenderObject *o = core(self)->renderer();
     if (o && o->isText()) {
         RenderText *t = toRenderText(o);
         return t->style().computedLineHeight();;
     }
-    
+
     return CGFLOAT_MAX;
 }
 
@@ -262,7 +262,7 @@ using WebCore::VisiblePosition;
         return nil;
 
     RenderBlock *block = static_cast<RenderBlock *>(renderer);
-    
+
     FloatPoint absPoint(point);
     FloatPoint localPoint = block->absoluteToLocal(absPoint);
 
@@ -272,7 +272,7 @@ using WebCore::VisiblePosition;
             if (child->height() == 0 || child->style().visibility() != WebCore::VISIBLE || child->isFloatingOrOutOfFlowPositioned())
                 continue;
             float top = child->y();
-            
+
             RenderBox* nextChild = child->nextSiblingBox();
             while (nextChild && nextChild->isFloatingOrOutOfFlowPositioned())
                 nextChild = nextChild->nextSiblingBox();
@@ -283,28 +283,28 @@ using WebCore::VisiblePosition;
                 }
                 continue;
             }
-            
+
             float bottom = nextChild->y();
-            
+
             if (localPoint.y() >= top && localPoint.y() < bottom && child->isRenderBlock()) {
                 block = static_cast<RenderBlock *>(child);
                 break;
-            }                
+            }
         }
-        
+
         if (!block->childrenInline())
             return nil;
-        
+
         localPoint = block->absoluteToLocal(absPoint);
     }
 
     RenderBlockFlow *blockFlow = toRenderBlockFlow(block);
-    
+
     // Only check the gaps between the root line boxes.  We deliberately ignore overflow because
     // experience has shown that hit tests on an exploded text node can fail when within the
     // overflow region.
     for (RootInlineBox *cur = blockFlow->firstRootBox(); cur && cur != blockFlow->lastRootBox(); cur = cur->nextRootBox()) {
-        float currentBottom = cur->y() + cur->logicalHeight();        
+        float currentBottom = cur->y() + cur->logicalHeight();
         if (localPoint.y() < currentBottom)
             return nil;
 
@@ -321,20 +321,20 @@ using WebCore::VisiblePosition;
         }
 
     }
-    return nil;    
+    return nil;
 }
 
 @end
 
 //-----------------
 
-@implementation DOMElement (DOMUIKitComplexityExtensions) 
+@implementation DOMElement (DOMUIKitComplexityExtensions)
 
 - (int)structuralComplexityContribution { return 0; }
 
 @end
 
-@implementation DOMHTMLElement (DOMUIKitComplexityExtensions) 
+@implementation DOMHTMLElement (DOMUIKitComplexityExtensions)
 
 - (int)structuralComplexityContribution
 {
@@ -407,7 +407,7 @@ using WebCore::VisiblePosition;
 
 
 //-----------------
-        
+
 @implementation DOMHTMLAreaElement (DOMUIKitExtensions)
 
 - (CGRect)boundingBoxWithOwner:(DOMNode *)anOwner
@@ -483,7 +483,7 @@ using WebCore::VisiblePosition;
     }
     if (!data)
         return nil;
-    
+
     return [data->createNSData().leakRef() autorelease];
 }
 
@@ -492,7 +492,7 @@ using WebCore::VisiblePosition;
     WebCore::CachedImage *cachedImage = core(self)->cachedImage();
     if (!cachedImage || !cachedImage->image())
         return nil;
-    
+
     return cachedImage->response().mimeType();
 }
 

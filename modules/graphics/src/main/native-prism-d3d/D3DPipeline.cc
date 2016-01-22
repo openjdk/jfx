@@ -232,8 +232,8 @@ inline IDirect3D9* addRef(IDirect3D9* i) {
 int getMaxSampleSupport(IDirect3D9 *d3d9, UINT adapter) {
     int maxSamples = 0;
     if (SUCCEEDED(d3d9->CheckDeviceMultiSampleType(adapter,
-					D3DDEVTYPE_HAL , D3DFMT_X8R8G8B8, FALSE,
-					D3DMULTISAMPLE_2_SAMPLES, NULL))) {
+                    D3DDEVTYPE_HAL , D3DFMT_X8R8G8B8, FALSE,
+                    D3DMULTISAMPLE_2_SAMPLES, NULL))) {
         const int MAX_SAMPLES_SEARCH = D3DMULTISAMPLE_16_SAMPLES;
         maxSamples = D3DMULTISAMPLE_2_SAMPLES;
         // Typically even samples are used, thus checking only even samples to
@@ -241,8 +241,8 @@ int getMaxSampleSupport(IDirect3D9 *d3d9, UINT adapter) {
         for (int i = maxSamples; i <= MAX_SAMPLES_SEARCH; i += 2) {
             D3DMULTISAMPLE_TYPE msType = static_cast<D3DMULTISAMPLE_TYPE>(i);
             if (SUCCEEDED(d3d9->CheckDeviceMultiSampleType(adapter,
-					D3DDEVTYPE_HAL, D3DFMT_X8R8G8B8, FALSE,
-					msType, NULL))) {
+                    D3DDEVTYPE_HAL, D3DFMT_X8R8G8B8, FALSE,
+                    msType, NULL))) {
                 maxSamples = i;
             } else {
                 break;

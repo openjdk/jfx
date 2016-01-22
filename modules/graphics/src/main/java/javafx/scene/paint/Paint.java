@@ -55,13 +55,13 @@ public abstract class Paint {
             public void addListener(Paint paint, AbstractNotifyListener platformChangeListener) {
                 paint.acc_addListener(platformChangeListener);
             }
-            
+
             @Override
             public void removeListener(Paint paint, AbstractNotifyListener platformChangeListener) {
                 paint.acc_removeListener(platformChangeListener);
             }
-            
-            
+
+
         });
     }
 
@@ -75,7 +75,7 @@ public abstract class Paint {
     }
 
     abstract Object acc_getPlatformPaint();
-    
+
     void acc_addListener(AbstractNotifyListener platformChangeListener) {
         throw new UnsupportedOperationException("Not Supported.");
     }
@@ -83,7 +83,7 @@ public abstract class Paint {
     void acc_removeListener(AbstractNotifyListener platformChangeListener) {
         throw new UnsupportedOperationException("Not Supported.");
     }
-    
+
     /**
      * Gets whether this Paint is completely opaque. An opaque paint is one that
      * has no alpha component in any of its colors. It may be possible for a Paint
@@ -96,19 +96,19 @@ public abstract class Paint {
      * @since JavaFX 8.0
      */
     public abstract boolean isOpaque();
-      
+
     /**
-     * Creates a paint value from a string representation. Recognizes strings 
+     * Creates a paint value from a string representation. Recognizes strings
      * representing {@code Color}, {@code RadialGradient} or {@code LinearGradient}.
      * String specifying LinearGradient must begin with linear-gradient keyword
      * and string specifying RadialGradient must begin with radial-gradient.
-     * 
+     *
      * @param value the string to convert
      * @throws NullPointerException if {@code value} is {@code null}
      * @throws IllegalArgumentException if {@code value} cannot be parsed
      * @return a {@code Color}, {@code RadialGradient} or {@code LinearGradient}
      * object holding the value represented by the string argument.
-     * 
+     *
      * @see Color#valueOf(String)
      * @see LinearGradient#valueOf(String)
      * @see RadialGradient#valueOf(String)
@@ -123,7 +123,7 @@ public abstract class Paint {
             return LinearGradient.valueOf(value);
         } else if (value.startsWith("radial-gradient(")) {
             return RadialGradient.valueOf(value);
-        } else {                
+        } else {
             return Color.valueOf(value);
         }
     }

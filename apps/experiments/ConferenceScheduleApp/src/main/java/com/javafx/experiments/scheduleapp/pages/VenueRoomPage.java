@@ -132,16 +132,16 @@ public class VenueRoomPage extends ScrollPane {
             }
         });
         box.getChildren().addAll(title, subTitle, backButton, imagesRegion, sessions, sessionList);
-        
+
         roomRegion.setStyle("-fx-background-color: #00a8cc44;");
         roomRegion.setScaleShape(false);
         roomRegion.setCenterShape(false);
     }
-    
+
     public void setRoom(Room room) {
         // Get room metadata
         RoomMetadata metadata = ROOM_METADATA.get(room.getName());
-        
+
         title.setText(room.getName());
         if (metadata != null && metadata.floor != null) {
             subTitle.setText(room.getVenue().getName()+" "+metadata.floor+" Floor");
@@ -160,7 +160,7 @@ public class VenueRoomPage extends ScrollPane {
             }
         });
         sessionList.getItems().setAll(sessionTimes);
-        
+
         if (metadata != null) {
             imagesRegion.setVisible(true);
             imagesRegion.setManaged(true);
@@ -175,7 +175,7 @@ public class VenueRoomPage extends ScrollPane {
             imagesRegion.setManaged(false);
         }
     }
-    
+
     private static class ImagesRegion extends Region {
         private final ImageView plan;
         private final Region roomRegion;
@@ -204,7 +204,7 @@ public class VenueRoomPage extends ScrollPane {
             roomRegion.resize(plan.getLayoutBounds().getWidth(), plan.getLayoutBounds().getHeight());
         }
     }
-    
+
     private static class RoomMetadata {
         public final String floor;
         public final String imageUrl;
@@ -220,53 +220,53 @@ public class VenueRoomPage extends ScrollPane {
             this.svgOriginY = svgOriginY;
         }
     }
-    
+
     private static Map<String,RoomMetadata> ROOM_METADATA = new HashMap<String,RoomMetadata>();
-//    
+//
 //    static {
 //        // PARK 55
-//        ROOM_METADATA.put("Cyril Magnin I", new RoomMetadata("4th", 
-//                ConferenceScheduleApp.class.getResource("images/plans/Parc55-4floor.png").toExternalForm(), 
+//        ROOM_METADATA.put("Cyril Magnin I", new RoomMetadata("4th",
+//                ConferenceScheduleApp.class.getResource("images/plans/Parc55-4floor.png").toExternalForm(),
 //                "M-123.71,794.58l-115.25,0.096l-29.685-30.025V524.943l144.935-0.096V794.58z", -299.957, 426.0273));
-//        ROOM_METADATA.put("Cyril Magnin II/III", new RoomMetadata("4th", 
-//                ConferenceScheduleApp.class.getResource("images/plans/Parc55-4floor.png").toExternalForm(), 
+//        ROOM_METADATA.put("Cyril Magnin II/III", new RoomMetadata("4th",
+//                ConferenceScheduleApp.class.getResource("images/plans/Parc55-4floor.png").toExternalForm(),
 //                "M-123.71,794.58l-115.25,0.096l-29.685-30.025V524.943l144.935-0.096V794.58z", -299.957, 426.0273));
-//        ROOM_METADATA.put("Mission", new RoomMetadata("4th", 
-//                ConferenceScheduleApp.class.getResource("images/plans/Parc55-4floor.png").toExternalForm(), 
+//        ROOM_METADATA.put("Mission", new RoomMetadata("4th",
+//                ConferenceScheduleApp.class.getResource("images/plans/Parc55-4floor.png").toExternalForm(),
 //                "M200.088,493.849h187.511v60.847H200.088V493.849z", -299.957, 426.0273));
-//        
-//        ROOM_METADATA.put("Embarcadero", new RoomMetadata("3rd", 
-//                ConferenceScheduleApp.class.getResource("images/plans/Parc55-3floor.png").toExternalForm(), 
+//
+//        ROOM_METADATA.put("Embarcadero", new RoomMetadata("3rd",
+//                ConferenceScheduleApp.class.getResource("images/plans/Parc55-3floor.png").toExternalForm(),
 //                "M594.244-0.138h106.145v190.271H484.784V42.076h62.119v21.711h8.139l4.371-4.374v-9.799h26.389v9.952l3.618,3.618h5.127L594.244-0.138z", 0,0));
-//        ROOM_METADATA.put("Market Street", new RoomMetadata("3rd", 
-//                ConferenceScheduleApp.class.getResource("images/plans/Parc55-3floor.png").toExternalForm(), 
+//        ROOM_METADATA.put("Market Street", new RoomMetadata("3rd",
+//                ConferenceScheduleApp.class.getResource("images/plans/Parc55-3floor.png").toExternalForm(),
 //                "M62.425,337.516l17.248-1.943h178.753V436.29H62.425V337.516z", 0,0));
-//        ROOM_METADATA.put("Powell I/II", new RoomMetadata("3rd", 
-//                ConferenceScheduleApp.class.getResource("images/plans/Parc55-3floor.png").toExternalForm(), 
+//        ROOM_METADATA.put("Powell I/II", new RoomMetadata("3rd",
+//                ConferenceScheduleApp.class.getResource("images/plans/Parc55-3floor.png").toExternalForm(),
 //                "M201.715,292.917H78.02v-65.613h123.695V292.917z", 0,0));
-//        
-//        ROOM_METADATA.put("Divisidero", new RoomMetadata("2nd", 
-//                ConferenceScheduleApp.class.getResource("images/plans/Parc55-2floor.png").toExternalForm(), 
+//
+//        ROOM_METADATA.put("Divisidero", new RoomMetadata("2nd",
+//                ConferenceScheduleApp.class.getResource("images/plans/Parc55-2floor.png").toExternalForm(),
 //                "M571.732,161.783l-20.072,0.231l-0.232,5.634h-86.805V75.67h107.109V161.783z", -1,-1));
-//        
+//
 //        // Hotel Nikko
-//        ROOM_METADATA.put("Carmel I/II", new RoomMetadata("3rd", 
-//                ConferenceScheduleApp.class.getResource("images/plans/Nikko-3floor.png").toExternalForm(), 
+//        ROOM_METADATA.put("Carmel I/II", new RoomMetadata("3rd",
+//                ConferenceScheduleApp.class.getResource("images/plans/Nikko-3floor.png").toExternalForm(),
 //                "M93.69,251.459H0.816V103.316H93.69V251.459z", -0.9561, -0.6035));
-//        ROOM_METADATA.put("Monterey I/II", new RoomMetadata("3rd", 
-//                ConferenceScheduleApp.class.getResource("images/plans/Nikko-3floor.png").toExternalForm(), 
+//        ROOM_METADATA.put("Monterey I/II", new RoomMetadata("3rd",
+//                ConferenceScheduleApp.class.getResource("images/plans/Nikko-3floor.png").toExternalForm(),
 //                "M21.404,36.639c-0.001,0-0.189-13.599-0.189-13.599h15.488L36.515-0.604h212.303l-1.702,48.956v30.009H0.377V36.639H21.404z", -0.9561, -0.6035));
-//        ROOM_METADATA.put("Nikko Ballroom I", new RoomMetadata("3rd", 
-//                ConferenceScheduleApp.class.getResource("images/plans/Nikko-3floor.png").toExternalForm(), 
+//        ROOM_METADATA.put("Nikko Ballroom I", new RoomMetadata("3rd",
+//                ConferenceScheduleApp.class.getResource("images/plans/Nikko-3floor.png").toExternalForm(),
 //                "M417.605,346.83l-99.055,0.001V219.155h99.055", -0.9561, -0.6035));
-//        ROOM_METADATA.put("Nikko Ballroom II/III", new RoomMetadata("3rd", 
-//                ConferenceScheduleApp.class.getResource("images/plans/Nikko-3floor.png").toExternalForm(), 
+//        ROOM_METADATA.put("Nikko Ballroom II/III", new RoomMetadata("3rd",
+//                ConferenceScheduleApp.class.getResource("images/plans/Nikko-3floor.png").toExternalForm(),
 //                "M417.605,219.155h197.41l0.723,18.033l80.789-0.72v100.264l-80.789,0.722l0.021,9.376H417.605", -0.9561, -0.6035));
 //        // Hilton San Francisco
-//        
-//        
-//        RoomMetadata continental = new RoomMetadata(null, 
-//                ConferenceScheduleApp.class.getResource("images/plans/Hilton.png").toExternalForm(), 
+//
+//
+//        RoomMetadata continental = new RoomMetadata(null,
+//                ConferenceScheduleApp.class.getResource("images/plans/Hilton.png").toExternalForm(),
 //                "M180.282,270.154l15.968-4.386l133.037,39.236l-14.227,4.312l49.866,15.951l-68.548,17.677L64.145,275.257l71.388-18.793L180.282,270.154z", 0,0);
 //        ROOM_METADATA.put("Continental Ballroom", continental);
 //        ROOM_METADATA.put("Continental Ballroom 1/2/3", continental);
@@ -275,30 +275,30 @@ public class VenueRoomPage extends ScrollPane {
 //        ROOM_METADATA.put("Continental Ballroom 6", continental);
 //        ROOM_METADATA.put("Continental Ballroom 7/8/9", continental);
 //        ROOM_METADATA.put("Continental Ballroom 7/8/9 *", continental);
-//        
-//        ROOM_METADATA.put("Franciscan A/B/C/D", new RoomMetadata(null, 
-//                ConferenceScheduleApp.class.getResource("images/plans/Hilton.png").toExternalForm(), 
+//
+//        ROOM_METADATA.put("Franciscan A/B/C/D", new RoomMetadata(null,
+//                ConferenceScheduleApp.class.getResource("images/plans/Hilton.png").toExternalForm(),
 //                "M455.558,175.874l-0.997,4.564l36.227,13.692v17.972l-80.728-25.103l42.361-11.981L455.558,175.874z", 0,0));
-//        ROOM_METADATA.put("Yosemite A/B/C", new RoomMetadata(null, 
-//                ConferenceScheduleApp.class.getResource("images/plans/Hilton.png").toExternalForm(), 
+//        ROOM_METADATA.put("Yosemite A/B/C", new RoomMetadata(null,
+//                ConferenceScheduleApp.class.getResource("images/plans/Hilton.png").toExternalForm(),
 //                "M616.874,259.456l-105.403,29.239l-60.62-17.401l-15.401,4.565l-36.8-11.127l11.125-3.279l20.823-4.423l23.82-6.56l-6.419-3.281l13.977-3.565l7.276,3.565l51.632-15.406L616.874,259.456z", 0,0));
-//        RoomMetadata yosimite = new RoomMetadata(null, 
-//                ConferenceScheduleApp.class.getResource("images/plans/Hilton.png").toExternalForm(), 
+//        RoomMetadata yosimite = new RoomMetadata(null,
+//                ConferenceScheduleApp.class.getResource("images/plans/Hilton.png").toExternalForm(),
 //                "M150.516,444.173l25.498,9.788L69.133,484.607l-31.936-11.59L150.516,444.173z M196.102,502.893l100.442-35.025l-32.238-9.356l-115.077,28.932L196.102,502.893z", 0,0);
 //        ROOM_METADATA.put("Golden Gate 3/4/5", yosimite);
 //        ROOM_METADATA.put("Golden Gate 6/7/8", yosimite);
-//        
-//        ROOM_METADATA.put("Imperial Ballroom A", new RoomMetadata(null, 
-//                ConferenceScheduleApp.class.getResource("images/plans/Hilton.png").toExternalForm(), 
+//
+//        ROOM_METADATA.put("Imperial Ballroom A", new RoomMetadata(null,
+//                ConferenceScheduleApp.class.getResource("images/plans/Hilton.png").toExternalForm(),
 //                "M328.896,206.426l71.634,26.283l-44.946,12.082l-80.187-23.569L328.896,206.426z", 0,0));
-//        ROOM_METADATA.put("Imperial Ballroom B", new RoomMetadata(null, 
-//                ConferenceScheduleApp.class.getResource("images/plans/Hilton.png").toExternalForm(), 
+//        ROOM_METADATA.put("Imperial Ballroom B", new RoomMetadata(null,
+//                ConferenceScheduleApp.class.getResource("images/plans/Hilton.png").toExternalForm(),
 //                "M449.142,219.642l-48.611,13.067l-71.634-26.283l38.475-10.64L449.142,219.642z", 0,0));
-//        ROOM_METADATA.put("Plaza A/B", new RoomMetadata(null, 
-//                ConferenceScheduleApp.class.getResource("images/plans/Hilton.png").toExternalForm(), 
+//        ROOM_METADATA.put("Plaza A/B", new RoomMetadata(null,
+//                ConferenceScheduleApp.class.getResource("images/plans/Hilton.png").toExternalForm(),
 //                "M349.957,406.56l70.419,20.981l-79.617,22.132l-75.304-22.132L349.957,406.56z", 0,0));
-//        
-//        
+//
+//
 ////        new Room(Venue.ALL_VENUES[3],"Golden Gate 3/4/5"),
 ////        new Room(Venue.ALL_VENUES[3],"Golden Gate 6/7/8"),
 ////        new Room(Venue.ALL_VENUES[3],"Imperial Ballroom A"),

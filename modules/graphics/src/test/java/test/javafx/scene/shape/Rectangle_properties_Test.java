@@ -42,7 +42,7 @@ public final class Rectangle_properties_Test extends PropertiesTestBase {
     @Parameters
     public static Collection data() {
         final Rectangle testRectangle = createTestRectangle();
-        
+
         return Arrays.asList(new Object[] {
             config(testRectangle, "x", 0.0, 100.0),
             config(testRectangle, "y", 0.0, 200.0),
@@ -85,7 +85,7 @@ public final class Rectangle_properties_Test extends PropertiesTestBase {
                    box(0, 0, 100, 50), box(0, 0, 100, 200)),
             config(createTestRectangle(),
                    "translateX", 0.0, 100.0,
-                   "boundsInParent", 
+                   "boundsInParent",
                    box(0, 0, 100, 100), box(100, 0, 100, 100)),
             config(createTestRectangle(),
                    "translateY", 0.0, 100.0,

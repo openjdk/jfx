@@ -105,23 +105,23 @@ public:
     void SetAllowDuplicates(bool Value) {
         FAllowDuplicates = Value;
     }
-    
+
     iterator begin() {
         return FList.begin();
     }
-    
+
     const_iterator begin() const {
         return FList.begin();
     }
-    
+
     iterator end() {
         return FList.end();
     }
-    
+
     const_iterator end() const {
         return FList.end();
     }
-    
+
     void Clear() {
         for (typename list_type::iterator iterator = FList.begin(); iterator != FList.end(); iterator++) {
             container_type *item = *iterator;
@@ -236,7 +236,7 @@ public:
         Append(Value);
         return *this;
     }
-    
+
     OrderedMap& operator= (const OrderedMap &Value) {
         Clear();
         Append(Value);

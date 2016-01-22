@@ -84,7 +84,7 @@ public class IndexSearcher {
         try {
             Query query = parser.parse(searchString);
             final SecondPassGroupingCollector collector = new SecondPassGroupingCollector("documentType", searchGroups,
-                    Sort.RELEVANCE, Sort.RELEVANCE, 10, true, false, true); 
+                    Sort.RELEVANCE, Sort.RELEVANCE, 10, true, false, true);
             searcher.search(query, collector);
             final TopGroups groups = collector.getTopGroups(0);
             for (GroupDocs groupDocs : groups.groups) {
@@ -111,18 +111,18 @@ public class IndexSearcher {
                         */
                         if (docType == DocumentType.SAMPLE) {
                             if (Samples.ROOT.sampleForPath(result.getEnsemblePath().substring(9).trim()) == null) {
-                                
+
                                 // Skip unsupported (not existing) samples
                                 continue;
                             }
                             if (results.size() == 5) {
-                                
+
                                 // 5 samples is enough
                                 break;
                             }
                         }
                         results.add(result);
-                    } 
+                    }
                 }
                 resultMap.put(docType, results);
             }

@@ -80,25 +80,25 @@ public interface TKSceneListener {
             int defaultTextX, int defaultTextY,
             double x, double y, double screenX, double screenY,
             boolean _shiftDown, boolean _controlDown,
-            boolean _altDown, boolean _metaDown, 
+            boolean _altDown, boolean _metaDown,
             boolean _direct, boolean _inertia);
 
     public void menuEvent(double x, double y, double xAbs, double yAbs,
             boolean isKeyboardTrigger);
-    
+
     public void zoomEvent(
             EventType<ZoomEvent> eventType,
             double zoomFactor, double totalZoomFactor,
             double x, double y, double screenX, double screenY,
             boolean _shiftDown, boolean _controlDown,
-            boolean _altDown, boolean _metaDown, 
+            boolean _altDown, boolean _metaDown,
             boolean _direct, boolean _inertia);
 
     public void rotateEvent(
             EventType<RotateEvent> eventType, double angle, double totalAngle,
             double x, double y, double screenX, double screenY,
             boolean _shiftDown, boolean _controlDown,
-            boolean _altDown, boolean _metaDown, 
+            boolean _altDown, boolean _metaDown,
             boolean _direct, boolean _inertia);
 
     public void swipeEvent(

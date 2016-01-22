@@ -122,17 +122,17 @@ final class GtkApplication extends Application implements InvokeLaterDispatcher.
         // Embedded in SWT, with shared event thread
         final boolean isEventThread = AccessController
             .doPrivileged((PrivilegedAction<Boolean>) () -> Boolean.getBoolean("javafx.embed.isEventThread"));
-        
+
         if (isEventThread) {
             init();
             setEventThread(Thread.currentThread());
             launchable.run();
             return;
         }
-        
+
         final boolean noErrorTrap = AccessController
             .doPrivileged((PrivilegedAction<Boolean>) () -> Boolean.getBoolean("glass.noErrorTrap"));
-        
+
         final Thread toolkitThread =
             AccessController.doPrivileged((PrivilegedAction<Thread>) () -> new Thread(() -> {
                 init();
@@ -141,8 +141,8 @@ final class GtkApplication extends Application implements InvokeLaterDispatcher.
         setEventThread(toolkitThread);
         toolkitThread.start();
     }
-    
-    @Override 
+
+    @Override
     protected void finishTerminating() {
         final Thread toolkitThread = getEventThread();
         if (toolkitThread != null) {
@@ -159,9 +159,9 @@ final class GtkApplication extends Application implements InvokeLaterDispatcher.
     private static native boolean _isDisplayValid();
 
     private native void _terminateLoop();
-    
+
     private native void _init(long eventProc, boolean disableGrab);
-    
+
     private native void _runLoop(Runnable launchable, boolean noErrorTrap);
 
     @Override

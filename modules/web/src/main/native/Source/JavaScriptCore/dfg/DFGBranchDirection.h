@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef DFGBranchDirection_h
@@ -36,18 +36,18 @@ enum BranchDirection {
     // This is not a branch and so there is no branch direction, or
     // the branch direction has yet to be set.
     InvalidBranchDirection,
-        
+
     // The branch takes the true case.
     TakeTrue,
-        
+
     // The branch takes the false case.
     TakeFalse,
-        
+
     // For all we know, the branch could go either direction, so we
     // have to assume the worst.
     TakeBoth
 };
-    
+
 static inline const char* branchDirectionToString(BranchDirection branchDirection)
 {
     switch (branchDirection) {
@@ -61,7 +61,7 @@ static inline const char* branchDirectionToString(BranchDirection branchDirectio
         return "TakeBoth";
     }
 }
-    
+
 static inline bool isKnownDirection(BranchDirection branchDirection)
 {
     switch (branchDirection) {

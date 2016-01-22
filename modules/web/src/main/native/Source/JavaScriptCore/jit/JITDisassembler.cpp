@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -51,7 +51,7 @@ void JITDisassembler::dump(PrintStream& out, LinkBuffer& linkBuffer)
 {
     dumpHeader(out, linkBuffer);
     dumpDisassembly(out, linkBuffer, m_startOfCode, m_labelForBytecodeIndexInMainPath[0]);
-    
+
     dumpForInstructions(out, linkBuffer, "    ", m_labelForBytecodeIndexInMainPath, firstSlowLabel());
     out.print("    (End Of Main Path)\n");
     dumpForInstructions(out, linkBuffer, "    (S) ", m_labelForBytecodeIndexInSlowPath, m_endOfSlowPath);
@@ -68,13 +68,13 @@ void JITDisassembler::dump(LinkBuffer& linkBuffer)
 void JITDisassembler::reportToProfiler(Profiler::Compilation* compilation, LinkBuffer& linkBuffer)
 {
     StringPrintStream out;
-    
+
     dumpHeader(out, linkBuffer);
     compilation->addDescription(Profiler::CompiledBytecode(Profiler::OriginStack(), out.toCString()));
     out.reset();
     dumpDisassembly(out, linkBuffer, m_startOfCode, m_labelForBytecodeIndexInMainPath[0]);
     compilation->addDescription(Profiler::CompiledBytecode(Profiler::OriginStack(), out.toCString()));
-    
+
     reportInstructions(compilation, linkBuffer, "    ", m_labelForBytecodeIndexInMainPath, firstSlowLabel());
     compilation->addDescription(Profiler::CompiledBytecode(Profiler::OriginStack(), "    (End Of Main Path)\n"));
     reportInstructions(compilation, linkBuffer, "    (S) ", m_labelForBytecodeIndexInSlowPath, m_endOfSlowPath);
@@ -107,7 +107,7 @@ Vector<JITDisassembler::DumpedOp> JITDisassembler::dumpVectorForInstructions(Lin
 {
     StringPrintStream out;
     Vector<DumpedOp> result;
-    
+
     for (unsigned i = 0; i < labels.size();) {
         if (!labels[i].isSet()) {
             i++;
@@ -132,14 +132,14 @@ Vector<JITDisassembler::DumpedOp> JITDisassembler::dumpVectorForInstructions(Lin
             }
         }
     }
-    
+
     return result;
 }
 
 void JITDisassembler::dumpForInstructions(PrintStream& out, LinkBuffer& linkBuffer, const char* prefix, Vector<MacroAssembler::Label>& labels, MacroAssembler::Label endLabel)
 {
     Vector<DumpedOp> dumpedOps = dumpVectorForInstructions(linkBuffer, prefix, labels, endLabel);
-    
+
     for (unsigned i = 0; i < dumpedOps.size(); ++i)
         out.print(dumpedOps[i].disassembly);
 }
@@ -147,7 +147,7 @@ void JITDisassembler::dumpForInstructions(PrintStream& out, LinkBuffer& linkBuff
 void JITDisassembler::reportInstructions(Profiler::Compilation* compilation, LinkBuffer& linkBuffer, const char* prefix, Vector<MacroAssembler::Label>& labels, MacroAssembler::Label endLabel)
 {
     Vector<DumpedOp> dumpedOps = dumpVectorForInstructions(linkBuffer, prefix, labels, endLabel);
-    
+
     for (unsigned i = 0; i < dumpedOps.size(); ++i) {
         compilation->addDescription(
             Profiler::CompiledBytecode(

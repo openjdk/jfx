@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef GetByIdVariant_h
@@ -53,20 +53,20 @@ public:
             ASSERT(!chain);
         }
     }
-    
+
     bool isSet() const { return !!m_structureSet.size(); }
     bool operator!() const { return !isSet(); }
     const StructureSet& structureSet() const { return m_structureSet; }
     IntendedStructureChain* chain() const { return const_cast<IntendedStructureChain*>(m_chain.get()); }
     JSValue specificValue() const { return m_specificValue; }
     PropertyOffset offset() const { return m_offset; }
-    
+
     void dump(PrintStream&) const;
     void dumpInContext(PrintStream&, DumpContext*) const;
-    
+
 private:
     friend class GetByIdStatus;
-    
+
     StructureSet m_structureSet;
     RefPtr<IntendedStructureChain> m_chain;
     JSValue m_specificValue;

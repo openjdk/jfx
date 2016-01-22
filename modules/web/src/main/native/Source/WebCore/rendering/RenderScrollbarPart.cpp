@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -76,7 +76,7 @@ void RenderScrollbarPart::layoutVerticalPart()
     } else {
         setWidth(m_scrollbar->width());
         computeScrollbarHeight();
-    } 
+    }
 }
 
 static int calcScrollbarThicknessUsing(SizeType sizeType, const Length& length, int containingLength, RenderView* renderView)
@@ -98,8 +98,8 @@ void RenderScrollbarPart::computeScrollbarWidth()
     int minWidth = calcScrollbarThicknessUsing(MinSize, style().minWidth(), visibleSize, renderView);
     int maxWidth = style().maxWidth().isUndefined() ? w : calcScrollbarThicknessUsing(MaxSize, style().maxWidth(), visibleSize, renderView);
     setWidth(std::max(minWidth, std::min(maxWidth, w)));
-    
-    // Buttons and track pieces can all have margins along the axis of the scrollbar. 
+
+    // Buttons and track pieces can all have margins along the axis of the scrollbar.
     m_marginBox.setLeft(minimumValueForLength(style().marginLeft(), visibleSize, renderView));
     m_marginBox.setRight(minimumValueForLength(style().marginRight(), visibleSize, renderView));
 }
@@ -117,7 +117,7 @@ void RenderScrollbarPart::computeScrollbarHeight()
     int maxHeight = style().maxHeight().isUndefined() ? h : calcScrollbarThicknessUsing(MaxSize, style().maxHeight(), visibleSize, renderView);
     setHeight(std::max(minHeight, std::min(maxHeight, h)));
 
-    // Buttons and track pieces can all have margins along the axis of the scrollbar. 
+    // Buttons and track pieces can all have margins along the axis of the scrollbar.
     m_marginBox.setTop(minimumValueForLength(style().marginTop(), visibleSize, renderView));
     m_marginBox.setBottom(minimumValueForLength(style().marginBottom(), visibleSize, renderView));
 }
@@ -126,7 +126,7 @@ void RenderScrollbarPart::computePreferredLogicalWidths()
 {
     if (!preferredLogicalWidthsDirty())
         return;
-    
+
     m_minPreferredLogicalWidth = m_maxPreferredLogicalWidth = 0;
 
     setPreferredLogicalWidthsDirty(false);
@@ -152,7 +152,7 @@ void RenderScrollbarPart::imageChanged(WrappedImagePtr image, const IntRect* rec
             view().frameView().invalidateScrollCorner(view().frameView().scrollCornerRect());
             return;
         }
-        
+
         RenderBlock::imageChanged(image, rect);
     }
 }
@@ -175,7 +175,7 @@ void RenderScrollbarPart::paintIntoRect(GraphicsContext* graphicsContext, const 
         graphicsContext->clip(rect);
         graphicsContext->beginTransparencyLayer(style().opacity());
     }
-    
+
     // Now do the paint.
     PaintInfo paintInfo(graphicsContext, pixelSnappedIntRect(rect), PaintPhaseBlockBackground, PaintBehaviorNormal);
     paint(paintInfo, paintOffset);

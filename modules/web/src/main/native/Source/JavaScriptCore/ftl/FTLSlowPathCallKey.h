@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef FTLSlowPathCallKey_h
@@ -49,45 +49,45 @@ public:
         , m_offset(0)
     {
     }
-    
+
     SlowPathCallKey(const RegisterSet& set, void* callTarget, ptrdiff_t offset)
         : m_usedRegisters(set)
         , m_callTarget(callTarget)
         , m_offset(offset)
     {
     }
-    
+
     const RegisterSet& usedRegisters() const { return m_usedRegisters; }
     void* callTarget() const { return m_callTarget; }
     ptrdiff_t offset() const { return m_offset; }
-    
+
     SlowPathCallKey withCallTarget(void* callTarget)
     {
         return SlowPathCallKey(usedRegisters(), callTarget, offset());
     }
-    
+
     void dump(PrintStream&) const;
-    
+
     enum EmptyValueTag { EmptyValue };
     enum DeletedValueTag { DeletedValue };
-    
+
     SlowPathCallKey(EmptyValueTag)
         : m_usedRegisters(RegisterSet::EmptyValue)
         , m_callTarget(0)
         , m_offset(0)
     {
     }
-    
+
     SlowPathCallKey(DeletedValueTag)
         : m_usedRegisters(RegisterSet::DeletedValue)
         , m_callTarget(0)
         , m_offset(0)
     {
     }
-    
+
     bool isEmptyValue() const { return m_usedRegisters.isEmptyValue(); }
     bool isDeletedValue() const { return m_usedRegisters.isDeletedValue(); }
-    
+
     bool operator==(const SlowPathCallKey& other) const
     {
         return m_usedRegisters == other.m_usedRegisters

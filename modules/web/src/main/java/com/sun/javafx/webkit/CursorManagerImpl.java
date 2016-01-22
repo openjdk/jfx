@@ -108,10 +108,10 @@ public final class CursorManagerImpl extends CursorManager<Cursor> {
                 if (bundle != null) {
                     String resource = bundle.getString(name + ".file");
                     Image image = new Image(CursorManagerImpl.class.getResourceAsStream(resource));
-                    
+
                     resource = bundle.getString(name + ".hotspotX");
                     int hotspotX = Integer.parseInt(resource);
-                    
+
                     resource = bundle.getString(name + ".hotspotY");
                     int hotspotY = Integer.parseInt(resource);
 

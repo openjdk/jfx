@@ -69,7 +69,7 @@ public class WrapInDialogPaneJob extends AbstractWrapInJob {
         }
         return result;
     }
-    
+
     @Override
     protected List<Job> wrapChildrenJobs(final List<FXOMObject> children) {
 

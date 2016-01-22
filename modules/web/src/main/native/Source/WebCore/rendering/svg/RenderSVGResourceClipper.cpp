@@ -298,7 +298,7 @@ FloatRect RenderSVGResourceClipper::resourceBoundingBox(const RenderObject& obje
     // Resource was not layouted yet. Give back the boundingBox of the object.
     if (selfNeedsLayout())
         return object.objectBoundingBox();
-    
+
     if (m_clipBoundaries.isEmpty())
         calculateClipContentRepaintRect();
 

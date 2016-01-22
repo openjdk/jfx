@@ -92,7 +92,7 @@ public interface Plugin {
             String methodName,
             Object[] args) throws IOException;
 
-    
+
     /**
      * Paints plugin by Webkit request in selected bounds
      * @param g

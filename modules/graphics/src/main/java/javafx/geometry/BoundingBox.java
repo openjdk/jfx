@@ -167,7 +167,7 @@ public class BoundingBox extends Bounds {
 
     /**
      * Indicates whether some other object is "equal to" this one.
-     * 
+     *
      * @param obj the reference object with which to compare
      * @return true if this object is the same as the obj argument; false otherwise
      */
@@ -197,7 +197,7 @@ public class BoundingBox extends Bounds {
             bits = 31L * bits + Double.doubleToLongBits(getWidth());
             bits = 31L * bits + Double.doubleToLongBits(getHeight());
             bits = 31L * bits + Double.doubleToLongBits(getDepth());
-	    hash = (int) (bits ^ (bits >> 32));
+        hash = (int) (bits ^ (bits >> 32));
         }
         return hash;
     }

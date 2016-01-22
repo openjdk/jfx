@@ -51,7 +51,7 @@ package com.sun.prism.impl;
  * </pre>
  * The amounts and sizes returned from the methods should all be in the
  * same units, usually bytes.
- * 
+ *
  * @param <T> the type of resource stored in this pool
  * @see ManagedResource
  */
@@ -67,7 +67,7 @@ public interface ResourcePool<T> {
      * This method will unlock all non-permanent resources that have outstanding
      * locks if {@code forgiveStaleLocks} is {@code true}, or it will print out
      * a warning and a resource summary if that parameter is {@code false}.
-     * 
+     *
      * @param forgiveStaleLocks {@code true} if the caller wishes to forgive
      *         and unlock all outstanding locks on non-permanent resources
      */
@@ -136,7 +136,7 @@ public interface ResourcePool<T> {
 
     /**
      * The estimated size of the indicated resource.
-     * 
+     *
      * @param resource the resource to be measured
      * @return the space within this resource pool that the object occupies.
      */
@@ -145,7 +145,7 @@ public interface ResourcePool<T> {
     /**
      * Record the indicated amount of the resource as being allocated for
      * a {@link ManagedResource}.
-     * 
+     *
      * @param size the amount of the resource to be indicated as managed.
      */
     public void recordAllocated(long size);
@@ -153,7 +153,7 @@ public interface ResourcePool<T> {
     /**
      * Record the indicated amount of the resource as no longer being
      * held in a {@link ManagedResource}.
-     * 
+     *
      * @param size the amount of the resource to remove from the managed amount.
      */
     public void recordFree(long size);
@@ -161,7 +161,7 @@ public interface ResourcePool<T> {
     /**
      * Record the {@link ManagedResource} object as being currently managed
      * by this pool.
-     * 
+     *
      * @param resource the resource that is now being managed
      */
     public void resourceManaged(ManagedResource<T> resource);
@@ -169,7 +169,7 @@ public interface ResourcePool<T> {
     /**
      * Record the {@link ManagedResource} object as no longer being managed
      * by this pool.
-     * 
+     *
      * @param resource the resource that is freed, no longer being managed
      */
     public void resourceFreed(ManagedResource<T> resource);
@@ -178,7 +178,7 @@ public interface ResourcePool<T> {
      * Prepare for an allocation of a resource from this pool of the
      * indicated size by freeing up uninteresting resources until the
      * allocation fits within the target() or max() sizes.
-     * 
+     *
      * @param size the size of the resource that is about to be allocated
      * @return true if there is room for the indicated resource
      */

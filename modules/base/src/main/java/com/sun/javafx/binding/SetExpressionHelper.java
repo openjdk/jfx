@@ -680,6 +680,6 @@ public abstract class SetExpressionHelper<E> extends ExpressionHelperBase {
         public String toString() {
             return addOp ? "added " + added : "removed " + old;
         }
-        
+
     }
 }

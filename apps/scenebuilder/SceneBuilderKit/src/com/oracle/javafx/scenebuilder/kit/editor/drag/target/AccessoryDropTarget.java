@@ -79,7 +79,7 @@ public class AccessoryDropTarget extends AbstractDropTarget {
     @Override
     public boolean acceptDragSource(AbstractDragSource dragSource) {
         assert dragSource != null;
-        
+
         final boolean result;
         if (dragSource.getDraggedObjects().size() != 1) {
             result = false;
@@ -89,7 +89,7 @@ public class AccessoryDropTarget extends AbstractDropTarget {
             result = m.isAcceptingAccessory(accessory, draggedObject)
                     && m.getAccessory(accessory) == null;
         }
-        
+
         return result;
     }
 
@@ -97,14 +97,14 @@ public class AccessoryDropTarget extends AbstractDropTarget {
     public Job makeDropJob(AbstractDragSource dragSource, EditorController editorController) {
         assert acceptDragSource(dragSource);
         assert editorController != null;
-        
+
         final boolean shouldRefreshSceneGraph = true;
         final BatchJob result = new BatchJob(editorController,
                 shouldRefreshSceneGraph, dragSource.makeDropJobDescription());
-        
+
         final FXOMObject draggedObject = dragSource.getDraggedObjects().get(0);
         final FXOMObject currentParent = draggedObject.getParentObject();
-        
+
         // Two steps :
         //  - remove drag source object from its current parent (if any)
         //  - set the drag source object as accessory of the drop target
@@ -112,13 +112,13 @@ public class AccessoryDropTarget extends AbstractDropTarget {
         if (currentParent != null) {
             result.addSubJob(new RemoveObjectJob(draggedObject, editorController));
         }
-        final Job j = new InsertAsAccessoryJob(draggedObject, 
+        final Job j = new InsertAsAccessoryJob(draggedObject,
                 targetContainer, accessory, editorController);
         result.addSubJob(j);
-        
-        if ((targetContainer.getSceneGraphObject() instanceof BorderPane) 
+
+        if ((targetContainer.getSceneGraphObject() instanceof BorderPane)
                 && (draggedObject instanceof FXOMInstance)) {
-            
+
             // We add a job which sets BorderPane.alignment=CENTER on draggedObject
             final FXOMInstance draggedInstance
                     = (FXOMInstance) draggedObject;
@@ -128,13 +128,13 @@ public class AccessoryDropTarget extends AbstractDropTarget {
                     = new EnumerationPropertyMetadata(alignmentName, Pos.class,
                     "UNUSED", true /* readWrite */, InspectorPath.UNUSED); //NOI18N
             final Job alignmentJob
-                    = new ModifyObjectJob(draggedInstance, alignmentMeta, 
+                    = new ModifyObjectJob(draggedInstance, alignmentMeta,
                             Pos.CENTER.toString(), editorController);
             result.addSubJob(alignmentJob);
         }
-        
+
         assert result.isExecutable();
-        
+
         return result;
     }
 
@@ -142,7 +142,7 @@ public class AccessoryDropTarget extends AbstractDropTarget {
     public boolean isSelectRequiredAfterDrop() {
         return true;
     }
-    
+
     /*
      * Objects
      */
@@ -176,6 +176,6 @@ public class AccessoryDropTarget extends AbstractDropTarget {
     public String toString() {
         return "AccessoryDropTarget{" + "targetContainer=" + targetContainer + ", accessory=" + accessory + '}'; //NOI18N
     }
-    
-    
+
+
 }

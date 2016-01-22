@@ -66,27 +66,27 @@ import org.jemmy.fx.QueueExecutor;
 /**
  * This test runs Modena app and waits for snapshots obtained from the app content
  * to match the golden files.
- * 
+ *
  * Unless they perfectly match test will fail. The following information is collected
  * for failed comparisons:
  * current snapshot in build/test/results folder
  * observed image difference in build/test/results/diffs folder
- * 
+ *
  * Not all failures necessary mean JavaFX is broken. Here are possible exceptions:
  * - Animated content can't be compared exactly using this approach.
  * - Some minor variations in layout/colors are possible.
  * Manual image comparison is required for all such cases. If observed image is
  * correct you could copy it to corresponding golden images folder. Golden images
  * are located in golden/seven, golden/xp, golden/mac or golden/linux folders.
- * 
+ *
  * This project requires Jemmy libraries which are downloaded from SQE repository
  * on first run (see build.xml or lib/readme.txt)
- * 
+ *
  * @author akouznet
  */
 @RunWith(Parameterized.class)
 public class ModenaTest {
-    
+
     private static File osFolder;
     private static File goldenFolder;
     private static File resFolder;
@@ -94,7 +94,7 @@ public class ModenaTest {
     private static ImageLoader imageLoader;
     private static final String DEFAULT_OS_FOLDER_NAME = "seven";
     private static Configuration[] configurations;
-    
+
     /*
      * The following method copied from
      * SharedTestUtils\src\test\javaclient\shared\screenshots\ImagesManager.java
@@ -123,20 +123,20 @@ public class ModenaTest {
         configurations = new Configuration[] { DEFAULT, ALTERED_COLORS };
         return DEFAULT_OS_FOLDER_NAME;
     }
-    
+
     private static boolean isRetina() {
         return false; // TODO: Fix this
     }
-    
+
     @Parameterized.Parameters
     public static List<Object[]> imageNames() {
-        
-        
-        osFolder = new File(new File("golden"), osFolder());        
+
+
+        osFolder = new File(new File("golden"), osFolder());
         System.out.println("Golden base folder = " + osFolder.getAbsolutePath());
-        
+
         imageLoader = new FilesystemImageLoader();
-        
+
         new Thread(new Runnable() {
 
             @Override
@@ -149,7 +149,7 @@ public class ModenaTest {
         AWTImage.setComparator(new StrictImageComparator());
         Environment.getEnvironment().setExecutor(QueueExecutor.EXECUTOR);
         Environment.getEnvironment().setImageCapturer(new ImageCapturer() {
-            
+
             @Override
             public Image capture(final Wrap<?> wrap, Rectangle rctngl) {
                 final Node node = (Node) wrap.getControl();
@@ -167,7 +167,7 @@ public class ModenaTest {
                 }.dispatch(Environment.getEnvironment()), null));
             }
         });
-        
+
         Map<String, Node> content = new Waiter(new Timeout(null, 60_000))
                 .ensureState(new State<Modena>() {
 
@@ -180,8 +180,8 @@ public class ModenaTest {
             public Modena reached() {
                 return Modena.getInstance();
             }
-        }).getContent();    
-        
+        }).getContent();
+
         ArrayList<Object[]> arrayList = new ArrayList<>(content.keySet().size() * configurations.length);
         for (Configuration configuration : configurations) {
             for (String name : content.keySet()) {
@@ -190,9 +190,9 @@ public class ModenaTest {
         }
         return arrayList;
     }
-    
+
     public static enum Configuration {
-        
+
         DEFAULT("default", null, 13),
         ALTERED_COLORS("altered_colors", null, 13, false, true),
         ALTERED_COLORS_RETINA("altered_colors_retina", null, 13, true, true),
@@ -203,7 +203,7 @@ public class ModenaTest {
         ENBEDDED_SMALL("small", "Arial", 9);
 //        MAC("13px", "Lucida Grande", 13),
 //        WINDOWS_100("100", "Segoe UI", 12),
-        
+
         public String folderName;
         public String fontName;
         public int fontSize;
@@ -213,7 +213,7 @@ public class ModenaTest {
         private Configuration(String folderName, String fontName, int fontSize) {
             this(folderName, fontName, fontSize, true);
         }
-        
+
         private Configuration(String folderName, String fontName, int fontSize, boolean defaultColors) {
             this(folderName, fontName, fontSize, defaultColors, false);
         }
@@ -226,17 +226,17 @@ public class ModenaTest {
             this.retinaMode = retinaMode;
         }
     }
-    
+
     private String imageName;
     private Configuration configuration;
-    
+
     private static Configuration currentConfiguration;
-    
+
     public ModenaTest(String imageName, Configuration configuration) {
         this.imageName = imageName;
         this.configuration = configuration;
     }
-    
+
     @Before
     public void setUp() {
         if (configuration != currentConfiguration) {
@@ -246,11 +246,11 @@ public class ModenaTest {
             resFolder = new File(new File(buildTest, "results"), configuration.folderName);
             diffFolder = new File(resFolder, "diffs");
             resFolder.mkdirs();
-            
+
             System.out.println("Golden folder = " + goldenFolder.getAbsolutePath());
             System.out.println("Diffs  folder = " + diffFolder.getAbsolutePath());
             System.out.println("Result folder = " + resFolder.getAbsolutePath());
-            
+
             new GetAction<Void>() {
 
                 @Override
@@ -289,27 +289,27 @@ public class ModenaTest {
         File goldenFile = new File(goldenFolder, goldenFilename);
         File resFile = new File(resFolder, resultFilename);
         File diffFile = new File(diffFolder, diffFilename);
-        if (goldenFile.exists()) { 
+        if (goldenFile.exists()) {
             try {
-                nodeDock.wrap().waitImage(imageLoader.load(goldenFile.getAbsolutePath()), 
-                        resFile.getAbsolutePath(), 
+                nodeDock.wrap().waitImage(imageLoader.load(goldenFile.getAbsolutePath()),
+                        resFile.getAbsolutePath(),
                         diffFile.getAbsolutePath());
             } catch (Exception e) {
                 e.printStackTrace(System.err);
 //                try {
-//                    AnimatedGIFCreator.createImage(new File(diffFolder, filenameBase + ".gif"), 
+//                    AnimatedGIFCreator.createImage(new File(diffFolder, filenameBase + ".gif"),
 //                            ((AWTImage) imageLoader.load(goldenFile.getAbsolutePath())).getTheImage(),
 //                            ((AWTImage) imageLoader.load(resFile.getAbsolutePath())).getTheImage());
 //                } catch (IOException ex) {
 //                    Logger.getLogger(ModenaTest.class.getName()).
 //                            log(Level.SEVERE, null, ex);
 //                }
-                throw new AssertionError(filenameBase + " image doesn't match golden in " 
+                throw new AssertionError(filenameBase + " image doesn't match golden in "
                         + configuration.folderName, e);
             }
         } else {
             nodeDock.wrap().getScreenImage().save(resFile.getAbsolutePath());
-            throw new AssertionError("No golden file for " + filenameBase + " in " 
+            throw new AssertionError("No golden file for " + filenameBase + " in "
                     + configuration.folderName);
         }
     }

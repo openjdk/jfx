@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef DFGPlan_h
@@ -62,52 +62,52 @@ struct Plan : public ThreadSafeRefCounted<Plan> {
         CompilationMode, unsigned osrEntryBytecodeIndex,
         const Operands<JSValue>& mustHandleValues);
     ~Plan();
-    
+
     void compileInThread(LongLivedState&, ThreadData*);
-    
+
     CompilationResult finalizeWithoutNotifyingCallback();
     void finalizeAndNotifyCallback();
-    
+
     void notifyReady();
-    
+
     CompilationKey key();
-    
+
     void visitChildren(SlotVisitor&, CodeBlockSet&);
-    
+
     VM& vm;
     RefPtr<CodeBlock> codeBlock;
     RefPtr<CodeBlock> profiledDFGCodeBlock;
     CompilationMode mode;
     const unsigned osrEntryBytecodeIndex;
     Operands<JSValue> mustHandleValues;
-    
+
     ThreadData* threadData;
 
     RefPtr<Profiler::Compilation> compilation;
 
     OwnPtr<Finalizer> finalizer;
-    
+
     DesiredWatchpoints watchpoints;
     DesiredIdentifiers identifiers;
     DesiredStructureChains chains;
     DesiredWeakReferences weakReferences;
     DesiredWriteBarriers writeBarriers;
     DesiredTransitions transitions;
-    
+
     bool willTryToTierUp;
 
     double beforeFTL;
-    
+
     bool isCompiled;
 
     RefPtr<DeferredCompilationCallback> callback;
 
 private:
     bool reportCompileTimes() const;
-    
+
     enum CompilationPath { FailPath, DFGPath, FTLPath };
     CompilationPath compileInThreadImpl(LongLivedState&);
-    
+
     bool isStillValid();
     void reallyAdd(CommonData*);
 };

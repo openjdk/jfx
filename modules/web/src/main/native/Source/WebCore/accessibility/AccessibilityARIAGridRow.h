@@ -32,29 +32,29 @@
 #include "AccessibilityTableRow.h"
 
 namespace WebCore {
-    
+
 class AccessibilityTable;
-    
+
 class AccessibilityARIAGridRow : public AccessibilityTableRow {
-    
+
 private:
     explicit AccessibilityARIAGridRow(RenderObject*);
 public:
     static PassRefPtr<AccessibilityARIAGridRow> create(RenderObject*);
     virtual ~AccessibilityARIAGridRow();
-    
+
     void disclosedRows(AccessibilityChildrenVector&);
     AccessibilityObject* disclosedByRow() const;
-    
+
     virtual AccessibilityObject* headerObject() override;
-    
+
 private:
     virtual bool isARIATreeGridRow() const override;
     virtual AccessibilityTable* parentTable() const override;
-}; 
+};
 
 ACCESSIBILITY_OBJECT_TYPE_CASTS(AccessibilityARIAGridRow, isARIATreeGridRow())
 
-} // namespace WebCore 
+} // namespace WebCore
 
 #endif // AccessibilityARIAGridRow_h

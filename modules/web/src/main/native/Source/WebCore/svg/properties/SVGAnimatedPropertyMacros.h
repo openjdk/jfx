@@ -100,7 +100,7 @@ const SVGPropertyInfo* OwnerType::LowerProperty##PropertyInfo() { \
                          &OwnerType::synchronize##UpperProperty, \
                          &OwnerType::lookupOrCreate##UpperProperty##Wrapper)); \
     return &s_propertyInfo; \
-} 
+}
 
 // Property declaration helpers (used in SVG*.h files)
 #define BEGIN_DECLARE_ANIMATED_PROPERTIES(OwnerType) \
@@ -171,7 +171,7 @@ private: \
 \
     mutable SVGSynchronizableAnimatedProperty<PropertyType> m_##LowerProperty;
 
-#define END_DECLARE_ANIMATED_PROPERTIES 
+#define END_DECLARE_ANIMATED_PROPERTIES
 
 // List specific definition/declaration helpers
 #define DECLARE_ANIMATED_LIST_PROPERTY(TearOffType, PropertyType, UpperProperty, LowerProperty) \

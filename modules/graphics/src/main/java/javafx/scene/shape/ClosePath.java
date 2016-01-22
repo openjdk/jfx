@@ -29,18 +29,18 @@ import com.sun.javafx.geom.Path2D;
 import com.sun.javafx.sg.prism.NGPath;
 
 /**
- * A path element which closes the current path.   
+ * A path element which closes the current path.
  *
- * <p>For more information on path elements see the {@link Path} and 
+ * <p>For more information on path elements see the {@link Path} and
  * {@link PathElement} classes.
  * @since JavaFX 2.0
- */    
+ */
 public class ClosePath extends PathElement {
-    
+
     /**
      * {@inheritDoc}
-     */        
-    @Override 
+     */
+    @Override
     void addTo(NGPath pgPath) {
         pgPath.addClosePath();
     }

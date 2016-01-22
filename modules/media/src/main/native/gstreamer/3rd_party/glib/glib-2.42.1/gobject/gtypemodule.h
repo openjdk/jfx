@@ -39,11 +39,11 @@ typedef struct _GTypeModuleClass GTypeModuleClass;
 /**
  * GTypeModule:
  * @name: the name of the module
- * 
- * The members of the GTypeModule structure should not 
+ *
+ * The members of the GTypeModule structure should not
  * be accessed directly, except for the @name field.
  */
-struct _GTypeModule 
+struct _GTypeModule
 {
   GObject parent_instance;
 
@@ -61,8 +61,8 @@ struct _GTypeModule
  * @load: loads the module and registers one or more types using
  *  g_type_module_register_type().
  * @unload: unloads the module
- * 
- * In order to implement dynamic loading of types based on #GTypeModule, 
+ *
+ * In order to implement dynamic loading of types based on #GTypeModule,
  * the @load and @unload functions in #GTypeModuleClass must be implemented.
  */
 struct _GTypeModuleClass
@@ -87,16 +87,16 @@ struct _GTypeModuleClass
  * @t_n: The name of the new type, in lowercase, with words
  *  separated by '_'.
  * @T_P: The #GType of the parent type.
- * 
+ *
  * A convenience macro for dynamic type implementations, which declares a
- * class initialization function, an instance initialization function (see 
- * #GTypeInfo for information about these) and a static variable named 
- * @t_n<!-- -->_parent_class pointing to the parent class. Furthermore, 
+ * class initialization function, an instance initialization function (see
+ * #GTypeInfo for information about these) and a static variable named
+ * @t_n<!-- -->_parent_class pointing to the parent class. Furthermore,
  * it defines a `*_get_type()` and a static `*_register_type()` functions
  * for use in your `module_init()`.
  *
  * See G_DEFINE_DYNAMIC_TYPE_EXTENDED() for an example.
- * 
+ *
  * Since: 2.14
  */
 #define G_DEFINE_DYNAMIC_TYPE(TN, t_n, T_P)          G_DEFINE_DYNAMIC_TYPE_EXTENDED (TN, t_n, T_P, 0, {})
@@ -108,10 +108,10 @@ struct _GTypeModuleClass
  * @TYPE_PARENT: The #GType of the parent type.
  * @flags: #GTypeFlags to pass to g_type_module_register_type()
  * @CODE: Custom code that gets inserted in the *_get_type() function.
- * 
+ *
  * A more general version of G_DEFINE_DYNAMIC_TYPE() which
  * allows to specify #GTypeFlags and custom code.
- * 
+ *
  * |[
  * G_DEFINE_DYNAMIC_TYPE_EXTENDED (GtkGadget,
  *                                 gtk_gadget,
@@ -125,22 +125,22 @@ struct _GTypeModuleClass
  * static void     gtk_gadget_init              (GtkGadget      *self);
  * static void     gtk_gadget_class_init        (GtkGadgetClass *klass);
  * static void     gtk_gadget_class_finalize    (GtkGadgetClass *klass);
- * 
+ *
  * static gpointer gtk_gadget_parent_class = NULL;
  * static GType    gtk_gadget_type_id = 0;
- * 
+ *
  * static void     gtk_gadget_class_intern_init (gpointer klass)
  * {
- *   gtk_gadget_parent_class = g_type_class_peek_parent (klass); 
- *   gtk_gadget_class_init ((GtkGadgetClass*) klass); 
+ *   gtk_gadget_parent_class = g_type_class_peek_parent (klass);
+ *   gtk_gadget_class_init ((GtkGadgetClass*) klass);
  * }
- * 
+ *
  * GType
  * gtk_gadget_get_type (void)
  * {
  *   return gtk_gadget_type_id;
  * }
- * 
+ *
  * static void
  * gtk_gadget_register_type (GTypeModule *type_module)
  * {
@@ -153,7 +153,7 @@ struct _GTypeModuleClass
  *     NULL,   // class_data
  *     sizeof (GtkGadget),
  *     0,      // n_preallocs
- *     (GInstanceInitFunc) gtk_gadget_init, 
+ *     (GInstanceInitFunc) gtk_gadget_init,
  *     NULL    // value_table
  *   };
  *   gtk_gadget_type_id = g_type_module_register_type (type_module,
@@ -169,7 +169,7 @@ struct _GTypeModuleClass
  *   }
  * }
  * ]|
- * 
+ *
  * Since: 2.14
  */
 #define G_DEFINE_DYNAMIC_TYPE_EXTENDED(TypeName, type_name, TYPE_PARENT, flags, CODE) \
@@ -210,10 +210,10 @@ type_name##_register_type (GTypeModule *type_module) \
     NULL    /* value_table */ \
   }; \
   type_name##_type_id = g_type_module_register_type (type_module, \
-						     TYPE_PARENT, \
-						     #TypeName, \
-						     &g_define_type_info, \
-						     (GTypeFlags) flags); \
+                             TYPE_PARENT, \
+                             #TypeName, \
+                             &g_define_type_info, \
+                             (GTypeFlags) flags); \
   g_define_type_id = type_name##_type_id; \
   { CODE ; } \
 }

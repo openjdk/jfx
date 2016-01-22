@@ -6,13 +6,13 @@
  * are met:
  *
  * 1.  Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer. 
+ *     notice, this list of conditions and the following disclaimer.
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
- *     documentation and/or other materials provided with the distribution. 
+ *     documentation and/or other materials provided with the distribution.
  * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
- *     from this software without specific prior written permission. 
+ *     from this software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY APPLE AND ITS CONTRIBUTORS "AS IS" AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
@@ -46,21 +46,21 @@ static WebRenderNode *copyRenderNode(RenderObject*);
 - (id)_initWithCoreFrame:(Frame *)frame
 {
     [self release];
-    
+
     if (!frame->loader().client().hasHTMLView())
         return nil;
-    
+
     RenderObject* renderer = frame->contentRenderer();
     if (!renderer)
         return nil;
-    
+
     return copyRenderNode(renderer);
 }
 
 - (id)_initWithName:(NSString *)n position:(NSPoint)p rect:(NSRect)r coreFrame:(Frame*)coreFrame children:(NSArray *)c
 {
     NSMutableArray *collectChildren;
-    
+
     self = [super init];
     if (!self)
         return nil;
@@ -76,10 +76,10 @@ static WebRenderNode *copyRenderNode(RenderObject*);
         [collectChildren addObject:node];
         [node release];
     }
-    
+
     children = [collectChildren copy];
     [collectChildren release];
-    
+
     return self;
 }
 
@@ -93,7 +93,7 @@ static WebRenderNode *copyRenderNode(RenderObject* node)
     }
 
     NSString *name = [[NSString alloc] initWithUTF8String:node->renderName()];
-    
+
     RenderWidget* renderWidget = node->isWidget() ? toRenderWidget(node) : 0;
     Widget* widget = renderWidget ? renderWidget->widget() : 0;
     FrameView* frameView = widget && widget->isFrameView() ? toFrameView(widget) : 0;

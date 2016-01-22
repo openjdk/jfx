@@ -44,18 +44,18 @@ public class LinearWizardFlow implements Wizard.Flow {
         this( Arrays.asList(pages));
     }
 
-	@Override
-	public Optional<WizardPane> advance(WizardPane currentPage) {
-		int pageIndex = pages.indexOf(currentPage);
-		return Optional.ofNullable( pages.get(++pageIndex) );
-	}
+    @Override
+    public Optional<WizardPane> advance(WizardPane currentPage) {
+        int pageIndex = pages.indexOf(currentPage);
+        return Optional.ofNullable( pages.get(++pageIndex) );
+    }
 
-	@Override
-	public boolean canAdvance(WizardPane currentPage) {
-		int pageIndex = pages.indexOf(currentPage);
-		return pages.size()-1 > pageIndex; 
-	}
-	
-	
+    @Override
+    public boolean canAdvance(WizardPane currentPage) {
+        int pageIndex = pages.indexOf(currentPage);
+        return pages.size()-1 > pageIndex;
+    }
+
+
 
 }

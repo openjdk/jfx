@@ -44,7 +44,7 @@ public class SetExpressionTest {
     private static final Integer data2_0 = 42;
     private static final Integer data2_1 = -3;
     private static final Integer datax = Integer.MAX_VALUE;
-    
+
     private SetProperty<Integer> opNull;
     private SetProperty<Integer> opEmpty;
     private SetProperty<Integer> op1;
@@ -152,7 +152,7 @@ public class SetExpressionTest {
         assertTrue(op1.isNotNull().get());
         assertTrue(op2.isNotNull().get());
     }
-    
+
     @Test
     public void testAsString() {
         assertEquals("null", opNull.asString().get());
@@ -194,7 +194,7 @@ public class SetExpressionTest {
         assertTrue(op2.contains(data2_0));
         assertTrue(op2.contains(data2_1));
     }
-    
+
     @Test
     public void testIterator() {
         assertFalse(opNull.iterator().hasNext());
@@ -235,7 +235,7 @@ public class SetExpressionTest {
             fail();
         }
     }
-    
+
     @Test
     public void testToArray_WithArg() {
         Integer[] arrayIn = new Integer[] {datax};

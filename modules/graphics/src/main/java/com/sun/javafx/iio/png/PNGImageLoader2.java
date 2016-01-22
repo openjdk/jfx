@@ -643,7 +643,7 @@ public final class PNGImageLoader2 extends ImageLoaderImpl {
         int[] outWH = ImageTools.computeDimensions(width, height, rWidth, rHeight, preserveAspectRatio);
         rWidth = outWH[0];
         rHeight = outWH[1];
-        
+
         ImageMetadata metaData = new ImageMetadata(null, true,
                 null, null, null, null, null, rWidth, rHeight, null, null, null);
         updateImageMetadata(metaData);

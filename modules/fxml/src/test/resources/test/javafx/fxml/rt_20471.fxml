@@ -26,5 +26,5 @@ questions.
 
 <?import test.javafx.fxml.*?>
 
-<Widget fx:controller="test.javafx.fxml.RT_20471Controller" 
+<Widget fx:controller="test.javafx.fxml.RT_20471Controller"
     xmlns:fx="http://javafx.com/fxml"/>

@@ -34,7 +34,7 @@ import javafx.scene.input.TransferMode;
  * to determine if any nodes in the scene graph are to be notified
  * of drag gesture events.
  * <br>
- * TODO: extend this interface to include dropActionChanged() notification  
+ * TODO: extend this interface to include dropActionChanged() notification
  */
 public interface TKDropTargetListener {
 

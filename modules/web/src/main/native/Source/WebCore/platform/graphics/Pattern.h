@@ -22,7 +22,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef Pattern_h
@@ -62,7 +62,7 @@ public:
 
     void platformDestroy();
 
-    // Pattern space is an abstract space that maps to the default user space by the transformation 'userSpaceTransformation' 
+    // Pattern space is an abstract space that maps to the default user space by the transformation 'userSpaceTransformation'
     PlatformPatternPtr createPlatformPattern(const AffineTransform& userSpaceTransformation) const;
     void setPatternSpaceTransform(const AffineTransform& patternSpaceTransformation);
     const AffineTransform& getPatternSpaceTransform() { return m_patternSpaceTransformation; };

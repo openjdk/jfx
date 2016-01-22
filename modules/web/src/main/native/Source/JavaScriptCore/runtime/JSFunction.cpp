@@ -36,7 +36,7 @@
 #include "JSBoundFunction.h"
 #include "JSFunctionInlines.h"
 #include "JSGlobalObject.h"
-#include "JSNameScope.h" 
+#include "JSNameScope.h"
 #include "JSNotAnObject.h"
 #include "Interpreter.h"
 #include "ObjectConstructor.h"
@@ -146,24 +146,24 @@ String JSFunction::name(ExecState* exec)
 String JSFunction::displayName(ExecState* exec)
 {
     JSValue displayName = getDirect(exec->vm(), exec->vm().propertyNames->displayName);
-    
+
     if (displayName && isJSString(displayName))
         return asString(displayName)->tryGetValue();
-    
+
     return String();
 }
 
 const String JSFunction::calculatedDisplayName(ExecState* exec)
 {
     const String explicitName = displayName(exec);
-    
+
     if (!explicitName.isEmpty())
         return explicitName;
-    
+
     const String actualName = name(exec);
     if (!actualName.isEmpty() || isHostOrBuiltinFunction())
         return actualName;
-    
+
     return jsExecutable()->inferredName().string();
 }
 
@@ -173,7 +173,7 @@ const SourceCode* JSFunction::sourceCode() const
         return 0;
     return &jsExecutable()->source();
 }
-    
+
 bool JSFunction::isHostOrBuiltinFunction() const
 {
     return isHostFunction() || isBuiltinFunction();
@@ -490,7 +490,7 @@ bool JSFunction::defineOwnProperty(JSObject* object, ExecState* exec, PropertyNa
         valueCheck = !descriptor.value() || sameValue(exec, descriptor.value(), thisObject->jsExecutable()->nameValue());
     else
         return Base::defineOwnProperty(object, exec, propertyName, descriptor, throwException);
-     
+
     if (descriptor.configurablePresent() && descriptor.configurable()) {
         if (throwException)
             exec->vm().throwException(exec, createTypeError(exec, ASCIILiteral("Attempting to configurable attribute of unconfigurable property.")));

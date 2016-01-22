@@ -28,7 +28,7 @@
 #include "PlatformWebView.h"
 
 namespace TestWebKitAPI {
-    
+
 static bool done;
 
 static void didFinishLoadForFrame(WKPageRef page, WKFrameRef frame, WKTypeRef userData, const void* clientInfo)

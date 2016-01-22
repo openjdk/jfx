@@ -21,7 +21,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #if !PLATFORM(IOS)
@@ -138,7 +138,7 @@ OSStatus TextCodecMac::decode(const unsigned char* inputBuffer, int inputBufferL
 
     if (m_numBufferedBytes != 0) {
         // Finish converting a partial character that's in our buffer.
-        
+
         // First, fill the partial character buffer with as many bytes as are available.
         ASSERT_WITH_SECURITY_IMPLICATION(m_numBufferedBytes < sizeof(m_bufferedBytes));
         const int spaceInBuffer = sizeof(m_bufferedBytes) - m_numBufferedBytes;
@@ -200,7 +200,7 @@ String TextCodecMac::decode(const char* bytes, size_t length, bool flush, bool s
     // Get a converter for the passed-in encoding.
     if (!m_converterTEC && createTECConverter() != noErr)
         return String();
-    
+
     Vector<UChar> result;
 
     const unsigned char* sourcePointer = reinterpret_cast<const unsigned char*>(bytes);
@@ -215,7 +215,7 @@ String TextCodecMac::decode(const char* bytes, size_t length, bool flush, bool s
         ASSERT(bytesRead <= sourceLength);
         sourcePointer += bytesRead;
         sourceLength -= bytesRead;
-        
+
         switch (status) {
             case noErr:
             case kTECOutputBufferFullStatus:
@@ -256,7 +256,7 @@ String TextCodecMac::decode(const char* bytes, size_t length, bool flush, bool s
 
         bufferWasFull = status == kTECOutputBufferFullStatus;
     }
-    
+
     if (flush) {
         unsigned long bytesWritten = 0;
         TECFlushText(m_converterTEC, reinterpret_cast<unsigned char*>(buffer), sizeof(buffer), &bytesWritten);
@@ -272,7 +272,7 @@ String TextCodecMac::decode(const char* bytes, size_t length, bool flush, bool s
     // To work around, just change all occurences of U+E5E5 to U+3000 (ideographic space).
     if (m_encoding == kCFStringEncodingGB_18030_2000)
         resultString.replace(0xE5E5, ideographicSpace);
-    
+
     return resultString;
 }
 

@@ -48,7 +48,7 @@ import javafx.stage.Stage;
 import javafx.util.Callback;
 
 /**
- * A sample that demonstrates pagination. 
+ * A sample that demonstrates pagination.
  *
  * @sampleName Pagination
  * @preview preview.png
@@ -96,7 +96,7 @@ public class PaginationApp extends Application {
         box.getChildren().addAll(iv, desc);
         return box;
     }
-    
+
     @Override public void start(Stage primaryStage) throws Exception {
         primaryStage.setScene(new Scene(createContent()));
         primaryStage.show();

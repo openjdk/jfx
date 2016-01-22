@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -43,16 +43,16 @@ public:
         : Phase(graph, "flush-liveness analysis")
     {
     }
-    
+
     bool run()
     {
         ASSERT(m_graph.m_form == SSA);
-        
+
         // Liveness is a backwards analysis; the roots are the blocks that
         // end in a terminal (Return/Unreachable). For now, we
         // use a fixpoint formulation since liveness is a rapid analysis with
         // convergence guaranteed after O(connectivity).
-        
+
         // Start by assuming that everything is dead.
         for (BlockIndex blockIndex = m_graph.numBlocks(); blockIndex--;) {
             BasicBlock* block = m_graph.block(blockIndex);
@@ -61,13 +61,13 @@ public:
             block->ssa->flushAtHead.fill(FlushedAt());
             block->ssa->flushAtTail.fill(FlushedAt());
         }
-        
+
         do {
             m_changed = false;
             for (BlockIndex blockIndex = m_graph.numBlocks(); blockIndex--;)
                 process(blockIndex);
         } while (m_changed);
-        
+
         Operands<FlushedAt>& root = m_graph.block(0)->ssa->flushAtHead;
         for (unsigned i = root.size(); i--;) {
             if (root.isArgument(i)) {
@@ -85,7 +85,7 @@ public:
             m_graph.dump();
             CRASH();
         }
-        
+
         return true;
     }
 
@@ -95,12 +95,12 @@ private:
         BasicBlock* block = m_graph.block(blockIndex);
         if (!block)
             return;
-        
+
         m_live = block->ssa->flushAtTail;
-        
+
         for (unsigned nodeIndex = block->size(); nodeIndex--;) {
             Node* node = block->at(nodeIndex);
-            
+
             switch (node->op()) {
             case SetLocal: {
                 VariableAccessData* variable = node->variableAccessData();
@@ -110,7 +110,7 @@ private:
                 current = FlushedAt();
                 break;
             }
-                
+
             case GetArgument: {
                 VariableAccessData* variable = node->variableAccessData();
                 ASSERT(variable->local() == variable->machineLocal());
@@ -121,7 +121,7 @@ private:
                 current = FlushedAt(FlushedJSValue, node->local());
                 break;
             }
-                
+
             case Flush:
             case GetLocal: {
                 VariableAccessData* variable = node->variableAccessData();
@@ -131,15 +131,15 @@ private:
                 current = variable->flushedAt();
                 break;
             }
-                
+
             default:
                 break;
             }
         }
-        
+
         if (m_live == block->ssa->flushAtHead)
             return;
-        
+
         m_changed = true;
         block->ssa->flushAtHead = m_live;
         for (unsigned i = block->predecessors.size(); i--;) {
@@ -147,7 +147,7 @@ private:
             for (unsigned j = m_live.size(); j--;) {
                 FlushedAt& predecessorFlush = predecessor->ssa->flushAtTail[j];
                 FlushedAt myFlush = m_live[j];
-                
+
                 // Three possibilities:
                 // 1) Predecessor format is Dead, in which case it acquires our format.
                 // 2) Predecessor format is not Dead but our format is dead, in which
@@ -169,7 +169,7 @@ private:
 
                 if (predecessorFlush == myFlush)
                     continue;
-                
+
                 dataLog(
                     "Bad Flush merge at edge ", *predecessor, " -> ", *block,
                     ", local variable r", m_live.operandForIndex(j), ": ", *predecessor,
@@ -180,7 +180,7 @@ private:
             }
         }
     }
-    
+
     NO_RETURN_DUE_TO_CRASH void reportError(Node* node)
     {
         dataLog(
@@ -191,7 +191,7 @@ private:
         m_graph.dump();
         CRASH();
     }
-    
+
     bool m_changed;
     Operands<FlushedAt> m_live;
 };

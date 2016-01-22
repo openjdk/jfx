@@ -192,8 +192,8 @@ class MonocleRobot extends Robot {
 
             if (x == 0 && y == 0 && width == scrWidth && height == scrHeight) {
                 return new MonoclePixels(width, height, buffer);
-            } 
-            
+            }
+
             IntBuffer ret = IntBuffer.allocate(width * height);
             int rowStop = Math.min(y + height, scrHeight);
             int colStop = Math.min(x + width, scrWidth);
@@ -202,7 +202,7 @@ class MonocleRobot extends Robot {
                     ret.put(buffer.get(row * scrWidth + col));
                 }
             }
-            
+
             ret.rewind();
             return new MonoclePixels(width, height, ret);
         }

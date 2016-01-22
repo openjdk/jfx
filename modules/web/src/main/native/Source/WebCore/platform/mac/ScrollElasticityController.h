@@ -39,7 +39,7 @@ class PlatformWheelEvent;
 
 class ScrollElasticityControllerClient {
 protected:
-    virtual ~ScrollElasticityControllerClient() { } 
+    virtual ~ScrollElasticityControllerClient() { }
 
 public:
     virtual bool allowsHorizontalStretching() = 0;
@@ -85,7 +85,7 @@ private:
     bool m_inScrollGesture;
     bool m_momentumScrollInProgress;
     bool m_ignoreMomentumScrolls;
-    
+
     CFTimeInterval m_lastMomentumScrollTimestamp;
     FloatSize m_overflowScrollDelta;
     FloatSize m_stretchScrollForce;

@@ -41,42 +41,42 @@ import javafx.scene.AccessibleAttribute;
  * to select one or more values (depending on the implementation). This base
  * class makes no assumptions about what happens when the {@link #show()} and
  * {@link #hide()} methods are called, however commonly this results in either
- * a popup or dialog appearing that allows for the user to provide the 
+ * a popup or dialog appearing that allows for the user to provide the
  * required information.
- * 
+ *
  * <p>A ComboBox has a {@link #valueProperty() value} property that represents
  * the current user input. This may be based on a selection from a drop-down list,
- * or it may be from user input when the ComboBox is 
+ * or it may be from user input when the ComboBox is
  * {@link #editableProperty() editable}.
- * 
+ *
  * <p>An {@link #editableProperty() editable} ComboBox is one which provides some
  * means for an end-user to provide input for values that are not otherwise
  * options available to them. For example, in the {@link ComboBox} implementation,
  * an editable ComboBox provides a {@link TextField} that may be typed into.
  * As mentioned above, when the user commits textual input into the textfield
- * (commonly by pressing the Enter keyboard key), the 
+ * (commonly by pressing the Enter keyboard key), the
  * {@link #valueProperty() value} property will be updated.
- * 
- * <p>The purpose of the separation between this class and, say, {@link ComboBox} 
- * is to allow for ComboBox-like controls that do not necessarily pop up a list 
- * of items. Examples of other implementations include color pickers, calendar 
+ *
+ * <p>The purpose of the separation between this class and, say, {@link ComboBox}
+ * is to allow for ComboBox-like controls that do not necessarily pop up a list
+ * of items. Examples of other implementations include color pickers, calendar
  * pickers, etc. The  {@link ComboBox} class provides the default, and most commonly
  * expected implementation. Refer to that classes javadoc for more information.
- * 
+ *
  * @see ComboBox
  * @param <T> The type of the value that has been selected or otherwise
  *      entered in to this ComboBox.
  * @since JavaFX 2.1
  */
 public abstract class ComboBoxBase<T> extends Control {
-    
- 
+
+
     /***************************************************************************
      *                                                                         *
      * Static properties and methods                                           *
      *                                                                         *
      **************************************************************************/
-    
+
     /**
      * <p>Called prior to the ComboBox showing its popup/display after the user
      * has clicked or otherwise interacted with the ComboBox.
@@ -93,7 +93,7 @@ public abstract class ComboBoxBase<T> extends Control {
             new EventType<Event>(Event.ANY, "COMBO_BOX_BASE_ON_SHOWN");
 
     /**
-     * <p>Called when the ComboBox popup/display <b>will</b> be hidden. 
+     * <p>Called when the ComboBox popup/display <b>will</b> be hidden.
      * @since JavaFX 2.2
      */
     public static final EventType<Event> ON_HIDING =
@@ -105,15 +105,15 @@ public abstract class ComboBoxBase<T> extends Control {
      */
     public static final EventType<Event> ON_HIDDEN =
             new EventType<Event>(Event.ANY, "COMBO_BOX_BASE_ON_HIDDEN");
-    
-    
-    
+
+
+
     /***************************************************************************
      *                                                                         *
      * Constructors                                                            *
      *                                                                         *
      **************************************************************************/
-    
+
     /**
      * Creates a default ComboBoxBase instance.
      */
@@ -131,17 +131,17 @@ public abstract class ComboBoxBase<T> extends Control {
         });
         // End of fix for RT-29885
     }
-    
+
     /***************************************************************************
      *                                                                         *
      * Properties                                                              *
      *                                                                         *
-     **************************************************************************/  
-    
+     **************************************************************************/
+
     // --- value
     /**
      * The value of this ComboBox is defined as the selected item if the input
-     * is not editable, or if it is editable, the most recent user action: 
+     * is not editable, or if it is editable, the most recent user action:
      * either the value input by the user, or the last selected item.
      */
     public ObjectProperty<T> valueProperty() { return value; }
@@ -149,15 +149,15 @@ public abstract class ComboBoxBase<T> extends Control {
 
     public final void setValue(T value) { valueProperty().set(value); }
     public final T getValue() { return valueProperty().get(); }
-    
-    
+
+
     // --- editable
     /**
-     * Specifies whether the ComboBox allows for user input. When editable is 
+     * Specifies whether the ComboBox allows for user input. When editable is
      * true, the ComboBox has a text input area that a user may type in to. This
      * input is then available via the {@link #valueProperty() value} property.
-     * 
-     * <p>Note that when the editable property changes, the value property is 
+     *
+     * <p>Note that when the editable property changes, the value property is
      * reset, along with any other relevant state.
      */
     public BooleanProperty editableProperty() { return editable; }
@@ -168,11 +168,11 @@ public abstract class ComboBoxBase<T> extends Control {
             pseudoClassStateChanged(PSEUDO_CLASS_EDITABLE, get());
         }
     };
-    
-    
+
+
     // --- showing
     /**
-     * Represents the current state of the ComboBox popup, and whether it is 
+     * Represents the current state of the ComboBox popup, and whether it is
      * currently visible on screen (although it may be hidden behind other windows).
      */
     private ReadOnlyBooleanWrapper showing;
@@ -183,7 +183,7 @@ public abstract class ComboBoxBase<T> extends Control {
         Event.fireEvent(this, value ? new Event(ComboBoxBase.ON_SHOWING) :
             new Event(ComboBoxBase.ON_HIDING));
         showingPropertyImpl().set(value);
-        Event.fireEvent(this, value ? new Event(ComboBoxBase.ON_SHOWN) : 
+        Event.fireEvent(this, value ? new Event(ComboBoxBase.ON_SHOWN) :
             new Event(ComboBoxBase.ON_HIDDEN));
     }
     private ReadOnlyBooleanWrapper showingPropertyImpl() {
@@ -207,11 +207,11 @@ public abstract class ComboBoxBase<T> extends Control {
         }
         return showing;
     }
-    
-    
+
+
     // --- prompt text
     /**
-     * The {@code ComboBox} prompt text to display, or <tt>null</tt> if no 
+     * The {@code ComboBox} prompt text to display, or <tt>null</tt> if no
      * prompt text is displayed. Prompt text is not displayed in all circumstances,
      * it is dependent upon the subclasses of ComboBoxBase to clarify when
      * promptText will be shown. For example, in most cases prompt text will never be
@@ -231,12 +231,12 @@ public abstract class ComboBoxBase<T> extends Control {
     public final StringProperty promptTextProperty() { return promptText; }
     public final String getPromptText() { return promptText.get(); }
     public final void setPromptText(String value) { promptText.set(value); }
-    
-    
+
+
     // --- armed
     /**
      * Indicates that the ComboBox has been "armed" such that a mouse release
-     * will cause the ComboBox {@link #show()} method to be invoked. This is 
+     * will cause the ComboBox {@link #show()} method to be invoked. This is
      * subtly different from pressed. Pressed indicates that the mouse has been
      * pressed on a Node and has not yet been released. {@code arm} however
      * also takes into account whether the mouse is actually over the
@@ -250,15 +250,15 @@ public abstract class ComboBoxBase<T> extends Control {
             pseudoClassStateChanged(PSEUDO_CLASS_ARMED, get());
         }
     };
-    
-    
+
+
     // --- On Action
     /**
-     * The ComboBox action, which is invoked whenever the ComboBox 
+     * The ComboBox action, which is invoked whenever the ComboBox
      * {@link #valueProperty() value} property is changed. This
      * may be due to the value property being programmatically changed, when the
-     * user selects an item in a popup list or dialog, or, in the case of 
-     * {@link #editableProperty() editable} ComboBoxes, it may be when the user 
+     * user selects an item in a popup list or dialog, or, in the case of
+     * {@link #editableProperty() editable} ComboBoxes, it may be when the user
      * provides their own input (be that via a {@link TextField} or some other
      * input mechanism.
      */
@@ -280,8 +280,8 @@ public abstract class ComboBoxBase<T> extends Control {
             return "onAction";
         }
     };
-    
-    
+
+
     // --- On Showing
     public final ObjectProperty<EventHandler<Event>> onShowingProperty() { return onShowing; }
     public final void setOnShowing(EventHandler<Event> value) { onShowingProperty().set(value); }
@@ -372,8 +372,8 @@ public abstract class ComboBoxBase<T> extends Control {
             return "onHidden";
         }
     };
-    
-    
+
+
     /***************************************************************************
      *                                                                         *
      * Methods                                                                 *
@@ -400,9 +400,9 @@ public abstract class ComboBoxBase<T> extends Control {
             setShowing(false);
         }
     }
-    
+
     /**
-     * Arms the ComboBox. An armed ComboBox will show a popup list on the next 
+     * Arms the ComboBox. An armed ComboBox will show a popup list on the next
      * expected UI gesture.
      *
      * @expert This function is intended to be used by experts, primarily
@@ -436,7 +436,7 @@ public abstract class ComboBoxBase<T> extends Control {
      **************************************************************************/
 
     private static final String DEFAULT_STYLE_CLASS = "combo-box-base";
-    
+
     private static final PseudoClass PSEUDO_CLASS_EDITABLE =
             PseudoClass.getPseudoClass("editable");
     private static final PseudoClass PSEUDO_CLASS_SHOWING =

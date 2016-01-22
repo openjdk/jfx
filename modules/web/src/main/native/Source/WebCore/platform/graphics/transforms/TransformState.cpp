@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -41,12 +41,12 @@ TransformState& TransformState::operator=(const TransformState& other)
         m_lastPlanarQuad = other.m_lastPlanarQuad;
     m_accumulatingTransform = other.m_accumulatingTransform;
     m_direction = other.m_direction;
-    
+
     m_accumulatedTransform.clear();
 
     if (other.m_accumulatedTransform)
         m_accumulatedTransform = adoptPtr(new TransformationMatrix(*other.m_accumulatedTransform));
-        
+
     return *this;
 }
 
@@ -128,7 +128,7 @@ void TransformState::applyTransform(const TransformationMatrix& transformFromCon
         // Make one if we started to accumulate
         m_accumulatedTransform = adoptPtr(new TransformationMatrix(transformFromContainer));
     }
-    
+
     if (accumulate == FlattenTransform) {
         const TransformationMatrix* finalTransform = m_accumulatedTransform ? m_accumulatedTransform.get() : &transformFromContainer;
         flattenWithTransform(*finalTransform, wasClamped);
@@ -147,7 +147,7 @@ void TransformState::flatten(bool* wasClamped)
         m_accumulatingTransform = false;
         return;
     }
-    
+
     flattenWithTransform(*m_accumulatedTransform, wasClamped);
 }
 

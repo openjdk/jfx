@@ -98,7 +98,7 @@ public class MeshCompareTest extends VisualTestBase {
         final int pointSize = 3; // x, y, z
         final int texCoordSize = 2; // u, v
         final int faceSize = 9; // 3 point indices, 3 normal indices and 3 texCoord indices per triangle
-        
+
         // create 12 vertices of a icosahedron
         int numVerts = 12;
         float t = (float) ((1.0 + Math.sqrt(5.0)) / 2.0);
@@ -121,19 +121,19 @@ public class MeshCompareTest extends VisualTestBase {
 
         for(int i = 0; i < numVerts; i++) {
             int pointIndex = i * pointSize;
-            points[pointIndex] *= scale;    
-            points[pointIndex + 1] *= scale;    
+            points[pointIndex] *= scale;
+            points[pointIndex + 1] *= scale;
             points[pointIndex + 2] *= scale;
             int texCoordIndex = i * texCoordSize;
             texCoords[texCoordIndex] = 0f;
             texCoords[texCoordIndex + 1] = 0f;
-                
+
         }
 
         // create 20 triangles of the icosahedron
         int faces[] = {
             0, 0, 11, 0, 5, 0,
-            0, 0, 5, 0, 1, 0,            
+            0, 0, 5, 0, 1, 0,
             0, 0, 1, 0, 7, 0,
             0, 0, 7, 0, 10, 0,
             0, 0, 10, 0, 11, 0,
@@ -167,7 +167,7 @@ public class MeshCompareTest extends VisualTestBase {
         final int normalSize = 3; // nx, ny, nz
         final int texCoordSize = 2; // u, v
         final int faceSize = 9; // 3 point indices, 3 normal indices and 3 texCoord indices per triangle
-        
+
         // create 12 vertices of a icosahedron
         int numVerts = 12;
         float points[] = new float[numVerts * pointSize];
@@ -193,8 +193,8 @@ public class MeshCompareTest extends VisualTestBase {
 
         for(int i = 0; i < numVerts; i++) {
             int pointIndex = i * pointSize;
-            points[pointIndex] = scale * arrV[i].x;    
-            points[pointIndex + 1] = scale * arrV[i].y;    
+            points[pointIndex] = scale * arrV[i].x;
+            points[pointIndex + 1] = scale * arrV[i].y;
             points[pointIndex + 2] = scale * arrV[i].z;
 
             int normalIndex = i * normalSize;
@@ -205,13 +205,13 @@ public class MeshCompareTest extends VisualTestBase {
 
             int texCoordIndex = i * texCoordSize;
             texCoords[texCoordIndex] = 0f;
-            texCoords[texCoordIndex + 1] = 0f;         
+            texCoords[texCoordIndex + 1] = 0f;
         }
 
         // create 20 triangles of the icosahedron
         int faces[] = {
             0, 0, 0, 11, 11, 0, 5, 5, 0,
-            0, 0, 0, 5, 5, 0, 1, 1, 0,            
+            0, 0, 0, 5, 5, 0, 1, 1, 0,
             0, 0, 0, 1, 1, 0, 7, 7, 0,
             0, 0, 0, 7, 7, 0, 10, 10, 0,
             0, 0, 0, 10, 10, 0, 11, 11, 0,

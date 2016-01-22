@@ -43,32 +43,32 @@ import javafx.geometry.Rectangle2D;
 public class Rectangle2DPropertyMetadata extends ComplexPropertyMetadata<Rectangle2D> {
 
     private final DoublePropertyMetadata minXMetadata
-            = new DoublePropertyMetadata(new PropertyName("minX"), 
+            = new DoublePropertyMetadata(new PropertyName("minX"),
             DoublePropertyMetadata.DoubleKind.COORDINATE, true, 0.0, InspectorPath.UNUSED);
     private final DoublePropertyMetadata minYMetadata
-            = new DoublePropertyMetadata(new PropertyName("minY"), 
+            = new DoublePropertyMetadata(new PropertyName("minY"),
             DoublePropertyMetadata.DoubleKind.COORDINATE, true, 0.0, InspectorPath.UNUSED);
     private final DoublePropertyMetadata widthMetadata
-            = new DoublePropertyMetadata(new PropertyName("width"), 
+            = new DoublePropertyMetadata(new PropertyName("width"),
             DoublePropertyMetadata.DoubleKind.SIZE, true, 0.0, InspectorPath.UNUSED);
     private final DoublePropertyMetadata heightMetadata
-            = new DoublePropertyMetadata(new PropertyName("height"), 
+            = new DoublePropertyMetadata(new PropertyName("height"),
             DoublePropertyMetadata.DoubleKind.SIZE, true, 0.0, InspectorPath.UNUSED);
 
-    public Rectangle2DPropertyMetadata(PropertyName name, boolean readWrite, 
+    public Rectangle2DPropertyMetadata(PropertyName name, boolean readWrite,
             Rectangle2D defaultValue, InspectorPath inspectorPath) {
         super(name, Rectangle2D.class, readWrite, defaultValue, inspectorPath);
     }
 
-    
+
     /*
      * ComplexPropertyMetadata
      */
-    
+
     @Override
     public FXOMInstance makeFxomInstanceFromValue(Rectangle2D value, FXOMDocument fxomDocument) {
         final FXOMInstance result = new FXOMInstance(fxomDocument, value.getClass());
-        
+
         minXMetadata.setValue(result, value.getMinX());
         minYMetadata.setValue(result, value.getMinY());
         widthMetadata.setValue(result, value.getWidth());
@@ -76,5 +76,5 @@ public class Rectangle2DPropertyMetadata extends ComplexPropertyMetadata<Rectang
 
         return result;
     }
-    
+
 }

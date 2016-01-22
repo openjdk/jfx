@@ -34,7 +34,7 @@ public final class MenuItem {
 
         public void validate();
     }
-    
+
     public static final MenuItem Separator = null;
 
     private final MenuItemDelegate delegate;

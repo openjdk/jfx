@@ -245,8 +245,8 @@ public abstract class Control extends Region implements Skinnable {
             // called set on skinClassName in order to keep CSS from overwriting
             // the skin.
             skinClassNameProperty().set(currentSkinClassName);
-            
-            
+
+
             // Dispose of the old skin
             if (oldValue != null) oldValue.dispose();
 
@@ -896,7 +896,7 @@ public abstract class Control extends Region implements Skinnable {
      *                                                                         *
      **************************************************************************/
 
-    @Override 
+    @Override
     public Object queryAccessibleAttribute(AccessibleAttribute attribute, Object... parameters) {
         switch (attribute) {
             case HELP:

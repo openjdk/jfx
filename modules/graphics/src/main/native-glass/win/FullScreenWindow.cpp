@@ -118,7 +118,7 @@ void FullScreenWindow::DetachView()
     m_oldViewParent = NULL;
 
     view->SetHostHwnd(oldWnd);
-    
+
     ::ShowWindow(oldWnd, SW_SHOW);
     ::SetForegroundWindow(oldWnd);
     ::SetFocus(oldWnd);
@@ -221,7 +221,7 @@ void FullScreenWindow::HandleViewTimerEvent(HWND hwnd, UINT_PTR timerID)
         ViewContainer::HandleViewTimerEvent(hwnd, timerID);
         return;
     }
-        
+
     if (timerID == IDT_GLASS_ANIMATION_ENTER) {
         if (m_animationStage > ANIMATION_MAX_ITERATION) {
             StopAnimation(TRUE);
@@ -329,7 +329,7 @@ LRESULT FullScreenWindow::WindowProc(UINT msg, WPARAM wParam, LPARAM lParam)
             BOOL handled = HandleViewMouseEvent(GetHWND(), msg, wParam, lParam);
             if (handled && msg == WM_RBUTTONUP) {
                 // By default, DefWindowProc() sends WM_CONTEXTMENU from WM_LBUTTONUP
-                // Since DefWindowProc() is not called, call the mouse menu handler directly 
+                // Since DefWindowProc() is not called, call the mouse menu handler directly
                 HandleViewMenuEvent(GetHWND(), WM_CONTEXTMENU, (WPARAM) GetHWND(), ::GetMessagePos ());
                 //::DefWindowProc(GetHWND(), msg, wParam, lParam);
             }

@@ -38,15 +38,15 @@ import javafx.scene.control.MenuButton;
  *
  * Base class for all editors.
  *
- * 
+ *
  */
 public abstract class Editor {
-    
+
     public static final String topAnchorPropName = "AnchorPane.topAnchor";
     public static final String rightAnchorPropName = "AnchorPane.rightAnchor";
     public static final String bottomAnchorPropName = "AnchorPane.bottomAnchor";
     public static final String leftAnchorPropName = "AnchorPane.leftAnchor";
-    
+
     // ScrollPane scroll bar min and max
     public static final String hValuePropName = "hvalue";
     public static final String hMinPropName = "hmin";

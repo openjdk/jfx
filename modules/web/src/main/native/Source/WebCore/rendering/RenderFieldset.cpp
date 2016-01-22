@@ -129,7 +129,7 @@ RenderBox* RenderFieldset::findLegend(FindLegendOption option) const
     for (RenderObject* legend = firstChild(); legend; legend = legend->nextSibling()) {
         if (option == IgnoreFloatingOrOutOfFlow && legend->isFloatingOrOutOfFlowPositioned())
             continue;
-        
+
         if (legend->node() && (legend->node()->hasTagName(legendTag)))
             return toRenderBox(legend);
     }
@@ -166,7 +166,7 @@ void RenderFieldset::paintBoxDecorations(PaintInfo& paintInfo, const LayoutPoint
 
     if (!style().hasBorder())
         return;
-    
+
     // Create a clipping region around the legend and paint the border as normal
     GraphicsContext* graphicsContext = paintInfo.context;
     GraphicsContextStateSaver stateSaver(*graphicsContext);

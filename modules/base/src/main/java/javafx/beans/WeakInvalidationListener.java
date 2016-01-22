@@ -44,8 +44,8 @@ import javafx.beans.NamedArg;
  *
  * @see InvalidationListener
  * @see Observable
- * 
- * 
+ *
+ *
  * @since JavaFX 2.0
  */
 public final class WeakInvalidationListener implements InvalidationListener, WeakListener {
@@ -54,7 +54,7 @@ public final class WeakInvalidationListener implements InvalidationListener, Wea
 
     /**
      * The constructor of {@code WeakInvalidationListener}.
-     * 
+     *
      * @param listener
      *            The original listener that should be notified
      */

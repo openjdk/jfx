@@ -98,11 +98,11 @@ import javafx.collections.ObservableIntegerArray;
  * Fluent API allows to be more specific about the returned type (see
  * {@link javafx.beans.binding.NumberExpression} for more details about implicit
  * casting.
- * 
+ *
  * @see Binding
  * @see NumberBinding
- * 
- * 
+ *
+ *
  * @since JavaFX 2.0
  */
 public final class Bindings {
@@ -407,13 +407,13 @@ public final class Bindings {
     /**
      * Creates a binding used to get a member, such as {@code a.b.c}. The value
      * of the binding will be {@code c}, or {@code null} if {@code c} could not
-     * be reached (due to {@code b} not having a {@code c} property, 
+     * be reached (due to {@code b} not having a {@code c} property,
      * {@code b} being {@code null}, or {@code c} not being the right type etc.).
      * <p>
      * All classes and properties used in a select-binding have to be public.
      *
      * Note: since 8.0, JavaBeans properties are supported and might be in the chain.
-     * 
+     *
      * @param root
      *            The root {@link javafx.beans.value.ObservableValue}
      * @param steps
@@ -427,7 +427,7 @@ public final class Bindings {
     /**
      * Creates a binding used to get a member, such as {@code a.b.c}. The value
      * of the binding will be {@code c}, or {@code 0.0} if {@code c} could not
-     * be reached (due to {@code b} not having a {@code c} property, 
+     * be reached (due to {@code b} not having a {@code c} property,
      * {@code b} being {@code null}, or {@code c} not being a {@code Number} etc.).
      * <p>
      * All classes and properties used in a select-binding have to be public.
@@ -447,7 +447,7 @@ public final class Bindings {
     /**
      * Creates a binding used to get a member, such as {@code a.b.c}. The value
      * of the binding will be {@code c}, or {@code 0.0f} if {@code c} could not
-     * be reached (due to {@code b} not having a {@code c} property, 
+     * be reached (due to {@code b} not having a {@code c} property,
      * {@code b} being {@code null}, or {@code c} not being a {@code Number} etc.).
      * <p>
      * All classes and properties used in a select-binding have to be public.
@@ -467,7 +467,7 @@ public final class Bindings {
     /**
      * Creates a binding used to get a member, such as {@code a.b.c}. The value
      * of the binding will be {@code c}, or {@code 0} if {@code c} could not
-     * be reached (due to {@code b} not having a {@code c} property, 
+     * be reached (due to {@code b} not having a {@code c} property,
      * {@code b} being {@code null}, or {@code c} not being a {@code Number} etc.).
      * <p>
      * All classes and properties used in a select-binding have to be public.
@@ -487,7 +487,7 @@ public final class Bindings {
     /**
      * Creates a binding used to get a member, such as {@code a.b.c}. The value
      * of the binding will be {@code c}, or {@code 0L} if {@code c} could not
-     * be reached (due to {@code b} not having a {@code c} property, 
+     * be reached (due to {@code b} not having a {@code c} property,
      * {@code b} being {@code null}, or {@code c} not being a {@code Number} etc.).
      * <p>
      * All classes and properties used in a select-binding have to be public.
@@ -527,7 +527,7 @@ public final class Bindings {
     /**
      * Creates a binding used to get a member, such as {@code a.b.c}. The value
      * of the binding will be {@code c}, or {@code ""} if {@code c} could not
-     * be reached (due to {@code b} not having a {@code c} property, 
+     * be reached (due to {@code b} not having a {@code c} property,
      * {@code b} being {@code null}, or {@code c} not being a {@code String} etc.).
      * <p>
      * All classes and properties used in a select-binding have to be public.
@@ -708,9 +708,9 @@ public final class Bindings {
     /**
      * Creates a binding that calculates the result of a ternary expression. See
      * the description of class {@link When} for details.
-     * 
+     *
      * @see When
-     * 
+     *
      * @param condition
      *            the condition of the ternary expression
      * @return an intermediate class to build the complete binding
@@ -741,7 +741,7 @@ public final class Bindings {
      * (usually bindings would throw an exception). Secondly bidirectional
      * bindings are calculated eagerly, i.e. a bound property is updated
      * immediately.
-     * 
+     *
      * @param <T>
      *            the types of the properties
      * @param property1
@@ -760,7 +760,7 @@ public final class Bindings {
     /**
      * Delete a bidirectional binding that was previously defined with
      * {@link #bindBidirectional(Property, Property)}.
-     * 
+     *
      * @param <T>
      *            the types of the properties
      * @param property1
@@ -1101,7 +1101,7 @@ public final class Bindings {
     /**
      * Creates a new {@link javafx.beans.binding.NumberBinding} that calculates
      * the negation of a {@link javafx.beans.value.ObservableNumberValue}.
-     * 
+     *
      * @param value
      *            the operand
      * @return the new {@code NumberBinding}
@@ -1232,8 +1232,8 @@ public final class Bindings {
                 @Override
                 @ReturnsUnmodifiableCollection
                 public ObservableList<?> getDependencies() {
-                    return (dependencies.length == 1)? 
-                            FXCollections.singletonObservableList(dependencies[0]) 
+                    return (dependencies.length == 1)?
+                            FXCollections.singletonObservableList(dependencies[0])
                             : new ImmutableObservableList<Observable>(dependencies);
                 }
             };
@@ -1256,8 +1256,8 @@ public final class Bindings {
                 @Override
                 @ReturnsUnmodifiableCollection
                 public ObservableList<?> getDependencies() {
-                    return (dependencies.length == 1)? 
-                            FXCollections.singletonObservableList(dependencies[0]) 
+                    return (dependencies.length == 1)?
+                            FXCollections.singletonObservableList(dependencies[0])
                             : new ImmutableObservableList<Observable>(dependencies);
                 }
             };
@@ -1280,8 +1280,8 @@ public final class Bindings {
                 @Override
                 @ReturnsUnmodifiableCollection
                 public ObservableList<?> getDependencies() {
-                    return (dependencies.length == 1)? 
-                            FXCollections.singletonObservableList(dependencies[0]) 
+                    return (dependencies.length == 1)?
+                            FXCollections.singletonObservableList(dependencies[0])
                             : new ImmutableObservableList<Observable>(dependencies);
                 }
             };
@@ -1304,8 +1304,8 @@ public final class Bindings {
                 @Override
                 @ReturnsUnmodifiableCollection
                 public ObservableList<?> getDependencies() {
-                    return (dependencies.length == 1)? 
-                            FXCollections.singletonObservableList(dependencies[0]) 
+                    return (dependencies.length == 1)?
+                            FXCollections.singletonObservableList(dependencies[0])
                             : new ImmutableObservableList<Observable>(dependencies);
                 }
             };
@@ -1316,7 +1316,7 @@ public final class Bindings {
      * Creates a new {@link javafx.beans.binding.NumberBinding} that calculates
      * the sum of the values of two instances of
      * {@link javafx.beans.value.ObservableNumberValue}.
-     * 
+     *
      * @param op1
      *            the first operand
      * @param op2
@@ -1333,7 +1333,7 @@ public final class Bindings {
      * Creates a new {@link javafx.beans.binding.DoubleBinding} that calculates
      * the sum of the value of a
      * {@link javafx.beans.value.ObservableNumberValue} and a constant value.
-     * 
+     *
      * @param op1
      *            the {@code ObservableNumberValue}
      * @param op2
@@ -1350,7 +1350,7 @@ public final class Bindings {
      * Creates a new {@link javafx.beans.binding.DoubleBinding} that calculates
      * the sum of the value of a
      * {@link javafx.beans.value.ObservableNumberValue} and a constant value.
-     * 
+     *
      * @param op1
      *            the constant value
      * @param op2
@@ -1367,7 +1367,7 @@ public final class Bindings {
      * Creates a new {@link javafx.beans.binding.NumberBinding} that calculates
      * the sum of the value of a
      * {@link javafx.beans.value.ObservableNumberValue} and a constant value.
-     * 
+     *
      * @param op1
      *            the {@code ObservableNumberValue}
      * @param op2
@@ -1384,7 +1384,7 @@ public final class Bindings {
      * Creates a new {@link javafx.beans.binding.NumberBinding} that calculates
      * the sum of the value of a
      * {@link javafx.beans.value.ObservableNumberValue} and a constant value.
-     * 
+     *
      * @param op1
      *            the constant value
      * @param op2
@@ -1401,7 +1401,7 @@ public final class Bindings {
      * Creates a new {@link javafx.beans.binding.NumberBinding} that calculates
      * the sum of the value of a
      * {@link javafx.beans.value.ObservableNumberValue} and a constant value.
-     * 
+     *
      * @param op1
      *            the {@code ObservableNumberValue}
      * @param op2
@@ -1418,7 +1418,7 @@ public final class Bindings {
      * Creates a new {@link javafx.beans.binding.NumberBinding} that calculates
      * the sum of the value of a
      * {@link javafx.beans.value.ObservableNumberValue} and a constant value.
-     * 
+     *
      * @param op1
      *            the constant value
      * @param op2
@@ -1435,7 +1435,7 @@ public final class Bindings {
      * Creates a new {@link javafx.beans.binding.NumberBinding} that calculates
      * the sum of the value of a
      * {@link javafx.beans.value.ObservableNumberValue} and a constant value.
-     * 
+     *
      * @param op1
      *            the {@code ObservableNumberValue}
      * @param op2
@@ -1452,7 +1452,7 @@ public final class Bindings {
      * Creates a new {@link javafx.beans.binding.NumberBinding} that calculates
      * the sum of the value of a
      * {@link javafx.beans.value.ObservableNumberValue} and a constant value.
-     * 
+     *
      * @param op1
      *            the constant value
      * @param op2
@@ -1467,7 +1467,7 @@ public final class Bindings {
 
     // =================================================================================================================
     // Diff
-    
+
     private static NumberBinding subtract(final ObservableNumberValue op1, final ObservableNumberValue op2, final Observable... dependencies) {
         if ((op1 == null) || (op2 == null)) {
             throw new NullPointerException("Operands cannot be null.");
@@ -1493,8 +1493,8 @@ public final class Bindings {
                 @Override
                 @ReturnsUnmodifiableCollection
                 public ObservableList<?> getDependencies() {
-                    return (dependencies.length == 1)? 
-                            FXCollections.singletonObservableList(dependencies[0]) 
+                    return (dependencies.length == 1)?
+                            FXCollections.singletonObservableList(dependencies[0])
                             : new ImmutableObservableList<Observable>(dependencies);
                 }
             };
@@ -1517,8 +1517,8 @@ public final class Bindings {
                 @Override
                 @ReturnsUnmodifiableCollection
                 public ObservableList<?> getDependencies() {
-                    return (dependencies.length == 1)? 
-                            FXCollections.singletonObservableList(dependencies[0]) 
+                    return (dependencies.length == 1)?
+                            FXCollections.singletonObservableList(dependencies[0])
                             : new ImmutableObservableList<Observable>(dependencies);
                 }
             };
@@ -1541,8 +1541,8 @@ public final class Bindings {
                 @Override
                 @ReturnsUnmodifiableCollection
                 public ObservableList<?> getDependencies() {
-                    return (dependencies.length == 1)? 
-                            FXCollections.singletonObservableList(dependencies[0]) 
+                    return (dependencies.length == 1)?
+                            FXCollections.singletonObservableList(dependencies[0])
                             : new ImmutableObservableList<Observable>(dependencies);
                 }
             };
@@ -1565,19 +1565,19 @@ public final class Bindings {
                 @Override
                 @ReturnsUnmodifiableCollection
                 public ObservableList<?> getDependencies() {
-                    return (dependencies.length == 1)? 
-                            FXCollections.singletonObservableList(dependencies[0]) 
+                    return (dependencies.length == 1)?
+                            FXCollections.singletonObservableList(dependencies[0])
                             : new ImmutableObservableList<Observable>(dependencies);
                 }
             };
         }
     }
-    
+
     /**
      * Creates a new {@link javafx.beans.binding.NumberBinding} that calculates
      * the difference of the values of two instances of
      * {@link javafx.beans.value.ObservableNumberValue}.
-     * 
+     *
      * @param op1
      *            the first operand
      * @param op2
@@ -1594,7 +1594,7 @@ public final class Bindings {
      * Creates a new {@link javafx.beans.binding.DoubleBinding} that calculates
      * the difference of the value of a
      * {@link javafx.beans.value.ObservableNumberValue} and a constant value.
-     * 
+     *
      * @param op1
      *            the {@code ObservableNumberValue}
      * @param op2
@@ -1611,7 +1611,7 @@ public final class Bindings {
      * Creates a new {@link javafx.beans.binding.DoubleBinding} that calculates
      * the difference of a constant value and the value of a
      * {@link javafx.beans.value.ObservableNumberValue}.
-     * 
+     *
      * @param op1
      *            the constant value
      * @param op2
@@ -1628,7 +1628,7 @@ public final class Bindings {
      * Creates a new {@link javafx.beans.binding.NumberBinding} that calculates
      * the difference of the value of a
      * {@link javafx.beans.value.ObservableNumberValue} and a constant value.
-     * 
+     *
      * @param op1
      *            the constant value
      * @param op2
@@ -1645,7 +1645,7 @@ public final class Bindings {
      * Creates a new {@link javafx.beans.binding.NumberBinding} that calculates
      * the difference of a constant value and the value of a
      * {@link javafx.beans.value.ObservableNumberValue}.
-     * 
+     *
      * @param op1
      *            the {@code ObservableNumberValue}
      * @param op2
@@ -1662,7 +1662,7 @@ public final class Bindings {
      * Creates a new {@link javafx.beans.binding.NumberBinding} that calculates
      * the difference of the value of a
      * {@link javafx.beans.value.ObservableNumberValue} and a constant value.
-     * 
+     *
      * @param op1
      *            the constant value
      * @param op2
@@ -1679,7 +1679,7 @@ public final class Bindings {
      * Creates a new {@link javafx.beans.binding.NumberBinding} that calculates
      * the difference of a constant value and the value of a
      * {@link javafx.beans.value.ObservableNumberValue}.
-     * 
+     *
      * @param op1
      *            the {@code ObservableNumberValue}
      * @param op2
@@ -1696,7 +1696,7 @@ public final class Bindings {
      * Creates a new {@link javafx.beans.binding.NumberBinding} that calculates
      * the difference of the value of a
      * {@link javafx.beans.value.ObservableNumberValue} and a constant value.
-     * 
+     *
      * @param op1
      *            the constant value
      * @param op2
@@ -1713,7 +1713,7 @@ public final class Bindings {
      * Creates a new {@link javafx.beans.binding.NumberBinding} that calculates
      * the difference of a constant value and the value of a
      * {@link javafx.beans.value.ObservableNumberValue}.
-     * 
+     *
      * @param op1
      *            the {@code ObservableNumberValue}
      * @param op2
@@ -1754,8 +1754,8 @@ public final class Bindings {
                 @Override
                 @ReturnsUnmodifiableCollection
                 public ObservableList<?> getDependencies() {
-                    return (dependencies.length == 1)? 
-                            FXCollections.singletonObservableList(dependencies[0]) 
+                    return (dependencies.length == 1)?
+                            FXCollections.singletonObservableList(dependencies[0])
                             : new ImmutableObservableList<Observable>(dependencies);
                 }
             };
@@ -1778,8 +1778,8 @@ public final class Bindings {
                 @Override
                 @ReturnsUnmodifiableCollection
                 public ObservableList<?> getDependencies() {
-                    return (dependencies.length == 1)? 
-                            FXCollections.singletonObservableList(dependencies[0]) 
+                    return (dependencies.length == 1)?
+                            FXCollections.singletonObservableList(dependencies[0])
                             : new ImmutableObservableList<Observable>(dependencies);
                 }
             };
@@ -1802,8 +1802,8 @@ public final class Bindings {
                 @Override
                 @ReturnsUnmodifiableCollection
                 public ObservableList<?> getDependencies() {
-                    return (dependencies.length == 1)? 
-                            FXCollections.singletonObservableList(dependencies[0]) 
+                    return (dependencies.length == 1)?
+                            FXCollections.singletonObservableList(dependencies[0])
                             : new ImmutableObservableList<Observable>(dependencies);
                 }
             };
@@ -1826,19 +1826,19 @@ public final class Bindings {
                 @Override
                 @ReturnsUnmodifiableCollection
                 public ObservableList<?> getDependencies() {
-                    return (dependencies.length == 1)? 
-                            FXCollections.singletonObservableList(dependencies[0]) 
+                    return (dependencies.length == 1)?
+                            FXCollections.singletonObservableList(dependencies[0])
                             : new ImmutableObservableList<Observable>(dependencies);
                 }
             };
         }
     }
-    
+
     /**
      * Creates a new {@link javafx.beans.binding.NumberBinding} that calculates
      * the product of the values of two instances of
      * {@link javafx.beans.value.ObservableNumberValue}.
-     * 
+     *
      * @param op1
      *            the first operand
      * @param op2
@@ -1855,7 +1855,7 @@ public final class Bindings {
      * Creates a new {@link javafx.beans.binding.DoubleBinding} that calculates
      * the product of the value of a
      * {@link javafx.beans.value.ObservableNumberValue} and a constant value.
-     * 
+     *
      * @param op1
      *            the {@code ObservableNumberValue}
      * @param op2
@@ -1872,7 +1872,7 @@ public final class Bindings {
      * Creates a new {@link javafx.beans.binding.DoubleBinding} that calculates
      * the product of the value of a
      * {@link javafx.beans.value.ObservableNumberValue} and a constant value.
-     * 
+     *
      * @param op1
      *            the constant value
      * @param op2
@@ -1889,7 +1889,7 @@ public final class Bindings {
      * Creates a new {@link javafx.beans.binding.NumberBinding} that calculates
      * the product of the value of a
      * {@link javafx.beans.value.ObservableNumberValue} and a constant value.
-     * 
+     *
      * @param op1
      *            the constant value
      * @param op2
@@ -1906,7 +1906,7 @@ public final class Bindings {
      * Creates a new {@link javafx.beans.binding.NumberBinding} that calculates
      * the product of the value of a
      * {@link javafx.beans.value.ObservableNumberValue} and a constant value.
-     * 
+     *
      * @param op1
      *            the constant value
      * @param op2
@@ -1923,7 +1923,7 @@ public final class Bindings {
      * Creates a new {@link javafx.beans.binding.NumberBinding} that calculates
      * the product of the value of a
      * {@link javafx.beans.value.ObservableNumberValue} and a constant value.
-     * 
+     *
      * @param op1
      *            the constant value
      * @param op2
@@ -1940,7 +1940,7 @@ public final class Bindings {
      * Creates a new {@link javafx.beans.binding.NumberBinding} that calculates
      * the product of the value of a
      * {@link javafx.beans.value.ObservableNumberValue} and a constant value.
-     * 
+     *
      * @param op1
      *            the constant value
      * @param op2
@@ -1957,7 +1957,7 @@ public final class Bindings {
      * Creates a new {@link javafx.beans.binding.NumberBinding} that calculates
      * the product of the value of a
      * {@link javafx.beans.value.ObservableNumberValue} and a constant value.
-     * 
+     *
      * @param op1
      *            the constant value
      * @param op2
@@ -1974,7 +1974,7 @@ public final class Bindings {
      * Creates a new {@link javafx.beans.binding.NumberBinding} that calculates
      * the product of the value of a
      * {@link javafx.beans.value.ObservableNumberValue} and a constant value.
-     * 
+     *
      * @param op1
      *            the constant value
      * @param op2
@@ -1989,7 +1989,7 @@ public final class Bindings {
 
     // =================================================================================================================
     // Divide
-    
+
     private static NumberBinding divide(final ObservableNumberValue op1, final ObservableNumberValue op2, final Observable... dependencies) {
         if ((op1 == null) || (op2 == null)) {
             throw new NullPointerException("Operands cannot be null.");
@@ -2015,8 +2015,8 @@ public final class Bindings {
                 @Override
                 @ReturnsUnmodifiableCollection
                 public ObservableList<?> getDependencies() {
-                    return (dependencies.length == 1)? 
-                            FXCollections.singletonObservableList(dependencies[0]) 
+                    return (dependencies.length == 1)?
+                            FXCollections.singletonObservableList(dependencies[0])
                             : new ImmutableObservableList<Observable>(dependencies);
                 }
             };
@@ -2039,8 +2039,8 @@ public final class Bindings {
                 @Override
                 @ReturnsUnmodifiableCollection
                 public ObservableList<?> getDependencies() {
-                    return (dependencies.length == 1)? 
-                            FXCollections.singletonObservableList(dependencies[0]) 
+                    return (dependencies.length == 1)?
+                            FXCollections.singletonObservableList(dependencies[0])
                             : new ImmutableObservableList<Observable>(dependencies);
                 }
             };
@@ -2063,8 +2063,8 @@ public final class Bindings {
                 @Override
                 @ReturnsUnmodifiableCollection
                 public ObservableList<?> getDependencies() {
-                    return (dependencies.length == 1)? 
-                            FXCollections.singletonObservableList(dependencies[0]) 
+                    return (dependencies.length == 1)?
+                            FXCollections.singletonObservableList(dependencies[0])
                             : new ImmutableObservableList<Observable>(dependencies);
                 }
             };
@@ -2087,8 +2087,8 @@ public final class Bindings {
                 @Override
                 @ReturnsUnmodifiableCollection
                 public ObservableList<?> getDependencies() {
-                    return (dependencies.length == 1)? 
-                            FXCollections.singletonObservableList(dependencies[0]) 
+                    return (dependencies.length == 1)?
+                            FXCollections.singletonObservableList(dependencies[0])
                             : new ImmutableObservableList<Observable>(dependencies);
                 }
             };
@@ -2099,7 +2099,7 @@ public final class Bindings {
      * Creates a new {@link javafx.beans.binding.NumberBinding} that calculates
      * the division of the values of two instances of
      * {@link javafx.beans.value.ObservableNumberValue}.
-     * 
+     *
      * @param op1
      *            the first operand
      * @param op2
@@ -2116,7 +2116,7 @@ public final class Bindings {
      * Creates a new {@link javafx.beans.binding.DoubleBinding} that calculates
      * the division of the value of a
      * {@link javafx.beans.value.ObservableNumberValue} and a constant value.
-     * 
+     *
      * @param op1
      *            the {@code ObservableNumberValue}
      * @param op2
@@ -2133,7 +2133,7 @@ public final class Bindings {
      * Creates a new {@link javafx.beans.binding.DoubleBinding} that calculates
      * the division of a constant value and the value of a
      * {@link javafx.beans.value.ObservableNumberValue}.
-     * 
+     *
      * @param op1
      *            the constant value
      * @param op2
@@ -2150,7 +2150,7 @@ public final class Bindings {
      * Creates a new {@link javafx.beans.binding.NumberBinding} that calculates
      * the division of the value of a
      * {@link javafx.beans.value.ObservableNumberValue} and a constant value.
-     * 
+     *
      * @param op1
      *            the constant value
      * @param op2
@@ -2167,7 +2167,7 @@ public final class Bindings {
      * Creates a new {@link javafx.beans.binding.NumberBinding} that calculates
      * the division of a constant value and the value of a
      * {@link javafx.beans.value.ObservableNumberValue}.
-     * 
+     *
      * @param op1
      *            the {@code ObservableNumberValue}
      * @param op2
@@ -2184,7 +2184,7 @@ public final class Bindings {
      * Creates a new {@link javafx.beans.binding.NumberBinding} that calculates
      * the division of the value of a
      * {@link javafx.beans.value.ObservableNumberValue} and a constant value.
-     * 
+     *
      * @param op1
      *            the constant value
      * @param op2
@@ -2201,7 +2201,7 @@ public final class Bindings {
      * Creates a new {@link javafx.beans.binding.NumberBinding} that calculates
      * the division of a constant value and the value of a
      * {@link javafx.beans.value.ObservableNumberValue}.
-     * 
+     *
      * @param op1
      *            the {@code ObservableNumberValue}
      * @param op2
@@ -2218,7 +2218,7 @@ public final class Bindings {
      * Creates a new {@link javafx.beans.binding.NumberBinding} that calculates
      * the division of the value of a
      * {@link javafx.beans.value.ObservableNumberValue} and a constant value.
-     * 
+     *
      * @param op1
      *            the constant value
      * @param op2
@@ -2235,7 +2235,7 @@ public final class Bindings {
      * Creates a new {@link javafx.beans.binding.NumberBinding} that calculates
      * the division of a constant value and the value of a
      * {@link javafx.beans.value.ObservableNumberValue}.
-     * 
+     *
      * @param op1
      *            the {@code ObservableNumberValue}
      * @param op2
@@ -2250,7 +2250,7 @@ public final class Bindings {
 
     // =================================================================================================================
     // Equals
-    
+
     private static BooleanBinding equal(final ObservableNumberValue op1, final ObservableNumberValue op2, final double epsilon, final Observable... dependencies) {
         if ((op1 == null) || (op2 == null)) {
             throw new NullPointerException("Operands cannot be null.");
@@ -2276,8 +2276,8 @@ public final class Bindings {
                 @Override
                 @ReturnsUnmodifiableCollection
                 public ObservableList<?> getDependencies() {
-                    return (dependencies.length == 1)? 
-                            FXCollections.singletonObservableList(dependencies[0]) 
+                    return (dependencies.length == 1)?
+                            FXCollections.singletonObservableList(dependencies[0])
                             : new ImmutableObservableList<Observable>(dependencies);
                 }
             };
@@ -2300,8 +2300,8 @@ public final class Bindings {
                 @Override
                 @ReturnsUnmodifiableCollection
                 public ObservableList<?> getDependencies() {
-                    return (dependencies.length == 1)? 
-                            FXCollections.singletonObservableList(dependencies[0]) 
+                    return (dependencies.length == 1)?
+                            FXCollections.singletonObservableList(dependencies[0])
                             : new ImmutableObservableList<Observable>(dependencies);
                 }
             };
@@ -2324,8 +2324,8 @@ public final class Bindings {
                 @Override
                 @ReturnsUnmodifiableCollection
                 public ObservableList<?> getDependencies() {
-                    return (dependencies.length == 1)? 
-                            FXCollections.singletonObservableList(dependencies[0]) 
+                    return (dependencies.length == 1)?
+                            FXCollections.singletonObservableList(dependencies[0])
                             : new ImmutableObservableList<Observable>(dependencies);
                 }
             };
@@ -2348,8 +2348,8 @@ public final class Bindings {
                 @Override
                 @ReturnsUnmodifiableCollection
                 public ObservableList<?> getDependencies() {
-                    return (dependencies.length == 1)? 
-                            FXCollections.singletonObservableList(dependencies[0]) 
+                    return (dependencies.length == 1)?
+                            FXCollections.singletonObservableList(dependencies[0])
                             : new ImmutableObservableList<Observable>(dependencies);
                 }
             };
@@ -2367,7 +2367,7 @@ public final class Bindings {
      * <p>
      * Allowing a small tolerance is recommended when comparing floating-point
      * numbers because of rounding-errors.
-     * 
+     *
      * @param op1
      *            the first operand
      * @param op2
@@ -2390,7 +2390,7 @@ public final class Bindings {
      * When comparing floating-point numbers it is recommended to use the
      * {@link #equal(ObservableNumberValue, ObservableNumberValue, double)
      * equal()} method that allows a small tolerance.
-     * 
+     *
      * @param op1
      *            the first operand
      * @param op2
@@ -2413,7 +2413,7 @@ public final class Bindings {
      * <p>
      * Allowing a small tolerance is recommended when comparing floating-point
      * numbers because of rounding-errors.
-     * 
+     *
      * @param op1
      *            the {@code ObservableNumberValue}
      * @param op2
@@ -2438,7 +2438,7 @@ public final class Bindings {
      * <p>
      * Allowing a small tolerance is recommended when comparing floating-point
      * numbers because of rounding-errors.
-     * 
+     *
      * @param op1
      *            the constant value
      * @param op2
@@ -2463,7 +2463,7 @@ public final class Bindings {
      * <p>
      * Allowing a small tolerance is recommended when comparing floating-point
      * numbers because of rounding-errors.
-     * 
+     *
      * @param op1
      *            the {@code ObservableNumberValue}
      * @param op2
@@ -2488,7 +2488,7 @@ public final class Bindings {
      * <p>
      * Allowing a small tolerance is recommended when comparing floating-point
      * numbers because of rounding-errors.
-     * 
+     *
      * @param op1
      *            the constant value
      * @param op2
@@ -2513,7 +2513,7 @@ public final class Bindings {
      * <p>
      * Allowing a small tolerance is recommended when comparing floating-point
      * numbers because of rounding-errors.
-     * 
+     *
      * @param op1
      *            the {@code ObservableNumberValue}
      * @param op2
@@ -2536,7 +2536,7 @@ public final class Bindings {
      * When comparing floating-point numbers it is recommended to use the
      * {@link #equal(ObservableNumberValue, long, double) equal()} method that
      * allows a small tolerance.
-     * 
+     *
      * @param op1
      *            the {@code ObservableNumberValue}
      * @param op2
@@ -2559,7 +2559,7 @@ public final class Bindings {
      * <p>
      * Allowing a small tolerance is recommended when comparing floating-point
      * numbers because of rounding-errors.
-     * 
+     *
      * @param op1
      *            the constant value
      * @param op2
@@ -2582,7 +2582,7 @@ public final class Bindings {
      * When comparing floating-point numbers it is recommended to use the
      * {@link #equal(long, ObservableNumberValue, double) equal()} method that
      * allows a small tolerance.
-     * 
+     *
      * @param op1
      *            the constant value
      * @param op2
@@ -2605,7 +2605,7 @@ public final class Bindings {
      * <p>
      * Allowing a small tolerance is recommended when comparing floating-point
      * numbers because of rounding-errors.
-     * 
+     *
      * @param op1
      *            the {@code ObservableNumberValue}
      * @param op2
@@ -2628,7 +2628,7 @@ public final class Bindings {
      * When comparing floating-point numbers it is recommended to use the
      * {@link #equal(ObservableNumberValue, int, double) equal()} method that
      * allows a small tolerance.
-     * 
+     *
      * @param op1
      *            the {@code ObservableNumberValue}
      * @param op2
@@ -2651,7 +2651,7 @@ public final class Bindings {
      * <p>
      * Allowing a small tolerance is recommended when comparing floating-point
      * numbers because of rounding-errors.
-     * 
+     *
      * @param op1
      *            the constant value
      * @param op2
@@ -2674,7 +2674,7 @@ public final class Bindings {
      * When comparing floating-point numbers it is recommended to use the
      * {@link #equal(int, ObservableNumberValue, double) equal()} method that
      * allows a small tolerance.
-     * 
+     *
      * @param op1
      *            the constant value
      * @param op2
@@ -2689,7 +2689,7 @@ public final class Bindings {
 
     // =================================================================================================================
     // Not Equal
-    
+
     private static BooleanBinding notEqual(final ObservableNumberValue op1, final ObservableNumberValue op2, final double epsilon, final Observable... dependencies) {
         if ((op1 == null) || (op2 == null)) {
             throw new NullPointerException("Operands cannot be null.");
@@ -2715,8 +2715,8 @@ public final class Bindings {
                 @Override
                 @ReturnsUnmodifiableCollection
                 public ObservableList<?> getDependencies() {
-                    return (dependencies.length == 1)? 
-                            FXCollections.singletonObservableList(dependencies[0]) 
+                    return (dependencies.length == 1)?
+                            FXCollections.singletonObservableList(dependencies[0])
                             : new ImmutableObservableList<Observable>(dependencies);
                 }
             };
@@ -2739,8 +2739,8 @@ public final class Bindings {
                 @Override
                 @ReturnsUnmodifiableCollection
                 public ObservableList<?> getDependencies() {
-                    return (dependencies.length == 1)? 
-                            FXCollections.singletonObservableList(dependencies[0]) 
+                    return (dependencies.length == 1)?
+                            FXCollections.singletonObservableList(dependencies[0])
                             : new ImmutableObservableList<Observable>(dependencies);
                 }
             };
@@ -2763,8 +2763,8 @@ public final class Bindings {
                 @Override
                 @ReturnsUnmodifiableCollection
                 public ObservableList<?> getDependencies() {
-                    return (dependencies.length == 1)? 
-                            FXCollections.singletonObservableList(dependencies[0]) 
+                    return (dependencies.length == 1)?
+                            FXCollections.singletonObservableList(dependencies[0])
                             : new ImmutableObservableList<Observable>(dependencies);
                 }
             };
@@ -2787,8 +2787,8 @@ public final class Bindings {
                 @Override
                 @ReturnsUnmodifiableCollection
                 public ObservableList<?> getDependencies() {
-                    return (dependencies.length == 1)? 
-                            FXCollections.singletonObservableList(dependencies[0]) 
+                    return (dependencies.length == 1)?
+                            FXCollections.singletonObservableList(dependencies[0])
                             : new ImmutableObservableList<Observable>(dependencies);
                 }
             };
@@ -2806,7 +2806,7 @@ public final class Bindings {
      * <p>
      * Allowing a small tolerance is recommended when comparing floating-point
      * numbers because of rounding-errors.
-     * 
+     *
      * @param op1
      *            the first operand
      * @param op2
@@ -2829,7 +2829,7 @@ public final class Bindings {
      * When comparing floating-point numbers it is recommended to use the
      * {@link #notEqual(ObservableNumberValue, ObservableNumberValue, double)
      * notEqual()} method that allows a small tolerance.
-     * 
+     *
      * @param op1
      *            the first operand
      * @param op2
@@ -2852,7 +2852,7 @@ public final class Bindings {
      * <p>
      * Allowing a small tolerance is recommended when comparing floating-point
      * numbers because of rounding-errors.
-     * 
+     *
      * @param op1
      *            the {@code ObservableNumberValue}
      * @param op2
@@ -2877,7 +2877,7 @@ public final class Bindings {
      * <p>
      * Allowing a small tolerance is recommended when comparing floating-point
      * numbers because of rounding-errors.
-     * 
+     *
      * @param op1
      *            the constant value
      * @param op2
@@ -2902,7 +2902,7 @@ public final class Bindings {
      * <p>
      * Allowing a small tolerance is recommended when comparing floating-point
      * numbers because of rounding-errors.
-     * 
+     *
      * @param op1
      *            the {@code ObservableNumberValue}
      * @param op2
@@ -2927,7 +2927,7 @@ public final class Bindings {
      * <p>
      * Allowing a small tolerance is recommended when comparing floating-point
      * numbers because of rounding-errors.
-     * 
+     *
      * @param op1
      *            the constant value
      * @param op2
@@ -2952,7 +2952,7 @@ public final class Bindings {
      * <p>
      * Allowing a small tolerance is recommended when comparing floating-point
      * numbers because of rounding-errors.
-     * 
+     *
      * @param op1
      *            the {@code ObservableNumberValue}
      * @param op2
@@ -2975,7 +2975,7 @@ public final class Bindings {
      * When comparing floating-point numbers it is recommended to use the
      * {@link #notEqual(ObservableNumberValue, long, double) notEqual()} method
      * that allows a small tolerance.
-     * 
+     *
      * @param op1
      *            the {@code ObservableNumberValue}
      * @param op2
@@ -2998,7 +2998,7 @@ public final class Bindings {
      * <p>
      * Allowing a small tolerance is recommended when comparing floating-point
      * numbers because of rounding-errors.
-     * 
+     *
      * @param op1
      *            the constant value
      * @param op2
@@ -3021,7 +3021,7 @@ public final class Bindings {
      * When comparing floating-point numbers it is recommended to use the
      * {@link #notEqual(long, ObservableNumberValue, double) notEqual()} method
      * that allows a small tolerance.
-     * 
+     *
      * @param op1
      *            the constant value
      * @param op2
@@ -3044,7 +3044,7 @@ public final class Bindings {
      * <p>
      * Allowing a small tolerance is recommended when comparing floating-point
      * numbers because of rounding-errors.
-     * 
+     *
      * @param op1
      *            the {@code ObservableNumberValue}
      * @param op2
@@ -3067,7 +3067,7 @@ public final class Bindings {
      * When comparing floating-point numbers it is recommended to use the
      * {@link #notEqual(ObservableNumberValue, int, double) notEqual()} method
      * that allows a small tolerance.
-     * 
+     *
      * @param op1
      *            the {@code ObservableNumberValue}
      * @param op2
@@ -3090,7 +3090,7 @@ public final class Bindings {
      * <p>
      * Allowing a small tolerance is recommended when comparing floating-point
      * numbers because of rounding-errors.
-     * 
+     *
      * @param op1
      *            the constant value
      * @param op2
@@ -3113,7 +3113,7 @@ public final class Bindings {
      * When comparing floating-point numbers it is recommended to use the
      * {@link #notEqual(int, ObservableNumberValue, double) notEqual()} method
      * that allows a small tolerance.
-     * 
+     *
      * @param op1
      *            the constant value
      * @param op2
@@ -3154,8 +3154,8 @@ public final class Bindings {
                 @Override
                 @ReturnsUnmodifiableCollection
                 public ObservableList<?> getDependencies() {
-                    return (dependencies.length == 1)? 
-                            FXCollections.singletonObservableList(dependencies[0]) 
+                    return (dependencies.length == 1)?
+                            FXCollections.singletonObservableList(dependencies[0])
                             : new ImmutableObservableList<Observable>(dependencies);
                 }
             };
@@ -3178,8 +3178,8 @@ public final class Bindings {
                 @Override
                 @ReturnsUnmodifiableCollection
                 public ObservableList<?> getDependencies() {
-                    return (dependencies.length == 1)? 
-                            FXCollections.singletonObservableList(dependencies[0]) 
+                    return (dependencies.length == 1)?
+                            FXCollections.singletonObservableList(dependencies[0])
                             : new ImmutableObservableList<Observable>(dependencies);
                 }
             };
@@ -3202,8 +3202,8 @@ public final class Bindings {
                 @Override
                 @ReturnsUnmodifiableCollection
                 public ObservableList<?> getDependencies() {
-                    return (dependencies.length == 1)? 
-                            FXCollections.singletonObservableList(dependencies[0]) 
+                    return (dependencies.length == 1)?
+                            FXCollections.singletonObservableList(dependencies[0])
                             : new ImmutableObservableList<Observable>(dependencies);
                 }
             };
@@ -3226,20 +3226,20 @@ public final class Bindings {
                 @Override
                 @ReturnsUnmodifiableCollection
                 public ObservableList<?> getDependencies() {
-                    return (dependencies.length == 1)? 
-                            FXCollections.singletonObservableList(dependencies[0]) 
+                    return (dependencies.length == 1)?
+                            FXCollections.singletonObservableList(dependencies[0])
                             : new ImmutableObservableList<Observable>(dependencies);
                 }
             };
         }
     }
-    
+
     /**
      * Creates a new {@link javafx.beans.binding.BooleanBinding} that holds {@code true}
      * if the value of the first
      * {@link javafx.beans.value.ObservableNumberValue} is greater than the
      * value of the second.
-     * 
+     *
      * @param op1
      *            the first operand
      * @param op2
@@ -3256,7 +3256,7 @@ public final class Bindings {
      * Creates a new {@link javafx.beans.binding.BooleanBinding} that holds {@code true}
      * if the value of a {@link javafx.beans.value.ObservableNumberValue} is
      * greater than a constant value.
-     * 
+     *
      * @param op1
      *            the {@code ObservableNumberValue}
      * @param op2
@@ -3273,7 +3273,7 @@ public final class Bindings {
      * Creates a new {@link javafx.beans.binding.BooleanBinding} that holds {@code true}
      * if a constant value is greater than the value of a
      * {@link javafx.beans.value.ObservableNumberValue}.
-     * 
+     *
      * @param op1
      *            the constant value
      * @param op2
@@ -3290,7 +3290,7 @@ public final class Bindings {
      * Creates a new {@link javafx.beans.binding.BooleanBinding} that holds {@code true}
      * if the value of a {@link javafx.beans.value.ObservableNumberValue} is
      * greater than a constant value.
-     * 
+     *
      * @param op1
      *            the {@code ObservableNumberValue}
      * @param op2
@@ -3307,7 +3307,7 @@ public final class Bindings {
      * Creates a new {@link javafx.beans.binding.BooleanBinding} that holds {@code true}
      * if a constant value is greater than the value of a
      * {@link javafx.beans.value.ObservableNumberValue}.
-     * 
+     *
      * @param op1
      *            the constant value
      * @param op2
@@ -3324,7 +3324,7 @@ public final class Bindings {
      * Creates a new {@link javafx.beans.binding.BooleanBinding} that holds {@code true}
      * if the value of a {@link javafx.beans.value.ObservableNumberValue} is
      * greater than a constant value.
-     * 
+     *
      * @param op1
      *            the {@code ObservableNumberValue}
      * @param op2
@@ -3341,7 +3341,7 @@ public final class Bindings {
      * Creates a new {@link javafx.beans.binding.BooleanBinding} that holds {@code true}
      * if a constant value is greater than the value of a
      * {@link javafx.beans.value.ObservableNumberValue}.
-     * 
+     *
      * @param op1
      *            the constant value
      * @param op2
@@ -3358,7 +3358,7 @@ public final class Bindings {
      * Creates a new {@link javafx.beans.binding.BooleanBinding} that holds {@code true}
      * if the value of a {@link javafx.beans.value.ObservableNumberValue} is
      * greater than a constant value.
-     * 
+     *
      * @param op1
      *            the {@code ObservableNumberValue}
      * @param op2
@@ -3375,7 +3375,7 @@ public final class Bindings {
      * Creates a new {@link javafx.beans.binding.BooleanBinding} that holds {@code true}
      * if a constant value is greater than the value of a
      * {@link javafx.beans.value.ObservableNumberValue}.
-     * 
+     *
      * @param op1
      *            the constant value
      * @param op2
@@ -3394,13 +3394,13 @@ public final class Bindings {
     private static BooleanBinding lessThan(final ObservableNumberValue op1, final ObservableNumberValue op2, final Observable... dependencies) {
         return greaterThan(op2, op1, dependencies);
     }
-    
+
     /**
      * Creates a new {@link javafx.beans.binding.BooleanBinding} that holds {@code true}
      * if the value of the first
      * {@link javafx.beans.value.ObservableNumberValue} is less than the value
      * of the second.
-     * 
+     *
      * @param op1
      *            the first operand
      * @param op2
@@ -3417,7 +3417,7 @@ public final class Bindings {
      * Creates a new {@link javafx.beans.binding.BooleanBinding} that holds {@code true}
      * if the value of a {@link javafx.beans.value.ObservableNumberValue} is
      * less than a constant value.
-     * 
+     *
      * @param op1
      *            the {@code ObservableNumberValue}
      * @param op2
@@ -3434,7 +3434,7 @@ public final class Bindings {
      * Creates a new {@link javafx.beans.binding.BooleanBinding} that holds {@code true}
      * if a constant value is less than the value of a
      * {@link javafx.beans.value.ObservableNumberValue}.
-     * 
+     *
      * @param op1
      *            the constant value
      * @param op2
@@ -3451,7 +3451,7 @@ public final class Bindings {
      * Creates a new {@link javafx.beans.binding.BooleanBinding} that holds {@code true}
      * if the value of a {@link javafx.beans.value.ObservableNumberValue} is
      * less than a constant value.
-     * 
+     *
      * @param op1
      *            the {@code ObservableNumberValue}
      * @param op2
@@ -3468,7 +3468,7 @@ public final class Bindings {
      * Creates a new {@link javafx.beans.binding.BooleanBinding} that holds {@code true}
      * if a constant value is less than the value of a
      * {@link javafx.beans.value.ObservableNumberValue}.
-     * 
+     *
      * @param op1
      *            the constant value
      * @param op2
@@ -3485,7 +3485,7 @@ public final class Bindings {
      * Creates a new {@link javafx.beans.binding.BooleanBinding} that holds {@code true}
      * if the value of a {@link javafx.beans.value.ObservableNumberValue} is
      * less than a constant value.
-     * 
+     *
      * @param op1
      *            the {@code ObservableNumberValue}
      * @param op2
@@ -3502,7 +3502,7 @@ public final class Bindings {
      * Creates a new {@link javafx.beans.binding.BooleanBinding} that holds {@code true}
      * if a constant value is less than the value of a
      * {@link javafx.beans.value.ObservableNumberValue}.
-     * 
+     *
      * @param op1
      *            the constant value
      * @param op2
@@ -3519,7 +3519,7 @@ public final class Bindings {
      * Creates a new {@link javafx.beans.binding.BooleanBinding} that holds {@code true}
      * if the value of a {@link javafx.beans.value.ObservableNumberValue} is
      * less than a constant value.
-     * 
+     *
      * @param op1
      *            the {@code ObservableNumberValue}
      * @param op2
@@ -3536,7 +3536,7 @@ public final class Bindings {
      * Creates a new {@link javafx.beans.binding.BooleanBinding} that holds {@code true}
      * if a constant value is less than the value of a
      * {@link javafx.beans.value.ObservableNumberValue}.
-     * 
+     *
      * @param op1
      *            the constant value
      * @param op2
@@ -3577,8 +3577,8 @@ public final class Bindings {
                 @Override
                 @ReturnsUnmodifiableCollection
                 public ObservableList<?> getDependencies() {
-                    return (dependencies.length == 1)? 
-                            FXCollections.singletonObservableList(dependencies[0]) 
+                    return (dependencies.length == 1)?
+                            FXCollections.singletonObservableList(dependencies[0])
                             : new ImmutableObservableList<Observable>(dependencies);
                 }
             };
@@ -3601,8 +3601,8 @@ public final class Bindings {
                 @Override
                 @ReturnsUnmodifiableCollection
                 public ObservableList<?> getDependencies() {
-                    return (dependencies.length == 1)? 
-                            FXCollections.singletonObservableList(dependencies[0]) 
+                    return (dependencies.length == 1)?
+                            FXCollections.singletonObservableList(dependencies[0])
                             : new ImmutableObservableList<Observable>(dependencies);
                 }
             };
@@ -3625,8 +3625,8 @@ public final class Bindings {
                 @Override
                 @ReturnsUnmodifiableCollection
                 public ObservableList<?> getDependencies() {
-                    return (dependencies.length == 1)? 
-                            FXCollections.singletonObservableList(dependencies[0]) 
+                    return (dependencies.length == 1)?
+                            FXCollections.singletonObservableList(dependencies[0])
                             : new ImmutableObservableList<Observable>(dependencies);
                 }
             };
@@ -3649,20 +3649,20 @@ public final class Bindings {
                 @Override
                 @ReturnsUnmodifiableCollection
                 public ObservableList<?> getDependencies() {
-                    return (dependencies.length == 1)? 
-                            FXCollections.singletonObservableList(dependencies[0]) 
+                    return (dependencies.length == 1)?
+                            FXCollections.singletonObservableList(dependencies[0])
                             : new ImmutableObservableList<Observable>(dependencies);
                 }
             };
         }
     }
-    
+
     /**
      * Creates a new {@link javafx.beans.binding.BooleanBinding} that holds {@code true}
      * if the value of the first
      * {@link javafx.beans.value.ObservableNumberValue} is greater than or equal
      * to the value of the second.
-     * 
+     *
      * @param op1
      *            the first operand
      * @param op2
@@ -3679,7 +3679,7 @@ public final class Bindings {
      * Creates a new {@link javafx.beans.binding.BooleanBinding} that holds {@code true}
      * if the value of a {@link javafx.beans.value.ObservableNumberValue} is
      * greater than or equal to a constant value.
-     * 
+     *
      * @param op1
      *            the {@code ObservableNumberValue}
      * @param op2
@@ -3696,7 +3696,7 @@ public final class Bindings {
      * Creates a new {@link javafx.beans.binding.BooleanBinding} that holds {@code true}
      * if a constant value is greater than or equal to the value of a
      * {@link javafx.beans.value.ObservableNumberValue}.
-     * 
+     *
      * @param op1
      *            the constant value
      * @param op2
@@ -3713,7 +3713,7 @@ public final class Bindings {
      * Creates a new {@link javafx.beans.binding.BooleanBinding} that holds {@code true}
      * if the value of a {@link javafx.beans.value.ObservableNumberValue} is
      * greater than or equal to a constant value.
-     * 
+     *
      * @param op1
      *            the {@code ObservableNumberValue}
      * @param op2
@@ -3730,7 +3730,7 @@ public final class Bindings {
      * Creates a new {@link javafx.beans.binding.BooleanBinding} that holds {@code true}
      * if a constant value is greater than or equal to the value of a
      * {@link javafx.beans.value.ObservableNumberValue}.
-     * 
+     *
      * @param op1
      *            the constant value
      * @param op2
@@ -3747,7 +3747,7 @@ public final class Bindings {
      * Creates a new {@link javafx.beans.binding.BooleanBinding} that holds {@code true}
      * if the value of a {@link javafx.beans.value.ObservableNumberValue} is
      * greater than or equal to a constant value.
-     * 
+     *
      * @param op1
      *            the {@code ObservableNumberValue}
      * @param op2
@@ -3764,7 +3764,7 @@ public final class Bindings {
      * Creates a new {@link javafx.beans.binding.BooleanBinding} that holds {@code true}
      * if a constant value is greater than or equal to the value of a
      * {@link javafx.beans.value.ObservableNumberValue}.
-     * 
+     *
      * @param op1
      *            the constant value
      * @param op2
@@ -3781,7 +3781,7 @@ public final class Bindings {
      * Creates a new {@link javafx.beans.binding.BooleanBinding} that holds {@code true}
      * if the value of a {@link javafx.beans.value.ObservableNumberValue} is
      * greater than or equal to a constant value.
-     * 
+     *
      * @param op1
      *            the {@code ObservableNumberValue}
      * @param op2
@@ -3798,7 +3798,7 @@ public final class Bindings {
      * Creates a new {@link javafx.beans.binding.BooleanBinding} that holds {@code true}
      * if a constant value is greater than or equal to the value of a
      * {@link javafx.beans.value.ObservableNumberValue}.
-     * 
+     *
      * @param op1
      *            the constant value
      * @param op2
@@ -3818,13 +3818,13 @@ public final class Bindings {
         return greaterThanOrEqual(op2, op1, dependencies);
     }
 
-    
+
     /**
      * Creates a new {@link javafx.beans.binding.BooleanBinding} that holds {@code true}
      * if the value of the first
      * {@link javafx.beans.value.ObservableNumberValue} is less than or equal to
      * the value of the second.
-     * 
+     *
      * @param op1
      *            the first operand
      * @param op2
@@ -3841,7 +3841,7 @@ public final class Bindings {
      * Creates a new {@link javafx.beans.binding.BooleanBinding} that holds {@code true}
      * if the value of a {@link javafx.beans.value.ObservableNumberValue} is
      * less than or equal to a constant value.
-     * 
+     *
      * @param op1
      *            the {@code ObservableNumberValue}
      * @param op2
@@ -3858,7 +3858,7 @@ public final class Bindings {
      * Creates a new {@link javafx.beans.binding.BooleanBinding} that holds {@code true}
      * if a constant value is less than or equal to the value of a
      * {@link javafx.beans.value.ObservableNumberValue}.
-     * 
+     *
      * @param op1
      *            the constant value
      * @param op2
@@ -3875,7 +3875,7 @@ public final class Bindings {
      * Creates a new {@link javafx.beans.binding.BooleanBinding} that holds {@code true}
      * if the value of a {@link javafx.beans.value.ObservableNumberValue} is
      * less than or equal to a constant value.
-     * 
+     *
      * @param op1
      *            the {@code ObservableNumberValue}
      * @param op2
@@ -3892,7 +3892,7 @@ public final class Bindings {
      * Creates a new {@link javafx.beans.binding.BooleanBinding} that holds {@code true}
      * if a constant value is less than or equal to the value of a
      * {@link javafx.beans.value.ObservableNumberValue}.
-     * 
+     *
      * @param op1
      *            the constant value
      * @param op2
@@ -3909,7 +3909,7 @@ public final class Bindings {
      * Creates a new {@link javafx.beans.binding.BooleanBinding} that holds {@code true}
      * if the value of a {@link javafx.beans.value.ObservableNumberValue} is
      * less than or equal to a constant value.
-     * 
+     *
      * @param op1
      *            the {@code ObservableNumberValue}
      * @param op2
@@ -3926,7 +3926,7 @@ public final class Bindings {
      * Creates a new {@link javafx.beans.binding.BooleanBinding} that holds {@code true}
      * if a constant value is less than or equal to the value of a
      * {@link javafx.beans.value.ObservableNumberValue}.
-     * 
+     *
      * @param op1
      *            the constant value
      * @param op2
@@ -3943,7 +3943,7 @@ public final class Bindings {
      * Creates a new {@link javafx.beans.binding.BooleanBinding} that holds {@code true}
      * if the value of a {@link javafx.beans.value.ObservableNumberValue} is
      * less than or equal to a constant value.
-     * 
+     *
      * @param op1
      *            the {@code ObservableNumberValue}
      * @param op2
@@ -3960,7 +3960,7 @@ public final class Bindings {
      * Creates a new {@link javafx.beans.binding.BooleanBinding} that holds {@code true}
      * if a constant value is less than or equal to the value of a
      * {@link javafx.beans.value.ObservableNumberValue}.
-     * 
+     *
      * @param op1
      *            the constant value
      * @param op2
@@ -3975,7 +3975,7 @@ public final class Bindings {
 
     // =================================================================================================================
     // Minimum
-    
+
     private static NumberBinding min(final ObservableNumberValue op1, final ObservableNumberValue op2, final Observable... dependencies) {
         if ((op1 == null) || (op2 == null)) {
             throw new NullPointerException("Operands cannot be null.");
@@ -4001,8 +4001,8 @@ public final class Bindings {
                 @Override
                 @ReturnsUnmodifiableCollection
                 public ObservableList<?> getDependencies() {
-                    return (dependencies.length == 1)? 
-                            FXCollections.singletonObservableList(dependencies[0]) 
+                    return (dependencies.length == 1)?
+                            FXCollections.singletonObservableList(dependencies[0])
                             : new ImmutableObservableList<Observable>(dependencies);
                 }
             };
@@ -4025,8 +4025,8 @@ public final class Bindings {
                 @Override
                 @ReturnsUnmodifiableCollection
                 public ObservableList<?> getDependencies() {
-                    return (dependencies.length == 1)? 
-                            FXCollections.singletonObservableList(dependencies[0]) 
+                    return (dependencies.length == 1)?
+                            FXCollections.singletonObservableList(dependencies[0])
                             : new ImmutableObservableList<Observable>(dependencies);
                 }
             };
@@ -4049,8 +4049,8 @@ public final class Bindings {
                 @Override
                 @ReturnsUnmodifiableCollection
                 public ObservableList<?> getDependencies() {
-                    return (dependencies.length == 1)? 
-                            FXCollections.singletonObservableList(dependencies[0]) 
+                    return (dependencies.length == 1)?
+                            FXCollections.singletonObservableList(dependencies[0])
                             : new ImmutableObservableList<Observable>(dependencies);
                 }
             };
@@ -4073,8 +4073,8 @@ public final class Bindings {
                 @Override
                 @ReturnsUnmodifiableCollection
                 public ObservableList<?> getDependencies() {
-                    return (dependencies.length == 1)? 
-                            FXCollections.singletonObservableList(dependencies[0]) 
+                    return (dependencies.length == 1)?
+                            FXCollections.singletonObservableList(dependencies[0])
                             : new ImmutableObservableList<Observable>(dependencies);
                 }
             };
@@ -4085,7 +4085,7 @@ public final class Bindings {
      * Creates a new {@link javafx.beans.binding.NumberBinding} that calculates
      * the minimum of the values of two instances of
      * {@link javafx.beans.value.ObservableNumberValue}.
-     * 
+     *
      * @param op1
      *            the first operand
      * @param op2
@@ -4102,7 +4102,7 @@ public final class Bindings {
      * Creates a new {@link javafx.beans.binding.DoubleBinding} that calculates
      * the minimum of the value of a
      * {@link javafx.beans.value.ObservableNumberValue} and a constant value.
-     * 
+     *
      * @param op1
      *            the {@code ObservableNumberValue}
      * @param op2
@@ -4119,7 +4119,7 @@ public final class Bindings {
      * Creates a new {@link javafx.beans.binding.DoubleBinding} that calculates
      * the minimum of the value of a
      * {@link javafx.beans.value.ObservableNumberValue} and a constant value.
-     * 
+     *
      * @param op1
      *            the constant value
      * @param op2
@@ -4136,7 +4136,7 @@ public final class Bindings {
      * Creates a new {@link javafx.beans.binding.NumberBinding} that calculates
      * the minimum of the value of a
      * {@link javafx.beans.value.ObservableNumberValue} and a constant value.
-     * 
+     *
      * @param op1
      *            the {@code ObservableNumberValue}
      * @param op2
@@ -4153,7 +4153,7 @@ public final class Bindings {
      * Creates a new {@link javafx.beans.binding.NumberBinding} that calculates
      * the minimum of the value of a
      * {@link javafx.beans.value.ObservableNumberValue} and a constant value.
-     * 
+     *
      * @param op1
      *            the constant value
      * @param op2
@@ -4170,7 +4170,7 @@ public final class Bindings {
      * Creates a new {@link javafx.beans.binding.NumberBinding} that calculates
      * the minimum of the value of a
      * {@link javafx.beans.value.ObservableNumberValue} and a constant value.
-     * 
+     *
      * @param op1
      *            the {@code ObservableNumberValue}
      * @param op2
@@ -4187,7 +4187,7 @@ public final class Bindings {
      * Creates a new {@link javafx.beans.binding.NumberBinding} that calculates
      * the minimum of the value of a
      * {@link javafx.beans.value.ObservableNumberValue} and a constant value.
-     * 
+     *
      * @param op1
      *            the constant value
      * @param op2
@@ -4204,7 +4204,7 @@ public final class Bindings {
      * Creates a new {@link javafx.beans.binding.NumberBinding} that calculates
      * the minimum of the value of a
      * {@link javafx.beans.value.ObservableNumberValue} and a constant value.
-     * 
+     *
      * @param op1
      *            the {@code ObservableNumberValue}
      * @param op2
@@ -4221,7 +4221,7 @@ public final class Bindings {
      * Creates a new {@link javafx.beans.binding.NumberBinding} that calculates
      * the minimum of the value of a
      * {@link javafx.beans.value.ObservableNumberValue} and a constant value.
-     * 
+     *
      * @param op1
      *            the constant value
      * @param op2
@@ -4236,7 +4236,7 @@ public final class Bindings {
 
     // =================================================================================================================
     // Maximum
-    
+
     private static NumberBinding max(final ObservableNumberValue op1, final ObservableNumberValue op2, final Observable... dependencies) {
         if ((op1 == null) || (op2 == null)) {
             throw new NullPointerException("Operands cannot be null.");
@@ -4262,8 +4262,8 @@ public final class Bindings {
                 @Override
                 @ReturnsUnmodifiableCollection
                 public ObservableList<?> getDependencies() {
-                    return (dependencies.length == 1)? 
-                            FXCollections.singletonObservableList(dependencies[0]) 
+                    return (dependencies.length == 1)?
+                            FXCollections.singletonObservableList(dependencies[0])
                             : new ImmutableObservableList<Observable>(dependencies);
                 }
             };
@@ -4286,8 +4286,8 @@ public final class Bindings {
                 @Override
                 @ReturnsUnmodifiableCollection
                 public ObservableList<?> getDependencies() {
-                    return (dependencies.length == 1)? 
-                            FXCollections.singletonObservableList(dependencies[0]) 
+                    return (dependencies.length == 1)?
+                            FXCollections.singletonObservableList(dependencies[0])
                             : new ImmutableObservableList<Observable>(dependencies);
                 }
             };
@@ -4310,8 +4310,8 @@ public final class Bindings {
                 @Override
                 @ReturnsUnmodifiableCollection
                 public ObservableList<?> getDependencies() {
-                    return (dependencies.length == 1)? 
-                            FXCollections.singletonObservableList(dependencies[0]) 
+                    return (dependencies.length == 1)?
+                            FXCollections.singletonObservableList(dependencies[0])
                             : new ImmutableObservableList<Observable>(dependencies);
                 }
             };
@@ -4334,8 +4334,8 @@ public final class Bindings {
                 @Override
                 @ReturnsUnmodifiableCollection
                 public ObservableList<?> getDependencies() {
-                    return (dependencies.length == 1)? 
-                            FXCollections.singletonObservableList(dependencies[0]) 
+                    return (dependencies.length == 1)?
+                            FXCollections.singletonObservableList(dependencies[0])
                             : new ImmutableObservableList<Observable>(dependencies);
                 }
             };
@@ -4346,7 +4346,7 @@ public final class Bindings {
      * Creates a new {@link javafx.beans.binding.NumberBinding} that calculates
      * the maximum of the values of two instances of
      * {@link javafx.beans.value.ObservableNumberValue}.
-     * 
+     *
      * @param op1
      *            the first operand
      * @param op2
@@ -4363,7 +4363,7 @@ public final class Bindings {
      * Creates a new {@link javafx.beans.binding.DoubleBinding} that calculates
      * the maximum of the value of a
      * {@link javafx.beans.value.ObservableNumberValue} and a constant value.
-     * 
+     *
      * @param op1
      *            the {@code ObservableNumberValue}
      * @param op2
@@ -4380,7 +4380,7 @@ public final class Bindings {
      * Creates a new {@link javafx.beans.binding.DoubleBinding} that calculates
      * the maximum of the value of a
      * {@link javafx.beans.value.ObservableNumberValue} and a constant value.
-     * 
+     *
      * @param op1
      *            the constant value
      * @param op2
@@ -4397,7 +4397,7 @@ public final class Bindings {
      * Creates a new {@link javafx.beans.binding.NumberBinding} that calculates
      * the maximum of the value of a
      * {@link javafx.beans.value.ObservableNumberValue} and a constant value.
-     * 
+     *
      * @param op1
      *            the {@code ObservableNumberValue}
      * @param op2
@@ -4414,7 +4414,7 @@ public final class Bindings {
      * Creates a new {@link javafx.beans.binding.NumberBinding} that calculates
      * the maximum of the value of a
      * {@link javafx.beans.value.ObservableNumberValue} and a constant value.
-     * 
+     *
      * @param op1
      *            the constant value
      * @param op2
@@ -4431,7 +4431,7 @@ public final class Bindings {
      * Creates a new {@link javafx.beans.binding.NumberBinding} that calculates
      * the maximum of the value of a
      * {@link javafx.beans.value.ObservableNumberValue} and a constant value.
-     * 
+     *
      * @param op1
      *            the {@code ObservableNumberValue}
      * @param op2
@@ -4448,7 +4448,7 @@ public final class Bindings {
      * Creates a new {@link javafx.beans.binding.NumberBinding} that calculates
      * the maximum of the value of a
      * {@link javafx.beans.value.ObservableNumberValue} and a constant value.
-     * 
+     *
      * @param op1
      *            the constant value
      * @param op2
@@ -4465,7 +4465,7 @@ public final class Bindings {
      * Creates a new {@link javafx.beans.binding.NumberBinding} that calculates
      * the maximum of the value of a
      * {@link javafx.beans.value.ObservableNumberValue} and a constant value.
-     * 
+     *
      * @param op1
      *            the {@code ObservableNumberValue}
      * @param op2
@@ -4482,7 +4482,7 @@ public final class Bindings {
      * Creates a new {@link javafx.beans.binding.NumberBinding} that calculates
      * the maximum of the value of a
      * {@link javafx.beans.value.ObservableNumberValue} and a constant value.
-     * 
+     *
      * @param op1
      *            the constant value
      * @param op2
@@ -4507,13 +4507,13 @@ public final class Bindings {
         public BooleanAndBinding(ObservableBooleanValue op1, ObservableBooleanValue op2) {
             this.op1 = op1;
             this.op2 = op2;
-            
+
             observer = new ShortCircuitAndInvalidator(this);
-            
+
             op1.addListener(observer);
             op2.addListener(observer);
         }
-        
+
 
         @Override
         public void dispose() {
@@ -4532,7 +4532,7 @@ public final class Bindings {
             return new ImmutableObservableList<>(op1, op2);
         }
     }
-    
+
     private static class ShortCircuitAndInvalidator implements InvalidationListener {
 
         private final WeakReference<BooleanAndBinding> ref;
@@ -4558,12 +4558,12 @@ public final class Bindings {
         }
 
     }
-    
+
     /**
      * Creates a {@link BooleanBinding} that calculates the conditional-AND
      * operation on the value of two instance of
      * {@link javafx.beans.value.ObservableBooleanValue}.
-     * 
+     *
      * @param op1
      *            first {@code ObservableBooleanValue}
      * @param op2
@@ -4579,7 +4579,7 @@ public final class Bindings {
 
         return new BooleanAndBinding(op1, op2);
     }
-    
+
     private static class BooleanOrBinding extends BooleanBinding {
 
         private final ObservableBooleanValue op1;
@@ -4593,7 +4593,7 @@ public final class Bindings {
             op1.addListener(observer);
             op2.addListener(observer);
         }
-        
+
 
         @Override
         public void dispose() {
@@ -4613,7 +4613,7 @@ public final class Bindings {
         }
     }
 
-    
+
     private static class ShortCircuitOrInvalidator implements InvalidationListener {
 
         private final WeakReference<BooleanOrBinding> ref;
@@ -4639,12 +4639,12 @@ public final class Bindings {
         }
 
     }
-    
+
     /**
      * Creates a {@link BooleanBinding} that calculates the conditional-OR
      * operation on the value of two instance of
      * {@link javafx.beans.value.ObservableBooleanValue}.
-     * 
+     *
      * @param op1
      *            first {@code ObservableBooleanValue}
      * @param op2
@@ -4664,7 +4664,7 @@ public final class Bindings {
     /**
      * Creates a {@link BooleanBinding} that calculates the inverse of the value
      * of a {@link javafx.beans.value.ObservableBooleanValue}.
-     * 
+     *
      * @param op
      *            the {@code ObservableBooleanValue}
      * @return the new {@code BooleanBinding}
@@ -4702,7 +4702,7 @@ public final class Bindings {
     /**
      * Creates a new {@link BooleanBinding} that holds {@code true} if the values of two
      * instances of {@link javafx.beans.value.ObservableBooleanValue} are equal.
-     * 
+     *
      * @param op1
      *            the first operand
      * @param op2
@@ -4743,7 +4743,7 @@ public final class Bindings {
      * Creates a new {@link BooleanBinding} that holds {@code true} if the values of two
      * instances of {@link javafx.beans.value.ObservableBooleanValue} are not
      * equal.
-     * 
+     *
      * @param op1
      *            the first operand
      * @param op2
@@ -4790,7 +4790,7 @@ public final class Bindings {
      * returned. Otherwise a new {@link javafx.beans.binding.StringBinding} is
      * created that holds the value of the {@code ObservableValue} converted to
      * a {@code String}.
-     * 
+     *
      * @param observableValue
      *            The source {@code ObservableValue}
      * @return A {@code StringExpression} that wraps the {@code ObservableValue}
@@ -4814,7 +4814,7 @@ public final class Bindings {
      * If {@code null} or an empty array is passed to this method, a
      * {@code StringExpression} that contains an empty {@code String} is
      * returned
-     * 
+     *
      * @param args
      *            the {@code Objects} that should be concatenated
      * @return the new {@code StringExpression}
@@ -4834,7 +4834,7 @@ public final class Bindings {
      * the {@code StringExpression}.
      * <p>
      * See {@code java.util.Formatter} for formatting rules.
-     * 
+     *
      * @param format
      *            the formatting {@code String}
      * @param args
@@ -4858,7 +4858,7 @@ public final class Bindings {
      * <p>
      * See {@code java.util.Formatter} for formatting rules. See
      * {@code java.util.Locale} for details on {@code Locale}.
-     * 
+     *
      * @param locale
      *            the {@code Locale} to use during formatting
      * @param format
@@ -4876,7 +4876,7 @@ public final class Bindings {
     private static String getStringSafe(String value) {
         return value == null ? "" : value;
     }
-    
+
     private static BooleanBinding equal(final ObservableStringValue op1, final ObservableStringValue op2, final Observable... dependencies) {
         if ((op1 == null) || (op2 == null)) {
             throw new NullPointerException("Operands cannot be null.");
@@ -4903,8 +4903,8 @@ public final class Bindings {
             @Override
             @ReturnsUnmodifiableCollection
             public ObservableList<?> getDependencies() {
-                return (dependencies.length == 1)? 
-                        FXCollections.singletonObservableList(dependencies[0]) 
+                return (dependencies.length == 1)?
+                        FXCollections.singletonObservableList(dependencies[0])
                         : new ImmutableObservableList<Observable>(dependencies);
             }
         };
@@ -4917,7 +4917,7 @@ public final class Bindings {
      * <p>
      * Note: In this comparison a {@code String} that is {@code null} is
      * considered equal to an empty {@code String}.
-     * 
+     *
      * @param op1
      *            the first operand
      * @param op2
@@ -4937,7 +4937,7 @@ public final class Bindings {
      * <p>
      * Note: In this comparison a {@code String} that is {@code null} is
      * considered equal to an empty {@code String}.
-     * 
+     *
      * @param op1
      *            the {@code ObservableStringValue}
      * @param op2
@@ -4957,7 +4957,7 @@ public final class Bindings {
      * <p>
      * Note: In this comparison a {@code String} that is {@code null} is
      * considered equal to an empty {@code String}.
-     * 
+     *
      * @param op1
      *            the constant value
      * @param op2
@@ -4969,7 +4969,7 @@ public final class Bindings {
     public static BooleanBinding equal(String op1, final ObservableStringValue op2) {
         return equal(StringConstant.valueOf(op1), op2, op2);
     }
-    
+
     private static BooleanBinding notEqual(final ObservableStringValue op1, final ObservableStringValue op2, final Observable... dependencies) {
         if ((op1 == null) || (op2 == null)) {
             throw new NullPointerException("Operands cannot be null.");
@@ -4996,8 +4996,8 @@ public final class Bindings {
             @Override
             @ReturnsUnmodifiableCollection
             public ObservableList<?> getDependencies() {
-                return (dependencies.length == 1)? 
-                        FXCollections.singletonObservableList(dependencies[0]) 
+                return (dependencies.length == 1)?
+                        FXCollections.singletonObservableList(dependencies[0])
                         : new ImmutableObservableList<Observable>(dependencies);
             }
         };
@@ -5010,7 +5010,7 @@ public final class Bindings {
      * <p>
      * Note: In this comparison a {@code String} that is {@code null} is
      * considered equal to an empty {@code String}.
-     * 
+     *
      * @param op1
      *            the first operand
      * @param op2
@@ -5030,7 +5030,7 @@ public final class Bindings {
      * <p>
      * Note: In this comparison a {@code String} that is {@code null} is
      * considered equal to an empty {@code String}.
-     * 
+     *
      * @param op1
      *            the {@code ObservableStringValue}
      * @param op2
@@ -5050,7 +5050,7 @@ public final class Bindings {
      * <p>
      * Note: In this comparison a {@code String} that is {@code null} is
      * considered equal to an empty {@code String}.
-     * 
+     *
      * @param op1
      *            the constant value
      * @param op2
@@ -5062,7 +5062,7 @@ public final class Bindings {
     public static BooleanBinding notEqual(String op1, final ObservableStringValue op2) {
         return notEqual(StringConstant.valueOf(op1), op2, op2);
     }
-    
+
     private static BooleanBinding equalIgnoreCase(final ObservableStringValue op1, final ObservableStringValue op2, final Observable... dependencies) {
         if ((op1 == null) || (op2 == null)) {
             throw new NullPointerException("Operands cannot be null.");
@@ -5089,8 +5089,8 @@ public final class Bindings {
             @Override
             @ReturnsUnmodifiableCollection
             public ObservableList<?> getDependencies() {
-                return (dependencies.length == 1)? 
-                        FXCollections.singletonObservableList(dependencies[0]) 
+                return (dependencies.length == 1)?
+                        FXCollections.singletonObservableList(dependencies[0])
                         : new ImmutableObservableList<Observable>(dependencies);
             }
         };
@@ -5103,7 +5103,7 @@ public final class Bindings {
      * <p>
      * Note: In this comparison a {@code String} that is {@code null} is
      * considered equal to an empty {@code String}.
-     * 
+     *
      * @param op1
      *            the first operand
      * @param op2
@@ -5123,7 +5123,7 @@ public final class Bindings {
      * <p>
      * Note: In this comparison a {@code String} that is {@code null} is
      * considered equal to an empty {@code String}.
-     * 
+     *
      * @param op1
      *            the {@code ObservableStringValue}
      * @param op2
@@ -5143,7 +5143,7 @@ public final class Bindings {
      * <p>
      * Note: In this comparison a {@code String} that is {@code null} is
      * considered equal to an empty {@code String}.
-     * 
+     *
      * @param op1
      *            the constant value
      * @param op2
@@ -5182,13 +5182,13 @@ public final class Bindings {
             @Override
             @ReturnsUnmodifiableCollection
             public ObservableList<?> getDependencies() {
-                return (dependencies.length == 1)? 
-                        FXCollections.singletonObservableList(dependencies[0]) 
+                return (dependencies.length == 1)?
+                        FXCollections.singletonObservableList(dependencies[0])
                         : new ImmutableObservableList<Observable>(dependencies);
             }
         };
     }
-    
+
     /**
      * Creates a new {@link javafx.beans.binding.BooleanBinding} that holds {@code true}
      * if the values of two instances of
@@ -5197,7 +5197,7 @@ public final class Bindings {
      * <p>
      * Note: In this comparison a {@code String} that is {@code null} is
      * considered equal to an empty {@code String}.
-     * 
+     *
      * @param op1
      *            the first operand
      * @param op2
@@ -5217,7 +5217,7 @@ public final class Bindings {
      * <p>
      * Note: In this comparison a {@code String} that is {@code null} is
      * considered equal to an empty {@code String}.
-     * 
+     *
      * @param op1
      *            the {@code ObservableStringValue}
      * @param op2
@@ -5237,7 +5237,7 @@ public final class Bindings {
      * <p>
      * Note: In this comparison a {@code String} that is {@code null} is
      * considered equal to an empty {@code String}.
-     * 
+     *
      * @param op1
      *            the constant value
      * @param op2
@@ -5276,13 +5276,13 @@ public final class Bindings {
             @Override
             @ReturnsUnmodifiableCollection
             public ObservableList<?> getDependencies() {
-                return (dependencies.length == 1)? 
-                        FXCollections.singletonObservableList(dependencies[0]) 
+                return (dependencies.length == 1)?
+                        FXCollections.singletonObservableList(dependencies[0])
                         : new ImmutableObservableList<Observable>(dependencies);
             }
         };
     }
-    
+
     /**
      * Creates a new {@link javafx.beans.binding.BooleanBinding} that holds {@code true}
      * if the value of the first
@@ -5291,7 +5291,7 @@ public final class Bindings {
      * <p>
      * Note: In this comparison a {@code String} that is {@code null} is
      * considered equal to an empty {@code String}.
-     * 
+     *
      * @param op1
      *            the first operand
      * @param op2
@@ -5311,7 +5311,7 @@ public final class Bindings {
      * <p>
      * Note: In this comparison a {@code String} that is {@code null} is
      * considered equal to an empty {@code String}.
-     * 
+     *
      * @param op1
      *            the {@code ObservableStringValue}
      * @param op2
@@ -5331,7 +5331,7 @@ public final class Bindings {
      * <p>
      * Note: In this comparison a {@code String} that is {@code null} is
      * considered equal to an empty {@code String}.
-     * 
+     *
      * @param op1
      *            the constant value
      * @param op2
@@ -5347,7 +5347,7 @@ public final class Bindings {
     private static BooleanBinding lessThan(final ObservableStringValue op1, final ObservableStringValue op2, final Observable... dependencies) {
         return greaterThan(op2, op1, dependencies);
     }
-    
+
     /**
      * Creates a new {@link javafx.beans.binding.BooleanBinding} that holds {@code true}
      * if the value of the first
@@ -5356,7 +5356,7 @@ public final class Bindings {
      * <p>
      * Note: In this comparison a {@code String} that is {@code null} is
      * considered equal to an empty {@code String}.
-     * 
+     *
      * @param op1
      *            the first operand
      * @param op2
@@ -5376,7 +5376,7 @@ public final class Bindings {
      * <p>
      * Note: In this comparison a {@code String} that is {@code null} is
      * considered equal to an empty {@code String}.
-     * 
+     *
      * @param op1
      *            the {@code ObservableStringValue}
      * @param op2
@@ -5396,7 +5396,7 @@ public final class Bindings {
      * <p>
      * Note: In this comparison a {@code String} that is {@code null} is
      * considered equal to an empty {@code String}.
-     * 
+     *
      * @param op1
      *            the constant value
      * @param op2
@@ -5435,13 +5435,13 @@ public final class Bindings {
             @Override
             @ReturnsUnmodifiableCollection
             public ObservableList<?> getDependencies() {
-                return (dependencies.length == 1)? 
-                        FXCollections.singletonObservableList(dependencies[0]) 
+                return (dependencies.length == 1)?
+                        FXCollections.singletonObservableList(dependencies[0])
                         : new ImmutableObservableList<Observable>(dependencies);
             }
         };
     }
-    
+
     /**
      * Creates a new {@link javafx.beans.binding.BooleanBinding} that holds {@code true}
      * if the value of the first
@@ -5450,7 +5450,7 @@ public final class Bindings {
      * <p>
      * Note: In this comparison a {@code String} that is {@code null} is
      * considered equal to an empty {@code String}.
-     * 
+     *
      * @param op1
      *            the first operand
      * @param op2
@@ -5470,7 +5470,7 @@ public final class Bindings {
      * <p>
      * Note: In this comparison a {@code String} that is {@code null} is
      * considered equal to an empty {@code String}.
-     * 
+     *
      * @param op1
      *            the {@code ObservableStringValue}
      * @param op2
@@ -5490,7 +5490,7 @@ public final class Bindings {
      * <p>
      * Note: In this comparison a {@code String} that is {@code null} is
      * considered equal to an empty {@code String}.
-     * 
+     *
      * @param op1
      *            the constant value
      * @param op2
@@ -5506,7 +5506,7 @@ public final class Bindings {
     private static BooleanBinding lessThanOrEqual(final ObservableStringValue op1, final ObservableStringValue op2, final Observable... dependencies) {
         return greaterThanOrEqual(op2, op1, dependencies);
     }
-    
+
     /**
      * Creates a new {@link javafx.beans.binding.BooleanBinding} that holds {@code true}
      * if the value of the first
@@ -5515,7 +5515,7 @@ public final class Bindings {
      * <p>
      * Note: In this comparison a {@code String} that is {@code null} is
      * considered equal to an empty {@code String}.
-     * 
+     *
      * @param op1
      *            the first operand
      * @param op2
@@ -5535,7 +5535,7 @@ public final class Bindings {
      * <p>
      * Note: In this comparison a {@code String} that is {@code null} is
      * considered equal to an empty {@code String}.
-     * 
+     *
      * @param op1
      *            the {@code ObservableStringValue}
      * @param op2
@@ -5555,7 +5555,7 @@ public final class Bindings {
      * <p>
      * Note: In this comparison a {@code String} that is {@code null} is
      * considered equal to an empty {@code String}.
-     * 
+     *
      * @param op1
      *            the constant value
      * @param op2
@@ -5723,18 +5723,18 @@ public final class Bindings {
             @Override
             @ReturnsUnmodifiableCollection
             public ObservableList<?> getDependencies() {
-                return (dependencies.length == 1)? 
-                        FXCollections.singletonObservableList(dependencies[0]) 
+                return (dependencies.length == 1)?
+                        FXCollections.singletonObservableList(dependencies[0])
                         : new ImmutableObservableList<Observable>(dependencies);
             }
         };
     }
-    
+
     /**
      * Creates a new {@link javafx.beans.binding.BooleanBinding} that holds {@code true}
      * if the values of two instances of
      * {@link javafx.beans.value.ObservableObjectValue} are equal.
-     * 
+     *
      * @param op1
      *            the first operand
      * @param op2
@@ -5751,7 +5751,7 @@ public final class Bindings {
      * Creates a new {@link javafx.beans.binding.BooleanBinding} that holds {@code true}
      * if the value of an {@link javafx.beans.value.ObservableObjectValue} is
      * equal to a constant value.
-     * 
+     *
      * @param op1
      *            the {@code ObservableCharacterValue}
      * @param op2
@@ -5768,7 +5768,7 @@ public final class Bindings {
      * Creates a new {@link javafx.beans.binding.BooleanBinding} that holds {@code true}
      * if the value of an {@link javafx.beans.value.ObservableObjectValue} is
      * equal to a constant value.
-     * 
+     *
      * @param op1
      *            the constant value
      * @param op2
@@ -5780,7 +5780,7 @@ public final class Bindings {
     public static BooleanBinding equal(Object op1, final ObservableObjectValue<?> op2) {
         return equal(ObjectConstant.valueOf(op1), op2, op2);
     }
-    
+
     private static BooleanBinding notEqual(final ObservableObjectValue<?> op1, final ObservableObjectValue<?> op2, final Observable... dependencies) {
         if ((op1 == null) || (op2 == null)) {
             throw new NullPointerException("Operands cannot be null.");
@@ -5807,8 +5807,8 @@ public final class Bindings {
             @Override
             @ReturnsUnmodifiableCollection
             public ObservableList<?> getDependencies() {
-                return (dependencies.length == 1)? 
-                        FXCollections.singletonObservableList(dependencies[0]) 
+                return (dependencies.length == 1)?
+                        FXCollections.singletonObservableList(dependencies[0])
                         : new ImmutableObservableList<Observable>(dependencies);
             }
         };
@@ -5818,7 +5818,7 @@ public final class Bindings {
      * Creates a new {@link javafx.beans.binding.BooleanBinding} that holds {@code true}
      * if the values of two instances of
      * {@link javafx.beans.value.ObservableObjectValue} are not equal.
-     * 
+     *
      * @param op1
      *            the first operand
      * @param op2
@@ -5835,7 +5835,7 @@ public final class Bindings {
      * Creates a new {@link javafx.beans.binding.BooleanBinding} that holds {@code true}
      * if the value of an {@link javafx.beans.value.ObservableObjectValue} is
      * not equal to a constant value.
-     * 
+     *
      * @param op1
      *            the {@code ObservableObjectValue}
      * @param op2
@@ -5852,7 +5852,7 @@ public final class Bindings {
      * Creates a new {@link javafx.beans.binding.BooleanBinding} that holds {@code true}
      * if the value of an {@link javafx.beans.value.ObservableObjectValue} is
      * not equal to a constant value.
-     * 
+     *
      * @param op1
      *            the constant value
      * @param op2
@@ -5864,12 +5864,12 @@ public final class Bindings {
     public static BooleanBinding notEqual(Object op1, final ObservableObjectValue<?> op2) {
         return notEqual(ObjectConstant.valueOf(op1), op2, op2);
     }
-    
+
     /**
      * Creates a new {@link javafx.beans.binding.BooleanBinding} that holds {@code true}
-     * if the value of an {@link javafx.beans.value.ObservableObjectValue} is 
+     * if the value of an {@link javafx.beans.value.ObservableObjectValue} is
      * {@code null}.
-     * 
+     *
      * @param op
      *            the {@code ObservableObjectValue}
      * @return the new {@code BooleanBinding}
@@ -5906,9 +5906,9 @@ public final class Bindings {
 
     /**
      * Creates a new {@link javafx.beans.binding.BooleanBinding} that holds {@code true}
-     * if the value of an {@link javafx.beans.value.ObservableObjectValue} is 
+     * if the value of an {@link javafx.beans.value.ObservableObjectValue} is
      * not {@code null}.
-     * 
+     *
      * @param op
      *            the {@code ObservableObjectValue}
      * @return the new {@code BooleanBinding}
@@ -6070,7 +6070,7 @@ public final class Bindings {
      * Creates a new {@link javafx.beans.binding.ObjectBinding} that contains the element
      * of an {@link javafx.collections.ObservableList} at the specified position. The {@code ObjectBinding}
      * will contain {@code null}, if the {@code index} points behind the {@code ObservableList}.
-     * 
+     *
      * @param op the {@code ObservableList}
      * @param index the position in the {@code List}
      * @param <E> the type of the {@code List} elements

@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef ProfilerCompiledBytecode_h
@@ -38,12 +38,12 @@ public:
     // sort of non-bytecode-related machine code.
     CompiledBytecode(const OriginStack&, const CString& description);
     ~CompiledBytecode();
-    
+
     const OriginStack& originStack() const { return m_origin; }
     const CString& description() const { return m_description; }
-    
+
     JSValue toJS(ExecState*) const;
-    
+
 private:
     OriginStack m_origin;
     CString m_description;

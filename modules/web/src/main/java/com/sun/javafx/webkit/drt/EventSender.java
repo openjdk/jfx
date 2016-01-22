@@ -166,7 +166,7 @@ final class EventSender {
         mousePositionY = y;
         dispatchMouseEvent(mousePressed
                 ? WCMouseEvent.MOUSE_DRAGGED
-                : WCMouseEvent.MOUSE_MOVED, 
+                : WCMouseEvent.MOUSE_MOVED,
                 (mousePressed ? mouseButton : WCMouseEvent.NOBUTTON), 0, 0);
     }
 

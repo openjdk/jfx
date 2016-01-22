@@ -114,10 +114,10 @@ enum
   LAST_SIGNAL
 };
 
-#define DEFAULT_PROP_EOS		TRUE
-#define DEFAULT_PROP_EMIT_SIGNALS	FALSE
-#define DEFAULT_PROP_MAX_BUFFERS	0
-#define DEFAULT_PROP_DROP		FALSE
+#define DEFAULT_PROP_EOS        TRUE
+#define DEFAULT_PROP_EMIT_SIGNALS   FALSE
+#define DEFAULT_PROP_MAX_BUFFERS    0
+#define DEFAULT_PROP_DROP       FALSE
 
 enum
 {
@@ -511,7 +511,7 @@ gst_app_sink_flush_unlocked (GstAppSink * appsink)
   // and then flush (during seek). After, seek is done first preroll buffer will be
   // send with preroll_caps and all sequential buffers will be send with last_caps.
   while ((obj = g_queue_pop_head (priv->queue))) {
-    if (GST_IS_EVENT (obj)) {          
+    if (GST_IS_EVENT (obj)) {
       if (GST_EVENT_TYPE (obj) == GST_EVENT_CAPS) {
         GstCaps *caps = NULL;
         GstEvent *event = GST_EVENT_CAST (obj);

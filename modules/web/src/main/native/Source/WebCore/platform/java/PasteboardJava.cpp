@@ -201,7 +201,7 @@ PassOwnPtr<Pasteboard> Pasteboard::createPrivate()
 {
     return adoptPtr(new Pasteboard(DataObjectJava::create()));
 }
-    
+
 PassOwnPtr<Pasteboard> Pasteboard::createForCopyAndPaste()
 {
     // Use single shared data instance for all copy'n'paste pasteboards.
@@ -364,7 +364,7 @@ void Pasteboard::clear(const String& type)
             jWritePlainText(DataObjectJava::emptyString());
     }
 }
-    
+
 void Pasteboard::clear()
 {
     if (m_dataObject) {
@@ -376,7 +376,7 @@ void Pasteboard::clear()
         jWritePlainText(DataObjectJava::emptyString());
     }
 }
-    
+
 Vector<String> Pasteboard::types()
 {
     if (m_dataObject) {

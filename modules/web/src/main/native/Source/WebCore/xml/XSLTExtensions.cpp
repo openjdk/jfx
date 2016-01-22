@@ -8,17 +8,17 @@
  * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
  * copies of the Software, and to permit persons to whom the Software is fur-
  * nished to do so, subject to the following conditions:
- * 
+ *
  * The above copyright notice and this permission notice shall be included in
  * all copies or substantial portions of the Software.
- * 
+ *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FIT-
  * NESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL THE
  * AUTHORS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
  * IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CON-
  * NECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
- * 
+ *
  * Except as contained in this notice, the name of the authors shall not
  * be used in advertising or otherwise to promote the sale, use or other deal-
  * ings in this Software without prior written authorization from him.
@@ -67,10 +67,10 @@ static void exsltNodeSetFunction(xmlXPathParserContextPtr ctxt, int nargs)
     strval = xmlXPathPopString(ctxt);
     retNode = xmlNewDocText(NULL, strval);
     ret = xmlXPathNewValueTree(retNode);
-    
+
     // FIXME: It might be helpful to push any errors from xmlXPathNewValueTree
     // up to the Javascript Console.
-    if (ret != NULL) 
+    if (ret != NULL)
         ret->type = XPATH_NODESET;
 
     if (strval != NULL)

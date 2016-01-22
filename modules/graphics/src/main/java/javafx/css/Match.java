@@ -64,7 +64,7 @@ public final class Match implements Comparable<Match> {
         }
         specificity = (idCount << 8) | (styleClassCount << 4) | nPseudoClasses;
     }
-        
+
     public Selector getSelector() {
         return selector;
     }

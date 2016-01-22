@@ -343,7 +343,7 @@ void g_cclosure_marshal_BOOLEAN__FLAGSv (GClosure *closure,
                                          gpointer  marshal_data,
                                          int       n_params,
                                          GType    *param_types);
-#define g_cclosure_marshal_BOOL__FLAGS	g_cclosure_marshal_BOOLEAN__FLAGS
+#define g_cclosure_marshal_BOOL__FLAGS  g_cclosure_marshal_BOOLEAN__FLAGS
 
 /* STRING:OBJECT,POINTER (./gmarshal.list:28) */
 GLIB_AVAILABLE_IN_ALL
@@ -378,7 +378,7 @@ void g_cclosure_marshal_BOOLEAN__BOXED_BOXEDv (GClosure *closure,
                                                gpointer  marshal_data,
                                                int       n_params,
                                                GType    *param_types);
-#define g_cclosure_marshal_BOOL__BOXED_BOXED	g_cclosure_marshal_BOOLEAN__BOXED_BOXED
+#define g_cclosure_marshal_BOOL__BOXED_BOXED    g_cclosure_marshal_BOOLEAN__BOXED_BOXED
 
 G_END_DECLS
 

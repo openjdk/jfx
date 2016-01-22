@@ -21,7 +21,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef ScrollView_h
@@ -206,7 +206,7 @@ public:
     virtual IntPoint maximumScrollPosition() const override; // The maximum position we can be scrolled to.
     virtual IntPoint minimumScrollPosition() const override; // The minimum position we can be scrolled to.
     // Adjust the passed in scroll position to keep it between the minimum and maximum positions.
-    IntPoint adjustScrollPositionWithinRange(const IntPoint&) const; 
+    IntPoint adjustScrollPositionWithinRange(const IntPoint&) const;
     int scrollX() const { return scrollPosition().x(); }
     int scrollY() const { return scrollPosition().y(); }
 
@@ -235,7 +235,7 @@ public:
 
     // This function scrolls by lines, pages or pixels.
     bool scroll(ScrollDirection, ScrollGranularity);
-    
+
     // A logical scroll that just ends up calling the corresponding physical scroll() based off the document's writing mode.
     bool logicalScroll(ScrollLogicalDirection, ScrollGranularity);
 
@@ -268,7 +268,7 @@ public:
     // The purpose of this function is to answer whether or not the scroll view is currently visible. Animations and painting updates can be suspended if
     // we know that we are either not in a window right now or if that window is not visible.
     bool isOffscreen() const;
-    
+
     // These functions are used to enable scrollbars to avoid window resizer controls that overlap the scroll view. This happens on Mac
     // for example.
     virtual IntRect windowResizerRect() const { return IntRect(); }
@@ -280,7 +280,7 @@ public:
 
     // Called when our frame rect changes (or the rect/scroll position of an ancestor changes).
     virtual void frameRectsChanged() override;
-    
+
     // Widget override to update our scrollbars and notify our contents of the resize.
     virtual void setFrameRect(const IntRect&) override;
 
@@ -316,7 +316,7 @@ public:
     virtual void show() override;
     virtual void hide() override;
     virtual void setParentVisible(bool) override;
-    
+
     // Pan scrolling.
     static const int noPanScrollRadius = 15;
     void addPanScrollIcon(const IntPoint&);
@@ -440,7 +440,7 @@ private:
     void platformRepaintContentRectangle(const IntRect&, bool now);
     bool platformIsOffscreen() const;
     void platformSetScrollbarOverlayStyle(ScrollbarOverlayStyle);
-   
+
     void platformSetScrollOrigin(const IntPoint&, bool updatePositionAtAll, bool updatePositionSynchronously);
 
     void calculateOverhangAreasForPainting(IntRect& horizontalOverhangRect, IntRect& verticalOverhangRect);

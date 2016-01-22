@@ -89,9 +89,9 @@ void SharedBuffer::maybeTransferPlatformData()
 {
     if (!m_cfData)
         return;
-    
+
     ASSERT(!m_size);
-    
+
     // Hang on to the m_cfData pointer in a local pointer as append() will re-enter maybeTransferPlatformData()
     // and we need to make sure to early return when it does.
     RetainPtr<CFDataRef> cfData = adoptCF(m_cfData.leakRef());

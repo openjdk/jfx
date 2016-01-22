@@ -42,19 +42,19 @@ import javafx.scene.image.Image;
 public class DesignImage {
     private final Image image;
     private final String location; // A URL or a relative path expression using @
-    
+
     public DesignImage(Image image, String location) {
         assert image != null;
         assert location != null;
-        
+
         this.image = image;
         this.location = location;
     }
-    
+
     public DesignImage(Image image) {
         assert image != null;
         assert Deprecation.getUrl(image) != null;
-        
+
         this.image = image;
         this.location = Deprecation.getUrl(image);
     }
@@ -66,7 +66,7 @@ public class DesignImage {
     public String getLocation() {
         return location;
     }
-    
+
     public static URL getVoidImageUrl() {
         return DesignImage.class.getResource("DesignImage.png"); //NOI18N
     }

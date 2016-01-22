@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef DFGCompilationKey_h
@@ -43,45 +43,45 @@ public:
         , m_mode(InvalidCompilationMode)
     {
     }
-    
+
     CompilationKey(WTF::HashTableDeletedValueType)
         : m_profiledBlock(0)
         , m_mode(DFGMode)
     {
     }
-    
+
     CompilationKey(CodeBlock* profiledBlock, CompilationMode mode)
         : m_profiledBlock(profiledBlock)
         , m_mode(mode)
     {
     }
-    
+
     bool operator!() const
     {
         return !m_profiledBlock && m_mode == InvalidCompilationMode;
     }
-    
+
     bool isHashTableDeletedValue() const
     {
         return !m_profiledBlock && m_mode != InvalidCompilationMode;
     }
-    
+
     CodeBlock* profiledBlock() const { return m_profiledBlock; }
     CompilationMode mode() const { return m_mode; }
-    
+
     bool operator==(const CompilationKey& other) const
     {
         return m_profiledBlock == other.m_profiledBlock
             && m_mode == other.m_mode;
     }
-    
+
     unsigned hash() const
     {
         return WTF::pairIntHash(WTF::PtrHash<CodeBlock*>::hash(m_profiledBlock), m_mode);
     }
-    
+
     void visitChildren(CodeBlockSet&);
-    
+
     void dump(PrintStream&) const;
 
 private:

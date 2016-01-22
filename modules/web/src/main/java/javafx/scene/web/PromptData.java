@@ -33,7 +33,7 @@ import javafx.beans.NamedArg;
  * a message and a default value. Instances are passed into {@code prompt}
  * handlers registered on a {@code WebEngine} using
  * {@link WebEngine#setPromptHandler} method.
- * 
+ *
  * @see WebEngine
  * @see WebEngine#setPromptHandler
  * @since JavaFX 2.0

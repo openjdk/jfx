@@ -6,13 +6,13 @@
  * are met:
  *
  * 1.  Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer. 
+ *     notice, this list of conditions and the following disclaimer.
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
- *     documentation and/or other materials provided with the distribution. 
+ *     documentation and/or other materials provided with the distribution.
  * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
- *     from this software without specific prior written permission. 
+ *     from this software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY APPLE AND ITS CONTRIBUTORS "AS IS" AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
@@ -53,24 +53,24 @@ public:
     virtual ULONG STDMETHODCALLTYPE Release(void);
 
     // IWebFrameLoadDelegate
-    virtual HRESULT STDMETHODCALLTYPE didStartProvisionalLoadForFrame( 
-        /* [in] */ IWebView *webView,
-        /* [in] */ IWebFrame *frame); 
-
-    virtual HRESULT STDMETHODCALLTYPE didReceiveServerRedirectForProvisionalLoadForFrame( 
+    virtual HRESULT STDMETHODCALLTYPE didStartProvisionalLoadForFrame(
         /* [in] */ IWebView *webView,
         /* [in] */ IWebFrame *frame);
 
-    virtual HRESULT STDMETHODCALLTYPE didFailProvisionalLoadWithError( 
+    virtual HRESULT STDMETHODCALLTYPE didReceiveServerRedirectForProvisionalLoadForFrame(
+        /* [in] */ IWebView *webView,
+        /* [in] */ IWebFrame *frame);
+
+    virtual HRESULT STDMETHODCALLTYPE didFailProvisionalLoadWithError(
         /* [in] */ IWebView *webView,
         /* [in] */ IWebError *error,
         /* [in] */ IWebFrame *frame);
 
-    virtual HRESULT STDMETHODCALLTYPE didCommitLoadForFrame( 
+    virtual HRESULT STDMETHODCALLTYPE didCommitLoadForFrame(
         /* [in] */ IWebView *webView,
         /* [in] */ IWebFrame *frame);
 
-    virtual HRESULT STDMETHODCALLTYPE didReceiveTitle( 
+    virtual HRESULT STDMETHODCALLTYPE didReceiveTitle(
         /* [in] */ IWebView *webView,
         /* [in] */ BSTR title,
         /* [in] */ IWebFrame *frame);
@@ -79,88 +79,88 @@ public:
         /* [in] */ IWebView *webView,
         /* [in] */ IWebFrame *frame);
 
-    virtual HRESULT STDMETHODCALLTYPE didReceiveIcon( 
+    virtual HRESULT STDMETHODCALLTYPE didReceiveIcon(
         /* [in] */ IWebView *webView,
         /* [in] */ OLE_HANDLE image,
-        /* [in] */ IWebFrame *frame) { return E_NOTIMPL; } 
+        /* [in] */ IWebFrame *frame) { return E_NOTIMPL; }
 
-    virtual HRESULT STDMETHODCALLTYPE didFinishLoadForFrame( 
+    virtual HRESULT STDMETHODCALLTYPE didFinishLoadForFrame(
         /* [in] */ IWebView *webView,
         /* [in] */ IWebFrame *frame);
 
-    virtual HRESULT STDMETHODCALLTYPE didFailLoadWithError( 
+    virtual HRESULT STDMETHODCALLTYPE didFailLoadWithError(
         /* [in] */ IWebView *webView,
         /* [in] */ IWebError *error,
         /* [in] */ IWebFrame *forFrame);
 
-    virtual HRESULT STDMETHODCALLTYPE didChangeLocationWithinPageForFrame( 
+    virtual HRESULT STDMETHODCALLTYPE didChangeLocationWithinPageForFrame(
         /* [in] */ IWebView *webView,
-        /* [in] */ IWebFrame *frame) { return E_NOTIMPL; } 
+        /* [in] */ IWebFrame *frame) { return E_NOTIMPL; }
 
-    virtual HRESULT STDMETHODCALLTYPE willPerformClientRedirectToURL( 
+    virtual HRESULT STDMETHODCALLTYPE willPerformClientRedirectToURL(
         /* [in] */ IWebView *webView,
         /* [in] */ BSTR url,
         /* [in] */ double delaySeconds,
         /* [in] */ DATE fireDate,
         /* [in] */ IWebFrame *frame);
 
-    virtual HRESULT STDMETHODCALLTYPE didCancelClientRedirectForFrame( 
+    virtual HRESULT STDMETHODCALLTYPE didCancelClientRedirectForFrame(
         /* [in] */ IWebView *webView,
         /* [in] */ IWebFrame *frame);
 
-    virtual HRESULT STDMETHODCALLTYPE willCloseFrame( 
+    virtual HRESULT STDMETHODCALLTYPE willCloseFrame(
         /* [in] */ IWebView *webView,
         /* [in] */ IWebFrame *frame);
 
-    virtual HRESULT STDMETHODCALLTYPE windowScriptObjectAvailable( 
+    virtual HRESULT STDMETHODCALLTYPE windowScriptObjectAvailable(
         /* [in] */ IWebView *sender,
         /* [in] */ JSContextRef context,
         /* [in] */ JSObjectRef windowObject) { return E_NOTIMPL; }
 
-    virtual /* [local] */ HRESULT STDMETHODCALLTYPE didClearWindowObject( 
+    virtual /* [local] */ HRESULT STDMETHODCALLTYPE didClearWindowObject(
         /* [in] */ IWebView* webView,
         /* [in] */ JSContextRef context,
         /* [in] */ JSObjectRef windowObject,
         /* [in] */ IWebFrame* frame);
 
     // IWebFrameLoadDelegatePrivate
-    virtual HRESULT STDMETHODCALLTYPE didFinishDocumentLoadForFrame( 
-        /* [in] */ IWebView *sender,
-        /* [in] */ IWebFrame *frame);
-        
-    virtual HRESULT STDMETHODCALLTYPE didFirstLayoutInFrame( 
-        /* [in] */ IWebView *sender,
-        /* [in] */ IWebFrame *frame) { return E_NOTIMPL; } 
-        
-    virtual HRESULT STDMETHODCALLTYPE didHandleOnloadEventsForFrame( 
+    virtual HRESULT STDMETHODCALLTYPE didFinishDocumentLoadForFrame(
         /* [in] */ IWebView *sender,
         /* [in] */ IWebFrame *frame);
 
-    virtual HRESULT STDMETHODCALLTYPE didFirstVisuallyNonEmptyLayoutInFrame( 
+    virtual HRESULT STDMETHODCALLTYPE didFirstLayoutInFrame(
+        /* [in] */ IWebView *sender,
+        /* [in] */ IWebFrame *frame) { return E_NOTIMPL; }
+
+    virtual HRESULT STDMETHODCALLTYPE didHandleOnloadEventsForFrame(
+        /* [in] */ IWebView *sender,
+        /* [in] */ IWebFrame *frame);
+
+    virtual HRESULT STDMETHODCALLTYPE didFirstVisuallyNonEmptyLayoutInFrame(
         /* [in] */ IWebView *sender,
         /* [in] */ IWebFrame *frame);
 
     // IWebFrameLoadDelegatePrivate2
-    virtual HRESULT STDMETHODCALLTYPE didDisplayInsecureContent( 
+    virtual HRESULT STDMETHODCALLTYPE didDisplayInsecureContent(
         /* [in] */ IWebView *sender);
 
-    virtual HRESULT STDMETHODCALLTYPE didRunInsecureContent( 
+    virtual HRESULT STDMETHODCALLTYPE didRunInsecureContent(
         /* [in] */ IWebView *sender,
         /* [in] */ IWebSecurityOrigin *origin);
 
     virtual HRESULT STDMETHODCALLTYPE didClearWindowObjectForFrameInScriptWorld(IWebView*, IWebFrame*, IWebScriptWorld*);
 
-    virtual HRESULT STDMETHODCALLTYPE didPushStateWithinPageForFrame( 
+    virtual HRESULT STDMETHODCALLTYPE didPushStateWithinPageForFrame(
         /* [in] */ IWebView *sender,
-        /* [in] */ IWebFrame *frame) { return E_NOTIMPL; } 
-    
-    virtual HRESULT STDMETHODCALLTYPE didReplaceStateWithinPageForFrame( 
-        /* [in] */ IWebView *sender,
-        /* [in] */ IWebFrame *frame) { return E_NOTIMPL; } 
+        /* [in] */ IWebFrame *frame) { return E_NOTIMPL; }
 
-    virtual HRESULT STDMETHODCALLTYPE didPopStateWithinPageForFrame( 
+    virtual HRESULT STDMETHODCALLTYPE didReplaceStateWithinPageForFrame(
         /* [in] */ IWebView *sender,
-        /* [in] */ IWebFrame *frame) { return E_NOTIMPL; } 
+        /* [in] */ IWebFrame *frame) { return E_NOTIMPL; }
+
+    virtual HRESULT STDMETHODCALLTYPE didPopStateWithinPageForFrame(
+        /* [in] */ IWebView *sender,
+        /* [in] */ IWebFrame *frame) { return E_NOTIMPL; }
 
 private:
     void didClearWindowObjectForFrameInIsolatedWorld(IWebFrame*, IWebScriptWorld*);

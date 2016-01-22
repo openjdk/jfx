@@ -36,29 +36,29 @@ import com.oracle.javafx.scenebuilder.kit.fxom.glue.GlueElement;
 
 /**
  *
- * 
+ *
  */
 class GlueCursor {
-    
+
     private final GlueDocument glueDocument;
     private GlueElement currentElement;
-    
+
     public GlueCursor(GlueDocument glueDocument) {
         this.glueDocument = glueDocument;
         gotoFirstElement();
     }
-    
+
     public GlueElement getCurrentElement() {
         return currentElement;
     }
-    
+
     public final void gotoFirstElement() {
         currentElement = glueDocument.getRootElement();
     }
-    
+
     public void moveToNextElement() {
         assert currentElement != null;
-        
+
         if (currentElement.getChildren().isEmpty()) {
             GlueElement nextElement = currentElement.getNextSibling();
             while ((nextElement == null) && (currentElement.getParent()!= null)) {

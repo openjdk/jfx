@@ -137,7 +137,7 @@ void SVGFEDropShadowElement::svgAttributeChanged(const QualifiedName& attrName)
     }
 
     SVGElementInstance::InvalidationGuard invalidationGuard(this);
-    
+
     if (attrName == SVGNames::inAttr
         || attrName == SVGNames::stdDeviationAttr
         || attrName == SVGNames::dxAttr
@@ -159,7 +159,7 @@ PassRefPtr<FilterEffect> SVGFEDropShadowElement::build(SVGFilterBuilder* filterB
         return 0;
 
     const SVGRenderStyle& svgStyle = renderer->style().svgStyle();
-    
+
     Color color = svgStyle.floodColor();
     float opacity = svgStyle.floodOpacity();
 

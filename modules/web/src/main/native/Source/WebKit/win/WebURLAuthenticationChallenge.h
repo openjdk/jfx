@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef WebURLAuthenticationChallenge_h
@@ -45,15 +45,15 @@ public:
 
     // IWebURLAuthenticationChallenge
     virtual HRESULT STDMETHODCALLTYPE initWithProtectionSpace(
-        /* [in] */ IWebURLProtectionSpace* space, 
-        /* [in] */ IWebURLCredential* proposedCredential, 
-        /* [in] */ int previousFailureCount, 
-        /* [in] */ IWebURLResponse* failureResponse, 
-        /* [in] */ IWebError* error, 
+        /* [in] */ IWebURLProtectionSpace* space,
+        /* [in] */ IWebURLCredential* proposedCredential,
+        /* [in] */ int previousFailureCount,
+        /* [in] */ IWebURLResponse* failureResponse,
+        /* [in] */ IWebError* error,
         /* [in] */ IWebURLAuthenticationChallengeSender* sender);
 
     virtual HRESULT STDMETHODCALLTYPE initWithAuthenticationChallenge(
-        /* [in] */ IWebURLAuthenticationChallenge* challenge, 
+        /* [in] */ IWebURLAuthenticationChallenge* challenge,
         /* [in] */ IWebURLAuthenticationChallengeSender* sender);
 
     virtual HRESULT STDMETHODCALLTYPE error(

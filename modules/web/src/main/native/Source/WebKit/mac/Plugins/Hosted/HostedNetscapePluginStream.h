@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #if USE(PLUGIN_HOST_PROCESS)
@@ -78,7 +78,7 @@ private:
 
     HostedNetscapePluginStream(NetscapePluginInstanceProxy*, uint32_t streamID, NSURLRequest *);
     HostedNetscapePluginStream(NetscapePluginInstanceProxy*, WebCore::FrameLoader*);
-    
+
     void startStream(NSURL *, long long expectedContentLength, NSDate *lastModifiedDate, NSString *mimeType, NSData *headers);
 
     NSError *pluginCancelledConnectionError() const;
@@ -86,7 +86,7 @@ private:
     // NetscapePlugInStreamLoaderClient methods.
     void didReceiveResponse(WebCore::NetscapePlugInStreamLoader*, const WebCore::ResourceResponse&);
     bool wantsAllStreams() const;
-    
+
     RefPtr<NetscapePluginInstanceProxy> m_instance;
     uint32_t m_streamID;
     RetainPtr<NSMutableURLRequest> m_request;

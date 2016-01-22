@@ -54,10 +54,10 @@ import javafx.scene.Parent;
 
 /**
  *
- * 
+ *
  */
 public class FXOMDocument {
-    
+
     private final GlueDocument glue;
     private URL location;
     private ClassLoader classLoader;
@@ -69,9 +69,9 @@ public class FXOMDocument {
     private final SimpleIntegerProperty cssRevision = new SimpleIntegerProperty();
     private SceneGraphHolder sceneGraphHolder;
     private int updateDepth;
-    
-    
-    
+
+
+
     public FXOMDocument(String fxmlText, URL location, ClassLoader classLoader, ResourceBundle resources, boolean normalize) throws IOException {
         this.glue = new GlueDocument(fxmlText);
         this.location = location;
@@ -91,21 +91,21 @@ public class FXOMDocument {
             // Keeps this.sceneGraphRoot == null
         }
     }
-    
-    
+
+
     public FXOMDocument(String fxmlText, URL location, ClassLoader classLoader, ResourceBundle resources) throws IOException {
         this(fxmlText, location, classLoader, resources, true /* normalize */);
     }
-    
-    
+
+
     public FXOMDocument() {
         this.glue = new GlueDocument();
     }
-    
+
     public GlueDocument getGlue() {
         return glue;
     }
-    
+
     public URL getLocation() {
         return location;
     }
@@ -129,7 +129,7 @@ public class FXOMDocument {
         beginUpdate();
         this.classLoader = classLoader;
         endUpdate();
-    }    
+    }
 
     public ResourceBundle getResources() {
         return resources;
@@ -147,7 +147,7 @@ public class FXOMDocument {
 
     public void setSampleDataEnabled(boolean sampleDataEnabled) {
         assert isUpdateOnGoing() == false;
-        
+
         final SampleDataGenerator newSampleDataGenerator;
         if (sampleDataEnabled) {
             if (sampleDataGenerator != null) {
@@ -158,7 +158,7 @@ public class FXOMDocument {
         } else {
             newSampleDataGenerator = null;
         }
-        
+
         if (newSampleDataGenerator != sampleDataGenerator) {
             if (sampleDataGenerator != null) {
                 sampleDataGenerator.removeSampleData(fxomRoot);
@@ -168,8 +168,8 @@ public class FXOMDocument {
                 sampleDataGenerator.assignSampleData(fxomRoot);
             }
         }
-    }    
-    
+    }
+
     public FXOMObject getFxomRoot() {
         return fxomRoot;
     }
@@ -179,7 +179,7 @@ public class FXOMDocument {
         updateRoots(fxomRoot, null);
         endUpdate();
     }
-    
+
     void updateRoots(FXOMObject fxomRoot, Object sceneGraphRoot) {
         assert fxomRoot == null || fxomRoot.getFxomDocument() == this;
 
@@ -218,45 +218,45 @@ public class FXOMDocument {
 
     public FXOMObject searchWithSceneGraphObject(Object sceneGraphObject) {
         final FXOMObject result;
-        
+
         if (fxomRoot == null) {
             result = null;
         } else {
             result = fxomRoot.searchWithSceneGraphObject(sceneGraphObject);
         }
-        
+
         return result;
     }
-    
+
     public FXOMObject searchWithFxId(String fxId) {
         final FXOMObject result;
-        
+
         if (fxomRoot == null) {
             result = null;
         } else {
             result = fxomRoot.searchWithFxId(fxId);
         }
-        
+
         return result;
     }
-    
+
     public Map<String, FXOMObject> collectFxIds() {
         final Map<String, FXOMObject> result;
-        
+
         if (fxomRoot == null) {
             result = Collections.emptyMap();
         } else {
             result = fxomRoot.collectFxIds();
         }
-        
+
         return result;
     }
-    
-    
+
+
     public void beginUpdate() {
         updateDepth++;
     }
-    
+
     public void endUpdate() {
         assert updateDepth >= 1;
         updateDepth--;
@@ -264,11 +264,11 @@ public class FXOMDocument {
             refreshSceneGraph();
         }
     }
-    
+
     public boolean isUpdateOnGoing() {
         return updateDepth >= 1;
     }
-    
+
     public void refreshSceneGraph() {
         if (sceneGraphHolder != null) {
             sceneGraphHolder.fxomDocumentWillRefreshSceneGraph(this);
@@ -283,26 +283,26 @@ public class FXOMDocument {
         }
         sceneGraphRevision.set(sceneGraphRevision.get()+1);
     }
-    
+
     /**
      * Returns the property holding the revision number of the scene graph.
      * refreshSceneGraph() method increments the revision by one each time it
      * refreshes the scene graph.
-     * 
+     *
      * @return the property holding the revision number of scene graph.
      */
     public ReadOnlyIntegerProperty sceneGraphRevisionProperty() {
         return sceneGraphRevision;
     }
-    
+
     /**
      * Forces this document to reload the specified css stylesheet file.
-     * 
+     *
      * @param stylesheetPath path of the stylesheet to be reloaded.
      */
     public void reapplyCSS(Path stylesheetPath) {
         if (sceneGraphRoot instanceof Node) {
-            
+
             /*
              * Normally we should scan for all stylesheets properties which
              * include stylesheetPath and update them.
@@ -315,28 +315,28 @@ public class FXOMDocument {
             }
         }
     }
-    
+
     /**
      * Returns the property holding the css revision number.
      * reapplyCSS() method increments the revision by one each time it
      * is invoked.
-     * 
+     *
      * @return the property holding the css revision number.
      */
     public ReadOnlyIntegerProperty cssRevisionProperty() {
         return cssRevision;
     }
-    
+
     /**
      * Utility method that fetches the text content from a URL.
-     * 
+     *
      * @param url a URL
      * @return  the text content read from the URL.
      * @throws IOException if something goes wrong
      */
     public static String readContentFromURL(URL url) throws IOException {
         final StringBuilder result = new StringBuilder();
-        
+
         try (InputStream is =url.openConnection().getInputStream()) {
             try (BufferedReader r = new BufferedReader(
                     new InputStreamReader(is, Charset.forName("UTF-8")))) {
@@ -347,17 +347,17 @@ public class FXOMDocument {
                     result.append(buffer, 0, readLength);
                     readLength = r.read(buffer, 0, buffer.length);
                 }
-                
+
             }
         }
-        
+
         return result.toString();
     }
-    
+
     /**
      * Informs this fxom document that its scene graph is hold by the specified
      * scene graph holder.
-     * 
+     *
      * @param holder an scene graph holder (should not be null)
      */
     public void beginHoldingSceneGraph(SceneGraphHolder holder) {
@@ -365,7 +365,7 @@ public class FXOMDocument {
         assert sceneGraphHolder == null;
         sceneGraphHolder = holder;
     }
-    
+
     /**
      * Informs this fxom document that its scene graph i no longer hold.
      */
@@ -373,16 +373,16 @@ public class FXOMDocument {
         assert sceneGraphHolder != null;
         sceneGraphHolder = null;
     }
-    
+
     /**
      * Returns null or the object holding the scene graph of this fxom document.
-     * 
+     *
      * @return  null or the object holding the scene graph of this fxom document.
      */
     public SceneGraphHolder getSceneGraphHolder() {
         return sceneGraphHolder;
     }
-    
+
     public static interface SceneGraphHolder {
         public void fxomDocumentWillRefreshSceneGraph(FXOMDocument fxomDocument);
         public void fxomDocumentDidRefreshSceneGraph(FXOMDocument fxomDocument);

@@ -50,7 +50,7 @@ PassRefPtr<HRTFDatabaseLoader> HRTFDatabaseLoader::createAndLoadAsynchronouslyIf
     ASSERT(isMainThread());
 
     RefPtr<HRTFDatabaseLoader> loader;
-    
+
     loader = loaderMap().get(sampleRate);
     if (loader) {
         ASSERT(sampleRate == loader->databaseSampleRate());
@@ -105,7 +105,7 @@ void HRTFDatabaseLoader::loadAsynchronously()
     ASSERT(isMainThread());
 
     MutexLocker locker(m_threadLock);
-    
+
     if (!m_hrtfDatabase.get() && !m_databaseLoaderThread) {
         // Start the asynchronous database loading process.
         m_databaseLoaderThread = createThread(databaseLoaderEntry, this, "HRTF database loader");
@@ -120,7 +120,7 @@ bool HRTFDatabaseLoader::isLoaded() const
 void HRTFDatabaseLoader::waitForLoaderThreadCompletion()
 {
     MutexLocker locker(m_threadLock);
-    
+
     // waitForThreadCompletion() should not be called twice for the same thread.
     if (m_databaseLoaderThread)
         waitForThreadCompletion(m_databaseLoaderThread);

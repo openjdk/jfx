@@ -79,9 +79,9 @@ void AudioParamTimeline::insertEvent(const ParamEvent& event)
     ASSERT(isValid);
     if (!isValid)
         return;
-        
+
     std::lock_guard<std::mutex> lock(m_eventsMutex);
-    
+
     unsigned i = 0;
     float insertTime = event.time();
     for (i = 0; i < m_events.size(); ++i) {

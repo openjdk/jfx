@@ -45,7 +45,7 @@ import static org.junit.Assert.*;
  */
 public class PopupControlTest {
     private PopupControl popup;
-    
+
     private static final class PopupControlSkin<C extends PopupControl> implements Skin<C>{
         @Override public Node getNode()     { return null; }
         @Override public void dispose()     { }
@@ -110,7 +110,7 @@ public class PopupControlTest {
         popup.getStyleClass().add("Hello");
         assertEquals("Hello", popup.getStyleClass().toString());
     }
-    
+
     @Test public void getStyleClassStringable3() {
         popup.getStyleClass().add("Hello");
         popup.getStyleClass().add("Goodbye");
@@ -334,8 +334,8 @@ public class PopupControlTest {
     @Test public void setPrefSizeAndGetPrefHeight() {
         popup.setPrefSize( 3.0D, 6.0D );
         assertEquals( 6.0D, popup.getPrefHeight(), 0.0D );
-    } 
-    
+    }
+
     @Test public void getNullMaxWidth() {
         assertEquals(PopupControl.USE_COMPUTED_SIZE, popup.getMaxWidth(), 0.0D);
     }

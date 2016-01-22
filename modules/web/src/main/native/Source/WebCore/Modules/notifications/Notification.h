@@ -29,7 +29,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef Notification_h  
+#ifndef Notification_h
 #define Notification_h
 
 #include "ActiveDOMObject.h"
@@ -73,7 +73,7 @@ public:
 #if ENABLE(NOTIFICATIONS)
     static PassRefPtr<Notification> create(ScriptExecutionContext&, const String& title, const Dictionary& options);
 #endif
-    
+
     virtual ~Notification();
 
     void show();
@@ -112,7 +112,7 @@ public:
     DEFINE_ATTRIBUTE_EVENT_LISTENER(error);
     DEFINE_ATTRIBUTE_EVENT_LISTENER(close);
     DEFINE_ATTRIBUTE_EVENT_LISTENER(click);
-    
+
     void dispatchClickEvent();
     void dispatchCloseEvent();
     void dispatchErrorEvent();

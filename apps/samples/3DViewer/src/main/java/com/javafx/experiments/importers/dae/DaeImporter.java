@@ -72,7 +72,7 @@ public class DaeImporter extends Importer {
         rootNode.getTransforms().add(new Rotate(180,0,0,0,Rotate.X_AXIS));
     }
 
-    public DaeImporter() {        
+    public DaeImporter() {
     }
     public DaeImporter(String url, boolean createPolyMesh) {
         load(url, createPolyMesh);
@@ -128,9 +128,9 @@ public class DaeImporter extends Importer {
             e.printStackTrace();
         }
         long END = System.currentTimeMillis();
-        System.out.println("IMPORTED ["+url+"] in  "+((END-START))+"ms");     
+        System.out.println("IMPORTED ["+url+"] in  "+((END-START))+"ms");
     }
-    
+
     @Override
     public boolean isSupported(String extension) {
         return extension != null && extension.equals("dae");

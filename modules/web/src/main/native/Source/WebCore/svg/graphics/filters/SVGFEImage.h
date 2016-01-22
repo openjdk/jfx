@@ -49,7 +49,7 @@ public:
     virtual FilterEffectType filterEffectType() const override { return FilterEffectTypeImage; }
 
     virtual TextStream& externalRepresentation(TextStream&, int indention) const override;
-    
+
 private:
     virtual ~FEImage() { }
     FEImage(Filter*, PassRefPtr<Image>, const SVGPreserveAspectRatio&);

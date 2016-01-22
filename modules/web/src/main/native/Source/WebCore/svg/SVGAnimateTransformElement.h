@@ -38,7 +38,7 @@ public:
 
 private:
     SVGAnimateTransformElement(const QualifiedName&, Document&);
-    
+
     virtual bool hasValidAttributeType() override;
 
     bool isSupportedAttribute(const QualifiedName&);

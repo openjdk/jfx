@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef StylePendingImage_h
@@ -59,7 +59,7 @@ private:
     virtual WrappedImagePtr data() const override { return const_cast<StylePendingImage*>(this); }
 
     virtual PassRefPtr<CSSValue> cssValue() const override { return m_value; }
-    
+
     virtual LayoutSize imageSize(const RenderElement*, float /*multiplier*/) const override { return LayoutSize(); }
     virtual bool imageHasRelativeWidth() const override { return false; }
     virtual bool imageHasRelativeHeight() const override { return false; }
@@ -76,7 +76,7 @@ private:
     }
 
     virtual bool knownToBeOpaque(const RenderElement*) const override { return false; }
-    
+
     StylePendingImage(CSSValue* value)
         : m_value(value)
     {

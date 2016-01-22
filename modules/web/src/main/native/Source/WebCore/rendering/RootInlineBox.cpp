@@ -38,7 +38,7 @@
 #include <wtf/NeverDestroyed.h>
 
 namespace WebCore {
-    
+
 struct SameSizeAsRootInlineBox : public InlineFlowBox {
     unsigned variables[7];
     void* pointers[3];
@@ -173,7 +173,7 @@ void RootInlineBox::paint(PaintInfo& paintInfo, const LayoutPoint& paintOffset, 
     // Check if we are in the correct region.
     if (paintInfo.renderRegion && m_hasContainingRegion && containingRegion() != paintInfo.renderRegion)
         return;
-    
+
     InlineFlowBox::paint(paintInfo, paintOffset, lineTop, lineBottom);
     paintEllipsisBox(paintInfo, paintOffset, lineTop, lineBottom);
 }
@@ -281,7 +281,7 @@ LayoutUnit RootInlineBox::alignBoxesInBlockDirection(LayoutUnit heightOfBlock, G
                                lineTopIncludingMargins, lineBottomIncludingMargins, hasAnnotationsBefore, hasAnnotationsAfter, baselineType());
     m_hasAnnotationsBefore = hasAnnotationsBefore;
     m_hasAnnotationsAfter = hasAnnotationsAfter;
-    
+
     maxHeight = std::max<LayoutUnit>(0, maxHeight); // FIXME: Is this really necessary?
 
     setLineTopBottomPositions(lineTop, lineBottom, heightOfBlock, heightOfBlock + maxHeight);
@@ -360,7 +360,7 @@ LayoutUnit RootInlineBox::lineSnapAdjustment(LayoutUnit delta) const
     RootInlineBox* lineGridBox = lineGrid->lineGridBox();
     if (!lineGridBox)
         return 0;
-    
+
     LayoutUnit lineGridBlockOffset = lineGrid->isHorizontalWritingMode() ? lineGridOffset.height() : lineGridOffset.width();
     LayoutUnit blockOffset = blockFlow().isHorizontalWritingMode() ? layoutState->layoutOffset().height() : layoutState->layoutOffset().width();
 
@@ -423,12 +423,12 @@ LayoutUnit RootInlineBox::lineSnapAdjustment(LayoutUnit delta) const
     // If we aren't paginated we can return the result.
     if (!layoutState->isPaginated() || !layoutState->pageLogicalHeight() || result == delta)
         return result;
-    
+
     // We may end up shifted to a new page. We need to do a re-snap when that happens.
     LayoutUnit newPageLogicalTop = blockFlow().pageLogicalTopForOffset(lineBottomWithLeading() + result);
     if (newPageLogicalTop == pageLogicalTop)
         return result;
-    
+
     // Put ourselves at the top of the next page to force a snap onto the new grid established by that page.
     return lineSnapAdjustment(newPageLogicalTop - (blockOffset + lineTopWithLeading()));
 }
@@ -723,7 +723,7 @@ InlineBox* RootInlineBox::closestLeafChildForLogicalLeftPosition(int leftPositio
 }
 
 BidiStatus RootInlineBox::lineBreakBidiStatus() const
-{ 
+{
     return BidiStatus(static_cast<UCharDirection>(m_lineBreakBidiStatusEor), static_cast<UCharDirection>(m_lineBreakBidiStatusLastStrong), static_cast<UCharDirection>(m_lineBreakBidiStatusLast), m_lineBreakContext);
 }
 
@@ -771,7 +771,7 @@ LayoutRect RootInlineBox::paddedLayoutOverflowRect(LayoutUnit endPadding) const
     LayoutRect lineLayoutOverflow = layoutOverflowRect(lineTop(), lineBottom());
     if (!endPadding)
         return lineLayoutOverflow;
-    
+
     // FIXME: Audit whether to use pixel snapped values when not using integers for layout: https://bugs.webkit.org/show_bug.cgi?id=63656
     if (isHorizontal()) {
         if (isLeftToRightDirection())
@@ -784,7 +784,7 @@ LayoutRect RootInlineBox::paddedLayoutOverflowRect(LayoutUnit endPadding) const
         else
             lineLayoutOverflow.shiftYEdgeTo(std::min<LayoutUnit>(lineLayoutOverflow.y(), pixelSnappedLogicalLeft() - endPadding));
     }
-    
+
     return lineLayoutOverflow;
 }
 
@@ -811,7 +811,7 @@ void RootInlineBox::ascentAndDescentForBox(InlineBox* box, GlyphOverflowAndFallb
         if (lineStyle().lineBoxContain() & LineBoxContainReplaced) {
             ascent = box->baselinePosition(baselineType());
             descent = box->lineHeight() - ascent;
-            
+
             // Replaced elements always affect both the ascent and descent.
             affectsAscent = true;
             affectsDescent = true;
@@ -826,10 +826,10 @@ void RootInlineBox::ascentAndDescentForBox(InlineBox* box, GlyphOverflowAndFallb
         usedFonts = it == textBoxDataMap.end() ? 0 : &it->value.first;
         glyphOverflow = it == textBoxDataMap.end() ? 0 : &it->value.second;
     }
-        
+
     bool includeLeading = includeLeadingForBox(box);
     bool includeFont = includeFontForBox(box);
-    
+
     bool setUsedFont = false;
     bool setUsedFontWithLeading = false;
 
@@ -867,27 +867,27 @@ void RootInlineBox::ascentAndDescentForBox(InlineBox* box, GlyphOverflowAndFallb
         int ascentWithLeading = box->baselinePosition(baselineType());
         int descentWithLeading = box->lineHeight() - ascentWithLeading;
         setAscentAndDescent(ascent, descent, ascentWithLeading, descentWithLeading, ascentDescentSet);
-        
+
         // Examine the font box for inline flows and text boxes to see if any part of it is above the baseline.
         // If the top of our font box relative to the root box baseline is above the root box baseline, then
         // we are contributing to the maxAscent value. Descent is similar. If any part of our font box is below
         // the root box's baseline, then we contribute to the maxDescent value.
         affectsAscent = ascentWithLeading - box->logicalTop() > 0;
-        affectsDescent = descentWithLeading + box->logicalTop() > 0; 
+        affectsDescent = descentWithLeading + box->logicalTop() > 0;
     }
-    
+
     if (includeFontForBox(box) && !setUsedFont) {
         int fontAscent = boxLineStyle.fontMetrics().ascent(baselineType());
         int fontDescent = boxLineStyle.fontMetrics().descent(baselineType());
         setAscentAndDescent(ascent, descent, fontAscent, fontDescent, ascentDescentSet);
         affectsAscent = fontAscent - box->logicalTop() > 0;
-        affectsDescent = fontDescent + box->logicalTop() > 0; 
+        affectsDescent = fontDescent + box->logicalTop() > 0;
     }
 
     if (includeGlyphsForBox(box) && glyphOverflow && glyphOverflow->computeBounds) {
         setAscentAndDescent(ascent, descent, glyphOverflow->top, glyphOverflow->bottom, ascentDescentSet);
         affectsAscent = glyphOverflow->top - box->logicalTop() > 0;
-        affectsDescent = glyphOverflow->bottom + box->logicalTop() > 0; 
+        affectsDescent = glyphOverflow->bottom + box->logicalTop() > 0;
         glyphOverflow->top = std::min(glyphOverflow->top, std::max(0, glyphOverflow->top - boxLineStyle.fontMetrics().ascent(baselineType())));
         glyphOverflow->bottom = std::min(glyphOverflow->bottom, std::max(0, glyphOverflow->bottom - boxLineStyle.fontMetrics().descent(baselineType())));
     }
@@ -900,7 +900,7 @@ void RootInlineBox::ascentAndDescentForBox(InlineBox* box, GlyphOverflowAndFallb
             descentWithMargin += box->boxModelObject()->borderAndPaddingAfter() + box->boxModelObject()->marginAfter();
         }
         setAscentAndDescent(ascent, descent, ascentWithMargin, descentWithMargin, ascentDescentSet);
-        
+
         // Treat like a replaced element, since we're using the margin box.
         affectsAscent = true;
         affectsDescent = true;
@@ -911,7 +911,7 @@ LayoutUnit RootInlineBox::verticalPositionForBox(InlineBox* box, VerticalPositio
 {
     if (box->renderer().isTextOrLineBreak())
         return box->parent()->logicalTop();
-    
+
     RenderBoxModelObject* renderer = box->boxModelObject();
     ASSERT(renderer->isInline());
     if (!renderer->isInline())
@@ -934,11 +934,11 @@ LayoutUnit RootInlineBox::verticalPositionForBox(InlineBox* box, VerticalPositio
     EVerticalAlign verticalAlign = renderer->style().verticalAlign();
     if (verticalAlign == TOP || verticalAlign == BOTTOM)
         return 0;
-   
+
     RenderElement* parent = renderer->parent();
     if (parent->isRenderInline() && parent->style().verticalAlign() != TOP && parent->style().verticalAlign() != BOTTOM)
         verticalPosition = box->parent()->logicalTop();
-    
+
     if (verticalAlign != BASELINE) {
         const RenderStyle& parentLineStyle = firstLine ? parent->firstLineStyle() : parent->style();
         const Font& font = parentLineStyle.font();
@@ -993,7 +993,7 @@ bool RootInlineBox::includeFontForBox(InlineBox* box) const
 {
     if (box->renderer().isReplaced() || (box->renderer().isTextOrLineBreak() && !box->behavesLikeText()))
         return false;
-    
+
     if (!box->behavesLikeText() && box->isInlineFlowBox() && !toInlineFlowBox(box)->hasTextChildren())
         return false;
 
@@ -1006,7 +1006,7 @@ bool RootInlineBox::includeGlyphsForBox(InlineBox* box) const
 {
     if (box->renderer().isReplaced() || (box->renderer().isTextOrLineBreak() && !box->behavesLikeText()))
         return false;
-    
+
     if (!box->behavesLikeText() && box->isInlineFlowBox() && !toInlineFlowBox(box)->hasTextChildren())
         return false;
 
@@ -1051,12 +1051,12 @@ Node* RootInlineBox::getLogicalStartBoxWithNode(InlineBox*& startBox) const
     startBox = 0;
     return 0;
 }
-    
+
 Node* RootInlineBox::getLogicalEndBoxWithNode(InlineBox*& endBox) const
 {
     Vector<InlineBox*> leafBoxesInLogicalOrder;
     collectLeafBoxesInLogicalOrder(leafBoxesInLogicalOrder);
-    for (size_t i = leafBoxesInLogicalOrder.size(); i > 0; --i) { 
+    for (size_t i = leafBoxesInLogicalOrder.size(); i > 0; --i) {
         if (leafBoxesInLogicalOrder[i - 1]->renderer().node()) {
             endBox = leafBoxesInLogicalOrder[i - 1];
             return endBox->renderer().node();

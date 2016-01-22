@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -37,7 +37,7 @@ namespace JSC { namespace Profiler {
 BytecodeSequence::BytecodeSequence(CodeBlock* codeBlock)
 {
     StringPrintStream out;
-    
+
     for (unsigned i = 0; i < codeBlock->numberOfArgumentValueProfiles(); ++i) {
         ConcurrentJITLocker locker(codeBlock->m_lock);
         CString description = codeBlock->valueProfileForArgument(i)->briefDescription(locker);
@@ -47,10 +47,10 @@ BytecodeSequence::BytecodeSequence(CodeBlock* codeBlock)
         out.print("arg", i, " (r", virtualRegisterForArgument(i).offset(), "): ", description);
         m_header.append(out.toCString());
     }
-    
+
     StubInfoMap stubInfos;
     codeBlock->getStubInfoMap(stubInfos);
-    
+
     for (unsigned bytecodeIndex = 0; bytecodeIndex < codeBlock->instructions().size();) {
         out.reset();
         codeBlock->dumpBytecode(out, bytecodeIndex, stubInfos);
@@ -81,7 +81,7 @@ void BytecodeSequence::addSequenceProperties(ExecState* exec, JSObject* result) 
     for (unsigned i = 0; i < m_header.size(); ++i)
         header->putDirectIndex(exec, i, jsString(exec, String::fromUTF8(m_header[i])));
     result->putDirect(exec->vm(), exec->propertyNames().header, header);
-    
+
     JSArray* sequence = constructEmptyArray(exec, 0);
     for (unsigned i = 0; i < m_sequence.size(); ++i)
         sequence->putDirectIndex(exec, i, m_sequence[i].toJS(exec));

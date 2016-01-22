@@ -33,9 +33,9 @@ public enum FillRule {
 
     /**
      * Defines an even-odd filling rule for determining the interior of a path.
-     * 
+     *
      * The even-odd rule specifies that a point lies inside the path if a ray
-     * drawn in any direction from that point to infinity is crossed by path 
+     * drawn in any direction from that point to infinity is crossed by path
      * segments an odd number of times.
      * <p>
      * <img src="doc-files/fillrule-evenodd.png"/>
@@ -45,10 +45,10 @@ public enum FillRule {
 
     /**
      * Defines a non-zero filling rule for determining the interior of a path.
-     * 
-     * The non-zero rule specifies that a point lies inside the path if a ray 
-     * drawn in any direction from that point to infinity is crossed by path 
-     * segments a different number of times in the counter-clockwise direction 
+     *
+     * The non-zero rule specifies that a point lies inside the path if a ray
+     * drawn in any direction from that point to infinity is crossed by path
+     * segments a different number of times in the counter-clockwise direction
      * than the clockwise direction.
      * <p>
      * <img src="doc-files/fillrule-nonzero.png"/>

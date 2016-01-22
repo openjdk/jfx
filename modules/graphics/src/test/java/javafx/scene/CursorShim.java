@@ -40,15 +40,15 @@ public class CursorShim {
     public static CursorFrame getCurrentFrame(Cursor c) {
         return c.getCurrentFrame();
     }
-    
+
     public static Cursor getCursor(String name) {
         return new Cursor(name) {
 
             @Override
             CursorFrame getCurrentFrame() {
-                throw new UnsupportedOperationException("Not supported yet."); 
+                throw new UnsupportedOperationException("Not supported yet.");
             }
         };
     }
-    
+
 }

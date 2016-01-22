@@ -68,7 +68,7 @@ public class ToggleGroup {
     }
 
     private final ObservableList<Toggle> toggles = new VetoableListDecorator<Toggle>(new TrackableObservableList<Toggle>() {
-        @Override protected void onChanged(Change<Toggle> c) {            
+        @Override protected void onChanged(Change<Toggle> c) {
             while (c.next()) {
                 // Look through the removed toggles, and if any of them was the
                 // one and only selected toggle, then we will clear the selected
@@ -78,7 +78,7 @@ public class ToggleGroup {
                         selectToggle(null);
                     }
                 }
-                
+
                 // A Toggle can only be in one group at any one time. If the
                 // group is changed, then the toggle is removed from the old group prior to
                 // being added to the new group.
@@ -90,11 +90,11 @@ public class ToggleGroup {
                         t.setToggleGroup(ToggleGroup.this);
                     }
                 }
-                
+
                 // Look through all the added toggles and the very first selected
                 // toggle we encounter will become the one we make the selected
-                // toggle for this group.                
-                for (Toggle t : c.getAddedSubList()) {                    
+                // toggle for this group.
+                for (Toggle t : c.getAddedSubList()) {
                     if (t.isSelected()) {
                         selectToggle(t);
                         break;
@@ -138,7 +138,7 @@ public class ToggleGroup {
             }
         }
     };
-    
+
     /**
      * Selects the toggle.
      *
@@ -180,7 +180,7 @@ public class ToggleGroup {
         }
         selectedToggle.set(null);
     }
-    
+
     /*************************************************************************
     *                                                                        *
     *                                                                        *

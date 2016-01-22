@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef CopiedSpace_h
@@ -58,7 +58,7 @@ public:
 
     CheckedBoolean tryAllocate(size_t, void**);
     CheckedBoolean tryReallocate(void**, size_t, size_t);
-    
+
     CopiedAllocator& allocator() { return m_allocator; }
 
     void didStartFullCollection();
@@ -75,7 +75,7 @@ public:
 
     bool contains(CopiedBlock*);
     bool contains(void*, CopiedBlock*&);
-    
+
     void pinIfNecessary(void* pointer);
 
     size_t size();
@@ -94,7 +94,7 @@ private:
     JS_EXPORT_PRIVATE CheckedBoolean tryAllocateSlowCase(size_t, void**);
     CheckedBoolean tryAllocateOversize(size_t, void**);
     CheckedBoolean tryReallocateOversize(void**, size_t, size_t);
-    
+
     void allocateBlock();
     CopiedBlock* allocateBlockForCopyingPhase();
 
@@ -119,7 +119,7 @@ private:
 
         DoublyLinkedList<CopiedBlock>* toSpace;
         DoublyLinkedList<CopiedBlock>* fromSpace;
-        
+
         DoublyLinkedList<CopiedBlock> blocks1;
         DoublyLinkedList<CopiedBlock> blocks2;
         DoublyLinkedList<CopiedBlock> oversizeBlocks;
@@ -129,11 +129,11 @@ private:
 
     CopiedGeneration m_oldGen;
     CopiedGeneration m_newGen;
-   
+
     bool m_inCopyingPhase;
     bool m_shouldDoCopyPhase;
 
-    Mutex m_loanedBlocksLock; 
+    Mutex m_loanedBlocksLock;
     ThreadCondition m_loanedBlocksCondition;
     size_t m_numberOfLoanedBlocks;
 

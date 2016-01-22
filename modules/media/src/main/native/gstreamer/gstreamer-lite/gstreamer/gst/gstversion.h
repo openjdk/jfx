@@ -75,7 +75,7 @@ G_BEGIN_DECLS
  * Check whether a GStreamer version equal to or greater than
  * major.minor.micro is present.
  */
-#define	GST_CHECK_VERSION(major,minor,micro)	\
+#define GST_CHECK_VERSION(major,minor,micro)    \
     (GST_VERSION_MAJOR > (major) || \
      (GST_VERSION_MAJOR == (major) && GST_VERSION_MINOR > (minor)) || \
      (GST_VERSION_MAJOR == (major) && GST_VERSION_MINOR == (minor) && \

@@ -49,7 +49,7 @@ namespace WebCore {
         void clearName();
         Frame* parent() const;
         void setParent(Frame* parent) { m_parent = parent; }
-        
+
         Frame* nextSibling() const { return m_nextSibling.get(); }
         Frame* previousSibling() const { return m_previousSibling; }
         Frame* firstChild() const { return m_firstChild.get(); }
@@ -59,7 +59,7 @@ namespace WebCore {
         Frame* traverseNext(const Frame* stayWithin = 0) const;
         Frame* traverseNextWithWrap(bool) const;
         Frame* traversePreviousWithWrap(bool) const;
-        
+
         void appendChild(PassRefPtr<Frame>);
         bool transferChild(PassRefPtr<Frame>);
         void detachFromParent() { m_parent = 0; }

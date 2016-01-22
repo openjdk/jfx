@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef DFGValueSource_h
@@ -118,13 +118,13 @@ public:
         : m_kind(SourceNotSet)
     {
     }
-    
+
     explicit ValueSource(ValueSourceKind valueSourceKind)
         : m_kind(valueSourceKind)
     {
         ASSERT(kind() == ArgumentsSource || kind() == SourceIsDead || kind() == ArgumentsSource);
     }
-    
+
     explicit ValueSource(MinifiedID id)
         : m_kind(HaveNode)
         , m_value(id.bits())
@@ -132,7 +132,7 @@ public:
         ASSERT(!!id);
         ASSERT(kind() == HaveNode);
     }
-    
+
     ValueSource(ValueSourceKind valueSourceKind, VirtualRegister where)
         : m_kind(valueSourceKind)
         , m_value(static_cast<intptr_t>(where.offset()))
@@ -140,7 +140,7 @@ public:
         ASSERT(kind() != SourceNotSet);
         ASSERT(kind() != HaveNode);
     }
-    
+
     static ValueSource forFlushFormat(VirtualRegister where, FlushFormat format)
     {
         switch (format) {
@@ -165,59 +165,59 @@ public:
         RELEASE_ASSERT_NOT_REACHED();
         return ValueSource();
     }
-    
+
     static ValueSource forDataFormat(VirtualRegister where, DataFormat dataFormat)
     {
         return ValueSource(dataFormatToValueSourceKind(dataFormat), where);
     }
-    
+
     bool isSet() const
     {
         return kind() != SourceNotSet;
     }
-    
+
     ValueSourceKind kind() const
     {
         return m_kind;
     }
-    
+
     bool isInJSStack() const { return JSC::DFG::isInJSStack(kind()); }
     bool isTriviallyRecoverable() const { return JSC::DFG::isTriviallyRecoverable(kind()); }
-    
+
     DataFormat dataFormat() const
     {
         return valueSourceKindToDataFormat(kind());
     }
-    
+
     ValueRecovery valueRecovery() const
     {
         ASSERT(isTriviallyRecoverable());
         switch (kind()) {
         case SourceIsDead:
             return ValueRecovery::constant(jsUndefined());
-            
+
         case ArgumentsSource:
             return ValueRecovery::argumentsThatWereNotCreated();
-            
+
         default:
             return ValueRecovery::displacedInJSStack(virtualRegister(), dataFormat());
         }
     }
-    
+
     MinifiedID id() const
     {
         ASSERT(kind() == HaveNode);
         return MinifiedID::fromBits(m_value);
     }
-    
+
     VirtualRegister virtualRegister() const
     {
         ASSERT(isInJSStack());
         return VirtualRegister(m_value);
     }
-    
+
     void dump(PrintStream&) const;
-    
+
 private:
     ValueSourceKind m_kind;
     uintptr_t m_value;

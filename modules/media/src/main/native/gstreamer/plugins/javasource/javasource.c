@@ -139,7 +139,7 @@ GType java_source_get_type (void)
                sizeof (JavaSourceClass),
                (GClassInitFunc) java_source_class_intern_init,
                sizeof(JavaSource),
-               (GInstanceInitFunc) java_source_init,               
+               (GInstanceInitFunc) java_source_init,
                (GTypeFlags) 0);
         g_once_init_leave (&gonce_data, (gsize) _type);
     }
@@ -175,11 +175,11 @@ static void java_source_class_init (JavaSourceClass *klass)
 {
     GObjectClass *gobject_klass = G_OBJECT_CLASS (klass);
     GstElementClass *element_class = GST_ELEMENT_CLASS (klass);
-    
+
     gobject_klass->finalize = GST_DEBUG_FUNCPTR(java_source_finalize);
     gobject_klass->set_property = java_source_set_property;
     gobject_klass->get_property = java_source_get_property;
-    
+
     gst_element_class_set_static_metadata (element_class,
         "Java Source",
         "Source",
@@ -347,7 +347,7 @@ static void java_source_set_property (GObject *object, guint prop_id,
             element->mode = MODE_DEFAULT;
         break;
     case PROP_MIMETYPE:
-        element->mimetype = g_strdup(g_value_get_string (value));        
+        element->mimetype = g_strdup(g_value_get_string (value));
         break;
     default:
         break;
@@ -552,11 +552,11 @@ next_event:
                 gst_event_set_group_id (event, gst_util_group_id_next ());
                 result = gst_pad_push_event (element->srcpad, event) ? GST_FLOW_OK : GST_FLOW_FLUSHING;
                 g_free (stream_id);
-                
+
                 element->pending_event = GST_EVENT_SEGMENT;
                 break;
             }
-    
+
         case GST_EVENT_SEGMENT:
             {
                 GstEvent *new_segment = NULL;
@@ -564,7 +564,7 @@ next_event:
                 if ((element->mode & MODE_HLS) == MODE_HLS)
                 {
                     gint result = 0;
-                    gboolean wrong_state = FALSE;                    
+                    gboolean wrong_state = FALSE;
                     g_signal_emit(element, JAVA_SOURCE_GET_CLASS(element)->signals[SIGNAL_GET_STREAM_SIZE], 0, &result);
 
                     g_mutex_lock(&element->lock);
@@ -572,7 +572,7 @@ next_event:
                     g_mutex_unlock(&element->lock);
 
                     if (wrong_state)
-                        break; 
+                        break;
 
                     if (result == -1)
                     {
@@ -584,7 +584,7 @@ next_event:
                         result = -1 * result;
                         element->discont = TRUE;
                     }
-                    
+
                     gst_segment_init (&segment, GST_FORMAT_BYTES);
                     if (element->update)
                         segment.flags |= GST_SEGMENT_FLAG_UPDATE;
@@ -635,7 +635,7 @@ next_event:
                         }
 
                         g_signal_emit(element, JAVA_SOURCE_GET_CLASS(element)->signals[SIGNAL_COPY_BLOCK], 0, info.data, size);
-                        
+
                         gst_buffer_unmap(buffer, &info);
 
                         if (element->discont)
@@ -749,7 +749,7 @@ static gboolean java_source_query (GstPad *pad, GstObject *parent, GstQuery *que
             }
             break;
         }
-    
+
     case GST_QUERY_SCHEDULING:
         {
             if (element->is_random_access)
@@ -768,7 +768,7 @@ static gboolean java_source_query (GstPad *pad, GstObject *parent, GstQuery *que
         {
             GstFormat format = GST_FORMAT_UNDEFINED;
             gst_query_parse_seeking(query, &format, NULL, NULL, NULL);
-            
+
             // We can seek only in bytes format and when source is seekable.
             if (format != GST_FORMAT_BYTES || !element->is_seekable)
             {

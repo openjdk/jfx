@@ -6,13 +6,13 @@
  * are met:
  *
  * 1.  Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer. 
+ *     notice, this list of conditions and the following disclaimer.
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
- *     documentation and/or other materials provided with the distribution. 
+ *     documentation and/or other materials provided with the distribution.
  * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
- *     from this software without specific prior written permission. 
+ *     from this software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY APPLE AND ITS CONTRIBUTORS "AS IS" AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
@@ -124,7 +124,7 @@ DumpRenderTreeDraggingInfo *draggingInfo = nil;
 {
     if (!done)
         printf("CONFIRM NAVIGATION: %s\n", [message UTF8String]);
-    
+
     return !gTestRunner->shouldStayOnPageAfterHandlingBeforeUnload();
 }
 
@@ -153,32 +153,32 @@ DumpRenderTreeDraggingInfo *draggingInfo = nil;
 {
     if (!gTestRunner->canOpenWindows())
         return nil;
-    
+
     // Make sure that waitUntilDone has been called.
     ASSERT(gTestRunner->waitToDump());
 
     WebView *webView = createWebViewAndOffscreenWindow();
-    
+
     if (gTestRunner->newWindowsCopyBackForwardList())
         [webView _loadBackForwardListFromOtherView:sender];
-    
+
     return [webView autorelease];
 }
 
 - (void)webViewClose:(WebView *)sender
 {
     NSWindow* window = [sender window];
- 
+
     if (gTestRunner->callCloseOnWebViews())
         [sender close];
-    
+
     [window close];
 }
 
 - (void)webView:(WebView *)sender frame:(WebFrame *)frame exceededDatabaseQuotaForSecurityOrigin:(WebSecurityOrigin *)origin database:(NSString *)databaseIdentifier
 {
     if (!done && gTestRunner->dumpDatabaseCallbacks()) {
-        printf("UI DELEGATE DATABASE CALLBACK: exceededDatabaseQuotaForSecurityOrigin:{%s, %s, %i} database:%s\n", [[origin protocol] UTF8String], [[origin host] UTF8String], 
+        printf("UI DELEGATE DATABASE CALLBACK: exceededDatabaseQuotaForSecurityOrigin:{%s, %s, %i} database:%s\n", [[origin protocol] UTF8String], [[origin host] UTF8String],
             [origin port], [databaseIdentifier UTF8String]);
     }
 

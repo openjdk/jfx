@@ -158,7 +158,7 @@ Deprecated::ScriptValue ScriptController::evaluateInWorld(const ScriptSourceCode
     return Deprecated::ScriptValue(exec->vm(), returnValue);
 }
 
-Deprecated::ScriptValue ScriptController::evaluate(const ScriptSourceCode& sourceCode) 
+Deprecated::ScriptValue ScriptController::evaluate(const ScriptSourceCode& sourceCode)
 {
     return evaluateInWorld(sourceCode, mainThreadNormalWorld());
 }
@@ -266,7 +266,7 @@ bool ScriptController::canAccessFromCurrentOrigin(Frame *frame)
     ExecState* exec = JSMainThreadExecState::currentState();
     if (exec)
         return shouldAllowAccessToFrame(exec, frame);
-    // If the current state is 0 we're in a call path where the DOM security 
+    // If the current state is 0 we're in a call path where the DOM security
     // check doesn't apply (eg. parser).
     return true;
 }
@@ -402,7 +402,7 @@ JSObject* ScriptController::jsObjectForPluginElement(HTMLPlugInElement* plugin)
     JSValue jsElementValue = toJS(globalObj->globalExec(), globalObj, plugin);
     if (!jsElementValue || !jsElementValue.isObject())
         return 0;
-    
+
     return jsElementValue.getObject();
 }
 
@@ -469,7 +469,7 @@ Deprecated::ScriptValue ScriptController::executeScriptInWorld(DOMWrapperWorld& 
 bool ScriptController::shouldBypassMainWorldContentSecurityPolicy()
 {
     CallFrame* callFrame = JSDOMWindow::commonVM()->topCallFrame;
-    if (callFrame == CallFrame::noCaller()) 
+    if (callFrame == CallFrame::noCaller())
         return false;
     DOMWrapperWorld& domWrapperWorld = currentWorld(callFrame);
     if (domWrapperWorld.isNormal())
@@ -543,7 +543,7 @@ bool ScriptController::executeIfJavaScriptURL(const URL& url, ShouldReplaceDocum
     if (shouldReplaceDocumentIfJavaScriptURL == ReplaceDocumentIfJavaScriptURL) {
         // We're still in a frame, so there should be a DocumentLoader.
         ASSERT(m_frame.document()->loader());
-        
+
         // DocumentWriter::replaceDocument can cause the DocumentLoader to get deref'ed and possible destroyed,
         // so protect it with a RefPtr.
         if (RefPtr<DocumentLoader> loader = m_frame.document()->loader())

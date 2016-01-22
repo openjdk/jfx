@@ -72,6 +72,6 @@ public abstract class WCImage extends Ref {
         }
         return img;
     }
-    
+
     public abstract float getPixelScale();
 }

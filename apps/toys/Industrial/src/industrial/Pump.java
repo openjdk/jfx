@@ -178,7 +178,7 @@ public class Pump {
 
     public final DoubleProperty getPumpRatePercentProperty() {
         if (pumpRate == null) {
-            pumpRate = new DoublePropertyBase(1.) { 
+            pumpRate = new DoublePropertyBase(1.) {
                 @Override
                 public Object getBean() {
                     return Pump.this;
@@ -194,10 +194,10 @@ public class Pump {
                     double value = get();
                     if (value < 0.0) {
                         set(0.0);
-                    } 
+                    }
                     if (value > 1.0) {
                         set(1.0);
-                    } 
+                    }
                     timeline.setRate(value);
                 }
             };

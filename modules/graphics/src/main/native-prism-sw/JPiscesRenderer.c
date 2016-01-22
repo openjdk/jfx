@@ -156,7 +156,7 @@ JNIEXPORT void JNICALL Java_com_sun_pisces_PiscesRenderer_clearRectImpl(JNIEnv* 
     SURFACE_FROM_RENDERER(surface, env, surfaceHandle, objectHandle);
     ACQUIRE_SURFACE(surface, env, surfaceHandle);
     INVALIDATE_RENDERER_SURFACE(rdr);
-    
+
     rdr->_imagePixelStride = 1;
     rdr->_imageScanlineStride = surface->width;
     renderer_clearRect(rdr, x, y, w, h);
@@ -566,7 +566,7 @@ fillRect(JNIEnv *env, jobject this, Renderer* rdr,
  * and rectangle is in an up-right position ie. no rotate or shear
  */
 JNIEXPORT void JNICALL Java_com_sun_pisces_PiscesRenderer_fillRectImpl
-  (JNIEnv *env, jobject this, jint x, jint y, jint w, jint h) 
+  (JNIEnv *env, jobject this, jint x, jint y, jint w, jint h)
 {
     Renderer* rdr;
     rdr = (Renderer*)JLongToPointer((*env)->GetLongField(env, this, fieldIds[RENDERER_NATIVE_PTR]));
@@ -588,9 +588,9 @@ JNIEXPORT void JNICALL Java_com_sun_pisces_PiscesRenderer_emitAndClearAlphaRowIm
     Surface* surface;
     jobject surfaceHandle;
     jbyte* alphaMap;
-    
+
     rdr = (Renderer*)JLongToPointer((*env)->GetLongField(env, this, fieldIds[RENDERER_NATIVE_PTR]));
-    
+
     SURFACE_FROM_RENDERER(surface, env, surfaceHandle, this);
     ACQUIRE_SURFACE(surface, env, surfaceHandle);
     INVALIDATE_RENDERER_SURFACE(rdr);
@@ -704,14 +704,14 @@ JNIEXPORT void JNICALL Java_com_sun_pisces_PiscesRenderer_fillAlphaMaskImpl
     jint minX, minY, maxX, maxY;
     jint maskOffset;
     rdr = (Renderer*)JLongToPointer((*env)->GetLongField(env, this, fieldIds[RENDERER_NATIVE_PTR]));
-    
+
     minX = MAX(x, rdr->_clip_bbMinX);
     minY = MAX(y, rdr->_clip_bbMinY);
     maxX = MIN(x + maskWidth - 1, rdr->_clip_bbMaxX);
     maxY = MIN(y + maskHeight - 1, rdr->_clip_bbMaxY);
-    
+
     maskOffset = offset + (minY - y) * maskWidth + minX - x;
-    
+
     fillAlphaMask(rdr, minX, minY, maxX, maxY, env, this, ALPHA_MASK, jmask,
         x, y, maskWidth, maskHeight, maskOffset, stride);
 }
@@ -754,14 +754,14 @@ JNIEXPORT void JNICALL Java_com_sun_pisces_PiscesRenderer_fillLCDAlphaMaskImpl
 }
 
 static void fillAlphaMask(Renderer* rdr, jint minX, jint minY, jint maxX, jint maxY,
-    JNIEnv *env, jobject this, jint maskType, jbyteArray jmask, 
+    JNIEnv *env, jobject this, jint maskType, jbyteArray jmask,
     jint x, jint y, jint maskWidth, jint maskHeight, jint offset, jint stride)
 {
     jint rowsToBeRendered, rowsBeingRendered;
-    
+
     Surface* surface;
     jobject surfaceHandle;
-    
+
     if (maxX >= minX && maxY >= minY)
     {
         jbyte* mask;
@@ -783,19 +783,19 @@ static void fillAlphaMask(Renderer* rdr, jint minX, jint minY, jint maxX, jint m
             rdr->_maxTouched = maxX;
             rdr->_currX = minX;
             rdr->_currY = minY;
-            
+
             rdr->_alphaWidth = width;
-            
+
             rdr->_imageScanlineStride = surface->width;
             rdr->_imagePixelStride = 1;
             rdr->_rowNum = 0;
             rdr->_maskOffset = offset;
-            
+
             rowsToBeRendered = height;
-            
+
             while (rowsToBeRendered > 0) {
                 rowsBeingRendered = 1; //MIN(rowsToBeRendered, NUM_ALPHA_ROWS);
-                
+
                 rdr->_currImageOffset = rdr->_currY * surface->width;
                 if (rdr->_genPaint) {
                     size_t l = (width * rowsBeingRendered);
@@ -803,7 +803,7 @@ static void fillAlphaMask(Renderer* rdr, jint minX, jint minY, jint maxX, jint m
                     rdr->_genPaint(rdr, rowsBeingRendered);
                 }
                 rdr->_emitRows(rdr, rowsBeingRendered);
-            
+
                 rdr->_maskOffset += maskWidth;
                 rdr->_rowNum += rowsBeingRendered;
                 rowsToBeRendered -= rowsBeingRendered;

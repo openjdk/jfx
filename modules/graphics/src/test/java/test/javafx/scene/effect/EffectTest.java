@@ -57,7 +57,7 @@ import javafx.scene.effect.SepiaTone;
 import javafx.scene.effect.Shadow;
 
 public class EffectTest {
-    
+
     @Test
     public void testAdding() {
         Bloom b = new Bloom();
@@ -65,7 +65,7 @@ public class EffectTest {
         g.setEffect(b);
         assertEquals(b, g.getEffect());
     }
-    
+
     @Test
     public void testRemoving() {
         Bloom b = new Bloom();
@@ -96,7 +96,7 @@ public class EffectTest {
         n1.setEffect(bloom);
         Glow glow = new Glow();
         bloom.setInput(glow);
-        
+
         glow.setLevel(1.1);
         assertEquals(1.1, glow.getLevel(), 1e-100);
         toolkit.fireTestPulse();
@@ -174,7 +174,7 @@ public class EffectTest {
         Bloom bloom3 = new Bloom();
         ov2.set(bloom3);
         bloom3.setThreshold(0.1);
-       
+
         assertEquals(0.1, bloom3.getThreshold(), 1e-100);
         assertTrue(glow.impl_isEffectDirty());
         assertTrue(bloom.impl_isEffectDirty());

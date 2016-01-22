@@ -61,16 +61,16 @@ public class InsertColumnConstraintsJob extends Job {
     private final int columnIndex;
     private final int insertCount;
 
-    public InsertColumnConstraintsJob(FXOMObject gridPaneObject, 
+    public InsertColumnConstraintsJob(FXOMObject gridPaneObject,
             int columnIndex, int insertCount, EditorController editorController) {
         super(editorController);
-        
+
         assert gridPaneObject instanceof FXOMInstance;
         assert gridPaneObject.getSceneGraphObject() instanceof GridPane;
         assert columnIndex >= 0;
         assert columnIndex <= columnContraintsMeta.getValue((FXOMInstance)gridPaneObject).size();
         assert insertCount >= 1;
-        
+
         this.gridPaneObject = (FXOMInstance)gridPaneObject;
         this.columnIndex = columnIndex;
         this.insertCount = insertCount;
@@ -92,7 +92,7 @@ public class InsertColumnConstraintsJob extends Job {
 
     @Override
     public void undo() {
-        final List<ColumnConstraints> constraintsList 
+        final List<ColumnConstraints> constraintsList
                 = new ArrayList<>(columnContraintsMeta.getValue(gridPaneObject));
         assert columnIndex < constraintsList.size();
         for (int i = 0; i < insertCount; i++) {
@@ -103,7 +103,7 @@ public class InsertColumnConstraintsJob extends Job {
 
     @Override
     public void redo() {
-        final List<ColumnConstraints> constraintsList 
+        final List<ColumnConstraints> constraintsList
                 = new ArrayList<>(columnContraintsMeta.getValue(gridPaneObject));
         final ColumnConstraints template;
         if (columnIndex >= 1) {
@@ -121,12 +121,12 @@ public class InsertColumnConstraintsJob extends Job {
     public String getDescription() {
         return getClass().getSimpleName();
     }
-    
-    
+
+
     /*
      * Private
      */
-    
+
     private ColumnConstraints makeColumnConstraints(ColumnConstraints template) {
         final ColumnConstraints result = new ColumnConstraints();
         if (columnIndex >= 1) {

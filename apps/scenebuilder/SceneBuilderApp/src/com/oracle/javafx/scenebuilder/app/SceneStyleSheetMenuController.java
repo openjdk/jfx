@@ -49,7 +49,7 @@ import javafx.stage.FileChooser;
  */
 public class SceneStyleSheetMenuController {
     private final DocumentWindowController documentWindowController;
-    
+
     public SceneStyleSheetMenuController(DocumentWindowController dwc) {
         this.documentWindowController = dwc;
     }
@@ -57,18 +57,18 @@ public class SceneStyleSheetMenuController {
     void performAddSceneStyleSheet() {
         boolean knownFilesModified = false;
         ObservableList<File> knownFiles = documentWindowController.getEditorController().getSceneStyleSheets();
-        
+
         if (knownFiles == null) {
             knownFiles = FXCollections.observableArrayList();
         }
-        
+
         // Open a file chooser for *.css & *.bss
         FileChooser fileChooser = new FileChooser();
         fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter(I18N.getString("scenestylesheet.filechooser.filter.msg"),
                 "*.css", "*.bss")); //NOI18N
         fileChooser.setInitialDirectory(EditorController.getNextInitialDirectory());
         List<File> selectedFiles = fileChooser.showOpenMultipleDialog(documentWindowController.getStage());
-        
+
         if (selectedFiles != null) {
             assert selectedFiles.isEmpty() == false;
             // Keep track of the user choice for next time
@@ -86,17 +86,17 @@ public class SceneStyleSheetMenuController {
             documentWindowController.getEditorController().setSceneStyleSheets(knownFiles);
         }
     }
-    
+
     public void performRemoveSceneStyleSheet(File toRemove) {
         ObservableList<File> knownFiles = documentWindowController.getEditorController().getSceneStyleSheets();
         assert knownFiles != null;
-        
+
         if (knownFiles.contains(toRemove)) {
             knownFiles.remove(toRemove);
             documentWindowController.getEditorController().setSceneStyleSheets(knownFiles);
         }
     }
-    
+
     public void performOpenSceneStyleSheet(File toOpen) {
         try {
             EditorPlatform.open(toOpen.getPath());
@@ -109,5 +109,5 @@ public class SceneStyleSheetMenuController {
             errorDialog.showAndWait();
         }
     }
-    
+
 }

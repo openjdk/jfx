@@ -53,7 +53,7 @@ public class SplitPaneDriver extends AbstractNodeDriver {
     /*
      * AbstractDriver
      */
-    
+
     @Override
     public AbstractResizer<?> makeResizer(FXOMObject fxomObject) {
         assert fxomObject.getSceneGraphObject() instanceof SplitPane;
@@ -66,5 +66,5 @@ public class SplitPaneDriver extends AbstractNodeDriver {
         assert fxomObject.getSceneGraphObject() instanceof SplitPane;
         return new SplitPaneHandles(contentPanelController, (FXOMInstance) fxomObject);
     }
-    
+
 }

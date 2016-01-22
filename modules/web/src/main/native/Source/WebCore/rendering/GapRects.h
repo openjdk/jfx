@@ -31,7 +31,7 @@ namespace WebCore {
         const LayoutRect& left() const { return m_left; }
         const LayoutRect& center() const { return m_center; }
         const LayoutRect& right() const { return m_right; }
-        
+
         void uniteLeft(const LayoutRect& r) { m_left.unite(r); }
         void uniteCenter(const LayoutRect& r) { m_center.unite(r); }
         void uniteRight(const LayoutRect& r) { m_right.unite(r); }

@@ -42,25 +42,25 @@ public class RuntimeFlagsParserTest {
     @Parameterized.Parameters
     public static Collection<String[]> data() {
         return Arrays.asList(new String[][] {
-                { 
+                {
                     "java version \"1.7.0_51\"\nJava(TM) SE Runtime Environment (build 1.7.0_51-b13)\nJava HotSpot(TM) 64-Bit Server VM (build 24.51-b03, mixed mode)\n",
                     "64", "1.7.0_51", "1.7.0", "51", null, "7", "51", "51", "0"
                 },
-                { 
+                {
                     "java version \"1.8.0_05-ea\"\nJava(TM) SE Runtime Environment (build 1.8.0_05-ea-b03)\nJava HotSpot(TM) Client VM (build 25.5-b01, mixed mode)\n",
                     "32", "1.8.0_05", "1.8.0", "05", "ea", "8", "05", "05", "0"
                 },
-                { 
+                {
                     "java version \"1.8.0_40\"\nJava(TM) SE Runtime Environment (build 1.8.0_40-b25)\nJava HotSpot(TM) 64-Bit Server VM (build 25.40-b25, mixed mode)",
                     "64", "1.8.0_40", "1.8.0", "40", null, "8", "40", "40", "0"
                 },
-                { 
+                {
                     "java version \"9.1.2.3-ea\"\nJava(TM) SE Runtime Environment (build 9.1.2.3-ea-4+2015-03-14-092653.pi.jdk9)\nJava HotSpot(TM) 64-Bit Server VM (build 25.40-b25, mixed mode)",
                     "64", "9.1.2.3", "9.1.2.3", "1", "ea", "9", "1", "2", "3"
                 }
         });
     }
-    
+
     String versionText;
     String bitArch;
     String fullVersion;
@@ -99,5 +99,5 @@ public class RuntimeFlagsParserTest {
         Assert.assertEquals(versionMinor, params.get(".runtime.version.minor"));
         Assert.assertEquals(versionSecurity, params.get(".runtime.version.security"));
         Assert.assertEquals(versionPatch, params.get(".runtime.version.patch"));
-    } 
+    }
 }

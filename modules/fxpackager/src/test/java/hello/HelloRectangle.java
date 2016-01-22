@@ -58,12 +58,12 @@ public class HelloRectangle extends Application {
         private MessagePreloaderNotification(String message) {
             this.message = message;
         }
-        
+
         public String toString() {
             return message;
         }
     }
-    
+
     @Override
     public void init() throws Exception {
         boolean wait;
@@ -98,7 +98,7 @@ public class HelloRectangle extends Application {
         try {
             title = Optional.ofNullable(System.getProperty("app.preferences.id")).orElse("Hello Rectangle").replace("/", " " );
         } catch (SecurityException ignored) {}
-        
+
         stage.setTitle(title);
 
         AnchorPane root = new AnchorPane();
@@ -116,12 +116,12 @@ public class HelloRectangle extends Application {
         Parameters p = getParameters();
 
         ObservableList<Map.Entry<String, String>> paramsList = FXCollections.observableArrayList(p.getNamed().entrySet());
-        
+
         TableColumn<Map.Entry<String, String>, String> paramsKey = new TableColumn<>("Param Name");
         paramsKey.setCellValueFactory(e -> new SimpleStringProperty(e.getValue().getKey()));
         TableColumn<Map.Entry<String, String>, String> paramsValue = new TableColumn<>("Param Value");
         paramsValue.setCellValueFactory(e -> new SimpleStringProperty(e.getValue().getValue()));
-        
+
         TableView<Map.Entry<String, String>> paramsTable = new TableView<>(paramsList);
         paramsTable.getColumns().setAll(paramsKey, paramsValue);
         paramsTable.setPrefSize(250, 100);
@@ -162,7 +162,7 @@ public class HelloRectangle extends Application {
         );
         wierdAl.setExpandedPane(wierdAl.getPanes().get(0));
         wierdAl.setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
-        
+
         AnchorPane.setTopAnchor(wierdAl, 0.0);
         AnchorPane.setRightAnchor(wierdAl, 0.0);
         AnchorPane.setBottomAnchor(wierdAl, 0.0);

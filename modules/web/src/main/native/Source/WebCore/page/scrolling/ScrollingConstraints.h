@@ -51,16 +51,16 @@ public:
         : m_alignmentOffset(other.m_alignmentOffset)
         , m_anchorEdges(other.m_anchorEdges)
     { }
-    
+
     virtual ~ViewportConstraints() { }
-    
+
     virtual ConstraintType constraintType() const = 0;
-    
+
     AnchorEdges anchorEdges() const { return m_anchorEdges; }
     bool hasAnchorEdge(AnchorEdgeFlags flag) const { return m_anchorEdges & flag; }
     void addAnchorEdge(AnchorEdgeFlags edgeFlag) { m_anchorEdges |= edgeFlag; }
     void setAnchorEdges(AnchorEdges edges) { m_anchorEdges = edges; }
-    
+
     FloatSize alignmentOffset() const { return m_alignmentOffset; }
     void setAlignmentOffset(const FloatSize& offset) { m_alignmentOffset = offset; }
 
@@ -84,7 +84,7 @@ public:
         , m_viewportRectAtLastLayout(other.m_viewportRectAtLastLayout)
         , m_layerPositionAtLastLayout(other.m_layerPositionAtLastLayout)
     { }
-    
+
     FloatPoint layerPositionForViewportRect(const FloatRect& viewportRect) const;
 
     const FloatRect& viewportRectAtLastLayout() const { return m_viewportRectAtLastLayout; }

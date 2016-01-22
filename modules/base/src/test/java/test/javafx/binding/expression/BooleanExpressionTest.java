@@ -146,24 +146,24 @@ public class BooleanExpressionTest {
         op1.set(true);
         assertEquals("true", binding.get());
     }
-    
+
     @Test
-    public void testAsObject() { 
+    public void testAsObject() {
         final ObservableBooleanValueStub valueModel = new ObservableBooleanValueStub();
         final ObjectExpression<Boolean> exp = BooleanExpression.booleanExpression(valueModel).asObject();
-        
+
         assertEquals(Boolean.FALSE, exp.get());
         valueModel.set(true);
         assertEquals(Boolean.TRUE, exp.get());
         valueModel.set(false);
         assertEquals(Boolean.FALSE, exp.get());
     }
-    
+
     @Test
     public void testFactory() {
         final ObservableBooleanValueStub valueModel = new ObservableBooleanValueStub();
         final BooleanExpression exp = BooleanExpression.booleanExpression(valueModel);
-        
+
         assertTrue(exp instanceof BooleanBinding);
         assertEquals(FXCollections.singletonObservableList(valueModel), ((BooleanBinding)exp).getDependencies());
 
@@ -176,12 +176,12 @@ public class BooleanExpressionTest {
         // make sure we do not create unnecessary bindings
         assertEquals(op1, BooleanExpression.booleanExpression(op1));
     }
-    
+
     @Test
     public void testObjectToBoolean() {
         final ObservableValueStub<Boolean> valueModel = new ObservableValueStub<Boolean>();
         final BooleanExpression exp = BooleanExpression.booleanExpression(valueModel);
-        
+
         assertTrue(exp instanceof BooleanBinding);
         assertEquals(FXCollections.singletonObservableList(valueModel), ((BooleanBinding)exp).getDependencies());
 

@@ -22,7 +22,7 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
- 
+
 #include "input/LensInput.h"
 
 #if defined(OMAP3) || defined(IMX6_PLATFORM)

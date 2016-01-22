@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -96,13 +96,13 @@ LayoutState::LayoutState(std::unique_ptr<LayoutState> next, RenderBox* renderer,
         m_pageLogicalHeight = m_next->m_pageLogicalHeight;
         m_pageLogicalHeightChanged = m_next->m_pageLogicalHeightChanged;
         m_pageOffset = m_next->m_pageOffset;
-        
+
         // Disable pagination for objects we don't support. For now this includes overflow:scroll/auto, inline blocks and
         // writing mode roots.
         if (renderer->isUnsplittableForPagination())
             m_pageLogicalHeight = 0;
     }
-    
+
     // Propagate line grid information.
     propagateLineGridInfo(renderer);
 
@@ -123,7 +123,7 @@ LayoutState::LayoutState(std::unique_ptr<LayoutState> next, RenderBox* renderer,
     m_layoutDeltaXSaturated = m_next->m_layoutDeltaXSaturated;
     m_layoutDeltaYSaturated = m_next->m_layoutDeltaYSaturated;
 #endif
-    
+
     m_isPaginated = m_pageLogicalHeight || m_columnInfo || renderer->isRenderFlowThread();
 
     if (lineGrid() && (lineGrid()->style().writingMode() == renderer->style().writingMode()) && renderer->isRenderBlock())
@@ -143,7 +143,7 @@ LayoutState::LayoutState(RenderObject& root)
 #if !ASSERT_DISABLED && ENABLE(SATURATED_LAYOUT_ARITHMETIC)
     , m_layoutDeltaXSaturated(false)
     , m_layoutDeltaYSaturated(false)
-#endif    
+#endif
     , m_columnInfo(0)
     , m_lineGrid(0)
 #if ENABLE(CSS_SHAPES) && ENABLE(CSS_SHAPE_INSIDE)
@@ -218,10 +218,10 @@ void LayoutState::establishLineGrid(RenderBlockFlow* block)
             }
         }
     }
-    
+
     // We didn't find an already-established grid with this identifier. Our render object establishes the grid.
     m_lineGrid = block;
-    m_lineGridOffset = m_layoutOffset; 
+    m_lineGridOffset = m_layoutOffset;
 }
 
 } // namespace WebCore

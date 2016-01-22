@@ -84,7 +84,7 @@ public class ProgressBarApp extends Application {
         p6.setLayoutX(215);
         p6.setLayoutY(y);
         p6.setProgress(1);
-        
+
         Group group = new Group();
         group.getChildren().addAll(p1,p2,p3,p4,p5,p6);
         return group;

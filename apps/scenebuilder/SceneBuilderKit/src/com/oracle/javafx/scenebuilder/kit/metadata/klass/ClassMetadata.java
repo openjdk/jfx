@@ -35,10 +35,10 @@ import java.util.Objects;
 
 /**
  *
- * 
+ *
  */
 public class ClassMetadata implements Comparable<ClassMetadata> {
-    
+
     private final Class<?> klass;
 
     public ClassMetadata(Class<?> klass) {
@@ -48,17 +48,17 @@ public class ClassMetadata implements Comparable<ClassMetadata> {
     public Class<?> getKlass() {
         return klass;
     }
-    
+
     /*
      * Object
      */
-    
+
     @Override
     public String toString() {
         return klass.getCanonicalName();
     }
-    
-    
+
+
     /*
      * Comparable
      */
@@ -91,6 +91,6 @@ public class ClassMetadata implements Comparable<ClassMetadata> {
         }
         return true;
     }
-    
-    
+
+
 }

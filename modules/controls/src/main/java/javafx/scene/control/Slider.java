@@ -80,17 +80,17 @@ import javafx.css.StyleableProperty;
  *
  * <pre>
  * import javafx.scene.control.Slider;
- * 
+ *
  * Slider slider = new Slider(0, 1, 0.5);
  * </pre>
- * 
+ *
  * <p>
  * This next example shows a slider with customized tick marks and tick mark
  * labels, which also spans from 0 to 1:
  *
  * <pre>
  * import javafx.scene.control.Slider;
- * 
+ *
  * Slider slider = new Slider(0, 1, 0.5);
  * slider.setShowTickMarks(true);
  * slider.setShowTickLabels(true);
@@ -265,7 +265,7 @@ public class Slider extends Control {
 //     * {@code max} are forced to maintain a proper relationship.
 //     */
 //    //    public def span = bind max - min;
-    
+
     /**
      * The orientation of the {@code Slider} can either be horizontal
      * or vertical.
@@ -287,8 +287,8 @@ public class Slider extends Control {
                     pseudoClassStateChanged(VERTICAL_PSEUDOCLASS_STATE,    vertical);
                     pseudoClassStateChanged(HORIZONTAL_PSEUDOCLASS_STATE, !vertical);
                 }
-                
-                @Override 
+
+                @Override
                 public CssMetaData<Slider,Orientation> getCssMetaData() {
                     return StyleableProperties.ORIENTATION;
                 }
@@ -306,8 +306,8 @@ public class Slider extends Control {
         }
         return orientation;
     }
-    
-    
+
+
     /**
      * Indicates that the labels for tick marks should be shown. Typically a
      * {@link Skin} implementation will only show labels if
@@ -326,8 +326,8 @@ public class Slider extends Control {
         if (showTickLabels == null) {
             showTickLabels = new StyleableBooleanProperty(false) {
 
-                
-                @Override 
+
+                @Override
                 public CssMetaData<Slider,Boolean> getCssMetaData() {
                     return StyleableProperties.SHOW_TICK_LABELS;
                 }
@@ -361,8 +361,8 @@ public class Slider extends Control {
         if (showTickMarks == null) {
             showTickMarks = new StyleableBooleanProperty(false) {
 
-                
-                @Override 
+
+                @Override
                 public CssMetaData<Slider,Boolean> getCssMetaData() {
                     return StyleableProperties.SHOW_TICK_MARKS;
                 }
@@ -412,8 +412,8 @@ public class Slider extends Control {
                         throw new IllegalArgumentException("MajorTickUnit cannot be less than or equal to 0.");
                     }
                 }
-                
-                @Override 
+
+                @Override
                 public CssMetaData<Slider,Number> getCssMetaData() {
                     return StyleableProperties.MAJOR_TICK_UNIT;
                 }
@@ -449,8 +449,8 @@ public class Slider extends Control {
         if (minorTickCount == null) {
             minorTickCount = new StyleableIntegerProperty(3) {
 
-                
-                @Override 
+
+                @Override
                 public CssMetaData<Slider,Number> getCssMetaData() {
                     return StyleableProperties.MINOR_TICK_COUNT;
                 }
@@ -485,8 +485,8 @@ public class Slider extends Control {
     public final BooleanProperty snapToTicksProperty() {
         if (snapToTicks == null) {
             snapToTicks = new StyleableBooleanProperty(false) {
-                
-                @Override 
+
+                @Override
                 public CssMetaData<Slider,Boolean> getCssMetaData() {
                     return StyleableProperties.SNAP_TO_TICKS;
                 }
@@ -545,7 +545,7 @@ public class Slider extends Control {
         if (blockIncrement == null) {
             blockIncrement = new StyleableDoubleProperty(10) {
 
-                @Override 
+                @Override
                 public CssMetaData<Slider,Number> getCssMetaData() {
                     return StyleableProperties.BLOCK_INCREMENT;
                 }
@@ -565,11 +565,11 @@ public class Slider extends Control {
     }
 
     /**
-     * Adjusts {@link #valueProperty() value} to match <code>newValue</code>. The 
-     * <code>value</code>is the actual amount between the 
+     * Adjusts {@link #valueProperty() value} to match <code>newValue</code>. The
+     * <code>value</code>is the actual amount between the
      * {@link #minProperty() min} and {@link #maxProperty() max}. This function
      * also takes into account {@link #snapToTicksProperty() snapToTicks}, which
-     * is the main difference between adjustValue and setValue. It also ensures 
+     * is the main difference between adjustValue and setValue. It also ensures
      * that the value is some valid number between min and max.
      *
      * @expert This function is intended to be used by experts, primarily
@@ -594,7 +594,7 @@ public class Slider extends Control {
     public void increment() {
         adjustValue(getValue() + getBlockIncrement());
     }
-    
+
     /**
      * Decrements the value by {@link #blockIncrementProperty() blockIncrement}, bounded by max. If the
      * max is less than or equal to the min, then this method does nothing.
@@ -602,7 +602,7 @@ public class Slider extends Control {
     public void decrement() {
         adjustValue(getValue() - getBlockIncrement());
     }
-    
+
     /**
      * Ensures that min is always < max, that value is always
      * somewhere between the two, and that if snapToTicks is set then the
@@ -668,7 +668,7 @@ public class Slider extends Control {
                 return (StyleableProperty<Number>)(WritableValue<Number>)n.blockIncrementProperty();
             }
         };
-        
+
         private static final CssMetaData<Slider,Boolean> SHOW_TICK_LABELS =
             new CssMetaData<Slider,Boolean>("-fx-show-tick-labels",
                 BooleanConverter.getInstance(), Boolean.FALSE) {
@@ -683,7 +683,7 @@ public class Slider extends Control {
                 return (StyleableProperty<Boolean>)(WritableValue<Boolean>)n.showTickLabelsProperty();
             }
         };
-                    
+
         private static final CssMetaData<Slider,Boolean> SHOW_TICK_MARKS =
             new CssMetaData<Slider,Boolean>("-fx-show-tick-marks",
                 BooleanConverter.getInstance(), Boolean.FALSE) {
@@ -698,7 +698,7 @@ public class Slider extends Control {
                 return (StyleableProperty<Boolean>)(WritableValue<Boolean>)n.showTickMarksProperty();
             }
         };
-            
+
         private static final CssMetaData<Slider,Boolean> SNAP_TO_TICKS =
             new CssMetaData<Slider,Boolean>("-fx-snap-to-ticks",
                 BooleanConverter.getInstance(), Boolean.FALSE) {
@@ -713,7 +713,7 @@ public class Slider extends Control {
                 return (StyleableProperty<Boolean>)(WritableValue<Boolean>)n.snapToTicksProperty();
             }
         };
-        
+
         private static final CssMetaData<Slider,Number> MAJOR_TICK_UNIT =
             new CssMetaData<Slider,Number>("-fx-major-tick-unit",
                 SizeConverter.getInstance(), 25.0) {
@@ -728,7 +728,7 @@ public class Slider extends Control {
                 return (StyleableProperty<Number>)(WritableValue<Number>)n.majorTickUnitProperty();
             }
         };
-        
+
         private static final CssMetaData<Slider,Number> MINOR_TICK_COUNT =
             new CssMetaData<Slider,Number>("-fx-minor-tick-count",
                 SizeConverter.getInstance(), 3.0) {
@@ -743,15 +743,15 @@ public class Slider extends Control {
                 return (StyleableProperty<Number>)(WritableValue<Number>)n.minorTickCountProperty();
             }
         };
-        
+
         private static final CssMetaData<Slider,Orientation> ORIENTATION =
             new CssMetaData<Slider,Orientation>("-fx-orientation",
-                new EnumConverter<Orientation>(Orientation.class), 
+                new EnumConverter<Orientation>(Orientation.class),
                 Orientation.HORIZONTAL) {
 
             @Override
             public Orientation getInitialValue(Slider node) {
-                // A vertical Slider should remain vertical 
+                // A vertical Slider should remain vertical
                 return node.getOrientation();
             }
 
@@ -768,7 +768,7 @@ public class Slider extends Control {
 
         private static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES;
         static {
-            final List<CssMetaData<? extends Styleable, ?>> styleables = 
+            final List<CssMetaData<? extends Styleable, ?>> styleables =
                 new ArrayList<CssMetaData<? extends Styleable, ?>>(Control.getClassCssMetaData());
             styleables.add(BLOCK_INCREMENT);
             styleables.add(SHOW_TICK_LABELS);
@@ -777,7 +777,7 @@ public class Slider extends Control {
             styleables.add(MAJOR_TICK_UNIT);
             styleables.add(MINOR_TICK_COUNT);
             styleables.add(ORIENTATION);
-            
+
             STYLEABLES = Collections.unmodifiableList(styleables);
         }
     }

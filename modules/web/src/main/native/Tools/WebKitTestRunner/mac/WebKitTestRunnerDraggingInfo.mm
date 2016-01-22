@@ -44,7 +44,7 @@ using namespace WTR;
     _draggingPasteboard = [pasteboard retain];
     _draggingSource = [source retain];
     _offset = offset;
-    
+
     return self;
 }
 
@@ -56,12 +56,12 @@ using namespace WTR;
     [super dealloc];
 }
 
-- (NSWindow *)draggingDestinationWindow 
+- (NSWindow *)draggingDestinationWindow
 {
     return [TestController::shared().mainWebView()->platformView() window];
 }
 
-- (NSDragOperation)draggingSourceOperationMask 
+- (NSDragOperation)draggingSourceOperationMask
 {
     // WKView currently implements neither draggingSourceOperationMaskForLocal: nor draggingSession:sourceOperationMaskForDraggingContext:.
     return NSDragOperationAll;
@@ -73,7 +73,7 @@ using namespace WTR;
     return NSMakePoint(location.x, location.y);
 }
 
-- (NSPoint)draggedImageLocation 
+- (NSPoint)draggedImageLocation
 {
     WKPoint location = TestController::shared().eventSenderProxy()->position();
     return NSMakePoint(location.x + _offset.width, location.y + _offset.height);

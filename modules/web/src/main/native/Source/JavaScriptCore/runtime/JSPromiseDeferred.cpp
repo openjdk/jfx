@@ -41,7 +41,7 @@ const ClassInfo JSPromiseDeferred::s_info = { "JSPromiseDeferred", 0, 0, 0, CREA
 JSPromiseDeferred* JSPromiseDeferred::create(ExecState* exec, JSGlobalObject* globalObject)
 {
     VM& vm = exec->vm();
-    
+
     JSFunction* resolver = createDeferredConstructionFunction(vm, globalObject);
 
     JSPromise* promise = constructPromise(exec, globalObject, resolver);
@@ -140,10 +140,10 @@ ThenableStatus updateDeferredFromPotentialThenable(ExecState* exec, JSValue x, J
     // 1. If Type(x) is not Object, return "not a thenable".
     if (!x.isObject())
         return NotAThenable;
-    
+
     // 2. Let 'then' be the result of calling Get(x, "then").
     JSValue thenValue = x.get(exec, exec->vm().propertyNames->then);
-    
+
     // 3. If then is an abrupt completion,
     if (exec->hadException()) {
         // i. Let 'rejectResult' be the result of calling the [[Call]] internal method of
@@ -176,7 +176,7 @@ ThenableStatus updateDeferredFromPotentialThenable(ExecState* exec, JSValue x, J
     MarkedArgumentBuffer thenArguments;
     thenArguments.append(deferred->resolve());
     thenArguments.append(deferred->reject());
-    
+
     call(exec, thenValue, thenCallType, thenCallData, x, thenArguments);
 
     // 7. If 'thenCallResult' is an abrupt completion,

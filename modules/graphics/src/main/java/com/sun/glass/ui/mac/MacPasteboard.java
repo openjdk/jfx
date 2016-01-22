@@ -32,10 +32,10 @@ final class MacPasteboard {
     static {
         _initIDs();
     }
-    
+
     final static public int General = 1;
     final static public int DragAndDrop = 2;
-    
+
     final static public int UtfIndex = 0;
     final static public int ObjectIndex = 1;
 
@@ -57,7 +57,7 @@ final class MacPasteboard {
     final static public String UtfRawImageType = "application.x-java-rawimage";
     final static public String UtfDragImageType = "application.x-java-drag-image";
     final static public String UtfDragImageOffset = "application.x-java-drag-image-offset";
-    
+
     // Native object handle (NSPasteboard*, etc.)
     private long ptr = 0L;
 
@@ -70,21 +70,21 @@ final class MacPasteboard {
         this.user = false;
         this.ptr = _createSystemPasteboard(type);
     }
-    
+
     // creates user platform pasteboard for the given name
     private native long _createUserPasteboard(String name);
     public MacPasteboard(String name) {
         this.user = true;
         this.ptr = _createUserPasteboard(name);
     }
-    
+
     /** Returns native pasteboard pointer (NSPasteboard*)
      */
     public long getNativePasteboard() {
         assertValid();
         return this.ptr;
     }
-    
+
     // returns name
     private native String _getName(long ptr);
     public String getName() {
@@ -108,24 +108,24 @@ final class MacPasteboard {
         assertValid();
         return _getItemAsRawImage(this.ptr, index);
     }
-    
+
     // get the item representation for the given utf type as String
     private native String _getItemStringForUTF(long ptr, int index, String utf);
     public String getItemStringForUTF(int index, String utf) {
         assertValid();
         return _getItemStringForUTF(this.ptr, index, utf);
     }
-    
+
     // get the item representation for the given utf type as byte array
     private native byte[] _getItemBytesForUTF(long ptr, int index, String utf);
     public byte[] getItemBytesForUTF(int index, String utf) {
         assertValid();
         return _getItemBytesForUTF(this.ptr, index, utf);
     }
-    
+
     // paste the items with their corresponding representations
     // returns seed
-    // 
+    //
     // ex of 2 items:
     // 1st item has 2 representations
     // 2nd item has 1 representation
@@ -164,7 +164,7 @@ final class MacPasteboard {
         }
         return putItemsFromArray(array, supportedActions);
     }
-    
+
     // clears pasteboard
     // returns seed
     private native long _clear(long ptr);
@@ -172,21 +172,21 @@ final class MacPasteboard {
         assertValid();
         return _clear(this.ptr);
     }
-    
+
     // retrieve pasteboard seed
     private native long _getSeed(long ptr);
     public long getSeed() {
         assertValid();
         return _getSeed(this.ptr);
     }
-    
+
     // synthesized API
     private native int _getAllowedOperation(long ptr);
     public int getAllowedOperation() {
         assertValid();
         return _getAllowedOperation(this.ptr);
     }
-    
+
     private native void _release(long ptr);
     public void release() {
         assertValid();

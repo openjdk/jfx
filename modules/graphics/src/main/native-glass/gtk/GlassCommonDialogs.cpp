@@ -119,7 +119,7 @@ JNIEXPORT jobject JNICALL Java_com_sun_glass_ui_gtk_GtkCommonDialogs__1showFileC
             (chooser_type == GTK_FILE_CHOOSER_ACTION_OPEN ? GTK_STOCK_OPEN : GTK_STOCK_SAVE),
             GTK_RESPONSE_ACCEPT,
             NULL);
-    
+
     if (chooser_type == GTK_FILE_CHOOSER_ACTION_SAVE) {
         gtk_file_chooser_set_current_name(GTK_FILE_CHOOSER(chooser), chooser_filename);
         gtk_file_chooser_set_do_overwrite_confirmation(GTK_FILE_CHOOSER (chooser), TRUE);
@@ -149,26 +149,26 @@ JNIEXPORT jobject JNICALL Java_com_sun_glass_ui_gtk_GtkCommonDialogs__1showFileC
             g_slist_free(fnames_gslist);
         }
     }
-    
+
     if (!jFileNames) {
-        jFileNames = env->NewObjectArray(0, jStringCls, NULL);            
+        jFileNames = env->NewObjectArray(0, jStringCls, NULL);
         EXCEPTION_OCCURED(env);
     }
-    
+
     int index = g_slist_index(filters, gtk_file_chooser_get_filter(GTK_FILE_CHOOSER(chooser)));
-    
-    jclass jCommonDialogs = (jclass) env->FindClass("com/sun/glass/ui/CommonDialogs");            
-    EXCEPTION_OCCURED(env);    
+
+    jclass jCommonDialogs = (jclass) env->FindClass("com/sun/glass/ui/CommonDialogs");
+    EXCEPTION_OCCURED(env);
     jmethodID jCreateFileChooserResult = env->GetStaticMethodID(jCommonDialogs,
             "createFileChooserResult",
             "([Ljava/lang/String;[Lcom/sun/glass/ui/CommonDialogs$ExtensionFilter;I)Lcom/sun/glass/ui/CommonDialogs$FileChooserResult;");
-    
+
     EXCEPTION_OCCURED(env);
 
     jobject result =
             env->CallStaticObjectMethod(jCommonDialogs, jCreateFileChooserResult, jFileNames, jFilters, index);
     LOG_EXCEPTION(env)
-    
+
     g_slist_free(filters);
     gtk_widget_destroy(chooser);
 
@@ -250,7 +250,7 @@ static GSList* setup_GtkFileFilters(GtkFileChooser* chooser, JNIEnv* env, jobjec
     jsize jfilters_size = env->GetArrayLength(extFilters);
     LOG1("Filters: %d\n", jfilters_size)
     if (jfilters_size == 0) return NULL;
-    
+
     GSList* filter_list = NULL;
 
     for(i = 0; i<jfilters_size; i++) {
@@ -271,7 +271,7 @@ static GSList* setup_GtkFileFilters(GtkFileChooser* chooser, JNIEnv* env, jobjec
         LOG1("Patterns: %d\n", jextarray_size)
         int ext_idx;
         for(ext_idx = 0; ext_idx < jextarray_size; ext_idx++) {
-            jstring jext = (jstring)env->GetObjectArrayElement(jextensions, ext_idx);    
+            jstring jext = (jstring)env->GetObjectArrayElement(jextensions, ext_idx);
             EXCEPTION_OCCURED(env);
             const char * ext = env->GetStringUTFChars(jext, NULL);
             LOG2("pattern[%d]: %s\n", ext_idx, ext)
@@ -284,7 +284,7 @@ static GSList* setup_GtkFileFilters(GtkFileChooser* chooser, JNIEnv* env, jobjec
         if (default_filter_index == i) {
             gtk_file_chooser_set_filter(chooser, ffilter);
         }
-        
+
         filter_list = g_slist_append(filter_list, ffilter);
     }
     return filter_list;

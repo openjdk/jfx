@@ -27,11 +27,11 @@ package javafx.beans.value;
 
 /**
  * A writable double value.
- * 
+ *
  * @see WritableValue
  * @see WritableNumberValue
- * 
- * 
+ *
+ *
  * @since JavaFX 2.0
  */
 public interface WritableDoubleValue extends WritableNumberValue {
@@ -41,7 +41,7 @@ public interface WritableDoubleValue extends WritableNumberValue {
      * Unlike {@link #getValue()},
      * this method returns primitive double.
      * Needs to be identical to {@link #getValue()}.
-     * 
+     *
      * @return The current value
      */
     double get();
@@ -50,7 +50,7 @@ public interface WritableDoubleValue extends WritableNumberValue {
      * Set the wrapped value.
      * Unlike {@link #setValue(java.lang.Number) },
      * this method uses primitive double.
-     * 
+     *
      * @param value
      *            The new value
      */

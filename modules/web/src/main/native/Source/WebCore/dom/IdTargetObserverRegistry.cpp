@@ -34,7 +34,7 @@ void IdTargetObserverRegistry::addObserver(const AtomicString& id, IdTargetObser
 {
     if (id.isEmpty())
         return;
-    
+
     IdToObserverSetMap::AddResult result = m_registry.add(id.impl(), nullptr);
     if (result.isNewEntry)
         result.iterator->value = std::make_unique<ObserverSet>();

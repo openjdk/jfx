@@ -125,7 +125,7 @@ public class JreUtils {
     public static RelativeFileSet extractJreAsRelativeFileSet(String root, JreUtils.Rule[] ruleset) {
         return extractJreAsRelativeFileSet(root, ruleset, false);
     }
-    
+
     public static RelativeFileSet extractJreAsRelativeFileSet(String root, JreUtils.Rule[] ruleset, boolean acceptSymlinks) {
         if (root.isEmpty()) return null;
 

@@ -52,7 +52,7 @@ private:
     virtual CursorDirective getCursor(const LayoutPoint&, Cursor&) const override final;
     virtual bool isSnapshottedPlugIn() const override final { return true; }
     virtual void paint(PaintInfo&, const LayoutPoint&) override;
-    
+
     virtual bool canHaveWidget() const override final { return false; }
 
     void paintSnapshot(PaintInfo&, const LayoutPoint&);

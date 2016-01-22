@@ -30,12 +30,12 @@ import org.antlr.runtime.RecognitionException;
 import org.junit.Test;
 
 public class CommentTest extends LexerBase {
-    
+
     @Test
     public void comment() throws Exception {
         assertRecognized("/* ignored */");
     }
-    
+
     @Test
     public void multilineComment() throws Exception {
         assertRecognized("/* ignored \n * line 2 */");

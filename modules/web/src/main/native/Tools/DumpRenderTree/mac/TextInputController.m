@@ -6,13 +6,13 @@
  * are met:
  *
  * 1.  Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer. 
+ *     notice, this list of conditions and the following disclaimer.
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
- *     documentation and/or other materials provided with the distribution. 
+ *     documentation and/or other materials provided with the distribution.
  * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
- *     from this software without specific prior written permission. 
+ *     from this software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY APPLE AND ITS CONTRIBUTORS "AS IS" AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
@@ -278,7 +278,7 @@
 {
     [inputMethodHandler release];
     inputMethodHandler = nil;
-    
+
     [super dealloc];
 }
 
@@ -307,7 +307,7 @@
 - (void)setMarkedText:(NSString *)aString selectedFrom:(int)from length:(int)length
 {
     NSObject <NSTextInput> *textInput = [self textInput];
- 
+
     if (textInput)
         [textInput setMarkedText:aString selectedRange:NSMakeRange(from, length)];
 }
@@ -346,7 +346,7 @@
 
     if (textInput)
         return [[textInput attributedSubstringFromRange:NSMakeRange(from, length)] string];
-    
+
     return @"";
 }
 
@@ -358,7 +358,7 @@
 
     if (textInput)
         [ret setAttributedString:[textInput attributedSubstringFromRange:NSMakeRange(from, length)]];
-    
+
     return ret;
 }
 
@@ -396,7 +396,7 @@
 
     return nil;
 }
-  
+
 
 - (NSArray *)firstRectForCharactersFrom:(int)from length:(int)length
 {
@@ -486,11 +486,11 @@
 {
     if (!inputMethodHandler)
         return NO;
-    
+
     inputMethodView = sender;
-    
+
     NSEvent *event = [eventArray objectAtIndex:0];
-    unsigned modifierFlags = [event modifierFlags]; 
+    unsigned modifierFlags = [event modifierFlags];
     NSMutableArray *modifiers = [[NSMutableArray alloc] init];
     if (modifierFlags & NSAlphaShiftKeyMask)
         [modifiers addObject:@"NSAlphaShiftKeyMask"];
@@ -508,7 +508,7 @@
         [modifiers addObject:@"NSHelpKeyMask"];
     if (modifierFlags & NSFunctionKeyMask)
         [modifiers addObject:@"NSFunctionKeyMask"];
-    
+
     WebScriptObject* eventParam = [inputMethodHandler evaluateWebScript:@"new Object();"];
     [eventParam setValue:[event characters] forKey:@"characters"];
     [eventParam setValue:[event charactersIgnoringModifiers] forKey:@"charactersIgnoringModifiers"];
@@ -517,12 +517,12 @@
     [eventParam setValue:modifiers forKey:@"modifierFlags"];
 
     [modifiers release];
-    
+
     id result = [inputMethodHandler callWebScriptMethod:@"call" withArguments:[NSArray arrayWithObjects:inputMethodHandler, eventParam, nil]];
-    if (![result respondsToSelector:@selector(boolValue)] || ![result boolValue]) 
+    if (![result respondsToSelector:@selector(boolValue)] || ![result boolValue])
         [sender doCommandBySelector:@selector(noop:)]; // AppKit sends noop: if the ime does not handle an event
-    
-    inputMethodView = nil;    
+
+    inputMethodView = nil;
     return YES;
 }
 

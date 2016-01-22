@@ -64,7 +64,7 @@ public class WeakReferenceQueue<E> {
         size++;
         new ListEntry(obj, garbage).insert(head.prev);
     }
-    
+
     public void remove(E obj) {
         cleanup();
 
@@ -79,7 +79,7 @@ public class WeakReferenceQueue<E> {
             entry = entry.next;
         }
     }
-    
+
     public void cleanup() {
         ListEntry entry;
         while ((entry = (ListEntry) garbage.poll()) != null) {

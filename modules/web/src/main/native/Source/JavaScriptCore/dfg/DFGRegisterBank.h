@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef DFGRegisterBank_h
@@ -86,12 +86,12 @@ public:
     RegID tryAllocate()
     {
         VirtualRegister ignored = VirtualRegister();
-        
+
         for (uint32_t i = 0; i < NUM_REGS; ++i) {
             if (!m_data[i].lockCount && !m_data[i].name.isValid())
                 return allocateInternal(i, ignored);
         }
-        
+
         return (RegID)-1;
     }
 
@@ -149,7 +149,7 @@ public:
         VirtualRegister name = nameAtIndex(index);
         if (name.isValid())
             releaseAtIndex(index);
-        
+
         return name;
     }
 
@@ -206,12 +206,12 @@ public:
     {
         return nameAtIndex(BankInfo::toIndex(reg));
     }
-    
+
     bool isInUse(RegID reg) const
     {
         return isLocked(reg) || name(reg).isValid();
     }
-    
+
     void dump()
     {
         // For each register, print the VirtualRegister 'name'.

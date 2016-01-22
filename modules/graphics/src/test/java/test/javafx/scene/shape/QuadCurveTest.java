@@ -59,8 +59,8 @@ public class QuadCurveTest {
 
     @Test public void testSetGetControlY() throws Exception {
         TestUtils.testDoublePropertyGetterSetter(new StubQuadCurve(), "controlY", 123.2, 0.0);
-    } 
-    
+    }
+
     @Test public void testPropertyPropagation_visible() throws Exception {
         NodeTest.testBooleanPropertyPropagation(new StubQuadCurve(), "visible", false, true);
     }

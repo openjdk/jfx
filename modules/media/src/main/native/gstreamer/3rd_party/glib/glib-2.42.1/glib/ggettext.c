@@ -8,7 +8,7 @@
  *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.	 See the GNU
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
@@ -19,7 +19,7 @@
  * Modified by the GLib Team and others 1997-2000.  See the AUTHORS
  * file for a list of people on the GLib Team.  See the ChangeLog
  * files for a list of changes.  These files are distributed with
- * GLib at ftp://ftp.gtk.org/pub/gtk/. 
+ * GLib at ftp://ftp.gtk.org/pub/gtk/.
  */
 
 #include "config.h"
@@ -74,9 +74,9 @@ _glib_get_locale_dir (void)
        */
       const char *p = GLIB_LOCALE_DIR + strlen (GLIB_LOCALE_DIR);
       while (*--p != '/')
-	;
+    ;
       while (*--p != '/')
-	;
+    ;
 
       locale_dir = g_build_filename (install_dir, p, NULL);
 
@@ -375,7 +375,7 @@ _g_dgettext_should_translate (void)
  *
  * This function disables translations if and only if upon its first
  * call all the following conditions hold:
- * 
+ *
  * - @domain is not %NULL
  *
  * - textdomain() has been called to set a default text domain

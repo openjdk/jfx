@@ -42,51 +42,51 @@ import java.util.Set;
  *
  */
 public class FXOMCloner {
-    
+
     private final FXOMDocument targetDocument;
     private final FxIdCollector fxIdCollector;
     private FXOMObject clonee;
     private final Set<String> addedFxIds = new HashSet<>();
-    
+
     public FXOMCloner(FXOMDocument targetDocument) {
         assert targetDocument != null;
         this.targetDocument = targetDocument;
         this.fxIdCollector = new FxIdCollector(targetDocument);
     }
-    
+
     public FXOMDocument getTargetDocument() {
         return targetDocument;
     }
-    
+
     public FXOMObject clone(FXOMObject clonee) {
         return clone(clonee, false /* preserveCloneFxId */);
     }
-    
+
     public FXOMObject clone(FXOMObject clonee, boolean preserveCloneeFxId) {
         assert clonee != null;
         assert addedFxIds.isEmpty();
-        
+
         this.clonee = clonee;
-        
+
         // Creates a deep clone of 'clonee'
         final FXOMObject result = cloneObject(this.clonee);
         addedFxIds.clear();
-        
+
         // Renames fxid in the clone so that there is no naming
         // conflict when the clone is hooked to its target document.
         renameFxIds(result, preserveCloneeFxId);
-        
+
         return result;
     }
-    
-    
+
+
     /*
      * Private
      */
-    
+
     private FXOMObject cloneObject(FXOMObject fxomObject) {
         final FXOMObject result;
-        
+
         if (fxomObject instanceof FXOMCollection) {
             result = cloneCollection((FXOMCollection) fxomObject);
         } else if (fxomObject instanceof FXOMInstance) {
@@ -97,37 +97,37 @@ public class FXOMCloner {
             throw new RuntimeException(getClass().getSimpleName()
                     + " needs some additional implementation"); //NOI18N
         }
-        
+
         return result;
     }
-    
-    
+
+
     private FXOMCollection cloneCollection(FXOMCollection source) {
         assert source != null;
-        
+
         final FXOMCollection result = new FXOMCollection(
                 targetDocument,
                 source.getDeclaredClass());
-        
+
         for (FXOMObject sourceItem : source.getItems()) {
             final FXOMObject newItem = cloneObject(sourceItem);
             newItem.addToParentCollection(-1, result);
         }
-        
+
         result.setFxConstant(source.getFxConstant());
         result.setFxController(source.getFxController());
         result.setFxFactory(source.getFxFactory());
         result.setFxId(source.getFxId());
         result.setFxValue(source.getFxValue());
-        
+
         return result;
     }
-    
-    
+
+
     private FXOMInstance cloneInstance(FXOMInstance source) {
-        
+
         assert source != null;
-        
+
         final FXOMInstance result;
         if (source.getDeclaredClass() == null) {
             assert source.getSceneGraphObject() == null; // source is unresolved
@@ -139,28 +139,28 @@ public class FXOMCloner {
                     targetDocument,
                     source.getDeclaredClass());
         }
-        
+
         for (Map.Entry<PropertyName, FXOMProperty> e : source.getProperties().entrySet()) {
             final FXOMProperty newProperty = cloneProperty(e.getValue());
-            // Note: cloneProperty() may 
+            // Note: cloneProperty() may
             if (newProperty != null) {
                 newProperty.addToParentInstance(-1, result);
             }
         }
-        
+
         result.setFxConstant(source.getFxConstant());
         result.setFxController(source.getFxController());
         result.setFxFactory(source.getFxFactory());
         result.setFxId(source.getFxId());
         result.setFxValue(source.getFxValue());
-        
+
         return result;
     }
-    
-    
+
+
     private FXOMObject cloneIntrinsic(FXOMIntrinsic source) {
         assert source != null;
-        
+
         final boolean shallowClone;
         final FXOMObject sourceObject;
         switch(source.getType()) {
@@ -181,7 +181,7 @@ public class FXOMCloner {
                 shallowClone = true;
                 break;
         }
-        
+
         final FXOMObject result;
         if (shallowClone) {
             // We clone the intrinsic itself
@@ -198,19 +198,19 @@ public class FXOMCloner {
         }
         else {
             assert sourceObject != null;
-            
+
             // We clone the target of the intrinsic
             result = cloneObject(sourceObject);
         }
-        
-        
+
+
         return result;
     }
-    
-    
+
+
     private FXOMProperty cloneProperty(FXOMProperty source) {
         final FXOMProperty result;
-        
+
         if (source instanceof FXOMPropertyC) {
             result = clonePropertyC((FXOMPropertyC) source);
         } else if (source instanceof FXOMPropertyT) {
@@ -219,28 +219,28 @@ public class FXOMCloner {
             throw new RuntimeException(getClass().getSimpleName()
                     + " needs some additional implementation"); //NOI18N
         }
-        
+
         return result;
     }
 
     public FXOMPropertyC clonePropertyC(FXOMPropertyC source) {
         assert source != null;
-        
+
         final FXOMPropertyC result = new FXOMPropertyC(
                 targetDocument,
                 source.getName());
-        
+
         for (FXOMObject sourceValue : source.getValues()) {
             final FXOMObject newValue = cloneObject(sourceValue);
             newValue.addToParentProperty(-1, result);
         }
-        
+
         return result;
     }
-    
+
     public FXOMProperty clonePropertyT(FXOMPropertyT source) {
         assert source != null;
-        
+
         final boolean shallowClone;
         final FXOMObject sourceObject;
         final PrefixedValue pv = new PrefixedValue(source.getValue());
@@ -259,7 +259,7 @@ public class FXOMCloner {
             shallowClone = true;
             sourceObject = null;
         }
-        
+
         final FXOMProperty result;
         if (shallowClone) {
             result = new FXOMPropertyT(
@@ -277,41 +277,41 @@ public class FXOMCloner {
                         cloneObject(sourceObject));
             }
         }
-        
+
         return result;
     }
-    
+
     private boolean isInsideClonee(FXOMObject object) {
         assert object != null;
         return (object == clonee) || object.isDescendantOf(clonee);
-    }    
-    
+    }
+
     private void renameFxIds(FXOMObject clone, boolean preserveCloneeFxId) {
-        
+
         final Map<String, FXOMObject> fxIds = clone.collectFxIds();
-        
+
         if (preserveCloneeFxId && (clonee.getFxId() != null)) {
             // We don't apply renaming to the fx:id of the clonee
             assert clonee.getFxId().equals(clone.getFxId());
             assert fxIds.get(clonee.getFxId()) == clone;
             fxIds.remove(clonee.getFxId());
         }
-        
+
         for (Map.Entry<String, FXOMObject> e : fxIds.entrySet()) {
             final String candidateFxId = e.getKey();
             final FXOMObject declarer = e.getValue();
-            
+
             final String renamedFxId = fxIdCollector.importFxId(candidateFxId);
-            
+
             if (renamedFxId.equals(candidateFxId) == false) {
-                
+
                 /*
-                 * We renamed candidateFxId as renamedFxId 
+                 * We renamed candidateFxId as renamedFxId
                  *  1) on the declarer object
                  *  2) in each fx:reference/fx:copy object
                  *  3) in each xxx="$candidateFxId" expression property //NOI18N
                  */
-                
+
                 // 1)
                 declarer.setFxId(renamedFxId);
 
@@ -329,6 +329,6 @@ public class FXOMCloner {
                 }
             }
         }
-        
+
     }
 }

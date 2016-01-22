@@ -61,7 +61,7 @@ public:
             m_namedGlyphs.add(glyphName, glyph.tableEntry);
             return;
         }
-    
+
         GlyphMapLayer* currentLayer = &m_rootLayer;
         RefPtr<GlyphMapNode> node;
         size_t length = unicodeString.length();
@@ -87,10 +87,10 @@ public:
         SVGGlyph& lastGlyph = node->glyphs.last();
         lastGlyph.priority = m_currentPriority++;
         lastGlyph.unicodeStringLength = length;
-    
+
         // If the glyph is named, also add it to the named glyph name, and to the glyph table in both cases.
         appendToGlyphTable(lastGlyph);
-        if (hasGlyphName)  
+        if (hasGlyphName)
             m_namedGlyphs.add(glyphName, lastGlyph.tableEntry);
     }
 
@@ -130,9 +130,9 @@ public:
 
         std::sort(glyphs.begin(), glyphs.end(), compareGlyphPriority);
     }
-    
-    void clear() 
-    { 
+
+    void clear()
+    {
         m_rootLayer.clear();
         m_glyphTable.clear();
         m_currentPriority = 0;

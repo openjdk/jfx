@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -65,7 +65,7 @@ bool JSStorage::deleteProperty(JSCell* cell, ExecState* exec, PropertyName prope
     PropertySlot slot(thisObject);
     if (getStaticValueSlot<JSStorage, Base>(exec, *s_info.propHashTable(exec), thisObject, propertyName, slot))
         return false;
-        
+
     JSValue prototype = thisObject->prototype();
     if (prototype.isObject() && asObject(prototype)->getPropertySlot(exec, propertyName, slot))
         return false;
@@ -95,7 +95,7 @@ void JSStorage::getOwnPropertyNames(JSObject* object, ExecState* exec, PropertyN
         if (exec->hadException())
             return;
     }
-        
+
     Base::getOwnPropertyNames(thisObject, exec, propertyNames, mode);
 }
 
@@ -115,7 +115,7 @@ bool JSStorage::putDelegate(ExecState* exec, PropertyName propertyName, JSValue 
     String stringValue = value.toString(exec)->value(exec);
     if (exec->hadException())
         return true;
-    
+
     ExceptionCode ec = 0;
     impl().setItem(propertyNameToString(propertyName), stringValue, ec);
     setDOMException(exec, ec);

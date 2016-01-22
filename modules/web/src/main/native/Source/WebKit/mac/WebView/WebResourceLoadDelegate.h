@@ -6,13 +6,13 @@
  * are met:
  *
  * 1.  Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer. 
+ *     notice, this list of conditions and the following disclaimer.
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
- *     documentation and/or other materials provided with the distribution. 
+ *     documentation and/or other materials provided with the distribution.
  * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
- *     from this software without specific prior written permission. 
+ *     from this software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY APPLE AND ITS CONTRIBUTORS "AS IS" AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
@@ -40,7 +40,7 @@
     Implementors are also given the opportunity to mutate requests before they are sent.
     The various progress methods of this protocol all receive an identifier as the
     parameter.  This identifier can be used to track messages associated with a single
-    resource.  For example, a single resource may generate multiple 
+    resource.  For example, a single resource may generate multiple
     resource:willSendRequest:redirectResponse:fromDataSource: messages as it's URL is redirected.
 */
 @interface NSObject (WebResourceLoadDelegate)

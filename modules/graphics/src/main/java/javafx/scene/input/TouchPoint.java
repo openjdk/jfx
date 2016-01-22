@@ -131,7 +131,7 @@ public final class TouchPoint implements Serializable{
                 n = n.getParent();
             }
         }
-        
+
         return target == this.target;
     }
 

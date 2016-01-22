@@ -55,7 +55,7 @@ public class TableViewDriver extends AbstractNodeDriver {
     /*
      * AbstractDriver
      */
-    
+
     @Override
     public AbstractHandles<?> makeHandles(FXOMObject fxomObject) {
         assert fxomObject != null;
@@ -64,22 +64,22 @@ public class TableViewDriver extends AbstractNodeDriver {
         return new TableViewHandles(contentPanelController, (FXOMInstance) fxomObject);
     }
 
-    
+
     @Override
     public AbstractResizer<?> makeResizer(FXOMObject fxomObject) {
         assert fxomObject.getSceneGraphObject() instanceof TableView;
         return new RegionResizer((Region) fxomObject.getSceneGraphObject());
     }
-    
+
     @Override
     public FXOMObject refinePick(Node hitNode, double sceneX, double sceneY, FXOMObject fxomObject) {
         assert fxomObject.getSceneGraphObject() instanceof TableView;
-        
+
         final TableViewDesignInfoX di = new TableViewDesignInfoX();
         final TableView<?> tv = (TableView<?>) fxomObject.getSceneGraphObject();
         final TableColumn<?,?> tc = di.lookupColumn(tv, sceneX, sceneY);
         final FXOMObject result;
-        
+
         if (tc == null) {
             result = fxomObject;
         } else {
@@ -87,8 +87,8 @@ public class TableViewDriver extends AbstractNodeDriver {
             assert result != null;
             assert result.getSceneGraphObject() == tc;
         }
-        
+
         return result;
     }
-    
+
 }

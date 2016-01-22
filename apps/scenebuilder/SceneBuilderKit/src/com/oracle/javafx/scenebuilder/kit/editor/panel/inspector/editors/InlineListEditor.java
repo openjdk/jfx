@@ -42,8 +42,8 @@ import javafx.scene.layout.VBox;
 
 /**
  * Generic class for property editors based on a list of inline items.
- * 
- * 
+ *
+ *
  */
 public abstract class InlineListEditor extends PropertyEditor implements EditorItemDelegate {
     private final VBox vbox = new VBox(1);
@@ -63,7 +63,7 @@ public abstract class InlineListEditor extends PropertyEditor implements EditorI
     public void reset(ValuePropertyMetadata propMeta, Set<Class<?>> selectedClasses) {
         reset(propMeta, selectedClasses, true);
     }
-    
+
     public void reset(ValuePropertyMetadata propMeta, Set<Class<?>> selectedClasses, boolean removeAll) {
         super.reset(propMeta, selectedClasses);
         setLayoutFormat(PropertyEditor.LayoutFormat.DOUBLE_LINE);
@@ -102,7 +102,7 @@ public abstract class InlineListEditor extends PropertyEditor implements EditorI
         // By default, keep 1 item
         remove(source, false);
     }
-    
+
     public void remove(EditorItem source, boolean removeAll) {
 //        System.out.println("REMOVE");
         removeItem(source, removeAll);
@@ -126,7 +126,7 @@ public abstract class InlineListEditor extends PropertyEditor implements EditorI
     final protected List<EditorItem> getEditorItems() {
         return editorItems;
     }
-    
+
     final protected EditorItem addItem(EditorItem newItem) {
         return addItem(null, newItem);
     }
@@ -152,7 +152,7 @@ public abstract class InlineListEditor extends PropertyEditor implements EditorI
         // By default, keep 1 item
         removeItem(editorItem, false);
     }
-    
+
     protected void removeItem(EditorItem editorItem, boolean removeAll) {
         if (!removeAll && editorItems.size() == 1) {
             // Do not remove last item, but reset it
@@ -192,7 +192,7 @@ public abstract class InlineListEditor extends PropertyEditor implements EditorI
         // By default, keep 1 item
         reset(false);
     }
-    
+
     protected void reset(boolean removeAll) {
         List<EditorItem> items = new ArrayList<>(editorItems);
         for (EditorItem editorItem : items) {

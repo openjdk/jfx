@@ -198,7 +198,7 @@ final class FXDnD {
                     node.removeEventHandler(MouseEvent.MOUSE_PRESSED, onMousePressHandler);
                     node.removeEventHandler(MouseEvent.DRAG_DETECTED, onDragStartHandler);
                     node.removeEventHandler(DragEvent.DRAG_DONE, onDragDoneHandler);
-                    
+
                     isDragSourceListenerInstalled = false;
                 }
             });
@@ -374,7 +374,7 @@ final class FXDnD {
 
     private final EventHandler<DragEvent> onDragEnteredHandler = (event) -> {
         if (activeDTContextPeer == null) activeDTContextPeer = new FXDropTargetContextPeer();
-        
+
         int action = activeDTContextPeer.postDropTargetEvent(event);
 
         // If AWT doesn't accept anything, let parent nodes handle the event
@@ -391,7 +391,7 @@ final class FXDnD {
 
     private final EventHandler<DragEvent> onDragOverHandler = (event) -> {
         if (activeDTContextPeer == null) activeDTContextPeer = new FXDropTargetContextPeer();
-        
+
         int action = activeDTContextPeer.postDropTargetEvent(event);
 
         // If AWT doesn't accept anything, let parent nodes handle the event
@@ -413,7 +413,7 @@ final class FXDnD {
         if (action != 0) {
             // NOTE: the dropAction is ignored since we use the action last
             // reported from the DRAG_OVER handler.
-            // 
+            //
             // We might want to:
             //
             //    assert activeDTContextPeer.dropAction == onDragDroppedHandler.currentAction;

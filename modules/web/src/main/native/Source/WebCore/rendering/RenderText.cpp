@@ -307,15 +307,15 @@ Vector<IntRect> RenderText::absoluteRectsForRange(unsigned start, unsigned end, 
     const_cast<RenderText&>(*this).ensureLineBoxes();
 
     // Work around signed/unsigned issues. This function takes unsigneds, and is often passed UINT_MAX
-    // to mean "all the way to the end". InlineTextBox coordinates are unsigneds, so changing this 
-    // function to take ints causes various internal mismatches. But selectionRect takes ints, and 
-    // passing UINT_MAX to it causes trouble. Ideally we'd change selectionRect to take unsigneds, but 
+    // to mean "all the way to the end". InlineTextBox coordinates are unsigneds, so changing this
+    // function to take ints causes various internal mismatches. But selectionRect takes ints, and
+    // passing UINT_MAX to it causes trouble. Ideally we'd change selectionRect to take unsigneds, but
     // that would cause many ripple effects, so for now we'll just clamp our unsigned parameters to INT_MAX.
     ASSERT(end == UINT_MAX || end <= INT_MAX);
     ASSERT(start <= INT_MAX);
     start = std::min(start, static_cast<unsigned>(INT_MAX));
     end = std::min(end, static_cast<unsigned>(INT_MAX));
-    
+
     return m_lineBoxes.absoluteRectsForRange(*this, start, end, useSelectionHeight, wasFixed);
 }
 
@@ -326,9 +326,9 @@ Vector<IntRect> RenderText::absoluteRectsForRange(unsigned start, unsigned end, 
 void RenderText::collectSelectionRects(Vector<SelectionRect>& rects, unsigned start, unsigned end)
 {
     // FIXME: Work around signed/unsigned issues. This function takes unsigneds, and is often passed UINT_MAX
-    // to mean "all the way to the end". InlineTextBox coordinates are unsigneds, so changing this 
-    // function to take ints causes various internal mismatches. But selectionRect takes ints, and 
-    // passing UINT_MAX to it causes trouble. Ideally we'd change selectionRect to take unsigneds, but 
+    // to mean "all the way to the end". InlineTextBox coordinates are unsigneds, so changing this
+    // function to take ints causes various internal mismatches. But selectionRect takes ints, and
+    // passing UINT_MAX to it causes trouble. Ideally we'd change selectionRect to take unsigneds, but
     // that would cause many ripple effects, so for now we'll just clamp our unsigned parameters to INT_MAX.
     ASSERT(end == std::numeric_limits<unsigned>::max() || end <= std::numeric_limits<int>::max());
     ASSERT(start <= std::numeric_limits<int>::max());
@@ -419,15 +419,15 @@ Vector<FloatQuad> RenderText::absoluteQuadsForRange(unsigned start, unsigned end
     const_cast<RenderText&>(*this).ensureLineBoxes();
 
     // Work around signed/unsigned issues. This function takes unsigneds, and is often passed UINT_MAX
-    // to mean "all the way to the end". InlineTextBox coordinates are unsigneds, so changing this 
-    // function to take ints causes various internal mismatches. But selectionRect takes ints, and 
-    // passing UINT_MAX to it causes trouble. Ideally we'd change selectionRect to take unsigneds, but 
+    // to mean "all the way to the end". InlineTextBox coordinates are unsigneds, so changing this
+    // function to take ints causes various internal mismatches. But selectionRect takes ints, and
+    // passing UINT_MAX to it causes trouble. Ideally we'd change selectionRect to take unsigneds, but
     // that would cause many ripple effects, so for now we'll just clamp our unsigned parameters to INT_MAX.
     ASSERT(end == UINT_MAX || end <= INT_MAX);
     ASSERT(start <= INT_MAX);
     start = std::min(start, static_cast<unsigned>(INT_MAX));
     end = std::min(end, static_cast<unsigned>(INT_MAX));
-    
+
     return m_lineBoxes.absoluteQuadsForRange(*this, start, end, useSelectionHeight, wasFixed);
 }
 
@@ -597,7 +597,7 @@ float RenderText::minLogicalWidth() const
 {
     if (preferredLogicalWidthsDirty())
         const_cast<RenderText*>(this)->computePreferredLogicalWidths(0);
-        
+
     return m_minWidth;
 }
 
@@ -605,7 +605,7 @@ float RenderText::maxLogicalWidth() const
 {
     if (preferredLogicalWidthsDirty())
         const_cast<RenderText*>(this)->computePreferredLogicalWidths(0);
-        
+
     return m_maxWidth;
 }
 
@@ -925,7 +925,7 @@ bool RenderText::isAllCollapsibleWhitespace() const
     }
     return true;
 }
-    
+
 bool RenderText::containsOnlyWhitespace(unsigned from, unsigned len) const
 {
     ASSERT(m_text);
@@ -951,7 +951,7 @@ float RenderText::firstRunY() const
 {
     return firstTextBox() ? firstTextBox()->y() : 0;
 }
-    
+
 void RenderText::setSelectionState(SelectionState state)
 {
     if (state != SelectionNone)
@@ -1116,7 +1116,7 @@ void RenderText::setText(const String& text, bool force)
 
     if (parent()->isRenderBlockFlow())
         toRenderBlockFlow(parent())->invalidateLineLayoutPath();
-    
+
     if (AXObjectCache* cache = document().existingAXObjectCache())
         cache->textChanged(this);
 }

@@ -50,7 +50,7 @@ MediaStreamCenter& MediaStreamCenter::shared()
     MediaStreamCenter* override = mediaStreamCenterOverride();
     if (override)
         return *override;
-    
+
     return MediaStreamCenter::platformCenter();
 }
 

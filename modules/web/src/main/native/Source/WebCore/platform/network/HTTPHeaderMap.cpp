@@ -80,12 +80,12 @@ struct CaseFoldingCStringTranslator {
     {
         return CaseFoldingHash::hash(cString, strlen(cString));
     }
-    
+
     static bool equal(const AtomicString& key, const char* cString)
     {
         return equalIgnoringCase(key, cString);
     }
-    
+
     static void translate(AtomicString& location, const char* cString, unsigned /*hash*/)
     {
         location = AtomicString(cString);
@@ -99,7 +99,7 @@ String HTTPHeaderMap::get(const char* name) const
         return String();
     return i->value;
 }
-    
+
 bool HTTPHeaderMap::contains(const char* name) const
 {
     return find<CaseFoldingCStringTranslator>(name) != end();

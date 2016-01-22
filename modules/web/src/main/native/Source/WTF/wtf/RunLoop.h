@@ -66,7 +66,7 @@ public:
 #if PLATFORM(COCOA)
     WTF_EXPORT_PRIVATE void runForDuration(double duration);
 #endif
-    
+
     class TimerBase {
         friend class RunLoop;
     public:

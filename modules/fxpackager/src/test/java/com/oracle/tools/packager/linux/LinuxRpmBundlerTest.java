@@ -175,7 +175,7 @@ public class LinuxRpmBundlerTest {
      *     <li>Where to build it</li>
      *     <li>The jar containing the application (with a main-class attribute)</li>
      * </ul>
-     * 
+     *
      * All other values will be driven off of those two values.
      */
     @Test
@@ -417,7 +417,7 @@ public class LinuxRpmBundlerTest {
         Assume.assumeTrue(Boolean.parseBoolean(System.getProperty("FULL_TEST")));
 
         testFileAssociation("FASmoke 1", "Bogus File", "bogus", "application/x-vnd.test-bogus",
-                            new File(appResourcesDir, "javalogo_white_48.png"));        
+                            new File(appResourcesDir, "javalogo_white_48.png"));
     }
 
     @Test
@@ -558,5 +558,5 @@ public class LinuxRpmBundlerTest {
         assertNotNull(output);
         assertTrue(output.exists());
     }
-    
+
 }

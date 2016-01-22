@@ -45,7 +45,7 @@ public class GLSLBackend extends SLBackend {
         qualMap.put("const", "const");
         qualMap.put("param", "uniform");
     }
-    
+
     private static final Map<String, String> typeMap = new HashMap<String, String>();
     static {
         typeMap.put("void",    "void");
@@ -65,7 +65,7 @@ public class GLSLBackend extends SLBackend {
         typeMap.put("lsampler","sampler2D");
         typeMap.put("fsampler","sampler2D");
     }
-    
+
     private static final Map<String, String> varMap = new HashMap<String, String>();
     static {
         varMap.put("pos0", "gl_TexCoord[0].st");
@@ -116,7 +116,7 @@ public class GLSLBackend extends SLBackend {
         // of the special pixcoord variable (it's wasteful otherwise)...
         sb.append("uniform float jsl_pixCoordYOffset;\n");
         sb.append("vec2 pixcoord = vec2(gl_FragCoord.x, jsl_pixCoordYOffset-gl_FragCoord.y);\n");
-        
+
         // also output helper function that handles the y-flip
         // needed to account for OpenGL's lower-left origin
         // TODO: this is really gross, but the Java2D/RSL backend needs

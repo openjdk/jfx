@@ -98,7 +98,7 @@ ComplexTextController::ComplexTextRun::ComplexTextRun(CTRunRef ctRun, const Simp
     , m_stringLength(stringLength)
     , m_indexBegin(runRange.location)
     , m_indexEnd(runRange.location + runRange.length)
-    , m_initialAdvance(wkCTRunGetInitialAdvance(ctRun))    
+    , m_initialAdvance(wkCTRunGetInitialAdvance(ctRun))
     , m_isLTR(!(CTRunGetStatus(ctRun) & kCTRunStatusRightToLeft))
     , m_isMonotonic(true)
 {

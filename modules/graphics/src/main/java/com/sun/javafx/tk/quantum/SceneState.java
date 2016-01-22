@@ -34,7 +34,7 @@ import com.sun.prism.paint.Paint;
 
 /**
  * SceneState is intended to provide for a shadow copy the View/Scene state
- * similar to the shadow Graph, providing a static snapshot until the Scene 
+ * similar to the shadow Graph, providing a static snapshot until the Scene
  * is rendered.
  */
 class SceneState extends PresentableState {
@@ -63,7 +63,7 @@ class SceneState extends PresentableState {
     /**
      * Returns the glass scene for the view state
      * .
-     * @return the glass scene 
+     * @return the glass scene
      *
      * May be called on any thread.
      */
@@ -110,10 +110,10 @@ class SceneState extends PresentableState {
             viewHeight = (int)camera.getViewHeight();
         }
     }
-    
+
     /**
      * Put the pixels on the screen.
-     * 
+     *
      * @param source - the source for the Pixels object to be uploaded
      */
     @Override

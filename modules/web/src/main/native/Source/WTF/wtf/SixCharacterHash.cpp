@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -39,7 +39,7 @@ unsigned sixCharacterHashStringToInteger(const char* string)
     unsigned hash = 0;
 
     RELEASE_ASSERT(strlen(string) == 6);
-    
+
     for (unsigned i = 0; i < 6; ++i) {
         hash *= 62;
         unsigned c = string[i];
@@ -54,7 +54,7 @@ unsigned sixCharacterHashStringToInteger(const char* string)
         ASSERT(c >= '0' && c <= '9');
         hash += c - '0' + 26 * 2;
     }
-    
+
     return hash;
 }
 

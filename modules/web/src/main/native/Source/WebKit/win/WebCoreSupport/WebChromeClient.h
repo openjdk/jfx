@@ -21,7 +21,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include <WebCore/ChromeClient.h>
@@ -45,7 +45,7 @@ public:
 
     virtual void setWindowRect(const WebCore::FloatRect&);
     virtual WebCore::FloatRect windowRect();
-    
+
     virtual WebCore::FloatRect pageRect();
 
     virtual void focus();
@@ -65,13 +65,13 @@ public:
 
     virtual void setToolbarsVisible(bool);
     virtual bool toolbarsVisible();
-    
+
     virtual void setStatusbarVisible(bool);
     virtual bool statusbarVisible();
-    
+
     virtual void setScrollbarsVisible(bool);
     virtual bool scrollbarsVisible();
-    
+
     virtual void setMenubarVisible(bool);
     virtual bool menubarVisible();
 

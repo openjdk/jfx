@@ -202,11 +202,11 @@ public final class MouseDragEvent extends MouseEvent{
             @NamedArg("gestureSource") Object gestureSource) {
         this(null, null, eventType, x, y, screenX, screenY, button, clickCount,
                 shiftDown, controlDown, altDown, metaDown, primaryButtonDown,
-                middleButtonDown, secondaryButtonDown, synthesized, popupTrigger, 
+                middleButtonDown, secondaryButtonDown, synthesized, popupTrigger,
                 pickResult, gestureSource);
      }
 
-   
+
     private final transient Object gestureSource;
 
     /**

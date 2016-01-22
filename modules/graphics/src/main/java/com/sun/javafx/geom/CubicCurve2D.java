@@ -30,7 +30,7 @@ import java.util.Arrays;
 import com.sun.javafx.geom.transform.BaseTransform;
 
 /**
- * The <code>CubicCurve2D</code> class defines a cubic parametric curve 
+ * The <code>CubicCurve2D</code> class defines a cubic parametric curve
  * segment in {@code (x,y)} coordinate space.
  * <p>
  * This class is only the abstract superclass for all objects which
@@ -248,9 +248,9 @@ public class CubicCurve2D extends Shape {
      * to the double coordinates at the specified offset in the specified
      * array.
      * @param coords a double array containing coordinates
-     * @param offset the index of <code>coords</code> from which to begin 
+     * @param offset the index of <code>coords</code> from which to begin
      *          setting the end points and control points of this curve
-     *      to the coordinates contained in <code>coords</code> 
+     *      to the coordinates contained in <code>coords</code>
      */
     public void setCurve(float[] coords, int offset) {
         setCurve(coords[offset + 0], coords[offset + 1],
@@ -277,11 +277,11 @@ public class CubicCurve2D extends Shape {
 
     /**
      * Sets the location of the end points and control points of this curve
-     * to the coordinates of the <code>Point2D</code> objects at the specified 
+     * to the coordinates of the <code>Point2D</code> objects at the specified
      * offset in the specified array.
      * @param pts an array of <code>Point2D</code> objects
      * @param offset  the index of <code>pts</code> from which to begin setting
-     *          the end points and control points of this curve to the 
+     *          the end points and control points of this curve to the
      *      points contained in <code>pts</code>
      */
     public void setCurve(Point2D[] pts, int offset) {
@@ -302,7 +302,7 @@ public class CubicCurve2D extends Shape {
 
     /**
      * Returns the square of the flatness of the cubic curve specified
-     * by the indicated control points. The flatness is the maximum distance 
+     * by the indicated control points. The flatness is the maximum distance
      * of a control point from the line connecting the end points.
      *
      * @param x1 the X coordinate that specifies the start point
@@ -330,12 +330,12 @@ public class CubicCurve2D extends Shape {
                        float x2, float y2) {
         return Math.max(Line2D.ptSegDistSq(x1, y1, x2, y2, ctrlx1, ctrly1),
                 Line2D.ptSegDistSq(x1, y1, x2, y2, ctrlx2, ctrly2));
-            
+
     }
 
     /**
      * Returns the flatness of the cubic curve specified
-     * by the indicated control points. The flatness is the maximum distance 
+     * by the indicated control points. The flatness is the maximum distance
      * of a control point from the line connecting the end points.
      *
      * @param x1 the X coordinate that specifies the start point
@@ -367,11 +367,11 @@ public class CubicCurve2D extends Shape {
 
     /**
      * Returns the square of the flatness of the cubic curve specified
-     * by the control points stored in the indicated array at the 
-     * indicated index. The flatness is the maximum distance 
+     * by the control points stored in the indicated array at the
+     * indicated index. The flatness is the maximum distance
      * of a control point from the line connecting the end points.
      * @param coords an array containing coordinates
-     * @param offset the index of <code>coords</code> from which to begin 
+     * @param offset the index of <code>coords</code> from which to begin
      *          getting the end points and control points of the curve
      * @return the square of the flatness of the <code>CubicCurve2D</code>
      *      specified by the coordinates in <code>coords</code> at
@@ -386,11 +386,11 @@ public class CubicCurve2D extends Shape {
 
     /**
      * Returns the flatness of the cubic curve specified
-     * by the control points stored in the indicated array at the 
-     * indicated index.  The flatness is the maximum distance 
+     * by the control points stored in the indicated array at the
+     * indicated index.  The flatness is the maximum distance
      * of a control point from the line connecting the end points.
      * @param coords an array containing coordinates
-     * @param offset the index of <code>coords</code> from which to begin 
+     * @param offset the index of <code>coords</code> from which to begin
      *          getting the end points and control points of the curve
      * @return the flatness of the <code>CubicCurve2D</code>
      *      specified by the coordinates in <code>coords</code> at
@@ -404,8 +404,8 @@ public class CubicCurve2D extends Shape {
     }
 
     /**
-     * Returns the square of the flatness of this curve.  The flatness is the 
-     * maximum distance of a control point from the line connecting the 
+     * Returns the square of the flatness of this curve.  The flatness is the
+     * maximum distance of a control point from the line connecting the
      * end points.
      * @return the square of the flatness of this curve.
      */
@@ -414,8 +414,8 @@ public class CubicCurve2D extends Shape {
     }
 
     /**
-     * Returns the flatness of this curve.  The flatness is the 
-     * maximum distance of a control point from the line connecting the 
+     * Returns the flatness of this curve.  The flatness is the
+     * maximum distance of a control point from the line connecting the
      * end points.
      * @return the flatness of this curve.
      */
@@ -437,7 +437,7 @@ public class CubicCurve2D extends Shape {
      */
     public void subdivide(float t, CubicCurve2D left, CubicCurve2D right) {
         if ((left == null) && (right == null)) return;
-        
+
         float npx = calcX(t);
         float npy = calcY(t);
 
@@ -500,9 +500,9 @@ public class CubicCurve2D extends Shape {
 
     /**
      * Subdivides the cubic curve specified by the <code>src</code> parameter
-     * and stores the resulting two subdivided curves into the 
+     * and stores the resulting two subdivided curves into the
      * <code>left</code> and <code>right</code> curve parameters.
-     * Either or both of the <code>left</code> and <code>right</code> objects 
+     * Either or both of the <code>left</code> and <code>right</code> objects
      * may be the same as the <code>src</code> object or <code>null</code>.
      * @param src the cubic curve to be subdivided
      * @param left the cubic curve object for storing the left or
@@ -545,12 +545,12 @@ public class CubicCurve2D extends Shape {
 
     /**
      * Subdivides the cubic curve specified by the coordinates
-     * stored in the <code>src</code> array at indices <code>srcoff</code> 
+     * stored in the <code>src</code> array at indices <code>srcoff</code>
      * through (<code>srcoff</code>&nbsp;+&nbsp;7) and stores the
      * resulting two subdivided curves into the two result arrays at the
      * corresponding indices.
      * Either or both of the <code>left</code> and <code>right</code>
-     * arrays may be <code>null</code> or a reference to the same array 
+     * arrays may be <code>null</code> or a reference to the same array
      * as the <code>src</code> array.
      * Note that the last point in the first subdivided curve is the
      * same as the first point in the second subdivided curve. Thus,
@@ -620,9 +620,9 @@ public class CubicCurve2D extends Shape {
     }
 
     /**
-     * Solves the cubic whose coefficients are in the <code>eqn</code> 
-     * array and places the non-complex roots back into the same array, 
-     * returning the number of roots.  The solved cubic is represented 
+     * Solves the cubic whose coefficients are in the <code>eqn</code>
+     * array and places the non-complex roots back into the same array,
+     * returning the number of roots.  The solved cubic is represented
      * by the equation:
      * <pre>
      *     eqn = {c, b, a, d}
@@ -650,7 +650,7 @@ public class CubicCurve2D extends Shape {
      * zeroes.
      * @param eqn the specified array of coefficients to use to solve
      *        the cubic equation
-     * @param res the array that contains the non-complex roots 
+     * @param res the array that contains the non-complex roots
      *        resulting from the solution of the cubic equation
      * @return the number of roots, or -1 if the equation is a constant
      */
@@ -706,14 +706,14 @@ public class CubicCurve2D extends Shape {
      * of them.  Since the cosine method can have an error of
      * +/- 1E-14 we need to make sure that we don't make any
      * bad decisions due to an error.
-     * 
+     *
      * If the root is not near one of the endpoints, then we will
      * only have a slight inaccuracy in calculating the x intercept
      * which will only cause a slightly wrong answer for some
      * points very close to the curve.  While the results in that
      * case are not as accurate as they could be, they are not
      * disastrously inaccurate either.
-     * 
+     *
      * On the other hand, if the error happens near one end of
      * the curve, then our processing to reject values outside
      * of the t=[0,1] range will fail and the results of that
@@ -722,7 +722,7 @@ public class CubicCurve2D extends Shape {
      * the crossings and get a wrong answer for all of them, even
      * when they are clearly and obviously inside or outside the
      * curve.
-     * 
+     *
      * To work around this problem, we try a couple of Newton-Raphson
      * iterations to see if the true root is closer to the endpoint
      * or further away.  If it is further away, then we can stop
@@ -950,7 +950,7 @@ public class CubicCurve2D extends Shape {
         if (w <= 0 || h <= 0) {
             return false;
         }
-    
+
         // Trivially accept if either endpoint is inside the rectangle
         // (not on its border since it may end there and not go inside)
         // Record where they lie with respect to the rectangle.
@@ -969,7 +969,7 @@ public class CubicCurve2D extends Shape {
         if (x2tag == INSIDE && y2tag == INSIDE) {
             return true;
         }
-    
+
         float ctrlx1 = this.ctrlx1;
         float ctrly1 = this.ctrly1;
         float ctrlx2 = this.ctrlx2;
@@ -978,7 +978,7 @@ public class CubicCurve2D extends Shape {
         int ctrly1tag = getTag(ctrly1, y, y + h);
         int ctrlx2tag = getTag(ctrlx2, x, x + w);
         int ctrly2tag = getTag(ctrly2, y, y + h);
-    
+
         // Trivially reject if all points are entirely to one side of
         // the rectangle.
         if (x1tag < INSIDE && x2tag < INSIDE &&
@@ -1001,7 +1001,7 @@ public class CubicCurve2D extends Shape {
         {
             return false;   // All points below
         }
-    
+
         // Test for endpoints on the edge where either the segment
         // or the curve is headed "inwards" from them
         // Note: These tests are a superset of the fast endpoint tests
@@ -1019,7 +1019,7 @@ public class CubicCurve2D extends Shape {
             // Second endpoint on border with either edge moving inside
             return true;
         }
-    
+
         // Trivially accept if endpoints span directly across the rectangle
         boolean xoverlap = (x1tag * x2tag <= 0);
         boolean yoverlap = (y1tag * y2tag <= 0);
@@ -1029,13 +1029,13 @@ public class CubicCurve2D extends Shape {
         if (y1tag == INSIDE && y2tag == INSIDE && xoverlap) {
             return true;
         }
-    
+
         // We now know that both endpoints are outside the rectangle
         // but the 4 points are not all on one side of the rectangle.
         // Therefore the curve cannot be contained inside the rectangle,
         // but the rectangle might be contained inside the curve, or
         // the curve might intersect the boundary of the rectangle.
-    
+
         float[] eqn = new float[4];
         float[] res = new float[4];
         if (!yoverlap) {
@@ -1054,7 +1054,7 @@ public class CubicCurve2D extends Shape {
             return (num == 2 &&
                 getTag(res[0], x, x+w) * getTag(res[1], x, x+w) <= 0);
         }
-    
+
         // Y ranges overlap.  Now we examine the X ranges
         if (!xoverlap) {
             // Both x coordinates for the closing segment are left of
@@ -1072,7 +1072,7 @@ public class CubicCurve2D extends Shape {
             return (num == 2 &&
                 getTag(res[0], y, y+h) * getTag(res[1], y, y+h) <= 0);
         }
-    
+
         // The X and Y ranges of the endpoints overlap the X and Y
         // ranges of the rectangle, now find out how the endpoint
         // line segment intersects the Y range of the rectangle
@@ -1095,7 +1095,7 @@ public class CubicCurve2D extends Shape {
         if (c1tag * c2tag <= 0) {
             return true;
         }
-    
+
         // Now we know that both the X and Y ranges intersect and that
         // the endpoint line segment does not directly cross the rectangle.
         //
@@ -1116,7 +1116,7 @@ public class CubicCurve2D extends Shape {
         // the endpoint segment, and one or three with the curve.  If
         // any pair of those vertical intersections overlap the Y range
         // of the rectangle, we have an intersection.  Otherwise, we don't.
-    
+
         // c1tag = vertical intersection class of the endpoint segment
         //
         // Choose the y tag of the endpoint that was not on the same
@@ -1124,7 +1124,7 @@ public class CubicCurve2D extends Shape {
         // Note that we can "steal" the existing Y tag of that endpoint
         // since it will be provably the same as the vertical intersection.
         c1tag = ((c1tag * x1tag <= 0) ? y1tag : y2tag);
-    
+
         // Now we have to calculate an array of solutions of the curve
         // with the "near vertical side" of the rectangle.  Then we
         // need to sort the tags and do a pairwise range test to see
@@ -1136,7 +1136,7 @@ public class CubicCurve2D extends Shape {
         fillEqn(eqn, (c2tag < INSIDE ? x : x+w), x1, ctrlx1, ctrlx2, x2);
         int num = solveCubic(eqn, res);
         num = evalCubic(res, num, true, true, null, y1, ctrly1, ctrly2, y2);
-    
+
         // Now put all of the tags into a bucket and sort them.  There
         // is an intersection iff one of the pairs of tags "spans" the
         // Y range of the rectangle.

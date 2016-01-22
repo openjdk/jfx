@@ -64,7 +64,7 @@ public class SpeedGaugeApp extends Application {
     private  AnimationTimer timer;
 
     public Parent createContent() {
-        
+
         ImageView speedNeedle = new ImageView(needleImg);
 
         Rotate speedRotate = new Rotate(0, SPEED_CENTER_X, SPEED_CENTER_Y);
@@ -80,7 +80,7 @@ public class SpeedGaugeApp extends Application {
         root.setMinSize(Pane.USE_PREF_SIZE, Pane.USE_PREF_SIZE);
         root.setMaxSize(Pane.USE_PREF_SIZE, Pane.USE_PREF_SIZE);
         root.getChildren().addAll(new ImageView(backgroundImg), speedNeedle);
-        
+
         dial.setFitWidth(640);
         dial.setPreserveRatio(true);
 

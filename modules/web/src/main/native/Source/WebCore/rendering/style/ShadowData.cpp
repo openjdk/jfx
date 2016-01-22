@@ -42,7 +42,7 @@ bool ShadowData::operator==(const ShadowData& o) const
     if ((m_next && !o.m_next) || (!m_next && o.m_next)
         || (m_next && o.m_next && *m_next != *o.m_next))
         return false;
-    
+
     return m_location == o.m_location
         && m_radius == o.m_radius
         && m_spread == o.m_spread

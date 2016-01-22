@@ -77,7 +77,7 @@ public:
     FilterEffectVector& inputEffects() { return m_inputEffects; }
     FilterEffect* inputEffect(unsigned) const;
     unsigned numberOfEffectInputs() const { return m_inputEffects.size(); }
-    
+
     inline bool hasResult() const
     {
         // This function needs platform specific checks, if the memory managment is not done by FilterEffect.
@@ -100,7 +100,7 @@ public:
     void setAbsolutePaintRect(const IntRect& absolutePaintRect) { m_absolutePaintRect = absolutePaintRect; }
 
     FloatRect maxEffectRect() const { return m_maxEffectRect; }
-    void setMaxEffectRect(const FloatRect& maxEffectRect) { m_maxEffectRect = maxEffectRect; } 
+    void setMaxEffectRect(const FloatRect& maxEffectRect) { m_maxEffectRect = maxEffectRect; }
 
     void apply();
 #if ENABLE(OPENCL)
@@ -189,12 +189,12 @@ private:
     bool m_alphaImage;
 
     IntRect m_absolutePaintRect;
-    
+
     // The maximum size of a filter primitive. In SVG this is the primitive subregion in absolute coordinate space.
     // The absolute paint rect should never be bigger than m_maxEffectRect.
     FloatRect m_maxEffectRect;
     Filter* m_filter;
-    
+
 private:
     inline void copyImageBytes(Uint8ClampedArray* source, Uint8ClampedArray* destination, const IntRect&);
 

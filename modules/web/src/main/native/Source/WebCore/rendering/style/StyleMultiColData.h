@@ -39,7 +39,7 @@ class StyleMultiColData : public RefCounted<StyleMultiColData> {
 public:
     static PassRef<StyleMultiColData> create() { return adoptRef(*new StyleMultiColData); }
     PassRef<StyleMultiColData> copy() const;
-    
+
     bool operator==(const StyleMultiColData& o) const;
     bool operator!=(const StyleMultiColData &o) const
     {
@@ -49,7 +49,7 @@ public:
     unsigned short ruleWidth() const
     {
         if (m_rule.style() == BNONE || m_rule.style() == BHIDDEN)
-            return 0; 
+            return 0;
         return m_rule.width();
     }
 

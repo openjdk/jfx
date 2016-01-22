@@ -436,7 +436,7 @@ abstract class ViewPainter implements Runnable {
 
         return sceneState.isWindowVisible() && !sceneState.isWindowMinimized();
     }
-    
+
     protected float getPixelScaleFactor() {
         return presentable == null ? 1.0f : presentable.getPixelScaleFactor();
     }

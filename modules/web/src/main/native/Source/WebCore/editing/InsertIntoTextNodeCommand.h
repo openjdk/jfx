@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef InsertIntoTextNodeCommand_h
@@ -47,11 +47,11 @@ private:
 #if PLATFORM(IOS)
     virtual void doReapply() override;
 #endif
-    
+
 #ifndef NDEBUG
     virtual void getNodesInCommand(HashSet<Node*>&) override;
 #endif
-    
+
     RefPtr<Text> m_node;
     unsigned m_offset;
     String m_text;

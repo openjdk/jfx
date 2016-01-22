@@ -87,15 +87,15 @@ CSSStyleSheet* DocumentStyleSheetCollection::pageUserSheet()
 {
     if (m_pageUserSheet)
         return m_pageUserSheet.get();
-    
+
     Page* owningPage = m_document.page();
     if (!owningPage)
         return 0;
-    
+
     String userSheetText = owningPage->userStyleSheet();
     if (userSheetText.isEmpty())
         return 0;
-    
+
     // Parse the sheet and cache it.
     m_pageUserSheet = CSSStyleSheet::createInline(m_document, m_document.settings()->userStyleSheetLocation());
     m_pageUserSheet->contents().setIsUserStyleSheet(true);
@@ -202,7 +202,7 @@ void DocumentStyleSheetCollection::removePendingSheet(RemovePendingSheetNotifica
     ASSERT(m_pendingStylesheets > 0);
 
     m_pendingStylesheets--;
-    
+
 #ifdef INSTRUMENT_LAYOUT_SCHEDULING
     if (!ownerElement())
         printf("Stylesheet loaded at time %d. %d stylesheets still remain.\n", elapsedTime(), m_pendingStylesheets);
@@ -215,7 +215,7 @@ void DocumentStyleSheetCollection::removePendingSheet(RemovePendingSheetNotifica
         m_document.setNeedsNotifyRemoveAllPendingStylesheet();
         return;
     }
-    
+
     m_document.didRemoveAllPendingStylesheet();
 }
 
@@ -223,7 +223,7 @@ void DocumentStyleSheetCollection::addStyleSheetCandidateNode(Node& node, bool c
 {
     if (!node.inDocument())
         return;
-    
+
     // Until the <body> exists, we have no choice but to compare document positions,
     // since styles outside of the body and head continue to be shunted into the head
     // (and thus can shift to end up before dynamically added DOM content that is also
@@ -248,7 +248,7 @@ void DocumentStyleSheetCollection::addStyleSheetCandidateNode(Node& node, bool c
         }
         followingNode = n;
     } while (it != begin);
-    
+
     m_styleSheetCandidateNodes.insertBefore(followingNode, &node);
 }
 
@@ -348,7 +348,7 @@ void DocumentStyleSheetCollection::analyzeStyleSheetChange(UpdateFlag updateFlag
 {
     styleResolverUpdateType = Reconstruct;
     requiresFullStyleRecalc = true;
-    
+
     // Stylesheets of <style> elements that @import stylesheets are active but loading. We need to trigger a full recalc when such loads are done.
     bool hasActiveLoadingStylesheet = false;
     unsigned newStylesheetCount = newStylesheets.size();

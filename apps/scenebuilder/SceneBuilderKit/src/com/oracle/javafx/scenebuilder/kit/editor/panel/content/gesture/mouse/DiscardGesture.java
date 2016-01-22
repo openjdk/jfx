@@ -36,7 +36,7 @@ import javafx.scene.input.KeyEvent;
 
 /**
  *
- * 
+ *
  */
 public class DiscardGesture extends AbstractMouseGesture {
 
@@ -47,7 +47,7 @@ public class DiscardGesture extends AbstractMouseGesture {
     /*
      * AbstractMouseGesture
      */
-    
+
     @Override
     protected void mousePressed() {
     }

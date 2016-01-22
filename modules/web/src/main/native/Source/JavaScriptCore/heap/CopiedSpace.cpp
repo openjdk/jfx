@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -74,18 +74,18 @@ void CopiedSpace::init()
 {
     m_oldGen.toSpace = &m_oldGen.blocks1;
     m_oldGen.fromSpace = &m_oldGen.blocks2;
-    
+
     m_newGen.toSpace = &m_newGen.blocks1;
     m_newGen.fromSpace = &m_newGen.blocks2;
 
     allocateBlock();
-}   
+}
 
 CheckedBoolean CopiedSpace::tryAllocateSlowCase(size_t bytes, void** outPtr)
 {
     if (isOversize(bytes))
         return tryAllocateOversize(bytes, outPtr);
-    
+
     ASSERT(m_heap->vm()->currentThreadIsHoldingAPILock());
     m_heap->didAllocate(m_allocator.currentCapacity());
 
@@ -98,13 +98,13 @@ CheckedBoolean CopiedSpace::tryAllocateSlowCase(size_t bytes, void** outPtr)
 CheckedBoolean CopiedSpace::tryAllocateOversize(size_t bytes, void** outPtr)
 {
     ASSERT(isOversize(bytes));
-    
+
     CopiedBlock* block = CopiedBlock::create(m_heap->blockAllocator().allocateCustomSize(sizeof(CopiedBlock) + bytes, CopiedBlock::blockSize));
     m_newGen.oversizeBlocks.push(block);
     m_newGen.blockFilter.add(reinterpret_cast<Bits>(block));
     m_blockSet.add(block);
     ASSERT(!block->isOld());
-    
+
     CopiedAllocator allocator;
     allocator.setCurrentBlock(block);
     *outPtr = allocator.forceAllocate(bytes);
@@ -119,13 +119,13 @@ CheckedBoolean CopiedSpace::tryReallocate(void** ptr, size_t oldSize, size_t new
 {
     if (oldSize >= newSize)
         return true;
-    
+
     void* oldPtr = *ptr;
     ASSERT(!m_heap->vm()->isInitializingObject());
-    
+
     if (CopiedSpace::blockFor(oldPtr)->isOversize() || isOversize(newSize))
         return tryReallocateOversize(ptr, oldSize, newSize);
-    
+
     if (m_allocator.tryReallocate(oldPtr, oldSize, newSize))
         return true;
 
@@ -145,7 +145,7 @@ CheckedBoolean CopiedSpace::tryReallocateOversize(void** ptr, size_t oldSize, si
     ASSERT(newSize > oldSize);
 
     void* oldPtr = *ptr;
-    
+
     void* newPtr = 0;
     if (!tryAllocateOversize(newSize, &newPtr)) {
         *ptr = 0;
@@ -163,7 +163,7 @@ CheckedBoolean CopiedSpace::tryReallocateOversize(void** ptr, size_t oldSize, si
         m_blockSet.remove(oldBlock);
         m_heap->blockAllocator().deallocateCustomSize(CopiedBlock::destroy(oldBlock));
     }
-    
+
     *ptr = newPtr;
     return true;
 }
@@ -171,7 +171,7 @@ CheckedBoolean CopiedSpace::tryReallocateOversize(void** ptr, size_t oldSize, si
 void CopiedSpace::doneFillingBlock(CopiedBlock* block, CopiedBlock** exchange)
 {
     ASSERT(m_inCopyingPhase);
-    
+
     if (exchange)
         *exchange = allocateBlockForCopyingPhase();
 
@@ -342,11 +342,11 @@ static bool isBlockListPagedOut(double deadline, DoublyLinkedList<CopiedBlock>* 
 
 bool CopiedSpace::isPagedOut(double deadline)
 {
-    return isBlockListPagedOut(deadline, m_oldGen.toSpace) 
-        || isBlockListPagedOut(deadline, m_oldGen.fromSpace) 
+    return isBlockListPagedOut(deadline, m_oldGen.toSpace)
+        || isBlockListPagedOut(deadline, m_oldGen.fromSpace)
         || isBlockListPagedOut(deadline, &m_oldGen.oversizeBlocks)
-        || isBlockListPagedOut(deadline, m_newGen.toSpace) 
-        || isBlockListPagedOut(deadline, m_newGen.fromSpace) 
+        || isBlockListPagedOut(deadline, m_newGen.toSpace)
+        || isBlockListPagedOut(deadline, m_newGen.fromSpace)
         || isBlockListPagedOut(deadline, &m_newGen.oversizeBlocks);
 }
 

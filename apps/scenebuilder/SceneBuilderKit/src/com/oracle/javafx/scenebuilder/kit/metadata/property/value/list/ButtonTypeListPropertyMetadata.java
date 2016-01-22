@@ -46,7 +46,7 @@ public class ButtonTypeListPropertyMetadata extends ListValuePropertyMetadata<Bu
             = new ButtonTypePropertyMetadata(new PropertyName("unused"), //NOI18N
                     true, ButtonType.CLOSE, InspectorPath.UNUSED);
 
-    public ButtonTypeListPropertyMetadata(PropertyName name, boolean readWrite, 
+    public ButtonTypeListPropertyMetadata(PropertyName name, boolean readWrite,
             List<ButtonType> defaultValue, InspectorPath inspectorPath) {
         super(name, ButtonType.class, itemMetadata, readWrite, defaultValue, inspectorPath);
     }

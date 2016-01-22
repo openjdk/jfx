@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2013 Apple Inc. All Rights Reserved.
- * 
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
  * are met:
@@ -9,7 +9,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
@@ -20,7 +20,7 @@
  * PROFITS OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -61,7 +61,7 @@ HRESULT AccessibleText::addSelection(long startOffset, long endOffset)
     endOffset = convertSpecialOffset(endOffset);
 
     m_object->setSelectedTextRange(PlainTextRange(startOffset, endOffset-startOffset));
-    
+
     return S_OK;
 }
 
@@ -162,7 +162,7 @@ HRESULT AccessibleText::get_offsetAtPoint(long x, long y, enum IA2CoordinateType
 
     int caretPosition = vpos.deepEquivalent().offsetInContainerNode();
     if (caretPosition < 0 || caretPosition > m_object->stringValue().length())
-        return S_FALSE; 
+        return S_FALSE;
     return S_OK;
 }
 
@@ -206,7 +206,7 @@ HRESULT AccessibleText::get_textBeforeOffset(long offset, enum IA2TextBoundaryTy
 
     if (!startOffset || !endOffset || !text)
         return E_POINTER;
-    
+
     offset = convertSpecialOffset(offset);
 
     if (offset < 0 || offset > m_object->stringValue().length())
@@ -413,7 +413,7 @@ HRESULT AccessibleText::setCaretOffset(long offset)
 {
     if (initialCheck() == E_POINTER)
         return E_POINTER;
-        
+
     offset = convertSpecialOffset(offset);
 
     Node* node = m_object->node();
@@ -522,7 +522,7 @@ HRESULT AccessibleText::get_newText(IA2TextSegment* newText)
 {
     if (initialCheck() == E_POINTER)
         return E_POINTER;
-    
+
     return E_NOTIMPL;
 }
 
@@ -593,7 +593,7 @@ HRESULT AccessibleText::insertText(long offset, BSTR* text)
     Frame* frame = m_object->document()->frame();
     if (!frame)
         return E_POINTER;
-    
+
     addSelection(offset, offset);
 
     frame->editor().insertText(*text, 0);
@@ -721,8 +721,8 @@ ULONG STDMETHODCALLTYPE AccessibleText::Release(void)
 int AccessibleText::convertSpecialOffset(int offset)
 {
     ASSERT(m_object);
-    
-    if (offset == IA2_TEXT_OFFSET_LENGTH) 
+
+    if (offset == IA2_TEXT_OFFSET_LENGTH)
         return m_object->stringValue().length();
     if (offset == IA2_TEXT_OFFSET_CARET) {
         long caretOffset;

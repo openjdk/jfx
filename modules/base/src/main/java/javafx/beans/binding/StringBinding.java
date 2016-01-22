@@ -51,11 +51,11 @@ import com.sun.javafx.binding.ExpressionHelper;
  * {@link #get()} is called for an invalid binding.
  * <p>
  * See {@link DoubleBinding} for an example how this base class can be extended.
- * 
+ *
  * @see Binding
  * @see javafx.beans.binding.StringExpression
- * 
- * 
+ *
+ *
  * @since JavaFX 2.0
  */
 public abstract class StringBinding extends StringExpression implements
@@ -66,30 +66,30 @@ public abstract class StringBinding extends StringExpression implements
     private BindingHelperObserver observer;
     private ExpressionHelper<String> helper = null;
 
-    @Override 
+    @Override
     public void addListener(InvalidationListener listener) {
         helper = ExpressionHelper.addListener(helper, this, listener);
     }
 
-    @Override 
+    @Override
     public void removeListener(InvalidationListener listener) {
         helper = ExpressionHelper.removeListener(helper, listener);
     }
-    
+
     @Override
     public void addListener(ChangeListener<? super String> listener) {
         helper = ExpressionHelper.addListener(helper, this, listener);
     }
 
-    @Override 
+    @Override
     public void removeListener(ChangeListener<? super String> listener) {
         helper = ExpressionHelper.removeListener(helper, listener);
     }
-    
+
     /**
      * Start observing the dependencies for changes. If the value of one of the
      * dependencies changes, the binding is marked as invalid.
-     * 
+     *
      * @param dependencies
      *            the dependencies to observe
      */
@@ -106,7 +106,7 @@ public abstract class StringBinding extends StringExpression implements
 
     /**
      * Stop observing the dependencies for changes.
-     * 
+     *
      * @param dependencies
      *            the dependencies to stop observing
      */
@@ -129,7 +129,7 @@ public abstract class StringBinding extends StringExpression implements
     /**
      * A default implementation of {@code getDependencies()} that returns an
      * empty {@link javafx.collections.ObservableList}.
-     * 
+     *
      * @return an empty {@code ObservableList}
      */
     @Override
@@ -143,7 +143,7 @@ public abstract class StringBinding extends StringExpression implements
      * {@code computeValue()} is only called if the binding is invalid. The
      * result is cached and returned if the binding did not become invalid since
      * the last call of {@code get()}.
-     * 
+     *
      * @return the current value
      */
     @Override
@@ -182,7 +182,7 @@ public abstract class StringBinding extends StringExpression implements
      * <p>
      * Classes extending {@code StringBinding} have to provide an implementation
      * of {@code computeValue}.
-     * 
+     *
      * @return the current value
      */
     protected abstract String computeValue();
@@ -190,7 +190,7 @@ public abstract class StringBinding extends StringExpression implements
     /**
      * Returns a string representation of this {@code StringBinding} object.
      * @return a string representation of this {@code StringBinding} object.
-     */ 
+     */
     @Override
     public String toString() {
         return valid ? "StringBinding [value: " + get() + "]"

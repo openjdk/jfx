@@ -402,7 +402,7 @@ static inline CFStringRef jpegUTI()
 #endif
     return kUTTypeJPEG;
 }
-    
+
 static RetainPtr<CFStringRef> utiFromMIMEType(const String& mimeType)
 {
 #if PLATFORM(MAC)

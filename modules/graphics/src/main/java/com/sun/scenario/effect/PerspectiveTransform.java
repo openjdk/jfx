@@ -283,7 +283,7 @@ public class PerspectiveTransform extends CoreEffect<RenderState> {
 
         //RT-28197 - Dirty regions could be computed in more efficient way
         drc.deriveWithNewRegion((RectBounds) getBounds(BaseTransform.IDENTITY_TRANSFORM, defaultInput));
-        
+
         return drc;
     }
 }

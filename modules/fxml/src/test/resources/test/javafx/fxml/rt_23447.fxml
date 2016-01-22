@@ -24,10 +24,10 @@ or visit www.oracle.com if you need additional information or have any
 questions.
 -->
 
-<?import java.lang.*?> 
-<?import java.util.*?> 
-<?import javafx.scene.control.*?> 
-<?import javafx.scene.layout.*?> 
+<?import java.lang.*?>
+<?import java.util.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
 <?import javafx.scene.paint.*?>
 
 <fx:root type="my.AnchorPane" id="AnchorPane" maxHeight="-Infinity" maxWidth="-Infinity"
@@ -35,4 +35,4 @@ questions.
     <children>
         <Button id="button1" layoutX="268.0" layoutY="190.0" mnemonicParsing="false" text="Button" />
     </children>
-</fx:root> 
+</fx:root>

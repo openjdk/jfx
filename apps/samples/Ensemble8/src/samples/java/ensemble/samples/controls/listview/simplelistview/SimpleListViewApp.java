@@ -47,7 +47,7 @@ import javafx.stage.Stage;
  * heights.
  *
  * @sampleName Simple ListView
- * @preview preview.png 
+ * @preview preview.png
  * @see javafx.scene.control.ListView
  * @see javafx.scene.control.SelectionModel
  * @related /Controls/Listview/HorizontalListView

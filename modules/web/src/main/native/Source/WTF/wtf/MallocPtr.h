@@ -28,7 +28,7 @@
 
 // MallocPtr is a smart pointer class that calls fastFree in its destructor.
 // It is intended to be used for pointers where the C++ lifetime semantics
-// (calling constructors and destructors) is not desired. 
+// (calling constructors and destructors) is not desired.
 
 namespace WTF {
 

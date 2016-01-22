@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #pragma once
@@ -39,71 +39,71 @@ public:
     virtual ULONG STDMETHODCALLTYPE Release(void);
 
     // IWebFrameLoadDelegate
-    virtual HRESULT STDMETHODCALLTYPE didStartProvisionalLoadForFrame( 
+    virtual HRESULT STDMETHODCALLTYPE didStartProvisionalLoadForFrame(
         /* [in] */ IWebView* webView,
         /* [in] */ IWebFrame* /*frame*/) { return S_OK; }
-    
-    virtual HRESULT STDMETHODCALLTYPE didReceiveServerRedirectForProvisionalLoadForFrame( 
+
+    virtual HRESULT STDMETHODCALLTYPE didReceiveServerRedirectForProvisionalLoadForFrame(
         /* [in] */ IWebView *webView,
         /* [in] */ IWebFrame *frame) { return S_OK; }
-    
-    virtual HRESULT STDMETHODCALLTYPE didFailProvisionalLoadWithError( 
+
+    virtual HRESULT STDMETHODCALLTYPE didFailProvisionalLoadWithError(
         /* [in] */ IWebView *webView,
         /* [in] */ IWebError *error,
         /* [in] */ IWebFrame*);
-    
-    virtual HRESULT STDMETHODCALLTYPE didCommitLoadForFrame( 
+
+    virtual HRESULT STDMETHODCALLTYPE didCommitLoadForFrame(
         /* [in] */ IWebView *webView,
         /* [in] */ IWebFrame *frame) { return updateAddressBar(webView); }
-    
-    virtual HRESULT STDMETHODCALLTYPE didReceiveTitle( 
+
+    virtual HRESULT STDMETHODCALLTYPE didReceiveTitle(
         /* [in] */ IWebView *webView,
         /* [in] */ BSTR title,
         /* [in] */ IWebFrame *frame) { return S_OK; }
-    
+
     virtual HRESULT STDMETHODCALLTYPE didChangeIcons(
         /* [in] */ IWebView *webView,
         /* [in] */ IWebFrame *frame) { return S_OK; }
 
-    virtual HRESULT STDMETHODCALLTYPE didReceiveIcon( 
+    virtual HRESULT STDMETHODCALLTYPE didReceiveIcon(
         /* [in] */ IWebView *webView,
         /* [in] */ OLE_HANDLE hBitmap,
         /* [in] */ IWebFrame *frame) { return S_OK; }
-    
-    virtual HRESULT STDMETHODCALLTYPE didFinishLoadForFrame( 
+
+    virtual HRESULT STDMETHODCALLTYPE didFinishLoadForFrame(
         /* [in] */ IWebView* webView,
         /* [in] */ IWebFrame* /*frame*/);
-    
-    virtual HRESULT STDMETHODCALLTYPE didFailLoadWithError( 
+
+    virtual HRESULT STDMETHODCALLTYPE didFailLoadWithError(
         /* [in] */ IWebView *webView,
         /* [in] */ IWebError *error,
         /* [in] */ IWebFrame *forFrame) { return S_OK; }
-    
-    virtual HRESULT STDMETHODCALLTYPE didChangeLocationWithinPageForFrame( 
+
+    virtual HRESULT STDMETHODCALLTYPE didChangeLocationWithinPageForFrame(
         /* [in] */ IWebView *webView,
         /* [in] */ IWebFrame *frame) { return S_OK; }
 
-    virtual HRESULT STDMETHODCALLTYPE willPerformClientRedirectToURL( 
+    virtual HRESULT STDMETHODCALLTYPE willPerformClientRedirectToURL(
         /* [in] */ IWebView *webView,
         /* [in] */ BSTR url,
         /* [in] */ double delaySeconds,
         /* [in] */ DATE fireDate,
         /* [in] */ IWebFrame *frame) { return S_OK; }
-    
-    virtual HRESULT STDMETHODCALLTYPE didCancelClientRedirectForFrame( 
+
+    virtual HRESULT STDMETHODCALLTYPE didCancelClientRedirectForFrame(
         /* [in] */ IWebView *webView,
         /* [in] */ IWebFrame *frame) { return S_OK; }
-    
-    virtual HRESULT STDMETHODCALLTYPE willCloseFrame( 
+
+    virtual HRESULT STDMETHODCALLTYPE willCloseFrame(
         /* [in] */ IWebView *webView,
         /* [in] */ IWebFrame *frame) { return S_OK; }
-    
-    virtual /* [local] */ HRESULT STDMETHODCALLTYPE windowScriptObjectAvailable( 
+
+    virtual /* [local] */ HRESULT STDMETHODCALLTYPE windowScriptObjectAvailable(
         /* [in] */ IWebView *webView,
         /* [in] */ JSContextRef context,
         /* [in] */ JSObjectRef windowScriptObject)  { return S_OK; }
 
-    virtual /* [local] */ HRESULT STDMETHODCALLTYPE didClearWindowObject( 
+    virtual /* [local] */ HRESULT STDMETHODCALLTYPE didClearWindowObject(
         /* [in] */ IWebView *webView,
         /* [in] */ JSContextRef context,
         /* [in] */ JSObjectRef windowScriptObject,

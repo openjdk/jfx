@@ -39,10 +39,10 @@ import javafx.scene.input.ZoomEvent;
 
 /**
  *
- * 
+ *
  */
 public class ZoomGesture extends AbstractGesture {
-    
+
     private Observer observer;
 
     public ZoomGesture(ContentPanelController contentPanelController) {
@@ -52,40 +52,40 @@ public class ZoomGesture extends AbstractGesture {
     /*
      * AbstractGesture
      */
-    
+
     @Override
     public void start(InputEvent e, Observer observer) {
-        
+
         assert e != null;
         assert e.getEventType() == ZoomEvent.ZOOM_STARTED;
         assert observer != null;
-        
+
         this.observer = observer;
-        
+
         final Node glassLayer = contentPanelController.getGlassLayer();
         assert glassLayer.getOnZoom() == null;
         assert glassLayer.getOnZoomFinished() == null;
-        
+
         glassLayer.setOnZoom(e1 -> updateContentPanelScaling(e1));
         glassLayer.setOnZoomFinished(e1 -> performTermination());
     }
-    
-    
+
+
     /*
      * Private
      */
-    
+
     private void updateContentPanelScaling(ZoomEvent e) {
         assert Double.isNaN(e.getZoomFactor()) == false;
         final double scaling = contentPanelController.getScaling();
         contentPanelController.setScaling(Math.min(5, scaling * e.getZoomFactor()));
     }
-    
+
     private void performTermination() {
         final Node glassLayer = contentPanelController.getGlassLayer();
         glassLayer.setOnZoom(null);
         glassLayer.setOnZoomFinished(null);
-        
+
         observer.gestureDidTerminate(this);
         observer = null;
     }

@@ -662,7 +662,7 @@ void ContainerNode::removeChildren()
 
         ChildChange change = { AllChildrenRemoved, nullptr, nullptr, ChildChangeSourceAPI };
         childrenChanged(change);
-        
+
         for (size_t i = 0; i < removedChildren.size(); ++i)
             ChildNodeRemovalNotifier(*this).notify(removedChildren[i].get());
     }
@@ -795,7 +795,7 @@ void ContainerNode::queuePostAttachCallback(NodeCallback callback, Node& node, u
 {
     if (!s_postAttachCallbackQueue)
         s_postAttachCallbackQueue = new NodeCallbackQueue;
-    
+
     s_postAttachCallbackQueue->append(CallbackInfo(callback, CallbackParameters(&node, callbackData)));
 }
 
@@ -910,7 +910,7 @@ bool ContainerNode::getUpperLeftCorner(FloatPoint& point) const
             return true;
         }
     }
-    
+
     // If the target doesn't have any children or siblings that could be used to calculate the scroll position, we must be
     // at the end of the document. Scroll to the bottom. FIXME: who said anything about scrolling?
     if (!o && document().view()) {
@@ -973,7 +973,7 @@ LayoutRect ContainerNode::boundingBox() const
     FloatPoint upperLeft, lowerRight;
     bool foundUpperLeft = getUpperLeftCorner(upperLeft);
     bool foundLowerRight = getLowerRightCorner(lowerRight);
-    
+
     // If we've found one corner, but not the other,
     // then we should just return a point at the corner that we did find.
     if (foundUpperLeft != foundLowerRight) {
@@ -981,7 +981,7 @@ LayoutRect ContainerNode::boundingBox() const
             lowerRight = upperLeft;
         else
             upperLeft = lowerRight;
-    } 
+    }
 
     return enclosingLayoutRect(FloatRect(upperLeft, lowerRight.expandedTo(upperLeft) - upperLeft));
 }

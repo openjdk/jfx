@@ -50,19 +50,19 @@ static void get3DContextAttributes(ExecState* exec, RefPtr<CanvasContextAttribut
     JSValue initializerValue = exec->argument(1);
     if (initializerValue.isUndefinedOrNull())
         return;
-    
+
     JSObject* initializerObject = initializerValue.toObject(exec);
     JSDictionary dictionary(exec, initializerObject);
-    
+
     GraphicsContext3D::Attributes graphicsAttrs;
-    
+
     dictionary.tryGetProperty("alpha", graphicsAttrs.alpha);
     dictionary.tryGetProperty("depth", graphicsAttrs.depth);
     dictionary.tryGetProperty("stencil", graphicsAttrs.stencil);
     dictionary.tryGetProperty("antialias", graphicsAttrs.antialias);
     dictionary.tryGetProperty("premultipliedAlpha", graphicsAttrs.premultipliedAlpha);
     dictionary.tryGetProperty("preserveDrawingBuffer", graphicsAttrs.preserveDrawingBuffer);
-    
+
     attrs = WebGLContextAttributes::create(graphicsAttrs);
 }
 #endif
@@ -71,7 +71,7 @@ JSValue JSHTMLCanvasElement::getContext(ExecState* exec)
 {
     HTMLCanvasElement& canvas = impl();
     const String& contextId = exec->argument(0).toString(exec)->value(exec);
-    
+
     RefPtr<CanvasContextAttributes> attrs;
 #if ENABLE(WEBGL)
     if (HTMLCanvasElement::is3dType(contextId)) {
@@ -80,7 +80,7 @@ JSValue JSHTMLCanvasElement::getContext(ExecState* exec)
             return jsUndefined();
     }
 #endif
-    
+
     CanvasRenderingContext* context = canvas.getContext(contextId, attrs.get());
     if (!context)
         return jsNull();
@@ -108,7 +108,7 @@ JSValue JSHTMLCanvasElement::probablySupportsContext(ExecState* exec)
     const String& contextId = exec->uncheckedArgument(0).toString(exec)->value(exec);
     if (exec->hadException())
         return jsUndefined();
-    
+
     RefPtr<CanvasContextAttributes> attrs;
 #if ENABLE(WEBGL)
     if (HTMLCanvasElement::is3dType(contextId)) {
@@ -117,7 +117,7 @@ JSValue JSHTMLCanvasElement::probablySupportsContext(ExecState* exec)
             return jsUndefined();
     }
 #endif
-    
+
     return jsBoolean(canvas.probablySupportsContext(contextId, attrs.get()));
 }
 

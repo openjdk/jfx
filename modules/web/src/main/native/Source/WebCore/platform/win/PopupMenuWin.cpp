@@ -76,7 +76,7 @@ static LPCWSTR kPopupWindowClassName = L"PopupWindowClass";
 // message to the web view and not have our message stolen and sent to
 // the popup window.
 static const UINT WM_HOST_WINDOW_FIRST = WM_USER;
-static const UINT WM_HOST_WINDOW_CHAR = WM_USER + WM_CHAR; 
+static const UINT WM_HOST_WINDOW_CHAR = WM_USER + WM_CHAR;
 static const UINT WM_HOST_WINDOW_MOUSEMOVE = WM_USER + WM_MOUSEMOVE;
 
 // FIXME: Remove this as soon as practical.
@@ -89,7 +89,7 @@ static void translatePoint(LPARAM& lParam, HWND from, HWND to)
 {
     POINT pt;
     pt.x = (short)GET_X_LPARAM(lParam);
-    pt.y = (short)GET_Y_LPARAM(lParam);    
+    pt.y = (short)GET_Y_LPARAM(lParam);
     ::MapWindowPoints(from, to, &pt, 1);
     lParam = MAKELPARAM(pt.x, pt.y);
 }
@@ -190,7 +190,7 @@ void PopupMenuWin::show(const IntRect& r, FrameView* view, int index)
     while (::GetMessage(&msg, 0, 0, 0)) {
         switch (msg.message) {
             case WM_HOST_WINDOW_MOUSEMOVE:
-            case WM_HOST_WINDOW_CHAR: 
+            case WM_HOST_WINDOW_CHAR:
                 if (msg.hwnd == m_popup) {
                     // This message should be sent to the host window.
                     msg.hwnd = hostWindow;
@@ -314,7 +314,7 @@ void PopupMenuWin::calculatePositionAndSize(const IntRect& r, FrameView* v)
         ::MoveWindow(m_popup, absoluteScreenCoords.x(), absoluteScreenCoords.y(), absoluteScreenCoords.width(), absoluteScreenCoords.height(), false);
 
     FloatRect screen = monitorFromHwnd(m_popup);
-    
+
     // Now we determine the actual location and measurements of the popup itself.
     // r is in absolute document coordinates, but we want to be in screen coordinates.
 
@@ -335,7 +335,7 @@ void PopupMenuWin::calculatePositionAndSize(const IntRect& r, FrameView* v)
     int popupHeight = std::min(maxPopupHeight, naturalHeight);
     // The popup should show an integral number of items (i.e. no partial items should be visible)
     popupHeight -= popupHeight % m_itemHeight;
-    
+
     // Next determine its width
     int popupWidth = 0;
     for (int i = 0; i < itemCount; ++i) {
@@ -652,7 +652,7 @@ void PopupMenuWin::paint(const IntRect& damageRect, HDC hdc)
 
         TextRun textRun(itemText, 0, 0, TextRun::AllowTrailingExpansion, itemStyle.textDirection(), itemStyle.hasTextDirectionOverride());
         context.setFillColor(optionTextColor, ColorSpaceDeviceRGB);
-        
+
         Font itemFont = client()->menuStyle().font();
         if (client()->itemIsLabel(index)) {
             FontDescription d = itemFont.fontDescription();
@@ -660,7 +660,7 @@ void PopupMenuWin::paint(const IntRect& damageRect, HDC hdc)
             itemFont = Font(d, itemFont.letterSpacing(), itemFont.wordSpacing());
             itemFont.update(m_popupClient->fontSelector());
         }
-        
+
         // Draw the item text
         if (itemStyle.isVisible()) {
             int textX = 0;
@@ -1004,7 +1004,7 @@ LRESULT PopupMenuWin::wndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPa
                 }
             }
 
-            // If the mouse is inside the window, update the focused index. Otherwise, 
+            // If the mouse is inside the window, update the focused index. Otherwise,
             // hide the popup.
             RECT bounds;
             GetClientRect(m_popup, &bounds);

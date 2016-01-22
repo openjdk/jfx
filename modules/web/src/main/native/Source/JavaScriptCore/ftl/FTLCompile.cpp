@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -52,23 +52,23 @@ static uint8_t* mmAllocateCodeSection(
     void* opaqueState, uintptr_t size, unsigned alignment, unsigned, const char* sectionName)
 {
     State& state = *static_cast<State*>(opaqueState);
-    
+
     RELEASE_ASSERT(alignment <= jitAllocationGranule);
-    
+
     RefPtr<ExecutableMemoryHandle> result =
         state.graph.m_vm.executableAllocator.allocate(
             state.graph.m_vm, size, state.graph.m_codeBlock, JITCompilationMustSucceed);
-    
+
     // LLVM used to put __compact_unwind in a code section. We keep this here defensively,
     // for clients that use older LLVMs.
     if (!strcmp(sectionName, "__compact_unwind")) {
         state.compactUnwind = result->start();
         state.compactUnwindSize = result->sizeInBytes();
     }
-    
+
     state.jitCode->addHandle(result);
     state.codeSectionNames.append(sectionName);
-    
+
     return static_cast<uint8_t*>(result->start());
 }
 
@@ -80,12 +80,12 @@ static uint8_t* mmAllocateDataSection(
     UNUSED_PARAM(isReadOnly);
 
     State& state = *static_cast<State*>(opaqueState);
-    
+
     RELEASE_ASSERT(alignment <= sizeof(LSectionWord));
-    
+
     RefCountedArray<LSectionWord> section(
         (size + sizeof(LSectionWord) - 1) / sizeof(LSectionWord));
-    
+
     if (!strcmp(sectionName, "__llvm_stackmaps"))
         state.stackmapsSection = section;
     else {
@@ -96,7 +96,7 @@ static uint8_t* mmAllocateDataSection(
             state.compactUnwindSize = size;
         }
     }
-    
+
     return bitwise_cast<uint8_t*>(section.data());
 }
 
@@ -130,36 +130,36 @@ void generateICFastPath(
         // It was optimized out.
         return;
     }
-    
+
     Vector<StackMaps::Record>& records = iter->value;
-    
+
     RELEASE_ASSERT(records.size() == ic.m_generators.size());
-    
+
     for (unsigned i = records.size(); i--;) {
         StackMaps::Record& record = records[i];
         auto generator = ic.m_generators[i];
 
         CCallHelpers fastPathJIT(&vm, codeBlock);
         generator.generateFastPath(fastPathJIT);
-        
+
         char* startOfIC =
             bitwise_cast<char*>(generatedFunction) + record.instructionOffset;
-        
+
         LinkBuffer linkBuffer(vm, &fastPathJIT, startOfIC, sizeOfIC);
         // Note: we could handle the !isValid() case. We just don't appear to have a
         // reason to do so, yet.
         RELEASE_ASSERT(linkBuffer.isValid());
-        
+
         MacroAssembler::AssemblerType_T::fillNops(
             startOfIC + linkBuffer.size(), sizeOfIC - linkBuffer.size());
-        
+
         state.finalizer->sideCodeLinkBuffer->link(
             ic.m_slowPathDone[i], CodeLocationLabel(startOfIC + sizeOfIC));
-        
+
         linkBuffer.link(
             generator.slowPathJump(),
             state.finalizer->sideCodeLinkBuffer->locationOf(generator.slowPathBegin()));
-        
+
         generator.finalize(linkBuffer, *state.finalizer->sideCodeLinkBuffer);
     }
 }
@@ -171,7 +171,7 @@ static void fixFunctionBasedOnStackMaps(
     Graph& graph = state.graph;
     VM& vm = graph.m_vm;
     StackMaps stackmaps = jitCode->stackmaps;
-    
+
     StackMaps::RecordMap::iterator iter = recordMap.find(state.capturedStackmapID);
     RELEASE_ASSERT(iter != recordMap.end());
     RELEASE_ASSERT(iter->value.size() == 1);
@@ -182,26 +182,26 @@ static void fixFunctionBasedOnStackMaps(
     RELEASE_ASSERT(capturedLocation.gpr() == GPRInfo::callFrameRegister);
     RELEASE_ASSERT(!(capturedLocation.addend() % sizeof(Register)));
     int32_t localsOffset = capturedLocation.addend() / sizeof(Register) + graph.m_nextMachineLocal;
-    
+
     for (unsigned i = graph.m_inlineVariableData.size(); i--;) {
         InlineCallFrame* inlineCallFrame = graph.m_inlineVariableData[i].inlineCallFrame;
-        
+
         if (inlineCallFrame->argumentsRegister.isValid()) {
             inlineCallFrame->argumentsRegister = VirtualRegister(
                 inlineCallFrame->argumentsRegister.offset() + localsOffset);
         }
-        
+
         for (unsigned argument = inlineCallFrame->arguments.size(); argument-- > 1;) {
             inlineCallFrame->arguments[argument] =
                 inlineCallFrame->arguments[argument].withLocalsOffset(localsOffset);
         }
-        
+
         if (inlineCallFrame->isClosureCall) {
             inlineCallFrame->calleeRecovery =
                 inlineCallFrame->calleeRecovery.withLocalsOffset(localsOffset);
         }
     }
-    
+
     if (codeBlock->usesArguments()) {
         codeBlock->setArgumentsRegister(
             VirtualRegister(codeBlock->argumentsRegister().offset() + localsOffset));
@@ -211,7 +211,7 @@ static void fixFunctionBasedOnStackMaps(
 
     {
         CCallHelpers checkJIT(&vm, codeBlock);
-        
+
         // At this point it's perfectly fair to just blow away all state and restore the
         // JS JIT view of the universe.
         checkJIT.move(GPRInfo::callFrameRegister, GPRInfo::argumentGPR1);
@@ -231,7 +231,7 @@ static void fixFunctionBasedOnStackMaps(
         OwnPtr<LinkBuffer> linkBuffer = adoptPtr(new LinkBuffer(
             vm, &checkJIT, codeBlock, JITCompilationMustSucceed));
         linkBuffer->link(call, FunctionPtr(lookupExceptionHandler));
-        
+
         state.finalizer->handleExceptionsLinkBuffer = linkBuffer.release();
     }
 
@@ -240,13 +240,13 @@ static void fixFunctionBasedOnStackMaps(
     if (exitThunkGenerator.didThings()) {
         OwnPtr<LinkBuffer> linkBuffer = adoptPtr(new LinkBuffer(
             vm, &exitThunkGenerator, codeBlock, JITCompilationMustSucceed));
-        
+
         ASSERT(state.finalizer->osrExit.size() == state.jitCode->osrExit.size());
-        
+
         for (unsigned i = 0; i < state.jitCode->osrExit.size(); ++i) {
             OSRExitCompilationInfo& info = state.finalizer->osrExit[i];
             OSRExit& exit = jitCode->osrExit[i];
-            
+
             if (verboseCompilationEnabled())
                 dataLog("Handling OSR stackmap #", exit.m_stackmapID, " for ", exit.m_codeOrigin, "\n");
 
@@ -255,10 +255,10 @@ static void fixFunctionBasedOnStackMaps(
                 // It was optimized out.
                 continue;
             }
-            
+
             info.m_thunkAddress = linkBuffer->locationOf(info.m_thunkLabel);
             exit.m_patchableCodeOffset = linkBuffer->offsetOf(info.m_thunkJump);
-            
+
             for (unsigned j = exit.m_values.size(); j--;) {
                 ExitValue value = exit.m_values[j];
                 if (!value.isInJSStackSomehow())
@@ -268,106 +268,106 @@ static void fixFunctionBasedOnStackMaps(
                 exit.m_values[j] = value.withVirtualRegister(
                     VirtualRegister(value.virtualRegister().offset() + localsOffset));
             }
-            
+
             if (verboseCompilationEnabled()) {
                 DumpContext context;
                 dataLog("    Exit values: ", inContext(exit.m_values, &context), "\n");
             }
         }
-        
+
         state.finalizer->exitThunksLinkBuffer = linkBuffer.release();
     }
 
     if (!state.getByIds.isEmpty() || !state.putByIds.isEmpty()) {
         CCallHelpers slowPathJIT(&vm, codeBlock);
-        
+
         CCallHelpers::JumpList exceptionTarget;
-        
+
         for (unsigned i = state.getByIds.size(); i--;) {
             GetByIdDescriptor& getById = state.getByIds[i];
-            
+
             if (verboseCompilationEnabled())
                 dataLog("Handling GetById stackmap #", getById.stackmapID(), "\n");
-            
+
             iter = recordMap.find(getById.stackmapID());
             if (iter == recordMap.end()) {
                 // It was optimized out.
                 continue;
             }
-            
+
             for (unsigned i = 0; i < iter->value.size(); ++i) {
                 StackMaps::Record& record = iter->value[i];
-            
+
                 // FIXME: LLVM should tell us which registers are live.
                 RegisterSet usedRegisters = RegisterSet::allRegisters();
-                
+
                 GPRReg result = record.locations[0].directGPR();
                 GPRReg base = record.locations[1].directGPR();
-                
+
                 JITGetByIdGenerator gen(
                     codeBlock, getById.codeOrigin(), usedRegisters, JSValueRegs(base),
                     JSValueRegs(result), false);
-                
+
                 MacroAssembler::Label begin = slowPathJIT.label();
-                
+
                 MacroAssembler::Call call = callOperation(
                     state, usedRegisters, slowPathJIT, getById.codeOrigin(), &exceptionTarget,
                     operationGetByIdOptimize, result, gen.stubInfo(), base, getById.uid());
-                
+
                 gen.reportSlowPathCall(begin, call);
-                
+
                 getById.m_slowPathDone.append(slowPathJIT.jump());
                 getById.m_generators.append(gen);
             }
         }
-        
+
         for (unsigned i = state.putByIds.size(); i--;) {
             PutByIdDescriptor& putById = state.putByIds[i];
-            
+
             if (verboseCompilationEnabled())
                 dataLog("Handling PutById stackmap #", putById.stackmapID(), "\n");
-            
+
             iter = recordMap.find(putById.stackmapID());
             if (iter == recordMap.end()) {
                 // It was optimized out.
                 continue;
             }
-            
+
             for (unsigned i = 0; i < iter->value.size(); ++i) {
                 StackMaps::Record& record = iter->value[i];
-                
+
                 // FIXME: LLVM should tell us which registers are live.
                 RegisterSet usedRegisters = RegisterSet::allRegisters();
-                
+
                 GPRReg base = record.locations[0].directGPR();
                 GPRReg value = record.locations[1].directGPR();
-                
+
                 JITPutByIdGenerator gen(
                     codeBlock, putById.codeOrigin(), usedRegisters, JSValueRegs(base),
                     JSValueRegs(value), GPRInfo::patchpointScratchRegister, false,
                     putById.ecmaMode(), putById.putKind());
-                
+
                 MacroAssembler::Label begin = slowPathJIT.label();
-                
+
                 MacroAssembler::Call call = callOperation(
                     state, usedRegisters, slowPathJIT, putById.codeOrigin(), &exceptionTarget,
                     gen.slowPathFunction(), gen.stubInfo(), value, base, putById.uid());
-                
+
                 gen.reportSlowPathCall(begin, call);
-                
+
                 putById.m_slowPathDone.append(slowPathJIT.jump());
                 putById.m_generators.append(gen);
             }
         }
-        
+
         exceptionTarget.link(&slowPathJIT);
         MacroAssembler::Jump exceptionJump = slowPathJIT.jump();
-        
+
         state.finalizer->sideCodeLinkBuffer = adoptPtr(
             new LinkBuffer(vm, &slowPathJIT, codeBlock, JITCompilationMustSucceed));
         state.finalizer->sideCodeLinkBuffer->link(
             exceptionJump, state.finalizer->handleExceptionsLinkBuffer->entrypoint());
-        
+
         for (unsigned i = state.getByIds.size(); i--;) {
             generateICFastPath(
                 state, codeBlock, generatedFunction, recordMap, state.getByIds[i],
@@ -379,14 +379,14 @@ static void fixFunctionBasedOnStackMaps(
                 sizeOfPutById());
         }
     }
-    
+
     // Handling JS calls is weird: we need to ensure that we sort them by the PC in LLVM
     // generated code. That implies first pruning the ones that LLVM didn't generate.
     Vector<JSCall> oldCalls = state.jsCalls;
     state.jsCalls.resize(0);
     for (unsigned i = 0; i < oldCalls.size(); ++i) {
         JSCall& call = oldCalls[i];
-        
+
         StackMaps::RecordMap::iterator iter = recordMap.find(call.stackmapID());
         if (iter == recordMap.end())
             continue;
@@ -397,28 +397,28 @@ static void fixFunctionBasedOnStackMaps(
             state.jsCalls.append(copy);
         }
     }
-    
+
     std::sort(state.jsCalls.begin(), state.jsCalls.end());
-    
+
     codeBlock->setNumberOfCallLinkInfos(state.jsCalls.size());
     for (unsigned i = state.jsCalls.size(); i--;) {
         JSCall& call = state.jsCalls[i];
 
         CCallHelpers fastPathJIT(&vm, codeBlock);
         call.emit(fastPathJIT);
-        
+
         char* startOfIC = bitwise_cast<char*>(generatedFunction) + call.m_instructionOffset;
-        
+
         LinkBuffer linkBuffer(vm, &fastPathJIT, startOfIC, sizeOfCall());
         RELEASE_ASSERT(linkBuffer.isValid());
-        
+
         MacroAssembler::AssemblerType_T::fillNops(
             startOfIC + linkBuffer.size(), sizeOfCall() - linkBuffer.size());
-        
+
         CallLinkInfo& info = codeBlock->callLinkInfo(i);
         call.link(vm, linkBuffer, info);
     }
-    
+
     RepatchBuffer repatchBuffer(codeBlock);
 
     iter = recordMap.find(state.handleStackOverflowExceptionStackmapID);
@@ -427,7 +427,7 @@ static void fixFunctionBasedOnStackMaps(
     if (iter != recordMap.end()) {
         for (unsigned i = iter->value.size(); i--;) {
             StackMaps::Record& record = iter->value[i];
-            
+
             CodeLocationLabel source = CodeLocationLabel(
                 bitwise_cast<char*>(generatedFunction) + record.instructionOffset);
 
@@ -436,44 +436,44 @@ static void fixFunctionBasedOnStackMaps(
             repatchBuffer.replaceWithJump(source, state.finalizer->handleExceptionsLinkBuffer->locationOf(stackOverflowException));
         }
     }
-    
+
     iter = recordMap.find(state.handleExceptionStackmapID);
     // It's sort of remotely possible that we won't have an in-band exception handling
     // path, for some kinds of functions.
     if (iter != recordMap.end()) {
         for (unsigned i = iter->value.size(); i--;) {
             StackMaps::Record& record = iter->value[i];
-            
+
             CodeLocationLabel source = CodeLocationLabel(
                 bitwise_cast<char*>(generatedFunction) + record.instructionOffset);
-            
+
             repatchBuffer.replaceWithJump(source, state.finalizer->handleExceptionsLinkBuffer->entrypoint());
         }
     }
-    
+
     for (unsigned exitIndex = 0; exitIndex < jitCode->osrExit.size(); ++exitIndex) {
         OSRExitCompilationInfo& info = state.finalizer->osrExit[exitIndex];
         OSRExit& exit = jitCode->osrExit[exitIndex];
         iter = recordMap.find(exit.m_stackmapID);
-        
+
         Vector<const void*> codeAddresses;
-        
+
         if (iter != recordMap.end()) {
             for (unsigned i = iter->value.size(); i--;) {
                 StackMaps::Record& record = iter->value[i];
-                
+
                 CodeLocationLabel source = CodeLocationLabel(
                     bitwise_cast<char*>(generatedFunction) + record.instructionOffset);
-                
+
                 codeAddresses.append(bitwise_cast<char*>(generatedFunction) + record.instructionOffset + MacroAssembler::maxJumpReplacementSize());
-                
+
                 if (info.m_isInvalidationPoint)
                     jitCode->common.jumpReplacements.append(JumpReplacement(source, info.m_thunkAddress));
                 else
                     repatchBuffer.replaceWithJump(source, info.m_thunkAddress);
             }
         }
-        
+
         if (graph.compilation())
             graph.compilation()->addOSRExitSite(codeAddresses);
     }
@@ -482,10 +482,10 @@ static void fixFunctionBasedOnStackMaps(
 void compile(State& state)
 {
     char* error = 0;
-    
+
     {
         GraphSafepoint safepoint(state.graph);
-        
+
         LLVMMCJITCompilerOptions options;
         llvm->InitializeMCJITCompilerOptions(&options, sizeof(options));
         options.OptLevel = Options::llvmBackendOptimizationLevel();
@@ -495,9 +495,9 @@ void compile(State& state)
         options.EnableFastISel = Options::enableLLVMFastISel();
         options.MCJMM = llvm->CreateSimpleMCJITMemoryManager(
             &state, mmAllocateCodeSection, mmAllocateDataSection, mmApplyPermissions, mmDestroy);
-    
+
         LLVMExecutionEngineRef engine;
-    
+
         if (llvm->CreateMCJITCompilerForModule(&engine, state.module, &options, sizeof(options), &error)) {
             dataLog("FATAL: Could not create LLVM execution engine: ", error, "\n");
             CRASH();
@@ -505,7 +505,7 @@ void compile(State& state)
 
         LLVMPassManagerRef functionPasses = 0;
         LLVMPassManagerRef modulePasses;
-    
+
         if (Options::llvmSimpleOpt()) {
             modulePasses = llvm->CreatePassManager();
             llvm->AddTargetData(llvm->GetExecutionEngineTargetData(engine), modulePasses);
@@ -522,28 +522,28 @@ void compile(State& state)
             LLVMPassManagerBuilderRef passBuilder = llvm->PassManagerBuilderCreate();
             llvm->PassManagerBuilderSetOptLevel(passBuilder, Options::llvmOptimizationLevel());
             llvm->PassManagerBuilderSetSizeLevel(passBuilder, Options::llvmSizeLevel());
-        
+
             functionPasses = llvm->CreateFunctionPassManagerForModule(state.module);
             modulePasses = llvm->CreatePassManager();
-        
+
             llvm->AddTargetData(llvm->GetExecutionEngineTargetData(engine), modulePasses);
-        
+
             llvm->PassManagerBuilderPopulateFunctionPassManager(passBuilder, functionPasses);
             llvm->PassManagerBuilderPopulateModulePassManager(passBuilder, modulePasses);
-        
+
             llvm->PassManagerBuilderDispose(passBuilder);
-        
+
             llvm->InitializeFunctionPassManager(functionPasses);
             for (LValue function = llvm->GetFirstFunction(state.module); function; function = llvm->GetNextFunction(function))
                 llvm->RunFunctionPassManager(functionPasses, function);
             llvm->FinalizeFunctionPassManager(functionPasses);
-        
+
             llvm->RunPassManager(modulePasses, state.module);
         }
 
         if (shouldShowDisassembly() || verboseCompilationEnabled())
             state.dumpState("after optimization");
-    
+
         // FIXME: Need to add support for the case where JIT memory allocation failed.
         // https://bugs.webkit.org/show_bug.cgi?id=113620
         state.generatedFunction = reinterpret_cast<GeneratedFunction>(llvm->GetPointerToGlobal(engine, state.function));
@@ -564,7 +564,7 @@ void compile(State& state)
                 MacroAssemblerCodePtr(handle->start()), handle->sizeInBytes(),
                 "    ", WTF::dataFile(), LLVMSubset);
         }
-        
+
         for (unsigned i = 0; i < state.jitCode->dataSections().size(); ++i) {
             const RefCountedArray<LSectionWord>& section = state.jitCode->dataSections()[i];
             dataLog(
@@ -574,12 +574,12 @@ void compile(State& state)
             dumpDataSection(section, "    ");
         }
     }
-    
+
     state.jitCode->unwindInfo.parse(
         state.compactUnwind, state.compactUnwindSize, state.generatedFunction);
     if (shouldShowDisassembly())
         dataLog("Unwind info for ", CodeBlockWithJITType(state.graph.m_codeBlock, JITCode::FTLJIT), ":\n    ", state.jitCode->unwindInfo, "\n");
-    
+
     if (state.stackmapsSection.size()) {
         if (shouldShowDisassembly()) {
             dataLog(
@@ -588,26 +588,26 @@ void compile(State& state)
             dataLog("    Raw data:\n");
             dumpDataSection(state.stackmapsSection, "    ");
         }
-        
+
         RefPtr<DataView> stackmapsData = DataView::create(
             ArrayBuffer::create(state.stackmapsSection.data(), state.stackmapsSection.byteSize()));
         state.jitCode->stackmaps.parse(stackmapsData.get());
-    
+
         if (shouldShowDisassembly()) {
             dataLog("    Structured data:\n");
             state.jitCode->stackmaps.dumpMultiline(WTF::dataFile(), "        ");
         }
-        
+
         StackMaps::RecordMap recordMap = state.jitCode->stackmaps.computeRecordMap();
         fixFunctionBasedOnStackMaps(
             state, state.graph.m_codeBlock, state.jitCode.get(), state.generatedFunction,
             recordMap);
-        
+
         if (shouldShowDisassembly()) {
             for (unsigned i = 0; i < state.jitCode->handles().size(); ++i) {
                 if (state.codeSectionNames[i] != "__text")
                     continue;
-                
+
                 ExecutableMemoryHandle* handle = state.jitCode->handles()[i].get();
                 dataLog(
                     "Generated LLVM code after stackmap-based fix-up for ",
@@ -620,7 +620,7 @@ void compile(State& state)
             }
         }
     }
-    
+
     state.module = 0; // We no longer own the module.
 }
 

@@ -50,7 +50,7 @@ public:
     void queueLoadingScript(const String& script);
     void queueNonLoadingScript(const String& script);
 
-private:    
+private:
     typedef Deque<OwnPtr<class WorkQueueItem> > WorkQueue;
 
     void enqueue(WorkQueueItem*); // Adopts pointer.

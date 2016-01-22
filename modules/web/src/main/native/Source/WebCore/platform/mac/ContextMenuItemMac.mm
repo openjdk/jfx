@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -87,7 +87,7 @@ ContextMenuItem::ContextMenuItem(ContextMenuItemType type, ContextMenuAction act
 ContextMenuItem::ContextMenuItem(ContextMenuAction action, const String& title, bool enabled, bool checked, Vector<ContextMenuItem>& subMenuItems)
 {
     m_platformDescription = adoptNS(createPlatformMenuItemDescription(SubmenuType, action, title, enabled, checked));
-    
+
     setSubMenu(subMenuItems);
 }
 
@@ -112,11 +112,11 @@ ContextMenuItemType ContextMenuItem::type() const
 }
 
 ContextMenuAction ContextMenuItem::action() const
-{ 
+{
     return static_cast<ContextMenuAction>([m_platformDescription.get() tag]);
 }
 
-String ContextMenuItem::title() const 
+String ContextMenuItem::title() const
 {
     return [m_platformDescription.get() title];
 }
@@ -134,7 +134,7 @@ void ContextMenuItem::setType(ContextMenuItemType type)
 
 void ContextMenuItem::setAction(ContextMenuAction action)
 {
-    [m_platformDescription.get() setTag:action]; 
+    [m_platformDescription.get() setTag:action];
 }
 
 void ContextMenuItem::setTitle(const String& title)
@@ -159,7 +159,7 @@ void ContextMenuItem::setSubMenu(Vector<ContextMenuItem>& subMenuItems)
     [subMenu setAutoenablesItems:NO];
     for (unsigned i = 0; i < subMenuItems.size(); ++i)
         [subMenu addItem:subMenuItems[i].releasePlatformDescription()];
-        
+
     [m_platformDescription.get() setSubmenu:subMenu];
     [subMenu release];
 }

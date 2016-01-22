@@ -8,13 +8,13 @@
  * are met:
  *
  * 1.  Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer. 
+ *     notice, this list of conditions and the following disclaimer.
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
- *     documentation and/or other materials provided with the distribution. 
+ *     documentation and/or other materials provided with the distribution.
  * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
- *     from this software without specific prior written permission. 
+ *     from this software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY APPLE AND ITS CONTRIBUTORS "AS IS" AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
@@ -32,7 +32,7 @@
 #include "PixelDumpSupport.h"
 #include "PixelDumpSupportCG.h"
 
-#include "DumpRenderTree.h" 
+#include "DumpRenderTree.h"
 #include "TestRunner.h"
 #include <CoreGraphics/CGBitmapContext.h>
 #include <wtf/Assertions.h>
@@ -51,7 +51,7 @@ static PassRefPtr<BitmapContext> createBitmapContext(size_t pixelsWide, size_t p
     buffer = calloc(pixelsHigh, rowBytes);
     if (!buffer)
         return 0;
-    
+
     // Creating this bitmap in the device color space prevents any color conversion when the image of the web view is drawn into it.
     RetainPtr<CGColorSpaceRef> colorSpace = adoptCF(CGColorSpaceCreateDeviceRGB());
     CGContextRef context = CGBitmapContextCreate(buffer, pixelsWide, pixelsHigh, 8, rowBytes, colorSpace.get(), kCGImageAlphaPremultipliedFirst | kCGBitmapByteOrder32Host); // Use ARGB8 on PPC or BGRA8 on X86 to improve CG performance
@@ -75,19 +75,19 @@ static void paintRepaintRectOverlay(WebView* webView, CGContextRef context)
     // Flip the context.
     CGContextScaleCTM(context, 1, -1);
     CGContextTranslateCTM(context, 0, -viewRect.size.height);
-    
+
     CGContextSetRGBFillColor(context, 0, 0, 0, static_cast<CGFloat>(0.66));
     CGContextFillRect(context, viewRect);
 
     NSArray *repaintRects = [webView trackedRepaintRects];
     if (repaintRects) {
-        
+
         for (NSValue *value in repaintRects) {
             CGRect currRect = NSRectToCGRect([value rectValue]);
             CGContextClearRect(context, currRect);
         }
     }
-    
+
     CGContextEndTransparencyLayer(context);
     CGContextRestoreGState(context);
 }
@@ -115,7 +115,7 @@ PassRefPtr<BitmapContext> createBitmapContextFromWebView(bool onscreen, bool inc
 
     NSGraphicsContext *nsContext = [NSGraphicsContext graphicsContextWithGraphicsPort:context flipped:NO];
     ASSERT(nsContext);
-    
+
     if (incrementalRepaint) {
         if (sweepHorizontally) {
             for (NSRect column = NSMakeRect(0, 0, 1, webViewSize.height); column.origin.x < webViewSize.width; column.origin.x++)
@@ -126,7 +126,7 @@ PassRefPtr<BitmapContext> createBitmapContextFromWebView(bool onscreen, bool inc
         }
     } else {
         if (deviceScaleFactor != 1) {
-            // Call displayRectIgnoringOpacity for HiDPI tests since it ensures we paint directly into the context 
+            // Call displayRectIgnoringOpacity for HiDPI tests since it ensures we paint directly into the context
             // that we have appropriately sized and scaled.
             [view displayRectIgnoringOpacity:[view bounds] inContext:nsContext];
             if ([view isTrackingRepaints])
@@ -160,10 +160,10 @@ PassRefPtr<BitmapContext> createBitmapContextFromWebView(bool onscreen, bool inc
             RetainPtr<NSGraphicsContext> savedContext = [NSGraphicsContext currentContext];
             [NSGraphicsContext setCurrentContext:nsContext];
             [imageRep draw];
-            
+
             if ([view isTrackingRepaints])
                 paintRepaintRectOverlay(view, context);
-            
+
             [NSGraphicsContext setCurrentContext:savedContext.get()];
         }
     }
@@ -178,7 +178,7 @@ PassRefPtr<BitmapContext> createBitmapContextFromWebView(bool onscreen, bool inc
         CGContextStrokeRect(context, CGRectMake(rect.origin.x, rect.origin.y, rect.size.width, rect.size.height));
         CGContextRestoreGState(context);
     }
-    
+
     return bitmapContext.release();
 }
 

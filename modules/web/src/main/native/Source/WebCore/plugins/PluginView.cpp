@@ -22,7 +22,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -123,7 +123,7 @@ IntRect PluginView::windowClipRect() const
 {
     // Start by clipping to our bounds.
     IntRect clipRect(m_windowRect);
-    
+
     // Take our element and get the clip rect from the enclosing layer and frame view.
     FrameView* parentView = m_element->document().view();
     clipRect.intersect(parentView->windowClipRectForFrameOwner(m_element, true));
@@ -420,7 +420,7 @@ void PluginView::performRequest(PluginRequest* request)
     if (!m_isStarted)
         return;
 
-    // don't let a plugin start any loads if it is no longer part of a document that is being 
+    // don't let a plugin start any loads if it is no longer part of a document that is being
     // displayed unless the loads are in the same frame as the plugin.
     const String& targetFrameName = request->frameLoadRequest().frameName();
     if (m_parentFrame->loader().documentLoader() != m_parentFrame->loader().activeDocumentLoader() && (targetFrameName.isNull() || m_parentFrame->tree().find(targetFrameName) != m_parentFrame))
@@ -464,7 +464,7 @@ void PluginView::performRequest(PluginRequest* request)
     // Targeted JavaScript requests are only allowed on the frame that contains the JavaScript plugin
     // and this has been made sure in ::load.
     ASSERT(targetFrameName.isEmpty() || m_parentFrame->tree().find(targetFrameName) == m_parentFrame);
-    
+
     // Executing a script can cause the plugin view to be destroyed, so we keep a reference to it.
     RefPtr<PluginView> protector(this);
     Deprecated::ScriptValue result = m_parentFrame->script().executeScript(jsString, request->shouldAllowPopups());
@@ -491,7 +491,7 @@ void PluginView::requestTimerFired(Timer<PluginView>* timer)
 
     OwnPtr<PluginRequest> request = m_requests[0].release();
     m_requests.remove(0);
-    
+
     // Schedule a new request before calling performRequest since the call to
     // performRequest can cause the plugin view to be deleted.
     if (!m_requests.isEmpty())
@@ -513,7 +513,7 @@ NPError PluginView::load(const FrameLoadRequest& frameLoadRequest, bool sendNoti
     ASSERT(frameLoadRequest.resourceRequest().httpMethod() == "GET" || frameLoadRequest.resourceRequest().httpMethod() == "POST");
 
     URL url = frameLoadRequest.resourceRequest().url();
-    
+
     if (url.isEmpty())
         return NPERR_INVALID_URL;
 
@@ -682,7 +682,7 @@ void PluginView::pushPopupsEnabledState(bool state)
 {
     m_popupStateStack.append(state);
 }
- 
+
 void PluginView::popPopupsEnabledState()
 {
     m_popupStateStack.removeLast();
@@ -901,7 +901,7 @@ void PluginView::didReceiveData(const char* data, int length)
 
     ASSERT(m_loadManually);
     ASSERT(m_manualStream);
-    
+
     m_manualStream->didReceiveData(0, data, length);
 }
 
@@ -922,7 +922,7 @@ void PluginView::didFail(const ResourceError& error)
         return;
 
     ASSERT(m_loadManually);
-    
+
     if (m_manualStream)
         m_manualStream->didFail(0, error);
 }
@@ -986,7 +986,7 @@ static inline int locationAfterFirstBlankLine(const Vector<char>& buffer)
         // Support for Acrobat. It sends "\n\n".
         if (bytes[i] == '\n' && bytes[i + 1] == '\n')
             return i + 2;
-        
+
         // Returns the position after 2 CRLF's or 1 CRLF if it is the first line.
         if (bytes[i] == '\r' && bytes[i + 1] == '\n') {
             i += 2;
@@ -1069,7 +1069,7 @@ static inline HTTPHeaderMap parseRFC822HeaderFields(const Vector<char>& buffer, 
     while ((eol = findEOL(bytes, length))) {
         const char* line = bytes;
         int lineLength = eol - bytes;
-        
+
         // Move bytes to the character after the terminator as returned by findEOL.
         bytes = eol + 1;
         if ((*eol == '\r') && (*bytes == '\n'))
@@ -1097,7 +1097,7 @@ static inline HTTPHeaderMap parseRFC822HeaderFields(const Vector<char>& buffer, 
             for (colon = line; *colon != ':' && colon != eol; colon++) {
                 // empty loop
             }
-            if (colon == eol) 
+            if (colon == eol)
                 // malformed header; ignore it and continue
                 continue;
             else {
@@ -1134,7 +1134,7 @@ NPError PluginView::handlePost(const char* url, const char* target, uint32_t len
 
     HTTPHeaderMap headerFields;
     Vector<char> buffer;
-    
+
     if (file) {
         NPError readResult = handlePostReadFile(buffer, len, buf);
         if(readResult != NPERR_NO_ERROR)
@@ -1186,11 +1186,11 @@ void PluginView::invalidateWindowlessPluginRect(const IntRect& rect)
 {
     if (!isVisible())
         return;
-    
+
     if (!m_element->renderer())
         return;
     RenderBox* renderer = toRenderBox(m_element->renderer());
-    
+
     IntRect dirtyRect = rect;
     dirtyRect.move(renderer->borderLeft() + renderer->paddingLeft(), renderer->borderTop() + renderer->paddingTop());
     renderer->repaintRectangle(dirtyRect);
@@ -1367,7 +1367,7 @@ static Frame* getFrame(Frame* parentFrame, Element* element)
 {
     if (parentFrame)
         return parentFrame;
-    
+
     return element->document().frame();
 }
 

@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef WebURLResponse_H
@@ -45,45 +45,45 @@ public:
     virtual ULONG STDMETHODCALLTYPE Release(void);
 
     // IWebURLResponse
-    virtual HRESULT STDMETHODCALLTYPE expectedContentLength( 
+    virtual HRESULT STDMETHODCALLTYPE expectedContentLength(
         /* [retval][out] */ long long *result);
-    
-    virtual HRESULT STDMETHODCALLTYPE initWithURL( 
+
+    virtual HRESULT STDMETHODCALLTYPE initWithURL(
         /* [in] */ BSTR url,
         /* [in] */ BSTR mimeType,
         /* [in] */ int expectedContentLength,
         /* [in] */ BSTR textEncodingName);
-    
-    virtual HRESULT STDMETHODCALLTYPE MIMEType( 
+
+    virtual HRESULT STDMETHODCALLTYPE MIMEType(
         /* [retval][out] */ BSTR *result);
-    
-    virtual HRESULT STDMETHODCALLTYPE suggestedFilename( 
+
+    virtual HRESULT STDMETHODCALLTYPE suggestedFilename(
         /* [retval][out] */ BSTR *result);
-    
-    virtual HRESULT STDMETHODCALLTYPE textEncodingName( 
+
+    virtual HRESULT STDMETHODCALLTYPE textEncodingName(
         /* [retval][out] */ BSTR *result);
-    
-    virtual HRESULT STDMETHODCALLTYPE URL( 
+
+    virtual HRESULT STDMETHODCALLTYPE URL(
         /* [retval][out] */ BSTR *result);
 
     // IWebHTTPURLResponse
-    virtual HRESULT STDMETHODCALLTYPE allHeaderFields( 
+    virtual HRESULT STDMETHODCALLTYPE allHeaderFields(
         /* [retval][out] */ IPropertyBag **headerFields);
-    
-    virtual HRESULT STDMETHODCALLTYPE localizedStringForStatusCode( 
+
+    virtual HRESULT STDMETHODCALLTYPE localizedStringForStatusCode(
         /* [in] */ int statusCode,
         /* [retval][out] */ BSTR *statusString);
-    
-    virtual HRESULT STDMETHODCALLTYPE statusCode( 
+
+    virtual HRESULT STDMETHODCALLTYPE statusCode(
         /* [retval][out] */ int *statusCode);
 
-    virtual HRESULT STDMETHODCALLTYPE isAttachment( 
+    virtual HRESULT STDMETHODCALLTYPE isAttachment(
         /* [retval][out] */ BOOL *attachment);
 
     // IWebURLResponsePrivate
-    virtual HRESULT STDMETHODCALLTYPE sslPeerCertificate( 
+    virtual HRESULT STDMETHODCALLTYPE sslPeerCertificate(
         /* [retval][out] */ OLE_HANDLE *result);
-    
+
     const WebCore::ResourceResponse& resourceResponse() const;
 
 protected:

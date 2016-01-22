@@ -39,7 +39,7 @@ PassRefPtr<TransformOperation> MatrixTransformOperation::blend(const TransformOp
         const MatrixTransformOperation* m = static_cast<const MatrixTransformOperation*>(from);
         fromT.setMatrix(m->m_a, m->m_b, m->m_c, m->m_d, m->m_e, m->m_f);
     }
-    
+
     if (blendToIdentity)
         std::swap(fromT, toT);
 

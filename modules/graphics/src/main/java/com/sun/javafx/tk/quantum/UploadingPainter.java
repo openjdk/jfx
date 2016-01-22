@@ -80,7 +80,7 @@ final class UploadingPainter extends ViewPainter implements Runnable {
                 paintImpl(null);
                 return;
             }
-            
+
             if (factory == null) {
                 factory = GraphicsPipeline.getDefaultResourceFactory();
             }
@@ -171,7 +171,7 @@ final class UploadingPainter extends ViewPainter implements Runnable {
                 pixelSource.enqueuePixels(pix);
                 sceneState.uploadPixels(pixelSource);
             }
-                
+
         } catch (Throwable th) {
             errored = true;
             th.printStackTrace(System.err);

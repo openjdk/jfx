@@ -52,7 +52,7 @@
     id<GlassOffscreenProtocol>  _offscreen;
 
     GLboolean                   _dirty;
-    
+
     GLfloat                     _backgroundR;
     GLfloat                     _backgroundG;
     GLfloat                     _backgroundB;

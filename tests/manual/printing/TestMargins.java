@@ -60,12 +60,12 @@ public class TestMargins extends Application {
             double rm = pl.getRightMargin();
             double tm = pl.getTopMargin();
             double bm = pl.getBottomMargin();
-          
+
 
             print("Printer: "+printer.getName());
             print("  Default paper = " + paper + "size(pts)="+pwid+"x"+phgt);
-            
-            print("  PageLayout (pts) : Paper size " + pw + "x"+ph + 
+
+            print("  PageLayout (pts) : Paper size " + pw + "x"+ph +
                  ", Margins: "+lm+ ","+tm+ ","+rm+ ","+bm);
             double width = pw + lm + rm;
             double height = ph + tm + bm;

@@ -21,7 +21,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -62,7 +62,7 @@ GC3Dint WebGLUniformLocation::location() const
     ASSERT(m_program->getLinkCount() == m_linkCount);
     return m_location;
 }
-    
+
 GC3Denum WebGLUniformLocation::type() const
 {
     // If the program has been linked again, then this UniformLocation is no

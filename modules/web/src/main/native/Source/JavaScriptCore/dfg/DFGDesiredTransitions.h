@@ -30,7 +30,7 @@
 
 #if ENABLE(DFG_JIT)
 
-namespace JSC { 
+namespace JSC {
 
 class CodeBlock;
 class ScriptExecutable;
@@ -47,7 +47,7 @@ public:
     DesiredTransition(CodeBlock*, ScriptExecutable*, Structure*, Structure*);
 
     void reallyAdd(VM&, CommonData*);
-    
+
     void visitChildren(SlotVisitor&);
 
 private:

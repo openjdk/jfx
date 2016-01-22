@@ -47,7 +47,7 @@ import javafx.event.EventHandler;
  * Editor for Double properties, with pre-defined constants (handled by
  * auto-suggest popup).
  *
- * 
+ *
  */
 public class DoubleEditor extends AutoSuggestEditor {
 
@@ -57,7 +57,7 @@ public class DoubleEditor extends AutoSuggestEditor {
         super(propMeta, selectedClasses, new ArrayList<>(constants.keySet()), AutoSuggestEditor.Type.DOUBLE);
         initialize(constants);
     }
-    
+
     private void initialize(Map<String, Object> constants) {
         this.constants = constants;
 

@@ -6,13 +6,13 @@
  * are met:
  *
  * 1.  Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer. 
+ *     notice, this list of conditions and the following disclaimer.
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
- *     documentation and/or other materials provided with the distribution. 
+ *     documentation and/or other materials provided with the distribution.
  * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
- *     from this software without specific prior written permission. 
+ *     from this software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY APPLE AND ITS CONTRIBUTORS "AS IS" AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
@@ -25,7 +25,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
- 
+
 #ifndef TestRunner_h
 #define TestRunner_h
 
@@ -145,7 +145,7 @@ public:
 
     bool dumpAsAudio() const { return m_dumpAsAudio; }
     void setDumpAsAudio(bool dumpAsAudio) { m_dumpAsAudio = dumpAsAudio; }
-    
+
     bool dumpAsPDF() const { return m_dumpAsPDF; }
     void setDumpAsPDF(bool dumpAsPDF) { m_dumpAsPDF = dumpAsPDF; }
 
@@ -184,16 +184,16 @@ public:
 
     bool dumpProgressFinishedCallback() const { return m_dumpProgressFinishedCallback; }
     void setDumpProgressFinishedCallback(bool dumpProgressFinishedCallback) { m_dumpProgressFinishedCallback = dumpProgressFinishedCallback; }
-    
+
     bool dumpUserGestureInFrameLoadCallbacks() const { return m_dumpUserGestureInFrameLoadCallbacks; }
-    void setDumpUserGestureInFrameLoadCallbacks(bool dumpUserGestureInFrameLoadCallbacks) { m_dumpUserGestureInFrameLoadCallbacks = dumpUserGestureInFrameLoadCallbacks; }    
+    void setDumpUserGestureInFrameLoadCallbacks(bool dumpUserGestureInFrameLoadCallbacks) { m_dumpUserGestureInFrameLoadCallbacks = dumpUserGestureInFrameLoadCallbacks; }
 
     bool dumpHistoryDelegateCallbacks() const { return m_dumpHistoryDelegateCallbacks; }
     void setDumpHistoryDelegateCallbacks(bool dumpHistoryDelegateCallbacks) { m_dumpHistoryDelegateCallbacks = dumpHistoryDelegateCallbacks; }
-    
+
     bool dumpResourceLoadCallbacks() const { return m_dumpResourceLoadCallbacks; }
     void setDumpResourceLoadCallbacks(bool dumpResourceLoadCallbacks) { m_dumpResourceLoadCallbacks = dumpResourceLoadCallbacks; }
-    
+
     bool dumpResourceResponseMIMETypes() const { return m_dumpResourceResponseMIMETypes; }
     void setDumpResourceResponseMIMETypes(bool dumpResourceResponseMIMETypes) { m_dumpResourceResponseMIMETypes = dumpResourceResponseMIMETypes; }
 
@@ -214,10 +214,10 @@ public:
 
     bool dumpVisitedLinksCallback() const { return m_dumpVisitedLinksCallback; }
     void setDumpVisitedLinksCallback(bool dumpVisitedLinksCallback) { m_dumpVisitedLinksCallback = dumpVisitedLinksCallback; }
-    
+
     bool dumpWillCacheResponse() const { return m_dumpWillCacheResponse; }
     void setDumpWillCacheResponse(bool dumpWillCacheResponse) { m_dumpWillCacheResponse = dumpWillCacheResponse; }
-    
+
     bool callCloseOnWebViews() const { return m_callCloseOnWebViews; }
     void setCallCloseOnWebViews(bool callCloseOnWebViews) { m_callCloseOnWebViews = callCloseOnWebViews; }
 
@@ -226,10 +226,10 @@ public:
 
     bool closeRemainingWindowsWhenComplete() const { return m_closeRemainingWindowsWhenComplete; }
     void setCloseRemainingWindowsWhenComplete(bool closeRemainingWindowsWhenComplete) { m_closeRemainingWindowsWhenComplete = closeRemainingWindowsWhenComplete; }
-    
+
     bool newWindowsCopyBackForwardList() const { return m_newWindowsCopyBackForwardList; }
     void setNewWindowsCopyBackForwardList(bool newWindowsCopyBackForwardList) { m_newWindowsCopyBackForwardList = newWindowsCopyBackForwardList; }
-    
+
     bool stopProvisionalFrameLoads() const { return m_stopProvisionalFrameLoads; }
     void setStopProvisionalFrameLoads(bool stopProvisionalFrameLoads) { m_stopProvisionalFrameLoads = stopProvisionalFrameLoads; }
 
@@ -260,22 +260,22 @@ public:
 
     bool alwaysAcceptCookies() const { return m_alwaysAcceptCookies; }
     void setAlwaysAcceptCookies(bool);
-    
+
     bool handlesAuthenticationChallenges() const { return m_handlesAuthenticationChallenges; }
     void setHandlesAuthenticationChallenges(bool handlesAuthenticationChallenges) { m_handlesAuthenticationChallenges = handlesAuthenticationChallenges; }
-    
+
     bool isPrinting() const { return m_isPrinting; }
     void setIsPrinting(bool isPrinting) { m_isPrinting = isPrinting; }
 
     const std::string& authenticationUsername() const { return m_authenticationUsername; }
     void setAuthenticationUsername(std::string username) { m_authenticationUsername = username; }
-    
+
     const std::string& authenticationPassword() const { return m_authenticationPassword; }
     void setAuthenticationPassword(std::string password) { m_authenticationPassword = password; }
 
     bool globalFlag() const { return m_globalFlag; }
     void setGlobalFlag(bool globalFlag) { m_globalFlag = globalFlag; }
-    
+
     double databaseDefaultQuota() const { return m_databaseDefaultQuota; }
     void setDatabaseDefaultQuota(double quota) { m_databaseDefaultQuota = quota; }
 
@@ -328,7 +328,7 @@ public:
 
     static void setSerializeHTTPLoads(bool);
 
-    // The following API test functions should probably be moved to platform-specific 
+    // The following API test functions should probably be moved to platform-specific
     // unit tests outside of DRT once they exist.
     void apiTestNewWindowDataLoadBaseURL(JSStringRef utf8Data, JSStringRef baseURL);
     void apiTestGoToCurrentBackForwardItem();
@@ -420,7 +420,7 @@ private:
     double m_databaseMaxQuota;
 
     std::string m_authenticationUsername;
-    std::string m_authenticationPassword; 
+    std::string m_authenticationPassword;
     std::string m_testPathOrURL;
     std::string m_expectedPixelHash; // empty string if no hash
     std::string m_titleTextDirection;
@@ -430,7 +430,7 @@ private:
     std::vector<char> m_audioResult;
 
     std::map<std::string, std::string> m_URLsToRedirect;
-    
+
     static JSClassRef getJSClass();
     static JSStaticValue* staticValues();
     static JSStaticFunction* staticFunctions();

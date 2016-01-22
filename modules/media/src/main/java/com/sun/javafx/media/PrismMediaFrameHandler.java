@@ -67,16 +67,16 @@ public class PrismMediaFrameHandler implements ResourceFactoryListener {
     private PrismMediaFrameHandler(Object provider) {
     }
 
-    
+
     /* NOTE: The following methods will only ever happen on one thread, so thread
      * safety should not be a concern here.
      */
-    
+
     /**
      * This should only ever be called during a render cycle. Any other time it
      * will return null. Note that a returned texture should be unlocked when
      * the caller no longer needs it.
-     * 
+     *
      * @param g the Graphics context about to be rendered into
      * @return the current media texture valid for rendering into <code>g</code>
      * or null if called outside a render cycle
@@ -84,7 +84,7 @@ public class PrismMediaFrameHandler implements ResourceFactoryListener {
     public Texture getTexture(Graphics g, VideoDataBuffer currentFrame) {
         Screen screen = g.getAssociatedScreen();
         TextureMapEntry tme = textures.get(screen);
-        
+
         if (null == currentFrame) {
             // null frame, remove the existing texture
             if (textures.containsKey(screen)) {
@@ -92,7 +92,7 @@ public class PrismMediaFrameHandler implements ResourceFactoryListener {
             }
             return null;
         }
-        
+
         if (null == tme) {
             // we need to create a new texture for this graphics context
             tme = new TextureMapEntry();
@@ -105,7 +105,7 @@ public class PrismMediaFrameHandler implements ResourceFactoryListener {
                 tme.texture = null;
             }
         }
-        
+
         // check if it needs to be updated
         if (null == tme.texture || tme.lastFrameTime != currentFrame.getTimestamp()) {
             updateTexture(g, currentFrame, tme);
@@ -135,14 +135,14 @@ public class PrismMediaFrameHandler implements ResourceFactoryListener {
                 GraphicsPipeline.getDefaultResourceFactory().addFactoryListener(this);
                 registeredWithFactory = true;
             }
-            
+
             tme.texture = GraphicsPipeline.getPipeline().
                 getResourceFactory(screen).
                     createTexture(prismBuffer);
             tme.encodedWidth = vdb.getEncodedWidth();
             tme.encodedHeight = vdb.getEncodedHeight();
         }
-        
+
         // upload frame data, check for null in case createTexture fails
         if (tme.texture != null) {
             tme.texture.update(prismBuffer, false);
@@ -158,7 +158,7 @@ public class PrismMediaFrameHandler implements ResourceFactoryListener {
         }
         textures.clear();
     }
-    
+
     private final RenderJob releaseRenderJob = new RenderJob(() -> {
         releaseData();
     });
@@ -179,7 +179,7 @@ public class PrismMediaFrameHandler implements ResourceFactoryListener {
     public void factoryReleased() {
         releaseData();
     }
-    
+
     /**
      * Bridge class to avoid having to import JFXMedia into a bunch of prism
      * code.
@@ -192,7 +192,7 @@ public class PrismMediaFrameHandler implements ResourceFactoryListener {
             if (null == sourceBuffer) {
                 throw new NullPointerException();
             }
-            
+
             master = sourceBuffer;
             switch (master.getFormat()) {
                 case BGRA_PRE:
@@ -220,7 +220,7 @@ public class PrismMediaFrameHandler implements ResourceFactoryListener {
         public void holdFrame() {
             master.holdFrame();
         }
-        
+
         @Override
         public void releaseFrame() {
             master.releaseFrame();
@@ -284,7 +284,7 @@ public class PrismMediaFrameHandler implements ResourceFactoryListener {
             return new PrismFrameBuffer(newVDB);
         }
     }
-    
+
     private static class TextureMapEntry {
         public double lastFrameTime = -1; // used to determine if we need to update
         public Texture texture;

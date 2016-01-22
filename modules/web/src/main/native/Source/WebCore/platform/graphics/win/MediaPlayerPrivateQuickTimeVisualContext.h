@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef MediaPlayerPrivateQuickTimeVisualContext_h
@@ -73,36 +73,36 @@ private:
     void cancelLoad();
     void loadInternal(const String& url);
     void resumeLoad();
-    
+
     void play();
-    void pause();    
+    void pause();
     void prepareToPlay();
-    
+
     bool paused() const;
     bool seeking() const;
-    
+
     float duration() const;
     float currentTime() const;
     void seek(float time);
-    
+
     void setRate(float);
     void setVolume(float);
     void setPreservesPitch(bool);
-    
+
     MediaPlayer::NetworkState networkState() const { return m_networkState; }
     MediaPlayer::ReadyState readyState() const { return m_readyState; }
-    
+
     PassRefPtr<TimeRanges> buffered() const;
     float maxTimeSeekable() const;
     bool didLoadingProgress() const;
     unsigned totalBytes() const;
-    
+
     void setVisible(bool);
     void setSize(const IntSize&);
-    
+
     void loadStateChanged();
     void didEnd();
-    
+
     void paint(GraphicsContext*, const IntRect&);
     void paintCompleted(GraphicsContext&, const IntRect&);
 
@@ -173,7 +173,7 @@ private:
     RefPtr<PlatformCALayer> m_transformLayer;
     OwnPtr<WKCAImageQueue> m_imageQueue;
     OwnPtr<QTDecompressionSession> m_decompressionSession;
-    CGAffineTransform m_movieTransform; 
+    CGAffineTransform m_movieTransform;
     RefPtr<QTMovieVisualContext> m_visualContext;
     float m_seekTo;
     Timer<MediaPlayerPrivateQuickTimeVisualContext> m_seekTimer;

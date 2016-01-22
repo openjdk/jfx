@@ -267,8 +267,8 @@ static void
 gst_wavparse_init (GstWavParse * wavparse)
 {
 #ifdef GSTREAMER_LITE
-	GstElementClass *klass = GST_ELEMENT_GET_CLASS (wavparse);
-	GstPadTemplate *src_template;
+    GstElementClass *klass = GST_ELEMENT_GET_CLASS (wavparse);
+    GstPadTemplate *src_template;
 #endif // GSTREAMER_LITE
 
   gst_wavparse_reset (wavparse);
@@ -301,7 +301,7 @@ gst_wavparse_init (GstWavParse * wavparse)
       GST_DEBUG_FUNCPTR (gst_wavparse_pad_query));
   gst_pad_set_event_function (wavparse->srcpad,
       GST_DEBUG_FUNCPTR (gst_wavparse_srcpad_event));
-	gst_element_add_pad (GST_ELEMENT_CAST (wavparse), wavparse->srcpad);
+    gst_element_add_pad (GST_ELEMENT_CAST (wavparse), wavparse->srcpad);
 }
 
 static gboolean
@@ -2410,7 +2410,7 @@ gst_wavparse_sink_event (GstPad * pad, GstObject * parent, GstEvent * event)
       if (wav->end_offset > 0) {
 #ifdef GSTREAMER_LITE
         wav->dataleft = MIN(wav->datasize, wav->end_offset - wav->offset);
-#else 
+#else
         wav->dataleft = wav->end_offset - wav->offset;
 #endif // GSTREAMER_LITE
       } else {
@@ -2708,19 +2708,19 @@ gst_wavparse_pad_query (GstPad * pad, GstObject * parent, GstQuery * query)
 }
 
 #ifdef GSTREAMER_LITE
-static gboolean 
+static gboolean
 gst_wavparse_sink_query (GstPad* pad, GstObject *parent, GstQuery* query)
 {
     gboolean result = TRUE;
-    switch (GST_QUERY_TYPE(query)) 
+    switch (GST_QUERY_TYPE(query))
     {
         case GST_QUERY_CUSTOM:
         {
             const GstStructure *s = gst_query_get_structure(query);
             if (gst_structure_has_name(s, GETRANGE_QUERY_NAME))
-                gst_structure_set(s, GETRANGE_QUERY_SUPPORTS_FIELDNANE, 
-                                     GETRANGE_QUERY_SUPPORTS_FIELDTYPE, 
-                                     TRUE, 
+                gst_structure_set(s, GETRANGE_QUERY_SUPPORTS_FIELDNANE,
+                                     GETRANGE_QUERY_SUPPORTS_FIELDTYPE,
+                                     TRUE,
                                      NULL);
             break;
         }

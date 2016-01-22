@@ -105,5 +105,5 @@ void FileReaderSync::startLoading(ScriptExecutionContext* scriptExecutionContext
 }
 
 } // namespace WebCore
- 
+
 #endif // ENABLE(BLOB)

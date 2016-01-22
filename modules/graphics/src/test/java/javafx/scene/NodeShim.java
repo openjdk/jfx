@@ -53,7 +53,7 @@ public class NodeShim {
     public static void impl_clearDirty(Node n, DirtyBits dirtyBit) {
         n.impl_clearDirty(dirtyBit);
     }
-    
+
     public static boolean impl_isDirty(Node n, DirtyBits dirtyBit) {
         return n.impl_isDirty(dirtyBit);
     }

@@ -77,7 +77,7 @@ struct ScrollableAreaParameters {
 
     bool hasEnabledHorizontalScrollbar;
     bool hasEnabledVerticalScrollbar;
-    
+
     ScrollableAreaParameters()
         : horizontalScrollElasticity(ScrollElasticityNone)
         , verticalScrollElasticity(ScrollElasticityNone)
@@ -105,7 +105,7 @@ public:
     virtual ~ScrollingCoordinator();
 
     virtual void pageDestroyed();
-    
+
     virtual bool isAsyncScrollingCoordinator() const { return false; }
     virtual bool isRemoteScrollingCoordinator() const { return false; }
 
@@ -115,7 +115,7 @@ public:
     // Should be called whenever the given frame view has been laid out.
     virtual void frameViewLayoutUpdated(FrameView*) { }
 
-    // Should be called whenever a wheel event handler is added or removed in the 
+    // Should be called whenever a wheel event handler is added or removed in the
     // frame view's underlying document.
     void frameViewWheelEventHandlerCountChanged(FrameView*);
 
@@ -143,7 +143,7 @@ public:
     // Force all scroll layer position updates to happen on the main thread.
     void setForceSynchronousScrollLayerPositionUpdates(bool);
 
-    // These virtual functions are currently unique to the threaded scrolling architecture. 
+    // These virtual functions are currently unique to the threaded scrolling architecture.
     // Their meaningful implementations are in ScrollingCoordinatorMac.
     virtual void commitTreeStateIfNeeded() { }
     virtual bool requestScrollPositionUpdate(FrameView*, const IntPoint&) { return false; }
@@ -202,7 +202,7 @@ private:
 
     virtual bool hasVisibleSlowRepaintViewportConstrainedObjects(FrameView*) const;
     void updateSynchronousScrollingReasons();
-    
+
     bool m_forceSynchronousScrollLayerPositionUpdates;
 };
 

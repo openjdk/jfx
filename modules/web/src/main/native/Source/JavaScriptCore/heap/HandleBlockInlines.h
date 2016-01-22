@@ -70,5 +70,5 @@ inline unsigned HandleBlock::nodeCapacity()
 }
 
 } // namespace JSC
-    
+
 #endif // HandleBlockInlines_h

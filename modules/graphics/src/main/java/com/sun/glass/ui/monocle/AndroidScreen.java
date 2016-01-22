@@ -118,7 +118,7 @@ public class AndroidScreen implements NativeScreen {
      * Returns a read-only ByteBuffer in the native pixel format containing the screen contents.
      * @return ByteBuffer a read-only ByteBuffer containing the screen contents
      */
-    public ByteBuffer getScreenCapture() { 
+    public ByteBuffer getScreenCapture() {
         return _getScreenCapture();
     }
 

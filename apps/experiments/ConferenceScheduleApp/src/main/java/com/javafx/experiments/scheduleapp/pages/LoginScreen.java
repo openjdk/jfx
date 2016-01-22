@@ -66,11 +66,11 @@ public class LoginScreen extends Region {
     private final Image titleImage;
     private final Badge badge;
     private final DataService dataService;
-    
+
     public LoginScreen(DataService dataService, boolean small) {
         this.small = small;
         setStyle("-fx-background-image: url(\""+dataService.getLoginBackgroundImageUrl()+"\"); -fx-background-size: cover;");
-        
+
         this.strapImage = new Image(ConferenceScheduleApp.class.getResource("images/login-badge-strap"+(small?"-SMALL":"")+".png").toExternalForm());
         this.titleImage = new Image(ConferenceScheduleApp.class.getResource("images/login-title"+(small?"-SMALL":"")+".png").toExternalForm());
         this.badge = new Badge();
@@ -126,7 +126,7 @@ public class LoginScreen extends Region {
         private Group inputPane = new Group();
         private Animation fadeAnimation = null;
         private Task<Void> loginTask = null;
-        
+
         public Badge() {
             setId("LoginBadge");
             getChildren().addAll(strap, title, inputPane, progressPane, guestButton, loginButton);
@@ -239,7 +239,7 @@ public class LoginScreen extends Region {
             fadeAnimation = tx;
             tx.play();
         }
-        
+
         @Override protected void layoutChildren() {
             final int w = (int)getWidth();
             if (small) {

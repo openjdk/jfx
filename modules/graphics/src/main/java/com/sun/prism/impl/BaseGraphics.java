@@ -260,7 +260,7 @@ public abstract class BaseGraphics implements RectShadowGraphics {
     }
 
     // If true use fragment shader that does alpha testing (i.e. discard if alpha == 0.0)
-    // Currently it is required when depth testing is in use. 
+    // Currently it is required when depth testing is in use.
     public boolean isAlphaTestShader() {
         return (PrismSettings.forceAlphaTestShader || (isDepthTest() && isDepthBuffer()));
     }

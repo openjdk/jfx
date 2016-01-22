@@ -39,108 +39,108 @@ import javafx.scene.control.ScrollPane;
 /**
  * This is a wrapper for ScrollPane class. It brings some essential verbs
  * that should be available on ScrollPane.
- * 
- * 
+ *
+ *
  */
 public class ScrollPaneBooster {
-    
+
     public final ScrollPane scrollPane;
-    
+
     public ScrollPaneBooster(ScrollPane scrollPane) {
         assert scrollPane != null;
         this.scrollPane = scrollPane;
     }
-    
+
     public void scrollTo(Node node) {
         assert node != null;
     }
-    
+
     public void scrollTo(Bounds targetRect) {
         final Bounds visibleRect = getContentVisibleRect();
-        
+
         if (visibleRect.intersects(targetRect) == false) {
             // targetRect is not visible (not even partially)
-            
+
             final double targetCenterX, targetCenterY, hValue, vValue;
             targetCenterX = (targetRect.getMinX() + targetRect.getMaxX()) / 2.0;
             targetCenterY = (targetRect.getMinY() + targetRect.getMaxY()) / 2.0;
             final boolean clamp = true;
             hValue = xContentToHValue(targetCenterX, clamp);
             vValue = yContentToVValue(targetCenterY, clamp);
-            
+
             scrollPane.setHvalue(hValue);
             scrollPane.setVvalue(vValue);
         }
     }
-    
+
     public double xContentToHValue(double x, boolean clamp) {
         final double xNormalized = xContentToNormalized(x, clamp);
         final double hmin = scrollPane.getHmin();
         final double hmax = scrollPane.getHmax();
-       
+
         return hmin + xNormalized * (hmax - hmin);
     }
-    
+
     public double xContentToNormalized(double x, boolean clamp) {
-        
+
         /*
          * viewport     +-----+-----+                 +-----+-----+
          * content      +-----+-----------------------------+-----+
          *                    |
-         * x          viewport.width / 2          content.width - viewport.width / 2 
+         * x          viewport.width / 2          content.width - viewport.width / 2
          *             - content.minX                   - content.minX
-         * 
+         *
          * result             0                             1
-         * 
+         *
          */
-        
+
         final Bounds contentBounds = scrollPane.getContent().getLayoutBounds();
         final Bounds visibleBounds = getContentVisibleRect();
         final double minX = visibleBounds.getWidth() / 2 - contentBounds.getMinX();
         final double maxX = contentBounds.getWidth() - visibleBounds.getWidth() / 2.0 - contentBounds.getMinX();
-        
+
         double result = (x - minX) / (maxX - minX);
-        
+
         if (clamp) {
             result = Math.max(Math.min(result, 1.0), 0.0);
         }
-        
+
         return result;
     }
-    
+
     public double yContentToVValue(double y, boolean clamp) {
         final double yNormalized = yContentToNormalized(y, clamp);
         final double vmin = scrollPane.getVmin();
         final double vmax = scrollPane.getVmax();
-       
+
         return vmin + yNormalized * (vmax - vmin);
     }
-    
+
     public double yContentToNormalized(double y, boolean clamp) {
         final Bounds contentBounds = scrollPane.getContent().getLayoutBounds();
         final Bounds visibleBounds = getContentVisibleRect();
         final double minY = visibleBounds.getHeight() / 2 - contentBounds.getMinY();
         final double maxY = contentBounds.getHeight() - visibleBounds.getHeight() / 2.0 - contentBounds.getMinY();
-        
+
         double result = (y - minY) / (maxY - minY);
-        
+
         if (clamp) {
             result = Math.max(Math.min(result, 1.0), 0.0);
         }
-        
+
         return result;
     }
-    
+
     public Bounds getContentVisibleRect() {
         final Bounds viewportBounds = scrollPane.getViewportBounds();
 
         /*
          * ScrollPane.viewportBounds is a strange beast.
-         * 
+         *
          * When viewport is in top left corner:
          *    viewportBounds.minx = 0
          *    viewportBounds.miny = 0
-         * 
+         *
          *     +--------------+--------------+
          *     |   viewport   |              |
          *     |              |              |
@@ -148,11 +148,11 @@ public class ScrollPaneBooster {
          *     |                             |
          *     |            content          |
          *     +-----------------------------+
-         * 
+         *
          * When viewport is in bottom/right corner:
          *    viewportBounds.minx = - content width
          *    viewportBounds.miny = - content height
-         * 
+         *
          *     +-----------------------------+
          *     |            content          |
          *     |                             |
@@ -160,17 +160,17 @@ public class ScrollPaneBooster {
          *     |              |   viewport   |
          *     |              |              |
          *     +--------------+--------------+
-         *     
-         *     
+         *
+         *
          */
-        
+
         final Bounds contentBounds = scrollPane.getContent().getLayoutBounds();
         final double minX, minY, width, height;
         minX = - viewportBounds.getMinX() - contentBounds.getMinX();
         minY = - viewportBounds.getMinY() - contentBounds.getMinY();
         width  = viewportBounds.getWidth();
         height = viewportBounds.getHeight();
-    
+
         return new BoundingBox(minX, minY, width, height);
     }
 }

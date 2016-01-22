@@ -66,7 +66,7 @@ public class When {
 
     /**
      * The constructor of {@code When}.
-     * 
+     *
      * @param condition
      *            the condition of the ternary expression
      */
@@ -76,14 +76,14 @@ public class When {
         }
         this.condition = condition;
     }
-    
+
     private static class WhenListener implements InvalidationListener {
-        
+
         private final ObservableBooleanValue condition;
         private final ObservableValue<?> thenValue;
         private final ObservableValue<?> otherwiseValue;
         private final WeakReference<Binding<?>> ref;
-        
+
         private WhenListener(Binding<?> binding, ObservableBooleanValue condition, ObservableValue<?> thenValue, ObservableValue<?> otherwiseValue) {
             this.ref = new WeakReference<Binding<?>>(binding);
             this.condition = condition;
@@ -111,7 +111,7 @@ public class When {
                 }
             }
         }
-        
+
     }
 
     private static NumberBinding createNumberCondition(
@@ -257,7 +257,7 @@ public class When {
          * Defines the {@link javafx.beans.value.ObservableNumberValue} which
          * value is returned by the ternary expression if the condition is
          * {@code false}.
-         * 
+         *
          * @param otherwiseValue
          *            the value
          * @return the complete {@link DoubleBinding}
@@ -272,7 +272,7 @@ public class When {
         /**
          * Defines a constant value of the ternary expression, that is returned
          * if the condition is {@code false}.
-         * 
+         *
          * @param otherwiseValue
          *            the value
          * @return the complete {@link DoubleBinding}
@@ -284,7 +284,7 @@ public class When {
         /**
          * Defines a constant value of the ternary expression, that is returned
          * if the condition is {@code false}.
-         * 
+         *
          * @param otherwiseValue
          *            the value
          * @return the complete {@link NumberBinding}
@@ -296,7 +296,7 @@ public class When {
         /**
          * Defines a constant value of the ternary expression, that is returned
          * if the condition is {@code false}.
-         * 
+         *
          * @param otherwiseValue
          *            the value
          * @return the complete {@link NumberBinding}
@@ -308,7 +308,7 @@ public class When {
         /**
          * Defines a constant value of the ternary expression, that is returned
          * if the condition is {@code false}.
-         * 
+         *
          * @param otherwiseValue
          *            the value
          * @return the complete {@link NumberBinding}
@@ -321,7 +321,7 @@ public class When {
     /**
      * Defines the {@link javafx.beans.value.ObservableNumberValue} which value
      * is returned by the ternary expression if the condition is {@code true}.
-     * 
+     *
      * @param thenValue
      *            the value
      * @return the intermediate result which still requires the otherwise-branch
@@ -336,7 +336,7 @@ public class When {
     /**
      * Defines a constant value of the ternary expression, that is returned if
      * the condition is {@code true}.
-     * 
+     *
      * @param thenValue
      *            the value
      * @return the intermediate result which still requires the otherwise-branch
@@ -348,7 +348,7 @@ public class When {
     /**
      * Defines a constant value of the ternary expression, that is returned if
      * the condition is {@code true}.
-     * 
+     *
      * @param thenValue
      *            the value
      * @return the intermediate result which still requires the otherwise-branch
@@ -360,7 +360,7 @@ public class When {
     /**
      * Defines a constant value of the ternary expression, that is returned if
      * the condition is {@code true}.
-     * 
+     *
      * @param thenValue
      *            the value
      * @return the intermediate result which still requires the otherwise-branch
@@ -372,7 +372,7 @@ public class When {
     /**
      * Defines a constant value of the ternary expression, that is returned if
      * the condition is {@code true}.
-     * 
+     *
      * @param thenValue
      *            the value
      * @return the intermediate result which still requires the otherwise-branch
@@ -390,7 +390,7 @@ public class When {
 
         private final ObservableBooleanValue falseResult;
         private final boolean falseResultValue;
-        
+
         private final InvalidationListener observer;
 
         private BooleanCondition(final ObservableBooleanValue then, final ObservableBooleanValue otherwise) {
@@ -493,7 +493,7 @@ public class When {
          * Defines the {@link javafx.beans.value.ObservableBooleanValue} which
          * value is returned by the ternary expression if the condition is
          * {@code false}.
-         * 
+         *
          * @param otherwiseValue
          *            the value
          * @return the complete {@link BooleanBinding}
@@ -511,7 +511,7 @@ public class When {
         /**
          * Defines a constant value of the ternary expression, that is returned
          * if the condition is {@code false}.
-         * 
+         *
          * @param otherwiseValue
          *            the value
          * @return the complete {@link BooleanBinding}
@@ -527,7 +527,7 @@ public class When {
     /**
      * Defines the {@link javafx.beans.value.ObservableBooleanValue} which value
      * is returned by the ternary expression if the condition is {@code true}.
-     * 
+     *
      * @param thenValue
      *            the value
      * @return the intermediate result which still requires the otherwise-branch
@@ -542,7 +542,7 @@ public class When {
     /**
      * Defines a constant value of the ternary expression, that is returned if
      * the condition is {@code true}.
-     * 
+     *
      * @param thenValue
      *            the value
      * @return the intermediate result which still requires the otherwise-branch
@@ -665,7 +665,7 @@ public class When {
          * Defines the {@link javafx.beans.value.ObservableStringValue} which
          * value is returned by the ternary expression if the condition is
          * {@code false}.
-         * 
+         *
          * @param otherwiseValue
          *            the value
          * @return the complete {@link StringBinding}
@@ -680,7 +680,7 @@ public class When {
         /**
          * Defines a constant value of the ternary expression, that is returned
          * if the condition is {@code false}.
-         * 
+         *
          * @param otherwiseValue
          *            the value
          * @return the complete {@link StringBinding}
@@ -696,7 +696,7 @@ public class When {
     /**
      * Defines the {@link javafx.beans.value.ObservableStringValue} which value
      * is returned by the ternary expression if the condition is {@code true}.
-     * 
+     *
      * @param thenValue
      *            the value
      * @return the intermediate result which still requires the otherwise-branch
@@ -711,7 +711,7 @@ public class When {
     /**
      * Defines a constant value of the ternary expression, that is returned if
      * the condition is {@code true}.
-     * 
+     *
      * @param thenValue
      *            the value
      * @return the intermediate result which still requires the otherwise-branch
@@ -732,7 +732,7 @@ public class When {
         private final T falseResultValue;
 
         private final InvalidationListener observer;
-        
+
         private ObjectCondition(final ObservableObjectValue<T> then, final ObservableObjectValue<T> otherwise) {
             this.trueResult = then;
             this.trueResultValue = null;
@@ -834,7 +834,7 @@ public class When {
          * Defines the {@link javafx.beans.value.ObservableObjectValue} which
          * value is returned by the ternary expression if the condition is
          * {@code false}.
-         * 
+         *
          * @param otherwiseValue
          *            the value
          * @return the complete {@link ObjectBinding}
@@ -852,7 +852,7 @@ public class When {
         /**
          * Defines a constant value of the ternary expression, that is returned
          * if the condition is {@code false}.
-         * 
+         *
          * @param otherwiseValue
          *            the value
          * @return the complete {@link ObjectBinding}
@@ -868,7 +868,7 @@ public class When {
     /**
      * Defines the {@link javafx.beans.value.ObservableObjectValue} which value
      * is returned by the ternary expression if the condition is {@code true}.
-     * 
+     *
      * @param thenValue
      *            the value
      * @return the intermediate result which still requires the otherwise-branch
@@ -883,7 +883,7 @@ public class When {
     /**
      * Defines a constant value of the ternary expression, that is returned if
      * the condition is {@code true}.
-     * 
+     *
      * @param thenValue
      *            the value
      * @return the intermediate result which still requires the otherwise-branch

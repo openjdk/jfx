@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -89,10 +89,10 @@ Vector<ContextMenuItem> contextMenuItemVector(PlatformMenuDescription menu)
     unsigned count = [menu count];
     if (menu)
         items.reserveCapacity(count);
-    
+
     for (unsigned i = 0; i < count; ++i)
         items.append(ContextMenuItem([menu objectAtIndex:i]));
-    
+
     return items;
 }
 
@@ -104,7 +104,7 @@ PlatformMenuDescription platformMenuDescription(Vector<ContextMenuItem>& menuIte
         [platformMenu addObject:platformItem];
         [platformItem release];
     }
-    
+
     return [platformMenu autorelease];
 }
 

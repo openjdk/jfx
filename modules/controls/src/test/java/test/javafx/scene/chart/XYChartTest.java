@@ -56,11 +56,11 @@ import static org.junit.Assert.assertSame;
 
 
 public class XYChartTest extends ChartTestBase {
-    
+
     NumberAxis yaxis;
     CategoryAxis cataxis;
     AreaChart<?, ?> areachart;
-    
+
     protected Chart createChart() {
         ObservableList<String> cat = FXCollections.observableArrayList();
         cataxis = new CategoryAxis();
@@ -70,15 +70,15 @@ public class XYChartTest extends ChartTestBase {
         areachart.setId("AreaChart");
         return areachart;
     }
-    
+
     @Test
     public void testTickMarksToString() {
         startApp();
         pulse();
-        yaxis.getTickMarks().toString(); 
+        yaxis.getTickMarks().toString();
         System.out.println(" --- "+yaxis.getTickMarks().toString());
     }
-    
+
     // RT-22166
     @Test public void testTickLabelFont() {
         startApp();
@@ -86,10 +86,10 @@ public class XYChartTest extends ChartTestBase {
         // default caspian value for font size = 10
         assertEquals(10, new Double(f.getSize()).intValue());
         assertEquals(10, new Double(AxisShim.get_measure(yaxis).getFont().getSize()).intValue());
-        
+
         // set tick label font via css and test if ticklabelfont, measure and tick textnode follow.
         ParsedValue pv = new CssParser().parseExpr("-fx-tick-label-font","0.916667em System");
-        Object val = pv.convert(null);        
+        Object val = pv.convert(null);
         CssMetaData prop = ((StyleableProperty)yaxis.tickLabelFontProperty()).getCssMetaData();
         try {
             prop.set(yaxis, val, null);
@@ -110,20 +110,20 @@ public class XYChartTest extends ChartTestBase {
         TickMark tm = yaTickMarks.get(0);
         assertEquals(12, new Double(AxisShim.TickMark_get_textNode(tm).getFont().getSize()).intValue());
     }
-    
+
     @Test public void testSetTickLabelFill() {
         startApp();
         pulse();
         yaxis.setTickLabelFill(Color.web("#444444"));
         pulse();
-        // Check if text node on axis has the right fill 
+        // Check if text node on axis has the right fill
         for (Node n : yaxis.getChildrenUnmodifiable()) {
             if (n instanceof Text) {
                 assertEquals(((Text)n).getFill(), Color.web("#444444"));
             }
         }
     }
-    
+
     @Test public void testAddAxisWithoutSpecifyingSide() {
         final NumberAxis axis = new NumberAxis(0, 12, 1);
         axis.setMaxWidth(Double.MAX_VALUE);
@@ -138,11 +138,11 @@ public class XYChartTest extends ChartTestBase {
         getTestStage().show();
         pulse();
     }
-    
+
     @Test public void testLegendSizeWhenThereIsNoChartData() {
         startApp();
-        assertEquals(0, ChartShim.getLegend(areachart).prefHeight(-1), 0);            
-        assertEquals(0, ChartShim.getLegend(areachart).prefWidth(-1), 0);            
+        assertEquals(0, ChartShim.getLegend(areachart).prefHeight(-1), 0);
+        assertEquals(0, ChartShim.getLegend(areachart).prefWidth(-1), 0);
     }
 
 

@@ -42,51 +42,51 @@ import javafx.geometry.Bounds;
  *
  */
 class HorizontalLineIndex {
-    
+
     private static final HorizontalLineComparator comparator = new HorizontalLineComparator();
-    
+
     private final List<HorizontalSegment> lines = new ArrayList<>();
     private boolean sorted;
-    
+
 
     public void addLine(HorizontalSegment s) {
         lines.add(s);
         sorted = false;
     }
-    
+
     public void clear() {
         lines.clear();
     }
-    
+
     public boolean isEmpty() {
         return lines.isEmpty();
     }
-    
+
     public List<HorizontalSegment> matchNorth(Bounds boundsInScene, double threshold) {
         assert boundsInScene.isEmpty() == false;
         return matchY(boundsInScene.getMinY(), threshold);
     }
-    
+
     public List<HorizontalSegment> matchSouth(Bounds boundsInScene, double threshold) {
         assert boundsInScene.isEmpty() == false;
         return matchY(boundsInScene.getMaxY(), threshold);
     }
-    
+
     public List<HorizontalSegment> matchCenter(Bounds boundsInScene, double threshold) {
         assert boundsInScene.isEmpty() == false;
         final double minY = boundsInScene.getMinY();
         final double maxY = boundsInScene.getMaxY();
         return matchY((minY + maxY) / 2.0, threshold);
     }
-    
-    
+
+
     /*
      * Private
      */
-    
+
     private List<HorizontalSegment> matchY(double targetY, double threshold) {
         assert threshold >= 0;
-        
+
         if (sorted == false) {
             Collections.sort(lines, comparator);
         }
@@ -104,7 +104,7 @@ class HorizontalLineIndex {
                 }
             }
         }
-        
+
         return result;
     }
 }

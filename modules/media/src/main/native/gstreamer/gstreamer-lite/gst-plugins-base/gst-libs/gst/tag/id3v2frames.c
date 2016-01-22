@@ -926,8 +926,8 @@ id3v2_genre_fields_to_taglist (ID3TagsWorking * work, const gchar * tag_name,
             break;
           }
 
-          /* If we encounter a non-digit while searching for a closing 
-           * parenthesis, we should not try and interpret this as a 
+          /* If we encounter a non-digit while searching for a closing
+           * parenthesis, we should not try and interpret this as a
            * numeric genre string */
           if (!g_ascii_isdigit (tag_str[pos]))
             break;

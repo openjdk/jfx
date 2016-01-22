@@ -95,7 +95,7 @@ void InspectorResourceAgent::willDestroyFrontendAndBackend(InspectorDisconnectRe
 static PassRefPtr<InspectorObject> buildObjectForHeaders(const HTTPHeaderMap& headers)
 {
     RefPtr<InspectorObject> headersObject = InspectorObject::create();
-    
+
     for (const auto& header : headers)
         headersObject->setString(header.key.string(), header.value);
     return headersObject;

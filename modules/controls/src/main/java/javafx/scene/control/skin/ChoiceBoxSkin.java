@@ -359,8 +359,8 @@ public class ChoiceBoxSkin<T> extends SkinBase<ChoiceBox<T>> {
             choiceBoxItems.addListener(weakChoiceBoxItemsListener);
         }
     }
-    
-    // Test only purpose    
+
+    // Test only purpose
     String getChoiceBoxSelectedText() {
         return label.getText();
     }

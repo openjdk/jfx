@@ -33,18 +33,18 @@ package com.oracle.javafx.scenebuilder.kit.fxom.glue;
 
 /**
  *
- * 
+ *
  */
 public class GlueCharacters extends GlueAuxiliary {
-    
+
     public enum Type {
         TEXT,
         COMMENT
     }
-    
+
     private final Type type;
     private String data;
-    
+
     public GlueCharacters(GlueDocument document, Type type, String data) {
         super(document);
         this.type = type;
@@ -62,23 +62,23 @@ public class GlueCharacters extends GlueAuxiliary {
     public void setData(String data) {
         this.data = data;
     }
-    
+
     public void adjustIndentBy(int delta) {
         /*
          * data
-         * 
+         *
          * 'xxxxxxx\nbbbbbbxxxxxxx\nbbbbbbbbxxxxxxxxxx\nbbbbbxxxxx....'
-         * 
+         *
          *  b : white space
          *  x : any other char
-         * 
+         *
          * Indenting means:
          * - when delta > 0, inserting 'delta' spaces after each '\n' char
          * - when delta < 0, removing 'delta' spaces after each '\n' char *when possible*
          */
-        
+
         final StringBuilder newValue = new StringBuilder();
-        
+
         if (delta > 0) {
             for (int i = 0, length = data.length(); i < length; i++) {
                 final char ch = data.charAt(i);
@@ -94,7 +94,7 @@ public class GlueCharacters extends GlueAuxiliary {
                 final char ch = data.charAt(i);
                 newValue.append(ch);
                 if (ch == '\n') {
-                    while ((i+1 < length) 
+                    while ((i+1 < length)
                             && (data.charAt(i+1) == ' ')
                             && (delta < 0)) {
                         i++;
@@ -103,30 +103,30 @@ public class GlueCharacters extends GlueAuxiliary {
                 }
             }
         }
-        
+
         data = newValue.toString();
     }
-    
+
     public int guessIndent() {
         int result;
-        
+
         /*
          * If data match the following pattern
-         * 
+         *
          * 'xxxxxxx\nbbbbbbxxxxxxx....'
-         * 
+         *
          *  b : white space
          *  x : any other char
-         * 
+         *
          * then returns number of b characters else returns -1.
          */
-        
+
         int i = 0;
         final int count = data.length();
         while ((i < count) && data.charAt(i) != '\n') {
             i++;
         }
-        
+
         if (i < count) {
             i++;
             result = 0;
@@ -137,7 +137,7 @@ public class GlueCharacters extends GlueAuxiliary {
         } else {
             result = -1;
         }
-        
+
         return result;
     }
 }

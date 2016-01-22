@@ -48,7 +48,7 @@ public class KeyCombinationPropertyMetadata extends ComplexPropertyMetadata<KeyC
     private final KeyCodeCombinationPropertyMetadata keyCodeCombinationMetadata;
     private final KeyCharacterCombinationPropertyMetadata keyCharacterCombinationMetadata;
 
-    public KeyCombinationPropertyMetadata(PropertyName name, boolean readWrite, 
+    public KeyCombinationPropertyMetadata(PropertyName name, boolean readWrite,
             KeyCombination defaultValue, InspectorPath inspectorPath) {
         super(name, KeyCombination.class, readWrite, defaultValue, inspectorPath);
         keyCodeCombinationMetadata = new KeyCodeCombinationPropertyMetadata(name, readWrite, null, inspectorPath);
@@ -61,7 +61,7 @@ public class KeyCombinationPropertyMetadata extends ComplexPropertyMetadata<KeyC
     @Override
     public FXOMInstance makeFxomInstanceFromValue(KeyCombination value, FXOMDocument fxomDocument) {
         final FXOMInstance result;
-        
+
         if (value instanceof KeyCodeCombination) {
             result = keyCodeCombinationMetadata.makeFxomInstanceFromValue((KeyCodeCombination) value, fxomDocument);
         } else {

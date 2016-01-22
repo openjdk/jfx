@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef Pasteboard_h
@@ -65,7 +65,7 @@ class Element;
 class Frame;
 class Range;
 class SharedBuffer;
-    
+
 enum ShouldSerializeSelectedTextForClipboard { DefaultSelectedTextType, IncludeImageAltTextForClipboard };
 
 // For writing to the pasteboard. Generally sorted with the richest formats on top.
@@ -187,7 +187,7 @@ public:
     static NSArray* supportedPasteboardTypes();
     static String resourceMIMEType(const NSString *mimeType);
 #endif
-    
+
 #if PLATFORM(MAC)
     explicit Pasteboard(const String& pasteboardName);
     static PassOwnPtr<Pasteboard> create(const String& pasteboardName);
@@ -208,9 +208,9 @@ private:
 
 #if PLATFORM(JAVA)
     Pasteboard(PassRefPtr<DataObjectJava>, bool copyPasteMode);
-    static PassOwnPtr<Pasteboard> create(PassRefPtr<DataObjectJava>);    
+    static PassOwnPtr<Pasteboard> create(PassRefPtr<DataObjectJava>);
 #endif
-    
+
 #if PLATFORM(GTK)
     Pasteboard(PassRefPtr<DataObjectGtk>);
     Pasteboard(GtkClipboard*);

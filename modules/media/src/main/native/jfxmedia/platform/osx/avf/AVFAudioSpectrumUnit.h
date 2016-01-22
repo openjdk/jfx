@@ -80,7 +80,7 @@ public:
     void Reset();
     void SetSampleRate(Float32 rate);
     void SetChannelCount(int count);
-    
+
     void SetSpectrumCallbackProc(AVFSpectrumUnitCallbackProc proc, void *context) {
         mSpectrumCallbackProc = proc;
         mSpectrumCallbackContext = context;

@@ -253,7 +253,7 @@ public class CssMetaDataTest {
         Set<PseudoClass> pseudoClasses = null;
         if (selector instanceof SimpleSelector) {
 
-            pseudoClasses = 
+            pseudoClasses =
                     SimpleSelectorShim.getPseudoClassStates((SimpleSelector)selector);
         } else {
 
@@ -1246,7 +1246,7 @@ public class CssMetaDataTest {
         StyleOrigin origin = ((StyleableProperty)rect.fillProperty()).getStyleOrigin();
 
         // set should not change the value if the values are equal and origin is same
-        assertEquals(c1, c2);        
+        assertEquals(c1, c2);
         fill.applyStyle(origin, c2);
 
         assertSame(c1,rect.getFill()); // instance should not change.

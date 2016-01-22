@@ -156,7 +156,7 @@ final class MonocleWindowManager {
             window._notifyFocusDisabled();
         }
     }
-    
+
     MonocleWindow getFocusedWindow() {
         return focusedWindow;
     }

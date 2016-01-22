@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -70,7 +70,7 @@ CClass* CClass::classForIsA(NPClass* isa)
 Method* CClass::methodNamed(PropertyName propertyName, Instance* instance) const
 {
     String name(propertyName.publicName());
-    
+
     if (Method* method = m_methods.get(name.impl()))
         return method;
 
@@ -82,14 +82,14 @@ Method* CClass::methodNamed(PropertyName propertyName, Instance* instance) const
         m_methods.set(name.impl(), adoptPtr(method));
         return method;
     }
-    
+
     return 0;
 }
 
 Field* CClass::fieldNamed(PropertyName propertyName, Instance* instance) const
 {
     String name(propertyName.publicName());
-    
+
     if (Field* field = m_fields.get(name.impl()))
         return field;
 

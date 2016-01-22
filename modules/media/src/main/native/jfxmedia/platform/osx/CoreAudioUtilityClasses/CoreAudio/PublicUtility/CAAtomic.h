@@ -2,14 +2,14 @@
      File: CAAtomic.h
  Abstract: Part of CoreAudio Utility Classes
   Version: 1.1
- 
+
  Disclaimer: IMPORTANT:  This Apple software is supplied to you by Apple
  Inc. ("Apple") in consideration of your agreement to the following
  terms, and your use, installation, modification or redistribution of
  this Apple software constitutes acceptance of these terms.  If you do
  not agree with these terms, please do not use, install, modify or
  redistribute this Apple software.
- 
+
  In consideration of your agreement to abide by the following terms, and
  subject to these terms, Apple grants you a personal, non-exclusive
  license, under Apple's copyrights in this original Apple software (the
@@ -25,13 +25,13 @@
  implied, are granted by Apple herein, including but not limited to any
  patent rights that may be infringed by your derivative works or by other
  works in which the Apple Software may be incorporated.
- 
+
  The Apple Software is provided by Apple on an "AS IS" basis.  APPLE
  MAKES NO WARRANTIES, EXPRESS OR IMPLIED, INCLUDING WITHOUT LIMITATION
  THE IMPLIED WARRANTIES OF NON-INFRINGEMENT, MERCHANTABILITY AND FITNESS
  FOR A PARTICULAR PURPOSE, REGARDING THE APPLE SOFTWARE OR ITS USE AND
  OPERATION ALONE OR IN COMBINATION WITH YOUR PRODUCTS.
- 
+
  IN NO EVENT SHALL APPLE BE LIABLE FOR ANY SPECIAL, INDIRECT, INCIDENTAL
  OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
  SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
@@ -40,65 +40,65 @@
  AND WHETHER UNDER THEORY OF CONTRACT, TORT (INCLUDING NEGLIGENCE),
  STRICT LIABILITY OR OTHERWISE, EVEN IF APPLE HAS BEEN ADVISED OF THE
  POSSIBILITY OF SUCH DAMAGE.
- 
+
  Copyright (C) 2014 Apple Inc. All Rights Reserved.
- 
+
 */
 /*
-	This file implements all Atomic operations using Interlocked functions specified in
-	Winbase.h
+    This file implements all Atomic operations using Interlocked functions specified in
+    Winbase.h
 NOTE: According to Microsoft documentation, all Interlocked functions generates a
-full barrier. 
-	On Windows:
-	As the Interlocked functions returns the Old value, Extra checks and operations 
-	are made after the atomic operation to return value consistent with OSX counterparts.
+full barrier.
+    On Windows:
+    As the Interlocked functions returns the Old value, Extra checks and operations
+    are made after the atomic operation to return value consistent with OSX counterparts.
 */
 #ifndef __CAAtomic_h__
 #define __CAAtomic_h__
 
 #if TARGET_OS_WIN32
-	#include <windows.h>
-	#include <intrin.h>
-	#pragma intrinsic(_InterlockedOr)
-	#pragma intrinsic(_InterlockedAnd)
+    #include <windows.h>
+    #include <intrin.h>
+    #pragma intrinsic(_InterlockedOr)
+    #pragma intrinsic(_InterlockedAnd)
 #else
-	#include <CoreFoundation/CFBase.h>
-	#include <libkern/OSAtomic.h>
+    #include <CoreFoundation/CFBase.h>
+    #include <libkern/OSAtomic.h>
 #endif
 
-inline void CAMemoryBarrier() 
+inline void CAMemoryBarrier()
 {
 #if TARGET_OS_WIN32
-	MemoryBarrier();
+    MemoryBarrier();
 #else
-	OSMemoryBarrier();
+    OSMemoryBarrier();
 #endif
 }
 
 inline SInt32 CAAtomicAdd32Barrier(SInt32 theAmt, volatile SInt32* theValue)
 {
 #if TARGET_OS_WIN32
-	long lRetVal = InterlockedExchangeAdd((volatile long*)theValue, theAmt);
-	// InterlockedExchangeAdd returns the original value which differs from OSX version. 
-	// At this point the addition would have occured and hence returning the new value
-	// to keep it sync with OSX.
-	return lRetVal + theAmt;
+    long lRetVal = InterlockedExchangeAdd((volatile long*)theValue, theAmt);
+    // InterlockedExchangeAdd returns the original value which differs from OSX version.
+    // At this point the addition would have occured and hence returning the new value
+    // to keep it sync with OSX.
+    return lRetVal + theAmt;
 #else
-	return OSAtomicAdd32Barrier(theAmt, (volatile int32_t *)theValue);
+    return OSAtomicAdd32Barrier(theAmt, (volatile int32_t *)theValue);
 #endif
 }
 
 inline SInt32 CAAtomicOr32Barrier(UInt32 theMask, volatile UInt32* theValue)
 {
 #if TARGET_OS_WIN32
-	// InterlockedAnd macro is not defined in x86 platform, and hence using the intrinsic
-	// function instead.
-	long j = _InterlockedOr((volatile long*)theValue, theMask);
-	// _InterlockedOr returns the original value which differs from OSX version.
-	// Returning the new value similar to OSX
-	return (SInt32)(j | theMask);
+    // InterlockedAnd macro is not defined in x86 platform, and hence using the intrinsic
+    // function instead.
+    long j = _InterlockedOr((volatile long*)theValue, theMask);
+    // _InterlockedOr returns the original value which differs from OSX version.
+    // Returning the new value similar to OSX
+    return (SInt32)(j | theMask);
 #else
-	return OSAtomicOr32Barrier(theMask, (volatile uint32_t *)theValue);
+    return OSAtomicOr32Barrier(theMask, (volatile uint32_t *)theValue);
 #endif
 }
 
@@ -107,25 +107,25 @@ inline SInt32 CAAtomicAnd32Barrier(UInt32 theMask, volatile UInt32* theValue)
 #if TARGET_OS_WIN32
 // InterlockedAnd macro is not defined in x86 platform, and hence using the intrinsic
 // function instead.
-	long j = _InterlockedAnd((volatile long*)theValue, theMask);
-	// _InterlockedAnd returns the original value which differs from OSX version.
-	// Returning the new value similar to OSX
-	return (SInt32)(j & theMask);
+    long j = _InterlockedAnd((volatile long*)theValue, theMask);
+    // _InterlockedAnd returns the original value which differs from OSX version.
+    // Returning the new value similar to OSX
+    return (SInt32)(j & theMask);
 #else
-	return OSAtomicAnd32Barrier(theMask, (volatile uint32_t *)theValue);
+    return OSAtomicAnd32Barrier(theMask, (volatile uint32_t *)theValue);
 #endif
 }
 
 inline bool CAAtomicCompareAndSwap32Barrier(SInt32 oldValue, SInt32 newValue, volatile SInt32 *theValue)
 {
 #if TARGET_OS_WIN32
-	// InterlockedCompareExchange returns the old value. But we need to return bool value.
-	long lRetVal = InterlockedCompareExchange((volatile long*)theValue, newValue, oldValue);
+    // InterlockedCompareExchange returns the old value. But we need to return bool value.
+    long lRetVal = InterlockedCompareExchange((volatile long*)theValue, newValue, oldValue);
 // Hence we check if the new value is set and if it is we return true else false.
 // If theValue is equal to oldValue then the swap happens. Otherwise swap doesn't happen.
-	return (oldValue == lRetVal);
+    return (oldValue == lRetVal);
 #else
-	return OSAtomicCompareAndSwap32Barrier(oldValue, newValue, (volatile int32_t *)theValue);
+    return OSAtomicCompareAndSwap32Barrier(oldValue, newValue, (volatile int32_t *)theValue);
 #endif
 }
 
@@ -133,66 +133,66 @@ inline bool CAAtomicCompareAndSwap32Barrier(SInt32 oldValue, SInt32 newValue, vo
 inline SInt32 CAAtomicIncrement32(volatile SInt32* theValue)
 {
 #if TARGET_OS_WIN32
-	return (SInt32)InterlockedIncrement((volatile long*)theValue);
+    return (SInt32)InterlockedIncrement((volatile long*)theValue);
 #else
-	return OSAtomicIncrement32((volatile int32_t *)theValue);
+    return OSAtomicIncrement32((volatile int32_t *)theValue);
 #endif
 }
 
 inline SInt32 CAAtomicDecrement32(volatile SInt32* theValue)
 {
 #if TARGET_OS_WIN32
-	return (SInt32)InterlockedDecrement((volatile long*)theValue);
+    return (SInt32)InterlockedDecrement((volatile long*)theValue);
 #else
-	return OSAtomicDecrement32((volatile int32_t *)theValue);
+    return OSAtomicDecrement32((volatile int32_t *)theValue);
 #endif
 }
 
 inline SInt32 CAAtomicIncrement32Barrier(volatile SInt32* theValue)
 {
 #if TARGET_OS_WIN32
-	return CAAtomicIncrement32(theValue);
+    return CAAtomicIncrement32(theValue);
 #else
-	return OSAtomicIncrement32Barrier((volatile int32_t *)theValue);
+    return OSAtomicIncrement32Barrier((volatile int32_t *)theValue);
 #endif
 }
 
 inline SInt32 CAAtomicDecrement32Barrier(volatile SInt32* theValue)
 {
 #if TARGET_OS_WIN32
-	return CAAtomicDecrement32(theValue);
+    return CAAtomicDecrement32(theValue);
 #else
-	return OSAtomicDecrement32Barrier((volatile int32_t *)theValue);
+    return OSAtomicDecrement32Barrier((volatile int32_t *)theValue);
 #endif
 }
 
 inline bool CAAtomicTestAndClearBarrier(int bitToClear, void* theAddress)
 {
 #if TARGET_OS_WIN32
-	BOOL bOldVal = InterlockedBitTestAndReset((long*)theAddress, bitToClear);
-	return (bOldVal ? true : false);
+    BOOL bOldVal = InterlockedBitTestAndReset((long*)theAddress, bitToClear);
+    return (bOldVal ? true : false);
 #else
-	return OSAtomicTestAndClearBarrier(bitToClear, (volatile void *)theAddress);
+    return OSAtomicTestAndClearBarrier(bitToClear, (volatile void *)theAddress);
 #endif
 }
 
 inline bool CAAtomicTestAndClear(int bitToClear, void* theAddress)
 {
 #if TARGET_OS_WIN32
-	BOOL bOldVal = CAAtomicTestAndClearBarrier(bitToClear, (long*)theAddress);
-	return (bOldVal ? true : false);
+    BOOL bOldVal = CAAtomicTestAndClearBarrier(bitToClear, (long*)theAddress);
+    return (bOldVal ? true : false);
 #else
-	return OSAtomicTestAndClear(bitToClear, (volatile void *)theAddress);
+    return OSAtomicTestAndClear(bitToClear, (volatile void *)theAddress);
 #endif
 }
 
 inline bool CAAtomicTestAndSetBarrier(int bitToSet, void* theAddress)
 {
 #if TARGET_OS_WIN32
-	BOOL bOldVal = InterlockedBitTestAndSet((long*)theAddress, bitToSet);
-	return (bOldVal ? true : false);
+    BOOL bOldVal = InterlockedBitTestAndSet((long*)theAddress, bitToSet);
+    return (bOldVal ? true : false);
 #else
-	return OSAtomicTestAndSetBarrier(bitToSet, (volatile void *)theAddress);
+    return OSAtomicTestAndSetBarrier(bitToSet, (volatile void *)theAddress);
 #endif
 }
 
@@ -204,58 +204,58 @@ inline bool CAAtomicTestAndSetBarrier(int bitToSet, void* theAddress)
 #if defined(__cplusplus) && defined(__MACTYPES__) && !__LP64__
 inline int32_t CAAtomicAdd32Barrier(int32_t theAmt, volatile int32_t* theValue)
 {
-	return CAAtomicAdd32Barrier(theAmt, (volatile SInt32 *)theValue);
+    return CAAtomicAdd32Barrier(theAmt, (volatile SInt32 *)theValue);
 }
 
 inline int32_t CAAtomicOr32Barrier(uint32_t theMask, volatile uint32_t* theValue)
 {
-	return CAAtomicOr32Barrier(theMask, (volatile UInt32 *)theValue);
+    return CAAtomicOr32Barrier(theMask, (volatile UInt32 *)theValue);
 }
 
 inline int32_t CAAtomicAnd32Barrier(uint32_t theMask, volatile uint32_t* theValue)
 {
-	return CAAtomicAnd32Barrier(theMask, (volatile UInt32 *)theValue);
+    return CAAtomicAnd32Barrier(theMask, (volatile UInt32 *)theValue);
 }
 
 inline bool CAAtomicCompareAndSwap32Barrier(int32_t oldValue, int32_t newValue, volatile int32_t *theValue)
 {
-	return CAAtomicCompareAndSwap32Barrier(oldValue, newValue, (volatile SInt32 *)theValue);
+    return CAAtomicCompareAndSwap32Barrier(oldValue, newValue, (volatile SInt32 *)theValue);
 }
 
 inline int32_t CAAtomicIncrement32(volatile int32_t* theValue)
 {
-	return CAAtomicIncrement32((volatile SInt32 *)theValue);
+    return CAAtomicIncrement32((volatile SInt32 *)theValue);
 }
 
 inline int32_t CAAtomicDecrement32(volatile int32_t* theValue)
 {
-	return CAAtomicDecrement32((volatile SInt32 *)theValue);
+    return CAAtomicDecrement32((volatile SInt32 *)theValue);
 }
 
 inline int32_t CAAtomicIncrement32Barrier(volatile int32_t* theValue)
 {
-	return CAAtomicIncrement32Barrier((volatile SInt32 *)theValue);
+    return CAAtomicIncrement32Barrier((volatile SInt32 *)theValue);
 }
 
 inline int32_t CAAtomicDecrement32Barrier(volatile int32_t* theValue)
 {
-	return CAAtomicDecrement32Barrier((volatile SInt32 *)theValue);
+    return CAAtomicDecrement32Barrier((volatile SInt32 *)theValue);
 }
 #endif // __cplusplus && !__LP64__
 
 #if __LP64__
 inline bool CAAtomicCompareAndSwap64Barrier( int64_t __oldValue, int64_t __newValue, volatile int64_t *__theValue )
 {
-	return OSAtomicCompareAndSwap64Barrier(__oldValue, __newValue, __theValue);
+    return OSAtomicCompareAndSwap64Barrier(__oldValue, __newValue, __theValue);
 }
 #endif
 
 inline bool CAAtomicCompareAndSwapPtrBarrier(void *__oldValue, void *__newValue, volatile void ** __theValue)
 {
 #if __LP64__
-	return CAAtomicCompareAndSwap64Barrier((int64_t)__oldValue, (int64_t)__newValue, (int64_t *)__theValue);
+    return CAAtomicCompareAndSwap64Barrier((int64_t)__oldValue, (int64_t)__newValue, (int64_t *)__theValue);
 #else
-	return CAAtomicCompareAndSwap32Barrier((int32_t)__oldValue, (int32_t)__newValue, (int32_t *)__theValue);
+    return CAAtomicCompareAndSwap32Barrier((int32_t)__oldValue, (int32_t)__newValue, (int32_t *)__theValue);
 #endif
 }
 
@@ -265,7 +265,7 @@ inline bool CAAtomicCompareAndSwapPtrBarrier(void *__oldValue, void *__newValue,
  * The try operation immediately returns false if the lock was held, true if it took the
  * lock.  The convention is that unlocked is zero, locked is nonzero.
  */
-#define	CA_SPINLOCK_INIT    0
+#define CA_SPINLOCK_INIT    0
 
 typedef int32_t CASpinLock;
 
@@ -276,28 +276,28 @@ void    CASpinLockUnlock( volatile CASpinLock *__lock );
 inline void    CASpinLockLock( volatile CASpinLock *__lock )
 {
 #if TARGET_OS_MAC
-	OSSpinLockLock(__lock);
+    OSSpinLockLock(__lock);
 #else
-	while (CAAtomicTestAndSetBarrier(0, (void*)__lock))
-		usleep(1000); // ???
+    while (CAAtomicTestAndSetBarrier(0, (void*)__lock))
+        usleep(1000); // ???
 #endif
 }
 
 inline void    CASpinLockUnlock( volatile CASpinLock *__lock )
 {
 #if TARGET_OS_MAC
-	OSSpinLockUnlock(__lock);
+    OSSpinLockUnlock(__lock);
 #else
-	CAAtomicTestAndClearBarrier(0, (void*)__lock);
+    CAAtomicTestAndClearBarrier(0, (void*)__lock);
 #endif
 }
 
 inline bool    CASpinLockTry( volatile CASpinLock *__lock )
 {
 #if TARGET_OS_MAC
-	return OSSpinLockTry(__lock);
+    return OSSpinLockTry(__lock);
 #else
-	return (CAAtomicTestAndSetBarrier(0, (void*)__lock) == 0);
+    return (CAAtomicTestAndSetBarrier(0, (void*)__lock) == 0);
 #endif
 }
 

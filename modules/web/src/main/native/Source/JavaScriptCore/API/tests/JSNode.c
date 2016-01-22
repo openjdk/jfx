@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "JSNode.h"
@@ -65,19 +65,19 @@ static JSValueRef JSNode_removeChild(JSContextRef context, JSObjectRef function,
             if (JSValueIsObjectOfClass(context, arguments[0], JSNode_class(context))) {
                 Node* node = JSObjectGetPrivate(thisObject);
                 Node* child = JSObjectGetPrivate(JSValueToObject(context, arguments[0], exception));
-                
+
                 Node_removeChild(node, child);
             }
         }
     }
-    
+
     return JSValueMakeUndefined(context);
 }
 
 static JSValueRef JSNode_replaceChild(JSContextRef context, JSObjectRef function, JSObjectRef thisObject, size_t argumentCount, const JSValueRef arguments[], JSValueRef* exception)
 {
     UNUSED_PARAM(function);
-    
+
     if (argumentCount > 1) {
         if (JSValueIsObjectOfClass(context, thisObject, JSNode_class(context))) {
             if (JSValueIsObjectOfClass(context, arguments[0], JSNode_class(context))) {
@@ -85,13 +85,13 @@ static JSValueRef JSNode_replaceChild(JSContextRef context, JSObjectRef function
                     Node* node = JSObjectGetPrivate(thisObject);
                     Node* newChild = JSObjectGetPrivate(JSValueToObject(context, arguments[0], exception));
                     Node* oldChild = JSObjectGetPrivate(JSValueToObject(context, arguments[1], exception));
-                    
+
                     Node_replaceChild(node, newChild, oldChild);
                 }
             }
         }
     }
-    
+
     return JSValueMakeUndefined(context);
 }
 
@@ -114,7 +114,7 @@ static JSValueRef JSNode_getNodeType(JSContextRef context, JSObjectRef object, J
         JSStringRelease(nodeType);
         return value;
     }
-    
+
     return NULL;
 }
 
@@ -133,7 +133,7 @@ static JSValueRef JSNode_getFirstChild(JSContextRef context, JSObjectRef object,
     UNUSED_PARAM(object);
     UNUSED_PARAM(propertyName);
     UNUSED_PARAM(exception);
-    
+
     return JSValueMakeUndefined(context);
 }
 

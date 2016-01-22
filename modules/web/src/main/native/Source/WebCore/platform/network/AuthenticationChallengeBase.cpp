@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "config.h"
 #include "AuthenticationChallenge.h"
@@ -47,29 +47,29 @@ AuthenticationChallengeBase::AuthenticationChallengeBase(const ProtectionSpace& 
 {
 }
 
-unsigned AuthenticationChallengeBase::previousFailureCount() const 
-{ 
-    return m_previousFailureCount; 
+unsigned AuthenticationChallengeBase::previousFailureCount() const
+{
+    return m_previousFailureCount;
 }
 
-const Credential& AuthenticationChallengeBase::proposedCredential() const 
-{ 
-    return m_proposedCredential; 
+const Credential& AuthenticationChallengeBase::proposedCredential() const
+{
+    return m_proposedCredential;
 }
 
-const ProtectionSpace& AuthenticationChallengeBase::protectionSpace() const 
-{ 
-    return m_protectionSpace; 
+const ProtectionSpace& AuthenticationChallengeBase::protectionSpace() const
+{
+    return m_protectionSpace;
 }
 
-const ResourceResponse& AuthenticationChallengeBase::failureResponse() const 
-{ 
-    return m_failureResponse; 
+const ResourceResponse& AuthenticationChallengeBase::failureResponse() const
+{
+    return m_failureResponse;
 }
 
-const ResourceError& AuthenticationChallengeBase::error() const 
-{ 
-    return m_error; 
+const ResourceError& AuthenticationChallengeBase::error() const
+{
+    return m_error;
 }
 
 bool AuthenticationChallengeBase::isNull() const
@@ -89,22 +89,22 @@ bool AuthenticationChallengeBase::compare(const AuthenticationChallenge& a, cons
 
     if (a.isNull() || b.isNull())
         return false;
-        
+
     if (a.protectionSpace() != b.protectionSpace())
         return false;
-        
+
     if (a.proposedCredential() != b.proposedCredential())
         return false;
-        
+
     if (a.previousFailureCount() != b.previousFailureCount())
         return false;
-        
+
     if (a.failureResponse() != b.failureResponse())
         return false;
-        
+
     if (a.error() != b.error())
         return false;
-        
+
     return AuthenticationChallenge::platformCompare(a, b);
 }
 

@@ -55,10 +55,10 @@ const String& InternalFunction::name(ExecState* exec)
 const String InternalFunction::displayName(ExecState* exec)
 {
     JSValue displayName = getDirect(exec->vm(), exec->vm().propertyNames->displayName);
-    
+
     if (displayName && isJSString(displayName))
         return asString(displayName)->tryGetValue();
-    
+
     return String();
 }
 
@@ -71,10 +71,10 @@ CallType InternalFunction::getCallData(JSCell*, CallData&)
 const String InternalFunction::calculatedDisplayName(ExecState* exec)
 {
     const String explicitName = displayName(exec);
-    
+
     if (!explicitName.isEmpty())
         return explicitName;
-    
+
     return name(exec);
 }
 

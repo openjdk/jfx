@@ -74,13 +74,13 @@ public:
 
     virtual void setScrollingPerformanceLoggingEnabled(bool) = 0;
     virtual bool scrollingPerformanceLoggingEnabled() const = 0;
-    
+
     virtual void setAggressivelyRetainsTiles(bool) = 0;
     virtual bool aggressivelyRetainsTiles() const = 0;
-    
+
     virtual void setUnparentsOffscreenTiles(bool) = 0;
     virtual bool unparentsOffscreenTiles() const = 0;
-    
+
     virtual double retainedTileBackingStoreMemory() const = 0;
 
     virtual void setTileMargins(int marginTop, int marginBottom, int marginLeft, int marginRight) = 0;

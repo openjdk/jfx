@@ -58,14 +58,14 @@ public:
 
     // Check to see if a mime type is suitable for being loaded as a JavaScript
     // resource.
-    static bool isSupportedJavaScriptMIMEType(const String& mimeType);    
+    static bool isSupportedJavaScriptMIMEType(const String& mimeType);
 
     // Check to see if a non-image mime type is suitable for being loaded as a
     // document in a frame.  Includes supported JavaScript MIME types.
     static bool isSupportedNonImageMIMEType(const String& mimeType);
 
     // Check to see if a mime type is suitable for being loaded using <video> and <audio>
-    static bool isSupportedMediaMIMEType(const String& mimeType); 
+    static bool isSupportedMediaMIMEType(const String& mimeType);
 
     // Check to see if the mime type is not suitable for being loaded as a text
     // document in a frame. Only valid for mime types begining with "text/".

@@ -40,38 +40,38 @@ import com.oracle.javafx.scenebuilder.kit.editor.job.Job;
  *
  */
 class LiveUpdater {
-    
+
     private final AbstractDragSource dragSource;
     private final EditorController editorController;
     private AbstractDropTarget dropTarget;
     private Job dropTargetMoveJob;
-    
+
     public LiveUpdater(AbstractDragSource dragSource, EditorController editorController) {
         assert dragSource != null;
         assert editorController != null;
-        
+
         this.dragSource = dragSource;
         this.editorController = editorController;
     }
-    
+
     public void setDropTarget(AbstractDropTarget newDropTarget) {
         assert (newDropTarget == null) || (this.dropTarget != newDropTarget);
-        
+
         /*
          *   \ newDropTarget |                     |
          * this.dropTarget   |        null         |        non null
          * ------------------+---------------------+------------------------
          *                   |                     |          (A)
          *       null        |        nop          | move to new drop target
-         *                   |                     |           
+         *                   |                     |
          * ------------------+---------------------+------------------------
          *                   |        (B)          |          (C)
          *     not null      |    undo last move   |     undo last move
          *                   |                     | move to new drop target
          * ------------------+---------------------+------------------------
-         * 
+         *
          */
-        
+
         if (this.dropTarget != null) {
             assert this.dropTargetMoveJob != null;
             this.dropTargetMoveJob.undo();
@@ -83,7 +83,7 @@ class LiveUpdater {
             this.dropTargetMoveJob.execute();
         }
     }
-    
+
     public AbstractDropTarget getDropTarget() {
         return dropTarget;
     }

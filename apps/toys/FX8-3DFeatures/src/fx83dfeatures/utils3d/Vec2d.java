@@ -64,7 +64,7 @@ public class Vec2d {
         this.x = v.x;
         this.y = v.y;
     }
-    
+
     public void set(double x, double y) {
         this.x = x;
         this.y = y;

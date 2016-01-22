@@ -72,7 +72,7 @@ public class BindingsIsNullTest {
         assertTrue(binding.get());
         observer.check(binding, 1);
     }
-    
+
     @Test
     public void test_Object_IsNotNull() {
         final BooleanBinding binding = Bindings.isNotNull(oo);
@@ -114,7 +114,7 @@ public class BindingsIsNullTest {
         assertTrue(binding.get());
         observer.check(binding, 1);
     }
-    
+
     @Test
     public void test_String_IsNotNull() {
         final BooleanBinding binding = Bindings.isNotNull(os);

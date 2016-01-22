@@ -45,7 +45,7 @@ import javafx.scene.shape.Rectangle;
  *
  */
 class TreeTableViewSampleData extends AbstractSampleData {
-    
+
     private final TreeItem<SampleDataItem> sampleRoot;
 
     public TreeTableViewSampleData() {
@@ -72,13 +72,13 @@ class TreeTableViewSampleData extends AbstractSampleData {
 
     public static boolean canApplyTo(TreeTableView<?> treeTableView) {
         final boolean result;
-        
+
         /*
          * We can insert sample data if:
          * 1) TreeTableView.items() is null
          * 2) TreeTableView columns have no cell factory set
          */
-        
+
         if (treeTableView.getRoot() != null) {
             result = false;
         } else {
@@ -93,32 +93,32 @@ class TreeTableViewSampleData extends AbstractSampleData {
                     break;
                 }
             }
-            
+
             result = columns.isEmpty();
         }
-        
+
         return result;
     }
-    
-    
+
+
     /*
      * AbstractSampleData
      */
-    
-    
+
+
     @Override
     public void applyTo(Object sceneGraphObject) {
         assert sceneGraphObject instanceof TreeTableView;
-        
-        @SuppressWarnings("unchecked")        
+
+        @SuppressWarnings("unchecked")
         final TreeTableView<SampleDataItem> tableView = (TreeTableView<SampleDataItem>) sceneGraphObject;
-        
+
         tableView.setRoot(sampleRoot);
-        
+
         final List<TreeTableColumn<SampleDataItem, ?>> columns = new ArrayList<>(tableView.getColumns());
         while (columns.isEmpty() == false) {
-            @SuppressWarnings("unchecked")        
-            final TreeTableColumn<SampleDataItem,String> ttc 
+            @SuppressWarnings("unchecked")
+            final TreeTableColumn<SampleDataItem,String> ttc
                     = (TreeTableColumn<SampleDataItem,String>)columns.get(0);
             ttc.setCellValueFactory(SampleDataItem.FACTORY);
             columns.remove(0);
@@ -129,39 +129,39 @@ class TreeTableViewSampleData extends AbstractSampleData {
     @Override
     public void removeFrom(Object sceneGraphObject) {
         assert sceneGraphObject instanceof TreeTableView;
-        
-        @SuppressWarnings("unchecked")        
+
+        @SuppressWarnings("unchecked")
         final TreeTableView<SampleDataItem> tableView = TreeTableView.class.cast(sceneGraphObject);
         tableView.setRoot(null);
-        
+
         final List<TreeTableColumn<SampleDataItem, ?>> columns = new ArrayList<>();
         columns.addAll(tableView.getColumns());
         while (columns.isEmpty() == false) {
-            @SuppressWarnings("unchecked")        
-            final TreeTableColumn<SampleDataItem,String> tc 
+            @SuppressWarnings("unchecked")
+            final TreeTableColumn<SampleDataItem,String> tc
                     = (TreeTableColumn<SampleDataItem,String>)columns.get(0);
             tc.setCellValueFactory(null);
             columns.remove(0);
             columns.addAll(tc.getColumns());
         }
     }
-  
-    
+
+
     /*
      * Private
      */
-    
-    
+
+
     public static class SampleDataItem {
         int index;
-        
+
         public final static TreeItemPropertyValueFactory<SampleDataItem, String> FACTORY
                 = new TreeItemPropertyValueFactory<>("prop"); //NOI18N
-        
+
         public SampleDataItem(int index) {
             this.index = index;
         }
-        
+
         public String getProp() {
             return TreeTableViewSampleData.lorem(index);
         }

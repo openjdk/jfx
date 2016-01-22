@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef ProfileTreeNode_h
@@ -48,7 +48,7 @@ public:
     {
         if (!m_children)
             m_children = new Map();
-    
+
         ProfileTreeNode newEntry;
         Map::AddResult result = m_children->add(String(name), newEntry);
         ProfileTreeNode* childInMap = &result.iterator->value;
@@ -75,7 +75,7 @@ public:
             childCount += it->value.count();
         return childCount;
     }
-    
+
 private:
     void dumpInternal(unsigned indent)
     {

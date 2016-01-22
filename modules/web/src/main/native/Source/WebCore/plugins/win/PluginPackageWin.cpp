@@ -22,7 +22,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 
@@ -79,7 +79,7 @@ bool PluginPackage::isPluginBlacklisted()
         return true;
     } else if (name() == "Yahoo Application State Plugin") {
         // https://bugs.webkit.org/show_bug.cgi?id=26860
-        // Bug in Yahoo Application State plug-in earlier than 1.0.0.6 leads to heap corruption. 
+        // Bug in Yahoo Application State plug-in earlier than 1.0.0.6 leads to heap corruption.
         static const PlatformModuleVersion yahooAppStatePluginMinRequired(0x00000006, 0x00010000);
         if (compareFileVersion(yahooAppStatePluginMinRequired) < 0)
             return true;
@@ -107,7 +107,7 @@ void PluginPackage::determineQuirks(const String& mimeType)
         // call SetWindow when the plugin view has a correct size
         m_quirks.add(PluginQuirkDeferFirstSetWindowCall);
 
-        // Windowless mode does not work at all with the WMP plugin so just remove that parameter 
+        // Windowless mode does not work at all with the WMP plugin so just remove that parameter
         // and don't pass it to the plug-in.
         m_quirks.add(PluginQuirkRemoveWindowlessVideoParam);
 
@@ -308,7 +308,7 @@ abort:
 }
 
 unsigned PluginPackage::hash() const
-{ 
+{
     const unsigned hashCodes[] = {
         m_name.impl()->hash(),
         m_description.impl()->hash(),

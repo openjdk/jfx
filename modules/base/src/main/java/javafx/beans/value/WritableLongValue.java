@@ -27,11 +27,11 @@ package javafx.beans.value;
 
 /**
  * A writable long value.
- * 
+ *
  * @see WritableValue
  * @see WritableNumberValue
- * 
- * 
+ *
+ *
  * @since JavaFX 2.0
  */
 public interface WritableLongValue extends WritableNumberValue {
@@ -41,7 +41,7 @@ public interface WritableLongValue extends WritableNumberValue {
      * Unlike {@link #getValue()},
      * this method returns primitive long.
      * Needs to be identical to {@link #getValue()}.
-     * 
+     *
      * @return The current value
      */
     long get();
@@ -50,7 +50,7 @@ public interface WritableLongValue extends WritableNumberValue {
      * Set the wrapped value.
      * Unlike {@link #setValue(java.lang.Number) },
      * this method uses primitive long.
-     * 
+     *
      * @param value
      *            The new value
      */

@@ -45,15 +45,15 @@ import javafx.scene.Node;
 
 /**
  *
- * 
+ *
  */
 public class ObjectSelectionGroup extends AbstractSelectionGroup {
-    
+
     private final Set<FXOMObject> items = new HashSet<>();
     private final FXOMObject hitItem;
     private final Object hitSceneGraphObject;
     private final Node hitNode;
-    
+
     ObjectSelectionGroup(FXOMObject fxomObject, Node hitNode) {
         assert fxomObject != null;
         this.items.add(fxomObject);
@@ -61,7 +61,7 @@ public class ObjectSelectionGroup extends AbstractSelectionGroup {
         this.hitSceneGraphObject = fxomObject.getSceneGraphObject();
         this.hitNode = hitNode;
     }
-    
+
     public ObjectSelectionGroup(Collection<FXOMObject> fxomObjects, FXOMObject hitItem, Node hitNode) {
         assert fxomObjects != null;
         assert hitItem != null;
@@ -71,7 +71,7 @@ public class ObjectSelectionGroup extends AbstractSelectionGroup {
         this.hitSceneGraphObject = this.hitItem.getSceneGraphObject();
         this.hitNode = hitNode;
     }
-    
+
     public Set<FXOMObject> getItems() {
         return Collections.unmodifiableSet(items);
     }
@@ -83,26 +83,26 @@ public class ObjectSelectionGroup extends AbstractSelectionGroup {
     public Node getHitNode() {
         return hitNode;
     }
-    
+
     public boolean isExpired() {
         return hitItem.getSceneGraphObject() != hitSceneGraphObject;
     }
-    
+
     public Node getCheckedHitNode() {
         final Node result;
-        
+
         if ((hitNode == null) || isExpired()) {
             result = getFallbackHitNode();
         } else {
             result = hitNode;
         }
-        
+
         return result;
     }
-    
+
     public Node getFallbackHitNode() {
         final Node result;
-        
+
         if (hitItem.isNode()) {
             result = (Node) hitItem.getSceneGraphObject();
         } else {
@@ -113,21 +113,21 @@ public class ObjectSelectionGroup extends AbstractSelectionGroup {
                 result = null;
             }
         }
-        
+
         return result;
     }
-    
+
     public Set<FXOMObject> getFlattenItems() {
         return FXOMNodes.flatten(items);
     }
-    
+
     public List<FXOMObject> getSortedItems() {
         return FXOMNodes.sort(items);
     }
-    
+
     public boolean hasSingleParent() {
         final boolean result;
-        
+
         if (items.size() == 1) {
             result = true;
         } else {
@@ -137,20 +137,20 @@ public class ObjectSelectionGroup extends AbstractSelectionGroup {
             }
             result = parents.size() == 1;
         }
-        
+
         return result;
     }
-    
+
     /*
      * AbstractSelectionGroup
      */
-    
+
     @Override
     public FXOMObject getAncestor() {
         final FXOMObject result;
-        
+
         assert items.isEmpty() == false;
-        
+
         switch(items.size()) {
 
             case 0:
@@ -178,14 +178,14 @@ public class ObjectSelectionGroup extends AbstractSelectionGroup {
                 result = commonPath.getLeaf();
                 break;
         }
-        
+
         return result;
     }
 
     @Override
     public boolean isValid(FXOMDocument fxomDocument) {
         assert fxomDocument != null;
-        
+
         boolean result;
         final FXOMObject fxomRoot = fxomDocument.getFxomRoot();
         if (fxomRoot == null) {
@@ -200,11 +200,11 @@ public class ObjectSelectionGroup extends AbstractSelectionGroup {
                 }
             }
         }
-        
+
         return result;
     }
-    
-    
+
+
     /*
      * Cloneable
      */
@@ -213,7 +213,7 @@ public class ObjectSelectionGroup extends AbstractSelectionGroup {
         return (ObjectSelectionGroup)super.clone();
     }
 
-    
+
     /*
      * Object
      */

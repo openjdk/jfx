@@ -150,7 +150,7 @@ void initState(ContextInfo *ctxInfo) {
     ctxInfo->state.fillMode = GL_FILL;
     ctxInfo->state.cullEnable = JNI_FALSE;
     ctxInfo->state.cullMode = GL_BACK;
-    ctxInfo->state.fbo = 0;    
+    ctxInfo->state.fbo = 0;
 }
 
 void clearBuffers(ContextInfo *ctxInfo,
@@ -338,7 +338,7 @@ int checkFramebufferStatus(ContextInfo *ctxInfo) {
                 break;
             case GL_FRAMEBUFFER_INCOMPLETE_DRAW_BUFFER:
                 fprintf(stderr, "Incomplete draw buffer. (GL_FRAMEBUFFER_INCOMPLETE_DRAW_BUFFER)(FBO - 820)\n");
-                break; 
+                break;
             case GL_FRAMEBUFFER_INCOMPLETE_READ_BUFFER:
                 fprintf(stderr, "Incomplete read buffer. (GL_FRAMEBUFFER_INCOMPLETE_READ_BUFFER)(FBO - 820)\n");
                 break;
@@ -641,7 +641,7 @@ JNIEXPORT jint JNICALL Java_com_sun_prism_es2_GLContext_nCompileShader
     }
     ctxInfo->glShaderSource(shaderID, 1, (const GLchar **) &shaderString, (GLint *) NULL);
     ctxInfo->glCompileShader(shaderID);
-    ctxInfo->glGetShaderiv(shaderID, GL_COMPILE_STATUS, &success);    
+    ctxInfo->glGetShaderiv(shaderID, GL_COMPILE_STATUS, &success);
 
     free(shaderString);
 
@@ -840,7 +840,7 @@ JNIEXPORT jint JNICALL Java_com_sun_prism_es2_GLContext_nGenAndBindTexture
 JNIEXPORT jint JNICALL Java_com_sun_prism_es2_GLContext_nGetFBO
 (JNIEnv *env, jclass class) {
     GLint param;
-    /* The caching logic has been done on Java side if 
+    /* The caching logic has been done on Java side if
      * platform isn't MAC or IOS. On these platforms Glass
      * can change the FBO under us. We should be able to simplify the
      * logic in Java and remove this method once once Glass stop doing it.
@@ -953,7 +953,7 @@ int translatePrismToGL(int value) {
             return GL_MAX_VERTEX_UNIFORM_VECTORS;
         case com_sun_prism_es2_GLContext_GL_MAX_VERTEX_TEXTURE_IMAGE_UNITS:
             return GL_MAX_VERTEX_TEXTURE_IMAGE_UNITS;
-            
+
         default:
             fprintf(stderr, "warning: Unknown value. Returning value = %d\n", value);
     }
@@ -1108,7 +1108,7 @@ JNIEXPORT void JNICALL Java_com_sun_prism_es2_GLContext_nTexParamsMinMax
 (JNIEnv *env, jclass class, jint min, jint max) {
     GLenum param = translatePrismToGL(max);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, param);
-    param = translatePrismToGL(min);    
+    param = translatePrismToGL(min);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, param);
 }
 
@@ -1742,8 +1742,8 @@ JNIEXPORT void JNICALL Java_com_sun_prism_es2_GLContext_nSetDeviceParametersFor3
     }
     // Note: projViewTx and camPos are handled above in the Java layer
 
-    // This setting matches 2D ((1,1-alpha); premultiplied alpha case.    
-    // Will need to evaluate when support proper 3D blending (alpha,1-alpha). 
+    // This setting matches 2D ((1,1-alpha); premultiplied alpha case.
+    // Will need to evaluate when support proper 3D blending (alpha,1-alpha).
     glEnable(GL_BLEND);
     glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
 
@@ -1785,7 +1785,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_prism_es2_GLContext_nCreateES2Mesh
         return 0;
     }
 
-    /* initialize the structure */    
+    /* initialize the structure */
     meshInfo->vboIDArray[MESH_VERTEXBUFFER] = 0;
     meshInfo->vboIDArray[MESH_INDEXBUFFER] = 0;
     meshInfo->indexBufferSize = 0;
@@ -2044,13 +2044,13 @@ JNIEXPORT void JNICALL Java_com_sun_prism_es2_GLContext_nSetMap
     if ((ctxInfo == NULL) || (pmInfo == NULL)) {
         return;
     }
-    
+
     // Must within the range of DIFFUSE, SPECULAR, BUMP, SELFILLUMINATION
     if ((mapType < 0) || (mapType > 3)) {
         fprintf(stderr, "nSetMap: mapType is out of bounds\n");
         return;
     }
-    
+
     pmInfo->maps[mapType] = texID;
 }
 

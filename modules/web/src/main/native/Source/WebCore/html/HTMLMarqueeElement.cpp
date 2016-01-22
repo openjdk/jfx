@@ -127,7 +127,7 @@ int HTMLMarqueeElement::scrollAmount() const
     int scrollAmount = fastGetAttribute(scrollamountAttr).toInt(&ok);
     return ok && scrollAmount >= 0 ? scrollAmount : RenderStyle::initialMarqueeIncrement().intValue();
 }
-    
+
 void HTMLMarqueeElement::setScrollAmount(int scrollAmount, ExceptionCode& ec)
 {
     if (scrollAmount < 0)
@@ -135,7 +135,7 @@ void HTMLMarqueeElement::setScrollAmount(int scrollAmount, ExceptionCode& ec)
     else
         setIntegralAttribute(scrollamountAttr, scrollAmount);
 }
-    
+
 int HTMLMarqueeElement::scrollDelay() const
 {
     bool ok;
@@ -150,14 +150,14 @@ void HTMLMarqueeElement::setScrollDelay(int scrollDelay, ExceptionCode& ec)
     else
         setIntegralAttribute(scrolldelayAttr, scrollDelay);
 }
-    
+
 int HTMLMarqueeElement::loop() const
 {
     bool ok;
     int loopValue = fastGetAttribute(loopAttr).toInt(&ok);
     return ok && loopValue > 0 ? loopValue : -1;
 }
-    
+
 void HTMLMarqueeElement::setLoop(int loop, ExceptionCode& ec)
 {
     if (loop <= 0 && loop != -1)

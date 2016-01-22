@@ -35,23 +35,23 @@ namespace JSC {
 class DataView : public ArrayBufferView {
 protected:
     DataView(PassRefPtr<ArrayBuffer>, unsigned byteOffset, unsigned byteLength);
-    
+
 public:
     JS_EXPORT_PRIVATE static PassRefPtr<DataView> create(PassRefPtr<ArrayBuffer>, unsigned byteOffset, unsigned length);
     static PassRefPtr<DataView> create(PassRefPtr<ArrayBuffer>);
-    
+
     virtual unsigned byteLength() const override
     {
         return m_byteLength;
     }
-    
+
     virtual TypedArrayType getType() const override
     {
         return TypeDataView;
     }
 
     virtual JSArrayBufferView* wrap(ExecState*, JSGlobalObject*) override;
-    
+
     template<typename T>
     T get(unsigned offset, bool littleEndian, bool* status = 0)
     {
@@ -67,7 +67,7 @@ public:
             *reinterpret_cast<T*>(static_cast<uint8_t*>(m_baseAddress) + offset),
             littleEndian);
     }
-    
+
     template<typename T>
     T read(unsigned& offset, bool littleEndian, bool* status = 0)
     {
@@ -76,7 +76,7 @@ public:
             offset += sizeof(T);
         return result;
     }
-    
+
     template<typename T>
     void set(unsigned offset, T value, bool littleEndian, bool* status = 0)
     {

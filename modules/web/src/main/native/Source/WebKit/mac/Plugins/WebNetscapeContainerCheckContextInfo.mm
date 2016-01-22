@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #import "WebNetscapeContainerCheckContextInfo.h"
@@ -34,7 +34,7 @@
     self = [super init];
     if (!self)
         return nil;
-    
+
     _checkRequestID = checkRequestID;
     _callback = callbackFunc;
     _context = context;
@@ -43,7 +43,7 @@
 
 - (uint32_t)checkRequestID
 {
-    return _checkRequestID;   
+    return _checkRequestID;
 }
 
 - (void (*)(NPP npp, uint32_t, NPBool, void*))callback

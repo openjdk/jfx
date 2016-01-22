@@ -51,9 +51,9 @@ public class BidirectionalBindingWithConversionTest<S, T> {
     public static interface Functions<U, V> {
         PropertyMock<U> create0();
         PropertyMock<V> create1();
-    	void bind(PropertyMock<U> obj0, PropertyMock<V> obj1);
-    	void unbind(Object obj0, Object obj1);
-    	Object createBindingDirectly(PropertyMock<U> op0, PropertyMock<V> op1);
+        void bind(PropertyMock<U> obj0, PropertyMock<V> obj1);
+        void unbind(Object obj0, Object obj1);
+        Object createBindingDirectly(PropertyMock<U> op0, PropertyMock<V> op1);
         void check0(U obj0, U obj1);
         void check1(V obj0, V obj1);
     }
@@ -75,98 +75,98 @@ public class BidirectionalBindingWithConversionTest<S, T> {
 
     @Before
     public void setUp() {
-    	op0.setValue(v0[0]);
-    	op1.setValue(v1[1]);
+        op0.setValue(v0[0]);
+        op1.setValue(v1[1]);
     }
-    
+
     @Test
     public void testBind() {
-    	func.bind(op0, op1);
-		System.gc(); // making sure we did not not overdo weak references
+        func.bind(op0, op1);
+        System.gc(); // making sure we did not not overdo weak references
         func.check0(v0[1], op0.getValue());
         func.check1(v1[1], op1.getValue());
 
-		op0.setValue(v0[2]);
+        op0.setValue(v0[2]);
         func.check0(v0[2], op0.getValue());
         func.check1(v1[2], op1.getValue());
 
-		op1.setValue(v1[3]);
+        op1.setValue(v1[3]);
         func.check0(v0[3], op0.getValue());
         func.check1(v1[3], op1.getValue());
     }
 
-	@Test
-	public void testUnbind() {
-		// unbind non-existing binding => no-op
-		func.unbind(op0, op1);
-		
-		// unbind properties of different beans
-    	func.bind(op0, op1);
-		System.gc(); // making sure we did not not overdo weak references
+    @Test
+    public void testUnbind() {
+        // unbind non-existing binding => no-op
+        func.unbind(op0, op1);
+
+        // unbind properties of different beans
+        func.bind(op0, op1);
+        System.gc(); // making sure we did not not overdo weak references
         func.check0(v0[1], op0.getValue());
         func.check1(v1[1], op1.getValue());
 
-		func.unbind(op0, op1);
-		System.gc();
+        func.unbind(op0, op1);
+        System.gc();
         func.check0(v0[1], op0.getValue());
         func.check1(v1[1], op1.getValue());
 
-		op0.setValue(v0[2]);
+        op0.setValue(v0[2]);
         func.check0(v0[2], op0.getValue());
         func.check1(v1[1], op1.getValue());
 
-		op1.setValue(v1[3]);
+        op1.setValue(v1[3]);
         func.check0(v0[2], op0.getValue());
         func.check1(v1[3], op1.getValue());
-	}
+    }
 
-	@Test
-	public void testWeakReferencing() {
-		func.bind(op0, op1);
-		assertEquals(1, op0.getListenerCount());
-		assertEquals(1, op1.getListenerCount());
+    @Test
+    public void testWeakReferencing() {
+        func.bind(op0, op1);
+        assertEquals(1, op0.getListenerCount());
+        assertEquals(1, op1.getListenerCount());
 
-		op0 = null;
-		System.gc();
-		op1.setValue(v1[2]);
-		assertEquals(0, op1.getListenerCount());
+        op0 = null;
+        System.gc();
+        op1.setValue(v1[2]);
+        assertEquals(0, op1.getListenerCount());
 
         this.op0 = func.create0();
-		func.bind(op0, op1);
-		assertEquals(1, op0.getListenerCount());
-		assertEquals(1, op1.getListenerCount());
+        func.bind(op0, op1);
+        assertEquals(1, op0.getListenerCount());
+        assertEquals(1, op1.getListenerCount());
 
-		op1 = null;
-		System.gc();
-		op0.setValue(v0[3]);
-		assertEquals(0, op0.getListenerCount());
-	}
-	
-	@Test(expected=NullPointerException.class)
-	public void testBind_Null_X() {
-		func.bind(null, op1);
-	}
+        op1 = null;
+        System.gc();
+        op0.setValue(v0[3]);
+        assertEquals(0, op0.getListenerCount());
+    }
 
-	@Test(expected=NullPointerException.class)
-	public void testBind_X_Null() {
-		func.bind(op0, null);
-	}
+    @Test(expected=NullPointerException.class)
+    public void testBind_Null_X() {
+        func.bind(null, op1);
+    }
 
-	@Test(expected=NullPointerException.class)
-	public void testUnbind_Null_X() {
-		func.unbind(null, op1);
-	}
+    @Test(expected=NullPointerException.class)
+    public void testBind_X_Null() {
+        func.bind(op0, null);
+    }
 
-	@Test(expected=NullPointerException.class)
-	public void testUnbind_X_Null() {
-		func.unbind(op0, null);
-	}
+    @Test(expected=NullPointerException.class)
+    public void testUnbind_Null_X() {
+        func.unbind(null, op1);
+    }
 
-	@Test(expected=IllegalArgumentException.class)
-	public void testUnbind_X_Self() {
-		func.unbind(op0, op0);
-	}
-	
+    @Test(expected=NullPointerException.class)
+    public void testUnbind_X_Null() {
+        func.unbind(op0, null);
+    }
+
+    @Test(expected=IllegalArgumentException.class)
+    public void testUnbind_X_Self() {
+        func.unbind(op0, op0);
+    }
+
     @Parameterized.Parameters
     public static Collection<Object[]> parameters() {
         final DateFormat format = DateFormat.getDateTimeInstance(DateFormat.FULL, DateFormat.FULL, Locale.US);
@@ -266,49 +266,49 @@ public class BidirectionalBindingWithConversionTest<S, T> {
             },
         });
     }
-    
+
     private interface PropertyMock<T> extends Property<T> {
         int getListenerCount();
     }
-    
+
     private static class ObjectPropertyMock<T> extends SimpleObjectProperty<T> implements PropertyMock<T> {
-        
+
         private int listenerCount = 0;
-        
+
         @Override
         public int getListenerCount() {
             return listenerCount;
         }
-        
-        @Override 
+
+        @Override
         public void addListener(ChangeListener<? super T> listener) {
             super.addListener(listener);
             listenerCount++;
         }
-        
-        @Override 
+
+        @Override
         public void removeListener(ChangeListener<? super T> listener) {
             super.removeListener(listener);
             listenerCount--;
         }
     }
-    
+
     private static class StringPropertyMock extends SimpleStringProperty implements PropertyMock<String> {
-        
+
         private int listenerCount = 0;
-        
+
         @Override
         public int getListenerCount() {
             return listenerCount;
         }
-        
-        @Override 
+
+        @Override
         public void addListener(ChangeListener<? super String> listener) {
             super.addListener(listener);
             listenerCount++;
         }
-        
-        @Override 
+
+        @Override
         public void removeListener(ChangeListener<? super String> listener) {
             super.removeListener(listener);
             listenerCount--;

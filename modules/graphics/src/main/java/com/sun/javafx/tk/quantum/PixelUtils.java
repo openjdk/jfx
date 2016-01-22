@@ -42,7 +42,7 @@ class PixelUtils {
 
     private PixelUtils() {
     }
-    
+
     private static ImageFormatDescription[] supportedFormats =
                                 ImageStorage.getSupportedDescriptions();
 
@@ -62,7 +62,7 @@ class PixelUtils {
         Application app = Application.GetApplication();
         int nativeFormat = Pixels.getNativeFormat();
         Pixels pixels;
-        
+
         if (pixelType == PixelFormat.DataType.BYTE) {
             ByteBuffer bytes = (ByteBuffer)image.getPixelBuffer();
             int w = image.getWidth();
@@ -115,7 +115,7 @@ class PixelUtils {
             throw new IllegalArgumentException("unhandled image type: " + pixelType);
         }
     }
-    
+
     public static Image pixelsToImage(Pixels pix) {
         Buffer pixbuf = pix.getPixels();
         if (pix.getBytesPerComponent() == 1) {
@@ -127,10 +127,10 @@ class PixelUtils {
             IntBuffer buf = IntBuffer.allocate(pixbuf.capacity());
             buf.put((IntBuffer)pixbuf);
             buf.rewind();
-            return (Image.fromIntArgbPreData((IntBuffer)pixbuf, 
+            return (Image.fromIntArgbPreData((IntBuffer)pixbuf,
                                              pix.getWidth(), pix.getHeight()));
         } else {
-            throw new IllegalArgumentException("unhandled pixel buffer: " + 
+            throw new IllegalArgumentException("unhandled pixel buffer: " +
                                                pixbuf.getClass().getName());
         }
     }

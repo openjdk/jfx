@@ -46,29 +46,29 @@ import org.junit.Before;
 import org.junit.Test;
 
 /**
- * All public members of Axis are tested here . 
+ * All public members of Axis are tested here .
  */
 public class AxisTest {
     private Axis axis;//Empty string
     private AxisHelper helper;
-    
+
     public AxisTest() {
         helper = new AxisHelper();
     }
-    
+
     @Before public void setup() {
         if (axis == null) {
             axis = helper.getDummyAxis();
         }
         helper.setAxis(axis);
     }
-    
-   
-   
+
+
+
     /*********************************************************************
      * Tests for default values                                         *
      ********************************************************************/
-    
+
     @Test public void defaultSideNull() {
         assertNull(axis.getSide());
     }
@@ -114,7 +114,7 @@ public class AxisTest {
     /*********************************************************************
      * Tests for property binding                                        *
      ********************************************************************/
-    
+
     @Test public void checkSidePropertyBind() {
         ObjectProperty objPr = new SimpleObjectProperty<Side>(Side.TOP);
         axis.sideProperty().bind(objPr);
@@ -122,7 +122,7 @@ public class AxisTest {
         objPr.setValue(Side.BOTTOM);
         assertSame("side cannot be bound", axis.sideProperty().getValue(), Side.BOTTOM);
     }
-    
+
     @Test public void checkTickMarkVisiblePropertyBind() {
         BooleanProperty objPr = new SimpleBooleanProperty(true);
         axis.tickMarkVisibleProperty().bind(objPr);
@@ -130,7 +130,7 @@ public class AxisTest {
         objPr.setValue(false);
         assertFalse("tickMarkVisibleProperty cannot be bound", axis.tickMarkVisibleProperty().getValue());
     }
-    
+
     @Test public void checkTickLabelsVisiblePropertyBind() {
         BooleanProperty objPr = new SimpleBooleanProperty(true);
         axis.tickLabelsVisibleProperty().bind(objPr);
@@ -138,7 +138,7 @@ public class AxisTest {
         objPr.setValue(false);
         assertFalse("tickLabelsVisibleProperty cannot be bound", axis.tickLabelsVisibleProperty().getValue());
     }
-    
+
     @Test public void checkTickLengthPropertyBind() {
         DoubleProperty objPr = new SimpleDoubleProperty(56.0);
         axis.tickLengthProperty().bind(objPr);
@@ -146,7 +146,7 @@ public class AxisTest {
         objPr.setValue(23.0);
         assertEquals("tickLengthProperty cannot be bound", axis.tickLengthProperty().getValue(),23.0,0.0);
     }
-    
+
     @Test public void checkAutoRangingPropertyBind() {
         BooleanProperty objPr = new SimpleBooleanProperty(true);
         axis.autoRangingProperty().bind(objPr);
@@ -154,7 +154,7 @@ public class AxisTest {
         objPr.setValue(false);
         assertFalse("autoRangingProperty cannot be bound", axis.autoRangingProperty().getValue());
     }
-    
+
     @Test public void checkTickLabelFontPropertyBind() {
         ObjectProperty objPr = new SimpleObjectProperty<Font>(null);
         axis.tickLabelFontProperty().bind(objPr);
@@ -162,7 +162,7 @@ public class AxisTest {
         objPr.setValue(Font.getDefault());
         assertSame("tickLabelFontProperty cannot be bound", axis.tickLabelFontProperty().getValue(), Font.getDefault());
     }
-    
+
     @Test public void checkTickLabelFillPropertyBind() {
         ObjectProperty objPr = new SimpleObjectProperty<Color>(Color.WHEAT);
         axis.tickLabelFillProperty().bind(objPr);
@@ -170,7 +170,7 @@ public class AxisTest {
         objPr.setValue(Color.BLUE);
         assertSame("tickLabelFillProperty cannot be bound", axis.tickLabelFillProperty().getValue(), Color.BLUE);
     }
-    
+
     @Test public void checkTickLabelGapPropertyBind() {
         DoubleProperty objPr = new SimpleDoubleProperty(56.0);
         axis.tickLabelGapProperty().bind(objPr);
@@ -178,7 +178,7 @@ public class AxisTest {
         objPr.setValue(23.0);
         assertEquals("tickLabelGapProperty cannot be bound", axis.tickLabelGapProperty().getValue(),23.0,0.0);
     }
-    
+
     @Test public void checkAnimatedPropertyBind() {
         BooleanProperty objPr = new SimpleBooleanProperty(true);
         axis.animatedProperty().bind(objPr);
@@ -186,7 +186,7 @@ public class AxisTest {
         objPr.setValue(false);
         assertFalse("animatedProperty cannot be bound", axis.animatedProperty().getValue());
     }
-    
+
     @Test public void checkTickLabelRotationPropertyBind() {
         DoubleProperty objPr = new SimpleDoubleProperty(56.0);
         axis.tickLabelRotationProperty().bind(objPr);
@@ -194,9 +194,9 @@ public class AxisTest {
         objPr.setValue(23.0);
         assertEquals("tickLabelRotationProperty cannot be bound", axis.tickLabelRotationProperty().getValue(),23.0,0.0);
     }
-    
 
-    
+
+
     @Test public void sidePropertyHasBeanReference() {
         assertSame(axis, axis.sideProperty().getBean());
     }
@@ -277,8 +277,8 @@ public class AxisTest {
         assertEquals("tickLabelRotation", axis.tickLabelRotationProperty().getName());
     }
 
-    
-    
+
+
     /*********************************************************************
      * Check for Pseudo classes                                          *
      ********************************************************************/
@@ -315,7 +315,7 @@ public class AxisTest {
     }
 
 
-    
+
     /*********************************************************************
      * CSS related Tests                                                 *
      ********************************************************************/
@@ -454,101 +454,101 @@ public class AxisTest {
         axis.setSide(Side.BOTTOM);
         assertSame(axis.sideProperty().getValue(), Side.BOTTOM);
     }
-    
+
     @Test public void setHbarPolicyAndSeeValue() {
         axis.setSide(Side.TOP);
         assertSame(axis.getSide(), Side.TOP);
     }
-    
+
     @Test public void setTickMarkVisibleAndSeeValueIsReflectedInModel() {
         axis.setTickMarkVisible(false);
         assertFalse(axis.tickMarkVisibleProperty().getValue());
     }
-    
+
     @Test public void setTickMarkVisibleAndSeeValue() {
         axis.setTickMarkVisible(true);
         assertTrue(axis.isTickMarkVisible());
     }
-    
+
     @Test public void setTickLabelsVisibleAndSeeValueIsReflectedInModel() {
         axis.setTickLabelsVisible(false);
         assertFalse(axis.tickLabelsVisibleProperty().getValue());
     }
-    
+
     @Test public void setTickLabelsVisibleAndSeeValue() {
         axis.setTickLabelsVisible(true);
         assertTrue(axis.isTickLabelsVisible());
     }
-    
+
     @Test public void setTickLengthAndSeeValueIsReflectedInModel() {
         axis.setTickLength(30.0);
         assertEquals(axis.tickLengthProperty().getValue(), 30.0, 0.0);
     }
-    
+
     @Test public void setTickLengthAndSeeValue() {
         axis.setTickLength(30.0);
         assertEquals(axis.getTickLength(), 30.0, 0.0);
     }
-    
+
     @Test public void setAutoRangingAndSeeValueIsReflectedInModel() {
         axis.setAutoRanging(false);
         assertFalse(axis.autoRangingProperty().getValue());
     }
-    
+
     @Test public void setAutoRangingAndSeeValue() {
         axis.setAutoRanging(true);
         assertTrue(axis.isAutoRanging());
     }
-    
+
     @Test public void setTickLabelFontAndSeeValueIsReflectedInModel() {
         axis.setTickLabelFont(Font.getDefault());
         assertSame(axis.tickLabelFontProperty().getValue(), Font.getDefault());
     }
-    
+
     @Test public void setTickLabelFontAndSeeValue() {
         axis.setTickLabelFont(Font.getDefault());
         assertSame(axis.getTickLabelFont(), Font.getDefault());
     }
-    
+
     @Test public void setTickLabelFillAndSeeValueIsReflectedInModel() {
         axis.setTickLabelFill(Color.AQUA);
         assertSame(axis.tickLabelFillProperty().getValue(), Color.AQUA);
     }
-    
+
     @Test public void setTickLabelFillAndSeeValue() {
         axis.setTickLabelFill(Color.AQUA);
         assertSame(axis.getTickLabelFill(), Color.AQUA);
     }
-    
+
     @Test public void setTickLabelGapAndSeeValueIsReflectedInModel() {
         axis.setTickLabelGap(30.0);
         assertEquals(axis.tickLabelGapProperty().getValue(), 30.0, 0.0);
     }
-    
+
     @Test public void setTickLabelGapAndSeeValue() {
         axis.setTickLabelGap(30.0);
         assertEquals(axis.getTickLabelGap(), 30.0, 0.0);
     }
-    
+
     @Test public void setAnimatedAndSeeValueIsReflectedInModel() {
         axis.setAnimated(false);
         assertFalse(axis.animatedProperty().getValue());
     }
-    
+
     @Test public void setAnimatedAndSeeValue() {
         axis.setAnimated(true);
         assertTrue(axis.getAnimated());
     }
-    
+
     @Test public void setTickLabelRotationAndSeeValueIsReflectedInModel() {
         axis.setTickLabelRotation(30.0);
         assertEquals(axis.tickLabelRotationProperty().getValue(), 30.0, 0.0);
     }
-    
+
     @Test public void setTickLabelRotationAndSeeValue() {
         axis.setTickLabelRotation(30.0);
         assertEquals(axis.getTickLabelRotation(), 30.0, 0.0);
     }
-    
-    
+
+
 }

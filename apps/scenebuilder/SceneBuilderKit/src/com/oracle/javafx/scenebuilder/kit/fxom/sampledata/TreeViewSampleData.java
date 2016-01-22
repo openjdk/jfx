@@ -41,7 +41,7 @@ import javafx.scene.shape.Rectangle;
  *
  */
 class TreeViewSampleData extends AbstractSampleData {
-    
+
     private final TreeItem<String> sampleRoot;
 
     public TreeViewSampleData() {
@@ -69,12 +69,12 @@ class TreeViewSampleData extends AbstractSampleData {
     /*
      * AbstractSampleData
      */
-    
-    
+
+
     @Override
     public void applyTo(Object sceneGraphObject) {
         assert sceneGraphObject instanceof TreeView;
-        @SuppressWarnings("unchecked")        
+        @SuppressWarnings("unchecked")
         final TreeView<String> treeView = (TreeView<String>) sceneGraphObject;
         treeView.setRoot(sampleRoot);
     }
@@ -82,9 +82,9 @@ class TreeViewSampleData extends AbstractSampleData {
     @Override
     public void removeFrom(Object sceneGraphObject) {
         assert sceneGraphObject instanceof TreeView;
-        @SuppressWarnings("unchecked")        
+        @SuppressWarnings("unchecked")
         final TreeView<String> treeView = (TreeView<String>) sceneGraphObject;
         treeView.setRoot(null);
     }
-    
+
 }

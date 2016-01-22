@@ -33,7 +33,7 @@
 #include <wtf/unicode/CharacterNames.h>
 
 namespace WebCore {
-    
+
 class RenderMathMLOperator final : public RenderMathMLBlock {
 public:
     RenderMathMLOperator(MathMLElement&, PassRef<RenderStyle>);
@@ -44,7 +44,7 @@ public:
     void stretchToHeight(int pixelHeight);
     int stretchHeight() { return m_stretchHeight; }
     float expandedStretchHeight() const;
-    
+
     enum OperatorType { Default, Separator, Fence };
     void setOperatorType(OperatorType type) { m_operatorType = type; }
     OperatorType operatorType() const { return m_operatorType; }
@@ -104,7 +104,7 @@ inline UChar convertHyphenMinusToMinusSign(UChar glyph)
     // When rendered as a mathematical operator, minus glyph should be larger.
     if (glyph == hyphenMinus)
         return minusSign;
-    
+
     return glyph;
 }
 

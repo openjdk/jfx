@@ -111,7 +111,7 @@ public final class DumpRenderTree {
         protected int getSelectionColor(int index) {
             return 0;
         }
-        
+
         @Override
         public WCSize getWidgetSize(Ref widget) {
             return new WCSize(0, 0);
@@ -152,11 +152,11 @@ public final class DumpRenderTree {
         protected int getTrackLength(int w, int h, int orientation) {
             return 0;
         }
-        
+
         @Override
         public WCSize getWidgetSize(Ref widget) {
             return new WCSize(0, 0);
-        }        
+        }
     }
 
     // called on FX thread

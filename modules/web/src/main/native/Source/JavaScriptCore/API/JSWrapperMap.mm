@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -48,7 +48,7 @@ static const int32_t webkitFirstVersionWithInitConstructorSupport = 0x21A0400; /
 
 @class JSObjCClassInfo;
 
-@interface JSWrapperMap () 
+@interface JSWrapperMap ()
 
 - (JSObjCClassInfo*)classInfoForClass:(Class)cls;
 
@@ -202,17 +202,17 @@ static bool isInitFamilyMethod(NSString *name)
         return false;
 
     // If we're at the end or the next character is a capital letter then this is an init-family selector.
-    return i == [name length] || [[NSCharacterSet uppercaseLetterCharacterSet] characterIsMember:[name characterAtIndex:i]]; 
+    return i == [name length] || [[NSCharacterSet uppercaseLetterCharacterSet] characterIsMember:[name characterAtIndex:i]];
 }
 
 static bool shouldSkipMethodWithName(NSString *name)
 {
-    // For clients that don't support init-based constructors just copy 
+    // For clients that don't support init-based constructors just copy
     // over the init method as we would have before.
     if (!supportsInitMethodConstructors())
         return false;
 
-    // Skip over init family methods because we handle those specially 
+    // Skip over init family methods because we handle those specially
     // for the purposes of hooking up the constructor correctly.
     return isInitFamilyMethod(name);
 }
@@ -314,7 +314,7 @@ static void copyPrototypeProperties(JSContext *context, Class objcClass, Protoco
         bool readonly = parsePropertyAttributes(property, getterName, setterName);
         const char* name = property_getName(property);
 
-        // Add the names of the getter & setter methods to 
+        // Add the names of the getter & setter methods to
         if (!getterName)
             getterName = strdup(name);
         accessorMethods[@(getterName)] = undefined;
@@ -345,7 +345,7 @@ static void copyPrototypeProperties(JSContext *context, Class objcClass, Protoco
             free(property.setterName);
             ASSERT(![setter isUndefined]);
         }
-        
+
         [prototypeValue defineProperty:@(property.name) descriptor:@{
             JSPropertyDescriptorGetKey: getter,
             JSPropertyDescriptorSetKey: setter,
@@ -552,7 +552,7 @@ static JSValue *allocateConstructorForCustomClass(JSContext *context, const char
     NSPointerFunctionsOptions keyOptions = NSPointerFunctionsOpaqueMemory | NSPointerFunctionsOpaquePersonality;
     NSPointerFunctionsOptions valueOptions = NSPointerFunctionsWeakMemory | NSPointerFunctionsObjectPersonality;
     m_cachedObjCWrappers = [[NSMapTable alloc] initWithKeyOptions:keyOptions valueOptions:valueOptions capacity:0];
-    
+
     m_context = context;
     m_classMap = [[NSMutableDictionary alloc] init];
     return self;

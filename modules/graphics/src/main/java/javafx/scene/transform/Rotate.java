@@ -116,7 +116,7 @@ public class Rotate extends Transform {
      * Creates a three-dimensional Rotate transform.
      * The pivot point is set to (0,0,0)
      * @param angle the angle of rotation measured in degrees
-     * @param axis the axis of rotation 
+     * @param axis the axis of rotation
      */
     public Rotate(double angle, Point3D axis) {
         setAngle(angle);
@@ -153,7 +153,7 @@ public class Rotate extends Transform {
      * @param pivotX the X coordinate of the rotation pivot point
      * @param pivotY the Y coordinate of the rotation pivot point
      * @param pivotZ the Z coordinate of the rotation pivot point
-     * @param axis the axis of rotation 
+     * @param axis the axis of rotation
      */
     public Rotate(double angle, double pivotX, double pivotY, double pivotZ, Point3D axis) {
         this(angle, pivotX, pivotY);
@@ -200,7 +200,7 @@ public class Rotate extends Transform {
 
     /**
      * Defines the X coordinate of the rotation pivot point.
-     * 
+     *
      * @defaultValue 0.0
      */
     private DoubleProperty pivotX;
@@ -239,7 +239,7 @@ public class Rotate extends Transform {
 
     /**
      * Defines the Y coordinate of the rotation pivot point.
-     * 
+     *
      * @defaultValue 0.0
      */
     private DoubleProperty pivotY;
@@ -278,7 +278,7 @@ public class Rotate extends Transform {
 
     /**
      * Defines the Z coordinate of the rotation pivot point.
-     * 
+     *
      * @defaultValue 0.0
      */
     private DoubleProperty pivotZ;
@@ -862,7 +862,7 @@ public class Rotate extends Transform {
 
             if (axis == Z_AXIS ||
                     (axis.getX() == 0.0 &&
-                     axis.getY() == 0.0 && 
+                     axis.getY() == 0.0 &&
                      axis.getZ() > 0.0)) {
                 // 2D case
                 mxx = cos;

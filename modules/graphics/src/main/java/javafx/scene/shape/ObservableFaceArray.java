@@ -31,10 +31,10 @@ import javafx.collections.ObservableIntegerArray;
  * to track changes when they occur. In order to track changes, the internal
  * array is encapsulated and there is no direct access available from the outside.
  * Bulk operations are supported but they always do a copy of the data range.
- * 
+ *
  * @see ArrayChangeListener
  * @since JavaFX 8.0
  */
 public interface ObservableFaceArray extends ObservableIntegerArray {
-    
+
 }

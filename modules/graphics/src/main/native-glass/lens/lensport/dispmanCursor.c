@@ -22,7 +22,7 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
- 
+
 #include <stdio.h>
 #include <pthread.h>
 #include <semaphore.h>
@@ -258,7 +258,7 @@ static void fbDispmanReleaseNativeCursor(jlong nativeCursorHandle) {
         if (cursor.currentCursor == nativeCursorHandle && cursor.isVisible) {
             DISPMANX_UPDATE_HANDLE_T update;
             update = vc_dispmanx_update_start(0);
-            vc_dispmanx_element_change_source(update, 
+            vc_dispmanx_element_change_source(update,
                                               cursor.element, 0 /* resource*/);
             vc_dispmanx_update_submit_sync(update);
         }
@@ -277,10 +277,10 @@ static void fbDispmanSetVisible(jboolean isVisible) {
     if (isVisible) {
         if (!cursor.isVisible && cursor.currentCursor != 0) {
             fbDispmanSetNativeCursor(cursor.currentCursor);
-            DispmanCursorImage *cursorImage = 
+            DispmanCursorImage *cursorImage =
                 (DispmanCursorImage *)jlong_to_ptr(cursor.currentCursor);
             DISPMANX_UPDATE_HANDLE_T update = vc_dispmanx_update_start(0);
-            vc_dispmanx_element_change_source(update, cursor.element, 
+            vc_dispmanx_element_change_source(update, cursor.element,
                                               cursorImage->resource);
             vc_dispmanx_update_submit_sync(update);
         }
@@ -310,7 +310,7 @@ static void *fbCursorUpdater(void *data) {
         vc_dispmanx_element_change_attributes(update,
                                               cursor.element,
                                               0x4 ,
-                                              0 , 0, 
+                                              0 , 0,
                                               &dst,
                                               0 ,
                                               0 , 0 );

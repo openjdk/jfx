@@ -36,7 +36,7 @@ namespace JSC {
             prototype->finishCreation(vm);
             return prototype;
         }
-        
+
         DECLARE_INFO;
 
         static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype)

@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -134,7 +134,7 @@ void WebNotificationCenter::postNotificationInternal(IWebNotification* notificat
 
 // IWebNotificationCenter -----------------------------------------------------
 
-HRESULT STDMETHODCALLTYPE WebNotificationCenter::defaultCenter( 
+HRESULT STDMETHODCALLTYPE WebNotificationCenter::defaultCenter(
     /* [retval][out] */ IWebNotificationCenter** center)
 {
     *center = defaultCenterInternal();
@@ -142,7 +142,7 @@ HRESULT STDMETHODCALLTYPE WebNotificationCenter::defaultCenter(
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE WebNotificationCenter::addObserver( 
+HRESULT STDMETHODCALLTYPE WebNotificationCenter::addObserver(
     /* [in] */ IWebNotificationObserver* observer,
     /* [in] */ BSTR notificationName,
     /* [in] */ IUnknown* anObject)
@@ -160,7 +160,7 @@ HRESULT STDMETHODCALLTYPE WebNotificationCenter::addObserver(
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE WebNotificationCenter::postNotification( 
+HRESULT STDMETHODCALLTYPE WebNotificationCenter::postNotification(
     /* [in] */ IWebNotification* notification)
 {
     BString name;
@@ -178,7 +178,7 @@ HRESULT STDMETHODCALLTYPE WebNotificationCenter::postNotification(
     return hr;
 }
 
-HRESULT STDMETHODCALLTYPE WebNotificationCenter::postNotificationName( 
+HRESULT STDMETHODCALLTYPE WebNotificationCenter::postNotificationName(
     /* [in] */ BSTR notificationName,
     /* [in] */ IUnknown* anObject,
     /* [optional][in] */ IPropertyBag* userInfo)
@@ -188,7 +188,7 @@ HRESULT STDMETHODCALLTYPE WebNotificationCenter::postNotificationName(
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE WebNotificationCenter::removeObserver( 
+HRESULT STDMETHODCALLTYPE WebNotificationCenter::removeObserver(
     /* [in] */ IWebNotificationObserver* anObserver,
     /* [in] */ BSTR notificationName,
     /* [optional][in] */ IUnknown* anObject)

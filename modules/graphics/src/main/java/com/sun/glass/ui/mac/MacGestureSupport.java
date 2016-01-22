@@ -41,7 +41,7 @@ final class MacGestureSupport {
     private final static int GESTURE_ROTATE = 100;
     private final static int GESTURE_MAGNIFY = 101;
     private final static int GESTURE_SWIPE = 102;
-    
+
     private final static int SCROLL_SRC_WHEEL = 50;
     private final static int SCROLL_SRC_GESTURE = 51;
     private final static int SCROLL_SRC_INERTIA = 52;
@@ -98,14 +98,14 @@ final class MacGestureSupport {
             case SCROLL_SRC_WHEEL:
                 // fall through
             case SCROLL_SRC_INERTIA:
-                // When inertial scrolling occurs system sends a number of 
-                // scroll (mouse wheel notifications to be precise) 
-                // notifications. 
-                // Handle these notifications in a special way like swipe 
-                // gestures, i.e. notify view with only 
+                // When inertial scrolling occurs system sends a number of
+                // scroll (mouse wheel notifications to be precise)
+                // notifications.
+                // Handle these notifications in a special way like swipe
+                // gestures, i.e. notify view with only
                 // GestureEvent#GESTURE_PERFORMED event type.
                 //
-                // Note: inertial scrolling may occur even when some 
+                // Note: inertial scrolling may occur even when some
                 // touch points still present.
                 GestureSupport.handleScrollingPerformed(view, modifiers, isDirect,
                                                   isInertia, touchCount, x, y,

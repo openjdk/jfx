@@ -77,7 +77,7 @@ public class PaintPopupEditor extends PopupEditor {
         super(propMeta, selectedClasses);
         initialize(editorController);
     }
-    
+
     private void initialize(EditorController editorController) {
         this.editorController = editorController;
     }

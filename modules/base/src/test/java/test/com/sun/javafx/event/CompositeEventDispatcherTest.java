@@ -54,7 +54,7 @@ public final class CompositeEventDispatcherTest {
         Assert.assertNull(eventDispatchChain.dispatchEvent(new EmptyEvent()));
         verifyEventCounters(compositeDispatcher, 2, 1, 1, 1, 1, 1);
         Assert.assertEquals(1, terminalDispatcher.getCapturingEventCount());
-        
+
         compositeDispatcher.getSecondChildDispatcher().setConsumeNextEvent(
                 ConsumeEvent.CAPTURING);
         Assert.assertNull(eventDispatchChain.dispatchEvent(new EmptyEvent()));

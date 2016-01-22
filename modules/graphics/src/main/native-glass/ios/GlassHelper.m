@@ -48,7 +48,7 @@
         NSLog(@"GlassHelper error: threadCls == NULL");
         return NULL;
     }
-    
+
     static jmethodID currentThreadMID = NULL;
     if (currentThreadMID == NULL)
     {
@@ -59,7 +59,7 @@
         NSLog(@"GlassHelper error: currentThreadMID == NULL");
         return NULL;
     }
-    
+
     static jmethodID getContextClassLoaderMID = NULL;
     if (getContextClassLoaderMID == NULL)
     {
@@ -70,7 +70,7 @@
         NSLog(@"GlassHelper error: getContextClassLoaderMID == NULL");
         return NULL;
     }
-    
+
     static jclass classCls = NULL;
     if (classCls == NULL)
     {
@@ -81,7 +81,7 @@
         NSLog(@"GlassHelper error: classCls == NULL");
         return NULL;
     }
-    
+
     static jmethodID forNameMID = NULL;
     if (forNameMID == NULL)
     {
@@ -92,28 +92,28 @@
         NSLog(@"GlassHelper error: forNameMID == NULL");
         return NULL;
     }
-    
+
     jobject jCurrentThread = (*env)->CallStaticObjectMethod(env, threadCls, currentThreadMID);
     if (jCurrentThread == NULL)
     {
         NSLog(@"GlassHelper error: jCurrentThread == NULL");
         return NULL;
     }
-    
+
     jobject contextClassLoader = (*env)->CallObjectMethod(env, jCurrentThread, getContextClassLoaderMID);
     if ((*env)->ExceptionCheck(env) == JNI_TRUE)
     {
         (*env)->ExceptionDescribe(env);
         return NULL;
     }
-    
+
     jstring classNameStr = (*env)->NewStringUTF(env, className);
     if (classNameStr == NULL)
     {
         NSLog(@"GlassHelper error: classNameStrs == NULL");
         return NULL;
     }
-    
+
     // possibly we can cache values in Dictionary
     return (*env)->CallStaticObjectMethod(env, classCls, forNameMID, classNameStr, JNI_TRUE, contextClassLoader);
 }

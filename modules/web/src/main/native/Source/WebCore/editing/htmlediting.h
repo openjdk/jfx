@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef htmlediting_h
@@ -125,12 +125,12 @@ TextDirection directionOfEnclosingBlock(const Position&);
 // -------------------------------------------------------------------------
 // Position
 // -------------------------------------------------------------------------
-    
+
 // Functions returning Position
-    
+
 Position nextCandidate(const Position&);
 Position previousCandidate(const Position&);
-    
+
 Position nextVisuallyDistinctCandidate(const Position&);
 Position previousVisuallyDistinctCandidate(const Position&);
 
@@ -154,7 +154,7 @@ inline Position lastPositionInOrAfterNode(Node* node)
 }
 
 // comparision functions on Position
-    
+
 int comparePositions(const Position&, const Position&);
 
 // boolean functions on Position
@@ -176,16 +176,16 @@ void updatePositionForNodeRemoval(Position&, Node*);
 // -------------------------------------------------------------------------
 // VisiblePosition
 // -------------------------------------------------------------------------
-    
+
 // Functions returning VisiblePosition
-    
+
 VisiblePosition firstEditablePositionAfterPositionInRoot(const Position&, Node*);
 VisiblePosition lastEditablePositionBeforePositionInRoot(const Position&, Node*);
 VisiblePosition visiblePositionBeforeNode(Node*);
 VisiblePosition visiblePositionAfterNode(Node*);
 
 bool lineBreakExistsAtVisiblePosition(const VisiblePosition&);
-    
+
 int comparePositions(const VisiblePosition&, const VisiblePosition&);
 
 int indexForVisiblePosition(const VisiblePosition&, RefPtr<ContainerNode>& scope);
@@ -196,9 +196,9 @@ VisiblePosition visiblePositionForIndexUsingCharacterIterator(Node*, int index);
 // -------------------------------------------------------------------------
 // HTMLElement
 // -------------------------------------------------------------------------
-    
+
 // Functions returning HTMLElement
-    
+
 PassRefPtr<HTMLElement> createDefaultParagraphElement(Document&);
 PassRefPtr<HTMLElement> createBreakElement(Document&);
 PassRefPtr<HTMLElement> createOrderedListElement(Document&);
@@ -214,9 +214,9 @@ Node* enclosingListChild(Node*);
 // -------------------------------------------------------------------------
 // Element
 // -------------------------------------------------------------------------
-    
+
 // Functions returning Element
-    
+
 PassRefPtr<Element> createTabSpanElement(Document&);
 PassRefPtr<Element> createTabSpanElement(Document&, PassRefPtr<Node> tabTextNode);
 PassRefPtr<Element> createTabSpanElement(Document&, const String& tabText);
@@ -226,9 +226,9 @@ Element* editableRootForPosition(const Position&, EditableType = ContentIsEditab
 Element* unsplittableElementForPosition(const Position&);
 
 // Boolean functions on Element
-    
+
 bool canMergeLists(Element* firstList, Element* secondList);
-    
+
 // -------------------------------------------------------------------------
 // VisibleSelection
 // -------------------------------------------------------------------------
@@ -237,7 +237,7 @@ bool canMergeLists(Element* firstList, Element* secondList);
 VisibleSelection selectionForParagraphIteration(const VisibleSelection&);
 
 Position adjustedSelectionStartForStyleComputation(const VisibleSelection&);
-    
+
 
 // Miscellaneous functions on Text
 inline bool isWhitespace(UChar c)

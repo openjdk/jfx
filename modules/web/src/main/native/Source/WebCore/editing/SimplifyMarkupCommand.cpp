@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -40,22 +40,22 @@ SimplifyMarkupCommand::SimplifyMarkupCommand(Document& document, Node* firstNode
     , m_nodeAfterLast(nodeAfterLast)
 {
 }
-    
+
 void SimplifyMarkupCommand::doApply()
 {
     Node* rootNode = m_firstNode->parentNode();
     Vector<RefPtr<Node>> nodesToRemove;
-    
+
     document().updateLayoutIgnorePendingStylesheets();
 
     // Walk through the inserted nodes, to see if there are elements that could be removed
     // without affecting the style. The goal is to produce leaner markup even when starting
     // from a verbose fragment.
-    // We look at inline elements as well as non top level divs that don't have attributes. 
+    // We look at inline elements as well as non top level divs that don't have attributes.
     for (Node* node = m_firstNode.get(); node && node != m_nodeAfterLast; node = NodeTraversal::next(node)) {
         if (node->firstChild() || (node->isTextNode() && node->nextSibling()))
             continue;
-        
+
         Node* startingNode = node->parentNode();
         RenderStyle* startingStyle = startingNode->renderStyle();
         if (!startingStyle)
@@ -65,23 +65,23 @@ void SimplifyMarkupCommand::doApply()
         while (currentNode != rootNode) {
             if (currentNode->parentNode() != rootNode && isRemovableBlock(currentNode))
                 nodesToRemove.append(currentNode);
-            
+
             currentNode = currentNode->parentNode();
             if (!currentNode)
                 break;
 
             if (!currentNode->renderer() || !currentNode->renderer()->isRenderInline() || toRenderInline(currentNode->renderer())->alwaysCreateLineBoxes())
                 continue;
-            
+
             if (currentNode->firstChild() != currentNode->lastChild()) {
                 topNodeWithStartingStyle = 0;
                 break;
             }
-            
+
             unsigned context;
             if (currentNode->renderStyle()->diff(startingStyle, context) == StyleDifferenceEqual)
                 topNodeWithStartingStyle = currentNode;
-            
+
         }
         if (topNodeWithStartingStyle) {
             for (Node* node = startingNode; node != topNodeWithStartingStyle; node = node->parentNode())
@@ -114,7 +114,7 @@ int SimplifyMarkupCommand::pruneSubsequentAncestorsToRemove(Vector<RefPtr<Node>>
     RefPtr<ContainerNode> parent = highestAncestorToRemove->parentNode();
     if (!parent) // Parent has already been removed.
         return -1;
-    
+
     if (pastLastNodeToRemove == startNodeIndex + 1)
         return 0;
 

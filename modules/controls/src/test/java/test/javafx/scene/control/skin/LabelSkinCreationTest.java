@@ -66,7 +66,7 @@ public class LabelSkinCreationTest {
     private boolean wrapText;
     private ContentDisplay contentDisplay;
     private Node graphic;
-    
+
     private Label label;
     private LabelSkin skin;
     private Text text;
@@ -129,7 +129,7 @@ public class LabelSkinCreationTest {
         this.contentDisplay = contentDisplay;
         this.graphic = graphic;
     }
-    
+
     @Before public void setup() {
         label = new Label();
         label.setTextFill(fill);
@@ -145,7 +145,7 @@ public class LabelSkinCreationTest {
         label.setSkin(skin);
         text = LabeledSkinBaseShim.get_text(skin);
     }
-    
+
     @Test public void labelWasInitializedCorrectly() {
         assertSame(label.getTextFill(), text.getFill());
         assertSame(label.getFont(), text.getFont());
@@ -154,7 +154,7 @@ public class LabelSkinCreationTest {
 
         // The wrapping width is based on layout after updateDisplayedText() is called from layoutChildren().
         //assertTrue(label.isWrapText() ? text.getWrappingWidth() > 0 : text.getWrappingWidth() == 0);
-        
+
         // Now test the children
         if (label.getContentDisplay() == ContentDisplay.GRAPHIC_ONLY) {
             // 1 child, graphic, if it is not null, otherwise 0
@@ -180,7 +180,7 @@ public class LabelSkinCreationTest {
                 assertEquals(text, SkinBaseShim.getChildren(skin).get(1));
             }
         }
-        
+
         // TODO test that if there is a graphic, that the appropriate listeners are added
     }
 }

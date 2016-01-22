@@ -39,7 +39,7 @@ public abstract class PixelFormat<T extends Buffer> {
     /**
      * An enum describing the in-array storage format of a single pixel
      * managed by a {@link PixelFormat}.
-     * 
+     *
      * @since JavaFX 2.2
      */
     public enum Type {
@@ -96,13 +96,13 @@ public abstract class PixelFormat<T extends Buffer> {
      * Pixels in this format can be decoded using the following sample code:
      * <pre>
      *     int pixel = array[rowstart + x];
-     * 
+     *
      *     int alpha = ((pixel >> 24) & 0xff);
      *     int red   = ((pixel >> 16) & 0xff);
      *     int green = ((pixel >>  8) & 0xff);
      *     int blue  = ((pixel      ) & 0xff);
      * </pre>
-     * 
+     *
      * @return a {@code WritabelPixelFormat<IntBuffer>} describing the
      *         indicated pixel format
      */
@@ -119,13 +119,13 @@ public abstract class PixelFormat<T extends Buffer> {
      * Pixels in this format can be decoded using the following sample code:
      * <pre>
      *     int pixel = array[rowstart + x];
-     * 
+     *
      *     int alpha = ((pixel >> 24) & 0xff);
      *     int red   = ((pixel >> 16) & 0xff);
      *     int green = ((pixel >>  8) & 0xff);
      *     int blue  = ((pixel      ) & 0xff);
      * </pre>
-     * 
+     *
      * @return a {@code WritabelPixelFormat<IntBuffer>} describing the
      *         indicated pixel format
      */
@@ -142,13 +142,13 @@ public abstract class PixelFormat<T extends Buffer> {
      * Pixels in this format can be decoded using the following sample code:
      * <pre>
      *     int i = rowstart + x * 4;
-     * 
+     *
      *     int blue  = (array[i+0] & 0xff);
      *     int green = (array[i+1] & 0xff);
      *     int red   = (array[i+2] & 0xff);
      *     int alpha = (array[i+3] & 0xff);
      * </pre>
-     * 
+     *
      * @return a {@code WritablePixelFormat<ByteBuffer>} describing the
      *         indicated pixel format
      */
@@ -165,13 +165,13 @@ public abstract class PixelFormat<T extends Buffer> {
      * Pixels in this format can be decoded using the following sample code:
      * <pre>
      *     int i = rowstart + x * 4;
-     * 
+     *
      *     int blue  = (array[i+0] & 0xff);
      *     int green = (array[i+1] & 0xff);
      *     int red   = (array[i+2] & 0xff);
      *     int alpha = (array[i+3] & 0xff);
      * </pre>
-     * 
+     *
      * @return a {@code WritablePixelFormat<ByteBuffer>} describing the
      *         indicated pixel format
      */
@@ -188,12 +188,12 @@ public abstract class PixelFormat<T extends Buffer> {
      * Pixels in this format can be decoded using the following sample code:
      * <pre>
      *     int i = rowstart + x * 3;
-     * 
+     *
      *     int red   = (array[i+0] & 0xff);
      *     int green = (array[i+1] & 0xff);
      *     int blue  = (array[i+2] & 0xff);
      * </pre>
-     * 
+     *
      * @return a {@code PixelFormat<ByteBuffer>} describing the
      *         indicated pixel format
      */
@@ -211,13 +211,13 @@ public abstract class PixelFormat<T extends Buffer> {
      * <pre>
      *     int pixel = array[rowstart + x] & 0xff;
      *     int argb  = colors[pixel];
-     * 
+     *
      *     int alpha = ((argb >> 24) & 0xff);
      *     int red   = ((argb >> 16) & 0xff);
      *     int green = ((argb >>  8) & 0xff);
      *     int blue  = ((argb      ) & 0xff);
      * </pre>
-     * 
+     *
      * @param colors an {@code int[]} array of 32-bit color values in
      *               the {@link Type#INT_ARGB_PRE INT_ARGB_PRE} format
      * @return a {@code PixelFormat<ByteBuffer>} describing the indicated
@@ -239,13 +239,13 @@ public abstract class PixelFormat<T extends Buffer> {
      * <pre>
      *     int pixel = array[rowstart + x] & 0xff;
      *     int argb  = colors[pixel];
-     * 
+     *
      *     int alpha = ((argb >> 24) & 0xff);
      *     int red   = ((argb >> 16) & 0xff);
      *     int green = ((argb >>  8) & 0xff);
      *     int blue  = ((argb      ) & 0xff);
      * </pre>
-     * 
+     *
      * @param colors an {@code int[]} array of 32-bit color values in
      *               the {@link Type#INT_ARGB INT_ARGB} format
      * @return a {@code PixelFormat<ByteBuffer>} describing the indicated
@@ -260,7 +260,7 @@ public abstract class PixelFormat<T extends Buffer> {
     /**
      * Returns the enum representing the storage format of the pixels
      * managed by this {@code PixelFormat} object.
-     * 
+     *
      * @return the {@code Type} enum of the pixels
      */
     public Type getType() {
@@ -270,7 +270,7 @@ public abstract class PixelFormat<T extends Buffer> {
     /**
      * Returns true iff this {@code PixelFormat} object can convert
      * color information into a pixel representation.
-     * 
+     *
      * @return true iff this {@code PixelFormat} can convert colors to
      *         pixel data
      */
@@ -280,7 +280,7 @@ public abstract class PixelFormat<T extends Buffer> {
      * Returns true iff the color components decoded (or encoded) by this
      * format are pre-multiplied by the alpha component for more efficient
      * blending calculations.
-     * 
+     *
      * @return true iff the managed color components are premultiplied
      *         by alpha
      */
@@ -339,7 +339,7 @@ public abstract class PixelFormat<T extends Buffer> {
      *     int green = ((retval >>  8) & 0xff);
      *     int blue  = ((retval      ) & 0xff);
      * </pre>
-     * 
+     *
      * @param buf the buffer of pixel data
      * @param x the X coordinate of the pixel to be read
      * @param y the Y coordinate of the pixel to be read

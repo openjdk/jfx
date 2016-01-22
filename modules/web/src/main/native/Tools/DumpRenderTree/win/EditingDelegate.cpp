@@ -6,13 +6,13 @@
  * are met:
  *
  * 1.  Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer. 
+ *     notice, this list of conditions and the following disclaimer.
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
- *     documentation and/or other materials provided with the distribution. 
+ *     documentation and/or other materials provided with the distribution.
  * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
- *     from this software without specific prior written permission. 
+ *     from this software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY APPLE AND ITS CONTRIBUTORS "AS IS" AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
@@ -118,7 +118,7 @@ static wstring dump(IDOMRange* range)
     return buffer;
 }
 
-HRESULT STDMETHODCALLTYPE EditingDelegate::shouldBeginEditingInDOMRange( 
+HRESULT STDMETHODCALLTYPE EditingDelegate::shouldBeginEditingInDOMRange(
     /* [in] */ IWebView* webView,
     /* [in] */ IDOMRange* range,
     /* [retval][out] */ BOOL* result)
@@ -135,7 +135,7 @@ HRESULT STDMETHODCALLTYPE EditingDelegate::shouldBeginEditingInDOMRange(
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE EditingDelegate::shouldEndEditingInDOMRange( 
+HRESULT STDMETHODCALLTYPE EditingDelegate::shouldEndEditingInDOMRange(
     /* [in] */ IWebView* webView,
     /* [in] */ IDOMRange* range,
     /* [retval][out] */ BOOL* result)
@@ -152,7 +152,7 @@ HRESULT STDMETHODCALLTYPE EditingDelegate::shouldEndEditingInDOMRange(
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE EditingDelegate::shouldInsertNode( 
+HRESULT STDMETHODCALLTYPE EditingDelegate::shouldInsertNode(
     /* [in] */ IWebView* webView,
     /* [in] */ IDOMNode* node,
     /* [in] */ IDOMRange* range,
@@ -170,7 +170,7 @@ HRESULT STDMETHODCALLTYPE EditingDelegate::shouldInsertNode(
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE EditingDelegate::shouldInsertText( 
+HRESULT STDMETHODCALLTYPE EditingDelegate::shouldInsertText(
     /* [in] */ IWebView* webView,
     /* [in] */ BSTR text,
     /* [in] */ IDOMRange* range,
@@ -195,7 +195,7 @@ HRESULT STDMETHODCALLTYPE EditingDelegate::shouldInsertText(
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE EditingDelegate::shouldDeleteDOMRange( 
+HRESULT STDMETHODCALLTYPE EditingDelegate::shouldDeleteDOMRange(
     /* [in] */ IWebView* webView,
     /* [in] */ IDOMRange* range,
     /* [retval][out] */ BOOL* result)
@@ -212,7 +212,7 @@ HRESULT STDMETHODCALLTYPE EditingDelegate::shouldDeleteDOMRange(
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE EditingDelegate::shouldChangeSelectedDOMRange( 
+HRESULT STDMETHODCALLTYPE EditingDelegate::shouldChangeSelectedDOMRange(
     /* [in] */ IWebView* webView,
     /* [in] */ IDOMRange* currentRange,
     /* [in] */ IDOMRange* proposedRange,
@@ -241,7 +241,7 @@ HRESULT STDMETHODCALLTYPE EditingDelegate::shouldChangeSelectedDOMRange(
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE EditingDelegate::shouldApplyStyle( 
+HRESULT STDMETHODCALLTYPE EditingDelegate::shouldApplyStyle(
     /* [in] */ IWebView* webView,
     /* [in] */ IDOMCSSStyleDeclaration* style,
     /* [in] */ IDOMRange* range,
@@ -259,7 +259,7 @@ HRESULT STDMETHODCALLTYPE EditingDelegate::shouldApplyStyle(
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE EditingDelegate::shouldChangeTypingStyle( 
+HRESULT STDMETHODCALLTYPE EditingDelegate::shouldChangeTypingStyle(
     /* [in] */ IWebView* webView,
     /* [in] */ IDOMCSSStyleDeclaration* currentStyle,
     /* [in] */ IDOMCSSStyleDeclaration* proposedStyle,
@@ -277,7 +277,7 @@ HRESULT STDMETHODCALLTYPE EditingDelegate::shouldChangeTypingStyle(
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE EditingDelegate::doPlatformCommand( 
+HRESULT STDMETHODCALLTYPE EditingDelegate::doPlatformCommand(
     /* [in] */ IWebView *webView,
     /* [in] */ BSTR command,
     /* [retval][out] */ BOOL *result)
@@ -294,7 +294,7 @@ HRESULT STDMETHODCALLTYPE EditingDelegate::doPlatformCommand(
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE EditingDelegate::webViewDidBeginEditing( 
+HRESULT STDMETHODCALLTYPE EditingDelegate::webViewDidBeginEditing(
     /* [in] */ IWebNotification* notification)
 {
     if (::gTestRunner->dumpEditingCallbacks() && !done) {
@@ -306,7 +306,7 @@ HRESULT STDMETHODCALLTYPE EditingDelegate::webViewDidBeginEditing(
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE EditingDelegate::webViewDidChange( 
+HRESULT STDMETHODCALLTYPE EditingDelegate::webViewDidChange(
     /* [in] */ IWebNotification *notification)
 {
     if (::gTestRunner->dumpEditingCallbacks() && !done) {
@@ -318,7 +318,7 @@ HRESULT STDMETHODCALLTYPE EditingDelegate::webViewDidChange(
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE EditingDelegate::webViewDidEndEditing( 
+HRESULT STDMETHODCALLTYPE EditingDelegate::webViewDidEndEditing(
     /* [in] */ IWebNotification *notification)
 {
     if (::gTestRunner->dumpEditingCallbacks() && !done) {
@@ -330,7 +330,7 @@ HRESULT STDMETHODCALLTYPE EditingDelegate::webViewDidEndEditing(
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE EditingDelegate::webViewDidChangeTypingStyle( 
+HRESULT STDMETHODCALLTYPE EditingDelegate::webViewDidChangeTypingStyle(
     /* [in] */ IWebNotification *notification)
 {
     if (::gTestRunner->dumpEditingCallbacks() && !done) {
@@ -342,7 +342,7 @@ HRESULT STDMETHODCALLTYPE EditingDelegate::webViewDidChangeTypingStyle(
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE EditingDelegate::webViewDidChangeSelection( 
+HRESULT STDMETHODCALLTYPE EditingDelegate::webViewDidChangeSelection(
     /* [in] */ IWebNotification *notification)
 {
     if (::gTestRunner->dumpEditingCallbacks() && !done) {

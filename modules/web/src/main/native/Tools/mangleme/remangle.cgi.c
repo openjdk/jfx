@@ -62,49 +62,49 @@ void make_up_value(void) {
   if (c) putchar('"');
 
 }
-  
+
 
 void random_tag(void) {
   int tn, tc;
-  
+
   do tn = R(MAXTAGS); while (!tags[tn][0]);
   tc = R(MAXPCOUNT) + 1;
-  
+
   putchar('<');
-  
+
   switch (R(10)) {
     case 0: putchar(R(256)); break;
     case 1: putchar('/');
   }
-  
+
   printf("%s", tags[tn][0]);
-  
+
   while (tc--) {
     int pn;
     switch (R(32)) {
-      case 0: putchar(R(256)); 
+      case 0: putchar(R(256));
       case 1: break;
       default: putchar(' ');
     }
     do pn = R(MAXPARS-1) + 1; while (!tags[tn][pn]);
     printf("%s", tags[tn][pn]);
     switch (R(32)) {
-      case 0: putchar(R(256)); 
+      case 0: putchar(R(256));
       case 1: break;
       default: putchar('=');
     }
-    
+
     make_up_value();
-    
+
   }
-    
+
   putchar('>');
-  
+
 }
 
 
 int main(int argc,char** argv) {
-  int tc,seed; 
+  int tc,seed;
   char* x = getenv("QUERY_STRING");
 
   if (!x || sscanf(x,"%x",&seed) != 1) {
@@ -117,7 +117,7 @@ int main(int argc,char** argv) {
   printf("<script language=\"javascript\">setTimeout('window.location=\"remangle.cgi?0x%08x\"', 1000);</script>\n", seed);
 
   srand(seed);
-  
+
   tc = R(MAXTCOUNT) + 1;
   while (tc--) random_tag();
   fflush(0);

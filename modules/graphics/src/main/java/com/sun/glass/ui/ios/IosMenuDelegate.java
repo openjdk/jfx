@@ -30,8 +30,8 @@ import com.sun.glass.ui.Pixels;
 import com.sun.glass.ui.delegate.MenuDelegate;
 import com.sun.glass.ui.delegate.MenuItemDelegate;
 
-/** 
- * MenuDelegate implementation stub for iOS. 
+/**
+ * MenuDelegate implementation stub for iOS.
  * Calling IosMenuDelegate's methods has no effect.
  */
 final class IosMenuDelegate implements MenuDelegate, MenuItemDelegate {

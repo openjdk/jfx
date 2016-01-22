@@ -55,7 +55,7 @@ public class QuadCurveToTest {
     @Test public void testSetGetControlY() throws Exception {
         TestUtils.testDoublePropertyGetterSetter(new QuadCurveTo(), "controlY", 123.2, 0.0);
     }
-    
+
    @Test public void testDoublePropertySynced_X() throws Exception {
         checkSyncedProperty("x", Coords.X, 123.4);
     }

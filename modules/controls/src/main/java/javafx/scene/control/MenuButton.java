@@ -58,7 +58,7 @@ import javafx.beans.property.ReadOnlyBooleanWrapper;
  * specified using the {@link #popupSideProperty() popupSide} property. By default
  * the menu appears below the button. However, regardless of the popupSide specified,
  * if there is not enough room, the {@link ContextMenu} will be
- * smartly repositioned, most probably to be on the opposite side of the 
+ * smartly repositioned, most probably to be on the opposite side of the
  * MenuButton.
  *
  * <p>Example:</p>
@@ -66,7 +66,7 @@ import javafx.beans.property.ReadOnlyBooleanWrapper;
  * MenuButton m = new MenuButton("Eats");
  * m.getItems().addAll(new MenuItem("Burger"), new MenuItem("Hot Dog"));
  * </pre>
- * 
+ *
  * <p>
  * MnemonicParsing is enabled by default for MenuButton.
  * </p>
@@ -133,7 +133,7 @@ public class MenuButton extends ButtonBase {
      * Creates a new empty menu button with the given text to display on the
      * button. Use {@link #setGraphic(Node)} and {@link #getItems()} to set the
      * content.
-     * 
+     *
      * @param text the text to display on the menu button
      */
     public MenuButton(String text) {
@@ -143,7 +143,7 @@ public class MenuButton extends ButtonBase {
     /**
      * Creates a new empty menu button with the given text and graphic to
      * display on the button. Use {@link #getItems()} to set the content.
-     * 
+     *
      * @param text the text to display on the menu button
      * @param graphic the graphic to display on the menu button
      */
@@ -191,7 +191,7 @@ public class MenuButton extends ButtonBase {
      * The items to show within this buttons menu. If this ObservableList is modified
      * at runtime, the Menu will update as expected.
      * <p>
-     * Commonly used controls include including {@code MenuItem}, 
+     * Commonly used controls include including {@code MenuItem},
      * {@code CheckMenuItem}, {@code RadioMenuItem},
      * and of course {@code Menu}, which if added to a menu, will become a sub
      * menu. {@link SeparatorMenuItem} is another commonly used Node in the Menu's items
@@ -221,8 +221,8 @@ public class MenuButton extends ButtonBase {
     }
     public final boolean isShowing() { return showing.get(); }
     public final ReadOnlyBooleanProperty showingProperty() { return showing.getReadOnlyProperty(); }
-    
-    
+
+
 
     /**
      * Indicates on which side the {@link ContextMenu} should open in
@@ -276,7 +276,7 @@ public class MenuButton extends ButtonBase {
 
     /**
      * Shows the {@link ContextMenu}, assuming this MenuButton is not disabled.
-     * 
+     *
      * @see #isDisabled()
      * @see #isShowing()
      */
@@ -289,7 +289,7 @@ public class MenuButton extends ButtonBase {
 
     /**
      * Hides the {@link ContextMenu}.
-     * 
+     *
      * @see #isShowing()
      */
     public void hide() {
@@ -321,9 +321,9 @@ public class MenuButton extends ButtonBase {
      **************************************************************************/
 
     private static final String DEFAULT_STYLE_CLASS = "menu-button";
-    private static final PseudoClass PSEUDO_CLASS_OPENVERTICALLY = 
+    private static final PseudoClass PSEUDO_CLASS_OPENVERTICALLY =
             PseudoClass.getPseudoClass("openvertically");
-    private static final PseudoClass PSEUDO_CLASS_SHOWING = 
+    private static final PseudoClass PSEUDO_CLASS_SHOWING =
             PseudoClass.getPseudoClass("showing");
 
     /***************************************************************************

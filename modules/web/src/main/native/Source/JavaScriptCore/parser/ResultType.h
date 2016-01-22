@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef ResultType_h
@@ -33,7 +33,7 @@ namespace JSC {
 
         typedef char Type;
         static const Type TypeInt32 = 1;
-        
+
         static const Type TypeMaybeNumber = 0x04;
         static const Type TypeMaybeString = 0x08;
         static const Type TypeMaybeNull   = 0x10;
@@ -46,7 +46,7 @@ namespace JSC {
             : m_type(type)
         {
         }
-        
+
         bool isInt32()
         {
             return m_type & TypeInt32;
@@ -56,7 +56,7 @@ namespace JSC {
         {
             return (m_type & TypeBits) == TypeMaybeNumber;
         }
-        
+
         bool definitelyIsString()
         {
             return (m_type & TypeBits) == TypeMaybeString;
@@ -76,42 +76,42 @@ namespace JSC {
         {
             return !mightBeNumber();
         }
-        
+
         static ResultType nullType()
         {
             return ResultType(TypeMaybeNull);
         }
-        
+
         static ResultType booleanType()
         {
             return ResultType(TypeMaybeBool);
         }
-        
+
         static ResultType numberType()
         {
             return ResultType(TypeMaybeNumber);
         }
-        
+
         static ResultType numberTypeIsInt32()
         {
             return ResultType(TypeInt32 | TypeMaybeNumber);
         }
-        
+
         static ResultType stringOrNumberType()
         {
             return ResultType(TypeMaybeNumber | TypeMaybeString);
         }
-        
+
         static ResultType stringType()
         {
             return ResultType(TypeMaybeString);
         }
-        
+
         static ResultType unknownType()
         {
             return ResultType(TypeBits);
         }
-        
+
         static ResultType forAdd(ResultType op1, ResultType op2)
         {
             if (op1.definitelyIsNumber() && op2.definitelyIsNumber())
@@ -142,7 +142,7 @@ namespace JSC {
     private:
         Type m_type;
     };
-    
+
     struct OperandTypes
     {
         OperandTypes(ResultType first = ResultType::unknownType(), ResultType second = ResultType::unknownType())
@@ -153,7 +153,7 @@ namespace JSC {
             m_u.rds.first = first.m_type;
             m_u.rds.second = second.m_type;
         }
-        
+
         union {
             struct {
                 ResultType::Type first;

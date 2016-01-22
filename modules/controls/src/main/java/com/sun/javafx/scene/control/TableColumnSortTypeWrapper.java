@@ -34,7 +34,7 @@ import javafx.scene.control.TreeTableColumn;
  * Convenience class for dealing with sort types on TableColumn and TreeTableColumn,
  * although note that this will only work whilst TableColumn.SortType is
  * equivalent to TreeTableColumn.SortType. Once they diverge this code will need
- * to be replaced. 
+ * to be replaced.
  */
 public class TableColumnSortTypeWrapper {
 
@@ -42,12 +42,12 @@ public class TableColumnSortTypeWrapper {
         String sortTypeName = getSortTypeName(column);
         return "ASCENDING".equals(sortTypeName);
     }
-    
+
     public static boolean isDescending(TableColumnBase<?, ?> column) {
         String sortTypeName = getSortTypeName(column);
         return "DESCENDING".equals(sortTypeName);
     }
-    
+
     public static void setSortType(TableColumnBase<?,?> column, SortType sortType) {
         if (column instanceof TableColumn) {
             TableColumn tc = (TableColumn) column;
@@ -63,7 +63,7 @@ public class TableColumnSortTypeWrapper {
             }
         }
     }
-    
+
     public static String getSortTypeName(TableColumnBase<?,?> column) {
         if (column instanceof TableColumn) {
             TableColumn tc = (TableColumn) column;
@@ -76,7 +76,7 @@ public class TableColumnSortTypeWrapper {
         }
         return null;
     }
-    
+
     public static ObservableValue getSortTypeProperty(TableColumnBase<?,?> column) {
         if (column instanceof TableColumn) {
             return ((TableColumn) column).sortTypeProperty();

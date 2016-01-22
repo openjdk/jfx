@@ -873,7 +873,7 @@ gst_value_compare_list (const GValue * value1, const GValue * value2)
           continue;
         v2 = &g_array_index (array2, GValue, j);
         if (gst_value_compare_with_func (v1, v2, compare) == GST_VALUE_EQUAL) {
-          /* mark item as removed now that we found it in array2 and 
+          /* mark item as removed now that we found it in array2 and
            * decrement the number of remaining items in array2. */
           removed[j] = 1;
           to_remove--;
@@ -4614,7 +4614,7 @@ gst_value_compare (const GValue * value1, const GValue * value2)
  *
  * Compares @value1 and @value2 using the @compare function. Works like
  * gst_value_compare() but allows to save time determining the compare function
- * a multiple times. 
+ * a multiple times.
  *
  * Returns: comparison result
  */

@@ -31,7 +31,7 @@
 #include "MathMLElement.h"
 
 namespace WebCore {
-    
+
 class MathMLInlineContainerElement : public MathMLElement {
 public:
     static PassRefPtr<MathMLInlineContainerElement> create(const QualifiedName& tagName, Document&);
@@ -44,7 +44,7 @@ protected:
 private:
     virtual RenderPtr<RenderElement> createElementRenderer(PassRef<RenderStyle>) override;
 };
-    
+
 }
 
 #endif // ENABLE(MATHML)

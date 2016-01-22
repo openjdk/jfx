@@ -58,7 +58,7 @@ public class PNTBoxSmoothViewer extends Application {
     boolean textureSwitch = false;
     final Image diffuseMap = new Image("resources/cup_diffuseMap_1024.png");
     final Image bumpMap = new Image("resources/cup_normalMap_1024.png");
-    
+
     private PerspectiveCamera addCamera(Scene scene) {
         PerspectiveCamera perspectiveCamera = new PerspectiveCamera();
         scene.setCamera(perspectiveCamera);
@@ -196,7 +196,7 @@ public class PNTBoxSmoothViewer extends Application {
 
     TriangleMesh createBox(float w, float h, float d) {
 
-        // NOTE: still create mesh for degenerated box       
+        // NOTE: still create mesh for degenerated box
         float hw = w / 2f;
         float hh = h / 2f;
         float hd = d / 2f;
@@ -225,13 +225,13 @@ public class PNTBoxSmoothViewer extends Application {
 
         int faces[] = {
             0, 0, 0, 2, 2, 2, 1, 1, 1,
-            2, 2, 2, 0, 0, 0, 3, 3, 3,            
+            2, 2, 2, 0, 0, 0, 3, 3, 3,
             1, 1, 0, 6, 6, 2, 5, 5, 1,
-            6, 6, 2, 1, 1, 0, 2, 2, 3,            
+            6, 6, 2, 1, 1, 0, 2, 2, 3,
             5, 5, 0, 7, 7, 2, 4, 4, 1,
             7, 7, 2, 5, 5, 0, 6, 6, 3,
             4, 4, 0, 3, 3, 2, 0, 0, 1,
-            3, 3, 2, 4, 4, 0, 7, 7, 3,            
+            3, 3, 2, 4, 4, 0, 7, 7, 3,
             3, 3, 0, 6, 6, 2, 2, 2, 1,
             6, 6, 2, 3, 3, 0, 7, 7, 3,
             4, 4, 0, 1, 1, 2, 5, 5, 1,

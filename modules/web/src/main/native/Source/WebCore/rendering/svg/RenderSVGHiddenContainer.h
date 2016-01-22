@@ -23,7 +23,7 @@
 #include "RenderSVGContainer.h"
 
 namespace WebCore {
-    
+
 class SVGElement;
 
 // This class is for containers which are never drawn, but do need to support style
@@ -40,7 +40,7 @@ private:
     virtual const char* renderName() const override { return "RenderSVGHiddenContainer"; }
 
     virtual void paint(PaintInfo&, const LayoutPoint&) override final;
-    
+
     virtual LayoutRect clippedOverflowRectForRepaint(const RenderLayerModelObject*) const override final { return LayoutRect(); }
     virtual void absoluteQuads(Vector<FloatQuad>&, bool* wasFixed) const override final;
 

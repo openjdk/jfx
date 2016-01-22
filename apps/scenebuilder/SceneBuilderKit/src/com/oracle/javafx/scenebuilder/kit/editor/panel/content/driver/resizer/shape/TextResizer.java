@@ -44,14 +44,14 @@ import javafx.scene.text.Text;
 
 /**
  *
- * 
+ *
  */
 public class TextResizer extends AbstractResizer<Text> {
 
     private final double originalWrappingWidth;
     private final PropertyName wrappingWidthName = new PropertyName("wrappingWidth"); //NOI18N
     private final List<PropertyName> propertyNames = new ArrayList<>();
-    
+
     public TextResizer(Text sceneGraphObject) {
         super(sceneGraphObject);
         originalWrappingWidth = sceneGraphObject.getWrappingWidth();
@@ -61,14 +61,14 @@ public class TextResizer extends AbstractResizer<Text> {
     /*
      * AbstractResizer
      */
-    
+
     @Override
     public final Bounds computeBounds(double width, double height) {
         final double minX = sceneGraphObject.getX();
         final double minY = sceneGraphObject.getY();
         return new BoundingBox(minX, minY, width, height);
     }
- 
+
     @Override
     public Feature getFeature() {
         return Feature.WIDTH_ONLY;
@@ -76,7 +76,7 @@ public class TextResizer extends AbstractResizer<Text> {
 
     @Override
     public void changeWidth(double width) {
-        // When wrappingWidth is set to 0, text will 
+        // When wrappingWidth is set to 0, text will
         // jump from a nearer zero column to a single line.
         // Not nice : so we set a min of 1 to avoid this effect.
         sceneGraphObject.setWrappingWidth(Math.max(1.0, width));
@@ -100,7 +100,7 @@ public class TextResizer extends AbstractResizer<Text> {
     public Object getValue(PropertyName propertyName) {
         assert propertyName != null;
         assert propertyNames.contains(propertyName);
-        
+
         final Object result;
         if (propertyName.equals(wrappingWidthName)) {
             result = sceneGraphObject.getWrappingWidth();
@@ -108,7 +108,7 @@ public class TextResizer extends AbstractResizer<Text> {
             // Emergency code
             result = null;
         }
-        
+
         return result;
     }
 

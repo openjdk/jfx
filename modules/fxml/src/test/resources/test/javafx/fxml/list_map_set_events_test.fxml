@@ -33,7 +33,7 @@ questions.
         <Widget name="Widget 2"/>
         <Widget name="Widget 3"/>
     </children>
-    
+
     <properties a="1" b="10" c="100" onChange="#handlePropertiesChange"/>
     <set onChange="#handleSetChange"/>
 </Widget>

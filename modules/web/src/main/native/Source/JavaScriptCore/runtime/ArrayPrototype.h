@@ -34,7 +34,7 @@ public:
     typedef JSArray Base;
 
     static ArrayPrototype* create(VM&, JSGlobalObject*, Structure*);
-        
+
     static bool getOwnPropertySlot(JSObject*, ExecState*, PropertyName, PropertySlot&);
 
     DECLARE_INFO;

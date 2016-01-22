@@ -55,8 +55,8 @@ public class Scale extends Transform {
     /**
      * Creates a two-dimensional Scale.
      * The pivot point is set to (0,0)
-     * @param x the factor by which coordinates are scaled along the X axis 
-     * @param y the factor by which coordinates are scaled along the Y axis 
+     * @param x the factor by which coordinates are scaled along the X axis
+     * @param y the factor by which coordinates are scaled along the Y axis
      */
     public Scale(double x, double y) {
         setX(x);
@@ -65,8 +65,8 @@ public class Scale extends Transform {
 
     /**
      * Creates a two-dimensional Scale with pivot.
-     * @param x the factor by which coordinates are scaled along the X axis 
-     * @param y the factor by which coordinates are scaled along the Y axis 
+     * @param x the factor by which coordinates are scaled along the X axis
+     * @param y the factor by which coordinates are scaled along the Y axis
      * @param pivotX the X coordinate about which point the scale occurs
      * @param pivotY the Y coordinate about which point the scale occurs
      */
@@ -79,9 +79,9 @@ public class Scale extends Transform {
     /**
      * Creates a three-dimensional Scale.
      * The pivot point is set to (0,0,0)
-     * @param x the factor by which coordinates are scaled along the X axis 
-     * @param y the factor by which coordinates are scaled along the Y axis 
-     * @param z the factor by which coordinates are scaled along the Z axis 
+     * @param x the factor by which coordinates are scaled along the X axis
+     * @param y the factor by which coordinates are scaled along the Y axis
+     * @param z the factor by which coordinates are scaled along the Z axis
      */
     public Scale(double x, double y, double z) {
         this(x, y);
@@ -90,9 +90,9 @@ public class Scale extends Transform {
 
     /**
      * Creates a three-dimensional Scale with pivot.
-     * @param x the factor by which coordinates are scaled along the X axis 
-     * @param y the factor by which coordinates are scaled along the Y axis 
-     * @param z the factor by which coordinates are scaled along the Z axis 
+     * @param x the factor by which coordinates are scaled along the X axis
+     * @param y the factor by which coordinates are scaled along the Y axis
+     * @param z the factor by which coordinates are scaled along the Z axis
      * @param pivotX the X coordinate about which point the scale occurs
      * @param pivotY the Y coordinate about which point the scale occurs
      * @param pivotZ the Z coordinate about which point the scale occurs
@@ -219,7 +219,7 @@ public class Scale extends Transform {
 
     /**
      * Defines the X coordinate about which point the scale occurs.
-     * 
+     *
      * @defaultValue 0.0
      */
     private DoubleProperty pivotX;
@@ -258,7 +258,7 @@ public class Scale extends Transform {
 
     /**
      * Defines the Y coordinate about which point the scale occurs.
-     * 
+     *
      * @defaultValue 0.0
      */
     private DoubleProperty pivotY;
@@ -297,7 +297,7 @@ public class Scale extends Transform {
 
     /**
      * Defines the Z coordinate about which point the scale occurs.
-     * 
+     *
      * @defaultValue 0.0
      */
     private DoubleProperty pivotZ;
@@ -800,7 +800,7 @@ public class Scale extends Transform {
 
     @Override
     void appendTo(Affine a) {
-        a.appendScale(getX(), getY(), getZ(), 
+        a.appendScale(getX(), getY(), getZ(),
                 getPivotX(), getPivotY(), getPivotZ());
     }
 

@@ -30,7 +30,7 @@ package javafx.scene.web;
  * JavaScript {@code window.open} function. Instances are passed into popup
  * handlers registered on a {@code WebEngine} using
  * {@link WebEngine#setCreatePopupHandler} method.
- * 
+ *
  * @see WebEngine
  * @see WebEngine#setCreatePopupHandler
  */

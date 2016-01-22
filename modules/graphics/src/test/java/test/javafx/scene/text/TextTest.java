@@ -36,7 +36,7 @@ import javafx.scene.text.Text;
 import org.junit.Test;
 
 public class TextTest {
-    
+
     @Test public void testCtors() {
         Text t1 = new Text();
         assertEquals("", t1.getText());
@@ -47,7 +47,7 @@ public class TextTest {
         assertEquals(20f, t3.getY(), 0);
         assertEquals("2", t3.getText());
     }
-    
+
     @Test public void testSettingNullText() {
         Text t = new Text();
         t.setText(null);
@@ -68,7 +68,7 @@ public class TextTest {
         assertEquals("", t.getText());
         assertEquals("", t.textProperty().get());
     }
-    
+
     @Test public void testStoreFont() {
         Text t = new Text();
         Font f = new Font(44);
@@ -76,7 +76,7 @@ public class TextTest {
         t.setFont(f);
         assertEquals(44f, t.getBaselineOffset(), 0);
     }
-    
+
  // Commented out as StubFontLoader only knows about Amble and its
  // also not a given that the Font.getDefault() matches the default font
  // on a Text node anyway, as CSS defaults are applied to the Text node.
@@ -97,7 +97,7 @@ public class TextTest {
 //                     }
 //                 });
 //     }
-    
+
 //     @Test public void testPropertyPropagation_boundsType() throws Exception {
 //         final Text node = new Text();
 //         NodeTest.testObjectPropertyPropagation(node, "boundsType", "textBoundsType",
@@ -108,10 +108,10 @@ public class TextTest {
 //                     }
 //                 });
 //     }
-    
+
 //     @Test public void testPropertyPropagation_textAlignment() throws Exception {
 //         final Text node = new Text();
-//         NodeTest.testObjectPropertyPropagation(node, "textAlignment", "textAlignment", 
+//         NodeTest.testObjectPropertyPropagation(node, "textAlignment", "textAlignment",
 //                 TextAlignment.LEFT, TextAlignment.CENTER, new NodeTest.ObjectValueConvertor() {
 //                     @Override
 //                     public Object toSg(Object pgValue) {
@@ -119,7 +119,7 @@ public class TextTest {
 //                     }
 //                 });
 //     }
-    
+
 //     @Test public void testPropertyPropagation_visible() throws Exception {
 //         final Text node = new Text();
 //         NodeTest.testBooleanPropertyPropagation(node, "visible", false, true);
@@ -194,13 +194,13 @@ public class TextTest {
 //                 "boundsType", "textBoundsType", TextBoundsType.VISUAL);
 //     }
 
-    
+
 //     @Test public void testBoundPropertySync_WrappingWidth() throws Exception {
 //         NodeTest.assertDoublePropertySynced(
 //                 new Text(1.0, 2.0, "The Text"),
 //                 "wrappingWidth", "wrappingWidth", 50);
 //     }
-    
+
 
 //     @Test public void testBoundPropertySync_Underline() throws Exception {
 //         NodeTest.assertBooleanPropertySynced(

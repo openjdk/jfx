@@ -198,7 +198,7 @@ public  class QuadCurveTo extends PathElement {
         }
         return x;
     }
-    
+
     /**
      * Defines the Y coordinate of the final end point.
      *

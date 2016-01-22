@@ -34,24 +34,24 @@
 namespace WebCore {
 
 class AccessibilitySVGRoot : public AccessibilityRenderObject {
-    
+
 protected:
     explicit AccessibilitySVGRoot(RenderObject*);
 public:
     static PassRefPtr<AccessibilitySVGRoot> create(RenderObject*);
     virtual ~AccessibilitySVGRoot();
-    
+
     void setParent(AccessibilityObject* parent) { m_parent = parent; }
-    
+
 private:
     AccessibilityObject* m_parent;
-    
+
     virtual AccessibilityObject* parentObject() const override;
     virtual bool isAccessibilitySVGRoot() const override { return true; }
 };
 
 ACCESSIBILITY_OBJECT_TYPE_CASTS(AccessibilitySVGRoot, isAccessibilitySVGRoot())
-    
-} // namespace WebCore 
+
+} // namespace WebCore
 
 #endif // AccessibilitySVGRoot_h

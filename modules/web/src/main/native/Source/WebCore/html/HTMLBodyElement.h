@@ -66,18 +66,18 @@ private:
     virtual InsertionNotificationRequest insertedInto(ContainerNode&) override;
 
     virtual bool isURLAttribute(const Attribute&) const override;
-    
+
     virtual bool supportsFocus() const override;
 
     virtual int scrollLeft() override;
     virtual void setScrollLeft(int scrollLeft) override;
-    
+
     virtual int scrollTop() override;
     virtual void setScrollTop(int scrollTop) override;
-    
+
     virtual int scrollHeight() override;
     virtual int scrollWidth() override;
-    
+
     virtual void addSubresourceAttributeURLs(ListHashSet<URL>&) const override;
 };
 

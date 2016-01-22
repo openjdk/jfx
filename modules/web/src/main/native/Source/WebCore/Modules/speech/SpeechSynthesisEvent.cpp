@@ -29,7 +29,7 @@
 #if ENABLE(SPEECH_SYNTHESIS)
 
 namespace WebCore {
-    
+
 PassRefPtr<SpeechSynthesisEvent> SpeechSynthesisEvent::create()
 {
     return adoptRef(new SpeechSynthesisEvent());
@@ -51,7 +51,7 @@ SpeechSynthesisEvent::SpeechSynthesisEvent(const AtomicString& type, unsigned lo
     , m_name(name)
 {
 }
-    
+
 } // namespace WebCore
 
 #endif // ENABLE(SPEECH_SYNTHESIS)

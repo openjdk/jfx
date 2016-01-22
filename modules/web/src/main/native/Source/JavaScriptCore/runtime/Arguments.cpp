@@ -50,7 +50,7 @@ void Arguments::visitChildren(JSCell* cell, SlotVisitor& visitor)
     visitor.append(&thisObject->m_callee);
     visitor.append(&thisObject->m_activation);
 }
-    
+
 static EncodedJSValue JSC_HOST_CALL argumentsFuncIterator(ExecState*);
 
 void Arguments::destroy(JSCell* cell)
@@ -78,9 +78,9 @@ void Arguments::copyToArguments(ExecState* exec, CallFrame* callFrame, uint32_t 
 void Arguments::fillArgList(ExecState* exec, MarkedArgumentBuffer& args)
 {
     if (UNLIKELY(m_overrodeLength)) {
-        unsigned length = get(exec, exec->propertyNames().length).toUInt32(exec); 
-        for (unsigned i = 0; i < length; i++) 
-            args.append(get(exec, i)); 
+        unsigned length = get(exec, exec->propertyNames().length).toUInt32(exec);
+        for (unsigned i = 0; i < length; i++)
+            args.append(get(exec, i));
         return;
     }
     uint32_t length = this->length(exec);
@@ -102,7 +102,7 @@ bool Arguments::getOwnPropertySlotByIndex(JSObject* object, ExecState* exec, uns
 
     return JSObject::getOwnPropertySlot(thisObject, exec, Identifier::from(exec, i), slot);
 }
-    
+
 void Arguments::createStrictModeCallerIfNecessary(ExecState* exec)
 {
     if (m_overrodeCaller)
@@ -218,7 +218,7 @@ void Arguments::put(JSCell* cell, ExecState* exec, PropertyName propertyName, JS
     JSObject::put(thisObject, exec, propertyName, value, slot);
 }
 
-bool Arguments::deletePropertyByIndex(JSCell* cell, ExecState* exec, unsigned i) 
+bool Arguments::deletePropertyByIndex(JSCell* cell, ExecState* exec, unsigned i)
 {
     Arguments* thisObject = jsCast<Arguments*>(cell);
     if (i < thisObject->m_numArguments) {
@@ -230,7 +230,7 @@ bool Arguments::deletePropertyByIndex(JSCell* cell, ExecState* exec, unsigned i)
     return JSObject::deletePropertyByIndex(thisObject, exec, i);
 }
 
-bool Arguments::deleteProperty(JSCell* cell, ExecState* exec, PropertyName propertyName) 
+bool Arguments::deleteProperty(JSCell* cell, ExecState* exec, PropertyName propertyName)
 {
     if (exec->vm().isInDefineOwnProperty())
         return Base::deleteProperty(cell, exec, propertyName);
@@ -257,7 +257,7 @@ bool Arguments::deleteProperty(JSCell* cell, ExecState* exec, PropertyName prope
         }
         thisObject->createStrictModeCalleeIfNecessary(exec);
     }
-    
+
     if (propertyName == exec->propertyNames().caller && thisObject->m_isStrictMode)
         thisObject->createStrictModeCallerIfNecessary(exec);
 
@@ -323,7 +323,7 @@ void Arguments::tearOff(CallFrame* callFrame)
 
     // Must be called for the same call frame from which it was created.
     ASSERT(bitwise_cast<WriteBarrier<Unknown>*>(callFrame) == m_registers);
-    
+
     m_registerArray = std::make_unique<WriteBarrier<Unknown>[]>(m_numArguments);
     m_registers = m_registerArray.get() - CallFrame::offsetFor(1) - 1;
 
@@ -351,7 +351,7 @@ void Arguments::didTearOffActivation(ExecState* exec, JSActivation* activation)
 
     if (!m_numArguments)
         return;
-    
+
     m_activation.set(exec->vm(), this, activation);
     tearOff(exec);
 }
@@ -360,10 +360,10 @@ void Arguments::tearOff(CallFrame* callFrame, InlineCallFrame* inlineCallFrame)
 {
     if (isTornOff())
         return;
-    
+
     if (!m_numArguments)
         return;
-    
+
     m_registerArray = std::make_unique<WriteBarrier<Unknown>[]>(m_numArguments);
     m_registers = m_registerArray.get() - CallFrame::offsetFor(1) - 1;
 
@@ -372,7 +372,7 @@ void Arguments::tearOff(CallFrame* callFrame, InlineCallFrame* inlineCallFrame)
         trySetArgument(callFrame->vm(), i, recovery.recover(callFrame));
     }
 }
-    
+
 EncodedJSValue JSC_HOST_CALL argumentsFuncIterator(ExecState* exec)
 {
     JSObject* thisObj = exec->hostThisValue().toThis(exec, StrictMode).toObject(exec);

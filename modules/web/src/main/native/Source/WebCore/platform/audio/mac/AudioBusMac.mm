@@ -46,7 +46,7 @@ PassRefPtr<AudioBus> AudioBus::loadPlatformResource(const char* name, float samp
 {
     // This method can be called from other than the main thread, so we need an auto-release pool.
     AutodrainedPool pool;
-    
+
     NSBundle *bundle = [NSBundle bundleForClass:[WebCoreAudioBundleClass class]];
     NSURL *audioFileURL = [bundle URLForResource:[NSString stringWithUTF8String:name] withExtension:@"wav" subdirectory:@"audio"];
     NSDataReadingOptions options = NSDataReadingMappedIfSafe;

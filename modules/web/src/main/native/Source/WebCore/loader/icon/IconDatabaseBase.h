@@ -20,9 +20,9 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
- 
+
 #ifndef IconDatabaseBase_h
 #define IconDatabaseBase_h
 
@@ -74,7 +74,7 @@ private:
     uint64_t m_callbackID;
 };
 
-template<typename EnumType> 
+template<typename EnumType>
 class EnumCallback : public CallbackBase {
 public:
     typedef void (*CallbackFunction)(EnumType, void*);
@@ -96,7 +96,7 @@ public:
         m_callback(result, context());
         m_callback = 0;
     }
-    
+
     void invalidate()
     {
         m_callback = 0;
@@ -113,7 +113,7 @@ private:
     CallbackFunction m_callback;
 };
 
-template<typename ObjectType> 
+template<typename ObjectType>
 class ObjectCallback : public CallbackBase {
 public:
     typedef void (*CallbackFunction)(ObjectType, void*);
@@ -135,7 +135,7 @@ public:
         m_callback(result, context());
         m_callback = 0;
     }
-    
+
     void invalidate()
     {
         m_callback = 0;
@@ -166,7 +166,7 @@ public:
 
     // Used internally by WebCore
     virtual bool isEnabled() const { return false; }
-        
+
     virtual void retainIconForPageURL(const String&) { }
     virtual void releaseIconForPageURL(const String&) { }
 
@@ -185,7 +185,7 @@ public:
     virtual bool supportsAsynchronousMode() { return false; }
     virtual void loadDecisionForIconURL(const String&, PassRefPtr<IconLoadDecisionCallback>) { }
     virtual void iconDataForIconURL(const String&, PassRefPtr<IconDataCallback>) { }
-    
+
 
     // Used within one or more WebKit ports.
     // We should try to remove these dependencies from the IconDatabaseBase class.
@@ -206,7 +206,7 @@ public:
 
     virtual void setPrivateBrowsingEnabled(bool) { }
     virtual void setClient(IconDatabaseClient*) { }
-    
+
     virtual bool isOpen() const { return false; }
     virtual String databasePath() const;
 

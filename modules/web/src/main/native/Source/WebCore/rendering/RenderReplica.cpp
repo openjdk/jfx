@@ -47,7 +47,7 @@ RenderReplica::RenderReplica(Document& document, PassRef<RenderStyle> style)
 RenderReplica::~RenderReplica()
 {
 }
-    
+
 void RenderReplica::layout()
 {
     StackStats::LayoutCheckPoint layoutCheckPoint;
@@ -67,7 +67,7 @@ void RenderReplica::paint(PaintInfo& paintInfo, const LayoutPoint& paintOffset)
 {
     if (paintInfo.phase != PaintPhaseForeground && paintInfo.phase != PaintPhaseMask)
         return;
- 
+
     LayoutPoint adjustedPaintOffset = paintOffset + location();
 
     if (paintInfo.phase == PaintPhaseForeground) {

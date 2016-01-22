@@ -1,7 +1,7 @@
     /*
         Font configuration for HelloSanity sample
     */
-    
+
     .button {
     -fx-font-size: 18px;
     }
@@ -21,7 +21,7 @@
     .check-box {
     -fx-font-size: 18px;
     }
-    
+
     .slider {
     -fx-font-size: 18px;
     }
@@ -61,4 +61,4 @@
 
 
 
-    
+

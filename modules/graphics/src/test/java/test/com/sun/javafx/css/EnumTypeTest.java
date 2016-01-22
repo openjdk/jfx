@@ -49,7 +49,7 @@ public class EnumTypeTest {
     @Test
     public void testConvert() {
         StyleConverter sizeUnitsType = new EnumConverter(SizeUnits.class);
-        ParsedValue<String,Enum> value = 
+        ParsedValue<String,Enum> value =
                 new ParsedValueImpl<String,Enum>("percent", sizeUnitsType);
         Font font = null;
         Enum expResult = SizeUnits.PERCENT;

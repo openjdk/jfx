@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef WTF_HashIterators_h
@@ -90,7 +90,7 @@ namespace WTF {
 
     public:
         HashTableConstKeysIterator(const ConstIterator& impl) : m_impl(impl) {}
-        
+
         const KeyType* get() const { return &(m_impl.get()->key); }
         const KeyType& operator*() const { return *get(); }
         const KeyType* operator->() const { return get(); }
@@ -107,7 +107,7 @@ namespace WTF {
 
     public:
         HashTableConstValuesIterator(const ConstIterator& impl) : m_impl(impl) {}
-        
+
         const MappedType* get() const { return &(m_impl.get()->value); }
         const MappedType& operator*() const { return *get(); }
         const MappedType* operator->() const { return get(); }
@@ -125,7 +125,7 @@ namespace WTF {
 
     public:
         HashTableKeysIterator(const Iterator& impl) : m_impl(impl) {}
-        
+
         KeyType* get() const { return &(m_impl.get()->key); }
         KeyType& operator*() const { return *get(); }
         KeyType* operator->() const { return get(); }
@@ -148,7 +148,7 @@ namespace WTF {
 
     public:
         HashTableValuesIterator(const Iterator& impl) : m_impl(impl) {}
-        
+
         MappedType* get() const { return &(m_impl.get()->value); }
         MappedType& operator*() const { return *get(); }
         MappedType* operator->() const { return get(); }

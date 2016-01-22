@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef SMILTimeContainer_h
@@ -37,7 +37,7 @@
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
-    
+
 class SVGElement;
 class SVGSMILElement;
 class SVGSVGElement;
@@ -70,7 +70,7 @@ private:
     void timerFired(Timer<SMILTimeContainer>*);
     void startTimer(SMILTime fireTime, SMILTime minimumDelay = 0);
     void updateAnimations(SMILTime elapsed, bool seekToTime = false);
-    
+
     void updateDocumentOrderIndexes();
     void sortByPriority(Vector<SVGSMILElement*>& smilElements, SMILTime elapsed);
 
@@ -81,7 +81,7 @@ private:
     double m_presetStartTime;
 
     bool m_documentOrderIndexesDirty;
-    
+
     Timer<SMILTimeContainer> m_timer;
 
     typedef std::pair<SVGElement*, QualifiedName> ElementAttributePair;

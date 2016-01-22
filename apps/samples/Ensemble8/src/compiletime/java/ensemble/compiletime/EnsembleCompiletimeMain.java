@@ -41,11 +41,11 @@ import java.util.List;
  * This is run during the build by ant to build sample files and search indexes
  */
 public class EnsembleCompiletimeMain {
-    
+
     static {
         System.setProperty("java.net.useSystemProxies", "true");
     }
-    
+
     public static void main(String[] args) {
         System.out.println("==================================================================");
         System.out.println("                 Ensemble Compile Time Build");
@@ -77,7 +77,7 @@ public class EnsembleCompiletimeMain {
             System.out.println("                 Written Samples.java class file");
             System.out.println("==================================================================");
         }
-        
+
         System.out.println("buildSearchIndex = " + buildSearchIndex);
         if(buildSearchIndex) {
             System.out.println("==================================================================");
@@ -86,7 +86,7 @@ public class EnsembleCompiletimeMain {
             File indexDir = new File(ensembleDir,"src/generated/resources/ensemble/search/index");
             indexDir.mkdirs();
             BuildEnsembleSearchIndex.buildSearchIndex(
-                allSamples, 
+                allSamples,
                 "https://docs.oracle.com/javase/8/javafx/api/",
                 "https://docs.oracle.com/javafx/index.html",
                 indexDir);

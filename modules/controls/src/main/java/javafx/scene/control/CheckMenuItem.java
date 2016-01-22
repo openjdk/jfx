@@ -62,7 +62,7 @@ subsystem1.setOnAction(new EventHandler&lt;ActionEvent&gt;() {
 });
 private final BooleanProperty widgetShowing();
 public final boolean isWidgetShowing() { return widgetShowing.get(); )
-public final void setWidgetShowing(boolean value) { 
+public final void setWidgetShowing(boolean value) {
     widgetShowingProperty().set(value);
 }
 public final BooleanProperty widgetShowingProperty() {
@@ -142,7 +142,7 @@ public class CheckMenuItem extends MenuItem {
                 @Override protected void invalidated() {
                     // force validation
                     get();
-                    
+
                     // update the styleclass
                     if (isSelected()) {
                         getStyleClass().add(STYLE_CLASS_SELECTED);

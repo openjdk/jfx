@@ -6,13 +6,13 @@
  * are met:
  *
  * 1.  Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer. 
+ *     notice, this list of conditions and the following disclaimer.
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
- *     documentation and/or other materials provided with the distribution. 
+ *     documentation and/or other materials provided with the distribution.
  * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
- *     from this software without specific prior written permission. 
+ *     from this software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY APPLE AND ITS CONTRIBUTORS "AS IS" AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
@@ -61,7 +61,7 @@ extern NSString *WebElementImageAltStringKey;   // NSString of the ALT attribute
 extern NSString *WebElementImageKey;            // NSImage of the image element
 extern NSString *WebElementImageRectKey;        // NSValue of an NSRect, the rect of the image element
 extern NSString *WebElementImageURLKey;         // NSURL of the image element
-extern NSString *WebElementIsSelectedKey;       // NSNumber of BOOL indicating whether the element is selected or not 
+extern NSString *WebElementIsSelectedKey;       // NSNumber of BOOL indicating whether the element is selected or not
 extern NSString *WebElementLinkURLKey;          // NSURL of the link if the element is within an anchor
 extern NSString *WebElementLinkTargetFrameKey;  // WebFrame of the target of the anchor
 extern NSString *WebElementLinkTitleKey;        // NSString of the title of the anchor
@@ -88,32 +88,32 @@ extern NSString *WebViewProgressFinishedNotification;
     WebView manages the interaction between WebFrameViews and WebDataSources.  Modification
     of the policies and behavior of the WebKit is largely managed by WebViews and their
     delegates.
-    
+
     <p>
     Typical usage:
     </p>
     <pre>
     WebView *webView;
     WebFrame *mainFrame;
-    
+
     webView  = [[WebView alloc] initWithFrame: NSMakeRect (0,0,640,480)];
     mainFrame = [webView mainFrame];
     [mainFrame loadRequest:request];
     </pre>
-    
+
     WebViews have the following delegates:  WebUIDelegate, WebResourceLoadDelegate,
     WebFrameLoadDelegate, and WebPolicyDelegate.
-    
+
     WebKit depends on the WebView's WebUIDelegate for all window
     related management, including opening new windows and controlling the user interface
     elements in those windows.
-    
+
     WebResourceLoadDelegate is used to monitor the progress of resources as they are
     loaded.  This delegate may be used to present users with a progress monitor.
-    
+
     The WebFrameLoadDelegate receives messages when the URL in a WebFrame is
     changed.
-    
+
     WebView's WebPolicyDelegate can make determinations about how
     content should be handled, based on the resource's URL and MIME type.
 */
@@ -188,9 +188,9 @@ extern NSString *WebViewProgressFinishedNotification;
 /*!
     @method initWithFrame:frameName:groupName:
     @abstract The designated initializer for WebView.
-    @discussion Initialize a WebView with the supplied parameters. This method will 
+    @discussion Initialize a WebView with the supplied parameters. This method will
     create a main WebFrame with the view. Passing a top level frame name is useful if you
-    handle a targetted frame navigation that would normally open a window in some other 
+    handle a targetted frame navigation that would normally open a window in some other
     way that still ends up creating a new WebView.
     @param frame The frame used to create the view.
     @param frameName The name to use for the top level frame. May be nil.
@@ -266,41 +266,41 @@ extern NSString *WebViewProgressFinishedNotification;
 /*!
     @property backForwardList
     @abstract The backforward list for this WebView.
-*/    
+*/
 @property (nonatomic, readonly, strong) WebBackForwardList *backForwardList;
 
 /*!
     @method setMaintainsBackForwardList:
     @abstract Enable or disable the use of a backforward list for this webView.
     @param flag Turns use of the back forward list on or off
-*/    
+*/
 - (void)setMaintainsBackForwardList:(BOOL)flag;
 
 /*!
     @method goBack
     @abstract Go back to the previous URL in the backforward list.
     @result YES if able to go back in the backforward list, NO otherwise.
-*/    
+*/
 - (BOOL)goBack;
 
 /*!
     @method goForward
     @abstract Go forward to the next URL in the backforward list.
     @result YES if able to go forward in the backforward list, NO otherwise.
-*/    
+*/
 - (BOOL)goForward;
 
 /*!
     @method goToBackForwardItem:
     @abstract Go back or forward to an item in the backforward list.
     @result YES if able to go to the item, NO otherwise.
-*/    
+*/
 - (BOOL)goToBackForwardItem:(WebHistoryItem *)item;
 
 /*!
     @property textSizeMultiplier
     @abstract The text size multipler.
-*/    
+*/
 @property (nonatomic) float textSizeMultiplier;
 
 /*!
@@ -311,7 +311,7 @@ extern NSString *WebViewProgressFinishedNotification;
 
 /*!
     @method setCustomUserAgent:
-    @abstract Set the user agent. 
+    @abstract Set the user agent.
     @discussion .
     @param userAgentString The user agent description
 */
@@ -434,7 +434,7 @@ extern NSString *WebViewProgressFinishedNotification;
 /*!
     @property estimatedProgress
     @discussion An estimate of the percent complete for a document load.  This
-    value will range from 0 to 1.0 and, once a load completes, will remain at 1.0 
+    value will range from 0 to 1.0 and, once a load completes, will remain at 1.0
     until a new load starts, at which point it will be reset to 0.  The value is an
     estimate based on the total number of bytes expected to be received
     for a document, including all it's possible subresources.  For more accurate progress
@@ -612,11 +612,11 @@ extern NSString * const WebViewDidChangeSelectionNotification;
 @end
 
 @interface WebView (WebViewUndoableEditing)
-- (void)replaceSelectionWithNode:(DOMNode *)node; 
-- (void)replaceSelectionWithText:(NSString *)text;    
+- (void)replaceSelectionWithNode:(DOMNode *)node;
+- (void)replaceSelectionWithText:(NSString *)text;
 - (void)replaceSelectionWithMarkupString:(NSString *)markupString;
 - (void)replaceSelectionWithArchive:(WebArchive *)archive;
-- (void)deleteSelection;    
+- (void)deleteSelection;
 - (void)applyStyle:(DOMCSSStyleDeclaration *)style;
 @end
 
@@ -664,11 +664,11 @@ extern NSString * const WebViewDidChangeSelectionNotification;
 - (void)toggleUnderline:(id)sender;
 #endif
 
-/* 
+/*
 The following methods are declared in NSResponder.h.
 WebView overrides each method in this list, providing
 a custom implementation for each.
-    
+
 - (void)capitalizeWord:(id)sender;
 - (void)centerSelectionInVisibleArea:(id)sender;
 - (void)changeCaseOfLetter:(id)sender;
@@ -732,7 +732,7 @@ a custom implementation for each.
 - (void)selectWord:(id)sender;
 - (void)uppercaseWord:(id)sender;
 */
- 
+
 @end
 
 #if TARGET_OS_IPHONE

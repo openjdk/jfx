@@ -77,11 +77,11 @@ public class ColorPickerTest {
     @Test public void noArgConstructorSetsTheStyleClass() {
         assertStyleClassContains(colorPicker, "color-picker");
     }
-    
+
     @Test public void noArgConstructor_valueIsNonNull() {
         assertNotNull(colorPicker.getValue());
     }
-    
+
     @Test public void noArgConstructor_showingIsFalse() {
         assertFalse(colorPicker.isShowing());
     }
@@ -90,7 +90,7 @@ public class ColorPickerTest {
         final ColorPicker cp = new ColorPicker(Color.WHITE);
         assertStyleClassContains(cp, "color-picker");
     }
-    
+
     @Test public void singleArgConstructor_showingIsFalse() {
         final ColorPicker cp = new ColorPicker(Color.WHITE);
         assertFalse(cp.isShowing());
@@ -100,38 +100,38 @@ public class ColorPickerTest {
         final ColorPicker cp = new ColorPicker(Color.WHITE);
         assertNotNull(cp.getValue());
     }
-    
+
     @Test public void defaultActionHandlerIsNotDefined() {
         assertNull(colorPicker.getOnAction());
     }
-    
+
     @Test public void testGetSetValue() {
         final ColorPicker cp = new ColorPicker(Color.WHITE);
         cp.setValue(Color.PINK);
         assertEquals(cp.getValue(), Color.PINK);
     }
-    
+
     @Test public void testCustomColors() {
         final ColorPicker cp = new ColorPicker(Color.WHITE);
         cp.getCustomColors().addAll(new Color(0.83, .55, .214, 1), new Color(.811, .222, .621, 1));
         assertEquals(cp.getCustomColors().get(0),  new Color(0.83, .55, .214, 1));
         assertEquals(cp.getCustomColors().get(1),  new Color(.811, .222, .621, 1));
     }
-    
+
     @Test public void ensureCanSetValueToNonNullColorAndBackAgain() {
         colorPicker.setValue(Color.PINK);
         assertEquals(Color.PINK, colorPicker.getValue());
         colorPicker.setValue(null);
         assertNull(colorPicker.getValue());
     }
-    
+
     @Test public void ensureCanToggleShowing() {
         colorPicker.show();
         assertTrue(colorPicker.isShowing());
         colorPicker.hide();
         assertFalse(colorPicker.isShowing());
     }
-    
+
     @Test public void ensureCanNotToggleShowingWhenDisabled() {
         colorPicker.setDisable(true);
         colorPicker.show();
@@ -140,13 +140,13 @@ public class ColorPickerTest {
         colorPicker.show();
         assertTrue(colorPicker.isShowing());
     }
-     
+
     @Test public void ensureCanSetOnAction() {
         EventHandler<ActionEvent> onAction = t -> { };
         colorPicker.setOnAction(onAction);
         assertEquals(onAction, colorPicker.getOnAction());
     }
-    
+
     @Test public void ensureOnActionPropertyReferencesBean() {
         assertEquals(colorPicker, colorPicker.onActionProperty().getBean());
     }

@@ -124,7 +124,7 @@ SVGGlyph SVGGlyphElement::buildGenericGlyphIdentifier(const SVGElement* element)
 {
     SVGGlyph identifier;
     buildPathFromString(element->fastGetAttribute(SVGNames::dAttr), identifier.pathData);
- 
+
     // Spec: The horizontal advance after rendering the glyph in horizontal orientation.
     // If the attribute is not specified, the effect is as if the attribute were set to the
     // value of the font's horiz-adv-x attribute. Glyph widths are required to be non-negative,

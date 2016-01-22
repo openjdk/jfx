@@ -542,10 +542,10 @@ public class MouseTest {
         assertSame(CursorShim.getCurrentFrame(Cursor.DEFAULT),
                    scene.getCursorFrame());
     }
-    
+
     @Test
     public void platformCursorShouldBeUpdatedOnPulse() {
-        
+
         final StubToolkit toolkit = (StubToolkit) Toolkit.getToolkit();
         SimpleTestScene scene = new SimpleTestScene();
         MouseEventGenerator generator = new MouseEventGenerator();
@@ -558,7 +558,7 @@ public class MouseTest {
         scene.scene.setCursor(Cursor.TEXT);
         toolkit.firePulse();
         assertSame(CursorShim.getCurrentFrame(Cursor.TEXT), scene.getCursorFrame());
-        
+
     }
 
     @Test
@@ -602,7 +602,7 @@ public class MouseTest {
         assertFalse(scene.bigSquareTracker.wasClicked());
         assertTrue(scene.groupTracker.wasClicked());
     }
-    
+
     @Test
     public void clickShouldBeGeneratedWhenReleasedOnTheSameNode() {
         SimpleTestScene scene = new SimpleTestScene();
@@ -621,7 +621,7 @@ public class MouseTest {
         assertFalse(scene.bigSquareTracker.wasClicked());
         assertTrue(scene.groupTracker.wasClicked());
     }
-    
+
     @Test
     public void clickShouldBeGeneratedWhenReleasedOnParent() {
         SimpleTestScene scene = new SimpleTestScene();
@@ -638,7 +638,7 @@ public class MouseTest {
         assertFalse(scene.bigSquareTracker.wasClicked());
         assertTrue(scene.groupTracker.wasClicked());
     }
-    
+
     @Test
     public void doubleClickShouldBeGeneratedFromPressedReleasedTwoTimes() {
         SimpleTestScene scene = new SimpleTestScene();
@@ -701,7 +701,7 @@ public class MouseTest {
         assertFalse(scene.bigSquareTracker.wasDoubleClicked());
         assertTrue(scene.groupTracker.wasDoubleClicked());
     }
-    
+
     @Test
     public void doubleClickShouldNotBeGeneratedWhenMovedFarAwayBetweenClick() {
         SimpleTestScene scene = new SimpleTestScene();
@@ -725,7 +725,7 @@ public class MouseTest {
         assertFalse(scene.bigSquareTracker.wasDoubleClicked());
         assertFalse(scene.groupTracker.wasDoubleClicked());
     }
-    
+
     @Test
     public void doubleClickShouldNotBeGeneratedWhenMovedFarAwayInFirstClick() {
         SimpleTestScene scene = new SimpleTestScene();
@@ -749,7 +749,7 @@ public class MouseTest {
         assertFalse(scene.bigSquareTracker.wasDoubleClicked());
         assertFalse(scene.groupTracker.wasDoubleClicked());
     }
-    
+
     @Test
     public void doubleClickShouldBeGeneratedWhenMovedFarAwayInSecondClick() {
         SimpleTestScene scene = new SimpleTestScene();
@@ -770,19 +770,19 @@ public class MouseTest {
         assertFalse(scene.bigSquareTracker.wasDoubleClicked());
         assertTrue(scene.groupTracker.wasDoubleClicked());
     }
-    
+
     @Test
     public void doubleClickShouldNotBeGeneratedWithLongTimeBetweenClicks() {
         SimpleTestScene scene = new SimpleTestScene();
         MouseEventGenerator generator = new MouseEventGenerator();
 
         ((StubToolkit) Toolkit.getToolkit()).setAnimationTime(0);
-        
+
         scene.processEvent(generator.generateMouseEvent(
                 MouseEvent.MOUSE_PRESSED, 250, 250));
         scene.processEvent(generator.generateMouseEvent(
                 MouseEvent.MOUSE_RELEASED, 250, 250));
-        
+
         ((StubToolkit) Toolkit.getToolkit()).setAnimationTime(2000);
 
         scene.processEvent(generator.generateMouseEvent(
@@ -797,17 +797,17 @@ public class MouseTest {
         assertFalse(scene.bigSquareTracker.wasDoubleClicked());
         assertFalse(scene.groupTracker.wasDoubleClicked());
     }
-    
+
     @Test
     public void doubleClickShouldNotBeGeneratedWithLongTimeInFirstClick() {
         SimpleTestScene scene = new SimpleTestScene();
         MouseEventGenerator generator = new MouseEventGenerator();
 
         ((StubToolkit) Toolkit.getToolkit()).setAnimationTime(0);
-        
+
         scene.processEvent(generator.generateMouseEvent(
                 MouseEvent.MOUSE_PRESSED, 250, 250));
-        
+
         ((StubToolkit) Toolkit.getToolkit()).setAnimationTime(2000);
 
         scene.processEvent(generator.generateMouseEvent(
@@ -824,21 +824,21 @@ public class MouseTest {
         assertFalse(scene.bigSquareTracker.wasDoubleClicked());
         assertFalse(scene.groupTracker.wasDoubleClicked());
     }
-    
+
     @Test
     public void doubleClickShouldBeGeneratedWithLongTimeInSecondClick() {
         SimpleTestScene scene = new SimpleTestScene();
         MouseEventGenerator generator = new MouseEventGenerator();
 
         ((StubToolkit) Toolkit.getToolkit()).setAnimationTime(0);
-        
+
         scene.processEvent(generator.generateMouseEvent(
                 MouseEvent.MOUSE_PRESSED, 250, 250));
         scene.processEvent(generator.generateMouseEvent(
                 MouseEvent.MOUSE_RELEASED, 250, 250));
         scene.processEvent(generator.generateMouseEvent(
                 MouseEvent.MOUSE_PRESSED, 250, 250));
-        
+
         ((StubToolkit) Toolkit.getToolkit()).setAnimationTime(2000);
 
         scene.processEvent(generator.generateMouseEvent(
@@ -848,17 +848,17 @@ public class MouseTest {
         assertFalse(scene.bigSquareTracker.wasDoubleClicked());
         assertTrue(scene.groupTracker.wasDoubleClicked());
     }
-    
+
     @Test
     public void testClickCountOfMouseEvents() {
         SimpleTestScene scene = new SimpleTestScene();
         MouseEventGenerator generator = new MouseEventGenerator();
-        
+
         scene.processEvent(generator.generateMouseEvent(
                 MouseEvent.MOUSE_MOVED, 250, 250));
         assertEquals(0, scene.smallSquareTracker.getLastClickCount());
         scene.smallSquareTracker.clear();
-        
+
         scene.processEvent(generator.generateMouseEvent(
                 MouseEvent.MOUSE_PRESSED, 250, 250));
         assertEquals(1, scene.smallSquareTracker.getLastClickCount());
@@ -868,17 +868,17 @@ public class MouseTest {
                 MouseEvent.MOUSE_DRAGGED, 251, 251));
         assertEquals(1, scene.smallSquareTracker.getLastClickCount());
         scene.smallSquareTracker.clear();
-        
+
         scene.processEvent(generator.generateMouseEvent(
                 MouseEvent.MOUSE_RELEASED, 251, 251));
         assertEquals(1, scene.smallSquareTracker.getLastClickCount());
         scene.smallSquareTracker.clear();
-        
+
         scene.processEvent(generator.generateMouseEvent(
                 MouseEvent.MOUSE_MOVED, 252, 252));
         assertEquals(0, scene.smallSquareTracker.getLastClickCount());
         scene.smallSquareTracker.clear();
-        
+
         scene.processEvent(generator.generateMouseEvent(
                 MouseEvent.MOUSE_PRESSED, 252, 252));
         assertEquals(2, scene.smallSquareTracker.getLastClickCount());
@@ -888,17 +888,17 @@ public class MouseTest {
                 MouseEvent.MOUSE_DRAGGED, 280, 280));
         assertEquals(2, scene.smallSquareTracker.getLastClickCount());
         scene.smallSquareTracker.clear();
-        
+
         scene.processEvent(generator.generateMouseEvent(
                 MouseEvent.MOUSE_RELEASED, 280, 280));
         assertEquals(2, scene.smallSquareTracker.getLastClickCount());
         scene.smallSquareTracker.clear();
-        
+
         scene.processEvent(generator.generateMouseEvent(
                 MouseEvent.MOUSE_MOVED, 280, 280));
         assertEquals(0, scene.smallSquareTracker.getLastClickCount());
         scene.smallSquareTracker.clear();
-        
+
         scene.processEvent(generator.generateMouseEvent(
                 MouseEvent.MOUSE_PRESSED, 280, 280));
         assertEquals(1, scene.smallSquareTracker.getLastClickCount());
@@ -907,26 +907,26 @@ public class MouseTest {
         scene.processEvent(generator.generateMouseEvent(
                 MouseEvent.MOUSE_RELEASED, 280, 280));
         assertEquals(1, scene.smallSquareTracker.getLastClickCount());
-        scene.smallSquareTracker.clear();        
+        scene.smallSquareTracker.clear();
     }
-    
+
     @Test
     public void testIsStillOfMouseEvents() {
         SimpleTestScene scene = new SimpleTestScene();
         MouseEventGenerator generator = new MouseEventGenerator();
-        
+
         scene.processEvent(generator.generateMouseEvent(
                 MouseEvent.MOUSE_MOVED, 250, 250));
         assertFalse(scene.smallSquareTracker.wasLastStill());
-    
+
         scene.processEvent(generator.generateMouseEvent(
                 MouseEvent.MOUSE_PRESSED, 250, 250));
         assertFalse(scene.smallSquareTracker.wasLastStill());
-        
+
         scene.processEvent(generator.generateMouseEvent(
                 MouseEvent.MOUSE_DRAGGED, 252, 252));
         assertTrue(scene.smallSquareTracker.wasLastStill());
-        
+
         scene.processEvent(generator.generateMouseEvent(
                 MouseEvent.MOUSE_RELEASED, 252, 252));
         assertTrue(scene.smallSquareTracker.wasLastStill());
@@ -958,10 +958,10 @@ public class MouseTest {
         scene.processEvent(generator.generateMouseEvent(
                 MouseEvent.MOUSE_PRESSED, 266, 266));
         assertFalse(scene.smallSquareTracker.wasLastStill());
-        
+
         scene.processEvent(generator.generateMouseEvent(
                 MouseEvent.MOUSE_RELEASED, 266, 266));
-        assertTrue(scene.smallSquareTracker.wasLastStill());        
+        assertTrue(scene.smallSquareTracker.wasLastStill());
     }
 
     @Test
@@ -1305,7 +1305,7 @@ public class MouseTest {
         s.processEvent(MouseEvent.MOUSE_MOVED, 360, 30);
         s.assertCalled();
     }
-    
+
     @Test
     public void coordinatesShouldBeReComputedToSubScenePlane() {
         final TestSceneWithSubScenes s = new TestSceneWithSubScenes();
@@ -1502,26 +1502,26 @@ public class MouseTest {
         assertFalse(s.groupTracker.wasReleased());
         assertTrue(s.rootTracker.wasReleased());
     }
-    
+
     @Test
     public void testMouseEventCanEditCursor() {
         final SimpleTestScene s = new SimpleTestScene();
-        
+
         s.smallSquare.setOnMousePressed(event -> s.smallSquare.setCursor(Cursor.CROSSHAIR));
-        
+
         s.smallSquare.setOnMouseReleased(event -> s.smallSquare.setCursor(Cursor.WAIT));
-        
+
         s.processEvent(MouseEventGenerator.generateMouseEvent(MouseEvent.MOUSE_MOVED, 250, 250));
         assertSame(CursorShim.getCurrentFrame(Cursor.HAND), s.getCursorFrame());
         s.processEvent(MouseEventGenerator.generateMouseEvent(MouseEvent.MOUSE_PRESSED, 250, 250));
         assertSame(CursorShim.getCurrentFrame(Cursor.CROSSHAIR), s.getCursorFrame());
         s.processEvent(MouseEventGenerator.generateMouseEvent(MouseEvent.MOUSE_RELEASED, 250, 250));
         assertSame(CursorShim.getCurrentFrame(Cursor.WAIT), s.getCursorFrame());
-        
+
         s.smallSquare.setOnMouseClicked(event -> s.smallSquare.setCursor(Cursor.TEXT));
-        
+
         s.smallSquare.setCursor(Cursor.HAND);
-        
+
         s.processEvent(MouseEventGenerator.generateMouseEvent(MouseEvent.MOUSE_MOVED, 250, 250));
         assertSame(CursorShim.getCurrentFrame(Cursor.HAND), s.getCursorFrame());
         s.processEvent(MouseEventGenerator.generateMouseEvent(MouseEvent.MOUSE_PRESSED, 250, 250));
@@ -1529,7 +1529,7 @@ public class MouseTest {
         s.processEvent(MouseEventGenerator.generateMouseEvent(MouseEvent.MOUSE_RELEASED, 250, 250));
         assertSame(CursorShim.getCurrentFrame(Cursor.TEXT), s.getCursorFrame());
     }
-    
+
     private static class SimpleTestScene {
 
         MouseEventTracker sceneTracker;
@@ -1537,7 +1537,7 @@ public class MouseTest {
         MouseEventTracker groupTracker;
         MouseEventTracker bigSquareTracker;
         MouseEventTracker smallSquareTracker;
-        
+
         Rectangle smallSquare;
         private boolean moused = false;
         private Scene scene;
@@ -1660,7 +1660,7 @@ public class MouseTest {
                     exitedChild = true;
                 }
             });
-            
+
             node.addEventHandler(MouseEvent.ANY, event -> {
                 if (event.getEventType() != MouseEvent.MOUSE_CLICKED) {
                     lastClickCount = event.getClickCount();
@@ -1722,11 +1722,11 @@ public class MouseTest {
         public boolean isHover() {
             return node.isHover();
         }
-        
+
         public int getLastClickCount() {
             return lastClickCount;
         }
-        
+
         public boolean wasLastStill() {
             return lastIsStill;
         }

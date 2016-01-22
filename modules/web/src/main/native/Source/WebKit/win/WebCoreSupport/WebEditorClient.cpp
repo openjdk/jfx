@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -52,7 +52,7 @@ using namespace WebCore;
 using namespace HTMLNames;
 
 // {09A11D2B-FAFB-4ca0-A6F7-791EE8932C88}
-static const GUID IID_IWebUndoCommand = 
+static const GUID IID_IWebUndoCommand =
 { 0x9a11d2b, 0xfafb, 0x4ca0, { 0xa6, 0xf7, 0x79, 0x1e, 0xe8, 0x93, 0x2c, 0x88 } };
 
 class IWebUndoCommand : public IUnknown {
@@ -73,7 +73,7 @@ public:
     virtual ULONG STDMETHODCALLTYPE Release(void);
 
     // IWebUndoTarget
-    virtual HRESULT STDMETHODCALLTYPE invoke( 
+    virtual HRESULT STDMETHODCALLTYPE invoke(
         /* [in] */ BSTR actionName,
         /* [in] */ IUnknown *obj);
 
@@ -114,7 +114,7 @@ ULONG STDMETHODCALLTYPE WebEditorUndoTarget::Release(void)
     return newRef;
 }
 
-HRESULT STDMETHODCALLTYPE WebEditorUndoTarget::invoke( 
+HRESULT STDMETHODCALLTYPE WebEditorUndoTarget::invoke(
     /* [in] */ BSTR /*actionName*/,
     /* [in] */ IUnknown *obj)
 {
@@ -241,10 +241,10 @@ void WebEditorClient::getClientPasteboardDataForRange(WebCore::Range*, Vector<St
 
 bool WebEditorClient::shouldDeleteRange(Range* /*range*/)
 {
-    notImplemented(); 
-    return true; 
+    notImplemented();
+    return true;
 
-    // FIXME: calling m_webView->editingDelegate() will cause an assertion failure so we don't want to enable this code until that's implemented. 
+    // FIXME: calling m_webView->editingDelegate() will cause an assertion failure so we don't want to enable this code until that's implemented.
     //BOOL result = false;
     //IWebViewEditingDelegate* editingDelegate;
     //// FIXME: DOMRange needs to be implemented before anything meaningful can be done here
@@ -257,17 +257,17 @@ bool WebEditorClient::shouldDeleteRange(Range* /*range*/)
 }
 
 bool WebEditorClient::shouldInsertNode(Node* /*node*/, Range* /*replacingRange*/, EditorInsertAction /*givenAction*/)
-{ 
-    notImplemented(); 
-    return true; 
+{
+    notImplemented();
+    return true;
 }
 
 bool WebEditorClient::shouldInsertText(const String& /*str*/, Range* /* replacingRange */, EditorInsertAction /*givenAction*/)
-{     
-    notImplemented(); 
-    return true; 
+{
+    notImplemented();
+    return true;
 
-    // FIXME: calling m_webView->editingDelegate() will cause an assertion failure so we don't want to enable this code until that's implemented. 
+    // FIXME: calling m_webView->editingDelegate() will cause an assertion failure so we don't want to enable this code until that's implemented.
     //BOOL result = false;
     //IWebViewEditingDelegate* editingDelegate;
     //// FIXME: DOMRange needs to be implemented before anything meaningful can be done here
@@ -448,9 +448,9 @@ private:
 
 WebEditorUndoCommand::WebEditorUndoCommand(PassRefPtr<UndoStep> step, bool isUndo)
     : m_step(step)
-    , m_isUndo(isUndo) 
+    , m_isUndo(isUndo)
     , m_refCount(1)
-{ 
+{
 }
 
 void WebEditorUndoCommand::execute()
@@ -753,7 +753,7 @@ void WebEditorClient::showSpellingUI(bool show)
     COMPtr<IWebEditingDelegate> ed;
     if (FAILED(m_webView->editingDelegate(&ed)) || !ed.get())
         return;
-    
+
     ed->showSpellingUI(show);
 }
 

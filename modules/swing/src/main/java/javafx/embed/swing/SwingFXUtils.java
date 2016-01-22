@@ -72,7 +72,7 @@ public class SwingFXUtils {
      * A new {@code Image} will be created if the supplied object is null,
      * is too small or of a type which the image pixels cannot be easily
      * converted into.
-     * 
+     *
      * @param bimg the {@code BufferedImage} object to be converted
      * @param wimg an optional {@code WritableImage} object that can be
      *        used to store the returned pixel data
@@ -133,11 +133,11 @@ public class SwingFXUtils {
      * Determine the optimal BufferedImage type to use for the specified
      * {@code fxFormat} allowing for the specified {@code bimg} to be used
      * as a potential default storage space if it is not null and is compatible.
-     * 
+     *
      * @param fxFormat the PixelFormat of the source FX Image
      * @param bimg an optional existing {@code BufferedImage} to be used
      *             for storage if it is compatible, or null
-     * @return 
+     * @return
      */
     static int
         getBestBufferedImageType(PixelFormat<?> fxFormat, BufferedImage bimg)
@@ -177,10 +177,10 @@ public class SwingFXUtils {
     /**
      * Determine the appropriate {@link WritablePixelFormat} type that can
      * be used to transfer data into the indicated BufferedImage.
-     * 
+     *
      * @param bimg the BufferedImage that will be used as a destination for
      *             a {@code PixelReader<IntBuffer>#getPixels()} operation.
-     * @return 
+     * @return
      */
     private static WritablePixelFormat<IntBuffer>
         getAssociatedPixelFormat(BufferedImage bimg)
@@ -222,7 +222,7 @@ public class SwingFXUtils {
      * A new {@code BufferedImage} will be created if the supplied object
      * is null, is too small or of a type which the image pixels cannot
      * be easily converted into.
-     * 
+     *
      * @param img the JavaFX {@code Image} to be converted
      * @param bimg an optional {@code BufferedImage} object that may be
      *        used to store the returned pixel data

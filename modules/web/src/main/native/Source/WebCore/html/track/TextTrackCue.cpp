@@ -122,7 +122,7 @@ void TextTrackCue::setStartTime(double value, ExceptionCode& ec)
         ec = TypeError;
         return;
     }
-    
+
     // TODO(93143): Add spec-compliant behavior for negative time values.
     if (m_startTime == value || value < 0)
         return;
@@ -131,7 +131,7 @@ void TextTrackCue::setStartTime(double value, ExceptionCode& ec)
     m_startTime = value;
     didChange();
 }
-    
+
 void TextTrackCue::setEndTime(double value, ExceptionCode& ec)
 {
     // NaN, Infinity and -Infinity values should trigger a TypeError.
@@ -148,12 +148,12 @@ void TextTrackCue::setEndTime(double value, ExceptionCode& ec)
     m_endTime = value;
     didChange();
 }
-    
+
 void TextTrackCue::setPauseOnExit(bool value)
 {
     if (m_pauseOnExit == value)
         return;
-    
+
     m_pauseOnExit = value;
 }
 

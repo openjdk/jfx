@@ -175,7 +175,7 @@ public final class TouchEvent extends InputEvent {
         recomputeToSource(e, getSource(), newSource);
         return e;
     }
-    
+
     /**
      * Creates a copy of the given event with the given fields substituted.
      * @param source the new source of the copied event
@@ -194,7 +194,7 @@ public final class TouchEvent extends InputEvent {
     public EventType<TouchEvent> getEventType() {
         return (EventType<TouchEvent>) super.getEventType();
     }
-    
+
     private final int eventSetId;
 
     /**
@@ -280,14 +280,14 @@ public final class TouchEvent extends InputEvent {
 
     /**
      * Gets all the touch points represented by this set of touch events,
-     * including the touch point of this event. The list is unmodifiable and 
+     * including the touch point of this event. The list is unmodifiable and
      * is sorted by their IDs, which means it is also sorted by the time
      * they were pressed. To distinguish between touch points belonging to
      * a node and unrelated touch points, TouchPoint's {@code belongsTo}
      * method can be used.
      * @return All current touch points in an unmodifiable list
      */
-    @ReturnsUnmodifiableCollection 
+    @ReturnsUnmodifiableCollection
     public List<TouchPoint> getTouchPoints() {
         return touchPoints;
     }

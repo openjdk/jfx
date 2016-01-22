@@ -21,7 +21,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -53,13 +53,13 @@ public:
     {
         return adoptRef(new AutocorrectionAlternativeDetails(replacementString));
     }
-    
+
     const String& replacementString() const { return m_replacementString; }
 private:
     AutocorrectionAlternativeDetails(const String& replacementString)
     : m_replacementString(replacementString)
     { }
-    
+
     String m_replacementString;
 };
 
@@ -178,7 +178,7 @@ void AlternativeTextController::applyPendingCorrection(const VisibleSelection& s
             doApplyCorrection = false;
     }
     if (doApplyCorrection)
-        handleAlternativeTextUIResult(dismissSoon(ReasonForDismissingAlternativeTextAccepted)); 
+        handleAlternativeTextUIResult(dismissSoon(ReasonForDismissingAlternativeTextAccepted));
     else
         m_alternativeTextInfo.rangeWithAlternative.clear();
 }
@@ -268,12 +268,12 @@ void AlternativeTextController::applyAlternativeTextToRange(const Range* range, 
 
     // Clone the range, since the caller of this method may want to keep the original range around.
     RefPtr<Range> rangeWithAlternative = range->cloneRange(ec);
-    
+
     int paragraphStartIndex = TextIterator::rangeLength(Range::create(*m_frame.document(), m_frame.document(), 0, paragraphRangeContainingCorrection.get()->startContainer(), paragraphRangeContainingCorrection.get()->startOffset()).get());
     applyCommand(SpellingCorrectionCommand::create(rangeWithAlternative, alternative));
     // Recalculate pragraphRangeContainingCorrection, since SpellingCorrectionCommand modified the DOM, such that the original paragraphRangeContainingCorrection is no longer valid. Radar: 10305315 Bugzilla: 89526
     paragraphRangeContainingCorrection = TextIterator::rangeFromLocationAndLength(m_frame.document(), paragraphStartIndex, correctionStartOffsetInParagraph + alternative.length());
-    
+
     setEnd(paragraphRangeContainingCorrection.get(), m_frame.selection().selection().start());
     RefPtr<Range> replacementRange = TextIterator::subrange(paragraphRangeContainingCorrection.get(), correctionStartOffsetInParagraph, alternative.length());
     String newText = plainText(replacementRange.get());
@@ -301,8 +301,8 @@ bool AlternativeTextController::applyAutocorrectionBeforeTypingIfAppropriate()
     if (m_alternativeTextInfo.rangeWithAlternative->endPosition() == caretPosition) {
         handleAlternativeTextUIResult(dismissSoon(ReasonForDismissingAlternativeTextAccepted));
         return true;
-    } 
-    
+    }
+
     // Pending correction should always be where caret is. But in case this is not always true, we still want to dismiss the panel without accepting the correction.
     ASSERT(m_alternativeTextInfo.rangeWithAlternative->endPosition() == caretPosition);
     dismiss(ReasonForDismissingAlternativeTextIgnored);
@@ -438,7 +438,7 @@ FloatRect AlternativeTextController::rootViewRectForRange(const Range* range) co
     for (size_t i = 0; i < size; ++i)
         boundingRect.unite(textQuads[i].boundingBox());
     return view->contentsToRootView(IntRect(boundingRect));
-}        
+}
 
 void AlternativeTextController::respondToChangedSelection(const VisibleSelection& oldSelection, FrameSelection::SetSelectionOptions options)
 {
@@ -451,12 +451,12 @@ void AlternativeTextController::respondToChangedSelection(const VisibleSelection
         return;
 
     VisiblePosition selectionPosition = currentSelection.start();
-    
+
     // Creating a Visible position triggers a layout and there is no
     // guarantee that the selection is still valid.
     if (selectionPosition.isNull())
         return;
-    
+
     VisiblePosition endPositionOfWord = endOfWord(selectionPosition, LeftWordIfOnBoundary);
     if (selectionPosition != endPositionOfWord)
         return;

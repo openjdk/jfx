@@ -29,7 +29,7 @@ import java.util.NoSuchElementException;
 
 /**
  * The <code>FlatteningPathIterator</code> class returns a flattened view of
- * another {@link PathIterator} object.  Other {@link java.awt.Shape Shape} 
+ * another {@link PathIterator} object.  Other {@link java.awt.Shape Shape}
  * classes can use this class to provide flattening behavior for their paths
  * without having to perform the interpolation calculations themselves.
  *
@@ -83,10 +83,10 @@ public class FlatteningPathIterator implements PathIterator {
     boolean done;           // True when iteration is done
 
     /**
-     * Constructs a new <code>FlatteningPathIterator</code> object that 
-     * flattens a path as it iterates over it.  The iterator does not 
-     * subdivide any curve read from the source iterator to more than 
-     * 10 levels of subdivision which yields a maximum of 1024 line 
+     * Constructs a new <code>FlatteningPathIterator</code> object that
+     * flattens a path as it iterates over it.  The iterator does not
+     * subdivide any curve read from the source iterator to more than
+     * 10 levels of subdivision which yields a maximum of 1024 line
      * segments per curve.
      * @param src the original unflattened path being iterated over
      * @param flatness the maximum allowable distance between the
@@ -97,7 +97,7 @@ public class FlatteningPathIterator implements PathIterator {
     }
 
     /**
-     * Constructs a new <code>FlatteningPathIterator</code> object 
+     * Constructs a new <code>FlatteningPathIterator</code> object
      * that flattens a path as it iterates over it.
      * The <code>limit</code> parameter allows you to control the
      * maximum number of recursive subdivisions that the iterator
@@ -110,7 +110,7 @@ public class FlatteningPathIterator implements PathIterator {
      * control points and the flattened curve
      * @param limit the maximum number of recursive subdivisions
      * allowed for any curved segment
-     * @exception <code>IllegalArgumentException</code> if 
+     * @exception <code>IllegalArgumentException</code> if
      *      <code>flatness</code> or <code>limit</code>
      *      is less than zero
      */
@@ -140,7 +140,7 @@ public class FlatteningPathIterator implements PathIterator {
 
     /**
      * Returns the recursion limit of this iterator.
-     * @return the recursion limit of this 
+     * @return the recursion limit of this
      * <code>FlatteningPathIterator</code>.
      */
     public int getRecursionLimit() {
@@ -197,7 +197,7 @@ public class FlatteningPathIterator implements PathIterator {
 
     private void next(boolean doNext) {
         int level;
-    
+
         if (holdIndex >= holdEnd) {
             if (doNext) {
             src.next();
@@ -210,7 +210,7 @@ public class FlatteningPathIterator implements PathIterator {
             levelIndex = 0;
             levels[0] = 0;
         }
-    
+
         switch (holdType) {
         case SEG_MOVETO:
         case SEG_LINETO:
@@ -241,19 +241,19 @@ public class FlatteningPathIterator implements PathIterator {
             hold[holdIndex + 4] = curx = hold[2];
             hold[holdIndex + 5] = cury = hold[3];
             }
-    
+
             level = levels[levelIndex];
             while (level < limit) {
             if (QuadCurve2D.getFlatnessSq(hold, holdIndex) < squareflat) {
                 break;
             }
-    
+
             ensureHoldCapacity(4);
             QuadCurve2D.subdivide(hold, holdIndex,
                           hold, holdIndex - 4,
                           hold, holdIndex);
             holdIndex -= 4;
-    
+
             // Now that we have subdivided, we have constructed
             // two curves of one depth lower than the original
             // curve.  One of those curves is in the place of
@@ -265,7 +265,7 @@ public class FlatteningPathIterator implements PathIterator {
             levelIndex++;
             levels[levelIndex] = level;
             }
-    
+
             // This curve segment is flat enough, or it is too deep
             // in recursion levels to try to flatten any more.  The
             // two coordinates at holdIndex+4 and holdIndex+5 now
@@ -288,19 +288,19 @@ public class FlatteningPathIterator implements PathIterator {
             hold[holdIndex + 6] = curx = hold[4];
             hold[holdIndex + 7] = cury = hold[5];
             }
-    
+
             level = levels[levelIndex];
             while (level < limit) {
             if (CubicCurve2D.getFlatnessSq(hold, holdIndex) < squareflat) {
                 break;
             }
-    
+
             ensureHoldCapacity(6);
             CubicCurve2D.subdivide(hold, holdIndex,
                            hold, holdIndex - 6,
                            hold, holdIndex);
             holdIndex -= 6;
-    
+
             // Now that we have subdivided, we have constructed
             // two curves of one depth lower than the original
             // curve.  One of those curves is in the place of
@@ -312,7 +312,7 @@ public class FlatteningPathIterator implements PathIterator {
             levelIndex++;
             levels[levelIndex] = level;
             }
-    
+
             // This curve segment is flat enough, or it is too deep
             // in recursion levels to try to flatten any more.  The
             // two coordinates at holdIndex+6 and holdIndex+7 now

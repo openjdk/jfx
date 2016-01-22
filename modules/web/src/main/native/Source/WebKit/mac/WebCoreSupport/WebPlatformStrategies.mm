@@ -143,7 +143,7 @@ void WebPlatformStrategies::getPluginInfo(const Page* page, Vector<PluginInfo>& 
 
         plugins.append([plugin pluginInfo]);
     }
-    
+
     END_BLOCK_OBJC_EXCEPTIONS;
 }
 
@@ -194,7 +194,7 @@ String WebPlatformStrategies::uniqueName()
 
 Color WebPlatformStrategies::color(const String& pasteboardName)
 {
-    return PlatformPasteboard(pasteboardName).color();    
+    return PlatformPasteboard(pasteboardName).color();
 }
 
 URL WebPlatformStrategies::url(const String& pasteboardName)

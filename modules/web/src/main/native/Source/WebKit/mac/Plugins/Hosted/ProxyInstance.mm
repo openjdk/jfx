@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #if USE(PLUGIN_HOST_PROCESS) && ENABLE(NETSCAPE_PLUGIN_API)
@@ -68,20 +68,20 @@ static ProxyClass* proxyClass()
     DEFINE_STATIC_LOCAL(ProxyClass, proxyClass, ());
     return &proxyClass;
 }
-    
+
 class ProxyField : public JSC::Bindings::Field {
 public:
     ProxyField(uint64_t serverIdentifier)
         : m_serverIdentifier(serverIdentifier)
     {
     }
-    
+
     uint64_t serverIdentifier() const { return m_serverIdentifier; }
 
 private:
     virtual JSValue valueFromInstance(ExecState*, const Instance*) const;
     virtual void setValueToInstance(ExecState*, const Instance*, JSValue) const;
-    
+
     uint64_t m_serverIdentifier;
 };
 
@@ -89,7 +89,7 @@ JSValue ProxyField::valueFromInstance(ExecState* exec, const Instance* instance)
 {
     return static_cast<const ProxyInstance*>(instance)->fieldValue(exec, this);
 }
-    
+
 void ProxyField::setValueToInstance(ExecState* exec, const Instance* instance, JSValue value) const
 {
     static_cast<const ProxyInstance*>(instance)->setFieldValue(exec, this, value);
@@ -122,12 +122,12 @@ ProxyInstance::~ProxyInstance()
 {
     if (!m_instanceProxy)
         return;
-    
+
     m_instanceProxy->removeInstance(this);
 
     invalidate();
 }
-    
+
 RuntimeObject* ProxyInstance::newRuntimeObject(ExecState* exec)
 {
     // FIXME: deprecatedGetDOMStructure uses the prototype off of the wrong global object.
@@ -159,7 +159,7 @@ JSValue ProxyInstance::invoke(JSC::ExecState* exec, InvokeType type, uint64_t id
         }
         return jsUndefined();
     }
-    
+
     auto reply = waitForReply<NetscapePluginInstanceProxy::BooleanAndDataReply>(requestID);
     NetscapePluginInstanceProxy::moveGlobalExceptionToExecState(exec);
 
@@ -170,7 +170,7 @@ JSValue ProxyInstance::invoke(JSC::ExecState* exec, InvokeType type, uint64_t id
 
     if (!reply || !reply->m_returnValue)
         return jsUndefined();
-    
+
     return m_instanceProxy->demarshalValue(exec, (char*)CFDataGetBytePtr(reply->m_result.get()), CFDataGetLength(reply->m_result.get()));
 }
 
@@ -231,12 +231,12 @@ bool ProxyInstance::supportsInvokeDefaultMethod() const
 {
     if (!m_instanceProxy)
         return false;
-    
+
     uint32_t requestID = m_instanceProxy->nextRequestID();
-    
+
     if (_WKPHNPObjectHasInvokeDefaultMethod(m_instanceProxy->hostProxy()->port(), m_instanceProxy->pluginID(), requestID, m_objectID) != KERN_SUCCESS)
         return false;
-    
+
     auto reply = waitForReply<NetscapePluginInstanceProxy::BooleanReply>(requestID);
     return reply && reply->m_result;
 }
@@ -250,16 +250,16 @@ bool ProxyInstance::supportsConstruct() const
 {
     if (!m_instanceProxy)
         return false;
-    
+
     uint32_t requestID = m_instanceProxy->nextRequestID();
-    
+
     if (_WKPHNPObjectHasConstructMethod(m_instanceProxy->hostProxy()->port(), m_instanceProxy->pluginID(), requestID, m_objectID) != KERN_SUCCESS)
         return false;
-    
+
     auto reply = waitForReply<NetscapePluginInstanceProxy::BooleanReply>(requestID);
     return reply && reply->m_result;
 }
-    
+
 JSValue ProxyInstance::invokeConstruct(ExecState* exec, const ArgList& args)
 {
     return invoke(exec, Construct, 0, args);
@@ -301,19 +301,19 @@ void ProxyInstance::getPropertyNames(ExecState* exec, PropertyNameArray& nameArr
 {
     if (!m_instanceProxy)
         return;
-    
+
     uint32_t requestID = m_instanceProxy->nextRequestID();
-    
+
     if (_WKPHNPObjectEnumerate(m_instanceProxy->hostProxy()->port(), m_instanceProxy->pluginID(), requestID, m_objectID) != KERN_SUCCESS)
         return;
-    
+
     auto reply = waitForReply<NetscapePluginInstanceProxy::BooleanAndDataReply>(requestID);
     NetscapePluginInstanceProxy::moveGlobalExceptionToExecState(exec);
     if (!reply || !reply->m_returnValue)
         return;
-    
+
     NSArray *array = [NSPropertyListSerialization propertyListWithData:(NSData *)reply->m_result.get() options:NSPropertyListImmutable format:nullptr error:nullptr];
-    
+
     for (NSNumber *number in array) {
         IdentifierRep* identifier = reinterpret_cast<IdentifierRep*>([number longLongValue]);
         if (!IdentifierRep::isValid(identifier))
@@ -335,18 +335,18 @@ Method* ProxyInstance::methodNamed(PropertyName propertyName)
 
     if (!m_instanceProxy)
         return nullptr;
-    
+
     // If we already have an entry in the map, use it.
     auto existingMapEntry = m_methods.find(name.impl());
     if (existingMapEntry != m_methods.end())
         return existingMapEntry->value.get();
-    
+
     uint64_t methodName = reinterpret_cast<uint64_t>(_NPN_GetStringIdentifier(name.ascii().data()));
     uint32_t requestID = m_instanceProxy->nextRequestID();
-    
+
     if (_WKPHNPObjectHasMethod(m_instanceProxy->hostProxy()->port(), m_instanceProxy->pluginID(), requestID, m_objectID, methodName) != KERN_SUCCESS)
         return nullptr;
-    
+
     auto reply = waitForReply<NetscapePluginInstanceProxy::BooleanReply>(requestID);
     if (!reply)
         return nullptr;
@@ -370,25 +370,25 @@ Field* ProxyInstance::fieldNamed(PropertyName propertyName)
 
     if (!m_instanceProxy)
         return nullptr;
-    
+
     // If we already have an entry in the map, use it.
     auto existingMapEntry = m_fields.find(name.impl());
     if (existingMapEntry != m_fields.end())
         return existingMapEntry->value.get();
-    
+
     uint64_t identifier = reinterpret_cast<uint64_t>(_NPN_GetStringIdentifier(name.ascii().data()));
     uint32_t requestID = m_instanceProxy->nextRequestID();
-    
+
     if (_WKPHNPObjectHasProperty(m_instanceProxy->hostProxy()->port(), m_instanceProxy->pluginID(), requestID, m_objectID, identifier) != KERN_SUCCESS)
         return nullptr;
-    
+
     auto reply = waitForReply<NetscapePluginInstanceProxy::BooleanReply>(requestID);
     if (!reply)
         return nullptr;
-    
+
     if (!reply->m_result && !m_instanceProxy->hostProxy()->shouldCacheMissingPropertiesAndMethods())
         return nullptr;
-    
+
     // Add a new entry to the map unless an entry was added while we were in waitForReply.
     auto mapAddResult = m_fields.add(name.impl(), nullptr);
     if (mapAddResult.isNewEntry && reply->m_result)
@@ -400,29 +400,29 @@ JSC::JSValue ProxyInstance::fieldValue(ExecState* exec, const Field* field) cons
 {
     if (!m_instanceProxy)
         return jsUndefined();
-    
+
     uint64_t serverIdentifier = static_cast<const ProxyField*>(field)->serverIdentifier();
     uint32_t requestID = m_instanceProxy->nextRequestID();
-    
+
     if (_WKPHNPObjectGetProperty(m_instanceProxy->hostProxy()->port(), m_instanceProxy->pluginID(), requestID, m_objectID, serverIdentifier) != KERN_SUCCESS)
         return jsUndefined();
-    
+
     auto reply = waitForReply<NetscapePluginInstanceProxy::BooleanAndDataReply>(requestID);
     NetscapePluginInstanceProxy::moveGlobalExceptionToExecState(exec);
     if (!reply || !reply->m_returnValue)
         return jsUndefined();
-    
+
     return m_instanceProxy->demarshalValue(exec, (char*)CFDataGetBytePtr(reply->m_result.get()), CFDataGetLength(reply->m_result.get()));
 }
-    
+
 void ProxyInstance::setFieldValue(ExecState* exec, const Field* field, JSValue value) const
 {
     if (!m_instanceProxy)
         return;
-    
+
     uint64_t serverIdentifier = static_cast<const ProxyField*>(field)->serverIdentifier();
     uint32_t requestID = m_instanceProxy->nextRequestID();
-    
+
     data_t valueData;
     mach_msg_type_number_t valueLength;
 
@@ -434,7 +434,7 @@ void ProxyInstance::setFieldValue(ExecState* exec, const Field* field, JSValue v
         m_instanceProxy->releaseLocalObject(value);
     if (kr != KERN_SUCCESS)
         return;
-    
+
     waitForReply<NetscapePluginInstanceProxy::BooleanReply>(requestID);
     NetscapePluginInstanceProxy::moveGlobalExceptionToExecState(exec);
 }
@@ -442,7 +442,7 @@ void ProxyInstance::setFieldValue(ExecState* exec, const Field* field, JSValue v
 void ProxyInstance::invalidate()
 {
     ASSERT(m_instanceProxy);
-    
+
     if (NetscapePluginHostProxy* hostProxy = m_instanceProxy->hostProxy())
         _WKPHNPObjectRelease(hostProxy->port(), m_instanceProxy->pluginID(), m_objectID);
     m_instanceProxy = nullptr;

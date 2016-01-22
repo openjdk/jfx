@@ -56,7 +56,7 @@ public abstract class AbstractTask extends TaskShim<String> {
 
     Thread appThread;
     ServiceTestBase test;
-    
+
     // Simulates scheduling the concurrent for execution
     public void simulateSchedule() {
         shim_setState(State.SCHEDULED);

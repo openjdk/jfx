@@ -208,7 +208,7 @@ StyleDifference SVGRenderStyle::diff(const SVGRenderStyle* other) const
 
     // NOTE: All comparisions below may only return StyleDifferenceRepaint
 
-    // Painting related properties only need repaints. 
+    // Painting related properties only need repaints.
     if (miscNotEqual) {
         if (misc->floodColor != other->misc->floodColor
             || misc->floodOpacity != other->misc->floodOpacity

@@ -37,7 +37,7 @@
 #include "SliderThumbElement.h"
 
 namespace WebCore {
-    
+
 using namespace HTMLNames;
 
 AccessibilitySlider::AccessibilitySlider(RenderObject* renderer)
@@ -55,7 +55,7 @@ AccessibilityOrientation AccessibilitySlider::orientation() const
     // Default to horizontal in the unknown case.
     if (!m_renderer)
         return AccessibilityOrientationHorizontal;
-    
+
     const RenderStyle& style = m_renderer->style();
 
     ControlPart styleAppearance = style.appearance();
@@ -65,21 +65,21 @@ AccessibilityOrientation AccessibilitySlider::orientation() const
     case MediaSliderPart:
     case MediaFullScreenVolumeSliderPart:
         return AccessibilityOrientationHorizontal;
-    
-    case SliderThumbVerticalPart: 
+
+    case SliderThumbVerticalPart:
     case SliderVerticalPart:
     case MediaVolumeSliderPart:
         return AccessibilityOrientationVertical;
-        
+
     default:
         return AccessibilityOrientationHorizontal;
     }
 }
-    
+
 void AccessibilitySlider::addChildren()
 {
-    ASSERT(!m_haveChildren); 
-    
+    ASSERT(!m_haveChildren);
+
     m_haveChildren = true;
 
     AXObjectCache* cache = m_renderer->document().axObjectCache();
@@ -99,7 +99,7 @@ const AtomicString& AccessibilitySlider::getAttribute(const QualifiedName& attri
 {
     return inputElement()->getAttribute(attribute);
 }
-    
+
 AccessibilityObject* AccessibilitySlider::elementAccessibilityHitTest(const IntPoint& point) const
 {
     if (m_children.size()) {
@@ -107,7 +107,7 @@ AccessibilityObject* AccessibilitySlider::elementAccessibilityHitTest(const IntP
         if (m_children[0]->elementRect().contains(point))
             return m_children[0].get();
     }
-    
+
     return axObjectCache()->getOrCreate(m_renderer);
 }
 
@@ -129,7 +129,7 @@ float AccessibilitySlider::minValueForRange() const
 void AccessibilitySlider::setValue(const String& value)
 {
     HTMLInputElement* input = inputElement();
-    
+
     if (input->value() == value)
         return;
 
@@ -153,12 +153,12 @@ PassRefPtr<AccessibilitySliderThumb> AccessibilitySliderThumb::create()
 {
     return adoptRef(new AccessibilitySliderThumb());
 }
-    
+
 LayoutRect AccessibilitySliderThumb::elementRect() const
 {
     if (!m_parent)
         return LayoutRect();
-    
+
     RenderObject* sliderRenderer = m_parent->renderer();
     if (!sliderRenderer || !sliderRenderer->isSlider())
         return LayoutRect();

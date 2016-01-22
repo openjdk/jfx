@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef WebMutableURLRequest_H
@@ -64,44 +64,44 @@ public:
     virtual ULONG STDMETHODCALLTYPE Release(void);
 
     // IWebURLRequest
-    virtual HRESULT STDMETHODCALLTYPE requestWithURL( 
+    virtual HRESULT STDMETHODCALLTYPE requestWithURL(
         /* [in] */ BSTR theURL,
         /* [optional][in] */ WebURLRequestCachePolicy cachePolicy,
         /* [optional][in] */ double timeoutInterval);
-    
-    virtual HRESULT STDMETHODCALLTYPE allHTTPHeaderFields( 
+
+    virtual HRESULT STDMETHODCALLTYPE allHTTPHeaderFields(
         /* [retval][out] */ IPropertyBag **result);
-    
-    virtual HRESULT STDMETHODCALLTYPE cachePolicy( 
+
+    virtual HRESULT STDMETHODCALLTYPE cachePolicy(
         /* [retval][out] */ WebURLRequestCachePolicy *result);
-    
-    virtual HRESULT STDMETHODCALLTYPE HTTPBody( 
+
+    virtual HRESULT STDMETHODCALLTYPE HTTPBody(
         /* [retval][out] */ IStream **result);
-    
-    virtual HRESULT STDMETHODCALLTYPE HTTPBodyStream( 
+
+    virtual HRESULT STDMETHODCALLTYPE HTTPBodyStream(
         /* [retval][out] */ IStream **result);
-    
-    virtual HRESULT STDMETHODCALLTYPE HTTPMethod( 
+
+    virtual HRESULT STDMETHODCALLTYPE HTTPMethod(
         /* [retval][out] */ BSTR *result);
-    
-    virtual HRESULT STDMETHODCALLTYPE HTTPShouldHandleCookies( 
+
+    virtual HRESULT STDMETHODCALLTYPE HTTPShouldHandleCookies(
         /* [retval][out] */ BOOL *result);
-    
-    virtual HRESULT STDMETHODCALLTYPE initWithURL( 
+
+    virtual HRESULT STDMETHODCALLTYPE initWithURL(
         /* [in] */ BSTR url,
         /* [optional][in] */ WebURLRequestCachePolicy cachePolicy,
         /* [optional][in] */ double timeoutInterval);
-    
-    virtual HRESULT STDMETHODCALLTYPE mainDocumentURL( 
+
+    virtual HRESULT STDMETHODCALLTYPE mainDocumentURL(
         /* [retval][out] */ BSTR *result);
-    
-    virtual HRESULT STDMETHODCALLTYPE timeoutInterval( 
+
+    virtual HRESULT STDMETHODCALLTYPE timeoutInterval(
         /* [retval][out] */ double *result);
-    
-    virtual HRESULT STDMETHODCALLTYPE URL( 
+
+    virtual HRESULT STDMETHODCALLTYPE URL(
         /* [retval][out] */ BSTR *result);
-    
-    virtual HRESULT STDMETHODCALLTYPE valueForHTTPHeaderField( 
+
+    virtual HRESULT STDMETHODCALLTYPE valueForHTTPHeaderField(
         /* [in] */ BSTR field,
         /* [retval][out] */ BSTR *result);
 
@@ -116,38 +116,38 @@ public:
         /* [out, retval] */ BOOL* result);
 
     // IWebMutableURLRequest
-    virtual HRESULT STDMETHODCALLTYPE addValue( 
+    virtual HRESULT STDMETHODCALLTYPE addValue(
         /* [in] */ BSTR value,
         /* [in] */ BSTR field);
-    
-    virtual HRESULT STDMETHODCALLTYPE setAllHTTPHeaderFields( 
+
+    virtual HRESULT STDMETHODCALLTYPE setAllHTTPHeaderFields(
         /* [in] */ IPropertyBag *headerFields);
-    
-    virtual HRESULT STDMETHODCALLTYPE setCachePolicy( 
+
+    virtual HRESULT STDMETHODCALLTYPE setCachePolicy(
         /* [in] */ WebURLRequestCachePolicy policy);
-    
-    virtual HRESULT STDMETHODCALLTYPE setHTTPBody( 
+
+    virtual HRESULT STDMETHODCALLTYPE setHTTPBody(
         /* [in] */ IStream *data);
-    
-    virtual HRESULT STDMETHODCALLTYPE setHTTPBodyStream( 
+
+    virtual HRESULT STDMETHODCALLTYPE setHTTPBodyStream(
         /* [in] */ IStream *data);
-    
-    virtual HRESULT STDMETHODCALLTYPE setHTTPMethod( 
+
+    virtual HRESULT STDMETHODCALLTYPE setHTTPMethod(
         /* [in] */ BSTR method);
-    
-    virtual HRESULT STDMETHODCALLTYPE setHTTPShouldHandleCookies( 
+
+    virtual HRESULT STDMETHODCALLTYPE setHTTPShouldHandleCookies(
         /* [in] */ BOOL handleCookies);
-    
-    virtual HRESULT STDMETHODCALLTYPE setMainDocumentURL( 
+
+    virtual HRESULT STDMETHODCALLTYPE setMainDocumentURL(
         /* [in] */ BSTR theURL);
-    
-    virtual HRESULT STDMETHODCALLTYPE setTimeoutInterval( 
+
+    virtual HRESULT STDMETHODCALLTYPE setTimeoutInterval(
         /* [in] */ double timeoutInterval);
-    
-    virtual HRESULT STDMETHODCALLTYPE setURL( 
+
+    virtual HRESULT STDMETHODCALLTYPE setURL(
         /* [in] */ BSTR theURL);
-    
-    virtual HRESULT STDMETHODCALLTYPE setValue( 
+
+    virtual HRESULT STDMETHODCALLTYPE setValue(
         /* [in] */ BSTR value,
         /* [in] */ BSTR field);
 
@@ -163,7 +163,7 @@ public:
     // WebMutableURLRequest
     void setFormData(const PassRefPtr<WebCore::FormData> data);
     const PassRefPtr<WebCore::FormData> formData() const;
-    
+
     void addHTTPHeaderFields(const WebCore::HTTPHeaderMap& headerFields);
     const WebCore::HTTPHeaderMap& httpHeaderFields() const;
 

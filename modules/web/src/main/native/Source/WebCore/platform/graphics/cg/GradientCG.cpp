@@ -21,7 +21,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -45,7 +45,7 @@ CGGradientRef Gradient::platformGradient()
         return m_gradient;
 
     sortStopsIfNecessary();
-    
+
     const int cReservedStops = 3;
     Vector<CGFloat, 4 * cReservedStops> colorComponents;
     colorComponents.reserveInitialCapacity(m_stops.size() * 4); // RGBA components per stop
@@ -61,7 +61,7 @@ CGGradientRef Gradient::platformGradient()
 
         locations.uncheckedAppend(m_stops[i].stop);
     }
-    
+
     m_gradient = CGGradientCreateWithColorComponents(deviceRGBColorSpaceRef(), colorComponents.data(), locations.data(), m_stops.size());
 
     return m_gradient;

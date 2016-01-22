@@ -24,7 +24,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -64,7 +64,7 @@ public:
 #endif
     {
     }
-    
+
     ImageBuffer* getScratchBuffer(const IntSize& size)
     {
         ASSERT(!m_bufferInUse);
@@ -126,7 +126,7 @@ public:
         const double scratchBufferPurgeInterval = 2;
         m_purgeTimer.startOneShot(scratchBufferPurgeInterval);
     }
-    
+
     static ScratchBuffer& shared();
 
 private:
@@ -134,7 +134,7 @@ private:
     {
         clearScratchBuffer();
     }
-    
+
     void clearScratchBuffer()
     {
         m_imageBuffer = nullptr;
@@ -144,7 +144,7 @@ private:
 
     std::unique_ptr<ImageBuffer> m_imageBuffer;
     Timer<ScratchBuffer> m_purgeTimer;
-    
+
     FloatRect m_lastInsetBounds;
     FloatRect m_lastShadowRect;
     FloatRoundedRect::Radii m_lastRadii;
@@ -153,7 +153,7 @@ private:
     FloatSize m_lastRadius;
     bool m_lastWasInset;
     FloatSize m_lastLayerSize;
-    
+
 #if !ASSERT_DISABLED
     bool m_bufferInUse;
 #endif
@@ -307,7 +307,7 @@ void ShadowBlur::blurLayerImage(unsigned char* imageData, const IntSize& size, i
     // Two stages: horizontal and vertical
     for (int pass = 0; pass < 2; ++pass) {
         unsigned char* pixels = imageData;
-        
+
         if (!pass && !m_blurRadius.width())
             final = 0; // Do no work if horizonal blur is zero.
 
@@ -345,13 +345,13 @@ void ShadowBlur::blurLayerImage(unsigned char* imageData, const IntSize& size, i
                     *ptr = (sum * invCount) >> blurSumShift;
                     sum += ((ofs < dim) ? *next : alpha2) - alpha1;
                 }
-                
+
                 prev = pixels + channels[step];
                 for (; ofs < dim; ptr += stride, prev += stride, next += stride, ++i, ++ofs) {
                     *ptr = (sum * invCount) >> blurSumShift;
                     sum += (*next) - (*prev);
                 }
-                
+
                 for (; i < dim; ptr += stride, prev += stride, ++i) {
                     *ptr = (sum * invCount) >> blurSumShift;
                     sum += alpha2 - (*prev);
@@ -440,7 +440,7 @@ IntRect ShadowBlur::calculateLayerBoundingRect(GraphicsContext* context, const F
             inflatedClip.inflateX(1);
             inflatedClip.inflateY(1);
         }
-        
+
         layerRect.intersect(inflatedClip);
     }
 
@@ -499,12 +499,12 @@ IntSize ShadowBlur::templateSize(const IntSize& radiusPadding, const FloatRounde
     int rightSlice;
     int topSlice;
     int bottomSlice;
-    
+
     IntSize blurExpansion = radiusPadding;
     blurExpansion.scale(2);
 
     computeSliceSizesFromRadii(blurExpansion, radii, leftSlice, rightSlice, topSlice, bottomSlice);
-    
+
     return IntSize(templateSideLength + leftSlice + rightSlice,
                    templateSideLength + topSlice + bottomSlice);
 }
@@ -592,7 +592,7 @@ void ShadowBlur::drawRectShadowWithoutTiling(GraphicsContext* graphicsContext, c
 
         blurShadowBuffer(expandedIntSize(m_layerSize));
     }
-    
+
     drawShadowBuffer(graphicsContext);
     m_layerImage = 0;
     ScratchBuffer::shared().scheduleScratchBufferPurge();
@@ -633,7 +633,7 @@ void ShadowBlur::drawInsetShadowWithoutTiling(GraphicsContext* graphicsContext, 
 
         blurShadowBuffer(expandedIntSize(m_layerSize));
     }
-    
+
     drawShadowBuffer(graphicsContext);
     m_layerImage = 0;
     ScratchBuffer::shared().scheduleScratchBufferPurge();
@@ -729,7 +729,7 @@ void ShadowBlur::drawInsetShadowWithTiling(GraphicsContext* graphicsContext, con
         graphicsContext->clearShadow();
         graphicsContext->fillPath(exteriorPath);
     }
-    
+
     drawLayerPieces(graphicsContext, destHoleBounds, radii, edgeSize, templateSize, InnerShadow);
 
     m_layerImage = 0;
@@ -753,7 +753,7 @@ void ShadowBlur::drawRectShadowWithTiling(GraphicsContext* graphicsContext, cons
 
         shadowContext->clearRect(FloatRect(0, 0, templateSize.width(), templateSize.height()));
         shadowContext->setFillColor(Color::black, ColorSpaceDeviceRGB);
-        
+
         if (radii.isZero())
             shadowContext->fillRect(templateShadow);
         else {
@@ -812,7 +812,7 @@ void ShadowBlur::drawLayerPieces(GraphicsContext* graphicsContext, const FloatRe
     // because ImageBuffer::draw() knows that it doesn't have to copy the image bits.
     FloatRect centerRect(shadowBounds.x() + leftSlice, shadowBounds.y() + topSlice, centerWidth, centerHeight);
     centerRect = graphicsContext->roundToDevicePixels(centerRect);
-    
+
     // Top side.
     FloatRect tileRect = FloatRect(leftSlice, 0, templateSideLength, topSlice);
     FloatRect destRect = FloatRect(centerRect.x(), centerRect.y() - topSlice, centerRect.width(), topSlice);

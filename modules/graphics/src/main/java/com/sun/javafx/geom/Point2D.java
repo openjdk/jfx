@@ -48,7 +48,7 @@ public class Point2D {
     public Point2D() { }
 
     /**
-     * Constructs and initializes a <code>Point2D</code> with 
+     * Constructs and initializes a <code>Point2D</code> with
      * the specified coordinates.
      *
      * @param x the X coordinate of the newly
@@ -62,7 +62,7 @@ public class Point2D {
     }
 
     /**
-     * Sets the location of this <code>Point2D</code> to the 
+     * Sets the location of this <code>Point2D</code> to the
      * specified <code>float</code> coordinates.
      *
      * @param x the new X coordinate of this {@code Point2D}
@@ -116,7 +116,7 @@ public class Point2D {
     }
 
     /**
-     * Returns the square of the distance from this 
+     * Returns the square of the distance from this
      * <code>Point2D</code> to a specified point.
      *
      * @param px the X coordinate of the specified point to be measured
@@ -133,7 +133,7 @@ public class Point2D {
     }
 
     /**
-     * Returns the square of the distance from this 
+     * Returns the square of the distance from this
      * <code>Point2D</code> to a specified <code>Point2D</code>.
      *
      * @param pt the specified point to be measured
@@ -148,7 +148,7 @@ public class Point2D {
     }
 
     /**
-     * Returns the distance from this <code>Point2D</code> to 
+     * Returns the distance from this <code>Point2D</code> to
      * a specified point.
      *
      * @param px the X coordinate of the specified point to be measured
@@ -191,7 +191,7 @@ public class Point2D {
 
     /**
      * Determines whether or not two points are equal. Two instances of
-     * <code>Point2D</code> are equal if the values of their 
+     * <code>Point2D</code> are equal if the values of their
      * <code>x</code> and <code>y</code> member fields, representing
      * their position in the coordinate space, are the same.
      * @param obj an object to be compared with this <code>Point2D</code>
@@ -207,13 +207,13 @@ public class Point2D {
         }
         return false;
     }
-    
+
     /**
-     * Returns a <code>String</code> that represents the value 
+     * Returns a <code>String</code> that represents the value
      * of this <code>Point2D</code>.
      * @return a string representation of this <code>Point2D</code>.
      */
     public String toString() {
         return "Point2D["+x+", "+y+"]";
-    }    
+    }
 }

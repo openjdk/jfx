@@ -46,19 +46,19 @@ public class HelloSlider extends Application {
 
     @Override public void start(Stage stage) {
         stage.setTitle("Hello Slider");
-        
+
         VBox vbox = new VBox(4);
         Slider slider = new Slider();
         vbox.getChildren().add(slider);
-        
+
         slider = new Slider();
         slider.setBlockIncrement(30);
         vbox.getChildren().add(slider);
-        
+
         slider = new Slider();
         slider.setSnapToTicks(true);
         vbox.getChildren().add(slider);
-        
+
         slider = new Slider();
         slider.setShowTickMarks(true);
         vbox.getChildren().add(slider);
@@ -84,10 +84,10 @@ public class HelloSlider extends Application {
         slider.setShowTickLabels(true);
         view.rotateProperty().bind(slider.valueProperty());
         vbox.getChildren().add(slider);
-        
+
         HBox hbox = new HBox(5);
         hbox.getChildren().add(vbox);
-        
+
         slider = new Slider(0, 300, 0.0);
         slider.setOrientation(Orientation.VERTICAL);
         slider.setBlockIncrement(10d);
@@ -97,7 +97,7 @@ public class HelloSlider extends Application {
         slider.setShowTickLabels(true);
         view.fitWidthProperty().bind(slider.valueProperty());
         hbox.getChildren().add(slider);
-        
+
         slider = new Slider(0, 256, 0.0);
         slider.setOrientation(Orientation.VERTICAL);
         slider.setBlockIncrement(10d);
@@ -107,7 +107,7 @@ public class HelloSlider extends Application {
         slider.setShowTickLabels(true);
         view.fitHeightProperty().bind(slider.valueProperty());
         hbox.getChildren().add(slider);
-        
+
 
         Scene scene = new Scene(hbox);
         stage.setScene(scene);

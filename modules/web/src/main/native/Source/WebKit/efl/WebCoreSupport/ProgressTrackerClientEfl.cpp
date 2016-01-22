@@ -37,12 +37,12 @@ ProgressTrackerClientEfl::ProgressTrackerClientEfl(Evas_Object* view)
 {
     ASSERT(m_view);
 }
-    
+
 void ProgressTrackerClientEfl::progressTrackerDestroyed()
 {
     delete this;
 }
-    
+
 void ProgressTrackerClientEfl::progressStarted(Frame& originatingProgressFrame)
 {
     ewk_frame_load_started(EWKPrivate::kitFrame(&originatingProgressFrame));

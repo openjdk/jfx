@@ -46,24 +46,24 @@ public class ObservableLongValueStub extends ObservableValueBase<Number> impleme
     public Long getValue() {
         return value;
     }
-    
-	@Override
-	public int intValue() {
-		return (int)value;
-	}
 
-	@Override
-	public long longValue() {
-		return value;
-	}
+    @Override
+    public int intValue() {
+        return (int)value;
+    }
 
-	@Override
-	public float floatValue() {
-		return value;
-	}
+    @Override
+    public long longValue() {
+        return value;
+    }
 
-	@Override
-	public double doubleValue() {
-		return value;
-	}
+    @Override
+    public float floatValue() {
+        return value;
+    }
+
+    @Override
+    public double doubleValue() {
+        return value;
+    }
 }

@@ -47,7 +47,7 @@
  *   </varlistentry>
  *   <varlistentry>
  *     <term>delay()</term>
- *     <listitem><para>Get the number of samples written but not yet played 
+ *     <listitem><para>Get the number of samples written but not yet played
  *     by the device.</para></listitem>
  *   </varlistentry>
  *   <varlistentry>
@@ -205,7 +205,7 @@ typedef gint (*WriteFunc) (GstAudioSink * sink, gpointer data, guint length);
 
 /* this internal thread does nothing else but write samples to the audio device.
  * It will write each segment in the ringbuffer and will update the play
- * pointer. 
+ * pointer.
  * The start/stop methods control the thread.
  */
 static void

@@ -55,7 +55,7 @@ public class ProgressBarSkinTest {
         progressbar.setPrefHeight(500);
         assertEquals(500, progressbar.maxHeight(-1), 0);
     }
-    
+
     public static final class ProgressBarSkinMock extends ProgressBarSkin {
         boolean propertyChanged = false;
         int propertyChangeCount = 0;

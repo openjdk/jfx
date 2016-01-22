@@ -41,7 +41,7 @@ public:
 
 private:
     HTMLOListElement(const QualifiedName&, Document&);
-        
+
     void updateItemValues();
 
     unsigned itemCount() const

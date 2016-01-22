@@ -43,14 +43,14 @@
 /**
  * g_unichar_break_type:
  * @c: a Unicode character
- * 
+ *
  * Determines the break type of @c. @c should be a Unicode character
  * (to derive a character from UTF-8 encoded text, use
  * g_utf8_get_char()). The break type is used to find word and line
  * breaks ("text boundaries"), Pango implements the Unicode boundary
  * resolution algorithms and normally you would use a function such
  * as pango_break() instead of caring about break types yourself.
- * 
+ *
  * Returns: the break type of @c
  **/
 GUnicodeBreakType

@@ -40,10 +40,10 @@ import javafx.scene.Parent;
 
 /**
  *
- * 
+ *
  */
 public abstract class AbstractRelocater<T extends Parent> {
-    
+
     protected final Node sceneGraphObject;
     protected final Class<T> parentClass;
 
@@ -54,7 +54,7 @@ public abstract class AbstractRelocater<T extends Parent> {
         this.sceneGraphObject = sceneGraphObject;
         this.parentClass = parentClass;
     }
-    
+
     public abstract void moveToLayoutX(double newLayoutX, Bounds newLayoutBounds);
     public abstract void moveToLayoutY(double newLayoutY, Bounds newLayoutBounds);
     public abstract void revertToOriginalLocation();

@@ -253,7 +253,7 @@ public abstract class AbstractWrapInJob extends BatchSelectionJob {
             //==================================================================
             // STEP #2
             //==================================================================
-            // This step depends on the new container property 
+            // This step depends on the new container property
             // (either either the SUB COMPONENT or the CONTENT property)
             //------------------------------------------------------------------
             result.addAll(wrapChildrenJobs(children));

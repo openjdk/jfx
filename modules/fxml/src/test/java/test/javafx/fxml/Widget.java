@@ -150,7 +150,7 @@ public class Widget {
     public void setRatios(float[] ratios) {
         this.ratios = Arrays.copyOf(ratios, ratios.length);
     }
-    
+
     public String[] getNames() {
         return Arrays.copyOf(names, names.length);
     }

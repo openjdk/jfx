@@ -153,7 +153,7 @@ public final class UnlockController {
             this.node.setWidth((1.0 - frac) * width);
         }
     }
-    
+
     private final static class WidthAndLayoutXTransition extends Transition {
 
         final Rectangle node;
@@ -240,9 +240,9 @@ public final class UnlockController {
             }
         }
     }
-    
+
     private final class ValidateCallback implements Callback<String, Boolean> {
-        private ValidateCallback() {    
+        private ValidateCallback() {
         }
         @Override
         public Boolean call(String param) {
@@ -254,7 +254,7 @@ public final class UnlockController {
             }
             return accessGranted;
         }
-        
+
     }
 
     @FXML // This method is called by the FXMLLoader when initialization is complete
@@ -270,7 +270,7 @@ public final class UnlockController {
 
         // Set pin validation for the keypad
         pad.setValidateCallback(new ValidateCallback());
-        
+
         // Reset visibility and opacity of nodes - useful if you left your
         // FXML in a 'bad' state
         resetVisibility();
@@ -288,14 +288,14 @@ public final class UnlockController {
         root.requestFocus();
         FadeTransition fadeOutPad = fadeOut(Duration.valueOf("1s"), pad);
 
-        final WidthTransition openOkLeft = 
+        final WidthTransition openOkLeft =
                 new WidthTransition(Duration.valueOf("2s"), okleft);
         openOkLeft.setOnFinished(arg0 -> {
             okleft.setVisible(false);
             okleft.setWidth(openOkLeft.width);
         });
-        
-        final WidthAndLayoutXTransition openOkRight = 
+
+        final WidthAndLayoutXTransition openOkRight =
                 new WidthAndLayoutXTransition(openOkLeft.getDuration(), okright);
         openOkRight.setOnFinished(arg0 -> {
             okright.setVisible(false);

@@ -229,13 +229,13 @@ RenderObject* RenderRubyRun::layoutSpecialExcludedChild(bool relayoutChildren)
 void RenderRubyRun::layout()
 {
     RenderBlockFlow::layout();
-    
+
     RenderRubyText* rt = rubyText();
     if (!rt)
         return;
 
     rt->setLogicalLeft(0);
-    
+
     // Place the RenderRubyText such that its bottom is flush with the lineTop of the first line of the RenderRubyBase.
     LayoutUnit lastLineRubyTextBottom = rt->logicalHeight();
     LayoutUnit firstLineRubyTextTop = 0;
@@ -254,7 +254,7 @@ void RenderRubyRun::layout()
                 firstLineTop = rootBox->logicalTopLayoutOverflow();
             firstLineTop += rb->logicalTop();
         }
-        
+
         rt->setLogicalTop(-lastLineRubyTextBottom + firstLineTop);
     } else {
         LayoutUnit lastLineBottom = logicalHeight();

@@ -136,14 +136,14 @@ void ProcessingInstruction::checkStyleSheet()
                 m_cachedSheet->removeClient(this);
                 m_cachedSheet = 0;
             }
-            
+
             String url = document().completeURL(href).string();
             if (!dispatchBeforeLoadEvent(url))
                 return;
-            
+
             m_loading = true;
             document().styleSheetCollection().addPendingSheet();
-            
+
             CachedResourceRequest request(ResourceRequest(document().completeURL(href)));
 #if ENABLE(XSLT)
             if (m_isXSL)
@@ -255,7 +255,7 @@ void ProcessingInstruction::addSubresourceAttributeURLs(ListHashSet<URL>& urls) 
 {
     if (!sheet())
         return;
-    
+
     addSubresourceURL(urls, sheet()->baseURL());
 }
 
@@ -274,7 +274,7 @@ void ProcessingInstruction::removedFrom(ContainerNode& insertionPoint)
     CharacterData::removedFrom(insertionPoint);
     if (!insertionPoint.inDocument())
         return;
-    
+
     document().styleSheetCollection().removeStyleSheetCandidateNode(*this);
 
     if (m_sheet) {

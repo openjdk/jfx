@@ -53,7 +53,7 @@ final class EmbeddedSceneDnD {
     public EmbeddedSceneDnD(final GlassScene scene) {
         this.dndHandler = new GlassSceneDnDEventHandler(scene);
     }
-    
+
     private void startDrag() {
         assert Platform.isFxApplicationThread();
         assert fxDragSource != null;
@@ -70,7 +70,7 @@ final class EmbeddedSceneDnD {
     public boolean isHostThread() {
         return (Thread.currentThread() == hostThread);
     }
-    
+
     public void onDragSourceReleased(final EmbeddedSceneDSInterface ds) {
         assert fxDragSource == ds;
 
@@ -93,7 +93,7 @@ final class EmbeddedSceneDnD {
      * dragOver() in SwingDnD is executed before dragEnter() is finished
      */
     <T> T executeOnFXThread(final Callable<T> r) {
-        
+
         // When running under SWT, the main thread is the FX thread
         // so execute the callable right away (return null on failure)
         if (Platform.isFxApplicationThread()) {
@@ -127,7 +127,7 @@ final class EmbeddedSceneDnD {
         return result.get();
     }
 
-    
+
     // Should be called from Scene.DnDGesture.createDragboard only!
     public TKClipboard createDragboard(boolean isDragSource) {
         assert Platform.isFxApplicationThread();
@@ -150,7 +150,7 @@ final class EmbeddedSceneDnD {
         setHostThread();
         dragStartListener = l;
     }
-    
+
     public EmbeddedSceneDTInterface createDropTarget() {
         setHostThread();
         return executeOnFXThread(() -> {

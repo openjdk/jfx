@@ -65,7 +65,7 @@ public:
     bool needsMoreData() const;
     bool didBlockData() const;
     const char* getReplacementData(int& length) const;
-    
+
 #if PLATFORM(IOS)
     static const char* scheme();
     void requestUnblockAndDispatchIfSuccessful(Function<void()>);
@@ -73,7 +73,7 @@ public:
 
 private:
     explicit ContentFilter(const ResourceResponse&);
-    
+
 #if PLATFORM(COCOA)
     RetainPtr<WebFilterEvaluator> m_platformContentFilter;
     RetainPtr<NSData> m_replacementData;

@@ -142,7 +142,7 @@ static void set_uri_data(GtkSelectionData *selection_data, jobject data) {
 
     jobjectArray files_array = NULL;
     gsize files_cnt = 0;
-    
+
     jstring typeString;
 
     typeString = mainEnv->NewStringUTF("text/uri-list");
@@ -152,7 +152,7 @@ static void set_uri_data(GtkSelectionData *selection_data, jobject data) {
         CHECK_JNI_EXCEPTION(mainEnv);
         url = mainEnv->GetStringUTFChars(jurl, NULL);
     }
-    
+
     typeString = mainEnv->NewStringUTF("application/x-java-file-list");
     if (mainEnv->ExceptionCheck()) return;
     if (mainEnv->CallBooleanMethod(data, jMapContainsKey, typeString, NULL)) {
@@ -169,7 +169,7 @@ static void set_uri_data(GtkSelectionData *selection_data, jobject data) {
 
     gsize uri_cnt = files_cnt + (url ? 1 : 0);
 
-    gchar **uris = 
+    gchar **uris =
             (gchar**) glass_try_malloc0_n(uri_cnt + 1, // uris must be a NULL-terminated array of strings
                                             sizeof(gchar*));
     if (!uris) {
@@ -392,7 +392,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkSystemClipboard_init
     if (jclipboard) {
         ERROR0("GtkSystemClipboard already initiated");
     }
-    
+
     jclipboard = env->NewGlobalRef(obj);
     owner_change_handler_id = g_signal_connect(G_OBJECT(get_clipboard()),
             "owner-change", G_CALLBACK(clipboard_owner_changed_callback), jclipboard);
@@ -410,7 +410,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkSystemClipboard_dispose
 
     g_signal_handler_disconnect(G_OBJECT(get_clipboard()), owner_change_handler_id);
     env->DeleteGlobalRef(jclipboard);
-    
+
     owner_change_handler_id = 0;
     jclipboard = NULL;
 }
@@ -449,7 +449,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkSystemClipboard_pushToSystem
     if (targets) {
         gtk_clipboard_set_with_data(get_clipboard(), targets, ntargets, set_data_func, clear_data_func, data);
         gtk_target_table_free(targets, ntargets);
-    } else { 
+    } else {
         // targets == NULL means that we want to clear clipboard.
         // Passing NULL as targets parameter to gtk_clipboard_set_with_data will produce Gtk-CRITICAL assertion
         // but passing 0 as n_targets parameter allows to set empty list of available mime types
@@ -596,7 +596,7 @@ JNIEXPORT jobjectArray JNICALL Java_com_sun_glass_ui_gtk_GtkSystemClipboard_mime
         }
     }
 
-    result = env->NewObjectArray(convertible_ptr - convertible, jStringCls, NULL);    
+    result = env->NewObjectArray(convertible_ptr - convertible, jStringCls, NULL);
     EXCEPTION_OCCURED(env);
     for (i = 0; convertible + i < convertible_ptr; ++i) {
         name = gdk_atom_name(convertible[i]);

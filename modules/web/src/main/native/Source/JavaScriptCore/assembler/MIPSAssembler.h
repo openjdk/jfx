@@ -277,7 +277,7 @@ public:
 
     void mul(RegisterID rd, RegisterID rs, RegisterID rt)
     {
-#if WTF_MIPS_ISA_AT_LEAST(32) 
+#if WTF_MIPS_ISA_AT_LEAST(32)
         emitInst(0x70000002 | (rd << OP_SH_RD) | (rs << OP_SH_RS) | (rt << OP_SH_RT));
 #else
         mult(rs, rt);
@@ -840,7 +840,7 @@ public:
         result |= *insn & 0x0000ffff;
         return result;
     }
-    
+
     static void repatchCompact(void* where, int32_t value)
     {
         repatchInt32(where, value);

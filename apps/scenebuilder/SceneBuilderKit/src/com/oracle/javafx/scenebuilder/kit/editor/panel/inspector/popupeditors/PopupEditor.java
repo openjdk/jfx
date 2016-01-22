@@ -66,7 +66,7 @@ public abstract class PopupEditor extends PropertyEditor implements PopupEditorV
         super(propMeta, selectedClasses);
         initializeEditor();
     }
-    
+
     // Separate method to please FindBugs
     private void initializeEditor() {
         EditorUtils.loadPopupFxml("PopupEditor.fxml", this);

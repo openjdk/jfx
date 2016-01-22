@@ -340,12 +340,12 @@ public class ScrollBarSkin extends SkinBase<ScrollBar> {
 
 
         if (!Properties.IS_TOUCH_SUPPORTED) {
-            
+
             incButton = new EndButton("increment-button", "increment-arrow") {
                 @Override
                 public void executeAccessibleAction(AccessibleAction action, Object... parameters) {
                     switch (action) {
-                        case FIRE: 
+                        case FIRE:
                             getSkinnable().increment();
                             break;
                         default: super.executeAccessibleAction(action, parameters);
@@ -607,7 +607,7 @@ public class ScrollBarSkin extends SkinBase<ScrollBar> {
         ScrollBar s = getSkinnable();
         double clampedValue = Utils.clamp(s.getMin(), s.getValue(), s.getMax());
         trackPos = (s.getMax() - s.getMin() > 0) ? ((trackLength - thumbLength) * (clampedValue - s.getMin()) / (s.getMax() - s.getMin())) : (0.0F);
-        
+
         if (!Properties.IS_TOUCH_SUPPORTED) {
             if (s.getOrientation() == Orientation.VERTICAL) {
                 trackPos += decButton.prefHeight(-1);
@@ -615,11 +615,11 @@ public class ScrollBarSkin extends SkinBase<ScrollBar> {
                 trackPos += decButton.prefWidth(-1);
             }
         }
-        
+
         thumb.setTranslateX( snapPosition(s.getOrientation() == Orientation.VERTICAL ? snappedLeftInset() : trackPos + snappedLeftInset()));
         thumb.setTranslateY( snapPosition(s.getOrientation() == Orientation.VERTICAL ? trackPos + snappedTopInset() : snappedTopInset()));
     }
-    
+
     private Node getThumb() {
         return thumb;
     }
@@ -681,7 +681,7 @@ public class ScrollBarSkin extends SkinBase<ScrollBar> {
             final double aw = snapSize(arrow.prefWidth(-1));
             return left + aw + right;
         }
-        
+
         @Override protected double computePrefHeight(double width) {
             final double top = snappedTopInset();
             final double bottom = snappedBottomInset();

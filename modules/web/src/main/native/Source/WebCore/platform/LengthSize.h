@@ -30,7 +30,7 @@ public:
     LengthSize()
     {
     }
-    
+
     LengthSize(Length width, Length height)
         : m_width(std::move(width))
         , m_height(std::move(height))

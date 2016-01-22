@@ -32,23 +32,23 @@ import javafx.util.Duration;
 /**
  * This {@code Transition} executes an {@link Animation#onFinished} at the end of its
  * {@link #duration}.
- * 
+ *
  * <p>
  * Code Segment Example:
  * </p>
- * 
+ *
  * <pre>
  * <code>
  * import javafx.scene.shape.*;
  * import javafx.animation.transition.*;
- * 
+ *
  * ...
- * 
+ *
  *     Rectangle rect = new Rectangle (100, 40, 100, 100);
  *     rect.setArcHeight(50);
  *     rect.setArcWidth(50);
  *     rect.setFill(Color.VIOLET);
- * 
+ *
  *     RotateTransition rt = new RotateTransition(Duration.millis(3000), rect);
  *     rt.setByAngle(180);
  *     rt.setCycleCount(4f);
@@ -58,21 +58,21 @@ import javafx.util.Duration;
  *         rt
  *     );
  *     seqTransition.play();
- * 
+ *
  * ...
- * 
+ *
  * </code>
  * </pre>
- * 
+ *
  * @see Transition
  * @see Animation
- * 
+ *
  * @since JavaFX 2.0
  */
 public final class PauseTransition extends Transition {
 
     /**
-     * The duration of this {@code Transition}. 
+     * The duration of this {@code Transition}.
      * <p>
      * It is not possible to change the {@code duration} of a running
      * {@code PauseTransition}. If the value of {@code duration} is changed for a
@@ -86,7 +86,7 @@ public final class PauseTransition extends Transition {
      *
      * Setting duration to value lower than {@link Duration#ZERO} will result
      * in {@link IllegalArgumentException}.
-     * 
+     *
      * @defaultValue 400ms
      */
     private ObjectProperty<Duration> duration;
@@ -135,7 +135,7 @@ public final class PauseTransition extends Transition {
 
     /**
      * The constructor of {@code PauseTransition}.
-     * 
+     *
      * @param duration
      *            The duration of the {@code PauseTransition}
      */

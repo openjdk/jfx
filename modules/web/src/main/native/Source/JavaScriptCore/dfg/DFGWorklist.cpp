@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -103,14 +103,14 @@ void Worklist::waitUntilAllPlansForVMAreReady(VM& vm)
     // about any other VM's plans, and we won't attempt to wait on those.
     // After we release this lock, we know that although other VMs may still
     // be adding plans, our VM will not be.
-    
+
     MutexLocker locker(m_lock);
-    
+
     if (Options::verboseCompilationQueue()) {
         dump(locker, WTF::dataFile());
         dataLog(": Waiting for all in VM to complete.\n");
     }
-    
+
     for (;;) {
         bool allAreCompiled = true;
         PlanMap::iterator end = m_plans.end();
@@ -122,10 +122,10 @@ void Worklist::waitUntilAllPlansForVMAreReady(VM& vm)
                 break;
             }
         }
-        
+
         if (allAreCompiled)
             break;
-        
+
         m_planCompiled.wait(m_lock);
     }
 }
@@ -157,32 +157,32 @@ Worklist::State Worklist::completeAllReadyPlansForVM(VM& vm, CompilationKey requ
 {
     DeferGC deferGC(vm.heap);
     Vector<RefPtr<Plan>, 8> myReadyPlans;
-    
+
     removeAllReadyPlansForVM(vm, myReadyPlans);
-    
+
     State resultingState = NotKnown;
 
     while (!myReadyPlans.isEmpty()) {
         RefPtr<Plan> plan = myReadyPlans.takeLast();
         CompilationKey currentKey = plan->key();
-        
+
         if (Options::verboseCompilationQueue())
             dataLog(*this, ": Completing ", currentKey, "\n");
-        
+
         RELEASE_ASSERT(plan->isCompiled);
-        
+
         plan->finalizeAndNotifyCallback();
-        
+
         if (currentKey == requestedKey)
             resultingState = Compiled;
     }
-    
+
     if (!!requestedKey && resultingState == NotKnown) {
         MutexLocker locker(m_lock);
         if (m_plans.contains(requestedKey))
             resultingState = Compiling;
     }
-    
+
     return resultingState;
 }
 
@@ -211,7 +211,7 @@ void Worklist::visitChildren(SlotVisitor& visitor, CodeBlockSet& codeBlocks)
         iter->key.visitChildren(codeBlocks);
         iter->value->visitChildren(visitor, codeBlocks);
     }
-    
+
     for (unsigned i = m_threads.size(); i--;) {
         ThreadData* data = m_threads[i].get();
         if (Safepoint* safepoint = data->m_safepoint)
@@ -242,50 +242,50 @@ void Worklist::dump(const MutexLocker&, PrintStream& out) const
 void Worklist::runThread(ThreadData* data)
 {
     CompilationScope compilationScope;
-    
+
     if (Options::verboseCompilationQueue())
         dataLog(*this, ": Thread started\n");
-    
+
     LongLivedState longLivedState;
-    
+
     for (;;) {
         RefPtr<Plan> plan;
         {
             MutexLocker locker(m_lock);
             while (m_queue.isEmpty())
                 m_planEnqueued.wait(m_lock);
-            
+
             plan = m_queue.takeFirst();
             if (plan)
                 m_numberOfActiveThreads++;
         }
-        
+
         if (!plan) {
             if (Options::verboseCompilationQueue())
                 dataLog(*this, ": Thread shutting down\n");
             return;
         }
-        
+
         {
             MutexLocker locker(data->m_rightToRun);
-        
+
             if (Options::verboseCompilationQueue())
                 dataLog(*this, ": Compiling ", plan->key(), " asynchronously\n");
-        
+
             plan->compileInThread(longLivedState, data);
         }
-        
+
         {
             MutexLocker locker(m_lock);
             plan->notifyReady();
-            
+
             if (Options::verboseCompilationQueue()) {
                 dump(locker, WTF::dataFile());
                 dataLog(": Compiled ", plan->key(), " asynchronously\n");
             }
-            
+
             m_readyPlans.append(plan);
-            
+
             m_planCompiled.broadcast();
             m_numberOfActiveThreads--;
         }

@@ -55,12 +55,12 @@ public class JSWBackend extends TreeScanner {
         resetStatics();
 
         this.parser = parser;
-        
+
         JSWTreeScanner scanner = new JSWTreeScanner();
         scanner.scan(program);
         this.body = scanner.getResult();
     }
-    
+
     public final String getGenCode(String effectName,
                                    String peerName,
                                    String genericsName,
@@ -85,14 +85,14 @@ public class JSWBackend extends TreeScanner {
         // somewhere in the program...
         pixInitY.append("float pixcoord_y = (float)dy;\n");
         pixInitX.append("float pixcoord_x = (float)dx;\n");
-        
+
         for (Variable v : vars.values()) {
             if (v.getQualifier() == Qualifier.CONST && v.getConstValue() == null) {
                 // this must be a special built-in variable (e.g. pos0);
                 // these are handled elsewhere, so just continue...
                 continue;
             }
-            
+
             Type t = v.getType();
             BaseType bt = t.getBaseType();
             if (v.getQualifier() != null && bt != BaseType.SAMPLER) {
@@ -241,7 +241,7 @@ public class JSWBackend extends TreeScanner {
         glue.setAttribute("body", body);
         return glue.toString();
     }
-    
+
     // TODO: need better mechanism for querying fields
     private static char[] fields = {'x', 'y', 'z', 'w'};
     public static String getSuffix(int i) {
@@ -266,7 +266,7 @@ public class JSWBackend extends TreeScanner {
             throw new InternalError();
         }
     }
-    
+
     // TODO: these shouldn't be implemented as a static method
     private static Map<String, FuncDef> funcDefs = new HashMap<String, FuncDef>();
     static void putFuncDef(FuncDef def) {
@@ -275,7 +275,7 @@ public class JSWBackend extends TreeScanner {
     static FuncDef getFuncDef(String name) {
         return funcDefs.get(name);
     }
-    
+
     private static Set<String> resultVars = new HashSet<String>();
     static boolean isResultVarDeclared(String vname) {
         return resultVars.contains(vname);
@@ -283,12 +283,12 @@ public class JSWBackend extends TreeScanner {
     static void declareResultVar(String vname) {
         resultVars.add(vname);
     }
-    
+
     private static StringBuilder usercode = new StringBuilder();
     static void addGlueBlock(String block) {
         usercode.append(block);
     }
-    
+
     private static void resetStatics() {
         funcDefs.clear();
         resultVars.clear();

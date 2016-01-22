@@ -21,7 +21,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef XPathNodeSet_h
@@ -37,7 +37,7 @@ namespace WebCore {
         public:
             NodeSet() : m_isSorted(true), m_subtreesAreDisjoint(false) { }
             explicit NodeSet(PassRefPtr<Node> node) : m_isSorted(true), m_subtreesAreDisjoint(false), m_nodes(1, node) { }
-            
+
             size_t size() const { return m_nodes.size(); }
             bool isEmpty() const { return m_nodes.isEmpty(); }
             Node* operator[](unsigned i) const { return m_nodes.at(i).get(); }

@@ -129,7 +129,7 @@ float floatValueForLength(const Length& length, LayoutUnit maximumValue, RenderV
     case Auto:
         return static_cast<float>(maximumValue);
     case Calculated:
-        return length.nonNanCalculatedValue(maximumValue);                
+        return length.nonNanCalculatedValue(maximumValue);
     case ViewportPercentageWidth:
         if (renderView)
             return static_cast<int>(renderView->viewportSize().width() * length.viewportPercentageLength() / 100.0f);

@@ -107,7 +107,7 @@ public class IssueTrackingLiteController {
     TrackingService model = null;
     private TextField statusValue = new TextField();
     final ObservableList<ObservableIssue> tableContent = FXCollections.observableArrayList();
-    
+
     /**
      * Initializes the controller class.
      */
@@ -125,7 +125,7 @@ public class IssueTrackingLiteController {
         assert synopsis != null : "fx:id=\"synopsis\" was not injected: check your FXML file 'IssueTrackingLite.fxml'.";
         assert table != null : "fx:id=\"table\" was not injected: check your FXML file 'IssueTrackingLite.fxml'.";
         assert list != null : "fx:id=\"list\" was not injected: check your FXML file 'IssueTrackingLite.fxml'.";
-        
+
         System.out.println(this.getClass().getSimpleName() + ".initialize");
         configureButtons();
         configureDetails();
@@ -205,7 +205,7 @@ public class IssueTrackingLiteController {
 
         updateSaveIssueButtonState();
     }
-    
+
     private void configureButtons() {
         if (newIssue != null) {
             newIssue.setDisable(true);
@@ -217,18 +217,18 @@ public class IssueTrackingLiteController {
             deleteIssue.setDisable(true);
         }
     }
-    
+
     // An observable list of project names obtained from the model.
     // This is a live list, and we will react to its changes by removing
     // and adding project names to/from our list widget.
     private ObservableList<String> displayedProjectNames;
-    
+
     // The list of Issue IDs relevant to the selected project. Can be null
     // if no project is selected. This list is obtained from the model.
     // This is a live list, and we will react to its changes by removing
     // and adding Issue objects to/from our table widget.
     private ObservableList<String> displayedIssues;
-    
+
     // This listener will listen to changes in the displayedProjectNames list,
     // and update our list widget in consequence.
     private final ListChangeListener<String> projectNamesListener = c -> {
@@ -249,7 +249,7 @@ public class IssueTrackingLiteController {
         }
         FXCollections.sort(projectsView);
     };
-    
+
     // This listener will listen to changes in the displayedIssues list,
     // and update our table widget in consequence.
     private final ListChangeListener<String> projectIssuesListener = c -> {
@@ -297,7 +297,7 @@ public class IssueTrackingLiteController {
         projectsView.addAll(sortedProjects);
         list.setItems(projectsView);
     }
-    
+
     // This listener listen to changes in the table widget selection and
     // update the DeleteIssue button state accordingly.
     private final ListChangeListener<ObservableIssue> tableSelectionChanged =
@@ -381,7 +381,7 @@ public class IssueTrackingLiteController {
             }
             return IssueStatus.valueOf(statusValue.getText().trim());
         }
-        
+
         @Override
         public String getProjectName() {
             if (displayedBugProject == null || isEmpty(displayedIssueLabel.getText())) {
@@ -516,7 +516,7 @@ public class IssueTrackingLiteController {
         }
         return null;
     }
-    
+
     /**
      * Listen to changes in the list selection, and updates the table widget and
      * DeleteIssue and NewIssue buttons accordingly.

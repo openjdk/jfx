@@ -137,7 +137,7 @@ public class PasteIntoJob extends BatchSelectionJob {
             return new ObjectSelectionGroup(newObjects, newObjects.iterator().next(), null);
         }
     }
-    
+
     private String makeSingleSelectionDescription() {
         final String result;
 

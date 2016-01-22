@@ -71,7 +71,7 @@ public class HelloSimpleListView extends Application {
         stage.setScene(new Scene(group, 800, 600));
         stage.show();
     }
-    
+
     public static void main(String[] args) {
         launch(args);
     }

@@ -66,20 +66,20 @@ customMenuItem.setHideOnClick(false);
  * @since JavaFX 2.0
  */
 public class CustomMenuItem extends MenuItem {
-    
+
     /***************************************************************************
      *                                                                         *
      * Constructors                                                            *
      *                                                                         *
      **************************************************************************/
-    
+
     /**
      * Creates a default CustomMenuItem instance.
      */
     public CustomMenuItem() {
         this(null, true);
     }
-    
+
     /**
      * Constructs a CustomMenuItem and initializes its content with the node specified.
      * @param node to be embedded inside this CustomMenuItem
@@ -95,19 +95,19 @@ public class CustomMenuItem extends MenuItem {
      */
     public CustomMenuItem(Node node, boolean hideOnClick) {
         getStyleClass().add(DEFAULT_STYLE_CLASS);
-        
+
         setContent(node);
         setHideOnClick(hideOnClick);
     }
-    
-    
-    
+
+
+
     /***************************************************************************
      *                                                                         *
      * Properties                                                              *
      *                                                                         *
-     **************************************************************************/    
-    
+     **************************************************************************/
+
     /**
      * The node to display within this CustomMenuItem.
      */
@@ -128,7 +128,7 @@ public class CustomMenuItem extends MenuItem {
         return content;
     }
 
-    
+
     /**
      * If true, this menu item, and all visible menus, will be hidden when this
      * menu item is clicked on.
@@ -151,9 +151,9 @@ public class CustomMenuItem extends MenuItem {
         }
         return hideOnClick;
     }
- 
-    
-    
+
+
+
     /***************************************************************************
      *                                                                         *
      * Stylesheet Handling                                                     *

@@ -100,7 +100,7 @@ static NSDictionary *dictGroupingKeys;
     NSString *propertyName = [self predicateKeyToMediaItemProperty: predicateKey];
     NSNumber *propertyValue = [NSNumber numberWithInt: predicateValue];
 
-    MPMediaPropertyPredicate *predicate = 
+    MPMediaPropertyPredicate *predicate =
     [MPMediaPropertyPredicate predicateWithValue: propertyValue
                                      forProperty: propertyName];
 
@@ -111,14 +111,14 @@ static NSDictionary *dictGroupingKeys;
                             value: (NSString *) predicateValue {
     NSString *propertyName = [self predicateKeyToMediaItemProperty: predicateKey];
 
-    MPMediaPropertyPredicate *predicate = 
+    MPMediaPropertyPredicate *predicate =
     [MPMediaPropertyPredicate predicateWithValue: predicateValue
                                      forProperty: propertyName];
 
     [[self query] addFilterPredicate: predicate];
 }
 
-- (jstring) createJavaString: (NSString *) nsString 
+- (jstring) createJavaString: (NSString *) nsString
                       JNIEnv: (JNIEnv *) env {
     const char *cString = [nsString UTF8String];
     return (jstring) (*env)->NewStringUTF(env, cString);
@@ -128,7 +128,7 @@ static NSDictionary *dictGroupingKeys;
                         MediaItem: (MPMediaItem *) item
                            JNIEnv: (JNIEnv *) env {
     NSString* nsString = (NSString *) [item valueForProperty: propertyName];
-    return [self createJavaString: nsString 
+    return [self createJavaString: nsString
                            JNIEnv: env];
 }
 

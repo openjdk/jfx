@@ -90,7 +90,7 @@ void SVGAttributeToPropertyMap::synchronizeProperties(SVGElement* contextElement
         PropertiesVector::iterator vectorEnd = vector->end();
         for (PropertiesVector::iterator vectorIt = vector->begin(); vectorIt != vectorEnd; ++vectorIt)
             synchronizeProperty(contextElement, it->key, *vectorIt);
-    } 
+    }
 }
 
 bool SVGAttributeToPropertyMap::synchronizeProperty(SVGElement* contextElement, const QualifiedName& attributeName)

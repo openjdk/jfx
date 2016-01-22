@@ -70,16 +70,16 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * The TreeView control provides a view on to a tree root (of type 
+ * The TreeView control provides a view on to a tree root (of type
  * {@link TreeItem}). By using a TreeView, it is possible to drill down into the
  * children of a TreeItem, recursively until a TreeItem has no children (that is,
  * it is a <i>leaf</i> node in the tree). To facilitate this, unlike controls
- * like {@link ListView}, in TreeView it is necessary to <strong>only</strong> 
- * specify the {@link #rootProperty() root} node. 
+ * like {@link ListView}, in TreeView it is necessary to <strong>only</strong>
+ * specify the {@link #rootProperty() root} node.
  *
  * <p>
- * For more information on building up a tree using this approach, refer to the 
- * {@link TreeItem} class documentation. Briefly however, to create a TreeView, 
+ * For more information on building up a tree using this approach, refer to the
+ * {@link TreeItem} class documentation. Briefly however, to create a TreeView,
  * you should do something along the lines of the following:
  * <pre><code>
  * TreeItem&lt;String&gt; root = new TreeItem&lt;String&gt;("Root Node");
@@ -91,38 +91,38 @@ import java.util.Map;
  * );
  * TreeView&lt;String&gt; treeView = new TreeView&lt;String&gt;(root);
  * </code></pre>
- * 
+ *
  * <p>
  * A TreeView may be configured to optionally hide the root node by setting the
  * {@link #setShowRoot(boolean) showRoot} property to {@code false}. If the root
  * node is hidden, there is one less level of indentation, and all children
  * nodes of the root node are shown. By default, the root node is shown in the
  * TreeView.
- * 
+ *
  * <h3>TreeView Selection / Focus APIs</h3>
  * <p>To track selection and focus, it is necessary to become familiar with the
  * {@link SelectionModel} and {@link FocusModel} classes. A TreeView has at most
- * one instance of each of these classes, available from 
- * {@link #selectionModelProperty() selectionModel} and 
+ * one instance of each of these classes, available from
+ * {@link #selectionModelProperty() selectionModel} and
  * {@link #focusModelProperty() focusModel} properties respectively.
  * Whilst it is possible to use this API to set a new selection model, in
  * most circumstances this is not necessary - the default selection and focus
  * models should work in most circumstances.
- * 
+ *
  * <p>The default {@link SelectionModel} used when instantiating a TreeView is
- * an implementation of the {@link MultipleSelectionModel} abstract class. 
+ * an implementation of the {@link MultipleSelectionModel} abstract class.
  * However, as noted in the API documentation for
  * the {@link MultipleSelectionModel#selectionModeProperty() selectionMode}
- * property, the default value is {@link SelectionMode#SINGLE}. To enable 
+ * property, the default value is {@link SelectionMode#SINGLE}. To enable
  * multiple selection in a default TreeView instance, it is therefore necessary
  * to do the following:
- * 
+ *
  * <pre>
- * {@code 
+ * {@code
  * treeView.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);}</pre>
- * 
+ *
  * <h3>Customizing TreeView Visuals</h3>
- * <p>The visuals of the TreeView can be entirely customized by replacing the 
+ * <p>The visuals of the TreeView can be entirely customized by replacing the
  * default {@link #cellFactoryProperty() cell factory}. A cell factory is used to
  * generate {@link TreeCell} instances, which are used to represent an item in the
  * TreeView. See the {@link Cell} class documentation for a more complete
@@ -198,18 +198,18 @@ import java.util.Map;
  */
 @DefaultProperty("root")
 public class TreeView<T> extends Control {
-    
+
     /***************************************************************************
      *                                                                         *
      * Static properties and methods                                           *
      *                                                                         *
      **************************************************************************/
-    
-    /** 
+
+    /**
      * An EventType that indicates some edit event has occurred. It is the parent
      * type of all other edit events: {@link #editStartEvent},
      *  {@link #editCommitEvent} and {@link #editCancelEvent}.
-     * 
+     *
      * @return An EventType that indicates some edit event has occurred.
      */
     @SuppressWarnings("unchecked")
@@ -222,7 +222,7 @@ public class TreeView<T> extends Control {
     /**
      * An EventType used to indicate that an edit event has started within the
      * TreeView upon which the event was fired.
-     * 
+     *
      * @return An EventType used to indicate that an edit event has started.
      */
     @SuppressWarnings("unchecked")
@@ -235,7 +235,7 @@ public class TreeView<T> extends Control {
     /**
      * An EventType used to indicate that an edit event has just been canceled
      * within the TreeView upon which the event was fired.
-     * 
+     *
      * @return An EventType used to indicate that an edit event has just been
      *      canceled.
      */
@@ -250,7 +250,7 @@ public class TreeView<T> extends Control {
      * An EventType that is used to indicate that an edit in a TreeView has been
      * committed. This means that user has made changes to the data of a
      * TreeItem, and that the UI should be updated.
-     * 
+     *
      * @return An EventType that is used to indicate that an edit in a TreeView
      *      has been committed.
      */
@@ -260,9 +260,9 @@ public class TreeView<T> extends Control {
     }
     private static final EventType<?> EDIT_COMMIT_EVENT =
             new EventType<>(editAnyEvent(), "EDIT_COMMIT");
-    
+
     /**
-     * Returns the number of levels of 'indentation' of the given TreeItem, 
+     * Returns the number of levels of 'indentation' of the given TreeItem,
      * based on how many times {@link javafx.scene.control.TreeItem#getParent()}
      * can be recursively called. If the TreeItem does not have any parent set,
      * the returned value will be zero. For each time getParent() is recursively
@@ -273,7 +273,7 @@ public class TreeView<T> extends Control {
      * past the root node of the TreeView control, if the root node has a parent.
      * If this is important, call {@link TreeView#getTreeItemLevel(TreeItem)}
      * instead.
-     * 
+     *
      * @param node The TreeItem for which the level is needed.
      * @return An integer representing the number of parents above the given node,
      *          or -1 if the given TreeItem is null.
@@ -305,7 +305,7 @@ public class TreeView<T> extends Control {
 
     /**
      * Creates an empty TreeView.
-     * 
+     *
      * <p>Refer to the {@link TreeView} class documentation for details on the
      * default state of other properties.
      */
@@ -315,10 +315,10 @@ public class TreeView<T> extends Control {
 
     /**
      * Creates a TreeView with the provided root node.
-     * 
+     *
      * <p>Refer to the {@link TreeView} class documentation for details on the
      * default state of other properties.
-     * 
+     *
      * @param root The node to be the root in this TreeView.
      */
     public TreeView(TreeItem<T> root) {
@@ -334,16 +334,16 @@ public class TreeView<T> extends Control {
         setSelectionModel(sm);
         setFocusModel(new TreeViewFocusModel<T>(this));
     }
-    
-    
-    
+
+
+
     /***************************************************************************
      *                                                                         *
      * Instance Variables                                                      *
      *                                                                         *
-     **************************************************************************/ 
-    
-    // used in the tree item modification event listener. Used by the 
+     **************************************************************************/
+
+    // used in the tree item modification event listener. Used by the
     // layoutChildren method to determine whether the tree item count should
     // be recalculated.
     private boolean expandedItemCountDirty = true;
@@ -351,14 +351,14 @@ public class TreeView<T> extends Control {
     // Used in the getTreeItem(int row) method to act as a cache.
     // See RT-26716 for the justification and performance gains.
     private Map<Integer, SoftReference<TreeItem<T>>> treeItemCacheMap = new HashMap<>();
-    
-    
+
+
     /***************************************************************************
      *                                                                         *
      * Callbacks and Events                                                    *
      *                                                                         *
      **************************************************************************/
-    
+
     // we use this to forward events that have bubbled up TreeItem instances
     // to the TreeViewSkin, to force it to recalculate teh item count and redraw
     // if necessary
@@ -380,21 +380,21 @@ public class TreeView<T> extends Control {
             requestLayout();
         }
     };
-    
+
     private WeakEventHandler<TreeModificationEvent<T>> weakRootEventListener;
 
 
-    
+
     /***************************************************************************
      *                                                                         *
      * Properties                                                              *
      *                                                                         *
      **************************************************************************/
-    
+
 
     // --- Cell Factory
     private ObjectProperty<Callback<TreeView<T>, TreeCell<T>>> cellFactory;
-    
+
     /**
      * Sets the cell factory that will be used for creating TreeCells,
      * which are used to represent items in the
@@ -405,26 +405,26 @@ public class TreeView<T> extends Control {
      * by the system to represent different items in the tree when possible.
      *
      * <p>Refer to the {@link Cell} class documentation for more details.
-     * 
+     *
      * @param value The {@link Callback} to use for generating TreeCell instances,
      *      or null if the default cell factory should be used.
      */
-    public final void setCellFactory(Callback<TreeView<T>, TreeCell<T>> value) { 
-        cellFactoryProperty().set(value); 
+    public final void setCellFactory(Callback<TreeView<T>, TreeCell<T>> value) {
+        cellFactoryProperty().set(value);
     }
-    
+
     /**
      * <p>Returns the cell factory that will be used for creating TreeCells,
      * which are used to represent items in the TreeView, or null if no custom
      * cell factory has been set.
      */
-    public final Callback<TreeView<T>, TreeCell<T>> getCellFactory() { 
-        return cellFactory == null ? null : cellFactory.get(); 
+    public final Callback<TreeView<T>, TreeCell<T>> getCellFactory() {
+        return cellFactory == null ? null : cellFactory.get();
     }
-    
+
     /**
      * Represents the cell factory that will be used for creating TreeCells,
-     * which are used to represent items in the TreeView. 
+     * which are used to represent items in the TreeView.
      */
     public final ObjectProperty<Callback<TreeView<T>, TreeCell<T>>> cellFactoryProperty() {
         if (cellFactory == null) {
@@ -433,7 +433,7 @@ public class TreeView<T> extends Control {
         return cellFactory;
     }
 
-    
+
     // --- Root
     private ObjectProperty<TreeItem<T>> root = new SimpleObjectProperty<TreeItem<T>>(this, "root") {
         private WeakReference<TreeItem<T>> weakOldItem;
@@ -458,11 +458,11 @@ public class TreeView<T> extends Control {
             updateRootExpanded();
         }
     };
-    
+
     /**
      * Sets the root node in this TreeView. See the {@link TreeItem} class level
      * documentation for more details.
-     * 
+     *
      * @param value The {@link TreeItem} that will be placed at the root of the
      *      TreeView.
      */
@@ -486,15 +486,15 @@ public class TreeView<T> extends Control {
         return root;
     }
 
-    
-    
+
+
     // --- Show Root
     private BooleanProperty showRoot;
-    
+
     /**
-     * Specifies whether the root {@code TreeItem} should be shown within this 
+     * Specifies whether the root {@code TreeItem} should be shown within this
      * TreeView.
-     * 
+     *
      * @param value If true, the root TreeItem will be shown, and if false it
      *      will be hidden.
      */
@@ -524,15 +524,15 @@ public class TreeView<T> extends Control {
         }
         return showRoot;
     }
-    
-    
+
+
     // --- Selection Model
     private ObjectProperty<MultipleSelectionModel<TreeItem<T>>> selectionModel;
 
     /**
-     * Sets the {@link MultipleSelectionModel} to be used in the TreeView. 
+     * Sets the {@link MultipleSelectionModel} to be used in the TreeView.
      * Despite a TreeView requiring a <code><b>Multiple</b>SelectionModel</code>,
-     * it is possible to configure it to only allow single selection (see 
+     * it is possible to configure it to only allow single selection (see
      * {@link MultipleSelectionModel#setSelectionMode(javafx.scene.control.SelectionMode)}
      * for more information).
      */
@@ -559,13 +559,13 @@ public class TreeView<T> extends Control {
         }
         return selectionModel;
     }
-    
-    
+
+
     // --- Focus Model
     private ObjectProperty<FocusModel<TreeItem<T>>> focusModel;
 
     /**
-     * Sets the {@link FocusModel} to be used in the TreeView. 
+     * Sets the {@link FocusModel} to be used in the TreeView.
      */
     public final void setFocusModel(FocusModel<TreeItem<T>> value) {
         focusModelProperty().set(value);
@@ -589,8 +589,8 @@ public class TreeView<T> extends Control {
         }
         return focusModel;
     }
-    
-    
+
+
     // --- Expanded node count
     /**
      * <p>Represents the number of tree nodes presently able to be visible in the
@@ -686,7 +686,7 @@ public class TreeView<T> extends Control {
         return fixedCellSize;
     }
 
-    
+
     // --- Editable
     private BooleanProperty editable;
     public final void setEditable(boolean value) {
@@ -706,8 +706,8 @@ public class TreeView<T> extends Control {
         }
         return editable;
     }
-    
-    
+
+
     // --- Editing Item
     private ReadOnlyObjectWrapper<TreeItem<T>> editingItem;
 
@@ -726,7 +726,7 @@ public class TreeView<T> extends Control {
     /**
      * <p>A property used to represent the TreeItem currently being edited
      * in the TreeView, if editing is taking place, or null if no item is being edited.
-     * 
+     *
      * <p>It is not possible to set the editing item, instead it is required that
      * you call {@link #edit(javafx.scene.control.TreeItem)}.
      */
@@ -740,14 +740,14 @@ public class TreeView<T> extends Control {
         }
         return editingItem;
     }
-    
-    
+
+
     // --- On Edit Start
     private ObjectProperty<EventHandler<EditEvent<T>>> onEditStart;
 
     /**
      * Sets the {@link EventHandler} that will be called when the user begins
-     * an edit. 
+     * an edit.
      */
     public final void setOnEditStart(EventHandler<EditEvent<T>> value) {
         onEditStartProperty().set(value);
@@ -782,7 +782,7 @@ public class TreeView<T> extends Control {
 
     /**
      * Sets the {@link EventHandler} that will be called when the user commits
-     * an edit. 
+     * an edit.
      */
     public final void setOnEditCommit(EventHandler<EditEvent<T>> value) {
         onEditCommitProperty().set(value);
@@ -800,9 +800,9 @@ public class TreeView<T> extends Control {
      * <p>This property is used when the user performs an action that should
      * result in their editing input being persisted.</p>
      *
-     * <p>The EventHandler in this property should not be called directly - 
+     * <p>The EventHandler in this property should not be called directly -
      * instead call {@link TreeCell#commitEdit(java.lang.Object)} from within
-     * your custom TreeCell. This will handle firing this event, updating the 
+     * your custom TreeCell. This will handle firing this event, updating the
      * view, and switching out of the editing state.</p>
      */
     public final ObjectProperty<EventHandler<EditEvent<T>>> onEditCommitProperty() {
@@ -851,43 +851,43 @@ public class TreeView<T> extends Control {
     }
 
 
-    
+
     /***************************************************************************
      *                                                                         *
      * Public API                                                              *
      *                                                                         *
      **************************************************************************/
-    
-    
+
+
     /** {@inheritDoc} */
     @Override protected void layoutChildren() {
         if (expandedItemCountDirty) {
             updateExpandedItemCount(getRoot());
         }
-        
+
         super.layoutChildren();
     }
-    
-    
+
+
     /**
-     * Instructs the TreeView to begin editing the given TreeItem, if 
+     * Instructs the TreeView to begin editing the given TreeItem, if
      * the TreeView is {@link #editableProperty() editable}. Once
-     * this method is called, if the current 
+     * this method is called, if the current
      * {@link #cellFactoryProperty() cell factory} is set up to support editing,
      * the Cell will switch its visual state to enable the user input to take place.
-     * 
+     *
      * @param item The TreeItem in the TreeView that should be edited.
      */
     public void edit(TreeItem<T> item) {
         if (!isEditable()) return;
         setEditingItem(item);
     }
-    
+
 
     /**
      * Scrolls the TreeView such that the item in the given index is visible to
      * the end user.
-     * 
+     *
      * @param index The index that should be made visible to the user, assuming
      *      of course that it is greater than, or equal to 0, and less than the
      *      number of the visible items in the TreeView.
@@ -901,18 +901,18 @@ public class TreeView<T> extends Control {
      * @since JavaFX 8.0
      */
     private ObjectProperty<EventHandler<ScrollToEvent<Integer>>> onScrollTo;
-    
+
     public void setOnScrollTo(EventHandler<ScrollToEvent<Integer>> value) {
         onScrollToProperty().set(value);
     }
-    
+
     public EventHandler<ScrollToEvent<Integer>> getOnScrollTo() {
         if( onScrollTo != null ) {
             return onScrollTo.get();
         }
         return null;
     }
-    
+
     public ObjectProperty<EventHandler<ScrollToEvent<Integer>>> onScrollToProperty() {
         if( onScrollTo == null ) {
             onScrollTo = new ObjectPropertyBase<EventHandler<ScrollToEvent<Integer>>>() {
@@ -933,17 +933,17 @@ public class TreeView<T> extends Control {
         }
         return onScrollTo;
     }
-    
+
     /**
      * Returns the index position of the given TreeItem, assuming that it is
      * currently accessible through the tree hierarchy (most notably, that all
      * parent tree items are expanded). If a parent tree item is collapsed,
      * the result is that this method will return -1 to indicate that the
      * given tree item is not accessible in the tree.
-     * 
+     *
      * @param item The TreeItem for which the index is sought.
      * @return An integer representing the location in the current TreeView of the
-     *      first instance of the given TreeItem, or -1 if it is null or can not 
+     *      first instance of the given TreeItem, or -1 if it is null or can not
      *      be found (for example, if a parent (all the way up to the root) is
      *      collapsed).
      */
@@ -953,7 +953,7 @@ public class TreeView<T> extends Control {
 
     /**
      * Returns the TreeItem in the given index, or null if it is out of bounds.
-     * 
+     *
      * @param row The index of the TreeItem being sought.
      * @return The TreeItem in the given index, or null if it is out of bounds.
      */
@@ -1031,13 +1031,13 @@ public class TreeView<T> extends Control {
     }
 
 
-    
+
     /***************************************************************************
      *                                                                         *
      * Private Implementation                                                  *
      *                                                                         *
-     **************************************************************************/  
-    
+     **************************************************************************/
+
     private void updateExpandedItemCount(TreeItem<T> treeItem) {
         setExpandedItemCount(TreeUtil.updateExpandedItemCount(treeItem, expandedItemCountDirty, isShowRoot()));
 
@@ -1059,7 +1059,7 @@ public class TreeView<T> extends Control {
     }
 
 
-    
+
     /***************************************************************************
      *                                                                         *
      * Stylesheet Handling                                                     *
@@ -1154,11 +1154,11 @@ public class TreeView<T> extends Control {
 
     /**
      * An {@link Event} subclass used specifically in TreeView for representing
-     * edit-related events. It provides additional API to easily access the 
+     * edit-related events. It provides additional API to easily access the
      * TreeItem that the edit event took place on, as well as the input provided
      * by the end user.
-     * 
-     * @param <T> The type of the input, which is the same type as the TreeView 
+     *
+     * @param <T> The type of the input, which is the same type as the TreeView
      *      itself.
      * @since JavaFX 2.0
      */
@@ -1174,10 +1174,10 @@ public class TreeView<T> extends Control {
         private final T oldValue;
         private final T newValue;
         private transient final TreeItem<T> treeItem;
-        
+
         /**
-         * Creates a new EditEvent instance to represent an edit event. This 
-         * event is used for {@link #EDIT_START_EVENT}, 
+         * Creates a new EditEvent instance to represent an edit event. This
+         * event is used for {@link #EDIT_START_EVENT},
          * {@link #EDIT_COMMIT_EVENT} and {@link #EDIT_CANCEL_EVENT} types.
          */
         public EditEvent(TreeView<T> source,
@@ -1202,14 +1202,14 @@ public class TreeView<T> extends Control {
         public TreeItem<T> getTreeItem() {
             return treeItem;
         }
-        
+
         /**
          * Returns the new value input into the TreeItem by the end user.
          */
         public T getNewValue() {
             return newValue;
         }
-        
+
         /**
          * Returns the old value that existed in the TreeItem prior to the current
          * edit event.
@@ -1218,10 +1218,10 @@ public class TreeView<T> extends Control {
             return oldValue;
         }
     }
-    
-    
-    
-    
+
+
+
+
 
 
 
@@ -1254,23 +1254,23 @@ public class TreeView<T> extends Control {
             this.treeView.showRootProperty().addListener(o -> {
                 shiftSelection(0, treeView.isShowRoot() ? 1 : -1, null);
             });
-                    
+
             updateTreeEventListener(null, treeView.getRoot());
 
             updateDefaultSelection();
         }
-        
+
         private void updateTreeEventListener(TreeItem<T> oldRoot, TreeItem<T> newRoot) {
             if (oldRoot != null && weakTreeItemListener != null) {
                 oldRoot.removeEventHandler(TreeItem.<T>expandedItemCountChangeEvent(), weakTreeItemListener);
             }
-            
+
             if (newRoot != null) {
                 weakTreeItemListener = new WeakEventHandler<>(treeItemListener);
                 newRoot.addEventHandler(TreeItem.<T>expandedItemCountChangeEvent(), weakTreeItemListener);
             }
         }
-        
+
         private ChangeListener<TreeItem<T>> rootPropertyListener = (observable, oldValue, newValue) -> {
             updateDefaultSelection();
             updateTreeEventListener(oldValue, newValue);
@@ -1405,10 +1405,10 @@ public class TreeView<T> extends Control {
                 }
             }
         };
-        
+
         private WeakChangeListener<TreeItem<T>> weakRootPropertyListener =
                 new WeakChangeListener<>(rootPropertyListener);
-        
+
         private WeakEventHandler<TreeModificationEvent<T>> weakTreeItemListener;
 
 
@@ -1431,12 +1431,12 @@ public class TreeView<T> extends Control {
         /** {@inheritDoc} */
         @Override public void select(TreeItem<T> obj) {
 //        if (getRowCount() <= 0) return;
-            
+
             if (obj == null && getSelectionMode() == SelectionMode.SINGLE) {
                 clearSelection();
                 return;
             }
-            
+
             // we firstly expand the path down such that the given object is
             // visible. This fixes RT-14456, where selection was not happening
             // correctly on TreeItems that are not visible.
@@ -1448,16 +1448,16 @@ public class TreeView<T> extends Control {
                     item = item.getParent();
                 }
             }
-            
+
             // Fix for RT-15419. We eagerly update the tree item count, such that
             // selection occurs on the row
             treeView.updateExpandedItemCount(treeView.getRoot());
-            
+
             // We have no option but to iterate through the model and select the
             // first occurrence of the given object. Once we find the first one, we
             // don't proceed to select any others.
             int row = treeView.getRow(obj);
-            
+
             if (row == -1) {
                 // if we are here, we did not find the item in the entire data model.
                 // Even still, we allow for this item to be set to the give object.
@@ -1483,7 +1483,7 @@ public class TreeView<T> extends Control {
          * Support code                                                        *
          *                                                                     *
          **********************************************************************/
-        
+
         /** {@inheritDoc} */
         @Override protected void focus(int itemIndex) {
             if (treeView.getFocusModel() != null) {
@@ -1499,7 +1499,7 @@ public class TreeView<T> extends Control {
             if (treeView.getFocusModel() == null) return -1;
             return treeView.getFocusModel().getFocusedIndex();
         }
-        
+
         /** {@inheritDoc} */
         @Override protected int getItemCount() {
             return treeView == null ? 0 : treeView.getExpandedItemCount();
@@ -1530,12 +1530,12 @@ public class TreeView<T> extends Control {
             focus(getItemCount() > 0 ? 0 : -1);
         }
     }
-    
-    
+
+
 
     /**
-     * 
-     * @param <T> 
+     *
+     * @param <T>
      */
     static class TreeViewFocusModel<T> extends FocusModel<TreeItem<T>> {
 
@@ -1557,25 +1557,25 @@ public class TreeView<T> extends Control {
                 }
             });
         }
-        
+
         private final ChangeListener<TreeItem<T>> rootPropertyListener = (observable, oldValue, newValue) -> {
             updateTreeEventListener(oldValue, newValue);
         };
-                
+
         private final WeakChangeListener<TreeItem<T>> weakRootPropertyListener =
                 new WeakChangeListener<>(rootPropertyListener);
-        
+
         private void updateTreeEventListener(TreeItem<T> oldRoot, TreeItem<T> newRoot) {
             if (oldRoot != null && weakTreeItemListener != null) {
                 oldRoot.removeEventHandler(TreeItem.<T>expandedItemCountChangeEvent(), weakTreeItemListener);
             }
-            
+
             if (newRoot != null) {
                 weakTreeItemListener = new WeakEventHandler<>(treeItemListener);
                 newRoot.addEventHandler(TreeItem.<T>expandedItemCountChangeEvent(), weakTreeItemListener);
             }
         }
-        
+
         private EventHandler<TreeModificationEvent<T>> treeItemListener = new EventHandler<TreeModificationEvent<T>>() {
             @Override public void handle(TreeModificationEvent<T> e) {
                 // don't shift focus if the event occurred on a tree item after
@@ -1633,16 +1633,16 @@ public class TreeView<T> extends Control {
                         }
                     }
                 } while (e.getChange() != null && e.getChange().next());
-                
+
                 if(shift != 0) {
                     final int newFocus = getFocusedIndex() + shift;
                     if (newFocus >= 0) {
                         Platform.runLater(() -> focus(newFocus));
                     }
-                } 
+                }
             }
         };
-        
+
         private WeakEventHandler<TreeModificationEvent<T>> weakTreeItemListener;
 
         @Override protected int getItemCount() {
@@ -1662,7 +1662,7 @@ public class TreeView<T> extends Control {
             if (treeView.expandedItemCountDirty) {
                 treeView.updateExpandedItemCount(treeView.getRoot());
             }
-            
+
             super.focus(index);
         }
     }

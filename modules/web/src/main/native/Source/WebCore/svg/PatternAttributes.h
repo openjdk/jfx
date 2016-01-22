@@ -85,7 +85,7 @@ struct PatternAttributes {
         m_height = value;
         m_heightSet = true;
     }
-    
+
     void setViewBox(const FloatRect& value)
     {
         m_viewBox = value;

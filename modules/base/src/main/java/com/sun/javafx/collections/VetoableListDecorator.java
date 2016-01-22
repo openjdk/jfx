@@ -61,7 +61,7 @@ public abstract class VetoableListDecorator<E> implements ObservableList<E> {
      * <li> for set <code>toBeAdded</code> contains 1 element and <code>indexes</code> are like with removal: {index, index + 1}
      * <li> for setAll, <code>toBeAdded</code> contains all new elements and <code>indexes</code> looks like this: {0, size()}
      * </ul>
-     * 
+     *
      * Note that it's always safe to iterate over toBeAdded and use indexes as pairs of
      * from-to, as there's always at least one pair.
      *
@@ -87,7 +87,7 @@ public abstract class VetoableListDecorator<E> implements ObservableList<E> {
     public void removeListener(ListChangeListener<? super E> listener) {
         helper = ListListenerHelper.removeListener(helper, listener);
     }
-    
+
     @Override
     public void addListener(InvalidationListener listener) {
         helper = ListListenerHelper.addListener(helper, listener);
@@ -708,7 +708,7 @@ public abstract class VetoableListDecorator<E> implements ObservableList<E> {
             lastReturned = -1;
             --cursor;
         }
-        
+
         protected void checkForComodification() {
             if (modCount != modCountAccessor.get()) {
                 throw new ConcurrentModificationException();

@@ -33,10 +33,10 @@ package com.oracle.javafx.scenebuilder.kit.fxom.glue;
 
 /**
  *
- * 
+ *
  */
 public class GlueAuxiliary extends GlueNode {
-    
+
     private final GlueDocument document;
 
     public GlueAuxiliary(GlueDocument document) {
@@ -46,5 +46,5 @@ public class GlueAuxiliary extends GlueNode {
     public GlueDocument getDocument() {
         return document;
     }
-    
+
 }

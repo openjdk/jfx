@@ -32,11 +32,11 @@ import javafx.beans.binding.FloatExpression;
 
 /**
  * Super class for all readonly properties wrapping a {@code float}.
- * 
+ *
  * @see javafx.beans.value.ObservableFloatValue
  * @see javafx.beans.binding.FloatExpression
  * @see ReadOnlyProperty
- * 
+ *
  * @since JavaFX 2.0
  */
 public abstract class ReadOnlyFloatProperty extends FloatExpression implements
@@ -51,7 +51,7 @@ public abstract class ReadOnlyFloatProperty extends FloatExpression implements
     /**
      * Returns a string representation of this {@code ReadOnlyFloatProperty} object.
      * @return a string representation of this {@code ReadOnlyFloatProperty} object.
-     */ 
+     */
     @Override
     public String toString() {
         final Object bean = getBean();
@@ -67,7 +67,7 @@ public abstract class ReadOnlyFloatProperty extends FloatExpression implements
         result.append("value: ").append(get()).append("]");
         return result.toString();
     }
-    
+
     /**
      * Returns a {@code ReadOnlyFloatProperty} that wraps a
      * {@link javafx.beans.property.ReadOnlyProperty}. If the
@@ -75,9 +75,9 @@ public abstract class ReadOnlyFloatProperty extends FloatExpression implements
      * will be returned. Otherwise a new
      * {@code ReadOnlyFloatProperty} is created that is bound to
      * the {@code ReadOnlyProperty}.
-     * 
+     *
      * Note: null values will be interpreted as 0f
-     * 
+     *
      * @param property
      *            The source {@code ReadOnlyProperty}
      * @return A {@code ReadOnlyFloatProperty} that wraps the
@@ -90,7 +90,7 @@ public abstract class ReadOnlyFloatProperty extends FloatExpression implements
         if (property == null) {
             throw new NullPointerException("Property cannot be null");
         }
-        
+
         return property instanceof ReadOnlyFloatProperty ? (ReadOnlyFloatProperty) property:
            new ReadOnlyFloatPropertyBase() {
             private boolean valid = true;
@@ -104,7 +104,7 @@ public abstract class ReadOnlyFloatProperty extends FloatExpression implements
             {
                 property.addListener(new WeakInvalidationListener(listener));
             }
-                    
+
             @Override
             public float get() {
                 valid = true;
@@ -129,7 +129,7 @@ public abstract class ReadOnlyFloatProperty extends FloatExpression implements
      * of this {@code ReadOnlyFloatProperty}. If the
      * value of this {@code ReadOnlyFloatProperty} changes, the value of the
      * {@code ReadOnlyObjectProperty} will be updated automatically.
-     * 
+     *
      * @return the new {@code ReadOnlyObjectProperty}
      * @since JavaFX 8.0
      */
@@ -148,7 +148,7 @@ public abstract class ReadOnlyFloatProperty extends FloatExpression implements
             {
                 ReadOnlyFloatProperty.this.addListener(new WeakInvalidationListener(listener));
             }
-            
+
             @Override
             public Object getBean() {
                 return null; // Virtual property, does not exist on a bean

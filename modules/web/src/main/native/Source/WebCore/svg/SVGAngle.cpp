@@ -76,14 +76,14 @@ inline SVGAngle::SVGAngleType stringToAngleType(const UChar*& ptr, const UChar* 
         return SVGAngle::SVG_ANGLETYPE_UNSPECIFIED;
 
     const UChar firstChar = *ptr;
-    
+
     // If the unit contains only one character, the angle type is unknown.
     ++ptr;
     if (ptr == end)
         return SVGAngle::SVG_ANGLETYPE_UNKNOWN;
 
     const UChar secondChar = *ptr;
- 
+
     // If the unit contains only two characters, the angle type is unknown.
     ++ptr;
     if (ptr == end)

@@ -369,7 +369,7 @@ static void writeRenderSVGTextBox(TextStream& ts, const RenderSVGText& text)
         return;
 
     ts << " " << enclosingIntRect(FloatRect(text.location(), FloatSize(box->logicalWidth(), box->logicalHeight())));
-    
+
     // FIXME: Remove this hack, once the new text layout engine is completly landed. We want to preserve the old layout test results for now.
     ts << " contains 1 chunk(s)";
 
@@ -472,7 +472,7 @@ void writeSVGResourceContainer(TextStream& ts, const RenderSVGResourceContainer&
     writeStandardPrefix(ts, resource, indent);
 
     const AtomicString& id = resource.element().getIdAttribute();
-    writeNameAndQuotedValue(ts, "id", id);    
+    writeNameAndQuotedValue(ts, "id", id);
 
     if (resource.resourceType() == MaskerResourceType) {
         const auto& masker = static_cast<const RenderSVGResourceMasker&>(resource);

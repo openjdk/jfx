@@ -38,7 +38,7 @@ import javafx.stage.Stage;
 public class HelloSimpleTreeView extends Application {
 
     public void start(Stage stage) {
-        
+
         TreeItem<String> root = new TreeItem<>("Root node");
         for (int i = 0; i < 200; i++) {
             TreeItem<String> item = new TreeItem<>("Child node " + i);
@@ -68,7 +68,7 @@ public class HelloSimpleTreeView extends Application {
         stage.setScene(new Scene(group, 800, 600));
         stage.show();
     }
-    
+
     public static void main(String[] args) {
         launch(args);
     }

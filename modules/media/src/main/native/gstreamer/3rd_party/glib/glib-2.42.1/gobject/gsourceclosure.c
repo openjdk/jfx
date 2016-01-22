@@ -36,13 +36,13 @@ g_io_condition_get_type (void)
   if (etype == 0)
     {
       static const GFlagsValue values[] = {
-	{ G_IO_IN,   "G_IO_IN",   "in" },
-	{ G_IO_OUT,  "G_IO_OUT",  "out" },
-	{ G_IO_PRI,  "G_IO_PRI",  "pri" },
-	{ G_IO_ERR,  "G_IO_ERR",  "err" },
-	{ G_IO_HUP,  "G_IO_HUP",  "hup" },
-	{ G_IO_NVAL, "G_IO_NVAL", "nval" },
-	{ 0, NULL, NULL }
+    { G_IO_IN,   "G_IO_IN",   "in" },
+    { G_IO_OUT,  "G_IO_OUT",  "out" },
+    { G_IO_PRI,  "G_IO_PRI",  "pri" },
+    { G_IO_ERR,  "G_IO_ERR",  "err" },
+    { G_IO_HUP,  "G_IO_HUP",  "hup" },
+    { G_IO_NVAL, "G_IO_NVAL", "nval" },
+    { 0, NULL, NULL }
       };
       etype = g_flags_register_static ("GIOCondition", values);
     }
@@ -54,11 +54,11 @@ g_io_condition_get_type (void)
  */
 static void
 source_closure_marshal_BOOLEAN__VOID (GClosure     *closure,
-				      GValue       *return_value,
-				      guint         n_param_values,
-				      const GValue *param_values,
-				      gpointer      invocation_hint,
-				      gpointer      marshal_data)
+                      GValue       *return_value,
+                      guint         n_param_values,
+                      const GValue *param_values,
+                      gpointer      invocation_hint,
+                      gpointer      marshal_data)
 {
   GSourceFunc callback;
   GCClosure *cc = (GCClosure*) closure;
@@ -76,8 +76,8 @@ source_closure_marshal_BOOLEAN__VOID (GClosure     *closure,
 
 static gboolean
 io_watch_closure_callback (GIOChannel   *channel,
-			   GIOCondition  condition,
-			   gpointer      data)
+               GIOCondition  condition,
+               gpointer      data)
 {
   GClosure *closure = data;
 
@@ -88,7 +88,7 @@ io_watch_closure_callback (GIOChannel   *channel,
   g_value_init (&result_value, G_TYPE_BOOLEAN);
   g_value_init (&params[0], G_TYPE_IO_CHANNEL);
   g_value_set_boxed (&params[0], channel);
-		     
+
   g_value_init (&params[1], G_TYPE_IO_CONDITION);
   g_value_set_flags (&params[1], condition);
 
@@ -176,7 +176,7 @@ source_closure_callback (gpointer data)
   gboolean result;
 
   g_value_init (&result_value, G_TYPE_BOOLEAN);
-  
+
   g_closure_invoke (closure, &result_value, 0, NULL, NULL);
 
   result = g_value_get_boolean (&result_value);
@@ -187,9 +187,9 @@ source_closure_callback (gpointer data)
 
 static void
 closure_callback_get (gpointer     cb_data,
-		      GSource     *source,
-		      GSourceFunc *func,
-		      gpointer    *data)
+              GSource     *source,
+              GSourceFunc *func,
+              gpointer    *data)
 {
   GSourceFunc closure_callback = source->source_funcs->closure_callback;
 
@@ -241,7 +241,7 @@ closure_invalidated (gpointer  user_data,
  */
 void
 g_source_set_closure (GSource  *source,
-		      GClosure *closure)
+              GClosure *closure)
 {
   g_return_if_fail (source != NULL);
   g_return_if_fail (closure != NULL);
@@ -270,13 +270,13 @@ g_source_set_closure (GSource  *source,
     {
       GClosureMarshal marshal = (GClosureMarshal)source->source_funcs->closure_marshal;
       if (marshal)
-	g_closure_set_marshal (closure, marshal);
+    g_closure_set_marshal (closure, marshal);
       else if (source->source_funcs == &g_idle_funcs ||
 #ifdef G_OS_UNIX
                source->source_funcs == &g_unix_signal_funcs ||
 #endif
                source->source_funcs == &g_timeout_funcs)
-	g_closure_set_marshal (closure, source_closure_marshal_BOOLEAN__VOID);
+    g_closure_set_marshal (closure, source_closure_marshal_BOOLEAN__VOID);
       else
         g_closure_set_marshal (closure, g_cclosure_marshal_generic);
     }
@@ -284,11 +284,11 @@ g_source_set_closure (GSource  *source,
 
 static void
 dummy_closure_marshal (GClosure     *closure,
-		       GValue       *return_value,
-		       guint         n_param_values,
-		       const GValue *param_values,
-		       gpointer      invocation_hint,
-		       gpointer      marshal_data)
+               GValue       *return_value,
+               guint         n_param_values,
+               const GValue *param_values,
+               gpointer      invocation_hint,
+               gpointer      marshal_data)
 {
   if (G_VALUE_HOLDS_BOOLEAN (return_value))
     g_value_set_boolean (return_value, TRUE);

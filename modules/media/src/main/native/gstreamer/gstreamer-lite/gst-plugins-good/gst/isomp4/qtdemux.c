@@ -87,7 +87,7 @@
 #define QTDEMUX_MAX_SAMPLE_INDEX_SIZE (500*1024*1024)
 #else
 #define QTDEMUX_MAX_SAMPLE_INDEX_SIZE (50*1024*1024)
-#endif // GSTREAMER_LITE 
+#endif // GSTREAMER_LITE
 
 /* For converting qt creation times to unix epoch times */
 #define QTDEMUX_SECONDS_PER_DAY (60 * 60 * 24)
@@ -229,7 +229,7 @@ struct _QtDemuxStream
 #ifdef GSTREAMER_LITE
   gboolean track_enabled;
 #endif // GSTREAMER_LITE
-  
+
   /* duration/scale */
   guint64 duration;             /* in timescale */
   guint32 timescale;
@@ -6843,14 +6843,14 @@ qtdemux_parse_segments (GstQTDemux * qtdemux, QtDemuxStream * stream,
     /* we might allocate a bit too much, at least allocate 1 segment */
 #ifdef GSTREAMER_LITE
     n_segments = MAX (n_segments, 1);
-      
+
     if (n_segments < G_MAXSIZE / sizeof(QtDemuxSegment)) {
         stream->segments = g_try_malloc (sizeof(QtDemuxSegment) * n_segments);
-          
+
         if (stream->segments == NULL) {
             return FALSE;
         }
-        
+
         buffer_length = QT_UINT32 (buffer);
     } else {
         return FALSE;
@@ -6871,12 +6871,12 @@ qtdemux_parse_segments (GstQTDemux * qtdemux, QtDemuxStream * stream,
 
 #ifdef GSTREAMER_LITE
         guint32 idx;
-        
+
         idx = 20 + i * 12;
-        
+
         if (idx <= buffer_length - 4) {
             media_time = QT_UINT32 (buffer + idx);
-            
+
             /* -1 media time is an empty segment, just ignore it */
             if (media_time == G_MAXUINT32) {
                 continue;
@@ -6884,17 +6884,17 @@ qtdemux_parse_segments (GstQTDemux * qtdemux, QtDemuxStream * stream,
         } else {
             return FALSE;
         }
-        
+
         idx = 16 + i * 12;
-        
+
         if (idx <= buffer_length - 4) {
             duration = QT_UINT32 (buffer + idx);
         } else {
             return FALSE;
         }
-        
+
         segment = &stream->segments[count++];
-        
+
         /* time and duration expressed in global timescale */
         segment->time = stime;
         /* add non scaled values so we don't cause roundoff errors */
@@ -6906,12 +6906,12 @@ qtdemux_parse_segments (GstQTDemux * qtdemux, QtDemuxStream * stream,
         segment->media_start =
         gst_util_uint64_scale (media_time, GST_SECOND, stream->timescale);
         segment->media_stop = segment->media_start + segment->duration;
-        
+
         idx = 24 + i * 12;
-        
+
         if (idx <= buffer_length - 4) {
             rate_int = GST_READ_UINT32_BE (buffer + idx);
-            
+
             if (rate_int <= 1) {
                 /* 0 is not allowed, some programs write 1 instead of the floating point
                  * value */
@@ -6958,7 +6958,7 @@ qtdemux_parse_segments (GstQTDemux * qtdemux, QtDemuxStream * stream,
         segment->rate = rate_int / 65536.0;
       }
 #endif
-        
+
       GST_DEBUG_OBJECT (qtdemux, "created segment %d time %" GST_TIME_FORMAT
           ", duration %" GST_TIME_FORMAT ", media_time %" GST_TIME_FORMAT
           ", rate %g, (%d)", i, GST_TIME_ARGS (segment->time),
@@ -10377,7 +10377,7 @@ qtdemux_parse_tree (GstQTDemux * qtdemux)
 #ifdef GSTREAMER_LITE
       if (!qtdemux_parse_trak (qtdemux, trak))
           return FALSE;
-#else    
+#else
     qtdemux_parse_trak (qtdemux, trak);
 #endif // GSTREAMER_LITE
     /* iterate all siblings */
@@ -10705,15 +10705,15 @@ gst_qtdemux_handle_esds (GstQTDemux * qtdemux, QtDemuxStream * stream,
                   {
                       memcpy (info.data, esds->data, esds_len);
                       gst_buffer_unmap(esds_buffer, &info);
-                      
+
                       GST_DEBUG_OBJECT (qtdemux, "setting esds_data from esds");
                       GST_MEMDUMP_OBJECT (qtdemux, "esds_data from esds", esds->data, esds_len);
-              
+
                       gst_caps_set_simple (stream->caps, "esds_data", GST_TYPE_BUFFER,
                                    esds_buffer, NULL);
                   }
-                  
-                  gst_buffer_unref (esds_buffer);                
+
+                  gst_buffer_unref (esds_buffer);
               }
           }
               break;
@@ -10721,7 +10721,7 @@ gst_qtdemux_handle_esds (GstQTDemux * qtdemux, QtDemuxStream * stream,
               break;
       }
 #endif
-	  
+
   }
 
 #ifdef GSTREAMER_LITE

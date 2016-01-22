@@ -167,10 +167,10 @@ void getHostnamesWithCookies(const NetworkStorageSession& session, HashSet<Strin
     BEGIN_BLOCK_OBJC_EXCEPTIONS;
 
     NSArray *cookies = wkHTTPCookies(session.cookieStorage().get());
-    
+
     for (NSHTTPCookie* cookie in cookies)
         hostnames.add([cookie domain]);
-    
+
     END_BLOCK_OBJC_EXCEPTIONS;
 }
 
@@ -182,12 +182,12 @@ void deleteCookiesForHostname(const NetworkStorageSession& session, const String
     NSArray *cookies = wkHTTPCookies(cookieStorage.get());
     if (!cookies)
         return;
-    
+
     for (NSHTTPCookie* cookie in cookies) {
         if (hostname == String([cookie domain]))
             wkDeleteHTTPCookie(cookieStorage.get(), cookie);
     }
-    
+
     END_BLOCK_OBJC_EXCEPTIONS;
 }
 

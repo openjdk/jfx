@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef DFGBlockInsertionSet_h
@@ -42,12 +42,12 @@ class BlockInsertionSet {
 public:
     BlockInsertionSet(Graph& graph);
     ~BlockInsertionSet();
-    
+
     void insert(const BlockInsertion& insertion);
     void insert(size_t index, PassRefPtr<BasicBlock> block);
     BasicBlock* insert(size_t index);
     BasicBlock* insertBefore(BasicBlock* before);
-    
+
     bool execute();
 
 private:

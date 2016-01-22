@@ -111,7 +111,7 @@ import sun.swing.LightweightContent;
  *                 }
  *             });
  *         }
- * 
+ *
  *         public static void main(String[] args) {
  *             launch(args);
  *         }
@@ -123,7 +123,7 @@ public class SwingNode extends Node {
 
     private double fxWidth;
     private double fxHeight;
-    
+
     private int swingPrefWidth;
     private int swingPrefHeight;
     private int swingMaxWidth;
@@ -141,7 +141,7 @@ public class SwingNode extends Node {
 
     private boolean skipBackwardUnrgabNotification;
     private boolean grabbed; // lwframe initiated grab
-    
+
     private volatile int scale = 1;
 
     /**
@@ -236,7 +236,7 @@ public class SwingNode extends Node {
      */
     private static final OptionalMethod<JLightweightFrame> jlfNotifyDisplayChanged =
         new OptionalMethod<>(JLightweightFrame.class, "notifyDisplayChanged", Integer.TYPE);
-    
+
     /*
      * Called on EDT
      */
@@ -353,7 +353,7 @@ public class SwingNode extends Node {
      *
      * @param width the target layout bounds width
      * @param height the target layout bounds height
-     */    
+     */
     @Override public void resize(final double width, final double height) {
         super.resize(width, height);
         if (width != this.fxWidth || height != this.fxHeight) {
@@ -372,7 +372,7 @@ public class SwingNode extends Node {
     /**
      * Returns the {@code SwingNode}'s preferred width for use in layout calculations.
      * This value corresponds to the preferred width of the Swing component.
-     * 
+     *
      * @return the preferred width that the node should be resized to during layout
      */
     @Override
@@ -384,7 +384,7 @@ public class SwingNode extends Node {
     /**
      * Returns the {@code SwingNode}'s preferred height for use in layout calculations.
      * This value corresponds to the preferred height of the Swing component.
-     * 
+     *
      * @return the preferred height that the node should be resized to during layout
      */
     @Override
@@ -392,35 +392,35 @@ public class SwingNode extends Node {
         float uiScale = WindowHelper.getWindowAccessor().getUIScale(getScene().getWindow());
         return swingPrefHeight / uiScale;
     }
-    
+
     /**
      * Returns the {@code SwingNode}'s maximum width for use in layout calculations.
      * This value corresponds to the maximum width of the Swing component.
-     * 
+     *
      * @return the maximum width that the node should be resized to during layout
      */
     @Override public double maxWidth(double height) {
         float uiScale = WindowHelper.getWindowAccessor().getUIScale(getScene().getWindow());
         return swingMaxWidth / uiScale;
     }
-    
+
     /**
      * Returns the {@code SwingNode}'s maximum height for use in layout calculations.
      * This value corresponds to the maximum height of the Swing component.
-     * 
+     *
      * @return the maximum height that the node should be resized to during layout
-     */    
+     */
     @Override public double maxHeight(double width) {
         float uiScale = WindowHelper.getWindowAccessor().getUIScale(getScene().getWindow());
         return swingMaxHeight / uiScale;
     }
-    
+
     /**
      * Returns the {@code SwingNode}'s minimum width for use in layout calculations.
      * This value corresponds to the minimum width of the Swing component.
-     * 
+     *
      * @return the minimum width that the node should be resized to during layout
-     */    
+     */
     @Override public double minWidth(double height) {
         float uiScale = WindowHelper.getWindowAccessor().getUIScale(getScene().getWindow());
         return swingMinWidth / uiScale;
@@ -429,9 +429,9 @@ public class SwingNode extends Node {
     /**
      * Returns the {@code SwingNode}'s minimum height for use in layout calculations.
      * This value corresponds to the minimum height of the Swing component.
-     * 
+     *
      * @return the minimum height that the node should be resized to during layout
-     */    
+     */
     @Override public double minHeight(double width) {
         float uiScale = WindowHelper.getWindowAccessor().getUIScale(getScene().getWindow());
         return swingMinHeight / uiScale;
@@ -489,7 +489,7 @@ public class SwingNode extends Node {
         if (window != null) {
             addWindowListeners(window);
         }
-        scene.windowProperty().addListener(sceneWindowListener);                
+        scene.windowProperty().addListener(sceneWindowListener);
     }
 
     private void addWindowListeners(final Window window) {
@@ -645,7 +645,7 @@ public class SwingNode extends Node {
             }
         });
     }
-    
+
     private void setLwFrameScale(final int scale) {
         if (lwFrame == null) {
             return;
@@ -657,7 +657,7 @@ public class SwingNode extends Node {
                     jlfNotifyDisplayChanged.invoke(lwFrame, scale);
                 }
             }
-        });        
+        });
     }
 
     /**

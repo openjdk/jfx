@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -103,7 +103,7 @@ HistoryItem::HistoryItem(const String& urlString, const String& title)
 #if PLATFORM(JAVA)
     , m_hostObject(NULL)
 #endif
-{    
+{
 #if !PLATFORM(JAVA) || ENABLE(ICONDATABASE)
     iconDatabase().retainIconForPageURL(m_urlString);
 #endif
@@ -156,7 +156,7 @@ HistoryItem::HistoryItem(const URL& url, const String& target, const String& par
 #if PLATFORM(JAVA)
     , m_hostObject(NULL)
 #endif
-{    
+{
 #if !PLATFORM(JAVA) || ENABLE(ICONDATABASE)
     iconDatabase().retainIconForPageURL(m_urlString);
 #endif
@@ -203,7 +203,7 @@ inline HistoryItem::HistoryItem(const HistoryItem& item)
 {
     if (item.m_formData)
         m_formData = item.m_formData->copy();
-        
+
     unsigned size = item.m_children.size();
     m_children.reserveInitialCapacity(size);
     for (unsigned i = 0; i < size; ++i)
@@ -316,7 +316,7 @@ void HistoryItem::setURLString(const String& urlString)
         iconDatabase().retainIconForPageURL(m_urlString);
 #endif
     }
-    
+
     notifyHistoryItemChanged(this);
 }
 
@@ -508,10 +508,10 @@ bool HistoryItem::shouldDoSameDocumentNavigationTo(HistoryItem* otherItem) const
 
     if (stateObject() || otherItem->stateObject())
         return documentSequenceNumber() == otherItem->documentSequenceNumber();
-    
+
     if ((url().hasFragmentIdentifier() || otherItem->url().hasFragmentIdentifier()) && equalIgnoringFragmentIdentifier(url(), otherItem->url()))
-        return documentSequenceNumber() == otherItem->documentSequenceNumber();        
-    
+        return documentSequenceNumber() == otherItem->documentSequenceNumber();
+
     return hasSameDocumentTree(otherItem);
 }
 
@@ -521,7 +521,7 @@ bool HistoryItem::hasSameDocumentTree(HistoryItem* otherItem) const
 {
     if (documentSequenceNumber() != otherItem->documentSequenceNumber())
         return false;
-        
+
     if (children().size() != otherItem->children().size())
         return false;
 
@@ -541,7 +541,7 @@ bool HistoryItem::hasSameFrames(HistoryItem* otherItem) const
 {
     if (target() != otherItem->target())
         return false;
-        
+
     if (children().size() != otherItem->children().size())
         return false;
 
@@ -561,7 +561,7 @@ String HistoryItem::formContentType() const
 void HistoryItem::setFormInfoFromRequest(const ResourceRequest& request)
 {
     m_referrer = request.httpReferrer();
-    
+
     if (equalIgnoringCase(request.httpMethod(), "POST")) {
         // FIXME: Eventually we have to make this smart enough to handle the case where
         // we have a stream for the body to handle the "data interspersed with files" feature.
@@ -664,7 +664,7 @@ void HistoryItem::encodeBackForwardTreeNode(Encoder& encoder) const
 
     encoder.encodeInt32(m_scrollPoint.x());
     encoder.encodeInt32(m_scrollPoint.y());
-    
+
     encoder.encodeFloat(m_pageScaleFactor);
 
     encoder.encodeBool(m_stateObject);
@@ -806,7 +806,7 @@ resume:
     if (!decoder.decodeInt32(y))
         return 0;
     node->m_scrollPoint = IntPoint(x, y);
-    
+
     if (!decoder.decodeFloat(node->m_pageScaleFactor))
         return 0;
 
@@ -842,7 +842,7 @@ PassRefPtr<HistoryItem> HistoryItem::decodeBackForwardTree(const String&, const 
     uint32_t version;
     if (!decoder.decodeUInt32("version", version))
         return nullptr;
-    
+
     if (version != backForwardTreeEncodingVersion)
         return nullptr;
 
@@ -877,7 +877,7 @@ int HistoryItem::showTreeWithIndent(unsigned indentLevel) const
     prefix.append("\0", 1);
 
     fprintf(stderr, "%s+-%s (%p)\n", prefix.data(), m_urlString.utf8().data(), this);
-    
+
     int totalSubItems = 0;
     for (unsigned i = 0; i < m_children.size(); ++i)
         totalSubItems += m_children[i]->showTreeWithIndent(indentLevel + 1);
@@ -885,7 +885,7 @@ int HistoryItem::showTreeWithIndent(unsigned indentLevel) const
 }
 
 #endif
-                
+
 } // namespace WebCore
 
 #ifndef NDEBUG

@@ -38,8 +38,8 @@ typedef struct _GDir GDir;
 
 GLIB_AVAILABLE_IN_ALL
 GDir    *                g_dir_open           (const gchar  *path,
-					       guint         flags,
-					       GError      **error);
+                           guint         flags,
+                           GError      **error);
 GLIB_AVAILABLE_IN_ALL
 const gchar *            g_dir_read_name      (GDir         *dir);
 GLIB_AVAILABLE_IN_ALL

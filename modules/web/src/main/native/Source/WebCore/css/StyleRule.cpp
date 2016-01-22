@@ -51,7 +51,7 @@ PassRefPtr<CSSRule> StyleRuleBase::createCSSOMWrapper(CSSStyleSheet* parentSheet
 }
 
 PassRefPtr<CSSRule> StyleRuleBase::createCSSOMWrapper(CSSRule* parentRule) const
-{ 
+{
     return createCSSOMWrapper(0, parentRule);
 }
 
@@ -328,7 +328,7 @@ void StyleRuleGroup::wrapperInsertRule(unsigned index, PassRef<StyleRuleBase> ru
 {
     m_childRules.insert(index, std::move(rule));
 }
-    
+
 void StyleRuleGroup::wrapperRemoveRule(unsigned index)
 {
     m_childRules.remove(index);

@@ -6,13 +6,13 @@
  * are met:
  *
  * 1.  Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer. 
+ *     notice, this list of conditions and the following disclaimer.
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
- *     documentation and/or other materials provided with the distribution. 
+ *     documentation and/or other materials provided with the distribution.
  * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
- *     from this software without specific prior written permission. 
+ *     from this software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY APPLE AND ITS CONTRIBUTORS "AS IS" AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
@@ -42,21 +42,21 @@
     CFStringRef name = (CFStringRef)self;
     NSString *result = nil;
 
-    CFIndex i; 
+    CFIndex i;
     CFIndex len = CFStringGetLength(name);
     char *charPtr = NULL;
     UniChar *uniCharPtr = NULL;
     Boolean useUniCharPtr = FALSE;
     Boolean shouldCapitalize = TRUE;
     Boolean somethingChanged = FALSE;
-    
+
     for (i = 0; i < len; i ++) {
         UniChar ch = CFStringGetCharacterAtIndex(name, i);
         Boolean replace = FALSE;
         if (shouldCapitalize && ch >= 'a' && ch <= 'z') {
             ch = ch + 'A' - 'a';
             replace = TRUE;
-        } 
+        }
         else if (!shouldCapitalize && ch >= 'A' && ch <= 'Z') {
             ch = ch + 'a' - 'A';
             replace = TRUE;
@@ -69,7 +69,7 @@
                     useUniCharPtr = FALSE;
                     charPtr = CFAllocatorAllocate(NULL, len + 1, 0);
                     CFStringGetCString(name, charPtr, len+1, kCFStringEncodingISOLatin1);
-                } 
+                }
                 else {
                     useUniCharPtr = TRUE;
                     uniCharPtr = CFAllocatorAllocate(NULL, len * sizeof(UniChar), 0);
@@ -78,14 +78,14 @@
             }
             if (useUniCharPtr) {
                 uniCharPtr[i] = ch;
-            } 
+            }
             else {
                 charPtr[i] = ch;
             }
         }
         if (ch == '-') {
             shouldCapitalize = TRUE;
-        } 
+        }
         else {
             shouldCapitalize = FALSE;
         }
@@ -93,15 +93,15 @@
     if (somethingChanged) {
         if (useUniCharPtr) {
             result = (NSString *)CFMakeCollectable(CFStringCreateWithCharactersNoCopy(NULL, uniCharPtr, len, NULL));
-        } 
+        }
         else {
             result = (NSString *)CFMakeCollectable(CFStringCreateWithCStringNoCopy(NULL, charPtr, kCFStringEncodingISOLatin1, NULL));
         }
-    } 
+    }
     else {
         result = [self retain];
     }
-    
+
     return [result autorelease];
 }
 
@@ -113,21 +113,21 @@
 {
     int length = [self length];
     const UInt8 *bytes = [self bytes];
-    
+
 #define CHANNEL_TAG_LENGTH 7
-    
+
     const char *p = (const char *)bytes;
     int remaining = MIN(length, WEB_GUESS_MIME_TYPE_PEEK_LENGTH) - (CHANNEL_TAG_LENGTH - 1);
-    
+
     BOOL foundRDF = false;
-    
+
     while (remaining > 0) {
         // Look for a "<".
         const char *hit = memchr(p, '<', remaining);
         if (!hit) {
             break;
         }
-        
+
         // We are trying to identify RSS or Atom. RSS has a top-level
         // element of either <rss> or <rdf>. However, there are
         // non-RSS RDF files, so in the case of <rdf> we further look
@@ -136,7 +136,7 @@
         // starting with <? or <! can precede the root element. We
         // bail if we don't find an <rss>, <feed> or <rdf> element
         // right after those.
-        
+
         if (foundRDF) {
             if (strncasecmp(hit, "<channel", strlen("<channel")) == 0) {
                 return @"application/rss+xml";
@@ -150,12 +150,12 @@
         } else if (strncasecmp(hit, "<?", strlen("<?")) != 0 && strncasecmp(hit, "<!", strlen("<!")) != 0) {
             return nil;
         }
-        
+
         // Skip the "<" and continue.
         remaining -= (hit + 1) - p;
         p = hit + 1;
     }
-    
+
     return nil;
 }
 
@@ -166,14 +166,14 @@
 #define TEXT_HTML_LENGTH 9
 #define VCARD_HEADER_LENGTH 11
 #define VCAL_HEADER_LENGTH 15
-    
+
     NSString *MIMEType = [self _webkit_guessedMIMETypeForXML];
     if ([MIMEType length])
         return MIMEType;
-    
+
     int length = [self length];
     const char *bytes = [self bytes];
-    
+
     const char *p = bytes;
     int remaining = MIN(length, WEB_GUESS_MIME_TYPE_PEEK_LENGTH) - (SCRIPT_TAG_LENGTH - 1);
     while (remaining > 0) {
@@ -182,7 +182,7 @@
         if (!hit) {
             break;
         }
-        
+
         // If we found a "<", look for "<html>" or "<a " or "<script".
         if (strncasecmp(hit, "<html>",  strlen("<html>")) == 0 ||
             strncasecmp(hit, "<a ",     strlen("<a ")) == 0 ||
@@ -190,12 +190,12 @@
             strncasecmp(hit, "<title>", strlen("<title>")) == 0) {
             return @"text/html";
         }
-        
+
         // Skip the "<" and continue.
         remaining -= (hit + 1) - p;
         p = hit + 1;
     }
-    
+
     // Test for a broken server which has sent the content type as part of the content.
     // This code could be improved to look for other mime types.
     p = bytes;
@@ -217,24 +217,24 @@
         else {
             hit = MIN(lowerhit, upperhit);
         }
-        
+
         // If we found a "t/T", look for "text/html".
         if (strncasecmp(hit, "text/html", TEXT_HTML_LENGTH) == 0) {
             return @"text/html";
         }
-        
+
         // Skip the "t/T" and continue.
         remaining -= (hit + 1) - p;
         p = hit + 1;
     }
-    
+
     if ((length >= VCARD_HEADER_LENGTH) && strncmp(bytes, "BEGIN:VCARD", VCARD_HEADER_LENGTH) == 0) {
         return @"text/vcard";
     }
     if ((length >= VCAL_HEADER_LENGTH) && strncmp(bytes, "BEGIN:VCALENDAR", VCAL_HEADER_LENGTH) == 0) {
         return @"text/calendar";
     }
-    
+
     // Test for plain text.
     int i;
     for(i=0; i<length; i++){
@@ -247,20 +247,20 @@
         // Didn't encounter any bad characters, looks like plain text.
         return @"text/plain";
     }
-    
+
     // Looks like this is a binary file.
-    
+
     // Sniff for the JPEG magic number.
     if ((length >= JPEG_MAGIC_NUMBER_LENGTH) && strncmp(bytes, "\xFF\xD8\xFF\xE0", JPEG_MAGIC_NUMBER_LENGTH) == 0) {
         return @"image/jpeg";
     }
-    
+
 #undef JPEG_MAGIC_NUMBER_LENGTH
 #undef SCRIPT_TAG_LENGTH
 #undef TEXT_HTML_LENGTH
 #undef VCARD_HEADER_LENGTH
 #undef VCAL_HEADER_LENGTH
-    
+
     return nil;
 }
 
@@ -271,13 +271,13 @@
 -(BOOL)_web_isCaseInsensitiveEqualToCString:(const char *)string
 {
     ASSERT(string);
-    
+
     const char *bytes = [self bytes];
     return strncasecmp(bytes, string, [self length]) == 0;
 }
 
 static const UInt8 *_findEOL(const UInt8 *bytes, CFIndex len) {
-    
+
     // According to the HTTP specification EOL is defined as
     // a CRLF pair.  Unfortunately, some servers will use LF
     // instead.  Worse yet, some servers will use a combination
@@ -298,11 +298,11 @@ static const UInt8 *_findEOL(const UInt8 *bytes, CFIndex len) {
             // (CRLF is across reads).  If so, wait for
             // next read.
             if (i + 1 == len) break;
-                
+
             return bytes + i;
         }
     }
-    
+
     return NULL;
 }
 
@@ -401,15 +401,15 @@ static const UInt8 *_findEOL(const UInt8 *bytes, CFIndex len) {
 {
     const char *bytes = (const char *)[self bytes];
     unsigned length = [self length];
-    
+
     unsigned i;
     for (i = 0; i < length - 4; i++) {
-        
+
         //  Support for Acrobat. It sends "\n\n".
         if (bytes[i] == '\n' && bytes[i+1] == '\n') {
             return i+2;
         }
-        
+
         // Returns the position after 2 CRLF's or 1 CRLF if it is the first line.
         if (bytes[i] == '\r' && bytes[i+1] == '\n') {
             i += 2;

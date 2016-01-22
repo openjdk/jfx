@@ -20,9 +20,9 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
- 
+
 #ifndef UnitBezier_h
 #define UnitBezier_h
 
@@ -37,28 +37,28 @@ namespace WebCore {
             cx = 3.0 * p1x;
             bx = 3.0 * (p2x - p1x) - cx;
             ax = 1.0 - cx -bx;
-             
+
             cy = 3.0 * p1y;
             by = 3.0 * (p2y - p1y) - cy;
             ay = 1.0 - cy - by;
         }
-        
+
         double sampleCurveX(double t)
         {
             // `ax t^3 + bx t^2 + cx t' expanded using Horner's rule.
             return ((ax * t + bx) * t + cx) * t;
         }
-        
+
         double sampleCurveY(double t)
         {
             return ((ay * t + by) * t + cy) * t;
         }
-        
+
         double sampleCurveDerivativeX(double t)
         {
             return (3.0 * ax * t + 2.0 * bx) * t + cx;
         }
-        
+
         // Given an x value, find a parametric value it came from.
         double solveCurveX(double x, double epsilon)
         {
@@ -109,12 +109,12 @@ namespace WebCore {
         {
             return sampleCurveY(solveCurveX(x, epsilon));
         }
-        
+
     private:
         double ax;
         double bx;
         double cx;
-        
+
         double ay;
         double by;
         double cy;

@@ -24,12 +24,12 @@
  */
 
 #ifndef ANDROID_LOG_H
-#define	ANDROID_LOG_H
+#define ANDROID_LOG_H
 
 #include <stdio.h>
 #include <android/log.h>
 
-#ifdef	__cplusplus
+#ifdef  __cplusplus
 extern "C" {
 #endif
 
@@ -60,9 +60,9 @@ extern "C" {
     (*ENV)->ThrowNew(ENV,                                                   \
         (*ENV)->FindClass(ENV, "java/lang/RuntimeException"), error_msg);
 
-#ifdef	__cplusplus
+#ifdef  __cplusplus
 }
 #endif
 
-#endif	/* ANDROID_LOG_H */
+#endif  /* ANDROID_LOG_H */
 

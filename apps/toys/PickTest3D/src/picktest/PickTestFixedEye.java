@@ -67,7 +67,7 @@ public class PickTestFixedEye extends Application {
                 ay = event.getSceneY();
             }
         });
-        
+
         scene.setOnMouseDragged(new EventHandler<MouseEvent>() {
             @Override public void handle(MouseEvent event) {
                 b.setTranslateZ(b.getTranslateZ() + (event.getSceneY() - ay) / 3);

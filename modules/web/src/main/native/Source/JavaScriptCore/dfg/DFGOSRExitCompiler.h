@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef DFGOSRExitCompiler_h
@@ -47,14 +47,14 @@ public:
         : m_jit(jit)
     {
     }
-    
+
     void compileExit(const OSRExit&, const Operands<ValueRecovery>&, SpeculationRecovery*);
 
 private:
 #if !ASSERT_DISABLED
     static unsigned badIndex() { return static_cast<unsigned>(-1); };
 #endif
-    
+
     void initializePoisoned(unsigned size)
     {
 #if ASSERT_DISABLED
@@ -63,14 +63,14 @@ private:
         m_poisonScratchIndices.fill(badIndex(), size);
 #endif
     }
-    
+
     unsigned poisonIndex(unsigned index)
     {
         unsigned result = m_poisonScratchIndices[index];
         ASSERT(result != badIndex());
         return result;
     }
-    
+
     CCallHelpers& m_jit;
     Vector<unsigned> m_poisonScratchIndices;
 };

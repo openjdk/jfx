@@ -28,17 +28,17 @@ package javafx.css;
 import com.sun.javafx.css.PseudoClassState;
 
 /**
- * PseudoClass represents one unique pseudo-class state. Introducing a 
+ * PseudoClass represents one unique pseudo-class state. Introducing a
  * pseudo-class into a JavaFX class only requires that the method
  * {@link javafx.scene.Node#pseudoClassStateChanged(javafx.css.PseudoClass, boolean)}
  * be called when the pseudo-class state changes. Typically, the
  * {@code pseudoClassStateChanged} method is called from the
- * {@code protected void invalidated()} method of one of the property base 
+ * {@code protected void invalidated()} method of one of the property base
  * classes in the {@code javafx.beans.property} package.
  * <p>
  * Note that if a node has a default pseudo-class state, a horizontal orientation
- * for example, {@code pseudoClassStateChanged} should be called from the 
- * constructor to set the initial state. 
+ * for example, {@code pseudoClassStateChanged} should be called from the
+ * constructor to set the initial state.
  * <p>
  * The following example would allow &quot;xyzzy&quot; to be used as a
  *  pseudo-class in a CSS selector.
@@ -82,7 +82,7 @@ public abstract class PseudoClass {
      * @throws IllegalArgumentException if pseudoClass parameter is null or an empty String
      */
     public static PseudoClass getPseudoClass(String pseudoClass) {
-        
+
         return PseudoClassState.getPseudoClass(pseudoClass);
 
     }

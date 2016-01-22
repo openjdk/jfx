@@ -43,7 +43,7 @@ using namespace WebCore;
 class NotificationCOMWrapper : public IWebDesktopNotification {
 public:
     static NotificationCOMWrapper* create(Notification* inner) { return new NotificationCOMWrapper(inner); }
-   
+
     // IUnknown
     virtual HRESULT STDMETHODCALLTYPE QueryInterface(REFIID riid, void** ppvObject);
     virtual ULONG STDMETHODCALLTYPE AddRef();
@@ -81,8 +81,8 @@ HRESULT STDMETHODCALLTYPE NotificationCOMWrapper::QueryInterface(REFIID riid, vo
 }
 
 ULONG STDMETHODCALLTYPE NotificationCOMWrapper::AddRef()
-{ 
-    return ++m_refCount; 
+{
+    return ++m_refCount;
 }
 
 ULONG STDMETHODCALLTYPE NotificationCOMWrapper::Release()

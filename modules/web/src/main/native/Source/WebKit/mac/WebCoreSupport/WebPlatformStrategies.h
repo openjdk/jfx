@@ -42,10 +42,10 @@ struct PasteboardWebContent;
 class WebPlatformStrategies : public WebCore::PlatformStrategies, private WebCore::CookiesStrategy, private WebCore::DatabaseStrategy, private WebCore::LoaderStrategy, private WebCore::PasteboardStrategy, private WebCore::PluginStrategy, private WebCore::SharedWorkerStrategy, private WebCore::StorageStrategy, private WebCore::VisitedLinkStrategy {
 public:
     static void initializeIfNecessary();
-    
+
 private:
     WebPlatformStrategies();
-    
+
     // WebCore::PlatformStrategies
     virtual WebCore::CookiesStrategy* createCookiesStrategy() override;
     virtual WebCore::DatabaseStrategy* createDatabaseStrategy() override;
@@ -80,7 +80,7 @@ private:
     // WebCore::VisitedLinkStrategy
     virtual bool isLinkVisited(WebCore::Page*, WebCore::LinkHash, const WebCore::URL& baseURL, const WTF::AtomicString& attributeURL) override;
     virtual void addVisitedLink(WebCore::Page*, WebCore::LinkHash) override;
-    
+
     // WebCore::PasteboardStrategy
 #if PLATFORM(IOS)
     virtual void writeToPasteboard(const WebCore::PasteboardWebContent&) override;

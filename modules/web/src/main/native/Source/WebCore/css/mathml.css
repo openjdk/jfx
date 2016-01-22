@@ -161,7 +161,7 @@ math[mathsize="normal"], mstyle[mathsize="normal"], mo[mathsize="normal"], mn[ma
 math[mathsize="big"], mstyle[mathsize="big"], mo[mathsize="big"], mn[mathsize="big"], mi[mathsize="big"], mtext[mathsize="big"], mspace[mathsize="big"], ms[mathsize="big"] {
     font-size: 1.5em;
 }
- 
+
 mphantom {
     visibility: hidden;
 }

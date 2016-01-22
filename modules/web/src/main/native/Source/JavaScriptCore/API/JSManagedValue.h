@@ -36,20 +36,20 @@
 
 /*!
 @interface
-@discussion JSManagedValue represents a "conditionally retained" JSValue. 
- "Conditionally retained" means that as long as either the JSManagedValue's 
+@discussion JSManagedValue represents a "conditionally retained" JSValue.
+ "Conditionally retained" means that as long as either the JSManagedValue's
  JavaScript value is reachable through the JavaScript object graph
- or the JSManagedValue object is reachable through the external Objective-C 
- object graph as reported to the JSVirtualMachine using 
- addManagedReference:withOwner:, the corresponding JavaScript value will 
- be retained. However, if neither of these conditions are true, the 
+ or the JSManagedValue object is reachable through the external Objective-C
+ object graph as reported to the JSVirtualMachine using
+ addManagedReference:withOwner:, the corresponding JavaScript value will
+ be retained. However, if neither of these conditions are true, the
  corresponding JSValue will be released and set to nil.
 
- The primary use case for JSManagedValue is for safely referencing JSValues 
- from the Objective-C heap. It is incorrect to store a JSValue into an 
- Objective-C heap object, as this can very easily create a reference cycle, 
+ The primary use case for JSManagedValue is for safely referencing JSValues
+ from the Objective-C heap. It is incorrect to store a JSValue into an
+ Objective-C heap object, as this can very easily create a reference cycle,
  keeping the entire JSContext alive.
-*/ 
+*/
 #ifndef JSC_OBJC_API_AVAILABLE_MAC_OS_X_1080
 NS_CLASS_AVAILABLE(10_9, 7_0)
 #else
@@ -77,7 +77,7 @@ OBJC_VISIBLE
 /*!
 @property
 @abstract Get the JSValue from the JSManagedValue.
-@result The corresponding JSValue for this JSManagedValue or 
+@result The corresponding JSValue for this JSManagedValue or
  nil if the JSValue has been collected.
 */
 @property (readonly, strong) JSValue *value;

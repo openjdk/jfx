@@ -85,7 +85,7 @@ TEST(WebKit2_WeakObjCPtr, GetAutoreleased)
         weak = object;
 
         EXPECT_EQ(weak.getAutoreleased(), object);
-        
+
         [object release];
 
         // The object is still in the autorelease pool.

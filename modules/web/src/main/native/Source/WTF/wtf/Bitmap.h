@@ -114,7 +114,7 @@ inline bool Bitmap<size, atomicMode, WordType>::concurrentTestAndSet(size_t n)
         return testAndSet(n);
 
     ASSERT(atomicMode == BitmapAtomic);
-    
+
     WordType mask = one << (n % wordSize);
     size_t index = n / wordSize;
     WordType* wordPtr = bits.data() + index;
@@ -134,7 +134,7 @@ inline bool Bitmap<size, atomicMode, WordType>::concurrentTestAndClear(size_t n)
         return testAndClear(n);
 
     ASSERT(atomicMode == BitmapAtomic);
-    
+
     WordType mask = one << (n % wordSize);
     size_t index = n / wordSize;
     WordType* wordPtr = bits.data() + index;
@@ -170,19 +170,19 @@ inline size_t Bitmap<size, atomicMode, WordType>::nextPossiblyUnset(size_t start
 template<size_t size, BitmapAtomicMode atomicMode, typename WordType>
 inline int64_t Bitmap<size, atomicMode, WordType>::findRunOfZeros(size_t runLength) const
 {
-    if (!runLength) 
-        runLength = 1; 
-     
+    if (!runLength)
+        runLength = 1;
+
     for (size_t i = 0; i <= (size - runLength) ; i++) {
-        bool found = true; 
-        for (size_t j = i; j <= (i + runLength - 1) ; j++) { 
+        bool found = true;
+        for (size_t j = i; j <= (i + runLength - 1) ; j++) {
             if (get(j)) {
-                found = false; 
+                found = false;
                 break;
             }
         }
-        if (found)  
-            return i; 
+        if (found)
+            return i;
     }
     return -1;
 }

@@ -106,7 +106,7 @@ public class Deprecation {
 
     public static void reapplyCSS(Parent parent, String stylesheetPath) {
         assert parent != null;
-        
+
         final List<String> stylesheets = parent.getStylesheets();
         for (String s : new LinkedList<>(stylesheets)) {
             if (s.endsWith(stylesheetPath)) {
@@ -117,7 +117,7 @@ public class Deprecation {
                 break;
             }
         }
-        
+
         for (Node child : parent.getChildrenUnmodifiable()) {
             if (child instanceof Parent) {
                 final Parent childParent = (Parent) child;
@@ -227,13 +227,13 @@ public class Deprecation {
     // using it would break ability to compile over JDK 8 GA, not an option for now.
     public static int getNodeLevel(TreeItem<?> item) {
         return TreeView.getNodeLevel(item);
-    } 
-    
+    }
+
     public static Point2D localToLocal(Node source, double sourceX, double sourceY, Node target) {
         final Point2D sceneXY = source.localToScene(sourceX, sourceY, true /* rootScene */);
         return target.sceneToLocal(sceneXY, true /* rootScene */);
     }
-    
+
     public static Bounds localToLocal(Node source, Bounds sourceBounds, Node target) {
         final Bounds sceneBounds = source.localToScene(sourceBounds, true /* rootScene */);
         return target.sceneToLocal(sceneBounds, true /* rootScene */);

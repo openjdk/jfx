@@ -41,24 +41,24 @@ import java.util.List;
  *
  */
 public class SegmentIndex {
-    
+
     private final List<AbstractSegment> segments = new ArrayList<>();
     private boolean sorted;
-    
+
 
     public void addSegment(AbstractSegment s) {
         segments.add(s);
         sorted = false;
     }
-    
+
     public void clear() {
         segments.clear();
     }
-    
+
     public List<AbstractSegment> match(double targetLength, double threshold) {
         assert targetLength >= 0;
         assert threshold >= 0;
-        
+
         if (sorted == false) {
             Collections.sort(segments);
         }
@@ -76,7 +76,7 @@ public class SegmentIndex {
                 }
             }
         }
-        
+
         return result;
     }
 }

@@ -36,7 +36,7 @@
 {
     if (!(self = [super init]))
         return nil;
-    
+
     self.onLoadBlock = block;
     return self;
 }

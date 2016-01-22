@@ -80,7 +80,7 @@ private:
     virtual LayoutRect clippedOverflowRectForRepaint(const RenderLayerModelObject* repaintContainer) const override;
 
     virtual VisiblePosition positionForPoint(const LayoutPoint&) override final;
-    
+
     virtual bool canBeSelectionLeaf() const override { return true; }
 
     virtual LayoutRect selectionRectForRepaint(const RenderLayerModelObject* repaintContainer, bool clipToVisibleContent = true) override final;

@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef Cursor_h
@@ -142,8 +142,8 @@ namespace WebCore {
         }
 
 #if PLATFORM(JAVA)
-	explicit Cursor(PlatformCursor);
-	void setPlatformCursor(const Cursor&) const;
+    explicit Cursor(PlatformCursor);
+    void setPlatformCursor(const Cursor&) const;
 #endif
 
 #if !PLATFORM(IOS)
@@ -191,7 +191,7 @@ namespace WebCore {
     };
 
     IntPoint determineHotSpot(Image*, const IntPoint& specifiedHotSpot);
-    
+
     const Cursor& pointerCursor();
     const Cursor& crossCursor();
     const Cursor& handCursor();

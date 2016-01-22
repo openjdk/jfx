@@ -45,7 +45,7 @@ import org.junit.runners.Parameterized.Parameters;
 
 @RunWith(Parameterized.class)
 public class StyleTest {
-    
+
     private static class Data {
         private final String s1, s2;
         private final boolean expected;
@@ -54,19 +54,19 @@ public class StyleTest {
             this.s2 = s2;
             this.expected = expected;
         }
-        
+
         @Override public String toString() {
             return "\"" + s1 + "\" " + (expected ? "==" : "!=") + " \"" + s2 + "\"";
         }
     }
-    
+
     public StyleTest(Data data) {
         this.data = data;
     }
     private final Data data;
-    
+
     private static Style createStyle(String stylesheetText) {
-        
+
         Stylesheet stylesheet = new CssParser().parse(stylesheetText);
         Rule rule = stylesheet.getRules().get(0);
         Selector sel = RuleShim.getUnobservedSelectorList(rule).get(0);
@@ -76,33 +76,33 @@ public class StyleTest {
 
     @Parameters
     public static Collection data() {
-        
+
         return Arrays.asList(new Object[] {
-            new Object[] { new Data("*.style { -fx-fill: red; }", 
+            new Object[] { new Data("*.style { -fx-fill: red; }",
                                     "*.style { -fx-fill: red; }", true) },
-            new Object[] { new Data("*.style { -fx-fill: red; }", 
+            new Object[] { new Data("*.style { -fx-fill: red; }",
                                     "*.bad   { -fx-fill: red; }", false) },
-            new Object[] { new Data("*.style:p { -fx-fill: red; }", 
+            new Object[] { new Data("*.style:p { -fx-fill: red; }",
                                     "*.style:p { -fx-fill: red; }", true) },
-            new Object[] { new Data("*.style:p { -fx-fill: red; }", 
+            new Object[] { new Data("*.style:p { -fx-fill: red; }",
                                     "*.style:q { -fx-fill: red; }", false) },
-            new Object[] { new Data("*.style:p { -fx-fill: red; }", 
+            new Object[] { new Data("*.style:p { -fx-fill: red; }",
                                     "*.bad:p   { -fx-fill: red; }", false) },
-            new Object[] { new Data("*.style#c { -fx-fill: red; }", 
+            new Object[] { new Data("*.style#c { -fx-fill: red; }",
                                     "*.style#c { -fx-fill: red; }", true) },
-            new Object[] { new Data("*.style#c { -fx-fill: red; }", 
+            new Object[] { new Data("*.style#c { -fx-fill: red; }",
                                     "*.style#d { -fx-fill: red; }", false) },
-            new Object[] { new Data("*.style#c:p { -fx-fill: red; }", 
+            new Object[] { new Data("*.style#c:p { -fx-fill: red; }",
                                     "*.style#c:p { -fx-fill: red; }", true) },
-            new Object[] { new Data("*.style#c:p { -fx-fill: red; }", 
+            new Object[] { new Data("*.style#c:p { -fx-fill: red; }",
                                     "*.style#c:q { -fx-fill: red; }", false) },
-            new Object[] { new Data("*.style { -fx-fill: red; }", 
+            new Object[] { new Data("*.style { -fx-fill: red; }",
                                     "*.style { -fx-fill: green; }", false) },
-            new Object[] { new Data("*.style { -fx-border-color: red; }", 
+            new Object[] { new Data("*.style { -fx-border-color: red; }",
                                     "*.style { -fx-fill: red; }", false) },
         });
     }
-    
+
     @Test
     public void testEquals() {
 
@@ -111,7 +111,7 @@ public class StyleTest {
         boolean expected = data.expected;
         boolean actual = instance.equals(obj);
         assertTrue(data.toString(), expected == actual);
-        
+
     }
 
 }

@@ -52,26 +52,26 @@ public class ReadOnlyIntegerPropertyTest {
     public void testToString() {
         final ReadOnlyIntegerProperty v1 = new ReadOnlyIntegerPropertyStub(null, "");
         assertEquals("ReadOnlyIntegerProperty [value: " + DEFAULT + "]", v1.toString());
-        
+
         final ReadOnlyIntegerProperty v2 = new ReadOnlyIntegerPropertyStub(null, null);
         assertEquals("ReadOnlyIntegerProperty [value: " + DEFAULT + "]", v2.toString());
-        
+
         final Object bean = new Object();
         final String name = "My name";
         final ReadOnlyIntegerProperty v3 = new ReadOnlyIntegerPropertyStub(bean, name);
         assertEquals("ReadOnlyIntegerProperty [bean: " + bean.toString() + ", name: My name, value: " + DEFAULT + "]", v3.toString());
-        
+
         final ReadOnlyIntegerProperty v4 = new ReadOnlyIntegerPropertyStub(bean, "");
         assertEquals("ReadOnlyIntegerProperty [bean: " + bean.toString() + ", value: " + DEFAULT + "]", v4.toString());
-        
+
         final ReadOnlyIntegerProperty v5 = new ReadOnlyIntegerPropertyStub(bean, null);
         assertEquals("ReadOnlyIntegerProperty [bean: " + bean.toString() + ", value: " + DEFAULT + "]", v5.toString());
-        
+
         final ReadOnlyIntegerProperty v6 = new ReadOnlyIntegerPropertyStub(null, name);
         assertEquals("ReadOnlyIntegerProperty [name: My name, value: " + DEFAULT + "]", v6.toString());
-        
+
     }
-    
+
     @Test
     public void testAsObject() {
         final ReadOnlyIntegerWrapper valueModel = new ReadOnlyIntegerWrapper();
@@ -83,7 +83,7 @@ public class ReadOnlyIntegerPropertyTest {
         valueModel.set(5);
         assertEquals(Integer.valueOf(5), exp.getValue());
     }
-    
+
     @Test
     public void testObjectToInteger() {
         final ReadOnlyObjectWrapper<Integer> valueModel = new ReadOnlyObjectWrapper<Integer>();
@@ -95,12 +95,12 @@ public class ReadOnlyIntegerPropertyTest {
         valueModel.set(5);
         assertEquals(5, exp.intValue());
     }
-    
+
     private static class ReadOnlyIntegerPropertyStub extends ReadOnlyIntegerProperty {
-        
+
         private final Object bean;
         private final String name;
-        
+
         private ReadOnlyIntegerPropertyStub(Object bean, String name) {
             this.bean = bean;
             this.name = name;
@@ -125,7 +125,7 @@ public class ReadOnlyIntegerPropertyTest {
         @Override
         public void removeListener(InvalidationListener listener) {
         }
-        
+
     }
 
 }

@@ -63,7 +63,7 @@ void Profile::forEach(void (ProfileNode::*function)())
     while (currentNode && currentNode != endNode) {
         (currentNode->*function)();
         currentNode = currentNode->traverseNextNodePostOrder();
-    } 
+    }
 }
 
 #ifndef NDEBUG

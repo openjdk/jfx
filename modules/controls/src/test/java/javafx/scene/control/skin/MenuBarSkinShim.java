@@ -38,21 +38,21 @@ import javafx.scene.layout.VBox;
  *
  */
 public class MenuBarSkinShim {
-    
+
     // can only access the getNodeForMenu method in MenuBarSkin from this package.
     public static MenuButton getNodeForMenu(MenuBarSkin skin, int i) {
         return skin.getNodeForMenu(i);
     }
-    
+
     public static Skin getPopupSkin(MenuButton mb) {
         return ((MenuButtonSkinBase)mb.getSkin()).popup.getSkin();
     }
-    
+
     public static ContextMenuContent getMenuContent(MenuButton mb) {
         ContextMenuContent cmc = (ContextMenuContent)getPopupSkin(mb).getNode();
         return cmc;
     }
-    
+
     public static int getFocusedIndex(MenuBarSkin skin) {
         return skin.getFocusedMenuIndex();
     }

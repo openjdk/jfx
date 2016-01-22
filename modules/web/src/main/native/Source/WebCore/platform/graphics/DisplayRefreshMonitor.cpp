@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -127,7 +127,7 @@ void DisplayRefreshMonitor::displayDidRefresh()
         MutexLocker lock(m_mutex);
         m_previousFrameDone = true;
     }
-    
+
     DisplayRefreshMonitorManager::sharedManager()->displayDidRefresh(this);
 }
 
@@ -155,7 +155,7 @@ void DisplayRefreshMonitorManager::registerClient(DisplayRefreshMonitorClient* c
 {
     if (!client->m_displayIDIsSet)
         return;
-        
+
     ensureMonitorForClient(client);
 }
 
@@ -167,7 +167,7 @@ void DisplayRefreshMonitorManager::unregisterClient(DisplayRefreshMonitorClient*
     DisplayRefreshMonitorMap::iterator it = m_monitors.find(client->m_displayID);
     if (it == m_monitors.end())
         return;
-    
+
     DisplayRefreshMonitor* monitor = it->value.get();
     if (monitor->removeClient(client)) {
         if (!monitor->hasClients())
@@ -179,7 +179,7 @@ bool DisplayRefreshMonitorManager::scheduleAnimation(DisplayRefreshMonitorClient
 {
     if (!client->m_displayIDIsSet)
         return false;
-        
+
     DisplayRefreshMonitor* monitor = ensureMonitorForClient(client);
 
     client->m_scheduled = true;
@@ -198,7 +198,7 @@ void DisplayRefreshMonitorManager::windowScreenDidChange(PlatformDisplayID displ
 {
     if (client->m_displayIDIsSet && client->m_displayID == displayID)
         return;
-    
+
     unregisterClient(client);
     client->setDisplayID(displayID);
     registerClient(client);

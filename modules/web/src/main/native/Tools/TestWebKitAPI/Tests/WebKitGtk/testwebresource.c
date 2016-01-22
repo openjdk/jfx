@@ -198,14 +198,14 @@ static void test_web_resource_loading()
 
     /* We won't get finished immediately, because of the redirect */
     g_main_loop_run(loop);
-    
+
     web_frame = webkit_web_view_get_main_frame(web_view);
     data_source = webkit_web_frame_get_data_source(web_frame);
 
     g_assert(main_resource);
     g_assert(webkit_web_data_source_get_main_resource(data_source) == main_resource);
     g_object_unref(main_resource);
-    
+
     g_assert_cmpint(been_to_resource_request_starting, ==, 2);
     g_assert_cmpint(been_to_load_finished, ==, TRUE);
 
@@ -242,7 +242,7 @@ static void test_web_resource_sub_resource_loading()
     char* uri = g_strdup_printf("%smain.html", base_uri);
 
     main_resource = NULL;
-    
+
     loop = g_main_loop_new(NULL, TRUE);
 
     g_object_ref_sink(web_view);
@@ -262,7 +262,7 @@ static void test_web_resource_sub_resource_loading()
     /* The main resource should be loaded; now let's wait for the sub-resource to load */
     g_idle_add(idle_quit_loop_cb, NULL);
     g_main_loop_run(loop);
-    
+
     g_assert(main_resource && sub_resource);
     g_assert(main_resource != sub_resource);
 

@@ -50,7 +50,7 @@ public:
     LinkRelAttribute();
     explicit LinkRelAttribute(const String&);
 };
-    
+
 }
 
 #endif

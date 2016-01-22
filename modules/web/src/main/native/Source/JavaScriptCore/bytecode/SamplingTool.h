@@ -81,7 +81,7 @@ namespace JSC {
         private:
             int m_flag;
         };
-    
+
         static const void* addressOfFlags()
         {
             return &s_flags;
@@ -107,25 +107,25 @@ namespace JSC {
                 m_name = 0;
                 return;
             }
-            
+
             m_name = name;
             exchangeCurrent(this, &m_previous);
             ASSERT(!m_previous || m_previous > this);
         }
-        
+
         ~SamplingRegion()
         {
             if (!m_name)
                 return;
-            
+
             ASSERT(bitwise_cast<SamplingRegion*>(s_currentOrReserved & ~1) == this);
             exchangeCurrent(m_previous);
         }
-        
+
         static void sample();
-        
+
         JS_EXPORT_PRIVATE static void dump();
-        
+
     private:
         const char* m_name;
         SamplingRegion* m_previous;
@@ -135,7 +135,7 @@ namespace JSC {
             uintptr_t previous;
             while (true) {
                 previous = s_currentOrReserved;
-                
+
                 // If it's reserved (i.e. sampling thread is reading it), loop around.
                 if (previous & 1) {
 #if OS(UNIX)
@@ -143,16 +143,16 @@ namespace JSC {
 #endif
                     continue;
                 }
-                
+
                 // If we're going to CAS, then make sure previous is set.
                 if (previousPtr)
                     *previousPtr = bitwise_cast<SamplingRegion*>(previous);
-                
+
                 if (WTF::weakCompareAndSwapUIntPtr(&s_currentOrReserved, previous, bitwise_cast<uintptr_t>(current)))
                     break;
             }
         }
-        
+
         static void dumpInternal();
 
         class Locker {
@@ -162,12 +162,12 @@ namespace JSC {
         };
 
         static volatile uintptr_t s_currentOrReserved;
-        
+
         // rely on identity hashing of string constants
         static Spectrum<const char*>* s_spectrum;
-        
+
         static unsigned long s_noneOfTheAbove;
-        
+
         static unsigned s_numberOfSamplesSinceDump;
     };
 #else // ENABLE(SAMPLING_REGIONS)
@@ -194,13 +194,13 @@ namespace JSC {
             , m_size(0)
         {
         }
-        
+
         ~ScriptSampleRecord()
         {
             if (m_samples)
                 free(m_samples);
         }
-        
+
         void sample(CodeBlock*, Instruction*);
 
         Strong<ScriptExecutable> m_executable;
@@ -229,7 +229,7 @@ namespace JSC {
     class SamplingTool {
     public:
         friend struct CallRecord;
-        
+
 #if ENABLE(OPCODE_SAMPLING)
         class CallRecord {
             WTF_MAKE_NONCOPYABLE(CallRecord);
@@ -309,7 +309,7 @@ namespace JSC {
                 , m_codeBlock(codeBlock)
             {
             }
-            
+
             bool isNull() { return !m_sample; }
             CodeBlock* codeBlock() { return m_codeBlock; }
             Instruction* vPC() { return reinterpret_cast<Instruction*>(m_sample & ~0x3); }
@@ -323,9 +323,9 @@ namespace JSC {
 
         void doRun();
         static SamplingTool* s_samplingTool;
-        
+
         Interpreter* m_interpreter;
-        
+
         // State tracked by the main thread, used by the sampling thread.
         CodeBlock* m_codeBlock;
         intptr_t m_sample;
@@ -335,7 +335,7 @@ namespace JSC {
         long long m_opcodeSampleCount;
         unsigned m_opcodeSamples[numOpcodeIDs];
         unsigned m_opcodeSamplesInCTIFunctions[numOpcodeIDs];
-        
+
 #if ENABLE(CODEBLOCK_SAMPLING)
         Mutex m_scriptSampleMapMutex;
         OwnPtr<ScriptSampleRecordMap> m_scopeSampleMap;

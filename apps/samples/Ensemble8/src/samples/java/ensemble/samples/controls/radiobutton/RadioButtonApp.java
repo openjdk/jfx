@@ -58,7 +58,7 @@ public class RadioButtonApp extends Application {
         VBox vbox = new VBox();
         vbox.setSpacing(5);
         vbox.setAlignment(Pos.CENTER_LEFT);
-        
+
         ToggleGroup tg = new ToggleGroup();
         RadioButton rb1 = new RadioButton("Hello");
         rb1.setToggleGroup(tg);
@@ -74,7 +74,7 @@ public class RadioButtonApp extends Application {
 
         vbox.getChildren().addAll(rb1, rb2, rb3);
         hbox.getChildren().add(vbox);
-        
+
         return hbox;
     }
 

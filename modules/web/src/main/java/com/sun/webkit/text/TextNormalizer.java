@@ -45,7 +45,7 @@ final class TextNormalizer {
         default:
             throw new IllegalArgumentException("invalid type: " + type);
         }
-            
+
         return Normalizer.normalize(data, form);
     }
 }

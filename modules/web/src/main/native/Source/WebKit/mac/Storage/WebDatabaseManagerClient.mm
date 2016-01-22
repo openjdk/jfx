@@ -20,9 +20,9 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
- 
+
 #import "WebDatabaseManagerClient.h"
 
 #if ENABLE(SQL_DATABASE)
@@ -56,7 +56,7 @@ WebDatabaseManagerClient* WebDatabaseManagerClient::sharedWebDatabaseManagerClie
 static void onNewDatabaseOriginAdded(CFNotificationCenterRef, void* observer, CFStringRef, const void*, CFDictionaryRef)
 {
     ASSERT(observer);
-    
+
     WebDatabaseManagerClient* client = reinterpret_cast<WebDatabaseManagerClient*>(observer);
     client->newDatabaseOriginWasAdded();
 }
@@ -64,7 +64,7 @@ static void onNewDatabaseOriginAdded(CFNotificationCenterRef, void* observer, CF
 static void onDatabaseDeleted(CFNotificationCenterRef, void* observer, CFStringRef, const void*, CFDictionaryRef)
 {
     ASSERT(observer);
-    
+
     WebDatabaseManagerClient* client = reinterpret_cast<WebDatabaseManagerClient*>(observer);
     client->databaseWasDeleted();
 }
@@ -72,7 +72,7 @@ static void onDatabaseDeleted(CFNotificationCenterRef, void* observer, CFStringR
 static void onDatabaseOriginDeleted(CFNotificationCenterRef, void* observer, CFStringRef, const void*, CFDictionaryRef)
 {
     ASSERT(observer);
-    
+
     WebDatabaseManagerClient* client = reinterpret_cast<WebDatabaseManagerClient*>(observer);
     client->databaseOriginWasDeleted();
 }
@@ -86,10 +86,10 @@ WebDatabaseManagerClient::WebDatabaseManagerClient()
 #endif
 {
 #if PLATFORM(IOS)
-    CFNotificationCenterRef center = CFNotificationCenterGetDarwinNotifyCenter(); 
+    CFNotificationCenterRef center = CFNotificationCenterGetDarwinNotifyCenter();
     CFNotificationCenterAddObserver(center, this, onNewDatabaseOriginAdded, WebDatabaseOriginWasAddedNotification, 0, CFNotificationSuspensionBehaviorDeliverImmediately);
     CFNotificationCenterAddObserver(center, this, onDatabaseDeleted, WebDatabaseWasDeletedNotification, 0, CFNotificationSuspensionBehaviorDeliverImmediately);
-    CFNotificationCenterAddObserver(center, this, onDatabaseOriginDeleted, WebDatabaseOriginWasDeletedNotification, 0, CFNotificationSuspensionBehaviorDeliverImmediately);    
+    CFNotificationCenterAddObserver(center, this, onDatabaseOriginDeleted, WebDatabaseOriginWasDeletedNotification, 0, CFNotificationSuspensionBehaviorDeliverImmediately);
 #endif
 }
 
@@ -137,7 +137,7 @@ void WebDatabaseManagerClient::dispatchDidModifyOrigin(SecurityOrigin* origin)
 
     RetainPtr<WebSecurityOrigin> webSecurityOrigin = adoptNS([[WebSecurityOrigin alloc] _initWithWebCoreSecurityOrigin:origin]);
 
-    [[NSNotificationCenter defaultCenter] postNotificationName:WebDatabaseDidModifyOriginNotification 
+    [[NSNotificationCenter defaultCenter] postNotificationName:WebDatabaseDidModifyOriginNotification
                                                         object:webSecurityOrigin.get()];
 }
 
@@ -149,9 +149,9 @@ void WebDatabaseManagerClient::dispatchDidModifyDatabase(SecurityOrigin* origin,
     }
 
     RetainPtr<WebSecurityOrigin> webSecurityOrigin = adoptNS([[WebSecurityOrigin alloc] _initWithWebCoreSecurityOrigin:origin]);
-    RetainPtr<NSDictionary> userInfo = adoptNS([[NSDictionary alloc] 
+    RetainPtr<NSDictionary> userInfo = adoptNS([[NSDictionary alloc]
                                                initWithObjectsAndKeys:(NSString *)databaseIdentifier, WebDatabaseIdentifierKey, nil]);
-    
+
     [[NSNotificationCenter defaultCenter] postNotificationName:WebDatabaseDidModifyDatabaseNotification
                                                         object:webSecurityOrigin.get()
                                                       userInfo:userInfo.get()];
@@ -159,7 +159,7 @@ void WebDatabaseManagerClient::dispatchDidModifyDatabase(SecurityOrigin* origin,
 
 #if PLATFORM(IOS)
 void WebDatabaseManagerClient::dispatchDidAddNewOrigin(SecurityOrigin*)
-{    
+{
     m_isHandlingNewDatabaseOriginNotification = true;
     // Send a notification to all apps that a new origin has been added, so other apps with opened database can refresh their origin maps.
     CFNotificationCenterPostNotification(CFNotificationCenterGetDarwinNotifyCenter(), WebDatabaseOriginWasAddedNotification, 0, 0, true);
@@ -190,7 +190,7 @@ void WebDatabaseManagerClient::newDatabaseOriginWasAdded()
         m_isHandlingNewDatabaseOriginNotification = false;
         return;
     }
-    
+
     databaseOriginsDidChange();
 }
 
@@ -198,14 +198,14 @@ void WebDatabaseManagerClient::databaseWasDeleted()
 {
     // Locks the WebThread for the rest of the run loop.
     WebThreadLock();
-    
+
     // If this is the process that added the new origin, its quota map should have been updated
     // and does not need to be invalidated.
     if (m_isHandlingDeleteDatabaseNotification) {
         m_isHandlingDeleteDatabaseNotification = false;
         return;
     }
-    
+
     DatabaseTracker::tracker().removeDeletedOpenedDatabases();
 }
 
@@ -213,7 +213,7 @@ void WebDatabaseManagerClient::databaseOriginWasDeleted()
 {
     // Locks the WebThread for the rest of the run loop.
     WebThreadLock();
-    
+
     // If this is the process that added the new origin, its quota map should have been updated
     // and does not need to be invalidated.
     if (m_isHandlingDeleteDatabaseOriginNotification) {

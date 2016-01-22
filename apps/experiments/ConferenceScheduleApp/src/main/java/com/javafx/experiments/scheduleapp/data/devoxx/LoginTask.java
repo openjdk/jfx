@@ -98,13 +98,13 @@ class LoginTask extends Task<Void> {
 
         return null;
     }
-    
+
     private void loadEvents() throws Exception {
         System.out.println("LOGIN TASK loadEvents()");
         events.clear();
         JSONParserJP.parse("http://cfp.devoxx.com/rest/v1/events/7/schedule/"+userName, new EventCallback());
     }
-    
+
     private class EventCallback extends JSONParserJP.CallbackAdapter {
         @Override public void keyValue(String key, String value, int depth) {
             if (depth == 2 && "id".equals(key)){

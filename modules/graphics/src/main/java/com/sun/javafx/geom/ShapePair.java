@@ -74,7 +74,7 @@ public abstract class ShapePair extends Shape {
 
     /**
      * Returns the inner {@link Shape}.
-     * 
+     *
      * @return the inner {@link Shape}.
      */
     public abstract Shape getInnerShape();

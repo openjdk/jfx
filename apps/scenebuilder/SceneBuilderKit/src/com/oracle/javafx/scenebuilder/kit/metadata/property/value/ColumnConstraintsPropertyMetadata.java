@@ -46,27 +46,27 @@ import javafx.scene.layout.ColumnConstraints;
  *
  */
 public class ColumnConstraintsPropertyMetadata extends ComplexPropertyMetadata<ColumnConstraints> {
-    
+
     private static final ColumnConstraints DEFAULT = new ColumnConstraints();
 
     private final BooleanPropertyMetadata fillWidthMetadata
-            = new BooleanPropertyMetadata(new PropertyName("fillWidth"), 
+            = new BooleanPropertyMetadata(new PropertyName("fillWidth"),
                     true, DEFAULT.isFillWidth(), InspectorPath.UNUSED);
     private final DoublePropertyMetadata maxWidthMetadata
-            = new DoublePropertyMetadata(new PropertyName("maxWidth"), 
+            = new DoublePropertyMetadata(new PropertyName("maxWidth"),
                     DoublePropertyMetadata.DoubleKind.USE_COMPUTED_SIZE, true,
                     DEFAULT.getMaxWidth(), InspectorPath.UNUSED);
     private final DoublePropertyMetadata minWidthMetadata
-            = new DoublePropertyMetadata(new PropertyName("minWidth"), 
-            DoublePropertyMetadata.DoubleKind.USE_COMPUTED_SIZE, true, 
+            = new DoublePropertyMetadata(new PropertyName("minWidth"),
+            DoublePropertyMetadata.DoubleKind.USE_COMPUTED_SIZE, true,
                     DEFAULT.getMinWidth(), InspectorPath.UNUSED);
     private final DoublePropertyMetadata percentWidthMetadata
-            = new DoublePropertyMetadata(new PropertyName("percentWidth"), 
-            DoublePropertyMetadata.DoubleKind.PERCENTAGE, true, 
+            = new DoublePropertyMetadata(new PropertyName("percentWidth"),
+            DoublePropertyMetadata.DoubleKind.PERCENTAGE, true,
                     DEFAULT.getPercentWidth(), InspectorPath.UNUSED);
     private final DoublePropertyMetadata prefWidthMetadata
-            = new DoublePropertyMetadata(new PropertyName("prefWidth"), 
-            DoublePropertyMetadata.DoubleKind.USE_PREF_SIZE, true, 
+            = new DoublePropertyMetadata(new PropertyName("prefWidth"),
+            DoublePropertyMetadata.DoubleKind.USE_PREF_SIZE, true,
                     DEFAULT.getPrefWidth(), InspectorPath.UNUSED);
     private final EnumerationPropertyMetadata halignmentMetadata
             = new EnumerationPropertyMetadata(new PropertyName("halignment"),
@@ -74,8 +74,8 @@ public class ColumnConstraintsPropertyMetadata extends ComplexPropertyMetadata<C
     private final EnumerationPropertyMetadata hgrowMetadata
             = new EnumerationPropertyMetadata(new PropertyName("hgrow"),
             Priority.class, EnumerationPropertyMetadata.EQUIV_INHERITED, true, InspectorPath.UNUSED);
-    
-    public ColumnConstraintsPropertyMetadata(PropertyName name, boolean readWrite, 
+
+    public ColumnConstraintsPropertyMetadata(PropertyName name, boolean readWrite,
             ColumnConstraints defaultValue, InspectorPath inspectorPath) {
         super(name, ColumnConstraints.class, readWrite, defaultValue, inspectorPath);
     }
@@ -83,7 +83,7 @@ public class ColumnConstraintsPropertyMetadata extends ComplexPropertyMetadata<C
     /*
      * Utility
      */
-    
+
     public static boolean equals(ColumnConstraints c1, ColumnConstraints c2) {
         assert c1 != null;
         assert c2 != null;
@@ -99,31 +99,31 @@ public class ColumnConstraintsPropertyMetadata extends ComplexPropertyMetadata<C
                     && MathUtils.equals(c1.getPercentWidth(), c2.getPercentWidth())
                     && MathUtils.equals(c1.getPrefWidth(), c2.getPrefWidth());
         }
-        
+
         return result;
     }
-    
+
     /*
      * ComplexPropertyMetadata
      */
-    
+
     @Override
     public FXOMInstance makeFxomInstanceFromValue(ColumnConstraints value, FXOMDocument fxomDocument) {
         final FXOMInstance result = new FXOMInstance(fxomDocument, value.getClass());
-        
+
         fillWidthMetadata.setValue(result, value.isFillWidth());
         maxWidthMetadata.setValue(result, value.getMaxWidth());
         minWidthMetadata.setValue(result, value.getMinWidth());
         percentWidthMetadata.setValue(result, value.getPercentWidth());
         prefWidthMetadata.setValue(result, value.getPrefWidth());
-        
+
         final HPos halignment = value.getHalignment();
         if (halignment == null) {
             halignmentMetadata.setValue(result, halignmentMetadata.getDefaultValue());
         } else {
             halignmentMetadata.setValue(result, halignment.toString());
         }
-        
+
         final Priority hgrow = value.getHgrow();
         if (hgrow == null) {
             hgrowMetadata.setValue(result, hgrowMetadata.getDefaultValue());
@@ -133,5 +133,5 @@ public class ColumnConstraintsPropertyMetadata extends ComplexPropertyMetadata<C
 
         return result;
     }
-    
+
 }

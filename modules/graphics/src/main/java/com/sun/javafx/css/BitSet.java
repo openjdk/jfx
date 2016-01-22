@@ -46,7 +46,7 @@ abstract class BitSet<T> implements ObservableSet<T> {
         this.bits = EMPTY_SET;
     }
 
-    
+
     /** {@inheritDoc} */
     @Override
     public int size() {
@@ -67,7 +67,7 @@ abstract class BitSet<T> implements ObservableSet<T> {
 
     @Override
     public boolean isEmpty() {
-        
+
         if (bits.length > 0) {
             for (int n = 0; n < bits.length; n++) {
                 final long mask = bits[n];
@@ -86,12 +86,12 @@ abstract class BitSet<T> implements ObservableSet<T> {
      */
     @Override
     public Iterator<T> iterator() {
-        
+
         return new Iterator<T>() {
             int next = -1;
             int element = 0;
             int index = -1;
-            
+
             @Override
             public boolean hasNext() {
                 if (bits == null || bits.length == 0) {
@@ -99,7 +99,7 @@ abstract class BitSet<T> implements ObservableSet<T> {
                 }
 
                 boolean found = false;
-                
+
                 do {
                     if (++next >= Long.SIZE) {
                         if (++element < bits.length) {
@@ -107,13 +107,13 @@ abstract class BitSet<T> implements ObservableSet<T> {
                         } else {
                             return false;
                         }
-                    }                        
-                    
+                    }
+
                     long bit = 1l << next;
                     found = (bit & bits[element]) == bit;
-                    
+
                 } while( !found );
-                
+
                 if (found) {
                     index = Long.SIZE * element + next;
                 }
@@ -144,25 +144,25 @@ abstract class BitSet<T> implements ObservableSet<T> {
     /** {@inheritDoc} */
     @Override
     public boolean add(T t) {
-        
+
         if (t == null) {
             // this not modified!
             return false;
         }
-        
+
         final int element = getIndex(t) / Long.SIZE;
         final long bit = 1l << (getIndex(t) % Long.SIZE);
-        
+
         // need to grow?
         if (element >= bits.length) {
             final long[] temp = new long[element + 1];
             System.arraycopy(bits, 0, temp, 0, bits.length);
             bits = temp;
         }
-        
+
         final long temp = bits[element];
         bits[element] = temp | bit;
-        
+
         // if index[element] == temp, then the bit was already set
         final boolean modified = (bits[element] != temp);
         if (modified && SetListenerHelper.hasListeners(listenerHelper)){
@@ -174,7 +174,7 @@ abstract class BitSet<T> implements ObservableSet<T> {
     /** {@inheritDoc} */
     @Override
     public boolean remove(Object o) {
-        
+
         if (o == null) {
             // this not modified!
             return false;
@@ -189,7 +189,7 @@ abstract class BitSet<T> implements ObservableSet<T> {
             // not in this Set!
             return false;
         }
-        
+
         final long temp = bits[element];
         bits[element] = temp & ~bit;
 
@@ -210,14 +210,14 @@ abstract class BitSet<T> implements ObservableSet<T> {
         return modified;
     }
 
-    
+
     /** {@inheritDoc} */
     @Override
     public boolean contains(Object o) {
         if (o == null) {
             return false;
         }
-        
+
         final T t = cast(o);
 
         final int element = getIndex(t) / Long.SIZE;
@@ -225,7 +225,7 @@ abstract class BitSet<T> implements ObservableSet<T> {
 
         return (element < bits.length) && (bits[element] & bit) == bit;
     }
-    
+
     /** {@inheritDoc} */
     @Override
     public boolean containsAll(Collection<?> c) {
@@ -253,17 +253,17 @@ abstract class BitSet<T> implements ObservableSet<T> {
         }
         return true;
     }
-        
+
 
     /** {@inheritDoc} */
     @Override
     public boolean addAll(Collection<? extends T> c) {
-        
+
         if (c == null || this.getClass() != c.getClass()) {
             // this not modified!
             return false;
         }
-        
+
         boolean modified = false;
 
         BitSet other = (BitSet)c;
@@ -335,7 +335,7 @@ abstract class BitSet<T> implements ObservableSet<T> {
             clear();
             return true;
         }
-        
+
         boolean modified = false;
 
         BitSet other = (BitSet)c;
@@ -407,17 +407,17 @@ abstract class BitSet<T> implements ObservableSet<T> {
 
         return modified;
     }
-        
+
 
     /** {@inheritDoc} */
     @Override
     public boolean removeAll(Collection<?> c) {
-        
+
         if (c == null || this.getClass() != c.getClass()) {
             // this not modified!
             return false;
         }
-        
+
         boolean modified = false;
 
         BitSet other = (BitSet)c;
@@ -492,7 +492,7 @@ abstract class BitSet<T> implements ObservableSet<T> {
 
         bits = EMPTY_SET;
     }
-    
+
     @Override
     public int hashCode() {
         int hash = 7;
@@ -535,7 +535,7 @@ abstract class BitSet<T> implements ObservableSet<T> {
 
     abstract protected T getT(int index);
     abstract protected int getIndex(T t);
-    
+
     /*
      * Try to cast the arg to a T.
      * @throws ClassCastException if the class of the argument is
@@ -543,11 +543,11 @@ abstract class BitSet<T> implements ObservableSet<T> {
      * @throws NullPointerException if the argument is null
      */
     abstract protected T cast(Object o);
-    
+
     protected long[] getBits() {
         return bits;
     }
-    
+
     private static final long[] EMPTY_SET = new long[0];
 
     // the set

@@ -6,13 +6,13 @@
  * are met:
  *
  * 1.  Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer. 
+ *     notice, this list of conditions and the following disclaimer.
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
- *     documentation and/or other materials provided with the distribution. 
+ *     documentation and/or other materials provided with the distribution.
  * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
- *     from this software without specific prior written permission. 
+ *     from this software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY APPLE AND ITS CONTRIBUTORS "AS IS" AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
@@ -206,7 +206,7 @@ typedef NS_OPTIONS(NSUInteger, WebDragSourceAction) {
 
 /*!
     @method webViewClose:
-    @abstract Close the current window. 
+    @abstract Close the current window.
     @param sender The WebView sending the delegate method.
     @discussion Clients showing multiple views in one window may
     choose to close only the one corresponding to this
@@ -352,7 +352,7 @@ typedef NS_OPTIONS(NSUInteger, WebDragSourceAction) {
     @method webViewFrame:
     @param sender The WebView sending the delegate method.
     @abstract REturn the window's frame rect
-    @discussion 
+    @discussion
 */
 - (NSRect)webViewFrame:(WebView *)sender;
 
@@ -363,7 +363,7 @@ typedef NS_OPTIONS(NSUInteger, WebDragSourceAction) {
     @param message The message to display.
     @param frame The WebFrame whose JavaScript initiated this call.
     @discussion Clients should visually indicate that this panel comes
-    from JavaScript initiated by the specified frame. The panel should have 
+    from JavaScript initiated by the specified frame. The panel should have
     a single OK button.
 */
 - (void)webView:(WebView *)sender runJavaScriptAlertPanelWithMessage:(NSString *)message initiatedByFrame:(WebFrame *)frame;
@@ -376,7 +376,7 @@ typedef NS_OPTIONS(NSUInteger, WebDragSourceAction) {
     @param frame The WebFrame whose JavaScript initiated this call.
     @result YES if the user hit OK, NO if the user chose Cancel.
     @discussion Clients should visually indicate that this panel comes
-    from JavaScript initiated by the specified frame. The panel should have 
+    from JavaScript initiated by the specified frame. The panel should have
     two buttons, e.g. "OK" and "Cancel".
 */
 - (BOOL)webView:(WebView *)sender runJavaScriptConfirmPanelWithMessage:(NSString *)message initiatedByFrame:(WebFrame *)frame;
@@ -390,7 +390,7 @@ typedef NS_OPTIONS(NSUInteger, WebDragSourceAction) {
     @param frame The WebFrame whose JavaScript initiated this call.
     @result The typed text if the user hit OK, otherwise nil.
     @discussion Clients should visually indicate that this panel comes
-    from JavaScript initiated by the specified frame. The panel should have 
+    from JavaScript initiated by the specified frame. The panel should have
     two buttons, e.g. "OK" and "Cancel", and an area to type text.
 */
 - (NSString *)webView:(WebView *)sender runJavaScriptTextInputPanelWithPrompt:(NSString *)prompt defaultText:(NSString *)defaultText initiatedByFrame:(WebFrame *)frame;
@@ -403,7 +403,7 @@ typedef NS_OPTIONS(NSUInteger, WebDragSourceAction) {
     @param frame The WebFrame whose JavaScript initiated this call.
     @result YES if the user hit OK, NO if the user chose Cancel.
     @discussion Clients should include a message in addition to the one
-    supplied by the web page that indicates. The panel should have 
+    supplied by the web page that indicates. The panel should have
     two buttons, e.g. "OK" and "Cancel".
 */
 - (BOOL)webView:(WebView *)sender runBeforeUnloadConfirmPanelWithMessage:(NSString *)message initiatedByFrame:(WebFrame *)frame;

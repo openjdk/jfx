@@ -93,7 +93,7 @@ typedef enum {
  * API to set details on it.
  */
 
-#define GST_TYPE_INSTALL_PLUGINS_CONTEXT	(gst_install_plugins_context_get_type())
+#define GST_TYPE_INSTALL_PLUGINS_CONTEXT    (gst_install_plugins_context_get_type())
 
 typedef struct _GstInstallPluginsContext GstInstallPluginsContext;
 

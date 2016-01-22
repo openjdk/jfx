@@ -72,7 +72,7 @@ public abstract class NGShape extends NGNode {
     }
 
     public void setSmooth(boolean smooth) {
-        smooth = !PrismSettings.forceNonAntialiasedShape && smooth; 
+        smooth = !PrismSettings.forceNonAntialiasedShape && smooth;
         if (smooth != this.smooth) {
             this.smooth = smooth;
             visualsChanged();
@@ -84,9 +84,9 @@ public abstract class NGShape extends NGNode {
     }
 
     public void setFillPaint(Object fillPaint) {
-        if (fillPaint != this.fillPaint || 
-                (this.fillPaint != null && this.fillPaint.isMutable())) 
-        {           
+        if (fillPaint != this.fillPaint ||
+                (this.fillPaint != null && this.fillPaint.isMutable()))
+        {
             this.fillPaint = (Paint) fillPaint;
             visualsChanged();
             invalidateOpaqueRegion();
@@ -98,8 +98,8 @@ public abstract class NGShape extends NGNode {
     }
 
     public void setDrawPaint(Object drawPaint) {
-        if (drawPaint != this.drawPaint || 
-                (this.drawPaint != null && this.drawPaint.isMutable())) 
+        if (drawPaint != this.drawPaint ||
+                (this.drawPaint != null && this.drawPaint.isMutable()))
         {
             this.drawPaint = (Paint) drawPaint;
             visualsChanged();
@@ -236,7 +236,7 @@ public abstract class NGShape extends NGNode {
                         false);
                 cached3D.setLinearFiltering(isSmooth());
                 cached3D.contentsUseful();
-                final Graphics textureGraphics = cached3D.createGraphics();                
+                final Graphics textureGraphics = cached3D.createGraphics();
                 // Have to move the origin such that when rendering to x=0, we actually end up rendering
                 // at x=bounds.getMinX(). Otherwise anything rendered to the left of the origin would be lost
                 textureGraphics.scale((float) scaleX, (float) scaleY);

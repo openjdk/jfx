@@ -22,7 +22,7 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
- 
+
 #ifndef __INPUT_DEVICES_H__
 #define __INPUT_DEVICES_H__
 

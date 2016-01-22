@@ -100,7 +100,7 @@ final class WCImageImpl extends PrismImage {
             t.dispose();
             return;
         }
-        
+
         if (texture != null) {
             texture.lock();
             if (texture.isSurfaceLost()) {
@@ -173,7 +173,7 @@ final class WCImageImpl extends PrismImage {
             pixels, s);
         return pixels;
     }
-    
+
     @Override
     public float getPixelScale() {
         return img.getPixelScale();

@@ -60,7 +60,7 @@ typedef HashSet<QualifiedName::QualifiedNameImpl*, QualifiedNameHash, QualifiedN
 struct QNameComponentsTranslator {
     static unsigned hash(const QualifiedNameComponents& components)
     {
-        return hashComponents(components); 
+        return hashComponents(components);
     }
     static bool equal(QualifiedName::QualifiedNameImpl* name, const QualifiedNameComponents& c)
     {

@@ -35,7 +35,7 @@
 const unsigned EnabledInputChannels = 2;
 
 namespace WebCore {
-    
+
 DefaultAudioDestinationNode::DefaultAudioDestinationNode(AudioContext* context)
     : AudioDestinationNode(context, AudioDestination::hardwareSampleRate())
     , m_numberOfInputChannels(0)
@@ -53,7 +53,7 @@ DefaultAudioDestinationNode::~DefaultAudioDestinationNode()
 
 void DefaultAudioDestinationNode::initialize()
 {
-    ASSERT(isMainThread()); 
+    ASSERT(isMainThread());
     if (isInitialized())
         return;
 
@@ -63,7 +63,7 @@ void DefaultAudioDestinationNode::initialize()
 
 void DefaultAudioDestinationNode::uninitialize()
 {
-    ASSERT(isMainThread()); 
+    ASSERT(isMainThread());
     if (!isInitialized())
         return;
 
@@ -77,7 +77,7 @@ void DefaultAudioDestinationNode::createDestination()
 {
     float hardwareSampleRate = AudioDestination::hardwareSampleRate();
     LOG(WebAudio, ">>>> hardwareSampleRate = %f\n", hardwareSampleRate);
-    
+
     m_destination = AudioDestination::create(*this, m_inputDeviceId, m_numberOfInputChannels, channelCount(), hardwareSampleRate);
 }
 

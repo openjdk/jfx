@@ -21,7 +21,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -113,7 +113,7 @@ SharedBuffer::SharedBuffer(const unsigned char* data, unsigned size)
 {
     append(reinterpret_cast<const char*>(data), size);
 }
-    
+
 SharedBuffer::~SharedBuffer()
 {
 #if ENABLE(DISK_IMAGE_CACHE)
@@ -134,8 +134,8 @@ PassRefPtr<SharedBuffer> SharedBuffer::adoptVector(Vector<char>& vector)
     return buffer.release();
 }
 
-PassRefPtr<SharedBuffer> SharedBuffer::adoptPurgeableBuffer(PassOwnPtr<PurgeableBuffer> purgeableBuffer) 
-{ 
+PassRefPtr<SharedBuffer> SharedBuffer::adoptPurgeableBuffer(PassOwnPtr<PurgeableBuffer> purgeableBuffer)
+{
     ASSERT(!purgeableBuffer->isPurgeable());
     RefPtr<SharedBuffer> buffer = create();
     buffer->m_purgeableBuffer = purgeableBuffer;
@@ -146,10 +146,10 @@ unsigned SharedBuffer::size() const
 {
     if (hasPlatformData())
         return platformDataSize();
-    
+
     if (m_purgeableBuffer)
         return m_purgeableBuffer->size();
-    
+
     return m_size;
 }
 
@@ -270,7 +270,7 @@ const char* SharedBuffer::data() const
 
     if (m_purgeableBuffer)
         return m_purgeableBuffer->data();
-    
+
     return this->buffer().data();
 }
 
@@ -364,7 +364,7 @@ void SharedBuffer::append(const Vector<char>& data)
 void SharedBuffer::clear()
 {
     clearPlatformData();
-    
+
 #if !USE(NETWORK_CFDATA_ARRAY_CALLBACK)
     for (unsigned i = 0; i < m_segments.size(); ++i)
         freeSegment(m_segments[i]);
@@ -401,9 +401,9 @@ PassRefPtr<SharedBuffer> SharedBuffer::copy() const
 }
 
 PassOwnPtr<PurgeableBuffer> SharedBuffer::releasePurgeableBuffer()
-{ 
-    ASSERT(hasOneRef()); 
-    return m_purgeableBuffer.release(); 
+{
+    ASSERT(hasOneRef());
+    return m_purgeableBuffer.release();
 }
 
 #if !USE(NETWORK_CFDATA_ARRAY_CALLBACK)
@@ -462,7 +462,7 @@ unsigned SharedBuffer::getSomeData(const char*& someData, unsigned position) con
         someData = m_buffer.data() + position;
         return consecutiveSize - position;
     }
- 
+
     position -= consecutiveSize;
 #if !USE(NETWORK_CFDATA_ARRAY_CALLBACK)
     unsigned segments = m_segments.size();
@@ -508,7 +508,7 @@ inline const char* SharedBuffer::platformData() const
 inline unsigned SharedBuffer::platformDataSize() const
 {
     ASSERT_NOT_REACHED();
-    
+
     return 0;
 }
 

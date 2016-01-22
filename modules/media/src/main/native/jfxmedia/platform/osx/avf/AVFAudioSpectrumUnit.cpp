@@ -278,7 +278,7 @@ void AVFAudioSpectrumUnit::SetupSpectralProcessor() {
         vDSP_vclr(mPhases(), 1, mBandCount);
 
         mSamplesPerInterval = (UInt32)(mAudioUnit->GetSampleRate() * mUpdateInterval);
-        
+
         // Clamp FFTs per interval to an integral number
         mFFTCount = 0;
         mFFTsPerInterval = mSamplesPerInterval / mFFTSize * kSpectrumOversampleFactor;

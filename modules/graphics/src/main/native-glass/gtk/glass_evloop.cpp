@@ -59,7 +59,7 @@ glass_evloop_call_hooks(GdkEvent * event) {
         GevlHookRegistrationImpl * hookReg =
                 GEVL_HOOK_REGISTRATION_IMPL(ptr->data);
         hookReg->hookFn(event, hookReg->data);
-        
+
         ptr = g_slist_next(ptr);
     }
 }
@@ -69,7 +69,7 @@ glass_evloop_hook_add(GevlHookFunction hookFn, void * data) {
     GevlHookRegistrationImpl * hookReg =
             (GevlHookRegistrationImpl *)
                 malloc(sizeof(GevlHookRegistrationImpl));
-    
+
     if (hookReg != NULL) {
         hookReg->hookFn = hookFn;
         hookReg->data = data;

@@ -263,8 +263,8 @@ enum
   LAST_SIGNAL
 };
 
-#define DEFAULT_ASYNC_HANDLING	FALSE
-#define DEFAULT_MESSAGE_FORWARD	FALSE
+#define DEFAULT_ASYNC_HANDLING  FALSE
+#define DEFAULT_MESSAGE_FORWARD FALSE
 
 enum
 {
@@ -1701,7 +1701,7 @@ static gint
 bin_element_is_sink (GstElement * child, GstBin * bin)
 {
   gboolean is_sink;
-  
+
 #ifdef GSTREAMER_LITE
   if (child == NULL)
       return 1;

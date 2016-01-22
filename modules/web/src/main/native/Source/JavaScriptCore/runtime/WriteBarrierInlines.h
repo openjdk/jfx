@@ -62,6 +62,6 @@ inline void WriteBarrierBase<Unknown>::set(VM& vm, const JSCell* owner, JSValue 
     vm.heap.writeBarrier(owner, value);
 }
 
-} // namespace JSC 
+} // namespace JSC
 
 #endif // WriteBarrierInlines_h

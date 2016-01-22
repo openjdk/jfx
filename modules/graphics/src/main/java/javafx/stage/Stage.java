@@ -74,7 +74,7 @@ import javafx.beans.value.ObservableValue;
  * be changed externally by the underlying platform and therefore must
  * not be bindable.
  * </p>
- * 
+ *
  * <p><b>Style</b></p>
  * <p>
  * A stage has one of the following styles:
@@ -92,7 +92,7 @@ import javafx.beans.value.ObservableValue;
  * <p>On some platforms decorations might not be available. For example, on
  * some mobile or embedded devices. In these cases a request for a DECORATED or
  * UTILITY window will be accepted, but no decorations will be shown. </p>
- * 
+ *
  * <p><b>Owner</b></p>
  * <p>
  * A stage can optionally have an owner Window.
@@ -110,14 +110,14 @@ import javafx.beans.value.ObservableValue;
  * A stage has one of the following modalities:
  * <ul>
  * <li>{@link Modality#NONE} - a stage that does not block any other window.</li>
- * <li>{@link Modality#WINDOW_MODAL} - a stage that blocks input events from 
+ * <li>{@link Modality#WINDOW_MODAL} - a stage that blocks input events from
  * being delivered to all windows from its owner (parent) to its root.
  * Its root is the closest ancestor window without an owner.</li>
- * <li>{@link Modality#APPLICATION_MODAL} - a stage that blocks input events from 
+ * <li>{@link Modality#APPLICATION_MODAL} - a stage that blocks input events from
  * being delivered to all windows from the same application, except for those
  * from its child hierarchy.</li>
- * </ul> 
- * 
+ * </ul>
+ *
  * <p>When a window is blocked by a modal stage its Z-order relative to its ancestors
  * is preserved, and it receives no input events and no window activation events,
  * but continues to animate and render normally.
@@ -125,7 +125,7 @@ import javafx.beans.value.ObservableValue;
  * {@link #show} method returns immediately regardless of the modality of the stage.
  * Use the {@link #showAndWait} method if you need to block the caller until
  * the modal stage is hidden (closed).
- * The modality must be initialized before the stage is made visible.</p> 
+ * The modality must be initialized before the stage is made visible.</p>
  *
  * <p><b>Example:</b></p>
  *
@@ -145,10 +145,10 @@ public class HelloWorld extends Application {
         text.setFont(new Font(40));
         Scene scene = new Scene(new Group(text));
 
-        stage.setTitle("Welcome to JavaFX!"); 
-        stage.setScene(scene); 
-        stage.sizeToScene(); 
-        stage.show(); 
+        stage.setTitle("Welcome to JavaFX!");
+        stage.setScene(scene);
+        stage.sizeToScene();
+        stage.show();
     }
 
     public static void main(String[] args) {
@@ -188,7 +188,7 @@ public class Stage extends Window {
             }
         });
     }
-    
+
     private static final StagePeerListener.StageAccessor STAGE_ACCESSOR = new StagePeerListener.StageAccessor() {
 
         @Override
@@ -243,7 +243,7 @@ public class Stage extends Window {
         // Set the style
         initStyle(style);
     }
-    
+
     /**
      * Specify the scene to be used on this stage.
      */
@@ -258,7 +258,7 @@ public class Stage extends Window {
     @Override public final void show() {
         super.show();
     }
-    
+
     private boolean primary = false;
 
     ////////////////////////////////////////////////////////////////////
@@ -318,7 +318,7 @@ public class Stage extends Window {
     boolean isPrimary() {
         return primary;
     }
-    
+
     /**
      * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
@@ -566,7 +566,7 @@ public class Stage extends Window {
         }
 
         this.owner = owner;
-        
+
         final Scene sceneValue = getScene();
         if (sceneValue != null) {
             SceneHelper.parentEffectiveOrientationInvalidated(sceneValue);
@@ -630,9 +630,9 @@ public class Stage extends Window {
      * The user can unconditionally exit full-screen mode
      * at any time by pressing {@code ESC}.
      * <p>
-     * There are differences in behavior between applications if a security 
-     * manager is present. Applications with permissions are allowed to enter 
-     * full-screen mode unrestricted. Applications without the proper 
+     * There are differences in behavior between applications if a security
+     * manager is present. Applications with permissions are allowed to enter
+     * full-screen mode unrestricted. Applications without the proper
      * permissions will have the following restrictions:
      * </p>
      * <ul>
@@ -829,7 +829,7 @@ public class Stage extends Window {
         }
         return maximized;
     }
-    
+
     /**
      * Defines whether this {@code Stage} is kept on top of other windows.
      * <p>
@@ -838,9 +838,9 @@ public class Stage extends Window {
      * platform).
      * </p>
      * <p>
-     * There are differences in behavior between applications if a security 
+     * There are differences in behavior between applications if a security
      * manager is present. Applications with permissions are allowed to set
-     * "always on top" flag on a Stage. In applications without the proper 
+     * "always on top" flag on a Stage. In applications without the proper
      * permissions, an attempt to set the flag will be ignored and the property
      * value will be restored to "false".
      * </p>
@@ -848,12 +848,12 @@ public class Stage extends Window {
      * The property is read only because it can be changed externally
      * by the underlying platform and therefore must not be bindable.
      * </p>
-     * 
+     *
      * @defaultValue false
      * @since JavaFX 8u20
      */
     private ReadOnlyBooleanWrapper alwaysOnTop;
-    
+
     public final void setAlwaysOnTop(boolean value) {
         alwaysOnTopPropertyImpl().set(value);
         if (impl_peer != null) {
@@ -889,7 +889,7 @@ public class Stage extends Window {
      * <br>
      * Bidirectional binds are still allowed, as they don't block setting of the
      * property by the system.
-     * 
+     *
      * @defaultValue true
      */
     private BooleanProperty resizable;
@@ -1125,7 +1125,7 @@ public class Stage extends Window {
         return maxHeight;
     }
 
-    
+
     /**
      * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
@@ -1165,7 +1165,7 @@ public class Stage extends Window {
         }
     }
 
-    
+
     /**
      * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
@@ -1239,7 +1239,7 @@ public class Stage extends Window {
         return getOwner();
     }
 
-    
+
     private final ObjectProperty<KeyCombination> fullScreenExitCombination =
             new SimpleObjectProperty<KeyCombination>(this, "fullScreenExitCombination", null);
 
@@ -1248,14 +1248,14 @@ public class Stage extends Window {
      * mode. A value of KeyCombination.NO_MATCH will not match any KeyEvent and
      * will make it so the user is not able to escape from Full Screen mode.
      * A value of null indicates that the default platform specific key combination
-     * should be used. 
+     * should be used.
      * <p>
-     * An internal copy of this value is made when entering FullScreen mode and will be 
+     * An internal copy of this value is made when entering FullScreen mode and will be
      * used to trigger the exit from the mode. If an application does not have
      * the proper permissions, this setting will be ignored.
      * </p>
      * @param keyCombination the key combination to exit on
-     * @since JavaFX 8.0 
+     * @since JavaFX 8.0
      */
     public final void setFullScreenExitKeyCombination(KeyCombination keyCombination) {
         fullScreenExitCombination.set(keyCombination);
@@ -1264,7 +1264,7 @@ public class Stage extends Window {
     /**
      * Get the current sequence used to exit Full Screen mode.
      * @return the current setting (null for system default)
-     * @since JavaFX 8.0 
+     * @since JavaFX 8.0
      */
     public final KeyCombination getFullScreenExitKeyCombination() {
         return fullScreenExitCombination.get();
@@ -1273,27 +1273,27 @@ public class Stage extends Window {
     /**
      * Get the property for the Full Screen exit key combination.
      * @return the property.
-     * @since JavaFX 8.0 
+     * @since JavaFX 8.0
      */
     public final ObjectProperty<KeyCombination> fullScreenExitKeyProperty() {
         return fullScreenExitCombination;
     }
 
-    private final ObjectProperty<String> fullScreenExitHint = 
+    private final ObjectProperty<String> fullScreenExitHint =
             new SimpleObjectProperty<String>(this, "fullScreenExitHint", null);
-                
+
     /**
      * Specifies the text to show when a user enters full screen mode, usually
      * used to indicate the way a user should go about exiting out of full
      * screen mode. A value of null will result in the default per-locale
-     * message being displayed. 
-     * If set to the empty string, then no message will be displayed. 
+     * message being displayed.
+     * If set to the empty string, then no message will be displayed.
      * <p>
-     * If an application does not have the proper permissions, this setting 
+     * If an application does not have the proper permissions, this setting
      * will be ignored.
      * </p>
      * @param value the string to be displayed.
-     * @since JavaFX 8.0 
+     * @since JavaFX 8.0
      */
     public final void setFullScreenExitHint(String value) {
         fullScreenExitHint.set(value);

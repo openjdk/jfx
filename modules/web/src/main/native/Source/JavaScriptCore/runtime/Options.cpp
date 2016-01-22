@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -83,10 +83,10 @@ bool overrideOptionWithHeuristic(T& variable, const char* name)
     const char* stringValue = getenv(name);
     if (!stringValue)
         return false;
-    
+
     if (parse(stringValue, variable))
         return true;
-    
+
     fprintf(stderr, "WARNING: failed to parse %s=%s\n", name, stringValue);
 #endif
     return false;
@@ -100,7 +100,7 @@ static unsigned computeNumberOfWorkerThreads(int maxNumberOfWorkerThreads)
     ASSERT(cpusToUse >= 1);
     if (cpusToUse < 1)
         cpusToUse = 1;
-    
+
     return cpusToUse;
 }
 
@@ -186,7 +186,7 @@ static void recomputeDependentOptions()
 #if !ENABLE(YARR_JIT)
     Options::useRegExpJIT() = false;
 #endif
-    
+
     if (Options::showDisassembly()
         || Options::showDFGDisassembly()
         || Options::showFTLDisassembly()
@@ -204,7 +204,7 @@ static void recomputeDependentOptions()
         || Options::verboseCFA()
         || Options::verboseFTLFailure())
         Options::alwaysComputeHash() = true;
-    
+
     // Compute the maximum value of the reoptimization retry counter. This is simply
     // the largest value at which we don't overflow the execute counter, when using it
     // to left-shift the execution counter by this amount. Currently the value ends
@@ -225,7 +225,7 @@ void Options::initialize()
     name_() = defaultValue_;
     JSC_OPTIONS(FOR_EACH_OPTION)
 #undef FOR_EACH_OPTION
-        
+
 #if USE(CF) || OS(UNIX)
     objectsAreImmortal() = !!getenv("JSImmortalZombieEnabled");
     useZombieMode() = !!getenv("JSImmortalZombieEnabled") || !!getenv("JSZombieEnabled");
@@ -247,7 +247,7 @@ void Options::initialize()
 #if 0
     ; // Deconfuse editors that do auto indentation
 #endif
-    
+
     recomputeDependentOptions();
 
     // Do range checks where needed and make corrections to the options:

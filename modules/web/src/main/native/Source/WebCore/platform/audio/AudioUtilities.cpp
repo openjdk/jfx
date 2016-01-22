@@ -45,7 +45,7 @@ float linearToDecibels(float linear)
     ASSERT(linear);
     if (!linear)
         return -1000;
-        
+
     return 20 * log10f(linear);
 }
 

@@ -40,7 +40,7 @@ public class FieldSelectExpr extends Expr {
         this.expr = expr;
         this.fields = fields;
     }
-    
+
     private static Type getType(Type orig, String fields) {
         BaseType base = orig.getBaseType();
         int len = fields.length();

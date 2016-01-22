@@ -84,7 +84,7 @@ public class StringBindingApp extends Application {
                     Date today = new Date();
                     Calendar c2 = Calendar.getInstance();
                     c2.setTime(today);
-                    
+
                     if (c.get(Calendar.DAY_OF_YEAR) == c2.get(Calendar.DAY_OF_YEAR) - 1
                             && c.get(Calendar.YEAR) == c2.get(Calendar.YEAR)) {
                         return "You were born yesterday";

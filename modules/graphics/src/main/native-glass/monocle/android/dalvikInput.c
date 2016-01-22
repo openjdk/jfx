@@ -27,7 +27,7 @@
 #include <dlfcn.h>
 #include "dalvikInput.h"
 #include "dalvikUtils.h"
-#include "com_sun_glass_events_TouchEvent.h"    
+#include "com_sun_glass_events_TouchEvent.h"
 #include "com_sun_glass_ui_android_SoftwareKeyboard.h"
 #include "com_sun_glass_ui_android_Activity.h"
 #include "javafxports_android_FXDalvikEntity_InternalSurfaceView.h"
@@ -43,7 +43,7 @@
     if (env) {                                                              \
       (*ENV)->ThrowNew(ENV,                                                 \
           (*ENV)->FindClass(ENV, "java/lang/RuntimeException"), error_msg); \
-    }                                                                       
+    }
 
 #ifdef DEBUG
     static void *get_check_symbol(JNIEnv *env, void *handle, const char *name) {
@@ -62,7 +62,7 @@
 #define GLASS_LOG_WARNING(...)  ((void)__android_log_print(ANDROID_LOG_INFO,"GLASS", __VA_ARGS__))
 
 #define ANDROID_LIB   "libactivity.so"
-    
+
 static int bind = 0;
 
 static ANativeWindow *(*_ANDROID_getNativeWindow)();
@@ -86,7 +86,7 @@ void bind_activity(JNIEnv *env) {
         THROW_RUNTIME_EXCEPTION(env, "dlopen failed with error: ", dlerror());
         return;
     }
-    
+
     _ANDROID_getNativeWindow = GET_SYMBOL(env, libandroid, "android_getNativeWindow");
     _ANDROID_getDensity = GET_SYMBOL(env, libandroid, "android_getDensity");
     _ANDROID_getDataDir = GET_SYMBOL(env, libandroid, "android_getDataDir");
@@ -114,19 +114,19 @@ GLASS_LOG_FINEST("GetNativeWindow = %p, getDensitiy = %p",_ANDROID_getNativeWind
 }
 
 ANativeWindow *android_getNativeWindow(JNIEnv *env) {
-    if(!bind) bind_activity(env);    
+    if(!bind) bind_activity(env);
     return (*_ANDROID_getNativeWindow)();
 }
 
 jfloat android_getDensity(JNIEnv *env) {
-    if(!bind) bind_activity(env);    
+    if(!bind) bind_activity(env);
     jfloat* answer = (*_ANDROID_getDensity)();
     return *answer;
 }
 
 const char *android_getDataDir(JNIEnv *env) {
-    if(!bind) bind_activity(env);    
-    return (*_ANDROID_getDataDir)();    
+    if(!bind) bind_activity(env);
+    return (*_ANDROID_getDataDir)();
 }
 
 JNIEXPORT void JNICALL Java_com_sun_glass_ui_android_SoftwareKeyboard__1show
@@ -169,7 +169,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_android_DalvikInput_onMultiTouchEve
 
     GLASS_LOG_FINE("Glass will pass multitouchevent to monocle with count = %i",jcount);
 
-    (*env)->CallStaticVoidMethod(env, jAndroidInputDeviceRegistryClass, monocle_gotTouchEventFromNative, 
+    (*env)->CallStaticVoidMethod(env, jAndroidInputDeviceRegistryClass, monocle_gotTouchEventFromNative,
             jcount, jactions, jids, jxs, jys, primary);
 
     (*env)->ReleaseIntArrayElements(env, jactions, actions, 0);
@@ -187,7 +187,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_android_DalvikInput_onMultiTouchEve
 JNIEXPORT void JNICALL Java_com_sun_glass_ui_android_DalvikInput_onKeyEventNative
   (JNIEnv *env, jobject that, jint action, jint keycode, jstring s) {
     int linux_keycode = to_linux_keycode(keycode);
-    (*env)->CallStaticVoidMethod(env, jAndroidInputDeviceRegistryClass, monocle_gotKeyEventFromNative, 
+    (*env)->CallStaticVoidMethod(env, jAndroidInputDeviceRegistryClass, monocle_gotKeyEventFromNative,
             action,linux_keycode);
 
 }

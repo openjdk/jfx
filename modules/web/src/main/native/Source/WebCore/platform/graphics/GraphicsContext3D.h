@@ -1053,7 +1053,7 @@ private:
             , isValid(false)
         {
         }
-        
+
         ShaderSymbolMap& symbolMap(enum ANGLEShaderSymbolType symbolType)
         {
             ASSERT(symbolType == SHADER_SYMBOL_TYPE_ATTRIBUTE || symbolType == SHADER_SYMBOL_TYPE_UNIFORM || symbolType == SHADER_SYMBOL_TYPE_VARYING);

@@ -263,19 +263,19 @@ static void initializeFonts(const char* testURL = 0)
     // Ahem is used by many layout tests.
     GUniquePtr<gchar> ahemFontFilename(g_build_filename(FONTS_CONF_DIR, "AHEM____.TTF", nullptr));
     if (!FcConfigAppFontAddFile(config, reinterpret_cast<FcChar8*>(ahemFontFilename.get())))
-        g_error("Could not load font at %s!", ahemFontFilename.get()); 
+        g_error("Could not load font at %s!", ahemFontFilename.get());
 
     for (int i = 1; i <= 9; i++) {
         GUniquePtr<gchar> fontFilename(g_strdup_printf("WebKitWeightWatcher%i00.ttf", i));
         GUniquePtr<gchar> fontPath(g_build_filename(FONTS_CONF_DIR, "..", "..", "fonts", fontFilename.get(), nullptr));
         if (!FcConfigAppFontAddFile(config, reinterpret_cast<FcChar8*>(fontPath.get())))
-            g_error("Could not load font at %s!", fontPath.get()); 
+            g_error("Could not load font at %s!", fontPath.get());
     }
 
     // A font with no valid Fontconfig encoding to test https://bugs.webkit.org/show_bug.cgi?id=47452
     GUniquePtr<gchar> fontWithNoValidEncodingFilename(g_build_filename(FONTS_CONF_DIR, "FontWithNoValidEncoding.fon", nullptr));
     if (!FcConfigAppFontAddFile(config, reinterpret_cast<FcChar8*>(fontWithNoValidEncodingFilename.get())))
-        g_error("Could not load font at %s!", fontWithNoValidEncodingFilename.get()); 
+        g_error("Could not load font at %s!", fontWithNoValidEncodingFilename.get());
 
     if (!FcConfigSetCurrent(config))
         g_error("Could not set the current font configuration!");
@@ -587,7 +587,7 @@ static void initializeGlobalsFromCommandLineOptions(int argc, char *argv[])
         {"no-timeout", no_argument, &useTimeoutWatchdog, false},
         {NULL, 0, NULL, 0}
     };
-    
+
     int option;
     while ((option = getopt_long(argc, (char * const *)argv, "", options, NULL)) != -1) {
         switch (option) {
@@ -909,7 +909,7 @@ static void addControllerToWindow(JSContextRef context, JSObjectRef windowObject
 {
     JSStringRef controllerNameStr = JSStringCreateWithUTF8CString(controllerName);
     JSObjectSetProperty(context, windowObject, controllerNameStr, controller, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete, 0);
-    JSStringRelease(controllerNameStr); 
+    JSStringRelease(controllerNameStr);
 }
 
 static void webViewWindowObjectCleared(WebKitWebView* view, WebKitWebFrame* frame, JSGlobalContextRef context, JSObjectRef windowObject, gpointer data)

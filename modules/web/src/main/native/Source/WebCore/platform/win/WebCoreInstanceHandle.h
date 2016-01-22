@@ -35,7 +35,7 @@ extern HINSTANCE s_instanceHandle;
 
 inline void setInstanceHandle(HINSTANCE instanceHandle) { s_instanceHandle = instanceHandle; }
 inline HINSTANCE instanceHandle() { return s_instanceHandle; }
-    
+
 }
 
 #endif // WebCoreInstanceHandle_h

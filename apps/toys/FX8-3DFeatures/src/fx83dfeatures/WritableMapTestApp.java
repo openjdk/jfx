@@ -51,11 +51,11 @@ public class WritableMapTestApp extends Application {
     private CheckBox specularMapCheckBox;
     private ColorPicker selfIllumMapPicker;
     private CheckBox selfIllumMapCheckBox;
-    
+
 
     private Image generateMap(WritableImage writableImage, Image map) {
         PixelReader pixelReader = map.getPixelReader();
-        
+
         //Copy from source to destination pixel by pixel
         PixelWriter pixelWriter = writableImage.getPixelWriter();
 
@@ -79,7 +79,7 @@ public class WritableMapTestApp extends Application {
         }
         return writableImage;
     }
-    
+
     @Override
     public void start(Stage stage) throws Exception {
 
@@ -119,9 +119,9 @@ public class WritableMapTestApp extends Application {
         sharedMapSphere.setMaterial(sharedMapMaterial);
         sharedMapSphere.setTranslateX(750);
         sharedMapSphere.setTranslateY(400);
-        
+
         Group root1 = new Group(sharedMatSphere, sharedMatSphere1, sharedMapSphere);
-        
+
         diffuseMapPicker = new ColorPicker(Color.RED);
         diffuseMapPicker.valueProperty().addListener((ov, t, t1) -> generateMap(diffuseMap, t1));
 
@@ -151,16 +151,16 @@ public class WritableMapTestApp extends Application {
 
         HBox diffuseBox = new HBox(20);
         diffuseBox.getChildren().addAll(diffuseMapPicker, diffuseMapCheckBox);
-        
+
         HBox specularBox = new HBox(20);
         specularBox.getChildren().addAll(specularMapPicker, specularMapCheckBox);
-        
+
         HBox selfIllumBox = new HBox(20);
         selfIllumBox.getChildren().addAll(selfIllumMapPicker, selfIllumMapCheckBox);
-        
+
         VBox controls = new VBox(20);
         controls.getChildren().addAll(labelBox, diffuseBox, specularBox, selfIllumBox);
-        
+
         Group root = new Group(root1, controls);
         Scene scene = new Scene(root, 1000, 650, true);
 
@@ -168,7 +168,7 @@ public class WritableMapTestApp extends Application {
         stage.setScene(scene);
         stage.show();
     }
-    
+
     public static void main(String[] args) {
         launch(args);
     }

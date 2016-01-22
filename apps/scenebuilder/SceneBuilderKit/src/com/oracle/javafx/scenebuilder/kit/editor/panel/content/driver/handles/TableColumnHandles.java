@@ -55,44 +55,44 @@ import com.oracle.javafx.scenebuilder.kit.metadata.util.DesignHierarchyMask;
 
 /**
  *
- * 
+ *
  */
 
 public class TableColumnHandles extends AbstractResilientHandles<Object> {
-    
+
     /*
      * Handles for TableColumn need a special treatment.
-     * 
+     *
      * A TableColumn instance can be transiently disconnected from its parent TableView:
      *  - TableColumn.getTableView() returns null
      *  - TableView.getColumns().contains() returns false
-     * 
+     *
      * When the TableColumn is disconnected, handles cannot be drawn.
      * This Handles class inherits from AbstractResilientHandles to take
      * care of this singularity.
      */
-    
+
     private final Group grips = new Group();
     private final TableViewDesignInfoX tableViewDesignInfo
             = new TableViewDesignInfoX();
     private TableView<?> tableView;
     private Node columnHeaderNode;
-    
+
     public TableColumnHandles(ContentPanelController contentPanelController,
             FXOMInstance fxomInstance) {
         super(contentPanelController, fxomInstance, Object.class);
         assert fxomInstance.getSceneGraphObject() instanceof TableColumn;
-        
+
         getRootNode().getChildren().add(grips); // Above handles
-        
+
         getTableColumn().tableViewProperty().addListener(
                 (ChangeListener<Object>) (ov, v1, v2) -> tableViewOrVisibilityDidChange());
         getTableColumn().visibleProperty().addListener(
                 (ChangeListener<Object>) (ov, v1, v2) -> tableViewOrVisibilityDidChange());
-        
+
         tableViewOrVisibilityDidChange();
     }
-    
+
     public FXOMInstance getFxomInstance() {
         return (FXOMInstance) getFxomObject();
     }
@@ -121,7 +121,7 @@ public class TableColumnHandles extends AbstractResilientHandles<Object> {
         assert tableView != null;
         startListeningToLayoutBounds(tableView);
         startListeningToLocalToSceneTransform(tableView);
-        
+
         assert columnHeaderNode == null;
         columnHeaderNode = tableViewDesignInfo.getColumnNode(getTableColumn());
         startListeningToBoundsInParent(columnHeaderNode);
@@ -133,7 +133,7 @@ public class TableColumnHandles extends AbstractResilientHandles<Object> {
         assert tableView != null;
         stopListeningToLayoutBounds(tableView);
         stopListeningToLocalToSceneTransform(tableView);
-        
+
         assert columnHeaderNode != null;
         stopListeningToBoundsInParent(columnHeaderNode);
         columnHeaderNode = null;
@@ -142,12 +142,12 @@ public class TableColumnHandles extends AbstractResilientHandles<Object> {
     @Override
     protected void layoutDecoration() {
         assert tableView != null;
-        
+
         super.layoutDecoration();
-             
+
         // Adjusts the number of grip lines to the number of dividers
         adjustGripCount();
-        
+
         // Updates grip positions
         for (int i = 0, count = getTableColumns().size(); i < count; i++) {
             layoutGrip(i);
@@ -157,19 +157,19 @@ public class TableColumnHandles extends AbstractResilientHandles<Object> {
     @Override
     public AbstractGesture findGesture(Node node) {
         final AbstractGesture result;
-        
+
         final int gripIndex = grips.getChildren().indexOf(node);
         if (gripIndex != -1) {
             final FXOMObject parentObject = getFxomInstance().getParentObject();
             final DesignHierarchyMask m = new DesignHierarchyMask(parentObject);
             final FXOMObject columnObject = m.getSubComponentAtIndex(gripIndex);
             assert columnObject instanceof FXOMInstance;
-            result = new ResizeTableColumnGesture(getContentPanelController(), 
+            result = new ResizeTableColumnGesture(getContentPanelController(),
                     (FXOMInstance)columnObject);
         } else {
             result = super.findGesture(node);
         }
-        
+
         return result;
     }
 
@@ -177,17 +177,17 @@ public class TableColumnHandles extends AbstractResilientHandles<Object> {
     /*
      * Private
      */
-    
+
     private TableColumn<?,?> getTableColumn() {
         assert getSceneGraphObject() instanceof TableColumn;
         return (TableColumn<?,?>) getSceneGraphObject();
     }
-    
+
     private void tableViewOrVisibilityDidChange() {
         tableView = getTableColumn().getTableView();
         setReady((tableView != null) && getTableColumn().isVisible());
     }
-    
+
     private List<?> getTableColumns() {
         final List<?> result;
 
@@ -197,22 +197,22 @@ public class TableColumnHandles extends AbstractResilientHandles<Object> {
         } else {
             result = tableColumn.getParentColumn().getColumns();
         }
-        
+
         return result;
     }
-    
-    
-    
+
+
+
     /*
      * Private (grips)
      */
-    
+
     private void adjustGripCount() {
         assert tableView != null;
-        
+
         final int columnCount = getTableColumns().size();
         final List<Node> gripChildren = grips.getChildren();
-        
+
         while (gripChildren.size() < columnCount) {
             gripChildren.add(makeGripLine());
         }
@@ -220,7 +220,7 @@ public class TableColumnHandles extends AbstractResilientHandles<Object> {
             gripChildren.remove(gripChildren.size()-1);
         }
     }
-    
+
     private Line makeGripLine() {
         final Line result = new Line();
         result.setStrokeWidth(SELECTION_HANDLES_SIZE);
@@ -229,11 +229,11 @@ public class TableColumnHandles extends AbstractResilientHandles<Object> {
         attachHandles(result);
         return result;
     }
-    
+
     private void layoutGrip(int gripIndex) {
         assert grips.getChildren().get(gripIndex) instanceof Line;
         assert getTableColumns().get(gripIndex) instanceof TableColumn<?,?>;
-        
+
         final List<?> columns = getTableColumns();
         final TableColumn<?,?> tc = (TableColumn<?,?>)columns.get(gripIndex);
         if (tc.isVisible()) {
@@ -260,9 +260,9 @@ public class TableColumnHandles extends AbstractResilientHandles<Object> {
             gripLine.setManaged(false);
         }
     }
-    
-    
-    /* 
+
+
+    /*
      * Wrapper to avoid the 'leaking this in constructor' warning emitted by NB.
      */
     private void attachHandles(Node node) {

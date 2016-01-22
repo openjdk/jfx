@@ -404,7 +404,7 @@ public class ColumnConstraints extends ConstraintsBase {
     /**
      * Returns a string representation of this {@code ColumnConstraints} object.
      * @return a string representation of this {@code ColumnConstraints} object.
-     */ 
+     */
     @Override public String toString() {
         return "ColumnConstraints percentWidth="+getPercentWidth()+
                 " minWidth="+getMinWidth()+

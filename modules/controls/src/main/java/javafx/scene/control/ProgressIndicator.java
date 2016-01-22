@@ -53,7 +53,7 @@ import javafx.scene.AccessibleRole;
  * import javafx.scene.control.ProgressIndicator;
  * ProgressIndicator p1 = new ProgressIndicator();
  * </code></pre>
- * 
+ *
  * <p>
  * This next example creates a ProgressIndicator which is 25% complete :
  * <pre><code>
@@ -70,7 +70,7 @@ public class ProgressIndicator extends Control {
 
     /**
      * Value for progress indicating that the progress is indeterminate.
-     * 
+     *
      * @see #setProgress
      */
     public static final double INDETERMINATE_PROGRESS = -1;
@@ -93,14 +93,14 @@ public class ProgressIndicator extends Control {
      */
     public ProgressIndicator(double progress) {
         // focusTraversable is styleable through css. Calling setFocusTraversable
-        // makes it look to css like the user set the value and css will not 
+        // makes it look to css like the user set the value and css will not
         // override. Initializing focusTraversable by calling applyStyle with null
         // StyleOrigin ensures that css will be able to override the value.
         ((StyleableProperty<Boolean>)(WritableValue<Boolean>)focusTraversableProperty()).applyStyle(null, Boolean.FALSE);
         setProgress(progress);
         getStyleClass().setAll(DEFAULT_STYLE_CLASS);
         setAccessibleRole(AccessibleRole.PROGRESS_INDICATOR);
-        
+
         // need to initialize pseudo-class state
         final int c = Double.compare(INDETERMINATE_PROGRESS, progress);
         pseudoClassStateChanged(PSEUDO_CLASS_INDETERMINATE, c == 0);

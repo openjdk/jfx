@@ -52,21 +52,21 @@ import javafx.scene.image.ImageView;
  *
  */
 public class ImageViewDropTarget extends AbstractDropTarget {
-    
+
     private final FXOMInstance targetImageView;
 
     public ImageViewDropTarget(FXOMObject targetImageView) {
         assert targetImageView instanceof FXOMInstance;
         assert targetImageView.getSceneGraphObject() instanceof ImageView;
-        
+
         this.targetImageView = (FXOMInstance) targetImageView;
     }
-    
-    
+
+
     /*
      * ImageViewDropTarget
      */
-    
+
     @Override
     public FXOMObject getTargetObject() {
         return targetImageView;
@@ -80,33 +80,33 @@ public class ImageViewDropTarget extends AbstractDropTarget {
 
     @Override
     public Job makeDropJob(AbstractDragSource dragSource, EditorController editorController) {
-        
+
         assert dragSource != null;
         assert dragSource.isSingleImageViewOnly(); // (1)
-        
-        final FXOMObject draggedObject 
+
+        final FXOMObject draggedObject
                 = dragSource.getDraggedObjects().get(0);
         assert draggedObject instanceof FXOMInstance; // because (1)
-        final FXOMInstance draggedInstance 
+        final FXOMInstance draggedInstance
                 = (FXOMInstance) draggedObject;
-        final PropertyName imageName 
+        final PropertyName imageName
                 = new PropertyName("image"); //NOI18N
-        final ValuePropertyMetadata vpm 
+        final ValuePropertyMetadata vpm
                 = Metadata.getMetadata().queryValueProperty(draggedInstance, imageName);
         assert vpm instanceof ImagePropertyMetadata;
         final ImagePropertyMetadata imageVPM
                 = (ImagePropertyMetadata) vpm;
         final DesignImage image
                 = imageVPM.getValue(draggedInstance);
-        
+
         final BatchJob result = new BatchJob(editorController);
         result.addSubJob(new BackupSelectionJob(editorController));
         result.addSubJob(new ModifyObjectJob(targetImageView, imageVPM, image, editorController));
         result.addSubJob(new UpdateSelectionJob(targetImageView, editorController));
-        
+
         return result;
     }
-    
+
     @Override
     public boolean isSelectRequiredAfterDrop() {
         /*
@@ -118,5 +118,5 @@ public class ImageViewDropTarget extends AbstractDropTarget {
          */
         return false;
     }
-    
+
 }

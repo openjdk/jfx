@@ -40,17 +40,17 @@ import sun.reflect.misc.MethodUtil;
 
 /**
  * A {@code ReadOnlyJavaBeanBooleanProperty} provides an adapter between a regular
- * read only Java Bean property of type {@code boolean} or {@code Boolean} and a JavaFX 
- * {@code ReadOnlyBooleanProperty}. It cannot be created directly, but a 
+ * read only Java Bean property of type {@code boolean} or {@code Boolean} and a JavaFX
+ * {@code ReadOnlyBooleanProperty}. It cannot be created directly, but a
  * {@link ReadOnlyJavaBeanBooleanPropertyBuilder} has to be used.
  * <p>
  * As a minimum, the Java Bean must implement a getter for the
- * property. If the getter of an instance of this class is called, the property of 
+ * property. If the getter of an instance of this class is called, the property of
  * the Java Bean is returned. If the Java Bean property is bound (i.e. it supports
- * PropertyChangeListeners), this {@code ReadOnlyJavaBeanBooleanProperty} will be 
+ * PropertyChangeListeners), this {@code ReadOnlyJavaBeanBooleanProperty} will be
  * aware of changes in the Java Bean. Otherwise it can be notified about
  * changes by calling {@link #fireValueChangedEvent()}.
- * 
+ *
  * @see javafx.beans.property.ReadOnlyBooleanProperty
  * @see ReadOnlyJavaBeanBooleanPropertyBuilder
  * @since JavaFX 2.1
@@ -71,9 +71,9 @@ public final class ReadOnlyJavaBeanBooleanProperty extends ReadOnlyBooleanProper
 
     /**
      * {@inheritDoc}
-     * 
+     *
      * @throws UndeclaredThrowableException if calling the getter of the Java Bean
-     * property throws an {@code IllegalAccessException} or an 
+     * property throws an {@code IllegalAccessException} or an
      * {@code InvocationTargetException}.
      */
     @Override

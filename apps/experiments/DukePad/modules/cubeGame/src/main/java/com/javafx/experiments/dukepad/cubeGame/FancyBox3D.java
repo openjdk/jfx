@@ -52,7 +52,7 @@ public class FancyBox3D extends MeshView {
     private static final float PART_SIZE = SIDE_SIZE / 3;
     private static final float T2 = 2 * T1;
     private static final float T3 = 1;
-    
+
     /**
      * Creates 3D box of given size with beveled edges. Box bounds are (0, 0, 0)
      * and (xSize, ySize, zSize).
@@ -185,19 +185,19 @@ public class FancyBox3D extends MeshView {
         mesh.getFaces().set(faceIndex +  9, baseTC + 2);
         mesh.getFaces().set(faceIndex + 11, baseTC + 3);
     }
-    
+
     /**
      * FancyBox3D faces
      */
-    public static enum Face { 
-            BOTTOM, TOP, 
-            BACK, EDGE_BACK_TOP, EDGE_BACK_BOTTOM, 
+    public static enum Face {
+            BOTTOM, TOP,
+            BACK, EDGE_BACK_TOP, EDGE_BACK_BOTTOM,
             EDGE_RIGHT_BACK, EDGE_RIGHT_BACK_TOP, EDGE_RIGHT_BACK_BOTTOM,
-            RIGHT, EDGE_RIGHT_TOP, EDGE_RIGHT_BOTTOM, 
+            RIGHT, EDGE_RIGHT_TOP, EDGE_RIGHT_BOTTOM,
             EDGE_FRONT_RIGHT, EDGE_FRONT_RIGHT_TOP, EDGE_FRONT_RIGHT_BOTTOM,
-            FRONT, EDGE_FRONT_TOP, EDGE_FRONT_BOTTOM, 
+            FRONT, EDGE_FRONT_TOP, EDGE_FRONT_BOTTOM,
             EDGE_LEFT_FRONT, EDGE_LEFT_FRONT_TOP, EDGE_LEFT_FRONT_BOTTOM,
-            LEFT, EDGE_LEFT_TOP, EDGE_LEFT_BOTTOM, 
+            LEFT, EDGE_LEFT_TOP, EDGE_LEFT_BOTTOM,
             EDGE_BACK_LEFT, EDGE_BACK_LEFT_TOP, EDGE_BACK_LEFT_BOTTOM
     }
 }

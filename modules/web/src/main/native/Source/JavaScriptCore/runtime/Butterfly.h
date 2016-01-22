@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef Butterfly_h
@@ -78,7 +78,7 @@ class Butterfly {
 private:
     Butterfly() { } // Not instantiable.
 public:
-    
+
     static size_t totalSize(size_t preCapacity, size_t propertyCapacity, bool hasIndexingHeader, size_t indexingPayloadSizeInBytes)
     {
         ASSERT(indexingPayloadSizeInBytes ? hasIndexingHeader : true);
@@ -90,37 +90,37 @@ public:
     {
         return reinterpret_cast<Butterfly*>(static_cast<EncodedJSValue*>(base) + preCapacity + propertyCapacity + 1);
     }
-    
+
     // This method is here not just because it's handy, but to remind you that
     // the whole point of butterflies is to do evil pointer arithmetic.
     static Butterfly* fromPointer(char* ptr)
     {
         return reinterpret_cast<Butterfly*>(ptr);
     }
-    
+
     char* pointer() { return reinterpret_cast<char*>(this); }
-    
+
     static ptrdiff_t offsetOfIndexingHeader() { return IndexingHeader::offsetOfIndexingHeader(); }
     static ptrdiff_t offsetOfArrayBuffer() { return offsetOfIndexingHeader() + IndexingHeader::offsetOfArrayBuffer(); }
     static ptrdiff_t offsetOfPublicLength() { return offsetOfIndexingHeader() + IndexingHeader::offsetOfPublicLength(); }
     static ptrdiff_t offsetOfVectorLength() { return offsetOfIndexingHeader() + IndexingHeader::offsetOfVectorLength(); }
-    
+
     static Butterfly* createUninitialized(VM&, JSCell* intendedOwner, size_t preCapacity, size_t propertyCapacity, bool hasIndexingHeader, size_t indexingPayloadSizeInBytes);
 
     static Butterfly* create(VM&, JSCell* intendedOwner, size_t preCapacity, size_t propertyCapacity, bool hasIndexingHeader, const IndexingHeader&, size_t indexingPayloadSizeInBytes);
     static Butterfly* create(VM&, JSCell* intendedOwner, Structure*);
     static Butterfly* createUninitializedDuringCollection(CopyVisitor&, size_t preCapacity, size_t propertyCapacity, bool hasIndexingHeader, size_t indexingPayloadSizeInBytes);
-    
+
     IndexingHeader* indexingHeader() { return IndexingHeader::from(this); }
     const IndexingHeader* indexingHeader() const { return IndexingHeader::from(this); }
     PropertyStorage propertyStorage() { return indexingHeader()->propertyStorage(); }
     ConstPropertyStorage propertyStorage() const { return indexingHeader()->propertyStorage(); }
-    
+
     uint32_t publicLength() { return indexingHeader()->publicLength(); }
     uint32_t vectorLength() { return indexingHeader()->vectorLength(); }
     void setPublicLength(uint32_t value) { indexingHeader()->setPublicLength(value); }
     void setVectorLength(uint32_t value) { indexingHeader()->setVectorLength(value); }
-    
+
     template<typename T>
     T* indexingPayload() { return reinterpret_cast_ptr<T*>(this); }
     ArrayStorage* arrayStorage() { return indexingPayload<ArrayStorage>(); }
@@ -128,7 +128,7 @@ public:
 
     ContiguousDoubles contiguousDouble() { return ContiguousDoubles(indexingPayload<double>(), vectorLength()); }
     ContiguousJSValues contiguous() { return ContiguousJSValues(indexingPayload<WriteBarrier<Unknown>>(), vectorLength()); }
-    
+
     static Butterfly* fromContiguous(WriteBarrier<Unknown>* contiguous)
     {
         return reinterpret_cast<Butterfly*>(contiguous);
@@ -137,7 +137,7 @@ public:
     {
         return reinterpret_cast<Butterfly*>(contiguous);
     }
-    
+
     static ptrdiff_t offsetOfPropertyStorage() { return -static_cast<ptrdiff_t>(sizeof(IndexingHeader)); }
     static int indexOfPropertyStorage()
     {
@@ -151,7 +151,7 @@ public:
     static Butterfly* createOrGrowArrayRight(
         Butterfly*, VM&, JSCell* intendedOwner, Structure* oldStructure,
         size_t propertyCapacity, bool hadIndexingHeader,
-        size_t oldIndexingPayloadSizeInBytes, size_t newIndexingPayloadSizeInBytes); 
+        size_t oldIndexingPayloadSizeInBytes, size_t newIndexingPayloadSizeInBytes);
 
     // The butterfly reallocation methods perform the reallocation itself but do not change any
     // of the meta-data to reflect that the reallocation occurred. Note that this set of

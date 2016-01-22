@@ -40,7 +40,7 @@ namespace WebCore {
 class SpeechSynthesisUtterance final : public PlatformSpeechSynthesisUtteranceClient, public RefCounted<SpeechSynthesisUtterance>, public ContextDestructionObserver, public EventTargetWithInlineData {
 public:
     static PassRefPtr<SpeechSynthesisUtterance> create(ScriptExecutionContext&, const String&);
-    
+
     ~SpeechSynthesisUtterance();
 
     const String& text() const { return m_platformUtterance->text(); }
@@ -63,7 +63,7 @@ public:
 
     double startTime() const { return m_platformUtterance->startTime(); }
     void setStartTime(double startTime) { m_platformUtterance->setStartTime(startTime); }
-    
+
     DEFINE_ATTRIBUTE_EVENT_LISTENER(start);
     DEFINE_ATTRIBUTE_EVENT_LISTENER(end);
     DEFINE_ATTRIBUTE_EVENT_LISTENER(error);
@@ -88,7 +88,7 @@ private:
     virtual void refEventTarget() override { ref(); }
     virtual void derefEventTarget() override { deref(); }
 };
-    
+
 } // namespace WebCore
 
 #endif // ENABLE(SPEECH_SYNTHESIS)

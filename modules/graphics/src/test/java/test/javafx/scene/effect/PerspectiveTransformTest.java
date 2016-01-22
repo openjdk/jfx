@@ -95,7 +95,7 @@ public class PerspectiveTransformTest extends EffectsTestBase {
         effect.setUry(1.0f);
         assertEquals(1.0f, effect.getUry(), 1e-100);
     }
-    
+
     @Test
     public void testCreateWithParams() {
         effect = new PerspectiveTransform(1, 2, 3, 4, 5, 6, 7, 8);

@@ -27,7 +27,7 @@
 
 namespace JSC {
 
-    inline void gcProtect(JSCell* val) 
+    inline void gcProtect(JSCell* val)
     {
         Heap::heap(val)->protect(val);
     }
@@ -37,18 +37,18 @@ namespace JSC {
         Heap::heap(val)->unprotect(val);
     }
 
-    inline void gcProtectNullTolerant(JSCell* val) 
+    inline void gcProtectNullTolerant(JSCell* val)
     {
-        if (val) 
+        if (val)
             gcProtect(val);
     }
 
-    inline void gcUnprotectNullTolerant(JSCell* val) 
+    inline void gcUnprotectNullTolerant(JSCell* val)
     {
-        if (val) 
+        if (val)
             gcUnprotect(val);
     }
-    
+
     inline void gcProtect(JSValue value)
     {
         if (value && value.isCell())

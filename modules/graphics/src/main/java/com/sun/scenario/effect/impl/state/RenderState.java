@@ -173,7 +173,7 @@ public interface RenderState {
      * transforms to be used to get input data and transform the results, but
      * this method can help to set the expectations of the caller to optimize
      * techniques.
-     * 
+     *
      * @return an {@link EffectSpace} value to describe the expected output
      * from the {@code getEffectTransform(...)} and {@code getResultTransform(...)}
      * methods.
@@ -188,7 +188,7 @@ public interface RenderState {
      * Typically, the output of {@code getInputTransform(transform)} and
      * {@code getResultTransform(transform)} could be concatenated to produce
      * the original {@code filterTransform}.
-     * 
+     *
      * @param filterTransform the {@code BaseTransform} object for the filter operation
      * @return the {@code BaseTransform} object to use for the input effects
      */
@@ -202,7 +202,7 @@ public interface RenderState {
      * Typically, the output of {@code getInputTransform(transform)} and
      * {@code getResultTransform(transform)} could be concatenated to produce
      * the original {@code filterTransform}.
-     * 
+     *
      * @param filterTransform the {@code BaseTransform} object for the filter operation
      * @return the {@code BaseTransform} object to be applied to the result
      * texture
@@ -212,7 +212,7 @@ public interface RenderState {
     /**
      * Return the clip for the indicated input based on the indicated output
      * clip.
-     * 
+     *
      * @param i the index of the input being processed
      * @param filterClip the output clip supplied to the given filter operation
      * @return the required rectangle from the indicated input to provide

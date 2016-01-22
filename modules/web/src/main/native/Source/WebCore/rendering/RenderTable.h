@@ -50,7 +50,7 @@ public:
     // and rows respectively, not necessarily the horizontal and vertical spacing respectively".
     int hBorderSpacing() const { return m_hSpacing; }
     int vBorderSpacing() const { return m_vSpacing; }
-    
+
     bool collapseBorders() const { return style().borderCollapse(); }
 
     virtual LayoutUnit borderStart() const override { return m_borderStart; }
@@ -169,7 +169,7 @@ public:
     void appendColumn(unsigned span);
     unsigned numEffCols() const { return m_columns.size(); }
     unsigned spanOfEffCol(unsigned effCol) const { return m_columns[effCol].span; }
-    
+
     unsigned colToEffCol(unsigned column) const
     {
         unsigned effColumn = 0;
@@ -178,7 +178,7 @@ public:
             c += m_columns[effColumn].span;
         return effColumn;
     }
-    
+
     unsigned effColToCol(unsigned effCol) const
     {
         unsigned c = 0;
@@ -232,7 +232,7 @@ public:
     RenderTableCell* cellBelow(const RenderTableCell*) const;
     RenderTableCell* cellBefore(const RenderTableCell*) const;
     RenderTableCell* cellAfter(const RenderTableCell*) const;
- 
+
     typedef Vector<CollapsedBorderValue> CollapsedBorderValues;
     void invalidateCollapsedBorders()
     {
@@ -240,7 +240,7 @@ public:
         m_collapsedBorders.clear();
     }
     const CollapsedBorderValue* currentBorderValue() const { return m_currentBorder; }
-    
+
     bool hasSections() const { return m_head || m_foot || m_firstBody; }
 
     void recalcSectionsIfNeeded() const
@@ -294,7 +294,7 @@ private:
 
     virtual RenderBlock* firstLineBlock() const override final;
     virtual void updateFirstLetter() override final;
-    
+
     virtual void updateLogicalWidth() override final;
 
     LayoutUnit convertStyleLogicalWidthToComputedWidth(const Length& styleLogicalWidth, LayoutUnit availableWidth);

@@ -55,7 +55,7 @@ public class SimpleWindowPage extends StackPane {
     private Node windows7WindowContent;
     private Node windows8WindowContent;
     private Node ubuntuWindowContent;
-    
+
     public SimpleWindowPage() {
         setPadding(new Insets(20));
         TilePane box = new TilePane(10,10);
@@ -70,22 +70,22 @@ public class SimpleWindowPage extends StackPane {
             macWindowContent.lookup("#MenuBar").setVisible(false);
             macWindowContent.lookup("#MenuBar").setManaged(false);
             macWindow.getChildren().add(macWindowContent);
-            
+
             StackPane windows7Window = new StackPane();
             windows7Window.getStyleClass().add("windows7Window");
             windows7WindowContent = (Node)FXMLLoader.load(SimpleWindowPage.class.getResource("simple-window.fxml"));
             windows7Window.getChildren().add(windows7WindowContent);
-            
+
             StackPane windows8Window = new StackPane();
             windows8Window.getStyleClass().add("windows8Window");
             windows8WindowContent = (Node)FXMLLoader.load(SimpleWindowPage.class.getResource("simple-window.fxml"));
             windows8Window.getChildren().add(windows8WindowContent);
-            
+
             StackPane ubuntuWindow = new StackPane();
             ubuntuWindow.getStyleClass().add("ubuntuWindow");
             ubuntuWindowContent = (Node)FXMLLoader.load(SimpleWindowPage.class.getResource("simple-window.fxml"));
             ubuntuWindow.getChildren().add(ubuntuWindowContent);
-            
+
             Platform.runLater(() -> {
                 final Node macRB1 = macWindowContent.lookup("#RadioButton1");
                 macRB1.setMouseTransparent(true);
@@ -111,13 +111,13 @@ public class SimpleWindowPage extends StackPane {
                 ubuntuRB2.setMouseTransparent(true);
                 ubuntuRB2.pseudoClassStateChanged(PseudoClass.getPseudoClass("focused"), true);
             });
-                      
+
             box.getChildren().addAll(macWindow, ubuntuWindow, windows7Window, windows8Window);
         } catch (IOException ex) {
             Logger.getLogger(SimpleWindowPage.class.getName()).log(Level.SEVERE, null, ex);
         }
     }
-    
+
     public void setModena(boolean modena) {
         if (modena) {
             macWindowContent.setStyle("-fx-background-color: -fx-background;");

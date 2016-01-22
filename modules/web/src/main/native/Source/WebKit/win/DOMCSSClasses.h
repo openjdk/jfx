@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef DOMCSSClasses_H
@@ -47,73 +47,73 @@ public:
     virtual ULONG STDMETHODCALLTYPE Release(void) { return DOMObject::Release(); }
 
     // IWebScriptObject
-    virtual HRESULT STDMETHODCALLTYPE throwException( 
+    virtual HRESULT STDMETHODCALLTYPE throwException(
         /* [in] */ BSTR exceptionMessage,
         /* [retval][out] */ BOOL *result) { return DOMObject::throwException(exceptionMessage, result); }
-    
-    virtual HRESULT STDMETHODCALLTYPE callWebScriptMethod( 
+
+    virtual HRESULT STDMETHODCALLTYPE callWebScriptMethod(
         /* [in] */ BSTR name,
         /* [size_is][in] */ const VARIANT args[  ],
         /* [in] */ int cArgs,
         /* [retval][out] */ VARIANT *result) { return DOMObject::callWebScriptMethod(name, args, cArgs, result); }
-    
-    virtual HRESULT STDMETHODCALLTYPE evaluateWebScript( 
+
+    virtual HRESULT STDMETHODCALLTYPE evaluateWebScript(
         /* [in] */ BSTR script,
         /* [retval][out] */ VARIANT *result) { return DOMObject::evaluateWebScript(script, result); }
-    
-    virtual HRESULT STDMETHODCALLTYPE removeWebScriptKey( 
+
+    virtual HRESULT STDMETHODCALLTYPE removeWebScriptKey(
         /* [in] */ BSTR name) { return DOMObject::removeWebScriptKey(name); }
-    
-    virtual HRESULT STDMETHODCALLTYPE stringRepresentation( 
+
+    virtual HRESULT STDMETHODCALLTYPE stringRepresentation(
         /* [retval][out] */ BSTR* stringRepresentation) { return DOMObject::stringRepresentation(stringRepresentation); }
-    
-    virtual HRESULT STDMETHODCALLTYPE webScriptValueAtIndex( 
+
+    virtual HRESULT STDMETHODCALLTYPE webScriptValueAtIndex(
         /* [in] */ unsigned int index,
         /* [retval][out] */ VARIANT *result) { return DOMObject::webScriptValueAtIndex(index, result); }
-    
-    virtual HRESULT STDMETHODCALLTYPE setWebScriptValueAtIndex( 
+
+    virtual HRESULT STDMETHODCALLTYPE setWebScriptValueAtIndex(
         /* [in] */ unsigned int index,
         /* [in] */ VARIANT val) { return DOMObject::setWebScriptValueAtIndex(index, val); }
-    
-    virtual HRESULT STDMETHODCALLTYPE setException( 
+
+    virtual HRESULT STDMETHODCALLTYPE setException(
         /* [in] */ BSTR description) { return DOMObject::setException(description); }
 
     // IDOMCSSStyleDeclaration
-    virtual HRESULT STDMETHODCALLTYPE cssText( 
+    virtual HRESULT STDMETHODCALLTYPE cssText(
         /* [retval][out] */ BSTR *result);
-    
-    virtual HRESULT STDMETHODCALLTYPE setCssText( 
+
+    virtual HRESULT STDMETHODCALLTYPE setCssText(
         /* [in] */ BSTR cssText);
-    
-    virtual HRESULT STDMETHODCALLTYPE getPropertyValue( 
+
+    virtual HRESULT STDMETHODCALLTYPE getPropertyValue(
         /* [in] */ BSTR propertyName,
         /* [retval][out] */ BSTR *result);
-    
-    virtual HRESULT STDMETHODCALLTYPE getPropertyCSSValue( 
+
+    virtual HRESULT STDMETHODCALLTYPE getPropertyCSSValue(
         /* [in] */ BSTR propertyName,
         /* [retval][out] */ IDOMCSSValue **result);
-    
-    virtual HRESULT STDMETHODCALLTYPE removeProperty( 
+
+    virtual HRESULT STDMETHODCALLTYPE removeProperty(
         /* [in] */ BSTR propertyName,
         /* [retval][out] */ BSTR *result);
-    
-    virtual HRESULT STDMETHODCALLTYPE getPropertyPriority( 
+
+    virtual HRESULT STDMETHODCALLTYPE getPropertyPriority(
         /* [in] */ BSTR propertyName,
         /* [retval][out] */ BSTR *result);
-    
-    virtual HRESULT STDMETHODCALLTYPE setProperty( 
+
+    virtual HRESULT STDMETHODCALLTYPE setProperty(
         /* [in] */ BSTR propertyName,
         /* [in] */ BSTR value,
         /* [in] */ BSTR priority);
-    
-    virtual HRESULT STDMETHODCALLTYPE length( 
+
+    virtual HRESULT STDMETHODCALLTYPE length(
         /* [retval][out] */ UINT *result);
-    
-    virtual HRESULT STDMETHODCALLTYPE item( 
+
+    virtual HRESULT STDMETHODCALLTYPE item(
         /* [in] */ UINT index,
         /* [retval][out] */ BSTR *result);
-    
-    virtual HRESULT STDMETHODCALLTYPE parentRule( 
+
+    virtual HRESULT STDMETHODCALLTYPE parentRule(
         /* [retval][out] */ IDOMCSSRule **result);
 
 protected:

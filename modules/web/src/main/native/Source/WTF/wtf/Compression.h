@@ -40,7 +40,7 @@ public:
     uint32_t originalSize() const { return m_originalSize; }
 
     WTF_EXPORT_PRIVATE bool decompress(uint8_t* destination, size_t bufferSize, size_t* decompressedByteCount = 0);
-    
+
 private:
     GenericCompressedData(size_t originalSize, size_t compressedSize)
     {

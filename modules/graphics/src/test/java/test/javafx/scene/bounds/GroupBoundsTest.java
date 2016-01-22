@@ -243,7 +243,7 @@ public class GroupBoundsTest {
         r2.setVisible(true);
         assertGroupBounds(g);
     }
-    
+
     private Group createGroupWithRects() {
         Group group = new Group();
         group.setId("group");
@@ -254,7 +254,7 @@ public class GroupBoundsTest {
                 group.getChildren().add(r);
             }
         }
-        
+
         // sanity test check that the size of the group is correct
         assertEquals(box(100, 100, 250, 250), group.getBoundsInLocal());
 
@@ -500,7 +500,7 @@ public class GroupBoundsTest {
         assertEquals(group.getBoundsInLocal(), group.getBoundsInParent());
         assertEquals(group.getBoundsInLocal(), group.getLayoutBounds());
     }
-    
+
     /**
      * Just a basic test to make sure basic group node bounds calculation works
      */

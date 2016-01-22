@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef FTLUnwindInfo_h
@@ -36,14 +36,14 @@ namespace JSC { namespace FTL {
 struct UnwindInfo {
     UnwindInfo();
     ~UnwindInfo();
-    
+
     void parse(void*, size_t, GeneratedFunction);
-    
+
     void dump(PrintStream&) const;
-    
+
     RegisterAtOffset* find(Reg) const;
     unsigned indexOf(Reg) const; // Returns UINT_MAX if not found.
-    
+
     Vector<RegisterAtOffset> m_registers;
 };
 

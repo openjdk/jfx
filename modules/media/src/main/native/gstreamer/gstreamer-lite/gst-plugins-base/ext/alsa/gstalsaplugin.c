@@ -47,7 +47,7 @@ gst_alsa_error_wrapper (const char *file, int line, const char *function,
   va_start (args, fmt);
   str = g_strdup_vprintf (fmt, args);
   va_end (args);
-  /* FIXME: use GST_LEVEL_ERROR here? Currently warning is used because we're 
+  /* FIXME: use GST_LEVEL_ERROR here? Currently warning is used because we're
    * able to catch enough of the errors that would be printed otherwise
    */
   gst_debug_log (alsa_debug, GST_LEVEL_WARNING, file, function, line, NULL,

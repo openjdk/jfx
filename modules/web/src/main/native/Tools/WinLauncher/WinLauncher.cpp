@@ -23,7 +23,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "stdafx.h"
@@ -526,7 +526,7 @@ int WINAPI wWinMain(HINSTANCE, HINSTANCE, PWSTR, int nCmdShow)
 
     if (usesLayeredWebView()) {
         hURLBarWnd = CreateWindow(L"EDIT", L"Type URL Here",
-                    WS_OVERLAPPEDWINDOW | WS_VISIBLE | WS_BORDER | ES_LEFT | ES_AUTOVSCROLL, 
+                    WS_OVERLAPPEDWINDOW | WS_VISIBLE | WS_BORDER | ES_LEFT | ES_AUTOVSCROLL,
                     s_windowPosition.x, s_windowPosition.y + s_windowSize.cy, s_windowSize.cx, URLBAR_HEIGHT,
                     0,
                     0,
@@ -669,7 +669,7 @@ exit:
 
     // Shut down COM.
     OleUninitialize();
-    
+
     return static_cast<int>(msg.wParam);
 }
 
@@ -955,7 +955,7 @@ LRESULT CALLBACK EditProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
     case WM_CHAR:
         if (wParam == 13) { // Enter Key
             wchar_t strPtr[INTERNET_MAX_URL_LENGTH];
-            *((LPWORD)strPtr) = INTERNET_MAX_URL_LENGTH; 
+            *((LPWORD)strPtr) = INTERNET_MAX_URL_LENGTH;
             int strLen = SendMessage(hDlg, EM_GETLINE, 0, (LPARAM)strPtr);
 
             strPtr[strLen] = 0;
@@ -963,7 +963,7 @@ LRESULT CALLBACK EditProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
             loadURL(bstr.GetBSTR());
 
             return 0;
-        } 
+        }
     default:
         return CallWindowProc(DefEditProc, hDlg, message, wParam, lParam);
     }

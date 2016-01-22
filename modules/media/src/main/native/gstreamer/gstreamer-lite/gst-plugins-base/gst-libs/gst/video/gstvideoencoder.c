@@ -4,7 +4,7 @@
  * Copyright (C) 2011 Nokia Corporation. All rights reserved.
  *   Contact: Stefan Kost <stefan.kost@nokia.com>
  * Copyright (C) 2012 Collabora Ltd.
- *	Author : Edward Hervey <edward@collabora.com>
+ *  Author : Edward Hervey <edward@collabora.com>
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -1823,7 +1823,7 @@ gst_video_encoder_release_frame (GstVideoEncoder * enc,
 /**
  * gst_video_encoder_finish_frame:
  * @encoder: a #GstVideoEncoder
- * @frame: (transfer full): an encoded #GstVideoCodecFrame 
+ * @frame: (transfer full): an encoded #GstVideoCodecFrame
  *
  * @frame must have a valid encoded data buffer, whose metadata fields
  * are then appropriately set according to frame data or no buffer at
@@ -2244,7 +2244,7 @@ gst_video_encoder_get_oldest_frame (GstVideoEncoder * encoder)
  * @frame_number: system_frame_number of a frame
  *
  * Get a pending unfinished #GstVideoCodecFrame
- * 
+ *
  * Returns: (transfer full): pending unfinished #GstVideoCodecFrame identified by @frame_number.
  */
 GstVideoCodecFrame *
@@ -2274,7 +2274,7 @@ gst_video_encoder_get_frame (GstVideoEncoder * encoder, int frame_number)
  * @encoder: a #GstVideoEncoder
  *
  * Get all pending unfinished #GstVideoCodecFrame
- * 
+ *
  * Returns: (transfer full) (element-type GstVideoCodecFrame): pending unfinished #GstVideoCodecFrame.
  */
 GList *

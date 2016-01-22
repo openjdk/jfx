@@ -13,13 +13,13 @@ RQRef::~RQRef()
         JNIEnv* env = WebCore_GetJavaEnv();
 
         if (env) {
-            //do it if JVM is here. 
+            //do it if JVM is here.
             static jmethodID mid = env->GetMethodID(PG_GetRefClass(env), "deref", "()V");
             ASSERT(mid);
             env->CallVoidMethod(m_ref, mid);
 
             CheckAndClearException(env);
-        } 
+        }
     }
 }
 

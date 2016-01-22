@@ -71,7 +71,7 @@ bool isHTMLLineBreak(UChar);
 bool isNotHTMLSpace(UChar);
 bool isHTMLSpaceButNotLineBreak(UChar character);
 
-// Strip leading and trailing whitespace as defined by the HTML specification. 
+// Strip leading and trailing whitespace as defined by the HTML specification.
 String stripLeadingAndTrailingHTMLSpaces(const String&);
 template<size_t inlineCapacity>
 String stripLeadingAndTrailingHTMLSpaces(const Vector<UChar, inlineCapacity>& vector)

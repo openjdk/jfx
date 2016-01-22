@@ -991,9 +991,9 @@ public class GridPane extends Pane {
         final List<Node> managed = getManagedChildren();
         for (int i = 0, size = managed.size(); i < size; i++) {
             Node child = managed.get(i);
-            final int nodeRowIndex = getNodeRowIndex(child); 
+            final int nodeRowIndex = getNodeRowIndex(child);
             final int nodeRowEnd = getNodeRowEnd(child);
-            if (rowIndex >= nodeRowIndex && 
+            if (rowIndex >= nodeRowIndex &&
                     (rowIndex <= nodeRowEnd || nodeRowEnd == REMAINING)) {
                 int index = getNodeColumnIndex(child);
                 int end = getNodeColumnEnd(child);
@@ -1810,7 +1810,7 @@ public class GridPane extends Pane {
             double remainder = 0;
             for (int i = 0; i < rowPercentHeight.length; i++) {
                 if (rowPercentHeight[i] >= 0) {
-                    double size = (contentHeight - vgaps) * (rowPercentHeight[i]/100);       
+                    double size = (contentHeight - vgaps) * (rowPercentHeight[i]/100);
                     double floor = Math.floor(size);
                     remainder += size - floor;
 
@@ -1824,7 +1824,7 @@ public class GridPane extends Pane {
                 }
             }
         }
-        double rowTotal = heights.computeTotal();      
+        double rowTotal = heights.computeTotal();
         if (rowPercentTotal < 100) {
             double heightAvailable = height - top - bottom - rowTotal;
             // now that both fixed and percentage rows have been computed, divy up any surplus or deficit
@@ -2607,7 +2607,7 @@ public class GridPane extends Pane {
             }
             return result;
         }
-        
+
         private double computeTotal(final int from, final int to) {
             double total = gap * (to - from - 1);
             for (int i = from; i < to; ++i) {

@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef VariableWatchpointSet_h
@@ -38,9 +38,9 @@ public:
         : WatchpointSet(ClearWatchpoint)
     {
     }
-    
+
     ~VariableWatchpointSet() { }
-    
+
     // For the purpose of deciding whether or not to watch this variable, you only need
     // to inspect inferredValue(). If this returns something other than the empty
     // value, then it means that at all future safepoints, this watchpoint set will be
@@ -53,7 +53,7 @@ public:
     //        either notice that it's invalidated and not install the watchpoint, or
     //        you will have been notified that the watchpoint was fired.
     JSValue inferredValue() const { return m_inferredValue; }
-    
+
     void notifyWrite(JSValue value)
     {
         ASSERT(!!value);
@@ -69,21 +69,21 @@ public:
                 return;
             invalidate();
             return;
-            
+
         case IsInvalidated:
             ASSERT(!m_inferredValue);
             return;
         }
-        
+
         ASSERT_NOT_REACHED();
     }
-    
+
     void invalidate()
     {
         m_inferredValue = JSValue();
         WatchpointSet::invalidate();
     }
-    
+
     void finalizeUnconditionally()
     {
         ASSERT(!!m_inferredValue == (state() == IsWatched));
@@ -96,7 +96,7 @@ public:
             return;
         invalidate();
     }
-    
+
     JSValue* addressOfInferredValue() { return &m_inferredValue; }
 
 private:

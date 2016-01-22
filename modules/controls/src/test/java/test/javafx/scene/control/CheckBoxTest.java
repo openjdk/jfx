@@ -355,25 +355,25 @@ public class CheckBoxTest {
         assertFalse(btn.isSelected());
         assertFalse(btn.isIndeterminate());
     }
-    
+
     @Test public void fireSelectedCheckboxResultsIn_OnAction() {
         btn.setOnAction(arg0 -> {
             assertTrue(btn.isSelected());
         });
-        btn.setSelected(true); 
+        btn.setSelected(true);
         assertTrue(btn.isSelected());
-    }    
-    
+    }
+
     @Test public void fireIndeterminateCheckboxResultsIn_OnAction() {
         btn.setOnAction(arg0 -> {
             assertTrue(btn.isIndeterminate());
         });
         btn.setIndeterminate(true);
         assertTrue(btn.isIndeterminate());
-    }  
-    
+    }
+
     private int count = 0;
-    @Test public void fireSelectedCheckboxResultsIn_OnActionCalledOnce_RT21482() {        
+    @Test public void fireSelectedCheckboxResultsIn_OnActionCalledOnce_RT21482() {
         btn.setOnAction(arg0 -> {
             if (count++ > 0) {
                 assertFalse(true);

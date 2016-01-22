@@ -384,9 +384,9 @@ void HTMLPlugInImageElement::didAddUserAgentShadowRoot(ShadowRoot* root)
 
     // Reset any author styles that may apply as we only want explicit
     // styles defined in the injected user agents stylesheets to specify
-    // the look-and-feel of the snapshotted plug-in overlay. 
+    // the look-and-feel of the snapshotted plug-in overlay.
     root->setResetStyleInheritance(true);
-    
+
     String mimeType = loadedMimeType();
 
     DOMWrapperWorld& isolatedWorld = plugInImageElementIsolatedWorld();
@@ -402,7 +402,7 @@ void HTMLPlugInImageElement::didAddUserAgentShadowRoot(ShadowRoot* root)
     argList.append(toJS(exec, globalObject, root));
     argList.append(jsString(exec, titleText(page, mimeType)));
     argList.append(jsString(exec, subtitleText(page, mimeType)));
-    
+
     // This parameter determines whether or not the snapshot overlay should always be visible over the plugin snapshot.
     // If no snapshot was found then we want the overlay to be visible.
     argList.append(JSC::jsBoolean(!m_snapshotImage));
@@ -494,7 +494,7 @@ void HTMLPlugInImageElement::restartSimilarPlugIns()
     for (Frame* frame = &document().page()->mainFrame(); frame; frame = frame->tree().traverseNext()) {
         if (!frame->loader().subframeLoader().containsPlugins())
             continue;
-        
+
         if (!frame->document())
             continue;
 
@@ -769,7 +769,7 @@ bool HTMLPlugInImageElement::requestObject(const String& url, const String& mime
 {
     if (HTMLPlugInElement::requestObject(url, mimeType, paramNames, paramValues))
         return true;
-    
+
     SubframeLoader& loader = document().frame()->loader().subframeLoader();
     return loader.requestObject(*this, url, getNameAttribute(), mimeType, paramNames, paramValues);
 }

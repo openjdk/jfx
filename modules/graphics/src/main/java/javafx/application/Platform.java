@@ -348,7 +348,7 @@ public final class Platform {
      *
      * @return the read-only boolean property indicating if accessibility is active
      *
-     * @since JavaFX 8u40 
+     * @since JavaFX 8u40
      */
     public static ReadOnlyBooleanProperty accessibilityActiveProperty() {
         if (accessibilityActiveProperty == null) {

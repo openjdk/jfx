@@ -43,7 +43,7 @@ import org.junit.Test;
 
 public class TransitionTest {
 
-	private static Interpolator DEFAULT_INTERPOLATOR = Interpolator.EASE_BOTH;
+    private static Interpolator DEFAULT_INTERPOLATOR = Interpolator.EASE_BOTH;
     private static double EPSILON = 1e-12;
 
     private TransitionImpl transition;
@@ -55,13 +55,13 @@ public class TransitionTest {
 
     @Test
     public void testDefaultValues() {
-    	// emtpy ctor
-    	Transition t0 = new TransitionImpl(Duration.millis(1000));
+        // emtpy ctor
+        Transition t0 = new TransitionImpl(Duration.millis(1000));
         assertEquals(DEFAULT_INTERPOLATOR, t0.getInterpolator());
         assertEquals(6000.0 / Toolkit.getToolkit().getMasterTimer().getDefaultResolution(), t0.getTargetFramerate(), EPSILON);
-        
+
         // setting targetFramerate
-    	Transition t1 = new TransitionImpl(Duration.millis(1000), 10);
+        Transition t1 = new TransitionImpl(Duration.millis(1000), 10);
         assertEquals(DEFAULT_INTERPOLATOR, t1.getInterpolator());
         assertEquals(10, t1.getTargetFramerate(), EPSILON);
     }
@@ -225,10 +225,10 @@ public class TransitionTest {
         private TransitionImpl(Duration duration) {
             setCycleDuration(duration);
         }
-        
+
         private TransitionImpl(Duration duration, double targetFramerate) {
-        	super(targetFramerate);
-        	setCycleDuration(duration);
+            super(targetFramerate);
+            setCycleDuration(duration);
         }
 
         public void impl_setCurrentTicks(long ticks) {

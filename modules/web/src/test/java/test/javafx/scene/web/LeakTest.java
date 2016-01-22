@@ -90,7 +90,7 @@ public class LeakTest extends TestBase {
             assertNull("WebView has not been GCed", webViewRef.get());
             assertNull("WebEngine has not been GCed", webEngineRef.get());
         });
-        
+
         WeakReference<WebPage> webPageRef = webPageRefQueue.take();
         long endTime = System.currentTimeMillis() + 5000;
         while (true) {

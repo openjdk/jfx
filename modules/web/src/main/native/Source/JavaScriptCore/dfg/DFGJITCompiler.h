@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef DFGJITCompiler_h
@@ -88,7 +88,7 @@ struct InRecord {
         , m_stubInfo(stubInfo)
     {
     }
-    
+
     MacroAssembler::PatchableJump m_jump;
     MacroAssembler::Label m_done;
     SlowPathGenerator* m_slowPathGenerator;
@@ -107,16 +107,16 @@ class JITCompiler : public CCallHelpers {
 public:
     JITCompiler(Graph& dfg);
     ~JITCompiler();
-    
+
     void compile();
     void compileFunction();
-    
+
     void link();
     void linkFunction();
 
     // Accessors for properties.
     Graph& graph() { return m_graph; }
-    
+
     // Methods to set labels for the disassembler.
     void setStartOfCode()
     {
@@ -124,35 +124,35 @@ public:
             return;
         m_disassembler->setStartOfCode(labelIgnoringWatchpoints());
     }
-    
+
     void setForBlockIndex(BlockIndex blockIndex)
     {
         if (LIKELY(!m_disassembler))
             return;
         m_disassembler->setForBlockIndex(blockIndex, labelIgnoringWatchpoints());
     }
-    
+
     void setForNode(Node* node)
     {
         if (LIKELY(!m_disassembler))
             return;
         m_disassembler->setForNode(node, labelIgnoringWatchpoints());
     }
-    
+
     void setEndOfMainPath()
     {
         if (LIKELY(!m_disassembler))
             return;
         m_disassembler->setEndOfMainPath(labelIgnoringWatchpoints());
     }
-    
+
     void setEndOfCode()
     {
         if (LIKELY(!m_disassembler))
             return;
         m_disassembler->setEndOfCode(labelIgnoringWatchpoints());
     }
-    
+
     void emitStoreCodeOrigin(CodeOrigin codeOrigin)
     {
         unsigned index = m_jitCode->common.addCodeOrigin(codeOrigin);
@@ -167,12 +167,12 @@ public:
         m_calls.append(CallLinkRecord(functionCall, function));
         return functionCall;
     }
-    
+
     void exceptionCheck(Jump jumpToHandler)
     {
         m_exceptionChecks.append(jumpToHandler);
     }
-    
+
     void exceptionCheck()
     {
         m_exceptionChecks.append(emitExceptionCheck());
@@ -188,7 +188,7 @@ public:
     {
         m_exceptionChecks.append(branchTestPtr(Zero, GPRInfo::returnValueGPR));
     }
-    
+
     OSRExitCompilationInfo& appendExitInfo(MacroAssembler::JumpList jumpsToFail = MacroAssembler::JumpList())
     {
         OSRExitCompilationInfo info;
@@ -210,7 +210,7 @@ public:
     {
         m_getByIds.append(InlineCacheWrapper<JITGetByIdGenerator>(gen, slowPath));
     }
-    
+
     void addPutById(const JITPutByIdGenerator& gen, SlowPathGenerator* slowPath)
     {
         m_putByIds.append(InlineCacheWrapper<JITPutByIdGenerator>(gen, slowPath));
@@ -220,7 +220,7 @@ public:
     {
         m_ins.append(record);
     }
-    
+
     unsigned currentJSCallIndex() const
     {
         return m_jsCalls.size();
@@ -230,18 +230,18 @@ public:
     {
         m_jsCalls.append(JSCallRecord(fastCall, slowCall, targetToCheck, callType, callee, codeOrigin));
     }
-    
+
     void addWeakReference(JSCell* target)
     {
         m_graph.m_plan.weakReferences.addLazily(target);
     }
-    
+
     void addWeakReferences(const StructureSet& structureSet)
     {
         for (unsigned i = structureSet.size(); i--;)
             addWeakReference(structureSet[i]);
     }
-    
+
     template<typename T>
     Jump branchWeakPtr(RelationalCondition cond, T left, JSCell* weakPtr)
     {
@@ -249,17 +249,17 @@ public:
         addWeakReference(weakPtr);
         return result;
     }
-    
+
     void noticeOSREntry(BasicBlock& basicBlock, JITCompiler::Label blockHead, LinkBuffer& linkBuffer)
     {
         // OSR entry is not allowed into blocks deemed unreachable by control flow analysis.
         if (!basicBlock.cfaHasVisited)
             return;
-        
+
         OSREntryData* entry = m_jitCode->appendOSREntryData(basicBlock.bytecodeBegin, linkBuffer.offsetOf(blockHead));
-        
+
         entry->m_expectedValues = basicBlock.valuesAtHead;
-        
+
         // Fix the expected values: in our protocol, a dead variable will have an expected
         // value of (None, []). But the old JIT may stash some values there. So we really
         // need (Top, TOP).
@@ -275,7 +275,7 @@ public:
             else {
                 VariableAccessData* variable = node->variableAccessData();
                 entry->m_machineStackUsed.set(variable->machineLocal().toLocal());
-                
+
                 switch (variable->flushFormat()) {
                 case FlushedDouble:
                     entry->m_localsForcedDouble.set(local);
@@ -286,7 +286,7 @@ public:
                 default:
                     break;
                 }
-                
+
                 if (variable->local() != variable->machineLocal()) {
                     entry->m_reshufflings.append(
                         OSREntryReshuffling(
@@ -294,40 +294,40 @@ public:
                 }
             }
         }
-        
+
         entry->m_reshufflings.shrinkToFit();
     }
-    
+
     PassRefPtr<JITCode> jitCode() { return m_jitCode; }
-    
+
     Vector<Label>& blockHeads() { return m_blockHeads; }
 
 private:
     friend class OSRExitJumpPlaceholder;
-    
+
     // Internal implementation to compile.
     void compileEntry();
     void compileBody();
     void link(LinkBuffer&);
-    
+
     void exitSpeculativeWithOSR(const OSRExit&, SpeculationRecovery*);
     void compileExceptionHandlers();
     void linkOSRExits();
     void disassemble(LinkBuffer&);
-    
+
     // The dataflow graph currently being generated.
     Graph& m_graph;
 
     OwnPtr<Disassembler> m_disassembler;
-    
+
     RefPtr<JITCode> m_jitCode;
-    
+
     // Vector of calls out from JIT code, including exception handler information.
     // Count of the number of CallRecords with exception handlers.
     Vector<CallLinkRecord> m_calls;
     JumpList m_exceptionChecks;
     JumpList m_exceptionChecksWithCallFrameRollback;
-    
+
     Vector<Label> m_blockHeads;
 
     struct JSCallRecord {
@@ -340,7 +340,7 @@ private:
             , m_codeOrigin(codeOrigin)
         {
         }
-        
+
         Call m_fastCall;
         Call m_slowCall;
         DataLabelPtr m_targetToCheck;
@@ -348,14 +348,14 @@ private:
         GPRReg m_callee;
         CodeOrigin m_codeOrigin;
     };
-    
+
     Vector<InlineCacheWrapper<JITGetByIdGenerator>, 4> m_getByIds;
     Vector<InlineCacheWrapper<JITPutByIdGenerator>, 4> m_putByIds;
     Vector<InRecord, 4> m_ins;
     Vector<JSCallRecord, 4> m_jsCalls;
     SegmentedVector<OSRExitCompilationInfo, 4> m_exitCompilationInfo;
     Vector<Vector<Label>> m_exitSiteLabels;
-    
+
     Call m_callArityFixup;
     Label m_arityCheck;
     OwnPtr<SpeculativeJIT> m_speculative;

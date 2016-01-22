@@ -111,8 +111,8 @@ public:
     {
         return std::unique_ptr<DatabaseUnpauseTask>(new DatabaseUnpauseTask(thread));
     }
-    
-    virtual bool shouldPerformWhilePaused() const 
+
+    virtual bool shouldPerformWhilePaused() const
     {
         // Since we're not locking the DatabaseThread::m_paused in the main database thread loop, it's possible that
         // a DatabaseUnpauseTask might be added to the m_pausedQueue and performed from within ::handlePausedQueue.
@@ -168,10 +168,10 @@ void DatabaseThread::handlePausedQueue()
                 continue;
             }
         }
-            
+
         if (terminationRequested())
             break;
-    
+
         task->performTask();
     }
 }

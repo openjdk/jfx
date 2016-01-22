@@ -70,7 +70,7 @@ bool JSAPIWrapperObjectHandleOwner::isReachableFromOpaqueRoots(JSC::Handle<JSC::
 }
 
 namespace JSC {
-    
+
 template <> const ClassInfo JSCallbackObject<JSAPIWrapperObject>::s_info = { "JSAPIWrapperObject", &Base::s_info, 0, 0, CREATE_METHOD_TABLE(JSCallbackObject) };
 
 template<> const bool JSCallbackObject<JSAPIWrapperObject>::needsDestruction = true;
@@ -92,7 +92,7 @@ void JSAPIWrapperObject::finishCreation(VM& vm)
     Base::finishCreation(vm);
     WeakSet::allocate(this, jsAPIWrapperObjectHandleOwner(), 0); // Balanced in JSAPIWrapperObjectHandleOwner::finalize.
 }
-    
+
 void JSAPIWrapperObject::setWrappedObject(void* wrappedObject)
 {
     ASSERT(!m_wrappedObject);

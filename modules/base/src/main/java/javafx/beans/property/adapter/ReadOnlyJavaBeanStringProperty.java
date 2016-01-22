@@ -40,17 +40,17 @@ import sun.reflect.misc.MethodUtil;
 
 /**
  * A {@code ReadOnlyJavaBeanStringProperty} provides an adapter between a regular
- * read only Java Bean property of type {@code String} and a JavaFX 
- * {@code ReadOnlyStringProperty}. It cannot be created directly, but a 
+ * read only Java Bean property of type {@code String} and a JavaFX
+ * {@code ReadOnlyStringProperty}. It cannot be created directly, but a
  * {@link ReadOnlyJavaBeanStringPropertyBuilder} has to be used.
  * <p>
  * As a minimum, the Java Bean must implement a getter for the
- * property. If the getter of an instance of this class is called, the property of 
+ * property. If the getter of an instance of this class is called, the property of
  * the Java Bean is returned. If the Java Bean property is bound (i.e. it supports
- * PropertyChangeListeners), this {@code ReadOnlyJavaBeanStringProperty} will be 
+ * PropertyChangeListeners), this {@code ReadOnlyJavaBeanStringProperty} will be
  * aware of changes in the Java Bean. Otherwise it can be notified about
  * changes by calling {@link #fireValueChangedEvent()}.
- * 
+ *
  * @see javafx.beans.property.ReadOnlyStringProperty
  * @see ReadOnlyJavaBeanStringPropertyBuilder
  * @since JavaFX 2.1
@@ -71,9 +71,9 @@ public final class ReadOnlyJavaBeanStringProperty extends ReadOnlyStringProperty
 
     /**
      * {@inheritDoc}
-     * 
+     *
      * @throws UndeclaredThrowableException if calling the getter of the Java Bean
-     * property throws an {@code IllegalAccessException} or an 
+     * property throws an {@code IllegalAccessException} or an
      * {@code InvocationTargetException}.
      */
     @Override

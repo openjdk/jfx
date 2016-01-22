@@ -21,7 +21,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef CharacterReferenceParserInlines_h
@@ -53,7 +53,7 @@ bool consumeCharacterReference(SegmentedString& source, StringBuilder& decodedCh
     ASSERT(!additionalAllowedCharacter || additionalAllowedCharacter == '"' || additionalAllowedCharacter == '\'' || additionalAllowedCharacter == '>');
     ASSERT(!notEnoughCharacters);
     ASSERT(decodedCharacter.isEmpty());
-    
+
     enum EntityState {
         Initial,
         Number,
@@ -66,7 +66,7 @@ bool consumeCharacterReference(SegmentedString& source, StringBuilder& decodedCh
     EntityState entityState = Initial;
     UChar32 result = 0;
     StringBuilder consumedCharacters;
-    
+
     while (!source.isEmpty()) {
         UChar cc = source.currentChar();
         switch (entityState) {

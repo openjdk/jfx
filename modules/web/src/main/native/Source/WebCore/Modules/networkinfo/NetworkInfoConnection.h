@@ -53,7 +53,7 @@ public:
 
     double bandwidth() const;
     bool metered() const;
-    
+
     void didChangeNetworkInformation(PassRefPtr<Event>, PassRefPtr<NetworkInfo>);
     void networkInfoControllerDestroyed() { m_controller = 0; }
 
@@ -65,7 +65,7 @@ public:
     using RefCounted<NetworkInfoConnection>::deref;
 
     DEFINE_ATTRIBUTE_EVENT_LISTENER(webkitnetworkinfochange);
-  
+
     // ActiveDOMObject implementation.
     virtual bool canSuspend() const { return true; }
     virtual void suspend(ReasonForSuspension);
@@ -85,7 +85,7 @@ private:
     EventTargetData m_eventTargetData;
 
     NetworkInfoController* m_controller;
-    RefPtr<NetworkInfo> m_networkInfo; 
+    RefPtr<NetworkInfo> m_networkInfo;
 };
 
 } // namespace WebCore

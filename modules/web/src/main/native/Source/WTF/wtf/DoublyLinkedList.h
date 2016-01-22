@@ -32,10 +32,10 @@ namespace WTF {
 template<typename T> class DoublyLinkedListNode {
 public:
     DoublyLinkedListNode();
-    
+
     void setPrev(T*);
     void setNext(T*);
-    
+
     T* prev() const;
     T* next() const;
 };
@@ -69,7 +69,7 @@ template<typename T> inline T* DoublyLinkedListNode<T>::next() const
 template<typename T> class DoublyLinkedList {
 public:
     DoublyLinkedList();
-    
+
     bool isEmpty() const;
     size_t size() const; // This is O(n).
     void clear();

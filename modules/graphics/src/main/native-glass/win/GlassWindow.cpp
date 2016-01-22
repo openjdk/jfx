@@ -514,7 +514,7 @@ LRESULT GlassWindow::WindowProc(UINT msg, WPARAM wParam, LPARAM lParam)
                 BOOL handled = HandleViewMouseEvent(GetHWND(), msg, wParam, lParam);
                 if (handled && msg == WM_RBUTTONUP) {
                     // By default, DefWindowProc() sends WM_CONTEXTMENU from WM_LBUTTONUP
-                    // Since DefWindowProc() is not called, call the mouse menu handler directly 
+                    // Since DefWindowProc() is not called, call the mouse menu handler directly
                     HandleViewMenuEvent(GetHWND(), WM_CONTEXTMENU, (WPARAM) GetHWND(), ::GetMessagePos ());
                     //::DefWindowProc(GetHWND(), msg, wParam, lParam);
                 }
@@ -582,7 +582,7 @@ LRESULT GlassWindow::WindowProc(UINT msg, WPARAM wParam, LPARAM lParam)
                     } else {
                         activeTouchWindow = 0;
                     }
-                } 
+                }
                 return 0;
             }
             break;
@@ -703,7 +703,7 @@ void GlassWindow::HandleActivateEvent(jint event)
     if (!active) {
         UngrabFocus();
     }
-    
+
     JNIEnv* env = GetEnv();
     env->CallVoidMethod(m_grefThis, javaIDs.Window.notifyFocus, event);
     CheckAndClearException(env);
@@ -909,7 +909,7 @@ bool GlassWindow::RequestFocus(jint event)
     if (::GetForegroundWindow() != toplevel && !::SetForegroundWindow(toplevel)) {
         // We're unable to bring our top-level window to foreground.
         // But since it anyway becomes active, we (or the plugin) won't receive
-        // any subsequent notifications. So let's pretend we got the focus - 
+        // any subsequent notifications. So let's pretend we got the focus -
         //IGNORE: return false;
         //We'll anyway get a reasonable response from the ::SetFocus() later
     }
@@ -1582,9 +1582,9 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_win_WinWindow__1setVisible
             }
         }
 
-        
+
         ::ShowWindow(hWnd, visible ? SW_SHOW : SW_HIDE);
-        
+
         if (visible) {
             if (pWindow) {
                 if (pWindow->IsFocusable()) {

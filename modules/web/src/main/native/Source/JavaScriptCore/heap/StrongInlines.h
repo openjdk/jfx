@@ -53,5 +53,5 @@ inline void Strong<T>::set(VM& vm, ExternalType value)
 }
 
 } // namespace JSC
-    
+
 #endif // StrongInlines_h

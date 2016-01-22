@@ -55,12 +55,12 @@ public abstract class ComboBoxBaseSkin<T> extends SkinBase<ComboBoxBase<T>> {
      * Private Fields                                                          *
      *                                                                         *
      **************************************************************************/
-    
+
     private Node displayNode; // this is normally either label or textField
-    
+
     StackPane arrowButton;
     Region arrow;
-    
+
     /** The mode in which this control will be represented. */
     private ComboBoxMode mode = ComboBoxMode.COMBOBOX;
     final ComboBoxMode getMode() { return mode; }
@@ -119,7 +119,7 @@ public abstract class ComboBoxBaseSkin<T> extends SkinBase<ComboBoxBase<T>> {
                 focusLost();
             }
         });
-        
+
         // Register listeners
         registerChangeListener(control.editableProperty(), e -> updateDisplayArea());
         registerChangeListener(control.showingProperty(), e -> {
@@ -151,13 +151,13 @@ public abstract class ComboBoxBaseSkin<T> extends SkinBase<ComboBoxBase<T>> {
      * It is up to specific skin implementations to determine how this is handled.
      */
     public abstract void show();
- 
+
     /**
      * This method will be called when the ComboBox popup should be hidden.
      * It is up to specific skin implementations to determine how this is handled.
      */
     public abstract void hide();
-    
+
     /** {@inheritDoc} */
     @Override protected void layoutChildren(final double x, final double y,
             final double w, final double h) {
@@ -169,7 +169,7 @@ public abstract class ComboBoxBaseSkin<T> extends SkinBase<ComboBoxBase<T>> {
         final double arrowButtonWidth = (isButton()) ? 0 :
                 arrowButton.snappedLeftInset() + arrowWidth +
                 arrowButton.snappedRightInset();
-        
+
         if (displayNode != null) {
             displayNode.resizeRelocate(x, y, w - arrowButtonWidth, h);
         }
@@ -191,10 +191,10 @@ public abstract class ComboBoxBaseSkin<T> extends SkinBase<ComboBoxBase<T>> {
         final double arrowWidth = snapSize(arrow.prefWidth(-1));
         final double arrowButtonWidth = isButton() ? 0 :
                                         arrowButton.snappedLeftInset() +
-                                        arrowWidth + 
+                                        arrowWidth +
                                         arrowButton.snappedRightInset();
         final double displayNodeWidth = displayNode == null ? 0 : displayNode.prefWidth(height);
-        
+
         final double totalWidth = displayNodeWidth + arrowButtonWidth;
         return leftInset + totalWidth + rightInset;
     }
@@ -208,7 +208,7 @@ public abstract class ComboBoxBaseSkin<T> extends SkinBase<ComboBoxBase<T>> {
         double ph;
         if (displayNode == null) {
             final int DEFAULT_HEIGHT = 21;
-            double arrowHeight = (isButton()) ? 0 : 
+            double arrowHeight = (isButton()) ? 0 :
                     (arrowButton.snappedTopInset() + arrow.prefHeight(-1) + arrowButton.snappedBottomInset());
             ph = Math.max(DEFAULT_HEIGHT, arrowHeight);
         } else {

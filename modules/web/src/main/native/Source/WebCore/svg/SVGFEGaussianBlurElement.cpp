@@ -132,7 +132,7 @@ void SVGFEGaussianBlurElement::svgAttributeChanged(const QualifiedName& attrName
     }
 
     SVGElementInstance::InvalidationGuard invalidationGuard(this);
-    
+
     if (attrName == SVGNames::inAttr
         || attrName == SVGNames::stdDeviationAttr
         || attrName == SVGNames::edgeModeAttr) {

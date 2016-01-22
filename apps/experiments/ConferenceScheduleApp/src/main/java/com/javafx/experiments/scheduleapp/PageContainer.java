@@ -113,7 +113,7 @@ public class PageContainer extends Pane {
             }
         });
     }
-    
+
     private void rebuild() {
         if (header.getChildren().size() > 1) {
             header.getChildren().remove(1, header.getChildren().size());
@@ -137,7 +137,7 @@ public class PageContainer extends Pane {
             header.getChildren().add(title);
         }
     }
-    
+
     public void gotoPage(Page page, boolean animate) {
         System.out.println("CHANGING TO PAGE --> "+page.getName());
         final Label newTitleLabel = titlesMap.get(page);
@@ -155,7 +155,7 @@ public class PageContainer extends Pane {
                         new KeyValue(currentTitlelabel.textFillProperty(), TEXT_SELECTED_COLOR),
                         new KeyValue(headerArrow.layoutXProperty(), headerArrow.getLayoutX())
                     ),
-                    new KeyFrame(Duration.seconds(.3), 
+                    new KeyFrame(Duration.seconds(.3),
                         new KeyValue(selectionBox.xProperty(), newPageTitleBounds.getMinX(), Interpolator.EASE_BOTH),
                         new KeyValue(selectionBox.yProperty(), newPageTitleBounds.getMinY(), Interpolator.EASE_BOTH),
                         new KeyValue(selectionBox.widthProperty(), newPageTitleBounds.getWidth(), Interpolator.EASE_BOTH),
@@ -209,7 +209,7 @@ public class PageContainer extends Pane {
         }
         lightBox.resizeRelocate(0, 0, w, h);
     }
-    
+
     public ObservableList<Page> getPages() {
         return pages;
     }

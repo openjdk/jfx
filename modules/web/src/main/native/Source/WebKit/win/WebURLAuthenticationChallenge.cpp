@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -108,11 +108,11 @@ ULONG STDMETHODCALLTYPE WebURLAuthenticationChallenge::Release(void)
 // IWebURLAuthenticationChallenge -------------------------------------------------------------------
 
 HRESULT STDMETHODCALLTYPE WebURLAuthenticationChallenge::initWithProtectionSpace(
-    /* [in] */ IWebURLProtectionSpace* space, 
-    /* [in] */ IWebURLCredential* proposedCredential, 
-    /* [in] */ int previousFailureCount, 
-    /* [in] */ IWebURLResponse* failureResponse, 
-    /* [in] */ IWebError* error, 
+    /* [in] */ IWebURLProtectionSpace* space,
+    /* [in] */ IWebURLCredential* proposedCredential,
+    /* [in] */ int previousFailureCount,
+    /* [in] */ IWebURLResponse* failureResponse,
+    /* [in] */ IWebError* error,
     /* [in] */ IWebURLAuthenticationChallengeSender* sender)
 {
     LOG_ERROR("Calling the ala carte init for WebURLAuthenticationChallenge - is this really what you want to do?");
@@ -139,7 +139,7 @@ HRESULT STDMETHODCALLTYPE WebURLAuthenticationChallenge::initWithProtectionSpace
     hr = error->QueryInterface(CLSID_WebError, (void**)&webError);
     if (FAILED(hr))
         return hr;
-    
+
     COMPtr<WebURLAuthenticationChallengeSender> webSender(Query, sender);
     if (!webSender)
         return E_NOINTERFACE;
@@ -154,7 +154,7 @@ HRESULT STDMETHODCALLTYPE WebURLAuthenticationChallenge::initWithProtectionSpace
 }
 
 HRESULT STDMETHODCALLTYPE WebURLAuthenticationChallenge::initWithAuthenticationChallenge(
-    /* [in] */ IWebURLAuthenticationChallenge* challenge, 
+    /* [in] */ IWebURLAuthenticationChallenge* challenge,
     /* [in] */ IWebURLAuthenticationChallengeSender* sender)
 {
     if (!challenge || !sender)

@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -38,7 +38,7 @@ void NetworkStateNotifier::updateState()
 {
     // Assume that we're online until proven otherwise.
     m_isOnLine = true;
-    
+
     Vector<char> buffer;
     DWORD size = 0;
 
@@ -63,7 +63,7 @@ void NetworkStateNotifier::updateState()
         // We found an interface that was up.
         return;
     }
-    
+
     // We didn't find any valid interfaces, so we must be offline.
     m_isOnLine = false;
 }
@@ -71,7 +71,7 @@ void NetworkStateNotifier::updateState()
 void NetworkStateNotifier::addressChanged()
 {
     bool oldOnLine = m_isOnLine;
-    
+
     updateState();
 
     if (m_isOnLine == oldOnLine)

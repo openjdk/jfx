@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -142,7 +142,7 @@ void InsertTextCommand::doApply()
             return;
         deleteSelection(false, true, true, false, false);
         // deleteSelection eventually makes a new endingSelection out of a Position. If that Position doesn't have
-        // a renderer (e.g. it is on a <frameset> in the DOM), the VisibleSelection cannot be canonicalized to 
+        // a renderer (e.g. it is on a <frameset> in the DOM), the VisibleSelection cannot be canonicalized to
         // anything other than NoSelection. The rest of this function requires a real endingSelection, so bail out.
         if (endingSelection().isNone())
             return;
@@ -152,9 +152,9 @@ void InsertTextCommand::doApply()
     }
 
     Position startPosition(endingSelection().start());
-    
+
     Position placeholder;
-    // We want to remove preserved newlines and brs that will collapse (and thus become unnecessary) when content 
+    // We want to remove preserved newlines and brs that will collapse (and thus become unnecessary) when content
     // is inserted just before them.
     // FIXME: We shouldn't really have to do this, but removing placeholders is a workaround for 9661.
     // If the caret is just before a placeholder, downstream will normalize the caret to it.
@@ -168,10 +168,10 @@ void InsertTextCommand::doApply()
         // we get a chance to insert into it.  We check for a placeholder now, though, because doing so requires
         // the creation of a VisiblePosition, and if we did that post-insertion it would force a layout.
     }
-    
+
     // Insert the character at the leftmost candidate.
     startPosition = startPosition.upstream();
-    
+
     // It is possible for the node that contains startPosition to contain only unrendered whitespace,
     // and so deleteInsignificantText could remove it.  Save the position before the node in case that happens.
     Position positionBeforeStartNode(positionInParentBeforeNode(startPosition.containerNode()));
@@ -180,11 +180,11 @@ void InsertTextCommand::doApply()
         startPosition = positionBeforeStartNode;
     if (!startPosition.isCandidate())
         startPosition = startPosition.downstream();
-    
+
     startPosition = positionAvoidingSpecialElementBoundary(startPosition);
-    
+
     Position endPosition;
-    
+
     if (m_text == "\t") {
         endPosition = insertTab(startPosition);
         startPosition = endPosition.previous();
@@ -245,10 +245,10 @@ Position InsertTextCommand::insertTab(const Position& pos)
         insertTextIntoNode(textNode, offset, "\t");
         return Position(textNode.release(), offset + 1);
     }
-    
+
     // create new tab span
     RefPtr<Element> spanNode = createTabSpanElement(document());
-    
+
     // place it
     if (!node->isTextNode()) {
         insertNodeAt(spanNode.get(), insertPos);

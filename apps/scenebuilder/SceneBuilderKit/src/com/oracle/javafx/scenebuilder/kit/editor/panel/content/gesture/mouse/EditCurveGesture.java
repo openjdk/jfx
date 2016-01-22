@@ -36,17 +36,17 @@ import javafx.scene.input.KeyEvent;
 
 /**
  *
- * 
+ *
  */
 public class EditCurveGesture extends AbstractMouseGesture {
-    
+
     public enum Tunable {
         START,
         END,
         CONTROL1,
         CONTROL2
     }
-    
+
     private final Tunable tunable;
 
     public EditCurveGesture(ContentPanelController contentPanelController, Tunable tunable) {
@@ -57,11 +57,11 @@ public class EditCurveGesture extends AbstractMouseGesture {
     public Tunable getTunable() {
         return tunable;
     }
-    
+
     /*
      * AbstractMouseGesture
      */
-    
+
     @Override
     protected void mousePressed() {
         System.out.println("EditCurveGesture.mousePressed: tunable=" + tunable);
@@ -96,5 +96,5 @@ public class EditCurveGesture extends AbstractMouseGesture {
     protected void userDidCancel() {
          System.out.println("EditCurveGesture.keyEvent: tunable=" + tunable);
     }
-    
+
 }

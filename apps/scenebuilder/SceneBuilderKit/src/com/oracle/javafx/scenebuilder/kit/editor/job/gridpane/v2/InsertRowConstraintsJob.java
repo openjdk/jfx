@@ -61,16 +61,16 @@ public class InsertRowConstraintsJob extends Job {
     private final int rowIndex;
     private final int insertCount;
 
-    public InsertRowConstraintsJob(FXOMObject gridPaneObject, 
+    public InsertRowConstraintsJob(FXOMObject gridPaneObject,
             int rowIndex, int insertCount, EditorController editorController) {
         super(editorController);
-        
+
         assert gridPaneObject instanceof FXOMInstance;
         assert gridPaneObject.getSceneGraphObject() instanceof GridPane;
         assert rowIndex >= 0;
         assert rowIndex <= rowContraintsMeta.getValue((FXOMInstance)gridPaneObject).size();
         assert insertCount >= 1;
-        
+
         this.gridPaneObject = (FXOMInstance)gridPaneObject;
         this.rowIndex = rowIndex;
         this.insertCount = insertCount;
@@ -92,7 +92,7 @@ public class InsertRowConstraintsJob extends Job {
 
     @Override
     public void undo() {
-        final List<RowConstraints> constraintsList 
+        final List<RowConstraints> constraintsList
                 = new ArrayList<>(rowContraintsMeta.getValue(gridPaneObject));
         assert rowIndex < constraintsList.size();
         for (int i = 0; i < insertCount; i++) {
@@ -103,7 +103,7 @@ public class InsertRowConstraintsJob extends Job {
 
     @Override
     public void redo() {
-        final List<RowConstraints> constraintsList 
+        final List<RowConstraints> constraintsList
                 = new ArrayList<>(rowContraintsMeta.getValue(gridPaneObject));
         final RowConstraints template;
         if (rowIndex >= 1) {
@@ -121,12 +121,12 @@ public class InsertRowConstraintsJob extends Job {
     public String getDescription() {
         return getClass().getSimpleName();
     }
-    
-    
+
+
     /*
      * Private
      */
-    
+
     private RowConstraints makeRowConstraints(RowConstraints template) {
         final RowConstraints result = new RowConstraints();
         if (rowIndex >= 1) {

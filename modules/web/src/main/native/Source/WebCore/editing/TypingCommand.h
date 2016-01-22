@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef TypingCommand_h
@@ -32,12 +32,12 @@ namespace WebCore {
 
 class TypingCommand : public TextInsertionBaseCommand {
 public:
-    enum ETypingCommand { 
+    enum ETypingCommand {
         DeleteSelection,
-        DeleteKey, 
-        ForwardDeleteKey, 
-        InsertText, 
-        InsertLineBreak, 
+        DeleteKey,
+        ForwardDeleteKey,
+        InsertText,
+        InsertLineBreak,
         InsertParagraphSeparator,
         InsertParagraphSeparatorInQuotedContent
     };
@@ -133,7 +133,7 @@ private:
     TextCompositionType m_compositionType;
     bool m_killRing;
     bool m_preservesTypingStyle;
-    
+
     // Undoing a series of backward deletes will restore a selection around all of the
     // characters that were deleted, but only if the typing command being undone
     // was opened with a backward delete.

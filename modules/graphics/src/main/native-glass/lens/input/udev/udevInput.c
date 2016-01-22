@@ -143,7 +143,7 @@ typedef struct _LensInputMouseState {
     struct input_event      *pendingInputEvents;
     int                     pendingInputEventCount;
     int                     pendingInputEventCapacity;
-    
+
     int pressedX;
     int pressedY;
 
@@ -392,7 +392,7 @@ jboolean lens_input_initialize(JNIEnv *env) {
 
             if (confRadius >= 0 && confRadius <= LENS_MAX_TAP_RADIUS ) {
                 gTapRadius = confRadius;
-                
+
                 GLASS_LOG_CONFIG("Tap radius was set to: %d", gTapRadius);
             } else {
                 GLASS_LOG_SEVERE("tap radius %d is out of bound (0-%d), "
@@ -401,7 +401,7 @@ jboolean lens_input_initialize(JNIEnv *env) {
                                  LENS_MAX_TAP_RADIUS,
                                  gTapRadius);
             }
-            
+
         } else {
             GLASS_LOG_SEVERE("Could not find static touchTapRadius field in %s",
                              className);
@@ -415,7 +415,7 @@ jboolean lens_input_initialize(JNIEnv *env) {
 
             if (confSensitivity >= 0 && confSensitivity <= LENS_MAX_MOVE_SENSITIVITY ) {
                 gTouchMoveSensitivity = confSensitivity;
-                
+
                 GLASS_LOG_CONFIG("Touch move sensitivity was set to: %d",
                                  gTouchMoveSensitivity);
             } else {
@@ -425,7 +425,7 @@ jboolean lens_input_initialize(JNIEnv *env) {
                                  LENS_MAX_MOVE_SENSITIVITY,
                                  gTouchMoveSensitivity);
             }
-            
+
         } else {
             GLASS_LOG_SEVERE("Could not find static touchMoveSensitivity filed in %s",
                              className);
@@ -653,7 +653,7 @@ static jboolean lens_input_deviceCheckProperties(LensInputDevice *device,
     } else if (!strcmp(key, "ID_INPUT_TOUCHSCREEN")
                || !strcmp(key, "ID_INPUT_TABLET")) {
         device->isTouch = JNI_TRUE;
-        //touch support level is checked in 
+        //touch support level is checked in
         //lens_input_deviceInitCapabilities()->lens_input_checkTouchSupportLevel()
         isValidDevice = JNI_TRUE;
         TRACE("[properties check] Device is marked as touch");
@@ -944,7 +944,7 @@ static LensResult eviocgbit(LensInputDevice *device,
                          device->info->name,
                          device->info->devNode,
                          type,
-                         errno, 
+                         errno,
                          strerror(errno));
         return LENS_FAILED;
     } else {
@@ -968,7 +968,7 @@ static LensResult lens_input_deviceInitCapabilities(LensInputDevice *device) {
                       sizeof(caps->eventMask), &caps->eventMask)) {
             return LENS_FAILED;
         }
-        if (IS_BITSET(caps->eventMask, EV_KEY)) {            
+        if (IS_BITSET(caps->eventMask, EV_KEY)) {
             if (eviocgbit(device, EV_KEY,
                           sizeof(caps->keybits), &caps->keybits)) {
                 return LENS_FAILED;
@@ -1015,21 +1015,21 @@ static LensResult lens_input_deviceInitCapabilities(LensInputDevice *device) {
 }
 
 static void lens_input_checkTouchSupportLevel(LensInputDevice *device) {
-    
+
     LensInputDeviceCapabilities *caps = &device->info->caps;
 
     if (device->isTouch) {
         char *supportedProtocol;
         //check the level of multi touch support of the device.
-        if (IS_BITSET(caps->absbits, ABS_MT_POSITION_X)) {            
-            //ABS_MT_POSITION_X is used by both protocol A & B multi touch 
+        if (IS_BITSET(caps->absbits, ABS_MT_POSITION_X)) {
+            //ABS_MT_POSITION_X is used by both protocol A & B multi touch
             //devices, so we are definitely multi touch
             if (IS_BITSET(caps->absbits, ABS_MT_TRACKING_ID)) {
                 //ABS_MT_TRACKING_ID is part of protocol B
                 if (IS_BITSET(caps->absbits, ABS_MT_SLOT)) {
-                    //device that support all this events is a protocol B 
+                    //device that support all this events is a protocol B
                     //device/
-                    //currently protocol B is not supported, fallback to 
+                    //currently protocol B is not supported, fallback to
                     //protocol A to allow single touch mode support
                     device->touchProtocolType = TOUCH_PROTOCOL_MT_A;
                     supportedProtocol = "protocol B downgrade to protocol A";
@@ -1044,7 +1044,7 @@ static void lens_input_checkTouchSupportLevel(LensInputDevice *device) {
                 //device is protocol A device
                 device->touchProtocolType = TOUCH_PROTOCOL_MT_A;
                 supportedProtocol = "protocol A";
-            }            
+            }
         } else {
             //device is single touch
             device->touchProtocolType = TOUCH_PROTOCOL_ST;
@@ -1059,7 +1059,7 @@ static void lens_input_checkTouchSupportLevel(LensInputDevice *device) {
         //device is not a touch screen
         device->touchProtocolType = TOUCH_PROTOCOL_NONE;
     }
-   
+
 }
 
 //// Initialization section - END
@@ -1269,24 +1269,24 @@ void lens_input_eventLoop(JNIEnv *env, void *handle) {
                 const int readBufferSize = (int)sizeof(struct input_event) * EVENTS_PER_READ;
 
                 do {
-                    numOfBytesRead = read(device->fd, readBuffer + device->readOffset, 
+                    numOfBytesRead = read(device->fd, readBuffer + device->readOffset,
                                           readBufferSize - device->readOffset);
 
                     if (numOfBytesRead > 0) {
                         device->readOffset += numOfBytesRead;
                     }
 
-                } while ((device->readOffset < readBufferSize ) && 
+                } while ((device->readOffset < readBufferSize ) &&
                          (numOfBytesRead > 0 || (numOfBytesRead < 0 && errno == EINTR)));
 
 
                 if (numOfBytesRead < 0 && errno != EINTR && errno != EWOULDBLOCK) {
                     GLASS_LOG_SEVERE("error reading %s, read offset=%i fd=%i, errno=%i (%s)",
-                                     device->info->name, device->readOffset, device->fd, 
+                                     device->info->name, device->readOffset, device->fd,
                                      errno, strerror(errno));
                     lens_input_epollRemoveDevice(device);
                     continue; // of for-loop
-                } 
+                }
 
                 numOfEvents = device->readOffset / (int)sizeof(struct input_event);
 
@@ -1306,7 +1306,7 @@ void lens_input_eventLoop(JNIEnv *env, void *handle) {
                         lens_input_pointerEvents_handleEvent(device, &device->readInputEvents[eventIndex]);
                     }
                 }
-           
+
                 numOfRemainingBytes = device->readOffset % (int)sizeof(struct input_event);
                 if (numOfRemainingBytes == 0) {
                     // most (if not all) of the times
@@ -1314,7 +1314,7 @@ void lens_input_eventLoop(JNIEnv *env, void *handle) {
                 } else {
                     memmove(readBuffer, readBuffer + device->readOffset - numOfRemainingBytes, numOfRemainingBytes);
                     device->readOffset = numOfRemainingBytes;
-                }           
+                }
 
             } else {
                 GLASS_LOG_WARNING("Null device, skipping event");
@@ -1505,7 +1505,7 @@ static void lens_input_pointerEvents_handleSync(LensInputDevice *device) {
     int keyEventIndex = -1;
     jboolean reportMouseMove = JNI_FALSE;
     mouseState->pendingTouchPointCount = 0;
-    mouseState->pressedX = mouseState->pressedY = -1;    
+    mouseState->pressedX = mouseState->pressedY = -1;
     int touchButtonValue = -1; //not set
     int numOfUpdatePoints = 0;
     int numOfReleasePoints = 0;
@@ -1609,22 +1609,22 @@ static void lens_input_pointerEvents_handleSync(LensInputDevice *device) {
      * 1)
      * SYN_MT_REPORT
      * SYN_REPORT
-     * 
+     *
      * 2)
      * EV_KEY BTN_TOUCH 0
      * EV_SYN_MT_REPORT 0
      * SYN_REPORT
-     * 
+     *
      * 3)
      * EV_KEY BTN_TOUCH 0
      * SYN_REPORT
-     * 
+     *
      * As BTN_TOUCH is optional for multi touch devices and we only
      * intersted in the pressed points we need to make sure that
      * pendingTouchPointCount holds the correct number of points
      */
     if (device->touchProtocolType == TOUCH_PROTOCOL_MT_A) {
-        if (numOfUpdatePoints < mouseState->pendingTouchPointCount) {             
+        if (numOfUpdatePoints < mouseState->pendingTouchPointCount) {
              GLASS_LOG_FINEST("[preprocessing MT_A] updating pendingTouchPointCount from "
                               "%d to %d",
                               mouseState->pendingTouchPointCount,
@@ -1637,16 +1637,16 @@ static void lens_input_pointerEvents_handleSync(LensInputDevice *device) {
         }
     } else if (device->touchProtocolType == TOUCH_PROTOCOL_MT_A_WITH_TRACKING_ID) {
         /**
-         * we are counting 3 things: 
+         * we are counting 3 things:
          * 1) total touch events -> mouseState->pendingTouchPointCount
-         * 2) number of update events (press, move...) 
-         * -> numOfUpdatePoints 
-         * 3) number of release events -> numOfReleasePoints 
-         *  
-         * In this mode total event can't be greater then update event, 
-         * but we can have remove events without update events. So we 
-         * check for this condition and handle it here 
-         *  
+         * 2) number of update events (press, move...)
+         * -> numOfUpdatePoints
+         * 3) number of release events -> numOfReleasePoints
+         *
+         * In this mode total event can't be greater then update event,
+         * but we can have remove events without update events. So we
+         * check for this condition and handle it here
+         *
          */
 
          GLASS_LOG_FINEST("[preprocessing MIXED] total touch events %d, update "
@@ -1656,11 +1656,11 @@ static void lens_input_pointerEvents_handleSync(LensInputDevice *device) {
                           numOfReleasePoints);
         if (numOfReleasePoints > 0) {
             /**
-             * some or all reported points are points to be released 
-             * according to their tracking ID. Traverse over existing points 
-             * and copy non-released points to pending points array so in 
-             * the end we will provide a well formatted list for further 
-             * processing which is compliant with Protocol A processing 
+             * some or all reported points are points to be released
+             * according to their tracking ID. Traverse over existing points
+             * and copy non-released points to pending points array so in
+             * the end we will provide a well formatted list for further
+             * processing which is compliant with Protocol A processing
              */
             int actualCount = 0;
             GLASS_LOG_FINEST("[preprocessing MIXED] touchPointCount = %d , "
@@ -1701,9 +1701,9 @@ static void lens_input_pointerEvents_handleSync(LensInputDevice *device) {
     GLASS_LOG_FINEST("Number of touch points - pre-existing %d new %d",
                      mouseState->touchPointCount,
                      mouseState->pendingTouchPointCount);
-    //assign IDS to touch points 
+    //assign IDS to touch points
     if (mouseState->pendingTouchPointCount) {
-        // assign IDs to touch points        
+        // assign IDs to touch points
         if (mouseState->touchPointCount == 0) {
             // no pre-existing touch points, so assign any IDs
             GLASS_LOG_FINEST("no pre-existing touch points");
@@ -1834,7 +1834,7 @@ static void lens_input_pointerEvents_handleSync(LensInputDevice *device) {
                     int newDeviceID = mouseState->pendingTouchTrackingIDs[j];
 
                     //touch point get a move only when its moved out the tap radius
-                    //after first move (dragging) all moves should be reported 
+                    //after first move (dragging) all moves should be reported
                     //as long as the move event is bigger then gTouchMoveSensitivity
                     //threshold
                     if (mouseState->touchIsDragging[i]) {
@@ -1857,7 +1857,7 @@ static void lens_input_pointerEvents_handleSync(LensInputDevice *device) {
                     } else {
                         //first move - check if event is outside the tap radius
                         if (dX * dX + dY * dY <= gTapRadius * gTapRadius) {
-                            //clamp the position of the point to the previous 
+                            //clamp the position of the point to the previous
                             //position to prevent point crawling
                             states[count] = com_sun_glass_events_TouchEvent_TOUCH_STILL;
                             xs[count] = oldX;
@@ -1909,7 +1909,7 @@ static void lens_input_pointerEvents_handleSync(LensInputDevice *device) {
                 mouseState->touchIsDragging[i] = JNI_FALSE;
                 GLASS_LOG_FINEST("point %d - no match -> PRESSED", count+1);
                 count ++;
-                
+
             }
         }
     } else if (device->isTouch && mouseState->touchPointCount){
@@ -1928,7 +1928,7 @@ static void lens_input_pointerEvents_handleSync(LensInputDevice *device) {
             //as all points are released there is no need to save them for next
             //event processing
             needToSavePendingPoints = JNI_FALSE;
-            
+
         }
     }
 
@@ -2006,11 +2006,11 @@ static void lens_input_pointerEvents_handleSync(LensInputDevice *device) {
 
             }
 
-            //check if we can use multi touch events and simulate single touch 
+            //check if we can use multi touch events and simulate single touch
             //screen event, if not.
             //follow primaryPointIndex for notifications
-            if (!gUseMultiTouch && 
-                device->isTouch && device->touchProtocolType != TOUCH_PROTOCOL_ST ) {                
+            if (!gUseMultiTouch &&
+                device->isTouch && device->touchProtocolType != TOUCH_PROTOCOL_ST ) {
                 if (primaryPointIndex > -1) {
                     GLASS_LOG_FINEST("[multi->single] Using primary point with index"
                                      " %d for notification",
@@ -2019,7 +2019,7 @@ static void lens_input_pointerEvents_handleSync(LensInputDevice *device) {
 
                     ids[0] = 1; //always use same point id
                     count = 1;
-                    if (primaryPointReassigned && 
+                    if (primaryPointReassigned &&
                         states[primaryPointIndex] == com_sun_glass_events_TouchEvent_TOUCH_PRESSED) {
                         //avoid double press
                         states[0] = com_sun_glass_events_TouchEvent_TOUCH_MOVED;
@@ -2028,10 +2028,10 @@ static void lens_input_pointerEvents_handleSync(LensInputDevice *device) {
                     }
                     xs[0] = xs[primaryPointIndex];
                     ys[0] = ys[primaryPointIndex];
-                    
+
                     primaryPointIndex = 0;
                 } else {
-                    //all points were released, just drop the count to 1. The 
+                    //all points were released, just drop the count to 1. The
                     //coordinates from the first point will be used for the notification
                     GLASS_LOG_FINEST("[multi->single] All points released, using first "
                                      " point for notification");
@@ -2108,7 +2108,7 @@ static void lens_input_pointerEvents_handleSync(LensInputDevice *device) {
     if (needToSavePendingPoints) {
         // recording pending touch points as existing touch points
         int activeTouchPointsCount = 0;
-                       
+
         for (i = 0; i < count; i++) {
             if (states[i] != com_sun_glass_events_TouchEvent_TOUCH_RELEASED) {
                 mouseState->touchIDs[activeTouchPointsCount] = ids[i];

@@ -108,7 +108,7 @@ public final class AudioClip {
      * level accordingly.
      */
     private DoubleProperty volume;
-    
+
     /**
      * Set the default volume level. The new setting will only take effect on
      * subsequent plays.
@@ -262,7 +262,7 @@ public final class AudioClip {
      * clips.
      */
     private DoubleProperty pan;
-    
+
     /**
      * Set the default pan value. The new value will only affect subsequent
      * plays.
@@ -304,7 +304,7 @@ public final class AudioClip {
         }
         return pan;
     }
-    
+
     /**
      * The relative priority of the clip with respect to other clips. This value
      * is used to determine which clips to remove when the maximum allowed number
@@ -315,7 +315,7 @@ public final class AudioClip {
      * that can be played is implementation- and possibly system-dependent.
      */
     private IntegerProperty priority;
-    
+
     /**
      * Set the default playback priority. The new value will only affect
      * subsequent plays.

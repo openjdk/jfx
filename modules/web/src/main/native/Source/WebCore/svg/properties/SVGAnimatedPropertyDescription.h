@@ -29,7 +29,7 @@ namespace WebCore {
 
 class SVGElement;
 
-struct SVGAnimatedPropertyDescription {            
+struct SVGAnimatedPropertyDescription {
     // Empty value
     SVGAnimatedPropertyDescription()
         : m_element(0)
@@ -80,7 +80,7 @@ struct SVGAnimatedPropertyDescriptionHash {
 };
 
 struct SVGAnimatedPropertyDescriptionHashTraits : WTF::SimpleClassHashTraits<SVGAnimatedPropertyDescription> { };
- 
+
 }
 
 #endif // SVGAnimatedPropertyDescription_h

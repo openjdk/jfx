@@ -76,7 +76,7 @@ public:
 
     class InvalidationGuard {
         WTF_MAKE_NONCOPYABLE(InvalidationGuard);
-    public:    
+    public:
         InvalidationGuard(SVGElement* element) : m_element(element) { }
         ~InvalidationGuard() { SVGElementInstance::invalidateAllInstancesOfElement(m_element); }
     private:
@@ -92,7 +92,7 @@ public:
     private:
         SVGElement* m_targetElement;
     };
-    
+
     static void invalidateAllInstancesOfElement(SVGElement*);
 
     using TreeShared<SVGElementInstance>::ref;
@@ -172,7 +172,7 @@ private:
     void setLastChild(SVGElementInstance* child) { m_lastChild = child; }
 
     void setNextSibling(SVGElementInstance* sibling) { m_nextSibling = sibling; }
-    void setPreviousSibling(SVGElementInstance* sibling) { m_previousSibling = sibling; }    
+    void setPreviousSibling(SVGElementInstance* sibling) { m_previousSibling = sibling; }
 
     virtual void refEventTarget() override { ref(); }
     virtual void derefEventTarget() override { deref(); }

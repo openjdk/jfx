@@ -32,42 +32,42 @@
 #include "AccessibilityRenderObject.h"
 
 namespace WebCore {
-    
+
 class AccessibilityTable;
 
 class AccessibilityTableRow : public AccessibilityRenderObject {
-    
+
 protected:
     explicit AccessibilityTableRow(RenderObject*);
 public:
     static PassRefPtr<AccessibilityTableRow> create(RenderObject*);
     virtual ~AccessibilityTableRow();
-    
+
     virtual bool isTableRow() const override;
 
     // retrieves the "row" header (a th tag in the rightmost column)
     virtual AccessibilityObject* headerObject();
     virtual AccessibilityTable* parentTable() const;
-    
+
     void setRowIndex(int rowIndex) { m_rowIndex = rowIndex; }
     int rowIndex() const { return m_rowIndex; }
 
     // allows the table to add other children that may not originate
     // in the row, but their col/row spans overlap into it
     void appendChild(AccessibilityObject*);
-    
+
 protected:
     virtual AccessibilityRole determineAccessibilityRole() override;
 
 private:
     int m_rowIndex;
-    
+
     virtual AccessibilityObject* observableObject() const override;
     virtual bool computeAccessibilityIsIgnored() const override;
-}; 
+};
 
 ACCESSIBILITY_OBJECT_TYPE_CASTS(AccessibilityTableRow, isTableRow())
 
-} // namespace WebCore 
+} // namespace WebCore
 
 #endif // AccessibilityTableRow_h

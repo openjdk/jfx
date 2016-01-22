@@ -6,13 +6,13 @@
  * are met:
  *
  * 1.  Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer. 
+ *     notice, this list of conditions and the following disclaimer.
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
- *     documentation and/or other materials provided with the distribution. 
+ *     documentation and/or other materials provided with the distribution.
  * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
- *     from this software without specific prior written permission. 
+ *     from this software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY APPLE AND ITS CONTRIBUTORS "AS IS" AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
@@ -85,7 +85,7 @@ void DefaultGCActivityCallback::doWork()
     Heap* heap = &m_vm->heap;
     if (!isEnabled())
         return;
-    
+
     APIEntryShim shim(m_vm);
 #if !PLATFORM(IOS)
     double startTime = WTF::monotonicallyIncreasingTime();
@@ -98,7 +98,7 @@ void DefaultGCActivityCallback::doWork()
     heap->gcTimerDidFire();
     heap->collect();
 }
-    
+
 #if USE(CF)
 void DefaultGCActivityCallback::scheduleTimer(double newDelay)
 {
@@ -122,7 +122,7 @@ void DefaultGCActivityCallback::scheduleTimer(double newDelay)
 
     stop();
     m_delay = newDelay;
-    
+
     ASSERT(!m_timer);
     m_timer = add(newDelay, this);
 }
@@ -143,7 +143,7 @@ void DefaultGCActivityCallback::didAllocate(size_t bytes)
     ASSERT(WTF::isMainThread());
 #endif
 
-    // The first byte allocated in an allocation cycle will report 0 bytes to didAllocate. 
+    // The first byte allocated in an allocation cycle will report 0 bytes to didAllocate.
     // We pretend it's one byte so that we don't ignore this allocation entirely.
     if (!bytes)
         bytes = 1;

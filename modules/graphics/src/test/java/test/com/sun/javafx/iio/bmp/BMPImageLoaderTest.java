@@ -75,7 +75,7 @@ public class BMPImageLoaderTest {
                 int p2 = img.getArgb(x, y);
                 if (!compareRGB(p1, p2, 1)) {
                     throw new org.junit.ComparisonFailure(
-                        "pixel " + x + ", " + y + " does not match", 
+                        "pixel " + x + ", " + y + " does not match",
                         String.format("0x%08X", p1), String.format("0x%08X", p2)
                     );
                 }

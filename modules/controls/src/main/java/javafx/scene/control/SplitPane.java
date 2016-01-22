@@ -163,7 +163,7 @@ public class SplitPane extends Control {
         }
         return true;
     }
-    
+
     /***************************************************************************
      *                                                                         *
      * Constructors                                                            *
@@ -187,10 +187,10 @@ public class SplitPane extends Control {
     public SplitPane(Node... items) {
         getStyleClass().setAll(DEFAULT_STYLE_CLASS);
         // focusTraversable is styleable through css. Calling setFocusTraversable
-        // makes it look to css like the user set the value and css will not 
+        // makes it look to css like the user set the value and css will not
         // override. Initializing focusTraversable by calling applyStyle with a
         // null StyleOrigin ensures that css will be able to override the value.
-        ((StyleableProperty<Boolean>)(WritableValue<Boolean>)focusTraversableProperty()).applyStyle(null, Boolean.FALSE); 
+        ((StyleableProperty<Boolean>)(WritableValue<Boolean>)focusTraversableProperty()).applyStyle(null, Boolean.FALSE);
 
         getItems().addListener(new ListChangeListener<Node>() {
             @Override public void onChanged(Change<? extends Node> c) {
@@ -234,7 +234,7 @@ public class SplitPane extends Control {
         if (items != null) {
             getItems().addAll(items);
         }
-        
+
         // initialize pseudo-class state
         pseudoClassStateChanged(HORIZONTAL_PSEUDOCLASS_STATE, true);
     }
@@ -279,11 +279,11 @@ public class SplitPane extends Control {
                     pseudoClassStateChanged(VERTICAL_PSEUDOCLASS_STATE,    isVertical);
                     pseudoClassStateChanged(HORIZONTAL_PSEUDOCLASS_STATE, !isVertical);
                 }
-                
+
                 @Override public CssMetaData<SplitPane,Orientation> getCssMetaData() {
                     return StyleableProperties.ORIENTATION;
                 }
-                
+
                 @Override
                 public Object getBean() {
                     return SplitPane.this;
@@ -407,10 +407,10 @@ public class SplitPane extends Control {
 
             @Override
             public Orientation getInitialValue(SplitPane node) {
-                // A vertical SplitPane should remain vertical 
+                // A vertical SplitPane should remain vertical
                 return node.getOrientation();
             }
-            
+
             @Override
             public boolean isSettable(SplitPane n) {
                 return n.orientation == null || !n.orientation.isBound();
@@ -463,7 +463,7 @@ public class SplitPane extends Control {
     @Override protected Boolean getInitialFocusTraversable() {
         return Boolean.FALSE;
     }
-    
+
 
     /***************************************************************************
      *                                                                         *

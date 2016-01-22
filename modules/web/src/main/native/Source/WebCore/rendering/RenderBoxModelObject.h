@@ -63,7 +63,7 @@ class StickyPositionViewportConstraints;
 class RenderBoxModelObject : public RenderLayerModelObject {
 public:
     virtual ~RenderBoxModelObject();
-    
+
     LayoutSize relativePositionOffset() const;
     LayoutSize relativePositionLogicalOffset() const { return style().isHorizontalWritingMode() ? relativePositionOffset() : relativePositionOffset().transposedSize(); }
 
@@ -209,7 +209,7 @@ protected:
         {
             m_destOrigin = destOrigin;
         }
-        
+
         IntRect destRect() const { return m_destRect; }
         void setDestRect(const IntRect& destRect)
         {
@@ -218,14 +218,14 @@ protected:
 
         // Returns the phase relative to the destination rectangle.
         IntPoint relativePhase() const;
-        
-        IntPoint phase() const { return m_phase; }   
+
+        IntPoint phase() const { return m_phase; }
         void setPhase(const IntPoint& phase)
         {
             m_phase = phase;
         }
 
-        IntSize tileSize() const { return m_tileSize; }    
+        IntSize tileSize() const { return m_tileSize; }
         void setTileSize(const IntSize& tileSize)
         {
             m_tileSize = tileSize;
@@ -238,14 +238,14 @@ protected:
 
         void setPhaseX(int x) { m_phase.setX(x); }
         void setPhaseY(int y) { m_phase.setY(y); }
-        
+
         void setNoRepeatX(int xOffset);
         void setNoRepeatY(int yOffset);
-        
+
         void useFixedAttachment(const IntPoint& attachmentPoint);
-        
+
         void clip(const IntRect&);
-        
+
         void setHasNonLocalGeometry(bool hasNonLocalGeometry = true) { m_hasNonLocalGeometry = hasNonLocalGeometry; }
         bool hasNonLocalGeometry() const { return m_hasNonLocalGeometry; }
 
@@ -311,7 +311,7 @@ public:
 
 private:
     LayoutUnit computedCSSPadding(const Length&) const;
-    
+
     virtual LayoutRect frameRectForStickyPositioning() const = 0;
 
     IntSize calculateFillTileSize(const FillLayer*, const IntSize& scaledPositioningAreaSize) const;
@@ -321,7 +321,7 @@ private:
 
     RoundedRect getBackgroundRoundedRect(const LayoutRect&, InlineFlowBox*, LayoutUnit inlineBoxWidth, LayoutUnit inlineBoxHeight,
         bool includeLogicalLeftEdge, bool includeLogicalRightEdge) const;
-    
+
     bool fixedBackgroundPaintsInLocalCoordinates() const;
 
     void clipBorderSidePolygon(GraphicsContext*, const RoundedRect& outerBorder, const RoundedRect& innerBorder,
@@ -336,7 +336,7 @@ private:
         const IntPoint& innerBorderAdjustment, const class BorderEdge[], BorderEdgeFlags, BackgroundBleedAvoidance,
         bool includeLogicalLeftEdge, bool includeLogicalRightEdge, bool antialias = false, const Color* overrideColor = 0);
     void drawBoxSideFromPath(GraphicsContext*, const LayoutRect&, const Path&, const class BorderEdge[],
-                            float thickness, float drawThickness, BoxSide, const RenderStyle*, 
+                            float thickness, float drawThickness, BoxSide, const RenderStyle*,
                             Color, EBorderStyle, BackgroundBleedAvoidance, bool includeLogicalLeftEdge, bool includeLogicalRightEdge);
     void paintMaskForTextFillBox(ImageBuffer*, const IntRect&, InlineFlowBox*, const LayoutRect&, RenderRegion*);
 };

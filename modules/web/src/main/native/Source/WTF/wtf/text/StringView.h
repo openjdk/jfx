@@ -59,7 +59,7 @@ public:
     {
         if (!string.impl())
             return;
-        
+
         if (string.is8Bit())
             initialize(string.characters8(), string.length());
         else
@@ -157,7 +157,7 @@ private:
     void initialize(const LChar* characters, unsigned length)
     {
         ASSERT(!(length & is16BitStringFlag));
-        
+
         m_characters = characters;
         m_length = length;
     }
@@ -165,7 +165,7 @@ private:
     void initialize(const UChar* characters, unsigned length)
     {
         ASSERT(!(length & is16BitStringFlag));
-        
+
         m_characters = characters;
         m_length = is16BitStringFlag | length;
     }

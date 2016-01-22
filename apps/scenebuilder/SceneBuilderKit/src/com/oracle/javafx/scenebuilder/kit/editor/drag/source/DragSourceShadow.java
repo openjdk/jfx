@@ -54,25 +54,25 @@ import javafx.scene.transform.Transform;
  * on the image view and the region (1).
  */
 class DragSourceShadow extends Group {
-    
+
     private final ImageView imageView = new ImageView();
     private final Region glass = new Region();
     private static final String NID_DRAG_SHADOW = "dragShadow"; //NOI18N
 
-    
+
     public DragSourceShadow() {
         this.setId(NID_DRAG_SHADOW);
         this.getChildren().add(imageView);
         this.getChildren().add(glass);
-        
+
         this.getStyleClass().add("drag-shadow"); //NOI18N
         this.glass.getStyleClass().add("drag-shadow-glass"); //NOI18N
     }
-    
+
     public void setupForNode(Node node) {
         assert node != null;
         assert node.getScene() != null;
-        
+
         // Snapshot node
         // Note : we setup snapshot view port with layout bounds.
         final SnapshotParameters sp = new SnapshotParameters();
@@ -84,11 +84,11 @@ class DragSourceShadow extends Group {
         }
         final Bounds vp = node.getLayoutBounds();
         if ((vp.getWidth() >= 0) && (vp.getHeight() >= 0)) {
-            sp.setViewport(new Rectangle2D(vp.getMinX(), vp.getMinY(), 
+            sp.setViewport(new Rectangle2D(vp.getMinX(), vp.getMinY(),
                     vp.getWidth(), vp.getHeight()));
         }
         imageView.setImage(node.snapshot(sp, null));
-        
+
         // Setup layoutX/layoutY on the image view and the region (1)
         final Bounds inputBounds = vp;
         imageView.setLayoutX(inputBounds.getMinX());

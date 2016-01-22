@@ -46,7 +46,7 @@ class GlassAppletWindow implements AppletWindow {
     private final Window glassWindow;
     private WeakReference<Stage> topStage;
     private String serverName;
-    
+
     GlassAppletWindow(long nativeParent, String serverName) {
         if (0 == nativeParent) {
             if (serverName != null) {
@@ -58,11 +58,11 @@ class GlassAppletWindow implements AppletWindow {
             glassWindow = Application.GetApplication().createWindow(nativeParent);
         }
     }
-    
+
     Window getGlassWindow() {
         return glassWindow;
     }
-    
+
     @Override
     public void setBackgroundColor(final int color) {
         Application.invokeLater(() -> {
@@ -145,7 +145,7 @@ class GlassAppletWindow implements AppletWindow {
             this.topStage = null;
         }
     }
-    
+
     @Override
     public int getRemoteLayerId() {
         final AtomicInteger id = new AtomicInteger(-1);
@@ -157,12 +157,12 @@ class GlassAppletWindow implements AppletWindow {
         });
         return id.get();
     }
-    
+
     @Override
     public void dispatchEvent(final Map eventInfo) {
         Application.invokeAndWait(() -> glassWindow.dispatchNpapiEvent(eventInfo));
     }
-    
+
     /**
      * Call when a child stage becomes visible so we can make sure topStage
      * is pushed to the front where it should be.

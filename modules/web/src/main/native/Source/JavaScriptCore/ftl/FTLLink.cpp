@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -50,39 +50,39 @@ void link(State& state)
     Graph& graph = state.graph;
     CodeBlock* codeBlock = graph.m_codeBlock;
     VM& vm = graph.m_vm;
-    
+
     // LLVM will create its own jump tables as needed.
     codeBlock->clearSwitchJumpTables();
-    
+
     // FIXME: Need to know the real frame register count.
     // https://bugs.webkit.org/show_bug.cgi?id=125727
     state.jitCode->common.frameRegisterCount = 1000;
-    
+
     state.jitCode->common.requiredRegisterCountForExit = graph.requiredRegisterCountForExit();
-    
+
     if (!graph.m_inlineCallFrames->isEmpty())
         state.jitCode->common.inlineCallFrames = std::move(graph.m_inlineCallFrames);
-    
+
     // Create the entrypoint. Note that we use this entrypoint totally differently
     // depending on whether we're doing OSR entry or not.
     CCallHelpers jit(&vm, codeBlock);
-    
+
     OwnPtr<LinkBuffer> linkBuffer;
     CCallHelpers::Label arityCheck;
 
     CCallHelpers::Address frame = CCallHelpers::Address(
         CCallHelpers::stackPointerRegister, -static_cast<int32_t>(sizeof(void*)));
-    
+
     if (Profiler::Compilation* compilation = graph.compilation()) {
         compilation->addDescription(
             Profiler::OriginStack(),
             toCString("Generated FTL JIT code for ", CodeBlockWithJITType(codeBlock, JITCode::FTLJIT), ", instruction count = ", graph.m_codeBlock->instructionCount(), ":\n"));
-        
+
         graph.m_dominators.computeIfNecessary(graph);
         graph.m_naturalLoops.computeIfNecessary(graph);
-        
+
         const char* prefix = "    ";
-        
+
         DumpContext dumpContext;
         StringPrintStream out;
         Node* lastNode = 0;
@@ -90,46 +90,46 @@ void link(State& state)
             BasicBlock* block = graph.block(blockIndex);
             if (!block)
                 continue;
-            
+
             graph.dumpBlockHeader(out, prefix, block, Graph::DumpLivePhisOnly, &dumpContext);
             compilation->addDescription(Profiler::OriginStack(), out.toCString());
             out.reset();
-            
+
             for (size_t nodeIndex = 0; nodeIndex < block->size(); ++nodeIndex) {
                 Node* node = block->at(nodeIndex);
                 if (!node->willHaveCodeGenOrOSR() && !Options::showAllDFGNodes())
                     continue;
-                
+
                 Profiler::OriginStack stack;
-                
+
                 if (node->origin.semantic.isSet()) {
                     stack = Profiler::OriginStack(
                         *vm.m_perBytecodeProfiler, codeBlock, node->origin.semantic);
                 }
-                
+
                 if (graph.dumpCodeOrigin(out, prefix, lastNode, node, &dumpContext)) {
                     compilation->addDescription(stack, out.toCString());
                     out.reset();
                 }
-                
+
                 graph.dump(out, prefix, node, &dumpContext);
                 compilation->addDescription(stack, out.toCString());
                 out.reset();
-                
+
                 if (node->origin.semantic.isSet())
                     lastNode = node;
             }
         }
-        
+
         dumpContext.dump(out, prefix);
         compilation->addDescription(Profiler::OriginStack(), out.toCString());
         out.reset();
-        
+
         out.print("    Disassembly:\n");
         for (unsigned i = 0; i < state.jitCode->handles().size(); ++i) {
             if (state.codeSectionNames[i] != "__text")
                 continue;
-            
+
                 ExecutableMemoryHandle* handle = state.jitCode->handles()[i].get();
                 disassemble(
                     MacroAssemblerCodePtr(handle->start()), handle->sizeInBytes(),
@@ -137,14 +137,14 @@ void link(State& state)
         }
         compilation->addDescription(Profiler::OriginStack(), out.toCString());
         out.reset();
-        
+
         state.jitCode->common.compilation = compilation;
     }
-    
+
     switch (graph.m_plan.mode) {
     case FTLMode: {
         CCallHelpers::JumpList mainPathJumps;
-    
+
         jit.load32(
             frame.withOffset(sizeof(Register) * JSStack::ArgumentCount),
             GPRInfo::regT1);
@@ -184,7 +184,7 @@ void link(State& state)
         state.jitCode->initializeAddressForCall(MacroAssemblerCodePtr(bitwise_cast<void*>(state.generatedFunction)));
         break;
     }
-        
+
     case FTLForOSREntryMode: {
         // We jump to here straight from DFG code, after having boxed up all of the
         // values into the scratch buffer. Everything should be good to go - at this
@@ -193,19 +193,19 @@ void link(State& state)
         CCallHelpers::Label start = jit.label();
         jit.emitFunctionEpilogue();
         CCallHelpers::Jump mainPathJump = jit.jump();
-        
+
         linkBuffer = adoptPtr(new LinkBuffer(vm, &jit, codeBlock, JITCompilationMustSucceed));
         linkBuffer->link(mainPathJump, CodeLocationLabel(bitwise_cast<void*>(state.generatedFunction)));
 
         state.jitCode->initializeAddressForCall(linkBuffer->locationOf(start));
         break;
     }
-        
+
     default:
         RELEASE_ASSERT_NOT_REACHED();
         break;
     }
-    
+
     state.finalizer->entrypointLinkBuffer = linkBuffer.release();
     state.finalizer->function = state.generatedFunction;
     state.finalizer->arityCheck = arityCheck;

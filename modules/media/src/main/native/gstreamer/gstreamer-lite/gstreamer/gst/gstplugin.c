@@ -680,7 +680,7 @@ static GMutex gst_plugin_loading_mutex;
  *
  * Loads the given plugin and refs it.  Caller needs to unref after use.
  *
- * Returns: (transfer full): a reference to the existing loaded GstPlugin, a 
+ * Returns: (transfer full): a reference to the existing loaded GstPlugin, a
  * reference to the newly-loaded GstPlugin, or %NULL if an error occurred.
  */
 GstPlugin *
@@ -1344,19 +1344,19 @@ gst_plugin_list_free (GList * list)
  * ENV + *xyz   same as above, but xyz acts as suffix filter
  * ENV + xyz*   same as above, but xyz acts as prefix filter (is this needed?)
  * ENV + *xyz*  same as above, but xyz acts as strstr filter (is this needed?)
- * 
+ *
  * same as above, with additional paths hard-coded at compile-time:
  *   - only check paths + ... if ENV is not set or yields not paths
  *   - always check paths + ... in addition to ENV
  *
  * When user specifies set of environment variables, he/she may also use e.g.
  * "HOME/.mystuff/plugins", and we'll expand the content of $HOME with the
- * remainder 
+ * remainder
  */
 
 /* we store in registry:
  *  sets of:
- *   { 
+ *   {
  *     - environment variables (array of strings)
  *     - last hash of env variable contents (uint) (so we can avoid doing stats
  *       if one of the env vars has changed; premature optimisation galore)

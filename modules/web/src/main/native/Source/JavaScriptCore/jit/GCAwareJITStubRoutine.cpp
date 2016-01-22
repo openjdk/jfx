@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -45,7 +45,7 @@ GCAwareJITStubRoutine::GCAwareJITStubRoutine(
 {
     vm.heap.m_jitStubRoutines.add(this);
 }
-    
+
 GCAwareJITStubRoutine::~GCAwareJITStubRoutine() { }
 
 void GCAwareJITStubRoutine::observeZeroRefCount()
@@ -59,7 +59,7 @@ void GCAwareJITStubRoutine::observeZeroRefCount()
         delete this;
         return;
     }
-    
+
     RELEASE_ASSERT(!m_refCount);
 
     m_isJettisoned = true;
@@ -70,7 +70,7 @@ void GCAwareJITStubRoutine::deleteFromGC()
     ASSERT(m_isJettisoned);
     ASSERT(!m_refCount);
     ASSERT(!m_mayBeExecuting);
-    
+
     delete this;
 }
 
@@ -117,7 +117,7 @@ PassRefPtr<JITStubRoutine> createJITStubRoutine(
 {
     if (!makesCalls)
         return adoptRef(new JITStubRoutine(code));
-    
+
     return static_pointer_cast<JITStubRoutine>(
         adoptRef(new MarkingGCAwareJITStubRoutineWithOneObject(code, vm, owner, object)));
 }

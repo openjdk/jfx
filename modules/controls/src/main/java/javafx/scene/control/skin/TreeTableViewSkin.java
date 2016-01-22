@@ -137,10 +137,10 @@ public class TreeTableViewSkin<T> extends TableViewSkinBase<T, TreeItem<T>, Tree
         // install default input map for the TreeTableView control
         behavior = new TreeTableViewBehavior<>(control);
 //        control.setInputMap(behavior.getInputMap());
-        
+
         flow.setFixedCellSize(control.getFixedCellSize());
         flow.setCellFactory(flow -> createCell());
-        
+
         setRoot(getSkinnable().getRoot());
 
         EventHandler<MouseEvent> ml = event -> {
@@ -174,7 +174,7 @@ public class TreeTableViewSkin<T> extends TableViewSkinBase<T, TreeItem<T>, Tree
         behavior.setOnSelectNextRow(() -> onSelectNextCell());
         behavior.setOnSelectLeftCell(() -> onSelectLeftCell());
         behavior.setOnSelectRightCell(() -> onSelectRightCell());
-        
+
         registerChangeListener(control.rootProperty(), e -> {
             // fix for RT-37853
             getSkinnable().edit(-1, null);
@@ -274,7 +274,7 @@ public class TreeTableViewSkin<T> extends TableViewSkinBase<T, TreeItem<T>, Tree
     }
 
 
-    
+
     /***************************************************************************
      *                                                                         *
      * Private methods                                                         *
@@ -524,22 +524,22 @@ public class TreeTableViewSkin<T> extends TableViewSkinBase<T, TreeItem<T>, Tree
      */
     private static class TreeTableViewBackingList<T> extends ReadOnlyUnbackedObservableList<TreeItem<T>> {
         private final TreeTableView<T> treeTable;
-        
+
         private int size = -1;
-        
+
         TreeTableViewBackingList(TreeTableView<T> treeTable) {
             this.treeTable = treeTable;
         }
-        
+
         void resetSize() {
             int oldSize = size;
             size = -1;
-            
+
             // TODO we can certainly make this better....but it may not really matter
             callObservers(new NonIterableChange.GenericAddRemoveChange<TreeItem<T>>(
                     0, oldSize, FXCollections.<TreeItem<T>>emptyObservableList(), this));
         }
-        
+
         @Override public TreeItem<T> get(int i) {
             return treeTable.getTreeItem(i);
         }

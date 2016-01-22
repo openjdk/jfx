@@ -43,7 +43,7 @@ public abstract class GameRsp extends MessageRsp {
 
     public GameRsp() {
     }
-    
+
     public GameRsp(String gameId) {
         super(gameId);
     }

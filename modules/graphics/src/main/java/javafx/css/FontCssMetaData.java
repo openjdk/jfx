@@ -72,14 +72,14 @@ public abstract class FontCssMetaData<S extends Styleable> extends CssMetaData<S
     }
 
     private static <S extends Styleable> List<CssMetaData<? extends Styleable, ?>> createSubProperties(String property, Font initial) {
-        
-        final List<CssMetaData<S, ?>> subProperties = 
+
+        final List<CssMetaData<S, ?>> subProperties =
                 new ArrayList<>();
-        
+
         final Font defaultFont = initial != null ? initial : Font.getDefault();
-        
-        final CssMetaData<S, String> FAMILY = 
-                new CssMetaData<S, String>(property.concat("-family"), 
+
+        final CssMetaData<S, String> FAMILY =
+                new CssMetaData<S, String>(property.concat("-family"),
                 StringConverter.getInstance(), defaultFont.getFamily(), true) {
             @Override
             public boolean isSettable(S styleable) {
@@ -92,9 +92,9 @@ public abstract class FontCssMetaData<S extends Styleable> extends CssMetaData<S
             }
         };
         subProperties.add(FAMILY);
-        
-        final CssMetaData<S, Number> SIZE = 
-                new CssMetaData<S, Number>(property.concat("-size"), 
+
+        final CssMetaData<S, Number> SIZE =
+                new CssMetaData<S, Number>(property.concat("-size"),
                 SizeConverter.getInstance(), defaultFont.getSize(), true) {
             @Override
             public boolean isSettable(S styleable) {
@@ -107,9 +107,9 @@ public abstract class FontCssMetaData<S extends Styleable> extends CssMetaData<S
             }
         };
         subProperties.add(SIZE);
-        
-        final CssMetaData<S, FontPosture> STYLE = 
-                new CssMetaData<S, FontPosture>(property.concat("-style"), 
+
+        final CssMetaData<S, FontPosture> STYLE =
+                new CssMetaData<S, FontPosture>(property.concat("-style"),
                 FontConverter.FontStyleConverter.getInstance(), FontPosture.REGULAR, true) {
             @Override
             public boolean isSettable(S styleable) {
@@ -122,9 +122,9 @@ public abstract class FontCssMetaData<S extends Styleable> extends CssMetaData<S
             }
         };
         subProperties.add(STYLE);
-        
-        final CssMetaData<S, FontWeight> WEIGHT = 
-                new CssMetaData<S, FontWeight>(property.concat("-weight"), 
+
+        final CssMetaData<S, FontWeight> WEIGHT =
+                new CssMetaData<S, FontWeight>(property.concat("-weight"),
                 FontConverter.FontWeightConverter.getInstance(), FontWeight.NORMAL, true) {
             @Override
             public boolean isSettable(S styleable) {
@@ -137,8 +137,8 @@ public abstract class FontCssMetaData<S extends Styleable> extends CssMetaData<S
             }
         };
         subProperties.add(WEIGHT);
-        
+
         return Collections.<CssMetaData<? extends Styleable, ?>>unmodifiableList(subProperties);
     }
-    
+
 }

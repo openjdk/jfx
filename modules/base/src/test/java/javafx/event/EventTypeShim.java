@@ -34,11 +34,11 @@ public class EventTypeShim<T extends Event> {
     }
 
     public static class EventTypeSerializationShim extends EventType.EventTypeSerialization {
-        
+
         public EventTypeSerializationShim(List<String> path) {
             super(path);
         }
 
     }
-    
+
 }

@@ -666,7 +666,7 @@ void Internals::enableMockSpeechSynthesizer()
     SpeechSynthesis* synthesis = DOMWindowSpeechSynthesis::speechSynthesis(document->domWindow());
     if (!synthesis)
         return;
-    
+
     synthesis->setPlatformSynthesizer(PlatformSpeechSynthesizerMock::create(synthesis));
 }
 #endif
@@ -1143,7 +1143,7 @@ PassRefPtr<NodeList> Internals::nodesFromRect(Document* document, int centerX, i
     } else {
         HitTestResult result(point, topPadding, rightPadding, bottomPadding, leftPadding);
         renderView->hitTest(request, result);
-        
+
         const HitTestResult::NodeSet& nodeSet = result.rectBasedTestResult();
         matches.reserveInitialCapacity(nodeSet.size());
         for (auto it = nodeSet.begin(), end = nodeSet.end(); it != end; ++it)
@@ -1203,7 +1203,7 @@ String Internals::parserMetaData(Deprecated::ScriptValue value)
         GetCallerCodeBlockFunctor iter;
         exec->iterate(iter);
         CodeBlock* codeBlock = iter.codeBlock();
-        executable = codeBlock->ownerExecutable(); 
+        executable = codeBlock->ownerExecutable();
     } else if (code.isFunction()) {
         JSFunction* funcObj = JSC::jsCast<JSFunction*>(code.toObject(exec));
         executable = funcObj->jsExecutable();
@@ -1305,13 +1305,13 @@ bool Internals::hasSpellingMarker(int from, int length, ExceptionCode&)
 
     return document->frame()->editor().selectionStartHasMarkerFor(DocumentMarker::Spelling, from, length);
 }
-    
+
 bool Internals::hasAutocorrectedMarker(int from, int length, ExceptionCode&)
 {
     Document* document = contextDocument();
     if (!document || !document->frame())
         return 0;
-    
+
     return document->frame()->editor().selectionStartHasMarkerFor(DocumentMarker::Autocorrected, from, length);
 }
 
@@ -1527,7 +1527,7 @@ unsigned Internals::numberOfScrollableAreas(ExceptionCode&)
 
     return count;
 }
-    
+
 bool Internals::isPageBoxVisible(int pageNumber, ExceptionCode& ec)
 {
     Document* document = contextDocument();
@@ -2093,10 +2093,10 @@ void Internals::setCaptionDisplayMode(const String& mode, ExceptionCode& ec)
         ec = INVALID_ACCESS_ERR;
         return;
     }
-    
+
 #if ENABLE(VIDEO_TRACK) && !PLATFORM(WIN)
     CaptionUserPreferences* captionPreferences = document->page()->group().captionPreferences();
-    
+
     if (equalIgnoringCase(mode, "Automatic"))
         captionPreferences->setCaptionDisplayMode(CaptionUserPreferences::Automatic);
     else if (equalIgnoringCase(mode, "ForcedOnly"))
@@ -2188,7 +2188,7 @@ void Internals::endMediaSessionInterruption(const String& flagsString)
 
     if (equalIgnoringCase(flagsString, "MayResumePlaying"))
         flags = MediaSession::MayResumePlaying;
-    
+
     MediaSessionManager::sharedManager().endInterruption(flags);
 }
 
@@ -2220,7 +2220,7 @@ void Internals::setMediaSessionRestrictions(const String& mediaTypeString, const
     MediaSessionManager::sharedManager().removeRestriction(mediaType, restrictions);
 
     restrictions = MediaSessionManager::NoRestrictions;
-    
+
     if (equalIgnoringCase(restrictionsString, "ConcurrentPlaybackNotPermitted"))
         restrictions = MediaSessionManager::ConcurrentPlaybackNotPermitted;
     if (equalIgnoringCase(restrictionsString, "InlineVideoPlaybackRestricted"))

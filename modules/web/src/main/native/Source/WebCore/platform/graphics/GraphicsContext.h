@@ -160,7 +160,7 @@ namespace WebCore {
 
         RefPtr<Gradient> strokeGradient;
         RefPtr<Pattern> strokePattern;
-        
+
         RefPtr<Gradient> fillGradient;
         RefPtr<Pattern> fillPattern;
 
@@ -325,7 +325,7 @@ namespace WebCore {
         void drawImage(Image*, ColorSpace styleColorSpace, const FloatRect& destRect);
         void drawImage(Image*, ColorSpace styleColorSpace, const FloatRect& destRect, const FloatRect& srcRect, CompositeOperator = CompositeSourceOver, ImageOrientationDescription = ImageOrientationDescription(), bool useLowQualityScale = false);
         void drawImage(Image*, ColorSpace styleColorSpace, const FloatRect& destRect, const FloatRect& srcRect, CompositeOperator, BlendMode, ImageOrientationDescription = ImageOrientationDescription(), bool useLowQualityScale = false);
-        
+
         void drawTiledImage(Image*, ColorSpace styleColorSpace, const IntRect& destRect, const IntPoint& srcPoint, const IntSize& tileSize,
             CompositeOperator = CompositeSourceOver, bool useLowQualityScale = false, BlendMode = BlendModeNormal);
         void drawTiledImage(Image*, ColorSpace styleColorSpace, const IntRect& destRect, const IntRect& srcRect,
@@ -364,7 +364,7 @@ namespace WebCore {
         bool emojiDrawingEnabled();
         void setEmojiDrawingEnabled(bool);
 #endif
-        
+
 #if !PLATFORM(IOS)
         void drawText(const Font&, const TextRun&, const FloatPoint&, int from = 0, int to = -1);
 #else

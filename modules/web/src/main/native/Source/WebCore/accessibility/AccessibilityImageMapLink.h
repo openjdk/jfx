@@ -34,26 +34,26 @@
 #include "HTMLMapElement.h"
 
 namespace WebCore {
-    
+
 class AccessibilityImageMapLink : public AccessibilityMockObject {
-        
+
 private:
     AccessibilityImageMapLink();
 public:
     static PassRefPtr<AccessibilityImageMapLink> create();
     virtual ~AccessibilityImageMapLink();
-    
+
     void setHTMLAreaElement(HTMLAreaElement* element) { m_areaElement = element; }
     HTMLAreaElement* areaElement() const { return m_areaElement.get(); }
-    
-    void setHTMLMapElement(HTMLMapElement* element) { m_mapElement = element; }    
+
+    void setHTMLMapElement(HTMLMapElement* element) { m_mapElement = element; }
     HTMLMapElement* mapElement() const { return m_mapElement.get(); }
-    
+
     virtual Node* node() const override { return m_areaElement.get(); }
-        
+
     virtual AccessibilityRole roleValue() const override;
     virtual bool isEnabled() const override { return true; }
-    
+
     virtual Element* anchorElement() const override;
     virtual Element* actionElement() const override;
     virtual URL url() const override;
@@ -62,13 +62,13 @@ public:
     virtual String title() const override;
     virtual String accessibilityDescription() const override;
     virtual AccessibilityObject* parentObject() const override;
-    
+
     virtual String stringValueForMSAA() const override;
     virtual String nameForMSAA() const override;
 
     virtual LayoutRect elementRect() const override;
 
-private:    
+private:
     RefPtr<HTMLAreaElement> m_areaElement;
     RefPtr<HTMLMapElement> m_mapElement;
 
@@ -82,7 +82,7 @@ private:
 };
 
 ACCESSIBILITY_OBJECT_TYPE_CASTS(AccessibilityImageMapLink, isImageMapLink())
-    
+
 } // namespace WebCore
 
 #endif // AccessibilityImageMapLink_h

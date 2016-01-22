@@ -32,7 +32,7 @@ import java.util.Locale;
 public enum Qualifier {
     CONST,
     PARAM;
-    
+
     /**
      * Returns a {@code Qualifier} instance given a lowercase token string.
      * For example, given "param", this method will return
@@ -41,7 +41,7 @@ public enum Qualifier {
     public static Qualifier fromToken(String s) {
         return valueOf(s.toUpperCase(Locale.ENGLISH));
     }
-    
+
     @Override
     public String toString() {
         return name().toLowerCase(Locale.ENGLISH);

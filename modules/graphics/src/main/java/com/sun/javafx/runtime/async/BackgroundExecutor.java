@@ -42,7 +42,7 @@ public class BackgroundExecutor {
     private static ScheduledExecutorService timerInstance;
 
     private BackgroundExecutor() {
-        // not instantiable        
+        // not instantiable
     }
 
     public static synchronized ExecutorService getExecutor() {

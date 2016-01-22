@@ -36,7 +36,7 @@ class RenderObject;
 class FloatRect;
 class RenderSVGResourceFilter;
 
-// SVGRenderingContext 
+// SVGRenderingContext
 class SVGRenderingContext {
 public:
     enum NeedsGraphicsContextSave {

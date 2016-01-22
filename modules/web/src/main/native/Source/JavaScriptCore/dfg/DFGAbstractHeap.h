@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef DFGAbstractHeap_h
@@ -94,34 +94,34 @@ public:
             , m_value(0)
         {
         }
-        
+
         Payload(bool isTop, int64_t value)
             : m_isTop(isTop)
             , m_value(value)
         {
             ASSERT(!(isTop && value));
         }
-        
+
         Payload(int64_t value)
             : m_isTop(false)
             , m_value(value)
         {
         }
-        
+
         Payload(const void* pointer)
             : m_isTop(false)
             , m_value(bitwise_cast<intptr_t>(pointer))
         {
         }
-        
+
         Payload(VirtualRegister operand)
             : m_isTop(false)
             , m_value(operand.offset())
         {
         }
-        
+
         static Payload top() { return Payload(true, 0); }
-        
+
         bool isTop() const { return m_isTop; }
         int64_t value() const
         {
@@ -132,18 +132,18 @@ public:
         {
             return m_value;
         }
-        
+
         bool operator==(const Payload& other) const
         {
             return m_isTop == other.m_isTop
                 && m_value == other.m_value;
         }
-        
+
         bool operator!=(const Payload& other) const
         {
             return !(*this == other);
         }
-        
+
         bool operator<(const Payload& other) const
         {
             if (isTop())
@@ -152,7 +152,7 @@ public:
                 return false;
             return value() < other.value();
         }
-        
+
         bool isDisjoint(const Payload& other) const
         {
             if (isTop())
@@ -161,50 +161,50 @@ public:
                 return false;
             return m_value != other.m_value;
         }
-        
+
         bool overlaps(const Payload& other) const
         {
             return !isDisjoint(other);
         }
-        
+
         void dump(PrintStream&) const;
-        
+
     private:
         bool m_isTop;
         int64_t m_value;
     };
-    
+
     AbstractHeap()
     {
         m_value = encode(InvalidAbstractHeap, Payload());
     }
-    
+
     AbstractHeap(AbstractHeapKind kind)
     {
         ASSERT(kind != InvalidAbstractHeap);
         m_value = encode(kind, Payload::top());
     }
-    
+
     AbstractHeap(AbstractHeapKind kind, Payload payload)
     {
         ASSERT(kind != InvalidAbstractHeap && kind != World);
         m_value = encode(kind, payload);
     }
-    
+
     AbstractHeap(WTF::HashTableDeletedValueType)
     {
         m_value = encode(InvalidAbstractHeap, Payload::top());
     }
-    
+
     bool operator!() const { return kind() == InvalidAbstractHeap && !payloadImpl().isTop(); }
-    
+
     AbstractHeapKind kind() const { return static_cast<AbstractHeapKind>(m_value & ((1 << topShift) - 1)); }
     Payload payload() const
     {
         ASSERT(kind() != World && kind() != InvalidAbstractHeap);
         return payloadImpl();
     }
-    
+
     bool isDisjoint(const AbstractHeap& other)
     {
         ASSERT(kind() != InvalidAbstractHeap);
@@ -217,12 +217,12 @@ public:
             return true;
         return payload().isDisjoint(other.payload());
     }
-    
+
     bool overlaps(const AbstractHeap& other)
     {
         return !isDisjoint(other);
     }
-    
+
     AbstractHeap supertype() const
     {
         ASSERT(kind() != InvalidAbstractHeap);
@@ -232,52 +232,52 @@ public:
             return World;
         return AbstractHeap(kind());
     }
-    
+
     unsigned hash() const
     {
         return WTF::IntHash<int64_t>::hash(m_value);
     }
-    
+
     bool operator==(const AbstractHeap& other) const
     {
         return m_value == other.m_value;
     }
-    
+
     bool operator!=(const AbstractHeap& other) const
     {
         return !(*this == other);
     }
-    
+
     bool operator<(const AbstractHeap& other) const
     {
         if (kind() != other.kind())
             return kind() < other.kind();
         return payload() < other.payload();
     }
-    
+
     bool isHashTableDeletedValue() const
     {
         return kind() == InvalidAbstractHeap && payloadImpl().isTop();
     }
-    
+
     void dump(PrintStream& out) const;
-    
+
 private:
     static const unsigned valueShift = 15;
     static const unsigned topShift = 14;
-    
+
     Payload payloadImpl() const
     {
         return Payload((m_value >> topShift) & 1, m_value >> valueShift);
     }
-    
+
     static int64_t encode(AbstractHeapKind kind, Payload payload)
     {
         int64_t kindAsInt = static_cast<int64_t>(kind);
         ASSERT(kindAsInt < (1 << topShift));
         return kindAsInt | (payload.isTop() << topShift) | (payload.valueImpl() << valueShift);
     }
-    
+
     // The layout of the value is:
     // Low 14 bits: the Kind
     // 15th bit: whether or not the payload is TOP.

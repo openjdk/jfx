@@ -36,7 +36,7 @@ package com.oracle.javafx.scenebuilder.kit.util;
  *
  */
 public class GridBounds {
-    
+
     private final int minColumnIndex;
     private final int minRowIndex;
     private final int columnSpan;
@@ -66,11 +66,11 @@ public class GridBounds {
     public int getRowSpan() {
         return rowSpan;
     }
-    
+
     public int getMaxColumnIndex() {
         return minColumnIndex + columnSpan;
     }
-    
+
     public int getMaxRowIndex() {
         return minRowIndex + rowSpan;
     }
@@ -78,13 +78,13 @@ public class GridBounds {
     public boolean isEmpty() {
         return (columnSpan == 0) || (rowSpan == 0);
     }
-    
+
     public GridBounds move(int columnDelta, int rowDelta) {
         final int newColumnIndex = minColumnIndex + columnDelta;
         final int newRowIndex = minRowIndex + rowDelta;
         return new GridBounds(newColumnIndex, newRowIndex, columnSpan, rowSpan);
     }
-    
+
     public GridBounds union(GridBounds gridBounds) {
         final int newMinColumnIndex = Math.min(minColumnIndex, gridBounds.minColumnIndex);
         final int newMinRowIndex = Math.min(minRowIndex, gridBounds.minRowIndex);

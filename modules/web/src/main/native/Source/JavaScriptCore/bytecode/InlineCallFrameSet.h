@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef InlineCallFrameSet_h
@@ -37,15 +37,15 @@ class InlineCallFrameSet {
 public:
     InlineCallFrameSet();
     ~InlineCallFrameSet();
-    
+
     bool isEmpty() const { return m_frames.isEmpty(); }
-    
+
     InlineCallFrame* add();
-    
+
     typedef Bag<InlineCallFrame>::iterator iterator;
     iterator begin() { return m_frames.begin(); }
     iterator end() { return m_frames.end(); }
-    
+
 private:
     Bag<InlineCallFrame> m_frames;
 };

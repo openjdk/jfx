@@ -459,7 +459,7 @@ public class DeployFXTask extends Task implements DynamicAttribute {
         //raw id of the placeholder, need to escape it
         this.placeholder = "'"+id+"'";
     }
-    
+
     public void setSignBundle(boolean signBundle) {
         this.signBundle = signBundle;
     }

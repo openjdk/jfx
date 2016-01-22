@@ -83,7 +83,7 @@ public class Brick extends Parent {
         content.setFitWidth(Config.FIELD_WIDTH/15);
     }
 
-    
+
 
     public static int getBrickType(String s) {
         if (s.equals("L")) {

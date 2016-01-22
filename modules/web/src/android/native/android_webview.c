@@ -94,7 +94,7 @@ LOGI("Got webviewclass: %p",jInternalWebViewClass);
     jInternalWebView_setVisible = (*env)->GetStaticMethodID(env, jInternalWebViewClass,
             "setVisible", "(IZ)V");
     CHECK_EXCEPTION(env);
-    
+
     jInternalWebView_dispose = (*env)->GetStaticMethodID(env, jInternalWebViewClass,
             "dispose", "(I)V");
     CHECK_EXCEPTION(env);
@@ -126,10 +126,10 @@ void init_functions(JNIEnv *env) {
     char *cdatadir = (char*)(*env)->GetStringUTFChars(env, jdatadir, 0);
     int cdatadir_len = (*env)->GetStringUTFLength(env, jdatadir);
 
-    char *fullpath = (char *) calloc(cdatadir_len + strlen(LIBWEBVIEW_SO) + 
+    char *fullpath = (char *) calloc(cdatadir_len + strlen(LIBWEBVIEW_SO) +
                                 2 * strlen(PATH_SEP) + strlen(LIB_DIR) + 1, 1);
     strcpy(fullpath, cdatadir);
-    strcat(fullpath, PATH_SEP);    
+    strcat(fullpath, PATH_SEP);
     strcat(fullpath, LIB_DIR);
     strcat(fullpath, PATH_SEP);
     strcat(fullpath, LIBWEBVIEW_SO);
@@ -161,7 +161,7 @@ int create_android_webview(JNIEnv *env) {
     internalID = (*env)->CallIntMethod(env, jInternalWebView, jInternalWebView_getInternalID);
     LOGI(TAG, "CREATE_ANDROID_WEBVIEW4\n");
     CHECK_EXCEPTION(env);
-    
+
     return internalID;
 }
 */
@@ -245,7 +245,7 @@ JNIEXPORT void JNICALL Java_com_oracle_dalvik_InternalWebView__1fireLoadEvent
         return;
     }
     char *curl = (char *)(*env)->GetStringUTFChars(env, url, 0);
-    char *ccontent_type = (char *)(*env)->GetStringUTFChars(env, contentType, 0);    
+    char *ccontent_type = (char *)(*env)->GetStringUTFChars(env, contentType, 0);
 
     (*_VM_fire_load_event)(id, frameID, state, curl, ccontent_type, progress, errorCode);
 }

@@ -51,12 +51,12 @@ import com.sun.javafx.binding.ExpressionHelper;
  * {@link #get()} is called for an invalid binding.
  * <p>
  * See {@link DoubleBinding} for an example how this base class can be extended.
- * 
+ *
  * @see Binding
  * @see NumberBinding
  * @see javafx.beans.binding.IntegerExpression
- * 
- * 
+ *
+ *
  * @since JavaFX 2.0
  */
 public abstract class IntegerBinding extends IntegerExpression implements
@@ -67,30 +67,30 @@ public abstract class IntegerBinding extends IntegerExpression implements
     private BindingHelperObserver observer;
     private ExpressionHelper<Number> helper = null;
 
-    @Override 
+    @Override
     public void addListener(InvalidationListener listener) {
         helper = ExpressionHelper.addListener(helper, this, listener);
     }
 
-    @Override 
+    @Override
     public void removeListener(InvalidationListener listener) {
         helper = ExpressionHelper.removeListener(helper, listener);
     }
-    
+
     @Override
     public void addListener(ChangeListener<? super Number> listener) {
         helper = ExpressionHelper.addListener(helper, this, listener);
     }
 
-    @Override 
+    @Override
     public void removeListener(ChangeListener<? super Number> listener) {
         helper = ExpressionHelper.removeListener(helper, listener);
     }
-    
+
     /**
      * Start observing the dependencies for changes. If the value of one of the
      * dependencies changes, the binding is marked as invalid.
-     * 
+     *
      * @param dependencies
      *            the dependencies to observe
      */
@@ -107,7 +107,7 @@ public abstract class IntegerBinding extends IntegerExpression implements
 
     /**
      * Stop observing the dependencies for changes.
-     * 
+     *
      * @param dependencies
      *            the dependencies to stop observing
      */
@@ -130,7 +130,7 @@ public abstract class IntegerBinding extends IntegerExpression implements
     /**
      * A default implementation of {@code getDependencies()} that returns an
      * empty {@link javafx.collections.ObservableList}.
-     * 
+     *
      * @return an empty {@code ObservableList}
      */
     @Override
@@ -144,7 +144,7 @@ public abstract class IntegerBinding extends IntegerExpression implements
      * {@code computeValue()} is only called if the binding is invalid. The
      * result is cached and returned if the binding did not become invalid since
      * the last call of {@code get()}.
-     * 
+     *
      * @return the current value
      */
     @Override
@@ -183,7 +183,7 @@ public abstract class IntegerBinding extends IntegerExpression implements
      * <p>
      * Classes extending {@code IntegerBinding} have to provide an
      * implementation of {@code computeValue}.
-     * 
+     *
      * @return the current value
      */
     protected abstract int computeValue();
@@ -191,7 +191,7 @@ public abstract class IntegerBinding extends IntegerExpression implements
     /**
      * Returns a string representation of this {@code IntegerBinding} object.
      * @return a string representation of this {@code IntegerBinding} object.
-     */ 
+     */
     @Override
     public String toString() {
         return valid ? "IntegerBinding [value: " + get() + "]"

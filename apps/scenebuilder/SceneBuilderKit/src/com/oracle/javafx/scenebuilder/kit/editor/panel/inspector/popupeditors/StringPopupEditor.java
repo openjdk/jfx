@@ -59,7 +59,7 @@ public class StringPopupEditor extends PopupEditor {
     // Interface from PopupEditor.
     // Methods called by PopupEditor.
     //
-    
+
     @Override
     public void initializePopupContent() {
         root = EditorUtils.loadPopupFxml("StringPopupEditor.fxml", this);

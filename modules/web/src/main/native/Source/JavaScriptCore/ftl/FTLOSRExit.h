@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef FTLOSRExit_h
@@ -147,9 +147,9 @@ struct OSRExit : public DFG::OSRExitBase {
         ExitKind, ValueFormat profileValueFormat, MethodOfGettingAValueProfile,
         CodeOrigin, CodeOrigin originForProfile,
         unsigned numberOfArguments, unsigned numberOfLocals);
-    
+
     MacroAssemblerCodeRef m_code;
-    
+
     // The first argument to the exit call may be a value we wish to profile.
     // If that's the case, the format will be not Invalid and we'll have a
     // method of getting a value profile. Note that all of the ExitArgument's
@@ -157,16 +157,16 @@ struct OSRExit : public DFG::OSRExitBase {
     // correct them.
     ValueFormat m_profileValueFormat;
     MethodOfGettingAValueProfile m_valueProfile;
-    
+
     // Offset within the exit stubs of the stub for this exit.
     unsigned m_patchableCodeOffset;
-    
+
     Operands<ExitValue> m_values;
-    
+
     uint32_t m_stackmapID;
-    
+
     CodeLocationJump codeLocationForRepatch(CodeBlock* ftlCodeBlock) const;
-    
+
     bool considerAddingAsFrequentExitSite(CodeBlock* profiledCodeBlock)
     {
         return OSRExitBase::considerAddingAsFrequentExitSite(profiledCodeBlock, ExitFromFTL);

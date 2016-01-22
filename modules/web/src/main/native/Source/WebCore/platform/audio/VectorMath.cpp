@@ -157,9 +157,9 @@ void vsma(const float* sourceP, int sourceStride, const float* scale, float* des
                 destP += 4;                         \
             }
 
-        if (destAligned) 
+        if (destAligned)
             SSE2_MULT_ADD(load, store)
-        else 
+        else
             SSE2_MULT_ADD(loadu, storeu)
 
         n = tailFrames;
@@ -309,7 +309,7 @@ void vadd(const float* source1P, int sourceStride1, const float* source2P, int s
                 destP += 4;
             }
 
-        } else if (source2Aligned && !destAligned) { // source2 aligned but dest not aligned 
+        } else if (source2Aligned && !destAligned) { // source2 aligned but dest not aligned
             while (group--) {
                 pSource1 = reinterpret_cast<__m128*>(const_cast<float*>(source1P));
                 pSource2 = reinterpret_cast<__m128*>(const_cast<float*>(source2P));
@@ -321,7 +321,7 @@ void vadd(const float* source1P, int sourceStride1, const float* source2P, int s
                 destP += 4;
             }
 
-        } else if (!source2Aligned && destAligned) { // source2 not aligned but dest aligned 
+        } else if (!source2Aligned && destAligned) { // source2 not aligned but dest aligned
             while (group--) {
                 pSource1 = reinterpret_cast<__m128*>(const_cast<float*>(source1P));
                 source2 = _mm_loadu_ps(source2P);
@@ -332,7 +332,7 @@ void vadd(const float* source1P, int sourceStride1, const float* source2P, int s
                 source2P += 4;
                 destP += 4;
             }
-        } else if (!source2Aligned && !destAligned) { // both source2 and dest not aligned 
+        } else if (!source2Aligned && !destAligned) { // both source2 and dest not aligned
             while (group--) {
                 pSource1 = reinterpret_cast<__m128*>(const_cast<float*>(source1P));
                 source2 = _mm_loadu_ps(source2P);
@@ -462,7 +462,7 @@ void zvmul(const float* real1P, const float* imag1P, const float* real2P, const 
 {
     unsigned i = 0;
 #ifdef __SSE2__
-    // Only use the SSE optimization in the very common case that all addresses are 16-byte aligned. 
+    // Only use the SSE optimization in the very common case that all addresses are 16-byte aligned.
     // Otherwise, fall through to the scalar code below.
     if (!(reinterpret_cast<uintptr_t>(real1P) & 0x0F)
         && !(reinterpret_cast<uintptr_t>(imag1P) & 0x0F)
@@ -470,7 +470,7 @@ void zvmul(const float* real1P, const float* imag1P, const float* real2P, const 
         && !(reinterpret_cast<uintptr_t>(imag2P) & 0x0F)
         && !(reinterpret_cast<uintptr_t>(realDestP) & 0x0F)
         && !(reinterpret_cast<uintptr_t>(imagDestP) & 0x0F)) {
-        
+
         unsigned endSize = framesToProcess - framesToProcess % 4;
         while (i < endSize) {
             __m128 real1 = _mm_load_ps(real1P + i);
@@ -519,35 +519,35 @@ void vsvesq(const float* sourceP, int sourceStride, float* sumP, size_t framesTo
     int n = framesToProcess;
     float sum = 0;
 
-#ifdef __SSE2__ 
-    if (sourceStride == 1) { 
-        // If the sourceP address is not 16-byte aligned, the first several frames (at most three) should be processed separately. 
-        while ((reinterpret_cast<uintptr_t>(sourceP) & 0x0F) && n) { 
-            float sample = *sourceP; 
-            sum += sample * sample; 
-            sourceP++; 
-            n--; 
-        } 
- 
+#ifdef __SSE2__
+    if (sourceStride == 1) {
+        // If the sourceP address is not 16-byte aligned, the first several frames (at most three) should be processed separately.
+        while ((reinterpret_cast<uintptr_t>(sourceP) & 0x0F) && n) {
+            float sample = *sourceP;
+            sum += sample * sample;
+            sourceP++;
+            n--;
+        }
+
         // Now the sourceP is aligned, use SSE.
-        int tailFrames = n % 4; 
-        const float* endP = sourceP + n - tailFrames; 
-        __m128 source; 
-        __m128 mSum = _mm_setzero_ps(); 
- 
-        while (sourceP < endP) { 
-            source = _mm_load_ps(sourceP); 
-            source = _mm_mul_ps(source, source); 
-            mSum = _mm_add_ps(mSum, source); 
-            sourceP += 4; 
-        } 
- 
-        // Summarize the SSE results. 
-        const float* groupSumP = reinterpret_cast<float*>(&mSum); 
-        sum += groupSumP[0] + groupSumP[1] + groupSumP[2] + groupSumP[3]; 
- 
-        n = tailFrames; 
-    } 
+        int tailFrames = n % 4;
+        const float* endP = sourceP + n - tailFrames;
+        __m128 source;
+        __m128 mSum = _mm_setzero_ps();
+
+        while (sourceP < endP) {
+            source = _mm_load_ps(sourceP);
+            source = _mm_mul_ps(source, source);
+            mSum = _mm_add_ps(mSum, source);
+            sourceP += 4;
+        }
+
+        // Summarize the SSE results.
+        const float* groupSumP = reinterpret_cast<float*>(&mSum);
+        sum += groupSumP[0] + groupSumP[1] + groupSumP[2] + groupSumP[3];
+
+        n = tailFrames;
+    }
 #elif HAVE(ARM_NEON_INTRINSICS)
     if (sourceStride == 1) {
         int tailFrames = n % 4;

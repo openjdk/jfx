@@ -12,7 +12,7 @@ namespace WebCore {
 void systemBeep()
 {
     WC_GETJAVAENV_CHKRET(env);
-    
+
     JLClass cls( env->FindClass("java/awt/Toolkit") );
     ASSERT(cls);
 

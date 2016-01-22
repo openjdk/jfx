@@ -268,7 +268,7 @@ void AVFEqualizerBand::ApplyFilter(double *inSource, double *inDest, int frameCo
         inSource[0] = mHistory[channel].x2;
         inDest[1] = mHistory[channel].y1;
         inDest[0] = mHistory[channel].y2;
-        
+
         vDSP_deq22D(inSource, 1, mCoefficients, inDest, 1, frameCount);
 
         // update history

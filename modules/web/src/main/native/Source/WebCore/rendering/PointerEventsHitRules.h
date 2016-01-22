@@ -39,7 +39,7 @@ public:
     bool requireFill;
     bool requireStroke;
     bool canHitStroke;
-    bool canHitFill;  
+    bool canHitFill;
 };
 
 }

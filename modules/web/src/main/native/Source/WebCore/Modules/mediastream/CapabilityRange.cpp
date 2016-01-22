@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
 
@@ -60,7 +60,7 @@ static Deprecated::ScriptValue scriptValue(ExecState* exec, const MediaStreamSou
     // We don't do this currently because I don't know of an instance where it isn't possible to retrieve a source
     // capability, but when we have to deal with this we will need to mark CapabilityRange.min and CapabilityRange.max as
     // "Custom" and return jsUndefined() from the custom getter to support it.
-    
+
     switch (type) {
     case MediaStreamSourceCapabilityRange::Float:
         return Deprecated::ScriptValue(exec->vm(), JSValue(value.asFloat));

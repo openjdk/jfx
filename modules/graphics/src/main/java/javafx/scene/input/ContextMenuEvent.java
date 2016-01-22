@@ -143,12 +143,12 @@ public class ContextMenuEvent extends InputEvent {
     public EventType<ContextMenuEvent> getEventType() {
         return (EventType<ContextMenuEvent>) super.getEventType();
     }
-    
+
     /**
      * The boolean that indicates the event was triggered by a keyboard gesture.
      */
     private final boolean keyboardTrigger;
-    
+
     /**
      * Determines whether this event originated from the keyboard.
      *

@@ -49,18 +49,18 @@ namespace JSC {
 
         Identifier(VM* vm, const LChar* s, int length) : m_string(add(vm, s, length)) { }
         Identifier(VM* vm, const UChar* s, int length) : m_string(add(vm, s, length)) { }
-        Identifier(VM* vm, StringImpl* rep) : m_string(add(vm, rep)) { } 
+        Identifier(VM* vm, StringImpl* rep) : m_string(add(vm, rep)) { }
         Identifier(VM* vm, const String& s) : m_string(add(vm, s.impl())) { }
 
         const String& string() const { return m_string; }
         StringImpl* impl() const { return m_string.impl(); }
-        
+
         const UChar* deprecatedCharacters() const { return m_string.deprecatedCharacters(); }
         int length() const { return m_string.length(); }
-        
+
         CString ascii() const { return m_string.ascii(); }
         CString utf8() const { return m_string.utf8(); }
-        
+
         static Identifier from(const PrivateName& name)
         {
             Identifier result;
@@ -79,7 +79,7 @@ namespace JSC {
 
         bool isNull() const { return m_string.isNull(); }
         bool isEmpty() const { return m_string.isEmpty(); }
-        
+
         friend bool operator==(const Identifier&, const Identifier&);
         friend bool operator!=(const Identifier&, const Identifier&);
 
@@ -87,7 +87,7 @@ namespace JSC {
         friend bool operator==(const Identifier&, const char*);
         friend bool operator!=(const Identifier&, const LChar*);
         friend bool operator!=(const Identifier&, const char*);
-    
+
         static bool equal(const StringImpl*, const LChar*);
         static inline bool equal(const StringImpl*a, const char*b) { return Identifier::equal(a, reinterpret_cast<const LChar*>(b)); };
         static bool equal(const StringImpl*, const LChar*, unsigned length);
@@ -153,14 +153,14 @@ namespace JSC {
         const T* s;
         unsigned int length;
     };
-    
+
     template <typename T>
     struct IdentifierCharBufferTranslator {
         static unsigned hash(const CharBuffer<T>& buf)
         {
             return StringHasher::computeHashAndMaskTop8Bits(buf.s, buf.length);
         }
-        
+
         static bool equal(StringImpl* str, const CharBuffer<T>& buf)
         {
             return Identifier::equal(str, buf.s, buf.length);
@@ -185,12 +185,12 @@ namespace JSC {
             if (canUseSingleCharacterString(c))
                 return add(vm, vm->smallStrings.singleCharacterStringRep(c));
         }
-        
+
         if (!length)
             return *StringImpl::empty();
         CharBuffer<T> buf = { s, static_cast<unsigned>(length) };
         HashSet<StringImpl*>::AddResult addResult = vm->identifierTable->add<CharBuffer<T>, IdentifierCharBufferTranslator<T>>(buf);
-        
+
         // If the string is newly-translated, then we need to adopt it.
         // The boolean in the pair tells us if that is so.
         return addResult.isNewEntry ? adoptRef(**addResult.iterator) : **addResult.iterator;
@@ -215,7 +215,7 @@ namespace JSC {
     {
         return Identifier::equal(a, reinterpret_cast<const LChar*>(b));
     }
-    
+
     inline bool operator!=(const Identifier& a, const LChar* b)
     {
         return !Identifier::equal(a, b);
@@ -225,7 +225,7 @@ namespace JSC {
     {
         return !Identifier::equal(a, reinterpret_cast<const LChar*>(b));
     }
-    
+
     inline bool Identifier::equal(const StringImpl* r, const LChar* s)
     {
         return WTF::equal(r, s);
@@ -240,7 +240,7 @@ namespace JSC {
     {
         return WTF::equal(r, s, length);
     }
-    
+
     IdentifierTable* createIdentifierTable();
     void deleteIdentifierTable(IdentifierTable*);
 

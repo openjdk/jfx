@@ -116,7 +116,7 @@ public:
     // Serializes the specified date into a formatted date string to
     // display to the user. If an implementation doesn't support
     // localized dates the function should return an empty string.
-    // FormatType can be used to specify if you want the short format. 
+    // FormatType can be used to specify if you want the short format.
 #if !PLATFORM(IOS)
     String formatDateTime(const DateComponents&, FormatType = FormatTypeUnspecified);
 #else

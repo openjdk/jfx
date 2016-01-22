@@ -44,15 +44,15 @@ public class AddPropertyValueJob extends Job {
     private final FXOMObject value;
     private final FXOMPropertyC targetProperty;
     private final int targetIndex;
-    
-    public AddPropertyValueJob(FXOMObject value, FXOMPropertyC targetProperty, 
+
+    public AddPropertyValueJob(FXOMObject value, FXOMPropertyC targetProperty,
             int targetIndex, EditorController editorController) {
         super(editorController);
-        
+
         assert value != null;
         assert targetProperty != null;
         assert targetIndex >= -1;
-        
+
         this.value = value;
         this.targetProperty = targetProperty;
         this.targetIndex = targetIndex;
@@ -61,7 +61,7 @@ public class AddPropertyValueJob extends Job {
     /*
      * AddPropertyValueJob
      */
-    
+
     @Override
     public boolean isExecutable() {
         return (value.getParentProperty() == null)
@@ -78,11 +78,11 @@ public class AddPropertyValueJob extends Job {
     public void undo() {
         assert value.getParentProperty() == targetProperty;
         assert value.getParentCollection() == null;
-        
+
         getEditorController().getFxomDocument().beginUpdate();
         value.removeFromParentProperty();
         getEditorController().getFxomDocument().endUpdate();
-        
+
         assert value.getParentProperty() == null;
         assert value.getParentCollection() == null;
     }
@@ -91,11 +91,11 @@ public class AddPropertyValueJob extends Job {
     public void redo() {
         assert value.getParentProperty() == null;
         assert value.getParentCollection() == null;
-        
+
         getEditorController().getFxomDocument().beginUpdate();
         value.addToParentProperty(targetIndex, targetProperty);
         getEditorController().getFxomDocument().endUpdate();
-        
+
         assert value.getParentProperty() == targetProperty;
         assert value.getParentCollection() == null;
     }
@@ -105,5 +105,5 @@ public class AddPropertyValueJob extends Job {
         // Should normally not reach the user
         return getClass().getSimpleName();
     }
-    
+
 }

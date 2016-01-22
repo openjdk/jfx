@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef RegisterSet_h
@@ -42,14 +42,14 @@ namespace JSC {
 class RegisterSet {
 public:
     RegisterSet() { }
-    
+
     static RegisterSet stackRegisters();
     static RegisterSet specialRegisters();
     static RegisterSet calleeSaveRegisters();
     static RegisterSet allGPRs();
     static RegisterSet allFPRs();
     static RegisterSet allRegisters();
-    
+
     void set(Reg reg, bool value = true)
     {
         ASSERT(!!reg);
@@ -62,46 +62,46 @@ public:
             set(regs.tagGPR());
         set(regs.payloadGPR());
     }
-    
+
     void clear(Reg reg)
     {
         ASSERT(!!reg);
         set(reg, false);
     }
-    
+
     bool get(Reg reg) const
     {
         ASSERT(!!reg);
         return m_vector.get(reg.index());
     }
-    
+
     void merge(const RegisterSet& other) { m_vector.merge(other.m_vector); }
     void filter(const RegisterSet& other) { m_vector.filter(other.m_vector); }
     void exclude(const RegisterSet& other) { m_vector.exclude(other.m_vector); }
-    
+
     size_t numberOfSetRegisters() const { return m_vector.bitCount(); }
-    
+
     void dump(PrintStream&) const;
-    
+
     enum EmptyValueTag { EmptyValue };
     enum DeletedValueTag { DeletedValue };
-    
+
     RegisterSet(EmptyValueTag)
         : m_vector(BitVector::EmptyValue)
     {
     }
-    
+
     RegisterSet(DeletedValueTag)
         : m_vector(BitVector::DeletedValue)
     {
     }
-    
+
     bool isEmptyValue() const { return m_vector.isEmptyValue(); }
     bool isDeletedValue() const { return m_vector.isDeletedValue(); }
-    
+
     bool operator==(const RegisterSet& other) const { return m_vector == other.m_vector; }
     unsigned hash() const { return m_vector.hash(); }
-    
+
 private:
     BitVector m_vector;
 };

@@ -221,7 +221,7 @@ void FileReader::didFinishLoading()
     fireEvent(eventNames().progressEvent);
     fireEvent(eventNames().loadEvent);
     fireEvent(eventNames().loadendEvent);
-    
+
     // All possible events have fired and we're done, no more pending activity.
     unsetPendingActivity(this);
 }
@@ -238,7 +238,7 @@ void FileReader::didFail(int errorCode)
     m_error = FileError::create(static_cast<FileError::ErrorCode>(errorCode));
     fireEvent(eventNames().errorEvent);
     fireEvent(eventNames().loadendEvent);
-    
+
     // All possible events have fired and we're done, no more pending activity.
     unsetPendingActivity(this);
 }
@@ -263,5 +263,5 @@ String FileReader::stringResult()
 }
 
 } // namespace WebCore
- 
+
 #endif // ENABLE(BLOB)

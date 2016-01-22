@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef IdentifierRep_h
@@ -32,7 +32,7 @@
 #include <string.h>
 
 namespace WebCore {
-    
+
 class IdentifierRep {
     WTF_MAKE_FAST_ALLOCATED;
 public:
@@ -40,27 +40,27 @@ public:
     static IdentifierRep* get(const char*);
 
     static bool isValid(IdentifierRep*);
-    
+
     bool isString() const { return m_isString; }
 
     int number() const { return m_isString ? 0 : m_value.m_number; }
     const char* string() const { return m_isString ? m_value.m_string : 0; }
 
 private:
-    explicit IdentifierRep(int number) 
+    explicit IdentifierRep(int number)
         : m_isString(false)
     {
         m_value.m_number = number;
     }
-    
+
     explicit IdentifierRep(const char* name)
         : m_isString(true)
     {
         m_value.m_string = fastStrDup(name);
     }
-    
+
     ~IdentifierRep(); // Not implemented
-    
+
     union {
         const char* m_string;
         int m_number;

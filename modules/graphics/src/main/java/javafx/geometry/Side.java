@@ -34,24 +34,24 @@ public enum Side {
      * Represents top side of a rectangle.
      */
     TOP,
-    
+
     /**
      * Represents bottom side of a rectangle.
      */
     BOTTOM,
-    
+
     /**
      * Represents left side of a rectangle.
      */
     LEFT,
-    
+
     /**
      * Represents right side of a rectangle.
      */
     RIGHT;
 
     /**
-     * Indicates whether this is vertical side of a rectangle (returns 
+     * Indicates whether this is vertical side of a rectangle (returns
      * {@code true} for {@code LEFT} and {@code RIGHT}.
      * @return {@code true} if this represents a vertical side of a rectangle
      */
@@ -60,7 +60,7 @@ public enum Side {
     }
 
     /**
-     * Indicates whether this is horizontal side of a rectangle (returns 
+     * Indicates whether this is horizontal side of a rectangle (returns
      * {@code true} for {@code TOP} and {@code BOTTOM}.
      * @return {@code true} if this represents a horizontal side of a rectangle
      */

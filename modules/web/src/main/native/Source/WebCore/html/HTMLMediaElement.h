@@ -130,7 +130,7 @@ public:
 
     virtual bool supportsSave() const;
     virtual bool supportsScanning() const override;
-    
+
     PlatformMedia platformMedia() const;
     PlatformLayer* platformLayer() const;
 #if PLATFORM(IOS)
@@ -145,11 +145,11 @@ public:
         ConfigureTextTrackDisplay = 1 << 3,
     };
     void scheduleDelayedAction(DelayedActionType);
-    
+
     MediaPlayer::MovieLoadType movieLoadType() const;
-    
+
     bool inActiveDocument() const { return m_inActiveDocument; }
-    
+
 // DOM API
 // error state
     PassRefPtr<MediaError> error() const;
@@ -166,7 +166,7 @@ public:
     enum NetworkState { NETWORK_EMPTY, NETWORK_IDLE, NETWORK_LOADING, NETWORK_NO_SOURCE };
     NetworkState networkState() const;
 
-    String preload() const;    
+    String preload() const;
     void setPreload(const String&);
 
     virtual PassRefPtr<TimeRanges> buffered() const override;
@@ -194,7 +194,7 @@ public:
     virtual PassRefPtr<TimeRanges> seekable() const override;
     bool ended() const;
     bool autoplay() const;
-    bool loop() const;    
+    bool loop() const;
     void setLoop(bool b);
     virtual void play() override;
     virtual void pause() override;
@@ -248,7 +248,7 @@ public:
     void togglePlayState();
     virtual void beginScrubbing() override;
     virtual void endScrubbing() override;
-    
+
     virtual bool canPlay() const override;
 
     double percentLoaded() const;
@@ -382,7 +382,7 @@ public:
     using HTMLElement::scriptExecutionContext;
 
     bool hasSingleSecurityOrigin() const { return !m_player || m_player->hasSingleSecurityOrigin(); }
-    
+
     virtual bool isFullscreen() const override;
     void toggleFullscreenState();
     virtual void enterFullscreen() override;
@@ -462,7 +462,7 @@ protected:
     enum DisplayMode { Unknown, None, Poster, PosterWaitingForVideo, Video };
     DisplayMode displayMode() const { return m_displayMode; }
     virtual void setDisplayMode(DisplayMode mode) { m_displayMode = mode; }
-    
+
     virtual bool isMediaElement() const override { return true; }
 
 #if ENABLE(VIDEO_TRACK)
@@ -497,7 +497,7 @@ private:
     virtual void suspend(ReasonForSuspension) override;
     virtual void resume() override;
     virtual void stop() override;
-    
+
     virtual void mediaVolumeDidChange() override;
 
 #if ENABLE(PAGE_VISIBILITY_API)
@@ -505,7 +505,7 @@ private:
 #endif
 
     virtual void updateDisplayState() { }
-    
+
     void setReadyState(MediaPlayer::ReadyState);
     void setNetworkState(MediaPlayer::NetworkState);
 
@@ -525,7 +525,7 @@ private:
     virtual bool mediaPlayerRenderingCanBeAccelerated(MediaPlayer*) override;
     virtual void mediaPlayerRenderingModeChanged(MediaPlayer*) override;
     virtual void mediaPlayerEngineUpdated(MediaPlayer*) override;
-    
+
     virtual void mediaPlayerFirstVideoFrameAvailable(MediaPlayer*) override;
     virtual void mediaPlayerCharacteristicChanged(MediaPlayer*) override;
 
@@ -587,10 +587,10 @@ private:
     void finishSeek();
     void checkIfSeekNeeded();
     void addPlayedRange(double start, double end);
-    
+
     void scheduleTimeupdateEvent(bool periodicEvent);
     void scheduleEvent(const AtomicString& eventName);
-    
+
     // loading
     void selectMediaResource();
     void loadResource(const URL&, ContentType&, const String& keySystem);
@@ -708,7 +708,7 @@ private:
     double m_volume;
     bool m_volumeInitialized;
     double m_lastSeekTime;
-    
+
     unsigned m_previousProgress;
     double m_previousProgressTime;
 
@@ -717,7 +717,7 @@ private:
 
     // The last time a timeupdate event was sent in movie time.
     double m_lastTimeUpdateEventMovieTime;
-    
+
     // Loading state.
     enum LoadState { WaitingForSource, LoadingFromSrcAttr, LoadingFromSourceElement };
     LoadState m_loadState;
@@ -772,7 +772,7 @@ private:
     bool m_pausedInternal : 1;
 
     // Not all media engines provide enough information about a file to be able to
-    // support progress events so setting m_sendProgressEvents disables them 
+    // support progress events so setting m_sendProgressEvents disables them
     bool m_sendProgressEvents : 1;
 
     bool m_isFullscreen : 1;

@@ -44,7 +44,7 @@ public final class Lighting_properties_Test extends PropertiesTestBase {
         final Lighting testLighting = new Lighting();
 
         return Arrays.asList(new Object[] {
-            config(testLighting, "light", 
+            config(testLighting, "light",
                    new Light.Distant(),
                    new Light.Point()),
             config(testLighting, "bumpInput", null, new BoxBlur()),

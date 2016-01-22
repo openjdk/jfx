@@ -43,7 +43,7 @@ public:
     {
         WKBundlePageListenForLayoutMilestones(page, kWKDidFirstLayout | kWKDidFirstVisuallyNonEmptyLayout | kWKDidHitRelevantRepaintedObjectsAreaThreshold);
     }
-    
+
 };
 
 static InjectedBundleTest::Register<NewFirstVisuallyNonEmptyLayoutForImagesTest> registrar("NewFirstVisuallyNonEmptyLayoutForImagesTest");

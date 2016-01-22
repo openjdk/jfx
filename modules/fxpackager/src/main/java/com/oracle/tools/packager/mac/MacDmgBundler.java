@@ -185,20 +185,20 @@ public class MacDmgBundler extends MacBaseInstallerBundler {
     private void prepareLicense(Map<String, ? super Object> params) {
         try {
             File licFile = null;
-            
+
             List<String> licFiles = LICENSE_FILE.fetchFrom(params);
             if (licFiles.isEmpty()) {
                 return;
             }
             String licFileStr = licFiles.get(0);
-            
+
             for (RelativeFileSet rfs : APP_RESOURCES_LIST.fetchFrom(params)) {
                 if (rfs.contains(licFileStr)) {
                     licFile = new File(rfs.getBaseDirectory(), licFileStr);
                     break;
                 }
             }
-            
+
             if (licFile == null) {
                 // this is NPE protection, validate should have caught it's absence
                 // so we don't complain or throw an error

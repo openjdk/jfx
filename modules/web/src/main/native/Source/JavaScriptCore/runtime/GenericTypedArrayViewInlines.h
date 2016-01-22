@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef GenericTypedArrayViewInlines_h
@@ -64,7 +64,7 @@ PassRefPtr<GenericTypedArrayView<Adaptor>> GenericTypedArrayView<Adaptor>::creat
     RefPtr<ArrayBuffer> buffer = passedBuffer;
     if (!verifySubRange<typename Adaptor::Type>(buffer, byteOffset, length))
         return 0;
-    
+
     return adoptRef(new GenericTypedArrayView(buffer, byteOffset, length));
 }
 

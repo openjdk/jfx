@@ -43,7 +43,7 @@ public class ClassWithDefaultValues {
             @NamedArg(value="b", defaultValue="2.0") double b,
             @NamedArg(value="color", defaultValue="red") Color color,
             @NamedArg(value="fill", defaultValue="GREEN") Paint fill,
-            @NamedArg(value="stageStyle", defaultValue="DECORATED") StageStyle stageStyle            
+            @NamedArg(value="stageStyle", defaultValue="DECORATED") StageStyle stageStyle
             ) {
         this.a = a;
         this.b = b;

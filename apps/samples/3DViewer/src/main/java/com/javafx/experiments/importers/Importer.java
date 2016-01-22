@@ -38,23 +38,23 @@ import javafx.scene.Group;
 public abstract class Importer {
     /**
      * Loads the 3D file
-     * 
+     *
      * @param url The url of the 3D file to load
-     * @param asPolygonMesh When true load as a PolygonMesh if the loader 
-     * supports. 
+     * @param asPolygonMesh When true load as a PolygonMesh if the loader
+     * supports.
      * @throws IOException If issue loading file
      */
-    public abstract void load(String url, boolean asPolygonMesh) throws IOException; 
+    public abstract void load(String url, boolean asPolygonMesh) throws IOException;
     /**
      * Gets the 3D node that was loaded earlier through the load() call
      * @return The loaded node
      */
     public abstract Group getRoot();
     /**
-     * Tests if the given 3D file extension is supported (e.g. "ma", "ase", 
-     * "obj", "fxml", "dae"). 
-     * 
-     * @param supportType The file extension (e.g. "ma", "ase", "obj", "fxml", 
+     * Tests if the given 3D file extension is supported (e.g. "ma", "ase",
+     * "obj", "fxml", "dae").
+     *
+     * @param supportType The file extension (e.g. "ma", "ase", "obj", "fxml",
      * "dae")
      * @return True if the extension is of a supported type. False otherwise.
      */

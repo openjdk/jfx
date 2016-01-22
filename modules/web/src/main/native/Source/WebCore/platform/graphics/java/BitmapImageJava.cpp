@@ -26,7 +26,7 @@ bool FrameData::clear(bool clearMetadata)
 
     if (m_frame) {
 #if USE(IMAGEIO)
-	WC_GETJAVAENV_CHKRET(env, false);
+    WC_GETJAVAENV_CHKRET(env, false);
         static jmethodID midDestroyDecodedData = env->GetMethodID(
                 JLClass(env->GetObjectClass(*m_frame)),
                 "destroyDecodedData",
@@ -61,7 +61,7 @@ void BitmapImage::draw(GraphicsContext *gc, const FloatRect &dstRect, const Floa
 PassRefPtr<Image> BitmapImage::createFromName(const char* name)
 {
     WC_GETJAVAENV_CHKRET(env, NULL);
-    
+
     RefPtr<BitmapImage> img(create());
 
 #if USE(IMAGEIO)

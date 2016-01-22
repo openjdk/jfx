@@ -44,7 +44,7 @@ final class IosGestureSupport {
     private final static boolean isDirect = true;
 
     private final static GestureSupport gestures = new GestureSupport(false);
-    private final static TouchInputSupport touches = 
+    private final static TouchInputSupport touches =
             new TouchInputSupport(gestures.createTouchCountListener(), false);
 
 

@@ -6,13 +6,13 @@
  * are met:
  *
  * 1.  Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer. 
+ *     notice, this list of conditions and the following disclaimer.
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
- *     documentation and/or other materials provided with the distribution. 
+ *     documentation and/or other materials provided with the distribution.
  * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
- *     from this software without specific prior written permission. 
+ *     from this software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY APPLE AND ITS CONTRIBUTORS "AS IS" AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
@@ -70,7 +70,7 @@ public:
     // If so, we stay in this state until that response is received (and it returns the start time).
     // Otherwise, we use the current time as the start time and go immediately to AnimationStateLooping
     // or AnimationStateEnding.
-    enum AnimState { 
+    enum AnimState {
         AnimationStateNew,                  // animation just created, animation not running yet
         AnimationStateStartWaitTimer,       // start timer running, waiting for fire
         AnimationStateStartWaitStyleAvailable,   // waiting for style setup so we can start animations
@@ -157,7 +157,7 @@ public:
     {
         if (acceleratedOnly && !m_isAccelerated)
             return false;
-            
+
         if (isRunningNow)
             return (!waitingToStart() && !postActive()) && affectsProperty(property);
 
@@ -176,14 +176,14 @@ public:
     // Play and pause API
     void play();
     void pause();
-    
+
     double beginAnimationUpdateTime() const;
-    
+
     double getElapsedTime() const;
     // Setting the elapsed time will adjust the start time and possibly pause time.
     void setElapsedTime(double);
-    
-    void styleAvailable() 
+
+    void styleAvailable()
     {
         ASSERT(waitingForStyleAvailable());
         updateStateMachine(AnimationBase::AnimationStateInputStyleAvailable, -1);
@@ -201,7 +201,7 @@ protected:
     virtual void onAnimationStart(double /*elapsedTime*/) { }
     virtual void onAnimationIteration(double /*elapsedTime*/) { }
     virtual void onAnimationEnd(double /*elapsedTime*/) { }
-    
+
     // timeOffset is an offset from the current time when the animation should start. Negative values are OK.
     // Return value indicates whether to expect an asynchronous notifyAnimationStarted() callback.
     virtual bool startAnimation(double /*timeOffset*/) { return false; }
@@ -214,7 +214,7 @@ protected:
     bool isAccelerated() const { return m_isAccelerated; }
 
     static void setNeedsStyleRecalc(Element*);
-    
+
     void getTimeToNextEvent(double& time, bool& isLooping) const;
 
     double fractionalTime(double scale, double elapsedTime, double offset) const;

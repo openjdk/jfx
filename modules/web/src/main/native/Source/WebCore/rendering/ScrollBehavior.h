@@ -50,7 +50,7 @@ enum ScrollBehavior {
     noScroll,
     alignCenter,
     alignTop,
-    alignBottom, 
+    alignBottom,
     alignLeft,
     alignRight,
     alignToClosestEdge

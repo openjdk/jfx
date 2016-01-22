@@ -37,7 +37,7 @@ import javafx.scene.control.ScrollBar;
 import javafx.scene.control.Skin;
 
 /**
- * A minimal skin for scrollbars that is much lighter weight as we don't need 
+ * A minimal skin for scrollbars that is much lighter weight as we don't need
  * scrollbars on touch devices.
  */
 public class NoopScrollBarSkin implements Skin<ScrollBar>{
@@ -47,7 +47,7 @@ public class NoopScrollBarSkin implements Skin<ScrollBar>{
     public NoopScrollBarSkin(ScrollBar scrollBar) {
         this.scrollBar = scrollBar;
     }
-    
+
     @Override public ScrollBar getSkinnable() {
         return scrollBar;
     }
@@ -57,5 +57,5 @@ public class NoopScrollBarSkin implements Skin<ScrollBar>{
     }
 
     @Override public void dispose() {}
-    
+
 }

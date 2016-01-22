@@ -34,7 +34,7 @@ public class  SystemProperties {
    /**
     * JavaFX System Properties table.
     * First column represents javafx property name with "javafx" prefix stripped off.
-    * Second column represents underlying runtime platform equivalent. 
+    * Second column represents underlying runtime platform equivalent.
     * "jfx_specific" value in the runtime platform equivalent field indicates the property is JavaFX specific.
     * Empty string in   the runtime platform equivalent field indicates thete is no equivalent property for given platform.
     */
@@ -46,7 +46,7 @@ public class  SystemProperties {
     /**
      * JavaFX Specific System Properties table.
      * First column represents javafx environment specific property name with "javafx" prefix stripped off.
-     * Second column represents value of the property 
+     * Second column represents value of the property
     */
     private static final String[] jfxprop_table = {
         /*"javafx.*/"application.codebase", "",
@@ -79,9 +79,9 @@ public class  SystemProperties {
                 SystemProperties.class.getResourceAsStream(versionResourceName);
         try  {
             size = is.available();
-        
+
             byte[] b = new byte[size];
-            int n = is.read(b);            
+            int n = is.read(b);
             String inStr = new String(b, "utf-8");
             SystemProperties.setFXProperty("javafx.version",
                     getValue(inStr, "release="));
@@ -108,7 +108,7 @@ public class  SystemProperties {
         return "unknown";
     }
     /**
-     * Registers a statically allocated System Properties table 
+     * Registers a statically allocated System Properties table
      * Once registered properties listed in the table are availabe for inquiry through FX.getProperty().
      * Table is defined as a String array with JavaFX property name followed by property value or property mapping identifier
      * depending on whether the table contains JavaFX specific properties or not.
@@ -119,37 +119,37 @@ public class  SystemProperties {
      *    method to retrieve property value.
      *    example:
      *    {"version", "java.version"}
-     * </p>   
+     * </p>
      * 2. "javafx_specific". When listed indicates there is no association between the property and underlying runtime
      *    platform. Rather the property is JavaFX specific. In that case another table needs to be provided with values
      *    for all JavaFX specific properties. JavaFX specific properties table is a string array containing property name
      *    and corresponding property value.
      *    example:
-     *    {"hw.radio", "none"} 
-     * </p>     
-     * 3. Empty string. When listed, the meaning there is no association between the property and underlying runtime 
+     *    {"hw.radio", "none"}
+     * </p>
+     * 3. Empty string. When listed, the meaning there is no association between the property and underlying runtime
      *    platform nor the property is JavaFX specific. FX.getProperty() invoked on that property returns null.
      *    example:
-     *    {"supports.mixing", "none"} 
+     *    {"supports.mixing", "none"}
      * @param table System Properties table
      * @param jfx_specific Indicates the table contains JavaFX specific properties
-     */      
+     */
     public static void addProperties (String[] table, boolean jfx_specific) {
         if (table == null)
             return;
 
         Hashtable props;
-                            
+
         if (jfx_specific) {
             props = jfxprop_list;
         } else {
             props = sysprop_list;
         }
-                                  
+
         for (int i=0; i<table.length; i+=2) {
             props.put(table[i], table[i+1]);
         }
-    } 
+    }
 
     public static String getProperty (String key) {
         Hashtable props = sysprop_list;
@@ -167,9 +167,9 @@ public class  SystemProperties {
         if ((found == null) || (found.equals(""))) {
         // No Java Runtime Environment property equivalent is found
             return null;
-        }                        
+        }
 
-                
+
         // Now check if the property is JFX specific and has no association with Runtime Environment
         if (found.equals("jfx_specific")) {
             props = jfxprop_list;
@@ -180,7 +180,7 @@ public class  SystemProperties {
     }
 
    /*
-    * Removes the property from JavaFX System Properties list 
+    * Removes the property from JavaFX System Properties list
     * @param key JavaFX System Property name
     */
     public static void clearProperty (String key) {
@@ -189,7 +189,7 @@ public class  SystemProperties {
 
         Hashtable props = sysprop_list;
         final String prefix = "javafx.";
-        
+
         // Remove "javafx." prefix from the key
         if (key.startsWith(prefix.toString())) {
             key = key.substring(prefix.length());
@@ -212,21 +212,21 @@ public class  SystemProperties {
 
     /**
      * Adds a new JavaFX specific property or modifyies existing property value.
-     * Note that there is no method in this class to set underlying platform 
+     * Note that there is no method in this class to set underlying platform
      * property as MIDP doesn't support System.setProperty() method.
      * @param key JavaFX Property name
      * @param value Property value
      * @throws NullPointerException if key or value is null
      */
     public static void setFXProperty (String key, final String value) {
-        
+
         Hashtable props = sysprop_list;
-        final String prefix = "javafx."; 
-        
+        final String prefix = "javafx.";
+
         // Remove "javafx." prefix from the key
         if (key.startsWith(prefix)) {
             key = key.substring(prefix.length());
-       
+
            String k = (String)props.get(key);
            // Add new property to the list
            if (k == null) {
@@ -240,7 +240,7 @@ public class  SystemProperties {
                if (codebase.equals(prefix+key))
                    codebase_value = value;
            }
-        } 
+        }
     }
 
     public static boolean isDebug() {

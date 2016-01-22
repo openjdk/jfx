@@ -22,7 +22,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #import "config.h"
@@ -169,7 +169,7 @@ static Class lookupElementClass(const QualifiedName& tag)
     // Do a special lookup to ignore element prefixes
     if (tag.hasPrefix())
         return elementClassMap->get(QualifiedName(nullAtom, tag.localName(), tag.namespaceURI()).impl());
-    
+
     return elementClassMap->get(tag.impl());
 }
 
@@ -200,7 +200,7 @@ static WKQuad wkQuadFromFloatQuad(const FloatQuad& inQuad)
     theQuad.p2 = inQuad.p2();
     theQuad.p3 = inQuad.p3();
     theQuad.p4 = inQuad.p4();
-    
+
     return theQuad;
 }
 
@@ -256,10 +256,10 @@ static inline WKQuad emptyQuad()
 {
     float left      = WebCore::min4(_quad.p1.x, _quad.p2.x, _quad.p3.x, _quad.p4.x);
     float top       = WebCore::min4(_quad.p1.y, _quad.p2.y, _quad.p3.y, _quad.p4.y);
-    
+
     float right     = WebCore::max4(_quad.p1.x, _quad.p2.x, _quad.p3.x, _quad.p4.x);
     float bottom    = WebCore::max4(_quad.p1.y, _quad.p2.y, _quad.p3.y, _quad.p4.y);
-    
+
     return CGRectMake(left, top, right - left, bottom - top);
 }
 
@@ -394,7 +394,7 @@ id <DOMEventTarget> kit(WebCore::EventTarget* eventTarget)
 
         if (quads.size() == 0)
             return WebCore::emptyQuad();
-        
+
         if (quads.size() == 1)
             return wkQuadFromFloatQuad(quads[0]);
 
@@ -434,13 +434,13 @@ id <DOMEventTarget> kit(WebCore::EventTarget* eventTarget)
 - (Element *)_linkElement
 {
     WebCore::Node* node = core(self);
-    
+
     while (node) {
         if (node->isLink())
             return static_cast<WebCore::Element*>(node);
         node = node->parentNode();
     }
-    
+
     return 0;
 }
 
@@ -449,43 +449,43 @@ id <DOMEventTarget> kit(WebCore::EventTarget* eventTarget)
     Element *link= [self _linkElement];
     if (link)
         return link->document().completeURL(stripLeadingAndTrailingHTMLSpaces(link->getAttribute(HTMLNames::hrefAttr)));
-    
+
     return nil;
 }
 
 - (NSString *)hrefTarget
 {
     Element *target = [self _linkElement];
-    
+
     if(target) return target->getAttribute(HTMLNames::targetAttr);
-    
+
     return nil;
 }
 
 - (CGRect)hrefFrame
 {
     RenderObject *renderer = [self _linkElement]->renderer();
-    
+
     if(renderer) return renderer->absoluteBoundingBoxRect();
-    
+
     return NSZeroRect;
 }
 
 - (NSString *)hrefLabel
 {
     Element *link= [self _linkElement];
-    
+
     if (!link) return nil;
-    
+
     return link->textContent();
 }
 
 - (NSString *)hrefTitle
 {
     Element *link= [self _linkElement];
-    
+
     if (!link) return nil;
-    
+
     return link->document().displayStringModifiedByEncoding(static_cast<HTMLElement *>(link)->title());
 }
 
@@ -726,7 +726,7 @@ id <DOMEventTarget> kit(WebCore::EventTarget* eventTarget)
         frameView->setFixedLayoutSize(IntSize(layoutHeight, layoutWidth));
         frameView->setUseFixedLayout(true);
     }
-        
+
     bool result = [self _mediaQueryMatches];
 
     frameView->setFixedLayoutSize(savedFixedLayoutSize);
@@ -806,10 +806,10 @@ DOMNodeFilter *kit(WebCore::NodeFilter* impl)
 {
     if (!impl)
         return nil;
-    
+
     if (DOMNodeFilter *wrapper = getDOMWrapper(impl))
         return [[wrapper retain] autorelease];
-    
+
     DOMNodeFilter *wrapper = [[DOMNodeFilter alloc] _init];
     wrapper->_internal = reinterpret_cast<DOMObjectInternal*>(impl);
     impl->ref();

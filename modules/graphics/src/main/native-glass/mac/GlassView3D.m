@@ -88,7 +88,7 @@
             kCGLPFAColorSize, 32,
             kCGLPFAAlphaSize, 8,
             kCGLPFADepthSize, depth,
-	    kCGLPFAAllowOfflineRenderers, // lets OpenGL know this context is offline renderer aware
+        kCGLPFAAllowOfflineRenderers, // lets OpenGL know this context is offline renderer aware
             (CGLPixelFormatAttribute)0
         };
         GLint npix = 0;
@@ -131,7 +131,7 @@
             GLASS_CHECK_EXCEPTION(env);
         }
     }
-    
+
     CGLContextObj sharedCGL = NULL;
     if (jproperties != NULL)
     {
@@ -149,7 +149,7 @@
             }
         }
     }
-    
+
     CGLContextObj clientCGL = NULL;
     BOOL isSwPipe = NO;
 
@@ -224,11 +224,11 @@
     if (self != nil)
     {
         [self _initialize3dWithJproperties:jproperties];
-        
+
         self->_delegate = [[GlassViewDelegate alloc] initWithView:self withJview:jView];
         self->_drawCounter = 0;
         self->_texture = 0;
-        
+
         self->_trackingArea = [[NSTrackingArea alloc] initWithRect:frame
                                                            options:(NSTrackingMouseMoved | NSTrackingActiveAlways | NSTrackingInVisibleRect)
                                                              owner:self userInfo:nil];
@@ -251,18 +251,18 @@
         }
         [[layer getPainterOffscreen] unbind];
     }
-    
+
     [[self layer] release];
     [self->_delegate release];
     self->_delegate = nil;
-    
+
     [self removeTrackingArea: self->_trackingArea];
     [self->_trackingArea release];
     self->_trackingArea = nil;
 
     [self->nsAttrBuffer release];
     self->nsAttrBuffer = nil;
-    
+
     [super dealloc];
 }
 
@@ -482,10 +482,10 @@
              uch == com_sun_glass_events_KeyEvent_VK_EQUALS))
         {
             GET_MAIN_JENV;
-            
+
             jcharArray jKeyChars = GetJavaKeyChars(env, theEvent);
             jint jModifiers = GetJavaModifiers(theEvent);
-            
+
             (*env)->CallVoidMethod(env, self->_delegate->jView, jViewNotifyKey,
                                    com_sun_glass_events_KeyEvent_PRESS,
                                    uch, jKeyChars, jModifiers);
@@ -496,7 +496,7 @@
                                    com_sun_glass_events_KeyEvent_RELEASE,
                                    uch, jKeyChars, jModifiers);
             (*env)->DeleteLocalRef(env, jKeyChars);
-            
+
             GLASS_CHECK_EXCEPTION(env);
             [fsWindow release];
             return YES;
@@ -513,7 +513,7 @@
     [GlassApplication registerKeyEvent:theEvent];
 
     if (![[self inputContext] handleEvent:theEvent] || shouldProcessKeyEvent) {
-        [self->_delegate sendJavaKeyEvent:theEvent isDown:YES]; 
+        [self->_delegate sendJavaKeyEvent:theEvent isDown:YES];
     }
     shouldProcessKeyEvent = YES;
 }
@@ -546,7 +546,7 @@
 {
     DNDLOG("performDragOperation");
     [self->_delegate sendJavaDndEvent:sender type:com_sun_glass_events_DndEvent_PERFORM];
-    
+
     return YES;
 }
 
@@ -603,7 +603,7 @@
 {
     LOG("begin");
     assert(self->_drawCounter >= 0);
-    
+
     if (self->_drawCounter == 0)
     {
         GlassLayer3D *layer = (GlassLayer3D*)[self layer];
@@ -617,7 +617,7 @@
 - (void)end
 {
     assert(self->_drawCounter > 0);
-    
+
     self->_drawCounter--;
     if (self->_drawCounter == 0)
     {
@@ -636,20 +636,20 @@
 - (void)pushPixels:(void*)pixels withWidth:(GLuint)width withHeight:(GLuint)height withScale:(GLfloat)scale withEnv:(JNIEnv *)env
 {
     assert(self->_drawCounter > 0);
-    
+
     if (self->_texture == 0)
     {
         glGenTextures(1, &self->_texture);
     }
-    
+
     BOOL uploaded = NO;
     if ((self->_textureWidth != width) || (self->_textureHeight != height))
     {
         uploaded = YES;
-        
+
         self->_textureWidth = width;
         self->_textureHeight = height;
-        
+
         // GL_EXT_texture_rectangle is defined in OS X 10.6 GL headers, so we can depend on GL_TEXTURE_RECTANGLE_EXT being available
         glBindTexture(GL_TEXTURE_RECTANGLE_EXT, self->_texture);
         glTexParameteri(GL_TEXTURE_RECTANGLE_EXT, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
@@ -658,7 +658,7 @@
         glTexParameteri(GL_TEXTURE_RECTANGLE_EXT, GL_TEXTURE_WRAP_T, GL_CLAMP);
         glTexImage2D(GL_TEXTURE_RECTANGLE_EXT, 0, GL_RGBA8, (GLsizei)self->_textureWidth, (GLsizei)self->_textureHeight, 0, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8_REV, pixels);
     }
-    
+
     glEnable(GL_TEXTURE_RECTANGLE_EXT);
     glBindTexture(GL_TEXTURE_RECTANGLE_EXT, self->_texture);
     {
@@ -666,10 +666,10 @@
         {
             glTexSubImage2D(GL_TEXTURE_RECTANGLE_EXT, 0, 0, 0, (GLsizei)self->_textureWidth, (GLsizei)self->_textureHeight, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8_REV, pixels);
         }
-        
+
         GLfloat w = self->_textureWidth;
         GLfloat h = self->_textureHeight;
-        
+
         NSSize size = [self bounds].size;
         size.width *= scale;
         size.height *= scale;
@@ -678,7 +678,7 @@
             // This could happen on live resize, clear the FBO to avoid rendering garbage
             glClear(GL_COLOR_BUFFER_BIT);
         }
-        
+
         glMatrixMode(GL_PROJECTION);
         glPushMatrix();
         glLoadIdentity();
@@ -689,7 +689,7 @@
             glLoadIdentity();
             {
                 glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE); // copy
-                
+
                 glBegin(GL_QUADS);
                 {
                     glTexCoord2f(0.0f, 0.0f); glVertex2f(0.0f, 0.0f);
@@ -707,7 +707,7 @@
     }
     glBindTexture(GL_TEXTURE_RECTANGLE_EXT, 0);
     glDisable(GL_TEXTURE_RECTANGLE_EXT);
-    
+
     glFinish();
 
     // The layer will be notified about redraw in _end()
@@ -740,7 +740,7 @@
 - (void) insertText:(id)aString replacementRange:(NSRange)replacementRange
 {
     IMLOG("insertText called with string: %s", [aString UTF8String]);
-    if ([self->nsAttrBuffer length] > 0 || [aString length] > 1) { 
+    if ([self->nsAttrBuffer length] > 0 || [aString length] > 1) {
         [self->_delegate notifyInputMethod:aString attr:4 length:(int)[aString length] cursor:(int)[aString length] selectedRange: NSMakeRange(NSNotFound, 0)];
         self->shouldProcessKeyEvent = NO;
     } else {
@@ -760,7 +760,7 @@
     NSString *incomingString = (isAttributedString ? [aString string] : aString);
     IMLOG("setMarkedText called, attempt to set string to %s", [incomingString UTF8String]);
     [self->_delegate notifyInputMethod:incomingString attr:1 length:0 cursor:(int)[incomingString length] selectedRange:selectionRange ];
-    self->nsAttrBuffer = (attrString == nil ? [self->nsAttrBuffer initWithString:incomingString] 
+    self->nsAttrBuffer = (attrString == nil ? [self->nsAttrBuffer initWithString:incomingString]
                                             : [self->nsAttrBuffer initWithAttributedString: attrString]);
     self->shouldProcessKeyEvent = NO;
 }
@@ -794,7 +794,7 @@
 
 - (NSAttributedString *) attributedSubstringForProposedRange:(NSRange)theRange actualRange:(NSRangePointer)actualRange
 {
-    IMLOG("attributedSubstringFromRange called: location=%lu, length=%lu", 
+    IMLOG("attributedSubstringFromRange called: location=%lu, length=%lu",
             (unsigned long)theRange.location, (unsigned long)theRange.length);
     if (self->imEnabled) {
         return self->nsAttrBuffer;

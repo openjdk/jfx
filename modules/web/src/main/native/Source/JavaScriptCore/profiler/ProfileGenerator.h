@@ -22,7 +22,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
- 
+
 #ifndef ProfileGenerator_h
 #define ProfileGenerator_h
 
@@ -37,7 +37,7 @@ namespace JSC {
     class JSGlobalObject;
     class Profile;
     class ProfileNode;
-    struct CallIdentifier;    
+    struct CallIdentifier;
 
     class ProfileGenerator : public RefCounted<ProfileGenerator>  {
     public:

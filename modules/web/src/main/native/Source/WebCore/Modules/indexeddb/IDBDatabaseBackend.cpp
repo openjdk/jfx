@@ -47,7 +47,7 @@ PassRefPtr<IDBDatabaseBackend> IDBDatabaseBackend::create(const String& name, co
 {
     RefPtr<IDBDatabaseBackend> backend = adoptRef(new IDBDatabaseBackend(name, uniqueIdentifier, factory, serverConnection));
     backend->openInternalAsync();
-    
+
     return backend.release();
 }
 

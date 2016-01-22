@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "JSNode.h"
@@ -40,7 +40,7 @@ static JSValueRef JSNodeList_item(JSContextRef context, JSObjectRef object, JSOb
         if (node)
             return JSNode_new(context, node);
     }
-    
+
     return JSValueMakeUndefined(context);
 }
 
@@ -53,7 +53,7 @@ static JSValueRef JSNodeList_length(JSContextRef context, JSObjectRef thisObject
 {
     UNUSED_PARAM(propertyName);
     UNUSED_PARAM(exception);
-    
+
     NodeList* nodeList = JSObjectGetPrivate(thisObject);
     ASSERT(nodeList);
     return JSValueMakeNumber(context, NodeList_length(nodeList));
@@ -75,7 +75,7 @@ static JSValueRef JSNodeList_getProperty(JSContextRef context, JSObjectRef thisO
         if (node)
             return JSNode_new(context, node);
     }
-    
+
     return NULL;
 }
 
@@ -85,7 +85,7 @@ static void JSNodeList_initialize(JSContextRef context, JSObjectRef thisObject)
 
     NodeList* nodeList = JSObjectGetPrivate(thisObject);
     ASSERT(nodeList);
-    
+
     NodeList_ref(nodeList);
 }
 
@@ -112,7 +112,7 @@ static JSClassRef JSNodeList_class(JSContextRef context)
 
         jsClass = JSClassCreate(&definition);
     }
-    
+
     return jsClass;
 }
 

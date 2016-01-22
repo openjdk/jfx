@@ -178,7 +178,7 @@ gboolean     gst_video_info_convert     (GstVideoInfo *info,
                                          GstFormat     dest_format,
                                          gint64       *dest_value);
 gboolean     gst_video_info_is_equal    (const GstVideoInfo *info,
-					 const GstVideoInfo *other);
+                     const GstVideoInfo *other);
 
 #include <gst/video/video.h>
 

@@ -39,7 +39,7 @@ class ReverbAccumulationBuffer;
 class ReverbConvolver;
 class FFTConvolver;
 class DirectConvolver;
-    
+
 // A ReverbConvolverStage represents the convolution associated with a sub-section of a large impulse response.
 // It incorporates a delay line to account for the offset of the sub-section within the larger impulse response.
 class ReverbConvolverStage {

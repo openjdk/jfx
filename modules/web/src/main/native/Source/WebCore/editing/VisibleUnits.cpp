@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -62,7 +62,7 @@ static Node* nextLeafWithSameEditability(Node* node, EditableType editableType =
 {
     if (!node)
         return nullptr;
-    
+
     bool editable = node->hasEditableStyle(editableType);
     node = nextLeafNode(node);
     while (node) {
@@ -88,7 +88,7 @@ static Position previousRootInlineBoxCandidatePosition(Node* node, const Visible
 
         Position pos = previousNode->hasTagName(brTag) ? positionBeforeNode(previousNode) :
             createLegacyEditingPosition(previousNode, caretMaxOffset(previousNode));
-        
+
         if (pos.isCandidate())
             return pos;
 
@@ -110,7 +110,7 @@ static Position nextRootInlineBoxCandidatePosition(Node* node, const VisiblePosi
 
         Position pos;
         pos = createLegacyEditingPosition(nextNode, caretMinOffset(nextNode));
-        
+
         if (pos.isCandidate())
             return pos;
 
@@ -344,7 +344,7 @@ static bool islogicalEndOfWord(TextBreakIterator* iter, int position, bool hardL
 
 enum CursorMovementDirection { MoveLeft, MoveRight };
 
-static VisiblePosition visualWordPosition(const VisiblePosition& visiblePosition, CursorMovementDirection direction, 
+static VisiblePosition visualWordPosition(const VisiblePosition& visiblePosition, CursorMovementDirection direction,
     bool skipsSpaceWhenMovingRight)
 {
     if (visiblePosition.isNull())
@@ -359,14 +359,14 @@ static VisiblePosition visualWordPosition(const VisiblePosition& visiblePosition
     Vector<UChar, 1024> string;
 
     while (1) {
-        VisiblePosition adjacentCharacterPosition = direction == MoveRight ? current.right(true) : current.left(true); 
+        VisiblePosition adjacentCharacterPosition = direction == MoveRight ? current.right(true) : current.left(true);
         if (adjacentCharacterPosition == current || adjacentCharacterPosition.isNull())
             return VisiblePosition();
-    
+
         InlineBox* box;
         int offsetInBox;
         adjacentCharacterPosition.deepEquivalent().getInlineBoxAndOffset(UPSTREAM, box, offsetInBox);
-    
+
         if (!box)
             break;
         if (!box->isInlineTextBox()) {
@@ -405,11 +405,11 @@ static VisiblePosition visualWordPosition(const VisiblePosition& visiblePosition
         } else {
             bool logicalEndInRenderer = offsetInBox == static_cast<int>(textBox->start() + textBox->len()) && nextBoxInDifferentBlock;
             isWordBreak = islogicalEndOfWord(iter, offsetInIterator, logicalEndInRenderer);
-        }      
+        }
 
         if (isWordBreak)
             return adjacentCharacterPosition;
-    
+
         current = adjacentCharacterPosition;
     }
     return VisiblePosition();
@@ -419,7 +419,7 @@ VisiblePosition leftWordPosition(const VisiblePosition& visiblePosition, bool sk
 {
     VisiblePosition leftWordBreak = visualWordPosition(visiblePosition, MoveLeft, skipsSpaceWhenMovingRight);
     leftWordBreak = visiblePosition.honorEditingBoundaryAtOrBefore(leftWordBreak);
-    
+
     // FIXME: How should we handle a non-editable position?
     if (leftWordBreak.isNull() && isEditablePosition(visiblePosition.deepEquivalent())) {
         TextDirection blockDirection = directionOfEnclosingBlock(visiblePosition.deepEquivalent());
@@ -493,7 +493,7 @@ static VisiblePosition previousBoundary(const VisiblePosition& c, BoundarySearch
     Position start = createLegacyEditingPosition(boundary, 0).parentAnchoredEquivalent();
     Position end = pos.parentAnchoredEquivalent();
     RefPtr<Range> searchRange = Range::create(boundaryDocument);
-    
+
     Vector<UChar, 1024> string;
     unsigned suffixLength = 0;
 
@@ -527,7 +527,7 @@ static VisiblePosition previousBoundary(const VisiblePosition& c, BoundarySearch
     while (!it.atEnd()) {
         bool inTextSecurityMode = it.node() && it.node()->renderer() && it.node()->renderer()->style().textSecurity() != TSNONE;
         // iterate to get chunks until the searchFunction returns a non-zero value.
-        if (!inTextSecurityMode) 
+        if (!inTextSecurityMode)
             prepend(string, it.text());
         else {
             // Treat bullets used in the text security mode as regular characters when looking for boundaries
@@ -619,7 +619,7 @@ static VisiblePosition nextBoundary(const VisiblePosition& c, BoundarySearchFunc
         next = searchFunction(StringView(string.data(), string.size()), prefixLength, DontHaveMoreContext, needMoreContext);
         ASSERT(!needMoreContext);
     }
-    
+
     if (it.atEnd() && next == string.size())
         pos = it.range()->startPosition();
     else if (next > prefixLength) {
@@ -628,7 +628,7 @@ static VisiblePosition nextBoundary(const VisiblePosition& c, BoundarySearchFunc
         charIt.advance(next - prefixLength - 1);
         RefPtr<Range> characterRange = charIt.range();
         pos = characterRange->endPosition();
-        
+
         if (charIt.text()[0] == '\n') {
             // FIXME: workaround for collapsed range (where only start position is correct) emitted for some emitted newlines (see rdar://5192593)
             VisiblePosition visPos = VisiblePosition(pos);
@@ -668,7 +668,7 @@ VisiblePosition startOfWord(const VisiblePosition& c, EWordSide side)
         // at paragraph end, the startofWord is the current position
         if (isEndOfParagraph(c))
             return c;
-        
+
         p = c.next();
         if (p.isNull())
             return c;
@@ -695,13 +695,13 @@ VisiblePosition endOfWord(const VisiblePosition& c, EWordSide side)
     if (side == LeftWordIfOnBoundary) {
         if (isStartOfParagraph(c))
             return c;
-            
+
         p = c.previous();
         if (p.isNull())
             return c;
     } else if (isEndOfParagraph(c))
         return c;
-    
+
     return nextBoundary(p, endWordBoundary);
 }
 
@@ -844,7 +844,7 @@ static VisiblePosition endPositionForLine(const VisiblePosition& c, LineEndpoint
             endNode = endBox->renderer().nonPseudoNode();
             if (endNode)
                 break;
-            
+
             endBox = endBox->prevLeafChild();
         }
     }
@@ -860,7 +860,7 @@ static VisiblePosition endPositionForLine(const VisiblePosition& c, LineEndpoint
         pos = Position(toText(endNode), endOffset);
     } else
         pos = positionAfterNode(endNode);
-    
+
     return VisiblePosition(pos, VP_UPSTREAM_IF_POSSIBLE);
 }
 
@@ -877,7 +877,7 @@ static VisiblePosition endOfLine(const VisiblePosition& c, LineEndpointComputati
 
     if (mode == UseLogicalOrdering) {
         // Make sure the end of line is at the same line as the given input position. For a wrapping line, the logical end
-        // position for the not-last-2-lines might incorrectly hand back the logical beginning of the next line. 
+        // position for the not-last-2-lines might incorrectly hand back the logical beginning of the next line.
         // For example, <div contenteditable dir="rtl" style="line-break:before-white-space">abcdefg abcdefg abcdefg
         // a abcdefg abcdefg abcdefg abcdefg abcdefg abcdefg abcdefg abcdefg abcdefg abcdefg </div>
         // In this case, use the previous position of the computed logical end position.
@@ -892,18 +892,18 @@ static VisiblePosition endOfLine(const VisiblePosition& c, LineEndpointComputati
         return c.honorEditingBoundaryAtOrAfter(visPos);
     }
 
-    // Make sure the end of line is at the same line as the given input position. Else use the previous position to 
-    // obtain end of line. This condition happens when the input position is before the space character at the end 
+    // Make sure the end of line is at the same line as the given input position. Else use the previous position to
+    // obtain end of line. This condition happens when the input position is before the space character at the end
     // of a soft-wrapped non-editable line. In this scenario, endPositionForLine would incorrectly hand back a position
     // in the next line instead. This fix is to account for the discrepancy between lines with webkit-line-break:after-white-space style
-    // versus lines without that style, which would break before a space by default. 
+    // versus lines without that style, which would break before a space by default.
     if (!inSameLine(c, visPos)) {
         visPos = c.previous();
         if (visPos.isNull())
             return VisiblePosition();
         visPos = endPositionForLine(visPos, UseInlineBoxOrdering);
     }
-    
+
     return c.honorEditingBoundaryAtOrAfter(visPos);
 }
 
@@ -953,9 +953,9 @@ VisiblePosition previousLinePosition(const VisiblePosition& visiblePosition, int
 
     if (!node)
         return VisiblePosition();
-    
+
     node->document().updateLayoutIgnorePendingStylesheets();
-    
+
     RenderObject* renderer = node->renderer();
     if (!renderer)
         return VisiblePosition();
@@ -981,7 +981,7 @@ VisiblePosition previousLinePosition(const VisiblePosition& visiblePosition, int
                 return position;
         }
     }
-    
+
     if (root) {
         // FIXME: Can be wrong for multi-column layout and with transforms.
         IntPoint pointInLine = absoluteLineDirectionPointToLocalPointInBlock(*root, lineDirectionPoint);
@@ -991,7 +991,7 @@ VisiblePosition previousLinePosition(const VisiblePosition& visiblePosition, int
             return positionInParentBeforeNode(node);
         return renderer.positionForPoint(pointInLine);
     }
-    
+
     // Could not find a previous line. This means we must already be on the first line.
     // Move to the start of the content in this block, which effectively moves us
     // to the start of the line we're on.
@@ -1008,7 +1008,7 @@ VisiblePosition nextLinePosition(const VisiblePosition& visiblePosition, int lin
 
     if (!node)
         return VisiblePosition();
-    
+
     node->document().updateLayoutIgnorePendingStylesheets();
 
     RenderObject* renderer = node->renderer();
@@ -1039,7 +1039,7 @@ VisiblePosition nextLinePosition(const VisiblePosition& visiblePosition, int lin
                 return position;
         }
     }
-    
+
     if (root) {
         // FIXME: Can be wrong for multi-column layout and with transforms.
         IntPoint pointInLine = absoluteLineDirectionPointToLocalPointInBlock(*root, lineDirectionPoint);
@@ -1114,7 +1114,7 @@ VisiblePosition startOfParagraph(const VisiblePosition& c, EditingBoundaryCrossi
 
     if (!startNode)
         return VisiblePosition();
-    
+
     if (isRenderedAsNonInlineTableImageOrHR(startNode))
         return positionBeforeNode(startNode);
 
@@ -1149,7 +1149,7 @@ VisiblePosition startOfParagraph(const VisiblePosition& c, EditingBoundaryCrossi
             n = NodeTraversal::previousPostOrder(n, startBlock);
             continue;
         }
-        
+
         if (r->isBR() || isBlock(n))
             break;
 
@@ -1187,7 +1187,7 @@ VisiblePosition startOfParagraph(const VisiblePosition& c, EditingBoundaryCrossi
 }
 
 VisiblePosition endOfParagraph(const VisiblePosition& c, EditingBoundaryCrossingRule boundaryCrossingRule)
-{    
+{
     if (c.isNull())
         return VisiblePosition();
 
@@ -1196,10 +1196,10 @@ VisiblePosition endOfParagraph(const VisiblePosition& c, EditingBoundaryCrossing
 
     if (isRenderedAsNonInlineTableImageOrHR(startNode))
         return positionAfterNode(startNode);
-    
+
     Node* startBlock = enclosingBlock(startNode);
     Node* stayInsideBlock = startBlock;
-    
+
     Node* node = startNode;
     Node* highestRoot = highestEditableRoot(p);
     int offset = p.deprecatedEditingOffset();
@@ -1230,7 +1230,7 @@ VisiblePosition endOfParagraph(const VisiblePosition& c, EditingBoundaryCrossing
             n = NodeTraversal::next(n, stayInsideBlock);
             continue;
         }
-        
+
         if (r->isBR() || isBlock(n))
             break;
 
@@ -1356,7 +1356,7 @@ VisiblePosition startOfDocument(const Node* node)
 {
     if (!node || !node->document().documentElement())
         return VisiblePosition();
-    
+
 #if PLATFORM(IOS)
     // The canonicalization of the position at (documentElement, 0) can turn the visible
     // position to null, even when there's a valid candidate to be had, because the root HTML element
@@ -1380,7 +1380,7 @@ VisiblePosition endOfDocument(const Node* node)
 {
     if (!node || !node->document().documentElement())
         return VisiblePosition();
-    
+
 #if PLATFORM(IOS)
     // (As above, in startOfDocument.)  The canonicalization can reject valid visible positions
     // when descending from the root element, so we construct the visible position directly from a
@@ -1531,13 +1531,13 @@ bool withinTextUnitOfGranularity(const VisiblePosition& vp, TextGranularity gran
 
     VisiblePosition prevBoundary;
     VisiblePosition nextBoundary;
-    
+
     switch (granularity) {
     case WordGranularity:
         // Note that "Left" and "Right" in this context apparently mean "upstream/previous" and "downstream/next".
         prevBoundary = startOfWord(vp, (useDownstream ? RightWordIfOnBoundary : LeftWordIfOnBoundary));
         nextBoundary = endOfWord(vp, (useDownstream ? RightWordIfOnBoundary : LeftWordIfOnBoundary));
-    
+
         // Workaround for <rdar://problem/7259611> Word boundary code on iPhone gives different results than desktop
         if (endOfWord(prevBoundary, RightWordIfOnBoundary) != nextBoundary)
             return false;
@@ -1593,7 +1593,7 @@ static VisiblePosition nextWordBoundaryInDirection(const VisiblePosition& vp, Se
     bool useDownstream = directionIsDownstream(direction);
     bool withinUnitOfGranularity = withinTextUnitOfGranularity(vp, WordGranularity, direction);
     VisiblePosition result;
-    
+
     if (useDownstream) {
         if (withinUnitOfGranularity)
             result = endOfWord(vp, RightWordIfOnBoundary);
@@ -1655,10 +1655,10 @@ static VisiblePosition nextWordBoundaryInDirection(const VisiblePosition& vp, Se
             }
         }
     }
-    
+
     if (result == vp)
         return VisiblePosition();
-    
+
     return result;
 }
 

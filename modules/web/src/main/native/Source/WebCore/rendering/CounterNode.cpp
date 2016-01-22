@@ -290,7 +290,7 @@ void CounterNode::insertAfter(CounterNode* newChild, CounterNode* refChild, cons
             m_lastChild = last;
 
         first->m_previousSibling = newChild;
-    
+
         // The case when the original next sibling of the inserted node becomes a child of
         // one of the former children of the inserted node is not handled as it is believed
         // to be impossible since:
@@ -332,7 +332,7 @@ void CounterNode::removeChild(CounterNode* oldChild)
     oldChild->m_previousSibling = 0;
     oldChild->m_parent = 0;
 
-    if (previous) 
+    if (previous)
         previous->m_nextSibling = next;
     else {
         ASSERT(m_firstChild == oldChild);

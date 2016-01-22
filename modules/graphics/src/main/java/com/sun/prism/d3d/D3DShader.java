@@ -128,10 +128,10 @@ final class D3DShader extends D3DResource implements Shader {
     public void setConstants(String name, IntBuffer buf, int off, int count) {
         // NOTE: see HLSLBackend for an explanation of why we need to use
         // floats instead of ints; for now this codepath is disabled...
-        //setConstantsI(pData, getRegister(name), buf, off, count);       
+        //setConstantsI(pData, getRegister(name), buf, off, count);
         throw new InternalError("Not yet implemented");
     }
-    
+
     private static void checkTmpFloatBuf() {
         if (ftmp == null) {
             ftmp = BufferUtil.newFloatBuffer(4);
@@ -174,7 +174,7 @@ final class D3DShader extends D3DResource implements Shader {
                                      d3dResRecord.getResource(),
                                      getRegister(name), buf, off, count);
             valid &= res >= 0;
-            d3dResRecord.getContext().validate(res);       
+            d3dResRecord.getContext().validate(res);
     }
 
     private int getRegister(String name) {

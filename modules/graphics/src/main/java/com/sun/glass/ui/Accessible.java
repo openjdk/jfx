@@ -91,7 +91,7 @@ public abstract class Accessible {
         return role == AccessibleRole.NODE || role == AccessibleRole.PARENT;
     }
 
-    protected abstract long getNativeAccessible(); 
+    protected abstract long getNativeAccessible();
 
     protected Accessible getAccessible(Scene scene) {
         if (scene == null) return null;

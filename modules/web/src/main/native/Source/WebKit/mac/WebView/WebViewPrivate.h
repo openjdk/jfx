@@ -6,13 +6,13 @@
  * are met:
  *
  * 1.  Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer. 
+ *     notice, this list of conditions and the following disclaimer.
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
- *     documentation and/or other materials provided with the distribution. 
+ *     documentation and/or other materials provided with the distribution.
  * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
- *     from this software without specific prior written permission. 
+ *     from this software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY APPLE AND ITS CONTRIBUTORS "AS IS" AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
@@ -211,28 +211,28 @@ typedef enum {
 @method setScriptDebugDelegate:
 @abstract Set the WebView's WebScriptDebugDelegate delegate.
 @param delegate The WebScriptDebugDelegate to set as the delegate.
-*/    
+*/
 - (void)setScriptDebugDelegate:(id)delegate;
 
 /*!
 @method scriptDebugDelegate
 @abstract Return the WebView's WebScriptDebugDelegate.
 @result The WebView's WebScriptDebugDelegate.
-*/    
+*/
 - (id)scriptDebugDelegate;
 
 /*!
     @method setHistoryDelegate:
     @abstract Set the WebView's WebHistoryDelegate delegate.
     @param delegate The WebHistoryDelegate to set as the delegate.
-*/    
+*/
 - (void)setHistoryDelegate:(id)delegate;
 
 /*!
     @method historyDelegate
     @abstract Return the WebView's WebHistoryDelegate delegate.
     @result The WebView's WebHistoryDelegate delegate.
-*/    
+*/
 - (id)historyDelegate;
 
 - (BOOL)shouldClose;
@@ -264,13 +264,13 @@ typedef enum {
     @method setPageSizeMultiplier:
     @abstract Change the zoom factor of the page in views managed by this webView.
     @param multiplier A fractional percentage value, 1.0 is 100%.
-*/    
+*/
 - (void)setPageSizeMultiplier:(float)multiplier;
 
 /*!
     @method pageSizeMultiplier
     @result The page size multipler.
-*/    
+*/
 - (float)pageSizeMultiplier;
 
 // Commands for doing page zoom.  Will end up in WebView (WebIBActions) <NSUserInterfaceValidations>
@@ -922,7 +922,7 @@ Could be worth adding to the API.
 /*!
     @method _adjustPrintingMarginsForHeaderAndFooter:
     @abstract Increase the top and bottom margins for the current print operation to
-    account for the header and footer height. 
+    account for the header and footer height.
     @discussion Called by <WebDocument> implementors once when a print job begins. If the
     <WebDocument> implementor implements knowsPageRange:, this should be called from there.
     Otherwise this should be called from beginDocument. The <WebDocument> implementors need
@@ -933,7 +933,7 @@ Could be worth adding to the API.
 /*!
     @method _drawHeaderAndFooter
     @abstract Gives the WebView's UIDelegate a chance to draw a header and footer on the
-    printed page. 
+    printed page.
     @discussion This should be called by <WebDocument> implementors from an override of
     drawPageBorderWithSize:.
 */

@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef BitVector_h
@@ -57,32 +57,32 @@ namespace WTF {
 // space.
 
 class BitVector {
-public: 
+public:
     BitVector()
         : m_bitsOrPointer(makeInlineBits(0))
     {
     }
-    
+
     explicit BitVector(size_t numBits)
         : m_bitsOrPointer(makeInlineBits(0))
     {
         ensureSize(numBits);
     }
-    
+
     BitVector(const BitVector& other)
         : m_bitsOrPointer(makeInlineBits(0))
     {
         (*this) = other;
     }
 
-    
+
     ~BitVector()
     {
         if (isInline())
             return;
         OutOfLineBits::destroy(outOfLineBits());
     }
-    
+
     BitVector& operator=(const BitVector& other)
     {
         if (isInline() && other.isInline())
@@ -105,10 +105,10 @@ public:
             return;
         resizeOutOfLine(numBits);
     }
-    
+
     // Like ensureSize(), but supports reducing the size of the bitvector.
     WTF_EXPORT_PRIVATE void resize(size_t numBits);
-    
+
     WTF_EXPORT_PRIVATE void clearAll();
 
     bool quickGet(size_t bit) const
@@ -116,19 +116,19 @@ public:
         ASSERT_WITH_SECURITY_IMPLICATION(bit < size());
         return !!(bits()[bit / bitsInPointer()] & (static_cast<uintptr_t>(1) << (bit & (bitsInPointer() - 1))));
     }
-    
+
     void quickSet(size_t bit)
     {
         ASSERT_WITH_SECURITY_IMPLICATION(bit < size());
         bits()[bit / bitsInPointer()] |= (static_cast<uintptr_t>(1) << (bit & (bitsInPointer() - 1)));
     }
-    
+
     void quickClear(size_t bit)
     {
         ASSERT_WITH_SECURITY_IMPLICATION(bit < size());
         bits()[bit / bitsInPointer()] &= ~(static_cast<uintptr_t>(1) << (bit & (bitsInPointer() - 1)));
     }
-    
+
     void quickSet(size_t bit, bool value)
     {
         if (value)
@@ -136,14 +136,14 @@ public:
         else
             quickClear(bit);
     }
-    
+
     bool get(size_t bit) const
     {
         if (bit >= size())
             return false;
         return quickGet(bit);
     }
-    
+
     void set(size_t bit)
     {
         ensureSize(bit + 1);
@@ -162,7 +162,7 @@ public:
             return;
         quickClear(bit);
     }
-    
+
     void set(size_t bit, bool value)
     {
         if (value)
@@ -170,7 +170,7 @@ public:
         else
             clear(bit);
     }
-    
+
     void merge(const BitVector& other)
     {
         if (!isInline() || !other.isInline()) {
@@ -180,7 +180,7 @@ public:
         m_bitsOrPointer |= other.m_bitsOrPointer;
         ASSERT(isInline());
     }
-    
+
     void filter(const BitVector& other)
     {
         if (!isInline() || !other.isInline()) {
@@ -190,7 +190,7 @@ public:
         m_bitsOrPointer &= other.m_bitsOrPointer;
         ASSERT(isInline());
     }
-    
+
     void exclude(const BitVector& other)
     {
         if (!isInline() || !other.isInline()) {
@@ -201,41 +201,41 @@ public:
         m_bitsOrPointer |= (static_cast<uintptr_t>(1) << maxInlineBits());
         ASSERT(isInline());
     }
-    
+
     size_t bitCount() const
     {
         if (isInline())
             return bitCount(cleanseInlineBits(m_bitsOrPointer));
         return bitCountSlow();
     }
-    
+
     WTF_EXPORT_PRIVATE void dump(PrintStream& out) const;
-    
+
     enum EmptyValueTag { EmptyValue };
     enum DeletedValueTag { DeletedValue };
-    
+
     BitVector(EmptyValueTag)
         : m_bitsOrPointer(0)
     {
     }
-    
+
     BitVector(DeletedValueTag)
         : m_bitsOrPointer(1)
     {
     }
-    
+
     bool isEmptyValue() const { return !m_bitsOrPointer; }
     bool isDeletedValue() const { return m_bitsOrPointer == 1; }
-    
+
     bool isEmptyOrDeletedValue() const { return m_bitsOrPointer <= 1; }
-    
+
     bool operator==(const BitVector& other) const
     {
         if (isInline() && other.isInline())
             return m_bitsOrPointer == other.m_bitsOrPointer;
         return equalsSlowCase(other);
     }
-    
+
     unsigned hash() const
     {
         // This is a very simple hash. Just xor together the words that hold the various
@@ -248,7 +248,7 @@ public:
             value = hashSlowCase();
         return IntHash<uintptr_t>::hash(value);
     }
-    
+
 private:
     static unsigned bitsInPointer()
     {
@@ -270,28 +270,28 @@ private:
         ASSERT(!(bits & (static_cast<uintptr_t>(1) << maxInlineBits())));
         return bits | (static_cast<uintptr_t>(1) << maxInlineBits());
     }
-    
+
     static uintptr_t cleanseInlineBits(uintptr_t bits)
     {
         return bits & ~(static_cast<uintptr_t>(1) << maxInlineBits());
     }
-    
+
     static size_t bitCount(uintptr_t bits)
     {
         if (sizeof(uintptr_t) == 4)
             return WTF::bitCount(static_cast<unsigned>(bits));
         return WTF::bitCount(static_cast<uint64_t>(bits));
     }
-    
+
     class OutOfLineBits {
     public:
         size_t numBits() const { return m_numBits; }
         size_t numWords() const { return (m_numBits + bitsInPointer() - 1) / bitsInPointer(); }
         uintptr_t* bits() { return bitwise_cast<uintptr_t*>(this + 1); }
         const uintptr_t* bits() const { return bitwise_cast<const uintptr_t*>(this + 1); }
-        
+
         static WTF_EXPORT_PRIVATE OutOfLineBits* create(size_t numBits);
-        
+
         static WTF_EXPORT_PRIVATE void destroy(OutOfLineBits*);
 
     private:
@@ -299,41 +299,41 @@ private:
             : m_numBits(numBits)
         {
         }
-        
+
         size_t m_numBits;
     };
-    
+
     bool isInline() const { return m_bitsOrPointer >> maxInlineBits(); }
-    
+
     const OutOfLineBits* outOfLineBits() const { return bitwise_cast<const OutOfLineBits*>(m_bitsOrPointer << 1); }
     OutOfLineBits* outOfLineBits() { return bitwise_cast<OutOfLineBits*>(m_bitsOrPointer << 1); }
-    
+
     WTF_EXPORT_PRIVATE void resizeOutOfLine(size_t numBits);
     WTF_EXPORT_PRIVATE void setSlow(const BitVector& other);
-    
+
     WTF_EXPORT_PRIVATE void mergeSlow(const BitVector& other);
     WTF_EXPORT_PRIVATE void filterSlow(const BitVector& other);
     WTF_EXPORT_PRIVATE void excludeSlow(const BitVector& other);
-    
+
     WTF_EXPORT_PRIVATE size_t bitCountSlow() const;
-    
+
     WTF_EXPORT_PRIVATE bool equalsSlowCase(const BitVector& other) const;
     WTF_EXPORT_PRIVATE uintptr_t hashSlowCase() const;
-    
+
     uintptr_t* bits()
     {
         if (isInline())
             return &m_bitsOrPointer;
         return outOfLineBits()->bits();
     }
-    
+
     const uintptr_t* bits() const
     {
         if (isInline())
             return &m_bitsOrPointer;
         return outOfLineBits()->bits();
     }
-    
+
     uintptr_t m_bitsOrPointer;
 };
 

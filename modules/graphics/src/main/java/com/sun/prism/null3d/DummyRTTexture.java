@@ -55,7 +55,7 @@ class DummyRTTexture extends DummyTexture implements RTTexture {
     public boolean readPixels(Buffer pixels, int x, int y, int width, int height) {
         return false;
     }
-    
+
     public boolean readPixels(Buffer pixels) {
         return false;
     }

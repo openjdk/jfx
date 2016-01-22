@@ -42,7 +42,7 @@ const unsigned NumberOfRanges = 36; // There should be 3 * log2(PeriodicWaveSize
 const float CentsPerRange = 1200 / 3; // 1/3 Octave.
 
 namespace WebCore {
-    
+
 using namespace VectorMath;
 
 PassRefPtr<PeriodicWave> PeriodicWave::create(float sampleRate, Float32Array* real, Float32Array* imag)
@@ -120,7 +120,7 @@ void PeriodicWave::waveDataForFundamentalFrequency(float fundamentalFrequency, f
 
     lowerWaveData = m_bandLimitedTables[rangeIndex2]->data();
     higherWaveData = m_bandLimitedTables[rangeIndex1]->data();
-    
+
     // Ranges from 0 -> 1 to interpolate between lower -> higher.
     tableInterpolationFactor = pitchRange - rangeIndex1;
 }
@@ -154,7 +154,7 @@ void PeriodicWave::createBandLimitedTables(const float* realData, const float* i
     unsigned fftSize = m_periodicWaveSize;
     unsigned halfSize = fftSize / 2;
     unsigned i;
-    
+
     numberOfComponents = std::min(numberOfComponents, halfSize);
 
     m_bandLimitedTables.reserveCapacity(m_numberOfRanges);
@@ -175,7 +175,7 @@ void PeriodicWave::createBandLimitedTables(const float* realData, const float* i
             realP[i] = 0;
             imagP[i] = 0;
         }
-        
+
         // Generate complex conjugate because of the way the inverse FFT is defined.
         float minusOne = -1;
         vsmul(imagP, 1, &minusOne, imagP, 1, halfSize);
@@ -213,7 +213,7 @@ void PeriodicWave::createBandLimitedTables(const float* realData, const float* i
         }
 
         // Apply normalization scale.
-        vsmul(data, 1, &normalizationScale, data, 1, m_periodicWaveSize);          
+        vsmul(data, 1, &normalizationScale, data, 1, m_periodicWaveSize);
     }
 }
 

@@ -626,7 +626,7 @@ static char* parseES5DatePortion(const char* currentPosition, int& year, long& m
     if (*postParsePosition != '-')
         return postParsePosition;
     currentPosition = postParsePosition + 1;
-    
+
     if (!isASCIIDigit(*currentPosition))
         return 0;
     if (!parseLong(currentPosition, &postParsePosition, 10, &month))
@@ -638,7 +638,7 @@ static char* parseES5DatePortion(const char* currentPosition, int& year, long& m
     if (*postParsePosition != '-')
         return postParsePosition;
     currentPosition = postParsePosition + 1;
-    
+
     if (!isASCIIDigit(*currentPosition))
         return 0;
     if (!parseLong(currentPosition, &postParsePosition, 10, &day))
@@ -661,7 +661,7 @@ static char* parseES5TimePortion(char* currentPosition, long& hours, long& minut
     if (*postParsePosition != ':' || (postParsePosition - currentPosition) != 2)
         return 0;
     currentPosition = postParsePosition + 1;
-    
+
     if (!isASCIIDigit(*currentPosition))
         return 0;
     if (!parseLong(currentPosition, &postParsePosition, 10, &minutes))
@@ -673,7 +673,7 @@ static char* parseES5TimePortion(char* currentPosition, long& hours, long& minut
     // Seconds are optional.
     if (*currentPosition == ':') {
         ++currentPosition;
-    
+
         long intSeconds;
         if (!isASCIIDigit(*currentPosition))
             return 0;
@@ -684,18 +684,18 @@ static char* parseES5TimePortion(char* currentPosition, long& hours, long& minut
         seconds = intSeconds;
         if (*postParsePosition == '.') {
             currentPosition = postParsePosition + 1;
-            
+
             // In ECMA-262-5 it's a bit unclear if '.' can be present without milliseconds, but
             // a reasonable interpretation guided by the given examples and RFC 3339 says "no".
             // We check the next character to avoid reading +/- timezone hours after an invalid decimal.
             if (!isASCIIDigit(*currentPosition))
                 return 0;
-            
+
             // We are more lenient than ES5 by accepting more or less than 3 fraction digits.
             long fracSeconds;
             if (!parseLong(currentPosition, &postParsePosition, 10, &fracSeconds))
                 return 0;
-            
+
             long numFracDigits = postParsePosition - currentPosition;
             seconds += fracSeconds * pow(10.0, static_cast<double>(-numFracDigits));
         }
@@ -713,11 +713,11 @@ static char* parseES5TimePortion(char* currentPosition, long& hours, long& minut
     else
         return currentPosition; // no timezone
     ++currentPosition;
-    
+
     long tzHours;
     long tzHoursAbs;
     long tzMinutes;
-    
+
     if (!isASCIIDigit(*currentPosition))
         return 0;
     if (!parseLong(currentPosition, &postParsePosition, 10, &tzHours))
@@ -726,7 +726,7 @@ static char* parseES5TimePortion(char* currentPosition, long& hours, long& minut
         return 0;
     tzHoursAbs = labs(tzHours);
     currentPosition = postParsePosition + 1;
-    
+
     if (!isASCIIDigit(*currentPosition))
         return 0;
     if (!parseLong(currentPosition, &postParsePosition, 10, &tzMinutes))
@@ -734,12 +734,12 @@ static char* parseES5TimePortion(char* currentPosition, long& hours, long& minut
     if ((postParsePosition - currentPosition) != 2)
         return 0;
     currentPosition = postParsePosition;
-    
+
     if (tzHoursAbs > 24)
         return 0;
     if (tzMinutes < 0 || tzMinutes > 59)
         return 0;
-    
+
     timeZoneSeconds = 60 * (tzMinutes + (60 * tzHoursAbs));
     if (tzNegative)
         timeZoneSeconds = -timeZoneSeconds;
@@ -752,9 +752,9 @@ double parseES5DateFromNullTerminatedCharacters(const char* dateString)
     // This parses a date of the form defined in ECMA-262-5, section 15.9.1.15
     // (similar to RFC 3339 / ISO 8601: YYYY-MM-DDTHH:mm:ss[.sss]Z).
     // In most cases it is intentionally strict (e.g. correct field widths, no stray whitespace).
-    
+
     static const long daysPerMonth[12] = { 31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 };
-    
+
     // The year must be present, but the other fields may be omitted - see ES5.1 15.9.1.15.
     int year = 0;
     long month = 1;
@@ -799,7 +799,7 @@ double parseES5DateFromNullTerminatedCharacters(const char* dateString)
         // Discard leap seconds by clamping to the end of a minute.
         seconds = 60;
     }
-        
+
     double dateSeconds = ymdhmsToSeconds(year, month, day, hours, minutes, seconds) - timeZoneSeconds;
     return dateSeconds * msPerSecond;
 }
@@ -823,7 +823,7 @@ double parseDateFromNullTerminatedCharacters(const char* dateString, bool& haveT
     //     [Wednesday] January 09 23:12:40 GMT 1999
     //
     // We ignore the weekday.
-     
+
     // Skip leading space
     skipSpacesAndComments(dateString);
 
@@ -1011,7 +1011,7 @@ double parseDateFromNullTerminatedCharacters(const char* dateString, bool& haveT
             }
         }
     }
-    
+
     // The year may be after the time but before the time zone.
     if (isASCIIDigit(*dateString) && year == -1) {
         if (!parseInt(dateString, &newPosStr, 10, &year))
@@ -1020,7 +1020,7 @@ double parseDateFromNullTerminatedCharacters(const char* dateString, bool& haveT
         skipSpacesAndComments(dateString);
     }
 
-    // Don't fail if the time zone is missing. 
+    // Don't fail if the time zone is missing.
     // Some websites omit the time zone (4275206).
     if (*dateString) {
         if (strncasecmp(dateString, "GMT", 3) == 0 || strncasecmp(dateString, "UTC", 3) == 0) {
@@ -1085,7 +1085,7 @@ double parseDateFromNullTerminatedCharacters(const char* dateString, bool& haveT
         else
             year += 1900;
     }
-    
+
     return ymdhmsToSeconds(year, month + 1, day, hour, minute, second) * msPerSecond;
 }
 

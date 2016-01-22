@@ -84,7 +84,7 @@ G_BEGIN_DECLS
  *                               cannot produce data in %GST_STATE_PAUSED.
  *                               This typically happens with live sources.
  *
- * The possible return values from a state change function such as 
+ * The possible return values from a state change function such as
  * gst_element_set_state(). Only @GST_STATE_CHANGE_FAILURE is a real failure.
  */
 typedef enum {
@@ -604,7 +604,7 @@ struct _GstElementClass
 
   /*< public >*/
   /* the element metadata */
-  gpointer		 metadata;
+  gpointer       metadata;
 
   /* factory that the element was created from */
   GstElementFactory     *elementfactory;
@@ -752,7 +752,7 @@ void                    gst_element_no_more_pads        (GstElement *element);
 GstPad*                 gst_element_get_static_pad      (GstElement *element, const gchar *name);
 GstPad*                 gst_element_get_request_pad     (GstElement *element, const gchar *name);
 GstPad*                 gst_element_request_pad         (GstElement *element, GstPadTemplate *templ,
-							 const gchar * name, const GstCaps *caps);
+                             const gchar * name, const GstCaps *caps);
 void                    gst_element_release_request_pad (GstElement *element, GstPad *pad);
 
 GstIterator *           gst_element_iterate_pads        (GstElement * element);

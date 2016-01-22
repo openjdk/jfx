@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -58,13 +58,13 @@ void Disassembler::dump(LinkBuffer& linkBuffer)
 void Disassembler::reportToProfiler(Profiler::Compilation* compilation, LinkBuffer& linkBuffer)
 {
     Vector<DumpedOp> ops = createDumpList(linkBuffer);
-    
+
     for (unsigned i = 0; i < ops.size(); ++i) {
         Profiler::OriginStack stack;
-        
+
         if (ops[i].codeOrigin.isSet())
             stack = Profiler::OriginStack(*m_graph.m_vm.m_perBytecodeProfiler, m_graph.m_codeBlock, ops[i].codeOrigin);
-        
+
         compilation->addDescription(Profiler::CompiledBytecode(stack, ops[i].text));
     }
 }
@@ -87,17 +87,17 @@ Vector<Disassembler::DumpedOp> Disassembler::createDumpList(LinkBuffer& linkBuff
 {
     StringPrintStream out;
     Vector<DumpedOp> result;
-    
+
     CodeOrigin previousOrigin = CodeOrigin();
     dumpHeader(out, linkBuffer);
     append(result, out, previousOrigin);
-    
+
     m_graph.m_dominators.computeIfNecessary(m_graph);
     m_graph.m_naturalLoops.computeIfNecessary(m_graph);
-    
+
     const char* prefix = "    ";
     const char* disassemblyPrefix = "        ";
-    
+
     Node* lastNode = 0;
     MacroAssembler::Label previousLabel = m_startOfCode;
     for (size_t blockIndex = 0; blockIndex < m_graph.numBlocks(); ++blockIndex) {
@@ -146,7 +146,7 @@ Vector<Disassembler::DumpedOp> Disassembler::createDumpList(LinkBuffer& linkBuff
     append(result, out, previousOrigin);
     m_dumpContext.dump(out, prefix);
     append(result, out, previousOrigin);
-    
+
     return result;
 }
 
@@ -163,7 +163,7 @@ void Disassembler::dumpDisassembly(PrintStream& out, const char* prefix, LinkBuf
     for (int i = 0; i < amountOfNodeWhiteSpace; ++i)
         prefixBuffer[i + prefixLength] = ' ';
     prefixBuffer[prefixLength + amountOfNodeWhiteSpace] = 0;
-    
+
     CodeLocationLabel start = linkBuffer.locationOf(previousLabel);
     CodeLocationLabel end = linkBuffer.locationOf(currentLabel);
     previousLabel = currentLabel;

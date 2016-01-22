@@ -51,7 +51,7 @@ import org.junit.Ignore;
 
 
 public class RuleTest {
-    
+
     public RuleTest() {
     }
 
@@ -135,7 +135,7 @@ public class RuleTest {
         StyleOrigin result = instance.getOrigin();
         assertEquals(expResult, result);
     }
-    
+
     @Test
     public void testGetOriginWithoutAddingRuleToStylesheet() {
         Rule instance = RuleShim.getRule(Collections.EMPTY_LIST, Collections.EMPTY_LIST);
@@ -149,7 +149,7 @@ public class RuleTest {
         Stylesheet stylesheet = new StylesheetShim();
         stylesheet.getRules().add(instance);
         stylesheet.setOrigin(StyleOrigin.INLINE);
-        stylesheet.getRules().remove(instance);        
+        stylesheet.getRules().remove(instance);
         StyleOrigin result = instance.getOrigin();
         assertNull(result);
     }

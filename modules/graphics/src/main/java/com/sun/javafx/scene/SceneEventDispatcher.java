@@ -44,7 +44,7 @@ public class SceneEventDispatcher extends CompositeEventDispatcher {
         this(new KeyboardShortcutsHandler(),
              new EnteredExitedHandler(eventSource),
              new EventHandlerManager(eventSource));
-        
+
     }
 
     public SceneEventDispatcher(
@@ -63,7 +63,7 @@ public class SceneEventDispatcher extends CompositeEventDispatcher {
     public final KeyboardShortcutsHandler getKeyboardShortcutsHandler() {
         return keyboardShortcutsHandler;
     }
-    
+
     public final EnteredExitedHandler getEnteredExitedHandler() {
         return enteredExitedHandler;
     }

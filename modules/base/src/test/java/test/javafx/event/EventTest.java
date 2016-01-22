@@ -39,10 +39,10 @@ public class EventTest {
     public void testTypeConflict() {
         new EventType(Event.ANY, ActionEvent.ACTION.getName());
     }
-    
+
     @Test
     public void testTypeNew() {
         new EventType(Event.ANY, "TEST"); // should pass without exception
     }
-    
+
 }

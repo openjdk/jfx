@@ -6,13 +6,13 @@
  * are met:
  *
  * 1.  Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer. 
+ *     notice, this list of conditions and the following disclaimer.
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
- *     documentation and/or other materials provided with the distribution. 
+ *     documentation and/or other materials provided with the distribution.
  * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
- *     from this software without specific prior written permission. 
+ *     from this software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY APPLE AND ITS CONTRIBUTORS "AS IS" AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
@@ -291,17 +291,17 @@ VM::VM(VMType vmType, HeapType heapType)
 #if ENABLE(FTL_JIT)
     ftlThunks = std::make_unique<FTL::Thunks>();
 #endif // ENABLE(FTL_JIT)
-    
+
     interpreter->initialize(this->canUseJIT());
-    
+
 #if ENABLE(JIT)
     initializeHostCallReturnValue(); // This is needed to convince the linker not to drop host call return support.
 #endif
 
     heap.notifyIsSafeToCollect();
-    
+
     LLInt::Data::performAssertions(*this);
-    
+
     if (Options::enableProfiler()) {
         m_perBytecodeProfiler = adoptPtr(new Profiler::Database(*this));
 
@@ -319,7 +319,7 @@ VM::VM(VMType vmType, HeapType heapType)
     if (canUseJIT())
         dfgState = adoptPtr(new DFG::LongLivedState());
 #endif
-    
+
     // Initialize this last, as a free way of asserting that VM initialization itself
     // won't use this.
     m_typedArrayController = adoptRef(new SimpleTypedArrayController());
@@ -329,7 +329,7 @@ VM::~VM()
 {
     // Never GC, ever again.
     heap.incrementDeferralDepth();
-    
+
 #if ENABLE(DFG_JIT)
     // Make sure concurrent compilations are done, but don't install them, since there is
     // no point to doing so.
@@ -340,10 +340,10 @@ VM::~VM()
         }
     }
 #endif // ENABLE(DFG_JIT)
-    
+
     // Clear this first to ensure that nobody tries to remove themselves from it.
     m_perBytecodeProfiler.clear();
-    
+
     ASSERT(m_apiLock->currentThreadIsHoldingLock());
     m_apiLock->willDestroyVM(this);
     heap.lastChanceToFinalize();
@@ -568,7 +568,7 @@ struct StackPreservingRecompiler : public MarkedBlock::VoidFunctor {
 void VM::releaseExecutableMemory()
 {
     prepareToDiscardCode();
-    
+
     if (entryScope) {
         StackPreservingRecompiler recompiler;
         HeapIterationScope iterationScope(heap);
@@ -591,7 +591,7 @@ void VM::releaseExecutableMemory()
             executable->unlinkCalls();
             if (executable->inherits(FunctionExecutable::info()))
                 recompiler.currentlyExecutingFunctions.add(static_cast<FunctionExecutable*>(executable));
-                
+
         }
         heap.objectSpace().forEachLiveCell<StackPreservingRecompiler>(iterationScope, recompiler);
     }
@@ -602,33 +602,33 @@ void VM::releaseExecutableMemory()
 static void appendSourceToError(CallFrame* callFrame, ErrorInstance* exception, unsigned bytecodeOffset)
 {
     exception->clearAppendSourceToMessage();
-    
+
     if (!callFrame->codeBlock()->hasExpressionInfo())
         return;
-    
+
     int startOffset = 0;
     int endOffset = 0;
     int divotPoint = 0;
     unsigned line = 0;
     unsigned column = 0;
-    
+
     CodeBlock* codeBlock = callFrame->codeBlock();
     codeBlock->expressionRangeForBytecodeOffset(bytecodeOffset, divotPoint, startOffset, endOffset, line, column);
-    
+
     int expressionStart = divotPoint - startOffset;
     int expressionStop = divotPoint + endOffset;
-    
+
     const String& sourceString = codeBlock->source()->source();
     if (!expressionStop || expressionStart > static_cast<int>(sourceString.length()))
         return;
-    
+
     VM* vm = &callFrame->vm();
     JSValue jsMessage = exception->getDirect(*vm, vm->propertyNames->message);
     if (!jsMessage || !jsMessage.isString())
         return;
-    
+
     String message = asString(jsMessage)->value(callFrame);
-    
+
     if (expressionStart < expressionStop)
         message =  makeString(message, " (evaluating '", codeBlock->source()->getRange(expressionStart, expressionStop), "')");
     else {
@@ -649,28 +649,28 @@ static void appendSourceToError(CallFrame* callFrame, ErrorInstance* exception, 
             stop--;
         message = makeString(message, " (near '...", codeBlock->source()->getRange(start, stop), "...')");
     }
-    
+
     exception->putDirect(*vm, vm->propertyNames->message, jsString(vm, message));
 }
-    
+
 JSValue VM::throwException(ExecState* exec, JSValue error)
 {
     if (Options::breakOnThrow()) {
         dataLog("In call frame ", RawPointer(exec), " for code block ", *exec->codeBlock(), "\n");
         CRASH();
     }
-    
+
     ASSERT(exec == topCallFrame || exec == exec->lexicalGlobalObject()->globalExec() || exec == exec->vmEntryGlobalObject()->globalExec());
-    
+
     Vector<StackFrame> stackTrace;
     interpreter->getStackTrace(stackTrace);
     m_exceptionStack = RefCountedArray<StackFrame>(stackTrace);
     m_exception = error;
-    
+
     if (stackTrace.isEmpty() || !error.isObject())
         return error;
     JSObject* exception = asObject(error);
-    
+
     StackFrame stackFrame;
     for (unsigned i = 0 ; i < stackTrace.size(); ++i) {
         stackFrame = stackTrace.at(i);
@@ -705,11 +705,11 @@ JSValue VM::throwException(ExecState* exec, JSValue error)
 
     if (exception->hasProperty(exec, this->propertyNames->stack))
         return error;
-    
+
     exception->putDirect(*this, propertyNames->stack, interpreter->stackTraceAsString(topCallFrame, stackTrace), DontEnum);
     return error;
 }
-    
+
 JSObject* VM::throwException(ExecState* exec, JSObject* error)
 {
     return asObject(throwException(exec, JSValue(error)));
@@ -822,21 +822,21 @@ void VM::dumpRegExpTrace()
 {
     // The first RegExp object is ignored.  It is create by the RegExpPrototype ctor and not used.
     RTTraceList::iterator iter = ++m_rtTraceList->begin();
-    
+
     if (iter != m_rtTraceList->end()) {
         dataLogF("\nRegExp Tracing\n");
         dataLogF("                                                            match()    matches\n");
         dataLogF("Regular Expression                          JIT Address      calls      found\n");
         dataLogF("----------------------------------------+----------------+----------+----------\n");
-    
+
         unsigned reCount = 0;
-    
+
         for (; iter != m_rtTraceList->end(); ++iter, ++reCount)
             (*iter)->printTraceData();
 
         dataLogF("%d Regular Expressions\n", reCount);
     }
-    
+
     m_rtTraceList->clear();
 }
 #else

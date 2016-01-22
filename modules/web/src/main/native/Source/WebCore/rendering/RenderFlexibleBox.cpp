@@ -1389,7 +1389,7 @@ bool RenderFlexibleBox::isTopLayoutOverflowAllowed() const
     bool hasTopOverflow = RenderBlock::isTopLayoutOverflowAllowed();
     if (hasTopOverflow || !style().isReverseFlexDirection())
         return hasTopOverflow;
-    
+
     return !isHorizontalFlow();
 }
 
@@ -1398,7 +1398,7 @@ bool RenderFlexibleBox::isLeftLayoutOverflowAllowed() const
     bool hasLeftOverflow = RenderBlock::isLeftLayoutOverflowAllowed();
     if (hasLeftOverflow || !style().isReverseFlexDirection())
         return hasLeftOverflow;
-    
+
     return isHorizontalFlow();
 }
 

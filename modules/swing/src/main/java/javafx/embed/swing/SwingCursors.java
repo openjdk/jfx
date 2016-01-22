@@ -52,7 +52,7 @@ class SwingCursors {
         double scaledHotspotX = cursorFrame.getHotspotX() * nativeSize.getWidth() / imageWidth;
         double scaledHotspotY = cursorFrame.getHotspotY() * nativeSize.getHeight() / imageHeight;
         Point hotspot = new Point((int)scaledHotspotX, (int)scaledHotspotY);
-        
+
         BufferedImage awtImage = SwingFXUtils.fromFXImage(
                 Image.impl_fromPlatformImage(cursorFrame.getPlatformImage()), null);
         return awtToolkit.createCustomCursor(awtImage, hotspot, null);
@@ -85,7 +85,7 @@ class SwingCursors {
             case H_RESIZE:
                 return Cursor.getPredefinedCursor(Cursor.W_RESIZE_CURSOR);
             case E_RESIZE:
-	        return Cursor.getPredefinedCursor(Cursor.E_RESIZE_CURSOR);
+            return Cursor.getPredefinedCursor(Cursor.E_RESIZE_CURSOR);
             case OPEN_HAND:
             case CLOSED_HAND:
             case HAND:

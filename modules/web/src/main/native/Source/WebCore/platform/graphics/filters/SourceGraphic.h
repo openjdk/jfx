@@ -28,7 +28,7 @@
 namespace WebCore {
 
 class SourceGraphic : public FilterEffect {
-public:        
+public:
     static PassRefPtr<SourceGraphic> create(Filter*);
 
     static const AtomicString& effectName();

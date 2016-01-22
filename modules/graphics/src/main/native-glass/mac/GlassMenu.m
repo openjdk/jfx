@@ -111,7 +111,7 @@ static jfieldID  jDelegateMenuField = 0;
         {
             self->jCallback = (*env)->NewGlobalRef(env, jcallback);
         }
-        
+
         NSString *shortcut = @"";
         NSString *title = [GlassHelper nsStringWithJavaString:jtitle withEnv:env];
         LOG("initWithJavajdelegate: jdelegate %p jcallback %p jtitle %s",
@@ -138,23 +138,23 @@ static jfieldID  jDelegateMenuField = 0;
 - (void)dealloc
 {
     GET_MAIN_JENV;
-    
+
     if (env != NULL)
     {
-            if (self->jDelegate != NULL) 
+            if (self->jDelegate != NULL)
         {
             (*env)->DeleteGlobalRef(env, self->jDelegate);
             self->jDelegate = NULL;
         }
-            if (self->jCallback != NULL) 
+            if (self->jCallback != NULL)
         {
             (*env)->DeleteGlobalRef(env, self->jCallback);
             self->jCallback = NULL;
         }
     }
-    
+
     [self->item release];
-    
+
     [super dealloc];
 }
 
@@ -212,7 +212,7 @@ static jfieldID  jDelegateMenuField = 0;
 {
     NSString *shortcut = GetStringForJavaKey(jshortcut);
     LOG("_setShortcut %c -> %s", jshortcut, [shortcut UTF8String]);
-    
+
     NSUInteger modifier = 0;
     if ((jmodifiers & com_sun_glass_events_KeyEvent_MODIFIER_COMMAND) != 0)
     {
@@ -286,9 +286,9 @@ JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_mac_MacMenuBarDelegate__1createMen
 (JNIEnv *env, jobject jMenuBarDelegate)
 {
     LOG("Java_com_sun_glass_ui_mac_MacMenuBarDelegate__1createMenuBar");
-    
+
     jlong value = 0L;
-    
+
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
     GLASS_POOL_ENTER;
     {
@@ -297,7 +297,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_mac_MacMenuBarDelegate__1createMen
     }
     GLASS_POOL_EXIT;
     GLASS_CHECK_EXCEPTION(env);
-    
+
     return value;
 }
 
@@ -310,7 +310,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacMenuBarDelegate__1insert
 (JNIEnv *env, jobject jMenuDelegate, jlong jMenubarPtr, jlong jMenuPtr, jint jPos)
 {
     LOG("Java_com_sun_glass_ui_mac_MacMenuBarDelegate__1insert");
-    
+
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
     GLASS_POOL_ENTER;
     {
@@ -326,7 +326,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacMenuBarDelegate__1insert
         {
             [NSApp performSelector:@selector(setAppleMenu:) withObject:glassmenu->item];
         }
-        
+
         [[NSApp mainMenu] update];
     }
     GLASS_POOL_EXIT;
@@ -343,7 +343,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacMenuBarDelegate__1remove
 {
     LOG("Java_com_sun_glass_ui_mac_MacMenuBarDelegate__1remove del %p mb %p mp %p pos %d",
         jMenuDelegate, jMenubarPtr, jMenuPtr, jPos);
-    
+
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
     GLASS_POOL_ENTER;
     {
@@ -368,7 +368,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacMenuDelegate__1initIDs
 {
     jclass jCallbackClass = [GlassHelper ClassForName:"com.sun.glass.ui.MenuItem$Callback" withEnv:env];
     jclass jMenuClass = [GlassHelper ClassForName:"com.sun.glass.ui.Menu" withEnv:env];
-    
+
     jMenuActionMethod  = (*env)->GetMethodID(env, jCallbackClass,   "action",  "()V");
     if ((*env)->ExceptionCheck(env)) return;
     jMenuValidateMethod = (*env)->GetMethodID(env, jCallbackClass,   "validate",  "()V");
@@ -389,7 +389,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_mac_MacMenuDelegate__1createMenu
 (JNIEnv *env, jobject jMenuDelegate, jstring jTitle, jboolean jEnabled)
 {
     jlong value = 0L;
-    
+
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
     GLASS_POOL_ENTER;
     {
@@ -400,7 +400,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_mac_MacMenuDelegate__1createMenu
     }
     GLASS_POOL_EXIT;
     GLASS_CHECK_EXCEPTION(env);
-    
+
     NSString* title = [GlassHelper nsStringWithJavaString:jTitle withEnv:env];
     LOG("Java_com_sun_glass_ui_mac_MacMenuDelegate__1createMenu md %p title %s --> jMenuPtr %p ",
         jMenuDelegate, [title UTF8String], value);
@@ -418,7 +418,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_mac_MacMenuDelegate__1createMenuIt
  jobject jIcon, jboolean jEnabled, jboolean jChecked, jobject jCallback)
 {
     jlong value = 0L;
-    
+
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
     GLASS_POOL_ENTER;
     {
@@ -431,7 +431,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_mac_MacMenuDelegate__1createMenuIt
     }
     GLASS_POOL_EXIT;
     GLASS_CHECK_EXCEPTION(env);
-    
+
     NSString* title = [GlassHelper nsStringWithJavaString:jTitle withEnv:env];
     LOG("Java_com_sun_glass_ui_mac_MacMenuDelegate__1createMenuItem md %p title %s --> %p, value",
         jMenuDelegate, [title UTF8String], value);
@@ -517,7 +517,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacMenuDelegate__1setTitle
 (JNIEnv *env, jobject jMenuDelegate, jlong jMenuPtr, jstring jTitle)
 {
     LOG("Java_com_sun_glass_ui_mac_MacMenuDelegate__1setTitle");
-    
+
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
     GLASS_POOL_ENTER;
     {
@@ -537,7 +537,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacMenuDelegate__1setShortcut
 (JNIEnv *env, jobject jMenuDelegate, jlong jMenuPtr, jchar jShortcut, jint jModifiers)
 {
     LOG("Java_com_sun_glass_ui_mac_MacMenuDelegate__1setShortcut");
-    
+
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
     GLASS_POOL_ENTER;
     {
@@ -557,7 +557,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacMenuDelegate__1setEnabled
 (JNIEnv *env, jobject jMenuDelegate, jlong jMenuPtr, jboolean jEnabled)
 {
     LOG("Java_com_sun_glass_ui_mac_MacMenuDelegate__1setEnabled");
-    
+
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
     GLASS_POOL_ENTER;
     {
@@ -577,7 +577,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacMenuDelegate__1setChecked
 (JNIEnv *env, jobject jMenuDelegate, jlong jMenuPtr, jboolean jChecked)
 {
     LOG("Java_com_sun_glass_ui_mac_MacMenuDelegate__1setChecked");
-    
+
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
     GLASS_POOL_ENTER;
     {
@@ -597,7 +597,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacMenuDelegate__1setCallback
 (JNIEnv *env, jobject jMenuDelegate, jlong jMenuPtr, jobject jCallback)
 {
     LOG("Java_com_sun_glass_ui_mac_MacMenuDelegate__1setCallback");
-    
+
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
     GLASS_POOL_ENTER;
     {
@@ -622,7 +622,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacMenuDelegate__1setPixels
 (JNIEnv *env, jobject jMenuDelegate, jlong jMenuPtr, jobject jPixels)
 {
     LOG("Java_com_sun_glass_ui_mac_MacMenuDelegate__1setPixels");
-    
+
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
     GLASS_POOL_ENTER;
     {

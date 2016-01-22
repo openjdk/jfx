@@ -170,7 +170,7 @@ final class MonocleView extends View {
         super.notifyDragEnd(performedAction);
     }
 
-    //Menu event - i.e context menu hint (usually mouse right click) 
+    //Menu event - i.e context menu hint (usually mouse right click)
     @Override
     protected void notifyMenu(int x, int y, int xAbs, int yAbs, boolean isKeyboardTrigger) {
         super.notifyMenu(x, y, xAbs, yAbs, isKeyboardTrigger);

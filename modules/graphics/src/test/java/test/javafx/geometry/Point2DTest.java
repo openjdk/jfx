@@ -42,13 +42,13 @@ public class Point2DTest {
         assertEquals(1f, p.getX(), 1e-100);
         assertEquals(2f, p.getY(), 1e-100);
     }
-    
+
     @Test
     public void testDistance() {
         Point2D p1 = new Point2D(0, 0);
         Point2D p2 = new Point2D(1, 0);
         Point2D p3 = new Point2D(1, 1);
-        
+
         assertEquals(1, p2.distance(p1), 1e-100);
         assertEquals(1, p2.distance(0, 0), 1e-100);
         assertEquals(1, p2.distance(p3), 1e-100);

@@ -35,21 +35,21 @@ import com.oracle.javafx.scenebuilder.kit.metadata.util.PropertyName;
 
 /**
  *
- * 
+ *
  */
 public abstract class FXOMProperty extends FXOMNode {
-    
+
     private final PropertyName name;
     private FXOMInstance parentInstance;
-    
-    
+
+
     FXOMProperty(
-            FXOMDocument document, 
+            FXOMDocument document,
             PropertyName name) {
         super(document);
-        
+
         assert name != null;
-                
+
         this.name = name;
     }
 
@@ -60,27 +60,27 @@ public abstract class FXOMProperty extends FXOMNode {
     public FXOMInstance getParentInstance() {
         return parentInstance;
     }
-    
+
     public abstract void addToParentInstance(int index, FXOMInstance newParentInstance);
     public abstract void removeFromParentInstance();
     public abstract int getIndexInParentInstance();
-    
-    
+
+
     /*
      * FXOMNode
      */
-    
+
     @Override
     protected void changeFxomDocument(FXOMDocument destination) {
         assert destination != null;
         assert destination != getFxomDocument();
         assert (parentInstance == null) || (destination == parentInstance.getFxomDocument());
-        
+
         super.changeFxomDocument(destination);
     }
 
-    
-  
+
+
     /*
      * Package
      */

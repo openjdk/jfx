@@ -49,24 +49,24 @@ import java.util.Objects;
  *
  */
 public abstract class SingleValuePropertyMetadata<T> extends ValuePropertyMetadata {
-    
+
     private final Class<T> valueClass;
     private final T defaultValue;
 
-    public SingleValuePropertyMetadata(PropertyName name, Class<T> valueClass, 
+    public SingleValuePropertyMetadata(PropertyName name, Class<T> valueClass,
             boolean readWrite, T defaultValue, InspectorPath inspectorPath) {
         super(name, readWrite, inspectorPath);
         this.defaultValue = defaultValue;
         this.valueClass = valueClass;
     }
-    
+
     public T getDefaultValue() {
         return defaultValue;
     }
-    
+
     public T getValue(FXOMInstance fxomInstance) {
         final T result;
-        
+
         if (isReadWrite()) {
             final FXOMProperty fxomProperty = fxomInstance.getProperties().get(getName());
             if (fxomProperty == null) {
@@ -98,13 +98,13 @@ public abstract class SingleValuePropertyMetadata<T> extends ValuePropertyMetada
         } else {
             result = valueClass.cast(getName().getValue(fxomInstance.getSceneGraphObject()));
         }
-        
+
         return result;
     }
 
     public void setValue(FXOMInstance fxomInstance, T value) {
         assert isReadWrite();
-        
+
         final FXOMProperty fxomProperty = fxomInstance.getProperties().get(getName());
 
         if (Objects.equals(value, getDefaultValueObject())) {
@@ -125,18 +125,18 @@ public abstract class SingleValuePropertyMetadata<T> extends ValuePropertyMetada
             FXOMNodes.updateProperty(fxomInstance, newProperty);
         }
     }
-    
+
     public abstract T makeValueFromString(String string);
     public abstract T makeValueFromFxomInstance(FXOMInstance valueFxomInstance);
     public abstract boolean canMakeStringFromValue(T value);
     public abstract String makeStringFromValue(T value);
     public abstract FXOMInstance makeFxomInstanceFromValue(T value, FXOMDocument fxomDocument);
-    
+
     /* This routine should become abstract and replace makeValueFromString(). */
     public T makeValueFromProperty(FXOMPropertyT fxomProperty) {
         return makeValueFromString(fxomProperty.getValue());
     }
-    
+
     /*
      * ValuePropertyMetadata
      */

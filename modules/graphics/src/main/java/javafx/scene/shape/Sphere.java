@@ -54,7 +54,7 @@ public class Sphere extends Shape3D {
     private int divisions = DEFAULT_DIVISIONS;
     private TriangleMesh mesh;
 
-    /**  
+    /**
      * Creates a new instance of {@code Sphere} of radius of 1.0.
      * The resolution defaults to MID_RESOLUTION divisions along sphere's axes.
      */
@@ -72,7 +72,7 @@ public class Sphere extends Shape3D {
         this(radius, DEFAULT_DIVISIONS);
     }
 
-    /**  
+    /**
      * Creates a new instance of {@code Sphere} of a given radius and number
      * of divisions.
      * The resolution is defined in terms of number of subdivisions along the
@@ -80,9 +80,9 @@ public class Sphere extends Shape3D {
      *
      * Note that divisions should be at least 1. Any value less than that will be
      * clamped to 1.
-     * 
+     *
      * @param radius Radius
-     * @param divisions Divisions     
+     * @param divisions Divisions
      */
     public Sphere(double radius, int divisions) {
         this.divisions = divisions < 1 ? 1: divisions;
@@ -169,11 +169,11 @@ public class Sphere extends Shape3D {
     @Override
     public BaseBounds impl_computeGeomBounds(BaseBounds bounds, BaseTransform tx) {
         final float r = (float) getRadius();
-        
+
         if (r < 0) {
             return bounds.makeEmpty();
-        }        
-        
+        }
+
         bounds = bounds.deriveWithNewBounds(-r, -r, -r, r, r ,r);
         bounds = tx.transform(bounds, bounds);
         return bounds;

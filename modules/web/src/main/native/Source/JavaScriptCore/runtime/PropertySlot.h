@@ -115,7 +115,7 @@ public:
         m_propertyType = TypeValue;
         m_offset = invalidOffset;
     }
-    
+
     void setValue(JSObject* slotBase, unsigned attributes, JSValue value, PropertyOffset offset)
     {
         ASSERT(value);
@@ -150,7 +150,7 @@ public:
         m_propertyType = TypeCustom;
         m_offset = invalidOffset;
     }
-    
+
     void setCacheableCustom(JSObject* slotBase, unsigned attributes, GetValueFunc getValue)
     {
         ASSERT(getValue);

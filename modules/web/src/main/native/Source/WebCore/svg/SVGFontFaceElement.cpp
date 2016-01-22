@@ -62,14 +62,14 @@ PassRefPtr<SVGFontFaceElement> SVGFontFaceElement::create(const QualifiedName& t
 }
 
 void SVGFontFaceElement::parseAttribute(const QualifiedName& name, const AtomicString& value)
-{    
+{
     CSSPropertyID propId = cssPropertyIdForSVGAttributeName(name);
     if (propId > 0) {
         m_fontFaceRule->mutableProperties().setProperty(propId, value, false);
         rebuildFontFace();
         return;
     }
-    
+
     SVGElement::parseAttribute(name, value);
 }
 
@@ -142,7 +142,7 @@ float SVGFontFaceElement::verticalOriginY() const
 
     // Spec: The default Y-coordinate in the font coordinate system of the origin of a glyph to be used when
     // drawing vertically oriented text. If the attribute is not specified, the effect is as if the attribute
-    // were set to the position specified by the font's ascent attribute.             
+    // were set to the position specified by the font's ascent attribute.
     const AtomicString& value = m_fontElement->fastGetAttribute(vert_origin_yAttr);
     if (value.isEmpty())
         return ascent();
@@ -156,7 +156,7 @@ float SVGFontFaceElement::verticalAdvanceY() const
         return 0.0f;
 
     // Spec: The default vertical advance after rendering a glyph in vertical orientation. If the attribute is
-    // not specified, the effect is as if a value equivalent of one em were specified (see units-per-em).                    
+    // not specified, the effect is as if a value equivalent of one em were specified (see units-per-em).
     const AtomicString& value = m_fontElement->fastGetAttribute(vert_adv_yAttr);
        if (value.isEmpty())
         return 1.0f;
@@ -250,7 +250,7 @@ void SVGFontFaceElement::rebuildFontFace()
     // Parse in-memory CSS rules
     m_fontFaceRule->mutableProperties().addParsedProperty(CSSProperty(CSSPropertySrc, list));
 
-    if (describesParentFont) {    
+    if (describesParentFont) {
         // Traverse parsed CSS values and associate CSSFontFaceSrcValue elements with ourselves.
         RefPtr<CSSValue> src = m_fontFaceRule->properties().getPropertyCSSValue(CSSPropertySrc);
         CSSValueList* srcList = toCSSValueList(src.get());

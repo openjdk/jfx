@@ -98,7 +98,7 @@ GType audioconverter_get_type (void)
                sizeof (AudioConverterClass),
                (GClassInitFunc) audioconverter_class_intern_init,
                sizeof(AudioConverter),
-               (GInstanceInitFunc) audioconverter_init,               
+               (GInstanceInitFunc) audioconverter_init,
                (GTypeFlags) 0);
         g_once_init_leave (&gonce_data, (gsize) _type);
     }
@@ -194,7 +194,7 @@ audioconverter_state_init(AudioConverter *decode)
     decode->inputData = NULL;
 
     decode->enable_parser = TRUE;
-    
+
     decode->sink_caps = NULL;
     decode->segment_event = NULL;
 
@@ -349,12 +349,12 @@ audioconverter_change_state (GstElement* element, GstStateChange transition)
                 g_free(decode->previousDesc);
                 decode->previousDesc = NULL;
             }
-            
+
             if (decode->sink_caps != NULL) {
                 gst_caps_unref(decode->sink_caps);
                 decode->sink_caps = NULL;
             }
-            
+
             if (decode->segment_event != NULL) {
                 // INLINE - gst_event_unref()
                 gst_event_unref (decode->segment_event);
@@ -409,19 +409,19 @@ audioconverter_sink_event (GstPad * pad, GstObject *parent, GstEvent * event)
             ret = gst_pad_push_event (decode->srcpad, event);
             break;
         }
-            
+
         case GST_EVENT_EOS:
         {
             if (decode->is_priming)
             {
                 gst_element_message_full(GST_ELEMENT(decode), GST_MESSAGE_ERROR, GST_STREAM_ERROR, GST_STREAM_ERROR_DECODE, g_strdup("MP3 file must contain 3 MP3 frames."), NULL, ("audioconverter.c"), ("audioconverter_sink_event"), 0);
             }
-            
+
             // Push the event downstream.
             ret = gst_pad_push_event (decode->srcpad, event);
             break;
         }
-        
+
         case GST_EVENT_CAPS:
         {
             GstCaps *caps;
@@ -429,7 +429,7 @@ audioconverter_sink_event (GstPad * pad, GstObject *parent, GstEvent * event)
             gst_event_parse_caps (event, &caps);
             if (decode->sink_caps != NULL)
                 gst_caps_unref(decode->sink_caps);
-            
+
             decode->sink_caps = gst_caps_copy(caps);
 
             // INLINE - gst_event_unref()
@@ -437,7 +437,7 @@ audioconverter_sink_event (GstPad * pad, GstObject *parent, GstEvent * event)
             ret = TRUE;
             break;
         }
-        
+
         case GST_EVENT_SEGMENT:
         {
             if (!decode->has_pad_caps)
@@ -506,10 +506,10 @@ audioconverter_src_event (GstPad * pad, GstObject *parent, GstEvent * event)
                     gst_event_unref (event);
                 }
             }
-            
-            if (!result) 
+
+            if (!result)
             {
-                if (decode->frame_duration != 0) 
+                if (decode->frame_duration != 0)
                 {
                     SInt64 absolutePacketOffset = start / decode->frame_duration;
                     SInt64 absoluteByteOffset;
@@ -530,7 +530,7 @@ audioconverter_src_event (GstPad * pad, GstObject *parent, GstEvent * event)
                     }
                 }
                 else
-                    gst_element_message_full(GST_ELEMENT(decode), GST_MESSAGE_ERROR, GST_STREAM_ERROR, GST_STREAM_ERROR_DECODE, 
+                    gst_element_message_full(GST_ELEMENT(decode), GST_MESSAGE_ERROR, GST_STREAM_ERROR, GST_STREAM_ERROR_DECODE,
                                              g_strdup("Zero frame duration"), NULL, ("audioconverter.c"), ("audioconverter_src_event"), 0);
             }
         }
@@ -664,17 +664,17 @@ audioconverter_chain (GstPad * pad, GstObject *parent, GstBuffer * buf)
     if (GST_BUFFER_IS_DISCONT(buf) && TRUE == decode->is_synced) {
         audioconverter_state_reset(decode);
     }
-    
+
     // Get memory pointers from buffer
     if (gst_buffer_map(buf, &info, GST_MAP_READ)) {
         buf_data = info.data;
         buf_size = info.size;
         unmap_buf = TRUE;
-    } else {        
+    } else {
         ret = GST_FLOW_ERROR;
         goto _exit;
     }
-    
+
     if (decode->enable_parser && NULL == decode->audioStreamID) {
         AudioFileTypeID audioStreamTypeHint = kAudioFileM4AType;
 
@@ -703,7 +703,7 @@ audioconverter_chain (GstPad * pad, GstObject *parent, GstBuffer * buf)
                                 GstMapInfo info2;
                                 guint8* codec_data = NULL;
                                 guint codec_data_size = 0;
-                                
+
                                 if (gst_buffer_map(codec_data_buf, &info, GST_MAP_READ)) {
                                     codec_data = info.data;
                                     codec_data_size = info.size;
@@ -729,7 +729,7 @@ audioconverter_chain (GstPad * pad, GstObject *parent, GstBuffer * buf)
                                         channel_config = (codec_data[1]&0x78) >> 3;
                                     }
                                 }
-                                
+
                                 gst_buffer_unmap(codec_data_buf, &info);
 
                                 const GValue* esds_value = gst_structure_get_value (caps_struct, "esds_data");
@@ -747,7 +747,7 @@ audioconverter_chain (GstPad * pad, GstObject *parent, GstBuffer * buf)
                                     GstBuffer* esds_buf = gst_value_get_buffer (esds_value);
                                     guint8* esds_data = NULL;
                                     guint esds_size = 0;
-                                    
+
                                     if (gst_buffer_map(esds_buf, &info2, GST_MAP_READ)) {
                                       esds_data = info2.data;
                                       esds_size = info2.size;
@@ -784,9 +784,9 @@ audioconverter_chain (GstPad * pad, GstObject *parent, GstBuffer * buf)
 
                                     decode->isFormatInitialized = TRUE;
                                     decode->isAudioConverterReady = TRUE;
-                                    
+
                                     gst_buffer_unmap(esds_buf, &info2);
-                                } else {       
+                                } else {
                                     ret = GST_FLOW_ERROR;
                                     goto _exit;
                                 }
@@ -915,14 +915,14 @@ audioconverter_chain (GstPad * pad, GstObject *parent, GstBuffer * buf)
         }
 
         // Check frame duration for zero to avoid division by zero.
-        if (decode->frame_duration == 0) 
+        if (decode->frame_duration == 0)
         {
-            gst_element_message_full(GST_ELEMENT(decode), GST_MESSAGE_ERROR, GST_STREAM_ERROR, GST_STREAM_ERROR_DECODE, 
+            gst_element_message_full(GST_ELEMENT(decode), GST_MESSAGE_ERROR, GST_STREAM_ERROR, GST_STREAM_ERROR_DECODE,
                                      g_strdup("Zero frame duration"), NULL, ("audioconverter.c"), ("audioconverter_chain"), 0);
             ret = GST_FLOW_ERROR;
             goto _exit;
         }
-        
+
         // Derive sample count using the timestamp.
         guint64 frame_index = buf_time/decode->frame_duration;
         decode->total_samples = frame_index * decode->samples_per_frame;
@@ -1011,7 +1011,7 @@ audioconverter_chain (GstPad * pad, GstObject *parent, GstBuffer * buf)
 
             gst_caps_unref (caps);
             caps = NULL;
-            
+
             if (decode->segment_event)
             {
                 gst_pad_push_event (decode->srcpad, decode->segment_event);
@@ -1154,7 +1154,7 @@ audioconverter_chain (GstPad * pad, GstObject *parent, GstBuffer * buf)
 
 _exit:
     if (unmap_buf) {
-        gst_buffer_unmap(buf, &info);                                                     
+        gst_buffer_unmap(buf, &info);
     }
     // Unref the input buffer.
     // INLINE - gst_buffer_unref()

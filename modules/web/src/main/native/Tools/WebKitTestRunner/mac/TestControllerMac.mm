@@ -30,7 +30,7 @@
 #import "PoseAsClass.h"
 #import "WebKitTestRunnerPasteboard.h"
 #import <WebKit2/WKStringCF.h>
-#import <mach-o/dyld.h> 
+#import <mach-o/dyld.h>
 
 @interface NSSound (Details)
 + (void)_setAlertType:(NSUInteger)alertType;

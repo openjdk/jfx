@@ -33,7 +33,7 @@ import javafx.util.StringConverter;
  * @since JavaFX 2.1
  */
 public class BigDecimalStringConverter extends StringConverter<BigDecimal> {
-    
+
     /** {@inheritDoc} */
     @Override public BigDecimal fromString(String value) {
         // If the specified value is null or zero-length, return null

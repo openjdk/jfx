@@ -10,7 +10,7 @@
  *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.	 See the GNU
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
@@ -62,46 +62,46 @@
       : G_UNICODE_UNASSIGNED))
 
 
-#define IS(Type, Class)	(((guint)1 << (Type)) & (Class))
-#define OR(Type, Rest)	(((guint)1 << (Type)) | (Rest))
+#define IS(Type, Class) (((guint)1 << (Type)) & (Class))
+#define OR(Type, Rest)  (((guint)1 << (Type)) | (Rest))
 
 
 
-#define ISALPHA(Type)	IS ((Type),				\
-			    OR (G_UNICODE_LOWERCASE_LETTER,	\
-			    OR (G_UNICODE_UPPERCASE_LETTER,	\
-			    OR (G_UNICODE_TITLECASE_LETTER,	\
-			    OR (G_UNICODE_MODIFIER_LETTER,	\
-			    OR (G_UNICODE_OTHER_LETTER,		0))))))
+#define ISALPHA(Type)   IS ((Type),             \
+                OR (G_UNICODE_LOWERCASE_LETTER, \
+                OR (G_UNICODE_UPPERCASE_LETTER, \
+                OR (G_UNICODE_TITLECASE_LETTER, \
+                OR (G_UNICODE_MODIFIER_LETTER,  \
+                OR (G_UNICODE_OTHER_LETTER,     0))))))
 
-#define ISALDIGIT(Type)	IS ((Type),				\
-			    OR (G_UNICODE_DECIMAL_NUMBER,	\
-			    OR (G_UNICODE_LETTER_NUMBER,	\
-			    OR (G_UNICODE_OTHER_NUMBER,		\
-			    OR (G_UNICODE_LOWERCASE_LETTER,	\
-			    OR (G_UNICODE_UPPERCASE_LETTER,	\
-			    OR (G_UNICODE_TITLECASE_LETTER,	\
-			    OR (G_UNICODE_MODIFIER_LETTER,	\
-			    OR (G_UNICODE_OTHER_LETTER,		0)))))))))
+#define ISALDIGIT(Type) IS ((Type),             \
+                OR (G_UNICODE_DECIMAL_NUMBER,   \
+                OR (G_UNICODE_LETTER_NUMBER,    \
+                OR (G_UNICODE_OTHER_NUMBER,     \
+                OR (G_UNICODE_LOWERCASE_LETTER, \
+                OR (G_UNICODE_UPPERCASE_LETTER, \
+                OR (G_UNICODE_TITLECASE_LETTER, \
+                OR (G_UNICODE_MODIFIER_LETTER,  \
+                OR (G_UNICODE_OTHER_LETTER,     0)))))))))
 
-#define ISMARK(Type)	IS ((Type),				\
-			    OR (G_UNICODE_NON_SPACING_MARK,	\
-			    OR (G_UNICODE_SPACING_MARK,	\
-			    OR (G_UNICODE_ENCLOSING_MARK,	0))))
+#define ISMARK(Type)    IS ((Type),             \
+                OR (G_UNICODE_NON_SPACING_MARK, \
+                OR (G_UNICODE_SPACING_MARK, \
+                OR (G_UNICODE_ENCLOSING_MARK,   0))))
 
-#define ISZEROWIDTHTYPE(Type)	IS ((Type),			\
-			    OR (G_UNICODE_NON_SPACING_MARK,	\
-			    OR (G_UNICODE_ENCLOSING_MARK,	\
-			    OR (G_UNICODE_FORMAT,		0))))
+#define ISZEROWIDTHTYPE(Type)   IS ((Type),         \
+                OR (G_UNICODE_NON_SPACING_MARK, \
+                OR (G_UNICODE_ENCLOSING_MARK,   \
+                OR (G_UNICODE_FORMAT,       0))))
 
 /**
  * g_unichar_isalnum:
  * @c: a Unicode character
- * 
+ *
  * Determines whether a character is alphanumeric.
  * Given some UTF-8 text, obtain a character value
  * with g_utf8_get_char().
- * 
+ *
  * Returns: %TRUE if @c is an alphanumeric character
  **/
 gboolean
@@ -113,11 +113,11 @@ g_unichar_isalnum (gunichar c)
 /**
  * g_unichar_isalpha:
  * @c: a Unicode character
- * 
+ *
  * Determines whether a character is alphabetic (i.e. a letter).
  * Given some UTF-8 text, obtain a character value with
  * g_utf8_get_char().
- * 
+ *
  * Returns: %TRUE if @c is an alphabetic character
  **/
 gboolean
@@ -130,11 +130,11 @@ g_unichar_isalpha (gunichar c)
 /**
  * g_unichar_iscntrl:
  * @c: a Unicode character
- * 
+ *
  * Determines whether a character is a control character.
  * Given some UTF-8 text, obtain a character value with
  * g_utf8_get_char().
- * 
+ *
  * Returns: %TRUE if @c is a control character
  **/
 gboolean
@@ -146,11 +146,11 @@ g_unichar_iscntrl (gunichar c)
 /**
  * g_unichar_isdigit:
  * @c: a Unicode character
- * 
+ *
  * Determines whether a character is numeric (i.e. a digit).  This
  * covers ASCII 0-9 and also digits in other languages/scripts.  Given
  * some UTF-8 text, obtain a character value with g_utf8_get_char().
- * 
+ *
  * Returns: %TRUE if @c is a digit
  **/
 gboolean
@@ -163,35 +163,35 @@ g_unichar_isdigit (gunichar c)
 /**
  * g_unichar_isgraph:
  * @c: a Unicode character
- * 
+ *
  * Determines whether a character is printable and not a space
  * (returns %FALSE for control characters, format characters, and
  * spaces). g_unichar_isprint() is similar, but returns %TRUE for
  * spaces. Given some UTF-8 text, obtain a character value with
  * g_utf8_get_char().
- * 
+ *
  * Returns: %TRUE if @c is printable unless it's a space
  **/
 gboolean
 g_unichar_isgraph (gunichar c)
 {
   return !IS (TYPE(c),
-	      OR (G_UNICODE_CONTROL,
-	      OR (G_UNICODE_FORMAT,
-	      OR (G_UNICODE_UNASSIGNED,
-	      OR (G_UNICODE_SURROGATE,
-	      OR (G_UNICODE_SPACE_SEPARATOR,
-	     0))))));
+          OR (G_UNICODE_CONTROL,
+          OR (G_UNICODE_FORMAT,
+          OR (G_UNICODE_UNASSIGNED,
+          OR (G_UNICODE_SURROGATE,
+          OR (G_UNICODE_SPACE_SEPARATOR,
+         0))))));
 }
 
 /**
  * g_unichar_islower:
  * @c: a Unicode character
- * 
+ *
  * Determines whether a character is a lowercase letter.
  * Given some UTF-8 text, obtain a character value with
  * g_utf8_get_char().
- * 
+ *
  * Returns: %TRUE if @c is a lowercase letter
  **/
 gboolean
@@ -204,57 +204,57 @@ g_unichar_islower (gunichar c)
 /**
  * g_unichar_isprint:
  * @c: a Unicode character
- * 
+ *
  * Determines whether a character is printable.
  * Unlike g_unichar_isgraph(), returns %TRUE for spaces.
  * Given some UTF-8 text, obtain a character value with
  * g_utf8_get_char().
- * 
+ *
  * Returns: %TRUE if @c is printable
  **/
 gboolean
 g_unichar_isprint (gunichar c)
 {
   return !IS (TYPE(c),
-	      OR (G_UNICODE_CONTROL,
-	      OR (G_UNICODE_FORMAT,
-	      OR (G_UNICODE_UNASSIGNED,
-	      OR (G_UNICODE_SURROGATE,
-	     0)))));
+          OR (G_UNICODE_CONTROL,
+          OR (G_UNICODE_FORMAT,
+          OR (G_UNICODE_UNASSIGNED,
+          OR (G_UNICODE_SURROGATE,
+         0)))));
 }
 
 /**
  * g_unichar_ispunct:
  * @c: a Unicode character
- * 
+ *
  * Determines whether a character is punctuation or a symbol.
  * Given some UTF-8 text, obtain a character value with
  * g_utf8_get_char().
- * 
+ *
  * Returns: %TRUE if @c is a punctuation or symbol character
  **/
 gboolean
 g_unichar_ispunct (gunichar c)
 {
   return IS (TYPE(c),
-	     OR (G_UNICODE_CONNECT_PUNCTUATION,
-	     OR (G_UNICODE_DASH_PUNCTUATION,
-	     OR (G_UNICODE_CLOSE_PUNCTUATION,
-	     OR (G_UNICODE_FINAL_PUNCTUATION,
-	     OR (G_UNICODE_INITIAL_PUNCTUATION,
-	     OR (G_UNICODE_OTHER_PUNCTUATION,
-	     OR (G_UNICODE_OPEN_PUNCTUATION,
-	     OR (G_UNICODE_CURRENCY_SYMBOL,
-	     OR (G_UNICODE_MODIFIER_SYMBOL,
-	     OR (G_UNICODE_MATH_SYMBOL,
-	     OR (G_UNICODE_OTHER_SYMBOL,
-	    0)))))))))))) ? TRUE : FALSE;
+         OR (G_UNICODE_CONNECT_PUNCTUATION,
+         OR (G_UNICODE_DASH_PUNCTUATION,
+         OR (G_UNICODE_CLOSE_PUNCTUATION,
+         OR (G_UNICODE_FINAL_PUNCTUATION,
+         OR (G_UNICODE_INITIAL_PUNCTUATION,
+         OR (G_UNICODE_OTHER_PUNCTUATION,
+         OR (G_UNICODE_OPEN_PUNCTUATION,
+         OR (G_UNICODE_CURRENCY_SYMBOL,
+         OR (G_UNICODE_MODIFIER_SYMBOL,
+         OR (G_UNICODE_MATH_SYMBOL,
+         OR (G_UNICODE_OTHER_SYMBOL,
+        0)))))))))))) ? TRUE : FALSE;
 }
 
 /**
  * g_unichar_isspace:
  * @c: a Unicode character
- * 
+ *
  * Determines whether a character is a space, tab, or line separator
  * (newline, carriage return, etc.).  Given some UTF-8 text, obtain a
  * character value with g_utf8_get_char().
@@ -262,7 +262,7 @@ g_unichar_ispunct (gunichar c)
  * (Note: don't use this to do word breaking; you have to use
  * Pango or equivalent to get word breaking right, the algorithm
  * is fairly complex.)
- *  
+ *
  * Returns: %TRUE if @c is a space character
  **/
 gboolean
@@ -277,14 +277,14 @@ g_unichar_isspace (gunichar c)
     case '\f':
       return TRUE;
       break;
-      
+
     default:
       {
-	return IS (TYPE(c),
-	           OR (G_UNICODE_SPACE_SEPARATOR,
-	           OR (G_UNICODE_LINE_SEPARATOR,
+    return IS (TYPE(c),
+               OR (G_UNICODE_SPACE_SEPARATOR,
+               OR (G_UNICODE_LINE_SEPARATOR,
                    OR (G_UNICODE_PARAGRAPH_SEPARATOR,
-		  0)))) ? TRUE : FALSE;
+          0)))) ? TRUE : FALSE;
       }
       break;
     }
@@ -317,9 +317,9 @@ g_unichar_ismark (gunichar c)
 /**
  * g_unichar_isupper:
  * @c: a Unicode character
- * 
+ *
  * Determines if a character is uppercase.
- * 
+ *
  * Returns: %TRUE if @c is an uppercase character
  **/
 gboolean
@@ -331,14 +331,14 @@ g_unichar_isupper (gunichar c)
 /**
  * g_unichar_istitle:
  * @c: a Unicode character
- * 
+ *
  * Determines if a character is titlecase. Some characters in
  * Unicode which are composites, such as the DZ digraph
  * have three case variants instead of just two. The titlecase
  * form is used at the beginning of a word where only the
  * first letter is capitalized. The titlecase form of the DZ
  * digraph is U+01F2 LATIN CAPITAL LETTTER D WITH SMALL LETTER Z.
- * 
+ *
  * Returns: %TRUE if the character is titlecase
  **/
 gboolean
@@ -354,23 +354,23 @@ g_unichar_istitle (gunichar c)
 /**
  * g_unichar_isxdigit:
  * @c: a Unicode character.
- * 
+ *
  * Determines if a character is a hexidecimal digit.
- * 
+ *
  * Returns: %TRUE if the character is a hexadecimal digit
  **/
 gboolean
 g_unichar_isxdigit (gunichar c)
 {
   return ((c >= 'a' && c <= 'f')
-	  || (c >= 'A' && c <= 'F')
-	  || (TYPE (c) == G_UNICODE_DECIMAL_NUMBER));
+      || (c >= 'A' && c <= 'F')
+      || (TYPE (c) == G_UNICODE_DECIMAL_NUMBER));
 }
 
 /**
  * g_unichar_isdefined:
  * @c: a Unicode character
- * 
+ *
  * Determines if a given character is assigned in the Unicode
  * standard.
  *
@@ -380,15 +380,15 @@ gboolean
 g_unichar_isdefined (gunichar c)
 {
   return !IS (TYPE(c),
-	      OR (G_UNICODE_UNASSIGNED,
-	      OR (G_UNICODE_SURROGATE,
-	     0)));
+          OR (G_UNICODE_UNASSIGNED,
+          OR (G_UNICODE_SURROGATE,
+         0)));
 }
 
 /**
  * g_unichar_iszerowidth:
  * @c: a Unicode character
- * 
+ *
  * Determines if a given character typically takes zero width when rendered.
  * The return value is %TRUE for all non-spacing and enclosing marks
  * (e.g., combining accents), format characters, zero-width
@@ -413,7 +413,7 @@ g_unichar_iszerowidth (gunichar c)
     return TRUE;
 
   if (G_UNLIKELY ((c >= 0x1160 && c < 0x1200) ||
-		  c == 0x200B))
+          c == 0x200B))
     return TRUE;
 
   return FALSE;
@@ -436,10 +436,10 @@ interval_compare (const void *key, const void *elt)
 /**
  * g_unichar_iswide:
  * @c: a Unicode character
- * 
+ *
  * Determines if a character is typically rendered in a double-width
  * cell.
- * 
+ *
  * Returns: %TRUE if the character is wide
  **/
 gboolean
@@ -449,7 +449,7 @@ g_unichar_iswide (gunichar c)
                g_unicode_width_table_wide,
                G_N_ELEMENTS (g_unicode_width_table_wide),
                sizeof g_unicode_width_table_wide[0],
-	       interval_compare))
+           interval_compare))
     return TRUE;
 
   return FALSE;
@@ -459,7 +459,7 @@ g_unichar_iswide (gunichar c)
 /**
  * g_unichar_iswide_cjk:
  * @c: a Unicode character
- * 
+ *
  * Determines if a character is typically rendered in a double-width
  * cell under legacy East Asian locales.  If a character is wide according to
  * g_unichar_iswide(), then it is also reported wide with this function, but
@@ -470,7 +470,7 @@ g_unichar_iswide (gunichar c)
  * If a character passes the g_unichar_iswide() test then it will also pass
  * this test, but not the other way around.  Note that some characters may
  * pass both this test and g_unichar_iszerowidth().
- * 
+ *
  * Returns: %TRUE if the character is wide in legacy East Asian locales
  *
  * Since: 2.12
@@ -481,11 +481,11 @@ g_unichar_iswide_cjk (gunichar c)
   if (g_unichar_iswide (c))
     return TRUE;
 
-  if (bsearch (GUINT_TO_POINTER (c), 
+  if (bsearch (GUINT_TO_POINTER (c),
                g_unicode_width_table_ambiguous,
                G_N_ELEMENTS (g_unicode_width_table_ambiguous),
                sizeof g_unicode_width_table_ambiguous[0],
-	       interval_compare))
+           interval_compare))
     return TRUE;
 
   return FALSE;
@@ -495,9 +495,9 @@ g_unichar_iswide_cjk (gunichar c)
 /**
  * g_unichar_toupper:
  * @c: a Unicode character
- * 
+ *
  * Converts a character to uppercase.
- * 
+ *
  * Returns: the result of converting @c to uppercase.
  *               If @c is not an lowercase or titlecase character,
  *               or has no upper case equivalent @c is returned unchanged.
@@ -510,13 +510,13 @@ g_unichar_toupper (gunichar c)
     {
       gunichar val = ATTTABLE (c >> 8, c & 0xff);
       if (val >= 0x1000000)
-	{
-	  const gchar *p = special_case_table + val - 0x1000000;
+    {
+      const gchar *p = special_case_table + val - 0x1000000;
           val = g_utf8_get_char (p);
-	}
+    }
       /* Some lowercase letters, e.g., U+000AA, FEMININE ORDINAL INDICATOR,
        * do not have an uppercase equivalent, in which case val will be
-       * zero. 
+       * zero.
        */
       return val ? val : c;
     }
@@ -524,10 +524,10 @@ g_unichar_toupper (gunichar c)
     {
       unsigned int i;
       for (i = 0; i < G_N_ELEMENTS (title_table); ++i)
-	{
-	  if (title_table[i][0] == c)
-	    return title_table[i][1] ? title_table[i][1] : c;
-	}
+    {
+      if (title_table[i][0] == c)
+        return title_table[i][1] ? title_table[i][1] : c;
+    }
     }
   return c;
 }
@@ -535,9 +535,9 @@ g_unichar_toupper (gunichar c)
 /**
  * g_unichar_tolower:
  * @c: a Unicode character.
- * 
+ *
  * Converts a character to lower case.
- * 
+ *
  * Returns: the result of converting @c to lower case.
  *               If @c is not an upperlower or titlecase character,
  *               or has no lowercase equivalent @c is returned unchanged.
@@ -550,25 +550,25 @@ g_unichar_tolower (gunichar c)
     {
       gunichar val = ATTTABLE (c >> 8, c & 0xff);
       if (val >= 0x1000000)
-	{
-	  const gchar *p = special_case_table + val - 0x1000000;
-	  return g_utf8_get_char (p);
-	}
+    {
+      const gchar *p = special_case_table + val - 0x1000000;
+      return g_utf8_get_char (p);
+    }
       else
-	{
-	  /* Not all uppercase letters are guaranteed to have a lowercase
-	   * equivalent.  If this is the case, val will be zero. */
-	  return val ? val : c;
-	}
+    {
+      /* Not all uppercase letters are guaranteed to have a lowercase
+       * equivalent.  If this is the case, val will be zero. */
+      return val ? val : c;
+    }
     }
   else if (t == G_UNICODE_TITLECASE_LETTER)
     {
       unsigned int i;
       for (i = 0; i < G_N_ELEMENTS (title_table); ++i)
-	{
-	  if (title_table[i][0] == c)
-	    return title_table[i][2];
-	}
+    {
+      if (title_table[i][0] == c)
+        return title_table[i][2];
+    }
     }
   return c;
 }
@@ -576,9 +576,9 @@ g_unichar_tolower (gunichar c)
 /**
  * g_unichar_totitle:
  * @c: a Unicode character
- * 
+ *
  * Converts a character to the titlecase.
- * 
+ *
  * Returns: the result of converting @c to titlecase.
  *               If @c is not an uppercase or lowercase character,
  *               @c is returned unchanged.
@@ -590,10 +590,10 @@ g_unichar_totitle (gunichar c)
   for (i = 0; i < G_N_ELEMENTS (title_table); ++i)
     {
       if (title_table[i][0] == c || title_table[i][1] == c
-	  || title_table[i][2] == c)
-	return title_table[i][0];
+      || title_table[i][2] == c)
+    return title_table[i][0];
     }
-    
+
   if (TYPE (c) == G_UNICODE_LOWERCASE_LETTER)
     return g_unichar_toupper (c);
 
@@ -643,9 +643,9 @@ g_unichar_xdigit_value (gunichar c)
 /**
  * g_unichar_type:
  * @c: a Unicode character
- * 
+ *
  * Classifies a Unicode character by type.
- * 
+ *
  * Returns: the type of the character.
  **/
 GUnicodeType
@@ -685,15 +685,15 @@ get_locale_type (void)
     {
    case 'a':
       if (locale[1] == 'z')
-	return LOCALE_TURKIC;
+    return LOCALE_TURKIC;
       break;
     case 'l':
       if (locale[1] == 't')
-	return LOCALE_LITHUANIAN;
+    return LOCALE_LITHUANIAN;
       break;
     case 't':
       if (locale[1] == 'r')
-	return LOCALE_TURKIC;
+    return LOCALE_TURKIC;
       break;
     }
 
@@ -702,24 +702,24 @@ get_locale_type (void)
 
 static gint
 output_marks (const char **p_inout,
-	      char        *out_buffer,
-	      gboolean     remove_dot)
+          char        *out_buffer,
+          gboolean     remove_dot)
 {
   const char *p = *p_inout;
   gint len = 0;
-  
+
   while (*p)
     {
       gunichar c = g_utf8_get_char (p);
-      
+
       if (ISMARK (TYPE (c)))
-	{
-	  if (!remove_dot || c != 0x307 /* COMBINING DOT ABOVE */)
-	    len += g_unichar_to_utf8 (c, out_buffer ? out_buffer + len : NULL);
-	  p = g_utf8_next_char (p);
-	}
+    {
+      if (!remove_dot || c != 0x307 /* COMBINING DOT ABOVE */)
+        len += g_unichar_to_utf8 (c, out_buffer ? out_buffer + len : NULL);
+      p = g_utf8_next_char (p);
+    }
       else
-	break;
+    break;
     }
 
   *p_inout = p;
@@ -728,9 +728,9 @@ output_marks (const char **p_inout,
 
 static gint
 output_special_case (gchar *out_buffer,
-		     int    offset,
-		     int    type,
-		     int    which)
+             int    offset,
+             int    type,
+             int    which)
 {
   const gchar *p = special_case_table + offset;
   gint len;
@@ -750,9 +750,9 @@ output_special_case (gchar *out_buffer,
 
 static gsize
 real_toupper (const gchar *str,
-	      gssize       max_len,
-	      gchar       *out_buffer,
-	      LocaleType   locale_type)
+          gssize       max_len,
+          gchar       *out_buffer,
+          LocaleType   locale_type)
 {
   const gchar *p = str;
   const char *last = NULL;
@@ -769,94 +769,94 @@ real_toupper (const gchar *str,
       p = g_utf8_next_char (p);
 
       if (locale_type == LOCALE_LITHUANIAN)
-	{
-	  if (c == 'i')
-	    last_was_i = TRUE;
-	  else 
-	    {
-	      if (last_was_i)
-		{
-		  /* Nasty, need to remove any dot above. Though
-		   * I think only E WITH DOT ABOVE occurs in practice
-		   * which could simplify this considerably.
-		   */
-		  gsize decomp_len, i;
-		  gunichar decomp[G_UNICHAR_MAX_DECOMPOSITION_LENGTH];
+    {
+      if (c == 'i')
+        last_was_i = TRUE;
+      else
+        {
+          if (last_was_i)
+        {
+          /* Nasty, need to remove any dot above. Though
+           * I think only E WITH DOT ABOVE occurs in practice
+           * which could simplify this considerably.
+           */
+          gsize decomp_len, i;
+          gunichar decomp[G_UNICHAR_MAX_DECOMPOSITION_LENGTH];
 
-		  decomp_len = g_unichar_fully_decompose (c, FALSE, decomp, G_N_ELEMENTS (decomp));
-		  for (i=0; i < decomp_len; i++)
-		    {
-		      if (decomp[i] != 0x307 /* COMBINING DOT ABOVE */)
-			len += g_unichar_to_utf8 (g_unichar_toupper (decomp[i]), out_buffer ? out_buffer + len : NULL);
-		    }
-		  
-		  len += output_marks (&p, out_buffer ? out_buffer + len : NULL, TRUE);
+          decomp_len = g_unichar_fully_decompose (c, FALSE, decomp, G_N_ELEMENTS (decomp));
+          for (i=0; i < decomp_len; i++)
+            {
+              if (decomp[i] != 0x307 /* COMBINING DOT ABOVE */)
+            len += g_unichar_to_utf8 (g_unichar_toupper (decomp[i]), out_buffer ? out_buffer + len : NULL);
+            }
 
-		  continue;
-		}
+          len += output_marks (&p, out_buffer ? out_buffer + len : NULL, TRUE);
 
-	      if (!ISMARK (t))
-		last_was_i = FALSE;
-	    }
-	}
+          continue;
+        }
+
+          if (!ISMARK (t))
+        last_was_i = FALSE;
+        }
+    }
 
       if (locale_type == LOCALE_TURKIC && c == 'i')
-	{
-	  /* i => LATIN CAPITAL LETTER I WITH DOT ABOVE */
-	  len += g_unichar_to_utf8 (0x130, out_buffer ? out_buffer + len : NULL); 
-	}
-      else if (c == 0x0345)	/* COMBINING GREEK YPOGEGRAMMENI */
-	{
-	  /* Nasty, need to move it after other combining marks .. this would go away if
-	   * we normalized first.
-	   */
-	  len += output_marks (&p, out_buffer ? out_buffer + len : NULL, FALSE);
+    {
+      /* i => LATIN CAPITAL LETTER I WITH DOT ABOVE */
+      len += g_unichar_to_utf8 (0x130, out_buffer ? out_buffer + len : NULL);
+    }
+      else if (c == 0x0345) /* COMBINING GREEK YPOGEGRAMMENI */
+    {
+      /* Nasty, need to move it after other combining marks .. this would go away if
+       * we normalized first.
+       */
+      len += output_marks (&p, out_buffer ? out_buffer + len : NULL, FALSE);
 
-	  /* And output as GREEK CAPITAL LETTER IOTA */
-	  len += g_unichar_to_utf8 (0x399, out_buffer ? out_buffer + len : NULL); 	  
-	}
+      /* And output as GREEK CAPITAL LETTER IOTA */
+      len += g_unichar_to_utf8 (0x399, out_buffer ? out_buffer + len : NULL);
+    }
       else if (IS (t,
-		   OR (G_UNICODE_LOWERCASE_LETTER,
-		   OR (G_UNICODE_TITLECASE_LETTER,
-		  0))))
-	{
-	  val = ATTTABLE (c >> 8, c & 0xff);
+           OR (G_UNICODE_LOWERCASE_LETTER,
+           OR (G_UNICODE_TITLECASE_LETTER,
+          0))))
+    {
+      val = ATTTABLE (c >> 8, c & 0xff);
 
-	  if (val >= 0x1000000)
-	    {
-	      len += output_special_case (out_buffer ? out_buffer + len : NULL, val - 0x1000000, t,
-					  t == G_UNICODE_LOWERCASE_LETTER ? 0 : 1);
-	    }
-	  else
-	    {
-	      if (t == G_UNICODE_TITLECASE_LETTER)
-		{
-		  unsigned int i;
-		  for (i = 0; i < G_N_ELEMENTS (title_table); ++i)
-		    {
-		      if (title_table[i][0] == c)
-			{
-			  val = title_table[i][1];
-			  break;
-			}
-		    }
-		}
-
-	      /* Some lowercase letters, e.g., U+000AA, FEMININE ORDINAL INDICATOR,
-	       * do not have an uppercase equivalent, in which case val will be
-	       * zero. */
-	      len += g_unichar_to_utf8 (val ? val : c, out_buffer ? out_buffer + len : NULL);
-	    }
-	}
+      if (val >= 0x1000000)
+        {
+          len += output_special_case (out_buffer ? out_buffer + len : NULL, val - 0x1000000, t,
+                      t == G_UNICODE_LOWERCASE_LETTER ? 0 : 1);
+        }
       else
-	{
-	  gsize char_len = g_utf8_skip[*(guchar *)last];
+        {
+          if (t == G_UNICODE_TITLECASE_LETTER)
+        {
+          unsigned int i;
+          for (i = 0; i < G_N_ELEMENTS (title_table); ++i)
+            {
+              if (title_table[i][0] == c)
+            {
+              val = title_table[i][1];
+              break;
+            }
+            }
+        }
 
-	  if (out_buffer)
-	    memcpy (out_buffer + len, last, char_len);
+          /* Some lowercase letters, e.g., U+000AA, FEMININE ORDINAL INDICATOR,
+           * do not have an uppercase equivalent, in which case val will be
+           * zero. */
+          len += g_unichar_to_utf8 (val ? val : c, out_buffer ? out_buffer + len : NULL);
+        }
+    }
+      else
+    {
+      gsize char_len = g_utf8_skip[*(guchar *)last];
 
-	  len += char_len;
-	}
+      if (out_buffer)
+        memcpy (out_buffer + len, last, char_len);
+
+      len += char_len;
+    }
 
     }
 
@@ -867,19 +867,19 @@ real_toupper (const gchar *str,
  * g_utf8_strup:
  * @str: a UTF-8 encoded string
  * @len: length of @str, in bytes, or -1 if @str is nul-terminated.
- * 
+ *
  * Converts all Unicode characters in the string that have a case
  * to uppercase. The exact manner that this is done depends
  * on the current locale, and may result in the number of
  * characters in the string increasing. (For instance, the
  * German ess-zet will be changed to SS.)
- * 
+ *
  * Returns: a newly allocated string, with all characters
- *    converted to uppercase.  
+ *    converted to uppercase.
  **/
 gchar *
 g_utf8_strup (const gchar *str,
-	      gssize       len)
+          gssize       len)
 {
   gsize result_len;
   LocaleType locale_type;
@@ -888,7 +888,7 @@ g_utf8_strup (const gchar *str,
   g_return_val_if_fail (str != NULL, NULL);
 
   locale_type = get_locale_type ();
-  
+
   /*
    * We use a two pass approach to keep memory management simple
    */
@@ -907,7 +907,7 @@ g_utf8_strup (const gchar *str,
     return NULL;
 #else // GSTREAMER_LITE
   real_toupper (str, len, result, locale_type);
-#endif // GSTREAMER_LITE  
+#endif // GSTREAMER_LITE
   result[result_len] = '\0';
 
   return result;
@@ -937,9 +937,9 @@ has_more_above (const gchar *str)
 
 static gsize
 real_tolower (const gchar *str,
-	      gssize       max_len,
-	      gchar       *out_buffer,
-	      LocaleType   locale_type)
+          gssize       max_len,
+          gchar       *out_buffer,
+          LocaleType   locale_type)
 {
   const gchar *p = str;
   const char *last = NULL;
@@ -955,110 +955,110 @@ real_tolower (const gchar *str,
       p = g_utf8_next_char (p);
 
       if (locale_type == LOCALE_TURKIC && c == 'I')
-	{
+    {
           if (g_utf8_get_char (p) == 0x0307)
             {
               /* I + COMBINING DOT ABOVE => i (U+0069) */
-              len += g_unichar_to_utf8 (0x0069, out_buffer ? out_buffer + len : NULL); 
+              len += g_unichar_to_utf8 (0x0069, out_buffer ? out_buffer + len : NULL);
               p = g_utf8_next_char (p);
             }
           else
             {
               /* I => LATIN SMALL LETTER DOTLESS I */
-              len += g_unichar_to_utf8 (0x131, out_buffer ? out_buffer + len : NULL); 
+              len += g_unichar_to_utf8 (0x131, out_buffer ? out_buffer + len : NULL);
             }
         }
       /* Introduce an explicit dot above when lowercasing capital I's and J's
        * whenever there are more accents above. [SpecialCasing.txt] */
-      else if (locale_type == LOCALE_LITHUANIAN && 
+      else if (locale_type == LOCALE_LITHUANIAN &&
                (c == 0x00cc || c == 0x00cd || c == 0x0128))
         {
-          len += g_unichar_to_utf8 (0x0069, out_buffer ? out_buffer + len : NULL); 
-          len += g_unichar_to_utf8 (0x0307, out_buffer ? out_buffer + len : NULL); 
+          len += g_unichar_to_utf8 (0x0069, out_buffer ? out_buffer + len : NULL);
+          len += g_unichar_to_utf8 (0x0307, out_buffer ? out_buffer + len : NULL);
 
           switch (c)
             {
-            case 0x00cc: 
-              len += g_unichar_to_utf8 (0x0300, out_buffer ? out_buffer + len : NULL); 
+            case 0x00cc:
+              len += g_unichar_to_utf8 (0x0300, out_buffer ? out_buffer + len : NULL);
               break;
-            case 0x00cd: 
-              len += g_unichar_to_utf8 (0x0301, out_buffer ? out_buffer + len : NULL); 
+            case 0x00cd:
+              len += g_unichar_to_utf8 (0x0301, out_buffer ? out_buffer + len : NULL);
               break;
-            case 0x0128: 
-              len += g_unichar_to_utf8 (0x0303, out_buffer ? out_buffer + len : NULL); 
+            case 0x0128:
+              len += g_unichar_to_utf8 (0x0303, out_buffer ? out_buffer + len : NULL);
               break;
             }
         }
-      else if (locale_type == LOCALE_LITHUANIAN && 
-               (c == 'I' || c == 'J' || c == 0x012e) && 
+      else if (locale_type == LOCALE_LITHUANIAN &&
+               (c == 'I' || c == 'J' || c == 0x012e) &&
                has_more_above (p))
         {
-          len += g_unichar_to_utf8 (g_unichar_tolower (c), out_buffer ? out_buffer + len : NULL); 
-          len += g_unichar_to_utf8 (0x0307, out_buffer ? out_buffer + len : NULL); 
+          len += g_unichar_to_utf8 (g_unichar_tolower (c), out_buffer ? out_buffer + len : NULL);
+          len += g_unichar_to_utf8 (0x0307, out_buffer ? out_buffer + len : NULL);
         }
-      else if (c == 0x03A3)	/* GREEK CAPITAL LETTER SIGMA */
-	{
-	  if ((max_len < 0 || p < str + max_len) && *p)
-	    {
-	      gunichar next_c = g_utf8_get_char (p);
-	      int next_type = TYPE(next_c);
+      else if (c == 0x03A3) /* GREEK CAPITAL LETTER SIGMA */
+    {
+      if ((max_len < 0 || p < str + max_len) && *p)
+        {
+          gunichar next_c = g_utf8_get_char (p);
+          int next_type = TYPE(next_c);
 
-	      /* SIGMA mapps differently depending on whether it is
-	       * final or not. The following simplified test would
-	       * fail in the case of combining marks following the
-	       * sigma, but I don't think that occurs in real text.
-	       * The test here matches that in ICU.
-	       */
-	      if (ISALPHA (next_type)) /* Lu,Ll,Lt,Lm,Lo */
-		val = 0x3c3;	/* GREEK SMALL SIGMA */
-	      else
-		val = 0x3c2;	/* GREEK SMALL FINAL SIGMA */
-	    }
-	  else
-	    val = 0x3c2;	/* GREEK SMALL FINAL SIGMA */
-
-	  len += g_unichar_to_utf8 (val, out_buffer ? out_buffer + len : NULL);
-	}
-      else if (IS (t,
-		   OR (G_UNICODE_UPPERCASE_LETTER,
-		   OR (G_UNICODE_TITLECASE_LETTER,
-		  0))))
-	{
-	  val = ATTTABLE (c >> 8, c & 0xff);
-
-	  if (val >= 0x1000000)
-	    {
-	      len += output_special_case (out_buffer ? out_buffer + len : NULL, val - 0x1000000, t, 0);
-	    }
-	  else
-	    {
-	      if (t == G_UNICODE_TITLECASE_LETTER)
-		{
-		  unsigned int i;
-		  for (i = 0; i < G_N_ELEMENTS (title_table); ++i)
-		    {
-		      if (title_table[i][0] == c)
-			{
-			  val = title_table[i][2];
-			  break;
-			}
-		    }
-		}
-
-	      /* Not all uppercase letters are guaranteed to have a lowercase
-	       * equivalent.  If this is the case, val will be zero. */
-	      len += g_unichar_to_utf8 (val ? val : c, out_buffer ? out_buffer + len : NULL);
-	    }
-	}
+          /* SIGMA mapps differently depending on whether it is
+           * final or not. The following simplified test would
+           * fail in the case of combining marks following the
+           * sigma, but I don't think that occurs in real text.
+           * The test here matches that in ICU.
+           */
+          if (ISALPHA (next_type)) /* Lu,Ll,Lt,Lm,Lo */
+        val = 0x3c3;    /* GREEK SMALL SIGMA */
+          else
+        val = 0x3c2;    /* GREEK SMALL FINAL SIGMA */
+        }
       else
-	{
-	  gsize char_len = g_utf8_skip[*(guchar *)last];
+        val = 0x3c2;    /* GREEK SMALL FINAL SIGMA */
 
-	  if (out_buffer)
-	    memcpy (out_buffer + len, last, char_len);
+      len += g_unichar_to_utf8 (val, out_buffer ? out_buffer + len : NULL);
+    }
+      else if (IS (t,
+           OR (G_UNICODE_UPPERCASE_LETTER,
+           OR (G_UNICODE_TITLECASE_LETTER,
+          0))))
+    {
+      val = ATTTABLE (c >> 8, c & 0xff);
 
-	  len += char_len;
-	}
+      if (val >= 0x1000000)
+        {
+          len += output_special_case (out_buffer ? out_buffer + len : NULL, val - 0x1000000, t, 0);
+        }
+      else
+        {
+          if (t == G_UNICODE_TITLECASE_LETTER)
+        {
+          unsigned int i;
+          for (i = 0; i < G_N_ELEMENTS (title_table); ++i)
+            {
+              if (title_table[i][0] == c)
+            {
+              val = title_table[i][2];
+              break;
+            }
+            }
+        }
+
+          /* Not all uppercase letters are guaranteed to have a lowercase
+           * equivalent.  If this is the case, val will be zero. */
+          len += g_unichar_to_utf8 (val ? val : c, out_buffer ? out_buffer + len : NULL);
+        }
+    }
+      else
+    {
+      gsize char_len = g_utf8_skip[*(guchar *)last];
+
+      if (out_buffer)
+        memcpy (out_buffer + len, last, char_len);
+
+      len += char_len;
+    }
 
     }
 
@@ -1069,18 +1069,18 @@ real_tolower (const gchar *str,
  * g_utf8_strdown:
  * @str: a UTF-8 encoded string
  * @len: length of @str, in bytes, or -1 if @str is nul-terminated.
- * 
+ *
  * Converts all Unicode characters in the string that have a case
  * to lowercase. The exact manner that this is done depends
  * on the current locale, and may result in the number of
  * characters in the string changing.
- * 
+ *
  * Returns: a newly allocated string, with all characters
- *    converted to lowercase.  
+ *    converted to lowercase.
  **/
 gchar *
 g_utf8_strdown (const gchar *str,
-		gssize       len)
+        gssize       len)
 {
   gsize result_len;
   LocaleType locale_type;
@@ -1089,7 +1089,7 @@ g_utf8_strdown (const gchar *str,
   g_return_val_if_fail (str != NULL, NULL);
 
   locale_type = get_locale_type ();
-  
+
   /*
    * We use a two pass approach to keep memory management simple
    */
@@ -1109,25 +1109,25 @@ g_utf8_strdown (const gchar *str,
  * g_utf8_casefold:
  * @str: a UTF-8 encoded string
  * @len: length of @str, in bytes, or -1 if @str is nul-terminated.
- * 
+ *
  * Converts a string into a form that is independent of case. The
  * result will not correspond to any particular case, but can be
  * compared for equality or ordered with the results of calling
  * g_utf8_casefold() on other strings.
- * 
+ *
  * Note that calling g_utf8_casefold() followed by g_utf8_collate() is
  * only an approximation to the correct linguistic case insensitive
  * ordering, though it is a fairly good one. Getting this exactly
  * right would require a more sophisticated collation function that
  * takes case sensitivity into account. GLib does not currently
  * provide such a function.
- * 
+ *
  * Returns: a newly allocated string, that is a
  *   case independent form of @str.
  **/
 gchar *
 g_utf8_casefold (const gchar *str,
-		 gssize       len)
+         gssize       len)
 {
   GString *result;
   const char *p;
@@ -1145,38 +1145,38 @@ g_utf8_casefold (const gchar *str,
 
       if (ch >= casefold_table[start].ch &&
           ch <= casefold_table[end - 1].ch)
-	{
-	  while (TRUE)
-	    {
-	      int half = (start + end) / 2;
-	      if (ch == casefold_table[half].ch)
-		{
-		  g_string_append (result, casefold_table[half].data);
-		  goto next;
-		}
-	      else if (half == start)
-		break;
-	      else if (ch > casefold_table[half].ch)
-		start = half;
-	      else
-		end = half;
-	    }
-	}
+    {
+      while (TRUE)
+        {
+          int half = (start + end) / 2;
+          if (ch == casefold_table[half].ch)
+        {
+          g_string_append (result, casefold_table[half].data);
+          goto next;
+        }
+          else if (half == start)
+        break;
+          else if (ch > casefold_table[half].ch)
+        start = half;
+          else
+        end = half;
+        }
+    }
 
       g_string_append_unichar (result, g_unichar_tolower (ch));
-      
+
     next:
       p = g_utf8_next_char (p);
     }
 
-  return g_string_free (result, FALSE); 
+  return g_string_free (result, FALSE);
 }
 
 /**
  * g_unichar_get_mirror_char:
  * @ch: a Unicode character
  * @mirrored_ch: location to store the mirrored character
- * 
+ *
  * In Unicode, some characters are "mirrored". This means that their
  * images are mirrored horizontally in text that is laid out from right
  * to left. For instance, "(" would become its mirror image, ")", in
@@ -1219,14 +1219,14 @@ g_unichar_get_script_bsearch (gunichar ch)
   int mid = saved_mid;
 
 
-  do 
+  do
     {
       if (ch < g_script_table[mid].start)
-	upper = mid - 1;
+    upper = mid - 1;
       else if (ch >= g_script_table[mid].start + g_script_table[mid].chars)
-	lower = mid + 1;
+    lower = mid + 1;
       else
-	return g_script_table[saved_mid = mid].script;
+    return g_script_table[saved_mid = mid].script;
 
       mid = (lower + upper) / 2;
     }
@@ -1238,15 +1238,15 @@ g_unichar_get_script_bsearch (gunichar ch)
 /**
  * g_unichar_get_script:
  * @ch: a Unicode character
- * 
- * Looks up the #GUnicodeScript for a particular character (as defined 
+ *
+ * Looks up the #GUnicodeScript for a particular character (as defined
  * by Unicode Standard Annex \#24). No check is made for @ch being a
  * valid Unicode character; if you pass in invalid character, the
  * result is undefined.
  *
  * This function is equivalent to pango_script_for_unichar() and the
  * two are interchangeable.
- * 
+ *
  * Returns: the #GUnicodeScript for the character.
  *
  * Since: 2.14
@@ -1256,8 +1256,8 @@ g_unichar_get_script (gunichar ch)
 {
   if (ch < G_EASY_SCRIPTS_RANGE)
     return g_script_easy_table[ch];
-  else 
-    return g_unichar_get_script_bsearch (ch); 
+  else
+    return g_unichar_get_script_bsearch (ch);
 }
 
 

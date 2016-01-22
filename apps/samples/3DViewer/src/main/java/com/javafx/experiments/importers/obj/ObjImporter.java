@@ -70,7 +70,7 @@ public class ObjImporter {
             return uvIndex - 1;
         }
     }
-    
+
     private int normalIndex(int normalIndex) {
         if (normalIndex < 0) {
             return normalIndex + normals.size() / 3;
@@ -259,7 +259,7 @@ public class ObjImporter {
                         faceNormals.add(n1);
                         faceNormals.add(n2);
                         faceNormals.add(n3);
-                        
+
                         smoothingGroups.add(currentSmoothGroup);
                     }
                 } else if (line.startsWith("s ")) {
@@ -352,7 +352,7 @@ public class ObjImporter {
                 }
             }
             faces.set(i + 1, nuvi);
-            
+
             if (useNormals) {
                 int ni = faceNormals.get(i/2);
                 Integer nni = normalMap.get(ni);
@@ -378,7 +378,7 @@ public class ObjImporter {
         mesh.getPoints().setAll(newVertexes.toFloatArray());
         mesh.getTexCoords().setAll(newUVs.toFloatArray());
         mesh.getFaces().setAll(((IntegerArrayList) faces.subList(facesStart, faces.size())).toIntArray());
-        
+
         // Use normals if they are provided
         if (useNormals) {
             int[] newFaces = ((IntegerArrayList) faces.subList(facesStart, faces.size())).toIntArray();
@@ -388,7 +388,7 @@ public class ObjImporter {
         } else {
             mesh.getFaceSmoothingGroups().setAll(((IntegerArrayList) smoothingGroups.subList(smoothingGroupsStart, smoothingGroups.size())).toIntArray());
         }
-       
+
         int keyIndex = 2;
         String keyBase = key;
         while (meshes.get(key) != null) {

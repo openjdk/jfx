@@ -223,7 +223,7 @@ public class Clipboard {
      * @param content The content to put on the clipboard. If null, the
      *        clipboard is simply cleared and no new content added.
      * @return True if successful, false if the content fails to be added.
-     * @throws NullPointerException if null data reference is passed for any 
+     * @throws NullPointerException if null data reference is passed for any
      *                              format
      */
 //    public abstract boolean setContent(DataFormat uti, Object content);

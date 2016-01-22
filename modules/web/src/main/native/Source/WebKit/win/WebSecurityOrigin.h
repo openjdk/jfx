@@ -40,7 +40,7 @@ public:
     WebCore::SecurityOrigin* securityOrigin() const { return m_securityOrigin.get(); }
 
     // IUnknown
-    virtual HRESULT STDMETHODCALLTYPE QueryInterface( 
+    virtual HRESULT STDMETHODCALLTYPE QueryInterface(
         /* [in] */ REFIID riid,
         /* [iid_is][out] */ void** ppvObject);
 
@@ -49,22 +49,22 @@ public:
     virtual ULONG STDMETHODCALLTYPE Release();
 
     // IWebSecurityOrigin
-    virtual HRESULT STDMETHODCALLTYPE protocol( 
+    virtual HRESULT STDMETHODCALLTYPE protocol(
         /* [retval][out] */ BSTR* result);
-        
-    virtual HRESULT STDMETHODCALLTYPE host( 
+
+    virtual HRESULT STDMETHODCALLTYPE host(
         /* [retval][out] */ BSTR* result);
-        
-    virtual HRESULT STDMETHODCALLTYPE port( 
+
+    virtual HRESULT STDMETHODCALLTYPE port(
         /* [retval][out] */ unsigned short* result);
 
-    virtual HRESULT STDMETHODCALLTYPE usage( 
+    virtual HRESULT STDMETHODCALLTYPE usage(
         /* [retval][out] */ unsigned long long* result);
-        
-    virtual HRESULT STDMETHODCALLTYPE quota( 
+
+    virtual HRESULT STDMETHODCALLTYPE quota(
         /* [retval][out] */ unsigned long long* result);
-        
-    virtual HRESULT STDMETHODCALLTYPE setQuota( 
+
+    virtual HRESULT STDMETHODCALLTYPE setQuota(
         /* [in] */ unsigned long long quota);
 
 private:

@@ -50,7 +50,7 @@ import static javafx.geometry.NodeOrientation.RIGHT_TO_LEFT;
  * @since 9
  */
 final public class SimpleSelector extends Selector {
-    
+
     /**
      * If specified in the CSS file, the name of the java class to which
      * this selector is applied. For example, if the CSS file had:
@@ -66,29 +66,29 @@ final public class SimpleSelector extends Selector {
     public String getName() {
         return name;
     }
-    
+
     /**
      * @return Immutable List&lt;String&gt; of style-classes of the selector
      */
     public List<String> getStyleClasses() {
-        
+
         final List<String> names = new ArrayList<String>();
-        
+
         Iterator<StyleClass> iter = styleClassSet.iterator();
         while (iter.hasNext()) {
             names.add(iter.next().getStyleClassName());
         }
-        
+
         return Collections.unmodifiableList(names);
     }
 
     public Set<StyleClass> getStyleClassSet() {
         return styleClassSet;
     }
-    
+
     /** styleClasses converted to a set of bit masks */
     final private StyleClassSet styleClassSet;
-    
+
     final private String id;
     /*
      * @return The value of the selector id, which may be an empty string.
@@ -96,10 +96,10 @@ final public class SimpleSelector extends Selector {
     public String getId() {
         return id;
     }
-    
+
     // a mask of bits corresponding to the pseudoclasses
     final private PseudoClassState pseudoClassState;
-    
+
     Set<PseudoClass> getPseudoClassStates() {
         return pseudoClassState;
     }
@@ -108,23 +108,23 @@ final public class SimpleSelector extends Selector {
      * @return Immutable List&lt;String&gt; of pseudo-classes of the selector
      */
     List<String> getPseudoclasses() {
-        
+
         final List<String> names = new ArrayList<String>();
-        
+
         Iterator<PseudoClass> iter = pseudoClassState.iterator();
         while (iter.hasNext()) {
             names.add(iter.next().getPseudoClassName());
         }
-        
+
         if (nodeOrientation == RIGHT_TO_LEFT) {
             names.add("dir(rtl)");
         } else if (nodeOrientation == LEFT_TO_RIGHT) {
             names.add("dir(ltr)");
         }
-                    
+
         return Collections.unmodifiableList(names);
     }
-        
+
     // true if name is not a wildcard
     final private boolean matchOnName;
 
@@ -136,57 +136,57 @@ final public class SimpleSelector extends Selector {
 
     // dir(ltr) or dir(rtl), otherwise inherit
     final private NodeOrientation nodeOrientation;
-    
-    // Used in Match. If nodeOrientation is ltr or rtl, 
+
+    // Used in Match. If nodeOrientation is ltr or rtl,
     // then count it as a pseudoclass
     public NodeOrientation getNodeOrientation() {
         return nodeOrientation;
     }
-    
+
     // TODO: The parser passes styleClasses as a List. Should be array?
     SimpleSelector(final String name, final List<String> styleClasses,
             final List<String> pseudoClasses, final String id)
     {
         this.name = name == null ? "*" : name;
-        // if name is not null and not empty or wildcard, 
+        // if name is not null and not empty or wildcard,
         // then match needs to check name
         this.matchOnName = (name != null && !("".equals(name)) && !("*".equals(name)));
 
         this.styleClassSet = new StyleClassSet();
-        
+
         int nMax = styleClasses != null ? styleClasses.size() : 0;
-        for(int n=0; n<nMax; n++) { 
-            
+        for(int n=0; n<nMax; n++) {
+
             final String styleClassName = styleClasses.get(n);
             if (styleClassName == null || styleClassName.isEmpty()) continue;
-            
+
             final StyleClass styleClass = StyleClassSet.getStyleClass(styleClassName);
             this.styleClassSet.add(styleClass);
         }
-        
+
         this.matchOnStyleClass = (this.styleClassSet.size() > 0);
 
         this.pseudoClassState = new PseudoClassState();
-        
+
         nMax = pseudoClasses != null ? pseudoClasses.size() : 0;
 
         NodeOrientation dir = NodeOrientation.INHERIT;
-        for(int n=0; n<nMax; n++) { 
-            
+        for(int n=0; n<nMax; n++) {
+
             final String pclass = pseudoClasses.get(n);
             if (pclass == null || pclass.isEmpty()) continue;
-            
+
             // TODO: This is not how we should handle functional pseudo-classes in the long-run!
             if ("dir(".regionMatches(true, 0, pclass, 0, 4)) {
                 final boolean rtl = "dir(rtl)".equalsIgnoreCase(pclass);
                 dir = rtl ? RIGHT_TO_LEFT : LEFT_TO_RIGHT;
                 continue;
             }
-            
+
             final PseudoClass pseudoClass = PseudoClassState.getPseudoClass(pclass);
             this.pseudoClassState.add(pseudoClass);
         }
-        
+
         this.nodeOrientation = dir;
         this.id = id == null ? "" : id;
         // if id is not null and not empty, then match needs to check id
@@ -201,7 +201,7 @@ final public class SimpleSelector extends Selector {
     }
 
     @Override public boolean applies(Styleable styleable) {
-        
+
         // handle functional pseudo-class :dir()
         // INHERIT applies to both :dir(rtl) and :dir(ltr)
         if (nodeOrientation != INHERIT && styleable instanceof Node) {
@@ -235,10 +235,10 @@ final public class SimpleSelector extends Selector {
         }
 
         if (matchOnStyleClass) {
-            
+
             final StyleClassSet otherStyleClassSet = new StyleClassSet();
             final List<String> styleClasses = styleable.getStyleClass();
-            for(int n=0, nMax = styleClasses.size(); n<nMax; n++) { 
+            for(int n=0, nMax = styleClasses.size(); n<nMax; n++) {
 
                 final String styleClassName = styleClasses.get(n);
                 if (styleClassName == null || styleClassName.isEmpty()) continue;
@@ -246,36 +246,36 @@ final public class SimpleSelector extends Selector {
                 final StyleClass styleClass = StyleClassSet.getStyleClass(styleClassName);
                 otherStyleClassSet.add(styleClass);
             }
-            
-            boolean styleClassMatch = matchStyleClasses(otherStyleClassSet); 
+
+            boolean styleClassMatch = matchStyleClasses(otherStyleClassSet);
             if (!styleClassMatch) return false;
         }
-        
+
         return true;
     }
-    
+
     @Override public boolean applies(Styleable styleable, Set<PseudoClass>[] pseudoClasses, int depth) {
 
-        
+
         final boolean applies = applies(styleable);
-        
+
         //
         // We only need the pseudo-classes if the selector applies to the node.
-        // 
+        //
         if (applies && pseudoClasses != null && depth < pseudoClasses.length) {
 
             if (pseudoClasses[depth] == null) {
                 pseudoClasses[depth] = new PseudoClassState();
             }
-            
+
             pseudoClasses[depth].addAll(pseudoClassState);
-            
+
         }
         return applies;
     }
 
     @Override public boolean stateMatches(final Styleable styleable, Set<PseudoClass> states) {
-        // [foo bar] matches [foo bar bang], 
+        // [foo bar] matches [foo bar bang],
         // but [foo bar bang] doesn't match [foo bar]
         return states != null ? states.containsAll(pseudoClassState) : false;
     }
@@ -314,12 +314,12 @@ final public class SimpleSelector extends Selector {
         }
         if (this.pseudoClassState.equals(other.pseudoClassState) == false) {
             return false;
-        } 
-        
+        }
+
         return true;
     }
 
-    /* Hash code is used in Style's hash code and Style's hash 
+    /* Hash code is used in Style's hash code and Style's hash
        code is used by StyleHelper */
     @Override public int hashCode() {
         int hash = 7;
@@ -333,7 +333,7 @@ final public class SimpleSelector extends Selector {
 
     /** Converts this object to a string. */
     @Override public String toString() {
-        
+
         StringBuilder sbuf = new StringBuilder();
         if (name != null && name.isEmpty() == false) sbuf.append(name);
         else sbuf.append("*");
@@ -351,7 +351,7 @@ final public class SimpleSelector extends Selector {
             final PseudoClass pseudoClass = iter2.next();
             sbuf.append(':').append(pseudoClass.getPseudoClassName());
         }
-            
+
         return sbuf.toString();
     }
 

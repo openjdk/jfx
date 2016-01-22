@@ -43,7 +43,7 @@ public:
         ASSERT_UNUSED(inlineCapacity, !inlineCapacity);
         return sizeof(JSArray);
     }
-        
+
 protected:
     explicit JSArray(VM& vm, Structure* structure, Butterfly* butterfly)
         : JSNonFinalObject(vm, structure, butterfly)
@@ -64,7 +64,7 @@ public:
     static bool getOwnPropertySlot(JSObject*, ExecState*, PropertyName, PropertySlot&);
 
     DECLARE_EXPORT_INFO;
-        
+
     unsigned length() const { return getArrayLength(); }
     // OK to use on new arrays, but not if it might be a RegExpMatchArray.
     bool setLength(ExecState*, unsigned, bool throwException = false);
@@ -80,7 +80,7 @@ public:
         // This form of shift hints that we're doing queueing. With this assumption in hand,
         // we convert to ArrayStorage, which has queue optimizations.
         ShiftCountForShift,
-            
+
         // This form of shift hints that we're just doing care and feeding on an array that
         // is probably typically used for ordinary accesses. With this assumption in hand,
         // we try to preserve whatever indexing type it has already.
@@ -108,7 +108,7 @@ public:
             return false;
         }
     }
-        
+
     bool unshiftCountForShift(ExecState* exec, unsigned startIndex, unsigned count)
     {
         return unshiftCountWithArrayStorage(exec, startIndex, count, ensureArrayStorage(exec->vm()));
@@ -138,7 +138,7 @@ public:
     {
         return Structure::create(vm, globalObject, prototype, TypeInfo(ObjectType, StructureFlags), info(), indexingType);
     }
-        
+
 protected:
     static const unsigned StructureFlags = OverridesGetOwnPropertySlot | OverridesGetPropertyNames | JSObject::StructureFlags;
     static void put(JSCell*, ExecState*, PropertyName, JSValue, PutPropertySlot&);
@@ -155,7 +155,7 @@ private:
         SparseArrayValueMap* map = storage->m_sparseMap.get();
         return !map || !map->lengthIsReadOnly();
     }
-        
+
     bool shiftCountWithAnyIndexingType(ExecState*, unsigned startIndex, unsigned count);
     bool shiftCountWithArrayStorage(unsigned startIndex, unsigned count, ArrayStorage*);
 
@@ -165,16 +165,16 @@ private:
 
     template<IndexingType indexingType>
     void sortNumericVector(ExecState*, JSValue compareFunction, CallType, const CallData&);
-        
+
     template<IndexingType indexingType, typename StorageType>
     void sortCompactedVector(ExecState*, ContiguousData<StorageType>, unsigned relevantLength);
-        
+
     template<IndexingType indexingType>
     void sortVector(ExecState*, JSValue compareFunction, CallType, const CallData&);
 
     bool setLengthWithArrayStorage(ExecState*, unsigned newLength, bool throwException, ArrayStorage*);
     void setLengthWritable(ExecState*, bool writable);
-        
+
     template<IndexingType indexingType>
     void compactForSorting(unsigned& numDefined, unsigned& newRelevantLength);
 };
@@ -237,7 +237,7 @@ inline JSArray* JSArray::tryCreateUninitialized(VM& vm, Structure* structure, un
     unsigned vectorLength = std::max(BASE_VECTOR_LEN, initialLength);
     if (vectorLength > MAX_STORAGE_VECTOR_LENGTH)
         return 0;
-        
+
     Butterfly* butterfly;
     if (LIKELY(!hasArrayStorage(structure->indexingType()))) {
         ASSERT(
@@ -267,7 +267,7 @@ inline JSArray* JSArray::tryCreateUninitialized(VM& vm, Structure* structure, un
         storage->m_sparseMap.clear();
         storage->m_numValuesInVector = initialLength;
     }
-        
+
     JSArray* array = new (NotNull, allocateCell<JSArray>(vm.heap)) JSArray(vm, structure, butterfly);
     array->finishCreation(vm);
     return array;
@@ -304,7 +304,7 @@ inline JSArray* constructArray(ExecState* exec, Structure* arrayStructure, const
         array->initializeIndex(vm, i, values.at(i));
     return array;
 }
-    
+
 inline JSArray* constructArray(ExecState* exec, Structure* arrayStructure, const JSValue* values, unsigned length)
 {
     VM& vm = exec->vm();

@@ -27,8 +27,8 @@ package com.sun.pisces;
 
 /**
  * PiscesRenderer class is basic public API accessing Pisces library capabilities.
- * 
- * Pisces renderer is intended to draw directly into underlying data buffer of AbstractSurface. 
+ *
+ * Pisces renderer is intended to draw directly into underlying data buffer of AbstractSurface.
  * Basic implementation of AbstractSurface is e.g. GraphicsSurface.
  *
  * All coordinates are in 15.16 representation. ie. 13 will be passed as 13<<16.
@@ -43,7 +43,7 @@ package com.sun.pisces;
  *      </code>
  *  <br/>
  *  <br/>
- *  Now, when we have instances ready, we can render something from our paint(Graphics g) method 
+ *  Now, when we have instances ready, we can render something from our paint(Graphics g) method
  *  <br/><br/>
  *  <code><br/>
  *      void paint(Graphics g) {<br/>
@@ -56,7 +56,7 @@ package com.sun.pisces;
  *              //switch antialising on/off as required<br/>
  *              pr.setAntialiasing(true); // on<br/>
  *              <br/>
- *              pr.setTransform(ourTransform6Matrix);<br/>              
+ *              pr.setTransform(ourTransform6Matrix);<br/>
  *      <br/>
  *              //and now let's draw something finally<br/>
  *              pr.beginRendering(RendererBase.WIND_EVEN_ODD);<br/>
@@ -74,7 +74,7 @@ public final class PiscesRenderer {
     public static final int ARC_OPEN = 0;
     public static final int ARC_CHORD = 1;
     public static final int ARC_PIE = 2;
-    
+
     private long nativePtr = 0L;
     private AbstractSurface surface;
 
@@ -115,10 +115,10 @@ public final class PiscesRenderer {
     }
 
     /**
-     * Sets the current paint color.  An alpha value of 255 is used. Calling <code>setColor</code> also switches 
+     * Sets the current paint color.  An alpha value of 255 is used. Calling <code>setColor</code> also switches
      * painting mode - i.e. if we have specified gradient, or texture previously, this will be overcome with <code>setColor</code>
      * call. Also note, that 3-param <code>setColor</code> sets fully opaque RGB color. To draw with semi-transparent color
-     * use 4-param convenience method. 
+     * use 4-param convenience method.
      *
      * @param red a value between 0 and 255.
      * @param green a value between 0 and 255.
@@ -127,10 +127,10 @@ public final class PiscesRenderer {
     public void setColor(int red, int green, int blue) {
         setColor(red, green, blue, 255);
     }
-    
+
     /**
      * Sets current Compositing Rule (Porter-Duff) to be used in following rendering operation. Note that <code>compositeAlpha</code>
-     * is not changed. 
+     * is not changed.
      * @param compositeRule one of <code>RendererBase.COMPOSITE_*</code> constants.
      */
     public void setCompositeRule(int compositeRule) {
@@ -158,7 +158,7 @@ public final class PiscesRenderer {
      * @param y0 y-coordinate of the starting point of the linear gradient
      * @param x1 x-coordinate of the end point of the linear gradient
      * @param y0 y-coordinate of the end point of the linear gradient
-     * @param fractions this array defines normalized distances in which color (rgba[i]) starts to fade into next color (rgba[i+1]). This distance from the point [x0,y0] is given as fraction[i]*l, where l is length of line [[x0,y0], [x1,y1]]. fraction[i+1] says, in what distance fraction[i+1]*l from [x0,y0] should color already have firm value of rgba[i+1]. Values passed in fractions should be from interval <0.0, 1.0>, in 15.16 format.  
+     * @param fractions this array defines normalized distances in which color (rgba[i]) starts to fade into next color (rgba[i+1]). This distance from the point [x0,y0] is given as fraction[i]*l, where l is length of line [[x0,y0], [x1,y1]]. fraction[i+1] says, in what distance fraction[i+1]*l from [x0,y0] should color already have firm value of rgba[i+1]. Values passed in fractions should be from interval <0.0, 1.0>, in 15.16 format.
      * @param rgba colors which the linear gradient passes through. Generally should be fulfilled this formula <code>rgba.length == fractions.length</code>
      * @param cycleMethod some value from <code>GradientColorMap.CYCLE_*</code>. @see GradienColorMap
      * @param gradientTransform transformation applied to gradient paint data. This way we can either transform gradient fill together with filled object or leave it as if transformed gradient-filled object was a window through which we observe gradient area.
@@ -201,19 +201,19 @@ public final class PiscesRenderer {
      * Java2D-style linear gradient creation. The color changes proportionally
      * between point P0 (color0) nad P1 (color1). Cycle method constants are
      * defined in GradientColorMap (CYCLE_*). This is convenience method only. Same as if setLinearGradient method with 8 parameters was called with
-     * fractions = {0x0000, 0x10000}, rgba = {color0, color1} and identity transformation matrix.           
+     * fractions = {0x0000, 0x10000}, rgba = {color0, color1} and identity transformation matrix.
      *
      * @param x0 x coordinate of point P0
-     * @param y0 y coordinate of point P0     
+     * @param y0 y coordinate of point P0
      * @param color0 color of P0
      * @param x1 x coordinate of point P1
-     * @param y1 y coordinate of point P1     
+     * @param y1 y coordinate of point P1
      * @param color1 color of P1
      * @param cycleMethod type of cycling of the gradient (NONE, REFLECT, REPEAT)
-     * 
-     * As Pisces Gradient support was added to support features introduced in SVG, see e.g. http://www.w3.org/TR/SVG11/pservers.html for more information and examples.         
+     *
+     * As Pisces Gradient support was added to support features introduced in SVG, see e.g. http://www.w3.org/TR/SVG11/pservers.html for more information and examples.
      */
-    public void setLinearGradient(int x0, int y0, int color0, 
+    public void setLinearGradient(int x0, int y0, int color0,
                                   int x1, int y1, int color1,
                                   int cycleMethod) {
       int[] fractions = {0x0000, 0x10000};
@@ -230,20 +230,20 @@ public final class PiscesRenderer {
 
     /**
      * This method sets radial gradient paint data to be used in subsequent rendering. Radial gradient data generated will be used to fill the touched pixels of the path we draw.
-     * 
-     * @param cx cx, cy and radius triplet defines the largest circle for the gradient. 100% gradient stop is mapped to perimeter of this circle. 
-     * @param cy 
-     * @param fx fx,fy defines focal point of the gradient. ie. 0% gradient stop is mapped to fx,fy point. If cx == fx and cy == fy, then gradient consists of homocentric circles. If these relations are not met, gradient field is deformed and eccentric ovals can be observed. 
+     *
+     * @param cx cx, cy and radius triplet defines the largest circle for the gradient. 100% gradient stop is mapped to perimeter of this circle.
+     * @param cy
+     * @param fx fx,fy defines focal point of the gradient. ie. 0% gradient stop is mapped to fx,fy point. If cx == fx and cy == fy, then gradient consists of homocentric circles. If these relations are not met, gradient field is deformed and eccentric ovals can be observed.
      * @param fy
      * @param radius @see cx
      * @param fractions @see setLinearGradient
      * @param rgba @see setLinearGradient
      * @param cycleMethod @see setLinearGradient
      * @param gradientTransform @see setLinearGradient
-     * 
-     * As Pisces Gradient support was added to support features introduced in SVG, see e.g. http://www.w3.org/TR/SVG11/pservers.html for more information and examples. 
+     *
+     * As Pisces Gradient support was added to support features introduced in SVG, see e.g. http://www.w3.org/TR/SVG11/pservers.html for more information and examples.
      */
-    
+
     public void setRadialGradient(int cx, int cy, int fx, int fy,
                                   int radius,
                                   int[] fractions, int[] rgba,

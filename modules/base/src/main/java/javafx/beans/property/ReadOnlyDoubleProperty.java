@@ -32,11 +32,11 @@ import javafx.beans.binding.DoubleExpression;
 
 /**
  * Super class for all readonly properties wrapping a {@code double}.
- * 
+ *
  * @see javafx.beans.value.ObservableDoubleValue
  * @see javafx.beans.binding.DoubleExpression
  * @see ReadOnlyProperty
- * 
+ *
  * @since JavaFX 2.0
  */
 public abstract class ReadOnlyDoubleProperty extends DoubleExpression implements
@@ -51,7 +51,7 @@ public abstract class ReadOnlyDoubleProperty extends DoubleExpression implements
     /**
      * Returns a string representation of this {@code ReadOnlyDoubleProperty} object.
      * @return a string representation of this {@code ReadOnlyDoubleProperty} object.
-     */ 
+     */
     @Override
     public String toString() {
         final Object bean = getBean();
@@ -67,7 +67,7 @@ public abstract class ReadOnlyDoubleProperty extends DoubleExpression implements
         result.append("value: ").append(get()).append("]");
         return result.toString();
     }
-    
+
     /**
      * Returns a {@code ReadOnlyDoubleProperty} that wraps a
      * {@link javafx.beans.property.ReadOnlyProperty}. If the
@@ -75,9 +75,9 @@ public abstract class ReadOnlyDoubleProperty extends DoubleExpression implements
      * will be returned. Otherwise a new
      * {@code ReadOnlyDoubleProperty} is created that is bound to
      * the {@code ReadOnlyProperty}.
-     * 
+     *
      * Note: null values will be interpreted as 0.0
-     * 
+     *
      * @param property
      *            The source {@code ReadOnlyProperty}
      * @return A {@code ReadOnlyDoubleProperty} that wraps the
@@ -90,7 +90,7 @@ public abstract class ReadOnlyDoubleProperty extends DoubleExpression implements
         if (property == null) {
             throw new NullPointerException("Property cannot be null");
         }
-        
+
         return property instanceof ReadOnlyDoubleProperty ? (ReadOnlyDoubleProperty) property:
            new ReadOnlyDoublePropertyBase() {
             private boolean valid = true;
@@ -104,7 +104,7 @@ public abstract class ReadOnlyDoubleProperty extends DoubleExpression implements
             {
                 property.addListener(new WeakInvalidationListener(listener));
             }
-                    
+
             @Override
             public double get() {
                 valid = true;
@@ -129,7 +129,7 @@ public abstract class ReadOnlyDoubleProperty extends DoubleExpression implements
      * of this {@code ReadOnlyDoubleProperty}. If the
      * value of this {@code ReadOnlyDoubleProperty} changes, the value of the
      * {@code ReadOnlyObjectProperty} will be updated automatically.
-     * 
+     *
      * @return the new {@code ReadOnlyObjectProperty}
      * @since JavaFX 8.0
      */
@@ -148,7 +148,7 @@ public abstract class ReadOnlyDoubleProperty extends DoubleExpression implements
             {
                 ReadOnlyDoubleProperty.this.addListener(new WeakInvalidationListener(listener));
             }
-            
+
             @Override
             public Object getBean() {
                 return null; // Virtual property, does not exist on a bean
@@ -166,7 +166,7 @@ public abstract class ReadOnlyDoubleProperty extends DoubleExpression implements
             }
         };
     };
-    
-    
+
+
 
 }

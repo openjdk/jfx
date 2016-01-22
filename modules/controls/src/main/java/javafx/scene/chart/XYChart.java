@@ -524,16 +524,16 @@ public abstract class XYChart<X,Y> extends Chart {
     protected void updateLegend(){}
 
     /**
-     * This method is called when there is an attempt to add series that was  
-     * set to be removed, and the removal might not have completed. 
-     * @param series 
+     * This method is called when there is an attempt to add series that was
+     * set to be removed, and the removal might not have completed.
+     * @param series
      */
     void seriesBeingRemovedIsAdded(Series<X,Y> series) {}
-    
+
     /**
      * This method is called when there is an attempt to add a Data item that was
      * set to be removed, and the removal might not have completed.
-     * @param data 
+     * @param data
      */
     void dataBeingRemovedIsAdded(Data<X,Y> item, Series<X,Y> series) {}
     /**
@@ -1599,5 +1599,5 @@ public abstract class XYChart<X,Y> extends Chart {
             return displayedData.size();
         }
     }
-    
+
 }

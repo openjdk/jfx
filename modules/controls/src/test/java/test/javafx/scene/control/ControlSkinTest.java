@@ -58,7 +58,7 @@ public class ControlSkinTest {
      * Creates the control, skin, and tool tip but does not wire them up.
      * The tool tip does have a SkinStub created for it though, so the
      * tool tip is completely setup.
-     * 
+     *
      * By necessity, however, the skin does have a reference back to the control.
      */
     @Before public void setUp() {
@@ -87,7 +87,7 @@ public class ControlSkinTest {
         assertTrue(c.getChildrenUnmodifiable().contains(s2.getNode()));
         assertEquals(1, c.getChildrenUnmodifiable().size());
     }
-    
+
     @Test public void disposeIsCalledOnReplacedSkin() {
         final boolean[] result = new boolean[1];
         s = new SkinStub<ControlStub>(c) {
@@ -101,7 +101,7 @@ public class ControlSkinTest {
         c.setSkin(s2);
         assertTrue(result[0]);
     }
-    
+
     @Ignore ("I need some means of being able to check whether CSS has been told this property is set manually")
     @Test public void whenSkinIsChangedCSSIsNotified() {
     }
@@ -115,13 +115,13 @@ public class ControlSkinTest {
 //        ObjectProperty<SkinStub<ControlStub>> skin = new SimpleObjectProperty<SkinStub<ControlStub>>();
 //        c.skinProperty().bind(skin);
 //    }
-    
-    
+
+
     @Test public void shouldBeAbleToSpecifyTheSkinViaCSS() {
         ((StyleableProperty)ControlShim.skinClassNameProperty(c)).applyStyle(null, "test.javafx.scene.control.ControlSkinTest$MySkinStub");
         assertTrue(c.getSkin() instanceof MySkinStub);
     }
-    
+
     @Test public void impl_cssSetCalledTwiceWithTheSameValueHasNoEffectTheSecondTime() {
         StringProperty skinClassName = ControlShim.skinClassNameProperty(c);
         skinClassName.addListener(new InvalidationListener() {
@@ -142,38 +142,38 @@ public class ControlSkinTest {
         ((StyleableProperty)ControlShim.skinClassNameProperty(c)).applyStyle(null, "test.javafx.scene.control.ControlSkinTest$MySkinStub");
         assertTrue(c.getSkin() instanceof MySkinStub);
         ((StyleableProperty)ControlShim.skinClassNameProperty(c)).applyStyle(null, null);
-        assertTrue(c.getSkin() instanceof MySkinStub);        
+        assertTrue(c.getSkin() instanceof MySkinStub);
     }
-            
-    
+
+
     @Ignore ("This spits out annoying debug statements, re-enable when we can disable all logging")
     @Test public void loadSkinClassShouldIgnoreNullNames() {
         c.setSkin(s);
         ((StyleableProperty)ControlShim.skinClassNameProperty(c)).applyStyle(null, null);
         assertSame(s, c.getSkin()); // shouldn't have changed
     }
-    
+
     @Ignore ("This spits out annoying debug statements, re-enable when we can disable all logging")
     @Test public void loadSkinClassShouldIgnoreEmptyStrings() {
         c.setSkin(s);
         ((StyleableProperty)ControlShim.skinClassNameProperty(c)).applyStyle(null, "");
         assertSame(s, c.getSkin()); // shouldn't have changed
     }
-    
+
     @Ignore ("This spits out annoying debug statements, re-enable when we can disable all logging")
     @Test public void loadSkinClassShouldIgnoreSkinsWithoutAProperConstructor() {
         c.setSkin(s);
         ((StyleableProperty)ControlShim.skinClassNameProperty(c)).applyStyle(null, "test.javafx.scene.control.ControlSkinTest$UnloadableSkinStub");
         assertSame(s, c.getSkin()); // shouldn't have changed
     }
-    
+
     @Ignore ("This spits out annoying debug statements, re-enable when we can disable all logging")
     @Test public void loadSkinClassShouldIgnoreBogusOrUnfindableSkins() {
         c.setSkin(s);
         ((StyleableProperty)ControlShim.skinClassNameProperty(c)).applyStyle(null, "test.javafx.scene.control.ControlSkinTest$FooSkinWhichDoesntExist");
         assertSame(s, c.getSkin()); // shouldn't have changed
     }
-    
+
     @Test public void controlWithoutSkinShouldHaveZeroSizes() {
         assertEquals(0f, c.minWidth(-1), 0f);
         assertEquals(0f, c.minHeight(-1), 0f);
@@ -182,13 +182,13 @@ public class ControlSkinTest {
         assertEquals(0f, c.maxWidth(-1), 0f);
         assertEquals(0f, c.maxHeight(-1), 0f);
     }
-    
+
     public static final class MySkinStub<C extends ControlStub> extends SkinStub<C> {
         public MySkinStub(C c) {
             super(c);
         }
     }
-    
+
     public static final class UnloadableSkinStub<C extends ControlStub> extends SkinStub<C> {
         public UnloadableSkinStub() {
             super(null);

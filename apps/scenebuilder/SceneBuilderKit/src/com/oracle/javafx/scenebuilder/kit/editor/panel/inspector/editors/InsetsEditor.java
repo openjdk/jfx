@@ -49,7 +49,7 @@ import javafx.scene.input.KeyEvent;
 /**
  * Insets editor (for top/right/bottom/left fields).
  *
- * 
+ *
  */
 public class InsetsEditor extends PropertyEditor {
 
@@ -85,7 +85,7 @@ public class InsetsEditor extends PropertyEditor {
                     // Event received because of focus lost due to error dialog
                     return;
                 }
-                // !! Should check if invalid value ! 
+                // !! Should check if invalid value !
                 userUpdateValueProperty(getValue());
             };
             setNumericEditorBehavior(this, tf, valueListener, false);

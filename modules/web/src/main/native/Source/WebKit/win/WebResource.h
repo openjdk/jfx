@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef WebResource_h
@@ -48,26 +48,26 @@ public:
     virtual ULONG STDMETHODCALLTYPE Release(void);
 
     // IWebResource
-    virtual HRESULT STDMETHODCALLTYPE initWithData( 
+    virtual HRESULT STDMETHODCALLTYPE initWithData(
         /* [in] */ IStream *data,
         /* [in] */ BSTR url,
         /* [in] */ BSTR mimeType,
         /* [in] */ BSTR textEncodingName,
         /* [in] */ BSTR frameName);
-        
-    virtual HRESULT STDMETHODCALLTYPE data( 
+
+    virtual HRESULT STDMETHODCALLTYPE data(
         /* [retval][out] */ IStream **data);
-       
-    virtual HRESULT STDMETHODCALLTYPE URL( 
+
+    virtual HRESULT STDMETHODCALLTYPE URL(
         /* [retval][out] */ BSTR *url);
-        
-    virtual HRESULT STDMETHODCALLTYPE MIMEType( 
+
+    virtual HRESULT STDMETHODCALLTYPE MIMEType(
         /* [retval][out] */ BSTR *mime);
-        
-    virtual HRESULT STDMETHODCALLTYPE textEncodingName( 
+
+    virtual HRESULT STDMETHODCALLTYPE textEncodingName(
         /* [retval][out] */ BSTR *encodingName);
-        
-    virtual HRESULT STDMETHODCALLTYPE frameName( 
+
+    virtual HRESULT STDMETHODCALLTYPE frameName(
         /* [retval][out] */ BSTR *name);
 
 private:

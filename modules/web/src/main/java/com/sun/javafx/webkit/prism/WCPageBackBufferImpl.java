@@ -46,7 +46,7 @@ final class WCPageBackBufferImpl extends WCPageBackBuffer implements ResourceFac
     WCPageBackBufferImpl(float pixelScale) {
         this.pixelScale = pixelScale;
     }
-    
+
     private static RTTexture createTexture(int w, int h) {
         return GraphicsPipeline.getDefaultResourceFactory()
                 .createRTTexture(w, h, Texture.WrapMode.CLAMP_NOT_NEEDED);

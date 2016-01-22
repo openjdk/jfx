@@ -35,85 +35,85 @@ namespace WebCore {
 
         virtual void load(const String& url);
         virtual void cancelLoad();
-        
+
         virtual void prepareToPlay();
         //virtual PlatformMedia platformMedia() const { return NoPlatformMedia; }
 #if USE(ACCELERATED_COMPOSITING)
         //virtual PlatformLayer* platformLayer() const { return 0; }
 #endif
-        
+
         virtual void play();
         virtual void pause();
-        
+
         //virtual bool supportsFullscreen() const { return false; }
         //virtual bool supportsSave() const { return false; }
-        
+
         virtual IntSize naturalSize() const;
-        
+
         virtual bool hasVideo() const;
         virtual bool hasAudio() const;
-        
+
         virtual void setVisible(bool);
-        
+
         virtual float duration() const;
-        
+
         virtual float currentTime() const;
         virtual void seek(float time);
         virtual bool seeking() const;
-        
+
         virtual float startTime() const;
-        
+
         virtual void setRate(float);
         virtual void setPreservesPitch(bool);
-        
+
         virtual bool paused() const;
-        
+
         virtual void setVolume(float);
-        
+
         virtual bool supportsMuting() const;
         virtual void setMuted(bool);
-        
+
         //virtual bool hasClosedCaptions() const { return false; }
         //virtual void setClosedCaptionsVisible(bool) { }
-        
+
         virtual MediaPlayer::NetworkState networkState() const;
         virtual MediaPlayer::ReadyState readyState() const;
-        
+
         virtual float maxTimeSeekable() const;
         virtual bool didLoadingProgress() const;
         virtual PassRefPtr<TimeRanges> buffered() const;
-        
+
         virtual unsigned bytesLoaded() const;
-        
+
         virtual void setSize(const IntSize&);
-        
+
         virtual void paint(GraphicsContext*, const IntRect&);
-        
+
         //virtual void paintCurrentFrameInContext(GraphicsContext* c, const IntRect& r) { paint(c, r); }
-        
+
         virtual void setPreload(MediaPlayer::Preload);
-        
+
         //virtual bool hasAvailableVideoFrame() const { return readyState() >= MediaPlayer::HaveCurrentData; }
-        
+
         //virtual bool canLoadPoster() const { return false; }
         //virtual void setPoster(const String&) { }
-        
+
 //#if ENABLE(PLUGIN_PROXY_FOR_VIDEO)
 //        virtual void deliverNotification(MediaPlayerProxyNotificationType) = 0;
 //        virtual void setMediaPlayerProxy(WebMediaPlayerProxy*) = 0;
 //#endif
-        
+
 #if USE(ACCELERATED_COMPOSITING)
         // whether accelerated rendering is supported by the media engine for the current media.
         //virtual bool supportsAcceleratedRendering() const { return false; }
         // called when the rendering system flips the into or out of accelerated rendering mode.
         //virtual void acceleratedRenderingStateChanged() { }
 #endif
-        
+
         virtual bool hasSingleSecurityOrigin() const { return true; }
-        
+
         //virtual MediaPlayer::MovieLoadType movieLoadType() const { return MediaPlayer::Unknown; }
-        
+
         //virtual double maximumDurationToCacheMediaTime() const { return 0.5; }
     // implementation
     public:

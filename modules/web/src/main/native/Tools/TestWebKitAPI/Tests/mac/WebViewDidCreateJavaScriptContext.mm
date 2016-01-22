@@ -123,7 +123,7 @@ TEST(WebKit1, DidCreateJavaScriptContextSanity1)
         webView.get().frameLoadDelegate = frameLoadDelegate.get();
         WebFrame *mainFrame = webView.get().mainFrame;
 
-        NSString *bodyString = 
+        NSString *bodyString =
             @"<body> \
                 <script> \
                     myConsole.printHelloWorld(); \
@@ -149,7 +149,7 @@ TEST(WebKit1, DidCreateJavaScriptContextSanity2)
         webView.get().frameLoadDelegate = frameLoadDelegate.get();
         WebFrame *mainFrame = webView.get().mainFrame;
 
-        NSString *bodyString = 
+        NSString *bodyString =
             @"<body> \
                 <script> \
                     setTimeout(windowCallback, 100); \
@@ -171,7 +171,7 @@ TEST(WebKit1, DidCreateJavaScriptContextCallJSFunctionFromObjCCallbackTest)
         webView.get().frameLoadDelegate = frameLoadDelegate.get();
         WebFrame *mainFrame = webView.get().mainFrame;
 
-        NSString *bodyString = 
+        NSString *bodyString =
             @"<body> \
                 <script> \
                     callMeBack(function() { \
@@ -196,7 +196,7 @@ TEST(WebKit1, DidCreateJavaScriptContextAddCustomPropertiesFromJSTest)
         webView.get().frameLoadDelegate = frameLoadDelegate.get();
         WebFrame *mainFrame = webView.get().mainFrame;
 
-        NSString *bodyString = 
+        NSString *bodyString =
         @"<body> \
             <div id=\"test-div\"></div> \
             <script> \
@@ -222,7 +222,7 @@ TEST(WebKit1, DidCreateJavaScriptContextAddCustomPropertiesFromObjCTest)
         webView.get().frameLoadDelegate = frameLoadDelegate.get();
         WebFrame *mainFrame = webView.get().mainFrame;
 
-        NSString *bodyString = 
+        NSString *bodyString =
             @"<body> \
                 <div id=\"test-div\"></div> \
                 <script> \
@@ -253,14 +253,14 @@ TEST(WebKit1, DidCreateJavaScriptContextBackForwardCacheTest)
         webView.get().frameLoadDelegate = frameLoadDelegate.get();
         WebFrame *mainFrame = webView.get().mainFrame;
 
-        NSURL *url1 = [[NSBundle mainBundle] URLForResource:@"JSContextBackForwardCache1" 
-                                              withExtension:@"html" 
+        NSURL *url1 = [[NSBundle mainBundle] URLForResource:@"JSContextBackForwardCache1"
+                                              withExtension:@"html"
                                                subdirectory:@"TestWebKitAPI.resources"];
         [mainFrame loadRequest:[NSURLRequest requestWithURL:url1]];
         Util::run(&didInsertMyCustomProperty);
 
-        NSURL *url2 = [[NSBundle mainBundle] URLForResource:@"JSContextBackForwardCache2" 
-                                              withExtension:@"html" 
+        NSURL *url2 = [[NSBundle mainBundle] URLForResource:@"JSContextBackForwardCache2"
+                                              withExtension:@"html"
                                                subdirectory:@"TestWebKitAPI.resources"];
         [mainFrame loadRequest:[NSURLRequest requestWithURL:url2]];
         Util::run(&didCompleteTestSuccessfully);

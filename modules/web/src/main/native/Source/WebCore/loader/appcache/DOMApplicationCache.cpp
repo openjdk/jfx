@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -128,7 +128,7 @@ const AtomicString& DOMApplicationCache::toEventType(ApplicationCacheHost::Event
         return eventNames().updatereadyEvent;
     case ApplicationCacheHost::CACHED_EVENT:
         return eventNames().cachedEvent;
-    case ApplicationCacheHost::OBSOLETE_EVENT:            
+    case ApplicationCacheHost::OBSOLETE_EVENT:
         return eventNames().obsoleteEvent;
     }
     ASSERT_NOT_REACHED();

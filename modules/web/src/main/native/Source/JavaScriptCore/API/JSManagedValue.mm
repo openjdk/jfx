@@ -196,7 +196,7 @@ private:
     self = [super init];
     if (!self)
         return nil;
-    
+
     if (!value)
         return self;
 

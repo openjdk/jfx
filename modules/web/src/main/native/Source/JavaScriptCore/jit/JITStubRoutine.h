@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef JITStubRoutine_h
@@ -58,7 +58,7 @@ public:
         , m_refCount(1)
     {
     }
-    
+
     // Use this if you want to pass a CodePtr to someone who insists on taking
     // a RefPtr<JITStubRoutine>.
     static PassRefPtr<JITStubRoutine> createSelfManagedRoutine(
@@ -66,42 +66,42 @@ public:
     {
         return adoptRef(new JITStubRoutine(MacroAssemblerCodeRef::createSelfManagedCodeRef(rawCodePointer)));
     }
-    
+
     virtual ~JITStubRoutine();
-    
+
     // MacroAssemblerCodeRef is copyable, but at the cost of reference
     // counting churn. Returning a reference is a good way of reducing
     // the churn.
     const MacroAssemblerCodeRef& code() const { return m_code; }
-    
+
     static MacroAssemblerCodePtr asCodePtr(PassRefPtr<JITStubRoutine> stubRoutine)
     {
         if (!stubRoutine)
             return MacroAssemblerCodePtr();
-        
+
         MacroAssemblerCodePtr result = stubRoutine->code().code();
         ASSERT(!!result);
         return result;
     }
-    
+
     void ref()
     {
         m_refCount++;
     }
-    
+
     void deref()
     {
         if (--m_refCount)
             return;
         observeZeroRefCount();
     }
-    
+
     // Helpers for the GC to determine how to deal with marking JIT stub
     // routines.
     uintptr_t startAddress() const { return m_code.executableMemory()->startAsInteger(); }
     uintptr_t endAddress() const { return m_code.executableMemory()->endAsInteger(); }
     static uintptr_t addressStep() { return jitAllocationGranule; }
-    
+
     static bool canPerformRangeFilter()
     {
 #if ENABLE(EXECUTABLE_ALLOCATOR_FIXED)
@@ -135,10 +135,10 @@ public:
             // our hashtables upset.
             return address >= jitAllocationGranule && address != std::numeric_limits<uintptr_t>::max();
         }
-        
+
         if (address - filteringStartAddress() >= filteringExtentSize())
             return false;
-        
+
         return true;
     }
 

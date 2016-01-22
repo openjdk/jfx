@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef DFGArgumentPosition_h
@@ -42,31 +42,31 @@ public:
         , m_shouldNeverUnbox(false)
     {
     }
-    
+
     void addVariable(VariableAccessData* variable)
     {
         m_variables.append(variable);
     }
-    
+
     VariableAccessData* someVariable() const
     {
         if (m_variables.isEmpty())
             return 0;
         return m_variables[0]->find();
     }
-    
+
     FlushFormat flushFormat() const
     {
         if (VariableAccessData* variable = someVariable())
             return variable->flushFormat();
         return DeadFlush;
     }
-    
+
     bool mergeShouldNeverUnbox(bool shouldNeverUnbox)
     {
         return checkAndSet(m_shouldNeverUnbox, m_shouldNeverUnbox | shouldNeverUnbox);
     }
-    
+
     bool mergeArgumentPredictionAwareness()
     {
         bool changed = false;
@@ -87,7 +87,7 @@ public:
         }
         return changed;
     }
-    
+
     bool mergeArgumentUnboxingAwareness()
     {
         bool changed = false;
@@ -104,16 +104,16 @@ public:
         }
         return changed;
     }
-    
+
     bool shouldUnboxIfPossible() const { return m_isProfitableToUnbox && !m_shouldNeverUnbox; }
-    
+
     SpeculatedType prediction() const { return m_prediction; }
     DoubleFormatState doubleFormatState() const { return m_doubleFormatState; }
     bool shouldUseDoubleFormat() const
     {
         return doubleFormatState() == UsingDoubleFormat && shouldUnboxIfPossible();
     }
-    
+
     void dump(PrintStream& out, Graph* graph)
     {
         for (unsigned i = 0; i < m_variables.size(); ++i) {
@@ -130,13 +130,13 @@ public:
         }
         out.print("\n");
     }
-    
+
 private:
     SpeculatedType m_prediction;
     DoubleFormatState m_doubleFormatState;
     bool m_isProfitableToUnbox;
     bool m_shouldNeverUnbox;
-    
+
     Vector<VariableAccessData*, 2> m_variables;
 };
 

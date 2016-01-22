@@ -28,9 +28,9 @@ package javafx.beans.property;
 /**
  * This class provides a full implementation of a {@link Property} wrapping a
  * {@code double} value.
- * 
+ *
  * @see DoublePropertyBase
- * 
+ *
  * @since JavaFX 2.0
  */
 public class SimpleDoubleProperty extends DoublePropertyBase {
@@ -66,7 +66,7 @@ public class SimpleDoubleProperty extends DoublePropertyBase {
 
     /**
      * The constructor of {@code DoubleProperty}
-     * 
+     *
      * @param initialValue
      *            the initial value of the wrapped value
      */
@@ -76,7 +76,7 @@ public class SimpleDoubleProperty extends DoublePropertyBase {
 
     /**
      * The constructor of {@code DoubleProperty}
-     * 
+     *
      * @param bean
      *            the bean of this {@code DoubleProperty}
      * @param name
@@ -89,7 +89,7 @@ public class SimpleDoubleProperty extends DoublePropertyBase {
 
     /**
      * The constructor of {@code DoubleProperty}
-     * 
+     *
      * @param bean
      *            the bean of this {@code DoubleProperty}
      * @param name

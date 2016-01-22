@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef ScratchRegisterAllocator_h
@@ -59,7 +59,7 @@ public:
             return;
         m_lockedRegisters.setFPRByIndex(index);
     }
-    
+
     template<typename BankInfo>
     typename BankInfo::RegisterType allocateScratch()
     {
@@ -73,7 +73,7 @@ public:
                 return reg;
             }
         }
-        
+
         // Since that failed, try to allocate a register that is not yet
         // locked or used for scratch.
         for (unsigned i = 0; i < BankInfo::numberOfRegisters; ++i) {
@@ -84,31 +84,31 @@ public:
                 return reg;
             }
         }
-        
+
         // We failed.
         CRASH();
         // Make some silly compilers happy.
         return static_cast<typename BankInfo::RegisterType>(-1);
     }
-    
+
     GPRReg allocateScratchGPR() { return allocateScratch<GPRInfo>(); }
     FPRReg allocateScratchFPR() { return allocateScratch<FPRInfo>(); }
-    
+
     bool didReuseRegisters() const
     {
         return !!m_numberOfReusedRegisters;
     }
-    
+
     unsigned numberOfReusedRegisters() const
     {
         return m_numberOfReusedRegisters;
     }
-    
+
     void preserveReusedRegistersByPushing(MacroAssembler& jit)
     {
         if (!didReuseRegisters())
             return;
-        
+
         for (unsigned i = 0; i < FPRInfo::numberOfRegisters; ++i) {
             if (m_scratchRegisters.getFPRByIndex(i) && m_usedRegisters.getFPRByIndex(i))
                 jit.pushToSave(FPRInfo::toRegister(i));
@@ -118,12 +118,12 @@ public:
                 jit.pushToSave(GPRInfo::toRegister(i));
         }
     }
-    
+
     void restoreReusedRegistersByPopping(MacroAssembler& jit)
     {
         if (!didReuseRegisters())
             return;
-        
+
         for (unsigned i = GPRInfo::numberOfRegisters; i--;) {
             if (m_scratchRegisters.getGPRByIndex(i) && m_usedRegisters.getGPRByIndex(i))
                 jit.popToRestore(GPRInfo::toRegister(i));
@@ -133,9 +133,9 @@ public:
                 jit.popToRestore(FPRInfo::toRegister(i));
         }
     }
-    
+
     unsigned desiredScratchBufferSize() const { return m_usedRegisters.numberOfSetRegisters() * sizeof(JSValue); }
-    
+
     void preserveUsedRegistersToScratchBuffer(MacroAssembler& jit, ScratchBuffer* scratchBuffer, GPRReg scratchGPR = InvalidGPRReg)
     {
         unsigned count = 0;
@@ -158,11 +158,11 @@ public:
             }
         }
         RELEASE_ASSERT(count * sizeof(JSValue) == desiredScratchBufferSize());
-        
+
         jit.move(MacroAssembler::TrustedImmPtr(scratchBuffer->activeLengthPtr()), scratchGPR);
         jit.storePtr(MacroAssembler::TrustedImmPtr(static_cast<size_t>(count * sizeof(JSValue))), scratchGPR);
     }
-    
+
     void restoreUsedRegistersFromScratchBuffer(MacroAssembler& jit, ScratchBuffer* scratchBuffer, GPRReg scratchGPR = InvalidGPRReg)
     {
         if (scratchGPR == InvalidGPRReg) {
@@ -175,7 +175,7 @@ public:
             }
         }
         RELEASE_ASSERT(scratchGPR != InvalidGPRReg);
-        
+
         jit.move(MacroAssembler::TrustedImmPtr(scratchBuffer->activeLengthPtr()), scratchGPR);
         jit.storePtr(MacroAssembler::TrustedImmPtr(0), scratchGPR);
 
@@ -187,7 +187,7 @@ public:
                 jit.loadDouble(scratchGPR, FPRInfo::toRegister(i));
             }
         }
-        
+
         count = 0;
         for (unsigned i = GPRInfo::numberOfRegisters; i--;) {
             if (m_usedRegisters.getGPRByIndex(i)) {
@@ -199,7 +199,7 @@ public:
             }
         }
     }
-    
+
 private:
     TempRegisterSet m_usedRegisters;
     TempRegisterSet m_lockedRegisters;

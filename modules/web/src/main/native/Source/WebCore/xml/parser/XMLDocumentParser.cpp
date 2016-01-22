@@ -144,9 +144,9 @@ void XMLDocumentParser::enterText()
     m_currentNode->parserAppendChild(m_leafTextNode.get());
 }
 
-static inline String toString(const xmlChar* string, size_t size) 
-{ 
-    return String::fromUTF8(reinterpret_cast<const char*>(string), size); 
+static inline String toString(const xmlChar* string, size_t size)
+{
+    return String::fromUTF8(reinterpret_cast<const char*>(string), size);
 }
 
 
@@ -240,7 +240,7 @@ void XMLDocumentParser::notifyFinished(CachedResource* unusedResource)
 
     // JavaScript can detach this parser, make sure it's kept alive even if detached.
     Ref<XMLDocumentParser> protect(*this);
-    
+
     if (errorOccurred)
         scriptElement->dispatchErrorEvent();
     else if (!wasCanceled) {

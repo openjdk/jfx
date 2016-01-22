@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef FTLExitArgumentForOperand_h
@@ -41,20 +41,20 @@ public:
         : m_operand(VirtualRegister())
     {
     }
-    
+
     ExitArgumentForOperand(ExitArgument exitArgument, VirtualRegister operand)
         : m_exitArgument(exitArgument)
         , m_operand(operand)
     {
     }
-    
+
     bool operator!() const { return !m_exitArgument; }
-    
+
     const ExitArgument& exitArgument() const { return m_exitArgument; }
     VirtualRegister operand() const { return m_operand; }
-    
+
     void dump(PrintStream&) const;
-    
+
 private:
     ExitArgument m_exitArgument;
     VirtualRegister m_operand;

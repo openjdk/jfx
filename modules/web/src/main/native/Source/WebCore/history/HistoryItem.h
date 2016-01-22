@@ -21,7 +21,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef HistoryItem_h
@@ -65,7 +65,7 @@ extern void (*notifyHistoryItemChanged)(HistoryItem*);
 class HistoryItem : public RefCounted<HistoryItem> {
     friend class PageCache;
 
-public: 
+public:
     static PassRefPtr<HistoryItem> create() { return adoptRef(new HistoryItem); }
     static PassRefPtr<HistoryItem> create(const String& urlString, const String& title)
     {
@@ -79,14 +79,14 @@ public:
     {
         return adoptRef(new HistoryItem(url, target, parent, title));
     }
-    
+
     ~HistoryItem();
 
     PassRefPtr<HistoryItem> copy() const;
 
     // Resets the HistoryItem to its initial state, as returned by create().
     void reset();
-    
+
     void encodeBackForwardTree(Encoder&) const;
     void encodeBackForwardTree(KeyedEncoder&) const;
     static PassRefPtr<HistoryItem> decodeBackForwardTree(const String& urlString, const String& title, const String& originalURLString, Decoder&);
@@ -95,32 +95,32 @@ public:
     const String& originalURLString() const;
     const String& urlString() const;
     const String& title() const;
-    
+
     bool isInPageCache() const { return m_cachedPage.get(); }
     bool hasCachedPageExpired() const;
 
     void setAlternateTitle(const String& alternateTitle);
     const String& alternateTitle() const;
-    
+
     const String& parent() const;
     URL url() const;
     URL originalURL() const;
     const String& referrer() const;
     const String& target() const;
     bool isTargetItem() const;
-    
+
     FormData* formData();
     String formContentType() const;
-    
+
     bool lastVisitWasFailure() const { return m_lastVisitWasFailure; }
 
     const IntPoint& scrollPoint() const;
     void setScrollPoint(const IntPoint&);
     void clearScrollPoint();
-    
+
     float pageScaleFactor() const;
     void setPageScaleFactor(float);
-    
+
     const Vector<String>& documentState() const;
     void setDocumentState(const Vector<String>&);
     void clearDocumentState();
@@ -133,7 +133,7 @@ public:
     void setParent(const String&);
     void setTitle(const String&);
     void setIsTargetItem(bool);
-    
+
     void setStateObject(PassRefPtr<SerializedScriptValue> object);
     PassRefPtr<SerializedScriptValue> stateObject() const { return m_stateObject; }
 
@@ -158,7 +158,7 @@ public:
     bool hasChildren() const;
     void clearChildren();
     bool isAncestorOf(const HistoryItem*) const;
-    
+
     bool shouldDoSameDocumentNavigationTo(HistoryItem* otherItem) const;
     bool hasSameFrames(HistoryItem* otherItem) const;
 
@@ -167,11 +167,11 @@ public:
     void setRedirectURLs(std::unique_ptr<Vector<String>>);
 
     bool isCurrentDocument(Document*) const;
-    
+
 #if PLATFORM(COCOA)
     id viewState() const;
     void setViewState(id);
-    
+
     // Transient properties may be of any ObjC type.  They are intended to be used to store state per back/forward list entry.
     // The properties will not be persisted; when the history item is removed, the properties will be lost.
     id getTransientProperty(const String&) const;
@@ -227,13 +227,13 @@ private:
     String m_parent;
     String m_title;
     String m_displayTitle;
-    
+
     IntPoint m_scrollPoint;
     float m_pageScaleFactor;
     Vector<String> m_documentState;
-    
+
     HistoryItemVector m_children;
-    
+
     bool m_lastVisitWasFailure;
     bool m_isTargetItem;
 
@@ -252,7 +252,7 @@ private:
 
     // Support for HTML5 History
     RefPtr<SerializedScriptValue> m_stateObject;
-    
+
     // info used to repost form data
     RefPtr<FormData> m_formData;
     String m_formContentType;

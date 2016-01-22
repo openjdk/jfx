@@ -92,7 +92,7 @@
  * object size used at allocation time is still available when freeing.
  *
  * Here is an example for using the slice allocator:
- * |[<!-- language="C" --> 
+ * |[<!-- language="C" -->
  * gchar *mem[10000];
  * gint i;
  *
@@ -113,7 +113,7 @@
  *
  * And here is an example for using the using the slice allocator
  * with data structures:
- * |[<!-- language="C" --> 
+ * |[<!-- language="C" -->
  * GRealArray *array;
  *
  * // Allocate one block, using the g_slice_new() macro.
@@ -1707,13 +1707,13 @@ g_slice_debug_tree_statistics (void)
   else
     fprintf (stderr, "GSlice: MemChecker: root=NULL\n");
   g_mutex_unlock (&smc_tree_mutex);
-  
+
   /* sample statistics (beast + GSLice + 24h scripted core & GUI activity):
    *  PID %CPU %MEM   VSZ  RSS      COMMAND
    * 8887 30.3 45.8 456068 414856   beast-0.7.1 empty.bse
    * $ cat /proc/8887/statm # total-program-size resident-set-size shared-pages text/code data/stack library dirty-pages
    * 114017 103714 2354 344 0 108676 0
-   * $ cat /proc/8887/status 
+   * $ cat /proc/8887/status
    * Name:   beast-0.7.1
    * VmSize:   456068 kB
    * VmLck:         0 kB

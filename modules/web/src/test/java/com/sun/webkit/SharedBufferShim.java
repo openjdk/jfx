@@ -45,5 +45,5 @@ public class SharedBufferShim {
     public static int getSomeData(SharedBuffer sb, long position, byte[] buffer, int offset, int length) {
         return sb.getSomeData(position, buffer, offset, length);
     }
-    
+
 }

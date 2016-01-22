@@ -37,7 +37,7 @@
 namespace WTF {
 
 namespace double_conversion {
-    
+
     static int NormalizedExponent(uint64_t significand, int exponent) {
         ASSERT(significand != 0);
         while ((significand & Double::kHiddenBit) == 0) {
@@ -46,8 +46,8 @@ namespace double_conversion {
         }
         return exponent;
     }
-    
-    
+
+
     // Forward declarations:
     // Returns an estimation of k such that 10^(k-1) <= v < 10^k.
     static int EstimatePower(int exponent);
@@ -86,8 +86,8 @@ namespace double_conversion {
     static void GenerateCountedDigits(int count, int* decimal_point,
                                       Bignum* numerator, Bignum* denominator,
                                       BufferReference<char>(buffer), int* length);
-    
-    
+
+
     void BignumDtoa(double v, BignumDtoaMode mode, int requested_digits,
                     BufferReference<char> buffer, int* length, int* decimal_point) {
         ASSERT(v > 0);
@@ -98,7 +98,7 @@ namespace double_conversion {
         int normalized_exponent = NormalizedExponent(significand, exponent);
         // estimated_power might be too low by 1.
         int estimated_power = EstimatePower(normalized_exponent);
-        
+
         // Shortcut for Fixed.
         // The requested digits correspond to the digits after the point. If the
         // number is much too small, then there is no need in trying to get any
@@ -112,7 +112,7 @@ namespace double_conversion {
             *decimal_point = -requested_digits;
             return;
         }
-        
+
         Bignum numerator;
         Bignum denominator;
         Bignum delta_minus;
@@ -153,8 +153,8 @@ namespace double_conversion {
         }
         buffer[*length] = '\0';
     }
-    
-    
+
+
     // The procedure starts generating digits from the left to the right and stops
     // when the generated digits yield the shortest decimal representation of v. A
     // decimal representation of v is a number lying closer to v than to any other
@@ -185,7 +185,7 @@ namespace double_conversion {
             // digit = numerator / denominator (integer division).
             // numerator = numerator % denominator.
             buffer[(*length)++] = digit + '0';
-            
+
             // Can we stop already?
             // If the remainder of the division is less than the distance to the lower
             // boundary we can stop. In this case we simply round down (discarding the
@@ -234,7 +234,7 @@ namespace double_conversion {
                     // TODO(floitsch): need a way to solve half-way cases.
                     //   For now let's round towards even (since this is what Gay seems to
                     //   do).
-                    
+
                     if ((buffer[(*length) - 1] - '0') % 2 == 0) {
                         // Round down => Do nothing.
                     } else {
@@ -258,8 +258,8 @@ namespace double_conversion {
             }
         }
     }
-    
-    
+
+
     // Let v = numerator / denominator < 10.
     // Then we generate 'count' digits of d = x.xxxxx... (without the decimal point)
     // from left to right. Once 'count' digits have been produced we decide wether
@@ -301,8 +301,8 @@ namespace double_conversion {
         }
         *length = count;
     }
-    
-    
+
+
     // Generates 'requested_digits' after the decimal point. It might omit
     // trailing '0's. If the input number is too small then no digits at all are
     // generated (ex.: 2 fixed digits for 0.00001).
@@ -350,8 +350,8 @@ namespace double_conversion {
                                   buffer, length);
         }
     }
-    
-    
+
+
     // Returns an estimation of k such that 10^(k-1) <= v < 10^k where
     // v = f * 2^exponent and 2^52 <= f < 2^53.
     // v is hence a normalized double with the given exponent. The output is an
@@ -388,16 +388,16 @@ namespace double_conversion {
         // Explanation for v's boundary m+: the computation takes advantage of
         // the fact that 2^(p-1) <= f < 2^p. Boundaries still satisfy this requirement
         // (even for denormals where the delta can be much more important).
-        
+
         const double k1Log10 = 0.30102999566398114;  // 1/lg(10)
-        
+
         // For doubles len(f) == 53 (don't forget the hidden bit).
         const int kSignificandSize = 53;
         double estimate = ceil((exponent + kSignificandSize - 1) * k1Log10 - 1e-10);
         return static_cast<int>(estimate);
     }
-    
-    
+
+
     // See comments for InitialScaledStartValues.
     static void InitialScaledStartValuesPositiveExponent(
                                                          double v, int estimated_power, bool need_boundary_deltas,
@@ -407,13 +407,13 @@ namespace double_conversion {
         ASSERT(estimated_power >= 0);
         // Since the estimated_power is positive we simply multiply the denominator
         // by 10^estimated_power.
-        
+
         // numerator = v.
         numerator->AssignUInt64(Double(v).Significand());
         numerator->ShiftLeft(Double(v).Exponent());
         // denominator = 10^estimated_power.
         denominator->AssignPowerUInt16(10, estimated_power);
-        
+
         if (need_boundary_deltas) {
             // Introduce a common denominator so that the deltas to the boundaries are
             // integers.
@@ -426,7 +426,7 @@ namespace double_conversion {
             // Same for delta_minus (with adjustments below if f == 2^p-1).
             delta_minus->AssignUInt16(1);
             delta_minus->ShiftLeft(Double(v).Exponent());
-            
+
             // If the significand (without the hidden bit) is 0, then the lower
             // boundary is closer than just half a ulp (unit in the last place).
             // There is only one exception: if the next lower number is a denormal then
@@ -442,8 +442,8 @@ namespace double_conversion {
             }
         }
     }
-    
-    
+
+
     // See comments for InitialScaledStartValues
     static void InitialScaledStartValuesNegativeExponentPositivePower(
                                                                       double v, int estimated_power, bool need_boundary_deltas,
@@ -454,7 +454,7 @@ namespace double_conversion {
         // v = f * 2^e with e < 0, and with estimated_power >= 0.
         // This means that e is close to 0 (have a look at how estimated_power is
         // computed).
-        
+
         // numerator = significand
         //  since v = significand * 2^exponent this is equivalent to
         //  numerator = v * / 2^-exponent
@@ -462,7 +462,7 @@ namespace double_conversion {
         // denominator = 10^estimated_power * 2^-exponent (with exponent < 0)
         denominator->AssignPowerUInt16(10, estimated_power);
         denominator->ShiftLeft(-exponent);
-        
+
         if (need_boundary_deltas) {
             // Introduce a common denominator so that the deltas to the boundaries are
             // integers.
@@ -475,7 +475,7 @@ namespace double_conversion {
             delta_plus->AssignUInt16(1);
             // Same for delta_minus (with adjustments below if f == 2^p-1).
             delta_minus->AssignUInt16(1);
-            
+
             // If the significand (without the hidden bit) is 0, then the lower
             // boundary is closer than just one ulp (unit in the last place).
             // There is only one exception: if the next lower number is a denormal
@@ -492,8 +492,8 @@ namespace double_conversion {
             }
         }
     }
-    
-    
+
+
     // See comments for InitialScaledStartValues
     static void InitialScaledStartValuesNegativeExponentNegativePower(
                                                                       double v, int estimated_power, bool need_boundary_deltas,
@@ -505,11 +505,11 @@ namespace double_conversion {
         int exponent = Double(v).Exponent();
         // Instead of multiplying the denominator with 10^estimated_power we
         // multiply all values (numerator and deltas) by 10^-estimated_power.
-        
+
         // Use numerator as temporary container for power_ten.
         Bignum* power_ten = numerator;
         power_ten->AssignPowerUInt16(10, -estimated_power);
-        
+
         if (need_boundary_deltas) {
             // Since power_ten == numerator we must make a copy of 10^estimated_power
             // before we complete the computation of the numerator.
@@ -517,7 +517,7 @@ namespace double_conversion {
             delta_plus->AssignBignum(*power_ten);
             delta_minus->AssignBignum(*power_ten);
         }
-        
+
         // numerator = significand * 2 * 10^-estimated_power
         //  since v = significand * 2^exponent this is equivalent to
         // numerator = v * 10^-estimated_power * 2 * 2^-exponent.
@@ -525,11 +525,11 @@ namespace double_conversion {
         //  to itself.
         ASSERT(numerator == power_ten);
         numerator->MultiplyByUInt64(significand);
-        
+
         // denominator = 2 * 2^-exponent with exponent < 0.
         denominator->AssignUInt16(1);
         denominator->ShiftLeft(-exponent);
-        
+
         if (need_boundary_deltas) {
             // Introduce a common denominator so that the deltas to the boundaries are
             // integers.
@@ -539,7 +539,7 @@ namespace double_conversion {
             // delta_plus = 10^-estimated_power, and
             // delta_minus = 10^-estimated_power.
             // These assignments have been done earlier.
-            
+
             // The special case where the lower boundary is twice as close.
             // This time we have to look out for the exception too.
             uint64_t v_bits = Double(v).AsUint64();
@@ -553,8 +553,8 @@ namespace double_conversion {
             }
         }
     }
-    
-    
+
+
     // Let v = significand * 2^exponent.
     // Computes v / 10^estimated_power exactly, as a ratio of two bignums, numerator
     // and denominator. The functions GenerateShortestDigits and
@@ -612,8 +612,8 @@ namespace double_conversion {
                                                                   numerator, denominator, delta_minus, delta_plus);
         }
     }
-    
-    
+
+
     // This routine multiplies numerator/denominator so that its values lies in the
     // range 1-10. That is after a call to this function we have:
     //    1 <= (numerator + delta_plus) /denominator < 10.
@@ -653,7 +653,7 @@ namespace double_conversion {
             }
         }
     }
-    
+
 }  // namespace double_conversion
 
 } // namespace WTF

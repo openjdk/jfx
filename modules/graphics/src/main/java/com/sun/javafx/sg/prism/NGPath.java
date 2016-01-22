@@ -121,6 +121,6 @@ public class NGPath extends NGShape {
         p.setTo(path);
         geometryChanged();
     }
-    
-    
+
+
 }

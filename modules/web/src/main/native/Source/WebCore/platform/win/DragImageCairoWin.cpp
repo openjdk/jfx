@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -103,7 +103,7 @@ static cairo_surface_t* createCairoContextFromBitmap(HBITMAP bitmap)
 
 DragImageRef scaleDragImage(DragImageRef imageRef, FloatSize scale)
 {
-    // FIXME: due to the way drag images are done on windows we need 
+    // FIXME: due to the way drag images are done on windows we need
     // to preprocess the alpha channel <rdar://problem/5015946>
     if (!imageRef)
         return 0;
@@ -145,7 +145,7 @@ exit:
         hbmp.swap(image);
     return hbmp.leak();
 }
-    
+
 DragImageRef createDragImageFromImage(Image* img, ImageOrientationDescription)
 {
     HWndDC dc(0);
@@ -173,5 +173,5 @@ DragImageRef createDragImageFromImage(Image* img, ImageOrientationDescription)
 
     return hbmp.leak();
 }
-    
+
 }

@@ -156,7 +156,7 @@ SampleMap::iterator SampleMap::findSyncSampleAfterPresentationTime(const MediaTi
         return decodeEnd();
 
     iterator currentSampleDTS = findSampleWithDecodeTime(currentSamplePTS->second->decodeTime());
-    
+
     MediaTime upperBound = time + threshold;
     iterator foundSample = std::find_if(currentSampleDTS, decodeEnd(), SampleIsRandomAccess());
     if (foundSample == decodeEnd())

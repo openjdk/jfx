@@ -23,12 +23,12 @@
 #define printf_parse _g_gnulib_printf_parse
 
 /* Flags */
-#define FLAG_GROUP	 1	/* ' flag */
-#define FLAG_LEFT	 2	/* - flag */
-#define FLAG_SHOWSIGN	 4	/* + flag */
-#define FLAG_SPACE	 8	/* space flag */
-#define FLAG_ALT	16	/* # flag */
-#define FLAG_ZERO	32
+#define FLAG_GROUP   1  /* ' flag */
+#define FLAG_LEFT    2  /* - flag */
+#define FLAG_SHOWSIGN    4  /* + flag */
+#define FLAG_SPACE   8  /* space flag */
+#define FLAG_ALT    16  /* # flag */
+#define FLAG_ZERO   32
 
 /* A parsed directive.  */
 typedef struct

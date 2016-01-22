@@ -27,7 +27,7 @@
 namespace WebCore {
 
 class SourceAlpha : public FilterEffect {
-public:        
+public:
     static PassRefPtr<SourceAlpha> create(Filter*);
 
     static const AtomicString& effectName();

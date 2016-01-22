@@ -23,25 +23,25 @@
 #include "SVGTransform.h"
 
 namespace WebCore {
-    
+
 class AffineTransform;
-    
+
 class SVGTransformDistance {
 public:
     SVGTransformDistance();
     SVGTransformDistance(const SVGTransform& fromTransform, const SVGTransform& toTransform);
-    
+
     SVGTransformDistance scaledDistance(float scaleFactor) const;
     SVGTransform addToSVGTransform(const SVGTransform&) const;
 
     static SVGTransform addSVGTransforms(const SVGTransform&, const SVGTransform&, unsigned repeatCount = 1);
-    
+
     bool isZero() const;
-    
+
     float distance() const;
 private:
     SVGTransformDistance(SVGTransform::SVGTransformType, float angle, float cx, float cy, const AffineTransform&);
-        
+
     SVGTransform::SVGTransformType m_type;
     float m_angle;
     float m_cx;

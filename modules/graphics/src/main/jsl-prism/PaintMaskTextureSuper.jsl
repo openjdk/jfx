@@ -30,6 +30,6 @@ float4 paint(float2 texCoord0, float2 texCoord1)
 {
     //texCoord0: the actual texture coordinates
     //texCoord1: the weight for each texture (usually 0 or 1)
-    return (sample(inputTex0, texCoord0) * texCoord1.x)  + 
+    return (sample(inputTex0, texCoord0) * texCoord1.x)  +
            (sample(inputTex1, texCoord0).a * texCoord1.y) ;
 }

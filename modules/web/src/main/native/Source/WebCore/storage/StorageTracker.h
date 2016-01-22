@@ -37,7 +37,7 @@ namespace WebCore {
 class StorageTask;
 class StorageThread;
 class SecurityOrigin;
-class StorageTrackerClient;    
+class StorageTrackerClient;
 
 class StorageTracker {
     WTF_MAKE_NONCOPYABLE(StorageTracker);
@@ -50,15 +50,15 @@ public:
     String databaseDirectoryPath() const;
 
     void setOriginDetails(const String& originIdentifier, const String& databaseFile);
-    
+
     void deleteAllOrigins();
     void deleteOrigin(SecurityOrigin*);
     void deleteOriginWithIdentifier(const String& originIdentifier);
     void origins(Vector<RefPtr<SecurityOrigin>>& result);
     long long diskUsageForOrigin(SecurityOrigin*);
-    
+
     void cancelDeletingOrigin(const String& originIdentifier);
-    
+
     bool isActive();
 
     double storageDatabaseIdleInterval() { return m_StorageDatabaseIdleInterval; }
@@ -76,7 +76,7 @@ private:
 
     void importOriginIdentifiers();
     void finishedImportingOriginIdentifiers();
-    
+
     void deleteTrackerFiles();
     String databasePathForOrigin(const String& originIdentifier);
 
@@ -85,7 +85,7 @@ private:
     void willDeleteAllOrigins();
 
     void originFilePaths(Vector<String>& paths);
-    
+
     void setIsActive(bool);
 
     // Sync to disk on background thread.
@@ -109,12 +109,12 @@ private:
     OriginSet m_originsBeingDeleted;
 
     std::unique_ptr<StorageThread> m_thread;
-    
+
     bool m_isActive;
     bool m_needsInitialization;
     double m_StorageDatabaseIdleInterval;
 };
-    
+
 } // namespace WebCore
 
 #endif // StorageTracker_h

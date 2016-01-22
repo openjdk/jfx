@@ -63,33 +63,33 @@ import javafx.scene.paint.Paint;
 
 /**
  *
- * 
+ *
  */
 class MetadataIntrospector {
-    
+
     private final Class<?> componentClass;
     private final ComponentClassMetadata ancestorMetadata;
     private int counter;
-    
+
     public MetadataIntrospector(Class<?> componentClass, ComponentClassMetadata ancestorMetadata) {
         this.componentClass = componentClass;
         this.ancestorMetadata = ancestorMetadata;
     }
-    
+
     public ComponentClassMetadata introspect() {
         final Set<PropertyMetadata> properties = new HashSet<>();
         final Set<PropertyName> hiddenProperties = Metadata.getMetadata().getHiddenProperties();
         Exception exception;
-        
-        
+
+
         try {
             final Object sample = instantiate();
             final BeanInfo beanInfo = Introspector.getBeanInfo(componentClass);
             for (PropertyDescriptor d : beanInfo.getPropertyDescriptors()) {
                 final PropertyName name = new PropertyName(d.getName());
-                PropertyMetadata propertyMetadata 
+                PropertyMetadata propertyMetadata
                         = lookupPropertyMetadata(ancestorMetadata, name);
-                if ((propertyMetadata == null) 
+                if ((propertyMetadata == null)
                         && (hiddenProperties.contains(name) == false)) {
                     propertyMetadata = makePropertyMetadata(name, d, sample);
                     if (propertyMetadata != null) {
@@ -101,41 +101,41 @@ class MetadataIntrospector {
         } catch(IOException | IntrospectionException x) {
             exception = x;
         }
-        
-        final CustomComponentClassMetadata result 
-                = new CustomComponentClassMetadata(componentClass,  
+
+        final CustomComponentClassMetadata result
+                = new CustomComponentClassMetadata(componentClass,
                 ancestorMetadata, exception);
         result.getProperties().addAll(properties);
-        
+
         return result;
     }
-    
-    
+
+
     /*
      * Private
      */
-    
+
     private Object instantiate() throws IOException {
         final StringBuilder sb = new StringBuilder();
         Object result;
-        
+
         /*
          * <?xml version="1.0" encoding="UTF-8"?>
-         * 
+         *
          * <?import a.b.C?>
-         * 
+         *
          * <C/>
          */
-        
+
         sb.append("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
-        
+
         sb.append("<?import ");
         sb.append(componentClass.getCanonicalName());
         sb.append("?>");
         sb.append("<");
         sb.append(componentClass.getSimpleName());
         sb.append("/>\n");
-        
+
         final FXMLLoader fxmlLoader = new FXMLLoader();
         final String fxmlText = sb.toString();
         final byte[] fxmlBytes = fxmlText.getBytes(Charset.forName("UTF-8"));
@@ -146,27 +146,27 @@ class MetadataIntrospector {
         } catch(RuntimeException x) {
             throw new IOException(x);
         }
-        
+
         return result;
     }
-    
-    
+
+
     private PropertyMetadata lookupPropertyMetadata(
             ComponentClassMetadata ccm, PropertyName propertyName) {
         PropertyMetadata result = null;
-        
+
         while ((ccm != null) && (result == null)) {
             result = ccm.lookupProperty(propertyName);
             ccm = ccm.getParentMetadata();
         }
-        
+
         return result;
     }
-    
-    private PropertyMetadata makePropertyMetadata(PropertyName name, 
+
+    private PropertyMetadata makePropertyMetadata(PropertyName name,
             PropertyDescriptor d, Object sample) {
         final PropertyMetadata result;
-        
+
         if (d.getPropertyType() == null) {
             result = null;
         } else if (d.getReadMethod() == null) {
@@ -174,9 +174,9 @@ class MetadataIntrospector {
         } else {
             final Class<?> propertyType = canonizeClass(d.getPropertyType());
             final boolean readWrite = d.getWriteMethod() != null;
-            final InspectorPath inspectorPath 
+            final InspectorPath inspectorPath
                     = new InspectorPath(CUSTOM_SECTION, CUSTOM_SUB_SECTION, counter++);
-            
+
             if (propertyType.isArray()) {
                 result = null;
             } else if (propertyType.isEnum()) {
@@ -228,13 +228,13 @@ class MetadataIntrospector {
                 result = null;
             }
         }
-        
+
         return result;
     }
-    
+
     private Class<?> canonizeClass(Class<?> c) {
         final Class<?> result;
-        
+
         if (c.equals(boolean.class)) {
             result = Boolean.class;
         } else if (c.equals(double.class)) {
@@ -244,20 +244,20 @@ class MetadataIntrospector {
         } else {
             result = c;
         }
-        
+
         return result;
     }
-    
-    
+
+
     private Object getDefaultValue(Object sample, Method readMethod, Object fallback) {
         Object result;
-        
+
         try {
             result = readMethod.invoke(sample);
         } catch(InvocationTargetException|IllegalAccessException x) {
             result = fallback;
         }
-        
+
         return result;
     }
 }

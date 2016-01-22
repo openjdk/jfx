@@ -46,7 +46,7 @@ import javafx.scene.transform.Translate;
 import javafx.stage.Stage;
 
 /**
- * A sample that shows a 3D box and uses a perspective camera for rendering the 
+ * A sample that shows a 3D box and uses a perspective camera for rendering the
  * scene.
  * Hint: Switch to Line draw mode to see how cullFace property works.
  *
@@ -66,35 +66,35 @@ import javafx.stage.Stage;
  * @conditionalFeatures SCENE3D
  */
 public class Simple3DBoxApp extends Application {
-    
+
     private Box testBox;
     private PhongMaterial material;
-   
+
     public Parent createContent() throws Exception {
-               
+
         // Box
         testBox = new Box(5, 5, 5);
-        
+
         material = new PhongMaterial(Color.RED);
         testBox.setMaterial(material);
-        
+
         // Create and position camera
         PerspectiveCamera camera = new PerspectiveCamera(true);
         camera.getTransforms().addAll(
                 new Rotate(-20, Rotate.Y_AXIS),
                 new Rotate(-20, Rotate.X_AXIS),
                 new Translate(0, 0, -15));
-        
+
         // Build the Scene Graph
-        Group root = new Group();       
+        Group root = new Group();
         root.getChildren().add(camera);
         root.getChildren().add(testBox);
-        
-        // Use a SubScene       
+
+        // Use a SubScene
         SubScene subScene = new SubScene(root, 300, 300, true, SceneAntialiasing.BALANCED);
         subScene.setFill(Color.TRANSPARENT);
         subScene.setCamera(camera);
-        
+
         return new Group(subScene);
     }
 

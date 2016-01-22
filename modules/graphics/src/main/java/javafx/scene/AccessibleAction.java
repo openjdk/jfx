@@ -28,7 +28,7 @@ package javafx.scene;
 /**
  * This enum describes the actions that an assistive technology
  * such as a screen reader can request from the scene graph.
- * 
+ *
  * The {@link AccessibleRole} dictates the set of actions that
  * the screen reader will request for a particular control. For
  * example, a push button normally fires an event to indicate
@@ -40,7 +40,7 @@ package javafx.scene;
  * @see Node#executeAccessibleAction(AccessibleAction, Object...)
  * @see AccessibleRole
  * @see AccessibleAttribute#ROLE
- * 
+ *
  * @since JavaFX 8u40
  */
 public enum AccessibleAction {
@@ -49,7 +49,7 @@ public enum AccessibleAction {
      * Request that the node be decremented by a large value.
      * A smaller decrement is requested using {@link #DECREMENT}.
      * <p>Used by Slider, ScrollBar, and others </p>
-     * 
+     *
      * Parameters:
      * <ul>
      * </ul>
@@ -60,7 +60,7 @@ public enum AccessibleAction {
      * Request that the node be incremented by a large value.
      * A smaller increment is requested using {@link #INCREMENT}.
      * <p>Used by Slider, ScrollBar, and others </p>
-     * 
+     *
      * Parameters:
      * <ul>
      * </ul>
@@ -70,7 +70,7 @@ public enum AccessibleAction {
     /**
      * Request that the node should become collapsed.
      * <p>Used by TreeItem, TitledPane, and others </p>
-     * 
+     *
      * Parameters:
      * <ul>
      * </ul>
@@ -81,7 +81,7 @@ public enum AccessibleAction {
      * Request that the node be decremented by a small value.
      * A larger decrement is requested using {@link #BLOCK_DECREMENT}.
      * <p>Used by Slider, ScrollBar, and others </p>
-     * 
+     *
      * Parameters:
      * <ul>
      * </ul>
@@ -91,7 +91,7 @@ public enum AccessibleAction {
     /**
      * Request that the node should become expanded.
      * <p>Used by TreeItem, TitledPane, and others </p>
-     * 
+     *
      * Parameters:
      * <ul>
      * </ul>
@@ -104,7 +104,7 @@ public enum AccessibleAction {
      * that is has been activated.
      * *
      * <p>Used by Button, Hyperlink, and others </p>
-     * 
+     *
      * Parameters:
      * <ul>
      * </ul>
@@ -115,7 +115,7 @@ public enum AccessibleAction {
      * Request that the node be incremented by a small value.
      * A larger increment is requested using {@link #BLOCK_INCREMENT}.
      * <p>Used by Slider, ScrollBar, and others </p>
-     * 
+     *
      * Parameters:
      * <ul>
      * </ul>
@@ -123,7 +123,7 @@ public enum AccessibleAction {
     INCREMENT,
 
     /**
-     * Request that the node take focus.  By default, a node will 
+     * Request that the node take focus.  By default, a node will
      * request focus using  {@link javafx.scene.Node#requestFocus()}.
      * Both JavaFX and the assisteve technology have the concept of
      * a focus node and most of the time, they are the same.
@@ -131,9 +131,9 @@ public enum AccessibleAction {
      * on the parent, while the assistive technology focus is on the child.
      * For example, a table may respond to this request by setting focus
      * to a cell inside the table before allowing the default to run.
-     * 
+     *
      * <p>Used by Node, TabItem, TableCell and others </p>
-     * 
+     *
      * Parameters:
      * <ul>
      * </ul>
@@ -143,7 +143,7 @@ public enum AccessibleAction {
     /**
      * Request the node to show an item, scrolling if required.
      * <p>Used by ListView, TreeView, and others </p>
-     * 
+     *
      * Parameters:
      * <ul>
      * <li> {@link Node} the item to show </li>
@@ -154,7 +154,7 @@ public enum AccessibleAction {
     /**
      * Request the node to show a text range, scrolling if required.
      * <p>Used by TextField and TextArea. </p>
-     * 
+     *
      * Parameters:
      * <ul>
      * <li> {@link java.lang.Integer} the start offset </li>
@@ -166,7 +166,7 @@ public enum AccessibleAction {
     /**
      * Request the node to set the selection to a list of items.
      * <p>Used by ListView, TreeView, and others </p>
-     * 
+     *
      * Parameters:
      * <ul>
      * <li> {@link javafx.collections.ObservableList}&lt;{@link Node}&gt; the items to select </li>
@@ -177,7 +177,7 @@ public enum AccessibleAction {
     /**
      * Request the node to set the selection to range of text.
      * <p>Used by TextField and TextArea. </p>
-     * 
+     *
      * Parameters:
      * <ul>
      * <li> {@link java.lang.Integer} the start offset </li>
@@ -189,7 +189,7 @@ public enum AccessibleAction {
     /**
      * Request the node to set the current text.
      * <p>Used by TextField and TextArea. </p>
-     * 
+     *
      * Parameters:
      * <ul>
      * <li> {@link String} the new text</li>
@@ -200,7 +200,7 @@ public enum AccessibleAction {
     /**
      * Request the node to set the current value.
      * <p>Used by Slider, Scrollbars, and others </p>
-     * 
+     *
      * Parameters:
      * <ul>
      * <li> {@link java.lang.Double} the new value </li>
@@ -212,9 +212,9 @@ public enum AccessibleAction {
      * Request the node to show a menu.  If the node is a control,
      * then the context menu for the control is shown.  If the node
      * is a menu, then the submenu for the menu is shown.
-     * 
+     *
      * <p>Used by Node, Menu</p>
-     * 
+     *
      * Parameters:
      * <ul>
      * </ul>

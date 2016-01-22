@@ -89,20 +89,20 @@ public class TestNodeBase extends Node {
                 public CssMetaData getCssMetaData() {
                     return TestNodeBase.StyleableProperties.TEST;
                 }
-                
+
             };
         }
         return test;
     }
-    
+
     public void setTest(boolean value) {
         testProperty().set(value);
     }
-    
+
     public boolean getTest() {
         return (test == null ? true : test.get());
     }
-    
+
     private StringProperty string;
     private StringProperty stringProperty() {
         if (string == null) {
@@ -122,20 +122,20 @@ public class TestNodeBase extends Node {
                 public CssMetaData getCssMetaData() {
                     return TestNodeBase.StyleableProperties.STRING;
                 }
-                
+
             };
         }
         return string;
     }
-    
+
     public void setString(String value) {
         stringProperty().set(value);
     }
-    
+
     public String getString() {
         return (string == null ? "init string" : string.get());
-    }  
-    
+    }
+
     private DoubleProperty doubleProperty;
     private DoubleProperty doublePropertyProperty() {
         if (doubleProperty == null) {
@@ -155,24 +155,24 @@ public class TestNodeBase extends Node {
                 public CssMetaData getCssMetaData() {
                     return TestNodeBase.StyleableProperties.DOUBLE_PROPERTY;
                 }
-                
+
             };
         }
         return doubleProperty;
     }
-    
+
     public void setDoubleProperty(double number) {
         doublePropertyProperty().set(number);
     }
-    
+
     public double getDoubleProperty() {
         return (doubleProperty == null ? 0 : doubleProperty.get());
     }
-    
+
 
     public static class StyleableProperties {
         public final static CssMetaData<TestNodeBase,Boolean> TEST =
-                new CssMetaData<TestNodeBase,Boolean>("-fx-test", 
+                new CssMetaData<TestNodeBase,Boolean>("-fx-test",
                 BooleanConverter.getInstance(), Boolean.TRUE) {
 
             @Override
@@ -187,7 +187,7 @@ public class TestNodeBase extends Node {
         };
 
         public final static CssMetaData<TestNodeBase,String> STRING =
-                new CssMetaData<TestNodeBase,String>("-fx-string", 
+                new CssMetaData<TestNodeBase,String>("-fx-string",
                 StringConverter.getInstance(), "init string") {
 
             @Override
@@ -202,7 +202,7 @@ public class TestNodeBase extends Node {
         };
 
         public final static CssMetaData<TestNodeBase,Number> DOUBLE_PROPERTY =
-                new CssMetaData<TestNodeBase,Number>("-fx-double-property", 
+                new CssMetaData<TestNodeBase,Number>("-fx-double-property",
                 SizeConverter.getInstance(), 0) {
 
             @Override
@@ -215,12 +215,12 @@ public class TestNodeBase extends Node {
                 return (StyleableProperty)n.doublePropertyProperty();
             }
         };
-        
+
         static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES;
         static {
-            List<CssMetaData<? extends Styleable, ?>> list = 
+            List<CssMetaData<? extends Styleable, ?>> list =
                 new ArrayList<CssMetaData<? extends Styleable, ?>>(Node.getClassCssMetaData());
-            Collections.addAll(list,                
+            Collections.addAll(list,
                 TEST,
                 STRING,
                 DOUBLE_PROPERTY
@@ -228,7 +228,7 @@ public class TestNodeBase extends Node {
             STYLEABLES = Collections.unmodifiableList(list);
         }
     }
-                
+
     /**
      * {@inheritDoc}
      */
@@ -240,8 +240,8 @@ public class TestNodeBase extends Node {
      * {@inheritDoc}
      *
      */
-    
-    
+
+
     @Override
     public List<CssMetaData<? extends Styleable, ?>> getCssMetaData() {
         return getClassCssMetaData();

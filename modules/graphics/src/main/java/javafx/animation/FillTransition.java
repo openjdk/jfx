@@ -43,36 +43,36 @@ import javafx.util.Duration;
  * {@link javafx.scene.paint.Color} in this case).
  * <p>
  * It stops at the {@code toValue} value.
- * 
+ *
  * <p>
  * Code Segment Example:
  * </p>
- * 
+ *
  * <pre>
  * <code>
  * import javafx.scene.shape.*;
  * import javafx.animation.transition.*;
- * 
+ *
  * ...
- * 
+ *
  *     Rectangle rect = new Rectangle (100, 40, 100, 100);
  *     rect.setArcHeight(50);
  *     rect.setArcWidth(50);
- * 
+ *
  *     FillTransition ft = new FillTransition(Duration.millis(3000), rect, Color.RED, Color.BLUE);
  *     ft.setCycleCount(4);
  *     ft.setAutoReverse(true);
- * 
+ *
  *     ft.play();
- * 
+ *
  * ...
- * 
+ *
  * </code>
  * </pre>
- * 
+ *
  * @see Transition
  * @see Animation
- * 
+ *
  * @since JavaFX 2.0
  */
 public final class FillTransition extends Transition {
@@ -125,7 +125,7 @@ public final class FillTransition extends Transition {
      *
      * Setting duration to value lower than {@link Duration#ZERO} will result
      * in {@link IllegalArgumentException}.
-     * 
+     *
      * @defaultValue 400ms
      */
     private ObjectProperty<Duration> duration;
@@ -179,7 +179,7 @@ public final class FillTransition extends Transition {
      * {@code FillTransition}. If the value of {@code fromValue} is changed for
      * a running {@code FillTransition}, the animation has to be stopped and
      * started again to pick up the new value.
-     * 
+     *
      * @defaultValue {@code null}
      */
     private ObjectProperty<Color> fromValue;
@@ -209,7 +209,7 @@ public final class FillTransition extends Transition {
      * {@code FillTransition}. If the value of {@code toValue} is changed for a
      * running {@code FillTransition}, the animation has to be stopped and
      * started again to pick up the new value.
-     * 
+     *
      * @defaultValue {@code null}
      */
     private ObjectProperty<Color> toValue;
@@ -233,12 +233,12 @@ public final class FillTransition extends Transition {
     }
 
 /**
-	 * The constructor of {@code FillTransition}
-	 * @param duration The duration of the {@code FillTransition}
-	 * @param shape The {@code shape} which filling will be animated
-	 * @param fromValue The start value of the color-animation
-	 * @param toValue The end value of the color-animation
-	 */
+     * The constructor of {@code FillTransition}
+     * @param duration The duration of the {@code FillTransition}
+     * @param shape The {@code shape} which filling will be animated
+     * @param fromValue The start value of the color-animation
+     * @param toValue The end value of the color-animation
+     */
     public FillTransition(Duration duration, Shape shape, Color fromValue,
             Color toValue) {
         setDuration(duration);
@@ -249,18 +249,18 @@ public final class FillTransition extends Transition {
     }
 
 /**
-	 * The constructor of {@code FillTransition}
-	 * @param duration The duration of the {@code FillTransition}
-	 * @param fromValue The start value of the color-animation
-	 * @param toValue The end value of the color-animation
-	 */
+     * The constructor of {@code FillTransition}
+     * @param duration The duration of the {@code FillTransition}
+     * @param fromValue The start value of the color-animation
+     * @param toValue The end value of the color-animation
+     */
     public FillTransition(Duration duration, Color fromValue, Color toValue) {
         this(duration, null, fromValue, toValue);
     }
 
     /**
      * The constructor of {@code FillTransition}
-     * 
+     *
      * @param duration
      *            The duration of the {@code FillTransition}
      * @param shape
@@ -272,7 +272,7 @@ public final class FillTransition extends Transition {
 
     /**
      * The constructor of {@code FillTransition}
-     * 
+     *
      * @param duration
      *            The duration of the {@code FadeTransition}
      */
@@ -307,7 +307,7 @@ public final class FillTransition extends Transition {
         return shape;
     }
 
-    @Override 
+    @Override
     boolean impl_startable(boolean forceSync) {
         if (!super.impl_startable(forceSync)) {
             return false;
@@ -330,7 +330,7 @@ public final class FillTransition extends Transition {
         && (getToValue() != null)); // toValue defined?
     }
 
-    @Override 
+    @Override
     void impl_sync(boolean forceSync) {
         super.impl_sync(forceSync);
         if (forceSync || (cachedShape == null)) {

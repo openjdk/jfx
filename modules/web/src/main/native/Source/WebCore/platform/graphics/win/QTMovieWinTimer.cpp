@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "config.h"
 
@@ -30,7 +30,7 @@
 
 #include <wtf/Assertions.h>
 
-// This file is used by the QuickTime access DLL. It copies some WebCore code 
+// This file is used by the QuickTime access DLL. It copies some WebCore code
 // which can't be used directly due to dependency issues.
 
 // FIXME: Find a way to do timers that can manage <10ms resolution properly too.
@@ -63,7 +63,7 @@ static void initializeOffScreenTimerWindow()
 {
     if (timerWindowHandle)
         return;
-    
+
     WNDCLASSEX wcex;
     memset(&wcex, 0, sizeof(WNDCLASSEX));
     wcex.cbSize = sizeof(WNDCLASSEX);
@@ -101,12 +101,12 @@ void setSharedTimerFireDelay(double interval)
     initializeOffScreenTimerWindow();
 
     // We don't allow nested PostMessages, since the custom messages will effectively starve
-    // painting and user input. (Win32 has a tri-level queue with application messages > 
+    // painting and user input. (Win32 has a tri-level queue with application messages >
     // user input > WM_PAINT/WM_TIMER.)
     // In addition, if the queue contains input events that have been there since the last call to
     // GetQueueStatus, PeekMessage or GetMessage we favor timers.
-    if (intervalInMS < USER_TIMER_MINIMUM 
-        && !processingCustomTimerMessage 
+    if (intervalInMS < USER_TIMER_MINIMUM
+        && !processingCustomTimerMessage
         && !LOWORD(::GetQueueStatus(QS_ALLINPUT))) {
         // Windows SetTimer does not allow timeouts smaller than 10ms (USER_TIMER_MINIMUM)
         PostMessage(timerWindowHandle, timerFiredMessage, 0, 0);

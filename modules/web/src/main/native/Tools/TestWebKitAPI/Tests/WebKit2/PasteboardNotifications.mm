@@ -58,7 +58,7 @@ static void setInjectedBundleClient(WKContextRef context)
 TEST(WebKit2, PasteboardNotifications)
 {
     [[NSPasteboard generalPasteboard] clearContents];
-    
+
     WKRetainPtr<WKContextRef> context = adoptWK(Util::createContextForInjectedBundleTest("PasteboardNotificationsTest"));
     setInjectedBundleClient(context.get());
 

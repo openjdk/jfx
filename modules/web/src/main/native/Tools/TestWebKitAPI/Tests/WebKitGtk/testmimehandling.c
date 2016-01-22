@@ -165,7 +165,7 @@ static void testLocalMimeType(const void* data)
 
      webkit_web_view_load_uri(view, fileURI);
      g_free(fileURI);
- 
+
      g_main_loop_run(loop);
      g_object_unref(view);
 }

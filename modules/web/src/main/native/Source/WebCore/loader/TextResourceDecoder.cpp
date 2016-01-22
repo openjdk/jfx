@@ -313,7 +313,7 @@ TextResourceDecoder::ContentType TextResourceDecoder::determineContentType(const
 
 const TextEncoding& TextResourceDecoder::defaultEncoding(ContentType contentType, const TextEncoding& specifiedDefaultEncoding)
 {
-    // Despite 8.5 "Text/xml with Omitted Charset" of RFC 3023, we assume UTF-8 instead of US-ASCII 
+    // Despite 8.5 "Text/xml with Omitted Charset" of RFC 3023, we assume UTF-8 instead of US-ASCII
     // for text/xml. This matches Firefox.
     if (contentType == XML)
         return UTF8Encoding();
@@ -350,7 +350,7 @@ void TextResourceDecoder::setEncoding(const TextEncoding& encoding, EncodingSour
     // treat x-user-defined as windows-1252 (bug 18270)
     if (source == EncodingFromMetaTag && strcasecmp(encoding.name(), "x-user-defined") == 0)
         m_encoding = "windows-1252";
-    else if (source == EncodingFromMetaTag || source == EncodingFromXMLHeader || source == EncodingFromCSSCharset)        
+    else if (source == EncodingFromMetaTag || source == EncodingFromXMLHeader || source == EncodingFromCSSCharset)
         m_encoding = encoding.closestByteBasedEquivalent();
     else
         m_encoding = encoding;
@@ -366,7 +366,7 @@ static int findXMLEncoding(const char* str, int len, int& encodingLength)
     if (pos == -1)
         return -1;
     pos += 8;
-    
+
     // Skip spaces and stray control characters.
     while (pos < len && str[pos] <= ' ')
         ++pos;
@@ -473,7 +473,7 @@ bool TextResourceDecoder::checkForCSSCharset(const char* data, size_t len, bool&
             return false;
 
         int encodingNameLength = pos - dataStart;
-        
+
         ++pos;
 
         if (*pos == ';')
@@ -585,13 +585,13 @@ void TextResourceDecoder::detectJapaneseEncoding(const char* data, size_t len)
 //   Note that condition #2 is NOT satisfied unless parent-child frame
 //   relationship is compliant to the same-origin policy. If they're from
 //   different domains, |m_source| would not be set to EncodingFromParentFrame
-//   in the first place. 
+//   in the first place.
 bool TextResourceDecoder::shouldAutoDetect() const
 {
     // Just checking m_hintEncoding suffices here because it's only set
     // in setHintEncoding when the source is AutoDetectedEncoding.
     return m_usesEncodingDetector
-        && (m_source == DefaultEncoding || (m_source == EncodingFromParentFrame && m_hintEncoding)); 
+        && (m_source == DefaultEncoding || (m_source == EncodingFromParentFrame && m_hintEncoding));
 }
 
 String TextResourceDecoder::decode(const char* data, size_t len)

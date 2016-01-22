@@ -73,7 +73,7 @@ public class ClassWithCollection {
     public List<Integer> getList() {
         return list;
     }
-    
+
     public List<Integer> getPropertyList() {
         return propertyList;
     }

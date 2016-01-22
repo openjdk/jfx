@@ -26,7 +26,7 @@
 package javafx.scene.shape;
 
 /**
- * Defines the line join style of a {@code Shape}. 
+ * Defines the line join style of a {@code Shape}.
  * @since JavaFX 2.0
  */
 public enum StrokeLineJoin {
@@ -41,7 +41,7 @@ public enum StrokeLineJoin {
     MITER,//(BasicStroke.JOIN_MITER),
 
     /**
-     * Joins path segments by connecting the outer corners 
+     * Joins path segments by connecting the outer corners
      * of their wide outlines with a straight segment.
      *
      * <p>
@@ -51,7 +51,7 @@ public enum StrokeLineJoin {
     BEVEL,//(BasicStroke.JOIN_BEVEL),
 
     /**
-     * Joins path segments by rounding off the corner 
+     * Joins path segments by rounding off the corner
      * at a radius of half the line width.
      *
      * <p>

@@ -192,7 +192,7 @@ public final class FileChooser {
                     throw new NullPointerException(
                             "Extension must not be null");
                 }
-                
+
                 if (extension.isEmpty()) {
                     throw new IllegalArgumentException(
                             "Extension must not be empty");
@@ -237,7 +237,7 @@ public final class FileChooser {
 
     public final ObjectProperty<File> initialDirectoryProperty() {
         if (initialDirectory == null) {
-            initialDirectory = 
+            initialDirectory =
                     new SimpleObjectProperty<File>(this, "initialDirectory");
         }
 

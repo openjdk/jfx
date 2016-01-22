@@ -54,7 +54,7 @@ private:
     virtual void styleDidChange(StyleDifference, const RenderStyle* oldStyle) override;
 
     void fixChildStyle(RenderObject*);
-    
+
     LayoutUnit m_lineThickness;
 };
 

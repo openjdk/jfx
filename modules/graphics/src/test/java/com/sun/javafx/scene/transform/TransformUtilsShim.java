@@ -39,8 +39,8 @@ public class TransformUtilsShim {
             double myx, double myy, double myz, double ty,
             double mzx, double mzy, double mzz, double tz) {
         return new TransformUtils.ImmutableTransform(
-                mxx, mxy, mxz, tx, 
-                myx, myy, myz, ty, 
+                mxx, mxy, mxz, tx,
+                myx, myy, myz, ty,
                 mzx, mzy, mzz, tz);
     }
 

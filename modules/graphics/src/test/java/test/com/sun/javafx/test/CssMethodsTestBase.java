@@ -46,17 +46,17 @@ public abstract class CssMethodsTestBase {
         this.configuration = configuration;
     }
 
-    
+
     @Test // This _must_ be the first test!
     public void testCssDefaultSameAsPropertyDefault() {
         configuration.cssDefaultsTest();
     }
-    
+
     @Test
     public void testCSSPropertyAndCSSPropertyReferenceEachOther() {
         configuration.cssPropertyReferenceIntegrityTest();
     }
-    
+
     @Test
     public void testCssSettable() throws Exception {
         configuration.cssSettableTest();
@@ -113,9 +113,9 @@ public abstract class CssMethodsTestBase {
     public static Object[] config(final Configuration configuration) {
         return new Object[] { configuration };
     }
-    
+
     private static CssMetaData<? extends Styleable, ?> getCssMetaData(Node node, String cssProperty) {
-        
+
         List<CssMetaData<? extends Styleable, ?>> styleables = node.getCssMetaData();
         for(CssMetaData<? extends Styleable, ?> styleable : styleables) {
             if (styleable.getProperty().equals(cssProperty)) {
@@ -149,7 +149,7 @@ public abstract class CssMethodsTestBase {
         private final PropertyReference nodePropertyReference;
 
         private final Object initialValue;
-        
+
         private final Object defaultValue;
 
         private final CssMetaData cssPropertyKey;
@@ -211,7 +211,7 @@ public abstract class CssMethodsTestBase {
                              final Object expectedFinalValue,
                              final ValueComparator comparator) {
             this.node = node;
-            this.nodePropertyReference = 
+            this.nodePropertyReference =
                     PropertyReference.createForBean(node.getClass(),
                                                     propertyName);
             this.initialValue = initialValue;
@@ -247,27 +247,27 @@ public abstract class CssMethodsTestBase {
             StyleableProperty styleableProperty = cssPropertyKey.getStyleableProperty(node);
             styleableProperty.applyStyle(null, cssPropertyValue);
 
-            final Object nodePropertyValue = 
+            final Object nodePropertyValue =
                     nodePropertyReference.getValue(node);
             comparator.assertEquals(expectedFinalValue,
                                     nodePropertyValue);
         }
-        
+
         public void cssDefaultsTest() {
-            
+
             // is the cssInitialValue the same as the node property's default?
-            final Object cssInitialValue = 
+            final Object cssInitialValue =
                     cssPropertyKey.getInitialValue(node);
-            
+
             ValueComparator.DEFAULT.assertEquals(defaultValue, cssInitialValue);
         }
-        
+
         public void cssPropertyReferenceIntegrityTest() {
-            
+
             StyleableProperty prop  = cssPropertyKey.getStyleableProperty(node);
-            
+
             CssMetaData styleable = prop.getCssMetaData();
-            
+
             ValueComparator.DEFAULT.assertEquals(cssPropertyKey, styleable);
         }
     }

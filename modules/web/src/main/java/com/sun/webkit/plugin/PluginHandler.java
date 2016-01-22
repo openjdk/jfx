@@ -31,7 +31,7 @@ interface PluginHandler {
     String getName();
     String getFileName();
     String getDescription();
-    
+
     String[] supportedMIMETypes();
     boolean isSupportedMIMEType(String mimeType);
     boolean isSupportedPlatform();

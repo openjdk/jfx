@@ -229,7 +229,7 @@ public class XylophoneApp extends Application {
 
         SubScene subScene = new SubScene(sceneRoot, 780 * 1.5, 380 * 1.5, true, SceneAntialiasing.BALANCED);
         subScene.setCamera(camera);
-        
+
         sceneRoot.translateXProperty().bind(subScene.widthProperty().divide(2.2));
         sceneRoot.translateYProperty().bind(subScene.heightProperty().divide(1.6));
 

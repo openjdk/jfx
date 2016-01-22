@@ -4,7 +4,7 @@
  * Copyright (C) 2011 Nokia Corporation. All rights reserved.
  *   Contact: Stefan Kost <stefan.kost@nokia.com>
  * Copyright (C) 2012 Collabora Ltd.
- *	Author : Edward Hervey <edward@collabora.com>
+ *  Author : Edward Hervey <edward@collabora.com>
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -25,7 +25,7 @@
 /**
  * SECTION:gstvideodecoder
  * @short_description: Base class for video decoders
- * @see_also: 
+ * @see_also:
  *
  * This base class is for video decoders turning encoded data into raw video
  * frames.
@@ -97,7 +97,7 @@
  *   <listitem>
  *     <itemizedlist><title>End Of Stream</title>
  *     <listitem><para>
- *   At end-of-stream, the subclass @parse function may be called some final times with the 
+ *   At end-of-stream, the subclass @parse function may be called some final times with the
  *   at_eos parameter set to true, indicating that the element should not expect any more data
  *   to be arriving, and it should parse and remaining frames and call
  *   gst_video_decoder_have_frame() if possible.
@@ -177,7 +177,7 @@
  * on whether forward or reverse playback is requested.
  *
  * Forward playback:
- *   * Incoming buffer -> @parse() -> add_to_frame()/have_frame() -> handle_frame() -> 
+ *   * Incoming buffer -> @parse() -> add_to_frame()/have_frame() -> handle_frame() ->
  *     push downstream
  *
  * Reverse playback is more complicated, since it involves gathering incoming data regions
@@ -186,7 +186,7 @@
  *
  * Upstream data we want to play:
  *  Buffer encoded order:  1  2  3  4  5  6  7  8  9  EOS
- *  Keyframe flag:            K        K        
+ *  Keyframe flag:            K        K
  *  Groupings:             AAAAAAA  BBBBBBB  CCCCCCC
  *
  * Input:
@@ -262,7 +262,7 @@
  *   output queue:
  *
  *    gather queue:    4
- *    decode queue:    
+ *    decode queue:
  *    output queue:    9  8  7  6  5
  *
  *   Now output all the frames in the output queue, picking a frame from the
@@ -287,7 +287,7 @@
  *  Decoded output:
  *
  *    gather queue:    1
- *    decode queue:    
+ *    decode queue:
  *    output queue:    4  3  2
  *
  *  Leftover buffer 1 cannot be decoded and must be discarded.
@@ -2947,7 +2947,7 @@ gst_video_decoder_have_frame (GstVideoDecoder * decoder)
 }
 
 /* Pass the frame in priv->current_frame through the
- * handle_frame() callback for decoding and passing to gvd_finish_frame(), 
+ * handle_frame() callback for decoding and passing to gvd_finish_frame(),
  * or dropping by passing to gvd_drop_frame() */
 static GstFlowReturn
 gst_video_decoder_decode_frame (GstVideoDecoder * decoder,
@@ -2959,7 +2959,7 @@ gst_video_decoder_decode_frame (GstVideoDecoder * decoder,
 
   decoder_class = GST_VIDEO_DECODER_GET_CLASS (decoder);
 
-  /* FIXME : This should only have to be checked once (either the subclass has an 
+  /* FIXME : This should only have to be checked once (either the subclass has an
    * implementation, or it doesn't) */
   g_return_val_if_fail (decoder_class->handle_frame != NULL, GST_FLOW_ERROR);
 
@@ -3125,7 +3125,7 @@ gst_video_decoder_get_oldest_frame (GstVideoDecoder * decoder)
  * @frame_number: system_frame_number of a frame
  *
  * Get a pending unfinished #GstVideoCodecFrame
- * 
+ *
  * Returns: (transfer full): pending unfinished #GstVideoCodecFrame identified by @frame_number.
  */
 GstVideoCodecFrame *
@@ -3155,7 +3155,7 @@ gst_video_decoder_get_frame (GstVideoDecoder * decoder, int frame_number)
  * @decoder: a #GstVideoDecoder
  *
  * Get all pending unfinished #GstVideoCodecFrame
- * 
+ *
  * Returns: (transfer full) (element-type GstVideoCodecFrame): pending unfinished #GstVideoCodecFrame.
  */
 GList *

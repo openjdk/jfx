@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -193,8 +193,8 @@ static ALWAYS_INLINE JSValue createWrapperInline(ExecState* exec, JSDOMGlobalObj
 {
     ASSERT(node);
     ASSERT(!getCachedWrapper(currentWorld(exec), node));
-    
-    JSDOMWrapper* wrapper;    
+
+    JSDOMWrapper* wrapper;
     switch (node->nodeType()) {
         case Node::ELEMENT_NODE:
             if (node->isHTMLElement())
@@ -241,19 +241,19 @@ static ALWAYS_INLINE JSValue createWrapperInline(ExecState* exec, JSDOMGlobalObj
             wrapper = CREATE_DOM_WRAPPER(exec, globalObject, Node, node);
     }
 
-    return wrapper;    
+    return wrapper;
 }
 
 JSValue createWrapper(ExecState* exec, JSDOMGlobalObject* globalObject, Node* node)
 {
     return createWrapperInline(exec, globalObject, node);
 }
-    
+
 JSValue toJSNewlyCreated(ExecState* exec, JSDOMGlobalObject* globalObject, Node* node)
 {
     if (!node)
         return jsNull();
-    
+
     return createWrapperInline(exec, globalObject, node);
 }
 

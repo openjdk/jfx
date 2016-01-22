@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -47,26 +47,26 @@ void* prepareOSREntry(
     ExecutableBase* executable = dfgCodeBlock->ownerExecutable();
     DFG::JITCode* dfgCode = dfgCodeBlock->jitCode()->dfg();
     ForOSREntryJITCode* entryCode = entryCodeBlock->jitCode()->ftlForOSREntry();
-    
+
     if (Options::verboseOSR()) {
         dataLog(
             "FTL OSR from ", *dfgCodeBlock, " to ", *entryCodeBlock, " at bc#",
             bytecodeIndex, ".\n");
     }
-    
+
     if (bytecodeIndex != entryCode->bytecodeIndex()) {
         if (Options::verboseOSR())
             dataLog("    OSR failed because we don't have an entrypoint for bc#", bytecodeIndex, "; ours is for bc#", entryCode->bytecodeIndex());
         return 0;
     }
-    
+
     Operands<JSValue> values;
     dfgCode->reconstruct(
         exec, dfgCodeBlock, CodeOrigin(bytecodeIndex), streamIndex, values);
-    
+
     if (Options::verboseOSR())
         dataLog("    Values at entry: ", values, "\n");
-    
+
     for (int argument = values.numberOfArguments(); argument--;) {
         JSValue valueOnStack = exec->r(virtualRegisterForArgument(argument).offset()).jsValue();
         JSValue reconstructedValue = values.argument(argument);
@@ -77,31 +77,31 @@ void* prepareOSREntry(
         dataLog("    Reconstructed value: ", reconstructedValue, "\n");
         RELEASE_ASSERT_NOT_REACHED();
     }
-    
+
     RELEASE_ASSERT(
         static_cast<int>(values.numberOfLocals()) == baseline->m_numCalleeRegisters);
-    
+
     EncodedJSValue* scratch = static_cast<EncodedJSValue*>(
         entryCode->entryBuffer()->dataBuffer());
-    
+
     for (int local = values.numberOfLocals(); local--;)
         scratch[local] = JSValue::encode(values.local(local));
-    
+
     int stackFrameSize = entryCode->common.requiredRegisterCountForExecutionAndExit();
     if (!vm.interpreter->stack().ensureCapacityFor(&exec->registers()[virtualRegisterForLocal(stackFrameSize - 1).offset()])) {
         if (Options::verboseOSR())
             dataLog("    OSR failed because stack growth failed.\n");
         return 0;
     }
-    
+
     exec->setCodeBlock(entryCodeBlock);
-    
+
     void* result = entryCode->addressForCall(
         vm, executable, ArityCheckNotRequired,
         RegisterPreservationNotRequired).executableAddress();
     if (Options::verboseOSR())
         dataLog("    Entry will succeed, going to address", RawPointer(result), "\n");
-    
+
     return result;
 }
 

@@ -32,11 +32,11 @@ import javafx.beans.binding.BooleanExpression;
 
 /**
  * Super class for all readonly properties wrapping a {@code boolean}.
- * 
+ *
  * @see javafx.beans.value.ObservableBooleanValue
  * @see javafx.beans.binding.BooleanExpression
  * @see ReadOnlyProperty
- * 
+ *
  * @since JavaFX 2.0
  */
 public abstract class ReadOnlyBooleanProperty extends BooleanExpression
@@ -51,7 +51,7 @@ public abstract class ReadOnlyBooleanProperty extends BooleanExpression
     /**
      * Returns a string representation of this {@code ReadOnlyBooleanProperty} object.
      * @return a string representation of this {@code ReadOnlyBooleanProperty} object.
-     */ 
+     */
     @Override
     public String toString() {
         final Object bean = getBean();
@@ -67,7 +67,7 @@ public abstract class ReadOnlyBooleanProperty extends BooleanExpression
         result.append("value: ").append(get()).append("]");
         return result.toString();
     }
-    
+
     /**
      * Returns a {@code ReadOnlyBooleanProperty} that wraps a
      * {@link javafx.beans.property.ReadOnlyProperty}. If the
@@ -75,9 +75,9 @@ public abstract class ReadOnlyBooleanProperty extends BooleanExpression
      * will be returned. Otherwise a new
      * {@code ReadOnlyBooleanProperty} is created that is bound to
      * the {@code ReadOnlyProperty}.
-     * 
+     *
      * Note: null values will be interpreted as "false"
-     * 
+     *
      * @param property
      *            The source {@code ReadOnlyProperty}
      * @return A {@code ReadOnlyBooleanProperty} that wraps the
@@ -90,7 +90,7 @@ public abstract class ReadOnlyBooleanProperty extends BooleanExpression
         if (property == null) {
             throw new NullPointerException("Property cannot be null");
         }
-        
+
         return property instanceof ReadOnlyBooleanProperty ? (ReadOnlyBooleanProperty) property
                 : new ReadOnlyBooleanPropertyBase() {
             private boolean valid = true;
@@ -123,13 +123,13 @@ public abstract class ReadOnlyBooleanProperty extends BooleanExpression
             }
         };
     }
-    
+
     /**
      * Creates a {@link javafx.beans.property.ReadOnlyObjectProperty} that holds the value
      * of this {@code ReadOnlyBooleanProperty}. If the
      * value of this {@code ReadOnlyBooleanProperty} changes, the value of the
      * {@code ReadOnlyObjectProperty} will be updated automatically.
-     * 
+     *
      * @return the new {@code ReadOnlyObjectProperty}
      * @since JavaFX 8.0
      */
@@ -148,7 +148,7 @@ public abstract class ReadOnlyBooleanProperty extends BooleanExpression
             {
                 ReadOnlyBooleanProperty.this.addListener(new WeakInvalidationListener(listener));
             }
-            
+
             @Override
             public Object getBean() {
                 return null; // Virtual property, does not exist on a bean

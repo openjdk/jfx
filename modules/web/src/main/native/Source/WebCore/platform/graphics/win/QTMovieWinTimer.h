@@ -20,14 +20,14 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef QTMovieWinTimer_h
 #define QTMovieWinTimer_h
 
 // This header should not be included from WebCore.
-// It is used by the QuickTime access DLL. It copies some WebCore code 
+// It is used by the QuickTime access DLL. It copies some WebCore code
 // which can't be used directly due to dependency issues.
 
 void setSharedTimerFiredFunction(void (*)());

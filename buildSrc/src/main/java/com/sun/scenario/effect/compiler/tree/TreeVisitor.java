@@ -34,7 +34,7 @@ public class TreeVisitor {
             node.accept(this);
         }
     }
-    
+
     public void visitBinaryExpr(BinaryExpr e) {
     }
 
@@ -46,7 +46,7 @@ public class TreeVisitor {
 
     public void visitVariableExpr(VariableExpr e) {
     }
-    
+
     public void visitVectorCtorExpr(VectorCtorExpr e) {
     }
 
@@ -64,16 +64,16 @@ public class TreeVisitor {
 
     public void visitContinueStmt(ContinueStmt s) {
     }
-    
+
     public void visitBreakStmt(BreakStmt s) {
     }
 
     public void visitDiscardStmt(DiscardStmt s) {
     }
-    
+
     public void visitReturnStmt(ReturnStmt s) {
     }
-    
+
     public void visitSelectStmt(SelectStmt s) {
     }
 
@@ -85,7 +85,7 @@ public class TreeVisitor {
 
     public void visitForStmt(ForStmt s) {
     }
-    
+
     public void visitExprStmt(ExprStmt s) {
     }
 
@@ -94,10 +94,10 @@ public class TreeVisitor {
 
     public void visitCompoundStmt(CompoundStmt s) {
     }
-    
+
     public void visitFuncDef(FuncDef d) {
     }
-    
+
     public void visitVarDecl(VarDecl d) {
     }
 

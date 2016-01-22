@@ -129,10 +129,10 @@ static inline CGFloat webkit_CGFloor(CGFloat value)
     // Block all command key events while the fullscreen window is up.
     if ([event type] != NSKeyDown)
         return NO;
-    
+
     if (!([event modifierFlags] & NSCommandKeyMask))
         return NO;
-    
+
     return YES;
 }
 
@@ -326,7 +326,7 @@ static NSTextField *createTimeTextField(NSRect frame)
     [window setContentView:background];
     _area = [[NSTrackingArea alloc] initWithRect:[background bounds] options:NSTrackingMouseEnteredAndExited | NSTrackingActiveAlways owner:self userInfo:nil];
     [background addTrackingArea:_area];
-    [background release];    
+    [background release];
 
     NSView *contentView = [window contentView];
 
@@ -343,7 +343,7 @@ static NSTextField *createTimeTextField(NSRect frame)
     [exitFullscreenButton setTarget:self];
     [contentView addSubview:exitFullscreenButton];
     [exitFullscreenButton release];
-    
+
     CGFloat volumeControlsBottom = windowHeight - volumeControlsTopMargin - volumeButtonHeight;
     CGFloat left = horizontalMargin;
     NSControl *volumeDownButton = createControlWithMediaUIControlType(wkMediaUIControlVolumeDownButton, NSMakeRect(left, volumeControlsBottom, volumeButtonWidth, volumeButtonHeight));
@@ -561,7 +561,7 @@ static NSString *timeToString(double time)
     if (hours)
         return [NSString stringWithFormat:@"%d:%02d:%02d", hours, minutes, seconds];
 
-    return [NSString stringWithFormat:@"%02d:%02d", minutes, seconds];    
+    return [NSString stringWithFormat:@"%02d:%02d", minutes, seconds];
 }
 
 - (NSString *)remainingTimeText
@@ -619,7 +619,7 @@ static NSString *timeToString(double time)
     if (_isEndingFullscreen)
         return;
     _isEndingFullscreen = YES;
-    [_delegate requestExitFullscreen]; 
+    [_delegate requestExitFullscreen];
 }
 
 // MARK: NSWindowDelegate

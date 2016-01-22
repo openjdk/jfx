@@ -24,12 +24,12 @@
  */
 
 #ifndef SYMBOL_H
-#define	SYMBOL_H
+#define SYMBOL_H
 
 #include "android_log.h"
 #include <dlfcn.h>
 
-#ifdef	__cplusplus
+#ifdef  __cplusplus
 extern "C" {
 #endif
 
@@ -54,9 +54,9 @@ extern "C" {
 
 #endif
 
-#ifdef	__cplusplus
+#ifdef  __cplusplus
 }
 #endif
 
-#endif	/* SYMBOL_H */
+#endif  /* SYMBOL_H */
 

@@ -38,24 +38,24 @@ import javafx.scene.Node;
 
 /**
  *
- * 
+ *
  */
 public abstract class AbstractNodeTring<T extends Node> extends AbstractGenericTring<T> {
 
-    public AbstractNodeTring(ContentPanelController contentPanelController, 
+    public AbstractNodeTring(ContentPanelController contentPanelController,
             FXOMInstance fxomInstance, Class<T> sceneGraphClass) {
         super(contentPanelController, fxomInstance, sceneGraphClass);
     }
-    
+
     public FXOMInstance getFxomInstance() {
         return (FXOMInstance) getFxomObject();
     }
 
-    
+
     /*
      * AbstractGenericPring
      */
-    
+
     @Override
     public Bounds getSceneGraphObjectBounds() {
         return getSceneGraphObject().getLayoutBounds();

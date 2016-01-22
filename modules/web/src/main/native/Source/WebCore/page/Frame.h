@@ -162,14 +162,14 @@ namespace WebCore {
         FrameTree& tree() const;
         AnimationController& animation() const;
         ScriptController& script();
-        
+
         RenderView* contentRenderer() const; // Root of the render tree for the document contained in this frame.
         RenderWidget* ownerRenderer() const; // Renderer for the element that contains this frame.
 
     // ======== All public functions below this point are candidates to move out of Frame into another class. ========
 
         void injectUserScripts(UserScriptInjectionTime);
-        
+
         String layerTreeAsText(LayerTreeFlags = 0) const;
         String trackedRepaintRectsAsText() const;
 

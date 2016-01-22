@@ -74,21 +74,21 @@ import java.util.Map;
  *
  * Since all StyleHelpers are relevant to a Scene, valueCache is
  * created by StyleManager.StylesheetContainer and is passed in.
- * Note that all StyleHelper instances within a given Scene all 
- * share the same valueCache! 
+ * Note that all StyleHelper instances within a given Scene all
+ * share the same valueCache!
  */
 public final class StyleCache {
- 
+
     public StyleCache() {
         // no-op
     }
-    
+
     public void clear() {
         if (entries == null) return;
         Thread.dumpStack();
         entries.clear();
     }
-        
+
     public StyleCacheEntry getStyleCacheEntry(StyleCacheEntry.Key key) {
 
         StyleCacheEntry entry = null;
@@ -106,7 +106,7 @@ public final class StyleCache {
     }
 
     public static final class Key {
-        
+
         public Key(int[] styleMapIds, int count) {
             this.styleMapIds = new int[count];
             System.arraycopy(styleMapIds, 0, this.styleMapIds, 0, count);

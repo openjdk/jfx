@@ -82,7 +82,7 @@ public class ImageEditor extends PropertyEditor {
         super(propMeta, selectedClasses);
         initialize(fxmlFileLocation);
     }
-    
+
     // Separate method to please FindBugs
     private void initialize(URL fxmlFileLocation) {
         this.fxmlFileLocation = fxmlFileLocation;

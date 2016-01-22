@@ -42,7 +42,7 @@
 #include <wtf/MathExtras.h>
 
 namespace WebCore {
-    
+
 using namespace MathMLNames;
 
 // FIXME: The OpenType MATH table contains information that should override this table (http://wkbug/122297).
@@ -398,7 +398,7 @@ void RenderMathMLOperator::paintChildren(PaintInfo& paintInfo, const LayoutPoint
         return;
     RenderMathMLBlock::paintChildren(paintInfo, paintOffset, paintInfoForChild, usePrintRect);
 }
-    
+
 }
 
 #endif

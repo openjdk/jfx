@@ -2199,32 +2199,32 @@ format_number (GString  *str,
 }
 
 static gboolean g_date_time_format_locale (GDateTime   *datetime,
-					   const gchar *format,
-					   GString     *outstr,
-					   gboolean     locale_is_utf8);
+                       const gchar *format,
+                       GString     *outstr,
+                       gboolean     locale_is_utf8);
 
 /* g_date_time_format() subroutine that takes a locale-encoded format
  * string and produces a locale-encoded date/time string.
  */
 static gboolean
 g_date_time_locale_format_locale (GDateTime   *datetime,
-				  const gchar *format,
-				  GString     *outstr,
-				  gboolean     locale_is_utf8)
+                  const gchar *format,
+                  GString     *outstr,
+                  gboolean     locale_is_utf8)
 {
   gchar *utf8_format;
   gboolean success;
 
   if (locale_is_utf8)
     return g_date_time_format_locale (datetime, format, outstr,
-				      locale_is_utf8);
+                      locale_is_utf8);
 
   utf8_format = g_locale_to_utf8 (format, -1, NULL, NULL, NULL);
   if (!utf8_format)
     return FALSE;
 
   success = g_date_time_format_locale (datetime, utf8_format, outstr,
-				       locale_is_utf8);
+                       locale_is_utf8);
   g_free (utf8_format);
   return success;
 }
@@ -2234,9 +2234,9 @@ g_date_time_locale_format_locale (GDateTime   *datetime,
  */
 static gboolean
 g_date_time_format_locale (GDateTime   *datetime,
-			   const gchar *format,
-			   GString     *outstr,
-			   gboolean     locale_is_utf8)
+               const gchar *format,
+               GString     *outstr,
+               gboolean     locale_is_utf8)
 {
   guint     len;
   guint     colons;
@@ -2252,27 +2252,27 @@ g_date_time_format_locale (GDateTime   *datetime,
     {
       len = strcspn (format, "%");
       if (len)
-	{
-	  if (locale_is_utf8)
-	    g_string_append_len (outstr, format, len);
-	  else
-	    {
-	      tmp = g_locale_from_utf8 (format, len, NULL, NULL, NULL);
-	      if (!tmp)
-		return FALSE;
-	      g_string_append (outstr, tmp);
-	      g_free (tmp);
-	    }
-	}
+    {
+      if (locale_is_utf8)
+        g_string_append_len (outstr, format, len);
+      else
+        {
+          tmp = g_locale_from_utf8 (format, len, NULL, NULL, NULL);
+          if (!tmp)
+        return FALSE;
+          g_string_append (outstr, tmp);
+          g_free (tmp);
+        }
+    }
 
       format += len;
       if (!*format)
-	break;
+    break;
 
       g_assert (*format == '%');
       format++;
       if (!*format)
-	break;
+    break;
 
       colons = 0;
       alt_digits = FALSE;
@@ -2282,240 +2282,240 @@ g_date_time_format_locale (GDateTime   *datetime,
       c = g_utf8_get_char (format);
       format = g_utf8_next_char (format);
       switch (c)
-	{
-	case 'a':
-	  g_string_append (outstr, WEEKDAY_ABBR (datetime));
-	  break;
-	case 'A':
-	  g_string_append (outstr, WEEKDAY_FULL (datetime));
-	  break;
-	case 'b':
-	  g_string_append (outstr, MONTH_ABBR (datetime));
-	  break;
-	case 'B':
-	  g_string_append (outstr, MONTH_FULL (datetime));
-	  break;
-	case 'c':
-	  {
-	    if (!g_date_time_locale_format_locale (datetime, PREFERRED_DATE_TIME_FMT,
-						   outstr, locale_is_utf8))
-	      return FALSE;
-	  }
-	  break;
-	case 'C':
-	  format_number (outstr, alt_digits, pad_set ? pad : "0", 2,
-			 g_date_time_get_year (datetime) / 100);
-	  break;
-	case 'd':
-	  format_number (outstr, alt_digits, pad_set ? pad : "0", 2,
-			 g_date_time_get_day_of_month (datetime));
-	  break;
-	case 'e':
-	  format_number (outstr, alt_digits, pad_set ? pad : " ", 2,
-			 g_date_time_get_day_of_month (datetime));
-	  break;
-	case 'F':
-	  g_string_append_printf (outstr, "%d-%02d-%02d",
-				  g_date_time_get_year (datetime),
-				  g_date_time_get_month (datetime),
-				  g_date_time_get_day_of_month (datetime));
-	  break;
-	case 'g':
-	  format_number (outstr, alt_digits, pad_set ? pad : "0", 2,
-			 g_date_time_get_week_numbering_year (datetime) % 100);
-	  break;
-	case 'G':
-	  format_number (outstr, alt_digits, pad_set ? pad : 0, 0,
-			 g_date_time_get_week_numbering_year (datetime));
-	  break;
-	case 'h':
-	  g_string_append (outstr, MONTH_ABBR (datetime));
-	  break;
-	case 'H':
-	  format_number (outstr, alt_digits, pad_set ? pad : "0", 2,
-			 g_date_time_get_hour (datetime));
-	  break;
-	case 'I':
-	  format_number (outstr, alt_digits, pad_set ? pad : "0", 2,
-			 (g_date_time_get_hour (datetime) + 11) % 12 + 1);
-	  break;
-	case 'j':
-	  format_number (outstr, alt_digits, pad_set ? pad : "0", 3,
-			 g_date_time_get_day_of_year (datetime));
-	  break;
-	case 'k':
-	  format_number (outstr, alt_digits, pad_set ? pad : " ", 2,
-			 g_date_time_get_hour (datetime));
-	  break;
-	case 'l':
-	  format_number (outstr, alt_digits, pad_set ? pad : " ", 2,
-			 (g_date_time_get_hour (datetime) + 11) % 12 + 1);
-	  break;
-	case 'n':
-	  g_string_append_c (outstr, '\n');
-	  break;
-	case 'm':
-	  format_number (outstr, alt_digits, pad_set ? pad : "0", 2,
-			 g_date_time_get_month (datetime));
-	  break;
-	case 'M':
-	  format_number (outstr, alt_digits, pad_set ? pad : "0", 2,
-			 g_date_time_get_minute (datetime));
-	  break;
-	case 'O':
-	  alt_digits = TRUE;
-	  goto next_mod;
-	case 'p':
-	  ampm = (gchar *) GET_AMPM (datetime);
-	  if (!locale_is_utf8)
-	    {
-	      ampm = tmp = g_locale_to_utf8 (ampm, -1, NULL, NULL, NULL);
-	      if (!tmp)
-		return FALSE;
-	    }
-	  ampm = g_utf8_strup (ampm, -1);
-	  if (!locale_is_utf8)
-	    {
-	      g_free (tmp);
-	      tmp = g_locale_from_utf8 (ampm, -1, NULL, NULL, NULL);
-	      g_free (ampm);
-	      if (!tmp)
-		return FALSE;
-	      ampm = tmp;
-	    }
-	  g_string_append (outstr, ampm);
-	  g_free (ampm);
-	  break;
-	case 'P':
-	  ampm = (gchar *) GET_AMPM (datetime);
-	  if (!locale_is_utf8)
-	    {
-	      ampm = tmp = g_locale_to_utf8 (ampm, -1, NULL, NULL, NULL);
-	      if (!tmp)
-		return FALSE;
-	    }
-	  ampm = g_utf8_strdown (ampm, -1);
-	  if (!locale_is_utf8)
-	    {
-	      g_free (tmp);
-	      tmp = g_locale_from_utf8 (ampm, -1, NULL, NULL, NULL);
-	      g_free (ampm);
-	      if (!tmp)
-		return FALSE;
-	      ampm = tmp;
-	    }
-	  g_string_append (outstr, ampm);
-	  g_free (ampm);
-	  break;
-	case 'r':
-	  {
-	    if (!g_date_time_locale_format_locale (datetime, PREFERRED_12HR_TIME_FMT,
-						   outstr, locale_is_utf8))
-	      return FALSE;
-	  }
-	  break;
-	case 'R':
-	  g_string_append_printf (outstr, "%02d:%02d",
-				  g_date_time_get_hour (datetime),
-				  g_date_time_get_minute (datetime));
-	  break;
-	case 's':
-	  g_string_append_printf (outstr, "%" G_GINT64_FORMAT, g_date_time_to_unix (datetime));
-	  break;
-	case 'S':
-	  format_number (outstr, alt_digits, pad_set ? pad : "0", 2,
-			 g_date_time_get_second (datetime));
-	  break;
-	case 't':
-	  g_string_append_c (outstr, '\t');
-	  break;
-	case 'T':
-	  g_string_append_printf (outstr, "%02d:%02d:%02d",
-				  g_date_time_get_hour (datetime),
-				  g_date_time_get_minute (datetime),
-				  g_date_time_get_second (datetime));
-	  break;
-	case 'u':
-	  format_number (outstr, alt_digits, 0, 0,
-			 g_date_time_get_day_of_week (datetime));
-	  break;
-	case 'V':
-	  format_number (outstr, alt_digits, pad_set ? pad : "0", 2,
-			 g_date_time_get_week_of_year (datetime));
-	  break;
-	case 'w':
-	  format_number (outstr, alt_digits, 0, 0,
-			 g_date_time_get_day_of_week (datetime) % 7);
-	  break;
-	case 'x':
-	  {
-	    if (!g_date_time_locale_format_locale (datetime, PREFERRED_DATE_FMT,
-						   outstr, locale_is_utf8))
-	      return FALSE;
-	  }
-	  break;
-	case 'X':
-	  {
-	    if (!g_date_time_locale_format_locale (datetime, PREFERRED_TIME_FMT,
-						   outstr, locale_is_utf8))
-	      return FALSE;
-	  }
-	  break;
-	case 'y':
-	  format_number (outstr, alt_digits, pad_set ? pad : "0", 2,
-			 g_date_time_get_year (datetime) % 100);
-	  break;
-	case 'Y':
-	  format_number (outstr, alt_digits, 0, 0,
-			 g_date_time_get_year (datetime));
-	  break;
-	case 'z':
-	  {
-	    gint64 offset;
-	    if (datetime->tz != NULL)
-	      offset = g_date_time_get_utc_offset (datetime) / USEC_PER_SECOND;
-	    else
-	      offset = 0;
-	    if (!format_z (outstr, (int) offset, colons))
-	      return FALSE;
-	  }
-	  break;
-	case 'Z':
-	  tz = g_date_time_get_timezone_abbreviation (datetime);
-	  if (!locale_is_utf8)
-	    {
-	      tz = tmp = g_locale_from_utf8 (tz, -1, NULL, NULL, NULL);
-	      if (!tmp)
-		return FALSE;
-	    }
-	  g_string_append (outstr, tz);
-	  if (!locale_is_utf8)
-	    g_free (tmp);
-	  break;
-	case '%':
-	  g_string_append_c (outstr, '%');
-	  break;
-	case '-':
-	  pad_set = TRUE;
-	  pad = "";
-	  goto next_mod;
-	case '_':
-	  pad_set = TRUE;
-	  pad = " ";
-	  goto next_mod;
-	case '0':
-	  pad_set = TRUE;
-	  pad = "0";
-	  goto next_mod;
-	case ':':
-	  /* Colons are only allowed before 'z' */
-	  if (*format && *format != 'z' && *format != ':')
-	    return FALSE;
-	  colons++;
-	  goto next_mod;
-	default:
-	  return FALSE;
-	}
+    {
+    case 'a':
+      g_string_append (outstr, WEEKDAY_ABBR (datetime));
+      break;
+    case 'A':
+      g_string_append (outstr, WEEKDAY_FULL (datetime));
+      break;
+    case 'b':
+      g_string_append (outstr, MONTH_ABBR (datetime));
+      break;
+    case 'B':
+      g_string_append (outstr, MONTH_FULL (datetime));
+      break;
+    case 'c':
+      {
+        if (!g_date_time_locale_format_locale (datetime, PREFERRED_DATE_TIME_FMT,
+                           outstr, locale_is_utf8))
+          return FALSE;
+      }
+      break;
+    case 'C':
+      format_number (outstr, alt_digits, pad_set ? pad : "0", 2,
+             g_date_time_get_year (datetime) / 100);
+      break;
+    case 'd':
+      format_number (outstr, alt_digits, pad_set ? pad : "0", 2,
+             g_date_time_get_day_of_month (datetime));
+      break;
+    case 'e':
+      format_number (outstr, alt_digits, pad_set ? pad : " ", 2,
+             g_date_time_get_day_of_month (datetime));
+      break;
+    case 'F':
+      g_string_append_printf (outstr, "%d-%02d-%02d",
+                  g_date_time_get_year (datetime),
+                  g_date_time_get_month (datetime),
+                  g_date_time_get_day_of_month (datetime));
+      break;
+    case 'g':
+      format_number (outstr, alt_digits, pad_set ? pad : "0", 2,
+             g_date_time_get_week_numbering_year (datetime) % 100);
+      break;
+    case 'G':
+      format_number (outstr, alt_digits, pad_set ? pad : 0, 0,
+             g_date_time_get_week_numbering_year (datetime));
+      break;
+    case 'h':
+      g_string_append (outstr, MONTH_ABBR (datetime));
+      break;
+    case 'H':
+      format_number (outstr, alt_digits, pad_set ? pad : "0", 2,
+             g_date_time_get_hour (datetime));
+      break;
+    case 'I':
+      format_number (outstr, alt_digits, pad_set ? pad : "0", 2,
+             (g_date_time_get_hour (datetime) + 11) % 12 + 1);
+      break;
+    case 'j':
+      format_number (outstr, alt_digits, pad_set ? pad : "0", 3,
+             g_date_time_get_day_of_year (datetime));
+      break;
+    case 'k':
+      format_number (outstr, alt_digits, pad_set ? pad : " ", 2,
+             g_date_time_get_hour (datetime));
+      break;
+    case 'l':
+      format_number (outstr, alt_digits, pad_set ? pad : " ", 2,
+             (g_date_time_get_hour (datetime) + 11) % 12 + 1);
+      break;
+    case 'n':
+      g_string_append_c (outstr, '\n');
+      break;
+    case 'm':
+      format_number (outstr, alt_digits, pad_set ? pad : "0", 2,
+             g_date_time_get_month (datetime));
+      break;
+    case 'M':
+      format_number (outstr, alt_digits, pad_set ? pad : "0", 2,
+             g_date_time_get_minute (datetime));
+      break;
+    case 'O':
+      alt_digits = TRUE;
+      goto next_mod;
+    case 'p':
+      ampm = (gchar *) GET_AMPM (datetime);
+      if (!locale_is_utf8)
+        {
+          ampm = tmp = g_locale_to_utf8 (ampm, -1, NULL, NULL, NULL);
+          if (!tmp)
+        return FALSE;
+        }
+      ampm = g_utf8_strup (ampm, -1);
+      if (!locale_is_utf8)
+        {
+          g_free (tmp);
+          tmp = g_locale_from_utf8 (ampm, -1, NULL, NULL, NULL);
+          g_free (ampm);
+          if (!tmp)
+        return FALSE;
+          ampm = tmp;
+        }
+      g_string_append (outstr, ampm);
+      g_free (ampm);
+      break;
+    case 'P':
+      ampm = (gchar *) GET_AMPM (datetime);
+      if (!locale_is_utf8)
+        {
+          ampm = tmp = g_locale_to_utf8 (ampm, -1, NULL, NULL, NULL);
+          if (!tmp)
+        return FALSE;
+        }
+      ampm = g_utf8_strdown (ampm, -1);
+      if (!locale_is_utf8)
+        {
+          g_free (tmp);
+          tmp = g_locale_from_utf8 (ampm, -1, NULL, NULL, NULL);
+          g_free (ampm);
+          if (!tmp)
+        return FALSE;
+          ampm = tmp;
+        }
+      g_string_append (outstr, ampm);
+      g_free (ampm);
+      break;
+    case 'r':
+      {
+        if (!g_date_time_locale_format_locale (datetime, PREFERRED_12HR_TIME_FMT,
+                           outstr, locale_is_utf8))
+          return FALSE;
+      }
+      break;
+    case 'R':
+      g_string_append_printf (outstr, "%02d:%02d",
+                  g_date_time_get_hour (datetime),
+                  g_date_time_get_minute (datetime));
+      break;
+    case 's':
+      g_string_append_printf (outstr, "%" G_GINT64_FORMAT, g_date_time_to_unix (datetime));
+      break;
+    case 'S':
+      format_number (outstr, alt_digits, pad_set ? pad : "0", 2,
+             g_date_time_get_second (datetime));
+      break;
+    case 't':
+      g_string_append_c (outstr, '\t');
+      break;
+    case 'T':
+      g_string_append_printf (outstr, "%02d:%02d:%02d",
+                  g_date_time_get_hour (datetime),
+                  g_date_time_get_minute (datetime),
+                  g_date_time_get_second (datetime));
+      break;
+    case 'u':
+      format_number (outstr, alt_digits, 0, 0,
+             g_date_time_get_day_of_week (datetime));
+      break;
+    case 'V':
+      format_number (outstr, alt_digits, pad_set ? pad : "0", 2,
+             g_date_time_get_week_of_year (datetime));
+      break;
+    case 'w':
+      format_number (outstr, alt_digits, 0, 0,
+             g_date_time_get_day_of_week (datetime) % 7);
+      break;
+    case 'x':
+      {
+        if (!g_date_time_locale_format_locale (datetime, PREFERRED_DATE_FMT,
+                           outstr, locale_is_utf8))
+          return FALSE;
+      }
+      break;
+    case 'X':
+      {
+        if (!g_date_time_locale_format_locale (datetime, PREFERRED_TIME_FMT,
+                           outstr, locale_is_utf8))
+          return FALSE;
+      }
+      break;
+    case 'y':
+      format_number (outstr, alt_digits, pad_set ? pad : "0", 2,
+             g_date_time_get_year (datetime) % 100);
+      break;
+    case 'Y':
+      format_number (outstr, alt_digits, 0, 0,
+             g_date_time_get_year (datetime));
+      break;
+    case 'z':
+      {
+        gint64 offset;
+        if (datetime->tz != NULL)
+          offset = g_date_time_get_utc_offset (datetime) / USEC_PER_SECOND;
+        else
+          offset = 0;
+        if (!format_z (outstr, (int) offset, colons))
+          return FALSE;
+      }
+      break;
+    case 'Z':
+      tz = g_date_time_get_timezone_abbreviation (datetime);
+      if (!locale_is_utf8)
+        {
+          tz = tmp = g_locale_from_utf8 (tz, -1, NULL, NULL, NULL);
+          if (!tmp)
+        return FALSE;
+        }
+      g_string_append (outstr, tz);
+      if (!locale_is_utf8)
+        g_free (tmp);
+      break;
+    case '%':
+      g_string_append_c (outstr, '%');
+      break;
+    case '-':
+      pad_set = TRUE;
+      pad = "";
+      goto next_mod;
+    case '_':
+      pad_set = TRUE;
+      pad = " ";
+      goto next_mod;
+    case '0':
+      pad_set = TRUE;
+      pad = "0";
+      goto next_mod;
+    case ':':
+      /* Colons are only allowed before 'z' */
+      if (*format && *format != 'z' && *format != ':')
+        return FALSE;
+      colons++;
+      goto next_mod;
+    default:
+      return FALSE;
+    }
     }
 
   return TRUE;
@@ -2605,7 +2605,7 @@ g_date_time_format_locale (GDateTime   *datetime,
  * conversion specifier by one or more modifier characters. The
  * following modifiers are supported for many of the numeric
  * conversions:
- * 
+ *
  * - O: Use alternative numeric symbols, if the current locale supports those.
  * - _: Pad a numeric result with spaces. This overrides the default padding
  *   for the specifier.

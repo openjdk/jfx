@@ -79,42 +79,42 @@ typedef struct
   arg_type type;
   union
   {
-    signed char			a_schar;
-    unsigned char		a_uchar;
-    short			a_short;
-    unsigned short		a_ushort;
-    int				a_int;
-    unsigned int		a_uint;
-    long int			a_longint;
-    unsigned long int		a_ulongint;
+    signed char         a_schar;
+    unsigned char       a_uchar;
+    short           a_short;
+    unsigned short      a_ushort;
+    int             a_int;
+    unsigned int        a_uint;
+    long int            a_longint;
+    unsigned long int       a_ulongint;
 #ifdef HAVE_LONG_LONG
-    long long int		a_longlongint;
-    unsigned long long int	a_ulonglongint;
+    long long int       a_longlongint;
+    unsigned long long int  a_ulonglongint;
 #endif
 #ifdef HAVE_INT64_AND_I64
     __int64                     a_int64;
     unsigned __int64            a_uint64;
 #endif
-    float			a_float;
-    double			a_double;
+    float           a_float;
+    double          a_double;
 #ifdef HAVE_LONG_DOUBLE
-    long double			a_longdouble;
+    long double         a_longdouble;
 #endif
-    int				a_char;
+    int             a_char;
 #ifdef HAVE_WINT_T
-    wint_t			a_wide_char;
+    wint_t          a_wide_char;
 #endif
-    const char*			a_string;
+    const char*         a_string;
 #ifdef HAVE_WCHAR_T
-    const wchar_t*		a_wide_string;
+    const wchar_t*      a_wide_string;
 #endif
-    void*			a_pointer;
-    signed char *		a_count_schar_pointer;
-    short *			a_count_short_pointer;
-    int *			a_count_int_pointer;
-    long int *			a_count_longint_pointer;
+    void*           a_pointer;
+    signed char *       a_count_schar_pointer;
+    short *         a_count_short_pointer;
+    int *           a_count_int_pointer;
+    long int *          a_count_longint_pointer;
 #ifdef HAVE_LONG_LONG
-    long long int *		a_count_longlongint_pointer;
+    long long int *     a_count_longlongint_pointer;
 #endif
   }
   a;

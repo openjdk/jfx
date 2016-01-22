@@ -129,7 +129,7 @@ private:
     bool m_isFocusable;
     bool m_isFocused;
     // 'synthetic' focus event to be sent from WM_SETFOCUS for a child window
-    jint m_focusEvent; 
+    jint m_focusEvent;
 
     bool IsFocused() { return m_isFocused; }
     void SetFocused(bool focused) { m_isFocused = focused; }

@@ -21,7 +21,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef Settings_h
@@ -159,7 +159,7 @@ public:
 
     static void setDefaultMinDOMTimerInterval(double); // Interval specified in seconds.
     static double defaultMinDOMTimerInterval();
-        
+
     static void setHiddenPageDOMTimerAlignmentInterval(double); // Interval specified in seconds.
     static double hiddenPageDOMTimerAlignmentInterval();
 
@@ -181,7 +181,7 @@ public:
 
     void setUsesPageCache(bool);
     bool usesPageCache() const { return m_usesPageCache; }
-        
+
     void setFontRenderingMode(FontRenderingMode mode);
     FontRenderingMode fontRenderingMode() const;
 
@@ -240,7 +240,7 @@ public:
 
     void setScrollingPerformanceLoggingEnabled(bool);
     bool scrollingPerformanceLoggingEnabled() { return m_scrollingPerformanceLoggingEnabled; }
-        
+
     void setAggressiveTileRetentionEnabled(bool);
     bool aggressiveTileRetentionEnabled() { return m_aggressiveTileRetentionEnabled; }
 
@@ -350,7 +350,7 @@ private:
 #if PLATFORM(COCOA)
     static bool gQTKitEnabled;
 #endif
-        
+
     static bool gMockScrollbarsEnabled;
     static bool gUsesOverlayScrollbars;
 

@@ -226,25 +226,25 @@ void            gst_mini_object_init (GstMiniObject *mini_object,
 
 
 /* refcounting */
-GstMiniObject * gst_mini_object_ref		(GstMiniObject *mini_object);
-void            gst_mini_object_unref		(GstMiniObject *mini_object);
+GstMiniObject * gst_mini_object_ref     (GstMiniObject *mini_object);
+void            gst_mini_object_unref       (GstMiniObject *mini_object);
 
 void            gst_mini_object_weak_ref        (GstMiniObject *object,
-					         GstMiniObjectNotify notify,
-					         gpointer data);
-void            gst_mini_object_weak_unref	(GstMiniObject *object,
-					         GstMiniObjectNotify notify,
-					         gpointer data);
+                             GstMiniObjectNotify notify,
+                             gpointer data);
+void            gst_mini_object_weak_unref  (GstMiniObject *object,
+                             GstMiniObjectNotify notify,
+                             gpointer data);
 
 /* locking */
 gboolean        gst_mini_object_lock            (GstMiniObject *object, GstLockFlags flags);
 void            gst_mini_object_unlock          (GstMiniObject *object, GstLockFlags flags);
 
 gboolean        gst_mini_object_is_writable     (const GstMiniObject *mini_object);
-GstMiniObject * gst_mini_object_make_writable	(GstMiniObject *mini_object);
+GstMiniObject * gst_mini_object_make_writable   (GstMiniObject *mini_object);
 
 /* copy */
-GstMiniObject * gst_mini_object_copy		(const GstMiniObject *mini_object) G_GNUC_MALLOC;
+GstMiniObject * gst_mini_object_copy        (const GstMiniObject *mini_object) G_GNUC_MALLOC;
 
 
 void            gst_mini_object_set_qdata       (GstMiniObject *object, GQuark quark,

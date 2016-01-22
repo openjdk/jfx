@@ -6,13 +6,13 @@
  * are met:
  *
  * 1.  Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer. 
+ *     notice, this list of conditions and the following disclaimer.
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
- *     documentation and/or other materials provided with the distribution. 
+ *     documentation and/or other materials provided with the distribution.
  * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
- *     from this software without specific prior written permission. 
+ *     from this software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY APPLE AND ITS CONTRIBUTORS "AS IS" AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
@@ -41,267 +41,267 @@ public:
     virtual HRESULT STDMETHODCALLTYPE QueryInterface(REFIID, void**) { return E_NOTIMPL; };
 
     // IWebUIDelegate
-    virtual HRESULT STDMETHODCALLTYPE dragDestinationActionMaskForDraggingInfo( 
+    virtual HRESULT STDMETHODCALLTYPE dragDestinationActionMaskForDraggingInfo(
         /* [in] */ IWebView*,
         /* [in] */ IDataObject*,
         /* [retval][out] */ WebDragDestinationAction* action);
 
     // Not implemented
-    virtual HRESULT STDMETHODCALLTYPE createWebViewWithRequest( 
+    virtual HRESULT STDMETHODCALLTYPE createWebViewWithRequest(
         /* [in] */ IWebView*,
         /* [in] */ IWebURLRequest*,
         /* [retval][out] */ IWebView**) { return E_NOTIMPL; }
 
-    virtual HRESULT STDMETHODCALLTYPE webViewShow( 
+    virtual HRESULT STDMETHODCALLTYPE webViewShow(
         /* [in] */ IWebView*) { return E_NOTIMPL; }
 
-    virtual HRESULT STDMETHODCALLTYPE webViewClose( 
+    virtual HRESULT STDMETHODCALLTYPE webViewClose(
         /* [in] */ IWebView*) { return E_NOTIMPL; }
 
-    virtual HRESULT STDMETHODCALLTYPE webViewFocus( 
+    virtual HRESULT STDMETHODCALLTYPE webViewFocus(
         /* [in] */ IWebView*) { return E_NOTIMPL; }
 
-    virtual HRESULT STDMETHODCALLTYPE webViewUnfocus( 
+    virtual HRESULT STDMETHODCALLTYPE webViewUnfocus(
         /* [in] */ IWebView*) { return E_NOTIMPL; }
 
-    virtual HRESULT STDMETHODCALLTYPE webViewFirstResponder( 
+    virtual HRESULT STDMETHODCALLTYPE webViewFirstResponder(
         /* [in] */ IWebView*,
         /* [retval][out] */ OLE_HANDLE*) { return E_NOTIMPL; }
 
-    virtual HRESULT STDMETHODCALLTYPE makeFirstResponder( 
+    virtual HRESULT STDMETHODCALLTYPE makeFirstResponder(
         /* [in] */ IWebView*,
         /* [in] */ OLE_HANDLE) { return E_NOTIMPL; }
 
-    virtual HRESULT STDMETHODCALLTYPE setStatusText( 
+    virtual HRESULT STDMETHODCALLTYPE setStatusText(
         /* [in] */ IWebView*,
         /* [in] */ BSTR) { return E_NOTIMPL; }
 
-    virtual HRESULT STDMETHODCALLTYPE webViewStatusText( 
+    virtual HRESULT STDMETHODCALLTYPE webViewStatusText(
         /* [in] */ IWebView*,
         /* [retval][out] */ BSTR*) { return E_NOTIMPL; }
 
-    virtual HRESULT STDMETHODCALLTYPE webViewAreToolbarsVisible( 
+    virtual HRESULT STDMETHODCALLTYPE webViewAreToolbarsVisible(
         /* [in] */ IWebView*,
         /* [retval][out] */ BOOL*) { return E_NOTIMPL; }
 
-    virtual HRESULT STDMETHODCALLTYPE setToolbarsVisible( 
+    virtual HRESULT STDMETHODCALLTYPE setToolbarsVisible(
         /* [in] */ IWebView*,
         /* [in] */ BOOL) { return E_NOTIMPL; }
 
-    virtual HRESULT STDMETHODCALLTYPE webViewIsStatusBarVisible( 
+    virtual HRESULT STDMETHODCALLTYPE webViewIsStatusBarVisible(
         /* [in] */ IWebView*,
         /* [retval][out] */ BOOL*) { return E_NOTIMPL; }
 
-    virtual HRESULT STDMETHODCALLTYPE setStatusBarVisible( 
+    virtual HRESULT STDMETHODCALLTYPE setStatusBarVisible(
         /* [in] */ IWebView*,
         /* [in] */ BOOL) { return E_NOTIMPL; }
 
-    virtual HRESULT STDMETHODCALLTYPE webViewIsResizable( 
+    virtual HRESULT STDMETHODCALLTYPE webViewIsResizable(
         /* [in] */ IWebView*,
         /* [retval][out] */ BOOL*) { return E_NOTIMPL; }
 
-    virtual HRESULT STDMETHODCALLTYPE setResizable( 
+    virtual HRESULT STDMETHODCALLTYPE setResizable(
         /* [in] */ IWebView*,
         /* [in] */ BOOL) { return E_NOTIMPL; }
 
-    virtual HRESULT STDMETHODCALLTYPE setFrame( 
+    virtual HRESULT STDMETHODCALLTYPE setFrame(
         /* [in] */ IWebView*,
         /* [in] */ RECT*) { return E_NOTIMPL; }
 
-    virtual HRESULT STDMETHODCALLTYPE webViewFrame( 
+    virtual HRESULT STDMETHODCALLTYPE webViewFrame(
         /* [in] */ IWebView*,
         /* [retval][out] */ RECT*) { return E_NOTIMPL; }
 
-    virtual HRESULT STDMETHODCALLTYPE setContentRect( 
+    virtual HRESULT STDMETHODCALLTYPE setContentRect(
         /* [in] */ IWebView*,
         /* [in] */ RECT*) { return E_NOTIMPL; }
 
-    virtual HRESULT STDMETHODCALLTYPE webViewContentRect( 
+    virtual HRESULT STDMETHODCALLTYPE webViewContentRect(
         /* [in] */ IWebView*,
         /* [retval][out] */ RECT*) { return E_NOTIMPL; }
 
-    virtual HRESULT STDMETHODCALLTYPE runJavaScriptAlertPanelWithMessage( 
+    virtual HRESULT STDMETHODCALLTYPE runJavaScriptAlertPanelWithMessage(
         /* [in] */ IWebView*,
         /* [in] */ BSTR) { return E_NOTIMPL; }
 
-    virtual HRESULT STDMETHODCALLTYPE runJavaScriptConfirmPanelWithMessage( 
+    virtual HRESULT STDMETHODCALLTYPE runJavaScriptConfirmPanelWithMessage(
         /* [in] */ IWebView*,
         /* [in] */ BSTR,
         /* [retval][out] */ BOOL*) { return E_NOTIMPL; }
 
-    virtual HRESULT STDMETHODCALLTYPE runJavaScriptTextInputPanelWithPrompt( 
+    virtual HRESULT STDMETHODCALLTYPE runJavaScriptTextInputPanelWithPrompt(
         /* [in] */ IWebView*,
         /* [in] */ BSTR /*message*/,
         /* [in] */ BSTR /*defaultText*/,
         /* [retval][out] */ BSTR*) { return E_NOTIMPL; }
 
-    virtual HRESULT STDMETHODCALLTYPE runBeforeUnloadConfirmPanelWithMessage( 
+    virtual HRESULT STDMETHODCALLTYPE runBeforeUnloadConfirmPanelWithMessage(
         /* [in] */ IWebView*,
         /* [in] */ BSTR /*message*/,
         /* [in] */ IWebFrame*  /*initiatedByFrame*/,
         /* [retval][out] */ BOOL*) { return E_NOTIMPL; }
 
-    virtual HRESULT STDMETHODCALLTYPE runOpenPanelForFileButtonWithResultListener( 
+    virtual HRESULT STDMETHODCALLTYPE runOpenPanelForFileButtonWithResultListener(
         /* [in] */ IWebView*,
         /* [in] */ IWebOpenPanelResultListener*) { return E_NOTIMPL; }
 
-    virtual HRESULT STDMETHODCALLTYPE mouseDidMoveOverElement( 
+    virtual HRESULT STDMETHODCALLTYPE mouseDidMoveOverElement(
         /* [in] */ IWebView*,
         /* [in] */ IPropertyBag*,
         /* [in] */ UINT /*modifierFlags*/) { return E_NOTIMPL; }
 
-    virtual HRESULT STDMETHODCALLTYPE contextMenuItemsForElement( 
+    virtual HRESULT STDMETHODCALLTYPE contextMenuItemsForElement(
         /* [in] */ IWebView*,
         /* [in] */ IPropertyBag*,
         /* [in] */ OLE_HANDLE,
         /* [retval][out] */ OLE_HANDLE*) { return E_NOTIMPL; }
 
-    virtual HRESULT STDMETHODCALLTYPE validateUserInterfaceItem( 
+    virtual HRESULT STDMETHODCALLTYPE validateUserInterfaceItem(
         /* [in] */ IWebView*,
         /* [in] */ UINT,
         /* [in] */ BOOL,
         /* [retval][out] */ BOOL*) { return E_NOTIMPL; }
 
-    virtual HRESULT STDMETHODCALLTYPE shouldPerformAction( 
+    virtual HRESULT STDMETHODCALLTYPE shouldPerformAction(
         /* [in] */ IWebView*,
         /* [in] */ UINT /*itemCommandID*/,
         /* [in] */ UINT /*sender*/) { return E_NOTIMPL; }
 
-    virtual HRESULT STDMETHODCALLTYPE willPerformDragDestinationAction( 
+    virtual HRESULT STDMETHODCALLTYPE willPerformDragDestinationAction(
         /* [in] */ IWebView*,
         /* [in] */ WebDragDestinationAction,
         /* [in] */ IDataObject*) { return E_NOTIMPL; }
 
-    virtual HRESULT STDMETHODCALLTYPE dragSourceActionMaskForPoint( 
+    virtual HRESULT STDMETHODCALLTYPE dragSourceActionMaskForPoint(
         /* [in] */ IWebView*,
         /* [in] */ LPPOINT,
         /* [retval][out] */ WebDragSourceAction*) { return E_NOTIMPL; }
 
-    virtual HRESULT STDMETHODCALLTYPE willPerformDragSourceAction( 
+    virtual HRESULT STDMETHODCALLTYPE willPerformDragSourceAction(
         /* [in] */ IWebView*,
         /* [in] */ WebDragSourceAction,
         /* [in] */ LPPOINT,
         /* [in] */ IDataObject*,
         /* [retval][out] */ IDataObject**) { return E_NOTIMPL; }
 
-    virtual HRESULT STDMETHODCALLTYPE contextMenuItemSelected( 
+    virtual HRESULT STDMETHODCALLTYPE contextMenuItemSelected(
         /* [in] */ IWebView*,
         /* [in] */ void*  /*item*/,
         /* [in] */ IPropertyBag*) { return E_NOTIMPL; }
 
-    virtual HRESULT STDMETHODCALLTYPE hasCustomMenuImplementation( 
+    virtual HRESULT STDMETHODCALLTYPE hasCustomMenuImplementation(
         /* [retval][out] */ BOOL*) { return E_NOTIMPL; }
 
-    virtual HRESULT STDMETHODCALLTYPE trackCustomPopupMenu( 
+    virtual HRESULT STDMETHODCALLTYPE trackCustomPopupMenu(
         /* [in] */ IWebView*,
         /* [in] */ OLE_HANDLE,
         /* [in] */ LPPOINT) { return E_NOTIMPL; }
 
-    virtual HRESULT STDMETHODCALLTYPE measureCustomMenuItem( 
+    virtual HRESULT STDMETHODCALLTYPE measureCustomMenuItem(
         /* [in] */ IWebView*,
         /* [in] */ void*  /*measureItem*/) { return E_NOTIMPL; }
 
-    virtual HRESULT STDMETHODCALLTYPE drawCustomMenuItem( 
+    virtual HRESULT STDMETHODCALLTYPE drawCustomMenuItem(
         /* [in] */ IWebView*,
         /* [in] */ void*  /*drawItem*/) { return E_NOTIMPL; }
 
-    virtual HRESULT STDMETHODCALLTYPE addCustomMenuDrawingData( 
+    virtual HRESULT STDMETHODCALLTYPE addCustomMenuDrawingData(
         /* [in] */ IWebView*,
         /* [in] */ OLE_HANDLE) { return E_NOTIMPL; }
 
-    virtual HRESULT STDMETHODCALLTYPE cleanUpCustomMenuDrawingData( 
+    virtual HRESULT STDMETHODCALLTYPE cleanUpCustomMenuDrawingData(
         /* [in] */ IWebView*,
         /* [in] */ OLE_HANDLE) { return E_NOTIMPL; }
 
-    virtual HRESULT STDMETHODCALLTYPE canTakeFocus( 
+    virtual HRESULT STDMETHODCALLTYPE canTakeFocus(
         /* [in] */ IWebView*,
         /* [in] */ BOOL /*forward*/,
         /* [out] */ BOOL*) { return E_NOTIMPL; }
 
-    virtual HRESULT STDMETHODCALLTYPE takeFocus( 
+    virtual HRESULT STDMETHODCALLTYPE takeFocus(
         /* [in] */ IWebView*,
         /* [in] */ BOOL /*forward*/) { return E_NOTIMPL; }
 
-    virtual HRESULT STDMETHODCALLTYPE registerUndoWithTarget( 
+    virtual HRESULT STDMETHODCALLTYPE registerUndoWithTarget(
         /* [in] */ IWebUndoTarget*,
         /* [in] */ BSTR /*actionName*/,
         /* [in] */ IUnknown*  /*actionArg*/) { return E_NOTIMPL; }
 
-    virtual HRESULT STDMETHODCALLTYPE removeAllActionsWithTarget( 
+    virtual HRESULT STDMETHODCALLTYPE removeAllActionsWithTarget(
         /* [in] */ IWebUndoTarget*) { return E_NOTIMPL; }
 
-    virtual HRESULT STDMETHODCALLTYPE setActionTitle( 
+    virtual HRESULT STDMETHODCALLTYPE setActionTitle(
         /* [in] */ BSTR) { return E_NOTIMPL; }
 
     virtual HRESULT STDMETHODCALLTYPE undo() { return E_NOTIMPL; }
 
     virtual HRESULT STDMETHODCALLTYPE redo() { return E_NOTIMPL; }
 
-    virtual HRESULT STDMETHODCALLTYPE canUndo( 
+    virtual HRESULT STDMETHODCALLTYPE canUndo(
         /* [retval][out] */ BOOL*) { return E_NOTIMPL; }
 
-    virtual HRESULT STDMETHODCALLTYPE canRedo( 
+    virtual HRESULT STDMETHODCALLTYPE canRedo(
         /* [retval][out] */ BOOL*) { return E_NOTIMPL; }
 
-    virtual HRESULT STDMETHODCALLTYPE printFrame( 
+    virtual HRESULT STDMETHODCALLTYPE printFrame(
         /* [in] */ IWebView *webView,
         /* [in] */ IWebFrame *frame) { return E_NOTIMPL; }
-    
-    virtual HRESULT STDMETHODCALLTYPE ftpDirectoryTemplatePath( 
+
+    virtual HRESULT STDMETHODCALLTYPE ftpDirectoryTemplatePath(
         /* [in] */ IWebView *webView,
         /* [retval][out] */ BSTR *path) { return E_NOTIMPL; }
-    
-    virtual HRESULT STDMETHODCALLTYPE webViewHeaderHeight( 
+
+    virtual HRESULT STDMETHODCALLTYPE webViewHeaderHeight(
         /* [in] */ IWebView *webView,
         /* [retval][out] */ float *result) { return E_NOTIMPL; }
-    
-    virtual HRESULT STDMETHODCALLTYPE webViewFooterHeight( 
+
+    virtual HRESULT STDMETHODCALLTYPE webViewFooterHeight(
         /* [in] */ IWebView *webView,
         /* [retval][out] */ float *result) { return E_NOTIMPL; }
-    
-    virtual HRESULT STDMETHODCALLTYPE drawHeaderInRect( 
+
+    virtual HRESULT STDMETHODCALLTYPE drawHeaderInRect(
         /* [in] */ IWebView *webView,
         /* [in] */ RECT *rect,
         /* [in] */ OLE_HANDLE drawingContext) { return E_NOTIMPL; }
-    
-    virtual HRESULT STDMETHODCALLTYPE drawFooterInRect( 
+
+    virtual HRESULT STDMETHODCALLTYPE drawFooterInRect(
         /* [in] */ IWebView *webView,
         /* [in] */ RECT *rect,
         /* [in] */ OLE_HANDLE drawingContext,
         /* [in] */ UINT pageIndex,
         /* [in] */ UINT pageCount) { return E_NOTIMPL; }
-    
-    virtual HRESULT STDMETHODCALLTYPE webViewPrintingMarginRect( 
+
+    virtual HRESULT STDMETHODCALLTYPE webViewPrintingMarginRect(
         /* [in] */ IWebView *webView,
         /* [retval][out] */ RECT *rect) { return E_NOTIMPL; }
-    
-    virtual HRESULT STDMETHODCALLTYPE canRunModal( 
+
+    virtual HRESULT STDMETHODCALLTYPE canRunModal(
         /* [in] */ IWebView *webView,
         /* [retval][out] */ BOOL *canRunBoolean) { return E_NOTIMPL; }
-    
-    virtual HRESULT STDMETHODCALLTYPE createModalDialog( 
+
+    virtual HRESULT STDMETHODCALLTYPE createModalDialog(
         /* [in] */ IWebView *sender,
         /* [in] */ IWebURLRequest *request,
         /* [retval][out] */ IWebView **newWebView) { return E_NOTIMPL; }
-    
-    virtual HRESULT STDMETHODCALLTYPE runModal( 
+
+    virtual HRESULT STDMETHODCALLTYPE runModal(
         /* [in] */ IWebView *webView) { return E_NOTIMPL; }
-    
-    virtual HRESULT STDMETHODCALLTYPE isMenuBarVisible( 
+
+    virtual HRESULT STDMETHODCALLTYPE isMenuBarVisible(
         /* [in] */ IWebView *webView,
         /* [retval][out] */ BOOL *visible) { return E_NOTIMPL; }
-    
-    virtual HRESULT STDMETHODCALLTYPE setMenuBarVisible( 
+
+    virtual HRESULT STDMETHODCALLTYPE setMenuBarVisible(
         /* [in] */ IWebView *webView,
         /* [in] */ BOOL visible) { return E_NOTIMPL; }
-    
-    virtual HRESULT STDMETHODCALLTYPE runDatabaseSizeLimitPrompt( 
+
+    virtual HRESULT STDMETHODCALLTYPE runDatabaseSizeLimitPrompt(
         /* [in] */ IWebView *webView,
         /* [in] */ BSTR displayName,
         /* [in] */ IWebFrame *initiatedByFrame,
         /* [retval][out] */ BOOL *allowed) { return E_NOTIMPL; }
-    
-    virtual HRESULT STDMETHODCALLTYPE paintCustomScrollbar( 
+
+    virtual HRESULT STDMETHODCALLTYPE paintCustomScrollbar(
         /* [in] */ IWebView *webView,
         /* [in] */ HDC hDC,
         /* [in] */ RECT rect,
@@ -312,8 +312,8 @@ public:
         /* [in] */ float value,
         /* [in] */ float proportion,
         /* [in] */ WebScrollbarControlPartMask parts) { return E_NOTIMPL; }
-    
-    virtual HRESULT STDMETHODCALLTYPE paintCustomScrollCorner( 
+
+    virtual HRESULT STDMETHODCALLTYPE paintCustomScrollCorner(
         /* [in] */ IWebView *webView,
         /* [in] */ HDC hDC,
         /* [in] */ RECT rect) { return E_NOTIMPL; }

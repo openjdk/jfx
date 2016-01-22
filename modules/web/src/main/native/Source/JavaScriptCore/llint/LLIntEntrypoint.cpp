@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -42,7 +42,7 @@ namespace JSC { namespace LLInt {
 static void setFunctionEntrypoint(VM& vm, CodeBlock* codeBlock)
 {
     CodeSpecializationKind kind = codeBlock->specializationKind();
-    
+
 #if ENABLE(JIT)
     if (vm.canUseJIT()) {
         if (kind == CodeForCall) {
@@ -111,7 +111,7 @@ void setEntrypoint(VM& vm, CodeBlock* codeBlock)
         setFunctionEntrypoint(vm, codeBlock);
         return;
     }
-    
+
     RELEASE_ASSERT_NOT_REACHED();
 }
 

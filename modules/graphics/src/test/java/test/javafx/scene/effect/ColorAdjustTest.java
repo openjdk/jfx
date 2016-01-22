@@ -50,7 +50,7 @@ public class ColorAdjustTest extends EffectsTestBase {
         pulse();
         assertEquals(1.0f, ((com.sun.scenario.effect.ColorAdjust)effect.impl_getImpl()).getBrightness(), 1e-100);
     }
-    
+
     @Test
     public void testDefaultBrightness() {
         // default value should be 0
@@ -59,7 +59,7 @@ public class ColorAdjustTest extends EffectsTestBase {
         pulse();
         assertEquals(0f, ((com.sun.scenario.effect.ColorAdjust)effect.impl_getImpl()).getBrightness(), 1e-100);
     }
-    
+
     @Test
     public void testMinBrightness() {
         // -1 should be ok
@@ -76,12 +76,12 @@ public class ColorAdjustTest extends EffectsTestBase {
         // 1 should be ok
         effect.setBrightness(1);
         // try setting value greater than maximal
-        effect.setBrightness(1.1f); 
+        effect.setBrightness(1.1f);
         assertEquals(1.1f, effect.getBrightness(), 1e-100);
         pulse();
         assertEquals(1f, ((com.sun.scenario.effect.ColorAdjust)effect.impl_getImpl()).getBrightness(), 1e-100);
     }
-        
+
     @Test
     public void testSetContrast() {
         // try setting correct value
@@ -90,7 +90,7 @@ public class ColorAdjustTest extends EffectsTestBase {
         pulse();
         assertEquals(0.5, ((com.sun.scenario.effect.ColorAdjust)effect.impl_getImpl()).getContrast(), 1e-100);
     }
-    
+
     @Test
     public void testDefaultContrast() {
         // default value should be 0
@@ -99,7 +99,7 @@ public class ColorAdjustTest extends EffectsTestBase {
         pulse();
         assertEquals(0.0, ((com.sun.scenario.effect.ColorAdjust)effect.impl_getImpl()).getContrast(), 1e-100);
     }
-    
+
     @Test
     public void testMinContrast() {
         // -1 should be ok
@@ -121,7 +121,7 @@ public class ColorAdjustTest extends EffectsTestBase {
         pulse();
         assertEquals(1.0, ((com.sun.scenario.effect.ColorAdjust)effect.impl_getImpl()).getContrast(), 1e-100);
     }
-        
+
     @Test
     public void testSetHue() {
         // try setting correct value
@@ -130,7 +130,7 @@ public class ColorAdjustTest extends EffectsTestBase {
         pulse();
         assertEquals(1.0f, ((com.sun.scenario.effect.ColorAdjust)effect.impl_getImpl()).getHue(), 1e-100);
     }
-    
+
     @Test
     public void testDefaultHue() {
         // default value should be 0
@@ -139,7 +139,7 @@ public class ColorAdjustTest extends EffectsTestBase {
         pulse();
         assertEquals(0f, ((com.sun.scenario.effect.ColorAdjust)effect.impl_getImpl()).getHue(), 1e-100);
     }
-    
+
     @Test
     public void testMinHue() {
         // -1 should be ok
@@ -156,12 +156,12 @@ public class ColorAdjustTest extends EffectsTestBase {
         // 1 should be ok
         effect.setHue(1);
         // try setting value greater than maximal
-        effect.setHue(1.1f); 
+        effect.setHue(1.1f);
         assertEquals(1.1f, effect.getHue(), 1e-100);
         pulse();
         assertEquals(1f, ((com.sun.scenario.effect.ColorAdjust)effect.impl_getImpl()).getHue(), 1e-100);
     }
-        
+
     @Test
     public void testSetSaturation() {
         // try setting correct value
@@ -170,7 +170,7 @@ public class ColorAdjustTest extends EffectsTestBase {
         pulse();
         assertEquals(1.0f, ((com.sun.scenario.effect.ColorAdjust)effect.impl_getImpl()).getSaturation(), 1e-100);
     }
-    
+
     @Test
     public void testDefaultSaturation() {
         // default value should be 0
@@ -179,7 +179,7 @@ public class ColorAdjustTest extends EffectsTestBase {
         pulse();
         assertEquals(0f, ((com.sun.scenario.effect.ColorAdjust)effect.impl_getImpl()).getSaturation(), 1e-100);
     }
-    
+
     @Test
     public void testMinSaturation() {
         // -1 should be ok
@@ -196,7 +196,7 @@ public class ColorAdjustTest extends EffectsTestBase {
         // 1 should be ok
         effect.setSaturation(1);
         // try setting value greater than maximal
-        effect.setSaturation(1.1f); 
+        effect.setSaturation(1.1f);
         assertEquals(1.1f, effect.getSaturation(), 1e-100);
         pulse();
         assertEquals(1f, ((com.sun.scenario.effect.ColorAdjust)effect.impl_getImpl()).getSaturation(), 1e-100);
@@ -266,7 +266,7 @@ public class ColorAdjustTest extends EffectsTestBase {
         assertEquals(-0.1f, ((com.sun.scenario.effect.ColorAdjust) effect.impl_getImpl()).getBrightness(), 1e-100);
         assertEquals(0.1f, ((com.sun.scenario.effect.ColorAdjust) effect.impl_getImpl()).getContrast(), 1e-100);
     }
-    
+
     @Test
     public void testCreateWithDefaultParams() {
         effect = new ColorAdjust(0, 0, 0, 0);

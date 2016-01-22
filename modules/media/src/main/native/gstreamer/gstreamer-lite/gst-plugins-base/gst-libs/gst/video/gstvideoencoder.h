@@ -4,7 +4,7 @@
  * Copyright (C) 2011 Nokia Corporation. All rights reserved.
  *   Contact: Stefan Kost <stefan.kost@nokia.com>
  * Copyright (C) 2012 Collabora Ltd.
- *	Author : Edward Hervey <edward@collabora.com>
+ *  Author : Edward Hervey <edward@collabora.com>
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -245,27 +245,27 @@ struct _GstVideoEncoderClass
   gboolean      (*stop)         (GstVideoEncoder *encoder);
 
   gboolean      (*set_format)   (GstVideoEncoder *encoder,
-				 GstVideoCodecState *state);
+                 GstVideoCodecState *state);
 
   GstFlowReturn (*handle_frame) (GstVideoEncoder *encoder,
-				 GstVideoCodecFrame *frame);
+                 GstVideoCodecFrame *frame);
 
   gboolean      (*reset)        (GstVideoEncoder *encoder,
-				 gboolean hard);
+                 gboolean hard);
 
   GstFlowReturn (*finish)       (GstVideoEncoder *encoder);
 
   GstFlowReturn (*pre_push)     (GstVideoEncoder *encoder,
-				 GstVideoCodecFrame *frame);
+                 GstVideoCodecFrame *frame);
 
   GstCaps *     (*getcaps)      (GstVideoEncoder *enc,
                                  GstCaps *filter);
 
   gboolean      (*sink_event)   (GstVideoEncoder *encoder,
-				 GstEvent *event);
+                 GstEvent *event);
 
   gboolean      (*src_event)    (GstVideoEncoder *encoder,
-				 GstEvent *event);
+                 GstEvent *event);
 
   gboolean      (*negotiate)    (GstVideoEncoder *encoder);
 
@@ -276,10 +276,10 @@ struct _GstVideoEncoderClass
   gboolean      (*flush)              (GstVideoEncoder *encoder);
 
   gboolean      (*sink_query)     (GstVideoEncoder *encoder,
-				   GstQuery *query);
+                   GstQuery *query);
 
   gboolean      (*src_query)      (GstVideoEncoder *encoder,
-				   GstQuery *query);
+                   GstQuery *query);
 
   /*< private >*/
   gpointer       _gst_reserved[GST_PADDING_LARGE-3];
@@ -290,13 +290,13 @@ GType                gst_video_encoder_get_type (void);
 GstVideoCodecState*  gst_video_encoder_get_output_state (GstVideoEncoder *encoder);
 
 GstVideoCodecState*  gst_video_encoder_set_output_state (GstVideoEncoder * encoder,
-							 GstCaps * caps,
-							 GstVideoCodecState * reference);
+                             GstCaps * caps,
+                             GstVideoCodecState * reference);
 
 gboolean             gst_video_encoder_negotiate        (GstVideoEncoder * encoder);
 
 GstVideoCodecFrame*  gst_video_encoder_get_frame        (GstVideoEncoder *encoder,
-						         int frame_number);
+                                 int frame_number);
 GstVideoCodecFrame*  gst_video_encoder_get_oldest_frame (GstVideoEncoder *encoder);
 
 GList *              gst_video_encoder_get_frames       (GstVideoEncoder *encoder);
@@ -305,25 +305,25 @@ GstBuffer *          gst_video_encoder_allocate_output_buffer (GstVideoEncoder *
                                                                gsize size);
 
 GstFlowReturn        gst_video_encoder_allocate_output_frame  (GstVideoEncoder *encoder,
-						               GstVideoCodecFrame *frame,
+                                       GstVideoCodecFrame *frame,
                                                                gsize size);
 
 GstFlowReturn        gst_video_encoder_finish_frame (GstVideoEncoder *encoder,
-						     GstVideoCodecFrame *frame);
+                             GstVideoCodecFrame *frame);
 
 GstCaps *            gst_video_encoder_proxy_getcaps (GstVideoEncoder * enc,
-						      GstCaps         * caps,
+                              GstCaps         * caps,
                                                       GstCaps         * filter);
 
 void                 gst_video_encoder_set_latency (GstVideoEncoder *encoder,
-						    GstClockTime min_latency,
-						    GstClockTime max_latency);
-void		     gst_video_encoder_get_latency (GstVideoEncoder *encoder,
-						    GstClockTime *min_latency,
-						    GstClockTime *max_latency);
+                            GstClockTime min_latency,
+                            GstClockTime max_latency);
+void             gst_video_encoder_get_latency (GstVideoEncoder *encoder,
+                            GstClockTime *min_latency,
+                            GstClockTime *max_latency);
 
 void                 gst_video_encoder_set_headers (GstVideoEncoder *encoder,
-						    GList *headers);
+                            GList *headers);
 
 void                 gst_video_encoder_merge_tags  (GstVideoEncoder *encoder,
                                                     const GstTagList *tags,

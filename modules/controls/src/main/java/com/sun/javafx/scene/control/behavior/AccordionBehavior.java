@@ -44,7 +44,7 @@ public class AccordionBehavior extends BehaviorBase<Accordion> {
 
     private final InputMap<Accordion> inputMap;
     private AccordionFocusModel focusModel;
-    
+
     public AccordionBehavior(Accordion accordion) {
         super(accordion);
         focusModel = new AccordionFocusModel(accordion);
@@ -283,7 +283,7 @@ public class AccordionBehavior extends BehaviorBase<Accordion> {
                 }
             }
         };
-        
+
         public AccordionFocusModel(final Accordion accordion) {
             if (accordion == null) {
                 throw new IllegalArgumentException("Accordion can not be null");

@@ -79,7 +79,7 @@ public class TextInputControlTest {
     @Before public void setup() throws Exception {
         textInput = (TextInputControl) type.newInstance();
     }
-    
+
     /******************************************************
      * Test the default states                            *
      *****************************************************/
@@ -145,19 +145,19 @@ public class TextInputControlTest {
         textInput.setText(null);
         assertNull(textInput.getText());
     }
-    
+
     @Test public void textCanBeSwitchedBetweenNullAndAValue() {
         textInput.setText(null);
         textInput.setText("Test");
         assertEquals("Test", textInput.getText());
     }
-    
+
     @Test public void textCanBeSwitchedFromAValueToNull() {
         textInput.setText("Test");
         textInput.setText(null);
         assertNull(textInput.getText());
     }
-    
+
     @Test public void textIsNullThenBoundThenUnboundAndShouldReturnTheValueWhenBound() {
         textInput.setText(null);
         StringProperty other = new SimpleStringProperty("Peppers");
@@ -165,14 +165,14 @@ public class TextInputControlTest {
         textInput.textProperty().unbind();
         assertEquals("Peppers", textInput.getText());
     }
-    
+
     @Test public void textHasValueThenIsBoundToNullShouldReturnNullFromGet() {
         textInput.setText("Value");
         StringProperty other = new SimpleStringProperty(null);
         textInput.textProperty().bind(other);
         assertNull(textInput.getText());
     }
-    
+
     @Test public void textHasValueThenIsBoundToNullAndUnboundShouldReturnNullFromGet() {
         textInput.setText("Value");
         StringProperty other = new SimpleStringProperty(null);
@@ -269,12 +269,12 @@ public class TextInputControlTest {
         textInput.setEditable(false);
         assertFalse(textInput.isEditable());
     }
-    
+
     @Test public void settingEditableAndThenCreatingAModelAndReadingTheValueStillWorks() {
         textInput.setEditable(false);
         assertFalse(textInput.editableProperty().get());
     }
-    
+
     @Test public void editableCanBeBound() {
         BooleanProperty other = new SimpleBooleanProperty(false);
         textInput.editableProperty().bind(other);
@@ -282,7 +282,7 @@ public class TextInputControlTest {
         other.set(true);
         assertTrue(textInput.isEditable());
     }
-    
+
     @Ignore("getCssMetaData will return null for editableProperty")
     @Test public void impl_cssSettable_ReturnsFalseForEditableAlways() {
         CssMetaData styleable = ((StyleableProperty)textInput.editableProperty()).getCssMetaData();
@@ -1773,7 +1773,7 @@ public class TextInputControlTest {
         // Delete entire first character forwards
         textInput.deleteNextChar();
         assertEquals("\u0E17\u0E35\u0E48", textInput.getText());
-        
+
         // Break up and delete remaining character backwards in three steps
         textInput.forward();
         textInput.deletePreviousChar();
@@ -1793,7 +1793,7 @@ public class TextInputControlTest {
     // TODO tests for Content firing event notification properly
 
     // TODO tests for Content not allowing illegal characters
-    
+
     private void copy(String string) {
         ClipboardContent content = new ClipboardContent();
         content.putString(string);

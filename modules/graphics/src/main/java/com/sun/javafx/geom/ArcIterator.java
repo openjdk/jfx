@@ -144,7 +144,7 @@ class ArcIterator implements PathIterator {
      *   Midpoints:
      *     a) bezier (t = 1/2)
      *        bPm = P1 * (1-t)^3 +
-     *              3 * P2 * t * (1-t)^2 + 
+     *              3 * P2 * t * (1-t)^2 +
      *              3 * P3 * t^2 * (1-t) +
      *              P4 * t^3 =
      *            = (P1 + 3P2 + 3P3 + P4)/8

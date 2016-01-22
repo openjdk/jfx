@@ -1,6 +1,6 @@
 /* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*-
  * vim: set expandtab shiftwidth=2 tabstop=2: */
- 
+
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -35,7 +35,7 @@
  * the provisions above, a recipient may use your version of this file under
  * the terms of any one of the MPL, the GPL or the LGPL.
  *
- * ***** END LICENSE BLOCK ***** */   
+ * ***** END LICENSE BLOCK ***** */
 
 #ifndef __GTK_XTBIN_H__
 #define __GTK_XTBIN_H__
@@ -77,13 +77,13 @@ typedef struct _GtkXtBinClass GtkXtBinClass;
 typedef struct _XtClient XtClient;
 
 struct _XtClient {
-  Display	*xtdisplay;
-  Widget	top_widget;    /* The toplevel widget */
-  Widget	child_widget;  /* The embedded widget */
-  Visual	*xtvisual;
-  int		xtdepth;
-  Colormap	xtcolormap;
-  Window	oldwindow;
+  Display   *xtdisplay;
+  Widget    top_widget;    /* The toplevel widget */
+  Widget    child_widget;  /* The embedded widget */
+  Visual    *xtvisual;
+  int       xtdepth;
+  Colormap  xtcolormap;
+  Window    oldwindow;
 };
 
 struct _GtkXtBin
@@ -95,9 +95,9 @@ struct _GtkXtBin
   Window         xtwindow;         /* Xt Toolkit XWindow */
   gint           x, y;
   gint           width, height;
-  XtClient	 xtclient;         /* Xt Client for XEmbed */
+  XtClient   xtclient;         /* Xt Client for XEmbed */
 };
-  
+
 struct _GtkXtBinClass
 {
   GtkSocketClass widget_class;
@@ -117,7 +117,7 @@ typedef struct _XtTMRec {
     XtBoundActions  proc_table;         /* procedure bindings for actions    */
     struct _XtStateRec *current_state;  /* Translation Manager state ptr     */
     unsigned long   lastEventTime;
-} XtTMRec, *XtTM;   
+} XtTMRec, *XtTM;
 
 typedef struct _CorePart {
     Widget          self;               /* pointer to widget itself          */
@@ -153,7 +153,7 @@ typedef struct _CorePart {
 
 typedef struct _WidgetRec {
     CorePart    core;
- } WidgetRec, CoreRec;   
+ } WidgetRec, CoreRec;
 
 #ifdef __cplusplus
 }

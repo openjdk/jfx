@@ -92,7 +92,7 @@ public class ClasspathDirectory extends Directory {
             // read whole file into memory, so we can provide random access
             data = new byte[length];
             // read in upto 20k chunks
-            // this is needed as the amount of bytes read in any call in not 
+            // this is needed as the amount of bytes read in any call in not
             // garenteed to be number asked for
             final byte[] buf = new byte[1024*20];
             int offset = 0, remaining = length, read;

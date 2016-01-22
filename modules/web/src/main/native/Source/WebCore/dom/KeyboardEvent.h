@@ -65,7 +65,7 @@ public:
         // DOM_KEY_LOCATION_MOBILE     = 0x04,
         // DOM_KEY_LOCATION_JOYSTICK   = 0x05
     };
-        
+
     static PassRefPtr<KeyboardEvent> create()
     {
         return adoptRef(new KeyboardEvent);
@@ -82,18 +82,18 @@ public:
     }
 
     virtual ~KeyboardEvent();
-    
+
     void initKeyboardEvent(const AtomicString& type, bool canBubble, bool cancelable, AbstractView*,
         const String& keyIdentifier, unsigned location,
         bool ctrlKey, bool altKey, bool shiftKey, bool metaKey, bool altGraphKey = false);
-    
+
     const String& keyIdentifier() const { return m_keyIdentifier; }
     unsigned location() const { return m_location; }
 
     bool getModifierState(const String& keyIdentifier) const;
 
     bool altGraphKey() const { return m_altGraphKey; }
-    
+
     const PlatformKeyboardEvent* keyEvent() const { return m_keyEvent.get(); }
 
     virtual int keyCode() const override; // key code for keydown and keyup, character for keypress

@@ -90,9 +90,9 @@ private:
     IntSize m_totalContentsSizeForRubberBand;
     FloatPoint m_scrollPosition;
     IntPoint m_scrollOrigin;
-    
+
     ScrollableAreaParameters m_scrollableAreaParameters;
-    
+
     float m_frameScaleFactor;
 
     int m_headerHeight;

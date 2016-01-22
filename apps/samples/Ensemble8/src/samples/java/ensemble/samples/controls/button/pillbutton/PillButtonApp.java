@@ -57,7 +57,7 @@ public class PillButtonApp extends Application {
     public Parent createContent() {
         String pillButtonCss = PillButtonApp.class.getResource("PillButton.css").toExternalForm();
 
-        // create 3 toggle buttons and a toogle group for them     
+        // create 3 toggle buttons and a toogle group for them
         ToggleButton tb1 = new ToggleButton("Left");
         tb1.setPrefSize(76, 45);
         tb1.getStyleClass().add("left-pill");

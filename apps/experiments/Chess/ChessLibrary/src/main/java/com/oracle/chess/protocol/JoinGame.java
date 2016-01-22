@@ -57,7 +57,7 @@ public class JoinGame extends Message {
     public void setReplay(boolean replay) {
         this.replay = replay;
     }
-    
+
     @Override
     public Message processMe(ServerMessageProcessor processor) {
         return processor.process(this);

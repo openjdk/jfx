@@ -50,7 +50,7 @@ public class BarChartTest extends XYChartTestBase {
     final CategoryAxis xAxis = new CategoryAxis();
     final NumberAxis yAxis = new NumberAxis();
     final BarChart<String,Number> bc = new BarChart<String,Number>(xAxis,yAxis);
-    
+
     @Override
     protected Chart createChart() {
         xAxis.setLabel("X Axis");
@@ -72,7 +72,7 @@ public class BarChartTest extends XYChartTestBase {
         bc.getData().add(series2);
         return bc;
     }
-    
+
     @Test
     public void testAddingCustomStyleClassToBarChartBarNodes() {
         startApp();
@@ -88,11 +88,11 @@ public class BarChartTest extends XYChartTestBase {
         String myStyleClass = "my-style";
         bar.getStyleClass().add(myStyleClass);
         item.setNode(bar);
-        seriesData.add(item); 
+        seriesData.add(item);
         bc.getData().add(series);
         assertEquals("my-style", bar.getStyleClass().get(0));
     }
-    
+
     @Test
     public void testCategoryAxisCategoriesOnAddDataAtIndex() {
         startApp();
@@ -104,7 +104,7 @@ public class BarChartTest extends XYChartTestBase {
         series.getData().add(new XYChart.Data<String, Number>("1", 1));
         series.getData().add(new XYChart.Data<String, Number>("2", 2));
         series.getData().add(new XYChart.Data<String, Number>("3", 3));
-        bc.getData().add(series); 
+        bc.getData().add(series);
         pulse();
         // category at index 0 = "1"
         assertEquals("1", xAxis.getCategories().get(0));
@@ -113,7 +113,7 @@ public class BarChartTest extends XYChartTestBase {
         // item inserted at 0; category at index 0 = 0
         assertEquals("0", xAxis.getCategories().get(0));
     }
-    
+
     @Test
     public void testRemoveAndAddSameSeriesBeforeAnimationCompletes() {
         startApp();
@@ -123,7 +123,7 @@ public class BarChartTest extends XYChartTestBase {
         pulse();
         assertEquals(2, bc.getData().size());
     }
-    
+
     @Test
     public void testRemoveAndAddSameDataBeforeAnimationCompletes() {
         startApp();

@@ -55,7 +55,7 @@ public class HelloI18NController {
     @FXML // This method is called by the FXMLLoader when initialization is complete
     void initialize() {
         assert button != null : "fx:id=\"button\" was not injected: check your FXML file 'HelloI18N.fxml'.";
-        
+
         if (button != null) {
             button.setOnAction(event -> System.out.println(resources.getString("button.printed.message")));
         }

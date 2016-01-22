@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef WebError_h
@@ -46,43 +46,43 @@ public:
     virtual ULONG STDMETHODCALLTYPE Release(void);
 
     // IWebError
-    virtual HRESULT STDMETHODCALLTYPE init( 
+    virtual HRESULT STDMETHODCALLTYPE init(
         /* [in] */ BSTR domain,
         /* [in] */ int code,
         /* [in] */ BSTR url);
 
-    virtual HRESULT STDMETHODCALLTYPE code( 
+    virtual HRESULT STDMETHODCALLTYPE code(
         /* [retval][out] */ int *result);
-        
-    virtual HRESULT STDMETHODCALLTYPE domain( 
+
+    virtual HRESULT STDMETHODCALLTYPE domain(
         /* [retval][out] */ BSTR *result);
-        
-    virtual HRESULT STDMETHODCALLTYPE localizedDescription( 
+
+    virtual HRESULT STDMETHODCALLTYPE localizedDescription(
         /* [retval][out] */ BSTR *result);
-        
-    virtual HRESULT STDMETHODCALLTYPE localizedFailureReason( 
+
+    virtual HRESULT STDMETHODCALLTYPE localizedFailureReason(
         /* [retval][out] */ BSTR *result);
-        
-    virtual HRESULT STDMETHODCALLTYPE localizedRecoveryOptions( 
+
+    virtual HRESULT STDMETHODCALLTYPE localizedRecoveryOptions(
         /* [retval][out] */ IEnumVARIANT **result);
-        
-    virtual HRESULT STDMETHODCALLTYPE localizedRecoverySuggestion( 
+
+    virtual HRESULT STDMETHODCALLTYPE localizedRecoverySuggestion(
         /* [retval][out] */ BSTR *result);
-       
-    virtual HRESULT STDMETHODCALLTYPE recoverAttempter( 
+
+    virtual HRESULT STDMETHODCALLTYPE recoverAttempter(
         /* [retval][out] */ IUnknown **result);
-        
-    virtual HRESULT STDMETHODCALLTYPE userInfo( 
+
+    virtual HRESULT STDMETHODCALLTYPE userInfo(
         /* [retval][out] */ IPropertyBag **result);
 
-    virtual HRESULT STDMETHODCALLTYPE failingURL( 
+    virtual HRESULT STDMETHODCALLTYPE failingURL(
         /* [retval][out] */ BSTR *result);
 
-    virtual HRESULT STDMETHODCALLTYPE isPolicyChangeError( 
+    virtual HRESULT STDMETHODCALLTYPE isPolicyChangeError(
         /* [retval][out] */ BOOL *result);
 
     // IWebErrorPrivate
-    virtual HRESULT STDMETHODCALLTYPE sslPeerCertificate( 
+    virtual HRESULT STDMETHODCALLTYPE sslPeerCertificate(
         /* [retval][out] */ OLE_HANDLE *result);
 
     const WebCore::ResourceError& resourceError() const;

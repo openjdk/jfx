@@ -8,7 +8,7 @@
  *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.	 See the GNU
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General
@@ -45,23 +45,23 @@
  * g_value_unset() as the clear function using g_array_set_clear_func(),
  * for instance, the following code:
  *
- * |[<!-- language="C" --> 
+ * |[<!-- language="C" -->
  *   GValueArray *array = g_value_array_new (10);
  * ]|
  *
  * can be replaced by:
  *
- * |[<!-- language="C" --> 
+ * |[<!-- language="C" -->
  *   GArray *array = g_array_sized_new (FALSE, TRUE, sizeof (GValue), 10);
  *   g_array_set_clear_func (array, (GDestroyNotify) g_value_unset);
  * ]|
  */
 
 
-#ifdef	DISABLE_MEM_POOLS
-#  define	GROUP_N_VALUES	(1)	/* power of 2 !! */
+#ifdef  DISABLE_MEM_POOLS
+#  define   GROUP_N_VALUES  (1) /* power of 2 !! */
 #else
-#  define	GROUP_N_VALUES	(8)	/* power of 2 !! */
+#  define   GROUP_N_VALUES  (8) /* power of 2 !! */
 #endif
 
 
@@ -79,7 +79,7 @@
  */
 GValue*
 g_value_array_get_nth (GValueArray *value_array,
-		       guint        index)
+               guint        index)
 {
   g_return_val_if_fail (value_array != NULL, NULL);
   g_return_val_if_fail (index < value_array->n_values, NULL);
@@ -89,8 +89,8 @@ g_value_array_get_nth (GValueArray *value_array,
 
 static inline void
 value_array_grow (GValueArray *value_array,
-		  guint        n_values,
-		  gboolean     zero_init)
+          guint        n_values,
+          gboolean     zero_init)
 {
   g_return_if_fail (n_values >= value_array->n_values);
 
@@ -102,9 +102,9 @@ value_array_grow (GValueArray *value_array,
       value_array->n_prealloced = (value_array->n_values + GROUP_N_VALUES - 1) & ~(GROUP_N_VALUES - 1);
       value_array->values = g_renew (GValue, value_array->values, value_array->n_prealloced);
       if (!zero_init)
-	i = value_array->n_values;
+    i = value_array->n_values;
       memset (value_array->values + i, 0,
-	      (value_array->n_prealloced - i) * sizeof (value_array->values[0]));
+          (value_array->n_prealloced - i) * sizeof (value_array->values[0]));
     }
 }
 
@@ -171,7 +171,7 @@ g_value_array_free (GValueArray *value_array)
       GValue *value = value_array->values + i;
 
       if (G_VALUE_TYPE (value) != 0) /* we allow unset values in the array */
-	g_value_unset (value);
+    g_value_unset (value);
     }
   g_free (value_array->values);
   g_slice_free (GValueArray, value_array);
@@ -209,10 +209,10 @@ g_value_array_copy (const GValueArray *value_array)
   for (i = 0; i < new_array->n_values; i++)
     if (G_VALUE_TYPE (value_array->values + i) != 0)
       {
-	GValue *value = new_array->values + i;
-	
-	g_value_init (value, G_VALUE_TYPE (value_array->values + i));
-	g_value_copy (value_array->values + i, value);
+    GValue *value = new_array->values + i;
+
+    g_value_init (value, G_VALUE_TYPE (value_array->values + i));
+    g_value_copy (value_array->values + i, value);
       }
   return new_array;
 }
@@ -232,7 +232,7 @@ g_value_array_copy (const GValueArray *value_array)
  */
 GValueArray*
 g_value_array_prepend (GValueArray  *value_array,
-		       const GValue *value)
+               const GValue *value)
 {
   g_return_val_if_fail (value_array != NULL, NULL);
 
@@ -255,7 +255,7 @@ g_value_array_prepend (GValueArray  *value_array,
  */
 GValueArray*
 g_value_array_append (GValueArray  *value_array,
-		      const GValue *value)
+              const GValue *value)
 {
   g_return_val_if_fail (value_array != NULL, NULL);
 
@@ -279,8 +279,8 @@ g_value_array_append (GValueArray  *value_array,
  */
 GValueArray*
 g_value_array_insert (GValueArray  *value_array,
-		      guint         index,
-		      const GValue *value)
+              guint         index,
+              const GValue *value)
 {
   guint i;
 
@@ -315,7 +315,7 @@ g_value_array_insert (GValueArray  *value_array,
  */
 GValueArray*
 g_value_array_remove (GValueArray *value_array,
-		      guint        index)
+              guint        index)
 {
   g_return_val_if_fail (value_array != NULL, NULL);
   g_return_val_if_fail (index < value_array->n_values, value_array);
@@ -350,15 +350,15 @@ g_value_array_remove (GValueArray *value_array,
  */
 GValueArray*
 g_value_array_sort (GValueArray *value_array,
-		    GCompareFunc compare_func)
+            GCompareFunc compare_func)
 {
   g_return_val_if_fail (compare_func != NULL, NULL);
 
   if (value_array->n_values)
     qsort (value_array->values,
-	   value_array->n_values,
-	   sizeof (value_array->values[0]),
-	   compare_func);
+       value_array->n_values,
+       sizeof (value_array->values[0]),
+       compare_func);
   return value_array;
 }
 
@@ -381,16 +381,16 @@ g_value_array_sort (GValueArray *value_array,
  */
 GValueArray*
 g_value_array_sort_with_data (GValueArray     *value_array,
-			      GCompareDataFunc compare_func,
-			      gpointer         user_data)
+                  GCompareDataFunc compare_func,
+                  gpointer         user_data)
 {
   g_return_val_if_fail (value_array != NULL, NULL);
   g_return_val_if_fail (compare_func != NULL, NULL);
 
   if (value_array->n_values)
     g_qsort_with_data (value_array->values,
-		       value_array->n_values,
-		       sizeof (value_array->values[0]),
-		       compare_func, user_data);
+               value_array->n_values,
+               sizeof (value_array->values[0]),
+               compare_func, user_data);
   return value_array;
 }

@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -53,7 +53,7 @@ using namespace WebCore;
 -(CGLPixelFormatObj)copyCGLPixelFormatForDisplayMask:(uint32_t)mask
 {
     // FIXME: The mask param tells you which display (on a multi-display system)
-    // is to be used. But since we are now getting the pixel format from the 
+    // is to be used. But since we are now getting the pixel format from the
     // Canvas CGL context, we don't use it. This seems to do the right thing on
     // one multi-display system. But there may be cases where this is not the case.
     // If needed we will have to set the display mask in the Canvas CGLContext and
@@ -76,7 +76,7 @@ using namespace WebCore;
     CGLSetCurrentContext(glContext);
 
     CGRect frame = [self frame];
-        
+
     // draw the FBO into the layer
     glViewport(0, 0, frame.size.width, frame.size.height);
     glMatrixMode(GL_PROJECTION);
@@ -87,7 +87,7 @@ using namespace WebCore;
 
     glEnable(GL_TEXTURE_2D);
     glBindTexture(GL_TEXTURE_2D, m_context->platformTexture());
-    
+
     glBegin(GL_TRIANGLE_FAN);
         glTexCoord2f(0, 0);
         glVertex2f(-1, -1);
@@ -98,7 +98,7 @@ using namespace WebCore;
         glTexCoord2f(0, 1);
         glVertex2f(-1, 1);
     glEnd();
-    
+
     glBindTexture(GL_TEXTURE_2D, 0);
     glDisable(GL_TEXTURE_2D);
 
@@ -125,7 +125,7 @@ static void freeData(void *, const void *data, size_t /* size */)
         imageColorSpace = adoptCF(CGColorSpaceCreateDeviceRGB());
 
     CGRect layerBounds = CGRectIntegral([self bounds]);
-    
+
     size_t width = layerBounds.size.width;
     size_t height = layerBounds.size.height;
 

@@ -251,7 +251,7 @@ public:
 private:
     CodeCache();
 
-    template <class UnlinkedCodeBlockType, class ExecutableType> 
+    template <class UnlinkedCodeBlockType, class ExecutableType>
     UnlinkedCodeBlockType* getGlobalCodeBlock(VM&, ExecutableType*, const SourceCode&, JSParserStrictness, DebuggerMode, ProfilerMode, ParserError&);
 
     CodeCacheMap m_sourceCode;

@@ -77,7 +77,7 @@ abstract class GLContext {
     final static int GL_LINEAR                    = 53;
     final static int GL_NEAREST_MIPMAP_NEAREST    = 54;
     final static int GL_LINEAR_MIPMAP_LINEAR      = 55;
-    
+
 
     // Use by glPixelStorei
     final static int GL_UNPACK_ALIGNMENT          = 60;
@@ -116,7 +116,7 @@ abstract class GLContext {
     final static int NUM_MATRIX_ELEMENTS          = 16;
 
     long nativeCtxInfo;
-    private int maxTextureSize = -1;    
+    private int maxTextureSize = -1;
     private Boolean nonPowTwoExtAvailable;
     private Boolean clampToZeroAvailable;
 
@@ -348,7 +348,7 @@ abstract class GLContext {
     int createFBO(int texID) {
         if (nativeFBOID != FBO_ID_NOCACHE) {
             nativeFBOID = FBO_ID_UNSET; // invalidate FBO ID cache
-        } 
+        }
         return nCreateFBO(nativeCtxInfo, texID);
     }
 

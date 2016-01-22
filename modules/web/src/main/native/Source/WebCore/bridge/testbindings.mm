@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -140,13 +140,13 @@
     [super dealloc];
 }
 
-- (int)getInt 
+- (int)getInt
 {
     LOG ("myInt = %d\n", myInt);
     return myInt;
 }
 
-- (void)setInt: (int)anInt 
+- (void)setInt: (int)anInt
 {
     LOG ("anInt = %d\n", anInt);
     myInt = anInt;
@@ -157,7 +157,7 @@
     return string;
 }
 
-- (MySecondInterface *)getMySecondInterface 
+- (MySecondInterface *)getMySecondInterface
 {
     LOG ("\n");
     return mySecondInterface;
@@ -215,14 +215,14 @@ const char *readJavaScriptFromFile (const char *file)
         fprintf(stderr, "Error opening %s.\n", file);
         return 0;
     }
-    
+
     int num = fread(code, 1, BufferSize, f);
     code[num] = '\0';
     if(num >= BufferSize)
         fprintf(stderr, "Warning: File may have been too long.\n");
 
     fclose(f);
-    
+
     return code;
 }
 
@@ -233,30 +233,30 @@ int main(int argc, char **argv)
         fprintf(stderr, "You have to specify at least one filename\n");
         return -1;
     }
-    
+
     bool ret = true;
     {
         NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
-        
+
         JSLock lock;
-        
+
         // create interpreter w/ global object
         Object global(new GlobalImp());
         Interpreter interp;
         interp.setGlobalObject(global);
         ExecState *exec = interp.globalExec();
-        
+
         MyFirstInterface *myInterface = [[MyFirstInterface alloc] init];
-        
+
         global.put(exec, Identifier("myInterface"), Instance::createRuntimeObject(Instance::ObjectiveCLanguage, (void *)myInterface));
-        
+
         for (int i = 1; i < argc; i++) {
             const char *code = readJavaScriptFromFile(argv[i]);
-            
+
             if (code) {
                 // run
                 Completion comp(interp.evaluate(code));
-                
+
                 if (comp.complType() == Throw) {
                     Value exVal = comp.value();
                     char *msg = exVal.toString(exec).ascii();
@@ -278,10 +278,10 @@ int main(int argc, char **argv)
                 }
             }
         }
-        
+
         [myInterface release];
         [pool drain];
     } // end block, so that Interpreter and global get deleted
-    
+
     return ret ? 0 : 3;
 }

@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef DFGArrayMode_h
@@ -66,7 +66,7 @@ enum Type {
     Contiguous,
     ArrayStorage,
     SlowPutArrayStorage,
-    
+
     Arguments,
     Int8Array,
     Int16Array,
@@ -121,7 +121,7 @@ public:
         u.asBytes.speculation = Array::InBounds;
         u.asBytes.conversion = Array::AsIs;
     }
-    
+
     explicit ArrayMode(Array::Type type)
     {
         u.asBytes.type = type;
@@ -129,7 +129,7 @@ public:
         u.asBytes.speculation = Array::InBounds;
         u.asBytes.conversion = Array::AsIs;
     }
-    
+
     ArrayMode(Array::Type type, Array::Class arrayClass)
     {
         u.asBytes.type = type;
@@ -137,7 +137,7 @@ public:
         u.asBytes.speculation = Array::InBounds;
         u.asBytes.conversion = Array::AsIs;
     }
-    
+
     ArrayMode(Array::Type type, Array::Class arrayClass, Array::Speculation speculation, Array::Conversion conversion)
     {
         u.asBytes.type = type;
@@ -145,7 +145,7 @@ public:
         u.asBytes.speculation = speculation;
         u.asBytes.conversion = conversion;
     }
-    
+
     ArrayMode(Array::Type type, Array::Class arrayClass, Array::Conversion conversion)
     {
         u.asBytes.type = type;
@@ -153,31 +153,31 @@ public:
         u.asBytes.speculation = Array::InBounds;
         u.asBytes.conversion = conversion;
     }
-    
+
     Array::Type type() const { return static_cast<Array::Type>(u.asBytes.type); }
     Array::Class arrayClass() const { return static_cast<Array::Class>(u.asBytes.arrayClass); }
     Array::Speculation speculation() const { return static_cast<Array::Speculation>(u.asBytes.speculation); }
     Array::Conversion conversion() const { return static_cast<Array::Conversion>(u.asBytes.conversion); }
-    
+
     unsigned asWord() const { return u.asWord; }
-    
+
     static ArrayMode fromWord(unsigned word)
     {
         return ArrayMode(word);
     }
-    
+
     static ArrayMode fromObserved(const ConcurrentJITLocker&, ArrayProfile*, Array::Action, bool makeSafe);
-    
+
     ArrayMode withSpeculation(Array::Speculation speculation) const
     {
         return ArrayMode(type(), arrayClass(), speculation, conversion());
     }
-    
+
     ArrayMode withArrayClass(Array::Class arrayClass) const
     {
         return ArrayMode(type(), arrayClass, speculation(), conversion());
     }
-    
+
     ArrayMode withSpeculationFromProfile(const ConcurrentJITLocker& locker, ArrayProfile* profile, bool makeSafe) const
     {
         Array::Speculation mySpeculation;
@@ -188,14 +188,14 @@ public:
             mySpeculation = Array::ToHole;
         else
             mySpeculation = Array::InBounds;
-        
+
         return withSpeculation(mySpeculation);
     }
-    
+
     ArrayMode withProfile(const ConcurrentJITLocker& locker, ArrayProfile* profile, bool makeSafe) const
     {
         Array::Class myArrayClass;
-        
+
         if (isJSArray()) {
             if (profile->usesOriginalArrayStructures(locker) && benefitsFromOriginalArray())
                 myArrayClass = Array::OriginalArray;
@@ -203,31 +203,31 @@ public:
                 myArrayClass = Array::Array;
         } else
             myArrayClass = arrayClass();
-        
+
         return withArrayClass(myArrayClass).withSpeculationFromProfile(locker, profile, makeSafe);
     }
-    
+
     ArrayMode withType(Array::Type type) const
     {
         return ArrayMode(type, arrayClass(), speculation(), conversion());
     }
-    
+
     ArrayMode withConversion(Array::Conversion conversion) const
     {
         return ArrayMode(type(), arrayClass(), speculation(), conversion);
     }
-    
+
     ArrayMode withTypeAndConversion(Array::Type type, Array::Conversion conversion) const
     {
         return ArrayMode(type, arrayClass(), speculation(), conversion);
     }
-    
+
     ArrayMode refine(Graph&, CodeOrigin, SpeculatedType base, SpeculatedType index, SpeculatedType value = SpecNone, NodeFlags = 0) const;
-    
+
     bool alreadyChecked(Graph&, Node*, AbstractValue&) const;
-    
+
     void dump(PrintStream&) const;
-    
+
     bool usesButterfly() const
     {
         switch (type()) {
@@ -241,7 +241,7 @@ public:
             return false;
         }
     }
-    
+
     bool isJSArray() const
     {
         switch (arrayClass()) {
@@ -252,17 +252,17 @@ public:
             return false;
         }
     }
-    
+
     bool isJSArrayWithOriginalStructure() const
     {
         return arrayClass() == Array::OriginalArray;
     }
-    
+
     bool isSaneChain() const
     {
         return speculation() == Array::SaneChain;
     }
-    
+
     bool isInBounds() const
     {
         switch (speculation()) {
@@ -273,22 +273,22 @@ public:
             return false;
         }
     }
-    
+
     bool mayStoreToHole() const
     {
         return !isInBounds();
     }
-    
+
     bool isOutOfBounds() const
     {
         return speculation() == Array::OutOfBounds;
     }
-    
+
     bool isSlowPut() const
     {
         return type() == Array::SlowPutArrayStorage;
     }
-    
+
     bool canCSEStorage() const
     {
         switch (type()) {
@@ -302,7 +302,7 @@ public:
             return true;
         }
     }
-    
+
     bool lengthNeedsStorage() const
     {
         switch (type()) {
@@ -317,7 +317,7 @@ public:
             return false;
         }
     }
-    
+
     ArrayMode modeForPut() const
     {
         switch (type()) {
@@ -331,7 +331,7 @@ public:
             return *this;
         }
     }
-    
+
     bool isSpecific() const
     {
         switch (type()) {
@@ -345,7 +345,7 @@ public:
             return true;
         }
     }
-    
+
     bool supportsLength() const
     {
         switch (type()) {
@@ -364,9 +364,9 @@ public:
             return true;
         }
     }
-    
+
     bool permitsBoundsCheckLowering() const;
-    
+
     bool benefitsFromOriginalArray() const
     {
         switch (type()) {
@@ -379,11 +379,11 @@ public:
             return false;
         }
     }
-    
+
     // Returns 0 if this is not OriginalArray.
     Structure* originalArrayStructure(Graph&, const CodeOrigin&) const;
     Structure* originalArrayStructure(Graph&, Node*) const;
-    
+
     bool doesConversion() const
     {
         return conversion() != Array::AsIs;
@@ -393,7 +393,7 @@ public:
     {
         return arrayModesAlreadyChecked(arrayModeFromStructure(structure), arrayModesThatPassFiltering());
     }
-    
+
     ArrayModes arrayModesThatPassFiltering() const
     {
         switch (type()) {
@@ -413,22 +413,22 @@ public:
             return asArrayModes(NonArray);
         }
     }
-    
+
     bool getIndexedPropertyStorageMayTriggerGC() const
     {
         return type() == Array::String;
     }
-    
+
     IndexingType shapeMask() const
     {
         return toIndexingShape(type());
     }
-    
+
     TypedArrayType typedArrayType() const
     {
         return toTypedArrayType(type());
     }
-    
+
     bool operator==(const ArrayMode& other) const
     {
         return type() == other.type()
@@ -436,7 +436,7 @@ public:
             && speculation() == other.speculation()
             && conversion() == other.conversion();
     }
-    
+
     bool operator!=(const ArrayMode& other) const
     {
         return !(*this == other);
@@ -446,7 +446,7 @@ private:
     {
         u.asWord = word;
     }
-    
+
     ArrayModes arrayModesWithIndexingShape(IndexingType shape) const
     {
         switch (arrayClass()) {
@@ -463,9 +463,9 @@ private:
             return 0;
         }
     }
-    
+
     bool alreadyChecked(Graph&, Node*, AbstractValue&, IndexingType shape) const;
-    
+
     union {
         struct {
             uint8_t type;

@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef WebBackForwardList_H
@@ -52,57 +52,57 @@ public:
     virtual ULONG STDMETHODCALLTYPE Release(void);
 
     // IWebBackForwardList
-    virtual HRESULT STDMETHODCALLTYPE addItem( 
+    virtual HRESULT STDMETHODCALLTYPE addItem(
         /* [in] */ IWebHistoryItem *item);
-    
+
     virtual HRESULT STDMETHODCALLTYPE goBack( void);
-    
+
     virtual HRESULT STDMETHODCALLTYPE goForward( void);
-    
-    virtual HRESULT STDMETHODCALLTYPE goToItem( 
+
+    virtual HRESULT STDMETHODCALLTYPE goToItem(
         /* [in] */ IWebHistoryItem *item);
-    
-    virtual HRESULT STDMETHODCALLTYPE backItem( 
+
+    virtual HRESULT STDMETHODCALLTYPE backItem(
         /* [retval][out] */ IWebHistoryItem **item);
-    
-    virtual HRESULT STDMETHODCALLTYPE currentItem( 
+
+    virtual HRESULT STDMETHODCALLTYPE currentItem(
         /* [retval][out] */ IWebHistoryItem **item);
-    
-    virtual HRESULT STDMETHODCALLTYPE forwardItem( 
+
+    virtual HRESULT STDMETHODCALLTYPE forwardItem(
         /* [retval][out] */ IWebHistoryItem **item);
-    
-    virtual HRESULT STDMETHODCALLTYPE backListWithLimit( 
+
+    virtual HRESULT STDMETHODCALLTYPE backListWithLimit(
         /* [in] */ int limit,
         /* [out] */ int *listCount,
         /* [in] */ IWebHistoryItem **list);
-    
-    virtual HRESULT STDMETHODCALLTYPE forwardListWithLimit( 
+
+    virtual HRESULT STDMETHODCALLTYPE forwardListWithLimit(
         /* [in] */ int limit,
         /* [out] */ int *listCount,
         /* [in] */ IWebHistoryItem **list);
-    
-    virtual HRESULT STDMETHODCALLTYPE capacity( 
+
+    virtual HRESULT STDMETHODCALLTYPE capacity(
         /* [retval][out] */ int *result);
-    
-    virtual HRESULT STDMETHODCALLTYPE setCapacity( 
+
+    virtual HRESULT STDMETHODCALLTYPE setCapacity(
         /* [in] */ int size);
-    
-    virtual HRESULT STDMETHODCALLTYPE backListCount( 
+
+    virtual HRESULT STDMETHODCALLTYPE backListCount(
         /* [retval][out] */ int *count);
-    
-    virtual HRESULT STDMETHODCALLTYPE forwardListCount( 
+
+    virtual HRESULT STDMETHODCALLTYPE forwardListCount(
         /* [retval][out] */ int *sizecount);
-    
-    virtual HRESULT STDMETHODCALLTYPE containsItem( 
+
+    virtual HRESULT STDMETHODCALLTYPE containsItem(
         /* [in] */ IWebHistoryItem *item,
         /* [retval][out] */ BOOL *result);
-    
-    virtual HRESULT STDMETHODCALLTYPE itemAtIndex( 
+
+    virtual HRESULT STDMETHODCALLTYPE itemAtIndex(
         /* [in] */ int index,
         /* [retval][out] */ IWebHistoryItem **item);
-    
+
     // IWebBackForwardListPrivate
-    virtual HRESULT STDMETHODCALLTYPE removeItem( 
+    virtual HRESULT STDMETHODCALLTYPE removeItem(
         /* [in] */ IWebHistoryItem* item);
 
     // WebBackForwardList

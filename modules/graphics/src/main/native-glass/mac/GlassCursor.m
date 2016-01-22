@@ -94,7 +94,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacCursor__1initIDs
                                       [[nwseDict valueForKey:@"hoty"] doubleValue]);
     NSPoint   neswPoint = NSMakePoint([[neswDict valueForKey:@"hotx"] doubleValue],
                                       [[neswDict valueForKey:@"hoty"] doubleValue]);
-    
+
     if (jSizeInit == NULL)
     {
         jSizeInit = (*env)->GetMethodID(env, [GlassHelper ClassForName:"com.sun.glass.ui.Size" withEnv:env],
@@ -124,7 +124,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacCursor__1initIDs
                       /* NS_REQUIRES_NIL_TERM */    nil
                    ];
     [cursorCache retain];
-    
+
     assert([cursorCache count] == (com_sun_glass_ui_Cursor_CURSOR_MAX + 1));
 }
 
@@ -138,7 +138,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_mac_MacCursor__1createCursor
 {
     LOG("Java_com_sun_glass_ui_mac_MacCursor__1createCursor");
     jlong jcursor = 0;
-    
+
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
     GLASS_POOL_ENTER;
     {
@@ -153,7 +153,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_mac_MacCursor__1createCursor
     }
     GLASS_POOL_EXIT;
     GLASS_CHECK_EXCEPTION(env);
-    
+
     return jcursor;
 }
 
@@ -188,7 +188,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacCursor__1setCustom
 (JNIEnv *env, jclass jCursorClass, jlong cursorPtr)
 {
     LOG("Java_com_sun_glass_ui_mac_MacCursor__1setCustom");
-    
+
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
     GLASS_POOL_ENTER;
     {
@@ -208,7 +208,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacCursor__1setVisible
 (JNIEnv *env, jclass jCursorClass, jboolean visible)
 {
     LOG("Java_com_sun_glass_ui_mac_MacCursor__1setVisible");
-    
+
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
     GLASS_POOL_ENTER;
     {
@@ -234,17 +234,17 @@ JNIEXPORT jobject JNICALL Java_com_sun_glass_ui_mac_MacCursor__1getBestSize
 (JNIEnv *env, jclass jCursorClass, jint width, jint height)
 {
     LOG("Java_com_sun_glass_ui_mac_MacCursor__1getBestSize");
-    
+
     jobject jsize = NULL;
-    
+
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
     GLASS_POOL_ENTER;
     {
         jint widthBest = width;
         jint heightBest = height;
-        
+
         NSImage *image = [[[NSCursor arrowCursor] image] retain];
-        
+
         if (widthBest <= 0)
         {
             if (image != nil)
@@ -256,7 +256,7 @@ JNIEXPORT jobject JNICALL Java_com_sun_glass_ui_mac_MacCursor__1getBestSize
                 widthBest = CURSOR_BEST_SIZE;
             }
         }
-        
+
         if (heightBest <= 0)
         {
             if (image != nil)
@@ -268,13 +268,13 @@ JNIEXPORT jobject JNICALL Java_com_sun_glass_ui_mac_MacCursor__1getBestSize
                 heightBest = CURSOR_BEST_SIZE;
             }
         }
-        
+
         [image release];
-        
+
         jsize = (*env)->NewObject(env, [GlassHelper ClassForName:"com.sun.glass.ui.Size" withEnv:env], jSizeInit, widthBest, heightBest);
     }
     GLASS_POOL_EXIT;
     GLASS_CHECK_EXCEPTION(env);
-    
+
     return jsize;
 }

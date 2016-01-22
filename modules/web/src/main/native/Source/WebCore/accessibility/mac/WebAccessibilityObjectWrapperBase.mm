@@ -111,14 +111,14 @@ static NSArray *convertMathPairsToNSArray(const AccessibilityObject::Accessibili
     // Calling updateBackingStore() can invalidate this element so self must be retained.
     // If it does become invalidated, m_object will be nil.
     [[self retain] autorelease];
-    
+
     if (!m_object)
         return NO;
-    
+
     m_object->updateBackingStore();
     if (!m_object)
         return NO;
-    
+
     return YES;
 }
 
@@ -159,25 +159,25 @@ static NSArray *convertMathPairsToNSArray(const AccessibilityObject::Accessibili
     // The compromise is to return the button type in the role description and the value of the file path in the title
     if (m_object->isFileUploadButton() && [self fileUploadButtonReturnsValueInTitle])
         return m_object->stringValue();
-    
+
     Vector<AccessibilityText> textOrder;
     m_object->accessibilityText(textOrder);
-    
+
     for (const auto& text : textOrder) {
         // If we have alternative text, then we should not expose a title.
         if (text.textSource == AlternativeText)
             break;
-        
+
         // Once we encounter visible text, or the text from our children that should be used foremost.
         if (text.textSource == VisibleText || text.textSource == ChildrenText)
             return text.text;
-        
+
         // If there's an element that labels this object and it's not exposed, then we should use
         // that text as our title.
         if (text.textSource == LabelByElementText && !m_object->exposesTitleUIElement())
             return text.text;
     }
-    
+
     return [NSString string];
 }
 
@@ -187,15 +187,15 @@ static NSArray *convertMathPairsToNSArray(const AccessibilityObject::Accessibili
     // One exception is the media control labels that have a value and a description. Those are set programatically.
     if (m_object->roleValue() == StaticTextRole && !m_object->isMediaControlLabel())
         return [NSString string];
-    
+
     Vector<AccessibilityText> textOrder;
     m_object->accessibilityText(textOrder);
-    
+
     bool visibleTextAvailable = false;
     for (const auto& text : textOrder) {
         if (text.textSource == AlternativeText)
             return text.text;
-        
+
         switch (text.textSource) {
         case VisibleText:
         case ChildrenText:
@@ -205,11 +205,11 @@ static NSArray *convertMathPairsToNSArray(const AccessibilityObject::Accessibili
         default:
             break;
         }
-        
+
         if (text.textSource == TitleTagText && !visibleTextAvailable)
             return text.text;
     }
-    
+
     return [NSString string];
 }
 
@@ -217,12 +217,12 @@ static NSArray *convertMathPairsToNSArray(const AccessibilityObject::Accessibili
 {
     Vector<AccessibilityText> textOrder;
     m_object->accessibilityText(textOrder);
-    
+
     bool descriptiveTextAvailable = false;
     for (const auto& text : textOrder) {
         if (text.textSource == HelpText || text.textSource == SummaryText)
             return text.text;
-        
+
         // If an element does NOT have other descriptive text the title tag should be used as its descriptive text.
         // But, if those ARE available, then the title tag should be used for help text instead.
         switch (text.textSource) {
@@ -235,11 +235,11 @@ static NSArray *convertMathPairsToNSArray(const AccessibilityObject::Accessibili
         default:
             break;
         }
-        
+
         if (text.textSource == TitleTagText && descriptiveTextAvailable)
             return text.text;
     }
-    
+
     return [NSString string];
 }
 
@@ -292,7 +292,7 @@ static void ConvertPathToScreenSpaceFunction(void* info, const PathElement* elem
 - (CGPathRef)convertPathToScreenSpace:(Path &)path
 {
     PathConversionInfo conversion = { self, CGPathCreateMutable() };
-    path.apply(&conversion, ConvertPathToScreenSpaceFunction);    
+    path.apply(&conversion, ConvertPathToScreenSpaceFunction);
     return (CGPathRef)[(id)conversion.path autorelease];
 }
 
@@ -362,7 +362,7 @@ static void ConvertPathToScreenSpaceFunction(void* info, const PathElement* elem
 - (NSString *)accessibilityPlatformMathSuperscriptKey
 {
     ASSERT_NOT_REACHED();
-    return nil;    
+    return nil;
 }
 
 - (NSArray *)accessibilityMathPostscriptPairs

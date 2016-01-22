@@ -123,7 +123,7 @@ public class MenuButtonSkinBase<C extends MenuButton> extends SkinBase<C> {
         getChildren().addAll(label, arrowButton);
 
         getSkinnable().requestLayout();
-        
+
         itemsChangedListener = c -> {
             while (c.next()) {
                 popup.getItems().removeAll(c.getRemoved());
@@ -131,7 +131,7 @@ public class MenuButtonSkinBase<C extends MenuButton> extends SkinBase<C> {
             }
         };
         control.getItems().addListener(itemsChangedListener);
-        
+
         if (getSkinnable().getScene() != null) {
             ControlAcceleratorSupport.addAcceleratorsIntoScene(getSkinnable().getItems(), getSkinnable());
         }
@@ -276,7 +276,7 @@ public class MenuButtonSkinBase<C extends MenuButton> extends SkinBase<C> {
     private void show() {
         if (!popup.isShowing()) {
             popup.show(getSkinnable(), getSkinnable().getPopupSide(), 0, 0);
-            
+
 //            if (getSkinnable().isOpenVertically()) {
 //                // FIXME ugly hack - need to work out why we need '12' for
 //                // MenuButton/SplitMenuButton, but not for Menus

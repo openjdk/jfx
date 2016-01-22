@@ -87,35 +87,35 @@ JS_EXPORT void JSStringRelease(JSStringRef string);
 JS_EXPORT size_t JSStringGetLength(JSStringRef string);
 /*!
 @function
-@abstract         Returns a pointer to the Unicode character buffer that 
+@abstract         Returns a pointer to the Unicode character buffer that
  serves as the backing store for a JavaScript string.
 @param string     The JSString whose backing store you want to access.
-@result           A pointer to the Unicode character buffer that serves as string's 
+@result           A pointer to the Unicode character buffer that serves as string's
  backing store, which will be deallocated when string is deallocated.
 */
 JS_EXPORT const JSChar* JSStringGetCharactersPtr(JSStringRef string);
 
 /*!
 @function
-@abstract Returns the maximum number of bytes a JavaScript string will 
+@abstract Returns the maximum number of bytes a JavaScript string will
  take up if converted into a null-terminated UTF8 string.
-@param string The JSString whose maximum converted size (in bytes) you 
+@param string The JSString whose maximum converted size (in bytes) you
  want to know.
-@result The maximum number of bytes that could be required to convert string into a 
- null-terminated UTF8 string. The number of bytes that the conversion actually ends 
+@result The maximum number of bytes that could be required to convert string into a
+ null-terminated UTF8 string. The number of bytes that the conversion actually ends
  up requiring could be less than this, but never more.
 */
 JS_EXPORT size_t JSStringGetMaximumUTF8CStringSize(JSStringRef string);
 /*!
 @function
-@abstract Converts a JavaScript string into a null-terminated UTF8 string, 
+@abstract Converts a JavaScript string into a null-terminated UTF8 string,
  and copies the result into an external byte buffer.
 @param string The source JSString.
-@param buffer The destination byte buffer into which to copy a null-terminated 
- UTF8 representation of string. On return, buffer contains a UTF8 string 
- representation of string. If bufferSize is too small, buffer will contain only 
- partial results. If buffer is not at least bufferSize bytes in size, 
- behavior is undefined. 
+@param buffer The destination byte buffer into which to copy a null-terminated
+ UTF8 representation of string. On return, buffer contains a UTF8 string
+ representation of string. If bufferSize is too small, buffer will contain only
+ partial results. If buffer is not at least bufferSize bytes in size,
+ behavior is undefined.
 @param bufferSize The size of the external buffer in bytes.
 @result The number of bytes written into buffer (including the null-terminator byte).
 */

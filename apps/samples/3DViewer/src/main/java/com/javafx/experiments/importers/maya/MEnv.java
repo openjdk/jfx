@@ -40,37 +40,37 @@ import java.io.*;
 class nxRigidBody extends MNodeType {
     public nxRigidBody(final MEnv env) {
         super(env, "nxRigidBody");
-        addAttribute(new MAttribute(env, "initialPosition", "ip", 
+        addAttribute(new MAttribute(env, "initialPosition", "ip",
                                     env.findDataType("float3")));
-        addAttribute(new MAttribute(env, "initialOrientation", "ior", 
+        addAttribute(new MAttribute(env, "initialOrientation", "ior",
                                     env.findDataType("float3")));
-        addAttribute(new MAttribute(env, "initialVelocity", "iv", 
+        addAttribute(new MAttribute(env, "initialVelocity", "iv",
                                     env.findDataType("float3")));
-        addAttribute(new MAttribute(env, "initialSpin", "is", 
+        addAttribute(new MAttribute(env, "initialSpin", "is",
                                     env.findDataType("float3")));
         addAttribute(new MAttribute(env, "staticFriction", "sf", env.findDataType("double")));
         addAttribute(new MAttribute(env, "dynamicFriction", "df", env.findDataType("double")));
-        addAttribute(new MAttribute(env, "centerOfMass", "com", 
+        addAttribute(new MAttribute(env, "centerOfMass", "com",
                                     env.findDataType("float3")));
         /*
-        addAttribute(new MAttribute(env, "inertiaTensor", "inert", 
+        addAttribute(new MAttribute(env, "inertiaTensor", "inert",
                                     env.findDataType("float3")));
         */
-        addAttribute(new MAttribute(env, "mass", "mas", 
+        addAttribute(new MAttribute(env, "mass", "mas",
                                     env.findDataType("double")));
-        addAttribute(new MAttribute(env, "density", "den", 
+        addAttribute(new MAttribute(env, "density", "den",
                                     env.findDataType("double")));
-        addAttribute(new MAttribute(env, "shape", "sha", 
+        addAttribute(new MAttribute(env, "shape", "sha",
                                     new MArrayType(env, env.findDataType("Message"))));
-        addAttribute(new MAttribute(env, "active", "act", 
+        addAttribute(new MAttribute(env, "active", "act",
                                     env.findDataType("bool")));
-        addAttribute(new MAttribute(env, "bounciness", "b", 
+        addAttribute(new MAttribute(env, "bounciness", "b",
                                     env.findDataType("double")));
-        addAttribute(new MAttribute(env, "damping", "dp", 
+        addAttribute(new MAttribute(env, "damping", "dp",
                                     env.findDataType("double")));
-        addAttribute(new MAttribute(env, "angularDamping", "adp", 
+        addAttribute(new MAttribute(env, "angularDamping", "adp",
                                     env.findDataType("double")));
-        addAttribute(new MAttribute(env, "sleepingThreshold", "sthrd", 
+        addAttribute(new MAttribute(env, "sleepingThreshold", "sthrd",
                                     env.findDataType("double")));
 
         // joint orient
@@ -123,27 +123,27 @@ class nxRigidBody extends MNodeType {
 class dRigidBody extends MNodeType {
     public dRigidBody(final MEnv env) {
         super(env, "dRigidBody");
-        addAttribute(new MAttribute(env, "inCollisionShape", "incs", 
+        addAttribute(new MAttribute(env, "inCollisionShape", "incs",
                                     env.findDataType("Message")));
-        addAttribute(new MAttribute(env, "solver", "solv", 
+        addAttribute(new MAttribute(env, "solver", "solv",
                                     env.findDataType("Message")));
-        addAttribute(new MAttribute(env, "restitution", "rst", 
+        addAttribute(new MAttribute(env, "restitution", "rst",
                                     env.findDataType("double")));
-        addAttribute(new MAttribute(env, "friction", "fc", 
+        addAttribute(new MAttribute(env, "friction", "fc",
                                     env.findDataType("double")));
-        addAttribute(new MAttribute(env, "linearDamping", "ld", 
+        addAttribute(new MAttribute(env, "linearDamping", "ld",
                                     env.findDataType("double")));
-        addAttribute(new MAttribute(env, "angularDamping", "ad", 
+        addAttribute(new MAttribute(env, "angularDamping", "ad",
                                     env.findDataType("double")));
-        addAttribute(new MAttribute(env, "initialPosition", "inpo", 
+        addAttribute(new MAttribute(env, "initialPosition", "inpo",
                                     env.findDataType("float3")));
-        addAttribute(new MAttribute(env, "initialRotation", "inro", 
+        addAttribute(new MAttribute(env, "initialRotation", "inro",
                                     env.findDataType("float3")));
-        addAttribute(new MAttribute(env, "initialVelocity", "inve", 
+        addAttribute(new MAttribute(env, "initialVelocity", "inve",
                                     env.findDataType("float3")));
-        addAttribute(new MAttribute(env, "initialSpin", "insp", 
+        addAttribute(new MAttribute(env, "initialSpin", "insp",
                                     env.findDataType("float3")));
-        addAttribute(new MAttribute(env, "mass", "ma", 
+        addAttribute(new MAttribute(env, "mass", "ma",
                                     env.findDataType("double")));
     }
 
@@ -164,13 +164,13 @@ class dRigidBody extends MNodeType {
 class dCollisionShape extends MNodeType {
     public dCollisionShape(final MEnv env) {
         super(env, "dCollisionShape");
-        addAttribute(new MAttribute(env, "type", "tp", 
+        addAttribute(new MAttribute(env, "type", "tp",
                                     env.findDataType("enum")));
-        addAttribute(new MAttribute(env, "scale", "sc", 
+        addAttribute(new MAttribute(env, "scale", "sc",
                                     env.findDataType("float3")));
-        addAttribute(new MAttribute(env, "outCollisionShape", "oucs", 
+        addAttribute(new MAttribute(env, "outCollisionShape", "oucs",
                                     env.findDataType("Message")));
-        addAttribute(new MAttribute(env, "inShape", "insh", 
+        addAttribute(new MAttribute(env, "inShape", "insh",
                                     env.findDataType("Message")));
     }
     protected void initNode(MNode result) {
@@ -182,35 +182,35 @@ class dCollisionShape extends MNodeType {
 class dHingeConstraint extends MNodeType {
     public dHingeConstraint(final MEnv env) {
         super(env, "dHingeConstraint");
-        addAttribute(new MAttribute(env, "inRigidBodyA", "inrba", 
+        addAttribute(new MAttribute(env, "inRigidBodyA", "inrba",
                                     env.findDataType("Message")));
-        addAttribute(new MAttribute(env, "inRigidBodyB", "inrbb", 
+        addAttribute(new MAttribute(env, "inRigidBodyB", "inrbb",
                                     env.findDataType("Message")));
-        addAttribute(new MAttribute(env, "damping", "dmp", 
+        addAttribute(new MAttribute(env, "damping", "dmp",
                                     env.findDataType("double")));
-        addAttribute(new MAttribute(env, "lowerLimit", "llmt", 
+        addAttribute(new MAttribute(env, "lowerLimit", "llmt",
                                     env.findDataType("double")));
-        addAttribute(new MAttribute(env, "upperLimit", "ulmt", 
+        addAttribute(new MAttribute(env, "upperLimit", "ulmt",
                                     env.findDataType("double")));
-        addAttribute(new MAttribute(env, "limitSoftness", "lmSo", 
+        addAttribute(new MAttribute(env, "limitSoftness", "lmSo",
                                     env.findDataType("double")));
-        addAttribute(new MAttribute(env, "biasFactor", "biFa", 
+        addAttribute(new MAttribute(env, "biasFactor", "biFa",
                                     env.findDataType("double")));
-        addAttribute(new MAttribute(env, "relaxationFactor", "reFa", 
+        addAttribute(new MAttribute(env, "relaxationFactor", "reFa",
                                     env.findDataType("double")));
-        addAttribute(new MAttribute(env, "rotationInA", "hgRotA", 
+        addAttribute(new MAttribute(env, "rotationInA", "hgRotA",
                                     env.findDataType("float3")));
-        addAttribute(new MAttribute(env, "rotationInB", "hgRotB", 
+        addAttribute(new MAttribute(env, "rotationInB", "hgRotB",
                                     env.findDataType("float3")));
-        addAttribute(new MAttribute(env, "pivotInA", "pivinA", 
+        addAttribute(new MAttribute(env, "pivotInA", "pivinA",
                                     env.findDataType("float3")));
-        addAttribute(new MAttribute(env, "pivotInB", "pivinB", 
+        addAttribute(new MAttribute(env, "pivotInB", "pivinB",
                                     env.findDataType("float3")));
-        addAttribute(new MAttribute(env, "enableAngularMotor", "enAM", 
+        addAttribute(new MAttribute(env, "enableAngularMotor", "enAM",
                                     env.findDataType("bool")));
-        addAttribute(new MAttribute(env, "motorTargetVelocity", "mTV", 
+        addAttribute(new MAttribute(env, "motorTargetVelocity", "mTV",
                                     env.findDataType("double")));
-        addAttribute(new MAttribute(env, "maxMotorImpulse", "mMI", 
+        addAttribute(new MAttribute(env, "maxMotorImpulse", "mMI",
                                     env.findDataType("double")));
     }
 
@@ -237,15 +237,15 @@ class dHingeConstraint extends MNodeType {
 class dNailConstraint extends MNodeType {
     public dNailConstraint(final MEnv env) {
         super(env, "dNailConstraint");
-        addAttribute(new MAttribute(env, "inRigidBodyA", "inrbA", 
+        addAttribute(new MAttribute(env, "inRigidBodyA", "inrbA",
                                     env.findDataType("Message")));
-        addAttribute(new MAttribute(env, "inRigidBodyB", "inrbB", 
+        addAttribute(new MAttribute(env, "inRigidBodyB", "inrbB",
                                     env.findDataType("Message")));
-        addAttribute(new MAttribute(env, "damping", "dmp", 
+        addAttribute(new MAttribute(env, "damping", "dmp",
                                     env.findDataType("double")));
-        addAttribute(new MAttribute(env, "pivotInA", "pivA", 
+        addAttribute(new MAttribute(env, "pivotInA", "pivA",
                                     env.findDataType("float3")));
-        addAttribute(new MAttribute(env, "pivotInB", "pivB", 
+        addAttribute(new MAttribute(env, "pivotInB", "pivB",
                                     env.findDataType("float3")));
     }
 
@@ -262,27 +262,27 @@ class characterType extends MNodeType {
         super(env, "character");
         addSuperType(env.findNodeType("objectSet"));
         // @TODO attributes
-        addAttribute(new MAttribute(env, "attributeAliasList", "aal", 
+        addAttribute(new MAttribute(env, "attributeAliasList", "aal",
                                     env.findDataType("AttributeAlias")));
-        addAttribute(new MAttribute(env, "linearValues", "lv", 
+        addAttribute(new MAttribute(env, "linearValues", "lv",
                                     env.findDataType("float[]")));
-        addAttribute(new MAttribute(env, "unitlessValues", "uv", 
+        addAttribute(new MAttribute(env, "unitlessValues", "uv",
                                     env.findDataType("float[]")));
-        addAttribute(new MAttribute(env, "angularValues", "av", 
+        addAttribute(new MAttribute(env, "angularValues", "av",
                                     env.findDataType("float[]")));
-        addAttribute(new MAttribute(env, "timeValues", "tv", 
+        addAttribute(new MAttribute(env, "timeValues", "tv",
                                     env.findDataType("float[]")));
-        addAttribute(new MAttribute(env, "unitlessClipValues", "uc", 
+        addAttribute(new MAttribute(env, "unitlessClipValues", "uc",
                                     env.findDataType("float[]")));
-        addAttribute(new MAttribute(env, "animationMapping", "am", 
+        addAttribute(new MAttribute(env, "animationMapping", "am",
                                     env.findDataType("characterMapping")));
-        addAttribute(new MAttribute(env, "referenceMapping", "rm", 
+        addAttribute(new MAttribute(env, "referenceMapping", "rm",
                                     env.findDataType("characterMapping")));
-        addAttribute(new MAttribute(env, "clipIndexMap", "cim", 
+        addAttribute(new MAttribute(env, "clipIndexMap", "cim",
                                     env.findDataType("int[]")));
-        addAttribute(new MAttribute(env, "timelineClipStart", "tcs", 
+        addAttribute(new MAttribute(env, "timelineClipStart", "tcs",
                                     env.findDataType("time")));
-        addAttribute(new MAttribute(env, "timelineClipEnd", "tce", 
+        addAttribute(new MAttribute(env, "timelineClipEnd", "tce",
                                     env.findDataType("time")));
 
     }
@@ -292,20 +292,20 @@ class animClipType extends MNodeType {
     public animClipType(final MEnv env) {
         super(env, "animClip");
         addSuperType(env.findNodeType("dependNode"));
-        addAttribute(new MAttribute(env, "sourceStart", "ss", 
+        addAttribute(new MAttribute(env, "sourceStart", "ss",
                                     env.findDataType("time")));
 
-        addAttribute(new MAttribute(env, "sourceEnd", "se", 
+        addAttribute(new MAttribute(env, "sourceEnd", "se",
                                     env.findDataType("time")));
-        addAttribute(new MAttribute(env, "clipInstance", "ci", 
+        addAttribute(new MAttribute(env, "clipInstance", "ci",
                                     env.findDataType("bool")));
-        addAttribute(new MAttribute(env, "startFrame", "sf", 
+        addAttribute(new MAttribute(env, "startFrame", "sf",
                                     env.findDataType("time")));
-        addAttribute(new MAttribute(env, "enabled", "ea", 
+        addAttribute(new MAttribute(env, "enabled", "ea",
                                     env.findDataType("bool")));
-        addAttribute(new MAttribute(env, "postCycle", "ca", 
+        addAttribute(new MAttribute(env, "postCycle", "ca",
                                     env.findDataType("double")));
-        addAttribute(new MAttribute(env, "scale", "sc", 
+        addAttribute(new MAttribute(env, "scale", "sc",
                                     env.findDataType("double")));
     }
     protected void initNode(MNode result) {
@@ -319,29 +319,29 @@ class clipSchedulerType extends MNodeType {
     public clipSchedulerType(final MEnv env) {
         super(env, "clipScheduler");
         addSuperType(env.findNodeType("dependNode"));
-        addAttribute(new MAttribute(env, "clip", "cl", 
+        addAttribute(new MAttribute(env, "clip", "cl",
                                     new MArrayType(env, env.findDataType("Message"))));
-        addAttribute(new MAttribute(env, "start", "st", 
+        addAttribute(new MAttribute(env, "start", "st",
                                     env.findDataType("float[]")));
-        addAttribute(new MAttribute(env, "sourceStart", "ss", 
+        addAttribute(new MAttribute(env, "sourceStart", "ss",
                                     env.findDataType("float[]")));
-        addAttribute(new MAttribute(env, "sourceEnd", "se", 
+        addAttribute(new MAttribute(env, "sourceEnd", "se",
                                     env.findDataType("float[]")));
-        addAttribute(new MAttribute(env, "scale", "sc", 
+        addAttribute(new MAttribute(env, "scale", "sc",
                                     env.findDataType("float[]")));
-        addAttribute(new MAttribute(env, "hold", "h", 
+        addAttribute(new MAttribute(env, "hold", "h",
                                     env.findDataType("float[]")));
-        addAttribute(new MAttribute(env, "weightStyle", "ws", 
+        addAttribute(new MAttribute(env, "weightStyle", "ws",
                                     env.findDataType("int[]")));
-        addAttribute(new MAttribute(env, "preCycle", "cb", 
+        addAttribute(new MAttribute(env, "preCycle", "cb",
                                     env.findDataType("float[]")));
-        addAttribute(new MAttribute(env, "postCycle", "ca", 
+        addAttribute(new MAttribute(env, "postCycle", "ca",
                                     env.findDataType("float[]")));
-        addAttribute(new MAttribute(env, "track", "tr", 
+        addAttribute(new MAttribute(env, "track", "tr",
                                     env.findDataType("int[]")));
-        addAttribute(new MAttribute(env, "trackState", "ts", 
+        addAttribute(new MAttribute(env, "trackState", "ts",
                                     env.findDataType("int[]")));
-        addAttribute(new MAttribute(env, "numTracks", "nt", 
+        addAttribute(new MAttribute(env, "numTracks", "nt",
                                     env.findDataType("int")));
 
     }
@@ -352,7 +352,7 @@ class clipLibraryType extends MNodeType {
     public clipLibraryType(final MEnv env) {
         super(env, "clipLibrary");
         addSuperType(env.findNodeType("dependNode"));
-        addAttribute(new MAttribute(env, "clipEvalList", "cel", 
+        addAttribute(new MAttribute(env, "clipEvalList", "cel",
                                     new MArrayType(env, new MCompoundType(env,
                                                                      "clipEvalList.cel") {
                                             {
@@ -372,7 +372,7 @@ class clipLibraryType extends MNodeType {
         addAttribute(new MAttribute(env, "sourceClip", "sc",
                                     new MArrayType(env,
                                                    env.findDataType("Message"))));
-        
+
         addAttribute(new MAttribute(env, "clip", "cl",
                                     new MArrayType(env,
                                                    env.findDataType("Message"))));
@@ -386,12 +386,12 @@ class clipLibraryType extends MNodeType {
                                         }
                                     }));
 
-                                                      
+
     }
 }
 
 public class MEnv {
-    
+
     float  playbackStart;
     float playbackEnd;
 
@@ -454,23 +454,23 @@ public class MEnv {
                 public void visitEnv(MEnv env) {
                     ps.println("MEnv:");
                 }
-                
+
                 public void visitNodeType(MNodeType type) {
                     ps.println("Node Type: "+ type.getName());
                 }
-                
+
                 public void visitNode(MNode node) {
                     ps.println("Node: "+ node.getName());
                 }
-                
+
                 public void visitDataType(MDataType type) {
                     ps.println("Data type: "+ type.getName());
                 }
-                
+
                 public void visitAttribute(MAttribute attr) {
                     ps.println("Attribute : "+ attr);
                 }
-                
+
                 public void visitNodeAttribute(MNode node, MAttribute attr, MData value) {
                     ps.println("Attribute value: " + node.getName() +"."+attr.getShortName() + " = "+ value);
                 }
@@ -499,7 +499,7 @@ public class MEnv {
     public MNode createNode(String typeName, String name) {
         return createNode(findNodeType(typeName), name);
     }
-    
+
     public MNode createNode(MNodeType type, String name) {
         if (type == null) {
             return null;
@@ -594,7 +594,7 @@ public class MEnv {
             addAttribute(new MAttribute(env, "translateMinusRotatePivot", "tmrp", t));
             addAttribute(new MAttribute(env, "worldMatrix", "wm", env.findDataType("matrix")));
             String[] alias = new String[]  {
-                "t", "r", "s", "rp", "rpt", "sp", "spt", "ra", "tmrp", 
+                "t", "r", "s", "rp", "rpt", "sp", "spt", "ra", "tmrp",
             };
             String[] comps = new String[] { "x", "y", "z" };
             for (int i = 0; i < alias.length; i++) {
@@ -616,14 +616,14 @@ public class MEnv {
         Field(final MEnv env) {
             super(env, "field");
             addSuperType(env.findNodeType("dynBase"));
-            addAttribute(new MAttribute(env, "magnitude", "mag", 
+            addAttribute(new MAttribute(env, "magnitude", "mag",
                                         env.findDataType("double")));
-            addAttribute(new MAttribute(env, "attenuation", "att", 
+            addAttribute(new MAttribute(env, "attenuation", "att",
                                         env.findDataType("double")));
 
             addAttribute(new MAttribute(env, "maxDistance", "com/javafx/importers/max",
                                         env.findDataType("double")));
-            addAttribute(new MAttribute(env, "falloffCurve", "fc", 
+            addAttribute(new MAttribute(env, "falloffCurve", "fc",
                                         new MArrayType(env,
                                                    new MCompoundType(env,
                                                                      "field.fc") {
@@ -631,18 +631,18 @@ public class MEnv {
                                                            addField("fcp",
                                                                     env.findDataType("float"),
                                                                     null);
-                                                           
+
                                                            addField("fcfv",
                                                                     env.findDataType("float"),
                                                                     null);
-                                                           
+
                                                            addField("fci",
                                                                     env.findDataType("enum"),
                                                                     null);
-                                                           
+
                                                        }
                                                    })));
-            addAttribute(new MAttribute(env, "inputData", "ind", 
+            addAttribute(new MAttribute(env, "inputData", "ind",
                                         new MArrayType(env,
                                                    new MCompoundType(env,
                                                                     "field.ind") {
@@ -650,23 +650,23 @@ public class MEnv {
                                                            addField("inp",
                                                                     env.findDataType("float3[]"),
                                                                     null);
-                                                           
+
                                                            addField("inv",
                                                                     env.findDataType("float3[]"),
                                                                     null);
-                                                           
+
                                                            addField("im",
                                                                     env.findDataType("float[]"),
                                                                     null);
-                                                           
+
                                                            addField("dt",
                                                                     env.findDataType("double"),
                                                                     null);
-                                                           
+
                                                        }
                                                    })));
-                                                         
-            addAttribute(new MAttribute(env, "outputForce", "of", 
+
+            addAttribute(new MAttribute(env, "outputForce", "of",
                                         env.findDataType("float3[]")));
         }
 
@@ -682,7 +682,7 @@ public class MEnv {
         RadialField(final MEnv env) {
             super(env, "radialField");
             addSuperType(env.findNodeType("field"));
-            addAttribute(new MAttribute(env, "radialType", "typ", 
+            addAttribute(new MAttribute(env, "radialType", "typ",
                                         env.findDataType("double")));
         }
     }
@@ -691,7 +691,7 @@ public class MEnv {
         VortexField(final MEnv env) {
             super(env, "vortexField");
             addSuperType(env.findNodeType("field"));
-            addAttribute(new MAttribute(env, "axis", "ax", 
+            addAttribute(new MAttribute(env, "axis", "ax",
                                         env.findDataType("float3")));
             addAlias("axx", "ax.x");
             addAlias("axy", "ax.y");
@@ -703,7 +703,7 @@ public class MEnv {
         GravityField(final MEnv env) {
             super(env, "gravityField");
             addSuperType(env.findNodeType("field"));
-            addAttribute(new MAttribute(env, "direction", "d", 
+            addAttribute(new MAttribute(env, "direction", "d",
                                         env.findDataType("float3")));
             addAlias("dx", "d.x");
             addAlias("dy", "d.y");
@@ -727,7 +727,7 @@ public class MEnv {
             addAlias("pcr", "pc.x");
             addAlias("pcg", "pc.y");
             addAlias("pcb", "pc.z");
-            addAttribute(new MAttribute(env, "output", "ot", 
+            addAttribute(new MAttribute(env, "output", "ot",
                                         new MArrayType(env, env.findDataType("Message"))));
             addAttribute(new MAttribute(env, "spread", "spr", env.findDataType("double")));
         }
@@ -785,7 +785,7 @@ public class MEnv {
         ParentConstraint(final MEnv env) {
             super(env, "parentConstraint");
             addSuperType(env.findNodeType("constraint"));
-            addAttribute(new MAttribute(env, "target", "tg", 
+            addAttribute(new MAttribute(env, "target", "tg",
                                         new MArrayType(env, new MCompoundType(env, "parentConstraint.tg") {
                                                 {
                                                     addField("tt", env.findDataType("double3"), null);
@@ -799,7 +799,7 @@ public class MEnv {
             addAlias("rsrrx", "rsrr.x");
             addAlias("rsrry", "rsrr.y");
             addAlias("rsrrz", "rsrr.z");
-            
+
             addAttribute(new MAttribute(env, "offset", "o", env.findDataType("double3")));
             addAlias("ox", "o.x");
             addAlias("oy", "o.y");
@@ -815,7 +815,7 @@ public class MEnv {
         OrientConstraint(final MEnv env) {
             super(env, "orientConstraint");
             addSuperType(env.findNodeType("constraint"));
-            addAttribute(new MAttribute(env, "target", "tg", 
+            addAttribute(new MAttribute(env, "target", "tg",
                                         new MArrayType(env, new MCompoundType(env, "orientConstraint.tg") {
                                                 {
                                                     addField("tt", env.findDataType("double3"), null);
@@ -833,7 +833,7 @@ public class MEnv {
         AimConstraint(final MEnv env) {
             super(env, "aimConstraint");
             addSuperType(env.findNodeType("constraint"));
-            addAttribute(new MAttribute(env, "target", "tg", 
+            addAttribute(new MAttribute(env, "target", "tg",
                                         new MArrayType(env, new MCompoundType(env, "aimConstraint.tg") {
                                                 {
                                                     addField("tt", env.findDataType("double3"), null);
@@ -882,7 +882,7 @@ public class MEnv {
             super(env, "poleVectorConstraint");
             addSuperType(env.findNodeType("pointConstraint"));
             addAttribute(new MAttribute(env, "pivotSpace", "ps", env.findDataType("matrix")));
-            addAttribute(new MAttribute(env, "target", "tg", 
+            addAttribute(new MAttribute(env, "target", "tg",
                                         new MCompoundType(env, "poleVectorConstraint.tg") {
                                             {
                                                 addField("tt", env.findDataType("double3"), null);
@@ -952,9 +952,9 @@ public class MEnv {
         GeometryFilterNodeType(final MEnv env) {
             super(env, "geometryFilter");
             addSuperType(env.findNodeType("dependNode"));
-            addAttribute(new MAttribute(env, "outputGeometry", "og", 
+            addAttribute(new MAttribute(env, "outputGeometry", "og",
                                         new MArrayType(env, env.findDataType("Message"))));;
-            addAttribute(new MAttribute(env, "input", "ip", 
+            addAttribute(new MAttribute(env, "input", "ip",
                                         new MArrayType(env, new MCompoundType(env,
                                                                               "geometryFilter.ip") {
                                                 {
@@ -962,7 +962,7 @@ public class MEnv {
                                                     addField("gi", env.findDataType("int"), null);
                                                 }
                                             })));
-                                                                             
+
         }
     }
 
@@ -985,7 +985,7 @@ public class MEnv {
                                                        new MCompoundType(env,
                                                                          "blendShape.it") {
                                                 {
-                                                    
+
                                                     addField("itg",
                                                              new MArrayType(env,  new MCompoundType(env, "blendShape.it.itg") {
                                                                      {
@@ -1002,7 +1002,7 @@ public class MEnv {
                                                              null);
                                                 }
                                             })));
-                                                          
+
         }
     }
 
@@ -1031,9 +1031,9 @@ public class MEnv {
         MaterialInfoNodeType(MEnv env) {
             super(env, "materialInfo");
             addSuperType(env.findNodeType("dependNode"));
-            addAttribute(new MAttribute(env, "shadingGroup", "sg", 
+            addAttribute(new MAttribute(env, "shadingGroup", "sg",
                                         env.findDataType("Message")));
-            addAttribute(new MAttribute(env, "material", "m", 
+            addAttribute(new MAttribute(env, "material", "m",
                                         env.findDataType("Message")));
         }
     }
@@ -1295,7 +1295,7 @@ public class MEnv {
             addAlias("ot.x", "otr");
             addAlias("ot.y", "otg");
             addAlias("ot.z", "otb");
-            addAttribute(new MAttribute(env, "inputs", "cs", 
+            addAttribute(new MAttribute(env, "inputs", "cs",
                                         new MArrayType(env,
                                                 new MCompoundType(env,
                                                                      "layeredTexture.cs") {
@@ -1309,7 +1309,7 @@ public class MEnv {
                                                                         }
                                                                     },
                                                                     null);
-                                                           
+
                                                            addField("a",
                                                                     env.findDataType("float"),
                                                                     null);
@@ -1508,7 +1508,7 @@ public class MEnv {
             addAlias("itg", "it.y");
             addAlias("itb", "it.z");
         }
-        
+
         protected void initNode(MNode node) {
             MFloat dc = (MFloat)node.getAttr("dc");
             dc.set(.8f);
@@ -1566,7 +1566,7 @@ public class MEnv {
             addAlias("itg", "it.y");
             addAlias("itb", "it.z");
         }
-        
+
         protected void initNode(MNode node) {
             MFloat dc = (MFloat)node.getAttr("dc");
             dc.set(.8f);
@@ -1604,7 +1604,7 @@ public class MEnv {
         PhongNodeType(MEnv env) {
             super(env, "phong");
             addSuperType(env.findNodeType("reflect"));
-            addAttribute(new MAttribute(env, 
+            addAttribute(new MAttribute(env,
                                         "cosinePower",
                                         "cp",
                                         env.findDataType("float")));
@@ -1620,7 +1620,7 @@ public class MEnv {
         PhongENodeType(MEnv env) {
             super(env, "phongE");
             addSuperType(env.findNodeType("reflect"));
-            addAttribute(new MAttribute(env, 
+            addAttribute(new MAttribute(env,
                                         "cosinePower",
                                         "cp",
                                         env.findDataType("float")));
@@ -1636,7 +1636,7 @@ public class MEnv {
         BlinnNodeType(MEnv env) {
             super(env, "blinn");
             addSuperType(env.findNodeType("reflect"));
-            addAttribute(new MAttribute(env, 
+            addAttribute(new MAttribute(env,
                                         "eccentricity",
                                         "ec",
                                         env.findDataType("float")));
@@ -1715,7 +1715,7 @@ public class MEnv {
                     super(env, new ogType(env));
                 }
             }
-            
+
             static class ogsType extends MCompoundType {
                 public ogsType(MEnv env) {
                     super(env, "dagNode.iog.og[]");
@@ -2048,11 +2048,11 @@ Less or Equal */
         SpotLightType(MEnv env) {
             super(env, "spotLight");
             addSuperType(env.findNodeType("nonExtendedLightShapeNode"));
-            addAttribute(new MAttribute(env, "coneAngle", "ca", 
+            addAttribute(new MAttribute(env, "coneAngle", "ca",
                                         env.findDataType("double")));
-            addAttribute(new MAttribute(env, "penumbraAngle", "pa", 
+            addAttribute(new MAttribute(env, "penumbraAngle", "pa",
                                         env.findDataType("double")));
-            addAttribute(new MAttribute(env, "dropoff", "dro", 
+            addAttribute(new MAttribute(env, "dropoff", "dro",
                                         env.findDataType("double")));
         }
         protected void initNode(MNode result) {
@@ -2193,7 +2193,7 @@ Less or Equal */
             addAlias("ioz", "ior.z");
             addAttribute(new MAttribute(env, "isKinematic", "kin", env.findDataType("bool")));
             addAttribute(new MAttribute(env, "active", "act", env.findDataType("bool")));
-            addAttribute(new MAttribute(env, "fieldData", "fld", 
+            addAttribute(new MAttribute(env, "fieldData", "fld",
                                         new MCompoundType(env, "rigidBody.fild") {
                                             {
                                                 addField("fdp",
@@ -2211,11 +2211,11 @@ Less or Equal */
                                             }
                                         }));;
 
-            addAttribute(new MAttribute(env, "inputForce", "ifr", 
+            addAttribute(new MAttribute(env, "inputForce", "ifr",
                                         env.findDataType("float3[]")));
         }
 
-        
+
         protected void initNode(MNode result) {
             MBool active = (MBool)result.getAttr("active");
             active.set(true);
@@ -2249,13 +2249,13 @@ Less or Equal */
         ParticleType(MEnv env) {
             super(env, "particle");
             addSuperType(env.findNodeType("deformableShape"));
-            addAttribute(new MAttribute(env, "newParticles", "npt", 
+            addAttribute(new MAttribute(env, "newParticles", "npt",
                                         new MArrayType(env, env.findDataType("Message"))));
             addAttribute(new MAttribute(env, "lifeSpanMode", "lfm", env.findDataType("enum")));
             addAttribute(new MAttribute(env, "lifeSpanRandom", "lfr", env.findDataType("double")));
             addAttribute(new MAttribute(env, "emissionToWorld", "eiw", env.findDataType("bool")));
             addAttribute(new MAttribute(env, "inputForce", "ifc", env.findDataType("float3[]")));
-                                        
+
         }
 
         protected void initNode(MNode result) {
@@ -2290,9 +2290,9 @@ Less or Equal */
                                         "currentUVSet",
                                         "cuvs",
                                         env.findDataType("string")));
-            addAttribute(new MAttribute(env, "tweakLocation", "twl", 
+            addAttribute(new MAttribute(env, "tweakLocation", "twl",
                                         env.findDataType("Message")));
-                                        
+
         }
     }
 
@@ -2308,9 +2308,9 @@ Less or Equal */
             super(env, "nurbsCurve");
             addSuperType(env.findNodeType("curveShape"));
             addAttribute(new MAttribute(env, "cached", "cc", env.findDataType("nurbsCurve")));
-            addAttribute(new MAttribute(env, "worldSpace", "ws", 
+            addAttribute(new MAttribute(env, "worldSpace", "ws",
                                         new MArrayType(env, env.findDataType("nurbsCurve"))));
-            addAttribute(new MAttribute(env, "local", "l", 
+            addAttribute(new MAttribute(env, "local", "l",
                                         env.findDataType("nurbsCurve")));
         }
     }
@@ -2326,19 +2326,19 @@ Less or Equal */
         MeshNodeType(MEnv env) {
             super(env, "mesh");
             addSuperType(env.findNodeType("surfaceShape"));
-            addAttribute(new MAttribute(env, "vrts", "vt", 
+            addAttribute(new MAttribute(env, "vrts", "vt",
                                         env.findDataType("float3[]")));
-            addAttribute(new MAttribute(env, "pnts", "pt", 
+            addAttribute(new MAttribute(env, "pnts", "pt",
                                         env.findDataType("float3[]")));
             addAttribute(new MAttribute(env, "face", "fc",
                                         env.findDataType("polyFace")));
             addAttribute(new MAttribute(env, "edge", "ed",
                                         env.findDataType("int3[]")));
-            addAttribute(new MAttribute(env, "normals", "n", 
+            addAttribute(new MAttribute(env, "normals", "n",
                                         env.findDataType("float3[]")));
-            addAttribute(new MAttribute(env, "inMesh", "i", 
+            addAttribute(new MAttribute(env, "inMesh", "i",
                                         env.findDataType("Message")));
-            addAttribute(new MAttribute(env, "outMesh", "o", 
+            addAttribute(new MAttribute(env, "outMesh", "o",
                                         env.findDataType("Message")));
         }
     }
@@ -2448,7 +2448,7 @@ Less or Equal */
 
     static class hwShaderType extends MNodeType {
         hwShaderType(MEnv env) {
-            super(env, "hwShader"); 
+            super(env, "hwShader");
             addSuperType(env.findNodeType("dependNode"));
             addAttribute(new MAttribute(env, "outColor", "oc",
                                         env.findDataType("float3")));
@@ -2459,7 +2459,7 @@ Less or Equal */
 
     static class cgfxShaderType extends MNodeType {
         cgfxShaderType(MEnv env) {
-            super(env, "cgfxShader"); 
+            super(env, "cgfxShader");
             addSuperType(env.findNodeType("hwShader"));
             addAttribute(new MAttribute(env, "shader", "s",
                                         env.findDataType("string")));
@@ -2524,7 +2524,7 @@ Less or Equal */
 
         addDataType(new MArrayType(this, findDataType("string")));
         aliasDataType("stringArray", "string[]");
-        
+
 
         // NODE TYPES
         addNodeType(new DagNodeType(this));
@@ -2540,7 +2540,7 @@ Less or Equal */
         addNodeType(new RigidBodyType(this));
 
         addNodeType(new TransformNodeType(this));
-        
+
         addNodeType(new DynBase(this));
         addNodeType(new Field(this));
         addNodeType(new RadialField(this));
@@ -2652,7 +2652,7 @@ Less or Equal */
 
     Map<MNode, Set<MConnection> > connections = new HashMap();
     Map<MNode, Set<MConnection> > invConnections = new HashMap();
-    
+
     public void connectAttr(String src,  String target) {
         MPath srcPath = new MPath(this, src);
         MNode srcNode = srcPath.getTargetNode();

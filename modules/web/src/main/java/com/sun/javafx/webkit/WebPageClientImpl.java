@@ -50,7 +50,7 @@ public final class WebPageClientImpl implements WebPageClient<WebView> {
     private static final boolean backBufferSupported;
     private static WebConsoleListener consoleListener = null;
     private final Accessor accessor;
-      
+
     static {
         backBufferSupported = Boolean.valueOf(
                 AccessController.doPrivileged((PrivilegedAction<String>) () -> System.getProperty(

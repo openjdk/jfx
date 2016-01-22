@@ -68,7 +68,7 @@ public class HelloLineChart extends Application {
 
         return lc;
     }
-    
+
     /**
      * @param args the command line arguments
      */

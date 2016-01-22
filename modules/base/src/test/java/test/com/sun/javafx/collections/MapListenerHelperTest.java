@@ -46,7 +46,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 public class MapListenerHelperTest {
-    
+
     private InvalidationListenerMock[] invalidationListenerMock;
 
     private MockMapObserver<Object, Object>[] changeListenerMock;
@@ -152,7 +152,7 @@ public class MapListenerHelperTest {
         invalidationListenerMock[0].check(map, 1);
         assertEquals(1, changeListenerMock[0].getCallsNumber());
     }
-    
+
     @Test
     public void testInvalidation_ChangeInPulse() {
         final InvalidationListener listener = observable -> {
@@ -248,7 +248,7 @@ public class MapListenerHelperTest {
         invalidationListenerMock[2].check(map, 1);
         invalidationListenerMock[3].check(map, 1);
     }
-    
+
     @Test
     public void testGeneric_AddInvalidationInPulse() {
         final MapChangeListener<Object, Object> addListener = new MapChangeListener<Object, Object>() {

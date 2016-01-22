@@ -105,20 +105,20 @@ public class SpeakersPage extends Page implements ChangeListener<String> {
     private static final int IMG_GAP = 12;
     private static final int MIN_HEIGHT = GAP + PIC_SIZE + 10 + GAP;
     private static final int TEXT_LEFT = GAP+PIC_SIZE+IMG_GAP;
-    
+
     private final SpeakerList speakersList = new SpeakerList();
     private final SearchBox searchBox = new SearchBox();
     private final Map<Speaker,Image> speakerImageCache = new HashMap<>();
-    
-    /** 
-     * index of currently expanded cell. We need to keep tack of the cell that 
-     * is expanded so that when you scroll away from it and its cell is reused 
+
+    /**
+     * index of currently expanded cell. We need to keep tack of the cell that
+     * is expanded so that when you scroll away from it and its cell is reused
      * then scroll back we can put the cell back in the expanded state.
      */
     private int expandedCellIndex = -1;
     /**
-     * the currently expanded cell or null if no cell is expanded. This is used 
-     * to make sure only once cell is expanded at a time. So when we expand a 
+     * the currently expanded cell or null if no cell is expanded. This is used
+     * to make sure only once cell is expanded at a time. So when we expand a
      * new cell we can collapse this one.
      */
     private SpeakerListCell expandedCell = null;
@@ -134,7 +134,7 @@ public class SpeakersPage extends Page implements ChangeListener<String> {
         speakersList.setItems(dataService.getSpeakers());
         getChildren().setAll(speakersList,searchBox);
         searchBox.textProperty().addListener(this);
-        
+
         // HORRIFIC!! The problem is that on Beagle right now, we're not seeing the
         // virtual keyboard layer getting hidden. This is likely a bug in the window
         // hardware layer support. This code will just move the keyboard out of the way.
@@ -157,7 +157,7 @@ public class SpeakersPage extends Page implements ChangeListener<String> {
             }
         });
     }
-    
+
     @Override public void reset() {
         searchBox.setText("");
         speakersList.scrollTo(0);
@@ -173,7 +173,7 @@ public class SpeakersPage extends Page implements ChangeListener<String> {
         speakersList.setLayoutX(12);
         speakersList.setLayoutY(53);
     }
-    
+
     /**
      * Handle text searching
      */
@@ -210,15 +210,15 @@ public class SpeakersPage extends Page implements ChangeListener<String> {
                 }
                 if (match) results.add(s);
             }
-            System.out.println("Setting data..."); 
-            long t0 = System.currentTimeMillis(); 
+            System.out.println("Setting data...");
+            long t0 = System.currentTimeMillis();
             items.setAll(results);
-            //ObservableList<Speaker> empty = FXCollections.observableArrayList(); 
-            //speakersList.setItems(empty); 
-            //items.clear(); 
-            //speakersList.setItems(FXCollections.observableArrayList(results)); 
-            long t1 = System.currentTimeMillis(); 
-            System.out.println("Done: " + (t1 - t0)); 
+            //ObservableList<Speaker> empty = FXCollections.observableArrayList();
+            //speakersList.setItems(empty);
+            //items.clear();
+            //speakersList.setItems(FXCollections.observableArrayList(results));
+            long t1 = System.currentTimeMillis();
+            System.out.println("Done: " + (t1 - t0));
 
         }
         long end = System.currentTimeMillis();
@@ -227,14 +227,14 @@ public class SpeakersPage extends Page implements ChangeListener<String> {
         expandedCellIndex = -1;
         expandedCell = null;
     }
-    
-    
+
+
     /**
-     * Helper method used to update a session row in speakers extended info to 
+     * Helper method used to update a session row in speakers extended info to
      * show or not show a star for when it added to sessions to attend.
-     * 
+     *
      * @param sessionTitle The label to add/remove star from
-     * @param show true if the star should be added to the label, false if it 
+     * @param show true if the star should be added to the label, false if it
      *             should be removed.
      */
     private static void updateStar(Label sessionTitle, boolean show) {
@@ -246,9 +246,9 @@ public class SpeakersPage extends Page implements ChangeListener<String> {
             sessionTitle.setGraphic(null);
         }
     }
-    
+
     /**
-     * Custom list for speakers, will all standard CSS removed an using our 
+     * Custom list for speakers, will all standard CSS removed an using our
      * custom SpeakerListCell.
      */
     private class SpeakerList extends ListView<Speaker> implements Callback<ListView<Speaker>, ListCell<Speaker>>{
@@ -268,8 +268,8 @@ public class SpeakersPage extends Page implements ChangeListener<String> {
     }
 
     /**
-     * The main body of the speaker list cell. This is separate from the cell 
-     * so that it can be cached and not need to be updated while the cells clip 
+     * The main body of the speaker list cell. This is separate from the cell
+     * so that it can be cached and not need to be updated while the cells clip
      * is changing during expansion.
      */
     private final static class SpeakerListCellBody extends Region {
@@ -294,7 +294,7 @@ public class SpeakersPage extends Page implements ChangeListener<String> {
             image.setFitHeight(PIC_SIZE);
             getChildren().addAll(name,company,dividerLine,shadow,imageBorder,image);
         }
-        
+
         @Override protected void layoutChildren() {
             final int w = (int)getWidth();
             final int h = (int)getHeight();
@@ -312,10 +312,10 @@ public class SpeakersPage extends Page implements ChangeListener<String> {
             company.setLayoutY(centerY+13);
         }
     }
-    
+
     /**
      * The extended info section of the speaker list cell. This is separate from
-     * the cell so that it can be cached and not need to be updated while the 
+     * the cell so that it can be cached and not need to be updated while the
      * cells clip is changing during expansion.
      */
     private final static class SpeakerListCellExtended extends GridPane {
@@ -348,13 +348,13 @@ public class SpeakersPage extends Page implements ChangeListener<String> {
             sessionsList.getStyleClass().setAll("speaker-session-list");
             sessionsList.setFillWidth(true);
             GridPane.setConstraints(sessionsList, 1, 2,1,1, HPos.LEFT, VPos.TOP, Priority.ALWAYS, Priority.NEVER);
-            
+
             getChildren().addAll(jobTitleText, jobTitle, bioText, bio, sessionsText,sessionsList);
         }
     }
-    
+
     /**
-     * Custom list cell for the speakers list. It uses a pattern to avoid 
+     * Custom list cell for the speakers list. It uses a pattern to avoid
      * standard list cell skin to have minimal overhead.
      */
     private class SpeakerListCell extends ListCell<Speaker> implements Skin<SpeakerListCell>, EventHandler {
@@ -369,7 +369,7 @@ public class SpeakersPage extends Page implements ChangeListener<String> {
                 requestLayout();
             }
         };
-        
+
         private SpeakerListCell() {
             super();
             // we don't need any of the labeled functionality of the default cell skin, so we replace skin with our own
@@ -398,14 +398,14 @@ public class SpeakersPage extends Page implements ChangeListener<String> {
             clip.setWidth(width);
             clip.setHeight(height);
         }
-        
+
         private Timeline expansionTimeline = null;
-        
+
         @Override public void handle(Event t) {
             final double e = this.expansion.get();
             expandCollapse(this.expansion.get() < 1);
         }
-        
+
         private void expandCollapse(boolean expand) {
             if (expansionTimeline != null) expansionTimeline.stop();
             if (expand) {
@@ -469,7 +469,7 @@ public class SpeakersPage extends Page implements ChangeListener<String> {
                 getChildren().remove(expandedContent);
             }
         }
-        
+
         @Override protected Node impl_pickNodeLocal(double localX, double localY) {
             if (contains(localX, localY)) {
                 if (this.expansion.get() > 0) {
@@ -526,7 +526,7 @@ public class SpeakersPage extends Page implements ChangeListener<String> {
                     body.image.setImage(img);
                 } else {
                     body.image.setImage(DUKE_48);
-                }  
+                }
                 if (getIndex() == expandedCellIndex) {
                     expansion.set(1);
                 } else if (expansion.get() == 1) {
@@ -551,7 +551,7 @@ public class SpeakersPage extends Page implements ChangeListener<String> {
                         }
                         first = false;
                     }
-                    
+
                 }
             }
         }
@@ -561,7 +561,7 @@ public class SpeakersPage extends Page implements ChangeListener<String> {
         @Override public Node getNode() { return body; }
         @Override public void dispose() {}
     }
-    
+
     private class SessionClickHandler implements EventHandler<MouseEvent>, Runnable {
         private final Session session;
         private final SessionTime sessionTime;
@@ -593,6 +593,6 @@ public class SpeakersPage extends Page implements ChangeListener<String> {
         @Override public void run() {
             updateStar(sessionTitle, sessionTime.getEvent() != null);
         }
-        
+
     }
 }

@@ -26,7 +26,7 @@
 //    A SentinelLinkedList is a linked list with dummy head and tail sentinels,
 //    which allow for branch-less insertion and removal, and removal without a
 //    pointer to the list.
-//    
+//
 //    Requires: Node is a concrete class with:
 //        Node(SentinelTag);
 //        void setPrev(Node*);
@@ -49,27 +49,27 @@ public:
         , m_prev(0)
     {
     }
-    
+
     BasicRawSentinelNode()
         : m_next(0)
         , m_prev(0)
     {
     }
-    
+
     void setPrev(BasicRawSentinelNode* prev) { m_prev = prev; }
     void setNext(BasicRawSentinelNode* next) { m_next = next; }
-    
+
     T* prev() { return static_cast<T*>(m_prev); }
     T* next() { return static_cast<T*>(m_next); }
-    
+
     bool isOnList() const
     {
         ASSERT(!!m_prev == !!m_next);
         return !!m_prev;
     }
-    
+
     void remove();
-    
+
 private:
     BasicRawSentinelNode* m_next;
     BasicRawSentinelNode* m_prev;
@@ -83,12 +83,12 @@ public:
 
     void push(T*);
     static void remove(T*);
-    
+
     bool isOnList(T*);
 
     iterator begin();
     iterator end();
-    
+
     bool isEmpty() { return begin() == end(); }
 
 private:
@@ -127,7 +127,7 @@ template <typename T, typename RawNode> inline void SentinelLinkedList<T, RawNod
     ASSERT(node);
     ASSERT(!node->prev());
     ASSERT(!node->next());
-    
+
     RawNode* prev = &m_headSentinel;
     RawNode* next = m_headSentinel.next();
 
@@ -143,13 +143,13 @@ template <typename T, typename RawNode> inline void SentinelLinkedList<T, RawNod
     ASSERT(node);
     ASSERT(!!node->prev());
     ASSERT(!!node->next());
-    
+
     RawNode* prev = node->prev();
     RawNode* next = node->next();
 
     prev->setNext(next);
     next->setPrev(prev);
-    
+
     node->setPrev(0);
     node->setNext(0);
 }
@@ -158,12 +158,12 @@ template <typename T, typename RawNode> inline bool SentinelLinkedList<T, RawNod
 {
     if (!node->isOnList())
         return false;
-    
+
     for (T* iter = begin(); iter != end(); iter = iter->next()) {
         if (iter == node)
             return true;
     }
-    
+
     return false;
 }
 

@@ -43,30 +43,30 @@ import org.junit.Test;
 import javafx.scene.chart.CategoryAxis;
 
 /**
- * All public members of CatgoryAxis are tested here . 
+ * All public members of CatgoryAxis are tested here .
  * @author srikalyc
  */
 public class CategoryAxisTest {
     private CategoryAxis axis;//Empty string
     private AxisHelper helper;
-    
+
     public CategoryAxisTest() {
         helper = new AxisHelper();
     }
-    
+
     @Before public void setup() {
         if (axis == null) {
             axis = new CategoryAxis();
         }
         helper.setAxis(axis);
     }
-    
-   
-   
+
+
+
     /*********************************************************************
      * Tests for default values                                         *
      ********************************************************************/
-    
+
     @Test public void defaultStartMargin() {
         assertEquals(axis.getStartMargin(), 5.0 , 0.0);
     }
@@ -91,7 +91,7 @@ public class CategoryAxisTest {
     /*********************************************************************
      * Tests for property binding                                        *
      ********************************************************************/
-    
+
     @Test public void checkStartMarginPropertyBind() {
         DoubleProperty objPr = new SimpleDoubleProperty(56.0);
         axis.startMarginProperty().bind(objPr);
@@ -99,7 +99,7 @@ public class CategoryAxisTest {
         objPr.setValue(23.0);
         assertEquals("startMarginProperty cannot be bound", axis.startMarginProperty().getValue(),23.0,0.0);
     }
-    
+
     @Test public void checkEndMarginPropertyBind() {
         DoubleProperty objPr = new SimpleDoubleProperty(56.0);
         axis.endMarginProperty().bind(objPr);
@@ -107,8 +107,8 @@ public class CategoryAxisTest {
         objPr.setValue(23.0);
         assertEquals("endMarginProperty cannot be bound", axis.endMarginProperty().getValue(),23.0,0.0);
     }
-    
-    
+
+
     @Test public void checkGapStartAndEndPropertyBind() {
         BooleanProperty objPr = new SimpleBooleanProperty(true);
         axis.gapStartAndEndProperty().bind(objPr);
@@ -116,12 +116,12 @@ public class CategoryAxisTest {
         objPr.setValue(false);
         assertFalse("gapStartAndEndProperty cannot be bound", axis.gapStartAndEndProperty().getValue());
     }
-    
-    
+
+
     @Test public void checkCategorySpacingReadOnlyCannotBind() {
         assertTrue(axis.categorySpacingProperty() instanceof ReadOnlyDoubleProperty);
     }
-    
+
     @Test public void startMarginPropertyHasBeanReference() {
         assertSame(axis, axis.startMarginProperty().getBean());
     }
@@ -155,7 +155,7 @@ public class CategoryAxisTest {
     }
 
 
-    
+
     /*********************************************************************
      * CSS related Tests                                                 *
      ********************************************************************/
@@ -219,37 +219,37 @@ public class CategoryAxisTest {
     /*********************************************************************
      * Miscellaneous Tests                                         *
      ********************************************************************/
-    
+
     @Test public void setStartMarginAndSeeValueIsReflectedInModel() {
         axis.setStartMargin(30.0);
         assertEquals(axis.startMarginProperty().getValue(), 30.0, 0.0);
     }
-    
+
     @Test public void setStartMarginAndSeeValue() {
         axis.setStartMargin(30.0);
         assertEquals(axis.getStartMargin(), 30.0, 0.0);
     }
-    
+
     @Test public void setEndMarginAndSeeValueIsReflectedInModel() {
         axis.setEndMargin(30.0);
         assertEquals(axis.endMarginProperty().getValue(), 30.0, 0.0);
     }
-    
+
     @Test public void setEndMarginAndSeeValue() {
         axis.setEndMargin(30.0);
         assertEquals(axis.getEndMargin(), 30.0, 0.0);
     }
-    
+
     @Test public void setGapStartAndEndAndSeeValueIsReflectedInModel() {
         axis.setGapStartAndEnd(false);
         assertFalse(axis.gapStartAndEndProperty().getValue());
     }
-    
+
     @Test public void setGapStartAndEndAndSeeValue() {
         axis.setTickLabelsVisible(true);
         assertTrue(axis.isGapStartAndEnd());
     }
-    
+
     @Test public void setCategoriesAndSeeValue() {
         ObservableList<String> list = FXCollections.observableArrayList();
         axis.setCategories(list);
@@ -267,5 +267,5 @@ public class CategoryAxisTest {
         axis.setCategories(FXCollections.observableArrayList("A", "B", "C", "D"));
         assertTrue(Double.isNaN(axis.getDisplayPosition("E")));
     }
-    
+
 }

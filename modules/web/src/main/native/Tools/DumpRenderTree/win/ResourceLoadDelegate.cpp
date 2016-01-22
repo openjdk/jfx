@@ -6,13 +6,13 @@
  * are met:
  *
  * 1.  Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer. 
+ *     notice, this list of conditions and the following disclaimer.
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
- *     documentation and/or other materials provided with the distribution. 
+ *     documentation and/or other materials provided with the distribution.
  * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
- *     from this software without specific prior written permission. 
+ *     from this software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY APPLE AND ITS CONTRIBUTORS "AS IS" AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
@@ -62,7 +62,7 @@ static inline BSTR BSTRFromString(const string& str)
 wstring ResourceLoadDelegate::descriptionSuitableForTestResult(unsigned long identifier) const
 {
     IdentifierMap::const_iterator it = m_urlMap.find(identifier);
-    
+
     if (it == m_urlMap.end())
         return L"<unknown>";
 
@@ -77,21 +77,21 @@ wstring ResourceLoadDelegate::descriptionSuitableForTestResult(IWebURLRequest* r
     BSTR urlBSTR;
     if (FAILED(request->URL(&urlBSTR)))
         return wstring();
-    
+
     wstring url = urlSuitableForTestResult(wstringFromBSTR(urlBSTR));
     ::SysFreeString(urlBSTR);
-    
+
     BSTR mainDocumentURLBSTR;
     if (FAILED(request->mainDocumentURL(&mainDocumentURLBSTR)))
         return wstring();
-    
+
     wstring mainDocumentURL = urlSuitableForTestResult(wstringFromBSTR(mainDocumentURLBSTR));
     ::SysFreeString(mainDocumentURLBSTR);
-    
+
     BSTR httpMethodBSTR;
     if (FAILED(request->HTTPMethod(&httpMethodBSTR)))
         return wstring();
-    
+
     wstring httpMethod = wstringFromBSTR(httpMethodBSTR);
     ::SysFreeString(httpMethodBSTR);
 
@@ -106,7 +106,7 @@ wstring ResourceLoadDelegate::descriptionSuitableForTestResult(IWebURLResponse* 
     BSTR urlBSTR;
     if (FAILED(response->URL(&urlBSTR)))
         return wstring();
-    
+
     wstring url = urlSuitableForTestResult(wstringFromBSTR(urlBSTR));
     ::SysFreeString(urlBSTR);
 
@@ -114,7 +114,7 @@ wstring ResourceLoadDelegate::descriptionSuitableForTestResult(IWebURLResponse* 
     COMPtr<IWebHTTPURLResponse> httpResponse;
     if (response && SUCCEEDED(response->QueryInterface(&httpResponse)))
         httpResponse->statusCode(&statusCode);
-    
+
     return L"<NSURLResponse " + url + L", http status code " + wstringFromInt(statusCode) + L">";
 }
 
@@ -203,12 +203,12 @@ ULONG STDMETHODCALLTYPE ResourceLoadDelegate::Release(void)
     return newRef;
 }
 
-HRESULT STDMETHODCALLTYPE ResourceLoadDelegate::identifierForInitialRequest( 
+HRESULT STDMETHODCALLTYPE ResourceLoadDelegate::identifierForInitialRequest(
     /* [in] */ IWebView* webView,
     /* [in] */ IWebURLRequest* request,
     /* [in] */ IWebDataSource* dataSource,
     /* [in] */ unsigned long identifier)
-{ 
+{
     if (!done && gTestRunner->dumpResourceLoadCallbacks()) {
         BSTR urlStr;
         if (FAILED(request->URL(&urlStr)))
@@ -230,7 +230,7 @@ HRESULT STDMETHODCALLTYPE ResourceLoadDelegate::removeIdentifierForRequest(
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE ResourceLoadDelegate::willSendRequest( 
+HRESULT STDMETHODCALLTYPE ResourceLoadDelegate::willSendRequest(
     /* [in] */ IWebView* webView,
     /* [in] */ unsigned long identifier,
     /* [in] */ IWebURLRequest* request,
@@ -239,7 +239,7 @@ HRESULT STDMETHODCALLTYPE ResourceLoadDelegate::willSendRequest(
     /* [retval][out] */ IWebURLRequest **newRequest)
 {
     if (!done && gTestRunner->dumpResourceLoadCallbacks()) {
-        printf("%S - willSendRequest %S redirectResponse %S\n", 
+        printf("%S - willSendRequest %S redirectResponse %S\n",
             descriptionSuitableForTestResult(identifier).c_str(),
             descriptionSuitableForTestResult(request).c_str(),
             descriptionSuitableForTestResult(redirectResponse).c_str());
@@ -276,7 +276,7 @@ HRESULT STDMETHODCALLTYPE ResourceLoadDelegate::willSendRequest(
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE ResourceLoadDelegate::didReceiveAuthenticationChallenge( 
+HRESULT STDMETHODCALLTYPE ResourceLoadDelegate::didReceiveAuthenticationChallenge(
     /* [in] */ IWebView *webView,
     /* [in] */ unsigned long identifier,
     /* [in] */ IWebURLAuthenticationChallenge *challenge,
@@ -291,7 +291,7 @@ HRESULT STDMETHODCALLTYPE ResourceLoadDelegate::didReceiveAuthenticationChalleng
         sender->continueWithoutCredentialForAuthenticationChallenge(challenge);
         return S_OK;
     }
-    
+
     const char* user = gTestRunner->authenticationUsername().c_str();
     const char* password = gTestRunner->authenticationPassword().c_str();
 
@@ -307,9 +307,9 @@ HRESULT STDMETHODCALLTYPE ResourceLoadDelegate::didReceiveAuthenticationChalleng
 }
 
 HRESULT STDMETHODCALLTYPE ResourceLoadDelegate::didReceiveResponse(
-    /* [in] */ IWebView* webView, 
-    /* [in] */ unsigned long identifier, 
-    /* [in] */ IWebURLResponse* response, 
+    /* [in] */ IWebView* webView,
+    /* [in] */ unsigned long identifier,
+    /* [in] */ IWebURLResponse* response,
     /* [in] */ IWebDataSource* dataSource)
 {
     if (!done && gTestRunner->dumpResourceLoadCallbacks()) {
@@ -321,14 +321,14 @@ HRESULT STDMETHODCALLTYPE ResourceLoadDelegate::didReceiveResponse(
         BSTR mimeTypeBSTR;
         if (FAILED(response->MIMEType(&mimeTypeBSTR)))
             E_FAIL;
-    
+
         wstring mimeType = wstringFromBSTR(mimeTypeBSTR);
         ::SysFreeString(mimeTypeBSTR);
 
         BSTR urlBSTR;
         if (FAILED(response->URL(&urlBSTR)))
             E_FAIL;
-    
+
         wstring url = wstringFromBSTR(urlBSTR);
         ::SysFreeString(urlBSTR);
 
@@ -339,7 +339,7 @@ HRESULT STDMETHODCALLTYPE ResourceLoadDelegate::didReceiveResponse(
 }
 
 
-HRESULT STDMETHODCALLTYPE ResourceLoadDelegate::didFinishLoadingFromDataSource( 
+HRESULT STDMETHODCALLTYPE ResourceLoadDelegate::didFinishLoadingFromDataSource(
     /* [in] */ IWebView* webView,
     /* [in] */ unsigned long identifier,
     /* [in] */ IWebDataSource* dataSource)
@@ -353,15 +353,15 @@ HRESULT STDMETHODCALLTYPE ResourceLoadDelegate::didFinishLoadingFromDataSource(
 
     return S_OK;
 }
-        
-HRESULT STDMETHODCALLTYPE ResourceLoadDelegate::didFailLoadingWithError( 
+
+HRESULT STDMETHODCALLTYPE ResourceLoadDelegate::didFailLoadingWithError(
     /* [in] */ IWebView* webView,
     /* [in] */ unsigned long identifier,
     /* [in] */ IWebError* error,
     /* [in] */ IWebDataSource* dataSource)
 {
     if (!done && gTestRunner->dumpResourceLoadCallbacks()) {
-        printf("%S - didFailLoadingWithError: %S\n", 
+        printf("%S - didFailLoadingWithError: %S\n",
             descriptionSuitableForTestResult(identifier).c_str(),
             descriptionSuitableForTestResult(error, identifier).c_str());
     }

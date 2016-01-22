@@ -105,7 +105,7 @@ public:
     // to corrupt the new db if it's running in the background.
     static bool truncateDatabaseFile(sqlite3* database);
 #endif
-    
+
     static long long getDatabaseFileSize(const String& fileName);
     static double databaseCreationTime(const String& fileName);
     static double databaseModificationTime(const String& fileName);

@@ -70,13 +70,13 @@ public:
     {
         return adoptRef(new FrontendMenuProvider(frontendHost, frontendApiObject, items));
     }
-    
+
     void disconnect()
     {
         m_frontendApiObject = Deprecated::ScriptObject();
         m_frontendHost = nullptr;
     }
-    
+
 private:
     FrontendMenuProvider(InspectorFrontendHost* frontendHost, Deprecated::ScriptObject frontendApiObject, const Vector<ContextMenuItem>& items)
         : m_frontendHost(frontendHost)
@@ -89,13 +89,13 @@ private:
     {
         contextMenuCleared();
     }
-    
+
     virtual void populateContextMenu(ContextMenu* menu) override
     {
         for (size_t i = 0; i < m_items.size(); ++i)
             menu->appendItem(m_items[i]);
     }
-    
+
     virtual void contextMenuItemSelected(ContextMenuItem* item) override
     {
         if (m_frontendHost) {
@@ -107,7 +107,7 @@ private:
             function.call();
         }
     }
-    
+
     virtual void contextMenuCleared() override
     {
         if (m_frontendHost) {

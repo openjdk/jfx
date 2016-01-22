@@ -37,7 +37,7 @@ import javafx.beans.Observable;
  * and {@code size}. If size needs to be increased beyond capacity, the capacity
  * increases to match that new size. Use {@link #trimToSize()} method
  * to shrink it.
- * 
+ *
  * @see ArrayChangeListener
  * @param <T> actual array instance type
  * @since JavaFX 8.0
@@ -48,7 +48,7 @@ public interface ObservableArray<T extends ObservableArray<T>> extends Observabl
      * Add a listener to this observable array.
      * @param listener the listener for listening to the array changes
      * @throws NullPointerException if {@code listener} is {@code null}
-     */    
+     */
     public void addListener(ArrayChangeListener<T> listener);
 
     /**
@@ -56,7 +56,7 @@ public interface ObservableArray<T extends ObservableArray<T>> extends Observabl
      * attached to this array, nothing happens.
      * @param listener a listener to remove
      * @throws NullPointerException if {@code listener} is {@code null}
-     */    
+     */
     public void removeListener(ArrayChangeListener<T> listener);
 
     /**

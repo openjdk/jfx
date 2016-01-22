@@ -1170,7 +1170,7 @@ public class PaginationSkin extends SkinBase<Pagination> {
             }
             double arrowGap = arrowButtonGap.get();
 
-            return left + leftArrowWidth + 2 *arrowGap + minButtonSize /*at least one button*/ 
+            return left + leftArrowWidth + 2 *arrowGap + minButtonSize /*at least one button*/
                     + 2 * spacing + rightArrowWidth + right + pageInformationWidth;
         }
 

@@ -41,7 +41,7 @@ public interface PixelSource {
      * The caller should call
      * {@link #doneWithPixels(com.sun.glass.ui.Pixels) doneWithPixels()}
      * if and only if the return value was non-null.
-     * 
+     *
      * @return the next Pixels object to process, or null if there is nothing
      *         to process
      */
@@ -53,7 +53,7 @@ public interface PixelSource {
      * can be reused for future pixel deliveries if needed.
      * This method should be called by the consumer if and only if the call to
      * {@code getLatestPixels()} returned a non-null object.
-     * 
+     *
      * @param used a non-null {@code Pixels} object previously obtained from
      *             {@code getLatestPixels()}
      */

@@ -75,7 +75,7 @@ public:
     String cssText() const { return m_cssText; }
 
 private:
-    TextCloneCSSValue(ClassType classType, const String& text) 
+    TextCloneCSSValue(ClassType classType, const String& text)
         : CSSValue(classType, /*isCSSOMSafe*/ true)
         , m_cssText(text)
     {

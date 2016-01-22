@@ -77,7 +77,7 @@ public:
     bool canRemoveLast();
     const T removeLast();
     bool refill();
-    
+
     size_t size();
     bool isEmpty();
 
@@ -94,13 +94,13 @@ protected:
     };
 
     void expand();
-    
+
     size_t postIncTop();
     size_t preDecTop();
     void setTopForFullSegment();
     void setTopForEmptySegment();
     size_t top();
-    
+
     void validatePrevious();
 
     DoublyLinkedList<GCArraySegment<T>> m_segments;

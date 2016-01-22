@@ -98,7 +98,7 @@ public:
         didFinishLoad = false;
         didReceiveMessage = false;
 
-        // Force the creation of the 
+        // Force the creation of the
         WKPageLoadURL(webView->page(), adoptWK(Util::createURLForResource("simple", "html")).get());
         Util::run(&didFinishLoad);
 
@@ -109,7 +109,7 @@ public:
     void roundTrip(WKTypeRef object)
     {
         WKTypeID storedTypeID = WKGetTypeID(object);
-    
+
         recievedBody.clear();
         didReceiveMessage = false;
         WKContextPostMessageToInjectedBundle(context.get(), Util::toWK("RoundTrip").get(), object);
@@ -125,7 +125,7 @@ TEST_F(WebKit2UserMessageRoundTripTest, WKURLRequestRef)
 {
     WKRetainPtr<WKURLRef> url = adoptWK(WKURLCreateWithUTF8CString("http://webkit.org/"));
     WKRetainPtr<WKURLRequestRef> request = adoptWK(WKURLRequestCreateWithWKURL(url.get()));
-    
+
     roundTrip(request.get());
     WKTypeRef roundTrippedTypeRef = recievedBody.get();
 
@@ -137,7 +137,7 @@ TEST_F(WebKit2UserMessageRoundTripTest, WKURLRequestRef)
 TEST_F(WebKit2UserMessageRoundTripTest, WKURL)
 {
     WKRetainPtr<WKURLRef> url = adoptWK(WKURLCreateWithUTF8CString("http://webkit.org/"));
-    
+
     roundTrip(url.get());
     WKTypeRef roundTrippedTypeRef = recievedBody.get();
 
@@ -148,7 +148,7 @@ TEST_F(WebKit2UserMessageRoundTripTest, WKURL)
 TEST_F(WebKit2UserMessageRoundTripTest, WKString)
 {
     WKRetainPtr<WKStringRef> string = adoptWK(WKStringCreateWithUTF8CString("An important string"));
-    
+
     roundTrip(string.get());
     WKTypeRef roundTrippedTypeRef = recievedBody.get();
 

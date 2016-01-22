@@ -338,7 +338,7 @@ public class DirtyRegionTestBase extends NGTestBase {
                 Math.max(expected.getMinX() - 1, dirtyRegion.getMinX()),
                 Math.max(expected.getMinY() - 1, dirtyRegion.getMinY()),
                 Math.min(expected.getMaxX() + 1, dirtyRegion.getMaxX()),
-                Math.min(expected.getMaxY() + 1, dirtyRegion.getMaxY()));        
+                Math.min(expected.getMaxY() + 1, dirtyRegion.getMaxY()));
         // Now make the check, and print useful error information in case it fails.
         assertEquals("creator=" + creator + ", polluter=" + polluter, expected, dirtyRegion);
     }

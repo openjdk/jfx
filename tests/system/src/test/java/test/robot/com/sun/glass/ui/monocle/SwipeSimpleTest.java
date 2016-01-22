@@ -63,7 +63,7 @@ public class SwipeSimpleTest extends ParameterizedTestBase {
     public static void beforeInit() {
         System.setProperty("com.sun.javafx.gestures.swipe.maxduration", "1200");
     }
-    
+
     @Before
     public void addListener() throws Exception {
         TestApplication.getStage().getScene().addEventHandler(

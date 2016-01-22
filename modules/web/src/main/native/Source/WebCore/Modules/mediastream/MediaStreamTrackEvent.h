@@ -36,7 +36,7 @@ class MediaStreamTrack;
 
 struct MediaStreamTrackEventInit : public EventInit {
     MediaStreamTrackEventInit();
-    
+
     RefPtr<MediaStreamTrack> track;
 };
 

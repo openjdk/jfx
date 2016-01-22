@@ -55,7 +55,7 @@ public:
 
     const String& altText() const { return m_altText; }
     void setAltText(const String& altText) { m_altText = altText; }
-    
+
 private:
     virtual void styleDidChange(StyleDifference, const RenderStyle* oldStyle) override;
     virtual void willBeDestroyed() override;

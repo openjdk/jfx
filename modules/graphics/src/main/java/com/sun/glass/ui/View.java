@@ -277,7 +277,7 @@ public abstract class View {
          *
          * For description of isDirect argument see #handleBeginTouchEvent
          * method.
-         * 
+         *
          * For description of isInertia argument see #handleScrollGestureEvent
          * method.
          *
@@ -319,7 +319,7 @@ public abstract class View {
          *
          * For description of isDirect argument see #handleBeginTouchEvent
          * method.
-         * 
+         *
          * For description of isInertia argument see #handleScrollGestureEvent
          * method.
          *
@@ -344,15 +344,15 @@ public abstract class View {
          *
          * For description of isDirect argument see #handleBeginTouchEvent
          * method.
-         * 
-         * For description of isInertia and touchCount arguments 
+         *
+         * For description of isInertia and touchCount arguments
          * see #handleScrollGestureEvent method.
          *
          * For description of type, x,y, xAbs and yAbs arguments
          * see #handleBeginTouchEvent method.
-         * 
-         * @param dir gesture direction. 
-         *        One of constants defined in com.sun.glass.events.SwipeGesture 
+         *
+         * @param dir gesture direction.
+         *        One of constants defined in com.sun.glass.events.SwipeGesture
          *        class.
          */
         public void handleSwipeGestureEvent(View view, long time, int type,
@@ -450,13 +450,13 @@ public abstract class View {
         checkNotClosed();
         return _getNativeView(this.ptr);
     }
-    
+
     /** Only used on Mac when run inside a plugin */
     public int getNativeRemoteLayerId(String serverName) {
         Application.checkEventThread();
         throw new RuntimeException("This operation is not supported on this platform");
     }
-    
+
     public Window getWindow() {
         Application.checkEventThread();
         return this.window;
@@ -724,7 +724,7 @@ public abstract class View {
         checkNotClosed();
         _scheduleRepaint(this.ptr);
     }
-    
+
     protected abstract void _begin(long ptr);
     /** prepares to painting by locking native surface
      *
@@ -754,8 +754,8 @@ public abstract class View {
     public int getNativeFrameBuffer() {
         return _getNativeFrameBuffer(this.ptr);
     }
-    
-    
+
+
     protected abstract void _uploadPixels(long ptr, Pixels pixels);
     /**
      * This method dumps the pixels on to the view.
@@ -806,13 +806,13 @@ public abstract class View {
         }
 
         _scheduleRepaint(this.ptr);
-        
+
         return this.inFullscreen;
     }
 
 
     //-------- DELEGATE NOTIFICATIONS --------//
-    
+
     protected void notifyView(int type) {
         //System.err.println("    notifyView: "+ViewEvent.getTypeString(type)+" on thread"+Thread.currentThread());
         if (type == ViewEvent.REPAINT) {

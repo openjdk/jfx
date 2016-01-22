@@ -6,13 +6,13 @@
  * are met:
  *
  * 1.  Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer. 
+ *     notice, this list of conditions and the following disclaimer.
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
- *     documentation and/or other materials provided with the distribution. 
+ *     documentation and/or other materials provided with the distribution.
  * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
- *     from this software without specific prior written permission. 
+ *     from this software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY APPLE AND ITS CONTRIBUTORS "AS IS" AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
@@ -149,21 +149,21 @@
 
 - (NSDragOperation)_web_dragOperationForDraggingInfo:(id <NSDraggingInfo>)sender
 {
-    if (![NSApp modalWindow] && 
+    if (![NSApp modalWindow] &&
         ![[self window] attachedSheet] &&
         [sender draggingSource] != self &&
         [[sender draggingPasteboard] _web_bestURL]) {
 
         return NSDragOperationCopy;
     }
-    
+
     return NSDragOperationNone;
 }
 
 - (void)_web_DragImageForElement:(DOMElement *)element
                          rect:(NSRect)rect
                         event:(NSEvent *)event
-                   pasteboard:(NSPasteboard *)pasteboard 
+                   pasteboard:(NSPasteboard *)pasteboard
                        source:(id)source
                        offset:(NSPoint *)dragImageOffset
 {
@@ -175,19 +175,19 @@
     if (image != nil && [image size].height * [image size].width <= WebMaxOriginalImageArea) {
         NSSize originalSize = rect.size;
         origin = rect.origin;
-        
+
         dragImage = [[image copy] autorelease];
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
         [dragImage setScalesWhenResized:YES];
 #pragma clang diagnostic pop
         [dragImage setSize:originalSize];
-        
+
         [dragImage _web_scaleToMaxSize:WebMaxDragImageSize];
         NSSize newSize = [dragImage size];
-        
+
         [dragImage _web_dissolveToFraction:WebDragImageAlpha];
-        
+
         // Properly orient the drag image and orient it differently if it's smaller than the original
         origin.x = mouseDownPoint.x - (((mouseDownPoint.x - origin.x) / originalSize.width) * newSize.width);
         origin.y = origin.y + originalSize.height;
@@ -208,7 +208,7 @@
         dragImageOffset->x = mouseDownPoint.x - origin.x;
         dragImageOffset->y = origin.y - mouseDownPoint.y;
     }
-    
+
     // Per kwebster, offset arg is ignored
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
@@ -220,8 +220,8 @@
 - (BOOL)_web_firstResponderIsSelfOrDescendantView
 {
     NSResponder *responder = [[self window] firstResponder];
-    return (responder && 
-           (responder == self || 
+    return (responder &&
+           (responder == self ||
            ([responder isKindOfClass:[NSView class]] && [(NSView *)responder isDescendantOf:self])));
 }
 
@@ -230,12 +230,12 @@
     // Converting to this view's window; let -convertRect:toView: handle it
     if (aView == nil)
         return [self convertRect:aRect toView:nil];
-        
+
     // This view must be in a window.  Do whatever weird thing -convertRect:toView: does in this situation.
     NSWindow *thisWindow = [self window];
     if (!thisWindow)
         return [self convertRect:aRect toView:aView];
-    
+
     // The other view must be in a window, too.
     NSWindow *otherWindow = [aView window];
     if (!otherWindow)
@@ -243,7 +243,7 @@
 
     // Convert to this window's coordinates
     NSRect convertedRect = [self convertRect:aRect toView:nil];
-    
+
     // Convert to screen coordinates
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
@@ -252,10 +252,10 @@
     // Convert to other window's coordinates
     convertedRect.origin = [otherWindow convertScreenToBase:convertedRect.origin];
 #pragma clang diagnostic pop
-    
+
     // Convert to other view's coordinates
     convertedRect = [aView convertRect:convertedRect fromView:nil];
-    
+
     return convertedRect;
 }
 

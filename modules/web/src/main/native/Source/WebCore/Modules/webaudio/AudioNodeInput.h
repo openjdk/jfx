@@ -71,14 +71,14 @@ public:
     // bus() contains the rendered audio after pull() has been called for each time quantum.
     // Called from context's audio thread.
     AudioBus* bus();
-    
+
     // updateInternalBus() updates m_internalSummingBus appropriately for the number of channels.
     // This must be called when we own the context's graph lock in the audio thread at the very start or end of the render quantum.
     void updateInternalBus();
 
     // The number of channels of the connection with the largest number of channels.
-    unsigned numberOfChannels() const;        
-    
+    unsigned numberOfChannels() const;
+
 private:
     AudioNode* m_node;
 

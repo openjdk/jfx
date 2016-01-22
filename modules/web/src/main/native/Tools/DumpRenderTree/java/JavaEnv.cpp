@@ -29,7 +29,7 @@ bool CheckAndClearException(JNIEnv* env)
 
 namespace WTF {
 
-bool Mutex::tryLock() 
+bool Mutex::tryLock()
 {
     return true;
 }
@@ -40,7 +40,7 @@ void Mutex::unlock()
 
 ThreadIdentifier currentThread()
 {
-    return static_cast<ThreadIdentifier>(-1);   
+    return static_cast<ThreadIdentifier>(-1);
 }
 
 }

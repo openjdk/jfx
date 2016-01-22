@@ -21,7 +21,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -55,7 +55,7 @@ EncodedJSValue JSC_HOST_CALL JSWorkerConstructor::constructJSWorker(ExecState* e
     if (exec->hadException())
         return JSValue::encode(JSValue());
 
-    // See section 4.8.2 step 14 of WebWorkers for why this is the lexicalGlobalObject. 
+    // See section 4.8.2 step 14 of WebWorkers for why this is the lexicalGlobalObject.
     DOMWindow& window = asJSDOMWindow(exec->lexicalGlobalObject())->impl();
 
     ExceptionCode ec = 0;

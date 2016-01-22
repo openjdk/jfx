@@ -28,7 +28,7 @@
 namespace TestWebKitAPI {
 
 TEST(WebKit2, WKURL)
-{        
+{
     WKURLRef baseURL = WKURLCreateWithUTF8CString("http://trac.webkit.org");
     WKURLRef URL = WKURLCreateWithBaseURL(baseURL, "wiki");
     WKRelease(baseURL);

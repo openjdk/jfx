@@ -45,7 +45,7 @@ AsyncAudioDecoder::AsyncAudioDecoder()
 AsyncAudioDecoder::~AsyncAudioDecoder()
 {
     m_queue.kill();
-    
+
     // Stop thread.
     waitForThreadCompletion(m_threadID);
     m_threadID = 0;
@@ -108,7 +108,7 @@ void AsyncAudioDecoder::DecodingTask::decode()
 
     // Do the actual decoding and invoke the callback.
     m_audioBuffer = AudioBuffer::createFromAudioFileData(m_audioData->data(), m_audioData->byteLength(), false, sampleRate());
-    
+
     // Decoding is finished, but we need to do the callbacks on the main thread.
     callOnMainThread(notifyCompleteDispatch, this);
 }

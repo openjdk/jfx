@@ -62,20 +62,20 @@ public class RadioMenuItemTest {
         radioMenuItem = rmi = new RadioMenuItem("one");
         radioMenuItemTwoArg = new RadioMenuItem("two", node);
     }
-    
-   
-   
+
+
+
     /*********************************************************************
      * Tests for default values                                         *
      ********************************************************************/
-    
+
     @Test public void oneArgConstructorShouldSetStyleClassTo_checkmenuitem() {
         assertStyleClassContains(radioMenuItem, "radio-menu-item");
     }
     @Test public void twoArgConstructorShouldSetStyleClassTo_checkmenuitem() {
         assertStyleClassContains(radioMenuItemTwoArg, "radio-menu-item");
     }
-    
+
     @Test public void defaultTxtNotNull() {
         assertNotNull(radioMenuItem.getText());
         assertEquals(radioMenuItem.getText(), "one");
@@ -90,11 +90,11 @@ public class RadioMenuItemTest {
         assertFalse(radioMenuItem.isSelected());
     }
 
-    
+
     /*********************************************************************
      * Tests for property binding                                        *
      ********************************************************************/
-    
+
     @Test public void checkSelectedPropertyBind() {
         BooleanProperty objPr = new SimpleBooleanProperty(true);
         radioMenuItem.selectedProperty().bind(objPr);
@@ -102,7 +102,7 @@ public class RadioMenuItemTest {
         objPr.setValue(false);
         assertFalse("selectedProperty cannot be bound", radioMenuItem.selectedProperty().getValue());
     }
-    
+
     @Test public void checkToggleGroupPropertyBind() {
         ObjectProperty objPr = new SimpleObjectProperty<ToggleGroup>(null);
         radioMenuItem.toggleGroupProperty().bind(objPr);
@@ -110,7 +110,7 @@ public class RadioMenuItemTest {
         objPr.setValue(toggleGroup);
         assertSame("toggleGroupProperty cannot be bound", radioMenuItem.toggleGroupProperty().getValue(), toggleGroup);
     }
-    
+
     @Test public void selectedPropertyHasBeanReference() {
         assertSame(radioMenuItem, radioMenuItem.selectedProperty().getBean());
     }
@@ -134,27 +134,27 @@ public class RadioMenuItemTest {
         radioMenuItem.setSelected(true);
         assertTrue(radioMenuItem.selectedProperty().getValue());
     }
-    
+
     @Test public void setSelectedAndSeeValue() {
         radioMenuItem.setSelected(false);
         assertFalse(radioMenuItem.isSelected());
     }
-    
+
     @Test public void setSelectedTrueAndSeeIfStyleSelectedExists() {
         radioMenuItem.setSelected(true);
         assertTrue(radioMenuItem.getStyleClass().contains("selected"));
     }
-    
+
     @Test public void setSelectedFalseAndSeeIfStyleSelectedDoesNotExists() {
         radioMenuItem.setSelected(false);
         assertFalse(radioMenuItem.getStyleClass().contains("selected"));
     }
-    
+
     @Test public void setToggleGroupAndSeeValueIsReflectedInModel() {
         radioMenuItem.setToggleGroup(toggleGroup);
         assertSame(radioMenuItem.toggleGroupProperty().getValue(), toggleGroup);
     }
-    
+
     @Test public void setToggleGroupAndSeeValue() {
         radioMenuItem.setToggleGroup(toggleGroup);
         assertSame(radioMenuItem.getToggleGroup(), toggleGroup);
@@ -279,6 +279,6 @@ public class RadioMenuItemTest {
         rmi.selectedProperty().bind(other);
         assertEquals(other.get(), rmi.isSelected());
     }
-    
-    
+
+
 }

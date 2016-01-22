@@ -68,7 +68,7 @@ void IDBOpenDBRequest::onBlocked(uint64_t oldVersion)
     LOG(StorageAPI, "IDBOpenDBRequest::onBlocked()");
     if (!shouldEnqueueEvent())
         return;
-    
+
     enqueueEvent(IDBVersionChangeEvent::create(oldVersion, m_version, m_versionNullness, eventNames().blockedEvent));
 }
 

@@ -32,15 +32,15 @@ public class ZoomRadialBlurState {
     private float dx = -1f;
     private float dy = -1f;
     private final ZoomRadialBlur effect;
-    
+
     public ZoomRadialBlurState(ZoomRadialBlur effect) {
         this.effect = effect;
     }
-    
+
     public int getRadius() {
         return effect.getRadius();
     }
-    
+
     /**
      * Updates offsets by X and Y axes.
      */
@@ -48,15 +48,15 @@ public class ZoomRadialBlurState {
         this.dx = dx;
         this.dy = dy;
     }
-    
+
     /**
      * Invalidates X and Y offsets.
      */
     public void invalidateDeltas() {
         this.dx = -1f;
         this.dy = -1f;
-    }    
-    
+    }
+
     /**
      * Returns offset by X axis to the next pixel
      * @return offset by X axis to the next pixel
@@ -64,7 +64,7 @@ public class ZoomRadialBlurState {
     public float getDx() {
         return dx;
     }
-    
+
     /**
      * Returns offset by Y axis to the next pixel
      * @return offset by Y axis to the next pixel
@@ -72,7 +72,7 @@ public class ZoomRadialBlurState {
     public float getDy() {
         return dy;
     }
-    
+
     public int getNumSteps() {
         int r = getRadius();
         return r * 2 + 1;

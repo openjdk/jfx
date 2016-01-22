@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -91,17 +91,17 @@ bool PurgeableBuffer::makePurgeable(bool purgeable)
             volatileGroup = VM_VOLATILE_GROUP_4;
         else
             volatileGroup = VM_VOLATILE_GROUP_7;
-        
+
         int state = VM_PURGABLE_VOLATILE | volatileGroup;
         // So apparently "purgeable" is the correct spelling and the API here is misspelled.
         kern_return_t ret = vm_purgable_control(mach_task_self(), reinterpret_cast<vm_address_t>(m_data), VM_PURGABLE_SET_STATE, &state);
-        
+
         if (ret != KERN_SUCCESS) {
             // If that failed we have no clue what state we are in so assume purged.
             m_state = Purged;
             return true;
         }
-        
+
         m_state = Volatile;
         return true;
     }
@@ -110,7 +110,7 @@ bool PurgeableBuffer::makePurgeable(bool purgeable)
         return true;
     if (m_state == Purged)
         return false;
-    
+
     int state = VM_PURGABLE_NONVOLATILE;
     kern_return_t ret = vm_purgable_control(mach_task_self(), reinterpret_cast<vm_address_t>(m_data), VM_PURGABLE_SET_STATE, &state);
 
@@ -123,7 +123,7 @@ bool PurgeableBuffer::makePurgeable(bool purgeable)
     m_state = state & VM_PURGABLE_EMPTY ? Purged : NonVolatile;
     return m_state == NonVolatile;
 }
-    
+
 bool PurgeableBuffer::wasPurged() const
 {
     if (m_state == NonVolatile)
@@ -137,14 +137,14 @@ bool PurgeableBuffer::wasPurged() const
     if (ret != KERN_SUCCESS) {
         // If that failed we have no clue what state we are in so assume purged.
         m_state = Purged;
-        return true;        
+        return true;
     }
 
     if (state & VM_PURGABLE_EMPTY) {
         m_state = Purged;
         return true;
     }
-        
+
     return false;
 }
 
@@ -153,7 +153,7 @@ const char* PurgeableBuffer::data() const
     ASSERT(m_state == NonVolatile);
     return m_data;
 }
-    
+
 }
 
 #endif

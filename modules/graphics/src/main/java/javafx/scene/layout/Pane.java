@@ -33,7 +33,7 @@ import javafx.scene.Node;
  * Base class for layout panes which need to expose the children list as public
  * so that users of the subclass can freely add/remove children.
  * <p>
- * This class may be used directly in cases where absolute positioning of children 
+ * This class may be used directly in cases where absolute positioning of children
  * is required since it does not perform layout beyond resizing resizable children
  * to their preferred sizes. It is the application's responsibility to position the
  * children since the pane leaves the positions alone during layout.
@@ -56,9 +56,9 @@ import javafx.scene.Node;
  * <p>
  * Pane resizes each managed child regardless of the child's visible property value;
  * unmanaged children are ignored for all layout calculations.</p>
- * 
+ *
  * <h4>Resizable Range</h4>
- * 
+ *
  * A pane's parent will resize the pane within the pane's resizable range
  * during layout.   By default the pane computes this range based on its content
  * as outlined in the tables below:
@@ -90,7 +90,7 @@ import javafx.scene.Node;
  * Pane does not clip its content by default, so it is possible that childrens'
  * bounds may extend outside its own bounds, either if children are positioned
  * at negative coordinates or the pane is resized smaller than its preferred size.</p>
- * 
+ *
  * @since JavaFX 2.0
  */
 @DefaultProperty("children")

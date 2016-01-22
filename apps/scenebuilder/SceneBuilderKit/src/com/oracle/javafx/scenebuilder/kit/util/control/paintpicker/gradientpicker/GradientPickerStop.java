@@ -155,7 +155,7 @@ public class GradientPickerStop extends VBox {
 
         chip_rect.setFill(color);
         gradientPicker.setSelectedStop(this);
-        
+
         stop_button.setOnAction((ActionEvent event) -> {
             event.consume();
         });
@@ -168,7 +168,7 @@ public class GradientPickerStop extends VBox {
             }
         });
     }
-    
+
     @FXML
     void stopAction(ActionEvent event) {
         double val = Double.valueOf(offset_textfield.getText());

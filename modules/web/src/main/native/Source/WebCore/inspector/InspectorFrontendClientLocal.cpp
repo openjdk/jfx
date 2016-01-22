@@ -139,7 +139,7 @@ void InspectorFrontendClientLocal::windowObjectCleared()
 {
     if (m_frontendHost)
         m_frontendHost->disconnectClient();
-    
+
     JSC::ExecState* frontendExecState = execStateFromPage(debuggerWorld(), m_frontendPage);
     m_frontendHost = InspectorFrontendHost::create(this, m_frontendPage);
     ScriptGlobalObject::set(frontendExecState, "InspectorFrontendHost", m_frontendHost.get());
@@ -149,7 +149,7 @@ void InspectorFrontendClientLocal::frontendLoaded()
 {
     // Call setDockingUnavailable before bringToFront. If we display the inspector window via bringToFront first it causes
     // the call to canAttachWindow to return the wrong result on Windows.
-    // Calling bringToFront first causes the visibleHeight of the inspected page to always return 0 immediately after. 
+    // Calling bringToFront first causes the visibleHeight of the inspected page to always return 0 immediately after.
     // Thus if we call canAttachWindow first we can avoid this problem. This change does not cause any regressions on Mac.
     setDockingUnavailable(!canAttachWindow());
     bringToFront();
@@ -259,7 +259,7 @@ void InspectorFrontendClientLocal::restoreAttachedWindowHeight()
     unsigned inspectedPageHeight = m_inspectorController->inspectedPage().mainFrame().view()->visibleHeight();
     String value = m_settings->getProperty(inspectorAttachedHeightSetting);
     unsigned preferredHeight = value.isEmpty() ? defaultAttachedHeight : value.toUInt();
-    
+
     // This call might not go through (if the window starts out detached), but if the window is initially created attached,
     // InspectorController::attachWindow is never called, so we need to make sure to set the attachedWindowHeight.
     // FIXME: Clean up code so we only have to call setAttachedWindowHeight in InspectorController::attachWindow

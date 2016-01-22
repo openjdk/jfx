@@ -79,7 +79,7 @@ public class BeanAdapter extends AbstractMap<String, Object> {
         }
 
     }
-    
+
     private static final HashMap<Class<?>, MethodCache> globalMethodCache =
         new HashMap<>();
 
@@ -481,7 +481,7 @@ public class BeanAdapter extends AbstractMap<String, Object> {
             while (valueOfMethod == null
                 && valueType != null) {
                 try {
-                    ReflectUtil.checkPackageAccess(type); 
+                    ReflectUtil.checkPackageAccess(type);
                     valueOfMethod = type.getDeclaredMethod(VALUE_OF_METHOD_NAME, valueType);
                 } catch (NoSuchMethodException exception) {
                     // No-op

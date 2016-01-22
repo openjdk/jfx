@@ -69,7 +69,7 @@ public:
     float maxGlyphBoundingBoxX() const { return m_maxGlyphBoundingBoxX; }
     float minGlyphBoundingBoxY() const { return m_minGlyphBoundingBoxY; }
     float maxGlyphBoundingBoxY() const { return m_maxGlyphBoundingBoxY; }
-    
+
 private:
     class ComplexTextRun : public RefCounted<ComplexTextRun> {
     public:
@@ -121,7 +121,7 @@ private:
         bool m_isLTR;
         bool m_isMonotonic;
     };
-    
+
     static unsigned stringBegin(const ComplexTextRun& run) { return run.stringLocation() + run.indexBegin(); }
     static unsigned stringEnd(const ComplexTextRun& run) { return run.stringLocation() + run.indexEnd(); }
 
@@ -152,7 +152,7 @@ private:
     Vector<RefPtr<ComplexTextRun>, 16> m_complexTextRuns;
     Vector<CGSize, 256> m_adjustedAdvances;
     Vector<CGGlyph, 256> m_adjustedGlyphs;
- 
+
     unsigned m_currentCharacter;
     int m_end;
 

@@ -45,7 +45,7 @@ public class SendActionRsp extends MessageRsp {
     public SendActionRsp(String gameId) {
         super(gameId);
     }
-    
+
     public Type getType() {
         return type;
     }

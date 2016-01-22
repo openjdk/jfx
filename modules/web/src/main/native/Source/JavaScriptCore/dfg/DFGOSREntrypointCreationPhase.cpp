@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -43,21 +43,21 @@ public:
         : Phase(graph, "OSR entrypoint creation")
     {
     }
-    
+
     bool run()
     {
         RELEASE_ASSERT(m_graph.m_plan.mode == FTLForOSREntryMode);
         RELEASE_ASSERT(m_graph.m_form == ThreadedCPS);
-        
+
         unsigned bytecodeIndex = m_graph.m_plan.osrEntryBytecodeIndex;
         RELEASE_ASSERT(bytecodeIndex);
         RELEASE_ASSERT(bytecodeIndex != UINT_MAX);
-        
+
         // Needed by createPreHeader().
         m_graph.m_dominators.computeIfNecessary(m_graph);
-        
+
         CodeBlock* baseline = m_graph.m_profiledBlock;
-        
+
         BasicBlock* target = 0;
         for (unsigned blockIndex = m_graph.numBlocks(); blockIndex--;) {
             BasicBlock* block = m_graph.block(blockIndex);
@@ -80,12 +80,12 @@ public:
             // compilation is a failure.
             return false;
         }
-        
+
         BlockInsertionSet insertionSet(m_graph);
-        
+
         BasicBlock* newRoot = insertionSet.insert(0);
         NodeOrigin origin = target->at(0)->origin;
-        
+
         Vector<Node*> locals(baseline->m_numCalleeRegisters);
         for (int local = 0; local < baseline->m_numCalleeRegisters; ++local) {
             Node* previousHead = target->variablesAtHead.local(local);
@@ -95,7 +95,7 @@ public:
             locals[local] = newRoot->appendNode(
                 m_graph, variable->prediction(), ExtractOSREntryLocal, origin,
                 OpInfo(variable->local().offset()));
-            
+
             newRoot->appendNode(
                 m_graph, SpecNone, MovHint, origin, OpInfo(variable->local().offset()),
                 Edge(locals[local]));
@@ -112,7 +112,7 @@ public:
                 OpInfo(oldNode->variableAccessData()));
             m_graph.m_arguments[argument] = node;
         }
-        
+
         for (int local = 0; local < baseline->m_numCalleeRegisters; ++local) {
             Node* previousHead = target->variablesAtHead.local(local);
             if (!previousHead)
@@ -122,11 +122,11 @@ public:
             newRoot->appendNode(
                 m_graph, SpecNone, SetLocal, origin, OpInfo(variable), Edge(node));
         }
-        
+
         newRoot->appendNode(
             m_graph, SpecNone, Jump, origin,
             OpInfo(createPreHeader(m_graph, insertionSet, target)));
-        
+
         insertionSet.execute();
         m_graph.resetReachability();
         m_graph.killUnreachableBlocks();

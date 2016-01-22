@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef DataFormat_h
@@ -50,10 +50,10 @@ enum DataFormat {
     DataFormatJSDouble = DataFormatJS | DataFormatDouble,
     DataFormatJSCell = DataFormatJS | DataFormatCell,
     DataFormatJSBoolean = DataFormatJS | DataFormatBoolean,
-    
+
     // Marker deliminating ordinary data formats and OSR-only data formats.
-    DataFormatOSRMarker = 32, 
-    
+    DataFormatOSRMarker = 32,
+
     // Special data formats used only for OSR.
     DataFormatDead = 33, // Implies jsUndefined().
     DataFormatArguments = 34 // Implies that the arguments object must be reified.

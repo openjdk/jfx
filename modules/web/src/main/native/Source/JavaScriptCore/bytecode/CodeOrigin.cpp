@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -55,28 +55,28 @@ bool CodeOrigin::isApproximatelyEqualTo(const CodeOrigin& other) const
         return !b.isSet();
     if (!b.isSet())
         return false;
-    
+
     if (a.isHashTableDeletedValue())
         return b.isHashTableDeletedValue();
     if (b.isHashTableDeletedValue())
         return false;
-    
+
     for (;;) {
         ASSERT(a.isSet());
         ASSERT(b.isSet());
-        
+
         if (a.bytecodeIndex != b.bytecodeIndex)
             return false;
-        
+
         if ((!!a.inlineCallFrame) != (!!b.inlineCallFrame))
             return false;
-        
+
         if (!a.inlineCallFrame)
             return true;
-        
+
         if (a.inlineCallFrame->executable != b.inlineCallFrame->executable)
             return false;
-        
+
         a = a.inlineCallFrame->caller;
         b = b.inlineCallFrame->caller;
     }
@@ -88,17 +88,17 @@ unsigned CodeOrigin::approximateHash() const
         return 0;
     if (isHashTableDeletedValue())
         return 1;
-    
+
     unsigned result = 2;
     CodeOrigin codeOrigin = *this;
     for (;;) {
         result += codeOrigin.bytecodeIndex;
-        
+
         if (!codeOrigin.inlineCallFrame)
             return result;
-        
+
         result += WTF::PtrHash<JSCell*>::hash(codeOrigin.inlineCallFrame->executable.get());
-        
+
         codeOrigin = codeOrigin.inlineCallFrame->caller;
     }
 }
@@ -120,18 +120,18 @@ void CodeOrigin::dump(PrintStream& out) const
         out.print("<none>");
         return;
     }
-    
+
     Vector<CodeOrigin> stack = inlineStack();
     for (unsigned i = 0; i < stack.size(); ++i) {
         if (i)
             out.print(" --> ");
-        
+
         if (InlineCallFrame* frame = stack[i].inlineCallFrame) {
             out.print(frame->briefFunctionInformation(), ":<", RawPointer(frame->executable.get()), "> ");
             if (frame->isClosureCall)
                 out.print("(closure) ");
         }
-        
+
         out.print("bc#", stack[i].bytecodeIndex);
     }
 }

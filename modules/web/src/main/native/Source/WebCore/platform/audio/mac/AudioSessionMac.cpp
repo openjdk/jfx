@@ -51,7 +51,7 @@ static AudioDeviceID defaultDevice()
 }
 
 class AudioSessionPrivate {
-public:    
+public:
 };
 
 AudioSession::AudioSession()

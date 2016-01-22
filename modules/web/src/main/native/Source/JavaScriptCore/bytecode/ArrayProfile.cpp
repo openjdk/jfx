@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -40,12 +40,12 @@ void dumpArrayModes(PrintStream& out, ArrayModes arrayModes)
         out.print("<empty>");
         return;
     }
-    
+
     if (arrayModes == ALL_ARRAY_MODES) {
         out.print("TOP");
         return;
     }
-    
+
     CommaPrinter comma("|");
     if (arrayModes & asArrayModes(NonArray))
         out.print(comma, "NonArray");
@@ -79,15 +79,15 @@ void ArrayProfile::computeUpdatedPrediction(const ConcurrentJITLocker&, CodeBloc
 {
     if (!m_lastSeenStructure)
         return;
-    
+
     m_observedArrayModes |= arrayModeFromStructure(m_lastSeenStructure);
-    
+
     if (!m_didPerformFirstRunPruning
         && hasTwoOrMoreBitsSet(m_observedArrayModes)) {
         m_observedArrayModes = arrayModeFromStructure(m_lastSeenStructure);
         m_didPerformFirstRunPruning = true;
     }
-    
+
     m_mayInterceptIndexedAccesses |=
         m_lastSeenStructure->typeInfo().interceptsGetOwnPropertySlotByIndexEvenWhenLengthIsNotZero();
     JSGlobalObject* globalObject = codeBlock->globalObject();
@@ -106,46 +106,46 @@ CString ArrayProfile::briefDescription(const ConcurrentJITLocker& locker, CodeBl
 CString ArrayProfile::briefDescriptionWithoutUpdating(const ConcurrentJITLocker&)
 {
     StringPrintStream out;
-    
+
     bool hasPrinted = false;
-    
+
     if (m_observedArrayModes) {
         if (hasPrinted)
             out.print(", ");
         out.print(ArrayModesDump(m_observedArrayModes));
         hasPrinted = true;
     }
-    
+
     if (m_mayStoreToHole) {
         if (hasPrinted)
             out.print(", ");
         out.print("Hole");
         hasPrinted = true;
     }
-    
+
     if (m_outOfBounds) {
         if (hasPrinted)
             out.print(", ");
         out.print("OutOfBounds");
         hasPrinted = true;
     }
-    
+
     if (m_mayInterceptIndexedAccesses) {
         if (hasPrinted)
             out.print(", ");
         out.print("Intercept");
         hasPrinted = true;
     }
-    
+
     if (m_usesOriginalArrayStructures) {
         if (hasPrinted)
             out.print(", ");
         out.print("Original");
         hasPrinted = true;
     }
-    
+
     UNUSED_PARAM(hasPrinted);
-    
+
     return out.toCString();
 }
 

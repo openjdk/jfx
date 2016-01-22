@@ -33,7 +33,7 @@ import java.util.ArrayList;
 import java.util.Map;
 
 final class GtkView extends View {
-    
+
     private boolean imEnabled = false;
     private boolean isInPreeditMode = false;
     private final StringBuilder preedit = new StringBuilder();
@@ -83,7 +83,7 @@ final class GtkView extends View {
     @Override
     protected void _end(long ptr) {}
 
-    @Override 
+    @Override
     protected void _uploadPixels(long ptr, Pixels pixels) {
         Buffer data = pixels.getPixels();
         if (data.isDirect() == true) {
@@ -110,7 +110,7 @@ final class GtkView extends View {
 
     @Override
     protected native void _exitFullscreen(long ptr, boolean animate);
-    
+
     @Override
     protected void _finishInputMethodComposition(long ptr) {
         if (imEnabled && isInPreeditMode) {
@@ -157,7 +157,7 @@ final class GtkView extends View {
             attributes.position(first);
             attributes.put(attr);
         }
-                    
+
         if (attributes.limit() > 0) {
             ArrayList<Integer> boundaryList = new ArrayList<>();
             ArrayList<Byte> valuesList = new ArrayList<>();
@@ -196,7 +196,7 @@ final class GtkView extends View {
         notifyInputMethod(preedit.toString(), boundary, boundary, values, 0, caret, 0);
         lastCaret = caret;
     }
-    
+
     protected void notifyInputMethodCaret(int pos, int direction, int style) {
         switch (direction) {
             case 0: //XIMForwardChar

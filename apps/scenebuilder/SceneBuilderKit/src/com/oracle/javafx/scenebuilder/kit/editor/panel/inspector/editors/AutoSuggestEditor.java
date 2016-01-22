@@ -101,15 +101,15 @@ public abstract class AutoSuggestEditor extends PropertyEditor {
     public AutoSuggestEditor(String name, String defaultValue, List<String> suggestedList) {
         this(name, defaultValue, suggestedList, Type.ALPHA, true);
     }
-    
+
     public AutoSuggestEditor(String name, String defaultValue, List<String> suggestedList, Type type) {
         this(name, defaultValue, suggestedList, type, true);
     }
-    
+
     public AutoSuggestEditor(String name, String defaultValue, List<String> suggestedList, boolean showMenuButton) {
         this(name, defaultValue, suggestedList, Type.ALPHA, showMenuButton);
     }
-    
+
     public AutoSuggestEditor(String name, String defaultValue, List<String> suggestedList, Type type, boolean showMenuButton) {
         super(name, defaultValue);
         this.type = type;
@@ -207,11 +207,11 @@ public abstract class AutoSuggestEditor extends PropertyEditor {
         updateMenuButtonIfNeeded();
         entryField.setPromptText(null);
     }
-    
+
     protected List<String> getSuggestedList() {
         return suggestedList;
     }
-    
+
     private void setSuggestedList(List<String> suggestedList) {
         Collections.sort(suggestedList);
         this.suggestedList = suggestedList;
@@ -324,7 +324,7 @@ public abstract class AutoSuggestEditor extends PropertyEditor {
         if (entryField.getContextMenu().isShowing() == false) {
 //                System.out.println("showPopup");
             suggestedLv.getSelectionModel().clearSelection();
-            // popup x coordinate need to be slightly moved, so that the popup is centered 
+            // popup x coordinate need to be slightly moved, so that the popup is centered
             entryField.getContextMenu().show(entryField, Side.BOTTOM, 0, 0);
         }
     }

@@ -240,7 +240,7 @@ init()
 static void fini() __attribute__ ((destructor));
 static void fini()
 {
-    iolib_fini();    
+    iolib_fini();
     if (tLevel >= dbgLevel) {
         fprintf(stderr, "INTERPOSITION FINISHED\n");
     }

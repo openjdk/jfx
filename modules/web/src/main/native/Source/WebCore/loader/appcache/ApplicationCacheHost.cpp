@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -142,7 +142,7 @@ void ApplicationCacheHost::failedLoadingMainResource()
         }
         group = m_applicationCache->group();
     }
-    
+
     if (group)
         group->failedLoadingMainResource(m_documentLoader);
 }
@@ -152,7 +152,7 @@ void ApplicationCacheHost::finishedLoadingMainResource()
     ApplicationCacheGroup* group = candidateApplicationCacheGroup();
     if (!group && applicationCache() && !mainResourceApplicationCache())
         group = applicationCache()->group();
-    
+
     if (group)
         group->finishedLoadingMainResource(m_documentLoader);
 }
@@ -161,17 +161,17 @@ bool ApplicationCacheHost::maybeLoadResource(ResourceLoader* loader, ResourceReq
 {
     if (!isApplicationCacheEnabled() && !isApplicationCacheBlockedForRequest(request))
         return false;
-    
+
     if (request.url() != originalURL)
         return false;
 
     ApplicationCacheResource* resource;
     if (!shouldLoadResourceFromApplicationCache(request, resource))
         return false;
-    
+
     m_documentLoader->m_pendingSubstituteResources.set(loader, resource);
     m_documentLoader->deliverSubstituteResourcesAfterDelay();
-        
+
     return true;
 }
 
@@ -285,7 +285,7 @@ void ApplicationCacheHost::fillResourceList(ResourceInfoList* resources)
     ApplicationCache* cache = applicationCache();
     if (!cache || !cache->isComplete())
         return;
-    
+
     for (const auto& urlAndResource : *cache) {
         RefPtr<ApplicationCacheResource> resource = urlAndResource.value;
         unsigned type = resource->type();
@@ -297,13 +297,13 @@ void ApplicationCacheHost::fillResourceList(ResourceInfoList* resources)
         resources->append(ResourceInfo(resource->url(), isMaster, isManifest, isFallback, isForeign, isExplicit, resource->estimatedSizeInStorage()));
     }
 }
- 
+
 ApplicationCacheHost::CacheInfo ApplicationCacheHost::applicationCacheInfo()
 {
     ApplicationCache* cache = applicationCache();
     if (!cache || !cache->isComplete())
         return CacheInfo(URL(), 0, 0, 0);
-  
+
     // FIXME: Add "Creation Time" and "Update Time" to Application Caches.
     return CacheInfo(cache->manifestResource()->url(), 0, 0, cache->estimatedSizeInStorage());
 }
@@ -327,7 +327,7 @@ void ApplicationCacheHost::setCandidateApplicationCacheGroup(ApplicationCacheGro
     ASSERT(!m_applicationCache);
     m_candidateApplicationCacheGroup = group;
 }
-    
+
 void ApplicationCacheHost::setApplicationCache(PassRefPtr<ApplicationCache> applicationCache)
 {
     if (m_candidateApplicationCacheGroup) {
@@ -372,7 +372,7 @@ bool ApplicationCacheHost::getApplicationCacheFallbackResource(const ResourceReq
     }
     if (!cache->isComplete())
         return false;
-    
+
     // If the resource is not a HTTP/HTTPS GET, then abort
     if (!ApplicationCache::requestIsHTTPOrHTTPSGet(request))
         return false;
@@ -400,7 +400,7 @@ bool ApplicationCacheHost::scheduleLoadFallbackResourceFromApplicationCache(Reso
 
     m_documentLoader->m_pendingSubstituteResources.set(loader, resource);
     m_documentLoader->deliverSubstituteResourcesAfterDelay();
-    
+
     loader->handle()->cancel();
 
     return true;
@@ -408,7 +408,7 @@ bool ApplicationCacheHost::scheduleLoadFallbackResourceFromApplicationCache(Reso
 
 ApplicationCacheHost::Status ApplicationCacheHost::status() const
 {
-    ApplicationCache* cache = applicationCache();    
+    ApplicationCache* cache = applicationCache();
     if (!cache)
         return UNCACHED;
 
@@ -455,7 +455,7 @@ bool ApplicationCacheHost::swapCache()
     ApplicationCache* newestCache = cache->group()->newestCache();
     if (cache == newestCache)
         return false;
-    
+
     ASSERT(cache->group() == newestCache->group());
     setApplicationCache(newestCache);
     InspectorInstrumentation::updateApplicationCacheStatus(m_documentLoader->frame());

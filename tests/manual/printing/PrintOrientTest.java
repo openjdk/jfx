@@ -125,7 +125,7 @@ public class PrintOrientTest extends Application {
         String orientText = orient.toString();
         if (!orient.equals(layout.getPageOrientation())) {
             Printer printer = job.getPrinter();
-            PrinterAttributes attributes = printer.getPrinterAttributes();       
+            PrinterAttributes attributes = printer.getPrinterAttributes();
             Set<PageOrientation> poSet =
                 attributes.getSupportedPageOrientations();
             if (poSet.contains(orient)) {

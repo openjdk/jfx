@@ -29,7 +29,7 @@ import java.io.Serializable;
 import javafx.beans.NamedArg;
 
 /**
- * Represents a single run in which the characters have the same 
+ * Represents a single run in which the characters have the same
  * set of highlights in the input method text.
  * <p>
  * Note: this is a conditional feature. See
@@ -82,7 +82,7 @@ public class InputMethodTextRun implements Serializable {
     /**
      * Returns a string representation of this {@code InputMethodTextRun} object.
      * @return a string representation of this {@code InputMethodTextRun} object.
-     */ 
+     */
     @Override public String toString() {
         return "InputMethodTextRun text [" + getText()
                 + "], highlight [" + getHighlight() + "]";

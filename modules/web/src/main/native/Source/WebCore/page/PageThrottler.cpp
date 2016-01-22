@@ -95,7 +95,7 @@ void PageThrottler::unthrottlePage()
 
     if (oldState == PageThrottledState)
         m_pageActivity.beginActivity();
-    
+
     m_page.setTimerThrottlingEnabled(false);
 }
 

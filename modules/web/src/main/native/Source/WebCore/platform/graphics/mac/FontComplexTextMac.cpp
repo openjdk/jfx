@@ -49,7 +49,7 @@ FloatRect Font::selectionRectForComplexText(const TextRun& run, const FloatPoint
     if (run.rtl()) {
         float totalWidth = controller.totalWidth();
         return FloatRect(floorf(point.x() + totalWidth - afterWidth), point.y(), roundf(point.x() + totalWidth - beforeWidth) - floorf(point.x() + totalWidth - afterWidth), h);
-    } 
+    }
 
     return FloatRect(floorf(point.x() + beforeWidth), point.y(), roundf(point.x() + afterWidth) - floorf(point.x() + beforeWidth), h);
 }

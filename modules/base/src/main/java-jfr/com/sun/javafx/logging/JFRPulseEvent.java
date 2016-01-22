@@ -39,7 +39,7 @@ public class JFRPulseEvent extends TimedEvent {
 
     @ValueDefinition(name="phaseName", description="Pulse phase name", contentType=ContentType.None)
     private String phase;
-    
+
     public JFRPulseEvent(EventToken eventToken) {
         super(eventToken);
     }
@@ -47,15 +47,15 @@ public class JFRPulseEvent extends TimedEvent {
     public int getPulseNumber() {
         return pulseNumber;
     }
-     
+
     public void setPulseNumber(int n) {
         pulseNumber = n;
-    } 
-    
+    }
+
     public String getPhase() {
         return phase;
     }
-    
+
     public void setPhase(String s) {
         phase = s;
     }

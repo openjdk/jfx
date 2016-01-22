@@ -59,14 +59,14 @@ private:
     }
 
     virtual PassRefPtr<TransformOperation> blend(const TransformOperation* from, double progress, bool blendToIdentity = false);
-    
+
     SkewTransformOperation(double angleX, double angleY, OperationType type)
         : m_angleX(angleX)
         , m_angleY(angleY)
         , m_type(type)
     {
     }
-    
+
     double m_angleX;
     double m_angleY;
     OperationType m_type;

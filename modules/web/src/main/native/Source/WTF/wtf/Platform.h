@@ -577,7 +577,7 @@
 #define HAVE_SIGNAL_H 1
 #define HAVE_STRINGS_H 1
 #define HAVE_SYS_PARAM_H 1
-#define HAVE_SYS_TIME_H 1 
+#define HAVE_SYS_TIME_H 1
 #define WTF_USE_PTHREADS 1
 #endif /* OS(UNIX) */
 
@@ -735,7 +735,7 @@
 #define ENABLE_DISASSEMBLER 1
 #endif
 
-/* On some of the platforms where we have a JIT, we want to also have the 
+/* On some of the platforms where we have a JIT, we want to also have the
    low-level interpreter. */
 
 #if !defined(ENABLE_LLINT) \
@@ -947,7 +947,7 @@
 #include <wtf/gobject/GTypedefs.h>
 #endif
 
-/* FIXME: This define won't be needed once #27551 is fully landed. However, 
+/* FIXME: This define won't be needed once #27551 is fully landed. However,
    since most ports try to support sub-project independence, adding new headers
    to WTF causes many ports to break, and so this way we can address the build
    breakages one port at a time. */

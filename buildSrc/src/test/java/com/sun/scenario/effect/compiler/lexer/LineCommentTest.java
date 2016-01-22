@@ -30,7 +30,7 @@ import org.antlr.runtime.RecognitionException;
 import org.junit.Test;
 
 public class LineCommentTest extends LexerBase {
-    
+
     @Test
     public void comment() throws Exception {
         assertRecognized("// ignored\n");

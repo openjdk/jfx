@@ -138,7 +138,7 @@ PassRefPtr<FilterEffect> SVGFEBlendElement::build(SVGFilterBuilder* filterBuilde
     FilterEffectVector& inputEffects = effect->inputEffects();
     inputEffects.reserveCapacity(2);
     inputEffects.append(input1);
-    inputEffects.append(input2);    
+    inputEffects.append(input2);
     return effect.release();
 }
 

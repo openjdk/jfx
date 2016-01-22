@@ -33,25 +33,25 @@ import javafx.collections.ObservableList;
 /**
  * An abstract class that extends {@link SelectionModel} to add API to support
  * multiple selection.
- * 
+ *
  * @see SelectionModel
  * @see SelectionMode
  * @param <T> The type of the item contained in the control that can be selected.
  * @since JavaFX 2.0
  */
 public abstract class MultipleSelectionModel<T> extends SelectionModel<T> {
-    
+
     /***************************************************************************
      *                                                                         *
      * Properties                                                              *
      *                                                                         *
-     **************************************************************************/     
-    
+     **************************************************************************/
+
     /**
      * <p>Specifies the selection mode to use in this selection model. The
      * selection mode specifies how many items in the underlying data model can
      * be selected at any one time.
-     * 
+     *
      * <p>By default, the selection mode is <code>SelectionMode.SINGLE</code>.
      */
     private ObjectProperty<SelectionMode> selectionMode;
@@ -91,27 +91,27 @@ public abstract class MultipleSelectionModel<T> extends SelectionModel<T> {
         }
         return selectionMode;
     }
-    
-    
-    
+
+
+
     /***************************************************************************
      *                                                                         *
      * Constructor                                                             *
      *                                                                         *
-     **************************************************************************/  
-    
+     **************************************************************************/
+
     /**
      * Creates a default MultipleSelectionModel instance.
      */
     public MultipleSelectionModel() { }
-    
-    
-    
+
+
+
     /***************************************************************************
      *                                                                         *
      * Public API                                                              *
      *                                                                         *
-     **************************************************************************/     
+     **************************************************************************/
 
     /**
      * <p>Returns a <b>read-only</b> ObservableList of all selected indices. The
@@ -148,7 +148,7 @@ public abstract class MultipleSelectionModel<T> extends SelectionModel<T> {
      * <p>Selects all indices from the given start index to the item before the
      * given end index. This means that the selection is inclusive of the start
      * index, and exclusive of the end index. This method will work regardless
-     * of whether start < end or start > end: the only constant is that the 
+     * of whether start < end or start > end: the only constant is that the
      * index before the given end index will become the selected index.
      *
      * <p>If there is already one or more indices selected in this model, calling
@@ -160,14 +160,14 @@ public abstract class MultipleSelectionModel<T> extends SelectionModel<T> {
      */
     public void selectRange(final int start, final int end) {
         if (start == end) return;
-        
+
         final boolean asc = start < end;
         final int low = asc ? start : end;      // Math.min(start, end);
         final int high = asc ? end : start;     //Math.max(start, end);
         final int arrayLength = high - low - 1;
-        
+
         int[] indices = new int[arrayLength];
-        
+
         int startValue = asc ? low : high;
         int firstVal = asc ? startValue++ : startValue--;
         for (int i = 0; i < arrayLength; i++) {

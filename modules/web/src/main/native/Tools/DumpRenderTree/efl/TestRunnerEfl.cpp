@@ -321,12 +321,12 @@ void TestRunner::setAllowUniversalAccessFromFileURLs(bool flag)
 {
     ewk_view_setting_allow_universal_access_from_file_urls_set(browser->mainView(), flag);
 }
- 
+
 void TestRunner::setAllowFileAccessFromFileURLs(bool flag)
 {
     ewk_view_setting_allow_file_access_from_file_urls_set(browser->mainView(), flag);
 }
- 
+
 void TestRunner::setAuthorAndUserStylesEnabled(bool flag)
 {
     DumpRenderTreeSupportEfl::setAuthorAndUserStylesEnabled(browser->mainView(), flag);

@@ -183,7 +183,7 @@ void SVGAnimationElement::parseAttribute(const QualifiedName& name, const Atomic
 
     if (name == SVGNames::keyPointsAttr) {
         if (hasTagName(SVGNames::animateMotionTag)) {
-            // This is specified to be an animateMotion attribute only but it is simpler to put it here 
+            // This is specified to be an animateMotion attribute only but it is simpler to put it here
             // where the other timing calculatations are.
             parseKeyTimes(value, m_keyPoints, false);
         }
@@ -248,8 +248,8 @@ float SVGAnimationElement::getCurrentTime() const
 float SVGAnimationElement::getSimpleDuration(ExceptionCode&) const
 {
     return narrowPrecisionToFloat(simpleDuration().value());
-}    
-    
+}
+
 void SVGAnimationElement::beginElement()
 {
     beginElementAt(0);
@@ -321,17 +321,17 @@ void SVGAnimationElement::setAttributeType(const AtomicString& attributeType)
 }
 
 String SVGAnimationElement::toValue() const
-{    
+{
     return fastGetAttribute(SVGNames::toAttr);
 }
 
 String SVGAnimationElement::byValue() const
-{    
+{
     return fastGetAttribute(SVGNames::byAttr);
 }
 
 String SVGAnimationElement::fromValue() const
-{    
+{
     return fastGetAttribute(SVGNames::fromAttr);
 }
 
@@ -448,12 +448,12 @@ float SVGAnimationElement::calculatePercentFromKeyPoints(float percent) const
     float toPercent = m_keyTimes[index + 1];
     float fromKeyPoint = m_keyPoints[index];
     float toKeyPoint = m_keyPoints[index + 1];
-    
+
     if (calcMode() == CalcModeDiscrete)
         return fromKeyPoint;
-    
+
     float keyPointPercent = (percent - fromPercent) / (toPercent - fromPercent);
-    
+
     if (calcMode() == CalcModeSpline) {
         ASSERT(m_keySplines.size() == m_keyPoints.size() - 1);
         keyPointPercent = calculatePercentForSpline(keyPointPercent, index);
@@ -468,7 +468,7 @@ float SVGAnimationElement::calculatePercentForFromTo(float percent) const
 
     return percent;
 }
-    
+
 void SVGAnimationElement::currentValuesFromKeyPoints(float percent, float& effectivePercent, String& from, String& to) const
 {
     ASSERT(!m_keyPoints.isEmpty());
@@ -479,7 +479,7 @@ void SVGAnimationElement::currentValuesFromKeyPoints(float percent, float& effec
     from = m_values[index];
     to = m_values[index + 1];
 }
-    
+
 void SVGAnimationElement::currentValuesForValuesAnimation(float percent, float& effectivePercent, String& from, String& to)
 {
     unsigned valuesCount = m_values.size();
@@ -505,32 +505,32 @@ void SVGAnimationElement::currentValuesForValuesAnimation(float percent, float& 
     }
     if (!m_keyPoints.isEmpty() && calcMode != CalcModePaced)
         return currentValuesFromKeyPoints(percent, effectivePercent, from, to);
-    
+
     unsigned keyTimesCount = m_keyTimes.size();
     ASSERT(!keyTimesCount || valuesCount == keyTimesCount);
     ASSERT(!keyTimesCount || (keyTimesCount > 1 && !m_keyTimes[0]));
 
     unsigned index = calculateKeyTimesIndex(percent);
     if (calcMode == CalcModeDiscrete) {
-        if (!keyTimesCount) 
+        if (!keyTimesCount)
             index = static_cast<unsigned>(percent * valuesCount);
         from = m_values[index];
         to = m_values[index];
         effectivePercent = 0;
         return;
     }
-    
+
     float fromPercent;
     float toPercent;
     if (keyTimesCount) {
         fromPercent = m_keyTimes[index];
         toPercent = m_keyTimes[index + 1];
-    } else {        
+    } else {
         index = static_cast<unsigned>(floorf(percent * (valuesCount - 1)));
         fromPercent =  static_cast<float>(index) / (valuesCount - 1);
         toPercent =  static_cast<float>(index + 1) / (valuesCount - 1);
     }
-    
+
     if (index == valuesCount - 1)
         --index;
     from = m_values[index];
@@ -543,7 +543,7 @@ void SVGAnimationElement::currentValuesForValuesAnimation(float percent, float& 
         effectivePercent = calculatePercentForSpline(effectivePercent, index);
     }
 }
-    
+
 void SVGAnimationElement::startedActiveInterval()
 {
     m_animationValid = false;
@@ -595,7 +595,7 @@ void SVGAnimationElement::startedActiveInterval()
 }
 
 void SVGAnimationElement::updateAnimation(float percent, unsigned repeatCount, SVGSMILElement* resultElement)
-{    
+{
     if (!m_animationValid)
         return;
 
@@ -653,7 +653,7 @@ void SVGAnimationElement::adjustForInheritance(SVGElement* targetElement, const 
 static bool inheritsFromProperty(SVGElement*, const QualifiedName& attributeName, const String& value)
 {
     DEFINE_STATIC_LOCAL(const AtomicString, inherit, ("inherit", AtomicString::ConstructFromLiteral));
-    
+
     if (value.isEmpty() || value != inherit)
         return false;
     return SVGElement::isAnimatableCSSProperty(attributeName);

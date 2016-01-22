@@ -51,7 +51,7 @@ static EncodedJSValue JSC_HOST_CALL mapProtoFuncValues(ExecState*);
 static EncodedJSValue JSC_HOST_CALL mapProtoFuncEntries(ExecState*);
 
 static EncodedJSValue JSC_HOST_CALL mapProtoFuncSize(ExecState*);
-    
+
 void MapPrototype::finishCreation(VM& vm, JSGlobalObject* globalObject)
 {
     Base::finishCreation(vm);

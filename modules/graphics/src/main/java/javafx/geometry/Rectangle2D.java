@@ -97,7 +97,7 @@ public class Rectangle2D {
      * @param minX The x coordinate of the upper-left corner of the {@code Rectangle2D}
      * @param minY The y coordinate of the upper-left corner of the {@code Rectangle2D}
      * @param width The width of the {@code Rectangle2D}
-     * @param height The height of the {@code Rectangle2D} 
+     * @param height The height of the {@code Rectangle2D}
      */
     public Rectangle2D(@NamedArg("minX") double minX, @NamedArg("minY") double minY, @NamedArg("width") double width, @NamedArg("height") double height) {
         if (width < 0 || height < 0) {
@@ -216,7 +216,7 @@ public class Rectangle2D {
     /**
      * Returns a hash code for this {@code Rectangle2D} object.
      * @return a hash code for this {@code Rectangle2D} object.
-     */ 
+     */
     @Override public int hashCode() {
         if (hash == 0) {
             long bits = 7L;
@@ -224,7 +224,7 @@ public class Rectangle2D {
             bits = 31L * bits + Double.doubleToLongBits(minY);
             bits = 31L * bits + Double.doubleToLongBits(width);
             bits = 31L * bits + Double.doubleToLongBits(height);
-	    hash = (int) (bits ^ (bits >> 32));
+        hash = (int) (bits ^ (bits >> 32));
         }
         return hash;
     }

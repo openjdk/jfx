@@ -7,13 +7,13 @@
  * are met:
  *
  * 1.  Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer. 
+ *     notice, this list of conditions and the following disclaimer.
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
- *     documentation and/or other materials provided with the distribution. 
+ *     documentation and/or other materials provided with the distribution.
  * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
- *     from this software without specific prior written permission. 
+ *     from this software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY APPLE AND ITS CONTRIBUTORS "AS IS" AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
@@ -70,7 +70,7 @@ public:
     {
         pthread_once(&initFontLockControl, initFontCacheLockOnce);
         int lockcode = pthread_mutex_lock(&fontDataLock);
-        ASSERT_WITH_MESSAGE_UNUSED(lockcode, !lockcode, "fontDataLock lock failed with code:%d", lockcode);    
+        ASSERT_WITH_MESSAGE_UNUSED(lockcode, !lockcode, "fontDataLock lock failed with code:%d", lockcode);
     }
     ~FontLocker()
     {
@@ -130,7 +130,7 @@ struct FontPlatformDataCacheKeyHash {
     {
         return computeHash(font);
     }
-         
+
     static bool equal(const FontPlatformDataCacheKey& a, const FontPlatformDataCacheKey& b)
     {
         return a == b;
@@ -196,14 +196,14 @@ static const AtomicString alternateFamilyName(const AtomicString& familyName)
             return AtomicString("Times", AtomicString::ConstructFromLiteral);
         break;
 #if OS(WINDOWS)
-    // On Windows, bitmap fonts are blocked altogether so that we have to 
+    // On Windows, bitmap fonts are blocked altogether so that we have to
     // alias MS Sans Serif (bitmap font) -> Microsoft Sans Serif (truetype font)
     case 13:
         if (familyNameEqualIgnoringCase(familyName, "MS Sans Serif"))
             return AtomicString("Microsoft Sans Serif", AtomicString::ConstructFromLiteral);
         break;
 
-    // Alias MS Serif (bitmap) -> Times New Roman (truetype font). There's no 
+    // Alias MS Serif (bitmap) -> Times New Roman (truetype font). There's no
     // 'Microsoft Sans Serif-equivalent' for Serif.
     case 8:
         if (familyNameEqualIgnoringCase(familyName, "MS Serif"))
@@ -223,7 +223,7 @@ FontPlatformData* FontCache::getCachedFontPlatformData(const FontDescription& fo
 #if PLATFORM(IOS)
     FontLocker fontLocker;
 #endif
-    
+
 #if OS(WINDOWS) && ENABLE(OPENTYPE_VERTICAL)
     // Leading "@" in the font name enables Windows vertical flow flag for the font.
     // Because we do vertical flow by ourselves, we don't want to use the Windows feature.
@@ -326,7 +326,7 @@ struct FontDataCacheKeyHash {
     {
         return platformData.hash();
     }
-         
+
     static bool equal(const FontPlatformData& a, const FontPlatformData& b)
     {
         return a == b;
@@ -390,7 +390,7 @@ PassRefPtr<SimpleFontData> FontCache::getCachedFontData(const FontPlatformData* 
 #if PLATFORM(IOS)
     FontLocker fontLocker;
 #endif
-    
+
     if (!gFontDataCache) {
         gFontDataCache = new FontDataCache;
         gInactiveFontData = new ListHashSet<RefPtr<SimpleFontData>>;
@@ -413,7 +413,7 @@ PassRefPtr<SimpleFontData> FontCache::getCachedFontData(const FontPlatformData* 
     if (shouldRetain == Retain)
         result.get()->value.second++;
     else if (!result.get()->value.second) {
-        // If shouldRetain is DoNotRetain and count is 0, we want to remove the fontData from 
+        // If shouldRetain is DoNotRetain and count is 0, we want to remove the fontData from
         // gInactiveFontData (above) and re-add here to update LRU position.
         gInactiveFontData->add(result.get()->value.first);
     }
@@ -434,7 +434,7 @@ void FontCache::releaseFontData(const SimpleFontData* fontData)
 #if PLATFORM(IOS)
     FontLocker fontLocker;
 #endif
-    
+
     FontDataCache::iterator it = gFontDataCache->find(fontData->platformData());
     ASSERT(it != gFontDataCache->end());
     if (it == gFontDataCache->end())
@@ -505,7 +505,7 @@ void FontCache::purgeInactiveFontData(int count)
             if (platformData->value && !gFontDataCache->contains(*platformData->value))
                 keysToRemove.append(platformData->key);
         }
-        
+
         size_t keysToRemoveCount = keysToRemove.size();
         for (size_t i = 0; i < keysToRemoveCount; ++i)
             gFontPlatformDataCache->remove(keysToRemove[i]);

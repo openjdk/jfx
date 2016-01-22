@@ -63,8 +63,8 @@ public class ScrollBarApp extends Application {
     private static final int yBarWidth = 15;
     private static final int yBarHeight = 393;
     private static final int circleRadius = 90;
-    
-    public Parent createContent() {          
+
+    public Parent createContent() {
         Rectangle bg = new Rectangle(xBarWidth+yBarWidth,xBarHeight+yBarHeight,Color.rgb(90,90,90));
         Rectangle box = new Rectangle (100,100,Color.rgb(150,150,150));
         box.setTranslateX(147);
@@ -111,7 +111,7 @@ public class ScrollBarApp extends Application {
         scrollBar.setMax(xBarWidth-(2*circleRadius));
         return scrollBar;
     }
-    
+
     //Create a ScrollBar with given parameters
     private ScrollBar verticalScrollBar(double minw, double minh, double prefw, double prefh, double maxw, double maxh) {
         final ScrollBar scrollBar = new ScrollBar();
@@ -131,8 +131,8 @@ public class ScrollBarApp extends Application {
     private void setScrollValueY(double v, Circle circle) {
         this.yscrollValue = v+xBarHeight;
         circle.relocate(xscrollValue, yscrollValue);
-    }    
-    
+    }
+
     @Override
     public void start(Stage primaryStage) throws Exception {
         primaryStage.setScene(new Scene(createContent()));

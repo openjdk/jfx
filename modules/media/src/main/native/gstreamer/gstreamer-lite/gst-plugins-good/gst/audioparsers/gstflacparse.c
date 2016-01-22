@@ -573,7 +573,7 @@ gst_flac_parse_frame_header_is_valid (GstFlacParse * flacparse,
     }
   }
 
-  /* 
+  /*
      The FLAC format documentation says:
      The "blocking strategy" bit determines how to calculate the sample number
      of the first sample in the frame. If the bit is 0 (fixed-blocksize), the
@@ -583,7 +583,7 @@ gst_flac_parse_frame_header_is_valid (GstFlacParse * flacparse,
      sample number itself. (In the case of a fixed-blocksize stream, only the
      last block may be shorter than the stream blocksize; its starting sample
      number will be calculated as the frame number times the previous frame's
-     blocksize, or zero if it is the first frame). 
+     blocksize, or zero if it is the first frame).
 
      Therefore, when in fixed block size mode, we only update the block size
      the first time, then reuse that block size for subsequent calls.

@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef DFGStructureAbstractValue_h
@@ -43,46 +43,46 @@ public:
         : m_structure(0)
     {
     }
-    
+
     StructureAbstractValue(Structure* structure)
         : m_structure(structure)
     {
     }
-    
+
     StructureAbstractValue(const StructureSet& set)
     {
         switch (set.size()) {
         case 0:
             m_structure = 0;
             break;
-            
+
         case 1:
             m_structure = set[0];
             break;
-            
+
         default:
             m_structure = topValue();
             break;
         }
     }
-    
+
     void clear()
     {
         m_structure = 0;
     }
-    
+
     void makeTop()
     {
         m_structure = topValue();
     }
-    
+
     static StructureAbstractValue top()
     {
         StructureAbstractValue value;
         value.makeTop();
         return value;
     }
-    
+
     void add(Structure* structure)
     {
         ASSERT(!contains(structure) && !isTop());
@@ -91,7 +91,7 @@ public:
         else
             m_structure = structure;
     }
-    
+
     bool addAll(const StructureSet& other)
     {
         if (isTop() || !other.size())
@@ -109,7 +109,7 @@ public:
         makeTop();
         return true;
     }
-    
+
     bool addAll(const StructureAbstractValue& other)
     {
         if (!other.m_structure)
@@ -129,7 +129,7 @@ public:
         m_structure = other.m_structure;
         return true;
     }
-    
+
     bool contains(Structure* structure) const
     {
         if (isTop())
@@ -138,7 +138,7 @@ public:
             return true;
         return false;
     }
-    
+
     bool isSubsetOf(const StructureSet& other) const
     {
         if (isTop())
@@ -147,7 +147,7 @@ public:
             return true;
         return other.contains(m_structure);
     }
-    
+
     bool doesNotContainAnyOtherThan(Structure* structure) const
     {
         if (isTop())
@@ -156,7 +156,7 @@ public:
             return true;
         return m_structure == structure;
     }
-    
+
     bool isSupersetOf(const StructureSet& other) const
     {
         if (isTop())
@@ -167,7 +167,7 @@ public:
             return false;
         return m_structure == other[0];
     }
-    
+
     bool isSubsetOf(const StructureAbstractValue& other) const
     {
         if (other.isTop())
@@ -181,38 +181,38 @@ public:
         }
         return true;
     }
-    
+
     bool isSupersetOf(const StructureAbstractValue& other) const
     {
         return other.isSubsetOf(*this);
     }
-    
+
     void filter(const StructureSet& other)
     {
         if (!m_structure)
             return;
-        
+
         if (isTop()) {
             switch (other.size()) {
             case 0:
                 m_structure = 0;
                 return;
-                
+
             case 1:
                 m_structure = other[0];
                 return;
-                
+
             default:
                 return;
             }
         }
-        
+
         if (other.contains(m_structure))
             return;
-        
+
         m_structure = 0;
     }
-    
+
     void filter(const StructureAbstractValue& other)
     {
         if (isTop()) {
@@ -225,37 +225,37 @@ public:
             return;
         m_structure = 0;
     }
-    
+
     void filter(SpeculatedType other)
     {
         if (!(other & SpecCell)) {
             clear();
             return;
         }
-        
+
         if (isClearOrTop())
             return;
 
         if (!(speculationFromStructure(m_structure) & other))
             m_structure = 0;
     }
-    
+
     bool isClear() const
     {
         return !m_structure;
     }
-    
+
     bool isTop() const { return m_structure == topValue(); }
-    
+
     bool isClearOrTop() const { return m_structure <= topValue(); }
     bool isNeitherClearNorTop() const { return !isClearOrTop(); }
-    
+
     size_t size() const
     {
         ASSERT(!isTop());
         return !!m_structure;
     }
-    
+
     Structure* at(size_t i) const
     {
         ASSERT(!isTop());
@@ -263,17 +263,17 @@ public:
         ASSERT_UNUSED(i, !i);
         return m_structure;
     }
-    
+
     Structure* operator[](size_t i) const
     {
         return at(i);
     }
-    
+
     Structure* last() const
     {
         return at(0);
     }
-    
+
     SpeculatedType speculationFromStructures() const
     {
         if (isTop())
@@ -282,7 +282,7 @@ public:
             return SpecNone;
         return speculationFromStructure(m_structure);
     }
-    
+
     bool isValidOffset(PropertyOffset offset)
     {
         if (isTop())
@@ -291,30 +291,30 @@ public:
             return true;
         return m_structure->isValidOffset(offset);
     }
-    
+
     bool hasSingleton() const
     {
         return isNeitherClearNorTop();
     }
-    
+
     Structure* singleton() const
     {
         ASSERT(isNeitherClearNorTop());
         return m_structure;
     }
-    
+
     bool operator==(const StructureAbstractValue& other) const
     {
         return m_structure == other.m_structure;
     }
-    
+
     void dumpInContext(PrintStream& out, DumpContext* context) const
     {
         if (isTop()) {
             out.print("TOP");
             return;
         }
-        
+
         out.print("[");
         if (m_structure)
             out.print(inContext(*m_structure, context));
@@ -328,9 +328,9 @@ public:
 
 private:
     static Structure* topValue() { return reinterpret_cast<Structure*>(1); }
-    
+
     // NB. This must have a trivial destructor.
-    
+
     // This can only remember one structure at a time.
     Structure* m_structure;
 };

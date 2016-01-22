@@ -49,7 +49,7 @@ RenderMultiColumnFlowThread::~RenderMultiColumnFlowThread()
 }
 
 const char* RenderMultiColumnFlowThread::renderName() const
-{    
+{
     return "RenderMultiColumnFlowThread";
 }
 
@@ -88,7 +88,7 @@ void RenderMultiColumnFlowThread::autoGenerateRegionsToBlockOffset(LayoutUnit /*
     RenderMultiColumnSet* firstSet = toRenderMultiColumnSet(firstRegion());
     if (firstSet)
         return;
-    
+
     invalidateRegions();
 
     RenderBlockFlow* parentBlock = toRenderBlockFlow(parent());
@@ -131,7 +131,7 @@ void RenderMultiColumnFlowThread::computeLineGridPaginationOrigin(LayoutState& l
 {
     if (!progressionIsInline())
         return;
-    
+
     // We need to cache a line grid pagination origin so that we understand how to reset the line grid
     // at the top of each column.
     // Get the current line grid and offset.
@@ -143,7 +143,7 @@ void RenderMultiColumnFlowThread::computeLineGridPaginationOrigin(LayoutState& l
     auto lineGridBox = lineGrid->lineGridBox();
     if (!lineGridBox)
         return;
-    
+
     bool isHorizontalWritingMode = lineGrid->isHorizontalWritingMode();
 
     LayoutUnit lineGridBlockOffset = isHorizontalWritingMode ? layoutState.lineGridOffset().height() : layoutState.lineGridOffset().width();
@@ -157,7 +157,7 @@ void RenderMultiColumnFlowThread::computeLineGridPaginationOrigin(LayoutState& l
         return;
 
     LayoutUnit firstLineTopWithLeading = lineGridBlockOffset + lineGridBox->lineTopWithLeading();
-    
+
     if (layoutState.isPaginated() && layoutState.pageLogicalHeight()) {
         LayoutUnit pageLogicalTop = isHorizontalWritingMode ? layoutState.pageOffset().height() : layoutState.pageOffset().width();
         if (pageLogicalTop > firstLineTopWithLeading) {

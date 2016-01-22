@@ -38,11 +38,11 @@ public abstract class Timer {
 
     private final static double UNSET_PERIOD = -1.0; // 0 is valid value, so can't use it here
     private final static double SET_PERIOD   = -2.0; // token value for vsync timer
-    
+
     private final Runnable runnable;
     private long ptr;
     private double period = UNSET_PERIOD;
-    
+
     protected abstract long _start(Runnable runnable);
     protected abstract long _start(Runnable runnable, int period);
     protected abstract void _stop(long timer);
@@ -73,7 +73,7 @@ public abstract class Timer {
     public static int getMaxPeriod() {
         return Application.GetApplication().staticTimer_getMaxPeriod();
     }
-    
+
     /**
      * Starts the timer.
      * The period must be in the range getMinPeriod() .. getMaxPeriod().
@@ -84,11 +84,11 @@ public abstract class Timer {
         if (period < getMinPeriod() || period > getMaxPeriod()) {
             throw new IllegalArgumentException("period is out of range");
         }
-        
+
         if (this.ptr != 0L) {
             stop();
         }
-        
+
         this.ptr = _start(this.runnable, period);
         if (this.ptr == 0L) {
             this.period = UNSET_PERIOD;
@@ -97,18 +97,18 @@ public abstract class Timer {
             this.period = (double)period;
         }
     }
-    
+
     /**
      * Start a vsync-based timer if the system supports it.
-     * 
-     * A RuntimeException is thrown if the system does not support 
+     *
+     * A RuntimeException is thrown if the system does not support
      * vsync-based timer or if there was an issue starting the timer.
      */
-    public synchronized void start() {        
+    public synchronized void start() {
         if (this.ptr != 0L) {
             stop();
         }
-        
+
         this.ptr = _start(this.runnable);
         if (this.ptr == 0L) {
             this.period = UNSET_PERIOD;

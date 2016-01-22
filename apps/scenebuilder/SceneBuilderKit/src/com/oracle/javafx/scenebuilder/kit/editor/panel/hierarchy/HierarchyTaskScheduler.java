@@ -77,7 +77,7 @@ public class HierarchyTaskScheduler {
         timerTask = new TimerTask() {
             @Override
             public void run() {
-                // JavaFX data should only be accessed on the JavaFX thread. 
+                // JavaFX data should only be accessed on the JavaFX thread.
                 // => we must wrap the code into a Runnable object and call the Platform.runLater
                 Platform.runLater(() -> {
                     final TreeItem<HierarchyItem> graphicTreeItem
@@ -132,7 +132,7 @@ public class HierarchyTaskScheduler {
 
         @Override
         public void run() {
-            // JavaFX data should only be accessed on the JavaFX thread. 
+            // JavaFX data should only be accessed on the JavaFX thread.
             // => we must wrap the code into a Runnable object and call the Platform.runLater
             Platform.runLater(() -> treeItem.setExpanded(true));
         }

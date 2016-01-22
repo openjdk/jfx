@@ -96,7 +96,7 @@ public class RotatorControl extends GridPane {
 
         assert rotator_label != null;
         rotator_label.setText(text);
-        
+
         rotator_dial.setOnAction((ActionEvent event) -> {
             event.consume();
         });

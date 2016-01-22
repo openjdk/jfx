@@ -83,7 +83,7 @@ public class ImageInputTest extends EffectsTestBase {
         pulse();
         assertEquals(0, ((com.sun.scenario.effect.Identity) effect.impl_getImpl()).getLocation().y, 1e-100);
     }
-    
+
     @Test
     public void testSetSource() {
         // try setting non-existing image
@@ -163,11 +163,11 @@ public class ImageInputTest extends EffectsTestBase {
         assertEquals(Toolkit.getToolkit().toFilterable(TestImages.TEST_IMAGE_32x32).getPhysicalHeight(),
                 ((com.sun.scenario.effect.Identity) effect.impl_getImpl()).getSource().getPhysicalHeight());
         assertEquals(Toolkit.getToolkit().toFilterable(TestImages.TEST_IMAGE_32x32).getPhysicalWidth(),
-                ((com.sun.scenario.effect.Identity) effect.impl_getImpl()).getSource().getPhysicalWidth());        
+                ((com.sun.scenario.effect.Identity) effect.impl_getImpl()).getSource().getPhysicalWidth());
         assertEquals(1.0f, ((com.sun.scenario.effect.Identity) effect.impl_getImpl()).getLocation().x, 1e-100);
         assertEquals(2.0f, ((com.sun.scenario.effect.Identity) effect.impl_getImpl()).getLocation().y, 1e-100);
     }
-    
+
     @Test
     public void testCreateWithDefaultParams() {
         effect = new ImageInput(null);

@@ -39,14 +39,14 @@ import java.util.concurrent.TimeUnit;
 
 /*
  * Utility class to write sfnt-based font files.
- * 
+ *
  * To reduce the number of IO operation this class buffers the font header
  * and directory when the API writeHeader() and writeDirectoryEntry() are used.
  */
 class FontFileWriter implements FontConstants {
     byte[] header;              // buffer for the header and directory
     int pos;                    // current position for the tables
-    int headerPos;              // current buffer position in the header 
+    int headerPos;              // current buffer position in the header
     int writtenBytes;
     FontTracker tracker;
     File file;
@@ -184,8 +184,8 @@ class FontFileWriter implements FontConstants {
         checkSize(size);
         header = new byte[size];
 
-        /* Spec: 
-        * searchRange = (maximum power of 2 <= numTables) * 16 
+        /* Spec:
+        * searchRange = (maximum power of 2 <= numTables) * 16
         * entrySelector = log2(maximum power of 2 <= numTables)
         * rangeShift = numTables*16-searchRange
         */
@@ -213,7 +213,7 @@ class FontFileWriter implements FontConstants {
         writeShort(rangeShift);
     }
 
-    public void writeDirectoryEntry(int index, int tag, 
+    public void writeDirectoryEntry(int index, int tag,
             int checksum, int offset, int length) throws IOException
     {
         setHeaderPos(TTCHEADERSIZE + DIRECTORYENTRYSIZE * index);
@@ -239,10 +239,10 @@ class FontFileWriter implements FontConstants {
         writeBytes(buffer, 0, buffer.length);
     }
 
-    public void writeBytes(byte[] buffer, int startPos, int length) 
-            throws IOException 
+    public void writeBytes(byte[] buffer, int startPos, int length)
+            throws IOException
     {
-        checkSize(length); 
+        checkSize(length);
         raFile.write(buffer, startPos, length);
         pos += length;
     }
@@ -268,7 +268,7 @@ class FontFileWriter implements FontConstants {
         }
         return hasPerm;
     }
-    
+
     /* Like JDK, FX allows untrusted code to create fonts which consume
      * disk resource. We need to place some reasonable limit on the amount
      * that can be consumed to prevent D.O.S type attacks.

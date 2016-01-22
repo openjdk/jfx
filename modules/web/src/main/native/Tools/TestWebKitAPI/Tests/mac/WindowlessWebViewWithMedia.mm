@@ -72,7 +72,7 @@ TEST(WebKit1, WindowlessWebViewWithMedia)
 
     EXPECT_EQ(nil, [webView.get() window]);
 
-    Util::run(&didFinishLoad);    
+    Util::run(&didFinishLoad);
 
     spinLoop(0.25, ^{
         return [[webView.get() stringByEvaluatingJavaScriptFromString:@"window.didTriggerLoad"] isEqualToString:@"true"];

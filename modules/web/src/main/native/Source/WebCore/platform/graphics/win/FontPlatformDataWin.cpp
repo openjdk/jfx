@@ -55,7 +55,7 @@ FontPlatformData::FontPlatformData(GDIObject<HFONT> font, float size, bool bold,
 {
     HWndDC hdc(0);
     SaveDC(hdc);
-    
+
     ::SelectObject(hdc, m_font->get());
     UINT bufferSize = GetOutlineTextMetrics(hdc, 0, NULL);
 

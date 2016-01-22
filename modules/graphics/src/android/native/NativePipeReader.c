@@ -58,10 +58,10 @@ JNIEXPORT jstring JNICALL Java_com_oracle_dalvik_NativePipeReader_readPipe
 /*
  * Class:     com_oracle_dalvik_NativePipeReader_StdoutStderrClient
  * Method:    nativeInitPipe
- * Signature: ()I 
- *  
- * create a new pipe attaching stdout and stderr to the WRITE end 
- *  
+ * Signature: ()I
+ *
+ * create a new pipe attaching stdout and stderr to the WRITE end
+ *
  */
 JNIEXPORT jint JNICALL Java_com_oracle_dalvik_NativePipeReader_00024StdoutStderrClient_nativeInitPipe
   (JNIEnv *env, jobject thiz) {
@@ -85,11 +85,11 @@ JNIEXPORT jint JNICALL Java_com_oracle_dalvik_NativePipeReader_00024StdoutStderr
 /*
  * Class:     com_oracle_dalvik_NativePipeReader_StdoutStderrClient
  * Method:    nativeCleanupPipe
- * Signature: ()V 
- *  
- * Return stdout and stderr to previous settings and 
- * shut down pipe 
- *  
+ * Signature: ()V
+ *
+ * Return stdout and stderr to previous settings and
+ * shut down pipe
+ *
  */
 JNIEXPORT void JNICALL Java_com_oracle_dalvik_NativePipeReader_00024StdoutStderrClient_nativeCleanupPipe
   (JNIEnv *env, jobject thiz) {

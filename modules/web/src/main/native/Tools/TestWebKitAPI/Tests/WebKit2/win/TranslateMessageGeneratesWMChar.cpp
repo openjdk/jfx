@@ -38,7 +38,7 @@ static void didNotHandleKeyEventCallback(WKPageRef, WKNativeEventPtr event, cons
 {
     if (event->message != WM_KEYDOWN)
         return;
-    
+
     // Don't call TranslateMessage() here so a WM_CHAR isn't generated.
     didNotHandleKeyEventCalled = true;
 }
@@ -50,13 +50,13 @@ static void runAndWatchForWMChar(bool* done)
         BOOL result = ::GetMessageW(&msg, 0, 0, 0);
         if (!result || result == -1)
             break;
-        
+
         if (msg.message == WM_CHAR)
             didSeeWMChar = true;
-        
+
         if (Util::shouldTranslateMessage(msg))
             ::TranslateMessage(&msg);
-        
+
         ::DispatchMessage(&msg);
     }
 }
@@ -70,7 +70,7 @@ TEST(WebKit2, TranslateMessageGeneratesWMChar)
 
     // WebKit should call TranslateMessage() on the WM_KEYDOWN message to generate the WM_CHAR message.
     runAndWatchForWMChar(&didSeeWMChar);
-    
+
     didSeeWMChar = false;
 
     WKPageUIClient uiClient;

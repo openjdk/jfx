@@ -66,7 +66,7 @@ jint JNI_OnLoad(JavaVM* vm, void* reserved)
 
 static void logArgs(int argc, char** argv) {
     int i;
-    
+
     for (i = 0; i < argc; i++) {
         __android_log_print(3,"JVM", "arg[%d]: %s", i, argv[i]);
     }

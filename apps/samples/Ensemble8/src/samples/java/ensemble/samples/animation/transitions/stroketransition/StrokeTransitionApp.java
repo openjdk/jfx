@@ -68,8 +68,8 @@ public class StrokeTransitionApp extends Application {
         Pane root = new Pane();
         root.setPrefSize(200, 200);
         root.setMinSize(Pane.USE_PREF_SIZE, Pane.USE_PREF_SIZE);
-        root.setMaxSize(Pane.USE_PREF_SIZE, Pane.USE_PREF_SIZE);       
-        
+        root.setMaxSize(Pane.USE_PREF_SIZE, Pane.USE_PREF_SIZE);
+
         Rectangle rect = new Rectangle(0, 0, 150, 150);
         rect.setArcHeight(20);
         rect.setArcWidth(20);

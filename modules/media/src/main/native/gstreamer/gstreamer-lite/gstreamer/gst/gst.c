@@ -89,7 +89,7 @@
  * gst_version_string() returns a printable string.
  *
  * The gst_deinit() call is used to clean up all internal resources used
- * by <application>GStreamer</application>. It is mostly used in unit tests 
+ * by <application>GStreamer</application>. It is mostly used in unit tests
  * to check for leaks.
  */
 
@@ -336,7 +336,7 @@ gst_init_check (int *argc, char **argv[], GError ** err)
 
   _CrtSetDbgFlag ( _CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF );
   _CrtSetReportMode( _CRT_ERROR, _CRTDBG_MODE_DEBUG );
-#endif // ENABLE_VISUAL_STUDIO_MEMORY_LEAKS_DETECTION 
+#endif // ENABLE_VISUAL_STUDIO_MEMORY_LEAKS_DETECTION
 #endif // GSTREAMER_LITE
 
   if (gst_initialized) {
@@ -482,7 +482,7 @@ init_pre (GOptionContext * context, GOptionGroup * group, gpointer data,
 #if !GLIB_CHECK_VERSION(2, 35, 0)
   g_type_init ();
 #endif
-  
+
 #if defined(GSTREAMER_LITE) && defined(G_OS_WIN32)
   // We still need to call it due too bug in GLib
   g_type_init ();
@@ -958,7 +958,7 @@ parse_goption_arg (const gchar * opt,
  * This function is therefore mostly used by testsuites and other memory
  * profiling tools.
  *
- * After this call GStreamer (including this method) should not be used anymore. 
+ * After this call GStreamer (including this method) should not be used anymore.
  */
 void
 gst_deinit (void)

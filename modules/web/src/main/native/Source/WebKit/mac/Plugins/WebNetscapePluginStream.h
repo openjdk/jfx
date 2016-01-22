@@ -6,13 +6,13 @@
  * are met:
  *
  * 1.  Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer. 
+ *     notice, this list of conditions and the following disclaimer.
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
- *     documentation and/or other materials provided with the distribution. 
+ *     documentation and/or other materials provided with the distribution.
  * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
- *     from this software without specific prior written permission. 
+ *     from this software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY APPLE AND ITS CONTRIBUTORS "AS IS" AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
@@ -64,7 +64,7 @@ public:
 
     NPP plugin() const { return m_plugin; }
     void setPlugin(NPP);
-    
+
     static NPP ownerForStream(NPStream *);
 
     static NPReason reasonForError(NSError *);
@@ -76,9 +76,9 @@ public:
 
     void start();
     void stop();
-    
+
     void startStreamWithResponse(NSURLResponse *response);
-    
+
     void didReceiveData(WebCore::NetscapePlugInStreamLoader*, const char* bytes, int length);
     void destroyStreamWithError(NSError *);
     void didFinishLoading(WebCore::NetscapePlugInStreamLoader*);
@@ -91,7 +91,7 @@ private:
     void deliverData();
 
     void startStream(NSURL *, long long expectedContentLength, NSDate *lastModifiedDate, const WTF::String& mimeType, NSData *headers);
-    
+
     NSError *pluginCancelledConnectionError() const;
 
     // NetscapePlugInStreamLoaderClient methods.
@@ -117,7 +117,7 @@ private:
     NPReason m_reason;
     bool m_isTerminated;
     bool m_newStreamSuccessful;
-    
+
     WebCore::FrameLoader* m_frameLoader;
     RefPtr<WebCore::NetscapePlugInStreamLoader> m_loader;
     RetainPtr<NSMutableURLRequest> m_request;
@@ -125,7 +125,7 @@ private:
 
     void deliverDataTimerFired(WebCore::Timer<WebNetscapePluginStream>* timer);
     WebCore::Timer<WebNetscapePluginStream> m_deliverDataTimer;
-    
+
     WebNetscapePluginStream(WebCore::FrameLoader*);
     WebNetscapePluginStream(NSURLRequest *, NPP, bool sendNotification, void* notifyData);
 };

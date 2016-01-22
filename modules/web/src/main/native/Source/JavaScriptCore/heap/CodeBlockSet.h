@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef CodeBlockSet_h
@@ -49,27 +49,27 @@ class CodeBlockSet {
 public:
     CodeBlockSet(BlockAllocator&);
     ~CodeBlockSet();
-    
+
     // Add a CodeBlock. This is only called by CodeBlock constructors.
     void add(PassRefPtr<CodeBlock>);
-    
+
     // Clear all mark bits associated with DFG code blocks.
     void clearMarks();
-    
+
     // Mark a pointer that may be a CodeBlock that belongs to the set of DFG
     // blocks. This is defined in CodeBlock.h.
     void mark(CodeBlock* candidateCodeBlock);
     void mark(void* candidateCodeBlock);
-    
+
     // Delete all code blocks that are only referenced by this set (i.e. owned
     // by this set), and that have not been marked.
     void deleteUnmarkedAndUnreferenced();
-    
+
     // Trace all marked code blocks. The CodeBlock is free to make use of
     // mayBeExecuting.
     void traceMarked(SlotVisitor&);
 
-    // Add all currently executing CodeBlocks to the remembered set to be 
+    // Add all currently executing CodeBlocks to the remembered set to be
     // re-scanned during the next collection.
     void rememberCurrentlyExecutingCodeBlocks(Heap*);
 

@@ -46,7 +46,7 @@ import org.junit.Ignore;
 import org.junit.Test;
 
 public class Node_cssStateTransition_Test {
-    
+
     public Node_cssStateTransition_Test() {
     }
 

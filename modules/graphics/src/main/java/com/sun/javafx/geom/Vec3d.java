@@ -72,7 +72,7 @@ public class Vec3d {
         this.y = v.y;
         this.z = v.z;
     }
-    
+
     public void set(double x, double y, double z) {
         this.x = x;
         this.y = y;

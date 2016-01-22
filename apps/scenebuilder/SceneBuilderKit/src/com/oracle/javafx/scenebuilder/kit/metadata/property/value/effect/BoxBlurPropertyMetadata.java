@@ -45,7 +45,7 @@ import javafx.scene.effect.BoxBlur;
  *
  */
 public class BoxBlurPropertyMetadata extends ComplexPropertyMetadata<BoxBlur> {
-    
+
     private final EffectPropertyMetadata inputMetadata
             = new EffectPropertyMetadata(new PropertyName("input"), //NOI18N
             true /* readWrite */, null, InspectorPath.UNUSED);
@@ -59,7 +59,7 @@ public class BoxBlurPropertyMetadata extends ComplexPropertyMetadata<BoxBlur> {
             = new IntegerPropertyMetadata(new PropertyName("iterations"), //NOI18N
              true /* readWrite */, 1, InspectorPath.UNUSED);
 
-    public BoxBlurPropertyMetadata(PropertyName name, boolean readWrite, 
+    public BoxBlurPropertyMetadata(PropertyName name, boolean readWrite,
             BoxBlur defaultValue, InspectorPath inspectorPath) {
         super(name, BoxBlur.class, readWrite, defaultValue, inspectorPath);
     }
@@ -67,16 +67,16 @@ public class BoxBlurPropertyMetadata extends ComplexPropertyMetadata<BoxBlur> {
     /*
      * ComplexPropertyMetadata
      */
-    
+
     @Override
     public FXOMInstance makeFxomInstanceFromValue(BoxBlur value, FXOMDocument fxomDocument) {
         final FXOMInstance result = new FXOMInstance(fxomDocument, value.getClass());
-        
+
         inputMetadata.setValue(result, value.getInput());
         heightMetadata.setValue(result, value.getHeight());
         widthMetadata.setValue(result, value.getWidth());
         iterationsMetadata.setValue(result, value.getIterations());
-        
+
         return result;
     }
 }

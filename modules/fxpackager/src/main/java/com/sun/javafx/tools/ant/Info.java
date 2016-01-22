@@ -123,15 +123,15 @@ public class Info extends DataType {
     public void setDescription(String v) {
         appDescription = v;
     }
-    
+
     /**
      * Email contact of vendor.
      * Required for Debian packages, not used by other bundlers
-     * 
+     *
      * Email will be combined with Vendor to create a maintainer contact for
      * Debian package
-     * 
-     * @param v 
+     *
+     * @param v
      */
     public void setEmail(String v) {
         email = v;

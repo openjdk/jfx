@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef ProfilerBytecodes_h
@@ -38,7 +38,7 @@ class Bytecodes : public BytecodeSequence {
 public:
     Bytecodes(size_t id, CodeBlock*);
     ~Bytecodes();
-    
+
     size_t id() const { return m_id; }
     const CString& inferredName() const { return m_inferredName; }
     const CString& sourceCode() const { return m_sourceCode; }
@@ -46,9 +46,9 @@ public:
     CodeBlockHash hash() const { return m_hash; }
 
     void dump(PrintStream&) const;
-    
+
     JSValue toJS(ExecState*) const;
-    
+
 private:
     size_t m_id;
     CString m_inferredName;

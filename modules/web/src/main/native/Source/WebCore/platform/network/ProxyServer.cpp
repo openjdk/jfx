@@ -44,7 +44,7 @@ static void appendProxyServerString(StringBuilder& builder, const ProxyServer& p
         builder.append("SOCKS");
         break;
     }
-    
+
     builder.append(' ');
 
     ASSERT(!proxyServer.hostName().isNull());

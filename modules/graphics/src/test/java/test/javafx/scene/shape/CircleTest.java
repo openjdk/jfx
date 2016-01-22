@@ -63,7 +63,7 @@ public class CircleTest {
         final Circle node = new StubCircle();
         NodeTest.testDoublePropertyPropagation(node, "radius", 100, 200);
     }
-    
+
     @Test public void testBoundPropertySync_centerX() throws Exception {
         NodeTest.assertDoublePropertySynced(
                 new StubCircle(100, 200, 50),
@@ -92,7 +92,7 @@ public class CircleTest {
         c.setRotate(15);
         assertSimilar(original, c.getBoundsInParent());
     }
-    
+
     @Test
     public void testTransformedBounds_rotation2() {
         final int centerX = 50;

@@ -31,7 +31,7 @@
 namespace WebCore {
 
 class AudioContext;
-    
+
 class ChannelSplitterNode : public AudioNode {
 public:
     static PassRefPtr<ChannelSplitterNode> create(AudioContext*, float sampleRate, unsigned numberOfOutputs);

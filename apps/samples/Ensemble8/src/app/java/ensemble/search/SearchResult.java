@@ -94,7 +94,7 @@ public class SearchResult {
         return documentType +"::"+name+
                 "\n" + shortDescription;
     }
-    
+
     public String debugToString() {
         return "SearchResult{" +
                 "\n     documentType=" + documentType +

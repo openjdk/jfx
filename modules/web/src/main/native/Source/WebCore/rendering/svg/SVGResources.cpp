@@ -386,7 +386,7 @@ void SVGResources::resourceDestroyed(RenderSVGResourceContainer& resource)
         break;
     case ClipperResourceType:
         if (!m_clipperFilterMaskerData)
-            break; 
+            break;
         if (m_clipperFilterMaskerData->clipper == &resource) {
             m_clipperFilterMaskerData->clipper->removeAllClientsFromCache();
             m_clipperFilterMaskerData->clipper = 0;

@@ -116,7 +116,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
      * Private fields                                                          *
      *                                                                         *
      **************************************************************************/
-                    
+
     private boolean touchDetected = false;
     private boolean mouseDown = false;
 
@@ -276,7 +276,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
         sheet = new Group();
         sheet.getStyleClass().add("sheet");
         sheet.setAutoSizeChildren(false);
-        
+
         sheetChildren = sheet.getChildren();
 
         // --- clipView
@@ -294,7 +294,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
         ** don't allow the ScrollBar to handle the ScrollEvent,
         ** In a VirtualFlow a vertical scroll should scroll on the vertical only,
         ** whereas in a horizontal ScrollBar it can scroll horizontally.
-        */ 
+        */
         // block the event from being passed down to children
         final EventDispatcher blockEventDispatcher = (event, tail) -> event;
         // block ScrollEvent from being passed down to scrollbar's skin

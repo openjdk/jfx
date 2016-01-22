@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef MethodOfGettingAValueProfile_h
@@ -48,7 +48,7 @@ public:
         : m_kind(None)
     {
     }
-    
+
     explicit MethodOfGettingAValueProfile(ValueProfile* profile)
     {
         if (profile) {
@@ -57,12 +57,12 @@ public:
         } else
             m_kind = None;
     }
-    
+
     static MethodOfGettingAValueProfile fromLazyOperand(
         CodeBlock*, const LazyOperandValueProfileKey&);
-    
+
     bool operator!() const { return m_kind == None; }
-    
+
     // This logically has a pointer to a "There exists X such that
     // ValueProfileBase<X>". But since C++ does not have existential
     // templates, I cannot return it. So instead, for any methods that
@@ -70,16 +70,16 @@ public:
     // a method here that does it through an indirection. Or we could
     // possibly just make ValueProfile less template-based. But last I
     // tried that, it felt more yucky than this class.
-    
+
     EncodedJSValue* getSpecFailBucket(unsigned index) const;
-    
+
 private:
     enum Kind {
         None,
         Ready,
         LazyOperand
     };
-    
+
     Kind m_kind;
     union {
         ValueProfile* profile;

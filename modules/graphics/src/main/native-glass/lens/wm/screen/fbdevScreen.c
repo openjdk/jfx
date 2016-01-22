@@ -22,7 +22,7 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
- 
+
 #include "LensCommon.h"
 #include "input/LensInput.h"
 #include "wm/LensWindowManager.h"
@@ -82,7 +82,7 @@ LensResult glass_window_PlatformWindowRelease(JNIEnv *env, NativeWindow window) 
     return LENS_OK;
 }
 
-jboolean glass_window_setAlpha(JNIEnv *env, NativeWindow window, float alpha) {    
+jboolean glass_window_setAlpha(JNIEnv *env, NativeWindow window, float alpha) {
     lens_wm_repaint(env, window);
     return JNI_TRUE;
 }
@@ -94,7 +94,7 @@ void glass_pixel_attachIntBuffer(JNIEnv *env,
                                  jint height, int offset) {
     FILE *fb;
     NativeScreen fbScreen = glass_screen_getMainScreen();
-    
+
     GLASS_LOG_FINE("fopen(%s, \"w\") to write %ix%i pixels at depth %i",
                    FB_DEVICE, width, height, fbScreen->depth);
     fb = fopen(FB_DEVICE, "w");
@@ -189,19 +189,19 @@ void do_screen_clear() {
 
     memset(fbScanLine, 0, fbScanLineSize);
     switch (fbScreen->depth) {
-        case 32: 
+        case 32:
             for (y = 0; y < fbScreen->height; y++) {
                 fwrite(fbScanLine, 4, fbScanLineSize >> 2, fb);
             }
             GLASS_LOG_FINE("Screen cleared (32bit mode)");
-        
+
             break;
-        case 16: 
+        case 16:
             for (y = 0; y < fbScreen->height; y++) {
                 fwrite(fbScanLine, 2, fbScanLineSize >> 1, fb);
             }
             GLASS_LOG_FINE("Screen cleared (16bit mode)");
-        
+
             break;
         default:
             GLASS_LOG_SEVERE("Cannot write to screen of depth %i", fbScreen->depth);

@@ -37,12 +37,12 @@ import javafx.util.Callback;
  * of String key/value pairs. It is meant to be used in a similar way to System
  * Properties, but without the security restrictions. This class is designed
  * primarily to aid in testing and benchmarking Scenario itself.
- * 
+ *
  * If you are running in an environment that allows System Property access, this
  * class will attempt to look for a key's value in the System Properties if none
  * is found in Settings. This allows Settings to be set on the command line as
  * well as via the Settings API.
- * 
+ *
  */
 public class Settings {
 
@@ -70,13 +70,13 @@ public class Settings {
 
     /**
      * Add a new key-value setting.
-     * 
+     *
      * Passing a value of null indicates that the value for this key should be
      * looked for in the System Properties.
-     * 
+     *
      * If PropertyChangeListeners have been registered for the given key, they
      * will be notified of a change in value.
-     * 
+     *
      * If key is "" or null, this methods throws an IllegalArgumentException.
      */
     public static void set(String key, String value) {
@@ -93,13 +93,13 @@ public class Settings {
 
     /**
      * Retrieve the value for the given key.
-     * 
+     *
      * If the key is not present in Settings or its value is null, this methods
      * then checks to see if a value for this key is present in the System
      * Properties (provided you have sufficient privileges).
-     * 
+     *
      * If no value can be found for the given key, this method returns null.
-     * 
+     *
      * If key is "" or null, this methods throws an IllegalArgumentException.
      */
     public static String get(String key) {
@@ -120,10 +120,10 @@ public class Settings {
 
     /**
      * Convenience method for boolean settings.
-     * 
+     *
      * If the setting exists and its value is "true", true is returned.
      * Otherwise, false is returned.
-     * 
+     *
      * If key is "" or null, this methods throws an IllegalArgumentException.
      */
     public static boolean getBoolean(String key) {
@@ -138,11 +138,11 @@ public class Settings {
 
     /**
      * Convenience method for boolean settings.
-     * 
+     *
      * If the setting is set to "true", true is returned. If the setting is set
      * to "false", false is returned. It the setting is set to anything else,
      * defaultVal is returned.
-     * 
+     *
      * If key is "" or null, this methods throws an IllegalArgumentException.
      */
     public static boolean getBoolean(String key, boolean defaultVal) {
@@ -165,10 +165,10 @@ public class Settings {
 
     /**
      * Convenience method for int settings.
-     * 
+     *
      * If the setting exists and its value can be parsed to an int, the int
      * value is returned. Otherwise, the default value is returned.
-     * 
+     *
      * If key is "" or null, this methods throws an IllegalArgumentException.
      */
     public static int getInt(String key, int defaultVal) {
@@ -189,11 +189,11 @@ public class Settings {
 
     /**
      * Add a PropertyChangeListener for the specified setting
-     * 
+     *
      * Note that the PropertyChangeEvent will contain old and new values as they
      * would be returned from get(), meaning they may come from the System
      * Properties.
-     * 
+     *
      * If key is "" or null, this methods throws an IllegalArgumentException. If
      * listener is null no exception is thrown and no action is taken.
      */
@@ -207,7 +207,7 @@ public class Settings {
 
     /**
      * Remove the specified PropertyChangeListener.
-     * 
+     *
      * If listener is null, or was never added, no exception is thrown and no
      * action is taken.
      */

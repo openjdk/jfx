@@ -22,7 +22,7 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
- 
+
 #define _GNU_SOURCE
 #include <fcntl.h>
 #include <pthread.h>
@@ -53,19 +53,19 @@ iolib_init(int mode, const char *fname)
 {
     fileName = strdup(fname ? fname : TRACEFNAME);
     ioMode = mode;
-    
+
     if (ioMode == IO_WRITE) {
         int fd = open(fileName, O_RDWR|O_CREAT|O_TRUNC,
                   S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP|S_IROTH);
         if (fd < 0) {
             fprintf(stderr, "FATAL: can't create file %s\n", fileName);
             exit(1);
-        }             
+        }
         close(fd);
         curPtr = endPtr = NULL;
         fileOffset = (off_t)0;
         fileSize = (size_t)0;
-        
+
         putInt(OPC_VERSION);
         putInt(VERSION_MAJOR);
         putInt(VERSION_MINOR);
@@ -86,7 +86,7 @@ iolib_init(int mode, const char *fname)
         if (filePtr == MAP_FAILED) {
             fprintf(stderr, "FATAL: can't mmap file %s\n", fileName);
             exit(1);
-        }             
+        }
         curPtr = filePtr;
         endPtr = filePtr + fileSize;
 
@@ -129,13 +129,13 @@ enlarge()
     if (fileSize > 0) {
         munmap(filePtr, fileSize);
     }
-    
+
     int fd = open(fileName, O_RDWR);
     if (fd < 0) {
         fprintf(stderr, "FATAL: can't create file %s\n", fileName);
         exit(1);
     }
-    char zero = (char)0;           
+    char zero = (char)0;
     int n = pwrite(fd, &zero, sizeof(zero), fileOffset + CHUNKSZ - sizeof(zero));
     if (n != sizeof(zero)) {
         fprintf(stderr, "FATAL: can't allocate file %s\n", fileName);
@@ -162,14 +162,14 @@ putCmd(int cmd)
 {
     pthread_mutex_lock(&memlock);
     if (++reentrance > 1) return;
-    
+
     pthread_t thr = pthread_self();
     if (thr != curThread) {
         putInt(OPC_THREAD);
         putPtr((void*)thr);
         curThread = thr;
     }
-    
+
     putInt(cmd);
 }
 
@@ -275,7 +275,7 @@ putString(const char *str)
         putInt(0);
         return;
     }
-    
+
     int left = strlen(str) + 1;
     while (left > 0) {
         int avail = endPtr - curPtr;
@@ -288,7 +288,7 @@ putString(const char *str)
             enlarge();
         }
     }
-    while ((long)curPtr & (sizeof(int)-1)) *curPtr++ = (char)0; 
+    while ((long)curPtr & (sizeof(int)-1)) *curPtr++ = (char)0;
 }
 
 void
@@ -310,7 +310,7 @@ putBytes(const void *data, int size)
             enlarge();
         }
     }
-    while ((long)curPtr & (sizeof(int)-1)) *curPtr++ = (char)0; 
+    while ((long)curPtr & (sizeof(int)-1)) *curPtr++ = (char)0;
 }
 
 void

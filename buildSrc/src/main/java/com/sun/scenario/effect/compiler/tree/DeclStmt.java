@@ -32,7 +32,7 @@ import java.util.List;
 public class DeclStmt extends Stmt {
 
     private final List<VarDecl> decls;
-    
+
     DeclStmt(List<VarDecl> decls) {
         this.decls = decls;
     }
@@ -40,7 +40,7 @@ public class DeclStmt extends Stmt {
     public List<VarDecl> getDecls() {
         return decls;
     }
-    
+
     public void accept(TreeVisitor tv) {
         tv.visitDeclStmt(this);
     }

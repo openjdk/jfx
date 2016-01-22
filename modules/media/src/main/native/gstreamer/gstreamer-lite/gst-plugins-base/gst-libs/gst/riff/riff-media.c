@@ -1202,7 +1202,7 @@ gst_riff_create_audio_caps (guint16 codec_id,
         gint wd, ws;
         GstAudioFormat format;
 
-        /* If we have an empty blockalign, we take the width contained in 
+        /* If we have an empty blockalign, we take the width contained in
          * strf->bits_per_sample */
         if (ba != 0)
           wd = ba * 8 / ch;
@@ -1724,7 +1724,7 @@ gst_riff_create_audio_caps (guint16 codec_id,
         } else if (subformat_guid[0] == GST_RIFF_WAVE_FORMAT_EXTENSIBLE) {
           GST_DEBUG ("WAVE_FORMAT_EXTENSIBLE nested");
         } else {
-          /* recurse where no special consideration has yet to be identified 
+          /* recurse where no special consideration has yet to be identified
            * for the subformat guid */
           caps = gst_riff_create_audio_caps (subformat_guid[0], strh, strf,
               strf_data, strd_data, codec_name, channel_reorder_map);

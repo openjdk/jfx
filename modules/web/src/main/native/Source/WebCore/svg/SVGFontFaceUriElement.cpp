@@ -34,9 +34,9 @@
 #include "XLinkNames.h"
 
 namespace WebCore {
-    
+
 using namespace SVGNames;
-    
+
 inline SVGFontFaceUriElement::SVGFontFaceUriElement(const QualifiedName& tagName, Document& document)
     : SVGElement(tagName, document)
 {
@@ -76,7 +76,7 @@ void SVGFontFaceUriElement::childrenChanged(const ChildChange& change)
 
     if (!parentNode() || !parentNode()->hasTagName(font_face_srcTag))
         return;
-    
+
     ContainerNode* grandparent = parentNode()->parentNode();
     if (grandparent && grandparent->hasTagName(font_faceTag))
         toSVGFontFaceElement(grandparent)->rebuildFontFace();

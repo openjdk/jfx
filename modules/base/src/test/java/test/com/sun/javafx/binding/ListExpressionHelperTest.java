@@ -88,7 +88,7 @@ public class ListExpressionHelperTest {
                 new MockListObserver<Object>(), new MockListObserver<Object>(), new MockListObserver<Object>(), new MockListObserver<Object>()
         };
     }
-    
+
     @Test(expected = NullPointerException.class)
     public void testAddInvalidation_Null_X() {
         ListExpressionHelper.addListener(null, null, invalidationListener[0]);

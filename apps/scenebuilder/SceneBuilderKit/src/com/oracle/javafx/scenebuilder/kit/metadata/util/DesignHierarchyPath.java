@@ -40,12 +40,12 @@ import java.util.Objects;
  *
  */
 public class DesignHierarchyPath {
-    
+
     private final List<FXOMObject> pathItems = new ArrayList<>();
-    
+
     public DesignHierarchyPath() {
     }
-    
+
     public DesignHierarchyPath(FXOMObject fxomObject) {
         assert fxomObject != null;
         FXOMObject o = fxomObject;
@@ -54,7 +54,7 @@ public class DesignHierarchyPath {
             o = o.getParentObject();
         } while (o != null);
     }
-    
+
     @Override
     public boolean equals(Object obj) {
         if (obj instanceof DesignHierarchyPath) {
@@ -71,50 +71,50 @@ public class DesignHierarchyPath {
         hash = 29 * hash + Objects.hashCode(this.pathItems);
         return hash;
     }
-    
+
     public int getSize() {
         return pathItems.size();
     }
-    
+
     public boolean isEmpty() {
         return pathItems.isEmpty();
     }
-    
+
     public FXOMObject getRoot() {
         final FXOMObject result;
-        
+
         if (pathItems.isEmpty()) {
             result = null;
         } else {
             result = pathItems.get(0);
         }
-        
+
         return result;
     }
-    
+
     public FXOMObject getLeaf() {
         final FXOMObject result;
-        
+
         if (pathItems.isEmpty()) {
             result = null;
         } else {
             result = pathItems.get(pathItems.size()-1);
         }
-        
+
         return result;
     }
-    
+
     public DesignHierarchyPath getCommonPathWith(DesignHierarchyPath another) {
         final DesignHierarchyPath result = new DesignHierarchyPath();
-        
+
         assert another != null;
-        
+
         int i = 0, count = Math.min(this.getSize(), another.getSize());
         while ((i < count) && this.pathItems.get(i) == another.pathItems.get(i)) {
             result.pathItems.add(this.pathItems.get(i));
             i++;
         }
-        
+
         return result;
     }
 }

@@ -46,7 +46,7 @@ public:
     {}
 
     virtual ~AVFSoundLevelUnit() {}
-    
+
     virtual AUKernelBase *NewKernel();
 
     Float32 volume() {

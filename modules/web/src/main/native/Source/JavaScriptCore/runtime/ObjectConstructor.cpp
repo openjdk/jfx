@@ -193,7 +193,7 @@ EncodedJSValue JSC_HOST_CALL objectConstructorGetOwnPropertyDescriptor(ExecState
         description->putDirect(exec->vm(), exec->propertyNames().get, descriptor.getter(), 0);
         description->putDirect(exec->vm(), exec->propertyNames().set, descriptor.setter(), 0);
     }
-    
+
     description->putDirect(exec->vm(), exec->propertyNames().enumerable, jsBoolean(descriptor.enumerable()), 0);
     description->putDirect(exec->vm(), exec->propertyNames().configurable, jsBoolean(descriptor.configurable()), 0);
 

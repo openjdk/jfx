@@ -98,7 +98,7 @@ public class HelloFontSize extends Application {
 
             public void changed(ObservableValue<? extends Font> ov, Font t, Font t1) {
                 double fsize = t1.getSize();
-                fsize = Math.round(fsize*10.0)/10.0;                
+                fsize = Math.round(fsize*10.0)/10.0;
                 t6.setText(fsize + "px");
             }
         });
@@ -120,14 +120,14 @@ public class HelloFontSize extends Application {
 
         final HBox hbox2 = new HBox(5);
         hbox2.getChildren().addAll(slider, lbl);
-        
+
         final VBox vbox = new VBox(5);
         vbox.getChildren().addAll(
             new Text("Move the slider, click around, hover here and there.\n"
                     +"Make sure the buttons don't magically resize.\n"
                     +"The font size of the last button is 1.5em.\n"
                     +"The text of the last button is the font size rounded to nearest 10th"), hbox, hbox2);
-        
+
         vbox.setLayoutX(10);
         vbox.setLayoutY(300);
 
@@ -149,7 +149,7 @@ public class HelloFontSize extends Application {
                 hbox.setStyle("-fx-font: " + t1.toString() + "px \"Comic Sans MS\";");
             }
         });
-        
+
         hbox.styleProperty().addListener(new ChangeListener<String>() {
 
             public void changed(ObservableValue<? extends String> ov, String t, String t1) {
@@ -159,44 +159,44 @@ public class HelloFontSize extends Application {
 
         // RT-28635
         final SpecialButton specialButton = new SpecialButton("Button");
-        
+
         final VBox rt28635 = new VBox(5);
         rt28635.getStylesheets().add(HelloFontSize.class.getResource("hello.css").toExternalForm());
-        
+
         rt28635.getChildren().addAll(
             new Text("A mouse-press on this button should cause the font size to be set to 20.\n" +
                 "The font size and button size should return to normal on mouse-release."), specialButton);
-        
+
         rt28635.setLayoutX(10);
-        rt28635.setLayoutY(500);        
+        rt28635.setLayoutY(500);
         root.getChildren().add(rt28635);
-        
-        Scene scene = new Scene(root, 800, 600);  
+
+        Scene scene = new Scene(root, 800, 600);
         stage.setScene(scene);
         stage.show();
     }
-    
+
     private static class SpecialButton extends Button {
-        
+
         public static final String PSEUDO_CLASS_NAME = "mouse_pressed";
         public static final String STYLE_CLASS_NAME = "special-button";
 
         {
             getStyleClass().add(STYLE_CLASS_NAME);
-            
+
             setOnMousePressed(new EventHandler<MouseEvent>() {
                 @Override
                 public void handle(MouseEvent t) {
                     pseudoClassStateChanged(MOUSE_PRESSED_PSEUDO_CLASS,true);
                 }
-            });        
+            });
 
             setOnMouseReleased(new EventHandler<MouseEvent>() {
                 @Override
                 public void handle(MouseEvent t) {
                     pseudoClassStateChanged(MOUSE_PRESSED_PSEUDO_CLASS,false);
                 }
-            });      
+            });
         }
 
         public SpecialButton() {
@@ -207,9 +207,9 @@ public class HelloFontSize extends Application {
             super(str);
         }
 
-        private static final PseudoClass MOUSE_PRESSED_PSEUDO_CLASS = 
+        private static final PseudoClass MOUSE_PRESSED_PSEUDO_CLASS =
                 PseudoClass.getPseudoClass(PSEUDO_CLASS_NAME);
-        
+
         private BooleanProperty pressedPseudoState = new BooleanPropertyBase(false) {
             @Override
             protected void invalidated() {
@@ -227,7 +227,7 @@ public class HelloFontSize extends Application {
             }
         };
     }
-    
+
     /**
      * @param args the command line arguments
      */

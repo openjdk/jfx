@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef WebNotification_H
@@ -43,18 +43,18 @@ public:
     virtual ULONG STDMETHODCALLTYPE Release(void);
 
     // IWebNotification
-    virtual HRESULT STDMETHODCALLTYPE notificationWithName( 
+    virtual HRESULT STDMETHODCALLTYPE notificationWithName(
         /* [in] */ BSTR aName,
         /* [in] */ IUnknown *anObject,
         /* [optional][in] */ IPropertyBag *userInfo);
-    
-    virtual HRESULT STDMETHODCALLTYPE name( 
+
+    virtual HRESULT STDMETHODCALLTYPE name(
         /* [retval][out] */ BSTR *result);
-    
-    virtual HRESULT STDMETHODCALLTYPE getObject( 
+
+    virtual HRESULT STDMETHODCALLTYPE getObject(
         /* [retval][out] */ IUnknown **result);
-    
-    virtual HRESULT STDMETHODCALLTYPE userInfo( 
+
+    virtual HRESULT STDMETHODCALLTYPE userInfo(
         /* [retval][out] */ IPropertyBag **result);
 
 protected:

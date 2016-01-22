@@ -209,7 +209,7 @@ void GraphicsContext3D::prepareTexture()
 
     TemporaryOpenGLSetting scopedScissor(GL_SCISSOR_TEST, GL_FALSE);
     TemporaryOpenGLSetting scopedDither(GL_DITHER, GL_FALSE);
-    
+
     if (m_attrs.antialias)
         resolveMultisamplingIfNecessary();
 
@@ -284,7 +284,7 @@ void GraphicsContext3D::reshape(int width, int height)
 
     TemporaryOpenGLSetting scopedScissor(GL_SCISSOR_TEST, GL_FALSE);
     TemporaryOpenGLSetting scopedDither(GL_DITHER, GL_FALSE);
-    
+
     bool mustRestoreFBO = reshapeFBOs(IntSize(width, height));
 
     // Initialize renderbuffers to 0.
@@ -444,7 +444,7 @@ void GraphicsContext3D::blendFunc(GC3Denum sfactor, GC3Denum dfactor)
 {
     makeContextCurrent();
     ::glBlendFunc(sfactor, dfactor);
-}       
+}
 
 void GraphicsContext3D::blendFuncSeparate(GC3Denum srcRGB, GC3Denum dstRGB, GC3Denum srcAlpha, GC3Denum dstAlpha)
 {
@@ -533,11 +533,11 @@ void GraphicsContext3D::compileShader(Platform3DObject shader)
     LOG(WebGL, "--- begin translated shader source ---\n%s\n--- end translated shader source ---", translatedShaderPtr);
 
     ::glShaderSource(shader, 1, &translatedShaderPtr, &translatedShaderLength);
-    
+
     ::glCompileShader(shader);
-    
+
     int GLCompileSuccess;
-    
+
     ::glGetShaderiv(shader, COMPILE_STATUS, &GLCompileSuccess);
 
     ShaderSourceMap::iterator result = m_shaderSourceMap.find(shader);
@@ -702,9 +702,9 @@ bool GraphicsContext3D::getActiveAttribImpl(Platform3DObject program, GC3Duint i
     ::glGetActiveAttrib(program, index, maxAttributeSize, &nameLength, &size, &type, name.get());
     if (!nameLength)
         return false;
-    
+
     String originalName = originalSymbolName(program, SHADER_SYMBOL_TYPE_ATTRIBUTE, String(name.get(), nameLength));
-    
+
 #ifndef NDEBUG
     String uniformName(name.get(), nameLength);
     LOG(WebGL, "Program %d is mapping active attribute %d from '%s' to '%s'", program, index, uniformName.utf8().data(), originalName.utf8().data());
@@ -742,14 +742,14 @@ bool GraphicsContext3D::getActiveUniformImpl(Platform3DObject program, GC3Duint 
     ::glGetActiveUniform(program, index, maxUniformSize, &nameLength, &size, &type, name.get());
     if (!nameLength)
         return false;
-    
+
     String originalName = originalSymbolName(program, SHADER_SYMBOL_TYPE_UNIFORM, String(name.get(), nameLength));
-    
+
 #ifndef NDEBUG
     String uniformName(name.get(), nameLength);
     LOG(WebGL, "Program %d is mapping active uniform %d from '%s' to '%s'", program, index, uniformName.utf8().data(), originalName.utf8().data());
 #endif
-    
+
     info.name = originalName;
     info.type = type;
     info.size = size;
@@ -760,7 +760,7 @@ bool GraphicsContext3D::getActiveUniform(Platform3DObject program, GC3Duint inde
 {
     ASSERT(!m_shaderSymbolCount || index < m_shaderSymbolCount->filteredToActualUniformIndexMap.size());
     GC3Duint rawIndex = (m_shaderSymbolCount) ? m_shaderSymbolCount->filteredToActualUniformIndexMap[index] : index;
-    
+
     return getActiveUniformImpl(program, rawIndex, info);
 }
 
@@ -792,18 +792,18 @@ String GraphicsContext3D::mappedSymbolName(Platform3DObject program, ANGLEShader
     }
     return name;
 }
-    
+
 String GraphicsContext3D::originalSymbolName(Platform3DObject program, ANGLEShaderSymbolType symbolType, const String& name)
 {
     GC3Dsizei count;
     Platform3DObject shaders[2];
     getAttachedShaders(program, 2, &count, shaders);
-    
+
     for (GC3Dsizei i = 0; i < count; ++i) {
         ShaderSourceMap::iterator result = m_shaderSourceMap.find(shaders[i]);
         if (result == m_shaderSourceMap.end())
             continue;
-        
+
         const ShaderSymbolMap& symbolMap = result->value.symbolMap(symbolType);
         for (const auto& symbolEntry : symbolMap) {
             if (symbolEntry.value.mappedName == name)
@@ -820,7 +820,7 @@ String GraphicsContext3D::mappedSymbolName(Platform3DObject shaders[2], size_t c
             ShaderSourceMap::iterator result = m_shaderSourceMap.find(shaders[i]);
             if (result == m_shaderSourceMap.end())
                 continue;
-            
+
             const ShaderSymbolMap& symbolMap = result->value.symbolMap(static_cast<enum ANGLEShaderSymbolType>(symbolType));
             for (const auto& symbolEntry : symbolMap) {
                 if (symbolEntry.value.mappedName == name)
@@ -1287,7 +1287,7 @@ void GraphicsContext3D::getNonBuiltInActiveSymbolCount(Platform3DObject program,
 
         m_shaderSymbolCount->filteredToActualAttributeIndexMap.append(i);
     }
-    
+
     // Do the same for uniforms.
     GC3Dint uniformCount = 0;
     ::glGetProgramiv(program, ACTIVE_UNIFORMS, &uniformCount);
@@ -1296,10 +1296,10 @@ void GraphicsContext3D::getNonBuiltInActiveSymbolCount(Platform3DObject program,
         getActiveUniformImpl(program, i, info);
         if (info.name.startsWith("gl_"))
             continue;
-        
+
         m_shaderSymbolCount->filteredToActualUniformIndexMap.append(i);
     }
-    
+
     *value = m_shaderSymbolCount->countForType(pname);
 }
 
@@ -1310,7 +1310,7 @@ String GraphicsContext3D::getUnmangledInfoLog(Platform3DObject shaders[2], GC3Ds
     JSC::Yarr::RegularExpression regExp("webgl_[0123456789abcdefABCDEF]+", TextCaseSensitive);
 
     String processedLog;
-    
+
     int startFrom = 0;
     int matchedLength = 0;
     do {
@@ -1341,7 +1341,7 @@ String GraphicsContext3D::getProgramInfoLog(Platform3DObject program)
     GLint length = 0;
     ::glGetProgramiv(program, GL_INFO_LOG_LENGTH, &length);
     if (!length)
-        return String(); 
+        return String();
 
     GLsizei size = 0;
     auto info = std::make_unique<GLchar[]>(length);
@@ -1367,7 +1367,7 @@ void GraphicsContext3D::getShaderiv(Platform3DObject shader, GC3Denum pname, GC3
     makeContextCurrent();
 
     const auto& result = m_shaderSourceMap.find(shader);
-    
+
     switch (pname) {
     case DELETE_STATUS:
     case SHADER_TYPE:
@@ -1403,7 +1403,7 @@ String GraphicsContext3D::getShaderInfoLog(Platform3DObject shader)
 
     const auto& result = m_shaderSourceMap.find(shader);
     if (result == m_shaderSourceMap.end())
-        return String(); 
+        return String();
 
     const ShaderSourceEntry& entry = result->value;
     if (!entry.isValid)
@@ -1412,7 +1412,7 @@ String GraphicsContext3D::getShaderInfoLog(Platform3DObject shader)
     GLint length = 0;
     ::glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &length);
     if (!length)
-        return String(); 
+        return String();
 
     GLsizei size = 0;
     auto info = std::make_unique<GLchar[]>(length);
@@ -1430,7 +1430,7 @@ String GraphicsContext3D::getShaderSource(Platform3DObject shader)
 
     const auto& result = m_shaderSourceMap.find(shader);
     if (result == m_shaderSourceMap.end())
-        return String(); 
+        return String();
 
     return result->value.source;
 }

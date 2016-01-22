@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -35,8 +35,8 @@ namespace WebCore {
 String MIMETypeForImageSourceType(const String& type)
 {
     String mimeType;
-    // FIXME: This approach of taking a UTI like public.type and giving back 
-    // a MIME type like image/type will work for common image UTIs like jpeg, 
+    // FIXME: This approach of taking a UTI like public.type and giving back
+    // a MIME type like image/type will work for common image UTIs like jpeg,
     // png, tiff, gif but won't work for UTIs like: public.jpeg-2000,
     // public.xbitmap-image, com.apple.quicktime-image, and others.
     if (int dotLocation = type.reverseFind('.'))
@@ -69,7 +69,7 @@ String preferredExtensionForImageSourceType(const String& type)
         UTIMap.add("com.apple.pict", "pict");
         UTIMap.add("com.apple.quicktime-image", "qtif");
         UTIMap.add("com.apple.webarchive", "webarchive");
-        UTIMap.add("com.compuserve.gif", "gif");        
+        UTIMap.add("com.compuserve.gif", "gif");
         UTIMap.add("com.ilm.openexr-image", "exr");
         UTIMap.add("com.kodak.flashpix-image", "fpx");
         UTIMap.add("com.microsoft.bmp", "bmp");

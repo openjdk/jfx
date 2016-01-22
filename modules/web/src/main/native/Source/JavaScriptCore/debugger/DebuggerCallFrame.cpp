@@ -152,7 +152,7 @@ JSValue DebuggerCallFrame::evaluate(const String& script, JSValue& exception)
 
     if (!callFrame->codeBlock())
         return JSValue();
-    
+
     VM& vm = callFrame->vm();
     EvalExecutable* eval = EvalExecutable::create(callFrame, makeSource(script), callFrame->codeBlock()->isStrictMode());
     if (vm.exception()) {

@@ -71,7 +71,7 @@ final class WinMenuDelegate extends WinMenuImpl implements MenuDelegate {
         // TODO: implement images in menuItem
         return false;
     }
-    
+
     @Override public boolean insert(MenuDelegate menu, int pos) {
         return insertSubmenu((WinMenuDelegate)menu, pos);
     }

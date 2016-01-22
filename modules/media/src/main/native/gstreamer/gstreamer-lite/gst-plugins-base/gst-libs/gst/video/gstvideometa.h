@@ -169,7 +169,7 @@ typedef enum
  * @GST_VIDEO_GL_TEXTURE_ORIENTATION_X_NORMAL_Y_FLIP: Bottom line first in memory, left row first
  * @GST_VIDEO_GL_TEXTURE_ORIENTATION_X_FLIP_Y_NORMAL: Top line first in memory, right row first
  * @GST_VIDEO_GL_TEXTURE_ORIENTATION_X_FLIP_Y_FLIP: Bottom line first in memory, right row first
- * 
+ *
  * The orientation of the GL texture.
  */
 typedef enum
@@ -283,13 +283,13 @@ const GstMetaInfo *gst_video_region_of_interest_meta_get_info (void);
 GstVideoRegionOfInterestMeta *gst_buffer_get_video_region_of_interest_meta_id (GstBuffer   * buffer,
                                                                                gint          id);
 GstVideoRegionOfInterestMeta *gst_buffer_add_video_region_of_interest_meta    (GstBuffer   * buffer,
-									       const gchar * roi_type,
-									       guint         x,
+                                           const gchar * roi_type,
+                                           guint         x,
                                                                                guint         y,
                                                                                guint         w,
                                                                                guint         h);
-GstVideoRegionOfInterestMeta *gst_buffer_add_video_region_of_interest_meta_id (GstBuffer   * buffer, 
-									       GQuark        roi_type,
+GstVideoRegionOfInterestMeta *gst_buffer_add_video_region_of_interest_meta_id (GstBuffer   * buffer,
+                                           GQuark        roi_type,
                                                                                guint         x,
                                                                                guint         y,
                                                                                guint         w,

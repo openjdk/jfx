@@ -85,8 +85,8 @@ public class HelloSwingNodeController {
     @FXML
     void handleButtonAction(ActionEvent event) {
         if (enabled) {
-            // if Swing Button is currently enabled, then disable it, 
-            // and update text and tooltip of FX Button so it can be used now 
+            // if Swing Button is currently enabled, then disable it,
+            // and update text and tooltip of FX Button so it can be used now
             // to re-enable the Swing button
             SwingUtilities.invokeLater(() -> {
                 swingButton.setEnabled(false);
@@ -95,8 +95,8 @@ public class HelloSwingNodeController {
             fxButton.setText("Enable Swing Button");
             fxButton.getTooltip().setText("Click this button to enable the Swing button");
         } else {
-            // if Swing Button is currently disabled, then enable it, 
-            // and update text and tooltip of FX Button so it can be used now 
+            // if Swing Button is currently disabled, then enable it,
+            // and update text and tooltip of FX Button so it can be used now
             // to disable the Swing button
             SwingUtilities.invokeLater(() -> {
                 swingButton.setEnabled(true);

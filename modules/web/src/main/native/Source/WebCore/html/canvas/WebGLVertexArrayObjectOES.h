@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef WebGLVertexArrayObjectOES_h
@@ -39,11 +39,11 @@ public:
         VaoTypeDefault,
         VaoTypeUser,
     };
-    
+
     virtual ~WebGLVertexArrayObjectOES();
 
     static PassRefPtr<WebGLVertexArrayObjectOES> create(WebGLRenderingContext*, VaoType);
-    
+
     // Cached values for vertex attrib range checks
     struct VertexAttribState {
         VertexAttribState()
@@ -58,7 +58,7 @@ public:
             , divisor(0)
         {
         }
-        
+
         bool isBound() const { return bufferBinding && bufferBinding->object(); }
         bool validateBinding() const { return !enabled || isBound(); }
 
@@ -73,15 +73,15 @@ public:
         GC3Dintptr offset;
         GC3Duint divisor;
     };
-    
+
     bool isDefaultObject() const { return m_type == VaoTypeDefault; }
-    
+
     bool hasEverBeenBound() const { return object() && m_hasEverBeenBound; }
     void setHasEverBeenBound() { m_hasEverBeenBound = true; }
-    
+
     PassRefPtr<WebGLBuffer> getElementArrayBuffer() const { return m_boundElementArrayBuffer; }
     void setElementArrayBuffer(PassRefPtr<WebGLBuffer>);
-    
+
     VertexAttribState& getVertexAttribState(int index) { return m_vertexAttribState[index]; }
     void setVertexAttribState(GC3Duint, GC3Dsizei, GC3Dint, GC3Denum, GC3Dboolean, GC3Dsizei, GC3Dintptr, PassRefPtr<WebGLBuffer>);
     void unbindBuffer(PassRefPtr<WebGLBuffer>);
@@ -94,7 +94,7 @@ private:
     virtual void deleteObjectImpl(GraphicsContext3D*, Platform3DObject) override;
 
     virtual bool isVertexArray() const { return true; }
-    
+
     VaoType m_type;
     bool m_hasEverBeenBound;
     RefPtr<WebGLBuffer> m_boundElementArrayBuffer;

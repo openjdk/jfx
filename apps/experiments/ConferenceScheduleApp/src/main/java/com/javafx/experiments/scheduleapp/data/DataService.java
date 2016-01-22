@@ -52,7 +52,7 @@ public abstract class DataService {
     public abstract String getLoginBackgroundImageUrl();
     public abstract String getTwitterSearch(); // eg "java"
     public abstract String getTwitterLocalLatLon(); // eg "37.785313,-122.409459"
-    
+
     public abstract ObservableList<Event> getEvents();
     public abstract ObservableList<Session> getSessions();
     public abstract ObservableList<Speaker> getSpeakers();
@@ -64,7 +64,7 @@ public abstract class DataService {
     public abstract Task<Void> register(Event event);
     public abstract Task<Void> unregister(Event event);
     public abstract Task<Void> login(String userName, String password);
-    
+
     // default impl that returns that all sessions are always available
     public Task<Availability> checkAvailability(Event event) {
         return new Task<Availability>(){
@@ -73,7 +73,7 @@ public abstract class DataService {
             }
         };
     }
-    
+
     public long getNow() {
         return System.currentTimeMillis();
     }

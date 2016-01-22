@@ -40,7 +40,7 @@ import javafx.scene.control.ListView;
  *
  */
 class ListViewSampleData extends AbstractSampleData {
-    
+
     private final List<String> samples = new ArrayList<>();
 
     public ListViewSampleData() {
@@ -52,24 +52,24 @@ class ListViewSampleData extends AbstractSampleData {
     /*
      * AbstractSampleData
      */
-    
+
     @Override
     public void applyTo(Object sceneGraphObject) {
         assert sceneGraphObject != null;
-        
-        @SuppressWarnings("unchecked")        
+
+        @SuppressWarnings("unchecked")
         final ListView<String> listView = (ListView<String>) sceneGraphObject;
         listView.getItems().clear();
         listView.getItems().addAll(samples);
     }
-    
+
     @Override
     public void removeFrom(Object sceneGraphObject) {
         assert sceneGraphObject != null;
-        
-        @SuppressWarnings("unchecked")        
+
+        @SuppressWarnings("unchecked")
         final ListView<String> listView = (ListView<String>) sceneGraphObject;
         listView.getItems().clear();
     }
-    
+
 }

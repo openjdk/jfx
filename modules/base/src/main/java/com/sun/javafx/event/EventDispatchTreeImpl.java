@@ -227,7 +227,7 @@ public final class EventDispatchTreeImpl implements EventDispatchTree {
                     nextChildren[index] = childLevelIndex;
                 }
             }
-            
+
             index = nextSiblings[index];
         }
     }

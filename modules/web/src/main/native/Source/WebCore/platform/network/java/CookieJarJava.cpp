@@ -60,7 +60,7 @@ void setCookiesFromDOM(const NetworkStorageSession&, const URL&, const URL& url,
             putMethod,
             (jstring) url.string().toJavaString(env),
             (jstring) value.toJavaString(env));
-    CheckAndClearException(env);    
+    CheckAndClearException(env);
 }
 
 String cookiesForDOM(const NetworkStorageSession&, const URL&, const URL& url)

@@ -71,7 +71,7 @@ public abstract class SkinBase<C extends Control> implements Skin<C> {
      * automatically updated.
      */
     private C control;
-    
+
     /**
      * A local field that directly refers to the children list inside the Control.
      */
@@ -85,13 +85,13 @@ public abstract class SkinBase<C extends Control> implements Skin<C> {
     private LambdaMultiplePropertyChangeListenerHandler lambdaChangeListenerHandler;
 
 
-    
+
     /***************************************************************************
      *                                                                         *
      * Event Handlers / Listeners                                              *
      *                                                                         *
      **************************************************************************/
-    
+
     /**
      * Mouse handler used for consuming all mouse events (preventing them
      * from bubbling up to parent)
@@ -104,9 +104,9 @@ public abstract class SkinBase<C extends Control> implements Skin<C> {
         */
         event.consume();
     };
-    
-    
-    
+
+
+
     /***************************************************************************
      *                                                                         *
      * Constructor                                                             *
@@ -115,7 +115,7 @@ public abstract class SkinBase<C extends Control> implements Skin<C> {
 
     /**
      * Constructor for all SkinBase instances.
-     * 
+     *
      * @param control The control for which this Skin should attach to.
      */
     protected SkinBase(final C control) {
@@ -126,18 +126,18 @@ public abstract class SkinBase<C extends Control> implements Skin<C> {
         // Update the control and behavior
         this.control = control;
         this.children = control.getControlChildren();
-        
+
         // Default behavior for controls is to consume all mouse events
         consumeMouseEvents(true);
     }
-    
-    
+
+
 
     /***************************************************************************
      *                                                                         *
      * Public API (from Skin)                                                  *
      *                                                                         *
-     **************************************************************************/    
+     **************************************************************************/
 
     /** {@inheritDoc} */
     @Override public final C getSkinnable() {
@@ -146,11 +146,11 @@ public abstract class SkinBase<C extends Control> implements Skin<C> {
 
     /** {@inheritDoc} */
     @Override public final Node getNode() {
-        return control; 
+        return control;
     }
 
     /** {@inheritDoc} */
-    @Override public void dispose() { 
+    @Override public void dispose() {
 //        control.removeEventHandler(ContextMenuEvent.CONTEXT_MENU_REQUESTED, contextMenuHandler);
 
         // unhook listeners
@@ -160,24 +160,24 @@ public abstract class SkinBase<C extends Control> implements Skin<C> {
 
         this.control = null;
     }
-    
-    
-    
+
+
+
     /***************************************************************************
      *                                                                         *
      * Public API                                                              *
      *                                                                         *
-     **************************************************************************/     
-    
+     **************************************************************************/
+
     /**
      * Returns the children of the skin.
      */
     public final ObservableList<Node> getChildren() {
         return children;
     }
-    
+
     /**
-     * Called during the layout pass of the scenegraph. 
+     * Called during the layout pass of the scenegraph.
      */
     protected void layoutChildren(final double contentX, final double contentY,
             final double contentWidth, final double contentHeight) {
@@ -189,7 +189,7 @@ public abstract class SkinBase<C extends Control> implements Skin<C> {
             }
         }
     }
-    
+
     /**
      * Determines whether all mouse events should be automatically consumed.
      */
@@ -214,14 +214,14 @@ public abstract class SkinBase<C extends Control> implements Skin<C> {
     }
 
 
-    
-    
+
+
     /***************************************************************************
      *                                                                         *
      * Public Layout-related API                                               *
      *                                                                         *
      **************************************************************************/
-    
+
     /**
      * Computes the minimum allowable width of the Skin, based on the provided
      * height.
@@ -307,7 +307,7 @@ public abstract class SkinBase<C extends Control> implements Skin<C> {
     protected double computeMaxWidth(double height, double topInset, double rightInset, double bottomInset, double leftInset) {
         return Double.MAX_VALUE;
     }
-    
+
     /**
      * Computes the maximum allowable height of the Skin, based on the provided
      * width.
@@ -323,7 +323,7 @@ public abstract class SkinBase<C extends Control> implements Skin<C> {
     protected double computeMaxHeight(double width, double topInset, double rightInset, double bottomInset, double leftInset) {
         return Double.MAX_VALUE;
     }
-    
+
     // PENDING_DOC_REVIEW
     /**
      * Calculates the preferred width of this {@code SkinBase}. The default
@@ -359,7 +359,7 @@ public abstract class SkinBase<C extends Control> implements Skin<C> {
         }
         return maxX - minX;
     }
-    
+
     // PENDING_DOC_REVIEW
     /**
      * Calculates the preferred height of this {@code SkinBase}. The default
@@ -395,7 +395,7 @@ public abstract class SkinBase<C extends Control> implements Skin<C> {
         }
         return maxY - minY;
     }
-    
+
     /**
      * Calculates the baseline offset based on the first managed child. If there
      * is no such child, returns {@link Node#getBaselineOffset()}.
@@ -421,7 +421,7 @@ public abstract class SkinBase<C extends Control> implements Skin<C> {
         return Node.BASELINE_OFFSET_SAME_AS_HEIGHT;
     }
 
-    
+
     /***************************************************************************
      *                                                                         *
      * (Mostly ugly) Skin -> Control forwarding API                            *
@@ -477,7 +477,7 @@ public abstract class SkinBase<C extends Control> implements Skin<C> {
     protected double snapSpace(double value) {
         return control.isSnapToPixel() ? Math.round(value) : value;
     }
-    
+
     /**
      * If this region's snapToPixel property is true, returns a value ceiled
      * to the nearest pixel, else returns the same value.
@@ -523,10 +523,10 @@ public abstract class SkinBase<C extends Control> implements Skin<C> {
      * @param valignment the vertical alignment for the child within the area
      *
      */
-    protected void positionInArea(Node child, double areaX, double areaY, 
-            double areaWidth, double areaHeight, double areaBaselineOffset, 
+    protected void positionInArea(Node child, double areaX, double areaY,
+            double areaWidth, double areaHeight, double areaBaselineOffset,
             HPos halignment, VPos valignment) {
-        positionInArea(child, areaX, areaY, areaWidth, areaHeight, 
+        positionInArea(child, areaX, areaY, areaWidth, areaHeight,
                 areaBaselineOffset, Insets.EMPTY, halignment, valignment);
     }
 
@@ -561,10 +561,10 @@ public abstract class SkinBase<C extends Control> implements Skin<C> {
      * @since JavaFX 8.0
      */
     protected void positionInArea(Node child, double areaX, double areaY,
-            double areaWidth, double areaHeight, double areaBaselineOffset, 
+            double areaWidth, double areaHeight, double areaBaselineOffset,
             Insets margin, HPos halignment, VPos valignment) {
-        Region.positionInArea(child, areaX, areaY, areaWidth, areaHeight, 
-                areaBaselineOffset, margin, halignment, valignment, 
+        Region.positionInArea(child, areaX, areaY, areaWidth, areaHeight,
+                areaBaselineOffset, margin, halignment, valignment,
                 control.isSnapToPixel());
     }
 
@@ -616,7 +616,7 @@ public abstract class SkinBase<C extends Control> implements Skin<C> {
                                double areaWidth, double areaHeight,
                                double areaBaselineOffset,
                                HPos halignment, VPos valignment) {
-        layoutInArea(child, areaX, areaY, areaWidth, areaHeight, areaBaselineOffset, 
+        layoutInArea(child, areaX, areaY, areaWidth, areaHeight, areaBaselineOffset,
                 Insets.EMPTY, true, true, halignment, valignment);
     }
 
@@ -731,21 +731,21 @@ public abstract class SkinBase<C extends Control> implements Skin<C> {
                                double areaBaselineOffset,
                                Insets margin, boolean fillWidth, boolean fillHeight,
                                HPos halignment, VPos valignment) {
-        Region.layoutInArea(child, areaX, areaY, areaWidth, areaHeight, 
-                areaBaselineOffset, margin, fillWidth, fillHeight, halignment, 
+        Region.layoutInArea(child, areaX, areaY, areaWidth, areaHeight,
+                areaBaselineOffset, margin, fillWidth, fillHeight, halignment,
                 valignment, control.isSnapToPixel());
     }
-    
-    
-    
+
+
+
     /***************************************************************************
      *                                                                         *
      * Private Implementation                                                  *
      *                                                                         *
-     **************************************************************************/     
-    
-    
-    
+     **************************************************************************/
+
+
+
      /**************************************************************************
       *                                                                        *
       * Specialization of CSS handling code                                    *
@@ -760,7 +760,7 @@ public abstract class SkinBase<C extends Control> implements Skin<C> {
         }
     }
 
-    /** 
+    /**
      * Returns the CssMetaData associated with this class, which may include the
      * CssMetaData of its super classes.
      */
@@ -777,7 +777,7 @@ public abstract class SkinBase<C extends Control> implements Skin<C> {
     public List<CssMetaData<? extends Styleable, ?>> getCssMetaData() {
         return getClassCssMetaData();
     }
-    
+
     /**
      * Used to specify that a pseudo-class of this Node has changed. If the
      * pseudo-class is used in a CSS selector that matches this Node, CSS will

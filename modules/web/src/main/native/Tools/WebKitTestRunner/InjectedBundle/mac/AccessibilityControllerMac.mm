@@ -64,7 +64,7 @@ bool AccessibilityController::addNotificationListener(JSValueRef functionCallbac
 bool AccessibilityController::removeNotificationListener()
 {
     ASSERT(m_globalNotificationHandler);
-    
+
     [m_globalNotificationHandler.get() stopObserving];
     m_globalNotificationHandler.clear();
 

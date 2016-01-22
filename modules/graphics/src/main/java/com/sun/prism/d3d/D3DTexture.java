@@ -58,7 +58,7 @@ class D3DTexture extends BaseTexture<D3DTextureResource>
                                                         format, samples)),
               format, wrapMode,
               physicalWidth, physicalHeight,
-              contentX, contentY, contentWidth, contentHeight, 
+              contentX, contentY, contentWidth, contentHeight,
               physicalWidth, physicalHeight, useMipmap);
     }
 

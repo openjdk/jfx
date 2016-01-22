@@ -61,12 +61,12 @@ public class MacPkgBundler extends MacBaseInstallerBundler {
 
     public final static String MAC_BUNDLER_PREFIX =
             BUNDLER_PREFIX + "macosx" + File.separator;
-    
+
     private static final String DEFAULT_BACKGROUND_IMAGE = "background_pkg.png";
-    
+
     private static final String TEMPLATE_PREINSTALL_SCRIPT = "preinstall.template";
     private static final String TEMPLATE_POSTINSTALL_SCRIPT = "postinstall.template";
-    
+
     private static final BundlerParamInfo<File> PACKAGES_ROOT = new StandardBundlerParam<>(
             I18N.getString("param.packages-root.name"),
             I18N.getString("param.packages-root.description"),
@@ -139,7 +139,7 @@ public class MacPkgBundler extends MacBaseInstallerBundler {
                     Log.info(MessageFormat.format(I18N.getString("message.running-script"), configScript.getAbsolutePath()));
                     IOUtils.run("bash", configScript, VERBOSE.fetchFrom(params));
                 }
-                
+
                 return createPKG(params, outdir, appImageDir);
             }
             return null;
@@ -368,7 +368,7 @@ public class MacPkgBundler extends MacBaseInstallerBundler {
                 getConfig_Script(params),
                 VERBOSE.fetchFrom(params),
                 DROP_IN_RESOURCES_ROOT.fetchFrom(params));
-        
+
         return true;
     }
 

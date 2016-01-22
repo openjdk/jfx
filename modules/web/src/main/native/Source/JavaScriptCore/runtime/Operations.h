@@ -192,7 +192,7 @@ ALWAYS_INLINE JSValue jsAdd(CallFrame* callFrame, JSValue v1, JSValue v2)
 {
     if (v1.isNumber() && v2.isNumber())
         return jsNumber(v1.asNumber() + v2.asNumber());
-        
+
     if (v1.isString() && !v2.isObject())
         return jsString(callFrame, asString(v1), v2.toString(callFrame));
 
@@ -206,7 +206,7 @@ inline size_t normalizePrototypeChainForChainAccess(CallFrame* callFrame, JSValu
 {
     JSCell* cell = base.asCell();
     size_t count = 0;
-        
+
     while (!slotBase || slotBase != cell) {
         if (cell->isProxy())
             return InvalidPrototypeChain;
@@ -214,7 +214,7 @@ inline size_t normalizePrototypeChainForChainAccess(CallFrame* callFrame, JSValu
         const TypeInfo& typeInfo = cell->structure()->typeInfo();
         if (typeInfo.hasImpureGetOwnPropertySlot() && !typeInfo.newImpurePropertyFiresWatchpoints())
             return InvalidPrototypeChain;
-            
+
         JSValue v = cell->structure()->prototypeForLookup(callFrame);
 
         // If we didn't find slotBase in base's prototype chain, then base
@@ -233,12 +233,12 @@ inline size_t normalizePrototypeChainForChainAccess(CallFrame* callFrame, JSValu
         if (cell->structure()->isDictionary()) {
             asObject(cell)->flattenDictionaryObject(callFrame->vm());
             if (slotBase == cell)
-                slotOffset = cell->structure()->get(callFrame->vm(), propertyName); 
+                slotOffset = cell->structure()->get(callFrame->vm(), propertyName);
         }
-            
+
         ++count;
     }
-        
+
     return count;
 }
 
@@ -248,7 +248,7 @@ inline size_t normalizePrototypeChain(CallFrame* callFrame, JSCell* base)
     while (1) {
         if (base->isProxy())
             return InvalidPrototypeChain;
-            
+
         JSValue v = base->structure()->prototypeForLookup(callFrame);
         if (v.isNull())
             return count;
@@ -269,13 +269,13 @@ inline bool isPrototypeChainNormalized(JSGlobalObject* globalObject, Structure* 
     for (;;) {
         if (structure->typeInfo().type() == ProxyType)
             return false;
-            
+
         JSValue v = structure->prototypeForLookup(globalObject);
         if (v.isNull())
             return true;
-            
+
         structure = v.asCell()->structure();
-            
+
         if (structure->isDictionary())
             return false;
     }

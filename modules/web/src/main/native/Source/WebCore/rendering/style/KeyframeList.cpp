@@ -76,7 +76,7 @@ void KeyframeList::insert(const KeyframeValue& keyframe)
             break;
         }
     }
-    
+
     if (!replaced && !inserted)
         m_keyframes.append(keyframe);
 

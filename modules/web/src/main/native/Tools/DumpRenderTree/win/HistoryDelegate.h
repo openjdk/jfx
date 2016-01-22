@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef HistoryDelegate_h
@@ -41,27 +41,27 @@ public:
 
     // IWebHistoryDelegate
     virtual HRESULT STDMETHODCALLTYPE didNavigateWithNavigationData(
-        /* [in] */ IWebView* webView, 
-        /* [in] */ IWebNavigationData* navigationData, 
+        /* [in] */ IWebView* webView,
+        /* [in] */ IWebNavigationData* navigationData,
         /* [in] */ IWebFrame* webFrame);
 
     virtual HRESULT STDMETHODCALLTYPE didPerformClientRedirectFromURL(
-        /* [in] */ IWebView* webView, 
-        /* [in] */ BSTR sourceURL, 
-        /* [in] */ BSTR destinationURL, 
+        /* [in] */ IWebView* webView,
+        /* [in] */ BSTR sourceURL,
+        /* [in] */ BSTR destinationURL,
         /* [in] */ IWebFrame* webFrame);
-    
+
     virtual HRESULT STDMETHODCALLTYPE didPerformServerRedirectFromURL(
-        /* [in] */ IWebView* webView, 
-        /* [in] */ BSTR sourceURL, 
-        /* [in] */ BSTR destinationURL, 
+        /* [in] */ IWebView* webView,
+        /* [in] */ BSTR sourceURL,
+        /* [in] */ BSTR destinationURL,
         /* [in] */ IWebFrame* webFrame);
-    
+
     virtual HRESULT STDMETHODCALLTYPE updateHistoryTitle(
-        /* [in] */ IWebView* webView, 
-        /* [in] */ BSTR title, 
+        /* [in] */ IWebView* webView,
+        /* [in] */ BSTR title,
         /* [in] */ BSTR url);
-    
+
     virtual HRESULT STDMETHODCALLTYPE populateVisitedLinksForWebView(
         /* [in] */ IWebView* webView);
 

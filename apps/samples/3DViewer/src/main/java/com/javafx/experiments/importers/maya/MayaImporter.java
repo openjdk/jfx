@@ -148,7 +148,7 @@ public class MayaImporter extends Importer {
             throw new RuntimeException(e);
         }
     }
-    
+
     @Override
     public boolean isSupported(String extension) {
         return extension != null && extension.equals("ma");

@@ -70,6 +70,6 @@ private:
 
 }
 
-#endif // ENABLE(VIDEO) && USE(AVFOUNDATION) 
+#endif // ENABLE(VIDEO) && USE(AVFOUNDATION)
 
 #endif // WebCoreAVFResourceLoader_h

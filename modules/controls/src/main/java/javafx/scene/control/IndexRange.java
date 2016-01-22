@@ -44,7 +44,7 @@ public final class IndexRange {
     /**
      * Creates an instance of IndexRange representing the range between
      * <code>start</code> and <code>end</code>.
-     * 
+     *
      * @param start The start position of the range.
      * @param end The end position of the range.
      */
@@ -60,7 +60,7 @@ public final class IndexRange {
     /**
      * Creates an instance of IndexRange by copying the values from the
      * given IndexRange object.
-     * 
+     *
      * @param range The IndexRange instance from which to copy the start and end
      *      values.
      */
@@ -110,7 +110,7 @@ public final class IndexRange {
     /**
      * Returns a hash code for this {@code Range} object.
      * @return a hash code for this {@code Range} object.
-     */ 
+     */
     @Override
     public int hashCode() {
         return 31 * start + end;
@@ -119,7 +119,7 @@ public final class IndexRange {
     /**
      * Returns a string representation of this {@code Range} object.
      * @return a string representation of this {@code Range} object.
-     */ 
+     */
     @Override
     public String toString() {
         return start + VALUE_DELIMITER + " " + end;
@@ -128,7 +128,7 @@ public final class IndexRange {
     /**
      * Convenience method to create an IndexRange instance that has the smaller
      * value as the start index, and the larger value as the end index.
-     * 
+     *
      * @param v1 The first value to use in the range.
      * @param v2 The second value to use in the range.
      * @return A IndexRange instance where the smaller value is the start, and the
@@ -142,7 +142,7 @@ public final class IndexRange {
      * Convenience method to parse in a String of the form '2,6', which will
      * create an IndexRange instance with a start value of 2, and an end value
      * of 6.
-     * 
+     *
      * @param value The string to be parsed, and converted to an IndexRange.
      * @return An IndexRange instance representing the start and end values provided
      *      in the value string.

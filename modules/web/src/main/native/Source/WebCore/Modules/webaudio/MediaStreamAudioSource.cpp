@@ -58,7 +58,7 @@ const MediaStreamSourceStates& MediaStreamAudioSource::states()
     // https://bugs.webkit.org/show_bug.cgi?id=122430
     notImplemented();
     return m_currentStates;
-    
+
 }
 
 void MediaStreamAudioSource::addAudioConsumer(PassRefPtr<AudioDestinationConsumer> consumer)

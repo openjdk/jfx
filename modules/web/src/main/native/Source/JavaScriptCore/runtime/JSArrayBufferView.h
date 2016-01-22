@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef JSArrayBufferView_h
@@ -56,21 +56,21 @@ enum TypedArrayMode {
     // allocated in copied space, and M = FastTypedArray. V's liveness is
     // determined entirely by the view's liveness.
     FastTypedArray,
-    
+
     // A large typed array that still attempts not to waste too much
     // memory. B is initialized to point to a slot that could hold a
     // buffer pointer, V points to a vector allocated using fastCalloc(),
     // and M = OversizeTypedArray. V's liveness is determined entirely by
     // the view's liveness, and the view will add a finalizer to delete V.
     OversizeTypedArray,
-    
+
     // A typed array that was used in some crazy way. B's IndexingHeader
     // is hijacked to contain a reference to the native array buffer. The
     // native typed array view points back to the JS view. V points to a
     // vector allocated using who-knows-what, and M = WastefulTypedArray.
     // The view does not own the vector.
     WastefulTypedArray,
-    
+
     // A data view. B is unused, V points to a vector allocated using who-
     // knows-what, and M = DataViewMode. The view does not own the vector.
     // There is an extra field (in JSDataView) that points to the
@@ -93,9 +93,9 @@ inline bool hasArrayBuffer(TypedArrayMode mode)
 class JSArrayBufferView : public JSNonFinalObject {
 public:
     typedef JSNonFinalObject Base;
-    
+
     static const unsigned fastSizeLimit = 1000;
-    
+
     static size_t sizeOf(uint32_t length, uint32_t elementSize)
     {
         return (length * elementSize + sizeof(EncodedJSValue) - 1)
@@ -107,33 +107,33 @@ public:
         ASSERT_UNUSED(inlineCapacity, !inlineCapacity);
         return sizeof(JSArrayBufferView);
     }
-        
+
 protected:
     class ConstructionContext {
         WTF_MAKE_NONCOPYABLE(ConstructionContext);
-        
+
     public:
         enum InitializationMode { ZeroFill, DontInitialize };
-        
+
         JS_EXPORT_PRIVATE ConstructionContext(VM&, Structure*, uint32_t length, uint32_t elementSize, InitializationMode = ZeroFill);
-        
+
         JS_EXPORT_PRIVATE ConstructionContext(
             VM&, Structure*, PassRefPtr<ArrayBuffer>,
             unsigned byteOffset, unsigned length);
-        
+
         enum DataViewTag { DataView };
         ConstructionContext(
             Structure*, PassRefPtr<ArrayBuffer>,
             unsigned byteOffset, unsigned length, DataViewTag);
-        
+
         bool operator!() const { return !m_structure; }
-        
+
         Structure* structure() const { return m_structure; }
         void* vector() const { return m_vector; }
         uint32_t length() const { return m_length; }
         TypedArrayMode mode() const { return m_mode; }
         Butterfly* butterfly() const { return m_butterfly; }
-        
+
     private:
         Structure* m_structure;
         void* m_vector;
@@ -141,31 +141,31 @@ protected:
         TypedArrayMode m_mode;
         Butterfly* m_butterfly;
     };
-    
+
     JS_EXPORT_PRIVATE JSArrayBufferView(VM&, ConstructionContext&);
     JS_EXPORT_PRIVATE void finishCreation(VM&);
-    
+
     static bool getOwnPropertySlot(JSObject*, ExecState*, PropertyName, PropertySlot&);
     static void put(JSCell*, ExecState*, PropertyName, JSValue, PutPropertySlot&);
     static bool defineOwnProperty(JSObject*, ExecState*, PropertyName, const PropertyDescriptor&, bool shouldThrow);
     static bool deleteProperty(JSCell*, ExecState*, PropertyName);
-    
+
     static void getOwnNonIndexPropertyNames(JSObject*, ExecState*, PropertyNameArray&, EnumerationMode);
-    
+
 public:
     TypedArrayMode mode() const { return m_mode; }
     bool hasArrayBuffer() const { return JSC::hasArrayBuffer(mode()); }
-    
+
     ArrayBuffer* buffer();
     PassRefPtr<ArrayBufferView> impl();
     void neuter();
-    
+
     void* vector() { return m_vector; }
     unsigned byteOffset();
     unsigned length() const { return m_length; }
 
     DECLARE_EXPORT_INFO;
-    
+
     static ptrdiff_t offsetOfVector() { return OBJECT_OFFSETOF(JSArrayBufferView, m_vector); }
     static ptrdiff_t offsetOfLength() { return OBJECT_OFFSETOF(JSArrayBufferView, m_length); }
     static ptrdiff_t offsetOfMode() { return OBJECT_OFFSETOF(JSArrayBufferView, m_mode); }
@@ -175,7 +175,7 @@ private:
 
 protected:
     static const unsigned StructureFlags = OverridesGetPropertyNames | OverridesGetOwnPropertySlot | Base::StructureFlags;
-    
+
     ArrayBuffer* existingBufferInButterfly();
 
     void* m_vector;

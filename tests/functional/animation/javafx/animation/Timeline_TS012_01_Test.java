@@ -54,7 +54,7 @@ public class Timeline_TS012_01_Test extends AnimationFunctionalTestBase {
     @Test public void test() {
         t.play();
         delay(200);
-        
+
         if(!newVal.equals(target.getValue())) {
             throw new AssertionError("key value changed");
         }

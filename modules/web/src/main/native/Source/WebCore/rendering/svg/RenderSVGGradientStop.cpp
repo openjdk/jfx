@@ -28,7 +28,7 @@
 #include <wtf/StackStats.h>
 
 namespace WebCore {
-    
+
 using namespace SVGNames;
 
 RenderSVGGradientStop::RenderSVGGradientStop(SVGStopElement& element, PassRef<RenderStyle> style)

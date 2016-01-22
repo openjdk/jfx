@@ -45,7 +45,7 @@ import javafx.scene.paint.Color;
  *
  */
 public class DistantLightPropertyMetadata extends ComplexPropertyMetadata<Light.Distant> {
-    
+
     private final ColorPropertyMetadata colorMetadata
             = new ColorPropertyMetadata(new PropertyName("color"), //NOI18N
             true, Color.WHITE, InspectorPath.UNUSED);
@@ -55,8 +55,8 @@ public class DistantLightPropertyMetadata extends ComplexPropertyMetadata<Light.
     private final DoublePropertyMetadata elevationMetadata
             = new DoublePropertyMetadata(new PropertyName("elevation"), //NOI18N
             DoublePropertyMetadata.DoubleKind.ANGLE, true, 45.0, InspectorPath.UNUSED);
-    
-    public DistantLightPropertyMetadata(PropertyName name, boolean readWrite, 
+
+    public DistantLightPropertyMetadata(PropertyName name, boolean readWrite,
             Light.Distant defaultValue, InspectorPath inspectorPath) {
         super(name, Light.Distant.class, readWrite, defaultValue, inspectorPath);
     }
@@ -64,16 +64,16 @@ public class DistantLightPropertyMetadata extends ComplexPropertyMetadata<Light.
     /*
      * ComplexPropertyMetadata
      */
-    
+
     @Override
     public FXOMInstance makeFxomInstanceFromValue(Light.Distant value, FXOMDocument fxomDocument) {
         final FXOMInstance result = new FXOMInstance(fxomDocument, getValueClass());
-        
+
         colorMetadata.setValue(result, value.getColor());
         azimuthMetadata.setValue(result, value.getAzimuth());
         elevationMetadata.setValue(result, value.getElevation());
 
         return result;
     }
-    
+
 }

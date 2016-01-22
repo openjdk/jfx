@@ -65,17 +65,17 @@ import java.util.WeakHashMap;
  *
  */
 public class Metadata {
-    
+
     private static Metadata metadata = null;
-    
-    
+
+
     private final Map<Class<?>, ComponentClassMetadata> componentClassMap = new HashMap<>();
     private final Map<Class<?>, ComponentClassMetadata> customComponentClassMap = new WeakHashMap<>();
     private final Set<PropertyName> hiddenProperties = new HashSet<>();
     private final Set<PropertyName> parentRelatedProperties = new HashSet<>();
     private final List<String> sectionNames = new ArrayList<>();
     private final Map<String, List<String>> subSectionMap = new HashMap<>();
-    
+
     public final InspectorPathComparator INSPECTOR_PATH_COMPARATOR
             = new InspectorPathComparator(sectionNames, subSectionMap);
 
@@ -85,11 +85,11 @@ public class Metadata {
         }
         return metadata;
     }
-    
+
     public ComponentClassMetadata queryComponentMetadata(Class<?> componentClass) {
         final ComponentClassMetadata result;
-        
-        
+
+
         final ComponentClassMetadata componentMetadata
                 = componentClassMap.get(componentClass);
         if (componentMetadata != null) {
@@ -117,14 +117,14 @@ public class Metadata {
                 customComponentClassMap.put(componentClass, result);
             }
         }
-        
+
         return result;
     }
-    
+
     public Set<PropertyMetadata> queryProperties(Class<?> componentClass) {
         final Map<PropertyName, PropertyMetadata> result = new HashMap<>();
         ComponentClassMetadata classMetadata = queryComponentMetadata(componentClass);
-        
+
         while (classMetadata != null) {
             for (PropertyMetadata pm : classMetadata.getProperties()) {
                 if (result.containsKey(pm.getName()) == false) {
@@ -133,13 +133,13 @@ public class Metadata {
             }
             classMetadata = classMetadata.getParentMetadata();
         }
-        
+
         return new HashSet<>(result.values());
     }
-    
+
     public Set<PropertyMetadata> queryProperties(Collection<Class<?>> componentClasses) {
         final Set<PropertyMetadata> result = new HashSet<>();
-        
+
         int count = 0;
         for (Class<?> componentClass : componentClasses) {
             final Set<PropertyMetadata> propertyMetadata = queryProperties(componentClass);
@@ -150,13 +150,13 @@ public class Metadata {
             }
             count++;
         }
-        
+
         return result;
     }
-    
+
     public Set<ComponentPropertyMetadata> queryComponentProperties(Class<?> componentClass) {
         final Set<ComponentPropertyMetadata> result = new HashSet<>();
-        
+
         for (PropertyMetadata propertyMetadata : queryProperties(Arrays.asList(componentClass))) {
             if (propertyMetadata instanceof ComponentPropertyMetadata) {
                 result.add((ComponentPropertyMetadata) propertyMetadata);
@@ -164,10 +164,10 @@ public class Metadata {
         }
         return result;
     }
-    
+
     public Set<ValuePropertyMetadata> queryValueProperties(Set<Class<?>> componentClasses) {
         final Set<ValuePropertyMetadata> result = new HashSet<>();
-        
+
         for (PropertyMetadata propertyMetadata : queryProperties(componentClasses)) {
             if (propertyMetadata instanceof ValuePropertyMetadata) {
                 result.add((ValuePropertyMetadata) propertyMetadata);
@@ -175,28 +175,28 @@ public class Metadata {
         }
         return result;
     }
-    
+
     public PropertyMetadata queryProperty(Class<?> componentClass, PropertyName targetName) {
         final Set<PropertyMetadata> propertyMetadataSet = queryProperties(componentClass);
         final Iterator<PropertyMetadata> iterator = propertyMetadataSet.iterator();
         PropertyMetadata result = null;
-                
+
         while ((result == null) && iterator.hasNext()) {
             final PropertyMetadata propertyMetadata = iterator.next();
             if (propertyMetadata.getName().equals(targetName)) {
                 result = propertyMetadata;
             }
         }
-        
+
         return result;
     }
-    
-    
+
+
     public ValuePropertyMetadata queryValueProperty(FXOMInstance fxomInstance, PropertyName targetName) {
         final ValuePropertyMetadata result;
         assert fxomInstance != null;
         assert targetName != null;
-        
+
         if (fxomInstance.getSceneGraphObject() == null) {
             // FXOM object is unresolved
             result = null;
@@ -209,11 +209,11 @@ public class Metadata {
                 result = null;
             }
         }
-        
+
         return result;
     }
-    
-    
+
+
     public Collection<ComponentClassMetadata> getComponentClasses() {
         return componentClassMap.values();
     }
@@ -224,7 +224,7 @@ public class Metadata {
 
     public boolean isPropertyTrimmingNeeded(PropertyName name) {
         final boolean result;
-        
+
         if (name.getResidenceClass() != null) {
             // It's a static property eg GridPane.rowIndex
             // All static property are "parent related" and needs trimming
@@ -232,1057 +232,1057 @@ public class Metadata {
         } else {
             result = parentRelatedProperties.contains(name);
         }
-        
+
         return result;
     }
 
 
     // Abstract Component Classes
 
-    private final ComponentClassMetadata NodeMetadata = 
+    private final ComponentClassMetadata NodeMetadata =
             new ComponentClassMetadata(javafx.scene.Node.class, null);
-    private final ComponentClassMetadata ParentMetadata = 
+    private final ComponentClassMetadata ParentMetadata =
             new ComponentClassMetadata(javafx.scene.Parent.class, NodeMetadata);
-    private final ComponentClassMetadata RegionMetadata = 
+    private final ComponentClassMetadata RegionMetadata =
             new ComponentClassMetadata(javafx.scene.layout.Region.class, ParentMetadata);
-    private final ComponentClassMetadata PaneMetadata = 
+    private final ComponentClassMetadata PaneMetadata =
             new ComponentClassMetadata(javafx.scene.layout.Pane.class, RegionMetadata);
-    private final ComponentClassMetadata ControlMetadata = 
+    private final ComponentClassMetadata ControlMetadata =
             new ComponentClassMetadata(javafx.scene.control.Control.class, RegionMetadata);
-    private final ComponentClassMetadata LabeledMetadata = 
+    private final ComponentClassMetadata LabeledMetadata =
             new ComponentClassMetadata(javafx.scene.control.Labeled.class, ControlMetadata);
-    private final ComponentClassMetadata ButtonBaseMetadata = 
+    private final ComponentClassMetadata ButtonBaseMetadata =
             new ComponentClassMetadata(javafx.scene.control.ButtonBase.class, LabeledMetadata);
-    private final ComponentClassMetadata ComboBoxBaseMetadata = 
+    private final ComponentClassMetadata ComboBoxBaseMetadata =
             new ComponentClassMetadata(javafx.scene.control.ComboBoxBase.class, ControlMetadata);
-    private final ComponentClassMetadata PopupWindowMetadata = 
+    private final ComponentClassMetadata PopupWindowMetadata =
             new ComponentClassMetadata(javafx.stage.PopupWindow.class, null);
-    private final ComponentClassMetadata PopupControlMetadata = 
+    private final ComponentClassMetadata PopupControlMetadata =
             new ComponentClassMetadata(javafx.scene.control.PopupControl.class, PopupWindowMetadata);
-    private final ComponentClassMetadata TextInputControlMetadata = 
+    private final ComponentClassMetadata TextInputControlMetadata =
             new ComponentClassMetadata(javafx.scene.control.TextInputControl.class, ControlMetadata);
-    private final ComponentClassMetadata TableColumnBaseMetadata = 
+    private final ComponentClassMetadata TableColumnBaseMetadata =
             new ComponentClassMetadata(javafx.scene.control.TableColumnBase.class, null);
-    private final ComponentClassMetadata MenuItemMetadata = 
+    private final ComponentClassMetadata MenuItemMetadata =
             new ComponentClassMetadata(javafx.scene.control.MenuItem.class, null);
-    private final ComponentClassMetadata TextFieldMetadata = 
+    private final ComponentClassMetadata TextFieldMetadata =
             new ComponentClassMetadata(javafx.scene.control.TextField.class, TextInputControlMetadata);
-    private final ComponentClassMetadata ProgressIndicatorMetadata = 
+    private final ComponentClassMetadata ProgressIndicatorMetadata =
             new ComponentClassMetadata(javafx.scene.control.ProgressIndicator.class, ControlMetadata);
-    private final ComponentClassMetadata ToggleButtonMetadata = 
+    private final ComponentClassMetadata ToggleButtonMetadata =
             new ComponentClassMetadata(javafx.scene.control.ToggleButton.class, ButtonBaseMetadata);
-    private final ComponentClassMetadata AxisMetadata = 
+    private final ComponentClassMetadata AxisMetadata =
             new ComponentClassMetadata(javafx.scene.chart.Axis.class, RegionMetadata);
-    private final ComponentClassMetadata ChartMetadata = 
+    private final ComponentClassMetadata ChartMetadata =
             new ComponentClassMetadata(javafx.scene.chart.Chart.class, RegionMetadata);
-    private final ComponentClassMetadata ValueAxisMetadata = 
+    private final ComponentClassMetadata ValueAxisMetadata =
             new ComponentClassMetadata(javafx.scene.chart.ValueAxis.class, AxisMetadata);
-    private final ComponentClassMetadata XYChartMetadata = 
+    private final ComponentClassMetadata XYChartMetadata =
             new ComponentClassMetadata(javafx.scene.chart.XYChart.class, ChartMetadata);
-    private final ComponentClassMetadata ShapeMetadata = 
+    private final ComponentClassMetadata ShapeMetadata =
             new ComponentClassMetadata(javafx.scene.shape.Shape.class, NodeMetadata);
-    private final ComponentClassMetadata PathElementMetadata = 
+    private final ComponentClassMetadata PathElementMetadata =
             new ComponentClassMetadata(javafx.scene.shape.PathElement.class, null);
-    private final ComponentClassMetadata CameraMetadata = 
+    private final ComponentClassMetadata CameraMetadata =
             new ComponentClassMetadata(javafx.scene.Camera.class, NodeMetadata);
-    private final ComponentClassMetadata LightBaseMetadata = 
+    private final ComponentClassMetadata LightBaseMetadata =
             new ComponentClassMetadata(javafx.scene.LightBase.class, NodeMetadata);
-    private final ComponentClassMetadata Shape3DMetadata = 
+    private final ComponentClassMetadata Shape3DMetadata =
             new ComponentClassMetadata(javafx.scene.shape.Shape3D.class, NodeMetadata);
 
 
 
     // Other Component Classes (in alphabetical order)
 
-    private final ComponentClassMetadata SwingNodeMetadata = 
+    private final ComponentClassMetadata SwingNodeMetadata =
             new ComponentClassMetadata(javafx.embed.swing.SwingNode.class, NodeMetadata);
-    private final ComponentClassMetadata AmbientLightMetadata = 
+    private final ComponentClassMetadata AmbientLightMetadata =
             new ComponentClassMetadata(javafx.scene.AmbientLight.class, LightBaseMetadata);
-    private final ComponentClassMetadata GroupMetadata = 
+    private final ComponentClassMetadata GroupMetadata =
             new ComponentClassMetadata(javafx.scene.Group.class, ParentMetadata);
-    private final ComponentClassMetadata ParallelCameraMetadata = 
+    private final ComponentClassMetadata ParallelCameraMetadata =
             new ComponentClassMetadata(javafx.scene.ParallelCamera.class, CameraMetadata);
-    private final ComponentClassMetadata PerspectiveCameraMetadata = 
+    private final ComponentClassMetadata PerspectiveCameraMetadata =
             new ComponentClassMetadata(javafx.scene.PerspectiveCamera.class, CameraMetadata);
-    private final ComponentClassMetadata PointLightMetadata = 
+    private final ComponentClassMetadata PointLightMetadata =
             new ComponentClassMetadata(javafx.scene.PointLight.class, LightBaseMetadata);
-    private final ComponentClassMetadata SubSceneMetadata = 
+    private final ComponentClassMetadata SubSceneMetadata =
             new ComponentClassMetadata(javafx.scene.SubScene.class, NodeMetadata);
-    private final ComponentClassMetadata CanvasMetadata = 
+    private final ComponentClassMetadata CanvasMetadata =
             new ComponentClassMetadata(javafx.scene.canvas.Canvas.class, NodeMetadata);
-    private final ComponentClassMetadata AreaChartMetadata = 
+    private final ComponentClassMetadata AreaChartMetadata =
             new ComponentClassMetadata(javafx.scene.chart.AreaChart.class, XYChartMetadata);
-    private final ComponentClassMetadata BarChartMetadata = 
+    private final ComponentClassMetadata BarChartMetadata =
             new ComponentClassMetadata(javafx.scene.chart.BarChart.class, XYChartMetadata);
-    private final ComponentClassMetadata BubbleChartMetadata = 
+    private final ComponentClassMetadata BubbleChartMetadata =
             new ComponentClassMetadata(javafx.scene.chart.BubbleChart.class, XYChartMetadata);
-    private final ComponentClassMetadata CategoryAxisMetadata = 
+    private final ComponentClassMetadata CategoryAxisMetadata =
             new ComponentClassMetadata(javafx.scene.chart.CategoryAxis.class, AxisMetadata);
-    private final ComponentClassMetadata LineChartMetadata = 
+    private final ComponentClassMetadata LineChartMetadata =
             new ComponentClassMetadata(javafx.scene.chart.LineChart.class, XYChartMetadata);
-    private final ComponentClassMetadata NumberAxisMetadata = 
+    private final ComponentClassMetadata NumberAxisMetadata =
             new ComponentClassMetadata(javafx.scene.chart.NumberAxis.class, ValueAxisMetadata);
-    private final ComponentClassMetadata PieChartMetadata = 
+    private final ComponentClassMetadata PieChartMetadata =
             new ComponentClassMetadata(javafx.scene.chart.PieChart.class, ChartMetadata);
-    private final ComponentClassMetadata ScatterChartMetadata = 
+    private final ComponentClassMetadata ScatterChartMetadata =
             new ComponentClassMetadata(javafx.scene.chart.ScatterChart.class, XYChartMetadata);
-    private final ComponentClassMetadata StackedAreaChartMetadata = 
+    private final ComponentClassMetadata StackedAreaChartMetadata =
             new ComponentClassMetadata(javafx.scene.chart.StackedAreaChart.class, XYChartMetadata);
-    private final ComponentClassMetadata StackedBarChartMetadata = 
+    private final ComponentClassMetadata StackedBarChartMetadata =
             new ComponentClassMetadata(javafx.scene.chart.StackedBarChart.class, XYChartMetadata);
-    private final ComponentClassMetadata AccordionMetadata = 
+    private final ComponentClassMetadata AccordionMetadata =
             new ComponentClassMetadata(javafx.scene.control.Accordion.class, ControlMetadata);
-    private final ComponentClassMetadata ButtonMetadata = 
+    private final ComponentClassMetadata ButtonMetadata =
             new ComponentClassMetadata(javafx.scene.control.Button.class, ButtonBaseMetadata);
-    private final ComponentClassMetadata ButtonBarMetadata = 
+    private final ComponentClassMetadata ButtonBarMetadata =
             new ComponentClassMetadata(javafx.scene.control.ButtonBar.class, ControlMetadata);
-    private final ComponentClassMetadata CheckBoxMetadata = 
+    private final ComponentClassMetadata CheckBoxMetadata =
             new ComponentClassMetadata(javafx.scene.control.CheckBox.class, ButtonBaseMetadata);
-    private final ComponentClassMetadata CheckMenuItemMetadata = 
+    private final ComponentClassMetadata CheckMenuItemMetadata =
             new ComponentClassMetadata(javafx.scene.control.CheckMenuItem.class, MenuItemMetadata);
-    private final ComponentClassMetadata ChoiceBoxMetadata = 
+    private final ComponentClassMetadata ChoiceBoxMetadata =
             new ComponentClassMetadata(javafx.scene.control.ChoiceBox.class, ControlMetadata);
-    private final ComponentClassMetadata ColorPickerMetadata = 
+    private final ComponentClassMetadata ColorPickerMetadata =
             new ComponentClassMetadata(javafx.scene.control.ColorPicker.class, ComboBoxBaseMetadata);
-    private final ComponentClassMetadata ComboBoxMetadata = 
+    private final ComponentClassMetadata ComboBoxMetadata =
             new ComponentClassMetadata(javafx.scene.control.ComboBox.class, ComboBoxBaseMetadata);
-    private final ComponentClassMetadata ContextMenuMetadata = 
+    private final ComponentClassMetadata ContextMenuMetadata =
             new ComponentClassMetadata(javafx.scene.control.ContextMenu.class, PopupControlMetadata);
-    private final ComponentClassMetadata CustomMenuItemMetadata = 
+    private final ComponentClassMetadata CustomMenuItemMetadata =
             new ComponentClassMetadata(javafx.scene.control.CustomMenuItem.class, MenuItemMetadata);
-    private final ComponentClassMetadata DatePickerMetadata = 
+    private final ComponentClassMetadata DatePickerMetadata =
             new ComponentClassMetadata(javafx.scene.control.DatePicker.class, ComboBoxBaseMetadata);
-    private final ComponentClassMetadata DialogPaneMetadata = 
+    private final ComponentClassMetadata DialogPaneMetadata =
             new ComponentClassMetadata(javafx.scene.control.DialogPane.class, PaneMetadata);
-    private final ComponentClassMetadata HyperlinkMetadata = 
+    private final ComponentClassMetadata HyperlinkMetadata =
             new ComponentClassMetadata(javafx.scene.control.Hyperlink.class, ButtonBaseMetadata);
-    private final ComponentClassMetadata LabelMetadata = 
+    private final ComponentClassMetadata LabelMetadata =
             new ComponentClassMetadata(javafx.scene.control.Label.class, LabeledMetadata);
-    private final ComponentClassMetadata ListViewMetadata = 
+    private final ComponentClassMetadata ListViewMetadata =
             new ComponentClassMetadata(javafx.scene.control.ListView.class, ControlMetadata);
-    private final ComponentClassMetadata MenuMetadata = 
+    private final ComponentClassMetadata MenuMetadata =
             new ComponentClassMetadata(javafx.scene.control.Menu.class, MenuItemMetadata);
-    private final ComponentClassMetadata MenuBarMetadata = 
+    private final ComponentClassMetadata MenuBarMetadata =
             new ComponentClassMetadata(javafx.scene.control.MenuBar.class, ControlMetadata);
-    private final ComponentClassMetadata MenuButtonMetadata = 
+    private final ComponentClassMetadata MenuButtonMetadata =
             new ComponentClassMetadata(javafx.scene.control.MenuButton.class, ButtonBaseMetadata);
-    private final ComponentClassMetadata PaginationMetadata = 
+    private final ComponentClassMetadata PaginationMetadata =
             new ComponentClassMetadata(javafx.scene.control.Pagination.class, ControlMetadata);
-    private final ComponentClassMetadata PasswordFieldMetadata = 
+    private final ComponentClassMetadata PasswordFieldMetadata =
             new ComponentClassMetadata(javafx.scene.control.PasswordField.class, TextFieldMetadata);
-    private final ComponentClassMetadata ProgressBarMetadata = 
+    private final ComponentClassMetadata ProgressBarMetadata =
             new ComponentClassMetadata(javafx.scene.control.ProgressBar.class, ProgressIndicatorMetadata);
-    private final ComponentClassMetadata RadioButtonMetadata = 
+    private final ComponentClassMetadata RadioButtonMetadata =
             new ComponentClassMetadata(javafx.scene.control.RadioButton.class, ToggleButtonMetadata);
-    private final ComponentClassMetadata RadioMenuItemMetadata = 
+    private final ComponentClassMetadata RadioMenuItemMetadata =
             new ComponentClassMetadata(javafx.scene.control.RadioMenuItem.class, MenuItemMetadata);
-    private final ComponentClassMetadata ScrollBarMetadata = 
+    private final ComponentClassMetadata ScrollBarMetadata =
             new ComponentClassMetadata(javafx.scene.control.ScrollBar.class, ControlMetadata);
-    private final ComponentClassMetadata ScrollPaneMetadata = 
+    private final ComponentClassMetadata ScrollPaneMetadata =
             new ComponentClassMetadata(javafx.scene.control.ScrollPane.class, ControlMetadata);
-    private final ComponentClassMetadata SeparatorMetadata = 
+    private final ComponentClassMetadata SeparatorMetadata =
             new ComponentClassMetadata(javafx.scene.control.Separator.class, ControlMetadata);
-    private final ComponentClassMetadata SeparatorMenuItemMetadata = 
+    private final ComponentClassMetadata SeparatorMenuItemMetadata =
             new ComponentClassMetadata(javafx.scene.control.SeparatorMenuItem.class, CustomMenuItemMetadata);
-    private final ComponentClassMetadata SliderMetadata = 
+    private final ComponentClassMetadata SliderMetadata =
             new ComponentClassMetadata(javafx.scene.control.Slider.class, ControlMetadata);
-    private final ComponentClassMetadata SpinnerMetadata = 
+    private final ComponentClassMetadata SpinnerMetadata =
             new ComponentClassMetadata(javafx.scene.control.Spinner.class, ControlMetadata);
-    private final ComponentClassMetadata SplitMenuButtonMetadata = 
+    private final ComponentClassMetadata SplitMenuButtonMetadata =
             new ComponentClassMetadata(javafx.scene.control.SplitMenuButton.class, MenuButtonMetadata);
-    private final ComponentClassMetadata SplitPaneMetadata = 
+    private final ComponentClassMetadata SplitPaneMetadata =
             new ComponentClassMetadata(javafx.scene.control.SplitPane.class, ControlMetadata);
-    private final ComponentClassMetadata TabMetadata = 
+    private final ComponentClassMetadata TabMetadata =
             new ComponentClassMetadata(javafx.scene.control.Tab.class, null);
-    private final ComponentClassMetadata TabPaneMetadata = 
+    private final ComponentClassMetadata TabPaneMetadata =
             new ComponentClassMetadata(javafx.scene.control.TabPane.class, ControlMetadata);
-    private final ComponentClassMetadata TableColumnMetadata = 
+    private final ComponentClassMetadata TableColumnMetadata =
             new ComponentClassMetadata(javafx.scene.control.TableColumn.class, TableColumnBaseMetadata);
-    private final ComponentClassMetadata TableViewMetadata = 
+    private final ComponentClassMetadata TableViewMetadata =
             new ComponentClassMetadata(javafx.scene.control.TableView.class, ControlMetadata);
-    private final ComponentClassMetadata TextAreaMetadata = 
+    private final ComponentClassMetadata TextAreaMetadata =
             new ComponentClassMetadata(javafx.scene.control.TextArea.class, TextInputControlMetadata);
-    private final ComponentClassMetadata TextFormatterMetadata = 
+    private final ComponentClassMetadata TextFormatterMetadata =
             new ComponentClassMetadata(javafx.scene.control.TextFormatter.class, null);
-    private final ComponentClassMetadata TitledPaneMetadata = 
+    private final ComponentClassMetadata TitledPaneMetadata =
             new ComponentClassMetadata(javafx.scene.control.TitledPane.class, LabeledMetadata);
-    private final ComponentClassMetadata ToolBarMetadata = 
+    private final ComponentClassMetadata ToolBarMetadata =
             new ComponentClassMetadata(javafx.scene.control.ToolBar.class, ControlMetadata);
-    private final ComponentClassMetadata TooltipMetadata = 
+    private final ComponentClassMetadata TooltipMetadata =
             new ComponentClassMetadata(javafx.scene.control.Tooltip.class, PopupControlMetadata);
-    private final ComponentClassMetadata TreeTableColumnMetadata = 
+    private final ComponentClassMetadata TreeTableColumnMetadata =
             new ComponentClassMetadata(javafx.scene.control.TreeTableColumn.class, TableColumnBaseMetadata);
-    private final ComponentClassMetadata TreeTableViewMetadata = 
+    private final ComponentClassMetadata TreeTableViewMetadata =
             new ComponentClassMetadata(javafx.scene.control.TreeTableView.class, ControlMetadata);
-    private final ComponentClassMetadata TreeViewMetadata = 
+    private final ComponentClassMetadata TreeViewMetadata =
             new ComponentClassMetadata(javafx.scene.control.TreeView.class, ControlMetadata);
-    private final ComponentClassMetadata ImageViewMetadata = 
+    private final ComponentClassMetadata ImageViewMetadata =
             new ComponentClassMetadata(javafx.scene.image.ImageView.class, NodeMetadata);
-    private final ComponentClassMetadata AnchorPaneMetadata = 
+    private final ComponentClassMetadata AnchorPaneMetadata =
             new ComponentClassMetadata(javafx.scene.layout.AnchorPane.class, PaneMetadata);
-    private final ComponentClassMetadata BorderPaneMetadata = 
+    private final ComponentClassMetadata BorderPaneMetadata =
             new ComponentClassMetadata(javafx.scene.layout.BorderPane.class, PaneMetadata);
-    private final ComponentClassMetadata ColumnConstraintsMetadata = 
+    private final ComponentClassMetadata ColumnConstraintsMetadata =
             new ComponentClassMetadata(javafx.scene.layout.ColumnConstraints.class, null);
-    private final ComponentClassMetadata FlowPaneMetadata = 
+    private final ComponentClassMetadata FlowPaneMetadata =
             new ComponentClassMetadata(javafx.scene.layout.FlowPane.class, PaneMetadata);
-    private final ComponentClassMetadata GridPaneMetadata = 
+    private final ComponentClassMetadata GridPaneMetadata =
             new ComponentClassMetadata(javafx.scene.layout.GridPane.class, PaneMetadata);
-    private final ComponentClassMetadata HBoxMetadata = 
+    private final ComponentClassMetadata HBoxMetadata =
             new ComponentClassMetadata(javafx.scene.layout.HBox.class, PaneMetadata);
-    private final ComponentClassMetadata RowConstraintsMetadata = 
+    private final ComponentClassMetadata RowConstraintsMetadata =
             new ComponentClassMetadata(javafx.scene.layout.RowConstraints.class, null);
-    private final ComponentClassMetadata StackPaneMetadata = 
+    private final ComponentClassMetadata StackPaneMetadata =
             new ComponentClassMetadata(javafx.scene.layout.StackPane.class, PaneMetadata);
-    private final ComponentClassMetadata TilePaneMetadata = 
+    private final ComponentClassMetadata TilePaneMetadata =
             new ComponentClassMetadata(javafx.scene.layout.TilePane.class, PaneMetadata);
-    private final ComponentClassMetadata VBoxMetadata = 
+    private final ComponentClassMetadata VBoxMetadata =
             new ComponentClassMetadata(javafx.scene.layout.VBox.class, PaneMetadata);
-    private final ComponentClassMetadata MediaViewMetadata = 
+    private final ComponentClassMetadata MediaViewMetadata =
             new ComponentClassMetadata(javafx.scene.media.MediaView.class, NodeMetadata);
-    private final ComponentClassMetadata ArcMetadata = 
+    private final ComponentClassMetadata ArcMetadata =
             new ComponentClassMetadata(javafx.scene.shape.Arc.class, ShapeMetadata);
-    private final ComponentClassMetadata ArcToMetadata = 
+    private final ComponentClassMetadata ArcToMetadata =
             new ComponentClassMetadata(javafx.scene.shape.ArcTo.class, PathElementMetadata);
-    private final ComponentClassMetadata BoxMetadata = 
+    private final ComponentClassMetadata BoxMetadata =
             new ComponentClassMetadata(javafx.scene.shape.Box.class, Shape3DMetadata);
-    private final ComponentClassMetadata CircleMetadata = 
+    private final ComponentClassMetadata CircleMetadata =
             new ComponentClassMetadata(javafx.scene.shape.Circle.class, ShapeMetadata);
-    private final ComponentClassMetadata ClosePathMetadata = 
+    private final ComponentClassMetadata ClosePathMetadata =
             new ComponentClassMetadata(javafx.scene.shape.ClosePath.class, PathElementMetadata);
-    private final ComponentClassMetadata CubicCurveMetadata = 
+    private final ComponentClassMetadata CubicCurveMetadata =
             new ComponentClassMetadata(javafx.scene.shape.CubicCurve.class, ShapeMetadata);
-    private final ComponentClassMetadata CubicCurveToMetadata = 
+    private final ComponentClassMetadata CubicCurveToMetadata =
             new ComponentClassMetadata(javafx.scene.shape.CubicCurveTo.class, PathElementMetadata);
-    private final ComponentClassMetadata CylinderMetadata = 
+    private final ComponentClassMetadata CylinderMetadata =
             new ComponentClassMetadata(javafx.scene.shape.Cylinder.class, Shape3DMetadata);
-    private final ComponentClassMetadata EllipseMetadata = 
+    private final ComponentClassMetadata EllipseMetadata =
             new ComponentClassMetadata(javafx.scene.shape.Ellipse.class, ShapeMetadata);
-    private final ComponentClassMetadata HLineToMetadata = 
+    private final ComponentClassMetadata HLineToMetadata =
             new ComponentClassMetadata(javafx.scene.shape.HLineTo.class, PathElementMetadata);
-    private final ComponentClassMetadata LineMetadata = 
+    private final ComponentClassMetadata LineMetadata =
             new ComponentClassMetadata(javafx.scene.shape.Line.class, ShapeMetadata);
-    private final ComponentClassMetadata LineToMetadata = 
+    private final ComponentClassMetadata LineToMetadata =
             new ComponentClassMetadata(javafx.scene.shape.LineTo.class, PathElementMetadata);
-    private final ComponentClassMetadata MeshViewMetadata = 
+    private final ComponentClassMetadata MeshViewMetadata =
             new ComponentClassMetadata(javafx.scene.shape.MeshView.class, Shape3DMetadata);
-    private final ComponentClassMetadata MoveToMetadata = 
+    private final ComponentClassMetadata MoveToMetadata =
             new ComponentClassMetadata(javafx.scene.shape.MoveTo.class, PathElementMetadata);
-    private final ComponentClassMetadata PathMetadata = 
+    private final ComponentClassMetadata PathMetadata =
             new ComponentClassMetadata(javafx.scene.shape.Path.class, ShapeMetadata);
-    private final ComponentClassMetadata PolygonMetadata = 
+    private final ComponentClassMetadata PolygonMetadata =
             new ComponentClassMetadata(javafx.scene.shape.Polygon.class, ShapeMetadata);
-    private final ComponentClassMetadata PolylineMetadata = 
+    private final ComponentClassMetadata PolylineMetadata =
             new ComponentClassMetadata(javafx.scene.shape.Polyline.class, ShapeMetadata);
-    private final ComponentClassMetadata QuadCurveMetadata = 
+    private final ComponentClassMetadata QuadCurveMetadata =
             new ComponentClassMetadata(javafx.scene.shape.QuadCurve.class, ShapeMetadata);
-    private final ComponentClassMetadata QuadCurveToMetadata = 
+    private final ComponentClassMetadata QuadCurveToMetadata =
             new ComponentClassMetadata(javafx.scene.shape.QuadCurveTo.class, PathElementMetadata);
-    private final ComponentClassMetadata RectangleMetadata = 
+    private final ComponentClassMetadata RectangleMetadata =
             new ComponentClassMetadata(javafx.scene.shape.Rectangle.class, ShapeMetadata);
-    private final ComponentClassMetadata SVGPathMetadata = 
+    private final ComponentClassMetadata SVGPathMetadata =
             new ComponentClassMetadata(javafx.scene.shape.SVGPath.class, ShapeMetadata);
-    private final ComponentClassMetadata SphereMetadata = 
+    private final ComponentClassMetadata SphereMetadata =
             new ComponentClassMetadata(javafx.scene.shape.Sphere.class, Shape3DMetadata);
-    private final ComponentClassMetadata VLineToMetadata = 
+    private final ComponentClassMetadata VLineToMetadata =
             new ComponentClassMetadata(javafx.scene.shape.VLineTo.class, PathElementMetadata);
-    private final ComponentClassMetadata TextMetadata = 
+    private final ComponentClassMetadata TextMetadata =
             new ComponentClassMetadata(javafx.scene.text.Text.class, ShapeMetadata);
-    private final ComponentClassMetadata TextFlowMetadata = 
+    private final ComponentClassMetadata TextFlowMetadata =
             new ComponentClassMetadata(javafx.scene.text.TextFlow.class, PaneMetadata);
-    private final ComponentClassMetadata HTMLEditorMetadata = 
+    private final ComponentClassMetadata HTMLEditorMetadata =
             new ComponentClassMetadata(javafx.scene.web.HTMLEditor.class, ControlMetadata);
-    private final ComponentClassMetadata WebViewMetadata = 
+    private final ComponentClassMetadata WebViewMetadata =
             new ComponentClassMetadata(javafx.scene.web.WebView.class, ParentMetadata);
 
 
     // Property Names
 
-    private final PropertyName absoluteName = 
+    private final PropertyName absoluteName =
             new PropertyName("absolute");
-    private final PropertyName acceleratorName = 
+    private final PropertyName acceleratorName =
             new PropertyName("accelerator");
-    private final PropertyName accessibleHelpName = 
+    private final PropertyName accessibleHelpName =
             new PropertyName("accessibleHelp");
-    private final PropertyName accessibleRoleName = 
+    private final PropertyName accessibleRoleName =
             new PropertyName("accessibleRole");
-    private final PropertyName accessibleRoleDescriptionName = 
+    private final PropertyName accessibleRoleDescriptionName =
             new PropertyName("accessibleRoleDescription");
-    private final PropertyName accessibleTextName = 
+    private final PropertyName accessibleTextName =
             new PropertyName("accessibleText");
-    private final PropertyName alignmentName = 
+    private final PropertyName alignmentName =
             new PropertyName("alignment");
-    private final PropertyName allowIndeterminateName = 
+    private final PropertyName allowIndeterminateName =
             new PropertyName("allowIndeterminate");
-    private final PropertyName alternativeColumnFillVisibleName = 
+    private final PropertyName alternativeColumnFillVisibleName =
             new PropertyName("alternativeColumnFillVisible");
-    private final PropertyName alternativeRowFillVisibleName = 
+    private final PropertyName alternativeRowFillVisibleName =
             new PropertyName("alternativeRowFillVisible");
-    private final PropertyName anchorLocationName = 
+    private final PropertyName anchorLocationName =
             new PropertyName("anchorLocation");
-    private final PropertyName anchorXName = 
+    private final PropertyName anchorXName =
             new PropertyName("anchorX");
-    private final PropertyName anchorYName = 
+    private final PropertyName anchorYName =
             new PropertyName("anchorY");
-    private final PropertyName animatedName = 
+    private final PropertyName animatedName =
             new PropertyName("animated");
-    private final PropertyName arcHeightName = 
+    private final PropertyName arcHeightName =
             new PropertyName("arcHeight");
-    private final PropertyName arcWidthName = 
+    private final PropertyName arcWidthName =
             new PropertyName("arcWidth");
-    private final PropertyName autoFixName = 
+    private final PropertyName autoFixName =
             new PropertyName("autoFix");
-    private final PropertyName autoHideName = 
+    private final PropertyName autoHideName =
             new PropertyName("autoHide");
-    private final PropertyName autoRangingName = 
+    private final PropertyName autoRangingName =
             new PropertyName("autoRanging");
-    private final PropertyName autoSizeChildrenName = 
+    private final PropertyName autoSizeChildrenName =
             new PropertyName("autoSizeChildren");
-    private final PropertyName axisSortingPolicyName = 
+    private final PropertyName axisSortingPolicyName =
             new PropertyName("axisSortingPolicy");
-    private final PropertyName barGapName = 
+    private final PropertyName barGapName =
             new PropertyName("barGap");
-    private final PropertyName baselineOffsetName = 
+    private final PropertyName baselineOffsetName =
             new PropertyName("baselineOffset");
-    private final PropertyName blendModeName = 
+    private final PropertyName blendModeName =
             new PropertyName("blendMode");
-    private final PropertyName blockIncrementName = 
+    private final PropertyName blockIncrementName =
             new PropertyName("blockIncrement");
-    private final PropertyName bottomName = 
+    private final PropertyName bottomName =
             new PropertyName("bottom");
-    private final PropertyName boundsInLocalName = 
+    private final PropertyName boundsInLocalName =
             new PropertyName("boundsInLocal");
-    private final PropertyName boundsInParentName = 
+    private final PropertyName boundsInParentName =
             new PropertyName("boundsInParent");
-    private final PropertyName boundsTypeName = 
+    private final PropertyName boundsTypeName =
             new PropertyName("boundsType");
-    private final PropertyName buttonCellName = 
+    private final PropertyName buttonCellName =
             new PropertyName("buttonCell");
-    private final PropertyName buttonMinWidthName = 
+    private final PropertyName buttonMinWidthName =
             new PropertyName("buttonMinWidth");
-    private final PropertyName buttonOrderName = 
+    private final PropertyName buttonOrderName =
             new PropertyName("buttonOrder");
-    private final PropertyName buttonsName = 
+    private final PropertyName buttonsName =
             new PropertyName("buttons");
-    private final PropertyName buttonTypesName = 
+    private final PropertyName buttonTypesName =
             new PropertyName("buttonTypes");
-    private final PropertyName cacheName = 
+    private final PropertyName cacheName =
             new PropertyName("cache");
-    private final PropertyName cacheHintName = 
+    private final PropertyName cacheHintName =
             new PropertyName("cacheHint");
-    private final PropertyName cacheShapeName = 
+    private final PropertyName cacheShapeName =
             new PropertyName("cacheShape");
-    private final PropertyName cancelButtonName = 
+    private final PropertyName cancelButtonName =
             new PropertyName("cancelButton");
-    private final PropertyName categoriesName = 
+    private final PropertyName categoriesName =
             new PropertyName("categories");
-    private final PropertyName categoryGapName = 
+    private final PropertyName categoryGapName =
             new PropertyName("categoryGap");
-    private final PropertyName categorySpacingName = 
+    private final PropertyName categorySpacingName =
             new PropertyName("categorySpacing");
-    private final PropertyName centerName = 
+    private final PropertyName centerName =
             new PropertyName("center");
-    private final PropertyName centerShapeName = 
+    private final PropertyName centerShapeName =
             new PropertyName("centerShape");
-    private final PropertyName centerXName = 
+    private final PropertyName centerXName =
             new PropertyName("centerX");
-    private final PropertyName centerYName = 
+    private final PropertyName centerYName =
             new PropertyName("centerY");
-    private final PropertyName childrenName = 
+    private final PropertyName childrenName =
             new PropertyName("children");
-    private final PropertyName clipName = 
+    private final PropertyName clipName =
             new PropertyName("clip");
-    private final PropertyName clockwiseName = 
+    private final PropertyName clockwiseName =
             new PropertyName("clockwise");
-    private final PropertyName closableName = 
+    private final PropertyName closableName =
             new PropertyName("closable");
-    private final PropertyName collapsibleName = 
+    private final PropertyName collapsibleName =
             new PropertyName("collapsible");
-    private final PropertyName colorName = 
+    private final PropertyName colorName =
             new PropertyName("color");
-    private final PropertyName columnConstraintsName = 
+    private final PropertyName columnConstraintsName =
             new PropertyName("columnConstraints");
-    private final PropertyName columnHalignmentName = 
+    private final PropertyName columnHalignmentName =
             new PropertyName("columnHalignment");
-    private final PropertyName columnResizePolicyName = 
+    private final PropertyName columnResizePolicyName =
             new PropertyName("columnResizePolicy");
-    private final PropertyName columnsName = 
+    private final PropertyName columnsName =
             new PropertyName("columns");
-    private final PropertyName consumeAutoHidingEventsName = 
+    private final PropertyName consumeAutoHidingEventsName =
             new PropertyName("consumeAutoHidingEvents");
-    private final PropertyName contentName = 
+    private final PropertyName contentName =
             new PropertyName("content");
-    private final PropertyName contentBiasName = 
+    private final PropertyName contentBiasName =
             new PropertyName("contentBias");
-    private final PropertyName contentDisplayName = 
+    private final PropertyName contentDisplayName =
             new PropertyName("contentDisplay");
-    private final PropertyName contentTextName = 
+    private final PropertyName contentTextName =
             new PropertyName("contentText");
-    private final PropertyName contextMenuName = 
+    private final PropertyName contextMenuName =
             new PropertyName("contextMenu");
-    private final PropertyName contextMenuEnabledName = 
+    private final PropertyName contextMenuEnabledName =
             new PropertyName("contextMenuEnabled");
-    private final PropertyName controlXName = 
+    private final PropertyName controlXName =
             new PropertyName("controlX");
-    private final PropertyName controlX1Name = 
+    private final PropertyName controlX1Name =
             new PropertyName("controlX1");
-    private final PropertyName controlX2Name = 
+    private final PropertyName controlX2Name =
             new PropertyName("controlX2");
-    private final PropertyName controlYName = 
+    private final PropertyName controlYName =
             new PropertyName("controlY");
-    private final PropertyName controlY1Name = 
+    private final PropertyName controlY1Name =
             new PropertyName("controlY1");
-    private final PropertyName controlY2Name = 
+    private final PropertyName controlY2Name =
             new PropertyName("controlY2");
-    private final PropertyName createSymbolsName = 
+    private final PropertyName createSymbolsName =
             new PropertyName("createSymbols");
-    private final PropertyName cullFaceName = 
+    private final PropertyName cullFaceName =
             new PropertyName("cullFace");
-    private final PropertyName currentPageIndexName = 
+    private final PropertyName currentPageIndexName =
             new PropertyName("currentPageIndex");
-    private final PropertyName cursorName = 
+    private final PropertyName cursorName =
             new PropertyName("cursor");
-    private final PropertyName defaultButtonName = 
+    private final PropertyName defaultButtonName =
             new PropertyName("defaultButton");
-    private final PropertyName depthName = 
+    private final PropertyName depthName =
             new PropertyName("depth");
-    private final PropertyName depthTestName = 
+    private final PropertyName depthTestName =
             new PropertyName("depthTest");
-    private final PropertyName disableName = 
+    private final PropertyName disableName =
             new PropertyName("disable");
-    private final PropertyName dividerPositionsName = 
+    private final PropertyName dividerPositionsName =
             new PropertyName("dividerPositions");
-    private final PropertyName divisionsName = 
+    private final PropertyName divisionsName =
             new PropertyName("divisions");
-    private final PropertyName drawModeName = 
+    private final PropertyName drawModeName =
             new PropertyName("drawMode");
-    private final PropertyName editableName = 
+    private final PropertyName editableName =
             new PropertyName("editable");
-    private final PropertyName effectName = 
+    private final PropertyName effectName =
             new PropertyName("effect");
-    private final PropertyName effectiveNodeOrientationName = 
+    private final PropertyName effectiveNodeOrientationName =
             new PropertyName("effectiveNodeOrientation");
-    private final PropertyName elementsName = 
+    private final PropertyName elementsName =
             new PropertyName("elements");
-    private final PropertyName ellipsisStringName = 
+    private final PropertyName ellipsisStringName =
             new PropertyName("ellipsisString");
-    private final PropertyName endMarginName = 
+    private final PropertyName endMarginName =
             new PropertyName("endMargin");
-    private final PropertyName endXName = 
+    private final PropertyName endXName =
             new PropertyName("endX");
-    private final PropertyName endYName = 
+    private final PropertyName endYName =
             new PropertyName("endY");
-    private final PropertyName expandableContentName = 
+    private final PropertyName expandableContentName =
             new PropertyName("expandableContent");
-    private final PropertyName expandedName = 
+    private final PropertyName expandedName =
             new PropertyName("expanded");
-    private final PropertyName expandedItemCountName = 
+    private final PropertyName expandedItemCountName =
             new PropertyName("expandedItemCount");
-    private final PropertyName farClipName = 
+    private final PropertyName farClipName =
             new PropertyName("farClip");
-    private final PropertyName fieldOfViewName = 
+    private final PropertyName fieldOfViewName =
             new PropertyName("fieldOfView");
-    private final PropertyName fillName = 
+    private final PropertyName fillName =
             new PropertyName("fill");
-    private final PropertyName fillHeightName = 
+    private final PropertyName fillHeightName =
             new PropertyName("fillHeight");
-    private final PropertyName fillRuleName = 
+    private final PropertyName fillRuleName =
             new PropertyName("fillRule");
-    private final PropertyName fillWidthName = 
+    private final PropertyName fillWidthName =
             new PropertyName("fillWidth");
-    private final PropertyName fitHeightName = 
+    private final PropertyName fitHeightName =
             new PropertyName("fitHeight");
-    private final PropertyName fitToHeightName = 
+    private final PropertyName fitToHeightName =
             new PropertyName("fitToHeight");
-    private final PropertyName fitToWidthName = 
+    private final PropertyName fitToWidthName =
             new PropertyName("fitToWidth");
-    private final PropertyName fitWidthName = 
+    private final PropertyName fitWidthName =
             new PropertyName("fitWidth");
-    private final PropertyName fixedCellSizeName = 
+    private final PropertyName fixedCellSizeName =
             new PropertyName("fixedCellSize");
-    private final PropertyName fixedEyeAtCameraZeroName = 
+    private final PropertyName fixedEyeAtCameraZeroName =
             new PropertyName("fixedEyeAtCameraZero");
-    private final PropertyName focusTraversableName = 
+    private final PropertyName focusTraversableName =
             new PropertyName("focusTraversable");
-    private final PropertyName fontName = 
+    private final PropertyName fontName =
             new PropertyName("font");
-    private final PropertyName fontScaleName = 
+    private final PropertyName fontScaleName =
             new PropertyName("fontScale");
-    private final PropertyName fontSmoothingTypeName = 
+    private final PropertyName fontSmoothingTypeName =
             new PropertyName("fontSmoothingType");
-    private final PropertyName forceZeroInRangeName = 
+    private final PropertyName forceZeroInRangeName =
             new PropertyName("forceZeroInRange");
-    private final PropertyName gapStartAndEndName = 
+    private final PropertyName gapStartAndEndName =
             new PropertyName("gapStartAndEnd");
-    private final PropertyName graphicName = 
+    private final PropertyName graphicName =
             new PropertyName("graphic");
-    private final PropertyName graphicTextGapName = 
+    private final PropertyName graphicTextGapName =
             new PropertyName("graphicTextGap");
-    private final PropertyName gridLinesVisibleName = 
+    private final PropertyName gridLinesVisibleName =
             new PropertyName("gridLinesVisible");
-    private final PropertyName halignmentName = 
+    private final PropertyName halignmentName =
             new PropertyName("halignment");
-    private final PropertyName hbarPolicyName = 
+    private final PropertyName hbarPolicyName =
             new PropertyName("hbarPolicy");
-    private final PropertyName headerName = 
+    private final PropertyName headerName =
             new PropertyName("header");
-    private final PropertyName headerTextName = 
+    private final PropertyName headerTextName =
             new PropertyName("headerText");
-    private final PropertyName heightName = 
+    private final PropertyName heightName =
             new PropertyName("height");
-    private final PropertyName hgapName = 
+    private final PropertyName hgapName =
             new PropertyName("hgap");
-    private final PropertyName hgrowName = 
+    private final PropertyName hgrowName =
             new PropertyName("hgrow");
-    private final PropertyName hideOnClickName = 
+    private final PropertyName hideOnClickName =
             new PropertyName("hideOnClick");
-    private final PropertyName hideOnEscapeName = 
+    private final PropertyName hideOnEscapeName =
             new PropertyName("hideOnEscape");
-    private final PropertyName hmaxName = 
+    private final PropertyName hmaxName =
             new PropertyName("hmax");
-    private final PropertyName hminName = 
+    private final PropertyName hminName =
             new PropertyName("hmin");
-    private final PropertyName horizontalGridLinesVisibleName = 
+    private final PropertyName horizontalGridLinesVisibleName =
             new PropertyName("horizontalGridLinesVisible");
-    private final PropertyName horizontalZeroLineVisibleName = 
+    private final PropertyName horizontalZeroLineVisibleName =
             new PropertyName("horizontalZeroLineVisible");
-    private final PropertyName htmlTextName = 
+    private final PropertyName htmlTextName =
             new PropertyName("htmlText");
-    private final PropertyName hvalueName = 
+    private final PropertyName hvalueName =
             new PropertyName("hvalue");
-    private final PropertyName idName = 
+    private final PropertyName idName =
             new PropertyName("id");
-    private final PropertyName imageName = 
+    private final PropertyName imageName =
             new PropertyName("image");
-    private final PropertyName indeterminateName = 
+    private final PropertyName indeterminateName =
             new PropertyName("indeterminate");
-    private final PropertyName insetsName = 
+    private final PropertyName insetsName =
             new PropertyName("insets");
-    private final PropertyName itemsName = 
+    private final PropertyName itemsName =
             new PropertyName("items");
-    private final PropertyName labelName = 
+    private final PropertyName labelName =
             new PropertyName("label");
-    private final PropertyName labelForName = 
+    private final PropertyName labelForName =
             new PropertyName("labelFor");
-    private final PropertyName labelFormatterName = 
+    private final PropertyName labelFormatterName =
             new PropertyName("labelFormatter");
-    private final PropertyName labelLineLengthName = 
+    private final PropertyName labelLineLengthName =
             new PropertyName("labelLineLength");
-    private final PropertyName labelPaddingName = 
+    private final PropertyName labelPaddingName =
             new PropertyName("labelPadding");
-    private final PropertyName labelsVisibleName = 
+    private final PropertyName labelsVisibleName =
             new PropertyName("labelsVisible");
-    private final PropertyName largeArcFlagName = 
+    private final PropertyName largeArcFlagName =
             new PropertyName("largeArcFlag");
-    private final PropertyName layoutBoundsName = 
+    private final PropertyName layoutBoundsName =
             new PropertyName("layoutBounds");
-    private final PropertyName layoutXName = 
+    private final PropertyName layoutXName =
             new PropertyName("layoutX");
-    private final PropertyName layoutYName = 
+    private final PropertyName layoutYName =
             new PropertyName("layoutY");
-    private final PropertyName leftName = 
+    private final PropertyName leftName =
             new PropertyName("left");
-    private final PropertyName legendSideName = 
+    private final PropertyName legendSideName =
             new PropertyName("legendSide");
-    private final PropertyName legendVisibleName = 
+    private final PropertyName legendVisibleName =
             new PropertyName("legendVisible");
-    private final PropertyName lengthName = 
+    private final PropertyName lengthName =
             new PropertyName("length");
-    private final PropertyName lightOnName = 
+    private final PropertyName lightOnName =
             new PropertyName("lightOn");
-    private final PropertyName lineSpacingName = 
+    private final PropertyName lineSpacingName =
             new PropertyName("lineSpacing");
-    private final PropertyName lowerBoundName = 
+    private final PropertyName lowerBoundName =
             new PropertyName("lowerBound");
-    private final PropertyName majorTickUnitName = 
+    private final PropertyName majorTickUnitName =
             new PropertyName("majorTickUnit");
-    private final PropertyName materialName = 
+    private final PropertyName materialName =
             new PropertyName("material");
-    private final PropertyName maxName = 
+    private final PropertyName maxName =
             new PropertyName("max");
-    private final PropertyName maxHeightName = 
+    private final PropertyName maxHeightName =
             new PropertyName("maxHeight");
-    private final PropertyName maxPageIndicatorCountName = 
+    private final PropertyName maxPageIndicatorCountName =
             new PropertyName("maxPageIndicatorCount");
-    private final PropertyName maxWidthName = 
+    private final PropertyName maxWidthName =
             new PropertyName("maxWidth");
-    private final PropertyName menusName = 
+    private final PropertyName menusName =
             new PropertyName("menus");
-    private final PropertyName meshName = 
+    private final PropertyName meshName =
             new PropertyName("mesh");
-    private final PropertyName minName = 
+    private final PropertyName minName =
             new PropertyName("min");
-    private final PropertyName minHeightName = 
+    private final PropertyName minHeightName =
             new PropertyName("minHeight");
-    private final PropertyName minorTickCountName = 
+    private final PropertyName minorTickCountName =
             new PropertyName("minorTickCount");
-    private final PropertyName minorTickLengthName = 
+    private final PropertyName minorTickLengthName =
             new PropertyName("minorTickLength");
-    private final PropertyName minorTickVisibleName = 
+    private final PropertyName minorTickVisibleName =
             new PropertyName("minorTickVisible");
-    private final PropertyName minViewportHeightName = 
+    private final PropertyName minViewportHeightName =
             new PropertyName("minViewportHeight");
-    private final PropertyName minViewportWidthName = 
+    private final PropertyName minViewportWidthName =
             new PropertyName("minViewportWidth");
-    private final PropertyName minWidthName = 
+    private final PropertyName minWidthName =
             new PropertyName("minWidth");
-    private final PropertyName mnemonicParsingName = 
+    private final PropertyName mnemonicParsingName =
             new PropertyName("mnemonicParsing");
-    private final PropertyName mouseTransparentName = 
+    private final PropertyName mouseTransparentName =
             new PropertyName("mouseTransparent");
-    private final PropertyName nearClipName = 
+    private final PropertyName nearClipName =
             new PropertyName("nearClip");
-    private final PropertyName nodeOrientationName = 
+    private final PropertyName nodeOrientationName =
             new PropertyName("nodeOrientation");
-    private final PropertyName onActionName = 
+    private final PropertyName onActionName =
             new PropertyName("onAction");
-    private final PropertyName onAutoHideName = 
+    private final PropertyName onAutoHideName =
             new PropertyName("onAutoHide");
-    private final PropertyName onClosedName = 
+    private final PropertyName onClosedName =
             new PropertyName("onClosed");
-    private final PropertyName onCloseRequestName = 
+    private final PropertyName onCloseRequestName =
             new PropertyName("onCloseRequest");
-    private final PropertyName onContextMenuRequestedName = 
+    private final PropertyName onContextMenuRequestedName =
             new PropertyName("onContextMenuRequested");
-    private final PropertyName onDragDetectedName = 
+    private final PropertyName onDragDetectedName =
             new PropertyName("onDragDetected");
-    private final PropertyName onDragDoneName = 
+    private final PropertyName onDragDoneName =
             new PropertyName("onDragDone");
-    private final PropertyName onDragDroppedName = 
+    private final PropertyName onDragDroppedName =
             new PropertyName("onDragDropped");
-    private final PropertyName onDragEnteredName = 
+    private final PropertyName onDragEnteredName =
             new PropertyName("onDragEntered");
-    private final PropertyName onDragExitedName = 
+    private final PropertyName onDragExitedName =
             new PropertyName("onDragExited");
-    private final PropertyName onDragOverName = 
+    private final PropertyName onDragOverName =
             new PropertyName("onDragOver");
-    private final PropertyName onEditCancelName = 
+    private final PropertyName onEditCancelName =
             new PropertyName("onEditCancel");
-    private final PropertyName onEditCommitName = 
+    private final PropertyName onEditCommitName =
             new PropertyName("onEditCommit");
-    private final PropertyName onEditStartName = 
+    private final PropertyName onEditStartName =
             new PropertyName("onEditStart");
-    private final PropertyName onErrorName = 
+    private final PropertyName onErrorName =
             new PropertyName("onError");
-    private final PropertyName onHiddenName = 
+    private final PropertyName onHiddenName =
             new PropertyName("onHidden");
-    private final PropertyName onHidingName = 
+    private final PropertyName onHidingName =
             new PropertyName("onHiding");
-    private final PropertyName onInputMethodTextChangedName = 
+    private final PropertyName onInputMethodTextChangedName =
             new PropertyName("onInputMethodTextChanged");
-    private final PropertyName onKeyPressedName = 
+    private final PropertyName onKeyPressedName =
             new PropertyName("onKeyPressed");
-    private final PropertyName onKeyReleasedName = 
+    private final PropertyName onKeyReleasedName =
             new PropertyName("onKeyReleased");
-    private final PropertyName onKeyTypedName = 
+    private final PropertyName onKeyTypedName =
             new PropertyName("onKeyTyped");
-    private final PropertyName onMenuValidationName = 
+    private final PropertyName onMenuValidationName =
             new PropertyName("onMenuValidation");
-    private final PropertyName onMouseClickedName = 
+    private final PropertyName onMouseClickedName =
             new PropertyName("onMouseClicked");
-    private final PropertyName onMouseDragEnteredName = 
+    private final PropertyName onMouseDragEnteredName =
             new PropertyName("onMouseDragEntered");
-    private final PropertyName onMouseDragExitedName = 
+    private final PropertyName onMouseDragExitedName =
             new PropertyName("onMouseDragExited");
-    private final PropertyName onMouseDraggedName = 
+    private final PropertyName onMouseDraggedName =
             new PropertyName("onMouseDragged");
-    private final PropertyName onMouseDragOverName = 
+    private final PropertyName onMouseDragOverName =
             new PropertyName("onMouseDragOver");
-    private final PropertyName onMouseDragReleasedName = 
+    private final PropertyName onMouseDragReleasedName =
             new PropertyName("onMouseDragReleased");
-    private final PropertyName onMouseEnteredName = 
+    private final PropertyName onMouseEnteredName =
             new PropertyName("onMouseEntered");
-    private final PropertyName onMouseExitedName = 
+    private final PropertyName onMouseExitedName =
             new PropertyName("onMouseExited");
-    private final PropertyName onMouseMovedName = 
+    private final PropertyName onMouseMovedName =
             new PropertyName("onMouseMoved");
-    private final PropertyName onMousePressedName = 
+    private final PropertyName onMousePressedName =
             new PropertyName("onMousePressed");
-    private final PropertyName onMouseReleasedName = 
+    private final PropertyName onMouseReleasedName =
             new PropertyName("onMouseReleased");
-    private final PropertyName onRotateName = 
+    private final PropertyName onRotateName =
             new PropertyName("onRotate");
-    private final PropertyName onRotationFinishedName = 
+    private final PropertyName onRotationFinishedName =
             new PropertyName("onRotationFinished");
-    private final PropertyName onRotationStartedName = 
+    private final PropertyName onRotationStartedName =
             new PropertyName("onRotationStarted");
-    private final PropertyName onScrollName = 
+    private final PropertyName onScrollName =
             new PropertyName("onScroll");
-    private final PropertyName onScrollFinishedName = 
+    private final PropertyName onScrollFinishedName =
             new PropertyName("onScrollFinished");
-    private final PropertyName onScrollStartedName = 
+    private final PropertyName onScrollStartedName =
             new PropertyName("onScrollStarted");
-    private final PropertyName onScrollToName = 
+    private final PropertyName onScrollToName =
             new PropertyName("onScrollTo");
-    private final PropertyName onScrollToColumnName = 
+    private final PropertyName onScrollToColumnName =
             new PropertyName("onScrollToColumn");
-    private final PropertyName onSelectionChangedName = 
+    private final PropertyName onSelectionChangedName =
             new PropertyName("onSelectionChanged");
-    private final PropertyName onShowingName = 
+    private final PropertyName onShowingName =
             new PropertyName("onShowing");
-    private final PropertyName onShownName = 
+    private final PropertyName onShownName =
             new PropertyName("onShown");
-    private final PropertyName onSortName = 
+    private final PropertyName onSortName =
             new PropertyName("onSort");
-    private final PropertyName onSwipeDownName = 
+    private final PropertyName onSwipeDownName =
             new PropertyName("onSwipeDown");
-    private final PropertyName onSwipeLeftName = 
+    private final PropertyName onSwipeLeftName =
             new PropertyName("onSwipeLeft");
-    private final PropertyName onSwipeRightName = 
+    private final PropertyName onSwipeRightName =
             new PropertyName("onSwipeRight");
-    private final PropertyName onSwipeUpName = 
+    private final PropertyName onSwipeUpName =
             new PropertyName("onSwipeUp");
-    private final PropertyName onTouchMovedName = 
+    private final PropertyName onTouchMovedName =
             new PropertyName("onTouchMoved");
-    private final PropertyName onTouchPressedName = 
+    private final PropertyName onTouchPressedName =
             new PropertyName("onTouchPressed");
-    private final PropertyName onTouchReleasedName = 
+    private final PropertyName onTouchReleasedName =
             new PropertyName("onTouchReleased");
-    private final PropertyName onTouchStationaryName = 
+    private final PropertyName onTouchStationaryName =
             new PropertyName("onTouchStationary");
-    private final PropertyName onZoomName = 
+    private final PropertyName onZoomName =
             new PropertyName("onZoom");
-    private final PropertyName onZoomFinishedName = 
+    private final PropertyName onZoomFinishedName =
             new PropertyName("onZoomFinished");
-    private final PropertyName onZoomStartedName = 
+    private final PropertyName onZoomStartedName =
             new PropertyName("onZoomStarted");
-    private final PropertyName opacityName = 
+    private final PropertyName opacityName =
             new PropertyName("opacity");
-    private final PropertyName opaqueInsetsName = 
+    private final PropertyName opaqueInsetsName =
             new PropertyName("opaqueInsets");
-    private final PropertyName orientationName = 
+    private final PropertyName orientationName =
             new PropertyName("orientation");
-    private final PropertyName paddingName = 
+    private final PropertyName paddingName =
             new PropertyName("padding");
-    private final PropertyName pageCountName = 
+    private final PropertyName pageCountName =
             new PropertyName("pageCount");
-    private final PropertyName panesName = 
+    private final PropertyName panesName =
             new PropertyName("panes");
-    private final PropertyName pannableName = 
+    private final PropertyName pannableName =
             new PropertyName("pannable");
-    private final PropertyName percentHeightName = 
+    private final PropertyName percentHeightName =
             new PropertyName("percentHeight");
-    private final PropertyName percentWidthName = 
+    private final PropertyName percentWidthName =
             new PropertyName("percentWidth");
-    private final PropertyName pickOnBoundsName = 
+    private final PropertyName pickOnBoundsName =
             new PropertyName("pickOnBounds");
-    private final PropertyName placeholderName = 
+    private final PropertyName placeholderName =
             new PropertyName("placeholder");
-    private final PropertyName pointsName = 
+    private final PropertyName pointsName =
             new PropertyName("points");
-    private final PropertyName popupSideName = 
+    private final PropertyName popupSideName =
             new PropertyName("popupSide");
-    private final PropertyName prefColumnCountName = 
+    private final PropertyName prefColumnCountName =
             new PropertyName("prefColumnCount");
-    private final PropertyName prefColumnsName = 
+    private final PropertyName prefColumnsName =
             new PropertyName("prefColumns");
-    private final PropertyName prefHeightName = 
+    private final PropertyName prefHeightName =
             new PropertyName("prefHeight");
-    private final PropertyName prefRowCountName = 
+    private final PropertyName prefRowCountName =
             new PropertyName("prefRowCount");
-    private final PropertyName prefRowsName = 
+    private final PropertyName prefRowsName =
             new PropertyName("prefRows");
-    private final PropertyName prefTileHeightName = 
+    private final PropertyName prefTileHeightName =
             new PropertyName("prefTileHeight");
-    private final PropertyName prefTileWidthName = 
+    private final PropertyName prefTileWidthName =
             new PropertyName("prefTileWidth");
-    private final PropertyName prefViewportHeightName = 
+    private final PropertyName prefViewportHeightName =
             new PropertyName("prefViewportHeight");
-    private final PropertyName prefViewportWidthName = 
+    private final PropertyName prefViewportWidthName =
             new PropertyName("prefViewportWidth");
-    private final PropertyName prefWidthName = 
+    private final PropertyName prefWidthName =
             new PropertyName("prefWidth");
-    private final PropertyName prefWrapLengthName = 
+    private final PropertyName prefWrapLengthName =
             new PropertyName("prefWrapLength");
-    private final PropertyName preserveRatioName = 
+    private final PropertyName preserveRatioName =
             new PropertyName("preserveRatio");
-    private final PropertyName progressName = 
+    private final PropertyName progressName =
             new PropertyName("progress");
-    private final PropertyName promptTextName = 
+    private final PropertyName promptTextName =
             new PropertyName("promptText");
-    private final PropertyName radiusName = 
+    private final PropertyName radiusName =
             new PropertyName("radius");
-    private final PropertyName radiusXName = 
+    private final PropertyName radiusXName =
             new PropertyName("radiusX");
-    private final PropertyName radiusYName = 
+    private final PropertyName radiusYName =
             new PropertyName("radiusY");
-    private final PropertyName resizableName = 
+    private final PropertyName resizableName =
             new PropertyName("resizable");
-    private final PropertyName rightName = 
+    private final PropertyName rightName =
             new PropertyName("right");
-    private final PropertyName rotateName = 
+    private final PropertyName rotateName =
             new PropertyName("rotate");
-    private final PropertyName rotateGraphicName = 
+    private final PropertyName rotateGraphicName =
             new PropertyName("rotateGraphic");
-    private final PropertyName rotationAxisName = 
+    private final PropertyName rotationAxisName =
             new PropertyName("rotationAxis");
-    private final PropertyName rowConstraintsName = 
+    private final PropertyName rowConstraintsName =
             new PropertyName("rowConstraints");
-    private final PropertyName rowValignmentName = 
+    private final PropertyName rowValignmentName =
             new PropertyName("rowValignment");
-    private final PropertyName scaleName = 
+    private final PropertyName scaleName =
             new PropertyName("scale");
-    private final PropertyName scaleShapeName = 
+    private final PropertyName scaleShapeName =
             new PropertyName("scaleShape");
-    private final PropertyName scaleXName = 
+    private final PropertyName scaleXName =
             new PropertyName("scaleX");
-    private final PropertyName scaleYName = 
+    private final PropertyName scaleYName =
             new PropertyName("scaleY");
-    private final PropertyName scaleZName = 
+    private final PropertyName scaleZName =
             new PropertyName("scaleZ");
-    private final PropertyName scopeName = 
+    private final PropertyName scopeName =
             new PropertyName("scope");
-    private final PropertyName scrollLeftName = 
+    private final PropertyName scrollLeftName =
             new PropertyName("scrollLeft");
-    private final PropertyName scrollTopName = 
+    private final PropertyName scrollTopName =
             new PropertyName("scrollTop");
-    private final PropertyName selectedName = 
+    private final PropertyName selectedName =
             new PropertyName("selected");
-    private final PropertyName shapeName = 
+    private final PropertyName shapeName =
             new PropertyName("shape");
-    private final PropertyName showRootName = 
+    private final PropertyName showRootName =
             new PropertyName("showRoot");
-    private final PropertyName showTickLabelsName = 
+    private final PropertyName showTickLabelsName =
             new PropertyName("showTickLabels");
-    private final PropertyName showTickMarksName = 
+    private final PropertyName showTickMarksName =
             new PropertyName("showTickMarks");
-    private final PropertyName showWeekNumbersName = 
+    private final PropertyName showWeekNumbersName =
             new PropertyName("showWeekNumbers");
-    private final PropertyName sideName = 
+    private final PropertyName sideName =
             new PropertyName("side");
-    private final PropertyName smoothName = 
+    private final PropertyName smoothName =
             new PropertyName("smooth");
-    private final PropertyName snapToPixelName = 
+    private final PropertyName snapToPixelName =
             new PropertyName("snapToPixel");
-    private final PropertyName snapToTicksName = 
+    private final PropertyName snapToTicksName =
             new PropertyName("snapToTicks");
-    private final PropertyName sortableName = 
+    private final PropertyName sortableName =
             new PropertyName("sortable");
-    private final PropertyName sortModeName = 
+    private final PropertyName sortModeName =
             new PropertyName("sortMode");
-    private final PropertyName sortNodeName = 
+    private final PropertyName sortNodeName =
             new PropertyName("sortNode");
-    private final PropertyName sortOrderName = 
+    private final PropertyName sortOrderName =
             new PropertyName("sortOrder");
-    private final PropertyName sortTypeName = 
+    private final PropertyName sortTypeName =
             new PropertyName("sortType");
-    private final PropertyName spacingName = 
+    private final PropertyName spacingName =
             new PropertyName("spacing");
-    private final PropertyName startAngleName = 
+    private final PropertyName startAngleName =
             new PropertyName("startAngle");
-    private final PropertyName startMarginName = 
+    private final PropertyName startMarginName =
             new PropertyName("startMargin");
-    private final PropertyName startXName = 
+    private final PropertyName startXName =
             new PropertyName("startX");
-    private final PropertyName startYName = 
+    private final PropertyName startYName =
             new PropertyName("startY");
-    private final PropertyName strikethroughName = 
+    private final PropertyName strikethroughName =
             new PropertyName("strikethrough");
-    private final PropertyName strokeName = 
+    private final PropertyName strokeName =
             new PropertyName("stroke");
-    private final PropertyName strokeDashOffsetName = 
+    private final PropertyName strokeDashOffsetName =
             new PropertyName("strokeDashOffset");
-    private final PropertyName strokeLineCapName = 
+    private final PropertyName strokeLineCapName =
             new PropertyName("strokeLineCap");
-    private final PropertyName strokeLineJoinName = 
+    private final PropertyName strokeLineJoinName =
             new PropertyName("strokeLineJoin");
-    private final PropertyName strokeMiterLimitName = 
+    private final PropertyName strokeMiterLimitName =
             new PropertyName("strokeMiterLimit");
-    private final PropertyName strokeTypeName = 
+    private final PropertyName strokeTypeName =
             new PropertyName("strokeType");
-    private final PropertyName strokeWidthName = 
+    private final PropertyName strokeWidthName =
             new PropertyName("strokeWidth");
-    private final PropertyName styleName = 
+    private final PropertyName styleName =
             new PropertyName("style");
-    private final PropertyName styleClassName = 
+    private final PropertyName styleClassName =
             new PropertyName("styleClass");
-    private final PropertyName stylesheetsName = 
+    private final PropertyName stylesheetsName =
             new PropertyName("stylesheets");
-    private final PropertyName sweepFlagName = 
+    private final PropertyName sweepFlagName =
             new PropertyName("sweepFlag");
-    private final PropertyName tabClosingPolicyName = 
+    private final PropertyName tabClosingPolicyName =
             new PropertyName("tabClosingPolicy");
-    private final PropertyName tableMenuButtonVisibleName = 
+    private final PropertyName tableMenuButtonVisibleName =
             new PropertyName("tableMenuButtonVisible");
-    private final PropertyName tabMaxHeightName = 
+    private final PropertyName tabMaxHeightName =
             new PropertyName("tabMaxHeight");
-    private final PropertyName tabMaxWidthName = 
+    private final PropertyName tabMaxWidthName =
             new PropertyName("tabMaxWidth");
-    private final PropertyName tabMinHeightName = 
+    private final PropertyName tabMinHeightName =
             new PropertyName("tabMinHeight");
-    private final PropertyName tabMinWidthName = 
+    private final PropertyName tabMinWidthName =
             new PropertyName("tabMinWidth");
-    private final PropertyName tabsName = 
+    private final PropertyName tabsName =
             new PropertyName("tabs");
-    private final PropertyName textName = 
+    private final PropertyName textName =
             new PropertyName("text");
-    private final PropertyName textAlignmentName = 
+    private final PropertyName textAlignmentName =
             new PropertyName("textAlignment");
-    private final PropertyName textFillName = 
+    private final PropertyName textFillName =
             new PropertyName("textFill");
-    private final PropertyName textFormatterName = 
+    private final PropertyName textFormatterName =
             new PropertyName("textFormatter");
-    private final PropertyName textOriginName = 
+    private final PropertyName textOriginName =
             new PropertyName("textOrigin");
-    private final PropertyName textOverrunName = 
+    private final PropertyName textOverrunName =
             new PropertyName("textOverrun");
-    private final PropertyName tickLabelFillName = 
+    private final PropertyName tickLabelFillName =
             new PropertyName("tickLabelFill");
-    private final PropertyName tickLabelFontName = 
+    private final PropertyName tickLabelFontName =
             new PropertyName("tickLabelFont");
-    private final PropertyName tickLabelFormatterName = 
+    private final PropertyName tickLabelFormatterName =
             new PropertyName("tickLabelFormatter");
-    private final PropertyName tickLabelGapName = 
+    private final PropertyName tickLabelGapName =
             new PropertyName("tickLabelGap");
-    private final PropertyName tickLabelRotationName = 
+    private final PropertyName tickLabelRotationName =
             new PropertyName("tickLabelRotation");
-    private final PropertyName tickLabelsVisibleName = 
+    private final PropertyName tickLabelsVisibleName =
             new PropertyName("tickLabelsVisible");
-    private final PropertyName tickLengthName = 
+    private final PropertyName tickLengthName =
             new PropertyName("tickLength");
-    private final PropertyName tickMarksName = 
+    private final PropertyName tickMarksName =
             new PropertyName("tickMarks");
-    private final PropertyName tickMarkVisibleName = 
+    private final PropertyName tickMarkVisibleName =
             new PropertyName("tickMarkVisible");
-    private final PropertyName tickUnitName = 
+    private final PropertyName tickUnitName =
             new PropertyName("tickUnit");
-    private final PropertyName tileAlignmentName = 
+    private final PropertyName tileAlignmentName =
             new PropertyName("tileAlignment");
-    private final PropertyName tileHeightName = 
+    private final PropertyName tileHeightName =
             new PropertyName("tileHeight");
-    private final PropertyName tileWidthName = 
+    private final PropertyName tileWidthName =
             new PropertyName("tileWidth");
-    private final PropertyName titleName = 
+    private final PropertyName titleName =
             new PropertyName("title");
-    private final PropertyName titleSideName = 
+    private final PropertyName titleSideName =
             new PropertyName("titleSide");
-    private final PropertyName toggleGroupName = 
+    private final PropertyName toggleGroupName =
             new PropertyName("toggleGroup");
-    private final PropertyName tooltipName = 
+    private final PropertyName tooltipName =
             new PropertyName("tooltip");
-    private final PropertyName topName = 
+    private final PropertyName topName =
             new PropertyName("top");
-    private final PropertyName translateXName = 
+    private final PropertyName translateXName =
             new PropertyName("translateX");
-    private final PropertyName translateYName = 
+    private final PropertyName translateYName =
             new PropertyName("translateY");
-    private final PropertyName translateZName = 
+    private final PropertyName translateZName =
             new PropertyName("translateZ");
-    private final PropertyName treeColumnName = 
+    private final PropertyName treeColumnName =
             new PropertyName("treeColumn");
-    private final PropertyName typeName = 
+    private final PropertyName typeName =
             new PropertyName("type");
-    private final PropertyName underlineName = 
+    private final PropertyName underlineName =
             new PropertyName("underline");
-    private final PropertyName unitIncrementName = 
+    private final PropertyName unitIncrementName =
             new PropertyName("unitIncrement");
-    private final PropertyName upperBoundName = 
+    private final PropertyName upperBoundName =
             new PropertyName("upperBound");
-    private final PropertyName userAgentStylesheetName = 
+    private final PropertyName userAgentStylesheetName =
             new PropertyName("userAgentStylesheet");
-    private final PropertyName valignmentName = 
+    private final PropertyName valignmentName =
             new PropertyName("valignment");
-    private final PropertyName valueName = 
+    private final PropertyName valueName =
             new PropertyName("value");
-    private final PropertyName vbarPolicyName = 
+    private final PropertyName vbarPolicyName =
             new PropertyName("vbarPolicy");
-    private final PropertyName verticalFieldOfViewName = 
+    private final PropertyName verticalFieldOfViewName =
             new PropertyName("verticalFieldOfView");
-    private final PropertyName verticalGridLinesVisibleName = 
+    private final PropertyName verticalGridLinesVisibleName =
             new PropertyName("verticalGridLinesVisible");
-    private final PropertyName verticalZeroLineVisibleName = 
+    private final PropertyName verticalZeroLineVisibleName =
             new PropertyName("verticalZeroLineVisible");
-    private final PropertyName vgapName = 
+    private final PropertyName vgapName =
             new PropertyName("vgap");
-    private final PropertyName vgrowName = 
+    private final PropertyName vgrowName =
             new PropertyName("vgrow");
-    private final PropertyName viewportName = 
+    private final PropertyName viewportName =
             new PropertyName("viewport");
-    private final PropertyName viewportBoundsName = 
+    private final PropertyName viewportBoundsName =
             new PropertyName("viewportBounds");
-    private final PropertyName visibleName = 
+    private final PropertyName visibleName =
             new PropertyName("visible");
-    private final PropertyName visibleAmountName = 
+    private final PropertyName visibleAmountName =
             new PropertyName("visibleAmount");
-    private final PropertyName visibleRowCountName = 
+    private final PropertyName visibleRowCountName =
             new PropertyName("visibleRowCount");
-    private final PropertyName visitedName = 
+    private final PropertyName visitedName =
             new PropertyName("visited");
-    private final PropertyName vmaxName = 
+    private final PropertyName vmaxName =
             new PropertyName("vmax");
-    private final PropertyName vminName = 
+    private final PropertyName vminName =
             new PropertyName("vmin");
-    private final PropertyName vvalueName = 
+    private final PropertyName vvalueName =
             new PropertyName("vvalue");
-    private final PropertyName widthName = 
+    private final PropertyName widthName =
             new PropertyName("width");
-    private final PropertyName wrappingWidthName = 
+    private final PropertyName wrappingWidthName =
             new PropertyName("wrappingWidth");
-    private final PropertyName wrapTextName = 
+    private final PropertyName wrapTextName =
             new PropertyName("wrapText");
-    private final PropertyName xName = 
+    private final PropertyName xName =
             new PropertyName("x");
-    private final PropertyName XAxisName = 
+    private final PropertyName XAxisName =
             new PropertyName("XAxis");
-    private final PropertyName XAxisRotationName = 
+    private final PropertyName XAxisRotationName =
             new PropertyName("XAxisRotation");
-    private final PropertyName yName = 
+    private final PropertyName yName =
             new PropertyName("y");
-    private final PropertyName YAxisName = 
+    private final PropertyName YAxisName =
             new PropertyName("YAxis");
-    private final PropertyName zeroPositionName = 
+    private final PropertyName zeroPositionName =
             new PropertyName("zeroPosition");
-    private final PropertyName zoomName = 
+    private final PropertyName zoomName =
             new PropertyName("zoom");
-    private final PropertyName SplitPane_resizableWithParentName = 
+    private final PropertyName SplitPane_resizableWithParentName =
             new PropertyName("resizableWithParent", javafx.scene.control.SplitPane.class);
-    private final PropertyName AnchorPane_bottomAnchorName = 
+    private final PropertyName AnchorPane_bottomAnchorName =
             new PropertyName("bottomAnchor", javafx.scene.layout.AnchorPane.class);
-    private final PropertyName AnchorPane_leftAnchorName = 
+    private final PropertyName AnchorPane_leftAnchorName =
             new PropertyName("leftAnchor", javafx.scene.layout.AnchorPane.class);
-    private final PropertyName AnchorPane_rightAnchorName = 
+    private final PropertyName AnchorPane_rightAnchorName =
             new PropertyName("rightAnchor", javafx.scene.layout.AnchorPane.class);
-    private final PropertyName AnchorPane_topAnchorName = 
+    private final PropertyName AnchorPane_topAnchorName =
             new PropertyName("topAnchor", javafx.scene.layout.AnchorPane.class);
-    private final PropertyName BorderPane_alignmentName = 
+    private final PropertyName BorderPane_alignmentName =
             new PropertyName("alignment", javafx.scene.layout.BorderPane.class);
-    private final PropertyName BorderPane_marginName = 
+    private final PropertyName BorderPane_marginName =
             new PropertyName("margin", javafx.scene.layout.BorderPane.class);
-    private final PropertyName FlowPane_marginName = 
+    private final PropertyName FlowPane_marginName =
             new PropertyName("margin", javafx.scene.layout.FlowPane.class);
-    private final PropertyName GridPane_columnIndexName = 
+    private final PropertyName GridPane_columnIndexName =
             new PropertyName("columnIndex", javafx.scene.layout.GridPane.class);
-    private final PropertyName GridPane_columnSpanName = 
+    private final PropertyName GridPane_columnSpanName =
             new PropertyName("columnSpan", javafx.scene.layout.GridPane.class);
-    private final PropertyName GridPane_halignmentName = 
+    private final PropertyName GridPane_halignmentName =
             new PropertyName("halignment", javafx.scene.layout.GridPane.class);
-    private final PropertyName GridPane_hgrowName = 
+    private final PropertyName GridPane_hgrowName =
             new PropertyName("hgrow", javafx.scene.layout.GridPane.class);
-    private final PropertyName GridPane_marginName = 
+    private final PropertyName GridPane_marginName =
             new PropertyName("margin", javafx.scene.layout.GridPane.class);
-    private final PropertyName GridPane_rowIndexName = 
+    private final PropertyName GridPane_rowIndexName =
             new PropertyName("rowIndex", javafx.scene.layout.GridPane.class);
-    private final PropertyName GridPane_rowSpanName = 
+    private final PropertyName GridPane_rowSpanName =
             new PropertyName("rowSpan", javafx.scene.layout.GridPane.class);
-    private final PropertyName GridPane_valignmentName = 
+    private final PropertyName GridPane_valignmentName =
             new PropertyName("valignment", javafx.scene.layout.GridPane.class);
-    private final PropertyName GridPane_vgrowName = 
+    private final PropertyName GridPane_vgrowName =
             new PropertyName("vgrow", javafx.scene.layout.GridPane.class);
-    private final PropertyName HBox_hgrowName = 
+    private final PropertyName HBox_hgrowName =
             new PropertyName("hgrow", javafx.scene.layout.HBox.class);
-    private final PropertyName HBox_marginName = 
+    private final PropertyName HBox_marginName =
             new PropertyName("margin", javafx.scene.layout.HBox.class);
-    private final PropertyName StackPane_alignmentName = 
+    private final PropertyName StackPane_alignmentName =
             new PropertyName("alignment", javafx.scene.layout.StackPane.class);
-    private final PropertyName StackPane_marginName = 
+    private final PropertyName StackPane_marginName =
             new PropertyName("margin", javafx.scene.layout.StackPane.class);
-    private final PropertyName TilePane_alignmentName = 
+    private final PropertyName TilePane_alignmentName =
             new PropertyName("alignment", javafx.scene.layout.TilePane.class);
-    private final PropertyName TilePane_marginName = 
+    private final PropertyName TilePane_marginName =
             new PropertyName("margin", javafx.scene.layout.TilePane.class);
-    private final PropertyName VBox_marginName = 
+    private final PropertyName VBox_marginName =
             new PropertyName("margin", javafx.scene.layout.VBox.class);
-    private final PropertyName VBox_vgrowName = 
+    private final PropertyName VBox_vgrowName =
             new PropertyName("vgrow", javafx.scene.layout.VBox.class);
 
 

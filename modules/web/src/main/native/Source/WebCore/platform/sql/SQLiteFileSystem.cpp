@@ -120,9 +120,9 @@ bool SQLiteFileSystem::truncateDatabaseFile(sqlite3* database)
     return sqlite3_file_control(database, 0, SQLITE_TRUNCATE_DATABASE, 0) == SQLITE_OK;
 }
 #endif
-    
+
 long long SQLiteFileSystem::getDatabaseFileSize(const String& fileName)
-{        
+{
     long long size;
     return getFileSize(fileName, size) ? size : 0;
 }

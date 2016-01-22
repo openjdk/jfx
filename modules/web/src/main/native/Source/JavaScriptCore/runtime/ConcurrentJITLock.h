@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef ConcurrentJITLock_h
@@ -55,7 +55,7 @@ public:
     ~ConcurrentJITLockerBase()
     {
     }
-    
+
     void unlockEarly()
     {
         m_locker.unlockEarly();
@@ -82,7 +82,7 @@ public:
     ~GCSafeConcurrentJITLocker()
     {
         // We have to unlock early due to the destruction order of base
-        // vs. derived classes. If we didn't, then we would destroy the 
+        // vs. derived classes. If we didn't, then we would destroy the
         // DeferGC object before unlocking the lock which could cause a GC
         // and resulting deadlock.
         unlockEarly();

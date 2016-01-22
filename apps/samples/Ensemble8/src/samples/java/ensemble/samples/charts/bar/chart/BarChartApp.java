@@ -104,7 +104,7 @@ import javafx.stage.Stage;
  * @embedded
  */
 public class BarChartApp extends Application {
-    
+
     private BarChart chart;
     private CategoryAxis xAxis;
     private NumberAxis yAxis;

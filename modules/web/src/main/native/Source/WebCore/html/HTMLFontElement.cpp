@@ -155,19 +155,19 @@ bool HTMLFontElement::cssValueFromFontSizeNumber(const String& s, CSSValueID& si
         // FIXME: The spec says that we're supposed to use CSSValueXxSmall here.
         size = CSSValueXSmall;
         break;
-    case 2: 
+    case 2:
         size = CSSValueSmall;
         break;
-    case 3: 
+    case 3:
         size = CSSValueMedium;
         break;
-    case 4: 
+    case 4:
         size = CSSValueLarge;
         break;
-    case 5: 
+    case 5:
         size = CSSValueXLarge;
         break;
-    case 6: 
+    case 6:
         size = CSSValueXxLarge;
         break;
     case 7:

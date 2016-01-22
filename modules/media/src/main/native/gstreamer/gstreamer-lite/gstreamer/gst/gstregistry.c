@@ -40,7 +40,7 @@
  * means of doing so is to load every plugin and look at the resulting
  * information that is gathered in the default registry. Clearly, this is a time
  * consuming process, so we cache information in the registry file. The format
- * and location of the cache file is internal to gstreamer. 
+ * and location of the cache file is internal to gstreamer.
  *
  * On startup, plugins are searched for in the plugin search path. The following
  * locations are checked in this order:
@@ -257,7 +257,7 @@ enum
 };
 
 #ifdef GSTREAMER_LITE
-gchar *gstlite_plugins_list[] = 
+gchar *gstlite_plugins_list[] =
 {
 #ifdef LINUX
 
@@ -1310,7 +1310,7 @@ gst_registry_scan_path_level (GstRegistryScanContext * context,
   void *avcHandle = NULL;
 #endif // LINUX
 #endif // GSTREAMER_LITE
-  
+
 #ifndef GSTREAMER_LITE
   dir = g_dir_open (path, 0, NULL);
   if (!dir)
@@ -1373,7 +1373,7 @@ gst_registry_scan_path_level (GstRegistryScanContext * context,
       if (g_str_has_suffix(filename_partial, "libavplugin")) // Check libav version and load correspondent module.
       {
           int vi = (sizeof(AVCODEC_EXPLICIT_VERSIONS)/sizeof(AVCODEC_EXPLICIT_VERSIONS[0]));
-          
+
           while(!avcHandle && --vi >= 0)
           {
               int version = AVCODEC_EXPLICIT_VERSIONS[vi];
@@ -1381,7 +1381,7 @@ gst_registry_scan_path_level (GstRegistryScanContext * context,
               avcHandle = dlopen(libname, RTLD_NOW);
               g_free(libname);
           }
-              
+
           if (avcHandle)
           {
               dlclose(avcHandle);
@@ -1390,7 +1390,7 @@ gst_registry_scan_path_level (GstRegistryScanContext * context,
               // Try simple name first. OpenJDK build may contain the latest bits.
               filename = g_strdup_printf("%s%s", filename_partial, GST_EXTRA_MODULE_SUFFIX);
               if (g_stat (filename, &file_status) < 0) // Not available, create a versioned filename
-              { 
+              {
                   g_free(filename);
                   filename = g_strdup_printf("%s-%d%s", filename_partial, AVCODEC_EXPLICIT_VERSIONS[vi], GST_EXTRA_MODULE_SUFFIX);
               }
@@ -1744,7 +1744,7 @@ scan_and_update_registry (GstRegistry * default_registry,
             *p = '\0';
 
           changed |= gst_registry_scan_path (default_registry, dir);
-          
+
           g_free(dir);
         }
       }
@@ -1757,13 +1757,13 @@ scan_and_update_registry (GstRegistry * default_registry,
     gchar*      pBasePath = NULL;
     int         iCount = _dyld_image_count();
     int         i;
-    
+
     for(i = 1; i < iCount; i++)
     {
         if (((void*)_dyld_get_image_header(i)) == pHeader)
             pImageName = _dyld_get_image_name(i);//contains absolute path to dylib
-	}
-    
+    }
+
     if (NULL != pImageName)
     {
         pBasePath = g_path_get_dirname((const gchar*) pImageName);

@@ -52,13 +52,13 @@ public class MappingChangeTest {
         Change<Integer> change = new NonIterableChange.SimpleRemovedChange<Integer>(0, 1, new Integer(5), originalList);
         MappingChange<Integer, String> mapChange = new MappingChange<Integer, String>(change,
                 e -> e.toString(), list);
-        
+
         assertTrue(mapChange.next());
         assertEquals(0, mapChange.getFrom());
         assertEquals(1, mapChange.getTo());
         assertEquals(Arrays.asList("5"), mapChange.getRemoved());
         assertNotNull(mapChange.toString());
-        
+
         assertFalse(mapChange.next());
     }
 
@@ -67,38 +67,38 @@ public class MappingChangeTest {
         Change<Integer> change = new NonIterableChange.SimpleUpdateChange<Integer>(0, 1, originalList);
         MappingChange<Integer, String> mapChange = new MappingChange<Integer, String>(change,
                 e -> e.toString(), list);
-        
+
         assertTrue(mapChange.next());
         assertEquals(0, mapChange.getFrom());
         assertEquals(1, mapChange.getTo());
         assertTrue(mapChange.wasUpdated());
         assertNotNull(mapChange.toString());
-        
+
         assertFalse(mapChange.next());
     }
-    
+
     @Test
     public void testPermutation() {
         Change<Integer> change = new NonIterableChange.SimplePermutationChange<Integer>(0, 2, new int[] {1, 0}, originalList);
         MappingChange<Integer, String> mapChange = new MappingChange<Integer, String>(change,
                 e -> e.toString(), list);
-        
+
         assertTrue(mapChange.next());
         assertEquals(0, mapChange.getFrom());
         assertEquals(2, mapChange.getTo());
         assertTrue(mapChange.wasPermutated());
         assertNotNull(mapChange.toString());
-        
+
         assertFalse(mapChange.next());
     }
-    
+
     @Test
     public void testComplex() {
         Change<Integer> change = new Change(originalList) {
             int[][] added= new int[][]{ new int[] {0, 1}, new int[] {2, 3}, new int[] {4, 5}};
-            
+
             int pointer = -1;
-            
+
             @Override
             public boolean next() {
                 if (pointer == added.length - 1) {
@@ -107,27 +107,27 @@ public class MappingChangeTest {
                 ++pointer;
                 return true;
             }
-            
+
             @Override
             public void reset() {
                 pointer = -1;
             }
-            
+
             @Override
             public int getFrom() {
                 return added[pointer][0];
             }
-            
+
             @Override
             public int getTo() {
                 return added[pointer][1];
             }
-            
+
             @Override
             public List getRemoved() {
                 return Collections.EMPTY_LIST;
             }
-            
+
             @Override
             protected int[] getPermutation() {
                 return new int[0];
@@ -135,25 +135,25 @@ public class MappingChangeTest {
         };
         MappingChange<Integer, String> mapChange = new MappingChange<Integer, String>(change,
                 e -> e.toString(), list);
-        
+
         assertTrue(mapChange.next());
         assertEquals(0, mapChange.getFrom());
         assertEquals(1, mapChange.getTo());
         assertTrue(mapChange.wasAdded());
         assertNotNull(mapChange.toString());
-        
+
         assertTrue(mapChange.next());
         assertEquals(2, mapChange.getFrom());
         assertEquals(3, mapChange.getTo());
         assertTrue(mapChange.wasAdded());
         assertNotNull(mapChange.toString());
-        
+
         assertTrue(mapChange.next());
         assertEquals(4, mapChange.getFrom());
         assertEquals(5, mapChange.getTo());
         assertTrue(mapChange.wasAdded());
         assertNotNull(mapChange.toString());
-        
+
         assertFalse(mapChange.next());
     }
 }

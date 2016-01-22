@@ -50,7 +50,7 @@ import javafx.scene.input.MouseEvent;
 /**
  * Editor for bounded double properties. (e.g. 0 &lt;= opacity &lt;= 1)
  *
- * 
+ *
  */
 public class RotateEditor extends PropertyEditor {
 
@@ -71,7 +71,7 @@ public class RotateEditor extends PropertyEditor {
         super(propMeta, selectedClasses);
         initialize();
     }
-    
+
     // Method to please FindBugs
     private void initialize() {
         root = EditorUtils.loadFxml("RotateEditor.fxml", this);

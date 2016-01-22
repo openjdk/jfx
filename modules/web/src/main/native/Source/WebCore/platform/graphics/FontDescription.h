@@ -69,7 +69,7 @@ enum FontSmallCaps {
 
 class FontDescription {
 public:
-    enum GenericFamilyType { NoFamily, StandardFamily, SerifFamily, SansSerifFamily, 
+    enum GenericFamilyType { NoFamily, StandardFamily, SerifFamily, SansSerifFamily,
                              MonospaceFamily, CursiveFamily, FantasyFamily, PictographFamily };
 
     enum Kerning { AutoKerning, NormalKerning, NoneKerning };
@@ -189,7 +189,7 @@ private:
 
     float m_specifiedSize;   // Specified CSS value. Independent of rendering issues such as integer
                              // rounding, minimum font sizes, and zooming.
-    float m_computedSize;    // Computed size adjusted for the minimum font size and the zoom factor.  
+    float m_computedSize;    // Computed size adjusted for the minimum font size and the zoom factor.
 
     unsigned m_orientation : 1; // FontOrientation - Whether the font is rendering on a horizontal line or a vertical line.
     unsigned m_nonCJKGlyphOrientation : 1; // NonCJKGlyphOrientation - Only used by vertical text. Determines the default orientation for non-ideograph glyphs.

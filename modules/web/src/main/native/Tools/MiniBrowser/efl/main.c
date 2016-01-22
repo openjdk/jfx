@@ -116,7 +116,7 @@ typedef struct _Browser_Window {
         Evas_Object *backward_button;
         Evas_Object *forward_button;
     } search;
-    int current_zoom_level; 
+    int current_zoom_level;
     Tooltip_Information tooltip;
     Color_Selector color_selector;
     struct {
@@ -1885,7 +1885,7 @@ static Browser_Window *window_create(Evas_Object *opener, int width, int height)
 static Ewk_Cookie_Accept_Policy
 parse_cookies_policy(const char *input_string)
 {
-    if (!strcmp(input_string, "always")) 
+    if (!strcmp(input_string, "always"))
         return EWK_COOKIE_ACCEPT_POLICY_ALWAYS;
     if (!strcmp(input_string, "never"))
         return EWK_COOKIE_ACCEPT_POLICY_NEVER;

@@ -42,10 +42,10 @@ import java.util.Locale;
  *
  */
 public class URLUtils {
-    
+
     public static boolean equals(URL url1, URL url2) {
         boolean result;
-        
+
         if (url1 == url2) {
             result = true;
         } else if ((url1 == null) || (url2 == null)) {
@@ -59,20 +59,20 @@ public class URLUtils {
                 result = false; // Emergency code
             }
         }
-        
+
         return result;
     }
-    
+
     /**
      * Constructs a File instance from a file URI.
      * Returns null if it's not a file URI.
-     * 
+     *
      * @param uri a URI instance (never null).
      * @return null if uri is not a file URI or a File instance
      */
     public static File getFile(URI uri) {
         assert uri != null;
-        
+
         File result;
         final String scheme = uri.getScheme();
         if ((scheme == null) || ! scheme.toLowerCase(Locale.ROOT).equals("file")) { //NOI18N
@@ -84,13 +84,13 @@ public class URLUtils {
                 result = null;
             }
         }
-        
+
         return result;
     }
-    
+
     /**
      * Same as URLUtils.getFile(new URI(urlString)).
-     * 
+     *
      * @param urlString a URL string (never null)
      * @return null or the matching File instance.
      * @throws URISyntaxException if urlString is not a valid URI.
@@ -98,10 +98,10 @@ public class URLUtils {
     public static File getFile(String urlString) throws URISyntaxException {
         return getFile(new URI(urlString));
     }
-    
+
     /**
      * Same as URLUtils.getFile(url.toURI()).
-     * 
+     *
      * @param url a URL (never null)
      * @return null or the matching File instance.
      * @throws URISyntaxException if url cannot be converted to URI.

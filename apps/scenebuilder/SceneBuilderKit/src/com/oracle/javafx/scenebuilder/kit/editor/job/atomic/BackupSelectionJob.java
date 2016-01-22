@@ -46,7 +46,7 @@ public class BackupSelectionJob extends Job {
 
     public BackupSelectionJob(EditorController editorController) {
         super(editorController);
-        
+
         // Saves the current selection
         final Selection selection = getEditorController().getSelection();
         try {
@@ -92,5 +92,5 @@ public class BackupSelectionJob extends Job {
         // Not expected to reach the user
         return getClass().getSimpleName();
     }
-    
+
 }

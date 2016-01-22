@@ -46,7 +46,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 public class SetListenerHelperTest {
-    
+
     private InvalidationListenerMock[] invalidationListenerMock;
 
     private MockSetObserver<Object>[] changeListenerMock;
@@ -152,7 +152,7 @@ public class SetListenerHelperTest {
         invalidationListenerMock[0].check(set, 1);
         assertEquals(1, changeListenerMock[0].getCallsNumber());
     }
-    
+
     @Test
     public void testInvalidation_ChangeInPulse() {
         final InvalidationListener listener = observable -> {
@@ -248,7 +248,7 @@ public class SetListenerHelperTest {
         invalidationListenerMock[2].check(set, 1);
         invalidationListenerMock[3].check(set, 1);
     }
-    
+
     @Test
     public void testGeneric_AddInvalidationInPulse() {
         final SetChangeListener<Object> addListener = new SetChangeListener<Object>() {

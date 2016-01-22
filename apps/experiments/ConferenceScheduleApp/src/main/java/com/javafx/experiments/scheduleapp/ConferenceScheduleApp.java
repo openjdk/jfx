@@ -125,17 +125,17 @@ public class ConferenceScheduleApp extends Application {
     @Override public void start(Stage stage) throws Exception {
         INSTANCE = this;
         if(IS_TESTING_MODE) System.out.println("==============================================\n    WARNING: IN TEST MODE\n==============================================");
-        
+
         // create data service
         dataService = IS_TESTING_MODE ? new TestDataService() : new DevoxxDataService(7);
-        
+
         centralPopover = new Popover();
         centralPopover.setPrefWidth(400);
         lightBox = new AutoLogoutLightBox(dataService);
         lightBox.setVisible(false);
         keyboard = new VirtualKeyboard();
         loginLogoutButton = new ToggleButton();
-        
+
         // calculate window size
         final double width = IS_BEAGLE ? Screen.getMainScreen().getWidth() : 1024;
         final double height = IS_BEAGLE ? Screen.getMainScreen().getHeight(): 600;
@@ -182,7 +182,7 @@ public class ConferenceScheduleApp extends Application {
 
         // create login screen
         loginScreen = new LoginScreen(dataService, height < 1000);
-        
+
         // create root
         root = new StackPane() {
             @Override protected void layoutChildren() {
@@ -332,7 +332,7 @@ public class ConferenceScheduleApp extends Application {
 
         loginLogoutAnimation = new Timeline(
                 new KeyFrame(
-                    Duration.millis(800), 
+                    Duration.millis(800),
                     new EventHandler<ActionEvent>() {
                         @Override public void handle(ActionEvent event) {
                             pageContainer.setVisible(false);
@@ -346,7 +346,7 @@ public class ConferenceScheduleApp extends Application {
         );
         loginLogoutAnimation.play();
     }
-    
+
     public void hideLoginScreen() {
         final boolean isGuest = SESSION_MANAGEMENT.isGuestProperty().get();
         pageContainer.gotoPage(isGuest ? CATALOG_PAGE : TIMELINE_PAGE, false);
@@ -360,7 +360,7 @@ public class ConferenceScheduleApp extends Application {
 
         loginLogoutAnimation = new Timeline(
                 new KeyFrame(
-                    Duration.millis(800), 
+                    Duration.millis(800),
                     new EventHandler<ActionEvent>() {
                         @Override public void handle(ActionEvent event) {
                             loginScreen.setVisible(false);

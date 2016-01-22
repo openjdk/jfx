@@ -48,17 +48,17 @@ public:
     void setKeyText(const String& s) { m_key = s; }
 
     void getKeys(Vector<double>& keys) const   { parseKeyString(m_key, keys); }
-    
+
     const StyleProperties& properties() const { return m_properties.get(); }
     MutableStyleProperties& mutableProperties();
-    
+
     String cssText() const;
 
 private:
     explicit StyleKeyframe(PassRef<StyleProperties>);
-    
+
     static void parseKeyString(const String&, Vector<double>& keys);
-    
+
     Ref<StyleProperties> m_properties;
     // FIXME: This should be a parsed vector of floats.
     // comma separated list of keys
@@ -83,7 +83,7 @@ private:
 
     RefPtr<StyleKeyframe> m_keyframe;
     mutable RefPtr<StyleRuleCSSStyleDeclaration> m_propertiesCSSOMWrapper;
-    
+
     friend class WebKitCSSKeyframesRule;
 };
 

@@ -6,13 +6,13 @@
  * are met:
  *
  * 1.  Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer. 
+ *     notice, this list of conditions and the following disclaimer.
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
- *     documentation and/or other materials provided with the distribution. 
+ *     documentation and/or other materials provided with the distribution.
  * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
- *     from this software without specific prior written permission. 
+ *     from this software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY APPLE AND ITS CONTRIBUTORS "AS IS" AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
@@ -59,7 +59,7 @@ using namespace WebCore;
 - (void)speakString:(NSString *)string;
 @end
 
-WebContextMenuClient::WebContextMenuClient(WebView *webView) 
+WebContextMenuClient::WebContextMenuClient(WebView *webView)
     : m_webView(webView)
 {
 }
@@ -105,7 +105,7 @@ static NSMutableArray *fixMenusToSendToOldClients(NSMutableArray *defaultMenuIte
     BOOL preVersion3Client = isPreVersion3Client();
     if (!preVersion3Client)
         return savedItems;
-        
+
     for (unsigned i = 0; i < defaultItemsCount; ++i) {
         NSMenuItem *item = [defaultMenuItems objectAtIndex:i];
         int tag = [item tag];
@@ -118,7 +118,7 @@ static NSMutableArray *fixMenusToSendToOldClients(NSMutableArray *defaultMenuIte
         } else {
             // All items are expected to have useful tags coming into this method.
             ASSERT(tag != WebMenuItemTagOther);
-            
+
             // Use the pre-3.0 tags for the few items that changed tags as they moved from SPI to API. We
             // do this only for old clients; new Mail already expects the new symbols in this case.
             if (preVersion3Client) {
@@ -146,22 +146,22 @@ static NSMutableArray *fixMenusToSendToOldClients(NSMutableArray *defaultMenuIte
 }
 
 static void fixMenusReceivedFromOldClients(NSMutableArray *newMenuItems, NSMutableArray *savedItems)
-{   
+{
     if (savedItems)
         [newMenuItems addObjectsFromArray:savedItems];
 
     BOOL preVersion3Client = isPreVersion3Client();
     if (!preVersion3Client)
         return;
-    
-    // Restore the modern tags to the menu items whose tags we altered in fixMenusToSendToOldClients. 
+
+    // Restore the modern tags to the menu items whose tags we altered in fixMenusToSendToOldClients.
     unsigned newItemsCount = [newMenuItems count];
     for (unsigned i = 0; i < newItemsCount; ++i) {
         NSMenuItem *item = [newMenuItems objectAtIndex:i];
-        
+
         int tag = [item tag];
         int modernTag = tag;
-        
+
         if (tag == WebMenuItemTagOther) {
             // Restore the specific tag for items on which we temporarily set WebMenuItemTagOther to match old behavior.
             NSString *title = [item title];
@@ -261,9 +261,9 @@ static void fixMenusReceivedFromOldClients(NSMutableArray *newMenuItems, NSMutab
                     break;
             }
         }
-        
+
         if (modernTag != tag)
-            [item setTag:modernTag];        
+            [item setTag:modernTag];
     }
 }
 

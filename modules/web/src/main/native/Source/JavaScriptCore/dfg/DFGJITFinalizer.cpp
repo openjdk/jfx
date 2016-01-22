@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -57,9 +57,9 @@ bool JITFinalizer::finalize()
     m_jitCode->initializeCodeRef(
         m_linkBuffer->finalizeCodeWithoutDisassembly(), MacroAssemblerCodePtr());
     m_plan.codeBlock->setJITCode(m_jitCode);
-    
+
     finalizeCommon();
-    
+
     return true;
 }
 
@@ -69,9 +69,9 @@ bool JITFinalizer::finalizeFunction()
     m_jitCode->initializeCodeRef(
         m_linkBuffer->finalizeCodeWithoutDisassembly(), m_withArityCheck);
     m_plan.codeBlock->setJITCode(m_jitCode);
-    
+
     finalizeCommon();
-    
+
     return true;
 }
 
@@ -80,10 +80,10 @@ void JITFinalizer::finalizeCommon()
 #if ENABLE(FTL_JIT)
     m_jitCode->optimizeAfterWarmUp(m_plan.codeBlock.get());
 #endif // ENABLE(FTL_JIT)
-    
+
     if (m_plan.compilation)
         m_plan.vm.m_perBytecodeProfiler->addCompilation(m_plan.compilation);
-    
+
     if (!m_plan.willTryToTierUp)
         m_plan.codeBlock->baselineVersion()->m_didFailFTLCompilation = true;
 }

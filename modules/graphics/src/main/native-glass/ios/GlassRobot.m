@@ -140,13 +140,13 @@ static inline void DumpImage(CGImageRef image)
             frameInWindow =
             [view.window convertRect:view.frame fromView:view.superview];
         }
-        
+
         _tapCount = 1;
         _locationInWindow = location;
         _previousLocationInWindow = _locationInWindow;
-        
+
         UIView *target = [view.window hitTest:_locationInWindow withEvent:nil];
-        
+
         _window = [view.window retain];
         _view = [target retain];
         _phase = UITouchPhaseBegan;
@@ -259,15 +259,15 @@ static inline void DumpImage(CGImageRef image)
     gsEventProxy->sizeX = 1.0;
     gsEventProxy->sizeY = 1.0;
     gsEventProxy->flags = ([touch phase] == UITouchPhaseEnded) ? 0x1010180 : 0x3010180;
-    gsEventProxy->type = 3001;    
-    
+    gsEventProxy->type = 3001;
+
     Class touchesEventClass = NSClassFromString(@"UITouchesEvent");
     if (touchesEventClass && ![[self class] isEqual:touchesEventClass])
     {
         [self release];
         self = [touchesEventClass alloc];
     }
-    
+
     self = [self _initWithEvent:gsEventProxy touches:[NSSet setWithObject:touch]];
     if (self != nil)
     {
@@ -309,9 +309,9 @@ static inline void DumpImage(CGImageRef image)
 {
      touch = [[UITouch alloc] initInView:[GlassWindow getMasterWindowHost] :touchLocation];
     UIEvent *eventDown = [[UIEvent alloc] initWithTouch:touch];
-    
+
     [touch.view touchesBegan:[eventDown allTouches] withEvent:eventDown];
-    
+
     [eventDown release];
 }
 
@@ -319,10 +319,10 @@ static inline void DumpImage(CGImageRef image)
 {
     [touch setLocationInWindow:touchLocation];
     UIEvent *eventUp = [[UIEvent alloc] initWithTouch:touch];
-    
+
     [touch setPhase:UITouchPhaseEnded];
     [touch.view touchesEnded:[eventUp allTouches] withEvent:eventUp];
-    
+
     [eventUp release];
     [touch release];
 }
@@ -386,7 +386,7 @@ static inline void DumpImage(CGImageRef image)
     CFRelease(ref);
     CFRelease(colorspace);
     CGImageRelease(iref);
-    
+
     if (screenshot != nil) {
         CGImageRef screenImage = CGImageCreateWithImageInRect([screenshot CGImage], screenshotBounds);
         if (screenImage != NULL)
@@ -445,7 +445,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_ios_IosRobot__1init
 (JNIEnv *env, jobject jrobot)
 {
     LOG(@"Java_com_sun_glass_ui_ios_IosRobot__1init");
-    
+
     return ptr_to_jlong([GlassRobot new]);
 }
 
@@ -471,7 +471,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_ios_IosRobot__1keyPress
 (JNIEnv *env, jobject jrobot, jlong ptr, jint code)
 {
     LOG(@"Java_com_sun_glass_ui_ios_IosRobot__1keyPress");
-    
+
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
     GLASS_POOL_ENTER
     {
@@ -479,7 +479,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_ios_IosRobot__1keyPress
         NSString *chr = [[NSString stringWithCharacters:&c length:1] lowercaseString];
         GlassRobot* r = (GlassRobot*)jlong_to_ptr(ptr);
         [r performSelectorOnMainThread:@selector(keyPress:) withObject:chr waitUntilDone:YES];
-        
+
     }
     GLASS_POOL_EXIT;
 }
@@ -516,7 +516,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_ios_IosRobot__1mouseMove
 (JNIEnv *env, jobject jrobot, jlong ptr, jint x, jint y)
 {
     LOG(@"Java_com_sun_glass_ui_ios_IosRobot__1mouseMove");
-    
+
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
     GLASS_POOL_ENTER
     {
@@ -535,9 +535,9 @@ JNIEXPORT jint JNICALL Java_com_sun_glass_ui_ios_IosRobot__1getMouseX
 (JNIEnv *env, jobject jrobot, jlong ptr)
 {
     LOG(@"Java_com_sun_glass_ui_ios_IosRobot__1getMouseX");
-    
+
     jint x = 0;
-    
+
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
     GLASS_POOL_ENTER
     {
@@ -545,7 +545,7 @@ JNIEXPORT jint JNICALL Java_com_sun_glass_ui_ios_IosRobot__1getMouseX
         x = (jint) [r getTouchLocation].x;
     }
     GLASS_POOL_EXIT;
-    
+
     return x;
 }
 
@@ -558,9 +558,9 @@ JNIEXPORT jint JNICALL Java_com_sun_glass_ui_ios_IosRobot__1getMouseY
 (JNIEnv *env, jobject jrobot, jlong ptr)
 {
     LOG(@"Java_com_sun_glass_ui_ios_IosRobot__1getMouseY");
-    
+
     jint y = 0;
-    
+
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
     GLASS_POOL_ENTER
     {
@@ -568,7 +568,7 @@ JNIEXPORT jint JNICALL Java_com_sun_glass_ui_ios_IosRobot__1getMouseY
         y = (jint) [r getTouchLocation].y;
     }
     GLASS_POOL_EXIT;
-    
+
     return y;
 }
 
@@ -581,7 +581,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_ios_IosRobot__1mousePress
 (JNIEnv *env, jobject jrobot, jlong ptr, jint buttons)
 {
     LOG(@"Java_com_sun_glass_ui_ios_IosRobot__1mousePress");
-    
+
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
     GLASS_POOL_ENTER
     {
@@ -600,7 +600,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_ios_IosRobot__1mouseRelease
 (JNIEnv *env, jobject jrobot, jlong ptr, jint buttons)
 {
     LOG(@"Java_com_sun_glass_ui_ios_IosRobot__1mouseRelease");
-    
+
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
     GLASS_POOL_ENTER
     {
@@ -656,7 +656,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_ios_IosRobot__1getScreenCapture
 (JNIEnv *env, jobject jrobot, jlong ptr, jint x, jint y, jint width, jint height, jintArray pixelArray)
 {
     LOG(@"Java_com_sun_glass_ui_ios_IosRobot__1getScreenCapture");
-    
+
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
     GLASS_POOL_ENTER
     {

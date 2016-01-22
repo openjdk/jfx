@@ -298,7 +298,7 @@ public:
             return ListItemType();
         }
 
-        // Update the value at the desired position 'index'. 
+        // Update the value at the desired position 'index'.
         m_values->at(index) = newItem;
 
         commitChange();
@@ -337,7 +337,7 @@ public:
         if (oldItem)
             oldItem->detachWrapper();
 
-        // Update the value and the wrapper at the desired position 'index'. 
+        // Update the value and the wrapper at the desired position 'index'.
         m_values->at(index) = newItem->propertyReference();
         m_wrappers->at(index) = newItem;
 

@@ -144,7 +144,7 @@ void SocketStreamHandle::readBytes(signed long bytesRead, GError* error)
     }
 
     // The client can close the handle, potentially removing the last reference.
-    RefPtr<SocketStreamHandle> protect(this); 
+    RefPtr<SocketStreamHandle> protect(this);
     m_client->didReceiveSocketStreamData(this, m_readBuffer, bytesRead);
     if (m_inputStream) // The client may have closed the connection.
         g_input_stream_read_async(m_inputStream.get(), m_readBuffer, READ_BUFFER_SIZE, G_PRIORITY_DEFAULT, 0,

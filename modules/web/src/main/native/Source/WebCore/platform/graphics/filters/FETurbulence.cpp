@@ -107,7 +107,7 @@ bool FETurbulence::setBaseFrequencyX(float baseFrequencyX)
 
 float FETurbulence::seed() const
 {
-    return m_seed; 
+    return m_seed;
 }
 
 bool FETurbulence::setSeed(float seed)

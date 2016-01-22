@@ -74,7 +74,7 @@ public abstract class WritablePixelFormat<T extends Buffer>
      *                 (green &lt;&lt;  8) |
      *                 (blue       );
      * </pre>
-     * 
+     *
      * @param buf the buffer of pixel data
      * @param x the X coordinate of the pixel to be read
      * @param y the Y coordinate of the pixel to be read

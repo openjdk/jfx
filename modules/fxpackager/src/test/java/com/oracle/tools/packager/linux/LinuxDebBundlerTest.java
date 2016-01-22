@@ -230,9 +230,9 @@ public class LinuxDebBundlerTest {
 
         // mandatory re-names
         bundleParams.put(BUNDLE_NAME.getID(), "helloworld");
-        
+
         bundler.validate(bundleParams);
-        
+
         File output = bundler.execute(bundleParams, new File(workDir, "Unicode"));
         System.err.println("Bundle at - " + output);
         assertNotNull(output);
@@ -449,7 +449,7 @@ public class LinuxDebBundlerTest {
         Assume.assumeTrue(Boolean.parseBoolean(System.getProperty("FULL_TEST")));
 
         testFileAssociation("FASmoke 1", "Bogus File", "bogus", "application/x-vnd.test-bogus",
-                            new File(appResourcesDir, "javalogo_white_48.png"));        
+                            new File(appResourcesDir, "javalogo_white_48.png"));
     }
 
     @Test
@@ -568,7 +568,7 @@ public class LinuxDebBundlerTest {
         AbstractBundler bundler = new LinuxDebBundler();
 
         Map<String, Object> bundleParams = new HashMap<>();
-        
+
         bundleParams.put(BUILD_ROOT.getID(), tmpBase);
         bundleParams.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
 
@@ -583,7 +583,7 @@ public class LinuxDebBundlerTest {
         AbstractBundler bundler = new LinuxDebBundler();
 
         Map<String, Object> bundleParams = new HashMap<>();
-        
+
         bundleParams.put(BUILD_ROOT.getID(), tmpBase);
         bundleParams.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
 

@@ -36,5 +36,5 @@ public class HBGlyphLayout extends GlyphLayout {
     public void layout(TextRun run, PGFont font, FontStrike strike, char[] text) {
         System.out.println("Only simple text supported.");
     }
-    
+
 }

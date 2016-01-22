@@ -42,7 +42,7 @@ final class TextCodec {
     static {
         reMap.put("ISO-10646-UCS-2", "UTF-16");
     }
-        
+
     /**
      * This could throw a runtime exception (see the documentation for the
      * Charset.forName.)  JNI code should handle the exception.
@@ -50,7 +50,7 @@ final class TextCodec {
     private TextCodec(String encoding) {
         charset = Charset.forName(encoding);
     }
-        
+
     private byte[] encode(char[] data) {
         ByteBuffer bb = charset.encode(CharBuffer.wrap(data));
         byte[] encoded = new byte[bb.remaining()];
@@ -67,10 +67,10 @@ final class TextCodec {
 
     /**
      * Returns an array of charset alias/name pairs.
-     * 
+     *
      * The aliases are stored at the even array positions, names are at the
      * following odd positions.
-     * 
+     *
      * @return  an array of charset alias/name pairs
      */
     private static String[] getEncodings() {

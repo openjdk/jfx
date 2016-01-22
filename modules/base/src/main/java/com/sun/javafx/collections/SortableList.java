@@ -47,9 +47,9 @@ public interface SortableList<E> extends List<E> {
      * Sort using comparator
      * @param comparator the comparator to use
      * @throws ClassCastException if the list contains elements that are not
-     *	       <i>mutually comparable</i> using the specified comparator.
+     *         <i>mutually comparable</i> using the specified comparator.
      * @throws UnsupportedOperationException if the specified list's
-     *	       list-iterator does not support the <tt>set</tt> operation.
+     *         list-iterator does not support the <tt>set</tt> operation.
      */
     public void sort(Comparator<? super E> comparator);
 

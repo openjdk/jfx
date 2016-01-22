@@ -30,12 +30,12 @@ PassRefPtr<TransformOperation> ScaleTransformOperation::blend(const TransformOpe
 {
     if (from && !from->isSameType(*this))
         return this;
-    
+
     if (blendToIdentity)
         return ScaleTransformOperation::create(WebCore::blend(m_x, 1.0, progress),
                                                WebCore::blend(m_y, 1.0, progress),
                                                WebCore::blend(m_z, 1.0, progress), m_type);
-    
+
     const ScaleTransformOperation* fromOp = static_cast<const ScaleTransformOperation*>(from);
     double fromX = fromOp ? fromOp->m_x : 1.0;
     double fromY = fromOp ? fromOp->m_y : 1.0;

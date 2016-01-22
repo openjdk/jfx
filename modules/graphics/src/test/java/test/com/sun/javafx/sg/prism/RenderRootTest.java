@@ -96,18 +96,18 @@ public class RenderRootTest extends NGTestBase {
 
     /**
      * A quick note about how the NodePath works.
-     * 
+     *
      * If it is empty, then it means that nothing
      * needs to be painted (maybe there were some dirty nodes, but they were completely
      * occluded, so we don't need to paint anything).
-     * 
+     *
      * If it contains *only* the root node,
      * then either the root node itself is completely occluding the dirty region, or there was
      * no other render root to be found, so we have to paint the whole scene.
-     * 
+     *
      * If it contains something more than just the root node, then it will be the path from
      * the root node down to the render root child.
-     * 
+     *
      * This method takes the expected root (which may be null) and the rootPath (which can
      * never be null). If expectedRoot is null, rootPath must be empty. Otherwise,
      * expectedRoot must be the last item in rootPath.
@@ -121,7 +121,7 @@ public class RenderRootTest extends NGTestBase {
             assertSame(expectedRoot, rootPath.getCurrentNode());
         }
     }
-    
+
     /**
      * Tests the case where the dirty region is completely within the opaque region.
      * The rect in this case is dirty.

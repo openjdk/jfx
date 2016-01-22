@@ -73,7 +73,7 @@ void GraphicsLayerUpdater::displayRefreshFired(double timestamp)
 {
     UNUSED_PARAM(timestamp);
     m_scheduled = false;
-    
+
     if (m_client)
         m_client->flushLayers(this);
 }

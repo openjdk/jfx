@@ -54,7 +54,7 @@ public abstract class StringExpression implements ObservableStringValue {
     /**
      * Returns usually the value of this {@code StringExpression}. Only if the
      * value is {@code null} an empty {@code String} is returned instead.
-     * 
+     *
      * @return the value of this {@code StringExpression} or the empty
      *         {@code String}
      */
@@ -70,7 +70,7 @@ public abstract class StringExpression implements ObservableStringValue {
      * returned. Otherwise a new {@link javafx.beans.binding.StringBinding} is
      * created that holds the value of the {@code ObservableValue} converted to
      * a {@code String}.
-     * 
+     *
      * @param value
      *            The source {@code ObservableValue}
      * @return A {@code StringExpression} that wraps the {@code ObservableValue}
@@ -96,7 +96,7 @@ public abstract class StringExpression implements ObservableStringValue {
      * {@link javafx.beans.value.ObservableValue}, changes in the other
      * {@code Object} are reflected automatically in the resulting
      * {@code StringExpression}.
-     * 
+     *
      * @param other
      *            the other {@code Object}
      * @return the new {@code StringExpression}
@@ -112,7 +112,7 @@ public abstract class StringExpression implements ObservableStringValue {
      * <p>
      * Note: In this comparison a {@code String} that is {@code null} is
      * considered equal to an empty {@code String}.
-     * 
+     *
      * @param other
      *            the constant value
      * @return the new {@code BooleanBinding}
@@ -127,7 +127,7 @@ public abstract class StringExpression implements ObservableStringValue {
      * <p>
      * Note: In this comparison a {@code String} that is {@code null} is
      * considered equal to an empty {@code String}.
-     * 
+     *
      * @param other
      *            the constant value
      * @return the new {@code BooleanBinding}
@@ -143,7 +143,7 @@ public abstract class StringExpression implements ObservableStringValue {
      * <p>
      * Note: In this comparison a {@code String} that is {@code null} is
      * considered equal to an empty {@code String}.
-     * 
+     *
      * @param other
      *            the constant value
      * @return the new {@code BooleanBinding}
@@ -158,7 +158,7 @@ public abstract class StringExpression implements ObservableStringValue {
      * <p>
      * Note: In this comparison a {@code String} that is {@code null} is
      * considered equal to an empty {@code String}.
-     * 
+     *
      * @param other
      *            the constant value
      * @return the new {@code BooleanBinding}
@@ -174,7 +174,7 @@ public abstract class StringExpression implements ObservableStringValue {
      * <p>
      * Note: In this comparison a {@code String} that is {@code null} is
      * considered equal to an empty {@code String}.
-     * 
+     *
      * @param other
      *            the second {@code ObservableStringValue}
      * @return the new {@code BooleanBinding}
@@ -190,7 +190,7 @@ public abstract class StringExpression implements ObservableStringValue {
      * <p>
      * Note: In this comparison a {@code String} that is {@code null} is
      * considered equal to an empty {@code String}.
-     * 
+     *
      * @param other
      *            the constant value
      * @return the new {@code BooleanBinding}
@@ -206,7 +206,7 @@ public abstract class StringExpression implements ObservableStringValue {
      * <p>
      * Note: In this comparison a {@code String} that is {@code null} is
      * considered equal to an empty {@code String}.
-     * 
+     *
      * @param other
      *            the second {@code ObservableStringValue}
      * @return the new {@code BooleanBinding}
@@ -223,7 +223,7 @@ public abstract class StringExpression implements ObservableStringValue {
      * <p>
      * Note: In this comparison a {@code String} that is {@code null} is
      * considered equal to an empty {@code String}.
-     * 
+     *
      * @param other
      *            the constant value
      * @return the new {@code BooleanBinding}
@@ -239,7 +239,7 @@ public abstract class StringExpression implements ObservableStringValue {
      * <p>
      * Note: In this comparison a {@code String} that is {@code null} is
      * considered equal to an empty {@code String}.
-     * 
+     *
      * @param other
      *            the second {@code ObservableStringValue}
      * @return the new {@code BooleanBinding}
@@ -254,7 +254,7 @@ public abstract class StringExpression implements ObservableStringValue {
      * <p>
      * Note: In this comparison a {@code String} that is {@code null} is
      * considered equal to an empty {@code String}.
-     * 
+     *
      * @param other
      *            the constant value
      * @return the new {@code BooleanBinding}
@@ -270,7 +270,7 @@ public abstract class StringExpression implements ObservableStringValue {
      * <p>
      * Note: In this comparison a {@code String} that is {@code null} is
      * considered equal to an empty {@code String}.
-     * 
+     *
      * @param other
      *            the second {@code ObservableStringValue}
      * @return the new {@code BooleanBinding}
@@ -285,7 +285,7 @@ public abstract class StringExpression implements ObservableStringValue {
      * <p>
      * Note: In this comparison a {@code String} that is {@code null} is
      * considered equal to an empty {@code String}.
-     * 
+     *
      * @param other
      *            the constant value
      * @return the new {@code BooleanBinding}
@@ -301,7 +301,7 @@ public abstract class StringExpression implements ObservableStringValue {
      * <p>
      * Note: In this comparison a {@code String} that is {@code null} is
      * considered equal to an empty {@code String}.
-     * 
+     *
      * @param other
      *            the second {@code ObservableStringValue}
      * @return the new {@code BooleanBinding}
@@ -317,7 +317,7 @@ public abstract class StringExpression implements ObservableStringValue {
      * <p>
      * Note: In this comparison a {@code String} that is {@code null} is
      * considered equal to an empty {@code String}.
-     * 
+     *
      * @param other
      *            the constant value
      * @return the new {@code BooleanBinding}
@@ -333,7 +333,7 @@ public abstract class StringExpression implements ObservableStringValue {
      * <p>
      * Note: In this comparison a {@code String} that is {@code null} is
      * considered equal to an empty {@code String}.
-     * 
+     *
      * @param other
      *            the second {@code ObservableStringValue}
      * @return the new {@code BooleanBinding}
@@ -349,7 +349,7 @@ public abstract class StringExpression implements ObservableStringValue {
      * <p>
      * Note: In this comparison a {@code String} that is {@code null} is
      * considered equal to an empty {@code String}.
-     * 
+     *
      * @param other
      *            the constant value
      * @return the new {@code BooleanBinding}
@@ -357,21 +357,21 @@ public abstract class StringExpression implements ObservableStringValue {
     public BooleanBinding lessThanOrEqualTo(final String other) {
         return Bindings.lessThanOrEqual(this, other);
     }
-    
+
     /**
      * Creates a new {@link BooleanBinding} that holds {@code true} if this
      * {@code StringExpression} is {@code null}.
-     * 
+     *
      * @return the new {@code BooleanBinding}
      */
     public BooleanBinding isNull() {
         return Bindings.isNull(this);
     }
-    
+
     /**
      * Creates a new {@link BooleanBinding} that holds {@code true} if this
      * {@code StringExpression} is not {@code null}.
-     * 
+     *
      * @return the new {@code BooleanBinding}
      */
     public BooleanBinding isNotNull() {

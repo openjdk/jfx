@@ -51,7 +51,7 @@ struct CallIdentifier;
 class LegacyProfiler {
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    JS_EXPORT_PRIVATE static LegacyProfiler* profiler(); 
+    JS_EXPORT_PRIVATE static LegacyProfiler* profiler();
     static CallIdentifier createCallIdentifier(ExecState*, JSValue, const WTF::String& sourceURL, unsigned defaultLineNumber, unsigned defaultColumnNumber);
 
     JS_EXPORT_PRIVATE void startProfiling(ExecState*, const WTF::String& title);

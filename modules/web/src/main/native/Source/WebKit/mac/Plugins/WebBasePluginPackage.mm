@@ -6,13 +6,13 @@
  * are met:
  *
  * 1.  Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer. 
+ *     notice, this list of conditions and the following disclaimer.
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
- *     documentation and/or other materials provided with the distribution. 
+ *     documentation and/or other materials provided with the distribution.
  * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
- *     from this software without specific prior written permission. 
+ *     from this software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY APPLE AND ITS CONTRIBUTORS "AS IS" AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
@@ -76,7 +76,7 @@ using namespace WebCore;
 
 + (WebBasePluginPackage *)pluginWithPath:(NSString *)pluginPath
 {
-    
+
     WebBasePluginPackage *pluginPackage = [[WebPluginPackage alloc] initWithPath:pluginPath];
 
     if (!pluginPackage) {
@@ -135,7 +135,7 @@ static NSString *pathByResolvingSymlinksAndAliases(NSString *thePath)
 {
     if (!(self = [super init]))
         return nil;
-        
+
     path = pathByResolvingSymlinksAndAliases(pluginPath);
     cfBundle = adoptCF(CFBundleCreate(kCFAllocatorDefault, (CFURLRef)[NSURL fileURLWithPath:path]));
 
@@ -163,12 +163,12 @@ static NSString *pathByResolvingSymlinksAndAliases(NSString *thePath)
 {
     if (createFile)
         [self createPropertyListFile];
-    
+
     NSDictionary *pList = nil;
     NSData *data = [NSData dataWithContentsOfFile:pListPath];
     if (data)
         pList = [NSPropertyListSerialization propertyListWithData:data options:kCFPropertyListImmutable format:nil error:nil];
-    
+
     return pList;
 }
 
@@ -185,10 +185,10 @@ static NSString *pathByResolvingSymlinksAndAliases(NSString *thePath)
 {
     if (!cfBundle)
         return NO;
-    
+
     NSDictionary *MIMETypes = nil;
     NSString *pListFilename = [self _objectForInfoDictionaryKey:WebPluginMIMETypesFilenameKey];
-    
+
     // Check if the MIME types are claimed in a plist in the user's preferences directory.
     if (pListFilename) {
         NSString *pListPath = [NSString stringWithFormat:@"%@/Library/Preferences/%@", NSHomeDirectory(), pListFilename];
@@ -216,14 +216,14 @@ static NSString *pathByResolvingSymlinksAndAliases(NSString *thePath)
 
     while ((MIME = [keyEnumerator nextObject]) != nil) {
         MIMEDictionary = [MIMETypes objectForKey:MIME];
-        
+
         // FIXME: Consider storing disabled MIME types.
         NSNumber *isEnabled = [MIMEDictionary objectForKey:WebPluginTypeEnabledKey];
         if (isEnabled && [isEnabled boolValue] == NO)
             continue;
 
         MimeClassInfo mimeClassInfo;
-        
+
         NSArray *extensions = [[MIMEDictionary objectForKey:WebPluginExtensionsKey] _web_lowercaseStrings];
         for (NSUInteger i = 0; i < [extensions count]; ++i) {
             // The DivX plug-in lists multiple extensions in a comma separated string instead of using
@@ -264,7 +264,7 @@ static NSString *pathByResolvingSymlinksAndAliases(NSString *thePath)
 {
     if (cfBundle && !BP_CreatePluginMIMETypesPreferences)
         BP_CreatePluginMIMETypesPreferences = (BP_CreatePluginMIMETypesPreferencesFuncPtr)CFBundleGetFunctionPointerForName(cfBundle.get(), CFSTR("BP_CreatePluginMIMETypesPreferences"));
-    
+
     return YES;
 }
 
@@ -272,7 +272,7 @@ static NSString *pathByResolvingSymlinksAndAliases(NSString *thePath)
 {
     ASSERT(!pluginDatabases || [pluginDatabases count] == 0);
     [pluginDatabases release];
-    
+
     [super dealloc];
 }
 
@@ -298,7 +298,7 @@ static NSString *pathByResolvingSymlinksAndAliases(NSString *thePath)
 - (BOOL)supportsExtension:(const String&)extension
 {
     ASSERT(extension.lower() == extension);
-    
+
     for (size_t i = 0; i < pluginInfo.mimes.size(); ++i) {
         const Vector<String>& extensions = pluginInfo.mimes[i].extensions;
 
@@ -312,19 +312,19 @@ static NSString *pathByResolvingSymlinksAndAliases(NSString *thePath)
 - (BOOL)supportsMIMEType:(const WTF::String&)mimeType
 {
     ASSERT(mimeType.lower() == mimeType);
-    
+
     for (size_t i = 0; i < pluginInfo.mimes.size(); ++i) {
         if (pluginInfo.mimes[i].type == mimeType)
             return YES;
     }
-    
+
     return NO;
 }
 
 - (NSString *)MIMETypeForExtension:(const String&)extension
 {
     ASSERT(extension.lower() == extension);
-    
+
     for (size_t i = 0; i < pluginInfo.mimes.size(); ++i) {
         const MimeClassInfo& mimeClassInfo = pluginInfo.mimes[i];
         const Vector<String>& extensions = mimeClassInfo.extensions;
@@ -350,7 +350,7 @@ static NSString *pathByResolvingSymlinksAndAliases(NSString *thePath)
 
 static inline void swapIntsInHeader(uint32_t* rawData, size_t length)
 {
-    for (size_t i = 0; i < length; ++i) 
+    for (size_t i = 0; i < length; ++i)
         rawData[i] = OSSwapInt32(rawData[i]);
 }
 
@@ -359,14 +359,14 @@ static inline void swapIntsInHeader(uint32_t* rawData, size_t length)
     NSUInteger sizeInBytes = [data length];
     Vector<uint32_t, 128> rawData((sizeInBytes + 3) / 4);
     memcpy(rawData.data(), [data bytes], sizeInBytes);
-    
+
     unsigned numArchs = 0;
     struct fat_arch singleArch = { 0, 0, 0, 0, 0 };
     struct fat_arch* archs = 0;
-       
+
     if (sizeInBytes >= sizeof(struct mach_header_64)) {
         uint32_t magic = *rawData.data();
-        
+
         if (magic == MH_MAGIC || magic == MH_CIGAM) {
             // We have a 32-bit thin binary
             struct mach_header* header = (struct mach_header*)rawData.data();
@@ -374,7 +374,7 @@ static inline void swapIntsInHeader(uint32_t* rawData, size_t length)
             // Check if we need to swap the bytes
             if (magic == MH_CIGAM)
                 swapIntsInHeader(rawData.data(), rawData.size());
-    
+
             singleArch.cputype = header->cputype;
             singleArch.cpusubtype = header->cpusubtype;
 
@@ -387,10 +387,10 @@ static inline void swapIntsInHeader(uint32_t* rawData, size_t length)
             // Check if we need to swap the bytes
             if (magic == MH_CIGAM_64)
                 swapIntsInHeader(rawData.data(), rawData.size());
-            
+
             singleArch.cputype = header->cputype;
             singleArch.cpusubtype = header->cpusubtype;
-            
+
             archs = &singleArch;
             numArchs = 1;
         } else if (magic == FAT_MAGIC || magic == FAT_CIGAM) {
@@ -399,33 +399,33 @@ static inline void swapIntsInHeader(uint32_t* rawData, size_t length)
             // Check if we need to swap the bytes
             if (magic == FAT_CIGAM)
                 swapIntsInHeader(rawData.data(), rawData.size());
-            
+
             COMPILE_ASSERT(sizeof(struct fat_header) % sizeof(uint32_t) == 0, struct_fat_header_must_be_integral_size_of_uint32_t);
             archs = reinterpret_cast<struct fat_arch*>(rawData.data() + sizeof(struct fat_header) / sizeof(uint32_t));
             numArchs = reinterpret_cast<struct fat_header*>(rawData.data())->nfat_arch;
-            
+
             unsigned maxArchs = (sizeInBytes - sizeof(struct fat_header)) / sizeof(struct fat_arch);
             if (numArchs > maxArchs)
                 numArchs = maxArchs;
-        }            
+        }
     }
-    
+
     if (!archs || !numArchs)
         return NO;
-    
+
     const NXArchInfo* localArch = NXGetLocalArchInfo();
     if (!localArch)
         return NO;
-    
+
     cpu_type_t cputype = localArch->cputype;
     cpu_subtype_t cpusubtype = localArch->cpusubtype;
-    
+
 #ifdef __x86_64__
-    // NXGetLocalArchInfo returns CPU_TYPE_X86 even when running in 64-bit. 
+    // NXGetLocalArchInfo returns CPU_TYPE_X86 even when running in 64-bit.
     // See <rdar://problem/4996965> for more information.
     cputype = CPU_TYPE_X86_64;
 #endif
-    
+
     return NXFindBestFatArch(cputype, cpusubtype, archs, numArchs) != 0;
 }
 
@@ -436,10 +436,10 @@ static inline void swapIntsInHeader(uint32_t* rawData, size_t length)
 }
 
 - (void)wasAddedToPluginDatabase:(WebPluginDatabase *)database
-{    
+{
     if (!pluginDatabases)
         pluginDatabases = [[NSMutableSet alloc] init];
-        
+
     ASSERT(![pluginDatabases containsObject:database]);
     [pluginDatabases addObject:database];
 }

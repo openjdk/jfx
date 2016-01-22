@@ -93,7 +93,7 @@ public class HelloLabelBorders  extends Application {
     }
 
     // ListView operates on an ObservableList. The newline characters in the styles are
-    // there just to make the tooltip wrap where it is most logic.  
+    // there just to make the tooltip wrap where it is most logic.
     private static ObservableList<Data> data = FXCollections.observableArrayList(
             new Data(
                     "no-border",

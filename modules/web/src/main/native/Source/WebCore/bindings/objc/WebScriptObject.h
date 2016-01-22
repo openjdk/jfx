@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef WebScriptObject_h
@@ -33,11 +33,11 @@
 // NSObject (WebScripting) -----------------------------------------------------
 
 /*
-    Classes may implement one or more methods in WebScripting to export interfaces 
+    Classes may implement one or more methods in WebScripting to export interfaces
     to WebKit's JavaScript environment.
 
-    By default, no properties or functions are exported. A class must implement 
-    +isKeyExcludedFromWebScript: and/or +isSelectorExcludedFromWebScript: to 
+    By default, no properties or functions are exported. A class must implement
+    +isKeyExcludedFromWebScript: and/or +isSelectorExcludedFromWebScript: to
     expose selected properties and methods, respectively, to JavaScript.
 
     Access to exported properties is done using KVC -- specifically, the following
@@ -46,13 +46,13 @@
         - (void)setValue:(id)value forKey:(NSString *)key
         - (id)valueForKey:(NSString *)key
 
-    Clients may also intercept property set/get operations that are made by the 
-    scripting environment for properties that are not exported. This is done using 
+    Clients may also intercept property set/get operations that are made by the
+    scripting environment for properties that are not exported. This is done using
     the KVC methods:
 
         - (void)setValue:(id)value forUndefinedKey:(NSString *)key
         - (id)valueForUndefinedKey:(NSString *)key
-    
+
     Similarly, clients may intercept method invocations that are made by the
     scripting environment for methods that are not exported. This is done using
     the method:
@@ -68,7 +68,7 @@
     type meets the export criteria are exposed. Valid types are Objective-C instances
     and scalars. Other types are not allowed.
 
-    Types will be converted automatically between JavaScript and Objective-C in 
+    Types will be converted automatically between JavaScript and Objective-C in
     the following manner:
 
     JavaScript              ObjC
@@ -79,13 +79,13 @@
     boolean         =>      CFBoolean
     string          =>      NSString
     object          =>      id
-    
+
     The object => id conversion occurs as follows: if the object wraps an underlying
     Objective-C object (i.e., if it was created by a previous ObjC => JavaScript conversion),
     then the underlying Objective-C object is returned. Otherwise, a new WebScriptObject
     is created and returned.
-    
-    The above conversions occur only if the declared ObjC type is an object type. 
+
+    The above conversions occur only if the declared ObjC type is an object type.
     For primitive types like int and char, a numeric cast is performed.
 
     ObjC                    JavaScript
@@ -99,7 +99,7 @@
     NSArray         =>      array object
     WebScriptObject =>      object
 
-    The above conversions occur only if the declared ObjC type is an object type. 
+    The above conversions occur only if the declared ObjC type is an object type.
     For primitive type like int and char, a numeric cast is performed.
 */
 @interface NSObject (WebScripting)
@@ -128,7 +128,7 @@
     @method isSelectorExcludedFromWebScript:
     @param selector The selector the will be exposed to the script environment.
     @discussion Return NO to export the selector to the script environment.
-    Return YES to prevent the selector from being exported to the script environment. 
+    Return YES to prevent the selector from being exported to the script environment.
     If this method is not implemented on the class no selectors will be exported.
     @result Returns YES to hide the selector, NO to export the selector.
 */
@@ -159,7 +159,7 @@
     @method invokeUndefinedMethodFromWebScript:withArguments:
     @param name The name of the method to invoke.
     @param arguments The arguments to pass the method.
-    @discussion If a script attempts to invoke a method that is not exported, 
+    @discussion If a script attempts to invoke a method that is not exported,
     invokeUndefinedMethodFromWebScript:withArguments: will be called.
     @result The return value of the invocation. The value will be converted as appropriate
     for the script environment.
@@ -169,7 +169,7 @@
 /*!
     @method invokeDefaultMethodWithArguments:
     @param arguments The arguments to pass the method.
-    @discussion If a script attempts to call an exposed object as a function, 
+    @discussion If a script attempts to call an exposed object as a function,
     this method will be called.
     @result The return value of the call. The value will be converted as appropriate
     for the script environment.
@@ -234,7 +234,7 @@ WEBKIT_CLASS_AVAILABLE_MAC(10_4)
 /*!
     @method JSObject
     @result The equivalent JSObjectRef for this WebScriptObject.
-    @discussion Use this method to bridge between the WebScriptObject and 
+    @discussion Use this method to bridge between the WebScriptObject and
     JavaScriptCore APIs.
 */
 - (JSObjectRef)JSObject WEBKIT_AVAILABLE_MAC(10_5);
@@ -305,7 +305,7 @@ WEBKIT_CLASS_AVAILABLE_MAC(10_4)
 /*!
     @method JSValue
     @result The equivalent Objective-C JSValue for this WebScriptObject.
-    @discussion Use this method to bridge between the WebScriptObject and 
+    @discussion Use this method to bridge between the WebScriptObject and
     JavaScriptCore Objective-C APIs.
 */
 - (JSValue *)JSValue;

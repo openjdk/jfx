@@ -62,7 +62,7 @@ public:
     }
 
     virtual void SetCenterFrequency(double centerFrequency);
-    
+
     virtual double GetBandwidth() {
         return m_Bandwidth;
     }
@@ -120,7 +120,7 @@ public:
         mEQBufferA(),
         mEQBufferB()
     {}
-    
+
     virtual ~AVFAudioEqualizer();
 
     virtual AUKernelBase *NewKernel();

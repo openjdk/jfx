@@ -88,18 +88,18 @@ public class DeleteObjectJob extends InlineDocumentJob {
             result.add(setRootJob);
 
         } else {
-            
+
             /*
              * targetFxomObject is not the root object
              * => we delegate to ObjectDeleter
              * => this class will take care of references
              */
-            
+
             final ObjectDeleter deleter = new ObjectDeleter(getEditorController());
             deleter.delete(targetFxomObject);
             result.addAll(deleter.getExecutedJobs());
         }
-        
+
         return result;
     }
 
@@ -127,7 +127,7 @@ public class DeleteObjectJob extends InlineDocumentJob {
 
         return sb.toString();
     }
-    
+
     FXOMObject getTargetFxomObject() {
         return targetFxomObject;
     }

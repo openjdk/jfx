@@ -21,7 +21,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef AffineTransform_h
@@ -97,8 +97,8 @@ public:
     void makeIdentity();
 
     AffineTransform& multiply(const AffineTransform& other);
-    AffineTransform& scale(double); 
-    AffineTransform& scale(double sx, double sy); 
+    AffineTransform& scale(double);
+    AffineTransform& scale(double sx, double sy);
     AffineTransform& scaleNonUniform(double sx, double sy);
     AffineTransform& rotate(double d);
     AffineTransform& rotateFromVector(double x, double y);
@@ -127,7 +127,7 @@ public:
     {
         return m_transform[0] == 1 && m_transform[1] == 0 && m_transform[2] == 0 && m_transform[3] == 1;
     }
-    
+
     bool isIdentityOrTranslationOrFlipped() const
     {
         return m_transform[0] == 1 && m_transform[1] == 0 && m_transform[2] == 0 && (m_transform[3] == 1 || m_transform[3] == -1);
@@ -155,7 +155,7 @@ public:
     {
         return multiply(t);
     }
-    
+
     // result = *this * t (i.e., a multRight)
     AffineTransform operator*(const AffineTransform& t) const
     {
@@ -174,7 +174,7 @@ public:
     {
         return AffineTransform(1, 0, 0, 1, x, y);
     }
-    
+
     // decompose the matrix into its component parts
     typedef struct {
         double scaleX, scaleY;
@@ -182,7 +182,7 @@ public:
         double remainderA, remainderB, remainderC, remainderD;
         double translateX, translateY;
     } DecomposedType;
-    
+
     bool decompose(DecomposedType&) const;
     void recompose(const DecomposedType&);
 

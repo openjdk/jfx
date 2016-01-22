@@ -56,17 +56,17 @@ public class ScrollBarTest {
         tk = (StubToolkit)Toolkit.getToolkit();//This step is not needed (Just to make sure StubToolkit is loaded into VM)
         scrollBar = new ScrollBar();
     }
-    
-   
-   
+
+
+
     /*********************************************************************
      * Tests for default values                                         *
      ********************************************************************/
-    
+
     @Test public void defaultConstructorShouldSetStyleClassTo_scrollbar() {
         assertStyleClassContains(scrollBar, "scroll-bar");
     }
-    
+
     @Test public void defaultFocusTraversibleIsFalse() {
         assertFalse(scrollBar.isFocusTraversable());
     }
@@ -111,8 +111,8 @@ public class ScrollBarTest {
     /*********************************************************************
      * Tests for property binding                                        *
      ********************************************************************/
-    
-    
+
+
     @Test public void checkMinPropertyBind() {
         DoubleProperty objPr = new SimpleDoubleProperty(2.0);
         scrollBar.minProperty().bind(objPr);
@@ -120,7 +120,7 @@ public class ScrollBarTest {
         objPr.setValue(5.0);
         assertEquals("minProperty cannot be bound", scrollBar.minProperty().getValue(), 5.0, 0.0);
     }
-    
+
     @Test public void checkMaxPropertyBind() {
         DoubleProperty objPr = new SimpleDoubleProperty(2.0);
         scrollBar.maxProperty().bind(objPr);
@@ -128,7 +128,7 @@ public class ScrollBarTest {
         objPr.setValue(5.0);
         assertEquals("maxProperty cannot be bound", scrollBar.maxProperty().getValue(), 5.0, 0.0);
     }
-    
+
     @Test public void checkValuePropertyBind() {
         DoubleProperty objPr = new SimpleDoubleProperty(2.0);
         scrollBar.valueProperty().bind(objPr);
@@ -152,7 +152,7 @@ public class ScrollBarTest {
         objPr.setValue(5.0);
         assertEquals("unitIncrementProperty cannot be bound", scrollBar.unitIncrementProperty().getValue(), 5.0, 0.0);
     }
-    
+
     @Test public void checkBlockIncrementPropertyBind() {
         DoubleProperty objPr = new SimpleDoubleProperty(2.0);
         scrollBar.blockIncrementProperty().bind(objPr);
@@ -160,7 +160,7 @@ public class ScrollBarTest {
         objPr.setValue(5.0);
         assertEquals("blockIncrementProperty cannot be bound", scrollBar.blockIncrementProperty().getValue(), 5.0, 0.0);
     }
-    
+
     @Test public void checkVisibleAmtPropertyBind() {
         DoubleProperty objPr = new SimpleDoubleProperty(2.0);
         scrollBar.visibleAmountProperty().bind(objPr);
@@ -168,9 +168,9 @@ public class ScrollBarTest {
         objPr.setValue(5.0);
         assertEquals("visibleAmountProperty cannot be bound", scrollBar.visibleAmountProperty().getValue(), 5.0, 0.0);
     }
-    
-    
-    
+
+
+
     @Test public void minPropertyHasBeanReference() {
         assertSame(scrollBar, scrollBar.minProperty().getBean());
     }
@@ -195,7 +195,7 @@ public class ScrollBarTest {
         assertEquals("value", scrollBar.valueProperty().getName());
     }
 
-    
+
     @Test public void orientationPropertyHasBeanReference() {
         assertSame(scrollBar, scrollBar.orientationProperty().getBean());
     }
@@ -228,7 +228,7 @@ public class ScrollBarTest {
         assertEquals("visibleAmount", scrollBar.visibleAmountProperty().getName());
     }
 
-    
+
     /*********************************************************************
      * Check for Pseudo classes                                          *
      ********************************************************************/
@@ -259,7 +259,7 @@ public class ScrollBarTest {
     }
 
 
-    
+
     /*********************************************************************
      * CSS related Tests                                                 *
      ********************************************************************/
@@ -325,72 +325,72 @@ public class ScrollBarTest {
         scrollBar.setOrientation(Orientation.HORIZONTAL);
         assertSame(scrollBar.orientationProperty().getValue(), Orientation.HORIZONTAL);
     }
-    
+
     @Test public void setOrientationAndSeeValue() {
         scrollBar.setOrientation(Orientation.VERTICAL);
         assertSame(scrollBar.getOrientation(), Orientation.VERTICAL);
     }
-    
+
     @Test public void setMinAndSeeValueIsReflectedInModel() {
         scrollBar.setMin(30.0);
         assertEquals(scrollBar.minProperty().getValue(), 30.0, 0.0);
     }
-    
+
     @Test public void setMinAndSeeValue() {
         scrollBar.setMin(30.0);
         assertEquals(scrollBar.getMin(), 30.0, 0.0);
     }
-    
+
     @Test public void setMaxAndSeeValueIsReflectedInModel() {
         scrollBar.setMax(30.0);
         assertEquals(scrollBar.maxProperty().getValue(), 30.0, 0.0);
     }
-    
+
     @Test public void setMaxAndSeeValue() {
         scrollBar.setMax(30.0);
         assertEquals(scrollBar.getMax(), 30.0, 0.0);
     }
-    
+
     @Test public void setValueAndSeeValueIsReflectedInModel() {
         scrollBar.setValue(30.0);
         assertEquals(scrollBar.valueProperty().getValue(), 30.0, 0.0);
     }
-    
+
     @Test public void setValueAndSeeValue() {
         scrollBar.setValue(30.0);
         assertEquals(scrollBar.getValue(), 30.0, 0.0);
     }
-    
+
     @Test public void setUnitIncAndSeeValueIsReflectedInModel() {
         scrollBar.setUnitIncrement(30.0);
         assertEquals(scrollBar.unitIncrementProperty().getValue(), 30.0, 0.0);
     }
-    
+
     @Test public void setUnitIncAndSeeValue() {
         scrollBar.setUnitIncrement(30.0);
         assertEquals(scrollBar.getUnitIncrement(), 30.0, 0.0);
     }
-    
+
     @Test public void setBlockIncAndSeeValueIsReflectedInModel() {
         scrollBar.setBlockIncrement(30.0);
         assertEquals(scrollBar.blockIncrementProperty().getValue(), 30.0, 0.0);
     }
-    
+
     @Test public void setBlockIncAndSeeValue() {
         scrollBar.setBlockIncrement(30.0);
         assertEquals(scrollBar.getBlockIncrement(), 30.0, 0.0);
     }
-    
+
     @Test public void setVisibleAmtAndSeeValueIsReflectedInModel() {
         scrollBar.setVisibleAmount(30.0);
         assertEquals(scrollBar.visibleAmountProperty().getValue(), 30.0, 0.0);
     }
-    
+
     @Test public void setVisibleAmtAndSeeValue() {
         scrollBar.setVisibleAmount(30.0);
         assertEquals(scrollBar.getVisibleAmount(), 30.0, 0.0);
     }
-    
+
     @Test public void checkAdjustValueWhenActualValueIsCloseToMin() {
         scrollBar.setMin(0.0);
         scrollBar.setMax(100.0);
@@ -420,24 +420,24 @@ public class ScrollBarTest {
         scrollBar.increment();
         assertEquals(scrollBar.getValue(), 0.0, 0.0);
     }
-    
+
     @Test public void decrementWhenValueIsNegativeAndSeeIfValueIsClampedToMin() {
         scrollBar.setValue(-30.0);
         scrollBar.decrement();
         assertEquals(scrollBar.getValue(), 0.0, 0.0);
     }
-    
+
     @Test public void incrementWhenValueIsGreaterThanMaxAndSeeIfValueIsClampedToMax() {
         scrollBar.setValue(3000.0);
         scrollBar.increment();
         assertEquals(scrollBar.getValue(), 100.0, 0.0);
     }
-    
+
     @Test public void decrementWhenValueIsGreaterThanMaxAndSeeIfValueIsClampedToMax() {
         scrollBar.setValue(3000.0);
         scrollBar.decrement();
         assertEquals(scrollBar.getValue(), 100.0, 0.0);
     }
-    
+
 
 }

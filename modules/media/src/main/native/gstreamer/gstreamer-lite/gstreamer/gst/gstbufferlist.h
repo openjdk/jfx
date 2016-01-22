@@ -157,7 +157,7 @@ void                     gst_buffer_list_remove                (GstBufferList *l
 
 gboolean                 gst_buffer_list_foreach               (GstBufferList *list,
                                                                 GstBufferListFunc func,
-								gpointer user_data);
+                                gpointer user_data);
 
 #define gst_buffer_list_add(l,b) gst_buffer_list_insert((l),-1,(b));
 

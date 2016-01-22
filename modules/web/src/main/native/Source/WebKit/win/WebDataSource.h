@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef WebDataSource_H
@@ -50,61 +50,61 @@ public:
     virtual ULONG STDMETHODCALLTYPE Release(void);
 
     // IWebDataSource
-    virtual HRESULT STDMETHODCALLTYPE initWithRequest( 
+    virtual HRESULT STDMETHODCALLTYPE initWithRequest(
         /* [in] */ IWebURLRequest *request);
-    
-    virtual HRESULT STDMETHODCALLTYPE data( 
+
+    virtual HRESULT STDMETHODCALLTYPE data(
         /* [retval][out] */ IStream **stream);
-    
-    virtual HRESULT STDMETHODCALLTYPE representation( 
+
+    virtual HRESULT STDMETHODCALLTYPE representation(
         /* [retval][out] */ IWebDocumentRepresentation **rep);
-    
-    virtual HRESULT STDMETHODCALLTYPE webFrame( 
+
+    virtual HRESULT STDMETHODCALLTYPE webFrame(
         /* [retval][out] */ IWebFrame **frame);
-    
-    virtual HRESULT STDMETHODCALLTYPE initialRequest( 
+
+    virtual HRESULT STDMETHODCALLTYPE initialRequest(
         /* [retval][out] */ IWebURLRequest **request);
-    
-    virtual HRESULT STDMETHODCALLTYPE request( 
+
+    virtual HRESULT STDMETHODCALLTYPE request(
         /* [retval][out] */ IWebMutableURLRequest **request);
-    
-    virtual HRESULT STDMETHODCALLTYPE response( 
+
+    virtual HRESULT STDMETHODCALLTYPE response(
         /* [retval][out] */ IWebURLResponse **response);
-    
-    virtual HRESULT STDMETHODCALLTYPE textEncodingName( 
+
+    virtual HRESULT STDMETHODCALLTYPE textEncodingName(
         /* [retval][out] */ BSTR *name);
-    
-    virtual HRESULT STDMETHODCALLTYPE isLoading( 
+
+    virtual HRESULT STDMETHODCALLTYPE isLoading(
         /* [retval][out] */ BOOL *loading);
-    
-    virtual HRESULT STDMETHODCALLTYPE pageTitle( 
+
+    virtual HRESULT STDMETHODCALLTYPE pageTitle(
         /* [retval][out] */ BSTR *title);
-    
-    virtual HRESULT STDMETHODCALLTYPE unreachableURL( 
+
+    virtual HRESULT STDMETHODCALLTYPE unreachableURL(
         /* [retval][out] */ BSTR *url);
-    
-    virtual HRESULT STDMETHODCALLTYPE webArchive( 
+
+    virtual HRESULT STDMETHODCALLTYPE webArchive(
         /* [retval][out] */ IWebArchive **archive);
-    
-    virtual HRESULT STDMETHODCALLTYPE mainResource( 
+
+    virtual HRESULT STDMETHODCALLTYPE mainResource(
         /* [retval][out] */ IWebResource **resource);
-    
-    virtual HRESULT STDMETHODCALLTYPE subresources( 
+
+    virtual HRESULT STDMETHODCALLTYPE subresources(
         /* [retval][out] */ IEnumVARIANT **enumResources);
-    
-    virtual HRESULT STDMETHODCALLTYPE subresourceForURL( 
+
+    virtual HRESULT STDMETHODCALLTYPE subresourceForURL(
         /* [in] */ BSTR url,
         /* [retval][out] */ IWebResource **resource);
-    
-    virtual HRESULT STDMETHODCALLTYPE addSubresource( 
+
+    virtual HRESULT STDMETHODCALLTYPE addSubresource(
         /* [in] */ IWebResource *subresource);
 
     // IWebDataSourcePrivate
 
-    virtual HRESULT STDMETHODCALLTYPE overrideEncoding( 
+    virtual HRESULT STDMETHODCALLTYPE overrideEncoding(
         /* [retval][out] */ BSTR *encoding);
-    
-    virtual HRESULT STDMETHODCALLTYPE setOverrideEncoding( 
+
+    virtual HRESULT STDMETHODCALLTYPE setOverrideEncoding(
         /* [in] */ BSTR encoding);
 
     virtual HRESULT STDMETHODCALLTYPE mainDocumentError(

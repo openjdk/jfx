@@ -94,7 +94,7 @@ public:
         RefPtr<PlatformCALayer> layer;
         TileCohort cohort; // VisibleTileCohort is visible.
         bool hasStaleContent;
-        
+
         TileInfo()
             : cohort(VisibleTileCohort)
             , hasStaleContent(false)
@@ -165,7 +165,7 @@ private:
 
     void scheduleCohortRemoval();
     void cohortRemovalTimerFired(Timer<TileController>*);
-    
+
     typedef unsigned TileValidationPolicyFlags;
 
     void setNeedsRevalidateTiles();
@@ -182,7 +182,7 @@ private:
 
     TileCohort nextTileCohort() const;
     void startedNewCohort(TileCohort);
-    
+
     TileCohort newestTileCohort() const;
     TileCohort oldestTileCohort() const;
 
@@ -206,7 +206,7 @@ private:
     FloatRect m_visibleRectAtLastRevalidate;
     FloatRect m_exposedRect; // The exposed area of containing platform views.
     IntRect m_boundsAtLastRevalidate;
-    
+
     Vector<FloatRect> m_secondaryTileCoverageRects;
 
     typedef HashMap<TileIndex, TileInfo> TileMap;
@@ -226,7 +226,7 @@ private:
     };
     typedef Deque<TileCohortInfo> TileCohortList;
     TileCohortList m_cohortList;
-    
+
     IntRect m_primaryTileCoverageRect; // In tile coords.
 
     float m_scale;

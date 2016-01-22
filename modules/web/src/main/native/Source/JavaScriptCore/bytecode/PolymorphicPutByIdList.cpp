@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -37,14 +37,14 @@ PutByIdAccess PutByIdAccess::fromStructureStubInfo(
     MacroAssemblerCodePtr initialSlowPath)
 {
     PutByIdAccess result;
-    
+
     switch (stubInfo.accessType) {
     case access_put_by_id_replace:
         result.m_type = Replace;
         result.m_oldStructure.copyFrom(stubInfo.u.putByIdReplace.baseObjectStructure);
         result.m_stubRoutine = JITStubRoutine::createSelfManagedRoutine(initialSlowPath);
         break;
-        
+
     case access_put_by_id_transition_direct:
     case access_put_by_id_transition_normal:
         result.m_type = Transition;
@@ -53,11 +53,11 @@ PutByIdAccess PutByIdAccess::fromStructureStubInfo(
         result.m_chain.copyFrom(stubInfo.u.putByIdTransition.chain);
         result.m_stubRoutine = stubInfo.stubRoutine;
         break;
-        
+
     default:
         RELEASE_ASSERT_NOT_REACHED();
     }
-    
+
     return result;
 }
 
@@ -99,16 +99,16 @@ PolymorphicPutByIdList* PolymorphicPutByIdList::from(
 {
     if (stubInfo.accessType == access_put_by_id_list)
         return stubInfo.u.putByIdList.list;
-    
+
     ASSERT(stubInfo.accessType == access_put_by_id_replace
            || stubInfo.accessType == access_put_by_id_transition_normal
            || stubInfo.accessType == access_put_by_id_transition_direct);
-    
+
     PolymorphicPutByIdList* result =
         new PolymorphicPutByIdList(putKind, stubInfo, initialSlowPath);
-    
+
     stubInfo.initPutByIdList(result);
-    
+
     return result;
 }
 

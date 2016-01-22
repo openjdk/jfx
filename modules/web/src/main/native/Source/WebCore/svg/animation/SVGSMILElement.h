@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef SVGSMILElement_h
@@ -47,7 +47,7 @@ public:
     virtual void svgAttributeChanged(const QualifiedName&) override;
     virtual InsertionNotificationRequest insertedInto(ContainerNode&) override;
     virtual void removedFrom(ContainerNode&) override;
-    
+
     virtual bool hasValidAttributeType() = 0;
     virtual bool hasValidAttributeName();
     virtual void animationAttributeChanged() = 0;
@@ -80,7 +80,7 @@ public:
     SMILTime maxValue() const;
     SMILTime minValue() const;
 
-    SMILTime elapsed() const; 
+    SMILTime elapsed() const;
 
     SMILTime intervalBegin() const { return m_intervalBegin; }
     SMILTime intervalEnd() const { return m_intervalEnd; }
@@ -129,7 +129,7 @@ private:
     virtual void updateAnimation(float percent, unsigned repeat, SVGSMILElement* resultElement) = 0;
 
     enum BeginOrEnd { Begin, End };
-    
+
     SMILTime findInstanceTime(BeginOrEnd, SMILTime minimumTime, bool equalsMinimumOK) const;
     void resolveFirstInterval();
     void resolveNextInterval(bool notifyDependents);
@@ -198,7 +198,7 @@ private:
 
     Vector<Condition> m_conditions;
     bool m_conditionsConnected;
-    bool m_hasEndEventConditions;     
+    bool m_hasEndEventConditions;
 
     bool m_isWaitingForFirstInterval;
 

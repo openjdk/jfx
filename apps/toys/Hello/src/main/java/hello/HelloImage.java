@@ -59,12 +59,12 @@ public class HelloImage extends Application {
         System.err.println("BestCursor Size ="+d);
 
         Image animImage = new Image(animImageURL);
-        
+
         addImageToObservableList(seq, 160, 20, 420, 120, new Image(imageURL),
                            createImageCursor(animImageURL, 16, 16));
 //        addImageToObservableList(seq, 20, 20, 120, 120, animImage,
 //                           createImageCursor(animCursorURL, 0, 0));
-        
+
         final Image slowImage = new Image(slowImageURL, true);
         addImageToObservableList(seq, 20, 160, 560, 250, slowImage, Cursor.CROSSHAIR);
 

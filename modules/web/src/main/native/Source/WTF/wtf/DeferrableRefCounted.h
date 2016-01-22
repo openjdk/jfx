@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef DeferrableRefCounted_h
@@ -41,38 +41,38 @@ namespace WTF {
 class DeferrableRefCountedBase {
     static const unsigned deferredFlag = 1;
     static const unsigned normalIncrement = 2;
-    
+
 public:
     void ref()
     {
         m_refCount += normalIncrement;
     }
-    
+
     bool hasOneRef() const
     {
         return refCount() == 1;
     }
-    
+
     unsigned refCount() const
     {
         return m_refCount / normalIncrement;
     }
-    
+
     bool isDeferred() const
     {
         return !!(m_refCount & deferredFlag);
     }
-    
+
 protected:
     DeferrableRefCountedBase()
         : m_refCount(normalIncrement)
     {
     }
-    
+
     ~DeferrableRefCountedBase()
     {
     }
-    
+
     bool derefBase()
     {
         m_refCount -= normalIncrement;
@@ -88,7 +88,7 @@ protected:
         m_refCount &= ~deferredFlag;
         return !m_refCount;
     }
-    
+
 private:
     unsigned m_refCount;
 };
@@ -102,7 +102,7 @@ public:
         if (derefBase())
             delete static_cast<T*>(this);
     }
-    
+
     bool setIsDeferred(bool value)
     {
         if (!setIsDeferredBase(value))
@@ -110,7 +110,7 @@ public:
         delete static_cast<T*>(this);
         return true;
     }
-    
+
 protected:
     DeferrableRefCounted() { }
     ~DeferrableRefCounted() { }

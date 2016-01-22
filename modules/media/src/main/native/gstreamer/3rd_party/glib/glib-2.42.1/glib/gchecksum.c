@@ -266,7 +266,7 @@ md5_transform (guint32       buf[4],
   md5_step (F1, d, a, b, c, in[13] + 0xfd987193, 12);
   md5_step (F1, c, d, a, b, in[14] + 0xa679438e, 17);
   md5_step (F1, b, c, d, a, in[15] + 0x49b40821, 22);
-        
+
   md5_step (F2, a, b, c, d, in[1]  + 0xf61e2562,  5);
   md5_step (F2, d, a, b, c, in[6]  + 0xc040b340,  9);
   md5_step (F2, c, d, a, b, in[11] + 0x265e5a51, 14);

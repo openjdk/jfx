@@ -61,7 +61,7 @@ class ScrollGestureRecognizer implements GestureRecognizer {
             }
             return null;
         });
-    }    
+    }
 
     private ViewScene scene;
 
@@ -91,7 +91,7 @@ class ScrollGestureRecognizer implements GestureRecognizer {
     private double totalDeltaX, totalDeltaY;
     private double factorX, factorY;
     double inertiaLastTime = 0;
-    
+
     ScrollGestureRecognizer(final ViewScene scene) {
         this.scene = scene;
         inertiaScrollVelocity.addListener(valueModel -> {
@@ -156,13 +156,13 @@ class ScrollGestureRecognizer implements GestureRecognizer {
             totalY += tracker.getY();
             totalAbsX += tracker.getAbsX();
             totalAbsY += tracker.getAbsY();
-        }      
+        }
         centerX = totalX / currentTouchCount;
         centerY = totalY / currentTouchCount;
         centerAbsX = totalAbsX / currentTouchCount;
         centerAbsY = totalAbsY / currentTouchCount;
     }
-    
+
     @Override
     public void notifyEndTouchEvent(long time) {
         lastTouchEventTime = time;
@@ -181,9 +181,9 @@ class ScrollGestureRecognizer implements GestureRecognizer {
                         state = ScrollRecognitionState.INERTIA;
                         // activate inertia
                         inertiaLastTime = 0;
-                        if (initialInertiaScrollVelocity > MAX_INITIAL_VELOCITY) 
+                        if (initialInertiaScrollVelocity > MAX_INITIAL_VELOCITY)
                             initialInertiaScrollVelocity = MAX_INITIAL_VELOCITY;
-                            
+
                         inertiaTimeline.getKeyFrames().setAll(
                             new KeyFrame(
                                 Duration.millis(0),
@@ -251,7 +251,7 @@ class ScrollGestureRecognizer implements GestureRecognizer {
                         factorX = deltaX / scrollMagnitude;
                         factorY = deltaY / scrollMagnitude;
                         initialInertiaScrollVelocity = scrollMagnitude / timePassed;
-                        
+
                         scrollStartTime = time;
                     }
 
@@ -261,7 +261,7 @@ class ScrollGestureRecognizer implements GestureRecognizer {
             }
         }
     }
-    
+
     private void sendScrollStartedEvent(double centerX, double centerY, int touchCount) {
         AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
             if (scene.sceneListener != null) {

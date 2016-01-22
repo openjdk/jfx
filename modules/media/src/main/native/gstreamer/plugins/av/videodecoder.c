@@ -92,7 +92,7 @@ GType videodecoder_get_type (void)
                sizeof (VideoDecoderClass),
                (GClassInitFunc) videodecoder_class_intern_init,
                sizeof(VideoDecoder),
-               (GInstanceInitFunc) videodecoder_init,               
+               (GInstanceInitFunc) videodecoder_init,
                (GTypeFlags) 0);
         g_once_init_leave (&gonce_data, (gsize) _type);
     }
@@ -125,7 +125,7 @@ static void videodecoder_class_init(VideoDecoderClass *klass)
             gst_static_pad_template_get(&source_template));
     gst_element_class_add_pad_template(element_class,
             gst_static_pad_template_get(&sink_template));
-    
+
     element_class->change_state = videodecoder_change_state;
 }
 
@@ -207,7 +207,7 @@ static gboolean videodecoder_sink_event(GstPad *pad, GstObject *parent, GstEvent
             // Unset flag so chain function accepts buffers.
             BASEDECODER(decoder)->is_flushing = FALSE;
             break;
-            
+
         case GST_EVENT_CAPS:
         {
             GstCaps *caps;
@@ -223,7 +223,7 @@ static gboolean videodecoder_sink_event(GstPad *pad, GstObject *parent, GstEvent
             gst_event_unref (event);
             ret = TRUE;
             break;
-        }       
+        }
 
 #ifdef DEBUG_OUTPUT
         case GST_EVENT_NEWSEGMENT:
@@ -244,7 +244,7 @@ static gboolean videodecoder_sink_event(GstPad *pad, GstObject *parent, GstEvent
         default:
             break;
     }
-    
+
     if (!ret)
         ret = gst_pad_push_event(BASEDECODER(decoder)->srcpad, event);
 
@@ -269,7 +269,7 @@ static void videodecoder_init_state(VideoDecoder *decoder)
 static gboolean videodecoder_configure(VideoDecoder *decoder, GstCaps *sink_caps)
 {
     BaseDecoder *base = BASEDECODER(decoder);
-    
+
     if (base->is_initialized)
         return TRUE;
 
@@ -285,7 +285,7 @@ static gboolean videodecoder_configure(VideoDecoder *decoder, GstCaps *sink_caps
     base->is_initialized = basedecoder_open_decoder(BASEDECODER(decoder), AV_CODEC_ID_H264);
 #else
     base->is_initialized = basedecoder_open_decoder(BASEDECODER(decoder), CODEC_ID_H264);
-#endif    
+#endif
     return base->is_initialized;
 }
 
@@ -298,7 +298,7 @@ static void videodecoder_state_reset(VideoDecoder *decoder)
 static gboolean videodecoder_configure_sourcepad(VideoDecoder *decoder)
 {
     BaseDecoder *base = BASEDECODER(decoder);
-    
+
     GstCaps *caps = gst_pad_get_current_caps(base->srcpad);
 
 #if NEW_CODEC_ID
@@ -307,8 +307,8 @@ static gboolean videodecoder_configure_sourcepad(VideoDecoder *decoder)
 #else
     int width = base->context->width;
     int height = base->context->height;
-#endif // NEW_CODEC_ID 
-    
+#endif // NEW_CODEC_ID
+
     if (caps == NULL ||
         decoder->width != width || decoder->height != height)
     {
@@ -346,12 +346,12 @@ static gboolean videodecoder_configure_sourcepad(VideoDecoder *decoder)
             if (caps)
                 gst_caps_unref(caps);
             gst_caps_unref(src_caps);
-            
+
             return FALSE;
         }
         gst_caps_unref(src_caps);
     }
-    
+
     if (caps)
         gst_caps_unref(caps);
 
@@ -381,13 +381,13 @@ static GstFlowReturn videodecoder_chain(GstPad *pad, GstObject *parent, GstBuffe
         result = GST_FLOW_ERROR;
         goto _exit;
     }
-    
+
     if (!gst_buffer_map(buf, &info, GST_MAP_READ))
     {
         result = GST_FLOW_ERROR;
         goto _exit;
     }
-    
+
     unmap_buf = TRUE;
 
     if (!base->is_hls)
@@ -403,7 +403,7 @@ static GstFlowReturn videodecoder_chain(GstPad *pad, GstObject *parent, GstBuffe
             av_free_packet(&decoder->packet);
         }
         else
-        {            
+        {
             result = GST_FLOW_ERROR;
             goto _exit;
         }
@@ -464,12 +464,12 @@ static GstFlowReturn videodecoder_chain(GstPad *pad, GstObject *parent, GstBuffe
                                      g_strdup("Decoded video buffer allocation failed"), NULL, ("videodecoder.c"), ("videodecoder_chain"), 0);
                     goto _exit;
                 }
-                
+
                 // Copy image by parts from different arrays.
                 memcpy(info2.data,                     base->frame->data[0], decoder->u_offset);
                 memcpy(info2.data + decoder->u_offset, base->frame->data[1], decoder->uv_blocksize);
                 memcpy(info2.data + decoder->v_offset, base->frame->data[2], decoder->uv_blocksize);
-                
+
                 gst_buffer_unmap(outbuf, &info2);
 
                 GST_BUFFER_OFFSET_END(outbuf) = GST_BUFFER_OFFSET_NONE;

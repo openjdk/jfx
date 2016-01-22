@@ -30,19 +30,19 @@ import javafx.beans.value.ObservableValue;
 
 /**
  * This class extends {@code StringPropertyBase} and provides a partial
- * implementation of a {@code StyleableProperty}. The method 
- * {@link StyleableProperty#getCssMetaData()} is not implemented. 
- * 
- * This class is used to make a {@link javafx.beans.property.StringProperty}, 
- * that would otherwise be implemented as a {@link StringPropertyBase}, 
+ * implementation of a {@code StyleableProperty}. The method
+ * {@link StyleableProperty#getCssMetaData()} is not implemented.
+ *
+ * This class is used to make a {@link javafx.beans.property.StringProperty},
+ * that would otherwise be implemented as a {@link StringPropertyBase},
  * style&#8209;able by CSS.
- * 
+ *
  * @see javafx.beans.property.StringPropertyBase
  * @see CssMetaData
  * @see StyleableProperty
  * @since JavaFX 8.0
  */
-public abstract class StyleableStringProperty 
+public abstract class StyleableStringProperty
     extends StringPropertyBase implements StyleableProperty<String> {
 
     /**
@@ -54,14 +54,14 @@ public abstract class StyleableStringProperty
 
     /**
      * The constructor of the {@code StyleableStringProperty}.
-     * 
+     *
      * @param initialValue
      *            the initial value of the wrapped {@code Object}
      */
     public StyleableStringProperty(String initialValue) {
         super(initialValue);
     }
-    
+
     /** {@inheritDoc} */
     @Override
     public void applyStyle(StyleOrigin origin, String v) {
@@ -69,7 +69,7 @@ public abstract class StyleableStringProperty
         set(v);
         this.origin = origin;
     }
-            
+
     /** {@inheritDoc} */
     @Override
     public void bind(ObservableValue<? extends String> observable) {
@@ -84,11 +84,11 @@ public abstract class StyleableStringProperty
         origin = StyleOrigin.USER;
     }
 
-    
+
     /** {@inheritDoc} */
     @Override
     public StyleOrigin getStyleOrigin() { return origin; }
 
-    private StyleOrigin origin = null;    
-    
+    private StyleOrigin origin = null;
+
 }

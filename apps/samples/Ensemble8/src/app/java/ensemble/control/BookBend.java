@@ -146,9 +146,9 @@ public class BookBend {
         if (fill instanceof LinearGradient) {
             LinearGradient lg = (LinearGradient) fill;
             if (lg.getStops().size() >= 3) {
-                p.setFill(new LinearGradient(lg.getStartX(), lg.getStartY(), lg.getEndX(), lg.getEndY(), false, CycleMethod.NO_CYCLE, 
-                        new Stop(lg.getStops().get(0).getOffset(), pathColor), 
-                        new Stop(lg.getStops().get(1).getOffset(), bendStartColor), 
+                p.setFill(new LinearGradient(lg.getStartX(), lg.getStartY(), lg.getEndX(), lg.getEndY(), false, CycleMethod.NO_CYCLE,
+                        new Stop(lg.getStops().get(0).getOffset(), pathColor),
+                        new Stop(lg.getStops().get(1).getOffset(), bendStartColor),
                         new Stop(lg.getStops().get(2).getOffset(), bendEndColor)));
             }
         }
@@ -173,7 +173,7 @@ public class BookBend {
     public Color getBendStartColor() {
         return bendStartColor;
     }
-    
+
     /**
      * Updates DisplacementMap and path to target coordinates.
      * @param targetX target X
@@ -186,13 +186,13 @@ public class BookBend {
             setUpdateNeeded(true);
         }
     }
-    
+
     /**
      * Updates DisplacementMap and path for current coordinates.
      */
     public void update() {
         setUpdateNeeded(false);
-        
+
         if (newWidth == map.getWidth() && newHeight == map.getHeight()
                 && targetX == oldTargetX && targetY == oldTargetY) {
             return;
@@ -203,7 +203,7 @@ public class BookBend {
             map.setWidth(newWidth);
             map.setHeight(newHeight);
         }
-        
+
         final double W = node.getLayoutBounds().getWidth();
         final double H = node.getLayoutBounds().getHeight();
 
@@ -222,12 +222,12 @@ public class BookBend {
         final double AF = FO / 2;
 
         final double AC = Math.min(AF * 0.5, 200);
-        
+
         // radius of the fold as seen along the l2 line
         final double R = AC / Math.PI * 1.5;
         final double BC = R;
         final double flat_R = AC;
-        
+
         // Gradient for the line from target point to corner point
         final double K = (yO - yF) / (xO - xF);
 
@@ -287,10 +287,10 @@ public class BookBend {
         final double rE_y0 = rE_y2 * rE_y2 / (2 * rE_y2 - rE_yc);
         final double rE_b = rE_y0 - rE_y2;
         final double rE_a = Math.sqrt(-rE_x1 * rE_x1 / rE_y0 * rE_b * rE_b / rE_yc);
-        
-        p.setFill(new LinearGradient(xF, yF, xO, yO, false, CycleMethod.NO_CYCLE, 
-                new Stop(0, pathColor), 
-                new Stop((xC - xF) / (xO - xF), bendStartColor), 
+
+        p.setFill(new LinearGradient(xF, yF, xO, yO, false, CycleMethod.NO_CYCLE,
+                new Stop(0, pathColor),
+                new Stop((xC - xF) / (xO - xF), bendStartColor),
                 new Stop((xB - xF) / (xO - xF), bendEndColor)));
 
         ArcTo arcTo1 = new ArcTo();
@@ -309,7 +309,7 @@ public class BookBend {
         p.getElements().setAll(
                 new MoveTo(BP4.getX(), BP4.getY()),
                 arcTo1,
-                new LineTo(xF, yF), 
+                new LineTo(xF, yF),
                 new LineTo(RP1.getX(), RP1.getY()),
                 arcTo2,
                 new ClosePath());
@@ -317,10 +317,10 @@ public class BookBend {
         if (shadow != null) {
             double level0 = (xB - xF) / (xO - xF) - R / FO * 0.5;
             double level1 = (xB - xF) / (xO - xF) + (0.3 + (200 - AC) / 200) * R / FO;
-            shadow.setFill(new LinearGradient(xF, yF, xO, yO, false, CycleMethod.NO_CYCLE, 
-                    new Stop(level0, Color.rgb(0, 0, 0, 0.7)), 
-                    new Stop(level0 * 0.3 + level1 * 0.7, Color.rgb(0, 0, 0, 0.25)), 
-                    new Stop(level1, Color.rgb(0, 0, 0, 0.0)), 
+            shadow.setFill(new LinearGradient(xF, yF, xO, yO, false, CycleMethod.NO_CYCLE,
+                    new Stop(level0, Color.rgb(0, 0, 0, 0.7)),
+                    new Stop(level0 * 0.3 + level1 * 0.7, Color.rgb(0, 0, 0, 0.25)),
+                    new Stop(level1, Color.rgb(0, 0, 0, 0.0)),
                     new Stop(1, Color.rgb(0, 0, 0, 0))));
 
             ArcTo arcTo3 = new ArcTo();
@@ -346,16 +346,16 @@ public class BookBend {
                     new LineTo(xO, yO),
                     new ClosePath());
         }
-        
+
         if (clip != null) {
             final Point2D RL3 = new Point2D(W, yB - (W - xB) / K);
             final Point2D BL3 = new Point2D(xB - (H - yB) * K, H);
-        
+
             clip.getElements().setAll(
                     new MoveTo(0, 0),
                     RL3.getY() > 0 ? new LineTo(W, 0) : new LineTo(0, 0),
                     RL3.getY() >= 0 ? new LineTo(RL3.getX(), RL3.getY()) : new LineTo(xB - (0 - yB) * K, 0),
-                    BL3.getX() >= 0 ? new LineTo(BL3.getX(), BL3.getY()) : new LineTo(0, yB - (0 - xB) / K), 
+                    BL3.getX() >= 0 ? new LineTo(BL3.getX(), BL3.getY()) : new LineTo(0, yB - (0 - xB) / K),
                     BL3.getX() > 0 ? new LineTo(0, H) : new LineTo(0, 0),
                     new ClosePath());
         }
@@ -368,12 +368,12 @@ public class BookBend {
 
         final double STEP = Math.max(0.1, R / (buffer.length - 1));
         final double HYPOT = Math.hypot(1, K);
-        final double yR = 1.5 * R; 
+        final double yR = 1.5 * R;
         double x_1 = 0, y_1 = 0, cur_len = 0;
         for (double len = 0; len <= R; len += STEP) {
             final int index = (int) Math.round(len / STEP);
             final double angle = Math.asin(len / R);
-            final double y = yR * Math.cos(angle); 
+            final double y = yR * Math.cos(angle);
             if (len > 0) {
                 cur_len += Math.hypot(y - y_1, len - x_1);
             }
@@ -407,9 +407,9 @@ public class BookBend {
                     map.setSamples(x, y, buffer[index][0], buffer[index][1]);
                 }
             }
-        }         
+        }
     }
-    
+
     private static Point2D calcIntersection(Point2D ap1, Point2D ap2, Point2D bp1, Point2D bp2) {
         final double a1 = ap1.getY() - ap2.getY();
         final double b1 = ap2.getX() - ap1.getX();
@@ -419,16 +419,16 @@ public class BookBend {
         final double c2 = bp1.getX() * bp2.getY() - bp2.getX() * bp1.getY();
         final double d = a1 * b2 - a2 * b1;
         return new Point2D(
-                (b1 * c2 - b2 * c1) / d, 
+                (b1 * c2 - b2 * c1) / d,
                 (c1 * a2 - c2 * a1) / d);
-    }    
-    
+    }
+
     private static Point2D middle(Point2D a, Point2D a1, double value) {
         return new Point2D(
-                a1.getX() * value + a.getX() * (1 - value), 
+                a1.getX() * value + a.getX() * (1 - value),
                 a1.getY() * value + a.getY() * (1 - value));
     }
-    
+
     private static double hypot(Point2D p1, Point2D p2) {
         return Math.hypot(p1.getX() - p2.getX(), p1.getY() - p2.getY());
     }

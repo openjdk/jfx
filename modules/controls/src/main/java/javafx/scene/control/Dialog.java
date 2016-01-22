@@ -56,80 +56,80 @@ import com.sun.javafx.tk.Toolkit;
  * to present it to end users. In JavaFX 8u40, this essentially means that the
  * {@link DialogPane} is shown to users inside a {@link Stage}, but future releases
  * may offer alternative options (such as 'lightweight' or 'internal' dialogs).
- * This API therefore is intentionally ignorant of the underlying implementation, 
+ * This API therefore is intentionally ignorant of the underlying implementation,
  * and attempts to present a common API for all possible implementations.
- * 
+ *
  * <p>The Dialog class has a single generic type, R, which is used to represent
  * the type of the {@link #resultProperty() result} property (and also, how to
- * convert from {@link ButtonType} to R, through the use of the 
- * {@link #resultConverterProperty() result converter} {@link Callback}). 
- * 
+ * convert from {@link ButtonType} to R, through the use of the
+ * {@link #resultConverterProperty() result converter} {@link Callback}).
+ *
  * <p><strong>Critical note:</strong> It is critical that all developers who choose
- * to create their own dialogs by extending the Dialog class understand the 
+ * to create their own dialogs by extending the Dialog class understand the
  * importance of the {@link #resultConverterProperty() result converter} property.
- * A result converter must always be set, whenever the R type is not 
+ * A result converter must always be set, whenever the R type is not
  * {@link Void} or {@link ButtonType}. If this is not heeded, developers will find
  * that they get ClassCastExceptions in their code, for failure to convert from
  * {@link ButtonType} via the {@link #resultConverterProperty() result converter}.
- * 
+ *
  * <p>It is likely that most developers would be better served using either the
  * {@link Alert} class (for pre-defined, notification-style alerts), or either of
  * the two pre-built dialogs ({@link TextInputDialog} and {@link ChoiceDialog}),
  * depending on their needs.
- * 
- * <p>Once a Dialog is instantiated, the next step is to configure it. Almost 
+ *
+ * <p>Once a Dialog is instantiated, the next step is to configure it. Almost
  * all properties on Dialog are not related to the content of the Dialog, the
- * only exceptions are {@link #contentTextProperty()}, 
- * {@link #headerTextProperty()}, and {@link #graphicProperty()}, and these 
+ * only exceptions are {@link #contentTextProperty()},
+ * {@link #headerTextProperty()}, and {@link #graphicProperty()}, and these
  * properties are simply forwarding API onto the respective properties on the
- * {@link DialogPane} stored in the {@link #dialogPaneProperty() dialog pane} 
+ * {@link DialogPane} stored in the {@link #dialogPaneProperty() dialog pane}
  * property. These three properties are forwarded from DialogPane for developer
  * convenience. For developers wanting to configure their dialog, they will in many
- * cases be required to use code along the lines of 
+ * cases be required to use code along the lines of
  * {@code dialog.getDialogPane().setExpandableContent(node)}.
- * 
- * <p>After configuring these properties, all that remains is to consider whether 
- * the buttons (created using {@link ButtonType} and the 
- * {@link DialogPane#createButton(ButtonType)} method) are fully configured. 
+ *
+ * <p>After configuring these properties, all that remains is to consider whether
+ * the buttons (created using {@link ButtonType} and the
+ * {@link DialogPane#createButton(ButtonType)} method) are fully configured.
  * Developers will quickly find that the amount of configurability offered
  * via the {@link ButtonType} class is minimal. This is intentional, but does not
  * mean that developers can not modify the buttons created by the {@link ButtonType}
  * that have been specified. To do this, developers simply call the
- * {@link DialogPane#lookupButton(ButtonType)} method with the ButtonType 
- * (assuming it has already been set in the {@link DialogPane#getButtonTypes()} 
+ * {@link DialogPane#lookupButton(ButtonType)} method with the ButtonType
+ * (assuming it has already been set in the {@link DialogPane#getButtonTypes()}
  * list. The returned Node is typically of type {@link Button}, but this depends
  * on if the {@link DialogPane#createButton(ButtonType)} method has been overridden. A
  * typical approach is therefore along the following lines:
- * 
+ *
  * <pre>{@code ButtonType loginButtonType = new ButtonType("Login", ButtonData.OK_DONE);
  * Dialog<String> dialog = new Dialog<>();
  * dialog.getDialogPane().getButtonTypes().add(loginButtonType);
  * boolean disabled = false; // computed based on content of text fields, for example
  * dialog.getDialogPane().lookupButton(loginButtonType).setDisable(disabled);}</pre>
- * 
- * <p>Once a Dialog is instantiated and fully configured, the next step is to 
- * show it. More often than not, dialogs are shown in a modal and blocking 
- * fashion. 'Modal' means that the dialog prevents user interaction with the 
- * owning application whilst it is showing, and 'blocking' means that code 
- * execution stops at the point in which the dialog is shown. This means that 
- * you can show a dialog, await the user response, and then continue running the 
- * code that directly follows the show call, giving developers the ability to 
- * immediately deal with the user input from the dialog (if relevant). 
- * 
- * <p>JavaFX dialogs are modal by default (you can change this via the 
+ *
+ * <p>Once a Dialog is instantiated and fully configured, the next step is to
+ * show it. More often than not, dialogs are shown in a modal and blocking
+ * fashion. 'Modal' means that the dialog prevents user interaction with the
+ * owning application whilst it is showing, and 'blocking' means that code
+ * execution stops at the point in which the dialog is shown. This means that
+ * you can show a dialog, await the user response, and then continue running the
+ * code that directly follows the show call, giving developers the ability to
+ * immediately deal with the user input from the dialog (if relevant).
+ *
+ * <p>JavaFX dialogs are modal by default (you can change this via the
  * {@link #initModality(javafx.stage.Modality)} API). To specify whether you want
  * blocking or non-blocking dialogs, developers simply choose to call
- * {@link #showAndWait()} or {@link #show()} (respectively). By default most 
- * developers should choose to use {@link #showAndWait()}, given the ease of 
+ * {@link #showAndWait()} or {@link #show()} (respectively). By default most
+ * developers should choose to use {@link #showAndWait()}, given the ease of
  * coding in these situations. Shown below is three code snippets, showing three
  * equally valid ways of showing a dialog:
- * 
+ *
  * <p><strong>Option 1: The 'traditional' approach</strong>
  * <pre>{@code Optional<ButtonType> result = dialog.showAndWait();
  * if (result.isPresent() && result.get() == ButtonType.OK) {
  *     formatSystem();
  * }}</pre>
- * 
+ *
  * <p><strong>Option 2: The traditional + Optional approach</strong>
  * <pre>{@code dialog.showAndWait().ifPresent(response -> {
  *     if (response == ButtonType.OK) {
@@ -141,7 +141,7 @@ import com.sun.javafx.tk.Toolkit;
  * <pre>{@code dialog.showAndWait()
  *      .filter(response -> response == ButtonType.OK)
  *      .ifPresent(response -> formatSystem());}</pre>
- * 
+ *
  * <p>There is no better or worse option of the three listed above, so developers
  * are encouraged to work to their own style preferences. The purpose of showing
  * the above is to help introduce developers to the {@link Optional} API, which
@@ -172,13 +172,13 @@ import com.sun.javafx.tk.Toolkit;
  *
  * <h3>Dialog Closing Rules</h3>
  *
- * <p>It is important to understand what happens when a Dialog is closed, and 
+ * <p>It is important to understand what happens when a Dialog is closed, and
  * also how a Dialog can be closed, especially in abnormal closing situations
  * (such as when the 'X' button is clicked in a dialogs title bar, or when
  * operating system specific keyboard shortcuts (such as alt-F4 on Windows)
  * are entered). Fortunately, the outcome is well-defined in these situations,
  * and can be best summarised in the following bullet points:
- * 
+ *
  * <ul>
  *   <li>JavaFX dialogs can only be closed 'abnormally' (as defined above) in
  *   two situations:
@@ -193,7 +193,7 @@ import com.sun.javafx.tk.Toolkit;
  *           when {@link ButtonData#isCancelButton()} is called.</li>
  *       </ol>
  *     </ol>
- *   <li>In all other situations, the dialog will refuse to respond to all 
+ *   <li>In all other situations, the dialog will refuse to respond to all
  *   close requests, remaining open until the user clicks on one of the available
  *   buttons in the {@link DialogPane} area of the dialog.
  *   <li>If a dialog is closed abnormally, and if the dialog contains a button
@@ -203,16 +203,16 @@ import com.sun.javafx.tk.Toolkit;
  *   the first matching {@link ButtonType}.
  *   <li>If for any reason the result converter returns null, or if the dialog
  *   is closed when only one non-cancel button is present, the
- *   {@link #resultProperty() result} property will be null, and the 
+ *   {@link #resultProperty() result} property will be null, and the
  *   {@link #showAndWait()} method will return {@link Optional#empty()}. This
  *   later point means that, if you use either of option 2 or option 3 (as
- *   presented earlier in this class documentation), the 
+ *   presented earlier in this class documentation), the
  *   {@link Optional#ifPresent(java.util.function.Consumer)} lambda will never
- *   be called, and code will continue executing as if the dialog had not 
+ *   be called, and code will continue executing as if the dialog had not
  *   returned any value at all.
- * </ul>  
- * 
- * @param <R> The return type of the dialog, via the 
+ * </ul>
+ *
+ * @param <R> The return type of the dialog, via the
  *            {@link #resultProperty() result} property.
  * @see Alert
  * @see TextInputDialog
@@ -220,40 +220,40 @@ import com.sun.javafx.tk.Toolkit;
  * @since JavaFX 8u40
  */
 public class Dialog<R> implements EventTarget {
-    
+
     /**************************************************************************
-     * 
+     *
      * Static fields
-     * 
+     *
      **************************************************************************/
 
-    
-    
-    
+
+
+
     /**************************************************************************
-     * 
+     *
      * Static methods
-     * 
+     *
      **************************************************************************/
-    
+
 
 
     /**************************************************************************
-     * 
+     *
      * Private fields
-     * 
+     *
      **************************************************************************/
 
     final FXDialog dialog;
 
     private boolean isClosing;
 
-    
-    
+
+
     /**************************************************************************
-     * 
+     *
      * Constructors
-     * 
+     *
      **************************************************************************/
 
     /**
@@ -264,24 +264,24 @@ public class Dialog<R> implements EventTarget {
         setDialogPane(new DialogPane());
         initModality(Modality.APPLICATION_MODAL);
     }
-    
-    
-    
+
+
+
     /**************************************************************************
-     * 
+     *
      * Abstract methods
-     * 
+     *
      **************************************************************************/
 
-    
-    
+
+
 
     /**************************************************************************
-     * 
+     *
      * Public API
-     * 
+     *
      **************************************************************************/
-    
+
     /**
      * Shows the dialog but does not wait for a user response (in other words,
      * this brings up a non-blocking dialog). Users of this API must either
@@ -299,12 +299,12 @@ public class Dialog<R> implements EventTarget {
         }
 
         dialog.show();
-        
+
         Event.fireEvent(this, new DialogEvent(this, DialogEvent.DIALOG_SHOWN));
     }
 
     /**
-     * Shows the dialog and waits for the user response (in other words, brings 
+     * Shows the dialog and waits for the user response (in other words, brings
      * up a blocking dialog, with the returned value the users input).
      * <p>
      * This method must be called on the JavaFX Application thread.
@@ -332,14 +332,14 @@ public class Dialog<R> implements EventTarget {
         if( getWidth() == Double.NaN && getHeight() == Double.NaN ) {
             dialog.sizeToScene();
         }
-        
+
 
         // this is slightly odd - we fire the SHOWN event before the show()
         // call, so that users get the event before the dialog blocks
         Event.fireEvent(this, new DialogEvent(this, DialogEvent.DIALOG_SHOWN));
-        
+
         dialog.showAndWait();
-        
+
         return Optional.ofNullable(getResult());
     }
 
@@ -414,7 +414,7 @@ public class Dialog<R> implements EventTarget {
 
         isClosing = false;
     }
-    
+
     /**
      * closes the dialog.
      */
@@ -446,11 +446,11 @@ public class Dialog<R> implements EventTarget {
     public final Modality getModality() {
         return dialog.getModality();
     }
-    
+
     /**
      * Specifies the style for this dialog. This must be done prior to making
      * the dialog visible. The style is one of: StageStyle.DECORATED,
-     * StageStyle.UNDECORATED, StageStyle.TRANSPARENT, StageStyle.UTILITY, 
+     * StageStyle.UNDECORATED, StageStyle.TRANSPARENT, StageStyle.UTILITY,
      * or StageStyle.UNIFIED.
      *
      * @param style the style for this dialog.
@@ -463,7 +463,7 @@ public class Dialog<R> implements EventTarget {
     public final void initStyle(StageStyle style) {
         dialog.initStyle(style);
     }
-    
+
     /**
      * Specifies the owner {@link Window} for this dialog, or null for a top-level,
      * unowned dialog. This must be done prior to making the dialog visible.
@@ -478,7 +478,7 @@ public class Dialog<R> implements EventTarget {
     public final void initOwner(Window window) {
         dialog.initOwner(window);
     }
-    
+
     /**
      * Retrieves the owner Window for this dialog, or null for an unowned dialog.
      *
@@ -488,12 +488,12 @@ public class Dialog<R> implements EventTarget {
         return dialog.getOwner();
     }
 
-    
+
 
     /**************************************************************************
-     * 
+     *
      * Properties
-     * 
+     *
      **************************************************************************/
 
     // --- dialog Pane
@@ -507,11 +507,11 @@ public class Dialog<R> implements EventTarget {
         final InvalidationListener expandedListener = o -> {
             DialogPane dialogPane = getDialogPane();
             if (dialogPane == null) return;
-                        
+
             final Node content = dialogPane.getExpandableContent();
             final boolean isExpanded = content == null ? false : content.isVisible();
             setResizable(isExpanded);
-            
+
             Dialog.this.dialog.sizeToScene();
         };
 
@@ -520,7 +520,7 @@ public class Dialog<R> implements EventTarget {
         };
 
         WeakReference<DialogPane> dialogPaneRef = new WeakReference<>(null);
-        
+
         protected void invalidated() {
             DialogPane oldDialogPane = dialogPaneRef.get();
             if (oldDialogPane != null) {
@@ -530,12 +530,12 @@ public class Dialog<R> implements EventTarget {
                 oldDialogPane.headerTextProperty().removeListener(headerListener);
                 oldDialogPane.setDialog(null);
             }
-            
+
             final DialogPane newDialogPane = getDialogPane();
 
             if (newDialogPane != null) {
                 newDialogPane.setDialog(Dialog.this);
-                
+
                 // if the buttons change, we dynamically update the dialog
                 newDialogPane.getButtonTypes().addListener((ListChangeListener<ButtonType>) c -> {
                     newDialogPane.requestLayout();
@@ -547,14 +547,14 @@ public class Dialog<R> implements EventTarget {
                 updatePseudoClassState();
                 newDialogPane.requestLayout();
             }
-            
+
             // push the new dialog down into the implementation for rendering
             dialog.setDialogPane(newDialogPane);
-            
+
             dialogPaneRef = new WeakReference<DialogPane>(newDialogPane);
         }
     };
-    
+
     public final ObjectProperty<DialogPane> dialogPaneProperty() {
         return dialogPane;
     }
@@ -566,8 +566,8 @@ public class Dialog<R> implements EventTarget {
     public final void setDialogPane(DialogPane value) {
         dialogPane.set(value);
     }
-    
-    
+
+
     // --- content text (forwarded from DialogPane)
     /**
      * A property representing the content text for the dialog pane. The content text
@@ -578,14 +578,14 @@ public class Dialog<R> implements EventTarget {
     public final StringProperty contentTextProperty() {
         return getDialogPane().contentTextProperty();
     }
-    
+
     /**
      * Returns the currently-set content text for this DialogPane.
      */
     public final String getContentText() {
         return getDialogPane().getContentText();
     }
-    
+
     /**
      * Sets the string to show in the dialog content area. Note that the content text
      * is lower precedence than the {@link DialogPane#contentProperty() content node}, meaning
@@ -595,8 +595,8 @@ public class Dialog<R> implements EventTarget {
     public final void setContentText(String contentText) {
         getDialogPane().setContentText(contentText);
     }
-    
-    
+
+
     // --- header text (forwarded from DialogPane)
     /**
      * A property representing the header text for the dialog pane. The header text
@@ -607,14 +607,14 @@ public class Dialog<R> implements EventTarget {
     public final StringProperty headerTextProperty() {
         return getDialogPane().headerTextProperty();
     }
-    
+
     /**
      * Returns the currently-set header text for this DialogPane.
      */
     public final String getHeaderText() {
         return getDialogPane().getHeaderText();
     }
-    
+
     /**
      * Sets the string to show in the dialog header area. Note that the header text
      * is lower precedence than the {@link DialogPane#headerProperty() header node}, meaning
@@ -624,35 +624,35 @@ public class Dialog<R> implements EventTarget {
     public final void setHeaderText(String headerText) {
         getDialogPane().setHeaderText(headerText);
     }
-    
-    
+
+
     // --- graphic (forwarded from DialogPane)
     /**
      * The dialog graphic, presented either in the header, if one is showing, or
      * to the left of the {@link DialogPane#contentProperty() content}.
-     * 
+     *
      * @return An ObjectProperty wrapping the current graphic.
      */
     public final ObjectProperty<Node> graphicProperty() {
         return getDialogPane().graphicProperty();
     }
-    
+
     public final Node getGraphic() {
         return getDialogPane().getGraphic();
     }
-    
+
     /**
      * Sets the dialog graphic, which will be displayed either in the header, if
      * one is showing, or to the left of the {@link DialogPane#contentProperty() content}.
-     * 
+     *
      * @param graphic
      *            The new dialog graphic, or null if no graphic should be shown.
      */
     public final void setGraphic(Node graphic) {
         getDialogPane().setGraphic(graphic);
     }
-    
-    
+
+
     // --- result
     private final ObjectProperty<R> resultProperty = new SimpleObjectProperty<R>() {
         protected void invalidated() {
@@ -663,7 +663,7 @@ public class Dialog<R> implements EventTarget {
     /**
      * A property representing what has been returned from the dialog. A result
      * is generated through the {@link #resultConverterProperty() result converter},
-     * which is intended to convert from the {@link ButtonType} that the user 
+     * which is intended to convert from the {@link ButtonType} that the user
      * clicked on into a value of type R. Refer to the {@link Dialog} class
      * JavaDoc for more details.
      */
@@ -678,21 +678,21 @@ public class Dialog<R> implements EventTarget {
     public final void setResult(R value) {
         this.resultProperty().set(value);
     }
-    
-    
+
+
     // --- result converter
-    private final ObjectProperty<Callback<ButtonType, R>> resultConverterProperty 
+    private final ObjectProperty<Callback<ButtonType, R>> resultConverterProperty
         = new SimpleObjectProperty<>(this, "resultConverter");
 
     /**
-     * API to convert the {@link ButtonType} that the user clicked on into a 
-     * result that can be returned via the {@link #resultProperty() result} 
-     * property. This is necessary as {@link ButtonType} represents the visual 
+     * API to convert the {@link ButtonType} that the user clicked on into a
+     * result that can be returned via the {@link #resultProperty() result}
+     * property. This is necessary as {@link ButtonType} represents the visual
      * button within the dialog, and do not know how to map themselves to a valid
      * result - that is a requirement of the dialog implementation by making use
-     * of the result converter. In some cases, the result type of a Dialog 
+     * of the result converter. In some cases, the result type of a Dialog
      * subclass is ButtonType (which means that the result converter can be null),
-     * but in some cases (where the result type, R, is not ButtonType or Void), 
+     * but in some cases (where the result type, R, is not ButtonType or Void),
      * this callback must be specified.
      */
     public final ObjectProperty<Callback<ButtonType, R>> resultConverterProperty() {
@@ -706,8 +706,8 @@ public class Dialog<R> implements EventTarget {
     public final void setResultConverter(Callback<ButtonType, R> value) {
         this.resultConverterProperty().set(value);
     }
-    
-    
+
+
     // --- showing
     /**
      * Represents whether the dialog is currently showing.
@@ -718,14 +718,14 @@ public class Dialog<R> implements EventTarget {
 
     /**
      * Returns whether or not the dialog is showing.
-     * 
+     *
      * @return true if dialog is showing.
      */
     public final boolean isShowing() {
         return showingProperty().get();
     }
 
-    
+
     // --- resizable
     /**
      * Represents whether the dialog is resizable.
@@ -736,7 +736,7 @@ public class Dialog<R> implements EventTarget {
 
     /**
      * Returns whether or not the dialog is resizable.
-     * 
+     *
      * @return true if dialog is resizable.
      */
     public final boolean isResizable() {
@@ -746,8 +746,8 @@ public class Dialog<R> implements EventTarget {
     /**
      * Sets whether the dialog can be resized by the user.
      * Resizable dialogs can also be maximized ( maximize button
-     * becomes visible)  
-     * 
+     * becomes visible)
+     *
      * @param resizable true if dialog should be resizable.
      */
     public final void setResizable(boolean resizable) {
@@ -769,7 +769,7 @@ public class Dialog<R> implements EventTarget {
     public final double getWidth() {
         return widthProperty().get();
     }
-    
+
     /**
      * Sets the width of the dialog.
      */
@@ -792,7 +792,7 @@ public class Dialog<R> implements EventTarget {
     public final double getHeight() {
         return heightProperty().get();
     }
-    
+
     /**
      * Sets the height of the dialog.
      */
@@ -822,8 +822,8 @@ public class Dialog<R> implements EventTarget {
     public final void setTitle(String title){
         this.dialog.titleProperty().set(title);
     }
-    
-    
+
+
     // --- x
     public final double getX() {
         return dialog.getX();
@@ -832,15 +832,15 @@ public class Dialog<R> implements EventTarget {
     public final void setX(double x) {
         dialog.setX(x);
     }
-    
+
     /**
-     * The horizontal location of this {@code Dialog}. Changing this attribute 
+     * The horizontal location of this {@code Dialog}. Changing this attribute
      * will move the {@code Dialog} horizontally.
      */
     public final ReadOnlyDoubleProperty xProperty() {
         return dialog.xProperty();
     }
-    
+
     // --- y
     public final double getY() {
         return dialog.getY();
@@ -849,30 +849,30 @@ public class Dialog<R> implements EventTarget {
     public final void setY(double y) {
         dialog.setY(y);
     }
-    
+
     /**
-     * The vertical location of this {@code Dialog}. Changing this attribute 
+     * The vertical location of this {@code Dialog}. Changing this attribute
      * will move the {@code Dialog} vertically.
      */
     public final ReadOnlyDoubleProperty yProperty() {
         return dialog.yProperty();
     }
-    
-    
-    
+
+
+
     /***************************************************************************
-     *                                                                         
-     * Events                                                   
-     *                                                                         
+     *
+     * Events
+     *
      **************************************************************************/
-    
+
     private final EventHandlerManager eventHandlerManager = new EventHandlerManager(this);
 
     /** {@inheritDoc} */
     @Override public EventDispatchChain buildEventDispatchChain(EventDispatchChain tail) {
         return tail.prepend(eventHandlerManager);
     }
-    
+
     /**
      * Called just prior to the Dialog being shown.
      */
@@ -951,7 +951,7 @@ public class Dialog<R> implements EventTarget {
         }
         return onHidden;
     }
-    
+
     /**
      * Called when there is an external request to close this {@code Dialog}.
      * The installed event handler can prevent dialog closing by consuming the
@@ -975,13 +975,13 @@ public class Dialog<R> implements EventTarget {
         }
         return onCloseRequest;
     }
-    
-    
-    
+
+
+
     /***************************************************************************
-     *                                                                         
-     * Private implementation                                                   
-     *                                                                         
+     *
+     * Private implementation
+     *
      **************************************************************************/
 
     // This code is called both in the normal and in the abnormal case (i.e.
@@ -990,26 +990,26 @@ public class Dialog<R> implements EventTarget {
     @SuppressWarnings("unchecked")
     void setResultAndClose(ButtonType cmd, boolean close) {
         Callback<ButtonType, R> resultConverter = getResultConverter();
-        
+
         R priorResultValue = getResult();
         R newResultValue = null;
-        
+
         if (resultConverter == null) {
             // The choice to cast cmd to R here was a conscious decision, taking
             // into account the choices available to us. Firstly, to summarise the
-            // issue, at this point here we have a null result converter, and no 
+            // issue, at this point here we have a null result converter, and no
             // idea how to convert the given ButtonType to R. Our options are:
-            // 
-            // 1) We could throw an exception here, but this requires that all 
-            // developers who create a dialog set a result converter (at least 
-            // setResultConverter(buttonType -> (R) buttonType)). This is 
+            //
+            // 1) We could throw an exception here, but this requires that all
+            // developers who create a dialog set a result converter (at least
+            // setResultConverter(buttonType -> (R) buttonType)). This is
             // non-intuitive and depends on the developer reading documentation.
             //
             // 2) We could set a default result converter in the resultConverter
             // property that does the identity conversion. This saves people from
             // having to set a default result converter, but it is a little odd
             // that the result converter is non-null by default.
-            // 
+            //
             // 3) We can cast the button type here, which is what we do. This means
             // that the result converter is null by default.
             //
@@ -1025,29 +1025,29 @@ public class Dialog<R> implements EventTarget {
         } else {
             newResultValue = resultConverter.call(cmd);
         }
-        
+
         setResult(newResultValue);
-        
+
         // fix for the case where we set the same result as what
-        // was already set. We should still close the dialog, but 
+        // was already set. We should still close the dialog, but
         // we need to special-case it here, as the result property
         // won't fire any event if the value won't change.
         if (close && priorResultValue == newResultValue) {
             close();
         }
     }
-    
 
-    
+
+
 
     /***************************************************************************
-     *                                                                         
-     * Stylesheet Handling                                                     
-     *                                                                         
+     *
+     * Stylesheet Handling
+     *
      **************************************************************************/
-    private static final PseudoClass HEADER_PSEUDO_CLASS = 
+    private static final PseudoClass HEADER_PSEUDO_CLASS =
             PseudoClass.getPseudoClass("header"); //$NON-NLS-1$
-    private static final PseudoClass NO_HEADER_PSEUDO_CLASS = 
+    private static final PseudoClass NO_HEADER_PSEUDO_CLASS =
             PseudoClass.getPseudoClass("no-header"); //$NON-NLS-1$
 
     private void updatePseudoClassState() {

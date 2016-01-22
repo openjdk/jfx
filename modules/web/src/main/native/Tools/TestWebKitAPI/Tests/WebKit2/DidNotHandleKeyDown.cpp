@@ -52,7 +52,7 @@ TEST(WebKit2, DidNotHandleKeyDown)
 
     WKPageLoaderClientV0 loaderClient;
     memset(&loaderClient, 0, sizeof(loaderClient));
-    
+
     loaderClient.base.version = 0;
     loaderClient.didFinishLoadForFrame = didFinishLoadForFrame;
 

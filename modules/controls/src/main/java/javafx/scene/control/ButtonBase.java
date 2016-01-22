@@ -197,7 +197,7 @@ public abstract class ButtonBase extends Labeled {
     @Override
     public void executeAccessibleAction(AccessibleAction action, Object... parameters) {
         switch (action) {
-            case FIRE: 
+            case FIRE:
                 fire();
                 break;
             default: super.executeAccessibleAction(action);

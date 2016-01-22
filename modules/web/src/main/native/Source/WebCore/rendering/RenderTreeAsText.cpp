@@ -159,7 +159,7 @@ String quoteAndEscapeNonPrintables(const String& s)
                 result.append('\\');
                 result.append('x');
                 result.append('{');
-                appendUnsignedAsHex(c, result); 
+                appendUnsignedAsHex(c, result);
                 result.append('}');
             }
         }
@@ -191,7 +191,7 @@ void RenderTreeAsText::writeRenderObject(TextStream& ts, const RenderObject& o, 
                 ts << " *empty or unstyled AppleStyleSpan*";
         }
     }
-    
+
     RenderBlock* cb = o.containingBlock();
     bool adjustForTableCells = cb ? cb->isTableCell() : false;
 
@@ -252,7 +252,7 @@ void RenderTreeAsText::writeRenderObject(TextStream& ts, const RenderObject& o, 
             if (o.parent()->style().visitedDependentColor(CSSPropertyBackgroundColor) != backgroundColor
                 && backgroundColor.isValid() && backgroundColor.rgb())
                 ts << " [bgcolor=" << backgroundColor.nameForRenderTreeAsText() << "]";
-            
+
             Color textFillColor = o.style().visitedDependentColor(CSSPropertyWebkitTextFillColor);
             if (o.parent()->style().visitedDependentColor(CSSPropertyWebkitTextFillColor) != textFillColor
                 && textFillColor.isValid() && textFillColor != color && textFillColor.rgb())
@@ -397,7 +397,7 @@ void RenderTreeAsText::writeRenderObject(TextStream& ts, const RenderObject& o, 
             ts << ": " << text;
         }
     }
-    
+
     if (behavior & RenderAsTextShowIDAndClass) {
         if (Element* element = o.node() && o.node()->isElementNode() ? toElement(o.node()) : 0) {
             if (element->hasID())
@@ -414,12 +414,12 @@ void RenderTreeAsText::writeRenderObject(TextStream& ts, const RenderObject& o, 
             }
         }
     }
-    
+
     if (behavior & RenderAsTextShowLayoutState) {
         bool needsLayout = o.selfNeedsLayout() || o.needsPositionedMovementLayout() || o.posChildNeedsLayout() || o.normalChildNeedsLayout();
         if (needsLayout)
             ts << " (needs layout:";
-        
+
         bool havePrevious = false;
         if (o.selfNeedsLayout()) {
             ts << " self";
@@ -449,13 +449,13 @@ void RenderTreeAsText::writeRenderObject(TextStream& ts, const RenderObject& o, 
         if (needsLayout)
             ts << ")";
     }
-    
+
     if (behavior & RenderAsTextShowOverflow && o.isBox()) {
         const RenderBox& box = toRenderBox(o);
         if (box.hasRenderOverflow()) {
             LayoutRect layoutOverflow = box.layoutOverflowRect();
             ts << " (layout overflow " << layoutOverflow.x().toInt() << "," << layoutOverflow.y().toInt() << " " << layoutOverflow.width().toInt() << "x" << layoutOverflow.height().toInt() << ")";
-            
+
             if (box.hasVisualOverflow()) {
                 LayoutRect visualOverflow = box.visualOverflowRect();
                 ts << " (visual overflow " << visualOverflow.x().toInt() << "," << visualOverflow.y().toInt() << " " << visualOverflow.width().toInt() << "x" << visualOverflow.height().toInt() << ")";
@@ -475,7 +475,7 @@ static void writeTextRun(TextStream& ts, const RenderText& o, const InlineTextBo
     // FIXME: Table cell adjustment is temporary until results can be updated.
     if (o.containingBlock()->isTableCell())
         y -= toRenderTableCell(o.containingBlock())->intrinsicPaddingBefore();
-        
+
     ts << "text run at (" << x << "," << y << ") width " << logicalWidth;
     if (!run.isLeftToRightDirection() || run.dirOverride()) {
         ts << (!run.isLeftToRightDirection() ? " RTL" : " LTR");
@@ -497,7 +497,7 @@ static void writeSimpleLine(TextStream& ts, const RenderText& o, const LayoutRec
 
     if (o.containingBlock()->isTableCell())
         y -= toRenderTableCell(o.containingBlock())->intrinsicPaddingBefore();
-        
+
     ts << "text run at (" << x << "," << y << ") width " << logicalWidth;
     ts << ": "
         << quoteAndEscapeNonPrintables(text);
@@ -602,10 +602,10 @@ static void write(TextStream& ts, RenderLayer& l,
     writeIndent(ts, indent);
 
     ts << "layer ";
-    
+
     if (behavior & RenderAsTextShowAddresses)
         ts << static_cast<const void*>(&l) << " ";
-      
+
     ts << adjustedLayoutBounds;
 
     if (!adjustedLayoutBounds.isEmpty()) {
@@ -637,7 +637,7 @@ static void write(TextStream& ts, RenderLayer& l,
         if (l.isComposited())
             ts << " (composited, bounds=" << l.backing()->compositedBounds() << ", drawsContent=" << l.backing()->graphicsLayer()->drawsContent() << ", paints into ancestor=" << l.backing()->paintsIntoCompositedAncestor() << ")";
     }
-    
+
     ts << "\n";
 
     if (paintPhase != LayerPaintPhaseBackground)
@@ -737,7 +737,7 @@ static void writeLayers(TextStream& ts, const RenderLayer* rootLayer, RenderLaye
         paintDirtyRect.setHeight(std::max<LayoutUnit>(paintDirtyRect.height(), rootLayer->renderBox()->layoutOverflowRect().maxY()));
         l->setSize(l->size().expandedTo(pixelSnappedIntSize(maxLayoutOverflow(l->renderBox()), LayoutPoint(0, 0))));
     }
-    
+
     // Calculate the clip rects we should use.
     LayoutRect layerBounds;
     ClipRect damageRect, clipRectToApply, outlineRect;
@@ -799,7 +799,7 @@ static void writeLayers(TextStream& ts, const RenderLayer* rootLayer, RenderLaye
             }
         }
     }
-    
+
     // Altough the RenderFlowThread requires a layer, it is not collected by its parent,
     // so we have to treat it as a special case.
     if (l->renderer().isRenderView())
@@ -865,7 +865,7 @@ static String externalRepresentation(RenderBox* renderer, RenderAsTextBehavior b
     TextStream ts;
     if (!renderer->hasLayer())
         return ts.release();
-        
+
     RenderLayer* layer = renderer->layer();
     writeLayers(ts, layer, layer, layer->rect(), 0, behavior);
     writeSelection(ts, renderer);
@@ -896,7 +896,7 @@ String externalRepresentation(Element* element, RenderAsTextBehavior behavior)
     ASSERT(!(behavior & RenderAsTextPrintingMode));
     if (!(behavior & RenderAsTextDontUpdateLayout))
         element->document().updateLayout();
-    
+
     return externalRepresentation(toRenderBox(renderer), behavior | RenderAsTextShowAllLayers);
 }
 

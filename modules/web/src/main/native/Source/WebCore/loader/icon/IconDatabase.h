@@ -21,9 +21,9 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
- 
+
 #ifndef IconDatabase_h
 #define IconDatabase_h
 
@@ -43,7 +43,7 @@
 #include <wtf/Threading.h>
 #endif // ENABLE(ICONDATABASE)
 
-namespace WebCore { 
+namespace WebCore {
 
 class DocumentLoader;
 class Image;
@@ -71,11 +71,11 @@ public:
     static void checkIntegrityBeforeOpening() { }
     static String defaultDatabaseFilename() { return "WebpageIcons.db"; }
 };
-#else 
+#else
 
 class IconDatabase : public IconDatabaseBase {
     WTF_MAKE_FAST_ALLOCATED;
-    
+
 // *** Main Thread Only ***
 public:
     static PassOwnPtr<IconDatabase> create() { return adoptPtr(new IconDatabase); }
@@ -85,7 +85,7 @@ public:
 
     virtual bool open(const String& directory, const String& filename);
     virtual void close();
-            
+
     virtual void removeAllIcons();
 
     void readIconForPageURLFromDisk(const String&);
@@ -101,18 +101,18 @@ public:
     virtual PassNativeImagePtr synchronousNativeIconForPageURL(const String& pageURLOriginal, const IntSize&);
     virtual String synchronousIconURLForPageURL(const String&);
     virtual bool synchronousIconDataKnownForIconURL(const String&);
-    virtual IconLoadDecision synchronousLoadDecisionForIconURL(const String&, DocumentLoader*);    
-    
+    virtual IconLoadDecision synchronousLoadDecisionForIconURL(const String&, DocumentLoader*);
+
     virtual void setEnabled(bool);
     virtual bool isEnabled() const;
-    
+
     virtual void setPrivateBrowsingEnabled(bool flag);
     bool isPrivateBrowsingEnabled() const;
-    
+
     static void delayDatabaseCleanup();
     static void allowDatabaseCleanup();
     static void checkIntegrityBeforeOpening();
-        
+
     // Support for WebCoreStatistics in WebKit
     virtual size_t pageURLMappingCount();
     virtual size_t retainedPageURLCount();
@@ -129,11 +129,11 @@ private:
     void wakeSyncThread();
     void scheduleOrDeferSyncTimer();
     void syncTimerFired(Timer<IconDatabase>&);
-    
+
     Timer<IconDatabase> m_syncTimer;
     ThreadIdentifier m_syncThread;
     bool m_syncThreadRunning;
-    
+
     HashSet<RefPtr<DocumentLoader>> m_loadersPendingDecision;
 
     RefPtr<IconRecord> m_defaultIconRecord;
@@ -153,7 +153,7 @@ public:
 private:
     PassRefPtr<IconRecord> getOrCreateIconRecord(const String& iconURL);
     PageURLRecord* getOrCreatePageURLRecord(const String& pageURL);
-    
+
     bool m_isEnabled;
     bool m_privateBrowsingEnabled;
 
@@ -179,8 +179,8 @@ private:
     // Holding m_pendingSyncLock is required when accessing any of the following data structures
     HashMap<String, PageURLSnapshot> m_pageURLsPendingSync;
     HashMap<String, IconSnapshot> m_iconsPendingSync;
-    
-    Mutex m_pendingReadingLock;    
+
+    Mutex m_pendingReadingLock;
     // Holding m_pendingSyncLock is required when accessing any of the following data structures - when dealing with IconRecord*s, holding m_urlAndIconLock is also required
     HashSet<String> m_pageURLsPendingImport;
     HashSet<String> m_pageURLsInterestedInIcons;
@@ -196,10 +196,10 @@ private:
 public:
     virtual bool shouldStopThreadActivity() const;
 
-private:    
+private:
     static void iconDatabaseSyncThreadStart(void *);
     void iconDatabaseSyncThread();
-    
+
     // The following block of methods are called exclusively by the sync thread to manage i/o to and from the database
     // Each method should periodically monitor m_threadTerminationRequested when it makes sense to return early on shutdown
     void performOpenInitialization();
@@ -215,12 +215,12 @@ private:
     void* cleanupSyncThread();
     void performRetainIconForPageURL(const String&, int retainCount);
     void performReleaseIconForPageURL(const String&, int releaseCount);
-    
+
     bool wasExcludedFromBackup();
     void setWasExcludedFromBackup();
 
     bool m_initialPruningComplete;
-        
+
     void setIconURLForPageURLInSQLDatabase(const String&, const String&);
     void setIconIDForPageURLInSQLDatabase(int64_t, const String&);
     void removePageURLFromSQLDatabase(const String& pageURL);
@@ -228,7 +228,7 @@ private:
     int64_t addIconURLToSQLDatabase(const String&);
     PassRefPtr<SharedBuffer> getImageDataForIconURLFromSQLDatabase(const String& iconURL);
     void removeIconFromSQLDatabase(const String& iconURL);
-    void writeIconSnapshotToSQLDatabase(const IconSnapshot&);    
+    void writeIconSnapshotToSQLDatabase(const IconSnapshot&);
 
     void performPendingRetainAndReleaseOperations();
 
@@ -237,12 +237,12 @@ private:
     void dispatchDidImportIconDataForPageURLOnMainThread(const String&);
     void dispatchDidRemoveAllIconsOnMainThread();
     void dispatchDidFinishURLImportOnMainThread();
-    
+
     // The client is set by the main thread before the thread starts, and from then on is only used by the sync thread
     IconDatabaseClient* m_client;
-    
+
     SQLiteDatabase m_syncDB;
-    
+
     OwnPtr<SQLiteStatement> m_setIconIDForPageURLStatement;
     OwnPtr<SQLiteStatement> m_removePageURLStatement;
     OwnPtr<SQLiteStatement> m_getIconIDForIconURLStatement;

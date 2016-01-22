@@ -49,7 +49,7 @@ const float GainCalibrationSampleRate = 44100;
 
 // A minimum power value to when normalizing a silent (or very quiet) impulse response
 const float MinPower = 0.000125f;
-    
+
 static float calculateNormalizationScale(AudioBus* response)
 {
     // Normalize by RMS power
@@ -133,8 +133,8 @@ void Reverb::process(const AudioBus* sourceBus, AudioBus* destinationBus, size_t
     // Do a fairly comprehensive sanity check.
     // If these conditions are satisfied, all of the source and destination pointers will be valid for the various matrixing cases.
     bool isSafeToProcess = sourceBus && destinationBus && sourceBus->numberOfChannels() > 0 && destinationBus->numberOfChannels() > 0
-        && framesToProcess <= MaxFrameSize && framesToProcess <= sourceBus->length() && framesToProcess <= destinationBus->length(); 
-    
+        && framesToProcess <= MaxFrameSize && framesToProcess <= sourceBus->length() && framesToProcess <= destinationBus->length();
+
     ASSERT(isSafeToProcess);
     if (!isSafeToProcess)
         return;

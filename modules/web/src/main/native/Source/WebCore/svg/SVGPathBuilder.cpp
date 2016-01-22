@@ -58,7 +58,7 @@ void SVGPathBuilder::curveToCubic(const FloatPoint& point1, const FloatPoint& po
     } else {
         m_current = targetPoint;
         m_path->addBezierCurveTo(point1, point2, m_current);
-    }    
+    }
 }
 
 void SVGPathBuilder::closePath()

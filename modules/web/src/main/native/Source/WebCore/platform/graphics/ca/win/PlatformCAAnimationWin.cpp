@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -137,7 +137,7 @@ static RetainPtr<CACFTimingFunctionRef> toCACFTimingFunction(const TimingFunctio
         float y2 = static_cast<float>(ctf->y2());
         return adoptCF(CACFTimingFunctionCreate(x1, y1, x2, y2));
     }
-    
+
     return CACFTimingFunctionGetFunctionWithName(kCACFTimingFunctionLinear);
 }
 
@@ -158,7 +158,7 @@ PlatformCAAnimation::PlatformCAAnimation(AnimationType type, const String& keyPa
         m_animation = adoptCF(CACFAnimationCreate(kCACFBasicAnimation));
     else
         m_animation = adoptCF(CACFAnimationCreate(kCACFKeyframeAnimation));
-    
+
     CACFAnimationSetKeyPath(m_animation.get(), keyPath.createCFString().get());
 }
 
@@ -172,14 +172,14 @@ PlatformCAAnimation::PlatformCAAnimation(PlatformAnimationRef animation)
         ASSERT_NOT_REACHED();
         return;
     }
-    
+
     m_animation = animation;
 }
 
 PassRefPtr<PlatformCAAnimation> PlatformCAAnimation::copy() const
 {
     RefPtr<PlatformCAAnimation> animation = create(animationType(), keyPath());
-    
+
     animation->setBeginTime(beginTime());
     animation->setDuration(duration());
     animation->setSpeed(speed());
@@ -192,7 +192,7 @@ PassRefPtr<PlatformCAAnimation> PlatformCAAnimation::copy() const
     animation->copyTimingFunctionFrom(this);
     if (valueFunction())
         animation->setValueFunction(valueFunction());
-    
+
     // Copy the specific Basic or Keyframe values
     if (animationType() == Keyframe) {
         animation->copyValuesFrom(this);
@@ -202,7 +202,7 @@ PassRefPtr<PlatformCAAnimation> PlatformCAAnimation::copy() const
         animation->copyFromValueFrom(this);
         animation->copyToValueFrom(this);
     }
-    
+
     return animation;
 }
 
@@ -348,7 +348,7 @@ void PlatformCAAnimation::setFromValue(const WebCore::TransformationMatrix& valu
 {
     if (animationType() != Basic)
         return;
-    
+
     RetainPtr<CACFVectorRef> v = adoptCF(CACFVectorCreateTransform(value));
     CACFAnimationSetFromValue(m_animation.get(), v.get());
 }
@@ -384,7 +384,7 @@ void PlatformCAAnimation::copyFromValueFrom(const PlatformCAAnimation* value)
 {
     if (animationType() != Basic || value->animationType() != Basic)
         return;
-    
+
     CACFAnimationSetFromValue(m_animation.get(), CACFAnimationGetFromValue(value->platformAnimation()));
 }
 
@@ -437,7 +437,7 @@ void PlatformCAAnimation::copyToValueFrom(const PlatformCAAnimation* value)
 {
     if (animationType() != Basic || value->animationType() != Basic)
         return;
-        
+
     CACFAnimationSetToValue(m_animation.get(), CACFAnimationGetToValue(value->platformAnimation()));
 }
 
@@ -475,7 +475,7 @@ void PlatformCAAnimation::setValues(const Vector<FloatPoint3D>& value)
 {
     if (animationType() != Keyframe)
         return;
-        
+
     RetainPtr<CFMutableArrayRef> array = adoptCF(CFArrayCreateMutable(0, value.size(), &kCFTypeArrayCallBacks));
     for (size_t i = 0; i < value.size(); ++i) {
         CGFloat a[3] = { value[i].x(), value[i].y(), value[i].z() };
@@ -490,7 +490,7 @@ void PlatformCAAnimation::setValues(const Vector<WebCore::Color>& value)
 {
     if (animationType() != Keyframe)
         return;
-        
+
     RetainPtr<CFMutableArrayRef> array = adoptCF(CFArrayCreateMutable(0, value.size(), &kCFTypeArrayCallBacks));
     for (size_t i = 0; i < value.size(); ++i) {
         CGFloat a[4] = { value[i].red(), value[i].green(), value[i].blue(), value[i].alpha() };
@@ -512,7 +512,7 @@ void PlatformCAAnimation::copyValuesFrom(const PlatformCAAnimation* value)
 {
     if (animationType() != Keyframe || value->animationType() != Keyframe)
         return;
-    
+
     CACFAnimationSetValues(m_animation.get(), CACFAnimationGetValues(value->platformAnimation()));
 }
 
@@ -520,7 +520,7 @@ void PlatformCAAnimation::setKeyTimes(const Vector<float>& value)
 {
     if (animationType() != Keyframe)
         return;
-        
+
     RetainPtr<CFMutableArrayRef> array = adoptCF(CFArrayCreateMutable(0, value.size(), &kCFTypeArrayCallBacks));
     for (size_t i = 0; i < value.size(); ++i) {
         RetainPtr<CFNumberRef> v = adoptCF(CFNumberCreate(0, kCFNumberFloatType, &value[i]));

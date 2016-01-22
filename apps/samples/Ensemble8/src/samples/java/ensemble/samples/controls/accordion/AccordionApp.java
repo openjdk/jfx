@@ -67,7 +67,7 @@ public class AccordionApp extends Application {
         accordion.setPrefSize(200, 400);
         return accordion;
     }
-   
+
     @Override public void start(Stage primaryStage) throws Exception {
         primaryStage.setScene(new Scene(createContent()));
         primaryStage.show();

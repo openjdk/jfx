@@ -21,7 +21,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -76,10 +76,10 @@ public:
     Node* lastChild() const;
 
     bool isEmpty() const;
-    
+
     bool hasInterchangeNewlineAtStart() const { return m_hasInterchangeNewlineAtStart; }
     bool hasInterchangeNewlineAtEnd() const { return m_hasInterchangeNewlineAtEnd; }
-    
+
     void removeNode(PassRefPtr<Node>);
     void removeNodePreservingChildren(PassRefPtr<Node>);
 
@@ -88,7 +88,7 @@ private:
     void removeUnrenderedNodes(Node*);
     void restoreAndRemoveTestRenderingNodesToFragment(StyledElement*);
     void removeInterchangeNodes(Node*);
-    
+
     void insertNodeBefore(PassRefPtr<Node> node, Node* refNode);
 
     Document& document() { return *m_document; }
@@ -102,14 +102,14 @@ private:
 static bool isInterchangeNewlineNode(const Node *node)
 {
     DEFINE_STATIC_LOCAL(String, interchangeNewlineClassString, (AppleInterchangeNewline));
-    return node && node->hasTagName(brTag) && 
+    return node && node->hasTagName(brTag) &&
            static_cast<const Element *>(node)->getAttribute(classAttr) == interchangeNewlineClassString;
 }
 
 static bool isInterchangeConvertedSpaceSpan(const Node *node)
 {
     DEFINE_STATIC_LOCAL(String, convertedSpaceSpanClassString, (AppleConvertedSpace));
-    return node->isHTMLElement() && 
+    return node->isHTMLElement() &&
            static_cast<const HTMLElement *>(node)->getAttribute(classAttr) == convertedSpaceSpanClassString;
 }
 
@@ -130,8 +130,8 @@ static Position positionAvoidingPrecedingNodes(Position pos)
 
         if (pos.containerNode()->nonShadowBoundaryParentNode())
             nextPosition = positionInParentAfterNode(pos.containerNode());
-        
-        if (nextPosition == pos 
+
+        if (nextPosition == pos
             || enclosingBlock(nextPosition.containerNode()) != enclosingBlockNode
             || VisiblePosition(pos) != VisiblePosition(nextPosition))
             break;
@@ -149,14 +149,14 @@ ReplacementFragment::ReplacementFragment(Document& document, DocumentFragment* f
         return;
     if (!m_fragment->firstChild())
         return;
-    
+
     RefPtr<Element> editableRoot = selection.rootEditableElement();
     ASSERT(editableRoot);
     if (!editableRoot)
         return;
-    
+
     Node* shadowAncestorNode = editableRoot->deprecatedShadowAncestorNode();
-    
+
     if (!editableRoot->getAttributeEventListener(eventNames().webkitBeforeTextInsertedEvent) &&
         // FIXME: Remove these checks once textareas and textfields actually register an event handler.
         !(shadowAncestorNode && shadowAncestorNode->renderer() && shadowAncestorNode->renderer()->isTextControl()) &&
@@ -170,7 +170,7 @@ ReplacementFragment::ReplacementFragment(Document& document, DocumentFragment* f
         removeInterchangeNodes(m_fragment.get());
         return;
     }
-    
+
     RefPtr<Range> range = VisibleSelection::selectionFromContentsOfNode(holder.get()).toNormalizedRange();
     String text = plainText(range.get(), static_cast<TextIteratorBehavior>(TextIteratorEmitsOriginalText | TextIteratorIgnoresStyleVisibility));
 
@@ -204,14 +204,14 @@ bool ReplacementFragment::isEmpty() const
     return (!m_fragment || !m_fragment->firstChild()) && !m_hasInterchangeNewlineAtStart && !m_hasInterchangeNewlineAtEnd;
 }
 
-Node *ReplacementFragment::firstChild() const 
-{ 
-    return m_fragment ? m_fragment->firstChild() : 0; 
+Node *ReplacementFragment::firstChild() const
+{
+    return m_fragment ? m_fragment->firstChild() : 0;
 }
 
-Node *ReplacementFragment::lastChild() const 
-{ 
-    return m_fragment ? m_fragment->lastChild() : 0; 
+Node *ReplacementFragment::lastChild() const
+{
+    return m_fragment ? m_fragment->lastChild() : 0;
 }
 
 void ReplacementFragment::removeNodePreservingChildren(PassRefPtr<Node> node)
@@ -230,11 +230,11 @@ void ReplacementFragment::removeNode(PassRefPtr<Node> node)
 {
     if (!node)
         return;
-    
+
     ContainerNode* parent = node->nonShadowBoundaryParentNode();
     if (!parent)
         return;
-    
+
     parent->removeChild(node.get(), ASSERT_NO_EXCEPTION);
 }
 
@@ -242,11 +242,11 @@ void ReplacementFragment::insertNodeBefore(PassRefPtr<Node> node, Node* refNode)
 {
     if (!node || !refNode)
         return;
-        
+
     ContainerNode* parent = refNode->nonShadowBoundaryParentNode();
     if (!parent)
         return;
-        
+
     parent->insertBefore(node, refNode, ASSERT_NO_EXCEPTION);
 }
 
@@ -265,7 +265,7 @@ void ReplacementFragment::restoreAndRemoveTestRenderingNodesToFragment(StyledEle
 {
     if (!holder)
         return;
-    
+
     while (RefPtr<Node> node = holder->firstChild()) {
         holder->removeChild(node.get(), ASSERT_NO_EXCEPTION);
         m_fragment->appendChild(node.get(), ASSERT_NO_EXCEPTION);
@@ -316,7 +316,7 @@ void ReplacementFragment::removeInterchangeNodes(Node* container)
         }
         node = node->lastChild();
     }
-    
+
     node = container->firstChild();
     while (node) {
         RefPtr<Node> next = NodeTraversal::next(node);
@@ -332,10 +332,10 @@ inline void ReplaceSelectionCommand::InsertedNodes::respondToNodeInsertion(Node*
 {
     if (!node)
         return;
-    
+
     if (!m_firstNodeInserted)
         m_firstNodeInserted = node;
-    
+
     m_lastNodeInserted = node;
 }
 
@@ -392,16 +392,16 @@ bool ReplaceSelectionCommand::shouldMergeStart(bool selectionStartWasStartOfPara
 {
     if (m_movingParagraph)
         return false;
-    
+
     VisiblePosition startOfInsertedContent(positionAtStartOfInsertedContent());
     VisiblePosition prev = startOfInsertedContent.previous(CannotCrossEditingBoundary);
     if (prev.isNull())
         return false;
-    
+
     // When we have matching quote levels, its ok to merge more frequently.
     // For a successful merge, we still need to make sure that the inserted content starts with the beginning of a paragraph.
-    // And we should only merge here if the selection start was inside a mail blockquote.  This prevents against removing a 
-    // blockquote from newly pasted quoted content that was pasted into an unquoted position.  If that unquoted position happens 
+    // And we should only merge here if the selection start was inside a mail blockquote.  This prevents against removing a
+    // blockquote from newly pasted quoted content that was pasted into an unquoted position.  If that unquoted position happens
     // to be right after another blockquote, we don't want to merge and risk stripping a valid block (and newline) from the pasted content.
     if (isStartOfParagraph(startOfInsertedContent) && selectionStartWasInsideMailBlockquote && hasMatchingQuoteLevel(prev, positionAtEndOfInsertedContent()))
         return true;
@@ -435,7 +435,7 @@ static bool isHeaderElement(const Node* a)
 {
     if (!a)
         return false;
-        
+
     return a->hasTagName(h1Tag)
         || a->hasTagName(h2Tag)
         || a->hasTagName(h3Tag)
@@ -453,7 +453,7 @@ bool ReplaceSelectionCommand::shouldMerge(const VisiblePosition& source, const V
 {
     if (source.isNull() || destination.isNull())
         return false;
-        
+
     Node* sourceNode = source.deepEquivalent().deprecatedNode();
     Node* destinationNode = destination.deepEquivalent().deprecatedNode();
     Node* sourceBlock = enclosingBlock(sourceNode);
@@ -721,7 +721,7 @@ static void removeHeadContents(ReplacementFragment& fragment)
         fragment.removeNode(toRemove[i]);
 }
 
-// Remove style spans before insertion if they are unnecessary.  It's faster because we'll 
+// Remove style spans before insertion if they are unnecessary.  It's faster because we'll
 // avoid doing a layout.
 static bool handleStyleSpansBeforeInsertion(ReplacementFragment& fragment, const Position& insertionPos)
 {
@@ -750,11 +750,11 @@ static bool handleStyleSpansBeforeInsertion(ReplacementFragment& fragment, const
     return true;
 }
 
-// At copy time, WebKit wraps copied content in a span that contains the source document's 
-// default styles.  If the copied Range inherits any other styles from its ancestors, we put 
+// At copy time, WebKit wraps copied content in a span that contains the source document's
+// default styles.  If the copied Range inherits any other styles from its ancestors, we put
 // those styles on a second span.
-// This function removes redundant styles from those spans, and removes the spans if all their 
-// styles are redundant. 
+// This function removes redundant styles from those spans, and removes the spans if all their
+// styles are redundant.
 // We should remove the Apple-style-span class when we're done, see <rdar://problem/5685600>.
 // We should remove styles from spans that are overridden by all of their children, either here
 // or at copy time.
@@ -770,8 +770,8 @@ void ReplaceSelectionCommand::handleStyleSpans(InsertedNodes& insertedNodes)
             break;
         }
     }
-    
-    // There might not be any style spans if we're pasting from another application or if 
+
+    // There might not be any style spans if we're pasting from another application or if
     // we are here because of a document.execCommand("InsertHTML", ...) call.
     if (!wrappingStyleSpan)
         return;
@@ -788,8 +788,8 @@ void ReplaceSelectionCommand::handleStyleSpans(InsertedNodes& insertedNodes)
     // This operation requires that only editing styles to be removed from sourceDocumentStyle.
     style->prepareToApplyAt(firstPositionInNode(context));
 
-    // Remove block properties in the span's style. This prevents properties that probably have no effect 
-    // currently from affecting blocks later if the style is cloned for a new block element during a future 
+    // Remove block properties in the span's style. This prevents properties that probably have no effect
+    // currently from affecting blocks later if the style is cloned for a new block element during a future
     // editing operation.
     // FIXME: They *can* have an effect currently if blocks beneath the style span aren't individually marked
     // with block styles by the editing engine used to style them.  WebKit doesn't do this, but others might.
@@ -809,22 +809,22 @@ void ReplaceSelectionCommand::mergeEndIfNeeded()
 
     VisiblePosition startOfInsertedContent(positionAtStartOfInsertedContent());
     VisiblePosition endOfInsertedContent(positionAtEndOfInsertedContent());
-    
+
     // Bail to avoid infinite recursion.
     if (m_movingParagraph) {
         ASSERT_NOT_REACHED();
         return;
     }
-    
-    // Merging two paragraphs will destroy the moved one's block styles.  Always move the end of inserted forward 
-    // to preserve the block style of the paragraph already in the document, unless the paragraph to move would 
+
+    // Merging two paragraphs will destroy the moved one's block styles.  Always move the end of inserted forward
+    // to preserve the block style of the paragraph already in the document, unless the paragraph to move would
     // include the what was the start of the selection that was pasted into, so that we preserve that paragraph's
     // block styles.
     bool mergeForward = !(inSameParagraph(startOfInsertedContent, endOfInsertedContent) && !isStartOfParagraph(startOfInsertedContent));
-    
+
     VisiblePosition destination = mergeForward ? endOfInsertedContent.next() : endOfInsertedContent;
     VisiblePosition startOfParagraphToMove = mergeForward ? startOfParagraph(endOfInsertedContent) : endOfInsertedContent.next();
-   
+
     // Merging forward could result in deleting the destination anchor node.
     // To avoid this, we add a placeholder node before the start of the paragraph.
     if (endOfParagraph(startOfParagraphToMove) == destination) {
@@ -834,7 +834,7 @@ void ReplaceSelectionCommand::mergeEndIfNeeded()
     }
 
     moveParagraph(startOfParagraphToMove, endOfParagraph(startOfParagraphToMove), destination);
-    
+
     // Merging forward will remove m_endOfInsertedContent from the document.
     if (mergeForward) {
         if (m_startOfInsertedContent.isOrphan())
@@ -909,12 +909,12 @@ void ReplaceSelectionCommand::doApply()
     ReplacementFragment fragment(document(), m_documentFragment.get(), selection);
     if (performTrivialReplace(fragment))
         return;
-    
+
     // We can skip matching the style if the selection is plain text.
     if ((selection.start().deprecatedNode()->renderer() && selection.start().deprecatedNode()->renderer()->style().userModify() == READ_WRITE_PLAINTEXT_ONLY)
         && (selection.end().deprecatedNode()->renderer() && selection.end().deprecatedNode()->renderer()->style().userModify() == READ_WRITE_PLAINTEXT_ONLY))
         m_matchStyle = false;
-    
+
     if (m_matchStyle) {
         m_insertionStyle = EditingStyle::create(selection.start());
         m_insertionStyle->mergeTypingStyle(document());
@@ -922,12 +922,12 @@ void ReplaceSelectionCommand::doApply()
 
     VisiblePosition visibleStart = selection.visibleStart();
     VisiblePosition visibleEnd = selection.visibleEnd();
-    
+
     bool selectionEndWasEndOfParagraph = isEndOfParagraph(visibleEnd);
     bool selectionStartWasStartOfParagraph = isStartOfParagraph(visibleStart);
-    
+
     Node* startBlock = enclosingBlock(visibleStart.deepEquivalent().deprecatedNode());
-    
+
     Position insertionPos = selection.start();
     bool startIsInsideMailBlockquote = enclosingNodeOfType(insertionPos, isMailBlockquote, CanCrossEditingBoundary);
     bool selectionIsPlainText = !selection.isContentRichlyEditable();
@@ -936,16 +936,16 @@ void ReplaceSelectionCommand::doApply()
     if ((selectionStartWasStartOfParagraph && selectionEndWasEndOfParagraph && !startIsInsideMailBlockquote) ||
         startBlock == currentRoot || isListItem(startBlock) || selectionIsPlainText)
         m_preventNesting = false;
-    
+
     if (selection.isRange()) {
         // When the end of the selection being pasted into is at the end of a paragraph, and that selection
         // spans multiple blocks, not merging may leave an empty line.
-        // When the start of the selection being pasted into is at the start of a block, not merging 
+        // When the start of the selection being pasted into is at the start of a block, not merging
         // will leave hanging block(s).
-        // Merge blocks if the start of the selection was in a Mail blockquote, since we handle  
-        // that case specially to prevent nesting. 
+        // Merge blocks if the start of the selection was in a Mail blockquote, since we handle
+        // that case specially to prevent nesting.
         bool mergeBlocksAfterDelete = startIsInsideMailBlockquote || isEndOfParagraph(visibleEnd) || isStartOfBlock(visibleStart);
-        // FIXME: We should only expand to include fully selected special elements if we are copying a 
+        // FIXME: We should only expand to include fully selected special elements if we are copying a
         // selection and pasting it on top of itself.
         deleteSelection(false, mergeBlocksAfterDelete, true, false);
         visibleStart = endingSelection().visibleStart();
@@ -969,8 +969,8 @@ void ReplaceSelectionCommand::doApply()
             }
         }
         // We split the current paragraph in two to avoid nesting the blocks from the fragment inside the current block.
-        // For example paste <div>foo</div><div>bar</div><div>baz</div> into <div>x^x</div>, where ^ is the caret.  
-        // As long as the  div styles are the same, visually you'd expect: <div>xbar</div><div>bar</div><div>bazx</div>, 
+        // For example paste <div>foo</div><div>bar</div><div>baz</div> into <div>x^x</div>, where ^ is the caret.
+        // As long as the  div styles are the same, visually you'd expect: <div>xbar</div><div>bar</div><div>bazx</div>,
         // not <div>xbar<div>bar</div><div>bazx</div></div>.
         // Don't do this if the selection started in a Mail blockquote.
         if (m_preventNesting && !startIsInsideMailBlockquote && !isEndOfParagraph(visibleStart) && !isStartOfParagraph(visibleStart)) {
@@ -979,37 +979,37 @@ void ReplaceSelectionCommand::doApply()
         }
         insertionPos = endingSelection().start();
     }
-    
-    // We don't want any of the pasted content to end up nested in a Mail blockquote, so first break 
+
+    // We don't want any of the pasted content to end up nested in a Mail blockquote, so first break
     // out of any surrounding Mail blockquotes. Unless we're inserting in a table, in which case
     // breaking the blockquote will prevent the content from actually being inserted in the table.
-    if (startIsInsideMailBlockquote && m_preventNesting && !(enclosingNodeOfType(insertionPos, &isTableStructureNode))) { 
-        applyCommandToComposite(BreakBlockquoteCommand::create(document())); 
-        // This will leave a br between the split. 
-        Node* br = endingSelection().start().deprecatedNode(); 
-        ASSERT(br->hasTagName(brTag)); 
-        // Insert content between the two blockquotes, but remove the br (since it was just a placeholder). 
+    if (startIsInsideMailBlockquote && m_preventNesting && !(enclosingNodeOfType(insertionPos, &isTableStructureNode))) {
+        applyCommandToComposite(BreakBlockquoteCommand::create(document()));
+        // This will leave a br between the split.
+        Node* br = endingSelection().start().deprecatedNode();
+        ASSERT(br->hasTagName(brTag));
+        // Insert content between the two blockquotes, but remove the br (since it was just a placeholder).
         insertionPos = positionInParentBeforeNode(br);
         removeNode(br);
     }
-    
+
     // Inserting content could cause whitespace to collapse, e.g. inserting <div>foo</div> into hello^ world.
     prepareWhitespaceAtPositionForSplit(insertionPos);
 
     // If the downstream node has been removed there's no point in continuing.
     if (!insertionPos.downstream().deprecatedNode())
       return;
-    
-    // NOTE: This would be an incorrect usage of downstream() if downstream() were changed to mean the last position after 
-    // p that maps to the same visible position as p (since in the case where a br is at the end of a block and collapsed 
-    // away, there are positions after the br which map to the same visible position as [br, 0]).  
+
+    // NOTE: This would be an incorrect usage of downstream() if downstream() were changed to mean the last position after
+    // p that maps to the same visible position as p (since in the case where a br is at the end of a block and collapsed
+    // away, there are positions after the br which map to the same visible position as [br, 0]).
     RefPtr<Node> endBR = insertionPos.downstream().deprecatedNode()->hasTagName(brTag) ? insertionPos.downstream().deprecatedNode() : nullptr;
     VisiblePosition originalVisPosBeforeEndBR;
     if (endBR)
         originalVisPosBeforeEndBR = VisiblePosition(positionBeforeNode(endBR.get()), DOWNSTREAM).previous();
-    
+
     RefPtr<Node> insertionBlock = enclosingBlock(insertionPos.deprecatedNode());
-    
+
     // Adjust insertionPos to prevent nesting.
     // If the start was in a Mail blockquote, we will have already handled adjusting insertionPos above.
     if (m_preventNesting && insertionBlock && !isTableCell(insertionBlock.get()) && !startIsInsideMailBlockquote) {
@@ -1020,10 +1020,10 @@ void ReplaceSelectionCommand::doApply()
         else if (isStartOfBlock(visibleInsertionPos))
             insertionPos = positionInParentBeforeNode(insertionBlock.get());
     }
-    
+
     // Paste at start or end of link goes outside of link.
     insertionPos = positionAvoidingSpecialElementBoundary(insertionPos);
-    
+
     // FIXME: Can this wait until after the operation has been performed?  There doesn't seem to be
     // any work performed after this that queries or uses the typing style.
     frame().selection().clearTypingStyle();
@@ -1074,8 +1074,8 @@ void ReplaceSelectionCommand::doApply()
     // 2) Remove redundant styles and style tags, this inner <b> for example: <b>foo <b>bar</b> baz</b>.
     // 3) Merge the start of the added content with the content before the position being pasted into.
     // 4) Do one of the following: a) expand the last br if the fragment ends with one and it collapsed,
-    // b) merge the last paragraph of the incoming fragment with the paragraph that contained the 
-    // end of the selection that was pasted into, or c) handle an interchange newline at the end of the 
+    // b) merge the last paragraph of the incoming fragment with the paragraph that contained the
+    // end of the selection that was pasted into, or c) handle an interchange newline at the end of the
     // incoming fragment.
     // 5) Add spaces for smart replace.
     // 6) Select the replacement if requested, and match style if requested.
@@ -1083,7 +1083,7 @@ void ReplaceSelectionCommand::doApply()
     InsertedNodes insertedNodes;
     RefPtr<Node> refNode = fragment.firstChild();
     RefPtr<Node> node = refNode->nextSibling();
-    
+
     fragment.removeNode(refNode);
 
     Node* blockStart = enclosingBlock(insertionPos.deprecatedNode());
@@ -1142,7 +1142,7 @@ void ReplaceSelectionCommand::doApply()
             removeNode(nodeToRemove);
         }
     }
-    
+
     makeInsertedContentRoundTrippableWithHTMLTreeBuilder(insertedNodes);
 
     removeRedundantStylesAndKeepStyleSpanInline(insertedNodes);
@@ -1157,7 +1157,7 @@ void ReplaceSelectionCommand::doApply()
     // Determine whether or not we should merge the end of inserted content with what's after it before we do
     // the start merge so that the start merge doesn't effect our decision.
     m_shouldMergeEnd = shouldMergeEnd(selectionEndWasEndOfParagraph);
-    
+
     if (shouldMergeStart(selectionStartWasStartOfParagraph, fragment.hasInterchangeNewlineAtStart(), startIsInsideMailBlockquote)) {
         VisiblePosition startOfParagraphToMove = positionAtStartOfInsertedContent();
         VisiblePosition destination = startOfParagraphToMove.previous();
@@ -1167,13 +1167,13 @@ void ReplaceSelectionCommand::doApply()
         Node* destinationNode = destination.deepEquivalent().deprecatedNode();
         if (m_shouldMergeEnd && destinationNode != enclosingInline(destinationNode) && enclosingInline(destinationNode)->nextSibling())
             insertNodeBefore(createBreakElement(document()), refNode.get());
-        
+
         // Merging the the first paragraph of inserted content with the content that came
-        // before the selection that was pasted into would also move content after 
-        // the selection that was pasted into if: only one paragraph was being pasted, 
-        // and it was not wrapped in a block, the selection that was pasted into ended 
+        // before the selection that was pasted into would also move content after
+        // the selection that was pasted into if: only one paragraph was being pasted,
+        // and it was not wrapped in a block, the selection that was pasted into ended
         // at the end of a block and the next paragraph didn't start at the start of a block.
-        // Insert a line break just after the inserted content to separate it from what 
+        // Insert a line break just after the inserted content to separate it from what
         // comes after and prevent that from happening.
         VisiblePosition endOfInsertedContent = positionAtEndOfInsertedContent();
         if (startOfParagraph(endOfInsertedContent) == startOfParagraphToMove) {
@@ -1219,7 +1219,7 @@ void ReplaceSelectionCommand::doApply()
             // Select up to the beginning of the next paragraph.
             lastPositionToSelect = next.deepEquivalent().downstream();
         }
-        
+
     } else
         mergeEndIfNeeded();
 
@@ -1233,7 +1233,7 @@ void ReplaceSelectionCommand::doApply()
     // no style matching is necessary.
     if (plainTextFragment)
         m_matchStyle = false;
-        
+
     completeHTMLReplacement(lastPositionToSelect);
 }
 
@@ -1241,17 +1241,17 @@ bool ReplaceSelectionCommand::shouldRemoveEndBR(Node* endBR, const VisiblePositi
 {
     if (!endBR || !endBR->inDocument())
         return false;
-        
+
     VisiblePosition visiblePos(positionBeforeNode(endBR));
-    
+
     // Don't remove the br if nothing was inserted.
     if (visiblePos.previous() == originalVisPosBeforeEndBR)
         return false;
-    
+
     // Remove the br if it is collapsed away and so is unnecessary.
     if (!document().inNoQuirksMode() && isEndOfBlock(visiblePos) && !isStartOfParagraph(visiblePos))
         return true;
-        
+
     // A br that was originally holding a line open should be displaced by inserted content or turned into a line break.
     // A br that was originally acting as a line break should still be acting as a line break, not as a placeholder.
     return isStartOfParagraph(visiblePos) && isEndOfParagraph(visiblePos);
@@ -1474,7 +1474,7 @@ void ReplaceSelectionCommand::updateNodesInserted(Node *node)
 
 // During simple pastes, where we're just pasting a text node into a run of text, we insert the text node
 // directly into the text node that holds the selection.  This is much faster than the generalized code in
-// ReplaceSelectionCommand, and works around <https://bugs.webkit.org/show_bug.cgi?id=6148> since we don't 
+// ReplaceSelectionCommand, and works around <https://bugs.webkit.org/show_bug.cgi?id=6148> since we don't
 // split text nodes.
 bool ReplaceSelectionCommand::performTrivialReplace(const ReplacementFragment& fragment)
 {

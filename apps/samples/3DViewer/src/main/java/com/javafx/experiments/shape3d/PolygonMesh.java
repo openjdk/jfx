@@ -58,15 +58,15 @@ public class PolygonMesh {
     public ObservableFloatArray getPoints() {
         return points;
     }
-    
+
     public ObservableFloatArray getTexCoords() {
         return texCoords;
     }
-    
+
     public ObservableIntegerArray getFaceSmoothingGroups() {
         return faceSmoothingGroups;
     }
-     
+
     public int getNumEdgesInFaces() {
         if (numEdgesInFaces == -1) {
             numEdgesInFaces = 0;
@@ -77,7 +77,7 @@ public class PolygonMesh {
         }
         return numEdgesInFaces;
     }
-    
+
     // TODO: Hardcode to constants for FX 8 (only one vertex format)
     private static final int NUM_COMPONENTS_PER_POINT = 3;
     private static final int NUM_COMPONENTS_PER_TEXCOORD = 2;

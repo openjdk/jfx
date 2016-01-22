@@ -212,7 +212,7 @@ public final class SwipeEvent extends GestureEvent {
     public SwipeEvent copyFor(Object newSource, EventTarget newTarget) {
         return (SwipeEvent) super.copyFor(newSource, newTarget);
     }
-    
+
     /**
      * Creates a copy of the given event with the given fields substituted.
      * @param source the new source of the copied event
@@ -231,6 +231,6 @@ public final class SwipeEvent extends GestureEvent {
     public EventType<SwipeEvent> getEventType() {
         return (EventType<SwipeEvent>) super.getEventType();
     }
-    
-    
+
+
 }

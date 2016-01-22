@@ -34,45 +34,45 @@
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
-    
+
 class PlatformSpeechSynthesisUtteranceClient {
 public:
     // Implement methods as needed.
 protected:
     virtual ~PlatformSpeechSynthesisUtteranceClient() { }
 };
-    
+
 class PlatformSpeechSynthesisUtterance : public RefCounted<PlatformSpeechSynthesisUtterance> {
 public:
     static PassRefPtr<PlatformSpeechSynthesisUtterance> create(PlatformSpeechSynthesisUtteranceClient*);
-    
+
     const String& text() const { return m_text; }
     void setText(const String& text) { m_text = text; }
-    
+
     const String& lang() const { return m_lang; }
     void setLang(const String& lang) { m_lang = lang; }
-    
+
     PlatformSpeechSynthesisVoice* voice() const { return m_voice.get(); }
     void setVoice(PlatformSpeechSynthesisVoice* voice) { m_voice = voice; }
 
     // Range = [0, 1] where 1 is the default.
     float volume() const { return m_volume; }
     void setVolume(float volume) { m_volume = std::max(std::min(1.0f, volume), 0.0f); }
-    
+
     // Range = [0.1, 10] where 1 is the default.
     float rate() const { return m_rate; }
     void setRate(float rate) { m_rate = std::max(std::min(10.0f, rate), 0.1f); }
-    
+
     // Range = [0, 2] where 1 is the default.
     float pitch() const { return m_pitch; }
     void setPitch(float pitch) { m_pitch = std::max(std::min(2.0f, pitch), 0.0f); }
 
     double startTime() const { return m_startTime; }
     void setStartTime(double startTime) { m_startTime = startTime; }
-    
+
     PlatformSpeechSynthesisUtteranceClient* client() const { return m_client; }
     void setClient(PlatformSpeechSynthesisUtteranceClient* client) { m_client = client; }
-    
+
 private:
     explicit PlatformSpeechSynthesisUtterance(PlatformSpeechSynthesisUtteranceClient*);
 
@@ -85,7 +85,7 @@ private:
     float m_pitch;
     double m_startTime;
 };
-    
+
 } // namespace WebCore
 
 #endif // ENABLE(SPEECH_SYNTHESIS)

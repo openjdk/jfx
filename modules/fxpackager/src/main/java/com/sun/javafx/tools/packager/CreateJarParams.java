@@ -99,11 +99,11 @@ public class CreateJarParams extends CommonParams {
     public void setFxVersion(String fxVersion) {
         this.fxVersion = fxVersion;
     }
-    
+
     public void setAllPermissions(Boolean allPermissions) {
         this.allPermissions = allPermissions;
     }
-    
+
     public void setCodebase(String codebase) {
         this.codebase = codebase;
     }

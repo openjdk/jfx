@@ -111,7 +111,7 @@ class GtkWindow extends Window {
 
     @Override
     protected native void _toBack(long ptr);
-    
+
     @Override
     protected native void _enterModal(long ptr);
 
@@ -120,11 +120,11 @@ class GtkWindow extends Window {
 
     @Override
     protected native void _exitModal(long ptr);
-    
+
     protected native long _getNativeWindowImpl(long ptr);
 
     private native boolean isVisible(long ptr);
-    
+
     @Override
     protected boolean _setVisible(long ptr, boolean visible) {
         setVisibleImpl(ptr, visible);
@@ -132,7 +132,7 @@ class GtkWindow extends Window {
     }
 
     @Override
-    protected boolean _minimize(long ptr, boolean minimize) {   
+    protected boolean _minimize(long ptr, boolean minimize) {
         minimizeImpl(ptr, minimize);
         notifyStateChanged(WindowEvent.MINIMIZE);
         return minimize;
@@ -217,13 +217,13 @@ class GtkWindow extends Window {
     private native void getFrameExtents(long ptr, int[] extarr);
 
     @Override
-    protected void _requestInput(long ptr, String text, int type, double width, double height, 
+    protected void _requestInput(long ptr, String text, int type, double width, double height,
                                     double Mxx, double Mxy, double Mxz, double Mxt,
-                                    double Myx, double Myy, double Myz, double Myt, 
+                                    double Myx, double Myy, double Myz, double Myt,
                                     double Mzx, double Mzy, double Mzz, double Mzt) {
         throw new UnsupportedOperationException("Not supported yet.");
     }
-        
+
     @Override
     protected void _releaseInput(long ptr) {
         throw new UnsupportedOperationException("Not supported yet.");

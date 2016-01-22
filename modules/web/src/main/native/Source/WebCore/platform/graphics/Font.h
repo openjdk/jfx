@@ -127,7 +127,7 @@ public:
     bool isFixedPitch() const;
     bool isPrinterFont() const { return m_fontDescription.usePrinterFont(); }
     bool isSVGFont() const { return primaryFont()->isSVGFont(); }
-    
+
     FontRenderingMode renderingMode() const { return m_fontDescription.renderingMode(); }
 
     TypesettingFeatures typesettingFeatures() const { return static_cast<TypesettingFeatures>(m_typesettingFeatures); }

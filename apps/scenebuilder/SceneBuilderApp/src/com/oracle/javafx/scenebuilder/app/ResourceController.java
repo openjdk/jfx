@@ -61,7 +61,7 @@ class ResourceController {
     public File getResourceFile() {
         return resourceFile;
     }
-    
+
     public void setResourceFile(File file) {
         if (file != null) {
             if (readPropertyResourceBundle(file) == null) {
@@ -73,7 +73,7 @@ class ResourceController {
             }
         }
     }
-    
+
     public void performSetResource() {
         // Open a file chooser for *.properties & *.bss
         FileChooser fileChooser = new FileChooser();
@@ -113,26 +113,26 @@ class ResourceController {
         assert resourceFile != null;
         resourceFileDidChange();
     }
-    
+
     /*
      * Private
      */
-    
+
     private void resourceFileDidChange() {
         ResourceBundle resources;
-        
+
         if (resourceFile != null) {
             resources = readPropertyResourceBundle(resourceFile);
             assert resources != null;
         } else {
             resources = null;
         }
-        
+
         documentWindowController.getEditorController().setResources(resources);
         documentWindowController.getWatchingController().update();
     }
-    
-    
+
+
     private static PropertyResourceBundle readPropertyResourceBundle(File f) {
         PropertyResourceBundle result;
         try {

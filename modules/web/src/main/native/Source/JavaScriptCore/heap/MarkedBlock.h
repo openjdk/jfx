@@ -50,7 +50,7 @@
 #endif
 
 namespace JSC {
-    
+
     class Heap;
     class JSCell;
     class MarkedAllocator;
@@ -58,9 +58,9 @@ namespace JSC {
     typedef uintptr_t Bits;
 
     static const size_t MB = 1024 * 1024;
-    
+
     bool isZapped(const JSCell*);
-    
+
     // A marked block is a page-aligned container for heap-allocated objects.
     // Objects are allocated within cells of the marked block. For a given
     // marked block, all cells have the same size. Objects smaller than the
@@ -86,7 +86,7 @@ namespace JSC {
         struct FreeCell {
             FreeCell* next;
         };
-        
+
         struct FreeList {
             FreeCell* head;
             size_t bytes;
@@ -118,14 +118,14 @@ namespace JSC {
         static bool isAtomAligned(const void*);
         static MarkedBlock* blockFor(const void*);
         static size_t firstAtom();
-        
+
         void lastChanceToFinalize();
 
         MarkedAllocator* allocator() const;
         Heap* heap() const;
         VM* vm() const;
         WeakSet& weakSet();
-        
+
         enum SweepMode { SweepOnly, SweepToFreeList };
         FreeList sweep(SweepMode = SweepOnly);
 
@@ -143,7 +143,7 @@ namespace JSC {
         void didConsumeEmptyFreeList(); // Call this if you sweep a block, but the returned FreeList is empty.
         void didSweepToNoAvail(); // Call this if you sweep a block and get an empty free list back.
 
-        // Returns true if the "newly allocated" bitmap was non-null 
+        // Returns true if the "newly allocated" bitmap was non-null
         // and was successfully cleared and false otherwise.
         bool clearNewlyAllocated();
         void clearMarks();
@@ -197,7 +197,7 @@ namespace JSC {
         size_t atomNumber(const void*);
         void callDestructor(JSCell*);
         template<BlockState, SweepMode, DestructorType> FreeList specializedSweep();
-        
+
         size_t m_atomsPerCell;
         size_t m_endAtom; // This is a fuzzy end. Always test for < m_endAtom.
 #if ENABLE(PARALLEL_GC)
@@ -316,7 +316,7 @@ namespace JSC {
 
     inline MarkedBlock::DestructorType MarkedBlock::destructorType()
     {
-        return m_destructorType; 
+        return m_destructorType;
     }
 
     inline size_t MarkedBlock::size()

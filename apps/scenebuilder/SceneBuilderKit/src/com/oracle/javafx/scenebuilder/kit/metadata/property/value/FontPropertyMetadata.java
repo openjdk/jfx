@@ -39,7 +39,7 @@ import javafx.scene.text.Font;
 
 /**
  *
- * 
+ *
  */
 public class FontPropertyMetadata extends ComplexPropertyMetadata<Font> {
 
@@ -50,8 +50,8 @@ public class FontPropertyMetadata extends ComplexPropertyMetadata<Font> {
             = new DoublePropertyMetadata(new PropertyName("size"), //NOI18N
             DoublePropertyMetadata.DoubleKind.SIZE, true, 0.0, InspectorPath.UNUSED);
 
-    
-    public FontPropertyMetadata(PropertyName name, boolean readWrite, 
+
+    public FontPropertyMetadata(PropertyName name, boolean readWrite,
             Font defaultValue, InspectorPath inspectorPath) {
         super(name, Font.class, readWrite, defaultValue, inspectorPath);
     }
@@ -59,11 +59,11 @@ public class FontPropertyMetadata extends ComplexPropertyMetadata<Font> {
     /*
      * ComplexPropertyMetadata
      */
-    
+
     @Override
     public FXOMInstance makeFxomInstanceFromValue(Font value, FXOMDocument fxomDocument) {
         final FXOMInstance result = new FXOMInstance(fxomDocument, getValueClass());
-        
+
         nameMetadata.setValue(result, value.getName());
         sizeMetadata.setValue(result, value.getSize());
 

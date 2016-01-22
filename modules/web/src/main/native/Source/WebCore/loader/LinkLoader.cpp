@@ -78,7 +78,7 @@ void LinkLoader::notifyFinished(CachedResource* resource)
 
     if (m_cachedLinkResource->errorOccurred())
         m_linkLoadingErrorTimer.startOneShot(0);
-    else 
+    else
         m_linkLoadTimer.startOneShot(0);
 
     m_cachedLinkResource->removeClient(this);
@@ -90,7 +90,7 @@ bool LinkLoader::loadLink(const LinkRelAttribute& relAttribute, const String& ty
 {
     // We'll record this URL per document, even if we later only use it in top level frames
     if (relAttribute.m_iconType != InvalidIcon && href.isValid() && !href.isEmpty()) {
-        if (!m_client->shouldLoadLink()) 
+        if (!m_client->shouldLoadLink())
             return false;
         document->addIconURL(href.string(), type, sizes, relAttribute.m_iconType);
     }
@@ -110,13 +110,13 @@ bool LinkLoader::loadLink(const LinkRelAttribute& relAttribute, const String& ty
         ResourceLoadPriority priority = ResourceLoadPriorityUnresolved;
         CachedResource::Type type = CachedResource::LinkPrefetch;
         // We only make one request to the cachedresourcelodaer if multiple rel types are
-        // specified, 
+        // specified,
         if (relAttribute.m_isLinkSubresource) {
             priority = ResourceLoadPriorityLow;
             type = CachedResource::LinkSubresource;
         }
         CachedResourceRequest linkRequest(ResourceRequest(document->completeURL(href)), priority);
-        
+
         if (m_cachedLinkResource) {
             m_cachedLinkResource->removeClient(this);
             m_cachedLinkResource = 0;

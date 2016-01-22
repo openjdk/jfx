@@ -50,7 +50,7 @@ bool checkSyntax(ExecState* exec, const SourceCode& source, JSValue* returnedExc
 
     return true;
 }
-    
+
 bool checkSyntax(VM& vm, const SourceCode& source, ParserError& error)
 {
     JSLockHolder lock(vm);

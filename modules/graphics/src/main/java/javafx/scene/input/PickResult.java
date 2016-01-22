@@ -145,7 +145,7 @@ public class PickResult {
     }
 
     /**
-     * Returns the intersected distance between camera position 
+     * Returns the intersected distance between camera position
      * and the intersected point.
      *
      * @return the distance from camera to the intersection
@@ -158,7 +158,7 @@ public class PickResult {
      * Returns the intersected face of the picked Node, FACE_UNDEFINED
      *         if the node doesn't have user-specified faces
      *         or was picked on bounds.
-     * 
+     *
      * @return the picked face
      */
     public final int getIntersectedFace() {
@@ -199,7 +199,7 @@ public class PickResult {
         }
         if (getIntersectedNormal() != null) {
                 sb.append(", normal = ").append(getIntersectedNormal());
-        }        
+        }
         if (getIntersectedTexCoord() != null) {
                 sb.append(", texCoord = ").append(getIntersectedTexCoord());
         }

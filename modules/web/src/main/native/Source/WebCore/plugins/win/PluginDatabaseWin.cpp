@@ -22,7 +22,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -148,7 +148,7 @@ void PluginDatabase::getPluginPathsInDirectories(HashSet<String>& paths) const
     addPluginPathsFromRegistry(HKEY_LOCAL_MACHINE, paths);
     addPluginPathsFromRegistry(HKEY_CURRENT_USER, paths);
 
-    // If both the old and new WMP plugin are present in the plugins set, 
+    // If both the old and new WMP plugin are present in the plugins set,
     // we remove the old one so we don't end up choosing the old one.
     if (!oldWMPPluginPath.isEmpty() && !newWMPPluginPath.isEmpty())
         paths.remove(oldWMPPluginPath);
@@ -160,7 +160,7 @@ static inline Vector<int> parseVersionString(const String& versionString)
 
     unsigned startPos = 0;
     unsigned endPos;
-    
+
     while (startPos < versionString.length()) {
         for (endPos = startPos; endPos < versionString.length(); ++endPos)
             if (versionString[endPos] == '.' || versionString[endPos] == '_')
@@ -197,7 +197,7 @@ static inline void addMozillaPluginDirectories(Vector<String>& directories)
     // Enumerate all Mozilla plugin directories in the registry
     HKEY key;
     LONG result;
-    
+
     result = RegOpenKeyEx(HKEY_LOCAL_MACHINE, TEXT("Software\\Mozilla"), 0, KEY_READ, &key);
     if (result == ERROR_SUCCESS) {
         WCHAR name[128];
@@ -231,7 +231,7 @@ static inline void addMozillaPluginDirectories(Vector<String>& directories)
                 RegCloseKey(extensionsKey);
             }
         }
-        
+
         RegCloseKey(key);
     }
 }

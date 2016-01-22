@@ -98,7 +98,7 @@ static NSSize abs(NSSize size)
         finalSize.width = -finalSize.width;
     if (finalSize.height < 0)
         finalSize.height = -finalSize.height;
-    return finalSize;    
+    return finalSize;
 }
 
 @implementation WebScrollAnimationHelperDelegate
@@ -194,7 +194,7 @@ static NSSize abs(NSSize size)
     self = [super init];
     if (!self)
         return nil;
-    
+
     _scrollableArea = scrollableArea;
     return self;
 }
@@ -242,7 +242,7 @@ static NSSize abs(NSSize size)
     WebCore::Scrollbar* scrollbar = 0;
     if ([scrollerImp isHorizontal])
         scrollbar = _scrollableArea->horizontalScrollbar();
-    else 
+    else
         scrollbar = _scrollableArea->verticalScrollbar();
 
     // It is possible to have a null scrollbar here since it is possible for this delegate
@@ -399,7 +399,7 @@ enum FeatureToAnimate {
     self = [super init];
     if (!self)
         return nil;
-    
+
     _scrollbar = scrollbar;
     return self;
 }
@@ -509,7 +509,7 @@ enum FeatureToAnimate {
     scrollbarPartAnimation = adoptNS([[WebScrollbarPartAnimation alloc] initWithScrollbar:_scrollbar
                                                                        featureToAnimate:part == ThumbPart ? ThumbAlpha : TrackAlpha
                                                                             animateFrom:part == ThumbPart ? [scrollerPainter knobAlpha] : [scrollerPainter trackAlpha]
-                                                                              animateTo:newAlpha 
+                                                                              animateTo:newAlpha
                                                                                duration:duration]);
     [scrollbarPartAnimation startAnimation];
 }
@@ -564,7 +564,7 @@ enum FeatureToAnimate {
     [scrollbarPainter setUiStateTransitionProgress:1 - [scrollerImp uiStateTransitionProgress]];
 
     if (!_uiStateTransitionAnimation)
-        _uiStateTransitionAnimation = adoptNS([[WebScrollbarPartAnimation alloc] initWithScrollbar:_scrollbar 
+        _uiStateTransitionAnimation = adoptNS([[WebScrollbarPartAnimation alloc] initWithScrollbar:_scrollbar
                                                                                 featureToAnimate:UIStateTransition
                                                                                      animateFrom:[scrollbarPainter uiStateTransitionProgress]
                                                                                        animateTo:1.0
@@ -748,7 +748,7 @@ void ScrollAnimatorMac::adjustScrollPositionToBoundsIfNecessary()
 void ScrollAnimatorMac::immediateScrollTo(const FloatPoint& newPosition)
 {
     FloatPoint adjustedPosition = adjustScrollPositionIfNecessary(newPosition);
- 
+
     bool positionChanged = adjustedPosition.x() != m_currentPosX || adjustedPosition.y() != m_currentPosY;
     if (!positionChanged && !scrollableArea()->scrollOriginChanged())
         return;
@@ -1121,7 +1121,7 @@ bool ScrollAnimatorMac::pinnedInDirection(float deltaX, float deltaY)
             limitDelta.setWidth(m_scrollableArea->totalContentsSize().width() - (m_scrollableArea->visibleContentRect().maxX() + m_scrollableArea->scrollOrigin().x()));
         }
     }
-    
+
     if ((deltaX != 0 || deltaY != 0) && (limitDelta.width() < 1 && limitDelta.height() < 1))
         return true;
     return false;
@@ -1247,7 +1247,7 @@ void ScrollAnimatorMac::updateScrollerStyle()
         m_needsScrollerStyleUpdate = false;
         return;
     }
-    
+
     macTheme->usesOverlayScrollbarsChanged();
 
     NSScrollerStyle newStyle = [m_scrollbarPainterController scrollerStyle];
@@ -1256,14 +1256,14 @@ void ScrollAnimatorMac::updateScrollerStyle()
         verticalScrollbar->invalidate();
 
         ScrollbarPainter oldVerticalPainter = [m_scrollbarPainterController verticalScrollerImp];
-        ScrollbarPainter newVerticalPainter = [NSClassFromString(@"NSScrollerImp") scrollerImpWithStyle:newStyle 
-                                                                                    controlSize:(NSControlSize)verticalScrollbar->controlSize() 
-                                                                                    horizontal:NO 
+        ScrollbarPainter newVerticalPainter = [NSClassFromString(@"NSScrollerImp") scrollerImpWithStyle:newStyle
+                                                                                    controlSize:(NSControlSize)verticalScrollbar->controlSize()
+                                                                                    horizontal:NO
                                                                                     replacingScrollerImp:oldVerticalPainter];
         [m_scrollbarPainterController setVerticalScrollerImp:newVerticalPainter];
         macTheme->setNewPainterForScrollbar(verticalScrollbar, newVerticalPainter);
 
-        // The different scrollbar styles have different thicknesses, so we must re-set the 
+        // The different scrollbar styles have different thicknesses, so we must re-set the
         // frameRect to the new thickness, and the re-layout below will ensure the position
         // and length are properly updated.
         int thickness = macTheme->scrollbarThickness(verticalScrollbar->controlSize());
@@ -1274,21 +1274,21 @@ void ScrollAnimatorMac::updateScrollerStyle()
         horizontalScrollbar->invalidate();
 
         ScrollbarPainter oldHorizontalPainter = [m_scrollbarPainterController horizontalScrollerImp];
-        ScrollbarPainter newHorizontalPainter = [NSClassFromString(@"NSScrollerImp") scrollerImpWithStyle:newStyle 
-                                                                                    controlSize:(NSControlSize)horizontalScrollbar->controlSize() 
-                                                                                    horizontal:YES 
+        ScrollbarPainter newHorizontalPainter = [NSClassFromString(@"NSScrollerImp") scrollerImpWithStyle:newStyle
+                                                                                    controlSize:(NSControlSize)horizontalScrollbar->controlSize()
+                                                                                    horizontal:YES
                                                                                     replacingScrollerImp:oldHorizontalPainter];
         [m_scrollbarPainterController setHorizontalScrollerImp:newHorizontalPainter];
         macTheme->setNewPainterForScrollbar(horizontalScrollbar, newHorizontalPainter);
 
-        // The different scrollbar styles have different thicknesses, so we must re-set the 
+        // The different scrollbar styles have different thicknesses, so we must re-set the
         // frameRect to the new thickness, and the re-layout below will ensure the position
         // and length are properly updated.
         int thickness = macTheme->scrollbarThickness(horizontalScrollbar->controlSize());
         horizontalScrollbar->setFrameRect(IntRect(0, 0, thickness, thickness));
     }
 
-    // If m_needsScrollerStyleUpdate is true, then the page is restoring from the page cache, and 
+    // If m_needsScrollerStyleUpdate is true, then the page is restoring from the page cache, and
     // a relayout will happen on its own. Otherwise, we must initiate a re-layout ourselves.
     scrollableArea()->scrollbarStyleChanged(newStyle, !m_needsScrollerStyleUpdate);
 

@@ -128,7 +128,7 @@ public class Menu extends MenuItem {
     public Menu() {
         this("");
     }
-    
+
     /**
      * Constructs a Menu and sets the display text with the specified text.
      *
@@ -189,7 +189,7 @@ public class Menu extends MenuItem {
      * @defaultValue false
      */
     private ReadOnlyBooleanWrapper showing;
-    
+
     private void setShowing(boolean value) {
         if (getItems().size() == 0 || (value && isShowing())) return;
 
@@ -208,7 +208,7 @@ public class Menu extends MenuItem {
            Event.fireEvent(this, new Event(Menu.ON_HIDING));
         }
         showingPropertyImpl().set(value);
-        Event.fireEvent(this, (value) ? new Event(Menu.ON_SHOWN) : 
+        Event.fireEvent(this, (value) ? new Event(Menu.ON_SHOWN) :
             new Event(Menu.ON_HIDDEN));
     }
 
@@ -226,7 +226,7 @@ public class Menu extends MenuItem {
                 @Override protected void invalidated() {
                     // force validation
                     get();
-                    
+
                     // update the styleclass
                     if (isShowing()) {
                         getStyleClass().add(STYLE_CLASS_SHOWING);
@@ -398,7 +398,7 @@ public class Menu extends MenuItem {
     public final ObservableList<MenuItem> getItems() {
         return items;
     }
-    
+
     /**
      * If the Menu is not disabled and the {@link ContextMenu} is not already showing,
      * then this will cause the {@link ContextMenu} to be shown.

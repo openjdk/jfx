@@ -49,7 +49,7 @@ typedef String ErrorString;
 class InjectedScriptCanvasModule final : public Inspector::InjectedScriptModule {
 public:
     InjectedScriptCanvasModule();
-    
+
     virtual String source() const override;
     virtual JSC::JSValue host(Inspector::InjectedScriptManager*, JSC::ExecState*) const override;
     virtual bool returnsObject() const override { return true; }

@@ -24,15 +24,15 @@
  */
 
 #ifndef DALVIKUTILS_H
-#define	DALVIKUTILS_H
+#define DALVIKUTILS_H
 
 #include "dalvikConst.h"
 #include <linux/input.h>
 #include <android/keycodes.h>
 
-#ifdef	__cplusplus
+#ifdef  __cplusplus
 extern "C" {
-#endif     
+#endif
 
 #define CHECK_EXCEPTION(env) \
     if ((*env)->ExceptionCheck(env) == JNI_TRUE) {                                 \
@@ -40,10 +40,10 @@ extern "C" {
                 __FUNCTION__, __FILE__, __LINE__);                                 \
         (*env)->ExceptionDescribe(env);                                            \
         (*env)->ExceptionClear(env);                                               \
-    };    
+    };
 
-int to_jfx_key_action(int action);    
-int to_jfx_touch_action(int state);    
+int to_jfx_key_action(int action);
+int to_jfx_touch_action(int state);
 int to_linux_keycode(int androidKeyCode);
 char *describe_surface_format(int format);
 char *describe_touch_action(int state);
@@ -129,10 +129,10 @@ static AndroidLinuxKC keyMap[] = {
     {AKEYCODE_FORWARD_DEL, KEY_DELETE},
     {AKEYCODE_MENU, KEY_MENU },
 };
-    
 
-#ifdef	__cplusplus
+
+#ifdef  __cplusplus
 }
 #endif
 
-#endif	/* DALVIKUTILS_H */
+#endif  /* DALVIKUTILS_H */

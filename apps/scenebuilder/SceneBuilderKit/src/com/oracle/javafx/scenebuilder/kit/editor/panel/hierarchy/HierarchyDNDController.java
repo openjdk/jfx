@@ -262,7 +262,7 @@ public class HierarchyDNDController {
             //      the accessory is set to the place holder value
             // whatever the location value is.
             // - otherwise
-            //      the drop target is the place holder item 
+            //      the drop target is the place holder item
             //      the accessory is set to null
             //      the target index is set depending on the location value
             //------------------------------------------------------------------
@@ -312,7 +312,7 @@ public class HierarchyDNDController {
                 }
             } //
             // TreeItem is not a place holder:
-            // we set the drop target, accessory and target index 
+            // we set the drop target, accessory and target index
             // depending on the mouse location value
             //------------------------------------------------------------------
             else {
@@ -447,7 +447,7 @@ public class HierarchyDNDController {
                     for (Accessory a : accessories) {
                         final AccessoryDropTarget dropTarget
                                 = new AccessoryDropTarget(dropTargetInstance, a);
-                        // If the accessory drop target accepts the dragged objects, 
+                        // If the accessory drop target accepts the dragged objects,
                         // we return this drop target.
                         // Otherwise, we look for the next accessory.
                         if (dropTarget.acceptDragSource(dragSource)) {

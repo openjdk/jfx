@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef DFGAtTailAbstractState_h
@@ -34,28 +34,28 @@
 #include "DFGBasicBlock.h"
 #include "DFGGraph.h"
 
-namespace JSC { namespace DFG { 
+namespace JSC { namespace DFG {
 
 class AtTailAbstractState {
 public:
     AtTailAbstractState();
-    
+
     ~AtTailAbstractState();
-    
+
     void initializeTo(BasicBlock* block)
     {
         m_block = block;
     }
-    
+
     void createValueForNode(Node*);
     AbstractValue& forNode(Node*);
     AbstractValue& forNode(Edge edge) { return forNode(edge.node()); }
     Operands<AbstractValue>& variables() { return m_block->valuesAtTail; }
-    
+
     BasicBlock* block() const { return m_block; }
-    
+
     bool isValid() { return m_block->cfaDidFinish; }
-    
+
     void setDidClobber(bool) { }
     void setIsValid(bool isValid) { m_block->cfaDidFinish = isValid; }
     void setBranchDirection(BranchDirection) { }

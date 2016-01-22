@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -53,7 +53,7 @@
 using namespace WTF;
 
 namespace JSC {
-    
+
 uintptr_t startOfFixedExecutableMemoryPool;
 
 class FixedVMPoolExecutableAllocator : public MetaAllocator {
@@ -69,20 +69,20 @@ public:
         if (m_reservation) {
             ASSERT(m_reservation.size() == fixedExecutableMemoryPoolSize);
             addFreshFreeSpace(m_reservation.base(), m_reservation.size());
-            
+
             startOfFixedExecutableMemoryPool = reinterpret_cast<uintptr_t>(m_reservation.base());
         }
     }
 
     virtual ~FixedVMPoolExecutableAllocator();
-    
+
 protected:
     virtual void* allocateNewSpace(size_t&) override
     {
         // We're operating in a fixed pool, so new allocation is always prohibited.
         return 0;
     }
-    
+
     virtual void notifyNeedPage(void* page) override
     {
 #if USE(MADV_FREE_FOR_JIT_MEMORY)
@@ -91,7 +91,7 @@ protected:
         m_reservation.commit(page, pageSize());
 #endif
     }
-    
+
     virtual void notifyPageIsFree(void* page) override
     {
 #if USE(MADV_FREE_FOR_JIT_MEMORY)

@@ -195,7 +195,7 @@ LayoutRect RenderNamedFlowFragment::flowThreadPortionRectForClipping(bool isFirs
     // If they do not continue into another region in that direction, they should be
     // painted all the way to the region's border box.
     // Regions with overflow:hidden will apply clip at the border box, not the content box.
-    
+
     LayoutRect clippingRect = flowThreadPortionRect();
     RenderBlockFlow& container = fragmentContainer();
     if (container.style().hasPadding()) {
@@ -208,14 +208,14 @@ LayoutRect RenderNamedFlowFragment::flowThreadPortionRectForClipping(bool isFirs
                 clippingRect.expand(container.paddingBefore(), 0);
             }
         }
-        
+
         if (isLastRegionInRange) {
             if (flowThread()->isHorizontalWritingMode())
                 clippingRect.expand(0, container.paddingAfter());
             else
                 clippingRect.expand(container.paddingAfter(), 0);
         }
-        
+
         if (flowThread()->isHorizontalWritingMode()) {
             clippingRect.move(-container.paddingStart(), 0);
             clippingRect.expand(container.paddingStart() + container.paddingEnd(), 0);
@@ -224,7 +224,7 @@ LayoutRect RenderNamedFlowFragment::flowThreadPortionRectForClipping(bool isFirs
             clippingRect.expand(0, container.paddingStart() + container.paddingEnd());
         }
     }
-    
+
     return clippingRect;
 }
 
@@ -433,7 +433,7 @@ LayoutRect RenderNamedFlowFragment::visualOverflowRect() const
         if (boxInfo && boxInfo->overflow())
             return boxInfo->overflow()->visualOverflowRect();
     }
-    
+
     return RenderRegion::visualOverflowRect();
 }
 
@@ -460,7 +460,7 @@ void RenderNamedFlowFragment::detachRegion()
 {
     if (m_flowThread && hasAutoLogicalHeight())
         decrementAutoLogicalHeightCount();
-    
+
     RenderRegion::detachRegion();
 }
 

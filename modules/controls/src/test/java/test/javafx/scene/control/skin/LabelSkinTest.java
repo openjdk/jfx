@@ -58,7 +58,7 @@ public class LabelSkinTest {
     private Label label;
     private LabelSkinMock skin;
     private Text text;
-    
+
     @Before public void setup() {
         label = new Label();
         skin = new LabelSkinMock(label);
@@ -70,13 +70,13 @@ public class LabelSkinTest {
         // will have as its only child the Text node
         text = (Text) SkinBaseShim.getChildren(skin).get(0);
     }
-    
+
     /****************************************************************************
      *                                                                          *
      * Tests for change notification                                            *
      *                                                                          *
      ***************************************************************************/
-    
+
     @Test public void sizeChangesOnLabelShouldInvoke_handleControlPropertyChanged() {
         skin.addWatchedProperty(label.widthProperty());
         skin.addWatchedProperty(label.heightProperty());
@@ -87,104 +87,104 @@ public class LabelSkinTest {
         label.resize(label.getWidth(), label.prefHeight(label.getWidth()));
         assertEquals(2, skin.propertyChangeCount); // sanity check
     }
-    
+
     @Test public void textFillChangesOnLabelShouldInvoke_handleControlPropertyChanged() {
         skin.addWatchedProperty(label.textFillProperty());
         label.setTextFill(Color.PURPLE);
         assertTrue(skin.propertyChanged);
     }
-    
+
     @Test public void fontChangesOnLabelShouldInvoke_handleControlPropertyChanged() {
         skin.addWatchedProperty(label.fontProperty());
         final Font f = Font.font("Arial", 64);
         label.setFont(f);
         assertTrue(skin.propertyChanged);
     }
-    
+
     @Test public void graphicChangesOnLabelShouldInvoke_handleControlPropertyChanged() {
         skin.addWatchedProperty(label.graphicProperty());
         label.setGraphic(new Rectangle());
         assertTrue(skin.propertyChanged);
     }
-    
+
     @Test public void contentDisplayChangesOnLabelShouldInvoke_handleControlPropertyChanged() {
         skin.addWatchedProperty(label.contentDisplayProperty());
         label.setContentDisplay(ContentDisplay.TEXT_ONLY);
         assertTrue(skin.propertyChanged);
     }
-    
+
     @Test public void graphicTextGapChangesOnLabelShouldInvoke_handleControlPropertyChanged() {
         skin.addWatchedProperty(label.graphicTextGapProperty());
         label.setGraphicTextGap(60.34);
         assertTrue(skin.propertyChanged);
     }
-    
+
     @Test public void hposChangesOnLabelShouldInvoke_handleControlPropertyChanged() {
         skin.addWatchedProperty(label.alignmentProperty());
         label.setAlignment(Pos.CENTER_RIGHT);
         label.setAlignment(Pos.CENTER_RIGHT);
         assertTrue(skin.propertyChanged);
     }
-    
+
     @Test public void vposChangesOnLabelShouldInvoke_handleControlPropertyChanged() {
         skin.addWatchedProperty(label.alignmentProperty());
         label.setAlignment(Pos.TOP_CENTER);
         assertTrue(skin.propertyChanged);
     }
-    
+
     @Test public void textChangesOnLabelShouldInvoke_handleControlPropertyChanged() {
         skin.addWatchedProperty(label.textProperty());
         label.setText("Bust my buffers!");
         assertTrue(skin.propertyChanged);
     }
-    
+
     @Test public void textAlignmentChangesOnLabelShouldInvoke_handleControlPropertyChanged() {
         skin.addWatchedProperty(label.textAlignmentProperty());
         label.setTextAlignment(TextAlignment.JUSTIFY);
         assertTrue(skin.propertyChanged);
     }
-    
+
     @Test public void textOverrunChangesOnLabelShouldInvoke_handleControlPropertyChanged() {
         skin.addWatchedProperty(label.textOverrunProperty());
         label.setTextOverrun(OverrunStyle.CENTER_WORD_ELLIPSIS);
         assertTrue(skin.propertyChanged);
     }
-    
+
     @Test public void wrapTextChangesOnLabelShouldInvoke_handleControlPropertyChanged() {
         skin.addWatchedProperty(label.wrapTextProperty());
         label.setWrapText(true);
         assertTrue(skin.propertyChanged);
     }
-    
+
     @Test public void underlineChangesOnLabelShouldInvoke_handleControlPropertyChanged() {
         skin.addWatchedProperty(label.underlineProperty());
         label.setUnderline(true);
         assertTrue(skin.propertyChanged);
     }
-    
+
     @Test public void uninterestingChangesOnLabelShouldNotInvoke_handleControlPropertyChanged() {
         label.setBlendMode(BlendMode.BLUE);
         assertFalse(skin.propertyChanged);
     }
-    
+
     /****************************************************************************
      *                                                                          *
      * Tests for invalidation. When each of various properties change, we need  *
      * to invalidate some state, such as via requestLayout().                   *
      *                                                                          *
      ***************************************************************************/
-    
+
     @Test public void graphicLayoutBoundsChangeShouldInvalidateLayoutAndDisplayText() {
         final Rectangle r = new Rectangle(20, 20);
         label.setGraphic(r);
         label.layout();
         skin.updateDisplayedText();
-        
+
         r.setWidth(30);
         assertTrue(label.isNeedsLayout());
         assertTrue(skin.get_invalidText());
     }
-    
+
     @Test public void widthChangesOnLabelShouldInvalidateLayoutAndDisplayText() {
         label.layout();
         skin.updateDisplayedText();
@@ -193,7 +193,7 @@ public class LabelSkinTest {
         assertTrue(label.isNeedsLayout());
         assertTrue(skin.get_invalidText());
     }
-    
+
     @Test public void widthChangesWhenWrapTextIsTrueUpdatesTheWrappingWidth() {
         // Assert that the wrapping width changes with the label width if wrapText is true.
         // However, this will only be required if the longest line in the text is itself
@@ -203,26 +203,26 @@ public class LabelSkinTest {
         label.autosize();
         //label.layout();
         skin.updateDisplayedText();
-        
+
         final double oldWrappingWidth = text.getWrappingWidth();
         label.resize(100, label.getHeight());
         skin.updateDisplayedText();
         assertFalse(oldWrappingWidth == text.getWrappingWidth());
         assertTrue(text.getWrappingWidth() > 0);
     }
-    
+
     @Test public void widthChangesWhenWrapTextIsFalseKeepsWrappingWidthAtZero() {
         label.layout();
         skin.updateDisplayedText();
-        
+
         label.resize(500, label.getHeight());
         assertEquals(0, text.getWrappingWidth(), 0);
     }
-    
+
     @Test public void fontChangesOnLabelShouldInvalidateLayoutAndDisplayTextAndEllipsesWidthAndTextWidth() {
         label.layout();
         skin.updateDisplayedText();
-        
+
         label.setFont(Font.font("Arial", 37));
         assertTrue(label.isNeedsLayout());
         assertTrue(skin.get_invalidText());
@@ -233,7 +233,7 @@ public class LabelSkinTest {
     @Test public void graphicChangesOnLabelShouldInvalidateLayoutAndDisplayText() {
         label.layout();
         skin.updateDisplayedText();
-        
+
         label.setGraphic(new Rectangle(20, 20));
         assertTrue(label.isNeedsLayout());
         assertTrue(skin.get_invalidText());
@@ -242,7 +242,7 @@ public class LabelSkinTest {
     @Test public void contentDisplayChangesOnLabelShouldInvalidateLayoutAndDisplayText() {
         label.layout();
         skin.updateDisplayedText();
-        
+
         label.setContentDisplay(ContentDisplay.GRAPHIC_ONLY);
         assertTrue(label.isNeedsLayout());
         assertTrue(skin.get_invalidText());
@@ -251,7 +251,7 @@ public class LabelSkinTest {
     @Test public void graphicTextGapChangesOnLabelShouldInvalidateLayoutAndDisplayText() {
         label.layout();
         skin.updateDisplayedText();
-        
+
         label.setGraphicTextGap(8.37);
         assertTrue(label.isNeedsLayout());
         assertTrue(skin.get_invalidText());
@@ -260,7 +260,7 @@ public class LabelSkinTest {
     @Test public void hposChangesOnLabelShouldInvalidateLayout() {
         label.layout();
         skin.updateDisplayedText();
-        
+
         label.setAlignment(Pos.CENTER_RIGHT);
         assertTrue(label.isNeedsLayout());
         assertFalse(skin.get_invalidText());
@@ -269,7 +269,7 @@ public class LabelSkinTest {
     @Test public void vposChangesOnLabelShouldInvalidateLayout() {
         label.layout();
         skin.updateDisplayedText();
-        
+
         label.setAlignment(Pos.TOP_CENTER);
         assertTrue(label.isNeedsLayout());
         assertFalse(skin.get_invalidText());
@@ -278,7 +278,7 @@ public class LabelSkinTest {
     @Test public void textChangesOnLabelShouldInvalidateLayoutAndDisplayTextAndTextWidth() {
         label.layout();
         skin.updateDisplayedText();
-        
+
         label.setText("Apples and Oranges");
         assertTrue(label.isNeedsLayout());
         assertTrue(skin.get_invalidText());
@@ -298,7 +298,7 @@ public class LabelSkinTest {
     @Test public void textOverrunChangesOnLabelShouldInvalidateLayoutAndDisplayText() {
         label.layout();
         skin.updateDisplayedText();
-        
+
         label.setTextOverrun(OverrunStyle.CENTER_WORD_ELLIPSIS);
         assertTrue(label.isNeedsLayout());
         assertTrue(skin.get_invalidText());
@@ -321,7 +321,7 @@ public class LabelSkinTest {
     @Test public void underlineChangesOnLabelShouldInvalidateLayoutAndDisplayText() {
         label.layout();
         skin.updateDisplayedText();
-        
+
         label.setUnderline(true);
         assertTrue(label.isNeedsLayout());
         assertTrue(skin.get_invalidText());
@@ -338,13 +338,13 @@ public class LabelSkinTest {
         label.setText(null);
         assertEquals(0.0 + 14, label.minWidth(-1), 0);
     }
-    
+
     @Test public void whenTextIsEmptyAndNoGraphic_computeMinWidth_ReturnsZero() {
         label.setPadding(new Insets(7, 7, 7, 7));
         label.setText("");
         assertEquals(0.0 + 14, label.minWidth(-1), 0);
     }
-    
+
     @Test public void whenTextIsShorterThanEllipsisAndNoGraphic_computeMinWidth_ReturnsTextWidth() {
         label.setPadding(new Insets(7, 7, 7, 7));
         label.setText(".");
@@ -367,7 +367,7 @@ public class LabelSkinTest {
         label.setText(null);
         assertEquals(0.0 + 14, label.minWidth(-1), 0);
     }
-    
+
     @Test public void whenTextIsEmptyAndGraphicIsUnmanaged_computeMinWidth_ReturnsZero() {
         label.setPadding(new Insets(7, 7, 7, 7));
         Rectangle r = new Rectangle(23, 500);
@@ -376,7 +376,7 @@ public class LabelSkinTest {
         label.setText("");
         assertEquals(0.0 + 14, label.minWidth(-1), 0);
     }
-    
+
     @Test public void whenTextIsShorterThanEllipsisAndGraphicIsUnmanaged_computeMinWidth_ReturnsTextWidth() {
         label.setPadding(new Insets(7, 7, 7, 7));
         Rectangle r = new Rectangle(23, 500);
@@ -405,7 +405,7 @@ public class LabelSkinTest {
         assertTrue(label.minWidth(-1) >= 0);
         assertEquals(23 + 14, label.minWidth(-1), 0);
     }
-    
+
     @Test public void whenTextIsEmptyAndGraphicIsSet_computeMinWidth_ReturnsGraphicWidth() {
         label.setPadding(new Insets(7, 7, 7, 7));
         Rectangle r = new Rectangle(23, 23);
@@ -581,14 +581,14 @@ public class LabelSkinTest {
         final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0, text.getBoundsType());
         assertEquals(lineHeight + 14, label.minHeight(-1), 0);
     }
-    
+
     @Test public void whenTextIsEmptyAndNoGraphic_computeMinHeight_ReturnsSingleLineStringHeight() {
         label.setText("");
         label.setPadding(new Insets(7, 7, 7, 7));
         final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0, text.getBoundsType());
         assertEquals(lineHeight + 14, label.minHeight(-1), 0);
     }
-    
+
     @Test public void whenTextIsSetAndNoGraphic_computeMinHeight_ReturnsSingleLineStringHeight() {
         label.setText("Howdy Pardner");
         label.setPadding(new Insets(7, 7, 7, 7));
@@ -596,7 +596,7 @@ public class LabelSkinTest {
         final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0, text.getBoundsType());
         assertEquals(lineHeight + 14, label.minHeight(-1), 0);
     }
-    
+
     @Test public void whenTextIsNullAndUnmanagedGraphic_computeMinHeight_ReturnsSingleLineStringHeight() {
         label.setText(null);
         label.setPadding(new Insets(7, 7, 7, 7));
@@ -606,7 +606,7 @@ public class LabelSkinTest {
         final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0, text.getBoundsType());
         assertEquals(lineHeight + 14, label.minHeight(-1), 0);
     }
-    
+
     @Test public void whenTextIsEmptyAndUnmanagedGraphic_computeMinHeight_ReturnsSingleLineStringHeight() {
         label.setText("");
         label.setPadding(new Insets(7, 7, 7, 7));
@@ -616,7 +616,7 @@ public class LabelSkinTest {
         final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0, text.getBoundsType());
         assertEquals(lineHeight + 14, label.minHeight(-1), 0);
     }
-    
+
     @Test public void whenTextIsSetAndUnmanagedGraphic_computeMinHeight_ReturnsSingleLineStringHeight() {
         label.setText("Howdy Pardner");
         label.setPadding(new Insets(7, 7, 7, 7));
@@ -627,7 +627,7 @@ public class LabelSkinTest {
         assertTrue(label.minHeight(-1) >= 0);
         assertEquals(lineHeight + 14, label.minHeight(-1), 0);
     }
-    
+
     @Test public void whenTextIsNullAndGraphicIsSetWithTOPContentDisplay_computeMinHeight_ReturnsRightAnswer() {
         label.setText(null);
         label.setPadding(new Insets(7, 7, 7, 7));
@@ -638,7 +638,7 @@ public class LabelSkinTest {
         final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0, text.getBoundsType());
         assertEquals(23 + lineHeight + 2 + 14, label.minHeight(-1), 0);
     }
-    
+
     @Test public void whenTextIsEmptyAndGraphicIsSetWithTOPContentDisplay_computeMinHeight_ReturnsRightAnswer() {
         label.setText("");
         label.setPadding(new Insets(7, 7, 7, 7));
@@ -649,7 +649,7 @@ public class LabelSkinTest {
         final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0, text.getBoundsType());
         assertEquals(23 + lineHeight + 2 + 14, label.minHeight(-1), 0);
     }
-    
+
     @Test public void whenTextIsSetAndGraphicIsSetWithTOPContentDisplay_computeMinHeight_ReturnsRightAnswer() {
         label.setText("For crying in the mud");
         label.setPadding(new Insets(7, 7, 7, 7));
@@ -660,7 +660,7 @@ public class LabelSkinTest {
         final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0, text.getBoundsType());
         assertEquals(23 + lineHeight + 2 + 14, label.minHeight(-1), 0);
     }
-    
+
     @Test public void whenTextIsNullAndGraphicIsSetWithRIGHTContentDisplay_computeMinHeight_ReturnsRightAnswer() {
         label.setText(null);
         label.setPadding(new Insets(7, 7, 7, 7));
@@ -670,7 +670,7 @@ public class LabelSkinTest {
         final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0, text.getBoundsType());
         assertEquals(Math.max(23, lineHeight) + 14, label.minHeight(-1), 0);
     }
-    
+
     @Test public void whenTextIsEmptyAndGraphicIsSetWithRIGHTContentDisplay_computeMinHeight_ReturnsRightAnswer() {
         label.setText("");
         label.setPadding(new Insets(7, 7, 7, 7));
@@ -680,7 +680,7 @@ public class LabelSkinTest {
         final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0, text.getBoundsType());
         assertEquals(Math.max(23, lineHeight) + 14, label.minHeight(-1), 0);
     }
-    
+
     @Test public void whenTextIsSetAndGraphicIsSetWithRIGHTContentDisplay_computeMinHeight_ReturnsRightAnswer() {
         label.setText("For crying in the mud");
         label.setPadding(new Insets(7, 7, 7, 7));
@@ -690,7 +690,7 @@ public class LabelSkinTest {
         final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0, text.getBoundsType());
         assertEquals(Math.max(23, lineHeight) + 14, label.minHeight(-1), 0);
     }
-    
+
     @Test public void whenTextIsNullAndGraphicIsSetWithBOTTOMContentDisplay_computeMinHeight_ReturnsRightAnswer() {
         label.setText(null);
         label.setPadding(new Insets(7, 7, 7, 7));
@@ -701,7 +701,7 @@ public class LabelSkinTest {
         final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0, text.getBoundsType());
         assertEquals(23 + lineHeight + 2 + 14, label.minHeight(-1), 0);
     }
-    
+
     @Test public void whenTextIsEmptyAndGraphicIsSetWithBOTTOMContentDisplay_computeMinHeight_ReturnsRightAnswer() {
         label.setText("");
         label.setPadding(new Insets(7, 7, 7, 7));
@@ -712,7 +712,7 @@ public class LabelSkinTest {
         final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0, text.getBoundsType());
         assertEquals(23 + lineHeight + 2 + 14, label.minHeight(-1), 0);
     }
-    
+
     @Test public void whenTextIsSetAndGraphicIsSetWithBOTTOMContentDisplay_computeMinHeight_ReturnsRightAnswer() {
         label.setText("For crying in the mud");
         label.setPadding(new Insets(7, 7, 7, 7));
@@ -723,7 +723,7 @@ public class LabelSkinTest {
         final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0, text.getBoundsType());
         assertEquals(23 + lineHeight + 2 + 14, label.minHeight(-1), 0);
     }
-    
+
     @Test public void whenTextIsNullAndGraphicIsSetWithLEFTContentDisplay_computeMinHeight_ReturnsRightAnswer() {
         label.setText(null);
         label.setPadding(new Insets(7, 7, 7, 7));
@@ -733,7 +733,7 @@ public class LabelSkinTest {
         final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0, text.getBoundsType());
         assertEquals(Math.max(23, lineHeight) + 14, label.minHeight(-1), 0);
     }
-    
+
     @Test public void whenTextIsEmptyAndGraphicIsSetWithLEFTContentDisplay_computeMinHeight_ReturnsRightAnswer() {
         label.setText("");
         label.setPadding(new Insets(7, 7, 7, 7));
@@ -743,7 +743,7 @@ public class LabelSkinTest {
         final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0, text.getBoundsType());
         assertEquals(Math.max(23, lineHeight) + 14, label.minHeight(-1), 0);
     }
-    
+
     @Test public void whenTextIsSetAndGraphicIsSetWithLEFTContentDisplay_computeMinHeight_ReturnsRightAnswer() {
         label.setText("For crying in the mud");
         label.setPadding(new Insets(7, 7, 7, 7));
@@ -753,7 +753,7 @@ public class LabelSkinTest {
         final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0, text.getBoundsType());
         assertEquals(Math.max(23, lineHeight) + 14, label.minHeight(-1), 0);
     }
-    
+
     @Test public void whenTextIsNullAndGraphicIsSetWithCENTERContentDisplay_computeMinHeight_ReturnsRightAnswer() {
         label.setText(null);
         label.setPadding(new Insets(7, 7, 7, 7));
@@ -763,7 +763,7 @@ public class LabelSkinTest {
         final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0, text.getBoundsType());
         assertEquals(Math.max(23, lineHeight) + 14, label.minHeight(-1), 0);
     }
-    
+
     @Test public void whenTextIsEmptyAndGraphicIsSetWithCENTERContentDisplay_computeMinHeight_ReturnsRightAnswer() {
         label.setText("");
         label.setPadding(new Insets(7, 7, 7, 7));
@@ -773,7 +773,7 @@ public class LabelSkinTest {
         final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0, text.getBoundsType());
         assertEquals(Math.max(23, lineHeight) + 14, label.minHeight(-1), 0);
     }
-    
+
     @Test public void whenTextIsSetAndGraphicIsSetWithCENTERContentDisplay_computeMinHeight_ReturnsRightAnswer() {
         label.setText("For crying in the mud");
         label.setPadding(new Insets(7, 7, 7, 7));
@@ -783,7 +783,7 @@ public class LabelSkinTest {
         final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0, text.getBoundsType());
         assertEquals(Math.max(23, lineHeight) + 14, label.minHeight(-1), 0);
     }
-    
+
     @Test public void whenTextIsNullAndGraphicIsSetWithGRAPHIC_ONLYContentDisplay_computeMinHeight_ReturnsRightAnswer() {
         label.setText(null);
         label.setPadding(new Insets(7, 7, 7, 7));
@@ -792,7 +792,7 @@ public class LabelSkinTest {
         label.setContentDisplay(ContentDisplay.GRAPHIC_ONLY);
         assertEquals(23 + 14, label.minHeight(-1), 0);
     }
-    
+
     @Test public void whenTextIsEmptyAndGraphicIsSetWithGRAPHIC_ONLYContentDisplay_computeMinHeight_ReturnsRightAnswer() {
         label.setText("");
         label.setPadding(new Insets(7, 7, 7, 7));
@@ -801,7 +801,7 @@ public class LabelSkinTest {
         label.setContentDisplay(ContentDisplay.GRAPHIC_ONLY);
         assertEquals(23 + 14, label.minHeight(-1), 0);
     }
-    
+
     @Test public void whenTextIsSetAndGraphicIsSetWithGRAPHIC_ONLYContentDisplay_computeMinHeight_ReturnsRightAnswer() {
         label.setText("For crying in the mud");
         label.setPadding(new Insets(7, 7, 7, 7));
@@ -810,7 +810,7 @@ public class LabelSkinTest {
         label.setContentDisplay(ContentDisplay.GRAPHIC_ONLY);
         assertEquals(23 + 14, label.minHeight(-1), 0);
     }
-    
+
     @Test public void whenTextIsNullAndGraphicIsSetWithTEXT_ONLYContentDisplay_computeMinHeight_ReturnsRightAnswer() {
         label.setText(null);
         label.setPadding(new Insets(7, 7, 7, 7));
@@ -820,7 +820,7 @@ public class LabelSkinTest {
         final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0, text.getBoundsType());
         assertEquals(lineHeight + 14, label.minHeight(-1), 0);
     }
-    
+
     @Test public void whenTextIsEmptyAndGraphicIsSetWithTEXT_ONLYContentDisplay_computeMinHeight_ReturnsRightAnswer() {
         label.setText("");
         label.setPadding(new Insets(7, 7, 7, 7));
@@ -830,7 +830,7 @@ public class LabelSkinTest {
         final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0, text.getBoundsType());
         assertEquals(lineHeight + 14, label.minHeight(-1), 0);
     }
-    
+
     @Test public void whenTextIsSetAndGraphicIsSetWithTEXT_ONLYContentDisplay_computeMinHeight_ReturnsRightAnswer() {
         label.setText("For crying in the mud");
         label.setPadding(new Insets(7, 7, 7, 7));
@@ -840,7 +840,7 @@ public class LabelSkinTest {
         final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0, text.getBoundsType());
         assertEquals(lineHeight + 14, label.minHeight(-1), 0);
     }
-    
+
     /****************************************************************************
      *                                                                          *
      * Tests for prefWidth                                                      *
@@ -852,20 +852,20 @@ public class LabelSkinTest {
         label.setPadding(new Insets(7, 7, 7, 7));
         assertEquals(14, label.prefWidth(-1), 0);
     }
-    
+
     @Test public void whenTextIsEmptyAndNoGraphic_computePrefWidth_ReturnsPadding() {
         label.setText("");
         label.setPadding(new Insets(7, 7, 7, 7));
         assertEquals(14, label.prefWidth(-1), 0);
     }
-    
+
     @Test public void whenTextIsSetAndNoGraphic_computePrefWidth_ReturnsTextWidthPlusPadding() {
         label.setText("Lollipop");
         label.setPadding(new Insets(7, 7, 7, 7));
         final double textWidth = Utils.computeTextWidth(label.getFont(), "Lollipop", 0);
         assertEquals(14 + textWidth, label.prefWidth(-1), 0);
     }
-    
+
     @Test public void whenTextIsNullAndUnmanagedGraphic_computePrefWidth_ReturnsPadding() {
         label.setText(null);
         Rectangle r = new Rectangle(0, 0, 50, 50);
@@ -874,7 +874,7 @@ public class LabelSkinTest {
         label.setPadding(new Insets(7, 7, 7, 7));
         assertEquals(14, label.prefWidth(-1), 0);
     }
-    
+
     @Test public void whenTextIsEmptyAndUnmanagedGraphic_computePrefWidth_ReturnsPadding() {
         label.setText("");
         Rectangle r = new Rectangle(0, 0, 50, 50);
@@ -883,7 +883,7 @@ public class LabelSkinTest {
         label.setPadding(new Insets(7, 7, 7, 7));
         assertEquals(14, label.prefWidth(-1), 0);
     }
-    
+
     @Test public void whenTextIsSetAndUnmanagedGraphic_computePrefWidth_ReturnsTextWidthPlusPadding() {
         label.setText("Lollipop");
         Rectangle r = new Rectangle(0, 0, 50, 50);
@@ -893,7 +893,7 @@ public class LabelSkinTest {
         final double textWidth = Utils.computeTextWidth(label.getFont(), "Lollipop", 0);
         assertEquals(14 + textWidth, label.prefWidth(-1), 0);
     }
-    
+
     @Test public void whenTextIsNullAndGraphicIsSetWithTOPContentDisplay_computePrefWidth_ReturnsGraphicWidthPlusPadding() {
         label.setText(null);
         label.setGraphic(new Rectangle(0, 0, 20, 20));
@@ -902,7 +902,7 @@ public class LabelSkinTest {
         label.setPadding(new Insets(7, 7, 7, 7));
         assertEquals(14 + 20, label.prefWidth(-1), 0);
     }
-    
+
     @Test public void whenTextIsEmptyAndGraphicIsSetWithTOPContentDisplay_computePrefWidth_ReturnsGraphicWidthPlusPadding() {
         label.setText("");
         label.setGraphic(new Rectangle(0, 0, 20, 20));
@@ -911,7 +911,7 @@ public class LabelSkinTest {
         label.setPadding(new Insets(7, 7, 7, 7));
         assertEquals(14 + 20, label.prefWidth(-1), 0);
     }
-    
+
     @Test public void whenTextIsSetAndGraphicIsSetWithTOPContentDisplayAndGraphicIsWider_computePrefWidth_ReturnsGraphicWidthPlusPadding() {
         label.setText("Lollipop");
         label.setGraphic(new Rectangle(0, 0, 200, 20));
@@ -920,7 +920,7 @@ public class LabelSkinTest {
         label.setPadding(new Insets(7, 7, 7, 7));
         assertEquals(14 + 200, label.prefWidth(-1), 0);
     }
-    
+
     @Test public void whenTextIsSetAndGraphicIsSetWithTOPContentDisplayAndTextIsWider_computePrefWidth_ReturnsTextWidthPlusPadding() {
         label.setText("This is the right place");
         label.setGraphic(new Rectangle(0, 0, 20, 20));
@@ -948,7 +948,7 @@ public class LabelSkinTest {
         label.setPadding(new Insets(7, 7, 7, 7));
         assertEquals(20 + 14, label.prefWidth(-1), 0);
     }
-    
+
     @Test public void whenTextIsSetAndGraphicIsSetWithRIGHTContentDisplay_computePrefWidth_ReturnsTextWidthPlusGraphicWidthPlusGapPlusPadding() {
         label.setText("Howdy");
         label.setGraphic(new Rectangle(0, 0, 20, 20));
@@ -958,7 +958,7 @@ public class LabelSkinTest {
         final double textWidth = Utils.computeTextWidth(label.getFont(), "Howdy", 0);
         assertEquals(14 + textWidth + 6.5 + 20, label.prefWidth(-1), 0);
     }
-    
+
     @Test public void whenTextIsNullAndGraphicIsSetWithBOTTOMContentDisplay_computePrefWidth_ReturnsGraphicWidthPlusPadding() {
         label.setText(null);
         label.setGraphic(new Rectangle(0, 0, 20, 20));
@@ -967,7 +967,7 @@ public class LabelSkinTest {
         label.setPadding(new Insets(7, 7, 7, 7));
         assertEquals(14 + 20, label.prefWidth(-1), 0);
     }
-    
+
     @Test public void whenTextIsEmptyAndGraphicIsSetWithBOTTOMContentDisplay_computePrefWidth_ReturnsGraphicWidthPlusPadding() {
         label.setText(null);
         label.setGraphic(new Rectangle(0, 0, 20, 20));
@@ -976,7 +976,7 @@ public class LabelSkinTest {
         label.setPadding(new Insets(7, 7, 7, 7));
         assertEquals(14 + 20, label.prefWidth(-1), 0);
     }
-    
+
     @Test public void whenTextIsSetAndGraphicIsSetWithBOTTOMContentDisplayAndGraphicIsWider_computePrefWidth_ReturnsGraphicWidthPlusPadding() {
         label.setText("Lollipop");
         label.setGraphic(new Rectangle(0, 0, 200, 20));
@@ -985,7 +985,7 @@ public class LabelSkinTest {
         label.setPadding(new Insets(7, 7, 7, 7));
         assertEquals(14 + 200, label.prefWidth(-1), 0);
     }
-    
+
     @Test public void whenTextIsSetAndGraphicIsSetWithBOTTOMContentDisplayAndTextIsWider_computePrefWidth_ReturnsTextWidthPlusPadding() {
         label.setText("This is the right place");
         label.setGraphic(new Rectangle(0, 0, 20, 20));
@@ -1013,7 +1013,7 @@ public class LabelSkinTest {
         label.setPadding(new Insets(7, 7, 7, 7));
         assertEquals(20 + 14, label.prefWidth(-1), 0);
     }
-    
+
     @Test public void whenTextIsSetAndGraphicIsSetWithLEFTContentDisplay_computePrefWidth_ReturnsTextWidthPlusGraphicWidthPlusGapPlusPadding() {
         label.setText("Howdy");
         label.setGraphic(new Rectangle(0, 0, 20, 20));
@@ -1023,7 +1023,7 @@ public class LabelSkinTest {
         final double textWidth = Utils.computeTextWidth(label.getFont(), "Howdy", 0);
         assertEquals(14 + textWidth + 6.5 + 20, label.prefWidth(-1), 0);
     }
-    
+
     @Test public void whenTextIsNullAndGraphicIsSetWithCENTERContentDisplay_computePrefWidth_ReturnsGraphicWidthPlusPadding() {
         label.setText(null);
         label.setGraphic(new Rectangle(0, 0, 20, 20));
@@ -1032,7 +1032,7 @@ public class LabelSkinTest {
         label.setPadding(new Insets(7, 7, 7, 7));
         assertEquals(14 + 20, label.prefWidth(-1), 0);
     }
-    
+
     @Test public void whenTextIsEmptyAndGraphicIsSetWithCENTERContentDisplay_computePrefWidth_ReturnsGraphicWidthPlusPadding() {
         label.setText("");
         label.setGraphic(new Rectangle(0, 0, 20, 20));
@@ -1041,7 +1041,7 @@ public class LabelSkinTest {
         label.setPadding(new Insets(7, 7, 7, 7));
         assertEquals(14 + 20, label.prefWidth(-1), 0);
     }
-    
+
     @Test public void whenTextIsSetAndGraphicIsSetWithCENTERContentDisplayAndGraphicIsWider_computePrefWidth_ReturnsGraphicWidthPlusPadding() {
         label.setText("Lollipop");
         label.setGraphic(new Rectangle(0, 0, 200, 20));
@@ -1050,7 +1050,7 @@ public class LabelSkinTest {
         label.setPadding(new Insets(7, 7, 7, 7));
         assertEquals(14 + 200, label.prefWidth(-1), 0);
     }
-    
+
     @Test public void whenTextIsSetAndGraphicIsSetWithCENTERContentDisplayAndTextIsWider_computePrefWidth_ReturnsTextWidthPlusPadding() {
         label.setText("This is the right place");
         label.setGraphic(new Rectangle(0, 0, 20, 20));
@@ -1069,7 +1069,7 @@ public class LabelSkinTest {
         label.setPadding(new Insets(7, 7, 7, 7));
         assertEquals(14 + 20, label.prefWidth(-1), 0);
     }
-    
+
     @Test public void whenTextIsEmptyAndGraphicIsSetWithGRAPHIC_ONLYContentDisplay_computePrefWidth_ReturnsGraphicWidthPlusPadding() {
         label.setText("");
         label.setGraphic(new Rectangle(0, 0, 20, 20));
@@ -1078,7 +1078,7 @@ public class LabelSkinTest {
         label.setPadding(new Insets(7, 7, 7, 7));
         assertEquals(14 + 20, label.prefWidth(-1), 0);
     }
-    
+
     @Test public void whenTextIsSetAndGraphicIsSetWithGRAPHIC_ONLYContentDisplayAndGraphicIsWider_computePrefWidth_ReturnsGraphicWidthPlusPadding() {
         label.setText("Howdy");
         label.setGraphic(new Rectangle(0, 0, 200, 20));
@@ -1087,7 +1087,7 @@ public class LabelSkinTest {
         label.setPadding(new Insets(7, 7, 7, 7));
         assertEquals(14 + 200, label.prefWidth(-1), 0);
     }
-    
+
     @Test public void whenTextIsSetAndGraphicIsSetWithGRAPHIC_ONLYContentDisplayAndTextIsWider_computePrefWidth_ReturnsGraphicWidthPlusPadding() {
         label.setText("Tally ho, off to the races");
         label.setGraphic(new Rectangle(0, 0, 20, 20));
@@ -1096,7 +1096,7 @@ public class LabelSkinTest {
         label.setPadding(new Insets(7, 7, 7, 7));
         assertEquals(14 + 20, label.prefWidth(-1), 0);
     }
-    
+
     // TODO should this include the gap??
     @Test public void whenTextIsNullAndGraphicIsSetWithTEXT_ONLYContentDisplay_computePrefWidth_ReturnsPadding() {
         label.setText(null);
@@ -1106,7 +1106,7 @@ public class LabelSkinTest {
         label.setPadding(new Insets(7, 7, 7, 7));
         assertEquals(14, label.prefWidth(-1), 0);
     }
-    
+
     @Test public void whenTextIsEmptyAndGraphicIsSetWithTEXT_ONLYContentDisplay_computePrefWidth_ReturnsPadding() {
         label.setText("");
         label.setGraphic(new Rectangle(0, 0, 20, 20));
@@ -1115,7 +1115,7 @@ public class LabelSkinTest {
         label.setPadding(new Insets(7, 7, 7, 7));
         assertEquals(14, label.prefWidth(-1), 0);
     }
-    
+
     // TODO should this include the gap? I guess not, otherwise our gap would have to default to 0
     @Test public void whenTextIsSetAndGraphicIsSetWithTEXT_ONLYContentDisplay_computePrefWidth_ReturnsTextWidthPlusPadding() {
         label.setText("Yippee Skippee");
@@ -1126,7 +1126,7 @@ public class LabelSkinTest {
         final double textWidth = Utils.computeTextWidth(label.getFont(), "Yippee Skippee", 0);
         assertEquals(14 + textWidth, label.prefWidth(-1), 0);
     }
-    
+
     /****************************************************************************
      *                                                                          *
      * Tests for prefHeight                                                     *
@@ -1140,7 +1140,7 @@ public class LabelSkinTest {
         final double height = label.prefHeight(-1);
         assertTrue(height >= singleLineHeight * 5);
     }
-    
+
     @Test public void whenTextHasNewlinesAfterPreviousComputationOf_computePrefHeight_IncludesTheMultipleLinesInThePrefHeight() {
         label.setText("This is a test");
         final double oldPrefHeight = label.prefHeight(-1);
@@ -1148,21 +1148,21 @@ public class LabelSkinTest {
         final double newPrefHeight = label.prefHeight(-1);
         assertTrue(oldPrefHeight != newPrefHeight);
     }
-    
+
     @Test public void whenTextIsNullAndNoGraphic_computePrefHeight_ReturnsSingleLineStringHeightPlusPadding() {
         label.setText(null);
         label.setPadding(new Insets(7, 7, 7, 7));
         final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0, text.getBoundsType());
         assertEquals(14 + lineHeight, label.prefHeight(-1), 0);
     }
-    
+
     @Test public void whenTextIsEmptyAndNoGraphic_computePrefHeight_ReturnsSingleLineStringHeightPlusPadding() {
         label.setText("");
         label.setPadding(new Insets(7, 7, 7, 7));
         final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0, text.getBoundsType());
         assertEquals(14 + lineHeight, label.prefHeight(-1), 0);
     }
-    
+
     @Test public void whenTextIsSetAndNoGraphic_computePrefHeight_ReturnsSingleLineStringHeightPlusPadding() {
         label.setText("Howdy Pardner");
         label.setPadding(new Insets(7, 7, 7, 7));
@@ -1170,7 +1170,7 @@ public class LabelSkinTest {
         final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0, text.getBoundsType());
         assertEquals(14 + lineHeight, label.prefHeight(-1), 0);
     }
-    
+
     @Test public void whenTextIsNullAndUnmanagedGraphic_computePrefHeight_ReturnsSingleLineStringHeightPlusPadding() {
         label.setText(null);
         label.setPadding(new Insets(7, 7, 7, 7));
@@ -1180,7 +1180,7 @@ public class LabelSkinTest {
         final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0, text.getBoundsType());
         assertEquals(14 + lineHeight, label.prefHeight(-1), 0);
     }
-    
+
     @Test public void whenTextIsEmptyAndUnmanagedGraphic_computePrefHeight_ReturnsSingleLineStringHeightPlusPadding() {
         label.setText("");
         label.setPadding(new Insets(7, 7, 7, 7));
@@ -1190,7 +1190,7 @@ public class LabelSkinTest {
         final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0, text.getBoundsType());
         assertEquals(14 + lineHeight, label.prefHeight(-1), 0);
     }
-    
+
     @Test public void whenTextIsSetAndUnmanagedGraphic_computePrefHeight_ReturnsSingleLineStringHeightPlusPadding() {
         label.setText("Howdy Pardner");
         label.setPadding(new Insets(7, 7, 7, 7));
@@ -1201,7 +1201,7 @@ public class LabelSkinTest {
         assertTrue(label.prefHeight(-1) >= 0);
         assertEquals(14 + lineHeight, label.prefHeight(-1), 0);
     }
-    
+
     @Test public void whenTextIsNullAndGraphicIsSetWithTOPContentDisplay_computePrefHeight_ReturnsRightAnswer() {
         label.setText(null);
         label.setPadding(new Insets(7, 7, 7, 7));
@@ -1212,7 +1212,7 @@ public class LabelSkinTest {
         final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0, text.getBoundsType());
         assertEquals(14 + 23 + lineHeight + 2, label.prefHeight(-1), 0);
     }
-    
+
     @Test public void whenTextIsEmptyAndGraphicIsSetWithTOPContentDisplay_computePrefHeight_ReturnsRightAnswer() {
         label.setText("");
         label.setPadding(new Insets(7, 7, 7, 7));
@@ -1223,7 +1223,7 @@ public class LabelSkinTest {
         final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0, text.getBoundsType());
         assertEquals(14 + 23 + lineHeight + 2, label.prefHeight(-1), 0);
     }
-    
+
     @Test public void whenTextIsSetAndGraphicIsSetWithTOPContentDisplay_computePrefHeight_ReturnsRightAnswer() {
         label.setText("For crying in the mud");
         label.setPadding(new Insets(7, 7, 7, 7));
@@ -1234,7 +1234,7 @@ public class LabelSkinTest {
         final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0, text.getBoundsType());
         assertEquals(14 + 23 + lineHeight + 2, label.prefHeight(-1), 0);
     }
-    
+
     @Test public void whenTextIsNullAndGraphicIsSetWithRIGHTContentDisplay_computePrefHeight_ReturnsRightAnswer() {
         label.setText(null);
         label.setPadding(new Insets(7, 7, 7, 7));
@@ -1244,7 +1244,7 @@ public class LabelSkinTest {
         final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0, text.getBoundsType());
         assertEquals(14 + Math.max(23, lineHeight), label.prefHeight(-1), 0);
     }
-    
+
     @Test public void whenTextIsEmptyAndGraphicIsSetWithRIGHTContentDisplay_computePrefHeight_ReturnsRightAnswer() {
         label.setText("");
         label.setPadding(new Insets(7, 7, 7, 7));
@@ -1254,7 +1254,7 @@ public class LabelSkinTest {
         final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0, text.getBoundsType());
         assertEquals(14 + Math.max(23, lineHeight), label.prefHeight(-1), 0);
     }
-    
+
     @Test public void whenTextIsSetAndGraphicIsSetWithRIGHTContentDisplay_computePrefHeight_ReturnsRightAnswer() {
         label.setText("For crying in the mud");
         label.setPadding(new Insets(7, 7, 7, 7));
@@ -1264,7 +1264,7 @@ public class LabelSkinTest {
         final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0, text.getBoundsType());
         assertEquals(14 + Math.max(23, lineHeight), label.prefHeight(-1), 0);
     }
-    
+
     @Test public void whenTextIsNullAndGraphicIsSetWithBOTTOMContentDisplay_computePrefHeight_ReturnsRightAnswer() {
         label.setText(null);
         label.setPadding(new Insets(7, 7, 7, 7));
@@ -1275,7 +1275,7 @@ public class LabelSkinTest {
         final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0, text.getBoundsType());
         assertEquals(14 + 23 + lineHeight + 2, label.prefHeight(-1), 0);
     }
-    
+
     @Test public void whenTextIsEmptyAndGraphicIsSetWithBOTTOMContentDisplay_computePrefHeight_ReturnsRightAnswer() {
         label.setText("");
         label.setPadding(new Insets(7, 7, 7, 7));
@@ -1286,7 +1286,7 @@ public class LabelSkinTest {
         final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0, text.getBoundsType());
         assertEquals(14 + 23 + lineHeight + 2, label.prefHeight(-1), 0);
     }
-    
+
     @Test public void whenTextIsSetAndGraphicIsSetWithBOTTOMContentDisplay_computePrefHeight_ReturnsRightAnswer() {
         label.setText("For crying in the mud");
         label.setPadding(new Insets(7, 7, 7, 7));
@@ -1297,7 +1297,7 @@ public class LabelSkinTest {
         final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0, text.getBoundsType());
         assertEquals(14 + 23 + lineHeight + 2, label.prefHeight(-1), 0);
     }
-    
+
     @Test public void whenTextIsNullAndGraphicIsSetWithLEFTContentDisplay_computePrefHeight_ReturnsRightAnswer() {
         label.setText(null);
         label.setPadding(new Insets(7, 7, 7, 7));
@@ -1307,7 +1307,7 @@ public class LabelSkinTest {
         final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0, text.getBoundsType());
         assertEquals(14 + Math.max(23, lineHeight), label.prefHeight(-1), 0);
     }
-    
+
     @Test public void whenTextIsEmptyAndGraphicIsSetWithLEFTContentDisplay_computePrefHeight_ReturnsRightAnswer() {
         label.setText("");
         label.setPadding(new Insets(7, 7, 7, 7));
@@ -1317,7 +1317,7 @@ public class LabelSkinTest {
         final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0, text.getBoundsType());
         assertEquals(14 + Math.max(23, lineHeight), label.prefHeight(-1), 0);
     }
-    
+
     @Test public void whenTextIsSetAndGraphicIsSetWithLEFTContentDisplay_computePrefHeight_ReturnsRightAnswer() {
         label.setText("For crying in the mud");
         label.setPadding(new Insets(7, 7, 7, 7));
@@ -1327,7 +1327,7 @@ public class LabelSkinTest {
         final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0, text.getBoundsType());
         assertEquals(14 + Math.max(23, lineHeight), label.prefHeight(-1), 0);
     }
-    
+
     @Test public void whenTextIsNullAndGraphicIsSetWithCENTERContentDisplay_computePrefHeight_ReturnsRightAnswer() {
         label.setText(null);
         label.setPadding(new Insets(7, 7, 7, 7));
@@ -1337,7 +1337,7 @@ public class LabelSkinTest {
         final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0, text.getBoundsType());
         assertEquals(14 + Math.max(23, lineHeight), label.prefHeight(-1), 0);
     }
-    
+
     @Test public void whenTextIsEmptyAndGraphicIsSetWithCENTERContentDisplay_computePrefHeight_ReturnsRightAnswer() {
         label.setText("");
         label.setPadding(new Insets(7, 7, 7, 7));
@@ -1347,7 +1347,7 @@ public class LabelSkinTest {
         final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0, text.getBoundsType());
         assertEquals(14 + Math.max(23, lineHeight), label.prefHeight(-1), 0);
     }
-    
+
     @Test public void whenTextIsSetAndGraphicIsSetWithCENTERContentDisplay_computePrefHeight_ReturnsRightAnswer() {
         label.setText("For crying in the mud");
         label.setPadding(new Insets(7, 7, 7, 7));
@@ -1357,7 +1357,7 @@ public class LabelSkinTest {
         final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0, text.getBoundsType());
         assertEquals(14 + Math.max(23, lineHeight), label.prefHeight(-1), 0);
     }
-    
+
     @Test public void whenTextIsNullAndGraphicIsSetWithGRAPHIC_ONLYContentDisplay_computePrefHeight_ReturnsRightAnswer() {
         label.setText(null);
         label.setPadding(new Insets(7, 7, 7, 7));
@@ -1366,7 +1366,7 @@ public class LabelSkinTest {
         label.setContentDisplay(ContentDisplay.GRAPHIC_ONLY);
         assertEquals(14 + 23, label.prefHeight(-1), 0);
     }
-    
+
     @Test public void whenTextIsEmptyAndGraphicIsSetWithGRAPHIC_ONLYContentDisplay_computePrefHeight_ReturnsRightAnswer() {
         label.setText("");
         label.setPadding(new Insets(7, 7, 7, 7));
@@ -1375,7 +1375,7 @@ public class LabelSkinTest {
         label.setContentDisplay(ContentDisplay.GRAPHIC_ONLY);
         assertEquals(14 + 23, label.prefHeight(-1), 0);
     }
-    
+
     @Test public void whenTextIsSetAndGraphicIsSetWithGRAPHIC_ONLYContentDisplay_computePrefHeight_ReturnsRightAnswer() {
         label.setText("For crying in the mud");
         label.setPadding(new Insets(7, 7, 7, 7));
@@ -1384,7 +1384,7 @@ public class LabelSkinTest {
         label.setContentDisplay(ContentDisplay.GRAPHIC_ONLY);
         assertEquals(14 + 23, label.prefHeight(-1), 0);
     }
-    
+
     @Test public void whenTextIsNullAndGraphicIsSetWithTEXT_ONLYContentDisplay_computePrefHeight_ReturnsRightAnswer() {
         label.setText(null);
         label.setPadding(new Insets(7, 7, 7, 7));
@@ -1394,7 +1394,7 @@ public class LabelSkinTest {
         final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0, text.getBoundsType());
         assertEquals(14 + lineHeight, label.prefHeight(-1), 0);
     }
-    
+
     @Test public void whenTextIsEmptyAndGraphicIsSetWithTEXT_ONLYContentDisplay_computePrefHeight_ReturnsRightAnswer() {
         label.setText("");
         label.setPadding(new Insets(7, 7, 7, 7));
@@ -1404,7 +1404,7 @@ public class LabelSkinTest {
         final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0, text.getBoundsType());
         assertEquals(14 + lineHeight, label.prefHeight(-1), 0);
     }
-    
+
     @Test public void whenTextIsSetAndGraphicIsSetWithTEXT_ONLYContentDisplay_computePrefHeight_ReturnsRightAnswer() {
         label.setText("For crying in the mud");
         label.setPadding(new Insets(7, 7, 7, 7));
@@ -1414,7 +1414,7 @@ public class LabelSkinTest {
         final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0, text.getBoundsType());
         assertEquals(14 + lineHeight, label.prefHeight(-1), 0);
     }
-        
+
     /****************************************************************************
      *                                                                          *
      * Tests maxWidth                                                           *
@@ -1426,20 +1426,20 @@ public class LabelSkinTest {
         label.setPadding(new Insets(7, 7, 7, 7));
         assertEquals(14, label.maxWidth(-1), 0);
     }
-    
+
     @Test public void whenTextIsEmptyAndNoGraphic_computeMaxWidth_ReturnsPadding() {
         label.setText("");
         label.setPadding(new Insets(7, 7, 7, 7));
         assertEquals(14, label.maxWidth(-1), 0);
     }
-    
+
     @Test public void whenTextIsSetAndNoGraphic_computeMaxWidth_ReturnsTextWidthPlusPadding() {
         label.setText("Lollipop");
         label.setPadding(new Insets(7, 7, 7, 7));
         final double textWidth = Utils.computeTextWidth(label.getFont(), "Lollipop", 0);
         assertEquals(14 + textWidth, label.maxWidth(-1), 0);
     }
-    
+
     @Test public void whenTextIsNullAndUnmanagedGraphic_computeMaxWidth_ReturnsPadding() {
         label.setText(null);
         Rectangle r = new Rectangle(0, 0, 50, 50);
@@ -1448,7 +1448,7 @@ public class LabelSkinTest {
         label.setPadding(new Insets(7, 7, 7, 7));
         assertEquals(14, label.maxWidth(-1), 0);
     }
-    
+
     @Test public void whenTextIsEmptyAndUnmanagedGraphic_computeMaxWidth_ReturnsPadding() {
         label.setText("");
         Rectangle r = new Rectangle(0, 0, 50, 50);
@@ -1457,7 +1457,7 @@ public class LabelSkinTest {
         label.setPadding(new Insets(7, 7, 7, 7));
         assertEquals(14, label.maxWidth(-1), 0);
     }
-    
+
     @Test public void whenTextIsSetAndUnmanagedGraphic_computeMaxWidth_ReturnsTextWidthPlusPadding() {
         label.setText("Lollipop");
         Rectangle r = new Rectangle(0, 0, 50, 50);
@@ -1467,7 +1467,7 @@ public class LabelSkinTest {
         final double textWidth = Utils.computeTextWidth(label.getFont(), "Lollipop", 0);
         assertEquals(14 + textWidth, label.maxWidth(-1), 0);
     }
-    
+
     @Test public void whenTextIsNullAndGraphicIsSetWithTOPContentDisplay_computeMaxWidth_ReturnsGraphicWidthPlusPadding() {
         label.setText(null);
         label.setGraphic(new Rectangle(0, 0, 20, 20));
@@ -1476,7 +1476,7 @@ public class LabelSkinTest {
         label.setPadding(new Insets(7, 7, 7, 7));
         assertEquals(14 + 20, label.maxWidth(-1), 0);
     }
-    
+
     @Test public void whenTextIsEmptyAndGraphicIsSetWithTOPContentDisplay_computeMaxWidth_ReturnsGraphicWidthPlusPadding() {
         label.setText("");
         label.setGraphic(new Rectangle(0, 0, 20, 20));
@@ -1485,7 +1485,7 @@ public class LabelSkinTest {
         label.setPadding(new Insets(7, 7, 7, 7));
         assertEquals(14 + 20, label.maxWidth(-1), 0);
     }
-    
+
     @Test public void whenTextIsSetAndGraphicIsSetWithTOPContentDisplayAndGraphicIsWider_computeMaxWidth_ReturnsGraphicWidthPlusPadding() {
         label.setText("Lollipop");
         label.setGraphic(new Rectangle(0, 0, 200, 20));
@@ -1494,7 +1494,7 @@ public class LabelSkinTest {
         label.setPadding(new Insets(7, 7, 7, 7));
         assertEquals(14 + 200, label.maxWidth(-1), 0);
     }
-    
+
     @Test public void whenTextIsSetAndGraphicIsSetWithTOPContentDisplayAndTextIsWider_computeMaxWidth_ReturnsTextWidthPlusPadding() {
         label.setText("This is the right place");
         label.setGraphic(new Rectangle(0, 0, 20, 20));
@@ -1522,7 +1522,7 @@ public class LabelSkinTest {
         label.setPadding(new Insets(7, 7, 7, 7));
         assertEquals(20 + 14, label.maxWidth(-1), 0);
     }
-    
+
     @Test public void whenTextIsSetAndGraphicIsSetWithRIGHTContentDisplay_computeMaxWidth_ReturnsTextWidthPlusGraphicWidthPlusGapPlusPadding() {
         label.setText("Howdy");
         label.setGraphic(new Rectangle(0, 0, 20, 20));
@@ -1532,7 +1532,7 @@ public class LabelSkinTest {
         final double textWidth = Utils.computeTextWidth(label.getFont(), "Howdy", 0);
         assertEquals(14 + textWidth + 6.5 + 20, label.maxWidth(-1), 0);
     }
-    
+
     @Test public void whenTextIsNullAndGraphicIsSetWithBOTTOMContentDisplay_computeMaxWidth_ReturnsGraphicWidthPlusPadding() {
         label.setText(null);
         label.setGraphic(new Rectangle(0, 0, 20, 20));
@@ -1541,7 +1541,7 @@ public class LabelSkinTest {
         label.setPadding(new Insets(7, 7, 7, 7));
         assertEquals(14 + 20, label.maxWidth(-1), 0);
     }
-    
+
     @Test public void whenTextIsEmptyAndGraphicIsSetWithBOTTOMContentDisplay_computeMaxWidth_ReturnsGraphicWidthPlusPadding() {
         label.setText(null);
         label.setGraphic(new Rectangle(0, 0, 20, 20));
@@ -1550,7 +1550,7 @@ public class LabelSkinTest {
         label.setPadding(new Insets(7, 7, 7, 7));
         assertEquals(14 + 20, label.maxWidth(-1), 0);
     }
-    
+
     @Test public void whenTextIsSetAndGraphicIsSetWithBOTTOMContentDisplayAndGraphicIsWider_computeMaxWidth_ReturnsGraphicWidthPlusPadding() {
         label.setText("Lollipop");
         label.setGraphic(new Rectangle(0, 0, 200, 20));
@@ -1559,7 +1559,7 @@ public class LabelSkinTest {
         label.setPadding(new Insets(7, 7, 7, 7));
         assertEquals(14 + 200, label.maxWidth(-1), 0);
     }
-    
+
     @Test public void whenTextIsSetAndGraphicIsSetWithBOTTOMContentDisplayAndTextIsWider_computeMaxWidth_ReturnsTextWidthPlusPadding() {
         label.setText("This is the right place");
         label.setGraphic(new Rectangle(0, 0, 20, 20));
@@ -1587,7 +1587,7 @@ public class LabelSkinTest {
         label.setPadding(new Insets(7, 7, 7, 7));
         assertEquals(20 + 14, label.maxWidth(-1), 0);
     }
-    
+
     @Test public void whenTextIsSetAndGraphicIsSetWithLEFTContentDisplay_computeMaxWidth_ReturnsTextWidthPlusGraphicWidthPlusGapPlusPadding() {
         label.setText("Howdy");
         label.setGraphic(new Rectangle(0, 0, 20, 20));
@@ -1597,7 +1597,7 @@ public class LabelSkinTest {
         final double textWidth = Utils.computeTextWidth(label.getFont(), "Howdy", 0);
         assertEquals(14 + textWidth + 6.5 + 20, label.maxWidth(-1), 0);
     }
-    
+
     @Test public void whenTextIsNullAndGraphicIsSetWithCENTERContentDisplay_computeMaxWidth_ReturnsGraphicWidthPlusPadding() {
         label.setText(null);
         label.setGraphic(new Rectangle(0, 0, 20, 20));
@@ -1606,7 +1606,7 @@ public class LabelSkinTest {
         label.setPadding(new Insets(7, 7, 7, 7));
         assertEquals(14 + 20, label.maxWidth(-1), 0);
     }
-    
+
     @Test public void whenTextIsEmptyAndGraphicIsSetWithCENTERContentDisplay_computeMaxWidth_ReturnsGraphicWidthPlusPadding() {
         label.setText("");
         label.setGraphic(new Rectangle(0, 0, 20, 20));
@@ -1615,7 +1615,7 @@ public class LabelSkinTest {
         label.setPadding(new Insets(7, 7, 7, 7));
         assertEquals(14 + 20, label.maxWidth(-1), 0);
     }
-    
+
     @Test public void whenTextIsSetAndGraphicIsSetWithCENTERContentDisplayAndGraphicIsWider_computeMaxWidth_ReturnsGraphicWidthPlusPadding() {
         label.setText("Lollipop");
         label.setGraphic(new Rectangle(0, 0, 200, 20));
@@ -1624,7 +1624,7 @@ public class LabelSkinTest {
         label.setPadding(new Insets(7, 7, 7, 7));
         assertEquals(14 + 200, label.maxWidth(-1), 0);
     }
-    
+
     @Test public void whenTextIsSetAndGraphicIsSetWithCENTERContentDisplayAndTextIsWider_computeMaxWidth_ReturnsTextWidthPlusPadding() {
         label.setText("This is the right place");
         label.setGraphic(new Rectangle(0, 0, 20, 20));
@@ -1643,7 +1643,7 @@ public class LabelSkinTest {
         label.setPadding(new Insets(7, 7, 7, 7));
         assertEquals(14 + 20, label.maxWidth(-1), 0);
     }
-    
+
     @Test public void whenTextIsEmptyAndGraphicIsSetWithGRAPHIC_ONLYContentDisplay_computeMaxWidth_ReturnsGraphicWidthPlusPadding() {
         label.setText("");
         label.setGraphic(new Rectangle(0, 0, 20, 20));
@@ -1652,7 +1652,7 @@ public class LabelSkinTest {
         label.setPadding(new Insets(7, 7, 7, 7));
         assertEquals(14 + 20, label.maxWidth(-1), 0);
     }
-    
+
     @Test public void whenTextIsSetAndGraphicIsSetWithGRAPHIC_ONLYContentDisplayAndGraphicIsWider_computeMaxWidth_ReturnsGraphicWidthPlusPadding() {
         label.setText("Howdy");
         label.setGraphic(new Rectangle(0, 0, 200, 20));
@@ -1661,7 +1661,7 @@ public class LabelSkinTest {
         label.setPadding(new Insets(7, 7, 7, 7));
         assertEquals(14 + 200, label.maxWidth(-1), 0);
     }
-    
+
     @Test public void whenTextIsSetAndGraphicIsSetWithGRAPHIC_ONLYContentDisplayAndTextIsWider_computeMaxWidth_ReturnsGraphicWidthPlusPadding() {
         label.setText("Tally ho, off to the races");
         label.setGraphic(new Rectangle(0, 0, 20, 20));
@@ -1670,7 +1670,7 @@ public class LabelSkinTest {
         label.setPadding(new Insets(7, 7, 7, 7));
         assertEquals(14 + 20, label.maxWidth(-1), 0);
     }
-    
+
     // TODO should this include the gap??
     @Test public void whenTextIsNullAndGraphicIsSetWithTEXT_ONLYContentDisplay_computeMaxWidth_ReturnsPadding() {
         label.setText(null);
@@ -1680,7 +1680,7 @@ public class LabelSkinTest {
         label.setPadding(new Insets(7, 7, 7, 7));
         assertEquals(14, label.maxWidth(-1), 0);
     }
-    
+
     @Test public void whenTextIsEmptyAndGraphicIsSetWithTEXT_ONLYContentDisplay_computeMaxWidth_ReturnsPadding() {
         label.setText("");
         label.setGraphic(new Rectangle(0, 0, 20, 20));
@@ -1689,7 +1689,7 @@ public class LabelSkinTest {
         label.setPadding(new Insets(7, 7, 7, 7));
         assertEquals(14, label.maxWidth(-1), 0);
     }
-    
+
     // TODO should this include the gap? I guess not, otherwise our gap would have to default to 0
     @Test public void whenTextIsSetAndGraphicIsSetWithTEXT_ONLYContentDisplay_computeMaxWidth_ReturnsTextWidthPlusPadding() {
         label.setText("Yippee Skippee");
@@ -1700,7 +1700,7 @@ public class LabelSkinTest {
         final double textWidth = Utils.computeTextWidth(label.getFont(), "Yippee Skippee", 0);
         assertEquals(14 + textWidth, label.maxWidth(-1), 0);
     }
-    
+
     /****************************************************************************
      *                                                                          *
      * Tests for maxHeight.                                                     *
@@ -1713,14 +1713,14 @@ public class LabelSkinTest {
         final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0, text.getBoundsType());
         assertEquals(14 + lineHeight, label.maxHeight(-1), 0);
     }
-    
+
     @Test public void whenTextIsEmptyAndNoGraphic_computeMaxHeight_ReturnsSingleLineStringHeightPlusPadding() {
         label.setText("");
         label.setPadding(new Insets(7, 7, 7, 7));
         final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0, text.getBoundsType());
         assertEquals(14 + lineHeight, label.maxHeight(-1), 0);
     }
-    
+
     @Test public void whenTextIsSetAndNoGraphic_computeMaxHeight_ReturnsSingleLineStringHeightPlusPadding() {
         label.setText("Howdy Pardner");
         label.setPadding(new Insets(7, 7, 7, 7));
@@ -1728,7 +1728,7 @@ public class LabelSkinTest {
         final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0, text.getBoundsType());
         assertEquals(14 + lineHeight, label.maxHeight(-1), 0);
     }
-    
+
     @Test public void whenTextIsNullAndUnmanagedGraphic_computeMaxHeight_ReturnsSingleLineStringHeightPlusPadding() {
         label.setText(null);
         label.setPadding(new Insets(7, 7, 7, 7));
@@ -1738,7 +1738,7 @@ public class LabelSkinTest {
         final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0, text.getBoundsType());
         assertEquals(14 + lineHeight, label.maxHeight(-1), 0);
     }
-    
+
     @Test public void whenTextIsEmptyAndUnmanagedGraphic_computeMaxHeight_ReturnsSingleLineStringHeightPlusPadding() {
         label.setText("");
         label.setPadding(new Insets(7, 7, 7, 7));
@@ -1748,7 +1748,7 @@ public class LabelSkinTest {
         final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0, text.getBoundsType());
         assertEquals(14 + lineHeight, label.maxHeight(-1), 0);
     }
-    
+
     @Test public void whenTextIsSetAndUnmanagedGraphic_computeMaxHeight_ReturnsSingleLineStringHeightPlusPadding() {
         label.setText("Howdy Pardner");
         label.setPadding(new Insets(7, 7, 7, 7));
@@ -1759,7 +1759,7 @@ public class LabelSkinTest {
         assertTrue(label.maxHeight(-1) >= 0);
         assertEquals(14 + lineHeight, label.maxHeight(-1), 0);
     }
-    
+
     @Test public void whenTextIsNullAndGraphicIsSetWithTOPContentDisplay_computeMaxHeight_ReturnsRightAnswer() {
         label.setText(null);
         label.setPadding(new Insets(7, 7, 7, 7));
@@ -1770,7 +1770,7 @@ public class LabelSkinTest {
         final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0, text.getBoundsType());
         assertEquals(14 + 23 + lineHeight + 2, label.maxHeight(-1), 0);
     }
-    
+
     @Test public void whenTextIsEmptyAndGraphicIsSetWithTOPContentDisplay_computeMaxHeight_ReturnsRightAnswer() {
         label.setText("");
         label.setPadding(new Insets(7, 7, 7, 7));
@@ -1781,7 +1781,7 @@ public class LabelSkinTest {
         final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0, text.getBoundsType());
         assertEquals(14 + 23 + lineHeight + 2, label.maxHeight(-1), 0);
     }
-    
+
     @Test public void whenTextIsSetAndGraphicIsSetWithTOPContentDisplay_computeMaxHeight_ReturnsRightAnswer() {
         label.setText("For crying in the mud");
         label.setPadding(new Insets(7, 7, 7, 7));
@@ -1792,7 +1792,7 @@ public class LabelSkinTest {
         final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0, text.getBoundsType());
         assertEquals(14 + 23 + lineHeight + 2, label.maxHeight(-1), 0);
     }
-    
+
     @Test public void whenTextIsNullAndGraphicIsSetWithRIGHTContentDisplay_computeMaxHeight_ReturnsRightAnswer() {
         label.setText(null);
         label.setPadding(new Insets(7, 7, 7, 7));
@@ -1802,7 +1802,7 @@ public class LabelSkinTest {
         final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0, text.getBoundsType());
         assertEquals(14 + Math.max(23, lineHeight), label.maxHeight(-1), 0);
     }
-    
+
     @Test public void whenTextIsEmptyAndGraphicIsSetWithRIGHTContentDisplay_computeMaxHeight_ReturnsRightAnswer() {
         label.setText("");
         label.setPadding(new Insets(7, 7, 7, 7));
@@ -1812,7 +1812,7 @@ public class LabelSkinTest {
         final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0, text.getBoundsType());
         assertEquals(14 + Math.max(23, lineHeight), label.maxHeight(-1), 0);
     }
-    
+
     @Test public void whenTextIsSetAndGraphicIsSetWithRIGHTContentDisplay_computeMaxHeight_ReturnsRightAnswer() {
         label.setText("For crying in the mud");
         label.setPadding(new Insets(7, 7, 7, 7));
@@ -1822,7 +1822,7 @@ public class LabelSkinTest {
         final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0, text.getBoundsType());
         assertEquals(14 + Math.max(23, lineHeight), label.maxHeight(-1), 0);
     }
-    
+
     @Test public void whenTextIsNullAndGraphicIsSetWithBOTTOMContentDisplay_computeMaxHeight_ReturnsRightAnswer() {
         label.setText(null);
         label.setPadding(new Insets(7, 7, 7, 7));
@@ -1833,7 +1833,7 @@ public class LabelSkinTest {
         final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0, text.getBoundsType());
         assertEquals(14 + 23 + lineHeight + 2, label.maxHeight(-1), 0);
     }
-    
+
     @Test public void whenTextIsEmptyAndGraphicIsSetWithBOTTOMContentDisplay_computeMaxHeight_ReturnsRightAnswer() {
         label.setText("");
         label.setPadding(new Insets(7, 7, 7, 7));
@@ -1844,7 +1844,7 @@ public class LabelSkinTest {
         final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0, text.getBoundsType());
         assertEquals(14 + 23 + lineHeight + 2, label.maxHeight(-1), 0);
     }
-    
+
     @Test public void whenTextIsSetAndGraphicIsSetWithBOTTOMContentDisplay_computeMaxHeight_ReturnsRightAnswer() {
         label.setText("For crying in the mud");
         label.setPadding(new Insets(7, 7, 7, 7));
@@ -1855,7 +1855,7 @@ public class LabelSkinTest {
         final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0, text.getBoundsType());
         assertEquals(14 + 23 + lineHeight + 2, label.maxHeight(-1), 0);
     }
-    
+
     @Test public void whenTextIsNullAndGraphicIsSetWithLEFTContentDisplay_computeMaxHeight_ReturnsRightAnswer() {
         label.setText(null);
         label.setPadding(new Insets(7, 7, 7, 7));
@@ -1865,7 +1865,7 @@ public class LabelSkinTest {
         final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0, text.getBoundsType());
         assertEquals(14 + Math.max(23, lineHeight), label.maxHeight(-1), 0);
     }
-    
+
     @Test public void whenTextIsEmptyAndGraphicIsSetWithLEFTContentDisplay_computeMaxHeight_ReturnsRightAnswer() {
         label.setText("");
         label.setPadding(new Insets(7, 7, 7, 7));
@@ -1875,7 +1875,7 @@ public class LabelSkinTest {
         final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0, text.getBoundsType());
         assertEquals(14 + Math.max(23, lineHeight), label.maxHeight(-1), 0);
     }
-    
+
     @Test public void whenTextIsSetAndGraphicIsSetWithLEFTContentDisplay_computeMaxHeight_ReturnsRightAnswer() {
         label.setText("For crying in the mud");
         label.setPadding(new Insets(7, 7, 7, 7));
@@ -1885,7 +1885,7 @@ public class LabelSkinTest {
         final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0, text.getBoundsType());
         assertEquals(14 + Math.max(23, lineHeight), label.maxHeight(-1), 0);
     }
-    
+
     @Test public void whenTextIsNullAndGraphicIsSetWithCENTERContentDisplay_computeMaxHeight_ReturnsRightAnswer() {
         label.setText(null);
         label.setPadding(new Insets(7, 7, 7, 7));
@@ -1895,7 +1895,7 @@ public class LabelSkinTest {
         final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0, text.getBoundsType());
         assertEquals(14 + Math.max(23, lineHeight), label.maxHeight(-1), 0);
     }
-    
+
     @Test public void whenTextIsEmptyAndGraphicIsSetWithCENTERContentDisplay_computeMaxHeight_ReturnsRightAnswer() {
         label.setText("");
         label.setPadding(new Insets(7, 7, 7, 7));
@@ -1905,7 +1905,7 @@ public class LabelSkinTest {
         final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0, text.getBoundsType());
         assertEquals(14 + Math.max(23, lineHeight), label.maxHeight(-1), 0);
     }
-    
+
     @Test public void whenTextIsSetAndGraphicIsSetWithCENTERContentDisplay_computeMaxHeight_ReturnsRightAnswer() {
         label.setText("For crying in the mud");
         label.setPadding(new Insets(7, 7, 7, 7));
@@ -1915,7 +1915,7 @@ public class LabelSkinTest {
         final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0, text.getBoundsType());
         assertEquals(14 + Math.max(23, lineHeight), label.maxHeight(-1), 0);
     }
-    
+
     @Test public void whenTextIsNullAndGraphicIsSetWithGRAPHIC_ONLYContentDisplay_computeMaxHeight_ReturnsRightAnswer() {
         label.setText(null);
         label.setPadding(new Insets(7, 7, 7, 7));
@@ -1924,7 +1924,7 @@ public class LabelSkinTest {
         label.setContentDisplay(ContentDisplay.GRAPHIC_ONLY);
         assertEquals(14 + 23, label.maxHeight(-1), 0);
     }
-    
+
     @Test public void whenTextIsEmptyAndGraphicIsSetWithGRAPHIC_ONLYContentDisplay_computeMaxHeight_ReturnsRightAnswer() {
         label.setText("");
         label.setPadding(new Insets(7, 7, 7, 7));
@@ -1933,7 +1933,7 @@ public class LabelSkinTest {
         label.setContentDisplay(ContentDisplay.GRAPHIC_ONLY);
         assertEquals(14 + 23, label.maxHeight(-1), 0);
     }
-    
+
     @Test public void whenTextIsSetAndGraphicIsSetWithGRAPHIC_ONLYContentDisplay_computeMaxHeight_ReturnsRightAnswer() {
         label.setText("For crying in the mud");
         label.setPadding(new Insets(7, 7, 7, 7));
@@ -1942,7 +1942,7 @@ public class LabelSkinTest {
         label.setContentDisplay(ContentDisplay.GRAPHIC_ONLY);
         assertEquals(14 + 23, label.maxHeight(-1), 0);
     }
-    
+
     @Test public void whenTextIsNullAndGraphicIsSetWithTEXT_ONLYContentDisplay_computeMaxHeight_ReturnsRightAnswer() {
         label.setText(null);
         label.setPadding(new Insets(7, 7, 7, 7));
@@ -1952,7 +1952,7 @@ public class LabelSkinTest {
         final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0, text.getBoundsType());
         assertEquals(14 + lineHeight, label.maxHeight(-1), 0);
     }
-    
+
     @Test public void whenTextIsEmptyAndGraphicIsSetWithTEXT_ONLYContentDisplay_computeMaxHeight_ReturnsRightAnswer() {
         label.setText("");
         label.setPadding(new Insets(7, 7, 7, 7));
@@ -1962,7 +1962,7 @@ public class LabelSkinTest {
         final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0, text.getBoundsType());
         assertEquals(14 + lineHeight, label.maxHeight(-1), 0);
     }
-    
+
     @Test public void whenTextIsSetAndGraphicIsSetWithTEXT_ONLYContentDisplay_computeMaxHeight_ReturnsRightAnswer() {
         label.setText("For crying in the mud");
         label.setPadding(new Insets(7, 7, 7, 7));
@@ -1982,7 +1982,7 @@ public class LabelSkinTest {
         label.setPrefHeight(500);
         assertEquals(500, label.maxHeight(-1), 0);
     }
-    
+
     /****************************************************************************
      *                                                                          *
      * Tests for updateDisplayedText                                            *
@@ -1990,8 +1990,8 @@ public class LabelSkinTest {
      ***************************************************************************/
 
     // tests for updateDisplayedText (not even sure how to test it exactly yet)
-    
-    
+
+
     public static final class LabelSkinMock extends LabelSkin {
         boolean propertyChanged = false;
         int propertyChangeCount = 0;

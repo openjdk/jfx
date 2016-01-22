@@ -47,12 +47,12 @@ import static org.junit.Assert.*;
 import org.junit.Before;
 
 public class ExpressionHelperUtilityTest {
-    
+
     private ObservableValue observableValue;
     private ObservableListValue observableList;
     private ObservableMapValue observableMap;
     private ObservableSetValue observableSet;
-    
+
     private InvalidationListener invalidationListener1;
     private InvalidationListener invalidationListener2;
     private ChangeListener changeListener1;
@@ -63,14 +63,14 @@ public class ExpressionHelperUtilityTest {
     private MapChangeListener mapChangeListener2;
     private SetChangeListener setChangeListener1;
     private SetChangeListener setChangeListener2;
-    
+
     @Before
     public void setUp() {
         observableValue = new SimpleStringProperty();
         observableList = new SimpleListProperty();
         observableMap = new SimpleMapProperty();
         observableSet = new SimpleSetProperty();
-        
+
         invalidationListener1 = new EmptyInvalidationListener();
         invalidationListener2 = new EmptyInvalidationListener();
         changeListener1 = new EmptyChangeListener();
@@ -82,22 +82,22 @@ public class ExpressionHelperUtilityTest {
         setChangeListener1 = new EmptySetChangeListener();
         setChangeListener2 = new EmptySetChangeListener();
     }
-    
+
     @Test
     public void testGetInvalidationListenerFromValue() {
         // empty helper
         assertEquals(Collections.emptyList(), ExpressionHelperUtility.getInvalidationListeners(observableValue));
-        
+
         // SingleInvalidation
         observableValue.addListener(invalidationListener1);
         assertEquals(Collections.singletonList(invalidationListener1), ExpressionHelperUtility.getInvalidationListeners(observableValue));
         observableValue.removeListener(invalidationListener1);
-        
+
         // SingleChange
         observableValue.addListener(changeListener1);
         assertEquals(Collections.emptyList(), ExpressionHelperUtility.getInvalidationListeners(observableValue));
         observableValue.removeListener(changeListener1);
-        
+
         // Generic
         observableValue.addListener(changeListener1);
         observableValue.addListener(changeListener2);
@@ -108,22 +108,22 @@ public class ExpressionHelperUtilityTest {
         assertTrue(Arrays.asList(invalidationListener1, invalidationListener2).equals(ExpressionHelperUtility.getInvalidationListeners(observableValue))
                 || Arrays.asList(invalidationListener2, invalidationListener1).equals(ExpressionHelperUtility.getInvalidationListeners(observableValue)));
     }
-    
+
     @Test
     public void testGetChangeListenerFromValue() {
         // empty helper
         assertEquals(Collections.emptyList(), ExpressionHelperUtility.getChangeListeners(observableValue));
-        
+
         // SingleInvalidation
         observableValue.addListener(invalidationListener1);
         assertEquals(Collections.emptyList(), ExpressionHelperUtility.getChangeListeners(observableValue));
         observableValue.removeListener(invalidationListener1);
-        
+
         // SingleChange
         observableValue.addListener(changeListener1);
         assertEquals(Collections.singletonList(changeListener1), ExpressionHelperUtility.getChangeListeners(observableValue));
         observableValue.removeListener(changeListener1);
-        
+
         // Generic
         observableValue.addListener(invalidationListener1);
         observableValue.addListener(invalidationListener2);
@@ -417,21 +417,21 @@ public class ExpressionHelperUtilityTest {
     private static class EmptyInvalidationListener implements InvalidationListener {
         @Override public void invalidated(Observable observable) { }
     }
-    
+
     private static class EmptyChangeListener implements ChangeListener<Object> {
         @Override public void changed(ObservableValue<? extends Object> observableValue, Object oldValue, Object newValue) { }
     }
-    
+
     private static class EmptyListChangeListener implements ListChangeListener<Object> {
         @Override public void onChanged(Change<? extends Object> change) { }
     }
-    
+
     private static class EmptyMapChangeListener implements MapChangeListener<Object, Object> {
         @Override public void onChanged(Change<? extends Object, ? extends Object> change) { }
     }
-    
+
     private static class EmptySetChangeListener implements SetChangeListener<Object> {
         @Override public void onChanged(Change<? extends Object> change) { }
     }
-    
+
 }

@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef IntendedStructureChain_h
@@ -44,27 +44,27 @@ public:
     IntendedStructureChain(CodeBlock* codeBlock, Structure* head, StructureChain* chain);
     IntendedStructureChain(CodeBlock* codeBlock, Structure* head, StructureChain* chain, unsigned count);
     ~IntendedStructureChain();
-    
+
     bool isStillValid() const;
     bool matches(StructureChain*) const;
     StructureChain* chain(VM&) const;
     bool mayInterceptStoreTo(VM&, StringImpl* uid);
     bool isNormalized();
-    
+
     Structure* head() const { return m_head; }
-    
+
     size_t size() const { return m_vector.size(); }
     Structure* at(size_t index) { return m_vector[index]; }
     Structure* operator[](size_t index) { return at(index); }
-    
+
     JSObject* terminalPrototype() const;
-    
+
     Structure* last() const { return m_vector.last(); }
-    
+
     void visitChildren(SlotVisitor&);
     void dump(PrintStream&) const;
     void dumpInContext(PrintStream&, DumpContext*) const;
-    
+
 private:
     JSGlobalObject* m_globalObject;
     Structure* m_head;

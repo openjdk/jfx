@@ -53,26 +53,26 @@ public class ReadOnlyDoublePropertyTest {
     public void testToString() {
         final ReadOnlyDoubleProperty v1 = new ReadOnlyDoublePropertyStub(null, "");
         assertEquals("ReadOnlyDoubleProperty [value: " + DEFAULT + "]", v1.toString());
-        
+
         final ReadOnlyDoubleProperty v2 = new ReadOnlyDoublePropertyStub(null, null);
         assertEquals("ReadOnlyDoubleProperty [value: " + DEFAULT + "]", v2.toString());
-        
+
         final Object bean = new Object();
         final String name = "My name";
         final ReadOnlyDoubleProperty v3 = new ReadOnlyDoublePropertyStub(bean, name);
         assertEquals("ReadOnlyDoubleProperty [bean: " + bean.toString() + ", name: My name, value: " + DEFAULT + "]", v3.toString());
-        
+
         final ReadOnlyDoubleProperty v4 = new ReadOnlyDoublePropertyStub(bean, "");
         assertEquals("ReadOnlyDoubleProperty [bean: " + bean.toString() + ", value: " + DEFAULT + "]", v4.toString());
-        
+
         final ReadOnlyDoubleProperty v5 = new ReadOnlyDoublePropertyStub(bean, null);
         assertEquals("ReadOnlyDoubleProperty [bean: " + bean.toString() + ", value: " + DEFAULT + "]", v5.toString());
-        
+
         final ReadOnlyDoubleProperty v6 = new ReadOnlyDoublePropertyStub(null, name);
         assertEquals("ReadOnlyDoubleProperty [name: My name, value: " + DEFAULT + "]", v6.toString());
-        
+
     }
-    
+
     @Test
     public void testAsObject() {
         final ReadOnlyDoubleWrapper valueModel = new ReadOnlyDoubleWrapper();
@@ -84,12 +84,12 @@ public class ReadOnlyDoublePropertyTest {
         valueModel.set(5e11);
         assertEquals(5e11, exp.getValue(), EPSILON);
     }
-    
+
     @Test
     public void testObjectToDouble() {
         final ReadOnlyObjectWrapper<Double> valueModel = new ReadOnlyObjectWrapper<Double>();
         final ReadOnlyDoubleProperty exp = ReadOnlyDoubleProperty.readOnlyDoubleProperty(valueModel.getReadOnlyProperty());
-        
+
 
         assertEquals(0.0, exp.doubleValue(), EPSILON);
         valueModel.set(-4354.3);
@@ -97,12 +97,12 @@ public class ReadOnlyDoublePropertyTest {
         valueModel.set(5e11);
         assertEquals(5e11, exp.doubleValue(), EPSILON);
     }
-    
+
     private static class ReadOnlyDoublePropertyStub extends ReadOnlyDoubleProperty {
-        
+
         private final Object bean;
         private final String name;
-        
+
         private ReadOnlyDoublePropertyStub(Object bean, String name) {
             this.bean = bean;
             this.name = name;
@@ -127,7 +127,7 @@ public class ReadOnlyDoublePropertyTest {
         @Override
         public void removeListener(InvalidationListener listener) {
         }
-        
+
     }
 
 }

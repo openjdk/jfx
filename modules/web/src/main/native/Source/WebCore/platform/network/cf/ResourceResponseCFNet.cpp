@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -36,7 +36,7 @@
 // We would like a better value for a maximum time_t,
 // but there is no way to do that in C with any certainty.
 // INT_MAX should work well enough for our purposes.
-#define MAX_TIME_T ((time_t)INT_MAX)    
+#define MAX_TIME_T ((time_t)INT_MAX)
 
 namespace WebCore {
 
@@ -80,9 +80,9 @@ void ResourceResponse::platformLazyInit(InitLevel initLevel)
         CFHTTPMessageRef httpResponse = CFURLResponseGetHTTPResponse(m_cfResponse.get());
         if (httpResponse) {
             m_httpStatusCode = CFHTTPMessageGetResponseStatusCode(httpResponse);
-            
+
             RetainPtr<CFDictionaryRef> headers = adoptCF(CFHTTPMessageCopyAllHeaderFields(httpResponse));
-            
+
             for (int i = 0; i < numCommonHeaderFields; i++) {
                 CFStringRef value;
                 if (CFDictionaryGetValueIfPresent(headers.get(), commonHeaderFields[i], (const void **)&value))
@@ -107,7 +107,7 @@ void ResourceResponse::platformLazyInit(InitLevel initLevel)
                 m_httpHeaderFields.set((CFStringRef)keys[i], (CFStringRef)values[i]);
         }
     }
-    
+
     if (m_initLevel < AllFields && initLevel >= AllFields) {
         RetainPtr<CFStringRef> suggestedFilename = adoptCF(CFURLResponseCopySuggestedFilename(m_cfResponse.get()));
         m_suggestedFilename = suggestedFilename.get();
@@ -115,7 +115,7 @@ void ResourceResponse::platformLazyInit(InitLevel initLevel)
 
     m_initLevel = initLevel;
 }
-    
+
 bool ResourceResponse::platformCompare(const ResourceResponse& a, const ResourceResponse& b)
 {
     // CFEqual crashes if you pass it 0 so do an early check before calling it.

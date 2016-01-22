@@ -42,14 +42,14 @@ import com.oracle.javafx.scenebuilder.kit.fxom.FXOMProperty;
  *
  */
 public class RemoveNodeJob extends Job {
-    
+
     private final Job subJob;
-    
+
     public RemoveNodeJob(FXOMNode targetNode, EditorController editorController) {
         super(editorController);
-        
+
         assert (targetNode instanceof FXOMObject) || (targetNode instanceof FXOMProperty);
-        
+
         if (targetNode instanceof FXOMObject) {
             subJob = new RemoveObjectJob((FXOMObject)targetNode, editorController);
         } else {
@@ -57,8 +57,8 @@ public class RemoveNodeJob extends Job {
             subJob = new RemovePropertyJob((FXOMProperty)targetNode, editorController);
         }
     }
-    
-    
+
+
     /*
      * Job
      */
@@ -87,5 +87,5 @@ public class RemoveNodeJob extends Job {
     public String getDescription() {
         return getClass().getSimpleName(); // Should not reach end user
     }
-    
+
 }

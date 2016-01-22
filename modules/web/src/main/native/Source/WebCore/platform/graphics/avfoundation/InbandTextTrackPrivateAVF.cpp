@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -268,7 +268,7 @@ void InbandTextTrackPrivateAVF::processCueAttributes(CFAttributedStringRef attri
                 valueString = static_cast<CFStringRef>(value);
                 if (CFGetTypeID(valueString) != CFStringGetTypeID() || !CFStringGetLength(valueString))
                     continue;
-                
+
                 if (CFStringCompare(valueString, kCMTextVerticalLayout_LeftToRight, 0) == kCFCompareEqualTo)
                     tagStart.append(leftToRightMark);
                 else if (CFStringCompare(valueString, kCMTextVerticalLayout_RightToLeft, 0) == kCFCompareEqualTo)
@@ -279,7 +279,7 @@ void InbandTextTrackPrivateAVF::processCueAttributes(CFAttributedStringRef attri
             if (CFStringCompare(key, kCMTextMarkupAttribute_BaseFontSizePercentageRelativeToVideoHeight, 0) == kCFCompareEqualTo) {
                 if (CFGetTypeID(value) != CFNumberGetTypeID())
                     continue;
-                
+
                 CFNumberRef valueNumber = static_cast<CFNumberRef>(value);
                 double baseFontSize;
                 CFNumberGetValue(valueNumber, kCFNumberFloat64Type, &baseFontSize);
@@ -290,7 +290,7 @@ void InbandTextTrackPrivateAVF::processCueAttributes(CFAttributedStringRef attri
             if (CFStringCompare(key, kCMTextMarkupAttribute_RelativeFontSize, 0) == kCFCompareEqualTo) {
                 if (CFGetTypeID(value) != CFNumberGetTypeID())
                     continue;
-                
+
                 CFNumberRef valueNumber = static_cast<CFNumberRef>(value);
                 double relativeFontSize;
                 CFNumberGetValue(valueNumber, kCFNumberFloat64Type, &relativeFontSize);
@@ -305,7 +305,7 @@ void InbandTextTrackPrivateAVF::processCueAttributes(CFAttributedStringRef attri
                 if (processed & FontName)
                     continue;
                 processed |= FontName;
-                
+
                 cueData->setFontName(valueString);
                 continue;
             }
@@ -314,18 +314,18 @@ void InbandTextTrackPrivateAVF::processCueAttributes(CFAttributedStringRef attri
                 CFArrayRef arrayValue = static_cast<CFArrayRef>(value);
                 if (CFGetTypeID(arrayValue) != CFArrayGetTypeID())
                     continue;
-                
+
                 RGBA32 color;
                 if (!makeRGBA32FromARGBCFArray(arrayValue, color))
                     continue;
                 cueData->setForegroundColor(color);
             }
-            
+
             if (CFStringCompare(key, kCMTextMarkupAttribute_BackgroundColorARGB, 0) == kCFCompareEqualTo) {
                 CFArrayRef arrayValue = static_cast<CFArrayRef>(value);
                 if (CFGetTypeID(arrayValue) != CFArrayGetTypeID())
                     continue;
-                
+
                 RGBA32 color;
                 if (!makeRGBA32FromARGBCFArray(arrayValue, color))
                     continue;
@@ -336,7 +336,7 @@ void InbandTextTrackPrivateAVF::processCueAttributes(CFAttributedStringRef attri
                 CFArrayRef arrayValue = static_cast<CFArrayRef>(value);
                 if (CFGetTypeID(arrayValue) != CFArrayGetTypeID())
                     continue;
-                
+
                 RGBA32 color;
                 if (!makeRGBA32FromARGBCFArray(arrayValue, color))
                     continue;
@@ -409,12 +409,12 @@ void InbandTextTrackPrivateAVF::processCue(CFArrayRef attributedStrings, double 
         m_currentCueStartTime = time;
         cueData->setStartTime(m_currentCueStartTime);
         cueData->setEndTime(std::numeric_limits<double>::infinity());
-        
+
         // AVFoundation cue "position" is to the center of the text so adjust relative to the edge because we will use it to
         // set CSS "left".
         if (cueData->position() >= 0 && cueData->size() > 0)
             cueData->setPosition(cueData->position() - cueData->size() / 2);
-        
+
         LOG(Media, "InbandTextTrackPrivateAVF::processCue(%p) - adding cue for time = %.2f, position =  %.2f, line =  %.2f", this, cueData->startTime(), cueData->position(), cueData->line());
 
         cueData->setStatus(GenericCueData::Partial);

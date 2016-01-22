@@ -47,7 +47,7 @@ public:
     void invalidateCode();
 
 private:
-    
+
     static const unsigned maxStrongCacheablePatternLength = 256;
 
     static const int maxStrongCacheableEntries = 32;

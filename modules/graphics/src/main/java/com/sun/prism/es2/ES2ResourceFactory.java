@@ -71,7 +71,7 @@ public class ES2ResourceFactory extends BaseShaderFactory {
             System.out.println("Maximum number of vertex attributes = "
                     + context.getGLContext().getIntParam(GLContext.GL_MAX_VERTEX_ATTRIBS));
             int maxVUC, maxFUC, maxVC;
-            // We need this if-else block is because iMX6 doesn't support component queries 
+            // We need this if-else block is because iMX6 doesn't support component queries
             // and Mac  doesn't support vectors queries.
             if (PlatformUtil.isEmbedded()) {
                 // Multiply by 4 as it is documented that a vector has 4 components.

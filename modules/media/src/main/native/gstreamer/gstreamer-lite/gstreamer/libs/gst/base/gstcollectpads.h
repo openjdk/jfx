@@ -362,8 +362,8 @@ void            gst_collect_pads_set_waiting   (GstCollectPads *pads, GstCollect
                                                 gboolean waiting);
 
 /* convenience helper */
-GstFlowReturn	gst_collect_pads_clip_running_time (GstCollectPads * pads,
-					            GstCollectData * cdata,
+GstFlowReturn   gst_collect_pads_clip_running_time (GstCollectPads * pads,
+                                GstCollectData * cdata,
                                                     GstBuffer * buf, GstBuffer ** outbuf,
                                                     gpointer user_data);
 

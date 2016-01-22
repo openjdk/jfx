@@ -24,7 +24,7 @@
 #include <gst/tag/tag.h>
 
 G_BEGIN_DECLS
-  
+
 
 typedef struct _GstTagEntryMatch GstTagEntryMatch;
 struct _GstTagEntryMatch {

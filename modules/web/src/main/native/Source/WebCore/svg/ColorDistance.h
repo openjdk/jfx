@@ -21,9 +21,9 @@
 #define ColorDistance_h
 
 namespace WebCore {
-    
+
 class Color;
-    
+
 class ColorDistance {
 public:
     ColorDistance();
@@ -32,14 +32,14 @@ public:
 
     ColorDistance scaledDistance(float scaleFactor) const;
     Color addToColor(const Color&) const;
-        
+
     static Color addColors(const Color&, const Color&);
     static Color clampColor(int red, int green, int blue, int alpha);
 
     bool isZero() const;
 
     float distance() const;
-        
+
 private:
     int m_redDiff;
     int m_greenDiff;

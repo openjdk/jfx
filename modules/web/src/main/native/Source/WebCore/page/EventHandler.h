@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef EventHandler_h
@@ -242,14 +242,14 @@ public:
 
 #if ENABLE(DRAG_SUPPORT)
     bool eventMayStartDrag(const PlatformMouseEvent&) const;
-    
+
     void dragSourceEndedAt(const PlatformMouseEvent&, DragOperation);
 #endif
 
     void focusDocumentView();
 
     void capsLockStateMayHaveChanged(); // Only called by FrameSelection
-    
+
     void sendScrollEvent(); // Ditto
 
 #if PLATFORM(COCOA) && defined(__OBJC__)
@@ -304,7 +304,7 @@ private:
 #if ENABLE(DRAG_SUPPORT)
     static DragState& dragState();
     static const double TextDragDelay;
-    
+
     PassRefPtr<Clipboard> createDraggingClipboard() const;
 #endif // ENABLE(DRAG_SUPPORT)
 
@@ -333,9 +333,9 @@ private:
 #endif
 
     bool logicalScrollOverflow(ScrollLogicalDirection, ScrollGranularity, Node* startingNode = 0);
-    
+
     bool shouldTurnVerticalTicksIntoHorizontal(const HitTestResult&, const PlatformWheelEvent&) const;
-    
+
     bool mouseDownMayStartSelect() const { return m_mouseDownMayStartSelect; }
 
     static bool isKeyboardOptionTab(KeyboardEvent*);
@@ -355,10 +355,10 @@ private:
 #endif
 
     Node* nodeUnderMouse() const;
-    
+
     void updateMouseEventTargetNode(Node*, const PlatformMouseEvent&, bool fireMouseOverOut);
     void fireMouseOverOut(bool fireMouseOver = true, bool fireMouseOut = true, bool updateLastNodeUnderMouse = true);
-    
+
     MouseEventWithHitTestResults prepareMouseEvent(const HitTestRequest&, const PlatformMouseEvent&);
 
     bool dispatchMouseEvent(const AtomicString& eventType, Node* target, bool cancelable, int clickCount, const PlatformMouseEvent&, bool setUnder);
@@ -402,7 +402,7 @@ private:
     DragSourceAction updateDragSourceActionsAllowed() const;
 #endif
 
-    // The following are called at the beginning of handleMouseUp and handleDrag.  
+    // The following are called at the beginning of handleMouseUp and handleDrag.
     // If they return true it indicates that they have consumed the event.
     bool eventLoopHandleMouseUp(const MouseEventWithHitTestResults&);
 #if ENABLE(DRAG_SUPPORT)
@@ -414,7 +414,7 @@ private:
 #endif
 
     void updateLastScrollbarUnderMouse(Scrollbar*, bool);
-    
+
     void setFrameWasScrolledByUser();
 
     bool capturesDragging() const { return m_capturesDragging; }
@@ -477,7 +477,7 @@ private:
 
     RefPtr<Element> m_capturingMouseEventsElement;
     bool m_eventHandlerWillResetCapturingMouseEventsElement;
-    
+
     RefPtr<Element> m_elementUnderMouse;
     RefPtr<Element> m_lastElementUnderMouse;
     RefPtr<Frame> m_lastMouseMoveEventSubframe;
@@ -506,11 +506,11 @@ private:
     RefPtr<Element> m_dragTarget;
     bool m_shouldOnlyFireDragOverEvent;
 #endif
-    
+
     RefPtr<HTMLFrameSetElement> m_frameSetBeingResized;
 
     LayoutSize m_offsetFromResizeCorner; // In the coords of m_resizeLayer.
-    
+
     bool m_mousePositionIsUnknown;
     IntPoint m_lastKnownMousePosition;
     IntPoint m_lastKnownMouseGlobalPosition;

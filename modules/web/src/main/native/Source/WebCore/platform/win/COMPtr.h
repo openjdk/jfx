@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef COMPtr_h
@@ -41,7 +41,7 @@
 typedef long HRESULT;
 
 // FIXME: Should we put this into the WebCore namespace and use "using" on it
-// as we do with things in WTF? 
+// as we do with things in WTF?
 
 enum AdoptCOMTag { AdoptCOM };
 enum QueryTag { Query };
@@ -76,7 +76,7 @@ public:
     T** operator&() { ASSERT(!m_ptr); return &m_ptr; }
 
     bool operator!() const { return !m_ptr; }
-    
+
     // This conversion operator allows implicit conversion to bool but not to other integer types.
     typedef T* (COMPtr::*UnspecifiedBoolType)() const;
     operator UnspecifiedBoolType() const { return m_ptr ? &COMPtr::get : 0; }
@@ -201,7 +201,7 @@ template<typename T, typename U> inline bool operator==(const COMPtr<T>& a, U* b
     return a.get() == b;
 }
 
-template<typename T, typename U> inline bool operator==(T* a, const COMPtr<U>& b) 
+template<typename T, typename U> inline bool operator==(T* a, const COMPtr<U>& b)
 {
     return a == b.get();
 }

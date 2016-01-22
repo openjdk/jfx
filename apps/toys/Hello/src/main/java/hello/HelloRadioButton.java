@@ -58,7 +58,7 @@ public class HelloRadioButton extends Application {
         sides.setAlignment(Pos.CENTER);
         VBox quotes = new VBox(10);
         quotes.setAlignment(Pos.CENTER_LEFT);
-        
+
         ToggleGroup toggle = new ToggleGroup();
         RadioButton button1 = new RadioButton("No, *I* am your father");
         button1.setToggleGroup(toggle);
@@ -67,10 +67,10 @@ public class HelloRadioButton extends Application {
         button2.setLayoutY(40);
         button2.setToggleGroup(toggle);
         quotes.getChildren().addAll(button1, button2);
-        
+
         Button clear = new Button("Clear Selection");
         sides.getChildren().add(new Label("Select Side:"));
-        
+
         ToggleGroup sideGroup = new ToggleGroup();
         for (final Side side : Side.class.getEnumConstants()) {
             final RadioButton rb = new RadioButton(side.toString());
@@ -95,7 +95,7 @@ public class HelloRadioButton extends Application {
         Scene scene = new Scene(group);
         scene.setFill(GHOSTWHITE);
         group.getChildren().add(vbox);
-        
+
         stage.setTitle("Hello RadioButton");
         stage.setWidth(450);
         stage.setHeight(300);

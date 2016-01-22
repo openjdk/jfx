@@ -53,7 +53,7 @@ public class GenericEditor extends PropertyEditor {
         super(propMeta, selectedClasses);
         initialize();
     }
-    
+
     private void initialize() {
         textField = new TextField();
         EventHandler<ActionEvent> onActionListener = event -> userUpdateValueProperty(getValue());

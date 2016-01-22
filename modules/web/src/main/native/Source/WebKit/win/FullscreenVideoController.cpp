@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -200,7 +200,7 @@ private:
     FullscreenVideoController* m_parent;
 };
 
-void FullscreenVideoController::LayerClient::platformCALayerLayoutSublayersOfLayer(PlatformCALayer* layer) 
+void FullscreenVideoController::LayerClient::platformCALayerLayoutSublayersOfLayer(PlatformCALayer* layer)
 {
     ASSERT_ARG(layer, layer == m_parent->m_rootChild);
 
@@ -307,9 +307,9 @@ void FullscreenVideoController::exitFullscreen()
     // of its orginial layer tree to display it in our fullscreen
     // window.  Now, we need to get the layer back in its original
     // tree.
-    // 
+    //
     // As a side effect of setting the player to invisible/visible,
-    // the player's layer will be recreated, and will be picked up 
+    // the player's layer will be recreated, and will be picked up
     // the next time the layer tree is synched.
     m_mediaElement->player()->setVisible(0);
     m_mediaElement->player()->setVisible(1);
@@ -363,13 +363,13 @@ float FullscreenVideoController::duration() const
 
 void FullscreenVideoController::beginScrubbing()
 {
-    if (m_mediaElement) 
+    if (m_mediaElement)
         m_mediaElement->beginScrubbing();
 }
 
 void FullscreenVideoController::endScrubbing()
 {
-    if (m_mediaElement) 
+    if (m_mediaElement)
         m_mediaElement->endScrubbing();
 }
 
@@ -449,7 +449,7 @@ void FullscreenVideoController::createHUDWindow()
 
     registerHUDWindowClass();
 
-    m_hudWindow = CreateWindowEx(WS_EX_LAYERED | WS_EX_TRANSPARENT | WS_EX_TOOLWINDOW, 
+    m_hudWindow = CreateWindowEx(WS_EX_LAYERED | WS_EX_TRANSPARENT | WS_EX_TOOLWINDOW,
         fullscreenVideeoHUDWindowClassName, 0, WS_POPUP | WS_VISIBLE,
         m_hudPosition.x(), m_hudPosition.y(), 0, 0, m_fullscreenWindow->hwnd(), 0, gInstance, 0);
     ASSERT(::IsWindow(m_hudWindow));
@@ -462,7 +462,7 @@ static String timeToString(float time)
 {
     if (!std::isfinite(time))
         time = 0;
-    int seconds = fabsf(time); 
+    int seconds = fabsf(time);
     int hours = seconds / (60 * 60);
     int minutes = (seconds / 60) % 60;
     seconds %= 60;

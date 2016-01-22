@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -179,7 +179,7 @@ CaptionUserPreferences::CaptionDisplayMode CaptionUserPreferencesMediaAF::captio
     ASSERT_NOT_REACHED();
     return ForcedOnly;
 }
-    
+
 void CaptionUserPreferencesMediaAF::setCaptionDisplayMode(CaptionUserPreferences::CaptionDisplayMode mode)
 {
     if (testingMode() || !MediaAccessibilityLibrary()) {
@@ -211,7 +211,7 @@ bool CaptionUserPreferencesMediaAF::userPrefersCaptions() const
     bool captionSetting = CaptionUserPreferences::userPrefersCaptions();
     if (captionSetting || testingMode() || !MediaAccessibilityLibrary())
         return captionSetting;
-    
+
     RetainPtr<CFArrayRef> captioningMediaCharacteristics = adoptCF(MACaptionAppearanceCopyPreferredCaptioningMediaCharacteristics(kMACaptionAppearanceDomainUser));
     return captioningMediaCharacteristics && CFArrayGetCount(captioningMediaCharacteristics.get());
 }
@@ -221,7 +221,7 @@ bool CaptionUserPreferencesMediaAF::userPrefersSubtitles() const
     bool subtitlesSetting = CaptionUserPreferences::userPrefersSubtitles();
     if (subtitlesSetting || testingMode() || !MediaAccessibilityLibrary())
         return subtitlesSetting;
-    
+
     RetainPtr<CFArrayRef> captioningMediaCharacteristics = adoptCF(MACaptionAppearanceCopyPreferredCaptioningMediaCharacteristics(kMACaptionAppearanceDomainUser));
     return !(captioningMediaCharacteristics && CFArrayGetCount(captioningMediaCharacteristics.get()));
 }
@@ -303,14 +303,14 @@ Color CaptionUserPreferencesMediaAF::captionsTextColor(bool& important) const
     if (!textColor.isValid())
         // This default value must be the same as the one specified in mediaControls.css for -webkit-media-text-track-container.
         textColor = Color::white;
-    
+
     important = behavior == kMACaptionAppearanceBehaviorUseValue;
     CGFloat opacity = MACaptionAppearanceGetForegroundOpacity(kMACaptionAppearanceDomainUser, &behavior);
     if (!important)
         important = behavior == kMACaptionAppearanceBehaviorUseValue;
     return Color(textColor.red(), textColor.green(), textColor.blue(), static_cast<int>(opacity * 255));
 }
-    
+
 String CaptionUserPreferencesMediaAF::captionsTextColorCSS() const
 {
     bool important;
@@ -321,7 +321,7 @@ String CaptionUserPreferencesMediaAF::captionsTextColorCSS() const
 
     return colorPropertyCSS(CSSPropertyColor, textColor, important);
 }
-    
+
 String CaptionUserPreferencesMediaAF::windowRoundedCornerRadiusCSS() const
 {
     MACaptionAppearanceBehavior behavior;
@@ -338,22 +338,22 @@ String CaptionUserPreferencesMediaAF::windowRoundedCornerRadiusCSS() const
 
     return builder.toString();
 }
-    
+
 Color CaptionUserPreferencesMediaAF::captionsEdgeColorForTextColor(const Color& textColor) const
 {
     int distanceFromWhite = differenceSquared(textColor, Color::white);
     int distanceFromBlack = differenceSquared(textColor, Color::black);
-    
+
     if (distanceFromWhite < distanceFromBlack)
         return textColor.dark();
-    
+
     return textColor.light();
 }
 
 String CaptionUserPreferencesMediaAF::cssPropertyWithTextEdgeColor(CSSPropertyID id, const String& value, const Color& textColor, bool important) const
 {
     StringBuilder builder;
-    
+
     builder.append(getPropertyNameString(id));
     builder.append(':');
     builder.append(value);
@@ -362,21 +362,21 @@ String CaptionUserPreferencesMediaAF::cssPropertyWithTextEdgeColor(CSSPropertyID
     if (important)
         builder.append(" !important");
     builder.append(';');
-    
+
     return builder.toString();
 }
 
 String CaptionUserPreferencesMediaAF::colorPropertyCSS(CSSPropertyID id, const Color& color, bool important) const
 {
     StringBuilder builder;
-    
+
     builder.append(getPropertyNameString(id));
     builder.append(':');
     builder.append(color.serialized());
     if (important)
         builder.append(" !important");
     builder.append(';');
-    
+
     return builder.toString();
 }
 
@@ -399,7 +399,7 @@ String CaptionUserPreferencesMediaAF::captionsTextEdgeCSS() const
     case kMACaptionAppearanceTextEdgeStyleUndefined:
     case kMACaptionAppearanceTextEdgeStyleNone:
         return emptyString();
-            
+
     case kMACaptionAppearanceTextEdgeStyleRaised:
         return cssPropertyWithTextEdgeColor(CSSPropertyTextShadow, edgeStyleRaised, color, behavior == kMACaptionAppearanceBehaviorUseValue);
     case kMACaptionAppearanceTextEdgeStyleDepressed:
@@ -408,19 +408,19 @@ String CaptionUserPreferencesMediaAF::captionsTextEdgeCSS() const
         return cssPropertyWithTextEdgeColor(CSSPropertyTextShadow, edgeStyleDropShadow, color, behavior == kMACaptionAppearanceBehaviorUseValue);
     case kMACaptionAppearanceTextEdgeStyleUniform:
         return cssPropertyWithTextEdgeColor(CSSPropertyWebkitTextStroke, edgeStyleUniform, color, behavior == kMACaptionAppearanceBehaviorUseValue);
-            
+
     default:
         ASSERT_NOT_REACHED();
         break;
     }
-    
+
     return emptyString();
 }
 
 String CaptionUserPreferencesMediaAF::captionsDefaultFontCSS() const
 {
     MACaptionAppearanceBehavior behavior;
-    
+
     RetainPtr<CTFontDescriptorRef> font = adoptCF(MACaptionAppearanceCopyFontDescriptorForStyle(kMACaptionAppearanceDomainUser, &behavior, kMACaptionAppearanceFontStyleDefault));
     if (!font)
         return emptyString();
@@ -428,9 +428,9 @@ String CaptionUserPreferencesMediaAF::captionsDefaultFontCSS() const
     RetainPtr<CFTypeRef> name = adoptCF(CTFontDescriptorCopyAttribute(font.get(), kCTFontNameAttribute));
     if (!name)
         return emptyString();
-    
+
     StringBuilder builder;
-    
+
     builder.append(getPropertyNameString(CSSPropertyFontFamily));
     builder.append(": \"");
     builder.append(static_cast<CFStringRef>(name.get()));
@@ -438,7 +438,7 @@ String CaptionUserPreferencesMediaAF::captionsDefaultFontCSS() const
     if (behavior == kMACaptionAppearanceBehaviorUseValue)
         builder.append(" !important");
     builder.append(';');
-    
+
     return builder.toString();
 }
 
@@ -511,13 +511,13 @@ String CaptionUserPreferencesMediaAF::captionsStyleSheetOverride() const
 {
     if (testingMode())
         return CaptionUserPreferences::captionsStyleSheetOverride();
-    
+
     StringBuilder captionsOverrideStyleSheet;
 
 #if HAVE(MEDIA_ACCESSIBILITY_FRAMEWORK)
     if (!MediaAccessibilityLibrary())
         return CaptionUserPreferences::captionsStyleSheetOverride();
-    
+
     String captionsColor = captionsTextColorCSS();
     String edgeStyle = captionsTextEdgeCSS();
     String fontName = captionsDefaultFontCSS();
@@ -526,7 +526,7 @@ String CaptionUserPreferencesMediaAF::captionsStyleSheetOverride() const
         captionsOverrideStyleSheet.append(" video::");
         captionsOverrideStyleSheet.append(TextTrackCue::cueShadowPseudoId());
         captionsOverrideStyleSheet.append('{');
-        
+
         if (!background.isEmpty())
             captionsOverrideStyleSheet.append(background);
         if (!captionsColor.isEmpty())
@@ -535,22 +535,22 @@ String CaptionUserPreferencesMediaAF::captionsStyleSheetOverride() const
             captionsOverrideStyleSheet.append(edgeStyle);
         if (!fontName.isEmpty())
             captionsOverrideStyleSheet.append(fontName);
-        
+
         captionsOverrideStyleSheet.append('}');
     }
-    
+
     String windowColor = captionsWindowCSS();
     String windowCornerRadius = windowRoundedCornerRadiusCSS();
     if (!windowColor.isEmpty() || !windowCornerRadius.isEmpty()) {
         captionsOverrideStyleSheet.append(" video::");
         captionsOverrideStyleSheet.append(VTTCueBox::vttCueBoxShadowPseudoId());
         captionsOverrideStyleSheet.append('{');
-        
+
         if (!windowColor.isEmpty())
             captionsOverrideStyleSheet.append(windowColor);
         if (!windowCornerRadius.isEmpty())
             captionsOverrideStyleSheet.append(windowCornerRadius);
-        
+
         captionsOverrideStyleSheet.append('}');
     }
 #endif // HAVE(MEDIA_ACCESSIBILITY_FRAMEWORK)
@@ -597,13 +597,13 @@ static String trackDisplayName(TextTrack* track)
             if (localeDict) {
                 CFStringRef countryCode = 0;
                 String countryName;
-                
+
                 CFDictionaryGetValueIfPresent(localeDict.get(), kCFLocaleCountryCode, (const void **)&countryCode);
                 if (countryCode) {
                     RetainPtr<CFStringRef> countryNameCF = adoptCF(CFLocaleCopyDisplayNameForPropertyValue(currentLocale.get(), kCFLocaleCountryCode, countryCode));
                     countryName = countryNameCF.get();
                 }
-                
+
                 if (!countryName.isEmpty())
                     displayName.append(textTrackCountryAndLanguageMenuItemText(label, countryName, language));
                 else
@@ -619,13 +619,13 @@ static String trackDisplayName(TextTrack* track)
         else
             displayName.append(localeIdentifier.get());
     }
-    
+
     if (displayName.isEmpty())
         displayName.append(textTrackNoLabelText());
-    
+
     if (track->isEasyToRead())
         return easyReaderTrackMenuItemText(displayName.toString());
-    
+
     if (track->isClosedCaptions())
         return closedCaptionTrackMenuItemText(displayName.toString());
 
@@ -777,7 +777,7 @@ Vector<RefPtr<TextTrack>> CaptionUserPreferencesMediaAF::sortedTrackListForMenu(
             LOG(Media, "CaptionUserPreferencesMac::sortedTrackListForMenu - skipping '%s' track with language '%s' because it contains only forced subtitles", track->kind().string().utf8().data(), language.utf8().data());
             continue;
         }
-        
+
         if (track->isEasyToRead()) {
             LOG(Media, "CaptionUserPreferencesMac::sortedTrackListForMenu - adding '%s' track with language '%s' because it is 'easy to read'", track->kind().string().utf8().data(), language.utf8().data());
             if (!language.isEmpty())
@@ -848,7 +848,7 @@ Vector<RefPtr<TextTrack>> CaptionUserPreferencesMediaAF::sortedTrackListForMenu(
 
     return tracksForMenu;
 }
-    
+
 }
 
 #endif // ENABLE(VIDEO_TRACK)

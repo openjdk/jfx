@@ -41,7 +41,7 @@ inline StyleMarqueeData::StyleMarqueeData(const StyleMarqueeData& o)
     , speed(o.speed)
     , loops(o.loops)
     , behavior(o.behavior)
-    , direction(o.direction) 
+    , direction(o.direction)
 {
 }
 

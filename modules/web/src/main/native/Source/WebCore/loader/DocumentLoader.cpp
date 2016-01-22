@@ -7,13 +7,13 @@
  * are met:
  *
  * 1.  Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer. 
+ *     notice, this list of conditions and the following disclaimer.
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
- *     documentation and/or other materials provided with the distribution. 
+ *     documentation and/or other materials provided with the distribution.
  * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
- *     from this software without specific prior written permission. 
+ *     from this software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY APPLE AND ITS CONTRIBUTORS "AS IS" AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
@@ -165,7 +165,7 @@ DocumentLoader::~DocumentLoader()
     if (m_iconDataCallback)
         m_iconDataCallback->invalidate();
     m_cachedResourceLoader->clearDocumentLoader();
-    
+
     clearMainResource();
 }
 
@@ -228,7 +228,7 @@ void DocumentLoader::setRequest(const ResourceRequest& req)
         m_committed = false;
 
     // We should never be getting a redirect callback after the data
-    // source is committed, except in the unreachable URL case. It 
+    // source is committed, except in the unreachable URL case. It
     // would be a WebFoundation bug if it sent a redirect callback after commit.
     ASSERT(!m_committed);
 
@@ -237,7 +237,7 @@ void DocumentLoader::setRequest(const ResourceRequest& req)
 
 void DocumentLoader::setMainDocumentError(const ResourceError& error)
 {
-    m_mainDocumentError = error;    
+    m_mainDocumentError = error;
     frameLoader()->client().setMainDocumentError(this, error);
 }
 
@@ -266,8 +266,8 @@ void DocumentLoader::mainReceivedError(const ResourceError& error)
 }
 
 // Cancels the data source's pending loads.  Conceptually, a data source only loads
-// one document at a time, but one document may have many related resources. 
-// stopLoading will stop all loads initiated by the data source, 
+// one document at a time, but one document may have many related resources.
+// stopLoading will stop all loads initiated by the data source,
 // but not loads initiated by child frames' data sources -- that's the WebFrame's job.
 void DocumentLoader::stopLoading()
 {
@@ -290,7 +290,7 @@ void DocumentLoader::stopLoading()
         // Attempt to stop the frame if the document loader is loading, or if it is done loading but
         // still  parsing. Failure to do so can cause a world leak.
         Document* doc = m_frame->document();
-        
+
         if (loading || doc->parsing())
             m_frame->loader().stopLoading(UnloadEventPolicyNone);
     }
@@ -300,33 +300,33 @@ void DocumentLoader::stopLoading()
 
     // Appcache uses ResourceHandle directly, DocumentLoader doesn't count these loads.
     m_applicationCacheHost->stopLoadingInFrame(m_frame);
-    
+
 #if ENABLE(WEB_ARCHIVE) || ENABLE(MHTML)
     clearArchiveResources();
 #endif
 
     if (!loading) {
-        // If something above restarted loading we might run into mysterious crashes like 
+        // If something above restarted loading we might run into mysterious crashes like
         // https://bugs.webkit.org/show_bug.cgi?id=62764 and <rdar://problem/9328684>
         ASSERT(!isLoading());
         return;
     }
 
-    // We might run in to infinite recursion if we're stopping loading as the result of 
+    // We might run in to infinite recursion if we're stopping loading as the result of
     // detaching from the frame, so break out of that recursion here.
     // See <rdar://problem/9673866> for more details.
     if (m_isStopping)
         return;
-    
+
     m_isStopping = true;
 
     FrameLoader* frameLoader = DocumentLoader::frameLoader();
-    
+
     if (isLoadingMainResource()) {
         // Stop the main resource loader and let it send the cancelled message.
         cancelMainResourceLoad(frameLoader->cancelledError(m_request));
     } else if (!m_subresourceLoaders.isEmpty())
-        // The main resource loader already finished loading. Set the cancelled error on the 
+        // The main resource loader already finished loading. Set the cancelled error on the
         // document and let the subresourceLoaders send individual cancelled messages below.
         setMainDocumentError(frameLoader->cancelledError(m_request));
     else
@@ -339,10 +339,10 @@ void DocumentLoader::stopLoading()
     // in unexpected side effects such as erroneous event dispatch. ( http://webkit.org/b/117112 )
     if (Document* document = this->document())
         document->cancelParsing();
-    
+
     stopLoadingSubresources();
     stopLoadingPlugIns();
-    
+
     m_isStopping = false;
 }
 
@@ -502,7 +502,7 @@ void DocumentLoader::willSendRequest(ResourceRequest& newRequest, const Resource
 {
     // Note that there are no asserts here as there are for the other callbacks. This is due to the
     // fact that this "callback" is sent when starting every load, and the state of callback
-    // deferrals plays less of a part in this function in preventing the bad behavior deferring 
+    // deferrals plays less of a part in this function in preventing the bad behavior deferring
     // callbacks is meant to prevent.
     ASSERT(!newRequest.isNull());
 
@@ -683,7 +683,7 @@ void DocumentLoader::continueAfterContentPolicy(PolicyAction policy)
 
     URL url = m_request.url();
     const String& mimeType = m_response.mimeType();
-    
+
     switch (policy) {
     case PolicyUse: {
         // Prevent remote web archives from loading because they can claim to be from any domain and thus avoid cross-domain security checks (4120255).
@@ -728,7 +728,7 @@ void DocumentLoader::continueAfterContentPolicy(PolicyAction policy)
             InspectorInstrumentation::continueWithPolicyIgnore(m_frame, this, mainResourceLoader->identifier(), m_response);
         stopLoadingForPolicyChange();
         return;
-    
+
     default:
         ASSERT_NOT_REACHED();
     }
@@ -791,7 +791,7 @@ void DocumentLoader::commitData(const char* bytes, size_t length)
         m_gotFirstByte = true;
         m_writer.begin(documentURL(), false);
         m_writer.setDocumentWasLoadedAsPartOfNavigation();
-        
+
         if (SecurityPolicy::allowSubstituteDataAccessToLocal() && m_originalSubstituteDataWasValid) {
             // If this document was loaded with substituteData, then the document can
             // load local resources. See https://bugs.webkit.org/show_bug.cgi?id=16756
@@ -802,7 +802,7 @@ void DocumentLoader::commitData(const char* bytes, size_t length)
 
         if (frameLoader()->stateMachine().creatingInitialEmptyDocument())
             return;
-        
+
 #if ENABLE(MHTML)
         // The origin is the MHTML file, we need to set the base URL to the document encoded in the MHTML so
         // relative URLs are resolved properly.
@@ -895,13 +895,13 @@ void DocumentLoader::setupForReplace()
 {
     if (!mainResourceData())
         return;
-    
+
     maybeFinishLoadingMultipartContent();
     maybeCreateArchive();
     m_writer.end();
     frameLoader()->setReplacing();
     m_gotFirstByte = false;
-    
+
     stopLoadingSubresources();
     stopLoadingPlugIns();
 #if ENABLE(WEB_ARCHIVE) || ENABLE(MHTML)
@@ -970,7 +970,7 @@ bool DocumentLoader::isLoadingInAPISense() const
     if (frameLoader()->state() != FrameStateComplete) {
         if (m_frame->settings().needsIsLoadingInAPISenseQuirk() && !m_subresourceLoaders.isEmpty())
             return true;
-    
+
         Document* doc = m_frame->document();
         if ((isLoadingMainResource() || !m_frame->document()->loadEventFinished()) && isLoading())
             return true;
@@ -989,18 +989,18 @@ bool DocumentLoader::maybeCreateArchive()
 #if !ENABLE(WEB_ARCHIVE) && !ENABLE(MHTML)
     return false;
 #else
-    
+
     // Give the archive machinery a crack at this document. If the MIME type is not an archive type, it will return 0.
     RefPtr<ResourceBuffer> mainResourceBuffer = mainResourceData();
     m_archive = ArchiveFactory::create(m_response.url(), mainResourceBuffer ? mainResourceBuffer->sharedBuffer() : 0, m_response.mimeType());
     if (!m_archive)
         return false;
-    
+
     addAllArchiveResources(m_archive.get());
     ArchiveResource* mainResource = m_archive->mainResource();
     m_parsedArchiveData = mainResource->data();
     m_writer.setMIMEType(mainResource->mimeType());
-    
+
     ASSERT(m_frame->document());
     commitData(mainResource->data()->data(), mainResource->data()->size());
     return true;
@@ -1018,11 +1018,11 @@ void DocumentLoader::addAllArchiveResources(Archive* archive)
 {
     if (!m_archiveResourceCollection)
         m_archiveResourceCollection = adoptPtr(new ArchiveResourceCollection);
-        
+
     ASSERT(archive);
     if (!archive)
         return;
-        
+
     m_archiveResourceCollection->addAllResources(archive);
 }
 
@@ -1032,11 +1032,11 @@ void DocumentLoader::addArchiveResource(PassRefPtr<ArchiveResource> resource)
 {
     if (!m_archiveResourceCollection)
         m_archiveResourceCollection = adoptPtr(new ArchiveResourceCollection);
-        
+
     ASSERT(resource);
     if (!resource)
         return;
-        
+
     m_archiveResourceCollection->addResource(resource);
 }
 
@@ -1061,7 +1061,7 @@ ArchiveResource* DocumentLoader::archiveResourceForURL(const URL& url) const
 {
     if (!m_archiveResourceCollection)
         return 0;
-        
+
     ArchiveResource* resource = m_archiveResourceCollection->archiveResourceForURL(url);
 
     return resource && !resource->shouldIgnoreWhenUnarchiving() ? resource : 0;
@@ -1070,12 +1070,12 @@ ArchiveResource* DocumentLoader::archiveResourceForURL(const URL& url) const
 PassRefPtr<ArchiveResource> DocumentLoader::mainResource() const
 {
     const ResourceResponse& r = response();
-        
+
     RefPtr<ResourceBuffer> mainResourceBuffer = mainResourceData();
     RefPtr<SharedBuffer> data = mainResourceBuffer ? mainResourceBuffer->sharedBuffer() : 0;
     if (!data)
         data = SharedBuffer::create();
-        
+
     return ArchiveResource::create(data, r.url(), r.mimeType(), r.textEncodingName(), frame()->tree().uniqueName());
 }
 
@@ -1083,7 +1083,7 @@ PassRefPtr<ArchiveResource> DocumentLoader::subresource(const URL& url) const
 {
     if (!isCommitted())
         return 0;
-    
+
     CachedResource* resource = m_cachedResourceLoader->cachedResource(url);
     if (!resource || !resource->isLoaded())
         return archiveResourceForURL(url);
@@ -1145,10 +1145,10 @@ void DocumentLoader::substituteResourceDeliveryTimerFired(Timer<DocumentLoader>&
     for (SubstituteResourceMap::const_iterator it = copy.begin(); it != end; ++it) {
         RefPtr<ResourceLoader> loader = it->key;
         SubstituteResource* resource = it->value.get();
-        
+
         if (resource) {
             SharedBuffer* data = resource->data();
-        
+
             loader->didReceiveResponse(resource->response());
 
             // Calling ResourceLoader::didReceiveResponse can end up cancelling the load,
@@ -1490,7 +1490,7 @@ void DocumentLoader::subresourceLoaderFinishedLoadingOnePart(ResourceLoader* loa
     m_subresourceLoaders.remove(loader);
     checkLoadComplete();
     if (Frame* frame = m_frame)
-        frame->loader().checkLoadComplete();    
+        frame->loader().checkLoadComplete();
 }
 
 void DocumentLoader::maybeFinishLoadingMultipartContent()
@@ -1543,7 +1543,7 @@ static void iconDataCallback(SharedBuffer*, void*)
 }
 
 void DocumentLoader::getIconDataForIconURL(const String& urlString)
-{   
+{
     if (m_iconDataCallback)
         m_iconDataCallback->invalidate();
     m_iconDataCallback = IconDataCallback::create(this, iconDataCallback);

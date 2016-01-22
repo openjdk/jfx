@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -62,12 +62,12 @@ static CFRunLoopSourceRef completionSource;
 static void completedJavaScriptAccess (void *i)
 {
     ASSERT(CFRunLoopGetCurrent() != _performJavaScriptRunLoop);
-    
+
     JSObjectCallContext *callContext = (JSObjectCallContext *)i;
     CFRunLoopRef runLoop = (CFRunLoopRef)callContext->originatingLoop;
-    
+
     ASSERT(CFRunLoopGetCurrent() == runLoop);
-    
+
     CFRunLoopStop(runLoop);
 }
 
@@ -78,10 +78,10 @@ static int javaScriptAccessLockCount = 0;
 static void initializeJavaScriptAccessLock()
 {
     pthread_mutexattr_t attr;
-    
+
     pthread_mutexattr_init(&attr);
     pthread_mutexattr_settype (&attr, PTHREAD_MUTEX_RECURSIVE);
-    
+
     pthread_mutex_init(&javaScriptAccessLock, &attr);
 }
 
@@ -105,48 +105,48 @@ static void dispatchToJavaScriptThread(JSObjectCallContext *context)
     // at a time, and also guarantees that completionSource;
     // won't get clobbered.
     lockJavaScriptAccess();
-    
+
     CFRunLoopRef currentRunLoop = CFRunLoopGetCurrent();
-    
+
     ASSERT(currentRunLoop != _performJavaScriptRunLoop);
-    
+
     // Setup a source to signal once the invocation of the JavaScript
     // call completes.
     //
     // FIXME:  This could be a potential performance issue.  Creating and
-    // adding run loop sources is expensive.  We could create one source 
+    // adding run loop sources is expensive.  We could create one source
     // per thread, as needed, instead.
     context->originatingLoop = currentRunLoop;
     CFRunLoopSourceContext sourceContext = {0, context, NULL, NULL, NULL, NULL, NULL, NULL, NULL, completedJavaScriptAccess};
     completionSource = CFRunLoopSourceCreate(NULL, 0, &sourceContext);
     CFRunLoopAddSource(currentRunLoop, completionSource, kCFRunLoopDefaultMode);
-    
+
     // Wakeup JavaScript access thread and make it do its work.
     CFRunLoopSourceSignal(_performJavaScriptSource);
     if (CFRunLoopIsWaiting(_performJavaScriptRunLoop))
         CFRunLoopWakeUp(_performJavaScriptRunLoop);
-    
+
     // Wait until the JavaScript access thread is done.
     CFRunLoopRun ();
-    
+
     CFRunLoopRemoveSource(currentRunLoop, completionSource, kCFRunLoopDefaultMode);
     CFRelease (completionSource);
-    
+
     unlockJavaScriptAccess();
 }
 
 static void performJavaScriptAccess(void*)
 {
     ASSERT(CFRunLoopGetCurrent() == _performJavaScriptRunLoop);
-    
+
     // Dispatch JavaScript calls here.
     CFRunLoopSourceContext sourceContext;
     CFRunLoopSourceGetContext (completionSource, &sourceContext);
-    JSObjectCallContext *callContext = (JSObjectCallContext *)sourceContext.info;    
+    JSObjectCallContext *callContext = (JSObjectCallContext *)sourceContext.info;
     CFRunLoopRef originatingLoop = callContext->originatingLoop;
-    
+
     JavaJSObject::invoke (callContext);
-    
+
     // Signal the originating thread that we're done.
     CFRunLoopSourceSignal (completionSource);
     if (CFRunLoopIsWaiting(originatingLoop))
@@ -157,11 +157,11 @@ static void performJavaScriptAccess(void*)
 void JavaJSObject::initializeJNIThreading() {
     // Should only be called once.
     ASSERT(!_performJavaScriptRunLoop);
-    
-    // Assume that we can retain this run loop forever.  It'll most 
+
+    // Assume that we can retain this run loop forever.  It'll most
     // likely (always?) be the main loop.
     _performJavaScriptRunLoop = (CFRunLoopRef)CFRetain(CFRunLoopGetCurrent());
-    
+
     // Setup a source the other threads can use to signal the _runLoop
     // thread that a JavaScript call needs to be invoked.
     CFRunLoopSourceContext sourceContext = {0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, performJavaScriptAccess};
@@ -179,8 +179,8 @@ jvalue JavaJSObject::invoke(JSObjectCallContext *context)
     jvalue result;
 
     bzero ((void *)&result, sizeof(jvalue));
-    
-    if (!isJavaScriptThread()) {        
+
+    if (!isJavaScriptThread()) {
         // Send the call context to the thread that is allowed to
         // call JavaScript.
         dispatchToJavaScriptThread(context);
@@ -202,52 +202,52 @@ jvalue JavaJSObject::invoke(JSObjectCallContext *context)
                 return result;
             }
 
-            switch (context->type){            
+            switch (context->type){
                 case Call: {
                     result.l = JavaJSObject(nativeHandle).call(context->string, context->args);
                     break;
                 }
-                
+
                 case Eval: {
                     result.l = JavaJSObject(nativeHandle).eval(context->string);
                     break;
                 }
-            
+
                 case GetMember: {
                     result.l = JavaJSObject(nativeHandle).getMember(context->string);
                     break;
                 }
-                
+
                 case SetMember: {
                     JavaJSObject(nativeHandle).setMember(context->string, context->value);
                     break;
                 }
-                
+
                 case RemoveMember: {
                     JavaJSObject(nativeHandle).removeMember(context->string);
                     break;
                 }
-            
+
                 case GetSlot: {
                     result.l = JavaJSObject(nativeHandle).getSlot(context->index);
                     break;
                 }
-                
+
                 case SetSlot: {
                     JavaJSObject(nativeHandle).setSlot(context->index, context->value);
                     break;
                 }
-            
+
                 case ToString: {
                     result.l = (jobject) JavaJSObject(nativeHandle).toString();
                     break;
                 }
-    
+
                 case Finalize: {
                     JavaJSObject(nativeHandle).finalize();
                     break;
                 }
-                
+
                 default: {
                     LOG_ERROR("invalid JavaScript call");
                 }
@@ -263,15 +263,15 @@ jvalue JavaJSObject::invoke(JSObjectCallContext *context)
 JavaJSObject::JavaJSObject(jlong nativeJSObject)
 {
     _imp = jlong_to_impptr(nativeJSObject);
-    
+
     ASSERT(_imp);
     _rootObject = findProtectingRootObject(_imp);
     ASSERT(_rootObject);
 }
 
 RootObject* JavaJSObject::rootObject() const
-{ 
-    return _rootObject && _rootObject->isValid() ? _rootObject.get() : 0; 
+{
+    return _rootObject && _rootObject->isValid() ? _rootObject.get() : 0;
 }
 
 jobject JavaJSObject::call(jstring methodName, jobjectArray args) const
@@ -281,11 +281,11 @@ jobject JavaJSObject::call(jstring methodName, jobjectArray args) const
     RootObject* rootObject = this->rootObject();
     if (!rootObject)
         return 0;
-    
+
     // Lookup the function object.
     ExecState* exec = rootObject->globalObject()->globalExec();
     JSLockHolder lock(exec);
-    
+
     Identifier identifier(exec, JavaString(methodName).impl());
     JSValue function = _imp->get(exec, identifier);
     CallData callData;
@@ -312,7 +312,7 @@ jobject JavaJSObject::eval(jstring script) const
         return 0;
 
     JSLockHolder lock(rootObject->globalObject()->globalData());
-    
+
     rootObject->globalObject()->globalData().timeoutChecker.start();
     JSValue result = JSC::evaluate(rootObject->globalObject()->globalExec(), rootObject->globalObject()->globalScopeChain(), makeSource(JavaString(script).impl()));
     rootObject->globalObject()->globalData().timeoutChecker.stop();
@@ -329,7 +329,7 @@ jobject JavaJSObject::getMember(jstring memberName) const
         return 0;
 
     ExecState* exec = rootObject->globalObject()->globalExec();
-    
+
     JSLockHolder lock(exec);
     JSValue result = _imp->get(exec, Identifier(exec, JavaString(memberName).impl()));
 
@@ -400,7 +400,7 @@ void JavaJSObject::setSlot(jint index, jobject value) const
 jstring JavaJSObject::toString() const
 {
     LOG(LiveConnect, "JavaJSObject::toString");
-    
+
     RootObject* rootObject = this->rootObject();
     if (!rootObject)
         return 0;
@@ -408,7 +408,7 @@ jstring JavaJSObject::toString() const
     JSObject *thisObj = const_cast<JSObject*>(_imp);
     ExecState* exec = rootObject->globalObject()->globalExec();
     JSLockHolder lock(exec);
-    
+
     return static_cast<jstring>(convertValueToJValue(exec, rootObject, thisObj, JavaTypeObject, "java.lang.String").l);
 }
 
@@ -457,7 +457,7 @@ jlong JavaJSObject::createNative(jlong nativeHandle)
         rootObject->gcProtect(globalObject);
         return ptr_to_jlong(globalObject);
     }
-    
+
     return nativeHandle;
 }
 
@@ -467,12 +467,12 @@ jobject JavaJSObject::convertValueToJObject(JSValue value) const
     if (!rootObject)
         return 0;
 
-    
+
     ExecState* exec = rootObject->globalObject()->globalExec();
     JSLockHolder lock(exec);
     JNIEnv *env = getJNIEnv();
     jobject result = 0;
-    
+
     // See section 22.7 of 'JavaScript:  The Definitive Guide, 4th Edition',
     // figure 22-5.
     // number -> java.lang.Double
@@ -480,7 +480,7 @@ jobject JavaJSObject::convertValueToJObject(JSValue value) const
     // boolean -> java.lang.Boolean
     // Java instance -> Java instance
     // Everything else -> JavaJSObject
-    
+
     if (value.isNumber()) {
         jclass JSObjectClass = env->FindClass ("java/lang/Double");
         jmethodID constructorID = env->GetMethodID (JSObjectClass, "<init>", "(D)V");
@@ -501,10 +501,10 @@ jobject JavaJSObject::convertValueToJObject(JSValue value) const
     else {
         // Create a JavaJSObject.
         jlong nativeHandle;
-        
+
         if (value.isObject()) {
             JSObject* object = asObject(value);
-            
+
             // We either have a wrapper around a Java instance or a JavaScript
             // object.  If we have a wrapper around a Java instance, return that
             // instance, otherwise create a new Java JavaJSObject with the JSObject*
@@ -514,7 +514,7 @@ jobject JavaJSObject::convertValueToJObject(JSValue value) const
                 JavaInstance* runtimeInstance = runtimeObject->getInternalJavaInstance();
                 if (!runtimeInstance)
                     return 0;
-                
+
                 return runtimeInstance->javaInstance();
             } else {
                 nativeHandle = ptr_to_jlong(object);
@@ -524,24 +524,24 @@ jobject JavaJSObject::convertValueToJObject(JSValue value) const
         // All other types will result in an undefined object.
             nativeHandle = UndefinedHandle;
         }
-        
+
         // Now create the Java JavaJSObject.  Look for the JavaJSObject in its new (Tiger)
         // location and in the original Java 1.4.2 location.
         jclass JSObjectClass;
-        
+
         JSObjectClass = env->FindClass ("sun/plugin/javascript/webkit/JSObject");
         if (!JSObjectClass) {
             env->ExceptionDescribe();
             env->ExceptionClear();
             JSObjectClass = env->FindClass ("apple/applet/JSObject");
         }
-            
+
         jmethodID constructorID = env->GetMethodID (JSObjectClass, "<init>", "(J)V");
         if (constructorID != NULL) {
             result = env->NewObject (JSObjectClass, constructorID, nativeHandle);
         }
     }
-    
+
     return result;
 }
 
@@ -584,7 +584,7 @@ void JavaJSObject::getListFromJArray(ExecState* exec, jobjectArray jArray, Marke
 {
     JNIEnv *env = getJNIEnv();
     int numObjects = jArray ? env->GetArrayLength(jArray) : 0;
-    
+
     for (int i = 0; i < numObjects; i++) {
         jobject anObject = env->GetObjectArrayElement ((jobjectArray)jArray, i);
         if (anObject) {

@@ -59,7 +59,7 @@ import javafx.stage.WindowEvent;
  *
  */
 public class JarAnalysisReportController extends AbstractFxmlWindowController {
-    
+
     @FXML
     TextFlow textFlow;
     @FXML
@@ -75,7 +75,7 @@ public class JarAnalysisReportController extends AbstractFxmlWindowController {
                 sb.append(((Text)item).getText());
             }
         }
-        
+
         content.put(DataFormat.PLAIN_TEXT, sb.toString());
         Clipboard.getSystemClipboard().setContent(content);
     }
@@ -95,16 +95,16 @@ public class JarAnalysisReportController extends AbstractFxmlWindowController {
     public void onCloseRequest(WindowEvent event) {
         getStage().close();
     }
-    
+
     @Override
     public void openWindow() {
         super.openWindow();
-        
+
         if (dirty) {
             update();
         }
     }
-    
+
     @Override
     protected void controllerDidCreateStage() {
         // Setup window title
@@ -115,22 +115,22 @@ public class JarAnalysisReportController extends AbstractFxmlWindowController {
     protected void controllerDidLoadFxml() {
         assert textFlow != null;
         assert timestampLabel != null;
-                
+
         UserLibrary lib = (UserLibrary)editorController.getLibrary();
         lib.getJarReports().addListener((ListChangeListener<JarReport>) change -> update());
-        
+
         update();
     }
-    
+
     private void update() {
         // No need to eat CPU if the skeleton window isn't opened
         if (getStage().isShowing()) {
             textFlow.getChildren().clear();
-            
+
             updateTimeStampLabel();
-            
+
             UserLibrary lib = (UserLibrary)editorController.getLibrary();
-            
+
             for (JarReport report : lib.getJarReports()) {
                 for (JarReportEntry entry : report.getEntries()) {
                     if (entry.getStatus() != JarReportEntry.Status.OK) {
@@ -144,7 +144,7 @@ public class JarAnalysisReportController extends AbstractFxmlWindowController {
                             text.setText(sb.toString());
                             text.getStyleClass().add("header"); //NOI18N
                             textFlow.getChildren().add(text);
-                            
+
                             StringBuilder sb2 = new StringBuilder();
                             sb2.append(getFullStack(entry.getException()));
                             Text text2 = new Text();
@@ -169,7 +169,7 @@ public class JarAnalysisReportController extends AbstractFxmlWindowController {
             dirty = true;
         }
     }
-    
+
     // The very first section must start on top, it is only for the next one we
     // need a separator.
     private String getSectionPrefix() {
@@ -180,7 +180,7 @@ public class JarAnalysisReportController extends AbstractFxmlWindowController {
             return "\n\n"; //NOI18N
         }
     }
-    
+
     private StringBuilder getFullStack(Throwable t) {
         StringBuilder res = new StringBuilder("\n"); //NOI18N
         StringWriter writer = new StringWriter();
@@ -188,7 +188,7 @@ public class JarAnalysisReportController extends AbstractFxmlWindowController {
             res.append(writer.getBuffer().toString());
         return res;
     }
-    
+
     private void updateTimeStampLabel() {
         UserLibrary lib = (UserLibrary)editorController.getLibrary();
         Date date = (Date)lib.getExplorationDate();

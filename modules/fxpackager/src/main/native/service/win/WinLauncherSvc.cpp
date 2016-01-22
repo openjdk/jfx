@@ -37,8 +37,8 @@
 
 #pragma comment(lib, "advapi32.lib")
 
-SERVICE_STATUS          gSvcStatus; 
-SERVICE_STATUS_HANDLE   gSvcStatusHandle; 
+SERVICE_STATUS          gSvcStatus;
+SERVICE_STATUS_HANDLE   gSvcStatusHandle;
 HANDLE                  ghSvcStopEvent = NULL;
 
 VOID SvcInstall(TCHAR *svcName, TCHAR *svcDesc, TCHAR *mainExe,
@@ -52,10 +52,10 @@ BOOL StopDependentServices(SC_HANDLE schSCManager, SC_HANDLE schService);
 VOID SvcStartup(TCHAR *mainExe);
 
 VOID WINAPI SvcMain(DWORD argc, LPTSTR *argv);
-VOID WINAPI SvcCtrlHandler(DWORD); 
+VOID WINAPI SvcCtrlHandler(DWORD);
 
 VOID ReportSvcStatus(DWORD, DWORD, DWORD);
-VOID SvcInit(DWORD, LPTSTR *); 
+VOID SvcInit(DWORD, LPTSTR *);
 VOID SvcReportEvent(LPTSTR);
 
 HANDLE CreateMainProcess();
@@ -207,12 +207,12 @@ VOID SvcInstall(TCHAR *svcName, TCHAR *svcDesc, TCHAR *mainExe,
     // append the service arguments to the service executable
     StringCchPrintf(szPath, MAX_PATH, _T("%s -mainExe \"%s\""), szModuleName, mainExe);
 
-    // Get a handle to the SCM database. 
-    schSCManager = OpenSCManager( 
+    // Get a handle to the SCM database.
+    schSCManager = OpenSCManager(
         NULL,                    // local computer
-        NULL,                    // ServicesActive database 
-        SC_MANAGER_ALL_ACCESS);  // full access rights 
- 
+        NULL,                    // ServicesActive database
+        SC_MANAGER_ALL_ACCESS);  // full access rights
+
     if (NULL == schSCManager) {
         debug(TEXT("OpenSCManager failed (%d)"), GetLastError());
         return;
@@ -225,21 +225,21 @@ VOID SvcInstall(TCHAR *svcName, TCHAR *svcDesc, TCHAR *mainExe,
     }
 
     // Create the service
-    schService = CreateService( 
-        schSCManager,              // SCM database 
-        svcName,                   // name of service 
-        svcName,                   // service name to display 
-        SERVICE_ALL_ACCESS,        // desired access 
-        SERVICE_WIN32_OWN_PROCESS, // service type 
-        dwStartType,               // start type 
-        SERVICE_ERROR_NORMAL,      // error control type 
-        szPath,                    // path to service's binary 
-        NULL,                      // no load ordering group 
-        NULL,                      // no tag identifier 
-        NULL,                      // no dependencies 
-        NULL,                      // LocalSystem account 
-        NULL);                     // no password 
- 
+    schService = CreateService(
+        schSCManager,              // SCM database
+        svcName,                   // name of service
+        svcName,                   // service name to display
+        SERVICE_ALL_ACCESS,        // desired access
+        SERVICE_WIN32_OWN_PROCESS, // service type
+        dwStartType,               // start type
+        SERVICE_ERROR_NORMAL,      // error control type
+        szPath,                    // path to service's binary
+        NULL,                      // no load ordering group
+        NULL,                      // no tag identifier
+        NULL,                      // no dependencies
+        NULL,                      // LocalSystem account
+        NULL);                     // no password
+
     if (schService == NULL) {
         debug(TEXT("CreateService failed (%d)"), GetLastError());
         CloseServiceHandle(schSCManager);
@@ -270,7 +270,7 @@ VOID SvcInstall(TCHAR *svcName, TCHAR *svcDesc, TCHAR *mainExe,
         SvcStartOnInstall(schService);
     }
 
-    CloseServiceHandle(schService); 
+    CloseServiceHandle(schService);
     CloseServiceHandle(schSCManager);
 }
 
@@ -280,18 +280,18 @@ VOID SvcInstall(TCHAR *svcName, TCHAR *svcDesc, TCHAR *mainExe,
 VOID SvcStartOnInstall(SC_HANDLE schService)
 {
     SERVICE_STATUS_PROCESS ssStatus;
-    DWORD dwOldCheckPoint; 
+    DWORD dwOldCheckPoint;
     DWORD dwStartTickCount;
     DWORD dwWaitTime;
     DWORD dwBytesNeeded;
 
     if (!StartService(
-                      schService,  // handle to service 
+                      schService,  // handle to service
                       0,           // number of arguments
-                      NULL) )      // no arguments 
+                      NULL) )      // no arguments
     {
         debug(TEXT("StartService failed (%d)"), GetLastError());
-        return; 
+        return;
     }
     else
     {
@@ -300,25 +300,25 @@ VOID SvcStartOnInstall(SC_HANDLE schService)
 
     // Check the status until the service is no longer start pending.
     if (!QueryServiceStatusEx(
-                              schService,                     // handle to service 
+                              schService,                     // handle to service
                               SC_STATUS_PROCESS_INFO,         // info level
                               (LPBYTE) &ssStatus,             // address of structure
                               sizeof(SERVICE_STATUS_PROCESS), // size of structure
                               &dwBytesNeeded ) )              // if buffer too small
     {
         debug(TEXT("QueryServiceStatusEx failed (%d)"), GetLastError());
-        return; 
+        return;
     }
- 
+
     // Save the tick count and initial checkpoint.
     dwStartTickCount = GetTickCount();
     dwOldCheckPoint = ssStatus.dwCheckPoint;
 
-    while (ssStatus.dwCurrentState == SERVICE_START_PENDING) 
-    { 
-        // Do not wait longer than the wait hint. A good interval is 
-        // one-tenth the wait hint, but no less than 1 second and no 
-        // more than 10 seconds. 
+    while (ssStatus.dwCurrentState == SERVICE_START_PENDING)
+    {
+        // Do not wait longer than the wait hint. A good interval is
+        // one-tenth the wait hint, but no less than 1 second and no
+        // more than 10 seconds.
         dwWaitTime = ssStatus.dwWaitHint / 10;
 
         if(dwWaitTime < 1000) {
@@ -329,9 +329,9 @@ VOID SvcStartOnInstall(SC_HANDLE schService)
 
         Sleep(dwWaitTime);
 
-        // Check the status again. 
-        if (!QueryServiceStatusEx( 
-                                  schService,                     // handle to service 
+        // Check the status again.
+        if (!QueryServiceStatusEx(
+                                  schService,                     // handle to service
                                   SC_STATUS_PROCESS_INFO,         // info level
                                   (LPBYTE) &ssStatus,             // address of structure
                                   sizeof(SERVICE_STATUS_PROCESS), // size of structure
@@ -340,7 +340,7 @@ VOID SvcStartOnInstall(SC_HANDLE schService)
             debug(TEXT("QueryServiceStatusEx failed (%d)"), GetLastError());
             break;
         }
- 
+
         if (ssStatus.dwCheckPoint > dwOldCheckPoint)
         {
             // Continue to wait and check.
@@ -379,23 +379,23 @@ VOID SvcUninstall(TCHAR *svcName, BOOL stopOnUninstall)
         return;
     }
 
-    // Get a handle to the SCM database. 
-    schSCManager = OpenSCManager( 
+    // Get a handle to the SCM database.
+    schSCManager = OpenSCManager(
         NULL,                    // local computer
-        NULL,                    // ServicesActive database 
-        SC_MANAGER_ALL_ACCESS);  // full access rights 
- 
+        NULL,                    // ServicesActive database
+        SC_MANAGER_ALL_ACCESS);  // full access rights
+
     if (schSCManager == NULL) {
         debug(TEXT("OpenSCManager failed (%d)"), GetLastError());
         return;
     }
 
     // Get a handle to the service.
-    schService = OpenService( 
-        schSCManager,                                      // SCM database 
-        svcName,                                           // name of service 
+    schService = OpenService(
+        schSCManager,                                      // SCM database
+        svcName,                                           // name of service
         DELETE | SERVICE_STOP | SERVICE_QUERY_STATUS);     // need stop/delete access
- 
+
     if (schService == NULL) {
         debug(TEXT("OpenService failed (%d)"), GetLastError());
         CloseServiceHandle(schSCManager);
@@ -413,8 +413,8 @@ VOID SvcUninstall(TCHAR *svcName, BOOL stopOnUninstall)
     } else {
         debug(TEXT("Service deleted successfully"));
     }
- 
-    CloseServiceHandle(schService); 
+
+    CloseServiceHandle(schService);
     CloseServiceHandle(schSCManager);
 }
 
@@ -451,8 +451,8 @@ VOID SvcStopOnUninstall(SC_HANDLE schSCManager, SC_HANDLE schService)
     {
         debug(TEXT("Service stop pending..."));
 
-        // Do not wait longer than the wait hint. A good interval is 
-        // one-tenth of the wait hint but not less than 1 second  
+        // Do not wait longer than the wait hint. A good interval is
+        // one-tenth of the wait hint but not less than 1 second
         // and not more than 10 seconds.
         dwWaitTime = ssp.dwWaitHint / 10;
 
@@ -464,10 +464,10 @@ VOID SvcStopOnUninstall(SC_HANDLE schSCManager, SC_HANDLE schService)
 
         Sleep(dwWaitTime);
 
-        if (!QueryServiceStatusEx( 
-                                  schService, 
+        if (!QueryServiceStatusEx(
+                                  schService,
                                   SC_STATUS_PROCESS_INFO,
-                                  (LPBYTE)&ssp, 
+                                  (LPBYTE)&ssp,
                                   sizeof(SERVICE_STATUS_PROCESS),
                                   &dwBytesNeeded ) )
         {
@@ -547,8 +547,8 @@ BOOL StopDependentServices(SC_HANDLE schSCManager, SC_HANDLE schService) {
         // If the Enum call succeeds, then there are no dependent
         // services, so do nothing.
         return TRUE;
-    } 
-    else 
+    }
+    else
     {
         if (GetLastError() != ERROR_MORE_DATA) {
             return FALSE; // Unexpected error
@@ -557,7 +557,7 @@ BOOL StopDependentServices(SC_HANDLE schSCManager, SC_HANDLE schService) {
         // Allocate a buffer for the dependencies.
         lpDependencies = (LPENUM_SERVICE_STATUS) HeapAlloc(
                       GetProcessHeap(), HEAP_ZERO_MEMORY, dwBytesNeeded);
-  
+
         if (!lpDependencies) {
             return FALSE;
         }
@@ -574,8 +574,8 @@ BOOL StopDependentServices(SC_HANDLE schSCManager, SC_HANDLE schService) {
             for (i = 0; i < dwCount; i++) {
                 ess = *(lpDependencies + i);
                 // Open the service.
-                hDepService = OpenService(schSCManager, 
-                                          ess.lpServiceName, 
+                hDepService = OpenService(schSCManager,
+                                          ess.lpServiceName,
                                           SERVICE_STOP | SERVICE_QUERY_STATUS);
 
                 if (!hDepService) {
@@ -595,7 +595,7 @@ BOOL StopDependentServices(SC_HANDLE schSCManager, SC_HANDLE schService) {
                     {
                         Sleep( ssp.dwWaitHint );
                         if (!QueryServiceStatusEx(
-                                                  hDepService, 
+                                                  hDepService,
                                                   SC_STATUS_PROCESS_INFO,
                                                   (LPBYTE)&ssp,
                                                   sizeof(SERVICE_STATUS_PROCESS),
@@ -620,12 +620,12 @@ BOOL StopDependentServices(SC_HANDLE schSCManager, SC_HANDLE schService) {
                 }
             }
         }
-        __finally 
+        __finally
         {
             // Always free the enumeration buffer.
             HeapFree( GetProcessHeap(), 0, lpDependencies );
         }
-    } 
+    }
     return TRUE;
 }
 
@@ -648,13 +648,13 @@ VOID SvcStartup(TCHAR *mainExe)
     // service type, the lpServiceName member of lpServiceTable is ignored.
     // This member cannot be NULL but it can be an empty string (SVCNAME).
 
-    SERVICE_TABLE_ENTRY DispatchTable[] = 
+    SERVICE_TABLE_ENTRY DispatchTable[] =
     {
         { SVCNAME, (LPSERVICE_MAIN_FUNCTION) SvcMain },
         { NULL, NULL }
     };
 
-    // This call returns when the service has stopped. 
+    // This call returns when the service has stopped.
     // The process should simply terminate when the call returns.
     if (!StartServiceCtrlDispatcher (DispatchTable)) {
         SvcReportEvent(TEXT("StartServiceCtrlDispatcher"));
@@ -682,14 +682,14 @@ VOID WINAPI SvcMain(DWORD dwArgc, LPTSTR *lpszArgv)
     // Register the handler function for the service
     gSvcStatusHandle = RegisterServiceCtrlHandler (SVCNAME, SvcCtrlHandler);
 
-    if(!gSvcStatusHandle) { 
-        SvcReportEvent(TEXT("RegisterServiceCtrlHandler")); 
-        return; 
+    if(!gSvcStatusHandle) {
+        SvcReportEvent(TEXT("RegisterServiceCtrlHandler"));
+        return;
     }
 
     // These SERVICE_STATUS members remain as set here
-    gSvcStatus.dwServiceType = SERVICE_WIN32_OWN_PROCESS; 
-    gSvcStatus.dwServiceSpecificExitCode = 0;    
+    gSvcStatus.dwServiceType = SERVICE_WIN32_OWN_PROCESS;
+    gSvcStatus.dwServiceSpecificExitCode = 0;
 
     // Report initial status to the SCM
     ReportSvcStatus(SERVICE_START_PENDING, NO_ERROR, 3000);
@@ -796,19 +796,19 @@ HANDLE CreateMainProcess() {
  */
 VOID WINAPI SvcCtrlHandler( DWORD dwCtrl )
 {
-    switch(dwCtrl) 
-    {  
-        case SERVICE_CONTROL_STOP: 
+    switch(dwCtrl)
+    {
+        case SERVICE_CONTROL_STOP:
             ReportSvcStatus(SERVICE_STOP_PENDING, NO_ERROR, 0);
             // Signal the service to stop.
             SetEvent(ghSvcStopEvent);
             ReportSvcStatus(gSvcStatus.dwCurrentState, NO_ERROR, 0);
-            return; 
-        case SERVICE_CONTROL_INTERROGATE: 
-            break; 
-        default: 
+            return;
+        case SERVICE_CONTROL_INTERROGATE:
             break;
-   }   
+        default:
+            break;
+   }
 }
 
 /*
@@ -816,7 +816,7 @@ VOID WINAPI SvcCtrlHandler( DWORD dwCtrl )
  *
  * @param dwCurrentState - The current state (see SERVICE_STATUS)
  * @param dwWin32ExitCode - The system error code
- * @param dwWaitHint - Estimated time for pending operation, 
+ * @param dwWaitHint - Estimated time for pending operation,
  *                     in milliseconds
  */
 VOID ReportSvcStatus( DWORD dwCurrentState,
@@ -855,8 +855,8 @@ VOID ReportSvcStatus( DWORD dwCurrentState,
  *
  * The service must have an entry in the Application event log.
  */
-VOID SvcReportEvent(LPTSTR szFunction) 
-{ 
+VOID SvcReportEvent(LPTSTR szFunction)
+{
     HANDLE hEventSource;
     LPCTSTR lpszStrings[2];
     TCHAR Buffer[80];

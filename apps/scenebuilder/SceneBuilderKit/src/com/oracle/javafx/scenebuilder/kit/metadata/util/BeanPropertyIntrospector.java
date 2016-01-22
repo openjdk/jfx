@@ -41,10 +41,10 @@ import java.lang.reflect.InvocationTargetException;
  *
  */
 class BeanPropertyIntrospector {
-    
+
     private final Object object;
     private final PropertyDescriptor[] propertyDescriptors;
-    
+
     public BeanPropertyIntrospector(Object object) {
         assert object != null;
         this.object = object;
@@ -55,11 +55,11 @@ class BeanPropertyIntrospector {
             throw new RuntimeException(x);
         }
     }
-    
+
     public Object getValue(String propertyName) {
         final PropertyDescriptor d = findDescriptor(propertyName);
         final Object result;
-        
+
         if (d != null) {
             try {
                 result = d.getReadMethod().invoke(object);
@@ -69,14 +69,14 @@ class BeanPropertyIntrospector {
         } else {
             throw new RuntimeException(propertyName + " not found"); //NOI18N
         }
-        
+
         return result;
     }
-    
-    
+
+
     public void setValue(String propertyName, Object value) {
         final PropertyDescriptor d = findDescriptor(propertyName);
-        
+
         if (d != null) {
             try {
                 d.getWriteMethod().invoke(object, value);
@@ -87,15 +87,15 @@ class BeanPropertyIntrospector {
             throw new RuntimeException(propertyName + " not found"); //NOI18N
         }
     }
-    
+
     private PropertyDescriptor findDescriptor(String propertyName) {
         assert propertyDescriptors != null;
         int i = 0;
-        while ((i < propertyDescriptors.length) 
+        while ((i < propertyDescriptors.length)
                 && ! propertyDescriptors[i].getName().equals(propertyName)){
             i++;
         }
-        
+
         return (i < propertyDescriptors.length) ? propertyDescriptors[i] : null;
     }
 }

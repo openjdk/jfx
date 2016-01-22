@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef FTLAbstractHeapRepository_h
@@ -80,10 +80,10 @@ namespace JSC { namespace FTL {
     macro(indexedArrayStorageProperties, 0, sizeof(EncodedJSValue)) \
     macro(singleCharacterStrings, 0, sizeof(JSString*)) \
     macro(variables, 0, sizeof(Register))
-    
+
 #define FOR_EACH_NUMBERED_ABSTRACT_HEAP(macro) \
     macro(properties)
-    
+
 // This class is meant to be cacheable between compilations, but it doesn't have to be.
 // Doing so saves on creation of nodes. But clearing it will save memory.
 
@@ -92,9 +92,9 @@ class AbstractHeapRepository {
 public:
     AbstractHeapRepository(LContext);
     ~AbstractHeapRepository();
-    
+
     AbstractHeap root;
-    
+
 #define ABSTRACT_HEAP_DECLARATION(name) AbstractHeap name;
     FOR_EACH_ABSTRACT_HEAP(ABSTRACT_HEAP_DECLARATION)
 #undef ABSTRACT_HEAP_DECLARATION
@@ -102,44 +102,44 @@ public:
 #define ABSTRACT_FIELD_DECLARATION(name, offset) AbstractField name;
     FOR_EACH_ABSTRACT_FIELD(ABSTRACT_FIELD_DECLARATION)
 #undef ABSTRACT_FIELD_DECLARATION
-    
+
     AbstractField& JSCell_freeListNext;
-    
+
 #define INDEXED_ABSTRACT_HEAP_DECLARATION(name, offset, size) IndexedAbstractHeap name;
     FOR_EACH_INDEXED_ABSTRACT_HEAP(INDEXED_ABSTRACT_HEAP_DECLARATION)
 #undef INDEXED_ABSTRACT_HEAP_DECLARATION
-    
+
 #define NUMBERED_ABSTRACT_HEAP_DECLARATION(name) NumberedAbstractHeap name;
     FOR_EACH_NUMBERED_ABSTRACT_HEAP(NUMBERED_ABSTRACT_HEAP_DECLARATION)
 #undef NUMBERED_ABSTRACT_HEAP_DECLARATION
 
     AbsoluteAbstractHeap absolute;
-    
+
     IndexedAbstractHeap* forIndexingType(IndexingType indexingType)
     {
         switch (indexingType) {
         case ALL_BLANK_INDEXING_TYPES:
         case ALL_UNDECIDED_INDEXING_TYPES:
             return 0;
-            
+
         case ALL_INT32_INDEXING_TYPES:
             return &indexedInt32Properties;
-            
+
         case ALL_DOUBLE_INDEXING_TYPES:
             return &indexedDoubleProperties;
-            
+
         case ALL_CONTIGUOUS_INDEXING_TYPES:
             return &indexedContiguousProperties;
-            
+
         case ALL_ARRAY_STORAGE_INDEXING_TYPES:
             return &indexedArrayStorageProperties;
-            
+
         default:
             RELEASE_ASSERT_NOT_REACHED();
             return 0;
         }
     }
-    
+
     IndexedAbstractHeap& forArrayType(DFG::Array::Type type)
     {
         switch (type) {
@@ -160,7 +160,7 @@ public:
 
 private:
     friend class AbstractHeap;
-    
+
     LContext m_context;
     unsigned m_tbaaKind;
 };

@@ -40,13 +40,13 @@ import com.sun.javafx.scene.control.skin.Utils;
 
 
 public class TableViewBehavior<T> extends TableViewBehaviorBase<TableView<T>, T, TableColumn<T, ?>> {
-    
+
     /**************************************************************************
      *                                                                        *
      * Listeners                                                              *
-     *                                                                        *  
+     *                                                                        *
      *************************************************************************/
-    
+
     private final ChangeListener<TableViewSelectionModel<T>> selectionModelListener =
             (observable, oldValue, newValue) -> {
                 if (oldValue != null) {
@@ -56,30 +56,30 @@ public class TableViewBehavior<T> extends TableViewBehaviorBase<TableView<T>, T,
                     newValue.getSelectedCells().addListener(weakSelectedCellsListener);
                 }
             };
-    
-    private final WeakChangeListener<TableViewSelectionModel<T>> weakSelectionModelListener = 
+
+    private final WeakChangeListener<TableViewSelectionModel<T>> weakSelectionModelListener =
             new WeakChangeListener<TableViewSelectionModel<T>>(selectionModelListener);
-    
+
     private TwoLevelFocusBehavior tlFocus;
 
-    
+
 
     /**************************************************************************
      *                                                                        *
      * Constructors                                                           *
-     *                                                                        *  
+     *                                                                        *
      *************************************************************************/
-    
+
     public TableViewBehavior(TableView<T> control) {
         super(control);
-        
+
         // Fix for RT-16565
         control.selectionModelProperty().addListener(weakSelectionModelListener);
         TableViewSelectionModel<T> sm = control.getSelectionModel();
         if (sm != null) {
             sm.getSelectedCells().addListener(selectedCellsListener);
         }
-        
+
         // Only add this if we're on an embedded platform that supports 5-button navigation
         if (Utils.isTwoLevelFocus()) {
             tlFocus = new TwoLevelFocusBehavior(control); // needs to be last.
@@ -94,9 +94,9 @@ public class TableViewBehavior<T> extends TableViewBehaviorBase<TableView<T>, T,
     /**************************************************************************
      *                                                                        *
      * Implement TableViewBehaviorBase abstract methods                       *
-     *                                                                        *  
+     *                                                                        *
      *************************************************************************/
-    
+
     /** {@inheritDoc}  */
     @Override protected int getItemCount() {
         return getNode().getItems() == null ? 0 : getNode().getItems().size();
@@ -143,7 +143,7 @@ public class TableViewBehavior<T> extends TableViewBehaviorBase<TableView<T>, T,
     }
 
     /** {@inheritDoc}  */
-    @Override protected TablePositionBase<TableColumn<T, ?>> 
+    @Override protected TablePositionBase<TableColumn<T, ?>>
             getTablePosition(int row, TableColumnBase<T, ?> tc) {
         return new TablePosition(getNode(), row, (TableColumn)tc);
     }

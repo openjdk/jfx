@@ -629,7 +629,7 @@ jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
 
             (*jEnv)->CallVoidMethod(jEnv, self->jApplication, javaIDs.MacApplication.notifyApplicationDidTerminate);
             GLASS_CHECK_EXCEPTION(jEnv);
-            
+
             jint err = (*jVM)->DetachCurrentThread(jVM);
             if (err < 0)
             {
@@ -798,7 +798,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacApplication__1initIDs
     LOG("Java_com_sun_glass_ui_mac_MacApplication__1initIDs");
 
     disableSyncRendering = jDisableSyncRendering ? YES : NO;
-   
+
     jApplicationClass = (*env)->NewGlobalRef(env, jClass);
 
     javaIDs.Application.createPixels = (*env)->GetStaticMethodID(
@@ -1062,7 +1062,7 @@ JNIEXPORT jobjectArray JNICALL Java_com_sun_glass_ui_mac_MacApplication_staticSc
     }
     GLASS_POOL_EXIT;
     GLASS_CHECK_EXCEPTION(env);
-    
+
     return screenArray;
 }
 
@@ -1120,7 +1120,7 @@ JNIEXPORT jstring JNICALL Java_com_sun_glass_ui_mac_MacApplication__1getDataDire
 (JNIEnv * env, jobject japplication)
 {
     jstring string = nil;
-    
+
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
     GLASS_POOL_ENTER;
     {
@@ -1131,7 +1131,7 @@ JNIEXPORT jstring JNICALL Java_com_sun_glass_ui_mac_MacApplication__1getDataDire
     }
     GLASS_POOL_EXIT;
     GLASS_CHECK_EXCEPTION(env);
-    
+
     return string;
 }
 
@@ -1143,7 +1143,7 @@ JNIEXPORT jstring JNICALL Java_com_sun_glass_ui_mac_MacApplication__1getDataDire
 JNIEXPORT jint JNICALL Java_com_sun_glass_ui_mac_MacApplication__1getMacKey
 (JNIEnv *env, jclass jClass, jint code)
 {
-	unsigned short macCode = 0;
+    unsigned short macCode = 0;
     GetMacKey(code, &macCode);
     return (macCode & 0xFFFF);
 }

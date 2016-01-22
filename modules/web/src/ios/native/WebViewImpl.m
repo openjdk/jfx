@@ -79,7 +79,7 @@ jstring createJString(JNIEnv *env, NSString *nsStr) {
     NSURL *homeURL = [NSURL URLWithString:value];
     NSURLRequest *request = [[NSURLRequest alloc] initWithURL:homeURL];
 
-    loadingLabel.text = [NSString stringWithFormat:@"Loading %@", 
+    loadingLabel.text = [NSString stringWithFormat:@"Loading %@",
                         [[request URL] absoluteString]];
 
     loadingLabel.hidden = YES;
@@ -214,7 +214,7 @@ jstring createJString(JNIEnv *env, NSString *nsStr) {
 }
 
 - (void)webViewDidFinishLoad:(UIWebView *)wv{
-    NSString *inner = [wv stringByEvaluatingJavaScriptFromString: 
+    NSString *inner = [wv stringByEvaluatingJavaScriptFromString:
                                          @"document.documentElement.innerHTML"];
     NSString *currentUrl = wv.request.URL.absoluteString;
 

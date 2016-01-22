@@ -40,24 +40,24 @@ import javafx.fxml.FXMLLoader;
 
 /**
  *
- * 
+ *
  */
 class ResourceKeyCollector extends ResourceBundle {
-    
+
     private final ResourceBundle backingResources;
-    
+
     public ResourceKeyCollector(ResourceBundle backingResources) {
         this.backingResources = backingResources;
     }
-            
+
     /*
      * ResourceBundle
      */
-    
+
     @Override
     protected Object handleGetObject(String key) {
         Object result;
-        
+
         if (backingResources != null) {
             try {
                 result = backingResources.getObject(key);
@@ -70,7 +70,7 @@ class ResourceKeyCollector extends ResourceBundle {
         if (result == null) {
             result = FXMLLoader.RESOURCE_KEY_PREFIX + key;
         }
-        
+
         return result;
     }
 
@@ -86,9 +86,9 @@ class ResourceKeyCollector extends ResourceBundle {
 
 
     private static class EnumerationFromIterator<T> implements Enumeration<T> {
-        
+
         private final Iterator<T> iterator;
-        
+
         public EnumerationFromIterator(Iterator<T> iterator) {
             this.iterator = iterator;
         }
@@ -102,6 +102,6 @@ class ResourceKeyCollector extends ResourceBundle {
         public T nextElement() {
             return iterator.next();
         }
-        
+
     }
 }

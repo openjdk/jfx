@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -143,7 +143,7 @@ protected:
 // family of functions. print() deciphers the % formatting, translate them
 // to primitive formats, and dispatches to underlying printArg() functions
 // to do the printing.
-// 
+//
 // The non-public internal printArg() function is virtual and is responsible
 // for handling the variations between printf, fprintf, sprintf, and snprintf.
 
@@ -271,7 +271,7 @@ void FormatPrinter::print(const char* format, va_list args)
             if (UNLIKELY(curr >= end)) \
                 goto formatTooLong;    \
         } while (false)
-        
+
         curr = buffer;
         *curr++ = *p++; // Output the first % in the format specifier.
         c = *p++; // Grab the next char in the format specifier.
@@ -452,7 +452,7 @@ private:
 
 FileFormatPrinter::FileFormatPrinter(FILE* file)
     : m_file(file)
-{ 
+{
 }
 
 bool FileFormatPrinter::printArg(const char* format, va_list args)
@@ -477,7 +477,7 @@ private:
 
 StringFormatPrinter::StringFormatPrinter(char* buffer)
     : m_buffer(buffer)
-{ 
+{
 }
 
 bool StringFormatPrinter::printArg(const char* format, va_list args)

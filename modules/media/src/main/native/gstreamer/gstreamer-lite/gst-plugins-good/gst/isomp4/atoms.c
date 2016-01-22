@@ -3293,7 +3293,7 @@ atom_edts_add_entry (AtomEDTS * edts, EditListEntry * entry)
   edts->elst.entries = g_slist_append (edts->elst.entries, entry);
 }
 
-/* 
+/*
  * Adds a new entry to this trak edits list
  * duration is in the moov's timescale
  * media_time is the offset in the media time to start from (media's timescale)

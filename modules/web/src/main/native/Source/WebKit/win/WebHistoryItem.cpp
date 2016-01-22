@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -172,7 +172,7 @@ HRESULT STDMETHODCALLTYPE WebHistoryItem::dictionaryRepresentation(void** dictio
     }
 
     *dictionaryRef = CFDictionaryCreate(0, keys, values, keyCount, &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks);
-    
+
     for (int i = 0; i < keyCount; ++i)
         CFRelease(values[i]);
 
@@ -428,7 +428,7 @@ HRESULT STDMETHODCALLTYPE WebHistoryItem::initWithURLString(
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE WebHistoryItem::originalURLString( 
+HRESULT STDMETHODCALLTYPE WebHistoryItem::originalURLString(
     /* [retval][out] */ BSTR* url)
 {
     if (!url)
@@ -439,7 +439,7 @@ HRESULT STDMETHODCALLTYPE WebHistoryItem::originalURLString(
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE WebHistoryItem::URLString( 
+HRESULT STDMETHODCALLTYPE WebHistoryItem::URLString(
     /* [retval][out] */ BSTR* url)
 {
     if (!url)
@@ -450,7 +450,7 @@ HRESULT STDMETHODCALLTYPE WebHistoryItem::URLString(
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE WebHistoryItem::title( 
+HRESULT STDMETHODCALLTYPE WebHistoryItem::title(
     /* [retval][out] */ BSTR* pageTitle)
 {
     if (!pageTitle)
@@ -462,20 +462,20 @@ HRESULT STDMETHODCALLTYPE WebHistoryItem::title(
 }
 
 // FIXME: This function should be removed from the IWebHistoryItem interface.
-HRESULT STDMETHODCALLTYPE WebHistoryItem::lastVisitedTimeInterval( 
+HRESULT STDMETHODCALLTYPE WebHistoryItem::lastVisitedTimeInterval(
     /* [retval][out] */ DATE* lastVisited)
 {
     return E_NOTIMPL;
 }
 
-HRESULT STDMETHODCALLTYPE WebHistoryItem::setAlternateTitle( 
+HRESULT STDMETHODCALLTYPE WebHistoryItem::setAlternateTitle(
     /* [in] */ BSTR title)
 {
     m_alternateTitle = String(title, SysStringLen(title));
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE WebHistoryItem::alternateTitle( 
+HRESULT STDMETHODCALLTYPE WebHistoryItem::alternateTitle(
     /* [retval][out] */ BSTR* title)
 {
     if (!title) {
@@ -487,7 +487,7 @@ HRESULT STDMETHODCALLTYPE WebHistoryItem::alternateTitle(
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE WebHistoryItem::icon( 
+HRESULT STDMETHODCALLTYPE WebHistoryItem::icon(
     /* [out, retval] */ OLE_HANDLE* /*hBitmap*/)
 {
     ASSERT_NOT_REACHED();

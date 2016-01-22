@@ -236,10 +236,10 @@ static bool testOneRegExp(VM& vm, RegExp* regexp, RegExpTest* regExpTest, bool v
 static int scanString(char* buffer, int bufferLength, StringBuilder& builder, char termChar)
 {
     bool escape = false;
-    
+
     for (int i = 0; i < bufferLength; ++i) {
         UChar c = buffer[i];
-        
+
         if (escape) {
             switch (c) {
             case '0':
@@ -282,7 +282,7 @@ static int scanString(char* buffer, int bufferLength, StringBuilder& builder, ch
                 i += 4;
                 break;
             }
-            
+
             builder.append(c);
             escape = false;
         } else {
@@ -302,7 +302,7 @@ static int scanString(char* buffer, int bufferLength, StringBuilder& builder, ch
 static RegExp* parseRegExpLine(VM& vm, char* line, int lineLength)
 {
     StringBuilder pattern;
-    
+
     if (line[0] != '/')
         return 0;
 
@@ -319,7 +319,7 @@ static RegExp* parseRegExpLine(VM& vm, char* line, int lineLength)
 static RegExpTest* parseTestLine(char* line, int lineLength)
 {
     StringBuilder subjectString;
-    
+
     if ((line[0] != ' ') || (line[1] != '"'))
         return 0;
 
@@ -329,9 +329,9 @@ static RegExpTest* parseTestLine(char* line, int lineLength)
         return 0;
 
     i += 3;
-    
+
     int offset;
-    
+
     if (sscanf(line + i, "%d, ", &offset) != 1)
         return 0;
 
@@ -339,24 +339,24 @@ static RegExpTest* parseTestLine(char* line, int lineLength)
         ++i;
 
     ++i;
-    
+
     int matchResult;
-    
+
     if (sscanf(line + i, "%d, ", &matchResult) != 1)
         return 0;
-    
+
     while (line[i] && line[i] != ' ')
         ++i;
-    
+
     ++i;
-    
+
     if (line[i++] != '(')
         return 0;
 
     int start, end;
-    
+
     RegExpTest* result = new RegExpTest();
-    
+
     result->subject = subjectString.toString();
     result->offset = offset;
     result->result = matchResult;
@@ -407,7 +407,7 @@ static bool runFromFiles(GlobalObject* globalObject, const Vector<String>& files
             printf("Unable to open test data file \"%s\"\n", files[i].utf8().data());
             continue;
         }
-            
+
         RegExp* regexp = 0;
         size_t lineLength = 0;
         char* linePtr = 0;
@@ -428,7 +428,7 @@ static bool runFromFiles(GlobalObject* globalObject, const Vector<String>& files
                 regexp = parseRegExpLine(vm, linePtr, lineLength);
             } else if (linePtr[0] == ' ') {
                 RegExpTest* regExpTest = parseTestLine(linePtr, lineLength);
-                
+
                 if (regexp && regExpTest) {
                     ++tests;
                     if (!testOneRegExp(vm, regexp, regExpTest, verbose, lineNumber)) {
@@ -436,12 +436,12 @@ static bool runFromFiles(GlobalObject* globalObject, const Vector<String>& files
                         printf("Failure on line %u\n", lineNumber);
                     }
                 }
-                
+
                 if (regExpTest)
                     delete regExpTest;
             }
         }
-        
+
         fclose(testCasesFile);
     }
 

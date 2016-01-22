@@ -77,7 +77,7 @@ void RenderSVGContainer::layout()
     if (m_needsBoundariesUpdate || updatedTransform) {
         updateCachedBoundaries();
         m_needsBoundariesUpdate = false;
-    
+
         // If our bounds changed, notify the parents.
         RenderSVGModelObject::setNeedsBoundariesUpdate();
     }
@@ -140,7 +140,7 @@ void RenderSVGContainer::paint(PaintInfo& paintInfo, const LayoutPoint&)
                 child.paint(childPaintInfo, IntPoint());
         }
     }
-    
+
     // FIXME: This really should be drawn from local coordinates, but currently we hack it
     // to avoid our clip killing our outline rect.  Thus we translate our
     // outline rect into parent coords before drawing.
@@ -176,7 +176,7 @@ bool RenderSVGContainer::nodeAtFloatPoint(const HitTestRequest& request, HitTest
 
     if (!SVGRenderSupport::pointInClippingArea(*this, localPoint))
         return false;
-                
+
     for (RenderObject* child = lastChild(); child; child = child->previousSibling()) {
         if (child->nodeAtFloatPoint(request, result, localPoint, hitTestAction)) {
             updateHitTestResult(result, roundedLayoutPoint(localPoint));
@@ -189,7 +189,7 @@ bool RenderSVGContainer::nodeAtFloatPoint(const HitTestRequest& request, HitTest
         updateHitTestResult(result, roundedLayoutPoint(localPoint));
         return true;
     }
-    
+
     // Spec: Only graphical elements can be targeted by the mouse, period.
     // 16.4: "If there are no graphics elements whose relevant graphics content is under the pointer (i.e., there is no target element), the event is not dispatched."
     return false;

@@ -141,7 +141,7 @@ public class PuzzlePiecesApp extends Application {
         vb.setMinSize(VBox.USE_PREF_SIZE, VBox.USE_PREF_SIZE);
         return vb;
     }
-    
+
     @Override public void start(Stage primaryStage) throws Exception {
         primaryStage.setResizable(false);
         primaryStage.setScene(new Scene(createContent()));

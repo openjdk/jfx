@@ -62,7 +62,7 @@ import org.apache.lucene.util.Version;
  * Generate the lucene index that Ensemble uses for its search
  */
 public class BuildEnsembleSearchIndex {
-    
+
     public static void buildSearchIndex(List<Sample> allSamples, String javaDocBaseUrl, String javafxDocumentationHome, File indexDir){
         try {
             List<Document> docs = new ArrayList<>();
@@ -107,7 +107,7 @@ public class BuildEnsembleSearchIndex {
                 writer.optimize();
                 System.out.println("NUMBER OF INDEXED DOCUMENTS = ["+writer.numDocs()+"]");
             }
-            // write file listing all the search index files, so we know what 
+            // write file listing all the search index files, so we know what
             // is in the jar file at runtime
             try (FileWriter listAllOut = new FileWriter(new File(indexDir,"listAll.txt"))) {
                 for (String fileName: dir.listAll()) {
@@ -126,7 +126,7 @@ public class BuildEnsembleSearchIndex {
             Logger.getLogger(BuildEnsembleSearchIndex.class.getName()).log(Level.SEVERE, null, ex);
         }
     }
-    
+
     private static List<Callable<List<Document>>> indexAllDocumentation(String javafxDocumentationHome) throws IOException{
         List<Callable<List<Document>>> tasks = new ArrayList<>();
         CharSequence content = grabWebPage(javafxDocumentationHome);
@@ -139,7 +139,7 @@ public class BuildEnsembleSearchIndex {
             String foundUrl = matcher.group(1);
 //            System.out.println("foundUrl = " + foundUrl);
             final String docPageUrl = (foundUrl.startsWith("http") ? foundUrl : baseUrl + foundUrl);
-            if ("https://docs.oracle.com/javafx/2/api/javafx/scene/doc-files/cssref.html".equals(docPageUrl) || 
+            if ("https://docs.oracle.com/javafx/2/api/javafx/scene/doc-files/cssref.html".equals(docPageUrl) ||
                     "https://docs.oracle.com/javafx/2/api/index.html".equals(docPageUrl) ||
                     "http://www.oracle.com/technetwork/java/javafx/downloads/supportedconfigurations-1506746.html".equals(docPageUrl) ||
                     "http://www.oracle.com/technetwork/java/javase/downloads/".equals(docPageUrl) ||
@@ -152,7 +152,7 @@ public class BuildEnsembleSearchIndex {
         System.out.println(" --- end of list ---");
         return tasks;
     }
-    
+
     private static List<Document> indexDocumentationPage(String docPageUrl) throws IOException{
         List<Document> docs = new ArrayList<>();
         try {
@@ -178,7 +178,7 @@ public class BuildEnsembleSearchIndex {
             if (docPage.nextUrl != null) {
                 docs.addAll(indexDocumentationPage(docPage.nextUrl));
             }
-            
+
         } catch (Exception ex) {
             System.out.println("FAILED TO PARSE DOCS PAGE SO IGNORED: ["+docPageUrl+"]");
             ex.printStackTrace(System.out);
@@ -269,7 +269,7 @@ public class BuildEnsembleSearchIndex {
         // extract properties
         Matcher propertySummaryMatcher = PROPERTY_SUMMARY.matcher(content);
         if (propertySummaryMatcher.find()) {
-            String propertySummaryTable = propertySummaryMatcher.group(1);           
+            String propertySummaryTable = propertySummaryMatcher.group(1);
             Matcher propertyMatcher = PROPERTY.matcher(propertySummaryTable);
             while (propertyMatcher.find()) {
                 String propUrl = propertyMatcher.group(1);
@@ -437,7 +437,7 @@ public class BuildEnsembleSearchIndex {
         html = html.replaceAll("&amp;", "&"); // un-escape &
         return html;
     }
-    
+
     static CharSequence grabWebPage(String url) throws IOException {
         StringBuilder builder = new StringBuilder();
         try (BufferedReader reader = new BufferedReader(new InputStreamReader(new URL(url).openStream()))) {
@@ -449,8 +449,8 @@ public class BuildEnsembleSearchIndex {
         }
         return builder;
     }
-          
-    
+
+
     // ===================  JAVAFX DOCUMENTATION PATTERNS ======================
     /*
      GET ALL LINKS FROM DOCS HOME PAGE
@@ -475,8 +475,8 @@ public class BuildEnsembleSearchIndex {
     GROUP 1 = chapter name
      */
     private static final Pattern chapter = Pattern.compile("<h1\\s+class=\\\"chapter\\\"\\s*>([^<]+)");
-    
-    
+
+
     // ===================  API DOC PATTERNS ===================================
     /*
     Pull class urls from all classes page

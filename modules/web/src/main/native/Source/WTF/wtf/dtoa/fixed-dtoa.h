@@ -33,7 +33,7 @@
 namespace WTF {
 
 namespace double_conversion {
-    
+
     // Produces digits necessary to print a given number with
     // 'fractional_count' digits after the decimal point.
     // The buffer must be big enough to hold the result plus one terminating null
@@ -52,7 +52,7 @@ namespace double_conversion {
     // returns false. The output is null-terminated when the function succeeds.
     bool FastFixedDtoa(double v, int fractional_count,
                        BufferReference<char> buffer, int* length, int* decimal_point);
-    
+
 }  // namespace double_conversion
 
 } // namespace WTF

@@ -891,7 +891,7 @@ g_variant_get_data (GVariant *value)
  * Returns: (transfer full): A new #GBytes representing the variant data
  *
  * Since: 2.36
- */ 
+ */
 GBytes *
 g_variant_get_data_as_bytes (GVariant *value)
 {

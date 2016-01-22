@@ -41,8 +41,8 @@ import com.sun.javafx.tk.Toolkit;
  * then the anchor rectangle should be specified relative to the unit
  * square (0.0->1.0) and will be stretched across the shape.
  * If the {@code proportional} variable is set to false, then the anchor
- * rectangle should be specified in the local coordinate system of the shape 
- * and the image will be stretched to fit the anchor rectangle. The anchor 
+ * rectangle should be specified in the local coordinate system of the shape
+ * and the image will be stretched to fit the anchor rectangle. The anchor
  * rectangle will not be stretched across the shape.</p>
  *
  * <p>The example below demonstrates the use of the {@code proportional}
@@ -61,20 +61,20 @@ import javafx.scene.shape.Polygon;
 import javafx.stage.Stage;
 
 public class HelloImagePattern extends Application {
-    
+
     private static final String flowerURL = "file:flower.png";
     private static final String dotsURL = "file:dots.png";
-    
+
     &#64;Override public void start(Stage stage) {
         stage.setTitle("Image Pattern");
         Group root = new Group();
         Scene scene = new Scene(root, 600, 450);
-        
+
         Image dots = new Image(dotsURL);
         Image flower = new Image(flowerURL);
-        
+
         Polygon p = new Polygon();
-        
+
         p.setLayoutX(10);
         p.setLayoutY(10);
         p.getPoints().add(50.0);
@@ -83,13 +83,13 @@ public class HelloImagePattern extends Application {
         p.getPoints().add(100.0);
         p.getPoints().add(0.0);
         p.getPoints().add(100.0);
-        
+
         p.setFill(new ImagePattern(flower, 0, 0, 1, 1, true));
-        
+
         root.getChildren().add(p);
-        
+
         Polygon p2 = new Polygon();
-        
+
         p2.setLayoutX(10);
         p2.setLayoutY(120);
         p2.getPoints().add(50.0);
@@ -98,27 +98,27 @@ public class HelloImagePattern extends Application {
         p2.getPoints().add(100.0);
         p2.getPoints().add(0.0);
         p2.getPoints().add(100.0);
-        
+
         p2.setFill(new ImagePattern(flower, 0, 0, 100, 100, false));
-        
+
         root.getChildren().add(p2);
-        
+
         Circle circ = new Circle(50);
         circ.setTranslateX(120);
         circ.setTranslateY(10);
         circ.setCenterX(50);
         circ.setCenterY(50);
         circ.setFill(new ImagePattern(dots, 0.2, 0.2, 0.4, 0.4, true));
-        
+
         root.getChildren().add(circ);
-        
+
         Circle circ2 = new Circle(50);
         circ2.setTranslateX(120);
         circ2.setTranslateY(10);
         circ2.setCenterX(50);
         circ2.setCenterY(50);
         circ2.setFill(new ImagePattern(dots, 20, 20, 40, 40, false));
-        
+
         root.getChildren().add(circ2);
         stage.setScene(scene);
         stage.show();
@@ -130,21 +130,21 @@ public class HelloImagePattern extends Application {
  * @since JavaFX 2.2
  */
 public final class ImagePattern extends Paint {
-    
+
     private Image image;
 
     /**
      * Gets the image to be used as a paint.
-     * 
+     *
      * @return Image to be used as a paint.
      */
     public final Image getImage() {
         return image;
     }
-    
-    
+
+
     private double x;
-    
+
     /**
      * Gets the x origin of the anchor rectangle.
      *
@@ -154,7 +154,7 @@ public final class ImagePattern extends Paint {
     public final double getX() {
         return x;
     }
-    
+
     private double y;
 
     /**
@@ -166,10 +166,10 @@ public final class ImagePattern extends Paint {
     public final double getY() {
         return y;
     }
-    
-    
+
+
     private double width = 1f;
-    
+
     /**
      * Gets the width of the anchor rectangle.
      *
@@ -179,10 +179,10 @@ public final class ImagePattern extends Paint {
     public final double getWidth() {
         return width;
     }
-    
-    
+
+
     private double height = 1f;
-    
+
     /**
      * Gets the height of the anchor rectangle.
      *
@@ -192,16 +192,16 @@ public final class ImagePattern extends Paint {
     public final double getHeight() {
         return height;
     }
-    
+
 
     private boolean proportional = true;
 
     /**
-     * Gets a boolean that indicates whether start and end locations are 
-     * proportional or absolute. If this flag is true, the two end points are 
-     * defined in a coordinate space where coordinates in the range 
-     * {@code [0..1]} are scaled to map onto the bounds of the shape that the 
-     * pattern fills. If this flag is false, then the coordinates are specified 
+     * Gets a boolean that indicates whether start and end locations are
+     * proportional or absolute. If this flag is true, the two end points are
+     * defined in a coordinate space where coordinates in the range
+     * {@code [0..1]} are scaled to map onto the bounds of the shape that the
+     * pattern fills. If this flag is false, then the coordinates are specified
      * in the local coordinate system of the node.
      *
      * @defaultValue true
@@ -222,12 +222,12 @@ public final class ImagePattern extends Paint {
     private Object platformPaint;
 
     /**
-     * Creates a new instance of ImagePattern from the specified image. Default 
+     * Creates a new instance of ImagePattern from the specified image. Default
      * values are used for all other parameters.
-     * 
+     *
      * @param image the image to be used as the paint.
      * @throws NullPointerException if the image is null.
-     * @throws IllegalArgumentException if image is not done loading, 
+     * @throws IllegalArgumentException if image is not done loading,
      * that is if progress is < 1.
      */
     public ImagePattern(@NamedArg("image") Image image) {
@@ -241,7 +241,7 @@ public final class ImagePattern extends Paint {
 
     /**
      * Creates a new instance of ImagePattern.
-     * 
+     *
      * @param image the image to be used as the paint.
      * @param x the x origin of the anchor rectangle.
      * @param y the y origin of the anchor rectangle.
@@ -250,7 +250,7 @@ public final class ImagePattern extends Paint {
      * @param proportional whether the coordinates are proportional
      * to the shape which ImagePattern fills
      * @throws NullPointerException if the image is null.
-     * @throws IllegalArgumentException if image is not done loading, 
+     * @throws IllegalArgumentException if image is not done loading,
      * that is if progress is < 1.
      */
     public ImagePattern(@NamedArg("image") Image image, @NamedArg("x") double x, @NamedArg("y") double y, @NamedArg("width") double width,

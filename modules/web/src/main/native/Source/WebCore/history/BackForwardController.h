@@ -52,7 +52,7 @@ public:
 
     void addItem(PassRefPtr<HistoryItem>);
     void setCurrentItem(HistoryItem*);
-        
+
     int count() const;
     int backCount() const;
     int forwardCount() const;

@@ -51,17 +51,17 @@ import sun.util.logging.PlatformLogger;
  * This camera is always located at center of the scene and looks along the
  * positive z-axis. The coordinate system defined by this camera has its
  * origin in the upper left corner of the panel with the Y-axis pointing
- * down and the Z axis pointing away from the viewer (into the screen). 
- * 
+ * down and the Z axis pointing away from the viewer (into the screen).
+ *
  * <p> In the default camera, where fixedEyeAtCameraZero is false, the Z value
  * of the eye position is adjusted in Z such that the projection matrix generated
- * using the specified {@code fieldOfView} will produce units at 
+ * using the specified {@code fieldOfView} will produce units at
  * Z = 0 (the projection plane), in device-independent pixels, matches that of
  * the ParallelCamera.
  * When the Scene is resized,
  * the objects in the scene at the projection plane (Z = 0) will stay the same size,
  * but more or less content of the scene is viewable.
- * 
+ *
  * <p> If fixedEyeAtCameraZero is true, the eye position is fixed at (0, 0, 0)
  * in the local coordinates of the camera. The projection matrix is generated
  * using the specified {@code fieldOfView} and the projection volume is mapped
@@ -70,15 +70,15 @@ import sun.util.logging.PlatformLogger;
  * When the Scene is resized,
  * the objects in the scene will shrink or grow proportionally,
  * but the visible portion of the content is unchanged.
- * 
+ *
  * <p> We recommend setting fixedEyeAtCameraZero to true if you are going to
  * transform (move) the camera. Transforming the camera when fixedEyeAtCameraZero
  * is set to false may lead to results that are not intuitive.
- * 
+ *
  * <p> Note that this is a conditional feature. See
  * {@link javafx.application.ConditionalFeature#SCENE3D ConditionalFeature.SCENE3D}
  * for more information.
- * 
+ *
  * @since JavaFX 2.0
  */
 public class PerspectiveCamera extends Camera {
@@ -110,7 +110,7 @@ public class PerspectiveCamera extends Camera {
      * @defaultValue 30.0
      */
     private DoubleProperty fieldOfView;
-    
+
     public final void setFieldOfView(double value){
         fieldOfViewProperty().set(value);
     }
@@ -132,8 +132,8 @@ public class PerspectiveCamera extends Camera {
     }
 
     /**
-     * Defines whether the {@code fieldOfView} property is to apply to the vertical 
-     * dimension of the projection plane. If it is false, {@code fieldOfView} is to 
+     * Defines whether the {@code fieldOfView} property is to apply to the vertical
+     * dimension of the projection plane. If it is false, {@code fieldOfView} is to
      * apply to the horizontal dimension of the projection plane.
      *
      * @defaultValue true
@@ -168,7 +168,7 @@ public class PerspectiveCamera extends Camera {
     /**
      * Constructs a PerspectiveCamera with the specified fixedEyeAtCameraZero flag.
      *
-     * <p> In the default camera, where fixedEyeAtCameraZero is false, the Z value of 
+     * <p> In the default camera, where fixedEyeAtCameraZero is false, the Z value of
      * the eye position is adjusted in Z such that the projection matrix generated
      * using the specified {@code fieldOfView} will produce units at
      * Z = 0 (the projection plane), in device-independent pixels, matches that of
@@ -189,9 +189,9 @@ public class PerspectiveCamera extends Camera {
      * <p> We recommend setting fixedEyeAtCameraZero to true if you are going to
      * transform (move) the camera. Transforming the camera when fixedEyeAtCameraZero
      * is set to false may lead to results that are not intuitive.
-     * 
+     *
      * @since JavaFX 8.0
-     */ 
+     */
     public PerspectiveCamera(boolean fixedEyeAtCameraZero) {
         if (!Platform.isSupported(ConditionalFeature.SCENE3D)) {
             String logname = PerspectiveCamera.class.getName();

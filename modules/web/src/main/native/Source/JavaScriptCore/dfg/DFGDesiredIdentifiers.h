@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef DFGDesiredIdentifiers_h
@@ -44,16 +44,16 @@ class DesiredIdentifiers {
 public:
     DesiredIdentifiers(CodeBlock*);
     ~DesiredIdentifiers();
-    
+
     unsigned numberOfIdentifiers();
     void addLazily(StringImpl*);
-    
+
     StringImpl* at(unsigned index) const;
-    
+
     StringImpl* operator[](unsigned index) const { return at(index); }
-    
+
     void reallyAdd(VM&, CommonData*);
-    
+
 private:
     CodeBlock* m_codeBlock;
     Vector<StringImpl*> m_addedIdentifiers;

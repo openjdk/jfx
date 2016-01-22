@@ -42,7 +42,7 @@ import javafx.util.Callback;
  *
  */
 public class TableViewResizePolicyPropertyMetadata extends CallbackPropertyMetadata {
-    
+
     public TableViewResizePolicyPropertyMetadata(PropertyName name, boolean readWrite, Object defaultValue, InspectorPath inspectorPath) {
         super(name, readWrite, defaultValue, inspectorPath);
         assert (defaultValue == TableView.CONSTRAINED_RESIZE_POLICY)
@@ -62,11 +62,11 @@ public class TableViewResizePolicyPropertyMetadata extends CallbackPropertyMetad
     protected Class<?> getFxConstantClass() {
         return TableView.class;
     }
-    
+
     @Override
     protected void updateFxomInstanceWithValue(FXOMInstance valueInstance, Object value) {
         final String fxConstant;
-        
+
         if (value == TableView.CONSTRAINED_RESIZE_POLICY) {
             fxConstant = "CONSTRAINED_RESIZE_POLICY"; //NOI18N
         } else if (value == TableView.UNCONSTRAINED_RESIZE_POLICY) {
@@ -76,7 +76,7 @@ public class TableViewResizePolicyPropertyMetadata extends CallbackPropertyMetad
             assert false;
             fxConstant = "CONSTRAINED_RESIZE_POLICY"; //NOI18N
         }
-        
+
         valueInstance.setFxConstant(fxConstant);
     }
 }

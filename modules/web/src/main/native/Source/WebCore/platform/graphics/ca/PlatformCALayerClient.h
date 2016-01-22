@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef PlatformCALayerClient_h
@@ -52,7 +52,7 @@ public:
     virtual bool platformCALayerShowDebugBorders() const = 0;
     virtual bool platformCALayerShowRepaintCounter(PlatformCALayer*) const = 0;
     virtual int platformCALayerIncrementRepaintCount(PlatformCALayer*) = 0;
-    
+
     virtual bool platformCALayerContentsOpaque() const = 0;
     virtual bool platformCALayerDrawsContent() const = 0;
     virtual void platformCALayerLayerDidDisplay(PlatformLayer*) = 0;

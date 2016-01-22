@@ -44,7 +44,7 @@ public final class SessionTime {
     private final Room room;
     private final int capacity;
     private final int registered;
-    /** This is null if not in users schedule otherwise its the Event that 
+    /** This is null if not in users schedule otherwise its the Event that
      * is in their schedule. */
     private Event event;
     private Session session;
@@ -57,11 +57,11 @@ public final class SessionTime {
         this.capacity = capacity;
         this.registered = registered;
     }
-    
+
     public int getId() {
         return id;
     }
-    
+
     public Date getStart() {
         return start;
     }
@@ -101,7 +101,7 @@ public final class SessionTime {
     public String debugString() {
         return start+ "(" + length + "min) " + room + " (" + registered + "/" + capacity + ')';
     }
-    
+
     @Override public String toString() {
         return session.getTitle();
     }

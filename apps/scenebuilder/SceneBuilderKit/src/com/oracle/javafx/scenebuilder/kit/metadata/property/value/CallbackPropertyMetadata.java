@@ -58,14 +58,14 @@ public abstract class CallbackPropertyMetadata extends ValuePropertyMetadata {
     public Object getDefaultValue() {
         return defaultValue;
     }
-    
+
     public Object getValue(FXOMInstance fxomInstance) {
         final Object result;
-        
+
         if (isReadWrite()) {
             final FXOMProperty fxomProperty = fxomInstance.getProperties().get(getName());
             if (fxomProperty instanceof FXOMPropertyC) {
-                
+
                 final FXOMPropertyC fxomPropertyC = (FXOMPropertyC) fxomProperty;
                 assert fxomPropertyC.getValues().size() == 1;
 
@@ -75,7 +75,7 @@ public abstract class CallbackPropertyMetadata extends ValuePropertyMetadata {
                 result = castValue(sceneGraphObject);
             } else {
                 assert fxomProperty == null;
-                
+
                 // propertyName is not specified in the fxom instance.
                 // We return the default value specified in the metadata of the
                 // property
@@ -84,13 +84,13 @@ public abstract class CallbackPropertyMetadata extends ValuePropertyMetadata {
         } else {
             result = castValue(getName().getValue(fxomInstance.getSceneGraphObject()));
         }
-        
+
         return result;
     }
 
     public void setValue(FXOMInstance fxomInstance, Object value) {
         assert isReadWrite();
-        
+
         final FXOMProperty fxomProperty = fxomInstance.getProperties().get(getName());
 
         if (Objects.equals(value, getDefaultValueObject())) {
@@ -110,19 +110,19 @@ public abstract class CallbackPropertyMetadata extends ValuePropertyMetadata {
             }
         }
     }
-    
-    
+
+
     protected abstract void updateFxomInstanceWithValue(FXOMInstance valueInstance, Object value);
     protected abstract Class<?> getFxConstantClass();
     protected abstract Object castValue(Object value);
-    
-    
-    
-    
+
+
+
+
     /*
      * ValuePropertyMetadata
      */
-    
+
     @Override
     public Class<?> getValueClass() {
         return Callback.class;
@@ -142,16 +142,16 @@ public abstract class CallbackPropertyMetadata extends ValuePropertyMetadata {
     public void setValueObject(FXOMInstance fxomInstance, Object valueObject) {
         setValue(fxomInstance, castValue(valueObject));
     }
-    
-    
+
+
     /*
      * Private
      */
-    
+
     protected FXOMProperty makeFxomPropertyFromValue(FXOMInstance fxomInstance, Object value) {
         assert fxomInstance != null;
         assert value != null;
-        
+
         final FXOMDocument fxomDocument = fxomInstance.getFxomDocument();
         final FXOMInstance valueInstance = new FXOMInstance(fxomDocument, getFxConstantClass());
         updateFxomInstanceWithValue(valueInstance, value);
@@ -161,10 +161,10 @@ public abstract class CallbackPropertyMetadata extends ValuePropertyMetadata {
     protected void updateFxomPropertyWithValue(FXOMProperty fxomProperty, Object value) {
         assert value != null;
         assert fxomProperty instanceof FXOMPropertyC; // Because Callback are expressed using fx:constant
-        
+
         final FXOMPropertyC fxomPropertyC = (FXOMPropertyC) fxomProperty;
         assert fxomPropertyC.getValues().size() == 1;
-        
+
         FXOMObject valueObject = fxomPropertyC.getValues().get(0);
         if (valueObject instanceof FXOMInstance) {
             updateFxomInstanceWithValue((FXOMInstance) valueObject, value);

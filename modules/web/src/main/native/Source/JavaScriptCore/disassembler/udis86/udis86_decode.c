@@ -1,26 +1,26 @@
 /* udis86 - libudis86/decode.c
- * 
+ *
  * Copyright (c) 2002-2009 Vivek Thampi
  * All rights reserved.
- * 
- * Redistribution and use in source and binary forms, with or without modification, 
+ *
+ * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
- * 
- *     * Redistributions of source code must retain the above copyright notice, 
+ *
+ *     * Redistributions of source code must retain the above copyright notice,
  *       this list of conditions and the following disclaimer.
- *     * Redistributions in binary form must reproduce the above copyright notice, 
- *       this list of conditions and the following disclaimer in the documentation 
+ *     * Redistributions in binary form must reproduce the above copyright notice,
+ *       this list of conditions and the following disclaimer in the documentation
  *       and/or other materials provided with the distribution.
- * 
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
- * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED 
- * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE 
- * DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR 
- * ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES 
- * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; 
- * LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON 
- * ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT 
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS 
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+ * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+ * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+ * DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR
+ * ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+ * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+ * LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
+ * ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
@@ -45,7 +45,7 @@
 #define MAX_PREFIXES    15
 
 /* instruction aliases and special cases */
-static struct ud_itab_entry s_ie__invalid = 
+static struct ud_itab_entry s_ie__invalid =
     { UD_Iinvalid, O_NONE, O_NONE, O_NONE, P_none };
 
 static int
@@ -89,12 +89,12 @@ const char * ud_lookup_mnemonic( enum ud_mnemonic_code c )
 }
 
 
-/* 
+/*
  * decode_prefixes
  *
  *  Extracts instruction prefixes.
  */
-static int 
+static int
 decode_prefixes(struct ud *u)
 {
     unsigned int have_pfx = 1;
@@ -102,76 +102,76 @@ decode_prefixes(struct ud *u)
     uint8_t curr;
 
     /* if in error state, bail out */
-    if ( u->error ) 
-        return -1; 
+    if ( u->error )
+        return -1;
 
     /* keep going as long as there are prefixes available */
     for ( i = 0; have_pfx ; ++i ) {
 
         /* Get next byte. */
-        ud_inp_next(u); 
-        if ( u->error ) 
+        ud_inp_next(u);
+        if ( u->error )
             return -1;
         curr = ud_inp_curr( u );
 
         /* rex prefixes in 64bit mode */
         if ( u->dis_mode == 64 && ( curr & 0xF0 ) == 0x40 ) {
-            u->pfx_rex = curr;  
+            u->pfx_rex = curr;
         } else {
-            switch ( curr )  
+            switch ( curr )
             {
-            case 0x2E : 
-                u->pfx_seg = UD_R_CS; 
+            case 0x2E :
+                u->pfx_seg = UD_R_CS;
                 u->pfx_rex = 0;
                 break;
-            case 0x36 :     
-                u->pfx_seg = UD_R_SS; 
+            case 0x36 :
+                u->pfx_seg = UD_R_SS;
                 u->pfx_rex = 0;
                 break;
-            case 0x3E : 
-                u->pfx_seg = UD_R_DS; 
+            case 0x3E :
+                u->pfx_seg = UD_R_DS;
                 u->pfx_rex = 0;
                 break;
-            case 0x26 : 
-                u->pfx_seg = UD_R_ES; 
+            case 0x26 :
+                u->pfx_seg = UD_R_ES;
                 u->pfx_rex = 0;
                 break;
-            case 0x64 : 
-                u->pfx_seg = UD_R_FS; 
+            case 0x64 :
+                u->pfx_seg = UD_R_FS;
                 u->pfx_rex = 0;
                 break;
-            case 0x65 : 
-                u->pfx_seg = UD_R_GS; 
+            case 0x65 :
+                u->pfx_seg = UD_R_GS;
                 u->pfx_rex = 0;
                 break;
-            case 0x67 : /* adress-size override prefix */ 
+            case 0x67 : /* adress-size override prefix */
                 u->pfx_adr = 0x67;
                 u->pfx_rex = 0;
                 break;
-            case 0xF0 : 
+            case 0xF0 :
                 u->pfx_lock = 0xF0;
                 u->pfx_rex  = 0;
                 break;
-            case 0x66: 
+            case 0x66:
                 /* the 0x66 sse prefix is only effective if no other sse prefix
                  * has already been specified.
                  */
                 if ( !u->pfx_insn ) u->pfx_insn = 0x66;
-                u->pfx_opr = 0x66;           
+                u->pfx_opr = 0x66;
                 u->pfx_rex = 0;
                 break;
             case 0xF2:
                 u->pfx_insn  = 0xF2;
-                u->pfx_repne = 0xF2; 
+                u->pfx_repne = 0xF2;
                 u->pfx_rex   = 0;
                 break;
             case 0xF3:
                 u->pfx_insn = 0xF3;
-                u->pfx_rep  = 0xF3; 
-                u->pfx_repe = 0xF3; 
+                u->pfx_rep  = 0xF3;
+                u->pfx_repe = 0xF3;
                 u->pfx_rex  = 0;
                 break;
-            default : 
+            default :
                 /* No more prefixes */
                 have_pfx = 0;
                 break;
@@ -186,11 +186,11 @@ decode_prefixes(struct ud *u)
     }
 
     /* return status */
-    if ( u->error ) 
-        return -1; 
+    if ( u->error )
+        return -1;
 
-    /* rewind back one byte in stream, since the above loop 
-     * stops with a non-prefix byte. 
+    /* rewind back one byte in stream, since the above loop
+     * stops with a non-prefix byte.
      */
     ud_inp_back(u);
     return 0;
@@ -209,13 +209,13 @@ static inline unsigned int modrm( struct ud * u )
 
 static unsigned int resolve_operand_size( const struct ud * u, unsigned int s )
 {
-    switch ( s ) 
+    switch ( s )
     {
     case SZ_V:
         return ( u->opr_mode );
-    case SZ_Z:  
+    case SZ_Z:
         return ( u->opr_mode == 16 ) ? 16 : 32;
-    case SZ_P:  
+    case SZ_P:
         return ( u->opr_mode == 16 ) ? SZ_WP : SZ_DP;
     case SZ_MDQ:
         return ( u->opr_mode == 16 ) ? 32 : u->opr_mode;
@@ -281,10 +281,10 @@ static int resolve_mnemonic( struct ud* u )
  * decode_a()- Decodes operands of the type seg:offset
  * -----------------------------------------------------------------------------
  */
-static void 
+static void
 decode_a(struct ud* u, struct ud_operand *op)
 {
-  if (u->opr_mode == 16) {  
+  if (u->opr_mode == 16) {
     /* seg16:off16 */
     op->type = UD_OP_PTR;
     op->size = 32;
@@ -300,14 +300,14 @@ decode_a(struct ud* u, struct ud_operand *op)
 }
 
 /* -----------------------------------------------------------------------------
- * decode_gpr() - Returns decoded General Purpose Register 
+ * decode_gpr() - Returns decoded General Purpose Register
  * -----------------------------------------------------------------------------
  */
-static enum ud_type 
+static enum ud_type
 decode_gpr(register struct ud* u, unsigned int s, unsigned char rm)
 {
   s = resolve_operand_size(u, s);
-        
+
   switch (s) {
     case 64:
         return UD_R_RAX + rm;
@@ -329,21 +329,21 @@ decode_gpr(register struct ud* u, unsigned int s, unsigned char rm)
 }
 
 /* -----------------------------------------------------------------------------
- * resolve_gpr64() - 64bit General Purpose Register-Selection. 
+ * resolve_gpr64() - 64bit General Purpose Register-Selection.
  * -----------------------------------------------------------------------------
  */
-static enum ud_type 
+static enum ud_type
 resolve_gpr64(struct ud* u, enum ud_operand_code gpr_op, enum ud_operand_size * size)
 {
   if (gpr_op >= OP_rAXr8 && gpr_op <= OP_rDIr15)
-    gpr_op = (gpr_op - OP_rAXr8) | (REX_B(u->pfx_rex) << 3);          
+    gpr_op = (gpr_op - OP_rAXr8) | (REX_B(u->pfx_rex) << 3);
   else  gpr_op = (gpr_op - OP_rAX);
 
   if (u->opr_mode == 16) {
     *size = 16;
     return gpr_op + UD_R_AX;
   }
-  if (u->dis_mode == 32 || 
+  if (u->dis_mode == 32 ||
     (u->opr_mode == 32 && ! (REX_W(u->pfx_rex) || u->default64))) {
     *size = 32;
     return gpr_op + UD_R_EAX;
@@ -354,25 +354,25 @@ resolve_gpr64(struct ud* u, enum ud_operand_code gpr_op, enum ud_operand_size * 
 }
 
 /* -----------------------------------------------------------------------------
- * resolve_gpr32 () - 32bit General Purpose Register-Selection. 
+ * resolve_gpr32 () - 32bit General Purpose Register-Selection.
  * -----------------------------------------------------------------------------
  */
-static enum ud_type 
+static enum ud_type
 resolve_gpr32(struct ud* u, enum ud_operand_code gpr_op)
 {
   gpr_op = gpr_op - OP_eAX;
 
-  if (u->opr_mode == 16) 
+  if (u->opr_mode == 16)
     return gpr_op + UD_R_AX;
 
   return gpr_op +  UD_R_EAX;
 }
 
 /* -----------------------------------------------------------------------------
- * resolve_reg() - Resolves the register type 
+ * resolve_reg() - Resolves the register type
  * -----------------------------------------------------------------------------
  */
-static enum ud_type 
+static enum ud_type
 resolve_reg(struct ud* u, unsigned int type, unsigned char i)
 {
   switch (type) {
@@ -399,7 +399,7 @@ resolve_reg(struct ud* u, unsigned int type, unsigned char i)
  * decode_imm() - Decodes Immediate values.
  * -----------------------------------------------------------------------------
  */
-static void 
+static void
 decode_imm(struct ud* u, unsigned int s, struct ud_operand *op)
 {
   op->size = resolve_operand_size(u, s);
@@ -419,10 +419,10 @@ decode_imm(struct ud* u, unsigned int s, struct ud_operand *op)
  * decode_modrm_reg
  *
  *    Decodes reg field of mod/rm byte
- * 
+ *
  */
 static void
-decode_modrm_reg(struct ud         *u, 
+decode_modrm_reg(struct ud         *u,
                  struct ud_operand *operand,
                  unsigned int       type,
                  unsigned int       size)
@@ -443,10 +443,10 @@ decode_modrm_reg(struct ud         *u,
  * decode_modrm_rm
  *
  *    Decodes rm field of mod/rm byte
- * 
+ *
  */
-static void 
-decode_modrm_rm(struct ud         *u, 
+static void
+decode_modrm_rm(struct ud         *u,
                 struct ud_operand *op,
                 unsigned char      type,
                 unsigned int       size)
@@ -460,10 +460,10 @@ decode_modrm_rm(struct ud         *u,
   reg = (REX_R(u->pfx_rex) << 3) | MODRM_REG(modrm(u));
 
   UNUSED_PARAM(reg);
-  
+
   op->size = resolve_operand_size(u, size);
 
-  /* 
+  /*
    * If mod is 11b, then the modrm.rm specifies a register.
    *
    */
@@ -475,12 +475,12 @@ decode_modrm_rm(struct ud         *u,
       op->base = resolve_reg(u, type, (REX_B(u->pfx_rex) << 3) | (rm & 7));
     }
     return;
-  } 
+  }
 
 
-  /* 
+  /*
    * !11 => Memory Address
-   */  
+   */
   op->type = UD_OP_MEM;
 
   if (u->adr_mode == 64) {
@@ -489,18 +489,18 @@ decode_modrm_rm(struct ud         *u,
       op->offset = 8;
     } else if (mod == 2) {
       op->offset = 32;
-    } else if (mod == 0 && (rm & 7) == 5) {           
+    } else if (mod == 0 && (rm & 7) == 5) {
       op->base = UD_R_RIP;
       op->offset = 32;
     } else {
       op->offset = 0;
     }
-    /* 
-     * Scale-Index-Base (SIB) 
+    /*
+     * Scale-Index-Base (SIB)
      */
     if ((rm & 7) == 4) {
       ud_inp_next(u);
-      
+
       op->scale = (1 << SIB_S(ud_inp_curr(u))) & ~1;
       op->index = UD_R_RAX + (SIB_I(ud_inp_curr(u)) | (REX_X(u->pfx_rex) << 3));
       op->base  = UD_R_RAX + (SIB_B(ud_inp_curr(u)) | (REX_B(u->pfx_rex) << 3));
@@ -514,7 +514,7 @@ decode_modrm_rm(struct ud         *u,
       if (op->base == UD_R_RBP || op->base == UD_R_R13) {
         if (mod == 0) {
           op->base = UD_NONE;
-        } 
+        }
         if (mod == 1) {
           op->offset = 8;
         } else {
@@ -552,7 +552,7 @@ decode_modrm_rm(struct ud         *u,
       if (op->base == UD_R_EBP) {
         if (mod == 0) {
           op->base = UD_NONE;
-        } 
+        }
         if (mod == 1) {
           op->offset = 8;
         } else {
@@ -572,13 +572,13 @@ decode_modrm_rm(struct ud         *u,
       op->base = UD_NONE;
     } else if (mod == 1) {
       op->offset = 8;
-    } else if (mod == 2) { 
+    } else if (mod == 2) {
       op->offset = 16;
     }
   }
 
-  /* 
-   * extract offset, if any 
+  /*
+   * extract offset, if any
    */
   switch (op->offset) {
     case 8 : op->lval.ubyte  = ud_inp_uint8(u);  break;
@@ -593,21 +593,21 @@ decode_modrm_rm(struct ud         *u,
  * decode_o() - Decodes offset
  * -----------------------------------------------------------------------------
  */
-static void 
+static void
 decode_o(struct ud* u, unsigned int s, struct ud_operand *op)
 {
   switch (u->adr_mode) {
     case 64:
-        op->offset = 64; 
-        op->lval.uqword = ud_inp_uint64(u); 
+        op->offset = 64;
+        op->lval.uqword = ud_inp_uint64(u);
         break;
     case 32:
-        op->offset = 32; 
-        op->lval.udword = ud_inp_uint32(u); 
+        op->offset = 32;
+        op->lval.udword = ud_inp_uint32(u);
         break;
     case 16:
-        op->offset = 16; 
-        op->lval.uword  = ud_inp_uint16(u); 
+        op->offset = 16;
+        op->lval.uword  = ud_inp_uint16(u);
         break;
     default:
         return;
@@ -621,7 +621,7 @@ decode_o(struct ud* u, unsigned int s, struct ud_operand *op)
  * -----------------------------------------------------------------------------
  */
 static int
-decode_operand(struct ud           *u, 
+decode_operand(struct ud           *u,
                struct ud_operand   *operand,
                enum ud_operand_code type,
                unsigned int         size)
@@ -632,7 +632,7 @@ decode_operand(struct ud           *u,
       break;
     case OP_MR:
       if (MODRM_MOD(modrm(u)) == 3) {
-        decode_modrm_rm(u, operand, T_GPR, 
+        decode_modrm_rm(u, operand, T_GPR,
                         size == SZ_DY ? SZ_MDQ : SZ_V);
       } else if (size == SZ_WV) {
         decode_modrm_rm( u, operand, T_GPR, SZ_W);
@@ -706,28 +706,28 @@ decode_operand(struct ud           *u,
     case OP_O:
       decode_o(u, size, operand);
       break;
-    case OP_rAXr8: 
-    case OP_rCXr9: 
-    case OP_rDXr10: 
+    case OP_rAXr8:
+    case OP_rCXr9:
+    case OP_rDXr10:
     case OP_rBXr11:
-    case OP_rSPr12: 
-    case OP_rBPr13: 
-    case OP_rSIr14: 
+    case OP_rSPr12:
+    case OP_rBPr13:
+    case OP_rSIr14:
     case OP_rDIr15:
-    case OP_rAX: 
-    case OP_rCX: 
-    case OP_rDX: 
+    case OP_rAX:
+    case OP_rCX:
+    case OP_rDX:
     case OP_rBX:
-    case OP_rSP: 
-    case OP_rBP: 
-    case OP_rSI: 
+    case OP_rSP:
+    case OP_rBP:
+    case OP_rSI:
     case OP_rDI:
       operand->type = UD_OP_REG;
       operand->base = resolve_gpr64(u, type, &operand->size);
       break;
     case OP_ALr8b:
-    case OP_CLr9b: 
-    case OP_DLr10b: 
+    case OP_CLr9b:
+    case OP_DLr10b:
     case OP_BLr11b:
     case OP_AHr12b:
     case OP_CHr13b:
@@ -742,23 +742,23 @@ decode_operand(struct ud           *u,
       operand->base = gpr;
       break;
     }
-    case OP_eAX: 
-    case OP_eCX: 
-    case OP_eDX: 
+    case OP_eAX:
+    case OP_eCX:
+    case OP_eDX:
     case OP_eBX:
-    case OP_eSP: 
-    case OP_eBP: 
-    case OP_eSI: 
+    case OP_eSP:
+    case OP_eBP:
+    case OP_eSI:
     case OP_eDI:
       operand->type = UD_OP_REG;
       operand->base = resolve_gpr32(u, type);
       operand->size = u->opr_mode == 16 ? 16 : 32;
       break;
-    case OP_ES: 
-    case OP_CS: 
+    case OP_ES:
+    case OP_CS:
     case OP_DS:
-    case OP_SS: 
-    case OP_FS: 
+    case OP_SS:
+    case OP_FS:
     case OP_GS:
       /* in 64bits mode, only fs and gs are allowed */
       if (u->dis_mode == 64) {
@@ -790,13 +790,13 @@ decode_operand(struct ud           *u,
       operand->type = UD_OP_CONST;
       operand->lval.sbyte = 3;
       break;
-    case OP_ST0: 
-    case OP_ST1: 
-    case OP_ST2: 
+    case OP_ST0:
+    case OP_ST1:
+    case OP_ST2:
     case OP_ST3:
     case OP_ST4:
-    case OP_ST5: 
-    case OP_ST6: 
+    case OP_ST5:
+    case OP_ST6:
     case OP_ST7:
       operand->type = UD_OP_REG;
       operand->base = (type - OP_ST0) + UD_R_ST0;
@@ -815,7 +815,7 @@ decode_operand(struct ud           *u,
 }
 
 
-/* 
+/*
  * decode_operands
  *
  *    Disassemble upto 3 operands of the current instruction being
@@ -836,7 +836,7 @@ decode_operands(struct ud* u)
                     u->itab_entry->operand3.size);
   return 0;
 }
-    
+
 /* -----------------------------------------------------------------------------
  * clear_insn() - clear instruction structure
  * -----------------------------------------------------------------------------
@@ -867,7 +867,7 @@ static int
 resolve_mode( struct ud* u )
 {
   /* if in error state, bail out */
-  if ( u->error ) return -1; 
+  if ( u->error ) return -1;
 
   /* propagate prefix effects */
   if ( u->dis_mode == 64 ) {  /* set 64bit-mode flags */
@@ -878,16 +878,16 @@ resolve_mode( struct ud* u )
         return -1;
     }
 
-    /* effective rex prefix is the  effective mask for the 
+    /* effective rex prefix is the  effective mask for the
      * instruction hard-coded in the opcode map.
      */
-    u->pfx_rex = ( u->pfx_rex & 0x40 ) | 
-                 ( u->pfx_rex & REX_PFX_MASK( u->itab_entry->prefix ) ); 
+    u->pfx_rex = ( u->pfx_rex & 0x40 ) |
+                 ( u->pfx_rex & REX_PFX_MASK( u->itab_entry->prefix ) );
 
-    /* whether this instruction has a default operand size of 
+    /* whether this instruction has a default operand size of
      * 64bit, also hardcoded into the opcode map.
      */
-    u->default64 = P_DEF64( u->itab_entry->prefix ); 
+    u->default64 = P_DEF64( u->itab_entry->prefix );
     /* calculate effective operand size */
     if ( REX_W( u->pfx_rex ) ) {
         u->opr_mode = 64;
@@ -931,7 +931,7 @@ static int gen_hex( struct ud *u )
   char* src_hex;
 
   /* bail out if in error stat. */
-  if ( u->error ) return -1; 
+  if ( u->error ) return -1;
   /* output buffer pointe */
   src_hex = ( char* ) u->insn_hexcode;
   /* for each byte used to decode instruction */
@@ -973,11 +973,11 @@ decode_3dnow(struct ud* u)
   ASSERT(u->le->type == UD_TAB__OPC_3DNOW);
   ASSERT(u->le->table[0xc] != 0);
   decode_insn(u, u->le->table[0xc]);
-  ud_inp_next(u); 
+  ud_inp_next(u);
   if (u->error) {
     return -1;
   }
-  ptr = u->le->table[ud_inp_curr(u)]; 
+  ptr = u->le->table[ud_inp_curr(u)];
   ASSERT((ptr & 0x8000) == 0);
   u->mnemonic = ud_itab[ptr].mnemonic;
   return 0;
@@ -997,14 +997,14 @@ decode_ssepfx(struct ud *u)
      * longer exported as an instruction prefix.
      */
     switch (u->pfx_insn) {
-      case 0xf2: 
+      case 0xf2:
         u->pfx_repne = 0;
         break;
-      case 0xf3: 
+      case 0xf3:
         u->pfx_rep = 0;
         u->pfx_repe = 0;
         break;
-      case 0x66: 
+      case 0x66:
         u->pfx_opr = 0;
         break;
     }
@@ -1023,7 +1023,7 @@ decode_ext(struct ud *u, uint16_t ptr)
 {
   uint8_t idx = 0;
   if ((ptr & 0x8000) == 0) {
-    return decode_insn(u, ptr); 
+    return decode_insn(u, ptr);
   }
   u->le = &ud_lookup_table_list[(~0x8000 & ptr)];
   if (u->le->type == UD_TAB__OPC_3DNOW) {
@@ -1082,7 +1082,7 @@ decode_opcode(struct ud *u)
 {
   uint16_t ptr;
   ASSERT(u->le->type == UD_TAB__OPC_TABLE);
-  ud_inp_next(u); 
+  ud_inp_next(u);
   if (u->error) {
     return -1;
   }
@@ -1096,7 +1096,7 @@ decode_opcode(struct ud *u)
   return decode_ext(u, ptr);
 }
 
- 
+
 /* =============================================================================
  * ud_decode() - Instruction decoder. Returns the number of bytes decoded.
  * =============================================================================
@@ -1107,7 +1107,7 @@ ud_decode(struct ud *u)
   ud_inp_start(u);
   clear_insn(u);
   u->le = &ud_lookup_table_list[0];
-  u->error = decode_prefixes(u) == -1 || 
+  u->error = decode_prefixes(u) == -1 ||
              decode_opcode(u)   == -1 ||
              u->error;
   /* Handle decode error. */
@@ -1117,12 +1117,12 @@ ud_decode(struct ud *u)
     /* mark the sequence of bytes as invalid. */
     u->itab_entry = & s_ie__invalid;
     u->mnemonic = u->itab_entry->mnemonic;
-  } 
+  }
 
     /* maybe this stray segment override byte
      * should be spewed out?
      */
-    if ( !P_SEG( u->itab_entry->prefix ) && 
+    if ( !P_SEG( u->itab_entry->prefix ) &&
             u->operand[0].type != UD_OP_MEM &&
             u->operand[1].type != UD_OP_MEM )
         u->pfx_seg = 0;

@@ -95,7 +95,7 @@ public final class MediaException extends RuntimeException {
      */
     static Type errorCodeToType(int errorCode) {
         Type errorType;
-        
+
         if(errorCode == MediaError.ERROR_LOCATOR_CONNECTION_LOST.code()) {
             errorType = Type.MEDIA_INACCESSIBLE;
         } else if(errorCode == MediaError.ERROR_GSTREAMER_SOURCEFILE_NONEXISTENT.code() ||
@@ -111,7 +111,7 @@ public final class MediaException extends RuntimeException {
                 errorCode == MediaError.ERROR_MEDIA_MP3_FORMAT_UNSUPPORTED.code() ||
                 errorCode == MediaError.ERROR_MEDIA_AAC_FORMAT_UNSUPPORTED.code() ||
                 errorCode == MediaError.ERROR_MEDIA_H264_FORMAT_UNSUPPORTED.code() ||
-                errorCode == MediaError.ERROR_MEDIA_HLS_FORMAT_UNSUPPORTED.code()) {            
+                errorCode == MediaError.ERROR_MEDIA_HLS_FORMAT_UNSUPPORTED.code()) {
             errorType = Type.MEDIA_UNSUPPORTED;
         } else if(errorCode == MediaError.ERROR_MEDIA_CORRUPTED.code()) {
             errorType = Type.MEDIA_CORRUPTED;
@@ -185,11 +185,11 @@ public final class MediaException extends RuntimeException {
     public Type getType() {
         return type;
     }
-    
+
     /**
      * Returns a string representation of this <code>MediaException</code> object.
      * @return a string representation of this <code>MediaException</code> object.
-     */ 
+     */
     @Override
     public String toString() {
         String errString = "MediaException: " + type;

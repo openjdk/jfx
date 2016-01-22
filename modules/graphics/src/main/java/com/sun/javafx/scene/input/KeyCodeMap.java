@@ -37,7 +37,7 @@ public final class KeyCodeMap {
 
     KeyCodeMap() {
     }
-    
+
     private static final Map<Integer, KeyCode> charMap;
 
     static {

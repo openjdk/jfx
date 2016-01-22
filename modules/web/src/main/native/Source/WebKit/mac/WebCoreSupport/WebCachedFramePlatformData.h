@@ -33,7 +33,7 @@
 class WebCachedFramePlatformData : public WebCore::CachedFramePlatformData {
 public:
     WebCachedFramePlatformData(id webDocumentView) : m_webDocumentView(webDocumentView) { }
-    
+
     virtual void clear() { wtfObjcMsgSend<void>(m_webDocumentView.get(), @selector(closeIfNotCurrentView)); }
 
     id webDocumentView() { return m_webDocumentView.get(); }

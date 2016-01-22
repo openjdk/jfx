@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef MemoryStream_H
@@ -49,51 +49,51 @@ public:
     virtual ULONG STDMETHODCALLTYPE Release(void);
 
     // ISequentialStream
-    virtual /* [local] */ HRESULT STDMETHODCALLTYPE Read( 
+    virtual /* [local] */ HRESULT STDMETHODCALLTYPE Read(
         /* [length_is][size_is][out] */ void* pv,
         /* [in] */ ULONG cb,
         /* [out] */ ULONG* pcbRead);
-    
-    virtual /* [local] */ HRESULT STDMETHODCALLTYPE Write( 
+
+    virtual /* [local] */ HRESULT STDMETHODCALLTYPE Write(
         /* [size_is][in] */ const void* pv,
         /* [in] */ ULONG cb,
         /* [out] */ ULONG* pcbWritten);
 
     // IStream
-    virtual /* [local] */ HRESULT STDMETHODCALLTYPE Seek( 
+    virtual /* [local] */ HRESULT STDMETHODCALLTYPE Seek(
         /* [in] */ LARGE_INTEGER dlibMove,
         /* [in] */ DWORD dwOrigin,
         /* [out] */ ULARGE_INTEGER* plibNewPosition);
-    
-    virtual HRESULT STDMETHODCALLTYPE SetSize( 
+
+    virtual HRESULT STDMETHODCALLTYPE SetSize(
         /* [in] */ ULARGE_INTEGER libNewSize);
-    
-    virtual /* [local] */ HRESULT STDMETHODCALLTYPE CopyTo( 
+
+    virtual /* [local] */ HRESULT STDMETHODCALLTYPE CopyTo(
         /* [unique][in] */ IStream* pstm,
         /* [in] */ ULARGE_INTEGER cb,
         /* [out] */ ULARGE_INTEGER* pcbRead,
         /* [out] */ ULARGE_INTEGER* pcbWritten);
-    
-    virtual HRESULT STDMETHODCALLTYPE Commit( 
+
+    virtual HRESULT STDMETHODCALLTYPE Commit(
         /* [in] */ DWORD grfCommitFlags);
-    
+
     virtual HRESULT STDMETHODCALLTYPE Revert( void);
-    
-    virtual HRESULT STDMETHODCALLTYPE LockRegion( 
+
+    virtual HRESULT STDMETHODCALLTYPE LockRegion(
         /* [in] */ ULARGE_INTEGER libOffset,
         /* [in] */ ULARGE_INTEGER cb,
         /* [in] */ DWORD dwLockType);
-    
-    virtual HRESULT STDMETHODCALLTYPE UnlockRegion( 
+
+    virtual HRESULT STDMETHODCALLTYPE UnlockRegion(
         /* [in] */ ULARGE_INTEGER libOffset,
         /* [in] */ ULARGE_INTEGER cb,
         /* [in] */ DWORD dwLockType);
-    
-    virtual HRESULT STDMETHODCALLTYPE Stat( 
+
+    virtual HRESULT STDMETHODCALLTYPE Stat(
         /* [out] */ STATSTG* pstatstg,
         /* [in] */ DWORD grfStatFlag);
-    
-    virtual HRESULT STDMETHODCALLTYPE Clone( 
+
+    virtual HRESULT STDMETHODCALLTYPE Clone(
         /* [out] */ IStream** ppstm);
 
 protected:

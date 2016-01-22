@@ -70,7 +70,7 @@ int done_loading_symbols = 0;
 static EGLDisplay(*_eglGetDisplay)(EGLNativeDisplayType display_id);
 static EGLNativeWindowType(*_ANDROID_getNativeWindow)();
 
-#else 
+#else
 
 PrismNativePort prismPort;
 
@@ -90,14 +90,14 @@ int load_wrapped_gles_symbols() {
     }
 
     _eglGetDisplay = dlsym(libegl, "eglGetDisplay");
-    
+
     libglesv2 = dlopen("libGLESv2.so", RTLD_LAZY | RTLD_GLOBAL);
     if (!libglesv2) {
         fprintf(stderr, "Did not find libGLESv2.so %s\n", dlerror());
         return 0;
     }
 #else
-    
+
     Dl_info dlinfo;
     if (dladdr(&load_wrapped_gles_symbols, &dlinfo)) {
 
@@ -110,7 +110,7 @@ int load_wrapped_gles_symbols() {
 
             jboolean (*prism_platform_init)(PrismNativePort*) =  0;
 
-            void *dlhand = dlopen(b,RTLD_NOW); 
+            void *dlhand = dlopen(b,RTLD_NOW);
             if (dlhand) {
                 prism_platform_init =  dlsym(dlhand, "prism_platform_initialize");
                 if (!prism_platform_init) {
@@ -160,8 +160,8 @@ EGLNativeWindowType getNativeWindowType() {
 #define ANDROID_LIB "libactivity.so"
 #define GET_NATIVE_WINDOW "android_getNativeWindow"
 #else
-#define ANDROID_LIB "libglass_lens_android.so"    
-#define GET_NATIVE_WINDOW "ANDROID_getNativeWindow"    
+#define ANDROID_LIB "libglass_lens_android.so"
+#define GET_NATIVE_WINDOW "ANDROID_getNativeWindow"
 #endif
     //don't cache for Android!
     printf("Using %s\n", ANDROID_LIB);

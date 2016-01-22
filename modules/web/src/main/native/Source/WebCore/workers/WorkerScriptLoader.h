@@ -21,7 +21,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
 
@@ -82,7 +82,7 @@ namespace WebCore {
 
         WorkerScriptLoaderClient* m_client;
         RefPtr<ThreadableLoader> m_threadableLoader;
-        String m_responseEncoding;        
+        String m_responseEncoding;
         RefPtr<TextResourceDecoder> m_decoder;
         StringBuilder m_script;
         URL m_url;

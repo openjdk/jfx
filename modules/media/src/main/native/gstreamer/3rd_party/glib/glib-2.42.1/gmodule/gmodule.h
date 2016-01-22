@@ -8,7 +8,7 @@
  *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.	 See the GNU
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
@@ -19,7 +19,7 @@
  * Modified by the GLib Team and others 1997-2000.  See the AUTHORS
  * file for a list of people on the GLib Team.  See the ChangeLog
  * files for a list of changes.  These files are distributed with
- * GLib at ftp://ftp.gtk.org/pub/gtk/. 
+ * GLib at ftp://ftp.gtk.org/pub/gtk/.
  */
 
 #ifndef __GMODULE_H__
@@ -32,32 +32,32 @@ G_BEGIN_DECLS
 /* exporting and importing functions, this is special cased
  * to feature Windows dll stubs.
  */
-#define	G_MODULE_IMPORT		extern
+#define G_MODULE_IMPORT     extern
 #ifdef G_PLATFORM_WIN32
-#  define	G_MODULE_EXPORT		__declspec(dllexport)
+#  define   G_MODULE_EXPORT     __declspec(dllexport)
 #else /* !G_PLATFORM_WIN32 */
-#  define	G_MODULE_EXPORT
+#  define   G_MODULE_EXPORT
 #endif /* !G_PLATFORM_WIN32 */
 
 typedef enum
 {
-  G_MODULE_BIND_LAZY	= 1 << 0,
-  G_MODULE_BIND_LOCAL	= 1 << 1,
-  G_MODULE_BIND_MASK	= 0x03
+  G_MODULE_BIND_LAZY    = 1 << 0,
+  G_MODULE_BIND_LOCAL   = 1 << 1,
+  G_MODULE_BIND_MASK    = 0x03
 } GModuleFlags;
 
-typedef	struct _GModule			 GModule;
-typedef const gchar* (*GModuleCheckInit) (GModule	*module);
-typedef void	     (*GModuleUnload)	 (GModule	*module);
+typedef struct _GModule          GModule;
+typedef const gchar* (*GModuleCheckInit) (GModule   *module);
+typedef void         (*GModuleUnload)    (GModule   *module);
 
 /* return TRUE if dynamic module loading is supported */
 GLIB_AVAILABLE_IN_ALL
-gboolean	g_module_supported	   (void) G_GNUC_CONST;
+gboolean    g_module_supported     (void) G_GNUC_CONST;
 
 /* open a module 'file_name' and return handle, which is NULL on error */
 GLIB_AVAILABLE_IN_ALL
 GModule*              g_module_open          (const gchar  *file_name,
-					      GModuleFlags  flags);
+                          GModuleFlags  flags);
 
 /* close a previously opened module, returns TRUE on success */
 GLIB_AVAILABLE_IN_ALL
@@ -74,8 +74,8 @@ const gchar *         g_module_error         (void);
 /* retrieve a symbol pointer from 'module', returns TRUE on success */
 GLIB_AVAILABLE_IN_ALL
 gboolean              g_module_symbol        (GModule      *module,
-					      const gchar  *symbol_name,
-					      gpointer     *symbol);
+                          const gchar  *symbol_name,
+                          gpointer     *symbol);
 
 /* retrieve the file name from an existing module */
 GLIB_AVAILABLE_IN_ALL
@@ -94,7 +94,7 @@ const gchar *         g_module_name          (GModule      *module);
  */
 GLIB_AVAILABLE_IN_ALL
 gchar*                g_module_build_path    (const gchar  *directory,
-					      const gchar  *module_name);
+                          const gchar  *module_name);
 
 
 #ifndef __GTK_DOC_IGNORE__

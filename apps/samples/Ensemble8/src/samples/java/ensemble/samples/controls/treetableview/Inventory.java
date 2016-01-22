@@ -51,6 +51,6 @@ public class Inventory {
         public StringProperty nameProperty() { return name; }
 
         public StringProperty notesProperty() { return notes; }
-        
+
         public ObjectProperty<Data> dataProperty() { return data; }
 }

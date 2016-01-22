@@ -43,40 +43,40 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 
 public class LabeledImplOtherTest {
-    
-    
+
+
     @Test public void test_RT_21357() {
-        
+
         final Labeled labeled = new Label("label");
         final LabeledImpl labeledImpl = new LabeledImpl(labeled);
-        
+
         URL url = LabeledImplOtherTest.class.getResource("/test/com/sun/javafx/scene/control/center-btn.png");
         Image img = new Image(url.toExternalForm());
         assertNotNull(img);
-        
+
         ImageView iView = new ImageView(img);
-        labeled.setGraphic(iView);  
-        
+        labeled.setGraphic(iView);
+
         assertEquals(labeled.getGraphic(), labeledImpl.getGraphic());
         assertNotNull(labeled.getGraphic());
     }
 
     @Test public void test_RT_21617() {
-        
+
         MenuButton mb = new MenuButton();
-        mb.setText("SomeText"); 
+        mb.setText("SomeText");
         MenuButtonSkin mbs = new MenuButtonSkin(mb);
         mb.setSkin(mbs);
-         
-        mb.setTranslateX(100);mb.setTranslateY(100); 
-        
-        Scene scene = new Scene(mb, 300, 300); 
+
+        mb.setTranslateX(100);mb.setTranslateY(100);
+
+        Scene scene = new Scene(mb, 300, 300);
         scene.getStylesheets().add(LabeledImplOtherTest.class.getResource("skin/LabeledImplTest.css").toExternalForm());
         Stage stage = new Stage();
-        stage.setScene(scene); 
-        stage.show(); 
-        
-        
+        stage.setScene(scene);
+        stage.show();
+
+
         LabeledImpl labeledImpl = (LabeledImpl)mb.lookup(".label");
         assertNotNull(labeledImpl);
         // LabeledImpl should not mirror the translateX/Y of the MenuButton
@@ -88,5 +88,5 @@ public class LabeledImplOtherTest {
         assertEquals(1, mb.getOpacity(), 0.00001);
         assertEquals(.5, labeledImpl.getOpacity(), 0.00001);
     }
-    
+
 }

@@ -30,7 +30,7 @@ import java.nio.IntBuffer;
 
 /**
  * This class encapsulates a bucket of pixels stored in IntArgbPre format.
- * 
+ *
  */
 public class FXRobotImage {
     private final IntBuffer pixelBuffer;
@@ -61,7 +61,7 @@ public class FXRobotImage {
 
     /**
      * Returns {@link java.nio.Buffer} which holds the data.
-     * 
+     *
      * @return {@code Buffer} holding the data for this image
      */
     public Buffer getPixelBuffer() {
@@ -86,7 +86,7 @@ public class FXRobotImage {
 
     /**
      * Returns scanline stride of this image in bytes
-     * 
+     *
      * @return scan line stride in bytes
      */
     public int getScanlineStride() {
@@ -118,7 +118,7 @@ public class FXRobotImage {
 
     /**
      * Returns pixel in IntArgb format (non-premultiplied).
-     * 
+     *
      * @param x coordinate
      * @param y coordinate
      * @return pixel in IntArgb format

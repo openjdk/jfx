@@ -94,7 +94,7 @@ void BlockAllocator::releaseFreeRegions()
                 m_numberOfEmptyRegions--;
             }
         }
-        
+
         if (!region)
             break;
 
@@ -129,7 +129,7 @@ void BlockAllocator::blockFreeingThreadMain()
         waitForDuration(std::chrono::seconds(1));
         if (m_blockFreeingThreadShouldQuit)
             break;
-        
+
         if (m_isCurrentlyAllocating) {
             m_isCurrentlyAllocating = false;
             continue;
@@ -146,9 +146,9 @@ void BlockAllocator::blockFreeingThreadMain()
             }
             currentNumberOfEmptyRegions = m_numberOfEmptyRegions;
         }
-        
+
         size_t desiredNumberOfEmptyRegions = currentNumberOfEmptyRegions / 2;
-        
+
         while (!m_blockFreeingThreadShouldQuit) {
             Region* region;
             {
@@ -161,10 +161,10 @@ void BlockAllocator::blockFreeingThreadMain()
                     m_numberOfEmptyRegions--;
                 }
             }
-            
+
             if (!region)
                 break;
-            
+
             region->destroy();
         }
     }

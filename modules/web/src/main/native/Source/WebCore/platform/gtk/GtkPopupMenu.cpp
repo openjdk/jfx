@@ -177,7 +177,7 @@ bool GtkPopupMenu::typeAheadFind(GdkEventKey* event)
     m_previousKeyEventTimestamp = event->time;
     m_previousKeyEventCharacter = unicodeCharacter;
 
-    // Like the Chromium port, we case fold before searching, because 
+    // Like the Chromium port, we case fold before searching, because
     // strncmp does not handle non-ASCII characters.
     GUniquePtr<gchar> searchStringWithCaseFolded(g_utf8_casefold(m_currentSearchString.utf8().data(), -1));
     size_t prefixLength = strlen(searchStringWithCaseFolded.get());

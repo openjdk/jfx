@@ -139,7 +139,7 @@
                     return;
                 }
             }
-             
+
             entry = [[PeerListEntry alloc] initWithPeer:peer javaObject:jo javaVM:jvm];
             [peerList addObject:entry];
             [entry release]; // array retains

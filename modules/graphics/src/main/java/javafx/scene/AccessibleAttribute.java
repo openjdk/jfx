@@ -36,7 +36,7 @@ import javafx.scene.text.Font;
 /**
  * This enum describes the attributes that an assistive technology
  * such as a screen reader can request from the scene graph.
- * 
+ *
  * The {@link AccessibleRole} dictates the set of attributes that
  * the screen reader will request for a particular control.  For
  * example, a slider is expected to return a double that represents
@@ -49,12 +49,12 @@ import javafx.scene.text.Font;
  * the screen reader to inform the user that a value has changed.  The most common form of
  * notification is focus change.
  * </p>
- * 
+ *
  * @see Node#queryAccessibleAttribute(AccessibleAttribute, Object...)
  * @see Node#notifyAccessibleAttributeChanged(AccessibleAttribute)
  * @see AccessibleRole
  * @see AccessibleAttribute#ROLE
- * 
+ *
  * @since JavaFX 8u40
  */
 public enum AccessibleAttribute {
@@ -87,7 +87,7 @@ public enum AccessibleAttribute {
      * <li>Used by: TextField and TextArea </li>
      * <li>Needs notify: no </li>
      * <li>Return Type: {@link Bounds}[] </li>
-     * <li>Parameters: 
+     * <li>Parameters:
      *   <ul>
      *    <li>{@link Integer} the start offset </li>
      *    <li>{@link Integer} the end offset </li>

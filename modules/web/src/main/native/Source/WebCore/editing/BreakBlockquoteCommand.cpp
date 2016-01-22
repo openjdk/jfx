@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -46,30 +46,30 @@ void BreakBlockquoteCommand::doApply()
 {
     if (endingSelection().isNone())
         return;
-    
+
     // Delete the current selection.
     if (endingSelection().isRange())
         deleteSelection(false, false);
-    
+
     // This is a scenario that should never happen, but we want to
-    // make sure we don't dereference a null pointer below.    
+    // make sure we don't dereference a null pointer below.
 
     ASSERT(!endingSelection().isNone());
-    
+
     if (endingSelection().isNone())
         return;
-        
+
     VisiblePosition visiblePos = endingSelection().visibleStart();
-    
-    // pos is a position equivalent to the caret.  We use downstream() so that pos will 
+
+    // pos is a position equivalent to the caret.  We use downstream() so that pos will
     // be in the first node that we need to move (there are a few exceptions to this, see below).
     Position pos = endingSelection().start().downstream();
-    
+
     // Find the top-most blockquote from the start.
     Node* topBlockquote = highestEnclosingNodeOfType(pos, isMailBlockquote);
     if (!topBlockquote || !topBlockquote->parentNode() || !topBlockquote->isElementNode())
         return;
-    
+
     RefPtr<Element> breakNode = createBreakElement(document());
 
     bool isLastVisPosInNode = isLastVisiblePositionInNode(visiblePos, topBlockquote);
@@ -79,10 +79,10 @@ void BreakBlockquoteCommand::doApply()
     if (isFirstVisiblePositionInNode(visiblePos, topBlockquote) && !isLastVisPosInNode) {
         insertNodeBefore(breakNode.get(), topBlockquote);
         setEndingSelection(VisibleSelection(positionBeforeNode(breakNode.get()), DOWNSTREAM, endingSelection().isDirectional()));
-        rebalanceWhitespace();   
+        rebalanceWhitespace();
         return;
     }
-    
+
     // Insert a break after the top blockquote.
     insertNodeAfter(breakNode.get(), topBlockquote);
 
@@ -92,19 +92,19 @@ void BreakBlockquoteCommand::doApply()
         rebalanceWhitespace();
         return;
     }
-    
+
     // Don't move a line break just after the caret.  Doing so would create an extra, empty paragraph
     // in the new blockquote.
     if (lineBreakExistsAtVisiblePosition(visiblePos))
         pos = pos.next();
-        
-    // Adjust the position so we don't split at the beginning of a quote.  
+
+    // Adjust the position so we don't split at the beginning of a quote.
     while (isFirstVisiblePositionInNode(VisiblePosition(pos), enclosingNodeOfType(pos, isMailBlockquote)))
         pos = pos.previous();
-    
+
     // startNode is the first node that we need to move to the new blockquote.
     Node* startNode = pos.deprecatedNode();
-        
+
     // Split at pos if in the middle of a text node.
     if (startNode->isTextNode()) {
         Text* textNode = toText(startNode);
@@ -118,22 +118,22 @@ void BreakBlockquoteCommand::doApply()
         startNode = childAtOffset ? childAtOffset : NodeTraversal::next(startNode);
         ASSERT(startNode);
     }
-    
+
     // If there's nothing inside topBlockquote to move, we're finished.
     if (!startNode->isDescendantOf(topBlockquote)) {
         setEndingSelection(VisibleSelection(VisiblePosition(firstPositionInOrBeforeNode(startNode)), endingSelection().isDirectional()));
         return;
     }
-    
+
     // Build up list of ancestors in between the start node and the top blockquote.
-    Vector<RefPtr<Element>> ancestors;    
+    Vector<RefPtr<Element>> ancestors;
     for (Element* node = startNode->parentElement(); node && node != topBlockquote; node = node->parentElement())
         ancestors.append(node);
-    
+
     // Insert a clone of the top blockquote after the break.
     RefPtr<Element> clonedBlockquote = toElement(topBlockquote)->cloneElementWithoutChildren();
     insertNodeAfter(clonedBlockquote.get(), breakNode.get());
-    
+
     // Clone startNode's ancestors into the cloned blockquote.
     // On exiting this loop, clonedAncestor is the lowest ancestor
     // that was cloned (i.e. the clone of either ancestors.last()
@@ -144,14 +144,14 @@ void BreakBlockquoteCommand::doApply()
         // Preserve list item numbering in cloned lists.
         if (clonedChild->isElementNode() && clonedChild->hasTagName(olTag)) {
             Node* listChildNode = i > 1 ? ancestors[i - 2].get() : startNode;
-            // The first child of the cloned list might not be a list item element, 
+            // The first child of the cloned list might not be a list item element,
             // find the first one so that we know where to start numbering.
             while (listChildNode && !listChildNode->hasTagName(liTag))
                 listChildNode = listChildNode->nextSibling();
             if (listChildNode && listChildNode->renderer() && listChildNode->renderer()->isListItem())
                 setNodeAttribute(clonedChild, startAttr, AtomicString::number(toRenderListItem(listChildNode->renderer())->value()));
         }
-            
+
         appendNode(clonedChild.get(), clonedAncestor.get());
         clonedAncestor = clonedChild;
     }
@@ -175,10 +175,10 @@ void BreakBlockquoteCommand::doApply()
         if (!originalParent->hasChildNodes())
             removeNode(originalParent);
     }
-    
+
     // Make sure the cloned block quote renders.
     addBlockPlaceholderIfNeeded(clonedBlockquote.get());
-    
+
     // Put the selection right before the break.
     setEndingSelection(VisibleSelection(positionBeforeNode(breakNode.get()), DOWNSTREAM, endingSelection().isDirectional()));
     rebalanceWhitespace();

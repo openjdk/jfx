@@ -154,10 +154,10 @@ public class SensorsPanel extends Group {
         com.sun.javafx.ext.device.ios.sensors.IOSLocationManager.addLocationListener(
                 new com.sun.javafx.ext.device.ios.sensors.IOSLocationManager.LocationListener() {
                     @Override
-                    public void locationUpdated(double latitude, 
-                                                double longitude, 
-                                                double altitude, 
-                                                double course, 
+                    public void locationUpdated(double latitude,
+                                                double longitude,
+                                                double altitude,
+                                                double course,
                                                 double speed) {
                         textLatitudeValue.setText(String.valueOf(latitude));
                         textLongitudeValue.setText(String.valueOf(longitude));

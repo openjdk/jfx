@@ -63,7 +63,7 @@ public class AudioAreaChartApp extends Application {
 
     private XYChart.Data<Number, Number>[] series1Data;
     private AudioSpectrumListener audioSpectrumListener;
-    private static final String AUDIO_URI = System.getProperty("demo.audio.url", 
+    private static final String AUDIO_URI = System.getProperty("demo.audio.url",
             "http://download.oracle.com/otndocs/javafx/JavaRap_Audio.mp4");
     private MediaPlayer audioMediaPlayer;
     private static final boolean PLAY_AUDIO = Boolean.parseBoolean(
@@ -134,7 +134,7 @@ public class AudioAreaChartApp extends Application {
         }
         return audioMediaPlayer;
     }
-    
+
     @Override public void start(Stage primaryStage) throws Exception {
         primaryStage.setScene(new Scene(createContent()));
         primaryStage.show();

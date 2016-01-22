@@ -420,7 +420,7 @@ public class TitledPaneSkin extends LabeledSkinBase<TitledPane>  {
             arrow.setId("arrow");
             arrow.getStyleClass().setAll("arrow");
             arrowRegion.getChildren().setAll(arrow);
-            
+
             // RT-13294: TitledPane : add animation to the title arrow
             arrow.rotateProperty().bind(new DoubleBinding() {
                 { bind(transitionProperty()); }

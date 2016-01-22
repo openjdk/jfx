@@ -48,21 +48,21 @@ public class OverlayWarning extends Group {
     private static final float  RECTH    = 100f;
     private static final float  ARC      = 20f;
     private static final int    FONTSIZE = 24;
-    
+
     private ViewScene               view;
     private SequentialTransition    overlayTransition;
     private boolean                 warningTransition;
 
     public OverlayWarning(final ViewScene vs) {
         view = vs;
-        
+
         createOverlayGroup();
-        
+
         PauseTransition pause = new PauseTransition(Duration.millis(4000));
         FadeTransition fade = new FadeTransition(Duration.millis(1000), this);
         fade.setFromValue(1);
         fade.setToValue(0);
-        
+
         overlayTransition = new SequentialTransition();
         overlayTransition.getChildren().add(pause);
         overlayTransition.getChildren().add(fade);
@@ -84,10 +84,10 @@ public class OverlayWarning extends Group {
         view = vs;
         view.entireSceneNeedsRepaint();
    }
-    
+
     protected void warn(String msg) {
         text.setText(msg);
-        
+
         warningTransition = true;
         overlayTransition.play();
     }
@@ -104,16 +104,16 @@ public class OverlayWarning extends Group {
     protected boolean inWarningTransition() {
         return warningTransition;
     }
-    
+
     private Text text = new Text();
     private Rectangle background;
-    
+
     private void createOverlayGroup() {
         final Font font = new Font(Font.getDefault().getFamily(), FONTSIZE);
         final Rectangle2D screenBounds = new Rectangle2D(0, 0,
                 view.getSceneState().getScreenWidth(),
                 view.getSceneState().getScreenHeight());
-        
+
         String TEXT_CSS =
             "-fx-effect: dropshadow(two-pass-box, rgba(0,0,0,0.75), 3, 0.0, 0, 2);";
         text.setStroke(Color.WHITE);
@@ -122,13 +122,13 @@ public class OverlayWarning extends Group {
         text.setWrappingWidth(RECTW - PAD - PAD);
         text.setStyle(TEXT_CSS);
         text.setTextAlignment(TextAlignment.CENTER);
-        
+
         background = createBackground(text, screenBounds);
 
         getChildren().add(background);
         getChildren().add(text);
     }
-    
+
     private Rectangle createBackground(Text text, Rectangle2D screen) {
         Rectangle rectangle = new Rectangle();
         double textW = text.getLayoutBounds().getWidth();
@@ -143,7 +143,7 @@ public class OverlayWarning extends Group {
         rectangle.setArcWidth(ARC);
         rectangle.setArcHeight(ARC);
         rectangle.setFill(Color.gray(0.0, 0.6));
-        
+
         text.setX(rectX + ((RECTW - textW) / 2.0));
         text.setY(rectY - (RECTH  / 2.0) + ((textH - text.getBaselineOffset()) / 2.0));
 

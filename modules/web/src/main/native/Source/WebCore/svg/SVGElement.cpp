@@ -375,7 +375,7 @@ SVGDocumentExtensions* SVGElement::accessDocumentSVGExtensions()
     // global inclusion of Document.h in SVG code.
     return document().accessSVGExtensions();
 }
- 
+
 void SVGElement::mapInstanceToElement(SVGElementInstance* instance)
 {
     ASSERT(instance);
@@ -385,7 +385,7 @@ void SVGElement::mapInstanceToElement(SVGElementInstance* instance)
 
     instances.add(instance);
 }
- 
+
 void SVGElement::removeInstanceMapping(SVGElementInstance* instance)
 {
     ASSERT(instance);
@@ -426,7 +426,7 @@ void SVGElement::setCursorElement(SVGCursorElement* cursorElement)
     rareData.setCursorElement(cursorElement);
 }
 
-void SVGElement::cursorElementRemoved() 
+void SVGElement::cursorElementRemoved()
 {
     ASSERT(m_svgRareData);
     m_svgRareData->setCursorElement(0);
@@ -547,14 +547,14 @@ static inline void collectInstancesForSVGElement(SVGElement* element, HashSet<SV
 bool SVGElement::addEventListener(const AtomicString& eventType, PassRefPtr<EventListener> prpListener, bool useCapture)
 {
     RefPtr<EventListener> listener = prpListener;
-    
+
     // Add event listener to regular DOM element
     if (!Node::addEventListener(eventType, listener, useCapture))
         return false;
 
     // Add event listener to all shadow tree DOM element instances
     HashSet<SVGElementInstance*> instances;
-    collectInstancesForSVGElement(this, instances);    
+    collectInstancesForSVGElement(this, instances);
     const HashSet<SVGElementInstance*>::const_iterator end = instances.end();
     for (HashSet<SVGElementInstance*>::const_iterator it = instances.begin(); it != end; ++it) {
         ASSERT((*it)->shadowTreeElement());
@@ -1165,7 +1165,7 @@ bool SVGElement::isKeyboardFocusable(KeyboardEvent*) const
 {
     return isMouseFocusable();
 }
-    
+
 void SVGElement::accessKeyAction(bool sendMouseEvents)
 {
     dispatchSimulatedClick(0, sendMouseEvents ? SendMouseUpDownEvents : SendNoEvents);

@@ -51,7 +51,7 @@ import org.junit.runners.Parameterized;
 @RunWith(Parameterized.class)
 public class LocalDateStringConverterTest {
     private static final LocalDate VALID_DATE = LocalDate.of(1985, 1, 12);
-    
+
     private static final DateTimeFormatter aFormatter = DateTimeFormatter.ofPattern("dd MM yyyy");
     private static final DateTimeFormatter aParser = DateTimeFormatter.ofPattern("yyyy MM dd");
 
@@ -77,7 +77,7 @@ public class LocalDateStringConverterTest {
     private FormatStyle dateStyle;
     private DateTimeFormatter formatter, parser;
     private LocalDate validDate;
-    
+
     public LocalDateStringConverterTest(LocalDateStringConverter converter, Locale locale, FormatStyle dateStyle, LocalDate validDate, DateTimeFormatter formatter, DateTimeFormatter parser) {
         this.converter = converter;
         this.locale = locale;
@@ -86,44 +86,44 @@ public class LocalDateStringConverterTest {
         this.formatter = formatter;
         this.parser = parser;
     }
-    
+
     @Before public void setup() {
     }
-    
+
     /*********************************************************************
      * Test constructors
-     ********************************************************************/ 
-    
+     ********************************************************************/
+
     @Test public void testConstructor() {
         assertEquals(locale, LocalDateStringConverterShim.getldtConverterLocale(converter));
-        assertEquals((dateStyle != null) ? dateStyle : FormatStyle.SHORT, 
+        assertEquals((dateStyle != null) ? dateStyle : FormatStyle.SHORT,
                 LocalDateStringConverterShim.getldtConverterDateStyle(converter));
         assertNull(LocalDateStringConverterShim.getldtConverterTimeStyle(converter));
         if (formatter != null) {
-            assertEquals(formatter, 
+            assertEquals(formatter,
                     LocalDateStringConverterShim.getldtConverterFormatter(converter));
         }
         if (parser != null) {
-            assertEquals(parser, 
+            assertEquals(parser,
                     LocalDateStringConverterShim.getldtConverterParser(converter));
         } else if (formatter != null) {
-            assertEquals(formatter, 
+            assertEquals(formatter,
                 LocalDateStringConverterShim.getldtConverterParser(converter));
         }
     }
-    
-    
+
+
     /*********************************************************************
      * Test toString / fromString methods
-     ********************************************************************/    
-    
+     ********************************************************************/
+
     @Test public void toString_to_fromString_testRoundtrip() {
         if (formatter == null) {
             // Only the default formatter/parser can guarantee roundtrip symmetry
             assertEquals(validDate, converter.fromString(converter.toString(validDate)));
         }
     }
-    
+
     @Test(expected=RuntimeException.class)
     public void fromString_testInvalidInput() {
         converter.fromString("abcdefg");

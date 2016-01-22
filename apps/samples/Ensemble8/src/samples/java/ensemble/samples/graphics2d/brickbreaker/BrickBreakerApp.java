@@ -40,19 +40,19 @@ import javafx.stage.Stage;
 /**
  * The main purpose of the game is to break all the bricks and
  * not drop the ball.
- * 
+ *
  * @sampleName Brick Breaker
  * @preview preview.png
- * @see javafx.scene.image.Image 
+ * @see javafx.scene.image.Image
  * @see javafx.scene.image.ImageView
- * @see javafx.util.Duration 
+ * @see javafx.util.Duration
  * @see javafx.animation.KeyFrame
  * @see javafx.animation.KeyValue
  * @see javafx.animation.Timeline
  * @see javafx.application.Application
  * @see javafx.application.Platform
  * @see javafx.collections.ObservableList
- * @see javafx.geometry.Rectangle2D 
+ * @see javafx.geometry.Rectangle2D
  * @see javafx.geometry.VPos
  */
 
@@ -63,7 +63,7 @@ public class BrickBreakerApp extends Application {
     public MainFrame getMainFrame() {
         return mainFrame;
     }
-    
+
     public Parent createContent() {
         Config.initialize();
         Pane root = new Pane();

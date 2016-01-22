@@ -95,7 +95,7 @@ public class RowConstraints extends ConstraintsBase {
      * Creates a row constraint object with a fixed size range.
      * This is a convenience for setting the minimum, preferred, and maximum
      * height constraints.
-     * 
+     *
      */
     public RowConstraints(double minHeight, double prefHeight, double maxHeight) {
         this();
@@ -400,7 +400,7 @@ public class RowConstraints extends ConstraintsBase {
     /**
      * Returns a string representation of this {@code RowConstraints} object.
      * @return a string representation of this {@code RowConstraints} object.
-     */ 
+     */
     @Override public String toString() {
         return "RowConstraints percentHeight="+getPercentHeight()+
                 " minHeight="+getMinHeight()+

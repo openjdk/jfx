@@ -58,7 +58,7 @@ static NSString * const WebKit2UseRemoteLayerTreeDrawingAreaKey = @"WebKit2UseRe
         _browsingContextGroup = [browsingContextGroup retain];
         _zoomTextOnly = NO;
     }
-    
+
     return self;
 }
 
@@ -89,7 +89,7 @@ static NSString * const WebKit2UseRemoteLayerTreeDrawingAreaKey = @"WebKit2UseRe
 - (IBAction)showHideWebView:(id)sender
 {
     BOOL hidden = ![_webView isHidden];
-    
+
     [_webView setHidden:hidden];
 }
 
@@ -97,7 +97,7 @@ static NSString * const WebKit2UseRemoteLayerTreeDrawingAreaKey = @"WebKit2UseRe
 {
     if ([_webView window]) {
         [_webView retain];
-        [_webView removeFromSuperview]; 
+        [_webView removeFromSuperview];
     } else {
         [containerView addSubview:_webView];
         [_webView release];
@@ -157,10 +157,10 @@ static NSString * const WebKit2UseRemoteLayerTreeDrawingAreaKey = @"WebKit2UseRe
 
     if (action == @selector(goBack:))
         return _webView && [_webView.browsingContextController canGoBack];
-    
+
     if (action == @selector(goForward:))
         return _webView && [_webView.browsingContextController canGoForward];
-    
+
     return YES;
 }
 
@@ -288,7 +288,7 @@ static NSString * const WebKit2UseRemoteLayerTreeDrawingAreaKey = @"WebKit2UseRe
 
     _webView.drawsTransparentBackground = isTransparent;
 
-    [[self window] display];    
+    [[self window] display];
 }
 
 - (BOOL)isUISideCompositingEnabled
@@ -510,7 +510,7 @@ static void runOpenPanel(WKPageRef page, WKFrameRef frame, WKOpenPanelParameters
             WKRelease(fileURLs);
         } else
             WKOpenPanelResultListenerCancel(listener);
-        
+
         WKRelease(listener);
     }];
 }

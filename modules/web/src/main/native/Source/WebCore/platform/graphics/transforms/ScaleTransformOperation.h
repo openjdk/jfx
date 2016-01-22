@@ -75,7 +75,7 @@ private:
     {
         ASSERT(type == SCALE_X || type == SCALE_Y || type == SCALE_Z || type == SCALE || type == SCALE_3D);
     }
-        
+
     double m_x;
     double m_y;
     double m_z;

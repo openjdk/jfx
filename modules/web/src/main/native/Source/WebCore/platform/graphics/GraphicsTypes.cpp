@@ -21,7 +21,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -77,7 +77,7 @@ bool parseCompositeAndBlendOperator(const String& s, CompositeOperator& op, Blen
             return true;
         }
     }
-    
+
     for (int i = 0; i < numBlendOperatorNames; i++) {
         if (s == blendOperatorNames[i]) {
             blendOp = static_cast<BlendMode>(i+1);
@@ -86,7 +86,7 @@ bool parseCompositeAndBlendOperator(const String& s, CompositeOperator& op, Blen
             return true;
         }
     }
-    
+
     return false;
 }
 

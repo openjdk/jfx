@@ -69,7 +69,7 @@ struct IconURL {
         , m_isDefaultIcon(false)
     {
     }
-    
+
     static IconURL defaultIconURL(const URL&, IconType);
 };
 

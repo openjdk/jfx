@@ -41,10 +41,10 @@ import javafx.scene.layout.GridPane;
 
 /**
  *
- * 
+ *
  */
 class FXOMNormalizer {
-    
+
     /*
      * We look for properties with $null values and remove them.
      * Exemple with ScrollPane.content.
@@ -56,11 +56,11 @@ class FXOMNormalizer {
      *      <ScrollPane ... />
      *
      */
-    
+
     /*
-     * 
+     *
      * We look for the following pattern:
-     * 
+     *
      * <Accordion>
      *   <expandedPane>
      *     <TitledPane fx:id="x1" text="B">
@@ -74,10 +74,10 @@ class FXOMNormalizer {
      *     <fx:reference source="x1" />
      *   </panes>
      * </Accordion>
-     * 
-     * 
+     *
+     *
      * and transform it as:
-     * 
+     *
      * <Accordion>
      *   <panes>
      *     <TitledPane text="A">
@@ -88,20 +88,20 @@ class FXOMNormalizer {
      *     </TitledPane>
      *   </panes>
      * </Accordion>
-     * 
-     * 
+     *
+     *
      */
-    
+
     private static final PropertyName expandedPaneName
             = new PropertyName("expandedPane");
-    
+
     private final FXOMDocument fxomDocument;
     private int changeCount;
-    
+
     public FXOMNormalizer(FXOMDocument fxomDocument) {
         this.fxomDocument = fxomDocument;
     }
-    
+
     public void normalize() {
         changeCount = 0;
         normalizeExpandedPaneProperties();
@@ -110,12 +110,12 @@ class FXOMNormalizer {
             fxomDocument.refreshSceneGraph();
         }
     }
-    
+
     public void normalizeExpandedPaneProperties() {
-        
+
         final List<FXOMProperty> expandedPaneProperties
                 = fxomDocument.getFxomRoot().collectProperties(expandedPaneName);
-        
+
         for (FXOMProperty p : expandedPaneProperties) {
             if (p instanceof FXOMPropertyC) {
                 final FXOMPropertyC pc = (FXOMPropertyC) p;
@@ -133,56 +133,56 @@ class FXOMNormalizer {
                 assert pt.getValue().equals("$null");
                 p.removeFromParentInstance();
             }
-            
+
             changeCount++;
         }
     }
-    
+
     private void normalizeExpandedPaneProperty(FXOMPropertyC p) {
-        
+
         assert p != null;
 
         /*
-         * 
+         *
          * <Accordion>                           // p.getParentInstance()
          *   <expandedPane>                      // p
          *     <TitledPane fx:id="x1" text="B">  // p.getValues().get(0)
          *       ...
          *     </TitledPane>
          *   </expandedPane>
-         *   <panes>                             // reference.getParentProperty()         
+         *   <panes>                             // reference.getParentProperty()
          *     <TitledPane text="A">
          *       ...
          *     </TitledPane>
          *     <fx:reference source="x1" />      // reference
          *   </panes>
          * </Accordion>
-         * 
+         *
          */
-    
+
         final FXOMInstance parentInstance = p.getParentInstance();
         assert parentInstance != null;
         final FXOMObject titledPane = p.getValues().get(0);
         assert titledPane.getSceneGraphObject() instanceof TitledPane;
         assert titledPane.getFxId() != null;
-        
+
         final FXOMObject fxomRoot = p.getFxomDocument().getFxomRoot();
-        final List<FXOMIntrinsic> references 
+        final List<FXOMIntrinsic> references
                 = fxomRoot.collectReferences(titledPane.getFxId());
         assert references.size() == 1;
         final FXOMIntrinsic reference = references.get(0);
         assert reference.getSource().equals(titledPane.getFxId());
         assert reference.getParentObject() == parentInstance;
         final int referenceIndex = reference.getIndexInParentProperty();
-        
+
         p.removeFromParentInstance();
         titledPane.removeFromParentProperty();
         titledPane.addToParentProperty(referenceIndex, reference.getParentProperty());
         reference.removeFromParentProperty();
     }
-    
-    
-    
+
+
+
     private void normalizeGridPanes() {
         final FXOMObject fxomRoot = fxomDocument.getFxomRoot();
         for (FXOMObject fxomGridPane : fxomRoot.collectObjectWithSceneGraphObjectClass(GridPane.class)) {
@@ -190,16 +190,16 @@ class FXOMNormalizer {
             changeCount++;
         }
     }
-    
+
     private final static ColumnConstraintsListPropertyMetadata columnConstraintsMeta
             = new ColumnConstraintsListPropertyMetadata();
     private final static RowConstraintsListPropertyMetadata rowConstraintsMeta
             = new RowConstraintsListPropertyMetadata();
-    
+
     private void normalizeGridPane(FXOMObject fxomGridPane) {
         assert fxomGridPane instanceof FXOMInstance;
         assert fxomGridPane.getSceneGraphObject() instanceof GridPane;
-        
+
         final GridPane gridPane = (GridPane) fxomGridPane.getSceneGraphObject();
         final int columnCount = Deprecation.getGridPaneColumnCount(gridPane);
         final int rowCount = Deprecation.getGridPaneRowCount(gridPane);

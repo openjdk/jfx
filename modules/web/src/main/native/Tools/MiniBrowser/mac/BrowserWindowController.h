@@ -63,9 +63,9 @@
     IBOutlet NSToolbar *toolbar;
     IBOutlet NSTextField *urlText;
     IBOutlet NSView *containerView;
-    
+
     IBOutlet NSWindow *findPanelWindow;
-    
+
     BOOL _zoomTextOnly;
 }
 

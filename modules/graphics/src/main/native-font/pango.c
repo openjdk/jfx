@@ -157,7 +157,7 @@ JNIEXPORT jobject JNICALL OS_NATIVE(pango_1shape)
             /* translate byte index to char index */
             cluster[i] = (jint)g_utf8_pointer_to_offset(text, text + glyphString->log_clusters[i]);
         }
-        (*env)->SetIntArrayRegion(env, glyphsArray, 0, count, glyphs); 
+        (*env)->SetIntArrayRegion(env, glyphsArray, 0, count, glyphs);
         if ((*env)->ExceptionOccurred(env)) {
             fprintf(stderr, "OS_NATIVE error: JNI exception");
             goto fail;

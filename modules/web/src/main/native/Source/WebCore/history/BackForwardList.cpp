@@ -21,7 +21,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -64,8 +64,8 @@ void BackForwardList::addItem(PassRefPtr<HistoryItem> prpItem)
     ASSERT(prpItem);
     if (m_capacity == 0 || !m_enabled)
         return;
-    
-    // Toss anything in the forward list    
+
+    // Toss anything in the forward list
     if (m_current != NoCurrentItemIndex) {
         unsigned targetSize = m_current + 1;
         while (m_entries.size() > targetSize) {
@@ -114,7 +114,7 @@ void BackForwardList::goToItem(HistoryItem* item)
 {
     if (!m_entries.size() || !item)
         return;
-        
+
     unsigned int index = 0;
     for (; index < m_entries.size(); ++index)
         if (m_entries[index] == item)
@@ -164,7 +164,7 @@ void BackForwardList::forwardListWithLimit(int limit, HistoryItemVector& list)
     list.clear();
     if (!m_entries.size())
         return;
-        
+
     unsigned lastEntry = m_entries.size() - 1;
     if (m_current < lastEntry) {
         int last = std::min(m_current + limit, lastEntry);
@@ -180,7 +180,7 @@ int BackForwardList::capacity()
 }
 
 void BackForwardList::setCapacity(int size)
-{    
+{
     while (size < (int)m_entries.size()) {
         RefPtr<HistoryItem> item = m_entries.last();
         m_entries.removeLast();
@@ -229,10 +229,10 @@ HistoryItem* BackForwardList::itemAtIndex(int index)
     // Do range checks without doing math on index to avoid overflow.
     if (index < -(int)m_current)
         return 0;
-    
+
     if (index > forwardListCount())
         return 0;
-        
+
     return m_entries[index + m_current].get();
 }
 
@@ -287,7 +287,7 @@ void BackForwardList::removeItem(HistoryItem* item)
 {
     if (!item)
         return;
-    
+
     for (unsigned i = 0; i < m_entries.size(); ++i)
         if (m_entries[i] == item) {
             m_entries.remove(i);

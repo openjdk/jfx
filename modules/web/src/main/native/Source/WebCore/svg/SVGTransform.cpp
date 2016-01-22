@@ -149,7 +149,7 @@ const String& SVGTransform::transformTypePrefixForParsing(SVGTransformType type)
     case SVG_TRANSFORM_ROTATE: {
         DEFINE_STATIC_LOCAL(String, rotateString, (ASCIILiteral("rotate(")));
         return rotateString;
-    }    
+    }
     case SVG_TRANSFORM_SKEWX: {
         DEFINE_STATIC_LOCAL(String, skewXString, (ASCIILiteral("skewX(")));
         return skewXString;

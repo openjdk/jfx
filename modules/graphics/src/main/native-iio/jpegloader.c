@@ -1378,7 +1378,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_javafx_iio_jpeg_JPEGImageLoader_initDecompr
     }
 
     imageio_set_stream(env, (j_common_ptr) cinfo, data, stream);
-    
+
     if ((*env)->ExceptionCheck(env)) return 0;
 
     imageio_init_source((j_decompress_ptr) cinfo);

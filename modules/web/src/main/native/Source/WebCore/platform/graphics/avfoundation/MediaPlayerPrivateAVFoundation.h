@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef MediaPlayerPrivateAVFoundation_h
@@ -88,7 +88,7 @@ public:
 #undef DEFINE_TYPE_ENUM
             FunctionType,
         };
-        
+
         Notification()
             : m_type(None)
             , m_time(0)
@@ -102,7 +102,7 @@ public:
             , m_finished(false)
         {
         }
-        
+
         Notification(Type type, bool finished)
             : m_type(type)
             , m_time(0)
@@ -117,13 +117,13 @@ public:
             , m_function(function)
         {
         }
-        
+
         Type type() { return m_type; }
         bool isValid() { return m_type != None; }
         double time() { return m_time; }
         bool finished() { return m_finished; }
         Function<void ()>& function() { return m_function; }
-        
+
     private:
         Type m_type;
         double m_time;
@@ -278,7 +278,7 @@ protected:
     bool hasSetUpVideoRendering() const;
 
     static void mainThreadCallback(void*);
-    
+
     void invalidateCachedDuration();
 
     const String& assetURL() const { return m_assetURL; }
@@ -293,7 +293,7 @@ protected:
     void processNewAndRemovedTextTracks(const Vector<RefPtr<InbandTextTrackPrivateAVF>>&);
     void clearTextTracks();
     Vector<RefPtr<InbandTextTrackPrivateAVF>> m_textTracks;
-    
+
 private:
     MediaPlayer* m_player;
 

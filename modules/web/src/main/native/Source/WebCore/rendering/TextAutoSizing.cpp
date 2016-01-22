@@ -110,7 +110,7 @@ void TextAutoSizingValue::addNode(Node* node, float size)
 bool TextAutoSizingValue::adjustNodeSizes()
 {
     bool objectsRemoved = false;
-    
+
     // Remove stale nodes.  Nodes may have had their renderers detached.  We'll
     // also need to remove the style from the documents m_textAutoSizedNodes
     // collection.  Return true indicates we need to do that removal.
@@ -125,16 +125,16 @@ bool TextAutoSizingValue::adjustNodeSizes()
             objectsRemoved = true;
         }
     }
-    
+
     unsigned count = nodesForRemoval.size();
     for (unsigned i = 0; i < count; i++)
         m_autoSizedNodes.remove(nodesForRemoval[i]);
-    
+
     // If we only have one piece of text with the style on the page don't
     // adjust it's size.
     if (m_autoSizedNodes.size() <= 1)
         return objectsRemoved;
-    
+
     // Compute average size
     float cumulativeSize = 0;
     end = m_autoSizedNodes.end();
@@ -143,9 +143,9 @@ bool TextAutoSizingValue::adjustNodeSizes()
         RenderText* renderText = static_cast<RenderText*>(autoSizingNode->renderer());
         cumulativeSize += renderText->candidateComputedTextSize();
     }
-    
+
     float averageSize = roundf(cumulativeSize / m_autoSizedNodes.size());
-    
+
     // Adjust sizes
     bool firstPass = true;
     end = m_autoSizedNodes.end();
@@ -160,18 +160,18 @@ bool TextAutoSizingValue::adjustNodeSizes()
                 averageSize = roundf(specifiedSize * MAX_SCALE_INCREASE);
                 scaleChange = averageSize / specifiedSize;
             }
-            
+
             RefPtr<RenderStyle> style = cloneRenderStyleWithState(text->style());
             FontDescription fontDescription = style->fontDescription();
             fontDescription.setComputedSize(averageSize);
             style->setFontDescription(fontDescription);
             style->font().update(autoSizingNode->document().ensureStyleResolver().fontSelector());
             text->parent()->setStyle(style.releaseNonNull());
-            
+
             RenderElement* parentRenderer = text->parent();
             if (parentRenderer->isAnonymousBlock())
                 parentRenderer = parentRenderer->parent();
-            
+
             // If we have a list we should resize ListMarkers separately.
             RenderObject* listMarkerRenderer = parentRenderer->firstChild();
             if (listMarkerRenderer->isListMarker()) {
@@ -180,17 +180,17 @@ bool TextAutoSizingValue::adjustNodeSizes()
                 style->font().update(autoSizingNode->document().ensureStyleResolver().fontSelector());
                 toRenderListMarker(*listMarkerRenderer).setStyle(style.releaseNonNull());
             }
-            
+
             // Resize the line height of the parent.
             const RenderStyle& parentStyle = parentRenderer->style();
             Length lineHeightLength = parentStyle.specifiedLineHeight();
-            
+
             int specifiedLineHeight = 0;
             if (lineHeightLength.isPercent())
                 specifiedLineHeight = minimumValueForLength(lineHeightLength, fontDescription.specifiedSize());
             else
                 specifiedLineHeight = lineHeightLength.value();
-            
+
             int lineHeight = specifiedLineHeight * scaleChange;
             if (!lineHeightLength.isFixed() || lineHeightLength.value() != lineHeight) {
                 RefPtr<RenderStyle> newParentStyle = cloneRenderStyleWithState(parentStyle);
@@ -202,7 +202,7 @@ bool TextAutoSizingValue::adjustNodeSizes()
             }
         }
     }
-    
+
     return objectsRemoved;
 }
 
@@ -228,10 +228,10 @@ void TextAutoSizingValue::reset()
         RenderElement* parentRenderer = text->parent();
         if (!parentRenderer)
             continue;
-        
+
         if (parentRenderer->isAnonymousBlock())
             parentRenderer = parentRenderer->parent();
-        
+
         const RenderStyle& parentStyle = parentRenderer->style();
         Length originalLineHeight = parentStyle.specifiedLineHeight();
         if (originalLineHeight != parentStyle.lineHeight()) {

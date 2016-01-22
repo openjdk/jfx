@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -43,7 +43,7 @@ using namespace WTF::Unicode;
 
 const JSClassDefinition kJSClassDefinitionEmpty = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
 
-OpaqueJSClass::OpaqueJSClass(const JSClassDefinition* definition, OpaqueJSClass* protoClass) 
+OpaqueJSClass::OpaqueJSClass(const JSClassDefinition* definition, OpaqueJSClass* protoClass)
     : parentClass(definition->parentClass)
     , prototypeClass(0)
     , initialize(definition->initialize)
@@ -80,14 +80,14 @@ OpaqueJSClass::OpaqueJSClass(const JSClassDefinition* definition, OpaqueJSClass*
             ++staticFunction;
         }
     }
-        
+
     if (protoClass)
         prototypeClass = JSClassRetain(protoClass);
 }
 
 OpaqueJSClass::~OpaqueJSClass()
 {
-    // The empty string is shared across threads & is an identifier, in all other cases we should have done a deep copy in className(), below. 
+    // The empty string is shared across threads & is an identifier, in all other cases we should have done a deep copy in className(), below.
     ASSERT(!m_className.length() || !m_className.impl()->isIdentifier());
 
 #ifndef NDEBUG
@@ -103,7 +103,7 @@ OpaqueJSClass::~OpaqueJSClass()
             ASSERT(!it->key->isIdentifier());
     }
 #endif
-    
+
     if (prototypeClass)
         JSClassRelease(prototypeClass);
 }
@@ -120,7 +120,7 @@ PassRefPtr<OpaqueJSClass> OpaqueJSClass::create(const JSClassDefinition* clientD
     JSClassDefinition protoDefinition = kJSClassDefinitionEmpty;
     protoDefinition.finalize = 0;
     swap(definition.staticFunctions, protoDefinition.staticFunctions); // Move static functions to the prototype.
-    
+
     // We are supposed to use JSClassRetain/Release but since we know that we currently have
     // the only reference to this class object we cheat and use a RefPtr instead.
     RefPtr<OpaqueJSClass> protoClass = adoptRef(new OpaqueJSClass(&protoDefinition, 0));

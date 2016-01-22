@@ -30,19 +30,19 @@ import javafx.beans.NamedArg;
 import javafx.util.StringConverter;
 
 /**
- * <p>{@link StringConverter} implementation that can use a {@link Format} 
+ * <p>{@link StringConverter} implementation that can use a {@link Format}
  * instance.</p>
  *
  * @since JavaFX 2.2
  */
 public class FormatStringConverter<T> extends StringConverter<T> {
-    
+
     // ------------------------------------------------------ Private properties
 
     final Format format;
-    
+
     // ------------------------------------------------------------ Constructors
-    
+
     public FormatStringConverter(@NamedArg("format") Format format) {
         this.format = format;
     }

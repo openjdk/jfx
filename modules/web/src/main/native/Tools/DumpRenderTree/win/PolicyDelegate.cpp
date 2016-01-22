@@ -6,13 +6,13 @@
  * are met:
  *
  * 1.  Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer. 
+ *     notice, this list of conditions and the following disclaimer.
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
- *     documentation and/or other materials provided with the distribution. 
+ *     documentation and/or other materials provided with the distribution.
  * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
- *     from this software without specific prior written permission. 
+ *     from this software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY APPLE AND ITS CONTRIBUTORS "AS IS" AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
@@ -91,10 +91,10 @@ ULONG STDMETHODCALLTYPE PolicyDelegate::Release(void)
 }
 
 HRESULT STDMETHODCALLTYPE PolicyDelegate::decidePolicyForNavigationAction(
-    /*[in]*/ IWebView* /*webView*/, 
-    /*[in]*/ IPropertyBag* actionInformation, 
-    /*[in]*/ IWebURLRequest* request, 
-    /*[in]*/ IWebFrame* frame, 
+    /*[in]*/ IWebView* /*webView*/,
+    /*[in]*/ IPropertyBag* actionInformation,
+    /*[in]*/ IWebURLRequest* request,
+    /*[in]*/ IWebFrame* frame,
     /*[in]*/ IWebPolicyDecisionListener* listener)
 {
     BSTR url;
@@ -163,8 +163,8 @@ HRESULT STDMETHODCALLTYPE PolicyDelegate::decidePolicyForNavigationAction(
 
 
 HRESULT STDMETHODCALLTYPE PolicyDelegate::unableToImplementPolicyWithError(
-    /*[in]*/ IWebView* /*webView*/, 
-    /*[in]*/ IWebError* error, 
+    /*[in]*/ IWebView* /*webView*/,
+    /*[in]*/ IWebError* error,
     /*[in]*/ IWebFrame* frame)
 {
     BSTR domainStr;
@@ -173,15 +173,15 @@ HRESULT STDMETHODCALLTYPE PolicyDelegate::unableToImplementPolicyWithError(
 
     int code;
     error->code(&code);
-    
+
     BSTR frameName;
     frame->name(&frameName);
     wstring frameNameMessage = frameName;
-    
+
     printf("Policy delegate: unable to implement policy with error domain '%S', error code %d, in frame '%S'", domainMessage.c_str(), code, frameNameMessage.c_str());
-    
+
     SysFreeString(domainStr);
     SysFreeString(frameName);
-    
+
     return S_OK;
 }

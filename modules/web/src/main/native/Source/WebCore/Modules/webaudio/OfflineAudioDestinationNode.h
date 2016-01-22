@@ -35,17 +35,17 @@ namespace WebCore {
 
 class AudioBus;
 class AudioContext;
-    
+
 class OfflineAudioDestinationNode : public AudioDestinationNode {
 public:
     static PassRefPtr<OfflineAudioDestinationNode> create(AudioContext* context, AudioBuffer* renderTarget)
     {
-        return adoptRef(new OfflineAudioDestinationNode(context, renderTarget));     
+        return adoptRef(new OfflineAudioDestinationNode(context, renderTarget));
     }
 
     virtual ~OfflineAudioDestinationNode();
-    
-    // AudioNode   
+
+    // AudioNode
     virtual void initialize() override;
     virtual void uninitialize() override;
 
@@ -60,16 +60,16 @@ private:
 
     // This AudioNode renders into this AudioBuffer.
     RefPtr<AudioBuffer> m_renderTarget;
-    
+
     // Temporary AudioBus for each render quantum.
     RefPtr<AudioBus> m_renderBus;
-    
+
     // Rendering thread.
     volatile ThreadIdentifier m_renderThread;
     bool m_startedRendering;
     static void offlineRenderEntry(void* threadData);
     void offlineRender();
-    
+
     // For completion callback on main thread.
     static void notifyCompleteDispatch(void* userData);
     void notifyComplete();

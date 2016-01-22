@@ -50,7 +50,7 @@ public:
 
     virtual RefPtr<MediaStreamSourceCapabilities> capabilities() const;
     virtual const MediaStreamSourceStates& states();
-    
+
     const String& deviceId() const { return m_deviceId; }
     void setDeviceId(const String& deviceId) { m_deviceId = deviceId; }
 

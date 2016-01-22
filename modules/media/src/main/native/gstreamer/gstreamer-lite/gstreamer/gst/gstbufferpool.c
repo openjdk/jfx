@@ -1013,7 +1013,7 @@ gst_buffer_pool_config_get_params (GstStructure * config, GstCaps ** caps,
  *
  * Get the @allocator and @params from @config.
  *
- * Returns: %TRUE, if the values are set. 
+ * Returns: %TRUE, if the values are set.
  */
 gboolean
 gst_buffer_pool_config_get_allocator (GstStructure * config,

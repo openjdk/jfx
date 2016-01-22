@@ -40,7 +40,7 @@ public final class KeyCodeCombination extends KeyCombination {
     /** The key code associated with this key combination. */
     private KeyCode code;
 
-    /** 
+    /**
      * Gets the key code associated with this key combination.
      * @return The key code associated with this key combination
      */

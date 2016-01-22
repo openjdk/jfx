@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef DOMEventsClasses_H
@@ -62,39 +62,39 @@ public:
     virtual ULONG STDMETHODCALLTYPE Release(void) { return DOMObject::Release(); }
 
     // IWebScriptObject
-    virtual HRESULT STDMETHODCALLTYPE throwException( 
+    virtual HRESULT STDMETHODCALLTYPE throwException(
         /* [in] */ BSTR exceptionMessage,
         /* [retval][out] */ BOOL* result) { return DOMObject::throwException(exceptionMessage, result); }
-    
-    virtual HRESULT STDMETHODCALLTYPE callWebScriptMethod( 
+
+    virtual HRESULT STDMETHODCALLTYPE callWebScriptMethod(
         /* [in] */ BSTR name,
         /* [size_is][in] */ const VARIANT args[  ],
         /* [in] */ int cArgs,
         /* [retval][out] */ VARIANT* result) { return DOMObject::callWebScriptMethod(name, args, cArgs, result); }
-    
-    virtual HRESULT STDMETHODCALLTYPE evaluateWebScript( 
+
+    virtual HRESULT STDMETHODCALLTYPE evaluateWebScript(
         /* [in] */ BSTR script,
         /* [retval][out] */ VARIANT* result) { return DOMObject::evaluateWebScript(script, result); }
-    
-    virtual HRESULT STDMETHODCALLTYPE removeWebScriptKey( 
+
+    virtual HRESULT STDMETHODCALLTYPE removeWebScriptKey(
         /* [in] */ BSTR name) { return DOMObject::removeWebScriptKey(name); }
-    
-    virtual HRESULT STDMETHODCALLTYPE stringRepresentation( 
+
+    virtual HRESULT STDMETHODCALLTYPE stringRepresentation(
         /* [retval][out] */ BSTR* stringRepresentation) { return DOMObject::stringRepresentation(stringRepresentation); }
-    
-    virtual HRESULT STDMETHODCALLTYPE webScriptValueAtIndex( 
+
+    virtual HRESULT STDMETHODCALLTYPE webScriptValueAtIndex(
         /* [in] */ unsigned int index,
         /* [retval][out] */ VARIANT* result) { return DOMObject::webScriptValueAtIndex(index, result); }
-    
-    virtual HRESULT STDMETHODCALLTYPE setWebScriptValueAtIndex( 
+
+    virtual HRESULT STDMETHODCALLTYPE setWebScriptValueAtIndex(
         /* [in] */ unsigned int index,
         /* [in] */ VARIANT val) { return DOMObject::setWebScriptValueAtIndex(index, val); }
-    
-    virtual HRESULT STDMETHODCALLTYPE setException( 
+
+    virtual HRESULT STDMETHODCALLTYPE setException(
         /* [in] */ BSTR description) { return DOMObject::setException(description); }
 
     // IDOMEventListener
-    virtual HRESULT STDMETHODCALLTYPE handleEvent( 
+    virtual HRESULT STDMETHODCALLTYPE handleEvent(
         /* [in] */ IDOMEvent* evt);
 };
 
@@ -113,64 +113,64 @@ public:
     virtual ULONG STDMETHODCALLTYPE Release(void) { return DOMObject::Release(); }
 
     // IWebScriptObject
-    virtual HRESULT STDMETHODCALLTYPE throwException( 
+    virtual HRESULT STDMETHODCALLTYPE throwException(
         /* [in] */ BSTR exceptionMessage,
         /* [retval][out] */ BOOL* result) { return DOMObject::throwException(exceptionMessage, result); }
-    
-    virtual HRESULT STDMETHODCALLTYPE callWebScriptMethod( 
+
+    virtual HRESULT STDMETHODCALLTYPE callWebScriptMethod(
         /* [in] */ BSTR name,
         /* [size_is][in] */ const VARIANT args[  ],
         /* [in] */ int cArgs,
         /* [retval][out] */ VARIANT* result) { return DOMObject::callWebScriptMethod(name, args, cArgs, result); }
-    
-    virtual HRESULT STDMETHODCALLTYPE evaluateWebScript( 
+
+    virtual HRESULT STDMETHODCALLTYPE evaluateWebScript(
         /* [in] */ BSTR script,
         /* [retval][out] */ VARIANT* result) { return DOMObject::evaluateWebScript(script, result); }
-    
-    virtual HRESULT STDMETHODCALLTYPE removeWebScriptKey( 
+
+    virtual HRESULT STDMETHODCALLTYPE removeWebScriptKey(
         /* [in] */ BSTR name) { return DOMObject::removeWebScriptKey(name); }
-    
-    virtual HRESULT STDMETHODCALLTYPE stringRepresentation( 
+
+    virtual HRESULT STDMETHODCALLTYPE stringRepresentation(
         /* [retval][out] */ BSTR* stringRepresentation) { return DOMObject::stringRepresentation(stringRepresentation); }
-    
-    virtual HRESULT STDMETHODCALLTYPE webScriptValueAtIndex( 
+
+    virtual HRESULT STDMETHODCALLTYPE webScriptValueAtIndex(
         /* [in] */ unsigned int index,
         /* [retval][out] */ VARIANT* result) { return DOMObject::webScriptValueAtIndex(index, result); }
-    
-    virtual HRESULT STDMETHODCALLTYPE setWebScriptValueAtIndex( 
+
+    virtual HRESULT STDMETHODCALLTYPE setWebScriptValueAtIndex(
         /* [in] */ unsigned int index,
         /* [in] */ VARIANT val) { return DOMObject::setWebScriptValueAtIndex(index, val); }
-    
-    virtual HRESULT STDMETHODCALLTYPE setException( 
+
+    virtual HRESULT STDMETHODCALLTYPE setException(
         /* [in] */ BSTR description) { return DOMObject::setException(description); }
 
     // IDOMEvent
-    virtual HRESULT STDMETHODCALLTYPE type( 
+    virtual HRESULT STDMETHODCALLTYPE type(
         /* [retval][out] */ BSTR* result);
-    
-    virtual HRESULT STDMETHODCALLTYPE target( 
+
+    virtual HRESULT STDMETHODCALLTYPE target(
         /* [retval][out] */ IDOMEventTarget** result);
-    
-    virtual HRESULT STDMETHODCALLTYPE currentTarget( 
+
+    virtual HRESULT STDMETHODCALLTYPE currentTarget(
         /* [retval][out] */ IDOMEventTarget** result);
-    
-    virtual HRESULT STDMETHODCALLTYPE eventPhase( 
+
+    virtual HRESULT STDMETHODCALLTYPE eventPhase(
         /* [retval][out] */ unsigned short* result);
-    
-    virtual HRESULT STDMETHODCALLTYPE bubbles( 
+
+    virtual HRESULT STDMETHODCALLTYPE bubbles(
         /* [retval][out] */ BOOL* result);
-    
-    virtual HRESULT STDMETHODCALLTYPE cancelable( 
+
+    virtual HRESULT STDMETHODCALLTYPE cancelable(
         /* [retval][out] */ BOOL* result);
-    
-    virtual HRESULT STDMETHODCALLTYPE timeStamp( 
+
+    virtual HRESULT STDMETHODCALLTYPE timeStamp(
         /* [retval][out] */ DOMTimeStamp* result);
-    
+
     virtual HRESULT STDMETHODCALLTYPE stopPropagation( void);
-    
+
     virtual HRESULT STDMETHODCALLTYPE preventDefault( void);
-    
-    virtual HRESULT STDMETHODCALLTYPE initEvent( 
+
+    virtual HRESULT STDMETHODCALLTYPE initEvent(
         /* [in] */ BSTR eventTypeArg,
         /* [in] */ BOOL canBubbleArg,
         /* [in] */ BOOL cancelableArg);
@@ -193,101 +193,101 @@ public:
     virtual ULONG STDMETHODCALLTYPE Release(void) { return DOMEvent::Release(); }
 
     // IWebScriptObject
-    virtual HRESULT STDMETHODCALLTYPE throwException( 
+    virtual HRESULT STDMETHODCALLTYPE throwException(
         /* [in] */ BSTR exceptionMessage,
         /* [retval][out] */ BOOL* result) { return DOMObject::throwException(exceptionMessage, result); }
-    
-    virtual HRESULT STDMETHODCALLTYPE callWebScriptMethod( 
+
+    virtual HRESULT STDMETHODCALLTYPE callWebScriptMethod(
         /* [in] */ BSTR name,
         /* [size_is][in] */ const VARIANT args[  ],
         /* [in] */ int cArgs,
         /* [retval][out] */ VARIANT* result) { return DOMObject::callWebScriptMethod(name, args, cArgs, result); }
-    
-    virtual HRESULT STDMETHODCALLTYPE evaluateWebScript( 
+
+    virtual HRESULT STDMETHODCALLTYPE evaluateWebScript(
         /* [in] */ BSTR script,
         /* [retval][out] */ VARIANT* result) { return DOMObject::evaluateWebScript(script, result); }
-    
-    virtual HRESULT STDMETHODCALLTYPE removeWebScriptKey( 
+
+    virtual HRESULT STDMETHODCALLTYPE removeWebScriptKey(
         /* [in] */ BSTR name) { return DOMObject::removeWebScriptKey(name); }
-    
-    virtual HRESULT STDMETHODCALLTYPE stringRepresentation( 
+
+    virtual HRESULT STDMETHODCALLTYPE stringRepresentation(
         /* [retval][out] */ BSTR* stringRepresentation) { return DOMObject::stringRepresentation(stringRepresentation); }
-    
-    virtual HRESULT STDMETHODCALLTYPE webScriptValueAtIndex( 
+
+    virtual HRESULT STDMETHODCALLTYPE webScriptValueAtIndex(
         /* [in] */ unsigned int index,
         /* [retval][out] */ VARIANT* result) { return DOMObject::webScriptValueAtIndex(index, result); }
-    
-    virtual HRESULT STDMETHODCALLTYPE setWebScriptValueAtIndex( 
+
+    virtual HRESULT STDMETHODCALLTYPE setWebScriptValueAtIndex(
         /* [in] */ unsigned int index,
         /* [in] */ VARIANT val) { return DOMObject::setWebScriptValueAtIndex(index, val); }
-    
-    virtual HRESULT STDMETHODCALLTYPE setException( 
+
+    virtual HRESULT STDMETHODCALLTYPE setException(
         /* [in] */ BSTR description) { return DOMObject::setException(description); }
 
     // IDOMEvent
-    virtual HRESULT STDMETHODCALLTYPE type( 
+    virtual HRESULT STDMETHODCALLTYPE type(
         /* [retval][out] */ BSTR* result) { return DOMEvent::type(result); }
-    
-    virtual HRESULT STDMETHODCALLTYPE target( 
+
+    virtual HRESULT STDMETHODCALLTYPE target(
         /* [retval][out] */ IDOMEventTarget** result) { return DOMEvent::target(result); }
-    
-    virtual HRESULT STDMETHODCALLTYPE currentTarget( 
+
+    virtual HRESULT STDMETHODCALLTYPE currentTarget(
         /* [retval][out] */ IDOMEventTarget** result) { return DOMEvent::currentTarget(result); }
-    
-    virtual HRESULT STDMETHODCALLTYPE eventPhase( 
+
+    virtual HRESULT STDMETHODCALLTYPE eventPhase(
         /* [retval][out] */ unsigned short* result) { return DOMEvent::eventPhase(result); }
-    
-    virtual HRESULT STDMETHODCALLTYPE bubbles( 
+
+    virtual HRESULT STDMETHODCALLTYPE bubbles(
         /* [retval][out] */ BOOL* result) { return DOMEvent::bubbles(result); }
-    
-    virtual HRESULT STDMETHODCALLTYPE cancelable( 
+
+    virtual HRESULT STDMETHODCALLTYPE cancelable(
         /* [retval][out] */ BOOL* result) { return DOMEvent::cancelable(result); }
-    
-    virtual HRESULT STDMETHODCALLTYPE timeStamp( 
+
+    virtual HRESULT STDMETHODCALLTYPE timeStamp(
         /* [retval][out] */ DOMTimeStamp* result) { return DOMEvent::timeStamp(result); }
-    
+
     virtual HRESULT STDMETHODCALLTYPE stopPropagation( void) { return DOMEvent::stopPropagation(); }
-    
+
     virtual HRESULT STDMETHODCALLTYPE preventDefault( void) { return DOMEvent::preventDefault(); }
-    
-    virtual HRESULT STDMETHODCALLTYPE initEvent( 
+
+    virtual HRESULT STDMETHODCALLTYPE initEvent(
         /* [in] */ BSTR eventTypeArg,
         /* [in] */ BOOL canBubbleArg,
         /* [in] */ BOOL cancelableArg) { return DOMEvent::initEvent(eventTypeArg, canBubbleArg, cancelableArg); }
 
     // IDOMUIEvent
-    virtual HRESULT STDMETHODCALLTYPE view( 
+    virtual HRESULT STDMETHODCALLTYPE view(
         /* [retval][out] */ IDOMWindow** result);
-    
-    virtual HRESULT STDMETHODCALLTYPE detail( 
+
+    virtual HRESULT STDMETHODCALLTYPE detail(
         /* [retval][out] */ long* result);
-    
-    virtual HRESULT STDMETHODCALLTYPE initUIEvent( 
+
+    virtual HRESULT STDMETHODCALLTYPE initUIEvent(
         /* [in] */ BSTR type,
         /* [in] */ BOOL canBubble,
         /* [in] */ BOOL cancelable,
         /* [in] */ IDOMWindow* view,
         /* [in] */ long detail);
-    
-    virtual HRESULT STDMETHODCALLTYPE keyCode( 
+
+    virtual HRESULT STDMETHODCALLTYPE keyCode(
         /* [retval][out] */ long* result);
-    
-    virtual HRESULT STDMETHODCALLTYPE charCode( 
+
+    virtual HRESULT STDMETHODCALLTYPE charCode(
         /* [retval][out] */ long* result);
-    
+
     virtual HRESULT STDMETHODCALLTYPE unused1(
         /* [retval][out] */ long* result);
-    
+
     virtual HRESULT STDMETHODCALLTYPE unused2(
         /* [retval][out] */ long* result);
-    
-    virtual HRESULT STDMETHODCALLTYPE pageX( 
+
+    virtual HRESULT STDMETHODCALLTYPE pageX(
         /* [retval][out] */ long* result);
-    
-    virtual HRESULT STDMETHODCALLTYPE pageY( 
+
+    virtual HRESULT STDMETHODCALLTYPE pageY(
         /* [retval][out] */ long* result);
-    
-    virtual HRESULT STDMETHODCALLTYPE which( 
+
+    virtual HRESULT STDMETHODCALLTYPE which(
         /* [retval][out] */ long* result);
 };
 
@@ -302,133 +302,133 @@ public:
     virtual ULONG STDMETHODCALLTYPE Release(void) { return DOMUIEvent::Release(); }
 
     // IWebScriptObject
-    virtual HRESULT STDMETHODCALLTYPE throwException( 
+    virtual HRESULT STDMETHODCALLTYPE throwException(
         /* [in] */ BSTR exceptionMessage,
         /* [retval][out] */ BOOL* result) { return DOMObject::throwException(exceptionMessage, result); }
-    
-    virtual HRESULT STDMETHODCALLTYPE callWebScriptMethod( 
+
+    virtual HRESULT STDMETHODCALLTYPE callWebScriptMethod(
         /* [in] */ BSTR name,
         /* [size_is][in] */ const VARIANT args[  ],
         /* [in] */ int cArgs,
         /* [retval][out] */ VARIANT* result) { return DOMObject::callWebScriptMethod(name, args, cArgs, result); }
-    
-    virtual HRESULT STDMETHODCALLTYPE evaluateWebScript( 
+
+    virtual HRESULT STDMETHODCALLTYPE evaluateWebScript(
         /* [in] */ BSTR script,
         /* [retval][out] */ VARIANT* result) { return DOMObject::evaluateWebScript(script, result); }
-    
-    virtual HRESULT STDMETHODCALLTYPE removeWebScriptKey( 
+
+    virtual HRESULT STDMETHODCALLTYPE removeWebScriptKey(
         /* [in] */ BSTR name) { return DOMObject::removeWebScriptKey(name); }
-    
-    virtual HRESULT STDMETHODCALLTYPE stringRepresentation( 
+
+    virtual HRESULT STDMETHODCALLTYPE stringRepresentation(
         /* [retval][out] */ BSTR* stringRepresentation) { return DOMObject::stringRepresentation(stringRepresentation); }
-    
-    virtual HRESULT STDMETHODCALLTYPE webScriptValueAtIndex( 
+
+    virtual HRESULT STDMETHODCALLTYPE webScriptValueAtIndex(
         /* [in] */ unsigned int index,
         /* [retval][out] */ VARIANT* result) { return DOMObject::webScriptValueAtIndex(index, result); }
-    
-    virtual HRESULT STDMETHODCALLTYPE setWebScriptValueAtIndex( 
+
+    virtual HRESULT STDMETHODCALLTYPE setWebScriptValueAtIndex(
         /* [in] */ unsigned int index,
         /* [in] */ VARIANT val) { return DOMObject::setWebScriptValueAtIndex(index, val); }
-    
-    virtual HRESULT STDMETHODCALLTYPE setException( 
+
+    virtual HRESULT STDMETHODCALLTYPE setException(
         /* [in] */ BSTR description) { return DOMObject::setException(description); }
 
     // IDOMEvent
-    virtual HRESULT STDMETHODCALLTYPE type( 
+    virtual HRESULT STDMETHODCALLTYPE type(
         /* [retval][out] */ BSTR* result) { return DOMEvent::type(result); }
-    
-    virtual HRESULT STDMETHODCALLTYPE target( 
+
+    virtual HRESULT STDMETHODCALLTYPE target(
         /* [retval][out] */ IDOMEventTarget** result) { return DOMEvent::target(result); }
-    
-    virtual HRESULT STDMETHODCALLTYPE currentTarget( 
+
+    virtual HRESULT STDMETHODCALLTYPE currentTarget(
         /* [retval][out] */ IDOMEventTarget** result) { return DOMEvent::currentTarget(result); }
-    
-    virtual HRESULT STDMETHODCALLTYPE eventPhase( 
+
+    virtual HRESULT STDMETHODCALLTYPE eventPhase(
         /* [retval][out] */ unsigned short* result) { return DOMEvent::eventPhase(result); }
-    
-    virtual HRESULT STDMETHODCALLTYPE bubbles( 
+
+    virtual HRESULT STDMETHODCALLTYPE bubbles(
         /* [retval][out] */ BOOL* result) { return DOMEvent::bubbles(result); }
-    
-    virtual HRESULT STDMETHODCALLTYPE cancelable( 
+
+    virtual HRESULT STDMETHODCALLTYPE cancelable(
         /* [retval][out] */ BOOL* result) { return DOMEvent::cancelable(result); }
-    
-    virtual HRESULT STDMETHODCALLTYPE timeStamp( 
+
+    virtual HRESULT STDMETHODCALLTYPE timeStamp(
         /* [retval][out] */ DOMTimeStamp* result) { return DOMEvent::timeStamp(result); }
-    
+
     virtual HRESULT STDMETHODCALLTYPE stopPropagation( void) { return DOMEvent::stopPropagation(); }
-    
+
     virtual HRESULT STDMETHODCALLTYPE preventDefault( void) { return DOMEvent::preventDefault(); }
-    
-    virtual HRESULT STDMETHODCALLTYPE initEvent( 
+
+    virtual HRESULT STDMETHODCALLTYPE initEvent(
         /* [in] */ BSTR eventTypeArg,
         /* [in] */ BOOL canBubbleArg,
         /* [in] */ BOOL cancelableArg) { return DOMEvent::initEvent(eventTypeArg, canBubbleArg, cancelableArg); }
 
     // IDOMUIEvent
-    virtual HRESULT STDMETHODCALLTYPE view( 
+    virtual HRESULT STDMETHODCALLTYPE view(
         /* [retval][out] */ IDOMWindow** result) { return DOMUIEvent::view(result); }
-    
-    virtual HRESULT STDMETHODCALLTYPE detail( 
+
+    virtual HRESULT STDMETHODCALLTYPE detail(
         /* [retval][out] */ long* result) { return DOMUIEvent::detail(result); }
-    
-    virtual HRESULT STDMETHODCALLTYPE initUIEvent( 
+
+    virtual HRESULT STDMETHODCALLTYPE initUIEvent(
         /* [in] */ BSTR type,
         /* [in] */ BOOL canBubble,
         /* [in] */ BOOL cancelable,
         /* [in] */ IDOMWindow* view,
         /* [in] */ long detail) { return DOMUIEvent::initUIEvent(type, canBubble, cancelable, view, detail); }
-    
-    virtual HRESULT STDMETHODCALLTYPE keyCode( 
+
+    virtual HRESULT STDMETHODCALLTYPE keyCode(
         /* [retval][out] */ long* result) { return DOMUIEvent::keyCode(result); }
-    
-    virtual HRESULT STDMETHODCALLTYPE charCode( 
+
+    virtual HRESULT STDMETHODCALLTYPE charCode(
         /* [retval][out] */ long* result) { return DOMUIEvent::charCode(result); }
-    
+
     virtual HRESULT STDMETHODCALLTYPE unused1(
         /* [retval][out] */ long* result) { return DOMUIEvent::unused1(result); }
-    
+
     virtual HRESULT STDMETHODCALLTYPE unused2(
         /* [retval][out] */ long* result) { return DOMUIEvent::unused2(result); }
-    
-    virtual HRESULT STDMETHODCALLTYPE pageX( 
+
+    virtual HRESULT STDMETHODCALLTYPE pageX(
         /* [retval][out] */ long* result) { return DOMUIEvent::pageX(result); }
-    
-    virtual HRESULT STDMETHODCALLTYPE pageY( 
+
+    virtual HRESULT STDMETHODCALLTYPE pageY(
         /* [retval][out] */ long* result) { return DOMUIEvent::pageY(result); }
-    
-    virtual HRESULT STDMETHODCALLTYPE which( 
+
+    virtual HRESULT STDMETHODCALLTYPE which(
         /* [retval][out] */ long* result) { return DOMUIEvent::which(result); }
 
     // IDOMKeyboardEvent
-    virtual HRESULT STDMETHODCALLTYPE keyIdentifier( 
+    virtual HRESULT STDMETHODCALLTYPE keyIdentifier(
         /* [retval][out] */ BSTR* result);
-    
+
     virtual HRESULT STDMETHODCALLTYPE location(
         /* [retval][out] */ unsigned long* result);
-    
-    virtual HRESULT STDMETHODCALLTYPE keyLocation( 
+
+    virtual HRESULT STDMETHODCALLTYPE keyLocation(
         /* [retval][out] */ unsigned long* result);
-    
-    virtual HRESULT STDMETHODCALLTYPE ctrlKey( 
+
+    virtual HRESULT STDMETHODCALLTYPE ctrlKey(
         /* [retval][out] */ BOOL* result);
-    
-    virtual HRESULT STDMETHODCALLTYPE shiftKey( 
+
+    virtual HRESULT STDMETHODCALLTYPE shiftKey(
         /* [retval][out] */ BOOL* result);
-    
-    virtual HRESULT STDMETHODCALLTYPE altKey( 
+
+    virtual HRESULT STDMETHODCALLTYPE altKey(
         /* [retval][out] */ BOOL* result);
-    
-    virtual HRESULT STDMETHODCALLTYPE metaKey( 
+
+    virtual HRESULT STDMETHODCALLTYPE metaKey(
         /* [retval][out] */ BOOL* result);
-    
-    virtual HRESULT STDMETHODCALLTYPE altGraphKey( 
+
+    virtual HRESULT STDMETHODCALLTYPE altGraphKey(
         /* [retval][out] */ BOOL* result);
-    
-    virtual HRESULT STDMETHODCALLTYPE getModifierState( 
+
+    virtual HRESULT STDMETHODCALLTYPE getModifierState(
         /* [in] */ BSTR keyIdentifierArg,
         /* [retval][out] */ BOOL* result);
-    
-    virtual HRESULT STDMETHODCALLTYPE initKeyboardEvent( 
+
+    virtual HRESULT STDMETHODCALLTYPE initKeyboardEvent(
         /* [in] */ BSTR type,
         /* [in] */ BOOL canBubble,
         /* [in] */ BOOL cancelable,
@@ -453,135 +453,135 @@ public:
     virtual ULONG STDMETHODCALLTYPE Release(void) { return DOMUIEvent::Release(); }
 
     // IWebScriptObject
-    virtual HRESULT STDMETHODCALLTYPE throwException( 
+    virtual HRESULT STDMETHODCALLTYPE throwException(
         /* [in] */ BSTR exceptionMessage,
         /* [retval][out] */ BOOL* result) { return DOMObject::throwException(exceptionMessage, result); }
-    
-    virtual HRESULT STDMETHODCALLTYPE callWebScriptMethod( 
+
+    virtual HRESULT STDMETHODCALLTYPE callWebScriptMethod(
         /* [in] */ BSTR name,
         /* [size_is][in] */ const VARIANT args[  ],
         /* [in] */ int cArgs,
         /* [retval][out] */ VARIANT* result) { return DOMObject::callWebScriptMethod(name, args, cArgs, result); }
-    
-    virtual HRESULT STDMETHODCALLTYPE evaluateWebScript( 
+
+    virtual HRESULT STDMETHODCALLTYPE evaluateWebScript(
         /* [in] */ BSTR script,
         /* [retval][out] */ VARIANT* result) { return DOMObject::evaluateWebScript(script, result); }
-    
-    virtual HRESULT STDMETHODCALLTYPE removeWebScriptKey( 
+
+    virtual HRESULT STDMETHODCALLTYPE removeWebScriptKey(
         /* [in] */ BSTR name) { return DOMObject::removeWebScriptKey(name); }
-    
-    virtual HRESULT STDMETHODCALLTYPE stringRepresentation( 
+
+    virtual HRESULT STDMETHODCALLTYPE stringRepresentation(
         /* [retval][out] */ BSTR* stringRepresentation) { return DOMObject::stringRepresentation(stringRepresentation); }
-    
-    virtual HRESULT STDMETHODCALLTYPE webScriptValueAtIndex( 
+
+    virtual HRESULT STDMETHODCALLTYPE webScriptValueAtIndex(
         /* [in] */ unsigned int index,
         /* [retval][out] */ VARIANT* result) { return DOMObject::webScriptValueAtIndex(index, result); }
-    
-    virtual HRESULT STDMETHODCALLTYPE setWebScriptValueAtIndex( 
+
+    virtual HRESULT STDMETHODCALLTYPE setWebScriptValueAtIndex(
         /* [in] */ unsigned int index,
         /* [in] */ VARIANT val) { return DOMObject::setWebScriptValueAtIndex(index, val); }
-    
-    virtual HRESULT STDMETHODCALLTYPE setException( 
+
+    virtual HRESULT STDMETHODCALLTYPE setException(
         /* [in] */ BSTR description) { return DOMObject::setException(description); }
 
     // IDOMEvent
-    virtual HRESULT STDMETHODCALLTYPE type( 
+    virtual HRESULT STDMETHODCALLTYPE type(
         /* [retval][out] */ BSTR* result) { return DOMEvent::type(result); }
-    
-    virtual HRESULT STDMETHODCALLTYPE target( 
+
+    virtual HRESULT STDMETHODCALLTYPE target(
         /* [retval][out] */ IDOMEventTarget** result) { return DOMEvent::target(result); }
-    
-    virtual HRESULT STDMETHODCALLTYPE currentTarget( 
+
+    virtual HRESULT STDMETHODCALLTYPE currentTarget(
         /* [retval][out] */ IDOMEventTarget** result) { return DOMEvent::currentTarget(result); }
-    
-    virtual HRESULT STDMETHODCALLTYPE eventPhase( 
+
+    virtual HRESULT STDMETHODCALLTYPE eventPhase(
         /* [retval][out] */ unsigned short* result) { return DOMEvent::eventPhase(result); }
-    
-    virtual HRESULT STDMETHODCALLTYPE bubbles( 
+
+    virtual HRESULT STDMETHODCALLTYPE bubbles(
         /* [retval][out] */ BOOL* result) { return DOMEvent::bubbles(result); }
-    
-    virtual HRESULT STDMETHODCALLTYPE cancelable( 
+
+    virtual HRESULT STDMETHODCALLTYPE cancelable(
         /* [retval][out] */ BOOL* result) { return DOMEvent::cancelable(result); }
-    
-    virtual HRESULT STDMETHODCALLTYPE timeStamp( 
+
+    virtual HRESULT STDMETHODCALLTYPE timeStamp(
         /* [retval][out] */ DOMTimeStamp* result) { return DOMEvent::timeStamp(result); }
-    
+
     virtual HRESULT STDMETHODCALLTYPE stopPropagation( void) { return DOMEvent::stopPropagation(); }
-    
+
     virtual HRESULT STDMETHODCALLTYPE preventDefault( void) { return DOMEvent::preventDefault(); }
-    
-    virtual HRESULT STDMETHODCALLTYPE initEvent( 
+
+    virtual HRESULT STDMETHODCALLTYPE initEvent(
         /* [in] */ BSTR eventTypeArg,
         /* [in] */ BOOL canBubbleArg,
         /* [in] */ BOOL cancelableArg) { return DOMEvent::initEvent(eventTypeArg, canBubbleArg, cancelableArg); }
 
     // IDOMUIEvent
-    virtual HRESULT STDMETHODCALLTYPE view( 
+    virtual HRESULT STDMETHODCALLTYPE view(
         /* [retval][out] */ IDOMWindow** result) { return DOMUIEvent::view(result); }
-    
-    virtual HRESULT STDMETHODCALLTYPE detail( 
+
+    virtual HRESULT STDMETHODCALLTYPE detail(
         /* [retval][out] */ long* result) { return DOMUIEvent::detail(result); }
-    
-    virtual HRESULT STDMETHODCALLTYPE initUIEvent( 
+
+    virtual HRESULT STDMETHODCALLTYPE initUIEvent(
         /* [in] */ BSTR type,
         /* [in] */ BOOL canBubble,
         /* [in] */ BOOL cancelable,
         /* [in] */ IDOMWindow* view,
         /* [in] */ long detail) { return DOMUIEvent::initUIEvent(type, canBubble, cancelable, view, detail); }
-    
-    virtual HRESULT STDMETHODCALLTYPE keyCode( 
+
+    virtual HRESULT STDMETHODCALLTYPE keyCode(
         /* [retval][out] */ long* result) { return DOMUIEvent::keyCode(result); }
-    
-    virtual HRESULT STDMETHODCALLTYPE charCode( 
+
+    virtual HRESULT STDMETHODCALLTYPE charCode(
         /* [retval][out] */ long* result) { return DOMUIEvent::charCode(result); }
-    
+
     virtual HRESULT STDMETHODCALLTYPE unused1(
         /* [retval][out] */ long* result) { return DOMUIEvent::unused1(result); }
-    
+
     virtual HRESULT STDMETHODCALLTYPE unused2(
         /* [retval][out] */ long* result) { return DOMUIEvent::unused2(result); }
-    
-    virtual HRESULT STDMETHODCALLTYPE pageX( 
+
+    virtual HRESULT STDMETHODCALLTYPE pageX(
         /* [retval][out] */ long* result) { return DOMUIEvent::pageX(result); }
-    
-    virtual HRESULT STDMETHODCALLTYPE pageY( 
+
+    virtual HRESULT STDMETHODCALLTYPE pageY(
         /* [retval][out] */ long* result) { return DOMUIEvent::pageY(result); }
-    
-    virtual HRESULT STDMETHODCALLTYPE which( 
+
+    virtual HRESULT STDMETHODCALLTYPE which(
         /* [retval][out] */ long* result) { return DOMUIEvent::which(result); }
 
     // IDOMMouseEvent
-    virtual HRESULT STDMETHODCALLTYPE screenX( 
+    virtual HRESULT STDMETHODCALLTYPE screenX(
         /* [retval][out] */ long* result);
-    
-    virtual HRESULT STDMETHODCALLTYPE screenY( 
+
+    virtual HRESULT STDMETHODCALLTYPE screenY(
         /* [retval][out] */ long* result);
-    
-    virtual HRESULT STDMETHODCALLTYPE clientX( 
+
+    virtual HRESULT STDMETHODCALLTYPE clientX(
         /* [retval][out] */ long* result);
-    
-    virtual HRESULT STDMETHODCALLTYPE clientY( 
+
+    virtual HRESULT STDMETHODCALLTYPE clientY(
         /* [retval][out] */ long* result);
-    
-    virtual HRESULT STDMETHODCALLTYPE ctrlKey( 
+
+    virtual HRESULT STDMETHODCALLTYPE ctrlKey(
         /* [retval][out] */ BOOL* result);
-    
-    virtual HRESULT STDMETHODCALLTYPE shiftKey( 
+
+    virtual HRESULT STDMETHODCALLTYPE shiftKey(
         /* [retval][out] */ BOOL* result);
-    
-    virtual HRESULT STDMETHODCALLTYPE altKey( 
+
+    virtual HRESULT STDMETHODCALLTYPE altKey(
         /* [retval][out] */ BOOL* result);
-    
-    virtual HRESULT STDMETHODCALLTYPE metaKey( 
+
+    virtual HRESULT STDMETHODCALLTYPE metaKey(
         /* [retval][out] */ BOOL* result);
-    
-    virtual HRESULT STDMETHODCALLTYPE button( 
+
+    virtual HRESULT STDMETHODCALLTYPE button(
         /* [retval][out] */ unsigned short* result);
-    
-    virtual HRESULT STDMETHODCALLTYPE relatedTarget( 
+
+    virtual HRESULT STDMETHODCALLTYPE relatedTarget(
         /* [retval][out] */ IDOMEventTarget** result);
-    
-    virtual HRESULT STDMETHODCALLTYPE initMouseEvent( 
+
+    virtual HRESULT STDMETHODCALLTYPE initMouseEvent(
         /* [in] */ BSTR type,
         /* [in] */ BOOL canBubble,
         /* [in] */ BOOL cancelable,
@@ -597,23 +597,23 @@ public:
         /* [in] */ BOOL metaKey,
         /* [in] */ unsigned short button,
         /* [in] */ IDOMEventTarget* relatedTarget);
-    
-    virtual HRESULT STDMETHODCALLTYPE offsetX( 
+
+    virtual HRESULT STDMETHODCALLTYPE offsetX(
         /* [retval][out] */ long* result);
-    
-    virtual HRESULT STDMETHODCALLTYPE offsetY( 
+
+    virtual HRESULT STDMETHODCALLTYPE offsetY(
         /* [retval][out] */ long* result);
-    
-    virtual HRESULT STDMETHODCALLTYPE x( 
+
+    virtual HRESULT STDMETHODCALLTYPE x(
         /* [retval][out] */ long* result);
-    
-    virtual HRESULT STDMETHODCALLTYPE y( 
+
+    virtual HRESULT STDMETHODCALLTYPE y(
         /* [retval][out] */ long* result);
-    
-    virtual HRESULT STDMETHODCALLTYPE fromElement( 
+
+    virtual HRESULT STDMETHODCALLTYPE fromElement(
         /* [retval][out] */ IDOMNode** result);
-    
-    virtual HRESULT STDMETHODCALLTYPE toElement( 
+
+    virtual HRESULT STDMETHODCALLTYPE toElement(
         /* [retval][out] */ IDOMNode** result);
 };
 
@@ -628,85 +628,85 @@ public:
     virtual ULONG STDMETHODCALLTYPE Release(void) { return DOMEvent::Release(); }
 
     // IWebScriptObject
-    virtual HRESULT STDMETHODCALLTYPE throwException( 
+    virtual HRESULT STDMETHODCALLTYPE throwException(
         /* [in] */ BSTR exceptionMessage,
         /* [retval][out] */ BOOL* result) { return DOMObject::throwException(exceptionMessage, result); }
-    
-    virtual HRESULT STDMETHODCALLTYPE callWebScriptMethod( 
+
+    virtual HRESULT STDMETHODCALLTYPE callWebScriptMethod(
         /* [in] */ BSTR name,
         /* [size_is][in] */ const VARIANT args[  ],
         /* [in] */ int cArgs,
         /* [retval][out] */ VARIANT* result) { return DOMObject::callWebScriptMethod(name, args, cArgs, result); }
-    
-    virtual HRESULT STDMETHODCALLTYPE evaluateWebScript( 
+
+    virtual HRESULT STDMETHODCALLTYPE evaluateWebScript(
         /* [in] */ BSTR script,
         /* [retval][out] */ VARIANT* result) { return DOMObject::evaluateWebScript(script, result); }
-    
-    virtual HRESULT STDMETHODCALLTYPE removeWebScriptKey( 
+
+    virtual HRESULT STDMETHODCALLTYPE removeWebScriptKey(
         /* [in] */ BSTR name) { return DOMObject::removeWebScriptKey(name); }
-    
-    virtual HRESULT STDMETHODCALLTYPE stringRepresentation( 
+
+    virtual HRESULT STDMETHODCALLTYPE stringRepresentation(
         /* [retval][out] */ BSTR* stringRepresentation) { return DOMObject::stringRepresentation(stringRepresentation); }
-    
-    virtual HRESULT STDMETHODCALLTYPE webScriptValueAtIndex( 
+
+    virtual HRESULT STDMETHODCALLTYPE webScriptValueAtIndex(
         /* [in] */ unsigned int index,
         /* [retval][out] */ VARIANT* result) { return DOMObject::webScriptValueAtIndex(index, result); }
-    
-    virtual HRESULT STDMETHODCALLTYPE setWebScriptValueAtIndex( 
+
+    virtual HRESULT STDMETHODCALLTYPE setWebScriptValueAtIndex(
         /* [in] */ unsigned int index,
         /* [in] */ VARIANT val) { return DOMObject::setWebScriptValueAtIndex(index, val); }
-    
-    virtual HRESULT STDMETHODCALLTYPE setException( 
+
+    virtual HRESULT STDMETHODCALLTYPE setException(
         /* [in] */ BSTR description) { return DOMObject::setException(description); }
 
     // IDOMEvent
-    virtual HRESULT STDMETHODCALLTYPE type( 
+    virtual HRESULT STDMETHODCALLTYPE type(
         /* [retval][out] */ BSTR* result) { return DOMEvent::type(result); }
-    
-    virtual HRESULT STDMETHODCALLTYPE target( 
+
+    virtual HRESULT STDMETHODCALLTYPE target(
         /* [retval][out] */ IDOMEventTarget** result) { return DOMEvent::target(result); }
-    
-    virtual HRESULT STDMETHODCALLTYPE currentTarget( 
+
+    virtual HRESULT STDMETHODCALLTYPE currentTarget(
         /* [retval][out] */ IDOMEventTarget** result) { return DOMEvent::currentTarget(result); }
-    
-    virtual HRESULT STDMETHODCALLTYPE eventPhase( 
+
+    virtual HRESULT STDMETHODCALLTYPE eventPhase(
         /* [retval][out] */ unsigned short* result) { return DOMEvent::eventPhase(result); }
-    
-    virtual HRESULT STDMETHODCALLTYPE bubbles( 
+
+    virtual HRESULT STDMETHODCALLTYPE bubbles(
         /* [retval][out] */ BOOL* result) { return DOMEvent::bubbles(result); }
-    
-    virtual HRESULT STDMETHODCALLTYPE cancelable( 
+
+    virtual HRESULT STDMETHODCALLTYPE cancelable(
         /* [retval][out] */ BOOL* result) { return DOMEvent::cancelable(result); }
-    
-    virtual HRESULT STDMETHODCALLTYPE timeStamp( 
+
+    virtual HRESULT STDMETHODCALLTYPE timeStamp(
         /* [retval][out] */ DOMTimeStamp* result) { return DOMEvent::timeStamp(result); }
-    
+
     virtual HRESULT STDMETHODCALLTYPE stopPropagation( void) { return DOMEvent::stopPropagation(); }
-    
+
     virtual HRESULT STDMETHODCALLTYPE preventDefault( void) { return DOMEvent::preventDefault(); }
-    
-    virtual HRESULT STDMETHODCALLTYPE initEvent( 
+
+    virtual HRESULT STDMETHODCALLTYPE initEvent(
         /* [in] */ BSTR eventTypeArg,
         /* [in] */ BOOL canBubbleArg,
         /* [in] */ BOOL cancelableArg) { return DOMEvent::initEvent(eventTypeArg, canBubbleArg, cancelableArg); }
 
     // IDOMMutationEvent
-    virtual HRESULT STDMETHODCALLTYPE relatedNode( 
+    virtual HRESULT STDMETHODCALLTYPE relatedNode(
         /* [retval][out] */ IDOMNode** result);
-    
-    virtual HRESULT STDMETHODCALLTYPE prevValue( 
+
+    virtual HRESULT STDMETHODCALLTYPE prevValue(
         /* [retval][out] */ BSTR* result);
-    
-    virtual HRESULT STDMETHODCALLTYPE newValue( 
+
+    virtual HRESULT STDMETHODCALLTYPE newValue(
         /* [retval][out] */ BSTR* result);
-    
-    virtual HRESULT STDMETHODCALLTYPE attrName( 
+
+    virtual HRESULT STDMETHODCALLTYPE attrName(
         /* [retval][out] */ BSTR* result);
-    
-    virtual HRESULT STDMETHODCALLTYPE attrChange( 
+
+    virtual HRESULT STDMETHODCALLTYPE attrChange(
         /* [retval][out] */ unsigned short* result);
-    
-    virtual HRESULT STDMETHODCALLTYPE initMutationEvent( 
+
+    virtual HRESULT STDMETHODCALLTYPE initMutationEvent(
         /* [in] */ BSTR type,
         /* [in] */ BOOL canBubble,
         /* [in] */ BOOL cancelable,
@@ -728,76 +728,76 @@ public:
     virtual ULONG STDMETHODCALLTYPE Release(void) { return DOMEvent::Release(); }
 
     // IWebScriptObject
-    virtual HRESULT STDMETHODCALLTYPE throwException( 
+    virtual HRESULT STDMETHODCALLTYPE throwException(
         /* [in] */ BSTR exceptionMessage,
         /* [retval][out] */ BOOL* result) { return DOMObject::throwException(exceptionMessage, result); }
-    
-    virtual HRESULT STDMETHODCALLTYPE callWebScriptMethod( 
+
+    virtual HRESULT STDMETHODCALLTYPE callWebScriptMethod(
         /* [in] */ BSTR name,
         /* [size_is][in] */ const VARIANT args[  ],
         /* [in] */ int cArgs,
         /* [retval][out] */ VARIANT* result) { return DOMObject::callWebScriptMethod(name, args, cArgs, result); }
-    
-    virtual HRESULT STDMETHODCALLTYPE evaluateWebScript( 
+
+    virtual HRESULT STDMETHODCALLTYPE evaluateWebScript(
         /* [in] */ BSTR script,
         /* [retval][out] */ VARIANT* result) { return DOMObject::evaluateWebScript(script, result); }
-    
-    virtual HRESULT STDMETHODCALLTYPE removeWebScriptKey( 
+
+    virtual HRESULT STDMETHODCALLTYPE removeWebScriptKey(
         /* [in] */ BSTR name) { return DOMObject::removeWebScriptKey(name); }
-    
-    virtual HRESULT STDMETHODCALLTYPE stringRepresentation( 
+
+    virtual HRESULT STDMETHODCALLTYPE stringRepresentation(
         /* [retval][out] */ BSTR* stringRepresentation) { return DOMObject::stringRepresentation(stringRepresentation); }
-    
-    virtual HRESULT STDMETHODCALLTYPE webScriptValueAtIndex( 
+
+    virtual HRESULT STDMETHODCALLTYPE webScriptValueAtIndex(
         /* [in] */ unsigned int index,
         /* [retval][out] */ VARIANT* result) { return DOMObject::webScriptValueAtIndex(index, result); }
-    
-    virtual HRESULT STDMETHODCALLTYPE setWebScriptValueAtIndex( 
+
+    virtual HRESULT STDMETHODCALLTYPE setWebScriptValueAtIndex(
         /* [in] */ unsigned int index,
         /* [in] */ VARIANT val) { return DOMObject::setWebScriptValueAtIndex(index, val); }
-    
-    virtual HRESULT STDMETHODCALLTYPE setException( 
+
+    virtual HRESULT STDMETHODCALLTYPE setException(
         /* [in] */ BSTR description) { return DOMObject::setException(description); }
 
     // IDOMEvent
-    virtual HRESULT STDMETHODCALLTYPE type( 
+    virtual HRESULT STDMETHODCALLTYPE type(
         /* [retval][out] */ BSTR* result) { return DOMEvent::type(result); }
-    
-    virtual HRESULT STDMETHODCALLTYPE target( 
+
+    virtual HRESULT STDMETHODCALLTYPE target(
         /* [retval][out] */ IDOMEventTarget** result) { return DOMEvent::target(result); }
-    
-    virtual HRESULT STDMETHODCALLTYPE currentTarget( 
+
+    virtual HRESULT STDMETHODCALLTYPE currentTarget(
         /* [retval][out] */ IDOMEventTarget** result) { return DOMEvent::currentTarget(result); }
-    
-    virtual HRESULT STDMETHODCALLTYPE eventPhase( 
+
+    virtual HRESULT STDMETHODCALLTYPE eventPhase(
         /* [retval][out] */ unsigned short* result) { return DOMEvent::eventPhase(result); }
-    
-    virtual HRESULT STDMETHODCALLTYPE bubbles( 
+
+    virtual HRESULT STDMETHODCALLTYPE bubbles(
         /* [retval][out] */ BOOL* result) { return DOMEvent::bubbles(result); }
-    
-    virtual HRESULT STDMETHODCALLTYPE cancelable( 
+
+    virtual HRESULT STDMETHODCALLTYPE cancelable(
         /* [retval][out] */ BOOL* result) { return DOMEvent::cancelable(result); }
-    
-    virtual HRESULT STDMETHODCALLTYPE timeStamp( 
+
+    virtual HRESULT STDMETHODCALLTYPE timeStamp(
         /* [retval][out] */ DOMTimeStamp* result) { return DOMEvent::timeStamp(result); }
-    
+
     virtual HRESULT STDMETHODCALLTYPE stopPropagation( void) { return DOMEvent::stopPropagation(); }
-    
+
     virtual HRESULT STDMETHODCALLTYPE preventDefault( void) { return DOMEvent::preventDefault(); }
-    
-    virtual HRESULT STDMETHODCALLTYPE initEvent( 
+
+    virtual HRESULT STDMETHODCALLTYPE initEvent(
         /* [in] */ BSTR eventTypeArg,
         /* [in] */ BOOL canBubbleArg,
         /* [in] */ BOOL cancelableArg) { return DOMEvent::initEvent(eventTypeArg, canBubbleArg, cancelableArg); }
 
     // IDOMOverflowEvent
-    virtual HRESULT STDMETHODCALLTYPE orient( 
+    virtual HRESULT STDMETHODCALLTYPE orient(
         /* [retval][out] */ unsigned short* result);
-    
-    virtual HRESULT STDMETHODCALLTYPE horizontalOverflow( 
+
+    virtual HRESULT STDMETHODCALLTYPE horizontalOverflow(
         /* [retval][out] */ BOOL* result);
-    
-    virtual HRESULT STDMETHODCALLTYPE verticalOverflow( 
+
+    virtual HRESULT STDMETHODCALLTYPE verticalOverflow(
         /* [retval][out] */ BOOL* result);
 };
 
@@ -812,153 +812,153 @@ public:
     virtual ULONG STDMETHODCALLTYPE Release(void) { return DOMUIEvent::Release(); }
 
     // IWebScriptObject
-    virtual HRESULT STDMETHODCALLTYPE throwException( 
+    virtual HRESULT STDMETHODCALLTYPE throwException(
         /* [in] */ BSTR exceptionMessage,
         /* [retval][out] */ BOOL* result) { return DOMObject::throwException(exceptionMessage, result); }
-    
-    virtual HRESULT STDMETHODCALLTYPE callWebScriptMethod( 
+
+    virtual HRESULT STDMETHODCALLTYPE callWebScriptMethod(
         /* [in] */ BSTR name,
         /* [size_is][in] */ const VARIANT args[  ],
         /* [in] */ int cArgs,
         /* [retval][out] */ VARIANT* result) { return DOMObject::callWebScriptMethod(name, args, cArgs, result); }
-    
-    virtual HRESULT STDMETHODCALLTYPE evaluateWebScript( 
+
+    virtual HRESULT STDMETHODCALLTYPE evaluateWebScript(
         /* [in] */ BSTR script,
         /* [retval][out] */ VARIANT* result) { return DOMObject::evaluateWebScript(script, result); }
-    
-    virtual HRESULT STDMETHODCALLTYPE removeWebScriptKey( 
+
+    virtual HRESULT STDMETHODCALLTYPE removeWebScriptKey(
         /* [in] */ BSTR name) { return DOMObject::removeWebScriptKey(name); }
-    
-    virtual HRESULT STDMETHODCALLTYPE stringRepresentation( 
+
+    virtual HRESULT STDMETHODCALLTYPE stringRepresentation(
         /* [retval][out] */ BSTR* stringRepresentation) { return DOMObject::stringRepresentation(stringRepresentation); }
-    
-    virtual HRESULT STDMETHODCALLTYPE webScriptValueAtIndex( 
+
+    virtual HRESULT STDMETHODCALLTYPE webScriptValueAtIndex(
         /* [in] */ unsigned int index,
         /* [retval][out] */ VARIANT* result) { return DOMObject::webScriptValueAtIndex(index, result); }
-    
-    virtual HRESULT STDMETHODCALLTYPE setWebScriptValueAtIndex( 
+
+    virtual HRESULT STDMETHODCALLTYPE setWebScriptValueAtIndex(
         /* [in] */ unsigned int index,
         /* [in] */ VARIANT val) { return DOMObject::setWebScriptValueAtIndex(index, val); }
-    
-    virtual HRESULT STDMETHODCALLTYPE setException( 
+
+    virtual HRESULT STDMETHODCALLTYPE setException(
         /* [in] */ BSTR description) { return DOMObject::setException(description); }
 
     // IDOMEvent
-    virtual HRESULT STDMETHODCALLTYPE type( 
+    virtual HRESULT STDMETHODCALLTYPE type(
         /* [retval][out] */ BSTR* result) { return DOMEvent::type(result); }
-    
-    virtual HRESULT STDMETHODCALLTYPE target( 
+
+    virtual HRESULT STDMETHODCALLTYPE target(
         /* [retval][out] */ IDOMEventTarget** result) { return DOMEvent::target(result); }
-    
-    virtual HRESULT STDMETHODCALLTYPE currentTarget( 
+
+    virtual HRESULT STDMETHODCALLTYPE currentTarget(
         /* [retval][out] */ IDOMEventTarget** result) { return DOMEvent::currentTarget(result); }
-    
-    virtual HRESULT STDMETHODCALLTYPE eventPhase( 
+
+    virtual HRESULT STDMETHODCALLTYPE eventPhase(
         /* [retval][out] */ unsigned short* result) { return DOMEvent::eventPhase(result); }
-    
-    virtual HRESULT STDMETHODCALLTYPE bubbles( 
+
+    virtual HRESULT STDMETHODCALLTYPE bubbles(
         /* [retval][out] */ BOOL* result) { return DOMEvent::bubbles(result); }
-    
-    virtual HRESULT STDMETHODCALLTYPE cancelable( 
+
+    virtual HRESULT STDMETHODCALLTYPE cancelable(
         /* [retval][out] */ BOOL* result) { return DOMEvent::cancelable(result); }
-    
-    virtual HRESULT STDMETHODCALLTYPE timeStamp( 
+
+    virtual HRESULT STDMETHODCALLTYPE timeStamp(
         /* [retval][out] */ DOMTimeStamp* result) { return DOMEvent::timeStamp(result); }
-    
+
     virtual HRESULT STDMETHODCALLTYPE stopPropagation( void) { return DOMEvent::stopPropagation(); }
-    
+
     virtual HRESULT STDMETHODCALLTYPE preventDefault( void) { return DOMEvent::preventDefault(); }
-    
-    virtual HRESULT STDMETHODCALLTYPE initEvent( 
+
+    virtual HRESULT STDMETHODCALLTYPE initEvent(
         /* [in] */ BSTR eventTypeArg,
         /* [in] */ BOOL canBubbleArg,
         /* [in] */ BOOL cancelableArg) { return DOMEvent::initEvent(eventTypeArg, canBubbleArg, cancelableArg); }
 
     // IDOMUIEvent
-    virtual HRESULT STDMETHODCALLTYPE view( 
+    virtual HRESULT STDMETHODCALLTYPE view(
         /* [retval][out] */ IDOMWindow** result) { return DOMUIEvent::view(result); }
-    
-    virtual HRESULT STDMETHODCALLTYPE detail( 
+
+    virtual HRESULT STDMETHODCALLTYPE detail(
         /* [retval][out] */ long* result) { return DOMUIEvent::detail(result); }
-    
-    virtual HRESULT STDMETHODCALLTYPE initUIEvent( 
+
+    virtual HRESULT STDMETHODCALLTYPE initUIEvent(
         /* [in] */ BSTR type,
         /* [in] */ BOOL canBubble,
         /* [in] */ BOOL cancelable,
         /* [in] */ IDOMWindow* view,
         /* [in] */ long detail) { return DOMUIEvent::initUIEvent(type, canBubble, cancelable, view, detail); }
-    
-    virtual HRESULT STDMETHODCALLTYPE keyCode( 
+
+    virtual HRESULT STDMETHODCALLTYPE keyCode(
         /* [retval][out] */ long* result) { return DOMUIEvent::keyCode(result); }
-    
-    virtual HRESULT STDMETHODCALLTYPE charCode( 
+
+    virtual HRESULT STDMETHODCALLTYPE charCode(
         /* [retval][out] */ long* result) { return DOMUIEvent::charCode(result); }
-    
+
     virtual HRESULT STDMETHODCALLTYPE unused1(
         /* [retval][out] */ long* result) { return DOMUIEvent::unused1(result); }
-    
+
     virtual HRESULT STDMETHODCALLTYPE unused2(
         /* [retval][out] */ long* result) { return DOMUIEvent::unused2(result); }
-    
-    virtual HRESULT STDMETHODCALLTYPE pageX( 
+
+    virtual HRESULT STDMETHODCALLTYPE pageX(
         /* [retval][out] */ long* result) { return DOMUIEvent::pageX(result); }
-    
-    virtual HRESULT STDMETHODCALLTYPE pageY( 
+
+    virtual HRESULT STDMETHODCALLTYPE pageY(
         /* [retval][out] */ long* result) { return DOMUIEvent::pageY(result); }
-    
-    virtual HRESULT STDMETHODCALLTYPE which( 
+
+    virtual HRESULT STDMETHODCALLTYPE which(
         /* [retval][out] */ long* result) { return DOMUIEvent::which(result); }
 
     // IDOMWheelEvent
-    virtual HRESULT STDMETHODCALLTYPE screenX( 
+    virtual HRESULT STDMETHODCALLTYPE screenX(
         /* [retval][out] */ long* result);
-    
-    virtual HRESULT STDMETHODCALLTYPE screenY( 
+
+    virtual HRESULT STDMETHODCALLTYPE screenY(
         /* [retval][out] */ long* result);
-    
-    virtual HRESULT STDMETHODCALLTYPE clientX( 
+
+    virtual HRESULT STDMETHODCALLTYPE clientX(
         /* [retval][out] */ long* result);
-    
-    virtual HRESULT STDMETHODCALLTYPE clientY( 
+
+    virtual HRESULT STDMETHODCALLTYPE clientY(
         /* [retval][out] */ long* result);
-    
-    virtual HRESULT STDMETHODCALLTYPE ctrlKey( 
+
+    virtual HRESULT STDMETHODCALLTYPE ctrlKey(
         /* [retval][out] */ BOOL* result);
-    
-    virtual HRESULT STDMETHODCALLTYPE shiftKey( 
+
+    virtual HRESULT STDMETHODCALLTYPE shiftKey(
         /* [retval][out] */ BOOL* result);
-    
-    virtual HRESULT STDMETHODCALLTYPE altKey( 
+
+    virtual HRESULT STDMETHODCALLTYPE altKey(
         /* [retval][out] */ BOOL* result);
-    
-    virtual HRESULT STDMETHODCALLTYPE metaKey( 
+
+    virtual HRESULT STDMETHODCALLTYPE metaKey(
         /* [retval][out] */ BOOL* result);
-    
-    virtual HRESULT STDMETHODCALLTYPE wheelDelta( 
+
+    virtual HRESULT STDMETHODCALLTYPE wheelDelta(
         /* [retval][out] */ long* result);
-    
-    virtual HRESULT STDMETHODCALLTYPE wheelDeltaX( 
+
+    virtual HRESULT STDMETHODCALLTYPE wheelDeltaX(
         /* [retval][out] */ long* result);
-    
-    virtual HRESULT STDMETHODCALLTYPE wheelDeltaY( 
+
+    virtual HRESULT STDMETHODCALLTYPE wheelDeltaY(
         /* [retval][out] */ long* result);
-    
-    virtual HRESULT STDMETHODCALLTYPE offsetX( 
+
+    virtual HRESULT STDMETHODCALLTYPE offsetX(
         /* [retval][out] */ long* result);
-    
-    virtual HRESULT STDMETHODCALLTYPE offsetY( 
+
+    virtual HRESULT STDMETHODCALLTYPE offsetY(
         /* [retval][out] */ long* result);
-    
-    virtual HRESULT STDMETHODCALLTYPE x( 
+
+    virtual HRESULT STDMETHODCALLTYPE x(
         /* [retval][out] */ long* result);
-    
-    virtual HRESULT STDMETHODCALLTYPE y( 
+
+    virtual HRESULT STDMETHODCALLTYPE y(
         /* [retval][out] */ long* result);
-    
-    virtual HRESULT STDMETHODCALLTYPE isHorizontal( 
+
+    virtual HRESULT STDMETHODCALLTYPE isHorizontal(
         /* [retval][out] */ BOOL* result);
-    
-    virtual HRESULT STDMETHODCALLTYPE initWheelEvent( 
+
+    virtual HRESULT STDMETHODCALLTYPE initWheelEvent(
         /* [in] */ long wheelDeltaX,
         /* [in] */ long wheelDeltaY,
         /* [in] */ IDOMWindow* view,

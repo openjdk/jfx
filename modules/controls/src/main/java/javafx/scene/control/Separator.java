@@ -118,7 +118,7 @@ public class Separator extends Control {
      * The orientation of the {@code Separator} can either be horizontal
      * or vertical.
      */
-    private ObjectProperty<Orientation> orientation = 
+    private ObjectProperty<Orientation> orientation =
         new StyleableObjectProperty<Orientation>(Orientation.HORIZONTAL) {
 
             @Override protected void invalidated() {
@@ -127,7 +127,7 @@ public class Separator extends Control {
                 pseudoClassStateChanged(HORIZONTAL_PSEUDOCLASS_STATE, !isVertical);
             }
 
-            @Override 
+            @Override
             public CssMetaData<Separator,Orientation> getCssMetaData() {
                 return StyleableProperties.ORIENTATION;
             }
@@ -179,7 +179,7 @@ public class Separator extends Control {
                 public CssMetaData<Separator,HPos> getCssMetaData() {
                     return StyleableProperties.HALIGNMENT;
                 }
-                
+
             };
         }
         return halignment;
@@ -217,7 +217,7 @@ public class Separator extends Control {
                 public CssMetaData<Separator,VPos> getCssMetaData() {
                     return StyleableProperties.VALIGNMENT;
                 }
-                
+
             };
         }
         return valignment;
@@ -237,14 +237,14 @@ public class Separator extends Control {
     private static final String DEFAULT_STYLE_CLASS = "separator";
 
     private static class StyleableProperties {
-        private static final CssMetaData<Separator,Orientation> ORIENTATION = 
+        private static final CssMetaData<Separator,Orientation> ORIENTATION =
                 new CssMetaData<Separator,Orientation>("-fx-orientation",
                 new EnumConverter<Orientation>(Orientation.class),
                 Orientation.HORIZONTAL) {
 
             @Override
             public Orientation getInitialValue(Separator node) {
-                // A vertical Separator should remain vertical 
+                // A vertical Separator should remain vertical
                 return node.getOrientation();
             }
 
@@ -258,8 +258,8 @@ public class Separator extends Control {
                 return (StyleableProperty<Orientation>)(WritableValue<Orientation>)n.orientationProperty();
             }
         };
-        
-        private static final CssMetaData<Separator,HPos> HALIGNMENT = 
+
+        private static final CssMetaData<Separator,HPos> HALIGNMENT =
                 new CssMetaData<Separator,HPos>("-fx-halignment",
                 new EnumConverter<HPos>(HPos.class),
                 HPos.CENTER) {
@@ -274,8 +274,8 @@ public class Separator extends Control {
                 return (StyleableProperty<HPos>)(WritableValue<HPos>)n.halignmentProperty();
             }
         };
-        
-        private static final CssMetaData<Separator,VPos> VALIGNMENT = 
+
+        private static final CssMetaData<Separator,VPos> VALIGNMENT =
                 new CssMetaData<Separator,VPos>("-fx-valignment",
                 new EnumConverter<VPos>(VPos.class),
                 VPos.CENTER){
@@ -336,5 +336,5 @@ public class Separator extends Control {
     @Override protected Boolean getInitialFocusTraversable() {
         return Boolean.FALSE;
     }
-    
+
 }

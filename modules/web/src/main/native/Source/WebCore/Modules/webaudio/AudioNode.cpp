@@ -124,7 +124,7 @@ AudioNodeOutput* AudioNode::output(unsigned i)
 
 void AudioNode::connect(AudioNode* destination, unsigned outputIndex, unsigned inputIndex, ExceptionCode& ec)
 {
-    ASSERT(isMainThread()); 
+    ASSERT(isMainThread());
     AudioContext::AutoLocker locker(*context());
 
     if (!destination) {
@@ -342,7 +342,7 @@ bool AudioNode::propagatesSilence() const
 void AudioNode::pullInputs(size_t framesToProcess)
 {
     ASSERT(context()->isAudioThread());
-    
+
     // Process all of the AudioNodes connected to our inputs.
     for (unsigned i = 0; i < m_inputs.size(); ++i)
         input(i)->pull(0, framesToProcess);
@@ -437,7 +437,7 @@ void AudioNode::deref(RefType refType)
     // In the case of the audio thread, we must use a tryLock to avoid glitches.
     bool hasLock = false;
     bool mustReleaseLock = false;
-    
+
     if (context()->isAudioThread()) {
         // Real-time audio thread must not contend lock (to avoid glitches).
         hasLock = context()->tryLock(mustReleaseLock);
@@ -445,7 +445,7 @@ void AudioNode::deref(RefType refType)
         context()->lock(mustReleaseLock);
         hasLock = true;
     }
-    
+
     if (hasLock) {
         // This is where the real deref work happens.
         finishDeref(refType);
@@ -469,7 +469,7 @@ void AudioNode::deref(RefType refType)
 void AudioNode::finishDeref(RefType refType)
 {
     ASSERT(context()->isGraphOwner());
-    
+
     switch (refType) {
     case RefTypeNormal:
         ASSERT(m_normalRefCount > 0);
@@ -482,7 +482,7 @@ void AudioNode::finishDeref(RefType refType)
     default:
         ASSERT_NOT_REACHED();
     }
-    
+
 #if DEBUG_AUDIONODE_REFERENCES
     fprintf(stderr, "%p: %d: AudioNode::deref(%d) %d %d\n", this, nodeType(), refType, m_normalRefCount, m_connectionRefCount);
 #endif

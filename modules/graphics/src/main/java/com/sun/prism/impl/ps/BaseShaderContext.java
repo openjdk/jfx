@@ -139,7 +139,7 @@ public abstract class BaseShaderContext extends BaseContext {
         TEXTURE_First_LCD    ("Solid_TextureFirstPassLCD"),
         TEXTURE_SECOND_LCD   ("Solid_TextureSecondPassLCD"),
         SUPER                ("Mask_TextureSuper");
-         
+
         private String name;
         private SpecialShaderType(String name) {
             this.name = name;
@@ -151,7 +151,7 @@ public abstract class BaseShaderContext extends BaseContext {
     private final Shader[] specialShaders = new Shader[SpecialShaderType.values().length];
     // specialShaders with alpha test
     private final Shader[] specialATShaders = new Shader[SpecialShaderType.values().length];
-    
+
     private Shader externalShader;
 
     private RTTexture lcdBuffer;

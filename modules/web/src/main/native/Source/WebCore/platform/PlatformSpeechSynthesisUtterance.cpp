@@ -34,7 +34,7 @@ PassRefPtr<PlatformSpeechSynthesisUtterance> PlatformSpeechSynthesisUtterance::c
 {
     return adoptRef(new PlatformSpeechSynthesisUtterance(client));
 }
-    
+
 PlatformSpeechSynthesisUtterance::PlatformSpeechSynthesisUtterance(PlatformSpeechSynthesisUtteranceClient* client)
     : m_client(client)
     , m_volume(1.0f)
@@ -42,7 +42,7 @@ PlatformSpeechSynthesisUtterance::PlatformSpeechSynthesisUtterance(PlatformSpeec
     , m_pitch(1.0f)
 {
 }
-    
+
 } // namespace WebCore
 
 #endif // ENABLE(SPEECH_SYNTHESIS)

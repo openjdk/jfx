@@ -43,7 +43,7 @@ import javafx.geometry.Orientation;
  * This first example creates a ProgressBar with an indeterminate value :
  * <pre><code>
  * import javafx.scene.control.ProgressBar;
- * 
+ *
  * ProgressBar p1 = new ProgressBar();
  * </code></pre>
  * <p>
@@ -78,8 +78,8 @@ public class ProgressBar extends ProgressIndicator {
      */
     public ProgressBar(double progress) {
         // focusTraversable is styleable through css. Calling setFocusTraversable
-        // makes it look to css like the user set the value and css will not 
-        // override. Initializing focusTraversable by calling set on the 
+        // makes it look to css like the user set the value and css will not
+        // override. Initializing focusTraversable by calling set on the
         // CssMetaData ensures that css will be able to override the value.
         ((StyleableProperty<Boolean>)(WritableValue<Boolean>)focusTraversableProperty()).applyStyle(null, Boolean.FALSE);
         setProgress(progress);
@@ -136,5 +136,5 @@ public class ProgressBar extends ProgressIndicator {
             case ORIENTATION: return Orientation.HORIZONTAL;
             default: return super.queryAccessibleAttribute(attribute, parameters);
         }
-    }    
+    }
 }

@@ -51,12 +51,12 @@ bool StringObject::getOwnPropertySlot(JSObject* cell, ExecState* exec, PropertyN
         return true;
     return JSObject::getOwnPropertySlot(thisObject, exec, propertyName, slot);
 }
-    
+
 bool StringObject::getOwnPropertySlotByIndex(JSObject* object, ExecState* exec, unsigned propertyName, PropertySlot& slot)
 {
     StringObject* thisObject = jsCast<StringObject*>(object);
     if (thisObject->internalValue()->getStringPropertySlot(exec, propertyName, slot))
-        return true;    
+        return true;
     return JSObject::getOwnPropertySlot(thisObject, exec, Identifier::from(exec, propertyName), slot);
 }
 

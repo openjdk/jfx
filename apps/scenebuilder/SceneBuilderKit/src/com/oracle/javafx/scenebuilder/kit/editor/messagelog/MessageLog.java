@@ -46,54 +46,54 @@ import javafx.beans.property.SimpleIntegerProperty;
  *
  */
 public class MessageLog {
-    
+
     private final List<MessageLogEntry> entries = new ArrayList<>();
     private final SimpleIntegerProperty revision = new SimpleIntegerProperty();
     private final SimpleIntegerProperty numOfWarningMessages = new SimpleIntegerProperty();
     private final static String TIMESTAMP_PATTERN = "h:mm a EEEEEEEEE d MMM. yyyy"; //NOI18N
     private static SimpleDateFormat TIMESTAMP_DATE_FORMAT;
-    
-    
+
+
     /*
      * Public
      */
-    
+
     public void logInfoMessage(String infoKey, ResourceBundle bundle, Object... arguments) {
         logMessage(MessageLogEntry.Type.INFO, bundle, infoKey, arguments);
     }
-    
+
     public void logWarningMessage(String warningKey, ResourceBundle bundle, Object... arguments) {
         logMessage(MessageLogEntry.Type.WARNING, bundle, warningKey, arguments);
     }
-    
+
     public void logInfoMessage(String infoKey, Object... arguments) {
         logInfoMessage(infoKey, I18N.getBundle(), arguments);
     }
-    
+
     public void logWarningMessage(String warningKey, Object... arguments) {
         logWarningMessage(warningKey, I18N.getBundle(), arguments);
     }
-    
+
     public IntegerProperty revisionProperty() {
         return revision;
     }
-    
+
     public IntegerProperty numOfWarningMessagesProperty() {
         return numOfWarningMessages;
     }
-    
+
     public List<MessageLogEntry> getEntries() {
         return Collections.unmodifiableList(entries);
     }
-    
+
     public MessageLogEntry getYoungestEntry() {
         return entries.isEmpty() ? null : entries.get(0);
     }
-    
+
     public int getEntryCount() {
         return entries.size();
     }
-    
+
     public int getWarningEntryCount() {
         int count = 0;
         for (MessageLogEntry entry : entries) {
@@ -103,7 +103,7 @@ public class MessageLog {
         }
         return count;
     }
-    
+
     public void clear() {
         if (entries.isEmpty() == false) {
             entries.clear();
@@ -111,23 +111,23 @@ public class MessageLog {
             resetNumOfWarningMessages();
         }
     }
-    
+
     public void clearEntry(MessageLogEntry entry) {
         assert entry != null;
         assert entries.contains(entry);
         entries.remove(entry);
         incrementRevision();
-        
+
         if (entry.getType().equals(MessageLogEntry.Type.WARNING)) {
             decrementNumOfWarningMessages();
         }
     }
-    
+
 
     /*
      * Private
      */
-    
+
     private synchronized String getTimeStamp() {
         // We create TIMESTAMP_DATE_FORMAT lazily because it seems to be slow
         if (TIMESTAMP_DATE_FORMAT == null) {
@@ -135,30 +135,30 @@ public class MessageLog {
         }
         return TIMESTAMP_DATE_FORMAT.format(new Date());
     }
-    
+
     private void logMessage(MessageLogEntry.Type messageType, ResourceBundle bundle, String messageKey, Object... arguments) {
         final String messageText = MessageFormat.format(bundle.getString(messageKey), arguments);
         final MessageLogEntry entry = new MessageLogEntry(messageType, messageText, getTimeStamp());
         entries.add(0, entry);
         incrementRevision();
-        
+
         if (messageType.equals(MessageLogEntry.Type.WARNING)) {
             incrementNumOfWarningMessages();
         }
     }
-    
+
     private void incrementRevision() {
         revision.set(revision.get() + 1);
     }
-    
+
     private void incrementNumOfWarningMessages() {
         numOfWarningMessages.set(numOfWarningMessages.get() + 1);
     }
-    
+
     private void decrementNumOfWarningMessages() {
         numOfWarningMessages.set(numOfWarningMessages.get() - 1);
     }
-    
+
     private void resetNumOfWarningMessages() {
         numOfWarningMessages.set(0);
     }

@@ -43,15 +43,15 @@ public class ImplUtils {
     private ImplUtils() {
         // no-op
     }
-    
+
     public static List<Node> getChildren(Node n, boolean useReflection) {
         return n instanceof Parent ? getChildren((Parent)n, useReflection) : Collections.emptyList();
     }
-    
+
     @SuppressWarnings("unchecked")
     public static ObservableList<Node> getChildren(Parent p, boolean useReflection) {
         ObservableList<Node> children = null;
-        
+
         // previously we used reflection immediately, now we try to avoid reflection
         // by checking the type of the Parent. Still not great...
         if (p instanceof Pane) {
@@ -68,7 +68,7 @@ public class ImplUtils {
             // we really want to avoid using this!!!!
             try {
                 Method getChildrenMethod = Parent.class.getDeclaredMethod("getChildren"); //$NON-NLS-1$
-                
+
                 if (getChildrenMethod != null) {
                     if (! getChildrenMethod.isAccessible()) {
                         getChildrenMethod.setAccessible(true);
@@ -81,12 +81,12 @@ public class ImplUtils {
                 throw new RuntimeException("Unable to get children for Parent of type " + p.getClass(), e);
             }
         }
-        
+
         if (useReflection && children == null) {
-            throw new RuntimeException("Unable to get children for Parent of type " + p.getClass() + 
+            throw new RuntimeException("Unable to get children for Parent of type " + p.getClass() +
                                        ". useReflection is set to true");
         }
-        
+
         return children == null ? FXCollections.emptyObservableList() : children;
     }
 }

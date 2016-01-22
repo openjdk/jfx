@@ -30,7 +30,7 @@ package javafx.beans.property;
  * creates two properties that are synchronized. One property is read-only
  * and can be passed to external users. The other property is read- and
  * writable and should be used internally only.
- * 
+ *
  * @since JavaFX 2.0
  */
 public class ReadOnlyObjectWrapper<T> extends SimpleObjectProperty<T> {
@@ -45,7 +45,7 @@ public class ReadOnlyObjectWrapper<T> extends SimpleObjectProperty<T> {
 
     /**
      * The constructor of {@code ReadOnlyObjectWrapper}
-     * 
+     *
      * @param initialValue
      *            the initial value of the wrapped value
      */
@@ -55,7 +55,7 @@ public class ReadOnlyObjectWrapper<T> extends SimpleObjectProperty<T> {
 
     /**
      * The constructor of {@code ReadOnlyObjectWrapper}
-     * 
+     *
      * @param bean
      *            the bean of this {@code ReadOnlyObjectProperty}
      * @param name
@@ -67,7 +67,7 @@ public class ReadOnlyObjectWrapper<T> extends SimpleObjectProperty<T> {
 
     /**
      * The constructor of {@code ReadOnlyObjectWrapper}
-     * 
+     *
      * @param bean
      *            the bean of this {@code ReadOnlyObjectProperty}
      * @param name
@@ -82,7 +82,7 @@ public class ReadOnlyObjectWrapper<T> extends SimpleObjectProperty<T> {
     /**
      * Returns the readonly property, that is synchronized with this
      * {@code ReadOnlyObjectWrapper}.
-     * 
+     *
      * @return the readonly property
      */
     public ReadOnlyObjectProperty<T> getReadOnlyProperty() {

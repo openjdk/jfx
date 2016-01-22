@@ -43,7 +43,7 @@ public class CreateGame extends Message {
 
     public CreateGame() {
     }
-    
+
     public CreateGame(String gameId, Color color) {
         this(gameId, color, null);
     }

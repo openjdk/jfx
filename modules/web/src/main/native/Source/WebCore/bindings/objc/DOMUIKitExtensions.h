@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
 
@@ -34,7 +34,7 @@
 #import <WebCore/DOMNode.h>
 #import <WebCore/DOMRange.h>
 
-typedef enum { 
+typedef enum {
     // The first four match SelectionDirection.  The last two don't have WebKit counterparts because
     // they aren't necessary until there is support vertical layout.
     WebTextAdjustmentForward,
@@ -43,7 +43,7 @@ typedef enum {
     WebTextAdjustmentLeft,
     WebTextAdjustmentUp,
     WebTextAdjustmentDown
-} WebTextAdjustmentDirection; 
+} WebTextAdjustmentDirection;
 
 @interface DOMRange (UIKitExtensions)
 
@@ -82,7 +82,7 @@ typedef enum {
 - (NSString *)mimeType;
 @end
 
-@interface DOMElement (DOMUIKitComplexityExtensions) 
+@interface DOMElement (DOMUIKitComplexityExtensions)
 - (int)structuralComplexityContribution; // Does not include children.
 @end
 

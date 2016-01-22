@@ -69,7 +69,7 @@ public:
     bool equals(const WebKitCSSTransformValue& other) const { return m_type == other.m_type && CSSValueList::equals(other); }
 
     TransformOperationType operationType() const { return m_type; }
-    
+
     PassRefPtr<WebKitCSSTransformValue> cloneForCSSOM() const;
 
 private:

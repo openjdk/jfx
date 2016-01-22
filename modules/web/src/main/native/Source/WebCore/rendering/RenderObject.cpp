@@ -527,7 +527,7 @@ RenderFlowThread* RenderObject::locateFlowThreadContainingBlock() const
     RenderFlowThread* flowThread = view().flowThreadController().currentRenderFlowThread();
     if (flowThread)
         return flowThread;
-    
+
     // Not in the middle of layout so have to find the thread the slow way.
     RenderObject* curr = const_cast<RenderObject*>(this);
     while (curr) {
@@ -675,7 +675,7 @@ void RenderObject::invalidateContainerPreferredLogicalWidths()
     // in the chain that we mark dirty (even though they're kind of irrelevant).
     auto o = isTableCell() ? containingBlock() : container();
     while (o && !o->preferredLogicalWidthsDirty()) {
-        // Don't invalidate the outermost object of an unrooted subtree. That object will be 
+        // Don't invalidate the outermost object of an unrooted subtree. That object will be
         // invalidated when the subtree is added to the document.
         auto container = o->isTableCell() ? o->containingBlock() : o->container();
         if (!container && !o->isRenderView())
@@ -790,7 +790,7 @@ void RenderObject::drawLineForBoxSide(GraphicsContext* graphicsContext, LayoutUn
                 StrokeStyle oldStrokeStyle = graphicsContext->strokeStyle();
                 graphicsContext->setStrokeStyle(NoStroke);
                 graphicsContext->setFillColor(color, style.colorSpace());
-                
+
                 bool wasAntialiased = graphicsContext->shouldAntialias();
                 graphicsContext->setShouldAntialias(antialias);
 
@@ -1039,7 +1039,7 @@ void RenderObject::paintOutline(PaintInfo& paintInfo, const LayoutRect& paintRec
     int topInner = inner.y();
     int bottomOuter = outer.maxY();
     int bottomInner = inner.maxY();
-    
+
     drawLineForBoxSide(graphicsContext, leftOuter, topOuter, leftInner, bottomOuter, BSLeft, outlineColor, outlineStyle, outlineWidth, outlineWidth);
     drawLineForBoxSide(graphicsContext, leftOuter, topOuter, rightOuter, topInner, BSTop, outlineColor, outlineStyle, outlineWidth, outlineWidth);
     drawLineForBoxSide(graphicsContext, rightInner, topOuter, rightOuter, bottomOuter, BSRight, outlineColor, outlineStyle, outlineWidth, outlineWidth);
@@ -1079,8 +1079,8 @@ void RenderObject::collectSelectionRects(Vector<SelectionRect>& rects, unsigned 
     Vector<FloatQuad> quads;
 
     if (!firstChildSlow()) {
-        // FIXME: WebKit's position for an empty span after a BR is incorrect, so we can't trust 
-        // quads for them. We don't need selection rects for those anyway though, since they 
+        // FIXME: WebKit's position for an empty span after a BR is incorrect, so we can't trust
+        // quads for them. We don't need selection rects for those anyway though, since they
         // are just empty containers. See <https://bugs.webkit.org/show_bug.cgi?id=49358>.
         RenderObject* previous = previousSibling();
         Node* node = this->node();
@@ -1109,7 +1109,7 @@ IntRect RenderObject::absoluteBoundingBoxRect(bool useTransforms) const
         size_t n = quads.size();
         if (!n)
             return IntRect();
-    
+
         IntRect result = quads[0].enclosingBoundingBox();
         for (size_t i = 1; i < n; ++i)
             result.unite(quads[i].enclosingBoundingBox());
@@ -1196,7 +1196,7 @@ RenderLayerModelObject* RenderObject::containerForRepaint() const
                 repaintContainer = &compLayer->renderer();
         }
     }
-    
+
 #if ENABLE(CSS_FILTERS)
     if (view().hasSoftwareFilters()) {
         if (RenderLayer* parentLayer = enclosingLayer()) {
@@ -1253,7 +1253,7 @@ void RenderObject::repaintUsingContainer(const RenderLayerModelObject* repaintCo
             return;
         }
     }
-    
+
     if (v.usesCompositing()) {
         ASSERT(repaintContainer->hasLayer() && repaintContainer->layer()->isComposited());
         repaintContainer->layer()->setBackingNeedsRepaintInRect(r, shouldClipToLayer ? GraphicsLayer::ClipToLayer : GraphicsLayer::DoNotClipToLayer);
@@ -1540,7 +1540,7 @@ FloatPoint RenderObject::localToAbsolute(const FloatPoint& localPoint, MapCoordi
     TransformState transformState(TransformState::ApplyTransformDirection, localPoint);
     mapLocalToContainer(0, transformState, mode | ApplyContainerFlip);
     transformState.flatten();
-    
+
     return transformState.lastPlanarPoint();
 }
 
@@ -1549,7 +1549,7 @@ FloatPoint RenderObject::absoluteToLocal(const FloatPoint& containerPoint, MapCo
     TransformState transformState(TransformState::UnapplyInverseTransformDirection, containerPoint);
     mapAbsoluteToLocalPoint(mode, transformState);
     transformState.flatten();
-    
+
     return transformState.lastPlanarPoint();
 }
 
@@ -1603,7 +1603,7 @@ const RenderObject* RenderObject::pushMappingToContainer(const RenderLayerModelO
         offset = -toRenderBox(container)->scrolledContentOffset();
 
     geometryMap.push(this, offset, hasColumns());
-    
+
     return container;
 }
 
@@ -1636,7 +1636,7 @@ void RenderObject::getTransformFromContainer(const RenderObject* containerObject
     RenderLayer* layer;
     if (hasLayer() && (layer = toRenderLayerModelObject(this)->layer()) && layer->transform())
         transform.multiply(layer->currentTransform());
-    
+
 #if ENABLE(3D_RENDERING)
     if (containerObject && containerObject->hasLayer() && containerObject->style().hasPerspective()) {
         // Perpsective on the container affects us, so we have to factor it in here.
@@ -1645,7 +1645,7 @@ void RenderObject::getTransformFromContainer(const RenderObject* containerObject
 
         TransformationMatrix perspectiveMatrix;
         perspectiveMatrix.applyPerspective(containerObject->style().perspective());
-        
+
         transform.translateRight3d(-perspectiveOrigin.x(), -perspectiveOrigin.y(), 0);
         transform = perspectiveMatrix * transform;
         transform.translateRight3d(perspectiveOrigin.x(), perspectiveOrigin.y(), 0);
@@ -1662,7 +1662,7 @@ FloatQuad RenderObject::localToContainerQuad(const FloatQuad& localQuad, const R
     TransformState transformState(TransformState::ApplyTransformDirection, localQuad.boundingBox().center(), localQuad);
     mapLocalToContainer(repaintContainer, transformState, mode | ApplyContainerFlip | UseTransforms, wasFixed);
     transformState.flatten();
-    
+
     return transformState.lastPlanarQuad();
 }
 
@@ -1895,9 +1895,9 @@ void RenderObject::removeFromRenderFlowThread()
 {
     if (flowThreadState() == NotInsideFlowThread)
         return;
-    
+
     // Sometimes we remove the element from the flow, but it's not destroyed at that time.
-    // It's only until later when we actually destroy it and remove all the children from it. 
+    // It's only until later when we actually destroy it and remove all the children from it.
     // Currently, that happens for firstLetter elements and list markers.
     // Pass in the flow thread so that we don't have to look it up for all the children.
     removeFromRenderFlowThreadRecursive(flowThreadContainingBlock());
@@ -2034,7 +2034,7 @@ RenderStyle* RenderObject::getCachedPseudoStyle(PseudoId pseudo, RenderStyle* pa
     RenderStyle* cachedStyle = style().getCachedPseudoStyle(pseudo);
     if (cachedStyle)
         return cachedStyle;
-    
+
     RefPtr<RenderStyle> result = getUncachedPseudoStyle(PseudoStyleRequest(pseudo), parentStyle);
     if (result)
         return style().addCachedPseudoStyle(result.release());
@@ -2045,7 +2045,7 @@ PassRefPtr<RenderStyle> RenderObject::getUncachedPseudoStyle(const PseudoStyleRe
 {
     if (pseudoStyleRequest.pseudoId < FIRST_INTERNAL_PSEUDOID && !ownStyle && !style().hasPseudoStyle(pseudoStyleRequest.pseudoId))
         return 0;
-    
+
     if (!parentStyle) {
         ASSERT(!ownStyle);
         parentStyle = &style();
@@ -2081,7 +2081,7 @@ static Color decorationColor(RenderStyle* style)
         if (result.alpha())
             return result;
     }
-    
+
     result = style->visitedDependentColor(CSSPropertyWebkitTextFillColor);
     return result;
 }
@@ -2138,7 +2138,7 @@ void RenderObject::addAnnotatedRegions(Vector<AnnotatedRegionValue>& regions)
     // Convert the style regions to absolute coordinates.
     if (style().visibility() != VISIBLE || !isBox())
         return;
-    
+
     RenderBox* box = toRenderBox(this);
     FloatPoint absPos = localToAbsolute();
 
@@ -2254,7 +2254,7 @@ RenderBoxModelObject* RenderObject::offsetParent() const
     // If A is an area HTML element which has a map HTML element somewhere in the ancestor
     // chain return the nearest ancestor map HTML element and stop this algorithm.
     // FIXME: Implement!
-    
+
     // Return the nearest ancestor element of A for which at least one of the following is
     // true and stop this algorithm if such an ancestor is found:
     //     * The computed value of the position property is not static.
@@ -2270,18 +2270,18 @@ RenderBoxModelObject* RenderObject::offsetParent() const
         Element* element = curr->element();
         if (!skipTables && element && (isHTMLTableElement(element) || element->hasTagName(tdTag) || element->hasTagName(thTag)))
             break;
- 
+
         float newZoom = curr->style().effectiveZoom();
         if (currZoom != newZoom)
             break;
         currZoom = newZoom;
         curr = curr->parent();
     }
-    
+
     // CSS regions specification says that region flows should return the body element as their offsetParent.
     if (curr && curr->isRenderNamedFlowThread())
         curr = document().body() ? document().body()->renderer() : 0;
-    
+
     return curr && curr->isBoxModelObject() ? toRenderBoxModelObject(curr) : 0;
 }
 
@@ -2290,7 +2290,7 @@ VisiblePosition RenderObject::createVisiblePosition(int offset, EAffinity affini
     // If this is a non-anonymous renderer in an editable area, then it's simple.
     if (Node* node = nonPseudoNode()) {
         if (!node->hasEditableStyle()) {
-            // If it can be found, we prefer a visually equivalent position that is editable. 
+            // If it can be found, we prefer a visually equivalent position that is editable.
             Position position = createLegacyEditingPosition(node, offset);
             Position candidate = position.downstream(CanCrossEditingBoundary);
             if (candidate.deprecatedNode()->hasEditableStyle())

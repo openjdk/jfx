@@ -41,7 +41,7 @@ import com.sun.scenario.animation.shared.TimelineClipCore;
  * A {@code Timeline}, defined by one or more {@link KeyFrame}s, processes
  * individual {@code KeyFrame} sequentially, in the order specified by
  * {@code KeyFrame.time}. The animated properties, defined as key values in
- * {@code KeyFrame.values}, are interpolated 
+ * {@code KeyFrame.values}, are interpolated
  * to/from the targeted key values at the specified time of the {@code KeyFrame}
  * to {@code Timeline}'s initial position, depends on {@code Timeline}'s
  * direction.
@@ -58,7 +58,7 @@ import com.sun.scenario.animation.shared.TimelineClipCore;
  * {@link #play()} or {@link #playFromStart()} is called.
  * <p>
  * It is not possible to change the {@code keyFrames} of a running {@code Timeline}.
- * If the value of {@code keyFrames} is changed for a running {@code Timeline}, it 
+ * If the value of {@code keyFrames} is changed for a running {@code Timeline}, it
  * has to be stopped and started again to pick up the new value.
  * <p>
  * A simple Timeline can be created like this:
@@ -75,17 +75,17 @@ import com.sun.scenario.animation.shared.TimelineClipCore;
  * <p>
  * <b>Warning :</b> A running Timeline is being referenced from the FX runtime. Infinite Timeline
  * might result in a memory leak if not stopped properly. All the objects with animated properties would not be garbage collected.
- * 
+ *
  * @see Animation
  * @see KeyFrame
  * @see KeyValue
- * 
+ *
  * @since JavaFX 2.0
  */
 public final class Timeline extends Animation {
     /* Package-private for testing purposes */
     final TimelineClipCore clipCore;
-    
+
     /**
      * Returns the {@link KeyFrame KeyFrames} of this {@code Timeline}.
      */
@@ -118,9 +118,9 @@ public final class Timeline extends Animation {
 
     /**
      * The constructor of {@code Timeline}.
-     * 
+     *
      * This constructor allows to define a {@link Animation#targetFramerate}.
-     * 
+     *
      * @param targetFramerate
      *            The custom target frame rate for this {@code Timeline}
      * @param keyFrames
@@ -134,7 +134,7 @@ public final class Timeline extends Animation {
 
     /**
      * The constructor of {@code Timeline}.
-     * 
+     *
      * @param keyFrames
      *            The keyframes of this {@code Timeline}
      */
@@ -146,9 +146,9 @@ public final class Timeline extends Animation {
 
     /**
      * The constructor of {@code Timeline}.
-     * 
+     *
      * This constructor allows to define a {@link Animation#targetFramerate}.
-     * 
+     *
      * @param targetFramerate
      *            The custom target frame rate for this {@code Timeline}
      */

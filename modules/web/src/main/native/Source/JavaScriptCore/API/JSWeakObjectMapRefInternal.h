@@ -47,7 +47,7 @@ public:
     }
 
     WeakMapType& map() { return m_map; }
-    
+
     ~OpaqueJSWeakObjectMap()
     {
         m_callback(this, m_data);

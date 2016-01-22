@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef FTLStackMaps_h
@@ -43,7 +43,7 @@ namespace FTL {
 struct StackMaps {
     struct Constant {
         int64_t integer;
-        
+
         void parse(DataView*, unsigned& offset);
         void dump(PrintStream& out) const;
     };
@@ -65,26 +65,26 @@ struct StackMaps {
             Constant,
             ConstantIndex
         };
-        
+
         uint16_t dwarfRegNum; // Represented as a 12-bit int in the section.
         int8_t size;
         Kind kind;
         int32_t offset;
-        
+
         void parse(DataView*, unsigned& offset);
         void dump(PrintStream& out) const;
-        
+
         GPRReg directGPR() const;
         void restoreInto(MacroAssembler&, StackMaps&, char* savedRegisters, GPRReg result) const;
     };
-    
+
     struct Record {
         uint32_t patchpointID;
         uint32_t instructionOffset;
         uint16_t flags;
-        
+
         Vector<Location> locations;
-        
+
         bool parse(DataView*, unsigned& offset);
         void dump(PrintStream&) const;
     };
@@ -92,13 +92,13 @@ struct StackMaps {
     Vector<StackSize> stackSizes;
     Vector<Constant> constants;
     Vector<Record> records;
-    
+
     bool parse(DataView*); // Returns true on parse success, false on failure. Failure means that LLVM is signaling compile failure to us.
     void dump(PrintStream&) const;
     void dumpMultiline(PrintStream&, const char* prefix) const;
-    
+
     typedef HashMap<uint32_t, Vector<Record>, WTF::IntHash<uint32_t>, WTF::UnsignedWithZeroKeyHashTraits<uint32_t>> RecordMap;
-    
+
     RecordMap computeRecordMap() const;
 
     unsigned stackSize() const;

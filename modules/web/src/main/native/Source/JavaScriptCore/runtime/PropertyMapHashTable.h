@@ -191,7 +191,7 @@ public:
     bool hasDeletedOffset();
     PropertyOffset getDeletedOffset();
     void addDeletedOffset(PropertyOffset);
-    
+
     PropertyOffset nextOffset(PropertyOffset inlineCapacity);
 
     // Copy this PropertyTable, ensuring the copy has at least the capacity provided.
@@ -368,12 +368,12 @@ inline std::pair<PropertyTable::find_iterator, bool> PropertyTable::add(const Va
     *iter.first = entry;
 
     ++m_keyCount;
-    
+
     if (offsetEffect == PropertyOffsetMayChange)
         offset = std::max(offset, entry.offset);
     else
         RELEASE_ASSERT(offset >= entry.offset);
-    
+
     return std::make_pair(iter, true);
 }
 

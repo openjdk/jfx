@@ -693,7 +693,7 @@ public class ImageTools {
 
         return new int[]{finalWidth, finalHeight};
     }
-    
+
     public static ImageFrame scaleImageFrame(ImageFrame src,
             int destWidth, int destHeight, boolean isSmooth)
     {
@@ -728,7 +728,7 @@ public class ImageTools {
         }
 
         return scaler.getDestination();
-    }    
+    }
 //    public static final java.awt.image.BufferedImage getAsBufferedImage(Image prismImage) {
 //        java.awt.image.BufferedImage image = null;
 //

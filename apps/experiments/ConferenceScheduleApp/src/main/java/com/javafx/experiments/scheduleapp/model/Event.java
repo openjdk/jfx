@@ -37,7 +37,7 @@ import java.util.Arrays;
 import java.util.Date;
 
 /**
- * Model object for a Calendar Event, this may have come from the users Calendar 
+ * Model object for a Calendar Event, this may have come from the users Calendar
  * or be one we created for a session they want to attend.
  */
 public class Event {
@@ -80,7 +80,7 @@ public class Event {
     public String getLocation() {
         return location;
     }
-    
+
     public String getOrganizer() {
         return organizer;
     }
@@ -100,7 +100,7 @@ public class Event {
     public Session getSession() {
         return session;
     }
-    
+
     public SessionTime getSessionTime() {
 //        if (session == null) return null;
 //        final SessionTime[] sessionTimes = session.getSessionTimes();
@@ -112,12 +112,12 @@ public class Event {
     }
 
     @Override public String toString() {
-        return "Event{" + "title=" + title + 
-                ", location=" + location + 
-                ", organizer=" + organizer + 
-                ", attendees=" + Arrays.toString(attendees) + 
-                ", start=" + DATE_FORMATTER.format(start) + 
-                ", end=" + DATE_FORMATTER.format(end) + 
+        return "Event{" + "title=" + title +
+                ", location=" + location +
+                ", organizer=" + organizer +
+                ", attendees=" + Arrays.toString(attendees) +
+                ", start=" + DATE_FORMATTER.format(start) +
+                ", end=" + DATE_FORMATTER.format(end) +
                 ", session=" + session + '}';
     }
 }

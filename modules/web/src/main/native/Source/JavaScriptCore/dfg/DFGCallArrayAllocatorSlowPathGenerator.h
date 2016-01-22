@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef DFGCallArrayAllocatorSlowPathGenerator_h
@@ -66,7 +66,7 @@ protected:
         jit->m_jit.loadPtr(MacroAssembler::Address(m_resultGPR, JSObject::butterflyOffset()), m_storageGPR);
         jumpTo(jit);
     }
-    
+
 private:
     P_JITOperation_EStZ m_function;
     GPRReg m_resultGPR;
@@ -110,7 +110,7 @@ protected:
             jit->silentFill(m_plans[i], canTrample);
         jumpTo(jit);
     }
-    
+
 private:
     P_JITOperation_EStZ m_function;
     GPRReg m_resultGPR;

@@ -37,7 +37,7 @@
     -fx-border-image-source: url("../../../shared-resources/search-box.png");
     -fx-border-image-slice: 12 12 12 22 fill;
     -fx-border-image-width: 12 12 12 22;
-    -fx-border-image-repeat: stretch; 
+    -fx-border-image-repeat: stretch;
     -fx-font-size: 13px;
     -fx-prompt-text-fill: grey;
 }

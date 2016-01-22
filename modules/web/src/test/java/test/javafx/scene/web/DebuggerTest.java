@@ -160,6 +160,6 @@ public class DebuggerTest extends TestBase {
     public void disableDebug() {
         submit(() -> {
             getEngine().impl_getDebugger().setEnabled(false);
-        });    
+        });
     }
 }

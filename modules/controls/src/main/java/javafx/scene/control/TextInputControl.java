@@ -1251,7 +1251,7 @@ public abstract class TextInputControl extends Control {
 
     /**
      * A little utility method for stripping out unwanted characters.
-     * 
+     *
      * @param txt
      * @param stripNewlines
      * @param stripTabs

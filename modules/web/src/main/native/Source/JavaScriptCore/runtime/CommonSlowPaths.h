@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef CommonSlowPaths_h
@@ -61,7 +61,7 @@ ALWAYS_INLINE int arityCheckFor(ExecState* exec, JSStack* stack, CodeSpecializat
     ASSERT(!callee->isHostFunction());
     CodeBlock* newCodeBlock = callee->jsExecutable()->codeBlockFor(kind);
     int argumentCountIncludingThis = exec->argumentCountIncludingThis();
-    
+
     ASSERT(argumentCountIncludingThis < newCodeBlock->numParameters());
     int missingArgumentCount = newCodeBlock->numParameters() - argumentCountIncludingThis;
     int neededStackSpace = missingArgumentCount + 1; // Allow space to save the original return PC.
@@ -149,15 +149,15 @@ inline void decodeResult(SlowPathReturnType result, void*& a, void*& b)
     b = u.pair.b;
 }
 #endif // USE(JSVALUE32_64)
-    
+
 #define SLOW_PATH
-    
+
 #define SLOW_PATH_DECL(name) \
 extern "C" SlowPathReturnType SLOW_PATH name(ExecState* exec, Instruction* pc)
-    
+
 #define SLOW_PATH_HIDDEN_DECL(name) \
 SLOW_PATH_DECL(name) WTF_INTERNAL
-    
+
 SLOW_PATH_HIDDEN_DECL(slow_path_call_arityCheck);
 SLOW_PATH_HIDDEN_DECL(slow_path_construct_arityCheck);
 SLOW_PATH_HIDDEN_DECL(slow_path_touch_entry);

@@ -36,12 +36,12 @@ class BiquadProcessor;
 // BiquadDSPKernel is an AudioDSPKernel and is responsible for filtering one channel of a BiquadProcessor using a Biquad object.
 
 class BiquadDSPKernel : public AudioDSPKernel {
-public:  
+public:
     explicit BiquadDSPKernel(BiquadProcessor* processor)
     : AudioDSPKernel(processor)
     {
     }
-    
+
     // AudioDSPKernel
     virtual void process(const float* source, float* dest, size_t framesToProcess) override;
     virtual void reset() override { m_biquad.reset(); }

@@ -61,19 +61,19 @@ public class LauncherImpl {
      * launchName is the name of the JavaFX application class to launch.
      */
     public static final String LAUNCH_MODE_CLASS = "LM_CLASS";
-    
+
     /**
      * When passed as launchMode to launchApplication, tells the method that
      * launchName is a path to a JavaFX application jar file to be launched.
      */
     public static final String LAUNCH_MODE_JAR = "LM_JAR";
-    
+
     // set to true to debug launch issues from Java launcher
     private static final boolean trace = false;
 
     // set system property javafx.verbose to true to make the launcher noisy
     private static final boolean verbose;
-    
+
     private static final String MF_MAIN_CLASS = "Main-Class";
     private static final String MF_JAVAFX_MAIN = "JavaFX-Application-Class";
     private static final String MF_JAVAFX_PRELOADER = "JavaFX-Preloader-Class";
@@ -127,24 +127,24 @@ public class LauncherImpl {
     @SuppressWarnings("unchecked")
     public static void launchApplication(final Class<? extends Application> appClass,
             final String[] args) {
-        
+
         Class<? extends Preloader> preloaderClass = savedPreloaderClass;
-        
+
         if (preloaderClass == null) {
             String preloaderByProperty = AccessController.doPrivileged((PrivilegedAction<String>) () ->
                     System.getProperty("javafx.preloader"));
             if (preloaderByProperty != null) {
                 try {
-                    preloaderClass = (Class<? extends Preloader>) Class.forName(preloaderByProperty, 
+                    preloaderClass = (Class<? extends Preloader>) Class.forName(preloaderByProperty,
                             false, appClass.getClassLoader());
                 } catch (Exception e) {
-                    System.err.printf("Could not load preloader class '" + preloaderByProperty + 
+                    System.err.printf("Could not load preloader class '" + preloaderByProperty +
                             "', continuing without preloader.");
                     e.printStackTrace();
                 }
             }
         }
-        
+
         launchApplication(appClass, preloaderClass, args);
     }
 
@@ -217,7 +217,7 @@ public class LauncherImpl {
      * directly from the command line via "java -jar fxapp.jar" or
      * "java -cp path some.fx.App". The launchMode argument must be one of
      * "LM_CLASS" or "LM_JAR" or execution will abort with an error.
-     * 
+     *
      * @param launchName Either the path to a jar file or the application class
      * name to launch
      * @param launchMode The method of launching the application, either LM_JAR
@@ -242,7 +242,7 @@ public class LauncherImpl {
         String preloaderClassName = null;
         String[] appArgs = args;
         ClassLoader appLoader = null;
-        
+
         if (launchMode.equals(LAUNCH_MODE_JAR)) {
             Attributes jarAttrs = getJarAttributes(launchName);
             if (jarAttrs == null) {
@@ -250,7 +250,7 @@ public class LauncherImpl {
             }
 
             // If we ever need to check JavaFX-Version, do that here...
-            
+
             // Support JavaFX-Class-Path, but warn that it's deprecated if used
             String fxClassPath = jarAttrs.getValue(MF_JAVAFX_CLASS_PATH);
             if (fxClassPath != null) {
@@ -261,7 +261,7 @@ public class LauncherImpl {
                         System.err.println("WARNING: Application jar uses deprecated JavaFX-Class-Path attribute."
                                +" Please use Class-Path instead.");
                     }
-                    
+
                     /*
                      * create a new ClassLoader to pull in the requested jar files
                      * OK if it returns null, that just means we didn't need to load
@@ -270,18 +270,18 @@ public class LauncherImpl {
                     appLoader = setupJavaFXClassLoader(new File(launchName), fxClassPath);
                 }
             }
-            
+
             // Support JavaFX-Feature-Proxy (only supported setting is 'auto', anything else is ignored)
             String proxySetting = jarAttrs.getValue(MF_JAVAFX_FEATURE_PROXY);
             if (proxySetting != null && "auto".equals(proxySetting.toLowerCase())) {
                 trySetAutoProxy();
             }
-            
+
             // process arguments and parameters if no args have been passed by the launcher
             if (args.length == 0) {
                 appArgs = getAppArguments(jarAttrs);
             }
-            
+
             // grab JavaFX-Application-Class
             mainClassName = jarAttrs.getValue(MF_JAVAFX_MAIN);
             if (mainClassName == null) {
@@ -316,11 +316,11 @@ public class LauncherImpl {
             try {
                 // reload this class through the app classloader
                 Class<?> launcherClass = appLoader.loadClass(LauncherImpl.class.getName());
-                
+
                 // then invoke the second part of this launcher using reflection
                 Method lawa = launcherClass.getMethod("launchApplicationWithArgs",
                         new Class[] { String.class, String.class, (new String[0]).getClass()});
-                
+
                 // set the thread context class loader before we continue, or it won't load properly
                 Thread.currentThread().setContextClassLoader(appLoader);
                 lawa.invoke(null, new Object[] {mainClassName, preloaderClassName, appArgs});
@@ -331,7 +331,7 @@ public class LauncherImpl {
             launchApplicationWithArgs(mainClassName, preloaderClassName, appArgs);
         }
     }
-    
+
     // Must be public since we could be called from a different class loader
     public static void launchApplicationWithArgs(final String mainClassName,
             final String preloaderClassName, String[] args) {
@@ -458,7 +458,7 @@ public class LauncherImpl {
             // don't bother if there's nothing to add
             if (!jcpList.isEmpty()) {
                 ArrayList<URL> urlList = new ArrayList<URL>();
-                
+
                 // prepend the existing classpath
                 // this will already have the app jar, so no need to worry about it
                 cp = System.getProperty("java.class.path");
@@ -480,10 +480,10 @@ public class LauncherImpl {
                 // we have to add jfxrt.jar to the new class loader, or the app won't load
                 URL jfxRtURL = LauncherImpl.class.getProtectionDomain().getCodeSource().getLocation();
                 urlList.add(jfxRtURL);
-                
+
                 // and finally append the JavaFX-Class-Path entries
                 urlList.addAll(jcpList);
-                
+
                 URL[] urls = (URL[])urlList.toArray(new URL[0]);
                 if (verbose) {
                     System.err.println("===== URL list");
@@ -502,7 +502,7 @@ public class LauncherImpl {
         }
         return null;
     }
-    
+
     private static void trySetAutoProxy() {
         // if explicit proxy settings are proxided we will skip autoproxy
         // Note: we only check few most popular settings.
@@ -525,14 +525,14 @@ public class LauncherImpl {
             }
             return;
         }
-        
+
         // grab deploy.jar
         // Note that we don't need to keep deploy.jar in the JavaFX classloader
         // it is only needed long enough to configure the proxy
         String javaHome = System.getProperty("java.home");
         File jreLibDir = new File(javaHome, "lib");
         File deployJar = new File(jreLibDir, "deploy.jar");
-        
+
         URL[] deployURLs;
         try {
             deployURLs = new URL[] {
@@ -545,7 +545,7 @@ public class LauncherImpl {
             }
             return; // give up setting proxy, usually silently
         }
-        
+
         try {
             URLClassLoader dcl = new URLClassLoader(deployURLs);
             Class sm = Class.forName("com.sun.deploy.services.ServiceManager",
@@ -576,7 +576,7 @@ public class LauncherImpl {
                     dcl);
             Method m = dps.getDeclaredMethod("reset", new Class[0]);
             m.invoke(null, new Object[0]);
-            
+
             if (verbose) {
                 System.out.println("Autoconfig of proxy is completed.");
             }
@@ -633,7 +633,7 @@ public class LauncherImpl {
         if (msg != null) {
             System.err.println(msg);
         }
-        
+
         if (trace) {
             if (cause != null) {
                 cause.printStackTrace();

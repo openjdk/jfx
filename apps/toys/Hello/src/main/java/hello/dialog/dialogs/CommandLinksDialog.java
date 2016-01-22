@@ -48,11 +48,11 @@ import javafx.scene.layout.GridPane;
 import javafx.scene.layout.Priority;
 
 public class CommandLinksDialog extends Dialog<ButtonType> {
-    
+
     private final static int gapSize = 10;
-    
+
     private final List<Button> buttons = new ArrayList<>();
-    
+
     private GridPane grid = new GridPane() {
         @Override protected double computePrefWidth(double height) {
             double pw = 0;
@@ -74,28 +74,28 @@ public class CommandLinksDialog extends Dialog<ButtonType> {
             return ph * 1.5;
         }
     };
-    
+
     public CommandLinksDialog(ButtonType... links) {
         this(Arrays.asList(links));
     }
-    
+
     public CommandLinksDialog(List<ButtonType> links) {
         this.grid.setHgap(gapSize);
         this.grid.setVgap(gapSize);
-        
+
         final DialogPane dialogPane = new DialogPane() {
             @Override protected Node createButtonBar() {
                 return null;
             }
-        }; 
+        };
         setDialogPane(dialogPane);
-        
+
         dialogPane.getStylesheets().add(getClass().getResource("commandlink.css").toExternalForm());
 
         // FIXME extract to CSS
         dialogPane.setGraphic(new ImageView(new Image(getClass().getResource("/hello/dialog/dialog-information.png").toExternalForm())));
         dialogPane.getButtonTypes().addAll(links);
-        
+
         dialogPane.contentProperty().addListener(o -> updateGrid());
 
         updateGrid();
@@ -103,27 +103,27 @@ public class CommandLinksDialog extends Dialog<ButtonType> {
             updateGrid();
         });
     }
-    
+
     private void updateGrid() {
         final Node content = getDialogPane().getContent();
         final boolean dialogContentIsGrid = grid == content;
-        
+
         if (! dialogContentIsGrid) {
             if (content != null) {
                 content.getStyleClass().add("command-link-message");
                 grid.add(content, 0, 0);
             }
         }
-        
+
         grid.getChildren().removeAll(buttons);
         int row = 1;
         for (final ButtonType action : getDialogPane().getButtonTypes()) {
-            if (action == null) continue; 
-            
+            if (action == null) continue;
+
 //            if (! (action instanceof DialogButton)) {
 //                throw new IllegalArgumentException("All actions in CommandLinksDialog must be instances of DialogAction");
 //            }
-//            
+//
 //            DialogButton commandLink = (DialogButton) action;
 
 //            //replace link's event handler with a proper one
@@ -133,11 +133,11 @@ public class CommandLinksDialog extends Dialog<ButtonType> {
 //                }
 //            });
 
-            final Button button = buildCommandLinkButton(action);   
+            final Button button = buildCommandLinkButton(action);
             final ButtonData buttonType = action.getButtonData();
             button.setDefaultButton(buttonType != null && buttonType.isDefaultButton());
 //            button.setOnAction(commandLink);
-            
+
             button.setOnAction(new EventHandler<ActionEvent>() {
                 @Override public void handle(ActionEvent ae) {
                     setResult(action);
@@ -157,7 +157,7 @@ public class CommandLinksDialog extends Dialog<ButtonType> {
             getDialogPane().setContent(grid);
         }
     }
-    
+
     private Button buildCommandLinkButton(ButtonType commandLink) {
         // put the content inside a button
         final Button button = new Button();
@@ -190,12 +190,12 @@ public class CommandLinksDialog extends Dialog<ButtonType> {
 //        GridPane.setVgrow(messageLabel, Priority.SOMETIMES);
 //
 //        Image commandLinkImage = commandLink.getGraphic();
-//        Node view = commandLinkImage == null ? 
-//                new ImageView(getClass().getResource("arrow-green-right.png").toExternalForm()) : 
+//        Node view = commandLinkImage == null ?
+//                new ImageView(getClass().getResource("arrow-green-right.png").toExternalForm()) :
 //                new ImageView(commandLinkImage);
 //        Pane graphicContainer = new Pane(view);
 //        graphicContainer.getStyleClass().add("graphic-container");
-        
+
         ImageView arrow = new ImageView(getClass().getResource("/hello/about_16.png").toExternalForm());
         GridPane.setValignment(arrow, VPos.TOP);
         GridPane.setMargin(arrow, new Insets(0,10,0,0));
@@ -213,5 +213,5 @@ public class CommandLinksDialog extends Dialog<ButtonType> {
         button.minWidthProperty().bind(titleLabel.prefWidthProperty());
 
         return button;
-    }    
+    }
 }

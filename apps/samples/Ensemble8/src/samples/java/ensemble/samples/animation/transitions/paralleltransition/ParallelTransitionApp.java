@@ -80,24 +80,24 @@ public class ParallelTransitionApp extends Application {
         rect.setFill(Color.CRIMSON);
         rect.setTranslateX(50);
         rect.setTranslateY(75);
-        root.getChildren().add(rect); 
+        root.getChildren().add(rect);
         // create parallel transition to do all 4 transitions at the same time
         FadeTransition fadeTrans = new FadeTransition(Duration.seconds(3), rect);
         fadeTrans.setFromValue(1);
         fadeTrans.setToValue(0.3);
         fadeTrans.setAutoReverse(true);
-        
+
         TranslateTransition translateTran = new TranslateTransition(Duration.seconds(2));
         translateTran.setFromX(50);
         translateTran.setToX(320);
         translateTran.setCycleCount(2);
         translateTran.setAutoReverse(true);
-        
+
         RotateTransition rotateTran = new RotateTransition(Duration.seconds(3));
         rotateTran.setByAngle(180);
         rotateTran.setCycleCount(4);
         rotateTran.setAutoReverse(true);
-        
+
         ScaleTransition scaleTran = new ScaleTransition(Duration.seconds(2));
         scaleTran.setToX(2);
         scaleTran.setToY(2);
@@ -108,7 +108,7 @@ public class ParallelTransitionApp extends Application {
                 translateTran, rotateTran, scaleTran);
         parallelTransition.setCycleCount(Timeline.INDEFINITE);
         parallelTransition.setAutoReverse(true);
-        
+
         return root;
     }
 

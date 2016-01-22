@@ -412,7 +412,7 @@ private:
     virtual void requiredAttributeChanged() override;
 
     void updateType();
-    
+
     virtual void subtreeHasChanged() override;
 
 #if ENABLE(DATALIST_ELEMENT)

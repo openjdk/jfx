@@ -74,11 +74,11 @@ System.out.println ("[JVDBG] I will load the webview system library");
     }
 
     static void unlockPage() {
-        throw new UnsupportedOperationException("Not supported yet."); 
+        throw new UnsupportedOperationException("Not supported yet.");
     }
 
     static void lockPage() {
-        throw new UnsupportedOperationException("Not supported yet."); 
+        throw new UnsupportedOperationException("Not supported yet.");
     }
 
     public void setZoomFactor(float zf, boolean b) {
@@ -107,15 +107,15 @@ System.out.println ("[JVDBG] I will load the webview system library");
     }
 
     public boolean isDragConfirmed() {
-        throw new UnsupportedOperationException("Not supported yet."); 
+        throw new UnsupportedOperationException("Not supported yet.");
     }
 
     public int dispatchDragOperation(int wkDndEventType, String[] toArray, String[] toArray0, int i, int i0, int i1, int i2, int wkDndAction) {
-        throw new UnsupportedOperationException("Not supported yet."); 
+        throw new UnsupportedOperationException("Not supported yet.");
     }
 
     public void confirmStartDrag() {
-        throw new UnsupportedOperationException("Not supported yet."); 
+        throw new UnsupportedOperationException("Not supported yet.");
     }
 
     public void setJavaScriptEnabled(boolean get) {
@@ -146,7 +146,7 @@ System.out.println ("[JVDBG] I will load the webview system library");
         getNativePeer().loadContent(content, contentType);
     }
 
-    public void refresh(long mainFrame) {        
+    public void refresh(long mainFrame) {
     }
 
     public Object executeScript(long mainFrame, String script) {
@@ -162,7 +162,7 @@ System.out.println ("[JVDBG] I will load the webview system library");
         try {
             DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
             DocumentBuilder builder = factory.newDocumentBuilder();
-            Document document = builder.parse(new InputSource(new StringReader(xmlString)));  
+            Document document = builder.parse(new InputSource(new StringReader(xmlString)));
             return document;
         }
         catch (Exception e) {
@@ -246,7 +246,7 @@ System.out.println ("[JVDBG] I will load the webview system library");
     }
 
     void fireLoadEvent(int frameID, int state, String url,
-            String contentType, double progress, int errorCode) {        
+            String contentType, double progress, int errorCode) {
         for (LoadListenerClient l : loadListenerClients) {
             l.dispatchLoadEvent(frameID, state, url, contentType, progress, errorCode);
         }

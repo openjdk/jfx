@@ -59,7 +59,7 @@ void computeUsesForBytecodeOffset(
         return;
     case op_new_func:
     case op_new_captured_func:
-    case op_create_activation: 
+    case op_create_activation:
     case op_create_arguments:
     case op_to_this:
     case op_tear_off_activation:

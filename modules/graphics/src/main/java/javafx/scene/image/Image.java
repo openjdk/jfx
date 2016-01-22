@@ -128,7 +128,7 @@ public class Image {
             public boolean isAnimation(Image image) {
                 return image.isAnimation();
             }
-            
+
             @Override
             public ReadOnlyObjectProperty<PlatformImage>
                     getImageProperty(Image image)
@@ -538,7 +538,7 @@ public class Image {
     public final Object impl_getPlatformImage() {
         return platformImage == null ? null : platformImage.get();
     }
-    
+
     final ReadOnlyObjectProperty<PlatformImage> acc_platformImageProperty() {
         return platformImagePropertyImpl();
     }
@@ -731,7 +731,7 @@ public class Image {
     /**
      * Package private internal constructor used only by {@link WritableImage}.
      * The dimensions must both be positive numbers <code>(&gt;&nbsp;0)</code>.
-     * 
+     *
      * @param width the width of the empty image
      * @param height the height of the empty image
      * @throws IllegalArgumentException if either dimension is negative or zero.
@@ -851,7 +851,7 @@ public class Image {
         for (int i = 0; i < frameCount; ++i) {
             animFrames[i] = loader.getFrame(i);
         }
-        
+
         PlatformImage zeroFrame = loader.getFrame(0);
 
         double w = loader.getWidth() / zeroFrame.getPixelScale();
@@ -1168,7 +1168,7 @@ public class Image {
      * there was an error.
      * This method may also return null for some images in a format that
      * is not supported for reading and writing pixels to.
-     * 
+     *
      * @return the {@code PixelReader} for reading the pixel data of the image
      * @since JavaFX 2.2
      */

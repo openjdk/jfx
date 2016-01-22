@@ -27,13 +27,13 @@ package javafx.beans.value;
 
 /**
  * A writable typed value.
- * 
+ *
  * @param T
  *            The type of the wrapped value
- * 
+ *
  * @see WritableValue
- * 
- * 
+ *
+ *
  * @since JavaFX 2.0
  */
 public interface WritableObjectValue<T> extends WritableValue<T> {
@@ -51,8 +51,8 @@ public interface WritableObjectValue<T> extends WritableValue<T> {
     /**
      * Set the wrapped value.
      * Should be equivalent to {@link #setValue(java.lang.Object) }
-     * @see #get() 
-     * 
+     * @see #get()
+     *
      * @param value
      *            The new value
      */

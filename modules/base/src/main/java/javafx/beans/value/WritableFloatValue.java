@@ -27,11 +27,11 @@ package javafx.beans.value;
 
 /**
  * A writable float value.
- * 
+ *
  * @see WritableValue
  * @see WritableNumberValue
- * 
- * 
+ *
+ *
  * @since JavaFX 2.0
  */
 public interface WritableFloatValue extends WritableNumberValue {
@@ -41,7 +41,7 @@ public interface WritableFloatValue extends WritableNumberValue {
      * Unlike {@link #getValue()},
      * this method returns primitive float.
      * Needs to be identical to {@link #getValue()}.
-     * 
+     *
      * @return The current value
      */
     float get();
@@ -50,7 +50,7 @@ public interface WritableFloatValue extends WritableNumberValue {
      * Set the wrapped value.
      * Unlike {@link #setValue(java.lang.Number) },
      * this method uses primitive float.
-     * 
+     *
      * @param value
      *            The new value
      */

@@ -24,9 +24,9 @@
  */
 
 /**
- * @file PiscesUtil.h 
+ * @file PiscesUtil.h
  * PISCES memory management and other macro definitions.
- */ 
+ */
 
 #ifndef PISCES_UTIL_H
 #define PISCES_UTIL_H
@@ -47,7 +47,7 @@
 /**
  * @def ABS(x)
  * Absolute value of x.
- */  
+ */
 #define ABS(x) ((x) > 0 ? (x) : -(x))
 #endif
 
@@ -55,7 +55,7 @@
 /**
  * @def MIN(a,b)
  * This macro gives minimum of a,b.
- */  
+ */
 #define MIN(a,b) ((a)<(b)?(a):(b))
 #endif
 
@@ -69,21 +69,21 @@
 
 /**
  * @def my_malloc(type, len)
- * Allocates and cleares memory to zeros. Returns pointer to this memory 
+ * Allocates and cleares memory to zeros. Returns pointer to this memory
  * type-casted to (type *). Size of allocated buffer is len*sizeof(type) bytes
- * long. 
+ * long.
  */
 #define my_malloc(type, len) (type *)PISCEScalloc(len, sizeof(type))
 
 /**
  * @def my_free(x)
  * Deallocates memory pointed to by pointer x. If x is NULL, does nothing.
- */  
+ */
 #define my_free(x) do { if (x) PISCESfree(x); } while(0)
 
 /* Clears count of bytes of memory pointed to by buffer to zero */
 #define my_clear_mem(buffer,count) PISCESclear_mem(buffer,count)
- 
+
 /*
  * If 'array' is null or smaller than 'thresh', allocate with
  * length MAX(thresh, len).  Discard old contents.

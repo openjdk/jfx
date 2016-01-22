@@ -230,10 +230,10 @@ gchar* g_markup_escape_text (const gchar *text,
 
 GLIB_AVAILABLE_IN_ALL
 gchar *g_markup_printf_escaped (const char *format,
-				...) G_GNUC_PRINTF (1, 2);
+                ...) G_GNUC_PRINTF (1, 2);
 GLIB_AVAILABLE_IN_ALL
 gchar *g_markup_vprintf_escaped (const char *format,
-				 va_list     args) G_GNUC_PRINTF(1, 0);
+                 va_list     args) G_GNUC_PRINTF(1, 0);
 
 typedef enum
 {

@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -45,8 +45,8 @@ TrackBase* toTrack(JSValue value)
     JSObject* object = asObject(value);
     if (object->inherits(JSTextTrack::info()))
         return &jsCast<JSTextTrack*>(object)->impl();
-    
-    // FIXME: Fill in additional tests and casts here for VideoTrack and AudioTrack when 
+
+    // FIXME: Fill in additional tests and casts here for VideoTrack and AudioTrack when
     // they have been added to WebCore.
 
     return 0;
@@ -56,17 +56,17 @@ JSC::JSValue toJS(JSC::ExecState* exec, JSDOMGlobalObject* globalObject, TrackBa
 {
     if (!track)
         return jsNull();
-    
+
     JSObject* wrapper = getCachedWrapper(currentWorld(exec), track);
     if (wrapper)
         return wrapper;
-    
+
     switch (track->type()) {
     case TrackBase::BaseTrack:
         // This should never happen.
         ASSERT_NOT_REACHED();
         break;
-        
+
     case TrackBase::AudioTrack:
         return CREATE_DOM_WRAPPER(exec, globalObject, AudioTrack, track);
         break;
@@ -79,7 +79,7 @@ JSC::JSValue toJS(JSC::ExecState* exec, JSDOMGlobalObject* globalObject, TrackBa
         return CREATE_DOM_WRAPPER(exec, globalObject, TextTrack, track);
         break;
     }
-    
+
     return jsNull();
 }
 

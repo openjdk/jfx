@@ -86,9 +86,9 @@ void WheelEvent::initWheelEvent(int rawDeltaX, int rawDeltaY, PassRefPtr<Abstrac
 {
     if (dispatched())
         return;
-    
+
     initUIEvent(eventNames().wheelEvent, true, true, view, 0);
-    
+
     m_screenLocation = IntPoint(screenX, screenY);
     m_ctrlKey = ctrlKey;
     m_altKey = altKey;

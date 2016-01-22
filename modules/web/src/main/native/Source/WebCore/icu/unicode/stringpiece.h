@@ -21,7 +21,7 @@
 #define __STRINGPIECE_H__
 
 /**
- * \file 
+ * \file
  * \brief C++ API: StringPiece: Read-only byte string wrapper class.
  */
 
@@ -144,7 +144,7 @@ class U_COMMON_API StringPiece : public UMemory {
 
   /**
    * Reset the stringpiece to refer to new data.
-   * @param str a pointer to a NUL-terminated string. 
+   * @param str a pointer to a NUL-terminated string.
    * @internal
    */
   void set(const char* str);
@@ -205,7 +205,7 @@ class U_COMMON_API StringPiece : public UMemory {
  * @return TRUE if the string data is equal
  * @internal
  */
-U_EXPORT UBool U_EXPORT2 
+U_EXPORT UBool U_EXPORT2
 operator==(const StringPiece& x, const StringPiece& y);
 
 /**

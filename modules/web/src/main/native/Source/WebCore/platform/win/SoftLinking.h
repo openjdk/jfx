@@ -6,13 +6,13 @@
  * are met:
  *
  * 1.  Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer. 
+ *     notice, this list of conditions and the following disclaimer.
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
- *     documentation and/or other materials provided with the distribution. 
+ *     documentation and/or other materials provided with the distribution.
  * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
- *     from this software without specific prior written permission. 
+ *     from this software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY APPLE AND ITS CONTRIBUTORS "AS IS" AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
@@ -99,10 +99,10 @@
 /*
     In order to soft link against functions decorated with __declspec(dllimport), we prepend "softLink_" to the function names.
     If you use SOFT_LINK_DLL_IMPORT(), you will also need to #define the function name to account for this, e.g.:
-    
+
     SOFT_LINK_DLL_IMPORT(myLibrary, myFunction, ...)
     #define myFunction softLink_myFunction
-*/ 
+*/
 #define SOFT_LINK_DLL_IMPORT(library, functionName, resultType, callingConvention, parameterDeclarations, parameterNames) \
     static resultType callingConvention init##functionName parameterDeclarations; \
     static resultType(callingConvention*softLink##functionName) parameterDeclarations = init##functionName; \
@@ -152,10 +152,10 @@
 /*
     Variables exported by a DLL need to be accessed through a function.
     If you use SOFT_LINK_VARIABLE_DLL_IMPORT(), you will also need to #define the variable name to account for this, e.g.:
-    
+
     SOFT_LINK_VARIABLE_DLL_IMPORT(myLibrary, myVar, int)
     #define myVar get_myVar()
-*/ 
+*/
 #define SOFT_LINK_VARIABLE_DLL_IMPORT(library, variableName, variableType) \
     static variableType get##variableName() \
     { \

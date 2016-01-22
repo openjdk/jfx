@@ -50,7 +50,7 @@ public class ControllerClassEditor extends AutoSuggestEditor {
         super(PROPERTY_NAME, DEFAULT_VALUE, suggestedClasses);
         initialize();
     }
-    
+
     private void initialize() {
         // text field events handling
         EventHandler<ActionEvent> onActionListener = event -> {
@@ -58,16 +58,16 @@ public class ControllerClassEditor extends AutoSuggestEditor {
                 // Event received because of focus lost due to error dialog
                 return;
             }
-            
+
             String value = textField.getText();
-            
+
             if (value != null && !value.isEmpty()) {
                 if (!JavaLanguage.isClassName(value)) {
                     handleInvalidValue(value);
                     return;
                 }
             }
-            
+
             userUpdateValueProperty((value == null || value.isEmpty()) ? null : value);
             textField.selectAll();
         };

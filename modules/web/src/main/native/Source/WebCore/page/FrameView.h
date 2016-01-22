@@ -73,7 +73,7 @@ public:
     virtual ~FrameView();
 
     virtual HostWindow* hostWindow() const override;
-    
+
     virtual void invalidateRect(const IntRect&) override;
     virtual void setFrameRect(const IntRect&) override;
 
@@ -185,7 +185,7 @@ public:
 
     bool isTransparent() const;
     void setTransparent(bool isTransparent);
-    
+
     // True if the FrameView is not transparent, and the base background color is opaque.
     bool hasOpaqueBackground() const;
 
@@ -211,7 +211,7 @@ public:
     bool shouldUpdate(bool = false) const;
 
     void adjustViewSize();
-    
+
     virtual IntRect windowClipRect(bool clipToContents = true) const override;
     IntRect windowClipRectForFrameOwner(const HTMLFrameOwnerElement*, bool clipToLayerContents) const;
 
@@ -232,7 +232,7 @@ public:
     virtual IntPoint maximumScrollPosition() const override;
 
     // This is different than visibleContentRect() in that it ignores negative (or overly positive)
-    // offsets from rubber-banding, and it takes zooming into account. 
+    // offsets from rubber-banding, and it takes zooming into account.
     LayoutRect viewportConstrainedVisibleContentRect() const;
 
     // A rectangle in content coordinates that is used to clip layers for fixed-position objects.
@@ -312,7 +312,7 @@ public:
     bool isInChildFrameWithFrameFlattening() const;
 
     static double currentPaintTimeStamp() { return sCurrentPaintTimeStamp; } // returns 0 if not painting
-    
+
     void updateLayoutAndStyleIfNeededRecursive();
 
     void incrementVisuallyNonEmptyCharacterCount(unsigned);
@@ -332,7 +332,7 @@ public:
     // resize around that view.  Auto-pagination uses the bounds of the actual view that's being printed to determine
     // the edges of the print operation, so the resize is necessary if the enclosing view's bounds depend on the
     // web document's bounds.
-    // 
+    //
     // This is already a problem if the view needs to be a different size because of printer fonts or because of print stylesheets.
     // Mail/Dictionary work around this problem by using the _layoutForPrinting SPI
     // to at least get print stylesheets and printer fonts into play, but since WebKit doesn't know about the page offset or
@@ -373,7 +373,7 @@ public:
     virtual void scrollbarStyleChanged(int newStyle, bool forceUpdate) override;
 
     RenderBox* embeddedContentBox() const;
-    
+
     void setTracksRepaints(bool);
     bool isTrackingRepaints() const { return m_isTrackingRepaints; }
     void resetTrackedRepaints();
@@ -405,7 +405,7 @@ public:
     // distinguish between the two.
     const Pagination& pagination() const;
     void setPagination(const Pagination&);
-    
+
     bool inProgrammaticScroll() const { return m_inProgrammaticScroll; }
     void setInProgrammaticScroll(bool programmaticScroll) { m_inProgrammaticScroll = programmaticScroll; }
 
@@ -457,7 +457,7 @@ public:
 protected:
     virtual bool scrollContentsFastPath(const IntSize& scrollDelta, const IntRect& rectToScroll, const IntRect& clipRect) override;
     virtual void scrollContentsSlowPath(const IntRect& updateRect) override;
-    
+
     void repaintSlowRepaintObjects();
 
     virtual bool isVerticalDocument() const override;
@@ -584,7 +584,7 @@ private:
     OwnPtr<HashSet<RenderElement*>> m_slowRepaintObjects;
 
     bool m_needsFullRepaint;
-    
+
     bool m_canHaveScrollbars;
     bool m_cannotBlitToWindow;
     bool m_isOverlapped;
@@ -616,7 +616,7 @@ private:
 
     bool m_overflowStatusDirty;
     bool m_horizontalOverflow;
-    bool m_verticalOverflow;    
+    bool m_verticalOverflow;
     RenderElement* m_viewportRenderer;
 
     Pagination m_pagination;
@@ -691,7 +691,7 @@ private:
 #endif
 
     bool m_visualUpdatesAllowedByClient;
-    
+
     ScrollPinningBehavior m_scrollPinningBehavior;
 };
 

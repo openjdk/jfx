@@ -62,7 +62,7 @@ public class JDK8130122Test extends VisualTestBase {
                 new Rectangle(100, 100, Color.RED), new Rectangle(100, 100, Color.BLUE));
 
         final ListView<Rectangle> horizontalListView = new ListView<Rectangle>();
-        
+
         runAndWait(() -> {
             final GridPane gridPane = new GridPane();
             gridPane.setPrefWidth(WIDTH);
@@ -75,7 +75,7 @@ public class JDK8130122Test extends VisualTestBase {
             horizontalListView.setVisible(false);
             GridPane.setVgrow(horizontalListView, Priority.ALWAYS);
             GridPane.setHgrow(horizontalListView, Priority.ALWAYS);
-            
+
             Group root = new Group(gridPane);
 
             testStage = getStage();
@@ -103,7 +103,7 @@ public class JDK8130122Test extends VisualTestBase {
             Color color = getColor(testScene, 200, 250);
             assertColorEquals(Color.GREEN, color, TOLERANCE);
         });
-        
+
     }
 
 }

@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef FastBitVector_h
@@ -41,20 +41,20 @@ public:
         , m_numBits(0)
     {
     }
-    
+
     FastBitVector(const FastBitVector& other)
         : m_array(0)
         , m_numBits(0)
     {
         *this = other;
     }
-    
+
     ~FastBitVector()
     {
         if (m_array)
             fastFree(m_array);
     }
-    
+
     FastBitVector& operator=(const FastBitVector& other)
     {
         size_t length = other.arrayLength();
@@ -66,14 +66,14 @@ public:
         m_numBits = other.m_numBits;
         return *this;
     }
-    
+
     size_t numBits() const { return m_numBits; }
-    
+
     void resize(size_t numBits)
     {
         // Use fastCalloc instead of fastRealloc because we expect the common
         // use case for this method to be initializing the size of the bitvector.
-        
+
         size_t newLength = arrayLength(numBits);
         uint32_t* newArray = static_cast<uint32_t*>(fastCalloc(newLength, 4));
         memcpy(newArray, m_array, arrayLength() * 4);
@@ -82,23 +82,23 @@ public:
         m_array = newArray;
         m_numBits = numBits;
     }
-    
+
     void setAll()
     {
         memset(m_array, 255, arrayLength() * 4);
     }
-    
+
     void clearAll()
     {
         memset(m_array, 0, arrayLength() * 4);
     }
-    
+
     void set(const FastBitVector& other)
     {
         ASSERT(m_numBits == other.m_numBits);
         memcpy(m_array, other.m_array, arrayLength() * 4);
     }
-    
+
     bool setAndCheck(const FastBitVector& other)
     {
         bool changed = false;
@@ -109,7 +109,7 @@ public:
         }
         return changed;
     }
-    
+
     bool equals(const FastBitVector& other) const
     {
         ASSERT(m_numBits == other.m_numBits);
@@ -121,40 +121,40 @@ public:
         }
         return true;
     }
-    
+
     void merge(const FastBitVector& other)
     {
         ASSERT(m_numBits == other.m_numBits);
         for (unsigned i = arrayLength(); i--;)
             m_array[i] |= other.m_array[i];
     }
-    
+
     void filter(const FastBitVector& other)
     {
         ASSERT(m_numBits == other.m_numBits);
         for (unsigned i = arrayLength(); i--;)
             m_array[i] &= other.m_array[i];
     }
-    
+
     void exclude(const FastBitVector& other)
     {
         ASSERT(m_numBits == other.m_numBits);
         for (unsigned i = arrayLength(); i--;)
             m_array[i] &= ~other.m_array[i];
     }
-    
+
     void set(size_t i)
     {
         ASSERT_WITH_SECURITY_IMPLICATION(i < m_numBits);
         m_array[i >> 5] |= (1 << (i & 31));
     }
-    
+
     void clear(size_t i)
     {
         ASSERT_WITH_SECURITY_IMPLICATION(i < m_numBits);
         m_array[i >> 5] &= ~(1 << (i & 31));
     }
-    
+
     void set(size_t i, bool value)
     {
         if (value)
@@ -162,13 +162,13 @@ public:
         else
             clear(i);
     }
-    
+
     bool get(size_t i) const
     {
         ASSERT_WITH_SECURITY_IMPLICATION(i < m_numBits);
         return !!(m_array[i >> 5] & (1 << (i & 31)));
     }
-    
+
     size_t bitCount() const
     {
         size_t result = 0;
@@ -176,13 +176,13 @@ public:
             result += WTF::bitCount(m_array[i]);
         return result;
     }
-    
+
     WTF_EXPORT_PRIVATE void dump(PrintStream&) const;
-    
+
 private:
     static size_t arrayLength(size_t numBits) { return (numBits + 31) >> 5; }
     size_t arrayLength() const { return arrayLength(m_numBits); }
-    
+
     uint32_t* m_array; // No, this can't be an std::unique_ptr<uint32_t[]>.
     size_t m_numBits;
 };

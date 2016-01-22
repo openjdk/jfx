@@ -57,9 +57,9 @@ public:
     }
 
     void clear() { m_length = 0; m_data.string16Ptr = 0; m_is8Bit = false;}
-    
+
     bool is8Bit() { return m_is8Bit; }
-    
+
     bool excludeLineNumbers() const { return !m_doNotExcludeLineNumbers; }
     bool doNotExcludeLineNumbers() const { return m_doNotExcludeLineNumbers; }
 
@@ -113,7 +113,7 @@ public:
             return getCurrentChar8();
         return getCurrentChar16();
     }
-    
+
     ALWAYS_INLINE UChar incrementAndGetCurrentChar()
     {
         ASSERT(m_length);
@@ -305,7 +305,7 @@ public:
 
     String toString() const;
 
-    UChar currentChar() const { return m_currentChar; }    
+    UChar currentChar() const { return m_currentChar; }
 
     // The method is moderately slow, comparing to currentLine method.
     OrdinalNumber currentColumn() const;
@@ -332,7 +332,7 @@ private:
     void advanceAndUpdateLineNumberSlowCase();
     void advanceEmpty();
     void advanceSubstring();
-    
+
     void updateSlowCaseFunctionPointers();
 
     void decrementAndCheckLength()
@@ -384,7 +384,7 @@ private:
         }
         return lookAheadSlowCase(string, caseSensitive);
     }
-    
+
     LookAheadResult lookAheadSlowCase(const String& string, bool caseSensitive)
     {
         unsigned count = string.length();

@@ -83,7 +83,7 @@ public:
         return m_renderer && m_renderer->preservesNewline() && m_renderer->isText() && toRenderText(m_renderer)->textLength()
             && toRenderText(m_renderer)->characterAt(m_pos) == '\n';
     }
-    
+
     inline bool atParagraphSeparator()
     {
         return (m_renderer && m_renderer->isBR()) || atTextParagraphSeparator();
@@ -288,7 +288,7 @@ static inline RenderObject* bidiFirstSkippingEmptyInlines(RenderElement& root, I
             // Never skip empty inlines.
             if (resolver)
                 resolver->commitExplicitEmbedding();
-            return o; 
+            return o;
         }
     }
 

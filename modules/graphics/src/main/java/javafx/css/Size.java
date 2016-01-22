@@ -51,14 +51,14 @@ final public class Size {
     public SizeUnits getUnits() {
         return units;
     }
-    
+
     /**
      * Return whether or not this Size is an absolute value or a relative value.
      */
     public boolean isAbsolute() {
         return units.isAbsolute();
     }
-    
+
     /** Convert this size into Points units, a Point is 1/72 of a inch */
     double points(Font font) {
         return points(1.0, font);

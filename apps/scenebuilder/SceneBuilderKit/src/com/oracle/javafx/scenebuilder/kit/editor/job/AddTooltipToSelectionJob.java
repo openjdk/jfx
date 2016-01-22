@@ -53,13 +53,13 @@ import java.util.Map;
  *
  */
 public class AddTooltipToSelectionJob extends BatchSelectionJob {
-    
+
     private Map<FXOMObject, FXOMObject> tooltipMap; // Initialized lazily
 
     public AddTooltipToSelectionJob(EditorController editorController) {
         super(editorController);
     }
-    
+
     public Collection<FXOMObject> getTooltips() {
         constructTooltipMap();
         return tooltipMap.values();
@@ -71,20 +71,20 @@ public class AddTooltipToSelectionJob extends BatchSelectionJob {
 
     @Override
     protected List<Job> makeSubJobs() {
-        
+
         constructTooltipMap();
-        
+
         final List<Job> result = new LinkedList<>();
         for (Map.Entry<FXOMObject, FXOMObject> e : tooltipMap.entrySet()) {
             final FXOMObject fxomObject = e.getKey();
             final FXOMObject tooltipObject = e.getValue();
             final Job insertJob = new InsertAsAccessoryJob(
-                    tooltipObject, fxomObject, 
-                    DesignHierarchyMask.Accessory.TOOLTIP, 
+                    tooltipObject, fxomObject,
+                    DesignHierarchyMask.Accessory.TOOLTIP,
                     getEditorController());
             result.add(insertJob);
         }
-        
+
         return result;
     }
 
@@ -93,31 +93,31 @@ public class AddTooltipToSelectionJob extends BatchSelectionJob {
         final Collection<FXOMObject> contextMenus = tooltipMap.values();
         assert contextMenus.isEmpty() == false;
         final FXOMObject hitMenu = contextMenus.iterator().next();
-        
+
         return new ObjectSelectionGroup(contextMenus, hitMenu, null);
     }
 
     /*
      * CompositeJob
      */
-    
+
     @Override
     protected String makeDescription() {
         return I18N.getString("label.action.edit.add.tooltip");
     }
-    
-    
+
+
     /*
      * Private
      */
-    
+
     private void constructTooltipMap() {
         if (tooltipMap == null) {
             tooltipMap = new LinkedHashMap<>();
-            
+
             // Build the ContextMenu item from the library builtin items
             final String tooltipFxmlPath = "builtin/Tooltip.fxml"; //NOI18N
-            final URL tooltipFxmlURL 
+            final URL tooltipFxmlURL
                     = BuiltinLibrary.class.getResource(tooltipFxmlPath);
             assert tooltipFxmlURL != null;
 

@@ -22,7 +22,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
- 
+
 #ifndef Profile_h
 #define Profile_h
 
@@ -62,7 +62,7 @@ namespace JSC {
     private:
         void removeProfileStart();
         void removeProfileEnd();
- 
+
         String m_title;
         RefPtr<ProfileNode> m_head;
         unsigned int m_uid;

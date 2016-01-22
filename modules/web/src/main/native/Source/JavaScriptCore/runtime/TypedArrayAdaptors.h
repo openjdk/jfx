@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef TypedArrayAdaptors_h
@@ -45,22 +45,22 @@ struct IntegralTypedArrayAdaptor {
     {
         return jsNumber(value);
     }
-    
+
     static double toDouble(Type value)
     {
         return static_cast<double>(value);
     }
-    
+
     static Type toNativeFromInt32(int32_t value)
     {
         return static_cast<Type>(value);
     }
-    
+
     static Type toNativeFromUint32(uint32_t value)
     {
         return static_cast<Type>(value);
     }
-    
+
     static Type toNativeFromDouble(double value)
     {
         int32_t result = static_cast<int32_t>(value);
@@ -68,7 +68,7 @@ struct IntegralTypedArrayAdaptor {
             result = toInt32(value);
         return static_cast<Type>(result);
     }
-    
+
     template<typename OtherAdaptor>
     static typename OtherAdaptor::Type convertTo(Type value)
     {
@@ -86,14 +86,14 @@ struct FloatTypedArrayAdaptor {
     typedef ViewTypeArg ViewType;
     typedef JSViewTypeArg JSViewType;
     static const TypedArrayType typeValue = typeValueArg;
-    
+
     static JSValue toJSValue(Type value)
     {
         if (value != value)
             return jsDoubleNumber(QNaN);
         return jsDoubleNumber(value);
     }
-    
+
     static double toDouble(Type value)
     {
         return static_cast<double>(value);
@@ -103,17 +103,17 @@ struct FloatTypedArrayAdaptor {
     {
         return static_cast<Type>(value);
     }
-    
+
     static Type toNativeFromUint32(uint32_t value)
     {
         return static_cast<Type>(value);
     }
-    
+
     static Type toNativeFromDouble(double value)
     {
         return value;
     }
-    
+
     template<typename OtherAdaptor>
     static typename OtherAdaptor::Type convertTo(Type value)
     {
@@ -167,27 +167,27 @@ struct Uint8ClampedAdaptor {
     typedef Uint8ClampedArray ViewType;
     typedef JSUint8ClampedArray JSViewType;
     static const TypedArrayType typeValue = TypeUint8Clamped;
-    
+
     static JSValue toJSValue(uint8_t value)
     {
         return jsNumber(value);
     }
-    
+
     static double toDouble(uint8_t value)
     {
         return static_cast<double>(value);
     }
-    
+
     static Type toNativeFromInt32(int32_t value)
     {
         return clamp(value);
     }
-    
+
     static Type toNativeFromUint32(uint32_t value)
     {
         return std::min(static_cast<uint32_t>(255), value);
     }
-    
+
     static Type toNativeFromDouble(double value)
     {
         if (std::isnan(value) || value < 0)
@@ -196,13 +196,13 @@ struct Uint8ClampedAdaptor {
             return 255;
         return static_cast<uint8_t>(lrint(value));
     }
-    
+
     template<typename OtherAdaptor>
     static typename OtherAdaptor::Type convertTo(uint8_t value)
     {
         return OtherAdaptor::toNativeFromInt32(value);
     }
-    
+
 private:
     static uint8_t clamp(int32_t value)
     {

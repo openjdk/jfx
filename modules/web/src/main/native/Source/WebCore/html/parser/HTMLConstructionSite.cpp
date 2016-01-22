@@ -304,7 +304,7 @@ void HTMLConstructionSite::setCompatibilityModeFromDoctype(const String& name, c
     // There are three possible compatibility modes:
     // Quirks - quirks mode emulates WinIE and NS4. CSS parsing is also relaxed in this mode, e.g., unit types can
     // be omitted from numbers.
-    // Limited Quirks - This mode is identical to no-quirks mode except for its treatment of line-height in the inline box model.  
+    // Limited Quirks - This mode is identical to no-quirks mode except for its treatment of line-height in the inline box model.
     // No Quirks - no quirks apply. Web pages will obey the specifications to the letter.
 
     // Check for Quirks Mode.

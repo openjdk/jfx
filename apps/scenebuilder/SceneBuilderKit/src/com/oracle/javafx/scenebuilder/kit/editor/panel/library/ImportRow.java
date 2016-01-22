@@ -81,14 +81,14 @@ class ImportRow {
     public void setPrefSize(PrefSize value) {
         this.prefSize = value;
     }
-    
+
     public String getCanonicalClassName() {
         return this.canonicalClassName;
     }
-    
+
     /**
      * Used by the CheckBoxListCell
-     * @return 
+     * @return
      */
     @Override
     public String toString() {

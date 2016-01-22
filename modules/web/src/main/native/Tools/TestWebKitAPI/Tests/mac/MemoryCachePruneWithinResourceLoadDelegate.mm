@@ -50,7 +50,7 @@ static bool didFinishLoad;
 {
     if (identifier == nil)
         return request;
-        
+
     [_window close];
     return request;
 }
@@ -92,7 +92,7 @@ TEST(WebKit1, DISABLED_MemoryCachePruneWithinResourceLoadDelegate)
     [[webView1.get() mainFrame] loadRequest:[NSURLRequest requestWithURL:[[NSBundle mainBundle] URLForResource:@"MemoryCachePruneWithinResourceLoadDelegate" withExtension:@"html" subdirectory:@"TestWebKitAPI.resources"]]];
 
     Util::run(&didFinishLoad);
-    
+
     [pool drain];
     // If we finished without crashing, the test passed.
 }

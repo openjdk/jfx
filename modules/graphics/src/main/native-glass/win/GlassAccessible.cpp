@@ -342,7 +342,7 @@ IFACEMETHODIMP GlassAccessible::get_HostRawElementProvider(IRawElementProviderSi
     if (env == NULL) return E_FAIL;
     jlong hwnd = env->CallLongMethod(m_jAccessible, mid_get_HostRawElementProvider);
     if (CheckAndClearException(env)) return E_FAIL;
-    
+
     // We ignore the return value of UiaHostProviderFromHwnd because it returns E_INVALIDARG
     // when invoked with NULL hwnd. We use NULL hwnds to represent "lightweight" accessibles.
     // If we don't ignore it and return it from GlassAccessible::get_HostRawElementProvider,
@@ -1242,7 +1242,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_win_WinAccessible__1initIDs
     if (env->ExceptionCheck()) return;
     mid_get_VerticalViewSize = env->GetMethodID(jClass, "get_VerticalViewSize", "()D");
     if (env->ExceptionCheck()) return;
-    
+
     /* IScrollItemProvider */
     mid_ScrollIntoView = env->GetMethodID(jClass, "ScrollIntoView", "()V");
     if (env->ExceptionCheck()) return;

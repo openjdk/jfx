@@ -47,25 +47,25 @@ public class ReIndexObjectJob extends Job {
     private final FXOMObject beforeObject;
     private final FXOMObject oldBeforeObject;
     private String description;
-    
+
 
     public ReIndexObjectJob(
-            FXOMObject reindexedObject, 
-            FXOMObject beforeObject, 
+            FXOMObject reindexedObject,
+            FXOMObject beforeObject,
             EditorController editorController) {
         super(editorController);
         assert reindexedObject != null;
-        
+
         this.reindexedObject = reindexedObject;
         this.beforeObject = beforeObject;
         this.oldBeforeObject = reindexedObject.getNextSlibing();
     }
-    
-    
+
+
     /*
      * Job
      */
-    
+
     @Override
     public boolean isExecutable() {
         return (beforeObject != oldBeforeObject);
@@ -120,5 +120,5 @@ public class ReIndexObjectJob extends Job {
         }
         return description;
     }
-    
+
 }

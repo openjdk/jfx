@@ -136,7 +136,7 @@ public class ButtonSkin extends LabeledSkinBase<Button> {
             ** don't laugh, it can happen....
             */
             setCancelButton(true);
-        }       
+        }
     }
 
 
@@ -196,7 +196,7 @@ public class ButtonSkin extends LabeledSkinBase<Button> {
         if (scene != null) {
             KeyCode acceleratorCode = KeyCode.ESCAPE;
             cancelAcceleratorKeyCodeCombination = new KeyCodeCombination(acceleratorCode);
-        
+
             Runnable oldCancel = scene.getAccelerators().get(cancelAcceleratorKeyCodeCombination);
             if (!value) {
                 /**

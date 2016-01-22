@@ -55,7 +55,7 @@ namespace WebCore {
         void clear() {
             m_availMimeTypes.clear();
         }
-        
+
         void clearData(const String& mimeType) {
             size_t pos = m_availMimeTypes.find(mimeType);
             if (pos != WTF::notFound) {
@@ -75,7 +75,7 @@ namespace WebCore {
             m_urlTitle = urlTitle;
             m_filenames.clear();
         }
-        
+
         void setFiles(const Vector<String> &filenames) {
             m_availMimeTypes.append(mimeURIList());
             clearData(mimeShortcutName());
@@ -83,12 +83,12 @@ namespace WebCore {
             m_urlTitle = emptyString();
             m_filenames = filenames;
         }
-        
+
         void setPlainText(const String &plainText){
             m_availMimeTypes.append(mimePlainText());
             m_plainText = plainText;
         }
-        
+
         void setHTML(const String &textHtml, const URL &htmlBaseUrl) {
             m_availMimeTypes.append(mimeHTML());
             m_textHtml = textHtml;
@@ -117,7 +117,7 @@ namespace WebCore {
             //returns MIME Types available in clipboard.
             return m_availMimeTypes;
         }
-        
+
         String getData(const String& mimeType) {
             String canonicalMimeType = normalizeMIMEType(mimeType);
             String ret;
@@ -131,11 +131,11 @@ namespace WebCore {
                 ret = m_urlTitle;
             return ret;
         }
-        
+
         bool containsURL() const {
             return m_availMimeTypes.contains(mimeURIList());
         }
-        
+
         String asURL(String* title = NULL) const
         {
             if (!containsURL())

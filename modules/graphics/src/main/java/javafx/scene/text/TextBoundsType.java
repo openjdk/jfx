@@ -52,18 +52,18 @@ public enum TextBoundsType {
      * Use logical bounds as the basis for calculating the bounds.
      * <p>
      * The logical bounds are based on font metrics information. The width is
-     * based on the glyph advances and the height on the ascent, descent, and 
+     * based on the glyph advances and the height on the ascent, descent, and
      * line gap. Except for the last line which does not include the line gap.
      * <p>
      * Note: This is usually the fastest option.
-     */    
+     */
     LOGICAL,
 
     /**
      * Use visual bounds as the basis for calculating the bounds.
      * <p>
      * Note: This is likely to be slower than using logical bounds.
-     */    
+     */
     VISUAL,
 
     /**

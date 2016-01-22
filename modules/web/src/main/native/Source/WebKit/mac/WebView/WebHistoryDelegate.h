@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #import <Foundation/Foundation.h>
@@ -32,7 +32,7 @@
 @interface NSObject (WebHistoryDelegate)
 
 - (void)webView:(WebView *)webView didNavigateWithNavigationData:(WebNavigationData *)navigationData inFrame:(WebFrame *)webFrame;
-                              
+
 - (void)webView:(WebView *)webView didPerformClientRedirectFromURL:(NSString *)sourceURL toURL:(NSString *)destinationURL inFrame:(WebFrame *)webFrame;
 
 - (void)webView:(WebView *)webView didPerformServerRedirectFromURL:(NSString *)sourceURL toURL:(NSString *)destinationURL inFrame:(WebFrame *)webFrame;

@@ -36,7 +36,7 @@ OBJC_CLASS NSString;
 namespace TestWebKitAPI {
 namespace Util {
 
-// Runs a platform runloop until the 'done' is true. 
+// Runs a platform runloop until the 'done' is true.
 void run(bool* done);
 
 #if PLATFORM(WIN)

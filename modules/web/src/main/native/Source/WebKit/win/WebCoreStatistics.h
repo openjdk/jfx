@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef WebCoreStatistics_h
@@ -42,30 +42,30 @@ public:
     virtual ULONG STDMETHODCALLTYPE Release(void);
 
     // IWebCoreStatistics
-    virtual HRESULT STDMETHODCALLTYPE javaScriptObjectsCount( 
+    virtual HRESULT STDMETHODCALLTYPE javaScriptObjectsCount(
         /* [retval][out] */ UINT *count);
-    virtual HRESULT STDMETHODCALLTYPE javaScriptGlobalObjectsCount( 
+    virtual HRESULT STDMETHODCALLTYPE javaScriptGlobalObjectsCount(
         /* [retval][out] */ UINT *count);
-    virtual HRESULT STDMETHODCALLTYPE javaScriptProtectedObjectsCount( 
+    virtual HRESULT STDMETHODCALLTYPE javaScriptProtectedObjectsCount(
         /* [retval][out] */ UINT *count);
-    virtual HRESULT STDMETHODCALLTYPE javaScriptProtectedGlobalObjectsCount( 
+    virtual HRESULT STDMETHODCALLTYPE javaScriptProtectedGlobalObjectsCount(
         /* [retval][out] */ UINT *count);
-    virtual HRESULT STDMETHODCALLTYPE javaScriptProtectedObjectTypeCounts( 
+    virtual HRESULT STDMETHODCALLTYPE javaScriptProtectedObjectTypeCounts(
         /* [retval][out] */ IPropertyBag2** typeNamesAndCounts);
-    virtual HRESULT STDMETHODCALLTYPE iconPageURLMappingCount( 
+    virtual HRESULT STDMETHODCALLTYPE iconPageURLMappingCount(
         /* [retval][out] */ UINT *count);
-    virtual HRESULT STDMETHODCALLTYPE iconRetainedPageURLCount( 
+    virtual HRESULT STDMETHODCALLTYPE iconRetainedPageURLCount(
         /* [retval][out] */ UINT *count);
-    virtual HRESULT STDMETHODCALLTYPE iconRecordCount( 
+    virtual HRESULT STDMETHODCALLTYPE iconRecordCount(
         /* [retval][out] */ UINT *count);
-    virtual HRESULT STDMETHODCALLTYPE iconsWithDataCount( 
+    virtual HRESULT STDMETHODCALLTYPE iconsWithDataCount(
         /* [retval][out] */ UINT *count);
-    virtual HRESULT STDMETHODCALLTYPE cachedFontDataCount( 
+    virtual HRESULT STDMETHODCALLTYPE cachedFontDataCount(
         /* [retval][out] */ UINT *count);
-    virtual HRESULT STDMETHODCALLTYPE cachedFontDataInactiveCount( 
+    virtual HRESULT STDMETHODCALLTYPE cachedFontDataInactiveCount(
         /* [retval][out] */ UINT *count);
     virtual HRESULT STDMETHODCALLTYPE purgeInactiveFontData(void);
-    virtual HRESULT STDMETHODCALLTYPE glyphPageCount( 
+    virtual HRESULT STDMETHODCALLTYPE glyphPageCount(
         /* [retval][out] */ UINT *count);
 
 protected:

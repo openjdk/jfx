@@ -180,7 +180,7 @@ void ChromeClientJava::chromeDestroyed()
 }
 
 #if ENABLE(INPUT_TYPE_COLOR)
-PassOwnPtr<ColorChooser> ChromeClientJava::createColorChooser(ColorChooserClient*, const Color&) 
+PassOwnPtr<ColorChooser> ChromeClientJava::createColorChooser(ColorChooserClient*, const Color&)
 {
     return nullptr;
 }
@@ -536,7 +536,7 @@ bool ChromeClientJava::canRunBeforeUnloadConfirmPanel()
 }
 
 void ChromeClientJava::addMessageToConsole(MessageSource, MessageLevel, const String& message,
-    unsigned lineNumber, unsigned columnNumber, const String& sourceID) 
+    unsigned lineNumber, unsigned columnNumber, const String& sourceID)
 {
     JNIEnv* env = WebCore_GetJavaEnv();
     initRefs(env);

@@ -50,7 +50,7 @@ public:
     ImageBufferData(const IntSize&);
 
     void* m_data;
-    
+
     RetainPtr<CGDataProviderRef> m_dataProvider;
     CGBitmapInfo m_bitmapInfo;
     Checked<unsigned, RecordOverflow> m_bytesPerRow;

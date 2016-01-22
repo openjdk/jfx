@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef ProfiledCodeBlockJettisoningWatchpoint_h
@@ -43,7 +43,7 @@ public:
         , m_codeBlock(0)
     {
     }
-    
+
     ProfiledCodeBlockJettisoningWatchpoint(
         CodeOrigin codeOrigin, ExitKind exitKind, CodeBlock* codeBlock)
         : m_codeOrigin(codeOrigin)
@@ -51,7 +51,7 @@ public:
         , m_codeBlock(codeBlock)
     {
     }
-    
+
 protected:
     virtual void fireInternal() override;
 

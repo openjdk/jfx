@@ -344,7 +344,7 @@ int DatabaseAuthorizer::allowRead(const String& tableName, const String&)
 {
     if (m_permissions & NoAccessMask && m_securityEnabled)
         return SQLAuthDeny;
-    
+
     return denyBasedOnTableName(tableName);
 }
 
@@ -400,7 +400,7 @@ void DatabaseAuthorizer::setReadOnly()
 {
     m_permissions |= ReadOnlyMask;
 }
-   
+
 void DatabaseAuthorizer::setPermissions(int permissions)
 {
     m_permissions = permissions;

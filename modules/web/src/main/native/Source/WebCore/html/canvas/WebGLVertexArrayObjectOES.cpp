@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -46,7 +46,7 @@ WebGLVertexArrayObjectOES::WebGLVertexArrayObjectOES(WebGLRenderingContext* ctx,
     , m_boundElementArrayBuffer(0)
 {
     m_vertexAttribState.resize(ctx->getMaxVertexAttribs());
-    
+
     Extensions3D* extensions = context()->graphicsContext3D()->getExtensions();
     switch (m_type) {
     case VaoTypeDefault:
@@ -90,7 +90,7 @@ void WebGLVertexArrayObjectOES::setElementArrayBuffer(PassRefPtr<WebGLBuffer> bu
     if (m_boundElementArrayBuffer)
         m_boundElementArrayBuffer->onDetached(context()->graphicsContext3D());
     m_boundElementArrayBuffer = buffer;
-    
+
 }
 
 void WebGLVertexArrayObjectOES::setVertexAttribState(

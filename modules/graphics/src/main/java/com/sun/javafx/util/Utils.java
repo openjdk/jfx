@@ -124,14 +124,14 @@ public class Utils {
 
     /**
      * Helper to remove leading and trailing quotes from a string.
-     * Works with single or double quotes. 
+     * Works with single or double quotes.
      */
     public static String stripQuotes(String str) {
         if (str == null) return str;
         if (str.length() == 0) return str;
 
         int beginIndex = 0;
-        final char openQuote = str.charAt(beginIndex);        
+        final char openQuote = str.charAt(beginIndex);
         if ( openQuote == '\"' || openQuote=='\'' ) beginIndex += 1;
 
         int endIndex = str.length();
@@ -886,7 +886,7 @@ public class Utils {
         /** The buffer index of the last converted unicode character
          */
         int unicodeConversionBp = -1;
-        
+
         buf = src.toCharArray();
         buflen = buf.length;
         bp = -1;
@@ -938,7 +938,7 @@ public class Utils {
             }
             dst[dstIndex++] = ch;
         }
-        
+
         return new String(dst, 0, dstIndex);
     }
 }

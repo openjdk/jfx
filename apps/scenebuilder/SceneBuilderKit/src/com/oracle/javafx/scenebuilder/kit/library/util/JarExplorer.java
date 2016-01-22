@@ -42,22 +42,22 @@ import javafx.fxml.FXMLLoader;
 
 /**
  *
- * 
+ *
  */
 public class JarExplorer {
-    
+
     private final Path jar;
-    
+
     public JarExplorer(Path jar) {
         assert jar != null;
         assert jar.isAbsolute();
-        
+
         this.jar = jar;
     }
-    
+
     public JarReport explore(ClassLoader classLoader) throws IOException {
         final JarReport result = new JarReport(jar);
-        
+
         try (JarFile jarFile = new JarFile(jar.toFile())) {
             final Enumeration<JarEntry> e = jarFile.entries();
             while (e.hasMoreElements()) {
@@ -65,37 +65,37 @@ public class JarExplorer {
                 result.getEntries().add(exploreEntry(entry, classLoader));
             }
         }
-        
+
         return result;
     }
-    
+
     public static String makeFxmlText(Class<?> klass) {
         final StringBuilder result = new StringBuilder();
-        
+
         /*
          * <?xml version="1.0" encoding="UTF-8"?> //NOI18N
-         * 
+         *
          * <?import a.b.C?>
-         * 
+         *
          * <C/>
          */
-        
+
         result.append("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"); //NOI18N
-        
+
         result.append("<?import "); //NOI18N
         result.append(klass.getCanonicalName());
         result.append("?>"); //NOI18N
         result.append("<"); //NOI18N
         result.append(klass.getSimpleName());
         result.append("/>\n"); //NOI18N
-        
+
         return result.toString();
     }
-    
-    
+
+
     public static Object instantiateWithFXMLLoader(Class<?> klass, ClassLoader classLoader) throws IOException {
         Object result;
-        
+
         final String fxmlText = makeFxmlText(klass);
         final byte[] fxmlBytes = fxmlText.getBytes(Charset.forName("UTF-8")); //NOI18N
 
@@ -108,19 +108,19 @@ public class JarExplorer {
         } catch(RuntimeException|Error x) {
             throw new IOException(x);
         }
-        
+
         return result;
     }
-    
+
     /*
      * Private
      */
-    
+
     private JarReportEntry exploreEntry(JarEntry entry, ClassLoader classLoader) {
         JarReportEntry.Status status;
         Throwable entryException;
         Class<?> entryClass;
-        
+
         if (entry.isDirectory()) {
             status = JarReportEntry.Status.IGNORED;
             entryClass = null;
@@ -157,14 +157,14 @@ public class JarExplorer {
                 }
             }
         }
-        
+
         return new JarReportEntry(entry.getName(), status, entryException, entryClass);
     }
-    
-    
+
+
     private String makeClassName(String entryName) {
         final String result;
-        
+
         if (entryName.endsWith(".class") == false) { //NOI18N
             result = null;
         } else if (entryName.contains("$")) { //NOI18N
@@ -174,7 +174,7 @@ public class JarExplorer {
             final int endIndex = entryName.length()-6; // ".class" -> 6 //NOI18N
             result = entryName.substring(0, endIndex).replace("/", "."); //NOI18N
         }
-        
+
         return result;
     }
 }

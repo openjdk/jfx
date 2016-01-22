@@ -104,7 +104,7 @@ public class SamplePage extends StackPane implements Page {
     @Override public Node getNode() {
         return this;
     }
-    
+
     String apiClassToUrl(String classname) {
         String urlEnd = classname.replaceAll("\\.([a-z])", "/$1").replaceFirst("\\.([A-Z])", "/$1");
         if (classname.startsWith("javafx")) {

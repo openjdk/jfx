@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef ProtectionSpace_h
@@ -52,7 +52,7 @@ enum ProtectionSpaceAuthenticationScheme {
     ProtectionSpaceAuthenticationSchemeServerTrustEvaluationRequested = 8,
     ProtectionSpaceAuthenticationSchemeUnknown = 100
 };
-  
+
 class ProtectionSpace {
 
 public:
@@ -62,14 +62,14 @@ public:
     // Hash table deleted values, which are only constructed and never copied or destroyed.
     ProtectionSpace(WTF::HashTableDeletedValueType) : m_isHashTableDeletedValue(true) { }
     bool isHashTableDeletedValue() const { return m_isHashTableDeletedValue; }
-    
+
     const String& host() const;
     int port() const;
     ProtectionSpaceServerType serverType() const;
     bool isProxy() const;
     const String& realm() const;
     ProtectionSpaceAuthenticationScheme authenticationScheme() const;
-    
+
     bool receivesCredentialSecurely() const;
 
 private:
@@ -83,7 +83,7 @@ private:
 
 bool operator==(const ProtectionSpace& a, const ProtectionSpace& b);
 inline bool operator!=(const ProtectionSpace& a, const ProtectionSpace& b) { return !(a == b); }
-    
+
 } // namespace WebCore
 
 #endif // ProtectionSpace_h

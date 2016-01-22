@@ -67,7 +67,7 @@ public abstract class AbstractWrapInContentJob extends AbstractWrapInJob {
         }
         return result;
     }
-    
+
     @Override
     protected List<Job> wrapChildrenJobs(final List<FXOMObject> children) {
 

@@ -84,7 +84,7 @@ class ColorPalette extends Region {
     private PopupControl popupControl;
     private ColorSquare focusedSquare;
     private ContextMenu contextMenu = null;
-    
+
     private Color mouseDragColor = null;
     private boolean dragDetected = false;
 
@@ -94,7 +94,7 @@ class ColorPalette extends Region {
     private int customColorLastRowLength = 0;
 
     private final ColorSquare hoverSquare = new ColorSquare();
-    
+
     public ColorPalette(final ColorPicker colorPicker) {
         getStyleClass().add("color-palette-region");
         this.colorPicker = colorPicker;
@@ -104,7 +104,7 @@ class ColorPalette extends Region {
         customColorLink.setPrefWidth(colorPickerGrid.prefWidth(-1));
         customColorLink.setAlignment(Pos.CENTER);
         customColorLink.setFocusTraversable(true);
-        customColorLink.setVisited(true); // so that it always appears blue 
+        customColorLink.setVisited(true); // so that it always appears blue
         customColorLink.setOnAction(new EventHandler<ActionEvent>() {
             @Override public void handle(ActionEvent t) {
                 if (customColorDialog == null) {
@@ -133,7 +133,7 @@ class ColorPalette extends Region {
                  });
             }
         });
-        
+
         initNavigation();
         customColorGrid.getStyleClass().add("color-picker-grid");
         customColorGrid.setVisible(false);
@@ -190,7 +190,7 @@ class ColorPalette extends Region {
         hoverSquare.setLayoutX(snapPosition(x) - xAdjust);
         hoverSquare.setLayoutY(snapPosition(y) - focusedSquare.getHeight() / 2.0 + (hoverSquare.getScaleY() == 1.0 ? 0 : focusedSquare.getHeight() / 4.0));
     }
-    
+
     private void buildCustomColors() {
         final ObservableList<Color> customColors = colorPicker.getCustomColors();
         customColorNumber = customColors.size();
@@ -249,7 +249,7 @@ class ColorPalette extends Region {
         requestLayout();
 
     }
-    
+
     private void initNavigation() {
         setOnKeyPressed(ke -> {
             switch (ke.getCode()) {
@@ -369,11 +369,11 @@ class ColorPalette extends Region {
     private void processSelectKey(KeyEvent ke) {
         if (focusedSquare != null) focusedSquare.selectColor(ke);
     }
-    
+
     public void setPopupControl(PopupControl pc) {
         this.popupControl = pc;
     }
-    
+
     public ColorPickerGrid getColorGrid() {
         return colorPickerGrid;
     }
@@ -452,12 +452,12 @@ class ColorPalette extends Region {
 
             String tooltipStr = ColorPickerSkin.tooltipString(color);
             Tooltip.install(this, new Tooltip((tooltipStr == null) ? "" : tooltipStr));
-          
+
             rectangle.getStyleClass().add("color-rect");
 
             getChildren().add(rectangle);
         }
-        
+
         public void selectColor(KeyEvent event) {
             if (rectangle.getFill() != null) {
                 if (rectangle.getFill() instanceof Color) {
@@ -469,7 +469,7 @@ class ColorPalette extends Region {
             colorPicker.hide();
         }
     }
-    
+
     // The skin can update selection if colorpicker value changes..
     public void updateSelection(Color color) {
         setFocusedSquare(null);
@@ -489,7 +489,7 @@ class ColorPalette extends Region {
             }
         }
     }
-    
+
     class ColorPickerGrid extends GridPane {
 
         private final List<ColorSquare> squares;
@@ -545,7 +545,7 @@ class ColorPalette extends Region {
                 dragDetected = false;
             });
         }
-        
+
         public List<ColorSquare> getSquares() {
             return squares;
         }

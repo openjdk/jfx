@@ -21,7 +21,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -78,7 +78,7 @@ static inline bool isLetterMatchIgnoringCase(char character, char lowercaseLette
 }
 
 enum URLCharacterClasses {
-    // alpha 
+    // alpha
     SchemeFirstChar = 1 << 0,
 
     // ( alpha | digit | "+" | "-" | "." )
@@ -125,21 +125,21 @@ static const unsigned char characterClassTable[256] = {
     /* 45  - */ SchemeChar | UserInfoChar | HostnameChar,
     /* 46  . */ SchemeChar | UserInfoChar | HostnameChar | IPv6Char,
     /* 47  / */ PathSegmentEndChar,
-    /* 48  0 */ SchemeChar | UserInfoChar | HostnameChar | IPv6Char, 
-    /* 49  1 */ SchemeChar | UserInfoChar | HostnameChar | IPv6Char,    
-    /* 50  2 */ SchemeChar | UserInfoChar | HostnameChar | IPv6Char, 
+    /* 48  0 */ SchemeChar | UserInfoChar | HostnameChar | IPv6Char,
+    /* 49  1 */ SchemeChar | UserInfoChar | HostnameChar | IPv6Char,
+    /* 50  2 */ SchemeChar | UserInfoChar | HostnameChar | IPv6Char,
     /* 51  3 */ SchemeChar | UserInfoChar | HostnameChar | IPv6Char,
-    /* 52  4 */ SchemeChar | UserInfoChar | HostnameChar | IPv6Char, 
+    /* 52  4 */ SchemeChar | UserInfoChar | HostnameChar | IPv6Char,
     /* 53  5 */ SchemeChar | UserInfoChar | HostnameChar | IPv6Char,
-    /* 54  6 */ SchemeChar | UserInfoChar | HostnameChar | IPv6Char, 
+    /* 54  6 */ SchemeChar | UserInfoChar | HostnameChar | IPv6Char,
     /* 55  7 */ SchemeChar | UserInfoChar | HostnameChar | IPv6Char,
-    /* 56  8 */ SchemeChar | UserInfoChar | HostnameChar | IPv6Char, 
+    /* 56  8 */ SchemeChar | UserInfoChar | HostnameChar | IPv6Char,
     /* 57  9 */ SchemeChar | UserInfoChar | HostnameChar | IPv6Char,
     /* 58  : */ UserInfoChar | IPv6Char,    /* 59  ; */ UserInfoChar,
     /* 60  < */ BadChar,    /* 61  = */ UserInfoChar,
     /* 62  > */ BadChar,    /* 63  ? */ PathSegmentEndChar | BadChar,
     /* 64  @ */ 0,
-    /* 65  A */ SchemeFirstChar | SchemeChar | UserInfoChar | HostnameChar | IPv6Char,    
+    /* 65  A */ SchemeFirstChar | SchemeChar | UserInfoChar | HostnameChar | IPv6Char,
     /* 66  B */ SchemeFirstChar | SchemeChar | UserInfoChar | HostnameChar | IPv6Char,
     /* 67  C */ SchemeFirstChar | SchemeChar | UserInfoChar | HostnameChar | IPv6Char,
     /* 68  D */ SchemeFirstChar | SchemeChar | UserInfoChar | HostnameChar | IPv6Char,
@@ -162,7 +162,7 @@ static const unsigned char characterClassTable[256] = {
     /* 85  U */ SchemeFirstChar | SchemeChar | UserInfoChar | HostnameChar,
     /* 86  V */ SchemeFirstChar | SchemeChar | UserInfoChar | HostnameChar,
     /* 87  W */ SchemeFirstChar | SchemeChar | UserInfoChar | HostnameChar,
-    /* 88  X */ SchemeFirstChar | SchemeChar | UserInfoChar | HostnameChar, 
+    /* 88  X */ SchemeFirstChar | SchemeChar | UserInfoChar | HostnameChar,
     /* 89  Y */ SchemeFirstChar | SchemeChar | UserInfoChar | HostnameChar,
     /* 90  Z */ SchemeFirstChar | SchemeChar | UserInfoChar | HostnameChar,
     /* 91  [ */ 0,
@@ -171,31 +171,31 @@ static const unsigned char characterClassTable[256] = {
     /* 95  _ */ UserInfoChar | HostnameChar,
     /* 96  ` */ 0,
     /* 97  a */ SchemeFirstChar | SchemeChar | UserInfoChar | HostnameChar | IPv6Char,
-    /* 98  b */ SchemeFirstChar | SchemeChar | UserInfoChar | HostnameChar | IPv6Char, 
+    /* 98  b */ SchemeFirstChar | SchemeChar | UserInfoChar | HostnameChar | IPv6Char,
     /* 99  c */ SchemeFirstChar | SchemeChar | UserInfoChar | HostnameChar | IPv6Char,
-    /* 100  d */ SchemeFirstChar | SchemeChar | UserInfoChar | HostnameChar | IPv6Char, 
+    /* 100  d */ SchemeFirstChar | SchemeChar | UserInfoChar | HostnameChar | IPv6Char,
     /* 101  e */ SchemeFirstChar | SchemeChar | UserInfoChar | HostnameChar | IPv6Char,
-    /* 102  f */ SchemeFirstChar | SchemeChar | UserInfoChar | HostnameChar | IPv6Char, 
+    /* 102  f */ SchemeFirstChar | SchemeChar | UserInfoChar | HostnameChar | IPv6Char,
     /* 103  g */ SchemeFirstChar | SchemeChar | UserInfoChar | HostnameChar,
-    /* 104  h */ SchemeFirstChar | SchemeChar | UserInfoChar | HostnameChar, 
+    /* 104  h */ SchemeFirstChar | SchemeChar | UserInfoChar | HostnameChar,
     /* 105  i */ SchemeFirstChar | SchemeChar | UserInfoChar | HostnameChar,
-    /* 106  j */ SchemeFirstChar | SchemeChar | UserInfoChar | HostnameChar, 
+    /* 106  j */ SchemeFirstChar | SchemeChar | UserInfoChar | HostnameChar,
     /* 107  k */ SchemeFirstChar | SchemeChar | UserInfoChar | HostnameChar,
-    /* 108  l */ SchemeFirstChar | SchemeChar | UserInfoChar | HostnameChar, 
+    /* 108  l */ SchemeFirstChar | SchemeChar | UserInfoChar | HostnameChar,
     /* 109  m */ SchemeFirstChar | SchemeChar | UserInfoChar | HostnameChar,
-    /* 110  n */ SchemeFirstChar | SchemeChar | UserInfoChar | HostnameChar, 
+    /* 110  n */ SchemeFirstChar | SchemeChar | UserInfoChar | HostnameChar,
     /* 111  o */ SchemeFirstChar | SchemeChar | UserInfoChar | HostnameChar,
-    /* 112  p */ SchemeFirstChar | SchemeChar | UserInfoChar | HostnameChar, 
+    /* 112  p */ SchemeFirstChar | SchemeChar | UserInfoChar | HostnameChar,
     /* 113  q */ SchemeFirstChar | SchemeChar | UserInfoChar | HostnameChar,
-    /* 114  r */ SchemeFirstChar | SchemeChar | UserInfoChar | HostnameChar, 
+    /* 114  r */ SchemeFirstChar | SchemeChar | UserInfoChar | HostnameChar,
     /* 115  s */ SchemeFirstChar | SchemeChar | UserInfoChar | HostnameChar,
-    /* 116  t */ SchemeFirstChar | SchemeChar | UserInfoChar | HostnameChar, 
+    /* 116  t */ SchemeFirstChar | SchemeChar | UserInfoChar | HostnameChar,
     /* 117  u */ SchemeFirstChar | SchemeChar | UserInfoChar | HostnameChar,
-    /* 118  v */ SchemeFirstChar | SchemeChar | UserInfoChar | HostnameChar, 
+    /* 118  v */ SchemeFirstChar | SchemeChar | UserInfoChar | HostnameChar,
     /* 119  w */ SchemeFirstChar | SchemeChar | UserInfoChar | HostnameChar,
-    /* 120  x */ SchemeFirstChar | SchemeChar | UserInfoChar | HostnameChar, 
+    /* 120  x */ SchemeFirstChar | SchemeChar | UserInfoChar | HostnameChar,
     /* 121  y */ SchemeFirstChar | SchemeChar | UserInfoChar | HostnameChar,
-    /* 122  z */ SchemeFirstChar | SchemeChar | UserInfoChar | HostnameChar, 
+    /* 122  z */ SchemeFirstChar | SchemeChar | UserInfoChar | HostnameChar,
     /* 123  { */ 0,
     /* 124  | */ 0,   /* 125  } */ 0,   /* 126  ~ */ UserInfoChar,   /* 127 del */ BadChar,
     /* 128 */ BadChar, /* 129 */ BadChar, /* 130 */ BadChar, /* 131 */ BadChar,
@@ -246,7 +246,7 @@ static inline bool isIPv6Char(unsigned char c) { return characterClassTable[c] &
 static inline bool isPathSegmentEndChar(char c) { return characterClassTable[static_cast<unsigned char>(c)] & PathSegmentEndChar; }
 static inline bool isPathSegmentEndChar(UChar c) { return c <= 0xff && (characterClassTable[c] & PathSegmentEndChar); }
 static inline bool isBadChar(unsigned char c) { return characterClassTable[c] & BadChar; }
-    
+
 static inline bool isSchemeCharacterMatchIgnoringCase(char character, char schemeCharacter)
 {
     ASSERT(isSchemeChar(character));
@@ -340,7 +340,7 @@ URL::URL(const URL& base, const String& relative)
 
 URL::URL(const URL& base, const String& relative, const TextEncoding& encoding)
 {
-    // For UTF-{7,16,32}, we want to use UTF-8 for the query part as 
+    // For UTF-{7,16,32}, we want to use UTF-8 for the query part as
     // we do when submitting a form. A form with GET method
     // has its contents added to a URL as query params and it makes sense
     // to be consistent.
@@ -606,7 +606,7 @@ String URL::pass() const
     if (m_passwordEnd == m_userEnd)
         return String();
 
-    return decodeURLEscapeSequences(m_string.substring(m_userEnd + 1, m_passwordEnd - m_userEnd - 1)); 
+    return decodeURLEscapeSequences(m_string.substring(m_userEnd + 1, m_passwordEnd - m_userEnd - 1));
 }
 
 String URL::user() const
@@ -666,7 +666,7 @@ bool URL::protocolIs(const char* protocol) const
     assertProtocolIsGood(protocol);
 
     // JavaScript URLs are "valid" and should be executed even if URL decides they are invalid.
-    // The free function protocolIsJavaScript() should be used instead. 
+    // The free function protocolIsJavaScript() should be used instead.
     ASSERT(!equalIgnoringCase(protocol, String("javascript")));
 
     if (!m_isValid)
@@ -685,7 +685,7 @@ String URL::query() const
     if (m_queryEnd == m_pathEnd)
         return String();
 
-    return m_string.substring(m_pathEnd + 1, m_queryEnd - (m_pathEnd + 1)); 
+    return m_string.substring(m_pathEnd + 1, m_queryEnd - (m_pathEnd + 1));
 }
 
 String URL::path() const
@@ -824,7 +824,7 @@ void URL::removeFragmentIdentifier()
         return;
     parse(m_string.left(m_queryEnd));
 }
-    
+
 void URL::setQuery(const String& query)
 {
     if (!m_isValid)
@@ -1259,10 +1259,10 @@ void URL::parse(const char* url, const String* originalString)
             while (isHostnameChar(url[hostEnd]))
                 hostEnd++;
         }
-        
+
         if (url[hostEnd] == ':') {
             portStart = portEnd = hostEnd + 1;
- 
+
             // possible start of port
             portEnd = portStart;
             while (isASCIIDigit(url[portEnd]))

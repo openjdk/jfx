@@ -36,25 +36,25 @@
 namespace WebCore {
 
 class AccessibilityTableHeaderContainer : public AccessibilityMockObject {
-    
+
 private:
     AccessibilityTableHeaderContainer();
 public:
     static PassRefPtr<AccessibilityTableHeaderContainer> create();
     virtual ~AccessibilityTableHeaderContainer();
-    
+
     virtual AccessibilityRole roleValue() const override { return TableHeaderContainerRole; }
-    
+
     virtual void addChildren() override;
-    
+
     virtual LayoutRect elementRect() const override;
-    
+
 private:
     LayoutRect m_headerRect;
-    
+
     virtual bool computeAccessibilityIsIgnored() const override;
-}; 
-    
-} // namespace WebCore 
+};
+
+} // namespace WebCore
 
 #endif // AccessibilityTableHeaderContainer_h

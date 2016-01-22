@@ -31,7 +31,7 @@
 #include "BiquadDSPKernel.h"
 
 namespace WebCore {
-    
+
 BiquadProcessor::BiquadProcessor(AudioContext* context, float sampleRate, size_t numberOfChannels, bool autoInitialize)
     : AudioDSPKernelProcessor(sampleRate, numberOfChannels)
     , m_type(LowPass)
@@ -72,7 +72,7 @@ void BiquadProcessor::checkForDirtyCoefficients()
     // The BiquadDSPKernel objects rely on this value to see if they need to re-compute their internal filter coefficients.
     m_filterCoefficientsDirty = false;
     m_hasSampleAccurateValues = false;
-    
+
     if (m_parameter1->hasSampleAccurateValues() || m_parameter2->hasSampleAccurateValues() || m_parameter3->hasSampleAccurateValues() || m_parameter4->hasSampleAccurateValues()) {
         m_filterCoefficientsDirty = true;
         m_hasSampleAccurateValues = true;
@@ -103,9 +103,9 @@ void BiquadProcessor::process(const AudioBus* source, AudioBus* destination, siz
         destination->zero();
         return;
     }
-        
+
     checkForDirtyCoefficients();
-            
+
     // For each channel of our input, process using the corresponding BiquadDSPKernel into the output channel.
     for (unsigned i = 0; i < m_kernels.size(); ++i)
         m_kernels[i]->process(source->channel(i)->data(), destination->channel(i)->mutableData(), framesToProcess);
@@ -127,7 +127,7 @@ void BiquadProcessor::getFrequencyResponse(int nFrequencies,
     // Compute the frequency response on a separate temporary kernel
     // to avoid interfering with the processing running in the audio
     // thread on the main kernels.
-    
+
     auto responseKernel = std::make_unique<BiquadDSPKernel>(this);
 
     responseKernel->getFrequencyResponse(nFrequencies, frequencyHz, magResponse, phaseResponse);

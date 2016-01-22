@@ -78,7 +78,7 @@ public interface HostInterface {
      * Called by embedded FX stage when FX enables/disables the stage.
      */
     public void setEnabled(boolean enabled);
-    
+
     /*
      * Called by embedded FX scene when its cursor is changed.
      */

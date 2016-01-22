@@ -127,7 +127,7 @@ bool TextTrackCueList::updateCueIndex(TextTrackCue* cue)
 {
     if (!contains(cue))
         return false;
-    
+
     remove(cue);
     return add(cue);
 }

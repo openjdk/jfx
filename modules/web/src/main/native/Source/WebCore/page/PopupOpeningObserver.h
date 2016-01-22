@@ -35,6 +35,6 @@ public:
 protected:
     virtual ~PopupOpeningObserver() { }
 };
-    
+
 }
 #endif

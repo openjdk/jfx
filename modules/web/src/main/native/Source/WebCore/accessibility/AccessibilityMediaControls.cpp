@@ -151,7 +151,7 @@ void AccessibilityMediaControl::accessibilityText(Vector<AccessibilityText>& tex
     if (!helptext.isEmpty())
         textOrder.append(AccessibilityText(helptext, HelpText));
 }
-    
+
 
 String AccessibilityMediaControl::title() const
 {
@@ -307,7 +307,7 @@ bool AccessibilityMediaTimeDisplay::computeAccessibilityIsIgnored() const
 
     if (!m_renderer->style().width().value())
         return true;
-    
+
     return accessibilityIsIgnoredByDefault();
 }
 

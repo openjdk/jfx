@@ -62,12 +62,12 @@ public abstract class WhenTestBase<T, P extends WritableValue<T> & ObservableVal
     private final T v3;
 
     public WhenTestBase(T v0, T v1, T v2, T v3, P p0, P... properties) {
-    	this.v0 = v0;
-    	this.v1 = v1;
-    	this.v2 = v2;
-    	this.v3 = v3;
-    	this.p0 = p0;
-    	this.properties = properties;
+        this.v0 = v0;
+        this.v1 = v1;
+        this.v2 = v2;
+        this.v3 = v3;
+        this.p0 = p0;
+        this.properties = properties;
     }
 
     @Before
@@ -75,7 +75,7 @@ public abstract class WhenTestBase<T, P extends WritableValue<T> & ObservableVal
         cond.set(false);
         p0.setValue(v0);
         for (final P p : properties) {
-        	p.setValue(v1);
+            p.setValue(v1);
         }
     }
 
@@ -84,35 +84,35 @@ public abstract class WhenTestBase<T, P extends WritableValue<T> & ObservableVal
         final Binding<T>[] bindings = generatePropertyPropertyList(p0, properties);
         final int n = bindings.length;
         for (int i=0; i<n; i++) {
-        	final Binding<T> binding = bindings[i];
-        	final P p1 = properties[i];
+            final Binding<T> binding = bindings[i];
+            final P p1 = properties[i];
             // check initial state
-	        checkDependencies(binding.getDependencies(), cond, p0, p1);
-	        check(p1.getValue(), binding);
-	
-	        // set first value
-	        p0.setValue(v2);
-	        check(p1.getValue(), binding);
-	
-	        // set second value
-	        p1.setValue(v3);
-	        check(p1.getValue(), binding);
-	
-	        // change condition
-	        cond.set(true);
-	        check(v2, binding);
-	
-	        // set first value
-	        p0.setValue(v0);
-	        check(v0, binding);
-	
-	        // set second value
-	        p1.setValue(v1);
-	        check(v0, binding);
-	
-	        // change condition
-	        cond.set(false);
-	        check(p1.getValue(), binding);
+            checkDependencies(binding.getDependencies(), cond, p0, p1);
+            check(p1.getValue(), binding);
+
+            // set first value
+            p0.setValue(v2);
+            check(p1.getValue(), binding);
+
+            // set second value
+            p1.setValue(v3);
+            check(p1.getValue(), binding);
+
+            // change condition
+            cond.set(true);
+            check(v2, binding);
+
+            // set first value
+            p0.setValue(v0);
+            check(v0, binding);
+
+            // set second value
+            p1.setValue(v1);
+            check(v0, binding);
+
+            // change condition
+            cond.set(false);
+            check(p1.getValue(), binding);
         }
     }
 
@@ -120,25 +120,25 @@ public abstract class WhenTestBase<T, P extends WritableValue<T> & ObservableVal
     public void test_expression_primitive() {
         final Binding<T>[] bindings = generatePropertyPrimitive(p0, v1);
         for (final Binding<T> binding : bindings) {
-	        // check initial state
-	        checkDependencies(binding.getDependencies(), cond, p0);
-	        check(v1, binding);
-	
-	        // set first value
-	        p0.setValue(v2);
-	        check(v1, binding);
-	
-	        // change condition
-	        cond.set(true);
-	        check(v2, binding);
-	
-	        // set first value
-	        p0.setValue(v0);
-	        check(v0, binding);
-	
-	        // change condition
-	        cond.set(false);
-	        check(v1, binding);
+            // check initial state
+            checkDependencies(binding.getDependencies(), cond, p0);
+            check(v1, binding);
+
+            // set first value
+            p0.setValue(v2);
+            check(v1, binding);
+
+            // change condition
+            cond.set(true);
+            check(v2, binding);
+
+            // set first value
+            p0.setValue(v0);
+            check(v0, binding);
+
+            // change condition
+            cond.set(false);
+            check(v1, binding);
         }
     }
 
@@ -146,25 +146,25 @@ public abstract class WhenTestBase<T, P extends WritableValue<T> & ObservableVal
     public void test_primitive_expression() {
         final Binding<T>[] bindings = generatePrimitiveProperty(v1, p0);
         for (final Binding<T> binding : bindings) {
-	        // check initial state
-	        checkDependencies(binding.getDependencies(), cond, p0);
-	        check(v0, binding);
-	
-	        // set second value
-	        p0.setValue(v3);
-	        check(v3, binding);
-	
-	        // change condition
-	        cond.set(true);
-	        check(v1, binding);
-	
-	        // set second value
-	        p0.setValue(v0);
-	        check(v1, binding);
-	
-	        // change condition
-	        cond.set(false);
-	        check(v0, binding);
+            // check initial state
+            checkDependencies(binding.getDependencies(), cond, p0);
+            check(v0, binding);
+
+            // set second value
+            p0.setValue(v3);
+            check(v3, binding);
+
+            // change condition
+            cond.set(true);
+            check(v1, binding);
+
+            // set second value
+            p0.setValue(v0);
+            check(v1, binding);
+
+            // change condition
+            cond.set(false);
+            check(v0, binding);
         }
     }
 
@@ -172,17 +172,17 @@ public abstract class WhenTestBase<T, P extends WritableValue<T> & ObservableVal
     public void test_primitive_primitive() {
         final Binding<T>[] bindings = generatePrimitivePrimitive(v0, v1);
         for (final Binding<T> binding : bindings) {
-	        // check initial state
-	        checkDependencies(binding.getDependencies(), cond);
-	        check(v1, binding);
-	
-	        // change condition
-	        cond.set(true);
-	        check(v0, binding);
-	
-	        // change condition
-	        cond.set(false);
-	        check(v1, binding);
+            // check initial state
+            checkDependencies(binding.getDependencies(), cond);
+            check(v1, binding);
+
+            // change condition
+            cond.set(true);
+            check(v0, binding);
+
+            // change condition
+            cond.set(false);
+            check(v1, binding);
         }
     }
 

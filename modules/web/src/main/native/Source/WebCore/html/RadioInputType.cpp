@@ -174,7 +174,7 @@ void RadioInputType::didDispatchClick(Event* event, const InputElementClickState
             checkedRadioButton->setChecked(true);
         }
 
-#if PLATFORM(IOS)        
+#if PLATFORM(IOS)
         element().setIndeterminate(state.indeterminate);
 #endif
 

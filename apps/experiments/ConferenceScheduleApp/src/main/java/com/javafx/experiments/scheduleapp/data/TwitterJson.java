@@ -48,11 +48,11 @@ import javafx.util.Callback;
 public class TwitterJson implements JSONParserJP.Callback, Runnable {
     //Thu, 26 Jul 2012 16:29:52 +0000
     private static final DateFormat TWITTER_DATE_FORMAT = new SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss ZZZZZ");
-    
+
     private final String url;
     private final Callback<Tweet[],Void> gotTweetCallBack;
     private final ArrayList<Tweet> tweets = new ArrayList<Tweet>();
-    
+
     private Date createdAt;
     private String fromUser;
     private String fromUserName;
@@ -63,7 +63,7 @@ public class TwitterJson implements JSONParserJP.Callback, Runnable {
         this.url = url;
         this.gotTweetCallBack = gotTweetCallBack;
     }
-    
+
     public static void getTweetsForQuery(String url, final Callback<Tweet[],Void> gotTweetCallBack) {
         new Thread(new TwitterJson(url, gotTweetCallBack)).start();
     }

@@ -60,7 +60,7 @@ final class PasteboardImpl implements Pasteboard {
         content.putHtml(html);
         clipboard.setContent(content);
     }
-    
+
     @Override public void writeImage(WCImageFrame wcImage) {
         Object platformImage = WCGraphicsManager.getGraphicsManager().
                 toPlatformImage(wcImage.getFrame());

@@ -517,7 +517,7 @@ Font::CodePath Font::codePath(const TextRun& run) const
 
     if (m_fontDescription.featureSettings() && m_fontDescription.featureSettings()->size() > 0)
         return Complex;
-    
+
     if (run.length() > 1 && !WidthIterator::supportsTypesettingFeatures(*this))
         return Complex;
 
@@ -533,7 +533,7 @@ Font::CodePath Font::codePath(const TextRun& run) const
 
 Font::CodePath Font::characterRangeCodePath(const UChar* characters, unsigned len)
 {
-    // FIXME: Should use a UnicodeSet in ports where ICU is used. Note that we 
+    // FIXME: Should use a UnicodeSet in ports where ICU is used. Note that we
     // can't simply use UnicodeCharacter Property/class because some characters
     // are not 'combining', but still need to go to the complex path.
     // Alternatively, we may as well consider binary search over a sorted
@@ -541,9 +541,9 @@ Font::CodePath Font::characterRangeCodePath(const UChar* characters, unsigned le
     CodePath result = Simple;
     for (unsigned i = 0; i < len; i++) {
         const UChar c = characters[i];
-        if (c < 0x2E5) // U+02E5 through U+02E9 (Modifier Letters : Tone letters)  
+        if (c < 0x2E5) // U+02E5 through U+02E9 (Modifier Letters : Tone letters)
             continue;
-        if (c <= 0x2E9) 
+        if (c <= 0x2E9)
             return Complex;
 
         if (c < 0x300) // U+0300 through U+036F Combining diacritical marks
@@ -557,9 +557,9 @@ Font::CodePath Font::characterRangeCodePath(const UChar* characters, unsigned le
             return Complex;
 
         // U+0600 through U+109F Arabic, Syriac, Thaana, NKo, Samaritan, Mandaic,
-        // Devanagari, Bengali, Gurmukhi, Gujarati, Oriya, Tamil, Telugu, Kannada, 
+        // Devanagari, Bengali, Gurmukhi, Gujarati, Oriya, Tamil, Telugu, Kannada,
         // Malayalam, Sinhala, Thai, Lao, Tibetan, Myanmar
-        if (c < 0x0600) 
+        if (c < 0x0600)
             continue;
         if (c <= 0x109F)
             return Complex;
@@ -634,7 +634,7 @@ Font::CodePath Font::characterRangeCodePath(const UChar* characters, unsigned le
 
        // U+A800 through U+ABFF Nagri, Phags-pa, Saurashtra, Devanagari Extended,
        // Hangul Jamo Ext. A, Javanese, Myanmar Extended A, Tai Viet, Meetei Mayek,
-        if (c < 0xA800) 
+        if (c < 0xA800)
             continue;
         if (c <= 0xABFF)
             return Complex;
@@ -690,39 +690,39 @@ bool Font::isCJKIdeograph(UChar32 c)
     // The basic CJK Unified Ideographs block.
     if (c >= 0x4E00 && c <= 0x9FFF)
         return true;
-    
+
     // CJK Unified Ideographs Extension A.
     if (c >= 0x3400 && c <= 0x4DBF)
         return true;
-    
+
     // CJK Radicals Supplement.
     if (c >= 0x2E80 && c <= 0x2EFF)
         return true;
-    
+
     // Kangxi Radicals.
     if (c >= 0x2F00 && c <= 0x2FDF)
         return true;
-    
+
     // CJK Strokes.
     if (c >= 0x31C0 && c <= 0x31EF)
         return true;
-    
+
     // CJK Compatibility Ideographs.
     if (c >= 0xF900 && c <= 0xFAFF)
         return true;
-    
+
     // CJK Unified Ideographs Extension B.
     if (c >= 0x20000 && c <= 0x2A6DF)
         return true;
-        
+
     // CJK Unified Ideographs Extension C.
     if (c >= 0x2A700 && c <= 0x2B73F)
         return true;
-    
+
     // CJK Unified Ideographs Extension D.
     if (c >= 0x2B740 && c <= 0x2B81F)
         return true;
-    
+
     // CJK Compatibility Ideographs Supplement.
     if (c >= 0x2F800 && c <= 0x2FA1F)
         return true;
@@ -734,8 +734,8 @@ bool Font::isCJKIdeographOrSymbol(UChar32 c)
 {
     // 0x2C7 Caron, Mandarin Chinese 3rd Tone
     // 0x2CA Modifier Letter Acute Accent, Mandarin Chinese 2nd Tone
-    // 0x2CB Modifier Letter Grave Access, Mandarin Chinese 4th Tone 
-    // 0x2D9 Dot Above, Mandarin Chinese 5th Tone 
+    // 0x2CB Modifier Letter Grave Access, Mandarin Chinese 4th Tone
+    // 0x2D9 Dot Above, Mandarin Chinese 5th Tone
     if ((c == 0x2C7) || (c == 0x2CA) || (c == 0x2CB) || (c == 0x2D9))
         return true;
 
@@ -775,7 +775,7 @@ bool Font::isCJKIdeographOrSymbol(UChar32 c)
 
     if ((c == 0x25B1) || (c == 0x25B2) || (c == 0x25B3) || (c == 0x25B6) || (c == 0x25B7) || (c == 0x25BC) || (c == 0x25BD))
         return true;
-    
+
     if ((c == 0x25C0) || (c == 0x25C1) || (c == 0x25C6) || (c == 0x25C7) || (c == 0x25C9) || (c == 0x25CB) || (c == 0x25CC))
         return true;
 
@@ -812,7 +812,7 @@ bool Font::isCJKIdeographOrSymbol(UChar32 c)
     // Ideographic Description Characters.
     if (c >= 0x2FF0 && c <= 0x2FFF)
         return true;
-    
+
     // CJK Symbols and Punctuation, excluding 0x3030.
     if (c >= 0x3000 && c < 0x3030)
         return true;
@@ -824,7 +824,7 @@ bool Font::isCJKIdeographOrSymbol(UChar32 c)
     if (c >= 0x3040 && c <= 0x309F)
         return true;
 
-    // Katakana 
+    // Katakana
     if (c >= 0x30A0 && c <= 0x30FF)
         return true;
 
@@ -838,11 +838,11 @@ bool Font::isCJKIdeographOrSymbol(UChar32 c)
     // Bopomofo Extended
     if (c >= 0x31A0 && c <= 0x31BF)
         return true;
- 
+
     // Enclosed CJK Letters and Months.
     if (c >= 0x3200 && c <= 0x32FF)
         return true;
-    
+
     // CJK Compatibility.
     if (c >= 0x3300 && c <= 0x33FF)
         return true;

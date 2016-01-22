@@ -21,7 +21,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef TextCodec_h
@@ -66,12 +66,12 @@ namespace WebCore {
             bool ignored;
             return decode(str, length, flush, false, ignored);
         }
-        
+
         virtual String decode(const char*, size_t length, bool flush, bool stopOnError, bool& sawError) = 0;
         virtual CString encode(const UChar*, size_t length, UnencodableHandling) = 0;
 
         // Fills a null-terminated string representation of the given
-        // unencodable character into the given replacement buffer. 
+        // unencodable character into the given replacement buffer.
         // The length of the string (not including the null) will be returned.
         static int getUnencodableReplacement(unsigned codePoint, UnencodableHandling, UnencodableReplacementArray);
     };

@@ -41,7 +41,7 @@ public class LineChartTest extends XYChartTestBase {
 
     LineChart<Number,Number> lineChart;
     final XYChart.Series<Number, Number> series1 = new XYChart.Series<Number, Number>();
-    
+
     @Override protected Chart createChart() {
         final NumberAxis xAxis = new NumberAxis();
         final NumberAxis yAxis = new NumberAxis();
@@ -57,7 +57,7 @@ public class LineChartTest extends XYChartTestBase {
         series1.getData().add(new XYChart.Data(80d, 10d));
         return lineChart;
     }
-    
+
     private StringBuffer getSeriesLineFromPlot() {
         ObservableList<Node> childrenList = XYChartShim.getPlotChildren(lineChart);
         StringBuffer sb = new StringBuffer();
@@ -114,7 +114,7 @@ public class LineChartTest extends XYChartTestBase {
         // 5 stackpane nodes and 1 path node + new stackpane for data added
         assertEquals(7, XYChartShim.getPlotChildren(lineChart).size());
     }
-      
+
     @Test
     public void testDataItemRemove() {
         startApp();
@@ -127,7 +127,7 @@ public class LineChartTest extends XYChartTestBase {
             assertEquals(5, XYChartShim.getPlotChildren(lineChart).size());
         }
     }
-     
+
      @Test
     public void testSeriesAddWithAnimation() {
         startApp();

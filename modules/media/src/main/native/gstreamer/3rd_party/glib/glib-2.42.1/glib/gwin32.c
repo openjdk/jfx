@@ -9,7 +9,7 @@
  *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.	 See the GNU
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
@@ -20,10 +20,10 @@
  * Modified by the GLib Team and others 1997-2000.  See the AUTHORS
  * file for a list of people on the GLib Team.  See the ChangeLog
  * files for a list of changes.  These files are distributed with
- * GLib at ftp://ftp.gtk.org/pub/gtk/. 
+ * GLib at ftp://ftp.gtk.org/pub/gtk/.
  */
 
-/* 
+/*
  * MT safe for the unix part, FIXME: make the win32 part MT safe as well.
  */
 
@@ -37,7 +37,7 @@
 #include <wchar.h>
 #include <errno.h>
 
-#define STRICT			/* Strict typing, please */
+#define STRICT          /* Strict typing, please */
 #include <windows.h>
 #undef STRICT
 #ifndef G_WITH_CYGWIN
@@ -60,7 +60,7 @@
 
 gint
 g_win32_ftruncate (gint  fd,
-		   guint size)
+           guint size)
 {
   return _chsize (fd, size);
 }
@@ -111,7 +111,7 @@ g_win32_getlocale (void)
   if (!GetLocaleInfo (lcid, LOCALE_SISO639LANGNAME, iso639, sizeof (iso639)) ||
       !GetLocaleInfo (lcid, LOCALE_SISO3166CTRYNAME, iso3166, sizeof (iso3166)))
     return g_strdup ("C");
-  
+
   /* Strip off the sorting rules, keep only the language part.  */
   langid = LANGIDFROMLCID (lcid);
 
@@ -124,34 +124,34 @@ g_win32_getlocale (void)
     {
     case LANG_AZERI:
       switch (sub)
-	{
-	case SUBLANG_AZERI_LATIN:
-	  script = "@Latn";
-	  break;
-	case SUBLANG_AZERI_CYRILLIC:
-	  script = "@Cyrl";
-	  break;
-	}
+    {
+    case SUBLANG_AZERI_LATIN:
+      script = "@Latn";
       break;
-    case LANG_SERBIAN:		/* LANG_CROATIAN == LANG_SERBIAN */
+    case SUBLANG_AZERI_CYRILLIC:
+      script = "@Cyrl";
+      break;
+    }
+      break;
+    case LANG_SERBIAN:      /* LANG_CROATIAN == LANG_SERBIAN */
       switch (sub)
-	{
-	case SUBLANG_SERBIAN_LATIN:
-	case 0x06: /* Serbian (Latin) - Bosnia and Herzegovina */
-	  script = "@Latn";
-	  break;
-	}
+    {
+    case SUBLANG_SERBIAN_LATIN:
+    case 0x06: /* Serbian (Latin) - Bosnia and Herzegovina */
+      script = "@Latn";
+      break;
+    }
       break;
     case LANG_UZBEK:
       switch (sub)
-	{
-	case SUBLANG_UZBEK_LATIN:
-	  script = "@Latn";
-	  break;
-	case SUBLANG_UZBEK_CYRILLIC:
-	  script = "@Cyrl";
-	  break;
-	}
+    {
+    case SUBLANG_UZBEK_LATIN:
+      script = "@Latn";
+      break;
+    case SUBLANG_UZBEK_CYRILLIC:
+      script = "@Cyrl";
+      break;
+    }
       break;
     }
   return g_strconcat (iso639, "_", iso3166, script, NULL);
@@ -178,19 +178,19 @@ g_win32_error_message (gint error)
   int nchars;
 
   FormatMessageW (FORMAT_MESSAGE_ALLOCATE_BUFFER
-		  |FORMAT_MESSAGE_IGNORE_INSERTS
-		  |FORMAT_MESSAGE_FROM_SYSTEM,
-		  NULL, error, 0,
-		  (LPWSTR) &msg, 0, NULL);
+          |FORMAT_MESSAGE_IGNORE_INSERTS
+          |FORMAT_MESSAGE_FROM_SYSTEM,
+          NULL, error, 0,
+          (LPWSTR) &msg, 0, NULL);
   if (msg != NULL)
     {
       nchars = wcslen (msg);
-      
+
       if (nchars > 2 && msg[nchars-1] == '\n' && msg[nchars-2] == '\r')
-	msg[nchars-2] = '\0';
-      
+    msg[nchars-2] = '\0';
+
       retval = g_utf16_to_utf8 (msg, -1, NULL, NULL, NULL);
-      
+
       LocalFree (msg);
     }
   else
@@ -302,9 +302,9 @@ get_package_directory_from_module (const gchar *module_name)
 
   if (module_dirs == NULL)
     module_dirs = g_hash_table_new (g_str_hash, g_str_equal);
-  
+
   fn = g_hash_table_lookup (module_dirs, module_name ? module_name : "");
-      
+
   if (fn)
     {
       G_UNLOCK (module_dirs);
@@ -318,10 +318,10 @@ get_package_directory_from_module (const gchar *module_name)
       g_free (wc_module_name);
 
       if (!hmodule)
-	{
-	  G_UNLOCK (module_dirs);
-	  return NULL;
-	}
+    {
+      G_UNLOCK (module_dirs);
+      return NULL;
+    }
     }
 
   fn = g_win32_get_package_installation_directory_of_module (hmodule);
@@ -331,7 +331,7 @@ get_package_directory_from_module (const gchar *module_name)
       G_UNLOCK (module_dirs);
       return NULL;
     }
-  
+
   g_hash_table_insert (module_dirs, module_name ? g_strdup (module_name) : "", fn);
 
   G_UNLOCK (module_dirs);
@@ -397,7 +397,7 @@ get_package_directory_from_module (const gchar *module_name)
 
  gchar *
 g_win32_get_package_installation_directory_utf8 (const gchar *package,
-						 const gchar *dll_name)
+                         const gchar *dll_name)
 {
   gchar *result = NULL;
 
@@ -419,7 +419,7 @@ g_win32_get_package_installation_directory_utf8 (const gchar *package,
 
 gchar *
 g_win32_get_package_installation_directory (const gchar *package,
-					    const gchar *dll_name)
+                        const gchar *dll_name)
 {
   gchar *utf8_package = NULL, *utf8_dll_name = NULL;
   gchar *utf8_retval, *retval;
@@ -432,7 +432,7 @@ g_win32_get_package_installation_directory (const gchar *package,
 
   utf8_retval =
     g_win32_get_package_installation_directory_utf8 (utf8_package,
-						     utf8_dll_name);
+                             utf8_dll_name);
 
   retval = g_locale_from_utf8 (utf8_retval, -1, NULL, NULL, NULL);
 
@@ -476,8 +476,8 @@ g_win32_get_package_installation_directory (const gchar *package,
 
 gchar *
 g_win32_get_package_installation_subdirectory_utf8 (const gchar *package,
-						    const gchar *dll_name,
-						    const gchar *subdir)
+                            const gchar *dll_name,
+                            const gchar *subdir)
 {
   gchar *prefix;
   gchar *dirname;
@@ -498,8 +498,8 @@ G_GNUC_END_IGNORE_DEPRECATIONS
 
 gchar *
 g_win32_get_package_installation_subdirectory (const gchar *package,
-					       const gchar *dll_name,
-					       const gchar *subdir)
+                           const gchar *dll_name,
+                           const gchar *subdir)
 {
   gchar *prefix;
   gchar *dirname;
@@ -530,7 +530,7 @@ g_win32_get_package_installation_subdirectory (const gchar *package,
  * GetVersionEx() and VerifyVersionInfo().
  *
  * Returns: The version information.
- * 
+ *
  * Since: 2.6
  **/
 guint
@@ -585,16 +585,16 @@ g_win32_locale_filename_from_utf8 (const gchar *utf8filename)
        */
       wchar_t *wname = g_utf8_to_utf16 (utf8filename, -1, NULL, NULL, NULL);
       if (wname != NULL)
-	{
-	  wchar_t wshortname[MAX_PATH + 1];
-	  if (GetShortPathNameW (wname, wshortname, G_N_ELEMENTS (wshortname)))
-	    {
-	      gchar *tem = g_utf16_to_utf8 (wshortname, -1, NULL, NULL, NULL);
-	      retval = g_locale_from_utf8 (tem, -1, NULL, NULL, NULL);
-	      g_free (tem);
-	    }
-	  g_free (wname);
-	}
+    {
+      wchar_t wshortname[MAX_PATH + 1];
+      if (GetShortPathNameW (wname, wshortname, G_N_ELEMENTS (wshortname)))
+        {
+          gchar *tem = g_utf16_to_utf8 (wshortname, -1, NULL, NULL, NULL);
+          retval = g_locale_from_utf8 (tem, -1, NULL, NULL, NULL);
+          g_free (tem);
+        }
+      g_free (wname);
+    }
     }
   return retval;
 }

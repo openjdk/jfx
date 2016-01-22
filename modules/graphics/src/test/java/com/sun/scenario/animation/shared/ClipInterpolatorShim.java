@@ -29,8 +29,8 @@ import javafx.animation.KeyFrame;
 
 public class ClipInterpolatorShim {
 
-    
-    public static ClipInterpolator setKeyFrames(ClipInterpolator clip, 
+
+    public static ClipInterpolator setKeyFrames(ClipInterpolator clip,
             KeyFrame[] keyFrames, long[] keyFrameTicks) {
         return clip.setKeyFrames(keyFrames, keyFrameTicks);
     }

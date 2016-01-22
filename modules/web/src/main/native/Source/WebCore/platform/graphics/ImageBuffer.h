@@ -22,7 +22,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef ImageBuffer_h
@@ -61,7 +61,7 @@ namespace WebCore {
         UnacceleratedNonPlatformBuffer, // Use plain memory allocation rather than platform API to allocate backing store.
         Accelerated
     };
-    
+
     enum BackingStoreCopy {
         CopyBackingStore, // Guarantee subsequent draws don't affect the copy.
         DontCopyBackingStore // Subsequent draws may affect the copy.
@@ -97,7 +97,7 @@ namespace WebCore {
 
         PassRefPtr<Image> copyImage(BackingStoreCopy = CopyBackingStore, ScaleBehavior = Scaled) const;
         // Give hints on the faster copyImage Mode, return DontCopyBackingStore if it supports the DontCopyBackingStore behavior
-        // or return CopyBackingStore if it doesn't.  
+        // or return CopyBackingStore if it doesn't.
         static BackingStoreCopy fastCopyImageMode();
 
         enum CoordinateSystem { LogicalCoordinateSystem, BackingStoreCoordinateSystem };
@@ -106,9 +106,9 @@ namespace WebCore {
         PassRefPtr<Uint8ClampedArray> getPremultipliedImageData(const IntRect&, CoordinateSystem = LogicalCoordinateSystem) const;
 
         void putByteArray(Multiply multiplied, Uint8ClampedArray*, const IntSize& sourceSize, const IntRect& sourceRect, const IntPoint& destPoint, CoordinateSystem = LogicalCoordinateSystem);
-        
+
         void convertToLuminanceMask();
-        
+
         String toDataURL(const String& mimeType, const double* quality = 0, CoordinateSystem = LogicalCoordinateSystem) const;
 #if !USE(CG)
         AffineTransform baseTransform() const { return AffineTransform(); }

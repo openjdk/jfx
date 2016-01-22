@@ -135,16 +135,16 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkApplication__1runLoop
         gdk_error_trap_push();
     }
 #endif
-        
+
     gtk_main();
-    
-    // When the last JFrame closes and DISPOSE_ON_CLOSE is specified, 
-    // Java exits with an X error. X error are hidden during the FX 
-    // event loop and should be restored when the event loop exits. Unfortunately, 
-    // this is too early. The fix is to never restore X errors. 
-    // 
+
+    // When the last JFrame closes and DISPOSE_ON_CLOSE is specified,
+    // Java exits with an X error. X error are hidden during the FX
+    // event loop and should be restored when the event loop exits. Unfortunately,
+    // this is too early. The fix is to never restore X errors.
+    //
     // See RT-21408 & RT-20756
-    
+
     // Restore X error handling
     // #ifndef VERBOSE
     //     if (!noErrorTrap) {
@@ -461,7 +461,7 @@ static void process_events(GdkEvent* event, gpointer data)
                 }
             }
         }
-        
+
         //process only for non-FX windows
         if (process_events_prev != NULL) {
             (*process_events_prev)(event, data);

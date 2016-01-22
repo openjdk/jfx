@@ -203,7 +203,7 @@ public class SpecularColorTestApp extends Application {
         grid.addRow(5, new Label("Gray map with color"), new Label("Color map with color"));
         controls.getChildren().addAll(specularColorCheckBox, specularColorPicker, specularPowerScroll,
                 grid, diffView, specularMapCheckBox, new HBox(15, specGrayView, specColorView));
-        
+
         return controls;
     }
 
@@ -245,7 +245,7 @@ public class SpecularColorTestApp extends Application {
         HBox root = new HBox(scene3D, controls);
         Scene scene = new Scene(root, 1324, 768, true);
         scene3D.requestFocus();
-     
+
         scene.setCamera(new PerspectiveCamera());
         stage.setScene(scene);
         stage.show();

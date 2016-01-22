@@ -66,7 +66,7 @@ bool HTMLMapElement::mapMouseEvent(LayoutPoint location, const LayoutSize& size,
         } else if (area.mapMouseEvent(location, size, result))
             return true;
     }
-    
+
     if (defaultArea) {
         result.setInnerNode(defaultArea);
         result.setURLElement(defaultArea);

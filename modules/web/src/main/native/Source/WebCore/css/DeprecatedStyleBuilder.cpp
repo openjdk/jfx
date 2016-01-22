@@ -685,7 +685,7 @@ public:
     {
         FontDescription fontDescription = styleResolver->style()->fontDescription();
         FontDescription parentFontDescription = styleResolver->parentStyle()->fontDescription();
-        
+
         fontDescription.setGenericFamily(parentFontDescription.genericFamily());
         fontDescription.setFamilies(parentFontDescription.families());
         fontDescription.setIsSpecifiedFont(parentFontDescription.isSpecifiedFont());
@@ -697,7 +697,7 @@ public:
     {
         FontDescription fontDescription = styleResolver->style()->fontDescription();
         FontDescription initialDesc = FontDescription();
-        
+
         // We need to adjust the size to account for the generic family change from monospace to non-monospace.
         if (fontDescription.keywordSize() && fontDescription.useFixedDefaultSize())
             styleResolver->setFontSize(fontDescription, Style::fontSizeForKeyword(CSSValueXxSmall + fontDescription.keywordSize() - 1, false, styleResolver->document()));
@@ -1164,10 +1164,10 @@ public:
                 it->value.clearReset();
             else
                 it->value.clearIncrement();
-        
+
         if (setCounterIncrementToNone)
             return;
-        
+
         CSSValueList* list = toCSSValueList(value);
         int length = list ? list->length() : 0;
         for (int i = 0; i < length; ++i) {

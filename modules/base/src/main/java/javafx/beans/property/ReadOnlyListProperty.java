@@ -115,7 +115,7 @@ public abstract class ReadOnlyListProperty<E> extends ListExpression<E>
             return false;
         }
         final List list = (List)obj;
-        
+
         if (size() != list.size()) {
             return false;
         }
@@ -130,7 +130,7 @@ public abstract class ReadOnlyListProperty<E> extends ListExpression<E>
         }
         return true;
     }
-    
+
     @Override
     public int hashCode() {
         int hashCode = 1;

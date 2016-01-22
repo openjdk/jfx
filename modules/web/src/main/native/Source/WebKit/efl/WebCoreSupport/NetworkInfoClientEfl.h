@@ -40,7 +40,7 @@ class NetworkInfoClientEfl : public WebCore::NetworkInfoClient {
 public:
     NetworkInfoClientEfl();
     ~NetworkInfoClientEfl();
-    
+
     virtual void networkInfoControllerDestroyed();
 
     virtual void startUpdating();

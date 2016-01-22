@@ -1,11 +1,11 @@
 // Copyright (c) 2005, 2007, Google Inc.
 // All rights reserved.
 // Copyright (C) 2005, 2006, 2007, 2008, 2009, 2011 Apple Inc. All rights reserved.
-// 
+//
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are
 // met:
-// 
+//
 //     * Redistributions of source code must retain the above copyright
 // notice, this list of conditions and the following disclaimer.
 //     * Redistributions in binary form must reproduce the above
@@ -15,7 +15,7 @@
 //     * Neither the name of Google Inc. nor the names of its
 // contributors may be used to endorse or promote products derived from
 // this software without specific prior written permission.
-// 
+//
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 // "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
 // LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -205,7 +205,7 @@ NO_RETURN_DUE_TO_CRASH void fastMallocMatchFailed(void*)
 } // namespace Internal
 
 
-void* fastZeroedMalloc(size_t n) 
+void* fastZeroedMalloc(size_t n)
 {
     void* result = fastMalloc(n);
     memset(result, 0, n);
@@ -220,7 +220,7 @@ char* fastStrDup(const char* src)
     return dup;
 }
 
-TryMallocReturnValue tryFastZeroedMalloc(size_t n) 
+TryMallocReturnValue tryFastZeroedMalloc(size_t n)
 {
     void* result;
     if (!tryFastMalloc(n).getValue(result))
@@ -248,7 +248,7 @@ size_t fastMallocGoodSize(size_t bytes)
 #endif
 }
 
-TryMallocReturnValue tryFastMalloc(size_t n) 
+TryMallocReturnValue tryFastMalloc(size_t n)
 {
     ASSERT(!isForbidden());
 
@@ -272,7 +272,7 @@ TryMallocReturnValue tryFastMalloc(size_t n)
 #endif
 }
 
-void* fastMalloc(size_t n) 
+void* fastMalloc(size_t n)
 {
     ASSERT(!isForbidden());
 
@@ -338,7 +338,7 @@ void fastFree(void* p)
 #if ENABLE(WTF_MALLOC_VALIDATION)
     if (!p)
         return;
-    
+
     fastMallocMatchValidateFree(p, Internal::AllocTypeMalloc);
     Internal::ValidationHeader* header = Internal::fastMallocValidationHeader(p);
     memset(p, 0xCC, header->m_size);
@@ -392,7 +392,7 @@ void* fastRealloc(void* p, size_t n)
 }
 
 void releaseFastMallocFreeMemory() { }
-    
+
 FastMallocStatistics fastMallocStatistics()
 {
     FastMallocStatistics statistics = { 0, 0, 0 };
@@ -496,10 +496,10 @@ static void* (*pthread_getspecific_function_pointer)(pthread_key_t) = pthread_ge
   char FLAGS_no##name;                                                        \
   }                                                                           \
   using FLAG__namespace_do_not_use_directly_use_DECLARE_##type##_instead::FLAGS_##name
-  
+
 #define DEFINE_int64(name, value, meaning) \
   DEFINE_VARIABLE(int64_t, name, value, meaning)
-  
+
 #define DEFINE_double(name, value, meaning) \
   DEFINE_VARIABLE(double, name, value, meaning)
 
@@ -548,7 +548,7 @@ enum {
     MaskKeyShift = 13
 };
 
-static ALWAYS_INLINE uintptr_t internalEntropyValue() 
+static ALWAYS_INLINE uintptr_t internalEntropyValue()
 {
     static uintptr_t value = EntropySource<sizeof(uintptr_t)>::value() | 1;
     ASSERT(value);
@@ -1514,7 +1514,7 @@ class MallocHook {
     static bool stackLoggingEnabled;
 
 #if OS(DARWIN)
-    
+
     enum StackLoggingType {
         StackLoggingTypeAlloc = 2,
         StackLoggingTypeDealloc = 4,
@@ -1659,7 +1659,7 @@ template <int BITS> class MapSelector {
 
 #if defined(WTF_CHANGES)
 #if CPU(X86_64) || CPU(ARM64)
-// On all known X86-64 platforms, the upper 16 bits are always unused and therefore 
+// On all known X86-64 platforms, the upper 16 bits are always unused and therefore
 // can be excluded from the PageMap key.
 // See http://en.wikipedia.org/wiki/X86-64#Virtual_address_space_details
 
@@ -1763,7 +1763,7 @@ class TCMalloc_PageHeap {
       pagemap_.Ensure(p, 1);
       return GetDescriptor(p);
   }
-    
+
   size_t ReturnedBytes() const;
 #endif
 
@@ -1853,7 +1853,7 @@ class TCMalloc_PageHeap {
       pagemap_.set(span->start + span->length - 1, span);
     }
   }
-  
+
     // Allocate a large span of length == n.  If successful, returns a
   // span of exactly the specified length.  Else, returns NULL.
   Span* AllocLarge(Length n);
@@ -1869,7 +1869,7 @@ class TCMalloc_PageHeap {
 
   // Index of last free list we scavenged
   size_t scavenge_index_;
-  
+
 #if defined(WTF_CHANGES) && OS(DARWIN)
   friend class FastMallocZone;
 #endif
@@ -1895,7 +1895,7 @@ class TCMalloc_PageHeap {
 #elif OS(WINDOWS)
   static void CALLBACK scavengerTimerFired(void*, BOOLEAN);
   HANDLE m_scavengeQueueTimer;
-#else 
+#else
   static NO_RETURN_WITH_VALUE void* runScavengerThread(void*);
   NO_RETURN void scavengerThread();
 
@@ -2054,7 +2054,7 @@ void* TCMalloc_PageHeap::runScavengerThread(void* context)
 
 ALWAYS_INLINE void TCMalloc_PageHeap::signalScavenger()
 {
-    // shouldScavenge() should be called only when the pageheap_lock spinlock is held, additionally, 
+    // shouldScavenge() should be called only when the pageheap_lock spinlock is held, additionally,
     // m_scavengeThreadActive is only set to false whilst pageheap_lock is held. The caller must ensure this is
     // taken prior to calling this method. If the scavenger thread is sleeping and shouldScavenge() indicates there
     // is memory to free the scavenger thread is signalled to start.
@@ -2075,7 +2075,7 @@ void TCMalloc_PageHeap::scavenge()
         ASSERT(Check());
         for (int i = kMaxPages; i > 0 && free_committed_pages_ >= targetPageCount; i--) {
             SpanList* slist = (static_cast<size_t>(i) == kMaxPages) ? &large_ : &free_[i];
-            // If the span size is bigger than kMinSpanListsWithSpans pages return all the spans in the list, else return all but 1 span.  
+            // If the span size is bigger than kMinSpanListsWithSpans pages return all the spans in the list, else return all but 1 span.
             // Return only 50% of a spanlist at a time so spans of size 1 are not the only ones left.
             size_t length = DLL_Length(&slist->normal, entropy_);
             size_t numSpansToReturn = (i > kMinSpanListsWithSpans) ? length : length / 2;
@@ -2102,9 +2102,9 @@ void TCMalloc_PageHeap::scavenge()
     min_free_committed_pages_since_last_scavenge_ = free_committed_pages_;
 }
 
-ALWAYS_INLINE bool TCMalloc_PageHeap::shouldScavenge() const 
+ALWAYS_INLINE bool TCMalloc_PageHeap::shouldScavenge() const
 {
-    return free_committed_pages_ > kMinimumFreeCommittedPageCount; 
+    return free_committed_pages_ > kMinimumFreeCommittedPageCount;
 }
 
 #endif  // USE_BACKGROUND_THREAD_TO_SCAVENGE_MEMORY
@@ -2136,7 +2136,7 @@ inline Span* TCMalloc_PageHeap::New(Length n) {
     // free committed pages count.
     ASSERT(free_committed_pages_ >= n);
     free_committed_pages_ -= n;
-    if (free_committed_pages_ < min_free_committed_pages_since_last_scavenge_) 
+    if (free_committed_pages_ < min_free_committed_pages_since_last_scavenge_)
       min_free_committed_pages_since_last_scavenge_ = free_committed_pages_;
 #endif  // USE_BACKGROUND_THREAD_TO_SCAVENGE_MEMORY
     ASSERT(Check());
@@ -2242,7 +2242,7 @@ inline void TCMalloc_PageHeap::Carve(Span* span, Length n, bool released) {
     free_committed_pages_ += span->length;
 #endif
   }
-  
+
   const int extra = static_cast<int>(span->length - n);
   ASSERT(extra >= 0);
   if (extra > 0) {
@@ -2425,7 +2425,7 @@ void TCMalloc_PageHeap::RegisterSizeClass(Span* span, size_t sc) {
     pagemap_.set(span->start+i, span);
   }
 }
-    
+
 #ifdef WTF_CHANGES
 size_t TCMalloc_PageHeap::ReturnedBytes() const {
     size_t result = 0;
@@ -2434,7 +2434,7 @@ size_t TCMalloc_PageHeap::ReturnedBytes() const {
         unsigned r_pages = s * r_length;
         result += r_pages << kPageShift;
     }
-    
+
     for (Span* s = large_.returned.next(entropy_); s != &large_.returned; s = s->next(entropy_))
         result += s->length << kPageShift;
     return result;
@@ -2626,7 +2626,7 @@ void TCMalloc_PageHeap::ReleaseFreeList(Span* list, Span* returned) {
 
 #if USE_BACKGROUND_THREAD_TO_SCAVENGE_MEMORY
     free_committed_pages_ -= freePageReduction;
-    if (free_committed_pages_ < min_free_committed_pages_since_last_scavenge_) 
+    if (free_committed_pages_ < min_free_committed_pages_since_last_scavenge_)
         min_free_committed_pages_since_last_scavenge_ = free_committed_pages_;
 #endif
 }
@@ -3519,7 +3519,7 @@ void TCMalloc_ThreadCache::InitTSD() {
   threadSpecificKeyCreate(&heap_key, DestroyThreadCache);
 #endif
   tsd_inited = true;
-    
+
 #if !OS(WINDOWS)
   // We may have used a fake pthread_t for the main thread.  Fix it.
   pthread_t zero;
@@ -4229,7 +4229,7 @@ static inline struct mallinfo do_mallinfo() {
 //         the call to the (de)allocation function.
 
 #ifndef WTF_CHANGES
-extern "C" 
+extern "C"
 #else
 #define do_malloc do_malloc<crashOnFailure>
 
@@ -4283,13 +4283,13 @@ void* malloc(size_t size) {
 }
 
 #ifndef WTF_CHANGES
-extern "C" 
+extern "C"
 #endif
 void free(void* ptr) {
 #if ENABLE(ALLOCATION_LOGGING)
     dataLogF("fastFree freeing %p.\n", ptr);
 #endif
-    
+
   MallocHook::InvokeDeleteHook(ptr);
 
 #if ENABLE(WTF_MALLOC_VALIDATION)
@@ -4306,7 +4306,7 @@ void free(void* ptr) {
 }
 
 #ifndef WTF_CHANGES
-extern "C" 
+extern "C"
 #else
 template <bool crashOnFailure>
 ALWAYS_INLINE void* calloc(size_t, size_t);
@@ -4340,7 +4340,7 @@ ALWAYS_INLINE
 #endif
 void* calloc(size_t n, size_t elem_size) {
   size_t totalBytes = n * elem_size;
-    
+
   // Protect against overflow
   if (n > 1 && elem_size && (totalBytes / elem_size) != n)
     return 0;
@@ -4366,7 +4366,7 @@ void* calloc(size_t n, size_t elem_size) {
 // Since cfree isn't used anywhere, we don't compile it in.
 #ifndef WTF_CHANGES
 #ifndef WTF_CHANGES
-extern "C" 
+extern "C"
 #endif
 void cfree(void* ptr) {
 #ifndef WTF_CHANGES
@@ -4377,7 +4377,7 @@ void cfree(void* ptr) {
 #endif
 
 #ifndef WTF_CHANGES
-extern "C" 
+extern "C"
 #else
 template <bool crashOnFailure>
 ALWAYS_INLINE void* realloc(void*, size_t);

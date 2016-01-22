@@ -47,7 +47,7 @@ import java.util.List;
 
 /**
  * Job invoked when re-indexing columns content.
- * 
+ *
  * IMPORTANT:
  * This job cannot extends BatchDocumentJob because its sub jobs list cannot be initialized lazily.
  */
@@ -85,9 +85,9 @@ public class ReIndexColumnContentJob extends Job {
 
     @Override
     public boolean isExecutable() {
-        // When the columns are empty, there is no content to move and the 
-        // sub job list may be empty. 
-        // => we do not invoke subJob.isExecutable() here. 
+        // When the columns are empty, there is no content to move and the
+        // sub job list may be empty.
+        // => we do not invoke subJob.isExecutable() here.
         return subJob != null;
     }
 

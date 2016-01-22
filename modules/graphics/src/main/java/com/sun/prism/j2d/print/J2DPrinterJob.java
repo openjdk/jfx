@@ -85,7 +85,7 @@ public class J2DPrinterJob implements PrinterJobImpl {
     java.awt.print.PrinterJob pJob2D;
     javafx.print.Printer fxPrinter;
     J2DPrinter j2dPrinter;
-    
+
     private JobSettings settings;
     private PrintRequestAttributeSet printReqAttrSet;
     private volatile Object elo = null;
@@ -351,7 +351,7 @@ public class J2DPrinterJob implements PrinterJobImpl {
     }
 
     private void updatePageLayout() {
-        
+
         PageLayout oldLayout = null;
         Media media = (Media)printReqAttrSet.get(Media.class);
         Paper paper = j2dPrinter.getPaperForMedia(media);
@@ -364,7 +364,7 @@ public class J2DPrinterJob implements PrinterJobImpl {
         if (mpa == null) {
             newLayout = fxPrinter.createPageLayout(paper, orient,
                                                    MarginType.DEFAULT);
-        } else {            
+        } else {
             double pWid = paper.getWidth();
             double pHgt = paper.getHeight();
             int INCH = MediaPrintableArea.INCH;
@@ -919,7 +919,7 @@ public class J2DPrinterJob implements PrinterJobImpl {
 
             if (elo != null && currPageInfo != null) {
                 Application.invokeLater(new ExitLoopRunnable(elo, null));
-	    }
+        }
 
             if (currPageInfo != null) {
                 if (Toolkit.getToolkit().isFxUserThread()) {

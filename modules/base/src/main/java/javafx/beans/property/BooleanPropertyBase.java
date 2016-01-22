@@ -263,6 +263,6 @@ public abstract class BooleanPropertyBase extends BooleanProperty {
         @Override
         public void dispose() {
             unbind(observable);
-        }        
+        }
     }
 }

@@ -40,7 +40,7 @@ import java.util.Map;
  * A collection of static methods for URL creation.
  */
 public final class URLs {
-        
+
     /**
      * The mapping between WebPane-specific protocol names and their
      * respective handlers.
@@ -102,7 +102,7 @@ public final class URLs {
                 null;
 
             if (handler == null) throw ex;
-            
+
             try {
                 // We should be able to specify one of our stream handlers for the URL
                 // when running as an applet or a web start app.

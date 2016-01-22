@@ -35,7 +35,7 @@
 #include "JSMainThreadExecStateInstrumentation.h"
 
 using namespace JSC;
-    
+
 namespace WebCore {
 
 void JSCallbackData::deleteData(void* context)

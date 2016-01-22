@@ -40,9 +40,9 @@ import static com.oracle.tools.packager.JreUtils.extractJreAsRelativeFileSet;
 
 
 public class WindowsBundlerParam<T> extends StandardBundlerParam<T> {
-    
+
     private static final ResourceBundle I18N = ResourceBundle.getBundle(WindowsBundlerParam.class.getName());
-    
+
     public WindowsBundlerParam(String name, String description, String id, Class<T> valueType, Function<Map<String, ? super Object>, T> defaultValueFunction, BiFunction<String, Map<String, ? super Object>, T> stringConverter) {
         super(name, description, id, valueType, defaultValueFunction, stringConverter);
     }

@@ -146,7 +146,7 @@ struct _GstQTDemux {
                       * requiring qtdemux to expose and create the streams */
   guint64 fragment_start;
   guint64 fragment_start_offset;
-    
+
   gint64 chapters_track_id;
 };
 

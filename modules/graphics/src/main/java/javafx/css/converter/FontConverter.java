@@ -57,7 +57,7 @@ public final class FontConverter extends StyleConverter<ParsedValue[], Font> {
         super();
     }
 
-    @Override 
+    @Override
     public Font convert(ParsedValue<ParsedValue[], Font> value, Font font) {
         ParsedValue[] values = value.getValue();
         Font aFont = (font != null) ? font : Font.getDefault();
@@ -83,7 +83,7 @@ public final class FontConverter extends StyleConverter<ParsedValue[], Font> {
         String family = font.getFamily();
         FontWeight weight = FontWeight.NORMAL;
         FontPosture style = FontPosture.REGULAR;
-        
+
         for (Entry<CssMetaData<? extends Styleable, ?>, Object> entry : convertedValues.entrySet()) {
 
             Object value = entry.getValue();
@@ -202,7 +202,7 @@ public final class FontConverter extends StyleConverter<ParsedValue[], Font> {
             return "FontConverter.WeightConverter";
         }
     }
-    
+
     public static final class FontSizeConverter extends StyleConverter<ParsedValue<?, Size>, Number> {
 
         // lazy, thread-safe instatiation
@@ -228,6 +228,6 @@ public final class FontConverter extends StyleConverter<ParsedValue[], Font> {
         public String toString() {
             return "FontConverter.FontSizeConverter";
         }
-    }    
+    }
 
 }

@@ -61,7 +61,7 @@ void HTMLLegendElement::focus(bool, FocusDirection direction)
 {
     if (isFocusable())
         Element::focus(true, direction);
-        
+
     // To match other browsers' behavior, never restore previous selection.
     if (HTMLFormControlElement* control = associatedControl())
         control->focus(false, direction);
@@ -84,5 +84,5 @@ HTMLFormElement* HTMLLegendElement::virtualForm() const
 
     return toHTMLFieldSetElement(fieldset)->form();
 }
-    
+
 } // namespace

@@ -41,14 +41,14 @@ import javafx.stage.WindowEvent;
  *
  */
 public class MessagePopupController extends AbstractPopupController {
-    
+
     private final MessagePanelController messagePanelController;
-    
+
     public MessagePopupController(EditorController editorController) {
         this.messagePanelController = new MessagePanelController(editorController);
     }
-    
-    
+
+
     /*
      * AbstractPopupController
      */
@@ -70,27 +70,27 @@ public class MessagePopupController extends AbstractPopupController {
         // See RT-31292 : Popup does not auto hide when resizing the window
         updatePopupLocation();
     }
-    
+
     @Override
     protected void anchorTransformDidChange() {
         // This callback should not be needed for auto hiding popups
         // See RT-31292 : Popup does not auto hide when resizing the window
         updatePopupLocation();
     }
-    
+
     @Override
     protected void anchorXYDidChange() {
         // This callback should not be needed for auto hiding popups
         // See RT-31292 : Popup does not auto hide when resizing the window
         updatePopupLocation();
     }
-    
+
     @Override
     protected void controllerDidCreatePopup() {
         getPopup().setAutoFix(false);
         getPopup().setAutoHide(true);
     }
-    
+
     /**
      * Update the popup location below the anchor node.
      */
@@ -98,9 +98,9 @@ public class MessagePopupController extends AbstractPopupController {
     protected void updatePopupLocation() {
         final Bounds anchorBounds = getAnchor().getLayoutBounds();
         Point2D popupLocation;
-        
+
         assert anchorBounds != null;
-        
+
         // At exit time, closeRequestHandler() is not always called.
         // So this method can be invoked after the anchor has been removed the
         // scene. This looks like a bug in FX...

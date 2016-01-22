@@ -12,7 +12,7 @@
  *    copyright notice, this list of conditions and the following
  *    disclaimer in the documentation and/or other materials
  *    provided with the distribution.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDER "AS IS" AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
@@ -159,7 +159,7 @@ void RenderFlowThread::validateRegions()
             LayoutUnit previousRegionLogicalWidth = 0;
             LayoutUnit previousRegionLogicalHeight = 0;
             bool firstRegionVisited = false;
-            
+
             for (auto& region : m_regionList) {
                 ASSERT(!region->needsLayout() || region->isRenderRegionSet());
 
@@ -239,7 +239,7 @@ void RenderFlowThread::layout()
 
     if (shouldDispatchRegionLayoutUpdateEvent())
         dispatchRegionLayoutUpdateEvent();
-    
+
     if (shouldDispatchRegionOversetChangeEvent())
         dispatchRegionOversetChangeEvent();
 }
@@ -416,7 +416,7 @@ void RenderFlowThread::repaintRectangleInRegions(const LayoutRect& repaintRect, 
     // We can't use currentFlowThread as it is possible to have interleaved flow threads and the wrong one could be used.
     // Let each region figure out the proper enclosing flow thread.
     CurrentRenderFlowThreadDisabler disabler(&view());
-    
+
     for (auto& region : m_regionList)
         region->repaintFlowThreadContent(repaintRect, immediate);
 }
@@ -473,7 +473,7 @@ RenderRegion* RenderFlowThread::regionFromAbsolutePointAndBox(const IntPoint& ab
 LayoutPoint RenderFlowThread::adjustedPositionRelativeToOffsetParent(const RenderBoxModelObject& boxModelObject, const LayoutPoint& startPoint)
 {
     LayoutPoint referencePoint = startPoint;
-    
+
     const RenderBlock* objContainingBlock = boxModelObject.containingBlock();
     // FIXME: This needs to be adapted for different writing modes inside the flow thread.
     RenderRegion* startRegion = regionAtBlockOffset(objContainingBlock, referencePoint.y());
@@ -484,15 +484,15 @@ LayoutPoint RenderFlowThread::adjustedPositionRelativeToOffsetParent(const Rende
         RenderBoxModelObject* currOffsetParent;
         while ((currOffsetParent = currObject->offsetParent())) {
             referencePoint.move(currObject->offsetLeft(), currObject->offsetTop());
-            
+
             // Since we're looking for the offset relative to the body, we must also
             // take into consideration the borders of the region's offsetParent.
             if (currOffsetParent->isBox() && !currOffsetParent->isBody())
                 referencePoint.move(toRenderBox(currOffsetParent)->borderLeft(), toRenderBox(currOffsetParent)->borderTop());
-            
+
             currObject = currOffsetParent;
         }
-        
+
         // We need to check if any of this box's containing blocks start in a different region
         // and if so, drop the object's top position (which was computed relative to its containing block
         // and is no longer valid) and recompute it using the region in which it flows as reference.
@@ -508,14 +508,14 @@ LayoutPoint RenderFlowThread::adjustedPositionRelativeToOffsetParent(const Rende
             }
             objContainingBlock = objContainingBlock->containingBlock();
         }
-        
+
         if (wasComputedRelativeToOtherRegion) {
             if (boxModelObject.isBox()) {
                 // Use borderBoxRectInRegion to account for variations such as percentage margins.
                 LayoutRect borderBoxRect = toRenderBox(boxModelObject).borderBoxRectInRegion(startRegion, RenderBox::DoNotCacheRenderBoxRegionInfo);
                 referencePoint.move(borderBoxRect.location().x(), 0);
             }
-            
+
             // Get the logical top coordinate of the current object.
             LayoutUnit top = 0;
             if (boxModelObject.isRenderBlock())
@@ -523,19 +523,19 @@ LayoutPoint RenderFlowThread::adjustedPositionRelativeToOffsetParent(const Rende
             else {
                 if (boxModelObject.containingBlock())
                     top = boxModelObject.containingBlock()->offsetFromLogicalTopOfFirstPage();
-                
+
                 if (boxModelObject.isBox())
                     top += toRenderBox(boxModelObject).topLeftLocation().y();
                 else if (boxModelObject.isRenderInline())
                     top -= toRenderInline(boxModelObject).borderTop();
             }
-            
+
             // Get the logical top of the region this object starts in
             // and compute the object's top, relative to the region's top.
             LayoutUnit regionLogicalTop = startRegion->pageLogicalTopForOffset(top);
             LayoutUnit topRelativeToRegion = top - regionLogicalTop;
             referencePoint.setY(startRegionBox->offsetTop() + topRelativeToRegion);
-            
+
             // Since the top has been overriden, check if the
             // relative/sticky positioning must be reconsidered.
             if (boxModelObject.isRelPositioned())
@@ -543,12 +543,12 @@ LayoutPoint RenderFlowThread::adjustedPositionRelativeToOffsetParent(const Rende
             else if (boxModelObject.isStickyPositioned())
                 referencePoint.move(0, boxModelObject.stickyPositionOffset().height());
         }
-        
+
         // Since we're looking for the offset relative to the body, we must also
         // take into consideration the borders of the region.
         referencePoint.move(startRegionBox->borderLeft(), startRegionBox->borderTop());
     }
-    
+
     return referencePoint;
 }
 
@@ -830,23 +830,23 @@ bool RenderFlowThread::objectShouldPaintInFlowRegion(const RenderObject* object,
 {
     ASSERT(object);
     ASSERT(region);
-    
+
     RenderFlowThread* flowThread = object->flowThreadContainingBlock();
     if (flowThread != this)
         return false;
     if (!m_regionList.contains(const_cast<RenderRegion*>(region)))
         return false;
-    
+
     RenderBox* enclosingBox = object->enclosingBox();
     RenderRegion* enclosingBoxStartRegion = 0;
     RenderRegion* enclosingBoxEndRegion = 0;
     getRegionRangeForBox(enclosingBox, enclosingBoxStartRegion, enclosingBoxEndRegion);
-    
+
     // If the box has no range, do not check regionInRange. Boxes inside inlines do not get ranges.
     // Instead, the containing RootInlineBox will abort when trying to paint inside the wrong region.
     if (enclosingBoxStartRegion && enclosingBoxEndRegion && !regionInRange(region, enclosingBoxStartRegion, enclosingBoxEndRegion))
         return false;
-    
+
     return object->isBox() || object->isRenderInline();
 }
 
@@ -875,7 +875,7 @@ bool RenderFlowThread::objectInFlowRegion(const RenderObject* object, const Rend
     if (!objectABBRect.width())
         objectABBRect.setWidth(1);
     if (!objectABBRect.height())
-        objectABBRect.setHeight(1); 
+        objectABBRect.setHeight(1);
     if (objectABBRect.intersects(region->absoluteBoundingBoxRect(true)))
         return true;
 
@@ -1077,7 +1077,7 @@ void RenderFlowThread::decrementAutoLogicalHeightRegions()
 void RenderFlowThread::collectLayerFragments(LayerFragments& layerFragments, const LayoutRect& layerBoundingBox, const LayoutRect& dirtyRect)
 {
     ASSERT(!m_regionsInvalidated);
-    
+
     for (auto& region : m_regionList)
         region->collectLayerFragments(layerFragments, layerBoundingBox, dirtyRect);
 }
@@ -1085,7 +1085,7 @@ void RenderFlowThread::collectLayerFragments(LayerFragments& layerFragments, con
 LayoutRect RenderFlowThread::fragmentsBoundingBox(const LayoutRect& layerBoundingBox)
 {
     ASSERT(!m_regionsInvalidated);
-    
+
     LayoutRect result;
     for (auto& region : m_regionList) {
         LayerFragments fragments;
@@ -1097,7 +1097,7 @@ LayoutRect RenderFlowThread::fragmentsBoundingBox(const LayoutRect& layerBoundin
             result.unite(fragmentRect);
         }
     }
-    
+
     return result;
 }
 
@@ -1271,10 +1271,10 @@ LayoutRect RenderFlowThread::decorationsClipRectForBoxInRegion(const RenderBox& 
     // RenderRegion::rectFlowPortionForBox method expects it unflipped.
     flipForWritingModeLocalCoordinates(visualOverflowRect);
     visualOverflowRect = region.rectFlowPortionForBox(&box, visualOverflowRect);
-    
+
     // Now flip it again.
     flipForWritingModeLocalCoordinates(visualOverflowRect);
-    
+
     // Layers are in physical coordinates so the origin must be moved to the physical top-left of the flowthread.
     if (style().isFlippedBlocksWritingMode()) {
         if (style().isHorizontalWritingMode())
@@ -1312,7 +1312,7 @@ LayoutRect RenderFlowThread::decorationsClipRectForBoxInRegion(const RenderBox& 
 
     // Since the purpose of this method is to make sure the borders of a fragmented
     // element don't overflow the region in the fragmentation direction, there's no
-    // point in restricting the clipping rect on the logical X axis. 
+    // point in restricting the clipping rect on the logical X axis.
     // This also saves us the trouble of handling percent-based widths and margins
     // since the absolute bounding box of a positioned element would not contain
     // the correct coordinates relative to the region we're interested in, but rather
@@ -1336,7 +1336,7 @@ void RenderFlowThread::flipForWritingModeLocalCoordinates(LayoutRect& rect) cons
 {
     if (!style().isFlippedBlocksWritingMode())
         return;
-    
+
     if (isHorizontalWritingMode())
         rect.setY(0 - rect.maxY());
     else
@@ -1418,7 +1418,7 @@ void RenderFlowThread::addRegionsOverflowFromChild(const RenderBox* box, const R
             break;
     }
 }
-    
+
 void RenderFlowThread::addRegionsLayoutOverflow(const RenderBox* box, const LayoutRect& layoutOverflow)
 {
     RenderRegion* startRegion = 0;
@@ -1441,13 +1441,13 @@ void RenderFlowThread::addRegionsVisualOverflow(const RenderBox* box, const Layo
     RenderRegion* startRegion = 0;
     RenderRegion* endRegion = 0;
     getRegionRangeForBox(box, startRegion, endRegion);
-    
+
     for (RenderRegionList::iterator iter = m_regionList.find(startRegion); iter != m_regionList.end(); ++iter) {
         RenderRegion* region = *iter;
         LayoutRect visualOverflowInRegion = region->rectFlowPortionForBox(box, visualOverflow);
-        
+
         region->addVisualOverflowForBox(box, visualOverflowInRegion);
-        
+
         if (region == endRegion)
             break;
     }

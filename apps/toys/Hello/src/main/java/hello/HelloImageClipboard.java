@@ -55,7 +55,7 @@ public class HelloImageClipboard extends Application {
         overlay.setHeight(600);
         overlay.setFill(Color.TRANSPARENT);
         EventHandler<DragEvent> drop =  de -> checkBoard(de.getDragboard(), de);
-            
+
         EventHandler<DragEvent> enter =  de -> {
             if (de != null && de.getDragboard() != null && de.getDragboard().hasImage()) {
                 de.acceptTransferModes(TransferMode.ANY);
@@ -79,7 +79,7 @@ public class HelloImageClipboard extends Application {
         copyBtn = new Button("Copy");
         copyBtn.setTranslateX(125);
         copyBtn.setTranslateY(30);
-        
+
         pasteBtn = new Button("Paste");
         pasteBtn.setTranslateX(200);
         pasteBtn.setTranslateY(30);
@@ -91,14 +91,14 @@ public class HelloImageClipboard extends Application {
             Clipboard.getSystemClipboard().setContent(content);
         });
         pasteBtn.setOnAction(e -> checkBoard(Clipboard.getSystemClipboard(), null));
-        
+
         Group root = (Group)scene.getRoot();
         root.getChildren().add(overlay);
         root.getChildren().add(imageView);
         root.getChildren().add(clearBtn);
         root.getChildren().add(copyBtn);
         root.getChildren().add(pasteBtn);
-        
+
         stage.setScene(scene);
         stage.show();
     }

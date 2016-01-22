@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -235,7 +235,7 @@ SLOW_PATH_DECL(slow_path_create_this)
 {
     BEGIN();
     JSFunction* constructor = jsCast<JSFunction*>(OP(2).jsValue().asCell());
-    
+
 #if !ASSERT_DISABLED
     ConstructData constructData;
     ASSERT(constructor->methodTable()->getConstructData(constructor, constructData) == ConstructTypeJS);
@@ -360,13 +360,13 @@ SLOW_PATH_DECL(slow_path_add)
     BEGIN();
     JSValue v1 = OP_C(2).jsValue();
     JSValue v2 = OP_C(3).jsValue();
-    
+
     if (v1.isString() && !v2.isObject())
         RETURN(jsString(exec, asString(v1), v2.toString(exec)));
-    
+
     if (v1.isNumber() && v2.isNumber())
         RETURN(jsNumber(v1.asNumber() + v2.asNumber()));
-    
+
     RETURN(jsAddSlowCase(exec, v1, v2));
 }
 
@@ -490,11 +490,11 @@ SLOW_PATH_DECL(slow_path_del_by_val)
     BEGIN();
     JSValue baseValue = OP_C(2).jsValue();
     JSObject* baseObject = baseValue.toObject(exec);
-    
+
     JSValue subscript = OP_C(3).jsValue();
-    
+
     bool couldDelete;
-    
+
     uint32_t i;
     if (subscript.getUInt32(i))
         couldDelete = baseObject->methodTable()->deletePropertyByIndex(baseObject, exec, i);
@@ -506,10 +506,10 @@ SLOW_PATH_DECL(slow_path_del_by_val)
         CHECK_EXCEPTION();
         couldDelete = baseObject->methodTable()->deleteProperty(baseObject, exec, property);
     }
-    
+
     if (!couldDelete && exec->codeBlock()->isStrictMode())
         THROW(createTypeError(exec, "Unable to delete property."));
-    
+
     RETURN(jsBoolean(couldDelete));
 }
 

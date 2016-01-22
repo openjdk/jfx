@@ -6,13 +6,13 @@
  * are met:
  *
  * 1.  Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer. 
+ *     notice, this list of conditions and the following disclaimer.
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
- *     documentation and/or other materials provided with the distribution. 
+ *     documentation and/or other materials provided with the distribution.
  * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
- *     from this software without specific prior written permission. 
+ *     from this software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY APPLE AND ITS CONTRIBUTORS "AS IS" AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
@@ -42,7 +42,7 @@ extern NSString *WebArchivePboardType;
     @discussion WebArchive represents a main resource as well as all the subresources and subframes associated with the main resource.
     The main resource can be an entire web page, a portion of a web page, or some other kind of data such as an image.
     This class can be used for saving standalone web pages, representing portions of a web page on the pasteboard, or any other
-    application where one class is needed to represent rich web content. 
+    application where one class is needed to represent rich web content.
 */
 @interface WebArchive : NSObject <NSCoding, NSCopying>
 {

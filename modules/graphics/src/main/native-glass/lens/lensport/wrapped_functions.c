@@ -160,7 +160,7 @@ int load_bcm_symbols() {
         return 1;
     }
 
-    useDispman = 1; 
+    useDispman = 1;
     bcm_loaded = 0;
 
     return bcm_loaded;

@@ -40,7 +40,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_ios_IosGestureSupport__1initIDs
     GLASS_LOG("Java_com_sun_glass_ui_ios_IosGestureSupport__1initIDs");
 
     // Initialize  methods IDs of java IosGestureSupport callbacks.
-    
+
     if (jGestureSupportClass == NULL)
     {
         jGestureSupportClass = (*env)->NewGlobalRef(env, jClass);
@@ -48,8 +48,8 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_ios_IosGestureSupport__1initIDs
 
     if (jGestureSupportRotateGesturePerformed == NULL)
     {
-        jGestureSupportRotateGesturePerformed = 
-                    (*env)->GetStaticMethodID(env, jGestureSupportClass, 
+        jGestureSupportRotateGesturePerformed =
+                    (*env)->GetStaticMethodID(env, jGestureSupportClass,
                                 "rotateGesturePerformed",
                                 "(Lcom/sun/glass/ui/View;IIIIIF)V");
         GLASS_CHECK_EXCEPTION(env);
@@ -57,8 +57,8 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_ios_IosGestureSupport__1initIDs
 
     if (jGestureSupportScrollGesturePerformed == NULL)
     {
-        jGestureSupportScrollGesturePerformed = 
-                    (*env)->GetStaticMethodID(env, jGestureSupportClass, 
+        jGestureSupportScrollGesturePerformed =
+                    (*env)->GetStaticMethodID(env, jGestureSupportClass,
                                 "scrollGesturePerformed",
                                 "(Lcom/sun/glass/ui/View;IZFFFFFF)V");
         GLASS_CHECK_EXCEPTION(env);
@@ -66,8 +66,8 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_ios_IosGestureSupport__1initIDs
 
     if (jGestureSupportSwipeGesturePerformed == NULL)
     {
-        jGestureSupportSwipeGesturePerformed = 
-                    (*env)->GetStaticMethodID(env, jGestureSupportClass, 
+        jGestureSupportSwipeGesturePerformed =
+                    (*env)->GetStaticMethodID(env, jGestureSupportClass,
                                 "swipeGesturePerformed",
                                 "(Lcom/sun/glass/ui/View;IIIIII)V");
         GLASS_CHECK_EXCEPTION(env);
@@ -75,8 +75,8 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_ios_IosGestureSupport__1initIDs
 
     if (jGestureSupportMagnifyGesturePerformed == NULL)
     {
-        jGestureSupportMagnifyGesturePerformed = 
-                    (*env)->GetStaticMethodID(env, jGestureSupportClass, 
+        jGestureSupportMagnifyGesturePerformed =
+                    (*env)->GetStaticMethodID(env, jGestureSupportClass,
                                 "magnifyGesturePerformed",
                                 "(Lcom/sun/glass/ui/View;IIIIIF)V");
         GLASS_CHECK_EXCEPTION(env);
@@ -84,8 +84,8 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_ios_IosGestureSupport__1initIDs
 
     if (jGestureSupportGestureFinished == NULL)
     {
-        jGestureSupportGestureFinished = 
-                    (*env)->GetStaticMethodID(env, jGestureSupportClass, 
+        jGestureSupportGestureFinished =
+                    (*env)->GetStaticMethodID(env, jGestureSupportClass,
                                 "gestureFinished",
                                 "(Lcom/sun/glass/ui/View;IIIII)V");
         GLASS_CHECK_EXCEPTION(env);
@@ -93,8 +93,8 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_ios_IosGestureSupport__1initIDs
 
     if (jGestureSupportNotifyBeginTouchEvent == NULL)
     {
-        jGestureSupportNotifyBeginTouchEvent = 
-                    (*env)->GetStaticMethodID(env, jGestureSupportClass, 
+        jGestureSupportNotifyBeginTouchEvent =
+                    (*env)->GetStaticMethodID(env, jGestureSupportClass,
                                 "notifyBeginTouchEvent",
                                 "(Lcom/sun/glass/ui/View;II)V");
         GLASS_CHECK_EXCEPTION(env);
@@ -102,8 +102,8 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_ios_IosGestureSupport__1initIDs
 
     if (jGestureSupportNotifyNextTouchEvent == NULL)
     {
-        jGestureSupportNotifyNextTouchEvent = 
-                    (*env)->GetStaticMethodID(env, jGestureSupportClass, 
+        jGestureSupportNotifyNextTouchEvent =
+                    (*env)->GetStaticMethodID(env, jGestureSupportClass,
                                 "notifyNextTouchEvent",
                                 "(Lcom/sun/glass/ui/View;IJFF)V");
         GLASS_CHECK_EXCEPTION(env);
@@ -111,8 +111,8 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_ios_IosGestureSupport__1initIDs
 
     if (jGestureSupportNotifyEndTouchEvent == NULL)
     {
-        jGestureSupportNotifyEndTouchEvent = 
-                    (*env)->GetStaticMethodID(env, jGestureSupportClass, 
+        jGestureSupportNotifyEndTouchEvent =
+                    (*env)->GetStaticMethodID(env, jGestureSupportClass,
                                 "notifyEndTouchEvent",
                                 "(Lcom/sun/glass/ui/View;)V");
         GLASS_CHECK_EXCEPTION(env);

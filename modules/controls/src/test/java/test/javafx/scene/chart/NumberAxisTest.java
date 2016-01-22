@@ -45,7 +45,7 @@ import javafx.scene.chart.NumberAxis;
 import javafx.scene.chart.NumberAxisShim;
 
 /**
- * All public members of NumberAxis are tested here . 
+ * All public members of NumberAxis are tested here .
  * @author srikalyc
  */
 public class NumberAxisTest {
@@ -53,10 +53,10 @@ public class NumberAxisTest {
     private NumberAxis threeValueAxis;//Empty string
     private NumberAxis fourValueAxis;//Empty string
     private StringConverter<Number> formatter;
-    
+
     public NumberAxisTest() {
     }
-    
+
     @Before public void setup() {
         if (axis == null) {
             axis = new NumberAxis();
@@ -74,9 +74,9 @@ public class NumberAxisTest {
             public Number fromString(String string) { return null; }
         };
     }
-    
-   
-   
+
+
+
     /*********************************************************************
      * Tests for default values                                         *
      ********************************************************************/
@@ -107,8 +107,8 @@ public class NumberAxisTest {
     /*********************************************************************
      * Tests for property binding                                        *
      ********************************************************************/
-    
-    
+
+
     @Test public void checkForceZeroInRangePropertyBind() {
         BooleanProperty objPr = new SimpleBooleanProperty(true);
         axis.forceZeroInRangeProperty().bind(objPr);
@@ -116,8 +116,8 @@ public class NumberAxisTest {
         objPr.setValue(false);
         assertFalse("forceZeroInRange cannot be bound", axis.forceZeroInRangeProperty().getValue());
     }
-    
-    
+
+
     @Test public void checkTickUnitPropertyBind() {
         DoubleProperty objPr = new SimpleDoubleProperty(56.0);
         axis.tickUnitProperty().bind(objPr);
@@ -125,8 +125,8 @@ public class NumberAxisTest {
         objPr.setValue(23.0);
         assertEquals("tickUnitProperty cannot be bound", axis.tickUnitProperty().getValue(),23.0,0.0);
     }
-    
-    
+
+
     @Test public void forceZeroInRangePropertyHasBeanReference() {
         assertSame(axis, axis.forceZeroInRangeProperty().getBean());
     }
@@ -144,7 +144,7 @@ public class NumberAxisTest {
     }
 
 
-    
+
     /*********************************************************************
      * CSS related Tests                                                 *
      ********************************************************************/
@@ -172,22 +172,22 @@ public class NumberAxisTest {
     /*********************************************************************
      * Miscellaneous Tests                                         *
      ********************************************************************/
-    
+
     @Test public void setForceZeroInRangeAndSeeValueIsReflectedInModel() {
         axis.setForceZeroInRange(false);
         assertFalse(axis.forceZeroInRangeProperty().getValue());
     }
-    
+
     @Test public void setForceZeroInRangeAndSeeValue() {
         axis.setForceZeroInRange(true);
         assertTrue(axis.isForceZeroInRange());
     }
-    
+
     @Test public void setTickUnitAndSeeValueIsReflectedInModel() {
         axis.setTickUnit(30.0);
         assertEquals(axis.tickUnitProperty().getValue(), 30.0, 0.0);
     }
-    
+
     @Test public void setTickUnitAndSeeValue() {
         axis.setTickUnit(30.0);
         assertEquals(axis.getTickUnit(), 30.0, 0.0);
@@ -293,7 +293,7 @@ public class NumberAxisTest {
         axis.setUpperBound(maxValue);
         // minValue + tickUnit == minValue
         axis.setTickUnit(0.5*Math.ulp(minValue));
-        Object range = NumberAxisShim.getRange(axis);        
+        Object range = NumberAxisShim.getRange(axis);
         NumberAxisShim.calculateTickValues(axis, 500, range);
         NumberAxisShim.calculateMinorTickMarks(axis);
     }

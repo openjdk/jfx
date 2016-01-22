@@ -38,28 +38,28 @@ import javafx.beans.property.SimpleIntegerProperty;
 
 /**
  *
- * 
+ *
  */
 public abstract class Glossary {
-    
+
     private final SimpleIntegerProperty revision = new SimpleIntegerProperty();
-    
+
     /**
      * Returns candidate controller classes tracked by this glossary.
-     * If fxmlLocation is not null, this glossary may use it to filter the 
+     * If fxmlLocation is not null, this glossary may use it to filter the
      * returned list. Some implementations may ignore the fxmlLocation parameter.
-     * 
+     *
      * @param fxmlLocation null or the URL of the fxml document being edited.
      * @return a list of class names (possibly empty but never null).
      */
     public abstract List<String> queryControllerClasses(URL fxmlLocation);
-    
+
     /**
      * Returns the candidate fx ids tracked by this glossary.
      * If fxmlLocation, controllerClass and/or targetType are not null,
      * this glossary may use them to filter the returned list.
      * Some implementations may ignore those parameters.
-     * 
+     *
      * @param fxmlLocation null or the location of the fxml document being edited
      * @param controllerClass null or one the classes return by queryControllerClasses()
      * @param targetType null or the type of the component targeted by the fx id
@@ -72,37 +72,37 @@ public abstract class Glossary {
      * If fxmlLocation and/or controllerClass are not null, this glossary
      * may use them to filter the returned list.
      * Some implementations may ignore those parameters.
-     * 
+     *
      * @param fxmlLocation null or the location of the fxml document being edited
      * @param controllerClass null or one the classes return by queryControllerClasses()
      * @return a list of event handler method name (possibly empty but never null).
      */
     public abstract List<String> queryEventHandlers(URL fxmlLocation, String controllerClass);
-    
+
     /**
      * Returns the property holding the revision number of this glossary.
      * Glossary class adds +1 to this number each time the glossary content changes.
-     * 
+     *
      * @return the property holding the revision number of this glossary.
      */
     public ReadOnlyIntegerProperty revisionProperty() {
         return revision;
     }
-    
+
     /**
      * Returns the revision number of this glossary.
-     * 
+     *
      * @return the revision number of this glossary.
      */
     public int getRevision() {
         return revision.get();
     }
-    
-    
+
+
     /*
      * For subclasses
      */
-    
+
     protected void incrementRevision() {
         revision.set(revision.get()+1);
     }

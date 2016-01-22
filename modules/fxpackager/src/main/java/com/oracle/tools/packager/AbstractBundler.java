@@ -53,7 +53,7 @@ public abstract class AbstractBundler implements Bundler {
     public final static String BUNDLER_PREFIX = "package/";
 
     protected Class baseResourceLoader = null;
-    
+
     protected void fetchResource(
             String publicName, String category,
             String defaultName, File result, boolean verbose, File publicRoot)

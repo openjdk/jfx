@@ -80,7 +80,7 @@ import javafx.css.Styleable;
  * <pre><code>
  * import javafx.scene.control.ScrollPane;
  * import javafx.scene.shape.Rectangle;
- * 
+ *
  * Rectangle rect = new Rectangle(200, 200, Color.RED);
  * ScrollPane s1 = new ScrollPane();
  * s1.setPrefSize(120, 120);
@@ -106,10 +106,10 @@ public class ScrollPane extends Control {
         getStyleClass().setAll(DEFAULT_STYLE_CLASS);
         setAccessibleRole(AccessibleRole.SCROLL_PANE);
         // focusTraversable is styleable through css. Calling setFocusTraversable
-        // makes it look to css like the user set the value and css will not 
+        // makes it look to css like the user set the value and css will not
         // override. Initializing focusTraversable by calling applyStyle with
         // null StyleOrigin ensures that css will be able to override the value.
-        ((StyleableProperty<Boolean>)(WritableValue<Boolean>)focusTraversableProperty()).applyStyle(null, Boolean.FALSE); 
+        ((StyleableProperty<Boolean>)(WritableValue<Boolean>)focusTraversableProperty()).applyStyle(null, Boolean.FALSE);
     }
 
     /**
@@ -372,7 +372,7 @@ public class ScrollPane extends Control {
                 @Override public void invalidated() {
                     pseudoClassStateChanged(FIT_TO_WIDTH_PSEUDOCLASS_STATE, get());
                 }
-                
+
                 @Override
                 public CssMetaData<ScrollPane,Boolean> getCssMetaData() {
                     return StyleableProperties.FIT_TO_WIDTH;
@@ -453,7 +453,7 @@ public class ScrollPane extends Control {
                 public CssMetaData<ScrollPane,Boolean> getCssMetaData() {
                     return StyleableProperties.PANNABLE;
                 }
-                
+
                 @Override
                 public Object getBean() {
                     return ScrollPane.this;
@@ -668,7 +668,7 @@ public class ScrollPane extends Control {
                 return (StyleableProperty<ScrollBarPolicy>)(WritableValue<ScrollBarPolicy>)n.hbarPolicyProperty();
             }
         };
-                
+
         private static final CssMetaData<ScrollPane,ScrollBarPolicy> VBAR_POLICY =
             new CssMetaData<ScrollPane,ScrollBarPolicy>("-fx-vbar-policy",
                 new EnumConverter<ScrollBarPolicy>(ScrollBarPolicy.class),
@@ -684,7 +684,7 @@ public class ScrollPane extends Control {
                 return (StyleableProperty<ScrollBarPolicy>)(WritableValue<ScrollBarPolicy>)n.vbarPolicyProperty();
             }
         };
-                
+
         private static final CssMetaData<ScrollPane,Boolean> FIT_TO_WIDTH =
             new CssMetaData<ScrollPane, Boolean>("-fx-fit-to-width",
                 BooleanConverter.getInstance(), Boolean.FALSE){
@@ -699,7 +699,7 @@ public class ScrollPane extends Control {
                 return (StyleableProperty<Boolean>)(WritableValue<Boolean>)n.fitToWidthProperty();
             }
         };
-                
+
         private static final CssMetaData<ScrollPane,Boolean> FIT_TO_HEIGHT =
             new CssMetaData<ScrollPane, Boolean>("-fx-fit-to-height",
                 BooleanConverter.getInstance(), Boolean.FALSE){
@@ -714,7 +714,7 @@ public class ScrollPane extends Control {
                 return (StyleableProperty<Boolean>)(WritableValue<Boolean>)n.fitToHeightProperty();
             }
         };
-                
+
         private static final CssMetaData<ScrollPane,Boolean> PANNABLE =
             new CssMetaData<ScrollPane, Boolean>("-fx-pannable",
                 BooleanConverter.getInstance(), Boolean.FALSE){
@@ -732,7 +732,7 @@ public class ScrollPane extends Control {
 
         private static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES;
         static {
-            final List<CssMetaData<? extends Styleable, ?>> styleables = 
+            final List<CssMetaData<? extends Styleable, ?>> styleables =
                 new ArrayList<CssMetaData<? extends Styleable, ?>>(Control.getClassCssMetaData());
             styleables.add(HBAR_POLICY);
             styleables.add(VBAR_POLICY);

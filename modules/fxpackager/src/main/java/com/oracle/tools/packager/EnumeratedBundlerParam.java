@@ -30,16 +30,16 @@ import java.util.function.BiFunction;
 import java.util.function.Function;
 
 /**
- * 
+ *
  * The class contains key-value pairs (elements) where keys are "displayable" keys
  * which the IDE can display/choose and values are "identifier" values which can be stored
  * in parameters' map.
  *
  * For instance the Mac has a predefined set of categories which can be applied
  * to LSApplicationCategoryType which is required for the mac app store.
- * 
+ *
  * The following example illustrates a simple usage of the MAC_CATEGORY parameter
- * 
+ *
  *     Set<String> keys = MAC_CATEGORY.getDisplayableKeys();
  *
  *     String key = getLastValue(keys); // get last value for example

@@ -33,10 +33,10 @@ import com.sun.webkit.graphics.WCStroke;
 final class WCStrokeImpl extends WCStroke<Paint, BasicStroke> {
 
     private BasicStroke stroke;
-    
+
     public WCStrokeImpl() {
     }
-    
+
     public WCStrokeImpl(float width, int cap, int join, float miterLimit,
                         float[] dash, float dashOffset)
     {
@@ -46,7 +46,7 @@ final class WCStrokeImpl extends WCStroke<Paint, BasicStroke> {
         setMiterLimit(miterLimit);
         setDashSizes(dash);
         setDashOffset(dashOffset);
-    }            
+    }
 
     protected void invalidate() {
         this.stroke = null;
@@ -74,7 +74,7 @@ final class WCStrokeImpl extends WCStroke<Paint, BasicStroke> {
         }
         return this.stroke;
     }
-    
+
     boolean isApplicable() {
         return getPaint() != null && getPlatformStroke() != null;
     }

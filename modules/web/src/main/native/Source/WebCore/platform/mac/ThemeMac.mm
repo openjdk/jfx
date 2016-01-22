@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #import "config.h"
@@ -179,13 +179,13 @@ static void setControlSize(NSCell* cell, const IntSize* sizes, const IntSize& mi
 static void updateStates(NSCell* cell, ControlStates states)
 {
     // Hover state is not supported by Aqua.
-    
+
     // Pressed state
     bool oldPressed = [cell isHighlighted];
     bool pressed = states & PressedState;
     if (pressed != oldPressed)
         [cell setHighlighted:pressed];
-    
+
     // Enabled state
     bool oldEnabled = [cell isEnabled];
     bool enabled = states & EnabledState;
@@ -199,8 +199,8 @@ static void updateStates(NSCell* cell, ControlStates states)
     bool oldChecked = [cell state] == NSOnState;
     if (oldIndeterminate != indeterminate || checked != oldChecked)
         [cell setState:indeterminate ? NSMixedState : (checked ? NSOnState : NSOffState)];
-        
-    // Window inactive state does not need to be checked explicitly, since we paint parented to 
+
+    // Window inactive state does not need to be checked explicitly, since we paint parented to
     // a view in a window whose key state can be detected.
 }
 
@@ -277,13 +277,13 @@ static NSButtonCell *checkbox(ControlStates states, const IntRect& zoomedRect, f
         [checkboxCell setAllowsMixedState:YES];
         [checkboxCell setFocusRingType:NSFocusRingTypeExterior];
     }
-    
+
     // Set the control size based off the rectangle we're painting into.
     setControlSize(checkboxCell, checkboxSizes(), zoomedRect.size(), zoomFactor);
 
     // Update the various states we respond to.
     updateStates(checkboxCell, states);
-    
+
     return checkboxCell;
 }
 
@@ -301,7 +301,7 @@ static void paintCheckbox(ControlStates states, GraphicsContext* context, const 
     zoomedSize.setWidth(zoomedSize.width() * zoomFactor);
     zoomedSize.setHeight(zoomedSize.height() * zoomFactor);
     IntRect inflatedRect = inflateRect(zoomedRect, zoomedSize, checkboxMargins(controlSize), zoomFactor);
-    
+
     if (zoomFactor != 1.0f) {
         inflatedRect.setWidth(inflatedRect.width() / zoomFactor);
         inflatedRect.setHeight(inflatedRect.height() / zoomFactor);
@@ -316,7 +316,7 @@ static void paintCheckbox(ControlStates states, GraphicsContext* context, const 
     if (states & FocusState)
         [checkboxCell _web_drawFocusRingWithFrame:NSRect(inflatedRect) inView:view];
     [checkboxCell setControlView:nil];
-    
+
     END_BLOCK_OBJC_EXCEPTIONS
 }
 
@@ -358,13 +358,13 @@ static NSButtonCell *radio(ControlStates states, const IntRect& zoomedRect, floa
         [radioCell setTitle:nil];
         [radioCell setFocusRingType:NSFocusRingTypeExterior];
     }
-    
+
     // Set the control size based off the rectangle we're painting into.
     setControlSize(radioCell, radioSizes(), zoomedRect.size(), zoomFactor);
 
     // Update the various states we respond to.
     updateStates(radioCell, states);
-    
+
     return radioCell;
 }
 
@@ -379,7 +379,7 @@ static void paintRadio(ControlStates states, GraphicsContext* context, const Int
     zoomedSize.setWidth(zoomedSize.width() * zoomFactor);
     zoomedSize.setHeight(zoomedSize.height() * zoomFactor);
     IntRect inflatedRect = inflateRect(zoomedRect, zoomedSize, radioMargins(controlSize), zoomFactor);
-    
+
     if (zoomFactor != 1.0f) {
         inflatedRect.setWidth(inflatedRect.width() / zoomFactor);
         inflatedRect.setHeight(inflatedRect.height() / zoomFactor);
@@ -457,14 +457,14 @@ static NSButtonCell *button(ControlPart part, ControlStates states, const IntRec
         static NSButtonCell *normalCell = leakButtonCell(NormalButtonCell);
         cell = normalCell;
     }
-    setUpButtonCell(cell, part, states, zoomedRect, zoomFactor);    
+    setUpButtonCell(cell, part, states, zoomedRect, zoomFactor);
     return cell;
 }
 
 static void paintButton(ControlPart part, ControlStates states, GraphicsContext* context, const IntRect& zoomedRect, float zoomFactor, ScrollView* scrollView)
 {
     BEGIN_BLOCK_OBJC_EXCEPTIONS
-    
+
     // Determine the width and height needed for the control and prepare the cell for painting.
     NSButtonCell *buttonCell = button(part, states, zoomedRect, zoomFactor);
     GraphicsContextStateSaver stateSaver(*context);
@@ -491,7 +491,7 @@ static void paintButton(ControlPart part, ControlStates states, GraphicsContext*
             context->scale(FloatSize(zoomFactor, zoomFactor));
             context->translate(-inflatedRect.x(), -inflatedRect.y());
         }
-    } 
+    }
 
     LocalCurrentGraphicsContext localContext(context);
     NSView *view = ThemeMac::ensuredView(scrollView, states);

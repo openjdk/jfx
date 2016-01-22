@@ -35,15 +35,15 @@
 int to_jfx_touch_action(int state) {
     switch (state) {
         case TOUCH_ACTION_DOWN:
-        case TOUCH_ACTION_POINTER_DOWN:    
+        case TOUCH_ACTION_POINTER_DOWN:
             return com_sun_glass_events_TouchEvent_TOUCH_PRESSED;
         case TOUCH_ACTION_UP:
-        case TOUCH_ACTION_POINTER_UP:    
+        case TOUCH_ACTION_POINTER_UP:
             return com_sun_glass_events_TouchEvent_TOUCH_RELEASED;
         case TOUCH_ACTION_MOVE:
             return com_sun_glass_events_TouchEvent_TOUCH_MOVED;
         case TOUCH_ACTION_CANCEL:
-            return com_sun_glass_events_TouchEvent_TOUCH_RELEASED;                    
+            return com_sun_glass_events_TouchEvent_TOUCH_RELEASED;
         case TOUCH_ACTION_STILL:
             return com_sun_glass_events_TouchEvent_TOUCH_STILL;
         default:
@@ -73,7 +73,7 @@ int to_linux_keycode(int androidKeyCode) {
 }
 
 
-char *describe_surface_format(int f) {    
+char *describe_surface_format(int f) {
     switch (f) {
         case RGBA_8888:
             return "RGBA_8888";

@@ -83,10 +83,10 @@ namespace JSC {
         static Heap* heap(const JSValue); // 0 for immediate values
         static Heap* heap(const JSCell*);
 
-        // This constant determines how many blocks we iterate between checks of our 
-        // deadline when calling Heap::isPagedOut. Decreasing it will cause us to detect 
-        // overstepping our deadline more quickly, while increasing it will cause 
-        // our scan to run faster. 
+        // This constant determines how many blocks we iterate between checks of our
+        // deadline when calling Heap::isPagedOut. Decreasing it will cause us to detect
+        // overstepping our deadline more quickly, while increasing it will cause
+        // our scan to run faster.
         static const unsigned s_timeCheckResolution = 16;
 
         static bool isLive(const void*);
@@ -129,7 +129,7 @@ namespace JSC {
         inline HeapOperation operationInProgress() { return m_operationInProgress; }
         // true if an allocation or collection is in progress
         inline bool isBusy();
-        
+
         MarkedAllocator& allocatorForObjectWithoutDestructor(size_t bytes) { return m_objectSpace.allocatorFor(bytes); }
         MarkedAllocator& allocatorForObjectWithNormalDestructor(size_t bytes) { return m_objectSpace.normalDestructorAllocatorFor(bytes); }
         MarkedAllocator& allocatorForObjectWithImmortalStructureDestructor(size_t bytes) { return m_objectSpace.immortalStructureDestructorAllocatorFor(bytes); }
@@ -157,7 +157,7 @@ namespace JSC {
 
         JS_EXPORT_PRIVATE void protect(JSValue);
         JS_EXPORT_PRIVATE bool unprotect(JSValue); // True when the protect count drops to 0.
-        
+
         size_t extraSize(); // extra memory usage outside of pages allocated by the heap
         JS_EXPORT_PRIVATE size_t size();
         JS_EXPORT_PRIVATE size_t capacity();
@@ -171,9 +171,9 @@ namespace JSC {
 
         void pushTempSortVector(Vector<ValueStringPair, 0, UnsafeVectorOverflow>*);
         void popTempSortVector(Vector<ValueStringPair, 0, UnsafeVectorOverflow>*);
-    
+
         HashSet<MarkedArgumentBuffer*>& markListSet() { if (!m_markListSet) m_markListSet = adoptPtr(new HashSet<MarkedArgumentBuffer*>); return *m_markListSet; }
-        
+
         template<typename Functor> typename Functor::ReturnType forEachProtectedCell(Functor&);
         template<typename Functor> typename Functor::ReturnType forEachProtectedCell();
         template<typename Functor> inline void forEachCodeBlock(Functor&);
@@ -194,11 +194,11 @@ namespace JSC {
         void didAbandon(size_t);
 
         bool isPagedOut(double deadline);
-        
+
         const JITStubRoutineSet& jitStubRoutines() { return m_jitStubRoutines; }
-        
+
         void addReference(JSCell*, ArrayBuffer*);
-        
+
         bool isDeferred() const { return !!m_deferralDepth || Options::disableGC(); }
 
 #if USE(CF)
@@ -236,7 +236,7 @@ namespace JSC {
 
         static const size_t minExtraCost = 256;
         static const size_t maxExtraCost = 1024 * 1024;
-        
+
         class FinalizerOwner : public WeakHandleOwner {
             virtual void finalize(Handle<Unknown>, void* context) override;
         };
@@ -259,7 +259,7 @@ namespace JSC {
 
         JSStack& stack();
         BlockAllocator& blockAllocator();
-        
+
         JS_EXPORT_PRIVATE void incrementDeferralDepth();
         void decrementDeferralDepth();
         JS_EXPORT_PRIVATE void decrementDeferralDepthAndGCIfNeeded();
@@ -276,7 +276,7 @@ namespace JSC {
         bool m_shouldDoFullCollection;
         size_t m_totalBytesVisited;
         size_t m_totalBytesCopied;
-        
+
         HeapOperation m_operationInProgress;
         BlockAllocator m_blockAllocator;
         MarkedSpace m_objectSpace;
@@ -291,7 +291,7 @@ namespace JSC {
         OwnPtr<HashSet<MarkedArgumentBuffer*>> m_markListSet;
 
         MachineThreads m_machineThreads;
-        
+
         GCThreadSharedData m_sharedData;
         SlotVisitor m_slotVisitor;
         CopyVisitor m_copyVisitor;
@@ -301,7 +301,7 @@ namespace JSC {
         CodeBlockSet m_codeBlocks;
         JITStubRoutineSet m_jitStubRoutines;
         FinalizerOwner m_finalizerOwner;
-        
+
         bool m_isSafeToCollect;
 
         WriteBarrierBuffer m_writeBarrierBuffer;
@@ -311,23 +311,23 @@ namespace JSC {
         double m_lastCodeDiscardTime;
 
         DoublyLinkedList<ExecutableBase> m_compiledCode;
-        
+
         OwnPtr<GCActivityCallback> m_activityCallback;
         OwnPtr<IncrementalSweeper> m_sweeper;
         Vector<MarkedBlock*> m_blockSnapshot;
-        
+
         unsigned m_deferralDepth;
     };
 
     struct MarkedBlockSnapshotFunctor : public MarkedBlock::VoidFunctor {
-        MarkedBlockSnapshotFunctor(Vector<MarkedBlock*>& blocks) 
-            : m_index(0) 
+        MarkedBlockSnapshotFunctor(Vector<MarkedBlock*>& blocks)
+            : m_index(0)
             , m_blocks(blocks)
         {
         }
-    
+
         void operator()(MarkedBlock* block) { m_blocks[m_index++] = block; }
-    
+
         size_t m_index;
         Vector<MarkedBlock*>& m_blocks;
     };
@@ -416,7 +416,7 @@ namespace JSC {
 
     inline void Heap::reportExtraMemoryCost(size_t cost)
     {
-        if (cost > minExtraCost) 
+        if (cost > minExtraCost)
             reportExtraMemoryCostSlowCase(cost);
     }
 
@@ -449,7 +449,7 @@ namespace JSC {
         ASSERT(isValidAllocation(bytes));
         return m_objectSpace.allocateWithNormalDestructor(bytes);
     }
-    
+
     inline void* Heap::allocateWithImmortalStructureDestructor(size_t bytes)
     {
 #if ENABLE(ALLOCATION_LOGGING)
@@ -458,7 +458,7 @@ namespace JSC {
         ASSERT(isValidAllocation(bytes));
         return m_objectSpace.allocateWithImmortalStructureDestructor(bytes);
     }
-    
+
     inline void* Heap::allocateWithoutDestructor(size_t bytes)
     {
 #if ENABLE(ALLOCATION_LOGGING)
@@ -467,7 +467,7 @@ namespace JSC {
         ASSERT(isValidAllocation(bytes));
         return m_objectSpace.allocateWithoutDestructor(bytes);
     }
-   
+
     inline CheckedBoolean Heap::tryAllocateStorage(JSCell* intendedOwner, size_t bytes, void** outPtr)
     {
         CheckedBoolean result = m_storageSpace.tryAllocate(bytes, outPtr);
@@ -478,7 +478,7 @@ namespace JSC {
 #endif
         return result;
     }
-    
+
     inline CheckedBoolean Heap::tryReallocateStorage(JSCell* intendedOwner, void** ptr, size_t oldSize, size_t newSize)
     {
 #if ENABLE(ALLOCATION_LOGGING)

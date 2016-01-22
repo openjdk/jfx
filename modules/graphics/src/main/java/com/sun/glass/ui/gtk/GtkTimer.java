@@ -41,5 +41,5 @@ final class GtkTimer extends Timer{
 
     @Override
     protected native void _stop(long timer);
-    
+
 }

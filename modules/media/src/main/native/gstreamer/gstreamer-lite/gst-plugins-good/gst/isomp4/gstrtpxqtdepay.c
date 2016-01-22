@@ -31,22 +31,22 @@
 
 #define MAKE_TLV(a,b)  (((a)<<8)|(b))
 
-#define TLV_sd	MAKE_TLV ('s','d')
-#define TLV_qt	MAKE_TLV ('q','t')
-#define TLV_ti	MAKE_TLV ('t','i')
-#define TLV_ly	MAKE_TLV ('l','y')
-#define TLV_vo	MAKE_TLV ('v','o')
-#define TLV_mx	MAKE_TLV ('m','x')
-#define TLV_tr	MAKE_TLV ('t','r')
-#define TLV_tw	MAKE_TLV ('t','w')
-#define TLV_th	MAKE_TLV ('t','h')
-#define TLV_la	MAKE_TLV ('l','a')
-#define TLV_rt	MAKE_TLV ('r','t')
-#define TLV_gm	MAKE_TLV ('g','m')
-#define TLV_oc	MAKE_TLV ('o','c')
-#define TLV_cr	MAKE_TLV ('c','r')
-#define TLV_du	MAKE_TLV ('d','u')
-#define TLV_po	MAKE_TLV ('p','o')
+#define TLV_sd  MAKE_TLV ('s','d')
+#define TLV_qt  MAKE_TLV ('q','t')
+#define TLV_ti  MAKE_TLV ('t','i')
+#define TLV_ly  MAKE_TLV ('l','y')
+#define TLV_vo  MAKE_TLV ('v','o')
+#define TLV_mx  MAKE_TLV ('m','x')
+#define TLV_tr  MAKE_TLV ('t','r')
+#define TLV_tw  MAKE_TLV ('t','w')
+#define TLV_th  MAKE_TLV ('t','h')
+#define TLV_la  MAKE_TLV ('l','a')
+#define TLV_rt  MAKE_TLV ('r','t')
+#define TLV_gm  MAKE_TLV ('g','m')
+#define TLV_oc  MAKE_TLV ('o','c')
+#define TLV_cr  MAKE_TLV ('c','r')
+#define TLV_du  MAKE_TLV ('d','u')
+#define TLV_po  MAKE_TLV ('p','o')
 
 #define QT_UINT32(a)  (GST_READ_UINT32_BE(a))
 #define QT_UINT24(a)  (GST_READ_UINT32_BE(a) >> 8)
@@ -279,7 +279,7 @@ gst_rtp_xqt_depay_process (GstRTPBaseDepayload * depayload, GstBuffer * buf)
     payload_len = gst_rtp_buffer_get_payload_len (&rtp);
     payload = gst_rtp_buffer_get_payload (&rtp);
 
-    /*                      1                   2                   3 
+    /*                      1                   2                   3
      *  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
      * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
      * | VER   |PCK|S|Q|L| RES         |D| QuickTime Payload ID        |
@@ -339,7 +339,7 @@ gst_rtp_xqt_depay_process (GstRTPBaseDepayload * depayload, GstBuffer * buf)
        * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
        * |K|F|A|Z| RES                   | QuickTime Payload Desc Length |
        * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-       * . QuickTime Payload Desc Data ... . 
+       * . QuickTime Payload Desc Data ... .
        * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
        */
       if (payload_len <= 4)
@@ -458,7 +458,7 @@ gst_rtp_xqt_depay_process (GstRTPBaseDepayload * depayload, GstBuffer * buf)
        * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
        * | RES                           | Sample-Specific Info Length   |
        * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-       * . QuickTime TLVs ... 
+       * . QuickTime TLVs ...
        * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
        */
       if (payload_len <= 4)
@@ -549,7 +549,7 @@ gst_rtp_xqt_depay_process (GstRTPBaseDepayload * depayload, GstBuffer * buf)
       {
         guint slen;
 
-        /* multiple samples per packet. 
+        /* multiple samples per packet.
          *                      1                   2                   3
          *  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
          * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+

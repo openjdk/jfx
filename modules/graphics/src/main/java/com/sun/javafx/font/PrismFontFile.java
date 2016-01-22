@@ -851,7 +851,7 @@ public abstract class PrismFontFile implements FontResource, FontConstants {
             }
         }
     }
-    
+
     /*** BEGIN LOCALE_ID MAPPING ****/
 
     private static Map<String, Short> lcidMap;

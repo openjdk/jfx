@@ -43,7 +43,7 @@ import javafx.css.Selector;
  */
 public final class StyleMap {
 
-    public static final StyleMap EMPTY_MAP = 
+    public static final StyleMap EMPTY_MAP =
         new StyleMap(-1, Collections.<Selector>emptyList());
 
     /** Only StyleManager creates StyleMap */
@@ -61,7 +61,7 @@ public final class StyleMap {
         else if (cascadingStyles != null) return cascadingStyles.isEmpty();
         else return true;
     }
-        
+
     public Map<String, List<CascadingStyle>> getCascadingStyles() {
 
         if (cascadingStyles == null) {

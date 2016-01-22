@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -40,13 +40,13 @@ void prepareCodeOriginForOSRExit(ExecState* exec, CodeOrigin codeOrigin)
 {
     VM& vm = exec->vm();
     DeferGC deferGC(vm.heap);
-    
+
     for (; codeOrigin.inlineCallFrame; codeOrigin = codeOrigin.inlineCallFrame->caller) {
         FunctionExecutable* executable =
             static_cast<FunctionExecutable*>(codeOrigin.inlineCallFrame->executable.get());
         CodeBlock* codeBlock = executable->baselineCodeBlockFor(
             codeOrigin.inlineCallFrame->isCall ? CodeForCall : CodeForConstruct);
-        
+
         if (codeBlock->jitType() == JSC::JITCode::BaselineJIT)
             continue;
         ASSERT(codeBlock->jitType() == JSC::JITCode::InterpreterThunk);

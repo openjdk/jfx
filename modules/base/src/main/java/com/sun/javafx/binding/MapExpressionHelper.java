@@ -682,7 +682,7 @@ public abstract class MapExpressionHelper<K, V> extends ExpressionHelperBase {
             removeOp = false;
             return this;
         }
-        
+
         public SimpleChange<K, V> setPut(K key, V old, V added) {
             this.key = key;
             this.old = old;

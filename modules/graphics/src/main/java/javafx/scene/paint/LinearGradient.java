@@ -359,15 +359,15 @@ public final class LinearGradient extends Paint {
     }
 
     /**
-     * Creates a linear gradient value from a string representation. 
-     * <p>The format of the string representation is based on 
-     * JavaFX CSS specification for linear gradient which is 
+     * Creates a linear gradient value from a string representation.
+     * <p>The format of the string representation is based on
+     * JavaFX CSS specification for linear gradient which is
      * <pre>
      * linear-gradient( [ [from &lt;point&gt; to &lt;point&gt;| [ to &lt;side-or-corner&gt;], ]? [ [ repeat | reflect ], ]? &lt;color-stop&gt;[, &lt;color-stop&gt;]+)
      * </pre>
      * where
      * <pre>
-     * &lt;side-or-corner&gt; = [left | right] || [top | bottom] 
+     * &lt;side-or-corner&gt; = [left | right] || [top | bottom]
      * &lt;point&gt; = [ [ &lt;length&gt; &lt;length&gt; ] | [ &lt;percentage&gt; | &lt;percentage&gt; ] ]
      * &lt;color-stop&gt; = [ &lt;color&gt; [ &lt;percentage&gt; | &lt;length&gt;]? ]
      * </pre>
@@ -375,10 +375,10 @@ public final class LinearGradient extends Paint {
      * <p> Currently length can be only specified in px, the specification of unit can be omited.
      * Format of color representation is the one used in {@link Color#web(String color)}.
      * The linear-gradient keyword can be omited.
-     * For additional information about the format of string representation, see the 
+     * For additional information about the format of string representation, see the
      * <a href="../doc-files/cssref.html">CSS Reference Guide</a>.
      * </p>
-     * 
+     *
      * Examples:
      * <pre><code>
      * LinearGradient g
@@ -394,7 +394,7 @@ public final class LinearGradient extends Paint {
      * @param value the string to convert
      * @throws NullPointerException if the {@code value} is {@code null}
      * @throws IllegalArgumentException if the {@code value} cannot be parsed
-     * @return a {@code LinearGradient} object holding the value represented 
+     * @return a {@code LinearGradient} object holding the value represented
      * by the string argument.
      * @since JavaFX 2.1
      */
@@ -411,7 +411,7 @@ public final class LinearGradient extends Paint {
                         + "must end with \"" + end + '"');
             }
             value = value.substring(start.length(), value.length() - end.length());
-        }       
+        }
 
         GradientUtils.Parser parser = new GradientUtils.Parser(value);
         if (parser.getSize() < 2) {
@@ -495,7 +495,7 @@ public final class LinearGradient extends Paint {
 
         Stop[] stops = parser.parseStops(startX.proportional, dist);
 
-        return new LinearGradient(startX.value, startY.value, endX.value, endY.value, 
+        return new LinearGradient(startX.value, startY.value, endX.value, endY.value,
                                   startX.proportional, method, stops);
     }
 }

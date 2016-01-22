@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef PrintStream_h
@@ -51,20 +51,20 @@ public:
     // Typically a no-op for many subclasses of PrintStream, this is a hint that
     // the implementation should flush its buffers if it had not done so already.
     virtual void flush();
-    
+
     template<typename T>
     void print(const T& value)
     {
         printInternal(*this, value);
     }
-    
+
     template<typename T1, typename T2>
     void print(const T1& value1, const T2& value2)
     {
         print(value1);
         print(value2);
     }
-    
+
     template<typename T1, typename T2, typename T3>
     void print(const T1& value1, const T2& value2, const T3& value3)
     {
@@ -72,7 +72,7 @@ public:
         print(value2);
         print(value3);
     }
-    
+
     template<typename T1, typename T2, typename T3, typename T4>
     void print(const T1& value1, const T2& value2, const T3& value3, const T4& value4)
     {
@@ -81,7 +81,7 @@ public:
         print(value3);
         print(value4);
     }
-    
+
     template<typename T1, typename T2, typename T3, typename T4, typename T5>
     void print(const T1& value1, const T2& value2, const T3& value3, const T4& value4, const T5& value5)
     {
@@ -91,7 +91,7 @@ public:
         print(value4);
         print(value5);
     }
-    
+
     template<typename T1, typename T2, typename T3, typename T4, typename T5, typename T6>
     void print(const T1& value1, const T2& value2, const T3& value3, const T4& value4, const T5& value5, const T6& value6)
     {
@@ -102,7 +102,7 @@ public:
         print(value5);
         print(value6);
     }
-    
+
     template<typename T1, typename T2, typename T3, typename T4, typename T5, typename T6, typename T7>
     void print(const T1& value1, const T2& value2, const T3& value3, const T4& value4, const T5& value5, const T6& value6, const T7& value7)
     {
@@ -114,7 +114,7 @@ public:
         print(value6);
         print(value7);
     }
-    
+
     template<typename T1, typename T2, typename T3, typename T4, typename T5, typename T6, typename T7, typename T8>
     void print(const T1& value1, const T2& value2, const T3& value3, const T4& value4, const T5& value5, const T6& value6, const T7& value7, const T8& value8)
     {
@@ -127,7 +127,7 @@ public:
         print(value7);
         print(value8);
     }
-    
+
     template<typename T1, typename T2, typename T3, typename T4, typename T5, typename T6, typename T7, typename T8, typename T9>
     void print(const T1& value1, const T2& value2, const T3& value3, const T4& value4, const T5& value5, const T6& value6, const T7& value7, const T8& value8, const T9& value9)
     {
@@ -141,7 +141,7 @@ public:
         print(value8);
         print(value9);
     }
-    
+
     template<typename T1, typename T2, typename T3, typename T4, typename T5, typename T6, typename T7, typename T8, typename T9, typename T10>
     void print(const T1& value1, const T2& value2, const T3& value3, const T4& value4, const T5& value5, const T6& value6, const T7& value7, const T8& value8, const T9& value9, const T10& value10)
     {
@@ -156,7 +156,7 @@ public:
         print(value9);
         print(value10);
     }
-    
+
     template<typename T1, typename T2, typename T3, typename T4, typename T5, typename T6, typename T7, typename T8, typename T9, typename T10, typename T11>
     void print(const T1& value1, const T2& value2, const T3& value3, const T4& value4, const T5& value5, const T6& value6, const T7& value7, const T8& value8, const T9& value9, const T10& value10, const T11& value11)
     {
@@ -172,7 +172,7 @@ public:
         print(value10);
         print(value11);
     }
-    
+
     template<typename T1, typename T2, typename T3, typename T4, typename T5, typename T6, typename T7, typename T8, typename T9, typename T10, typename T11, typename T12>
     void print(const T1& value1, const T2& value2, const T3& value3, const T4& value4, const T5& value5, const T6& value6, const T7& value7, const T8& value8, const T9& value9, const T10& value10, const T11& value11, const T12& value12)
     {
@@ -189,7 +189,7 @@ public:
         print(value11);
         print(value12);
     }
-    
+
     template<typename T1, typename T2, typename T3, typename T4, typename T5, typename T6, typename T7, typename T8, typename T9, typename T10, typename T11, typename T12, typename T13>
     void print(const T1& value1, const T2& value2, const T3& value3, const T4& value4, const T5& value5, const T6& value6, const T7& value7, const T8& value8, const T9& value9, const T10& value10, const T11& value11, const T12& value12, const T13& value13)
     {
@@ -207,7 +207,7 @@ public:
         print(value12);
         print(value13);
     }
-    
+
     template<typename T1, typename T2, typename T3, typename T4, typename T5, typename T6, typename T7, typename T8, typename T9, typename T10, typename T11, typename T12, typename T13, typename T14>
     void print(const T1& value1, const T2& value2, const T3& value3, const T4& value4, const T5& value5, const T6& value6, const T7& value7, const T8& value8, const T9& value9, const T10& value10, const T11& value11, const T12& value12, const T13& value13, const T14& value14)
     {
@@ -226,7 +226,7 @@ public:
         print(value13);
         print(value14);
     }
-    
+
     template<typename T1, typename T2, typename T3, typename T4, typename T5, typename T6, typename T7, typename T8, typename T9, typename T10, typename T11, typename T12, typename T13, typename T14, typename T15>
     void print(const T1& value1, const T2& value2, const T3& value3, const T4& value4, const T5& value5, const T6& value6, const T7& value7, const T8& value8, const T9& value9, const T10& value10, const T11& value11, const T12& value12, const T13& value13, const T14& value14, const T15& value15)
     {
@@ -324,7 +324,7 @@ public:
         : m_ptr(ptr)
     {
     }
-    
+
     void dump(PrintStream& out) const
     {
         if (m_ptr)
@@ -347,7 +347,7 @@ public:
         , m_context(context)
     {
     }
-    
+
     void dump(PrintStream& out) const
     {
         m_value->dumpInContext(out, m_context);
@@ -372,7 +372,7 @@ public:
         , m_context(context)
     {
     }
-    
+
     void dump(PrintStream& out) const
     {
         if (m_ptr)
@@ -399,7 +399,7 @@ public:
         : m_value(&value)
     {
     }
-    
+
     void dump(PrintStream& out) const
     {
         T context;

@@ -70,7 +70,7 @@ void AudioBasicProcessorNode::uninitialize()
 void AudioBasicProcessorNode::process(size_t framesToProcess)
 {
     AudioBus* destinationBus = output(0)->bus();
-    
+
     if (!isInitialized() || !processor() || processor()->numberOfChannels() != numberOfChannels())
         destinationBus->zero();
     else {
@@ -80,7 +80,7 @@ void AudioBasicProcessorNode::process(size_t framesToProcess)
         if (!input(0)->isConnected())
             sourceBus->zero();
 
-        processor()->process(sourceBus, destinationBus, framesToProcess);  
+        processor()->process(sourceBus, destinationBus, framesToProcess);
     }
 }
 
@@ -103,7 +103,7 @@ void AudioBasicProcessorNode::reset()
 void AudioBasicProcessorNode::checkNumberOfChannelsForInput(AudioNodeInput* input)
 {
     ASSERT(context()->isAudioThread() && context()->isGraphOwner());
-    
+
     ASSERT(input == this->input(0));
     if (input != this->input(0))
         return;
@@ -113,12 +113,12 @@ void AudioBasicProcessorNode::checkNumberOfChannelsForInput(AudioNodeInput* inpu
         return;
 
     unsigned numberOfChannels = input->numberOfChannels();
-    
+
     if (isInitialized() && numberOfChannels != output(0)->numberOfChannels()) {
         // We're already initialized but the channel count has changed.
         uninitialize();
     }
-    
+
     if (!isInitialized()) {
         // This will propagate the channel count to any nodes connected further down the chain...
         output(0)->setNumberOfChannels(numberOfChannels);

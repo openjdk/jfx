@@ -31,7 +31,7 @@ import javafx.beans.InvalidationListener;
 
 public class ObservableListWrapperShim<E> extends ObservableListWrapper<E> {
 
-    
+
     public ObservableListWrapperShim(List<E> list) {
         super(list);
     }

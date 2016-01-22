@@ -58,7 +58,7 @@ import javafx.stage.Stage;
  * current platform supports a system bar.
  *
  * @sampleName Menu
- * @preview preview.png 
+ * @preview preview.png
  * @see javafx.scene.control.MenuBar
  * @see javafx.scene.control.Menu
  * @see javafx.scene.control.MenuItem
@@ -83,7 +83,7 @@ public class MenuApp extends Application {
             menu112.setVisible(menu113.isSelected());
             System.err.println("MenuItem \"foo\" is now " + (menu112.isVisible() ? "" : "not") + " visible.");
         });
-        // Options->Submenu 1 submenu 
+        // Options->Submenu 1 submenu
         Menu menu11 = new Menu("Submenu 1",
                 new ImageView(new Image(MenuApp.class.getResourceAsStream("/ensemble/samples/shared-resources/menuInfo.png"))));
         menu11.getItems().addAll(menu111, menu112, menu113);
@@ -102,7 +102,7 @@ public class MenuApp extends Application {
             outputLabel.setText(((MenuItem) t.getTarget()).getText() + " - action called");
         });
 
-        // Options menu       
+        // Options menu
         Menu menu1 = new Menu("Options");
         menu1.getItems().addAll(menu11, menu12, menu13);
         menuBar.getMenus().addAll(menu1);

@@ -21,7 +21,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -85,13 +85,13 @@ void TextCodecICU::registerEncodingNames(EncodingNameRegistrar registrar)
         const char* canonicalConverterName = ucnv_getAvailableName(i);
         UErrorCode error = U_ZERO_ERROR;
         // Try MIME before trying IANA to pick up commonly used names like
-        // 'EUC-JP' instead of horrendously long names like 
-        // 'Extended_UNIX_Code_Packed_Format_for_Japanese'. 
+        // 'EUC-JP' instead of horrendously long names like
+        // 'Extended_UNIX_Code_Packed_Format_for_Japanese'.
         const char* webStandardName = ucnv_getStandardName(canonicalConverterName, "MIME", &error);
         if (!U_SUCCESS(error) || !webStandardName) {
             error = U_ZERO_ERROR;
             // Try IANA to pick up 'windows-12xx' and other names
-            // which are not preferred MIME names but are widely used. 
+            // which are not preferred MIME names but are widely used.
             webStandardName = ucnv_getStandardName(canonicalConverterName, "IANA", &error);
             if (!U_SUCCESS(error) || !webStandardName)
                 continue;
@@ -366,7 +366,7 @@ String TextCodecICU::decode(const char* bytes, size_t length, bool flush, bool s
             return String();
         }
     }
-    
+
     ErrorCallbackSetter callbackSetter(m_converterICU, stopOnError);
 
     StringBuilder result;
@@ -436,7 +436,7 @@ static void urlEscapedEntityCallback(const void* context, UConverterFromUnicodeA
 
 // Substitutes special GBK characters, escaping all other unassigned entities.
 static void gbkCallbackEscape(const void* context, UConverterFromUnicodeArgs* fromUArgs, const UChar* codeUnits, int32_t length,
-    UChar32 codePoint, UConverterCallbackReason reason, UErrorCode* err) 
+    UChar32 codePoint, UConverterCallbackReason reason, UErrorCode* err)
 {
     UChar outChar;
     if (reason == UCNV_UNASSIGNED && (outChar = fallbackForGBK(codePoint))) {
@@ -450,7 +450,7 @@ static void gbkCallbackEscape(const void* context, UConverterFromUnicodeArgs* fr
 
 // Combines both gbkUrlEscapedEntityCallback and GBK character substitution.
 static void gbkUrlEscapedEntityCallack(const void* context, UConverterFromUnicodeArgs* fromUArgs, const UChar* codeUnits, int32_t length,
-    UChar32 codePoint, UConverterCallbackReason reason, UErrorCode* err) 
+    UChar32 codePoint, UConverterCallbackReason reason, UErrorCode* err)
 {
     if (reason == UCNV_UNASSIGNED) {
         if (UChar outChar = fallbackForGBK(codePoint)) {
@@ -466,7 +466,7 @@ static void gbkUrlEscapedEntityCallack(const void* context, UConverterFromUnicod
 }
 
 static void gbkCallbackSubstitute(const void* context, UConverterFromUnicodeArgs* fromUArgs, const UChar* codeUnits, int32_t length,
-    UChar32 codePoint, UConverterCallbackReason reason, UErrorCode* err) 
+    UChar32 codePoint, UConverterCallbackReason reason, UErrorCode* err)
 {
     UChar outChar;
     if (reason == UCNV_UNASSIGNED && (outChar = fallbackForGBK(codePoint))) {

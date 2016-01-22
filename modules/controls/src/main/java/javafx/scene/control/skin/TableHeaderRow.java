@@ -72,7 +72,7 @@ public class TableHeaderRow extends StackPane {
      *                                                                         *
      **************************************************************************/
 
-    private static final String MENU_SEPARATOR = 
+    private static final String MENU_SEPARATOR =
             ControlResources.getString("TableView.nestedColumnControlMenuSeparator");
 
 
@@ -240,9 +240,9 @@ public class TableHeaderRow extends StackPane {
             @Override protected void layoutChildren() {
                 double imageWidth = image.snappedLeftInset() + image.snappedRightInset();
                 double imageHeight = image.snappedTopInset() + image.snappedBottomInset();
-                
+
                 image.resize(imageWidth, imageHeight);
-                positionInArea(image, 0, 0, getWidth(), getHeight() - 3, 
+                positionInArea(image, 0, 0, getWidth(), getHeight() - 3,
                         0, HPos.CENTER, VPos.CENTER);
             }
         };
@@ -265,7 +265,7 @@ public class TableHeaderRow extends StackPane {
         // reordering
         getChildren().addAll(filler, rootHeader, cornerRegion, dragHeader);
     }
-    
+
 
 
     /***************************************************************************
@@ -336,7 +336,7 @@ public class TableHeaderRow extends StackPane {
 
         // position the main nested header
         getRootHeader().resizeRelocate(x, snappedTopInset(), headerWidth, prefHeight);
-        
+
         // position the filler region
         final Control control = tableSkin.getSkinnable();
         if (control == null) {
@@ -368,7 +368,7 @@ public class TableHeaderRow extends StackPane {
     /** {@inheritDoc} */
     @Override protected double computePrefHeight(double width) {
         // we hardcode 24.0 here to avoid RT-37616, where the
-        // entire header row would disappear when all columns were hidden. 
+        // entire header row would disappear when all columns were hidden.
         double headerPrefHeight = getRootHeader().prefHeight(width);
         headerPrefHeight = headerPrefHeight == 0.0 ? 24.0 : headerPrefHeight;
         return snappedTopInset() + headerPrefHeight + snappedBottomInset();
@@ -578,24 +578,24 @@ public class TableHeaderRow extends StackPane {
         }
         return s;
     }
-    
+
     // We need to show strings properly. If a column has a parent column which is
     // not inserted into the TableView columns list, it effectively doesn't have
     // a parent column from the users perspective. As such, we shouldn't include
     // the parent column text in the menu. Fixes RT-14482.
     private boolean isColumnVisibleInHeader(TableColumnBase col, List columns) {
         if (col == null) return false;
-        
+
         for (int i = 0; i < columns.size(); i++) {
             TableColumnBase column = (TableColumnBase) columns.get(i);
             if (col.equals(column)) return true;
-            
+
             if (! column.getColumns().isEmpty()) {
                 boolean isVisible = isColumnVisibleInHeader(col, column.getColumns());
                 if (isVisible) return true;
             }
         }
-        
+
         return false;
     }
 }

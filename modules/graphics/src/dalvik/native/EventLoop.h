@@ -34,8 +34,8 @@ extern "C" {
 #include <stdio.h>
 #include <stdlib.h>
 #include <pthread.h>
-#include "Events.h"    
-        
+#include "Events.h"
+
 #define TRUE    1
 #define FALSE   0
 
@@ -54,7 +54,7 @@ typedef struct {
     int     (*push)(Event);
     Event   (*pop)();
     void    (*process)(JNIEnv *, Event);
-} _EventQ;    
+} _EventQ;
 typedef _EventQ* EventQ;
 
 EventQ eventq_getInstance();

@@ -234,7 +234,7 @@ public class CatalogPage extends Page  implements Callback<ListView<CatalogPage.
             }
         });
     }
-    
+
     private void buildRows() {
         final List<Row> items = new ArrayList<>(200);
         for (final Date startTime : dataService.getStartTimes()) {
@@ -250,7 +250,7 @@ public class CatalogPage extends Page  implements Callback<ListView<CatalogPage.
         }
         rows.setAll(items);
     }
-    
+
     @Override public void reset() {
         // Cause the session filter to clear out
         sessionFilterPopover.hide();

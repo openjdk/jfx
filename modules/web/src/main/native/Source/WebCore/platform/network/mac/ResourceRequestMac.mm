@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #import "config.h"
@@ -103,7 +103,7 @@ void ResourceRequest::doUpdateResourceRequest()
     m_cachePolicy = (ResourceRequestCachePolicy)[m_nsRequest.get() cachePolicy];
     m_timeoutInterval = [m_nsRequest.get() timeoutInterval];
     m_firstPartyForCookies = [m_nsRequest.get() mainDocumentURL];
-    
+
     if (NSString* method = [m_nsRequest.get() HTTPMethod])
         m_httpMethod = method;
     m_allowCookies = [m_nsRequest.get() HTTPShouldHandleCookies];
@@ -155,7 +155,7 @@ void ResourceRequest::doUpdatePlatformRequest()
         m_nsRequest = nil;
         return;
     }
-    
+
     NSMutableURLRequest *nsRequest = [m_nsRequest.get() mutableCopy];
 
     if (nsRequest)
@@ -263,7 +263,7 @@ void ResourceRequest::setStorageSession(CFURLStorageSessionRef storageSession)
     updatePlatformRequest();
     m_nsRequest = adoptNS(wkCopyRequestWithStorageSession(storageSession, m_nsRequest.get()));
 }
-    
+
 #endif // USE(CFNETWORK)
 
 #if !PLATFORM(IOS)
@@ -271,12 +271,12 @@ static bool initQuickLookResourceCachingQuirks()
 {
     if (applicationIsSafari())
         return false;
-    
+
     NSArray* frameworks = [NSBundle allFrameworks];
-    
+
     if (!frameworks)
         return false;
-    
+
     for (unsigned int i = 0; i < [frameworks count]; i++) {
         NSBundle* bundle = [frameworks objectAtIndex: i];
         const char* bundleID = [[bundle bundleIdentifier] UTF8String];

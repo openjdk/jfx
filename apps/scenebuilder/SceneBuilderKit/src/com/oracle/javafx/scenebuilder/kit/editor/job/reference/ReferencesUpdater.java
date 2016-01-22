@@ -59,13 +59,13 @@ import java.util.Set;
  *
  */
 public class ReferencesUpdater {
-    
+
     private final EditorController editorController;
     private final FXOMDocument fxomDocument;
     private final List<Job> executedJobs = new LinkedList<>();
     private final Set<String> declaredFxIds = new HashSet<>();
     private final FXOMCloner cloner;
-    
+
     public ReferencesUpdater(EditorController editorController) {
         assert editorController != null;
         assert editorController.getFxomDocument() != null;
@@ -73,23 +73,23 @@ public class ReferencesUpdater {
         this.fxomDocument = editorController.getFxomDocument();
         this.cloner = new FXOMCloner(this.fxomDocument);
     }
-    
+
     public void update() {
         if (fxomDocument.getFxomRoot() != null) {
             declaredFxIds.clear();
             update(fxomDocument.getFxomRoot());
         }
     }
-    
+
     public List<Job> getExecutedJobs() {
         return new LinkedList<>(executedJobs);
     }
-    
-    
+
+
     /*
      * Private
      */
-    
+
     private void update(FXOMNode node) {
         if (node instanceof FXOMCollection) {
             updateCollection((FXOMCollection) node);
@@ -105,8 +105,8 @@ public class ReferencesUpdater {
             throw new RuntimeException("Bug"); //NOI18N
         }
     }
-    
-    
+
+
     private void updateCollection(FXOMCollection collection) {
         if (collection.getFxId() != null) {
             declaredFxIds.add(collection.getFxId());
@@ -116,8 +116,8 @@ public class ReferencesUpdater {
             update(items.get(i));
         }
     }
-    
-    
+
+
     private void updateInstance(FXOMInstance instance) {
         if (instance.getFxId() != null) {
             declaredFxIds.add(instance.getFxId());
@@ -128,8 +128,8 @@ public class ReferencesUpdater {
             update(properties.get(propertyName));
         }
     }
-    
-    
+
+
     private void updateIntrinsic(FXOMIntrinsic intrinsic) {
         switch(intrinsic.getType()) {
             case FX_REFERENCE:
@@ -140,16 +140,16 @@ public class ReferencesUpdater {
                 break;
         }
     }
-    
-    
+
+
     private void updatePropertyC(FXOMPropertyC property) {
         final List<FXOMObject> values = property.getValues();
         for (int i = 0, count = values.size(); i < count; i++) {
             update(values.get(i));
         }
     }
-    
-    
+
+
     private void updatePropertyT(FXOMPropertyT property) {
         final PrefixedValue pv = new PrefixedValue(property.getValue());
         if (pv.isExpression()) {
@@ -159,12 +159,12 @@ public class ReferencesUpdater {
             }
         }
     }
-    
-    
+
+
     private void updateReference(FXOMNode r, String fxId) {
         assert (r instanceof FXOMPropertyT) || (r instanceof FXOMIntrinsic);
         assert fxId != null;
-        
+
         if (declaredFxIds.contains(fxId) == false) {
             // r is a forward reference
             //
@@ -175,8 +175,8 @@ public class ReferencesUpdater {
             //    => we remove the reference
             // 2) else r is a strong reference
             //    => we expand the reference
-            
-            
+
+
             final FXOMObject declarer = fxomDocument.searchWithFxId(fxId);
 
             // 0)
@@ -186,21 +186,21 @@ public class ReferencesUpdater {
                 executedJobs.add(fixJob);
                 declaredFxIds.add(fxId);
             }
-            
+
             // 1
             else if (FXOMNodes.isWeakReference(r) || (declarer == null)) {
                 final Job removeJob = new RemoveNodeJob(r, editorController);
                 removeJob.execute();
                 executedJobs.add(removeJob);
-                
+
             // 2)
             } else {
-                
+
                 final Job expandJob = new ExpandReferenceJob(r, cloner, editorController);
                 expandJob.execute();
                 executedJobs.add(expandJob);
             }
         }
     }
-    
+
 }

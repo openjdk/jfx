@@ -58,7 +58,7 @@ import javafx.scene.AccessibleRole;
 /**
  * Text input component that allows a user to enter multiple lines of
  * plain text. Unlike in previous releases of JavaFX, support for single line
- * input is not available as part of the TextArea control, however this is 
+ * input is not available as part of the TextArea control, however this is
  * the sole-purpose of the {@link TextField} control. Additionally, if you want
  * a form of rich-text editing, there is also the
  * {@link javafx.scene.web.HTMLEditor HTMLEditor} control.
@@ -506,7 +506,7 @@ public class TextArea extends TextInputControl {
     private IntegerProperty prefColumnCount = new StyleableIntegerProperty(DEFAULT_PREF_COLUMN_COUNT) {
 
         private int oldValue = get();
-        
+
         @Override
         protected void invalidated() {
             int value = get();
@@ -546,7 +546,7 @@ public class TextArea extends TextInputControl {
     private IntegerProperty prefRowCount = new StyleableIntegerProperty(DEFAULT_PREF_ROW_COUNT) {
 
         private int oldValue = get();
-        
+
         @Override
         protected void invalidated() {
             int value = get();

@@ -42,7 +42,7 @@ static void disposeNativeImpl(JNIEnv* env, jobject objectHandle);
 AbstractSurface*
 surface_get(JNIEnv* env, jobject surfaceHandle) {
     return (AbstractSurface*)JLongToPointer(
-               (*env)->GetLongField(env, surfaceHandle, 
+               (*env)->GetLongField(env, surfaceHandle,
                                     fieldIds[SURFACE_NATIVE_PTR]));
 }
 
@@ -67,7 +67,7 @@ Java_com_sun_pisces_AbstractSurface_getRGBImpl(JNIEnv* env, jobject objectHandle
     Surface* surface;
 
     surface = (Surface*)JLongToPointer(
-                  (*env)->GetLongField(env, objectHandle, 
+                  (*env)->GetLongField(env, objectHandle,
                                        fieldIds[SURFACE_NATIVE_PTR]));
 
     CORRECT_DIMS(surface, x, y, width, height, dstX, dstY);
@@ -123,7 +123,7 @@ Java_com_sun_pisces_AbstractSurface_setRGBImpl(JNIEnv* env, jobject objectHandle
 
     Surface* surface;
     surface = (Surface*)JLongToPointer(
-                  (*env)->GetLongField(env, objectHandle, 
+                  (*env)->GetLongField(env, objectHandle,
                                        fieldIds[SURFACE_NATIVE_PTR]));
 
     CORRECT_DIMS(surface, x, y, width, height, srcX, srcY);
@@ -194,7 +194,7 @@ disposeNativeImpl(JNIEnv* env, jobject objectHandle) {
     }
 
     surface = (AbstractSurface*)JLongToPointer(
-                  (*env)->GetLongField(env, objectHandle, 
+                  (*env)->GetLongField(env, objectHandle,
                                        fieldIds[SURFACE_NATIVE_PTR]));
 
     if (surface != NULL) {

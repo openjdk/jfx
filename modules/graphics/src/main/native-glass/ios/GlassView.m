@@ -43,17 +43,17 @@ static inline UIView<GlassView>* getGlassView(JNIEnv *env, jlong jPtr)
 jlong Do_com_sun_glass_ui_ios_IosView__1create(JNIEnv *env, jobject jView, jobject jCapabilities)
 {
     UIView<GlassView> *view;
-    
+
     NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
-    
+
     {
         view = [[GlassViewGL alloc] initWithFrame:CGRectMake(0,0,1,1) withJview:jView withJproperties:jCapabilities];
         (*env)->SetLongField(env, jView, (*env)->GetFieldID(env, mat_jViewClass, "nativePtr", "J"), ptr_to_jlong(view));
     }
     [pool drain];
-    
+
     GLASS_CHECK_EXCEPTION(env);
-    
+
     return ptr_to_jlong(view);
 }
 
@@ -105,9 +105,9 @@ void Do_com_sun_glass_ui_ios_IosView__1close(JNIEnv *env, jlong jPtr)
  */
 JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_ios_IosView__1create
 (JNIEnv *env, jobject jview, jobject jCapabilities) {
-    
+
     jlong value;
-    
+
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
     GLASS_POOL_ENTER;
     {
@@ -189,10 +189,10 @@ JNIEXPORT jint JNICALL Java_com_sun_glass_ui_ios_IosView__1getNativeFrameBuffer
 JNIEXPORT jint JNICALL Java_com_sun_glass_ui_ios_IosView__1getX
 (JNIEnv *env, jobject jview, jlong ptr) {
     GLASS_LOG("Java_com_sun_glass_ui_ios_IosView__1getX - returns 0");
-        
+
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
     GLASS_CHECK_EXCEPTION(env);
-    
+
     return 0; //on iOS Windows content rect equals it's frame, thus View's origin equals Window's origin
 }
 
@@ -205,10 +205,10 @@ JNIEXPORT jint JNICALL Java_com_sun_glass_ui_ios_IosView__1getX
 JNIEXPORT jint JNICALL Java_com_sun_glass_ui_ios_IosView__1getY
 (JNIEnv *env, jobject jview, jlong ptr) {
     GLASS_LOG("Java_com_sun_glass_ui_ios_IosView__1getY - returning 0");
-    
+
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
     GLASS_CHECK_EXCEPTION(env);
-    
+
     return 0; //on iOS Windows content rect equals it's frame, thus View's origin equals Window's origin
 }
 
@@ -221,7 +221,7 @@ JNIEXPORT jint JNICALL Java_com_sun_glass_ui_ios_IosView__1getY
 JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_ios_IosView__1close
 (JNIEnv *env, jclass jview, jlong ptr) {
     GLASS_LOG("Java_com_sun_glass_ui_ios_IosView__1close called.");
-   
+
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
     GLASS_POOL_ENTER;
     {
@@ -238,7 +238,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_ios_IosView__1close
     }
     GLASS_POOL_EXIT;
     GLASS_CHECK_EXCEPTION(env);
-    
+
     return JNI_TRUE;
 }
 
@@ -251,7 +251,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_ios_IosView__1close
 JNIEXPORT void JNICALL Java_com_sun_glass_ui_ios_IosView__1begin
 (JNIEnv *env, jobject jview, jlong ptr) {
     GLASS_LOG("Java_com_sun_glass_ui_ios_IosView__1begin");
-    
+
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
     UIView<GlassView> *view = getGlassView(env, ptr);
     GLASS_POOL_PUSH; // it will be popped by "_end"
@@ -271,7 +271,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_ios_IosView__1begin
 JNIEXPORT void JNICALL Java_com_sun_glass_ui_ios_IosView__1end
 (JNIEnv *env, jobject jview, jlong ptr) {
     GLASS_LOG("Java_com_sun_glass_ui_ios_IosView__1end");
-    
+
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
     UIView<GlassView> *view = getGlassView(env, ptr);
     {
@@ -291,7 +291,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_ios_IosView__1end
 JNIEXPORT void JNICALL Java_com_sun_glass_ui_ios_IosView__1scheduleRepaint
 (JNIEnv *env, jobject jview, jlong ptr) {
     GLASS_LOG("Java_com_sun_glass_ui_ios_IosView__1scheduleRepaint");
-    
+
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
     GLASS_POOL_ENTER;
     {
@@ -312,7 +312,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_ios_IosView__1setParent
 (JNIEnv *env, jobject jView, jlong jPtr, jlong parentPtr)
 {
     GLASS_LOG("Java_com_sun_glass_ui_ios_IosView__1setParent. Code template");
-    
+
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
 }
 
@@ -326,7 +326,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_ios_IosView__1enterFullscreen
 (JNIEnv *env, jobject jView, jlong jPtr, jboolean jAnimate, jboolean jKeepRatio, jboolean jHideCursor)
 {
     GLASS_LOG("Java_com_sun_glass_ui_ios_IosView__1enterFullscreen. Code template.");
-    
+
     return JNI_FALSE;
 }
 

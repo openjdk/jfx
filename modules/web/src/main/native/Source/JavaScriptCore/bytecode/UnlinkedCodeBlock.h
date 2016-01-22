@@ -339,7 +339,7 @@ public:
     bool isNumericCompareFunction() const { return m_isNumericCompareFunction; }
 
     bool isBuiltinFunction() const { return m_isBuiltinFunction; }
-    
+
     void shrinkToFit()
     {
         m_jumpTargets.shrinkToFit();
@@ -712,7 +712,7 @@ private:
         : Base(vm, structure, codeType, info)
     {
     }
-    
+
 public:
     static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue proto)
     {

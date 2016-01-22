@@ -6,13 +6,13 @@
  * are met:
  *
  * 1.  Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer. 
+ *     notice, this list of conditions and the following disclaimer.
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
- *     documentation and/or other materials provided with the distribution. 
+ *     documentation and/or other materials provided with the distribution.
  * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
- *     from this software without specific prior written permission. 
+ *     from this software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY APPLE AND ITS CONTRIBUTORS "AS IS" AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
@@ -125,7 +125,7 @@ static const Vector<DWORD, 4>& getCJKCodePageMasks()
 {
     // The default order in which we look for a font for a CJK character. If the user's default code page is
     // one of these, we will use it first.
-    static const UINT CJKCodePages[] = { 
+    static const UINT CJKCodePages[] = {
         932, /* Japanese */
         936, /* Simplified Chinese */
         950, /* Traditional Chinese */
@@ -355,7 +355,7 @@ PassRefPtr<SimpleFontData> FontCache::getLastResortFallbackFont(const FontDescri
         if (simpleFont = fontDataFromDescriptionAndLogFont(fontDescription, shouldRetain, nonClientMetrics.lfSmCaptionFont, fallbackFontName))
             return simpleFont.release();
     }
-    
+
     ASSERT_NOT_REACHED();
     return 0;
 }
@@ -581,7 +581,7 @@ PassOwnPtr<FontPlatformData> FontCache::createFontPlatformData(const FontDescrip
         // font.
         delete result;
         return nullptr;
-    }        
+    }
 
     return adoptPtr(result);
 }

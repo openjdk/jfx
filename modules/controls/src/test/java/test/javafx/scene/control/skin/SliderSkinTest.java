@@ -57,7 +57,7 @@ public class SliderSkinTest {
         slider.setPrefHeight(500);
         assertEquals(500, slider.maxHeight(-1), 0);
     }
-    
+
     public static final class SliderSkinMock extends SliderSkin {
         boolean propertyChanged = false;
         int propertyChangeCount = 0;

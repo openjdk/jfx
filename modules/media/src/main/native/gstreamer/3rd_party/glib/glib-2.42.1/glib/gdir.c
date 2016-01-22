@@ -261,18 +261,18 @@ g_dir_read_name (GDir *dir)
   while (1)
     {
       wentry = _wreaddir (dir->wdirp);
-      while (wentry 
-	     && (0 == wcscmp (wentry->d_name, L".") ||
-		 0 == wcscmp (wentry->d_name, L"..")))
-	wentry = _wreaddir (dir->wdirp);
+      while (wentry
+         && (0 == wcscmp (wentry->d_name, L".") ||
+         0 == wcscmp (wentry->d_name, L"..")))
+    wentry = _wreaddir (dir->wdirp);
 
       if (wentry == NULL)
-	return NULL;
+    return NULL;
 
       utf8_name = g_utf16_to_utf8 (wentry->d_name, -1, NULL, NULL, NULL);
 
       if (utf8_name == NULL)
-	continue;		/* Huh, impossible? Skip it anyway */
+    continue;       /* Huh, impossible? Skip it anyway */
 
       strcpy (dir->utf8_buf, utf8_name);
       g_free (utf8_name);
@@ -281,7 +281,7 @@ g_dir_read_name (GDir *dir)
     }
 #else
   entry = readdir (dir->dirp);
-  while (entry 
+  while (entry
          && (0 == strcmp (entry->d_name, ".") ||
              0 == strcmp (entry->d_name, "..")))
     entry = readdir (dir->dirp);
@@ -308,19 +308,19 @@ g_dir_read_name (GDir *dir)
     {
       const gchar *utf8_name = g_dir_read_name_utf8 (dir);
       gchar *retval;
-      
+
       if (utf8_name == NULL)
-	return NULL;
+    return NULL;
 
       retval = g_locale_from_utf8 (utf8_name, -1, NULL, NULL, NULL);
 
       if (retval != NULL)
-	{
-	  strcpy (dir->utf8_buf, retval);
-	  g_free (retval);
+    {
+      strcpy (dir->utf8_buf, retval);
+      g_free (retval);
 
-	  return dir->utf8_buf;
-	}
+      return dir->utf8_buf;
+    }
     }
 }
 
@@ -337,7 +337,7 @@ void
 g_dir_rewind (GDir *dir)
 {
   g_return_if_fail (dir != NULL);
-  
+
 #ifdef G_OS_WIN32
   _wrewinddir (dir->wdirp);
 #else

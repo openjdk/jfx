@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef ProfilerOrigin_h
@@ -46,32 +46,32 @@ public:
         : m_bytecodeIndex(std::numeric_limits<unsigned>::max())
     {
     }
-    
+
     Origin(WTF::HashTableDeletedValueType)
         : m_bytecodeIndex(std::numeric_limits<unsigned>::max() - 1)
     {
     }
-    
+
     Origin(Bytecodes* bytecodes, unsigned bytecodeIndex)
         : m_bytecodes(bytecodes)
         , m_bytecodeIndex(bytecodeIndex)
     {
         ASSERT(m_bytecodeIndex < std::numeric_limits<unsigned>::max() - 1);
     }
-    
+
     Origin(Database&, CodeBlock*, unsigned bytecodeIndex);
-    
+
     bool operator!() const { return m_bytecodeIndex == std::numeric_limits<unsigned>::max(); }
-    
+
     Bytecodes* bytecodes() const { return m_bytecodes; }
     unsigned bytecodeIndex() const { return m_bytecodeIndex; }
-    
+
     bool operator==(const Origin&) const;
     bool operator!=(const Origin& other) const { return !(*this == other); }
     unsigned hash() const;
-    
+
     bool isHashTableDeletedValue() const;
-    
+
     void dump(PrintStream&) const;
     JSValue toJS(ExecState*) const;
 

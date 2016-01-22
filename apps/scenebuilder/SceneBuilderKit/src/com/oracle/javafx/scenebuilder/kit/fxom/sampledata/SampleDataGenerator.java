@@ -53,16 +53,16 @@ import javafx.scene.control.TreeView;
  *
  */
 public class SampleDataGenerator {
-    
+
     private final Map<FXOMObject, AbstractSampleData> sampleDataMap = new HashMap<>();
-    
+
     public void assignSampleData(FXOMObject startObject) {
         assert startObject != null;
-        
+
         final Object sceneGraphObject = startObject.getSceneGraphObject();
         final AbstractSampleData currentData = sampleDataMap.get(startObject);
         final AbstractSampleData newData;
-        
+
         if (sceneGraphObject == null) {
             // startObject is unresolved
             newData = null;
@@ -171,7 +171,7 @@ public class SampleDataGenerator {
                 newData = null;
             }
         }
-        
+
         if (newData == null) {
             if (currentData != null) {
                 sampleDataMap.remove(startObject);
@@ -180,7 +180,7 @@ public class SampleDataGenerator {
             newData.applyTo(sceneGraphObject);
             sampleDataMap.put(startObject, newData);
         }
-        
+
         if (startObject instanceof FXOMInstance) {
             final FXOMInstance fxomInstance = (FXOMInstance) startObject;
             for (FXOMProperty p : fxomInstance.getProperties().values()) {
@@ -196,16 +196,16 @@ public class SampleDataGenerator {
             for (FXOMObject i : fxomCollection.getItems()) {
                 assignSampleData(i);
             }
-        } 
+        }
     }
-    
-    
+
+
     public void removeSampleData(FXOMObject startObject) {
         final AbstractSampleData currentData = sampleDataMap.get(startObject);
         if (currentData != null) {
             currentData.removeFrom(startObject.getSceneGraphObject());
         }
-        
+
         if (startObject instanceof FXOMInstance) {
             final FXOMInstance fxomInstance = (FXOMInstance) startObject;
             for (FXOMProperty p : fxomInstance.getProperties().values()) {
@@ -221,17 +221,17 @@ public class SampleDataGenerator {
             for (FXOMObject i : fxomCollection.getItems()) {
                 removeSampleData(i);
             }
-        } 
+        }
     }
-    
+
     /*
      * Private
      */
-//    
+//
 //    private AbstractSampleData<?> makeSampleData(FXOMObject fxomObject) {
 //        final Object obj = fxomObject.getSceneGraphObject();
 //        assert obj == null;
-//        
+//
 //        if (obj instanceof ListView) {
 //            @SuppressWarnings("unchecked")
 //            final ListView<Object> xyChart = (ListView)obj;
@@ -246,7 +246,7 @@ public class SampleDataGenerator {
 //            return visitTable(tableView);
 //        } else if (obj instanceof TableColumn) {
 //            @SuppressWarnings("unchecked")
-//            final TableColumn<Object,Object> tableColumn = 
+//            final TableColumn<Object,Object> tableColumn =
 //                (TableColumn<Object,Object>)obj;
 //            return visitTableColumn(tableColumn);
 //        } else if (obj instanceof XYChart && XYChartSeries.isKnownXYChart(obj)) {

@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef JSGenericTypedArrayViewConstructorInlines_h
@@ -75,20 +75,20 @@ static EncodedJSValue JSC_HOST_CALL constructGenericTypedArrayView(ExecState* ex
     Structure* structure =
         asInternalFunction(exec->callee())->globalObject()->typedArrayStructure(
             ViewClass::TypedArrayStorageType);
-    
+
     if (!exec->argumentCount()) {
         if (ViewClass::TypedArrayStorageType == TypeDataView)
             return throwVMError(exec, createTypeError(exec, "DataView constructor requires at least one argument."));
-        
+
         // Even though the documentation doesn't say so, it's correct to say
         // "new Int8Array()". This is the same as allocating an array of zero
         // length.
         return JSValue::encode(ViewClass::create(exec, structure, 0));
     }
-    
+
     if (JSArrayBuffer* jsBuffer = jsDynamicCast<JSArrayBuffer*>(exec->argument(0))) {
         RefPtr<ArrayBuffer> buffer = jsBuffer->impl();
-        
+
         unsigned offset = (exec->argumentCount() > 1) ? exec->uncheckedArgument(1).toUInt32(exec) : 0;
         if (exec->hadException())
             return JSValue::encode(jsUndefined());
@@ -104,32 +104,32 @@ static EncodedJSValue JSC_HOST_CALL constructGenericTypedArrayView(ExecState* ex
         }
         return JSValue::encode(ViewClass::create(exec, structure, buffer, offset, length));
     }
-    
+
     if (ViewClass::TypedArrayStorageType == TypeDataView)
         return throwVMError(exec, createTypeError(exec, "Expected ArrayBuffer for the first argument."));
-    
+
     // For everything but DataView, we allow construction with any of:
     // - Another array. This creates a copy of the of that array.
     // - An integer. This creates a new typed array of that length and zero-initializes it.
-    
+
     if (JSObject* object = jsDynamicCast<JSObject*>(exec->uncheckedArgument(0))) {
         unsigned length =
             object->get(exec, exec->vm().propertyNames->length).toUInt32(exec);
         if (exec->hadException())
             return JSValue::encode(jsUndefined());
-        
+
         ViewClass* result = ViewClass::createUninitialized(exec, structure, length);
         if (!result) {
             ASSERT(exec->hadException());
             return JSValue::encode(jsUndefined());
         }
-        
+
         if (!result->set(exec, object, 0, length))
             return JSValue::encode(jsUndefined());
-        
+
         return JSValue::encode(result);
     }
-    
+
     int length;
     if (exec->uncheckedArgument(0).isInt32())
         length = exec->uncheckedArgument(0).asInt32();

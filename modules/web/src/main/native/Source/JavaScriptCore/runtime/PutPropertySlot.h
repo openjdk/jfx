@@ -21,7 +21,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef PutPropertySlot_h
@@ -32,10 +32,10 @@
 #include <wtf/Assertions.h>
 
 namespace JSC {
-    
+
     class JSObject;
     class JSFunction;
-    
+
     class PutPropertySlot {
     public:
         enum Type { Uncachable, ExistingProperty, NewProperty, CustomProperty };
@@ -72,7 +72,7 @@ namespace JSC {
             m_base = base;
             m_putFunction = function;
         }
-        
+
         Context context() const { return static_cast<Context>(m_context); }
 
         Type type() const { return m_type; }

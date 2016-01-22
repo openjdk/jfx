@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef GraphicsTypes_h
@@ -79,7 +79,7 @@ namespace WebCore {
     enum HorizontalAlignment { AlignLeft, AlignRight, AlignHCenter };
 
     enum TextBaseline { AlphabeticTextBaseline, TopTextBaseline, MiddleTextBaseline, BottomTextBaseline, IdeographicTextBaseline, HangingTextBaseline };
-    
+
     enum TextAlign { StartTextAlign, EndTextAlign, LeftTextAlign, CenterTextAlign, RightTextAlign };
 
     String compositeOperatorName(CompositeOperator, BlendMode);
@@ -93,7 +93,7 @@ namespace WebCore {
 
     String textAlignName(TextAlign);
     bool parseTextAlign(const String&, TextAlign&);
-    
+
     String textBaselineName(TextBaseline);
     bool parseTextBaseline(const String&, TextBaseline&);
 

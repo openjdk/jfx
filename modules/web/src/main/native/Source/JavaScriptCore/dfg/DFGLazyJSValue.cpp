@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -50,15 +50,15 @@ static TriState equalToSingleCharacter(JSValue value, UChar character)
 {
     if (!value.isString())
         return FalseTriState;
-    
+
     JSString* jsString = asString(value);
     if (jsString->length() != 1)
         return FalseTriState;
-    
+
     const StringImpl* string = jsString->tryGetValueImpl();
     if (!string)
         return MixedTriState;
-    
+
     return triState(string->at(0) == character);
 }
 
@@ -66,12 +66,12 @@ static TriState equalToStringImpl(JSValue value, StringImpl* stringImpl)
 {
     if (!value.isString())
         return FalseTriState;
-    
+
     JSString* jsString = asString(value);
     const StringImpl* string = jsString->tryGetValueImpl();
     if (!string)
         return MixedTriState;
-    
+
     return triState(WTF::equal(stringImpl, string));
 }
 

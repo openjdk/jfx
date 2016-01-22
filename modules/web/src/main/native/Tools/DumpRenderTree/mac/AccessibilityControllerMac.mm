@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #import "config.h"
@@ -51,7 +51,7 @@ AccessibilityController::~AccessibilityController()
 AccessibilityUIElement AccessibilityController::elementAtPoint(int x, int y)
 {
     id accessibilityObject = [[[mainFrame frameView] documentView] accessibilityHitTest:NSMakePoint(x, y)];
-    return AccessibilityUIElement(accessibilityObject);    
+    return AccessibilityUIElement(accessibilityObject);
 }
 
 AccessibilityUIElement AccessibilityController::focusedElement()
@@ -63,10 +63,10 @@ AccessibilityUIElement AccessibilityController::focusedElement()
 AccessibilityUIElement AccessibilityController::rootElement()
 {
     // FIXME: we could do some caching here.
-    
+
     // Layout tests expect that the root element will be the scroll area
     // containing the web area object. That will be the parent of the accessibilityRoot on WK1.
-    
+
     id accessibilityObject = [[mainFrame accessibilityRoot] accessibilityAttributeValue:NSAccessibilityParentAttribute];
     return AccessibilityUIElement(accessibilityObject);
 }
@@ -128,7 +128,7 @@ bool AccessibilityController::addNotificationListener(JSObjectRef functionCallba
 {
     if (!functionCallback)
         return false;
- 
+
     // Mac programmers should not be adding more than one global notification listener.
     // Other platforms may be different.
     if (m_globalNotificationHandler)

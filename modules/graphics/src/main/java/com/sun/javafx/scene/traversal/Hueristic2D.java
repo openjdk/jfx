@@ -65,7 +65,7 @@ public class Hueristic2D implements Algorithm {
                     newNode = traversalNodeStack.pop();
                 }
             }
-            
+
             if (newNode == null) {
                 Bounds currentB = node.localToScene(node.getLayoutBounds());
                 if (cacheStartTraversalNode != null) {
@@ -251,7 +251,7 @@ public class Hueristic2D implements Algorithm {
             }
         }
     }
-    
+
     private static final Function<Bounds, Double> BOUNDS_TOP_SIDE = t -> t.getMinY();
 
     private static final Function<Bounds, Double> BOUNDS_BOTTOM_SIDE = t -> t.getMaxY();
@@ -259,10 +259,10 @@ public class Hueristic2D implements Algorithm {
     protected Node getNearestNodeUpOrDown(Bounds currentB, Bounds originB, TraversalContext context, Direction dir) {
 
         List<Node> nodes = context.getAllTargetNodes();
-        
+
         Function<Bounds, Double> ySideInDirection = dir == DOWN ? BOUNDS_BOTTOM_SIDE : BOUNDS_TOP_SIDE;
         Function<Bounds, Double> ySideInOpositeDirection = dir == DOWN ? BOUNDS_TOP_SIDE : BOUNDS_BOTTOM_SIDE;
-        
+
         Bounds biasedB = new BoundingBox(originB.getMinX(), currentB.getMinY(), originB.getWidth(), currentB.getHeight());
 
         Point2D currentMid2D = new Point2D(currentB.getMinX()+(currentB.getWidth()/2), ySideInDirection.apply(currentB));
@@ -288,7 +288,7 @@ public class Hueristic2D implements Algorithm {
 
             Bounds targetBounds = n.localToScene(n.getLayoutBounds());
             /*
-             ** check that the target node starts after we 
+             ** check that the target node starts after we
              ** and the target node ends after we end
              */
             if (dir == UP ? (currentB.getMinY() > targetBounds.getMaxY())
@@ -545,15 +545,15 @@ public class Hueristic2D implements Algorithm {
         }
         return null;
     }
-    
+
     private static final Function<Bounds, Double> BOUNDS_LEFT_SIDE = t -> t.getMinX();
-    
+
     private static final Function<Bounds, Double> BOUNDS_RIGHT_SIDE = t -> t.getMaxX();
 
     protected Node getNearestNodeLeftOrRight(Bounds currentB, Bounds originB, TraversalContext context, Direction dir) {
 
         List<Node> nodes = context.getAllTargetNodes();
-        
+
         Function<Bounds, Double> xSideInDirection = dir == LEFT ? BOUNDS_LEFT_SIDE : BOUNDS_RIGHT_SIDE;
         Function<Bounds, Double> xSideInOpositeDirection = dir == LEFT ? BOUNDS_RIGHT_SIDE : BOUNDS_LEFT_SIDE;
 
@@ -583,7 +583,7 @@ public class Hueristic2D implements Algorithm {
             Bounds targetBounds = n.localToScene(n.getLayoutBounds());
             /*
              ** check that the target node starts after we start
-             ** and the target node ends after we end 
+             ** and the target node ends after we end
              */
             if (dir == LEFT ? currentB.getMinX() > targetBounds.getMinX()
                     : currentB.getMaxX() < targetBounds.getMaxX()) {
@@ -729,11 +729,11 @@ public class Hueristic2D implements Algorithm {
         if (nearestNodeOnOriginY != null) {
             nearestNodeOnOriginY.originTopCornerDistance = originTopCorner2D.distance(xSideInOpositeDirection.apply(nearestNodeOnOriginY.bounds), nearestNodeOnOriginY.bounds.getMinY());
         }
-        
+
         if (nearestNodeOnCurrentY != null) {
             nearestNodeOnCurrentY.originTopCornerDistance = originTopCorner2D.distance(xSideInOpositeDirection.apply(nearestNodeOnCurrentY.bounds), nearestNodeOnCurrentY.bounds.getMinY());
         }
-        
+
         if (nearestNodeAverage != null) {
             nearestNodeAverage.originTopCornerDistance = originTopCorner2D.distance(xSideInOpositeDirection.apply(nearestNodeAverage.bounds), nearestNodeAverage.bounds.getMinY());
         }
@@ -884,7 +884,7 @@ public class Hueristic2D implements Algorithm {
     public static double findMin(double... values) {
 
         double minValue = Double.MAX_VALUE;
-        
+
         for (int i = 0 ; i < values.length ; i++) {
             minValue = (minValue < values[i]) ? minValue : values[i];
         }

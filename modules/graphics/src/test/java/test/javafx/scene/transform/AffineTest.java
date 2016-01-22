@@ -60,7 +60,7 @@ public class AffineTest {
          0,  0,  0,  1 };
 
     private static final double[] arrayZeros = new double[] {
-         0, 0, 0, 0, 
+         0, 0, 0, 0,
          0, 0, 0, 0,
          0, 0, 0, 0,
          0, 0, 0, 0, 1, 0, 0, 0, 0 };

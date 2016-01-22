@@ -59,7 +59,7 @@ void AXObjectCache::postPlatformNotification(AccessibilityObject* obj, AXNotific
 {
     if (!obj)
         return;
-    
+
     // Some notifications are unique to Safari and do not have NSAccessibility equivalents.
     NSString *macNotification;
     switch (notification) {
@@ -67,14 +67,14 @@ void AXObjectCache::postPlatformNotification(AccessibilityObject* obj, AXNotific
             // An active descendant change for trees means a selected rows change.
             if (obj->isTree())
                 macNotification = NSAccessibilitySelectedRowsChangedNotification;
-            
+
             // When a combobox uses active descendant, it means the selected item in its associated
             // list has changed. In these cases we should use selected children changed, because
             // we don't want the focus to change away from the combobox where the user is typing.
             else if (obj->isComboBox())
                 macNotification = NSAccessibilitySelectedChildrenChangedNotification;
             else
-                macNotification = NSAccessibilityFocusedUIElementChangedNotification;                
+                macNotification = NSAccessibilityFocusedUIElementChangedNotification;
             break;
         case AXAutocorrectionOccured:
             macNotification = @"AXAutocorrectionOccurred";
@@ -132,16 +132,16 @@ void AXObjectCache::postPlatformNotification(AccessibilityObject* obj, AXNotific
         default:
             return;
     }
-    
+
     // NSAccessibilityPostNotification will call this method, (but not when running DRT), so ASSERT here to make sure it does not crash.
     // https://bugs.webkit.org/show_bug.cgi?id=46662
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
     ASSERT([obj->wrapper() accessibilityIsIgnored] || true);
 #pragma clang diagnostic pop
-    
+
     NSAccessibilityPostNotification(obj->wrapper(), macNotification);
-    
+
     // Used by DRT to know when notifications are posted.
     [obj->wrapper() accessibilityPostedNotification:macNotification];
 }

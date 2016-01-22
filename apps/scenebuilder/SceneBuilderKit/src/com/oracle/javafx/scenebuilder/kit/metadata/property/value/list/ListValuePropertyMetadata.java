@@ -57,8 +57,8 @@ public abstract class ListValuePropertyMetadata<T> extends ValuePropertyMetadata
     private final Class<T> itemClass;
     private final SingleValuePropertyMetadata<T> itemMetadata;
     private final List<T> defaultValue;
-    
-    public ListValuePropertyMetadata(PropertyName name, 
+
+    public ListValuePropertyMetadata(PropertyName name,
             Class<T> itemClass, SingleValuePropertyMetadata<T> itemMetadata,
             boolean readWrite, List<T> defaultValue, InspectorPath inspectorPath) {
         super(name, readWrite, inspectorPath);
@@ -66,18 +66,18 @@ public abstract class ListValuePropertyMetadata<T> extends ValuePropertyMetadata
         this.defaultValue = defaultValue;
         this.itemMetadata = itemMetadata;
     }
-    
+
     public Class<T> getItemClass() {
         return itemClass;
     }
-    
+
     public List<T> getDefaultValue() {
         return defaultValue;
     }
 
     public List<T> getValue(FXOMInstance fxomInstance) {
         final List<T> result;
-        
+
         if (isReadWrite()) {
             final FXOMProperty fxomProperty = fxomInstance.getProperties().get(getName());
             if (fxomProperty == null) {
@@ -115,13 +115,13 @@ public abstract class ListValuePropertyMetadata<T> extends ValuePropertyMetadata
                 result.add(getItemClass().cast(item));
             }
         }
-        
+
         return result;
     }
 
     public void setValue(FXOMInstance fxomInstance, List<T> value) {
         assert isReadWrite();
-        
+
         final FXOMProperty fxomProperty = fxomInstance.getProperties().get(getName());
 
         if (Objects.equals(value, getDefaultValueObject()) || value.isEmpty()) {
@@ -146,29 +146,29 @@ public abstract class ListValuePropertyMetadata<T> extends ValuePropertyMetadata
         }
     }
 
-    
+
     /*
      * To be subclassed
      */
-    
+
     protected boolean canMakeStringFromValue(List<T> value) {
         boolean result = true;
-        
+
         for (T i : value) {
             result = itemMetadata.canMakeStringFromValue(i);
             if (result == false) {
                 break;
             }
         }
-        
+
         return result;
     }
-    
+
     protected String makeStringFromValue(List<T> value) {
         assert canMakeStringFromValue(value);
-        
+
         final StringBuilder result = new StringBuilder();
-        
+
         for (T item : value) {
             if (result.length() >= 1) {
                 result.append(FXMLLoader.ARRAY_COMPONENT_DELIMITER);
@@ -176,14 +176,14 @@ public abstract class ListValuePropertyMetadata<T> extends ValuePropertyMetadata
             }
             result.append(itemMetadata.makeStringFromValue(item));
         }
-        
+
         return result.toString();
     }
-    
-    
+
+
     protected List<T> makeValueFromString(String string) {
         final List<T> result;
-        
+
         final String[] items = string.split(FXMLLoader.ARRAY_COMPONENT_DELIMITER);
         if (items.length == 0) {
             result = Collections.emptyList();
@@ -193,14 +193,14 @@ public abstract class ListValuePropertyMetadata<T> extends ValuePropertyMetadata
                 result.add(itemMetadata.makeValueFromString(itemString));
             }
         }
-        
+
         return result;
     }
-    
+
     /*
      * ValuePropertyMetadata
      */
-    
+
     @Override
     public Class<?> getValueClass() {
         return List.class;
@@ -221,18 +221,18 @@ public abstract class ListValuePropertyMetadata<T> extends ValuePropertyMetadata
         assert valueObject instanceof List;
         setValue(fxomInstance, castItemList((List<?>)valueObject));
     }
-    
+
     /*
      * Private
      */
-    
+
     private List<T> castItemList(List<?> valueObject) {
         final List<T> result = new ArrayList<>();
-        
+
         for (Object itemValueObject : valueObject) {
             result.add(getItemClass().cast(itemValueObject));
         }
-        
+
         return result;
     }
 }

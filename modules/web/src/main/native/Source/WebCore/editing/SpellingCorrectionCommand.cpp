@@ -65,7 +65,7 @@ private:
             frame().editor().unappliedSpellCorrection(startingSelection(), m_corrected, m_correction);
             m_hasBeenUndone = true;
         }
-        
+
     }
 
 #ifndef NDEBUG

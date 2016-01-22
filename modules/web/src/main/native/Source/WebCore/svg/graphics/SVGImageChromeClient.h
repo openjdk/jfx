@@ -40,23 +40,23 @@ public:
         : m_image(image)
     {
     }
-    
+
     virtual bool isSVGImageChromeClient() const override { return true; }
     SVGImage* image() const { return m_image; }
-    
+
 private:
     virtual void chromeDestroyed() override
     {
         m_image = 0;
     }
-    
+
     virtual void invalidateContentsAndRootView(const IntRect& r, bool) override
     {
         // If m_image->m_page is null, we're being destructed, don't fire changedInRect() in that case.
         if (m_image && m_image->imageObserver() && m_image->m_page)
             m_image->imageObserver()->changedInRect(m_image, r);
     }
-    
+
     SVGImage* m_image;
 };
 
@@ -65,7 +65,7 @@ inline SVGImageChromeClient* toSVGImageChromeClient(ChromeClient* client)
     ASSERT_WITH_SECURITY_IMPLICATION(!client || client->isSVGImageChromeClient());
     return static_cast<SVGImageChromeClient*>(client);
 }
-    
-} 
+
+}
 
 #endif // SVGImageChromeClient_h

@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef APIShims_h
@@ -106,7 +106,7 @@ private:
             return false;
 
         // If the VM is in the middle of being destroyed then we don't want to resurrect it
-        // by allowing DropAllLocks to ref it. By this point the APILock has already been 
+        // by allowing DropAllLocks to ref it. By this point the APILock has already been
         // released anyways, so it doesn't matter that DropAllLocks is a no-op.
         if (!vm.refCount())
             return false;

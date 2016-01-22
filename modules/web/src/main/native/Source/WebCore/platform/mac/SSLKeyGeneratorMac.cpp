@@ -42,7 +42,7 @@ void getSupportedKeySizes(Vector<String>& supportedKeySizes)
 }
 
 String signedPublicKeyAndChallengeString(unsigned keySizeIndex, const String& challengeString, const URL& url)
-{   
+{
     // This switch statement must always be synced with the UI strings returned by getSupportedKeySizes.
     UInt32 keySize;
     switch (keySizeIndex) {

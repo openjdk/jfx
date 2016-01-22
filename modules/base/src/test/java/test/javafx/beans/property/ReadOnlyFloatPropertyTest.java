@@ -53,26 +53,26 @@ public class ReadOnlyFloatPropertyTest {
     public void testToString() {
         final ReadOnlyFloatProperty v1 = new ReadOnlyFloatPropertyStub(null, "");
         assertEquals("ReadOnlyFloatProperty [value: " + DEFAULT + "]", v1.toString());
-        
+
         final ReadOnlyFloatProperty v2 = new ReadOnlyFloatPropertyStub(null, null);
         assertEquals("ReadOnlyFloatProperty [value: " + DEFAULT + "]", v2.toString());
-        
+
         final Object bean = new Object();
         final String name = "My name";
         final ReadOnlyFloatProperty v3 = new ReadOnlyFloatPropertyStub(bean, name);
         assertEquals("ReadOnlyFloatProperty [bean: " + bean.toString() + ", name: My name, value: " + DEFAULT + "]", v3.toString());
-        
+
         final ReadOnlyFloatProperty v4 = new ReadOnlyFloatPropertyStub(bean, "");
         assertEquals("ReadOnlyFloatProperty [bean: " + bean.toString() + ", value: " + DEFAULT + "]", v4.toString());
-        
+
         final ReadOnlyFloatProperty v5 = new ReadOnlyFloatPropertyStub(bean, null);
         assertEquals("ReadOnlyFloatProperty [bean: " + bean.toString() + ", value: " + DEFAULT + "]", v5.toString());
-        
+
         final ReadOnlyFloatProperty v6 = new ReadOnlyFloatPropertyStub(null, name);
         assertEquals("ReadOnlyFloatProperty [name: My name, value: " + DEFAULT + "]", v6.toString());
-        
+
     }
-    
+
     @Test
     public void testAsObject() {
         final ReadOnlyFloatWrapper valueModel = new ReadOnlyFloatWrapper();
@@ -84,12 +84,12 @@ public class ReadOnlyFloatPropertyTest {
         valueModel.set(5e11f);
         assertEquals(5e11f, exp.getValue(), EPSILON);
     }
-    
+
     @Test
     public void testObjectToFloat() {
         final ReadOnlyObjectWrapper<Float> valueModel = new ReadOnlyObjectWrapper<Float>();
         final ReadOnlyFloatProperty exp = ReadOnlyFloatProperty.readOnlyFloatProperty(valueModel.getReadOnlyProperty());
-        
+
 
         assertEquals(0.0, exp.floatValue(), EPSILON);
         valueModel.set(-4354.3f);
@@ -97,12 +97,12 @@ public class ReadOnlyFloatPropertyTest {
         valueModel.set(5e11f);
         assertEquals(5e11f, exp.floatValue(), EPSILON);
     }
-    
+
     private static class ReadOnlyFloatPropertyStub extends ReadOnlyFloatProperty {
-        
+
         private final Object bean;
         private final String name;
-        
+
         private ReadOnlyFloatPropertyStub(Object bean, String name) {
             this.bean = bean;
             this.name = name;
@@ -127,7 +127,7 @@ public class ReadOnlyFloatPropertyTest {
         @Override
         public void removeListener(InvalidationListener listener) {
         }
-        
+
     }
 
 }

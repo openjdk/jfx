@@ -30,19 +30,19 @@ import javafx.beans.value.ObservableValue;
 
 /**
  * This class extends {@code IntegerPropertyBase} and provides a partial
- * implementation of a {@code StyleableProperty}. The method 
- * {@link StyleableProperty#getCssMetaData()} is not implemented. 
- * 
- * This class is used to make a {@link javafx.beans.property.IntegerProperty}, 
- * that would otherwise be implemented as a {@link IntegerPropertyBase}, 
+ * implementation of a {@code StyleableProperty}. The method
+ * {@link StyleableProperty#getCssMetaData()} is not implemented.
+ *
+ * This class is used to make a {@link javafx.beans.property.IntegerProperty},
+ * that would otherwise be implemented as a {@link IntegerPropertyBase},
  * style&#8209;able by CSS.
- * 
+ *
  * @see javafx.beans.property.IntegerPropertyBase
  * @see CssMetaData
  * @see StyleableProperty
  * @since JavaFX 8.0
  */
-public abstract class StyleableIntegerProperty 
+public abstract class StyleableIntegerProperty
     extends IntegerPropertyBase implements StyleableProperty<Number> {
 
     /**
@@ -54,14 +54,14 @@ public abstract class StyleableIntegerProperty
 
     /**
      * The constructor of the {@code StyleableIntegerProperty}.
-     * 
+     *
      * @param initialValue
      *            the initial value of the wrapped {@code Object}
      */
     public StyleableIntegerProperty(int initialValue) {
         super(initialValue);
     }
-    
+
     /** {@inheritDoc} */
     @Override
     public void applyStyle(StyleOrigin origin, Number v) {
@@ -82,11 +82,11 @@ public abstract class StyleableIntegerProperty
         super.set(v);
         origin = StyleOrigin.USER;
     }
-    
+
     /** {@inheritDoc} */
     @Override
     public StyleOrigin getStyleOrigin() { return origin; }
 
-    private StyleOrigin origin = null;    
-    
+    private StyleOrigin origin = null;
+
 }

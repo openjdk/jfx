@@ -632,7 +632,7 @@ bool isConvex(const FloatPoint* vertices, int nVertices)
             continue;
 
         /* Check current three points */
-        if (!convexCheckTriple(dcur, dprev, &curDir, &dirChanges, &angleSign)) 
+        if (!convexCheckTriple(dcur, dprev, &curDir, &dirChanges, &angleSign))
             return false;
         second = third;     /* Remember ptr to current point. */
         dprev = dcur;       /* Remember current delta. */
@@ -642,7 +642,7 @@ bool isConvex(const FloatPoint* vertices, int nVertices)
     third = vertices[0];                  /* Prepare for 'ConvexCheckTriple' */
     dcur = third - second;
     if (convexCompare(dcur)) {
-        if (!convexCheckTriple(dcur, dprev, &curDir, &dirChanges, &angleSign)) 
+        if (!convexCheckTriple(dcur, dprev, &curDir, &dirChanges, &angleSign))
             return false;
         second = third;     /* Remember ptr to current point. */
         dprev = dcur;       /* Remember current delta. */
@@ -650,7 +650,7 @@ bool isConvex(const FloatPoint* vertices, int nVertices)
 
     /* and check for direction changes back to second vertex */
     dcur = saveSecond - second;
-    if (!convexCheckTriple(dcur, dprev, &curDir, &dirChanges, &angleSign)) 
+    if (!convexCheckTriple(dcur, dprev, &curDir, &dirChanges, &angleSign))
         return false;
 
     /* Decide on polygon type given accumulated status */

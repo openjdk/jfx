@@ -37,10 +37,10 @@ import java.net.URL;
 
 /**
  *
- * 
+ *
  */
 public class LibraryItem {
-    
+
     private final String name;
     private final String section;
     private final String fxmlText;
@@ -51,7 +51,7 @@ public class LibraryItem {
         assert name != null;
         assert fxmlText != null;
         assert library != null;
-        
+
         this.name = name;
         this.section = section;
         this.fxmlText = fxmlText;
@@ -78,33 +78,33 @@ public class LibraryItem {
     public Library getLibrary() {
         return library;
     }
-    
+
     public FXOMDocument instantiate() {
         FXOMDocument result;
-        
+
         try {
             result = new FXOMDocument(fxmlText, null, library.getClassLoader(), null);
         } catch(Error|IOException x) {
             x.printStackTrace();
             result = null;
         }
-        
+
         return result;
     }
-    
+
     /*
      * Object
      */
-    
+
     @Override
     public String toString() {
         final StringBuilder result = new StringBuilder();
-        
+
         result.append(getClass().getSimpleName());
         result.append('[');
         result.append(name);
         result.append(']');
-        
+
         return result.toString();
     }
 }

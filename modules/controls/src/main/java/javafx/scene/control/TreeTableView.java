@@ -123,42 +123,42 @@ import javafx.util.Callback;
  *   <li>Column reordering by the user at runtime.
  *   <li>Built-in support for {@link TreeTableColumn#getColumns() column nesting}
  *   </ul>
- * <li>Different {@link #columnResizePolicyProperty() resizing policies} to 
+ * <li>Different {@link #columnResizePolicyProperty() resizing policies} to
  *      dictate what happens when the user resizes columns.
- * <li>Support for {@link #getSortOrder() multiple column sorting} by clicking 
- *      the column header (hold down Shift keyboard key whilst clicking on a 
+ * <li>Support for {@link #getSortOrder() multiple column sorting} by clicking
+ *      the column header (hold down Shift keyboard key whilst clicking on a
  *      header to sort by multiple columns).
  * </ul>
  * </p>
  *
  * <h2>Creating a TreeTableView</h2>
- * 
+ *
  * <p>Creating a TreeTableView is a multi-step process, and also depends on the
  * underlying data model needing to be represented. For this example we'll use
  * the TreeTableView to visualise a file system, and will therefore make use
  * of an imaginary (and vastly simplified) File class as defined below:
- * 
+ *
  * <pre>{@code
  * public class File {
  *     private StringProperty name;
  *     public void setName(String value) { nameProperty().set(value); }
  *     public String getName() { return nameProperty().get(); }
- *     public StringProperty nameProperty() { 
+ *     public StringProperty nameProperty() {
  *         if (name == null) name = new SimpleStringProperty(this, "name");
- *         return name; 
+ *         return name;
  *     }
- * 
+ *
  *     private LongProperty lastModified;
  *     public void setLastModified(long value) { lastModifiedProperty().set(value); }
  *     public long getLastModified() { return lastModifiedProperty().get(); }
  *     public LongProperty lastModifiedProperty() {
  *         if (lastModified == null) lastModified = new SimpleLongProperty(this, "lastModified");
- *         return lastModified; 
- *     } 
+ *         return lastModified;
+ *     }
  * }}</pre>
- * 
+ *
  * <p>Firstly, a TreeTableView instance needs to be defined, as such:
- * 
+ *
  * <pre>{@code
  * TreeTableView<File> treeTable = new TreeTableView<>();}</pre>
  *
@@ -169,23 +169,23 @@ import javafx.util.Callback;
  * <pre>{@code
  * TreeItem<File> root = new TreeItem<>(new File("/"));
  * treeTable.setRoot(root);}</pre>
- * 
+ *
  * <p>With the root set as such, the TreeTableView will automatically update whenever
- * the {@link TreeItem#getChildren() children} of the root changes. 
- * 
- * <p>At this point we now have a TreeTableView hooked up to observe the root 
- * TreeItem instance. The missing ingredient 
- * now is the means of splitting out the data contained within the model and 
- * representing it in one or more {@link TreeTableColumn} instances. To 
- * create a two-column TreeTableView to show the file name and last modified 
+ * the {@link TreeItem#getChildren() children} of the root changes.
+ *
+ * <p>At this point we now have a TreeTableView hooked up to observe the root
+ * TreeItem instance. The missing ingredient
+ * now is the means of splitting out the data contained within the model and
+ * representing it in one or more {@link TreeTableColumn} instances. To
+ * create a two-column TreeTableView to show the file name and last modified
  * properties, we extend the code shown above as follows:
- * 
+ *
  * <pre>{@code
  * TreeTableColumns<File,String> fileNameCol = new TreeTableColumn<>("Filename");
  * TreeTableColumns<File,Long> lastModifiedCol = new TreeTableColumn<>("Size");
  *
  * table.getColumns().setAll(fileNameCol, lastModifiedCol);}</pre>
- * 
+ *
  * <p>With the code shown above we have nearly fully defined the minimum properties
  * required to create a TreeTableView instance. The only thing missing is the
  * {@link javafx.scene.control.TreeTableColumn#cellValueFactoryProperty() cell value factories}
@@ -204,18 +204,18 @@ import javafx.util.Callback;
  * memory) will result in a TreeTableView being shown with two columns for name
  * and lastModified. Any other properties of the File class will not be shown, as
  * no TreeTableColumns are defined for them.
- * 
+ *
  * <h3>TreeTableView support for classes that don't contain properties</h3>
  *
  * <p>The code shown above is the shortest possible code for creating a TreeTableView
- * when the domain objects are designed with JavaFX properties in mind 
+ * when the domain objects are designed with JavaFX properties in mind
  * (additionally, {@link javafx.scene.control.cell.TreeItemPropertyValueFactory} supports
- * normal JavaBean properties too, although there is a caveat to this, so refer 
- * to the class documentation for more information). When this is not the case, 
+ * normal JavaBean properties too, although there is a caveat to this, so refer
+ * to the class documentation for more information). When this is not the case,
  * it is necessary to provide a custom cell value factory. More information
  * about cell value factories can be found in the {@link TreeTableColumn} API
  * documentation, but briefly, here is how a TreeTableColumns could be specified:
- * 
+ *
  * <pre>{@code
  * firstNameCol.setCellValueFactory(new Callback<CellDataFeatures<Person, String>, ObservableValue<String>>() {
  *     public ObservableValue<String> call(CellDataFeatures<Person, String> p) {
@@ -225,48 +225,48 @@ import javafx.util.Callback;
  *     }
  *  });
  * }}</pre>
- * 
+ *
  * <h3>TreeTableView Selection / Focus APIs</h3>
  * <p>To track selection and focus, it is necessary to become familiar with the
  * {@link SelectionModel} and {@link FocusModel} classes. A TreeTableView has at most
- * one instance of each of these classes, available from 
- * {@link #selectionModelProperty() selectionModel} and 
+ * one instance of each of these classes, available from
+ * {@link #selectionModelProperty() selectionModel} and
  * {@link #focusModelProperty() focusModel} properties, respectively.
  * Whilst it is possible to use this API to set a new selection model, in
  * most circumstances this is not necessary - the default selection and focus
  * models should work in most circumstances.
- * 
+ *
  * <p>The default {@link SelectionModel} used when instantiating a TreeTableView is
- * an implementation of the {@link MultipleSelectionModel} abstract class. 
+ * an implementation of the {@link MultipleSelectionModel} abstract class.
  * However, as noted in the API documentation for
  * the {@link MultipleSelectionModel#selectionModeProperty() selectionMode}
- * property, the default value is {@link SelectionMode#SINGLE}. To enable 
+ * property, the default value is {@link SelectionMode#SINGLE}. To enable
  * multiple selection in a default TreeTableView instance, it is therefore necessary
  * to do the following:
- * 
+ *
  * <pre>
- * {@code 
+ * {@code
  * treeTableView.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);}</pre>
  *
  * <h3>Customizing TreeTableView Visuals</h3>
- * <p>The visuals of the TreeTableView can be entirely customized by replacing the 
+ * <p>The visuals of the TreeTableView can be entirely customized by replacing the
  * default {@link #rowFactoryProperty() row factory}. A row factory is used to
  * generate {@link TreeTableRow} instances, which are used to represent an entire
- * row in the TreeTableView. 
- * 
+ * row in the TreeTableView.
+ *
  * <p>In many cases, this is not what is desired however, as it is more commonly
  * the case that cells be customized on a per-column basis, not a per-row basis.
- * It is therefore important to note that a {@link TreeTableRow} is not a 
+ * It is therefore important to note that a {@link TreeTableRow} is not a
  * {@link TreeTableCell}. A  {@link TreeTableRow} is simply a container for zero or more
- * {@link TreeTableCell}, and in most circumstances it is more likely that you'll 
+ * {@link TreeTableCell}, and in most circumstances it is more likely that you'll
  * want to create custom TreeTableCells, rather than TreeTableRows. The primary use case
  * for creating custom TreeTableRow instances would most probably be to introduce
  * some form of column spanning support.
- * 
- * <p>You can create custom {@link TreeTableCell} instances per column by assigning 
+ *
+ * <p>You can create custom {@link TreeTableCell} instances per column by assigning
  * the appropriate function to the TreeTableColumns
  * {@link TreeTableColumn#cellFactoryProperty() cell factory} property.
- * 
+ *
  * <p>See the {@link Cell} class documentation for a more complete
  * description of how to write custom Cells.
  *
@@ -345,7 +345,7 @@ import javafx.util.Callback;
  */
 @DefaultProperty("root")
 public class TreeTableView<S> extends Control {
-    
+
     /***************************************************************************
      *                                                                         *
      * Constructors                                                            *
@@ -354,7 +354,7 @@ public class TreeTableView<S> extends Control {
 
     /**
      * Creates an empty TreeTableView.
-     * 
+     *
      * <p>Refer to the {@link TreeTableView} class documentation for details on the
      * default state of other properties.
      */
@@ -364,10 +364,10 @@ public class TreeTableView<S> extends Control {
 
     /**
      * Creates a TreeTableView with the provided root node.
-     * 
+     *
      * <p>Refer to the {@link TreeTableView} class documentation for details on the
      * default state of other properties.
-     * 
+     *
      * @param root The node to be the root in this TreeTableView.
      */
     public TreeTableView(TreeItem<S> root) {
@@ -381,7 +381,7 @@ public class TreeTableView<S> extends Control {
         // by many users.
         setSelectionModel(new TreeTableViewArrayListSelectionModel<S>(this));
         setFocusModel(new TreeTableViewFocusModel<S>(this));
-        
+
         // we watch the columns list, such that when it changes we can update
         // the leaf columns and visible leaf columns lists (which are read-only).
         getColumns().addListener(weakColumnsObserver);
@@ -406,20 +406,20 @@ public class TreeTableView<S> extends Control {
 
         isInited = true;
     }
-    
-    
-    
+
+
+
     /***************************************************************************
      *                                                                         *
      * Static properties and methods                                           *
      *                                                                         *
      **************************************************************************/
-    
-    /** 
+
+    /**
      * An EventType that indicates some edit event has occurred. It is the parent
      * type of all other edit events: {@link #editStartEvent},
      *  {@link #editCommitEvent} and {@link #editCancelEvent}.
-     * 
+     *
      * @return An EventType that indicates some edit event has occurred.
      */
     @SuppressWarnings("unchecked")
@@ -432,7 +432,7 @@ public class TreeTableView<S> extends Control {
     /**
      * An EventType used to indicate that an edit event has started within the
      * TreeTableView upon which the event was fired.
-     * 
+     *
      * @return An EventType used to indicate that an edit event has started.
      */
     @SuppressWarnings("unchecked")
@@ -445,7 +445,7 @@ public class TreeTableView<S> extends Control {
     /**
      * An EventType used to indicate that an edit event has just been canceled
      * within the TreeTableView upon which the event was fired.
-     * 
+     *
      * @return An EventType used to indicate that an edit event has just been
      *      canceled.
      */
@@ -460,7 +460,7 @@ public class TreeTableView<S> extends Control {
      * An EventType that is used to indicate that an edit in a TreeTableView has been
      * committed. This means that user has made changes to the data of a
      * TreeItem, and that the UI should be updated.
-     * 
+     *
      * @return An EventType that is used to indicate that an edit in a TreeTableView
      *      has been committed.
      */
@@ -472,7 +472,7 @@ public class TreeTableView<S> extends Control {
             new EventType<>(editAnyEvent(), "EDIT_COMMIT");
 
     /**
-     * Returns the number of levels of 'indentation' of the given TreeItem, 
+     * Returns the number of levels of 'indentation' of the given TreeItem,
      * based on how many times {@link javafx.scene.control.TreeItem#getParent()}
      * can be recursively called. If the TreeItem does not have any parent set,
      * the returned value will be zero. For each time getParent() is recursively
@@ -508,13 +508,13 @@ public class TreeTableView<S> extends Control {
      * Of course, the immediate children may themselves be nested, and they would
      * then use this policy on their children.
      */
-    public static final Callback<TreeTableView.ResizeFeatures, Boolean> UNCONSTRAINED_RESIZE_POLICY = 
+    public static final Callback<TreeTableView.ResizeFeatures, Boolean> UNCONSTRAINED_RESIZE_POLICY =
             new Callback<TreeTableView.ResizeFeatures, Boolean>() {
-        
+
         @Override public String toString() {
             return "unconstrained-resize";
         }
-        
+
         @Override public Boolean call(TreeTableView.ResizeFeatures prop) {
             double result = TableUtil.resize(prop.getColumn(), prop.getDelta());
             return Double.compare(result, 0.0) == 0;
@@ -522,9 +522,9 @@ public class TreeTableView<S> extends Control {
     };
 
     /**
-     * <p>Simple policy that ensures the width of all visible leaf columns in 
+     * <p>Simple policy that ensures the width of all visible leaf columns in
      * this table sum up to equal the width of the table itself.
-     * 
+     *
      * <p>When the user resizes a column width with this policy, the table automatically
      * adjusts the width of the right hand side columns. When the user increases a
      * column width, the table decreases the width of the rightmost column until it
@@ -533,30 +533,30 @@ public class TreeTableView<S> extends Control {
      * hand side columns reach minimum size, the user cannot increase the size of
      * resized column any more.
      */
-    public static final Callback<TreeTableView.ResizeFeatures, Boolean> CONSTRAINED_RESIZE_POLICY = 
+    public static final Callback<TreeTableView.ResizeFeatures, Boolean> CONSTRAINED_RESIZE_POLICY =
             new Callback<TreeTableView.ResizeFeatures, Boolean>() {
 
         private boolean isFirstRun = true;
-        
+
         @Override public String toString() {
             return "constrained-resize";
         }
-        
+
         @Override public Boolean call(TreeTableView.ResizeFeatures prop) {
             TreeTableView<?> table = prop.getTable();
             List<? extends TableColumnBase<?,?>> visibleLeafColumns = table.getVisibleLeafColumns();
-            Boolean result = TableUtil.constrainedResize(prop, 
-                                               isFirstRun, 
+            Boolean result = TableUtil.constrainedResize(prop,
+                                               isFirstRun,
                                                table.contentWidth,
                                                visibleLeafColumns);
             isFirstRun = ! isFirstRun ? false : ! result;
             return result;
         }
     };
-    
+
     /**
      * The default {@link #sortPolicyProperty() sort policy} that this TreeTableView
-     * will use if no other policy is specified. The sort policy is a simple 
+     * will use if no other policy is specified. The sort policy is a simple
      * {@link Callback} that accepts a TreeTableView as the sole argument and expects
      * a Boolean response representing whether the sort succeeded or not. A Boolean
      * response of true represents success, and a response of false (or null) will
@@ -581,24 +581,24 @@ public class TreeTableView<S> extends Control {
                 // NullPointerException - if the specified element is null and this list does not permit null elements
                 // IllegalArgumentException - if some property of this element prevents it from being added to this list
 
-                // If we are here the list does not support sorting, so we gracefully 
+                // If we are here the list does not support sorting, so we gracefully
                 // fail the sort request and ensure the UI is put back to its previous
                 // state. This is handled in the code that calls the sort policy.
-                
+
                 return false;
             }
         }
     };
-    
-    
-    
+
+
+
     /***************************************************************************
      *                                                                         *
      * Instance Variables                                                      *
      *                                                                         *
-     **************************************************************************/    
-    
-    // used in the tree item modification event listener. Used by the 
+     **************************************************************************/
+
+    // used in the tree item modification event listener. Used by the
     // layoutChildren method to determine whether the tree item count should
     // be recalculated.
     private boolean expandedItemCountDirty = true;
@@ -615,7 +615,7 @@ public class TreeTableView<S> extends Control {
     // only the leaf columns that are currently visible.
     private final ObservableList<TreeTableColumn<S,?>> visibleLeafColumns = FXCollections.observableArrayList();
     private final ObservableList<TreeTableColumn<S,?>> unmodifiableVisibleLeafColumns = FXCollections.unmodifiableObservableList(visibleLeafColumns);
-    
+
     // Allows for multiple column sorting based on the order of the TreeTableColumns
     // in this observableArrayList. Each TreeTableColumn is responsible for whether it is
     // sorted using ascending or descending order.
@@ -624,20 +624,20 @@ public class TreeTableView<S> extends Control {
     // width of VirtualFlow minus the vbar width
     // package protected for testing only
     double contentWidth;
-    
+
     // Used to minimise the amount of work performed prior to the table being
     // completely initialised. In particular it reduces the amount of column
     // resize operations that occur, which slightly improves startup time.
     private boolean isInited = false;
-    
-    
-    
+
+
+
     /***************************************************************************
      *                                                                         *
      * Callbacks and Events                                                    *
      *                                                                         *
      **************************************************************************/
-    
+
     // we use this to forward events that have bubbled up TreeItem instances
     // to the TreeTableViewSkin, to force it to recalculate teh item count and redraw
     // if necessary
@@ -659,7 +659,7 @@ public class TreeTableView<S> extends Control {
             requestLayout();
         }
     };
-    
+
     private final ListChangeListener<TreeTableColumn<S,?>> columnsObserver = new ListChangeListener<TreeTableColumn<S,?>>() {
         @Override public void onChanged(ListChangeListener.Change<? extends TreeTableColumn<S,?>> c) {
             final List<TreeTableColumn<S,?>> columns = getColumns();
@@ -697,32 +697,32 @@ public class TreeTableView<S> extends Control {
             // We don't maintain a bind for leafColumns, we simply call this update
             // function behind the scenes in the appropriate places.
             updateVisibleLeafColumns();
-            
-            // Fix for RT-15194: Need to remove removed columns from the 
+
+            // Fix for RT-15194: Need to remove removed columns from the
             // sortOrder list.
             List<TreeTableColumn<S,?>> toRemove = new ArrayList<TreeTableColumn<S,?>>();
             while (c.next()) {
                 final List<? extends TreeTableColumn<S, ?>> removed = c.getRemoved();
                 final List<? extends TreeTableColumn<S, ?>> added = c.getAddedSubList();
-                
+
                 if (c.wasRemoved()) {
                     toRemove.addAll(removed);
                     for (TreeTableColumn<S,?> tc : removed) {
                         tc.setTreeTableView(null);
                     }
                 }
-                
+
                 if (c.wasAdded()) {
                     toRemove.removeAll(added);
                     for (TreeTableColumn<S,?> tc : added) {
                         tc.setTreeTableView(TreeTableView.this);
                     }
                 }
-                
+
                 // set up listeners
                 TableUtil.removeColumnsListener(removed, weakColumnsObserver);
                 TableUtil.addColumnsListener(added, weakColumnsObserver);
-                
+
                 TableUtil.removeTableColumnListener(c.getRemoved(),
                         weakColumnVisibleObserver,
                         weakColumnSortableObserver,
@@ -734,7 +734,7 @@ public class TreeTableView<S> extends Control {
                         weakColumnSortTypeObserver,
                         weakColumnComparatorObserver);
             }
-            
+
             sortOrder.removeAll(toRemove);
 
             // Fix for RT-38892.
@@ -820,11 +820,11 @@ public class TreeTableView<S> extends Control {
     };
 
     private final WeakHashMap<TreeTableColumn<S,?>, Integer> lastKnownColumnIndex = new WeakHashMap<>();
-    
+
     private final InvalidationListener columnVisibleObserver = valueModel -> {
         updateVisibleLeafColumns();
     };
-    
+
     private final InvalidationListener columnSortableObserver = valueModel -> {
         TreeTableColumn col = (TreeTableColumn) ((BooleanProperty)valueModel).getBean();
         if (! getSortOrder().contains(col)) return;
@@ -836,38 +836,38 @@ public class TreeTableView<S> extends Control {
         if (! getSortOrder().contains(col)) return;
         doSort(TableUtil.SortEventType.COLUMN_SORT_TYPE_CHANGE, col);
     };
-    
+
     private final InvalidationListener columnComparatorObserver = valueModel -> {
         TreeTableColumn col = (TreeTableColumn) ((SimpleObjectProperty)valueModel).getBean();
         if (! getSortOrder().contains(col)) return;
         doSort(TableUtil.SortEventType.COLUMN_COMPARATOR_CHANGE, col);
     };
-    
+
     /* proxy pseudo-class state change from selectionModel's cellSelectionEnabledProperty */
     private final InvalidationListener cellSelectionModelInvalidationListener = o -> {
         boolean isCellSelection = ((BooleanProperty)o).get();
         pseudoClassStateChanged(PSEUDO_CLASS_CELL_SELECTION,  isCellSelection);
         pseudoClassStateChanged(PSEUDO_CLASS_ROW_SELECTION,  !isCellSelection);
     };
-    
+
     private WeakEventHandler<TreeItem.TreeModificationEvent<S>> weakRootEventListener;
-    
-    private final WeakInvalidationListener weakColumnVisibleObserver = 
+
+    private final WeakInvalidationListener weakColumnVisibleObserver =
             new WeakInvalidationListener(columnVisibleObserver);
-    
-    private final WeakInvalidationListener weakColumnSortableObserver = 
+
+    private final WeakInvalidationListener weakColumnSortableObserver =
             new WeakInvalidationListener(columnSortableObserver);
-    
-    private final WeakInvalidationListener weakColumnSortTypeObserver = 
+
+    private final WeakInvalidationListener weakColumnSortTypeObserver =
             new WeakInvalidationListener(columnSortTypeObserver);
-    
-    private final WeakInvalidationListener weakColumnComparatorObserver = 
+
+    private final WeakInvalidationListener weakColumnComparatorObserver =
             new WeakInvalidationListener(columnComparatorObserver);
-    
-    private final WeakListChangeListener<TreeTableColumn<S,?>> weakColumnsObserver = 
+
+    private final WeakListChangeListener<TreeTableColumn<S,?>> weakColumnsObserver =
             new WeakListChangeListener<TreeTableColumn<S,?>>(columnsObserver);
-    
-    private final WeakInvalidationListener weakCellSelectionModelInvalidationListener = 
+
+    private final WeakInvalidationListener weakCellSelectionModelInvalidationListener =
             new WeakInvalidationListener(cellSelectionModelInvalidationListener);
 
 
@@ -902,11 +902,11 @@ public class TreeTableView<S> extends Control {
             updateRootExpanded();
         }
     };
-    
+
     /**
      * Sets the root node in this TreeTableView. See the {@link TreeItem} class level
      * documentation for more details.
-     * 
+     *
      * @param value The {@link TreeItem} that will be placed at the root of the
      *      TreeTableView.
      */
@@ -930,15 +930,15 @@ public class TreeTableView<S> extends Control {
         return root;
     }
 
-    
-    
+
+
     // --- Show Root
     private BooleanProperty showRoot;
-    
+
     /**
-     * Specifies whether the root {@code TreeItem} should be shown within this 
+     * Specifies whether the root {@code TreeItem} should be shown within this
      * TreeTableView.
-     * 
+     *
      * @param value If true, the root TreeItem will be shown, and if false it
      *      will be hidden.
      */
@@ -968,16 +968,16 @@ public class TreeTableView<S> extends Control {
         }
         return showRoot;
     }
-    
-    
-    
+
+
+
     // --- Tree Column
     private ObjectProperty<TreeTableColumn<S,?>> treeColumn;
     /**
      * Property that represents which column should have the disclosure node
      * shown in it (that is, the column with the arrow). By default this will be
      * the left-most column if this property is null, otherwise it will be the
-     * specified column assuming it is non-null and contained within the 
+     * specified column assuming it is non-null and contained within the
      * {@link #getVisibleLeafColumns() visible leaf columns} list.
      */
     public final ObjectProperty<TreeTableColumn<S,?>> treeColumnProperty() {
@@ -992,16 +992,16 @@ public class TreeTableView<S> extends Control {
     public final TreeTableColumn<S,?> getTreeColumn() {
         return treeColumn == null ? null : treeColumn.get();
     }
-    
-    
-    
+
+
+
     // --- Selection Model
     private ObjectProperty<TreeTableViewSelectionModel<S>> selectionModel;
 
     /**
-     * Sets the {@link MultipleSelectionModel} to be used in the TreeTableView. 
+     * Sets the {@link MultipleSelectionModel} to be used in the TreeTableView.
      * Despite a TreeTableView requiring a <code><b>Multiple</b>SelectionModel</code>,
-     * it is possible to configure it to only allow single selection (see 
+     * it is possible to configure it to only allow single selection (see
      * {@link MultipleSelectionModel#setSelectionMode(javafx.scene.control.SelectionMode)}
      * for more information).
      */
@@ -1025,35 +1025,35 @@ public class TreeTableView<S> extends Control {
     public final ObjectProperty<TreeTableViewSelectionModel<S>> selectionModelProperty() {
         if (selectionModel == null) {
             selectionModel = new SimpleObjectProperty<TreeTableViewSelectionModel<S>>(this, "selectionModel") {
-                
+
                 TreeTableViewSelectionModel<S> oldValue = null;
-                
+
                 @Override protected void invalidated() {
                     // need to listen to the cellSelectionEnabledProperty
-                    // in order to set pseudo-class state                    
+                    // in order to set pseudo-class state
                     if (oldValue != null) {
                         oldValue.cellSelectionEnabledProperty().removeListener(weakCellSelectionModelInvalidationListener);
                     }
-                    
+
                     oldValue = get();
-                    
+
                     if (oldValue != null) {
                         oldValue.cellSelectionEnabledProperty().addListener(weakCellSelectionModelInvalidationListener);
                         // fake invalidation to ensure updated pseudo-class states
-                        weakCellSelectionModelInvalidationListener.invalidated(oldValue.cellSelectionEnabledProperty());            
+                        weakCellSelectionModelInvalidationListener.invalidated(oldValue.cellSelectionEnabledProperty());
                     }
                 }
             };
         }
         return selectionModel;
     }
-    
-    
+
+
     // --- Focus Model
     private ObjectProperty<TreeTableViewFocusModel<S>> focusModel;
 
     /**
-     * Sets the {@link FocusModel} to be used in the TreeTableView. 
+     * Sets the {@link FocusModel} to be used in the TreeTableView.
      */
     public final void setFocusModel(TreeTableViewFocusModel<S> value) {
         focusModelProperty().set(value);
@@ -1078,7 +1078,7 @@ public class TreeTableView<S> extends Control {
         return focusModel;
     }
 
-    
+
     // --- Tree node count
     /**
      * <p>Represents the number of tree nodes presently able to be visible in the
@@ -1102,8 +1102,8 @@ public class TreeTableView<S> extends Control {
         }
         return expandedItemCount.get();
     }
-    
-    
+
+
     // --- Editable
     private BooleanProperty editable;
     public final void setEditable(boolean value) {
@@ -1170,8 +1170,8 @@ public class TreeTableView<S> extends Control {
     public final boolean isTableMenuButtonVisible() {
         return tableMenuButtonVisible == null ? false : tableMenuButtonVisible.get();
     }
-    
-    
+
+
     // --- Column Resize Policy
     private ObjectProperty<Callback<TreeTableView.ResizeFeatures, Boolean>> columnResizePolicy;
     public final void setColumnResizePolicy(Callback<TreeTableView.ResizeFeatures, Boolean> callback) {
@@ -1191,7 +1191,7 @@ public class TreeTableView<S> extends Control {
         if (columnResizePolicy == null) {
             columnResizePolicy = new SimpleObjectProperty<Callback<TreeTableView.ResizeFeatures, Boolean>>(this, "columnResizePolicy", UNCONSTRAINED_RESIZE_POLICY) {
                 private Callback<TreeTableView.ResizeFeatures, Boolean> oldPolicy;
-                
+
                 @Override protected void invalidated() {
                     if (isInited) {
                         get().call(new TreeTableView.ResizeFeatures(TreeTableView.this, null, 0.0));
@@ -1211,8 +1211,8 @@ public class TreeTableView<S> extends Control {
         }
         return columnResizePolicy;
     }
-    
-    
+
+
     // --- Row Factory
     private ObjectProperty<Callback<TreeTableView<S>, TreeTableRow<S>>> rowFactory;
 
@@ -1243,8 +1243,8 @@ public class TreeTableView<S> extends Control {
     public final Callback<TreeTableView<S>, TreeTableRow<S>> getRowFactory() {
         return rowFactory == null ? null : rowFactory.get();
     }
-    
-    
+
+
     // --- Placeholder Node
     private ObjectProperty<Node> placeholder;
     /**
@@ -1337,7 +1337,7 @@ public class TreeTableView<S> extends Control {
         return fixedCellSize;
     }
 
-    
+
     // --- SortMode
     /**
      * Specifies the sort mode to use when sorting the contents of this TreeTableView,
@@ -1357,8 +1357,8 @@ public class TreeTableView<S> extends Control {
     public final TreeSortMode getSortMode() {
         return sortMode == null ? TreeSortMode.ALL_DESCENDANTS : sortMode.get();
     }
-    
-    
+
+
     // --- Comparator (built via sortOrder list, so read-only)
     /**
      * The comparator property is a read-only property that is representative of the
@@ -1382,19 +1382,19 @@ public class TreeTableView<S> extends Control {
         }
         return comparator;
     }
-    
-    
+
+
     // --- sortPolicy
     /**
      * The sort policy specifies how sorting in this TreeTableView should be performed.
-     * For example, a basic sort policy may just recursively sort the children of 
-     * the root tree item, whereas a more advanced sort policy may call to a 
+     * For example, a basic sort policy may just recursively sort the children of
+     * the root tree item, whereas a more advanced sort policy may call to a
      * database to perform the necessary sorting on the server-side.
-     * 
+     *
      * <p>TreeTableView ships with a {@link TableView#DEFAULT_SORT_POLICY default
      * sort policy} that does precisely as mentioned above: it simply attempts
      * to sort the tree hierarchy in-place.
-     * 
+     *
      * <p>It is recommended that rather than override the {@link TreeTableView#sort() sort}
      * method that a different sort policy be provided instead.
      */
@@ -1402,10 +1402,10 @@ public class TreeTableView<S> extends Control {
     public final void setSortPolicy(Callback<TreeTableView<S>, Boolean> callback) {
         sortPolicyProperty().set(callback);
     }
-    @SuppressWarnings("unchecked") 
+    @SuppressWarnings("unchecked")
     public final Callback<TreeTableView<S>, Boolean> getSortPolicy() {
-        return sortPolicy == null ? 
-                (Callback<TreeTableView<S>, Boolean>)(Object) DEFAULT_SORT_POLICY : 
+        return sortPolicy == null ?
+                (Callback<TreeTableView<S>, Boolean>)(Object) DEFAULT_SORT_POLICY :
                 sortPolicy.get();
     }
     @SuppressWarnings("unchecked")
@@ -1420,25 +1420,25 @@ public class TreeTableView<S> extends Control {
         }
         return sortPolicy;
     }
-    
-    
+
+
     // onSort
     /**
      * Called when there's a request to sort the control.
      */
     private ObjectProperty<EventHandler<SortEvent<TreeTableView<S>>>> onSort;
-    
+
     public void setOnSort(EventHandler<SortEvent<TreeTableView<S>>> value) {
         onSortProperty().set(value);
     }
-    
+
     public EventHandler<SortEvent<TreeTableView<S>>> getOnSort() {
         if( onSort != null ) {
             return onSort.get();
         }
         return null;
     }
-    
+
     public ObjectProperty<EventHandler<SortEvent<TreeTableView<S>>>> onSortProperty() {
         if( onSort == null ) {
             onSort = new ObjectPropertyBase<EventHandler<SortEvent<TreeTableView<S>>>>() {
@@ -1447,7 +1447,7 @@ public class TreeTableView<S> extends Control {
                     EventHandler<SortEvent<TreeTableView<S>>> eventHandler = get();
                     setEventHandler(eventType, eventHandler);
                 }
-                
+
                 @Override public Object getBean() {
                     return TreeTableView.this;
                 }
@@ -1459,28 +1459,28 @@ public class TreeTableView<S> extends Control {
         }
         return onSort;
     }
-    
-    
-    
+
+
+
     /***************************************************************************
      *                                                                         *
      * Public API                                                              *
      *                                                                         *
      **************************************************************************/
-    
+
     /** {@inheritDoc} */
     @Override protected void layoutChildren() {
         if (expandedItemCountDirty) {
             updateExpandedItemCount(getRoot());
         }
-        
+
         super.layoutChildren();
     }
-    
+
     /**
      * Scrolls the TreeTableView such that the item in the given index is visible to
      * the end user.
-     * 
+     *
      * @param index The index that should be made visible to the user, assuming
      *      of course that it is greater than, or equal to 0, and less than the
      *      number of the visible items in the TreeTableView.
@@ -1488,30 +1488,30 @@ public class TreeTableView<S> extends Control {
     public void scrollTo(int index) {
         ControlUtils.scrollToIndex(this, index);
     }
-    
+
     /**
      * Called when there's a request to scroll an index into view using {@link #scrollTo(int)}
      */
     private ObjectProperty<EventHandler<ScrollToEvent<Integer>>> onScrollTo;
-    
+
     public void setOnScrollTo(EventHandler<ScrollToEvent<Integer>> value) {
         onScrollToProperty().set(value);
     }
-    
+
     public EventHandler<ScrollToEvent<Integer>> getOnScrollTo() {
         if( onScrollTo != null ) {
             return onScrollTo.get();
         }
         return null;
     }
-    
+
     public ObjectProperty<EventHandler<ScrollToEvent<Integer>>> onScrollToProperty() {
         if( onScrollTo == null ) {
             onScrollTo = new ObjectPropertyBase<EventHandler<ScrollToEvent<Integer>>>() {
                 @Override protected void invalidated() {
                     setEventHandler(ScrollToEvent.scrollToTopIndex(), get());
                 }
-                
+
                 @Override public Object getBean() {
                     return TreeTableView.this;
                 }
@@ -1531,7 +1531,7 @@ public class TreeTableView<S> extends Control {
     public void scrollToColumn(TreeTableColumn<S, ?> column) {
         ControlUtils.scrollToColumn(this, column);
     }
-    
+
     /**
      * Scrolls the TreeTableView so that the given index is visible within the viewport.
      * @param columnIndex The index of a column that should be visible to the user.
@@ -1541,24 +1541,24 @@ public class TreeTableView<S> extends Control {
             ControlUtils.scrollToColumn(this, getColumns().get(columnIndex));
         }
     }
-    
+
     /**
      * Called when there's a request to scroll a column into view using {@link #scrollToColumn(TreeTableColumn)}
      * or {@link #scrollToColumnIndex(int)}
      */
     private ObjectProperty<EventHandler<ScrollToEvent<TreeTableColumn<S, ?>>>> onScrollToColumn;
-    
+
     public void setOnScrollToColumn(EventHandler<ScrollToEvent<TreeTableColumn<S, ?>>> value) {
         onScrollToColumnProperty().set(value);
     }
-    
+
     public EventHandler<ScrollToEvent<TreeTableColumn<S, ?>>> getOnScrollToColumn() {
         if( onScrollToColumn != null ) {
             return onScrollToColumn.get();
         }
         return null;
     }
-    
+
     public ObjectProperty<EventHandler<ScrollToEvent<TreeTableColumn<S, ?>>>> onScrollToColumnProperty() {
         if( onScrollToColumn == null ) {
             onScrollToColumn = new ObjectPropertyBase<EventHandler<ScrollToEvent<TreeTableColumn<S, ?>>>>() {
@@ -1600,7 +1600,7 @@ public class TreeTableView<S> extends Control {
 
     /**
      * Returns the TreeItem in the given index, or null if it is out of bounds.
-     * 
+     *
      * @param row The index of the TreeItem being sought.
      * @return The TreeItem in the given index, or null if it is out of bounds.
      */
@@ -1659,7 +1659,7 @@ public class TreeTableView<S> extends Control {
 
         return level;
     }
-    
+
     /**
      * The TreeTableColumns that are part of this TableView. As the user reorders
      * the TableView columns, this list will be updated to reflect the current
@@ -1671,28 +1671,28 @@ public class TreeTableView<S> extends Control {
     public final ObservableList<TreeTableColumn<S,?>> getColumns() {
         return columns;
     }
-    
+
     /**
      * The sortOrder list defines the order in which {@link TreeTableColumn} instances
      * are sorted. An empty sortOrder list means that no sorting is being applied
-     * on the TableView. If the sortOrder list has one TreeTableColumn within it, 
-     * the TableView will be sorted using the 
+     * on the TableView. If the sortOrder list has one TreeTableColumn within it,
+     * the TableView will be sorted using the
      * {@link TreeTableColumn#sortTypeProperty() sortType} and
      * {@link TreeTableColumn#comparatorProperty() comparator} properties of this
-     * TreeTableColumn (assuming 
+     * TreeTableColumn (assuming
      * {@link TreeTableColumn#sortableProperty() TreeTableColumn.sortable} is true).
      * If the sortOrder list contains multiple TreeTableColumn instances, then
-     * the TableView is firstly sorted based on the properties of the first 
+     * the TableView is firstly sorted based on the properties of the first
      * TreeTableColumn. If two elements are considered equal, then the second
      * TreeTableColumn in the list is used to determine ordering. This repeats until
      * the results from all TreeTableColumn comparators are considered, if necessary.
-     * 
+     *
      * @return An ObservableList containing zero or more TreeTableColumn instances.
      */
     public final ObservableList<TreeTableColumn<S,?>> getSortOrder() {
         return sortOrder;
     }
-    
+
     /**
      * Applies the currently installed resize policy against the given column,
      * resizing it based on the delta value provided.
@@ -1707,7 +1707,7 @@ public class TreeTableView<S> extends Control {
 
     /**
      * Causes the cell at the given row/column view indexes to switch into
-     * its editing state, if it is not already in it, and assuming that the 
+     * its editing state, if it is not already in it, and assuming that the
      * TableView and column are also editable.
      */
     public void edit(int row, TreeTableColumn<S,?> column) {
@@ -1729,9 +1729,9 @@ public class TreeTableView<S> extends Control {
     public ObservableList<TreeTableColumn<S,?>> getVisibleLeafColumns() {
         return unmodifiableVisibleLeafColumns;
     }
-    
+
     /**
-     * Returns the position of the given column, relative to all other 
+     * Returns the position of the given column, relative to all other
      * visible leaf columns.
      */
     public int getVisibleLeafIndex(TreeTableColumn<S,?> column) {
@@ -1748,30 +1748,30 @@ public class TreeTableView<S> extends Control {
     }
 
     /**
-     * The sort method forces the TreeTableView to re-run its sorting algorithm. More 
+     * The sort method forces the TreeTableView to re-run its sorting algorithm. More
      * often than not it is not necessary to call this method directly, as it is
-     * automatically called when the {@link #getSortOrder() sort order}, 
-     * {@link #sortPolicyProperty() sort policy}, or the state of the 
+     * automatically called when the {@link #getSortOrder() sort order},
+     * {@link #sortPolicyProperty() sort policy}, or the state of the
      * TreeTableColumn {@link TreeTableColumn#sortTypeProperty() sort type} properties
      * change. In other words, this method should only be called directly when
      * something external changes and a sort is required.
      */
     public void sort() {
         final ObservableList<TreeTableColumn<S,?>> sortOrder = getSortOrder();
-        
+
         // update the Comparator property
         final Comparator<TreeItem<S>> oldComparator = getComparator();
         setComparator(sortOrder.isEmpty() ? null : new TableColumnComparatorBase.TreeTableColumnComparator(sortOrder));
-        
+
         // fire the onSort event and check if it is consumed, if
         // so, don't run the sort
         SortEvent<TreeTableView<S>> sortEvent = new SortEvent<>(TreeTableView.this, TreeTableView.this);
         fireEvent(sortEvent);
         if (sortEvent.isConsumed()) {
             // if the sort is consumed we could back out the last action (the code
-            // is commented out right below), but we don't as we take it as a 
+            // is commented out right below), but we don't as we take it as a
             // sign that the developer has decided to handle the event themselves.
-            
+
             // sortLock = true;
             // TableUtil.handleSortFailure(sortOrder, lastSortEventType, lastSortEventSupportInfo);
             // sortLock = false;
@@ -1792,7 +1792,7 @@ public class TreeTableView<S> extends Control {
         Boolean success = sortPolicy.call(this);
 
         getSelectionModel().stopAtomic();
-        
+
         if (success == null || ! success) {
             // the sort was a failure. Need to backout if possible
             sortLock = true;
@@ -1841,31 +1841,31 @@ public class TreeTableView<S> extends Control {
     public void refresh() {
         getProperties().put(Properties.RECREATE, Boolean.TRUE);
     }
-    
-    
-    
+
+
+
     /***************************************************************************
      *                                                                         *
      * Private Implementation                                                  *
      *                                                                         *
      **************************************************************************/
-    
+
     private boolean sortLock = false;
     private TableUtil.SortEventType lastSortEventType = null;
     private Object[] lastSortEventSupportInfo = null;
-    
+
     private void doSort(final TableUtil.SortEventType sortEventType, final Object... supportInfo) {
         if (sortLock) {
             return;
         }
-        
+
         this.lastSortEventType = sortEventType;
         this.lastSortEventSupportInfo = supportInfo;
         sort();
         this.lastSortEventType = null;
         this.lastSortEventSupportInfo = null;
     }
-    
+
     private void updateExpandedItemCount(TreeItem<S> treeItem) {
         setExpandedItemCount(TreeUtil.updateExpandedItemCount(treeItem, expandedItemCountDirty, isShowRoot()));
 
@@ -1899,7 +1899,7 @@ public class TreeTableView<S> extends Control {
             getColumnResizePolicy().call(new TreeTableView.ResizeFeatures<S>(TreeTableView.this, null, 0.0));
         }
     }
-    
+
     /**
      * Recomputes the currently visible leaf columns in this TableView.
      */
@@ -1932,7 +1932,7 @@ public class TreeTableView<S> extends Control {
     }
 
 
-    
+
     /***************************************************************************
      *                                                                         *
      * Stylesheet Handling                                                     *
@@ -1990,7 +1990,7 @@ public class TreeTableView<S> extends Control {
     public List<CssMetaData<? extends Styleable, ?>> getControlCssMetaData() {
         return getClassCssMetaData();
     }
-    
+
     /** {@inheritDoc} */
     @Override protected Skin<?> createDefaultSkin() {
         return new TreeTableViewSkin<S>(this);
@@ -2052,7 +2052,7 @@ public class TreeTableView<S> extends Control {
      **************************************************************************/
 
      /**
-      * An immutable wrapper class for use in the TableView 
+      * An immutable wrapper class for use in the TableView
      * {@link TreeTableView#columnResizePolicyProperty() column resize} functionality.
       * @since JavaFX 8.0
       */
@@ -2060,31 +2060,31 @@ public class TreeTableView<S> extends Control {
         private TreeTableView<S> treeTable;
 
         /**
-         * Creates an instance of this class, with the provided TreeTableView, 
+         * Creates an instance of this class, with the provided TreeTableView,
          * TreeTableColumn and delta values being set and stored in this immutable
          * instance.
-         * 
+         *
          * @param treeTable The TreeTableView upon which the resize operation is occurring.
          * @param column The column upon which the resize is occurring, or null
          *      if this ResizeFeatures instance is being created as a result of a
          *      TreeTableView resize operation.
-         * @param delta The amount of horizontal space added or removed in the 
+         * @param delta The amount of horizontal space added or removed in the
          *      resize operation.
          */
         public ResizeFeatures(TreeTableView<S> treeTable, TreeTableColumn<S,?> column, Double delta) {
             super(column, delta);
             this.treeTable = treeTable;
         }
-        
+
         /**
          * Returns the column upon which the resize is occurring, or null
          * if this ResizeFeatures instance was created as a result of a
          * TreeTableView resize operation.
          */
-        @Override public TreeTableColumn<S,?> getColumn() { 
-            return (TreeTableColumn<S,?>) super.getColumn(); 
+        @Override public TreeTableColumn<S,?> getColumn() {
+            return (TreeTableColumn<S,?>) super.getColumn();
         }
-        
+
         /**
          * Returns the TreeTableView upon which the resize operation is occurring.
          */
@@ -2092,14 +2092,14 @@ public class TreeTableView<S> extends Control {
     }
 
 
-    
+
     /**
      * An {@link Event} subclass used specifically in TreeTableView for representing
-     * edit-related events. It provides additional API to easily access the 
+     * edit-related events. It provides additional API to easily access the
      * TreeItem that the edit event took place on, as well as the input provided
      * by the end user.
-     * 
-     * @param <S> The type of the input, which is the same type as the TreeTableView 
+     *
+     * @param <S> The type of the input, which is the same type as the TreeTableView
      *      itself.
      * @since JavaFX 8.0
      */
@@ -2114,10 +2114,10 @@ public class TreeTableView<S> extends Control {
         private final S oldValue;
         private final S newValue;
         private transient final TreeItem<S> treeItem;
-        
+
         /**
-         * Creates a new EditEvent instance to represent an edit event. This 
-         * event is used for {@link #EDIT_START_EVENT}, 
+         * Creates a new EditEvent instance to represent an edit event. This
+         * event is used for {@link #EDIT_START_EVENT},
          * {@link #EDIT_COMMIT_EVENT} and {@link #EDIT_CANCEL_EVENT} types.
          */
         public EditEvent(TreeTableView<S> source,
@@ -2142,14 +2142,14 @@ public class TreeTableView<S> extends Control {
         public TreeItem<S> getTreeItem() {
             return treeItem;
         }
-        
+
         /**
          * Returns the new value input into the TreeItem by the end user.
          */
         public S getNewValue() {
             return newValue;
         }
-        
+
         /**
          * Returns the old value that existed in the TreeItem prior to the current
          * edit event.
@@ -2158,9 +2158,9 @@ public class TreeTableView<S> extends Control {
             return oldValue;
         }
     }
-    
-    
-     
+
+
+
      /**
      * A simple extension of the {@link SelectionModel} abstract class to
      * allow for special support for TreeTableView controls.
@@ -2209,7 +2209,7 @@ public class TreeTableView<S> extends Control {
          **********************************************************************/
 
          /**
-         * A read-only ObservableList representing the currently selected cells 
+         * A read-only ObservableList representing the currently selected cells
          * in this TreeTableView. Rather than directly modify this list, please
          * use the other methods provided in the TreeTableViewSelectionModel.
          */
@@ -2287,8 +2287,8 @@ public class TreeTableView<S> extends Control {
              return treeTableView.getFocusModel().getFocusedCell();
          }
      }
-    
-    
+
+
 
     /**
      * A primitive selection model implementation, using a List<Integer> to store all
@@ -2312,7 +2312,7 @@ public class TreeTableView<S> extends Control {
         public TreeTableViewArrayListSelectionModel(final TreeTableView<S> treeTableView) {
             super(treeTableView);
             this.treeTableView = treeTableView;
-            
+
             this.treeTableView.rootProperty().addListener(weakRootPropertyListener);
             this.treeTableView.showRootProperty().addListener(o -> {
                 shiftSelection(0, treeTableView.isShowRoot() ? 1 : -1, null);
@@ -2334,7 +2334,7 @@ public class TreeTableView<S> extends Control {
                     return getSelectedIndices().size();
                 }
             };
-            
+
             selectedCellsSeq = new ReadOnlyUnbackedObservableList<TreeTablePosition<S,?>>() {
                 @Override public TreeTablePosition<S,?> get(int i) {
                     return selectedCellsMap.get(i);
@@ -2353,18 +2353,18 @@ public class TreeTableView<S> extends Control {
                 TableCellBehaviorBase.setAnchor(treeTableView, getFocusedCell(), true);
             });
         }
-        
+
         private void updateTreeEventListener(TreeItem<S> oldRoot, TreeItem<S> newRoot) {
             if (oldRoot != null && weakTreeItemListener != null) {
                 oldRoot.removeEventHandler(TreeItem.<S>expandedItemCountChangeEvent(), weakTreeItemListener);
             }
-            
+
             if (newRoot != null) {
                 weakTreeItemListener = new WeakEventHandler<>(treeItemListener);
                 newRoot.addEventHandler(TreeItem.<S>expandedItemCountChangeEvent(), weakTreeItemListener);
             }
         }
-        
+
         private ChangeListener<TreeItem<S>> rootPropertyListener = (observable, oldValue, newValue) -> {
             updateDefaultSelection();
 
@@ -2373,9 +2373,9 @@ public class TreeTableView<S> extends Control {
 
         private EventHandler<TreeItem.TreeModificationEvent<S>> treeItemListener = new EventHandler<TreeItem.TreeModificationEvent<S>>() {
             @Override public void handle(TreeItem.TreeModificationEvent<S> e) {
-                
+
                 if (getSelectedIndex() == -1 && getSelectedItem() == null) return;
-                
+
                 final TreeItem<S> treeItem = e.getTreeItem();
                 if (treeItem == null) return;
 
@@ -2383,7 +2383,7 @@ public class TreeTableView<S> extends Control {
                 final TreeItem<S> oldSelectedItem = getSelectedItem();
 
                 treeTableView.expandedItemCountDirty = true;
-                
+
                 // we only shift selection from this row - everything before it
                 // is safe. We might change this below based on certain criteria
                 int startRow = treeTableView.getRow(treeItem);
@@ -2534,7 +2534,7 @@ public class TreeTableView<S> extends Control {
                         }
                     }
                 } while (e.getChange() != null && e.getChange().next());
-                
+
                 shiftSelection(startRow, shift, new Callback<ShiftParams, Void>() {
                     @Override public Void call(ShiftParams param) {
 
@@ -2573,20 +2573,20 @@ public class TreeTableView<S> extends Control {
                 });
             }
         };
-        
+
         private WeakChangeListener<TreeItem<S>> weakRootPropertyListener =
                 new WeakChangeListener<>(rootPropertyListener);
-        
+
         private WeakEventHandler<TreeItem.TreeModificationEvent<S>> weakTreeItemListener;
-        
-        
+
+
 
         /***********************************************************************
          *                                                                     *
          * Observable properties (and getters/setters)                         *
          *                                                                     *
          **********************************************************************/
-        
+
         // the only 'proper' internal data structure, selectedItems and selectedIndices
         // are both 'read-only and unbacked'.
         private final SelectedCellsMap<TreeTablePosition<S,?>> selectedCellsMap;
@@ -2609,7 +2609,7 @@ public class TreeTableView<S> extends Control {
          *                                                                     *
          **********************************************************************/
 
-        
+
 
         /***********************************************************************
          *                                                                     *
@@ -2716,7 +2716,7 @@ public class TreeTableView<S> extends Control {
             }
 
             TreeTablePosition<S,?> pos = new TreeTablePosition<>(getTreeTableView(), row, (TreeTableColumn<S,?>)column);
-            
+
             if (getSelectionMode() == SelectionMode.SINGLE) {
                 startAtomic();
                 quietClearSelection();
@@ -2859,7 +2859,7 @@ public class TreeTableView<S> extends Control {
                     }
                 }
                 selectedCellsMap.setAll(indices);
-                
+
                 if (tp != null) {
                     select(tp.getRow(), tp.getTableColumn());
                     focus(tp.getRow(), tp.getTableColumn());
@@ -2870,7 +2870,7 @@ public class TreeTableView<S> extends Control {
                     indices.add(new TreeTablePosition<>(getTreeTableView(), i, null));
                 }
                 selectedCellsMap.setAll(indices);
-                
+
                 int focusedIndex = getFocusedIndex();
                 if (focusedIndex == -1) {
                     final int itemCount = getItemCount();
@@ -3176,7 +3176,7 @@ public class TreeTableView<S> extends Control {
             int newFocusIndex = getItemCount() > 0 ? 0 : -1;
             focus(newFocusIndex, isCellSelectionEnabled() ? getTableColumn(0) : null);
         }
-        
+
         private TreeTableColumn<S,?> getTableColumn(int pos) {
             return getTreeTableView().getVisibleLeafColumn(pos);
         }
@@ -3192,7 +3192,7 @@ public class TreeTableView<S> extends Control {
             setSelectedIndex(row);
             setSelectedItem(getModelItem(row));
         }
-        
+
         @Override public void focus(int row) {
             focus(row, null);
         }
@@ -3370,14 +3370,14 @@ public class TreeTableView<S> extends Control {
             c.reset();
         }
     }
-    
-    
-    
-    
+
+
+
+
     /**
      * A {@link FocusModel} with additional functionality to support the requirements
      * of a TableView control.
-     * 
+     *
      * @see TableView
      * @since JavaFX 8.0
      */
@@ -3390,7 +3390,7 @@ public class TreeTableView<S> extends Control {
         /**
          * Creates a default TableViewFocusModel instance that will be used to
          * manage focus of the provided TableView control.
-         * 
+         *
          * @param treeTableView The tableView upon which this focus model operates.
          * @throws NullPointerException The TableView argument can not be null.
          */
@@ -3401,7 +3401,7 @@ public class TreeTableView<S> extends Control {
 
             this.treeTableView = treeTableView;
             this.EMPTY_CELL = new TreeTablePosition<>(treeTableView, -1, null);
-            
+
             this.treeTableView.rootProperty().addListener(weakRootPropertyListener);
             updateTreeEventListener(null, treeTableView.getRoot());
 
@@ -3416,25 +3416,25 @@ public class TreeTableView<S> extends Control {
                 }
             });
         }
-        
+
         private final ChangeListener<TreeItem<S>> rootPropertyListener = (observable, oldValue, newValue) -> {
             updateTreeEventListener(oldValue, newValue);
         };
-                
+
         private final WeakChangeListener<TreeItem<S>> weakRootPropertyListener =
                 new WeakChangeListener<>(rootPropertyListener);
-        
+
         private void updateTreeEventListener(TreeItem<S> oldRoot, TreeItem<S> newRoot) {
             if (oldRoot != null && weakTreeItemListener != null) {
                 oldRoot.removeEventHandler(TreeItem.<S>expandedItemCountChangeEvent(), weakTreeItemListener);
             }
-            
+
             if (newRoot != null) {
                 weakTreeItemListener = new WeakEventHandler<>(treeItemListener);
                 newRoot.addEventHandler(TreeItem.<S>expandedItemCountChangeEvent(), weakTreeItemListener);
             }
         }
-        
+
         private EventHandler<TreeItem.TreeModificationEvent<S>> treeItemListener = new EventHandler<TreeItem.TreeModificationEvent<S>>() {
             @Override public void handle(TreeItem.TreeModificationEvent<S> e) {
                 // don't shift focus if the event occurred on a tree item after
@@ -3502,7 +3502,7 @@ public class TreeTableView<S> extends Control {
                 }
             }
         };
-        
+
         private WeakEventHandler<TreeItem.TreeModificationEvent<S>> weakTreeItemListener;
 
         /** {@inheritDoc} */
@@ -3538,7 +3538,7 @@ public class TreeTableView<S> extends Control {
                         if (old == null || !old.equals(get())) {
                             setFocusedIndex(get().getRow());
                             setFocusedItem(getModelItem(getValue().getRow()));
-                            
+
                             old = get();
                         }
                     }
@@ -3583,7 +3583,7 @@ public class TreeTableView<S> extends Control {
         /**
          * Convenience method for setting focus on a particular row or cell
          * using a {@link TablePosition}.
-         * 
+         *
          * @param pos The table position where focus should be set.
          */
         public void focus(TreeTablePosition<S,?> pos) {
@@ -3623,7 +3623,7 @@ public class TreeTableView<S> extends Control {
             if (treeTableView.expandedItemCountDirty) {
                 treeTableView.updateExpandedItemCount(treeTableView.getRoot());
             }
-            
+
             if (index < 0 || index >= getItemCount()) {
                 setFocusedCell(EMPTY_CELL);
             } else {

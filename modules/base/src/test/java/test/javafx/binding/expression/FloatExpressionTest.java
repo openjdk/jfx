@@ -181,12 +181,12 @@ public class FloatExpressionTest {
         // make sure we do not create unnecessary bindings
         assertEquals(op1, FloatExpression.floatExpression(op1));
     }
-    
+
     @Test
-    public void testAsObject() { 
+    public void testAsObject() {
         final ObservableFloatValueStub valueModel = new ObservableFloatValueStub();
         final ObjectExpression<Float> exp = FloatExpression.floatExpression(valueModel).asObject();
-        
+
         assertEquals(0.0f, exp.getValue(), EPSILON);
         valueModel.set(data);
         assertEquals(data, exp.getValue(), EPSILON);
@@ -194,7 +194,7 @@ public class FloatExpressionTest {
         assertEquals(float1, exp.getValue(), EPSILON);
 
     }
-    
+
     @Test
     public void testObjectToFloat() {
         final ObservableValueStub<Float> valueModel = new ObservableValueStub<Float>();

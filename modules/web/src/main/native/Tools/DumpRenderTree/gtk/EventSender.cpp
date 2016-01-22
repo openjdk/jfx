@@ -282,12 +282,12 @@ static guint gdkModifierFromJSValue(JSContextRef context, const JSValueRef value
         gdkModifier = GDK_SHIFT_MASK;
     else if (JSStringIsEqualToUTF8CString(string, "altKey"))
         gdkModifier = GDK_MOD1_MASK;
-    
+
     // Currently the metaKey as defined in WebCore/platform/gtk/PlatformMouseEventGtk.cpp
     // is GDK_META_MASK. This code must be kept in sync with that file.
     else if (JSStringIsEqualToUTF8CString(string, "metaKey"))
         gdkModifier = GDK_META_MASK;
-    
+
     JSStringRelease(string);
     return gdkModifier;
 }

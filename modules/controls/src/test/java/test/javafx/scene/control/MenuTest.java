@@ -70,7 +70,7 @@ public class MenuTest {
         Menu menu2 = new Menu("");
         assertNull(menu2.getGraphic());
     }
-    
+
     @Test public void oneArgConstructorShouldHaveNoGraphic3() {
         assertNull(menu.getGraphic());
     }
@@ -88,13 +88,13 @@ public class MenuTest {
     @Test public void oneArgConstructorShouldHaveSpecifiedString3() {
         assertEquals("Hello", menu.getText());
     }
-    
+
     @Test public void twoArgConstructorShouldHaveSpecifiedGraphic1() {
         Menu menu2 = new Menu(null, null);
         assertNull(menu2.getGraphic());
     }
-    
-    @Test public void twoArgConstructorShouldHaveSpecifiedGraphic2() {   
+
+    @Test public void twoArgConstructorShouldHaveSpecifiedGraphic2() {
         Rectangle rect = new Rectangle();
         Menu menu2 = new Menu("Hello", rect);
         assertEquals(rect, menu2.getGraphic());
@@ -260,7 +260,7 @@ public class MenuTest {
     @Test public void hidingAlsoHidesMenuChildren() {
         Menu mi2 = new Menu("Child1");
         MenuItem mi3 = new MenuItem("Child2");
-        
+
         mi2.getItems().add(mi3);
         menu.getItems().add(mi2);
 
@@ -599,5 +599,5 @@ public class MenuTest {
 
 
     //TODO: test this -> Menu.buildEventDispatchChain(EventDispatchChain tail)
-    
+
 }

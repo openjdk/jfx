@@ -143,7 +143,7 @@ private:
     BasicBlock* m_currentBlock;
     unsigned m_currentIndex;
 };
-    
+
 bool performStoreBarrierElision(Graph& graph)
 {
     SamplingRegion samplingRegion("DFG Store Barrier Elision Phase");

@@ -58,7 +58,7 @@ public:
     RefPtr<MediaStreamSourceCapabilities> m_capabilities;
     MediaStreamSourceStates m_currentStates;
 };
-    
+
 typedef HashMap<String, RefPtr<MockSource>> MockSourceMap;
 
 static MockSourceMap& mockSourceMap()
@@ -131,9 +131,9 @@ void MockMediaStreamCenter::registerMockMediaStreamCenter()
 void MockMediaStreamCenter::validateRequestConstraints(PassRefPtr<MediaStreamCreationClient> prpQueryClient, PassRefPtr<MediaConstraints> audioConstraints, PassRefPtr<MediaConstraints> videoConstraints)
 {
     RefPtr<MediaStreamCreationClient> client = prpQueryClient;
-    
+
     ASSERT(client);
-    
+
     if (audioConstraints) {
         String invalidQuery = MediaConstraintsMock::verifyConstraints(audioConstraints);
         if (!invalidQuery.isEmpty()) {
@@ -141,7 +141,7 @@ void MockMediaStreamCenter::validateRequestConstraints(PassRefPtr<MediaStreamCre
             return;
         }
     }
-    
+
     if (videoConstraints) {
         String invalidQuery = MediaConstraintsMock::verifyConstraints(videoConstraints);
         if (!invalidQuery.isEmpty()) {
@@ -158,7 +158,7 @@ void MockMediaStreamCenter::createMediaStream(PassRefPtr<MediaStreamCreationClie
     RefPtr<MediaStreamCreationClient> client = prpQueryClient;
 
     ASSERT(client);
-    
+
     Vector<RefPtr<MediaStreamSource>> audioSources;
     Vector<RefPtr<MediaStreamSource>> videoSources;
     MockSourceMap& map = mockSourceMap();
@@ -194,7 +194,7 @@ void MockMediaStreamCenter::createMediaStream(PassRefPtr<MediaStreamCreationClie
         videoSource->setReadyState(MediaStreamSource::Live);
         videoSources.append(videoSource.release());
     }
-    
+
     client->didCreateStream(MediaStreamPrivate::create(audioSources, videoSources));
 }
 

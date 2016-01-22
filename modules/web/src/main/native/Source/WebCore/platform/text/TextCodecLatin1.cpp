@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -162,7 +162,7 @@ useLookupTable:
     }
 
     return result;
-    
+
 upConvertTo16Bit:
     UChar* characters16;
     String result16 = String::createUninitialized(length, characters16);
@@ -187,15 +187,15 @@ upConvertTo16Bit:
             if (isAlignedToMachineWord(source)) {
                 while (source < alignedEnd) {
                     MachineWord chunk = *reinterpret_cast_ptr<const MachineWord*>(source);
-                    
+
                     if (!isAllASCII<LChar>(chunk))
                         goto useLookupTable16;
-                    
+
                     copyASCIIMachineWord(destination16, source);
                     source += sizeof(MachineWord);
                     destination16 += sizeof(MachineWord);
                 }
-                
+
                 if (source == end)
                     break;
             }
@@ -204,11 +204,11 @@ upConvertTo16Bit:
 useLookupTable16:
             *destination16 = table[*source];
         }
-        
+
         ++source;
         ++destination16;
     }
-    
+
     return result16;
 }
 

@@ -49,7 +49,7 @@ import javafx.stage.Stage;
  * @see javafx.scene.Cursor
  */
 public class CursorApp extends Application {
-    
+
     public Parent createContent() {
 
         TilePane tilePaneRoot = new TilePane(5, 5);

@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -128,7 +128,7 @@ void MediaPlayerPrivateQuickTimeVisualContext::LayerClient::platformCALayerLayou
 
     // Calculate the new position based on the parent's size:
     FloatPoint position(parentSize.width() * 0.5 - videoBounds.width() * (0.5 - videoAnchor.x()),
-        parentSize.height() * 0.5 - videoBounds.height() * (0.5 - videoAnchor.y())); 
+        parentSize.height() * 0.5 - videoBounds.height() * (0.5 - videoAnchor.y()));
 
     m_parent->m_qtVideoLayer->setBounds(videoBounds);
     m_parent->m_qtVideoLayer->setPosition(position);
@@ -145,7 +145,7 @@ private:
 };
 
 PassOwnPtr<MediaPlayerPrivateInterface> MediaPlayerPrivateQuickTimeVisualContext::create(MediaPlayer* player)
-{ 
+{
     return adoptPtr(new MediaPlayerPrivateQuickTimeVisualContext(player));
 }
 
@@ -188,7 +188,7 @@ MediaPlayerPrivateQuickTimeVisualContext::~MediaPlayerPrivateQuickTimeVisualCont
 
 bool MediaPlayerPrivateQuickTimeVisualContext::supportsFullscreen() const
 {
-    Document* document = m_player->mediaPlayerClient()->mediaPlayerOwningDocument(); 
+    Document* document = m_player->mediaPlayerClient()->mediaPlayerOwningDocument();
     if (document)
         return document->settings()->acceleratedCompositingEnabled();
 
@@ -217,14 +217,14 @@ String MediaPlayerPrivateQuickTimeVisualContext::rfc2616DateStringFromTime(CFAbs
     if (!gmtTimeZone)
         gmtTimeZone = CFTimeZoneCopyDefault();
 
-    CFGregorianDate dateValue = CFAbsoluteTimeGetGregorianDate(time, gmtTimeZone); 
+    CFGregorianDate dateValue = CFAbsoluteTimeGetGregorianDate(time, gmtTimeZone);
     if (!CFGregorianDateIsValid(dateValue, kCFGregorianAllUnits))
         return String();
 
     time = CFGregorianDateGetAbsoluteTime(dateValue, gmtTimeZone);
     SInt32 day = CFAbsoluteTimeGetDayOfWeek(time, 0);
 
-    RetainPtr<CFStringRef> dateCFString = adoptCF(CFStringCreateWithFormat(0, 0, dateFormatString, dayStrings[day - 1], dateValue.day, 
+    RetainPtr<CFStringRef> dateCFString = adoptCF(CFStringCreateWithFormat(0, 0, dateFormatString, dayStrings[day - 1], dateValue.day,
         monthStrings[dateValue.month - 1], dateValue.year, dateValue.hour, dateValue.minute, (int)dateValue.second));
     return dateCFString.get();
 }
@@ -248,7 +248,7 @@ static void addCookieParam(StringBuilder& cookieBuilder, const String& name, con
 
 void MediaPlayerPrivateQuickTimeVisualContext::setUpCookiesForQuickTime(const String& url)
 {
-    // WebCore loaded the page with the movie URL with CFNetwork but QuickTime will 
+    // WebCore loaded the page with the movie URL with CFNetwork but QuickTime will
     // use WinINet to download the movie, so we need to copy any cookies needed to
     // download the movie into WinInet before asking QuickTime to open it.
     Document* document = m_player->mediaPlayerClient()->mediaPlayerOwningDocument();
@@ -272,9 +272,9 @@ void MediaPlayerPrivateQuickTimeVisualContext::setUpCookiesForQuickTime(const St
         StringBuilder cookieBuilder;
         addCookieParam(cookieBuilder, cookie.name, cookie.value);
         addCookieParam(cookieBuilder, "path", cookie.path);
-        if (cookie.expires) 
+        if (cookie.expires)
             addCookieParam(cookieBuilder, "expires", rfc2616DateStringFromTime(cookie.expires));
-        if (cookie.httpOnly) 
+        if (cookie.httpOnly)
             addCookieParam(cookieBuilder, "httpOnly", String());
         cookieBuilder.append(';');
 
@@ -309,12 +309,12 @@ static void disableComponentsOnce()
 
     uint32_t componentsToDisable[][5] = {
         {'eat ', 'TEXT', 'text', 0, 0},
-        {'eat ', 'TXT ', 'text', 0, 0},    
-        {'eat ', 'utxt', 'text', 0, 0},  
-        {'eat ', 'TEXT', 'tx3g', 0, 0},  
+        {'eat ', 'TXT ', 'text', 0, 0},
+        {'eat ', 'utxt', 'text', 0, 0},
+        {'eat ', 'TEXT', 'tx3g', 0, 0},
     };
 
-    for (size_t i = 0; i < WTF_ARRAY_LENGTH(componentsToDisable); ++i) 
+    for (size_t i = 0; i < WTF_ARRAY_LENGTH(componentsToDisable); ++i)
         QTMovie::disableComponent(componentsToDisable[i]);
 }
 
@@ -342,7 +342,7 @@ void MediaPlayerPrivateQuickTimeVisualContext::loadInternal(const String& url)
 {
     if (!QTMovie::initializeQuickTime()) {
         // FIXME: is this the right error to return?
-        m_networkState = MediaPlayer::DecodeError; 
+        m_networkState = MediaPlayer::DecodeError;
         m_player->networkStateChanged();
         return;
     }
@@ -413,21 +413,21 @@ float MediaPlayerPrivateQuickTimeVisualContext::currentTime() const
 void MediaPlayerPrivateQuickTimeVisualContext::seek(float time)
 {
     cancelSeek();
-    
+
     if (!m_movie)
         return;
-    
+
     if (time > duration())
         time = duration();
-    
+
     m_seekTo = time;
     if (maxTimeLoaded() >= m_seekTo)
         doSeek();
-    else 
+    else
         m_seekTimer.start(0, 0.5f);
 }
-    
-void MediaPlayerPrivateQuickTimeVisualContext::doSeek() 
+
+void MediaPlayerPrivateQuickTimeVisualContext::doSeek()
 {
     float oldRate = m_movie->rate();
     if (oldRate)
@@ -447,14 +447,14 @@ void MediaPlayerPrivateQuickTimeVisualContext::cancelSeek()
 }
 
 void MediaPlayerPrivateQuickTimeVisualContext::seekTimerFired(Timer<MediaPlayerPrivateQuickTimeVisualContext>*)
-{        
+{
     if (!m_movie || !seeking() || currentTime() == m_seekTo) {
         cancelSeek();
         updateStates();
-        m_player->timeChanged(); 
+        m_player->timeChanged();
         return;
-    } 
-    
+    }
+
     if (maxTimeLoaded() >= m_seekTo)
         doSeek();
     else {
@@ -567,7 +567,7 @@ float MediaPlayerPrivateQuickTimeVisualContext::maxTimeLoaded() const
 {
     if (!m_movie)
         return 0;
-    return m_movie->maxTimeLoaded(); 
+    return m_movie->maxTimeLoaded();
 }
 
 bool MediaPlayerPrivateQuickTimeVisualContext::didLoadingProgress() const
@@ -591,7 +591,7 @@ void MediaPlayerPrivateQuickTimeVisualContext::cancelLoad()
 {
     if (m_networkState < MediaPlayer::Loading || m_networkState == MediaPlayer::Loaded)
         return;
-    
+
     tearDownVideoRendering();
 
     // Cancel the load by destroying the movie.
@@ -604,15 +604,15 @@ void MediaPlayerPrivateQuickTimeVisualContext::updateStates()
 {
     MediaPlayer::NetworkState oldNetworkState = m_networkState;
     MediaPlayer::ReadyState oldReadyState = m_readyState;
-  
+
     long loadState = m_movie ? m_movie->loadState() : QTMovieLoadStateError;
 
     if (loadState >= QTMovieLoadStateLoaded && m_readyState < MediaPlayer::HaveMetadata) {
         m_movie->disableUnsupportedTracks(m_enabledTrackCount, m_totalTrackCount);
         if (m_player->inMediaDocument()) {
             if (!m_enabledTrackCount || m_enabledTrackCount != m_totalTrackCount) {
-                // This is a type of media that we do not handle directly with a <video> 
-                // element, eg. QuickTime VR, a movie with a sprite track, etc. Tell the 
+                // This is a type of media that we do not handle directly with a <video>
+                // element, eg. QuickTime VR, a movie with a sprite track, etc. Tell the
                 // MediaPlayerClient that we won't support it.
                 sawUnsupportedTracks();
                 return;
@@ -634,10 +634,10 @@ void MediaPlayerPrivateQuickTimeVisualContext::updateStates()
         m_readyState = MediaPlayer::HaveMetadata;
     } else if (loadState > QTMovieLoadStateError) {
         m_networkState = MediaPlayer::Loading;
-        m_readyState = MediaPlayer::HaveNothing;        
+        m_readyState = MediaPlayer::HaveNothing;
     } else {
         if (m_player->inMediaDocument()) {
-            // Something went wrong in the loading of media within a standalone file. 
+            // Something went wrong in the loading of media within a standalone file.
             // This can occur with chained ref movies that eventually resolve to a
             // file we don't support.
             sawUnsupportedTracks();
@@ -664,7 +664,7 @@ void MediaPlayerPrivateQuickTimeVisualContext::updateStates()
 
     if (seeking())
         m_readyState = MediaPlayer::HaveNothing;
-    
+
     if (m_networkState != oldNetworkState)
         m_player->networkStateChanged();
     if (m_readyState != oldReadyState)
@@ -694,8 +694,8 @@ void MediaPlayerPrivateQuickTimeVisualContext::didEnd()
     m_player->timeChanged();
 }
 
-void MediaPlayerPrivateQuickTimeVisualContext::setSize(const IntSize& size) 
-{ 
+void MediaPlayerPrivateQuickTimeVisualContext::setSize(const IntSize& size)
+{
     if (m_hasUnsupportedTracks || !m_movie || m_size == size)
         return;
     m_size = size;
@@ -717,7 +717,7 @@ void MediaPlayerPrivateQuickTimeVisualContext::setVisible(bool visible)
 void MediaPlayerPrivateQuickTimeVisualContext::paint(GraphicsContext* p, const IntRect& r)
 {
     MediaRenderingMode currentMode = currentRenderingMode();
- 
+
     if (currentMode == MediaRenderingNone)
         return;
 
@@ -727,12 +727,12 @@ void MediaPlayerPrivateQuickTimeVisualContext::paint(GraphicsContext* p, const I
     QTPixelBuffer buffer = m_visualContext->imageForTime(0);
     if (buffer.pixelBufferRef()) {
         if (m_qtVideoLayer) {
-            // We are probably being asked to render the video into a canvas, but 
+            // We are probably being asked to render the video into a canvas, but
             // there's a good chance the QTPixelBuffer is not ARGB and thus can't be
-            // drawn using CG.  If so, fire up an ICMDecompressionSession and convert 
+            // drawn using CG.  If so, fire up an ICMDecompressionSession and convert
             // the current frame into something which can be rendered by CG.
             if (!buffer.pixelFormatIs32ARGB() && !buffer.pixelFormatIs32BGRA()) {
-                // The decompression session will only decompress a specific pixelFormat 
+                // The decompression session will only decompress a specific pixelFormat
                 // at a specific width and height; if these differ, the session must be
                 // recreated with the new parameters.
                 if (!m_decompressionSession || !m_decompressionSession->canDecompress(buffer))
@@ -742,7 +742,7 @@ void MediaPlayerPrivateQuickTimeVisualContext::paint(GraphicsContext* p, const I
         }
 
         CGImageRef image = CreateCGImageFromPixelBuffer(buffer);
-        
+
         CGContextRef context = p->platformContext();
         CGContextSaveGState(context);
         CGContextTranslateCTM(context, r.x(), r.y());
@@ -799,7 +799,7 @@ static CGImageRef CreateCGImageFromPixelBuffer(QTPixelBuffer buffer)
     size_t bitsPerComponent = 0;
     size_t bitsPerPixel = 0;
     CGImageAlphaInfo alphaInfo = kCGImageAlphaNone;
-        
+
     if (buffer.pixelFormatIs32BGRA()) {
         bitsPerComponent = 8;
         bitsPerPixel = 32;
@@ -819,26 +819,26 @@ static CGImageRef CreateCGImageFromPixelBuffer(QTPixelBuffer buffer)
         &QTPixelBuffer::dataProviderGetBytesAtPositionCallback,
         &QTPixelBuffer::dataProviderReleaseInfoCallback,
     };
-    
+
     // Colorspace should be device, so that Quartz does not have to do an extra render.
     colorSpace = CGColorSpaceCreateDeviceRGB();
     require(colorSpace, Bail);
-            
+
     provider = CGDataProviderCreateDirectAccess(buffer.pixelBufferRef(), buffer.dataSize(), &callbacks);
     require(provider, Bail);
 
     // CGDataProvider does not retain the buffer, but it will release it later, so do an extra retain here:
     QTPixelBuffer::retainCallback(buffer.pixelBufferRef());
-        
+
     image = CGImageCreate(buffer.width(), buffer.height(), bitsPerComponent, bitsPerPixel, buffer.bytesPerRow(), colorSpace, alphaInfo, provider, 0, false, kCGRenderingIntentDefault);
- 
+
 Bail:
     // Once the image is created we can release our reference to the provider and the colorspace, they are retained by the image
     if (provider)
         CGDataProviderRelease(provider);
     if (colorSpace)
         CGColorSpaceRelease(colorSpace);
- 
+
     return image;
 }
 
@@ -867,7 +867,7 @@ void MediaPlayerPrivateQuickTimeVisualContext::retrieveCurrentImage()
                 // Debug QuickTime links against a non-Debug version of CoreFoundation, so the
                 // CFDictionary attached to the CVPixelBuffer cannot be directly passed on into the
                 // CAImageQueue without being converted to a non-Debug CFDictionary.  Additionally,
-                // old versions of QuickTime used a non-AAS CoreFoundation, so the types are not 
+                // old versions of QuickTime used a non-AAS CoreFoundation, so the types are not
                 // interchangable even in the release case.
                 RetainPtr<CFDictionaryRef> attachments = adoptCF(QTCFDictionaryCreateCopyWithDataCallback(kCFAllocatorDefault, buffer.attachments(), &QTCFDictionaryCreateWithDataCallback));
                 CFTimeInterval imageTime = QTMovieVisualContext::currentHostTime();
@@ -913,18 +913,18 @@ static HashSet<String> mimeTypeCache()
 
         typeListInitialized = true;
     }
-    
+
     return typeCache;
 }
 
 static CFStringRef createVersionStringFromModuleName(LPCWSTR moduleName)
 {
     HMODULE module = GetModuleHandleW(moduleName);
-    if (!module) 
+    if (!module)
         return 0;
 
     wchar_t filePath[MAX_PATH] = {0};
-    if (!GetModuleFileNameW(module, filePath, MAX_PATH)) 
+    if (!GetModuleFileNameW(module, filePath, MAX_PATH))
         return 0;
 
     DWORD versionInfoSize = GetFileVersionInfoSizeW(filePath, 0);
@@ -938,8 +938,8 @@ static CFStringRef createVersionStringFromModuleName(LPCWSTR moduleName)
         UINT fileInfoLength = 0;
 
         if (VerQueryValueW(versionInfo, L"\\", reinterpret_cast<LPVOID*>(&fileInfo), &fileInfoLength)) {
-            versionString = CFStringCreateWithFormat(kCFAllocatorDefault, 0, CFSTR("%d.%d.%d.%d"), 
-                HIWORD(fileInfo->dwFileVersionMS), LOWORD(fileInfo->dwFileVersionMS), 
+            versionString = CFStringCreateWithFormat(kCFAllocatorDefault, 0, CFSTR("%d.%d.%d.%d"),
+                HIWORD(fileInfo->dwFileVersionMS), LOWORD(fileInfo->dwFileVersionMS),
                 HIWORD(fileInfo->dwFileVersionLS), LOWORD(fileInfo->dwFileVersionLS));
         }
     }
@@ -948,7 +948,7 @@ static CFStringRef createVersionStringFromModuleName(LPCWSTR moduleName)
     return versionString;
 }
 
-static bool requiredDllsAvailable() 
+static bool requiredDllsAvailable()
 {
     static bool s_prerequisitesChecked = false;
     static bool s_prerequisitesSatisfied;
@@ -969,7 +969,7 @@ static bool requiredDllsAvailable()
         coreVideoString = createVersionStringFromModuleName(L"CoreVideo_debug");
 
     s_prerequisitesSatisfied = (quartzCoreString && coreVideoString
-        && CFStringCompare(quartzCoreString, kMinQuartzCoreVersion, kCFCompareNumerically) != kCFCompareLessThan 
+        && CFStringCompare(quartzCoreString, kMinQuartzCoreVersion, kCFCompareNumerically) != kCFCompareLessThan
         && CFStringCompare(coreVideoString, kMinCoreVideoVersion, kCFCompareNumerically) != kCFCompareLessThan);
 
     if (quartzCoreString)
@@ -983,7 +983,7 @@ static bool requiredDllsAvailable()
 void MediaPlayerPrivateQuickTimeVisualContext::getSupportedTypes(HashSet<String>& types)
 {
     types = mimeTypeCache();
-} 
+}
 
 bool MediaPlayerPrivateQuickTimeVisualContext::isAvailable()
 {
@@ -1085,7 +1085,7 @@ void MediaPlayerPrivateQuickTimeVisualContext::setUpVideoRendering()
     if (currentMode == preferredMode && currentMode != MediaRenderingNone)
         return;
 
-    if (currentMode != MediaRenderingNone)  
+    if (currentMode != MediaRenderingNone)
         tearDownVideoRendering();
 
     if (preferredMode == MediaRenderingMovieLayer)
@@ -1139,7 +1139,7 @@ void MediaPlayerPrivateQuickTimeVisualContext::retrieveAndResetMovieTransform()
     if (!CGAffineTransformEqualToTransform(trackTransform, CGAffineTransformIdentity))
         track->resetTransform();
 
-    // Multiply the two transforms together, taking care to 
+    // Multiply the two transforms together, taking care to
     // do so in the correct order, track * movie = final:
     m_movieTransform = CGAffineTransformConcat(trackTransform, movieTransform);
 }
@@ -1181,7 +1181,7 @@ void MediaPlayerPrivateQuickTimeVisualContext::createLayerForMovie()
     m_transformLayer->setNeedsLayout();
     // The layer will get hooked up via RenderLayerBacking::updateGraphicsLayerConfiguration().
 
-    // Fill the newly created layer with image data, so we're not looking at 
+    // Fill the newly created layer with image data, so we're not looking at
     // an empty layer until the next time a new image is available, which could
     // be a long time if we're paused.
     if (m_visualContext)

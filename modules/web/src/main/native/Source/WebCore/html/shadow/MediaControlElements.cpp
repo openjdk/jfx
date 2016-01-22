@@ -1224,7 +1224,7 @@ const AtomicString& MediaControlTextTrackContainerElement::textTrackContainerEle
     DEFINE_STATIC_LOCAL(AtomicString, id, ("-webkit-media-text-track-container", AtomicString::ConstructFromLiteral));
     return id;
 }
-    
+
 const AtomicString& MediaControlTextTrackContainerElement::shadowPseudoId() const
 {
     return textTrackContainerElementShadowPseudoId();
@@ -1329,7 +1329,7 @@ void MediaControlTextTrackContainerElement::updateTimerFired(Timer<MediaControlT
         setInlineStyleProperty(CSSPropertyWidth, m_videoDisplaySize.size().width(), CSSPrimitiveValue::CSS_PX);
         setInlineStyleProperty(CSSPropertyHeight, m_videoDisplaySize.size().height(), CSSPrimitiveValue::CSS_PX);
     }
-    
+
     HTMLMediaElement* mediaElement = parentMediaElement(this);
     if (!mediaElement)
         return;
@@ -1337,7 +1337,7 @@ void MediaControlTextTrackContainerElement::updateTimerFired(Timer<MediaControlT
     float smallestDimension = std::min(m_videoDisplaySize.size().height(), m_videoDisplaySize.size().width());
     float fontScale = document().page()->group().captionPreferences()->captionFontSizeScaleAndImportance(m_fontSizeIsImportant);
     m_fontSize = lroundf(smallestDimension * fontScale);
-    
+
     CueList activeCues = mediaElement->currentlyActiveCues();
     for (size_t i = 0; i < activeCues.size(); ++i) {
         TextTrackCue* cue = activeCues[i].data();

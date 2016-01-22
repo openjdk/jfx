@@ -65,5 +65,5 @@ public class CameraShim {
         return c.getViewWidth();
     }
 
-    
+
 }

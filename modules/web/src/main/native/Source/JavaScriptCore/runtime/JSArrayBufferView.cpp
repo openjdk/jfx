@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -62,14 +62,14 @@ JSArrayBufferView::ConstructionContext::ConstructionContext(
                 asWords[i] = 0;
         }
 #endif // USE(JSVALUE32_64)
-        
+
         return;
     }
 
     // Don't allow a typed array to use more than 2GB.
     if (length > static_cast<unsigned>(INT_MAX) / elementSize)
         return;
-    
+
     if (mode == ZeroFill) {
         if (!tryFastCalloc(length, elementSize).getValue(m_vector))
             return;
@@ -77,9 +77,9 @@ JSArrayBufferView::ConstructionContext::ConstructionContext(
         if (!tryFastMalloc(length * elementSize).getValue(m_vector))
             return;
     }
-    
+
     vm.heap.reportExtraMemoryCost(static_cast<size_t>(length) * elementSize);
-    
+
     m_structure = structure;
     m_mode = OversizeTypedArray;
 }
@@ -144,14 +144,14 @@ bool JSArrayBufferView::getOwnPropertySlot(
         slot.setValue(thisObject, DontDelete | ReadOnly, jsNumber(thisObject->byteOffset()));
         return true;
     }
-    
+
     if (propertyName == exec->propertyNames().buffer) {
         slot.setValue(
             thisObject, DontDelete | ReadOnly, exec->vm().m_typedArrayController->toJS(
                 exec, thisObject->globalObject(), thisObject->buffer()));
         return true;
     }
-    
+
     return Base::getOwnPropertySlot(thisObject, exec, propertyName, slot);
 }
 
@@ -166,7 +166,7 @@ void JSArrayBufferView::put(
         reject(exec, slot.isStrictMode(), "Attempting to write to read-only typed array property.");
         return;
     }
-    
+
     Base::put(thisObject, exec, propertyName, value, slot);
 }
 
@@ -179,7 +179,7 @@ bool JSArrayBufferView::defineOwnProperty(
         || propertyName == exec->propertyNames().byteOffset
         || propertyName == exec->propertyNames().buffer)
         return reject(exec, shouldThrow, "Attempting to define read-only typed array property.");
-    
+
     return Base::defineOwnProperty(thisObject, exec, propertyName, descriptor, shouldThrow);
 }
 
@@ -191,7 +191,7 @@ bool JSArrayBufferView::deleteProperty(
         || propertyName == exec->propertyNames().byteOffset
         || propertyName == exec->propertyNames().buffer)
         return false;
-    
+
     return Base::deleteProperty(thisObject, exec, propertyName);
 }
 
@@ -199,14 +199,14 @@ void JSArrayBufferView::getOwnNonIndexPropertyNames(
     JSObject* object, ExecState* exec, PropertyNameArray& array, EnumerationMode mode)
 {
     JSArrayBufferView* thisObject = jsCast<JSArrayBufferView*>(object);
-    
+
     // length/byteOffset/byteLength are DontEnum, at least in Firefox.
     if (mode == IncludeDontEnumProperties) {
         array.add(exec->propertyNames().byteOffset);
         array.add(exec->propertyNames().byteLength);
         array.add(exec->propertyNames().buffer);
     }
-    
+
     Base::getOwnNonIndexPropertyNames(thisObject, exec, array, mode);
 }
 

@@ -117,7 +117,7 @@ static void createKeyMap()
     keyMap().set(ASCIILiteral("KP_End"), ASCIILiteral("End"));
     keyMap().set(ASCIILiteral("KP_Insert"), ASCIILiteral("Insert"));
     keyMap().set(ASCIILiteral("KP_Delete"), ASCIILiteral("U+007F"));
- 
+
     addCharactersToKeyMap('a', 'z');
     addCharactersToKeyMap('A', 'Z');
     addCharactersToKeyMap('0', '9');

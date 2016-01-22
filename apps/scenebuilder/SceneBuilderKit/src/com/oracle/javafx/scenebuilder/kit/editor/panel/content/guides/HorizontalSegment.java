@@ -36,12 +36,12 @@ package com.oracle.javafx.scenebuilder.kit.editor.panel.content.guides;
  *
  */
 class HorizontalSegment extends AbstractSegment {
-    
+
     private final double x1;
     private final double x2;
     private final double y;
     private final double length;
-    
+
     public HorizontalSegment(double x1, double x2, double y) {
         this.x1 = x1;
         this.x2 = x2;

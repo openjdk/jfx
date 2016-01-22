@@ -58,7 +58,7 @@ ConvolverNode::ConvolverNode(AudioContext* context, float sampleRate)
     m_channelInterpretation = AudioBus::Speakers;
 
     setNodeType(NodeTypeConvolver);
-    
+
     initialize();
 }
 
@@ -102,7 +102,7 @@ void ConvolverNode::initialize()
 {
     if (isInitialized())
         return;
-        
+
     AudioNode::initialize();
 }
 
@@ -118,7 +118,7 @@ void ConvolverNode::uninitialize()
 void ConvolverNode::setBuffer(AudioBuffer* buffer)
 {
     ASSERT(isMainThread());
-    
+
     if (!buffer)
         return;
 

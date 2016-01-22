@@ -142,7 +142,7 @@ public:
 
     void setNext(FillLayer* n) { if (m_next != n) { delete m_next; m_next = n; } }
 
-    FillLayer& operator=(const FillLayer& o);    
+    FillLayer& operator=(const FillLayer& o);
     FillLayer(const FillLayer& o);
 
     bool operator==(const FillLayer& o) const;

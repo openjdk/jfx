@@ -72,13 +72,13 @@ public class PieChartApp extends Application {
                 new PieChart.Data("Dell", 22),
                 new PieChart.Data("Apple", 30));
     }
-    
+
     public Parent createContent() {
         chart = new PieChart(generateData());
         chart.setClockwise(false);
         return chart;
     }
-    
+
     @Override public void start(Stage primaryStage) throws Exception {
         primaryStage.setScene(new Scene(createContent()));
         primaryStage.show();
@@ -90,5 +90,5 @@ public class PieChartApp extends Application {
      */
     public static void main(String[] args) {
         launch(args);
-    }    
+    }
 }

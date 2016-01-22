@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -58,7 +58,7 @@ EncodedJSValue JSC_HOST_CALL MapIteratorPrototypeFuncNext(CallFrame* callFrame)
     JSMapIterator* iterator = jsDynamicCast<JSMapIterator*>(callFrame->thisValue());
     if (!iterator)
         return JSValue::encode(throwTypeError(callFrame, ASCIILiteral("Cannot call MapIterator.next() on a non-MapIterator object")));
-    
+
     JSValue result;
     if (iterator->next(callFrame, result))
         return JSValue::encode(result);

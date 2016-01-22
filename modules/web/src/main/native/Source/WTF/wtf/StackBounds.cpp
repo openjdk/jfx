@@ -47,7 +47,7 @@
 namespace WTF {
 
 #if PLATFORM(JAVA)
-    // 16K is a safe value to guard java stack red zone 
+    // 16K is a safe value to guard java stack red zone
     #define JAVA_RED_ZONE 0x4000
     #if OS(WINDOWS)
         // This is safe for the default stack sizes in all supported Windows

@@ -49,10 +49,10 @@ std::wstring GetTitle() {
     buffer[MAX_PATH - 1] = '\0';
     result = buffer;
     size_t slash = result.find_last_of('\\');
-    
+
     if (slash != std::wstring::npos)
         result = result.substr(slash + 1, result.size() - slash - 1);
-    
+
     return result;
 }
 
@@ -69,7 +69,7 @@ int APIENTRY _tWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
     argv = CommandLineToArgvW(GetCommandLine(), &argc);
 
     HMODULE library = ::LoadLibrary(PACKAGER_LIBRARY);
-    
+
     if (library == NULL) {
         std::wstring title = GetTitle();
         std::wstring description = std::wstring(PACKAGER_LIBRARY) + std::wstring(TEXT(" not found."));

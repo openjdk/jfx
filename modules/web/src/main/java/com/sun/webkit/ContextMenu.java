@@ -28,7 +28,7 @@ package com.sun.webkit;
 public abstract class ContextMenu {
 
     protected abstract void show(ShowContext showContext, int x, int y);
-    
+
     protected abstract void appendItem(ContextMenuItem item);
 
     protected abstract void insertItem(ContextMenuItem item, int index);

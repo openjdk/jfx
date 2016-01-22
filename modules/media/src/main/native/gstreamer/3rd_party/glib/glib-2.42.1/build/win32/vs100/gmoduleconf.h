@@ -23,13 +23,13 @@ extern "C" {
 #endif /* __cplusplus */
 
 
-#define	G_MODULE_IMPL_NONE	0
-#define	G_MODULE_IMPL_DL	1
-#define	G_MODULE_IMPL_WIN32	3
-#define	G_MODULE_IMPL_DYLD	6
+#define G_MODULE_IMPL_NONE  0
+#define G_MODULE_IMPL_DL    1
+#define G_MODULE_IMPL_WIN32 3
+#define G_MODULE_IMPL_DYLD  6
 
-#define	G_MODULE_IMPL		G_MODULE_IMPL_WIN32
-#undef	G_MODULE_HAVE_DLERROR
+#define G_MODULE_IMPL       G_MODULE_IMPL_WIN32
+#undef  G_MODULE_HAVE_DLERROR
 
 #ifdef __cplusplus
 }

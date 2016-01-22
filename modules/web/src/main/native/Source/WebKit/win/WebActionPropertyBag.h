@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef WebActionPropertyBag_h
@@ -46,12 +46,12 @@ public:
     virtual ULONG STDMETHODCALLTYPE Release();
 
     // IPropertyBag
-    virtual /* [local] */ HRESULT STDMETHODCALLTYPE Read( 
+    virtual /* [local] */ HRESULT STDMETHODCALLTYPE Read(
         /* [in] */ LPCOLESTR pszPropName,
         /* [out][in] */ VARIANT *pVar,
         /* [in] */ IErrorLog *pErrorLog);
-        
-    virtual HRESULT STDMETHODCALLTYPE Write( 
+
+    virtual HRESULT STDMETHODCALLTYPE Write(
         /* [in] */ LPCOLESTR pszPropName,
         /* [in] */ VARIANT *pVar);
 

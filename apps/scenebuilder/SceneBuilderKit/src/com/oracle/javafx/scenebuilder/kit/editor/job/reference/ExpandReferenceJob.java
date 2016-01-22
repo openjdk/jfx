@@ -43,9 +43,9 @@ import com.oracle.javafx.scenebuilder.kit.fxom.FXOMPropertyT;
  *
  */
 public class ExpandReferenceJob  extends Job {
-    
+
     private final Job subJob;
-    
+
     public ExpandReferenceJob(FXOMNode reference, FXOMCloner cloner, EditorController editorController) {
         super(editorController);
         if (reference instanceof FXOMIntrinsic) {
@@ -58,7 +58,7 @@ public class ExpandReferenceJob  extends Job {
             throw new RuntimeException("Bug"); //NOI18N
         }
     }
-    
+
     /*
      * Job
      */
@@ -88,5 +88,5 @@ public class ExpandReferenceJob  extends Job {
     }
 
 
-    
+
 }

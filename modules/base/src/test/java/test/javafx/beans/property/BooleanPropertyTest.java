@@ -42,7 +42,7 @@ import org.junit.Test;
 import static org.junit.Assert.*;
 
 public class BooleanPropertyTest {
-    
+
     private static final Object NO_BEAN = null;
     private static final String NO_NAME_1 = null;
     private static final String NO_NAME_2 = "";
@@ -51,7 +51,7 @@ public class BooleanPropertyTest {
     private static final boolean DEFAULT = false;
 
     private static final ErrorLoggingUtiltity log = new ErrorLoggingUtiltity();
-    
+
     @BeforeClass
     public static void setUpClass() {
         log.start();
@@ -74,45 +74,45 @@ public class BooleanPropertyTest {
     public void testBindBidirectional() {
         final BooleanProperty p1 = new SimpleBooleanProperty(VALUE_2);
         final BooleanProperty p2 = new SimpleBooleanProperty(VALUE_1);
-        
+
         p1.bindBidirectional(p2);
         assertEquals(VALUE_1, p1.get());
         assertEquals(VALUE_1, p2.get());
-        
+
         p1.set(VALUE_2);
         assertEquals(VALUE_2, p1.get());
         assertEquals(VALUE_2, p2.get());
-        
+
         p2.set(VALUE_1);
         assertEquals(VALUE_1, p1.get());
         assertEquals(VALUE_1, p2.get());
-        
+
         p1.unbindBidirectional(p2);
         p1.set(VALUE_2);
         assertEquals(VALUE_2, p1.get());
         assertEquals(VALUE_1, p2.get());
-        
+
         p1.set(VALUE_1);
         p2.set(VALUE_2);
         assertEquals(VALUE_1, p1.get());
         assertEquals(VALUE_2, p2.get());
     }
-    
+
     @Test
     public void testToString() {
         final BooleanProperty v0 = new BooleanPropertyStub(NO_BEAN, NO_NAME_1);
         assertEquals("BooleanProperty [value: " + DEFAULT + "]", v0.toString());
-        
+
         final BooleanProperty v1 = new BooleanPropertyStub(NO_BEAN, NO_NAME_2);
         assertEquals("BooleanProperty [value: " + DEFAULT + "]", v1.toString());
-        
+
         final Object bean = new Object();
         final String name = "My name";
         final BooleanProperty v2 = new BooleanPropertyStub(bean, name);
         assertEquals("BooleanProperty [bean: " + bean.toString() + ", name: My name, value: " + DEFAULT + "]", v2.toString());
         v2.set(VALUE_1);
         assertEquals("BooleanProperty [bean: " + bean.toString() + ", name: My name, value: " + VALUE_1 + "]", v2.toString());
-        
+
         final BooleanProperty v3 = new BooleanPropertyStub(bean, NO_NAME_1);
         assertEquals("BooleanProperty [bean: " + bean.toString() + ", value: " + DEFAULT + "]", v3.toString());
         v3.set(VALUE_1);
@@ -128,7 +128,7 @@ public class BooleanPropertyTest {
         v5.set(VALUE_1);
         assertEquals("BooleanProperty [name: My name, value: " + VALUE_1 + "]", v5.toString());
     }
-    
+
     @Test
     public void testAsObject() {
         final BooleanProperty valueModel = new SimpleBooleanProperty();
@@ -139,11 +139,11 @@ public class BooleanPropertyTest {
         assertEquals(Boolean.TRUE, exp.get());
         valueModel.set(false);
         assertEquals(Boolean.FALSE, exp.get());
-        
+
         exp.set(Boolean.TRUE);
         assertEquals(true, valueModel.get());
     }
-    
+
     @Test
     public void testObjectToBoolean() {
         final ObjectProperty<Boolean> valueModel = new SimpleObjectProperty<Boolean>(true);
@@ -154,17 +154,17 @@ public class BooleanPropertyTest {
         assertEquals(true, exp.get());
         valueModel.set(false);
         assertEquals(false, exp.get());
-        
+
         exp.set(true);
         assertEquals(true, valueModel.get());
     }
-    
+
     private class BooleanPropertyStub extends BooleanProperty {
-        
+
         private final Object bean;
         private final String name;
         private boolean value;
-        
+
         private BooleanPropertyStub(Object bean, String name) {
             this.bean = bean;
             this.name = name;
@@ -189,7 +189,7 @@ public class BooleanPropertyTest {
         public void set(boolean value) {
             this.value = value;
         }
-        
+
         @Override
         public void bind(ObservableValue<? extends Boolean> observable) {
             fail("Not in use");

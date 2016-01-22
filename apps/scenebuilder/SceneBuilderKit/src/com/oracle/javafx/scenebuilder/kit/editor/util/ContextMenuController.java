@@ -250,7 +250,7 @@ public class ContextMenuController {
         final MenuItemController c = (MenuItemController) i.getUserData();
         c.perform();
     }
-    
+
     private void jobManagerRevisionDidChange() {
         // FXOMDocument has been modified by a job.
         if (contextMenu != null && contextMenu.isShowing()) {

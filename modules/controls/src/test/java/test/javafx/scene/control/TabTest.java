@@ -73,21 +73,21 @@ public class TabTest {
         dummyTabPane = new TabPane();
         eh = event -> { };
     }
-    
-   
-   
+
+
+
     /*********************************************************************
      * Tests for default values                                         *
      ********************************************************************/
-    
+
     @Test public void defaultConstructorShouldSetStyleClassTo_tab() {
         assertStyleClassContains(tab, "tab");
     }
-    
+
     @Test public void oneArgConstructorShouldSetStyleClassTo_tab() {
         assertStyleClassContains(tabWithStr, "tab");
     }
-    
+
     @Test public void defaultConstructorText() {
         assertNull(tab.getText());
     }
@@ -146,13 +146,13 @@ public class TabTest {
         assertNull(tabWithStr.getTooltip());
     }
 
-    
+
 
     /*********************************************************************
      * Tests for property binding                                        *
      ********************************************************************/
-    
-    
+
+
     @Test public void checkIdPropertyBind() {
         StringProperty objPr = new SimpleStringProperty("one");
         tab.idProperty().bind(objPr);
@@ -160,7 +160,7 @@ public class TabTest {
         objPr.setValue("another");
         assertEquals("idProperty cannot be bound", tab.idProperty().getValue(), "another");
     }
-    
+
     @Test public void checkStylePropertyBind() {
         StringProperty objPr = new SimpleStringProperty("one");
         tab.styleProperty().bind(objPr);
@@ -168,7 +168,7 @@ public class TabTest {
         objPr.setValue("another");
         assertEquals("styleProperty cannot be bound", tab.styleProperty().getValue(), "another");
     }
-    
+
     @Test public void checkSelectedPropertyReadOnly() {
         assertTrue(tab.selectedProperty() instanceof ReadOnlyBooleanProperty);
     }
@@ -184,7 +184,7 @@ public class TabTest {
         strPr.setValue("newvalue");
         assertEquals("Text cannot be bound", tab.textProperty().getValue(), "newvalue");
     }
-    
+
     @Test public void checkGraphicPropertyBind() {
         ObjectProperty objPr = new SimpleObjectProperty<Node>(null);
         Rectangle rect = new Rectangle(10, 20);
@@ -193,7 +193,7 @@ public class TabTest {
         objPr.setValue(rect);
         assertSame("Graphic cannot be bound", tab.graphicProperty().getValue(), rect);
     }
-    
+
     @Test public void checkContentPropertyBind() {
         ObjectProperty objPr = new SimpleObjectProperty<Node>(null);
         Rectangle rect = new Rectangle(10, 20);
@@ -211,7 +211,7 @@ public class TabTest {
         objPr.setValue(mnu);
         assertSame("contextMenu cannot be bound", tab.contextMenuProperty().getValue(), mnu);
     }
-    
+
     @Test public void checkClosablePropertyBind() {
         BooleanProperty pr = new SimpleBooleanProperty(true);
         tab.closableProperty().bind(pr);
@@ -219,7 +219,7 @@ public class TabTest {
         pr.setValue(false);
         assertFalse("closable cannot be bound", tab.closableProperty().getValue());
     }
-    
+
     @Test public void checkOnSelectionChangedPropertyBind() {
         ObjectProperty objPr = new SimpleObjectProperty<EventHandler<Event>>(null);
         tab.onSelectionChangedProperty().bind(objPr);
@@ -227,7 +227,7 @@ public class TabTest {
         objPr.setValue(eh);
         assertSame("onSelectionChanged cannot be bound", tab.onSelectionChangedProperty().getValue(), eh);
     }
-    
+
     @Test public void checkOnClosedPropertyBind() {
         ObjectProperty objPr = new SimpleObjectProperty<EventHandler<Event>>(null);
         tab.onClosedProperty().bind(objPr);
@@ -235,7 +235,7 @@ public class TabTest {
         objPr.setValue(eh);
         assertSame("onSelectionChanged cannot be bound", tab.onClosedProperty().getValue(), eh);
     }
-    
+
     @Test public void checkTooltipPropertyBind() {
         ObjectProperty objPr = new SimpleObjectProperty<Tooltip>(null);
         tab.tooltipProperty().bind(objPr);
@@ -244,7 +244,7 @@ public class TabTest {
         objPr.setValue(tt);
         assertSame("tooltip cannot be bound", tab.tooltipProperty().getValue(), tt);
     }
-    
+
     @Test public void textPropertyHasBeanReference() {
         assertSame(tab, tab.textProperty().getBean());
     }
@@ -310,7 +310,7 @@ public class TabTest {
         assertEquals("tooltip",  tab.tooltipProperty().getName());
     }
 
-    
+
 
     /*********************************************************************
      * Miscellaneous Tests                                               *
@@ -319,17 +319,17 @@ public class TabTest {
         tab.setId("one");
         assertEquals(tab.idProperty().getValue(), "one");
     }
-    
+
     @Test public void setIdAndSeeValue() {
         tab.setId("one");
         assertEquals(tab.getId(), "one");
     }
-    
+
     @Test public void setStyleAndSeeValueIsReflectedInModel() {
         tab.setStyle("one");
         assertEquals(tab.styleProperty().getValue(), "one");
     }
-    
+
     @Test public void setStyleAndSeeValue() {
         tab.setStyle("one");
         assertEquals(tab.getStyle(), "one");
@@ -339,104 +339,104 @@ public class TabTest {
         tab.shim_setSelected(true);
         assertTrue(tab.selectedProperty().getValue());
     }
-    
+
     @Test public void setSelectedAndSeeValue() {
         tab.shim_setSelected(true);
         assertTrue(tab.isSelected());
     }
-    
+
     @Test public void setTabpaneAndSeeValueIsReflectedInModel() {
         tab.shim_setTabPane(dummyTabPane);
         assertSame(tab.tabPaneProperty().getValue(), dummyTabPane);
     }
-    
+
     @Test public void setTabpaneAndSeeValue() {
         tab.shim_setTabPane(dummyTabPane);
         assertSame(tab.getTabPane(), dummyTabPane);
     }
-    
+
     @Test public void setTextAndSeeValueIsReflectedInModel() {
         tab.setText("tmp");
         assertEquals(tab.textProperty().getValue(), "tmp");
     }
-    
+
     @Test public void setTextAndSeeValue() {
         tab.setText("tmp");
         assertEquals(tab.getText(), "tmp");
     }
-    
+
     @Test public void setGraphicAndSeeValueIsReflectedInModel() {
         Rectangle rect = new Rectangle();
         tab.setGraphic(rect);
         assertEquals(tab.graphicProperty().getValue(), rect);
     }
-    
+
     @Test public void setGraphicAndSeeValue() {
         Rectangle rect = new Rectangle();
         tab.setGraphic(rect);
         assertEquals(tab.getGraphic(), rect);
     }
-    
+
     @Test public void setContentAndSeeValueIsReflectedInModel() {
         Rectangle rect = new Rectangle();
         tab.setContent(rect);
         assertEquals(tab.contentProperty().getValue(), rect);
     }
-    
+
     @Test public void setContentAndSeeValue() {
         Rectangle rect = new Rectangle();
         tab.setContent(rect);
         assertEquals(tab.getContent(), rect);
     }
-    
+
     @Test public void setContextMenuAndSeeValueIsReflectedInModel() {
         ContextMenu mnu = new ContextMenu();
         tab.setContextMenu(mnu);
         assertSame(tab.contextMenuProperty().getValue(), mnu);
     }
-    
+
     @Test public void setContextMenuAndSeeValue() {
         ContextMenu mnu = new ContextMenu();
         tab.setContextMenu(mnu);
         assertSame(tab.getContextMenu(), mnu);
     }
-    
+
     @Test public void setClosableAndSeeValueIsReflectedInModel() {
         tab.setClosable(true);
         assertTrue(tab.closableProperty().getValue());
     }
-    
+
     @Test public void setClosableAndSeeValue() {
         tab.setClosable(true);
         assertTrue(tab.isClosable());
     }
-    
+
     @Test public void setOnSelectionChangedAndSeeValueIsReflectedInModel() {
         tab.setOnSelectionChanged(eh);
         assertSame(tab.onSelectionChangedProperty().getValue(), eh);
     }
-    
+
     @Test public void setOnSelectionChangedAndSeeValue() {
         tab.setOnSelectionChanged(eh);
         assertSame(tab.getOnSelectionChanged(), eh);
     }
-    
+
     @Test public void setOnClosedAndSeeValueIsReflectedInModel() {
         tab.setOnClosed(eh);
         assertSame(tab.onClosedProperty().getValue(), eh);
     }
-    
+
     @Test public void setOnClosedAndSeeValue() {
         tab.setOnClosed(eh);
         assertSame(tab.getOnClosed(), eh);
     }
-    
+
     @Test public void setTooltipAndSeeValueIsReflectedInModel() {
         Tooltip tt = new Tooltip();
         tab.setTooltip(tt);
         assertSame(tab.tooltipProperty().getValue(), tt);
     }
-    
+
     @Test public void setTooltipAndSeeValue() {
         Tooltip tt = new Tooltip();
         tab.setTooltip(tt);
@@ -447,26 +447,26 @@ public class TabTest {
         EventDispatchChain chain = new EventDispatchChainImpl();
         tab.buildEventDispatchChain(chain);
     }
-    
+
     @Test public void setDisableAndSeeValue() {
         tab.setDisable(true);
         assertTrue(tab.isDisable());
     }
-    
+
     @Test public void setDisableAndSeeDisabledValue() {
         tab.setDisable(true);
         assertTrue(tab.isDisabled());
     }
-    
+
     @Test public void setDisableOnTabPaneAndSeeValue() {
         dummyTabPane.getTabs().add(tab);
         assertFalse(tab.isDisable());
         assertFalse(tab.isDisabled());
-        
+
         dummyTabPane.setDisable(true);
         assertFalse(tab.isDisable());
         assertTrue(tab.isDisabled());
-        
+
         dummyTabPane.setDisable(false);
         assertFalse(tab.isDisable());
         assertFalse(tab.isDisabled());

@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -54,23 +54,23 @@ void NaturalLoops::compute(Graph& graph)
     // blocks. Then we backwards graph search from the backward branching
     // blocks to their loop headers, which gives us all of the blocks in the
     // loop body.
-    
+
     static const bool verbose = false;
-    
+
     graph.m_dominators.computeIfNecessary(graph);
-    
+
     if (verbose) {
         dataLog("Dominators:\n");
         graph.m_dominators.dump(graph, WTF::dataFile());
     }
-    
+
     m_loops.resize(0);
-    
+
     for (BlockIndex blockIndex = graph.numBlocks(); blockIndex--;) {
         BasicBlock* block = graph.block(blockIndex);
         if (!block)
             continue;
-        
+
         for (unsigned i = block->numSuccessors(); i--;) {
             BasicBlock* successor = block->successor(i);
             if (!graph.m_dominators.dominates(successor, block))
@@ -90,42 +90,42 @@ void NaturalLoops::compute(Graph& graph)
             m_loops.append(loop);
         }
     }
-    
+
     if (verbose)
         dataLog("After bootstrap: ", *this, "\n");
-    
+
     FastBitVector seenBlocks;
     Vector<BasicBlock*, 4> blockWorklist;
     seenBlocks.resize(graph.numBlocks());
-    
+
     for (unsigned i = m_loops.size(); i--;) {
         NaturalLoop& loop = m_loops[i];
-        
+
         seenBlocks.clearAll();
         ASSERT(blockWorklist.isEmpty());
-        
+
         if (verbose)
             dataLog("Dealing with loop ", loop, "\n");
-        
+
         for (unsigned j = loop.size(); j--;) {
             seenBlocks.set(loop[j]->index);
             blockWorklist.append(loop[j]);
         }
-        
+
         while (!blockWorklist.isEmpty()) {
             BasicBlock* block = blockWorklist.takeLast();
-            
+
             if (verbose)
                 dataLog("    Dealing with ", *block, "\n");
-            
+
             if (block == loop.header())
                 continue;
-            
+
             for (unsigned j = block->predecessors.size(); j--;) {
                 BasicBlock* predecessor = block->predecessors[j];
                 if (seenBlocks.get(predecessor->index))
                     continue;
-                
+
                 loop.addBlock(predecessor);
                 blockWorklist.append(predecessor);
                 seenBlocks.set(predecessor->index);
@@ -143,10 +143,10 @@ void NaturalLoops::compute(Graph& graph)
     }
     for (unsigned loopIndex = m_loops.size(); loopIndex--;) {
         NaturalLoop& loop = m_loops[loopIndex];
-        
+
         for (unsigned blockIndexInLoop = loop.size(); blockIndexInLoop--;) {
             BasicBlock* block = loop[blockIndexInLoop];
-            
+
             for (unsigned i = 0; i < BasicBlock::numberOfInnerMostLoopIndices; ++i) {
                 unsigned thisIndex = block->innerMostLoopIndices[i];
                 if (thisIndex == UINT_MAX || loop.size() < m_loops[thisIndex].size()) {
@@ -158,40 +158,40 @@ void NaturalLoops::compute(Graph& graph)
             }
         }
     }
-    
+
     // Now each block knows its inner-most loop and its next-to-inner-most loop. Use
     // this to figure out loop parenting.
     for (unsigned i = m_loops.size(); i--;) {
         NaturalLoop& loop = m_loops[i];
         RELEASE_ASSERT(loop.header()->innerMostLoopIndices[0] == i);
-        
+
         loop.m_outerLoopIndex = loop.header()->innerMostLoopIndices[1];
     }
-    
+
     if (validationEnabled()) {
         // Do some self-verification that we've done some of this correctly.
-        
+
         for (BlockIndex blockIndex = graph.numBlocks(); blockIndex--;) {
             BasicBlock* block = graph.block(blockIndex);
             if (!block)
                 continue;
-            
+
             Vector<const NaturalLoop*> simpleLoopsOf;
-            
+
             for (unsigned i = m_loops.size(); i--;) {
                 if (m_loops[i].contains(block))
                     simpleLoopsOf.append(&m_loops[i]);
             }
-            
+
             Vector<const NaturalLoop*> fancyLoopsOf = loopsOf(block);
-            
+
             std::sort(simpleLoopsOf.begin(), simpleLoopsOf.end());
             std::sort(fancyLoopsOf.begin(), fancyLoopsOf.end());
-            
+
             RELEASE_ASSERT(simpleLoopsOf == fancyLoopsOf);
         }
     }
-    
+
     if (verbose)
         dataLog("Results: ", *this, "\n");
 }

@@ -204,7 +204,7 @@ public class MotionBlur extends LinearConvolveCoreEffect {
     public DirtyRegionContainer getDirtyRegions(Effect defaultInput, DirtyRegionPool regionPool) {
         Effect di = getDefaultedInput(0, defaultInput);
         DirtyRegionContainer drc = di.getDirtyRegions(defaultInput, regionPool);
-        
+
         drc.grow(state.getHPad(), state.getVPad());
 
         return drc;

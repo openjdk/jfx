@@ -47,7 +47,7 @@ import javafx.geometry.Point3D;
 public class GestureEvent extends InputEvent {
 
     private static final long serialVersionUID = 20121107L;
-    
+
     /**
      * Common supertype for all gestures.
      */
@@ -185,7 +185,7 @@ public class GestureEvent extends InputEvent {
      * @return the horizontal position of the event relative to the
      * origin of the event's source.
      *
-     * @see #isDirect() 
+     * @see #isDirect()
      */
     public final double getX() {
         return x;

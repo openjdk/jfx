@@ -76,7 +76,7 @@
                 NSLog(@"GL_FRAMEBUFFER_INCOMPLETE_FORMATS_EXT");
                 break;
             case GL_FRAMEBUFFER_INCOMPLETE_DRAW_BUFFER_EXT:
-                NSLog(@"GL_FRAMEBUFFER_INCOMPLETE_DRAW_BUFFER_EXT");                          
+                NSLog(@"GL_FRAMEBUFFER_INCOMPLETE_DRAW_BUFFER_EXT");
                 break;
             case GL_FRAMEBUFFER_INCOMPLETE_READ_BUFFER_EXT:
                 NSLog(@"GL_FRAMEBUFFER_INCOMPLETE_READ_BUFFER_EXT");
@@ -113,7 +113,7 @@
         // TODO optimization: is it possible to just resize an FBO's texture without destroying it first?
         [self _destroyFbo];
     }
-    
+
     if (self->_fbo == 0)
     {
         glEnable(TARGET);
@@ -136,7 +136,7 @@
                 const GLvoid *pixels = NULL;
                 glTexImage2D(target, level, internalformat, (GLint)width, (GLint)height, border, format, type, pixels);
             }
-            
+
             glGenFramebuffersEXT(1, &self->_fbo);
             LOG("           GlassFrameBufferObject created FBO: %d", self->_fbo);
             glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, self->_fbo);
@@ -149,14 +149,14 @@
                 glFramebufferTexture2DEXT(target, attachment, textarget, texture, level);
             }
             LOG("           glGetError(): %d", glGetError());
-            
+
             if ([self _checkFbo] == NO)
             {
                 [self _destroyFbo];
             }
         }
         glDisable(TARGET);
-        
+
         glViewport(0, 0, (GLint)width, (GLint)height);
     }
 //    DOES NOT WORK
@@ -164,7 +164,7 @@
 //    {
 //        glEnable(TARGET);
 //        glBindTexture(TARGET, self->_texture);
-//        
+//
 //        GLenum target = TARGET;
 //        GLint level = 0;
 //        GLint xoffset = 0;
@@ -176,7 +176,7 @@
 //
 //        glDisable(TARGET);
 //    }
-    
+
     self->_width = width;
     self->_height = height;
 }
@@ -191,7 +191,7 @@
         self->_texture = 0;
         self->_fbo = 0;
         self->_isSwPipe = NO;
-        
+
         [self _assertContext];
         if ([self _supportsFbo] == NO)
         {
@@ -208,7 +208,7 @@
     {
         [self _destroyFbo];
     }
-    
+
     [super dealloc];
 }
 
@@ -255,7 +255,7 @@
 {
     if (self->_isSwPipe)
     {
-        LOG("           GlassFrameBufferObject unbind"); 
+        LOG("           GlassFrameBufferObject unbind");
         [self _assertContext];
         {
             GLint framebufferCurrent = 0;
@@ -266,7 +266,7 @@
                 fprintf(stderr, "ERROR: unexpected fbo is bound! Expected %d, but found %d\n", self->_fbo, framebufferCurrent);
             }
 
-            if (![GlassApplication syncRenderingDisabled]) {         
+            if (![GlassApplication syncRenderingDisabled]) {
                 glFinish();
             }
             GLuint framebufferToRevertTo = self->_fboToRestore;
@@ -285,10 +285,10 @@
         glMatrixMode(GL_PROJECTION);
         glLoadIdentity();
         glOrtho(0.0f, width, height, 0.0f, -1.0f, 1.0f);
-        
+
         glMatrixMode(GL_MODELVIEW);
         glLoadIdentity();
-        
+
         glEnable(TARGET);
         {
             glActiveTextureARB(GL_TEXTURE0);

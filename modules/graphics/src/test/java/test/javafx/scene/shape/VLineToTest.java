@@ -44,7 +44,7 @@ import static org.junit.Assert.*;
 public class VLineToTest {
 
     @Test public void testAddTo() throws Exception {
-        Path2D path = new Path2D(); 
+        Path2D path = new Path2D();
         path.moveTo(0f, 0f);
         final VLineTo vLineTo = new VLineTo(1f);
         vLineTo.impl_addTo(path);

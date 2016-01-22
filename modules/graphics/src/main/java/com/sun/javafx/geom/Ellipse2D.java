@@ -39,7 +39,7 @@ public class Ellipse2D extends RectangularShape {
      * framing rectangle of this {@code Ellipse2D}.
      */
     public float x;
-    
+
     /**
      * The Y coordinate of the upper-left corner of the
      * framing rectangle of this {@code Ellipse2D}.
@@ -88,7 +88,7 @@ public class Ellipse2D extends RectangularShape {
 
     /**
      * {@inheritDoc}
-     */ 
+     */
     @Override
     public float getY() {
         return y;
@@ -96,7 +96,7 @@ public class Ellipse2D extends RectangularShape {
 
     /**
      * {@inheritDoc}
-     */ 
+     */
     @Override
     public float getWidth() {
         return width;
@@ -142,7 +142,7 @@ public class Ellipse2D extends RectangularShape {
     public RectBounds getBounds() {
         return new RectBounds(x, y, x + width, y + height);
     }
-    
+
     /**
      * {@inheritDoc}
      */
@@ -223,7 +223,7 @@ public class Ellipse2D extends RectangularShape {
      * <code>Ellipse2D</code>.
      * The iterator for this class is multi-threaded safe, which means
      * that this <code>Ellipse2D</code> class guarantees that
-     * modifications to the geometry of this <code>Ellipse2D</code> 
+     * modifications to the geometry of this <code>Ellipse2D</code>
      * object do not affect any iterations of that geometry that
      * are already in process.
      * @param tx an optional <code>BaseTransform</code> to be applied to

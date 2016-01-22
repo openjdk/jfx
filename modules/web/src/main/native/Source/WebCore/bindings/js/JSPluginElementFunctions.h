@@ -53,7 +53,7 @@ namespace WebCore {
             if (proto.isObject() && JSC::jsCast<JSC::JSObject*>(asObject(proto))->hasProperty(exec, propertyName))
                 return false;
         }
-        
+
         return pluginElementCustomGetOwnPropertySlot(exec, propertyName, slot, element);
     }
 

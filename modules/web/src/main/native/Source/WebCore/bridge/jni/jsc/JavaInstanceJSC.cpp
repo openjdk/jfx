@@ -106,7 +106,7 @@ JSValue JavaInstance::stringValue(ExecState* exec) const
         JSValue exceptionDescription
             = (JavaInstance::create(ex, rootObject(), accessControlContext())
                ->createRuntimeObject(exec));
-	exec->vm().throwException(exec, createError(exec,
+    exec->vm().throwException(exec, createError(exec,
                                      (exceptionDescription.toString(exec)
                                       ->value(exec))));
         return jsUndefined();
@@ -138,7 +138,7 @@ JSValue JavaInstance::numberValue(ExecState*) const
     if (aClass->isBooleanClass())
         return jsNumber((int)
                         // Replaced the following line to work around possible GCC bug, see RT-22725
-	                // callJNIMethod<jboolean>(obj, "booleanValue", "()Z"));
+                    // callJNIMethod<jboolean>(obj, "booleanValue", "()Z"));
                         callJNIMethod(obj, JavaTypeBoolean, "booleanValue", "()Z", 0).z);
     return numberValueForNumber(obj);
 }
@@ -195,7 +195,7 @@ JSValue JavaInstance::getMethod(ExecState* exec, PropertyName propertyName)
 JSValue JavaInstance::invokeMethod(ExecState* exec, RuntimeMethod* runtimeMethod)
 {
     ASSERT(exec->vm().apiLock().currentThreadIsHoldingLock());
-    
+
     if (!asObject(runtimeMethod)->inherits(&JavaRuntimeMethod::s_info))
         exec->vm().throwException(exec, createTypeError(exec, "Attempt to invoke non-Java method on Java object."));
 
@@ -233,7 +233,7 @@ JSValue JavaInstance::invokeMethod(ExecState* exec, RuntimeMethod* runtimeMethod
         LOG(LiveConnect, "JavaInstance::invokeMethod unable to find an appropriate method with specified signature");
         return jsUndefined();
     }
-	
+
     Vector<jobject> jArgs(count);
 
     for (int i = 0; i < count; i++) {

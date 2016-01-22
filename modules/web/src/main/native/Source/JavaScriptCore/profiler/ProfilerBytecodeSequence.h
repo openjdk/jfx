@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef ProfilerBytecodeSequence_h
@@ -43,7 +43,7 @@ class BytecodeSequence {
 public:
     BytecodeSequence(CodeBlock*);
     ~BytecodeSequence();
-    
+
     // Note that this data structure is not indexed by bytecode index.
     unsigned size() const { return m_sequence.size(); }
     const Bytecode& at(unsigned i) const { return m_sequence[i]; }
@@ -53,7 +53,7 @@ public:
 
 protected:
     void addSequenceProperties(ExecState*, JSObject*) const;
-    
+
 private:
     Vector<CString> m_header;
     Vector<Bytecode> m_sequence;

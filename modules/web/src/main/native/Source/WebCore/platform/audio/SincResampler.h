@@ -37,12 +37,12 @@ namespace WebCore {
 // SincResampler is a high-quality sample-rate converter.
 
 class SincResampler {
-public:   
+public:
     // scaleFactor == sourceSampleRate / destinationSampleRate
     // kernelSize can be adjusted for quality (higher is better)
     // numberOfKernelOffsets is used for interpolation and is the number of sub-sample kernel shifts.
     SincResampler(double scaleFactor, unsigned kernelSize = 32, unsigned numberOfKernelOffsets = 32);
-    
+
     // Processes numberOfSourceFrames from source to produce numberOfSourceFrames / scaleFactor frames in destination.
     void process(const float* source, float* destination, unsigned numberOfSourceFrames);
 
@@ -52,7 +52,7 @@ public:
 protected:
     void initializeKernel();
     void consumeSource(float* buffer, unsigned numberOfSourceFrames);
-    
+
     double m_scaleFactor;
     unsigned m_kernelSize;
     unsigned m_numberOfKernelOffsets;
@@ -60,11 +60,11 @@ protected:
     // m_kernelStorage has m_numberOfKernelOffsets kernels back-to-back, each of size m_kernelSize.
     // The kernel offsets are sub-sample shifts of a windowed sinc() shifted from 0.0 to 1.0 sample.
     AudioFloatArray m_kernelStorage;
-    
+
     // m_virtualSourceIndex is an index on the source input buffer with sub-sample precision.
     // It must be double precision to avoid drift.
     double m_virtualSourceIndex;
-    
+
     // This is the number of destination frames we generate per processing pass on the buffer.
     unsigned m_blockSize;
 
@@ -73,9 +73,9 @@ protected:
 
     const float* m_source;
     unsigned m_sourceFramesAvailable;
-    
+
     // m_sourceProvider is used to provide the audio input stream to the resampler.
-    AudioSourceProvider* m_sourceProvider;    
+    AudioSourceProvider* m_sourceProvider;
 
     // The buffer is primed once at the very beginning of processing.
     bool m_isBufferPrimed;

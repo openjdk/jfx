@@ -21,7 +21,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -63,8 +63,8 @@ Image* Image::nullImage()
 
 bool Image::supportsType(const String& type)
 {
-    return MIMETypeRegistry::isSupportedImageResourceMIMEType(type); 
-} 
+    return MIMETypeRegistry::isSupportedImageResourceMIMEType(type);
+}
 
 bool Image::setData(PassRefPtr<SharedBuffer> data, bool allDataReceived)
 {
@@ -75,7 +75,7 @@ bool Image::setData(PassRefPtr<SharedBuffer> data, bool allDataReceived)
     int length = m_encodedImageData->size();
     if (!length)
         return true;
-    
+
     return dataChanged(allDataReceived);
 }
 
@@ -83,7 +83,7 @@ void Image::fillWithSolidColor(GraphicsContext* ctxt, const FloatRect& dstRect, 
 {
     if (!color.alpha())
         return;
-    
+
     CompositeOperator previousOperator = ctxt->compositeOperation();
     ctxt->setCompositeOperation(!color.hasAlpha() && op == CompositeSourceOver ? CompositeCopy : op);
     ctxt->fillRect(dstRect, color, styleColorSpace);
@@ -96,7 +96,7 @@ void Image::draw(GraphicsContext* ctx, const FloatRect& dstRect, const FloatRect
 }
 
 void Image::drawTiled(GraphicsContext* ctxt, const FloatRect& destRect, const FloatPoint& srcPoint, const FloatSize& scaledTileSize, ColorSpace styleColorSpace, CompositeOperator op, BlendMode blendMode)
-{    
+{
     if (mayFillWithSolidColor()) {
         fillWithSolidColor(ctxt, destRect, solidColor(), styleColorSpace, op);
         return;
@@ -120,8 +120,8 @@ void Image::drawTiled(GraphicsContext* ctxt, const FloatRect& destRect, const Fl
     oneTileRect.setX(destRect.x() + fmodf(fmodf(-srcPoint.x(), actualTileSize.width()) - actualTileSize.width(), actualTileSize.width()));
     oneTileRect.setY(destRect.y() + fmodf(fmodf(-srcPoint.y(), actualTileSize.height()) - actualTileSize.height(), actualTileSize.height()));
     oneTileRect.setSize(scaledTileSize);
-    
-    // Check and see if a single draw of the image can cover the entire area we are supposed to tile.    
+
+    // Check and see if a single draw of the image can cover the entire area we are supposed to tile.
     if (oneTileRect.contains(destRect) && !ctxt->drawLuminanceMask()) {
         FloatRect visibleSrcRect;
         visibleSrcRect.setX((destRect.x() - oneTileRect.x()) / scale.width());
@@ -181,7 +181,7 @@ void Image::drawTiled(GraphicsContext* ctxt, const FloatRect& destRect, const Fl
         }
         return;
     }
-#endif    
+#endif
 
     AffineTransform patternTransform = AffineTransform().scaleNonUniform(scale.width(), scale.height());
     FloatRect tileRect(FloatPoint(), intrinsicTileSize);
@@ -197,12 +197,12 @@ void Image::drawTiled(GraphicsContext* ctxt, const FloatRect& destRect, const Fl
 // FIXME: Merge with the other drawTiled eventually, since we need a combination of both for some things.
 void Image::drawTiled(GraphicsContext* ctxt, const FloatRect& dstRect, const FloatRect& srcRect,
     const FloatSize& tileScaleFactor, TileRule hRule, TileRule vRule, ColorSpace styleColorSpace, CompositeOperator op)
-{    
+{
     if (mayFillWithSolidColor()) {
         fillWithSolidColor(ctxt, dstRect, solidColor(), styleColorSpace, op);
         return;
     }
-    
+
     // FIXME: We do not support 'round' or 'space' yet. For now just map them to 'repeat'.
     if (hRule == RoundTile || hRule == SpaceTile)
         hRule = RepeatTile;
@@ -220,9 +220,9 @@ void Image::drawTiled(GraphicsContext* ctxt, const FloatRect& dstRect, const Flo
     if (hRule == Image::RepeatTile)
         hPhase -= (dstRect.width() - scaledTileWidth) / 2;
     if (vRule == Image::RepeatTile)
-        vPhase -= (dstRect.height() - scaledTileHeight) / 2; 
+        vPhase -= (dstRect.height() - scaledTileHeight) / 2;
     FloatPoint patternPhase(dstRect.x() - hPhase, dstRect.y() - vPhase);
-    
+
     drawPattern(ctxt, srcRect, patternTransform, patternPhase, styleColorSpace, op, dstRect);
 
 #if PLATFORM(IOS)

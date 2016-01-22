@@ -51,7 +51,7 @@ public class ExpressionHelperBase {
                 listeners[index] = null;
             }
         }
-        
+
         return size;
     }
 

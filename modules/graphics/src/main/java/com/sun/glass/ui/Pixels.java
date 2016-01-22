@@ -90,11 +90,11 @@ public abstract class Pixels {
         if ((this.width <= 0) || (this.height <= 0) || ((this.width * this.height * 4) > this.bytes.capacity())) {
             throw new IllegalArgumentException("Too small byte buffer size "+this.width+"x"+this.height+" ["+(this.width*this.height*4)+"] > "+this.bytes.capacity());
         }
-        
+
         this.ints = null;
         this.scale = 1.0f;
     }
-    
+
     protected Pixels(final int width, final int height, IntBuffer pixels) {
         this.width = width;
         this.height = height;
@@ -103,7 +103,7 @@ public abstract class Pixels {
         if ((this.width <= 0) || (this.height <= 0) || ((this.width * this.height) > this.ints.capacity())) {
             throw new IllegalArgumentException("Too small int buffer size "+this.width+"x"+this.height+" ["+(this.width*this.height)+"] > "+this.ints.capacity());
         }
-        
+
         this.bytes = null;
         this.scale = 1.0f;
     }
@@ -116,7 +116,7 @@ public abstract class Pixels {
         if ((this.width <= 0) || (this.height <= 0) || ((this.width * this.height) > this.ints.capacity())) {
             throw new IllegalArgumentException("Too small int buffer size "+this.width+"x"+this.height+" ["+(this.width*this.height)+"] > "+this.ints.capacity());
         }
-        
+
         this.bytes = null;
         this.scale = scale;
     }
@@ -125,7 +125,7 @@ public abstract class Pixels {
         Application.checkEventThread();
         return this.scale;
     }
-    
+
     public final float getScaleUnsafe() {
         return this.scale;
     }
@@ -143,11 +143,11 @@ public abstract class Pixels {
         Application.checkEventThread();
         return this.height;
     }
-    
+
     public final int getHeightUnsafe() {
         return this.height;
     }
-    
+
     public final int getBytesPerComponent() {
         Application.checkEventThread();
         return this.bytesPerComponent;
@@ -205,7 +205,7 @@ public abstract class Pixels {
             _attachByte(ptr, this.width, this.height, this.bytes, array, array != null ? this.bytes.arrayOffset() : 0);
         }
     }
-    
+
     protected abstract void _fillDirectByteBuffer(ByteBuffer bb);
     protected abstract void _attachInt(long ptr, int w, int h, IntBuffer ints, int[] array, int offset);
     protected abstract void _attachByte(long ptr, int w, int h, ByteBuffer bytes, byte[] array, int offset);

@@ -182,7 +182,7 @@ void FillLayer::fillUnsetProperties()
                 pattern = this;
         }
     }
-    
+
     for (curr = this; curr && curr->isYPositionSet(); curr = curr->next()) { }
     if (curr && curr != this) {
         // We need to fill in the remaining values with the pattern specified.
@@ -208,7 +208,7 @@ void FillLayer::fillUnsetProperties()
                 pattern = this;
         }
     }
-    
+
     for (curr = this; curr && curr->isClipSet(); curr = curr->next()) { }
     if (curr && curr != this) {
         // We need to fill in the remaining values with the pattern specified.
@@ -274,7 +274,7 @@ void FillLayer::fillUnsetProperties()
                 pattern = this;
         }
     }
-    
+
     for (curr = this; curr && curr->isSizeSet(); curr = curr->next()) { }
     if (curr && curr != this) {
         // We need to fill in the remaining values with the pattern specified.

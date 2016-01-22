@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef CallLinkStatus_h
@@ -50,16 +50,16 @@ public:
         , m_isProved(false)
     {
     }
-    
+
     static CallLinkStatus takesSlowPath()
     {
         CallLinkStatus result;
         result.m_couldTakeSlowPath = true;
         return result;
     }
-    
+
     explicit CallLinkStatus(JSValue);
-    
+
     CallLinkStatus(ExecutableBase* executable, Structure* structure)
         : m_executable(executable)
         , m_structure(structure)
@@ -68,13 +68,13 @@ public:
     {
         ASSERT(!!executable == !!structure);
     }
-    
+
     CallLinkStatus& setIsProved(bool isProved)
     {
         m_isProved = isProved;
         return *this;
     }
-    
+
     static CallLinkStatus computeFor(CodeBlock*, unsigned bytecodeIndex);
 
 #if ENABLE(JIT)
@@ -82,24 +82,24 @@ public:
     // exited.
     static CallLinkStatus computeFor(const ConcurrentJITLocker&, CallLinkInfo&);
 #endif
-    
+
     typedef HashMap<CodeOrigin, CallLinkStatus, CodeOriginApproximateHash> ContextMap;
-    
+
     // Computes all of the statuses of the DFG code block. Doesn't include statuses that had
     // no information. Currently we use this when compiling FTL code, to enable polyvariant
     // inlining.
     static void computeDFGStatuses(CodeBlock* dfgCodeBlock, ContextMap&);
-    
+
     // Helper that first consults the ContextMap and then does computeFor().
     static CallLinkStatus computeFor(CodeBlock*, CodeOrigin, const ContextMap&);
-    
+
     bool isSet() const { return m_callTarget || m_executable || m_couldTakeSlowPath; }
-    
+
     bool operator!() const { return !isSet(); }
-    
+
     bool couldTakeSlowPath() const { return m_couldTakeSlowPath; }
     bool isClosureCall() const { return m_executable && !m_callTarget; }
-    
+
     JSValue callTarget() const { return m_callTarget; }
     JSFunction* function() const;
     InternalFunction* internalFunction() const;
@@ -108,9 +108,9 @@ public:
     Structure* structure() const { return m_structure; }
     bool isProved() const { return m_isProved; }
     bool canOptimize() const { return (m_callTarget || m_executable) && !m_couldTakeSlowPath; }
-    
+
     void dump(PrintStream&) const;
-    
+
 private:
     void makeClosureCall()
     {
@@ -118,9 +118,9 @@ private:
         // Turn this into a closure call.
         m_callTarget = JSValue();
     }
-    
+
     static CallLinkStatus computeFromLLInt(const ConcurrentJITLocker&, CodeBlock*, unsigned bytecodeIndex);
-    
+
     JSValue m_callTarget;
     ExecutableBase* m_executable;
     Structure* m_structure;

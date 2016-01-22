@@ -45,51 +45,51 @@ namespace JSC {
             // Check that we have the expected number of arguments
             m_failures.append(branch32(NotEqual, payloadFor(JSStack::ArgumentCount), TrustedImm32(expectedArgCount + 1)));
         }
-        
+
         explicit SpecializedThunkJIT(VM* vm)
             : JSInterfaceJIT(vm)
         {
             emitFunctionPrologue();
         }
-        
+
         void loadDoubleArgument(int argument, FPRegisterID dst, RegisterID scratch)
         {
             unsigned src = CallFrame::argumentOffset(argument);
             m_failures.append(emitLoadDouble(src, dst, scratch));
         }
-        
+
         void loadCellArgument(int argument, RegisterID dst)
         {
             unsigned src = CallFrame::argumentOffset(argument);
             m_failures.append(emitLoadJSCell(src, dst));
         }
-        
+
         void loadJSStringArgument(VM& vm, int argument, RegisterID dst)
         {
             loadCellArgument(argument, dst);
             m_failures.append(branchPtr(NotEqual, Address(dst, JSCell::structureOffset()), TrustedImmPtr(vm.stringStructure.get())));
         }
-        
+
         void loadArgumentWithSpecificClass(const ClassInfo* classInfo, int argument, RegisterID dst, RegisterID scratch)
         {
             loadCellArgument(argument, dst);
             loadPtr(Address(dst, JSCell::structureOffset()), scratch);
             appendFailure(branchPtr(NotEqual, Address(scratch, Structure::classInfoOffset()), TrustedImmPtr(classInfo)));
         }
-        
+
         void loadInt32Argument(int argument, RegisterID dst, Jump& failTarget)
         {
             unsigned src = CallFrame::argumentOffset(argument);
             failTarget = emitLoadInt32(src, dst);
         }
-        
+
         void loadInt32Argument(int argument, RegisterID dst)
         {
             Jump conversionFailed;
             loadInt32Argument(argument, dst, conversionFailed);
             m_failures.append(conversionFailed);
         }
-        
+
         void appendFailure(const Jump& failure)
         {
             m_failures.append(failure);
@@ -111,7 +111,7 @@ namespace JSC {
             ret();
         }
 #endif
-        
+
         void returnDouble(FPRegisterID src)
         {
 #if USE(JSVALUE64)
@@ -159,7 +159,7 @@ namespace JSC {
             emitFunctionEpilogue();
             ret();
         }
-        
+
         MacroAssemblerCodeRef finalize(MacroAssemblerCodePtr fallback, const char* thunkKind)
         {
             LinkBuffer patchBuffer(*m_vm, this, GLOBAL_THUNK_ID);
@@ -175,7 +175,7 @@ namespace JSC {
         {
             m_calls.append(std::make_pair(call(), function));
         }
-        
+
         void callDoubleToDoublePreservingReturn(FunctionPtr function)
         {
             if (!isX86())
@@ -202,7 +202,7 @@ namespace JSC {
             move(TrustedImm32(JSValue::CellTag), regT1);
 #endif
         }
-        
+
         MacroAssembler::JumpList m_failures;
         Vector<std::pair<Call, FunctionPtr>> m_calls;
     };

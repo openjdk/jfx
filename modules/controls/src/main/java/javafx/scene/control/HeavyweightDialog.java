@@ -44,9 +44,9 @@ import javafx.stage.Window;
 class HeavyweightDialog extends FXDialog {
 
     /**************************************************************************
-     * 
+     *
      * Private fields
-     * 
+     *
      **************************************************************************/
 
     final Stage stage = new Stage() {
@@ -70,20 +70,20 @@ class HeavyweightDialog extends FXDialog {
 
     private double prefX = Double.NaN;
     private double prefY = Double.NaN;
-    
+
 
 
     /**************************************************************************
-     * 
+     *
      * Constructors
-     * 
+     *
      **************************************************************************/
 
     HeavyweightDialog(Dialog<?> dialog) {
         this.dialog = dialog;
 
         stage.setResizable(false);
-        
+
         stage.setOnCloseRequest(windowEvent -> {
             if (requestPermissionToClose(dialog)) {
                 dialog.close();
@@ -106,19 +106,19 @@ class HeavyweightDialog extends FXDialog {
 
 
     /**************************************************************************
-     * 
+     *
      * Public API
-     * 
+     *
      **************************************************************************/
-    
+
     @Override void initStyle(StageStyle style) {
         stage.initStyle(style);
     }
-    
+
     @Override StageStyle getStyle() {
         return stage.getStyle();
     }
-    
+
     @Override public void initOwner(Window newOwner) {
         updateStageBindings(stage.getOwner(), newOwner);
         stage.initOwner(newOwner);
@@ -127,7 +127,7 @@ class HeavyweightDialog extends FXDialog {
     @Override public Window getOwner() {
         return stage.getOwner();
     }
-    
+
     @Override public void initModality(Modality modality) {
         stage.initModality(modality == null? Modality.APPLICATION_MODAL : modality);
     }
@@ -193,11 +193,11 @@ class HeavyweightDialog extends FXDialog {
     @Override public void setX(double x) {
         stage.setX(x);
     }
-    
+
     @Override public ReadOnlyDoubleProperty xProperty() {
         return stage.xProperty();
     }
-    
+
     // --- y
     @Override public double getY() {
         return stage.getY();
@@ -206,7 +206,7 @@ class HeavyweightDialog extends FXDialog {
     @Override public void setY(double y) {
         stage.setY(y);
     }
-    
+
     @Override public ReadOnlyDoubleProperty yProperty() {
         return stage.yProperty();
     }
@@ -226,7 +226,7 @@ class HeavyweightDialog extends FXDialog {
     @Override ReadOnlyDoubleProperty widthProperty() {
         return stage.widthProperty();
     }
-    
+
     @Override void setWidth(double width) {
         stage.setWidth(width);
     }

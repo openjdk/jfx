@@ -85,7 +85,7 @@ public class TouchInputSupport
                     curView.notifyNextTouchEvent(TouchEvent.TOUCH_RELEASED, e.getKey(), coord.x, coord.y, coord.xAbs, coord.yAbs);
                 }
                 curView.notifyEndTouchEvent();
-            } 
+            }
             touch.clear();
             touchCount = 0;
             if (listener != null ) {
@@ -133,7 +133,7 @@ public class TouchInputSupport
                 System.err.println("Unknown touch state: " + state);
                 return;
         }
-        
+
         if (filterTouchCoordinates) {
             state = filterTouchInputState(state, id, x, y, xAbs, yAbs);
         }

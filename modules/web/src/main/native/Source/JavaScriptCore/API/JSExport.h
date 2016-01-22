@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #import <JavaScriptCore/JavaScriptCore.h>
@@ -78,7 +78,7 @@
 </pre>
 
  Data properties that are created on the prototype or constructor objects have
- the attributes: <code>writable:true</code>, <code>enumerable:false</code>, <code>configurable:true</code>. 
+ the attributes: <code>writable:true</code>, <code>enumerable:false</code>, <code>configurable:true</code>.
  Accessor properties have the attributes: <code>enumerable:false</code> and <code>configurable:true</code>.
 
  If an instance of <code>MyClass</code> is converted to a JavaScript value, the resulting
@@ -106,7 +106,7 @@
     for the given type. Support is built in for CGPoint, NSRange, CGRect, and
     CGSize.
 
- block types: Blocks can only be passed if they had been converted 
+ block types: Blocks can only be passed if they had been converted
     successfully by valueWithObject/toObject previously.
 
  For any interface that conforms to JSExport the normal copying conversion for

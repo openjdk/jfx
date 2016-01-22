@@ -178,7 +178,7 @@ inline ExcessRegion* ExcessRegion::create(size_t blockSize)
 {
     PageAllocationAligned allocation = PageAllocationAligned::allocate(s_regionSize, s_regionSize, OSAllocator::JSGCHeapPages);
     ASSERT(static_cast<bool>(allocation));
-    return new ExcessRegion(allocation, blockSize, s_regionSize / blockSize); 
+    return new ExcessRegion(allocation, blockSize, s_regionSize / blockSize);
 }
 
 inline ExcessRegion* ExcessRegion::createCustomSize(size_t blockSize, size_t blockAlignment)

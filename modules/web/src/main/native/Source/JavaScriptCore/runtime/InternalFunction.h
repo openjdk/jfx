@@ -41,9 +41,9 @@ namespace JSC {
         const String displayName(ExecState*);
         const String calculatedDisplayName(ExecState*);
 
-        static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue proto) 
-        { 
-            return Structure::create(vm, globalObject, proto, TypeInfo(ObjectType, StructureFlags), info()); 
+        static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue proto)
+        {
+            return Structure::create(vm, globalObject, proto, TypeInfo(ObjectType, StructureFlags), info());
         }
 
     protected:

@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -100,7 +100,7 @@ void SparseArrayValueMap::putEntry(ExecState* exec, JSObject* array, unsigned i,
             throwTypeError(exec, StrictModeReadonlyPropertyWriteError);
         return;
     }
-    
+
     entry.put(exec, array, this, value, shouldThrow);
 }
 
@@ -176,7 +176,7 @@ JSValue SparseArrayEntry::getNonSparseMode() const
 void SparseArrayValueMap::visitChildren(JSCell* thisObject, SlotVisitor& visitor)
 {
     Base::visitChildren(thisObject, visitor);
-    
+
     SparseArrayValueMap* thisMap = jsCast<SparseArrayValueMap*>(thisObject);
     iterator end = thisMap->m_map.end();
     for (iterator it = thisMap->m_map.begin(); it != end; ++it)

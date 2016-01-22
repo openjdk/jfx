@@ -55,7 +55,7 @@ public:
                 return static_cast<T*>(next);
             }
         }
-        
+
         return 0;
     }
 private:

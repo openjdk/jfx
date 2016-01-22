@@ -61,7 +61,7 @@ import javafx.stage.Window;
  *
  */
 public class DocumentDragSource extends AbstractDragSource {
-    
+
     private final List<FXOMObject> draggedObjects = new ArrayList<>();
     private final FXOMObject hitObject;
     private final double hitX;
@@ -72,23 +72,23 @@ public class DocumentDragSource extends AbstractDragSource {
     private final boolean singleContextMenuOnly;
 
     public DocumentDragSource(
-            List<FXOMObject> draggedObjects, 
+            List<FXOMObject> draggedObjects,
             FXOMObject hitObject,
             double hitX,
             double hitY,
             Window ownerWindow) {
         super(ownerWindow);
-        
+
         assert draggedObjects != null;
         assert hitObject != null;
         assert draggedObjects.contains(hitObject);
-        
+
         this.draggedObjects.addAll(draggedObjects);
         this.hitObject = hitObject;
         this.hitX = hitX;
         this.hitY = hitY;
         this.nodeOnly = checkForNodeOnly();
-        
+
         if (draggedObjects.size() != 1) {
             this.singleImageViewOnly = false;
             this.singleTooltipOnly = false;
@@ -109,23 +109,23 @@ public class DocumentDragSource extends AbstractDragSource {
     }
 
     public DocumentDragSource(
-            List<FXOMObject> draggedObjects, 
+            List<FXOMObject> draggedObjects,
             FXOMObject hitObject,
             Window ownerWindow) {
         super(ownerWindow);
-        
+
         assert draggedObjects != null;
         assert hitObject != null;
         assert draggedObjects.contains(hitObject);
-        
+
         this.draggedObjects.addAll(draggedObjects);
         this.hitObject = hitObject;
-        
+
         final Point2D hitPoint = computeDefaultHit(hitObject);
         this.hitX = hitPoint.getX();
         this.hitY = hitPoint.getY();
         this.nodeOnly = checkForNodeOnly();
-        
+
         if (draggedObjects.size() != 1) {
             this.singleImageViewOnly = false;
             this.singleTooltipOnly = false;
@@ -144,7 +144,7 @@ public class DocumentDragSource extends AbstractDragSource {
             }
         }
     }
-    
+
     private static Point2D computeDefaultHit(FXOMObject fxomObject) {
         final double hitX, hitY;
         if (fxomObject.getSceneGraphObject() instanceof Node) {
@@ -156,14 +156,14 @@ public class DocumentDragSource extends AbstractDragSource {
             hitX = 0.0;
             hitY = 0.0;
         }
-        
+
         return new Point2D(hitX,hitY);
     }
 
     /*
      * AbstractDragSource
      */
-    
+
     @Override
     public boolean isAcceptable() {
         /*
@@ -172,7 +172,7 @@ public class DocumentDragSource extends AbstractDragSource {
          * (because an Axis cannot be disconnected from its parent Chart).
          * In that case, this drag source is declared as 'non acceptable'.
          */
-        
+
         boolean result = true;
         for (FXOMObject draggedObject : draggedObjects) {
             if (draggedObject.getSceneGraphObject() instanceof Axis) {
@@ -183,11 +183,11 @@ public class DocumentDragSource extends AbstractDragSource {
                 }
             }
         }
-        
+
         return result;
     }
 
-    
+
     @Override
     public List<FXOMObject> getDraggedObjects() {
         return draggedObjects;
@@ -210,12 +210,12 @@ public class DocumentDragSource extends AbstractDragSource {
 
     @Override
     public ClipboardContent makeClipboardContent() {
-        
+
         // Encode the dragged objects in FXML
         final ClipboardEncoder encoder = new ClipboardEncoder(draggedObjects);
         assert encoder.isEncodable();
         final ClipboardContent result = encoder.makeEncoding();
-        
+
         return result;
     }
 
@@ -243,7 +243,7 @@ public class DocumentDragSource extends AbstractDragSource {
     @Override
     public Node makeShadow() {
         final Group result = new Group();
-        
+
         result.getStylesheets().add(EditorController.getStylesheet().toString());
 
         for (FXOMObject draggedObject : draggedObjects) {
@@ -256,7 +256,7 @@ public class DocumentDragSource extends AbstractDragSource {
                 result.getChildren().add(shadowNode);
             }
         }
-        
+
         // Translate the group so that it renders (hitX, hitY) above (layoutX, layoutY).
         final Point2D hitPoint;
         if (hitObject.getSceneGraphObject() instanceof Node) {
@@ -267,14 +267,14 @@ public class DocumentDragSource extends AbstractDragSource {
         }
         result.setTranslateX(-hitPoint.getX());
         result.setTranslateY(-hitPoint.getY());
-        
+
         return result;
     }
 
     @Override
     public String makeDropJobDescription() {
         final String result;
-        
+
         if (draggedObjects.size() == 1) {
             final FXOMObject draggedObject = draggedObjects.get(0);
             final Object sceneGraphObject = draggedObject.getSceneGraphObject();
@@ -295,7 +295,7 @@ public class DocumentDragSource extends AbstractDragSource {
                 }
             }
             final boolean homogeneous = (classes.size() == 1) && (unresolvedCount == 0);
-            
+
             if (homogeneous) {
                 final Class<?> singleClass = classes.iterator().next();
                 result = I18N.getString("drop.job.move.multiple.homogeneous",
@@ -306,7 +306,7 @@ public class DocumentDragSource extends AbstractDragSource {
                         draggedObjects.size());
             }
         }
-        
+
         return result;
     }
 
@@ -329,21 +329,21 @@ public class DocumentDragSource extends AbstractDragSource {
     public boolean isSingleContextMenuOnly() {
         return singleContextMenuOnly;
     }
-    
+
     /*
      * Object
      */
-    
+
     @Override
     public String toString() {
         return getClass().getSimpleName() + ": hitObject=(" + hitObject + ")"; //NOI18N
     }
-    
-    
+
+
     /*
      * Private
      */
-    
+
     private boolean checkForNodeOnly() {
         int nonNodeCount = 0;
         for (FXOMObject draggedObject : draggedObjects) {
@@ -351,7 +351,7 @@ public class DocumentDragSource extends AbstractDragSource {
                 nonNodeCount++;
             }
         }
-        
+
         return nonNodeCount == 0;
     }
 }

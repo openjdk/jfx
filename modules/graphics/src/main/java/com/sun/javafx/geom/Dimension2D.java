@@ -26,7 +26,7 @@
 package com.sun.javafx.geom;
 
 /**
- * The <code>Dimension2D</code> class is to encapsulate a width 
+ * The <code>Dimension2D</code> class is to encapsulate a width
  * and a height dimension.
  * <p>
  */

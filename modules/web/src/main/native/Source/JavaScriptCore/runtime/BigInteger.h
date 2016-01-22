@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef BigInteger_h
@@ -88,7 +88,7 @@ public:
             ASSERT(result == static_cast<uint32_t>(result));
             uint64_t remainder = dividend % static_cast<uint64_t>(divisor);
             ASSERT(remainder == static_cast<uint32_t>(remainder));
-            
+
             m_values[i] = static_cast<uint32_t>(result);
             carry = static_cast<uint32_t>(remainder);
         }

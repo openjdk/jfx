@@ -49,7 +49,7 @@ public class ReflectionTest extends EffectsTestBase {
         pulse();
         assertEquals(1.0f, ((com.sun.scenario.effect.Reflection)effect.impl_getImpl()).getTopOpacity(), 1e-100);
     }
-    
+
     @Test
     public void testDefaultTopOpacity() {
         // default value should be 0.5
@@ -58,7 +58,7 @@ public class ReflectionTest extends EffectsTestBase {
         pulse();
         assertEquals(0.5f, ((com.sun.scenario.effect.Reflection)effect.impl_getImpl()).getTopOpacity(), 1e-100);
     }
-    
+
     @Test
     public void testMinTopOpacity() {
         // 0 should be ok
@@ -75,12 +75,12 @@ public class ReflectionTest extends EffectsTestBase {
         // 1 should be ok
         effect.setTopOpacity(1);
         // try setting value greater than maximal
-        effect.setTopOpacity(1.1f); 
+        effect.setTopOpacity(1.1f);
         assertEquals(1.1f, effect.getTopOpacity(), 1e-100);
         pulse();
         assertEquals(1f, ((com.sun.scenario.effect.Reflection)effect.impl_getImpl()).getTopOpacity(), 1e-100);
-    }    
-    
+    }
+
     @Test
     public void testSetBottomOpacity() {
         // try setting correct value
@@ -89,7 +89,7 @@ public class ReflectionTest extends EffectsTestBase {
         pulse();
         assertEquals(1.0f, ((com.sun.scenario.effect.Reflection)effect.impl_getImpl()).getBottomOpacity(), 1e-100);
     }
-    
+
     @Test
     public void testDefaultBottomOpacity() {
         // default value should be 1
@@ -98,7 +98,7 @@ public class ReflectionTest extends EffectsTestBase {
         pulse();
         assertEquals(0f, ((com.sun.scenario.effect.Reflection)effect.impl_getImpl()).getBottomOpacity(), 1e-100);
     }
-    
+
     @Test
     public void testMinBottomOpacity() {
         // 0 should be ok
@@ -107,7 +107,7 @@ public class ReflectionTest extends EffectsTestBase {
         effect.setBottomOpacity(-0.1f);
         assertEquals(-0.1f, effect.getBottomOpacity(), 1e-100);
         pulse();
-        assertEquals(0f, ((com.sun.scenario.effect.Reflection)effect.impl_getImpl()).getBottomOpacity(), 1e-100);       
+        assertEquals(0f, ((com.sun.scenario.effect.Reflection)effect.impl_getImpl()).getBottomOpacity(), 1e-100);
     }
 
     @Test
@@ -118,9 +118,9 @@ public class ReflectionTest extends EffectsTestBase {
         effect.setBottomOpacity(1.1f);
         assertEquals(1.1f, effect.getBottomOpacity(), 1e-100);
         pulse();
-        assertEquals(1f, ((com.sun.scenario.effect.Reflection)effect.impl_getImpl()).getBottomOpacity(), 1e-100);        
-    }    
-    
+        assertEquals(1f, ((com.sun.scenario.effect.Reflection)effect.impl_getImpl()).getBottomOpacity(), 1e-100);
+    }
+
     @Test
     public void testSetFraction() {
         // try setting correct value
@@ -129,7 +129,7 @@ public class ReflectionTest extends EffectsTestBase {
         pulse();
         assertEquals(1.0f, ((com.sun.scenario.effect.Reflection)effect.impl_getImpl()).getFraction(), 1e-100);
     }
-    
+
     @Test
     public void testDefaultFraction() {
         // default value should be 0.75
@@ -138,7 +138,7 @@ public class ReflectionTest extends EffectsTestBase {
         pulse();
         assertEquals(0.75f, ((com.sun.scenario.effect.Reflection)effect.impl_getImpl()).getFraction(), 1e-100);
     }
-    
+
     @Test
     public void testMinFraction() {
         // 0 should be ok
@@ -147,7 +147,7 @@ public class ReflectionTest extends EffectsTestBase {
         effect.setFraction(-0.1f);
         assertEquals(-0.1f, effect.getFraction(), 1e-100);
         pulse();
-        assertEquals(0f, ((com.sun.scenario.effect.Reflection)effect.impl_getImpl()).getFraction(), 1e-100);      
+        assertEquals(0f, ((com.sun.scenario.effect.Reflection)effect.impl_getImpl()).getFraction(), 1e-100);
     }
 
     @Test
@@ -160,7 +160,7 @@ public class ReflectionTest extends EffectsTestBase {
         pulse();
         assertEquals(1f, ((com.sun.scenario.effect.Reflection)effect.impl_getImpl()).getFraction(), 1e-100);
     }
-    
+
     @Test
     public void testSetTopOffset() {
         // try setting correct value
@@ -169,7 +169,7 @@ public class ReflectionTest extends EffectsTestBase {
         pulse();
         assertEquals(1.0f, ((com.sun.scenario.effect.Reflection)effect.impl_getImpl()).getTopOffset(), 1e-100);
     }
-    
+
     @Test
     public void testDefaultTopOffset() {
         // default value should be 0

@@ -66,7 +66,7 @@ public class ImagePool {
         System.out.println("pixels created:    " + pixelsCreated);
         System.out.println("images accessed:   " + numAccessed);
         System.out.println("pixels accessed:   " + pixelsAccessed);
-        if (numEffects != 0) { 
+        if (numEffects != 0) {
             double avgImgs = ((double) numAccessed) / numEffects;
             double avgPxls = ((double) pixelsAccessed) / numEffects;
             System.out.println("images per effect: " + avgImgs);

@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef ExpressionRangeInfo_h
@@ -64,7 +64,7 @@ struct ExpressionRangeInfo {
     };
 
     enum {
-        MaxOffset = (1 << 7) - 1, 
+        MaxOffset = (1 << 7) - 1,
         MaxDivot = (1 << 25) - 1,
         MaxFatLineModeLine = (1 << 22) - 1,
         MaxFatLineModeColumn = (1 << 8) - 1,

@@ -70,9 +70,9 @@ static UText* uTextLatin1Clone(UText* destination, const UText* source, UBool de
     UText* result = utext_setup(destination, sizeof(UChar) * UTextWithBufferInlineCapacity, status);
     if (U_FAILURE(*status))
         return destination;
-    
+
     result->providerProperties = source->providerProperties;
-    
+
     // Point at the same position, but with an empty buffer.
     result->chunkNativeStart = source->chunkNativeStart;
     result->chunkNativeLimit = source->chunkNativeStart;
@@ -119,7 +119,7 @@ static UBool uTextLatin1Access(UText* uText, int64_t index, UBool forward)
             return FALSE;
         }
     }
-    
+
     if (forward) {
         uText->chunkNativeStart = index;
         uText->chunkNativeLimit = uText->chunkNativeStart + UTextWithBufferInlineCapacity;
@@ -169,7 +169,7 @@ static int32_t uTextLatin1Extract(UText* uText, int64_t start, int64_t limit, UC
         limit = length;
 
     length = limit - start;
-    
+
     if (!length)
         return 0;
 

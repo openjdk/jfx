@@ -61,7 +61,7 @@ public class ContainerZDropTarget extends AbstractDropTarget {
     public FXOMObject getBeforeChild() {
         return beforeChild;
     }
-    
+
 
     /*
      * AbstractDropTarget
@@ -74,7 +74,7 @@ public class ContainerZDropTarget extends AbstractDropTarget {
     @Override
     public boolean acceptDragSource(AbstractDragSource dragSource) {
         assert dragSource != null;
-        
+
         final boolean result;
         if (dragSource.getDraggedObjects().isEmpty()) {
             result = false;
@@ -82,18 +82,18 @@ public class ContainerZDropTarget extends AbstractDropTarget {
             final DesignHierarchyMask m = new DesignHierarchyMask(targetContainer);
             if (m.isAcceptingSubComponent(dragSource.getDraggedObjects())) {
                 final FXOMObject draggedObject0 = dragSource.getDraggedObjects().get(0);
-                final boolean sameContainer 
+                final boolean sameContainer
                         = targetContainer == draggedObject0.getParentObject();
-                final boolean sameIndex 
-                        = (beforeChild == draggedObject0) 
+                final boolean sameIndex
+                        = (beforeChild == draggedObject0)
                         || (beforeChild == draggedObject0.getNextSlibing());
-                        
+
                 result = (sameContainer == false) || (sameIndex == false);
             } else {
                 result = false;
             }
         }
-        
+
         return result;
     }
 
@@ -102,14 +102,14 @@ public class ContainerZDropTarget extends AbstractDropTarget {
         assert dragSource != null;
         assert dragSource.getDraggedObjects().isEmpty() == false;
         assert editorController != null;
-        
+
         final boolean shouldRefreshSceneGraph = true;
         final BatchJob result = new BatchJob(editorController,
                 shouldRefreshSceneGraph, dragSource.makeDropJobDescription());
-        
+
         final List<FXOMObject> draggedObjects = dragSource.getDraggedObjects();
         final FXOMObject currentParent = draggedObjects.get(0).getParentObject();
-        
+
         if (currentParent == targetContainer) {
             // It's a re-indexing job
             for (FXOMObject draggedObject : dragSource.getDraggedObjects()) {
@@ -120,7 +120,7 @@ public class ContainerZDropTarget extends AbstractDropTarget {
             // It's a reparening job :
             //  - remove drag source objects from their current parent (if any)
             //  - add drag source objects to this drop target
-            
+
             if (currentParent != null) {
                 for (FXOMObject draggedObject : draggedObjects) {
                     result.addSubJob(new RemoveObjectJob(draggedObject,
@@ -136,22 +136,22 @@ public class ContainerZDropTarget extends AbstractDropTarget {
                 assert targetIndex != -1;
             }
             for (FXOMObject draggedObject : draggedObjects) {
-                final Job j = new InsertAsSubComponentJob(draggedObject, 
+                final Job j = new InsertAsSubComponentJob(draggedObject,
                         targetContainer, targetIndex++, editorController);
                 result.addSubJob(j);
             }
         }
-        
+
         assert result.isExecutable();
-        
+
         return result;
     }
-    
+
     @Override
     public boolean isSelectRequiredAfterDrop() {
         return true;
     }
-    
+
     /*
      * Objects
      */
@@ -185,6 +185,6 @@ public class ContainerZDropTarget extends AbstractDropTarget {
     public String toString() {
         return "ContainerZDropTarget{" + "targetContainer=" + targetContainer + ", beforeChild=" + beforeChild + '}'; //NOI18N
     }
-    
-    
+
+
 }

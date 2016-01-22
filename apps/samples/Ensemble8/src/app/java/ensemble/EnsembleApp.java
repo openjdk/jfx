@@ -98,7 +98,7 @@ public class EnsembleApp extends Application {
     private Popover sampleListPopover;
     private SearchPopover searchPopover;
     private MenuBar menuBar;
-    
+
     static {
         System.setProperty("java.net.useSystemProxies", "true");
         Logger.getLogger(EnsembleApp.class.getName()).finer("IS_IPHONE = " + IS_IPHONE);
@@ -154,7 +154,7 @@ public class EnsembleApp extends Application {
                     screenSizeMenuItem("iPhone 5 Portrait", 640, 1136, true, screenSizeToggle));
             menuBar.getMenus().add(menu);
             screenSizeToggle.selectToggle(screenSizeToggle.getToggles().get(0));
-            
+
             root.getChildren().add(menuBar);
         }
         // CREATE TOOLBAR
@@ -207,7 +207,7 @@ public class EnsembleApp extends Application {
             pageBrowser.goHome();
         });
         homeButton.disableProperty().bind(pageBrowser.atHomeProperty());
-        
+
         // create and setup list popover
         sampleListPopover = new Popover();
         sampleListPopover.setPrefWidth(440);
@@ -224,7 +224,7 @@ public class EnsembleApp extends Application {
                 });
             }
         });
-        
+
         // create AndroidStyle menu handling
         if (IS_ANDROID) {
             root.setOnKeyReleased(new EventHandler<KeyEvent>() {
@@ -267,7 +267,7 @@ public class EnsembleApp extends Application {
                 }
             });
         }
-        
+
         // create and setup search popover
         searchPopover = new SearchPopover(searchBox,pageBrowser);
         root.getChildren().add(searchPopover);
@@ -332,8 +332,8 @@ public class EnsembleApp extends Application {
         }, "Trying to reach external styleshet");
         backgroundThread.setDaemon(true);
         backgroundThread.start();
-    }    
-    
+    }
+
     @Override public void start(final Stage stage) throws Exception {
         // CREATE SCENE
         scene = new Scene(root, 1024, 768, Color.BLACK);

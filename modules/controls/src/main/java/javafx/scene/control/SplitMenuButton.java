@@ -59,7 +59,7 @@ import javafx.scene.control.skin.SplitMenuButtonSkin;
  * });
  * </pre>
  * <p>
- * 
+ *
  * <p>
  * MnemonicParsing is enabled by default for SplitMenuButton.
  * </p>

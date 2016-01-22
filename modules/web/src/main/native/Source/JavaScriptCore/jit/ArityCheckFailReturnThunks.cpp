@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -46,27 +46,27 @@ CodeLocationLabel* ArityCheckFailReturnThunks::returnPCsFor(
     VM& vm, unsigned numExpectedArgumentsIncludingThis)
 {
     ASSERT(numExpectedArgumentsIncludingThis >= 1);
-    
+
     numExpectedArgumentsIncludingThis = WTF::roundUpToMultipleOf(
         stackAlignmentRegisters(), numExpectedArgumentsIncludingThis);
-    
+
     {
         ConcurrentJITLocker locker(m_lock);
         if (numExpectedArgumentsIncludingThis < m_nextSize)
             return m_returnPCArrays.last().get();
     }
-    
+
     ASSERT(!isCompilationThread());
-    
+
     numExpectedArgumentsIncludingThis = std::max(numExpectedArgumentsIncludingThis, m_nextSize * 2);
-    
+
     AssemblyHelpers jit(&vm, 0);
-    
+
     Vector<AssemblyHelpers::Label> labels;
-    
+
     for (unsigned size = m_nextSize; size <= numExpectedArgumentsIncludingThis; size += stackAlignmentRegisters()) {
         labels.append(jit.label());
-        
+
         jit.load32(
             AssemblyHelpers::Address(
                 AssemblyHelpers::stackPointerRegister,
@@ -80,11 +80,11 @@ CodeLocationLabel* ArityCheckFailReturnThunks::returnPCsFor(
         jit.lshift32(AssemblyHelpers::TrustedImm32(3), GPRInfo::regT2);
         jit.addPtr(AssemblyHelpers::stackPointerRegister, GPRInfo::regT2);
         jit.loadPtr(GPRInfo::regT2, GPRInfo::regT2);
-        
+
         jit.addPtr(
             AssemblyHelpers::TrustedImm32(size * sizeof(Register)),
             AssemblyHelpers::stackPointerRegister);
-        
+
         // Thunks like ours want to use the return PC to figure out where things
         // were saved. So, we pay it forward.
         jit.store32(
@@ -93,12 +93,12 @@ CodeLocationLabel* ArityCheckFailReturnThunks::returnPCsFor(
                 AssemblyHelpers::stackPointerRegister,
                 (JSStack::ArgumentCount - JSStack::CallerFrameAndPCSize) * sizeof(Register) +
                 PayloadOffset));
-        
+
         jit.jump(GPRInfo::regT2);
     }
-    
+
     LinkBuffer linkBuffer(vm, &jit, GLOBAL_THUNK_ID);
-    
+
     unsigned returnPCsSize = numExpectedArgumentsIncludingThis / stackAlignmentRegisters() + 1;
     std::unique_ptr<CodeLocationLabel[]> returnPCs =
         std::make_unique<CodeLocationLabel[]>(returnPCsSize);
@@ -119,7 +119,7 @@ CodeLocationLabel* ArityCheckFailReturnThunks::returnPCsFor(
         m_refs.append(FINALIZE_CODE(linkBuffer, ("Arity check fail return thunks for up to numArgs = %u", numExpectedArgumentsIncludingThis)));
         m_nextSize = numExpectedArgumentsIncludingThis + stackAlignmentRegisters();
     }
-    
+
     return result;
 }
 

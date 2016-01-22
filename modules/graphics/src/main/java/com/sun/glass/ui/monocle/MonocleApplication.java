@@ -112,7 +112,7 @@ public final class MonocleApplication extends Application {
     protected void runLoop(Runnable launchable) {
         runnableProcessor.invokeLater(launchable);
         long stackSize = AccessController.doPrivileged(
-                (PrivilegedAction<Long>) 
+                (PrivilegedAction<Long>)
                         () -> Long.getLong("monocle.stackSize", 0));
         Thread t = new Thread(
                 new ThreadGroup("Event"),

@@ -83,7 +83,7 @@ public:
     AccessibilityObject* rootObject();
     // Returns the root object for a specific frame.
     AccessibilityObject* rootObjectForFrame(Frame*);
-    
+
     // For AX objects with elements that back them.
     AccessibilityObject* getOrCreate(RenderObject*);
     AccessibilityObject* getOrCreate(Widget*);
@@ -91,12 +91,12 @@ public:
 
     // used for objects without backing elements
     AccessibilityObject* getOrCreate(AccessibilityRole);
-    
+
     // will only return the AccessibilityObject if it already exists
     AccessibilityObject* get(RenderObject*);
     AccessibilityObject* get(Widget*);
     AccessibilityObject* get(Node*);
-    
+
     void remove(RenderObject*);
     void remove(Node*);
     void remove(Widget*);
@@ -132,7 +132,7 @@ public:
 
     // Enhanced user interface accessibility can be toggled by the assistive technology.
     static void setEnhancedUserInterfaceAccessibility(bool flag) { gAccessibilityEnhancedUserInterfaceEnabled = flag; }
-    
+
     static bool accessibilityEnabled() { return gAccessibilityEnabled; }
     static bool accessibilityEnhancedUserInterfaceEnabled() { return gAccessibilityEnhancedUserInterfaceEnabled; }
 #else
@@ -211,7 +211,7 @@ public:
     AXComputedObjectAttributeCache* computedObjectAttributeCache() { return m_computedObjectAttributeCache.get(); }
 
     Document& document() const { return m_document; }
-    
+
 protected:
     void postPlatformNotification(AccessibilityObject*, AXNotification);
     void platformHandleFocusedUIElementChanged(Node* oldFocusedNode, Node* newFocusedNode);
@@ -236,17 +236,17 @@ private:
     std::unique_ptr<AXComputedObjectAttributeCache> m_computedObjectAttributeCache;
     static bool gAccessibilityEnabled;
     static bool gAccessibilityEnhancedUserInterfaceEnabled;
-    
+
     HashSet<AXID> m_idsInUse;
-    
+
     Timer<AXObjectCache> m_notificationPostTimer;
     Vector<std::pair<RefPtr<AccessibilityObject>, AXNotification>> m_notificationsToPost;
     void notificationPostTimerFired(Timer<AXObjectCache>&);
     void handleMenuOpened(Node*);
     void handleMenuItemSelected(Node*);
-    
+
     static AccessibilityObject* focusedImageMapUIElement(HTMLAreaElement*);
-    
+
     AXID getAXID(AccessibilityObject*);
 };
 
@@ -255,15 +255,15 @@ class AXAttributeCacheEnabler
 public:
     explicit AXAttributeCacheEnabler(AXObjectCache *cache);
     ~AXAttributeCacheEnabler();
-    
+
 private:
     AXObjectCache* m_cache;
 };
-    
+
 bool nodeHasRole(Node*, const String& role);
 // This will let you know if aria-hidden was explicitly set to false.
 bool isNodeAriaVisible(Node*);
-    
+
 #if !HAVE(ACCESSIBILITY)
 inline AccessibilityObjectInclusion AXComputedObjectAttributeCache::getIgnored(AXID) const { return DefaultBehavior; }
 inline void AXComputedObjectAttributeCache::setIgnored(AXID, AccessibilityObjectInclusion) { }

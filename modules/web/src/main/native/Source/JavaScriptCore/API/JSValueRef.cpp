@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -174,7 +174,7 @@ bool JSValueIsObjectOfClass(JSContextRef ctx, JSValueRef value, JSClassRef jsCla
     APIEntryShim entryShim(exec);
 
     JSValue jsValue = toJS(exec, value);
-    
+
     if (JSObject* o = jsValue.getObject()) {
         if (o->inherits(JSCallbackObject<JSGlobalObject>::info()))
             return jsCast<JSCallbackObject<JSGlobalObject>*>(o)->inherits(jsClass);
@@ -396,7 +396,7 @@ JSStringRef JSValueToStringCopy(JSContextRef ctx, JSValueRef value, JSValueRef* 
     APIEntryShim entryShim(exec);
 
     JSValue jsValue = toJS(exec, value);
-    
+
     RefPtr<OpaqueJSString> stringRef(OpaqueJSString::create(jsValue.toString(exec)->value(exec)));
     if (exec->hadException()) {
         if (exception)
@@ -417,7 +417,7 @@ JSObjectRef JSValueToObject(JSContextRef ctx, JSValueRef value, JSValueRef* exce
     APIEntryShim entryShim(exec);
 
     JSValue jsValue = toJS(exec, value);
-    
+
     JSObjectRef objectRef = toRef(jsValue.toObject(exec));
     if (exec->hadException()) {
         if (exception)
@@ -426,7 +426,7 @@ JSObjectRef JSValueToObject(JSContextRef ctx, JSValueRef value, JSValueRef* exce
         objectRef = 0;
     }
     return objectRef;
-}    
+}
 
 void JSValueProtect(JSContextRef ctx, JSValueRef value)
 {

@@ -42,16 +42,16 @@ template <typename T> class Strong : public Handle<T> {
 
 public:
     typedef typename Handle<T>::ExternalType ExternalType;
-    
+
     Strong()
         : Handle<T>()
     {
     }
-    
+
     Strong(VM&, ExternalType = ExternalType());
 
     Strong(VM&, Handle<T>);
-    
+
     Strong(const Strong& other)
         : Handle<T>()
     {
@@ -69,7 +69,7 @@ public:
         setSlot(HandleSet::heapFor(other.slot())->allocate());
         set(other.get());
     }
-    
+
     enum HashTableDeletedValueTag { HashTableDeletedValue };
     bool isHashTableDeletedValue() const { return slot() == hashTableDeletedValue(); }
     Strong(HashTableDeletedValueTag)
@@ -107,7 +107,7 @@ public:
         set(*HandleSet::heapFor(other.slot())->vm(), other.get());
         return *this;
     }
-    
+
     Strong& operator=(const Strong& other)
     {
         if (!other.slot()) {

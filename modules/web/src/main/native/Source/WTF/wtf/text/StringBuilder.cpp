@@ -21,7 +21,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -103,7 +103,7 @@ void StringBuilder::allocateBuffer(const LChar* currentCharacters, unsigned requ
     // Copy the existing data into a new buffer, set result to point to the end of the existing data.
     RefPtr<StringImpl> buffer = StringImpl::createUninitialized(requiredLength, m_bufferCharacters8);
     memcpy(m_bufferCharacters8, currentCharacters, static_cast<size_t>(m_length) * sizeof(LChar)); // This can't overflow.
-    
+
     // Update the builder state.
     m_buffer = buffer.release();
     m_string = String();
@@ -117,7 +117,7 @@ void StringBuilder::allocateBuffer(const UChar* currentCharacters, unsigned requ
     // Copy the existing data into a new buffer, set result to point to the end of the existing data.
     RefPtr<StringImpl> buffer = StringImpl::createUninitialized(requiredLength, m_bufferCharacters16);
     memcpy(m_bufferCharacters16, currentCharacters, static_cast<size_t>(m_length) * sizeof(UChar)); // This can't overflow.
-    
+
     // Update the builder state.
     m_buffer = buffer.release();
     m_string = String();
@@ -132,9 +132,9 @@ void StringBuilder::allocateBufferUpConvert(const LChar* currentCharacters, unsi
     RefPtr<StringImpl> buffer = StringImpl::createUninitialized(requiredLength, m_bufferCharacters16);
     for (unsigned i = 0; i < m_length; ++i)
         m_bufferCharacters16[i] = currentCharacters[i];
-    
+
     m_is8Bit = false;
-    
+
     // Update the builder state.
     m_buffer = buffer.release();
     m_string = String();
@@ -146,10 +146,10 @@ void StringBuilder::reallocateBuffer<LChar>(unsigned requiredLength)
     // If the buffer has only one ref (by this StringBuilder), reallocate it,
     // otherwise fall back to "allocate and copy" method.
     m_string = String();
-    
+
     ASSERT(m_is8Bit);
     ASSERT(m_buffer->is8Bit());
-    
+
     if (m_buffer->hasOneRef())
         m_buffer = StringImpl::reallocate(m_buffer.release(), requiredLength, m_bufferCharacters8);
     else
@@ -162,7 +162,7 @@ void StringBuilder::reallocateBuffer<UChar>(unsigned requiredLength)
     // If the buffer has only one ref (by this StringBuilder), reallocate it,
     // otherwise fall back to "allocate and copy" method.
     m_string = String();
-    
+
     if (m_buffer->is8Bit())
         allocateBufferUpConvert(m_buffer->characters8(), requiredLength);
     else if (m_buffer->hasOneRef())
@@ -215,7 +215,7 @@ ALWAYS_INLINE CharType* StringBuilder::appendUninitialized(unsigned length)
         m_length = requiredLength;
         return getBufferCharacters<CharType>() + currentLength;
     }
-    
+
     return appendUninitializedSlow<CharType>(requiredLength);
 }
 
@@ -229,13 +229,13 @@ CharType* StringBuilder::appendUninitializedSlow(unsigned requiredLength)
     if (m_buffer) {
         // If the buffer is valid it must be at least as long as the current builder contents!
         ASSERT(m_buffer->length() >= m_length);
-        
+
         reallocateBuffer<CharType>(expandedCapacity(capacity(), requiredLength));
     } else {
         ASSERT(m_string.length() == m_length);
         allocateBuffer(m_length ? m_string.characters<CharType>() : 0, expandedCapacity(capacity(), requiredLength));
     }
-    
+
     CharType* result = getBufferCharacters<CharType>() + m_length;
     m_length = requiredLength;
     return result;
@@ -260,18 +260,18 @@ void StringBuilder::append(const UChar* characters, unsigned length)
         unsigned requiredLength = length + m_length;
         if (requiredLength < length)
             CRASH();
-        
+
         if (m_buffer) {
             // If the buffer is valid it must be at least as long as the current builder contents!
             ASSERT(m_buffer->length() >= m_length);
-            
+
             allocateBufferUpConvert(m_buffer->characters8(), expandedCapacity(capacity(), requiredLength));
         } else {
             ASSERT(m_string.length() == m_length);
             allocateBufferUpConvert(m_string.isNull() ? 0 : m_string.characters8(), expandedCapacity(capacity(), requiredLength));
         }
 
-        memcpy(m_bufferCharacters16 + m_length, characters, static_cast<size_t>(length) * sizeof(UChar));        
+        memcpy(m_bufferCharacters16 + m_length, characters, static_cast<size_t>(length) * sizeof(UChar));
         m_length = requiredLength;
     } else
         memcpy(appendUninitialized<UChar>(length), characters, static_cast<size_t>(length) * sizeof(UChar));

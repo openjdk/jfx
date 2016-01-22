@@ -7,13 +7,13 @@
  * are met:
  *
  * 1.  Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer. 
+ *     notice, this list of conditions and the following disclaimer.
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
- *     documentation and/or other materials provided with the distribution. 
+ *     documentation and/or other materials provided with the distribution.
  * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
- *     from this software without specific prior written permission. 
+ *     from this software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY APPLE AND ITS CONTRIBUTORS "AS IS" AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
@@ -73,7 +73,7 @@ ResourceLoader::~ResourceLoader()
 void ResourceLoader::releaseResources()
 {
     ASSERT(!m_reachedTerminalState);
-    
+
     // It's possible that when we release the handle, it will be
     // deallocated and release the last reference to this object.
     // We need to retain to avoid accessing the object after it
@@ -82,7 +82,7 @@ void ResourceLoader::releaseResources()
 
     m_frame = 0;
     m_documentLoader = 0;
-    
+
     // We need to set reachedTerminalState to true before we release
     // the resources to prevent a double dealloc of WebView <rdar://problem/4372628>
     m_reachedTerminalState = true;
@@ -108,7 +108,7 @@ bool ResourceLoader::init(const ResourceRequest& r)
     ASSERT(m_request.isNull());
     ASSERT(m_deferredRequest.isNull());
     ASSERT(!m_documentLoader->isSubstituteLoadPending(this));
-    
+
     ResourceRequest clientRequest(r);
 
 #if PLATFORM(IOS)
@@ -119,14 +119,14 @@ bool ResourceLoader::init(const ResourceRequest& r)
         return false;
     }
 #endif
-    
+
     m_defersLoading = m_frame->page()->defersLoading();
     if (m_options.securityCheck == DoSecurityCheck && !m_frame->document()->securityOrigin()->canDisplay(clientRequest.url())) {
         FrameLoader::reportLocalLoadFailed(m_frame.get(), clientRequest.url().string());
         releaseResources();
         return false;
     }
-    
+
     // https://bugs.webkit.org/show_bug.cgi?id=26391
     // The various plug-in implementations call directly to ResourceLoader::load() instead of piping requests
     // through FrameLoader. As a result, they miss the FrameLoader::addExtraFieldsToRequest() step which sets
@@ -197,14 +197,14 @@ FrameLoader* ResourceLoader::frameLoader() const
 }
 
 void ResourceLoader::setDataBufferingPolicy(DataBufferingPolicy dataBufferingPolicy)
-{ 
-    m_options.dataBufferingPolicy = dataBufferingPolicy; 
+{
+    m_options.dataBufferingPolicy = dataBufferingPolicy;
 
     // Reset any already buffered data
     if (dataBufferingPolicy == DoNotBufferData)
         m_resourceData = 0;
 }
-    
+
 
 void ResourceLoader::addDataOrBuffer(const char* data, unsigned length, SharedBuffer* buffer, DataPayloadType dataPayloadType)
 {
@@ -215,7 +215,7 @@ void ResourceLoader::addDataOrBuffer(const char* data, unsigned length, SharedBu
         m_resourceData = buffer ? ResourceBuffer::adoptSharedBuffer(buffer) : ResourceBuffer::create(data, length);
         return;
     }
-        
+
     if (!m_resourceData)
         m_resourceData = buffer ? ResourceBuffer::adoptSharedBuffer(buffer) : ResourceBuffer::create(data, length);
     else {
@@ -244,7 +244,7 @@ void ResourceLoader::willSendRequest(ResourceRequest& request, const ResourceRes
     Ref<ResourceLoader> protect(*this);
 
     ASSERT(!m_reachedTerminalState);
-    
+
 #if PLATFORM(IOS)
     // Ensure an identifier is always set. This ensures that this assetion is not hit:
     // <rdar://problem/11059794> ASSERTION FAILED: !HashTranslator::equal(KeyTraits::emptyValue(), key) in WebFrameLoaderClient::canAuthenticateAgainstProtectionSpace loading the attached web archive
@@ -302,7 +302,7 @@ void ResourceLoader::didReceiveResponse(const ResourceResponse& r)
 
     if (FormData* data = m_request.httpBody())
         data->removeGeneratedFilesIfNeeded();
-        
+
     if (m_options.sendLoadCallbacks == SendCallbacks)
         frameLoader()->notifier().didReceiveResponse(this, m_response);
 }
@@ -334,7 +334,7 @@ void ResourceLoader::didReceiveDataOrBuffer(const char* data, unsigned length, P
     RefPtr<SharedBuffer> buffer = prpBuffer;
 
     addDataOrBuffer(data, length, buffer.get(), dataPayloadType);
-    
+
     // FIXME: If we get a resource with more than 2B bytes, this code won't do the right thing.
     // However, with today's computers and networking speeds, this won't happen in practice.
     // Could be an issue with a giant local file.
@@ -410,22 +410,22 @@ void ResourceLoader::cancel(const ResourceError& error)
     // If the load has already completed - succeeded, failed, or previously cancelled - do nothing.
     if (m_reachedTerminalState)
         return;
-       
+
     ResourceError nonNullError = error.isNull() ? cancelledError() : error;
-    
-    // willCancel() and didFailToLoad() both call out to clients that might do 
+
+    // willCancel() and didFailToLoad() both call out to clients that might do
     // something causing the last reference to this object to go away.
     Ref<ResourceLoader> protect(*this);
-    
-    // If we re-enter cancel() from inside willCancel(), we want to pick up from where we left 
+
+    // If we re-enter cancel() from inside willCancel(), we want to pick up from where we left
     // off without re-running willCancel()
     if (m_cancellationStatus == NotCancelled) {
         m_cancellationStatus = CalledWillCancel;
-        
+
         willCancel(nonNullError);
     }
 
-    // If we re-enter cancel() from inside didFailToLoad(), we want to pick up from where we 
+    // If we re-enter cancel() from inside didFailToLoad(), we want to pick up from where we
     // left off without redoing any of this work.
     if (m_cancellationStatus == CalledWillCancel) {
         m_cancellationStatus = Cancelled;
@@ -529,7 +529,7 @@ bool ResourceLoader::shouldUseCredentialStorage()
 {
     if (m_options.allowCredentials == DoNotAllowStoredCredentials)
         return false;
-    
+
     Ref<ResourceLoader> protect(*this);
     return frameLoader()->client().shouldUseCredentialStorage(documentLoader(), identifier());
 }
@@ -573,7 +573,7 @@ bool ResourceLoader::canAuthenticateAgainstProtectionSpace(const ProtectionSpace
     return frameLoader()->client().canAuthenticateAgainstProtectionSpace(documentLoader(), identifier(), protectionSpace);
 }
 #endif
-    
+
 #if PLATFORM(IOS)
 RetainPtr<CFDictionaryRef> ResourceLoader::connectionProperties(ResourceHandle*)
 {

@@ -62,7 +62,7 @@ public class EditorPlatform {
      * True if current platform is running Windows.
      */
     public static final boolean IS_WINDOWS = osName.contains("windows"); //NOI18N
-    
+
     /**
      * This URL is where you go when the user takes Scene Builder Help action (shortcut F1)
      */
@@ -72,7 +72,7 @@ public class EditorPlatform {
      * Javadoc home (for Inspector and CSS Analyzer properties)
      */
     public final static String JAVADOC_HOME = "https://docs.oracle.com/javase/8/javafx/api/"; //NOI18N
-    
+
 
     /**
      * Themes supported by Scene Builder Kit.
@@ -152,54 +152,54 @@ public class EditorPlatform {
                 result = Deprecation.CASPIAN_EMBEDDED_QVGA_HIGHCONTRAST_STYLESHEET;
                 break;
         }
-        
+
         if (!theme.equals(Theme.MODENA)) {
             assert result != null : "Missing logic for " + theme;
         }
 
         return result;
     }
-    
+
     public static String getPlatformThemeStylesheetURL() {
         // Return USER_AGENT css, which is Modena for fx 8.0
         return Deprecation.MODENA_STYLESHEET;
     }
-    
+
     public static boolean isModena(Theme theme) {
         return theme.toString().startsWith("MODENA");
     }
-    
+
     public static boolean isModenaBlackonwhite(Theme theme) {
         return isModena(theme)
                 && theme.toString().contains("BLACK_ON_WHITE");
     }
-    
+
     public static boolean isModenaWhiteonblack(Theme theme) {
         return isModena(theme)
                 && theme.toString().contains("WHITE_ON_BLACK");
     }
-    
+
     public static boolean isModenaYellowonblack(Theme theme) {
         return isModena(theme)
                 && theme.toString().contains("YELLOW_ON_BLACK");
     }
-    
+
     public static boolean isModenaHighContrast(Theme theme) {
         return isModena(theme)
                 && theme.toString().contains("HIGH_CONTRAST");
     }
-    
+
     public static boolean isModenaTouch(Theme theme) {
         return isModena(theme)
                 && theme.toString().contains("TOUCH");
     }
-    
+
     public static boolean isModenaTouchHighContrast(Theme theme) {
         return isModena(theme)
                 && theme.toString().contains("HIGH_CONTRAST")
                 && theme.toString().contains("TOUCH");
     }
-    
+
     public static boolean isCaspian(Theme theme) {
         return theme.toString().startsWith("CASPIAN");
     }

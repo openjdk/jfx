@@ -92,9 +92,9 @@ static WebDataSource* getWebDataSource(DocumentLoader* loader)
 
 class WebFrameLoaderClient::WebFramePolicyListenerPrivate {
 public:
-    WebFramePolicyListenerPrivate() 
+    WebFramePolicyListenerPrivate()
         : m_policyFunction(nullptr)
-    { 
+    {
     }
 
     ~WebFramePolicyListenerPrivate() { }
@@ -107,7 +107,7 @@ WebFrameLoaderClient::WebFrameLoaderClient(WebFrame* webFrame)
     : m_webFrame(webFrame)
     , m_manualLoader(0)
     , m_policyListenerPrivate(adoptPtr(new WebFramePolicyListenerPrivate))
-    , m_hasSentResponseToPlugin(false) 
+    , m_hasSentResponseToPlugin(false)
 {
 }
 
@@ -752,7 +752,7 @@ void WebFrameLoaderClient::updateGlobalHistory()
     if (historyDelegate) {
         COMPtr<IWebURLResponse> urlResponse(AdoptCOM, WebURLResponse::createInstance(loader->response()));
         COMPtr<IWebURLRequest> urlRequest(AdoptCOM, WebMutableURLRequest::createInstance(loader->originalRequestCopy()));
-        
+
         COMPtr<IWebNavigationData> navigationData(AdoptCOM, WebNavigationData::createInstance(
             loader->urlForHistory(), loader->title().string(), urlRequest.get(), urlResponse.get(), loader->substituteData().isValid(), loader->clientRedirectSourceForHistory()));
 
@@ -1134,7 +1134,7 @@ void WebFrameLoaderClient::dispatchDidFailToStartPlugin(const PluginView* plugin
 
     COMPtr<CFDictionaryPropertyBag> userInfoBag = CFDictionaryPropertyBag::createInstance();
     userInfoBag->setDictionary(userInfo.get());
- 
+
     int errorCode = 0;
     String description;
     switch (pluginView->status()) {
@@ -1152,7 +1152,7 @@ void WebFrameLoaderClient::dispatchDidFailToStartPlugin(const PluginView* plugin
 
     ResourceError resourceError(String(WebKitErrorDomain), errorCode, pluginView->url().string(), String());
     COMPtr<IWebError> error(AdoptCOM, WebError::createInstance(resourceError, userInfoBag.get()));
-     
+
     resourceLoadDelegate->plugInFailedWithError(webView, error.get(), getWebDataSource(frame->loader().documentLoader()));
 }
 
@@ -1167,7 +1167,7 @@ PassRefPtr<Widget> WebFrameLoaderClient::createPlugin(const IntSize& pluginSize,
         if (uiPrivate) {
             // Assemble the view arguments in a property bag.
             HashMap<String, String> viewArguments;
-            for (unsigned i = 0; i < paramNames.size(); i++) 
+            for (unsigned i = 0; i < paramNames.size(); i++)
                 viewArguments.set(paramNames[i], paramValues[i]);
             COMPtr<IPropertyBag> viewArgumentsBag(AdoptCOM, COMPropertyBag<String>::adopt(viewArguments));
             COMPtr<IDOMElement> containingElement(AdoptCOM, DOMElement::createInstance(element));
@@ -1209,7 +1209,7 @@ void WebFrameLoaderClient::redirectDataToPlugin(Widget* pluginWidget)
     // Ideally, this function shouldn't be necessary, see <rdar://problem/4852889>
     if (!pluginWidget || pluginWidget->isPluginView())
         m_manualLoader = toPluginView(pluginWidget);
-    else 
+    else
         m_manualLoader = static_cast<EmbeddedWidget*>(pluginWidget);
 }
 

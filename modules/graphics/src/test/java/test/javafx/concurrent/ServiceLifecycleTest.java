@@ -95,7 +95,7 @@ public class ServiceLifecycleTest extends ServiceTestBase {
     protected final class ManualExecutor implements Executor {
         private Runnable scheduled;
         private Executor wrapped;
-        
+
         ManualExecutor(Executor wrapped) {
             this.wrapped = wrapped;
         }
@@ -1538,7 +1538,7 @@ public class ServiceLifecycleTest extends ServiceTestBase {
 
     @Test (expected = IllegalStateException.class)
     public void cannotInvokeSettersOnRandomThreadAfterStart_1() throws Throwable {
-        assertThrowsException(s -> 
+        assertThrowsException(s ->
                 ServiceShim.setEventHandler(s, WorkerStateEvent.ANY, event -> {
         }));
     }
@@ -1935,7 +1935,7 @@ public class ServiceLifecycleTest extends ServiceTestBase {
             @Override public Service<String> createService() {
                 MythicalService svc = new MythicalService();
                 svc.setHandler(mythicalEvent -> result.set(true));
-                ServiceShim.fireEvent(svc, new MythicalEvent()); 
+                ServiceShim.fireEvent(svc, new MythicalEvent());
                 return svc;
             }
         };
@@ -1943,7 +1943,7 @@ public class ServiceLifecycleTest extends ServiceTestBase {
         svc.start();
         assertTrue(result.get());
     }
-    
+
     private static final class MythicalService extends ServiceShim<String> {
         public void setHandler(EventHandler<MythicalEvent> h) {
             ServiceShim.setEventHandler(this, MythicalEvent.ANY, h);

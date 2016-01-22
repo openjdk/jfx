@@ -100,7 +100,7 @@ public class FXCollections {
         return list instanceof RandomAccess ? new ObservableListWrapper<E>(list) :
                 new ObservableSequentialListWrapper<E>(list);
     }
-    
+
     /**
      * Constructs an ObservableList that is backed by the specified list.
      * Mutation operations on the ObservableList instance will be reported
@@ -122,10 +122,10 @@ public class FXCollections {
         if (list == null || extractor == null) {
             throw new NullPointerException();
         }
-        return list instanceof RandomAccess ? new ObservableListWrapper<E>(list, extractor) : 
+        return list instanceof RandomAccess ? new ObservableListWrapper<E>(list, extractor) :
             new ObservableSequentialListWrapper<E>(list, extractor);
     }
-    
+
     /**
      * Constructs an ObservableMap that is backed by the specified map.
      * Mutation operations on the ObservableMap instance will be reported
@@ -297,20 +297,20 @@ public class FXCollections {
 
     /**
      * Creates a new empty observable list that is backed by an arraylist.
-     * @see #observableList(java.util.List) 
+     * @see #observableList(java.util.List)
      * @return a newly created ObservableList
      */
     @SuppressWarnings("unchecked")
     public static <E> ObservableList<E> observableArrayList() {
         return observableList(new ArrayList());
     }
-    
+
     /**
      * Creates a new empty observable list backed by an arraylist.
-     * 
+     *
      * This list reports element updates.
      * @param extractor element to Observable[] convertor. Observable objects are listened for changes on the element.
-     * @see #observableList(java.util.List, javafx.util.Callback) 
+     * @see #observableList(java.util.List, javafx.util.Callback)
      * @since JavaFX 2.1
      * @return a newly created ObservableList
      */
@@ -341,7 +341,7 @@ public class FXCollections {
         list.addAll(col);
         return list;
     }
-    
+
     /**
      * Creates a new empty observable map that is backed by a HashMap.
      * @param <K> the type of keys
@@ -351,7 +351,7 @@ public class FXCollections {
     public static <K,V> ObservableMap<K,V> observableHashMap() {
         return observableMap(new HashMap<K, V>());
     }
-    
+
     /**
      * Concatenates more observable lists into one. The resulting list
      * would be backed by an arraylist.
@@ -377,7 +377,7 @@ public class FXCollections {
      * Creates and returns unmodifiable wrapper list on top of provided observable list.
      * @param list  an ObservableList that is to be wrapped
      * @return an ObserableList wrapper that is unmodifiable
-     * @see Collections#unmodifiableList(java.util.List) 
+     * @see Collections#unmodifiableList(java.util.List)
      */
     @ReturnsUnmodifiableCollection
     public static<E> ObservableList<E> unmodifiableObservableList(ObservableList<E> list) {
@@ -392,7 +392,7 @@ public class FXCollections {
      * @param list  an Observable list to be wrapped
      * @param type   the type of element that <tt>list</tt> is permitted to hold
      * @return a dynamically typesafe view of the specified list
-     * @see Collections#checkedList(java.util.List, java.lang.Class) 
+     * @see Collections#checkedList(java.util.List, java.lang.Class)
      */
     public static<E> ObservableList<E> checkedObservableList(ObservableList<E> list, Class<E> type) {
         if (list == null) {
@@ -405,7 +405,7 @@ public class FXCollections {
      * Creates and returns a synchronized wrapper on top of provided observable list.
      * @param  list the list to be "wrapped" in a synchronized list.
      * @return A synchronized version of the observable list
-     * @see Collections#synchronizedList(java.util.List) 
+     * @see Collections#synchronizedList(java.util.List)
      */
     public static<E> ObservableList<E> synchronizedObservableList(ObservableList<E> list) {
         if (list == null) {
@@ -420,7 +420,7 @@ public class FXCollections {
     /**
      * Creates and empty unmodifiable observable list.
      * @return An empty unmodifiable observable list
-     * @see Collections#emptyList() 
+     * @see Collections#emptyList()
      */
     @SuppressWarnings("unchecked")
     @ReturnsUnmodifiableCollection
@@ -432,7 +432,7 @@ public class FXCollections {
      * Creates an unmodifiable observable list with single element.
      * @param e the only elements that will be contained in this singleton observable list
      * @return a singleton observable list
-     * @see Collections#singletonList(java.lang.Object) 
+     * @see Collections#singletonList(java.lang.Object)
      */
     @ReturnsUnmodifiableCollection
     public static<E> ObservableList<E> singletonObservableList(E e) {
@@ -501,7 +501,7 @@ public class FXCollections {
      * Copies elements from src to dest. Fires only <b>one</b> change notification on dest.
      * @param dest the destination observable list
      * @param src the source list
-     * @see Collections#copy(java.util.List, java.util.List) 
+     * @see Collections#copy(java.util.List, java.util.List)
      */
     @SuppressWarnings("unchecked")
     public static <T> void copy(ObservableList<? super T> dest, List<? extends T> src) {
@@ -518,7 +518,7 @@ public class FXCollections {
      * Fills the provided list with obj. Fires only <b>one</b> change notification on the list.
      * @param list the list to fill
      * @param obj the object to fill the list with
-     * @see Collections#fill(java.util.List, java.lang.Object) 
+     * @see Collections#fill(java.util.List, java.lang.Object)
      */
     @SuppressWarnings("unchecked")
     public static <T> void fill(ObservableList<? super T> list, T obj) {
@@ -534,7 +534,7 @@ public class FXCollections {
      * @param oldVal the element that is going to be replace
      * @param newVal the replacement
      * @return true if the list was modified
-     * @see Collections#replaceAll(java.util.List, java.lang.Object, java.lang.Object) 
+     * @see Collections#replaceAll(java.util.List, java.lang.Object, java.lang.Object)
      */
     @SuppressWarnings("unchecked")
     public static <T> boolean replaceAll(ObservableList<T> list, T oldVal, T newVal) {
@@ -556,7 +556,7 @@ public class FXCollections {
      * Reverse the order in the list
      * Fires only <b>one</b> change notification on the list.
      * @param list the list to be reversed
-     * @see Collections#reverse(java.util.List) 
+     * @see Collections#reverse(java.util.List)
      */
     @SuppressWarnings("unchecked")
     public static void reverse(ObservableList list) {
@@ -574,7 +574,7 @@ public class FXCollections {
      * Fires only <b>one</b> change notification on the list.
      * @param list the list to be rotated
      * @param distance the distance of rotation
-     * @see Collections#rotate(java.util.List, int) 
+     * @see Collections#rotate(java.util.List, int)
      */
     @SuppressWarnings("unchecked")
     public static void rotate(ObservableList list, int distance) {
@@ -622,8 +622,8 @@ public class FXCollections {
      * Shuffles all elements in the observable list.
      * Fires only <b>one</b> change notification on the list.
      * @param list the list to be shuffled
-     * @param rnd the random generator used for shuffling 
-     * @see Collections#shuffle(java.util.List, java.util.Random) 
+     * @param rnd the random generator used for shuffling
+     * @see Collections#shuffle(java.util.List, java.util.Random)
      */
     @SuppressWarnings("unchecked")
     public static void shuffle(ObservableList list, Random rnd) {
@@ -663,7 +663,7 @@ public class FXCollections {
      * Fires only <b>one</b> change notification on the list.
      * @param list the list to sort
      * @param c comparator used for sorting. Null if natural ordering is required.
-     * @see Collections#sort(java.util.List, java.util.Comparator) 
+     * @see Collections#sort(java.util.List, java.util.Comparator)
      */
     @SuppressWarnings("unchecked")
     public static <T> void sort(ObservableList<T> list, Comparator<? super T> c) {
@@ -732,11 +732,11 @@ public class FXCollections {
         @Override
         public final void addListener(InvalidationListener listener) {
         }
-        
+
         @Override
         public final void removeListener(InvalidationListener listener) {
         }
-        
+
 
         @Override
         public void addListener(ListChangeListener<? super E> o) {
@@ -829,7 +829,7 @@ public class FXCollections {
         public boolean retainAll(E... elements) {
             throw new UnsupportedOperationException();
         }
-        
+
         @Override
         public void remove(int from, int to) {
             throw new UnsupportedOperationException();
@@ -880,15 +880,15 @@ public class FXCollections {
         @Override
         public void addListener(InvalidationListener listener) {
         }
-        
+
         @Override
         public void removeListener(InvalidationListener listener) {
         }
-        
+
         @Override
         public void addListener(ListChangeListener<? super E> o) {
         }
-        
+
         @Override
         public void removeListener(ListChangeListener<? super E> o) {
         }
@@ -1232,14 +1232,14 @@ public class FXCollections {
                 helper = ListListenerHelper.addListener(helper, listener);
             }
         }
-        
+
         @Override
         public final void removeListener(InvalidationListener listener) {
             synchronized (mutex) {
                 helper = ListListenerHelper.removeListener(helper, listener);
             }
         }
-        
+
         @Override
         public void addListener(ListChangeListener<? super T> listener) {
             synchronized (mutex) {
@@ -1839,7 +1839,7 @@ public class FXCollections {
                 backingSet.clear();
             }
         }
-        
+
         @Override
         public boolean equals(Object o) {
             if (o == this) {
@@ -2628,7 +2628,7 @@ public class FXCollections {
                 return entrySet;
             }
         }
-        
+
         @Override
         public boolean equals(Object o) {
             if (o == this) {

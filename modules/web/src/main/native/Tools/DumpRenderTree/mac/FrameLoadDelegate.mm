@@ -6,13 +6,13 @@
  * are met:
  *
  * 1.  Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer. 
+ *     notice, this list of conditions and the following disclaimer.
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
- *     documentation and/or other materials provided with the distribution. 
+ *     documentation and/or other materials provided with the distribution.
  * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
- *     from this software without specific prior written permission. 
+ *     from this software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY APPLE AND ITS CONTRIBUTORS "AS IS" AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
@@ -177,10 +177,10 @@ static NSString *testPathFromURL(NSURL* url)
         NSRange layoutTestsRange = [filePath rangeOfString:@"/LayoutTests/"];
         if (layoutTestsRange.location == NSNotFound)
             return nil;
-            
+
         return [filePath substringFromIndex:NSMaxRange(layoutTestsRange)];
     }
-    
+
     // HTTP test URLs look like: http://127.0.0.1:8000/inspector/resource-tree/resource-request-content-after-loading-and-clearing-cache.html
     if (![[url scheme] isEqualToString:@"http"] && ![[url scheme] isEqualToString:@"https"])
         return nil;
@@ -275,14 +275,14 @@ static NSString *testPathFromURL(NSURL* url)
 {
     ASSERT([frame dataSource]);
     ASSERT(frame == [[frame dataSource] webFrame]);
-    
+
     if (!done && gTestRunner->dumpFrameLoadCallbacks()) {
         NSString *string = [NSString stringWithFormat:@"%@ - didFinishLoadForFrame", [frame _drt_descriptionSuitableForTestResult]];
         printf ("%s\n", [string UTF8String]);
     }
 
     // FIXME: This call to displayIfNeeded can be removed when <rdar://problem/5092361> is fixed.
-    // After that is fixed, we will reenable painting after WebCore is done loading the document, 
+    // After that is fixed, we will reenable painting after WebCore is done loading the document,
     // and this call will no longer be needed.
     if ([[sender mainFrame] isEqual:frame])
         [sender displayIfNeeded];
@@ -299,8 +299,8 @@ static NSString *testPathFromURL(NSURL* url)
 
     ASSERT(![frame provisionalDataSource]);
     ASSERT([frame dataSource]);
-    
-    [self webView:sender locationChangeDone:error forDataSource:[frame dataSource]];    
+
+    [self webView:sender locationChangeDone:error forDataSource:[frame dataSource]];
 }
 
 - (void)webView:(WebView *)webView windowScriptObjectAvailable:(WebScriptObject *)windowScriptObject
@@ -347,9 +347,9 @@ static NSString *testPathFromURL(NSURL* url)
     EventSendingController *esc = [[EventSendingController alloc] init];
     [obj setValue:esc forKey:@"eventSender"];
     [esc release];
-    
+
     [obj setValue:gNavigationController forKey:@"navigationController"];
-    
+
     ObjCController *occ = [[ObjCController alloc] init];
     [obj setValue:occ forKey:@"objCController"];
     [occ release];
@@ -357,7 +357,7 @@ static NSString *testPathFromURL(NSURL* url)
     ObjCPlugin *plugin = [[ObjCPlugin alloc] init];
     [obj setValue:plugin forKey:@"objCPlugin"];
     [plugin release];
-    
+
     ObjCPluginFunction *pluginFunction = [[ObjCPluginFunction alloc] init];
     [obj setValue:pluginFunction forKey:@"objCPluginFunction"];
     [pluginFunction release];

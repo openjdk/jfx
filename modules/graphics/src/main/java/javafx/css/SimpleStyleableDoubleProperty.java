@@ -30,7 +30,7 @@ import javafx.beans.property.SimpleDoubleProperty;
 
 /**
  * This class extends {@code SimpleDoubleProperty} and provides a full
- * implementation of a {@code StyleableProperty}.  
+ * implementation of a {@code StyleableProperty}.
  *
  * This class is used to make a {@link javafx.beans.property.DoubleProperty},
  * that would otherwise be implemented as a {@link SimpleDoubleProperty},

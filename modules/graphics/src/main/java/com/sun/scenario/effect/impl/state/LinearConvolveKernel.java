@@ -48,7 +48,7 @@ public abstract class LinearConvolveKernel {
     /**
      * Returns true if the entire operation of this linear convolution
      * would have no effect on the source data.
-     * 
+     *
      * @return true if the operation is a NOP
      */
     public boolean isNop() {
@@ -58,7 +58,7 @@ public abstract class LinearConvolveKernel {
     /**
      * Returns the size of the output image needed for a given input
      * image dimensions and a given pass of the algorithm.
-     * 
+     *
      * @param srcdimension the bounds of the input image
      * @param pass the algorithm pass being performed
      * @return the bounds of the result image

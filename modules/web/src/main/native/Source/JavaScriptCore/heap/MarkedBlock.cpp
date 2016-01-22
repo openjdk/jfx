@@ -170,17 +170,17 @@ void MarkedBlock::stopAllocating(const FreeList& freeList)
         // 2) It may have dead objects, and we only know them to be dead by the
         //    fact that their mark bits are unset.
         // Hence if the block is Marked we need to leave it Marked.
-        
+
         ASSERT(!head);
         return;
     }
-   
+
     ASSERT(m_state == FreeListed);
-    
+
     // Roll back to a coherent state for Heap introspection. Cells newly
     // allocated from our free list are not currently marked, so we need another
-    // way to tell what's live vs dead. 
-    
+    // way to tell what's live vs dead.
+
     ASSERT(!m_newlyAllocated);
     m_newlyAllocated = adoptPtr(new WTF::Bitmap<atomsPerBlock>());
 
@@ -193,7 +193,7 @@ void MarkedBlock::stopAllocating(const FreeList& freeList)
         reinterpret_cast<JSCell*>(current)->zap();
         clearNewlyAllocated(current);
     }
-    
+
     m_state = Marked;
 }
 
@@ -254,7 +254,7 @@ MarkedBlock::FreeList MarkedBlock::resumeAllocating()
         return FreeList();
     }
 
-    // Re-create our free list from before stopping allocation. 
+    // Re-create our free list from before stopping allocation.
     return sweep(SweepToFreeList);
 }
 

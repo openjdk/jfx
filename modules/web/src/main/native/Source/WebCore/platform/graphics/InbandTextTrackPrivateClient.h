@@ -85,10 +85,10 @@ public:
 
     Color backgroundColor() const { return m_backgroundColor; }
     void setBackgroundColor(RGBA32 color) { m_backgroundColor.setRGB(color); }
-    
+
     Color highlightColor() const { return m_highlightColor; }
     void setHighlightColor(RGBA32 color) { m_highlightColor.setRGB(color); }
-    
+
     enum Status {
         Uninitialized,
         Partial,
@@ -96,7 +96,7 @@ public:
     };
     Status status() { return m_status; }
     void setStatus(Status status) { m_status = status; }
-    
+
 private:
     GenericCueData()
         : m_startTime(0)

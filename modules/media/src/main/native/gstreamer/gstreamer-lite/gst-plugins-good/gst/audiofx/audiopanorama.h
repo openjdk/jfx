@@ -1,4 +1,4 @@
-/* 
+/*
  * GStreamer
  * Copyright (C) 2006 Stefan Kost <ensonic@users.sf.net>
  *
@@ -17,7 +17,7 @@
  * Free Software Foundation, Inc., 51 Franklin St, Fifth Floor,
  * Boston, MA 02110-1301, USA.
  */
- 
+
 #ifndef __GST_AUDIO_PANORAMA_H__
 #define __GST_AUDIO_PANORAMA_H__
 

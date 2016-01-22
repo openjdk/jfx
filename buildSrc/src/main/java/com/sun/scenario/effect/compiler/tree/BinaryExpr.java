@@ -81,7 +81,7 @@ public class BinaryExpr extends Expr {
             }
         }
     }
-    
+
     public BinaryOpType getOp() {
         return op;
     }

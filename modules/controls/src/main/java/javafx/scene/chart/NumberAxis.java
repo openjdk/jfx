@@ -101,7 +101,7 @@ public final class NumberAxis extends ValueAxis<Number> {
                 requestAxisLayout();
             }
         }
-        
+
         @Override
         public CssMetaData<NumberAxis,Number> getCssMetaData() {
             return StyleableProperties.TICK_UNIT;
@@ -475,7 +475,7 @@ public final class NumberAxis extends ValueAxis<Number> {
 
         private static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES;
         static {
-           final List<CssMetaData<? extends Styleable, ?>> styleables = 
+           final List<CssMetaData<? extends Styleable, ?>> styleables =
                new ArrayList<CssMetaData<? extends Styleable, ?>>(ValueAxis.getClassCssMetaData());
            styleables.add(TICK_UNIT);
            STYLEABLES = Collections.unmodifiableList(styleables);

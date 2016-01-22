@@ -149,7 +149,7 @@ public class TableViewSkin<T> extends TableViewSkinBase<T, T, TableView<T>, Tabl
             behavior.dispose();
         }
     }
-    
+
     /** {@inheritDoc} */
     @Override public Object queryAccessibleAttribute(AccessibleAttribute attribute, Object... parameters) {
         switch (attribute) {
@@ -200,8 +200,8 @@ public class TableViewSkin<T> extends TableViewSkinBase<T, T, TableView<T>, Tabl
         }
     }
 
-    
-    
+
+
     /***************************************************************************
      *                                                                         *
      * Private methods                                                         *

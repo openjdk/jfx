@@ -34,7 +34,7 @@ import com.sun.javafx.css.parser.LexerState;
 import com.sun.javafx.css.parser.Recognizer;
 import com.sun.javafx.css.parser.Token;
 
-    
+
 final class CssLexer {
     final static int STRING = 10;
     final static int IDENT = 11;
@@ -162,7 +162,7 @@ final class CssLexer {
         UNDERSCORE_CHAR, ALPHA
     );
 
-    // nmchar		[_a-z0-9-]|{nonascii}|{escape}
+    // nmchar       [_a-z0-9-]|{nonascii}|{escape}
     final LexerState nmCharState = new LexerState(IDENT, "nmCharState",
         UNDERSCORE_CHAR, ALPHA, DIGIT, MINUS_CHAR
     );
@@ -206,7 +206,7 @@ final class CssLexer {
     final LexerState trailingDigitsState = new LexerState(NUMBER,"trailingDigitsState",
         DIGIT
     );
-    
+
     // http://www.w3.org/TR/css3-values/
     final LexerState unitsState = new UnitsState();
 
@@ -374,21 +374,21 @@ final class CssLexer {
         final Recognizer[] important_sym =
                 new Recognizer[] { I, M, P, O, R, T, A, N, T };
         int current = 0;
-        
+
         text.append((char)ch);
-        
+
         // get past the '!'
         ch = readChar();
-       
+
         while(true) {
-            
+
             switch (ch) {
 
                 case Token.EOF:
                     token = Token.EOF_TOKEN;
                     return token;
 
-                case '/':                    
+                case '/':
                     ch = readChar();
                     if (ch == '*') skipComment();
                     else if (ch == '/') skipEOL();
@@ -591,7 +591,7 @@ final class CssLexer {
     private class UnitsState extends LexerState {
 
         private final Recognizer[][] units = {
-        
+
             // TODO: all units from http://www.w3.org/TR/css3-values/
             // If units are added, getType and unitsMask must be updated!
             { C, M },
@@ -610,24 +610,24 @@ final class CssLexer {
             { T, U, R, N },
             { (c) -> c == '%'}
         };
-        
+
         // One bit per unit
         private int unitsMask = 0x7FFF;
 
         // Offset into inner array of units
         private int index = -1;
-        
+
         UnitsState() {
-            super(-1, "UnitsState", null);            
+            super(-1, "UnitsState", null);
         }
-        
+
         @Override
         public int getType() {
-            
+
             int type = Token.INVALID;
-                
+
             // Must keep this in sync with units array.
-            // Small switch will be faster than Math.log(oldMask)/Math.log(2) 
+            // Small switch will be faster than Math.log(oldMask)/Math.log(2)
             switch (unitsMask) {
                 case 0x1: type = CM; break;
                 case 0x2: type = DEG; break;
@@ -646,35 +646,35 @@ final class CssLexer {
                 case 0x4000: type = PERCENTAGE; break;
                 default: type = Token.INVALID;
             }
-             
+
             // reset
             unitsMask = 0x7fff;
             index = -1;
-            
+
             return type;
         }
 
         @Override
         public boolean accepts(int c) {
-            
-            // Ensure that something bogus like '10xyzzy' is 
+
+            // Ensure that something bogus like '10xyzzy' is
             // consumed as a token by only returning false
             // if the char is not alpha or %
             if (!ALPHA.recognize(c) && c != '%') {
                 return false;
             }
-            
-            // If unitsMask is zero, then we've already figured out that 
-            // this is an invalid token, but we want to accept c so that 
+
+            // If unitsMask is zero, then we've already figured out that
+            // this is an invalid token, but we want to accept c so that
             // '10xyzzy' is consumed as a token, albeit an invalid one.
             if (unitsMask == 0) return true;
-            
+
             index += 1;
 
             for (int n=0 ; n < units.length; n++) {
-                
+
                 final int u = 1 << n;
-                
+
                 // the unit at this index already failed. Move on.
                 if ((unitsMask & u) == 0) continue;
 
@@ -682,7 +682,7 @@ final class CssLexer {
                     // not a match, turn off this bit
                     unitsMask &= ~u;
                 }
-                    
+
             }
 
 
@@ -690,7 +690,7 @@ final class CssLexer {
         }
 
     }
-        
+
     private  void skipComment() throws IOException {
         while(ch != -1) {
             if (ch == '*') {
@@ -735,13 +735,13 @@ final class CssLexer {
         // a NL token is created after the readChar
         if (lastc == '\n' || (lastc == '\r' && c != '\n')) {
             // set pos to 1 since we've already read the first char of the new line
-            pos = 1; 
+            pos = 1;
             offset = 0;
             line++;
         } else {
             pos++;
         }
-        
+
         lastc = c;
         return c;
     }
@@ -812,7 +812,7 @@ final class CssLexer {
 
                         final String str = text.toString();
                         Token tok = new Token(type, str, line, offset);
-                        // because the next char has already been read, 
+                        // because the next char has already been read,
                         // the next token starts at pos-1
                         offset = pos-1;
 
@@ -936,7 +936,7 @@ final class CssLexer {
                     case '\r':
                         token = new Token(NL, "\\r", line, offset);
                         // offset and pos are reset on next readChar
-                        
+
                         ch = readChar();
                         if (ch == '\n') {
                             token = new Token(NL, "\\r\\n", line, offset);
@@ -948,7 +948,7 @@ final class CssLexer {
                             final Token tok = token;
                             token = (ch == -1) ? Token.EOF_TOKEN : null;
                             return tok;
-                        }                        
+                        }
                         break;
 
                     case '\n':
@@ -978,7 +978,7 @@ final class CssLexer {
                     offset = pos;
                 } else if (token.getType() == Token.EOF) {
                     return token;
-                } 
+                }
 
                 if (ch != -1 && !charNotConsumed) ch = readChar();
 
@@ -991,7 +991,7 @@ final class CssLexer {
             return token;
         }
     }
-    
+
     private int ch;
     private boolean charNotConsumed = false;
     private Reader reader;

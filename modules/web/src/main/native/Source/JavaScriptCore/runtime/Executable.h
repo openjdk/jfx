@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef Executable_h
@@ -52,7 +52,7 @@ class FunctionCodeBlock;
 class LLIntOffsetsExtractor;
 class ProgramCodeBlock;
 class JSScope;
-    
+
 enum CompilationKind { FirstCompilation, OptimizingCompilation };
 
 inline bool isCall(CodeSpecializationKind kind)
@@ -91,7 +91,7 @@ public:
     static const bool hasImmortalStructure = true;
     static void destroy(JSCell*);
 #endif
-        
+
     CodeBlockHash hashFor(CodeSpecializationKind) const;
 
     bool isEvalExecutable()
@@ -114,7 +114,7 @@ public:
     }
 
     static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue proto) { return Structure::create(vm, globalObject, proto, TypeInfo(CompoundType, StructureFlags), info()); }
-        
+
     void clearCode();
 
     DECLARE_EXPORT_INFO;
@@ -138,7 +138,7 @@ public:
         ASSERT(m_jitCodeForConstruct);
         return m_jitCodeForConstruct;
     }
-        
+
     PassRefPtr<JITCode> generatedJITCodeFor(CodeSpecializationKind kind)
     {
         if (kind == CodeForCall)
@@ -146,7 +146,7 @@ public:
         ASSERT(kind == CodeForConstruct);
         return generatedJITCodeForConstruct();
     }
-    
+
     MacroAssemblerCodePtr entrypointFor(
         VM& vm, CodeSpecializationKind kind, ArityCheckMode arity, RegisterPreservationMode registers)
     {
@@ -233,7 +233,7 @@ public:
         RELEASE_ASSERT_NOT_REACHED();
         return 0;
     }
-    
+
     static ptrdiff_t offsetOfNumParametersFor(CodeSpecializationKind kind)
     {
         if (kind == CodeForCall)
@@ -246,12 +246,12 @@ public:
     {
         return m_numParametersForCall >= 0;
     }
-        
+
     bool hasJITCodeForConstruct() const
     {
         return m_numParametersForConstruct >= 0;
     }
-        
+
     bool hasJITCodeFor(CodeSpecializationKind kind) const
     {
         if (kind == CodeForCall)
@@ -262,16 +262,16 @@ public:
 
     // Intrinsics are only for calls, currently.
     Intrinsic intrinsic() const;
-        
+
     Intrinsic intrinsicFor(CodeSpecializationKind kind) const
     {
         if (isCall(kind))
             return intrinsic();
         return NoIntrinsic;
     }
-    
+
     void dump(PrintStream&) const;
-        
+
 protected:
     ExecutableBase* m_prev;
     ExecutableBase* m_next;
@@ -306,7 +306,7 @@ public:
 
     NativeFunction function() { return m_function; }
     NativeFunction constructor() { return m_constructor; }
-        
+
     NativeFunction nativeFunctionFor(CodeSpecializationKind kind)
     {
         if (kind == CodeForCall)
@@ -314,7 +314,7 @@ public:
         ASSERT(kind == CodeForConstruct);
         return constructor();
     }
-        
+
     static ptrdiff_t offsetOfNativeFunctionFor(CodeSpecializationKind kind)
     {
         if (kind == CodeForCall)
@@ -324,7 +324,7 @@ public:
     }
 
     static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue proto) { return Structure::create(vm, globalObject, proto, TypeInfo(LeafType, StructureFlags), info()); }
-        
+
     DECLARE_INFO;
 
     Intrinsic intrinsic() const;
@@ -348,7 +348,7 @@ private:
 
     NativeFunction m_function;
     NativeFunction m_constructor;
-        
+
     Intrinsic m_intrinsic;
 };
 
@@ -379,7 +379,7 @@ public:
 #if ENABLE(JIT)
     static void destroy(JSCell*);
 #endif
-        
+
     CodeBlockHash hashFor(CodeSpecializationKind) const;
 
     const SourceCode& source() const { return m_source; }
@@ -395,15 +395,15 @@ public:
     bool needsActivation() const { return m_hasCapturedVariables || m_features & (EvalFeature | WithFeature | CatchFeature); }
     bool isStrictMode() const { return m_features & StrictModeFeature; }
     ECMAMode ecmaMode() const { return isStrictMode() ? StrictMode : NotStrictMode; }
-        
+
     void setNeverInline(bool value) { m_neverInline = value; }
     bool neverInline() const { return m_neverInline; }
     bool isInliningCandidate() const { return !neverInline(); }
 
     void unlinkCalls();
-        
+
     CodeFeatures features() const { return m_features; }
-        
+
     DECLARE_INFO;
 
     void recordParse(CodeFeatures features, bool hasCapturedVariables, int firstLine, int lastLine, unsigned startColumn, unsigned endColumn)
@@ -421,7 +421,7 @@ public:
     void installCode(CodeBlock*);
     PassRefPtr<CodeBlock> newCodeBlockFor(CodeSpecializationKind, JSFunction*, JSScope**, JSObject*& exception);
     PassRefPtr<CodeBlock> newReplacementCodeBlockFor(CodeSpecializationKind);
-    
+
     JSObject* prepareForExecution(ExecState* exec, JSFunction* function, JSScope** scope, CodeSpecializationKind kind)
     {
         if (hasJITCodeFor(kind))
@@ -477,7 +477,7 @@ public:
     {
         return Structure::create(vm, globalObject, proto, TypeInfo(EvalExecutableType, StructureFlags), info());
     }
-        
+
     DECLARE_INFO;
 
     void unlinkCalls();
@@ -528,14 +528,14 @@ public:
     {
         return generatedJITCodeForCall();
     }
-        
+
     static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue proto)
     {
         return Structure::create(vm, globalObject, proto, TypeInfo(ProgramExecutableType, StructureFlags), info());
     }
-        
+
     DECLARE_INFO;
-        
+
     void unlinkCalls();
 
     void clearCode();
@@ -544,7 +544,7 @@ public:
 
 private:
     friend class ScriptExecutable;
-    
+
     static const unsigned StructureFlags = OverridesVisitChildren | ScriptExecutable::StructureFlags;
 
     ProgramExecutable(ExecState*, const SourceCode&);
@@ -570,7 +570,7 @@ public:
     static FunctionExecutable* fromGlobalCode(const Identifier& name, ExecState*, Debugger*, const SourceCode&, JSObject** exception);
 
     static void destroy(JSCell*);
-        
+
     UnlinkedFunctionExecutable* unlinkedExecutable()
     {
         return m_unlinkedExecutable.get();
@@ -585,7 +585,7 @@ public:
             return m_codeBlockForCall.get();
         return m_codeBlockForConstruct.get();
     }
-        
+
     bool isGeneratedForCall() const
     {
         return m_codeBlockForCall;
@@ -605,7 +605,7 @@ public:
     {
         return m_codeBlockForConstruct.get();
     }
-        
+
     bool isGeneratedFor(CodeSpecializationKind kind)
     {
         if (kind == CodeForCall)
@@ -613,7 +613,7 @@ public:
         ASSERT(kind == CodeForConstruct);
         return isGeneratedForConstruct();
     }
-        
+
     FunctionCodeBlock* codeBlockFor(CodeSpecializationKind kind)
     {
         if (kind == CodeForCall)
@@ -623,12 +623,12 @@ public:
     }
 
     FunctionCodeBlock* baselineCodeBlockFor(CodeSpecializationKind);
-        
+
     FunctionCodeBlock* profiledCodeBlockFor(CodeSpecializationKind kind)
     {
         return baselineCodeBlockFor(kind);
     }
-        
+
     FunctionMode functionMode() { return m_unlinkedExecutable->functionMode(); }
     bool isBuiltinFunction() const { return m_unlinkedExecutable->isBuiltinFunction(); }
     const Identifier& name() { return m_unlinkedExecutable->name(); }
@@ -645,9 +645,9 @@ public:
     {
         return Structure::create(vm, globalObject, proto, TypeInfo(FunctionExecutableType, StructureFlags), info());
     }
-        
+
     DECLARE_INFO;
-        
+
     void unlinkCalls();
 
     void clearCode();

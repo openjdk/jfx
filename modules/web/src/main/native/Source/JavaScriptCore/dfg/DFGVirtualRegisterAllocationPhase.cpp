@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -42,7 +42,7 @@ public:
         : Phase(graph, "virtual register allocation")
     {
     }
-    
+
     bool run()
     {
         ScoreBoard scoreBoard(m_graph.m_nextMachineLocal);
@@ -55,10 +55,10 @@ public:
                 continue;
             for (size_t indexInBlock = 0; indexInBlock < block->size(); ++indexInBlock) {
                 Node* node = block->at(indexInBlock);
-        
+
                 if (!node->shouldGenerate())
                     continue;
-                
+
                 switch (node->op()) {
                 case Phi:
                 case Flush:
@@ -70,7 +70,7 @@ public:
                 default:
                     break;
                 }
-                
+
                 // First, call use on all of the current node's children, then
                 // allocate a VirtualRegister for this node. We do so in this
                 // order so that if a child is on its last use, and a
@@ -96,7 +96,7 @@ public:
             }
             scoreBoard.assertClear();
         }
-        
+
         // Record the number of virtual registers we're using. This is used by calls
         // to figure out where to put the parameters.
         m_graph.m_nextMachineLocal = scoreBoard.highWatermark();

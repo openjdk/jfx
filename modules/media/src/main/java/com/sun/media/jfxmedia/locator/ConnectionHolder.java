@@ -274,7 +274,7 @@ public abstract class ConnectionHolder {
         public long seek(long position) {
             if (urlConnection instanceof HttpURLConnection) {
                 URLConnection tmpURLConnection = null;
-                
+
                 //closeConnection();
                 try{
                     tmpURLConnection = uri.toURL().openConnection();

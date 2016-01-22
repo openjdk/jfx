@@ -40,12 +40,12 @@ public abstract class SymbolicPointArray {
     final public int numPoints;
     // x, y, z as stated.
     static final int NUM_COMPONENTS_PER_POINT = 3;
-    
+
     protected SymbolicPointArray(float[] data) {
         this.data = data;
         this.numPoints = data.length / NUM_COMPONENTS_PER_POINT;
     }
-    
+
     /**
      * Updates the variables x, y, z based on the state of the other variables
      * that this symbolic point depends on.

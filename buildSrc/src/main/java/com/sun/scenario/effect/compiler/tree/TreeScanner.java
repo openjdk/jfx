@@ -112,11 +112,11 @@ public class TreeScanner extends TreeVisitor {
     @Override
     public void visitGlueBlock(GlueBlock b) {
     }
-    
+
     @Override
     public void visitLiteralExpr(LiteralExpr e) {
     }
-    
+
     @Override
     public void visitParenExpr(ParenExpr e) {
         scan(e.getExpr());
@@ -154,7 +154,7 @@ public class TreeScanner extends TreeVisitor {
     @Override
     public void visitVariableExpr(VariableExpr e) {
     }
-    
+
     @Override
     public void visitVectorCtorExpr(VectorCtorExpr e) {
         for (Expr expr : e.getParams()) {

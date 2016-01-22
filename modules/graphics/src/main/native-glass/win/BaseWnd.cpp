@@ -64,7 +64,7 @@ BaseWnd::~BaseWnd()
         LEAVE_MAIN_THREAD_LATER;
 
         ARG(wndClassAtom) = m_wndClassAtom;
-        
+
         PERFORM_LATER();
     }
 }

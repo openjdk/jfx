@@ -32,7 +32,7 @@ public class SelectStmt extends Stmt {
     private final Expr ifExpr;
     private final Stmt thenStmt;
     private final Stmt elseStmt;
-    
+
     SelectStmt(Expr ifExpr, Stmt thenStmt, Stmt elseStmt) {
         this.ifExpr = ifExpr;
         this.thenStmt = thenStmt;

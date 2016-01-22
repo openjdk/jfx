@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef DFGNodeFlags_h
@@ -44,16 +44,16 @@ namespace JSC { namespace DFG {
 #define NodeResultInt52                  0x0004
 #define NodeResultBoolean                0x0005
 #define NodeResultStorage                0x0006
-                                
+
 #define NodeMustGenerate                 0x0008 // set on nodes that have side effects, and may not trivially be removed by DCE.
 #define NodeHasVarArgs                   0x0010
 #define NodeClobbersWorld                0x0020
 #define NodeMightClobber                 0x0040
-                                
+
 #define NodeBehaviorMask                 0x0180
 #define NodeMayOverflow                  0x0080
 #define NodeMayNegZero                   0x0100
-                                
+
 #define NodeBytecodeBackPropMask         0x1E00
 #define NodeBytecodeUseBottom            0x0000
 #define NodeBytecodeUsesAsNumber         0x0200 // The result of this computation may be used in a context that observes fractional, or bigger-than-int32, results.
@@ -101,10 +101,10 @@ static inline bool nodeCanSpeculateInt32(NodeFlags flags)
 {
     if (nodeMayOverflow(flags))
         return !bytecodeUsesAsNumber(flags);
-    
+
     if (nodeMayNegZero(flags))
         return bytecodeCanIgnoreNegativeZero(flags);
-    
+
     return true;
 }
 
@@ -112,7 +112,7 @@ static inline bool nodeCanSpeculateInt52(NodeFlags flags)
 {
     if (nodeMayNegZero(flags))
         return bytecodeCanIgnoreNegativeZero(flags);
-    
+
     return true;
 }
 

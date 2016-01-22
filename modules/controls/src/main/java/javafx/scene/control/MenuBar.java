@@ -64,7 +64,7 @@ import javafx.scene.AccessibleRole;
  * final Menu menu1 = new Menu("File");
  * final Menu menu2 = new Menu("Options");
  * final Menu menu3 = new Menu("Help");
- * 
+ *
  * MenuBar menuBar = new MenuBar();
  * menuBar.getMenus().addAll(menu1, menu2, menu3);
  * </code></pre>
@@ -104,7 +104,7 @@ public class MenuBar extends Control {
         }
 
         // focusTraversable is styleable through css. Calling setFocusTraversable
-        // makes it look to css like the user set the value and css will not 
+        // makes it look to css like the user set the value and css will not
         // override. Initializing focusTraversable by calling applyStyle with null
         // StyleOrigin ensures that css will be able to override the value.
         ((StyleableProperty<Boolean>)(WritableValue<Boolean>)focusTraversableProperty()).applyStyle(null, Boolean.FALSE);
@@ -159,7 +159,7 @@ public class MenuBar extends Control {
                 public String getName() {
                     return "useSystemMenuBar";
                 }
-                
+
                 @Override
                 public void bind(final ObservableValue<? extends Boolean> rawObservable) {
                     throw new RuntimeException(BIND_MSG);
@@ -171,7 +171,7 @@ public class MenuBar extends Control {
     }
     private String BIND_MSG =
         "cannot uni-directionally bind to the system menu bar - use bindBidrectional instead";
-                                               
+
     private BooleanProperty useSystemMenuBar;
     public final void setUseSystemMenuBar(boolean value) {
         useSystemMenuBarProperty().setValue(value);
@@ -200,7 +200,7 @@ public class MenuBar extends Control {
     @Override protected Skin<?> createDefaultSkin() {
         return new MenuBarSkin(this);
     }
-    
+
     /***************************************************************************
      *                                                                         *
      * Stylesheet Handling                                                     *

@@ -96,8 +96,8 @@ void GainNode::checkNumberOfChannelsForInput(AudioNodeInput* input)
     ASSERT(input && input == this->input(0));
     if (input != this->input(0))
         return;
-        
-    unsigned numberOfChannels = input->numberOfChannels();    
+
+    unsigned numberOfChannels = input->numberOfChannels();
 
     if (isInitialized() && numberOfChannels != output(0)->numberOfChannels()) {
         // We're already initialized but the channel count has changed.

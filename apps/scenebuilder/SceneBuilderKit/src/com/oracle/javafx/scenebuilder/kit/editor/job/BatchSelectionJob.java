@@ -53,7 +53,7 @@ public abstract class BatchSelectionJob extends BatchDocumentJob {
     protected final AbstractSelectionGroup getOldSelectionGroup() {
         return oldSelectionGroup;
     }
-    
+
     protected abstract AbstractSelectionGroup getNewSelectionGroup();
 
     @Override

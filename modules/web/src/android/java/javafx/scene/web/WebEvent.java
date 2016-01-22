@@ -32,7 +32,7 @@ import javafx.event.EventType;
  * {@code WebEvent} instances are passed into {@code EventHandler}s registered
  * with a {@link WebEngine} by JavaScript running on a Web page. An event holds
  * a single data item of type {@code T}.
- * 
+ *
  * @see WebEngine
  * @see WebEngine#setOnAlert
  * @see WebEngine#setOnResized
@@ -94,7 +94,7 @@ final public class WebEvent<T> extends Event {
     /**
      * Returns a string representation of this {@code WebEvent} object.
      * @return a string representation of this {@code WebEvent} object.
-     */ 
+     */
     @Override public String toString() {
         return String.format(
                 "WebEvent [source = %s, eventType = %s, data = %s]",

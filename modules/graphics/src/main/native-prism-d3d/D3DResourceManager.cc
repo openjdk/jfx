@@ -331,7 +331,7 @@ D3DResourceManager::CreateTexture(UINT width, UINT height,
                 width, height, isRTT, isOpaque);
 
     IDirect3DDevice9 *pd3dDevice = pCtx->Get3DDevice();
-       
+
     if (pd3dDevice == NULL) {
         return E_FAIL;
     }

@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -55,7 +55,7 @@ IconDatabaseBase& iconDatabase()
     if (vmbase)
         return *vmbase;
 
-    static IconDatabaseBase* defaultDatabase = 0;        
+    static IconDatabaseBase* defaultDatabase = 0;
     if (!defaultDatabase)
         defaultDatabase = new IconDatabase;
 

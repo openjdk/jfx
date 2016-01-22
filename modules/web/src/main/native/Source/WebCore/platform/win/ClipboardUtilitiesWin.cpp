@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -83,7 +83,7 @@ static bool getDataMapItem(const DragDataMap* dataObject, FORMATETC* format, Str
     return true;
 }
 
-static bool getWebLocData(IDataObject* dataObject, String& url, String* title) 
+static bool getWebLocData(IDataObject* dataObject, String& url, String* title)
 {
     bool succeeded = false;
 #if USE(CF)
@@ -103,16 +103,16 @@ static bool getWebLocData(IDataObject* dataObject, String& url, String* title)
         goto exit;
 
     if (_wcsicmp(PathFindExtensionW(filename), L".url"))
-        goto exit;    
-    
+        goto exit;
+
     if (!GetPrivateProfileStringW(L"InternetShortcut", L"url", 0, urlBuffer, WTF_ARRAY_LENGTH(urlBuffer), filename))
         goto exit;
-    
+
     if (title) {
         PathRemoveExtension(filename);
         *title = String((UChar*)filename);
     }
-    
+
     url = String((UChar*)urlBuffer);
     succeeded = true;
 
@@ -124,7 +124,7 @@ exit:
     return succeeded;
 }
 
-static bool getWebLocData(const DragDataMap* dataObject, String& url, String* title) 
+static bool getWebLocData(const DragDataMap* dataObject, String& url, String* title)
 {
 #if USE(CF)
     WCHAR filename[MAX_PATH];
@@ -135,7 +135,7 @@ static bool getWebLocData(const DragDataMap* dataObject, String& url, String* ti
 
     wcscpy(filename, dataObject->get(cfHDropFormat()->cfFormat)[0].charactersWithNullTermination().data());
     if (_wcsicmp(PathFindExtensionW(filename), L".url"))
-        return false;    
+        return false;
 
     if (!GetPrivateProfileStringW(L"InternetShortcut", L"url", 0, urlBuffer, WTF_ARRAY_LENGTH(urlBuffer), filename))
         return false;
@@ -144,7 +144,7 @@ static bool getWebLocData(const DragDataMap* dataObject, String& url, String* ti
         PathRemoveExtension(filename);
         *title = filename;
     }
-    
+
     url = urlBuffer;
     return true;
 #else
@@ -166,7 +166,7 @@ static String extractURL(const String &inURL, String* title)
 }
 
 // Firefox text/html
-static FORMATETC* texthtmlFormat() 
+static FORMATETC* texthtmlFormat()
 {
     static UINT cf = RegisterClipboardFormat(L"text/html");
     static FORMATETC texthtmlFormat = {cf, 0, DVASPECT_CONTENT, -1, TYMED_HGLOBAL};
@@ -361,7 +361,7 @@ FORMATETC* filenameFormat()
 }
 
 // MSIE HTML Format
-FORMATETC* htmlFormat() 
+FORMATETC* htmlFormat()
 {
     static UINT cf = RegisterClipboardFormat(L"HTML Format");
     static FORMATETC htmlFormat = {cf, 0, DVASPECT_CONTENT, -1, TYMED_HGLOBAL};
@@ -558,7 +558,7 @@ String getPlainText(IDataObject* dataObject)
 String getPlainText(const DragDataMap* data)
 {
     String text;
-    
+
     if (getDataMapItem(data, plainTextWFormat(), text))
         return text;
     if (getDataMapItem(data, plainTextFormat(), text))
@@ -644,7 +644,7 @@ PassRefPtr<DocumentFragment> fragmentFromCFHTML(Document* doc, const String& cfh
     return createFragmentFromMarkup(*doc, markup, srcURL, DisallowScriptingAndPluginContent);
 }
 
-PassRefPtr<DocumentFragment> fragmentFromHTML(Document* doc, IDataObject* data) 
+PassRefPtr<DocumentFragment> fragmentFromHTML(Document* doc, IDataObject* data)
 {
     if (!doc || !data)
         return 0;
@@ -663,7 +663,7 @@ PassRefPtr<DocumentFragment> fragmentFromHTML(Document* doc, IDataObject* data)
     return 0;
 }
 
-PassRefPtr<DocumentFragment> fragmentFromHTML(Document* document, const DragDataMap* data) 
+PassRefPtr<DocumentFragment> fragmentFromHTML(Document* document, const DragDataMap* data)
 {
     if (!document || !data || data->isEmpty())
         return 0;
@@ -790,14 +790,14 @@ void setCFData(IDataObject* data, FORMATETC* format, const Vector<String>& dataS
 
     SIZE_T dropFilesSize = sizeof(DROPFILES) + (sizeof(WCHAR) * (dataStrings.first().length() + 2));
     medium.hGlobal = ::GlobalAlloc(GHND | GMEM_SHARE, dropFilesSize);
-    if (!medium.hGlobal) 
+    if (!medium.hGlobal)
         return;
 
     DROPFILES* dropFiles = reinterpret_cast<DROPFILES *>(GlobalLock(medium.hGlobal));
     dropFiles->pFiles = sizeof(DROPFILES);
     dropFiles->fWide = TRUE;
     String filename = dataStrings.first();
-    wcscpy(reinterpret_cast<LPWSTR>(dropFiles + 1), filename.charactersWithNullTermination().data());    
+    wcscpy(reinterpret_cast<LPWSTR>(dropFiles + 1), filename.charactersWithNullTermination().data());
     GlobalUnlock(medium.hGlobal);
     data->SetData(format, &medium, FALSE);
     ::GlobalFree(medium.hGlobal);

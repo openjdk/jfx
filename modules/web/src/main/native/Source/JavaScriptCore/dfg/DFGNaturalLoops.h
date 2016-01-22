@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef DFGNaturalLoops_h
@@ -45,16 +45,16 @@ public:
         , m_outerLoopIndex(UINT_MAX)
     {
     }
-    
+
     NaturalLoop(BasicBlock* header, unsigned index)
         : m_header(header)
         , m_outerLoopIndex(UINT_MAX)
         , m_index(index)
     {
     }
-    
+
     BasicBlock* header() const { return m_header; }
-    
+
     unsigned size() const { return m_body.size(); }
     BasicBlock* at(unsigned i) const { return m_body[i]; }
     BasicBlock* operator[](unsigned i) const { return at(i); }
@@ -75,15 +75,15 @@ public:
 
     // The index of this loop in NaturalLoops.
     unsigned index() const { return m_index; }
-    
+
     bool isOuterMostLoop() const { return m_outerLoopIndex == UINT_MAX; }
-    
+
     void dump(PrintStream&) const;
 private:
     friend class NaturalLoops;
-    
+
     void addBlock(BasicBlock* block) { m_body.append(block); }
-    
+
     BasicBlock* m_header;
     Vector<BasicBlock*, 4> m_body;
     unsigned m_outerLoopIndex;
@@ -94,9 +94,9 @@ class NaturalLoops : public Analysis<NaturalLoops> {
 public:
     NaturalLoops();
     ~NaturalLoops();
-    
+
     void compute(Graph&);
-    
+
     unsigned numLoops() const
     {
         ASSERT(isValid());
@@ -107,7 +107,7 @@ public:
         ASSERT(isValid());
         return m_loops[i];
     }
-    
+
     // Return either null if the block isn't a loop header, or the
     // loop it belongs to.
     const NaturalLoop* headerOf(BasicBlock* block) const
@@ -124,7 +124,7 @@ public:
         }
         return 0;
     }
-    
+
     const NaturalLoop* innerMostLoopOf(BasicBlock* block) const
     {
         ASSERT(isValid());
@@ -133,7 +133,7 @@ public:
             return 0;
         return &m_loops[index];
     }
-    
+
     const NaturalLoop* innerMostOuterLoop(const NaturalLoop& loop) const
     {
         ASSERT(isValid());
@@ -141,21 +141,21 @@ public:
             return 0;
         return &m_loops[loop.m_outerLoopIndex];
     }
-    
+
     bool belongsTo(BasicBlock* block, const NaturalLoop& candidateLoop) const
     {
         ASSERT(isValid());
         // It's faster to do this test using the loop itself, if it's small.
         if (candidateLoop.size() < 4)
             return candidateLoop.contains(block);
-        
+
         for (const NaturalLoop* loop = innerMostLoopOf(block); loop; loop = innerMostOuterLoop(*loop)) {
             if (loop == &candidateLoop)
                 return true;
         }
         return false;
     }
-    
+
     // Return the indices of all loops this belongs to.
     Vector<const NaturalLoop*> loopsOf(BasicBlock*) const;
 

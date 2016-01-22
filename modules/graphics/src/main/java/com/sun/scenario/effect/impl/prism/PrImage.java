@@ -74,7 +74,7 @@ public class PrImage implements Filterable {
     public float getPixelScale() {
         return image.getPixelScale();
     }
-    
+
     public int getMaxContentWidth() {
         return image.getWidth();
     }

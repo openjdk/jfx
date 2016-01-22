@@ -1447,7 +1447,7 @@ public class FXMLLoader {
         public void processCharacters() throws IOException {
             String text = xmlStreamReader.getText();
             text = extraneousWhitespacePattern.matcher(text).replaceAll(" ").trim();
-            
+
             if (readOnly) {
                 if (isCollection()) {
                     add(text);

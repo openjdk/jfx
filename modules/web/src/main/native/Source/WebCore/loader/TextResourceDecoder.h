@@ -57,12 +57,12 @@ public:
 
     void setHintEncoding(const TextResourceDecoder* hintDecoder)
     {
-        // hintEncoding is for use with autodetection, which should be 
+        // hintEncoding is for use with autodetection, which should be
         // only invoked when hintEncoding comes from auto-detection.
         if (hintDecoder && hintDecoder->m_source == AutoDetectedEncoding)
             m_hintEncoding = hintDecoder->encoding().name();
     }
-   
+
     void useLenientXMLDecoding() { m_useLenientXMLDecoding = true; }
     bool sawError() const { return m_sawError; }
 

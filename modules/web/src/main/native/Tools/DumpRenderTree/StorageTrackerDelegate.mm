@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #import "config.h"
@@ -56,12 +56,12 @@
         return;
 
     numberOfNotificationsToLog--;
-    
+
     if (numberOfNotificationsToLog == 0 && controllerToNotifyDone) {
         NSArray *origins = [[WebStorageManager sharedWebStorageManager] origins];
         for (WebSecurityOrigin *origin in origins)
             printf("Origin identifier: '%s'\n", [[origin databaseIdentifier] UTF8String]);
-        
+
         controllerToNotifyDone->notifyDone();
     }
 }
@@ -69,7 +69,7 @@
 - (void)dealloc
 {
     [[NSNotificationCenter defaultCenter] removeObserver:self name:WebStorageDidModifyOriginNotification object:nil];
-    
+
     [super dealloc];
 }
 

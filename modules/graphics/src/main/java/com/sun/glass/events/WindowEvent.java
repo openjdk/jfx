@@ -44,7 +44,7 @@ public class WindowEvent {
 
     final static public int FOCUS_DISABLED        = 545;
     final static public int FOCUS_UNGRAB          = 546;
-    
+
     public static String getEventName(final int eventType) {
         switch(eventType) {
             case WindowEvent.RESIZE:
@@ -70,9 +70,9 @@ public class WindowEvent {
             case WindowEvent.FOCUS_GAINED_BACKWARD:
                 return "FOCUS_GAINED_BACKWARD";
             case WindowEvent.FOCUS_DISABLED:
-                return "FOCUS_DISABLED";   
+                return "FOCUS_DISABLED";
             case WindowEvent.FOCUS_UNGRAB:
-                return "FOCUS_UNGRAB";   
+                return "FOCUS_UNGRAB";
             default:
                 return "UNKNOWN";
         }

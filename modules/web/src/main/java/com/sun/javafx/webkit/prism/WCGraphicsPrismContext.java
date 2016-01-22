@@ -62,14 +62,14 @@ import com.sun.scenario.effect.impl.Renderer;
 import com.sun.scenario.effect.impl.prism.PrRenderer;
 
 class WCGraphicsPrismContext extends WCGraphicsContext {
-    
+
     public enum Type {
         /**
          * Base context associated with the topmost page buffer.
          * Created and disposed during a single render pass.
          */
         PRIMARY,
-        
+
         /**
          * A context associated with a dedicated buffer representing
          * a separate render target like canvas, buffered image etc.
@@ -106,7 +106,7 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
 
     WCGraphicsPrismContext() {
     }
-    
+
     public Type type() {
         return Type.PRIMARY;
     }
@@ -275,7 +275,7 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
     }
 
 
-    public void dispose() {        
+    public void dispose() {
         if (!states.isEmpty()) {
             log.fine("Unbalanced saveState/restoreState");
         }
@@ -445,11 +445,11 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
         Rectangle r = state.getClipNoClone();
         return r == null ? null : new WCRectangle(r.x, r.y, r.width, r.height);
     }
-    
+
     protected Rectangle getClipRectNoClone() {
         return state.getClipNoClone();
     }
-    
+
     protected Affine3D getTransformNoClone() {
         return state.getTransformNoClone();
     }
@@ -483,7 +483,7 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
             cachedGraphics.setTransform(state.getTransformNoClone());
         }
     }
-    
+
     // overriden in WCBufferedContext
     protected boolean shouldRenderRect(float x, float y, float w, float h,
                                        DropShadow shadow, BasicStroke stroke)
@@ -495,7 +495,7 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
     protected boolean shouldRenderShape(Shape shape, DropShadow shadow, BasicStroke stroke) {
         return true;
     }
-    
+
     // overriden in WCBufferedContext
     protected boolean shouldCalculateIntersection() {
         return false;
@@ -847,7 +847,7 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
     public void drawBitmapImage(final ByteBuffer image, final int x, final int y, final int w, final int h) {
         if (!shouldRenderRect(x, y, w, h, null, null)) {
             return;
-        }                
+        }
         new Composite() {
             @Override void doPaint(Graphics g) {
                 image.order(ByteOrder.nativeOrder());
@@ -905,16 +905,16 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
         }
         PGFont font = (PGFont)f.getPlatformFont();
         TextRun gl = TextUtilities.createGlyphList(glyphs, advances, x, y);
-        
+
         DropShadow shadow = state.getShadowNoClone();
         BasicStroke stroke = state.isTextStroke()
                 ? state.getStrokeNoClone().getPlatformStroke()
                 : null;
-        
+
         final FontStrike strike = font.getStrike(getTransformNoClone(), getFontSmoothingType());
         if (shouldCalculateIntersection()) {
             Metrics m = strike.getMetrics();
-            gl.setMetrics(m.getAscent(), m.getDescent(), m.getLineGap());            
+            gl.setMetrics(m.getAscent(), m.getDescent(), m.getLineGap());
             if (!shouldRenderRect(x, y, gl.getWidth(), gl.getHeight(), shadow, stroke)) {
                 return;
             }
@@ -963,7 +963,7 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
         for (GlyphList run: runs) {
             count += run.getGlyphCount();
         }
-        
+
         int[] glyphs = new int[count];
         float[] adv = new float[count];
         count = 0;
@@ -1002,7 +1002,7 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
                               null, state.getStrokeNoClone().getPlatformStroke()))
         {
             return;
-        }                
+        }
         new Composite() {
             @Override void doPaint(Graphics g) {
                 g.setPaint(state.getPaintNoClone());
@@ -1053,7 +1053,7 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
     public float getAlpha() {
         return state.getAlpha();
     }
-    
+
     @Override public void beginTransparencyLayer(float opacity) {
         TransparencyLayer layer = new TransparencyLayer(
                 getGraphics(false), state.getClipNoClone(), opacity);
@@ -1082,7 +1082,7 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
         WCSize s = theme.getWidgetSize(widget);
         if (!shouldRenderRect(x, y, s.getWidth(), s.getHeight(), null, null)) {
             return;
-        }                
+        }
         new Composite() {
             @Override void doPaint(Graphics g) {
                 theme.drawWidget(WCGraphicsPrismContext.this, widget, x, y);
@@ -1306,7 +1306,7 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
 
         private void concatTransform(Affine3D at) {
             xform.concatenate(at);
-	}
+    }
 
         private void translate(double dx, double dy) {
             xform.translate(dx, dy);
@@ -1340,7 +1340,7 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
                 ResourceFactory f = GraphicsPipeline.getDefaultResourceFactory();
                 RTTexture rtt = f.createRTTexture(w, h, Texture.WrapMode.CLAMP_NOT_NEEDED);
                 rtt.makePermanent();
-                buffer = ((PrRenderer)Renderer.getRenderer(fctx)).createDrawable(rtt);                
+                buffer = ((PrRenderer)Renderer.getRenderer(fctx)).createDrawable(rtt);
             } else {
                 buffer = (PrDrawable) Effect.getCompatibleImage(fctx, w, h);
             }
@@ -1487,7 +1487,7 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
 
         void paint(Graphics g) {
             if (g != null) {
-	        CompositeMode oldCompositeMode = g.getCompositeMode();
+            CompositeMode oldCompositeMode = g.getCompositeMode();
                 switch (state.getCompositeOperation()) {
                     // decode operations that don't require Blend first
                     case COMPOSITE_COPY:
@@ -1674,7 +1674,7 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
             !shouldRenderShape(arc, null, state.getStrokeNoClone().getPlatformStroke()))
         {
             return;
-        }        
+        }
         new Composite() {
             @Override void doPaint(Graphics g) {
                 if (state.getStrokeNoClone().apply(g)) {
@@ -1700,7 +1700,7 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
             lineWidth,
             BasicStroke.CAP_BUTT,
             BasicStroke.JOIN_MITER,
-            Math.max(1.0f, lineWidth));        
+            Math.max(1.0f, lineWidth));
         if (!shouldRenderRect(x, y, w, h, null, stroke)) {
             return;
         }
@@ -1722,14 +1722,14 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
         log.fine("strokePath");
         if (path != null) {
             final BasicStroke stroke = state.getStrokeNoClone().getPlatformStroke();
-            final DropShadow shadow = state.getShadowNoClone();            
+            final DropShadow shadow = state.getShadowNoClone();
             final Path2D p2d = (Path2D)path.getPlatformPath();
-            
+
             if ((stroke == null && shadow == null) ||
                 !shouldRenderShape(p2d, shadow, stroke))
             {
                 return;
-            }        
+            }
             new Composite() {
                 @Override void doPaint(Graphics g) {
                     if (shadow != null) {
@@ -1758,7 +1758,7 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
                                    state.getShadowNoClone(), null))
             {
                 return;
-            }        
+            }
             new Composite() {
                 @Override void doPaint(Graphics g) {
                     Path2D p2d = (Path2D) path.getPlatformPath();
@@ -1814,5 +1814,5 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
     @Override
     public WCGradient createRadialGradient(WCPoint p1, float r1, WCPoint p2, float r2) {
         return new WCRadialGradient(p1, r1, p2, r2);
-    }    
+    }
 }

@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -47,7 +47,7 @@ static void setNonZeroBeginTimeFlag(PlatformCAAnimation* animation, bool value)
 {
     [animation->platformAnimation() setValue:[NSNumber numberWithBool:value] forKey:WKNonZeroBeginTimeFlag];
 }
-    
+
 static NSString* toCAFillModeType(PlatformCAAnimation::FillModeType type)
 {
     switch (type) {
@@ -145,7 +145,7 @@ static CAMediaTimingFunction* toCAMediaTimingFunction(const TimingFunction* timi
         float y2 = static_cast<float>(ctf->y2());
         return [CAMediaTimingFunction functionWithControlPoints: x1 : y1 : x2 : y2];
     }
-    
+
     return [CAMediaTimingFunction functionWithName:kCAMediaTimingFunctionLinear];
 }
 
@@ -178,14 +178,14 @@ PlatformCAAnimation::PlatformCAAnimation(PlatformAnimationRef animation)
         ASSERT(0);
         return;
     }
-    
+
     m_animation = static_cast<CAPropertyAnimation*>(animation);
 }
 
 PassRefPtr<PlatformCAAnimation> PlatformCAAnimation::copy() const
 {
     RefPtr<PlatformCAAnimation> animation = create(animationType(), keyPath());
-    
+
     animation->setBeginTime(beginTime());
     animation->setDuration(duration());
     animation->setSpeed(speed());
@@ -199,7 +199,7 @@ PassRefPtr<PlatformCAAnimation> PlatformCAAnimation::copy() const
     animation->setValueFunction(valueFunction());
 
     setNonZeroBeginTimeFlag(animation.get(), hasNonZeroBeginTimeFlag(this));
-    
+
     // Copy the specific Basic or Keyframe values
     if (animationType() == Keyframe) {
         animation->copyValuesFrom(this);
@@ -209,7 +209,7 @@ PassRefPtr<PlatformCAAnimation> PlatformCAAnimation::copy() const
         animation->copyFromValueFrom(this);
         animation->copyToValueFrom(this);
     }
-    
+
     return animation;
 }
 PlatformCAAnimation::~PlatformCAAnimation()
@@ -234,8 +234,8 @@ CFTimeInterval PlatformCAAnimation::beginTime() const
 void PlatformCAAnimation::setBeginTime(CFTimeInterval value)
 {
     [m_animation.get() setBeginTime:value];
-    
-    // Also set a flag to tell us if we've passed in a 0 value. 
+
+    // Also set a flag to tell us if we've passed in a 0 value.
     // The flag is needed because later beginTime will get changed
     // to the time at which it fired and we need to know whether
     // or not it was 0 to begin with.
@@ -355,7 +355,7 @@ void PlatformCAAnimation::setFromValue(const WebCore::TransformationMatrix& valu
 {
     if (animationType() != Basic)
         return;
-        
+
     [static_cast<CABasicAnimation*>(m_animation.get()) setFromValue:[NSValue valueWithCATransform3D:value]];
 }
 
@@ -398,7 +398,7 @@ void PlatformCAAnimation::copyFromValueFrom(const PlatformCAAnimation* value)
 {
     if (animationType() != Basic || value->animationType() != Basic)
         return;
-        
+
     CABasicAnimation* otherAnimation = static_cast<CABasicAnimation*>(value->m_animation.get());
     [static_cast<CABasicAnimation*>(m_animation.get()) setFromValue:[otherAnimation fromValue]];
 }
@@ -457,7 +457,7 @@ void PlatformCAAnimation::copyToValueFrom(const PlatformCAAnimation* value)
 {
     if (animationType() != Basic || value->animationType() != Basic)
         return;
-        
+
     CABasicAnimation* otherAnimation = static_cast<CABasicAnimation*>(value->m_animation.get());
     [static_cast<CABasicAnimation*>(m_animation.get()) setToValue:[otherAnimation toValue]];
 }
@@ -468,7 +468,7 @@ void PlatformCAAnimation::setValues(const Vector<float>& value)
 {
     if (animationType() != Keyframe)
         return;
-        
+
     NSMutableArray* array = [NSMutableArray array];
     for (size_t i = 0; i < value.size(); ++i)
         [array addObject:[NSNumber numberWithDouble:value[i]]];
@@ -479,12 +479,12 @@ void PlatformCAAnimation::setValues(const Vector<WebCore::TransformationMatrix>&
 {
     if (animationType() != Keyframe)
         return;
-        
+
     NSMutableArray* array = [NSMutableArray array];
 
     for (size_t i = 0; i < value.size(); ++i)
         [array addObject:[NSValue valueWithCATransform3D:value[i]]];
-        
+
     [static_cast<CAKeyframeAnimation*>(m_animation.get()) setValues:array];
 }
 
@@ -492,7 +492,7 @@ void PlatformCAAnimation::setValues(const Vector<FloatPoint3D>& value)
 {
     if (animationType() != Keyframe)
         return;
-        
+
     NSMutableArray* array = [NSMutableArray array];
 
     for (size_t i = 0; i < value.size(); ++i) {
@@ -510,7 +510,7 @@ void PlatformCAAnimation::setValues(const Vector<WebCore::Color>& value)
 {
     if (animationType() != Keyframe)
         return;
-        
+
     NSMutableArray* array = [NSMutableArray array];
 
     for (size_t i = 0; i < value.size(); ++i) {
@@ -530,7 +530,7 @@ void PlatformCAAnimation::setValues(const Vector<RefPtr<FilterOperation>>& value
 {
     if (animationType() != Keyframe)
         return;
-        
+
     NSMutableArray* array = [NSMutableArray array];
 
     for (size_t i = 0; i < values.size(); ++i) {
@@ -545,7 +545,7 @@ void PlatformCAAnimation::copyValuesFrom(const PlatformCAAnimation* value)
 {
     if (animationType() != Keyframe || value->animationType() != Keyframe)
         return;
-        
+
     CAKeyframeAnimation* otherAnimation = static_cast<CAKeyframeAnimation*>(value->m_animation.get());
     [static_cast<CAKeyframeAnimation*>(m_animation.get()) setValues:[otherAnimation values]];
 }
@@ -556,7 +556,7 @@ void PlatformCAAnimation::setKeyTimes(const Vector<float>& value)
 
     for (size_t i = 0; i < value.size(); ++i)
         [array addObject:[NSNumber numberWithFloat:value[i]]];
-    
+
     [static_cast<CAKeyframeAnimation*>(m_animation.get()) setKeyTimes:array];
 }
 
@@ -572,7 +572,7 @@ void PlatformCAAnimation::setTimingFunctions(const Vector<const TimingFunction*>
 
     for (size_t i = 0; i < value.size(); ++i)
         [array addObject:toCAMediaTimingFunction(value[i], reverse)];
-    
+
     [static_cast<CAKeyframeAnimation*>(m_animation.get()) setTimingFunctions:array];
 }
 

@@ -72,7 +72,7 @@ static ThreadIdentifier mainThreadIdentifier;
 static std::mutex& mainThreadFunctionQueueMutex()
 {
     static NeverDestroyed<std::mutex> mutex;
-    
+
     return mutex;
 }
 
@@ -197,7 +197,7 @@ void cancelCallOnMainThread(MainThreadFunction* function, void* context)
     FunctionWithContextFinder pred(FunctionWithContext(function, context));
 
     while (true) {
-        // We must redefine 'i' each pass, because the itererator's operator= 
+        // We must redefine 'i' each pass, because the itererator's operator=
         // requires 'this' to be valid, and remove() invalidates all iterators
         FunctionQueue::iterator i(functionQueue().findIf(pred));
         if (i == functionQueue().end())

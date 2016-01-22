@@ -115,13 +115,13 @@ public class Level extends Parent {
         KeyFrame kf3 = new KeyFrame(Duration.millis(3000), new KeyValue(message.opacityProperty(), 1));
         KeyFrame kf4 = new KeyFrame(Duration.millis(4000), (ActionEvent event) -> {
             message.setVisible(false);
-            
+
             bat.setTranslateX((Config.FIELD_WIDTH - bat.getWidth()) / 2.0);
             ball.setTranslateX((Config.FIELD_WIDTH - ball.getDiameter()) / 2.0);
             ball.setTranslateY(Config.BAT_Y - ball.getDiameter());
             ballDirX = (Utils.random(2) * 2 - 1) * Config.BALL_MIN_COORD_SPEED;
             ballDirY = -Config.BALL_MIN_SPEED;
-            
+
             bat.setVisible(true);
             ball.setVisible(true);
             state = BALL_CATCHED;

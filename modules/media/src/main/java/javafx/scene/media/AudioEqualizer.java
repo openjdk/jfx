@@ -98,7 +98,7 @@ public final class AudioEqualizer {
         return bands;
     }
 
-    AudioEqualizer() {        
+    AudioEqualizer() {
         bands = new Bands();
 
         // Add reasonable bands
@@ -124,7 +124,7 @@ public final class AudioEqualizer {
             if (this.jfxEqualizer == jfxEqualizer) {
                 return;
             }
-            
+
             if (this.jfxEqualizer != null && jfxEqualizer == null) {
                 this.jfxEqualizer.setEnabled(false);
                 for (EqualizerBand band : bands) {
@@ -135,7 +135,7 @@ public final class AudioEqualizer {
             }
 
             this.jfxEqualizer = jfxEqualizer;
-            
+
             // Propogate enabled
             jfxEqualizer.setEnabled(isEnabled());
             // Propogate bands

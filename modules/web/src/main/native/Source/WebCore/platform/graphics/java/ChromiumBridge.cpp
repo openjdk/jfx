@@ -205,7 +205,7 @@ struct FontMap {
     const char* family;
 };
 
-typedef const char* ScriptToFontMap[USCRIPT_CODE_LIMIT];    
+typedef const char* ScriptToFontMap[USCRIPT_CODE_LIMIT];
 static const char* getFontFamilyForScript(UScriptCode script)
 {
     static ScriptToFontMap scriptFontMap;
@@ -250,7 +250,7 @@ static const char* getFontFamilyForScript(UScriptCode script)
             // For USCRIPT_COMMON, we map blocks to scripts when
             // that makes sense.
         };
-        
+
         for (int i = 0; i < sizeof(fontMap) / sizeof(fontMap[0]); ++i) {
             const char *family = fontMap[i].family;
             if (!isFontInstalled(family)) {
@@ -261,19 +261,19 @@ static const char* getFontFamilyForScript(UScriptCode script)
                 case USCRIPT_KATAKANA:
                 case USCRIPT_KATAKANA_OR_HIRAGANA:
                     family = getDefaultCJKFont();
-                    break;  
+                    break;
                 case USCRIPT_HANGUL:
                     family = getDefaultKoreanFont();
-                    break;  
+                    break;
                 case USCRIPT_ARABIC:
                     family = getDefaultArabicFont();
-                    break;  
+                    break;
                 case USCRIPT_HEBREW:
                     family = getDefaultHebrewFont();
-                    break;  
+                    break;
                 default:
                     family = getDefaultCommonFont();
-                    break;  
+                    break;
                 }
             }
             scriptFontMap[fontMap[i].script] = family;
@@ -395,10 +395,10 @@ const char *ChromiumBridge::getCursiveFontFamily()
 
 const char *ChromiumBridge::getFantasyFontFamily()
 {
-    return getCursiveFontFamily();    
+    return getCursiveFontFamily();
 }
 
-String ChromiumBridge::getFontFamilyForCharacters(const UChar* characters, size_t length) { 
+String ChromiumBridge::getFontFamilyForCharacters(const UChar* characters, size_t length) {
 #if !USE(ICU_UNICODE)
     return "lucida sans unicode";
 #else //USE(ICU_UNICODE)
@@ -440,7 +440,7 @@ String ChromiumBridge::getFontFamilyForCharacters(const UChar* characters, size_
             family = "lucida sans unicode";
         }
     }
-    return family; 
+    return family;
 #endif //USE(ICU_UNICODE)
 #endif //SKIA
 void ChromiumBridge::plugins(bool refresh, Vector<PluginInfo>*)

@@ -73,7 +73,7 @@ private:
     RefPtr<SVGPathElement> m_element;
 };
 
-class SVGPathSegSingleCoordinate : public SVGPathSegWithContext { 
+class SVGPathSegSingleCoordinate : public SVGPathSegWithContext {
 public:
     float x() const { return m_x; }
     void setX(float x)

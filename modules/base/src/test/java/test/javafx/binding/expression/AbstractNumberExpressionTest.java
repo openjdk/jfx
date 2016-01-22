@@ -426,15 +426,15 @@ public class AbstractNumberExpressionTest {
     @Test(expected=IllegalArgumentException.class)
     public void testFactory_UnknownClass() {
         NumberExpressionBase.numberExpression(new ObservableNumberValue() {
-			@Override public void addListener(InvalidationListener observer) {}
-			@Override public void addListener(ChangeListener observer) {}
-			@Override public void removeListener(InvalidationListener observer) {}
-			@Override public void removeListener(ChangeListener observer) {}
+            @Override public void addListener(InvalidationListener observer) {}
+            @Override public void addListener(ChangeListener observer) {}
+            @Override public void removeListener(InvalidationListener observer) {}
+            @Override public void removeListener(ChangeListener observer) {}
             @Override public Number getValue() {return null;}
-        	@Override public int intValue() {return 0;}
-        	@Override public long longValue() {return 0L;}
-        	@Override public float floatValue() {return 0.0f;}
-        	@Override public double doubleValue() {return 0.0;}
+            @Override public int intValue() {return 0;}
+            @Override public long longValue() {return 0L;}
+            @Override public float floatValue() {return 0.0f;}
+            @Override public double doubleValue() {return 0.0;}
         });
     }
 

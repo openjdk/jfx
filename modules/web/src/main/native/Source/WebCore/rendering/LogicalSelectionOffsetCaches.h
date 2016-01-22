@@ -128,7 +128,7 @@ public:
         mutable bool m_cachedLogicalRightSelectionOffset : 1;
         mutable LayoutUnit m_logicalLeftSelectionOffset;
         mutable LayoutUnit m_logicalRightSelectionOffset;
-        
+
     };
 
     explicit LogicalSelectionOffsetCaches(RenderBlock& rootBlock)

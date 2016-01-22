@@ -93,7 +93,7 @@ struct _GstDataQueueSize
  * @bytes: The amount of bytes currently in the queue.
  * @time: The accumulated duration of the items currently in the queue.
  * @checkdata: The #gpointer registered when the #GstDataQueue was created.
- * 
+ *
  * The prototype of the function used to inform the queue that it should be
  * considered as full.
  *
@@ -137,9 +137,9 @@ struct _GstDataQueueClass
 GType gst_data_queue_get_type (void);
 
 GstDataQueue * gst_data_queue_new            (GstDataQueueCheckFullFunction checkfull,
-					      GstDataQueueFullCallback fullcallback,
-					      GstDataQueueEmptyCallback emptycallback,
-					      gpointer checkdata) G_GNUC_MALLOC;
+                          GstDataQueueFullCallback fullcallback,
+                          GstDataQueueEmptyCallback emptycallback,
+                          gpointer checkdata) G_GNUC_MALLOC;
 
 gboolean       gst_data_queue_push           (GstDataQueue * queue, GstDataQueueItem * item);
 gboolean       gst_data_queue_push_force     (GstDataQueue * queue, GstDataQueueItem * item);

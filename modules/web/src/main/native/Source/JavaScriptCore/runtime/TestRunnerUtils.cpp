@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -36,7 +36,7 @@ FunctionExecutable* getExecutableForFunction(JSValue theFunctionValue)
     JSFunction* theFunction = jsDynamicCast<JSFunction*>(theFunctionValue);
     if (!theFunction)
         return 0;
-    
+
     FunctionExecutable* executable = jsDynamicCast<FunctionExecutable*>(
         theFunction->executable());
     return executable;
@@ -47,12 +47,12 @@ CodeBlock* getSomeBaselineCodeBlockForFunction(JSValue theFunctionValue)
     FunctionExecutable* executable = getExecutableForFunction(theFunctionValue);
     if (!executable)
         return 0;
-    
+
     CodeBlock* baselineCodeBlock = executable->baselineCodeBlockFor(CodeForCall);
-    
+
     if (!baselineCodeBlock)
         baselineCodeBlock = executable->baselineCodeBlockFor(CodeForConstruct);
-    
+
     return baselineCodeBlock;
 }
 
@@ -71,7 +71,7 @@ JSValue numberOfDFGCompiles(JSValue theFunctionValue)
             return jsNumber(1000000.0);
         return jsNumber(baselineCodeBlock->numberOfDFGCompiles());
     }
-    
+
     return jsNumber(0);
 }
 
@@ -79,7 +79,7 @@ JSValue setNeverInline(JSValue theFunctionValue)
 {
     if (FunctionExecutable* executable = getExecutableForFunction(theFunctionValue))
         executable->setNeverInline(true);
-    
+
     return jsUndefined();
 }
 

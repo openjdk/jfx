@@ -41,7 +41,7 @@
 #include "WebVTTParser.h"
 
 namespace WebCore {
-    
+
 TextTrackLoader::TextTrackLoader(TextTrackLoaderClient& client, ScriptExecutionContext* context)
     : m_client(client)
     , m_scriptExecutionContext(context)
@@ -61,12 +61,12 @@ TextTrackLoader::~TextTrackLoader()
 void TextTrackLoader::cueLoadTimerFired(Timer<TextTrackLoader>* timer)
 {
     ASSERT_UNUSED(timer, timer == &m_cueLoadTimer);
-    
+
     if (m_newCuesAvailable) {
         m_newCuesAvailable = false;
         m_client.newCuesAvailable(this);
     }
-    
+
     if (m_state >= Finished)
         m_client.cueLoadingCompleted(this, m_state == Failed);
 }
@@ -82,10 +82,10 @@ void TextTrackLoader::cancelLoad()
 void TextTrackLoader::processNewCueData(CachedResource* resource)
 {
     ASSERT(m_resource == resource);
-    
+
     if (m_state == Failed || !resource->resourceBuffer())
         return;
-    
+
     ResourceBuffer* buffer = resource->resourceBuffer();
     if (m_parseOffset == buffer->size())
         return;
@@ -106,10 +106,10 @@ void TextTrackLoader::processNewCueData(CachedResource* resource)
 void TextTrackLoader::deprecatedDidReceiveCachedResource(CachedResource* resource)
 {
     ASSERT(m_resource == resource);
-    
+
     if (!resource->resourceBuffer())
         return;
-    
+
     processNewCueData(resource);
 }
 
@@ -143,7 +143,7 @@ void TextTrackLoader::notifyFinished(CachedResource* resource)
 
     if (!m_cueLoadTimer.isActive())
         m_cueLoadTimer.startOneShot(0);
-    
+
     cancelLoad();
 }
 
@@ -173,7 +173,7 @@ bool TextTrackLoader::load(const URL& url, const String& crossOriginMode)
         return false;
 
     m_resource->addClient(this);
-    
+
     return true;
 }
 

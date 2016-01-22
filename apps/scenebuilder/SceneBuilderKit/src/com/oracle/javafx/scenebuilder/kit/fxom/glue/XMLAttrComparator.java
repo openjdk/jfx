@@ -36,7 +36,7 @@ import java.util.Map;
 
 /**
  *
- * 
+ *
  */
 class XMLAttrComparator implements Comparator<Map.Entry<String,String>> {
 
@@ -44,11 +44,11 @@ class XMLAttrComparator implements Comparator<Map.Entry<String,String>> {
     public int compare(Map.Entry<String,String> attr1, Map.Entry<String,String> attr2) {
         assert attr1 != null;
         assert attr2 != null;
-        
+
         final int aoi1 = getAttrOrderIndex(attr1);
         final int aoi2 = getAttrOrderIndex(attr2);
         final int result;
-        
+
         if ((aoi1 == 2) && (aoi2 == 2)) {
             final QualifiedName qn1 = new QualifiedName(attr1.getKey());
             final QualifiedName qn2 = new QualifiedName(attr2.getKey());
@@ -56,22 +56,22 @@ class XMLAttrComparator implements Comparator<Map.Entry<String,String>> {
         } else {
             result = Integer.compare(aoi1, aoi2);
         }
-        
+
         return result;
     }
-    
-    
+
+
     /*
      * Private
      */
-    
+
     private int getAttrOrderIndex(Map.Entry<String,String> attr) {
         assert attr != null;
-        
+
         /*
          * fx:id < id < other-attr < fx:controller
          */
-        
+
         final int result;
         switch(attr.getKey()) {
             case "id": //NOI18N
@@ -104,7 +104,7 @@ class XMLAttrComparator implements Comparator<Map.Entry<String,String>> {
                 result = 6;
                 break;
         }
-        
+
         return result;
     }
 }

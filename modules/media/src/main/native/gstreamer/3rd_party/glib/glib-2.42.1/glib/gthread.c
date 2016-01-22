@@ -12,7 +12,7 @@
  *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.	 See the GNU
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
@@ -100,7 +100,7 @@
  * Originally, UNIX did not have threads, and therefore some traditional
  * UNIX APIs are problematic in threaded programs. Some notable examples
  * are
- * 
+ *
  * - C library functions that return data in statically allocated
  *   buffers, such as strtok() or strerror(). For many of these,
  *   there are thread-safe variants with a _r suffix, or you can
@@ -158,7 +158,7 @@
  * give_me_next_number() example using the #G_LOCK macros:
  *
  * Here is an example for using the #G_LOCK convenience macros:
- * |[<!-- language="C" --> 
+ * |[<!-- language="C" -->
  *   G_LOCK_DEFINE (current_number);
  *
  *   int
@@ -227,7 +227,7 @@
  * access.
  *
  * Take for example the following function:
- * |[<!-- language="C" --> 
+ * |[<!-- language="C" -->
  *   int
  *   give_me_next_number (void)
  *   {
@@ -243,7 +243,7 @@
  * It is easy to see that this won't work in a multi-threaded
  * application. There current_number must be protected against shared
  * access. A #GMutex can be used as a solution to this problem:
- * |[<!-- language="C" --> 
+ * |[<!-- language="C" -->
  *   int
  *   give_me_next_number (void)
  *   {
@@ -306,7 +306,7 @@
  * g_rw_lock_reader_lock()).
  *
  * Here is an example for an array with access functions:
- * |[<!-- language="C" --> 
+ * |[<!-- language="C" -->
  *   GRWLock lock;
  *   GPtrArray *array;
  *
@@ -375,7 +375,7 @@
  *
  * Here is an example for using GCond to block a thread until a condition
  * is satisfied:
- * |[<!-- language="C" --> 
+ * |[<!-- language="C" -->
  *   gpointer current_data = NULL;
  *   GMutex data_mutex;
  *   GCond data_cond;
@@ -518,7 +518,7 @@ G_LOCK_DEFINE_STATIC (g_thread_new);
  *
  * A #GOnce must be initialized with this macro before it can be used.
  *
- * |[<!-- language="C" --> 
+ * |[<!-- language="C" -->
  *   GOnce my_once = G_ONCE_INIT;
  * ]|
  *
@@ -558,7 +558,7 @@ G_LOCK_DEFINE_STATIC (g_thread_new);
  * Calling g_once() recursively on the same #GOnce struct in
  * @func will lead to a deadlock.
  *
- * |[<!-- language="C" --> 
+ * |[<!-- language="C" -->
  *   gpointer
  *   get_debug_flags (void)
  *   {
@@ -574,8 +574,8 @@ G_LOCK_DEFINE_STATIC (g_thread_new);
  */
 gpointer
 g_once_impl (GOnce       *once,
-	     GThreadFunc  func,
-	     gpointer     arg)
+         GThreadFunc  func,
+         gpointer     arg)
 {
   g_mutex_lock (&g_once_mutex);
 
@@ -613,7 +613,7 @@ g_once_impl (GOnce       *once,
  * blocked until initialization completed. To be used in constructs
  * like this:
  *
- * |[<!-- language="C" --> 
+ * |[<!-- language="C" -->
  *   static gsize initialization_value = 0;
  *
  *   if (g_once_init_enter (&initialization_value))

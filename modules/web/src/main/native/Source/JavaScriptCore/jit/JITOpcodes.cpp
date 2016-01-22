@@ -21,7 +21,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -140,7 +140,7 @@ void JIT::emit_op_instanceof(Instruction* currentInstruction)
     // Check that prototype is an object
     loadPtr(Address(regT1, JSCell::structureOffset()), regT3);
     addSlowCase(emitJumpIfNotObject(regT3));
-    
+
     // Optimistically load the result true, and start looping.
     // Initially, regT1 still contains proto and regT2 still contains value.
     // As we loop regT2 will be updated with its prototype, recursively walking the prototype chain.
@@ -166,13 +166,13 @@ void JIT::emit_op_is_undefined(Instruction* currentInstruction)
 {
     int dst = currentInstruction[1].u.operand;
     int value = currentInstruction[2].u.operand;
-    
+
     emitGetVirtualRegister(value, regT0);
     Jump isCell = emitJumpIfJSCell(regT0);
 
     compare64(Equal, regT0, TrustedImm32(ValueUndefined), regT0);
     Jump done = jump();
-    
+
     isCell.link(this);
     loadPtr(Address(regT0, JSCell::structureOffset()), regT1);
     Jump isMasqueradesAsUndefined = branchTest8(NonZero, Address(regT1, Structure::typeInfoFlagsOffset()), TrustedImm32(MasqueradesAsUndefined));
@@ -194,7 +194,7 @@ void JIT::emit_op_is_boolean(Instruction* currentInstruction)
 {
     int dst = currentInstruction[1].u.operand;
     int value = currentInstruction[2].u.operand;
-    
+
     emitGetVirtualRegister(value, regT0);
     xor64(TrustedImm32(static_cast<int32_t>(ValueFalse)), regT0);
     test64(Zero, regT0, TrustedImm32(static_cast<int32_t>(~1)), regT0);
@@ -206,7 +206,7 @@ void JIT::emit_op_is_number(Instruction* currentInstruction)
 {
     int dst = currentInstruction[1].u.operand;
     int value = currentInstruction[2].u.operand;
-    
+
     emitGetVirtualRegister(value, regT0);
     test64(NonZero, regT0, tagTypeNumberRegister, regT0);
     emitTagAsBoolImmediate(regT0);
@@ -217,18 +217,18 @@ void JIT::emit_op_is_string(Instruction* currentInstruction)
 {
     int dst = currentInstruction[1].u.operand;
     int value = currentInstruction[2].u.operand;
-    
+
     emitGetVirtualRegister(value, regT0);
     Jump isNotCell = emitJumpIfNotJSCell(regT0);
-    
+
     loadPtr(Address(regT0, JSCell::structureOffset()), regT1);
     compare8(Equal, Address(regT1, Structure::typeInfoTypeOffset()), TrustedImm32(StringType), regT0);
     emitTagAsBoolImmediate(regT0);
     Jump done = jump();
-    
+
     isNotCell.link(this);
     move(TrustedImm32(ValueFalse), regT0);
-    
+
     done.link(this);
     emitPutVirtualRegister(dst);
 }
@@ -300,7 +300,7 @@ void JIT::emit_op_to_primitive(Instruction* currentInstruction)
     int src = currentInstruction[2].u.operand;
 
     emitGetVirtualRegister(src, regT0);
-    
+
     Jump isImm = emitJumpIfNotJSCell(regT0);
     addSlowCase(branchPtr(NotEqual, Address(regT0, JSCell::structureOffset()), TrustedImmPtr(m_vm->stringStructure.get())));
     isImm.link(this);
@@ -362,7 +362,7 @@ void JIT::emit_op_jeq_null(Instruction* currentInstruction)
     // Now handle the immediate cases - undefined & null
     isImmediate.link(this);
     and64(TrustedImm32(~TagBitUndefined), regT0);
-    addJump(branch64(Equal, regT0, TrustedImm64(JSValue::encode(jsNull()))), target);            
+    addJump(branch64(Equal, regT0, TrustedImm64(JSValue::encode(jsNull()))), target);
 
     isNotMasqueradesAsUndefined.link(this);
     masqueradesGlobalObjectIsForeign.link(this);
@@ -385,7 +385,7 @@ void JIT::emit_op_jneq_null(Instruction* currentInstruction)
     // Now handle the immediate cases - undefined & null
     isImmediate.link(this);
     and64(TrustedImm32(~TagBitUndefined), regT0);
-    addJump(branch64(NotEqual, regT0, TrustedImm64(JSValue::encode(jsNull()))), target);            
+    addJump(branch64(NotEqual, regT0, TrustedImm64(JSValue::encode(jsNull()))), target);
 
     wasNotImmediate.link(this);
 }
@@ -395,7 +395,7 @@ void JIT::emit_op_jneq_ptr(Instruction* currentInstruction)
     int src = currentInstruction[1].u.operand;
     Special::Pointer ptr = currentInstruction[2].u.specialPointer;
     unsigned target = currentInstruction[3].u.operand;
-    
+
     emitGetVirtualRegister(src, regT0);
     addJump(branchPtr(NotEqual, regT0, TrustedImmPtr(actualPointerFor(m_codeBlock, ptr))), target);
 }
@@ -494,7 +494,7 @@ void JIT::emit_op_get_pnames(Instruction* currentInstruction)
     addJump(branch32(Equal, regT1, TrustedImm32(ValueNull)), breakTarget);
     callOperation(operationToObject, base, regT0);
     jump().linkTo(isObject, this);
-    
+
     end.link(this);
 }
 
@@ -506,7 +506,7 @@ void JIT::emit_op_next_pname(Instruction* currentInstruction)
     int size = currentInstruction[4].u.operand;
     int it = currentInstruction[5].u.operand;
     int target = currentInstruction[6].u.operand;
-    
+
     JumpList callHasProperty;
 
     Label begin(this);
@@ -579,12 +579,12 @@ void JIT::compileOpStrictEq(Instruction* currentInstruction, CompileOpStrictEqTy
     int src2 = currentInstruction[3].u.operand;
 
     emitGetVirtualRegisters(src1, regT0, src2, regT1);
-    
+
     // Jump slow if both are cells (to cover strings).
     move(regT0, regT2);
     or64(regT1, regT2);
     addSlowCase(emitJumpIfJSCell(regT2));
-    
+
     // Jump slow if either is a double. First test if it's an integer, which is fine, and then test
     // if it's a double.
     Jump leftOK = emitJumpIfImmediateInteger(regT0);
@@ -617,7 +617,7 @@ void JIT::emit_op_to_number(Instruction* currentInstruction)
 {
     int srcVReg = currentInstruction[2].u.operand;
     emitGetVirtualRegister(srcVReg, regT0);
-    
+
     addSlowCase(emitJumpIfNotImmediateNumber(regT0));
 
     emitPutVirtualRegister(currentInstruction[1].u.operand);
@@ -768,7 +768,7 @@ void JIT::emit_op_neq_null(Instruction* currentInstruction)
 void JIT::emit_op_enter(Instruction*)
 {
     emitEnterOptimizationCheck();
-    
+
     // Even though CTI doesn't use them, we initialize our constant
     // registers to zap stale pointers, to avoid unnecessarily prolonging
     // object lifetime and increasing GC pressure.
@@ -782,7 +782,7 @@ void JIT::emit_op_enter(Instruction*)
 void JIT::emit_op_create_activation(Instruction* currentInstruction)
 {
     int dst = currentInstruction[1].u.operand;
-    
+
     Jump activationCreated = branchTest64(NonZero, Address(callFrameRegister, sizeof(Register) * dst));
     callOperation(operationCreateActivation, 0);
     emitStoreCell(dst, returnValueGPR);
@@ -909,7 +909,7 @@ void JIT::emitSlow_op_to_primitive(Instruction* currentInstruction, Vector<SlowC
 void JIT::emitSlow_op_not(Instruction* currentInstruction, Vector<SlowCaseEntry>::iterator& iter)
 {
     linkSlowCase(iter);
-    
+
     JITSlowPathCall slowPathCall(this, currentInstruction, slow_path_not);
     slowPathCall.call();
 }
@@ -1057,16 +1057,16 @@ void JIT::emitSlow_op_get_argument_by_val(Instruction* currentInstruction, Vecto
     int dst = currentInstruction[1].u.operand;
     int arguments = currentInstruction[2].u.operand;
     int property = currentInstruction[3].u.operand;
-    
+
     linkSlowCase(iter);
     Jump skipArgumentsCreation = jump();
-    
+
     linkSlowCase(iter);
     linkSlowCase(iter);
     callOperation(operationCreateArguments);
     emitStoreCell(arguments, returnValueGPR);
     emitStoreCell(unmodifiedArgumentsRegister(VirtualRegister(arguments)), returnValueGPR);
-    
+
     skipArgumentsCreation.link(this);
     emitGetVirtualRegister(arguments, regT0);
     emitGetVirtualRegister(property, regT1);
@@ -1079,14 +1079,14 @@ void JIT::emit_op_touch_entry(Instruction* currentInstruction)
 {
     if (m_codeBlock->symbolTable()->m_functionEnteredOnce.hasBeenInvalidated())
         return;
-    
+
     JITSlowPathCall slowPathCall(this, currentInstruction, slow_path_touch_entry);
     slowPathCall.call();
 }
 
 void JIT::emit_op_loop_hint(Instruction*)
 {
-    // Emit the JIT optimization check: 
+    // Emit the JIT optimization check:
     if (canBeOptimized()) {
         addSlowCase(branchAdd32(PositiveOrZero, TrustedImm32(Options::executionCounterIncrementForLoop()),
             AbsoluteAddress(m_codeBlock->addressOfJITExecuteCounter())));
@@ -1103,7 +1103,7 @@ void JIT::emitSlow_op_loop_hint(Instruction*, Vector<SlowCaseEntry>::iterator& i
     // Emit the slow path for the JIT optimization check:
     if (canBeOptimized()) {
         linkSlowCase(iter);
-        
+
         callOperation(operationOptimize, m_bytecodeOffset);
         Jump noOptimizedEntry = branchTestPtr(Zero, returnValueGPR);
         if (!ASSERT_DISABLED) {

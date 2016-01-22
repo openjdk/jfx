@@ -67,7 +67,7 @@ public enum Color {
         public King getKing() {
             return Piece.BLACK_KING;
         }
-        
+
         @Override
         public Queen getQueen() {
             return Piece.BLACK_QUEEN;
@@ -91,11 +91,11 @@ public enum Color {
         @Override
         public String toString() {
             return "B";
-        }        
+        }
     };
 
     public abstract King getKing();
-    
+
     public abstract Queen getQueen();
 
     public abstract Bishop getBishop();

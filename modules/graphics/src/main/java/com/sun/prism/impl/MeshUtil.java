@@ -151,7 +151,7 @@ class MeshUtil {
      * Fix TB if T and B go almost in parralel.
      * If T (ntb[1]) and B (ntb[2]) is almost parallel, invent something
      * artificial in NTB.
-     * 
+     *
      * This method assumes that T and B are normalized.
      */
     static void fixParallelTB(Vec3f[] ntb) {
@@ -260,7 +260,7 @@ class MeshUtil {
             float e1DotN1 = e1.dot(n1);
             float e2DotN2 = e2.dot(n2);
 
-            // This will interfer with degenerated triangle unit test. 
+            // This will interfer with degenerated triangle unit test.
             // assert ((e1DotN1 / n1Length - e2DotN2 / n2Length) < 0.001);
         }
 

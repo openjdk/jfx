@@ -35,14 +35,14 @@
 #include <wtf/Assertions.h>
 
 namespace TestWebKitAPI {
-    
+
 class LoadCanceledNoServerRedirectCallbackTest : public InjectedBundleTest {
 public:
     LoadCanceledNoServerRedirectCallbackTest(const std::string& identifier)
         : InjectedBundleTest(identifier)
     {
     }
-    
+
     static WKURLRequestRef willSendRequestForFrame(WKBundlePageRef, WKBundleFrameRef frame, uint64_t resourceIdentifier, WKURLRequestRef request, WKURLResponseRef redirectResponse, const void *clientInfo)
     {
         // Allow the loading of the main resource, but don't allow the loading of an iframe, return null from willSendRequest.
@@ -50,7 +50,7 @@ public:
             WKRetainPtr<WKURLRequestRef> newRequest = request;
             return newRequest.leakRef();
         }
-        
+
         return 0;
     }
 
@@ -58,7 +58,7 @@ public:
     {
         WKBundlePageResourceLoadClientV0 resourceLoadClient;
         memset(&resourceLoadClient, 0, sizeof(resourceLoadClient));
-        
+
         resourceLoadClient.base.version = 0;
         resourceLoadClient.willSendRequestForFrame = willSendRequestForFrame;
 

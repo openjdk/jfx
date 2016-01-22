@@ -43,7 +43,7 @@ public:
     virtual bool requiresLayer() const { return true; }
 
     virtual void layout();
-    
+
     virtual void paint(PaintInfo&, const LayoutPoint&);
 
 private:

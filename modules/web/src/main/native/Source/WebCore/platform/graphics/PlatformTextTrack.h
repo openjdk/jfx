@@ -39,7 +39,7 @@ class InbandTextTrackPrivate;
 class PlatformTextTrackClient {
 public:
     virtual ~PlatformTextTrackClient() { }
-    
+
     virtual TextTrack* publicTrack() = 0;
     virtual InbandTextTrackPrivate* privateTrack() { return 0; }
 };
@@ -66,7 +66,7 @@ public:
     }
 
     virtual ~PlatformTextTrack() { }
-    
+
     TrackType type() const { return m_type; }
     TrackKind kind() const { return m_kind; }
     String label() const { return m_label; }

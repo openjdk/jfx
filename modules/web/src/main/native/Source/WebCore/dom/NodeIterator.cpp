@@ -193,7 +193,7 @@ void NodeIterator::updateForNodeRemoval(Node* removedNode, NodePointer& referenc
                 }
                 if (node) {
                     // Removing last node.
-                    // Need to move the pointer after the node preceding the 
+                    // Need to move the pointer after the node preceding the
                     // new reference node.
                     referenceNode.node = node;
                     referenceNode.isPointerBeforeNode = false;

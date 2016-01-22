@@ -38,7 +38,7 @@ template <typename FloatType> static inline bool isValidRange(const FloatType& x
     return x >= -max && x <= max;
 }
 
-// We use this generic parseNumber function to allow the Path parsing code to work 
+// We use this generic parseNumber function to allow the Path parsing code to work
 // at a higher precision internally, without any unnecessary runtime cost or code
 // complexity.
 template <typename CharacterType, typename FloatType> static bool genericParseNumber(const CharacterType*& ptr, const CharacterType* end, FloatType& number, bool skip)
@@ -60,8 +60,8 @@ template <typename CharacterType, typename FloatType> static bool genericParseNu
     else if (ptr < end && *ptr == '-') {
         ptr++;
         sign = -1;
-    } 
-    
+    }
+
     if (ptr == end || ((*ptr < '0' || *ptr > '9') && *ptr != '.'))
         // The first character of a number must be one of [0-9+-.]
         return false;
@@ -85,18 +85,18 @@ template <typename CharacterType, typename FloatType> static bool genericParseNu
 
     if (ptr < end && *ptr == '.') { // read the decimals
         ptr++;
-        
+
         // There must be a least one digit following the .
         if (ptr >= end || *ptr < '0' || *ptr > '9')
             return false;
-        
+
         while (ptr < end && *ptr >= '0' && *ptr <= '9')
             decimal += (*(ptr++) - '0') * (frac *= static_cast<FloatType>(0.1));
     }
 
     // read the exponent part
-    if (ptr != start && ptr + 1 < end && (*ptr == 'e' || *ptr == 'E') 
-        && (ptr[1] != 'x' && ptr[1] != 'm')) { 
+    if (ptr != start && ptr + 1 < end && (*ptr == 'e' || *ptr == 'E')
+        && (ptr[1] != 'x' && ptr[1] != 'm')) {
         ptr++;
 
         // read the sign of the exponent
@@ -106,7 +106,7 @@ template <typename CharacterType, typename FloatType> static bool genericParseNu
             ptr++;
             expsign = -1;
         }
-        
+
         // There must be an exponent
         if (ptr >= end || *ptr < '0' || *ptr > '9')
             return false;
@@ -157,7 +157,7 @@ bool parseNumber(const LChar*& ptr, const LChar* end, float& number, bool skip)
     return genericParseNumber(ptr, end, number, skip);
 }
 
-bool parseNumber(const UChar*& ptr, const UChar* end, float& number, bool skip) 
+bool parseNumber(const UChar*& ptr, const UChar* end, float& number, bool skip)
 {
     return genericParseNumber(ptr, end, number, skip);
 }
@@ -183,9 +183,9 @@ bool genericParseArcFlag(const CharacterType*& ptr, const CharacterType* end, bo
         flag = true;
     else
         return false;
-    
+
     skipOptionalSVGSpacesOrDelimiter(ptr, end);
-    
+
     return true;
 }
 
@@ -222,7 +222,7 @@ bool parseRect(const String& string, FloatRect& rect)
     const UChar* ptr = string.deprecatedCharacters();
     const UChar* end = ptr + string.length();
     skipOptionalSVGSpaces(ptr, end);
-    
+
     float x = 0;
     float y = 0;
     float width = 0;
@@ -299,7 +299,7 @@ static bool parseUnicodeRange(const UChar* characters, unsigned length, UnicodeR
 {
     if (length < 2 || characters[0] != 'U' || characters[1] != '+')
         return false;
-    
+
     // Parse the starting hex number (or its prefix).
     unsigned startRange = 0;
     unsigned startLength = 0;
@@ -315,12 +315,12 @@ static bool parseUnicodeRange(const UChar* characters, unsigned length, UnicodeR
         startRange = (startRange << 4) | toASCIIHexValue(*ptr);
         ++ptr;
     }
-    
+
     // Handle the case of ranges separated by "-" sign.
     if (2 + startLength < length && *ptr == '-') {
         if (!startLength)
             return false;
-        
+
         // Parse the ending hex number (or its prefix).
         unsigned endRange = 0;
         unsigned endLength = 0;
@@ -334,15 +334,15 @@ static bool parseUnicodeRange(const UChar* characters, unsigned length, UnicodeR
             endRange = (endRange << 4) | toASCIIHexValue(*ptr);
             ++ptr;
         }
-        
+
         if (!endLength)
             return false;
-        
+
         range.first = startRange;
         range.second = endRange;
         return true;
     }
-    
+
     // Handle the case of a number with some optional trailing question marks.
     unsigned endRange = startRange;
     while (ptr < end) {
@@ -355,10 +355,10 @@ static bool parseUnicodeRange(const UChar* characters, unsigned length, UnicodeR
         endRange = (endRange << 4) | 0xF;
         ++ptr;
     }
-    
+
     if (!startLength)
         return false;
-    
+
     range.first = startRange;
     range.second = endRange;
     return true;

@@ -268,7 +268,7 @@ public class MacAppBundler extends AbstractImageBundler {
         } catch (IOException ignore) {
             // we tried, workingBase will remain absolute and not canonical.
         }
-        
+
         if (workingBase.getName().equals("jre")) {
             workingBase = workingBase.getParentFile();
         }
@@ -361,9 +361,9 @@ public class MacAppBundler extends AbstractImageBundler {
         if (!System.getProperty("os.name").toLowerCase().contains("os x")) {
             throw new UnsupportedPlatformException();
         }
-        
+
         imageBundleValidation(p);
-        
+
         if (getPredefinedImage(p) != null) {
             return true;
         }
@@ -382,7 +382,7 @@ public class MacAppBundler extends AbstractImageBundler {
                 runtime.upshift();
             }
         }
-        
+
         //validate required inputs
         testRuntime(runtime, new String[] {
                 "Contents/Home/(jre/)?lib/[^/]+/libjvm.dylib", // most reliable
@@ -398,7 +398,7 @@ public class MacAppBundler extends AbstractImageBundler {
                     I18N.getString("error.invalid-cfbundle-version"),
                     I18N.getString("error.invalid-cfbundle-version.advice"));
         }
-        
+
         // reject explicitly set sign to true and no valid signature key
         if (Optional.ofNullable(SIGN_BUNDLE.fetchFrom(p)).orElse(Boolean.FALSE)) {
             String signingIdentity = DEVELOPER_ID_APP_SIGNING_KEY.fetchFrom(p);
@@ -408,7 +408,7 @@ public class MacAppBundler extends AbstractImageBundler {
                         I18N.getString("error.explicit-sign-no-cert.advice"));
             }
         }
-        
+
         return true;
     }
 
@@ -432,7 +432,7 @@ public class MacAppBundler extends AbstractImageBundler {
     public File doBundle(Map<String, ? super Object> p, File outputDirectory, boolean dependentTask) {
         File rootDirectory = null;
         Map<String, ? super Object> originalParams = new HashMap<>(p);
-        
+
         if (!outputDirectory.isDirectory() && !outputDirectory.mkdirs()) {
             throw new RuntimeException(MessageFormat.format(I18N.getString("error.cannot-create-output-dir"), outputDirectory.getAbsolutePath()));
         }
@@ -530,7 +530,7 @@ public class MacAppBundler extends AbstractImageBundler {
             // Generate Info.plist
             IOUtils.copyFile(getConfig_InfoPlist(p),
                     new File(contentsDirectory, "Info.plist"));
-            
+
             // create the secondary launchers, if any
             List<Map<String, ? super Object>> entryPoints = StandardBundlerParam.SECONDARY_LAUNCHERS.fetchFrom(p);
             for (Map<String, ? super Object> entryPoint : entryPoints) {
@@ -574,7 +574,7 @@ public class MacAppBundler extends AbstractImageBundler {
         if (resourcesList == null) {
             throw new RuntimeException(I18N.getString("message.null-classpath"));
         }
-        
+
         for (RelativeFileSet classPath : resourcesList) {
             File srcdir = classPath.getBaseDirectory();
             for (String fname : classPath.getIncludedFiles()) {
@@ -600,12 +600,12 @@ public class MacAppBundler extends AbstractImageBundler {
         if ("Contents".equals(runtime.getBaseDirectory().getName())) {
             runtime.upshift();
         }
-        
-        
+
+
         plugInsDirectory.mkdirs();
 
         File srcdir = runtime.getBaseDirectory();
-        // the name in .../Contents/PlugIns/ must have a dot to be verified 
+        // the name in .../Contents/PlugIns/ must have a dot to be verified
         // properly by the Mac App Store.
         File destDir = new File(plugInsDirectory, "Java.runtime");
         Set<String> filesToCopy = runtime.getIncludedFiles();
@@ -771,7 +771,7 @@ public class MacAppBundler extends AbstractImageBundler {
         for (Map<String, ? super Object> fileAssociation : FILE_ASSOCIATIONS.fetchFrom(params)) {
 
             List<String> extensions = FA_EXTENSIONS.fetchFrom(fileAssociation);
-            
+
             if (extensions == null) {
                 Log.info(I18N.getString("message.creating-association-with-null-extension"));
             }
@@ -830,7 +830,7 @@ public class MacAppBundler extends AbstractImageBundler {
                 .append("          <string>public.data</string>\n") //TODO expose this?
                 .append("      </array>\n")
                 .append("\n");
-            
+
             if (icon != null && icon.exists()) {
                 exportedTypes.append("      <key>UTTypeIconFile</key>\n")
                     .append("      <string>")
@@ -978,14 +978,14 @@ public class MacAppBundler extends AbstractImageBundler {
 
         // we need the Info.plist for signing
         rules.add(Rule.suffix("/contents/info.plist"));
-        
+
         // Strip some JRE specific stuff
         if (isJRE) {
             rules.add(Rule.suffixNeg("/contents/disabled.plist"));
             rules.add(Rule.suffixNeg("/contents/enabled.plist"));
             rules.add(Rule.substrNeg("/contents/frameworks/"));
         }
-        
+
         // strip out command line tools
         rules.add(Rule.suffixNeg("home/bin"));
         if (isJDK) {

@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -50,12 +50,12 @@ struct MinifiedGenerationInfo {
     bool filled; // true -> in gpr/fpr/pair, false -> spilled
     VariableRepresentation u;
     DataFormat format;
-    
+
     MinifiedGenerationInfo()
         : format(DataFormatNone)
     {
     }
-    
+
     void update(const VariableEvent& event)
     {
         switch (event.kind()) {
@@ -73,7 +73,7 @@ struct MinifiedGenerationInfo {
         default:
             return;
         }
-        
+
         u = event.variableRepresentation();
         format = event.dataFormat();
     }
@@ -85,24 +85,24 @@ bool VariableEventStream::tryToSetConstantRecovery(ValueRecovery& recovery, Code
 {
     if (!node)
         return false;
-    
+
     if (node->hasConstantNumber()) {
         recovery = ValueRecovery::constant(
             codeBlock->constantRegister(
                 FirstConstantRegisterIndex + node->constantNumber()).get());
         return true;
     }
-    
+
     if (node->hasWeakConstant()) {
         recovery = ValueRecovery::constant(node->weakConstant());
         return true;
     }
-    
+
     if (node->op() == PhantomArguments) {
         recovery = ValueRecovery::argumentsThatWereNotCreated();
         return true;
     }
-    
+
     return false;
 }
 
@@ -112,13 +112,13 @@ void VariableEventStream::reconstruct(
 {
     ASSERT(codeBlock->jitType() == JITCode::DFGJIT);
     CodeBlock* baselineCodeBlock = codeBlock->baselineVersion();
-    
+
     unsigned numVariables;
     if (codeOrigin.inlineCallFrame)
         numVariables = baselineCodeBlockForInlineCallFrame(codeOrigin.inlineCallFrame)->m_numCalleeRegisters + VirtualRegister(codeOrigin.inlineCallFrame->stackOffset).toLocal() + 1;
     else
         numVariables = baselineCodeBlock->m_numCalleeRegisters;
-    
+
     // Crazy special case: if we're at index == 0 then this must be an argument check
     // failure, in which case all variables are already set up. The recoveries should
     // reflect this.
@@ -130,12 +130,12 @@ void VariableEventStream::reconstruct(
         }
         return;
     }
-    
+
     // Step 1: Find the last checkpoint, and figure out the number of virtual registers as we go.
     unsigned startIndex = index - 1;
     while (at(startIndex).kind() != Reset)
         startIndex--;
-    
+
     // Step 2: Create a mock-up of the DFG's state and execute the events.
     Operands<ValueSource> operandSources(codeBlock->numParameters(), numVariables);
     for (unsigned i = operandSources.size(); i--;)
@@ -175,7 +175,7 @@ void VariableEventStream::reconstruct(
             break;
         }
     }
-    
+
     // Step 3: Compute value recoveries!
     valueRecoveries = Operands<ValueRecovery>(codeBlock->numParameters(), numVariables);
     for (unsigned i = 0; i < operandSources.size(); ++i) {
@@ -184,20 +184,20 @@ void VariableEventStream::reconstruct(
             valueRecoveries[i] = source.valueRecovery();
             continue;
         }
-        
+
         ASSERT(source.kind() == HaveNode);
         MinifiedNode* node = graph.at(source.id());
         if (tryToSetConstantRecovery(valueRecoveries[i], codeBlock, node))
             continue;
-        
+
         MinifiedGenerationInfo info = generationInfos.get(source.id());
         if (info.format == DataFormatNone) {
             valueRecoveries[i] = ValueRecovery::constant(jsUndefined());
             continue;
         }
-        
+
         ASSERT(info.format != DataFormatNone);
-        
+
         if (info.filled) {
             if (info.format == DataFormatDouble) {
                 valueRecoveries[i] = ValueRecovery::inFPR(info.u.fpr);
@@ -212,7 +212,7 @@ void VariableEventStream::reconstruct(
             valueRecoveries[i] = ValueRecovery::inGPR(info.u.gpr, info.format);
             continue;
         }
-        
+
         valueRecoveries[i] =
             ValueRecovery::displacedInJSStack(static_cast<VirtualRegister>(info.u.virtualReg), info.format);
     }

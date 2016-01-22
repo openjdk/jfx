@@ -37,7 +37,7 @@ import javafx.collections.WeakListChangeListener;
 import static org.junit.Assert.*;
 
 public class WeakListChangeListenerTest {
-	
+
     @Test(expected=NullPointerException.class)
     public void testConstructWithNull() {
         new WeakListChangeListener<Object>(null);

@@ -94,7 +94,7 @@ class RotateGestureRecognizer implements GestureRecognizer {
     double angleReference;
     double totalRotation = 0;
     double inertiaLastTime = 0;
-    
+
     RotateGestureRecognizer(final ViewScene scene) {
         this.scene = scene;
         inertiaRotationVelocity.addListener(valueModel -> {
@@ -156,7 +156,7 @@ class RotateGestureRecognizer implements GestureRecognizer {
             totalY += tracker.getY();
             totalAbsX += tracker.getAbsX();
             totalAbsY += tracker.getAbsY();
-        }      
+        }
         centerX = totalX / currentTouchCount;
         centerY = totalY / currentTouchCount;
         centerAbsX = totalAbsX / currentTouchCount;
@@ -176,7 +176,7 @@ class RotateGestureRecognizer implements GestureRecognizer {
         //  for rotation events positive values are used for clockwise rotation, therefore the negation.
         double delta = -(newAngle - oldAngle);
 
-        
+
         //delta now in [-360,+360]. Normalize to [-180,+180]
         if (delta > 180) {
             delta -= 360;
@@ -235,11 +235,11 @@ class RotateGestureRecognizer implements GestureRecognizer {
                     state = RotateRecognitionState.INERTIA;
                     // activate inertia
                     inertiaLastTime = 0;
-                    if (initialInertiaRotationVelocity > MAX_INITIAL_VELOCITY) 
+                    if (initialInertiaRotationVelocity > MAX_INITIAL_VELOCITY)
                         initialInertiaRotationVelocity = MAX_INITIAL_VELOCITY;
                     else if (initialInertiaRotationVelocity < -MAX_INITIAL_VELOCITY)
                         initialInertiaRotationVelocity = -MAX_INITIAL_VELOCITY;
-                        
+
                     inertiaTimeline.getKeyFrames().setAll(
                         new KeyFrame(
                             Duration.millis(0),
@@ -280,7 +280,7 @@ class RotateGestureRecognizer implements GestureRecognizer {
                     state = RotateRecognitionState.TRACKING;
                     assignActiveTouchpoints();
                 }
-                
+
                 calculateCenter();
 
                 if (touchPointsSetChanged) {
@@ -289,7 +289,7 @@ class RotateGestureRecognizer implements GestureRecognizer {
                 TouchPointTracker tp1 = trackers.get(touchPointID1);
                 TouchPointTracker tp2 = trackers.get(touchPointID2);
                 double newAngle = getAngle(tp1, tp2);
-                    
+
                 if (touchPointsSetChanged) {
                     //No rotate event, just update the current angle. Keep total rotation
                     angleReference = newAngle;
@@ -301,7 +301,7 @@ class RotateGestureRecognizer implements GestureRecognizer {
                             sendRotateStartedEvent();
                         }
                     }
-                    
+
                     if (state == RotateRecognitionState.ACTIVE) {
                         totalRotation += currentRotation;
                         sendRotateEvent(false);

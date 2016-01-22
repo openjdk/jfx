@@ -52,7 +52,7 @@ public class JavaBeanPropertyBuilderHelper {
             this.descriptor = null;
         }
     }
-    
+
     public void beanClass(Class<?> beanClass) {
         if ((beanClass == null)? this.beanClass != null : !beanClass.equals(this.beanClass)) {
             ReflectUtil.checkPackageAccess(beanClass);
@@ -72,7 +72,7 @@ public class JavaBeanPropertyBuilderHelper {
             }
         }
     }
-    
+
     public Object getBean() {
         return bean;
     }
@@ -104,7 +104,7 @@ public class JavaBeanPropertyBuilderHelper {
             this.descriptor = null;
         }
     }
-    
+
     public PropertyDescriptor getDescriptor() throws NoSuchMethodException {
         if (descriptor == null) {
             if (propertyName == null) {
@@ -139,5 +139,5 @@ public class JavaBeanPropertyBuilderHelper {
         }
         return descriptor;
     }
-    
+
 }

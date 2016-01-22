@@ -60,7 +60,7 @@ bool HTMLFrameElementBase::isURLAllowed() const
 
     const URL& completeURL = document().completeURL(m_URL);
 
-    if (protocolIsJavaScript(completeURL)) { 
+    if (protocolIsJavaScript(completeURL)) {
         Document* contentDoc = this->contentDocument();
         if (contentDoc && !ScriptController::canAccessFromCurrentOrigin(contentDoc->frame()))
             return false;

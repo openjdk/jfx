@@ -33,27 +33,27 @@ import com.sun.glass.ui.delegate.MenuDelegate;
 import com.sun.glass.ui.delegate.MenuItemDelegate;
 
 public final class Menu {
-    
+
     public static class EventHandler {
         // currently used only on Mac OS X
         public void handleMenuOpening(Menu menu, long time) {
         }
-        
+
         // currently used only on Mac OS X
         public void handleMenuClosed(Menu menu, long time) {
         }
     }
-    
+
     public EventHandler getEventHandler() {
         Application.checkEventThread();
         return eventHandler;
     }
-    
+
     public void setEventHandler(EventHandler eventHandler) {
         Application.checkEventThread();
         this.eventHandler = eventHandler;
     }
-    
+
     private final MenuDelegate delegate;
 
     private String title;
@@ -99,12 +99,12 @@ public final class Menu {
             this.enabled = enabled;
         }
     }
-    
+
     public boolean setPixels(Pixels pixels) {
         Application.checkEventThread();
         return (delegate.setPixels(pixels));
     }
-    
+
     /**
      * Gets list of menu elements.
      * Objects in the list returned are instances of Menu or MenuItem.
@@ -178,7 +178,7 @@ public final class Menu {
     MenuDelegate getDelegate() {
         return delegate;
     }
-    
+
     // *****************************************************
     // notification callbacks
     // *****************************************************
@@ -187,7 +187,7 @@ public final class Menu {
             eventHandler.handleMenuOpening(this, System.nanoTime());
         }
     }
-    
+
     protected void notifyMenuClosed() {
         if (this.eventHandler != null) {
             eventHandler.handleMenuClosed(this, System.nanoTime());

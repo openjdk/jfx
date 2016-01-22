@@ -92,7 +92,7 @@ public class FXVK extends Control {
         vk.setSkin(vkskin);
         vkskin.prerender(textInput);
     }
- 
+
     public static void attach(final Node textInput) {
 
         if (vk == null) {

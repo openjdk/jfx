@@ -113,7 +113,7 @@ public class SelectionBarController extends AbstractFxmlPanelController {
      */
     @Override
     protected void controllerDidLoadFxml() {
-        
+
         // Sanity checks
         assert pathBox != null;
 
@@ -159,7 +159,7 @@ public class SelectionBarController extends AbstractFxmlPanelController {
 //                        // Update tooltip with the first entry
 //                        final Tooltip iconsTooltip = new Tooltip(entries.get(0).toString());
 //
-//                        // We use a label to set a tooltip over the node icon 
+//                        // We use a label to set a tooltip over the node icon
 //                        // (StackPane does not allow to set tooltips)
 //                        graphic = new Label();
 //                        ((Label) graphic).setGraphic(iconsStack);
@@ -184,7 +184,7 @@ public class SelectionBarController extends AbstractFxmlPanelController {
                     fxomObject = mask.getParentFXOMObject();
                     // Add selection chevron if needed
                     if (fxomObject != null) {
-                        // We cannot share the image view to avoid 
+                        // We cannot share the image view to avoid
                         // Children: duplicate children added
                         ImageView img = new ImageView(selectionChevronImage);
                         StackPane sp = new StackPane();

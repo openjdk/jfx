@@ -416,7 +416,7 @@ void MediaControls::updateTextTrackDisplay()
 
     m_textDisplayContainer->updateDisplay();
 }
-    
+
 void MediaControls::textTrackPreferencesChanged()
 {
     closedCaptionTracksChanged();

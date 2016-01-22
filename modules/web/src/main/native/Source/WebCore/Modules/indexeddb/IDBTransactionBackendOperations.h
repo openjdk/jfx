@@ -52,7 +52,7 @@ private:
         , m_objectStoreMetadata(objectStoreMetadata)
     {
     }
-    
+
     RefPtr<IDBTransactionBackend> m_transaction;
     const IDBObjectStoreMetadata m_objectStoreMetadata;
 };

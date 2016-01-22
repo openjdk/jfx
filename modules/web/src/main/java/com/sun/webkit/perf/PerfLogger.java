@@ -87,7 +87,7 @@ public final class PerfLogger {
     private PerfLogger(Logger log) {
         this.log = log;
         this.isEnabled = log.isLoggable(Level.FINE);
-        startCount("TOTALTIME");        
+        startCount("TOTALTIME");
     }
 
     /**
@@ -271,7 +271,7 @@ public final class PerfLogger {
         buf.append("=========== Performance Statistics =============\n");
 
         ProbeStat total = getProbeStat("TOTALTIME");
-        
+
         ArrayList<String> list = new ArrayList<String>();
         list.addAll(probes.keySet());
 

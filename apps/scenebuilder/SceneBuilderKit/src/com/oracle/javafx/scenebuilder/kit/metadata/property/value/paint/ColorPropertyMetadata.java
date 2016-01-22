@@ -42,7 +42,7 @@ import javafx.scene.paint.Color;
  */
 public class ColorPropertyMetadata extends TextEncodablePropertyMetadata<Color> {
 
-    public ColorPropertyMetadata(PropertyName name, boolean readWrite, 
+    public ColorPropertyMetadata(PropertyName name, boolean readWrite,
             Color defaultValue, InspectorPath inspectorPath) {
         super(name, Color.class, readWrite, defaultValue, inspectorPath);
     }
@@ -50,12 +50,12 @@ public class ColorPropertyMetadata extends TextEncodablePropertyMetadata<Color> 
     /*
      * ValuePropertyMetadata
      */
-    
+
     @Override
     public Color makeValueFromString(String string) {
         return Color.valueOf(string);
     }
-    
+
     @Override
     public String makeStringFromValue(Color value) {
         assert value != null;

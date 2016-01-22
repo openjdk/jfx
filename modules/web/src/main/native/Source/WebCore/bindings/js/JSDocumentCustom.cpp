@@ -107,7 +107,7 @@ JSValue toJS(ExecState* exec, JSDOMGlobalObject* globalObject, Document* documen
         size_t nodeCount = 0;
         for (Node* n = document; n; n = NodeTraversal::next(n))
             nodeCount++;
-        
+
         exec->heap()->reportExtraMemoryCost(nodeCount * sizeof(Node));
     }
 

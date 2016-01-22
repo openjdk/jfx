@@ -40,7 +40,7 @@ import javafx.util.Pair;
 public class MediaMarkerEvent extends ActionEvent {
 
     private static final long serialVersionUID = 20121107L;
-    
+
     private Pair<String,Duration> marker;
 
     MediaMarkerEvent(Pair<String,Duration> marker) {

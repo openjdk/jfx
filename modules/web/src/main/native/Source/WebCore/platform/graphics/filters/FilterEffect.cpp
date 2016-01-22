@@ -70,13 +70,13 @@ void FilterEffect::determineAbsolutePaintRect()
     unsigned size = m_inputEffects.size();
     for (unsigned i = 0; i < size; ++i)
         m_absolutePaintRect.unite(m_inputEffects.at(i)->absolutePaintRect());
-    
+
     // Filters in SVG clip to primitive subregion, while CSS doesn't.
     if (m_clipsToBounds)
         m_absolutePaintRect.intersect(enclosingIntRect(m_maxEffectRect));
     else
         m_absolutePaintRect.unite(enclosingIntRect(m_maxEffectRect));
-    
+
 }
 
 IntRect FilterEffect::requestedRegionOfInputImageData(const IntRect& effectRect) const
@@ -142,7 +142,7 @@ void FilterEffect::apply()
         for (unsigned i = 0; i < size; ++i)
             inputEffect(i)->correctFilterResultIfNeeded();
     }
-    
+
     // Add platform specific apply functions here and return earlier.
 #if ENABLE(OPENCL)
     if (platformApplyOpenCL())

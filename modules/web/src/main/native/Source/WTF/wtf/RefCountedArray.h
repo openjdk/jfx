@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef RefCountedArray_h
@@ -50,7 +50,7 @@ public:
         : m_data(0)
     {
     }
-    
+
     RefCountedArray(const RefCountedArray& other)
         : m_data(other.m_data)
     {
@@ -78,21 +78,21 @@ public:
             m_data = 0;
             return;
         }
-        
+
         m_data = (static_cast<Header*>(fastMalloc(Header::size() + sizeof(T) * other.size())))->payload();
         Header::fromPayload(m_data)->refCount = 1;
         Header::fromPayload(m_data)->length = other.size();
         ASSERT(Header::fromPayload(m_data)->length == other.size());
         VectorTypeOperations<T>::uninitializedCopy(other.begin(), other.end(), m_data);
     }
-    
+
     RefCountedArray& operator=(const RefCountedArray& other)
     {
         T* oldData = m_data;
         m_data = other.m_data;
         if (m_data)
             Header::fromPayload(m_data)->refCount++;
-        
+
         if (!oldData)
             return *this;
         if (--Header::fromPayload(oldData)->refCount)
@@ -101,7 +101,7 @@ public:
         fastFree(Header::fromPayload(oldData));
         return *this;
     }
-    
+
     ~RefCountedArray()
     {
         if (!m_data)
@@ -111,23 +111,23 @@ public:
         VectorTypeOperations<T>::destruct(begin(), end());
         fastFree(Header::fromPayload(m_data));
     }
-    
+
     unsigned refCount() const
     {
         if (!m_data)
             return 0;
         return Header::fromPayload(m_data)->refCount;
     }
-    
+
     size_t size() const
     {
         if (!m_data)
             return 0;
         return Header::fromPayload(m_data)->length;
     }
-    
+
     size_t byteSize() const { return size() * sizeof(T); }
-    
+
     T* data() { return m_data; }
     T* begin() { return m_data; }
     T* end()
@@ -136,23 +136,23 @@ public:
             return 0;
         return m_data + Header::fromPayload(m_data)->length;
     }
-    
+
     const T* data() const { return m_data; }
     const T* begin() const { return m_data; }
     const T* end() const { return const_cast<RefCountedArray*>(this)->end(); }
-    
+
     T& at(size_t i)
     {
         ASSERT_WITH_SECURITY_IMPLICATION(i < size());
         return begin()[i];
     }
-    
+
     const T& at(size_t i) const
     {
         ASSERT_WITH_SECURITY_IMPLICATION(i < size());
         return begin()[i];
     }
-    
+
     T& operator[](size_t i) { return at(i); }
     const T& operator[](size_t i) const { return at(i); }
 
@@ -171,30 +171,30 @@ public:
         }
         return true;
     }
-    
+
 private:
     struct Header {
         unsigned refCount;
         unsigned length;
-        
+
         static size_t size()
         {
             return (sizeof(Header) + 7) & ~7;
         }
-        
+
         T* payload()
         {
             char* result = reinterpret_cast<char*>(this) + size();
             ASSERT(!(bitwise_cast<uintptr_t>(result) & 7));
             return reinterpret_cast_ptr<T*>(result);
         }
-        
+
         static Header* fromPayload(T* payload)
         {
             return reinterpret_cast_ptr<Header*>(reinterpret_cast<char*>(payload) - size());
         }
     };
-    
+
     T* m_data;
 };
 

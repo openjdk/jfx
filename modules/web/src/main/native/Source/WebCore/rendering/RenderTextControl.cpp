@@ -1,6 +1,6 @@
 /**
  * Copyright (C) 2006, 2007 Apple Inc. All rights reserved.
- *           (C) 2008 Torch Mobile Inc. All rights reserved. (http://www.torchmobile.com/)  
+ *           (C) 2008 Torch Mobile Inc. All rights reserved. (http://www.torchmobile.com/)
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -95,7 +95,7 @@ void RenderTextControl::adjustInnerTextStyle(const RenderStyle* startStyle, Rend
     if (textBlockStyle->textSecurity() != TSNONE && !textBlockStyle->isLeftToRightDirection()) {
         // Preserve the alignment but force the direction to LTR so that the last-typed, unmasked character
         // (which cannot have RTL directionality) will appear to the right of the masked characters. See <rdar://problem/7024375>.
-        
+
         switch (textBlockStyle->textAlign()) {
         case TASTART:
         case JUSTIFY:
@@ -234,7 +234,7 @@ bool RenderTextControl::hasValidAvgCharWidth(AtomicString family)
         return false;
 
     static HashSet<AtomicString>* fontFamiliesWithInvalidCharWidthMap = 0;
-    
+
     if (!fontFamiliesWithInvalidCharWidthMap) {
         fontFamiliesWithInvalidCharWidthMap = new HashSet<AtomicString>;
 

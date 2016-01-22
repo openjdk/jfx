@@ -204,7 +204,7 @@ typedef enum
  *
  * These are the possible line break classifications.
  *
- * Since new unicode versions may add new types here, applications should be ready 
+ * Since new unicode versions may add new types here, applications should be ready
  * to handle unknown values. They may be regarded as %G_UNICODE_BREAK_UNKNOWN.
  *
  * See <ulink url="http://www.unicode.org/unicode/reports/tr14/">http://www.unicode.org/unicode/reports/tr14/</ulink>.

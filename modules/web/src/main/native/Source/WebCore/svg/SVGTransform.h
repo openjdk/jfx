@@ -64,7 +64,7 @@ public:
     void setRotate(float angle, float cx, float cy);
     void setSkewX(float angle);
     void setSkewY(float angle);
-    
+
     // Internal use only (animation system)
     FloatPoint translate() const;
     FloatSize scale() const;

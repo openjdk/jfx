@@ -105,11 +105,11 @@ public class SkeletonWindowController extends AbstractFxmlWindowController {
     public void onCloseRequest(WindowEvent event) {
         getStage().close();
     }
-    
+
     @Override
     public void openWindow() {
         super.openWindow();
-        
+
         if (dirty) {
             update();
         }
@@ -146,7 +146,7 @@ public class SkeletonWindowController extends AbstractFxmlWindowController {
 
     private void update() {
         assert editorController.getFxomDocument() != null;
-        
+
         // No need to eat CPU if the skeleton window isn't opened
         if (getStage().isShowing()) {
             updateTitle();

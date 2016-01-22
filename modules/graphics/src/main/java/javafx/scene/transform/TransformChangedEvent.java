@@ -37,7 +37,7 @@ import javafx.event.EventType;
 public final class TransformChangedEvent extends Event {
 
     private static final long serialVersionUID = 20121107L;
-    
+
     /**
      * The only valid EventType for the TransformChangedEvent.
      */

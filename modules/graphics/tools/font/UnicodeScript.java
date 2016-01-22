@@ -1519,9 +1519,9 @@ public enum UnicodeScript {
     };
 
    private static String getScriptName(UnicodeScript script) {
-       if (script==INHERITED) return "Inherited"; 
-       if (script==COMMON) return "Common"; 
-       if (script==UNKNOWN) return "Unknown"; 
+       if (script==INHERITED) return "Inherited";
+       if (script==COMMON) return "Common";
+       if (script==UNKNOWN) return "Unknown";
 
        Set<String> keys = aliases.keySet();
        for (String key : keys) {
@@ -1532,7 +1532,7 @@ public enum UnicodeScript {
        }
        return "Unknown";
    }
-  
+
    public static void main(String args[]) throws Exception {
        BufferedWriter w =
             new BufferedWriter(new FileWriter(new File("data.javapart")));
@@ -1543,7 +1543,7 @@ public enum UnicodeScript {
            int icuScriptCode = icuScripts[scriptID.ordinal()];
            String name = getScriptName(scriptID);
            String h = Integer.toHexString(start);
-           
+
            String line = "        0x0" + Integer.toHexString(start)+", "+ icuScriptCode+",";
            String comment="//  " + name;
            int pad = 24-line.length();

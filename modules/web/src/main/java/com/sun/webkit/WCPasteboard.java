@@ -32,7 +32,7 @@ import com.sun.webkit.graphics.WCImageFrame;
 
 final class WCPasteboard {
 
-    private final static Logger log = 
+    private final static Logger log =
         Logger.getLogger(WCPasteboard.class.getName());
 
     private static final Pasteboard pasteboard;

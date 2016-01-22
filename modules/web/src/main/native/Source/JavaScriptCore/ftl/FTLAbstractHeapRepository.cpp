@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -44,13 +44,13 @@ AbstractHeapRepository::AbstractHeapRepository(LContext context)
 #define ABSTRACT_FIELD_INITIALIZATION(name, offset) , name(&root, #name, offset)
     FOR_EACH_ABSTRACT_FIELD(ABSTRACT_FIELD_INITIALIZATION)
 #undef ABSTRACT_FIELD_INITIALIZATION
-    
+
     , JSCell_freeListNext(JSCell_structure)
-    
+
 #define INDEXED_ABSTRACT_HEAP_INITIALIZATION(name, offset, size) , name(context, &root, #name, offset, size)
     FOR_EACH_INDEXED_ABSTRACT_HEAP(INDEXED_ABSTRACT_HEAP_INITIALIZATION)
 #undef INDEXED_ABSTRACT_HEAP_INITIALIZATION
-    
+
 #define NUMBERED_ABSTRACT_HEAP_INITIALIZATION(name) , name(context, &root, #name)
     FOR_EACH_NUMBERED_ABSTRACT_HEAP(NUMBERED_ABSTRACT_HEAP_INITIALIZATION)
 #undef NUMBERED_ABSTRACT_HEAP_INITIALIZATION
@@ -60,10 +60,10 @@ AbstractHeapRepository::AbstractHeapRepository(LContext context)
     , m_tbaaKind(mdKindID(m_context, "tbaa"))
 {
     root.m_tbaaMetadata = mdNode(m_context, mdString(m_context, root.m_heapName));
-    
+
     RELEASE_ASSERT(m_tbaaKind);
     RELEASE_ASSERT(root.m_tbaaMetadata);
-    
+
     RELEASE_ASSERT(!JSCell_freeListNext.offset());
 }
 

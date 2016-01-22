@@ -67,7 +67,7 @@ struct _GstTriggerControlSource {
 
 struct _GstTriggerControlSourceClass {
   GstTimedValueControlSourceClass parent_class;
-  
+
   /*< private >*/
   gpointer _gst_reserved[GST_PADDING];
 };

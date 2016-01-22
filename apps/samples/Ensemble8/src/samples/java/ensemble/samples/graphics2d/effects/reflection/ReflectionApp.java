@@ -59,11 +59,11 @@ public class ReflectionApp extends Application {
 
     private static final Image BOAT = new Image(ReflectionApp.class.getResourceAsStream("/ensemble/samples/shared-resources/boat.jpg"));
     private Reflection reflection = new Reflection();
-   
+
     public Parent createContent() {
         Group root = new Group();
         ImageView sample = new ImageView(BOAT);
-        sample.setPreserveRatio(true);        
+        sample.setPreserveRatio(true);
         sample.setEffect(reflection);
         root.getChildren().add(sample);
         return root;

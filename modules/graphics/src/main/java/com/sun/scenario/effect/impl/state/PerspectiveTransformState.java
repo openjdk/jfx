@@ -32,7 +32,7 @@ public class PerspectiveTransformState {
     public float[][] getITX() {
         return itx;
     }
-    
+
     public void updateTx(float[][] tx) {
         // First calculate the matrix inversion
         float det = get3x3Determinant(tx);
@@ -58,7 +58,7 @@ public class PerspectiveTransformState {
             itx[2][2] = invdet * (tx[0][0]*tx[1][1] - tx[0][1]*tx[1][0]);
         }
     }
-    
+
     private static float get3x3Determinant(float m[][]) {
         return (  (m[0][0] * ((m[1][1] * m[2][2]) - (m[1][2] * m[2][1]))) -
                   (m[0][1] * ((m[1][0] * m[2][2]) - (m[1][2] * m[2][0]))) +

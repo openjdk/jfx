@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #import <objc/runtime.h>
@@ -182,7 +182,7 @@ typename DelegateType::ResultType parseObjCType(const char*& position)
         return DelegateType::typeBool();
     case 'v':
         return DelegateType::typeVoid();
-    
+
     case '@': { // An object (whether statically typed or typed id)
         if (position[0] == '?' && position[1] == '<') {
             position += 2;

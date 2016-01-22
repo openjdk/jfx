@@ -64,13 +64,13 @@ import java.util.logging.Logger;
 
 /**
  *
- * 
+ *
  */
 class LibraryFolderWatcher implements Runnable {
-    
+
     private final UserLibrary library;
     private enum FILE_TYPE {FXML, JAR};
-    
+
     public LibraryFolderWatcher(UserLibrary library) {
         this.library = library;
     }
@@ -78,10 +78,10 @@ class LibraryFolderWatcher implements Runnable {
     /*
      * Runnable
      */
-    
+
     @Override
     public void run() {
-        
+
         try {
             library.updateExplorationCount(0);
             library.updateExplorationDate(new Date());
@@ -91,16 +91,16 @@ class LibraryFolderWatcher implements Runnable {
             // Let's stop
         }
     }
-    
-    
+
+
     /*
      * Private
      */
-    
-    
+
+
     private void runDiscovery() throws InterruptedException {
         final Path folder = Paths.get(library.getPath());
-       
+
         // First put the builtin items in the library
         library.setItems(BuiltinLibrary.getLibrary().getItems());
 
@@ -117,7 +117,7 @@ class LibraryFolderWatcher implements Runnable {
                         currentFxmls.add(entry);
                     }
                 }
-               
+
                 updateLibrary(currentFxmls);
                 exploreAndUpdateLibrary(currentJars);
                 retry = false;
@@ -129,9 +129,9 @@ class LibraryFolderWatcher implements Runnable {
             }
         }
         while (retry);
-        
+
     }
-    
+
     private void runWatching() throws InterruptedException {
         while (true) {
             final Path folder = Paths.get(library.getPath());
@@ -150,16 +150,16 @@ class LibraryFolderWatcher implements Runnable {
             WatchKey watchKey = null;
             while ((watchKey == null) || (watchKey.isValid() == false)) {
                 try {
-                    watchKey = folder.register(watchService, 
-                    StandardWatchEventKinds.ENTRY_CREATE, 
-                    StandardWatchEventKinds.ENTRY_DELETE, 
+                    watchKey = folder.register(watchService,
+                    StandardWatchEventKinds.ENTRY_CREATE,
+                    StandardWatchEventKinds.ENTRY_DELETE,
                     StandardWatchEventKinds.ENTRY_MODIFY);
 
                     WatchKey wk;
                     do {
                         wk = watchService.take();
                         assert wk == watchKey;
-                        
+
                         boolean isDirty = false;
                         for (WatchEvent<?> e: wk.pollEvents()) {
                             final WatchEvent.Kind<?> kind = e.kind();
@@ -176,13 +176,13 @@ class LibraryFolderWatcher implements Runnable {
                                 assert kind == StandardWatchEventKinds.OVERFLOW;
                             }
                         }
-                                                
+
                         // We reconstruct a full set from scratch as soon as the
                         // dirty flag is set.
                         if (isDirty) {
                             // First put the builtin items in the library
                             library.setItems(BuiltinLibrary.getLibrary().getItems());
-                            
+
                             final Set<Path> fxmls = new HashSet<>();
                             fxmls.addAll(getAllFiles(FILE_TYPE.FXML));
                             updateLibrary(fxmls);
@@ -190,7 +190,7 @@ class LibraryFolderWatcher implements Runnable {
                             final Set<Path> jars = new HashSet<>();
                             jars.addAll(getAllFiles(FILE_TYPE.JAR));
                             exploreAndUpdateLibrary(jars);
-                            
+
                             library.updateExplorationCount(library.getExplorationCount()+1);
                         }
                     } while (wk.reset());
@@ -201,8 +201,8 @@ class LibraryFolderWatcher implements Runnable {
 
         }
     }
-    
-    
+
+
     private Set<Path> getAllFiles(FILE_TYPE fileType) throws IOException {
         Set<Path> res = new HashSet<>();
         final Path folder = Paths.get(library.getPath());
@@ -228,23 +228,23 @@ class LibraryFolderWatcher implements Runnable {
 
         return res;
     }
-    
-    
+
+
     private static boolean isJarPath(Path path) {
         final String pathString = path.toString().toLowerCase(Locale.ROOT);
         return pathString.endsWith(".jar"); //NOI18N
     }
-    
-    
+
+
     private static boolean isFxmlPath(Path path) {
         final String pathString = path.toString().toLowerCase(Locale.ROOT);
         return pathString.endsWith(".fxml"); //NOI18N
     }
-    
-    
+
+
     private void updateLibrary(Collection<Path> paths) throws IOException {
         final List<LibraryItem> newItems = new ArrayList<>();
-        
+
         for (Path path : paths) {
             newItems.add(makeLibraryItem(path));
         }
@@ -253,8 +253,8 @@ class LibraryFolderWatcher implements Runnable {
         library.updateFxmlFileReports(paths);
         library.updateExplorationDate(new Date());
     }
-    
-    
+
+
     private LibraryItem makeLibraryItem(Path path) throws IOException {
         final URL iconURL = ImageUtils.getNodeIconURL(null);
         String fileName = path.getFileName().toString();
@@ -267,15 +267,15 @@ class LibraryFolderWatcher implements Runnable {
             while ((line = reader.readLine()) != null) {
                 buf.append(line).append("\n"); //NOI18N
             }
-            
+
             fxmlText = buf.toString();
         }
 
         final LibraryItem res = new LibraryItem(itemName, UserLibrary.TAG_USER_DEFINED, fxmlText, iconURL, library);
         return res;
     }
-    
-    
+
+
     private void exploreAndUpdateLibrary(Collection<Path> jars) throws IOException {
 
         //  1) we create a classloader
@@ -311,13 +311,13 @@ class LibraryFolderWatcher implements Runnable {
         library.updateJarReports(new ArrayList<>(jarReports));
         library.updateExplorationDate(new Date());
     }
-    
-    
+
+
     private Collection<LibraryItem> makeLibraryItems(JarReport jarReport) throws IOException {
         final List<LibraryItem> result = new ArrayList<>();
         final URL iconURL = ImageUtils.getNodeIconURL(null);
         final List<String> excludedItems = library.getFilter();
-                
+
         for (JarReportEntry e : jarReport.getEntries()) {
             if ((e.getStatus() == JarReportEntry.Status.OK) && e.isNode()) {
                 // We filter out items listed in the excluded list, based on canonical name of the class.
@@ -329,11 +329,11 @@ class LibraryFolderWatcher implements Runnable {
                 }
             }
         }
-        
+
         return result;
     }
-    
-    
+
+
     private URL[] makeURLArrayFromPaths(Collection<Path> paths) {
         final URL[] result = new URL[paths.size()];
         int i = 0;
@@ -344,8 +344,8 @@ class LibraryFolderWatcher implements Runnable {
                 throw new RuntimeException("Bug in " + getClass().getSimpleName(), x); //NOI18N
             }
         }
-        
+
         return result;
     }
-    
+
 }

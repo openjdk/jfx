@@ -29,13 +29,13 @@ package javafx.scene.control;
  * A SelectionModel which enforces the requirement that only a single index
  * be selected at any given time. This class exists for controls that allow for
  * pluggable selection models, but which do not allow for multiple selection.
- * A good example is the {@link ChoiceBox} control. Conversely, most other 
- * controls ({@link ListView}, {@link TreeView}, {@link TableView}, etc) 
- * require {@link MultipleSelectionModel} implementations (although 
- * MultipleSelectionModel does still allow for single selection to be set via the 
+ * A good example is the {@link ChoiceBox} control. Conversely, most other
+ * controls ({@link ListView}, {@link TreeView}, {@link TableView}, etc)
+ * require {@link MultipleSelectionModel} implementations (although
+ * MultipleSelectionModel does still allow for single selection to be set via the
  * {@link MultipleSelectionModel#selectionModeProperty() selectionMode}
  * property).
- * 
+ *
  * @see SelectionModel
  * @see MultipleSelectionModel
  * @see SelectionMode
@@ -43,32 +43,32 @@ package javafx.scene.control;
  * @since JavaFX 2.0
  */
 public abstract class SingleSelectionModel<T> extends SelectionModel<T> {
-    
+
     /***************************************************************************
      *                                                                         *
      * Constructor                                                             *
      *                                                                         *
-     **************************************************************************/  
-    
+     **************************************************************************/
+
     /**
      * Creates a default SingleSelectionModel instance.
      */
     public SingleSelectionModel() { }
 
-    
+
 
     /***************************************************************************
      *                                                                         *
      * Selection API                                                           *
      *                                                                         *
      **************************************************************************/
-    
+
     /** {@inheritDoc} */
     @Override public void clearSelection() {
         updateSelectedIndex(-1);
     }
 
-    /** 
+    /**
      * Clears the selection of the given index, if it is currently selected.
      */
     @Override public void clearSelection(int index) {
@@ -83,7 +83,7 @@ public abstract class SingleSelectionModel<T> extends SelectionModel<T> {
     }
 
     /**
-     * <p>This method will return true if the given index is the currently 
+     * <p>This method will return true if the given index is the currently
      * selected index in this SingleSelectionModel.</code>.
      *
      * @param index The index to check as to whether it is currently selected
@@ -94,8 +94,8 @@ public abstract class SingleSelectionModel<T> extends SelectionModel<T> {
         return getSelectedIndex() == index;
     }
 
-    /** 
-     * In the SingleSelectionModel, this method is functionally equivalent to 
+    /**
+     * In the SingleSelectionModel, this method is functionally equivalent to
      * calling <code>select(index)</code>, as only one selection is allowed at
      * a time.
      */
@@ -115,7 +115,7 @@ public abstract class SingleSelectionModel<T> extends SelectionModel<T> {
             setSelectedItem(null);
             return;
         }
-        
+
         final int itemCount = getItemCount();
 
         for (int i = 0; i < itemCount; i++) {
@@ -128,7 +128,7 @@ public abstract class SingleSelectionModel<T> extends SelectionModel<T> {
 
         // if we are here, we did not find the item in the entire data model.
         // Even still, we allow for this item to be set to the give object.
-        // We expect that in concrete subclasses of this class we observe the 
+        // We expect that in concrete subclasses of this class we observe the
         // data model such that we check to see if the given item exists in it,
         // whilst SelectedIndex == -1 && SelectedItem != null.
         setSelectedItem(obj);
@@ -167,7 +167,7 @@ public abstract class SingleSelectionModel<T> extends SelectionModel<T> {
     @Override public void selectNext() {
         select(getSelectedIndex() + 1);
     }
-    
+
     /**
      * Selects the first index. Since the SingleSelectionModel can only support having
      * a single index selected at a time, this also causes any previously selected
@@ -190,14 +190,14 @@ public abstract class SingleSelectionModel<T> extends SelectionModel<T> {
             select(numItems - 1);
         }
     }
-    
+
     /**
      * Gets the data model item associated with a specific index.
      * @param index The position of the item in the underlying data model.
      * @return The item that exists at the given index.
      */
     protected abstract T getModelItem(int index);
-    
+
     /**
      * Gets the number of items available for the selection model. If the number
      * of items can change dynamically, it is the responsibility of the
@@ -211,16 +211,16 @@ public abstract class SingleSelectionModel<T> extends SelectionModel<T> {
     private void updateSelectedIndex(int newIndex) {
         int currentIndex = getSelectedIndex();
         T currentItem = getSelectedItem();
-        
+
         setSelectedIndex(newIndex);
-        
+
         if (currentIndex == -1 && currentItem != null && newIndex == -1) {
-            // no-op: the current selection isn't in the underlying data model - 
+            // no-op: the current selection isn't in the underlying data model -
             // we should keep the selected item as the new index is -1
         } else {
             // we don't use newIndex here, to prevent RT-32139 (which has a unit
             // test developed to prevent regressions in the future)
             setSelectedItem(getModelItem(getSelectedIndex()));
         }
-    }    
+    }
 }

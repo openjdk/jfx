@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -128,7 +128,7 @@ Node* lowestEditableAncestor(Node* node)
 {
     if (!node)
         return 0;
-    
+
     while (node) {
         if (node->hasEditableStyle())
             return node->rootEditableElement();
@@ -136,7 +136,7 @@ Node* lowestEditableAncestor(Node* node)
             break;
         node = node->parentNode();
     }
-    
+
     return 0;
 }
 
@@ -152,7 +152,7 @@ bool isEditablePosition(const Position& p, EditableType editableType, EUpdateSty
 
     if (node->renderer() && node->renderer()->isTable())
         node = node->parentNode();
-    
+
     return node->hasEditableStyle(editableType);
 }
 
@@ -161,17 +161,17 @@ bool isAtUnsplittableElement(const Position& pos)
     Node* node = pos.deprecatedNode();
     return (node == editableRootForPosition(pos) || node == enclosingNodeOfType(pos, &isTableCell));
 }
-    
-    
+
+
 bool isRichlyEditablePosition(const Position& p, EditableType editableType)
 {
     Node* node = p.deprecatedNode();
     if (!node)
         return false;
-        
+
     if (node->renderer() && node->renderer()->isTable())
         node = node->parentNode();
-    
+
     return node->hasRichlyEditableStyle(editableType);
 }
 
@@ -180,10 +180,10 @@ Element* editableRootForPosition(const Position& p, EditableType editableType)
     Node* node = p.containerNode();
     if (!node)
         return 0;
-        
+
     if (node->renderer() && node->renderer()->isTable())
         node = node->parentNode();
-    
+
     return node->rootEditableElement(editableType);
 }
 
@@ -265,10 +265,10 @@ VisiblePosition firstEditablePositionAfterPositionInRoot(const Position& positio
 
     while (p.deprecatedNode() && !isEditablePosition(p) && p.deprecatedNode()->isDescendantOf(highestRoot))
         p = isAtomicNode(p.deprecatedNode()) ? positionInParentAfterNode(p.deprecatedNode()) : nextVisuallyDistinctCandidate(p);
-    
+
     if (p.deprecatedNode() && p.deprecatedNode() != highestRoot && !p.deprecatedNode()->isDescendantOf(highestRoot))
         return VisiblePosition();
-    
+
     return VisiblePosition(p);
 }
 
@@ -287,13 +287,13 @@ VisiblePosition lastEditablePositionBeforePositionInRoot(const Position& positio
 
         p = firstPositionInOrBeforeNode(shadowAncestor);
     }
-    
+
     while (p.deprecatedNode() && !isEditablePosition(p) && p.deprecatedNode()->isDescendantOf(highestRoot))
         p = isAtomicNode(p.deprecatedNode()) ? positionInParentBeforeNode(p.deprecatedNode()) : previousVisuallyDistinctCandidate(p);
-    
+
     if (p.deprecatedNode() && p.deprecatedNode() != highestRoot && !p.deprecatedNode()->isDescendantOf(highestRoot))
         return VisiblePosition();
-    
+
     return VisiblePosition(p);
 }
 
@@ -310,8 +310,8 @@ bool isInline(const Node* node)
 }
 
 // FIXME: Deploy this in all of the places where enclosingBlockFlow/enclosingBlockFlowOrTableElement are used.
-// FIXME: Pass a position to this function. The enclosing block of [table, x] for example, should be the 
-// block that contains the table and not the table, and this function should be the only one responsible for 
+// FIXME: Pass a position to this function. The enclosing block of [table, x] for example, should be the
+// block that contains the table and not the table, and this function should be the only one responsible for
 // knowing about these kinds of special cases.
 Element* enclosingBlock(Node* node, EditingBoundaryCrossingRule rule)
 {
@@ -371,7 +371,7 @@ String stringWithRebalancedWhitespace(const String& string, bool startIsStartOfP
             rebalancedString[i] = ' ';
             previousCharacterWasSpace = true;
         }
-            
+
     }
 
     return String::adopt(rebalancedString);
@@ -394,7 +394,7 @@ bool isSpecialElement(const Node *n)
 {
     if (!n)
         return false;
-        
+
     if (!n->isHTMLElement())
         return false;
 
@@ -404,7 +404,7 @@ bool isSpecialElement(const Node *n)
     RenderObject* renderer = n->renderer();
     if (!renderer)
         return false;
-        
+
     if (renderer->style().display() == TABLE || renderer->style().display() == INLINE_TABLE)
         return true;
 
@@ -413,7 +413,7 @@ bool isSpecialElement(const Node *n)
 
     if (renderer->style().position() != StaticPosition)
         return true;
-        
+
     return false;
 }
 
@@ -497,7 +497,7 @@ Node* isFirstPositionAfterTable(const VisiblePosition& visiblePosition)
     Position upstream(visiblePosition.deepEquivalent().upstream());
     if (upstream.deprecatedNode() && upstream.deprecatedNode()->renderer() && upstream.deprecatedNode()->renderer()->isTable() && upstream.atLastEditingPositionForNode())
         return upstream.deprecatedNode();
-    
+
     return 0;
 }
 
@@ -506,7 +506,7 @@ Node* isLastPositionBeforeTable(const VisiblePosition& visiblePosition)
     Position downstream(visiblePosition.deepEquivalent().downstream());
     if (downstream.deprecatedNode() && downstream.deprecatedNode()->renderer() && downstream.deprecatedNode()->renderer()->isTable() && downstream.atFirstEditingPositionForNode())
         return downstream.deprecatedNode();
-    
+
     return 0;
 }
 
@@ -546,7 +546,7 @@ Node* enclosingNodeWithTag(const Position& p, const QualifiedName& tagName)
 {
     if (p.isNull())
         return 0;
-        
+
     Node* root = highestEditableRoot(p);
     for (Node* n = p.deprecatedNode(); n; n = n->parentNode()) {
         if (root && !n->hasEditableStyle())
@@ -556,7 +556,7 @@ Node* enclosingNodeWithTag(const Position& p, const QualifiedName& tagName)
         if (n == root)
             return 0;
     }
-    
+
     return 0;
 }
 
@@ -566,7 +566,7 @@ Node* enclosingNodeOfType(const Position& p, bool (*nodeIsOfType)(const Node*), 
     ASSERT(rule == CanCrossEditingBoundary || rule == CannotCrossEditingBoundary);
     if (p.isNull())
         return 0;
-        
+
     Node* root = rule == CannotCrossEditingBoundary ? highestEditableRoot(p) : 0;
     for (Node* n = p.deprecatedNode(); n; n = n->parentNode()) {
         // Don't return a non-editable node if the input position was editable, since
@@ -578,7 +578,7 @@ Node* enclosingNodeOfType(const Position& p, bool (*nodeIsOfType)(const Node*), 
         if (n == root)
             return 0;
     }
-    
+
     return 0;
 }
 
@@ -594,7 +594,7 @@ Node* highestEnclosingNodeOfType(const Position& p, bool (*nodeIsOfType)(const N
         if (n == root)
             break;
     }
-    
+
     return highest;
 }
 
@@ -647,16 +647,16 @@ HTMLElement* enclosingList(Node* node)
 {
     if (!node)
         return 0;
-        
+
     Node* root = highestEditableRoot(firstPositionInOrBeforeNode(node));
-    
+
     for (ContainerNode* n = node->parentNode(); n; n = n->parentNode()) {
         if (n->hasTagName(ulTag) || n->hasTagName(olTag))
             return toHTMLElement(n);
         if (n == root)
             return 0;
     }
-    
+
     return 0;
 }
 
@@ -667,7 +667,7 @@ Node* enclosingListChild(Node *node)
     // Check for a list item element, or for a node whose parent is a list element. Such a node
     // will appear visually as a list item (but without a list marker)
     Node* root = highestEditableRoot(firstPositionInOrBeforeNode(node));
-    
+
     // FIXME: This function is inappropriately named if it starts with node instead of node->parentNode()
     for (Node* n = node; n && n->parentNode(); n = n->parentNode()) {
         if (n->hasTagName(liTag) || (isListElement(n->parentNode()) && n != root))
@@ -675,7 +675,7 @@ Node* enclosingListChild(Node *node)
         if (n == root || isTableCell(n))
             return 0;
     }
-    
+
     return 0;
 }
 
@@ -686,7 +686,7 @@ static HTMLElement* embeddedSublist(Node* listItem)
         if (isListElement(n))
             return toHTMLElement(n);
     }
-    
+
     return 0;
 }
 
@@ -699,7 +699,7 @@ static Node* appendedSublist(Node* listItem)
         if (isListItem(listItem))
             return 0;
     }
-    
+
     return 0;
 }
 
@@ -716,10 +716,10 @@ Node* enclosingEmptyListItem(const VisiblePosition& visiblePos)
 
     if (firstInListChild != visiblePos || lastInListChild != visiblePos)
         return 0;
-    
+
     if (embeddedSublist(listChildNode) || appendedSublist(listChildNode))
         return 0;
-        
+
     return listChildNode;
 }
 
@@ -823,7 +823,7 @@ bool isTableCell(const Node* node)
     RenderObject* r = node->renderer();
     if (!r)
         return node->hasTagName(tdTag) || node->hasTagName(thTag);
-    
+
     return r->isTableCell();
 }
 
@@ -917,7 +917,7 @@ Node* tabSpanNode(const Node *node)
 {
     return isTabSpanTextNode(node) ? node->parentNode() : 0;
 }
-    
+
 Position positionOutsideTabSpan(const Position& pos)
 {
     Node* node = pos.containerNode();
@@ -978,7 +978,7 @@ unsigned numEnclosingMailBlockquotes(const Position& p)
     for (Node* n = p.deprecatedNode(); n; n = n->parentNode())
         if (isMailBlockquote(n))
             num++;
-    
+
     return num;
 }
 
@@ -1016,7 +1016,7 @@ bool isMailBlockquote(const Node *node)
 {
     if (!node || !node->hasTagName(blockquoteTag))
         return false;
-        
+
     return static_cast<const Element *>(node)->getAttribute("type") == "cite";
 }
 
@@ -1027,7 +1027,7 @@ int caretMinOffset(const Node* n)
     return r ? r->caretMinOffset() : 0;
 }
 
-// If a node can contain candidates for VisiblePositions, return the offset of the last candidate, otherwise 
+// If a node can contain candidates for VisiblePositions, return the offset of the last candidate, otherwise
 // return the number of children for container nodes and the length for unrendered text nodes.
 int caretMaxOffset(const Node* n)
 {
@@ -1047,16 +1047,16 @@ bool lineBreakExistsAtPosition(const Position& position)
 {
     if (position.isNull())
         return false;
-    
+
     if (position.anchorNode()->hasTagName(brTag) && position.atFirstEditingPositionForNode())
         return true;
-    
+
     if (!position.anchorNode()->renderer())
         return false;
-    
+
     if (!position.anchorNode()->isTextNode() || !position.anchorNode()->renderer()->style().preserveNewline())
         return false;
-    
+
     Text* textNode = toText(position.anchorNode());
     unsigned offset = position.offsetInContainerNode();
     return offset < textNode->length() && textNode->data()[offset] == '\n';
@@ -1070,7 +1070,7 @@ VisibleSelection selectionForParagraphIteration(const VisibleSelection& original
     VisibleSelection newSelection(original);
     VisiblePosition startOfSelection(newSelection.visibleStart());
     VisiblePosition endOfSelection(newSelection.visibleEnd());
-    
+
     // If the end of the selection to modify is just after a table, and
     // if the start of the selection is inside that table, then the last paragraph
     // that we'll want modify is the last one inside the table, not the table itself
@@ -1078,7 +1078,7 @@ VisibleSelection selectionForParagraphIteration(const VisibleSelection& original
     if (Node* table = isFirstPositionAfterTable(endOfSelection))
         if (startOfSelection.deepEquivalent().deprecatedNode()->isDescendantOf(table))
             newSelection = VisibleSelection(startOfSelection, endOfSelection.previous(CannotCrossEditingBoundary));
-    
+
     // If the start of the selection to modify is just before a table,
     // and if the end of the selection is inside that table, then the first paragraph
     // we'll want to modify is the first one inside the table, not the paragraph
@@ -1086,14 +1086,14 @@ VisibleSelection selectionForParagraphIteration(const VisibleSelection& original
     if (Node* table = isLastPositionBeforeTable(startOfSelection))
         if (endOfSelection.deepEquivalent().deprecatedNode()->isDescendantOf(table))
             newSelection = VisibleSelection(startOfSelection.next(CannotCrossEditingBoundary), endOfSelection);
-    
+
     return newSelection;
 }
 
-// FIXME: indexForVisiblePosition and visiblePositionForIndex use TextIterators to convert between 
-// VisiblePositions and indices. But TextIterator iteration using TextIteratorEmitsCharactersBetweenAllVisiblePositions 
-// does not exactly match VisiblePosition iteration, so using them to preserve a selection during an editing 
-// opertion is unreliable. TextIterator's TextIteratorEmitsCharactersBetweenAllVisiblePositions mode needs to be fixed, 
+// FIXME: indexForVisiblePosition and visiblePositionForIndex use TextIterators to convert between
+// VisiblePositions and indices. But TextIterator iteration using TextIteratorEmitsCharactersBetweenAllVisiblePositions
+// does not exactly match VisiblePosition iteration, so using them to preserve a selection during an editing
+// opertion is unreliable. TextIterator's TextIteratorEmitsCharactersBetweenAllVisiblePositions mode needs to be fixed,
 // or these functions need to be changed to iterate using actual VisiblePositions.
 // FIXME: Deploy these functions everywhere that TextIterators are used to convert between VisiblePositions and indices.
 int indexForVisiblePosition(const VisiblePosition& visiblePosition, RefPtr<ContainerNode>& scope)
@@ -1125,7 +1125,7 @@ int indexForVisiblePosition(Node* node, const VisiblePosition& visiblePosition, 
 VisiblePosition visiblePositionForIndex(int index, ContainerNode* scope)
 {
     RefPtr<Range> range = TextIterator::rangeFromLocationAndLength(scope, index, 0, true);
-    // Check for an invalid index. Certain editing operations invalidate indices because 
+    // Check for an invalid index. Certain editing operations invalidate indices because
     // of problems with TextIteratorEmitsCharactersBetweenAllVisiblePositions.
     if (!range)
         return VisiblePosition();
@@ -1218,7 +1218,7 @@ Position adjustedSelectionStartForStyleComputation(const VisibleSelection& selec
 {
     // This function is used by range style computations to avoid bugs like:
     // <rdar://problem/4017641> REGRESSION (Mail): you can only bold/unbold a selection starting from end of line once
-    // It is important to skip certain irrelevant content at the start of the selection, so we do not wind up 
+    // It is important to skip certain irrelevant content at the start of the selection, so we do not wind up
     // with a spurious "mixed" style.
 
     VisiblePosition visiblePosition = selection.start();

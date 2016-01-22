@@ -74,7 +74,7 @@ JSValue JavaField::valueFromInstance(ExecState* exec, const Instance* i) const
 
     JSValue jsresult = jsUndefined();
     jobject jfield = m_field->instance();
-    jobject jinstance = instance->javaInstance();    
+    jobject jinstance = instance->javaInstance();
     switch (m_type) {
     case JavaTypeArray:
     case JavaTypeObject:
@@ -107,7 +107,7 @@ JSValue JavaField::valueFromInstance(ExecState* exec, const Instance* i) const
     case JavaTypeShort:
         jsresult = jsNumber(callJNIMethod<jshort>(jfield, "getShort", "(Ljava/lang/Object;)S", jinstance));
         break;
-                            
+
     case JavaTypeInt:
         jsresult = jsNumber(static_cast<int>(callJNIMethod<jint>(jfield, "getInt", "(Ljava/lang/Object;)I", jinstance)));
         break;
@@ -138,7 +138,7 @@ void JavaField::setValueToInstance(ExecState* exec, const Instance* i, JSValue a
     jvalue javaValue = convertValueToJValue(exec, i->rootObject(), aValue, m_type, typeClassName());
     LOG(LiveConnect, "JavaField::setValueToInstance setting value %s to %s", String(name().impl()).utf8().data(), aValue.toString(exec)->value(exec).ascii().data());
 
-    jobject jfield = m_field->instance();    
+    jobject jfield = m_field->instance();
     jobject jinstance = instance->javaInstance();
 
     switch (m_type) {

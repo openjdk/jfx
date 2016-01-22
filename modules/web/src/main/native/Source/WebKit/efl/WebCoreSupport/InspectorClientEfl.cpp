@@ -105,7 +105,7 @@ InspectorFrontendChannel* InspectorClientEfl::openInspectorFrontend(InspectorCon
 
     InspectorController& controller = EWKPrivate::corePage(m_inspectorView)->inspectorController();
     controller.setInspectorFrontendClient(std::move(frontendClient));
-    
+
     return this;
 }
 

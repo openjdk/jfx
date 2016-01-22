@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #import "config.h"
@@ -65,21 +65,21 @@ RetainPtr<NSImage> scaleDragImage(RetainPtr<NSImage> image, FloatSize scale)
     [image.get() setSize:newSize];
     return image;
 }
-    
+
 RetainPtr<NSImage> dissolveDragImageToFraction(RetainPtr<NSImage> image, float delta)
 {
     if (!image)
         return nil;
 
     RetainPtr<NSImage> dissolvedImage = adoptNS([[NSImage alloc] initWithSize:[image.get() size]]);
-    
+
     [dissolvedImage.get() lockFocus];
     [image.get() drawAtPoint:NSZeroPoint fromRect:NSMakeRect(0, 0, [image size].width, [image size].height) operation:NSCompositeCopy fraction:delta];
     [dissolvedImage.get() unlockFocus];
 
     return dissolvedImage;
 }
-        
+
 RetainPtr<NSImage> createDragImageFromImage(Image* image, ImageOrientationDescription description)
 {
     IntSize size = image->size();
@@ -126,19 +126,19 @@ RetainPtr<NSImage> createDragImageFromImage(Image* image, ImageOrientationDescri
     [dragImage.get() setSize:(NSSize)size];
     return dragImage;
 }
-    
+
 RetainPtr<NSImage> createDragImageIconForCachedImageFilename(const String& filename)
 {
     NSString *extension = nil;
     size_t dotIndex = filename.reverseFind('.');
-    
+
     if (dotIndex != notFound && dotIndex < (filename.length() - 1)) // require that a . exists after the first character and before the last
         extension = filename.substring(dotIndex + 1);
     else {
         // It might be worth doing a further lookup to pull the extension from the MIME type.
         extension = @"";
     }
-    
+
     return [[NSWorkspace sharedWorkspace] iconForFileType:extension];
 }
 
@@ -156,12 +156,12 @@ const float DragLinkLabelFontsize = 11;
 const float DragLinkUrlFontSize = 10;
 
 // FIXME - we should move all the functionality of NSString extras to WebCore
-    
+
 static Font& fontFromNSFont(NSFont *font)
 {
     static NSFont *currentFont;
     DEFINE_STATIC_LOCAL(Font, currentRenderer, ());
-    
+
     if ([font isEqual:currentFont])
         return currentRenderer;
     if (currentFont)
@@ -183,14 +183,14 @@ static bool canUseFastRenderer(const UniChar* buffer, unsigned length)
     }
     return true;
 }
-    
+
 static float widthWithFont(NSString *string, NSFont *font)
 {
     unsigned length = [string length];
     Vector<UniChar, 2048> buffer(length);
-    
+
     [string getCharacters:buffer.data()];
-    
+
     if (canUseFastRenderer(buffer.data(), length)) {
         FontCachePurgePreventer fontCachePurgePreventer;
 
@@ -199,7 +199,7 @@ static float widthWithFont(NSString *string, NSFont *font)
         run.disableRoundingHacks();
         return webCoreFont.width(run);
     }
-    
+
     return [string sizeWithAttributes:[NSDictionary dictionaryWithObjectsAndKeys:font, NSFontAttributeName, nil]].width;
 }
 
@@ -209,14 +209,14 @@ static inline CGFloat webkit_CGCeiling(CGFloat value)
         return ceilf(value);
     return static_cast<CGFloat>(ceil(value));
 }
-    
+
 static void drawAtPoint(NSString *string, NSPoint point, NSFont *font, NSColor *textColor)
 {
     unsigned length = [string length];
     Vector<UniChar, 2048> buffer(length);
-    
+
     [string getCharacters:buffer.data()];
-    
+
     if (canUseFastRenderer(buffer.data(), length)) {
         FontCachePurgePreventer fontCachePurgePreventer;
 
@@ -225,16 +225,16 @@ static void drawAtPoint(NSString *string, NSPoint point, NSFont *font, NSColor *
         // If you change this, be sure to test all the text drawn this way in Safari, including
         // the status bar, bookmarks bar, tab bar, and activity window.
         point.y = webkit_CGCeiling(point.y);
-        
+
         NSGraphicsContext *nsContext = [NSGraphicsContext currentContext];
         CGContextRef cgContext = static_cast<CGContextRef>([nsContext graphicsPort]);
-        GraphicsContext graphicsContext(cgContext);    
-        
+        GraphicsContext graphicsContext(cgContext);
+
         // Safari doesn't flip the NSGraphicsContext before calling WebKit, yet WebCore requires a flipped graphics context.
         BOOL flipped = [nsContext isFlipped];
         if (!flipped)
             CGContextScaleCTM(cgContext, 1, -1);
-            
+
         Font webCoreFont(FontPlatformData(font, [font pointSize]), ![nsContext isDrawingToScreen], Antialiased);
         TextRun run(buffer.data(), length);
         run.disableRoundingHacks();
@@ -245,9 +245,9 @@ static void drawAtPoint(NSString *string, NSPoint point, NSFont *font, NSColor *
         CGFloat alpha;
         [[textColor colorUsingColorSpaceName:NSDeviceRGBColorSpace] getRed:&red green:&green blue:&blue alpha:&alpha];
         graphicsContext.setFillColor(makeRGBA(red * 255, green * 255, blue * 255, alpha * 255), ColorSpaceDeviceRGB);
-        
+
         webCoreFont.drawText(&graphicsContext, run, FloatPoint(point.x, (flipped ? point.y : (-1 * point.y))));
-        
+
         if (!flipped)
             CGContextScaleCTM(cgContext, 1, -1);
     } else {
@@ -256,16 +256,16 @@ static void drawAtPoint(NSString *string, NSPoint point, NSFont *font, NSColor *
             point.y -= [font ascender];
         else
             point.y += [font descender];
-                
+
         [string drawAtPoint:point withAttributes:[NSDictionary dictionaryWithObjectsAndKeys:font, NSFontAttributeName, textColor, NSForegroundColorAttributeName, nil]];
     }
 }
-    
+
 static void drawDoubledAtPoint(NSString *string, NSPoint textPoint, NSColor *topColor, NSColor *bottomColor, NSFont *font)
 {
         // turn off font smoothing so translucent text draws correctly (Radar 3118455)
         drawAtPoint(string, textPoint, font, bottomColor);
-        
+
         textPoint.y += 1;
         drawAtPoint(string, textPoint, font, topColor);
 }
@@ -344,7 +344,7 @@ DragImageRef createDragImageForLink(URL& url, const String& title, FontRendering
 
     return dragImage;
 }
-   
+
 } // namespace WebCore
 
 #endif // ENABLE(DRAG_SUPPORT)

@@ -30,7 +30,7 @@ import javafx.beans.NamedArg;
 
 /**
  * An immutable wrapper class for use by the column resize policies offered by
- * controls such as {@link TableView} and {@link TreeTableView}. 
+ * controls such as {@link TableView} and {@link TreeTableView}.
  * @since JavaFX 8.0
  */
 public class ResizeFeaturesBase<S> {
@@ -38,13 +38,13 @@ public class ResizeFeaturesBase<S> {
   private final Double delta;
 
   /**
-   * Creates an instance of this class, with the provided TableColumnBase and 
+   * Creates an instance of this class, with the provided TableColumnBase and
    * delta values being set and stored in this immutable instance.
-   * 
+   *
    * @param column The column upon which the resize is occurring, or null
    *      if this ResizeFeatures instance is being created as a result of a
    *      resize operation.
-   * @param delta The amount of horizontal space added or removed in the 
+   * @param delta The amount of horizontal space added or removed in the
    *      resize operation.
    */
   public ResizeFeaturesBase(@NamedArg("column") TableColumnBase<S,?> column, @NamedArg("delta") Double delta) {
@@ -60,7 +60,7 @@ public class ResizeFeaturesBase<S> {
   public TableColumnBase<S,?> getColumn() { return column; }
 
   /**
-   * Returns the amount of horizontal space added or removed in the 
+   * Returns the amount of horizontal space added or removed in the
    * resize operation.
    */
   public Double getDelta() { return delta; }

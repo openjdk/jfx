@@ -52,11 +52,11 @@ public class Cylinder extends Shape3D {
     static final int DEFAULT_DIVISIONS = 64;
     static final double DEFAULT_RADIUS = 1;
     static final double DEFAULT_HEIGHT = 2;
-    
+
     private int divisions = DEFAULT_DIVISIONS;
     private TriangleMesh mesh;
-    
-    /**  
+
+    /**
      * Creates a new instance of {@code Cylinder} of radius of 1.0 and height of 2.0.
      * Resolution defaults to 15 divisions along X and Z axis.
      */
@@ -67,7 +67,7 @@ public class Cylinder extends Shape3D {
     /**
      * Creates a new instance of {@code Cylinder} of a given radius and height.
      * Resolution defaults to 15 divisions along X and Z axis.
-     * 
+     *
      * @param radius Radius
      * @param height Height
      */
@@ -81,17 +81,17 @@ public class Cylinder extends Shape3D {
      *
      * Note that divisions should be at least 3. Any value less than that will be
      * clamped to 3.
-     * 
+     *
      * @param radius Radius
      * @param height Height
-     * @param divisions Divisions 
+     * @param divisions Divisions
      */
     public Cylinder (double radius, double height, int divisions) {
         this.divisions = divisions < 3 ? 3 : divisions;
         setRadius(radius);
         setHeight(height);
     }
-    
+
     /**
      * Defines the height or the Y dimension of the Cylinder.
      *
@@ -165,7 +165,7 @@ public class Cylinder extends Shape3D {
      * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
-    @Deprecated   
+    @Deprecated
     @Override
     public void impl_updatePeer() {
         super.impl_updatePeer();
@@ -185,7 +185,7 @@ public class Cylinder extends Shape3D {
             }
         }
     }
-    
+
     /**
      * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
@@ -209,9 +209,9 @@ public class Cylinder extends Shape3D {
         if (r < 0 || h < 0) {
             return bounds.makeEmpty();
         }
-        
+
         final float hh = h * 0.5f;
-        
+
         bounds = bounds.deriveWithNewBounds(-r, -hh, -r, r, hh, r);
         bounds = tx.transform(bounds, bounds);
         return bounds;
@@ -226,7 +226,7 @@ public class Cylinder extends Shape3D {
     protected boolean impl_computeContains(double localX, double localY) {
         double w = getRadius();
         double hh = getHeight()*.5f;
-        return -w <= localX && localX <= w && 
+        return -w <= localX && localX <= w &&
                 -hh <= localY && localY <= hh;
     }
 
@@ -302,10 +302,10 @@ public class Cylinder extends Shape3D {
         }
 
         // Now check the caps
-        
+
         // if we already know we are going to do the exact picking,
         // there is no need to check the caps
-        
+
         boolean topCap = false, bottomCap = false;
         if (t == Double.POSITIVE_INFINITY || !exactPicking) {
             final double tBottom = (-halfHeight - originY) / dirY;

@@ -82,7 +82,7 @@ void RenderLineBoxList::deleteLineBoxTree()
 void RenderLineBoxList::extractLineBox(InlineFlowBox* box)
 {
     checkConsistency();
-    
+
     m_lastLineBox = box->prevLineBox();
     if (box == m_firstLineBox)
         m_firstLineBox = 0;
@@ -160,7 +160,7 @@ bool RenderLineBoxList::rangeIntersectsRect(RenderBoxModelObject* renderer, Layo
     LayoutUnit physicalEnd = block->flipForWritingMode(logicalBottom);
     LayoutUnit physicalExtent = absoluteValue(physicalEnd - physicalStart);
     physicalStart = std::min(physicalStart, physicalEnd);
-    
+
     if (renderer->style().isHorizontalWritingMode()) {
         physicalStart += offset.y();
         if (physicalStart >= rect.maxY() || physicalStart + physicalExtent <= rect.y())
@@ -170,7 +170,7 @@ bool RenderLineBoxList::rangeIntersectsRect(RenderBoxModelObject* renderer, Layo
         if (physicalStart >= rect.maxX() || physicalStart + physicalExtent <= rect.x())
             return false;
     }
-    
+
     return true;
 }
 
@@ -190,7 +190,7 @@ bool RenderLineBoxList::anyLineIntersectsRect(RenderBoxModelObject* renderer, co
         lastLineBottom = std::max(lastLineBottom, lastRootBox.lineBottom());
     LayoutUnit logicalTop = firstLineTop - outlineSize;
     LayoutUnit logicalBottom = outlineSize + lastLineBottom;
-    
+
     return rangeIntersectsRect(renderer, logicalTop, logicalBottom, rect, offset);
 }
 
@@ -199,14 +199,14 @@ bool RenderLineBoxList::lineIntersectsDirtyRect(RenderBoxModelObject* renderer, 
     const RootInlineBox& rootBox = box->root();
     LayoutUnit logicalTop = std::min<LayoutUnit>(box->logicalTopVisualOverflow(rootBox.lineTop()), rootBox.selectionTop()) - renderer->maximalOutlineSize(paintInfo.phase);
     LayoutUnit logicalBottom = box->logicalBottomVisualOverflow(rootBox.lineBottom()) + renderer->maximalOutlineSize(paintInfo.phase);
-    
+
     return rangeIntersectsRect(renderer, logicalTop, logicalBottom, paintInfo.rect, offset);
 }
 
 void RenderLineBoxList::paint(RenderBoxModelObject* renderer, PaintInfo& paintInfo, const LayoutPoint& paintOffset) const
 {
     // Only paint during the foreground/selection phases.
-    if (paintInfo.phase != PaintPhaseForeground && paintInfo.phase != PaintPhaseSelection && paintInfo.phase != PaintPhaseOutline 
+    if (paintInfo.phase != PaintPhaseForeground && paintInfo.phase != PaintPhaseSelection && paintInfo.phase != PaintPhaseOutline
         && paintInfo.phase != PaintPhaseSelfOutline && paintInfo.phase != PaintPhaseChildOutlines && paintInfo.phase != PaintPhaseTextClip
         && paintInfo.phase != PaintPhaseMask)
         return;
@@ -333,7 +333,7 @@ void RenderLineBoxList::dirtyLinesFromChangedChild(RenderBoxModelObject* contain
     }
 
     // Try to figure out which line box we belong in.  First try to find a previous
-    // line box by examining our siblings.  If we didn't find a line box, then use our 
+    // line box by examining our siblings.  If we didn't find a line box, then use our
     // parent's first line box.
     RootInlineBox* box = 0;
     RenderObject* curr = 0;
@@ -394,7 +394,7 @@ void RenderLineBoxList::dirtyLinesFromChangedChild(RenderBoxModelObject* contain
         adjacentBox = box->nextRootBox();
         // If |child| has been inserted before the first element in the linebox, but after collapsed leading
         // space, the search for |child|'s linebox will go past the leading space to the previous linebox and select that
-        // one as |box|. If we hit that situation here, dirty the |box| actually containing the child too. 
+        // one as |box|. If we hit that situation here, dirty the |box| actually containing the child too.
         bool insertedAfterLeadingSpace = box->lineBreakObj() == child->previousSibling();
         if (adjacentBox && (adjacentBox->lineBreakObj() == child || child->isBR() || (curr && curr->isBR())
             || insertedAfterLeadingSpace || isIsolated(container->style().unicodeBidi())))

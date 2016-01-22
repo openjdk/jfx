@@ -55,7 +55,7 @@ public final class Shape_properties_Test extends PropertiesTestBase {
 
     @Parameters
     public static Collection data() {
-        ArrayList array = new ArrayList();        
+        ArrayList array = new ArrayList();
 
         // simple property tests
         Shape testShape = createTestRectangle();
@@ -84,7 +84,7 @@ public final class Shape_properties_Test extends PropertiesTestBase {
                     "strokeLineJoin", StrokeLineJoin.MITER, StrokeLineJoin.BEVEL,
                     testShape,
                     "boundsInLocal",
-                    box(192.562, 33.68, 114.874, 171.811), 
+                    box(192.562, 33.68, 114.874, 171.811),
                     box(194.756, 47.918, 110.486, 157.581),
                     new BBoxComparator(0.01)));
 
@@ -142,5 +142,5 @@ public final class Shape_properties_Test extends PropertiesTestBase {
         l.setStrokeWidth(10);
         return l;
     }
-    
+
 }

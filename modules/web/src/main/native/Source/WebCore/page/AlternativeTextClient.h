@@ -72,7 +72,7 @@ public:
     virtual Vector<String> dictationAlternatives(uint64_t dictationContext) = 0;
 #endif
 };
-    
+
 }
 
 #endif // AlternativeTextClient_h

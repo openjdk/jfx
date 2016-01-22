@@ -71,7 +71,7 @@ void WidgetBackingStoreGtkX11::scroll(const IntRect& scrollRect, const IntSize& 
         return;
 
     cairo_surface_flush(m_surface.get());
-    XCopyArea(m_display, m_pixmap, m_pixmap, m_gc, 
+    XCopyArea(m_display, m_pixmap, m_pixmap, m_gc,
         targetRect.x() - scrollOffset.width(), targetRect.y() - scrollOffset.height(),
         targetRect.width(), targetRect.height(),
         targetRect.x(), targetRect.y());

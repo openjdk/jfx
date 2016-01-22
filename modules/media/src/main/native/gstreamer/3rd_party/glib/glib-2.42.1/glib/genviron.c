@@ -19,7 +19,7 @@
  * Modified by the GLib Team and others 1997-2000.  See the AUTHORS
  * file for a list of people on the GLib Team.  See the ChangeLog
  * files for a list of changes.  These files are distributed with
- * GLib at ftp://ftp.gtk.org/pub/gtk/. 
+ * GLib at ftp://ftp.gtk.org/pub/gtk/.
  */
 
 #include "config.h"
@@ -188,7 +188,7 @@ g_environ_unsetenv_internal (gchar        **envp,
 /**
  * g_environ_unsetenv:
  * @envp: (allow-none) (array zero-terminated=1) (transfer full): an environment
- *     list that can be freed using g_strfreev() (e.g., as returned from g_get_environ()), 
+ *     list that can be freed using g_strfreev() (e.g., as returned from g_get_environ()),
  *     or %NULL for an empty environment list
  * @variable: the environment variable to remove, must not contain '='
  *
@@ -328,7 +328,7 @@ extern char **environ;
  * function is only safe to use at the very start of your program, before
  * creating any other threads (or creating objects that create worker
  * threads of their own).
- * 
+ *
  * If you need to set up the environment for a child process, you can
  * use g_get_environ() to get an environment array, modify that with
  * g_environ_setenv() and g_environ_unsetenv(), and then pass that

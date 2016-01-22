@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef YarrInterpreter_h
@@ -175,7 +175,7 @@ struct ByteTerm {
         atom.quantityCount = 1;
         inputPosition = inputPos;
     }
-    
+
     ByteTerm(Type type, bool invert = false)
         : type(type)
         , m_capture(false)
@@ -216,7 +216,7 @@ struct ByteTerm {
         term.checkInputCount = count.unsafeGet();
         return term;
     }
-    
+
     static ByteTerm EOL(int inputPos)
     {
         ByteTerm term(TypeAssertionEOL);
@@ -230,7 +230,7 @@ struct ByteTerm {
         term.inputPosition = inputPos;
         return term;
     }
-    
+
     static ByteTerm BackReference(unsigned subpatternId, int inputPos)
     {
         return ByteTerm(TypeBackReference, subpatternId, false, false, inputPos);
@@ -299,7 +299,7 @@ struct ByteTerm {
     {
         return ByteTerm(TypeSubpatternEnd);
     }
-    
+
     static ByteTerm DotStarEnclosure(bool bolAnchor, bool eolAnchor)
     {
         ByteTerm term(TypeDotStarEnclosure);

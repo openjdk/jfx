@@ -34,6 +34,6 @@ public abstract class FuncImpl {
     public String getPreamble(List<Expr> params) {
         return null;
     }
-    
+
     public abstract String toString(int i, List<Expr> params);
 }

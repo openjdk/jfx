@@ -49,9 +49,9 @@ public class ListExpressionTest {
     private static final Integer data2_0 = 42;
     private static final Integer data2_1 = -3;
     private static final Integer datax = Integer.MAX_VALUE;
-    
+
     private static final ErrorLoggingUtiltity log = new ErrorLoggingUtiltity();
-    
+
     private ListProperty<Integer> opNull;
     private ListProperty<Integer> opEmpty;
     private ListProperty<Integer> op1;
@@ -64,7 +64,7 @@ public class ListExpressionTest {
         op1 = new SimpleListProperty<Integer>(FXCollections.observableArrayList(data1_0));
         op2 = new SimpleListProperty<Integer>(FXCollections.observableArrayList(data2_0, data2_1));
     }
-    
+
     @BeforeClass
     public static void setUpClass() {
         log.start();
@@ -99,7 +99,7 @@ public class ListExpressionTest {
         assertNull(op2.valueAt(2).get());
         log.checkFine(IndexOutOfBoundsException.class);
     }
-    
+
     @Test(expected = IllegalArgumentException.class)
     public void testValueAt_Constant_NegativeIndex() {
         op1.valueAt(-1);
@@ -232,7 +232,7 @@ public class ListExpressionTest {
         assertTrue(op1.isNotNull().get());
         assertTrue(op2.isNotNull().get());
     }
-    
+
     @Test
     public void testAsString() {
         assertEquals("null", opNull.asString().get());
@@ -275,7 +275,7 @@ public class ListExpressionTest {
         assertTrue(op2.contains(data2_0));
         assertTrue(op2.contains(data2_1));
     }
-    
+
     @Test
     public void testIterator() {
         assertFalse(opNull.iterator().hasNext());
@@ -301,7 +301,7 @@ public class ListExpressionTest {
         assertArrayEquals(new Object[] {data1_0}, op1.toArray());
         assertArrayEquals(new Object[] {data2_0, data2_1}, op2.toArray());
     }
-    
+
     @Test
     public void testToArray_WithArg() {
         Integer[] arrayIn = new Integer[] {datax};

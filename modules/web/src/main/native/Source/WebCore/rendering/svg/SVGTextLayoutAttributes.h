@@ -52,7 +52,7 @@ public:
 
     RenderSVGInlineText& context() { return m_context; }
     const RenderSVGInlineText& context() const { return m_context; }
-    
+
     SVGCharacterDataMap& characterDataMap() { return m_characterDataMap; }
     const SVGCharacterDataMap& characterDataMap() const { return m_characterDataMap; }
 

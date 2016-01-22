@@ -46,7 +46,7 @@ namespace Inspector {
 class JS_EXPORT_PRIVATE ScriptCallStack : public RefCounted<ScriptCallStack> {
 public:
     static const size_t maxCallStackSizeToCapture = 200;
-    
+
     static PassRefPtr<ScriptCallStack> create(Vector<ScriptCallFrame>&);
 
     ~ScriptCallStack();

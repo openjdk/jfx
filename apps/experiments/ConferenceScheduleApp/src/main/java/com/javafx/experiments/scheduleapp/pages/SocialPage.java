@@ -81,21 +81,21 @@ public class SocialPage extends Page {
 
     public SocialPage(DataService dataService) {
         super("Social", null);
-        
-        recentListPopulator = new ListPopulator(recentTweetsList, 
+
+        recentListPopulator = new ListPopulator(recentTweetsList,
                 "http://search.twitter.com/search.json?q=%23"+dataService.getTwitterSearch()+"&rpp=100&result_type=recent");
-        popularListPopulator = new ListPopulator(popularTweetsList, 
-                IS_TESTING_MODE ? 
+        popularListPopulator = new ListPopulator(popularTweetsList,
+                IS_TESTING_MODE ?
                 "http://search.twitter.com/search.json?q="+dataService.getTwitterSearch()+"&rpp=100&geocode="+dataService.getTwitterLocalLatLon()+",1000mi" :
                 "http://search.twitter.com/search.json?q="+dataService.getTwitterSearch()+"&rpp=100&geocode="+dataService.getTwitterLocalLatLon()+",1mi");
-        
+
         if (IS_BEAGLE) {
             new TouchClickedEventAvoider(recentTweetsList);
             new TouchClickedEventAvoider(popularTweetsList);
         }
         getChildren().setAll(box);
         box.setPadding(new Insets(12));
-        
+
         box.setAlignment(Pos.CENTER);
 
         VBox recentBox = new VBox(12);
@@ -159,7 +159,7 @@ public class SocialPage extends Page {
         refreshButton2.getStyleClass().clear();
         HBox.setHgrow(spacer1, Priority.ALWAYS);
         HBox.setHgrow(spacer2, Priority.ALWAYS);
-        
+
         // refresh when switchimg to tab
         visibleProperty().addListener(new ChangeListener<Boolean>() {
             @Override public void changed(ObservableValue<? extends Boolean> ov, Boolean t, Boolean newvalue) {
@@ -170,7 +170,7 @@ public class SocialPage extends Page {
             }
         });
     }
-    
+
     @Override public void reset() {
         recentTweetsList.scrollTo(0);
         popularTweetsList.scrollTo(0);
@@ -181,7 +181,7 @@ public class SocialPage extends Page {
         final double h = getHeight();
         box.resizeRelocate(0, 0, w, h);
     }
-    
+
     private static class TwitterList extends ListView<Tweet> implements Callback<ListView<Tweet>, ListCell<Tweet>>{
         public TwitterList(){
             getStyleClass().setAll("twitter-list-view");
@@ -194,7 +194,7 @@ public class SocialPage extends Page {
             return new TweetListCell();
         }
     }
-    
+
     private static class ListPopulator implements EventHandler, Callback<Tweet[], Void>, Runnable {
         private final ListView<Tweet> list;
         private final String searchUrl;
@@ -204,7 +204,7 @@ public class SocialPage extends Page {
             this.list = list;
             this.searchUrl = searchUrl;
         }
-        
+
 
         @Override public void handle(Event t) {
             PlatformIntegration.getTweetsForQuery(searchUrl, this);
@@ -222,7 +222,7 @@ public class SocialPage extends Page {
             list.getItems().setAll(tweets);
             System.out.println("LIST ITEMS "+list.getItems().size());
         }
-        
+
     }
 
     private static class TweetListCell extends ListCell<Tweet> implements Skin<TweetListCell>, EventHandler {
@@ -240,7 +240,7 @@ public class SocialPage extends Page {
         private Rectangle imageBorder = new Rectangle(PIC_SIZE+6, PIC_SIZE+6,Color.WHITE);
         private Rectangle dividerLine = new Rectangle(1, 1);
         private int cellIndex;
-        
+
         private TweetListCell() {
             super();
             //System.out.println("CREATED TimeSlot CELL " + (cellIndex));
@@ -279,7 +279,7 @@ public class SocialPage extends Page {
         }
 
         @Override protected double computePrefHeight(double width) {
-//            final int messageWidth = width 
+//            final int messageWidth = width
             double calculatedHeight = GAP + user.getLayoutBounds().getHeight() + GAP + message.getLayoutBounds().getHeight() + GAP;
             if (hyperlink != null && hyperlink.getText() != null) {
                 calculatedHeight += 2 + hyperlink.prefHeight(-1);
@@ -314,7 +314,7 @@ public class SocialPage extends Page {
                 hyperlink.resize((int)(hyperlink.prefWidth(-1)+.5), (int)(hyperlink.prefHeight(-1)+.5));
             }
         }
-        
+
 
         // CELL METHODS
         @Override protected void updateItem(Tweet tweet, boolean empty) {
@@ -357,5 +357,5 @@ public class SocialPage extends Page {
             PlatformIntegration.openUrl(hyperlink.getText());
         }
     }
-    
+
 }

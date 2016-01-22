@@ -6,13 +6,13 @@
  * are met:
  *
  * 1.  Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer. 
+ *     notice, this list of conditions and the following disclaimer.
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
- *     documentation and/or other materials provided with the distribution. 
+ *     documentation and/or other materials provided with the distribution.
  * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
- *     from this software without specific prior written permission. 
+ *     from this software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY APPLE AND ITS CONTRIBUTORS "AS IS" AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
@@ -63,16 +63,16 @@ public:
         : m_pluginView(pluginView)
     {
         ASSERT(m_pluginView);
-        
+
         [m_pluginView.get() willCallPlugInFunction];
     }
-    
+
     ~PluginStopDeferrer()
     {
         ASSERT(m_pluginView);
         [m_pluginView.get() didCallPlugInFunction];
     }
-    
+
 private:
     RetainPtr<WebNetscapePluginView> m_pluginView;
 };
@@ -116,7 +116,7 @@ NSError *WebNetscapePluginStream::errorForReason(NPReason reason) const
 
     if (reason == NPRES_USER_BREAK)
         return [NSError _webKitErrorWithDomain:NSURLErrorDomain
-                                          code:NSURLErrorCancelled 
+                                          code:NSURLErrorCancelled
                                            URL:m_responseURL ? m_responseURL.get() : (NSURL *)m_requestURL];
 
     return pluginCancelledConnectionError();
@@ -160,17 +160,17 @@ WebNetscapePluginStream::WebNetscapePluginStream(NSURLRequest *request, NPP plug
     memset(&m_stream, 0, sizeof(NPStream));
 
     WebNetscapePluginView *view = (WebNetscapePluginView *)plugin->ndata;
-    
+
     // This check has already been done by the plug-in view.
     ASSERT(core([view webFrame])->document()->securityOrigin()->canDisplay([request URL]));
-    
+
     ASSERT([request URL]);
     ASSERT(plugin);
-    
+
     setPlugin(plugin);
-    
+
     streams().add(&m_stream, plugin);
-    
+
     String referrer = SecurityPolicy::generateReferrerHeader(core([view webFrame])->document()->referrerPolicy(), [request URL], core([view webFrame])->loader().outgoingReferrer());
     if (referrer.isEmpty())
         [m_request.get() _web_setHTTPReferrer:nil];
@@ -183,14 +183,14 @@ WebNetscapePluginStream::~WebNetscapePluginStream()
     ASSERT(!m_plugin);
     ASSERT(m_isTerminated);
     ASSERT(!m_stream.ndata);
-    
+
     // The stream file should have been deleted, and the path freed, in -_destroyStream
     ASSERT(!m_path);
     ASSERT(m_fileDescriptor == -1);
-    
+
     free((void *)m_stream.url);
     free(m_headers);
-    
+
     streams().remove(&m_stream);
 }
 
@@ -201,25 +201,25 @@ void WebNetscapePluginStream::setPlugin(NPP plugin)
         m_pluginView = static_cast<WebNetscapePluginView *>(m_plugin->ndata);
 
         WebNetscapePluginPackage *pluginPackage = [m_pluginView.get() pluginPackage];
-        
+
         m_pluginFuncs = [pluginPackage pluginFuncs];
     } else {
         WebNetscapePluginView *view = m_pluginView.get();
         m_plugin = 0;
         m_pluginFuncs = 0;
-        
+
         [view disconnectStream:this];
         m_pluginView = 0;
-    }        
+    }
 }
 
 void WebNetscapePluginStream::startStream(NSURL *url, long long expectedContentLength, NSDate *lastModifiedDate, const String& mimeType, NSData *headers)
 {
     ASSERT(!m_isTerminated);
-    
+
     m_responseURL = url;
     m_mimeType = mimeType.utf8();
-    
+
     free((void *)m_stream.url);
     m_stream.url = strdup([m_responseURL.get() _web_URLCString]);
 
@@ -235,7 +235,7 @@ void WebNetscapePluginStream::startStream(NSURL *url, long long expectedContentL
         m_headers[len] = 0;
         m_stream.headers = m_headers;
     }
-    
+
     m_transferMode = NP_NORMAL;
     m_offset = 0;
     m_reason = WEB_REASON_NONE;
@@ -285,14 +285,14 @@ void WebNetscapePluginStream::start()
     ASSERT(m_request);
     ASSERT(!m_frameLoader);
     ASSERT(!m_loader);
-    
+
     m_loader = resourceLoadScheduler()->schedulePluginStreamLoad(core([m_pluginView.get() webFrame]), this, m_request.get());
 }
 
 void WebNetscapePluginStream::stop()
 {
     ASSERT(!m_frameLoader);
-    
+
     if (!m_loader->isDone())
         cancelLoadAndDestroyStreamWithError(m_loader->cancelledError());
 }
@@ -300,34 +300,34 @@ void WebNetscapePluginStream::stop()
 void WebNetscapePluginStream::didReceiveResponse(NetscapePlugInStreamLoader*, const ResourceResponse& response)
 {
     NSURLResponse *r = response.nsURLResponse();
-    
+
     NSMutableData *theHeaders = nil;
     long long expectedContentLength = [r expectedContentLength];
-    
+
     if ([r isKindOfClass:[NSHTTPURLResponse class]]) {
         NSHTTPURLResponse *httpResponse = (NSHTTPURLResponse *)r;
         theHeaders = [NSMutableData dataWithCapacity:1024];
-        
+
         // FIXME: it would be nice to be able to get the raw HTTP header block.
         // This includes the HTTP version, the real status text,
         // all headers in their original order and including duplicates,
         // and all original bytes verbatim, rather than sent through Unicode translation.
         // Unfortunately NSHTTPURLResponse doesn't provide access at that low a level.
-        
+
         [theHeaders appendBytes:"HTTP " length:5];
         char statusStr[10];
         long statusCode = [httpResponse statusCode];
         snprintf(statusStr, sizeof(statusStr), "%ld", statusCode);
         [theHeaders appendBytes:statusStr length:strlen(statusStr)];
         [theHeaders appendBytes:" OK\n" length:4];
-        
+
         // HACK: pass the headers through as UTF-8.
         // This is not the intended behavior; we're supposed to pass original bytes verbatim.
         // But we don't have the original bytes, we have NSStrings built by the URL loading system.
         // It hopefully shouldn't matter, since RFC2616/RFC822 require ASCII-only headers,
         // but surely someone out there is using non-ASCII characters, and hopefully UTF-8 is adequate here.
         // It seems better than NSASCIIStringEncoding, which will lose information if non-ASCII is used.
-        
+
         NSDictionary *headerDict = [httpResponse allHeaderFields];
         NSArray *keys = [[headerDict allKeys] sortedArrayUsingSelector:@selector(caseInsensitiveCompare:)];
         NSEnumerator *i = [keys objectEnumerator];
@@ -339,17 +339,17 @@ void WebNetscapePluginStream::didReceiveResponse(NetscapePlugInStreamLoader*, co
             [theHeaders appendData:[v dataUsingEncoding:NSUTF8StringEncoding]];
             [theHeaders appendBytes:"\n" length:1];
         }
-        
+
         // If the content is encoded (most likely compressed), then don't send its length to the plugin,
         // which is only interested in the decoded length, not yet known at the moment.
         // <rdar://problem/4470599> tracks a request for -[NSURLResponse expectedContentLength] to incorporate this logic.
         NSString *contentEncoding = (NSString *)[[(NSHTTPURLResponse *)r allHeaderFields] objectForKey:@"Content-Encoding"];
         if (contentEncoding && ![contentEncoding isEqualToString:@"identity"])
             expectedContentLength = -1;
-        
+
         // startStreamResponseURL:... will null-terminate.
     }
-    
+
     startStream([r URL], expectedContentLength, WKGetNSURLResponseLastModifiedDate(r), response.mimeType(), theHeaders);
 }
 
@@ -362,7 +362,7 @@ bool WebNetscapePluginStream::wantsAllStreams() const
 {
     if (!m_pluginFuncs->getvalue)
         return false;
-    
+
     void *value = 0;
     NPError error;
     {
@@ -372,7 +372,7 @@ bool WebNetscapePluginStream::wantsAllStreams() const
     }
     if (error != NPERR_NO_ERROR)
         return false;
-    
+
     return value;
 }
 
@@ -385,7 +385,7 @@ void WebNetscapePluginStream::destroyStream()
 
     ASSERT(m_reason != WEB_REASON_NONE);
     ASSERT([m_deliveryData.get() length] == 0);
-    
+
     m_deliverDataTimer.stop();
 
     if (m_stream.ndata) {
@@ -419,7 +419,7 @@ void WebNetscapePluginStream::destroyStream()
         if (m_newStreamSuccessful) {
             PluginStopDeferrer deferrer(m_pluginView.get());
 #if !LOG_DISABLED
-            NPError npErr = 
+            NPError npErr =
 #endif
             m_pluginFuncs->destroystream(m_plugin, &m_stream, m_reason);
             LOG(Plugins, "NPP_DestroyStream responseURL=%@ error=%d", m_responseURL.get(), npErr);
@@ -467,15 +467,15 @@ void WebNetscapePluginStream::cancelLoadWithError(NSError *error)
 {
     if (m_frameLoader) {
         ASSERT(!m_loader);
-        
+
         DocumentLoader* documentLoader = m_frameLoader->activeDocumentLoader();
         ASSERT(documentLoader);
-        
+
         if (documentLoader->isLoadingMainResource())
             documentLoader->cancelMainResourceLoad(error);
         return;
     }
-    
+
     if (!m_loader->isDone())
         m_loader->cancel(error);
 }
@@ -496,7 +496,7 @@ void WebNetscapePluginStream::cancelLoadAndDestroyStreamWithError(NSError *error
     cancelLoadWithError(error);
     destroyStreamWithError(error);
     setPlugin(0);
-}    
+}
 
 void WebNetscapePluginStream::deliverData()
 {
@@ -542,11 +542,11 @@ void WebNetscapePluginStream::deliverData()
         if (totalBytesDelivered < totalBytes) {
             NSMutableData *newDeliveryData = [[NSMutableData alloc] initWithCapacity:totalBytes - totalBytesDelivered];
             [newDeliveryData appendBytes:(char *)[m_deliveryData.get() bytes] + totalBytesDelivered length:totalBytes - totalBytesDelivered];
-            
+
             m_deliveryData = adoptNS(newDeliveryData);
         } else {
             [m_deliveryData.get() setLength:0];
-            if (m_reason != WEB_REASON_NONE) 
+            if (m_reason != WEB_REASON_NONE)
                 destroyStream();
         }
     }
@@ -596,7 +596,7 @@ void WebNetscapePluginStream::didFinishLoading(NetscapePlugInStreamLoader*)
 {
     if (!m_stream.ndata)
         return;
-    
+
     if (m_transferMode == NP_ASFILE || m_transferMode == NP_ASFILEONLY) {
         // Fake the delivery of an empty data to ensure that the file has been created
         deliverDataToFile([NSData data]);
@@ -604,7 +604,7 @@ void WebNetscapePluginStream::didFinishLoading(NetscapePlugInStreamLoader*)
             close(m_fileDescriptor);
         m_fileDescriptor = -1;
     }
-    
+
     destroyStreamWithReason(NPRES_DONE);
 }
 
@@ -613,7 +613,7 @@ void WebNetscapePluginStream::didReceiveData(NetscapePlugInStreamLoader*, const 
     NSData *data = [[NSData alloc] initWithBytesNoCopy:(void*)bytes length:length freeWhenDone:NO];
 
     ASSERT([data length] > 0);
-    
+
     if (m_transferMode != NP_ASFILEONLY) {
         if (!m_deliveryData)
             m_deliveryData = adoptNS([[NSMutableData alloc] initWithCapacity:[data length]]);
@@ -622,7 +622,7 @@ void WebNetscapePluginStream::didReceiveData(NetscapePlugInStreamLoader*, const 
     }
     if (m_transferMode == NP_ASFILE || m_transferMode == NP_ASFILEONLY)
         deliverDataToFile(data);
-    
+
     [data release];
 }
 

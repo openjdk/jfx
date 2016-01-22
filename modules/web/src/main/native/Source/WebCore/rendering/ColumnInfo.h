@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef ColumnInfo_h
@@ -51,7 +51,7 @@ public:
 
     LayoutUnit desiredColumnWidth() const { return m_desiredColumnWidth; }
     void setDesiredColumnWidth(LayoutUnit width) { m_desiredColumnWidth = width; }
-    
+
     unsigned desiredColumnCount() const { return m_desiredColumnCount; }
     void setDesiredColumnCount(unsigned count) { m_desiredColumnCount = count; }
 
@@ -67,7 +67,7 @@ public:
     // Set our count and height.  This is enough info for a RenderBlock to compute page rects
     // dynamically.
     void setColumnCountAndHeight(int count, LayoutUnit height)
-    { 
+    {
         m_columnCount = count;
         m_columnHeight = height;
     }
@@ -80,13 +80,13 @@ public:
     LayoutUnit forcedBreakOffset() const { return m_forcedBreakOffset; }
     LayoutUnit maximumDistanceBetweenForcedBreaks() const { return m_maximumDistanceBetweenForcedBreaks; }
     void clearForcedBreaks()
-    { 
+    {
         m_forcedBreaks = 0;
         m_maximumDistanceBetweenForcedBreaks = 0;
         m_forcedBreakOffset = 0;
     }
     void addForcedBreak(LayoutUnit offsetFromFirstPage)
-    { 
+    {
         ASSERT(!m_columnHeight);
         LayoutUnit distanceFromLastBreak = offsetFromFirstPage - m_forcedBreakOffset;
         if (!distanceFromLastBreak)

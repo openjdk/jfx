@@ -39,11 +39,11 @@ public class AndroidInputDeviceRegistry extends InputDeviceRegistry {
     static AndroidInputDeviceRegistry getInstance() {
         return instance;
     }
-    
-    public static void registerDevice() {   
+
+    public static void registerDevice() {
         Platform.runLater(() -> instance.createDevice());
     }
-    
+
     public static void gotTouchEventFromNative(int count, int[] actions, int[] ids, int[] x, int[] y, int primary) {
         TouchState touchState = new TouchState();
 
@@ -61,7 +61,7 @@ public class AndroidInputDeviceRegistry extends InputDeviceRegistry {
         }
         instance.gotTouchEvent(touchState);
     }
-    
+
     private void gotTouchEvent(TouchState touchState) {
         if (androidDevice == null) {
             System.out.println("[MON] got touch event, but no registered device yet");
@@ -75,12 +75,12 @@ public class AndroidInputDeviceRegistry extends InputDeviceRegistry {
         }
         processor.pushEvent(touchState);
     }
-    
-    
+
+
     public static void gotKeyEventFromNative(int action, int linuxKey) {
         instance.gotKeyEvent (action, linuxKey);
     }
-    
+
     private void gotKeyEvent(int action, int lk) {
         int vk = LinuxKeyProcessor.getVirtualKeyCode(lk);
         if (action == 0) {
@@ -94,11 +94,11 @@ public class AndroidInputDeviceRegistry extends InputDeviceRegistry {
         }
         instance.gotKeyEvent(keyState);
     }
-    
+
     private void gotKeyEvent(KeyState keyState) {
         processor.pushKeyEvent(keyState);
     }
-    
+
     private AndroidInputDeviceRegistry() {
     }
 

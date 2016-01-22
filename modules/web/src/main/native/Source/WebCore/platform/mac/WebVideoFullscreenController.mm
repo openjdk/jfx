@@ -80,7 +80,7 @@ SOFT_LINK_CLASS(AVFoundation, AVPlayerLayer)
         return nil;
     [self windowDidLoad];
     return self;
-    
+
 }
 - (void)dealloc
 {
@@ -178,7 +178,7 @@ SOFT_LINK_CLASS(AVFoundation, AVPlayerLayer)
     [self clearFadeAnimation];
     [[self window] close];
     [self setWindow:nil];
-    [self updateMenuAndDockForFullscreen];   
+    [self updateMenuAndDockForFullscreen];
     [self updatePowerAssertions];
     [_hudController setDelegate:nil];
     [_hudController release];
@@ -186,7 +186,7 @@ SOFT_LINK_CLASS(AVFoundation, AVPlayerLayer)
     [_backgroundFullscreenWindow close];
     [_backgroundFullscreenWindow release];
     _backgroundFullscreenWindow = nil;
-    
+
     [self autorelease]; // Associated -retain is in -exitFullscreen.
     _isEndingFullscreen = NO;
 }
@@ -202,7 +202,7 @@ SOFT_LINK_CLASS(AVFoundation, AVPlayerLayer)
     [self updateMenuAndDockForFullscreen];
     [self updatePowerAssertions];
     [NSCursor setHiddenUntilMouseMoves:YES];
-    
+
     // Give the HUD keyboard focus initially
     [_hudController fadeWindowIn];
 }
@@ -213,7 +213,7 @@ SOFT_LINK_CLASS(AVFoundation, AVPlayerLayer)
 }
 
 - (void)applicationDidResignActive:(NSNotification*)notification
-{   
+{
     UNUSED_PARAM(notification);
     // Check to see if the fullscreenWindow is on the active space; this function is available
     // on 10.6 and later, so default to YES if the function is not available:
@@ -221,14 +221,14 @@ SOFT_LINK_CLASS(AVFoundation, AVPlayerLayer)
     BOOL isOnActiveSpace = ([fullscreenWindow respondsToSelector:@selector(isOnActiveSpace)] ? [fullscreenWindow isOnActiveSpace] : YES);
 
     // Replicate the QuickTime Player (X) behavior when losing active application status:
-    // Is the fullscreen screen the main screen? (Note: this covers the case where only a 
-    // single screen is available.)  Is the fullscreen screen on the current space? IFF so, 
-    // then exit fullscreen mode.    
+    // Is the fullscreen screen the main screen? (Note: this covers the case where only a
+    // single screen is available.)  Is the fullscreen screen on the current space? IFF so,
+    // then exit fullscreen mode.
     if ([fullscreenWindow screen] == [[NSScreen screens] objectAtIndex:0] && isOnActiveSpace)
          [self requestExitFullscreenWithAnimation:NO];
 }
-         
-         
+
+
 // MARK: -
 // MARK: Exposed Interface
 
@@ -247,7 +247,7 @@ static void constrainFrameToRatioOfFrame(NSRect *frameToConstrain, const NSRect 
         CGFloat diff = frameToConstrain->size.height - newHeight;
         frameToConstrain->size.height = newHeight;
         frameToConstrain->origin.y += diff / 2;
-    }    
+    }
 }
 
 static NSWindow *createBackgroundFullscreenWindow(NSRect frame, int level)
@@ -310,12 +310,12 @@ static NSWindow *createBackgroundFullscreenWindow(NSRect frame, int level)
         // This will disable scale animation
         endFrame = NSZeroRect;
     }
-    
+
     // We have to retain ourselves because we want to be alive for the end of the animation.
     // If our owner releases us we could crash if this is not the case.
     // Balanced in windowDidExitFullscreen
-    [self retain];    
-    
+    [self retain];
+
     [[self fullscreenWindow] animateFromRect:[[self window] frame] toRect:endFrame withSubAnimation:_fadeAnimation controllerAction:@selector(windowDidExitFullscreen)];
 }
 
@@ -323,8 +323,8 @@ static NSWindow *createBackgroundFullscreenWindow(NSRect frame, int level)
 {
     UNUSED_PARAM(notification);
     // The user may have changed the main screen by moving the menu bar, or they may have changed
-    // the Dock's size or location, or they may have changed the fullscreen screen's dimensions.  
-    // Update our presentation parameters, and ensure that the full screen window occupies the 
+    // the Dock's size or location, or they may have changed the fullscreen screen's dimensions.
+    // Update our presentation parameters, and ensure that the full screen window occupies the
     // entire screen:
     [self updateMenuAndDockForFullscreen];
     [[self window] setFrame:[[[self window] screen] frame] display:YES];
@@ -338,7 +338,7 @@ static NSWindow *createBackgroundFullscreenWindow(NSRect frame, int level)
 
     if (!_isEndingFullscreen) {
         // Auto-hide the menu bar if the fullscreenScreen contains the menu bar:
-        // NOTE: if the fullscreenScreen contains the menu bar but not the dock, we must still 
+        // NOTE: if the fullscreenScreen contains the menu bar but not the dock, we must still
         // auto-hide the dock, or an exception will be thrown.
         if ([[NSScreen screens] objectAtIndex:0] == fullscreenScreen)
             options |= (NSApplicationPresentationAutoHideMenuBar | NSApplicationPresentationAutoHideDock);
@@ -360,7 +360,7 @@ static NSWindow *createBackgroundFullscreenWindow(NSRect frame, int level)
     float rate = 0;
     if (_mediaElement && _mediaElement->platformMedia().type == PlatformMedia::QTMovieType)
         rate = [_mediaElement->platformMedia().media.qtMovie rate];
-    
+
     if (rate && !_isEndingFullscreen) {
         if (!_displaySleepDisabler)
             _displaySleepDisabler = DisplaySleepDisabler::create("com.apple.WebCore - Fullscreen video");
@@ -488,7 +488,7 @@ static NSWindow *createBackgroundFullscreenWindow(NSRect frame, int level)
         [_fullscreenAnimation release];
         _fullscreenAnimation = nil;
     }
-    
+
     if (NSIsEmptyRect(startRect) || NSIsEmptyRect(endRect)) {
         // Fakely end the subanimation.
         [subAnimation setCurrentProgress:1];
@@ -504,14 +504,14 @@ static NSWindow *createBackgroundFullscreenWindow(NSRect frame, int level)
     if (!wasAnimating) {
         // We'll downscale the window during the animation based on the higher resolution rect
         BOOL higherResolutionIsEndRect = startRect.size.width < endRect.size.width && startRect.size.height < endRect.size.height;
-        [self setFrame:higherResolutionIsEndRect ? endRect : startRect display:NO];        
+        [self setFrame:higherResolutionIsEndRect ? endRect : startRect display:NO];
     }
-    
+
     ASSERT(!_fullscreenAnimation);
     _fullscreenAnimation = [[WebWindowScaleAnimation alloc] initWithHintedDuration:0.2 window:self initalFrame:startRect finalFrame:endRect];
     [_fullscreenAnimation setSubAnimation:subAnimation];
     [_fullscreenAnimation setDelegate:self];
-    
+
     // Make sure the animation has scaled the window before showing it.
     [_fullscreenAnimation setCurrentProgress:0];
     [self makeKeyAndOrderFront:self];

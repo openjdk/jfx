@@ -54,11 +54,11 @@ public class Main extends Application {
     @Override
     public void start(Stage primaryStage) {
         try {
-            // Use one of the following to change the Language 
+            // Use one of the following to change the Language
             //  ar: Arabic  (will resolve I18N keys against Bundle.properties_ar)
             //  en: English (will resolve I18N keys against Bundle.properties)
             //  fr: French  (will resolve I18N keys against Bundle.properties_fr)
-            //  iw: Hebrew  (will resolve I18N keys against Bundle.properties_iw) 
+            //  iw: Hebrew  (will resolve I18N keys against Bundle.properties_iw)
             String language = "ar"; // <-- EDIT THIS
 
             Locale fakeLocale = new Locale(language);

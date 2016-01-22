@@ -44,17 +44,17 @@ import javafx.scene.paint.Paint;
  *
  */
 public class ResizingGuideController {
-    
+
     private final double MATCH_DISTANCE = 6.0;
     private final double CHROME_SIDE_LENGTH = 4.0;
     private final double DELTA = CHROME_SIDE_LENGTH + 2;
-    
+
     private final SegmentIndex widthIndex;
     private final SegmentIndex heightIndex;
     private final ResizingGuideRenderer renderer;
     private double suggestedWidth;
     private double suggestedHeight;
-    
+
     public ResizingGuideController(boolean matchWidth, boolean matchHeight, Paint guideColor) {
         this.renderer = new ResizingGuideRenderer(guideColor, CHROME_SIDE_LENGTH);
         if (matchWidth) {
@@ -68,11 +68,11 @@ public class ResizingGuideController {
             heightIndex = null;
         }
     }
-    
+
     public void addSampleBounds(Node node) {
         assert node != null;
         assert node.getScene() != null;
-        
+
         final Bounds layoutBounds = node.getLayoutBounds();
         final Bounds boundsInScene = node.localToScene(layoutBounds, true /* rootScene */);
         final double minX = boundsInScene.getMinX();
@@ -87,11 +87,11 @@ public class ResizingGuideController {
             heightIndex.addSegment(new VerticalSegment(minX - DELTA, minY, maxY));
         }
     }
-    
+
     public void clear() {
         renderer.setSegments(Collections.emptyList());
     }
-    
+
     public void match(Bounds targetBounds) {
         final List<AbstractSegment> matchingSegments = new ArrayList<>();
 
@@ -108,7 +108,7 @@ public class ResizingGuideController {
                 matchingSegments.addAll(matchingWidthSegments);
             }
         }
-        
+
         final double targetHeight = targetBounds.getHeight();
         if (heightIndex == null) {
             suggestedHeight = targetHeight;
@@ -122,19 +122,19 @@ public class ResizingGuideController {
                 matchingSegments.addAll(matchingHeightSegments);
             }
         }
-        
+
         renderer.setSegments(matchingSegments);
     }
-    
-    
+
+
     public double getSuggestedWidth() {
         return suggestedWidth;
     }
-    
+
     public double getSuggestedHeight() {
         return suggestedHeight;
     }
-    
+
     public Group getGuideGroup() {
         return renderer.getGuideGroup();
     }

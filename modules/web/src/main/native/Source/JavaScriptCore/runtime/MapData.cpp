@@ -83,7 +83,7 @@ template <typename Map, typename Key> MapData::Entry* MapData::add(CallFrame* ca
     typename Map::iterator location = map.find(key);
     if (location != map.end())
         return &m_entries[location->value];
-    
+
     if (!ensureSpaceForAppend(callFrame))
         return 0;
 
@@ -102,7 +102,7 @@ void MapData::set(CallFrame* callFrame, KeyType key, JSValue value)
         return;
     location->value.set(callFrame->vm(), this, value);
 }
-    
+
 MapData::Entry* MapData::add(CallFrame* callFrame, KeyType key)
 {
     if (key.value.isString())

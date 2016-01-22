@@ -77,7 +77,7 @@ static void keyButton(jint code, gboolean press)
     if (n_keys < 1) {
         return;
     }
-    
+
     XTestFakeKeyEvent(xdisplay,
                       keys[0].keycode,
                       press ? True : False,
@@ -208,7 +208,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkRobot__1mouseWheel
  * Signature: ()I
  */
 JNIEXPORT jint JNICALL Java_com_sun_glass_ui_gtk_GtkRobot__1getMouseX
-  (JNIEnv *env, jobject obj) 
+  (JNIEnv *env, jobject obj)
 {
     (void)env;
     (void)obj;
@@ -251,11 +251,11 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkRobot__1getScreenCapture
                                            x, y, 0, 0, width, height);
     screenshot = gdk_pixbuf_add_alpha(tmp, FALSE, 0, 0, 0);
     g_object_unref(tmp);
-    
+
     jint *pixels = (jint *)convert_BGRA_to_RGBA((int*)gdk_pixbuf_get_pixels(screenshot), width * 4, height);
     env->SetIntArrayRegion(data, 0, height * width, pixels);
     g_free(pixels);
-    
+
     g_object_unref(screenshot);
 }
 

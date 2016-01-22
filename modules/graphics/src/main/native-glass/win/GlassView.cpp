@@ -166,7 +166,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_win_WinView__1initIDs
     javaIDs.View.notifyResize = env->GetMethodID(cls, "notifyResize", "(II)V");
     ASSERT(javaIDs.View.notifyResize);
     if (env->ExceptionCheck()) return;
- 
+
     javaIDs.View.notifyRepaint = env->GetMethodID(cls, "notifyRepaint", "(IIII)V");
     ASSERT(javaIDs.View.notifyRepaint);
     if (env->ExceptionCheck()) return;

@@ -79,7 +79,7 @@ GType flv_demux_get_type (void)
                sizeof (FlvDemuxClass),
                (GClassInitFunc) flv_demux_class_intern_init,
                sizeof(FlvDemux),
-               (GInstanceInitFunc) flv_demux_init,               
+               (GInstanceInitFunc) flv_demux_init,
                (GTypeFlags) 0);
         g_once_init_leave (&gonce_data, (gsize) _type);
     }
@@ -128,7 +128,7 @@ flv_demux_class_init (FlvDemuxClass * klass)
 
     gobject_class = G_OBJECT_CLASS (klass);
     element_class = GST_ELEMENT_CLASS (klass);
-    
+
     gst_element_class_set_details_simple(element_class,
             "FlvDemux",
             "Coder/Demuxer",
@@ -141,7 +141,7 @@ flv_demux_class_init (FlvDemuxClass * klass)
         gst_static_pad_template_get (&audio_src_template));
     gst_element_class_add_pad_template (element_class,
         gst_static_pad_template_get (&video_src_template));
-    
+
     gobject_class->dispose = GST_DEBUG_FUNCPTR (flv_demux_dispose);
 
     element_class->change_state = GST_DEBUG_FUNCPTR(flv_demux_change_state);
@@ -509,11 +509,11 @@ flv_demux_parse_audio_tag(FlvDemux* filter, guchar* data, gsize size)
         gst_buffer_unref(out);
         return GST_FLOW_ERROR;
     }
-    
+
     memcpy(info.data, data + audio_tag.audio_packet_offset, audio_tag.audio_packet_size);
-    
+
     gst_buffer_unmap(out, &info);
-            
+
     GST_BUFFER_TIMESTAMP(out) = filter->current_timestamp;
     GST_BUFFER_DURATION(out) = filter->audio_frame_duration;
     GST_BUFFER_OFFSET(out) = filter->audio_offset++;
@@ -722,11 +722,11 @@ flv_demux_parse_video_tag(FlvDemux* filter, guchar* data, gsize size)
         gst_buffer_unref(out);
         return GST_FLOW_ERROR;
     }
-    
+
     memcpy(info.data, data + video_tag.video_packet_offset, video_tag.video_packet_size);
-    
+
     gst_buffer_unmap(out, &info);
-        
+
     GST_BUFFER_TIMESTAMP(out) = filter->current_timestamp;
     GST_BUFFER_DURATION(out) = filter->video_frame_duration;
     GST_BUFFER_OFFSET(out) = filter->video_offset++;
@@ -953,7 +953,7 @@ static gboolean flv_demux_do_indexing_pull(FlvDemux* filter,
         if (!gst_buffer_map(block, &info, GST_MAP_READ)) {
             return FALSE;
         }
-        
+
         parser_ret = flv_parser_read_tag_prefix(&temp_parser, info.data,
                 info.size, &tag_prefix);
         if (parser_ret != GST_FLOW_OK) {
@@ -1003,7 +1003,7 @@ static void flv_demux_loop (GstPad * pad)
         if (!gst_buffer_map(block, &info, GST_MAP_READ)) {
             result = GST_FLOW_EOS;
         }
-    
+
         if (result == GST_FLOW_OK) {
             result = flv_demux_parse_next_block(filter, info.data, info.size);
             gst_buffer_unmap(block, &info);
@@ -1024,7 +1024,7 @@ static void flv_demux_loop (GstPad * pad)
     if (result == GST_FLOW_EOS) {
         flv_demux_push_src_event(filter, gst_event_new_eos ());
     } else if (result == GST_FLOW_ERROR) {
-        gst_element_message_full(GST_ELEMENT(filter), GST_MESSAGE_ERROR, GST_STREAM_ERROR, GST_STREAM_ERROR_DEMUX, 
+        gst_element_message_full(GST_ELEMENT(filter), GST_MESSAGE_ERROR, GST_STREAM_ERROR, GST_STREAM_ERROR_DEMUX,
             g_strdup("Failed to demux FLV stream"), NULL, ("flvdemux.c"), ("flv_demux_loop"), 0);
     }
 }

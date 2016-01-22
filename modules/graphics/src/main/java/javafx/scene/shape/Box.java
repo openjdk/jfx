@@ -53,15 +53,15 @@ public class Box extends Shape3D {
     /**
      * Creates a new instance of {@code Box} of dimension 2 by 2 by 2.
      */
-    
+
     public static final double DEFAULT_SIZE = 2;
-    
+
     public Box() {
         this(DEFAULT_SIZE, DEFAULT_SIZE, DEFAULT_SIZE);
     }
 
     /**
-     * Creates a new instance of {@code Box} of dimension width by height 
+     * Creates a new instance of {@code Box} of dimension width by height
      * by depth.
      */
     public Box(double width, double height, double depth) {
@@ -69,7 +69,7 @@ public class Box extends Shape3D {
         setHeight(height);
         setDepth(depth);
     }
-    
+
     /**
      * Defines the depth or the Z dimension of the Box.
      *
@@ -193,7 +193,7 @@ public class Box extends Shape3D {
             }
         }
     }
-    
+
     /**
      * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
@@ -212,7 +212,7 @@ public class Box extends Shape3D {
         final float hw = w * 0.5f;
         final float hh = h * 0.5f;
         final float hd = d * 0.5f;
-        
+
         bounds = bounds.deriveWithNewBounds(-hw, -hh, -hd, hw, hh, hd);
         bounds = tx.transform(bounds, bounds);
         return bounds;
@@ -227,7 +227,7 @@ public class Box extends Shape3D {
     protected boolean impl_computeContains(double localX, double localY) {
         double w = getWidth();
         double h = getHeight();
-        return -w <= localX && localX <= w && 
+        return -w <= localX && localX <= w &&
                 -h <= localY && localY <= h;
     }
 
@@ -348,7 +348,7 @@ public class Box extends Shape3D {
             Point3D point = PickResultChooser.computePoint(pickRay, t);
 
             Point2D txtCoords = null;
-            
+
             switch (side) {
                 case 'x': // left
                     txtCoords = new Point2D(
@@ -388,13 +388,13 @@ public class Box extends Shape3D {
 
             pickResult.offer(this, t, PickResult.FACE_UNDEFINED, point, txtCoords);
         }
-        
+
         return true;
     }
 
     static TriangleMesh createMesh(float w, float h, float d) {
 
-        // NOTE: still create mesh for degenerated box       
+        // NOTE: still create mesh for degenerated box
         float hw = w / 2f;
         float hh = h / 2f;
         float hd = d / 2f;
@@ -418,13 +418,13 @@ public class Box extends Shape3D {
 
         int faces[] = {
             0, 0, 2, 2, 1, 1,
-            2, 2, 0, 0, 3, 3,            
+            2, 2, 0, 0, 3, 3,
             1, 0, 6, 2, 5, 1,
-            6, 2, 1, 0, 2, 3,            
+            6, 2, 1, 0, 2, 3,
             5, 0, 7, 2, 4, 1,
             7, 2, 5, 0, 6, 3,
             4, 0, 3, 2, 0, 1,
-            3, 2, 4, 0, 7, 3,            
+            3, 2, 4, 0, 7, 3,
             3, 0, 6, 2, 2, 1,
             6, 2, 3, 0, 7, 3,
             4, 0, 1, 2, 5, 1,

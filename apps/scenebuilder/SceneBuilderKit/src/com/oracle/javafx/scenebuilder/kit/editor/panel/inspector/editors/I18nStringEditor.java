@@ -75,7 +75,7 @@ public class I18nStringEditor extends PropertyEditor {
         super(propMeta, selectedClasses);
         initialize(multiLineSupported);
     }
-    
+
     private void initialize(boolean multiLineSupported) {
         this.multiLineSupported = multiLineSupported;
         valueListener = event -> {
@@ -275,7 +275,7 @@ public class I18nStringEditor extends PropertyEditor {
             multilineMenuItem.setText(MULTI_LINE);
             i18nMenuItem.setDisable(false);
         }
-        
+
         if (!multiLineSupported) {
             multilineMenuItem.setDisable(true);
         }

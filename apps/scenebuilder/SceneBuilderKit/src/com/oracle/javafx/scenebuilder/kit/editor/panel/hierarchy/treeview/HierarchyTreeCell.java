@@ -133,12 +133,12 @@ public class HierarchyTreeCell<T extends HierarchyItem> extends TreeCell<Hierarc
     private final ImageView includedFileImageView = new ImageView();
     // Stack used to add badges over the top of the node icon
     private final StackPane iconsStack = new StackPane();
-    // We use a label to set a tooltip over the node icon 
+    // We use a label to set a tooltip over the node icon
     // (StackPane does not allow to set tooltips)
     private final Label iconsLabel = new Label();
     private final Tooltip warningBadgeTooltip = new Tooltip();
 
-    // Vertical line used when inserting an item in order to indicate 
+    // Vertical line used when inserting an item in order to indicate
     // the parent into which the item will be inserted.
     // Horizontal lines are handled directly by the cell and are built using CSS only.
     //
@@ -165,10 +165,10 @@ public class HierarchyTreeCell<T extends HierarchyItem> extends TreeCell<Hierarc
                 classNameImageView,
                 warningBadgeImageView);
         iconsLabel.setGraphic(iconsStack);
-        // RT-31645 : we cannot dynamically update the HBox graphic children 
+        // RT-31645 : we cannot dynamically update the HBox graphic children
         // in the cell.updateItem method.
         // We set once the graphic children, then we update the managed property
-        // of the children depending on the cell item. 
+        // of the children depending on the cell item.
         graphic.getChildren().setAll(
                 includedFileImageView,
                 placeHolderImageView,
@@ -264,7 +264,7 @@ public class HierarchyTreeCell<T extends HierarchyItem> extends TreeCell<Hierarc
             // Remove insert line indicator
             panelController.removeFromPanelControlSkin(insertLineIndicator);
 
-            // If an animation timeline is running 
+            // If an animation timeline is running
             // (auto-scroll when DND to the top or bottom of the Hierarchy),
             // we do not display insert indicators.
             if (panelController.isTimelineRunning()) {
@@ -370,9 +370,9 @@ public class HierarchyTreeCell<T extends HierarchyItem> extends TreeCell<Hierarc
                             // To avoid visual movement of the horizontal border when
                             // dragging from one cell to another,
                             // we always set the border on the cell bottom location :
-                            // - if we handle REORDER BELOW gesture, just set the bottom 
+                            // - if we handle REORDER BELOW gesture, just set the bottom
                             // border on the current cell
-                            // - if we handle REORDER ABOVE gesture, we set the bottom 
+                            // - if we handle REORDER ABOVE gesture, we set the bottom
                             // border on the previous cell
                             //
                             switch (location) {
@@ -384,7 +384,7 @@ public class HierarchyTreeCell<T extends HierarchyItem> extends TreeCell<Hierarc
                                     } else {
                                         final int index = getIndex();
                                         // Retrieve the previous cell
-                                        // Note : we set the border on the bottom of the previous cell 
+                                        // Note : we set the border on the bottom of the previous cell
                                         // instead of using the top of the current cell in order to avoid
                                         // visual gap when DND from one cell to another
                                         final TreeCell<?> previousCell
@@ -458,7 +458,7 @@ public class HierarchyTreeCell<T extends HierarchyItem> extends TreeCell<Hierarc
     public void updateItem(HierarchyItem item, boolean empty) {
         super.updateItem(item, empty);
 
-        // The cell is not empty (TreeItem is not null) 
+        // The cell is not empty (TreeItem is not null)
         // AND the TreeItem value is not null
         if (!empty && item != null) {
             updateLayout(item);
@@ -532,7 +532,7 @@ public class HierarchyTreeCell<T extends HierarchyItem> extends TreeCell<Hierarc
             // scene may be null when tree view is collapsed
             return;
         }
-        // When another window is focused (just like the preview window), 
+        // When another window is focused (just like the preview window),
         // we use default cursor
         if (!getScene().getWindow().isFocused()) {
             scene.setCursor(Cursor.DEFAULT);
@@ -622,7 +622,7 @@ public class HierarchyTreeCell<T extends HierarchyItem> extends TreeCell<Hierarc
 
         // 2) Build the COMMIT Callback
         // This callback will be invoked to commit the new value
-        // It returns true if the value is unchanged or if the commit succeeded, 
+        // It returns true if the value is unchanged or if the commit succeeded,
         // false otherwise
         //----------------------------------------------------------------------
         final Callback<String, Boolean> requestCommit = newValue -> {
@@ -658,7 +658,7 @@ public class HierarchyTreeCell<T extends HierarchyItem> extends TreeCell<Hierarc
                                 = new ModifyFxIdJob(fxomObject, fxId, editorController);
                         if (job2.isExecutable()) {
 
-                            // If a controller class has been defined, 
+                            // If a controller class has been defined,
                             // check if the fx id is an injectable field
                             final String controllerClass
                                     = editorController.getFxomDocument().getFxomRoot().getFxController();
@@ -681,7 +681,7 @@ public class HierarchyTreeCell<T extends HierarchyItem> extends TreeCell<Hierarc
                                 editorController.getMessageLog().logWarningMessage(
                                         "log.warning.duplicate.fxid", fxId);
                             }
-                            
+
                             editorController.getJobManager().push(job2);
 
                         } else if (fxId != null) {
@@ -781,7 +781,7 @@ public class HierarchyTreeCell<T extends HierarchyItem> extends TreeCell<Hierarc
         assert fxomObject != null;
         return errorReport.query(fxomObject, !getTreeItem().isExpanded());
     }
-    
+
     public String getErrorReport(final ErrorReportEntry entry) {
 
         final StringBuilder result = new StringBuilder();
@@ -821,7 +821,7 @@ public class HierarchyTreeCell<T extends HierarchyItem> extends TreeCell<Hierarc
 
         return result.toString();
     }
-    
+
     private void updateInsertLineIndicator(
             final TreeCell<?> startTreeCell,
             final TreeCell<?> stopTreeCell) {
@@ -901,10 +901,10 @@ public class HierarchyTreeCell<T extends HierarchyItem> extends TreeCell<Hierarc
         }
         return location;
     }
-    
+
     private String makeCssParsingErrorString(CSSParsingReport r) {
         final StringBuilder result = new StringBuilder();
-        
+
         if (r.getIOException() != null) {
             result.append(r.getIOException());
         } else {
@@ -921,8 +921,8 @@ public class HierarchyTreeCell<T extends HierarchyItem> extends TreeCell<Hierarc
                 }
             }
         }
-        
+
         return result.toString();
     }
-    
+
 }

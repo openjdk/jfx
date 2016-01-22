@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef DFGAnalysis_h
@@ -45,12 +45,12 @@ public:
         : m_valid(false)
     {
     }
-    
+
     void invalidate()
     {
         m_valid = false;
     }
-    
+
     void computeIfNecessary(Graph& graph)
     {
         if (m_valid)
@@ -60,7 +60,7 @@ public:
         m_valid = true;
         static_cast<T*>(this)->compute(graph);
     }
-    
+
     bool isValid() const { return m_valid; }
 
 private:

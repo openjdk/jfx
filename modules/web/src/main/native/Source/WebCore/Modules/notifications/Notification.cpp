@@ -87,19 +87,19 @@ Notification::Notification(ScriptExecutionContext& context, const String& title)
     , m_taskTimer(adoptPtr(new Timer<Notification>(this, &Notification::taskTimerFired)))
 {
     m_notificationCenter = DOMWindowNotifications::webkitNotifications(toDocument(context).domWindow());
-    
+
     ASSERT(m_notificationCenter->client());
     m_taskTimer->startOneShot(0);
 }
 #endif
 
-Notification::~Notification() 
+Notification::~Notification()
 {
 }
 
 #if ENABLE(LEGACY_NOTIFICATIONS)
-PassRefPtr<Notification> Notification::create(const String& title, const String& body, const String& iconURI, ScriptExecutionContext* context, ExceptionCode& ec, PassRefPtr<NotificationCenter> provider) 
-{ 
+PassRefPtr<Notification> Notification::create(const String& title, const String& body, const String& iconURI, ScriptExecutionContext* context, ExceptionCode& ec, PassRefPtr<NotificationCenter> provider)
+{
     RefPtr<Notification> notification(adoptRef(new Notification(title, body, iconURI, context, ec, provider)));
     notification->suspendIfNeeded();
     return notification.release();
@@ -130,7 +130,7 @@ PassRefPtr<Notification> Notification::create(ScriptExecutionContext& context, c
 }
 #endif
 
-void Notification::show() 
+void Notification::show()
 {
     // prevent double-showing
     if (m_state == Idle && m_notificationCenter->client()) {
@@ -227,7 +227,7 @@ const String Notification::permissionString(NotificationClient::Permission permi
     case NotificationClient::PermissionNotAllowed:
         return ASCIILiteral("default");
     }
-    
+
     ASSERT_NOT_REACHED();
     return String();
 }

@@ -53,12 +53,12 @@ import javafx.stage.WindowEvent;
 
 /**
  *
- * 
+ *
  */
 public abstract class AbstractModalDialog extends AbstractFxmlWindowController {
-    
+
     public enum ButtonID { OK, CANCEL, ACTION }
-    
+
     private final Window owner;
     private final URL contentFxmlURL;
     private final ResourceBundle contentResources;
@@ -67,8 +67,8 @@ public abstract class AbstractModalDialog extends AbstractFxmlWindowController {
     private boolean showDefaultButton;
     private ButtonID defaultButtonID = ButtonID.OK;
     private boolean focusTraversableButtons;
-    
-    /* 
+
+    /*
      * The following members should be considered as 'private'.
      * They are 'protected' only to please the FXML loader.
      */
@@ -80,7 +80,7 @@ public abstract class AbstractModalDialog extends AbstractFxmlWindowController {
     @FXML protected Pane actionParent;
     @FXML protected ImageView imageView;
     @FXML protected Pane imageViewParent;
-    
+
     /*
      * Public
      */
@@ -92,9 +92,9 @@ public abstract class AbstractModalDialog extends AbstractFxmlWindowController {
         this.contentResources = contentResources;
         assert contentFxmlURL != null;
     }
-    
+
     public Parent getContentRoot() {
-        
+
         if (contentRoot == null) {
             final FXMLLoader loader = new FXMLLoader();
 
@@ -109,7 +109,7 @@ public abstract class AbstractModalDialog extends AbstractFxmlWindowController {
                 throw new RuntimeException("Failed to load " + contentFxmlURL.getFile(), x); //NOI18N
             }
         }
-        
+
         return contentRoot;
     }
 
@@ -119,11 +119,11 @@ public abstract class AbstractModalDialog extends AbstractFxmlWindowController {
         getStage().showAndWait();
         return clickedButtonID;
     }
-    
+
     public String getTitle() {
         return getStage().getTitle();
     }
-    
+
     public void setTitle(String title) {
         getStage().setTitle(title);
     }
@@ -131,31 +131,31 @@ public abstract class AbstractModalDialog extends AbstractFxmlWindowController {
     public String getOKButtonTitle() {
         return getOKButton().getText();
     }
-    
+
     public void setOKButtonTitle(String title) {
         getOKButton().setText(title);
     }
-    
+
     public String getCancelButtonTitle() {
         return getCancelButton().getText();
     }
-    
+
     public void setCancelButtonTitle(String title) {
         getCancelButton().setText(title);
     }
-    
+
     public String getActionButtonTitle() {
         return getActionButton().getText();
     }
-    
+
     public void setActionButtonTitle(String title) {
         getActionButton().setText(title);
     }
-    
+
     public boolean isOKButtonVisible() {
         return getOKButton().getParent() != null;
     }
-    
+
     public void setOKButtonVisible(boolean visible) {
         if (visible != isOKButtonVisible()) {
             if (visible) {
@@ -167,11 +167,11 @@ public abstract class AbstractModalDialog extends AbstractFxmlWindowController {
             }
         }
     }
-    
+
     public boolean isActionButtonVisible() {
         return getActionButton().getParent() != null;
     }
-    
+
     public void setActionButtonVisible(boolean visible) {
         if (visible != isActionButtonVisible()) {
             if (visible) {
@@ -183,11 +183,11 @@ public abstract class AbstractModalDialog extends AbstractFxmlWindowController {
             }
         }
     }
-    
+
     public void setOKButtonDisable(boolean disable) {
         getOKButton().setDisable(disable);
     }
-    
+
     public void setActionButtonDisable(boolean disable) {
         getActionButton().setDisable(disable);
     }
@@ -196,16 +196,16 @@ public abstract class AbstractModalDialog extends AbstractFxmlWindowController {
         showDefaultButton = show;
         updateButtonState();
     }
-    
+
     public void setDefaultButtonID(ButtonID buttonID) {
         defaultButtonID = buttonID;
         updateButtonState();
     }
-    
+
     public boolean isImageViewVisible() {
         return getImageView().getParent() != null;
     }
-    
+
     public void setImageViewVisible(boolean visible) {
         if (visible != isImageViewVisible()) {
             if (visible) {
@@ -217,15 +217,15 @@ public abstract class AbstractModalDialog extends AbstractFxmlWindowController {
             }
         }
     }
-    
+
     public Image getImageViewImage() {
         return getImageView().getImage();
     }
-    
+
     public void setImageViewImage(Image image) {
         getImageView().setImage(image);
     }
-    
+
     // On Mac the FXML defines the 3 buttons as non focus traversable.
     // However for complex dialogs such a Preferences, Code Skeleton and
     // Preview Background Color we'd better have them focus traversable hence
@@ -242,22 +242,22 @@ public abstract class AbstractModalDialog extends AbstractFxmlWindowController {
     /*
      * To be subclassed
      */
-    
+
     protected abstract void controllerDidLoadContentFxml();
-    
+
     /*
      * To be subclassed #2
      */
     @FXML
     protected abstract void okButtonPressed(ActionEvent e);
-    
+
     @FXML
     protected abstract void cancelButtonPressed(ActionEvent e);
-    
+
     @FXML
     protected abstract void actionButtonPressed(ActionEvent e);
-    
-    
+
+
     /*
      * AbstractWindowController
      */
@@ -273,7 +273,7 @@ public abstract class AbstractModalDialog extends AbstractFxmlWindowController {
             getStage().initModality(Modality.WINDOW_MODAL);
         }
     }
-    
+
     /*
      * AbstractFxmlWindowController
      */
@@ -291,21 +291,21 @@ public abstract class AbstractModalDialog extends AbstractFxmlWindowController {
         assert okButton.getParent() == okParent;
         assert actionButton.getParent() == actionParent;
         assert imageView.getParent() == imageViewParent;
-        
+
         final EventHandler<ActionEvent> callUpdateButtonID = e -> updateButtonID(e);
         okButton.addEventHandler(ActionEvent.ACTION, callUpdateButtonID);
         cancelButton.addEventHandler(ActionEvent.ACTION, callUpdateButtonID);
         actionButton.addEventHandler(ActionEvent.ACTION, callUpdateButtonID);
-        
+
         contentPane.getChildren().add(getContentRoot());
-        
+
         // By default, action button and image view are not visible
         setActionButtonVisible(false);
         setImageViewVisible(false);
-        
+
         // Setup default state and focus
         updateButtonState();
-        
+
         // Size everything
         getStage().sizeToScene();
     }
@@ -316,55 +316,55 @@ public abstract class AbstractModalDialog extends AbstractFxmlWindowController {
         cancelButtonPressed(null);
     }
 
-    
+
     /*
      * Private
      */
     private static URL getContainerFxmlURL() {
         final String fxmlName;
-        
+
         if (EditorPlatform.IS_WINDOWS) {
             fxmlName = "AbstractModalDialogW.fxml"; //NOI18N
         } else {
             fxmlName = "AbstractModalDialogM.fxml"; //NOI18N
         }
-        
+
         return AbstractModalDialog.class.getResource(fxmlName);
     }
-    
+
     private Button getOKButton() {
         getRoot(); // Force fxml loading
         return okButton;
     }
-    
+
     private Button getCancelButton() {
         getRoot(); // Force fxml loading
         return cancelButton;
     }
-    
+
     private Button getActionButton() {
         getRoot(); // Force fxml loading
         return actionButton;
     }
-    
+
     private Pane getOKParent() {
         getRoot(); // Force fxml loading
         return okParent;
     }
-    
+
     private Pane getActionParent() {
         getRoot(); // Force fxml loading
         return actionParent;
     }
-    
+
     private ImageView getImageView() {
         getRoot(); // Force fxml loading
         return imageView;
     }
-    
+
     private void updateButtonID(ActionEvent t) {
         assert t != null;
-        
+
         final Object source = t.getSource();
         if (source == getCancelButton()) {
             clickedButtonID = AbstractModalDialog.ButtonID.CANCEL;
@@ -381,7 +381,7 @@ public abstract class AbstractModalDialog extends AbstractFxmlWindowController {
         getOKButton().setDefaultButton(false);
         getCancelButton().setDefaultButton(false);
         getActionButton().setDefaultButton(false);
-        
+
         // To stick to OS specific "habits" we set a default button on Mac as on
         // Win and Linux we use focus to mark a button as the default one (then
         // you can tab navigate from a button to another, something which is

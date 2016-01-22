@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -88,7 +88,7 @@ void PositionIterator::decrement()
         }
         return;
     }
-    
+
     if (m_anchorNode->hasChildNodes()) {
         m_anchorNode = m_anchorNode->lastChild();
         m_offsetInAnchor = m_anchorNode->hasChildNodes()? 0: lastOffsetForEditing(m_anchorNode);
@@ -146,7 +146,7 @@ bool PositionIterator::isCandidate() const
     RenderObject* renderer = m_anchorNode->renderer();
     if (!renderer)
         return false;
-    
+
     if (renderer->style().visibility() != VISIBLE)
         return false;
 

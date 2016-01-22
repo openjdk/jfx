@@ -30,12 +30,12 @@ G_BEGIN_DECLS
 
 typedef enum /*< flags >*/
 {
-  G_IO_IN	GLIB_SYSDEF_POLLIN,
-  G_IO_OUT	GLIB_SYSDEF_POLLOUT,
-  G_IO_PRI	GLIB_SYSDEF_POLLPRI,
-  G_IO_ERR	GLIB_SYSDEF_POLLERR,
-  G_IO_HUP	GLIB_SYSDEF_POLLHUP,
-  G_IO_NVAL	GLIB_SYSDEF_POLLNVAL
+  G_IO_IN   GLIB_SYSDEF_POLLIN,
+  G_IO_OUT  GLIB_SYSDEF_POLLOUT,
+  G_IO_PRI  GLIB_SYSDEF_POLLPRI,
+  G_IO_ERR  GLIB_SYSDEF_POLLERR,
+  G_IO_HUP  GLIB_SYSDEF_POLLHUP,
+  G_IO_NVAL GLIB_SYSDEF_POLLNVAL
 } GIOCondition;
 
 
@@ -182,7 +182,7 @@ struct _GSource
   guint source_id;
 
   GSList *poll_fds;
-  
+
   GSource *prev;
   GSource *next;
 
@@ -196,7 +196,7 @@ struct _GSourceCallbackFuncs
   void (*ref)   (gpointer     cb_data);
   void (*unref) (gpointer     cb_data);
   void (*get)   (gpointer     cb_data,
-                 GSource     *source, 
+                 GSource     *source,
                  GSourceFunc *func,
                  gpointer    *data);
 };
@@ -221,7 +221,7 @@ struct _GSourceFuncs
 
   /*< private >*/
   /* For use by g_source_set_closure */
-  GSourceFunc     closure_callback;        
+  GSourceFunc     closure_callback;
   GSourceDummyMarshal closure_marshal; /* Really is of type GClosureMarshal */
 };
 
@@ -494,17 +494,17 @@ void g_source_set_callback_indirect (GSource              *source,
 
 GLIB_AVAILABLE_IN_ALL
 void     g_source_add_poll            (GSource        *source,
-				       GPollFD        *fd);
+                       GPollFD        *fd);
 GLIB_AVAILABLE_IN_ALL
 void     g_source_remove_poll         (GSource        *source,
-				       GPollFD        *fd);
+                       GPollFD        *fd);
 
 GLIB_AVAILABLE_IN_ALL
 void     g_source_add_child_source    (GSource        *source,
-				       GSource        *child_source);
+                       GSource        *child_source);
 GLIB_AVAILABLE_IN_ALL
 void     g_source_remove_child_source (GSource        *source,
-				       GSource        *child_source);
+                       GSource        *child_source);
 
 GLIB_DEPRECATED_IN_2_28_FOR(g_source_get_time)
 void     g_source_get_current_time (GSource        *source,

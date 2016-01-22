@@ -83,13 +83,13 @@ public class HelloTabPane extends Application {
         final Scene scene = new Scene(new Group(), 800, 800);
         scene.setFill(Color.GHOSTWHITE);
 
-        
+
         tabPane.prefWidthProperty().bind(scene.widthProperty());
         tabPane.prefHeightProperty().bind(scene.heightProperty());
-        
+
         tabPane.setRotateGraphic(false);
         tabPane.setTabClosingPolicy(TabPane.TabClosingPolicy.SELECTED_TAB);
-        tabPane.setSide(Side.TOP);        
+        tabPane.setSide(Side.TOP);
 
         {
             tab1.setText("Tab 1");
@@ -172,7 +172,7 @@ public class HelloTabPane extends Application {
                 tb.setSelected(showScrollArrows);
                 tb.selectedProperty().addListener(new InvalidationListener() {
                     public void invalidated(Observable ov) {
-                        showScrollArrows = !showScrollArrows;   
+                        showScrollArrows = !showScrollArrows;
                     }
                 });
                 vbox.getChildren().add(tb);

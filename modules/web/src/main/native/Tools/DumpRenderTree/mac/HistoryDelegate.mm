@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #import "config.h"
 #import "HistoryDelegate.h"
@@ -43,16 +43,16 @@
     bool hasClientRedirect = [[navigationData clientRedirectSource] length];
     NSHTTPURLResponse *httpResponse = [[navigationData response] isKindOfClass:[NSHTTPURLResponse class]] ? (NSHTTPURLResponse *)[navigationData response] : nil;
     bool wasFailure = [navigationData hasSubstituteData] || (httpResponse && [httpResponse statusCode] >= 400);
-            
-    printf("WebView navigated to url \"%s\" with title \"%s\" with HTTP equivalent method \"%s\".  The navigation was %s and was %s%s.\n", 
-        url ? [[url _drt_descriptionSuitableForTestResult] UTF8String] : "<none>", 
+
+    printf("WebView navigated to url \"%s\" with title \"%s\" with HTTP equivalent method \"%s\".  The navigation was %s and was %s%s.\n",
+        url ? [[url _drt_descriptionSuitableForTestResult] UTF8String] : "<none>",
         [navigationData title] ? [[navigationData title] UTF8String] : "",
         [navigationData originalRequest] ? [[[navigationData originalRequest] HTTPMethod] UTF8String] : "",
-        wasFailure ? "a failure" : "successful", 
+        wasFailure ? "a failure" : "successful",
         hasClientRedirect ? "a client redirect from " : "not a client redirect",
         hasClientRedirect ? [[navigationData clientRedirectSource] UTF8String] : "");
 }
-                              
+
 - (void)webView:(WebView *)webView didPerformClientRedirectFromURL:(NSString *)sourceURL toURL:(NSString *)destinationURL inFrame:(WebFrame *)webFrame
 {
     NSURL *source = [NSURL URLWithString:sourceURL];

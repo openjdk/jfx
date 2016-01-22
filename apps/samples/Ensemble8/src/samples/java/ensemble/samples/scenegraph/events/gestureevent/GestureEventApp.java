@@ -57,7 +57,7 @@ import javafx.stage.Stage;
 /**
  * A sample that demonstrates various multi-touch gesture events and their usage.
  * Tap, scroll and pan to move the rectangle. Use pinch close and open zoom
- * gestures to resize it. User rotate touch gesture to rotate it. 
+ * gestures to resize it. User rotate touch gesture to rotate it.
  * Swipe events are reported but not wired to any other behavior.
  * All events are logged to the console. You can also observe inertia scrolling.
  *
@@ -91,19 +91,19 @@ public class GestureEventApp extends Application {
     private final static int CONSOLE_WIDTH = 400;
     private final static int CONSOLE_HEIGHT = 80;
     private final static int BORDER_HEIGHT = SAMPLE_SCREEN_HEIGHT - CONSOLE_HEIGHT;
-    
+
     // some offset minus BORDER_HEIGHT so it's not off in the corner
-    private final static int SMALL_REC_Y = 20 - BORDER_HEIGHT; 
-    
+    private final static int SMALL_REC_Y = 20 - BORDER_HEIGHT;
+
     //some offset so it's not off in the corner
-    private final static int SMALL_REC_X = 30; 
+    private final static int SMALL_REC_X = 30;
 
     //create a console for logging mouse events
     final ListView<String> console = new ListView<>();
-    
+
     //create a observableArrayList of logged events that will be listed in console
     final ObservableList<String> consoleObservableList = FXCollections.observableArrayList();
-    
+
     private String lastEvent = "";
     private int lastEventCount = 0;
 
@@ -150,11 +150,11 @@ public class GestureEventApp extends Application {
 
         return smallRec;
     }
-    
+
     private void showOnConsole(String text) {
         if (lastEvent.equals(text)) {
             lastEventCount++;
-            consoleObservableList.set(consoleObservableList.size() - 1, 
+            consoleObservableList.set(consoleObservableList.size() - 1,
                     text + " (" + lastEventCount + " times)");
         } else {
             if (consoleObservableList.size() == 500) {
@@ -187,7 +187,7 @@ public class GestureEventApp extends Application {
             showOnConsole(msgPrefix + "SwipeRight event");
             se.consume();
         });
-        
+
         listeningNode.setOnTouchStationary((TouchEvent se) -> {
             showOnConsole(msgPrefix + "TouchStationary event");
             se.consume();
@@ -197,7 +197,7 @@ public class GestureEventApp extends Application {
             // scroll amount
             double translateX = event.getDeltaX();
             double translateY = event.getDeltaY();
-            
+
             if ((rec.getTranslateX() + translateX > 0) && (rec.getTranslateX() + translateX < 300)) {
                 rec.setTranslateX(rec.getTranslateX() + translateX);
             }

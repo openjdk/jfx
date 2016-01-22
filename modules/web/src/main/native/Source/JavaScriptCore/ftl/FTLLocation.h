@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef FTLLocation_h
@@ -45,19 +45,19 @@ public:
         Indirect,
         Constant
     };
-    
+
     Location()
         : m_kind(Unprocessed)
     {
         u.constant = 0;
     }
-    
+
     Location(WTF::HashTableDeletedValueType)
         : m_kind(Unprocessed)
     {
         u.constant = 1;
     }
-    
+
     static Location forRegister(int16_t dwarfRegNum, int32_t addend)
     {
         Location result;
@@ -66,7 +66,7 @@ public:
         result.u.variable.offset = addend;
         return result;
     }
-    
+
     static Location forIndirect(int16_t dwarfRegNum, int32_t offset)
     {
         Location result;
@@ -75,7 +75,7 @@ public:
         result.u.variable.offset = offset;
         return result;
     }
-    
+
     static Location forConstant(int64_t constant)
     {
         Location result;
@@ -87,51 +87,51 @@ public:
     // You can pass a null StackMaps if you are confident that the location doesn't
     // involve a wide constant.
     static Location forStackmaps(const StackMaps*, const StackMaps::Location&);
-    
+
     Kind kind() const { return m_kind; }
-    
+
     bool hasDwarfRegNum() const { return kind() == Register || kind() == Indirect; }
     int16_t dwarfRegNum() const
     {
         ASSERT(hasDwarfRegNum());
         return u.variable.dwarfRegNum;
     }
-    
+
     bool hasOffset() const { return kind() == Indirect; }
     int32_t offset() const
     {
         ASSERT(hasOffset());
         return u.variable.offset;
     }
-    
+
     bool hasAddend() const { return kind() == Register; }
     int32_t addend() const
     {
         ASSERT(hasAddend());
         return u.variable.offset;
     }
-    
+
     bool hasConstant() const { return kind() == Constant; }
     int64_t constant() const
     {
         ASSERT(hasConstant());
         return u.constant;
     }
-    
+
     bool operator!() const { return kind() == Unprocessed && !u.variable.offset; }
-    
+
     bool isHashTableDeletedValue() const { return kind() == Unprocessed && u.variable.offset; }
-    
+
     bool operator==(const Location& other) const
     {
         return m_kind == other.m_kind
             && u.constant == other.u.constant;
     }
-    
+
     unsigned hash() const
     {
         unsigned result = m_kind;
-        
+
         switch (kind()) {
         case Unprocessed:
             result ^= u.variable.offset;
@@ -140,30 +140,30 @@ public:
         case Register:
             result ^= u.variable.dwarfRegNum;
             break;
-            
+
         case Indirect:
             result ^= u.variable.dwarfRegNum;
             result ^= u.variable.offset;
             break;
-            
+
         case Constant:
             result ^= WTF::IntHash<int64_t>::hash(u.constant);
             break;
         }
-        
+
         return WTF::IntHash<unsigned>::hash(result);
     }
-    
+
     void dump(PrintStream&) const;
-    
+
     bool isGPR() const;
     bool involvesGPR() const;
     GPRReg gpr() const;
     GPRReg directGPR() const; // Get the GPR and assert that there is no addend.
-    
+
     bool isFPR() const;
     FPRReg fpr() const;
-    
+
     // Assuming that all registers are saved to the savedRegisters buffer according
     // to FTLSaveRestore convention, this loads the value into the given register.
     // The code that this generates isn't exactly super fast. This assumes that FP
@@ -172,7 +172,7 @@ public:
     // restore the FP by following the call frame linked list numFramesToPop times,
     // and SP can be recovered by popping FP numFramesToPop-1 times and adding 16).
     void restoreInto(MacroAssembler&, char* savedRegisters, GPRReg result, unsigned numFramesToPop = 0) const;
-    
+
 private:
     Kind m_kind;
     union {

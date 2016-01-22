@@ -376,7 +376,7 @@ public:
     void setAffectedByDrag() { noninherited_flags.setAffectedByDrag(true); }
 
     void setColumnStylesFromPaginationMode(const Pagination::Mode&);
-    
+
     bool operator==(const RenderStyle& other) const;
     bool operator!=(const RenderStyle& other) const { return !(*this == other); }
     bool isFloating() const { return noninherited_flags._floating != NoFloat; }
@@ -389,9 +389,9 @@ public:
 
     bool hasBackgroundImage() const { return m_background->background().hasImage(); }
     bool hasFixedBackgroundImage() const { return m_background->background().hasFixedImage(); }
-    
+
     bool hasEntirelyFixedBackground() const;
-    
+
     bool hasAppearance() const { return appearance() != NoControlPart; }
 
     bool hasBackground() const
@@ -401,7 +401,7 @@ public:
             return true;
         return hasBackgroundImage();
     }
-    
+
     LayoutBoxExtent imageOutsets(const NinePieceImage&) const;
     bool hasBorderImageOutsets() const
     {
@@ -467,7 +467,7 @@ public:
     const Length& maxWidth() const { return m_box->maxWidth(); }
     const Length& minHeight() const { return m_box->minHeight(); }
     const Length& maxHeight() const { return m_box->maxHeight(); }
-    
+
     const Length& logicalWidth() const { return isHorizontalWritingMode() ? width() : height(); }
     const Length& logicalHeight() const { return isHorizontalWritingMode() ? height() : width(); }
     const Length& logicalMinWidth() const { return isHorizontalWritingMode() ? minWidth() : minHeight(); }
@@ -510,7 +510,7 @@ public:
     float borderBottomWidth() const { return surround->border.borderBottomWidth(); }
     EBorderStyle borderBottomStyle() const { return surround->border.bottom().style(); }
     bool borderBottomIsTransparent() const { return surround->border.bottom().isTransparent(); }
-    
+
     float borderBeforeWidth() const;
     float borderAfterWidth() const;
     float borderStartWidth() const;
@@ -526,7 +526,7 @@ public:
     bool hasOutline() const { return outlineWidth() > 0 && outlineStyle() > BHIDDEN; }
     EBorderStyle outlineStyle() const { return m_background->outline().style(); }
     OutlineIsAuto outlineStyleIsAuto() const { return static_cast<OutlineIsAuto>(m_background->outline().isAuto()); }
-    
+
     EOverflow overflowX() const { return static_cast<EOverflow>(noninherited_flags._overflowX); }
     EOverflow overflowY() const { return static_cast<EOverflow>(noninherited_flags._overflowY); }
 
@@ -671,7 +671,7 @@ public:
     const FillLayer* maskLayers() const { return &(rareNonInheritedData->m_mask); }
     const NinePieceImage& maskBoxImage() const { return rareNonInheritedData->m_maskBoxImage; }
     StyleImage* maskBoxImageSource() const { return rareNonInheritedData->m_maskBoxImage.image(); }
- 
+
     EBorderCollapse borderCollapse() const { return static_cast<EBorderCollapse>(inherited_flags._border_collapse); }
     short horizontalBorderSpacing() const;
     short verticalBorderSpacing() const;
@@ -862,8 +862,8 @@ public:
     TextOrientation textOrientation() const { return static_cast<TextOrientation>(rareInheritedData->m_textOrientation); }
 
     ObjectFit objectFit() const { return static_cast<ObjectFit>(rareNonInheritedData->m_objectFit); }
-    
-    // Return true if any transform related property (currently transform, transformStyle3D or perspective) 
+
+    // Return true if any transform related property (currently transform, transformStyle3D or perspective)
     // indicates that we are transforming
     bool hasTransformRelatedProperty() const { return hasTransform() || preserves3D() || hasPerspective(); }
 
@@ -917,7 +917,7 @@ public:
     const Length& perspectiveOriginY() const { return rareNonInheritedData->m_perspectiveOriginY; }
     const LengthSize& pageSize() const { return rareNonInheritedData->m_pageSize; }
     PageSizeType pageSizeType() const { return static_cast<PageSizeType>(rareNonInheritedData->m_pageSizeType); }
-    
+
     // When set, this ensures that styles compare as different. Used during accelerated animations.
     bool isRunningAcceleratedAnimation() const { return rareNonInheritedData->m_runningAcceleratedAnimation; }
 
@@ -954,7 +954,7 @@ public:
     ImageResolutionSnap imageResolutionSnap() const { return static_cast<ImageResolutionSnap>(rareInheritedData->m_imageResolutionSnap); }
     float imageResolution() const { return rareInheritedData->m_imageResolution; }
 #endif
-    
+
     ESpeak speak() const { return static_cast<ESpeak>(rareInheritedData->speak); }
 
 #if ENABLE(CSS_FILTERS)
@@ -973,13 +973,13 @@ public:
     BlendMode blendMode() const { return BlendModeNormal; }
     bool hasBlendMode() const { return false; }
 #endif
- 
+
 #if USE(RTL_SCROLLBAR)
     bool shouldPlaceBlockDirectionScrollbarOnLogicalLeft() const { return !isLeftToRightDirection() && isHorizontalWritingMode(); }
 #else
     bool shouldPlaceBlockDirectionScrollbarOnLogicalLeft() const { return false; }
 #endif
-        
+
 // attribute setter methods
 
     void setDisplay(EDisplay v) { noninherited_flags._effectiveDisplay = v; }
@@ -1055,7 +1055,7 @@ public:
     void setBackgroundYPosition(Length length) { SET_VAR(m_background, m_background.m_yPosition, std::move(length)); }
     void setBackgroundSize(EFillSizeType b) { SET_VAR(m_background, m_background.m_sizeType, b); }
     void setBackgroundSizeLength(LengthSize size) { SET_VAR(m_background, m_background.m_sizeLength, std::move(size)); }
-    
+
     void setBorderImage(const NinePieceImage& b) { SET_VAR(surround, border.m_image, b); }
     void setBorderImageSource(PassRefPtr<StyleImage>);
     void setBorderImageSlices(LengthBox);
@@ -1078,7 +1078,7 @@ public:
     {
         setBorderRadius(LengthSize(Length(s.width(), Fixed), Length(s.height(), Fixed)));
     }
-    
+
     RoundedRect getRoundedBorderFor(const LayoutRect& borderRect, RenderView* = 0, bool includeLogicalLeftEdge = true, bool includeLogicalRightEdge = true) const;
     RoundedRect getRoundedInnerBorderFor(const LayoutRect& borderRect, bool includeLogicalLeftEdge = true, bool includeLogicalRightEdge = true) const;
 
@@ -1521,10 +1521,10 @@ public:
     static Length initialShapeMargin() { return Length(0, Fixed); }
 
     float shapeImageThreshold() const { return rareNonInheritedData->m_shapeImageThreshold; }
-    void setShapeImageThreshold(float shapeImageThreshold) 
-    { 
+    void setShapeImageThreshold(float shapeImageThreshold)
+    {
         float clampedShapeImageThreshold = clampTo<float>(shapeImageThreshold, 0, 1);
-        SET_VAR(rareNonInheritedData, m_shapeImageThreshold, clampedShapeImageThreshold); 
+        SET_VAR(rareNonInheritedData, m_shapeImageThreshold, clampedShapeImageThreshold);
     }
     static float initialShapeImageThreshold() { return 0; }
 #endif
@@ -1603,7 +1603,7 @@ public:
 
     void setHasExplicitlyInheritedProperties() { noninherited_flags.explicitInheritance = true; }
     bool hasExplicitlyInheritedProperties() const { return noninherited_flags.explicitInheritance; }
-    
+
     // Initial values for all the properties
     static EBorderCollapse initialBorderCollapse() { return BSEPARATE; }
     static EBorderStyle initialBorderStyle() { return BNONE; }
@@ -1910,7 +1910,7 @@ inline int adjustForAbsoluteZoom(int value, const RenderStyle& style)
     if (zoomFactor > 1) {
         if (value < 0)
             value--;
-        else 
+        else
             value++;
     }
 

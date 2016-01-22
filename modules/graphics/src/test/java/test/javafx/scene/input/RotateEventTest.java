@@ -189,53 +189,53 @@ public class RotateEventTest {
     @Test
     public void shouldDeliverRotateEventToPickedNode() {
         Scene scene = createScene();
-        Rectangle rect = 
+        Rectangle rect =
                 (Rectangle) scene.getRoot().getChildrenUnmodifiable().get(0);
-        
+
         rotated = false;
         rect.setOnRotate(event -> {
             rotated = true;
         });
-        
+
         ((StubScene) scene.impl_getPeer()).getListener().rotateEvent(
                 RotateEvent.ROTATE, 1, 1,
                 50, 50, 50, 50, false, false, false, false, false, false);
-        
+
         assertFalse(rotated);
 
         ((StubScene) scene.impl_getPeer()).getListener().rotateEvent(
                 RotateEvent.ROTATE, 1, 1,
                 150, 150, 150, 150, false, false, false, false, false, false);
-        
+
         assertTrue(rotated);
     }
-    
+
     @Test
     public void shouldPassAngles() {
         Scene scene = createScene();
-        Rectangle rect = 
+        Rectangle rect =
                 (Rectangle) scene.getRoot().getChildrenUnmodifiable().get(0);
-        
+
         rotated = false;
         rect.setOnRotate(event -> {
             Assert.assertEquals(90, event.getAngle(), 0.0001);
             Assert.assertEquals(-180, event.getTotalAngle(), 0.0001);
             rotated = true;
         });
-        
+
         ((StubScene) scene.impl_getPeer()).getListener().rotateEvent(
                 RotateEvent.ROTATE, 90, -180,
                 150, 150, 150, 150, false, false, false, false, false, false);
-        
+
         assertTrue(rotated);
     }
 
     @Test
     public void shouldPassModifiers() {
         Scene scene = createScene();
-        Rectangle rect = 
+        Rectangle rect =
                 (Rectangle) scene.getRoot().getChildrenUnmodifiable().get(0);
-        
+
         rotated = false;
         rect.setOnRotate(event -> {
             assertTrue(event.isShiftDown());
@@ -642,7 +642,7 @@ public class RotateEventTest {
 
     private Scene createScene() {
         final Group root = new Group();
-        
+
         final Scene scene = new Scene(root, 400, 400);
 
         Rectangle rect = new Rectangle(100, 100, 100, 100);
@@ -653,7 +653,7 @@ public class RotateEventTest {
         Stage stage = new Stage();
         stage.setScene(scene);
         stage.show();
-        
+
         return scene;
     }
 }

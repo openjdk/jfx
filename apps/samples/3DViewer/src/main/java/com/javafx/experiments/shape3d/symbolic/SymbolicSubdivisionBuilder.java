@@ -42,11 +42,11 @@ import javafx.geometry.Point2D;
 import static com.javafx.experiments.shape3d.SubdivisionMesh.*;
 
 /**
- * 
+ *
  * Data structure builder for Catmull Clark subdivision surface
  */
 public class SymbolicSubdivisionBuilder {
-    
+
     private SymbolicPolygonMesh oldMesh;
     private Map<Edge, EdgeInfo> edgeInfos;
     private FaceInfo[] faceInfos;
@@ -63,16 +63,16 @@ public class SymbolicSubdivisionBuilder {
         this.boundaryMode = boundaryMode;
         this.mapBorderMode = mapBorderMode;
     }
-    
+
     public SymbolicPolygonMesh subdivide() {
         collectInfo();
-        
+
         texCoords = new float[(oldMesh.getNumEdgesInFaces() * 3 + oldMesh.faces.length) * 2];
         int[][] faces = new int[oldMesh.getNumEdgesInFaces()][8];
         int[] faceSmoothingGroups = new int[oldMesh.getNumEdgesInFaces()];
         newTexCoordIndex = 0;
         reindex = new int[oldMesh.points.numPoints]; // indexes incremented by 1, 0 reserved for empty
-        
+
         // face points first
         int newFacesInd = 0;
         for (int f = 0; f < oldMesh.faces.length; f++) {
@@ -109,11 +109,11 @@ public class SymbolicSubdivisionBuilder {
                 newFacesInd++;
             }
         }
-        
+
         SymbolicPolygonMesh newMesh = new SymbolicPolygonMesh(points, texCoords, faces, faceSmoothingGroups);
         return newMesh;
     }
-    
+
     public static SymbolicPolygonMesh subdivide(SymbolicPolygonMesh oldMesh, BoundaryMode boundaryMode, MapBorderMode mapBorderMode) {
         SymbolicSubdivisionBuilder subdivision = new SymbolicSubdivisionBuilder(oldMesh, boundaryMode, mapBorderMode);
         return subdivision.subdivide();
@@ -138,7 +138,7 @@ public class SymbolicSubdivisionBuilder {
         pointInfo.edges.add(edge);
         pointInfo.faces.add(faceInfo);
     }
-    
+
     private void addPoint(int point, Edge edge) {
         PointInfo pointInfo = pointInfos[point];
         if (pointInfo == null) {
@@ -152,7 +152,7 @@ public class SymbolicSubdivisionBuilder {
         edgeInfos = new HashMap<>(oldMesh.faces.length * 2);
         faceInfos = new FaceInfo[oldMesh.faces.length];
         pointInfos = new PointInfo[oldMesh.points.numPoints];
-        
+
         for (int f = 0; f < oldMesh.faces.length; f++) {
             int[] face = oldMesh.faces[f];
             int n = face.length / 2;
@@ -187,9 +187,9 @@ public class SymbolicSubdivisionBuilder {
             }
             faceInfo.texCoord = new Point2D(u, v);
         }
-        
+
         points = new SubdividedPointArray(oldMesh.points, oldMesh.points.numPoints + faceInfos.length + edgeInfos.size(), boundaryMode);
-        
+
         for (int f = 0; f < oldMesh.faces.length; f++) {
             int[] face = oldMesh.faces[f];
             int n = face.length / 2;
@@ -199,7 +199,7 @@ public class SymbolicSubdivisionBuilder {
             }
             faceInfos[f].facePoint = points.addFacePoint(faceVertices);
         }
-        
+
         for(EdgeInfo edgeInfo : edgeInfos.values()) {
             int[] edgeFacePoints = new int[edgeInfo.faces.size()];
             for (int f = 0; f < edgeInfo.faces.size(); f++) {
@@ -212,7 +212,7 @@ public class SymbolicSubdivisionBuilder {
     private int calcControlPoint(int srcPointIndex) {
         PointInfo pointInfo = pointInfos[srcPointIndex];
         int origPoint = srcPointIndex;
-        
+
         int[] facePoints = new int[pointInfo.faces.size()];
         for (int f = 0; f < facePoints.length; f++) {
             facePoints[f] = pointInfo.faces.get(f).facePoint;
@@ -237,7 +237,7 @@ public class SymbolicSubdivisionBuilder {
     private void calcControlTexCoord(FaceInfo faceInfo, int srcPointIndex, int srcTexCoordIndex, int destTexCoordIndex){
         PointInfo pointInfo = pointInfos[srcPointIndex];
         boolean pointBelongsToCrease = oldMesh.points instanceof OriginalPointArray;
-        if ((mapBorderMode == MapBorderMode.SMOOTH_ALL && (pointInfo.isBoundary() || pointBelongsToCrease)) || 
+        if ((mapBorderMode == MapBorderMode.SMOOTH_ALL && (pointInfo.isBoundary() || pointBelongsToCrease)) ||
                 (mapBorderMode == MapBorderMode.SMOOTH_INTERNAL && !pointInfo.hasInternalEdge())) {
             double u = oldMesh.texCoords[srcTexCoordIndex * 2] / 2;
             double v = oldMesh.texCoords[srcTexCoordIndex * 2 + 1] / 2;
@@ -263,7 +263,7 @@ public class SymbolicSubdivisionBuilder {
         }
         return destPointIndex;
     }
-    
+
     private int getPointNewIndex(FaceInfo faceInfo, int edgeInd) {
         Edge edge = faceInfo.edges[edgeInd];
         EdgeInfo edgeInfo = edgeInfos.get(edge);
@@ -280,7 +280,7 @@ public class SymbolicSubdivisionBuilder {
         calcControlTexCoord(faceInfo, srcPointIndex, srcTexCoordIndex, destTexCoordIndex);
         return destTexCoordIndex;
     }
-    
+
     private int getTexCoordNewIndex(FaceInfo faceInfo, int edgeInd) {
         int destTexCoordIndex = newTexCoordIndex;
         newTexCoordIndex++;
@@ -288,7 +288,7 @@ public class SymbolicSubdivisionBuilder {
         texCoords[destTexCoordIndex * 2 + 1] = (float) faceInfo.edgeTexCoords[edgeInd].getY();
         return destTexCoordIndex;
     }
-    
+
     private int getTexCoordNewIndex(FaceInfo faceInfo) {
         int destTexCoordIndex = faceInfo.newTexCoordIndex - 1;
         if (destTexCoordIndex == -1) {
@@ -335,12 +335,12 @@ public class SymbolicSubdivisionBuilder {
             return true;
         }
     }
-    
+
     private static class EdgeInfo {
         Edge edge;
         int edgePoint;
         List<FaceInfo> faces = new ArrayList<>(2);
-        
+
         /**
          * an edge is in the boundary if it has only one adjacent face
          */
@@ -348,11 +348,11 @@ public class SymbolicSubdivisionBuilder {
             return faces.size() == 1;
         }
     }
-    
+
     private class PointInfo {
         List<FaceInfo> faces = new ArrayList<>(4);
         Set<Edge> edges = new HashSet<>(4);
-        
+
         /**
          * A point is in the boundary if any of its adjacent edges is in the boundary
          */
@@ -364,7 +364,7 @@ public class SymbolicSubdivisionBuilder {
             }
             return false;
         }
-        
+
         /**
          * A point is internal if at least one of its adjacent edges is not in the boundary
          */
@@ -377,7 +377,7 @@ public class SymbolicSubdivisionBuilder {
             return false;
         }
     }
-    
+
     private static class FaceInfo {
         int facePoint;
         Point2D texCoord;

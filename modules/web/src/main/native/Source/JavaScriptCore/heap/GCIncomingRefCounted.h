@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef GCIncomingRefCounted_h
@@ -46,13 +46,13 @@ public:
         : m_encodedPointer(0)
     {
     }
-    
+
     ~GCIncomingRefCounted()
     {
         if (hasVectorOfCells())
             delete vectorOfCells();
     }
-    
+
     size_t numberOfIncomingReferences() const
     {
         if (!hasAnyIncoming())
@@ -61,7 +61,7 @@ public:
             return 1;
         return vectorOfCells()->size();
     }
-    
+
     JSCell* incomingReferenceAt(size_t index) const
     {
         ASSERT(hasAnyIncoming());
@@ -71,12 +71,12 @@ public:
         }
         return vectorOfCells()->at(index);
     }
-    
+
     // It's generally not a good idea to call this directly, since if this
     // returns true, you're supposed to add this object to the GC's list.
     // Call GCIncomingRefCountedSet::addReference() instead.
     bool addIncomingReference(JSCell*);
-    
+
     // A filter function returns true if we wish to keep the incoming
     // reference, and false if we don't. This may delete the object,
     // and if it does so, this returns true. In general, you don't want
@@ -84,26 +84,26 @@ public:
     // you're also walking the GC's list.
     template<typename FilterFunctionType>
     bool filterIncomingReferences(FilterFunctionType&);
-    
+
 private:
     static uintptr_t singletonFlag() { return 1; }
-    
+
     bool hasVectorOfCells() const { return !(m_encodedPointer & singletonFlag()); }
     bool hasAnyIncoming() const { return !!m_encodedPointer; }
     bool hasSingleton() const { return hasAnyIncoming() && !hasVectorOfCells(); }
-    
+
     JSCell* singleton() const
     {
         ASSERT(hasSingleton());
         return bitwise_cast<JSCell*>(m_encodedPointer & ~singletonFlag());
     }
-    
+
     Vector<JSCell*>* vectorOfCells() const
     {
         ASSERT(hasVectorOfCells());
         return bitwise_cast<Vector<JSCell*>*>(m_encodedPointer);
     }
-    
+
     // Singleton flag is set: this is a JSCell*.
     // Singleton flag not set: this is a pointer to a vector of cells.
     uintptr_t m_encodedPointer;

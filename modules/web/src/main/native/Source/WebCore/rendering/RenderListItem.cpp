@@ -299,7 +299,7 @@ void RenderListItem::insertOrMoveMarkerRendererIfNeeded()
 void RenderListItem::layout()
 {
     StackStats::LayoutCheckPoint layoutCheckPoint;
-    ASSERT(needsLayout()); 
+    ASSERT(needsLayout());
 
     insertOrMoveMarkerRendererIfNeeded();
     RenderBlockFlow::layout();
@@ -338,7 +338,7 @@ void RenderListItem::positionListMarker()
         bool adjustOverflow = false;
         LayoutUnit markerLogicalLeft;
         bool hitSelfPaintingLayer = false;
-        
+
         const RootInlineBox& rootBox = m_marker->inlineBoxWrapper()->root();
         LayoutUnit lineTop = rootBox.lineTop();
         LayoutUnit lineBottom = rootBox.lineBottom();
@@ -385,7 +385,7 @@ void RenderListItem::positionListMarker()
                         adjustOverflow = true;
                 }
                 box->setOverflowFromLogicalRects(newLogicalLayoutOverflowRect, newLogicalVisualOverflowRect, lineTop, lineBottom);
-                
+
                 if (box->renderer().hasSelfPaintingLayer())
                     hitSelfPaintingLayer = true;
             }

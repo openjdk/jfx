@@ -52,17 +52,17 @@ import com.sun.javafx.binding.ExpressionHelper;
  * <p>
  * Below is a simple example of a {@code DoubleBinding} calculating the square-
  * root of a {@link javafx.beans.value.ObservableNumberValue} {@code moo}.
- * 
+ *
  * <pre>
  * <code>
  * final ObservableDoubleValue moo = ...;
- * 
+ *
  * DoubleBinding foo = new DoubleBinding() {
- * 
+ *
  *     {
  *         super.bind(moo);
  *     }
- * 
+ *
  *     &#x40;Override
  *     protected double computeValue() {
  *         return Math.sqrt(moo.getValue());
@@ -70,30 +70,30 @@ import com.sun.javafx.binding.ExpressionHelper;
  * };
  * </code>
  * </pre>
- * 
+ *
  * Following is the same example with implementations for the optional methods
  * {@link Binding#getDependencies()} and {@link Binding#dispose()}.
- * 
+ *
  * <pre>
  * <code>
  * final ObservableDoubleValue moo = ...;
- * 
+ *
  * DoubleBinding foo = new DoubleBinding() {
- * 
+ *
  *     {
  *         super.bind(moo);
  *     }
- * 
+ *
  *     &#x40;Override
  *     protected double computeValue() {
  *         return Math.sqrt(moo.getValue());
  *     }
- * 
+ *
  *     &#x40;Override
  *     public ObservableList<?> getDependencies() {
  *         return FXCollections.singletonObservableList(moo);
  *     }
- *     
+ *
  *     &#x40;Override
  *     public void dispose() {
  *         super.unbind(moo);
@@ -101,12 +101,12 @@ import com.sun.javafx.binding.ExpressionHelper;
  * };
  * </code>
  * </pre>
- * 
+ *
  * @see Binding
  * @see NumberBinding
  * @see javafx.beans.binding.DoubleExpression
- * 
- * 
+ *
+ *
  * @since JavaFX 2.0
  */
 public abstract class DoubleBinding extends DoubleExpression implements
@@ -117,30 +117,30 @@ public abstract class DoubleBinding extends DoubleExpression implements
     private BindingHelperObserver observer;
     private ExpressionHelper<Number> helper = null;
 
-    @Override 
+    @Override
     public void addListener(InvalidationListener listener) {
         helper = ExpressionHelper.addListener(helper, this, listener);
     }
 
-    @Override 
+    @Override
     public void removeListener(InvalidationListener listener) {
         helper = ExpressionHelper.removeListener(helper, listener);
     }
-    
+
     @Override
     public void addListener(ChangeListener<? super Number> listener) {
         helper = ExpressionHelper.addListener(helper, this, listener);
     }
 
-    @Override 
+    @Override
     public void removeListener(ChangeListener<? super Number> listener) {
         helper = ExpressionHelper.removeListener(helper, listener);
     }
-    
+
     /**
      * Start observing the dependencies for changes. If the value of one of the
      * dependencies changes, the binding is marked as invalid.
-     * 
+     *
      * @param dependencies
      *            the dependencies to observe
      */
@@ -157,7 +157,7 @@ public abstract class DoubleBinding extends DoubleExpression implements
 
     /**
      * Stop observing the dependencies for changes.
-     * 
+     *
      * @param dependencies
      *            the dependencies to stop observing
      */
@@ -180,7 +180,7 @@ public abstract class DoubleBinding extends DoubleExpression implements
     /**
      * A default implementation of {@code getDependencies()} that returns an
      * empty {@link javafx.collections.ObservableList}.
-     * 
+     *
      * @return an empty {@code ObservableList}
      */
     @Override
@@ -194,7 +194,7 @@ public abstract class DoubleBinding extends DoubleExpression implements
      * {@code computeValue()} is only called if the binding is invalid. The
      * result is cached and returned if the binding did not become invalid since
      * the last call of {@code get()}.
-     * 
+     *
      * @return the current value
      */
     @Override
@@ -233,7 +233,7 @@ public abstract class DoubleBinding extends DoubleExpression implements
      * <p>
      * Classes extending {@code DoubleBinding} have to provide an implementation
      * of {@code computeValue}.
-     * 
+     *
      * @return the current value
      */
     protected abstract double computeValue();
@@ -241,7 +241,7 @@ public abstract class DoubleBinding extends DoubleExpression implements
     /**
      * Returns a string representation of this {@code DoubleBinding} object.
      * @return a string representation of this {@code DoubleBinding} object.
-     */ 
+     */
     @Override
     public String toString() {
         return valid ? "DoubleBinding [value: " + get() + "]"

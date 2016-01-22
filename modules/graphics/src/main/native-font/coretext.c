@@ -919,35 +919,35 @@ JNIEXPORT jobject JNICALL OS_NATIVE(CGPathApply)
     data.pointCoords = (jfloat*)malloc(sizeof(jfloat) * DEFAULT_LEN_COORDS);
     data.numCoords = 0;
     data.lenCoords = DEFAULT_LEN_COORDS;
-    
+
     CGPathApply((CGPathRef)arg0, &data, pathApplierFunctionFast);
 
     static jclass path2DClass = NULL;
     static jmethodID path2DCtr = NULL;
     if (path2DClass == NULL) {
         jclass tmpClass = (*env)->FindClass(env, "com/sun/javafx/geom/Path2D");
-        if ((*env)->ExceptionOccurred(env) || !tmpClass) {   
+        if ((*env)->ExceptionOccurred(env) || !tmpClass) {
             fprintf(stderr, "OS_NATIVE error: JNI exception or tmpClass == NULL");
             goto fail;
         }
         path2DClass = (jclass)(*env)->NewGlobalRef(env, tmpClass);
         path2DCtr = (*env)->GetMethodID(env, path2DClass, "<init>", "(I[BI[FI)V");
-        if ((*env)->ExceptionOccurred(env) || !path2DCtr) {   
+        if ((*env)->ExceptionOccurred(env) || !path2DCtr) {
             fprintf(stderr, "OS_NATIVE error: JNI exception or path2DCtr == NULL");
             goto fail;
         }
     }
 
-    jbyteArray types = (*env)->NewByteArray(env, data.numTypes);  
+    jbyteArray types = (*env)->NewByteArray(env, data.numTypes);
     jfloatArray coords = (*env)->NewFloatArray(env, data.numCoords);
     if (types && coords) {
         (*env)->SetByteArrayRegion(env, types, 0, data.numTypes, data.pointTypes);
-        if ((*env)->ExceptionOccurred(env)) {   
+        if ((*env)->ExceptionOccurred(env)) {
             fprintf(stderr, "OS_NATIVE error: JNI exception");
             goto fail;
         }
         (*env)->SetFloatArrayRegion(env, coords, 0, data.numCoords, data.pointCoords);
-        if ((*env)->ExceptionOccurred(env)) {   
+        if ((*env)->ExceptionOccurred(env)) {
             fprintf(stderr, "OS_NATIVE error: JNI exception");
             goto fail;
         }
@@ -955,7 +955,7 @@ JNIEXPORT jobject JNICALL OS_NATIVE(CGPathApply)
                                    0 /*winding rule*/,
                                    types, data.numTypes,
                                    coords, data.numCoords);
-        if ((*env)->ExceptionOccurred(env) || !path2D) {   
+        if ((*env)->ExceptionOccurred(env) || !path2D) {
             goto fail;
         }
     }

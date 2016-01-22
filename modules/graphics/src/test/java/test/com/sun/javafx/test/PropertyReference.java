@@ -113,7 +113,7 @@ public final class PropertyReference {
     }
 
     private static String capitalizeName(final String input) {
-        return !input.isEmpty() 
+        return !input.isEmpty()
                 ? Character.toUpperCase(input.charAt(0)) + input.substring(1)
                 : input;
     }

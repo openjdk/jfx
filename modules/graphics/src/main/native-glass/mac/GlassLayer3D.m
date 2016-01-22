@@ -168,7 +168,7 @@ static NSArray *allModes = nil;
     }
 #endif
     // the viewport is already set for us here, so just blit
-  
+
 #if 0
     // this will stretch the offscreen to cover all the surface
     // ie., live resizing "appears" better, but the blit area is not at 1:1 scale

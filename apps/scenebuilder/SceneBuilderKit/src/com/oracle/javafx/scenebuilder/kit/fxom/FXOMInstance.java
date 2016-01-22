@@ -47,24 +47,24 @@ import javafx.fxml.FXMLLoader;
 
 /**
  *
- * 
+ *
  */
 public class FXOMInstance extends FXOMObject {
-    
+
     private final Map<PropertyName, FXOMProperty> properties = new LinkedHashMap<>();
     private Class<?> declaredClass;
-    
-    
+
+
     FXOMInstance(
-            FXOMDocument fxomDocument, 
-            GlueElement glueElement, 
+            FXOMDocument fxomDocument,
+            GlueElement glueElement,
             Class<?> declaredClass,
             Object sceneGraphObject,
             List<FXOMProperty> properties) {
         super(fxomDocument, glueElement, sceneGraphObject);
-        
+
         assert declaredClass != null;
-        assert glueElement.getTagName().equals("fx:root") 
+        assert glueElement.getTagName().equals("fx:root")
                 || glueElement.getTagName().equals(PropertyName.makeClassFullName(declaredClass))
                 || glueElement.getTagName().equals(declaredClass.getCanonicalName());
         assert sceneGraphObject != null;
@@ -76,13 +76,13 @@ public class FXOMInstance extends FXOMObject {
             p.setParentInstance(this);
         }
     }
-    
+
     FXOMInstance(
-            FXOMDocument fxomDocument, 
-            GlueElement glueElement, 
+            FXOMDocument fxomDocument,
+            GlueElement glueElement,
             List<FXOMProperty> properties) {
         super(fxomDocument, glueElement, null);
-        
+
         assert properties != null;
 
         this.declaredClass = null;
@@ -91,17 +91,17 @@ public class FXOMInstance extends FXOMObject {
             p.setParentInstance(this);
         }
     }
-    
+
     public FXOMInstance(FXOMDocument fxomDocument, Class<?> declaredClass) {
         super(fxomDocument, PropertyName.makeClassFullName(declaredClass));
         this.declaredClass = declaredClass;
     }
-    
+
     public FXOMInstance(FXOMDocument fxomDocument, String tagName) {
         super(fxomDocument, tagName);
         this.declaredClass = null; // This is an unresolved instance
     }
-    
+
     public Class<?> getDeclaredClass() {
         return declaredClass;
     }
@@ -117,9 +117,9 @@ public class FXOMInstance extends FXOMObject {
     public boolean isFxRoot() {
         return getGlueElement().getTagName().equals("fx:root");
     }
-    
+
     public void toggleFxRoot() {
-        
+
         if (isFxRoot()) {
             assert getType() != null;
             getGlueElement().setTagName(getType());
@@ -130,11 +130,11 @@ public class FXOMInstance extends FXOMObject {
             getGlueElement().setTagName("fx:root");
         }
     }
-    
+
     public String getType() {
         return getGlueElement().getAttributes().get(FXMLLoader.ROOT_TYPE_ATTRIBUTE);
     }
-    
+
     /*
      * FXOMObject
      */
@@ -142,7 +142,7 @@ public class FXOMInstance extends FXOMObject {
     @Override
     public void addToParentCollection(int index, FXOMCollection newParentCollection) {
         super.addToParentCollection(index, newParentCollection);
-        
+
         // May be this object was root : fx:root, type properties must be reset.
         resetRootProperties();
     }
@@ -150,7 +150,7 @@ public class FXOMInstance extends FXOMObject {
     @Override
     public void addToParentProperty(int index, FXOMPropertyC newParentProperty) {
         super.addToParentProperty(index, newParentProperty); //To change body of generated methods, choose Tools | Templates.
-        
+
         // May be this object was root : fx:root, type properties must be reset.
         resetRootProperties();
     }
@@ -159,7 +159,7 @@ public class FXOMInstance extends FXOMObject {
     @Override
     public List<FXOMObject> getChildObjects() {
         final List<FXOMObject> result = new ArrayList<>();
-        
+
         for (FXOMProperty p : properties.values()) {
             if (p instanceof FXOMPropertyC) {
                 final FXOMPropertyC pc = (FXOMPropertyC) p;
@@ -173,7 +173,7 @@ public class FXOMInstance extends FXOMObject {
     @Override
     public FXOMObject searchWithSceneGraphObject(Object sceneGraphObject) {
         FXOMObject result;
-        
+
         result = super.searchWithSceneGraphObject(sceneGraphObject);
         if (result == null) {
             final Iterator<FXOMProperty> it = properties.values().iterator();
@@ -189,14 +189,14 @@ public class FXOMInstance extends FXOMObject {
                 }
             }
         }
-        
+
         return result;
     }
-    
+
     @Override
     public FXOMObject searchWithFxId(String fxId) {
         FXOMObject result;
-        
+
         result = super.searchWithFxId(fxId);
         if (result == null) {
             final Iterator<FXOMProperty> it = properties.values().iterator();
@@ -212,18 +212,18 @@ public class FXOMInstance extends FXOMObject {
                 }
             }
         }
-        
+
         return result;
     }
-    
+
     @Override
     protected void collectDeclaredClasses(Set<Class<?>> result) {
         assert result != null;
-        
+
         if (declaredClass != null) {
             result.add(declaredClass);
         }
-        
+
         for (FXOMProperty p : properties.values()) {
             if (p instanceof FXOMPropertyC) {
                 for (FXOMObject v : ((FXOMPropertyC)p).getValues()) {
@@ -237,7 +237,7 @@ public class FXOMInstance extends FXOMObject {
     protected void collectProperties(PropertyName propertyName, List<FXOMProperty> result) {
         assert propertyName != null;
         assert result != null;
-        
+
         for (FXOMProperty p : properties.values()) {
             if (p.getName().equals(propertyName)) {
                 result.add(p);
@@ -253,7 +253,7 @@ public class FXOMInstance extends FXOMObject {
     @Override
     protected void collectNullProperties(List<FXOMPropertyT> result) {
         assert result != null;
-        
+
         for (FXOMProperty p : properties.values()) {
             if (p instanceof FXOMPropertyT) {
                 final FXOMPropertyT tp = (FXOMPropertyT) p;
@@ -272,7 +272,7 @@ public class FXOMInstance extends FXOMObject {
     @Override
     protected void collectPropertiesT(List<FXOMPropertyT> result) {
         assert result != null;
-        
+
         for (FXOMProperty p : properties.values()) {
             if (p instanceof FXOMPropertyT) {
                 final FXOMPropertyT tp = (FXOMPropertyT) p;
@@ -338,7 +338,7 @@ public class FXOMInstance extends FXOMObject {
         if (fxId != null) {
             result.put(fxId, this);
         }
-        
+
         for (FXOMProperty p : properties.values()) {
             if (p instanceof FXOMPropertyC) {
                 for (FXOMObject v : ((FXOMPropertyC)p).getValues()) {
@@ -388,10 +388,10 @@ public class FXOMInstance extends FXOMObject {
     /*
      * FXOMNode
      */
-    
+
     @Override
     protected void changeFxomDocument(FXOMDocument destination) {
-        
+
         super.changeFxomDocument(destination);
         for (FXOMProperty p : properties.values()) {
             p.changeFxomDocument(destination);
@@ -405,31 +405,31 @@ public class FXOMInstance extends FXOMObject {
         }
     }
 
-    
+
     /*
      * Package
      */
-    
+
     /* For FXOMProperty.addToParentInstance() private use only */
     void addProperty(FXOMProperty property) {
         assert property.getParentInstance() == this;
         assert properties.get(property.getName()) == null;
         properties.put(property.getName(), property);
     }
-    
+
     /* For FXOMProperty.removeFromParentInstance() private use only */
     void removeProperty(FXOMProperty property) {
         assert property.getParentInstance() == null;
         assert properties.get(property.getName()) == property;
         properties.remove(property.getName());
-        
+
     }
-    
-    
+
+
     /*
      * Private
      */
-    
+
     private void resetRootProperties() {
         if (isFxRoot()) {
             toggleFxRoot();

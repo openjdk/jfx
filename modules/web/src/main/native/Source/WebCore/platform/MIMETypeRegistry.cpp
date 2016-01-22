@@ -122,8 +122,8 @@ static const TypeExtensionPair commonMediaTypes[] = {
     { "video/x-m2ts", "ts" },
 
     // 3GP/3GP2
-    { "audio/3gpp", "3gpp" }, 
-    { "audio/3gpp2", "3g2" }, 
+    { "audio/3gpp", "3gpp" },
+    { "audio/3gpp2", "3g2" },
     { "application/x-mpeg", "amc" },
 
     // AAC
@@ -191,7 +191,7 @@ static HashSet<String>* pdfAndPostScriptMIMETypes;
 static HashSet<String>* unsupportedTextMIMETypes;
 
 typedef HashMap<String, Vector<String>*, CaseFoldingHash> MediaMIMETypeMap;
-    
+
 static void initializeSupportedImageMIMETypes()
 {
 #if USE(CG)
@@ -233,7 +233,7 @@ static void initializeSupportedImageMIMETypes()
     // These were removed for <rdar://problem/6564538> Re-enable UTI code in WebCore now that MobileCoreServices exists
     // But Mail relies on at least image/tif reported as being supported (should be image/tiff).
     // This can be removed when Mail addresses:
-    // <rdar://problem/7879510> Mail should use standard image mimetypes 
+    // <rdar://problem/7879510> Mail should use standard image mimetypes
     // and we fix sniffing so that it corrects items such as image/jpg -> image/jpeg.
     static const char* malformedMIMETypes[] = {
         // JPEG (image/jpeg)
@@ -427,10 +427,10 @@ String MIMETypeRegistry::getMediaMIMETypeForExtension(const String& ext)
     Vector<String>* typeList = mediaMIMETypeMap().get(ext);
     if (typeList)
         return (*typeList)[0];
-    
+
     return String();
 }
-    
+
 Vector<String> MIMETypeRegistry::getMediaMIMETypesForExtension(const String& ext)
 {
     Vector<String>* typeList = mediaMIMETypeMap().get(ext);
@@ -446,7 +446,7 @@ Vector<String> MIMETypeRegistry::getMediaMIMETypesForExtension(const String& ext
         typeList.append(type);
         return typeList;
     }
-    
+
     return Vector<String>();
 }
 

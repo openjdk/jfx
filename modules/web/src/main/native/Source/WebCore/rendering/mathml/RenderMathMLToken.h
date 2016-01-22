@@ -33,7 +33,7 @@
 #include "RenderText.h"
 
 namespace WebCore {
-    
+
 class RenderMathMLToken : public RenderMathMLBlock {
 public:
     RenderMathMLToken(Element&, PassRef<RenderStyle>);

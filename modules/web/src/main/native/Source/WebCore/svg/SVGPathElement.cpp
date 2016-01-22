@@ -379,7 +379,7 @@ void SVGPathElement::pathSegListChanged(SVGPathSegRole role, ListModification li
     }
 
     invalidateSVGAttributes();
-    
+
     RenderSVGPath* renderer = toRenderSVGPath(this->renderer());
     if (!renderer)
         return;

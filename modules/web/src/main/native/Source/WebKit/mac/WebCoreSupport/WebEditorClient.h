@@ -7,13 +7,13 @@
  * are met:
  *
  * 1.  Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer. 
+ *     notice, this list of conditions and the following disclaimer.
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
- *     documentation and/or other materials provided with the distribution. 
+ *     documentation and/or other materials provided with the distribution.
  * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
- *     from this software without specific prior written permission. 
+ *     from this software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY APPLE AND ITS CONTRIBUTORS "AS IS" AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
@@ -65,7 +65,7 @@ private:
     virtual bool shouldChangeSelectedRange(WebCore::Range* fromRange, WebCore::Range* toRange, WebCore::EAffinity, bool stillSelecting) override;
 
     virtual bool shouldApplyStyle(WebCore::StyleProperties*, WebCore::Range*) override;
-    
+
     virtual bool shouldMoveRangeAfterDelete(WebCore::Range*, WebCore::Range* rangeToBeReplaced) override;
 
     virtual void didBeginEditing() override;
@@ -79,7 +79,7 @@ private:
     virtual void setInsertionPasteboard(const String&) override;
     virtual NSURL *canonicalizeURL(NSURL *) override;
     virtual NSURL *canonicalizeURLString(NSString *) override;
-    
+
 #if USE(APPKIT)
     virtual void uppercaseWord() override;
     virtual void lowercaseWord() override;
@@ -119,10 +119,10 @@ private:
     virtual bool canPaste(WebCore::Frame*, bool defaultValue) const override;
     virtual bool canUndo() const override;
     virtual bool canRedo() const override;
-    
+
     virtual void undo() override;
     virtual void redo() override;
-    
+
     virtual void handleKeyboardEvent(WebCore::KeyboardEvent*) override;
     virtual void handleInputMethodKeydown(WebCore::KeyboardEvent*) override;
 
@@ -145,7 +145,7 @@ private:
     virtual bool performsTwoStepPaste(WebCore::DocumentFragment*) override;
     virtual int pasteboardChangeCount() override;
 #endif
-    
+
     virtual bool shouldEraseMarkersAfterChangeSelection(WebCore::TextCheckingType) const override;
     virtual void ignoreWordInSpellDocument(const String&) override;
     virtual void learnWord(const String&) override;

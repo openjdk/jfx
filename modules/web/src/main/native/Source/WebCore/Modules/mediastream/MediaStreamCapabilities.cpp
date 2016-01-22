@@ -41,7 +41,7 @@ RefPtr<MediaStreamCapabilities> MediaStreamCapabilities::create(PassRefPtr<Media
 {
     if (capabilities->hasVideoSource())
         return AllVideoCapabilities::create(capabilities);
-    
+
     return AllAudioCapabilities::create(capabilities);
 }
 
@@ -53,18 +53,18 @@ MediaStreamCapabilities::MediaStreamCapabilities(PassRefPtr<MediaStreamSourceCap
 Vector<String> MediaStreamCapabilities::sourceType() const
 {
     ASSERT(m_SourceCapabilities->hasVideoSource());
-    
+
     size_t count = m_SourceCapabilities->sourceTypes().size();
     if (!count)
         return Vector<String>();
-    
+
     const Vector<MediaStreamSourceStates::SourceType>& sourceTypes = m_SourceCapabilities->sourceTypes();
     Vector<String> capabilities;
     capabilities.reserveCapacity(count);
-    
+
     for (size_t i = 0; i < count; ++i)
         capabilities.append(MediaStreamSourceStates::sourceType(sourceTypes[i]));
-    
+
     return capabilities;
 }
 
@@ -73,67 +73,67 @@ Vector<String> MediaStreamCapabilities::sourceId() const
     size_t count = m_SourceCapabilities->sourceId().size();
     if (!count)
         return Vector<String>();
-    
+
     const Vector<AtomicString>& sourceIds = m_SourceCapabilities->sourceId();
     Vector<String> capabilities;
     capabilities.reserveCapacity(count);
-    
+
     for (size_t i = 0; i < count; ++i)
         capabilities.append(sourceIds[i]);
-    
+
     return capabilities;
 }
 
 Vector<String> MediaStreamCapabilities::facingMode() const
 {
     ASSERT(m_SourceCapabilities->hasVideoSource());
-    
+
     size_t count = m_SourceCapabilities->facingModes().size();
     if (!count)
         return Vector<String>();
-    
+
     const Vector<MediaStreamSourceStates::VideoFacingMode>& facingModes = m_SourceCapabilities->facingModes();
     Vector<String> capabilities;
     capabilities.reserveCapacity(count);
-    
+
     for (size_t i = 0; i < count; ++i)
         capabilities.append(MediaStreamSourceStates::facingMode(facingModes[i]));
-    
+
     return capabilities;
 }
 
 RefPtr<CapabilityRange> MediaStreamCapabilities::width() const
 {
     ASSERT(m_SourceCapabilities->hasVideoSource());
-    
+
     return CapabilityRange::create(m_SourceCapabilities->width());
 }
 
 RefPtr<CapabilityRange> MediaStreamCapabilities::height() const
 {
     ASSERT(m_SourceCapabilities->hasVideoSource());
-    
+
     return CapabilityRange::create(m_SourceCapabilities->height());
 }
 
 RefPtr<CapabilityRange> MediaStreamCapabilities::frameRate() const
 {
     ASSERT(m_SourceCapabilities->hasVideoSource());
-    
+
     return CapabilityRange::create(m_SourceCapabilities->frameRate());
 }
 
 RefPtr<CapabilityRange> MediaStreamCapabilities::aspectRatio() const
 {
     ASSERT(m_SourceCapabilities->hasVideoSource());
-    
+
     return CapabilityRange::create(m_SourceCapabilities->aspectRatio());
 }
 
 RefPtr<CapabilityRange> MediaStreamCapabilities::volume() const
 {
     ASSERT(!m_SourceCapabilities->hasVideoSource());
-    
+
     return CapabilityRange::create(m_SourceCapabilities->volume());
 }
 

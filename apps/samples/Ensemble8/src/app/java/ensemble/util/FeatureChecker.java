@@ -73,11 +73,11 @@ public class FeatureChecker {
         if (subCategories != null) {
             List<SampleCategory> filteredSubcategories = new ArrayList<>();
             for (SampleCategory subCategory : subCategories) {
-                if (subCategory.samples != null && subCategory.samples.length > 0 
+                if (subCategory.samples != null && subCategory.samples.length > 0
                         || subCategory.samplesAll != null && subCategory.samplesAll.length > 0) {
                     filteredSubcategories.add(subCategory);
                 }
-                
+
             }
             return filteredSubcategories.toArray(new SampleCategory[filteredSubcategories.size()]);
         } else {

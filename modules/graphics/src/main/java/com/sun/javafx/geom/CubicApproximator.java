@@ -64,7 +64,7 @@ public class CubicApproximator {
             res.add(approximate(curve));
             return d;
         } else {
-            SplitCubic(tmp, new float[] {curve.x1, curve.y1, 
+            SplitCubic(tmp, new float[] {curve.x1, curve.y1,
                                          curve.ctrlx1, curve.ctrly1,
                                          curve.ctrlx2, curve.ctrly2,
                                          curve.x2, curve.y2});
@@ -86,7 +86,7 @@ public class CubicApproximator {
     }
 
     private float approximate(List<CubicCurve2D> curves,
-                               List<QuadCurve2D> res) 
+                               List<QuadCurve2D> res)
     {
         QuadCurve2D approx = approximate(curves.get(0));
         float dMax = CubicApproximator.compareCPs(
@@ -139,19 +139,19 @@ public class CubicApproximator {
         /* Calculating error for approximation using formula:
          * max(|(-3P1+P0+3P2-P3)/6|, |(3P1-P0-3P2+P3)/6|)
          */
-        float res = 
-            (-3f*coords[2] + coords[0] + 3f*coords[4] - coords[6])/6f; 
-        float d = (-3f*coords[3] + coords[1] + 3f*coords[5] - coords[7])/6f; 
+        float res =
+            (-3f*coords[2] + coords[0] + 3f*coords[4] - coords[6])/6f;
+        float d = (-3f*coords[3] + coords[1] + 3f*coords[5] - coords[7])/6f;
         if (res < d) res = d;
-        d = (3f*coords[2] - coords[0] - 3f*coords[4] + coords[6])/6f; 
+        d = (3f*coords[2] - coords[0] - 3f*coords[4] + coords[6])/6f;
         if (res < d) res = d;
-        d = (3f*coords[3] - coords[1] - 3f*coords[5] + coords[7])/6f; 
+        d = (3f*coords[3] - coords[1] - 3f*coords[5] + coords[7])/6f;
         if (res < d) res = d;
         return res;
     }
 
     public static float getApproxError(CubicCurve2D curve) {
-        return getApproxError(new float[] {curve.x1, curve.y1, 
+        return getApproxError(new float[] {curve.x1, curve.y1,
                                       curve.ctrlx1, curve.ctrly1,
                                       curve.ctrlx2, curve.ctrly2,
                                       curve.x2, curve.y2});
@@ -174,8 +174,8 @@ public class CubicApproximator {
      * Calling DrawMonotonicCubic for the curves of the appropriate size.
      * Note: coords array could be changed
      */
-    private void ProcessMonotonicCubic(List<CubicCurve2D> resVect, 
-                                       float[] coords) 
+    private void ProcessMonotonicCubic(List<CubicCurve2D> resVect,
+                                       float[] coords)
     {
 
         float[] coords1 = new float[8];
@@ -191,7 +191,7 @@ public class CubicApproximator {
             xMax = (xMax < coords[i])? coords[i] : xMax;
             yMin = (yMin > coords[i + 1])? coords[i + 1] : yMin;
             yMax = (yMax < coords[i + 1])? coords[i + 1] : yMax;
-        }        
+        }
 
         if (xMax - xMin > maxCubicSize || yMax - yMin > maxCubicSize ||
             getApproxError(coords) > accuracy) {
@@ -215,7 +215,7 @@ public class CubicApproximator {
             ProcessMonotonicCubic(resVect, coords1);
         } else {
             resVect.add(new CubicCurve2D(
-                coords[0], coords[1], coords[2], coords[3], 
+                coords[0], coords[1], coords[2], coords[3],
                 coords[4], coords[5], coords[6], coords[7]));
         }
     }
@@ -226,7 +226,7 @@ public class CubicApproximator {
      * Note: coords array could be changed
      */
     public void SplitCubic(List<CubicCurve2D> resVect,
-                                   float[] coords) 
+                                   float[] coords)
     {
         /* Temporary array for holding parameters corresponding to the extreme
          * in X and Y points
@@ -239,15 +239,15 @@ public class CubicApproximator {
         /* Simple check for monotonicity in X before searching for the extreme
          * points of the X(t) function. We first check if the curve is
          * monotonic in X by seeing if all of the X coordinates are strongly
-         * ordered. 
+         * ordered.
          */
         if ((coords[0] > coords[2] || coords[2] > coords[4] ||
              coords[4] > coords[6]) &&
             (coords[0] < coords[2] || coords[2] < coords[4] ||
-             coords[4] < coords[6])) 
+             coords[4] < coords[6]))
         {
             /* Searching for extreme points of the X(t) function  by solving
-             * dX(t)  
+             * dX(t)
              * ----  = 0 equation
              *  dt
              */
@@ -257,7 +257,7 @@ public class CubicApproximator {
 
             int nr = QuadCurve2D.solveQuadratic(eqn, res);
 
-            /* Following code also correctly works in degenerate case of 
+            /* Following code also correctly works in degenerate case of
              * the quadratic equation (nr = -1) because we do not need
              * splitting in this case.
              */
@@ -271,12 +271,12 @@ public class CubicApproximator {
         /* Simple check for monotonicity in Y before searching for the extreme
          * points of the Y(t) function. We first check if the curve is
          * monotonic in Y by seeing if all of the Y coordinates are strongly
-         * ordered. 
+         * ordered.
          */
         if ((coords[1] > coords[3] || coords[3] > coords[5] ||
              coords[5] > coords[7]) &&
             (coords[1] < coords[3] || coords[3] < coords[5] ||
-             coords[5] < coords[7])) 
+             coords[5] < coords[7]))
         {
             /* Searching for extreme points of the Y(t) function by solving
              * dY(t)
@@ -289,7 +289,7 @@ public class CubicApproximator {
 
             int nr = QuadCurve2D.solveQuadratic(eqn, res);
 
-            /* Following code also correctly works in degenerate case of 
+            /* Following code also correctly works in degenerate case of
              * the quadratic equation (nr = -1) because we do not need
              * splitting in this case.
              */
@@ -301,7 +301,7 @@ public class CubicApproximator {
         }
 
         if (cnt > 0) {
-            /* Sorting parameter values corresponding to the extreme points 
+            /* Sorting parameter values corresponding to the extreme points
              * of the curve
              */
             Arrays.sort(params, 0, cnt);
@@ -322,9 +322,9 @@ public class CubicApproximator {
     }
 
     /*
-     * Bite the piece of the cubic curve from start point till the point 
-     * corresponding to the specified parameter then call ProcessCubic for the 
-     * bitten part. 
+     * Bite the piece of the cubic curve from start point till the point
+     * corresponding to the specified parameter then call ProcessCubic for the
+     * bitten part.
      * Note: coords array will be changed
      */
     private void ProcessFirstMonotonicPartOfCubic(

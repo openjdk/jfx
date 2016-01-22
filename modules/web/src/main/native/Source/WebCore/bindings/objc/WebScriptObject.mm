@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #import "config.h"
@@ -151,7 +151,7 @@ static void addExceptionToConsole(ExecState* exec)
 {
     if (id domWrapper = createDOMWrapper(toJS(jsObject), originRootObject, rootObject))
         return domWrapper;
-    
+
     return WebCore::createJSWrapper(toJS(jsObject), originRootObject, rootObject);
 }
 
@@ -200,7 +200,7 @@ static void addExceptionToConsole(ExecState* exec)
     self = [super init];
     _private = [[WebScriptObjectPrivate alloc] init];
     [self _setImp:imp originRootObject:originRootObject rootObject:rootObject];
-    
+
     return self;
 }
 
@@ -307,7 +307,7 @@ static void addExceptionToConsole(ExecState* exec)
 static void getListFromNSArray(ExecState *exec, NSArray *array, RootObject* rootObject, MarkedArgumentBuffer& aList)
 {
     int i, numObjects = array ? [array count] : 0;
-    
+
     for (i = 0; i < numObjects; i++) {
         id anObject = [array objectAtIndex:i];
         aList.append(convertObjcValueToValue(exec, &anObject, ObjcObjectType, rootObject));
@@ -354,16 +354,16 @@ static void getListFromNSArray(ExecState *exec, NSArray *array, RootObject* root
 {
     if (![self _isSafeScript])
         return nil;
-    
+
     ExecState* exec = [self _rootObject]->globalObject()->globalExec();
     ASSERT(!exec->hadException());
 
     JSLockHolder lock(exec);
-    
+
     JSC::JSValue returnValue = JSMainThreadExecState::evaluate(exec, makeSource(String(script)), JSC::JSValue(), 0);
 
     id resultObj = [WebScriptObject _convertValueToObjcValue:returnValue originRootObject:[self _originRootObject] rootObject:[self _rootObject]];
-    
+
     return resultObj;
 }
 
@@ -400,9 +400,9 @@ static void getListFromNSArray(ExecState *exec, NSArray *array, RootObject* root
         // [super valueForKey:key] which might throw an exception and bypass the JSLock destructor,
         // leaving the lock permanently held
         JSLockHolder lock(exec);
-        
+
         JSC::JSValue result = [self _imp]->get(exec, Identifier(exec, String(key)));
-        
+
         if (exec->hadException()) {
             addExceptionToConsole(exec);
             result = jsUndefined();
@@ -411,7 +411,7 @@ static void getListFromNSArray(ExecState *exec, NSArray *array, RootObject* root
 
         resultObj = [WebScriptObject _convertValueToObjcValue:result originRootObject:[self _originRootObject] rootObject:[self _rootObject]];
     }
-    
+
     if ([resultObj isKindOfClass:[WebUndefined class]])
         resultObj = [super valueForKey:key];    // defaults to throwing an exception
 
@@ -463,7 +463,7 @@ static void getListFromNSArray(ExecState *exec, NSArray *array, RootObject* root
 
     ExecState* exec = [self _rootObject]->globalObject()->globalExec();
     JSLockHolder lock(exec);
-    
+
     id result = convertValueToObjcValue(exec, [self _imp], ObjcObjectType).objectValue;
 
     NSString *description = [result description];
@@ -522,7 +522,7 @@ static void getListFromNSArray(ExecState *exec, NSArray *array, RootObject* root
     if (![self _isSafeScript])
         return 0;
     ExecState* exec = [self _rootObject]->globalObject()->globalExec();
-    
+
     JSLockHolder lock(exec);
     return toRef([self _imp]);
 }
@@ -575,8 +575,8 @@ static void getListFromNSArray(ExecState *exec, NSArray *array, RootObject* root
 {
     if (![self _isSafeScript])
         return 0;
-    
-    return [JSValue valueWithJSValueRef:[self JSObject] 
+
+    return [JSValue valueWithJSValueRef:[self JSObject]
                     inContext:[JSContext contextWithJSGlobalContextRef:[self _globalContextRef]]];
 }
 #endif
@@ -591,7 +591,7 @@ static void getListFromNSArray(ExecState *exec, NSArray *array, RootObject* root
 
 @implementation WebScriptObject (WebKitCocoaBindings)
 
-#if 0 
+#if 0
 
 // FIXME: We'd like to add this, but we can't do that until this issue is resolved:
 // http://bugs.webkit.org/show_bug.cgi?id=13129: presence of 'count' method on

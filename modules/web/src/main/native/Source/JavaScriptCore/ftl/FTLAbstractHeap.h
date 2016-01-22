@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef FTLAbstractHeap_h
@@ -59,16 +59,16 @@ public:
         , m_tbaaMetadata(0)
     {
     }
-    
+
     AbstractHeap(AbstractHeap* parent, const char* heapName)
         : m_parent(parent)
         , m_heapName(heapName)
         , m_tbaaMetadata(0)
     {
     }
-    
+
     bool isInitialized() const { return !!m_heapName; }
-    
+
     void initialize(AbstractHeap* parent, const char* heapName)
     {
         m_parent = parent;
@@ -80,13 +80,13 @@ public:
         ASSERT(isInitialized());
         return m_parent;
     }
-    
+
     const char* heapName() const
     {
         ASSERT(isInitialized());
         return m_heapName;
     }
-    
+
     LValue tbaaMetadata(const AbstractHeapRepository& repository) const
     {
         ASSERT(isInitialized());
@@ -94,14 +94,14 @@ public:
             return m_tbaaMetadata;
         return tbaaMetadataSlow(repository);
     }
-    
+
     void decorateInstruction(LValue instruction, const AbstractHeapRepository&) const;
 
 private:
     friend class AbstractHeapRepository;
-    
+
     LValue tbaaMetadataSlow(const AbstractHeapRepository&) const;
-    
+
     AbstractHeap* m_parent;
     const char* m_heapName;
     mutable LValue m_tbaaMetadata;
@@ -114,25 +114,25 @@ public:
     AbstractField()
     {
     }
-    
+
     AbstractField(AbstractHeap* parent, const char* heapName, ptrdiff_t offset)
         : AbstractHeap(parent, heapName)
         , m_offset(offset)
     {
     }
-    
+
     void initialize(AbstractHeap* parent, const char* heapName, ptrdiff_t offset)
     {
         AbstractHeap::initialize(parent, heapName);
         m_offset = offset;
     }
-    
+
     ptrdiff_t offset() const
     {
         ASSERT(isInitialized());
         return m_offset;
     }
-    
+
 private:
     ptrdiff_t m_offset;
 };
@@ -141,20 +141,20 @@ class IndexedAbstractHeap {
 public:
     IndexedAbstractHeap(LContext, AbstractHeap* parent, const char* heapName, ptrdiff_t offset, size_t elementSize);
     ~IndexedAbstractHeap();
-    
+
     const AbstractHeap& atAnyIndex() const { return m_heapForAnyIndex; }
-    
+
     const AbstractField& at(ptrdiff_t index)
     {
         if (static_cast<size_t>(index) < m_smallIndices.size())
             return returnInitialized(m_smallIndices[index], index);
         return atSlow(index);
     }
-    
+
     const AbstractField& operator[](ptrdiff_t index) { return at(index); }
-    
+
     TypedPointer baseIndex(Output& out, LValue base, LValue index, JSValue indexAsConstant = JSValue(), ptrdiff_t offset = 0);
-    
+
 private:
     const AbstractField& returnInitialized(AbstractField& field, ptrdiff_t index)
     {
@@ -173,13 +173,13 @@ private:
     LValue m_scaleTerm;
     bool m_canShift;
     std::array<AbstractField, 16> m_smallIndices;
-    
+
     struct WithoutZeroOrOneHashTraits : WTF::GenericHashTraits<ptrdiff_t> {
         static void constructDeletedValue(ptrdiff_t& slot) { slot = 1; }
         static bool isDeletedValue(ptrdiff_t value) { return value == 1; }
     };
     typedef HashMap<ptrdiff_t, std::unique_ptr<AbstractField>, WTF::IntHash<ptrdiff_t>, WithoutZeroOrOneHashTraits> MapType;
-    
+
     OwnPtr<MapType> m_largeIndices;
     Vector<CString, 16> m_largeIndexNames;
 };
@@ -193,14 +193,14 @@ class NumberedAbstractHeap {
 public:
     NumberedAbstractHeap(LContext, AbstractHeap* parent, const char* heapName);
     ~NumberedAbstractHeap();
-    
+
     const AbstractHeap& atAnyNumber() const { return m_indexedHeap.atAnyIndex(); }
-    
+
     const AbstractHeap& at(unsigned number) { return m_indexedHeap.at(number); }
     const AbstractHeap& operator[](unsigned number) { return at(number); }
 
 private:
-    
+
     // We use the fact that the indexed heap already has a superset of the
     // functionality we need.
     IndexedAbstractHeap m_indexedHeap;
@@ -210,14 +210,14 @@ class AbsoluteAbstractHeap {
 public:
     AbsoluteAbstractHeap(LContext, AbstractHeap* parent, const char* heapName);
     ~AbsoluteAbstractHeap();
-    
+
     const AbstractHeap& atAnyAddress() const { return m_indexedHeap.atAnyIndex(); }
-    
+
     const AbstractHeap& at(void* address)
     {
         return m_indexedHeap.at(bitwise_cast<ptrdiff_t>(address));
     }
-    
+
     const AbstractHeap& operator[](void* address) { return at(address); }
 
 private:

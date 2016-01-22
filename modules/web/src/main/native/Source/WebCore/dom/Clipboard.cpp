@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -85,7 +85,7 @@ Clipboard::~Clipboard()
         m_dragImageLoader->stopLoading(m_dragImage);
 #endif
 }
-    
+
 void Clipboard::setAccessPolicy(ClipboardAccessPolicy policy)
 {
     // Once the clipboard goes numb, it can never go back.
@@ -157,7 +157,7 @@ Vector<String> Clipboard::types() const
 
     return m_pasteboard->types();
 }
-    
+
 #if PLATFORM(JAVA)
 Vector<String> Clipboard::typesPrivate() const
 {

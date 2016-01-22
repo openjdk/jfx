@@ -129,7 +129,7 @@ import static com.sun.javafx.logging.PulseLogger.PULSE_LOGGING_ENABLED;
  * for more information.
  * <p>
  * A default headlight will be added to a scene that contains one or more
- * {@code Shape3D} nodes, but no light nodes. This light source is a 
+ * {@code Shape3D} nodes, but no light nodes. This light source is a
  * {@code Color.WHITE} {@code PointLight} placed at the camera position.
  *
  * <p>
@@ -2462,7 +2462,7 @@ public class Scene implements EventTarget {
                 cam.impl_updatePeer();
                 impl_peer.setCamera((NGCamera) cam.impl_getPeer());
             }
-            
+
             if (isDirty(DirtyBits.CURSOR_DIRTY)) {
                 mouseHandler.updateCursor(getCursor());
             }
@@ -3012,7 +3012,7 @@ public class Scene implements EventTarget {
                     DragboardHelper.setDataAccessRestriction(
                             dndGesture.dragboard, true);
                 }
-                
+
                 if (dndGesture.source == null) {
                     dndGesture.dragboard = null;
                     dndGesture = null;
@@ -3902,9 +3902,9 @@ public class Scene implements EventTarget {
             if (!onPulse) {
                 clickGenerator.postProcess(e, target, tmpTargetWrapper);
             }
-            
+
             // handle drag and drop
-            
+
             if (!PLATFORM_DRAG_GESTURE_INITIATION && !onPulse) {
                 if (Scene.this.dndGesture != null) {
                     if (!Scene.this.dndGesture.process(e, target.getEventTarget())) {
@@ -3912,7 +3912,7 @@ public class Scene implements EventTarget {
                     }
                 }
             }
-            
+
             Cursor cursor = target.getCursor();
             if (e.getEventType() != MouseEvent.MOUSE_EXITED) {
                 if (cursor == null && hover) {
@@ -4016,7 +4016,7 @@ public class Scene implements EventTarget {
                 currCursor = newCursor;
             }
         }
-        
+
         public void updateCursorFrame() {
             final CursorFrame newCursorFrame =
                     (currCursor != null)
@@ -6188,7 +6188,7 @@ public class Scene implements EventTarget {
             scene = s;
         }
     }
-    
+
     /*************************************************************************
     *                                                                        *
     *                                                                        *
@@ -6425,7 +6425,7 @@ public class Scene implements EventTarget {
                 if (node.accessible != null) {
                     /* This node has already been initialized to another scene.
                      * Note an accessible can be returned to the node before the
-                     * pulse if getAccessible() is called. In which case it must 
+                     * pulse if getAccessible() is called. In which case it must
                      * already being removed from accMap.
                      */
                     if (node.accessible == acc) {
@@ -6446,14 +6446,14 @@ public class Scene implements EventTarget {
             accMap.clear();
         }
     }
-    
+
     private Accessible accessible;
     Accessible getAccessible() {
         /*
          * The accessible for the Scene should never be
          * requested when the peer is not set.
          * This can only happen in a error case where a
-         * descender of this Scene was not disposed and 
+         * descender of this Scene was not disposed and
          * it still being used by the AT client and trying
          * to reach to the top level window.
          */

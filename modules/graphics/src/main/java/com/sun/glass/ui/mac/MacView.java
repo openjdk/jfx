@@ -36,7 +36,7 @@ import java.util.TreeSet;
  * MacOSX platform implementation class for View.
  */
 final class MacView extends View {
-    
+
     private native static void _initIDs();
     static {
         _initIDs();
@@ -64,7 +64,7 @@ final class MacView extends View {
     static int getMultiClickMaxY_impl() {
         return multiClickMaxY;
     }
- 
+
     @Override native protected int _getNativeFrameBuffer(long ptr);
     @Override native protected long _create(Map caps);
     @Override native protected int _getX(long ptr);
@@ -77,7 +77,7 @@ final class MacView extends View {
     @Override native protected boolean _enterFullscreen(long ptr, boolean animate, boolean keepRatio, boolean hideCursor);
     @Override native protected void _exitFullscreen(long ptr, boolean animate);
     @Override native protected void _enableInputMethodEvents(long ptr, boolean enable);
-    
+
     @Override protected void _uploadPixels(long ptr, Pixels pixels) {
         Buffer data = pixels.getPixels();
         if (data.isDirect() == true) {
@@ -101,16 +101,16 @@ final class MacView extends View {
     native void _uploadPixelsDirect(long viewPtr, Buffer pixels, int width, int height, float scale);
     native void _uploadPixelsByteArray(long viewPtr, byte[] pixels, int offset, int width, int height, float scale);
     native void _uploadPixelsIntArray(long viewPtr, int[] pixels, int offset, int width, int height, float scale);
-    
+
     @Override protected long _getNativeView(long ptr) {
         return ptr;
     }
-    
+
     native protected long _getNativeLayer(long ptr);
     public long getNativeLayer() {
         return _getNativeLayer(getNativeView());
     }
-    
+
     native protected int _getNativeRemoteLayerId(long ptr, String serverName);
     @Override public int getNativeRemoteLayerId(String serverName) {
         // used when run inside plugin
@@ -122,7 +122,7 @@ final class MacView extends View {
         // used when run inside plugin
         _hostRemoteLayerId(getNativeLayer(), nativeLayerId);
     }
-    
+
     protected void notifyInputMethodMac(String str, int attrib, int length,
                                             int cursor, int selStart, int selLength) {
         byte atts[] = new byte[1];

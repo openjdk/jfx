@@ -181,7 +181,7 @@ public class SliderControl extends GridPane {
                 effectPickerController.incrementRevision();
             }
         });
-        
+
         editor_textfield.setOnAction((ActionEvent e) -> {
             e.consume();
         });

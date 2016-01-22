@@ -67,9 +67,9 @@ private:
     }
 
     JS_EXPORT_PRIVATE void finishCreation(VM&);
-    
+
     static void visitChildren(JSCell*, SlotVisitor&);
-    
+
     WriteBarrier<MapData> m_mapData;
 };
 

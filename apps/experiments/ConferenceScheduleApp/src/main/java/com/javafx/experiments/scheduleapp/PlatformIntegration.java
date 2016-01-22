@@ -49,20 +49,20 @@ import javafx.util.Callback;
  * class giving access to platform integration
  */
 public class PlatformIntegration {
-    
+
     /**
      * Check if platform supports opening URLs in the system browser
-     * 
+     *
      * @return true if system can open URLs
      */
     public static boolean supportsSystemCalendar() {
-        return false; 
+        return false;
     }
-    
+
     /**
-     * Read all events from the system calendar between the given start and 
+     * Read all events from the system calendar between the given start and
      * end dates.
-     * 
+     *
      * @param start The start of range to find events from
      * @param end   The end of range to find events to
      * @return List of all events found
@@ -70,38 +70,38 @@ public class PlatformIntegration {
     public static List<Event> readEvents(List<Session> sessions, Date start, Date end) {
         throw new UnsupportedOperationException();
     }
-    
+
     /**
      * Write the given list of events into the system calendar.
-     * 
+     *
      * @param events List of events to save into calendar
      */
     public static void writeEvents(List<Event> events) {
         throw new UnsupportedOperationException();
     }
-    
+
     /**
      * Delete the given list of events from the system calendar.
-     * 
+     *
      * @param events List of events to delete
      */
     public static void deleteEvents(List<Event> events) {
         throw new UnsupportedOperationException();
     }
-    
+
     /**
      * Check if platform supports opening URLs in the system browser
-     * 
+     *
      * @return true if system can open URLs
      */
     public static boolean supportsOpeningUrls() {
-        return IS_MAC || IS_WINDOWS; 
+        return IS_MAC || IS_WINDOWS;
     }
-    
+
     /**
      * Open the given URL in the system web browser.
-     * 
-     * @param url 
+     *
+     * @param url
      */
     public static void openUrl(String url) {
         if (IS_MAC) {
@@ -120,48 +120,48 @@ public class PlatformIntegration {
             throw new UnsupportedOperationException();
         }
     }
-    
+
     /**
      * Get all tweets returned by the twitter API call with the given URL.
-     * 
+     *
      * @param url
-     * @param gotTweetCallBack 
+     * @param gotTweetCallBack
      */
     public static void getTweetsForQuery(String url, final Callback<Tweet[],Void> gotTweetCallBack) {
         TwitterJson.getTweetsForQuery(url, gotTweetCallBack);
     }
-    
+
     /**
      * Check if platform supports opening URLs in the system browser
-     * 
+     *
      * @return true if system can open URLs
      */
     public static boolean supportsSendingTweets() {
-        return false; 
+        return false;
     }
-    
+
     /**
      * Open a platform native send tweet dialog with the given initial text.
-     * 
+     *
      * @param text The initial text for tweet
      */
     public static void tweet(String text) {
         throw new UnsupportedOperationException();
     }
-    
+
     /**
      * Check if platform supports showing map routes
-     * 
+     *
      * @return true if system can show maps
      */
     public static boolean supportsMapRouting() {
-        return false; 
+        return false;
     }
-    
+
     /**
      * Open system maps application and show route from current location to the
      * given address.
-     * 
+     *
      * @param address The address to show route to
      */
     public static void openMapRoute(final String address) {

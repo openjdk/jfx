@@ -75,7 +75,7 @@ typedef void (* GstDirectControlBindingConvertGValue) (GstDirectControlBinding *
  */
 struct _GstDirectControlBinding {
   GstControlBinding parent;
-  
+
   /*< private >*/
   GstControlSource *cs;    /* GstControlSource for this property */
   GValue cur_value;

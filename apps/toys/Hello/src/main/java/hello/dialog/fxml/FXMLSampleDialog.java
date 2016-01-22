@@ -37,14 +37,14 @@ import javafx.scene.control.TextField;
 import javafx.stage.Stage;
 
 public class FXMLSampleDialog extends Application {
-    
+
     @FXML private DialogPane dialogPane;
     @FXML private ButtonType helpButtonType;
-    
+
     @FXML private TextField firstNameField;
     @FXML private TextField lastNameField;
     @FXML private TextField emailField;
-    
+
     public static void main(String[] args) {
         launch(args);
     }
@@ -52,7 +52,7 @@ public class FXMLSampleDialog extends Application {
     @Override public void start(Stage primaryStage) {
         showAndWait();
     }
-    
+
     public void showAndWait() {
         try {
             FXMLLoader.load(getClass().getResource("FXMLSampleDialog.fxml"));
@@ -60,18 +60,18 @@ public class FXMLSampleDialog extends Application {
             e.printStackTrace();
         }
     }
-    
+
     @FXML private void initialize() {
         Dialog<Person> dialog = new Dialog<>();
         dialog.setDialogPane(dialogPane);
-        
+
         dialog.setResultConverter(buttonType -> {
-            return buttonType == ButtonType.OK ? 
-                    new Person(firstNameField.getText(), 
-                               lastNameField.getText(), 
+            return buttonType == ButtonType.OK ?
+                    new Person(firstNameField.getText(),
+                               lastNameField.getText(),
                                emailField.getText()) : null;
         });
-        
+
         // add custom event handler to the help button
         Node helpButton = dialogPane.lookupButton(helpButtonType);
         ((Button)helpButton).addEventFilter(ActionEvent.ACTION, event -> {
@@ -79,7 +79,7 @@ public class FXMLSampleDialog extends Application {
             event.consume(); // this stops the hello.dialog from hiding
             // show stuff without dismissing hello.dialog
         });
-        
+
         // show hello.dialog and wait for result
         dialog.showAndWait().ifPresent(result -> System.out.println("Result is " + result));
     }

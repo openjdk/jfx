@@ -61,17 +61,17 @@ public:
     virtual String title() const override { return m_title; }
     virtual bool disabled() const override { return m_isDisabled; }
     virtual void setDisabled(bool) override;
-    
+
     PassRefPtr<CSSRuleList> cssRules();
     unsigned insertRule(const String& rule, unsigned index, ExceptionCode&);
     void deleteRule(unsigned index, ExceptionCode&);
-    
+
     // IE Extensions
     PassRefPtr<CSSRuleList> rules();
     int addRule(const String& selector, const String& style, int index, ExceptionCode&);
     int addRule(const String& selector, const String& style, ExceptionCode&);
     void removeRule(unsigned index, ExceptionCode& ec) { deleteRule(index, ec); }
-    
+
     // For CSSRuleList.
     unsigned length() const;
     CSSRule* item(unsigned index);
@@ -80,7 +80,7 @@ public:
     virtual CSSImportRule* ownerRule() const override { return m_ownerRule; }
     virtual URL baseURL() const override;
     virtual bool isLoading() const override;
-    
+
     void clearOwnerRule() { m_ownerRule = 0; }
     Document* ownerDocument() const;
     MediaQuerySet* mediaQueries() const { return m_mediaQueries.get(); }
@@ -108,7 +108,7 @@ public:
     void didMutateRules(RuleMutationType, WhetherContentsWereClonedForMutation, StyleRuleKeyframes* insertedKeyframesRule);
     void didMutateRuleFromCSSStyleDeclaration();
     void didMutate();
-    
+
     void clearChildRuleCSSOMWrappers();
     void reattachChildRuleCSSOMWrappers();
 
@@ -124,7 +124,7 @@ private:
     virtual String type() const override { return ASCIILiteral("text/css"); }
 
     bool canAccessRules() const;
-    
+
     Ref<StyleSheetContents> m_contents;
     bool m_isInlineStylesheet;
     bool m_isDisabled;

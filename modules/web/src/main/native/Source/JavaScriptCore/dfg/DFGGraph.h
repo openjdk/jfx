@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef DFGGraph_h
@@ -83,31 +83,31 @@ class Graph : public virtual Scannable {
 public:
     Graph(VM&, Plan&, LongLivedState&);
     ~Graph();
-    
+
     void changeChild(Edge& edge, Node* newNode)
     {
         edge.setNode(newNode);
     }
-    
+
     void changeEdge(Edge& edge, Edge newEdge)
     {
         edge = newEdge;
     }
-    
+
     void compareAndSwap(Edge& edge, Node* oldNode, Node* newNode)
     {
         if (edge.node() != oldNode)
             return;
         changeChild(edge, newNode);
     }
-    
+
     void compareAndSwap(Edge& edge, Edge oldEdge, Edge newEdge)
     {
         if (edge != oldEdge)
             return;
         changeEdge(edge, newEdge);
     }
-    
+
     void performSubstitution(Node* node)
     {
         if (node->flags() & NodeHasVarArgs) {
@@ -119,25 +119,25 @@ public:
             performSubstitutionForEdge(node->child3());
         }
     }
-    
+
     void performSubstitutionForEdge(Edge& child)
     {
         // Check if this operand is actually unused.
         if (!child)
             return;
-        
+
         // Check if there is any replacement.
         Node* replacement = child->misc.replacement;
         if (!replacement)
             return;
-        
+
         child.setNode(replacement);
-        
+
         // There is definitely a replacement. Assert that the replacement does not
         // have a replacement.
         ASSERT(!child->misc.replacement);
     }
-    
+
 #define DFG_DEFINE_ADD_NODE(templatePre, templatePost, typeParams, valueParamsComma, valueParams, valueArgs) \
     templatePre typeParams templatePost Node* addNode(SpeculatedType type valueParamsComma valueParams) \
     { \
@@ -149,7 +149,7 @@ public:
 #undef DFG_DEFINE_ADD_NODE
 
     void dethread();
-    
+
     void convertToConstant(Node* node, unsigned constantNumber)
     {
         if (node->op() == GetLocal)
@@ -158,7 +158,7 @@ public:
             ASSERT(!node->hasVariableAccessData(*this));
         node->convertToConstant(constantNumber);
     }
-    
+
     unsigned constantRegisterForConstant(JSValue value)
     {
         unsigned constantRegister;
@@ -174,7 +174,7 @@ public:
         }
         return constantRegister;
     }
-    
+
     void convertToConstant(Node* node, JSValue value)
     {
         if (value.isObject())
@@ -200,50 +200,50 @@ public:
     {
         return speculationFromValue(node->valueOfJSConstant(m_codeBlock));
     }
-    
+
     AddSpeculationMode addSpeculationMode(Node* add, bool leftShouldSpeculateInt32, bool rightShouldSpeculateInt32)
     {
         ASSERT(add->op() == ValueAdd || add->op() == ArithAdd || add->op() == ArithSub);
-        
+
         Node* left = add->child1().node();
         Node* right = add->child2().node();
-        
+
         if (left->hasConstant())
             return addImmediateShouldSpeculateInt32(add, rightShouldSpeculateInt32, left);
         if (right->hasConstant())
             return addImmediateShouldSpeculateInt32(add, leftShouldSpeculateInt32, right);
-        
+
         return (leftShouldSpeculateInt32 && rightShouldSpeculateInt32 && add->canSpeculateInt32()) ? SpeculateInt32 : DontSpeculateInt32;
     }
-    
+
     AddSpeculationMode valueAddSpeculationMode(Node* add)
     {
         return addSpeculationMode(add, add->child1()->shouldSpeculateInt32ExpectingDefined(), add->child2()->shouldSpeculateInt32ExpectingDefined());
     }
-    
+
     AddSpeculationMode arithAddSpeculationMode(Node* add)
     {
         return addSpeculationMode(add, add->child1()->shouldSpeculateInt32ForArithmetic(), add->child2()->shouldSpeculateInt32ForArithmetic());
     }
-    
+
     AddSpeculationMode addSpeculationMode(Node* add)
     {
         if (add->op() == ValueAdd)
             return valueAddSpeculationMode(add);
-        
+
         return arithAddSpeculationMode(add);
     }
-    
+
     bool addShouldSpeculateInt32(Node* add)
     {
         return addSpeculationMode(add) != DontSpeculateInt32;
     }
-    
+
     bool addShouldSpeculateMachineInt(Node* add)
     {
         if (!enableInt52())
             return false;
-        
+
         Node* left = add->child1().node();
         Node* right = add->child2().node();
 
@@ -255,25 +255,25 @@ public:
 
         return speculation && !hasExitSite(add, Int52Overflow);
     }
-    
+
     bool mulShouldSpeculateInt32(Node* mul)
     {
         ASSERT(mul->op() == ArithMul);
-        
+
         Node* left = mul->child1().node();
         Node* right = mul->child2().node();
-        
+
         return Node::shouldSpeculateInt32ForArithmetic(left, right)
             && mul->canSpeculateInt32();
     }
-    
+
     bool mulShouldSpeculateMachineInt(Node* mul)
     {
         ASSERT(mul->op() == ArithMul);
-        
+
         if (!enableInt52())
             return false;
-        
+
         Node* left = mul->child1().node();
         Node* right = mul->child2().node();
 
@@ -281,13 +281,13 @@ public:
             && mul->canSpeculateInt52()
             && !hasExitSite(mul, Int52Overflow);
     }
-    
+
     bool negateShouldSpeculateInt32(Node* negate)
     {
         ASSERT(negate->op() == ArithNegate);
         return negate->child1()->shouldSpeculateInt32ForArithmetic() && negate->canSpeculateInt32();
     }
-    
+
     bool negateShouldSpeculateMachineInt(Node* negate)
     {
         ASSERT(negate->op() == ArithNegate);
@@ -297,14 +297,14 @@ public:
             && !hasExitSite(negate, Int52Overflow)
             && negate->canSpeculateInt52();
     }
-    
+
     VirtualRegister bytecodeRegisterForArgument(CodeOrigin codeOrigin, int argument)
     {
         return VirtualRegister(
             codeOrigin.inlineCallFrame->stackOffset +
             baselineCodeBlockFor(codeOrigin)->argumentIndexAfterCapture(argument));
     }
-    
+
     // Helper methods to check nodes for constants.
     bool isConstant(Node* node)
     {
@@ -388,165 +388,165 @@ public:
     }
 
     static const char *opName(NodeType);
-    
+
     StructureSet* addStructureSet(const StructureSet& structureSet)
     {
         ASSERT(structureSet.size());
         m_structureSet.append(structureSet);
         return &m_structureSet.last();
     }
-    
+
     StructureTransitionData* addStructureTransitionData(const StructureTransitionData& structureTransitionData)
     {
         m_structureTransitionData.append(structureTransitionData);
         return &m_structureTransitionData.last();
     }
-    
+
     JSGlobalObject* globalObjectFor(CodeOrigin codeOrigin)
     {
         return m_codeBlock->globalObjectFor(codeOrigin);
     }
-    
+
     JSObject* globalThisObjectFor(CodeOrigin codeOrigin)
     {
         JSGlobalObject* object = globalObjectFor(codeOrigin);
         return jsCast<JSObject*>(object->methodTable()->toThis(object, object->globalExec(), NotStrictMode));
     }
-    
+
     ScriptExecutable* executableFor(InlineCallFrame* inlineCallFrame)
     {
         if (!inlineCallFrame)
             return m_codeBlock->ownerExecutable();
-        
+
         return inlineCallFrame->executable.get();
     }
-    
+
     ScriptExecutable* executableFor(const CodeOrigin& codeOrigin)
     {
         return executableFor(codeOrigin.inlineCallFrame);
     }
-    
+
     CodeBlock* baselineCodeBlockFor(InlineCallFrame* inlineCallFrame)
     {
         if (!inlineCallFrame)
             return m_profiledBlock;
         return baselineCodeBlockForInlineCallFrame(inlineCallFrame);
     }
-    
+
     CodeBlock* baselineCodeBlockFor(const CodeOrigin& codeOrigin)
     {
         return baselineCodeBlockForOriginAndBaselineCodeBlock(codeOrigin, m_profiledBlock);
     }
-    
+
     bool isStrictModeFor(CodeOrigin codeOrigin)
     {
         if (!codeOrigin.inlineCallFrame)
             return m_codeBlock->isStrictMode();
         return jsCast<FunctionExecutable*>(codeOrigin.inlineCallFrame->executable.get())->isStrictMode();
     }
-    
+
     ECMAMode ecmaModeFor(CodeOrigin codeOrigin)
     {
         return isStrictModeFor(codeOrigin) ? StrictMode : NotStrictMode;
     }
-    
+
     bool masqueradesAsUndefinedWatchpointIsStillValid(const CodeOrigin& codeOrigin)
     {
         return m_plan.watchpoints.isStillValid(
             globalObjectFor(codeOrigin)->masqueradesAsUndefinedWatchpoint());
     }
-    
+
     bool hasGlobalExitSite(const CodeOrigin& codeOrigin, ExitKind exitKind)
     {
         return baselineCodeBlockFor(codeOrigin)->hasExitSite(FrequentExitSite(exitKind));
     }
-    
+
     bool hasExitSite(const CodeOrigin& codeOrigin, ExitKind exitKind)
     {
         return baselineCodeBlockFor(codeOrigin)->hasExitSite(FrequentExitSite(codeOrigin.bytecodeIndex, exitKind));
     }
-    
+
     bool hasExitSite(Node* node, ExitKind exitKind)
     {
         return hasExitSite(node->origin.semantic, exitKind);
     }
-    
+
     VirtualRegister argumentsRegisterFor(InlineCallFrame* inlineCallFrame)
     {
         if (!inlineCallFrame)
             return m_profiledBlock->argumentsRegister();
-        
+
         return VirtualRegister(baselineCodeBlockForInlineCallFrame(
             inlineCallFrame)->argumentsRegister().offset() +
             inlineCallFrame->stackOffset);
     }
-    
+
     VirtualRegister argumentsRegisterFor(const CodeOrigin& codeOrigin)
     {
         return argumentsRegisterFor(codeOrigin.inlineCallFrame);
     }
-    
+
     VirtualRegister machineArgumentsRegisterFor(InlineCallFrame* inlineCallFrame)
     {
         if (!inlineCallFrame)
             return m_codeBlock->argumentsRegister();
-        
+
         return inlineCallFrame->argumentsRegister;
     }
-    
+
     VirtualRegister machineArgumentsRegisterFor(const CodeOrigin& codeOrigin)
     {
         return machineArgumentsRegisterFor(codeOrigin.inlineCallFrame);
     }
-    
+
     VirtualRegister uncheckedArgumentsRegisterFor(InlineCallFrame* inlineCallFrame)
     {
         if (!inlineCallFrame)
             return m_profiledBlock->uncheckedArgumentsRegister();
-        
+
         CodeBlock* codeBlock = baselineCodeBlockForInlineCallFrame(inlineCallFrame);
         if (!codeBlock->usesArguments())
             return VirtualRegister();
-        
+
         return VirtualRegister(codeBlock->argumentsRegister().offset() +
             inlineCallFrame->stackOffset);
     }
-    
+
     VirtualRegister uncheckedArgumentsRegisterFor(const CodeOrigin& codeOrigin)
     {
         return uncheckedArgumentsRegisterFor(codeOrigin.inlineCallFrame);
     }
-    
+
     VirtualRegister activationRegister()
     {
         return m_profiledBlock->activationRegister();
     }
-    
+
     VirtualRegister uncheckedActivationRegister()
     {
         return m_profiledBlock->uncheckedActivationRegister();
     }
-    
+
     VirtualRegister machineActivationRegister()
     {
         return m_profiledBlock->activationRegister();
     }
-    
+
     VirtualRegister uncheckedMachineActivationRegister()
     {
         return m_profiledBlock->uncheckedActivationRegister();
     }
-    
+
     ValueProfile* valueProfileFor(Node* node)
     {
         if (!node)
             return 0;
-        
+
         CodeBlock* profiledBlock = baselineCodeBlockFor(node->origin.semantic);
-        
+
         if (node->op() == GetArgument)
             return profiledBlock->valueProfileForArgument(node->local().toArgument());
-        
+
         if (node->hasLocal(*this)) {
             if (m_form == SSA)
                 return 0;
@@ -557,35 +557,35 @@ public:
                 return 0;
             return profiledBlock->valueProfileForArgument(argument);
         }
-        
+
         if (node->hasHeapPrediction())
             return profiledBlock->valueProfileForBytecodeOffset(node->origin.semantic.bytecodeIndex);
-        
+
         return 0;
     }
-    
+
     MethodOfGettingAValueProfile methodOfGettingAValueProfileFor(Node* node)
     {
         if (!node)
             return MethodOfGettingAValueProfile();
-        
+
         CodeBlock* profiledBlock = baselineCodeBlockFor(node->origin.semantic);
-        
+
         if (node->op() == GetLocal) {
             return MethodOfGettingAValueProfile::fromLazyOperand(
                 profiledBlock,
                 LazyOperandValueProfileKey(
                     node->origin.semantic.bytecodeIndex, node->local()));
         }
-        
+
         return MethodOfGettingAValueProfile(valueProfileFor(node));
     }
-    
+
     bool usesArguments() const
     {
         return m_codeBlock->usesArguments();
     }
-    
+
     BlockIndex numBlocks() const { return m_blocks.size(); }
     BasicBlock* block(BlockIndex blockIndex) const { return m_blocks[blockIndex].get(); }
     BasicBlock* lastBlock() const { return block(numBlocks() - 1); }
@@ -595,26 +595,26 @@ public:
         basicBlock->index = m_blocks.size();
         m_blocks.append(basicBlock);
     }
-    
+
     void killBlock(BlockIndex blockIndex)
     {
         m_blocks[blockIndex].clear();
     }
-    
+
     void killBlock(BasicBlock* basicBlock)
     {
         killBlock(basicBlock->index);
     }
-    
+
     void killBlockAndItsContents(BasicBlock*);
-    
+
     void killUnreachableBlocks();
-    
+
     bool isPredictedNumerical(Node* node)
     {
         return isNumerical(node->child1().useKind()) && isNumerical(node->child2().useKind());
     }
-    
+
     // Note that a 'true' return does not actually mean that the ByVal access clobbers nothing.
     // It really means that it will not clobber the entire world. It's still up to you to
     // carefully consider things like:
@@ -645,7 +645,7 @@ public:
             return true;
         }
     }
-    
+
     bool clobbersWorld(Node* node)
     {
         if (node->flags() & NodeClobbersWorld)
@@ -675,38 +675,38 @@ public:
             return true; // If by some oddity we hit this case in release build it's safer to have CSE assume the worst.
         }
     }
-    
+
     void determineReachability();
     void resetReachability();
-    
+
     void resetExitStates();
-    
+
     unsigned varArgNumChildren(Node* node)
     {
         ASSERT(node->flags() & NodeHasVarArgs);
         return node->numChildren();
     }
-    
+
     unsigned numChildren(Node* node)
     {
         if (node->flags() & NodeHasVarArgs)
             return varArgNumChildren(node);
         return AdjacencyList::Size;
     }
-    
+
     Edge& varArgChild(Node* node, unsigned index)
     {
         ASSERT(node->flags() & NodeHasVarArgs);
         return m_varArgChildren[node->firstChild() + index];
     }
-    
+
     Edge& child(Node* node, unsigned index)
     {
         if (node->flags() & NodeHasVarArgs)
             return varArgChild(node, index);
         return node->children.child(index);
     }
-    
+
     void voteNode(Node* node, unsigned ballot)
     {
         switch (node->op()) {
@@ -717,16 +717,16 @@ public:
         default:
             break;
         }
-        
+
         if (node->op() == GetLocal)
             node->variableAccessData()->vote(ballot);
     }
-    
+
     void voteNode(Edge edge, unsigned ballot)
     {
         voteNode(edge.node(), ballot);
     }
-    
+
     void voteChildren(Node* node, unsigned ballot)
     {
         if (node->flags() & NodeHasVarArgs) {
@@ -738,7 +738,7 @@ public:
             }
             return;
         }
-        
+
         if (!node->child1())
             return;
         voteNode(node->child1(), ballot);
@@ -749,7 +749,7 @@ public:
             return;
         voteNode(node->child3(), ballot);
     }
-    
+
     template<typename T> // T = Node* or Edge
     void substitute(BasicBlock& block, unsigned startIndexInBlock, T oldThing, T newThing)
     {
@@ -773,53 +773,53 @@ public:
             compareAndSwap(node->children.child3(), oldThing, newThing);
         }
     }
-    
+
     // Use this if you introduce a new GetLocal and you know that you introduced it *before*
     // any GetLocals in the basic block.
     // FIXME: it may be appropriate, in the future, to generalize this to handle GetLocals
     // introduced anywhere in the basic block.
     void substituteGetLocal(BasicBlock& block, unsigned startIndexInBlock, VariableAccessData* variableAccessData, Node* newGetLocal);
-    
+
     void invalidateCFG();
-    
+
     void clearReplacements();
     void initializeNodeOwners();
-    
+
     void getBlocksInDepthFirstOrder(Vector<BasicBlock*>& result);
-    
+
     Profiler::Compilation* compilation() { return m_plan.compilation.get(); }
-    
+
     DesiredIdentifiers& identifiers() { return m_plan.identifiers; }
     DesiredWatchpoints& watchpoints() { return m_plan.watchpoints; }
     DesiredStructureChains& chains() { return m_plan.chains; }
-    
+
     FullBytecodeLiveness& livenessFor(CodeBlock*);
     FullBytecodeLiveness& livenessFor(InlineCallFrame*);
     bool isLiveInBytecode(VirtualRegister, CodeOrigin);
-    
+
     unsigned frameRegisterCount();
     unsigned stackPointerOffset();
     unsigned requiredRegisterCountForExit();
     unsigned requiredRegisterCountForExecutionAndExit();
-    
+
     JSActivation* tryGetActivation(Node*);
     WriteBarrierBase<Unknown>* tryGetRegisters(Node*);
-    
+
     JSArrayBufferView* tryGetFoldableView(Node*);
     JSArrayBufferView* tryGetFoldableView(Node*, ArrayMode);
     JSArrayBufferView* tryGetFoldableViewForChild1(Node*);
-    
+
     virtual void visitChildren(SlotVisitor&) override;
-    
+
     VM& m_vm;
     Plan& m_plan;
     CodeBlock* m_codeBlock;
     CodeBlock* m_profiledBlock;
-    
+
     NodeAllocator& m_allocator;
 
     Operands<AbstractValue> m_mustHandleAbstractValues;
-    
+
     Vector< RefPtr<BasicBlock> , 8> m_blocks;
     Vector<Edge, 16> m_varArgChildren;
     Vector<StorageAccessData> m_storageAccessData;
@@ -844,49 +844,49 @@ public:
     unsigned m_parameterSlots;
     int m_machineCaptureStart;
     std::unique_ptr<SlowArgument[]> m_slowArguments;
-    
+
     OptimizationFixpointState m_fixpointState;
     GraphForm m_form;
     UnificationState m_unificationState;
     RefCountState m_refCountState;
 private:
-    
+
     void handleSuccessor(Vector<BasicBlock*, 16>& worklist, BasicBlock*, BasicBlock* successor);
     void addForDepthFirstSort(Vector<BasicBlock*>& result, Vector<BasicBlock*, 16>& worklist, HashSet<BasicBlock*>& seen, BasicBlock*);
-    
+
     AddSpeculationMode addImmediateShouldSpeculateInt32(Node* add, bool variableShouldSpeculateInt32, Node* immediate)
     {
         ASSERT(immediate->hasConstant());
-        
+
         JSValue immediateValue = immediate->valueOfJSConstant(m_codeBlock);
         if (!immediateValue.isNumber())
             return DontSpeculateInt32;
-        
+
         if (!variableShouldSpeculateInt32)
             return DontSpeculateInt32;
-        
+
         if (immediateValue.isInt32())
             return add->canSpeculateInt32() ? SpeculateInt32 : DontSpeculateInt32;
-        
+
         double doubleImmediate = immediateValue.asDouble();
         const double twoToThe48 = 281474976710656.0;
         if (doubleImmediate < -twoToThe48 || doubleImmediate > twoToThe48)
             return DontSpeculateInt32;
-        
+
         return bytecodeCanTruncateInteger(add->arithNodeFlags()) ? SpeculateInt32AndTruncateConstants : DontSpeculateInt32;
     }
-    
+
     bool mulImmediateShouldSpeculateInt32(Node* mul, Node* variable, Node* immediate)
     {
         ASSERT(immediate->hasConstant());
-        
+
         JSValue immediateValue = immediate->valueOfJSConstant(m_codeBlock);
         if (!immediateValue.isInt32())
             return false;
-        
+
         if (!variable->shouldSpeculateInt32ForArithmetic())
             return false;
-        
+
         int32_t intImmediate = immediateValue.asInt32();
         // Doubles have a 53 bit mantissa so we expect a multiplication of 2^31 (the highest
         // magnitude possible int32 value) and any value less than 2^22 to not result in any

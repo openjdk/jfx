@@ -43,7 +43,7 @@ public final class BackgroundPositionConverter extends StyleConverter<ParsedValu
     public static BackgroundPositionConverter getInstance() {
         return BACKGROUND_POSITION_CONVERTER;
     }
-    
+
     // Disallow instantiation
     private BackgroundPositionConverter() { }
 

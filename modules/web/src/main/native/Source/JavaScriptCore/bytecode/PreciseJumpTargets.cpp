@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -93,15 +93,15 @@ static void getJumpTargetsForBytecodeOffset(CodeBlock* codeBlock, Interpreter* i
 void computePreciseJumpTargets(CodeBlock* codeBlock, Vector<unsigned, 32>& out)
 {
     ASSERT(out.isEmpty());
-    
+
     // We will derive a superset of the jump targets that the code block thinks it has.
     // So, if the code block claims there are none, then we are done.
     if (!codeBlock->numberOfJumpTargets())
         return;
-    
+
     for (unsigned i = codeBlock->numberOfExceptionHandlers(); i--;)
         out.append(codeBlock->exceptionHandler(i).target);
-    
+
     Interpreter* interpreter = codeBlock->vm()->interpreter;
     Instruction* instructionsBegin = codeBlock->instructions().begin();
     unsigned instructionCount = codeBlock->instructions().size();
@@ -110,9 +110,9 @@ void computePreciseJumpTargets(CodeBlock* codeBlock, Vector<unsigned, 32>& out)
         getJumpTargetsForBytecodeOffset(codeBlock, interpreter, instructionsBegin, bytecodeOffset, out);
         bytecodeOffset += opcodeLengths[opcodeID];
     }
-    
+
     std::sort(out.begin(), out.end());
-    
+
     // We will have duplicates, and we must remove them.
     unsigned toIndex = 0;
     unsigned fromIndex = 0;

@@ -119,13 +119,13 @@ bool StyleAttributeMutationScope::s_shouldDeliver = false;
 } // namespace
 
 void PropertySetCSSStyleDeclaration::ref()
-{ 
+{
     m_propertySet->ref();
 }
 
 void PropertySetCSSStyleDeclaration::deref()
 {
-    m_propertySet->deref(); 
+    m_propertySet->deref();
 }
 
 unsigned PropertySetCSSStyleDeclaration::length() const
@@ -144,7 +144,7 @@ String PropertySetCSSStyleDeclaration::cssText() const
 {
     return m_propertySet->asText();
 }
-    
+
 void PropertySetCSSStyleDeclaration::setCssText(const String& text, ExceptionCode& ec)
 {
     StyleAttributeMutationScope mutationScope(this);
@@ -156,7 +156,7 @@ void PropertySetCSSStyleDeclaration::setCssText(const String& text, ExceptionCod
 
     didMutate(PropertyChanged);
 
-    mutationScope.enqueueMutationRecord();    
+    mutationScope.enqueueMutationRecord();
 }
 
 PassRefPtr<CSSValue> PropertySetCSSStyleDeclaration::getPropertyCSSValue(const String& propertyName)
@@ -248,12 +248,12 @@ PassRefPtr<CSSValue> PropertySetCSSStyleDeclaration::getPropertyCSSValueInternal
 }
 
 String PropertySetCSSStyleDeclaration::getPropertyValueInternal(CSSPropertyID propertyID)
-{ 
+{
     return m_propertySet->getPropertyValue(propertyID);
 }
 
 void PropertySetCSSStyleDeclaration::setPropertyInternal(CSSPropertyID propertyID, const String& value, bool important, ExceptionCode& ec)
-{ 
+{
     StyleAttributeMutationScope mutationScope(this);
     willMutate();
 
@@ -275,7 +275,7 @@ CSSValue* PropertySetCSSStyleDeclaration::cloneAndCacheForCSSOM(CSSValue* intern
     // FIXME: It is likely that the identity is not important for web compatibility and this code should be removed.
     if (!m_cssomCSSValueClones)
         m_cssomCSSValueClones = std::make_unique<HashMap<CSSValue*, RefPtr<CSSValue>>>();
-    
+
     RefPtr<CSSValue>& clonedValue = m_cssomCSSValueClones->add(internalValue, RefPtr<CSSValue>()).iterator->value;
     if (!clonedValue)
         clonedValue = internalValue->cloneForCSSOM();
@@ -283,7 +283,7 @@ CSSValue* PropertySetCSSStyleDeclaration::cloneAndCacheForCSSOM(CSSValue* intern
 }
 
 StyleSheetContents* PropertySetCSSStyleDeclaration::contextStyleSheet() const
-{ 
+{
     CSSStyleSheet* cssStyleSheet = parentStyleSheet();
     return cssStyleSheet ? &cssStyleSheet->contents() : 0;
 }
@@ -292,7 +292,7 @@ PassRef<MutableStyleProperties> PropertySetCSSStyleDeclaration::copyProperties()
 {
     return m_propertySet->mutableCopy();
 }
-    
+
 StyleRuleCSSStyleDeclaration::StyleRuleCSSStyleDeclaration(MutableStyleProperties& propertySet, CSSRule& parentRule)
     : PropertySetCSSStyleDeclaration(&propertySet)
     , m_refCount(1)
@@ -307,12 +307,12 @@ StyleRuleCSSStyleDeclaration::~StyleRuleCSSStyleDeclaration()
 }
 
 void StyleRuleCSSStyleDeclaration::ref()
-{ 
+{
     ++m_refCount;
 }
 
 void StyleRuleCSSStyleDeclaration::deref()
-{ 
+{
     ASSERT(m_refCount);
     if (!--m_refCount)
         delete this;

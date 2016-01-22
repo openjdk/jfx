@@ -51,20 +51,20 @@ import static com.sun.scenario.effect.compiler.backend.sw.sse.SSEBackend.*;
 /*
  * How should we translate function calls?  For now we will inline
  * everything, i.e. expand function bodies directly into the loop body.
- * 
+ *
  * The approach... For an ExprStmt or VarDecl (with initializer),
  * walk down the tree and see if there are any function calls.
  * For each function call, inline the function implementation prior
  * to the statement output.  The statement will then refer to
  * the output variables from the inlined function, rather than
  * the function call itself.
- * 
+ *
  * First declare the result variables using the name of the
  * called function and a field suffix, if needed; for example:
  *     float3 val = sample(...).rgb;
  * ==>
  *     float sample_res_r, sample_res_g, sample_res_b;
- * 
+ *
  * Inside the inlined function, assign parameter expressions to
  * temporary variables, using the name of the declared parameters
  * as a guide; for example:
@@ -76,7 +76,7 @@ import static com.sun.scenario.effect.compiler.backend.sw.sse.SSEBackend.*;
  *         float b_tmp = 1.0f;
  *         min_res = (a_tmp < b_tmp) a_tmp : b_tmp;
  *     }
- * 
+ *
  * In a future version, references to scalar variables and literals
  * could easily be inlined; for example:
  *     float val = min(foo+0.25*bar, 1.0);
@@ -86,12 +86,12 @@ import static com.sun.scenario.effect.compiler.backend.sw.sse.SSEBackend.*;
  *         float a_tmp = foo + 0.25f * bar;
  *         min_res = (a_tmp < 1.0f) a_tmp : 1.0f;
  *     }
- * 
+ *
  * Note that this system will likely produce less-than-efficient
  * Java code in many cases; for now we're just trying to get things
  * functional, and performance improvements will certainly come later.
- * 
- * 
+ *
+ *
  * Example #1:
  *     float3 val = scale * sample(baseImg, pos + off.xy).rgb;
  * ==>
@@ -108,7 +108,7 @@ import static com.sun.scenario.effect.compiler.backend.sw.sse.SSEBackend.*;
  *     float val_r = scale * sample_res_r;
  *     float val_g = scale * sample_res_g;
  *     float val_b = scale * sample_res_b;
- * 
+ *
  * Example #2:
  *     float val = scale * clamp(foo, 0.0, 1.0);
  * ==>

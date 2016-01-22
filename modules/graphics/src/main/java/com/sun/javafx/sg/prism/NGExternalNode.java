@@ -36,34 +36,34 @@ import com.sun.prism.ResourceFactory;
 import com.sun.prism.Texture;
 
 public class NGExternalNode extends NGNode {
-    
+
     private Texture dsttexture;
 
     private BufferData bufferData;
-    private final AtomicReference<RenderData> renderData = new AtomicReference<RenderData>(null);    
+    private final AtomicReference<RenderData> renderData = new AtomicReference<RenderData>(null);
     private RenderData rd; // last rendered data
 
     private volatile ReentrantLock bufferLock;
 
     @Override
     protected void renderContent(Graphics g) {
-        
+
         RenderData curRenderData = renderData.getAndSet(null);
-        
+
         if (curRenderData != null) {
             rd = curRenderData;
         }
         if (rd == null) return;
-        
+
         int x = rd.bdata.srcbounds.x;
         int y = rd.bdata.srcbounds.y;
         int w = rd.bdata.srcbounds.width;
         int h = rd.bdata.srcbounds.height;
-        
+
         if (dsttexture != null) {
-            
+
             dsttexture.lock();
-            
+
             if (dsttexture.isSurfaceLost() ||
                (dsttexture.getContentWidth() != w) ||
                (dsttexture.getContentHeight() != h))
@@ -78,7 +78,7 @@ public class NGExternalNode extends NGNode {
         }
         if (dsttexture == null) {
             return;
-        }        
+        }
         try {
             if (curRenderData != null) {
                 bufferLock.lock();
@@ -97,20 +97,20 @@ public class NGExternalNode extends NGNode {
                     g.clearQuad(0, 0, rd.bdata.usrwidth, rd.bdata.usrheight);
                 }
             }
-            
+
             g.drawTexture(dsttexture,
                           0, 0, rd.bdata.usrwidth, rd.bdata.usrheight, // dst
                           0, 0, w, h); // src
-        } finally {        
+        } finally {
             dsttexture.unlock();
         }
     }
-    
+
     private Texture createTexture(Graphics g, RenderData rd) {
         ResourceFactory factory = g.getResourceFactory();
         if (!factory.isDeviceReady()) {
             return null;
-        }               
+        }
         Texture txt = factory.createTexture(PixelFormat.INT_ARGB_PRE,
                                             Texture.Usage.DYNAMIC,
                                             Texture.WrapMode.CLAMP_NOT_NEEDED,
@@ -118,7 +118,7 @@ public class NGExternalNode extends NGNode {
         if (txt != null) {
             txt.contentsUseful();
         } else {
-            System.err.println("NGExternalNode: failed to create a texture");            
+            System.err.println("NGExternalNode: failed to create a texture");
         }
         return txt;
     }
@@ -136,14 +136,14 @@ public class NGExternalNode extends NGNode {
 
         // source image physical bounds
         final Rectangle srcbounds;
-        
+
         // source image user space (logical) size
         final float usrwidth;
         final float usrheight;
-        
+
         // source image scale factor
         final int scale;
-        
+
         BufferData(Buffer srcbuffer, int linestride,
                    int x, int y, int width, int height,
                    float usrWidth, float usrHeight,
@@ -156,15 +156,15 @@ public class NGExternalNode extends NGNode {
             this.usrwidth = usrWidth;
             this.usrheight = usrHeight;
         }
-        
+
         Rectangle scale(Rectangle r) {
             r.x *= this.scale;
             r.y *= this.scale;
             r.width *= this.scale;
             r.height *= this.scale;
             return r;
-        }        
-        
+        }
+
         BufferData copyWithBounds(int x, int y, int width, int height,
                                   float usrWidth, float usrHeight)
         {
@@ -173,19 +173,19 @@ public class NGExternalNode extends NGNode {
                                   usrWidth, usrHeight, this.scale);
         }
     }
-    
+
     private static class RenderData {
         final BufferData bdata;
         final Rectangle dirtyRect;
         final boolean clearTarget;
-        
+
         RenderData(BufferData bdata,
                    int dirtyX, int dirtyY, int dirtyWidth, int dirtyHeight,
                    boolean clearTarget)
         {
             this(bdata, dirtyX, dirtyY, dirtyWidth, dirtyHeight, clearTarget, true);
         }
-        
+
         RenderData(BufferData bdata,
                    int dirtyX, int dirtyY, int dirtyWidth, int dirtyHeight,
                    boolean clearTarget, boolean applyScale)
@@ -198,14 +198,14 @@ public class NGExternalNode extends NGNode {
         }
 
         RenderData copyAddDirtyRect(int dirtyX, int dirtyY, int dirtyWidth, int dirtyHeight) {
-            
+
             Rectangle r = bdata.scale(new Rectangle(dirtyX, dirtyY, dirtyWidth, dirtyHeight));
             r.add(this.dirtyRect);
             return new RenderData(this.bdata, r.x, r.y, r.width, r.height,
                                   this.clearTarget, false);
         }
-    }    
-    
+    }
+
     public void setImageBuffer(Buffer buffer,
                                int x, int y, int width, int height,
                                float usrWidth, float usrHeight,
@@ -219,9 +219,9 @@ public class NGExternalNode extends NGNode {
     public void setImageBounds(final int x, final int y, final int width, final int height,
                                final float usrWidth, final float usrHeight)
     {
-        
+
         final boolean shrinked = width < bufferData.usrwidth || height < bufferData.usrheight;
-        
+
         bufferData = bufferData.copyWithBounds(x, y, width, height, usrWidth, usrHeight);
         renderData.updateAndGet(prev -> {
             boolean clearTarget = (prev != null ? prev.clearTarget : false);
@@ -240,11 +240,11 @@ public class NGExternalNode extends NGNode {
             }
         });
     }
-    
+
     public void markContentDirty() {
         visualsChanged();
     }
-    
+
     @Override
     protected boolean hasOverlappingContents() {  return false; }
 }

@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef PolymorphicAccessStructureList_h
@@ -63,7 +63,7 @@ public:
             isDirect = _isDirect;
             count = 0;
         }
-        
+
         void set(VM& vm, JSCell* owner, PassRefPtr<JITStubRoutine> _stubRoutine, Structure* _base, StructureChain* _chain, bool _isDirect, unsigned _count)
         {
             stubRoutine = _stubRoutine;
@@ -73,11 +73,11 @@ public:
             count = _count;
         }
     } list[POLYMORPHIC_LIST_CACHE_SIZE];
-    
+
     PolymorphicAccessStructureList()
     {
     }
-    
+
     PolymorphicAccessStructureList(VM& vm, JSCell* owner, PassRefPtr<JITStubRoutine> stubRoutine, Structure* firstBase, bool isDirect)
     {
         list[0].set(vm, owner, stubRoutine, firstBase, isDirect);
@@ -94,13 +94,13 @@ public:
             PolymorphicStubInfo& info = list[i];
             if (!info.base)
                 continue;
-                
+
             if (!Heap::isMarked(info.base.get()))
                 return false;
             if (info.chain && !Heap::isMarked(info.chain.get()))
                 return false;
         }
-            
+
         return true;
     }
 };

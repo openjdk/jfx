@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -67,13 +67,13 @@ DrawingBuffer::DrawingBuffer(GraphicsContext3D* context,
         clear();
         return;
     }
-        
+
     // Create the WebGLLayer
     BEGIN_BLOCK_OBJC_EXCEPTIONS
         m_platformLayer = adoptNS([[WebGLLayer alloc] initWithGraphicsContext3D:m_context.get()]);
 #ifndef NDEBUG
         [m_platformLayer.get() setName:@"DrawingBuffer Layer"];
-#endif    
+#endif
     END_BLOCK_OBJC_EXCEPTIONS
 
     // create a texture to render into
@@ -84,7 +84,7 @@ DrawingBuffer::DrawingBuffer(GraphicsContext3D* context,
     context->texParameteri(GraphicsContext3D::TEXTURE_2D, GraphicsContext3D::TEXTURE_WRAP_S, GraphicsContext3D::CLAMP_TO_EDGE);
     context->texParameteri(GraphicsContext3D::TEXTURE_2D, GraphicsContext3D::TEXTURE_WRAP_T, GraphicsContext3D::CLAMP_TO_EDGE);
     context->bindTexture(GraphicsContext3D::TEXTURE_2D, 0);
-    
+
     createSecondaryBuffers();
     reset(size);
 }

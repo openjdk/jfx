@@ -137,7 +137,7 @@ gboolean        gst_plugin_feature_check_version        (GstPluginFeature *featu
                                                          guint             min_minor,
                                                          guint             min_micro);
 gint            gst_plugin_feature_rank_compare_func    (gconstpointer p1,
-							 gconstpointer p2);
+                             gconstpointer p2);
 
 G_END_DECLS
 

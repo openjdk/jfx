@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef JITDisassembler_h
@@ -44,7 +44,7 @@ class JITDisassembler {
 public:
     JITDisassembler(CodeBlock*);
     ~JITDisassembler();
-    
+
     void setStartOfCode(MacroAssembler::Label label) { m_startOfCode = label; }
     void setForBytecodeMainPath(unsigned bytecodeIndex, MacroAssembler::Label label)
     {
@@ -56,7 +56,7 @@ public:
     }
     void setEndOfSlowPath(MacroAssembler::Label label) { m_endOfSlowPath = label; }
     void setEndOfCode(MacroAssembler::Label label) { m_endOfCode = label; }
-    
+
     void dump(LinkBuffer&);
     void dump(PrintStream&, LinkBuffer&);
     void reportToProfiler(Profiler::Compilation*, LinkBuffer&);
@@ -64,18 +64,18 @@ public:
 private:
     void dumpHeader(PrintStream&, LinkBuffer&);
     MacroAssembler::Label firstSlowLabel();
-    
+
     struct DumpedOp {
         unsigned index;
         CString disassembly;
     };
     Vector<DumpedOp> dumpVectorForInstructions(LinkBuffer&, const char* prefix, Vector<MacroAssembler::Label>& labels, MacroAssembler::Label endLabel);
-        
+
     void dumpForInstructions(PrintStream&, LinkBuffer&, const char* prefix, Vector<MacroAssembler::Label>& labels, MacroAssembler::Label endLabel);
     void reportInstructions(Profiler::Compilation*, LinkBuffer&, const char* prefix, Vector<MacroAssembler::Label>& labels, MacroAssembler::Label endLabel);
-    
+
     void dumpDisassembly(PrintStream&, LinkBuffer&, MacroAssembler::Label from, MacroAssembler::Label to);
-    
+
     CodeBlock* m_codeBlock;
     MacroAssembler::Label m_startOfCode;
     Vector<MacroAssembler::Label> m_labelForBytecodeIndexInMainPath;

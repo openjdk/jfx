@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef StringPrintStream_h
@@ -36,16 +36,16 @@ class StringPrintStream : public PrintStream {
 public:
     WTF_EXPORT_PRIVATE StringPrintStream();
     WTF_EXPORT_PRIVATE virtual ~StringPrintStream();
-    
+
     virtual void vprintf(const char* format, va_list) override WTF_ATTRIBUTE_PRINTF(2, 0);
-    
+
     WTF_EXPORT_PRIVATE CString toCString();
     WTF_EXPORT_PRIVATE String toString();
     WTF_EXPORT_PRIVATE void reset();
-    
+
 private:
     void increaseSize(size_t);
-    
+
     char* m_buffer;
     size_t m_next;
     size_t m_size;

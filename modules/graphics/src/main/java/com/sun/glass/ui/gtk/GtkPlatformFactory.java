@@ -40,7 +40,7 @@ public final class GtkPlatformFactory extends PlatformFactory {
     @Override public Application createApplication(){
         return new GtkApplication();
     }
-    
+
     @Override public MenuBarDelegate createMenuBarDelegate(MenuBar menubar) {
         return new GtkMenuBarDelegate();
     }

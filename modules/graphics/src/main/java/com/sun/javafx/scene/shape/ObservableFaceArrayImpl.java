@@ -28,13 +28,13 @@ import com.sun.javafx.collections.ObservableIntegerArrayImpl;
 import javafx.scene.shape.ObservableFaceArray;
 
 public class ObservableFaceArrayImpl extends ObservableIntegerArrayImpl implements ObservableFaceArray {
-    
+
     /**
      * Creates empty observable Face array
      */
     public ObservableFaceArrayImpl() {
     }
-    
+
     /**
      * Creates observable Face array with copy of given initial values
      * @param elements initial values to copy to observable integer array

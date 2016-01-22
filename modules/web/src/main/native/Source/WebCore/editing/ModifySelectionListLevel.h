@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef ModifySelectionListLevel_h
@@ -36,13 +36,13 @@ namespace WebCore {
 class ModifySelectionListLevelCommand : public CompositeEditCommand {
 protected:
     explicit ModifySelectionListLevelCommand(Document&);
-    
+
     void appendSiblingNodeRange(Node* startNode, Node* endNode, Element* newParent);
     void insertSiblingNodeRangeBefore(Node* startNode, Node* endNode, Node* refNode);
     void insertSiblingNodeRangeAfter(Node* startNode, Node* endNode, Node* refNode);
 
 private:
-    virtual bool preservesTypingStyle() const;    
+    virtual bool preservesTypingStyle() const;
 };
 
 // IncreaseSelectionListLevelCommand moves the selected list items one level deeper.
@@ -61,7 +61,7 @@ private:
     {
         return adoptRef(new IncreaseSelectionListLevelCommand(document, type));
     }
-    
+
     IncreaseSelectionListLevelCommand(Document&, Type);
 
     virtual void doApply();

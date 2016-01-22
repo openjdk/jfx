@@ -52,7 +52,7 @@ float4 sampleGradient(float dist)
     // we offset by half a texel so that we find the linearly interpolated
     // color between the two texel centers of interest
     float tc = HALF_TEXEL_X + (FULL_TEXEL_X * relFraction);
-    return sample(colors, float2(tc, offset)); 
+    return sample(colors, float2(tc, offset));
 }
 
 float4 cycleNone(float dist)

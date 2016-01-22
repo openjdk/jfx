@@ -197,7 +197,7 @@ static BOOL shouldRoundScrollOrigin(WebDynamicScrollBarsView *view)
     Frame* frame = core([(WebHTMLView *)documentView _frame]);
     if (!frame)
         return NO;
-    
+
     FrameView *frameView = frame->view();
     if (!frameView)
         return NO;
@@ -340,7 +340,7 @@ static const unsigned cMaxUpdateScrollbarsPass = 2;
     NSSize documentSize = [documentView frame].size;
     NSSize visibleSize = [self documentVisibleRect].size;
     NSSize frameSize = [self frame].size;
-    
+
     // When in HiDPI with a scale factor > 1, the visibleSize and frameSize may be non-integral values,
     // while the documentSize (set by WebCore) will be integral.  Round up the non-integral sizes so that
     // the mismatch won't cause unwanted scrollbars to appear.  This can result in slightly cut off content,
@@ -480,11 +480,11 @@ static const unsigned cMaxUpdateScrollbarsPass = 2;
     [self setScrollingModes:[self horizontalScrollingMode] vertical:verticalMode andLock:lock];
 }
 
-// Mail uses this method, so we cannot remove it. 
-- (void)setVerticalScrollingMode:(ScrollbarMode)verticalMode 
-{ 
-    [self setScrollingModes:[self horizontalScrollingMode] vertical:verticalMode andLock:NO]; 
-} 
+// Mail uses this method, so we cannot remove it.
+- (void)setVerticalScrollingMode:(ScrollbarMode)verticalMode
+{
+    [self setScrollingModes:[self horizontalScrollingMode] vertical:verticalMode andLock:NO];
+}
 
 - (void)setScrollingModes:(ScrollbarMode)horizontalMode vertical:(ScrollbarMode)verticalMode andLock:(BOOL)lock
 {
@@ -588,7 +588,7 @@ static const unsigned cMaxUpdateScrollbarsPass = 2;
 }
 
 // This object will be the parent of the web area in WK1, so it should not be ignored.
-- (BOOL)accessibilityIsIgnored 
+- (BOOL)accessibilityIsIgnored
 {
     return NO;
 }

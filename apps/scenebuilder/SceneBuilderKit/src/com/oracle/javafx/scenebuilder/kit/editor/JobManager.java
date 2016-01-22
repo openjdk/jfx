@@ -40,44 +40,44 @@ import javafx.beans.property.ReadOnlyIntegerProperty;
 import javafx.beans.property.SimpleIntegerProperty;
 
 /**
- * @treatAsPrivate 
+ * @treatAsPrivate
  */
 public class JobManager {
-    
+
     private final EditorController editorController;
     private final int undoStackMaxSize;
     private final List<Job> undoStack = new ArrayList<>();
     private final List<Job> redoStack = new ArrayList<>();
     private final SimpleIntegerProperty revision = new SimpleIntegerProperty();
     private boolean lock;
-    
-    
+
+
     JobManager(EditorController editorController, int undoStackMaxSize) {
         assert editorController != null;
         assert undoStackMaxSize >= 1;
         this.editorController = editorController;
         this.undoStackMaxSize = undoStackMaxSize;
     }
-    
-    
+
+
     public List<Job> getUndoStack() {
         return Collections.unmodifiableList(undoStack);
     }
-    
+
     public List<Job> getRedoStack() {
         return Collections.unmodifiableList(redoStack);
     }
-    
+
     public void push(Job job) {
         assert job != null;
         assert job.getEditorController() == editorController;
         assert job.isExecutable();
-        
+
         if (lock) {
             // Method is called from a revision property listener
             throw new IllegalStateException("Pushing jobs from another job or a job manager listener is forbidden"); //NOI18N
         }
-        
+
         final Job fixJob = new UpdateReferencesJob(job);
         executeJob(fixJob);
         undoStack.add(0, fixJob);
@@ -86,24 +86,24 @@ public class JobManager {
         }
         redoStack.clear();
         incrementRevision();
-        
+
     }
-    
+
     public void clear() {
         if (lock) {
             // Method is called from a revision property listener
             throw new IllegalStateException("Clearing job stack from another job or a job manager listener is forbidden"); //NOI18N
         }
-        
+
         undoStack.clear();
         redoStack.clear();
         // We don't change the revision.
     }
-    
+
     public boolean canUndo() {
         return undoStack.isEmpty() == false;
     }
-    
+
     public String getUndoDescription() {
         final String result;
         if (canUndo()) {
@@ -113,26 +113,26 @@ public class JobManager {
         }
         return result;
     }
-    
+
     public void undo() {
         assert canUndo();
-        
+
         if (lock) {
             // Method is called from a revision property listener
             throw new IllegalStateException("Undoing jobs from another job or a job manager listener is forbidden"); //NOI18N
         }
-        
+
         final Job job = undoStack.get(0);
         undoJob(job);
         undoStack.remove(0);
         redoStack.add(0, job);
         incrementRevision();
     }
-    
+
     public boolean canRedo() {
         return redoStack.isEmpty() == false;
     }
-    
+
     public String getRedoDescription() {
         final String result;
         if (canRedo()) {
@@ -142,35 +142,35 @@ public class JobManager {
         }
         return result;
     }
-    
+
     public void redo() {
         assert canRedo();
-        
+
         if (lock) {
             // Method is called from a revision property listener
             throw new IllegalStateException("Redoing jobs from another job or a job manager listener is forbidden"); //NOI18N
         }
-        
+
         final Job job = redoStack.get(0);
         redoJob(job);
         redoStack.remove(0);
         undoStack.add(0, job);
         incrementRevision();
     }
-    
+
     /**
      * Returns the property holding the revision number of this job manager.
      * Job manager adds +1 to this number each time a job is done or undone.
-     * 
+     *
      * @return the property holding the revision number of this job manager.
      */
     public ReadOnlyIntegerProperty revisionProperty() {
         return revision;
     }
-    
+
     /**
      * Returns the job which has just been processed and which can be undone.
-     * 
+     *
      * @return the current job, which is the one at index 0 in the undo stack.
      * It can be null.
      */
@@ -181,12 +181,12 @@ public class JobManager {
             return null;
         }
     }
-    
-    
+
+
     /*
      * Private
      */
-    
+
     private void executeJob(Job job) {
         lock = true;
         try {
@@ -195,8 +195,8 @@ public class JobManager {
             lock = false;
         }
     }
-    
-    
+
+
     private void undoJob(Job job) {
         lock = true;
         try {
@@ -205,8 +205,8 @@ public class JobManager {
             lock = false;
         }
     }
-    
-    
+
+
     private void redoJob(Job job) {
         lock = true;
         try {
@@ -215,8 +215,8 @@ public class JobManager {
             lock = false;
         }
     }
-    
-    
+
+
     private void incrementRevision() {
         lock = true;
         try {

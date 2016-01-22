@@ -28,24 +28,24 @@ package com.sun.pisces;
 public final class GradientColorMap {
         /**
          * @defgroup CycleMethods Gradient cycle methods
-         * Gradient cycle methods. Specifies wheteher to repeat gradient fill in cycle 
+         * Gradient cycle methods. Specifies wheteher to repeat gradient fill in cycle
          * or not. We will explain possible methods on linear gradient behaviour.
-         * @see setLinearGradient, setRadialGradient  
+         * @see setLinearGradient, setRadialGradient
          * @def CYCLE_NONE
-         * @ingroup CycleMethods 
-         * Gradient without repetition. Imagine linear gradient from blue to red color.
-         * Color of start point (line perpendicular to vector(start,end)) will be blue. 
-         * Color of end point (line) will be red. Between these two points (lines), 
-         * there will be smooth color gradient. Outside gradient area everything will be
-         * blue or red when CYCLE_NONE used. It works similar way with radial gradient.       
-         * @def CYCLE_REPEAT 
          * @ingroup CycleMethods
-         * Gradient with repetition. Gradient fill is repeated with period given by 
+         * Gradient without repetition. Imagine linear gradient from blue to red color.
+         * Color of start point (line perpendicular to vector(start,end)) will be blue.
+         * Color of end point (line) will be red. Between these two points (lines),
+         * there will be smooth color gradient. Outside gradient area everything will be
+         * blue or red when CYCLE_NONE used. It works similar way with radial gradient.
+         * @def CYCLE_REPEAT
+         * @ingroup CycleMethods
+         * Gradient with repetition. Gradient fill is repeated with period given by
          * start,end distance.
          * @def CYCLE_REFLECT
-         * @ingroup CycleMethods 
-         * Gradient is repeated. Start and end color in new cycle are swaped. Gradient 
-         * fill is repeated with period given by start,end distance. You can imagine 
+         * @ingroup CycleMethods
+         * Gradient is repeated. Start and end color in new cycle are swaped. Gradient
+         * fill is repeated with period given by start,end distance. You can imagine
          * this as if you'd put mirror to end point (line).
          */
     public static final int CYCLE_NONE = 0;
@@ -62,7 +62,7 @@ public final class GradientColorMap {
 
     GradientColorMap(int[] fractions, int[] rgba, int cycleMethod) {
         this.cycleMethod = cycleMethod;
-    
+
         int numStops = fractions.length;
         if (fractions[0] != 0) {
             int[] nfractions = new int[numStops + 1];
@@ -118,7 +118,7 @@ public final class GradientColorMap {
                 frac = 0x1ffff - frac;
             }
             return frac;
-            
+
         default:
             throw new RuntimeException("Unknown cycle method: " + cycleMethod);
         }
@@ -135,7 +135,7 @@ public final class GradientColorMap {
         return 1;
     }
 
-    private void accumColor(int frac, 
+    private void accumColor(int frac,
                             int[] r, int[] g, int[] b, int[] a,
                             int[] red, int[] green, int[] blue, int[] alpha) {
         int stop = findStop(frac);
@@ -195,16 +195,16 @@ public final class GradientColorMap {
             g[i] = (rgba[i] >>  8) & 0xff;
             b[i] =  rgba[i]        & 0xff;
         }
-        
+
         int lastColorIndex = RAMP_SIZE - 1;
         int shift =  (16 - LG_RAMP_SIZE);
-        
+
         colors[0] = rgba[0];
         colors[lastColorIndex] = rgba[numStops - 1];
 
         for (int i = 1; i < lastColorIndex; i++) {
             red[0] = green[0] = blue[0] = alpha[0] = 0;
-            colors[i] = getColorAA(i << shift, 
+            colors[i] = getColorAA(i << shift,
                                    r, g, b, a,
                                    red, green, blue, alpha);
         }

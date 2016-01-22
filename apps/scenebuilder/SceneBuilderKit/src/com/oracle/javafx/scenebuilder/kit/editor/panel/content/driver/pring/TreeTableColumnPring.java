@@ -43,27 +43,27 @@ import javafx.scene.control.TreeTableView;
 
 /**
  *
- * 
+ *
  */
 public class TreeTableColumnPring extends AbstractGenericPring<Object> {
 
     private final TreeTableViewDesignInfoX tableViewDesignInfo
             = new TreeTableViewDesignInfoX();
-    
+
     public TreeTableColumnPring(ContentPanelController contentPanelController, FXOMInstance fxomInstance) {
         super(contentPanelController, fxomInstance, Object.class);
         assert fxomInstance.getSceneGraphObject() instanceof TreeTableColumn;
     }
-    
+
     public FXOMInstance getFxomInstance() {
         return (FXOMInstance) getFxomObject();
     }
 
-    
+
     /*
      * AbstractGenericPring
      */
-    
+
     @Override
     public Bounds getSceneGraphObjectBounds() {
         return tableViewDesignInfo.getColumnBounds(getTreeTableColumn());
@@ -91,14 +91,14 @@ public class TreeTableColumnPring extends AbstractGenericPring<Object> {
     @Override
     public AbstractGesture findGesture(Node node) {
         final AbstractGesture result;
-        
+
         if (node == ringPath) {
-            result = new SelectWithPringGesture(getContentPanelController(), 
+            result = new SelectWithPringGesture(getContentPanelController(),
                     getFxomInstance());
         } else {
             result = null;
         }
-        
+
         return result;
     }
 
@@ -106,7 +106,7 @@ public class TreeTableColumnPring extends AbstractGenericPring<Object> {
     /*
      * Private
      */
-    
+
     private TreeTableColumn<?,?> getTreeTableColumn() {
         assert getSceneGraphObject() instanceof TreeTableColumn;
         return (TreeTableColumn<?,?>) getSceneGraphObject();

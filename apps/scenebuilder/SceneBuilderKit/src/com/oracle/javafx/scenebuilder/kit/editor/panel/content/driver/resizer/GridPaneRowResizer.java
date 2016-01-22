@@ -46,7 +46,7 @@ import javafx.scene.layout.Region;
  *
  */
 public class GridPaneRowResizer {
-    
+
     private static final PropertyName minHeightName     = new PropertyName("minHeight"); //NOI18N
     private static final PropertyName prefHeightName    = new PropertyName("prefHeight"); //NOI18N
     private static final PropertyName maxHeightName     = new PropertyName("maxHeight"); //NOI18N
@@ -63,16 +63,16 @@ public class GridPaneRowResizer {
         assert gridPane != null;
         assert rowIndex >= 0;
         assert rowIndex+1 < gridPane.getRowConstraints().size();
-        
+
         this.gridPane = gridPane;
         this.rowIndex = rowIndex;
-        this.originalSizing 
+        this.originalSizing
                 = new RowSizing(gridPane.getRowConstraints().get(rowIndex));
-        this.originalSizingNext 
+        this.originalSizingNext
                 = new RowSizing(gridPane.getRowConstraints().get(rowIndex+1));
         this.usePercentSizing
                 = countPercentWidths() == Deprecation.getGridPaneColumnCount(gridPane);
-        
+
         //
         //
         //   y1 +-----
@@ -92,16 +92,16 @@ public class GridPaneRowResizer {
         //   ym +
         //      |
         ///  y4 +-----
-        //    
+        //
         //
         //       Range for moving y2 is [y1, ym]
         //       With (y4 - ym) == (y3 - y2)
         //
 
         // Compute y1, y2, y3, y4, ym
-        final Bounds cellBounds 
+        final Bounds cellBounds
                 = Deprecation.getGridPaneCellBounds(gridPane, 0, rowIndex);
-        final Bounds nextBounds 
+        final Bounds nextBounds
                 = Deprecation.getGridPaneCellBounds(gridPane, 0, rowIndex+1);
 
         y1 = cellBounds.getMinY();
@@ -119,39 +119,39 @@ public class GridPaneRowResizer {
     public int getColumnIndex() {
         return rowIndex;
     }
-    
+
     public void updateHeight(double dy) {
-        
+
         // Clamp y2 + dy in [y1, ym]
         final double newY2 = Math.max(y1, Math.min(ym, y2 + dy));
         final double newY3 = newY2 + (y3 - y2);
         final double newCellHeight = newY2 - y1;
         final double newNextHeight = y4 - newY3;
-        
+
 //        assert (newCellWidth+newNextWidth) == (downColWidths[colIndex]+downColWidths[colIndex+1]) :
 //                "newCellWidth+newNextWidth=" +  (newCellWidth+newNextWidth) + ", " +
-//                "downColWidths[colIndex]+downColWidths[colIndex+1]=" + 
+//                "downColWidths[colIndex]+downColWidths[colIndex+1]=" +
 //                (downColWidths[colIndex]+downColWidths[colIndex+1]);
 
         // Updates height of rows at rowIndex and rowIndex+1
         final RowConstraints rc = gridPane.getRowConstraints().get(rowIndex);
         final RowConstraints rcNext = gridPane.getRowConstraints().get(rowIndex+1);
-        
+
         if (usePercentSizing) {
             final double ratio = newCellHeight / (ym - y1);
-            
-            final double base 
-                    = originalSizing.getPercentHeight() 
+
+            final double base
+                    = originalSizing.getPercentHeight()
                     + originalSizingNext.getPercentHeight();
-            
+
             final double newPercentHeight = Math.floor(ratio * base);
             final double newPercentHeightNext = base - newPercentHeight;
-            
+
             rc.setPercentHeight(newPercentHeight);
             rcNext.setPercentHeight(newPercentHeightNext);
-            
+
         } else {
-            
+
             // Row at rowIndex
             rc.setPrefHeight(newCellHeight);
             if (rc.getMinHeight() == Region.USE_COMPUTED_SIZE) {
@@ -164,7 +164,7 @@ public class GridPaneRowResizer {
             } else {
                 rc.setMaxHeight(Math.max(newCellHeight, rc.getMaxHeight()));
             }
-            
+
             // Row at rowIndex+1
             rcNext.setPrefHeight(newNextHeight);
             if (rcNext.getMinHeight() == Region.USE_COMPUTED_SIZE) {
@@ -178,22 +178,22 @@ public class GridPaneRowResizer {
                 rcNext.setMaxHeight(Math.max(newNextHeight, rcNext.getMaxHeight()));
             }
         }
-        
+
     }
-    
+
     public void revertToOriginalSize() {
         // Restore sizing of rows at rowIndex and rowIndex+1
         final RowConstraints cc = gridPane.getRowConstraints().get(rowIndex);
         final RowConstraints ccNext = gridPane.getRowConstraints().get(rowIndex+1);
-        
+
         originalSizing.applyTo(cc);
         originalSizingNext.applyTo(ccNext);
     }
-    
-    
+
+
     public Map<PropertyName, Object> getChangeMap() {
         final Map<PropertyName, Object> result = new HashMap<>();
-        
+
         final RowConstraints cc = gridPane.getRowConstraints().get(rowIndex);
         if (MathUtils.equals(cc.getMinHeight(), originalSizing.getMinHeight()) == false) {
             result.put(minHeightName, cc.getMinHeight());
@@ -209,11 +209,11 @@ public class GridPaneRowResizer {
         }
         return result;
     }
-    
-    
+
+
     public Map<PropertyName, Object> getChangeMapNext() {
         final Map<PropertyName, Object> result = new HashMap<>();
-        
+
         final RowConstraints ccNext = gridPane.getRowConstraints().get(rowIndex+1);
         if (MathUtils.equals(ccNext.getMinHeight(), originalSizingNext.getMinHeight()) == false) {
             result.put(minHeightName, ccNext.getMinHeight());
@@ -229,12 +229,12 @@ public class GridPaneRowResizer {
         }
         return result;
     }
-    
-    
+
+
     /*
      * Private
-     */    
-    
+     */
+
     private int countPercentWidths() {
         int result = 0;
         for (RowConstraints cc : gridPane.getRowConstraints()) {
@@ -244,14 +244,14 @@ public class GridPaneRowResizer {
         }
         return result;
     }
-    
-    
+
+
     private static class RowSizing {
         private final double minHeight;
         private final double maxHeight;
         private final double prefHeight;
         private final double percentHeight;
-        
+
         public RowSizing(RowConstraints cc) {
             this.minHeight = cc.getMinHeight();
             this.maxHeight = cc.getMaxHeight();

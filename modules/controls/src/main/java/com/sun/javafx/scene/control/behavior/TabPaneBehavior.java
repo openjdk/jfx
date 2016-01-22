@@ -87,14 +87,14 @@ public class TabPaneBehavior extends BehaviorBase<TabPane> {
         Event.fireEvent(tab, event);
         return ! event.isConsumed();
     }
-    
+
     public void closeTab(Tab tab) {
         TabPane tabPane = getNode();
         // only switch to another tab if the selected tab is the one we're closing
         int index = tabPane.getTabs().indexOf(tab);
         if (index != -1) {
             tabPane.getTabs().remove(index);
-        }                
+        }
         if (tab.getOnClosed() != null) {
             Event.fireEvent(tab, new Event(Tab.CLOSED_EVENT));
         }

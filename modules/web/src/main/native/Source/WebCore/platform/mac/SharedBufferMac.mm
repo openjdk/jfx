@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -58,7 +58,7 @@ using namespace WebCore;
 {
     if (WebCoreObjCScheduleDeallocateOnMainThread([WebCoreSharedBufferData class], self))
         return;
-    
+
     [super dealloc];
 }
 
@@ -70,10 +70,10 @@ using namespace WebCore;
 - (id)initWithSharedBuffer:(SharedBuffer*)buffer
 {
     self = [super init];
-    
+
     if (self)
         sharedBuffer = buffer;
-    
+
     return self;
 }
 
@@ -97,7 +97,7 @@ PassRefPtr<SharedBuffer> SharedBuffer::wrapNSData(NSData *nsData)
 }
 
 SharedBuffer::NSDataRetainPtrWithoutImplicitConversionOperator SharedBuffer::createNSData()
-{    
+{
     return adoptNS([[WebCoreSharedBufferData alloc] initWithSharedBuffer:this]);
 }
 
@@ -112,7 +112,7 @@ RetainPtr<CFDataRef> SharedBuffer::createCFData()
 PassRefPtr<SharedBuffer> SharedBuffer::createWithContentsOfFile(const String& filePath)
 {
     NSData *resourceData = [NSData dataWithContentsOfFile:filePath];
-    if (resourceData) 
+    if (resourceData)
         return SharedBuffer::wrapNSData(resourceData);
     return 0;
 }

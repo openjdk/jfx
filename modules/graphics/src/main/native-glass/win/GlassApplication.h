@@ -76,7 +76,7 @@ public:
     virtual ~GlassApplication();
 
     static HWND GetToolkitHWND() { return  (NULL == pInstance) ? NULL : pInstance->GetHWND(); }
-    static GlassApplication *GetInstance() { return pInstance; }     
+    static GlassApplication *GetInstance() { return pInstance; }
     static void ExecAction(Action *action);
     static void ExecActionLater(Action *action);
     void RegisterClipboardViewer(jobject clipboard);

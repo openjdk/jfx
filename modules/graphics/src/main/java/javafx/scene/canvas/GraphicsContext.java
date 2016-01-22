@@ -63,7 +63,7 @@ import java.util.LinkedList;
 import javafx.scene.text.FontSmoothingType;
 
 /**
- * This class is used to issue draw calls to a {@code Canvas} using a buffer. 
+ * This class is used to issue draw calls to a {@code Canvas} using a buffer.
  * <p>
  * Each call pushes the necessary parameters onto the buffer
  * where they will be later rendered onto the image of the {@code Canvas} node
@@ -71,13 +71,13 @@ import javafx.scene.text.FontSmoothingType;
  * <p>
  * A {@code Canvas} only contains one {@code GraphicsContext}, and only one buffer.
  * If it is not attached to any scene, then it can be modified by any thread,
- * as long as it is only used from one thread at a time. Once a {@code Canvas} 
- * node is attached to a scene, it must be modified on the JavaFX Application 
+ * as long as it is only used from one thread at a time. Once a {@code Canvas}
+ * node is attached to a scene, it must be modified on the JavaFX Application
  * Thread.
  * <p>
  * Calling any method on the {@code GraphicsContext} is considered modifying
  * its corresponding {@code Canvas} and is subject to the same threading
- * rules. 
+ * rules.
  * <p>
  * A {@code GraphicsContext} also manages a stack of state objects that can
  * be saved or restored at anytime.
@@ -91,7 +91,7 @@ import javafx.scene.text.FontSmoothingType;
  * <th class="colLast" style="width:10%; text-align:center">Default value</th>
  * <th class="colLast">Description</th>
  * </tr>
- * 
+ *
  * <tr><th colspan="3"><a name="comm-attr"><p align="center">Common Rendering Attributes</p></a></th></tr>
  * <tr class="rowColor">
  * <td class="colLast" style="width:15%">{@link #clip() Clip}</td>
@@ -132,7 +132,7 @@ import javafx.scene.text.FontSmoothingType;
  * <td class="colLast">
  * An {@link Effect} applied individually to each rendering operation.
  * </td></tr>
- * 
+ *
  * <tr><th colspan="3"><a name="fill-attr"><p align="center">Fill Attributes</p></a></th></tr>
  * <tr class="rowColor">
  * <td class="colLast" style="width:15%">{@link #setFill(javafx.scene.paint.Paint) Fill Paint}</td>
@@ -142,7 +142,7 @@ import javafx.scene.text.FontSmoothingType;
  * The {@link Paint} to be applied to the interior of shapes in a
  * fill operation.
  * </td></tr>
- * 
+ *
  * <tr><th colspan="3"><a name="strk-attr"><p align="center">Stroke Attributes</p></a></th></tr>
  * <tr class="rowColor">
  * <td class="colLast" style="width:15%">{@link #setStroke(javafx.scene.paint.Paint) Stroke Paint}</td>
@@ -202,7 +202,7 @@ import javafx.scene.text.FontSmoothingType;
  * The distance offset into the array of dash lengths at which to start the
  * dashing of the segments in the boundary of shapes in a stroke operation.
  * </td></tr>
- * 
+ *
  * <tr><th colspan="3"><a name="text-attr"><p align="center">Text Attributes</p></a></th></tr>
  * <tr class="rowColor">
  * <td class="colLast" style="width:15%">{@link #setFont(javafx.scene.text.Font) Font}</td>
@@ -235,7 +235,7 @@ import javafx.scene.text.FontSmoothingType;
  * The type of smoothing (antialiasing) applied to the glyphs in the font
  * for all fill text operations.
  * </td></tr>
- * 
+ *
  * <tr><th colspan="3"><a name="path-attr"><p align="center">Path Attributes</p></a></th></tr>
  * <tr class="rowColor">
  * <td class="colLast" style="width:15%">{@link #beginPath() Current Path}</td>
@@ -254,7 +254,7 @@ import javafx.scene.text.FontSmoothingType;
  * clip operation.
  * </td></tr>
  * </table>
- * 
+ *
  * <p>
  * <a name="attr-ops-table">
  * The various rendering methods on the {@code GraphicsContext} use the
@@ -269,7 +269,7 @@ import javafx.scene.text.FontSmoothingType;
  * <th class="colLast" style="width:15%; text-align:center"><a href="#text-attr">Text Attributes</a></th>
  * <th class="colLast" style="width:15%; text-align:center"><a href="#path-attr">Path Attributes</a></th>
  * </tr>
- * 
+ *
  * <tr><th colspan="1"><p align="center">Basic Shape Rendering</p></th></tr>
  * <tr class="rowColor">
  * <td class="colLast" style="width:25%">
@@ -343,7 +343,7 @@ import javafx.scene.text.FontSmoothingType;
  * <a name="base-fn-1">[1]</a> Only the Transform, Clip, and Effect apply to clearRect()<br>
  * <a name="base-fn-2">[2]</a> Only the Fill Rule applies to fillPolygon(), the current path is left unchanged
  * </p></td></tr>
- * 
+ *
  * <tr><th colspan="1"><p align="center">Text Rendering</p></th></tr>
  * <tr class="rowColor">
  * <td class="colLast" style="width:25%">
@@ -374,7 +374,7 @@ import javafx.scene.text.FontSmoothingType;
  * <tr><td colspan="6"><p align="center">
  * <a name="text-fn-3">[3]</a> The Font Smoothing attribute only applies to filled text
  * </p></td></tr>
- * 
+ *
  * <tr><th colspan="1"><p align="center">Path Rendering</p></th></tr>
  * <tr class="rowColor">
  * <td class="colLast" style="width:25%">
@@ -435,7 +435,7 @@ import javafx.scene.text.FontSmoothingType;
  * <a name="path-fn-4">[4]</a> Transform applied only during path construction<br>
  * <a name="path-fn-5">[5]</a> Fill Rule only used for fill() and clip()
  * </p></td></tr>
- * 
+ *
  * <tr><th colspan="1"><p align="center">Image Rendering</p></th></tr>
  * <tr class="rowColor">
  * <td class="colLast" style="width:25%">
@@ -449,7 +449,7 @@ import javafx.scene.text.FontSmoothingType;
  * <td class="colLast" style="width:15%; text-align:center; color:#c00">No</td>
  * <td class="colLast" style="width:15%; text-align:center; color:#c00">No</td>
  * </tr>
- * 
+ *
  * <tr><th colspan="1"><p align="center">Miscellaneous</p></th></tr>
  * <tr class="rowColor">
  * <td class="colLast" style="width:25%">
@@ -477,10 +477,10 @@ Scene s = new Scene(root, 300, 300, Color.BLACK);
 
 final Canvas canvas = new Canvas(250,250);
 GraphicsContext gc = canvas.getGraphicsContext2D();
- 
+
 gc.setFill(Color.BLUE);
 gc.fillRect(75,75,100,100);
- 
+
 root.getChildren().add(canvas);
  * </pre>
  * </p>
@@ -875,7 +875,7 @@ public final class GraphicsContext {
 
     /**
     * Gets the {@code Canvas} that the {@code GraphicsContext} is issuing draw
-    * commands to. There is only ever one {@code Canvas} for a 
+    * commands to. There is only ever one {@code Canvas} for a
     * {@code GraphicsContext}.
     *
     * @return Canvas the canvas that this {@code GraphicsContext} is issuing draw
@@ -883,7 +883,7 @@ public final class GraphicsContext {
     */
     public Canvas getCanvas() {
         return theCanvas;
-    } 
+    }
 
     /**
      * Saves the following attributes onto a stack.
@@ -912,10 +912,10 @@ public final class GraphicsContext {
     }
 
     /**
-     * Pops the state off of the stack, setting the following attributes to their 
+     * Pops the state off of the stack, setting the following attributes to their
      * value at the time when that state was pushed onto the stack. If the stack
      * is empty then nothing is changed.
-     * 
+     *
      * <ul>
      *     <li>Global Alpha</li>
      *     <li>Global Blend Operation</li>
@@ -974,7 +974,7 @@ public final class GraphicsContext {
 
     /**
      * Concatenates the input with the current transform.
-     * 
+     *
      * @param mxx - the X coordinate scaling element of the 3x4 matrix
      * @param myx - the Y coordinate shearing element of the 3x4 matrix
      * @param mxy - the X coordinate shearing element of the 3x4 matrix
@@ -990,12 +990,12 @@ public final class GraphicsContext {
                                        myx, myy, myt);
         txdirty = true;
     }
-    
+
     /**
      * Concatenates the input with the current transform. Only 2D transforms are
      * supported. The only values used are the X and Y scaling, translation, and
      * shearing components of a transform. A {@code null} value is treated as identity.
-     * 
+     *
      * @param xform The affine to be concatenated with the current transform or null.
      */
     public void transform(Affine xform) {
@@ -1012,7 +1012,7 @@ public final class GraphicsContext {
      * @param mxy - the X coordinate shearing element of the 3x4 matrix
      * @param myy - the Y coordinate scaling element of the 3x4 matrix
      * @param mxt - the X coordinate translation element of the 3x4 matrix
-     * @param myt - the Y coordinate translation element of the 3x4 matrix 
+     * @param myt - the Y coordinate translation element of the 3x4 matrix
      */
     public void setTransform(double mxx, double myx,
                              double mxy, double myy,
@@ -1023,12 +1023,12 @@ public final class GraphicsContext {
                                         mxt, myt);
         txdirty = true;
     }
-    
+
     /**
-     * Sets the current transform. Only 2D transforms are supported. The only 
+     * Sets the current transform. Only 2D transforms are supported. The only
      * values used are the X and Y scaling, translation, and shearing components
      * of a transform.
-     * 
+     *
      * @param xform The affine to be copied and used as the current transform.
      */
     public void setTransform(Affine xform) {
@@ -1037,25 +1037,25 @@ public final class GraphicsContext {
                                         xform.getTx(), xform.getTy());
         txdirty = true;
     }
-    
+
     /**
      * Copies the current transform into the supplied object, creating
      * a new {@link Affine} object if it is null, and returns the object
      * containing the copy.
-     * 
-     * @param xform A transform object that will be used to hold the result.
-     * If xform is non null, then this method will copy the current transform 
-     * into that object. If xform is null a new transform object will be
-     * constructed. In either case, the return value is a copy of the current 
-     * transform. 
      *
-     * @return A copy of the current transform.  
+     * @param xform A transform object that will be used to hold the result.
+     * If xform is non null, then this method will copy the current transform
+     * into that object. If xform is null a new transform object will be
+     * constructed. In either case, the return value is a copy of the current
+     * transform.
+     *
+     * @return A copy of the current transform.
      */
     public Affine getTransform(Affine xform) {
         if (xform == null) {
             xform = new Affine();
         }
-        
+
         xform.setMxx(curState.transform.getMxx());
         xform.setMxy(curState.transform.getMxy());
         xform.setMxz(0);
@@ -1068,14 +1068,14 @@ public final class GraphicsContext {
         xform.setMzy(0);
         xform.setMzz(1);
         xform.setTz(0);
-        
+
         return xform;
     }
-    
+
     /**
      * Returns a copy of the current transform.
-     * 
-     * @return a copy of the transform of the current state. 
+     *
+     * @return a copy of the transform of the current state.
      */
     public Affine getTransform() {
         return getTransform(null);
@@ -1090,7 +1090,7 @@ public final class GraphicsContext {
      * The global alpha is a <a href="#comm-attr">common attribute</a>
      * used for nearly all rendering methods as specified in the
      * <a href="#attr-ops-table">Rendering Attributes Table</a>.
-     * 
+     *
      * @param alpha the new alpha value, clamped to {@code [0.0, 1.0]}
      *              during actual use.
      */
@@ -1101,15 +1101,15 @@ public final class GraphicsContext {
             writeParam(alpha, NGCanvas.GLOBAL_ALPHA);
         }
     }
-    
+
     /**
      * Gets the current global alpha.
      * The default value is {@code 1.0}.
      * The global alpha is a <a href="#comm-attr">common attribute</a>
      * used for nearly all rendering methods as specified in the
      * <a href="#attr-ops-table">Rendering Attributes Table</a>.
-     * 
-     * @return the current global alpha. 
+     *
+     * @return the current global alpha.
      */
     public double getGlobalAlpha() {
         return curState.globalAlpha;
@@ -1122,25 +1122,25 @@ public final class GraphicsContext {
      * The blend mode is a <a href="#comm-attr">common attribute</a>
      * used for nearly all rendering methods as specified in the
      * <a href="#attr-ops-table">Rendering Attributes Table</a>.
-     * 
+     *
      * @param op the {@code BlendMode} that will be set or null.
      */
     public void setGlobalBlendMode(BlendMode op) {
         if (op != null && op != curState.blendop) {
-            GrowableDataBuffer buf = getBuffer();           
-            curState.blendop = op; 
+            GrowableDataBuffer buf = getBuffer();
+            curState.blendop = op;
             buf.putByte(NGCanvas.COMP_MODE);
             buf.putObject(Blend.impl_getToolkitMode(op));
         }
     }
-    
+
     /**
      * Gets the global blend mode.
      * The default value is {@link BlendMode#SRC_OVER SRC_OVER}.
      * The blend mode is a <a href="#comm-attr">common attribute</a>
      * used for nearly all rendering methods as specified in the
      * <a href="#attr-ops-table">Rendering Attributes Table</a>.
-     * 
+     *
      * @return the global {@code BlendMode} of the current state.
      */
     public BlendMode getGlobalBlendMode() {
@@ -1154,7 +1154,7 @@ public final class GraphicsContext {
      * used for any of the fill methods as specified in the
      * <a href="#attr-ops-table">Rendering Attributes Table</a>.
      * A {@code null} value will be ignored and the current value will remain unchanged.
-     * 
+     *
      * @param p The {@code Paint} to be used as the fill {@code Paint} or null.
      */
     public void setFill(Paint p) {
@@ -1163,14 +1163,14 @@ public final class GraphicsContext {
             writePaint(p, NGCanvas.FILL_PAINT);
         }
     }
-    
+
     /**
      * Gets the current fill paint attribute.
      * The default value is {@link Color#BLACK BLACK}.
      * The fill paint is a <a href="#fill-attr">fill attribute</a>
      * used for any of the fill methods as specified in the
      * <a href="#attr-ops-table">Rendering Attributes Table</a>.
-     * 
+     *
      * @return p The {@code Paint} to be used as the fill {@code Paint}.
      */
     public Paint getFill() {
@@ -1184,7 +1184,7 @@ public final class GraphicsContext {
      * used for any of the stroke methods as specified in the
      * <a href="#attr-ops-table">Rendering Attributes Table</a>.
      * A {@code null} value will be ignored and the current value will remain unchanged.
-     * 
+     *
      * @param p The Paint to be used as the stroke Paint or null.
      */
     public void setStroke(Paint p) {
@@ -1193,14 +1193,14 @@ public final class GraphicsContext {
             writePaint(p, NGCanvas.STROKE_PAINT);
         }
     }
-    
+
     /**
      * Gets the current stroke.
      * The default value is {@link Color#BLACK BLACK}.
      * The stroke paint is a <a href="#strk-attr">stroke attribute</a>
      * used for any of the stroke methods as specified in the
      * <a href="#attr-ops-table">Rendering Attributes Table</a>.
-     * 
+     *
      * @return the {@code Paint} to be used as the stroke {@code Paint}.
      */
     public Paint getStroke() {
@@ -1215,8 +1215,8 @@ public final class GraphicsContext {
      * <a href="#attr-ops-table">Rendering Attributes Table</a>.
      * An infinite or non-positive value outside of the range {@code (0, +inf)}
      * will be ignored and the current value will remain unchanged.
-     * 
-     * @param lw value in the range {0-positive infinity}, with any other value 
+     *
+     * @param lw value in the range {0-positive infinity}, with any other value
      * being ignored and leaving the value unchanged.
      */
     public void setLineWidth(double lw) {
@@ -1229,14 +1229,14 @@ public final class GraphicsContext {
             }
         }
     }
-    
+
     /**
      * Gets the current line width.
      * The default value is {@code 1.0}.
      * The line width is a <a href="#strk-attr">stroke attribute</a>
      * used for any of the stroke methods as specified in the
      * <a href="#attr-ops-table">Rendering Attributes Table</a>.
-     * 
+     *
      * @return value between 0 and infinity.
      */
     public double getLineWidth() {
@@ -1250,7 +1250,7 @@ public final class GraphicsContext {
      * used for any of the stroke methods as specified in the
      * <a href="#attr-ops-table">Rendering Attributes Table</a>.
      * A {@code null} value will be ignored and the current value will remain unchanged.
-     * 
+     *
      * @param cap {@code StrokeLineCap} with a value of Butt, Round, or Square or null.
      */
     public void setLineCap(StrokeLineCap cap) {
@@ -1266,14 +1266,14 @@ public final class GraphicsContext {
             writeParam(v, NGCanvas.LINE_CAP);
         }
     }
-    
+
     /**
-     * Gets the current stroke line cap. 
+     * Gets the current stroke line cap.
      * The default value is {@link StrokeLineCap#SQUARE SQUARE}.
      * The line cap is a <a href="#strk-attr">stroke attribute</a>
      * used for any of the stroke methods as specified in the
      * <a href="#attr-ops-table">Rendering Attributes Table</a>.
-     * 
+     *
      * @return {@code StrokeLineCap} with a value of Butt, Round, or Square.
      */
     public StrokeLineCap getLineCap() {
@@ -1287,7 +1287,7 @@ public final class GraphicsContext {
      * used for any of the stroke methods as specified in the
      * <a href="#attr-ops-table">Rendering Attributes Table</a>.
      * A {@code null} value will be ignored and the current value will remain unchanged.
-     * 
+     *
      * @param join {@code StrokeLineJoin} with a value of Miter, Bevel, or Round or null.
      */
     public void setLineJoin(StrokeLineJoin join) {
@@ -1303,14 +1303,14 @@ public final class GraphicsContext {
             writeParam(v, NGCanvas.LINE_JOIN);
         }
     }
-    
+
     /**
      * Gets the current stroke line join.
      * The default value is {@link StrokeLineJoin#MITER}.
      * The line join is a <a href="#strk-attr">stroke attribute</a>
      * used for any of the stroke methods as specified in the
      * <a href="#attr-ops-table">Rendering Attributes Table</a>.
-     * 
+     *
      * @return {@code StrokeLineJoin} with a value of Miter, Bevel, or Round.
      */
     public StrokeLineJoin getLineJoin() {
@@ -1325,8 +1325,8 @@ public final class GraphicsContext {
      * <a href="#attr-ops-table">Rendering Attributes Table</a>.
      * An infinite or non-positive value outside of the range {@code (0, +inf)}
      * will be ignored and the current value will remain unchanged.
-     * 
-     * @param ml miter limit value between 0 and positive infinity with 
+     *
+     * @param ml miter limit value between 0 and positive infinity with
      * any other value being ignored and leaving the value unchanged.
      */
     public void setMiterLimit(double ml) {
@@ -1339,14 +1339,14 @@ public final class GraphicsContext {
             }
         }
     }
-    
+
     /**
      * Gets the current miter limit.
      * The default value is {@code 10.0}.
      * The miter limit is a <a href="#strk-attr">stroke attribute</a>
      * used for any of the stroke methods as specified in the
      * <a href="#attr-ops-table">Rendering Attributes Table</a>.
-     * 
+     *
      * @return the miter limit value in the range {@code 0.0-positive infinity}
      */
     public double getMiterLimit() {
@@ -1368,7 +1368,7 @@ public final class GraphicsContext {
      * be ignored and the current dash array will remain unchanged.
      * If the array is an odd length then it will be treated as if it
      * were two copies of the array appended to each other.
-     * 
+     *
      * @param dashes the array of finite non-negative dash lengths
      * @since JavaFX 8u40
      */
@@ -1420,7 +1420,7 @@ public final class GraphicsContext {
      * The line dash array is a <a href="#strk-attr">stroke attribute</a>
      * used for any of the stroke methods as specified in the
      * <a href="#attr-ops-table">Rendering Attributes Table</a>.
-     * 
+     *
      * @return a copy of the current line dash array.
      * @since JavaFX 8u40
      */
@@ -1439,7 +1439,7 @@ public final class GraphicsContext {
      * <a href="#attr-ops-table">Rendering Attributes Table</a>.
      * An infinite or NaN value outside of the range {@code (-inf, +inf)}
      * will be ignored and the current value will remain unchanged.
-     * 
+     *
      * @param dashOffset the line dash offset in the range {@code (-inf, +inf)}
      * @since JavaFX 8u40
      */
@@ -1458,7 +1458,7 @@ public final class GraphicsContext {
      * The line dash offset is a <a href="#strk-attr">stroke attribute</a>
      * used for any of the stroke methods as specified in the
      * <a href="#attr-ops-table">Rendering Attributes Table</a>.
-     * 
+     *
      * @return the line dash offset in the range {@code (-inf, +inf)}
      * @since JavaFX 8u40
      */
@@ -1473,7 +1473,7 @@ public final class GraphicsContext {
      * used for any of the text methods as specified in the
      * <a href="#attr-ops-table">Rendering Attributes Table</a>.
      * A {@code null} value will be ignored and the current value will remain unchanged.
-     * 
+     *
      * @param f the Font or null.
      */
     public void setFont(Font f) {
@@ -1484,15 +1484,15 @@ public final class GraphicsContext {
             buf.putObject(f.impl_getNativeFont());
         }
     }
-    
+
     /**
      * Gets the current Font.
      * The default value is specified by {@link Font#getDefault()}.
      * The font is a <a href="#text-attr">text attribute</a>
      * used for any of the text methods as specified in the
      * <a href="#attr-ops-table">Rendering Attributes Table</a>.
-     * 
-     * @return the Font 
+     *
+     * @return the Font
      */
     public Font getFont() {
         return curState.font;
@@ -1513,7 +1513,7 @@ public final class GraphicsContext {
      * implementations it may not be supported at all on a {@link Canvas}
      * because the required support does not exist for surfaces which contain
      * an alpha channel as all {@code Canvas} objects do.
-     * 
+     *
      * @param fontsmoothing the {@link FontSmoothingType} or null
      * @since JavaFX 8u40
      */
@@ -1530,7 +1530,7 @@ public final class GraphicsContext {
      * The font smoothing type is a <a href="#text-attr">text attribute</a>
      * used for any of the text methods as specified in the
      * <a href="#attr-ops-table">Rendering Attributes Table</a>.
-     * 
+     *
      * @return the {@link FontSmoothingType}
      * @since JavaFX 8u40
      */
@@ -1551,7 +1551,7 @@ public final class GraphicsContext {
      * Then TextAlignment is specified as:
      * <ul>
      * <li>Left: the left edge of the horizontal bounds will be at {@code x}.
-     * <li>Center: the center, halfway between left and right edge, of the 
+     * <li>Center: the center, halfway between left and right edge, of the
      * horizontal bounds will be at {@code x}.
      * <li>Right: the right edge of the horizontal bounds will be at {@code x}.
      * </ul>
@@ -1561,7 +1561,7 @@ public final class GraphicsContext {
      * alignment Justify is identical to left aligned text.
      * <p>
      * A {@code null} value will be ignored and the current value will remain unchanged.
-     * 
+     *
      * @param align {@code TextAlignment} with values of Left, Center, Right or null.
      */
     public void setTextAlign(TextAlignment align) {
@@ -1578,14 +1578,14 @@ public final class GraphicsContext {
             writeParam(a, NGCanvas.TEXT_ALIGN);
         }
     }
-    
+
     /**
      * Gets the current {@code TextAlignment}.
      * The default value is {@link TextAlignment#LEFT LEFT}.
      * The text alignment is a <a href="#text-attr">text attribute</a>
      * used for any of the text methods as specified in the
      * <a href="#attr-ops-table">Rendering Attributes Table</a>.
-     * 
+     *
      * @return {@code TextAlignment} with values of Left, Center, Right, or
      * Justify.
      */
@@ -1600,7 +1600,7 @@ public final class GraphicsContext {
      * used for any of the text methods as specified in the
      * <a href="#attr-ops-table">Rendering Attributes Table</a>.
      * A {@code null} value will be ignored and the current value will remain unchanged.
-     * 
+     *
      * @param baseline {@code VPos} with values of Top, Center, Baseline, or Bottom or null.
      */
     public void setTextBaseline(VPos baseline) {
@@ -1617,14 +1617,14 @@ public final class GraphicsContext {
             writeParam(b, NGCanvas.TEXT_BASELINE);
         }
     }
-    
+
     /**
      * Gets the current Text Baseline.
      * The default value is {@link VPos#BASELINE BASELINE}.
      * The text baseline is a <a href="#text-attr">text attribute</a>
      * used for any of the text methods as specified in the
      * <a href="#attr-ops-table">Rendering Attributes Table</a>.
-     * 
+     *
      * @return {@code VPos} with values of Top, Center, Baseline, or Bottom
      */
     public VPos getTextBaseline() {
@@ -1643,7 +1643,7 @@ public final class GraphicsContext {
      * attributes as specified in the
      * <a href="#attr-ops-table">Rendering Attributes Table</a>.
      * </p>
-     * 
+     *
      * @param text the string of text or null.
      * @param x position on the x axis.
      * @param y position on the y axis.
@@ -1664,7 +1664,7 @@ public final class GraphicsContext {
      * attributes as specified in the
      * <a href="#attr-ops-table">Rendering Attributes Table</a>.
      * </p>
-     * 
+     *
      * @param text the string of text or null.
      * @param x position on the x axis.
      * @param y position on the y axis.
@@ -1674,7 +1674,7 @@ public final class GraphicsContext {
     }
 
     /**
-     * Fills text and includes a maximum width of the string. 
+     * Fills text and includes a maximum width of the string.
      * If the width of the text extends past max width, then it will be sized
      * to fit.
      * A {@code null} text value will be ignored.
@@ -1686,7 +1686,7 @@ public final class GraphicsContext {
      * attributes as specified in the
      * <a href="#attr-ops-table">Rendering Attributes Table</a>.
      * </p>
-     * 
+     *
      * @param text the string of text or null.
      * @param x position on the x axis.
      * @param y position on the y axis.
@@ -1710,7 +1710,7 @@ public final class GraphicsContext {
      * attributes as specified in the
      * <a href="#attr-ops-table">Rendering Attributes Table</a>.
      * </p>
-     * 
+     *
      * @param text the string of text or null.
      * @param x position on the x axis.
      * @param y position on the y axis.
@@ -1738,14 +1738,14 @@ public final class GraphicsContext {
             byte b;
             if (fillRule == FillRule.EVEN_ODD) {
                 b = NGCanvas.FILL_RULE_EVEN_ODD;
-            } else { 
+            } else {
                 b = NGCanvas.FILL_RULE_NON_ZERO;
             }
             curState.fillRule = fillRule;
             writeParam(b, NGCanvas.FILL_RULE);
         }
      }
-    
+
     /**
      * Get the filling rule attribute for determining the interior of paths
      * in fill and clip operations.
@@ -1783,7 +1783,7 @@ public final class GraphicsContext {
      * <a href="#attr-ops-table">Rendering Attributes Table</a>
      * and <b>is not affected</b> by the {@link #save()} and
      * {@link #restore()} operations.
-     * 
+     *
      * @param x0 the X position for the move to command.
      * @param y0 the Y position for the move to command.
      */
@@ -1805,7 +1805,7 @@ public final class GraphicsContext {
      * <a href="#attr-ops-table">Rendering Attributes Table</a>
      * and <b>is not affected</b> by the {@link #save()} and
      * {@link #restore()} operations.
-     * 
+     *
      * @param x1 the X coordinate of the ending point of the line.
      * @param y1 the Y coordinate of the ending point of the line.
      */
@@ -1829,7 +1829,7 @@ public final class GraphicsContext {
      * <a href="#attr-ops-table">Rendering Attributes Table</a>
      * and <b>is not affected</b> by the {@link #save()} and
      * {@link #restore()} operations.
-     * 
+     *
      * @param xc the X coordinate of the control point
      * @param yc the Y coordinate of the control point
      * @param x1 the X coordinate of the end point
@@ -1857,7 +1857,7 @@ public final class GraphicsContext {
      * <a href="#attr-ops-table">Rendering Attributes Table</a>
      * and <b>is not affected</b> by the {@link #save()} and
      * {@link #restore()} operations.
-     * 
+     *
      * @param xc1 the X coordinate of first Bezier control point.
      * @param yc1 the Y coordinate of the first Bezier control point.
      * @param xc2 the X coordinate of the second Bezier control point.
@@ -1922,7 +1922,7 @@ public final class GraphicsContext {
      * point of the current path cannot be untransformed for computation.</li>
      * </ul>
      * </p>
-     * 
+     *
      * @param x1 the X coordinate of the first point of the arc.
      * @param y1 the Y coordinate of the first point of the arc.
      * @param x2 the X coordinate of the second point of the arc.
@@ -2124,7 +2124,7 @@ public final class GraphicsContext {
      * <a href="#attr-ops-table">Rendering Attributes Table</a>
      * and <b>is not affected</b> by the {@link #save()} and
      * {@link #restore()} operations.
-     * 
+     *
      * @param x x position of the upper left corner of the rectangle.
      * @param y y position of the upper left corner of the rectangle.
      * @param w width of the rectangle.
@@ -2154,7 +2154,7 @@ public final class GraphicsContext {
     }
 
     /**
-     * Appends an SVG Path string to the current path. If there is no current 
+     * Appends an SVG Path string to the current path. If there is no current
      * path the string must then start with either type of move command.
      * A {@code null} value or incorrect SVG path will be ignored.
      * The coordinates are transformed by the current transform as they are
@@ -2164,7 +2164,7 @@ public final class GraphicsContext {
      * <a href="#attr-ops-table">Rendering Attributes Table</a>
      * and <b>is not affected</b> by the {@link #save()} and
      * {@link #restore()} operations.
-     * 
+     *
      * @param svgpath the SVG Path string.
      */
     public void appendSVGPath(String svgpath) {
@@ -2310,10 +2310,10 @@ public final class GraphicsContext {
 
     /**
      * Returns true if the the given x,y point is inside the path.
-     * 
+     *
      * @param x the X coordinate to use for the check.
      * @param y the Y coordinate to use for the check.
-     * @return true if the point given is inside the path, false 
+     * @return true if the point given is inside the path, false
      * otherwise.
      */
     public boolean isPointInPath(double x, double y) {
@@ -2328,7 +2328,7 @@ public final class GraphicsContext {
      * This method will be affected only by the current transform, clip,
      * and effect.
      * </p>
-     * 
+     *
      * @param x X position of the upper left corner of the rectangle.
      * @param y Y position of the upper left corner of the rectangle.
      * @param w width of the rectangle.
@@ -2350,7 +2350,7 @@ public final class GraphicsContext {
      * attributes as specified in the
      * <a href="#attr-ops-table">Rendering Attributes Table</a>.
      * </p>
-     * 
+     *
      * @param x the X position of the upper left corner of the rectangle.
      * @param y the Y position of the upper left corner of the rectangle.
      * @param w the width of the rectangle.
@@ -2372,7 +2372,7 @@ public final class GraphicsContext {
      * attributes as specified in the
      * <a href="#attr-ops-table">Rendering Attributes Table</a>.
      * </p>
-     * 
+     *
      * @param x the X position of the upper left corner of the rectangle.
      * @param y the Y position of the upper left corner of the rectangle.
      * @param w the width of the rectangle.
@@ -2393,7 +2393,7 @@ public final class GraphicsContext {
      * attributes as specified in the
      * <a href="#attr-ops-table">Rendering Attributes Table</a>.
      * </p>
-     * 
+     *
      * @param x the X coordinate of the upper left bound of the oval.
      * @param y the Y coordinate of the upper left bound of the oval.
      * @param w the width at the center of the oval.
@@ -2414,7 +2414,7 @@ public final class GraphicsContext {
      * attributes as specified in the
      * <a href="#attr-ops-table">Rendering Attributes Table</a>.
      * </p>
-     * 
+     *
      * @param x the X coordinate of the upper left bound of the oval.
      * @param y the Y coordinate of the upper left bound of the oval.
      * @param w the width at the center of the oval.
@@ -2427,7 +2427,7 @@ public final class GraphicsContext {
     }
 
     /**
-     * Fills an arc using the current fill paint. A {@code null} ArcType or 
+     * Fills an arc using the current fill paint. A {@code null} ArcType or
      * non positive width or height will cause the render command to be ignored.
      * <p>
      * This method will be affected by any of the
@@ -2436,7 +2436,7 @@ public final class GraphicsContext {
      * attributes as specified in the
      * <a href="#attr-ops-table">Rendering Attributes Table</a>.
      * </p>
-     * 
+     *
      * @param x the X coordinate of the arc.
      * @param y the Y coordinate of the arc.
      * @param w the width of the arc.
@@ -2455,7 +2455,7 @@ public final class GraphicsContext {
     }
 
     /**
-     * Strokes an Arc using the current stroke paint. A {@code null} ArcType or 
+     * Strokes an Arc using the current stroke paint. A {@code null} ArcType or
      * non positive width or height will cause the render command to be ignored.
      * <p>
      * This method will be affected by any of the
@@ -2491,13 +2491,13 @@ public final class GraphicsContext {
      * attributes as specified in the
      * <a href="#attr-ops-table">Rendering Attributes Table</a>.
      * </p>
-     * 
+     *
      * @param x the X coordinate of the upper left bound of the oval.
      * @param y the Y coordinate of the upper left bound of the oval.
      * @param w the width at the center of the oval.
      * @param h the height at the center of the oval.
      * @param arcWidth the arc width of the rectangle corners.
-     * @param arcHeight the arc height of the rectangle corners. 
+     * @param arcHeight the arc height of the rectangle corners.
      */
     public void fillRoundRect(double x, double y, double w, double h,
                               double arcWidth, double arcHeight)
@@ -2516,7 +2516,7 @@ public final class GraphicsContext {
      * attributes as specified in the
      * <a href="#attr-ops-table">Rendering Attributes Table</a>.
      * </p>
-     * 
+     *
      * @param x the X coordinate of the upper left bound of the oval.
      * @param y the Y coordinate of the upper left bound of the oval.
      * @param w the width at the center of the oval.
@@ -2541,7 +2541,7 @@ public final class GraphicsContext {
      * attributes as specified in the
      * <a href="#attr-ops-table">Rendering Attributes Table</a>.
      * </p>
-     * 
+     *
      * @param x1 the X coordinate of the starting point of the line.
      * @param y1 the Y coordinate of the starting point of the line.
      * @param x2 the X coordinate of the ending point of the line.
@@ -2562,7 +2562,7 @@ public final class GraphicsContext {
      * attributes as specified in the
      * <a href="#attr-ops-table">Rendering Attributes Table</a>.
      * </p>
-     * 
+     *
      * @param xPoints array containing the x coordinates of the polygon's points or null.
      * @param yPoints array containing the y coordinates of the polygon's points or null.
      * @param nPoints the number of points that make the polygon.
@@ -2583,7 +2583,7 @@ public final class GraphicsContext {
      * attributes as specified in the
      * <a href="#attr-ops-table">Rendering Attributes Table</a>.
      * </p>
-     * 
+     *
      * @param xPoints array containing the x coordinates of the polygon's points or null.
      * @param yPoints array containing the y coordinates of the polygon's points or null.
      * @param nPoints the number of points that make the polygon.
@@ -2595,7 +2595,7 @@ public final class GraphicsContext {
     }
 
     /**
-     * Strokes a polyline with the given points using the currently set stroke 
+     * Strokes a polyline with the given points using the currently set stroke
      * paint attribute.
      * A {@code null} value for any of the arrays will be ignored and nothing will be drawn.
      * <p>
@@ -2605,7 +2605,7 @@ public final class GraphicsContext {
      * attributes as specified in the
      * <a href="#attr-ops-table">Rendering Attributes Table</a>.
      * </p>
-     * 
+     *
      * @param xPoints array containing the x coordinates of the polyline's points or null.
      * @param yPoints array containing the y coordinates of the polyline's points or null.
      * @param nPoints the number of points that make the polyline.
@@ -2626,7 +2626,7 @@ public final class GraphicsContext {
      * attributes as specified in the
      * <a href="#attr-ops-table">Rendering Attributes Table</a>.
      * </p>
-     * 
+     *
      * @param img the image to be drawn or null.
      * @param x the X coordinate on the destination for the upper left of the image.
      * @param y the Y coordinate on the destination for the upper left of the image.
@@ -2648,11 +2648,11 @@ public final class GraphicsContext {
      * attributes as specified in the
      * <a href="#attr-ops-table">Rendering Attributes Table</a>.
      * </p>
-     * 
+     *
      * @param img the image to be drawn or null.
      * @param x the X coordinate on the destination for the upper left of the image.
      * @param y the Y coordinate on the destination for the upper left of the image.
-     * @param w the width of the destination rectangle. 
+     * @param w the width of the destination rectangle.
      * @param h the height of the destination rectangle.
      */
     public void drawImage(Image img, double x, double y, double w, double h) {
@@ -2660,7 +2660,7 @@ public final class GraphicsContext {
     }
 
     /**
-     * Draws the specified source rectangle of the given image to the given 
+     * Draws the specified source rectangle of the given image to the given
      * destination rectangle of the Canvas.
      * A {@code null} image value or an image still in progress will be ignored.
      * <p>
@@ -2669,7 +2669,7 @@ public final class GraphicsContext {
      * attributes as specified in the
      * <a href="#attr-ops-table">Rendering Attributes Table</a>.
      * </p>
-     * 
+     *
      * @param img the image to be drawn or null.
      * @param sx the source rectangle's X coordinate position.
      * @param sy the source rectangle's Y coordinate position.
@@ -2696,7 +2696,7 @@ public final class GraphicsContext {
      * object will be in device space since they refer directly to pixels
      * and no other rendering attributes will be applied when modifying
      * pixels using this object.
-     * 
+     *
      * @return the {@code PixelWriter} for modifying the pixels of this
      *         {@code Canvas}
      */
@@ -2921,7 +2921,7 @@ public final class GraphicsContext {
      * The current effect is a <a href="#comm-attr">common attribute</a>
      * used for nearly all rendering operations as specified in the
      * <a href="#attr-ops-table">Rendering Attributes Table</a>.
-     * 
+     *
      * @param e the effect to use, or null to disable effects
      */
     public void setEffect(Effect e) {
@@ -2936,7 +2936,7 @@ public final class GraphicsContext {
             buf.putObject(curState.effect.impl_getImpl());
         }
     }
-    
+
     /**
      * Gets a copy of the effect to be applied after the next draw call.
      * A null return value means that no effect will be applied after subsequent
@@ -2944,7 +2944,7 @@ public final class GraphicsContext {
      * The current effect is a <a href="#comm-attr">common attribute</a>
      * used for nearly all rendering operations as specified in the
      * <a href="#attr-ops-table">Rendering Attributes Table</a>.
-     * 
+     *
      * @param e an {@code Effect} object that may be used to store the
      *        copy of the current effect, if it is of a compatible type
      * @return the current effect used for all rendering calls,
@@ -2966,7 +2966,7 @@ public final class GraphicsContext {
      * only a portion of the canvas has been rendered to and will not be
      * visible unless a negative offset is used to bring the reflection back
      * into view.
-     * 
+     *
      * @param e the effect to apply onto the entire destination or null.
      */
     public void applyEffect(Effect e) {

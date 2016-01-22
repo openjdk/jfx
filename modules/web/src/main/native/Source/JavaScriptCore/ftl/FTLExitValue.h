@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef FTLExitValue_h
@@ -62,16 +62,16 @@ public:
         : m_kind(InvalidExitValue)
     {
     }
-    
+
     bool operator!() const { return m_kind == InvalidExitValue; }
-    
+
     static ExitValue dead()
     {
         ExitValue result;
         result.m_kind = ExitValueDead;
         return result;
     }
-    
+
     static ExitValue inJSStack(VirtualRegister reg)
     {
         ExitValue result;
@@ -79,7 +79,7 @@ public:
         result.u.virtualRegister = reg.offset();
         return result;
     }
-    
+
     static ExitValue inJSStackAsInt32(VirtualRegister reg)
     {
         ExitValue result;
@@ -87,7 +87,7 @@ public:
         result.u.virtualRegister = reg.offset();
         return result;
     }
-    
+
     static ExitValue inJSStackAsInt52(VirtualRegister reg)
     {
         ExitValue result;
@@ -95,7 +95,7 @@ public:
         result.u.virtualRegister = reg.offset();
         return result;
     }
-    
+
     static ExitValue inJSStackAsDouble(VirtualRegister reg)
     {
         ExitValue result;
@@ -103,7 +103,7 @@ public:
         result.u.virtualRegister = reg.offset();
         return result;
     }
-    
+
     static ExitValue constant(JSValue value)
     {
         ExitValue result;
@@ -111,7 +111,7 @@ public:
         result.u.constant = JSValue::encode(value);
         return result;
     }
-    
+
     static ExitValue exitArgument(const ExitArgument& argument)
     {
         ExitValue result;
@@ -119,7 +119,7 @@ public:
         result.u.argument = argument.representation();
         return result;
     }
-    
+
     static ExitValue recovery(RecoveryOpcode opcode, unsigned leftArgument, unsigned rightArgument, ValueFormat format)
     {
         ExitValue result;
@@ -130,9 +130,9 @@ public:
         result.u.recovery.format = format;
         return result;
     }
-    
+
     ExitValueKind kind() const { return m_kind; }
-    
+
     bool isDead() const { return kind() == ExitValueDead; }
     bool isInJSStackSomehow() const
     {
@@ -149,49 +149,49 @@ public:
     bool isConstant() const { return kind() == ExitValueConstant; }
     bool isArgument() const { return kind() == ExitValueArgument; }
     bool isRecovery() const { return kind() == ExitValueRecovery; }
-    
+
     ExitArgument exitArgument() const
     {
         ASSERT(isArgument());
         return ExitArgument(u.argument);
     }
-    
+
     unsigned leftRecoveryArgument() const
     {
         ASSERT(isRecovery());
         return u.recovery.leftArgument;
     }
-    
+
     unsigned rightRecoveryArgument() const
     {
         ASSERT(isRecovery());
         return u.recovery.rightArgument;
     }
-    
+
     ValueFormat recoveryFormat() const
     {
         ASSERT(isRecovery());
         return static_cast<ValueFormat>(u.recovery.format);
     }
-    
+
     RecoveryOpcode recoveryOpcode() const
     {
         ASSERT(isRecovery());
         return static_cast<RecoveryOpcode>(u.recovery.opcode);
     }
-    
+
     JSValue constant() const
     {
         ASSERT(isConstant());
         return JSValue::decode(u.constant);
     }
-    
+
     VirtualRegister virtualRegister() const
     {
         ASSERT(isInJSStackSomehow());
         return VirtualRegister(u.virtualRegister);
     }
-    
+
     ExitValue withVirtualRegister(VirtualRegister virtualRegister)
     {
         ASSERT(isInJSStackSomehow());
@@ -211,35 +211,35 @@ public:
         case InvalidExitValue:
             RELEASE_ASSERT_NOT_REACHED();
             return InvalidValueFormat;
-            
+
         case ExitValueDead:
         case ExitValueConstant:
         case ExitValueInJSStack:
             return ValueFormatJSValue;
-            
+
         case ExitValueArgument:
             return exitArgument().format();
-            
+
         case ExitValueInJSStackAsInt32:
             return ValueFormatInt32;
-            
+
         case ExitValueInJSStackAsInt52:
             return ValueFormatInt52;
-            
+
         case ExitValueInJSStackAsDouble:
             return ValueFormatDouble;
-            
+
         case ExitValueRecovery:
             return recoveryFormat();
         }
-        
+
         RELEASE_ASSERT_NOT_REACHED();
         return InvalidValueFormat;
     }
 
     void dump(PrintStream&) const;
     void dumpInContext(PrintStream&, DumpContext*) const;
-    
+
 private:
     ExitValueKind m_kind;
     union {

@@ -28,7 +28,7 @@
 #include "SVGURIReference.h"
 
 namespace WebCore {
-    
+
 class SVGPathElement;
 
 class SVGMPathElement final : public SVGElement,

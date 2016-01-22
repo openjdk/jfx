@@ -41,7 +41,7 @@ class BaseWnd {
 public:
     BaseWnd(HWND ancestor = NULL);
     virtual ~BaseWnd();
-    
+
     //XXX: might eliminate hParent and use m_ancestor instead
     HWND Create(HWND hParent, int x, int y, int width, int height,
                 LPCTSTR lpWindowName, DWORD dwExStyle, DWORD dwStyle, HBRUSH hbrBackground);
@@ -50,7 +50,7 @@ public:
     // returns its bounds. This method is used to find the default window
     // size/location when CW_USEDEFAULT can't be used (e.g. for WS_POPUP windows).
     static BOOL GetDefaultWindowBounds(LPRECT r);
-    
+
     HWND GetHWND() { return m_hWnd; }
 
     static BaseWnd* FromHandle(HWND hWnd);
@@ -64,7 +64,7 @@ public:
     void SetAncestor(HWND ancestor) { m_ancestor = ancestor; }
 
     void SetCommonDialogOwner(bool owner) { m_isCommonDialogOwner = owner; }
-    
+
     void SetCursor(HCURSOR cursor);
 
 private:
@@ -72,7 +72,7 @@ private:
     static LRESULT CALLBACK StaticWindowProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
     static unsigned int sm_classNameCounter;
-    
+
     HWND m_ancestor;  // either owner or parent. a window can't have both at once anyway
 
     ATOM m_wndClassAtom;
@@ -81,11 +81,11 @@ private:
 protected:
     virtual LRESULT WindowProc(UINT msg, WPARAM wParam, LPARAM lParam) = 0;
     virtual MessageResult CommonWindowProc(UINT msg, WPARAM wParam, LPARAM lParam);
-    
+
     virtual LPCTSTR GetWindowClassNameSuffix() = 0;
 
     bool IsCommonDialogOwner() { return m_isCommonDialogOwner; }
 
 };
-   
+
 #endif  // _BASEWND_INCLUDED_

@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #import "WebApplicationCache.h"
@@ -44,17 +44,17 @@ using namespace WebCore;
 #if PLATFORM(IOS)
 // FIXME: This will be removed when WebKitInitializeApplicationCachePathIfNecessary()
 // is moved from WebView.mm to WebKitInitializeApplicationCacheIfNecessary() in this file.
-// https://bugs.webkit.org/show_bug.cgi?id=57567 
+// https://bugs.webkit.org/show_bug.cgi?id=57567
 + (void)initializeWithBundleIdentifier:(NSString *)bundleIdentifier
 {
     static BOOL initialized = NO;
     if (initialized)
         return;
-    
+
     SQLiteDatabaseTracker::setClient(WebSQLiteDatabaseTrackerClient::sharedWebSQLiteDatabaseTrackerClient());
 
     cacheStorage().setCacheDirectory([NSString _webkit_localCacheDirectoryWithBundleIdentifier:bundleIdentifier]);
-    
+
     initialized = YES;
 }
 #endif
@@ -99,15 +99,15 @@ using namespace WebCore;
 {
     HashSet<RefPtr<SecurityOrigin>> coreOrigins;
     cacheStorage().getOriginsWithCache(coreOrigins);
-    
+
     NSMutableArray *webOrigins = [[[NSMutableArray alloc] initWithCapacity:coreOrigins.size()] autorelease];
-    
+
     HashSet<RefPtr<SecurityOrigin>>::const_iterator end = coreOrigins.end();
     for (HashSet<RefPtr<SecurityOrigin>>::const_iterator it = coreOrigins.begin(); it != end; ++it) {
         RetainPtr<WebSecurityOrigin> webOrigin = adoptNS([[WebSecurityOrigin alloc] _initWithWebCoreSecurityOrigin:(*it).get()]);
         [webOrigins addObject:webOrigin.get()];
     }
-    
+
     return webOrigins;
 }
 

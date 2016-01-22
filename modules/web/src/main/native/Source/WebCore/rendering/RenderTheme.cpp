@@ -105,7 +105,7 @@ void RenderTheme::adjustStyle(StyleResolver& styleResolver, RenderStyle& style, 
 
     // Never support box-shadow on native controls.
     style.setBoxShadow(nullptr);
-    
+
 #if USE(NEW_THEME)
     switch (part) {
     case CheckboxPart:
@@ -153,7 +153,7 @@ void RenderTheme::adjustStyle(StyleResolver& styleResolver, RenderStyle& style, 
         // Whitespace
         if (m_theme->controlRequiresPreWhiteSpace(part))
             style.setWhiteSpace(PRE);
-            
+
         // Width / Height
         // The width and height here are affected by the zoom.
         // FIXME: Check is flawed, since it doesn't take min-width/max-width into account.
@@ -162,14 +162,14 @@ void RenderTheme::adjustStyle(StyleResolver& styleResolver, RenderStyle& style, 
             style.setWidth(controlSize.width());
         if (controlSize.height() != style.height())
             style.setHeight(controlSize.height());
-                
+
         // Min-Width / Min-Height
         LengthSize minControlSize = m_theme->minimumControlSize(part, style.font(), style.effectiveZoom());
         if (minControlSize.width() != style.minWidth())
             style.setMinWidth(minControlSize.width());
         if (minControlSize.height() != style.minHeight())
             style.setMinHeight(minControlSize.height());
-                
+
         // Font
         FontDescription controlFont = m_theme->controlFont(part, style.font(), style.effectiveZoom());
         if (controlFont != style.font().fontDescription()) {
@@ -871,7 +871,7 @@ bool RenderTheme::isDefault(const RenderObject* o) const
 
     if (!o->frame().settings().applicationChromeMode())
         return false;
-    
+
     return o->style().appearance() == DefaultButtonPart;
 }
 
@@ -1240,13 +1240,13 @@ Color RenderTheme::disabledTextColor(const Color& textColor, const Color& backgr
         disabledColor = textColor.light();
     else
         disabledColor = textColor.dark();
-    
+
     // If there's not very much contrast between the disabled color and the background color,
     // just leave the text color alone. We don't want to change a good contrast color scheme so that it has really bad contrast.
     // If the the contrast was already poor, then it doesn't do any good to change it to a different poor contrast color scheme.
     if (differenceSquared(disabledColor, backgroundColor) < minColorContrastValue)
         return textColor;
-    
+
     return disabledColor;
 }
 

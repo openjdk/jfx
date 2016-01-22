@@ -53,7 +53,7 @@ import java.lang.reflect.Method;
  * of the same class, you can reuse a {@code JavaBeanIntegerPropertyBuilder}.
  * by switching the Java Bean instance (with {@link #bean(java.lang.Object)} and
  * calling {@link #build()}.
- * 
+ *
  * @see JavaBeanIntegerProperty
  * @since JavaFX 2.1
  */
@@ -63,8 +63,8 @@ public final class JavaBeanIntegerPropertyBuilder {
 
     /**
      * Create a new instance of {@code JavaBeanIntegerPropertyBuilder}
-     * 
-     * @return the new {@code JavaBeanIntegerPropertyBuilder} 
+     *
+     * @return the new {@code JavaBeanIntegerPropertyBuilder}
      */
     public static JavaBeanIntegerPropertyBuilder create() {
         return new JavaBeanIntegerPropertyBuilder();
@@ -72,7 +72,7 @@ public final class JavaBeanIntegerPropertyBuilder {
 
     /**
      * Generate a new {@link JavaBeanIntegerProperty} with the current settings.
-     * 
+     *
      * @return the new {@code JavaBeanIntegerProperty}
      * @throws NoSuchMethodException if the settings were not sufficient to find
      * the getter and the setter of the Java Bean property
@@ -89,7 +89,7 @@ public final class JavaBeanIntegerPropertyBuilder {
 
     /**
      * Set the name of the property
-     * 
+     *
      * @param name the name of the property
      * @return a reference to this builder to enable method chaining
      */
@@ -100,7 +100,7 @@ public final class JavaBeanIntegerPropertyBuilder {
 
     /**
      * Set the Java Bean instance the adapter should connect to
-     * 
+     *
      * @param bean the Java Bean instance
      * @return a reference to this builder to enable method chaining
      */
@@ -108,12 +108,12 @@ public final class JavaBeanIntegerPropertyBuilder {
         helper.bean(bean);
         return this;
     }
-    
+
     /**
      * Set the Java Bean class in which the getter and setter should be searched.
      * This can be useful, if the builder should generate adapters for several
      * Java Beans of different types.
-     * 
+     *
      * @param beanClass the Java Bean class
      * @return a reference to this builder to enable method chaining
      */
@@ -123,9 +123,9 @@ public final class JavaBeanIntegerPropertyBuilder {
     }
 
     /**
-     * Set an alternative name for the getter. This can be omitted, if the 
+     * Set an alternative name for the getter. This can be omitted, if the
      * name of the getter follows Java Bean naming conventions.
-     * 
+     *
      * @param getter the alternative name of the getter
      * @return a reference to this builder to enable method chaining
      */
@@ -135,9 +135,9 @@ public final class JavaBeanIntegerPropertyBuilder {
     }
 
     /**
-     * Set an alternative name for the setter. This can be omitted, if the 
+     * Set an alternative name for the setter. This can be omitted, if the
      * name of the setter follows Java Bean naming conventions.
-     * 
+     *
      * @param setter the alternative name of the setter
      * @return a reference to this builder to enable method chaining
      */
@@ -147,9 +147,9 @@ public final class JavaBeanIntegerPropertyBuilder {
     }
 
     /**
-     * Set the getter method directly. This can be omitted, if the 
+     * Set the getter method directly. This can be omitted, if the
      * name of the getter follows Java Bean naming conventions.
-     * 
+     *
      * @param getter the getter
      * @return a reference to this builder to enable method chaining
      */
@@ -159,9 +159,9 @@ public final class JavaBeanIntegerPropertyBuilder {
     }
 
     /**
-     * Set the setter method directly. This can be omitted, if the 
+     * Set the setter method directly. This can be omitted, if the
      * name of the setter follows Java Bean naming conventions.
-     * 
+     *
      * @param setter the setter
      * @return a reference to this builder to enable method chaining
      */

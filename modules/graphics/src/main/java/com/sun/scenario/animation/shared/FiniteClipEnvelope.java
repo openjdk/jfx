@@ -30,12 +30,12 @@ import javafx.animation.Animation.Status;
 import javafx.util.Duration;
 
 public class FiniteClipEnvelope extends ClipEnvelope {
-    
+
     private boolean autoReverse;
     private int cycleCount;
     private long totalTicks;
     private long pos;
-    
+
     protected FiniteClipEnvelope(Animation animation) {
         super(animation);
         if (animation != null) {
@@ -55,7 +55,7 @@ public class FiniteClipEnvelope extends ClipEnvelope {
         return !autoReverse? rate
                 : (ticks % (2 * cycleTicks) < cycleTicks) == (rate > 0)? rate : -rate;
     }
-    
+
     @Override
     public ClipEnvelope setCycleDuration(Duration cycleDuration) {
         if (cycleDuration.isIndefinite()) {
@@ -75,7 +75,7 @@ public class FiniteClipEnvelope extends ClipEnvelope {
         updateTotalTicks();
         return this;
     }
-    
+
     @Override
     public void setRate(double rate) {
         final boolean toggled = rate * this.rate < 0;
@@ -91,7 +91,7 @@ public class FiniteClipEnvelope extends ClipEnvelope {
         ticks = newTicks;
         this.rate = rate;
     }
-    
+
     private void updateTotalTicks() {
         totalTicks = cycleCount * cycleTicks;
     }
@@ -108,15 +108,15 @@ public class FiniteClipEnvelope extends ClipEnvelope {
             final long oldTicks = ticks;
             ticks = ClipEnvelope.checkBounds(deltaTicks + Math.round(currentTick * Math.abs(rate)), totalTicks);
 
-            final boolean reachedEnd = ticks >= totalTicks; 
-            
+            final boolean reachedEnd = ticks >= totalTicks;
+
             long overallDelta = ticks - oldTicks; // overall delta between current position and new position
             if (overallDelta == 0) {
                 return;
             }
-            
+
             long cycleDelta = (currentRate > 0)? cycleTicks - pos : pos; // delta to reach end of cycle
-            
+
             while (overallDelta >= cycleDelta) {
                 if (cycleDelta > 0) {
                     pos = (currentRate > 0)? cycleTicks : 0;
@@ -142,7 +142,7 @@ public class FiniteClipEnvelope extends ClipEnvelope {
                 pos += (currentRate > 0)? overallDelta : -overallDelta;
                 AnimationAccessor.getDefault().playTo(animation, pos, cycleTicks);
             }
-            
+
             if(reachedEnd && !aborted) {
                 AnimationAccessor.getDefault().finished(animation);
             }
@@ -157,7 +157,7 @@ public class FiniteClipEnvelope extends ClipEnvelope {
         if (cycleTicks == 0L) {
             return;
         }
-        
+
         final long oldTicks = ticks;
         if (rate < 0) {
             newTicks = totalTicks - newTicks;
@@ -188,7 +188,7 @@ public class FiniteClipEnvelope extends ClipEnvelope {
                     pos = cycleTicks;
                 }
             }
-            
+
             AnimationAccessor.getDefault().jumpTo(animation, pos, cycleTicks, false);
             abortCurrentPulse();
         }

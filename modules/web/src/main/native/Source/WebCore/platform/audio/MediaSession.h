@@ -85,7 +85,7 @@ class MediaSessionClient {
     WTF_MAKE_NONCOPYABLE(MediaSessionClient);
 public:
     MediaSessionClient() { }
-    
+
     virtual MediaSession::MediaType mediaType() const = 0;
     virtual void resumePlayback() = 0;
     virtual void pausePlayback() = 0;

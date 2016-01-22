@@ -60,7 +60,7 @@ CorrectionPanel::~CorrectionPanel()
 void CorrectionPanel::show(WebView* view, AlternativeTextType type, const FloatRect& boundingBoxOfReplacedString, const String& replacedString, const String& replacementString, const Vector<String>& alternativeReplacementStrings)
 {
     dismissInternal(ReasonForDismissingAlternativeTextIgnored, false);
-    
+
     if (!view)
         return;
 
@@ -68,7 +68,7 @@ void CorrectionPanel::show(WebView* view, AlternativeTextType type, const FloatR
     NSString* replacementStringAsNSString = replacementString;
     m_view = view;
     NSCorrectionIndicatorType indicatorType = correctionIndicatorType(type);
-    
+
     NSMutableArray* alternativeStrings = 0;
     if (!alternativeReplacementStrings.isEmpty()) {
         size_t size = alternativeReplacementStrings.size();
@@ -91,7 +91,7 @@ String CorrectionPanel::dismissInternal(ReasonForDismissingAlternativeText reaso
 {
     if (!isShowing())
         return String();
-    
+
     m_wasDismissedExternally = dismissingExternally;
     m_reasonForDismissing = reason;
     m_resultForDismissal.clear();
@@ -105,10 +105,10 @@ void CorrectionPanel::recordAutocorrectionResponse(WebView* view, NSCorrectionRe
 }
 
 void CorrectionPanel::handleAcceptedReplacement(NSString* acceptedReplacement, NSString* replaced, NSString* proposedReplacement,  NSCorrectionIndicatorType correctionIndicatorType)
-{    
+{
     if (!m_view)
         return;
-    
+
     NSSpellChecker* spellChecker = [NSSpellChecker sharedSpellChecker];
     NSInteger documentTag = [m_view.get() spellCheckerDocumentTag];
 
@@ -132,7 +132,7 @@ void CorrectionPanel::handleAcceptedReplacement(NSString* acceptedReplacement, N
             [spellChecker recordResponse:NSCorrectionResponseAccepted toCorrection:acceptedReplacement forWord:replaced language:nil inSpellDocumentWithTag:documentTag];
         break;
     }
-    
+
     [m_view.get() handleAcceptedAlternativeText:acceptedReplacement];
     m_view.clear();
     if (acceptedReplacement)

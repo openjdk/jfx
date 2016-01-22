@@ -33,24 +33,24 @@
 #include <wtf/Vector.h>
 
 namespace WebCore {
-    
+
 class SpeechSynthesis;
 class SpeechSynthesisUtterance;
 class SpeechSynthesisVoice;
-    
+
 class PlatformSpeechSynthesis : public RefCounted<PlatformSpeechSynthesis> {
 public:
     static PassRefPtr<PlatformSpeechSynthesis> create(SpeechSynthesis*);
-    
+
     void platformInitializeVoiceList(Vector<RefPtr<SpeechSynthesisVoice> >&);
     void platformSpeak(SpeechSynthesisUtterance*);
-    
+
 private:
     PlatformSpeechSynthesis(SpeechSynthesis*);
 
     SpeechSynthesis* m_speechSynthesis;
 };
-    
+
 } // namespace WebCore
 
 #endif // ENABLE(SPEECH_SYNTHESIS)

@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef WebIconDatabase_H
@@ -62,39 +62,39 @@ public:
     virtual ULONG STDMETHODCALLTYPE Release(void);
 
     // IWebIconDatabase
-    virtual HRESULT STDMETHODCALLTYPE sharedIconDatabase( 
+    virtual HRESULT STDMETHODCALLTYPE sharedIconDatabase(
         /* [retval][out] */ IWebIconDatabase **result);
-    
-    virtual HRESULT STDMETHODCALLTYPE iconForURL( 
+
+    virtual HRESULT STDMETHODCALLTYPE iconForURL(
         /* [in] */ BSTR url,
         /* [optional][in] */ LPSIZE size,
         /* [optional][in] */ BOOL cache,
         /* [retval][out] */ OLE_HANDLE *image);
-    
-    virtual HRESULT STDMETHODCALLTYPE defaultIconWithSize( 
+
+    virtual HRESULT STDMETHODCALLTYPE defaultIconWithSize(
         /* [in] */ LPSIZE size,
         /* [retval][out] */ OLE_HANDLE *result);
-    
-    virtual HRESULT STDMETHODCALLTYPE retainIconForURL( 
+
+    virtual HRESULT STDMETHODCALLTYPE retainIconForURL(
         /* [in] */ BSTR url);
-    
-    virtual HRESULT STDMETHODCALLTYPE releaseIconForURL( 
+
+    virtual HRESULT STDMETHODCALLTYPE releaseIconForURL(
         /* [in] */ BSTR url);
 
     virtual HRESULT STDMETHODCALLTYPE removeAllIcons( void);
-    
+
     virtual HRESULT STDMETHODCALLTYPE delayDatabaseCleanup( void);
-    
+
     virtual HRESULT STDMETHODCALLTYPE allowDatabaseCleanup( void);
 
-    virtual HRESULT STDMETHODCALLTYPE iconURLForURL( 
+    virtual HRESULT STDMETHODCALLTYPE iconURLForURL(
         /* [in] */ BSTR url,
         /* [retval][out] */ BSTR *iconURL);
 
-    virtual HRESULT STDMETHODCALLTYPE isEnabled( 
+    virtual HRESULT STDMETHODCALLTYPE isEnabled(
         /* [retval][out] */ BOOL *result);
 
-    virtual HRESULT STDMETHODCALLTYPE setEnabled( 
+    virtual HRESULT STDMETHODCALLTYPE setEnabled(
         /* [in] */ BOOL /*flag*/);
 
     virtual HRESULT STDMETHODCALLTYPE hasIconForURL(

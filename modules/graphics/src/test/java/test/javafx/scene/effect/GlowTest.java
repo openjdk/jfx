@@ -50,7 +50,7 @@ public class GlowTest extends EffectsTestBase {
         pulse();
         assertEquals(1.0f, (float) ((com.sun.scenario.effect.Glow)effect.impl_getImpl()).getLevel(), 1e-100);
     }
-    
+
     @Test
     public void testDefaultLevel() {
         // default value should be 0.3
@@ -59,7 +59,7 @@ public class GlowTest extends EffectsTestBase {
         pulse();
         assertEquals(0.3f, (float) ((com.sun.scenario.effect.Glow)effect.impl_getImpl()).getLevel(), 1e-100);
     }
-    
+
     @Test
     public void testMinLevel() {
         // 0 should be ok

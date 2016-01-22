@@ -1433,7 +1433,7 @@ PassRefPtr<TypeBuilder::DOM::AccessibilityProperties> InspectorDOMAgent::buildOb
                 required = axObject->isRequired();
         }
     }
-    
+
     RefPtr<Inspector::TypeBuilder::DOM::AccessibilityProperties> value = Inspector::TypeBuilder::DOM::AccessibilityProperties::create()
         .setExists(exists)
         .setLabel(label)

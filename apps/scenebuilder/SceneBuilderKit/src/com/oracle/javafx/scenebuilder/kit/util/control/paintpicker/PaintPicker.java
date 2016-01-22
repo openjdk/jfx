@@ -51,7 +51,7 @@ public class PaintPicker extends Pane {
 
     private final PaintPickerController controller;
 
-    public PaintPicker(Delegate delegate) {        
+    public PaintPicker(Delegate delegate) {
         final FXMLLoader loader = new FXMLLoader();
         loader.setLocation(PaintPicker.class.getResource("PaintPicker.fxml")); //NOI18N
 
@@ -76,7 +76,7 @@ public class PaintPicker extends Pane {
         this(delegate);
         controller.setSingleMode(mode);
     }
-    
+
     public final ObjectProperty<Paint> paintProperty() {
         return controller.paintProperty();
     }
@@ -91,7 +91,7 @@ public class PaintPicker extends Pane {
     public final Paint getPaintProperty() {
         return controller.getPaintProperty();
     }
-    
+
     public final ReadOnlyBooleanProperty liveUpdateProperty() {
         return controller.liveUpdateProperty();
     }
@@ -99,7 +99,7 @@ public class PaintPicker extends Pane {
     public boolean isLiveUpdate() {
         return controller.isLiveUpdate();
     }
-    
+
     public static interface Delegate {
         public void handleError(String warningKey, Object... arguments);
     }

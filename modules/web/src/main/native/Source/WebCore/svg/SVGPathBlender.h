@@ -60,7 +60,7 @@ private:
 
     FloatPoint m_fromCurrentPoint;
     FloatPoint m_toCurrentPoint;
-    
+
     PathCoordinateMode m_fromMode;
     PathCoordinateMode m_toMode;
     float m_progress;

@@ -32,7 +32,7 @@
 #include <wtf/MathExtras.h>
 
 namespace WebCore {
-    
+
 FEDropShadow::FEDropShadow(Filter* filter, float stdX, float stdY, float dx, float dy, const Color& shadowColor, float shadowOpacity)
     : FilterEffect(filter)
     , m_stdX(stdX)
@@ -58,11 +58,11 @@ void FEDropShadow::determineAbsolutePaintRect()
     FloatRect absoluteOffsetPaintRect(absolutePaintRect);
     absoluteOffsetPaintRect.move(filter->applyHorizontalScale(m_dx), filter->applyVerticalScale(m_dy));
     absolutePaintRect.unite(absoluteOffsetPaintRect);
-    
+
     unsigned kernelSizeX = 0;
     unsigned kernelSizeY = 0;
     FEGaussianBlur::calculateKernelSize(filter, kernelSizeX, kernelSizeY, m_stdX, m_stdY);
-    
+
     // We take the half kernel size and multiply it with three, because we run box blur three times.
     absolutePaintRect.inflateX(3 * kernelSizeX * 0.5f);
     absolutePaintRect.inflateY(3 * kernelSizeY * 0.5f);
@@ -129,7 +129,7 @@ TextStream& FEDropShadow::externalRepresentation(TextStream& ts, int indent) con
     inputEffect(0)->externalRepresentation(ts, indent + 1);
     return ts;
 }
-    
+
 } // namespace WebCore
 
 #endif // ENABLE(FILTERS)

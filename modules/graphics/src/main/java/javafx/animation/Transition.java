@@ -51,31 +51,31 @@ import javafx.scene.Node;
  * {@code text} property of a {@link javafx.scene.text.Text} node. It starts
  * with an empty {@code String} and adds gradually letter by letter until the
  * full {@code String} was set when the animation finishes.
- * 
+ *
  * <pre>
  * {@code
- * 
+ *
  * final String content = "Lorem ipsum";
  * final Text text = new Text(10, 20, "");
- * 
+ *
  * final Animation animation = new Transition() {
  *     {
  *         setCycleDuration(Duration.millis(2000));
  *     }
- * 
+ *
  *     protected void interpolate(double frac) {
  *         final int length = content.length();
  *         final int n = Math.round(length * (float) frac);
  *         text.setText(content.substring(0, n));
  *     }
- * 
+ *
  * };
- * 
+ *
  * animation.play();
  * }</pre>
- * 
+ *
  * @see Animation
- * 
+ *
  * @since JavaFX 2.0
  */
 public abstract class Transition extends Animation {
@@ -90,7 +90,7 @@ public abstract class Transition extends Animation {
      * pick up the new value.
      * <p>
      * Default interpolator is set to {@link Interpolator#EASE_BOTH}.
-     * 
+     *
      * @defaultValue EASE_BOTH
      */
     private ObjectProperty<Interpolator> interpolator;
@@ -120,12 +120,12 @@ public abstract class Transition extends Animation {
     /**
      * Returns the {@link Interpolator}, that was set when the
      * {@code Transition} was started.
-     * 
+     *
      * Changing the {@link #interpolator} of a running {@code Transition} should
      * have no immediate effect. Instead the running {@code Transition} should
      * continue to use the original {@code Interpolator} until it is stopped and
      * started again.
-     * 
+     *
      * @return the {@code Interpolator} that was set when this
      *         {@code Transition} was started
      */
@@ -135,9 +135,9 @@ public abstract class Transition extends Animation {
 
     /**
      * The constructor of {@code Transition}.
-     * 
+     *
      * This constructor allows to define a {@link #targetFramerate}.
-     * 
+     *
      * @param targetFramerate
      *            The custom target frame rate for this {@code Transition}
      */
@@ -170,16 +170,16 @@ public abstract class Transition extends Animation {
      * The method {@code interpolate()} has to be provided by implementations of
      * {@code Transition}. While a {@code Transition} is running, this method is
      * called in every frame.
-     * 
+     *
      * The parameter defines the current position with the animation. At the
      * start, the fraction will be {@code 0.0} and at the end it will be
      * {@code 1.0}. How the parameter increases, depends on the
      * {@link #interpolatorProperty() interpolator}, e.g. if the
      * {@code interpolator} is {@link Interpolator#LINEAR}, the fraction will
      * increase linear.
-     * 
+     *
      * This method must not be called by the user directly.
-     * 
+     *
      * @param frac
      *            The relative position
      */

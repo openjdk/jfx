@@ -307,19 +307,19 @@ public final class MediaPlayer {
     private boolean audioSpectrumThresholdChangeRequested = false;
     private boolean audioSpectrumEnabledChangeRequested = false;
 
-    private MediaTimerTask mediaTimerTask = null;    
+    private MediaTimerTask mediaTimerTask = null;
     private double prevTimeMs = -1.0;
     private boolean isUpdateTimeEnabled = false;
     private BufferProgressEvent lastBufferEvent = null;
     private Duration startTimeAtStop = null;
     private boolean isEOS = false;
-    
+
     private final Object disposeLock = new Object();
 
     private final static int DEFAULT_SPECTRUM_BAND_COUNT = 128;
     private final static double DEFAULT_SPECTRUM_INTERVAL = 0.1;
     private final static int DEFAULT_SPECTRUM_THRESHOLD = -60;
-    
+
     // views to be notified on media change
     private final Set<WeakReference<MediaView>> viewRefs =
             new HashSet<WeakReference<MediaView>>();
@@ -397,11 +397,11 @@ public final class MediaPlayer {
         }
 
         this.media = media;
-        
+
         // So we can get errors during initialization from other threads (Ex. HLS).
         errorListener = new _MediaErrorListener();
         MediaManager.addMediaErrorListener(errorListener);
-        
+
         try {
             // Init MediaPlayer. Run on separate thread if locator can block.
             Locator locator = media.retrieveJfxLocator();
@@ -425,7 +425,7 @@ public final class MediaPlayer {
             if (getStatus() == Status.DISPOSED) {
                 return;
             }
-            
+
             if (jfxPlayer != null) {
                 // Register jfxPlayer for dispose. It will be disposed when FX MediaPlayer does not have
                 // any strong references.
@@ -449,12 +449,12 @@ public final class MediaPlayer {
             }
         }
     }
-    
+
     private void init() throws MediaException {
         try {
             // Create a new player
             Locator locator = media.retrieveJfxLocator();
-            
+
             // This call will block until we connected or fail to connect.
             // Call it here, so we do not block while initializing and holding locks like disposeLock.
             locator.waitForReadySignal();
@@ -463,7 +463,7 @@ public final class MediaPlayer {
                 if (getStatus() == Status.DISPOSED) {
                     return;
                 }
-                
+
                 jfxPlayer = MediaManager.getPlayer(locator);
 
                 if (jfxPlayer != null) {
@@ -475,7 +475,7 @@ public final class MediaPlayer {
                     jfxPlayer.setMute(isMute());
                     jfxPlayer.setVolume((float) getVolume());
 
-                    // Create listeners for the Player's event                
+                    // Create listeners for the Player's event
                     sizeListener = new _VideoTrackSizeListener();
                     stateListener = new _PlayerStateListener();
                     timeListener = new _PlayerTimeListener();
@@ -561,7 +561,7 @@ public final class MediaPlayer {
     public ReadOnlyObjectProperty<MediaException> errorProperty() {
         return errorPropertyImpl().getReadOnlyProperty();
     }
-                
+
     private ReadOnlyObjectWrapper<MediaException> errorPropertyImpl() {
         if (error == null) {
             error = new ReadOnlyObjectWrapper<MediaException>() {
@@ -849,7 +849,7 @@ public final class MediaPlayer {
     public ReadOnlyDoubleProperty currentRateProperty() {
         return currentRatePropertyImpl().getReadOnlyProperty();
     }
-    
+
     private ReadOnlyDoubleWrapper currentRatePropertyImpl() {
         if (currentRate == null) {
             currentRate = new ReadOnlyDoubleWrapper(this, "currentRate");
@@ -952,7 +952,7 @@ public final class MediaPlayer {
                                 balanceChangeRequested = true;
                             }
                         }
-                    }                    
+                    }
                 }
 
                 @Override
@@ -1033,7 +1033,7 @@ public final class MediaPlayer {
         if (jfxPlayer.getDuration() == Double.POSITIVE_INFINITY) {
             return;
         }
-        
+
         // Clamp the start and stop times to values in seconds.
         double[] startStop = calculateStartStopTimes(startValue, stopValue);
 
@@ -1071,7 +1071,7 @@ public final class MediaPlayer {
      * Sets the start time. Its effect will be clamped to
      * the range <code>[{@link Duration#ZERO},&nbsp;{@link #stopTimeProperty stopTime})</code>.
      * Invoking this method will have no effect if media duration is {@link Duration#INDEFINITE}.
-     * 
+     *
      * @param value the start time
      */
     public final void setStartTime(Duration value) {
@@ -1203,7 +1203,7 @@ public final class MediaPlayer {
     public ReadOnlyObjectProperty<Duration> cycleDurationProperty() {
         return cycleDurationPropertyImpl().getReadOnlyProperty();
     }
-    
+
     private ReadOnlyObjectWrapper<Duration> cycleDurationPropertyImpl() {
         if (cycleDuration == null) {
             cycleDuration = new ReadOnlyObjectWrapper<Duration>(this, "cycleDuration");
@@ -1260,7 +1260,7 @@ public final class MediaPlayer {
     public ReadOnlyObjectProperty<Duration> totalDurationProperty() {
         return totalDurationPropertyImpl().getReadOnlyProperty();
     }
-    
+
     private ReadOnlyObjectWrapper<Duration> totalDurationPropertyImpl() {
         if (totalDuration == null) {
             totalDuration = new ReadOnlyObjectWrapper<Duration>(this, "totalDuration");
@@ -1299,11 +1299,11 @@ public final class MediaPlayer {
             if (getStatus() == Status.DISPOSED) {
                 return Duration.ZERO;
             }
-            
+
             if (getStatus() == Status.STOPPED) {
                 return Duration.millis(getStartTime().toMillis());
             }
-            
+
             if (isEOS) {
                 Duration duration = media.getDuration();
                 Duration stopTime = getStopTime();
@@ -1312,7 +1312,7 @@ public final class MediaPlayer {
                         return Duration.millis(duration.toMillis());
                     } else {
                         return Duration.millis(stopTime.toMillis());
-                    }                    
+                    }
                 }
             }
 
@@ -1345,7 +1345,7 @@ public final class MediaPlayer {
     public ReadOnlyObjectProperty<Duration> currentTimeProperty() {
         return currentTimePropertyImpl().getReadOnlyProperty();
     }
-    
+
     private ReadOnlyObjectWrapper<Duration> currentTimePropertyImpl() {
         if (currentTime == null) {
             currentTime = new ReadOnlyObjectWrapper<Duration>(this, "currentTime");
@@ -1454,7 +1454,7 @@ public final class MediaPlayer {
     public ReadOnlyObjectProperty<Status> statusProperty() {
         return statusPropertyImpl().getReadOnlyProperty();
     }
-    
+
     private ReadOnlyObjectWrapper<Status> statusPropertyImpl() {
         if (status == null) {
             status = new ReadOnlyObjectWrapper<Status>() {
@@ -1467,7 +1467,7 @@ public final class MediaPlayer {
                     } else {
                         setCurrentRate(0.0);
                     }
-                    
+
                     // Signal status updates
                     if (get() == Status.READY) {
                         if (getOnReady() != null) {
@@ -1532,7 +1532,7 @@ public final class MediaPlayer {
     public ReadOnlyObjectProperty<Duration> bufferProgressTimeProperty() {
         return bufferProgressTimePropertyImpl().getReadOnlyProperty();
     }
-    
+
     private ReadOnlyObjectWrapper<Duration> bufferProgressTimePropertyImpl() {
         if (bufferProgressTime == null) {
             bufferProgressTime = new ReadOnlyObjectWrapper<Duration>(this, "bufferProgressTime");
@@ -1611,7 +1611,7 @@ public final class MediaPlayer {
     public ReadOnlyIntegerProperty currentCountProperty() {
         return currentCountPropertyImpl().getReadOnlyProperty();
     }
-    
+
     private ReadOnlyIntegerWrapper currentCountPropertyImpl() {
         if (currentCount == null) {
             currentCount = new ReadOnlyIntegerWrapper(this, "currentCount");
@@ -2350,7 +2350,7 @@ public final class MediaPlayer {
         }
         return audioSpectrumListener;
     }
-    
+
     /**
      * Free all resources associated with player. Player SHOULD NOT be used after this function is called.
      * Player will transition to {@link Status.DISPOSED} after this method is done. This method can be called
@@ -2362,7 +2362,7 @@ public final class MediaPlayer {
             setStatus(Status.DISPOSED);
 
             destroyMediaTimer();
-            
+
             if (audioEqualizer != null) {
                 audioEqualizer.setAudioEqualizer(null);
                 audioEqualizer = null;
@@ -2455,7 +2455,7 @@ public final class MediaPlayer {
         public void onPlaying(PlayerStateEvent evt) {
             //System.err.println("** MediaPlayerFX received onPlaying!");
             startTimeAtStop = null;
-            
+
             Platform.runLater(() -> {
                 createMediaTimer();
                 setStatus(Status.PLAYING);
@@ -2465,14 +2465,14 @@ public final class MediaPlayer {
         @Override
         public void onPause(PlayerStateEvent evt) {
             //System.err.println("** MediaPlayerFX received onPause!");
-            
+
             Platform.runLater(() -> {
                 // Disable updating currentTime.
                 isUpdateTimeEnabled = false;
 
                 setStatus(Status.PAUSED);
             });
-            
+
             if (startTimeAtStop != null && startTimeAtStop != getStartTime()) {
                 startTimeAtStop = null;
                 Platform.runLater(() -> {
@@ -2530,7 +2530,7 @@ public final class MediaPlayer {
 
                 // Set current rate to zero.
                 setCurrentRate(0.0);
-                
+
                 // Set EOS flag
                 isEOS = true;
 
@@ -2544,7 +2544,7 @@ public final class MediaPlayer {
         public void onFinish(PlayerStateEvent evt) {
             //System.err.println("** MediaPlayerFX received onFinish!");
             startTimeAtStop = null;
-            
+
             Platform.runLater(() -> {
                 handleFinish();
             });
@@ -2656,16 +2656,16 @@ public final class MediaPlayer {
             });
         }
     }
-    
+
     private final Object renderLock = new Object();
     private VideoDataBuffer currentRenderFrame;
     private VideoDataBuffer nextRenderFrame;
-    
+
     // NGMediaView will call this to get the frame to render
     /**
      * WARNING: You must call releaseFrame() on the returned frame when you are
      * finished with it or a massive memory leak will occur.
-     * 
+     *
      * @return the current frame to be used for rendering, or null if not in a render cycle
      * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
@@ -2679,13 +2679,13 @@ public final class MediaPlayer {
             return currentRenderFrame;
         }
     }
-    
+
     private class RendererListener implements
             com.sun.media.jfxmedia.events.VideoRendererListener,
             TKPulseListener
     {
         boolean updateMediaViews;
-        
+
         @Override
         public void videoFrameUpdated(NewFrameEvent nfe) {
             VideoDataBuffer vdb = nfe.getFrameData();
@@ -2732,7 +2732,7 @@ public final class MediaPlayer {
         public void pulse() {
             if (updateMediaViews) {
                 updateMediaViews = false;
-                
+
                 /* swap in the next frame if there is one
                  * this should be done exactly once per render cycle so that all
                  * views display the same image.
@@ -2746,7 +2746,7 @@ public final class MediaPlayer {
                         nextRenderFrame = null;
                     }
                 }
-                
+
                 // tell all media views that their content needs to be redrawn
                 synchronized (viewRefs) {
                     Iterator<WeakReference<MediaView>> iter = viewRefs.iterator();
@@ -2768,11 +2768,11 @@ class MediaPlayerShutdownHook implements Runnable {
 
     private final static List<WeakReference<MediaPlayer>> playerRefs = new ArrayList<WeakReference<MediaPlayer>>();
     private static boolean isShutdown = false;
-    
+
     static {
         Toolkit.getToolkit().addShutdownHook(new MediaPlayerShutdownHook());
     }
-    
+
     public static void addMediaPlayer(MediaPlayer player) {
         synchronized (playerRefs) {
             if (isShutdown) {

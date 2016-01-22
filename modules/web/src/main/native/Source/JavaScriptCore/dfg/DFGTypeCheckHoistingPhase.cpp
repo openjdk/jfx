@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -48,14 +48,14 @@ struct CheckData {
     ArrayMode m_arrayMode;
     bool m_arrayModeIsValid;
     bool m_arrayModeHoistingOkay;
-    
+
     CheckData()
         : m_structure(0)
         , m_arrayModeIsValid(false)
         , m_arrayModeHoistingOkay(false)
     {
     }
-    
+
     CheckData(Structure* structure)
         : m_structure(structure)
         , m_arrayModeIsValid(false)
@@ -77,14 +77,14 @@ struct CheckData {
         m_arrayModeHoistingOkay = false;
     }
 };
-    
+
 class TypeCheckHoistingPhase : public Phase {
 public:
     TypeCheckHoistingPhase(Graph& graph)
         : Phase(graph, "structure check hoisting")
     {
     }
-    
+
     bool run()
     {
         ASSERT(m_graph.m_form == ThreadedCPS);
@@ -128,7 +128,7 @@ public:
                         break;
 
                     NodeOrigin origin = node->origin;
-                    
+
                     Node* getLocal = insertionSet.insertNode(
                         indexInBlock + 1, variable->prediction(), GetLocal, origin,
                         OpInfo(variable), Edge(node));
@@ -148,13 +148,13 @@ public:
 
                     if (block->variablesAtTail.operand(variable->local()) == node)
                         block->variablesAtTail.operand(variable->local()) = getLocal;
-                    
+
                     m_graph.substituteGetLocal(*block, indexInBlock, variable, getLocal);
-                    
+
                     changed = true;
                     break;
                 }
-                    
+
                 case SetLocal: {
                     VariableAccessData* variable = node->variableAccessData();
                     HashMap<VariableAccessData*, CheckData>::iterator iter = m_map.find(variable);
@@ -165,7 +165,7 @@ public:
 
                     NodeOrigin origin = node->origin;
                     Edge child1 = node->child1();
-                    
+
                     if (iter->value.m_structure) {
                         insertionSet.insertNode(
                             indexInBlock, SpecNone, CheckStructure, origin,
@@ -182,20 +182,20 @@ public:
                     changed = true;
                     break;
                 }
-                    
+
                 default:
                     break;
                 }
             }
             insertionSet.execute(block);
         }
-        
+
         return changed;
     }
 
 private:
     void clearVariableVotes()
-    { 
+    {
         for (unsigned i = m_graph.m_variableAccessData.size(); i--;) {
             VariableAccessData* variable = &m_graph.m_variableAccessData[i];
             if (!variable->isRoot())
@@ -203,11 +203,11 @@ private:
             variable->clearVotes();
         }
     }
-        
+
     // Identify the set of variables that are always subject to the same structure
     // checks. For now, only consider monomorphic structure checks (one structure).
     void identifyRedundantStructureChecks()
-    {    
+    {
         for (BlockIndex blockIndex = 0; blockIndex < m_graph.numBlocks(); ++blockIndex) {
             BasicBlock* block = m_graph.block(blockIndex);
             if (!block)
@@ -227,7 +227,7 @@ private:
                     noticeStructureCheck(variable, node->structureSet());
                     break;
                 }
-                    
+
                 case GetByOffset:
                 case PutByOffset:
                 case PutStructure:
@@ -248,7 +248,7 @@ private:
                 case MultiGetByOffset:
                     // Don't count these uses.
                     break;
-                    
+
                 case ArrayifyToStructure:
                 case Arrayify:
                     if (node->arrayMode().conversion() == Array::RageConvert) {
@@ -264,7 +264,7 @@ private:
                         noticeStructureCheck(variable, 0);
                     }
                     break;
-                    
+
                 case SetLocal: {
                     // Find all uses of the source of the SetLocal. If any of them are a
                     // kind of CheckStructure, then we should notice them to ensure that
@@ -280,14 +280,14 @@ private:
                         case CheckStructure: {
                             if (subNode->child1() != source)
                                 break;
-                            
+
                             noticeStructureCheck(variable, subNode->structureSet());
                             break;
                         }
                         case StructureTransitionWatchpoint: {
                             if (subNode->child1() != source)
                                 break;
-                            
+
                             noticeStructureCheck(variable, subNode->structure());
                             break;
                         }
@@ -295,11 +295,11 @@ private:
                             break;
                         }
                     }
-                    
+
                     m_graph.voteChildren(node, VoteOther);
                     break;
                 }
-                    
+
                 default:
                     m_graph.voteChildren(node, VoteOther);
                     break;
@@ -307,7 +307,7 @@ private:
             }
         }
     }
-        
+
     void identifyRedundantArrayChecks()
     {
         for (BlockIndex blockIndex = 0; blockIndex < m_graph.numBlocks(); ++blockIndex) {
@@ -348,7 +348,7 @@ private:
                 case MultiGetByOffset:
                     // Don't count these uses.
                     break;
-                    
+
                 case AllocatePropertyStorage:
                 case ArrayifyToStructure:
                 case Arrayify: {
@@ -364,7 +364,7 @@ private:
                     disableCheckArrayHoisting(variable);
                     break;
                 }
-                    
+
                 case SetLocal: {
                     // Find all uses of the source of the SetLocal. If any of them are a
                     // kind of CheckStructure, then we should notice them to ensure that
@@ -380,14 +380,14 @@ private:
                         case CheckStructure: {
                             if (subNode->child1() != source)
                                 break;
-                            
+
                             noticeStructureCheckAccountingForArrayMode(variable, subNode->structureSet());
                             break;
                         }
                         case StructureTransitionWatchpoint: {
                             if (subNode->child1() != source)
                                 break;
-                            
+
                             noticeStructureCheckAccountingForArrayMode(variable, subNode->structure());
                             break;
                         }
@@ -401,11 +401,11 @@ private:
                             break;
                         }
                     }
-                    
+
                     m_graph.voteChildren(node, VoteOther);
                     break;
                 }
-                    
+
                 default:
                     m_graph.voteChildren(node, VoteOther);
                     break;
@@ -418,7 +418,7 @@ private:
     // contexts where it doesn't make sense.
     template <typename TypeCheck>
     void disableHoistingForVariablesWithInsufficientVotes()
-    {    
+    {
         for (unsigned i = m_graph.m_variableAccessData.size(); i--;) {
             VariableAccessData* variable = &m_graph.m_variableAccessData[i];
             if (!variable->isRoot())
@@ -484,7 +484,7 @@ private:
             return false;
         return true;
     }
-    
+
     void noticeStructureCheck(VariableAccessData* variable, Structure* structure)
     {
         HashMap<VariableAccessData*, CheckData>::AddResult result = m_map.add(variable, CheckData(structure));
@@ -494,7 +494,7 @@ private:
             return;
         result.iterator->value.m_structure = 0;
     }
-    
+
     void noticeStructureCheck(VariableAccessData* variable, const StructureSet& set)
     {
         if (set.size() != 1) {

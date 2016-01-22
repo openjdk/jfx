@@ -36,7 +36,7 @@ import javafx.beans.Observable;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.scene.control.TextInputControl;
- 
+
 public class TextInputValidatorPane<C extends TextInputControl> extends ValidatorPane<C> {
 
     private InvalidationListener textListener = (Observable o) -> {
@@ -44,7 +44,7 @@ public class TextInputValidatorPane<C extends TextInputControl> extends Validato
         final ValidationResult result = v != null ?
                 v.validate(getContent()) :
                 new ValidationResult("", ValidationResult.Type.SUCCESS);
-        
+
         handleValidationResult(result);
     };
 
@@ -63,4 +63,4 @@ public class TextInputValidatorPane<C extends TextInputControl> extends Validato
         this();
         setContent(field);
     }
-}    
+}

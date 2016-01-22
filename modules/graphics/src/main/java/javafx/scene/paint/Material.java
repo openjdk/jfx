@@ -34,7 +34,7 @@ import sun.util.logging.PlatformLogger;
 
 /**
  * Base class for representing the material of a 3D surface.
- * 
+ *
  * Note that this is a conditional feature. See
  * {@link javafx.application.ConditionalFeature#SCENE3D ConditionalFeature.SCENE3D}
  * for more information.
@@ -59,8 +59,8 @@ public abstract class Material {
                                                       + "ConditionalFeature.SCENE3D");
         }
     }
-    
-    // Material isn't a Node. It can't use the standard dirtyBits pattern that is 
+
+    // Material isn't a Node. It can't use the standard dirtyBits pattern that is
     // in Node
     private final BooleanProperty dirty = new SimpleBooleanProperty(true);
 

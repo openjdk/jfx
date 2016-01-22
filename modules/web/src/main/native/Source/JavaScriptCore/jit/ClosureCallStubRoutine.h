@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef ClosureCallStubRoutine_h
@@ -40,9 +40,9 @@ public:
     ClosureCallStubRoutine(
         const MacroAssemblerCodeRef&, VM&, const JSCell* owner,
         Structure*, ExecutableBase*, const CodeOrigin&);
-    
+
     virtual ~ClosureCallStubRoutine();
-    
+
     Structure* structure() const { return m_structure.get(); }
     ExecutableBase* executable() const { return m_executable.get(); }
     const CodeOrigin& codeOrigin() const { return m_codeOrigin; }

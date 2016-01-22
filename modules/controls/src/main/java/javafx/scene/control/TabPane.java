@@ -141,14 +141,14 @@ public class TabPane extends Control {
         if (tabs != null) {
             getTabs().addAll(tabs);
         }
-        
+
         // initialize pseudo-class state
         Side edge = getSide();
         pseudoClassStateChanged(TOP_PSEUDOCLASS_STATE, (edge == Side.TOP));
         pseudoClassStateChanged(RIGHT_PSEUDOCLASS_STATE, (edge == Side.RIGHT));
         pseudoClassStateChanged(BOTTOM_PSEUDOCLASS_STATE, (edge == Side.BOTTOM));
         pseudoClassStateChanged(LEFT_PSEUDOCLASS_STATE, (edge == Side.LEFT));
-        
+
     }
 
     private ObservableList<Tab> tabs = FXCollections.observableArrayList();
@@ -215,7 +215,7 @@ public class TabPane extends Control {
             side = new ObjectPropertyBase<Side>(Side.TOP) {
                 private Side oldSide;
                 @Override protected void invalidated() {
-                    
+
                     oldSide = get();
 
                     pseudoClassStateChanged(TOP_PSEUDOCLASS_STATE, (oldSide == Side.TOP || oldSide == null));
@@ -704,7 +704,7 @@ public class TabPane extends Control {
                 (index == getSelectedIndex() && getModelItem(index).isSelected())) {
                 return;
             }
-            
+
             // Unselect the old tab
             if (getSelectedIndex() >= 0 && getSelectedIndex() < tabPane.getTabs().size()) {
                 tabPane.getTabs().get(getSelectedIndex()).setSelected(false);
@@ -712,11 +712,11 @@ public class TabPane extends Control {
 
             setSelectedIndex(index);
 
-            Tab tab = getModelItem(index);            
+            Tab tab = getModelItem(index);
             if (tab != null) {
                 setSelectedItem(tab);
             }
-            
+
             // Select the new tab
             if (getSelectedIndex() >= 0 && getSelectedIndex() < tabPane.getTabs().size()) {
                 tabPane.getTabs().get(getSelectedIndex()).setSelected(true);

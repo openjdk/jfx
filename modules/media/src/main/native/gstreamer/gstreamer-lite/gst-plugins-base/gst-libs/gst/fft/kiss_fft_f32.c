@@ -268,7 +268,7 @@ kf_work (kiss_fft_f32_cpx * Fout,
   const kiss_fft_f32_cpx *Fout_end = Fout + p * m;
 
 #ifdef _OPENMP
-  // use openmp extensions at the 
+  // use openmp extensions at the
   // top-level (not recursive)
   if (fstride == 1) {
     int k;
@@ -310,7 +310,7 @@ kf_work (kiss_fft_f32_cpx * Fout,
     do {
       // recursive call:
       // DFT of size m*p performed by doing
-      // p instances of smaller DFTs of size m, 
+      // p instances of smaller DFTs of size m,
       // each one takes a decimated version of the input
       kf_work (Fout, f, fstride * p, in_stride, factors, st);
       f += fstride * in_stride;
@@ -319,7 +319,7 @@ kf_work (kiss_fft_f32_cpx * Fout,
 
   Fout = Fout_beg;
 
-  // recombine the p smaller DFTs 
+  // recombine the p smaller DFTs
   switch (p) {
     case 2:
       kf_bfly2 (Fout, fstride, st, m);
@@ -340,7 +340,7 @@ kf_work (kiss_fft_f32_cpx * Fout,
 }
 
 /*  facbuf is populated by p1,m1,p2,m2, ...
-    where 
+    where
     p[i] * m[i] = m[i-1]
     m0 = n                  */
 static void
@@ -440,7 +440,7 @@ kiss_fft_f32 (kiss_fft_f32_cfg cfg, const kiss_fft_f32_cpx * fin,
 }
 
 
-/* not really necessary to call, but if someone is doing in-place ffts, they may want to free the 
+/* not really necessary to call, but if someone is doing in-place ffts, they may want to free the
    buffers from CHECKBUF
  */
 void

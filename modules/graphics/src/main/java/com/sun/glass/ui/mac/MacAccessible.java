@@ -92,7 +92,7 @@ final class MacAccessible extends Accessible {
         NSAccessibilityEnabledAttribute(DISABLED, MacVariant::createNSNumberForBoolean),
         NSAccessibilityHelpAttribute(HELP, MacVariant::createNSString),
 
-        // FOCUSED might not match the result of accessibilityFocusedUIElement() cause of FOCUS_ITEM 
+        // FOCUSED might not match the result of accessibilityFocusedUIElement() cause of FOCUS_ITEM
         NSAccessibilityFocusedAttribute(FOCUSED, MacVariant::createNSNumberForBoolean),
         NSAccessibilityExpandedAttribute(EXPANDED, MacVariant::createNSNumberForBoolean),
         NSAccessibilityMaxValueAttribute(MAX_VALUE, MacVariant::createNSNumberForDouble),
@@ -194,7 +194,7 @@ final class MacAccessible extends Accessible {
         }
     }
 
-    /* 
+    /*
      * The Attribute and Action for roles are defined in
      * https://developer.apple.com/library/mac/documentation/UserExperience/Reference/Accessibility_RoleAttribute_Ref/Introduction.html
      */
@@ -595,7 +595,7 @@ final class MacAccessible extends Accessible {
         ;long ptr; /* Initialized natively - treat as final */
     }
 
-    /* 
+    /*
      * Do not access the following lists directly from the Mac enums.
      * It can cause the static initialization to happen in an unexpected order.
      */
@@ -701,7 +701,7 @@ final class MacAccessible extends Accessible {
                 Node node = (Node)getAttribute(FOCUS_NODE);
                 View view = getView();
                 if (node == null && view == null) {
-                    /* 
+                    /*
                      * The transientFocusContainer resigns focus.
                      * Delegate to the scene.
                      */
@@ -719,7 +719,7 @@ final class MacAccessible extends Accessible {
                     Node item = (Node)getAccessible(node).getAttribute(FOCUS_ITEM);
                     id = item != null ? getNativeAccessible(item) : getNativeAccessible(node);
                 } else {
-                    /* 
+                    /*
                      * No focused element. Send the notification to the scene itself.
                      * Note, the view is NULL when the FOCUS_NODE notification is sent
                      * by the transientFocusContainer.
@@ -764,7 +764,7 @@ final class MacAccessible extends Accessible {
                     } else {
                         macNotification = MacNotification.AXMenuClosed;
 
-                        /* 
+                        /*
                          * When a submenu closes the focus is returned to the main
                          * window, as opposite of the previous menu.
                          * The work around is to look for a previous menu
@@ -861,12 +861,12 @@ final class MacAccessible extends Accessible {
     private Boolean ignoreInnerText;
     private boolean ignoreInnerText() {
         if (ignoreInnerText != null) return ignoreInnerText;
-        /* 
+        /*
          * JavaFX controls are implemented by the skin by adding new nodes.
          * In accessibility these nodes sometimes duplicate the data in the
          * control. For example, a Label is implemented using a Text, creating a
          * AXStaticText inside an AXStaticText. In order to  improve accessibility
-         * navigation to following code ignores these inner text for the most 
+         * navigation to following code ignores these inner text for the most
          * common cases.
          */
         AccessibleRole role = (AccessibleRole)getAttribute(ROLE);
@@ -1028,7 +1028,7 @@ final class MacAccessible extends Accessible {
             case NSAccessibilityColumnsAttribute: {
                 Integer count = (Integer)getAttribute(COLUMN_COUNT);
 
-                /* 
+                /*
                  * JFX does not require ListView to report column count == 1
                  * But Mac needs NSAccessibilityColumnCountAttribute == 1 to work
                  */
@@ -1211,9 +1211,9 @@ final class MacAccessible extends Accessible {
                 case NSAccessibilitySelectedChildrenAttribute: {
                     Node focus = null;
                     if (role == AccessibleRole.CONTEXT_MENU) {
-                        /* 
+                        /*
                          * ContextMenu is in its separate Window. It is safe to
-                         * use FOCUS_NODE to locate the selected menu item 
+                         * use FOCUS_NODE to locate the selected menu item
                          * within it.
                          */
                         Scene scene = (Scene)getAttribute(SCENE);
@@ -1244,7 +1244,7 @@ final class MacAccessible extends Accessible {
                      */
                     if (getAttribute(DATE) == null) return null;
 
-                    /* 
+                    /*
                      * AXDateTimeComponents is an undocumented attribute which
                      * is used by native DateTime controls in Cocoa.
                      * It it used a bit vector and 224 indicates that
@@ -1263,7 +1263,7 @@ final class MacAccessible extends Accessible {
             switch (attr) {
                 case NSAccessibilityParentAttribute: break;
                 case NSAccessibilityColumnCountAttribute:
-                    /* 
+                    /*
                      * JFX does not require ListView to report column count == 1
                      * But Mac needs NSAccessibilityColumnCountAttribute == 1 to work
                      */
@@ -1288,7 +1288,7 @@ final class MacAccessible extends Accessible {
                      * to a Mac role. For example, reporting 'disclosure triangle'
                      * for a TITLED_PANE is not appropriate.
                      * Providing a custom role description makes it much better.
-                     * 
+                     *
                      * Note: The user can redefine this attribuet by specifying
                      * a DESCRIPTION.
                      */
@@ -1400,7 +1400,7 @@ final class MacAccessible extends Accessible {
                 break;
             }
             case NSAccessibilityPositionAttribute: {
-                /* 
+                /*
                  * NSAccessibilityPositionAttribute requires the point relative
                  * to the lower-left corner in screen.
                  */
@@ -1408,7 +1408,7 @@ final class MacAccessible extends Accessible {
                 break;
             }
             case NSAccessibilityMaxValueAttribute: {
-                /* 
+                /*
                  * VoiceOver reports 'Indeterminate Progress Indicator' when
                  * the max value is not specified.
                  */
@@ -1420,8 +1420,8 @@ final class MacAccessible extends Accessible {
             case NSAccessibilityTitleAttribute: {
                 /*
                  * Voice over sends title attributes in unexpected cases.
-                 * For text roles, where the title is reported in AXValue, reporting 
-                 * the value again in AXTitle will cause voice over to read the text twice. 
+                 * For text roles, where the title is reported in AXValue, reporting
+                 * the value again in AXTitle will cause voice over to read the text twice.
                  */
                 switch (role) {
                     case COMBO_BOX:
@@ -1438,7 +1438,7 @@ final class MacAccessible extends Accessible {
                 result = null;
                 if (kc instanceof KeyCharacterCombination) {
                     result = ((KeyCharacterCombination)kc).getCharacter();
-                } 
+                }
                 if (kc instanceof KeyCodeCombination) {
                     KeyCode code = ((KeyCodeCombination)kc).getCode();
                     if (isCmdCharBased(code)) {
@@ -1469,7 +1469,7 @@ final class MacAccessible extends Accessible {
                     KeyCode code = ((KeyCodeCombination)kc).getCode();
                     if (!isCmdCharBased(code)) {
                         result = getMenuItemCmdGlyph(code);
-                    }                    
+                    }
                 }
                 if (result == null) return null;
                 break;
@@ -1540,7 +1540,7 @@ final class MacAccessible extends Accessible {
                     Integer lineIndex = (Integer)getAttribute(LINE_FOR_OFFSET, result /*CARET_OFFSET*/);
                     result = lineIndex != null ? lineIndex : 0;
                 } else {
-                    /* Combo and TextArea */ 
+                    /* Combo and TextArea */
                     result = 0;
                 }
                 break;
@@ -1741,7 +1741,7 @@ final class MacAccessible extends Accessible {
                     Integer lineStart = (Integer)getAttribute(LINE_START, value /*line index*/);
                     Integer lineEnd = (Integer)getAttribute(LINE_END, value /*line index*/);
                     if (lineStart != null && lineEnd != null) {
-                        result = new int[] {lineStart, lineEnd - lineStart}; 
+                        result = new int[] {lineStart, lineEnd - lineStart};
                     } else {
                         result = null;
                     }
@@ -1841,7 +1841,7 @@ final class MacAccessible extends Accessible {
             if (macRole != null && macRole.macActions != null) {
                 actions.addAll(macRole.macActions);
             }
-            /* 
+            /*
              * Consider add a attribute to indicate when the node
              * has a menu instead of using the role.
              */
@@ -1896,7 +1896,7 @@ final class MacAccessible extends Accessible {
     private boolean accessibilityIsIgnored() {
         if (isIgnored()) return true;
         if (isInSlider()) {
-            /* 
+            /*
              * Ignoring the children within the slider, otherwise VoiceOver
              * reports 'multiple indicator slider' instead of the value.
              */

@@ -1,7 +1,7 @@
 /* GStreamer
  * Copyright (C) 2006 Jan Schmidt <thaytan@noraisin.net>
  *
- * gstquark.c: Registered quarks for the _priv_gst_quark_table, private to 
+ * gstquark.c: Registered quarks for the _priv_gst_quark_table, private to
  *   GStreamer
  *
  * This library is free software; you can redistribute it and/or

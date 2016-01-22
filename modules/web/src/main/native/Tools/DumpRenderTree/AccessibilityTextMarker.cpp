@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -66,17 +66,17 @@ JSClassRef AccessibilityTextMarker::getJSClass()
     static JSStaticValue staticValues[] = {
         { 0, 0, 0, 0 }
     };
-    
+
     static JSStaticFunction staticFunctions[] = {
         { "isEqual", isMarkerEqualCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
         { 0, 0, 0 }
     };
-    
+
     static JSClassDefinition classDefinition = {
         0, kJSClassAttributeNone, "AccessibilityTextMarker", 0, staticValues, staticFunctions,
         0, markerFinalize, 0, 0, 0, 0, 0, 0, 0, 0, 0
     };
-    
+
     static JSClassRef accessibilityTextMarkerClass = JSClassCreate(&classDefinition);
     return accessibilityTextMarkerClass;
 }
@@ -94,7 +94,7 @@ static JSValueRef isMarkerRangeEqualCallback(JSContextRef context, JSObjectRef f
 {
     if (argumentCount != 1)
         return JSValueMakeBoolean(context, false);
-    
+
     JSObjectRef otherMarker = JSValueToObject(context, arguments[0], exception);
     return JSValueMakeBoolean(context, toTextMarkerRange(thisObject)->isEqual(toTextMarkerRange(otherMarker)));
 }
@@ -118,17 +118,17 @@ JSClassRef AccessibilityTextMarkerRange::getJSClass()
     static JSStaticValue staticValues[] = {
         { 0, 0, 0, 0 }
     };
-    
+
     static JSStaticFunction staticFunctions[] = {
         { "isEqual", isMarkerRangeEqualCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
         { 0, 0, 0 }
     };
-    
+
     static JSClassDefinition classDefinition = {
         0, kJSClassAttributeNone, "AccessibilityTextMarkerRange", 0, staticValues, staticFunctions,
         0, markerRangeFinalize, 0, 0, 0, 0, 0, 0, 0, 0, 0
     };
-    
+
     static JSClassRef accessibilityTextMarkerRangeClass = JSClassCreate(&classDefinition);
     return accessibilityTextMarkerRangeClass;
 }

@@ -40,7 +40,7 @@
 namespace WebCore {
 
 using namespace AudioUtilities;
-    
+
 DynamicsCompressor::DynamicsCompressor(float sampleRate, unsigned numberOfChannels)
     : m_numberOfChannels(numberOfChannels)
     , m_sampleRate(sampleRate)
@@ -65,7 +65,7 @@ void DynamicsCompressor::setParameterValue(unsigned parameterID, float value)
 void DynamicsCompressor::initializeParameters()
 {
     // Initializes compressor to default values.
-    
+
     m_parameters[ParamThreshold] = -24; // dB
     m_parameters[ParamKnee] = 30; // dB
     m_parameters[ParamRatio] = 12; // unit-less
@@ -82,7 +82,7 @@ void DynamicsCompressor::initializeParameters()
     m_parameters[ParamFilterStageGain] = 4.4f; // dB
     m_parameters[ParamFilterStageRatio] = 2;
     m_parameters[ParamFilterAnchor] = 15000 / nyquist();
-    
+
     m_parameters[ParamPostGain] = 0; // dB
     m_parameters[ParamReduction] = 0; // dB
 
@@ -231,8 +231,8 @@ void DynamicsCompressor::process(const AudioBus* sourceBus, AudioBus* destinatio
                          releaseZone3,
                          releaseZone4
                          );
-                         
-    // Update the compression amount.                     
+
+    // Update the compression amount.
     setParameterValue(ParamReduction, m_compressor.meteringGain());
 
     // Apply de-emphasis filter.

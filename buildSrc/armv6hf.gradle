@@ -138,7 +138,7 @@ def monocleLFlags = [extraLFlags, "-ldl", "-lm"].flatten()
 def fontCFlags = [extraCFlags].flatten()
 def fontLFlags = [extraLFlags, "-ldl"].flatten()
 
-def iioCFlags = [extraCFlags, 
+def iioCFlags = [extraCFlags,
          "-Wno-main" // suppress warnings about using main as a variable, 3rd party code
          ].flatten()
 def iioLFlags = [extraLFlags].flatten()
@@ -293,12 +293,12 @@ ARMV6HF.glass.javahInclude = [
     "com/sun/glass/events/**",
     "com/sun/glass/ui/*"]
 ARMV6HF.glass.variants = [ ]
-if (ARMV6HF.includeLens) { 
+if (ARMV6HF.includeLens) {
     ARMV6HF.glass.variants.addAll("eglfb", "directfb", "fb", "lensport" );
     ARMV6HF.glass.javahInclude.addAll("com/sun/glass/ui/lens/*");
     ARMV6HF.javafxPlatformProperties = ARMV6HF.javafxPlatformProperties + lensPlatformAdditions
 }
-if (ARMV6HF.includeMonocle) { 
+if (ARMV6HF.includeMonocle) {
     ARMV6HF.glass.variants.addAll("monocle", "monocle_x11");
     ARMV6HF.glass.javahInclude.addAll(
         "com/sun/glass/ui/monocle/*",

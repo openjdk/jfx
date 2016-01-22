@@ -740,7 +740,7 @@ gint
                     gint           val)
 {
   gint oldval;
-  
+
 #ifdef GSTREAMER_LITE
   if (atomic == NULL) {
     return;

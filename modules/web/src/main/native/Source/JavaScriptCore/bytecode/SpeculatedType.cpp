@@ -46,11 +46,11 @@ void dumpSpeculation(PrintStream& out, SpeculatedType value)
         out.print("None");
         return;
     }
-    
+
     StringPrintStream myOut;
-    
+
     bool isTop = true;
-    
+
     if ((value & SpecCell) == SpecCell)
         myOut.print("Cell");
     else {
@@ -61,12 +61,12 @@ void dumpSpeculation(PrintStream& out, SpeculatedType value)
                 myOut.print("Othercell");
             else
                 isTop = false;
-    
+
             if (value & SpecObjectOther)
                 myOut.print("Otherobj");
             else
                 isTop = false;
-    
+
             if (value & SpecFinalObject)
                 myOut.print("Final");
             else
@@ -76,22 +76,22 @@ void dumpSpeculation(PrintStream& out, SpeculatedType value)
                 myOut.print("Array");
             else
                 isTop = false;
-    
+
             if (value & SpecInt8Array)
                 myOut.print("Int8array");
             else
                 isTop = false;
-    
+
             if (value & SpecInt16Array)
                 myOut.print("Int16array");
             else
                 isTop = false;
-    
+
             if (value & SpecInt32Array)
                 myOut.print("Int32array");
             else
                 isTop = false;
-    
+
             if (value & SpecUint8Array)
                 myOut.print("Uint8array");
             else
@@ -101,37 +101,37 @@ void dumpSpeculation(PrintStream& out, SpeculatedType value)
                 myOut.print("Uint8clampedarray");
             else
                 isTop = false;
-    
+
             if (value & SpecUint16Array)
                 myOut.print("Uint16array");
             else
                 isTop = false;
-    
+
             if (value & SpecUint32Array)
                 myOut.print("Uint32array");
             else
                 isTop = false;
-    
+
             if (value & SpecFloat32Array)
                 myOut.print("Float32array");
             else
                 isTop = false;
-    
+
             if (value & SpecFloat64Array)
                 myOut.print("Float64array");
             else
                 isTop = false;
-    
+
             if (value & SpecFunction)
                 myOut.print("Function");
             else
                 isTop = false;
-    
+
             if (value & SpecArguments)
                 myOut.print("Arguments");
             else
                 isTop = false;
-    
+
             if (value & SpecStringObject)
                 myOut.print("Stringobject");
             else
@@ -145,22 +145,22 @@ void dumpSpeculation(PrintStream& out, SpeculatedType value)
                 myOut.print("Stringident");
             else
                 isTop = false;
-            
+
             if (value & SpecStringVar)
                 myOut.print("Stringvar");
             else
                 isTop = false;
         }
     }
-    
+
     if (value & SpecInt32)
         myOut.print("Int32");
     else
         isTop = false;
-    
+
     if (value & SpecInt52)
         myOut.print("Int52");
-        
+
     if ((value & SpecDouble) == SpecDouble)
         myOut.print("Double");
     else {
@@ -168,33 +168,33 @@ void dumpSpeculation(PrintStream& out, SpeculatedType value)
             myOut.print("Int52asdouble");
         else
             isTop = false;
-        
+
         if (value & SpecNonIntAsDouble)
             myOut.print("Nonintasdouble");
         else
             isTop = false;
-        
+
         if (value & SpecDoubleNaN)
             myOut.print("Doublenan");
         else
             isTop = false;
     }
-    
+
     if (value & SpecBoolean)
         myOut.print("Bool");
     else
         isTop = false;
-    
+
     if (value & SpecOther)
         myOut.print("Other");
     else
         isTop = false;
-    
+
     if (isTop)
         out.print("Top");
     else
         out.print(myOut.toCString());
-    
+
     if (value & SpecEmpty)
         out.print("Empty");
 }
@@ -296,25 +296,25 @@ SpeculatedType speculationFromClassInfo(const ClassInfo* classInfo)
 {
     if (classInfo == JSFinalObject::info())
         return SpecFinalObject;
-    
+
     if (classInfo == JSArray::info())
         return SpecArray;
-    
+
     if (classInfo == Arguments::info())
         return SpecArguments;
-    
+
     if (classInfo == StringObject::info())
         return SpecStringObject;
-    
+
     if (classInfo->isSubClassOf(JSFunction::info()))
         return SpecFunction;
-    
+
     if (isTypedView(classInfo->typedArrayStorageType))
         return speculationFromTypedArrayType(classInfo->typedArrayStorageType);
-    
+
     if (classInfo->isSubClassOf(JSObject::info()))
         return SpecObjectOther;
-    
+
     return SpecCellOther;
 }
 
@@ -363,31 +363,31 @@ TypedArrayType typedArrayTypeFromSpeculation(SpeculatedType type)
 {
     if (isInt8ArraySpeculation(type))
         return TypeInt8;
-        
+
     if (isInt16ArraySpeculation(type))
         return TypeInt16;
-        
+
     if (isInt32ArraySpeculation(type))
         return TypeInt32;
-        
+
     if (isUint8ArraySpeculation(type))
         return TypeUint8;
-        
+
     if (isUint8ClampedArraySpeculation(type))
         return TypeUint8Clamped;
-        
+
     if (isUint16ArraySpeculation(type))
         return TypeUint16;
-        
+
     if (isUint32ArraySpeculation(type))
         return TypeUint32;
-        
+
     if (isFloat32ArraySpeculation(type))
         return TypeFloat32;
-        
+
     if (isFloat64ArraySpeculation(type))
         return TypeFloat64;
-    
+
     return NotTypedArray;
 }
 

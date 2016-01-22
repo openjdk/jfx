@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef AnimationUtilities_h
@@ -33,7 +33,7 @@
 namespace WebCore {
 
 inline int blend(int from, int to, double progress)
-{  
+{
     return static_cast<int>(lround(static_cast<double>(from) + static_cast<double>(to - from) * progress));
 }
 
@@ -43,17 +43,17 @@ inline unsigned blend(unsigned from, unsigned to, double progress)
 }
 
 inline double blend(double from, double to, double progress)
-{  
+{
     return from + (to - from) * progress;
 }
 
 inline float blend(float from, float to, double progress)
-{  
+{
     return static_cast<float>(from + (to - from) * progress);
 }
 
 inline LayoutUnit blend(LayoutUnit from, LayoutUnit to, double progress)
-{  
+{
     return from + (to - from) * progress;
 }
 

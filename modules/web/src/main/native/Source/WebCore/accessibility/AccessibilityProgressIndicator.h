@@ -35,7 +35,7 @@ class RenderMeter;
 class HTMLProgressElement;
 class RenderProgress;
 #endif
-    
+
 class AccessibilityProgressIndicator : public AccessibilityRenderObject {
 public:
 #if ENABLE(PROGRESS_ELEMENT)
@@ -62,7 +62,7 @@ private:
     explicit AccessibilityProgressIndicator(RenderMeter*);
     HTMLMeterElement* meterElement() const;
 #endif
-    
+
     virtual bool computeAccessibilityIsIgnored() const override;
 };
 

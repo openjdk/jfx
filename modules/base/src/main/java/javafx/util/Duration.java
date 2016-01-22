@@ -397,17 +397,17 @@ public class Duration implements Comparable<Duration>, Serializable {
     /**
      * Returns a string representation of this {@code Duration} object.
      * @return a string representation of this {@code Duration} object.
-     */ 
+     */
     @Override public String toString() {
         return isIndefinite() ? "INDEFINITE" : (isUnknown() ? "UNKNOWN" : millis + " ms");
     }
 
     /**
-     * Compares durations represented by this object and the specified object. 
-     * Returns a negative integer, zero, or a positive integer as this duration 
+     * Compares durations represented by this object and the specified object.
+     * Returns a negative integer, zero, or a positive integer as this duration
      * is less than, equal to, or greater than the specified duration.
      * @param d the duration to be compared.
-     * @return a negative integer, zero, or a positive integer as this duration 
+     * @return a negative integer, zero, or a positive integer as this duration
      * is less than, equal to, or greater than the specified duration.
      */
     @Override public int compareTo(Duration d) {
@@ -428,7 +428,7 @@ public class Duration implements Comparable<Duration>, Serializable {
     /**
      * Returns a hash code for this {@code Duration} object.
      * @return a hash code for this {@code Duration} object.
-     */ 
+     */
     @Override public int hashCode() {
         // Uses the same implementation as Double.hashCode
         long bits = Double.doubleToLongBits(millis);

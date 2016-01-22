@@ -86,7 +86,7 @@ class DummyResourceFactory extends BaseShaderFactory {
     public boolean isCompatibleTexture(Texture tex) {
         return tex instanceof DummyTexture;
     }
-  
+
     @Override
     public RTTexture createRTTexture(int width, int height, WrapMode wrapMode) {
         return createRTTexture(width, height, wrapMode, false);

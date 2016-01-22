@@ -150,17 +150,17 @@ jobject createJavaScreen(JNIEnv* env, gint monitor_idx) {
 jobjectArray rebuild_screens(JNIEnv* env) {
     GdkScreen *default_gdk_screen = gdk_screen_get_default();
     gint n_monitors = gdk_screen_get_n_monitors(default_gdk_screen);
-    
+
     jobjectArray jscreens = env->NewObjectArray(n_monitors, jScreenCls, NULL);
     JNI_EXCEPTION_TO_CPP(env)
     LOG1("Available monitors: %d\n", n_monitors)
-    
+
     int i;
     for (i=0; i < n_monitors; i++) {
         env->SetObjectArrayElement(jscreens, i, createJavaScreen(env, default_gdk_screen, i));
         JNI_EXCEPTION_TO_CPP(env)
     }
-    
+
     return jscreens;
 }
 

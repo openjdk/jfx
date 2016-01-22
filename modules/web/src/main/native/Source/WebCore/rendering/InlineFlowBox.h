@@ -88,7 +88,7 @@ public:
     InlineBox* lastChild() const { checkConsistency(); return m_lastChild; }
 
     virtual bool isLeaf() const override final { return false; }
-    
+
     InlineBox* firstLeafChild() const;
     InlineBox* lastLeafChild() const;
 
@@ -115,7 +115,7 @@ public:
     virtual void clearTruncation() override;
 
     IntRect roundedFrameRect() const;
-    
+
     void paintBoxDecorations(PaintInfo&, const LayoutPoint&);
     void paintMask(PaintInfo&, const LayoutPoint&);
     void paintFillLayers(const PaintInfo&, const Color&, const FillLayer*, const LayoutRect&, CompositeOperator = CompositeSourceOver);
@@ -201,7 +201,7 @@ public:
     LayoutUnit computeUnderAnnotationAdjustment(LayoutUnit allowedPosition) const;
 
     void computeOverflow(LayoutUnit lineTop, LayoutUnit lineBottom, GlyphOverflowAndFallbackFontsMap&);
-    
+
     void removeChild(InlineBox* child);
 
     virtual RenderObject::SelectionState selectionState() override;
@@ -213,7 +213,7 @@ public:
     bool hasTextDescendants() const { return m_hasTextDescendants; }
     void setHasTextChildren() { m_hasTextChildren = true; setHasTextDescendants(); }
     void setHasTextDescendants() { m_hasTextDescendants = true; }
-    
+
     void checkConsistency() const;
     void setHasBadChildList();
 
@@ -221,7 +221,7 @@ public:
     // For horizontal-tb and vertical-lr they will match physical directions, but for horizontal-bt and vertical-rl, the top/bottom and left/right
     // respectively are flipped when compared to their physical counterparts.  For example minX is on the left in vertical-lr, but it is on the right in vertical-rl.
     LayoutRect layoutOverflowRect(LayoutUnit lineTop, LayoutUnit lineBottom) const
-    { 
+    {
         return m_overflow ? m_overflow->layoutOverflowRect() : enclosingLayoutRect(frameRectIncludingLineHeight(lineTop, lineBottom));
     }
     LayoutUnit logicalTopLayoutOverflow(LayoutUnit lineTop) const
@@ -245,7 +245,7 @@ public:
     }
 
     LayoutRect visualOverflowRect(LayoutUnit lineTop, LayoutUnit lineBottom) const
-    { 
+    {
         return m_overflow ? m_overflow->visualOverflowRect() : enclosingLayoutRect(frameRectIncludingLineHeight(lineTop, lineBottom));
     }
     LayoutUnit logicalLeftVisualOverflow() const { return m_overflow ? (isHorizontal() ? m_overflow->visualOverflowRect().x() : m_overflow->visualOverflowRect().y()) : static_cast<LayoutUnit>(logicalLeft()); }
@@ -280,15 +280,15 @@ public:
             return FloatRect(m_topLeft.x(), lineTop, width(), lineBottom - lineTop);
         return FloatRect(lineTop, m_topLeft.y(), lineBottom - lineTop, height());
     }
-    
+
     FloatRect logicalFrameRectIncludingLineHeight(LayoutUnit lineTop, LayoutUnit lineBottom) const
     {
         return FloatRect(logicalLeft(), lineTop, logicalWidth(), lineBottom - lineTop);
     }
-    
+
     bool descendantsHaveSameLineHeightAndBaseline() const { return m_descendantsHaveSameLineHeightAndBaseline; }
     void clearDescendantsHaveSameLineHeightAndBaseline()
-    { 
+    {
         m_descendantsHaveSameLineHeightAndBaseline = false;
         if (parent() && parent()->descendantsHaveSameLineHeightAndBaseline())
             parent()->clearDescendantsHaveSameLineHeightAndBaseline();
@@ -309,7 +309,7 @@ protected:
 
     InlineBox* m_firstChild;
     InlineBox* m_lastChild;
-    
+
     InlineFlowBox* m_prevLineBox; // The previous box that also uses our RenderObject
     InlineFlowBox* m_nextLineBox; // The next box that also uses our RenderObject
 

@@ -31,7 +31,7 @@ import com.sun.glass.ui.Window;
 import java.io.File;
 
 final class GtkCommonDialogs {
- 
+
     private static native FileChooserResult _showFileChooser(
                                             long parent,
                                             String folder,
@@ -60,7 +60,7 @@ final class GtkCommonDialogs {
         if (owner != null) owner.setEnabled(true);
         return result;
     }
- 
+
     static File showFolderChooser(Window owner, String folder, String title) {
         if (owner != null) {
             owner.setEnabled(false);
@@ -68,12 +68,12 @@ final class GtkCommonDialogs {
         try {
             String filename = _showFolderChooser((owner != null) ? owner.getNativeHandle() : 0, folder, title);
             return filename != null ? new File(filename) : null;
-                                                   
+
         } finally {
             if (owner != null) {
                 owner.setEnabled(true);
             }
         }
-        
+
     }
 }

@@ -49,8 +49,8 @@ import java.lang.ref.WeakReference;
  *
  * @param <T>
  *            The type of the observed value
- * 
- * 
+ *
+ *
  * @since JavaFX 2.0
  */
 public final class WeakChangeListener<T> implements ChangeListener<T>, WeakListener {
@@ -59,7 +59,7 @@ public final class WeakChangeListener<T> implements ChangeListener<T>, WeakListe
 
     /**
      * The constructor of {@code WeakChangeListener}.
-     * 
+     *
      * @param listener
      *            The original listener that should be notified
      */

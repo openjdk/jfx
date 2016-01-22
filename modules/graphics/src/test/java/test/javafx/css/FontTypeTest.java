@@ -113,20 +113,20 @@ public class FontTypeTest {
         expResult = Font.font(font.getFamily(), font.getSize() * (96.0/72.0));
         result = value.convert(font);
         checkFont(expResult, result);
-        
+
     }
 
     @Test public void test_RT_21960_Bold_Italic() {
-        
+
         ParsedValue pv = new CssParser().parseExpr("-fx-font", "italic bold 24 Amble");
         Font f = (Font)pv.convert(null);
         assertEquals("Bold Italic", f.getStyle());
         assertEquals("Amble", f.getFamily());
         assertEquals(24, f.getSize(),0);
     }
-    
+
     @Test public void test_RT_21960_Bold() {
-        
+
         ParsedValue pv = new CssParser().parseExpr("-fx-font", "bold 24 Amble");
         Font f = (Font)pv.convert(null);
         assertEquals("Bold", f.getStyle());
@@ -135,7 +135,7 @@ public class FontTypeTest {
     }
 
     @Test public void test_RT_21960_Italic() {
-        
+
         ParsedValue pv = new CssParser().parseExpr("-fx-font", "italic 24 Amble");
         Font f = (Font)pv.convert(null);
         assertEquals("Italic", f.getStyle());
@@ -144,7 +144,7 @@ public class FontTypeTest {
     }
 
     @Test public void test_RT_21960_Neither_Bold_Nor_Italic() {
-        
+
         ParsedValue pv = new CssParser().parseExpr("-fx-font", "24 Amble");
         Font f = (Font)pv.convert(null);
         assertEquals("Regular", f.getStyle());

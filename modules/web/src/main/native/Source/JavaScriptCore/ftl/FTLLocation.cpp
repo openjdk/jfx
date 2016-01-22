@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -41,22 +41,22 @@ Location Location::forStackmaps(const StackMaps* stackmaps, const StackMaps::Loc
     case StackMaps::Location::Unprocessed:
         RELEASE_ASSERT_NOT_REACHED();
         break;
-        
+
     case StackMaps::Location::Register:
     case StackMaps::Location::Direct:
         return forRegister(location.dwarfRegNum, location.offset);
-        
+
     case StackMaps::Location::Indirect:
         return forIndirect(location.dwarfRegNum, location.offset);
-        
+
     case StackMaps::Location::Constant:
         return forConstant(location.offset);
-        
+
     case StackMaps::Location::ConstantIndex:
         ASSERT(stackmaps);
         return forConstant(stackmaps->constants[location.offset].integer);
     }
-    
+
     RELEASE_ASSERT_NOT_REACHED();
 }
 
@@ -91,9 +91,9 @@ GPRReg Location::gpr() const
     // Stupidly, Dwarf doesn't number the registers in the same way as the architecture;
     // for example, the architecture encodes CX as 1 and DX as 2 while Dwarf does the
     // opposite. Hence we need the switch.
-    
+
     RELEASE_ASSERT(involvesGPR());
-    
+
     switch (dwarfRegNum()) {
     case 0:
         return X86Registers::eax;
@@ -161,10 +161,10 @@ void Location::restoreInto(MacroAssembler& jit, char* savedRegisters, GPRReg res
         // Make the result GPR contain the appropriate stack register.
         if (numFramesToPop) {
             jit.move(MacroAssembler::framePointerRegister, result);
-            
+
             for (unsigned i = numFramesToPop - 1; i--;)
                 jit.loadPtr(result, result);
-            
+
             if (gpr() == MacroAssembler::framePointerRegister)
                 jit.loadPtr(result, result);
             else
@@ -172,52 +172,52 @@ void Location::restoreInto(MacroAssembler& jit, char* savedRegisters, GPRReg res
         } else
             jit.move(gpr(), result);
     }
-    
+
     if (isGPR()) {
         if (MacroAssembler::isStackRelated(gpr())) {
             // Already restored into result.
         } else
             jit.load64(savedRegisters + offsetOfGPR(gpr()), result);
-        
+
         if (addend())
             jit.add64(MacroAssembler::TrustedImm32(addend()), result);
         return;
     }
-    
+
     if (isFPR()) {
         jit.load64(savedRegisters + offsetOfFPR(fpr()), result);
         ASSERT(!addend());
         return;
     }
-    
+
     switch (kind()) {
     case Register:
         // LLVM used some register that we don't know about!
         RELEASE_ASSERT_NOT_REACHED();
         return;
-        
+
     case Indirect:
         if (MacroAssembler::isStackRelated(gpr())) {
             // The stack register is already recovered into result.
             jit.load64(MacroAssembler::Address(result, offset()), result);
             return;
         }
-        
+
         jit.load64(savedRegisters + offsetOfGPR(gpr()), result);
         jit.load64(MacroAssembler::Address(result, offset()), result);
         return;
-        
+
     case Constant:
         jit.move(MacroAssembler::TrustedImm64(constant()), result);
         return;
-        
+
     case Unprocessed:
         // Should never see this - it's an enumeration entry on LLVM's side that means that
         // it hasn't processed this location.
         RELEASE_ASSERT_NOT_REACHED();
         return;
     }
-    
+
     RELEASE_ASSERT_NOT_REACHED();
 }
 

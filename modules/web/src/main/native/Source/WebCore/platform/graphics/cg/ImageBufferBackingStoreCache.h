@@ -42,7 +42,7 @@ class ImageBufferBackingStoreCache {
 
 public:
     static ImageBufferBackingStoreCache& get();
-    
+
     struct IOSurfaceAndContext {
         IOSurfaceAndContext()
         {

@@ -135,7 +135,7 @@ public class MacDaemonBundler extends AbstractBundler {
 
     /*
      * Creates the following structure
-     * 
+     *
      *  <package-name>
      *      Library
      *          LaunchDaemons

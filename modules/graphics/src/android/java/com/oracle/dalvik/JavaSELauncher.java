@@ -38,26 +38,26 @@ public class JavaSELauncher implements Launcher, NativePipeReader.OnTextReceived
 
     private static final String TAG                     = "JavaSELauncher";
     private static final String TAG_JVM                 = "JavaSE";
-    
+
     private static final String VMLAUNCHER_LIB          = "vmlauncher";
     private static final String ANDROID_WEBVIEW_LIB     = "android_webview";
-    
+
     private static final String META_DATA_MAIN_CLASS    = "main.class";
     private static final String META_DATA_JVM_ARGS      = "jvm.args";
     private static final String META_DATA_APP_ARGS      = "app.args";
     private static final String META_DATA_DEBUG_PORT    = "debug.port";
     private static final String JAR_EXT                 = ".jar";
-    
+
     private Bundle              metaData;
     private Activity            activity;
     private NativePipeReader    reader;
     private String              appDataDir;
     private String              storageDir;
-    
+
     public JavaSELauncher() {
         System.loadLibrary(VMLAUNCHER_LIB);
     }
-    
+
     public void launchApp(Activity a, Bundle metadata) {
         this.activity = a;
         this.metaData = metadata;
@@ -72,26 +72,26 @@ public class JavaSELauncher implements Launcher, NativePipeReader.OnTextReceived
     public void onTextReceived(String text) {
         Log.v(TAG_JVM, text);
     }
-    
+
     private void installJVMIfNeeded() {
         new InstallerTask().execute();
     }
-    
+
     private class InstallerTask extends AsyncTask<Void, Void, Void> {
         protected Void doInBackground(Void... args) {
            Log.i(TAG, "Installing JVM");
-            AppDataInstaller installer = 
+            AppDataInstaller installer =
                 new AppDataInstaller(storageDir,
                     activity.getApplicationContext().getAssets());
             installer.install();
             return null;
         }
-        
+
         protected void onPostExecute(Void result) {
             runJVM();
         }
     }
-    
+
     private void runJVM() {
         Log.i(TAG, "Launch JVM + application");
         JvmArgs args = new JvmArgs(appDataDir);
@@ -99,7 +99,7 @@ public class JavaSELauncher implements Launcher, NativePipeReader.OnTextReceived
         VMLauncher.runOnDebugPort(args.getDebugPort(),
                                   args.getArgArray());
     }
-    
+
     private class JvmArgs {
         private List<String> argList = new ArrayList<String>();
         private String javaHome;
@@ -114,7 +114,7 @@ public class JavaSELauncher implements Launcher, NativePipeReader.OnTextReceived
                      + appDir + "/storage/jvm/lib|"
                      + "-cp|"
                      + getClasspath(appDir)
-                     + "|"                                         
+                     + "|"
                      + "-Djavafx.platform=android|"
                      + "-Djavafx.runtime.path="
                      + appDir +"/storage/lib|"
@@ -132,9 +132,9 @@ public class JavaSELauncher implements Launcher, NativePipeReader.OnTextReceived
             if (!dirf.exists()) {
                 return new String[]{};
             }
-            String[] files = dirf.list(new FilenameFilter() {           
+            String[] files = dirf.list(new FilenameFilter() {
                 @Override
-                public boolean accept(File dir, String filename) {      
+                public boolean accept(File dir, String filename) {
                     return filename.endsWith(suffix);
                 }
             });
@@ -169,7 +169,7 @@ public class JavaSELauncher implements Launcher, NativePipeReader.OnTextReceived
              return metaData.getString(META_DATA_APP_ARGS);
         }
 
-        private int getDebugPort() {            
+        private int getDebugPort() {
              return metaData.getInt(META_DATA_DEBUG_PORT, 0);
         }
 
@@ -195,7 +195,7 @@ public class JavaSELauncher implements Launcher, NativePipeReader.OnTextReceived
                 }
             }
         }
-        
+
         public String[] getArgArray() {
             return argList.toArray(new String[0]);
         }

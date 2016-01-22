@@ -45,7 +45,7 @@ import javafx.stage.Stage;
 
 /**
  * A bar chart that uses CSS to display stacks of car images to indicate data values
- * for categories. 
+ * for categories.
  *
  * @sampleName Image Bar Chart
  * @preview preview.png
@@ -95,7 +95,7 @@ import javafx.stage.Stage;
  * @playground chart.titleSide
  */
 public class ImageBarChartApp extends Application {
-    
+
     private BarChart chart;
     private CategoryAxis xAxis;
     private NumberAxis yAxis;
@@ -120,8 +120,8 @@ public class ImageBarChartApp extends Application {
         );
         return chart;
     }
-    
-    
+
+
     @Override public void start(Stage primaryStage) throws Exception {
         primaryStage.setScene(new Scene(createContent()));
         primaryStage.show();
@@ -133,5 +133,5 @@ public class ImageBarChartApp extends Application {
      */
     public static void main(String[] args) {
         launch(args);
-    }    
+    }
 }

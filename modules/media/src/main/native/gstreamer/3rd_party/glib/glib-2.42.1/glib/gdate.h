@@ -8,7 +8,7 @@
  *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.	 See the GNU
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
@@ -192,10 +192,10 @@ void         g_date_set_parse             (GDate       *date,
                                            const gchar *str);
 GLIB_AVAILABLE_IN_ALL
 void         g_date_set_time_t            (GDate       *date,
-					   time_t       timet);
+                       time_t       timet);
 GLIB_AVAILABLE_IN_ALL
 void         g_date_set_time_val          (GDate       *date,
-					   GTimeVal    *timeval);
+                       GTimeVal    *timeval);
 #ifndef G_DISABLE_DEPRECATED
 GLIB_DEPRECATED_FOR(g_date_set_time_t)
 void         g_date_set_time              (GDate       *date,
@@ -260,7 +260,7 @@ guint8       g_date_get_sunday_weeks_in_year  (GDateYear    year) G_GNUC_CONST;
    before date1, a negative value is return. */
 GLIB_AVAILABLE_IN_ALL
 gint         g_date_days_between          (const GDate *date1,
-					   const GDate *date2);
+                       const GDate *date2);
 
 /* qsort-friendly (with a cast...) */
 GLIB_AVAILABLE_IN_ALL
@@ -272,8 +272,8 @@ void         g_date_to_struct_tm          (const GDate *date,
 
 GLIB_AVAILABLE_IN_ALL
 void         g_date_clamp                 (GDate *date,
-					   const GDate *min_date,
-					   const GDate *max_date);
+                       const GDate *min_date,
+                       const GDate *max_date);
 
 /* Swap date1 and date2's values if date1 > date2. */
 GLIB_AVAILABLE_IN_ALL
@@ -290,17 +290,17 @@ gsize        g_date_strftime              (gchar       *s,
 
 #ifndef G_DISABLE_DEPRECATED
 
-#define g_date_weekday 			g_date_get_weekday
-#define g_date_month 			g_date_get_month
-#define g_date_year 			g_date_get_year
-#define g_date_day 			g_date_get_day
-#define g_date_julian 			g_date_get_julian
-#define g_date_day_of_year 		g_date_get_day_of_year
-#define g_date_monday_week_of_year 	g_date_get_monday_week_of_year
-#define g_date_sunday_week_of_year 	g_date_get_sunday_week_of_year
-#define g_date_days_in_month 		g_date_get_days_in_month
-#define g_date_monday_weeks_in_year 	g_date_get_monday_weeks_in_year
-#define g_date_sunday_weeks_in_year	g_date_get_sunday_weeks_in_year
+#define g_date_weekday          g_date_get_weekday
+#define g_date_month            g_date_get_month
+#define g_date_year             g_date_get_year
+#define g_date_day          g_date_get_day
+#define g_date_julian           g_date_get_julian
+#define g_date_day_of_year      g_date_get_day_of_year
+#define g_date_monday_week_of_year  g_date_get_monday_week_of_year
+#define g_date_sunday_week_of_year  g_date_get_sunday_week_of_year
+#define g_date_days_in_month        g_date_get_days_in_month
+#define g_date_monday_weeks_in_year     g_date_get_monday_weeks_in_year
+#define g_date_sunday_weeks_in_year g_date_get_sunday_weeks_in_year
 
 #endif /* G_DISABLE_DEPRECATED */
 

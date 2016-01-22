@@ -24,7 +24,7 @@
  */
 
  package javafx.geometry;
- 
+
  import javafx.beans.NamedArg;
 
 /**
@@ -84,8 +84,8 @@ public class Insets {
 
     /**
      * Constructs a new Insets instance with same value for all four offsets.
-     * 
-     * @param topRightBottomLeft the value used for top, bottom, right and left 
+     *
+     * @param topRightBottomLeft the value used for top, bottom, right and left
      * offset
      */
     public Insets(@NamedArg("topRightBottomLeft") double topRightBottomLeft) {

@@ -124,7 +124,7 @@ public class SubSceneAndAntiAliasingTest extends Application {
         node.setTranslateY(180);
         root.getChildren().addAll(setTitle(title), ambientLight, light, light2, node);
 
-        SubScene subScene = new SubScene(root, 500, 400, true, 
+        SubScene subScene = new SubScene(root, 500, 400, true,
                 msaa ? SceneAntialiasing.BALANCED : SceneAntialiasing.DISABLED);
         subScene.setFill(fillPaint);
         subScene.setCamera(camera);

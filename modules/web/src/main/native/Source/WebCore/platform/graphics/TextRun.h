@@ -98,7 +98,7 @@ public:
     {
         m_data.characters16 = c;
     }
-    
+
     TextRun(const String& s, float xpos = 0, float expansion = 0, ExpansionBehavior expansionBehavior = AllowTrailingExpansion | ForbidLeadingExpansion, TextDirection direction = LTR, bool directionalOverride = false, bool characterScanForCodePath = true, RoundingHacks roundingHacks = RunRounding | WordRounding)
         : m_charactersLength(s.length())
         , m_len(s.length())
@@ -144,7 +144,7 @@ public:
 
     const LChar* characters8() const { ASSERT(is8Bit()); return m_data.characters8; }
     const UChar* characters16() const { ASSERT(!is8Bit()); return m_data.characters16; }
-    
+
     bool is8Bit() const { return m_is8Bit; }
     int length() const { return m_len; }
     int charactersLength() const { return m_charactersLength; }
@@ -217,7 +217,7 @@ private:
     // m_xpos is the x position relative to the left start of the text line, not relative to the left
     // start of the containing block. In the case of right alignment or center alignment, left start of
     // the text line is not the same as left start of the containing block.
-    float m_xpos;  
+    float m_xpos;
     float m_horizontalGlyphStretch;
 
     float m_expansion;

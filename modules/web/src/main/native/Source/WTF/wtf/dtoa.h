@@ -69,7 +69,7 @@ inline double parseDouble(const UChar* string, size_t length, size_t& parsedLeng
         conversionBuffer[i] = isASCII(string[i]) ? string[i] : 0;
     return parseDouble(conversionBuffer, length, parsedLength);
 }
-    
+
 } // namespace WTF
 
 using WTF::NumberToStringBuffer;

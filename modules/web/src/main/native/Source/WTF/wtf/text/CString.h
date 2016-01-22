@@ -76,9 +76,9 @@ public:
     bool isSafeToSendToAnotherThread() const;
 
     CStringBuffer* buffer() const { return m_buffer.get(); }
-    
+
     bool isHashTableDeletedValue() const { return m_buffer.isHashTableDeletedValue(); }
-    
+
     WTF_EXPORT_PRIVATE unsigned hash() const;
 
 private:

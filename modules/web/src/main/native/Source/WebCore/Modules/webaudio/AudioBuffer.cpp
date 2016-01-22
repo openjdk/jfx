@@ -44,7 +44,7 @@ PassRefPtr<AudioBuffer> AudioBuffer::create(unsigned numberOfChannels, size_t nu
 {
     if (sampleRate < 22050 || sampleRate > 96000 || numberOfChannels > AudioContext::maxNumberOfChannels() || !numberOfFrames)
         return nullptr;
-    
+
     return adoptRef(new AudioBuffer(numberOfChannels, numberOfFrames, sampleRate));
 }
 

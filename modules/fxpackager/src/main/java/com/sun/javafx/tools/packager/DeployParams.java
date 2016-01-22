@@ -121,7 +121,7 @@ public class DeployParams extends CommonParams {
     //list of jvm properties (can also be passed as VM args
     // but keeping them separate make it a bit more convinient for JNLP generation)
     Map<String, String> properties = new LinkedHashMap<>();
-    
+
     // raw arguments to the bundler
     Map<String, ? super Object> bundlerArguments = new LinkedHashMap<>();
 
@@ -167,7 +167,7 @@ public class DeployParams extends CommonParams {
     public void setInstalldirChooser(Boolean installdirChooser) {
         this.installdirChooser = installdirChooser;
     }
-    
+
     public void setSignBundle(Boolean signBundle) {
         this.signBundle = signBundle;
     }
@@ -426,12 +426,12 @@ public class DeployParams extends CommonParams {
             return RelativeFileSet.Type.valueOf(type);
         }
     }
-    
+
     private static File createFile(final File baseDir, final String path) {
         final File testFile = new File(path);
         return testFile.isAbsolute()
                 ? testFile
-                : new File(baseDir == null 
+                : new File(baseDir == null
                     ? null
                     : baseDir.getAbsolutePath(),
                       path);
@@ -493,7 +493,7 @@ public class DeployParams extends CommonParams {
     public void setBundleType(BundleType type) {
         bundleType = type;
     }
-    
+
     public BundleType getBundleType() {
         return bundleType;
     }
@@ -569,7 +569,7 @@ public class DeployParams extends CommonParams {
                 }
             }
         }
-        
+
         bundleParams.setAppResourcesList(resources);
 
         bundleParams.setIdentifier(id);
@@ -611,7 +611,7 @@ public class DeployParams extends CommonParams {
             // currently everything is marked as webstart internally and runmode
             // is not publicly documented property
             if (/* (ic.mode == RunMode.ALL || ic.mode == RunMode.STANDALONE) && */
-                (ic.kind == null || ic.kind.equals("default"))) 
+                (ic.kind == null || ic.kind.equals("default")))
             {
                 //could be full path or something relative to the output folder
                 appIcon = new File(ic.href);
@@ -621,18 +621,18 @@ public class DeployParams extends CommonParams {
                     appIcon = new File(outdir, ic.href);
                 }
             }
-            
+
             Map<String, ? super Object> iconInfo = new TreeMap<>();
             if (ic.href != null) iconInfo.put(ICONS_HREF.getID(), ic.href);
             if (ic.kind != null) iconInfo.put(ICONS_KIND.getID(), ic.kind);
             if (ic.width > 0)    iconInfo.put(ICONS_WIDTH.getID(), Integer.toString(ic.width));
             if (ic.height > 0)   iconInfo.put(ICONS_HEIGHT.getID(), Integer.toString(ic.height));
             if (ic.depth > 0)    iconInfo.put(ICONS_DEPTH.getID(), Integer.toString(ic.depth));
-            
+
             if (!iconInfo.isEmpty()) bundlerIcons.add(iconInfo);
         }
         putUnlessNullOrEmpty(ICONS.getID(), bundlerIcons);
-        
+
         bundleParams.setIcon(appIcon);
 
         Map<String, String> paramsMap = new TreeMap<>();
@@ -642,7 +642,7 @@ public class DeployParams extends CommonParams {
             }
         }
         putUnlessNullOrEmpty(JNLPBundler.APP_PARAMS.getID(), paramsMap);
-        
+
         Map<String, String> unescapedHtmlParams = new TreeMap<>();
         Map<String, String> escapedHtmlParams = new TreeMap<>();
         if (htmlParams != null) {
@@ -656,13 +656,13 @@ public class DeployParams extends CommonParams {
         }
         putUnlessNullOrEmpty(JNLPBundler.APPLET_PARAMS.getID(), unescapedHtmlParams);
         putUnlessNullOrEmpty(ESCAPED_APPLET_PARAMS.getID(), escapedHtmlParams);
-        
+
 
         putUnlessNull(WIDTH.getID(), width);
         putUnlessNull(HEIGHT.getID(), height);
         putUnlessNull(EMBEDDED_WIDTH.getID(), embeddedWidth);
         putUnlessNull(EMBEDDED_HEIGHT.getID(), embeddedHeight);
-        
+
         putUnlessNull(CODEBASE.getID(), codebase);
         putUnlessNull(EMBED_JNLP.getID(), embedJNLP);
         // embedCertificates
@@ -675,7 +675,7 @@ public class DeployParams extends CommonParams {
         putUnlessNull(INCLUDE_DT.getID(), includeDT);
         putUnlessNull(PLACEHOLDER.getID(), placeholder);
         putUnlessNull(OFFLINE_ALLOWED.getID(), offlineAllowed);
-        
+
         Map<String, String> callbacksMap = new TreeMap<>();
         if (callbacks != null) {
             for (JSCallback callback : callbacks) {
@@ -696,7 +696,7 @@ public class DeployParams extends CommonParams {
         putUnlessNull(JRE_PLATFORM.getID(), jrePlatform);
 
         putUnlessNull(FALLBACK_APP.getID(), fallbackApp);
-        
+
         // check for collisions
         TreeSet<String> keys = new TreeSet<>(bundlerArguments.keySet());
         keys.retainAll(bundleParams.getBundleParamsAsMap().keySet());
@@ -704,9 +704,9 @@ public class DeployParams extends CommonParams {
         if (!keys.isEmpty()) {
             throw new RuntimeException("Deploy Params and Bundler Arguments overlap in the following values:" + keys.toString());
         }
-        
+
         bundleParams.addAllBundleParams(bundlerArguments);
-        
+
         return bundleParams;
     }
 

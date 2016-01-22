@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -74,7 +74,7 @@ NSMethodSignature* ObjcMethod::getMethodSignature() const
 
 // ---------------------- ObjcField ----------------------
 
-ObjcField::ObjcField(Ivar ivar) 
+ObjcField::ObjcField(Ivar ivar)
     : _ivar(ivar)
     , _name(adoptCF(CFStringCreateWithCString(0, ivar_getName(_ivar), kCFStringEncodingASCII)))
 {
@@ -89,7 +89,7 @@ ObjcField::ObjcField(CFStringRef name)
 JSValue ObjcField::valueFromInstance(ExecState* exec, const Instance* instance) const
 {
     JSValue result = jsUndefined();
-    
+
     id targetObject = (static_cast<const ObjcInstance*>(instance))->getObject();
 
     JSLock::DropAllLocks dropAllLocks(exec); // Can't put this inside the @try scope because it unwinds incorrectly.
@@ -157,7 +157,7 @@ void ObjcArray::setValueAt(ExecState* exec, unsigned int index, JSValue aValue) 
         exec->vm().throwException(exec, createRangeError(exec, "Index exceeds array size."));
         return;
     }
-    
+
     // Always try to convert the value to an ObjC object, so it can be placed in the
     // array.
     ObjcValue oValue = convertValueToObjcValue (exec, aValue, ObjcObjectType);
@@ -232,11 +232,11 @@ static EncodedJSValue JSC_HOST_CALL callObjCFallbackObject(ExecState* exec)
 
     if (!objcInstance)
         return JSValue::encode(RuntimeObject::throwInvalidAccessError(exec));
-    
+
     objcInstance->begin();
 
     id targetObject = objcInstance->getObject();
-    
+
     if ([targetObject respondsToSelector:@selector(invokeUndefinedMethodFromWebScript:withArguments:)]){
         ObjcClass* objcClass = static_cast<ObjcClass*>(objcInstance->getClass());
         OwnPtr<ObjcMethod> fallbackMethod(adoptPtr(new ObjcMethod(objcClass->isa(), @selector(invokeUndefinedMethodFromWebScript:withArguments:))));
@@ -244,7 +244,7 @@ static EncodedJSValue JSC_HOST_CALL callObjCFallbackObject(ExecState* exec)
         fallbackMethod->setJavaScriptName(nameIdentifier.createCFString().get());
         result = objcInstance->invokeObjcMethod(exec, fallbackMethod.get());
     }
-            
+
     objcInstance->end();
 
     return JSValue::encode(result);
@@ -274,10 +274,10 @@ JSValue ObjcFallbackObjectImp::defaultValue(const JSObject* object, ExecState* e
 bool ObjcFallbackObjectImp::toBoolean(ExecState *) const
 {
     id targetObject = _instance->getObject();
-    
+
     if ([targetObject respondsToSelector:@selector(invokeUndefinedMethodFromWebScript:withArguments:)])
         return true;
-    
+
     return false;
 }
 

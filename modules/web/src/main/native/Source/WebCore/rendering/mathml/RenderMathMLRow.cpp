@@ -69,7 +69,7 @@ void RenderMathMLRow::layout()
     }
     if (!stretchLogicalHeight)
         stretchLogicalHeight = style().fontSize();
-    
+
     // Set the sizes of (possibly embellished) stretchy operator children.
     for (auto& child : childrenOfType<RenderMathMLBlock>(*this)) {
         if (auto renderMo = child.unembellishedOperator()) {

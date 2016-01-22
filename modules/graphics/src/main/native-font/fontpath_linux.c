@@ -576,7 +576,7 @@ Java_com_sun_javafx_font_FontConfigManager_populateMapsNative
         FcFontList         == NULL ||
         FcFontSetDestroy   == NULL) { /* problem with the library: return. */
         if (debugFC) {
-           fprintf(stderr,"Could not find symbols in libfontconfig\n"); 
+           fprintf(stderr,"Could not find symbols in libfontconfig\n");
         }
         closeFontConfig(libfontconfig, JNI_FALSE);
         return JNI_FALSE;

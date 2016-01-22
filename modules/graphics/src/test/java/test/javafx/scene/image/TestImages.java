@@ -82,7 +82,7 @@ public final class TestImages {
             final int height,
             final int loopCount, final int... frameDelays) {
         final String url = "file:testAnimImg_" + width + "x" + height + ".png";
-        final StubPlatformImageInfo spii = 
+        final StubPlatformImageInfo spii =
                 new StubPlatformImageInfo(width, height, frameDelays, loopCount);
         imageLoaderFactory.registerImage(url, spii);
 

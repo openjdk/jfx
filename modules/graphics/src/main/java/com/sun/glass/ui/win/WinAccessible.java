@@ -295,7 +295,7 @@ final class WinAccessible extends Accessible {
                 break;
             }
             case SELECTED: {
-                Object role = getAttribute(ROLE); 
+                Object role = getAttribute(ROLE);
                 if (role == AccessibleRole.CHECK_BOX || role == AccessibleRole.TOGGLE_BUTTON) {
                     notifyToggleState();
                     break;
@@ -481,7 +481,7 @@ final class WinAccessible extends Accessible {
         }
     }
 
-    /* Helper used by TreeTableCell to find the TableRow */ 
+    /* Helper used by TreeTableCell to find the TableRow */
     private Accessible getRow() {
         Integer columnIndex = (Integer)getAttribute(COLUMN_INDEX);
         if (columnIndex == null) return null;
@@ -618,7 +618,7 @@ final class WinAccessible extends Accessible {
                 impl = patternId == UIA_SelectionItemPatternId ||
                        patternId == UIA_ScrollItemPatternId;
                 break;
-            /* 
+            /*
              * MSDN doc is confusing if text elements should implement
              * UIA_ValuePatternId. The article 'Text and TextRange Control
              * Patterns' says to implement for backward compatibility (MSAA).
@@ -664,7 +664,7 @@ final class WinAccessible extends Accessible {
 
     private long get_HostRawElementProvider() {
         if (isDisposed()) return 0;
-        /* 
+        /*
          * Returning NULL makes this accessible 'lightweight',
          * GetRuntimeID() will be called for it.
          */
@@ -699,7 +699,7 @@ final class WinAccessible extends Accessible {
                 if (kc != null) {
                     variant = new WinVariant();
                     variant.vt = WinVariant.VT_BSTR;
-                    /* Note: KeyCombination should have a getDisplayText() which encapsulates 
+                    /* Note: KeyCombination should have a getDisplayText() which encapsulates
                      * KeystrokeUtils.toString()
                      */
                     variant.bstrVal = kc.toString().replaceAll("Shortcut", "Ctrl");
@@ -787,9 +787,9 @@ final class WinAccessible extends Accessible {
             }
             case UIA_HasKeyboardFocusPropertyId: {
                 Boolean focus = (Boolean)getAttribute(FOCUSED);
-                /* 
+                /*
                  * Note that accessibility focus and scene focus are not the same.
-                 * Windows won't work correctly unless the accessible returned in GetFocus() 
+                 * Windows won't work correctly unless the accessible returned in GetFocus()
                  * answer TRUE in UIA_HasKeyboardFocusPropertyId.
                  * Note that UIA_HasKeyboardFocusPropertyId reports true for the main parent
                  * of a 'focus item', but that doesn't seem to cause problems.
@@ -907,7 +907,7 @@ final class WinAccessible extends Accessible {
         Integer index = (Integer)listItemAccessible.getAttribute(INDEX);
         if (index == null) return 0;
 
-        /* A view implementation can use stock items to measuring, these items can 
+        /* A view implementation can use stock items to measuring, these items can
          * have index equal to -1 for identification. See ViewFlow#accumCell as an example.
          * These items should be ignored to avoid incorrect item count computation by
          * the screen reader.
@@ -962,9 +962,9 @@ final class WinAccessible extends Accessible {
                 }
 
                 Node parent = (Node)getAttribute(treeCell ? TREE_ITEM_PARENT : PARENT);
-                /* 
+                /*
                  * When the parent is NULL is indicates either the root node for the scene
-                 * or the root tree item in a tree view. Either way, there is no siblings. 
+                 * or the root tree item in a tree view. Either way, there is no siblings.
                  */
                 if (parent != null) {
                     WinAccessible parentAccessible = (WinAccessible)getAccessible(parent);
@@ -1018,7 +1018,7 @@ final class WinAccessible extends Accessible {
                 lastIndex = -1;
                 if (role == AccessibleRole.LIST_VIEW) {
                     /* Windows 7. Initially the ComboBox contains the ListView,
-                     * but the ListCells will only be created if one an item is 
+                     * but the ListCells will only be created if one an item is
                      * selected. This causes Narrator to read combo box with
                      * zero items. The fix is to ask for first item, which will
                      * cause NavigateListView to be used.
@@ -1107,7 +1107,7 @@ final class WinAccessible extends Accessible {
     private long[] GetSelection() {
         if (isDisposed()) return null;
 
-        /* 
+        /*
          * GetSelection() is sent by ISelectionProvider and ITextProvider.
          * Check the role before processing message.
          */
@@ -1318,7 +1318,7 @@ final class WinAccessible extends Accessible {
 
     private long get_SelectionContainer() {
         if (isDisposed()) return 0;
-        WinAccessible acc = (WinAccessible)getContainer(); 
+        WinAccessible acc = (WinAccessible)getContainer();
         return acc != null ? acc.getNativeAccessible() : 0L;
     }
 
@@ -1372,7 +1372,7 @@ final class WinAccessible extends Accessible {
         if (isDisposed()) return 0;
         Integer count = (Integer)getAttribute(COLUMN_COUNT);
 
-        /* 
+        /*
          * JFX does not require ListView to report column count == 1
          * But Windows wants a column count of (at least) 1.
          */
@@ -1551,7 +1551,7 @@ final class WinAccessible extends Accessible {
             return isExpanded ? ExpandCollapseState_Expanded : ExpandCollapseState_Collapsed;
         }
 
-        /* 
+        /*
          * We ask if the accessible is a leaf for the TreeItem case where
          * we want to return that it is a leaf node. In other cases
          * (e.g. ComboBox) this will return false which means the ComboBox is

@@ -100,12 +100,12 @@ JSValue eval(CallFrame* callFrame)
     JSValue program = callFrame->argument(0);
     if (!program.isString())
         return program;
-    
+
     TopCallFrameSetter topCallFrame(callFrame->vm(), callFrame);
     String programSource = asString(program)->value(callFrame);
     if (callFrame->hadException())
         return JSValue();
-    
+
     CallFrame* callerFrame = callFrame->callerFrame();
     CodeBlock* callerCodeBlock = callerFrame->codeBlock();
     JSScope* callerScopeChain = callerFrame->scope();
@@ -122,10 +122,10 @@ JSValue eval(CallFrame* callFrame)
             } else {
                 LiteralParser<UChar> preparser(callFrame, programSource.characters16(), programSource.length(), NonStrictJSON);
                 if (JSValue parsedObject = preparser.tryLiteralParse())
-                    return parsedObject;                
+                    return parsedObject;
             }
         }
-        
+
         // If the literal parser bailed, it should not have thrown exceptions.
         ASSERT(!callFrame->vm().exception());
 
@@ -214,13 +214,13 @@ void loadVarargs(CallFrame* callFrame, CallFrame* newCallFrame, JSValue thisValu
             newCallFrame->setArgument(i, callFrame->argumentAfterCapture(i));
         return;
     }
-    
+
     if (arguments.isUndefinedOrNull()) {
         newCallFrame->setArgumentCountIncludingThis(1);
         newCallFrame->setThisValue(thisValue);
         return;
     }
-    
+
     if (asObject(arguments)->classInfo() == Arguments::info()) {
         Arguments* argsObject = asArguments(arguments);
         unsigned argCount = argsObject->length(callFrame);
@@ -229,7 +229,7 @@ void loadVarargs(CallFrame* callFrame, CallFrame* newCallFrame, JSValue thisValu
         argsObject->copyToArguments(callFrame, newCallFrame, argCount);
         return;
     }
-    
+
     if (isJSArray(arguments)) {
         JSArray* array = asArray(arguments);
         unsigned argCount = array->length();
@@ -238,7 +238,7 @@ void loadVarargs(CallFrame* callFrame, CallFrame* newCallFrame, JSValue thisValu
         array->copyToArguments(callFrame, newCallFrame, argCount);
         return;
     }
-    
+
     JSObject* argObject = asObject(arguments);
     unsigned argCount = argObject->get(callFrame, callFrame->propertyNames().length).toUInt32(callFrame);
     newCallFrame->setArgumentCountIncludingThis(argCount + 1);
@@ -346,7 +346,7 @@ void Interpreter::dumpRegisters(CallFrame* callFrame)
         dataLogF("[r% 3d %14s]      | %10p | %-16s 0x%lld \n", registerNumber, name.ascii().data(), it, toCString(v).data(), (long long)JSValue::encode(v));
         --it;
     }
-    
+
     dataLogF("-----------------------------------------------------------------------------\n");
     dataLogF("[ArgumentCount]            | %10p | %lu \n", it, (unsigned long) callFrame->argumentCount());
     --it;
@@ -548,7 +548,7 @@ public:
                 StackFrame s = { Strong<JSObject>(vm, visitor->callee()), StackFrameNativeCode, Strong<ExecutableBase>(), Strong<UnlinkedCodeBlock>(), 0, 0, 0, 0, 0, String()};
                 m_results.append(s);
             }
-    
+
             m_remainingCapacityForFrameCapture--;
             return StackVisitor::Continue;
         }
@@ -658,7 +658,7 @@ NEVER_INLINE HandlerInfo* Interpreter::unwind(CallFrame*& callFrame, JSValue& ex
         // go to the uncaught exception handler, which returns through callToJavaScript.
         return 0;
     }
-    
+
     CodeBlock* codeBlock = callFrame->codeBlock();
     ASSERT(codeBlock);
     bool isTermination = false;
@@ -756,7 +756,7 @@ private:
 JSValue Interpreter::execute(ProgramExecutable* program, CallFrame* callFrame, JSObject* thisObj)
 {
     SamplingScope samplingScope(this);
-    
+
     JSScope* scope = callFrame->scope();
     VM& vm = *scope->vm();
 
@@ -1050,7 +1050,7 @@ CallFrameClosure Interpreter::prepareForRepeatCall(FunctionExecutable* functionE
 {
     VM& vm = *scope->vm();
     ASSERT(!vm.exception());
-    
+
     if (vm.isCollectorBusy())
         return CallFrameClosure();
 
@@ -1071,11 +1071,11 @@ CallFrameClosure Interpreter::prepareForRepeatCall(FunctionExecutable* functionE
     return result;
 }
 
-JSValue Interpreter::execute(CallFrameClosure& closure) 
+JSValue Interpreter::execute(CallFrameClosure& closure)
 {
     VM& vm = *closure.vm;
     SamplingScope samplingScope(this);
-    
+
     ASSERT(!vm.isCollectorBusy());
     RELEASE_ASSERT(vm.currentThreadIsHoldingAPILock());
     if (vm.isCollectorBusy())
@@ -1109,7 +1109,7 @@ JSValue Interpreter::execute(EvalExecutable* eval, CallFrame* callFrame, JSValue
 {
     VM& vm = *scope->vm();
     SamplingScope samplingScope(this);
-    
+
     ASSERT(scope->vm() == &callFrame->vm());
     ASSERT(!vm.exception());
     ASSERT(!vm.isCollectorBusy());
@@ -1119,7 +1119,7 @@ JSValue Interpreter::execute(EvalExecutable* eval, CallFrame* callFrame, JSValue
 
     VMEntryScope entryScope(vm, scope->globalObject());
     if (!vm.isSafeToRecurse())
-        return checkedReturn(throwStackOverflowError(callFrame));        
+        return checkedReturn(throwStackOverflowError(callFrame));
 
     unsigned numVariables = eval->numVariables();
     int numFunctions = eval->numberOfFunctionDecls();
@@ -1216,7 +1216,7 @@ NEVER_INLINE void Interpreter::debug(CallFrame* callFrame, DebugHookID debugHook
             debugger->didReachBreakpoint(callFrame);
             return;
     }
-}    
+}
 
 void Interpreter::enableSampler()
 {

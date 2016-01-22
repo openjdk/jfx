@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef FTLLoweredNodeValue_h
@@ -50,7 +50,7 @@ public:
         , m_block(0)
     {
     }
-    
+
     LoweredNodeValue(LValue value, DFG::BasicBlock* block)
         : m_value(value)
         , m_block(block)
@@ -58,13 +58,13 @@ public:
         ASSERT(m_value);
         ASSERT(m_block);
     }
-    
+
     bool isSet() const { return !!m_value; }
     bool operator!() const { return !isSet(); }
-    
+
     LValue value() const { return m_value; }
     DFG::BasicBlock* block() const { return m_block; }
-    
+
 private:
     LValue m_value;
     DFG::BasicBlock* m_block;

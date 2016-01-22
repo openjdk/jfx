@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -37,8 +37,8 @@ TransformationMatrix::TransformationMatrix(const CATransform3D& t)
 {
     setMatrix(
         t.m11, t.m12, t.m13, t.m14,
-        t.m21, t.m22, t.m23, t.m24, 
-        t.m31, t.m32, t.m33, t.m34, 
+        t.m21, t.m22, t.m23, t.m24,
+        t.m31, t.m32, t.m33, t.m34,
         t.m41, t.m42, t.m43, t.m44);
 }
 

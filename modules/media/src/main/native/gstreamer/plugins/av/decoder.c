@@ -63,7 +63,7 @@ GType basedecoder_get_type (void)
                sizeof (BaseDecoderClass),
                (GClassInitFunc) basedecoder_class_intern_init,
                sizeof(BaseDecoder),
-               (GInstanceInitFunc) basedecoder_init,               
+               (GInstanceInitFunc) basedecoder_init,
                (GTypeFlags) 0);
         g_once_init_leave (&gonce_data, (gsize) _type);
     }
@@ -169,7 +169,7 @@ void basedecoder_set_codec_data(BaseDecoder *decoder, GstStructure *s)
                 decoder->codec_data = g_memdup(info.data, info.size);
                 gst_buffer_unmap(codec_data_buf, &info);
             }
-        }        
+        }
     }
 }
 

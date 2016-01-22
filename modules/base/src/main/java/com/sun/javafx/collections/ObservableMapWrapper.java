@@ -242,7 +242,7 @@ public class ObservableMapWrapper<K, V> implements ObservableMap<K, V>{
     public int hashCode() {
         return backingMap.hashCode();
     }
-    
+
     private class ObservableKeySet implements Set<K>{
 
         @Override
@@ -492,8 +492,8 @@ public class ObservableMapWrapper<K, V> implements ObservableMap<K, V>{
         public int hashCode() {
             return backingMap.values().hashCode();
         }
-        
-        
+
+
 
 
     }

@@ -45,7 +45,7 @@ public class Dimension2D {
         this.width = width;
         this.height = height;
     }
-    
+
     /**
      * The width of the dimension.
      *
@@ -60,7 +60,7 @@ public class Dimension2D {
     public final double getWidth() {
         return width;
     }
-    
+
     /**
      * The height of the dimension.
      *
@@ -83,7 +83,7 @@ public class Dimension2D {
 
     /**
      * Indicates whether some other object is "equal to" this one.
-     * 
+     *
      * @param obj the reference object with which to compare
      * @return true if this Dimension2D instance is the same as the obj argument; false otherwise
      */
@@ -104,7 +104,7 @@ public class Dimension2D {
             long bits = 7L;
             bits = 31L * bits + Double.doubleToLongBits(getWidth());
             bits = 31L * bits + Double.doubleToLongBits(getHeight());
-	    hash = (int) (bits ^ (bits >> 32));
+        hash = (int) (bits ^ (bits >> 32));
         }
         return hash;
     }

@@ -60,7 +60,7 @@ bool AccessibilitySearchFieldCancelButton::press() const
     Node* node = this->node();
     if (!node || !node->isElementNode())
         return false;
-    
+
     Element* element = toElement(node);
     // The default event handler on SearchFieldCancelButtonElement requires hover.
     element->setHovered(true);

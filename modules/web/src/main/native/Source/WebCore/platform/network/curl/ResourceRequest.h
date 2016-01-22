@@ -80,7 +80,7 @@ namespace WebCore {
 
         PassOwnPtr<CrossThreadResourceRequestData> doPlatformCopyData(PassOwnPtr<CrossThreadResourceRequestData> data) const { return data; }
         void doPlatformAdopt(PassOwnPtr<CrossThreadResourceRequestData>) { }
- 
+
         static bool s_httpPipeliningEnabled;
     };
 

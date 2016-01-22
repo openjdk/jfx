@@ -56,7 +56,7 @@ static JSObject* pluginScriptObjectFromPluginViewBase(HTMLPlugInElement& pluginE
     Widget* pluginWidget = pluginElement.pluginWidget();
     if (!pluginWidget)
         return 0;
-    
+
     if (!pluginWidget->isPluginViewBase())
         return 0;
 
@@ -85,7 +85,7 @@ JSObject* pluginScriptObject(ExecState* exec, JSHTMLElement* jsHTMLElement)
     // First, see if the element has a plug-in replacement with a script.
     if (JSObject* scriptObject = pluginElement.scriptObjectForPluginReplacement())
         return scriptObject;
-    
+
     // Next, see if we can ask the plug-in view for its script object.
     if (JSObject* scriptObject = pluginScriptObjectFromPluginViewBase(pluginElement, jsHTMLElement->globalObject()))
         return scriptObject;
@@ -99,7 +99,7 @@ JSObject* pluginScriptObject(ExecState* exec, JSHTMLElement* jsHTMLElement)
 
     return instance->createRuntimeObject(exec);
 }
-    
+
 EncodedJSValue pluginElementPropertyGetter(ExecState* exec, JSObject*, EncodedJSValue thisValue, PropertyName propertyName)
 {
 
@@ -109,7 +109,7 @@ EncodedJSValue pluginElementPropertyGetter(ExecState* exec, JSObject*, EncodedJS
     JSObject* scriptObject = pluginScriptObject(exec, thisObject);
     if (!scriptObject)
         return JSValue::encode(jsUndefined());
-    
+
     return JSValue::encode(scriptObject->get(exec, propertyName));
 }
 
@@ -163,14 +163,14 @@ CallType pluginElementGetCallData(JSHTMLElement* element, CallData& callData)
     // First, ask the plug-in view base for its runtime object.
     if (JSObject* scriptObject = pluginScriptObjectFromPluginViewBase(element)) {
         CallData scriptObjectCallData;
-        
+
         if (scriptObject->methodTable()->getCallData(scriptObject, scriptObjectCallData) == CallTypeNone)
             return CallTypeNone;
 
         callData.native.function = callPlugin;
         return CallTypeHost;
     }
-    
+
     Instance* instance = pluginInstance(element->impl());
     if (!instance || !instance->supportsInvokeDefaultMethod())
         return CallTypeNone;

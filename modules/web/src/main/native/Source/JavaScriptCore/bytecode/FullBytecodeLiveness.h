@@ -37,7 +37,7 @@ typedef HashMap<unsigned, FastBitVector, WTF::IntHash<unsigned>, WTF::UnsignedWi
 class FullBytecodeLiveness {
 public:
     FullBytecodeLiveness() : m_codeBlock(0) { }
-    
+
     // We say "out" to refer to the bitvector that contains raw results for a bytecode
     // instruction.
     const FastBitVector& getOut(unsigned bytecodeIndex) const
@@ -46,20 +46,20 @@ public:
         ASSERT(iter != m_map.end());
         return iter->value;
     }
-    
+
     bool operandIsLive(int operand, unsigned bytecodeIndex) const
     {
         return operandIsAlwaysLive(m_codeBlock, operand) || operandThatIsNotAlwaysLiveIsLive(m_codeBlock, getOut(bytecodeIndex), operand);
     }
-    
+
     FastBitVector getLiveness(unsigned bytecodeIndex) const
     {
         return getLivenessInfo(m_codeBlock, getOut(bytecodeIndex));
     }
-    
+
 private:
     friend class BytecodeLivenessAnalysis;
-    
+
     CodeBlock* m_codeBlock;
     BytecodeToBitmapMap m_map;
 };

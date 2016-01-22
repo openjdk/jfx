@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 // stdafx.h : include file for standard system include files,
@@ -38,7 +38,7 @@
 
 #ifndef _WIN32_WINNT // Allow use of features specific to Windows XP SP2 or later.
 #define _WIN32_WINNT 0x0502 // Change this to the appropriate value to target other versions of Windows.
-#endif                        
+#endif
 
 #ifndef _WIN32_WINDOWS        // Allow use of features specific to Windows 98 or later.
 #define _WIN32_WINDOWS 0x0410 // Change this to the appropriate value to target Windows Me or later.

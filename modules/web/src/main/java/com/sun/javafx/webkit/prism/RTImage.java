@@ -87,7 +87,7 @@ final class RTImage extends PrismImage implements ResourceFactoryListener {
         }
         return txt;
     }
-    
+
     @Override
     void draw(Graphics g,
             int dstx1, int dsty1, int dstx2, int dsty2,
@@ -229,9 +229,9 @@ final class RTImage extends PrismImage implements ResourceFactoryListener {
 
     @Override public void factoryReleased() {
     }
-    
+
     @Override
     public float getPixelScale() {
         return pixelScale;
-    }    
+    }
 }

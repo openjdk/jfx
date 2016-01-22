@@ -32,7 +32,7 @@
 #include "AudioArray.h"
 #include <complex>
 #include <sys/types.h>
- 
+
 #if USE(WEBAUDIO_IPP)
 #include <ipps.h>
 #endif // USE(WEBAUDIO_IPP)
@@ -45,7 +45,7 @@ namespace WebCore {
 //    lowpass, highpass, shelving, parameteric, notch, allpass, ...
 
 class Biquad {
-public:   
+public:
     Biquad();
     virtual ~Biquad();
 
@@ -82,7 +82,7 @@ public:
                               float* phaseResponse);
 private:
     void setNormalizedCoefficients(double b0, double b1, double b2, double a0, double a1, double a2);
-    
+
     // Filter coefficients. The filter is defined as
     //
     // y[n] + m_a1*y[n-1] + m_a2*y[n-2] = m_b0*x[n] + m_b1*x[n-1] + m_b2*x[n-2].

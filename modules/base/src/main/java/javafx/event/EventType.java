@@ -53,22 +53,22 @@ import java.util.WeakHashMap;
  * (e.g. as part of {@link Event} deserialization), need to exist at the time of
  * deserialization. Deserialization of EventType will not create new EventType
  * objects.
- * 
+ *
  * @param <T> the event class to which this type applies
  * @since JavaFX 2.0
  */
 public final class EventType<T extends Event> implements Serializable{
-    
+
     /**
      * The root event type. All other event types are either direct or
      * indirect sub types of it. It is also the only event type which
      * has its super event type set to {@code null}.
      */
-    public static final EventType<Event> ROOT = 
+    public static final EventType<Event> ROOT =
             new EventType<Event>("EVENT", null);
-    
+
     private WeakHashMap<EventType<? extends T>, Void> subTypes;
-    
+
     private final EventType<? super T> superType;
 
     private final String name;
@@ -88,7 +88,7 @@ public final class EventType<T extends Event> implements Serializable{
      * {@code EventType.ROOT} as its super type.
      *
      * @param name the name
-     * @throws IllegalArgumentException if an EventType with the same name and 
+     * @throws IllegalArgumentException if an EventType with the same name and
      * {@link EventType#ROOT}/{@link Event#ANY} as parent
      */
     public EventType(final String name) {
@@ -100,7 +100,7 @@ public final class EventType<T extends Event> implements Serializable{
      * the name set to {@code null}.
      *
      * @param superType the event super type
-     * @throws IllegalArgumentException if an EventType with "null" name and 
+     * @throws IllegalArgumentException if an EventType with "null" name and
      * under this supertype exists
      */
     public EventType(final EventType<? super T> superType) {
@@ -113,7 +113,7 @@ public final class EventType<T extends Event> implements Serializable{
      *
      * @param superType the event super type
      * @param name the name
-     * @throws IllegalArgumentException if an EventType with the same name and 
+     * @throws IllegalArgumentException if an EventType with the same name and
      * superType exists
      */
     public EventType(final EventType<? super T> superType,
@@ -127,7 +127,7 @@ public final class EventType<T extends Event> implements Serializable{
         this.name = name;
         superType.register(this);
     }
-    
+
     /**
      * Internal constructor that skips various checks
      */
@@ -170,12 +170,12 @@ public final class EventType<T extends Event> implements Serializable{
     /**
      * Returns a string representation of this {@code EventType} object.
      * @return a string representation of this {@code EventType} object.
-     */ 
+     */
     @Override
     public String toString() {
         return (name != null) ? name : super.toString();
     }
-    
+
     private void register(javafx.event.EventType<? extends T> subType) {
         if (subTypes == null) {
             subTypes = new WeakHashMap<EventType<? extends T>, Void>();
@@ -188,7 +188,7 @@ public final class EventType<T extends Event> implements Serializable{
         }
         subTypes.put(subType, null);
     }
-    
+
     private Object writeReplace() throws ObjectStreamException {
         Deque<String> path = new LinkedList<String>();
         EventType<?> t = this;
@@ -198,7 +198,7 @@ public final class EventType<T extends Event> implements Serializable{
         }
         return new EventTypeSerialization(new ArrayList<String>(path));
     }
-    
+
     static class EventTypeSerialization implements Serializable {
         private List<String> path;
 
@@ -222,7 +222,7 @@ public final class EventType<T extends Event> implements Serializable{
             }
             return t;
         }
-        
+
         private EventType findSubType(Set<EventType> subTypes, String name) {
             for (EventType t : subTypes) {
                 if (((t.name == null && name == null) || (t.name != null && t.name.equals(name)))) {

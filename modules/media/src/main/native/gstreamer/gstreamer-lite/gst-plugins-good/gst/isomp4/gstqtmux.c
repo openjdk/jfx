@@ -1772,7 +1772,7 @@ gst_qt_mux_start_file (GstQTMux * qtmux)
   }
   GST_OBJECT_UNLOCK (qtmux);
 
-  /* 
+  /*
    * send mdat header if already needed, and mark position for later update.
    * We don't send ftyp now if we are on fast start mode, because we can
    * better fine tune using the information we gather to create the whole moov
@@ -2261,7 +2261,7 @@ gst_qt_mux_add_buffer (GstQTMux * qtmux, GstQTPad * pad, GstBuffer * buf)
 
   last_buf = pad->last_buf;
 
-  /* if buffer has missing DTS, we take either segment start or previous buffer end time, 
+  /* if buffer has missing DTS, we take either segment start or previous buffer end time,
      which ever is later */
   if (buf && !GST_BUFFER_DTS_IS_VALID (buf)) {
     GstClockTime last_buf_duration = last_buf

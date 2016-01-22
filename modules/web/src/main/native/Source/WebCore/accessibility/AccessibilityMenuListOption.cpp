@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -49,7 +49,7 @@ Element* AccessibilityMenuListOption::actionElement() const
 {
     return m_element.get();
 }
-    
+
 bool AccessibilityMenuListOption::isEnabled() const
 {
     // isDisabledFormControl() returns true if the parent <select> element is disabled,
@@ -61,7 +61,7 @@ bool AccessibilityMenuListOption::isVisible() const
 {
     if (!m_parent)
         return false;
-    
+
     // In a single-option select with the popup collapsed, only the selected
     // item is considered visible.
     return !m_parent->isOffScreen() || isSelected();

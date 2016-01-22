@@ -48,23 +48,23 @@ import javafx.scene.input.MouseEvent;
 
 /**
  *
- * 
+ *
  */
 
 
 public class PickModeController extends AbstractModeController {
 
     private HitNodeChrome hitNodeChrome;
-    
+
     public PickModeController(ContentPanelController contentPanelController) {
         super(contentPanelController);
     }
-    
-    
+
+
     /*
      * AbstractModeController
      */
-    
+
     @Override
     public void willResignActive(AbstractModeController nextModeController) {
         contentPanelController.getGlassLayer().setCursor(Cursor.DEFAULT);
@@ -75,12 +75,12 @@ public class PickModeController extends AbstractModeController {
     @Override
     public void didBecomeActive(AbstractModeController previousModeController) {
         assert contentPanelController.getGlassLayer() != null;
-        
+
         updateHitNodeChrome();
         startListeningToInputEvents();
         contentPanelController.getGlassLayer().setCursor(ImageUtils.getCSSCursor());
     }
-    
+
     @Override
     public void editorSelectionDidChange() {
         updateHitNodeChrome();
@@ -103,38 +103,38 @@ public class PickModeController extends AbstractModeController {
         // will switch to EditModeController.
         assert false;
     }
-    
-    
+
+
     /*
      * Private
      */
-    
+
 
     private void startListeningToInputEvents() {
         final Node glassLayer = contentPanelController.getGlassLayer();
         assert glassLayer.getOnMousePressed() == null;
-        
+
         glassLayer.setOnMousePressed(mousePressedOnGlassLayerListener);
     }
-    
+
     private void stopListeningToInputEvents() {
         final Node glassLayer = contentPanelController.getGlassLayer();
         glassLayer.setOnMousePressed(null);
     }
-    
+
     private final EventHandler<MouseEvent> mousePressedOnGlassLayerListener
             = e -> mousePressedOnGlassLayer(e);
-    
-    
+
+
     private void mousePressedOnGlassLayer(MouseEvent e) {
-        
-        
-        final Selection selection 
+
+
+        final Selection selection
                 = contentPanelController.getEditorController().getSelection();
-        
+
         final FXOMDocument fxomDocument
                 = contentPanelController.getEditorController().getFxomDocument();
-        
+
         final FXOMObject hitObject;
         final Node hitNode;
         if ((fxomDocument == null) || (fxomDocument.getFxomRoot() == null)) {
@@ -157,7 +157,7 @@ public class PickModeController extends AbstractModeController {
                 hitNode = null;
             }
         }
-        
+
         if (hitObject == null) {
             selection.clear();
         } else {
@@ -169,13 +169,13 @@ public class PickModeController extends AbstractModeController {
             }
         }
     }
-    
-    
+
+
     private void updateHitNodeChrome() {
         final Selection selection = contentPanelController.getEditorController().getSelection();
         final HitNodeChrome newChrome;
-        
-        if ((hitNodeChrome == null) 
+
+        if ((hitNodeChrome == null)
                 || (hitNodeChrome.getFxomObject() != selection.getHitItem())
                 || (hitNodeChrome.getHitNode() != selection.getCheckedHitNode())) {
             if ((selection.getHitItem() != null) && (selection.getCheckedHitNode() != null)){
@@ -199,7 +199,7 @@ public class PickModeController extends AbstractModeController {
                     break;
             }
         }
-        
+
         if (newChrome != hitNodeChrome) {
             final Group rudderLayer = contentPanelController.getRudderLayer();
             if (hitNodeChrome != null) {
@@ -213,21 +213,21 @@ public class PickModeController extends AbstractModeController {
             assert (hitNodeChrome == null) || hitNodeChrome.getState() == AbstractPring.State.CLEAN;
         }
     }
-    
-    
+
+
     private HitNodeChrome makeHitNodeChrome(FXOMObject hitItem, Node hitNode) {
         final HitNodeChrome result;
-        
+
         assert hitItem != null;
-        
+
         /*
          * In some cases, we cannot make a chrome for some hitObject
-         * 
+         *
          *  MenuButton          <= OK
          *      CustomMenuItem  <= KO because MenuItem are not displayable (case #1)
          *          CheckBox    <= KO because this CheckBox is in a separate scene (Case #2)
          */
-        
+
         final AbstractDriver driver = contentPanelController.lookupDriver(hitItem);
         if (driver == null) {
             // Case #1 above
@@ -248,11 +248,11 @@ public class PickModeController extends AbstractModeController {
                 }
             }
         }
-        
+
         return result;
     }
-    
-    
+
+
     private void removeHitNodeChrome() {
         if (hitNodeChrome != null) {
             final Group rudderLayer = contentPanelController.getRudderLayer();

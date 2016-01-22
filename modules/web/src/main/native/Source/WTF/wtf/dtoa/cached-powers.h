@@ -33,24 +33,24 @@
 namespace WTF {
 
 namespace double_conversion {
-    
+
     class PowersOfTenCache {
     public:
-        
+
         // Not all powers of ten are cached. The decimal exponent of two neighboring
         // cached numbers will differ by kDecimalExponentDistance.
         static int kDecimalExponentDistance;
-        
+
         static int kMinDecimalExponent;
         static int kMaxDecimalExponent;
-        
+
         // Returns a cached power-of-ten with a binary exponent in the range
         // [min_exponent; max_exponent] (boundaries included).
         static void GetCachedPowerForBinaryExponentRange(int min_exponent,
                                                          int max_exponent,
                                                          DiyFp* power,
                                                          int* decimal_exponent);
-        
+
         // Returns a cached power of ten x ~= 10^k such that
         //   k <= decimal_exponent < k + kCachedPowersDecimalDistance.
         // The given decimal_exponent must satisfy
@@ -60,11 +60,11 @@ namespace double_conversion {
                                                      DiyFp* power,
                                                      int* found_exponent);
     };
-    
+
     // Initializes the table of cached powers used by the dtoa algorithm.
     // This needs to be called when JSC is being initialized.
     WTF_EXPORT_PRIVATE void initialize();
-    
+
 }  // namespace double_conversion
 
 } // namespace WTF

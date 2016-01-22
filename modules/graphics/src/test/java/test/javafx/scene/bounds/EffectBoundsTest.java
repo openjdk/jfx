@@ -43,26 +43,26 @@ public class EffectBoundsTest {
         DropShadow ds = new DropShadow();
         ds.setRadius(2);
         rect.setEffect(ds);
-        
+
         assertEquals(box(-2, -2, 104, 104), rect.getBoundsInLocal());
         assertEquals(rect.getBoundsInLocal(), rect.getBoundsInParent());
     }
-    
+
     // test setting an effect on a Node and removing the effect is right bounds
     public @Test void testBoundsOnRectangleWithShadowRemoved() {
         Rectangle rect = new Rectangle(100, 100);
         DropShadow ds = new DropShadow();
         ds.setRadius(2);
         rect.setEffect(ds);
-        
+
         assertEquals(box(-2, -2, 104, 104), rect.getBoundsInLocal());
         assertEquals(rect.getBoundsInLocal(), rect.getBoundsInParent());
-        
+
         rect.setEffect(null);
         assertEquals(box(0, 0, 100, 100), rect.getBoundsInLocal());
         assertEquals(rect.getBoundsInLocal(), rect.getBoundsInParent());
     }
-    
+
     // test setting an effect on a Node and changing the effect params
     //   (which causes the effect bounds to change) will update the bounds
     public @Test void testBoundsOnRectangleWithShadowChanged() {
@@ -104,7 +104,7 @@ public class EffectBoundsTest {
         ds.setRadius(2);
         rect.setEffect(ds);
         rect.setClip(new Rectangle(-10, -10, 30, 30));
-        
+
         assertEquals(box(-2, -2, 22, 22), rect.getBoundsInLocal());
         assertEquals(rect.getBoundsInLocal(), rect.getBoundsInParent());
     }

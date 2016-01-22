@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef WebPreferences_H
@@ -45,185 +45,185 @@ public:
     virtual ULONG STDMETHODCALLTYPE Release(void);
 
     // IWebPreferences
-    virtual HRESULT STDMETHODCALLTYPE standardPreferences( 
+    virtual HRESULT STDMETHODCALLTYPE standardPreferences(
         /* [retval][out] */ IWebPreferences** standardPreferences);
-    
-    virtual HRESULT STDMETHODCALLTYPE initWithIdentifier( 
+
+    virtual HRESULT STDMETHODCALLTYPE initWithIdentifier(
         /* [in] */ BSTR anIdentifier,
         /* [retval][out] */ IWebPreferences** preferences);
-    
-    virtual HRESULT STDMETHODCALLTYPE identifier( 
+
+    virtual HRESULT STDMETHODCALLTYPE identifier(
         /* [retval][out] */ BSTR* ident);
-    
-    virtual HRESULT STDMETHODCALLTYPE standardFontFamily( 
+
+    virtual HRESULT STDMETHODCALLTYPE standardFontFamily(
         /* [retval][out] */ BSTR* family);
-    
-    virtual HRESULT STDMETHODCALLTYPE setStandardFontFamily( 
+
+    virtual HRESULT STDMETHODCALLTYPE setStandardFontFamily(
         /* [in] */ BSTR family);
-    
-    virtual HRESULT STDMETHODCALLTYPE fixedFontFamily( 
+
+    virtual HRESULT STDMETHODCALLTYPE fixedFontFamily(
         /* [retval][out] */ BSTR* family);
-    
-    virtual HRESULT STDMETHODCALLTYPE setFixedFontFamily( 
+
+    virtual HRESULT STDMETHODCALLTYPE setFixedFontFamily(
         /* [in] */ BSTR family);
-    
-    virtual HRESULT STDMETHODCALLTYPE serifFontFamily( 
+
+    virtual HRESULT STDMETHODCALLTYPE serifFontFamily(
         /* [retval][out] */ BSTR* fontFamily);
-    
-    virtual HRESULT STDMETHODCALLTYPE setSerifFontFamily( 
+
+    virtual HRESULT STDMETHODCALLTYPE setSerifFontFamily(
         /* [in] */ BSTR family);
-    
-    virtual HRESULT STDMETHODCALLTYPE sansSerifFontFamily( 
+
+    virtual HRESULT STDMETHODCALLTYPE sansSerifFontFamily(
         /* [retval][out] */ BSTR* family);
-    
-    virtual HRESULT STDMETHODCALLTYPE setSansSerifFontFamily( 
+
+    virtual HRESULT STDMETHODCALLTYPE setSansSerifFontFamily(
         /* [in] */ BSTR family);
-    
-    virtual HRESULT STDMETHODCALLTYPE cursiveFontFamily( 
+
+    virtual HRESULT STDMETHODCALLTYPE cursiveFontFamily(
         /* [retval][out] */ BSTR* family);
-    
-    virtual HRESULT STDMETHODCALLTYPE setCursiveFontFamily( 
+
+    virtual HRESULT STDMETHODCALLTYPE setCursiveFontFamily(
         /* [in] */ BSTR family);
-    
-    virtual HRESULT STDMETHODCALLTYPE fantasyFontFamily( 
+
+    virtual HRESULT STDMETHODCALLTYPE fantasyFontFamily(
         /* [retval][out] */ BSTR* family);
-    
-    virtual HRESULT STDMETHODCALLTYPE setFantasyFontFamily( 
+
+    virtual HRESULT STDMETHODCALLTYPE setFantasyFontFamily(
         /* [in] */ BSTR family);
-    
-    virtual HRESULT STDMETHODCALLTYPE pictographFontFamily( 
+
+    virtual HRESULT STDMETHODCALLTYPE pictographFontFamily(
         /* [retval][out] */ BSTR* family);
-    
-    virtual HRESULT STDMETHODCALLTYPE setPictographFontFamily( 
+
+    virtual HRESULT STDMETHODCALLTYPE setPictographFontFamily(
         /* [in] */ BSTR family);
-    
-    virtual HRESULT STDMETHODCALLTYPE defaultFontSize( 
+
+    virtual HRESULT STDMETHODCALLTYPE defaultFontSize(
         /* [retval][out] */ int* fontSize);
-    
-    virtual HRESULT STDMETHODCALLTYPE setDefaultFontSize( 
+
+    virtual HRESULT STDMETHODCALLTYPE setDefaultFontSize(
         /* [in] */ int fontSize);
-    
-    virtual HRESULT STDMETHODCALLTYPE defaultFixedFontSize( 
+
+    virtual HRESULT STDMETHODCALLTYPE defaultFixedFontSize(
         /* [retval][out] */ int* fontSize);
-    
-    virtual HRESULT STDMETHODCALLTYPE setDefaultFixedFontSize( 
+
+    virtual HRESULT STDMETHODCALLTYPE setDefaultFixedFontSize(
         /* [in] */ int fontSize);
-    
-    virtual HRESULT STDMETHODCALLTYPE minimumFontSize( 
+
+    virtual HRESULT STDMETHODCALLTYPE minimumFontSize(
         /* [retval][out] */ int* fontSize);
-    
-    virtual HRESULT STDMETHODCALLTYPE setMinimumFontSize( 
+
+    virtual HRESULT STDMETHODCALLTYPE setMinimumFontSize(
         /* [in] */ int fontSize);
-    
-    virtual HRESULT STDMETHODCALLTYPE minimumLogicalFontSize( 
+
+    virtual HRESULT STDMETHODCALLTYPE minimumLogicalFontSize(
         /* [retval][out] */ int* fontSize);
-    
-    virtual HRESULT STDMETHODCALLTYPE setMinimumLogicalFontSize( 
+
+    virtual HRESULT STDMETHODCALLTYPE setMinimumLogicalFontSize(
         /* [in] */ int fontSize);
-    
-    virtual HRESULT STDMETHODCALLTYPE defaultTextEncodingName( 
+
+    virtual HRESULT STDMETHODCALLTYPE defaultTextEncodingName(
         /* [retval][out] */ BSTR* name);
-    
-    virtual HRESULT STDMETHODCALLTYPE setDefaultTextEncodingName( 
+
+    virtual HRESULT STDMETHODCALLTYPE setDefaultTextEncodingName(
         /* [in] */ BSTR name);
-    
-    virtual HRESULT STDMETHODCALLTYPE userStyleSheetEnabled( 
+
+    virtual HRESULT STDMETHODCALLTYPE userStyleSheetEnabled(
         /* [retval][out] */ BOOL* enabled);
-    
-    virtual HRESULT STDMETHODCALLTYPE setUserStyleSheetEnabled( 
+
+    virtual HRESULT STDMETHODCALLTYPE setUserStyleSheetEnabled(
         /* [in] */ BOOL enabled);
-    
-    virtual HRESULT STDMETHODCALLTYPE userStyleSheetLocation( 
+
+    virtual HRESULT STDMETHODCALLTYPE userStyleSheetLocation(
         /* [retval][out] */ BSTR* location);
-    
-    virtual HRESULT STDMETHODCALLTYPE setUserStyleSheetLocation( 
+
+    virtual HRESULT STDMETHODCALLTYPE setUserStyleSheetLocation(
         /* [in] */ BSTR location);
-    
-    virtual HRESULT STDMETHODCALLTYPE isJavaEnabled( 
+
+    virtual HRESULT STDMETHODCALLTYPE isJavaEnabled(
         /* [retval][out] */ BOOL* enabled);
-    
-    virtual HRESULT STDMETHODCALLTYPE setJavaEnabled( 
+
+    virtual HRESULT STDMETHODCALLTYPE setJavaEnabled(
         /* [in] */ BOOL enabled);
-    
-    virtual HRESULT STDMETHODCALLTYPE isJavaScriptEnabled( 
+
+    virtual HRESULT STDMETHODCALLTYPE isJavaScriptEnabled(
         /* [retval][out] */ BOOL* enabled);
-    
-    virtual HRESULT STDMETHODCALLTYPE setJavaScriptEnabled( 
+
+    virtual HRESULT STDMETHODCALLTYPE setJavaScriptEnabled(
         /* [in] */ BOOL enabled);
-    
-    virtual HRESULT STDMETHODCALLTYPE javaScriptCanOpenWindowsAutomatically( 
+
+    virtual HRESULT STDMETHODCALLTYPE javaScriptCanOpenWindowsAutomatically(
         /* [retval][out] */ BOOL* enabled);
-    
-    virtual HRESULT STDMETHODCALLTYPE setJavaScriptCanOpenWindowsAutomatically( 
+
+    virtual HRESULT STDMETHODCALLTYPE setJavaScriptCanOpenWindowsAutomatically(
         /* [in] */ BOOL enabled);
-    
-    virtual HRESULT STDMETHODCALLTYPE arePlugInsEnabled( 
+
+    virtual HRESULT STDMETHODCALLTYPE arePlugInsEnabled(
         /* [retval][out] */ BOOL* enabled);
-    
-    virtual HRESULT STDMETHODCALLTYPE setPlugInsEnabled( 
+
+    virtual HRESULT STDMETHODCALLTYPE setPlugInsEnabled(
         /* [in] */ BOOL enabled);
 
     virtual HRESULT STDMETHODCALLTYPE isCSSRegionsEnabled(
         /* [retval][out] */ BOOL* enabled);
-    
+
     virtual HRESULT STDMETHODCALLTYPE setCSSRegionsEnabled(
         /* [in] */ BOOL);
-    
+
     virtual HRESULT STDMETHODCALLTYPE unused7();
     virtual HRESULT STDMETHODCALLTYPE unused8();
-    
-    virtual HRESULT STDMETHODCALLTYPE allowsAnimatedImages( 
-        /* [retval][out] */ BOOL* enabled);
-    
-    virtual HRESULT STDMETHODCALLTYPE setAllowsAnimatedImages( 
-        /* [in] */ BOOL enabled);
-    
-    virtual HRESULT STDMETHODCALLTYPE allowAnimatedImageLooping( 
-        /* [retval][out] */ BOOL* enabled);
-    
-    virtual HRESULT STDMETHODCALLTYPE setAllowAnimatedImageLooping( 
-        /* [in] */ BOOL enabled);
-    
-    virtual HRESULT STDMETHODCALLTYPE setLoadsImagesAutomatically( 
-        /* [in] */ BOOL enabled);
-    
-    virtual HRESULT STDMETHODCALLTYPE loadsImagesAutomatically( 
-        /* [retval][out] */ BOOL* enabled);
-    
-    virtual HRESULT STDMETHODCALLTYPE setAutosaves( 
-        /* [in] */ BOOL enabled);
-    
-    virtual HRESULT STDMETHODCALLTYPE autosaves( 
-        /* [retval][out] */ BOOL* enabled);
-    
-    virtual HRESULT STDMETHODCALLTYPE setShouldPrintBackgrounds( 
-        /* [in] */ BOOL enabled);
-    
-    virtual HRESULT STDMETHODCALLTYPE shouldPrintBackgrounds( 
-        /* [retval][out] */ BOOL* enabled);
-    
-    virtual HRESULT STDMETHODCALLTYPE setPrivateBrowsingEnabled( 
-        /* [in] */ BOOL enabled);
-    
-    virtual HRESULT STDMETHODCALLTYPE privateBrowsingEnabled( 
-        /* [retval][out] */ BOOL* enabled);
-    
-    virtual HRESULT STDMETHODCALLTYPE setTabsToLinks( 
-        /* [in] */ BOOL enabled);
-    
-    virtual HRESULT STDMETHODCALLTYPE tabsToLinks( 
+
+    virtual HRESULT STDMETHODCALLTYPE allowsAnimatedImages(
         /* [retval][out] */ BOOL* enabled);
 
-    virtual HRESULT STDMETHODCALLTYPE textAreasAreResizable( 
+    virtual HRESULT STDMETHODCALLTYPE setAllowsAnimatedImages(
+        /* [in] */ BOOL enabled);
+
+    virtual HRESULT STDMETHODCALLTYPE allowAnimatedImageLooping(
+        /* [retval][out] */ BOOL* enabled);
+
+    virtual HRESULT STDMETHODCALLTYPE setAllowAnimatedImageLooping(
+        /* [in] */ BOOL enabled);
+
+    virtual HRESULT STDMETHODCALLTYPE setLoadsImagesAutomatically(
+        /* [in] */ BOOL enabled);
+
+    virtual HRESULT STDMETHODCALLTYPE loadsImagesAutomatically(
+        /* [retval][out] */ BOOL* enabled);
+
+    virtual HRESULT STDMETHODCALLTYPE setAutosaves(
+        /* [in] */ BOOL enabled);
+
+    virtual HRESULT STDMETHODCALLTYPE autosaves(
+        /* [retval][out] */ BOOL* enabled);
+
+    virtual HRESULT STDMETHODCALLTYPE setShouldPrintBackgrounds(
+        /* [in] */ BOOL enabled);
+
+    virtual HRESULT STDMETHODCALLTYPE shouldPrintBackgrounds(
+        /* [retval][out] */ BOOL* enabled);
+
+    virtual HRESULT STDMETHODCALLTYPE setPrivateBrowsingEnabled(
+        /* [in] */ BOOL enabled);
+
+    virtual HRESULT STDMETHODCALLTYPE privateBrowsingEnabled(
+        /* [retval][out] */ BOOL* enabled);
+
+    virtual HRESULT STDMETHODCALLTYPE setTabsToLinks(
+        /* [in] */ BOOL enabled);
+
+    virtual HRESULT STDMETHODCALLTYPE tabsToLinks(
+        /* [retval][out] */ BOOL* enabled);
+
+    virtual HRESULT STDMETHODCALLTYPE textAreasAreResizable(
         /* [retval][out] */ BOOL *enabled);
-    
-    virtual HRESULT STDMETHODCALLTYPE setTextAreasAreResizable( 
+
+    virtual HRESULT STDMETHODCALLTYPE setTextAreasAreResizable(
         /* [in] */ BOOL enabled);
 
-    virtual HRESULT STDMETHODCALLTYPE usesPageCache( 
+    virtual HRESULT STDMETHODCALLTYPE usesPageCache(
         /* [retval][out] */ BOOL *usesPageCache);
 
-    virtual HRESULT STDMETHODCALLTYPE setUsesPageCache( 
+    virtual HRESULT STDMETHODCALLTYPE setUsesPageCache(
         /* [in] */ BOOL usesPageCache);
 
     virtual HRESULT STDMETHODCALLTYPE unused1();
@@ -241,49 +241,49 @@ public:
     virtual HRESULT STDMETHODCALLTYPE setIconDatabaseEnabled(
         /* [in] */ BOOL enabled);
 
-    virtual HRESULT STDMETHODCALLTYPE fontSmoothing( 
+    virtual HRESULT STDMETHODCALLTYPE fontSmoothing(
         /* [retval][out] */ FontSmoothingType* smoothingType);
-    
-    virtual HRESULT STDMETHODCALLTYPE setFontSmoothing( 
+
+    virtual HRESULT STDMETHODCALLTYPE setFontSmoothing(
         /* [in] */ FontSmoothingType smoothingType);
 
-    virtual HRESULT STDMETHODCALLTYPE editableLinkBehavior( 
+    virtual HRESULT STDMETHODCALLTYPE editableLinkBehavior(
         /* [retval][out] */ WebKitEditableLinkBehavior* behavior);
-    
-    virtual HRESULT STDMETHODCALLTYPE setEditableLinkBehavior( 
+
+    virtual HRESULT STDMETHODCALLTYPE setEditableLinkBehavior(
         /* [in] */ WebKitEditableLinkBehavior behavior);
 
     virtual HRESULT STDMETHODCALLTYPE unused5();
     virtual HRESULT STDMETHODCALLTYPE unused6();
 
-    virtual HRESULT STDMETHODCALLTYPE cookieStorageAcceptPolicy( 
+    virtual HRESULT STDMETHODCALLTYPE cookieStorageAcceptPolicy(
         /* [retval][out] */ WebKitCookieStorageAcceptPolicy *acceptPolicy);
-        
-    virtual HRESULT STDMETHODCALLTYPE setCookieStorageAcceptPolicy( 
+
+    virtual HRESULT STDMETHODCALLTYPE setCookieStorageAcceptPolicy(
         /* [in] */ WebKitCookieStorageAcceptPolicy acceptPolicy);
 
-    virtual HRESULT STDMETHODCALLTYPE continuousSpellCheckingEnabled( 
+    virtual HRESULT STDMETHODCALLTYPE continuousSpellCheckingEnabled(
         /* [retval][out] */ BOOL *enabled);
-    
-    virtual HRESULT STDMETHODCALLTYPE setContinuousSpellCheckingEnabled( 
-        /* [in] */ BOOL enabled);
-    
-    virtual HRESULT STDMETHODCALLTYPE grammarCheckingEnabled( 
-        /* [retval][out] */ BOOL *enabled);
-    
-    virtual HRESULT STDMETHODCALLTYPE setGrammarCheckingEnabled( 
+
+    virtual HRESULT STDMETHODCALLTYPE setContinuousSpellCheckingEnabled(
         /* [in] */ BOOL enabled);
 
-    virtual HRESULT STDMETHODCALLTYPE allowContinuousSpellChecking( 
+    virtual HRESULT STDMETHODCALLTYPE grammarCheckingEnabled(
         /* [retval][out] */ BOOL *enabled);
-    
-    virtual HRESULT STDMETHODCALLTYPE setAllowContinuousSpellChecking( 
+
+    virtual HRESULT STDMETHODCALLTYPE setGrammarCheckingEnabled(
         /* [in] */ BOOL enabled);
 
-    virtual HRESULT STDMETHODCALLTYPE isDOMPasteAllowed( 
+    virtual HRESULT STDMETHODCALLTYPE allowContinuousSpellChecking(
         /* [retval][out] */ BOOL *enabled);
-    
-    virtual HRESULT STDMETHODCALLTYPE setDOMPasteAllowed( 
+
+    virtual HRESULT STDMETHODCALLTYPE setAllowContinuousSpellChecking(
+        /* [in] */ BOOL enabled);
+
+    virtual HRESULT STDMETHODCALLTYPE isDOMPasteAllowed(
+        /* [retval][out] */ BOOL *enabled);
+
+    virtual HRESULT STDMETHODCALLTYPE setDOMPasteAllowed(
         /* [in] */ BOOL enabled);
 
     virtual HRESULT STDMETHODCALLTYPE cacheModel(
@@ -335,28 +335,28 @@ public:
     virtual HRESULT STDMETHODCALLTYPE setAuthorAndUserStylesEnabled(BOOL);
     virtual HRESULT STDMETHODCALLTYPE authorAndUserStylesEnabled(BOOL*);
 
-    virtual HRESULT STDMETHODCALLTYPE inApplicationChromeMode( 
-        /* [retval][out] */ BOOL *enabled);
-    
-    virtual HRESULT STDMETHODCALLTYPE setApplicationChromeMode( 
-        /* [in] */ BOOL enabled);
-
-    virtual HRESULT STDMETHODCALLTYPE setOfflineWebApplicationCacheEnabled( 
-        /* [in] */ BOOL enabled);
-        
-    virtual HRESULT STDMETHODCALLTYPE offlineWebApplicationCacheEnabled( 
+    virtual HRESULT STDMETHODCALLTYPE inApplicationChromeMode(
         /* [retval][out] */ BOOL *enabled);
 
-    virtual HRESULT STDMETHODCALLTYPE setDatabasesEnabled( 
+    virtual HRESULT STDMETHODCALLTYPE setApplicationChromeMode(
         /* [in] */ BOOL enabled);
-        
-    virtual HRESULT STDMETHODCALLTYPE databasesEnabled( 
+
+    virtual HRESULT STDMETHODCALLTYPE setOfflineWebApplicationCacheEnabled(
+        /* [in] */ BOOL enabled);
+
+    virtual HRESULT STDMETHODCALLTYPE offlineWebApplicationCacheEnabled(
         /* [retval][out] */ BOOL *enabled);
 
-    virtual HRESULT STDMETHODCALLTYPE setLocalStorageEnabled( 
+    virtual HRESULT STDMETHODCALLTYPE setDatabasesEnabled(
         /* [in] */ BOOL enabled);
-        
-    virtual HRESULT STDMETHODCALLTYPE localStorageEnabled( 
+
+    virtual HRESULT STDMETHODCALLTYPE databasesEnabled(
+        /* [retval][out] */ BOOL *enabled);
+
+    virtual HRESULT STDMETHODCALLTYPE setLocalStorageEnabled(
+        /* [in] */ BOOL enabled);
+
+    virtual HRESULT STDMETHODCALLTYPE localStorageEnabled(
         /* [retval][out] */ BOOL *enabled);
 
     virtual HRESULT STDMETHODCALLTYPE localStorageDatabasePath(
@@ -371,22 +371,22 @@ public:
     virtual HRESULT STDMETHODCALLTYPE setExperimentalNotificationsEnabled(
         /* [in] */ BOOL enabled);
 
-    virtual HRESULT STDMETHODCALLTYPE setShouldPaintNativeControls( 
+    virtual HRESULT STDMETHODCALLTYPE setShouldPaintNativeControls(
     /* [in] */ BOOL shouldPaint);
 
-    virtual HRESULT STDMETHODCALLTYPE shouldPaintNativeControls( 
+    virtual HRESULT STDMETHODCALLTYPE shouldPaintNativeControls(
     /* [retval][out] */ BOOL *shouldPaint);
 
-    virtual HRESULT STDMETHODCALLTYPE setZoomsTextOnly( 
+    virtual HRESULT STDMETHODCALLTYPE setZoomsTextOnly(
     /* [retval][out] */ BOOL zoomsTextOnly);
 
-    virtual HRESULT STDMETHODCALLTYPE zoomsTextOnly( 
+    virtual HRESULT STDMETHODCALLTYPE zoomsTextOnly(
     /* [retval][out] */ BOOL *zoomsTextOnly);
 
-    virtual HRESULT STDMETHODCALLTYPE fontSmoothingContrast( 
+    virtual HRESULT STDMETHODCALLTYPE fontSmoothingContrast(
     /* [retval][out] */ float* contrast);
 
-    virtual HRESULT STDMETHODCALLTYPE setFontSmoothingContrast( 
+    virtual HRESULT STDMETHODCALLTYPE setFontSmoothingContrast(
     /* [in] */ float contrast);
 
     virtual HRESULT STDMETHODCALLTYPE isWebSecurityEnabled(

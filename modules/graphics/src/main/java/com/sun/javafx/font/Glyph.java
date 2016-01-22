@@ -48,7 +48,7 @@ public interface Glyph {
     public boolean isLCDGlyph();
 
     /* These 4 methods should only be called after either getPixelData() or
-     * getPixelData(int subPixel) is invoked. This ensures the returned value 
+     * getPixelData(int subPixel) is invoked. This ensures the returned value
      * is correct for the requested subpixel position. */
     public int getWidth();
     public int getHeight();

@@ -56,7 +56,7 @@ public class BubbleChart<X,Y> extends XYChart<X,Y> {
     // -------------- CONSTRUCTORS ----------------------------------------------
 
     /**
-     * Construct a new BubbleChart with the given axis. BubbleChart does not use a Category Axis. 
+     * Construct a new BubbleChart with the given axis. BubbleChart does not use a Category Axis.
      * Both X and Y axes should be of type NumberAxis.
      *
      * @param xAxis The x axis to use
@@ -67,7 +67,7 @@ public class BubbleChart<X,Y> extends XYChart<X,Y> {
     }
 
     /**
-     * Construct a new BubbleChart with the given axis and data. BubbleChart does not 
+     * Construct a new BubbleChart with the given axis and data. BubbleChart does not
      * use a Category Axis. Both X and Y axes should be of type NumberAxis.
      *
      * @param xAxis The x axis to use
@@ -176,7 +176,7 @@ public class BubbleChart<X,Y> extends XYChart<X,Y> {
     /** @inheritDoc */
     @Override protected void dataItemChanged(Data<X, Y> item) {
     }
-    
+
     @Override protected  void seriesAdded(Series<X,Y> series, int seriesIndex) {
         // handle any data already in series
         for (int j=0; j<series.getData().size(); j++) {

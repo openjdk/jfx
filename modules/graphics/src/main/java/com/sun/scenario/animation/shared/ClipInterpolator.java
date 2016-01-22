@@ -40,7 +40,7 @@ public abstract class ClipInterpolator {
     /**
      * Figures out the number of "real" key frames. The user may not have specified the "zero" key
      * frame, in which case we end up inferring an additional zero key frame on the array.
-     * 
+     *
      * @param keyFrames The key frames. Must not be null.
      * @return The "real" number of key frames
      */
@@ -52,15 +52,15 @@ public abstract class ClipInterpolator {
 
     /**
      * Changes the keyframes.
-     * 
+     *
      * The optimal implementation for the new keyFrames might be different. For
      * this reason, setKeyFrames returns a ClipInterpolator implementation with
      * the updated values. This can either be the same object or a newly created
      * one.
-     * 
+     *
      * @param keyFrames
      *            The new sorted array of keyframes of this clip
-     * @param keyFrameTicks 
+     * @param keyFrameTicks
      *            tick duration of corresponding keyFrames
      * @return The ClipInterpolator implementation to use after changing the
      *         keyframes.

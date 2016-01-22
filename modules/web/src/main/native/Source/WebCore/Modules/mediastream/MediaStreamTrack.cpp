@@ -176,7 +176,7 @@ RefPtr<MediaStreamCapabilities> MediaStreamTrack::capabilities() const
     MediaStreamSource::ReadyState readyState = m_privateTrack->readyState();
     if (readyState == MediaStreamSource::New || readyState == MediaStreamSource::Ended)
         sourceCapabilities->setSourceType(MediaStreamSourceStates::None);
-    
+
     return MediaStreamCapabilities::create(sourceCapabilities.release());
 }
 
@@ -205,9 +205,9 @@ void MediaStreamTrack::stopProducingData()
     // NOTE: this method is called when the "stop" method is called from JS, using
     // the "ImplementedAs" IDL attribute. This is done because ActiveDOMObject requires
     // a "stop" method.
-    
+
     // The stop method should "Permanently stop the generation of data for track's source", but it
-    // should not post an 'ended' event. 
+    // should not post an 'ended' event.
     m_stoppingTrack = true;
     m_privateTrack->stop(MediaStreamTrackPrivate::StopTrackAndStopSource);
     m_stoppingTrack = false;
@@ -243,7 +243,7 @@ void MediaStreamTrack::trackReadyStateChanged()
 
     configureTrackRendering();
 }
-    
+
 void MediaStreamTrack::trackMutedChanged()
 {
     if (stopped())

@@ -34,7 +34,7 @@
  * SECTION:gsttag
  * @short_description: additional tag definitions for plugins and applications
  * @see_also: #GstTagList
- * 
+ *
  * <refsect2>
  * <para>
  * Contains additional standardized GStreamer tag definitions for plugins

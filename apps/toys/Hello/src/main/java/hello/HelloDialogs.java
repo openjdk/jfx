@@ -79,7 +79,7 @@ public class HelloDialogs extends Application {
     private final CheckBox cbShowMasthead = new CheckBox();
     private final CheckBox cbSetOwner = new CheckBox();
     private final CheckBox cbCustomGraphic = new CheckBox();
-    
+
     private Stage stage;
 
     @Override public void start(Stage stage) throws Exception {
@@ -109,15 +109,15 @@ public class HelloDialogs extends Application {
                 String optionalMasthead = "Wouldn't this be nice?";
                 dlg.getDialogPane().setContentText("A collection of pre-built JavaFX dialogs?\nSeems like a great idea to me...");
                 configureSampleDialog(dlg, optionalMasthead);
-                
+
                 // lets get some output when events happen
                 dlg.setOnShowing(evt -> System.out.println(evt));
                 dlg.setOnShown(evt -> System.out.println(evt));
                 dlg.setOnHiding(evt -> System.out.println(evt));
                 dlg.setOnHidden(evt -> System.out.println(evt));
-                
+
 //              dlg.setOnCloseRequest(evt -> evt.consume());
-                
+
                 showDialog(dlg);
             }
         });
@@ -321,9 +321,9 @@ public class HelloDialogs extends Application {
         Hyperlink14.setOnAction(new EventHandler<ActionEvent>() {
             final TextField txUserName = new TextField();
             final PasswordField txPassword = new PasswordField();
-            
+
             final ButtonType loginButtonType = new ButtonType("Login", ButtonData.OK_DONE);
-            
+
             Dialog<String> dlg;
 
             private void validate() {
@@ -334,13 +334,13 @@ public class HelloDialogs extends Application {
             @Override
             public void handle(ActionEvent arg0) {
                 dlg = new Dialog<String>();
-                dlg.setResultConverter(buttonType -> buttonType == loginButtonType ? 
-                        "[" + txUserName.getText() + "/" + txPassword.getText() + "]" : 
+                dlg.setResultConverter(buttonType -> buttonType == loginButtonType ?
+                        "[" + txUserName.getText() + "/" + txPassword.getText() + "]" :
                          null);
                 dlg.initOwner(cbSetOwner.isSelected() ? stage : null);
                 dlg.setTitle("Login Dialog");
                 dlg.initModality(modalityCombobox.getValue());
-                
+
                 if (cbShowMasthead.isSelected()) {
                     dlg.getDialogPane().setHeaderText("Login to ControlsFX");
                 }
@@ -363,14 +363,14 @@ public class HelloDialogs extends Application {
                 dlg.setResizable(false);
                 dlg.getDialogPane().setGraphic(new ImageView(new Image(HelloAccordion.class.getResource("heart_16.png").toExternalForm())));
                 dlg.getDialogPane().setContent(content);
-                
+
                 // instead of creating an action, we have to do the following:
                 dlg.getDialogPane().getButtonTypes().addAll(loginButtonType, ButtonType.CANCEL);
                 Node loginButtonNode = dlg.getDialogPane().lookupButton(loginButtonType);
                 ((Button) loginButtonNode).setOnAction(evt -> {
                     dlg.setResult("[" + txUserName.getText() + " " + txPassword.getText() + "]");
                 });
-                
+
                 validate();
 
                 Platform.runLater( () -> txUserName.requestFocus() );
@@ -378,13 +378,13 @@ public class HelloDialogs extends Application {
                 dlg.showAndWait().ifPresent(result -> System.out.println("Result is " + result));
             }
         });
-        
+
         final Button Hyperlink14a = new Button("FXML");
         Hyperlink14a.setOnAction(event -> new FXMLSampleDialog().showAndWait());
 
         grid.add(new HBox(10, Hyperlink14, Hyperlink14a), 1, row++);
-        
-        
+
+
         // *******************************************************************
         // wizards
         // *******************************************************************
@@ -392,19 +392,19 @@ public class HelloDialogs extends Application {
         grid.add(createLabel("Wizard: "), 0, row);
         final Button Hyperlink15a = new Button("Linear Wizard");
         Hyperlink15a.setOnAction(e -> showLinearWizard());
-        
+
         final Button Hyperlink15b = new Button("Branching Wizard");
         Hyperlink15b.setOnAction(e -> showBranchingWizard());
-        
+
         grid.add(new HBox(10, Hyperlink15a, Hyperlink15b), 1, row++);
-        
-        
+
+
 
         SplitPane splitPane = new SplitPane();
         splitPane.setPrefSize(1200, 500);
         splitPane.getItems().addAll(grid, getControlPanel());
         splitPane.setDividerPositions(0.6);
-        
+
         Scene scene = new Scene(splitPane);
         stage.setScene(scene);
         stage.setTitle("JavaFX Dialogs");
@@ -418,20 +418,20 @@ public class HelloDialogs extends Application {
         dlg.initOwner(owner);
         return dlg;
     }
-    
+
     private void configureSampleDialog(Dialog<?> dlg, String masthead) {
         dlg.getDialogPane().setHeaderText(cbShowMasthead.isSelected() ? masthead : null);
-        
+
         if (cbCustomGraphic.isSelected()) {
             URL url = getClass().getResource("dialog/tick.png");
             Image image = new Image(url.toExternalForm());
             ImageView iv = new ImageView(image);
             dlg.getDialogPane().setGraphic(iv);
         }
-        
+
         dlg.initStyle(styleCombobox.getValue());
     }
-    
+
     private void showDialog(Dialog<?> dlg) {
         if (cbCloseDialogAutomatically.isSelected()) {
             new Thread(() -> {
@@ -475,7 +475,7 @@ public class HelloDialogs extends Application {
         modalityCombobox.setValue(modalityCombobox.getItems().get(Modality.values().length-1));
         grid.add(modalityCombobox, 1, row);
         row++;
-        
+
         // use blocking
         cbUseBlocking.setSelected(true);
         grid.add(createLabel("Use blocking: ", "property"), 0, row);
@@ -496,7 +496,7 @@ public class HelloDialogs extends Application {
         grid.add(createLabel("Set dialog owner: ", "property"), 0, row);
         grid.add(cbSetOwner, 1, row);
         row++;
-        
+
         // custom graphic
         grid.add(createLabel("Use custom graphic: ", "property"), 0, row);
         grid.add(cbCustomGraphic, 1, row);
@@ -504,7 +504,7 @@ public class HelloDialogs extends Application {
 
         return grid;
     }
-    
+
     private ButtonType buildCommandLink(String text, boolean isDefault) {
         return new ButtonType(text, isDefault ? ButtonData.OK_DONE : ButtonData.OTHER);
     }
@@ -528,7 +528,7 @@ public class HelloDialogs extends Application {
         // define pages to show
 
         Wizard wizard = new Wizard();
-        
+
         // --- page 1
         int row = 0;
 
@@ -538,7 +538,7 @@ public class HelloDialogs extends Application {
 
         page1Grid.add(new Label("First Name:"), 0, row);
         TextField txFirstName = createTextField("firstName");
-//        wizard.getValidationSupport().registerValidator(txFirstName, Validator.createEmptyValidator("First Name is mandatory"));  
+//        wizard.getValidationSupport().registerValidator(txFirstName, Validator.createEmptyValidator("First Name is mandatory"));
         page1Grid.add(txFirstName, 1, row++);
 
         page1Grid.add(new Label("Last Name:"), 0, row);
@@ -567,7 +567,7 @@ public class HelloDialogs extends Application {
         WizardPane page3 = new WizardPane();
         page3.setHeaderText("Goodbye!");
         page3.setContentText("Page 3, with extra 'help' button!");
-        
+
         ButtonType helpDialogButton = new ButtonType("Help", ButtonData.HELP_2);
         page3.getButtonTypes().add(helpDialogButton);
         Button helpButton = (Button) page3.lookupButton(helpDialogButton);
@@ -575,12 +575,12 @@ public class HelloDialogs extends Application {
             actionEvent.consume(); // stop hello.dialog from closing
             System.out.println("Help clicked!");
         });
-                
-                
+
+
 
         // create wizard
         wizard.setFlow(new LinearWizardFlow(page1, page2, page3));
-        
+
         System.out.println("page1: " + page1);
         System.out.println("page2: " + page2);
         System.out.println("page3: " + page3);
@@ -592,7 +592,7 @@ public class HelloDialogs extends Application {
             }
         });
     }
-    
+
     private void showBranchingWizard() {
         // define pages to show.
         // Because page1 references page2, we need to declare page2 first.
@@ -634,7 +634,7 @@ public class HelloDialogs extends Application {
             public boolean canAdvance(WizardPane currentPage) {
                 return currentPage != page3;
             }
-            
+
             private WizardPane getNext(WizardPane currentPage) {
                 if ( currentPage == null ) {
                     return page1;
@@ -644,9 +644,9 @@ public class HelloDialogs extends Application {
                     return page3;
                 }
             }
-            
+
         };
-        
+
         //wizard.setFlow( new LinearWizardFlow( page1, page2, page3));
         wizard.setFlow( branchingFlow);
 
@@ -657,7 +657,7 @@ public class HelloDialogs extends Application {
             }
         });
     }
-    
+
     private TextField createTextField(String id) {
         TextField textField = new TextField();
         textField.setId(id);

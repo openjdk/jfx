@@ -73,6 +73,6 @@ public class StagePeerListener extends WindowPeerListener {
     public void changedAlwaysOnTop(boolean aot) {
         stageAccessor.setAlwaysOnTop(stage, aot);
     }
-    
+
 
 }

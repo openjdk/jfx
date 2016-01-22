@@ -94,12 +94,12 @@ struct SymbolTableEntry {
             : m_bits(SlimFlag)
         {
         }
-        
+
         ALWAYS_INLINE Fast(const SymbolTableEntry& entry)
             : m_bits(entry.bits())
         {
         }
-    
+
         bool isNull() const
         {
             return !(m_bits & ~SlimFlag);
@@ -109,12 +109,12 @@ struct SymbolTableEntry {
         {
             return static_cast<int>(m_bits >> FlagBits);
         }
-    
+
         bool isReadOnly() const
         {
             return m_bits & ReadOnlyFlag;
         }
-        
+
         unsigned getAttributes() const
         {
             unsigned attributes = 0;
@@ -129,7 +129,7 @@ struct SymbolTableEntry {
         {
             return !(m_bits & SlimFlag);
         }
-        
+
     private:
         friend struct SymbolTableEntry;
         intptr_t m_bits;
@@ -153,18 +153,18 @@ struct SymbolTableEntry {
         ASSERT(isValidIndex(index));
         pack(index, attributes & ReadOnly, attributes & DontEnum);
     }
-    
+
     ~SymbolTableEntry()
     {
         freeFatEntry();
     }
-    
+
     SymbolTableEntry(const SymbolTableEntry& other)
         : m_bits(SlimFlag)
     {
         *this = other;
     }
-    
+
     SymbolTableEntry& operator=(const SymbolTableEntry& other)
     {
         if (UNLIKELY(other.isFat()))
@@ -173,7 +173,7 @@ struct SymbolTableEntry {
         m_bits = other.m_bits;
         return *this;
     }
-    
+
     bool isNull() const
     {
         return !(bits() & ~SlimFlag);
@@ -183,12 +183,12 @@ struct SymbolTableEntry {
     {
         return static_cast<int>(bits() >> FlagBits);
     }
-    
+
     ALWAYS_INLINE Fast getFast() const
     {
         return Fast(*this);
     }
-    
+
     ALWAYS_INLINE Fast getFast(bool& wasFat) const
     {
         Fast result;
@@ -199,7 +199,7 @@ struct SymbolTableEntry {
             result.m_bits = m_bits;
         return result;
     }
-    
+
     unsigned getAttributes() const
     {
         return getFast().getAttributes();
@@ -214,34 +214,34 @@ struct SymbolTableEntry {
     {
         return bits() & ReadOnlyFlag;
     }
-    
+
     JSValue inferredValue();
-    
+
     void prepareToWatch();
-    
+
     void addWatchpoint(Watchpoint*);
-    
+
     VariableWatchpointSet* watchpointSet()
     {
         if (!isFat())
             return 0;
         return fatEntry()->m_watchpoints.get();
     }
-    
+
     ALWAYS_INLINE void notifyWrite(JSValue value)
     {
         if (LIKELY(!isFat()))
             return;
         notifyWriteSlow(value);
     }
-    
+
 private:
     static const intptr_t SlimFlag = 0x1;
     static const intptr_t ReadOnlyFlag = 0x2;
     static const intptr_t DontEnumFlag = 0x4;
     static const intptr_t NotNullFlag = 0x8;
     static const intptr_t FlagBits = 4;
-    
+
     class FatEntry {
         WTF_MAKE_FAST_ALLOCATED;
     public:
@@ -249,55 +249,55 @@ private:
             : m_bits(bits & ~SlimFlag)
         {
         }
-        
+
         intptr_t m_bits; // always has FatFlag set and exactly matches what the bits would have been if this wasn't fat.
-        
+
         RefPtr<VariableWatchpointSet> m_watchpoints;
     };
-    
+
     SymbolTableEntry& copySlow(const SymbolTableEntry&);
     JS_EXPORT_PRIVATE void notifyWriteSlow(JSValue);
-    
+
     bool isFat() const
     {
         return !(m_bits & SlimFlag);
     }
-    
+
     const FatEntry* fatEntry() const
     {
         ASSERT(isFat());
         return bitwise_cast<const FatEntry*>(m_bits);
     }
-    
+
     FatEntry* fatEntry()
     {
         ASSERT(isFat());
         return bitwise_cast<FatEntry*>(m_bits);
     }
-    
+
     FatEntry* inflate()
     {
         if (LIKELY(isFat()))
             return fatEntry();
         return inflateSlow();
     }
-    
+
     FatEntry* inflateSlow();
-    
+
     ALWAYS_INLINE intptr_t bits() const
     {
         if (isFat())
             return fatEntry()->m_bits;
         return m_bits;
     }
-    
+
     ALWAYS_INLINE intptr_t& bits()
     {
         if (isFat())
             return fatEntry()->m_bits;
         return m_bits;
     }
-    
+
     void freeFatEntry()
     {
         if (LIKELY(!isFat()))
@@ -317,7 +317,7 @@ private:
         if (dontEnum)
             bitsRef |= DontEnumFlag;
     }
-    
+
     bool isValidIndex(int index)
     {
         return ((static_cast<intptr_t>(index) << FlagBits) >> FlagBits) == static_cast<intptr_t>(index);
@@ -356,93 +356,93 @@ public:
     {
         return m_map.find(key);
     }
-    
+
     Map::iterator find(const GCSafeConcurrentJITLocker&, StringImpl* key)
     {
         return m_map.find(key);
     }
-    
+
     SymbolTableEntry get(const ConcurrentJITLocker&, StringImpl* key)
     {
         return m_map.get(key);
     }
-    
+
     SymbolTableEntry get(StringImpl* key)
     {
         ConcurrentJITLocker locker(m_lock);
         return get(locker, key);
     }
-    
+
     SymbolTableEntry inlineGet(const ConcurrentJITLocker&, StringImpl* key)
     {
         return m_map.inlineGet(key);
     }
-    
+
     SymbolTableEntry inlineGet(StringImpl* key)
     {
         ConcurrentJITLocker locker(m_lock);
         return inlineGet(locker, key);
     }
-    
+
     Map::iterator begin(const ConcurrentJITLocker&)
     {
         return m_map.begin();
     }
-    
+
     Map::iterator end(const ConcurrentJITLocker&)
     {
         return m_map.end();
     }
-    
+
     Map::iterator end(const GCSafeConcurrentJITLocker&)
     {
         return m_map.end();
     }
-    
+
     size_t size(const ConcurrentJITLocker&) const
     {
         return m_map.size();
     }
-    
+
     size_t size() const
     {
         ConcurrentJITLocker locker(m_lock);
         return size(locker);
     }
-    
+
     Map::AddResult add(const ConcurrentJITLocker&, StringImpl* key, const SymbolTableEntry& entry)
     {
         return m_map.add(key, entry);
     }
-    
+
     void add(StringImpl* key, const SymbolTableEntry& entry)
     {
         ConcurrentJITLocker locker(m_lock);
         add(locker, key, entry);
     }
-    
+
     Map::AddResult set(const ConcurrentJITLocker&, StringImpl* key, const SymbolTableEntry& entry)
     {
         return m_map.set(key, entry);
     }
-    
+
     void set(StringImpl* key, const SymbolTableEntry& entry)
     {
         ConcurrentJITLocker locker(m_lock);
         set(locker, key, entry);
     }
-    
+
     bool contains(const ConcurrentJITLocker&, StringImpl* key)
     {
         return m_map.contains(key);
     }
-    
+
     bool contains(StringImpl* key)
     {
         ConcurrentJITLocker locker(m_lock);
         return contains(locker, key);
     }
-    
+
     bool usesNonStrictEval() { return m_usesNonStrictEval; }
     void setUsesNonStrictEval(bool usesNonStrictEval) { m_usesNonStrictEval = usesNonStrictEval; }
 
@@ -453,7 +453,7 @@ public:
     void setCaptureEnd(int captureEnd) { m_captureEnd = captureEnd; }
 
     int captureCount() const { return -(m_captureEnd - m_captureStart); }
-    
+
     bool isCaptured(int operand)
     {
         return operand <= captureStart() && operand > captureEnd();
@@ -466,7 +466,7 @@ public:
     // 0 if we don't capture any arguments; parameterCount() in length if we do.
     const SlowArgument* slowArguments() { return m_slowArguments.get(); }
     void setSlowArguments(std::unique_ptr<SlowArgument[]> slowArguments) { m_slowArguments = std::move(slowArguments); }
-    
+
     SymbolTable* cloneCapturedNames(VM&);
 
     static void visitChildren(JSCell*, SlotVisitor&);
@@ -478,19 +478,19 @@ private:
     public:
         WatchpointCleanup(SymbolTable*);
         virtual ~WatchpointCleanup();
-        
+
     protected:
         virtual void finalizeUnconditionally() override;
 
     private:
         SymbolTable* m_symbolTable;
     };
-    
+
     JS_EXPORT_PRIVATE SymbolTable(VM&);
     ~SymbolTable();
 
     Map m_map;
-    
+
     int m_parameterCountIncludingThis;
     bool m_usesNonStrictEval;
 
@@ -498,12 +498,12 @@ private:
     int m_captureEnd;
 
     std::unique_ptr<SlowArgument[]> m_slowArguments;
-    
+
     std::unique_ptr<WatchpointCleanup> m_watchpointCleanup;
 
 public:
     InlineWatchpointSet m_functionEnteredOnce;
-    
+
     mutable ConcurrentJITLock m_lock;
 };
 

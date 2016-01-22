@@ -139,7 +139,7 @@ public:
     // return true if all members of this class match (excluding m_next)
     bool animationsMatch(const Animation*, bool matchPlayStates = true) const;
 
-    // return true every Animation in the chain (defined by m_next) match 
+    // return true every Animation in the chain (defined by m_next) match
     bool operator==(const Animation& o) const { return animationsMatch(&o); }
     bool operator!=(const Animation& o) const { return !(*this == o); }
 
@@ -149,7 +149,7 @@ public:
 private:
     Animation();
     Animation(const Animation& o);
-    
+
     String m_name;
     CSSPropertyID m_property;
     AnimationMode m_mode;
@@ -171,7 +171,7 @@ private:
     bool m_playStateSet      : 1;
     bool m_propertySet       : 1;
     bool m_timingFunctionSet : 1;
-    
+
     bool m_isNone            : 1;
 
 public:

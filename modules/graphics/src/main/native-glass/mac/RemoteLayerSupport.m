@@ -126,7 +126,7 @@ uint32_t RemoteLayerGetIdForRemote(id remoteLayer)
         [invocation setSelector:layerID_SEL];
         [invocation invokeWithTarget:remoteLayer];
         [invocation getReturnValue:&layerID];
-        
+
         // what is the purpose of these 2 calls below?
         CFRetain(remoteLayer);
         [remoteLayer release]; // GC

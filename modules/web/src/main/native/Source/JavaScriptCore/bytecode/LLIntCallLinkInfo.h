@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef LLIntCallLinkInfo_h
@@ -38,15 +38,15 @@ struct LLIntCallLinkInfo : public BasicRawSentinelNode<LLIntCallLinkInfo> {
     LLIntCallLinkInfo()
     {
     }
-    
+
     ~LLIntCallLinkInfo()
     {
         if (isOnList())
             remove();
     }
-    
+
     bool isLinked() { return callee; }
-    
+
     void unlink()
     {
         callee.clear();
@@ -54,7 +54,7 @@ struct LLIntCallLinkInfo : public BasicRawSentinelNode<LLIntCallLinkInfo> {
         if (isOnList())
             remove();
     }
-    
+
     WriteBarrier<JSFunction> callee;
     WriteBarrier<JSFunction> lastSeenCallee;
     MacroAssemblerCodePtr machineCodeTarget;

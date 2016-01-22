@@ -46,9 +46,9 @@ class VerticalLineComparator implements Comparator<VerticalSegment> {
         assert o2 != null;
         assert MathUtils.equals(o1.getX1(), o1.getX2());
         assert MathUtils.equals(o2.getX1(), o2.getX2());
-        
+
         final int result;
-        
+
         if (o1 == o2) {
             result = 0;
         } else if (MathUtils.equals(o1.getX1(), o2.getX1())) {
@@ -58,8 +58,8 @@ class VerticalLineComparator implements Comparator<VerticalSegment> {
         } else {
             result = -1;
         }
-        
+
         return result;
     }
-    
+
 }

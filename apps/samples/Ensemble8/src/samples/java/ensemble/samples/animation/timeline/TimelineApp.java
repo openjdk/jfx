@@ -57,7 +57,7 @@ import javafx.stage.Stage;
 import javafx.util.Duration;
 
 /**
- * A sample that demonstrates the basics of timeline creation. 
+ * A sample that demonstrates the basics of timeline creation.
  *
  * @sampleName Timeline
  * @preview preview.png

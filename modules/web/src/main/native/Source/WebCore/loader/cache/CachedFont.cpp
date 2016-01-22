@@ -21,7 +21,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -101,7 +101,7 @@ bool CachedFont::ensureCustomFontData()
 
         bool fontIsWOFF = false;
 #if !PLATFORM(JAVA) // See JDK-8130740
-	fontIsWOFF = isWOFF(buffer);
+    fontIsWOFF = isWOFF(buffer);
         if (fontIsWOFF) {
             Vector<char> sfnt;
             if (convertWOFFToSfnt(buffer, sfnt)) {
@@ -110,7 +110,7 @@ bool CachedFont::ensureCustomFontData()
             } else
                 buffer = nullptr;
         }
-#endif	
+#endif
         m_fontData = buffer ? createFontCustomPlatformData(*buffer) : nullptr;
         if (m_fontData)
             m_hasCreatedFontDataWrappingResource = !fontIsWOFF;
@@ -139,9 +139,9 @@ bool CachedFont::ensureSVGFontData()
         RefPtr<TextResourceDecoder> decoder = TextResourceDecoder::create("application/xml");
         String svgSource = decoder->decode(m_data->data(), m_data->size());
         svgSource.append(decoder->flush());
-        
+
         m_externalSVGDocument->setContent(svgSource);
-        
+
         if (decoder->sawError())
             m_externalSVGDocument = 0;
     }
@@ -188,7 +188,7 @@ void CachedFont::checkNotify()
 {
     if (isLoading())
         return;
-    
+
     CachedResourceClientWalker<CachedFontClient> w(m_clients);
     while (CachedFontClient* c = w.next())
          c->fontLoaded(this);

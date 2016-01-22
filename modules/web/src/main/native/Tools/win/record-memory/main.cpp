@@ -40,7 +40,7 @@ HRESULT ProcessArgs(int argc, TCHAR *argv[])
             return PrintUsage();
         else if (wcsstr(argument, _T("--exe"))) {
             gCommandLine = argv[++count];
-        } else if (wcsstr(argument, _T("-i")) || 
+        } else if (wcsstr(argument, _T("-i")) ||
             wcsstr(argument, _T("--interval"))) {
             gQueryInterval = _wtoi(argv[++count]);
             if (gQueryInterval < 1) {
@@ -107,7 +107,7 @@ unsigned int getMemoryInfo(DWORD processID)
 void printProcessInfo(DWORD processID)
 {
     TCHAR szProcessName[MAX_PATH] = TEXT("<unknown>");
-   
+
     // Get a handle to the process.
     HANDLE hProcess = OpenProcess( PROCESS_QUERY_INFORMATION |
                                    PROCESS_VM_READ,
@@ -119,14 +119,14 @@ void printProcessInfo(DWORD processID)
         DWORD cbNeeded;     //The number of bytes required to store all module handles in the Module array
 
         if (EnumProcessModules(hProcess, &hMod, sizeof(hMod), &cbNeeded)) {
-            GetModuleBaseName(hProcess, hMod, szProcessName, 
+            GetModuleBaseName(hProcess, hMod, szProcessName,
                                sizeof(szProcessName)/sizeof(TCHAR));
         }
     }
 
     // Print the process name and identifier of matching strings, ignoring case
     _tprintf(TEXT("%s  (PID: %u)\n"), szProcessName, processID);
-    
+
     // Release the handle to the process.
     CloseHandle( hProcess );
 }
@@ -138,7 +138,7 @@ int evalProcesses(HANDLE hProcess)
 
     unsigned int totalMemUsage = 0;
     DWORD processID = GetProcessId(hProcess);
-  
+
     HANDLE hProcessSnapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
 
     PROCESSENTRY32 processEntry = { 0 };
@@ -147,7 +147,7 @@ int evalProcesses(HANDLE hProcess)
     // Retrieves information about the first process encountered in a system snapshot
     if(Process32First(hProcessSnapshot, &processEntry)) {
         do {
-            // if th32processID = processID, we are the parent process!  
+            // if th32processID = processID, we are the parent process!
             // if th32ParentProcessID = processID, we are a child process!
             if ((processEntry.th32ProcessID == processID) || (processEntry.th32ParentProcessID == processID)) {
                 unsigned int procMemUsage = 0;
@@ -155,7 +155,7 @@ int evalProcesses(HANDLE hProcess)
                 procMemUsage = getMemoryInfo(processEntry.th32ProcessID);
                 totalMemUsage += procMemUsage;
             }
-          // Retrieves information about the next process recorded in a system snapshot.   
+          // Retrieves information about the next process recorded in a system snapshot.
         } while(Process32Next(hProcessSnapshot, &processEntry));
     }
 
@@ -170,7 +170,7 @@ void UseImage(void (functionForQueryType(HANDLE)))
     si.cb = sizeof(STARTUPINFO);
     PROCESS_INFORMATION pi = {0};
 
-    // Start the child process. 
+    // Start the child process.
     if(!CreateProcess( NULL,   // No module name (use command line)
         gCommandLine,        // Command line
         NULL,           // Process handle not inheritable
@@ -178,14 +178,14 @@ void UseImage(void (functionForQueryType(HANDLE)))
         FALSE,          // Set handle inheritance to FALSE
         0,              // No creation flags
         NULL,           // Use parent's environment block
-        NULL,           // Use parent's starting directory 
+        NULL,           // Use parent's starting directory
         &si,            // Pointer to STARTUPINFO structure
         &pi ))          // Pointer to PROCESS_INFORMATION structure
         printf("CreateProcess failed (%d)\n", GetLastError());
     else {
         printf("Created process with id: %d\n", pi.dwProcessId);
         functionForQueryType(pi.hProcess);
-        // Close process and thread handles. 
+        // Close process and thread handles.
         CloseHandle( pi.hProcess );
         CloseHandle( pi.hThread );
     }
@@ -202,7 +202,7 @@ void QueryContinuously(HANDLE hProcess)
         Sleep(gQueryInterval*1000);
         memUsage = evalProcesses(hProcess);
         pastDuration = gDuration > 0 ? ElapsedTime(startTime) > gDuration : false;
-    } 
+    }
 }
 
 // returns elapsed time in seconds

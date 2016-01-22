@@ -68,7 +68,7 @@ public class TreeTableViewMouseInputTest {
     private TreeTableView<String> tableView;
     private TreeTableView.TreeTableViewSelectionModel<?> sm;
     private TreeTableView.TreeTableViewFocusModel<?> fm;
-    
+
     private final TreeTableColumn<String, String> col0 = new TreeTableColumn<String, String>("col0");
     private final TreeTableColumn<String, String> col1 = new TreeTableColumn<String, String>("col1");
     private final TreeTableColumn<String, String> col2 = new TreeTableColumn<String, String>("col2");
@@ -131,32 +131,32 @@ public class TreeTableViewMouseInputTest {
         child9.setExpanded(false);
         child10.getChildren().clear();
         child10.setExpanded(false);
-        
+
         tableView = new TreeTableView<String>();
         sm = tableView.getSelectionModel();
         fm = tableView.getFocusModel();
-        
+
         sm.setSelectionMode(SelectionMode.MULTIPLE);
         sm.setCellSelectionEnabled(false);
-        
+
         tableView.setRoot(root);
         tableView.getColumns().setAll(col0, col1, col2, col3, col4);
     }
-    
+
     @After public void tearDown() {
         if (tableView.getSkin() != null) {
             tableView.getSkin().dispose();
         }
         sm = null;
     }
-    
+
     /***************************************************************************
      * Util methods
      **************************************************************************/
-    
+
     private String debug() {
         StringBuilder sb = new StringBuilder("Selected Cells: [");
-        
+
         ObservableList<? extends TreeTablePosition<?, ?>> cells = sm.getSelectedCells();
         for (TreeTablePosition<?,?> tp : cells) {
             sb.append("(");
@@ -165,15 +165,15 @@ public class TreeTableViewMouseInputTest {
             sb.append(tp.getColumn());
             sb.append("), ");
         }
-        
+
         sb.append("] \nFocus: (" + fm.getFocusedCell().getRow() + ", " + fm.getFocusedCell().getColumn() + ")");
-        
+
         TreeTablePosition anchor = getAnchor();
-        sb.append(" \nAnchor: (" + (anchor == null ? "null" : anchor.getRow()) + 
+        sb.append(" \nAnchor: (" + (anchor == null ? "null" : anchor.getRow()) +
                 ", " + (anchor == null ? "null" : anchor.getColumn()) + ")");
         return sb.toString();
     }
-    
+
     // Returns true if ALL indices are selected
     private boolean isSelected(int... indices) {
         for (int index : indices) {
@@ -181,7 +181,7 @@ public class TreeTableViewMouseInputTest {
         }
         return true;
     }
-    
+
     // Returns true if ALL indices are NOT selected
     private boolean isNotSelected(int... indices) {
         for (int index : indices) {
@@ -189,56 +189,56 @@ public class TreeTableViewMouseInputTest {
         }
         return true;
     }
-    
+
     private TreeTablePosition getAnchor() {
         return TreeTableViewAnchorRetriever.getAnchor(tableView);
     }
-    
+
     private boolean isAnchor(int row) {
         TreeTablePosition tp = new TreeTablePosition(tableView, row, null);
         return getAnchor() != null && getAnchor().equals(tp);
     }
-    
+
     private boolean isAnchor(int row, int col) {
         TreeTablePosition tp = new TreeTablePosition(tableView, row, tableView.getColumns().get(col));
         return getAnchor() != null && getAnchor().equals(tp);
     }
-    
+
     private int getItemCount() {
         return root.getChildren().size() + child3.getChildren().size();
     }
-    
-    
-    
+
+
+
     /***************************************************************************
      * Tests for specific bug reports
      **************************************************************************/
-    
+
     @Test public void test_rt29833_mouse_select_upwards() {
         sm.setCellSelectionEnabled(false);
         sm.setSelectionMode(SelectionMode.MULTIPLE);
-        
+
         sm.clearAndSelect(9);
-        
+
         // select all from 9 - 7
         VirtualFlowTestUtils.clickOnRow(tableView, 7, KeyModifier.SHIFT);
         assertTrue(debug(), isSelected(7,8,9));
-        
+
         // select all from 9 - 7 - 5
         VirtualFlowTestUtils.clickOnRow(tableView, 5, KeyModifier.SHIFT);
         assertTrue(debug(),isSelected(5,6,7,8,9));
     }
-    
+
     @Test public void test_rt29833_mouse_select_downwards() {
         sm.setCellSelectionEnabled(false);
         sm.setSelectionMode(SelectionMode.MULTIPLE);
-        
+
         sm.clearAndSelect(5);
-        
+
         // select all from 5 - 7
         VirtualFlowTestUtils.clickOnRow(tableView, 7, KeyModifier.SHIFT);
         assertTrue(debug(), isSelected(5,6,7));
-        
+
         // select all from 5 - 7 - 9
         VirtualFlowTestUtils.clickOnRow(tableView, 9, KeyModifier.SHIFT);
         assertTrue(debug(),isSelected(5,6,7,8,9));

@@ -6,13 +6,13 @@
  * are met:
  *
  * 1.  Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer. 
+ *     notice, this list of conditions and the following disclaimer.
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
- *     documentation and/or other materials provided with the distribution. 
+ *     documentation and/or other materials provided with the distribution.
  * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
- *     from this software without specific prior written permission. 
+ *     from this software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY APPLE AND ITS CONTRIBUTORS "AS IS" AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
@@ -71,7 +71,7 @@ using JSC::Yarr::RegularExpression;
 @interface WebHTMLRepresentationPrivate : NSObject {
 @public
     WebDataSource *dataSource;
-    
+
     BOOL hasSentResponseToPlugin;
     BOOL includedInWebKitStatistics;
 
@@ -132,7 +132,7 @@ static NSMutableArray *newArrayByConcatenatingArrays(NSArray *first, NSArray *se
     self = [super init];
     if (!self)
         return nil;
-    
+
     _private = [[WebHTMLRepresentationPrivate alloc] init];
 
     return self;
@@ -196,7 +196,7 @@ static NSMutableArray *newArrayByConcatenatingArrays(NSArray *first, NSArray *se
             [_private->manualLoader pluginView:_private->pluginView receivedResponse:[dataSource response]];
             _private->hasSentResponseToPlugin = YES;
         }
-        
+
         [_private->manualLoader pluginView:_private->pluginView receivedData:data];
     }
 }
@@ -236,7 +236,7 @@ static NSMutableArray *newArrayByConcatenatingArrays(NSArray *first, NSArray *se
 
 - (NSString *)documentSource
 {
-    if ([self _isDisplayingWebArchive]) {            
+    if ([self _isDisplayingWebArchive]) {
         SharedBuffer *parsedArchiveData = [_private->dataSource _documentLoader]->parsedArchiveData();
         NSString *result = [[NSString alloc] initWithData:parsedArchiveData ? parsedArchiveData->createNSData().get() : nil encoding:NSUTF8StringEncoding];
         return [result autorelease];
@@ -385,7 +385,7 @@ static RegularExpression* regExpForLabels(NSArray *labels)
                 startsWithWordChar = wordRegExp.match(label.substring(0, 1)) >= 0;
                 endsWithWordChar = wordRegExp.match(label.substring(label.length() - 1, 1)) >= 0;
             }
-            
+
             if (i != 0)
                 pattern.append("|");
             // Search for word boundaries only if label starts/ends with "word characters".
@@ -433,7 +433,7 @@ static NSString* searchForLabelsBeforeElement(Frame* frame, NSArray* labels, Ele
     // If the starting element is within a table, the cell that contains it
     HTMLTableCellElement* startingTableCell = 0;
     bool searchedCellAbove = false;
-    
+
     if (resultDistance)
         *resultDistance = notFound;
     if (resultIsInCellAbove)
@@ -487,7 +487,7 @@ static NSString* searchForLabelsBeforeElement(Frame* frame, NSArray* labels, Ele
             return result;
         }
     }
-    
+
     return nil;
 }
 
@@ -495,13 +495,13 @@ static NSString *matchLabelsAgainstString(NSArray *labels, const String& stringT
 {
     if (stringToMatch.isEmpty())
         return nil;
-    
+
     String mutableStringToMatch = stringToMatch;
-    
+
     // Make numbers and _'s in field names behave like word boundaries, e.g., "address2"
     replace(mutableStringToMatch, RegularExpression("\\d", TextCaseSensitive), " ");
     mutableStringToMatch.replace('_', ' ');
-    
+
     RegularExpression* regExp = regExpForLabels(labels);
     // Use the largest match we can find in the whole string
     int pos;
@@ -520,7 +520,7 @@ static NSString *matchLabelsAgainstString(NSArray *labels, const String& stringT
             start = pos + 1;
         }
     } while (pos != -1);
-    
+
     if (bestPos != -1)
         return mutableStringToMatch.substring(bestPos, bestLength);
     return nil;
@@ -533,7 +533,7 @@ static NSString* matchLabelsAgainstElement(NSArray* labels, Element* element)
     String resultFromNameAttribute = matchLabelsAgainstString(labels, element->getAttribute(nameAttr));
     if (!resultFromNameAttribute.isEmpty())
         return resultFromNameAttribute;
-    
+
     return matchLabelsAgainstString(labels, element->getAttribute(idAttr));
 }
 
@@ -547,9 +547,9 @@ static NSString* matchLabelsAgainstElement(NSArray* labels, Element* element)
 {
     size_t distance;
     bool isInCellAbove;
-    
+
     NSString *result = searchForLabelsBeforeElement(core([_private->dataSource webFrame]), labels, core(element), &distance, &isInCellAbove);
-    
+
     if (outDistance) {
         if (distance == notFound)
             *outDistance = NSNotFound;
@@ -559,7 +559,7 @@ static NSString* matchLabelsAgainstElement(NSArray* labels, Element* element)
 
     if (outIsInCellAbove)
         *outIsInCellAbove = isInCellAbove;
-    
+
     return result;
 }
 

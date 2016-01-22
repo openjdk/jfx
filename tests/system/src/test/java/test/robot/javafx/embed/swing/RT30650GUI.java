@@ -47,20 +47,20 @@ import javax.swing.JPanel;
 
 /**
  * RT-30650: SwingNode is not Resizable
- * 
+ *
  * The scenario: SwingNode contains JPanel. It should be initialized with the same layout bounds.
  * SwingNode is added to StackPane. The JPanel's max size is unbounded, so SwingNode is expected
  * to fill the whole space.
  */
 public class RT30650GUI extends Application {
     SwingNode swingNode;
-    
+
     private final static int SIZE = 400;
-    
+
     // 100 pulses is not enough for the interop case, so we wait for 400 instead
     private static int pulseCount = 400;
     private static volatile boolean passed;
-        
+
     public static boolean test() {
         launch(new String[]{});
         return passed;
@@ -71,7 +71,7 @@ public class RT30650GUI extends Application {
 
     @Override
     public void start(final Stage stage) {
-        
+
         // start constant pulse activity
         animationTimer = new AnimationTimer() {
             @Override public void handle(long l) {}
@@ -88,12 +88,12 @@ public class RT30650GUI extends Application {
         stage.setScene(scene);
         stage.setTitle("RT-30650");
         stage.show();
-        
+
         SwingUtilities.invokeLater(() -> {
             JPanel panel = new JPanel();
             panel.setBackground(Color.RED);
             swingNode.setContent(panel);
-            
+
             Platform.runLater(() -> {
                 pulseListener = () -> {
                     if (--pulseCount == 0) {
@@ -105,7 +105,7 @@ public class RT30650GUI extends Application {
                 };
                 com.sun.javafx.tk.Toolkit.getToolkit().addSceneTkPulseListener(pulseListener);
             });
-        });        
+        });
     }
 
     public boolean testColor(Stage stage) {
@@ -117,7 +117,7 @@ public class RT30650GUI extends Application {
             Robot r = com.sun.glass.ui.Application.GetApplication().createRobot();
             rgb[0] = r.getPixelColor(x + SIZE/2, y + SIZE/2);
         });
-        
+
         System.out.println("detected color: " + Integer.toHexString(rgb[0]));
 
         // On MacOSX the robot returns the color affected by the color profile.

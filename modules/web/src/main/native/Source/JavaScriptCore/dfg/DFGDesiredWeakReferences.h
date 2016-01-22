@@ -30,7 +30,7 @@
 
 #if ENABLE(DFG_JIT)
 
-namespace JSC { 
+namespace JSC {
 
 class CodeBlock;
 class JSCell;
@@ -48,7 +48,7 @@ public:
 
     void addLazily(JSCell*);
     void reallyAdd(VM&, CommonData*);
-    
+
     void visitChildren(SlotVisitor&);
 
 private:

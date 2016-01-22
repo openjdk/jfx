@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef MacroAssemblerX86_64_h
@@ -62,19 +62,19 @@ public:
         move(TrustedImmPtr(address.m_ptr), scratchRegister);
         add32(imm, Address(scratchRegister));
     }
-    
+
     void and32(TrustedImm32 imm, AbsoluteAddress address)
     {
         move(TrustedImmPtr(address.m_ptr), scratchRegister);
         and32(imm, Address(scratchRegister));
     }
-    
+
     void add32(AbsoluteAddress address, RegisterID dest)
     {
         move(TrustedImmPtr(address.m_ptr), scratchRegister);
         add32(Address(scratchRegister), dest);
     }
-    
+
     void or32(TrustedImm32 imm, AbsoluteAddress address)
     {
         move(TrustedImmPtr(address.m_ptr), scratchRegister);
@@ -92,7 +92,7 @@ public:
         move(TrustedImmPtr(address.m_ptr), scratchRegister);
         sub32(imm, Address(scratchRegister));
     }
-    
+
     void load8(const void* address, RegisterID dest)
     {
         move(TrustedImmPtr(address), dest);
@@ -126,7 +126,7 @@ public:
         move(TrustedImmPtr(address), scratchRegister);
         store32(imm, scratchRegister);
     }
-    
+
     void store8(TrustedImm32 imm, void* address)
     {
         move(TrustedImmPtr(address), scratchRegister);
@@ -182,7 +182,7 @@ public:
     {
         m_assembler.addq_rr(src, dest);
     }
-    
+
     void add64(Address src, RegisterID dest)
     {
         m_assembler.addq_mr(src.offset, src.base, dest);
@@ -253,17 +253,17 @@ public:
     {
         m_assembler.shlq_i8r(imm.m_value, dest);
     }
-    
+
     void rshift64(TrustedImm32 imm, RegisterID dest)
     {
         m_assembler.sarq_i8r(imm.m_value, dest);
     }
-    
+
     void mul64(RegisterID src, RegisterID dest)
     {
         m_assembler.imulq_rr(src, dest);
     }
-    
+
     void neg64(RegisterID dest)
     {
         m_assembler.negq_r(dest);
@@ -302,7 +302,7 @@ public:
         move(src, dest);
         or64(imm, dest);
     }
-    
+
     void rotateRight64(TrustedImm32 imm, RegisterID srcDst)
     {
         m_assembler.rorq_i8r(imm.m_value, srcDst);
@@ -312,7 +312,7 @@ public:
     {
         m_assembler.subq_rr(src, dest);
     }
-    
+
     void sub64(TrustedImm32 imm, RegisterID dest)
     {
         if (imm.m_value == 1)
@@ -320,7 +320,7 @@ public:
         else
             m_assembler.subq_ir(imm.m_value, dest);
     }
-    
+
     void sub64(TrustedImm64 imm, RegisterID dest)
     {
         if (imm.m_value == 1)
@@ -335,7 +335,7 @@ public:
     {
         m_assembler.xorq_rr(src, dest);
     }
-    
+
     void xor64(RegisterID src, Address dest)
     {
         m_assembler.xorq_rm(src, dest.offset, dest.base);
@@ -372,7 +372,7 @@ public:
         m_assembler.movq_mr_disp32(address.offset, address.base, dest);
         return DataLabel32(this);
     }
-    
+
     DataLabelCompact load64WithCompactAddressOffsetPatch(Address address, RegisterID dest)
     {
         padBeforePatch();
@@ -389,7 +389,7 @@ public:
     {
         m_assembler.movq_rm(src, address.offset, address.base, address.index, address.scale);
     }
-    
+
     void store64(RegisterID src, void* address)
     {
         if (src == X86Registers::eax)
@@ -411,7 +411,7 @@ public:
         move(imm, scratchRegister);
         m_assembler.movq_rm(scratchRegister, address.offset, address.base, address.index, address.scale);
     }
-    
+
     DataLabel32 store64WithAddressOffsetPatch(RegisterID src, Address address)
     {
         padBeforePatch();
@@ -438,14 +438,14 @@ public:
         m_assembler.setCC_r(x86Condition(cond), dest);
         m_assembler.movzbl_rr(dest, dest);
     }
-    
+
     void compare64(RelationalCondition cond, RegisterID left, RegisterID right, RegisterID dest)
     {
         m_assembler.cmpq_rr(right, left);
         m_assembler.setCC_r(x86Condition(cond), dest);
         m_assembler.movzbl_rr(dest, dest);
     }
-    
+
     Jump branch64(RelationalCondition cond, RegisterID left, RegisterID right)
     {
         m_assembler.cmpq_rr(right, left);
@@ -508,7 +508,7 @@ public:
         m_assembler.testq_rr(reg, mask);
         return Jump(m_assembler.jCC(x86Condition(cond)));
     }
-    
+
     Jump branchTest64(ResultCondition cond, RegisterID reg, TrustedImm32 mask = TrustedImm32(-1))
     {
         // if we are only interested in the low seven bits, this can be tested with a testb
@@ -645,14 +645,14 @@ public:
         store64(scratchRegister, address);
         return label;
     }
-    
+
     using MacroAssemblerX86Common::branch8;
     Jump branch8(RelationalCondition cond, AbsoluteAddress left, TrustedImm32 right)
     {
         MacroAssemblerX86Common::move(TrustedImmPtr(left.m_ptr), scratchRegister);
         return MacroAssemblerX86Common::branch8(cond, Address(scratchRegister), right);
     }
-    
+
     using MacroAssemblerX86Common::branchTest8;
     Jump branchTest8(ResultCondition cond, ExtendedAddress address, TrustedImm32 mask = TrustedImm32(-1))
     {
@@ -660,7 +660,7 @@ public:
         MacroAssemblerX86Common::move(addr, scratchRegister);
         return MacroAssemblerX86Common::branchTest8(cond, BaseIndex(scratchRegister, address.base, TimesOne), mask);
     }
-    
+
     Jump branchTest8(ResultCondition cond, AbsoluteAddress address, TrustedImm32 mask = TrustedImm32(-1))
     {
         MacroAssemblerX86Common::move(TrustedImmPtr(address.m_ptr), scratchRegister);
@@ -677,7 +677,7 @@ public:
     static bool supportsFloatingPointTruncate() { return true; }
     static bool supportsFloatingPointSqrt() { return true; }
     static bool supportsFloatingPointAbs() { return true; }
-    
+
     static FunctionPtr readCallTarget(CodeLocationCall call)
     {
         return FunctionPtr(X86Assembler::readPointer(call.dataLabelPtrAtOffset(-REPTACH_OFFSET_CALL_R11).dataLocation()));
@@ -687,7 +687,7 @@ public:
     static RegisterID scratchRegisterForBlinding() { return scratchRegister; }
 
     static bool canJumpReplacePatchableBranchPtrWithPatch() { return true; }
-    
+
     static CodeLocationLabel startOfBranchPtrWithPatchOnRegister(CodeLocationDataLabelPtr label)
     {
         const int rexBytes = 1;
@@ -697,12 +697,12 @@ public:
         ASSERT(totalBytes >= maxJumpReplacementSize());
         return label.labelAtOffset(-totalBytes);
     }
-    
+
     static CodeLocationLabel startOfPatchableBranchPtrWithPatchOnAddress(CodeLocationDataLabelPtr label)
     {
         return startOfBranchPtrWithPatchOnRegister(label);
     }
-    
+
     static void revertJumpReplacementToPatchableBranchPtrWithPatch(CodeLocationLabel instructionStart, Address, void* initialValue)
     {
         X86Assembler::revertJumpTo_movq_i64r(instructionStart.executableAddress(), reinterpret_cast<intptr_t>(initialValue), scratchRegister);
@@ -800,7 +800,7 @@ extern "C" void ctiMasmProbeTrampoline();
 //
 // Specifcally, the saved stack pointer register will point to the stack
 // position before we push the ProbeContext frame. The saved rip will point to
-// the address of the instruction immediately following the probe. 
+// the address of the instruction immediately following the probe.
 
 inline void MacroAssemblerX86_64::probe(MacroAssemblerX86_64::ProbeFunction function, void* arg1, void* arg2)
 {

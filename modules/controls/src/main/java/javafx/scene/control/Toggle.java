@@ -55,7 +55,7 @@ public interface Toggle {
      * The {@link ToggleGroup} to which this {@code Toggle} belongs.
      */
     ObjectProperty<ToggleGroup> toggleGroupProperty();
-    
+
     /**
      * Indicates whether this {@code Toggle} is selected.
      * @return {@code true} if this {@code Toggle} is selected.

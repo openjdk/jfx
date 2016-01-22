@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef DFGOSREntry_h
@@ -40,13 +40,13 @@ namespace DFG {
 #if ENABLE(DFG_JIT)
 struct OSREntryReshuffling {
     OSREntryReshuffling() { }
-    
+
     OSREntryReshuffling(int fromOffset, int toOffset)
         : fromOffset(fromOffset)
         , toOffset(toOffset)
     {
     }
-    
+
     int fromOffset;
     int toOffset;
 };
@@ -68,7 +68,7 @@ inline unsigned getOSREntryDataBytecodeIndex(OSREntryData* osrEntryData)
 }
 
 // Returns a pointer to a data buffer that the OSR entry thunk will recognize and
-// parse. If this returns null, it means 
+// parse. If this returns null, it means
 void* prepareOSREntry(ExecState*, CodeBlock*, unsigned bytecodeIndex);
 #else
 inline void* prepareOSREntry(ExecState*, CodeBlock*, unsigned) { return 0; }

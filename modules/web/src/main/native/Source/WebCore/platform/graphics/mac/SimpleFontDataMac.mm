@@ -132,7 +132,7 @@ void SimpleFontData::platformInit()
             fallbackFontFamily = @"Times New Roman";
         else
             fallbackFontFamily = webFallbackFontFamily();
-        
+
         // Try setting up the alternate font.
         // This is a last ditch effort to use a substitute font when something has gone wrong.
 #if !ERROR_DISABLED
@@ -171,7 +171,7 @@ void SimpleFontData::platformInit()
         LOG_ERROR("failed to set up font, using system font %s", m_platformData.font());
         initFontData(this);
     }
-    
+
     int iAscent;
     int iDescent;
     int iLineGap;
@@ -206,7 +206,7 @@ void SimpleFontData::platformInit()
         lineGap -= 3 - descent;
         descent = 3;
     }
-    
+
     if (platformData().orientation() == Vertical && !isTextOrientationFallback())
         m_hasVerticalGlyphs = fontHasVerticalGlyphs(m_platformData.ctFont());
 
@@ -240,7 +240,7 @@ void SimpleFontData::platformCharWidthInit()
 {
     m_avgCharWidth = 0;
     m_maxCharWidth = 0;
-    
+
     RetainPtr<CFDataRef> os2Table = adoptCF(copyFontTableForTag(m_platformData, 'OS/2'));
     if (os2Table && CFDataGetLength(os2Table.get()) >= 4) {
         const UInt8* os2 = CFDataGetBytePtr(os2Table.get());

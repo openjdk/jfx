@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -41,7 +41,7 @@
 #include <CoreGraphics/CoreGraphics.h>
 
 // If you have an empty placeholder SafariThemeConstants.h, then include SafariTheme.h
-// This is a workaround until a version of WebKitSupportLibrary is released with an updated SafariThemeConstants.h 
+// This is a workaround until a version of WebKitSupportLibrary is released with an updated SafariThemeConstants.h
 #include <SafariTheme/SafariThemeConstants.h>
 #ifndef SafariThemeConstants_h
 #include <SafariTheme/SafariTheme.h>
@@ -79,7 +79,7 @@ SOFT_LINK_DEBUG_LIBRARY(SafariTheme)
 SOFT_LINK_LIBRARY(SafariTheme)
 #endif
 
-SOFT_LINK(SafariTheme, paintThemePart, void, __stdcall, 
+SOFT_LINK(SafariTheme, paintThemePart, void, __stdcall,
             (ThemePart part, CGContextRef context, const CGRect& rect, NSControlSize size, ThemeControlState state),
             (part, context, rect, size, state))
 
@@ -106,15 +106,15 @@ int ScrollbarThemeSafari::scrollbarThickness(ScrollbarControlSize controlSize)
 
 bool ScrollbarThemeSafari::hasButtons(ScrollbarThemeClient* scrollbar)
 {
-    return scrollbar->enabled() && (scrollbar->orientation() == HorizontalScrollbar ? 
-             scrollbar->width() : 
+    return scrollbar->enabled() && (scrollbar->orientation() == HorizontalScrollbar ?
+             scrollbar->width() :
              scrollbar->height()) >= 2 * (cRealButtonLength[scrollbar->controlSize()] - cButtonHitInset[scrollbar->controlSize()]);
 }
 
 bool ScrollbarThemeSafari::hasThumb(ScrollbarThemeClient* scrollbar)
 {
-    return scrollbar->enabled() && (scrollbar->orientation() == HorizontalScrollbar ? 
-             scrollbar->width() : 
+    return scrollbar->enabled() && (scrollbar->orientation() == HorizontalScrollbar ?
+             scrollbar->width() :
              scrollbar->height()) >= 2 * cButtonInset[scrollbar->controlSize()] + cThumbMinLength[scrollbar->controlSize()] + 1;
 }
 
@@ -155,7 +155,7 @@ IntRect ScrollbarThemeSafari::backButtonRect(ScrollbarThemeClient* scrollbar, Sc
 IntRect ScrollbarThemeSafari::forwardButtonRect(ScrollbarThemeClient* scrollbar, ScrollbarPart part, bool painting)
 {
     IntRect result;
-    
+
     // Windows just has single arrows.
     if (part == ForwardButtonStartPart)
         return result;
@@ -185,10 +185,10 @@ IntRect ScrollbarThemeSafari::trackRect(ScrollbarThemeClient* scrollbar, bool pa
 {
     if (painting || !hasButtons(scrollbar))
         return scrollbar->frameRect();
-    
+
     IntRect result;
     int thickness = scrollbarThickness(scrollbar->controlSize());
-    if (scrollbar->orientation() == HorizontalScrollbar) 
+    if (scrollbar->orientation() == HorizontalScrollbar)
         return IntRect(scrollbar->x() + cButtonLength[scrollbar->controlSize()], scrollbar->y(), scrollbar->width() - 2 * cButtonLength[scrollbar->controlSize()], thickness);
     return IntRect(scrollbar->x(), scrollbar->y() + cButtonLength[scrollbar->controlSize()], thickness, scrollbar->height() - 2 * cButtonLength[scrollbar->controlSize()]);
 }
@@ -213,7 +213,7 @@ void ScrollbarThemeSafari::paintTrackBackground(GraphicsContext* graphicsContext
         state |= ActiveState;
     if (hasButtons(scrollbar))
         state |= EnabledState;
-    paintThemePart(scrollbar->orientation() == VerticalScrollbar ? VScrollTrackPart : HScrollTrackPart, graphicsContext->platformContext(), trackRect, size, state); 
+    paintThemePart(scrollbar->orientation() == VerticalScrollbar ? VScrollTrackPart : HScrollTrackPart, graphicsContext->platformContext(), trackRect, size, state);
 }
 
 void ScrollbarThemeSafari::paintButton(GraphicsContext* graphicsContext, ScrollbarThemeClient* scrollbar, const IntRect& buttonRect, ScrollbarPart part)
@@ -248,7 +248,7 @@ void ScrollbarThemeSafari::paintThumb(GraphicsContext* graphicsContext, Scrollba
         state |= EnabledState;
     if (scrollbar->pressedPart() == ThumbPart)
         state |= PressedState;
-    paintThemePart(scrollbar->orientation() == VerticalScrollbar ? VScrollThumbPart : HScrollThumbPart, graphicsContext->platformContext(), 
+    paintThemePart(scrollbar->orientation() == VerticalScrollbar ? VScrollThumbPart : HScrollThumbPart, graphicsContext->platformContext(),
                    thumbRect, size, state);
 }
 

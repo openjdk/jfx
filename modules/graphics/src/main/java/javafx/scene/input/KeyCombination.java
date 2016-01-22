@@ -436,7 +436,7 @@ public abstract class KeyCombination {
                     ? new KeyCodeCombination(keyCode, modifierArray)
                     : new KeyCharacterCombination(keyCharacter, modifierArray);
     }
-    
+
     /**
      * Constructs a new {@code KeyCombination} from the specified string. This
      * method simply delegates to {@link #valueOf(String)}.

@@ -105,7 +105,7 @@ JIT::CodeRef JIT::privateCompileCTINativeCall(VM* vm, NativeFunction func)
 #endif // CPU(X86)
 
     // Check for an exception
-    Jump sawException = branch32(NotEqual, AbsoluteAddress(reinterpret_cast<char*>(vm->addressOfException()) + OBJECT_OFFSETOF(JSValue, u.asBits.tag)), TrustedImm32(JSValue::EmptyValueTag)); 
+    Jump sawException = branch32(NotEqual, AbsoluteAddress(reinterpret_cast<char*>(vm->addressOfException()) + OBJECT_OFFSETOF(JSValue, u.asBits.tag)), TrustedImm32(JSValue::EmptyValueTag));
 
     emitFunctionEpilogue();
     // Return.
@@ -143,7 +143,7 @@ void JIT::emit_op_mov(Instruction* currentInstruction)
 {
     int dst = currentInstruction[1].u.operand;
     int src = currentInstruction[2].u.operand;
-    
+
     if (m_codeBlock->isConstantRegisterIndex(src))
         emitStore(dst, getConstantOperand(src));
     else {
@@ -208,7 +208,7 @@ void JIT::emit_op_check_has_instance(Instruction* currentInstruction)
 
     // Check that baseVal is a cell.
     emitJumpSlowCaseIfNotJSCell(baseVal);
-    
+
     // Check that baseVal 'ImplementsHasInstance'.
     loadPtr(Address(regT0, JSCell::structureOffset()), regT0);
     addSlowCase(branchTest8(Zero, Address(regT0, Structure::typeInfoFlagsOffset()), TrustedImm32(ImplementsDefaultHasInstance)));
@@ -228,7 +228,7 @@ void JIT::emit_op_instanceof(Instruction* currentInstruction)
     // Check that proto are cells.  baseVal must be a cell - this is checked by op_check_has_instance.
     emitJumpSlowCaseIfNotJSCell(value);
     emitJumpSlowCaseIfNotJSCell(proto);
-    
+
     // Check that prototype is an object
     loadPtr(Address(regT1, JSCell::structureOffset()), regT3);
     addSlowCase(emitJumpIfNotObject(regT3));
@@ -289,19 +289,19 @@ void JIT::emit_op_is_undefined(Instruction* currentInstruction)
 {
     int dst = currentInstruction[1].u.operand;
     int value = currentInstruction[2].u.operand;
-    
+
     emitLoad(value, regT1, regT0);
     Jump isCell = branch32(Equal, regT1, TrustedImm32(JSValue::CellTag));
 
     compare32(Equal, regT1, TrustedImm32(JSValue::UndefinedTag), regT0);
     Jump done = jump();
-    
+
     isCell.link(this);
     loadPtr(Address(regT0, JSCell::structureOffset()), regT1);
     Jump isMasqueradesAsUndefined = branchTest8(NonZero, Address(regT1, Structure::typeInfoFlagsOffset()), TrustedImm32(MasqueradesAsUndefined));
     move(TrustedImm32(0), regT0);
     Jump notMasqueradesAsUndefined = jump();
-    
+
     isMasqueradesAsUndefined.link(this);
     move(TrustedImmPtr(m_codeBlock->globalObject()), regT0);
     loadPtr(Address(regT1, Structure::globalObjectOffset()), regT1);
@@ -316,7 +316,7 @@ void JIT::emit_op_is_boolean(Instruction* currentInstruction)
 {
     int dst = currentInstruction[1].u.operand;
     int value = currentInstruction[2].u.operand;
-    
+
     emitLoadTag(value, regT0);
     compare32(Equal, regT0, TrustedImm32(JSValue::BooleanTag), regT0);
     emitStoreBool(dst, regT0);
@@ -326,7 +326,7 @@ void JIT::emit_op_is_number(Instruction* currentInstruction)
 {
     int dst = currentInstruction[1].u.operand;
     int value = currentInstruction[2].u.operand;
-    
+
     emitLoadTag(value, regT0);
     add32(TrustedImm32(1), regT0);
     compare32(Below, regT0, TrustedImm32(JSValue::LowestTag + 1), regT0);
@@ -337,17 +337,17 @@ void JIT::emit_op_is_string(Instruction* currentInstruction)
 {
     int dst = currentInstruction[1].u.operand;
     int value = currentInstruction[2].u.operand;
-    
+
     emitLoad(value, regT1, regT0);
     Jump isNotCell = branch32(NotEqual, regT1, TrustedImm32(JSValue::CellTag));
-    
+
     loadPtr(Address(regT0, JSCell::structureOffset()), regT1);
     compare8(Equal, Address(regT1, Structure::typeInfoTypeOffset()), TrustedImm32(StringType), regT0);
     Jump done = jump();
-    
+
     isNotCell.link(this);
     move(TrustedImm32(0), regT0);
-    
+
     done.link(this);
     emitStoreBool(dst, regT0);
 }
@@ -996,7 +996,7 @@ void JIT::emit_op_debug(Instruction* currentInstruction)
 void JIT::emit_op_enter(Instruction* currentInstruction)
 {
     emitEnterOptimizationCheck();
-    
+
     // Even though JIT code doesn't use them, we initialize our constant
     // registers to zap stale pointers, to avoid unnecessarily prolonging
     // object lifetime and increasing GC pressure.
@@ -1010,7 +1010,7 @@ void JIT::emit_op_enter(Instruction* currentInstruction)
 void JIT::emit_op_create_activation(Instruction* currentInstruction)
 {
     int activation = currentInstruction[1].u.operand;
-    
+
     Jump activationCreated = branch32(NotEqual, tagFor(activation), TrustedImm32(JSValue::EmptyValueTag));
     callOperation(operationCreateActivation, 0);
     emitStoreCell(activation, returnValueGPR);
@@ -1154,7 +1154,7 @@ void JIT::emit_op_get_argument_by_val(Instruction* currentInstruction)
     // regT2 now contains the integer index of the argument we want, including this
     load32(payloadFor(JSStack::ArgumentCount), regT3);
     addSlowCase(branch32(AboveOrEqual, regT2, regT3));
-    
+
     loadPtr(BaseIndex(callFrameRegister, regT2, TimesEight, OBJECT_OFFSETOF(JSValue, u.asBits.payload) + CallFrame::thisArgumentOffset() * static_cast<int>(sizeof(Register))), regT0);
     loadPtr(BaseIndex(callFrameRegister, regT2, TimesEight, OBJECT_OFFSETOF(JSValue, u.asBits.tag) + CallFrame::thisArgumentOffset() * static_cast<int>(sizeof(Register))), regT1);
     emitValueProfilingSite();
@@ -1176,7 +1176,7 @@ void JIT::emitSlow_op_get_argument_by_val(Instruction* currentInstruction, Vecto
     callOperation(operationCreateArguments);
     emitStoreCell(arguments, returnValueGPR);
     emitStoreCell(unmodifiedArgumentsRegister(VirtualRegister(arguments)).offset(), returnValueGPR);
-    
+
     skipArgumentsCreation.link(this);
     emitLoad(arguments, regT1, regT0);
     emitLoad(property, regT3, regT2);

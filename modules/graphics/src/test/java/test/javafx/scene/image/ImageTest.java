@@ -65,7 +65,7 @@ public final class ImageTest {
     public void loadImageFromUrlBasicTest() {
         final String url = "file:test.png";
         registerImage(url, 100, 200);
-        
+
         final Image image = new Image(url);
 
         assertEquals(url, image.impl_getUrl());
@@ -155,7 +155,7 @@ public final class ImageTest {
         registerImage(fakePlatformImage1, 200, 500);
         final Object fakePlatformImage2 = new Object();
         registerImage(fakePlatformImage2, 200, 500);
-        
+
         final String url = "file:test.png";
         registerImage(url, 200, 100);
 
@@ -163,7 +163,7 @@ public final class ImageTest {
                 Image.impl_fromPlatformImage(fakePlatformImage1);
         final Image placeholderImage2 =
                 Image.impl_fromPlatformImage(fakePlatformImage2);
-        final Image image = new Image(url, 500, 200, true, false, 
+        final Image image = new Image(url, 500, 200, true, false,
                                       true);
 
         final StubAsyncImageLoader lastAsyncImageLoader =
@@ -312,7 +312,7 @@ public final class ImageTest {
     public void animatedImageTest() {
         // reset time
         toolkit.setAnimationTime(0);
-        final Image animatedImage = 
+        final Image animatedImage =
                 TestImages.createAnimatedTestImage(
                         300, 400,        // width, height
                         0,               // loop count
@@ -356,7 +356,7 @@ public final class ImageTest {
     public void animatedImageTestLoopOnce() {
         // reset time
         toolkit.setAnimationTime(0);
-        final Image animatedImage = 
+        final Image animatedImage =
                 TestImages.createAnimatedTestImage(
                         300, 400,        // width, height
                         1,               // loop count
@@ -370,10 +370,10 @@ public final class ImageTest {
 
         toolkit.setAnimationTime(2500);
         assertEquals(1, getPlatformImage(animatedImage).getFrame());
-        
+
         toolkit.setAnimationTime(4500);
         assertEquals(2, getPlatformImage(animatedImage).getFrame());
-        
+
         toolkit.setAnimationTime(7000);
         assertEquals(2, getPlatformImage(animatedImage).getFrame());
 
@@ -491,19 +491,19 @@ public final class ImageTest {
         final String url = "test/javafx/scene/image/test.png";
         final String resolvedUrl = Thread.currentThread().getContextClassLoader().getResource(url).toString();
         registerImage(resolvedUrl, 100, 200);
-        
+
         final Image image = new Image(url);
 
         assertEquals(resolvedUrl, image.impl_getUrl());
         verifyLoadedImage(image, 0, 0, false, false, 100, 200);
     }
-    
+
     @Test
     public void createImageFromClasspathTest_withLeadingSlash() {
         final String url = "/test/javafx/scene/image/test.png";
         final String resolvedUrl = Thread.currentThread().getContextClassLoader().getResource(url.substring(1)).toString();
         registerImage(resolvedUrl, 100, 200);
-        
+
         final Image image = new Image(url);
 
         assertEquals(resolvedUrl, image.impl_getUrl());

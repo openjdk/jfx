@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef DFGSilentRegisterSavePlan_h
@@ -83,7 +83,7 @@ public:
         , m_node(0)
     {
     }
-    
+
     SilentRegisterSavePlan(
         SilentSpillAction spillAction,
         SilentFillAction fillAction,
@@ -95,7 +95,7 @@ public:
         , m_node(node)
     {
     }
-    
+
     SilentRegisterSavePlan(
         SilentSpillAction spillAction,
         SilentFillAction fillAction,
@@ -107,15 +107,15 @@ public:
         , m_node(node)
     {
     }
-    
+
     SilentSpillAction spillAction() const { return static_cast<SilentSpillAction>(m_spillAction); }
     SilentFillAction fillAction() const { return static_cast<SilentFillAction>(m_fillAction); }
-    
+
     Node* node() const { return m_node; }
-    
+
     GPRReg gpr() const { return static_cast<GPRReg>(m_register); }
     FPRReg fpr() const { return static_cast<FPRReg>(m_register); }
-    
+
 private:
     int8_t m_spillAction;
     int8_t m_fillAction;

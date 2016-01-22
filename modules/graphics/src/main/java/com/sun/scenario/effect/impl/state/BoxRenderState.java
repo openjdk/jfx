@@ -61,11 +61,11 @@ import java.nio.FloatBuffer;
  * numbers on each end of the weights array approach e/2.0 == 1.0 and we end
  * up back at the pattern for an odd size again:
  * [ 1.0 {2*N+1 copies of 1.0} 1.0 ]
- * 
+ *
  * ***************************
  * SOFTWARE LIMITATION CAVEAT:
  * ***************************
- * 
+ *
  * Note that the highly optimized software filters for BoxBlur/Shadow will
  * actually do a very optimized "running sum" operation that is only currently
  * implemented for equal weighted kernels.  Also, until recently we had always
@@ -136,7 +136,7 @@ public class BoxRenderState extends LinearConvolveRenderState {
          * direction we apply the box convolutions could change as well
          * as the new size of the box summations relative to the pixels
          * produced under that transform.
-         * 
+         *
          * Since the box filter is best described by the summation of a range
          * of discrete pixels horizontally and vertically, and since the
          * software algorithms vastly prefer applying the sums horizontally
@@ -149,7 +149,7 @@ public class BoxRenderState extends LinearConvolveRenderState {
          * which essentially means being able to back off to an arbitrary
          * invocation on the associated LinearConvolvePeer from the software
          * hand-written Box peers.
-         * 
+         *
          * We will track the direction and size of the box as we traverse
          * different coordinate spaces with the intent that eventually we
          * will perform the math of the convolution with weights calculated
@@ -157,20 +157,20 @@ public class BoxRenderState extends LinearConvolveRenderState {
          * closely to the intended final filter transform as we can achieve
          * with the following caveats (very similar to the caveats for the
          * more general GaussianRenderState):
-         * 
+         *
          * - There is a maximum kernel size that the hardware pixel shaders
          *   can apply so we will try to keep the scaling of the filtered
          *   pixels low enough that we do not exceed that data limitation.
-         * 
+         *
          * - Software vastly prefers to apply these weights along horizontal
          *   and vertical vectors, but can apply them in an arbitrary direction
          *   if need be by backing off to the generic LinearConvolvePeer.
-         * 
+         *
          * - If the box is large enough, then applying a smaller box kernel
          *   to a downscaled input is close enough to applying the larger box
          *   to a larger scaled input.  Our maximum kernel size is large enough
          *   for this effect to be hidden if we max out the kernel.
-         * 
+         *
          * - We can tell the inputs what transform we want them to use, but
          *   they can always produce output under a different transform and
          *   then return a result with a "post-processing" trasnform to be
@@ -178,7 +178,7 @@ public class BoxRenderState extends LinearConvolveRenderState {
          *   how we want to apply the convolution weights and samples here,
          *   but we will have to reevaluate our actions when the actual
          *   input pixels are created later.
-         * 
+         *
          * - We will try to blur at a nice axis-aligned orientation (which is
          *   preferred for the software versions of the shaders) and perform
          *   any rotation and skewing in the final post-processing result

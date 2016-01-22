@@ -78,12 +78,12 @@ RenderView::RenderView(Document& document, PassRef<RenderStyle> style)
 
     // init RenderObject attributes
     setInline(false);
-    
+
     m_minPreferredLogicalWidth = 0;
     m_maxPreferredLogicalWidth = 0;
 
     setPreferredLogicalWidthsDirty(true, MarkOnlyThis);
-    
+
     setPositionState(AbsolutePosition); // to 0,0 :)
 }
 
@@ -179,7 +179,7 @@ void RenderView::initializeLayoutState(LayoutState& state)
 // The algorithm below assumes this is a full layout. In case there are previously computed values for regions, supplemental steps are taken
 // to ensure the results are the same as those obtained from a full layout (i.e. the auto-height regions from all the flows are marked as needing
 // layout).
-// 1. The flows are laid out from the outer flow to the inner flow. This successfully computes the outer non-auto-height regions size so the 
+// 1. The flows are laid out from the outer flow to the inner flow. This successfully computes the outer non-auto-height regions size so the
 // inner flows have the necessary information to correctly fragment the content.
 // 2. The flows are laid out from the inner flow to the outer flow. After an inner flow is laid out it goes into the constrained layout phase
 // and marks the auto-height regions they need layout. This means the outer flows will relayout if they depend on regions with auto-height regions
@@ -293,7 +293,7 @@ LayoutUnit RenderView::pageOrViewLogicalHeight() const
 {
     if (document().printing())
         return pageLogicalHeight();
-    
+
     if (hasColumns() && !style().hasInlineColumnAxis()) {
         if (int pageLength = frameView().pagination().pageLength)
             return pageLength;
@@ -349,7 +349,7 @@ void RenderView::mapLocalToContainer(const RenderLayerModelObject* repaintContai
         getTransformFromContainer(0, LayoutSize(), t);
         transformState.applyTransform(t);
     }
-    
+
     if (mode & IsFixed)
 #if PLATFORM(IOS)
         transformState.move(fixedPositionOffset(m_frameView));
@@ -439,13 +439,13 @@ static inline bool rendererObscuresBackground(RenderElement* rootObject)
 {
     if (!rootObject)
         return false;
-    
+
     const RenderStyle& style = rootObject->style();
     if (style.visibility() != VISIBLE
         || style.opacity() != 1
         || style.hasTransform())
         return false;
-    
+
     if (isComposited(rootObject))
         return false;
 
@@ -509,7 +509,7 @@ void RenderView::paintBoxDecorations(PaintInfo& paintInfo, const LayoutPoint&)
 
     // This code typically only executes if the root element's visibility has been set to hidden,
     // if there is a transform on the <html>, or if there is a page scale factor less than 1.
-    // Only fill with the base background color (typically white) if we're the root document, 
+    // Only fill with the base background color (typically white) if we're the root document,
     // since iframes/frames with no background in the child document should show the parent's background.
     if (frameView().isTransparent()) // FIXME: This needs to be dynamic. We should be able to go back to blitting if we ever stop being transparent.
         frameView().setCannotBlitToWindow(); // The parent must show behind the child.
@@ -644,7 +644,7 @@ void RenderView::computeRectForRepaint(const RenderLayerModelObject* repaintCont
         rect.move(frameView().scrollOffsetForFixedPosition());
 #endif
     }
-        
+
     // Apply our transform if we have one (because of full page zooming).
     if (!repaintContainer && layer() && layer()->transform())
         rect = layer()->transform()->mapRect(rect);
@@ -704,7 +704,7 @@ IntRect RenderView::selectionBounds(bool clipToVisibleContent) const
         LayoutRect currRect = info->rect();
         if (RenderLayerModelObject* repaintContainer = info->repaintContainer()) {
             FloatQuad absQuad = repaintContainer->localToAbsoluteQuad(FloatRect(currRect));
-            currRect = absQuad.enclosingBoundingBox(); 
+            currRect = absQuad.enclosingBoundingBox();
         }
         selRect.unite(currRect);
     }

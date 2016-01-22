@@ -131,7 +131,7 @@ public class ScatterChart<X,Y> extends XYChart<X,Y> {
     /** @inheritDoc */
     @Override protected void dataItemChanged(Data<X, Y> item) {
     }
-    
+
     /** @inheritDoc */
     @Override protected  void seriesAdded(Series<X,Y> series, int seriesIndex) {
         // handle any data already in series
@@ -185,7 +185,7 @@ public class ScatterChart<X,Y> extends XYChart<X,Y> {
                 if (symbol != null) {
                     final double w = symbol.prefWidth(-1);
                     final double h = symbol.prefHeight(-1);
-                    symbol.resizeRelocate(x-(w/2), y-(h/2),w,h); 
+                    symbol.resizeRelocate(x-(w/2), y-(h/2),w,h);
                 }
             }
         }

@@ -86,7 +86,7 @@ static void addConvexPolygonToContext(cairo_t* context, size_t numPoints, const 
     cairo_close_path(context);
 }
 
-enum PathDrawingStyle { 
+enum PathDrawingStyle {
     Fill = 1,
     Stroke = 2,
     FillAndStroke = Fill + Stroke

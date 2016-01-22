@@ -46,7 +46,7 @@ template<> class WriteBarrierBase<JSValue>;
 
 JS_EXPORT_PRIVATE void slowValidateCell(JSCell*);
 JS_EXPORT_PRIVATE void slowValidateCell(JSGlobalObject*);
-    
+
 #if ENABLE(GC_VALIDATION)
 template<class T> inline void validateCell(T cell)
 {
@@ -72,7 +72,7 @@ template<class T> inline void validateCell(T)
 template <typename T> class WriteBarrierBase {
 public:
     void set(VM&, const JSCell* owner, T* value);
-    
+
     // This is meant to be used like operator=, but is called copyFrom instead, in
     // order to kindly inform the C++ compiler that its advice is not appreciated.
     void copyFrom(const WriteBarrierBase<T>& other)
@@ -85,7 +85,7 @@ public:
     // Should only be used by JSCell during early initialisation
     // when some basic types aren't yet completely instantiated
     void setEarlyValue(VM&, const JSCell* owner, T* value);
-    
+
     T* get() const
     {
         // Copy m_cell to a local to avoid multiple-read issues. (See <http://webkit.org/b/110854>)
@@ -110,12 +110,12 @@ public:
     }
 
     void clear() { m_cell = 0; }
-    
+
     T** slot() { return reinterpret_cast<T**>(&m_cell); }
-    
+
     typedef T* (WriteBarrierBase::*UnspecifiedBoolType);
     operator UnspecifiedBoolType*() const { return m_cell ? reinterpret_cast<UnspecifiedBoolType*>(1) : 0; }
-    
+
     bool operator!() const { return !m_cell; }
 
     void setWithoutWriteBarrier(T* value)
@@ -152,9 +152,9 @@ public:
     bool isObject() const { return get().isObject(); }
     bool isNull() const { return get().isNull(); }
     bool isGetterSetter() const { return get().isGetterSetter(); }
-    
+
     JSValue* slot()
-    { 
+    {
         union {
             EncodedJSValue* v;
             JSValue* slot;
@@ -162,14 +162,14 @@ public:
         u.v = &m_value;
         return u.slot;
     }
-    
+
     int32_t* tagPointer() { return &bitwise_cast<EncodedValueDescriptor*>(&m_value)->asBits.tag; }
     int32_t* payloadPointer() { return &bitwise_cast<EncodedValueDescriptor*>(&m_value)->asBits.payload; }
-    
+
     typedef JSValue (WriteBarrierBase::*UnspecifiedBoolType);
     operator UnspecifiedBoolType*() const { return get() ? reinterpret_cast<UnspecifiedBoolType*>(1) : 0; }
-    bool operator!() const { return !get(); } 
-    
+    bool operator!() const { return !get(); }
+
 private:
     EncodedJSValue m_value;
 };

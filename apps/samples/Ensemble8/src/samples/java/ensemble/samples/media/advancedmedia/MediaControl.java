@@ -145,7 +145,7 @@ public class MediaControl extends BorderPane {
                 // don't do anything in these states
                 return;
             }
-            
+
             if (status == MediaPlayer.Status.PAUSED
                     || status == MediaPlayer.Status.READY
                     || status == MediaPlayer.Status.STOPPED) {
@@ -207,7 +207,7 @@ public class MediaControl extends BorderPane {
         timeSlider = new Slider();
         timeSlider.setMinWidth(30);
         timeSlider.setMaxWidth(Double.MAX_VALUE);
-        
+
         HBox.setHgrow(timeSlider, Priority.ALWAYS);
         timeSlider.valueProperty().addListener((ObservableValue<? extends Number> observable,
                                                 Number old, Number now) -> {
@@ -266,7 +266,7 @@ public class MediaControl extends BorderPane {
                             }
                         }
                     };
-                   
+
                     setCenter(null);
                     setBottom(null);
                     borderPane.setCenter(mvPane);
@@ -321,7 +321,7 @@ public class MediaControl extends BorderPane {
             BorderPane smallBP = (BorderPane)newStage.getScene().getRoot();
             smallBP.setCenter(null);
             setCenter(mvPane);
-            
+
             smallBP.setBottom(null);
             setBottom(mediaBar);
             Platform.runLater(() -> {

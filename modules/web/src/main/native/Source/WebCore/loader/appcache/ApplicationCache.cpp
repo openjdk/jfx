@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -35,7 +35,7 @@
 #include <wtf/text/CString.h>
 
 namespace WebCore {
- 
+
 static inline bool fallbackURLLongerThan(const std::pair<URL, URL>& lhs, const std::pair<URL, URL>& rhs)
 {
     return lhs.first.string().length() > rhs.first.string().length();
@@ -54,7 +54,7 @@ ApplicationCache::~ApplicationCache()
     if (m_group && !m_group->isCopy())
         m_group->cacheDestroyed(this);
 }
-    
+
 void ApplicationCache::setGroup(ApplicationCacheGroup* group)
 {
     ASSERT(!m_group || group == m_group);
@@ -71,24 +71,24 @@ void ApplicationCache::setManifestResource(PassRefPtr<ApplicationCacheResource> 
     ASSERT(manifest);
     ASSERT(!m_manifest);
     ASSERT(manifest->type() & ApplicationCacheResource::Manifest);
-    
+
     m_manifest = manifest.get();
-    
+
     addResource(manifest);
 }
-    
+
 void ApplicationCache::addResource(PassRefPtr<ApplicationCacheResource> resource)
 {
     ASSERT(resource);
-    
+
     const String& url = resource->url();
-    
+
     ASSERT(!m_resources.contains(url));
-    
+
     if (m_storageID) {
         ASSERT(!resource->storageID());
         ASSERT(resource->type() & ApplicationCacheResource::Master);
-        
+
         // Add the resource to the storage.
 #if !PLATFORM(JAVA)
         cacheStorage().store(resource.get(), this);
@@ -114,24 +114,24 @@ unsigned ApplicationCache::removeResource(const String& url)
     m_resources.remove(it);
 
     return type;
-}    
-    
+}
+
 ApplicationCacheResource* ApplicationCache::resourceForURL(const String& url)
 {
     ASSERT(!URL(ParsedURLString, url).hasFragmentIdentifier());
     return m_resources.get(url);
-}    
+}
 
 bool ApplicationCache::requestIsHTTPOrHTTPSGet(const ResourceRequest& request)
 {
     if (!request.url().protocolIsInHTTPFamily())
         return false;
-    
+
     if (!equalIgnoringCase(request.httpMethod(), "GET"))
         return false;
 
     return true;
-}    
+}
 
 ApplicationCacheResource* ApplicationCache::resourceForRequest(const ResourceRequest& request)
 {
@@ -149,7 +149,7 @@ ApplicationCacheResource* ApplicationCache::resourceForRequest(const ResourceReq
 void ApplicationCache::setOnlineWhitelist(const Vector<URL>& onlineWhitelist)
 {
     ASSERT(m_onlineWhitelist.isEmpty());
-    m_onlineWhitelist = onlineWhitelist; 
+    m_onlineWhitelist = onlineWhitelist;
 }
 
 bool ApplicationCache::isURLInOnlineWhitelist(const URL& url)
@@ -186,11 +186,11 @@ bool ApplicationCache::urlMatchesFallbackNamespace(const URL& url, URL* fallback
 void ApplicationCache::clearStorageID()
 {
     m_storageID = 0;
-    
+
     for (const auto& resource : m_resources.values())
         resource->clearStorageID();
 }
-    
+
 void ApplicationCache::deleteCacheForOrigin(SecurityOrigin* origin)
 {
 #if !PLATFORM(JAVA)
@@ -228,7 +228,7 @@ int64_t ApplicationCache::diskUsageForOrigin(SecurityOrigin* origin)
 void ApplicationCache::dump()
 {
     HashMap<String, RefPtr<ApplicationCacheResource>>::const_iterator end = m_resources.end();
-    
+
     for (HashMap<String, RefPtr<ApplicationCacheResource>>::const_iterator it = m_resources.begin(); it != end; ++it) {
         printf("%s ", it->key.ascii().data());
         ApplicationCacheResource::dumpType(it->value->type());

@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #import "WebDragClient.h"
@@ -56,7 +56,7 @@
 using namespace WebCore;
 
 WebDragClient::WebDragClient(WebView* webView)
-    : m_webView(webView) 
+    : m_webView(webView)
 {
 }
 
@@ -94,11 +94,11 @@ void WebDragClient::startDrag(DragImageRef dragImage, const IntPoint& at, const 
     RetainPtr<WebHTMLView> htmlView = (WebHTMLView*)[[kit(&frame) frameView] documentView];
     if (![htmlView.get() isKindOfClass:[WebHTMLView class]])
         return;
-    
+
     NSEvent *event = linkDrag ? frame.eventHandler().currentNSEvent() : [htmlView.get() _mouseDownEvent];
     WebHTMLView* topHTMLView = getTopHTMLView(&frame);
     RetainPtr<WebHTMLView> topViewProtector = topHTMLView;
-    
+
     [topHTMLView _stopAutoscrollTimer];
     NSPasteboard *pasteboard = [NSPasteboard pasteboardWithName:clipboard.pasteboard().name()];
 
@@ -125,11 +125,11 @@ void WebDragClient::declareAndWriteDragImage(const String& pasteboardName, Eleme
     ASSERT(pasteboardName);
     WebHTMLView *source = getTopHTMLView(frame);
     WebArchive *archive = [kit(&element) webArchive];
-    
+
     [[NSPasteboard pasteboardWithName:pasteboardName] _web_declareAndWriteDragImageForElement:kit(&element) URL:url title:title archive:archive source:source];
 }
 
-void WebDragClient::dragControllerDestroyed() 
+void WebDragClient::dragControllerDestroyed()
 {
     delete this;
 }

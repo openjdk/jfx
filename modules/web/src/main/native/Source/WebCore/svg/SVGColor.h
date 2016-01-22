@@ -71,7 +71,7 @@ public:
     String customCSSText() const;
 
     ~SVGColor() { }
-    
+
     PassRefPtr<SVGColor> cloneForCSSOM() const;
 
     bool equals(const SVGColor&) const;

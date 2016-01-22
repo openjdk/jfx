@@ -144,7 +144,7 @@ public class QuadCurve2D extends Shape {
     }
 
     /**
-     * Sets the location of the end points and control points of this 
+     * Sets the location of the end points and control points of this
      * <code>QuadCurve2D</code> to the <code>double</code> coordinates at
      * the specified offset in the specified array.
      * @param coords the array containing coordinate values
@@ -160,7 +160,7 @@ public class QuadCurve2D extends Shape {
 
     /**
      * Sets the location of the end points and control point of this
-     * <code>QuadCurve2D</code> to the specified <code>Point2D</code> 
+     * <code>QuadCurve2D</code> to the specified <code>Point2D</code>
      * coordinates.
      * @param p1 the start point
      * @param cp the control point
@@ -172,7 +172,7 @@ public class QuadCurve2D extends Shape {
 
     /**
      * Sets the location of the end points and control points of this
-     * <code>QuadCurve2D</code> to the coordinates of the 
+     * <code>QuadCurve2D</code> to the coordinates of the
      * <code>Point2D</code> objects at the specified offset in
      * the specified array.
      * @param pts an array containing <code>Point2D</code> that define
@@ -188,7 +188,7 @@ public class QuadCurve2D extends Shape {
     }
 
     /**
-     * Sets the location of the end points and control point of this 
+     * Sets the location of the end points and control point of this
      * <code>QuadCurve2D</code> to the same as those in the specified
      * <code>QuadCurve2D</code>.
      * @param c the specified <code>QuadCurve2D</code>
@@ -228,8 +228,8 @@ public class QuadCurve2D extends Shape {
      * @param ctrly the Y coordinate of the control point
      * @param x2 the X coordinate of the end point
      * @param y2 the Y coordinate of the end point
-     * @return the flatness of the quadratic curve defined by the 
-     *      specified coordinates. 
+     * @return the flatness of the quadratic curve defined by the
+     *      specified coordinates.
      */
     public static float getFlatness(float x1, float y1,
                      float ctrlx, float ctrly,
@@ -262,7 +262,7 @@ public class QuadCurve2D extends Shape {
      * @param coords an array containing coordinate values
      * @param offset the index into <code>coords</code> from which to
      *      start getting the coordinate values
-     * @return the flatness of a quadratic curve defined by the 
+     * @return the flatness of a quadratic curve defined by the
      *      specified array at the specified offset.
      */
     public static float getFlatness(float coords[], int offset) {
@@ -273,7 +273,7 @@ public class QuadCurve2D extends Shape {
 
     /**
      * Returns the square of the flatness, or maximum distance of a
-     * control point from the line connecting the end points, of this 
+     * control point from the line connecting the end points, of this
      * <code>QuadCurve2D</code>.
      * @return the square of the flatness of this
      *      <code>QuadCurve2D</code>.
@@ -294,9 +294,9 @@ public class QuadCurve2D extends Shape {
 
     /**
      * Subdivides this <code>QuadCurve2D</code> and stores the resulting
-     * two subdivided curves into the <code>left</code> and 
+     * two subdivided curves into the <code>left</code> and
      * <code>right</code> curve parameters.
-     * Either or both of the <code>left</code> and <code>right</code> 
+     * Either or both of the <code>left</code> and <code>right</code>
      * objects can be the same as this <code>QuadCurve2D</code> or
      * <code>null</code>.
      * @param left the <code>QuadCurve2D</code> object for storing the
@@ -309,11 +309,11 @@ public class QuadCurve2D extends Shape {
     }
 
     /**
-     * Subdivides the quadratic curve specified by the <code>src</code> 
+     * Subdivides the quadratic curve specified by the <code>src</code>
      * parameter and stores the resulting two subdivided curves into the
      * <code>left</code> and <code>right</code> curve parameters.
-     * Either or both of the <code>left</code> and <code>right</code> 
-     * objects can be the same as the <code>src</code> object or 
+     * Either or both of the <code>left</code> and <code>right</code>
+     * objects can be the same as the <code>src</code> object or
      * <code>null</code>.
      * @param src the quadratic curve to be subdivided
      * @param left the <code>QuadCurve2D</code> object for storing the
@@ -347,17 +347,17 @@ public class QuadCurve2D extends Shape {
 
     /**
      * Subdivides the quadratic curve specified by the coordinates
-     * stored in the <code>src</code> array at indices 
+     * stored in the <code>src</code> array at indices
      * <code>srcoff</code> through <code>srcoff</code>&nbsp;+&nbsp;5
      * and stores the resulting two subdivided curves into the two
      * result arrays at the corresponding indices.
-     * Either or both of the <code>left</code> and <code>right</code> 
+     * Either or both of the <code>left</code> and <code>right</code>
      * arrays can be <code>null</code> or a reference to the same array
      * and offset as the <code>src</code> array.
      * Note that the last point in the first subdivided curve is the
      * same as the first point in the second subdivided curve.  Thus,
      * it is possible to pass the same array for <code>left</code> and
-     * <code>right</code> and to use offsets such that 
+     * <code>right</code> and to use offsets such that
      * <code>rightoff</code> equals <code>leftoff</code> + 4 in order
      * to avoid allocating extra storage for this common point.
      * @param src the array holding the coordinates for the source curve
@@ -411,7 +411,7 @@ public class QuadCurve2D extends Shape {
     }
 
     /**
-     * Solves the quadratic whose coefficients are in the <code>eqn</code> 
+     * Solves the quadratic whose coefficients are in the <code>eqn</code>
      * array and places the non-complex roots back into the same array,
      * returning the number of roots.  The quadratic solved is represented
      * by the equation:
@@ -431,7 +431,7 @@ public class QuadCurve2D extends Shape {
     }
 
     /**
-     * Solves the quadratic whose coefficients are in the <code>eqn</code> 
+     * Solves the quadratic whose coefficients are in the <code>eqn</code>
      * array and places the non-complex roots into the <code>res</code>
      * array, returning the number of roots.
      * The quadratic solved is represented by the equation:
@@ -444,7 +444,7 @@ public class QuadCurve2D extends Shape {
      * has no zeroes.
      * @param eqn the specified array of coefficients to use to solve
      *        the quadratic equation
-     * @param res the array that contains the non-complex roots 
+     * @param res the array that contains the non-complex roots
      *        resulting from the solution of the quadratic equation
      * @return the number of roots, or <code>-1</code> if the equation is
      *  a constant.
@@ -459,7 +459,7 @@ public class QuadCurve2D extends Shape {
             if (b == 0f) {
                 // The line has degenerated to a constant.
                 return -1;
-            } 
+            }
             res[roots++] = -c / b;
         } else {
             // From Numerical Recipes, 5.6, Quadratic and Cubic Equations
@@ -497,7 +497,7 @@ public class QuadCurve2D extends Shape {
         float yc = this.ctrly;
         float x2 = this.x2;
         float y2 = this.y2;
-    
+
         /*
          * We have a convex shape bounded by quad curve Pc(t)
          * and ine Pl(t).
@@ -570,17 +570,17 @@ public class QuadCurve2D extends Shape {
         float dy = y - y1;
         float dxl = x2 - x1;
         float dyl = y2 - y1;
-    
+
         float t0 = (dx * ky - dy * kx) / (dxl * ky - dyl * kx);
         if (t0 < 0 || t0 > 1 || t0 != t0) {
             return false;
         }
-    
+
         float xb = kx * t0 * t0 + 2 * (xc - x1) * t0 + x1;
         float yb = ky * t0 * t0 + 2 * (yc - y1) * t0 + y1;
         float xl = dxl * t0 + x1;
         float yl = dyl * t0 + y1;
-    
+
         return (x >= xb && x < xl) ||
                (x >= xl && x < xb) ||
                (y >= yb && y < yl) ||
@@ -695,7 +695,7 @@ public class QuadCurve2D extends Shape {
         if (w <= 0 || h <= 0) {
             return false;
         }
-    
+
         // Trivially accept if either endpoint is inside the rectangle
         // (not on its border since it may end there and not go inside)
         // Record where they lie with respect to the rectangle.
@@ -718,7 +718,7 @@ public class QuadCurve2D extends Shape {
         float ctrly = this.ctrly;
         int ctrlxtag = getTag(ctrlx, x, x + w);
         int ctrlytag = getTag(ctrly, y, y + h);
-    
+
         // Trivially reject if all points are entirely to one side of
         // the rectangle.
         if (x1tag < INSIDE && x2tag < INSIDE && ctrlxtag < INSIDE) {
@@ -733,7 +733,7 @@ public class QuadCurve2D extends Shape {
         if (y1tag > INSIDE && y2tag > INSIDE && ctrlytag > INSIDE) {
             return false;   // All points below
         }
-    
+
         // Test for endpoints on the edge where either the segment
         // or the curve is headed "inwards" from them
         // Note: These tests are a superset of the fast endpoint tests
@@ -751,7 +751,7 @@ public class QuadCurve2D extends Shape {
             // Second endpoint on border with either edge moving inside
             return true;
         }
-    
+
         // Trivially accept if endpoints span directly across the rectangle
         boolean xoverlap = (x1tag * x2tag <= 0);
         boolean yoverlap = (y1tag * y2tag <= 0);
@@ -761,13 +761,13 @@ public class QuadCurve2D extends Shape {
         if (y1tag == INSIDE && y2tag == INSIDE && xoverlap) {
             return true;
         }
-    
+
         // We now know that both endpoints are outside the rectangle
         // but the 3 points are not all on one side of the rectangle.
         // Therefore the curve cannot be contained inside the rectangle,
         // but the rectangle might be contained inside the curve, or
         // the curve might intersect the boundary of the rectangle.
-    
+
         float[] eqn = new float[3];
         float[] res = new float[3];
         if (!yoverlap) {
@@ -782,7 +782,7 @@ public class QuadCurve2D extends Shape {
                       x1, ctrlx, x2) == 2 &&
                 getTag(res[0], x, x+w) * getTag(res[1], x, x+w) <= 0);
         }
-    
+
         // Y ranges overlap.  Now we examine the X ranges
         if (!xoverlap) {
                 // Both X coordinates for the closing segment are left of
@@ -796,7 +796,7 @@ public class QuadCurve2D extends Shape {
                       y1, ctrly, y2) == 2 &&
                 getTag(res[0], y, y+h) * getTag(res[1], y, y+h) <= 0);
         }
-    
+
         // The X and Y ranges of the endpoints overlap the X and Y
         // ranges of the rectangle, now find out how the endpoint
         // line segment intersects the Y range of the rectangle
@@ -819,7 +819,7 @@ public class QuadCurve2D extends Shape {
         if (c1tag * c2tag <= 0) {
             return true;
         }
-    
+
         // Now we know that both the X and Y ranges intersect and that
         // the endpoint line segment does not directly cross the rectangle.
         //
@@ -839,7 +839,7 @@ public class QuadCurve2D extends Shape {
         // the endpoint segment, and one with the curve.  If those two
         // vertical intersections overlap the Y range of the rectangle,
         // we have an intersection.  Otherwise, we don't.
-    
+
         // c1tag = vertical intersection class of the endpoint segment
         //
         // Choose the y tag of the endpoint that was not on the same
@@ -847,7 +847,7 @@ public class QuadCurve2D extends Shape {
         // Note that we can "steal" the existing Y tag of that endpoint
         // since it will be provably the same as the vertical intersection.
         c1tag = ((c1tag * x1tag <= 0) ? y1tag : y2tag);
-    
+
         // c2tag = vertical intersection class of the curve
         //
         // We have to calculate this one the straightforward way.
@@ -855,16 +855,16 @@ public class QuadCurve2D extends Shape {
         // to test against.
         fillEqn(eqn, (c2tag < INSIDE ? x : x+w), x1, ctrlx, x2);
         int num = solveQuadratic(eqn, res);
-    
+
         // Note: We should be able to assert(num == 2); since the
         // X range "crosses" (not touches) the vertical boundary,
         // but we pass num to evalQuadratic for completeness.
         evalQuadratic(res, num, true, true, null, y1, ctrly, y2);
-    
+
         // Note: We can assert(num evals == 1); since one of the
         // 2 crossings will be out of the [0,1] range.
         c2tag = getTag(res[0], y, y+h);
-    
+
         // Finally, we have an intersection if the two crossings
         // overlap the Y range of the rectangle.
         return (c1tag * c2tag <= 0);
@@ -909,14 +909,14 @@ public class QuadCurve2D extends Shape {
      * which means that this <code>QuadCurve2D</code> class does not
      * guarantee that modifications to the geometry of this
      * <code>QuadCurve2D</code> object do not affect any iterations of
-     * that geometry that are already in process. 
+     * that geometry that are already in process.
      * @param tx an optional <code>BaseTransform</code> to apply
      *      to the boundary of the shape
-     * @param flatness the maximum distance that the control points for a 
+     * @param flatness the maximum distance that the control points for a
      *      subdivided curve can be with respect to a line connecting
      *      the end points of this curve before this curve is
      *      replaced by a straight line connecting the end points.
-     * @return a <code>PathIterator</code> object that defines the 
+     * @return a <code>PathIterator</code> object that defines the
      *      flattened boundary of the shape.
      */
     public PathIterator getPathIterator(BaseTransform tx, float flatness) {

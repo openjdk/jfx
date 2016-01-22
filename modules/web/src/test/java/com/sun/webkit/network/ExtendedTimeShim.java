@@ -41,18 +41,18 @@ public class ExtendedTimeShim {
     }
 
     public boolean equals(ExtendedTimeShim s) {
-        if (s == null) 
+        if (s == null)
             return time.equals(null);
         else
             return time.equals(s.time);
     }
 
-    public static ExtendedTimeShim currentTime() { 
+    public static ExtendedTimeShim currentTime() {
         return new ExtendedTimeShim(ExtendedTime.currentTime());
     }
 
     public long baseTime() {
         return time.baseTime();
     }
-    
+
 }

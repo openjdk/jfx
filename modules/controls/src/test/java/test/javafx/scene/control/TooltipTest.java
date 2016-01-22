@@ -64,13 +64,13 @@ public class TooltipTest {
         toolTip = new TooltipShim();
         dummyToolTip = new TooltipShim("dummy");
     }
-    
-   
+
+
 
     /*********************************************************************
      * Tests for the constructors                                        *
      ********************************************************************/
-    
+
     @Test public void defaultConstructorShouldHaveNullString() {
         assertEquals(toolTip.getText(), "");
     }
@@ -78,19 +78,19 @@ public class TooltipTest {
         assertEquals("dummy", dummyToolTip.getText());
     }
 
-    
+
     /*********************************************************************
      * Tests for default values                                         *
      ********************************************************************/
-    
+
     @Test public void defaultConstructorShouldSetStyleClassTo_tooltip() {
         assertStyleClassContains(toolTip, "tooltip");
     }
-    
+
     @Test public void oneStrArgConstructorShouldSetStyleClassTo_tooltip() {
         assertStyleClassContains(dummyToolTip, "tooltip");
     }
-    
+
     @Test public void defaultActivationIsFalse() {
         assertFalse(toolTip.isActivated());
     }
@@ -104,7 +104,7 @@ public class TooltipTest {
         assertNotNull(toolTip.getTextAlignment());
         assertSame(toolTip.getTextAlignment(), TextAlignment.LEFT);
     }
-    
+
     @Test public void defaultTextOverrunIsEllipsis() {
         assertNotNull(toolTip.getTextOverrun());
         assertSame(toolTip.getTextOverrun(), OverrunStyle.ELLIPSIS);
@@ -144,7 +144,7 @@ public class TooltipTest {
         strPr.setValue("newvalue");
         assertTrue("Text cannot be bound", toolTip.textProperty().getValue().equals("newvalue"));
     }
-    
+
     @Test public void checkTextAlignmentPropertyBind() {
         ObjectProperty objPr = new SimpleObjectProperty<TextAlignment>(TextAlignment.CENTER);
         toolTip.textAlignmentProperty().bind(objPr);
@@ -152,7 +152,7 @@ public class TooltipTest {
         objPr.setValue(TextAlignment.JUSTIFY);
         assertSame("TextAlignment cannot be bound", toolTip.textAlignmentProperty().getValue(), TextAlignment.JUSTIFY);
     }
-    
+
     @Test public void checkTextOverrunPropertyBind() {
         ObjectProperty objPr = new SimpleObjectProperty<OverrunStyle>(OverrunStyle.CENTER_WORD_ELLIPSIS);
         toolTip.textOverrunProperty().bind(objPr);
@@ -160,7 +160,7 @@ public class TooltipTest {
         objPr.setValue(OverrunStyle.LEADING_ELLIPSIS);
         assertSame("TextOverrun cannot be bound", toolTip.textOverrunProperty().getValue(), OverrunStyle.LEADING_ELLIPSIS);
     }
-    
+
     @Test public void checkTextWrapPropertyBind() {
         ObjectProperty objPr = new SimpleObjectProperty<Boolean>(true);
         toolTip.wrapTextProperty().bind(objPr);
@@ -168,7 +168,7 @@ public class TooltipTest {
         objPr.setValue(false);
         assertEquals("TextWrap cannot be bound", toolTip.wrapTextProperty().getValue(), false);
     }
-    
+
     @Test public void checkFontPropertyBind() {
         ObjectProperty objPr = new SimpleObjectProperty<Font>(null);
         toolTip.fontProperty().bind(objPr);
@@ -176,7 +176,7 @@ public class TooltipTest {
         objPr.setValue(Font.getDefault());
         assertSame("Font cannot be bound", toolTip.fontProperty().getValue(), Font.getDefault());
     }
-    
+
     @Test public void checkGraphicPropertyBind() {
         ObjectProperty objPr = new SimpleObjectProperty<Node>(null);
         Rectangle rect = new Rectangle(10, 20);
@@ -185,7 +185,7 @@ public class TooltipTest {
         objPr.setValue(rect);
         assertSame("Graphic cannot be bound", toolTip.graphicProperty().getValue(), rect);
     }
-    
+
     @Test public void checkContentDisplayPropertyBind() {
         ObjectProperty objPr = new SimpleObjectProperty<ContentDisplay>(null);
         ContentDisplay cont = ContentDisplay.GRAPHIC_ONLY;
@@ -194,7 +194,7 @@ public class TooltipTest {
         objPr.setValue(cont);
         assertSame("ContentDisplay cannot be bound", toolTip.contentDisplayProperty().getValue(), cont);
     }
-    
+
     @Test public void checkGraphicTextGapPropertyBind() {
         DoubleProperty objPr = new SimpleDoubleProperty(2.0);
         toolTip.graphicTextGapProperty().bind(objPr);
@@ -202,7 +202,7 @@ public class TooltipTest {
         objPr.setValue(5.0);
         assertEquals("GraphicTextGap cannot be bound", toolTip.graphicTextGapProperty().getValue(), 5.0, 0.0);
     }
-    
+
     @Test public void textPropertyHasBeanReference() {
         assertSame(toolTip, toolTip.textProperty().getBean());
     }
@@ -234,7 +234,7 @@ public class TooltipTest {
     @Test public void wrapTextPropertyHasName() {
         assertEquals("wrapText", toolTip.wrapTextProperty().getName());
     }
-    
+
     @Test public void fontPropertyHasBeanReference() {
         assertSame(toolTip, toolTip.fontProperty().getBean());
     }
@@ -288,7 +288,7 @@ public class TooltipTest {
         ((StyleableProperty)toolTip.textAlignmentProperty()).applyStyle(null, TextAlignment.CENTER);
         assertSame(TextAlignment.CENTER, toolTip.getTextAlignment());
     }
-  
+
     @Test public void whenTextOverrunIsBound_impl_cssSettable_ReturnsFalse() {
         CssMetaData styleable = ((StyleableProperty)toolTip.textOverrunProperty()).getCssMetaData();
         assertTrue(styleable.isSettable(toolTip.get_bridge()));
@@ -296,18 +296,18 @@ public class TooltipTest {
         toolTip.textOverrunProperty().bind(other);
         assertFalse(styleable.isSettable(toolTip.get_bridge()));
     }
-    
+
     @Test public void whenTextOverrunIsSpecifiedViaCSSAndIsNotBound_impl_cssSettable_ReturnsTrue() {
         CssMetaData styleable = ((StyleableProperty)toolTip.textOverrunProperty()).getCssMetaData();
         ((StyleableProperty)toolTip.textOverrunProperty()).applyStyle(null, OverrunStyle.CENTER_ELLIPSIS);
         assertTrue(styleable.isSettable(toolTip.get_bridge()));
     }
-    
+
     @Test public void canSpecifyTextOverrunViaCSS() {
         ((StyleableProperty)toolTip.textOverrunProperty()).applyStyle(null, OverrunStyle.CLIP);
         assertSame(OverrunStyle.CLIP, toolTip.getTextOverrun());
     }
-   
+
     @Test public void whenWrapTextIsBound_impl_cssSettable_ReturnsFalse() {
         CssMetaData styleable = ((StyleableProperty)toolTip.wrapTextProperty()).getCssMetaData();
         assertTrue(styleable.isSettable(toolTip.get_bridge()));
@@ -315,17 +315,17 @@ public class TooltipTest {
         toolTip.wrapTextProperty().bind(other);
         assertFalse(styleable.isSettable(toolTip.get_bridge()));
     }
-    
+
     @Test public void whenWrapTextIsSpecifiedViaCSSAndIsNotBound_impl_cssSettable_ReturnsTrue() {
         CssMetaData styleable = ((StyleableProperty)toolTip.wrapTextProperty()).getCssMetaData();
           assertTrue(styleable.isSettable(toolTip.get_bridge()));
     }
-    
+
     @Test public void canSpecifyWrapTextViaCSS() {
         ((StyleableProperty)toolTip.wrapTextProperty()).applyStyle(null, Boolean.TRUE);
         assertSame(true, toolTip.isWrapText());
     }
-    
+
     @Test public void whenFontIsBound_impl_cssSettable_ReturnsFalse() {
         CssMetaData styleable = ((StyleableProperty)toolTip.fontProperty()).getCssMetaData();
           assertTrue(styleable.isSettable(toolTip.get_bridge()));
@@ -333,17 +333,17 @@ public class TooltipTest {
         toolTip.fontProperty().bind(other);
           assertFalse(styleable.isSettable(toolTip.get_bridge()));
     }
-    
+
     @Test public void whenFontIsSpecifiedViaCSSAndIsNotBound_impl_cssSettable_ReturnsTrue() {
         CssMetaData styleable = ((StyleableProperty)toolTip.fontProperty()).getCssMetaData();
           assertTrue(styleable.isSettable(toolTip.get_bridge()));
     }
-    
+
     @Test public void canSpecifyFontViaCSS() {
         ((StyleableProperty)toolTip.fontProperty()).applyStyle(null, Font.getDefault());
         assertSame(Font.getDefault(), toolTip.getFont());
     }
-    
+
     @Test public void whenGraphicIsBound_impl_cssSettable_ReturnsFalse() {
         CssMetaData styleable = ((StyleableProperty)toolTip.graphicProperty()).getCssMetaData();
         assertTrue(styleable.isSettable(toolTip.get_bridge()));
@@ -351,7 +351,7 @@ public class TooltipTest {
         toolTip.graphicProperty().bind(other);
           assertFalse(styleable.isSettable(toolTip.get_bridge()));
     }
-    
+
     @Test public void whenGraphicIsSpecifiedViaCSSAndIsNotBound_impl_cssSettable_ReturnsTrue() {
         CssMetaData styleable = ((StyleableProperty)toolTip.graphicProperty()).getCssMetaData();
           assertTrue(styleable.isSettable(toolTip.get_bridge()));
@@ -375,12 +375,12 @@ public class TooltipTest {
         CssMetaData styleable = ((StyleableProperty)toolTip.contentDisplayProperty()).getCssMetaData();
           assertTrue(styleable.isSettable(toolTip.get_bridge()));
     }
-    
+
     @Test public void canSpecifyContentDisplayViaCSS() {
         ((StyleableProperty)toolTip.contentDisplayProperty()).applyStyle(null, ContentDisplay.BOTTOM);
         assertSame(toolTip.getContentDisplay(), ContentDisplay.BOTTOM);
     }
-    
+
     @Test public void whenGraphicTextGapIsBound_impl_cssSettable_ReturnsFalse() {
         CssMetaData styleable = ((StyleableProperty)toolTip.graphicTextGapProperty()).getCssMetaData();
           assertTrue(styleable.isSettable(toolTip.get_bridge()));
@@ -399,7 +399,7 @@ public class TooltipTest {
         assertEquals(56.0, toolTip.getGraphicTextGap(),0.0);
     }
 
-    
+
 
     /*********************************************************************
      * Miscellaneous Tests                                         *
@@ -408,12 +408,12 @@ public class TooltipTest {
         toolTip.setText("tmp");
         assertEquals(toolTip.textProperty().getValue(), "tmp");
     }
-    
+
     @Test public void setTextAndSeeValue() {
         toolTip.setText("tmp");
         assertEquals(toolTip.getText(), "tmp");
     }
-    
+
     @Test public void setTextAlignmentAndSeeValueIsReflectedInModel() {
         toolTip.setTextAlignment(TextAlignment.JUSTIFY);
         assertEquals(toolTip.textAlignmentProperty().getValue(), TextAlignment.JUSTIFY);
@@ -428,66 +428,66 @@ public class TooltipTest {
         toolTip.setTextOverrun(OverrunStyle.LEADING_ELLIPSIS);
         assertEquals(toolTip.textOverrunProperty().getValue(), OverrunStyle.LEADING_ELLIPSIS);
     }
-    
+
     @Test public void setTextOverrunAndSeeValue() {
         toolTip.setTextOverrun(OverrunStyle.LEADING_ELLIPSIS);
         assertEquals(toolTip.getTextOverrun(), OverrunStyle.LEADING_ELLIPSIS);
     }
-    
+
     @Test public void setWrapTextAndSeeValueIsReflectedInModel() {
         toolTip.setWrapText(true);
         assertEquals(toolTip.wrapTextProperty().getValue(), true);
     }
-    
+
     @Test public void setWrapTextAndSeeValue() {
         toolTip.setWrapText(true);
         assertEquals(toolTip.isWrapText(), true);
     }
-    
+
     @Test public void setFontAndSeeValueIsReflectedInModel() {
         toolTip.setFont(Font.getDefault());
         assertEquals(toolTip.fontProperty().getValue(), Font.getDefault());
     }
-    
+
     @Test public void setFontAndSeeValue() {
         toolTip.setFont(Font.getDefault());
         assertEquals(toolTip.getFont(), Font.getDefault());
     }
-    
+
     @Test public void setGraphicAndSeeValueIsReflectedInModel() {
         Rectangle rect = new Rectangle();
         toolTip.setGraphic(rect);
         assertEquals(toolTip.graphicProperty().getValue(), rect);
     }
-    
+
     @Test public void setGraphicAndSeeValue() {
         Rectangle rect = new Rectangle();
         toolTip.setGraphic(rect);
         assertEquals(toolTip.getGraphic(), rect);
     }
-    
+
     @Test public void setContentDiaplyAndSeeValueIsReflectedInModel() {
         ContentDisplay cont = ContentDisplay.BOTTOM;
         toolTip.setContentDisplay(cont);
         assertEquals(toolTip.contentDisplayProperty().getValue(), cont);
     }
-    
+
     @Test public void setContentDisplayAndSeeValue() {
         ContentDisplay cont = ContentDisplay.TEXT_ONLY;
         toolTip.setContentDisplay(cont);
         assertEquals(toolTip.getContentDisplay(), cont);
     }
-    
+
     @Test public void setGraphicTextGapAndSeeValueIsReflectedInModel() {
         toolTip.setGraphicTextGap(32.0);
         assertEquals(toolTip.graphicTextGapProperty().getValue(), 32.0, 0.0);
     }
-    
+
     @Test public void setGraphicTextGapAndSeeValue() {
         toolTip.setGraphicTextGap(28.0);
         assertEquals(toolTip.getGraphicTextGap(), 28.0, 0.0);
     }
-    
+
     @Test public void installOnSingleNode() {
         try {
             Rectangle rect = new Rectangle(0, 0, 100, 100);
@@ -530,6 +530,6 @@ public class TooltipTest {
             fail("Could not uninstall same tooltip on many Node");
         }
     }
-    
-    
+
+
 }

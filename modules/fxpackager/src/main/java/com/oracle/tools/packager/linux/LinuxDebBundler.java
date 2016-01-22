@@ -58,7 +58,7 @@ public class LinuxDebBundler extends AbstractBundler {
 
     // Debian rules for package naming are used here
     // https://www.debian.org/doc/debian-policy/ch-controlfields.html#s-f-Source
-    // 
+    //
     // Package names must consist only of lower case letters (a-z), digits (0-9),
     // plus (+) and minus (-) signs, and periods (.).
     // They must be at least two characters long and must start with an alphanumeric character.
@@ -87,10 +87,10 @@ public class LinuxDebBundler extends AbstractBundler {
                                 MessageFormat.format(I18N.getString("error.invalid-value-for-package-name"), s),
                                                      I18N.getString("error.invalid-value-for-package-name.advice")));
                 }
-                
+
                 return s;
             });
-    
+
     public static final BundlerParamInfo<String> FULL_PACKAGE_NAME = new StandardBundlerParam<> (
             I18N.getString("param.full-package-name.name"),
             I18N.getString("param.full-package-name.description"),
@@ -162,16 +162,16 @@ public class LinuxDebBundler extends AbstractBundler {
             params -> {
                 try {
                     List<String> licenseFiles = LICENSE_FILE.fetchFrom(params);
-                    
+
                     //need to copy license file to the root of linux-app.image
                     if (licenseFiles.size() > 0) {
                         String licFileStr = licenseFiles.get(0);
-            
+
                         for (RelativeFileSet rfs : APP_RESOURCES_LIST.fetchFrom(params)) {
                             if (rfs.contains(licFileStr)) {
                                 return new String(IOUtils.readFully(new File(rfs.getBaseDirectory(), licFileStr)));
                             }
-                        }                        
+                        }
                     }
                 } catch (Exception e) {
                     if (Log.isDebug()) {
@@ -255,7 +255,7 @@ public class LinuxDebBundler extends AbstractBundler {
                         I18N.getString("error.tool-not-found.advice"));
             }
 
-            
+
             // validate license file, if used, exists in the proper place
             if (p.containsKey(LICENSE_FILE.getID())) {
                 List<RelativeFileSet> appResourcesList = APP_RESOURCES_LIST.fetchFrom(p);
@@ -273,10 +273,10 @@ public class LinuxDebBundler extends AbstractBundler {
                 }
             } else {
                 Log.info(I18N.getString("message.debs-like-licenses"));
-            }            
+            }
 
             boolean serviceHint = p.containsKey(SERVICE_HINT.getID()) && SERVICE_HINT.fetchFrom(p);
-            
+
             // for services, the app launcher must be less than 16 characters or init.d complains
             if (serviceHint && BUNDLE_NAME.fetchFrom(p).length() > 16) {
                 throw new ConfigException(
@@ -385,7 +385,7 @@ public class LinuxDebBundler extends AbstractBundler {
 
     /*
      * set permissions with a string like "rwxr-xr-x"
-     * 
+     *
      * This cannot be directly backport to 22u which is unfortunately built with 1.6
      */
     private void setPermissions(File file, String permissions) {

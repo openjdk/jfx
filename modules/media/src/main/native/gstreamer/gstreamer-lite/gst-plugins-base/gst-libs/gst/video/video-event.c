@@ -134,7 +134,7 @@ gst_video_event_new_downstream_force_key_unit (GstClockTime timestamp,
  * @count: integer that can be used to number key units
  *
  * Creates a new upstream force key unit event. An upstream force key unit event
- * can be sent to request upstream elements to produce a key unit. 
+ * can be sent to request upstream elements to produce a key unit.
  *
  * @running_time can be set to request a new key unit at a specific
  * running_time. If set to GST_CLOCK_TIME_NONE, upstream elements will produce a

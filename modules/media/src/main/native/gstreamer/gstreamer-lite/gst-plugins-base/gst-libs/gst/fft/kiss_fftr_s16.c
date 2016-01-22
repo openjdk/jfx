@@ -92,9 +92,9 @@ kiss_fftr_s16 (kiss_fftr_s16_cfg st, const kiss_fft_s16_scalar * timedata,
    * contains the sum of the even-numbered elements of the input time sequence
    * The imag part is the sum of the odd-numbered elements
    *
-   * The sum of tdc.r and tdc.i is the sum of the input time sequence. 
+   * The sum of tdc.r and tdc.i is the sum of the input time sequence.
    *      yielding DC of input time sequence
-   * The difference of tdc.r - tdc.i is the sum of the input (dot product) [1,-1,1,-1... 
+   * The difference of tdc.r - tdc.i is the sum of the input (dot product) [1,-1,1,-1...
    *      yielding Nyquist bin of input time sequence
    */
 

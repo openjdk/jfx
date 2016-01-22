@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #if USE(PLUGIN_HOST_PROCESS)
@@ -37,7 +37,7 @@
 namespace WebKit {
 
 class ProxyClass;
-    
+
 class ProxyInstance : public JSC::Bindings::Instance {
 public:
     static PassRefPtr<ProxyInstance> create(PassRefPtr<JSC::Bindings::RootObject> rootObject, NetscapePluginInstanceProxy* instanceProxy, uint32_t objectID)
@@ -51,14 +51,14 @@ public:
 
     JSC::JSValue fieldValue(JSC::ExecState*, const JSC::Bindings::Field*) const;
     void setFieldValue(JSC::ExecState*, const JSC::Bindings::Field*, JSC::JSValue) const;
-    
+
 
     NetscapePluginInstanceProxy* instanceProxy() { return m_instanceProxy; }
 
     void invalidate();
-    
+
     uint32_t objectID() const { return m_objectID; }
-    
+
 private:
     ProxyInstance(PassRefPtr<JSC::Bindings::RootObject>, NetscapePluginInstanceProxy*, uint32_t objectID);
 
@@ -77,24 +77,24 @@ private:
 
     virtual JSC::JSValue defaultValue(JSC::ExecState*, JSC::PreferredPrimitiveType) const;
     virtual JSC::JSValue valueOf(JSC::ExecState*) const;
-    
+
     virtual void getPropertyNames(JSC::ExecState*, JSC::PropertyNameArray&);
 
     JSC::JSValue stringValue(JSC::ExecState*) const;
     JSC::JSValue numberValue(JSC::ExecState*) const;
     JSC::JSValue booleanValue() const;
-    
+
     JSC::JSValue invoke(JSC::ExecState*, InvokeType, uint64_t identifier, const JSC::ArgList&);
-    
+
     template <typename T>
     std::unique_ptr<T> waitForReply(uint32_t requestID) const
     {
         auto reply = m_instanceProxy->waitForReply<T>(requestID);
-        
+
         // If the instance proxy was invalidated, just return a null reply.
         if (!m_instanceProxy)
             return nullptr;
-        
+
         return reply;
     }
 
@@ -103,7 +103,7 @@ private:
     HashMap<RefPtr<StringImpl>, std::unique_ptr<JSC::Bindings::Field>> m_fields;
     HashMap<RefPtr<StringImpl>, std::unique_ptr<JSC::Bindings::Method>> m_methods;
 };
-    
+
 }
 
 #endif // ProxyInstance_h

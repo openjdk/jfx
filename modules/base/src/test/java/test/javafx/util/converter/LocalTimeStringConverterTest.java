@@ -55,7 +55,7 @@ public class LocalTimeStringConverterTest {
         VALID_TIME_WITH_SECONDS = LocalTime.of(12, 34, 56);
         VALID_TIME_WITHOUT_SECONDS = LocalTime.of(12, 34, 0);
     }
-    
+
     private static final DateTimeFormatter aFormatter = DateTimeFormatter.ofPattern("HH mm ss");
     private static final DateTimeFormatter aParser = DateTimeFormatter.ofPattern("hh mm ss a");
 
@@ -90,46 +90,46 @@ public class LocalTimeStringConverterTest {
         this.formatter = formatter;
         this.parser = parser;
     }
-    
+
     @Before public void setup() {
     }
-    
+
     /*********************************************************************
      * Test constructors
-     ********************************************************************/ 
-    
+     ********************************************************************/
+
     @Test public void testConstructor() {
-        assertEquals(locale, 
+        assertEquals(locale,
                 LocalTimeStringConverterShim.getldtConverterLocale(converter));
         assertNull(LocalTimeStringConverterShim.getldtConverterDateStyle(converter));
-        assertEquals((timeStyle != null) ? timeStyle : FormatStyle.SHORT, 
+        assertEquals((timeStyle != null) ? timeStyle : FormatStyle.SHORT,
                 LocalTimeStringConverterShim.getldtConverterTimeStyle(converter));
         if (formatter != null) {
-            assertEquals(formatter, 
+            assertEquals(formatter,
                 LocalTimeStringConverterShim.getldtConverterFormatter(converter));
         }
         if (parser != null) {
-            assertEquals(parser, 
+            assertEquals(parser,
                 LocalTimeStringConverterShim.getldtConverterParser(converter));
         } else if (formatter != null) {
-            assertEquals(formatter, 
+            assertEquals(formatter,
                 LocalTimeStringConverterShim.getldtConverterFormatter(converter));
         }
     }
-    
-    
-    
+
+
+
     /*********************************************************************
      * Test toString / fromString methods
-     ********************************************************************/    
-    
+     ********************************************************************/
+
     @Test public void toString_to_fromString_testRoundtrip() {
         if (formatter == null) {
             // Only the default formatter/parser can guarantee roundtrip symmetry
             assertEquals(validTime, converter.fromString(converter.toString(validTime)));
         }
     }
-    
+
     @Test(expected=RuntimeException.class)
     public void fromString_testInvalidInput() {
         converter.fromString("abcdefg");

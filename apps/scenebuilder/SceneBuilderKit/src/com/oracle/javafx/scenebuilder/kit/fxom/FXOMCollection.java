@@ -44,41 +44,41 @@ import java.util.Set;
 
 /**
  *
- * 
+ *
  */
 public class FXOMCollection extends FXOMObject {
-    
+
     private final List<FXOMObject> items = new ArrayList<>();
     private Class<?> declaredClass;
 
     FXOMCollection(
-            FXOMDocument fxomDocument, 
-            GlueElement glueElement, 
+            FXOMDocument fxomDocument,
+            GlueElement glueElement,
             Class<?> declaredClass,
             Object sceneGraphObject,
             List<FXOMObject> items) {
         super(fxomDocument, glueElement, sceneGraphObject);
-        
+
         assert (declaredClass != null);
         assert (declaredClass.getSimpleName().equals(glueElement.getTagName()));
         assert sceneGraphObject instanceof Collection;
         assert items != null;
-        
+
         this.declaredClass = declaredClass;
         for (FXOMObject i : items) {
             this.items.add(i);
             i.setParentCollection(this);
         }
     }
-    
-    
+
+
     FXOMCollection(
             FXOMDocument fxomDocument,
             Class<?> declaredClass) {
         super(fxomDocument, declaredClass.getSimpleName());
         this.declaredClass = declaredClass;
     }
-    
+
     public Class<?> getDeclaredClass() {
         return declaredClass;
     }
@@ -89,9 +89,9 @@ public class FXOMCollection extends FXOMObject {
 
     public List<FXOMObject> getItems() {
         return Collections.unmodifiableList(items);
-    }    
-    
-    
+    }
+
+
     /*
      * FXOMObject
      */
@@ -105,7 +105,7 @@ public class FXOMCollection extends FXOMObject {
     @Override
     public FXOMObject searchWithSceneGraphObject(Object sceneGraphObject) {
         FXOMObject result;
-        
+
         result = super.searchWithSceneGraphObject(sceneGraphObject);
         if (result == null) {
             final Iterator<FXOMObject> it = items.iterator();
@@ -114,14 +114,14 @@ public class FXOMCollection extends FXOMObject {
                 result = item.searchWithSceneGraphObject(sceneGraphObject);
             }
         }
-        
+
         return result;
     }
 
     @Override
     public FXOMObject searchWithFxId(String fxId) {
         FXOMObject result;
-        
+
         result = super.searchWithFxId(fxId);
         if (result == null) {
             final Iterator<FXOMObject> it = items.iterator();
@@ -130,16 +130,16 @@ public class FXOMCollection extends FXOMObject {
                 result = item.searchWithFxId(fxId);
             }
         }
-        
+
         return result;
     }
-    
+
     @Override
     protected void collectDeclaredClasses(Set<Class<?>> result) {
         assert result != null;
-        
+
         result.add(declaredClass);
-        
+
         for (FXOMObject i : items) {
             i.collectDeclaredClasses(result);
         }
@@ -149,7 +149,7 @@ public class FXOMCollection extends FXOMObject {
     protected void collectProperties(PropertyName propertyName, List<FXOMProperty> result) {
         assert propertyName != null;
         assert result != null;
-        
+
         for (FXOMObject i : items) {
             i.collectProperties(propertyName, result);
         }
@@ -158,7 +158,7 @@ public class FXOMCollection extends FXOMObject {
     @Override
     protected void collectNullProperties(List<FXOMPropertyT> result) {
         assert result != null;
-        
+
         for (FXOMObject i : items) {
             i.collectNullProperties(result);
         }
@@ -167,7 +167,7 @@ public class FXOMCollection extends FXOMObject {
     @Override
     protected void collectPropertiesT(List<FXOMPropertyT> result) {
         assert result != null;
-        
+
         for (FXOMObject i : items) {
             i.collectPropertiesT(result);
         }
@@ -202,7 +202,7 @@ public class FXOMCollection extends FXOMObject {
         if (fxId != null) {
             result.put(fxId, this);
         }
-        
+
         for (FXOMObject i : items) {
             i.collectFxIds(result);
         }
@@ -232,10 +232,10 @@ public class FXOMCollection extends FXOMObject {
     /*
      * FXOMNode
      */
-    
+
     @Override
     protected void changeFxomDocument(FXOMDocument destination) {
-        
+
         super.changeFxomDocument(destination);
         for (FXOMObject i : items) {
             i.changeFxomDocument(destination);
@@ -248,12 +248,12 @@ public class FXOMCollection extends FXOMObject {
             i.documentLocationWillChange(newLocation);
         }
     }
-    
-    
+
+
     /*
      * Package
      */
-    
+
     /* Reserved to FXOMObject.addToParentCollection() private use */
     void addValue(int index, FXOMObject item) {
         assert item != null;
@@ -265,7 +265,7 @@ public class FXOMCollection extends FXOMObject {
             items.add(index, item);
         }
     }
-    
+
     /* Reserved to FXOMObject.removeFromParentCollection() private use */
     void removeValue(FXOMObject item) {
         assert item != null;

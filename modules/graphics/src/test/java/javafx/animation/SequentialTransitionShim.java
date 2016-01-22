@@ -31,7 +31,7 @@ public class SequentialTransitionShim {
 
     public static SequentialTransition getSequentialTransition(AbstractMasterTimer timer) {
         return new SequentialTransition(timer);
-        
+
     }
-    
+
 }

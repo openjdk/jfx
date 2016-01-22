@@ -21,7 +21,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -54,9 +54,9 @@ VisiblePosition::VisiblePosition(const Position &pos, EAffinity affinity)
 void VisiblePosition::init(const Position& position, EAffinity affinity)
 {
     m_affinity = affinity;
-    
+
     m_deepPosition = canonicalPosition(position);
-    
+
     // When not at a line wrap, make sure to end up with DOWNSTREAM affinity.
     if (m_affinity == UPSTREAM && (isNull() || inSameLine(VisiblePosition(position, DOWNSTREAM), *this)))
         m_affinity = DOWNSTREAM;
@@ -80,14 +80,14 @@ VisiblePosition VisiblePosition::previous(EditingBoundaryCrossingRule rule) cons
     ASSERT(rule == CanCrossEditingBoundary || rule == CannotCrossEditingBoundary);
     // find first previous DOM position that is visible
     Position pos = previousVisuallyDistinctCandidate(m_deepPosition);
-    
+
     // return null visible position if there is no previous visible position
     if (pos.atStartOfTree())
         return VisiblePosition();
-        
+
     VisiblePosition prev = VisiblePosition(pos, DOWNSTREAM);
     ASSERT(prev != *this);
-    
+
 #ifndef NDEBUG
     // we should always be able to make the affinity DOWNSTREAM, because going previous from an
     // UPSTREAM position can never yield another UPSTREAM position (unless line wrap length is 0!).
@@ -100,7 +100,7 @@ VisiblePosition VisiblePosition::previous(EditingBoundaryCrossingRule rule) cons
 
     if (rule == CanCrossEditingBoundary)
         return prev;
-    
+
     return honorEditingBoundaryAtOrBefore(prev);
 }
 
@@ -441,19 +441,19 @@ VisiblePosition VisiblePosition::honorEditingBoundaryAtOrBefore(const VisiblePos
 {
     if (pos.isNull())
         return pos;
-    
+
     Node* highestRoot = highestEditableRoot(deepEquivalent());
-    
+
     // Return empty position if pos is not somewhere inside the editable region containing this position
     if (highestRoot && !pos.deepEquivalent().deprecatedNode()->isDescendantOf(highestRoot))
         return VisiblePosition();
-        
+
     // Return pos itself if the two are from the very same editable region, or both are non-editable
     // FIXME: In the non-editable case, just because the new position is non-editable doesn't mean movement
     // to it is allowed.  VisibleSelection::adjustForEditableContent has this problem too.
     if (highestEditableRoot(pos.deepEquivalent()) == highestRoot)
         return pos;
-  
+
     // Return empty position if this position is non-editable, but pos is editable
     // FIXME: Move to the previous non-editable region.
     if (!highestRoot)
@@ -467,13 +467,13 @@ VisiblePosition VisiblePosition::honorEditingBoundaryAtOrAfter(const VisiblePosi
 {
     if (pos.isNull())
         return pos;
-    
+
     Node* highestRoot = highestEditableRoot(deepEquivalent());
-    
+
     // Return empty position if pos is not somewhere inside the editable region containing this position
     if (highestRoot && !pos.deepEquivalent().deprecatedNode()->isDescendantOf(highestRoot))
         return VisiblePosition();
-    
+
     // Return pos itself if the two are from the very same editable region, or both are non-editable
     // FIXME: In the non-editable case, just because the new position is non-editable doesn't mean movement
     // to it is allowed.  VisibleSelection::adjustForEditableContent has this problem too.
@@ -507,7 +507,7 @@ Position VisiblePosition::canonicalPosition(const Position& passedPosition)
     // paths that pass selection endpoints, and updateLayout can change the selection.
     Position position = passedPosition;
 
-    // FIXME (9535):  Canonicalizing to the leftmost candidate means that if we're at a line wrap, we will 
+    // FIXME (9535):  Canonicalizing to the leftmost candidate means that if we're at a line wrap, we will
     // ask renderers to paint downstream carets for other renderers.
     // To fix this, we need to either a) add code to all paintCarets to pass the responsibility off to
     // the appropriate renderer for VisiblePosition's like these, or b) canonicalize to the rightmost candidate
@@ -527,7 +527,7 @@ Position VisiblePosition::canonicalPosition(const Position& passedPosition)
     if (candidate.isCandidate())
         return candidate;
 
-    // When neither upstream or downstream gets us to a candidate (upstream/downstream won't leave 
+    // When neither upstream or downstream gets us to a candidate (upstream/downstream won't leave
     // blocks or enter new ones), we search forward and backward until we find one.
     Position next = canonicalizeCandidate(nextCandidate(position));
     Position prev = canonicalizeCandidate(previousCandidate(position));
@@ -540,12 +540,12 @@ Position VisiblePosition::canonicalPosition(const Position& passedPosition)
         return next.isNotNull() ? next : prev;
 
     Node* editingRoot = editableRootForPosition(position);
-        
-    // If the html element is editable, descending into its body will look like a descent 
+
+    // If the html element is editable, descending into its body will look like a descent
     // from non-editable to editable content since rootEditableElement() always stops at the body.
     if ((editingRoot && editingRoot->hasTagName(htmlTag)) || position.deprecatedNode()->isDocumentNode())
         return next.isNotNull() ? next : prev;
-        
+
     bool prevIsInSameEditableElement = prevNode && editableRootForPosition(prev) == editingRoot;
     bool nextIsInSameEditableElement = nextNode && editableRootForPosition(next) == editingRoot;
     if (prevIsInSameEditableElement && !nextIsInSameEditableElement)
@@ -563,7 +563,7 @@ Position VisiblePosition::canonicalPosition(const Position& passedPosition)
     bool prevIsOutsideOriginalBlock = !prevNode->isDescendantOf(originalBlock) && prevNode != originalBlock;
     if (nextIsOutsideOriginalBlock && !prevIsOutsideOriginalBlock)
         return prev;
-        
+
     return next;
 }
 
@@ -602,7 +602,7 @@ LayoutRect VisiblePosition::localCaretRect(RenderObject*& renderer) const
         return IntRect();
     }
     Node* node = m_deepPosition.anchorNode();
-    
+
     renderer = node->renderer();
     if (!renderer)
         return LayoutRect();
@@ -669,7 +669,7 @@ PassRefPtr<Range> makeRange(const VisiblePosition &start, const VisiblePosition 
 {
     if (start.isNull() || end.isNull())
         return 0;
-    
+
     Position s = start.deepEquivalent().parentAnchoredEquivalent();
     Position e = end.deepEquivalent().parentAnchoredEquivalent();
     if (s.isNull() || e.isNull())

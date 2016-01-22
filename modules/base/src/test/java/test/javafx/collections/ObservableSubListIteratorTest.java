@@ -44,7 +44,7 @@ import org.junit.runners.Parameterized;
  * are run using the sublist-based fixture. There are also some
  * additional tests that make assertions about the underlying list
  * after mutating the sublist via the iterator.
- * 
+ *
  */
 @RunWith(Parameterized.class)
 public class ObservableSubListIteratorTest extends ObservableListIteratorTest {

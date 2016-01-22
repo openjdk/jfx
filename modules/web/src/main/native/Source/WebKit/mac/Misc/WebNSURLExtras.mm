@@ -7,13 +7,13 @@
  * are met:
  *
  * 1.  Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer. 
+ *     notice, this list of conditions and the following disclaimer.
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
- *     documentation and/or other materials provided with the distribution. 
+ *     documentation and/or other materials provided with the distribution.
  * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
- *     from this software without specific prior written permission. 
+ *     from this software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY APPLE AND ITS CONTRIBUTORS "AS IS" AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
@@ -90,7 +90,7 @@ using namespace WTF;
 + (NSURL *)_web_URLWithData:(NSData *)data
 {
     return URLWithData(data, nil);
-}      
+}
 
 + (NSURL *)_web_URLWithData:(NSData *)data relativeToURL:(NSURL *)baseURL
 {
@@ -128,23 +128,23 @@ using namespace WTF;
  }
 
 - (NSURL *)_webkit_canonicalize
-{    
+{
     NSURLRequest *request = [[NSURLRequest alloc] initWithURL:self];
     Class concreteClass = WKNSURLProtocolClassForRequest(request);
     if (!concreteClass) {
         [request release];
         return self;
     }
-    
+
     // This applies NSURL's concept of canonicalization, but not URL's concept. It would
     // make sense to apply both, but when we tried that it caused a performance degradation
     // (see 5315926). It might make sense to apply only the URL concept and not the NSURL
     // concept, but it's too risky to make that change for WebKit 3.0.
     NSURLRequest *newRequest = [concreteClass canonicalRequestForRequest:request];
-    NSURL *newURL = [newRequest URL]; 
-    NSURL *result = [[newURL retain] autorelease]; 
+    NSURL *newURL = [newRequest URL];
+    NSURL *result = [[newURL retain] autorelease];
     [request release];
-    
+
     return result;
 }
 
@@ -179,7 +179,7 @@ using namespace WTF;
 }
 
 - (BOOL)_webkit_isFileURL
-{    
+{
     return [[self _web_originalDataAsString] _webkit_isFileURL];
 }
 
@@ -200,7 +200,7 @@ using namespace WTF;
     if (range.location == kCFNotFound) {
         return self;
     }
-    
+
     UInt8 static_buffer[URL_BYTES_BUFFER_LENGTH];
     UInt8 *buffer = static_buffer;
     CFIndex bytesFilled = CFURLGetBytes((CFURLRef)self, buffer, URL_BYTES_BUFFER_LENGTH);
@@ -210,7 +210,7 @@ using namespace WTF;
         bytesFilled = CFURLGetBytes((CFURLRef)self, buffer, bytesToAllocate);
         ASSERT(bytesFilled == bytesToAllocate);
     }
-    
+
     int i;
     BOOL changed = NO;
     for (i = 0; i < range.length; ++i) {
@@ -221,7 +221,7 @@ using namespace WTF;
             changed = YES;
         }
     }
-    
+
     NSURL *result = changed
         ? CFBridgingRelease(CFURLCreateAbsoluteURLWithBytes(NULL, buffer, bytesFilled, kCFStringEncodingUTF8, nil, YES))
         : self;
@@ -229,7 +229,7 @@ using namespace WTF;
     if (buffer != static_buffer) {
         free(buffer);
     }
-    
+
     return result;
 }
 
@@ -391,7 +391,7 @@ static inline NSURL *createYouTubeURL(NSString *videoID, NSString *timeID)
     CFRelease(UUIDRef);
     NSURL *URL = [NSURL URLWithString:[NSString stringWithFormat:@"%@://%@/%@", WebDataProtocolScheme, UUIDString, relativePart]];
     CFRelease(UUIDString);
-    
+
     return URL;
 }
 
@@ -499,7 +499,7 @@ static inline NSURL *createYouTubeURL(NSString *videoID, NSString *timeID)
 - (NSString *)_webkit_URLFragment
 {
     NSRange fragmentRange;
-    
+
     fragmentRange = [self rangeOfString:@"#" options:NSLiteralSearch];
     if (fragmentRange.location == NSNotFound)
         return nil;
@@ -522,35 +522,35 @@ static inline NSURL *createYouTubeURL(NSString *videoID, NSString *timeID)
     unsigned queryLength = [self length];
     if (!queryLength)
         return nil;
-    
+
     NSMutableDictionary *queryKeysAndValues = nil;
     NSRange equalSearchRange = NSMakeRange(0, queryLength);
-    
+
     while (equalSearchRange.location < queryLength - 1 && equalSearchRange.length) {
-        
+
         // Search for "=".
         NSRange equalRange = [self rangeOfString:@"=" options:NSLiteralSearch range:equalSearchRange];
         if (equalRange.location == NSNotFound)
             break;
-        
+
         unsigned indexAfterEqual = equalRange.location + 1;
         if (indexAfterEqual > queryLength - 1)
             break;
-                        
+
         // Get the key before the "=".
         NSRange keyRange = NSMakeRange(equalSearchRange.location, equalRange.location - equalSearchRange.location);
-        
+
         // Seach for the ampersand.
         NSRange ampersandSearchRange = NSMakeRange(indexAfterEqual, queryLength - indexAfterEqual);
         NSRange ampersandRange = [self rangeOfString:@"&" options:NSLiteralSearch range:ampersandSearchRange];
-        
+
         // Get the value after the "=", before the ampersand.
         NSRange valueRange;
         if (ampersandRange.location != NSNotFound)
             valueRange = NSMakeRange(indexAfterEqual, ampersandRange.location - indexAfterEqual);
-        else 
+        else
             valueRange = NSMakeRange(indexAfterEqual, queryLength - indexAfterEqual);
-                
+
         // Save the key and the value.
         if (keyRange.length && valueRange.length) {
             if (queryKeysAndValues == nil)
@@ -560,16 +560,16 @@ static inline NSURL *createYouTubeURL(NSString *videoID, NSString *timeID)
             if ([key length] && [value length])
                 [queryKeysAndValues setObject:value forKey:key];
         }
-        
+
         // At the end.
         if (ampersandRange.location == NSNotFound)
             break;
-        
+
         // Continue searching after the ampersand.
         unsigned indexAfterAmpersand = ampersandRange.location + 1;
         equalSearchRange = NSMakeRange(indexAfterAmpersand, queryLength - indexAfterAmpersand);
     }
-    
+
     return queryKeysAndValues;
 }
 

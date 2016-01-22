@@ -35,13 +35,13 @@ import com.oracle.javafx.scenebuilder.kit.fxom.glue.GlueElement;
 
 /**
  *
- * 
+ *
  */
 class TransientIntrinsic extends TransientNode {
-    
+
     private final FXOMIntrinsic.Type type;
     private final GlueElement glueElement;
-    
+
     public TransientIntrinsic(
             TransientNode parentNode,
             FXOMIntrinsic.Type type,

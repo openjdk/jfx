@@ -56,7 +56,7 @@ public class EffectsTestBase {
     private Stage stage;
     protected Node n;
     private Effect e;
-    
+
     protected void setupTest(Effect effect) {
         e = effect;
         Group root = new Group();
@@ -64,7 +64,7 @@ public class EffectsTestBase {
         stage = new Stage();
         stage.setScene(scene);
         stage.show();
-        toolkit = (StubToolkit) Toolkit.getToolkit(); 
+        toolkit = (StubToolkit) Toolkit.getToolkit();
         n = new Rectangle(100, 100);
         n.setEffect(effect);
         root.getChildren().add(n);
@@ -73,7 +73,7 @@ public class EffectsTestBase {
     protected void setEffect(Effect effect) {
         n.setEffect(effect);
     }
-    
+
     protected void pulse() {
         toolkit.fireTestPulse();
     }
@@ -306,7 +306,7 @@ public class EffectsTestBase {
         pulse();
         return pgGetter.invoke(pgObject);
     }
-    
+
     protected Object getDoublePropertySynced(
             String effectName,
             String propertyName,

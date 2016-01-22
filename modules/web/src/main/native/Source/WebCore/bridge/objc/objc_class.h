@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef KJS_BINDINGS_OBJC_CLASS_H
@@ -36,18 +36,18 @@ class ObjcClass : public Class
 {
 protected:
     ObjcClass (ClassStructPtr aClass); // Use classForIsA to create an ObjcClass.
-    
+
 public:
     // Return the cached ObjC of the specified name.
     static ObjcClass *classForIsA(ClassStructPtr);
-    
+
     virtual Method* methodNamed(PropertyName, Instance*) const;
     virtual Field *fieldNamed(PropertyName, Instance*) const;
 
     virtual JSValue fallbackObject(ExecState*, Instance*, PropertyName);
-    
+
     ClassStructPtr isa() { return _isa; }
-    
+
 private:
     ClassStructPtr _isa;
     mutable HashMap<String, OwnPtr<Method>> m_methodCache;

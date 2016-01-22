@@ -85,16 +85,16 @@ namespace JSC {
                 return String();
             return m_provider->getRange(m_startChar, m_endChar);
         }
-        
+
         CString toUTF8() const;
-        
+
         intptr_t providerID() const
         {
             if (!m_provider)
                 return SourceProvider::nullID;
             return m_provider->asID();
         }
-        
+
         bool isNull() const { return !m_provider; }
         SourceProvider* provider() const { return m_provider.get(); }
         int firstLine() const { return m_firstLine; }
@@ -102,7 +102,7 @@ namespace JSC {
         int startOffset() const { return m_startChar; }
         int endOffset() const { return m_endChar; }
         int length() const { return m_endChar - m_startChar; }
-        
+
         SourceCode subExpression(unsigned openBrace, unsigned closeBrace, int firstLine, int startColumn);
 
     private:

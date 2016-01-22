@@ -662,7 +662,7 @@ void InspectorTimelineAgent::commitFrameRecord()
 {
     if (!m_pendingFrameRecord)
         return;
-    
+
     m_pendingFrameRecord->setObject("data", InspectorObject::create());
     innerAddRecordToTimeline(m_pendingFrameRecord.release(), TimelineRecordType::BeginFrame);
 }

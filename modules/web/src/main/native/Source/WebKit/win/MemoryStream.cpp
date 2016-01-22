@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -86,7 +86,7 @@ ULONG STDMETHODCALLTYPE MemoryStream::Release(void)
 
 // ISequentialStream ----------------------------------------------------------
 
-HRESULT STDMETHODCALLTYPE MemoryStream::Read( 
+HRESULT STDMETHODCALLTYPE MemoryStream::Read(
     /* [length_is][size_is][out] */ void* pv,
     /* [in] */ ULONG cb,
     /* [out] */ ULONG* pcbRead)
@@ -110,7 +110,7 @@ HRESULT STDMETHODCALLTYPE MemoryStream::Read(
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE MemoryStream::Write( 
+HRESULT STDMETHODCALLTYPE MemoryStream::Write(
     /* [size_is][in] */ const void* /*pv*/,
     /* [in] */ ULONG /*cb*/,
     /* [out] */ ULONG* /*pcbWritten*/)
@@ -121,7 +121,7 @@ HRESULT STDMETHODCALLTYPE MemoryStream::Write(
 
 // IStream --------------------------------------------------------------------
 
-HRESULT STDMETHODCALLTYPE MemoryStream::Seek( 
+HRESULT STDMETHODCALLTYPE MemoryStream::Seek(
     /* [in] */ LARGE_INTEGER dlibMove,
     /* [in] */ DWORD dwOrigin,
     /* [out] */ ULARGE_INTEGER* plibNewPosition)
@@ -173,13 +173,13 @@ HRESULT STDMETHODCALLTYPE MemoryStream::Seek(
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE MemoryStream::SetSize( 
+HRESULT STDMETHODCALLTYPE MemoryStream::SetSize(
     /* [in] */ ULARGE_INTEGER /*libNewSize*/)
 {
     return STG_E_INVALIDFUNCTION;
 }
 
-HRESULT STDMETHODCALLTYPE MemoryStream::CopyTo( 
+HRESULT STDMETHODCALLTYPE MemoryStream::CopyTo(
     /* [unique][in] */ IStream* pstm,
     /* [in] */ ULARGE_INTEGER cb,
     /* [out] */ ULARGE_INTEGER* pcbRead,
@@ -207,7 +207,7 @@ HRESULT STDMETHODCALLTYPE MemoryStream::CopyTo(
     return hr;
 }
 
-HRESULT STDMETHODCALLTYPE MemoryStream::Commit( 
+HRESULT STDMETHODCALLTYPE MemoryStream::Commit(
     /* [in] */ DWORD /*grfCommitFlags*/)
 {
     return S_OK;
@@ -218,7 +218,7 @@ HRESULT STDMETHODCALLTYPE MemoryStream::Revert( void)
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE MemoryStream::LockRegion( 
+HRESULT STDMETHODCALLTYPE MemoryStream::LockRegion(
     /* [in] */ ULARGE_INTEGER /*libOffset*/,
     /* [in] */ ULARGE_INTEGER /*cb*/,
     /* [in] */ DWORD /*dwLockType*/)
@@ -226,7 +226,7 @@ HRESULT STDMETHODCALLTYPE MemoryStream::LockRegion(
     return STG_E_INVALIDFUNCTION;
 }
 
-HRESULT STDMETHODCALLTYPE MemoryStream::UnlockRegion( 
+HRESULT STDMETHODCALLTYPE MemoryStream::UnlockRegion(
     /* [in] */ ULARGE_INTEGER /*libOffset*/,
     /* [in] */ ULARGE_INTEGER /*cb*/,
     /* [in] */ DWORD /*dwLockType*/)
@@ -234,7 +234,7 @@ HRESULT STDMETHODCALLTYPE MemoryStream::UnlockRegion(
     return STG_E_INVALIDFUNCTION;
 }
 
-HRESULT STDMETHODCALLTYPE MemoryStream::Stat( 
+HRESULT STDMETHODCALLTYPE MemoryStream::Stat(
     /* [out] */ STATSTG* pstatstg,
     /* [in] */ DWORD /*grfStatFlag*/)
 {
@@ -250,7 +250,7 @@ HRESULT STDMETHODCALLTYPE MemoryStream::Stat(
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE MemoryStream::Clone( 
+HRESULT STDMETHODCALLTYPE MemoryStream::Clone(
     /* [out] */ IStream** ppstm)
 {
     MemoryStream::createInstance(m_buffer).copyRefTo(ppstm);

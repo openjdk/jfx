@@ -149,7 +149,7 @@ class WinTextRangeProvider {
         if (text == null) return;
         int length = text.length();
         if (length == 0) return;
-        
+
         switch (unit) {
             case TextUnit_Character: {
                 if (start == length) start--;
@@ -189,7 +189,7 @@ class WinTextRangeProvider {
                     start = lineStart;
                     end = lineEnd;
                 }
-                
+
                 break;
             }
             case TextUnit_Paragraph: {
@@ -293,7 +293,7 @@ class WinTextRangeProvider {
                     boolean italic = font.getStyle().toLowerCase().contains("italic");
                     variant = new WinVariant();
                     variant.vt = WinVariant.VT_BOOL;
-                    variant.boolVal = italic;   
+                    variant.boolVal = italic;
                 }
                 break;
             }
@@ -361,7 +361,7 @@ class WinTextRangeProvider {
                 int oldStart = start;
                 start = Math.max(0, Math.min(start + requestedCount, length - 1));
                 end = start + 1;
-                actualCount = start - oldStart; 
+                actualCount = start - oldStart;
                 break;
             }
             case TextUnit_Format:
@@ -464,7 +464,7 @@ class WinTextRangeProvider {
             case TextUnit_Character: {
                 int oldOffset = offset;
                 offset = Math.max(0, Math.min(offset + requestedCount, length));
-                actualCount = offset - oldOffset; 
+                actualCount = offset - oldOffset;
                 break;
             }
             case TextUnit_Format:

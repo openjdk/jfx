@@ -114,7 +114,7 @@ public class HelloPopup extends Application {
 
         private Popup nextPopup;
 
-        public PopupActionHandler(PopupPlacement popupPlacement, 
+        public PopupActionHandler(PopupPlacement popupPlacement,
                                   Node popupParent) {
             this.popupPlacement = popupPlacement;
             this.popupParent = popupParent;

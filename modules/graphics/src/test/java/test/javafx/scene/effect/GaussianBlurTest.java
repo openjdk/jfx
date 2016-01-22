@@ -49,7 +49,7 @@ public class GaussianBlurTest extends EffectsTestBase {
         pulse();
         assertEquals(1.0f, ((com.sun.scenario.effect.GaussianBlur)effect.impl_getImpl()).getRadius(), 1e-100);
     }
-    
+
     @Test
     public void testDefaultRadius() {
         // default value should be 10
@@ -58,7 +58,7 @@ public class GaussianBlurTest extends EffectsTestBase {
         pulse();
         assertEquals(10, ((com.sun.scenario.effect.GaussianBlur)effect.impl_getImpl()).getRadius(), 1e-100);
     }
-    
+
     @Test
     public void testMinRadius() {
         // 0 should be ok
@@ -67,7 +67,7 @@ public class GaussianBlurTest extends EffectsTestBase {
         effect.setRadius(-0.1f);
         assertEquals(-0.1f, effect.getRadius(), 1e-100);
         pulse();
-        assertEquals(0f, ((com.sun.scenario.effect.GaussianBlur)effect.impl_getImpl()).getRadius(), 1e-100);        
+        assertEquals(0f, ((com.sun.scenario.effect.GaussianBlur)effect.impl_getImpl()).getRadius(), 1e-100);
     }
 
     @Test
@@ -75,10 +75,10 @@ public class GaussianBlurTest extends EffectsTestBase {
         // 63 should be ok
         effect.setRadius(63);
         // try setting value greater than maximal
-        effect.setRadius(63.1f); 
+        effect.setRadius(63.1f);
         assertEquals(63.1f, effect.getRadius(), 1e-100);
         pulse();
-        assertEquals(63f, ((com.sun.scenario.effect.GaussianBlur)effect.impl_getImpl()).getRadius(), 1e-100);        
+        assertEquals(63f, ((com.sun.scenario.effect.GaussianBlur)effect.impl_getImpl()).getRadius(), 1e-100);
     }
 
     @Test

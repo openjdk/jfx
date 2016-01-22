@@ -66,14 +66,14 @@ public class HelloTextBoxClipboard extends Application {
 
         final HBox btns = new HBox();
         final Button copy = new Button("Copy");
-		copy.setOnAction(e -> {
+        copy.setOnAction(e -> {
             ClipboardContent content = new ClipboardContent();
             content.putString(copyFromText.getText());
             Clipboard.getSystemClipboard().setContent(content);
         });
 
         final Button paste = new Button("Paste");
-		paste.setOnAction(e -> {
+        paste.setOnAction(e -> {
             Set<DataFormat> types = Clipboard.getSystemClipboard().getContentTypes();
             for (DataFormat type: types) {
                 System.out.println("TYPE: " + type);

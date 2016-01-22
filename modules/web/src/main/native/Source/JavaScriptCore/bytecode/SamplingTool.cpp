@@ -121,13 +121,13 @@ void SamplingRegion::sample()
 {
     // Make sure we lock s_current.
     Locker locker;
-    
+
     // Create a spectrum if we don't have one already.
     if (!s_spectrum)
         s_spectrum = new Spectrum<const char*>();
-    
+
     ASSERT(s_currentOrReserved & 1);
-    
+
     // Walk the region stack, and record each region we see.
     SamplingRegion* region = bitwise_cast<SamplingRegion*>(s_currentOrReserved & ~1);
     if (region) {
@@ -135,7 +135,7 @@ void SamplingRegion::sample()
             s_spectrum->add(region->m_name);
     } else
         s_noneOfTheAbove++;
-    
+
     if (s_numberOfSamplesSinceDump++ == SamplingThread::s_hertz) {
         s_numberOfSamplesSinceDump = 0;
         dumpInternal();
@@ -145,7 +145,7 @@ void SamplingRegion::sample()
 void SamplingRegion::dump()
 {
     Locker locker;
-    
+
     dumpInternal();
 }
 
@@ -155,13 +155,13 @@ void SamplingRegion::dumpInternal()
         dataLogF("\nSamplingRegion: was never sampled.\n\n");
         return;
     }
-    
+
     Vector<Spectrum<const char*>::KeyAndCount> list = s_spectrum->buildList();
-    
+
     unsigned long total = s_noneOfTheAbove;
     for (unsigned i = list.size(); i--;)
         total += list[i].count;
-    
+
     dataLogF("\nSamplingRegion: sample counts for regions: (%lu samples)\n", total);
 
     for (unsigned i = list.size(); i--;)
@@ -189,7 +189,7 @@ static void sleepForMicroseconds(unsigned us)
     Sleep(ms);
 }
 
-#else 
+#else
 
 static void sleepForMicroseconds(unsigned us)
 {
@@ -358,7 +358,7 @@ void SamplingTool::dump(ExecState* exec)
     // Tidies up SunSpider output by removing short scripts - such a small number of samples would likely not be useful anyhow.
     if (m_sampleCount < 10)
         return;
-    
+
     // (1) Build and sort 'opcodeSampleInfo' array.
 
     OpcodeSampleInfo opcodeSampleInfo[numOpcodeIDs];
@@ -383,7 +383,7 @@ void SamplingTool::dump(ExecState* exec)
             continue;
 
         OpcodeID opcodeID = opcodeSampleInfo[i].opcode;
-        
+
         const char* opcodeName = opcodeNames[opcodeID];
         const char* opcodePadding = padOpcodeName(opcodeID, 28);
         double percentOfVM = (static_cast<double>(count) * 100) / m_opcodeSampleCount;
@@ -392,7 +392,7 @@ void SamplingTool::dump(ExecState* exec)
         double percentInCTIFunctions = (static_cast<double>(countInCTIFunctions) * 100) / count;
         debugDebugPrintf("%s:%s%-6lld %.3f%%\t%.3f%%\t  |   %-6lld %.3f%%\n", opcodeName, opcodePadding, count, percentOfVM, percentOfTotal, countInCTIFunctions, percentInCTIFunctions);
     }
-    
+
     dataLogF("\n[*] Samples inside host code are not charged to any Bytecode.\n\n");
     dataLogF("\tSamples inside VM:\t\t%lld / %lld (%.3f%%)\n", m_opcodeSampleCount, m_sampleCount, (static_cast<double>(m_opcodeSampleCount) * 100) / m_sampleCount);
     dataLogF("\tSamples inside host code:\t%lld / %lld (%.3f%%)\n\n", m_sampleCount - m_opcodeSampleCount, m_sampleCount, (static_cast<double>(m_sampleCount - m_opcodeSampleCount) * 100) / m_sampleCount);
@@ -402,7 +402,7 @@ void SamplingTool::dump(ExecState* exec)
     dataLogF("\t--------------\n");
     dataLogF("\tcti count:\tsamples inside a CTI function called by this opcode\n");
     dataLogF("\tcti %% of self:\tcti count / sample count\n");
-    
+
 #if ENABLE(CODEBLOCK_SAMPLING)
 
     // (3) Build and sort 'codeBlockSamples' array.
@@ -417,7 +417,7 @@ void SamplingTool::dump(ExecState* exec)
 
     // (4) Print data from 'codeBlockSamples' array.
 
-    dataLogF("\nCodeBlock samples\n\n"); 
+    dataLogF("\nCodeBlock samples\n\n");
 
     for (int i = 0; i < scopeCount; ++i) {
         ScriptSampleRecord* record = codeBlockSamples[i];

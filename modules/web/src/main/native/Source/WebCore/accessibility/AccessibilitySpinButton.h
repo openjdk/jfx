@@ -31,19 +31,19 @@
 #include "SpinButtonElement.h"
 
 namespace WebCore {
-    
+
 class AccessibilitySpinButton : public AccessibilityMockObject {
 public:
     static PassRefPtr<AccessibilitySpinButton> create();
     virtual ~AccessibilitySpinButton();
-    
+
     void setSpinButtonElement(SpinButtonElement* spinButton) { m_spinButtonElement = spinButton; }
-    
+
     AccessibilityObject* incrementButton();
     AccessibilityObject* decrementButton();
 
     void step(int amount);
-    
+
 private:
     AccessibilitySpinButton();
 
@@ -52,22 +52,22 @@ private:
     virtual bool isNativeSpinButton() const override { return true; }
     virtual void addChildren() override;
     virtual LayoutRect elementRect() const override;
-    
+
     SpinButtonElement* m_spinButtonElement;
-}; 
-   
+};
+
 class AccessibilitySpinButtonPart : public AccessibilityMockObject {
 public:
     static PassRefPtr<AccessibilitySpinButtonPart> create();
     virtual ~AccessibilitySpinButtonPart() { }
-    
+
     bool isIncrementor() const { return m_isIncrementor; }
     void setIsIncrementor(bool value) { m_isIncrementor = value; }
-    
+
 private:
     AccessibilitySpinButtonPart();
     bool m_isIncrementor : 1;
-    
+
     virtual bool press() const override;
     virtual AccessibilityRole roleValue() const override { return ButtonRole; }
     virtual bool isSpinButtonPart() const override { return true; }
@@ -76,7 +76,7 @@ private:
 
 ACCESSIBILITY_OBJECT_TYPE_CASTS(AccessibilitySpinButton, isNativeSpinButton())
 ACCESSIBILITY_OBJECT_TYPE_CASTS(AccessibilitySpinButtonPart, isSpinButtonPart())
-    
-} // namespace WebCore 
+
+} // namespace WebCore
 
 #endif // AccessibilitySpinButton_h

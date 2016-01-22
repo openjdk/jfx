@@ -70,10 +70,10 @@ void MarkedArgumentBuffer::slowAppend(JSValue v)
     if (m_markSet)
         return;
 
-    // As long as our size stays within our Vector's inline 
-    // capacity, all our values are allocated on the stack, and 
+    // As long as our size stays within our Vector's inline
+    // capacity, all our values are allocated on the stack, and
     // therefore don't need explicit marking. Once our size exceeds
-    // our Vector's inline capacity, though, our values move to the 
+    // our Vector's inline capacity, though, our values move to the
     // heap, where they do need explicit marking.
     for (int i = 0; i < m_size; ++i) {
         Heap* heap = Heap::heap(JSValue::decode(slotFor(i)));

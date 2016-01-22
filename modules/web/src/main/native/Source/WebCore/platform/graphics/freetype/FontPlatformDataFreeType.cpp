@@ -226,7 +226,7 @@ FontPlatformData::FontPlatformData(const FontPlatformData& other, float size)
 {
     *this = other;
 
-    // We need to reinitialize the instance, because the difference in size 
+    // We need to reinitialize the instance, because the difference in size
     // necessitates a new scaled font instance.
     m_size = size;
     initializeWithFontFace(cairo_scaled_font_get_font_face(m_scaledFont));
@@ -268,7 +268,7 @@ bool FontPlatformData::operator==(const FontPlatformData& other) const
         && m_size == other.m_size
         && m_syntheticOblique == other.m_syntheticOblique
         && m_orientation == other.m_orientation
-        && m_syntheticBold == other.m_syntheticBold; 
+        && m_syntheticBold == other.m_syntheticBold;
 }
 
 #ifndef NDEBUG
@@ -311,7 +311,7 @@ void FontPlatformData::initializeWithFontFace(cairo_font_face_t* fontFace, const
         if (fontDescription.italic() && FcPatternGetInteger(m_pattern.get(), FC_SLANT, 0, &actualFontSlant) == FcResultMatch)
             m_syntheticOblique = actualFontSlant == FC_SLANT_ROMAN;
 
-        // The matrix from FontConfig does not include the scale. 
+        // The matrix from FontConfig does not include the scale.
         cairo_matrix_scale(&fontMatrix, realSize, realSize);
     }
 

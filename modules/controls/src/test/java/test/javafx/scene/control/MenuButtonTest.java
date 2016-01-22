@@ -209,55 +209,55 @@ public class MenuButtonTest {
 
     //TODO: test show()/isShowing() for disabled=true
     //TODO: test MenuButton.impl_getPsuedoClassState
-    
+
     @Test
     public void test_RT_21894() {
-        
+
         // Bug reproduces by setting opacity on the MenuButton
         // then moving focus on and off the MenuButton
         final MenuButton mb = new MenuButton();
-        mb.setText("SomeText"); 
-        
+        mb.setText("SomeText");
+
         MenuButtonSkin mbs = new MenuButtonSkin(mb);
         mb.setSkin(mbs);
-        
+
         Button other = new Button("other");
         // Doesn't have to be done this way, but this more closely duplicates
         // the example code in the bug report.
         other.setOnAction(t -> {
             mb.setOpacity(.5);
         });
-        
+
         VBox vbox = new VBox();
         vbox.getChildren().addAll(mb, other);
-        Scene scene = new Scene(vbox, 300, 300); 
+        Scene scene = new Scene(vbox, 300, 300);
         Stage stage = new Stage();
-        stage.setScene(scene); 
+        stage.setScene(scene);
         stage.show();
         stage.requestFocus();
-        
+
         other.requestFocus();
         assertFalse(mb.isFocused());
-        
+
         // set opacity on MenuButton
         other.fire();
-        
+
         // focus on MenuButton
         mb.requestFocus();
         assertTrue(mb.isFocused());
-        
+
         // give css a chance to run
         Toolkit.getToolkit().firePulse();
-        
+
         // focus off the MenuButton
         other.requestFocus();
         assertFalse(mb.isFocused());
-        
+
         // give css a chance to run
         Toolkit.getToolkit().firePulse();
 
         // MenuButton should still be 50%
         assertEquals(.5, mb.getOpacity(), 0.00001);
-        
-    }    
+
+    }
 }

@@ -19,7 +19,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -45,7 +45,7 @@
 namespace WebCore {
 
 using namespace HTMLNames;
-    
+
 class FTPDirectoryDocumentParser final : public HTMLDocumentParser {
 public:
     static PassRefPtr<FTPDirectoryDocumentParser> create(HTMLDocument& document)
@@ -69,7 +69,7 @@ public:
             m_size = newSize;
         }
     }
-        
+
 private:
     FTPDirectoryDocumentParser(HTMLDocument&);
 
@@ -80,18 +80,18 @@ private:
     void createBasicDocument();
 
     void parseAndAppendOneLine(const String&);
-    void appendEntry(const String& name, const String& size, const String& date, bool isDirectory);    
+    void appendEntry(const String& name, const String& size, const String& date, bool isDirectory);
     PassRefPtr<Element> createTDForFilename(const String&);
 
     RefPtr<HTMLTableElement> m_tableElement;
 
     bool m_skipLF;
-    
+
     int m_size;
     UChar* m_buffer;
     UChar* m_dest;
     String m_carryOver;
-    
+
     ListState m_listState;
 };
 
@@ -223,7 +223,7 @@ static String processFileDateString(const FTPTime& fileTime)
             if (fileTime.tm_mday == now.monthDay() - 1)
                 return "Yesterday" + timeOfDay;
         }
-        
+
         if (now.monthDay() == 1 && (now.month() == fileTime.tm_mon + 1 || (now.month() == 0 && fileTime.tm_mon == 11)) &&
             wasLastDayOfMonth(fileTime.tm_year, fileTime.tm_mon, fileTime.tm_mday))
                 return "Yesterday" + timeOfDay;
@@ -282,14 +282,14 @@ static inline PassRefPtr<SharedBuffer> createTemplateDocumentData(Settings* sett
         LOG(FTP, "Loaded FTPDirectoryTemplate of length %i\n", buffer->size());
     return buffer.release();
 }
-    
+
 bool FTPDirectoryDocumentParser::loadDocumentTemplate()
 {
     static SharedBuffer* templateDocumentData = createTemplateDocumentData(document()->settings()).leakRef();
     // FIXME: Instead of storing the data, we'd rather actually parse the template data into the template Document once,
-    // store that document, then "copy" it whenever we get an FTP directory listing.  There are complexities with this 
+    // store that document, then "copy" it whenever we get an FTP directory listing.  There are complexities with this
     // approach that make it worth putting this off.
-    
+
     if (!templateDocumentData) {
         LOG_ERROR("Could not load templateData");
         return false;
@@ -302,7 +302,7 @@ bool FTPDirectoryDocumentParser::loadDocumentTemplate()
         LOG_ERROR("Unable to find element by id \"ftpDirectoryTable\" in the template document.");
     else if (!isHTMLTableElement(tableElement.get()))
         LOG_ERROR("Element of id \"ftpDirectoryTable\" is not a table element");
-    else 
+    else
         m_tableElement = toHTMLTableElement(tableElement.get());
 
     // Bail if we found the table element
@@ -401,7 +401,7 @@ void FTPDirectoryDocumentParser::append(PassRefPtr<StringImpl> inputSource)
             m_carryOver = String();
 
             start = ++cursor;
-        } else 
+        } else
             cursor++;
     }
 

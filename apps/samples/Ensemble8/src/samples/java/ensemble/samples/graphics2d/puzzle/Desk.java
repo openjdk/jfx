@@ -68,6 +68,6 @@ public class Desk extends Pane {
                     new LineTo(Piece.SIZE * numOfColumns - 5, Piece.SIZE + Piece.SIZE * row));
         }
     }
- 
+
     @Override protected void layoutChildren() {}
 }

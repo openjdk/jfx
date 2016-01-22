@@ -45,7 +45,7 @@ public final class UnmodifiableListSet<E> extends AbstractSet<E> {
         if (backingList == null) throw new NullPointerException();
         this.backingList = backingList;
     }
-    
+
     /**
      * Required implementation that returns an iterator. Note that I
      * don't just return backingList.iterator() because doing so would
@@ -73,4 +73,4 @@ public final class UnmodifiableListSet<E> extends AbstractSet<E> {
     @Override public int size() {
         return backingList.size();
     }
-}    
+}

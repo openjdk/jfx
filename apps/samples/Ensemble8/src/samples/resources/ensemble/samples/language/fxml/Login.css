@@ -40,11 +40,11 @@
 
 .top-segment {
     -fx-background-color: rgba(255, 255, 255, 0.05);
-    -fx-border-color: 
+    -fx-border-color:
         transparent transparent rgba(255, 255, 255, 0.08) transparent,
         transparent transparent rgba(0, 0, 0, 0.5) transparent;
     -fx-border-width: 1, 1.5;
-    -fx-border-insets: -1, 0; 
+    -fx-border-insets: -1, 0;
 }
 
 .label {

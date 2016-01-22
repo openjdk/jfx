@@ -33,22 +33,22 @@ import com.sun.webkit.graphics.WCGraphicsContext;
 
 
 final class DefaultPlugin implements Plugin {
-    
+
     private final static Logger log =
         Logger.getLogger("com.sun.browser.plugin.DefaultPlugin");
-    
+
     //private JLabel nullComp;
-    
+
     private void init(final String pluginDetails) {
         //nullComp = new JLabel(pluginDetails);
         //nullComp.setHorizontalAlignment(JLabel.CENTER);
         //nullComp.setVisible(true);
     }
-    
+
     DefaultPlugin(URL url, String type, String[] pNames, String[] pValues) {
         init("Default Plugin for: " + (null==url ? "(null)" : url.toExternalForm()));
     }
-    
+
     @Override
     public void paint(WCGraphicsContext g, int intX, int intY, int intWidth, int intHeight)
     {

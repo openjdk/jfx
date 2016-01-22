@@ -114,7 +114,7 @@
 #    define U_ATTRIBUTE_DEPRECATED __attribute__ ((deprecated))
 /**
  * \def U_ATTRIBUTE_DEPRECATED
- * This is used for Visual C++ specific attributes 
+ * This is used for Visual C++ specific attributes
  * @internal
  */
 #elif defined(U_WINDOWS) && defined(_MSC_VER) && (_MSC_VER >= 1400)
@@ -335,7 +335,7 @@ typedef int8_t UBool;
  */
 #if PLATFORM(JAVA) // avoiding definition conflicts
 #ifndef JSC_UNICODE_JAVA_H
-typedef int32_t UChar32; 
+typedef int32_t UChar32;
 #endif
 #endif
 
@@ -364,7 +364,7 @@ typedef int32_t UChar32;
  * \def U_INLINE
  * This is used to request inlining of a function, on platforms and languages which support it.
  */
- 
+
 #ifndef U_INLINE
 #   ifdef XP_CPLUSPLUS
 #       define U_INLINE inline

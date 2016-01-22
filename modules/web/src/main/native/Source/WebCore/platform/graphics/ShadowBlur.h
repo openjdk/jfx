@@ -23,7 +23,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef ShadowBlur_h
@@ -78,12 +78,12 @@ private:
     void drawShadowBuffer(GraphicsContext*);
 
     void adjustBlurRadius(GraphicsContext*);
-    
+
     enum ShadowDirection {
         OuterShadow,
         InnerShadow
     };
-    
+
     IntRect calculateLayerBoundingRect(GraphicsContext*, const FloatRect& layerArea, const IntRect& clipRect);
     IntSize templateSize(const IntSize& blurredEdgeSize, const FloatRoundedRect::Radii&) const;
 
@@ -92,15 +92,15 @@ private:
 
     void drawInsetShadowWithoutTiling(GraphicsContext*, const FloatRect&, const FloatRect& holeRect, const FloatRoundedRect::Radii&, const IntRect& layerRect);
     void drawInsetShadowWithTiling(GraphicsContext*, const FloatRect&, const FloatRect& holeRect, const FloatRoundedRect::Radii&, const IntSize& shadowTemplateSize, const IntSize& blurredEdgeSize);
-    
+
     void drawLayerPieces(GraphicsContext*, const FloatRect& shadowBounds, const FloatRoundedRect::Radii&, const IntSize& roundedRadius, const IntSize& templateSize, ShadowDirection);
-    
+
     void blurShadowBuffer(const IntSize& templateSize);
     void blurAndColorShadowBuffer(const IntSize& templateSize);
-    
+
     IntSize blurredEdgeSize() const;
-    
-    
+
+
     ShadowType m_type;
 
     Color m_color;

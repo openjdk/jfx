@@ -73,7 +73,7 @@ public class HelloWindowManager extends Application {
         LEFT, RIGHT, UP, DOWN,
         BIGGER, SMALLER,
         RAISE, LOWER,
-        FULLSCREEN_TOGGLE, 
+        FULLSCREEN_TOGGLE,
         CLOSE
     }
 
@@ -179,13 +179,13 @@ public class HelloWindowManager extends Application {
                     break;
             }
         }
-        
+
     }
 
 
     @Override public void start(Stage stage) {
         createStage(stage);
-        
+
         stage.show();
     }
 
@@ -343,7 +343,7 @@ public class HelloWindowManager extends Application {
 
             fsButton.setOnAction(new ReshapingHandler(ReshapingActions.FULLSCREEN_TOGGLE, window));
             content.add(fsButton);
-            
+
             ((Stage)window).fullScreenProperty().addListener((ov, oldValue, newValue) -> {
                 System.out.println("FULLSCREEN now +"+newValue);
                 fsButton.setText(newValue ? "Normal": "Full Screen");
@@ -559,7 +559,7 @@ public class HelloWindowManager extends Application {
 
         private Popup nextPopup;
 
-        public PopupActionHandler(PopupPlacement popupPlacement, 
+        public PopupActionHandler(PopupPlacement popupPlacement,
                                   Node popupParent) {
             this.popupPlacement = popupPlacement;
             this.popupParent = popupParent;

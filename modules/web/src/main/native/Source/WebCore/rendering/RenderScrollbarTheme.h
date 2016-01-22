@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef RenderScrollbarTheme_h
@@ -37,7 +37,7 @@ class ScrollView;
 class RenderScrollbarTheme : public ScrollbarThemeComposite {
 public:
     virtual ~RenderScrollbarTheme() {};
-    
+
     virtual int scrollbarThickness(ScrollbarControlSize controlSize) { return ScrollbarTheme::theme()->scrollbarThickness(controlSize); }
 
     virtual ScrollbarButtonsPlacement buttonsPlacement() const { return ScrollbarTheme::theme()->buttonsPlacement(); }
@@ -47,7 +47,7 @@ public:
     virtual void paintScrollCorner(ScrollView*, GraphicsContext* context, const IntRect& cornerRect);
 
     virtual bool shouldCenterOnThumb(ScrollbarThemeClient* scrollbar, const PlatformMouseEvent& event) { return ScrollbarTheme::theme()->shouldCenterOnThumb(scrollbar, event); }
-    
+
     virtual double initialAutoscrollTimerDelay() { return ScrollbarTheme::theme()->initialAutoscrollTimerDelay(); }
     virtual double autoscrollTimerDelay() { return ScrollbarTheme::theme()->autoscrollTimerDelay(); }
 
@@ -57,7 +57,7 @@ public:
     virtual int minimumThumbLength(ScrollbarThemeClient*);
 
     void buttonSizesAlongTrackAxis(ScrollbarThemeClient*, int& beforeSize, int& afterSize);
-    
+
     static RenderScrollbarTheme* renderScrollbarTheme();
 
 protected:
@@ -70,7 +70,7 @@ protected:
 
     virtual void willPaintScrollbar(GraphicsContext*, ScrollbarThemeClient*) override;
     virtual void didPaintScrollbar(GraphicsContext*, ScrollbarThemeClient*) override;
-    
+
     virtual void paintScrollbarBackground(GraphicsContext*, ScrollbarThemeClient*);
     virtual void paintTrackBackground(GraphicsContext*, ScrollbarThemeClient*, const IntRect&);
     virtual void paintTrackPiece(GraphicsContext*, ScrollbarThemeClient*, const IntRect&, ScrollbarPart);

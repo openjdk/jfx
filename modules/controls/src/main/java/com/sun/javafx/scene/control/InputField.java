@@ -77,11 +77,11 @@ public abstract class InputField extends Control {
      */
     private IntegerProperty prefColumnCount = new IntegerPropertyBase(DEFAULT_PREF_COLUMN_COUNT) {
         private int oldValue = get();
-        
+
         @Override
         protected void invalidated() {
             int value = get();
-            
+
             if (value < 0) {
                 if (isBound()) {
                     unbind();
@@ -89,7 +89,7 @@ public abstract class InputField extends Control {
                 set(oldValue);
                 throw new IllegalArgumentException("value cannot be negative.");
             }
-            
+
             oldValue = value;
         }
 

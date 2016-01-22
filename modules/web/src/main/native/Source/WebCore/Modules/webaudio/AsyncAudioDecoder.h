@@ -60,7 +60,7 @@ private:
         static std::unique_ptr<DecodingTask> create(JSC::ArrayBuffer* audioData, float sampleRate, PassRefPtr<AudioBufferCallback> successCallback, PassRefPtr<AudioBufferCallback> errorCallback);
 
         void decode();
-        
+
     private:
         DecodingTask(JSC::ArrayBuffer* audioData, float sampleRate, PassRefPtr<AudioBufferCallback> successCallback, PassRefPtr<AudioBufferCallback> errorCallback);
 
@@ -79,7 +79,7 @@ private:
         RefPtr<AudioBufferCallback> m_errorCallback;
         RefPtr<AudioBuffer> m_audioBuffer;
     };
-    
+
     static void threadEntry(void* threadData);
     void runLoop();
 

@@ -120,7 +120,7 @@ public class ResizabilityTest {
         assertTrue(parent.prefWidth(-1) == parent.minWidth(-1) &&
                    parent.prefWidth(-1) == parent.maxWidth(-1));
     }
-    
+
     @Test public void testParentMinPrefMaxHeightAreEqual() {
         Parent parent = new MockParent();
         assertTrue(parent.prefHeight(-1) == parent.minHeight(-1) &&

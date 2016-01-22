@@ -52,23 +52,23 @@ TEST(WebKit1, SimplifyMarkupTest)
     RetainPtr<WebView> webView1 = adoptNS([[WebView alloc] initWithFrame:NSMakeRect(0, 0, 120, 200) frameName:nil groupName:nil]);
     RetainPtr<WebView> webView2 = adoptNS([[WebView alloc] initWithFrame:NSMakeRect(0, 0, 120, 200) frameName:nil groupName:nil]);
     RetainPtr<SimplifyMarkupTest> testController = adoptNS([SimplifyMarkupTest new]);
-    
+
     webView1.get().frameLoadDelegate = testController.get();
     [[webView1.get() mainFrame] loadRequest:[NSURLRequest requestWithURL:[[NSBundle mainBundle] URLForResource:@"verboseMarkup" withExtension:@"html" subdirectory:@"TestWebKitAPI.resources"]]];
-    
+
     Util::run(&didFinishLoad);
     didFinishLoad = false;
- 
+
     webView2.get().frameLoadDelegate = testController.get();
     [[webView2.get() mainFrame] loadRequest:[NSURLRequest requestWithURL:[[NSBundle mainBundle] URLForResource:@"verboseMarkup" withExtension:@"html" subdirectory:@"TestWebKitAPI.resources"]]];
-    
+
     Util::run(&didFinishLoad);
     didFinishLoad = false;
 
     DOMDocument *document1 = webView1.get().mainFrameDocument;
     NSString* markupBefore = [[document1 body] innerHTML];
     DOMDocument *document2 = webView2.get().mainFrameDocument;
-    
+
     // If start is after end, nothing is done
     DOMNode *start = [document1 getElementById:@"test2"];
     DOMNode *end = [document1 getElementById:@"test1"];
@@ -84,17 +84,17 @@ TEST(WebKit1, SimplifyMarkupTest)
     end = [document2 getElementById:@"test2"];
     [webView1.get() _simplifyMarkup:start endNode:end];
     markupAfter = [[document1 body] innerHTML];
-    
+
     EXPECT_WK_STREQ(markupBefore, markupAfter);
     EXPECT_EQ([markupBefore length], [markupAfter length]);
 
     // If the two nodes are not in the same document, nothing is done.
     DOMHTMLFrameElement* frame = (DOMHTMLFrameElement *)[document1 getElementById:@"test3"];
     end = [[frame contentDocument] firstChild];
-    
+
     [webView1.get() _simplifyMarkup:start endNode:end];
     markupAfter = [[document1 body] innerHTML];
-    
+
     EXPECT_WK_STREQ(markupBefore, markupAfter);
     EXPECT_EQ([markupBefore length], [markupAfter length]);
 

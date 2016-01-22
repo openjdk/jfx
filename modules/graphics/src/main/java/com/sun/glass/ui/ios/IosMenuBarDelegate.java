@@ -29,8 +29,8 @@ import com.sun.glass.ui.delegate.MenuBarDelegate;
 import com.sun.glass.ui.delegate.MenuDelegate;
 
 
-/** 
- * MenuBarDelegate implementation stub for iOS. 
+/**
+ * MenuBarDelegate implementation stub for iOS.
  * Calling IosMenuBarDelegate's methods has no effect.
  */
 final class IosMenuBarDelegate implements MenuBarDelegate {
@@ -61,7 +61,7 @@ final class IosMenuBarDelegate implements MenuBarDelegate {
     public boolean remove(MenuDelegate menu, int pos) {
         return true;
     }
-    
+
     /**
      * @inheritDoc
      * Unsupported on iOS.

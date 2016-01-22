@@ -61,7 +61,7 @@ struct ParserError {
         , m_line(-1)
     {
     }
-    
+
     explicit ParserError(ErrorType type)
         : m_type(type)
         , m_syntaxErrorType(SyntaxErrorNone)

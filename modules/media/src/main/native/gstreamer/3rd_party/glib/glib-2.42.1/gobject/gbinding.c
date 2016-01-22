@@ -29,7 +29,7 @@
  * value is applied to the target property; for instance, the following
  * binding:
  *
- * |[<!-- language="C" --> 
+ * |[<!-- language="C" -->
  *   g_object_bind_property (object1, "property-a",
  *                           object2, "property-b",
  *                           G_BINDING_DEFAULT);
@@ -43,7 +43,7 @@
  * of two #GObject instances, so that if either property changes, the
  * other is updated as well, for instance:
  *
- * |[<!-- language="C" --> 
+ * |[<!-- language="C" -->
  *   g_object_bind_property (object1, "property-a",
  *                           object2, "property-b",
  *                           G_BINDING_BIDIRECTIONAL);
@@ -56,7 +56,7 @@
  * transformation from the source value to the target value before
  * applying it; for instance, the following binding:
  *
- * |[<!-- language="C" --> 
+ * |[<!-- language="C" -->
  *   g_object_bind_property_full (adjustment1, "value",
  *                                adjustment2, "value",
  *                                G_BINDING_BIDIRECTIONAL,

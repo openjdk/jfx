@@ -51,7 +51,7 @@ import javafx.util.Callback;
 public class PopoverTreeList<T> extends ListView<T> implements Callback<ListView<T>, ListCell<T>> {
     protected static final Image RIGHT_ARROW = new Image(
             EnsembleApp.class.getResource("images/popover-arrow.png").toExternalForm());
-    
+
     public PopoverTreeList(){
         getStyleClass().clear();
         setCellFactory(this);
@@ -60,7 +60,7 @@ public class PopoverTreeList<T> extends ListView<T> implements Callback<ListView
     @Override public ListCell<T> call(ListView<T> p) {
         return new TreeItemListCell();
     }
-    
+
     protected void itemClicked(T item) {}
 
     private class TreeItemListCell extends ListCell<T> implements EventHandler<MouseEvent> {
@@ -71,7 +71,7 @@ public class PopoverTreeList<T> extends ListView<T> implements Callback<ListView
             getStyleClass().setAll("popover-tree-list-cell");
             setOnMouseClicked(this);
         }
-        
+
         @Override public void handle(MouseEvent t) {
             itemClicked(getItem());
         }
@@ -95,7 +95,7 @@ public class PopoverTreeList<T> extends ListView<T> implements Callback<ListView
             arrow.setLayoutX(w - arrowBounds.getWidth() - 12);
             arrow.setLayoutY((int)((h - arrowBounds.getHeight())/2d));
         }
-        
+
         // CELL METHODS
         @Override protected void updateItem(T item, boolean empty) {
             // let super do its work

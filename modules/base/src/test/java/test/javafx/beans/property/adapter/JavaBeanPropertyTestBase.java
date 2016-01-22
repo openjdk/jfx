@@ -150,7 +150,7 @@ public abstract class JavaBeanPropertyTestBase<T> {
         property.setValue(getValue(0));
         assertFalse(fired.get());
     }
-    
+
     @Test
     public void testDispose() {
         assertTrue(bean.hasListeners());
@@ -211,7 +211,7 @@ public abstract class JavaBeanPropertyTestBase<T> {
 
     public static abstract class BeanStub<U> {
         private int listenerCount;
-        
+
         public abstract U getValue();
         public abstract void setValue(U value) throws PropertyVetoException;
         public abstract void setFailureMode(boolean failureMode);

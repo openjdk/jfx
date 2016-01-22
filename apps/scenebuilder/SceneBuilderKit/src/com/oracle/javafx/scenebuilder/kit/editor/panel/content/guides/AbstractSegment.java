@@ -36,7 +36,7 @@ package com.oracle.javafx.scenebuilder.kit.editor.panel.content.guides;
  *
  */
 public abstract class AbstractSegment implements Comparable<AbstractSegment> {
-    
+
     public abstract double getX1();
     public abstract double getY1();
     public abstract double getX2();

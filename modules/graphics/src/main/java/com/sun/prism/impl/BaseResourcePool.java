@@ -110,7 +110,7 @@ public abstract class BaseResourcePool<T> implements ResourcePool<T> {
      * <li> Finally, prune any resources that are not currently in the process
      *      of being used (i.e. locked or permanent).
      * </ol>
-     * 
+     *
      * @param needed
      * @return boolean indicating if the requested space is now available
      */
@@ -269,7 +269,7 @@ public abstract class BaseResourcePool<T> implements ResourcePool<T> {
      * This method will unlock all non-permanent resources that have outstanding
      * locks if {@code forgiveStaleLocks} is {@code true}, or it will print out
      * a warning and a resource summary if that parameter is {@code false}.
-     * 
+     *
      * @param forgiveStaleLocks {@code true} if the caller wishes to forgive
      *         and unlock all outstanding locks on non-permanent resources
      */

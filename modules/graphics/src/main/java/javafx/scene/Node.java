@@ -885,14 +885,14 @@ public abstract class Node implements EventTarget, Styleable {
         if (accessible != null) {
             /* Generally accessibility does not retain any state, therefore deleting objects
              * generally does not cause problems (AT just asks everything back).
-             * The exception to this rule is when the object sends a notifications to the AT, 
-             * in which case it is expected to be around to answer request for the new values. 
+             * The exception to this rule is when the object sends a notifications to the AT,
+             * in which case it is expected to be around to answer request for the new values.
              * It is possible that a object is reparented (within the scene) in the middle of
-             * this process. For example, when a tree item is expanded, the notification is 
-             * sent to the AT by the cell. But when the TreeView relayouts the cell can be 
+             * this process. For example, when a tree item is expanded, the notification is
+             * sent to the AT by the cell. But when the TreeView relayouts the cell can be
              * reparented before AT can query the relevant information about the expand event.
              * If the accessible was disposed, AT can't properly report the event.
-             * 
+             *
              * The fix is to defer the disposal of the accessible to the next pulse.
              * If at that time the node is placed back to the scene, then the accessible is hooked
              * to Node and AT requests are processed. Otherwise the accessible is disposed.
@@ -903,8 +903,8 @@ public abstract class Node implements EventTarget, Styleable {
             } else {
                 accessible.dispose();
             }
-            /* Always set to null to ensure this accessible is never on more than one 
-             * Scene#accMap at the same time (At lest not with the same accessible). 
+            /* Always set to null to ensure this accessible is never on more than one
+             * Scene#accMap at the same time (At lest not with the same accessible).
              */
             accessible = null;
         }
@@ -9097,14 +9097,14 @@ public abstract class Node implements EventTarget, Styleable {
      }
 
     /**
-     * If required, apply styles to this Node and its children, if any. This method does not normally need to 
+     * If required, apply styles to this Node and its children, if any. This method does not normally need to
      * be invoked directly but may be used in conjunction with {@link Parent#layout()} to size a Node before the
-     * next pulse, or if the {@link #getScene() Scene} is not in a {@link javafx.stage.Stage}. 
+     * next pulse, or if the {@link #getScene() Scene} is not in a {@link javafx.stage.Stage}.
      * <p>Provided that the Node&#39;s {@link #getScene() Scene} is not null, CSS is applied to this Node regardless
      * of whether this Node&#39;s CSS state is clean. CSS styles are applied from the top&#8209;most parent
      * of this Node whose CSS state is other than clean, which may affect the styling of other nodes.
      * This method is a no-op if the Node is not in a Scene. The Scene does not have to be in a Stage.</p>
-     * <p>This method does not invoke the {@link Parent#layout()} method. Typically, the caller will use the 
+     * <p>This method does not invoke the {@link Parent#layout()} method. Typically, the caller will use the
      * following sequence of operations.</p>
      * <pre><code>
      *     parentNode.applyCss();
@@ -9403,7 +9403,7 @@ public abstract class Node implements EventTarget, Styleable {
      *
      * @defaultValue {@link AccessibleRole#NODE}
      * @see AccessibleRole
-     * 
+     *
      * @since JavaFX 8u40
      */
     private ObjectProperty<AccessibleRole> accessibleRole;
@@ -9446,7 +9446,7 @@ public abstract class Node implements EventTarget, Styleable {
      * have the role description be arbitrary text.
      *
      * @defaultValue null
-     * 
+     *
      * @since JavaFX 8u40
      */
     public final ObjectProperty<String> accessibleRoleDescriptionProperty() {
@@ -9473,7 +9473,7 @@ public abstract class Node implements EventTarget, Styleable {
      * no longer do this when this value is set.
      *
      * @defaultValue null
-     * 
+     *
      * @since JavaFX 8u40
      */
     public final ObjectProperty<String> accessibleTextProperty() {
@@ -9498,7 +9498,7 @@ public abstract class Node implements EventTarget, Styleable {
      * a tool tip, this text is used.
      *
      * @defaultValue null
-     * 
+     *
      * @since JavaFX 8u40
      */
     public final ObjectProperty<String> accessibleHelpProperty() {
@@ -9581,7 +9581,7 @@ public abstract class Node implements EventTarget, Styleable {
      * If a particular action is not handled, the super class implementation
      * must be called.
      * </p>
-     * 
+     *
      * @param action the action to execute
      * @param parameters optional list of parameters
      *
@@ -9636,7 +9636,7 @@ public abstract class Node implements EventTarget, Styleable {
     Accessible getAccessible() {
         if (accessible == null) {
             Scene scene = getScene();
-            /* It is possible the node was reparented and getAccessible() 
+            /* It is possible the node was reparented and getAccessible()
              * is called before the pulse. Try to recycle the accessible
              * before creating a new one.
              * Note: this code relies that an accessible can never be on

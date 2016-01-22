@@ -44,9 +44,9 @@ public:
     void setInBalancingPass(bool balancing) { m_inBalancingPass = balancing; }
     bool needsRebalancing() const { return m_needsRebalancing; }
     void setNeedsRebalancing(bool balancing) { m_needsRebalancing = balancing; }
-    
+
     bool shouldRelayoutForPagination() const { return !m_inBalancingPass && m_needsRebalancing; }
-    
+
     bool requiresBalancing() const { return progressionIsInline() && (!columnHeightAvailable() || parent()->style().columnFill() == ColumnFillBalance); }
 
     void setColumnCountAndWidth(unsigned count, LayoutUnit width)
@@ -60,9 +60,9 @@ public:
 
     bool progressionIsReversed() const { return m_progressionIsReversed; }
     void setProgressionIsReversed(bool reversed) { m_progressionIsReversed = reversed; }
-    
+
     virtual void computeLineGridPaginationOrigin(LayoutState&) const override;
-    
+
 private:
     virtual const char* renderName() const override;
     virtual void computeLogicalHeight(LayoutUnit logicalHeight, LayoutUnit logicalTop, LogicalExtentComputedValues&) const override;
@@ -79,7 +79,7 @@ private:
     LayoutUnit m_columnHeightAvailable; // Total height available to columns, or 0 if auto.
     bool m_inBalancingPass; // Guard to avoid re-entering column balancing.
     bool m_needsRebalancing;
-    
+
     bool m_progressionIsInline;
     bool m_progressionIsReversed;
 };

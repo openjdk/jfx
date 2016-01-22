@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef InbandTextTrackPrivateAVF_h
@@ -37,7 +37,7 @@ namespace WebCore {
 class AVFInbandTrackParent {
 public:
     virtual ~AVFInbandTrackParent();
-    
+
     virtual void trackModeChanged() = 0;
 };
 
@@ -61,7 +61,7 @@ public:
     void beginSeeking();
     void endSeeking() { m_seeking = false; }
     bool seeking() const { return m_seeking; }
-    
+
     virtual bool isLegacyClosedCaptionsTrack() const = 0;
 
 protected:

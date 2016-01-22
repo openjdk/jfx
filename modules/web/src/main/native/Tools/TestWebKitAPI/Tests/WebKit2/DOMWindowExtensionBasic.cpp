@@ -72,14 +72,14 @@ static void didReceiveMessageFromInjectedBundle(WKContextRef, WKStringRef messag
 
     WKStringRef bodyString = (WKStringRef)messageBody;
     messages.append(bodyString);
-    
+
     if (WKStringIsEqualToUTF8CString(messageName, "DidFinishLoadForMainFrame") || WKStringIsEqualToUTF8CString(messageName, "TestComplete"))
         finished = true;
 }
 
 TEST(WebKit2, DISABLED_DOMWindowExtensionBasic)
 {
-    WKRetainPtr<WKPageGroupRef> pageGroup(AdoptWK, WKPageGroupCreateWithIdentifier(WKStringCreateWithUTF8CString("DOMWindowExtensionBasicPageGroup"))); 
+    WKRetainPtr<WKPageGroupRef> pageGroup(AdoptWK, WKPageGroupCreateWithIdentifier(WKStringCreateWithUTF8CString("DOMWindowExtensionBasicPageGroup")));
 
     WKRetainPtr<WKContextRef> context(AdoptWK, Util::createContextForInjectedBundleTest("DOMWindowExtensionBasic", pageGroup.get()));
 
@@ -90,20 +90,20 @@ TEST(WebKit2, DISABLED_DOMWindowExtensionBasic)
     injectedBundleClient.didReceiveMessageFromInjectedBundle = didReceiveMessageFromInjectedBundle;
 
     WKContextSetInjectedBundleClient(context.get(), &injectedBundleClient.base);
-    
+
     // The default cache model has a capacity of 0, so it is necessary to switch to a cache
     // model that actually allows for a page cache.
     WKContextSetCacheModel(context.get(), kWKCacheModelDocumentBrowser);
 
     PlatformWebView webView(context.get(), pageGroup.get());
-    
+
     // Make sure the extensions for each frame are installed in each world.
     WKRetainPtr<WKURLRef> url1(AdoptWK, Util::createURLForResource("simple-iframe", "html"));
     WKPageLoadURL(webView.page(), url1.get());
 
     Util::run(&finished);
     finished = false;
-    
+
     // Make sure those first 4 extensions are disconnected, and 2 new ones are installed.
     WKRetainPtr<WKURLRef> url2(AdoptWK, Util::createURLForResource("simple", "html"));
     WKPageLoadURL(webView.page(), url2.get());
@@ -121,13 +121,13 @@ TEST(WebKit2, DISABLED_DOMWindowExtensionBasic)
     WKPageClose(webView.page());
 
     Util::run(&finished);
-        
+
     const size_t expectedSize = sizeof(expectedMessages) / sizeof(const char*);
     EXPECT_EQ(expectedSize, messages.size());
-    
+
     if (messages.size() != expectedSize)
         return;
-    
+
     for (size_t i = 0; i < messages.size(); ++i)
         EXPECT_WK_STREQ(expectedMessages[i], messages[i].get());
 }

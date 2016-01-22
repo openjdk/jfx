@@ -77,7 +77,7 @@ public:
 
     bool shouldDumpPixels() const { return m_dumpPixels; }
     bool useWaitToDumpWatchdogTimer() const { return m_useWaitToDumpWatchdogTimer; }
-    
+
     void outputText(const String&);
     void postNewBeforeUnloadReturnValue(bool);
     void postAddChromeInputField();

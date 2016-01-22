@@ -42,26 +42,26 @@ import java.util.Set;
 
 /**
  *
- * 
+ *
  */
 public class FXOMIntrinsic extends FXOMObject {
-    
+
     public enum Type {
         FX_INCLUDE,
         FX_REFERENCE,
         FX_COPY,
         UNDEFINED
     }
-    
+
     private final Map<PropertyName, FXOMProperty> properties = new LinkedHashMap<>();
     private Object sourceSceneGraphObject;
 
-    
+
     FXOMIntrinsic(FXOMDocument document, GlueElement glueElement, Object targetSceneGraphObject) {
         super(document, glueElement, null);
         this.sourceSceneGraphObject = targetSceneGraphObject;
     }
-    
+
     public FXOMIntrinsic(FXOMDocument document, Type type, String source) {
         super(document, makeTagNameFromType(type));
         getGlueElement().getAttributes().put("source", source);
@@ -69,7 +69,7 @@ public class FXOMIntrinsic extends FXOMObject {
 
     public Type getType() {
         final Type result;
-        
+
         switch(getGlueElement().getTagName()) {
             case "fx:include":
                 result = Type.FX_INCLUDE;
@@ -84,14 +84,14 @@ public class FXOMIntrinsic extends FXOMObject {
                 result = Type.UNDEFINED;
                 break;
         }
-        
+
         return result;
     }
-    
+
     public String getSource() {
         return getGlueElement().getAttributes().get("source");
     }
-    
+
     public void setSource(String source) {
         if (source == null) {
             getGlueElement().getAttributes().remove("source");
@@ -107,7 +107,7 @@ public class FXOMIntrinsic extends FXOMObject {
     public void setSourceSceneGraphObject(Object sourceSceneGraphObject) {
         this.sourceSceneGraphObject = sourceSceneGraphObject;
     }
-    
+
     public Map<PropertyName, FXOMProperty> getProperties() {
         return properties;
     }
@@ -126,26 +126,26 @@ public class FXOMIntrinsic extends FXOMObject {
     @Override
     public FXOMObject searchWithSceneGraphObject(Object sceneGraphObject) {
         FXOMObject result;
-        
+
         if (getType() == Type.FX_INCLUDE) {
             result = super.searchWithSceneGraphObject(sceneGraphObject);
         } else {
             result = null;
         }
-        
+
         return result;
     }
 
     @Override
     public FXOMObject searchWithFxId(String fxId) {
         FXOMObject result;
-        
+
         if (getType() == Type.FX_INCLUDE) {
             result = super.searchWithFxId(fxId);
         } else {
             result = null;
         }
-        
+
         return result;
     }
 
@@ -172,8 +172,8 @@ public class FXOMIntrinsic extends FXOMObject {
     @Override
     protected void collectReferences(String source, List<FXOMIntrinsic> result) {
         assert result != null;
-        
-        if ((getType() == Type.FX_REFERENCE) 
+
+        if ((getType() == Type.FX_REFERENCE)
                 && ((source == null) || source.equals(getSource()))) {
             result.add(this);
         }
@@ -182,9 +182,9 @@ public class FXOMIntrinsic extends FXOMObject {
     @Override
     protected void collectReferences(String source, FXOMObject scope, List<FXOMNode> result) {
         assert result != null;
-        
+
         if ((scope == null) || (scope != this)) {
-            if ((getType() == Type.FX_REFERENCE) 
+            if ((getType() == Type.FX_REFERENCE)
                     && ((source == null) || source.equals(getSource()))) {
                 result.add(this);
             }
@@ -194,8 +194,8 @@ public class FXOMIntrinsic extends FXOMObject {
     @Override
     protected void collectIncludes(String source, List<FXOMIntrinsic> result) {
         assert result != null;
-        
-        if ((getType() == Type.FX_INCLUDE) 
+
+        if ((getType() == Type.FX_INCLUDE)
                 && ((source == null) || source.equals(getSource()))) {
             result.add(this);
         }
@@ -222,20 +222,20 @@ public class FXOMIntrinsic extends FXOMObject {
     /*
      * FXOMNode
      */
-    
+
     @Override
     public void documentLocationWillChange(URL newLocation) {
         // Nothing special to do here
     }
-    
-    
+
+
     /*
      * Private
      */
-    
+
     private static String makeTagNameFromType(Type type) {
         final String result;
-        
+
         switch(type) {
             case FX_COPY:
                 result = "fx:copy";
@@ -250,7 +250,7 @@ public class FXOMIntrinsic extends FXOMObject {
                 assert false;
                 throw new IllegalStateException("Unexpected intrinsic type " + type);
         }
-        
+
         return result;
     }
 }

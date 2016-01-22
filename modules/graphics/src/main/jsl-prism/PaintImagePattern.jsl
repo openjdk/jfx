@@ -29,7 +29,7 @@ param float4 yParams;
 param float3 perspVec;
 param float4 content;
 
-float4 paint(float2 winCoord) 
+float4 paint(float2 winCoord)
 {
     float3 fragCoord = float3(winCoord.x, winCoord.y, 1.0);
     float wParam = dot(fragCoord, perspVec);

@@ -78,7 +78,7 @@ public:
 
     explicit IntRect(const FloatRect&); // don't do this implicitly since it's lossy
     explicit IntRect(const LayoutRect&); // don't do this implicitly since it's lossy
-        
+
     IntPoint location() const { return m_location; }
     IntSize size() const { return m_size; }
 
@@ -103,9 +103,9 @@ public:
     // center point.
     IntPoint center() const { return IntPoint(x() + width() / 2, y() + height() / 2); }
 
-    void move(const IntSize& size) { m_location += size; } 
+    void move(const IntSize& size) { m_location += size; }
     void moveBy(const IntPoint& offset) { m_location.move(offset.x(), offset.y()); }
-    void move(int dx, int dy) { m_location.move(dx, dy); } 
+    void move(int dx, int dy) { m_location.move(dx, dy); }
 
     void expand(const IntSize& size) { m_size += size; }
     void expand(int dw, int dh) { m_size.expand(dw, dh); }
@@ -139,7 +139,7 @@ public:
     IntPoint maxXMinYCorner() const { return IntPoint(m_location.x() + m_size.width(), m_location.y()); } // typically topRight
     IntPoint minXMaxYCorner() const { return IntPoint(m_location.x(), m_location.y() + m_size.height()); } // typically bottomLeft
     IntPoint maxXMaxYCorner() const { return IntPoint(m_location.x() + m_size.width(), m_location.y() + m_size.height()); } // typically bottomRight
-    
+
     bool intersects(const IntRect&) const;
     bool contains(const IntRect&) const;
 

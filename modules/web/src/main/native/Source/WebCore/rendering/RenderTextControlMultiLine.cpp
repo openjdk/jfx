@@ -1,6 +1,6 @@
 /**
  * Copyright (C) 2006, 2007 Apple Inc. All rights reserved.
- *           (C) 2008 Torch Mobile Inc. All rights reserved. (http://www.torchmobile.com/) 
+ *           (C) 2008 Torch Mobile Inc. All rights reserved. (http://www.torchmobile.com/)
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -95,7 +95,7 @@ PassRef<RenderStyle> RenderTextControlMultiLine::createInnerTextStyle(const Rend
     textBlockStyle.get().setDisplay(BLOCK);
 
 #if PLATFORM(IOS)
-    // We're adding three extra pixels of padding to line textareas up with text fields.  
+    // We're adding three extra pixels of padding to line textareas up with text fields.
     textBlockStyle.get().setPaddingLeft(Length(3, Fixed));
     textBlockStyle.get().setPaddingRight(Length(3, Fixed));
 #endif
@@ -117,5 +117,5 @@ RenderObject* RenderTextControlMultiLine::layoutSpecialExcludedChild(bool relayo
     placeholderBox->setY(borderTop() + paddingTop());
     return placeholderRenderer;
 }
-    
+
 }

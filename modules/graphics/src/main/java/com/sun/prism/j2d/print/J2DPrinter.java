@@ -686,7 +686,7 @@ public class J2DPrinter implements PrinterImpl {
             map.put(MediaTray.ENVELOPE, PaperSource.ENVELOPE);
             map.put(MediaTray.LARGE_CAPACITY, PaperSource.LARGE_CAPACITY);
             preDefinedTrayMap = map;
-        }        
+        }
     }
 
     private void populateMedia() {

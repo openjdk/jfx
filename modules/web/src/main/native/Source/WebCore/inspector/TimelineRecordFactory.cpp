@@ -191,7 +191,7 @@ PassRefPtr<InspectorObject> TimelineRecordFactory::createLayoutData(unsigned dir
     data->setBoolean("partialLayout", partialLayout);
     return data.release();
 }
-    
+
 PassRefPtr<InspectorObject> TimelineRecordFactory::createDecodeImageData(const String& imageType)
 {
     RefPtr<InspectorObject> data = InspectorObject::create();

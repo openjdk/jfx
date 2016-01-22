@@ -59,7 +59,7 @@ TEST(WebKit2, InjectedBundleBasic)
     injectedBundleClient.didReceiveMessageFromInjectedBundle = didReceiveMessageFromInjectedBundle;
 
     WKContextSetInjectedBundleClient(context.get(), &injectedBundleClient.base);
- 
+
     PlatformWebView webView(context.get());
 
     WKPageLoaderClientV0 loaderClient;

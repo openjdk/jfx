@@ -61,7 +61,7 @@ public class EnumEditor extends PropertyEditor {
         });
         initialize();
     }
-    
+
     private void initialize() {
         updateItems();
     }
@@ -105,10 +105,10 @@ public class EnumEditor extends PropertyEditor {
     protected ChoiceBox<String> getChoiceBox() {
         return choiceBox;
     }
-    
+
     protected void updateItems() {
         assert getPropertyMeta() instanceof EnumerationPropertyMetadata;
-        final EnumerationPropertyMetadata enumPropMeta 
+        final EnumerationPropertyMetadata enumPropMeta
                 = (EnumerationPropertyMetadata) getPropertyMeta();
         choiceBox.getItems().clear();
         for (Object val : enumPropMeta.getValidValues()) {

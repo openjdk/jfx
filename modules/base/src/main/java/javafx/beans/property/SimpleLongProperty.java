@@ -28,9 +28,9 @@ package javafx.beans.property;
 /**
  * This class provides a full implementation of a {@link Property} wrapping a
  * {@code long} value.
- * 
+ *
  * @see LongPropertyBase
- * 
+ *
  * @since JavaFX 2.0
  */
 public class SimpleLongProperty extends LongPropertyBase {
@@ -66,7 +66,7 @@ public class SimpleLongProperty extends LongPropertyBase {
 
     /**
      * The constructor of {@code LongProperty}
-     * 
+     *
      * @param initialValue
      *            the initial value of the wrapped value
      */
@@ -76,7 +76,7 @@ public class SimpleLongProperty extends LongPropertyBase {
 
     /**
      * The constructor of {@code LongProperty}
-     * 
+     *
      * @param bean
      *            the bean of this {@code LongProperty}
      * @param name
@@ -89,7 +89,7 @@ public class SimpleLongProperty extends LongPropertyBase {
 
     /**
      * The constructor of {@code LongProperty}
-     * 
+     *
      * @param bean
      *            the bean of this {@code LongProperty}
      * @param name

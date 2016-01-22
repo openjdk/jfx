@@ -31,7 +31,7 @@ public class ArrayAccessExpr extends Expr {
 
     private final Expr expr;
     private final Expr index;
-    
+
     public ArrayAccessExpr(Expr expr, Expr index) {
         super(expr.getResultType());
         this.expr = expr;

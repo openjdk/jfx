@@ -36,7 +36,7 @@
 namespace WebCore {
 
 class AudioBus;
-    
+
 // Wrapper class for AudioFile and ExtAudioFile CoreAudio APIs for reading files and in-memory versions of them...
 
 class AudioFileReader {
@@ -66,5 +66,5 @@ private:
 };
 
 } // namespace WebCore
- 
+
 #endif // AudioFileReaderMac_h

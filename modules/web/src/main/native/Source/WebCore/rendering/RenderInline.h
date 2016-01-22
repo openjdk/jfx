@@ -77,7 +77,7 @@ public:
     RenderInline* inlineElementContinuation() const;
 
     virtual void updateDragState(bool dragOn) override final;
-    
+
     LayoutSize offsetForInFlowPositionedInline(const RenderBox* child) const;
 
     virtual void addFocusRingRects(Vector<IntRect>&, const LayoutPoint& additionalOffset, const RenderLayerModelObject* paintContainer = 0) override final;
@@ -157,7 +157,7 @@ private:
 
     virtual LayoutUnit lineHeight(bool firstLine, LineDirectionMode, LinePositionMode = PositionOnContainingLine) const override final;
     virtual int baselinePosition(FontBaseline, bool firstLine, LineDirectionMode, LinePositionMode = PositionOnContainingLine) const override final;
-    
+
     virtual void childBecameNonInline(RenderObject* child) override final;
 
     virtual void updateHitTestResult(HitTestResult&, const LayoutPoint&) override final;
@@ -167,9 +167,9 @@ private:
 #if ENABLE(DASHBOARD_SUPPORT)
     virtual void addAnnotatedRegions(Vector<AnnotatedRegionValue>&) override final;
 #endif
-    
+
     virtual void updateFromStyle() override final;
-    
+
     RenderPtr<RenderInline> clone() const;
 
     void paintOutlineForLine(GraphicsContext*, const LayoutPoint&, const LayoutRect& prevLine, const LayoutRect& thisLine,

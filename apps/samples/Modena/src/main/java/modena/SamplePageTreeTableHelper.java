@@ -68,16 +68,16 @@ public class SamplePageTreeTableHelper {
     private static final Random RANDOM = new Random(745288528l);
     private static int directoryCount = 0;
     private static int fileCount = 0;
-    
+
     static {
         ROOT = createDirectory(0.8);
     }
-    
+
     private static DummyFile createDirectory(double subdirectoryPercentage) {
         final int numFiles = (int)(3 + (7*RANDOM.nextDouble()));
         final DummyFile[] files = new DummyFile[numFiles];
         for(int i=0; i< numFiles; i++) {
-            files[i] = (RANDOM.nextDouble()<subdirectoryPercentage) ? 
+            files[i] = (RANDOM.nextDouble()<subdirectoryPercentage) ?
                     createDirectory(subdirectoryPercentage-0.4) :
                     createFile();
         }
@@ -86,7 +86,7 @@ public class SamplePageTreeTableHelper {
         calendar.set(Calendar.YEAR, 2013);
         return new DummyFile("Directory "+(directoryCount++), calendar.getTime(), files);
     }
-    
+
     private static DummyFile createFile() {
         Calendar calendar = Calendar.getInstance();
         calendar.setTimeInMillis(RANDOM.nextLong());
@@ -97,19 +97,19 @@ public class SamplePageTreeTableHelper {
             calendar.getTime()
         );
     }
-    
-    private static Node createFOLDER() { 
+
+    private static Node createFOLDER() {
         SVGPath sp = new SVGPath();
         sp.setContent(FOLDER);
         return sp;
     }
-    
-    private static Node createFILE() { 
+
+    private static Node createFILE() {
         SVGPath sp = new SVGPath();
         sp.setContent(FILE);
         return sp;
     }
-    
+
     static TreeTableView createTreeTableView(int width, boolean cellSelection) {
         TreeTableView treeTableView = buildFileBrowserTreeTableView();
         treeTableView.setSortMode(TreeSortMode.ONLY_FIRST_LEVEL);
@@ -125,17 +125,17 @@ public class SamplePageTreeTableHelper {
             treeTableView.getSelectionModel().selectRange(5, 8);
         }
         return treeTableView;
-    } 
-    
+    }
+
     private static TreeTableView buildFileBrowserTreeTableView() {
         // create a simple String treeview
         TreeItem<DummyFile> root = new FileTreeItem(ROOT);
         root.setExpanded(true);
-        
+
         final TreeTableView<DummyFile> treeTableView = new TreeTableView<DummyFile>();
         treeTableView.setShowRoot(true);
         treeTableView.setRoot(root);
-        
+
         // --- name column
         TreeTableColumn<DummyFile, String> nameColumn = new TreeTableColumn<DummyFile, String>("Name");
         nameColumn.setPrefWidth(300);
@@ -152,7 +152,7 @@ public class SamplePageTreeTableHelper {
         sizeColumn.setCellFactory(p -> new TreeTableCell<DummyFile, DummyFile>() {
             @Override protected void updateItem(DummyFile item, boolean empty) {
                 super.updateItem(item, empty);
-                
+
                 TreeTableView treeTable = p.getTreeTableView();
 
                 // if the File is a directory, it has no size...
@@ -161,7 +161,7 @@ public class SamplePageTreeTableHelper {
                     setText(null);
                 } else {
                     TreeItem<DummyFile> treeItem = treeTable.getTreeItem(getIndex());
-                    if (item == null || empty || treeItem == null || 
+                    if (item == null || empty || treeItem == null ||
                             treeItem.getValue() == null || treeItem.getValue().isDirectory()) {
                         setText(null);
                     } else {
@@ -182,7 +182,7 @@ public class SamplePageTreeTableHelper {
                 return 1;
             }
         });
-        
+
         // --- modified column
         TreeTableColumn<DummyFile, Date> lastModifiedColumn = new TreeTableColumn<DummyFile, Date>("Last Modified");
         lastModifiedColumn.setPrefWidth(130);
@@ -190,7 +190,7 @@ public class SamplePageTreeTableHelper {
         lastModifiedColumn.setCellFactory(p -> new TreeTableCell<DummyFile, Date>() {
             @Override protected void updateItem(Date item, boolean empty) {
                 super.updateItem(item, empty);
-                
+
                 if (item == null || empty) {
                     setText(null);
                 } else {
@@ -198,11 +198,11 @@ public class SamplePageTreeTableHelper {
                 }
             }
         });
-        
+
         treeTableView.getColumns().setAll(nameColumn, sizeColumn, lastModifiedColumn);
         return treeTableView;
     }
-    
+
     private static class DummyFile {
         private final String name;
         private final int size;
@@ -215,7 +215,7 @@ public class SamplePageTreeTableHelper {
             this.modified = modified;
             this.children = null;
         }
-        
+
         public DummyFile(String name, Date modified, DummyFile[] children) {
             this.name = name;
             this.size = 0;
@@ -238,12 +238,12 @@ public class SamplePageTreeTableHelper {
         public DummyFile[] getChildren() {
             return children;
         }
-        
+
         public boolean isDirectory() {
             return children != null;
         }
     }
-    
+
     private static class FileTreeItem extends TreeItem<DummyFile> {
         private boolean isFirstTimeChildren = true;
 

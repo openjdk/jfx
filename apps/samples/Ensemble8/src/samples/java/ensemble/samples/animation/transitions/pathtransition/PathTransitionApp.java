@@ -71,15 +71,15 @@ public class PathTransitionApp extends Application {
         Pane root = new Pane();
         root.setPrefSize(280, 190);
         root.setMinSize(Pane.USE_PREF_SIZE, Pane.USE_PREF_SIZE);
-        root.setMaxSize(Pane.USE_PREF_SIZE, Pane.USE_PREF_SIZE);        
+        root.setMaxSize(Pane.USE_PREF_SIZE, Pane.USE_PREF_SIZE);
 
         Rectangle rect = new Rectangle(0, 0, 40, 40);
         rect.setArcHeight(10);
         rect.setArcWidth(10);
         rect.setFill(Color.ORANGE);
         root.getChildren().add(rect);
-        Path path = new Path(new MoveTo(20, 20), 
-                new CubicCurveTo(380, 0, 220, 120, 120, 80), 
+        Path path = new Path(new MoveTo(20, 20),
+                new CubicCurveTo(380, 0, 220, 120, 120, 80),
                 new CubicCurveTo(0, 40, 0, 240, 220, 120));
         path.setStroke(Color.DODGERBLUE);
         path.getStrokeDashArray().setAll(5d, 5d);
@@ -89,7 +89,7 @@ public class PathTransitionApp extends Application {
         pathTransition.setOrientation(PathTransition.OrientationType.ORTHOGONAL_TO_TANGENT);
         pathTransition.setCycleCount(Timeline.INDEFINITE);
         pathTransition.setAutoReverse(true);
-        
+
         return root;
     }
 

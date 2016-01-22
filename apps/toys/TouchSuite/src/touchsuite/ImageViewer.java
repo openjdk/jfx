@@ -70,7 +70,7 @@ public class ImageViewer extends Application {
 
     Rotate rotate = new Rotate();
     Scale scale = new Scale();
-    
+
     @Override public void start(Stage stage) {
         stage.setTitle("Image Viewer");
 
@@ -88,10 +88,10 @@ public class ImageViewer extends Application {
         if (images.length > 1) setup(right, images[1]);
 
         view = new Group(bg, left, right, center);
-        
+
         center.setTranslateX((bg.getWidth() - center.getImage().getWidth()) / 2);
         alignNeighbours();
-        
+
         root.getChildren().addAll(view);
         stage.setScene(scene);
         stage.show();
@@ -122,7 +122,7 @@ public class ImageViewer extends Application {
                         drag(-event.getDeltaX(), 0);
                         event.consume();
                     } else if (Math.abs(event.getDeltaY()) > 0.5) {
-                        double factor = 
+                        double factor =
                                 event.getDeltaY() > 0 ? 0.8 : 1.25;
 
                         double x = event.getX();

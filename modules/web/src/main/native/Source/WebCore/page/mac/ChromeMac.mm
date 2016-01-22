@@ -40,7 +40,7 @@ void Chrome::focusNSView(NSView* view)
         client().makeFirstResponder();
         return;
     }
-    
+
     NSResponder *firstResponder = client().firstResponder();
     if (firstResponder == view)
         return;

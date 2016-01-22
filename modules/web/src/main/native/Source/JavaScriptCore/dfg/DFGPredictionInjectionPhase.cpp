@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -41,26 +41,26 @@ public:
         : Phase(graph, "prediction injection")
     {
     }
-    
+
     bool run()
     {
         ASSERT(m_graph.m_form == ThreadedCPS);
         ASSERT(m_graph.m_unificationState == GloballyUnified);
-        
+
         ASSERT(codeBlock()->numParameters() >= 1);
         {
             ConcurrentJITLocker locker(profiledBlock()->m_lock);
-            
+
             for (size_t arg = 0; arg < static_cast<size_t>(codeBlock()->numParameters()); ++arg) {
                 ValueProfile* profile = profiledBlock()->valueProfileForArgument(arg);
                 if (!profile)
                     continue;
-            
+
                 m_graph.m_arguments[arg]->variableAccessData()->predict(
                     profile->computeUpdatedPrediction(locker));
             }
         }
-        
+
         for (BlockIndex blockIndex = 0; blockIndex < m_graph.numBlocks(); ++blockIndex) {
             BasicBlock* block = m_graph.block(blockIndex);
             if (!block)
@@ -79,7 +79,7 @@ public:
                     speculationFromValue(m_graph.m_plan.mustHandleValues[i]));
             }
         }
-        
+
         return true;
     }
 };

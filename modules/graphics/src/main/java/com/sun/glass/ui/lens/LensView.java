@@ -201,7 +201,7 @@ final class LensView extends View {
         notifyDragOver(x, y, absx, absy, recommendedDropAction);
     }
 
-    //Menu event - i.e context menu hint (usually mouse right click) 
+    //Menu event - i.e context menu hint (usually mouse right click)
     protected void _notifyMenu(int x, int y, int xAbs, int yAbs, boolean isKeyboardTrigger) {
         notifyMenu(x, y, xAbs, yAbs, isKeyboardTrigger);
     }

@@ -94,7 +94,7 @@ import sun.util.logging.PlatformLogger;
  *
  * <p>
  * A default headlight will be added to a {@SubScene} that contains one or more
- * {@code Shape3D} nodes, but no light nodes. This light source is a 
+ * {@code Shape3D} nodes, but no light nodes. This light source is a
  * {@code Color.WHITE} {@code PointLight} placed at the camera position.
  * </p>
  *

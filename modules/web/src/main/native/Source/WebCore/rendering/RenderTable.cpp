@@ -147,7 +147,7 @@ void RenderTable::addChild(RenderObject* child, RenderObject* beforeChild)
                     m_head = toRenderTableSection(child);
                 } else {
                     resetSectionPointerIfNotBefore(m_firstBody, beforeChild);
-                    if (!m_firstBody) 
+                    if (!m_firstBody)
                         m_firstBody = toRenderTableSection(child);
                 }
                 wrapInAnonymousSection = false;
@@ -295,7 +295,7 @@ void RenderTable::updateLogicalWidth()
     // Ensure we aren't smaller than our min preferred width.
     setLogicalWidth(std::max<int>(logicalWidth(), minPreferredLogicalWidth()));
 
-    
+
     // Ensure we aren't bigger than our max-width style.
     Length styleMaxLogicalWidth = style().logicalMaxWidth();
     if ((styleMaxLogicalWidth.isSpecified() && !styleMaxLogicalWidth.isNegative()) || styleMaxLogicalWidth.isIntrinsic()) {
@@ -421,12 +421,12 @@ void RenderTable::layout()
     // FIXME: We should do this recalc lazily in borderStart/borderEnd so that we don't have to make sure
     // to call this before we call borderStart/borderEnd to avoid getting a stale value.
     recalcBordersInRowDirection();
-        
+
     LayoutRepainter repainter(*this, checkForRepaintDuringLayout());
     LayoutStateMaintainer statePusher(view(), *this, locationOffset(), hasTransform() || hasReflection() || style().isFlippedBlocksWritingMode());
 
     setLogicalHeight(0);
-    
+
     LayoutUnit oldLogicalWidth = logicalWidth();
     updateLogicalWidth();
 
@@ -492,11 +492,11 @@ void RenderTable::layout()
         updateLogicalHeight();
 
     LayoutUnit computedLogicalHeight = 0;
-    
+
     Length logicalHeightLength = style().logicalHeight();
     if (logicalHeightLength.isSpecified() && logicalHeightLength.isPositive())
         computedLogicalHeight = convertStyleLogicalHeightToComputedHeight(logicalHeightLength);
-    
+
     Length logicalMaxHeightLength = style().logicalMaxHeight();
     if (logicalMaxHeightLength.isSpecified() && !logicalMaxHeightLength.isNegative()) {
         LayoutUnit computedMaxLogicalHeight = convertStyleLogicalHeightToComputedHeight(logicalMaxHeightLength);
@@ -615,7 +615,7 @@ void RenderTable::addOverflowFromChildren()
     }
 
     // Add overflow from our caption.
-    for (unsigned i = 0; i < m_captions.size(); i++) 
+    for (unsigned i = 0; i < m_captions.size(); i++)
         addOverflowFromChild(m_captions[i]);
 
     // Add overflow from our sections.
@@ -658,7 +658,7 @@ void RenderTable::paintObject(PaintInfo& paintInfo, const LayoutPoint& paintOffs
     // We're done.  We don't bother painting any children.
     if (paintPhase == PaintPhaseBlockBackground)
         return;
-    
+
     // We don't paint our own background, but we do let the kids paint their backgrounds.
     if (paintPhase == PaintPhaseChildBlockBackgrounds)
         paintPhase = PaintPhaseChildBlockBackground;
@@ -673,7 +673,7 @@ void RenderTable::paintObject(PaintInfo& paintInfo, const LayoutPoint& paintOffs
             box.paint(info, childPoint);
         }
     }
-    
+
     if (collapseBorders() && paintPhase == PaintPhaseChildBlockBackground && style().visibility() == VISIBLE) {
         recalcCollapsedBorders();
         // Using our cached sorted styles, we then do individual passes,
@@ -943,7 +943,7 @@ void RenderTable::recalcSections() const
         if (sectionCols > maxCols)
             maxCols = sectionCols;
     }
-    
+
     m_columns.resize(maxCols);
     m_columnPos.resize(maxCols + 1);
 
@@ -1292,7 +1292,7 @@ RenderTableCell* RenderTable::cellBefore(const RenderTableCell* cell) const
     unsigned effCol = colToEffCol(cell->col());
     if (!effCol)
         return 0;
-    
+
     // If we hit a colspan back up to a real cell.
     RenderTableSection::CellStruct& prevCell = section->cellAt(cell->rowIndex(), effCol - 1);
     return prevCell.primaryCell();
@@ -1365,7 +1365,7 @@ LayoutRect RenderTable::overflowClipRect(const LayoutPoint& location, RenderRegi
         rect.setLocation(location + rect.location());
     } else
         rect = RenderBox::overflowClipRect(location, region, relevancy);
-    
+
     // If we have a caption, expand the clip to include the caption.
     // FIXME: Technically this is wrong, but it's virtually impossible to fix this
     // for real until captions have been re-written.

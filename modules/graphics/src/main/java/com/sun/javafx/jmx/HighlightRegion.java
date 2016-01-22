@@ -44,7 +44,7 @@ public class HighlightRegion extends Rectangle2D {
 
     /**
      * Constructs a new HighlightRegion.
-     * 
+     *
      * @param tkScene the scene this region belongs to.
      * @param x the x coordinate of the region
      * @param y the y coordinate of the region
@@ -85,7 +85,7 @@ public class HighlightRegion extends Rectangle2D {
             long bits = 7L;
             bits = 31L * bits + super.hashCode();
             bits = 31L * bits + tkScene.hashCode();
-	          hash = (int) (bits ^ (bits >> 32));
+              hash = (int) (bits ^ (bits >> 32));
         }
         return hash;
     }

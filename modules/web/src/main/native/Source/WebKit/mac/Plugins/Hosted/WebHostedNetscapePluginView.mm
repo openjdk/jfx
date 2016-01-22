@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #if USE(PLUGIN_HOST_PROCESS) && ENABLE(NETSCAPE_PLUGIN_API)
@@ -93,9 +93,9 @@ extern "C" {
     self = [super initWithFrame:frame pluginPackage:pluginPackage URL:URL baseURL:baseURL MIMEType:MIME attributeKeys:keys attributeValues:values loadManually:loadManually element:element];
     if (!self)
         return nil;
-    
+
     return self;
-}    
+}
 
 - (void)handleMouseMoved:(NSEvent *)event
 {
@@ -107,7 +107,7 @@ extern "C" {
 {
     ASSERT(!_attributeKeys);
     ASSERT(!_attributeValues);
-    
+
     _attributeKeys = adoptNS([keys copy]);
     _attributeValues = adoptNS([values copy]);
 }
@@ -132,17 +132,17 @@ extern "C" {
 
     _proxy = NetscapePluginHostManager::shared().instantiatePlugin([_pluginPackage.get() path], [_pluginPackage.get() pluginHostArchitecture], [_pluginPackage.get() bundleIdentifier], self, _MIMEType.get(), _attributeKeys.get(), _attributeValues.get(), userAgent, _sourceURL.get(),
                                                                    _mode == NP_FULL, _isPrivateBrowsingEnabled, acceleratedCompositingEnabled, _hostsLayersInWindowServer);
-    if (!_proxy) 
+    if (!_proxy)
         return NO;
 
     if (_proxy->rendererType() == UseSoftwareRenderer)
         _softwareRenderer = WKSoftwareCARendererCreate(_proxy->renderContextID());
     else
         [self createPluginLayer];
-    
+
     // Update the window frame.
     _proxy->windowFrameChanged([[self window] frame]);
-    
+
     return YES;
 }
 
@@ -207,7 +207,7 @@ extern "C" {
 {
     // FIXME: This should use the same implementation as WebNetscapePluginView (and move to the base class).
     [super setLayer:newLayer];
-    
+
     if (_pluginLayer)
         [newLayer addSublayer:_pluginLayer.get()];
 }
@@ -226,33 +226,33 @@ extern "C" {
 {
     if (!_proxy)
         return;
-    
+
     // The base coordinates of a window and it's contentView happen to be the equal at a userSpaceScaleFactor
     // of 1. For non-1.0 scale factors this assumption is false.
     NSView *windowContentView = [[self window] contentView];
     NSRect boundsInWindow = [self convertRect:[self bounds] toView:windowContentView];
 
     NSRect visibleRectInWindow;
-    
+
     // Core Animation plug-ins need to be updated (with a 0,0,0,0 clipRect) when
     // moved to a background tab. We don't do this for Core Graphics plug-ins as
     // older versions of Flash have historical WebKit-specific code that isn't
-    // compatible with this behavior.    
+    // compatible with this behavior.
     BOOL shouldClipOutPlugin = _pluginLayer && [self shouldClipOutPlugin];
     if (!shouldClipOutPlugin)
         visibleRectInWindow = [self actualVisibleRectInWindow];
     else
         visibleRectInWindow = NSZeroRect;
-    
+
     // Flip Y to convert NSWindow coordinates to top-left-based window coordinates.
     float borderViewHeight = [[self currentWindow] frame].size.height;
     boundsInWindow.origin.y = borderViewHeight - NSMaxY(boundsInWindow);
-        
+
     if (!shouldClipOutPlugin)
         visibleRectInWindow.origin.y = borderViewHeight - NSMaxY(visibleRectInWindow);
 
     _previousSize = boundsInWindow.size;
-    
+
     _proxy->resize(boundsInWindow, visibleRectInWindow);
 
     bool shouldHostLayersInWindowServer = [self windowHostsLayersInWindowServer];
@@ -270,7 +270,7 @@ extern "C" {
 {
     if (!_proxy)
         return YES;
-    
+
     return _proxy->shouldStop();
 }
 
@@ -281,11 +281,11 @@ extern "C" {
             WKSoftwareCARendererDestroy(_softwareRenderer);
             _softwareRenderer = 0;
         }
-        
+
         _proxy->destroy();
         _proxy = 0;
     }
-    
+
     _pluginLayer = 0;
 }
 
@@ -307,7 +307,7 @@ extern "C" {
         _proxy->focusChanged(_hasFocus);
 }
 
-- (void)windowFrameDidChange:(NSNotification *)notification 
+- (void)windowFrameDidChange:(NSNotification *)notification
 {
     if (_proxy && [self window])
         _proxy->windowFrameChanged([[self window] frame]);
@@ -316,16 +316,16 @@ extern "C" {
 - (void)addWindowObservers
 {
     [super addWindowObservers];
-    
+
     ASSERT([self window]);
-    
+
     NSWindow *window = [self window];
-    
+
     NSNotificationCenter *notificationCenter = [NSNotificationCenter defaultCenter];
-    [notificationCenter addObserver:self selector:@selector(windowFrameDidChange:) 
+    [notificationCenter addObserver:self selector:@selector(windowFrameDidChange:)
                                name:NSWindowDidMoveNotification object:window];
     [notificationCenter addObserver:self selector:@selector(windowFrameDidChange:)
-                               name:NSWindowDidResizeNotification object:window];    
+                               name:NSWindowDidResizeNotification object:window];
 
     if (_proxy)
         _proxy->windowFrameChanged([window frame]);
@@ -335,7 +335,7 @@ extern "C" {
 - (void)removeWindowObservers
 {
     [super removeWindowObservers];
-    
+
     NSNotificationCenter *notificationCenter = [NSNotificationCenter defaultCenter];
     [notificationCenter removeObserver:self name:NSWindowDidMoveNotification object:nil];
     [notificationCenter removeObserver:self name:NSWindowDidResizeNotification object:nil];
@@ -382,10 +382,10 @@ extern "C" {
 - (void)scrollWheel:(NSEvent *)event
 {
     bool processedEvent = false;
-    
+
     if (_isStarted && _proxy)
         processedEvent = _proxy->wheelEvent(self, event);
-    
+
     if (!processedEvent)
         [super scrollWheel:event];
 }
@@ -399,14 +399,14 @@ extern "C" {
 {
     if (!_isStarted || !_proxy)
         return;
-    
+
     NSString *string = nil;
     if ([[WebTextInputWindowController sharedTextInputWindowController] interpretKeyEvent:event string:&string]) {
         if (string)
             _proxy->insertText(string);
         return;
     }
-    
+
     _proxy->keyEvent(self, event, NPCocoaEventKeyDown);
 }
 
@@ -437,10 +437,10 @@ extern "C" {
 
     _pluginLayer = nil;
     _proxy = 0;
-    
+
     // No need for us to be layer backed anymore
     self.wantsLayer = NO;
-    
+
     [self invalidatePluginContentRect:[self bounds]];
 }
 
@@ -471,7 +471,7 @@ extern "C" {
 {
     if (!_proxy)
         return 0;
-    
+
     return _proxy->createBindingsInstance(rootObject);
 }
 
@@ -480,7 +480,7 @@ extern "C" {
     ASSERT(_loadManually);
     if (!_proxy)
         return;
-    
+
     ASSERT(!_proxy->manualStream());
 
     _proxy->setManualStream(HostedNetscapePluginStream::create(_proxy.get(), &core([self webFrame])->loader()));
@@ -492,7 +492,7 @@ extern "C" {
     ASSERT(_loadManually);
     if (!_proxy)
         return;
-    
+
     if (HostedNetscapePluginStream* manualStream = _proxy->manualStream())
         manualStream->didReceiveData(0, static_cast<const char*>([data bytes]), [data length]);
 }
@@ -502,7 +502,7 @@ extern "C" {
     ASSERT(_loadManually);
     if (!_proxy)
         return;
-    
+
     if (HostedNetscapePluginStream* manualStream = _proxy->manualStream())
         manualStream->didFail(0, error);
 }
@@ -512,7 +512,7 @@ extern "C" {
     ASSERT(_loadManually);
     if (!_proxy)
         return;
-    
+
     if (HostedNetscapePluginStream* manualStream = _proxy->manualStream())
         manualStream->didFinishLoading(0);
 }
@@ -520,7 +520,7 @@ extern "C" {
 - (void)_webPluginContainerCancelCheckIfAllowedToLoadRequest:(id)webPluginContainerCheck
 {
     ASSERT([webPluginContainerCheck isKindOfClass:[WebPluginContainerCheck class]]);
-    
+
     id contextInfo = [webPluginContainerCheck contextInfo];
     ASSERT([contextInfo isKindOfClass:[NSNumber class]]);
 

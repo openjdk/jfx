@@ -34,7 +34,7 @@
 {
     GLuint _width;
     GLuint _height;
-    
+
     GLuint _texture;
     GLuint _fbo;
     GLuint _fboToRestore;

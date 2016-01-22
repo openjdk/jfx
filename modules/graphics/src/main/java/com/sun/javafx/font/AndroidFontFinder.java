@@ -57,7 +57,7 @@ class AndroidFontFinder {
 
     private final static String SYSTEM_FONT_NAME    = "sans serif";
     private final static float SYSTEM_FONT_SIZE     = 16.0f;
-    
+
     final static String fontDescriptor_2_X_Path = "/com/sun/javafx/font/android_system_fonts.xml";
     final static String fontDescriptor_4_X_Path = "/system/etc/system_fonts.xml";
     final static String systemFontsDir = "/system/fonts";
@@ -76,7 +76,7 @@ class AndroidFontFinder {
     public static float getSystemFontSize() {
         return SYSTEM_FONT_SIZE;
     }
-    
+
     public static String getSystemFontsDir() {
         return systemFontsDir;
     }

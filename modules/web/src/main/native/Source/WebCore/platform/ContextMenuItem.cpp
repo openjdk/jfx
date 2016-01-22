@@ -51,7 +51,7 @@ ContextMenuItem::ContextMenuItem(ContextMenuItemType type, ContextMenuAction act
     , m_checked(checked)
 {
 }
-        
+
 ContextMenuItem::ContextMenuItem(ContextMenuAction action, const String& title, bool enabled, bool checked, const Vector<ContextMenuItem>& subMenuItems)
     : m_type(SubmenuType)
     , m_action(action)

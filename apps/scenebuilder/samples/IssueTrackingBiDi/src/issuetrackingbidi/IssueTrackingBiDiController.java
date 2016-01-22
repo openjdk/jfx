@@ -81,13 +81,13 @@ public class IssueTrackingBiDiController {
 
     @FXML //  fx:id="colSynopsis"
     private TableColumn<ObservableIssue, String> colSynopsis; // Value injected by FXMLLoader
-    
+
     @FXML //  fx:id="colNeeded"
     private TableColumn<ObservableIssue, LocalDate> colNeeded; // Value injected by FXMLLoader
-    
+
     @FXML //  fx:id="deleteIssue"
     private Button deleteIssue; // Value injected by FXMLLoader
-    
+
     @FXML // fx:id="neededBy"
     private DatePicker neededBy;  // Value injected by FXMLLoader
 
@@ -122,7 +122,7 @@ public class IssueTrackingBiDiController {
     TrackingService model = null;
     private TextField statusValue = new TextField();
     final ObservableList<ObservableIssue> tableContent = FXCollections.observableArrayList();
-    
+
     /**
      * Initializes the controller class.
      */
@@ -142,7 +142,7 @@ public class IssueTrackingBiDiController {
         assert table != null : "fx:id=\"table\" was not injected: check your FXML file 'IssueTrackingBiDi.fxml'.";
         assert list != null : "fx:id=\"list\" was not injected: check your FXML file 'IssueTrackingBiDi.fxml'.";
         assert neededBy != null : "fx:id=\"neededBy\" was not injected: check your FXML file 'IssueTrackingBiDi.fxml'.";
-        
+
         System.out.println(this.getClass().getSimpleName() + ".initialize");
         configureButtons();
         configureDetails();
@@ -206,9 +206,9 @@ public class IssueTrackingBiDiController {
         final Issue edited = new DetailsData();
         SaveState saveState = computeSaveState(edited, ref);
         if (saveState == SaveState.UNSAVED) {
-            model.saveIssue(ref.getId(), 
+            model.saveIssue(ref.getId(),
                     edited.getStatus(),
-                    edited.getSynopsis(), 
+                    edited.getSynopsis(),
                     edited.getDescription(),
                     edited.getNeededBy());
         }
@@ -225,7 +225,7 @@ public class IssueTrackingBiDiController {
 
         updateSaveIssueButtonState();
     }
-    
+
     private void configureButtons() {
         if (newIssue != null) {
             newIssue.setDisable(true);
@@ -237,18 +237,18 @@ public class IssueTrackingBiDiController {
             deleteIssue.setDisable(true);
         }
     }
-    
+
     // An observable list of project names obtained from the model.
     // This is a live list, and we will react to its changes by removing
     // and adding project names to/from our list widget.
     private ObservableList<String> displayedProjectNames;
-    
+
     // The list of Issue IDs relevant to the selected project. Can be null
     // if no project is selected. This list is obtained from the model.
     // This is a live list, and we will react to its changes by removing
     // and adding Issue objects to/from our table widget.
     private ObservableList<String> displayedIssues;
-    
+
     // This listener will listen to changes in the displayedProjectNames list,
     // and update our list widget in consequence.
     private final ListChangeListener<String> projectNamesListener = c -> {
@@ -269,7 +269,7 @@ public class IssueTrackingBiDiController {
         }
         FXCollections.sort(projectsView);
     };
-    
+
     // This listener will listen to changes in the displayedIssues list,
     // and update our table widget in consequence.
     private final ListChangeListener<String> projectIssuesListener = c -> {
@@ -317,7 +317,7 @@ public class IssueTrackingBiDiController {
         projectsView.addAll(sortedProjects);
         list.setItems(projectsView);
     }
-    
+
     // This listener listen to changes in the table widget selection and
     // update the DeleteIssue button state accordingly.
     private final ListChangeListener<ObservableIssue> tableSelectionChanged =
@@ -404,7 +404,7 @@ public class IssueTrackingBiDiController {
             }
             return IssueStatus.valueOf(statusValue.getText().trim());
         }
-        
+
         @Override
         public String getProjectName() {
             if (displayedBugProject == null || isEmpty(displayedIssueLabel.getText())) {
@@ -428,7 +428,7 @@ public class IssueTrackingBiDiController {
             }
             return descriptionValue.getText();
         }
-        
+
         @Override
         public LocalDate getNeededBy() {
             if (neededBy == null) {
@@ -549,7 +549,7 @@ public class IssueTrackingBiDiController {
         }
         return null;
     }
-    
+
     /**
      * Listen to changes in the list selection, and updates the table widget and
      * DeleteIssue and NewIssue buttons accordingly.

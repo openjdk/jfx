@@ -64,7 +64,7 @@ namespace JSC {
         OpRShift,
         OpURShift
     };
-    
+
     enum LogicalOperator {
         OpLogicalAnd,
         OpLogicalOr
@@ -149,7 +149,7 @@ namespace JSC {
         virtual bool isNumber() const { return false; }
         virtual bool isString() const { return false; }
         virtual bool isNull() const { return false; }
-        virtual bool isPure(BytecodeGenerator&) const { return false; }        
+        virtual bool isPure(BytecodeGenerator&) const { return false; }
         virtual bool isConstant() const { return false; }
         virtual bool isLocation() const { return false; }
         virtual bool isResolveNode() const { return false; }
@@ -252,7 +252,7 @@ namespace JSC {
 
         const Identifier& m_value;
     };
-    
+
     class ThrowableExpressionData {
     public:
         ThrowableExpressionData()
@@ -261,7 +261,7 @@ namespace JSC {
             , m_divotEnd(-1, -1, -1)
         {
         }
-        
+
         ThrowableExpressionData(const JSTextPosition& divot, const JSTextPosition& start, const JSTextPosition& end)
             : m_divot(divot)
             , m_divotStart(start)
@@ -349,7 +349,7 @@ namespace JSC {
         uint16_t m_subexpressionLineOffset;
         uint16_t m_subexpressionLineStartOffset;
     };
-    
+
     class ThrowablePrefixedSubExpressionData : public ThrowableExpressionData {
     public:
         ThrowablePrefixedSubExpressionData()
@@ -374,13 +374,13 @@ namespace JSC {
             ASSERT(subexpressionDivot.offset >= divot().offset);
             // Overflow means we can't do this safely, so just point at the primary divot,
             // divotLine, or divotLineStart.
-            if ((subexpressionDivot.offset - divot()) & ~0xFFFF) 
+            if ((subexpressionDivot.offset - divot()) & ~0xFFFF)
                 return;
             if ((subexpressionDivot.line - divot().line) & ~0xFFFF)
                 return;
             if ((subexpressionDivot.lineStartOffset - divot().lineStartOffset) & ~0xFFFF)
                 return;
-            if ((subexpressionOffset - divotStart()) & ~0xFFFF) 
+            if ((subexpressionOffset - divotStart()) & ~0xFFFF)
                 return;
             m_subexpressionDivotOffset = subexpressionDivot.offset - divot();
             m_subexpressionStartOffset = subexpressionOffset - divotStart();
@@ -482,7 +482,7 @@ namespace JSC {
         PropertyNode(VM*, const Identifier&, ExpressionNode*, Type);
         PropertyNode(VM*, double, ExpressionNode*, Type);
         PropertyNode(VM*, ExpressionNode* propertyName, ExpressionNode*, Type);
-        
+
         ExpressionNode* expressionName() const { return m_expression; }
         const Identifier* name() const { return m_name; }
 
@@ -518,7 +518,7 @@ namespace JSC {
 
         PropertyListNode* m_list;
     };
-    
+
     class BracketAccessorNode : public ExpressionNode, public ThrowableExpressionData {
     public:
         BracketAccessorNode(const JSTokenLocation&, ExpressionNode* base, ExpressionNode* subscript, bool subscriptHasAssignments);
@@ -559,12 +559,12 @@ namespace JSC {
     class SpreadExpressionNode : public ExpressionNode, public ThrowableExpressionData {
     public:
         SpreadExpressionNode(const JSTokenLocation&, ExpressionNode*);
-        
+
         ExpressionNode* expression() const { return m_expression; }
-        
+
     private:
         virtual RegisterID* emitBytecode(BytecodeGenerator&, RegisterID* = 0) override;
-        
+
         virtual bool isSpreadExpression() const override { return true; }
         ExpressionNode* m_expression;
     };
@@ -632,7 +632,7 @@ namespace JSC {
         const Identifier& m_ident;
         ArgumentsNode* m_args;
     };
-    
+
     class FunctionCallBracketNode : public ExpressionNode, public ThrowableSubExpressionData {
     public:
         FunctionCallBracketNode(const JSTokenLocation&, ExpressionNode* base, ExpressionNode* subscript, ArgumentsNode*, const JSTextPosition& divot, const JSTextPosition& divotStart, const JSTextPosition& divotEnd);
@@ -665,7 +665,7 @@ namespace JSC {
     private:
         virtual RegisterID* emitBytecode(BytecodeGenerator&, RegisterID* = 0) override;
     };
-    
+
     class ApplyFunctionCallDotNode : public FunctionCallDotNode {
     public:
         ApplyFunctionCallDotNode(const JSTokenLocation&, ExpressionNode* base, const Identifier&, ArgumentsNode*, const JSTextPosition& divot, const JSTextPosition& divotStart, const JSTextPosition& divotEnd);
@@ -816,7 +816,7 @@ namespace JSC {
 
         ExpressionNode* m_expr;
     };
- 
+
     class LogicalNotNode : public UnaryOpNode {
     public:
         LogicalNotNode(const JSTokenLocation&, ExpressionNode*);
@@ -923,7 +923,7 @@ namespace JSC {
     private:
         virtual RegisterID* emitBytecode(BytecodeGenerator&, RegisterID* = 0) override;
     };
-    
+
     class InstanceOfNode : public ThrowableBinaryOpNode {
     public:
         InstanceOfNode(const JSTokenLocation&, ExpressionNode* expr1, ExpressionNode* expr2, bool rightHasAssignments);
@@ -1092,7 +1092,7 @@ namespace JSC {
     private:
         virtual RegisterID* emitBytecode(BytecodeGenerator&, RegisterID* = 0) override;
     };
-    
+
     typedef Vector<ExpressionNode*, 8> ExpressionVector;
 
     class CommaNode : public ExpressionNode, public ParserArenaDeletable {
@@ -1109,7 +1109,7 @@ namespace JSC {
 
         ExpressionVector m_expressions;
     };
-    
+
     class ConstDeclNode : public ExpressionNode {
     public:
         ConstDeclNode(const JSTokenLocation&, const Identifier&, ExpressionNode*);
@@ -1179,11 +1179,11 @@ namespace JSC {
 
         virtual bool isEmptyStatement() const override { return true; }
     };
-    
+
     class DebuggerStatementNode : public StatementNode {
     public:
         DebuggerStatementNode(const JSTokenLocation&);
-        
+
     private:
         virtual void emitBytecode(BytecodeGenerator&, RegisterID* = 0) override;
     };
@@ -1259,20 +1259,20 @@ namespace JSC {
         ExpressionNode* m_expr3;
         StatementNode* m_statement;
     };
-    
+
     class DeconstructionPatternNode;
-    
+
     class EnumerationNode : public StatementNode, public ThrowableExpressionData {
     public:
         EnumerationNode(const JSTokenLocation&, ExpressionNode*, ExpressionNode*, StatementNode*);
         EnumerationNode(VM*, const JSTokenLocation&, DeconstructionPatternNode*, ExpressionNode*, StatementNode*);
-        
+
     protected:
         ExpressionNode* m_lexpr;
         ExpressionNode* m_expr;
         StatementNode* m_statement;
     };
-    
+
     class ForInNode : public EnumerationNode {
     public:
         ForInNode(const JSTokenLocation&, ExpressionNode*, ExpressionNode*, StatementNode*);
@@ -1281,12 +1281,12 @@ namespace JSC {
     private:
         virtual void emitBytecode(BytecodeGenerator&, RegisterID* = 0) override;
     };
-    
+
     class ForOfNode : public EnumerationNode {
     public:
         ForOfNode(const JSTokenLocation&, ExpressionNode*, ExpressionNode*, StatementNode*);
         ForOfNode(VM*, const JSTokenLocation&, DeconstructionPatternNode*, ExpressionNode*, StatementNode*);
-        
+
     private:
         virtual void emitBytecode(BytecodeGenerator&, RegisterID* = 0) override;
     };
@@ -1296,7 +1296,7 @@ namespace JSC {
         ContinueNode(VM*, const JSTokenLocation&);
         ContinueNode(const JSTokenLocation&, const Identifier&);
         Label* trivialTarget(BytecodeGenerator&);
-        
+
     private:
         virtual bool isContinue() const override { return true; }
         virtual void emitBytecode(BytecodeGenerator&, RegisterID* = 0) override;
@@ -1309,7 +1309,7 @@ namespace JSC {
         BreakNode(VM*, const JSTokenLocation&);
         BreakNode(const JSTokenLocation&, const Identifier&);
         Label* trivialTarget(BytecodeGenerator&);
-        
+
     private:
         virtual bool isBreak() const override { return true; }
         virtual void emitBytecode(BytecodeGenerator&, RegisterID* = 0) override;
@@ -1447,7 +1447,7 @@ namespace JSC {
         StatementNode* singleStatement() const;
 
         void emitStatementsBytecode(BytecodeGenerator&, RegisterID* destination);
-        
+
         void setClosedVariables(const Vector<RefPtr<StringImpl>>&&) { }
 
     protected:
@@ -1539,7 +1539,7 @@ namespace JSC {
 
         void finishParsing(const SourceCode&, ParameterNode*, const Identifier&, FunctionMode);
         void finishParsing(PassRefPtr<FunctionParameters>, const Identifier&, FunctionMode);
-        
+
         void overrideName(const Identifier& ident) { m_ident = ident; }
         const Identifier& ident() { return m_ident; }
         void setInferredName(const Identifier& inferredName) { ASSERT(!inferredName.isNull()); m_inferredName = inferredName; }
@@ -1594,9 +1594,9 @@ namespace JSC {
 
         virtual bool isBindingNode() const { return false; }
         virtual RegisterID* emitDirectBinding(BytecodeGenerator&, RegisterID*, ExpressionNode*) { return 0; }
-        
+
         virtual ~DeconstructionPatternNode() = 0;
-        
+
     protected:
         DeconstructionPatternNode(VM*);
     };
@@ -1618,7 +1618,7 @@ namespace JSC {
 
         Vector<RefPtr<DeconstructionPatternNode>> m_targetPatterns;
     };
-    
+
     class ObjectPatternNode : public DeconstructionPatternNode {
     public:
         static PassRefPtr<ObjectPatternNode> create(VM*);
@@ -1626,7 +1626,7 @@ namespace JSC {
         {
             m_targetPatterns.append(Entry(identifier, wasString, pattern));
         }
-        
+
     private:
         ObjectPatternNode(VM*);
         virtual void collectBoundIdentifiers(Vector<Identifier>&) const override;
@@ -1653,14 +1653,14 @@ namespace JSC {
 
         const JSTextPosition& divotStart() const { return m_divotStart; }
         const JSTextPosition& divotEnd() const { return m_divotEnd; }
-        
+
     private:
         BindingNode(VM*, const Identifier& boundProperty, const JSTextPosition& start, const JSTextPosition& end);
 
         virtual void collectBoundIdentifiers(Vector<Identifier>&) const override;
         virtual void bindValue(BytecodeGenerator&, RegisterID*) const override;
         virtual void toString(StringBuilder&) const override;
-        
+
         virtual bool isBindingNode() const override { return true; }
 
         JSTextPosition m_divotStart;
@@ -1672,7 +1672,7 @@ namespace JSC {
     public:
         DeconstructingAssignmentNode(const JSTokenLocation&, PassRefPtr<DeconstructionPatternNode>, ExpressionNode*);
         DeconstructionPatternNode* bindings() { return m_bindings.get(); }
-        
+
         using ParserArenaDeletable::operator new;
 
     private:

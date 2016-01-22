@@ -62,7 +62,7 @@ static UnlinkedFunctionCodeBlock* generateFunctionCodeBlock(VM& vm, UnlinkedFunc
         body->setUsesArguments();
     body->finishParsing(executable->parameters(), executable->name(), executable->functionMode());
     executable->recordParse(body->features(), body->hasCapturedVariables());
-    
+
     UnlinkedFunctionCodeBlock* result = UnlinkedFunctionCodeBlock::create(&vm, FunctionCode, ExecutableInfo(body->needsActivation(), body->usesEval(), body->isStrictMode(), kind == CodeForConstruct, functionKind == UnlinkedBuiltinFunction));
     OwnPtr<BytecodeGenerator> generator(adoptPtr(new BytecodeGenerator(vm, body.get(), result, debuggerMode, profilerMode)));
     error = generator->generate();
@@ -168,7 +168,7 @@ UnlinkedFunctionCodeBlock* UnlinkedFunctionExecutable::codeBlockFor(VM& vm, cons
     }
 
     UnlinkedFunctionCodeBlock* result = generateFunctionCodeBlock(vm, this, source, specializationKind, debuggerMode, profilerMode, isBuiltinFunction() ? UnlinkedBuiltinFunction : UnlinkedNormalFunction, error);
-    
+
     if (error.m_type != ParserError::ErrorNone)
         return 0;
 
@@ -374,7 +374,7 @@ void UnlinkedCodeBlock::addExpressionInfo(unsigned instructionOffset,
     }
 
     unsigned positionMode =
-        (line <= ExpressionRangeInfo::MaxFatLineModeLine && column <= ExpressionRangeInfo::MaxFatLineModeColumn) 
+        (line <= ExpressionRangeInfo::MaxFatLineModeLine && column <= ExpressionRangeInfo::MaxFatLineModeColumn)
         ? ExpressionRangeInfo::FatLineMode
         : (line <= ExpressionRangeInfo::MaxFatColumnModeLine && column <= ExpressionRangeInfo::MaxFatColumnModeColumn)
         ? ExpressionRangeInfo::FatColumnMode

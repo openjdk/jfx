@@ -35,13 +35,13 @@
 #include "lensPortInternal.h"
 #include "lensPortLogger.h"
 
-#if defined(OMAP3) || defined(IMX6_PLATFORM) 
+#if defined(OMAP3) || defined(IMX6_PLATFORM)
 # ifndef USE_FB_ROBOT
     #define USE_FB_ROBOT
 # endif
 #endif
 
-#ifdef OMAP3 
+#ifdef OMAP3
 #include <linux/omapfb.h>
 #endif
 
@@ -135,7 +135,7 @@ jboolean fbFBRobotScreen(jint x, jint y,
                 *dstPixel = 0xff000000; //black
             }
 
-            // real one row of pixels in the image 
+            // real one row of pixels in the image
             if (col < (int)screenInfo.xres) {
                 int numRead = fread(pixelBuffer, 1,
                             inStride,
@@ -156,7 +156,7 @@ jboolean fbFBRobotScreen(jint x, jint y,
                         unsigned int red = (int)((sp & 0xF800) >> 11) << 3;
                         unsigned int green =(int) ((sp & 0x7E0) >> 5) << 2;
                         unsigned int blue =(int) (sp & 0x1F) << 3;
-                        unsigned int pixel = (unsigned int) (0xff000000 | (red << 16) | (green << 8) | blue); 
+                        unsigned int pixel = (unsigned int) (0xff000000 | (red << 16) | (green << 8) | blue);
                         *dstPixel = pixel;
                    } else {
                         *dstPixel = 0xff000000 | srcIntPixel[col];

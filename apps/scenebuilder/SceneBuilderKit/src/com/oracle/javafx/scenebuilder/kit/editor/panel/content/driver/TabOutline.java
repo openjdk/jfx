@@ -47,7 +47,7 @@ import javafx.scene.shape.PathElement;
  *
  */
 public class TabOutline {
-    
+
     //
     //           2              3
     //           +--------------+
@@ -60,7 +60,7 @@ public class TabOutline {
     //     +--------------------------------------+
     //     7                                      6
     //
-        
+
 
     private final Path ringPath = new Path();
     private final MoveTo moveTo0 = new MoveTo();
@@ -74,14 +74,14 @@ public class TabOutline {
 
     private final TabPaneDesignInfoX tabPaneDesignInfo
             = new TabPaneDesignInfoX();
-    
+
     private final Tab tab;
-    
+
     public TabOutline(Tab tab) {
         assert tab != null;
-        
+
         this.tab = tab;
-        
+
         final List<PathElement> ringElements = ringPath.getElements();
         ringElements.add(moveTo0);
         ringElements.add(lineTo1);
@@ -94,11 +94,11 @@ public class TabOutline {
         ringElements.add(lineTo7);
         ringElements.add(new ClosePath());
     }
-    
+
     public Path getRingPath() {
         return ringPath;
     }
-    
+
     public void layout(AbstractDecoration<?> hostDecoration) {
         final TabPane tabPane = tab.getTabPane();
         final Bounds headerBounds = tabPaneDesignInfo.computeTabBounds(tabPane, tab);
@@ -121,14 +121,14 @@ public class TabOutline {
         }
     }
 
-    
+
     /*
      * Private
      */
-    
+
     private void layoutForTopSide(Bounds headerBounds, Bounds contentBounds,
             AbstractDecoration<?> hd) {
-        
+
         //
         //     x0    x1             x2                x3
         //
@@ -142,7 +142,7 @@ public class TabOutline {
         //     |                                      |
         // y2  +--------------------------------------+
         //
-        
+
         final double x0 = contentBounds.getMinX();
         final double x1 = headerBounds.getMinX();
         final double x2 = headerBounds.getMaxX();
@@ -150,7 +150,7 @@ public class TabOutline {
         final double y0 = headerBounds.getMinY();
         final double y1 = contentBounds.getMinY();
         final double y2 = contentBounds.getMaxY();
-        
+
         final boolean snapToPixel = true;
         final Point2D p0 = hd.sceneGraphObjectToDecoration(x0, y1, snapToPixel);
         final Point2D p1 = hd.sceneGraphObjectToDecoration(x1, y1, snapToPixel);
@@ -160,7 +160,7 @@ public class TabOutline {
         final Point2D p5 = hd.sceneGraphObjectToDecoration(x3, y1, snapToPixel);
         final Point2D p6 = hd.sceneGraphObjectToDecoration(x3, y2, snapToPixel);
         final Point2D p7 = hd.sceneGraphObjectToDecoration(x0, y2, snapToPixel);
-        
+
         moveTo0.setX(p0.getX());
         moveTo0.setY(p0.getY());
         lineTo1.setX(p1.getX());
@@ -178,11 +178,11 @@ public class TabOutline {
         lineTo7.setX(p7.getX());
         lineTo7.setY(p7.getY());
     }
-    
-    
+
+
     private void layoutForBottomSide(Bounds headerBounds, Bounds contentBounds,
             AbstractDecoration<?> hd) {
-        
+
         //
         //     x0    x1             x2                x3
         //
@@ -196,7 +196,7 @@ public class TabOutline {
         //           |    header    |
         // y2        +--------------+
         //
-        
+
         final double x0 = contentBounds.getMinX();
         final double x1 = headerBounds.getMinX();
         final double x2 = headerBounds.getMaxX();
@@ -204,7 +204,7 @@ public class TabOutline {
         final double y0 = contentBounds.getMinY();
         final double y1 = contentBounds.getMaxY();
         final double y2 = headerBounds.getMaxY();
-        
+
         final boolean snapToPixel = true;
         final Point2D p0 = hd.sceneGraphObjectToDecoration(x0, y0, snapToPixel);
         final Point2D p1 = hd.sceneGraphObjectToDecoration(x3, y0, snapToPixel);
@@ -214,7 +214,7 @@ public class TabOutline {
         final Point2D p5 = hd.sceneGraphObjectToDecoration(x1, y2, snapToPixel);
         final Point2D p6 = hd.sceneGraphObjectToDecoration(x1, y1, snapToPixel);
         final Point2D p7 = hd.sceneGraphObjectToDecoration(x0, y1, snapToPixel);
-        
+
         moveTo0.setX(p0.getX());
         moveTo0.setY(p0.getY());
         lineTo1.setX(p1.getX());
@@ -232,14 +232,14 @@ public class TabOutline {
         lineTo7.setX(p7.getX());
         lineTo7.setY(p7.getY());
     }
-    
-    
+
+
     private void layoutForLeftSide(Bounds headerBounds, Bounds contentBounds,
             AbstractDecoration<?> hd) {
-        
+
         //
         //     x0   x1                          x2
-        // 
+        //
         // y0       +---------------------------+
         //          |                           |
         // y1  +--+ |                           |
@@ -253,9 +253,9 @@ public class TabOutline {
         //          |                           |
         //          |                           |
         // y3       +---------------------------+
-        //     
         //
-        
+        //
+
         final double x0 = headerBounds.getMinX();
         final double x1 = contentBounds.getMinX();
         final double x2 = contentBounds.getMaxX();
@@ -263,7 +263,7 @@ public class TabOutline {
         final double y1 = headerBounds.getMinY();
         final double y2 = headerBounds.getMaxY();
         final double y3 = contentBounds.getMaxY();
-        
+
         final boolean snapToPixel = true;
         final Point2D p0 = hd.sceneGraphObjectToDecoration(x0, y1, snapToPixel);
         final Point2D p1 = hd.sceneGraphObjectToDecoration(x1, y1, snapToPixel);
@@ -273,7 +273,7 @@ public class TabOutline {
         final Point2D p5 = hd.sceneGraphObjectToDecoration(x1, y3, snapToPixel);
         final Point2D p6 = hd.sceneGraphObjectToDecoration(x1, y2, snapToPixel);
         final Point2D p7 = hd.sceneGraphObjectToDecoration(x0, y2, snapToPixel);
-        
+
         moveTo0.setX(p0.getX());
         moveTo0.setY(p0.getY());
         lineTo1.setX(p1.getX());
@@ -291,14 +291,14 @@ public class TabOutline {
         lineTo7.setX(p7.getX());
         lineTo7.setY(p7.getY());
     }
-    
-    
+
+
     private void layoutForRightSide(Bounds headerBounds, Bounds contentBounds,
             AbstractDecoration<?> hd) {
-        
+
         //
         //        x0                          x1   x2
-        // 
+        //
         // y0     +---------------------------+
         //        |                           |
         // y1     |                           | +--+
@@ -312,9 +312,9 @@ public class TabOutline {
         //        |                           |
         //        |                           |
         // y3     +---------------------------+
-        //     
         //
-        
+        //
+
         final double x0 = contentBounds.getMinX();
         final double x1 = contentBounds.getMaxX();
         final double x2 = headerBounds.getMaxX();
@@ -322,7 +322,7 @@ public class TabOutline {
         final double y1 = headerBounds.getMinY();
         final double y2 = headerBounds.getMaxY();
         final double y3 = contentBounds.getMaxY();
-        
+
         final boolean snapToPixel = true;
         final Point2D p0 = hd.sceneGraphObjectToDecoration(x0, y0, snapToPixel);
         final Point2D p1 = hd.sceneGraphObjectToDecoration(x1, y0, snapToPixel);
@@ -332,7 +332,7 @@ public class TabOutline {
         final Point2D p5 = hd.sceneGraphObjectToDecoration(x1, y2, snapToPixel);
         final Point2D p6 = hd.sceneGraphObjectToDecoration(x1, y3, snapToPixel);
         final Point2D p7 = hd.sceneGraphObjectToDecoration(x0, y3, snapToPixel);
-        
+
         moveTo0.setX(p0.getX());
         moveTo0.setY(p0.getY());
         lineTo1.setX(p1.getX());
@@ -350,5 +350,5 @@ public class TabOutline {
         lineTo7.setX(p7.getX());
         lineTo7.setY(p7.getY());
     }
-    
+
 }

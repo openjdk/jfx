@@ -103,7 +103,7 @@ import sun.util.logging.PlatformLogger;
  * @since JavaFX 2.0
  */
 public abstract class Camera extends Node {
-   
+
     private Affine3D localToSceneTx = new Affine3D();
 
     protected Camera() {
@@ -214,7 +214,7 @@ public abstract class Camera extends Node {
      * Objects farther away from the eye than {@code farClip} are not
      * drawn.
      * {@code farClip} is specified as a value greater than {@code nearClip}.
-     * A value less than or equal to {@code nearClip} is treated as 
+     * A value less than or equal to {@code nearClip} is treated as
      * {@code nearClip} plus a very small positive number.
      *
      * @defaultValue 100.0
@@ -242,7 +242,7 @@ public abstract class Camera extends Node {
         }
         return farClip;
     }
-    
+
     Camera copy() {
         return this;
     }
@@ -460,7 +460,7 @@ public abstract class Camera extends Node {
 
     /**
      * Computes local position of the camera in the scene.
-     * @param position Position to be reused. New instance is created in case 
+     * @param position Position to be reused. New instance is created in case
      *                 of null.
      * @return The position of the camera in the scene in camera local coords
      */

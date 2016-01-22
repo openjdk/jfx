@@ -6,13 +6,13 @@
  * are met:
  *
  * 1.  Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer. 
+ *     notice, this list of conditions and the following disclaimer.
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
- *     documentation and/or other materials provided with the distribution. 
+ *     documentation and/or other materials provided with the distribution.
  * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
- *     from this software without specific prior written permission. 
+ *     from this software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY APPLE AND ITS CONTRIBUTORS "AS IS" AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
@@ -108,7 +108,7 @@ static NSMutableDictionary *descriptions = nil;
                       MIMEType:(NSString *)MIMEType
 {
     [[self class] _registerWebKitErrors];
-    
+
     NSMutableDictionary *userInfo = [[NSMutableDictionary alloc] init];
     NSDictionary *descriptionsForWebKitErrorDomain = [descriptions objectForKey:WebKitErrorDomain];
     NSString *localizedDescription = [descriptionsForWebKitErrorDomain objectForKey:[NSNumber numberWithInt:code]];
@@ -132,7 +132,7 @@ static NSMutableDictionary *descriptions = nil;
     [userInfo release];
     NSError *error = [self initWithDomain:WebKitErrorDomain code:code userInfo:userInfoCopy];
     [userInfoCopy release];
-    
+
     return error;
 }
 
@@ -154,7 +154,7 @@ static void registerErrors()
         WebKitErrorDescriptionCannotShowURL,                        [NSNumber numberWithInt: WebKitErrorCannotShowURL],
         WebKitErrorDescriptionFrameLoadInterruptedByPolicyChange,   [NSNumber numberWithInt: WebKitErrorFrameLoadInterruptedByPolicyChange],
         WebKitErrorDescriptionCannotUseRestrictedPort,              [NSNumber numberWithInt: WebKitErrorCannotUseRestrictedPort],
-        
+
         // Plug-in and java errors
         WebKitErrorDescriptionCannotFindPlugin,                     [NSNumber numberWithInt: WebKitErrorCannotFindPlugIn],
         WebKitErrorDescriptionCannotLoadPlugin,                     [NSNumber numberWithInt: WebKitErrorCannotLoadPlugIn],

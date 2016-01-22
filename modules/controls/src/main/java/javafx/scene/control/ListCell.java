@@ -45,26 +45,26 @@ import javafx.scene.AccessibleRole;
 import javafx.scene.control.skin.ListCellSkin;
 
 /**
- * <p>The {@link Cell} type used within {@link ListView} instances. In addition 
- * to the API defined on Cell and {@link IndexedCell}, the ListCell is more 
- * tightly bound to a ListView, allowing for better support of editing events, 
+ * <p>The {@link Cell} type used within {@link ListView} instances. In addition
+ * to the API defined on Cell and {@link IndexedCell}, the ListCell is more
+ * tightly bound to a ListView, allowing for better support of editing events,
  * etc.
  *
  * <p>A ListView maintains selection, indicating which cell(s) have been selected,
  * and focus, indicating the current focus owner for any given ListView. For each
  * property, each ListCell has a boolean reflecting whether this specific cell is
  * selected or focused. To achieve this, each ListCell has a reference back to
- * the ListView that it is being used within. Each ListCell belongs to one and 
+ * the ListView that it is being used within. Each ListCell belongs to one and
  * only one ListView.
- * 
+ *
  * <p>Note that in the case of virtualized controls like ListView, when a cell
- * has focus this is not in the same sense as application focus. When a ListCell 
+ * has focus this is not in the same sense as application focus. When a ListCell
  * has focus it simply represents the fact that the cell will  receive keyboard
  * events in the situation that the owning ListView actually contains focus. Of
- * course, in the case where a cell has a Node set in the 
+ * course, in the case where a cell has a Node set in the
  * {@link #graphicProperty() graphic} property, it is completely legal for this
  * Node to request, and acquire focus as would normally be expected.
- * 
+ *
  * @param <T> The type of the item contained within the ListCell.
  * @since JavaFX 2.0
  */
@@ -127,18 +127,18 @@ public class ListCell<T> extends IndexedCell<T> {
                 ObservableValue<? extends MultipleSelectionModel<T>> observable,
                 MultipleSelectionModel<T> oldValue,
                 MultipleSelectionModel<T> newValue) {
-            
+
             if (oldValue != null) {
                 oldValue.getSelectedIndices().removeListener(weakSelectedListener);
             }
-            
+
             if (newValue != null) {
                 newValue.getSelectedIndices().addListener(weakSelectedListener);
             }
-            
+
             updateSelection();
         }
-        
+
     };
 
     /**
@@ -226,7 +226,7 @@ public class ListCell<T> extends IndexedCell<T> {
      * Properties                                                              *
      *                                                                         *
      **************************************************************************/
-    
+
     /**
      * The ListView associated with this Cell.
      */
@@ -306,8 +306,8 @@ public class ListCell<T> extends IndexedCell<T> {
     public final ListView<T> getListView() { return listView.get(); }
     public final ReadOnlyObjectProperty<ListView<T>> listViewProperty() { return listView.getReadOnlyProperty(); }
 
-    
-    
+
+
     /***************************************************************************
      *                                                                         *
      * Public API                                                              *
@@ -351,12 +351,12 @@ public class ListCell<T> extends IndexedCell<T> {
         if (!isEditable() || (list != null && ! list.isEditable())) {
             return;
         }
-        
+
         // it makes sense to get the cell into its editing state before firing
         // the event to the ListView below, so that's what we're doing here
         // by calling super.startEdit().
         super.startEdit();
-        
+
          // Inform the ListView of the edit starting.
         if (list != null) {
             list.fireEvent(new ListView.EditEvent<T>(list,
@@ -387,7 +387,7 @@ public class ListCell<T> extends IndexedCell<T> {
         // call cancelEdit(), resulting in both commit and cancel events being
         // fired (as identified in RT-29650)
         super.commitEdit(newValue);
-        
+
         // update the item within this cell, so that it represents the new value
         updateItem(newValue, false);
 
@@ -405,19 +405,19 @@ public class ListCell<T> extends IndexedCell<T> {
             ControlUtils.requestFocusOnControlOnlyIfCurrentFocusOwnerIsChild(list);
         }
     }
-    
+
     /** {@inheritDoc} */
     @Override public void cancelEdit() {
         if (! isEditing()) return;
-        
+
          // Inform the ListView of the edit being cancelled.
         ListView<T> list = getListView();
-        
+
         super.cancelEdit();
 
         if (list != null) {
             int editingIndex = list.getEditingIndex();
-            
+
             // reset the editing index on the ListView
             if (updateEditingIndex) list.edit(-1);
 
@@ -426,7 +426,7 @@ public class ListCell<T> extends IndexedCell<T> {
             // clicked out of the list entirely and given focus to something else.
             // It would be rude of us to request it back again.
             ControlUtils.requestFocusOnControlOnlyIfCurrentFocusOwnerIsChild(list);
-        
+
             list.fireEvent(new ListView.EditEvent<T>(list,
                     ListView.<T>editCancelEvent(),
                     null,
@@ -447,7 +447,7 @@ public class ListCell<T> extends IndexedCell<T> {
         final List<T> items = lv == null ? null : lv.getItems();
         final int index = getIndex();
         final int itemCount = items == null ? -1 : items.size();
-        
+
         // Compute whether the index for this cell is for a real item
         boolean valid = items != null && index >=0 && index < itemCount;
 
@@ -482,7 +482,7 @@ public class ListCell<T> extends IndexedCell<T> {
             }
         }
     }
-    
+
     /**
      * Updates the ListView associated with this Cell.
      *
@@ -499,16 +499,16 @@ public class ListCell<T> extends IndexedCell<T> {
         int index = getIndex();
         ListView<T> listView = getListView();
         if (index == -1 || listView == null) return;
-        
+
         SelectionModel<T> sm = listView.getSelectionModel();
         if (sm == null) {
             updateSelected(false);
             return;
         }
-        
+
         boolean isSelected = sm.isSelected(index);
         if (isSelected() == isSelected) return;
-        
+
         updateSelected(isSelected);
     }
 
@@ -516,16 +516,16 @@ public class ListCell<T> extends IndexedCell<T> {
         int index = getIndex();
         ListView<T> listView = getListView();
         if (index == -1 || listView == null) return;
-        
+
         FocusModel<T> fm = listView.getFocusModel();
         if (fm == null) {
             setFocused(false);
             return;
         }
-        
+
         setFocused(fm.isFocused(index));
     }
-    
+
     private void updateEditing() {
         final int index = getIndex();
         final ListView<T> list = getListView();
@@ -551,9 +551,9 @@ public class ListCell<T> extends IndexedCell<T> {
             }
         }
     }
-     
 
-    
+
+
     /***************************************************************************
      *                                                                         *
      * Stylesheet Handling                                                     *

@@ -21,10 +21,10 @@
 /**
  * SECTION:gstvideosink
  * @short_description: Base class for video sinks
- * 
+ *
  * <refsect2>
  * <para>
- * Provides useful functions and a base class for video sinks. 
+ * Provides useful functions and a base class for video sinks.
  * </para>
  * <para>
  * GstVideoSink will configure the default base sink to drop frames that
@@ -73,7 +73,7 @@ static GstFlowReturn gst_video_sink_show_frame (GstBaseSink * bsink,
  * @dst: the #GstVideoRectangle describing the destination area
  * @result: a pointer to a #GstVideoRectangle which will receive the result area
  * @scaling: a #gboolean indicating if scaling should be applied or not
- * 
+ *
  * Takes @src rectangle and position it at the center of @dst rectangle with or
  * without @scaling. It handles clipping if the @src rectangle is bigger than
  * the @dst one and @scaling is set to FALSE.

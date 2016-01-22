@@ -72,7 +72,7 @@ public class ControlChildrenTest {
         assertEquals(1, c.getChildrenUnmodifiable().size());
         assertSame(t, c.getChildrenUnmodifiable().get(0));
     }
-    
+
     @Test public void changingTheSkinResultsInBothNewSkinNodeAndTooltipAsChildren() {
         c.setSkin(s);
         c.setTooltip(t);

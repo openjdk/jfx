@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef BINDINGS_OBJC_INSTANCE_H_
@@ -39,11 +39,11 @@ class ObjcInstance : public Instance {
 public:
     static PassRefPtr<ObjcInstance> create(ObjectStructPtr, PassRefPtr<RootObject>);
     virtual ~ObjcInstance();
-    
+
     static void setGlobalException(NSString*, JSGlobalObject* exceptionEnvironment = 0); // A null exceptionEnvironment means the exception should propogate to any execution environment.
 
     virtual Class* getClass() const;
-        
+
     virtual JSValue valueOf(ExecState*) const;
     virtual JSValue defaultValue(ExecState*, PreferredPrimitiveType) const;
 
@@ -57,7 +57,7 @@ public:
     virtual bool setValueOfUndefinedField(ExecState*, PropertyName, JSValue);
 
     ObjectStructPtr getObject() const { return _instance.get(); }
-    
+
     JSValue stringValue(ExecState*) const;
     JSValue numberValue(ExecState*) const;
     JSValue booleanValue() const;

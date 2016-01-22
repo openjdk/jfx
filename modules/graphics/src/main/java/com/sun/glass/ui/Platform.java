@@ -35,7 +35,7 @@ final class Platform {
     public static final String GTK = "Gtk";
     public static final String IOS = "Ios";
     public static final String UNKNOWN = "unknown";
- 
+
     static private String type = null;
 
     static public synchronized String determinePlatform() {

@@ -32,16 +32,16 @@ import com.oracle.jrockit.jfr.Producer;
  * Logs pulse related information with Java Flight Recorder.
  */
 class JFRLogger extends Logger {
-    
+
     private static final String PRODUCER_URI = "http://www.oracle.com/technetwork/java/javafx/index.html";
     private static JFRLogger jfrLogger;
-    
+
     private final Producer producer;
     private final EventToken pulseEventToken;
     private final EventToken inputEventToken;
     private final ThreadLocal<JFRPulseEvent> curPhaseEvent;
     private final ThreadLocal<JFRInputEvent> curInputEvent;
-        
+
     private JFRLogger() throws Exception {
         producer = new Producer("JavaFX producer", "JavaFX producer.", PRODUCER_URI);
         pulseEventToken = producer.addEvent(JFRPulseEvent.class);
@@ -60,7 +60,7 @@ class JFRLogger extends Logger {
             }
         };
     }
-    
+
     public static JFRLogger getInstance() {
         if (jfrLogger == null) {
             /* Guards against exceptions in the constructor and the absence of jfr.jar at run time */
@@ -76,9 +76,9 @@ class JFRLogger extends Logger {
         }
         return jfrLogger;
     }
-    
+
     /**
-     *  Pulse number reconstruction for the render thread relies on the current synchronization 
+     *  Pulse number reconstruction for the render thread relies on the current synchronization
      *  between the FX and render threads: renderStart() is called on the FX thread after all
      *  previous RenderJobs have finished and before any new RenderJob is pushed.
      */
@@ -86,7 +86,7 @@ class JFRLogger extends Logger {
     private int fxPulseNumber;
     private int renderPulseNumber;
     private Thread fxThread;
-    
+
     @Override
     public void pulseStart() {
         ++pulseNumber;
@@ -96,13 +96,13 @@ class JFRLogger extends Logger {
         }
         newPhase("Pulse start");
     }
-    
+
     @Override
     public void pulseEnd() {
         newPhase(null);
         fxPulseNumber = 0;
     }
-    
+
     @Override
     public void renderStart() {
         renderPulseNumber = fxPulseNumber;
@@ -113,7 +113,7 @@ class JFRLogger extends Logger {
         newPhase(null);
         renderPulseNumber = 0;
     }
-    
+
     /**
      * Finishes the current phase and starts a new one if phaseName is not null.
      * @param phaseName The name for the new phase.
@@ -123,7 +123,7 @@ class JFRLogger extends Logger {
         if (pulseEventToken == null) {
             return;
         }
-        
+
         JFRPulseEvent event = curPhaseEvent.get();
 
         /* Cleanup if recording has finished */
@@ -131,7 +131,7 @@ class JFRLogger extends Logger {
             event.setPhase(null);
             return;
         }
-        
+
         /* Finish the previous phase if any */
         if (event.getPhase() != null) {
             event.end();
@@ -143,7 +143,7 @@ class JFRLogger extends Logger {
             event.setPhase(null);
             return;
         }
-                
+
         event.reset();
         event.begin();
         event.setPhase(phaseName);
@@ -163,7 +163,7 @@ class JFRLogger extends Logger {
             event.setInput(null);
             return;
         }
-        
+
         /* Finish the previous input event if any */
         if (event.getInput() != null) {
             event.end();
@@ -175,9 +175,9 @@ class JFRLogger extends Logger {
             event.setInput(null);
             return;
         }
-        
+
         event.reset();
         event.begin();
         event.setInput(input);
-    }    
+    }
 }

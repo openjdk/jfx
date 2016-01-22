@@ -46,7 +46,7 @@ final class SwingDragSource extends CachingTransferable implements EmbeddedScene
 
     SwingDragSource() {
     }
-    
+
     void updateContents(final DropTargetDragEvent e, boolean fetchData) {
         sourceActions = e.getSourceActions();
         updateData(e.getTransferable(), fetchData);
@@ -65,6 +65,6 @@ final class SwingDragSource extends CachingTransferable implements EmbeddedScene
 
     @Override
     public void dragDropEnd(TransferMode performedAction) {
-        throw new UnsupportedOperationException();                
+        throw new UnsupportedOperationException();
     }
 }

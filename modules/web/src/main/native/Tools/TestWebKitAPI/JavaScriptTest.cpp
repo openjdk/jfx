@@ -74,10 +74,10 @@ static void javaScriptCallback(WKSerializedScriptValueRef resultSerializedScript
     size_t bufferSize = JSStringGetMaximumUTF8CStringSize(context.actualString.get());
     auto buffer = std::make_unique<char[]>(bufferSize);
     JSStringGetUTF8CString(context.actualString.get(), buffer.get(), bufferSize);
-    
+
     return compareJSResult(script, buffer.get(), expectedResult);
 }
-    
+
 ::testing::AssertionResult compareJSResult(const char* script, const char* actualResult, const char* expectedResult)
 {
     if (!strcmp(actualResult, expectedResult))

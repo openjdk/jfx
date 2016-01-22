@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef CopiedBlock_h
@@ -66,18 +66,18 @@ public:
     char* payload();
     char* payloadEnd();
     size_t payloadCapacity();
-    
+
     // The data is the region of the block that has been used for allocations.
     char* data();
     char* dataEnd();
     size_t dataSize();
-    
+
     // The wilderness is the region of the block that is usable for allocations
     // but has not been so used.
     char* wilderness();
     char* wildernessEnd();
     size_t wildernessSize();
-    
+
     size_t size();
     size_t capacity();
 

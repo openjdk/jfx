@@ -38,9 +38,9 @@ import org.junit.Test;
 import static org.junit.Assert.*;
 
 public class ComboBoxTreeTableCellTest {
-    
+
     private StringConverter<Object> converter;
-    
+
     @Before public void setup() {
         converter = new StringConverter<Object>() {
             @Override public String toString(Object object) {
@@ -52,22 +52,22 @@ public class ComboBoxTreeTableCellTest {
             }
         };
     }
-    
+
     /**************************************************************************
-     * 
+     *
      * Test for public static Callback<TreeTableColumn<T>, TreeTableCell<T>> forTreeTableColumn(T... items)
-     * 
+     *
      **************************************************************************/
 
-    
+
     @Test public void testStatic_forTreeTableColumn_noArgs_ensureCellFactoryIsNotNull() {
         Callback<TreeTableColumn<String,String>, TreeTableCell<String,String>> cellFactory = ComboBoxTreeTableCell.forTreeTableColumn();
         assertNotNull(cellFactory);
     }
-    
+
     @Test public void testStatic_forTreeTableColumn_noArgs_ensureCellFactoryCreatesCells() {
         Callback<TreeTableColumn<String,String>, TreeTableCell<String,String>> cellFactory = ComboBoxTreeTableCell.forTreeTableColumn();
-        
+
         TreeTableColumn<String,String> tableColumn = new TreeTableColumn<>();
         ComboBoxTreeTableCell<String,String> cell = (ComboBoxTreeTableCell<String,String>)cellFactory.call(tableColumn);
         assertNotNull(cell);
@@ -80,14 +80,14 @@ public class ComboBoxTreeTableCellTest {
         ComboBoxTreeTableCell<String,String> cell = (ComboBoxTreeTableCell<String,String>)cellFactory.call(tableColumn);
         assertNotNull(cell.getConverter());
     }
-    
-    
-    
+
+
+
     /**************************************************************************
-     * 
+     *
      * Test for public static <T> Callback<TreeTableColumn<T>, TreeTableCell<T>> forTreeTableColumn(
      *       final ObservableList<T> items)
-     * 
+     *
      **************************************************************************/
 
     @Test public void testStatic_forTreeTableColumn_items_ensureSuccessWhenItemsIsNull() {
@@ -121,43 +121,43 @@ public class ComboBoxTreeTableCellTest {
     }
 
     /**************************************************************************
-     * 
+     *
      * Constructor tests for default constructor
-     * 
+     *
      **************************************************************************/
 
     @Test public void testConstructor_noArgs_defaultStringConverterIsNotNull() {
         ComboBoxTreeTableCell<Object, Object> cell = new ComboBoxTreeTableCell<>();
         assertNotNull(cell.getConverter());
     }
-    
+
     @Test public void testConstructor_noArgs_defaultStyleClass() {
         ComboBoxTreeTableCell<Object, Object> cell = new ComboBoxTreeTableCell<>();
         assertTrue(cell.getStyleClass().contains("combo-box-tree-table-cell"));
     }
-    
+
     @Test public void testConstructor_noArgs_defaultGraphicIsNull() {
         ComboBoxTreeTableCell<Object, Object> cell = new ComboBoxTreeTableCell<>();
         assertNull(cell.getGraphic());
     }
-    
-    
+
+
     /**************************************************************************
-     * 
+     *
      * Constructor tests for one-arg constructor
-     * 
+     *
      **************************************************************************/
-    
+
     @Test public void testConstructor_converter_defaultStringConverterIsNotNull() {
         ComboBoxTreeTableCell<Object, Object> cell = new ComboBoxTreeTableCell<>(converter);
         assertNotNull(cell.getConverter());
     }
-    
+
     @Test public void testConstructor_converter_defaultStyleClass() {
         ComboBoxTreeTableCell<Object, Object> cell = new ComboBoxTreeTableCell<>(converter);
         assertTrue(cell.getStyleClass().contains("combo-box-tree-table-cell"));
     }
-    
+
     @Test public void testConstructor_converter_defaultGraphicIsACheckBox() {
         ComboBoxTreeTableCell<Object, Object> cell = new ComboBoxTreeTableCell<>(converter);
         assertNull(cell.getGraphic());
@@ -216,12 +216,12 @@ public class ComboBoxTreeTableCellTest {
         cell.setComboBoxEditable(false);
         assertFalse(cell.isComboBoxEditable());
     }
-    
-    
+
+
     /**************************************************************************
-     * 
+     *
      * updateItem tests
-     * 
+     *
      **************************************************************************/
 
     @Test public void test_updateItem_isEmpty_graphicIsNull() {
@@ -229,20 +229,20 @@ public class ComboBoxTreeTableCellTest {
         cell.updateItem("TEST", true);
         assertNull(cell.getGraphic());
     }
-    
+
     @Test public void test_updateItem_isEmpty_textIsNull() {
         ComboBoxTreeTableCell<Object, Object> cell = new ComboBoxTreeTableCell<>();
         cell.updateItem("TEST", true);
         assertNull(cell.getText());
     }
-    
+
     @Test public void test_updateItem_isNotEmpty_textIsNotNull() {
         ComboBoxTreeTableCell<Object, Object> cell = new ComboBoxTreeTableCell<>();
         cell.updateItem("TEST", false);
         assertNotNull(cell.getText());
         assertEquals("TEST", cell.getText());
     }
-    
+
     @Test public void test_updateItem_isNotEmpty_textIsNotNull_nullConverter() {
         ComboBoxTreeTableCell<Object, Object> cell = new ComboBoxTreeTableCell<>();
         cell.setConverter(null);
@@ -250,7 +250,7 @@ public class ComboBoxTreeTableCellTest {
         assertNotNull(cell.getText());
         assertEquals("TEST", cell.getText());
     }
-    
+
     @Test public void test_updateItem_isNotEmpty_textIsNotNull_nonNullConverter() {
         ComboBoxTreeTableCell<Object, Object> cell = new ComboBoxTreeTableCell<>();
         cell.setConverter(

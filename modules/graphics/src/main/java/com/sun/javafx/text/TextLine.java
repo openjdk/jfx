@@ -54,7 +54,7 @@ public class TextLine implements com.sun.javafx.scene.text.TextLine {
     public TextRun[] getRuns() {
         return runs;
     }
-    
+
     public int getStart() {
         return start;
     }
@@ -82,6 +82,6 @@ public class TextLine implements com.sun.javafx.scene.text.TextLine {
     }
 
     public void setWidth(float width) {
-        bounds.setMaxX(bounds.getMinX() + width); 
+        bounds.setMaxX(bounds.getMinX() + width);
     }
 }

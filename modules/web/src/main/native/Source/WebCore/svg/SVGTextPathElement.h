@@ -52,7 +52,7 @@ struct SVGPropertyTraits<SVGTextPathMethodType> {
         case SVGTextPathMethodStretch:
             return "stretch";
         }
-    
+
         ASSERT_NOT_REACHED();
         return emptyString();
     }
@@ -110,7 +110,7 @@ public:
     };
 
     static PassRefPtr<SVGTextPathElement> create(const QualifiedName&, Document&);
- 
+
 private:
     SVGTextPathElement(const QualifiedName&, Document&);
 
@@ -131,7 +131,7 @@ private:
     virtual bool rendererIsNeeded(const RenderStyle&) override;
 
     virtual bool selfHasRelativeLengths() const override;
- 
+
     BEGIN_DECLARE_ANIMATED_PROPERTIES(SVGTextPathElement)
         DECLARE_ANIMATED_LENGTH(StartOffset, startOffset)
         DECLARE_ANIMATED_ENUMERATION(Method, method, SVGTextPathMethodType)

@@ -29,7 +29,7 @@
 #if ENABLE(SPEECH_SYNTHESIS)
 
 namespace WebCore {
-    
+
 PassRefPtr<SpeechSynthesisUtterance> SpeechSynthesisUtterance::create(ScriptExecutionContext& context, const String& text)
 {
     return adoptRef(new SpeechSynthesisUtterance(context, text));
@@ -56,11 +56,11 @@ void SpeechSynthesisUtterance::setVoice(SpeechSynthesisVoice* voice)
 {
     if (!voice)
         return;
-    
+
     // Cache our own version of the SpeechSynthesisVoice so that we don't have to do some lookup
     // to go from the platform voice back to the speech synthesis voice in the read property.
     m_voice = voice;
-    
+
     if (voice)
         m_platformUtterance->setVoice(voice->platformVoice());
 }

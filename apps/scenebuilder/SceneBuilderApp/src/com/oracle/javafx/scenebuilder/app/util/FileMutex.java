@@ -47,11 +47,11 @@ import java.util.TimerTask;
  *      2) call FileMutex.lock() or FileMutex.tryLock()
  */
 class FileMutex {
-    
+
     private final Path lockFile;
     private RandomAccessFile lockRAF;
     private FileLock lock;
-    
+
     public FileMutex(Path lockFile) {
         assert lockFile != null;
         this.lockFile = lockFile;
@@ -60,11 +60,11 @@ class FileMutex {
     public Path getLockFile() {
         return lockFile;
     }
-    
+
     public void lock(long timeout) throws IOException {
         assert lockRAF == null;
         assert lock == null;
-        
+
         createFileChannel();
         assert lockRAF != null;
         final Timer timer = new Timer();
@@ -73,7 +73,7 @@ class FileMutex {
         timer.cancel();
         assert lock != null;
     }
-    
+
     public boolean tryLock() throws IOException {
         assert lockRAF == null;
         assert lock == null;
@@ -85,30 +85,30 @@ class FileMutex {
             lockRAF.close();
             lockRAF = null;
         }
-        
+
         return lock != null;
     }
-    
+
     public void unlock() throws IOException {
         assert lockRAF != null;
         assert lock != null;
         assert lock.channel() == lockRAF.getChannel();
-        
+
         lock.release();
         lock = null;
         lockRAF.close();
         lockRAF = null;
     }
-    
+
     public boolean isLocked() {
         return lock != null;
     }
 
-    
+
     /*
      * Private
      */
-    
+
     private void createFileChannel() throws IOException {
         try {
             Files.createFile(lockFile);
@@ -117,14 +117,14 @@ class FileMutex {
         }
         lockRAF = new RandomAccessFile(lockFile.toFile(), "rw"); //NOI18N
     }
-    
+
     private static class InterruptTask extends TimerTask {
-        @Override 
+        @Override
         public void run() {
             Thread.currentThread().interrupt();
         }
     }
-    
+
 //    public static void main(String[] args) throws IOException {
 //        final Path mutexPath = Paths.get(System.getProperty("user.home"), "test.mtx");
 //        final FileMutex fm = new FileMutex(mutexPath);

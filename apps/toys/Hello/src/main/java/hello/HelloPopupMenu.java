@@ -126,42 +126,42 @@ public class HelloPopupMenu extends Application {
         item = new CheckMenuItem("Shortcut7");
         item.setAccelerator(KeyCombination.keyCombination("Shortcut + DOWN"));
         menu.getItems().add(item);
-        
+
         VBox vbox = new VBox(20);
         HBox hbox = new HBox(10);
         vbox.setAlignment(Pos.CENTER);
         hbox.setAlignment(Pos.CENTER);
-        
+
         Button simple = new Button("Simple ContextMenu");
         Button weekdays = new Button("Weekdays ContextMenu");
         Button complex = new Button("Complex ContextMenu");
-        
+
         simple.setContextMenu(simpleMenu);
         simple.setOnAction(e -> {
             Bounds b = simple.getBoundsInLocal();
             Point2D pt = simple.localToScreen(b.getMaxX(), b.getMaxY());
             simpleMenu.show(simple, pt.getX(), pt.getY());
         });
-        
+
         weekdays.setOnAction(e -> {
             Bounds b = weekdays.getBoundsInLocal();
             Point2D pt = weekdays.localToScreen(b.getMaxX(), b.getMaxY());
             weekdaysMenu.show(weekdays, pt.getX(), pt.getY());
         });
-        
+
         complex.setOnAction(e -> {
             Bounds b = complex.getBoundsInLocal();
             Point2D pt = complex.localToScreen(b.getMaxX(), b.getMaxY());
             complexMenu.show(complex, pt.getX(), pt.getY());
         });
-        
-        
+
+
         vbox.getChildren().addAll(simple, weekdays, complex);
         hbox.getChildren().addAll(vbox);
         hbox.setLayoutX(20);
         hbox.setLayoutY(20);
         group.getChildren().add(hbox);
-        
+
         return new Scene(group);
     }
 

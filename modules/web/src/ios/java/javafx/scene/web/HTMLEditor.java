@@ -40,13 +40,13 @@ import javafx.scene.control.Skin;
  * @since JavaFX 2.0
  */
 public class HTMLEditor extends Control {
-    
+
     /**
      * Creates a new instance of the HTMLEditor control.
      */
     public HTMLEditor() {
         ((StyleableProperty)super.skinClassNameProperty()).applyStyle(
-            null, 
+            null,
             "com.sun.javafx.scene.web.skin.HTMLEditorSkin"
         );
         getStyleClass().add("html-editor");
@@ -67,13 +67,13 @@ public class HTMLEditor extends Control {
      * Sets the HTML content of the editor. Note that if the contentEditable
      * property on the <body> tag of the provided HTML is not set to true, the
      * HTMLEditor will become read-only. You can ensure that the text remains
-     * editable by ensuring the body appears as such: 
+     * editable by ensuring the body appears as such:
      * <code>
      * &lt;body contentEditable="true"&gt;
      * </code>
      *
      * @param htmlText The full HTML markup to put into the editor. This should
-     *      include all normal HTML elements, starting with 
+     *      include all normal HTML elements, starting with
      *      <code>&lt;html&gt;</code>, and including a <code>&lt;body&gt;</code>.
      */
     public void setHtmlText(String htmlText) {

@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef ProgressTracker_h
@@ -52,7 +52,7 @@ public:
 
     void progressStarted(Frame&);
     void progressCompleted(Frame&);
-    
+
     void incrementProgress(unsigned long identifier, const ResourceResponse&);
     void incrementProgress(unsigned long identifier, unsigned bytesReceived);
     void completeProgress(unsigned long identifier);
@@ -67,9 +67,9 @@ private:
     void finalProgressComplete();
 
     void progressHeartbeatTimerFired(Timer<ProgressTracker>&);
-    
+
     static unsigned long s_uniqueIdentifier;
-    
+
     ProgressTrackerClient& m_client;
     long long m_totalPageAndResourceBytesToLoad;
     long long m_totalBytesReceived;
@@ -77,10 +77,10 @@ private:
     std::chrono::steady_clock::time_point m_lastNotifiedProgressTime;
     double m_progressNotificationInterval;
     std::chrono::milliseconds m_progressNotificationTimeInterval;
-    bool m_finalProgressChangedSent;    
+    bool m_finalProgressChangedSent;
     double m_progressValue;
     RefPtr<Frame> m_originatingProgressFrame;
-    
+
     int m_numProgressTrackedFrames;
     HashMap<unsigned long, std::unique_ptr<ProgressItem>> m_progressItems;
 
@@ -90,7 +90,7 @@ private:
     std::chrono::steady_clock::time_point m_mainLoadCompletionTime;
     bool m_isMainLoad;
 };
-    
+
 }
 
 #endif

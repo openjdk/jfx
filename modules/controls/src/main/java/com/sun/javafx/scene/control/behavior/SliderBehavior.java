@@ -37,7 +37,7 @@ import static javafx.scene.input.KeyCode.*;
 public class SliderBehavior extends BehaviorBase<Slider> {
 
     private final InputMap<Slider> sliderInputMap;
-    
+
     private TwoLevelFocusBehavior tlFocus;
 
     public SliderBehavior(Slider slider) {
@@ -183,7 +183,7 @@ public class SliderBehavior extends BehaviorBase<Slider> {
         } else {
             slider.decrement();
         }
-        
+
     }
 
     void end() {

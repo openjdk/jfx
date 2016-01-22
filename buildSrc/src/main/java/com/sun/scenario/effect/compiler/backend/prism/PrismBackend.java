@@ -48,18 +48,18 @@ public class PrismBackend extends TreeScanner {
     private JSLParser parser;
     private StringBuilder usercode = new StringBuilder();
     private boolean isPixcoordReferenced = false;
-    
+
     public PrismBackend(JSLParser parser, ProgramUnit program) {
         this.parser = parser;
         scan(program);
     }
-    
+
     private StringTemplate getTemplate(String type) {
         Reader template = new InputStreamReader(getClass().getResourceAsStream(type + "Glue.stg"));
         StringTemplateGroup group = new StringTemplateGroup(template, DefaultTemplateLexer.class);
         return group.getInstanceOf("glue");
     }
-    
+
     public String getGlueCode(String effectName,
                               String peerName,
                               String genericsName,

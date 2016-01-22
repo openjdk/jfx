@@ -92,6 +92,6 @@ public class StopWatchButton extends Parent {
     }
 
     public void moveDown() { move(0); }
-        
-    public void moveUp() { move(7); }       
+
+    public void moveUp() { move(7); }
 }

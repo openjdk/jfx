@@ -48,17 +48,17 @@ import com.sun.javafx.collections.annotations.ReturnsUnmodifiableCollection;
  * (e.g. {@link DoubleBinding}) to define a custom binding, because these
  * classes already provide most of the needed functionality. See
  * {@link DoubleBinding} for an example.
- * 
+ *
  * @see DoubleBinding
- * 
- * 
+ *
+ *
  * @since JavaFX 2.0
  */
 public interface Binding<T> extends ObservableValue<T> {
 
     /**
      * Checks if a binding is valid.
-     * 
+     *
      * @return {@code true} if the {@code Binding} is valid, {@code false}
      *         otherwise
      */
@@ -81,7 +81,7 @@ public interface Binding<T> extends ObservableValue<T> {
      * recommended to implement this functionality as sparse as possible. For
      * example if the dependencies do not change, each call can generate a new
      * {@code ObservableList}, avoiding the necessity to store the result.
-     * 
+     *
      * @return an unmodifiable {@code} ObservableList of the dependencies
      */
     @ReturnsUnmodifiableCollection

@@ -142,7 +142,7 @@ NSString *WebConsoleMessageErrorMessageLevel = @"ErrorMessageLevel";
 using namespace WebCore;
 using namespace HTMLNames;
 
-WebChromeClient::WebChromeClient(WebView *webView) 
+WebChromeClient::WebChromeClient(WebView *webView)
     : m_webView(webView)
 {
 }
@@ -152,7 +152,7 @@ void WebChromeClient::chromeDestroyed()
     delete this;
 }
 
-// These functions scale between window and WebView coordinates because JavaScript/DOM operations 
+// These functions scale between window and WebView coordinates because JavaScript/DOM operations
 // assume that the WebView and the window share the same coordinate system.
 
 void WebChromeClient::setWindowRect(const FloatRect& rect)
@@ -245,7 +245,7 @@ Page* WebChromeClient::createWindow(Frame* frame, const FrameLoadRequest&, const
     if (frame->document() && frame->document()->webkitCurrentFullScreenElement())
         frame->document()->webkitCancelFullScreen();
 #endif
-    
+
     if ([delegate respondsToSelector:@selector(webView:createWebViewWithRequest:windowFeatures:)]) {
         NSNumber *x = features.xSet ? [[NSNumber alloc] initWithFloat:features.x] : nil;
         NSNumber *y = features.ySet ? [[NSNumber alloc] initWithFloat:features.y] : nil;
@@ -258,9 +258,9 @@ Page* WebChromeClient::createWindow(Frame* frame, const FrameLoadRequest&, const
         NSNumber *resizable = [[NSNumber alloc] initWithBool:features.resizable];
         NSNumber *fullscreen = [[NSNumber alloc] initWithBool:features.fullscreen];
         NSNumber *dialog = [[NSNumber alloc] initWithBool:features.dialog];
-        
+
         NSMutableDictionary *dictFeatures = [[NSMutableDictionary alloc] initWithObjectsAndKeys:
-                                             menuBarVisible, @"menuBarVisible", 
+                                             menuBarVisible, @"menuBarVisible",
                                              statusBarVisible, @"statusBarVisible",
                                              toolBarVisible, @"toolBarVisible",
                                              scrollbarsVisible, @"scrollbarsVisible",
@@ -268,7 +268,7 @@ Page* WebChromeClient::createWindow(Frame* frame, const FrameLoadRequest&, const
                                              fullscreen, @"fullscreen",
                                              dialog, @"dialog",
                                              nil];
-        
+
         if (x)
             [dictFeatures setObject:x forKey:@"x"];
         if (y)
@@ -277,9 +277,9 @@ Page* WebChromeClient::createWindow(Frame* frame, const FrameLoadRequest&, const
             [dictFeatures setObject:width forKey:@"width"];
         if (height)
             [dictFeatures setObject:height forKey:@"height"];
-        
+
         newWebView = CallUIDelegate(m_webView, @selector(webView:createWebViewWithRequest:windowFeatures:), nil, dictFeatures);
-        
+
         [dictFeatures release];
         [x release];
         [y release];
@@ -302,7 +302,7 @@ Page* WebChromeClient::createWindow(Frame* frame, const FrameLoadRequest&, const
     if (newWebView)
         WebKit::NetscapePluginHostManager::shared().didCreateWindow();
 #endif
-    
+
     return core(newWebView);
 }
 
@@ -476,12 +476,12 @@ void WebChromeClient::closeWindowSoon()
 {
     // We need to remove the parent WebView from WebViewSets here, before it actually
     // closes, to make sure that JavaScript code that executes before it closes
-    // can't find it. Otherwise, window.open will select a closed WebView instead of 
+    // can't find it. Otherwise, window.open will select a closed WebView instead of
     // opening a new one <rdar://problem/3572585>.
 
     // We also need to stop the load to prevent further parsing or JavaScript execution
     // after the window has torn down <rdar://problem/4161660>.
-  
+
     // FIXME: This code assumes that the UI delegate will respond to a webViewClose
     // message by actually closing the WebView. Safari guarantees this behavior, but other apps might not.
     // This approach is an inherent limitation of not making a close execute immediately
@@ -552,7 +552,7 @@ bool WebChromeClient::shouldInterruptJavaScript()
 
 void WebChromeClient::setStatusbarText(const String& status)
 {
-    // We want the temporaries allocated here to be released even before returning to the 
+    // We want the temporaries allocated here to be released even before returning to the
     // event loop; see <http://bugs.webkit.org/show_bug.cgi?id=9880>.
     NSAutoreleasePool* localPool = [[NSAutoreleasePool alloc] init];
     CallUIDelegate(m_webView, @selector(webView:setStatusText:), (NSString *)status);
@@ -717,7 +717,7 @@ void WebChromeClient::populateVisitedLinks()
 {
     if ([m_webView historyDelegate]) {
         WebHistoryDelegateImplementationCache* implementations = WebViewGetHistoryDelegateImplementations(m_webView);
-        
+
         if (implementations->populateVisitedLinksFunc)
             CallHistoryDelegate(implementations->populateVisitedLinksFunc, m_webView, @selector(populateVisitedLinksForWebView:));
 
@@ -950,7 +950,7 @@ void WebChromeClient::exitFullscreenForNode(Node*)
 {
     BEGIN_BLOCK_OBJC_EXCEPTIONS;
     [m_webView _exitFullscreen];
-    END_BLOCK_OBJC_EXCEPTIONS;    
+    END_BLOCK_OBJC_EXCEPTIONS;
 }
 
 #endif

@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -46,10 +46,10 @@ void JITToDFGDeferredCompilationCallback::compilationDidBecomeReadyAsynchronousl
     CodeBlock* codeBlock)
 {
     ASSERT(codeBlock->alternative()->jitType() == JITCode::BaselineJIT);
-    
+
     if (Options::verboseOSR())
         dataLog("Optimizing compilation of ", *codeBlock, " did become ready.\n");
-    
+
     codeBlock->alternative()->forceOptimizationSlowPathConcurrently();
 }
 
@@ -57,13 +57,13 @@ void JITToDFGDeferredCompilationCallback::compilationDidComplete(
     CodeBlock* codeBlock, CompilationResult result)
 {
     ASSERT(codeBlock->alternative()->jitType() == JITCode::BaselineJIT);
-    
+
     if (Options::verboseOSR())
         dataLog("Optimizing compilation of ", *codeBlock, " result: ", result, "\n");
-    
+
     if (result == CompilationSuccessful)
         codeBlock->install();
-    
+
     codeBlock->alternative()->setOptimizationThresholdBasedOnCompilationResult(result);
 }
 

@@ -111,7 +111,7 @@ public class FXSlideShow extends Application {
                 image = new Image(imagePath);
             }
             if (image != null && image.isError()) {
-                image = null; 
+                image = null;
             }
             long elapsed = System.currentTimeMillis() - start;
             LOGGER.fine("Image load time="+elapsed+"ms " + imagePath);
@@ -588,7 +588,7 @@ public class FXSlideShow extends Application {
 
         scene.setOnKeyReleased(keyEventHandler);
 
-        // set up our image views, and 
+        // set up our image views, and
         // bindings to layout our ImageView properly.
         for (int i = 0; i < 2; i++) {
             view[i] = new ImageView();

@@ -176,7 +176,7 @@ void UniscribeController::advance(unsigned offset, GlyphBuffer* glyphBuffer)
             indexOfFontTransition = index;
         }
     }
-    
+
     int itemLength = m_run.rtl() ? indexOfFontTransition + 1 : length - indexOfFontTransition;
     if (itemLength) {
         if (m_fallbackFonts && nextFontData != m_font.primaryFont())
@@ -222,7 +222,7 @@ void UniscribeController::resetControlAndState()
 
     // Set up the correct direction for the run.
     m_state.uBidiLevel = m_run.rtl();
-    
+
     // Lock the correct directional override.
     m_state.fOverrideDirection = m_run.directionalOverride();
 }
@@ -239,7 +239,7 @@ bool UniscribeController::shapeAndPlaceItem(const UChar* cp, unsigned i, const S
     Vector<WORD> clusters;
     Vector<SCRIPT_VISATTR> visualAttributes;
     clusters.resize(len);
-     
+
     // Shape the item.
     // The recommended size for the glyph buffer is 1.5 * the character length + 16 in the uniscribe docs.
     // Apparently this is a good size to avoid having to make repeated calls to ScriptShape.
@@ -267,7 +267,7 @@ bool UniscribeController::shapeAndPlaceItem(const UChar* cp, unsigned i, const S
                                   &item.a, advances.data(), offsets.data(), 0);
         SelectObject(hdc, oldFont);
     }
-    
+
     if (FAILED(placeResult) || glyphs.isEmpty())
         return true;
 
@@ -296,7 +296,7 @@ bool UniscribeController::shapeAndPlaceItem(const UChar* cp, unsigned i, const S
 
     // Populate our glyph buffer with this information.
     bool hasExtraSpacing = m_font.letterSpacing() || m_font.wordSpacing() || m_padding;
-    
+
     float leftEdge = m_runWidthSoFar;
 
     for (unsigned k = 0; k < glyphs.size(); k++) {

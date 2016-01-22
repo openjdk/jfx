@@ -396,7 +396,7 @@ static PassRefPtr<InspectorObject> buildObjectForRegionHighlight(FrameView* main
     // Create incoming and outgoing boxes that we use to chain the regions toghether.
     const LayoutSize linkBoxSize(10, 10);
     const LayoutSize linkBoxMidpoint(linkBoxSize.width() / 2, linkBoxSize.height() / 2);
-    
+
     LayoutRect incomingRectBox = LayoutRect(borderBox.location() - linkBoxMidpoint, linkBoxSize);
     LayoutRect outgoingRectBox = LayoutRect(borderBox.location() - linkBoxMidpoint + borderBox.size(), linkBoxSize);
 
@@ -470,7 +470,7 @@ static PassRefPtr<InspectorObject> buildObjectForCSSRegionContentClip(RenderRegi
 
     // Apply any border or padding of the region.
     flippedRegionRect.setLocation(region->contentBoxRect().location());
-    
+
     FloatQuad clipQuad = region->localToAbsoluteQuad(FloatRect(flippedRegionRect));
     contentsQuadToPage(mainView, containingView, clipQuad);
 
@@ -656,7 +656,7 @@ static PassRefPtr<InspectorObject> buildObjectForElementInfo(Node* node)
     RenderBoxModelObject* modelObject = renderer->isBoxModelObject() ? toRenderBoxModelObject(renderer) : nullptr;
     elementInfo->setString("nodeWidth", String::number(modelObject ? adjustForAbsoluteZoom(modelObject->pixelSnappedOffsetWidth(), *modelObject) : boundingBox.width()));
     elementInfo->setString("nodeHeight", String::number(modelObject ? adjustForAbsoluteZoom(modelObject->pixelSnappedOffsetHeight(), *modelObject) : boundingBox.height()));
-    
+
     if (renderer->isRenderNamedFlowFragmentContainer()) {
         RenderNamedFlowFragment* region = toRenderBlockFlow(renderer)->renderNamedFlowFragment();
         RenderFlowThread* flowThread = region->flowThread();
@@ -713,7 +713,7 @@ PassRefPtr<InspectorObject> InspectorOverlay::buildObjectForHighlightedNode() co
         if (elementInfo)
             highlightObject->setObject("elementInfo", elementInfo.release());
     }
-        
+
     return highlightObject.release();
 }
 

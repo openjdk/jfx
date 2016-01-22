@@ -39,14 +39,14 @@ import java.util.Map;
 
 /**
  *
- * 
+ *
  */
 public abstract class ValuePropertyMetadata extends PropertyMetadata {
-    
+
     private final boolean readWrite;
     private final InspectorPath inspectorPath;
-    
-    
+
+
     private final Map<Class<?>, Object> defaultValueAlternatives = new HashMap<>();
 
     public ValuePropertyMetadata(PropertyName name, boolean readWrite, InspectorPath inspectorPath) {
@@ -63,17 +63,17 @@ public abstract class ValuePropertyMetadata extends PropertyMetadata {
     public InspectorPath getInspectorPath() {
         return inspectorPath;
     }
-    
+
     public abstract Class<?> getValueClass();
     public abstract Object getDefaultValueObject();
     public abstract Object getValueObject(FXOMInstance fxomInstance);
     public abstract void setValueObject(FXOMInstance fxomInstance, Object valueObject);
-    
+
     public Map<Class<?>, Object> getDefaultValueAlternatives() {
         return defaultValueAlternatives;
     }
-    
-    
+
+
     /**
      * Returns true if getName().getResidenceClass() != null.
      * @return true if getName().getResidenceClass() != null.
@@ -81,12 +81,12 @@ public abstract class ValuePropertyMetadata extends PropertyMetadata {
     public boolean isStaticProperty() {
         return getName().getResidenceClass() != null;
     }
-    
+
     /**
      * Sets the property value in the scene graph object.
-     * FXOM instance is unchanged. 
+     * FXOM instance is unchanged.
      * Value is lost at next scene graph reconstruction.
-     * 
+     *
      * @param fxomInstance an fxom instance (never null)
      * @param value a value conform with the property typing
      */
@@ -95,7 +95,7 @@ public abstract class ValuePropertyMetadata extends PropertyMetadata {
         assert fxomInstance.getSceneGraphObject() != null;
         getName().setValue(fxomInstance.getSceneGraphObject(), value);
     }
-    
+
     /**
      * Gets the property value in the scene graph object.
      * Result might be different from getValueObject().
@@ -103,7 +103,7 @@ public abstract class ValuePropertyMetadata extends PropertyMetadata {
      * and a resource bundle assign 'OK' to this key:
      *    - getValueObject() -> '%button-key'
      *    - getValueInSceneGraphObject() -> 'OK'
-     * 
+     *
      * @param fxomInstance an fxom instance (never null)
      * @return value of this property in the scene graph object associated
      *         fxomInstance
@@ -112,11 +112,11 @@ public abstract class ValuePropertyMetadata extends PropertyMetadata {
         assert fxomInstance != null;
         return getName().getValue(fxomInstance.getSceneGraphObject());
     }
-    
+
     /*
      * Object
      */
-    
+
     @Override
     public int hashCode() {  // To please FindBugs
         return super.hashCode();
@@ -130,8 +130,8 @@ public abstract class ValuePropertyMetadata extends PropertyMetadata {
         if (PropertyMetadata.class != obj.getClass()) {
             return false;
         }
-        
+
         return super.equals(obj);
     }
-    
+
 }

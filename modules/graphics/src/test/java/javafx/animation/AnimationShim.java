@@ -57,22 +57,22 @@ public abstract class AnimationShim extends Animation {
     public void impl_start(boolean forceSync) {
         super.impl_start(forceSync);
     }
-    
+
     @Override
     public void impl_setCurrentRate(double currentRate) {
         super.impl_setCurrentRate(currentRate);
     }
-    
+
     @Override
     public void impl_setCurrentTicks(long ticks) {
         super.impl_setCurrentTicks(ticks);
     }
-    
+
     @Override
     public boolean impl_startable(boolean forceSync) {
         return super.impl_startable(forceSync);
     }
-    
+
     @Override
     public void impl_stop() {
         super.impl_stop();
@@ -82,22 +82,22 @@ public abstract class AnimationShim extends Animation {
     public void impl_sync(boolean forceSync) {
         super.impl_sync(forceSync);
     }
-    
+
     @Override
     public void impl_timePulse(long elapsedTime) {
         super.impl_timePulse(elapsedTime);
     }
-    
+
     @Override
     public void pauseReceiver() {
         super.pauseReceiver();
     }
-    
+
     @Override
     public void resumeReceiver() {
         super.resumeReceiver();
     }
-    
+
     public void shim_setCycleDuration(Duration value) {
         setCycleDuration(value);
     }
@@ -130,7 +130,7 @@ public abstract class AnimationShim extends Animation {
     public static void impl_start(Animation a, boolean forceSync) {
         a.impl_start(forceSync);
     }
-    
+
     public static boolean impl_startable(Animation a, boolean forceSync) {
         return a.impl_startable(forceSync);
     }

@@ -97,11 +97,11 @@ public class TimelinePage extends Page implements Callback<ListView<Event>, List
     private static final Font SUMMARY_FONT = Font.font(DEFAULT_FONT_NAME, FontWeight.NORMAL, 11);
     private static final Color SUMMARY_COLOR = DARK_GREY;
     private static Image TOOTH_IMAGE = new Image(ConferenceScheduleApp.class.getResource("images/timeline-bubble-tooth.png").toExternalForm());
-    
+
     static {
         TIME_FORMAT.setTimeZone(TimeZone.getTimeZone("PST"));
     }
-    
+
     private ListView<Event> timelineListView;
     private TimelineListViewSkin timelineListViewSkin;
     private DayLabel pastLabel = new DayLabel(BLUE, null);
@@ -138,7 +138,7 @@ public class TimelinePage extends Page implements Callback<ListView<Event>, List
         nowButton.setId("now-button");
         nowButton.getStyleClass().clear();
         nowButton.setOnMouseClicked(new EventHandler<MouseEvent>() {
-            @Override public void handle(MouseEvent t) {  
+            @Override public void handle(MouseEvent t) {
                 // update current time
                 currentTime = dataService.getNow();
                 // find first item starting after the current time
@@ -154,7 +154,7 @@ public class TimelinePage extends Page implements Callback<ListView<Event>, List
                 timelineListView.scrollTo(itemToScrollTo);
             }
         });
-        
+
         ImageView loggedInMessage = new ImageView(new Image(ConferenceScheduleApp.class.getResource("images/need-to-be-logged-in.png").toExternalForm()));
         Button loginBtn = new Button("Login");
         loginBtn.getStyleClass().setAll("large-light-blue-button");
@@ -165,9 +165,9 @@ public class TimelinePage extends Page implements Callback<ListView<Event>, List
         });
         notLoggedInContent.setAlignment(Pos.CENTER);
         notLoggedInContent.getChildren().addAll(loggedInMessage, loginBtn);
-        
+
         getChildren().setAll(line,topZigZag,bottomZigZag,pastLabel,futureLabel,timelineListView, topFade, bottomFade, nowButton, notLoggedInContent);
-        
+
         ConferenceScheduleApp.getInstance().getSessionManagement().isGuestProperty().addListener(new ChangeListener<Boolean>() {
             @Override public void changed(ObservableValue<? extends Boolean> observable, Boolean oldValue, Boolean newValue) {
                 setIsGuest(newValue);
@@ -228,7 +228,7 @@ public class TimelinePage extends Page implements Callback<ListView<Event>, List
         topFade.setFitWidth(w);
         bottomFade.setLayoutY(h - BOTTOM - LABEL_HEIGHT - 34);
         bottomFade.setFitWidth(w);
-        
+
         nowButton.resize(138,48);
         nowButton.setLayoutX(w-5-138);
         nowButton.setLayoutY(h-5-48);
@@ -237,14 +237,14 @@ public class TimelinePage extends Page implements Callback<ListView<Event>, List
     @Override public ListCell<Event> call(ListView<Event> listView) {
         return new TimelineListCell();
     }
-    
+
     private class TimelineListViewSkin extends ListViewSkin<Event> implements Runnable {
         private TimelineListCell prevFirstCell = null, prevLastCell = null;
         public TimelineListViewSkin(ListView<Event> listView) {
             super(listView);
             flow.setCellChangeNotificationListener(this);
         }
-        
+
         @Override public void run() {
             TimelineListCell firstCell = (TimelineListCell)flow.getFirstVisibleCell();
             if (firstCell != prevFirstCell && firstCell != null) {
@@ -261,14 +261,14 @@ public class TimelinePage extends Page implements Callback<ListView<Event>, List
             prevLastCell = lastCell;
         }
     }
-    
+
     /**
      * Special Label node with a rounded rectangle background and a center-top origin.
      */
     private class DayLabel extends Group {
         private final Rectangle backgroundRect = new Rectangle();
         private final Text text = new Text();
-        
+
         public DayLabel(Color color, String content) {
             text.setTextOrigin(VPos.TOP);
             text.setLayoutY(4);
@@ -280,7 +280,7 @@ public class TimelinePage extends Page implements Callback<ListView<Event>, List
             getChildren().addAll(backgroundRect, text);
             if (content != null) setText(content);
         }
-        
+
         public final void setText(String newText) {
             text.setText(newText);
             final Bounds textBounds = text.getBoundsInParent();
@@ -292,7 +292,7 @@ public class TimelinePage extends Page implements Callback<ListView<Event>, List
             backgroundRect.setHeight(textHeight + 6);
         }
     }
-    
+
     private class TimelineListCell extends ListCell<Event> implements Skin<TimelineListCell> {
         private EventBubble bubble = new EventBubble();
         private Text timeText = new Text();
@@ -306,7 +306,7 @@ public class TimelinePage extends Page implements Callback<ListView<Event>, List
         private boolean isJustAfterNow = false;
         private boolean isFirst = false;
         private boolean isLast = false;
-        
+
         private TimelineListCell() {
             super();
             // we don't need any of the labeled functionality of the default cell skin, so we replace skin with our own
@@ -355,28 +355,28 @@ public class TimelinePage extends Page implements Callback<ListView<Event>, List
                 nowLine.setEndY(nowCenterY);
             }
             dot.relocate(
-                    (int)(centerX - (dot.getLayoutBounds().getWidth()/2)), 
+                    (int)(centerX - (dot.getLayoutBounds().getWidth()/2)),
                     (int)(centerY - (dot.getLayoutBounds().getHeight()/2)));
             final Bounds iconBounds = icon.getLayoutBounds();
             if (isOnRight) {
                 bubble.resizeRelocate(centerX+20, top, w-centerX-30, h);
                 icon.relocate(
-                        centerX - iconBounds.getWidth() - 12, 
+                        centerX - iconBounds.getWidth() - 12,
                         (int)(centerY - (iconBounds.getHeight()/2)));
                 timeText.relocate(
-                        (int)(centerX - iconBounds.getWidth() - 10 -timeText.getBoundsInParent().getWidth()-10), 
+                        (int)(centerX - iconBounds.getWidth() - 10 -timeText.getBoundsInParent().getWidth()-10),
                         (int)(centerY-(timeText.getBoundsInParent().getHeight()/2)));
             } else {
                 bubble.resizeRelocate(10, top, w-centerX-30, h);
                 icon.relocate(
-                        centerX + 12, 
+                        centerX + 12,
                         (int)(centerY - (iconBounds.getHeight()/2)));
                 timeText.relocate(
-                        (int)(centerX + 10 + iconBounds.getWidth() + 10), 
+                        (int)(centerX + 10 + iconBounds.getWidth() + 10),
                         (int)(centerY-(timeText.getBoundsInParent().getHeight()/2)));
             }
         }
-        
+
         // CELL METHODS
         @Override protected void updateItem(Event item, boolean empty) {
             if (getItem() != item || empty) {
@@ -441,7 +441,7 @@ public class TimelinePage extends Page implements Callback<ListView<Event>, List
         @Override public Node getNode() { return bubble; }
         @Override public void dispose() {}
     }
-    
+
     private class EventBubble extends Region {
         private Text titleText = new Text();
         private Text speakersText = new Text();
@@ -486,18 +486,18 @@ public class TimelinePage extends Page implements Callback<ListView<Event>, List
 
         @Override protected double computePrefHeight(double width) {
             int textWrapWidth = (int) width - 20 - BUBBLE_PADDING;
-            
+
             // TEMPORARY CODE - textWrapWidth should be the same number that is computed in layoutChildren()
             // but for some reason, it oscillates back and forth by 1 pixel causing wrapping to occur.
             // The fix is to bump it up by one pixel and avoid the work
             textWrapWidth++;
-            
+
             titleText.setWrappingWidth(textWrapWidth);
             speakersText.setWrappingWidth(textWrapWidth);
             summaryText.setWrappingWidth(textWrapWidth);
-            return (int)(BUBBLE_PADDING + titleText.getBoundsInParent().getHeight() + 
-                         BUBBLE_PADDING + speakersText.getBoundsInParent().getHeight() + 
-                         BUBBLE_PADDING + summaryText.getBoundsInParent().getHeight() + 
+            return (int)(BUBBLE_PADDING + titleText.getBoundsInParent().getHeight() +
+                         BUBBLE_PADDING + speakersText.getBoundsInParent().getHeight() +
+                         BUBBLE_PADDING + summaryText.getBoundsInParent().getHeight() +
                          BUBBLE_PADDING + 0.5);
         }
 
@@ -508,12 +508,12 @@ public class TimelinePage extends Page implements Callback<ListView<Event>, List
             if (isOnRight) {
                 tooth.setScaleX(1);
                 tooth.relocate(
-                        -tooth.getLayoutBounds().getWidth()+1, 
+                        -tooth.getLayoutBounds().getWidth()+1,
                         (h - tooth.getLayoutBounds().getHeight())/2);
             } else {
                 tooth.setScaleX(-1);
                 tooth.relocate(
-                        w-1, 
+                        w-1,
                         (h - tooth.getLayoutBounds().getHeight())/2);
             }
             // layout color bar
@@ -529,7 +529,7 @@ public class TimelinePage extends Page implements Callback<ListView<Event>, List
             final int speakersHeight = (int)(speakersText.getBoundsInParent().getHeight()+0.5);
             summaryText.relocate(20, BUBBLE_PADDING + titleHeight + BUBBLE_PADDING + speakersHeight + BUBBLE_PADDING);
         }
-        
+
         public void setEvent(Event event) {
             this.event = event;
             Session session = event.getSession();

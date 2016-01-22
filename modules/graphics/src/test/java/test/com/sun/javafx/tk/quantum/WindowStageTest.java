@@ -52,7 +52,7 @@ public class WindowStageTest {
         Assert.assertEquals(16, image.getWidth());
         image = WindowStageShim.findBestImage(images, 48, 48);
         Assert.assertEquals(48, image.getWidth());
-        
+
         //RT-39045
         image = WindowStageShim.findBestImage(images, 32, 32);
         Assert.assertEquals(32, image.getWidth());

@@ -78,7 +78,7 @@ public class DisplayShelf extends Region {
         // set clip
         setClip(clip);
         // set ids for styling via CSS
-        setId("displayshelf");  
+        setId("displayshelf");
         scrollBar.setId("display-scrollbar");
         // create items
         items = new PerspectiveImage[images.length];

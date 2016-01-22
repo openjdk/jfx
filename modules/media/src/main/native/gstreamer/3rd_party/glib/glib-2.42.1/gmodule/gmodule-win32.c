@@ -11,7 +11,7 @@
  *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.	 See the GNU
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
@@ -22,10 +22,10 @@
  * Modified by the GLib Team and others 1997-2000.  See the AUTHORS
  * file for a list of people on the GLib Team.  See the ChangeLog
  * files for a list of changes.  These files are distributed with
- * GLib at ftp://ftp.gtk.org/pub/gtk/. 
+ * GLib at ftp://ftp.gtk.org/pub/gtk/.
  */
 
-/* 
+/*
  * MT safe
  */
 #include "config.h"
@@ -41,7 +41,7 @@
 
 static void
 set_error (const gchar *format,
-	   ...)
+       ...)
 {
   gchar *error;
   gchar *detail;
@@ -65,8 +65,8 @@ set_error (const gchar *format,
 /* --- functions --- */
 static gpointer
 _g_module_open (const gchar *file_name,
-		gboolean     bind_lazy,
-		gboolean     bind_local)
+        gboolean     bind_lazy,
+        gboolean     bind_local)
 {
   HINSTANCE handle;
   wchar_t *wfilename;
@@ -80,7 +80,7 @@ _g_module_open (const gchar *file_name,
 
   handle = LoadLibraryW (wfilename);
   g_free (wfilename);
-      
+
   if (!handle)
     set_error ("'%s': ", file_name);
 
@@ -89,7 +89,7 @@ _g_module_open (const gchar *file_name,
 
 static gint dummy;
 static gpointer null_module_handle = &dummy;
-  
+
 static gpointer
 _g_module_self (void)
 {
@@ -98,7 +98,7 @@ _g_module_self (void)
 
 static void
 _g_module_close (gpointer handle,
-		 gboolean is_unref)
+         gboolean is_unref)
 {
   if (handle != null_module_handle)
     if (!FreeLibrary (handle))
@@ -108,7 +108,7 @@ _g_module_close (gpointer handle,
 static gpointer
 find_in_any_module_using_toolhelp (const gchar *symbol_name)
 {
-  HANDLE snapshot; 
+  HANDLE snapshot;
   MODULEENTRY32 me32;
 
   gpointer p;
@@ -121,8 +121,8 @@ find_in_any_module_using_toolhelp (const gchar *symbol_name)
   if (Module32First (snapshot, &me32))
     {
       do {
-	if ((p = GetProcAddress (me32.hModule, symbol_name)) != NULL)
-	  break;
+    if ((p = GetProcAddress (me32.hModule, symbol_name)) != NULL)
+      break;
       } while (Module32Next (snapshot, &me32));
     }
 
@@ -144,14 +144,14 @@ find_in_any_module (const gchar *symbol_name)
 
 static gpointer
 _g_module_symbol (gpointer     handle,
-		  const gchar *symbol_name)
+          const gchar *symbol_name)
 {
   gpointer p;
-  
+
   if (handle == null_module_handle)
     {
       if ((p = GetProcAddress (GetModuleHandle (NULL), symbol_name)) == NULL)
-	p = find_in_any_module (symbol_name);
+    p = find_in_any_module (symbol_name);
     }
   else
     p = GetProcAddress (handle, symbol_name);
@@ -164,12 +164,12 @@ _g_module_symbol (gpointer     handle,
 
 static gchar*
 _g_module_build_path (const gchar *directory,
-		      const gchar *module_name)
+              const gchar *module_name)
 {
   gint k;
 
   k = strlen (module_name);
-    
+
   if (directory && *directory)
     if (k > 4 && g_ascii_strcasecmp (module_name + k - 4, ".dll") == 0)
       return g_strconcat (directory, G_DIR_SEPARATOR_S, module_name, NULL);

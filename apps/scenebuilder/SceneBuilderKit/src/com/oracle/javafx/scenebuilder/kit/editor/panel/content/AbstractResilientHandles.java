@@ -44,33 +44,33 @@ import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
 public abstract class AbstractResilientHandles<T> extends AbstractGenericHandles<T> {
 
     private boolean ready;
-    
-    public AbstractResilientHandles(ContentPanelController contentPanelController, 
+
+    public AbstractResilientHandles(ContentPanelController contentPanelController,
             FXOMObject fxomObject, Class<T> sceneGraphClass) {
         super(contentPanelController, fxomObject, sceneGraphClass);
         getRootNode().setVisible(false);
     }
-    
+
     public void setReady(boolean ready) {
         if (this.ready != ready) {
             this.ready = ready;
             readyDidChange();
         }
     }
-    
+
     public boolean isReady() {
         return ready;
     }
-    
+
     /*
      * AbstractDecoration
      */
-    
-    
+
+
     @Override
     public void reconcile() {
         assert getState() == State.NEEDS_RECONCILE;
-        
+
         if (ready) {
             stopListeningToSceneGraphObject();
         }
@@ -80,19 +80,19 @@ public abstract class AbstractResilientHandles<T> extends AbstractGenericHandles
             layoutDecoration();
         }
     }
-    
+
     @Override
     public Point2D sceneGraphObjectToDecoration(double x, double y, boolean snapToPixel) {
         assert ready;
         return super.sceneGraphObjectToDecoration(x, y, snapToPixel);
     }
-    
+
     @Override
     public Transform getSceneGraphObjectToDecorationTransform() {
         assert ready;
         return super.getSceneGraphObjectToDecorationTransform();
     }
-    
+
     @Override
     protected void rootNodeSceneDidChange() {
         if (ready) {
@@ -108,14 +108,14 @@ public abstract class AbstractResilientHandles<T> extends AbstractGenericHandles
             }
         } // else transitions A -> B or B -> A
     }
-    
-    
+
+
     /*
      * Private
      */
-    
+
     /*
-     * 
+     *
      *      \ rootNode.getScene() |      null      |   not null    |
      *   ready                    |                |               |
      *   -------------------------+----------------+---------------+
@@ -123,17 +123,17 @@ public abstract class AbstractResilientHandles<T> extends AbstractGenericHandles
      *   -------------------------+----------------+---------------+
      *   true                     |        C       |       D       |
      *   -------------------------+----------------+---------------+
-     * 
+     *
      *   On transitions A -> D, B -> D, C -> D
      *      => layoutDecoration()
      *      => startListeningToSceneGraphObject()
      *      => rootNode.setVisible(true)
-     * 
+     *
      *   On transitions D -> A, D -> B, D -> C
      *      => rootNode.setVisible(false)
      *      => stopListeningToSceneGraphObject()
      */
-    
+
     private void readyDidChange() {
         if (getRootNode().getScene() != null) {
             if (ready) {
@@ -148,5 +148,5 @@ public abstract class AbstractResilientHandles<T> extends AbstractGenericHandles
             }
         } // Transitions A -> C or C -> A
     }
-    
+
 }

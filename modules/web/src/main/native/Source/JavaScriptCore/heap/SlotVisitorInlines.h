@@ -112,7 +112,7 @@ ALWAYS_INLINE void SlotVisitor::internalAppend(void* from, JSCell* cell)
         return;
 
     m_bytesVisited += MarkedBlock::blockFor(cell)->cellSize();
-        
+
     MARK_LOG_CHILD(*this, cell);
 
     unconditionallyAppend(cell);
@@ -122,10 +122,10 @@ ALWAYS_INLINE void SlotVisitor::unconditionallyAppend(JSCell* cell)
 {
     ASSERT(Heap::isMarked(cell));
     m_visitCount++;
-        
+
     // Should never attempt to mark something that is zapped.
     ASSERT(!cell->isZapped());
-        
+
     m_stack.append(cell);
 }
 
@@ -210,20 +210,20 @@ inline void SlotVisitor::mergeOpaqueRootsIfNecessary()
         return;
     mergeOpaqueRoots();
 }
-    
+
 inline void SlotVisitor::mergeOpaqueRootsIfProfitable()
 {
     if (static_cast<unsigned>(m_opaqueRoots.size()) < Options::opaqueRootMergeThreshold())
         return;
     mergeOpaqueRoots();
 }
-    
+
 inline void SlotVisitor::donate()
 {
     ASSERT(m_isInParallelMode);
     if (Options::numberOfGCMarkers() == 1)
         return;
-    
+
     donateKnownParallel();
 }
 
@@ -248,7 +248,7 @@ inline void SlotVisitor::copyLater(JSCell* owner, CopyToken token, void* ptr, si
         block->reportLiveBytes(locker, owner, token, bytes);
     }
 }
-    
+
 inline void SlotVisitor::reportExtraMemoryUsage(JSCell* owner, size_t size)
 {
 #if ENABLE(GGC)
@@ -260,7 +260,7 @@ inline void SlotVisitor::reportExtraMemoryUsage(JSCell* owner, size_t size)
 #endif
 
     size_t* counter = &m_shared.m_vm->heap.m_extraMemoryUsage;
-    
+
 #if ENABLE(COMPARE_AND_SWAP)
     for (;;) {
         size_t oldSize = *counter;

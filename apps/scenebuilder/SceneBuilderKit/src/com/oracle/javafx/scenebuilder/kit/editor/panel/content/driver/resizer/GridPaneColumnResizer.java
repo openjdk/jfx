@@ -46,7 +46,7 @@ import javafx.scene.layout.Region;
  *
  */
 public class GridPaneColumnResizer {
-    
+
     private static final PropertyName minWidthName     = new PropertyName("minWidth"); //NOI18N
     private static final PropertyName prefWidthName    = new PropertyName("prefWidth"); //NOI18N
     private static final PropertyName maxWidthName     = new PropertyName("maxWidth"); //NOI18N
@@ -63,16 +63,16 @@ public class GridPaneColumnResizer {
         assert gridPane != null;
         assert columnIndex >= 0;
         assert columnIndex+1 < gridPane.getColumnConstraints().size();
-        
+
         this.gridPane = gridPane;
         this.columnIndex = columnIndex;
-        this.originalSizing 
+        this.originalSizing
                 = new ColumnSizing(gridPane.getColumnConstraints().get(columnIndex));
-        this.originalSizingNext 
+        this.originalSizingNext
                 = new ColumnSizing(gridPane.getColumnConstraints().get(columnIndex+1));
         this.usePercentSizing
                 = countPercentWidths() == Deprecation.getGridPaneColumnCount(gridPane);
-        
+
         //
         //         x1                x2         x3             xm        x4
         //       --+-----------------+----------+--------------+---------+--
@@ -83,9 +83,9 @@ public class GridPaneColumnResizer {
         //       With (x4 - xm) == (x3 - x2)
         //
 
-        final Bounds cellBounds 
+        final Bounds cellBounds
                 = Deprecation.getGridPaneCellBounds(gridPane, columnIndex, 0);
-        final Bounds nextBounds 
+        final Bounds nextBounds
                 = Deprecation.getGridPaneCellBounds(gridPane, columnIndex+1, 0);
         x1 = cellBounds.getMinX();
         x2 = cellBounds.getMaxX();
@@ -102,39 +102,39 @@ public class GridPaneColumnResizer {
     public int getColumnIndex() {
         return columnIndex;
     }
-    
+
     public void updateWidth(double dx) {
-        
+
         // Clamp x2 + dx in [x1, xm]
         final double newX2 = Math.max(x1, Math.min(xm, x2 + dx));
         final double newX3 = newX2 + (x3 - x2);
         final double newCellWidth = newX2 - x1;
         final double newNextWidth = x4 - newX3;
-        
+
 //        assert (newCellWidth+newNextWidth) == (downColWidths[colIndex]+downColWidths[colIndex+1]) :
 //                "newCellWidth+newNextWidth=" +  (newCellWidth+newNextWidth) + ", " +
-//                "downColWidths[colIndex]+downColWidths[colIndex+1]=" + 
+//                "downColWidths[colIndex]+downColWidths[colIndex+1]=" +
 //                (downColWidths[colIndex]+downColWidths[colIndex+1]);
 
         // Updates width of columns at columnIndex and columnIndex+1
         final ColumnConstraints cc = gridPane.getColumnConstraints().get(columnIndex);
         final ColumnConstraints ccNext = gridPane.getColumnConstraints().get(columnIndex+1);
-        
+
         if (usePercentSizing) {
             final double ratio = newCellWidth / (xm - x1);
-            
-            final double base 
-                    = originalSizing.getPercentWidth() 
+
+            final double base
+                    = originalSizing.getPercentWidth()
                     + originalSizingNext.getPercentWidth();
-            
+
             final double newPercentWidth = Math.floor(ratio * base);
             final double newPercentWidthNext = base - newPercentWidth;
-            
+
             cc.setPercentWidth(newPercentWidth);
             ccNext.setPercentWidth(newPercentWidthNext);
-            
+
         } else {
-            
+
             // Column at columnIndex
             cc.setPrefWidth(newCellWidth);
             if (cc.getMinWidth() == Region.USE_COMPUTED_SIZE) {
@@ -147,7 +147,7 @@ public class GridPaneColumnResizer {
             } else {
                 cc.setMaxWidth(Math.max(newCellWidth, cc.getMaxWidth()));
             }
-            
+
             // Column at columnIndex+1
             ccNext.setPrefWidth(newNextWidth);
             if (ccNext.getMinWidth() == Region.USE_COMPUTED_SIZE) {
@@ -161,23 +161,23 @@ public class GridPaneColumnResizer {
                 ccNext.setMaxWidth(Math.max(newNextWidth, ccNext.getMaxWidth()));
             }
         }
-        
+
         // Adjusts min
     }
-    
+
     public void revertToOriginalSize() {
         // Restore sizing of columns at columnIndex and columnIndex+1
         final ColumnConstraints cc = gridPane.getColumnConstraints().get(columnIndex);
         final ColumnConstraints ccNext = gridPane.getColumnConstraints().get(columnIndex+1);
-        
+
         originalSizing.applyTo(cc);
         originalSizingNext.applyTo(ccNext);
     }
-    
-    
+
+
     public Map<PropertyName, Object> getChangeMap() {
         final Map<PropertyName, Object> result = new HashMap<>();
-        
+
         final ColumnConstraints cc = gridPane.getColumnConstraints().get(columnIndex);
         if (MathUtils.equals(cc.getMinWidth(), originalSizing.getMinWidth()) == false) {
             result.put(minWidthName, cc.getMinWidth());
@@ -193,11 +193,11 @@ public class GridPaneColumnResizer {
         }
         return result;
     }
-    
-    
+
+
     public Map<PropertyName, Object> getChangeMapNext() {
         final Map<PropertyName, Object> result = new HashMap<>();
-        
+
         final ColumnConstraints ccNext = gridPane.getColumnConstraints().get(columnIndex+1);
         if (MathUtils.equals(ccNext.getMinWidth(), originalSizingNext.getMinWidth()) == false) {
             result.put(minWidthName, ccNext.getMinWidth());
@@ -213,12 +213,12 @@ public class GridPaneColumnResizer {
         }
         return result;
     }
-    
-    
+
+
     /*
      * Private
-     */    
-    
+     */
+
     private int countPercentWidths() {
         int result = 0;
         for (ColumnConstraints cc : gridPane.getColumnConstraints()) {
@@ -228,14 +228,14 @@ public class GridPaneColumnResizer {
         }
         return result;
     }
-    
-    
+
+
     private static class ColumnSizing {
         private final double minWidth;
         private final double maxWidth;
         private final double prefWidth;
         private final double percentWidth;
-        
+
         public ColumnSizing(ColumnConstraints cc) {
             this.minWidth = cc.getMinWidth();
             this.maxWidth = cc.getMaxWidth();

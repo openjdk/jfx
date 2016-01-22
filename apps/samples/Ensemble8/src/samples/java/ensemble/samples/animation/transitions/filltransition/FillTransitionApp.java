@@ -75,7 +75,7 @@ public class FillTransitionApp extends Application {
         rect.setArcWidth(20);
         rect.setFill(Color.DODGERBLUE);
         root.getChildren().add(rect);
-        
+
         fillTransition = new FillTransition(Duration.seconds(3), rect, Color.RED, Color.DODGERBLUE);
         fillTransition.setCycleCount(Timeline.INDEFINITE);
         fillTransition.setAutoReverse(true);

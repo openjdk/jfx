@@ -24,7 +24,7 @@
  */
 
 #ifndef AVDEFINES_H
-#define	AVDEFINES_H
+#define AVDEFINES_H
 
 // According to ffmpeg Git they introduced
 // _decode_audio4  in version 53.25.0
@@ -36,5 +36,5 @@
 // New Frame alloc functions were introduced in 55.28.0
 #define NEW_ALLOC_FRAME        (LIBAVCODEC_VERSION_INT >= AV_VERSION_INT(55,28,0))
 
-#endif	/* AVDEFINES_H */
+#endif  /* AVDEFINES_H */
 

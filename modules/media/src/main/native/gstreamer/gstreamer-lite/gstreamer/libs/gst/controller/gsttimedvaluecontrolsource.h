@@ -113,7 +113,7 @@ GType gst_timed_value_control_source_get_type (void);
 /* Functions */
 
 GSequenceIter * gst_timed_value_control_source_find_control_point_iter (
-                                                               GstTimedValueControlSource * self, 
+                                                               GstTimedValueControlSource * self,
                                                                GstClockTime timestamp);
 
 gboolean        gst_timed_value_control_source_set            (GstTimedValueControlSource * self,

@@ -32,7 +32,7 @@ struct RadialGradientAttributes : GradientAttributes {
         , m_cySet(false)
         , m_rSet(false)
         , m_fxSet(false)
-        , m_fySet(false) 
+        , m_fySet(false)
         , m_frSet(false)
     {
     }

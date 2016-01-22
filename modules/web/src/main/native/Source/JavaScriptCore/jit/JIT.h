@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef JIT_h
@@ -105,7 +105,7 @@ namespace JSC {
         MacroAssembler::Jump from;
         unsigned to;
         unsigned hint;
-        
+
         SlowCaseEntry(MacroAssembler::Jump f, unsigned t, unsigned h = 0)
             : from(f)
             , to(t)
@@ -150,7 +150,7 @@ namespace JSC {
 
     struct ByValCompilationInfo {
         ByValCompilationInfo() { }
-        
+
         ByValCompilationInfo(unsigned bytecodeIndex, MacroAssembler::PatchableJump badTypeJump, JITArrayMode arrayMode, MacroAssembler::Label doneTarget)
             : bytecodeIndex(bytecodeIndex)
             , badTypeJump(badTypeJump)
@@ -158,7 +158,7 @@ namespace JSC {
             , doneTarget(doneTarget)
         {
         }
-        
+
         unsigned bytecodeIndex;
         MacroAssembler::PatchableJump badTypeJump;
         JITArrayMode arrayMode;
@@ -199,7 +199,7 @@ namespace JSC {
         {
             return JIT(vm, codeBlock).privateCompile(effort);
         }
-        
+
         static void compileClosureCall(VM* vm, CallLinkInfo* callLinkInfo, CodeBlock* callerCodeBlock, CodeBlock* calleeCodeBlock, Structure* expectedStructure, ExecutableBase* expectedExecutable, MacroAssemblerCodePtr codePtr)
         {
             JIT jit(vm, callerCodeBlock);
@@ -220,7 +220,7 @@ namespace JSC {
             jit.m_bytecodeOffset = byValInfo->bytecodeIndex;
             jit.privateCompilePutByVal(byValInfo, returnAddress, arrayMode);
         }
-        
+
         static void compileDirectPutByVal(VM* vm, CodeBlock* codeBlock, ByValInfo* byValInfo, ReturnAddressPtr returnAddress, JITArrayMode arrayMode)
         {
             JIT jit(vm, codeBlock);
@@ -251,9 +251,9 @@ namespace JSC {
         void privateCompileLinkPass();
         void privateCompileSlowCases();
         CompilationResult privateCompile(JITCompilationEffort);
-        
+
         void privateCompileClosureCall(CallLinkInfo*, CodeBlock* calleeCodeBlock, Structure*, ExecutableBase*, MacroAssemblerCodePtr);
-        
+
         void privateCompileGetByVal(ByValInfo*, ReturnAddressPtr, JITArrayMode);
         void privateCompilePutByVal(ByValInfo*, ReturnAddressPtr, JITArrayMode);
 
@@ -302,7 +302,7 @@ namespace JSC {
         enum CompileOpStrictEqType { OpStrictEq, OpNStrictEq };
         void compileOpStrictEq(Instruction* instruction, CompileOpStrictEqType type);
         bool isOperandConstantImmediateDouble(int src);
-        
+
         void emitLoadDouble(int index, FPRegisterID value);
         void emitLoadInt32ToDouble(int index, FPRegisterID value);
         Jump emitJumpIfNotObject(RegisterID structureReg);
@@ -322,7 +322,7 @@ namespace JSC {
 
         template<typename StructureType> // StructureType can be RegisterID or ImmPtr.
         void emitAllocateJSObject(RegisterID allocator, StructureType, RegisterID result, RegisterID scratch);
-        
+
         // This assumes that the value to profile is in regT0 and that regT3 is available for
         // scratch.
         void emitValueProfilingSite(ValueProfile*);
@@ -332,9 +332,9 @@ namespace JSC {
         void emitArrayProfilingSiteForBytecodeIndex(RegisterID structureAndIndexingType, RegisterID scratch, unsigned bytecodeIndex);
         void emitArrayProfileStoreToHoleSpecialCase(ArrayProfile*);
         void emitArrayProfileOutOfBoundsSpecialCase(ArrayProfile*);
-        
+
         JITArrayMode chooseArrayMode(ArrayProfile*);
-        
+
         // Property is in regT1, base is in regT0. regT2 contains indexing type.
         // Property is int-checked and zero extended. Base is cell checked.
         // Structure is already profiled. Returns the slow cases. Fall-through
@@ -345,7 +345,7 @@ namespace JSC {
         JumpList emitArrayStorageGetByVal(Instruction*, PatchableJump& badType);
         JumpList emitIntTypedArrayGetByVal(Instruction*, PatchableJump& badType, TypedArrayType);
         JumpList emitFloatTypedArrayGetByVal(Instruction*, PatchableJump& badType, TypedArrayType);
-        
+
         // Property is in regT0, base is in regT0. regT2 contains indecing type.
         // The value to store is not yet loaded. Property is int-checked and
         // zero-extended. Base is cell checked. Structure is already profiled.
@@ -366,7 +366,7 @@ namespace JSC {
         JumpList emitArrayStoragePutByVal(Instruction*, PatchableJump& badType);
         JumpList emitIntTypedArrayPutByVal(Instruction*, PatchableJump& badType, TypedArrayType);
         JumpList emitFloatTypedArrayPutByVal(Instruction*, PatchableJump& badType, TypedArrayType);
-        
+
         enum FinalObjectMode { MayBeFinal, KnownNotFinal };
 
 #if USE(JSVALUE32_64)
@@ -658,9 +658,9 @@ namespace JSC {
         MacroAssembler::Call appendCallWithCallFrameRollbackOnException(const FunctionPtr&);
         MacroAssembler::Call appendCallWithExceptionCheckSetJSValueResult(const FunctionPtr&, int);
         MacroAssembler::Call appendCallWithExceptionCheckSetJSValueResultWithProfile(const FunctionPtr&, int);
-        
+
         enum WithProfileTag { WithProfile };
-        
+
         MacroAssembler::Call callOperation(C_JITOperation_E);
         MacroAssembler::Call callOperation(C_JITOperation_EO, GPRReg);
         MacroAssembler::Call callOperation(C_JITOperation_ESt, Structure*);
@@ -746,7 +746,7 @@ namespace JSC {
 
         // Loads the character value of a single character string into dst.
         void emitLoadCharacterString(RegisterID src, RegisterID dst, JumpList& failures);
-        
+
 #if ENABLE(DFG_JIT)
         void emitEnterOptimizationCheck();
 #else

@@ -38,24 +38,24 @@ import java.util.ResourceBundle;
  *
  */
 public class I18N {
-    
+
     private static ResourceBundle bundle;
-    
+
     public static String getString(String key) {
         return getBundle().getString(key);
     }
-    
+
     public static String getString(String key, Object... arguments) {
         final String pattern = getString(key);
         return MessageFormat.format(pattern, arguments);
     }
-    
+
     public static synchronized ResourceBundle getBundle() {
         if (bundle == null) {
             final String packageName = I18N.class.getPackage().getName();
             bundle = ResourceBundle.getBundle(packageName + ".SceneBuilderKit"); //NOI18N
         }
-        
+
         return bundle;
     }
 }

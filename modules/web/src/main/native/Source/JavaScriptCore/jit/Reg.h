@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef Reg_h
@@ -55,38 +55,38 @@ public:
         : m_index(invalid())
     {
     }
-    
+
     Reg(MacroAssembler::RegisterID reg)
         : m_index(MacroAssembler::registerIndex(reg))
     {
     }
-    
+
     Reg(MacroAssembler::FPRegisterID reg)
         : m_index(MacroAssembler::registerIndex(reg))
     {
     }
-    
+
     static Reg fromIndex(unsigned index)
     {
         Reg result;
         result.m_index = index;
         return result;
     }
-    
+
     static Reg first()
     {
         Reg result;
         result.m_index = 0;
         return result;
     }
-    
+
     static Reg last()
     {
         Reg result;
         result.m_index = MacroAssembler::numberOfRegisters() + MacroAssembler::numberOfFPRegisters() - 1;
         return result;
     }
-    
+
     Reg next() const
     {
         ASSERT(!!*this);
@@ -96,75 +96,75 @@ public:
         result.m_index = m_index + 1;
         return result;
     }
-    
+
     unsigned index() const { return m_index; }
-    
+
     bool isSet() const { return m_index != invalid(); }
     bool operator!() const { return !isSet(); }
-    
+
     bool isGPR() const
     {
         return m_index < MacroAssembler::numberOfRegisters();
     }
-    
+
     bool isFPR() const
     {
         return (m_index - MacroAssembler::numberOfRegisters()) < MacroAssembler::numberOfFPRegisters();
     }
-    
+
     MacroAssembler::RegisterID gpr() const
     {
         ASSERT(isGPR());
         return static_cast<MacroAssembler::RegisterID>(MacroAssembler::firstRegister() + m_index);
     }
-    
+
     MacroAssembler::FPRegisterID fpr() const
     {
         ASSERT(isFPR());
         return static_cast<MacroAssembler::FPRegisterID>(
             MacroAssembler::firstFPRegister() + (m_index - MacroAssembler::numberOfRegisters()));
     }
-    
+
     bool operator==(const Reg& other) const
     {
         return m_index == other.m_index;
     }
-    
+
     bool operator!=(const Reg& other) const
     {
         return m_index != other.m_index;
     }
-    
+
     bool operator<(const Reg& other) const
     {
         return m_index < other.m_index;
     }
-    
+
     bool operator>(const Reg& other) const
     {
         return m_index > other.m_index;
     }
-    
+
     bool operator<=(const Reg& other) const
     {
         return m_index <= other.m_index;
     }
-    
+
     bool operator>=(const Reg& other) const
     {
         return m_index >= other.m_index;
     }
-    
+
     unsigned hash() const
     {
         return m_index;
     }
-    
+
     void dump(PrintStream&) const;
 
 private:
     static uint8_t invalid() { return 0xff; }
-    
+
     uint8_t m_index;
 };
 

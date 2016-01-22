@@ -60,12 +60,12 @@ public class LoginController extends AnchorPane {
     Label errorMessage;
 
     private Main application;
-    
-    
+
+
     public void setApp(Main application){
         this.application = application;
     }
-    
+
     @FXML // This method is called by the FXMLLoader when initialization is complete
     void initialize() {
         errorMessage.setText("");

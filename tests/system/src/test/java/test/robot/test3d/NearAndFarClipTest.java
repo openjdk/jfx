@@ -67,7 +67,7 @@ public class NearAndFarClipTest extends VisualTestBase {
             final double farClipDistance =  focalLength * FAR + eyePositionZ;
             final double nearClipDistanceOffset = Math.abs(nearClipDistance * OFFSET_PERCENT);
             final double farClipDistanceOffset = Math.abs(farClipDistance * OFFSET_PERCENT);
-      
+
 //                System.out.println("In scene coordinate: focalLength = " + focalLength
 //                        + ", nearClipDistance = " + nearClipDistance
 //                        + ", nearClipDistanceOffset = " + nearClipDistanceOffset
@@ -117,7 +117,7 @@ public class NearAndFarClipTest extends VisualTestBase {
         });
         waitFirstFrame();
         runAndWait(() -> {
-            
+
             if (!Platform.isSupported(ConditionalFeature.SCENE3D)) {
                 System.out.println("*************************************************************");
                 System.out.println("*      Platform isn't SCENE3D capable, skipping 3D test.    *");

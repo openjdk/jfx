@@ -41,16 +41,16 @@ import javafx.fxml.FXMLLoader;
 
 /**
  *
- * 
+ *
  */
 class FXOMSaver {
-    
-    
+
+
     public String save(FXOMDocument fxomDocument) {
-        
+
         assert fxomDocument != null;
         assert fxomDocument.getGlue() != null;
-        
+
         if (fxomDocument.getFxomRoot() != null) {
             updateNameSpace(fxomDocument);
             updateImportInstructions(fxomDocument);
@@ -58,39 +58,39 @@ class FXOMSaver {
 
         return fxomDocument.getGlue().toString();
     }
-    
-    
+
+
     /*
      * Private
      */
-    
+
     private static final String NAME_SPACE_FX = "http://javafx.com/javafx/" + FXMLLoader.JAVAFX_VERSION;
     private static final String NAME_SPACE_FXML = "http://javafx.com/fxml/1";
-    
+
     private void updateNameSpace(FXOMDocument fxomDocument) {
         assert fxomDocument.getFxomRoot() != null;
-        
+
         final FXOMObject fxomRoot = fxomDocument.getFxomRoot();
         final String currentNameSpaceFX = fxomRoot.getNameSpaceFX();
         final String currentNameSpaceFXML = fxomRoot.getNameSpaceFXML();
-        
-        if ((currentNameSpaceFX == null) 
+
+        if ((currentNameSpaceFX == null)
                 || (currentNameSpaceFX.equals(NAME_SPACE_FX) == false)) {
             fxomRoot.setNameSpaceFX(NAME_SPACE_FX);
         }
-        
-        if ((currentNameSpaceFXML == null) 
+
+        if ((currentNameSpaceFXML == null)
                 || (currentNameSpaceFXML.equals(NAME_SPACE_FXML) == false)) {
             fxomRoot.setNameSpaceFXML(NAME_SPACE_FXML);
         }
-        
-        
+
+
     }
-    
-    
+
+
     private void updateImportInstructions(FXOMDocument fxomDocument) {
         assert fxomDocument.getFxomRoot() != null;
-        
+
         // Collects all packages already declared by import processing instructions
         final GlueDocument glue = fxomDocument.getGlue();
         final List<GlueInstruction> imports = glue.collectInstructions("import");
@@ -102,19 +102,19 @@ class FXOMSaver {
                 existingPackageNames.add(packageName);
             }
         }
-        
+
         // Collects all the classes declared in the fxom document,
         // constructs the set of packages to be imported.
         final Set<String> newPackageNames = new TreeSet<>(); // Sorted
-        for (Class<?> declaredClass 
+        for (Class<?> declaredClass
                 : fxomDocument.getFxomRoot().collectDeclaredClasses()) {
             newPackageNames.add(declaredClass.getPackage().getName());
         }
         newPackageNames.add("java.lang");
-        
+
         // Removes package names already declared
         newPackageNames.removeAll(existingPackageNames);
-        
+
         // Chooses where to insert the new import processing intructions.
         // If there are some, we insert the new ones afterward.
         final int firstImportIndex;
@@ -124,7 +124,7 @@ class FXOMSaver {
             final GlueInstruction firstImport = imports.get(0);
             firstImportIndex = glue.getHeader().indexOf(firstImport);
         }
-        
+
         // Creates a glue instruction for each package to be declared.
         // We insert after the last import instruction.
         int i = firstImportIndex;
@@ -134,6 +134,6 @@ class FXOMSaver {
             glue.getHeader().add(i, instruction);
             i++;
         }
-        
+
     }
 }

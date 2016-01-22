@@ -49,7 +49,7 @@ return self;
 -(void)update:(NSString*)string
 {
     [[[self->_textView textStorage] mutableString] appendString:string];
-    
+
     // scroll old lines up
     NSRect frame = [self->_textView frame];
     frame.origin.y = 0.0f;

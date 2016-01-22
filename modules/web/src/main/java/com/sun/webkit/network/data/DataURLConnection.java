@@ -43,11 +43,11 @@ import java.util.LinkedList;
  * data:text/plain;charset=iso-8859-7,%be%f9%be
  * data:text/css,.picture%20%7B%20background%3A%20none%3B%20%7D
  * data:application/x-unknown,ERROR
- * 
+ *
  * @author jccollet
  */
 final class DataURLConnection extends URLConnection {
-    
+
     private static final Charset US_ASCII = Charset.forName("US-ASCII");
 
 
@@ -58,7 +58,7 @@ final class DataURLConnection extends URLConnection {
 
     DataURLConnection(URL url) throws IOException {
         super(url);
-        
+
         String content = url.toString();
         content = content.substring(content.indexOf(':') + 1);
 
@@ -67,10 +67,10 @@ final class DataURLConnection extends URLConnection {
             throw new ProtocolException(
                     "Invalid URL, ',' not found in: " + getURL());
         }
-        
+
         String metadata = content.substring(0, commaPosition);
         String dataString = content.substring(commaPosition + 1);
-        
+
         String mimeType = null;
         LinkedList<String> parameters = new LinkedList<String>();
         Charset charset = null;
@@ -117,7 +117,7 @@ final class DataURLConnection extends URLConnection {
             mediaTypeBuilder.append(';').append(parameter);
         }
         mediaType = mediaTypeBuilder.toString();
-        
+
         if (base64) {
             String s = urlDecode(dataString, US_ASCII);
             s = s.replaceAll("\\s+", "");
@@ -126,7 +126,7 @@ final class DataURLConnection extends URLConnection {
             String s = urlDecode(dataString, charset);
             data = s.getBytes(charset);
         }
-        
+
         inputStream = new ByteArrayInputStream(data);
     }
 
@@ -156,7 +156,7 @@ final class DataURLConnection extends URLConnection {
         // -1 means 'unknown length'
         return data != null ? data.length : -1;
     }
-    
+
     private static String urlDecode(String str, Charset charset) {
         int length = str.length();
         StringBuilder sb = new StringBuilder(length);
@@ -208,7 +208,7 @@ final class DataURLConnection extends URLConnection {
                 i++;
             }
         }
-        
+
         return sb.toString();
     }
 }

@@ -80,7 +80,7 @@ public class ButtonSkinTest {
                     .filter(m -> m.getNode() == node)
                     .count();
         }
-        return 0;        
+        return 0;
     }
 
     @Test
@@ -89,34 +89,34 @@ public class ButtonSkinTest {
             Stage stage = new Stage();
             Scene scene = new Scene(new Group(), 500, 500);
             stage.setScene(scene);
-            
+
             button.setMnemonicParsing(true);
             button.setText("_Mnemonic");
-            
+
             ((Group)scene.getRoot()).getChildren().add(button);
-        
+
             stage.show();
-        
+
             KeyCombination mnemonicKeyCombo = new MnemonicKeyCombination("M");
             assertEquals(1, countMnemonicNodes(scene, mnemonicKeyCombo, button));
         }
     }
 
-   
+
     @Test
     public void testMnemonicAutoParseAdditionRemovalOnParentChange() {
         if(!com.sun.javafx.PlatformUtil.isMac()) {
             Stage stage = new Stage();
             Scene scene = new Scene(new Group(), 500, 500);
             stage.setScene(scene);
-            
+
             button.setMnemonicParsing(true);
             button.setText("_AnotherMnemonic");
-            
+
             ((Group)scene.getRoot()).getChildren().add(button);
-        
+
             stage.show();
-        
+
             KeyCombination mnemonicKeyCombo = new MnemonicKeyCombination("A");
             assertEquals(1, countMnemonicNodes(scene, mnemonicKeyCombo, button));
 

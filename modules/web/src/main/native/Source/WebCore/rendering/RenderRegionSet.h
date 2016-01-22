@@ -55,7 +55,7 @@ private:
     virtual void expandToEncompassFlowThreadContentsIfNeeded() override final;
 
     virtual const char* renderName() const = 0;
-    
+
     virtual bool isRenderRegionSet() const override final { return true; }
 };
 

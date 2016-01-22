@@ -155,7 +155,7 @@ public class TouchLagTest {
         ui.writeValue(b, ys[0], 410);
         ui.writeValue(b, ys[1], 410);
         ui.write(b, 0, moveLength);
-        // release 
+        // release
         ui.processLine("EV_KEY BTN_TOUCH 0");
         ui.processLine("EV_SYN SYN_MT_REPORT 0");
         ui.processLine("EV_SYN SYN_REPORT 0");

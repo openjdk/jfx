@@ -6,13 +6,13 @@
  * are met:
  *
  * 1.  Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer. 
+ *     notice, this list of conditions and the following disclaimer.
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
- *     documentation and/or other materials provided with the distribution. 
+ *     documentation and/or other materials provided with the distribution.
  * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
- *     from this software without specific prior written permission. 
+ *     from this software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY APPLE AND ITS CONTRIBUTORS "AS IS" AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
@@ -58,12 +58,12 @@ public:
     typedef JSSymbolTableObject Base;
 
     WriteBarrier<Unknown>& registerAt(int index) { return m_registers[index]; }
-    
+
     // This is a slow method call, which searches the register bank to find the index
     // given a pointer. It will CRASH() if it does not find the register. Only use this
     // in debug code (like bytecode dumping).
     JS_EXPORT_PRIVATE int findRegisterIndex(void*);
-    
+
     WriteBarrier<Unknown>* assertRegisterIsInThisObject(WriteBarrier<Unknown>* registerPointer)
     {
 #if !ASSERT_DISABLED
@@ -71,11 +71,11 @@ public:
 #endif
         return registerPointer;
     }
-    
+
     // Adds numberOfRegistersToAdd registers, initializes them to Undefined, and returns
     // the index of the first one added.
     JS_EXPORT_PRIVATE int addRegisters(int numberOfRegistersToAdd);
-    
+
     JS_EXPORT_PRIVATE static void visitChildren(JSCell*, SlotVisitor&);
 
 protected:
@@ -90,7 +90,7 @@ protected:
     {
         Base::finishCreation(vm);
     }
-    
+
     SegmentedVector<WriteBarrier<Unknown>, 16> m_registers;
     ConcurrentJITLock m_lock;
 };

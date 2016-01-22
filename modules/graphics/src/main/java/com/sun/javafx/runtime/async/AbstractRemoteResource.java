@@ -60,13 +60,13 @@ public abstract class AbstractRemoteResource<T> extends AbstractAsyncOperation<T
     protected AbstractRemoteResource(String url, String method, AsyncOperationListener<T> listener) {
         this(url, method, null, listener);
     }
-    
+
     protected AbstractRemoteResource(String url, String method, String outboundContent, AsyncOperationListener<T> listener) {
         super(listener);
         this.url = url;
         this.method = method;
         this.outboundContent = outboundContent;
-    }    
+    }
 
     protected abstract T processStream(InputStream stream) throws IOException;
 
@@ -92,7 +92,7 @@ public abstract class AbstractRemoteResource<T> extends AbstractAsyncOperation<T
                 OutputStream out = conn.getOutputStream();
                 out.write(outBytes);
                 out.close();
-            }        
+            }
             conn.connect();
             fileSize = conn.getContentLength();
             setProgressMax(fileSize);
@@ -149,7 +149,7 @@ public abstract class AbstractRemoteResource<T> extends AbstractAsyncOperation<T
     public void setHeader(String header, String value) {
         headers.put(header, value);
     }
-    
+
     public String getResponseHeader(String header) {
         String value = null;
         List<String> list = responseHeaders.get(header);

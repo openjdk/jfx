@@ -63,7 +63,7 @@ public final class WCFontPerfLogger extends WCFont {
         logger.suspendCount("DERIVEFONT");
         return res;
     }
-    
+
     public int getOffsetForPosition(String str, float x) {
         logger.resumeCount("GETOFFSETFORPOSITION");
         int res = fnt.getOffsetForPosition(str, x);

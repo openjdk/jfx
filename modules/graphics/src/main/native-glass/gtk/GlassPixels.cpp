@@ -72,7 +72,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkPixels__1attachInt
     jint *data;
     GdkPixbuf **pixbuf;
     guint8 *dataRGBA;
-    
+
     if (array == NULL) {
         data = (jint*) env->GetDirectBufferAddress(ints);
         assert((w*h*4 + offset * 4) == env->GetDirectBufferCapacity(ints));
@@ -104,7 +104,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkPixels__1attachByte
     jbyte *data;
     GdkPixbuf **pixbuf;
     guint8 *dataRGBA;
-    
+
     if (array == NULL) {
         data = (jbyte*) env->GetDirectBufferAddress(bytes);
         assert((w*h*4 + offset) == env->GetDirectBufferCapacity(bytes));

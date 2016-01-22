@@ -21,7 +21,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef EditorClient_h
@@ -71,7 +71,7 @@ public:
     virtual void pageDestroyed() = 0;
 
     virtual bool shouldDeleteRange(Range*) = 0;
-    virtual bool smartInsertDeleteEnabled() = 0; 
+    virtual bool smartInsertDeleteEnabled() = 0;
     virtual bool isSelectTrailingWhitespaceEnabled() = 0;
     virtual bool isContinuousSpellCheckingEnabled() = 0;
     virtual void toggleContinuousSpellChecking() = 0;
@@ -84,7 +84,7 @@ public:
     virtual bool shouldInsertNode(Node*, Range*, EditorInsertAction) = 0;
     virtual bool shouldInsertText(const String&, Range*, EditorInsertAction) = 0;
     virtual bool shouldChangeSelectedRange(Range* fromRange, Range* toRange, EAffinity, bool stillSelecting) = 0;
-    
+
     virtual bool shouldApplyStyle(StyleProperties*, Range*) = 0;
     virtual bool shouldMoveRangeAfterDelete(Range*, Range*) = 0;
 
@@ -95,7 +95,7 @@ public:
     virtual void willWriteSelectionToPasteboard(Range*) = 0;
     virtual void didWriteSelectionToPasteboard() = 0;
     virtual void getClientPasteboardDataForRange(Range*, Vector<String>& pasteboardTypes, Vector<RefPtr<SharedBuffer>>& pasteboardData) = 0;
-    
+
     virtual void registerUndoStep(PassRefPtr<UndoStep>) = 0;
     virtual void registerRedoStep(PassRefPtr<UndoStep>) = 0;
     virtual void clearUndoRedoOperations() = 0;
@@ -104,13 +104,13 @@ public:
     virtual bool canPaste(Frame*, bool defaultValue) const = 0;
     virtual bool canUndo() const = 0;
     virtual bool canRedo() const = 0;
-    
+
     virtual void undo() = 0;
     virtual void redo() = 0;
 
     virtual void handleKeyboardEvent(KeyboardEvent*) = 0;
     virtual void handleInputMethodKeydown(KeyboardEvent*) = 0;
-    
+
     virtual void textFieldDidBeginEditing(Element*) = 0;
     virtual void textFieldDidEndEditing(Element*) = 0;
     virtual void textDidChangeInTextField(Element*) = 0;
@@ -160,7 +160,7 @@ public:
     virtual bool isAutomaticSpellingCorrectionEnabled() = 0;
     virtual void toggleAutomaticSpellingCorrection() = 0;
 #endif
-    
+
 #if ENABLE(DELETION_UI)
     virtual bool shouldShowDeleteInterface(HTMLElement*) = 0;
 #endif

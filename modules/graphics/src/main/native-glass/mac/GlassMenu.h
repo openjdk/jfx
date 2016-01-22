@@ -40,7 +40,7 @@
 {
     jobject     jMenu;
 @public
-        
+
     jobject     jDelegate;
     jobject     jCallback;
 
@@ -49,8 +49,8 @@
 }
 
 // Menu
-- (id)initWithJavajdelegate:(jobject)jdelegate 
-                     jtitle:(jstring)jtitle 
+- (id)initWithJavajdelegate:(jobject)jdelegate
+                     jtitle:(jstring)jtitle
                    jenabled:(jboolean)jenabled;
 
 // MenuItem

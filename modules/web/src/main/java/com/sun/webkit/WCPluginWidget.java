@@ -42,12 +42,12 @@ final class WCPluginWidget extends WCWidget implements PluginListener {
 
     private final static Logger log =
         Logger.getLogger(WCPluginWidget.class.getName());
-    
+
     private final Plugin plugin;
     private long pData = 0L;//for native code
 
     private static native void initIDs();
-    
+
     static {
         initIDs();
     };
@@ -71,7 +71,7 @@ final class WCPluginWidget extends WCWidget implements PluginListener {
     protected void requestFocus() {
         plugin.requestFocus();
     }
-    
+
     private static WCPluginWidget create(
         final WebPage webPage,
         final int width, final int height,
@@ -130,7 +130,7 @@ final class WCPluginWidget extends WCWidget implements PluginListener {
         pData = 0L;
         plugin.destroy();
     }
-    
+
     private void paint(WCGraphicsContext g,
             //page offsets
             final int x,

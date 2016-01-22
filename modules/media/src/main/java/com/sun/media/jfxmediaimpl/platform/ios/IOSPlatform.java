@@ -54,7 +54,7 @@ public final class IOSPlatform extends Platform {
         "video/x-quicktime",
         "audio/x-aiff"
     };
-    
+
     /**
      * All supported protocols.
      */
@@ -100,7 +100,7 @@ public final class IOSPlatform extends Platform {
     public String[] getSupportedContentTypes() {
         return Arrays.copyOf(CONTENT_TYPES, CONTENT_TYPES.length);
     }
-    
+
     @Override
     public String[] getSupportedProtocols() {
         return Arrays.copyOf(PROTOCOLS, PROTOCOLS.length);

@@ -25,7 +25,7 @@
 #include "SVGNames.h"
 
 namespace WebCore {
-    
+
 inline SVGAnimateColorElement::SVGAnimateColorElement(const QualifiedName& tagName, Document& document)
     : SVGAnimateElement(tagName, document)
 {

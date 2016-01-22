@@ -39,7 +39,7 @@ import javafx.beans.NamedArg;
  * TablePosition can be 'disabled' to represent an entire row or column. This is
  * done by setting the unrequired property to -1 or null.
  *
- * @param <S> The type of the {@link TreeItem} instances contained within the 
+ * @param <S> The type of the {@link TreeItem} instances contained within the
  *      TreeTableView.
  * @param <T> The type of the items contained within the TreeTableColumn.
  * @see TreeTableView
@@ -47,19 +47,19 @@ import javafx.beans.NamedArg;
  * @since JavaFX 8.0
  */
 public class TreeTablePosition<S,T> extends TablePositionBase<TreeTableColumn<S,T>> {
-    
+
     /***************************************************************************
      *                                                                         *
      * Constructors                                                            *
      *                                                                         *
-     **************************************************************************/  
+     **************************************************************************/
 
     /**
      * Constructs a TreeTablePosition instance to represent the given row/column
-     * position in the given TreeTableView instance. Both the TreeTableView and 
+     * position in the given TreeTableView instance. Both the TreeTableView and
      * TreeTableColumn are referenced weakly in this class, so it is possible that
      * they will be null when their respective getters are called.
-     * 
+     *
      * @param treeTableView The TreeTableView that this position is related to.
      * @param row The row that this TreeTablePosition is representing.
      * @param tableColumn The TreeTableColumn instance that this TreeTablePosition represents.
@@ -69,9 +69,9 @@ public class TreeTablePosition<S,T> extends TablePositionBase<TreeTableColumn<S,
         this.controlRef = new WeakReference<>(treeTableView);
         this.treeItemRef = new WeakReference<>(treeTableView.getTreeItem(row));
     }
-    
-    
-    
+
+
+
     /***************************************************************************
      *                                                                         *
      * Instance Variables                                                      *
@@ -87,7 +87,7 @@ public class TreeTablePosition<S,T> extends TablePositionBase<TreeTableColumn<S,
      * Public API                                                              *
      *                                                                         *
      **************************************************************************/
-    
+
     /**
      * The column index that this TreeTablePosition represents in the TreeTableView. It
      * is -1 if the TreeTableView or TreeTableColumn instances are null.
@@ -98,17 +98,17 @@ public class TreeTablePosition<S,T> extends TablePositionBase<TreeTableColumn<S,
         }
         TreeTableView<S> tableView = getTreeTableView();
         TreeTableColumn<S,T> tableColumn = getTableColumn();
-        return tableView == null || tableColumn == null ? -1 : 
+        return tableView == null || tableColumn == null ? -1 :
                 tableView.getVisibleLeafIndex(tableColumn);
     }
-    
+
     /**
      * The TreeTableView that this TreeTablePosition is related to.
      */
     public final TreeTableView<S> getTreeTableView() {
         return controlRef.get();
     }
-    
+
     @Override public final TreeTableColumn<S,T> getTableColumn() {
         // Forcing the return type to be TreeTableColumn<S,T>, not TableColumnBase<S,T>
         return super.getTableColumn();

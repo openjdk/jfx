@@ -100,7 +100,7 @@ public class GaussianRenderState extends LinearConvolveRenderState {
 
     /**
      * Constructs a {@link RenderState} for a 2 dimensional Gaussian convolution.
-     * 
+     *
      * @param xradius the Gaussian radius along the user space X axis
      * @param yradius the Gaussian radius along the user space Y axis
      * @param spread the spread amount
@@ -119,28 +119,28 @@ public class GaussianRenderState extends LinearConvolveRenderState {
          * direction we apply the gaussian convolutions could change as well
          * as the new size of that Gaussian distribution curve relative to
          * the pixels produced under that transform.
-         * 
+         *
          * We will track the direction and size of the Gaussian as we traverse
          * different coordinate spaces with the intent that eventually we
          * will perform the math of the convolution with weights calculated
          * for one sample per pixel in the indicated direction and applied as
          * closely to the intended final filter transform as we can achieve
          * with the following caveats:
-         * 
+         *
          * - There is a maximum kernel size that the hardware pixel shaders
          *   can apply so we will try to keep the scaling of the filtered
          *   pixels low enough that we do not exceed that data limitation.
-         * 
+         *
          * - Software prefers to apply these weights along horizontal and
          *   vertical vectors, but can apply them in an arbitrary direction
          *   if need be.
-         * 
+         *
          * - If the Gaussian kernel is large enough, then applying a smaller
          *   Gaussian kernel to a downscaled input is indistinguishable to
          *   applying the larger kernel to a larger scaled input.  Our maximum
          *   kernel size is large enough for this effect to be hidden if we
          *   max out the kernel.
-         * 
+         *
          * - We can tell the inputs what transform we want them to use, but
          *   they can always produce output under a different transform and
          *   then return a result with a "post-processing" trasnform to be
@@ -148,7 +148,7 @@ public class GaussianRenderState extends LinearConvolveRenderState {
          *   how we want to apply the convolution weights and samples here,
          *   but we will have to reevaluate our actions when the actual
          *   input pixels are created later.
-         * 
+         *
          * - If we are blurring enough to trigger the MAX_RADIUS exceptions
          *   then we can blur at a nice axis-aligned orientation (which is
          *   preferred for the software versions of the shaders) and perform
@@ -240,7 +240,7 @@ public class GaussianRenderState extends LinearConvolveRenderState {
     /**
      * Constructs a {@link RenderState} for a single dimensional, directional
      * Gaussian convolution (as for a MotionBlur operation).
-     * 
+     *
      * @param radius the Gaussian radius along the indicated direction
      * @param dx the delta X of the unit vector along which to apply the convolution
      * @param dy the delta Y of the unit vector along which to apply the convolution

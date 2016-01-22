@@ -46,39 +46,39 @@ import javafx.util.Duration;
  * <p>
  * The {@code toValue} takes precedence if both {@code toValue} and
  * {@code byValue} are specified.
- * 
+ *
  * <p>
  * Code Segment Example:
  * </p>
- * 
+ *
  * <pre>
  * <code>
  * import javafx.scene.shape.*;
  * import javafx.animation.transition.*;
- * 
+ *
  * ...
- * 
+ *
  *     Rectangle rect = new Rectangle (100, 40, 100, 100);
  *     rect.setArcHeight(50);
  *     rect.setArcWidth(50);
  *     rect.setFill(Color.VIOLET);
- * 
+ *
  *     FadeTransition ft = new FadeTransition(Duration.millis(3000), rect);
  *     ft.setFromValue(1.0);
  *     ft.setToValue(0.3);
  *     ft.setCycleCount(4);
  *     ft.setAutoReverse(true);
- * 
+ *
  *     ft.play();
- * 
+ *
  * ...
- * 
+ *
  * </code>
  * </pre>
- * 
+ *
  * @see Transition
  * @see Animation
- * 
+ *
  * @since JavaFX 2.0
  */
 public final class FadeTransition extends Transition {
@@ -186,7 +186,7 @@ public final class FadeTransition extends Transition {
      * {@code FadeTransition}. If the value of {@code fromValue} is changed for
      * a running {@code FadeTransition}, the animation has to be stopped and
      * started again to pick up the new value.
-     * 
+     *
      * @defaultValue {@code Double.NaN}
      */
     private DoubleProperty fromValue;
@@ -216,7 +216,7 @@ public final class FadeTransition extends Transition {
      * {@code FadeTransition}. If the value of {@code toValue} is changed for a
      * running {@code FadeTransition}, the animation has to be stopped and
      * started again to pick up the new value.
-     * 
+     *
      * @defaultValue {@code Double.NaN}
      */
     private DoubleProperty toValue;
@@ -270,7 +270,7 @@ public final class FadeTransition extends Transition {
 
     /**
      * The constructor of {@code FadeTransition}
-     * 
+     *
      * @param duration
      *            The duration of the {@code FadeTransition}
      * @param node
@@ -284,7 +284,7 @@ public final class FadeTransition extends Transition {
 
     /**
      * The constructor of {@code FadeTransition}
-     * 
+     *
      * @param duration
      *            The duration of the {@code FadeTransition}
      */

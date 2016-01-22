@@ -40,7 +40,7 @@ import javafx.scene.chart.PieChart;
  *
  */
 class PieChartSampleData extends AbstractSampleData {
-    
+
     private final List<PieChart.Data> samples = new ArrayList<>();
 
     public PieChartSampleData() {
@@ -52,22 +52,22 @@ class PieChartSampleData extends AbstractSampleData {
     /*
      * AbstractSampleData
      */
-    
+
     @Override
     public void applyTo(Object sceneGraphObject) {
         assert sceneGraphObject instanceof PieChart;
-        
+
         final PieChart pieChart = (PieChart) sceneGraphObject;
         pieChart.getData().clear();
         pieChart.getData().addAll(samples);
     }
-    
+
     @Override
     public void removeFrom(Object sceneGraphObject) {
         assert sceneGraphObject instanceof PieChart;
-        
+
         final PieChart pieChart = (PieChart) sceneGraphObject;
         pieChart.getData().clear();
     }
-    
+
 }

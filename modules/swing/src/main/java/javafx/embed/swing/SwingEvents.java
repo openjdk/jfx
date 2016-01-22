@@ -123,7 +123,7 @@ class SwingEvents {
         }
         return embedModifiers;
     }
-    
+
     static char keyCharToEmbedKeyChar(char ch) {
         // Convert Swing LF character to Fx CR character.
         return ch == '\n' ? '\r' : ch;

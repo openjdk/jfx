@@ -35,23 +35,23 @@ import java.text.Format;
 /**
  * This class provides a full implementation of a {@link Property} wrapping a
  * {@code String} value.
- * 
+ *
  * The value of a {@code StringProperty} can be get and set with {@link #get()},
  * {@link #getValue()}, {@link #set(Object)}, and {@link #setValue(String)}.
- * 
+ *
  * A property can be bound and unbound unidirectional with
  * {@link #bind(ObservableValue)} and {@link #unbind()}. Bidirectional bindings
  * can be created and removed with {@link #bindBidirectional(Property)} and
  * {@link #unbindBidirectional(Property)}.
- * 
+ *
  * The context of a {@code StringProperty} can be read with {@link #getBean()}
  * and {@link #getName()}.
- * 
+ *
  * @see javafx.beans.value.ObservableStringValue
  * @see javafx.beans.value.WritableStringValue
  * @see ReadOnlyStringProperty
  * @see Property
- * 
+ *
  * @since JavaFX 2.0
  */
 public abstract class StringProperty extends ReadOnlyStringProperty implements
@@ -141,7 +141,7 @@ public abstract class StringProperty extends ReadOnlyStringProperty implements
     /**
      * Returns a string representation of this {@code StringProperty} object.
      * @return a string representation of this {@code StringProperty} object.
-     */ 
+     */
     @Override
     public String toString() {
         final Object bean = getBean();

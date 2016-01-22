@@ -62,7 +62,7 @@ public:
     // When the user closes a page, or quits the client application, all of the page's
     // associated notifications are cleared.
     virtual void clearNotifications(ScriptExecutionContext*) { }
-    
+
     // Informs the presenter that a Notification object has been destroyed
     // (such as by a page transition). The presenter may continue showing
     // the notification, but must not attempt to call the event handlers.

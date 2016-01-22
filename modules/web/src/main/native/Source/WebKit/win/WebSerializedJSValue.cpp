@@ -91,7 +91,7 @@ HRESULT WebSerializedJSValue::serialize(JSContextRef sourceContext, JSValueRef v
         return E_POINTER;
 
     m_value = SerializedScriptValue::create(sourceContext, value, exception);
-        
+
     return S_OK;
 }
 

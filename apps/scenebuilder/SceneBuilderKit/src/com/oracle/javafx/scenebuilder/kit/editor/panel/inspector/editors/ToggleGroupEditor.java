@@ -51,7 +51,7 @@ public class ToggleGroupEditor extends AutoSuggestEditor {
         super(propMeta, selectedClasses, suggestedTgs);
         initialize(suggestedTgs);
     }
-    
+
     private void initialize(List<String> suggestedTgs) {
         this.suggestedTgs = suggestedTgs;
 

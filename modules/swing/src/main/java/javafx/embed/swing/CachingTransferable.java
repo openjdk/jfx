@@ -81,14 +81,14 @@ class CachingTransferable implements Transferable {
         // "java.awt.dnd.InvalidDnDOperationException" issue as
         // SwingDragSource#getData() is called from FX user code and from
         // QuantumClipboard#getContent() (sik!). These calls usually take
-        // place in the context of 
+        // place in the context of
         // EmbeddedSceneDTInterface#handleDragDrop() method as the
         // normal handling of DnD.
         // Instead of keeping reference to source Transferable we just read
         // all its data while in the context safe for calling
         // Transferable#getTransferData().
         //
-        // This observation is true for standard AWT Transferable-s. 
+        // This observation is true for standard AWT Transferable-s.
         // Things may be totally broken for custom Transferable-s though.
 
         // For performance reasons, the DRAG_ENTERED and DRAG_OVER event

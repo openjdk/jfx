@@ -22,7 +22,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
- 
+
 #ifndef RenderMathMLSquareRoot_h
 #define RenderMathMLSquareRoot_h
 
@@ -41,12 +41,12 @@ public:
     RenderMathMLSquareRoot(Element&, PassRef<RenderStyle>);
     RenderMathMLSquareRoot(Document&, PassRef<RenderStyle>);
     static RenderPtr<RenderMathMLSquareRoot> createAnonymousWithParentRenderer(RenderMathMLMenclose&);
-    
+
 private:
     virtual bool isRenderMathMLSquareRoot() const override { return true; }
     virtual const char* renderName() const override { return "RenderMathMLSquareRoot"; }
 };
-    
+
 }
 
 #endif // ENABLE(MATHML)

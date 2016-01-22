@@ -50,7 +50,7 @@ questions.
     </right>
     <center>
         <AnchorPane>
-            <Label AnchorPane.topAnchor="5" AnchorPane.leftAnchor="20" 
+            <Label AnchorPane.topAnchor="5" AnchorPane.leftAnchor="20"
                 text="We're in the center area."/>
             <ImageView AnchorPane.topAnchor="40" AnchorPane.leftAnchor="30"
                 image="$ICON_48"/>

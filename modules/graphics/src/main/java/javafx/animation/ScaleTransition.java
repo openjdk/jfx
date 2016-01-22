@@ -50,39 +50,39 @@ import javafx.util.Duration;
  * The ({@code toX}, {@code toY}, {@code toZ}) value takes precedence if both (
  * {@code toX}, {@code toY}, {@code toZ}) and ({@code byX}, {@code byY},
  * {@code byZ}) values are specified.
- * 
+ *
  * <p>
  * Code Segment Example:
  * </p>
- * 
+ *
  * <pre>
  * <code>
  * import javafx.scene.shape.*;
  * import javafx.animation.transition.*;
- * 
+ *
  * ...
- * 
+ *
  *     Rectangle rect = new Rectangle (100, 40, 100, 100);
  *     rect.setArcHeight(50);
  *     rect.setArcWidth(50);
  *     rect.setFill(Color.VIOLET);
- * 
+ *
  *     ScaleTransition st = new ScaleTransition(Duration.millis(2000), rect);
  *     st.setByX(1.5f);
  *     st.setByY(1.5f);
  *     st.setCycleCount(4f);
  *     st.setAutoReverse(true);
- * 
+ *
  *     st.play();
- * 
+ *
  * ...
- * 
+ *
  * </code>
  * </pre>
- * 
+ *
  * @see Transition
  * @see Animation
- * 
+ *
  * @since JavaFX 2.0
  */
 public final class ScaleTransition extends Transition {
@@ -140,7 +140,7 @@ public final class ScaleTransition extends Transition {
      *
      * Setting duration to value lower than {@link Duration#ZERO} will result
      * in {@link IllegalArgumentException}.
-     * 
+     *
      * @defaultValue 400ms
      */
     private ObjectProperty<Duration> duration;
@@ -194,7 +194,7 @@ public final class ScaleTransition extends Transition {
      * {@code ScaleTransition}. If the value of {@code fromX} is changed for a
      * running {@code ScaleTransition}, the animation has to be stopped and
      * started again to pick up the new value.
-     * 
+     *
      * @defaultValue {@code Double.NaN}
      */
     private DoubleProperty fromX;
@@ -224,7 +224,7 @@ public final class ScaleTransition extends Transition {
      * {@code ScaleTransition}. If the value of {@code fromY} is changed for a
      * running {@code ScaleTransition}, the animation has to be stopped and
      * started again to pick up the new value.
-     * 
+     *
      * @defaultValue {@code Double.NaN}
      */
     private DoubleProperty fromY;
@@ -254,7 +254,7 @@ public final class ScaleTransition extends Transition {
      * {@code ScaleTransition}. If the value of {@code fromZ} is changed for a
      * running {@code ScaleTransition}, the animation has to be stopped and
      * started again to pick up the new value.
-     * 
+     *
      * @defaultValue {@code Double.NaN}
      */
     private DoubleProperty fromZ;
@@ -284,7 +284,7 @@ public final class ScaleTransition extends Transition {
      * {@code ScaleTransition}. If the value of {@code toX} is changed for a
      * running {@code ScaleTransition}, the animation has to be stopped and
      * started again to pick up the new value.
-     * 
+     *
      * @defaultValue {@code Double.NaN}
      */
     private DoubleProperty toX;
@@ -314,7 +314,7 @@ public final class ScaleTransition extends Transition {
      * {@code ScaleTransition}. If the value of {@code toY} is changed for a
      * running {@code ScaleTransition}, the animation has to be stopped and
      * started again to pick up the new value.
-     * 
+     *
      * @defaultValue {@code Double.NaN}
      */
     private DoubleProperty toY;
@@ -344,7 +344,7 @@ public final class ScaleTransition extends Transition {
      * {@code ScaleTransition}. If the value of {@code toZ} is changed for a
      * running {@code ScaleTransition}, the animation has to be stopped and
      * started again to pick up the new value.
-     * 
+     *
      * @defaultValue {@code Double.NaN}
      */
     private DoubleProperty toZ;
@@ -456,7 +456,7 @@ public final class ScaleTransition extends Transition {
 
     /**
      * The constructor of {@code ScaleTransition}
-     * 
+     *
      * @param duration
      *            The duration of the {@code ScaleTransition}
      * @param node
@@ -470,7 +470,7 @@ public final class ScaleTransition extends Transition {
 
     /**
      * The constructor of {@code ScaleTransition}
-     * 
+     *
      * @param duration
      *            The duration of the {@code ScaleTransition}
      */
@@ -529,21 +529,21 @@ public final class ScaleTransition extends Transition {
             final double _byX = getByX();
             final double _byY = getByY();
             final double _byZ = getByZ();
-            
+
             if (Double.isNaN(_fromX) && Double.isNaN(_toX) && (Math.abs(_byX) < EPSILON)) {
                 startX = Double.NaN;
             } else {
                 startX = (!Double.isNaN(_fromX)) ? _fromX : cachedNode.getScaleX();
                 deltaX = (!Double.isNaN(_toX)) ? _toX - startX : getByX();
             }
-            
+
             if (Double.isNaN(_fromY) && Double.isNaN(_toY) && (Math.abs(_byY) < EPSILON)) {
                 startY = Double.NaN;
             } else {
                 startY = (!Double.isNaN(_fromY)) ? _fromY : cachedNode.getScaleY();
                 deltaY = (!Double.isNaN(_toY)) ? _toY - startY : getByY();
             }
-            
+
             if (Double.isNaN(_fromZ) && Double.isNaN(_toZ) && (Math.abs(_byZ) < EPSILON)) {
                 startZ = Double.NaN;
             } else {

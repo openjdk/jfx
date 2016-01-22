@@ -64,7 +64,7 @@ public class WrapInSplitPaneJob extends AbstractWrapInSubComponentJob {
         final Orientation orientation = getOrientation(children);
         JobUtils.setOrientation(newContainer, SplitPane.class, orientation.name());
     }
-    
+
     @Override
     protected Collection<FXOMObject> sortChildren(List<FXOMObject> children) {
         final List<FXOMObject> sorted = new ArrayList<>(children);

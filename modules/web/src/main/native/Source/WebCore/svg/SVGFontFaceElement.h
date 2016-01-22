@@ -48,7 +48,7 @@ public:
 
     SVGFontElement* associatedFontElement() const;
     void rebuildFontFace();
-    
+
     StyleRuleFontFace* fontFaceRule() const { return m_fontFaceRule.get(); }
 
 private:

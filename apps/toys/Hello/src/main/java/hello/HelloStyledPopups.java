@@ -39,7 +39,7 @@ import javafx.stage.Stage;
 
 
 /*
- * 
+ *
  */
 public class HelloStyledPopups extends Application {
 

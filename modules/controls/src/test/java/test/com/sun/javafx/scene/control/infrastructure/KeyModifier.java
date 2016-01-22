@@ -35,16 +35,16 @@ public enum KeyModifier {
     CTRL,
     ALT,
     META;
-    
+
     public static KeyModifier getShortcutKey() {
-        // The StubToolkit doesn't know what the platform shortcut key is, so 
+        // The StubToolkit doesn't know what the platform shortcut key is, so
         // we have to tell it here (and lets not be cute about optimising this
         // code as we need the platform shortcut key to be known elsewhere in the
         // code base for keyboard navigation tests to work accurately).
         if (Toolkit.getToolkit() instanceof StubToolkit) {
             ((StubToolkit)Toolkit.getToolkit()).setPlatformShortcutKey(Utils.isMac() ? KeyCode.META : KeyCode.CONTROL);
-        } 
-        
+        }
+
         switch (Toolkit.getToolkit().getPlatformShortcutKey()) {
             case SHIFT:
                 return SHIFT;

@@ -41,12 +41,12 @@ public abstract class BaseTexture<T extends ManagedResource> implements Texture 
     private final int contentY;
     protected int contentWidth;
     protected int contentHeight;
-    
+
     //maximum possible user pixels of a texture (in case of POW2 texture allocation size)
     //currently only matters with RTT's
     private final int maxContentWidth;
     private final int maxContentHeight;
-    
+
     // We do not provide a default wrapMode because it is so dependent on
     // how the texture will be used.
     private final WrapMode wrapMode;
@@ -95,7 +95,7 @@ public abstract class BaseTexture<T extends ManagedResource> implements Texture 
         this.maxContentHeight = physicalHeight;
         this.useMipmap = useMipmap;
     }
-    
+
     protected BaseTexture(T resource,
                           PixelFormat format, WrapMode wrapMode,
                           int physicalWidth, int physicalHeight,
@@ -151,17 +151,17 @@ public abstract class BaseTexture<T extends ManagedResource> implements Texture 
     public final int getContentHeight() {
         return contentHeight;
     }
-    
+
     @Override
     public int getMaxContentWidth() {
         return maxContentWidth;
     }
-    
+
     @Override
     public int getMaxContentHeight() {
         return maxContentHeight;
     }
-    
+
     @Override
     public void setContentWidth(int contentW) {
         if (contentW > maxContentWidth) {
@@ -170,14 +170,14 @@ public abstract class BaseTexture<T extends ManagedResource> implements Texture 
         }
         contentWidth = contentW;
     }
-    
+
     @Override
     public void setContentHeight(int contentH) {
         if (contentH > maxContentHeight) {
             throw new IllegalArgumentException("ContentWidth must be less than or "
                     + "equal to maxContentHeight");
         }
-        contentHeight = contentH; 
+        contentHeight = contentH;
    }
 
     @Override
@@ -221,7 +221,7 @@ public abstract class BaseTexture<T extends ManagedResource> implements Texture 
      * {@code ManagedResource} reference.
      * The lock counts for the shared resource reference are not
      * changed in the processing of this method.
-     * 
+     *
      * @param newMode the {@code WrapMode} to use for the new texture.
      * @return a new {@code Texture} object sharing the underlying resource.
      */

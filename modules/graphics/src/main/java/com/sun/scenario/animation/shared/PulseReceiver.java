@@ -36,7 +36,7 @@ package com.sun.scenario.animation.shared;
 public interface PulseReceiver {
     /**
      * Callback triggered to send regular pulses to the PulseReceiver
-     * 
+     *
      * @param now
      *            Timestamp of the pulse.
      * @return true if PulseReceiver should be removed from the MasterTimer.

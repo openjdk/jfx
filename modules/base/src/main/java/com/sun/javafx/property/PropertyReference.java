@@ -51,7 +51,7 @@ public final class PropertyReference<T> {
     // uses reflection to implement the get / set methods
     /**
      * Creates a new {@code PropertyReference} for a property of a bean.
-     * 
+     *
      * @param clazz
      *            The class of the {@link Bean} that contains the property
      * @param name
@@ -75,7 +75,7 @@ public final class PropertyReference<T> {
 
     /**
      * Can be used to determine if a property can be set.
-     * 
+     *
      * @return {@code true}, if the property can be set, {@code false} otherwise
      */
     public boolean isWritable() {
@@ -85,7 +85,7 @@ public final class PropertyReference<T> {
 
     /**
      * Can be used to determine if a property can be get.
-     * 
+     *
      * @return {@code true}, if the property can be get, {@code false} otherwise
      */
     public boolean isReadable() {
@@ -96,7 +96,7 @@ public final class PropertyReference<T> {
     /**
      * Can be used to determine if a property provides an implementation of
      * {@link javafx.beans.value.ObservableValue}.
-     * 
+     *
      * @return
      */
     public boolean hasProperty() {
@@ -106,7 +106,7 @@ public final class PropertyReference<T> {
 
     /**
      * Returns the name of the property.
-     * 
+     *
      * @return name of the propery
      */
     public String getName() {
@@ -115,7 +115,7 @@ public final class PropertyReference<T> {
 
     /**
      * Returns the class of the {@link Bean} that contains the property.
-     * 
+     *
      * @return the class of the {@link Bean}
      */
     public Class<?> getContainingClass() {
@@ -125,7 +125,7 @@ public final class PropertyReference<T> {
     /**
      * Returns the type of the property. This type is only evaluated correctly
      * if a getter or a setter was found.
-     * 
+     *
      * @return the type of the property
      */
     public Class<?> getType() {
@@ -135,7 +135,7 @@ public final class PropertyReference<T> {
 
     /**
      * Set the property to a new value.
-     * 
+     *
      * @param bean
      *            The {@link Bean} instance for which the property should be set
      * @param value
@@ -157,7 +157,7 @@ public final class PropertyReference<T> {
 
     /**
      * Get the value of the property.
-     * 
+     *
      * @param bean
      *            The {@code Bean} instance for which the property should be
      *            read
@@ -181,7 +181,7 @@ public final class PropertyReference<T> {
     /**
      * Get the {@link javafx.beans.value.ObservableValue} implementation of the
      * property.
-     * 
+     *
      * @param bean
      *            The {@code Bean} instance for which the property should be
      *            read

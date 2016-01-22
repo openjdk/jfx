@@ -56,7 +56,7 @@ public final class EventDispatchChainTest {
 
     private EventDispatchChain eventDispatchChain;
 
-    public EventDispatchChainTest(final Class<EventDispatchChain> chainClass) 
+    public EventDispatchChainTest(final Class<EventDispatchChain> chainClass)
             throws InstantiationException, IllegalAccessException {
         eventDispatchChain = chainClass.newInstance();
     }
@@ -86,7 +86,7 @@ public final class EventDispatchChainTest {
     public void chainModificationDuringDispatchTest() {
         // x + 55, y + 55
         eventDispatchChain = prependSeriesChain(eventDispatchChain, 10);
-        eventDispatchChain = 
+        eventDispatchChain =
                 eventDispatchChain.prepend(
                         new PathChangingDispatcher(
                             new EventChangingDispatcher(Operation.mul(3),
@@ -96,11 +96,11 @@ public final class EventDispatchChainTest {
                             1));
         // x + 15, y + 15
         eventDispatchChain = prependSeriesChain(eventDispatchChain, 5);
-        
+
         eventDispatchChain =
                 eventDispatchChain.prepend(
                         new PathChangingDispatcher(null, null, 2));
-        
+
         // x + 6, y + 6
         eventDispatchChain = prependSeriesChain(eventDispatchChain, 3);
 

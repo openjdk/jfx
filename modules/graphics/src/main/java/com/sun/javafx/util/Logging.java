@@ -31,14 +31,14 @@ import sun.util.logging.PlatformLogger;
  * Holds PlatformLoggers to use for logging javafx-ui-common related things.
  */
 public class Logging {
-    
+
     /**
      * A PlatformLogger to use for logging layout-related activities.  Created
      * lazily to delay calls to com.sun.javafx.tk.Toolkit.getToolkit() so that
      * it will not intefere with the build.
      */
     private static PlatformLogger layoutLogger = null;
-    
+
     /**
      * Returns the PlatformLogger for logging layout-related activities.
      */
@@ -72,7 +72,7 @@ public class Logging {
      * it will no intefere with the build.
      */
     private static PlatformLogger inputLogger = null;
-    
+
     /**
      * Returns the PlatformLogger for logging input-related activities.
      */
@@ -89,7 +89,7 @@ public class Logging {
      * it will no intefere with the build.
      */
     private static PlatformLogger cssLogger = null;
-    
+
     /**
      * Returns the PlatformLogger for logging CSS-related activities.
      */
@@ -123,7 +123,7 @@ public class Logging {
      * it will not intefere with the build.
      */
     private static PlatformLogger accessibilityLogger = null;
-    
+
     /**
      * Returns the PlatformLogger for logging layout-related activities.
      */
@@ -133,5 +133,5 @@ public class Logging {
         }
         return accessibilityLogger;
     }
-    
+
 }

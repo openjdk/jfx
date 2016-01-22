@@ -40,18 +40,18 @@ import javafx.scene.image.Image;
 
 /**
  *
- * 
+ *
  */
 public class ImagePropertyMetadata extends ComplexPropertyMetadata<DesignImage> {
 
     private final StringPropertyMetadata urlMetadata
-            = new StringPropertyMetadata(new PropertyName("url"), 
+            = new StringPropertyMetadata(new PropertyName("url"),
             true, null, InspectorPath.UNUSED);
     private final DoublePropertyMetadata requestedWidthMetadata
-            = new DoublePropertyMetadata(new PropertyName("requestedWidth"), 
+            = new DoublePropertyMetadata(new PropertyName("requestedWidth"),
             DoublePropertyMetadata.DoubleKind.SIZE, true, 0.0, InspectorPath.UNUSED);
     private final DoublePropertyMetadata requestedHeightMetadata
-            = new DoublePropertyMetadata(new PropertyName("requestedHeight"), 
+            = new DoublePropertyMetadata(new PropertyName("requestedHeight"),
             DoublePropertyMetadata.DoubleKind.SIZE, true, 0.0, InspectorPath.UNUSED);
     private final BooleanPropertyMetadata preserveRatioMetadata
             = new BooleanPropertyMetadata(new PropertyName("preserveRatio"),
@@ -62,8 +62,8 @@ public class ImagePropertyMetadata extends ComplexPropertyMetadata<DesignImage> 
     private final BooleanPropertyMetadata backgroundLoading
             = new BooleanPropertyMetadata(new PropertyName("backgroundLoading"),
             true /* readWrite */, false /* defaultValue */, InspectorPath.UNUSED);
-    
-    public ImagePropertyMetadata(PropertyName name, boolean readWrite, 
+
+    public ImagePropertyMetadata(PropertyName name, boolean readWrite,
             DesignImage defaultValue, InspectorPath inspectorPath) {
         super(name, DesignImage.class, readWrite, defaultValue, inspectorPath);
     }
@@ -71,11 +71,11 @@ public class ImagePropertyMetadata extends ComplexPropertyMetadata<DesignImage> 
     /*
      * ComplexPropertyMetadata
      */
-    
+
     @Override
     public FXOMInstance makeFxomInstanceFromValue(DesignImage value, FXOMDocument fxomDocument) {
         final FXOMInstance result = new FXOMInstance(fxomDocument, Image.class);
-        
+
         urlMetadata.setValue(result, value.getLocation());
         requestedWidthMetadata.setValue(result, value.getImage().getRequestedWidth());
         requestedHeightMetadata.setValue(result, value.getImage().getRequestedHeight());
@@ -85,7 +85,7 @@ public class ImagePropertyMetadata extends ComplexPropertyMetadata<DesignImage> 
 
         return result;
     }
-    
+
     @Override
     public DesignImage makeValueFromFxomInstance(FXOMInstance valueFxomInstance) {
         final String location = urlMetadata.getValue(valueFxomInstance);

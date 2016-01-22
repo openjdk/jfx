@@ -2,7 +2,7 @@
 #ifndef ____gst_app_marshal_MARSHAL_H__
 #define ____gst_app_marshal_MARSHAL_H__
 
-#include	<glib-object.h>
+#include    <glib-object.h>
 
 G_BEGIN_DECLS
 
@@ -39,7 +39,7 @@ extern void __gst_app_marshal_BOXED__VOID (GClosure     *closure,
                                            gpointer      marshal_data);
 
 /* VOID:UINT (gstapp-marshal.list:5) */
-#define __gst_app_marshal_VOID__UINT	g_cclosure_marshal_VOID__UINT
+#define __gst_app_marshal_VOID__UINT    g_cclosure_marshal_VOID__UINT
 
 G_END_DECLS
 

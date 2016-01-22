@@ -129,7 +129,7 @@ public class PlanetaryPlayerPane extends BorderPane {
             mp1.seek(Duration.seconds(currentTime.toSeconds() + 0.1));
             mp2.seek(Duration.seconds(currentTime.toSeconds() + 0.1));
         };
-        
+
         mediaBottomBar = new HBox();
         mediaBottomBar.setId("bottom");
         mediaBottomBar.setSpacing(0);

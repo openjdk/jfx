@@ -42,7 +42,7 @@ import java.util.Objects;
  *
  */
 public class CollectionDropTarget extends AbstractDropTarget {
-    
+
     private final FXOMCollection targetCollection;
     private final int targetIndex;
 
@@ -58,7 +58,7 @@ public class CollectionDropTarget extends AbstractDropTarget {
     public int getTargetIndex() {
         return targetIndex;
     }
-    
+
     /*
      * AbstractDropTarget
      */
@@ -70,7 +70,7 @@ public class CollectionDropTarget extends AbstractDropTarget {
     @Override
     public boolean acceptDragSource(AbstractDragSource dragSource) {
         assert dragSource != null;
-        
+
         // TODO(elp) : can we really put any kind of FXOMObject in a collection ?
         return dragSource.getDraggedObjects().isEmpty() == false;
     }
@@ -79,12 +79,12 @@ public class CollectionDropTarget extends AbstractDropTarget {
     public Job makeDropJob(AbstractDragSource dragSource, EditorController editorController) {
         throw new UnsupportedOperationException("To be implemented"); //NOI18N
     }
-    
+
     @Override
     public boolean isSelectRequiredAfterDrop() {
         return true;
     }
-    
+
     /*
      * Object
      */
@@ -118,6 +118,6 @@ public class CollectionDropTarget extends AbstractDropTarget {
     public String toString() {
         return "CollectionDropTarget{" + "targetCollection=" + targetCollection + ", targetIndex=" + targetIndex + '}'; //NOI18N
     }
-    
-    
+
+
 }

@@ -83,7 +83,7 @@ public class DevoxxDataService extends DataService {
     private final ObservableList<Track> tracks = FXCollections.observableArrayList();
     private final ObservableList<SessionType> sessionTypes = FXCollections.observableArrayList();
     private final ObservableList<Venue> venues = FXCollections.observableArrayList();
-    
+
     public DevoxxDataService(final int eventId) {
         this.eventId = eventId;
         final Venue venue = new Venue("MetroPolis","Metropolis Antwerp, Groenendaallaan 394, 2030 Antwerp, Belgium",
@@ -111,17 +111,17 @@ public class DevoxxDataService extends DataService {
         });
         EXECUTOR.submit(task);
     }
-    
+
     @Override public ObservableList<Event> getEvents() { return events; }
     @Override public ObservableList<Session> getSessions() { return sessions; }
     @Override public ObservableList<Speaker> getSpeakers() { return speakers; }
     @Override public ObservableList<Date> getStartTimes() { return startTimes; }
-    @Override public List<Session> getSessionsAtTimeSlot(Date timeSlot) { 
+    @Override public List<Session> getSessionsAtTimeSlot(Date timeSlot) {
         final List<Session> s = sessionPerTimeSlot.get(timeSlot);
         if (s == null) {
             return Collections.emptyList();
         }
-        return s; 
+        return s;
     }
     @Override public ObservableList<Track> getTracks() { return tracks; }
     @Override public ObservableList<SessionType> getSessionTypes() { return sessionTypes; }
@@ -141,7 +141,7 @@ public class DevoxxDataService extends DataService {
         events.remove(event);
         return new UpdateScheduleTask(events.toArray(new Event[events.size()]),userName,password);
     }
-    
+
     @Override public Task<Void> login(String userName, String password) {
         this.userName = userName;
         this.password = password;

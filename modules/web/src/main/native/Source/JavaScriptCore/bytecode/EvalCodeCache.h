@@ -48,7 +48,7 @@ namespace JSC {
                 return m_cacheMap.get(evalSource.impl()).get();
             return 0;
         }
-        
+
         EvalExecutable* getSlow(ExecState* exec, ScriptExecutable* owner, bool inStrictContext, const String& evalSource, JSScope* scope)
         {
             EvalExecutable* evalExecutable = EvalExecutable::create(exec, makeSource(evalSource), inStrictContext);
@@ -57,7 +57,7 @@ namespace JSC {
 
             if (!inStrictContext && evalSource.length() < maxCacheableSourceLength && scope->begin()->isVariableObject() && m_cacheMap.size() < maxCacheEntries)
                 m_cacheMap.set(evalSource.impl(), WriteBarrier<EvalExecutable>(exec->vm(), owner, evalExecutable));
-            
+
             return evalExecutable;
         }
 

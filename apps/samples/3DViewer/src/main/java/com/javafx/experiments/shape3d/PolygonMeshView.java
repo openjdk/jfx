@@ -55,10 +55,10 @@ public class PolygonMeshView extends Parent {
     private final MeshView meshView = new MeshView();
 
     private TriangleMesh triangleMesh = new TriangleMesh();
-    
+
     // this is null if no subdivision is happening (i.e. subdivisionLevel = 0);
     private SubdivisionMesh subdivisionMesh;
-    
+
     private final ArrayChangeListener<ObservableFloatArray> meshPointsListener = (t, bln, i, i1) -> {
         pointsDirty = true;
         updateMesh();
@@ -67,12 +67,12 @@ public class PolygonMeshView extends Parent {
         texCoordsDirty = true;
         updateMesh();
     };
-    
+
     private boolean pointsDirty = true;
     private boolean pointsSizeDirty = true;
     private boolean texCoordsDirty = true;
     private boolean facesDirty = true;
-    
+
     // =========================================================================
     // PROPERTIES
 
@@ -84,7 +84,7 @@ public class PolygonMeshView extends Parent {
     private ObjectProperty<PolygonMesh> meshProperty;
     public PolygonMesh getMesh() { return meshProperty().get(); }
     public void setMesh(PolygonMesh mesh) { meshProperty().set(mesh);}
-    public ObjectProperty<PolygonMesh> meshProperty() { 
+    public ObjectProperty<PolygonMesh> meshProperty() {
         if (meshProperty == null) {
             meshProperty = new SimpleObjectProperty<PolygonMesh>();
             meshProperty.addListener((observable, oldValue, newValue) -> {
@@ -97,7 +97,7 @@ public class PolygonMeshView extends Parent {
 
                 pointsDirty = pointsSizeDirty = texCoordsDirty = facesDirty = true;
                 updateMesh();
-                
+
                 if (newValue != null) {
                     newValue.getPoints().addListener(meshPointsListener);
                     newValue.getTexCoords().addListener(meshTexCoordListener);
@@ -106,7 +106,7 @@ public class PolygonMeshView extends Parent {
         }
         return meshProperty;
     }
-    
+
     /**
      * Defines the drawMode this {@code Shape3D}.
      *
@@ -167,7 +167,7 @@ public class PolygonMeshView extends Parent {
     private SimpleIntegerProperty subdivisionLevelProperty;
     public void setSubdivisionLevel(int subdivisionLevel) { subdivisionLevelProperty().set(subdivisionLevel); }
     public int getSubdivisionLevel() { return subdivisionLevelProperty == null ? 0 : subdivisionLevelProperty.get(); }
-    public SimpleIntegerProperty subdivisionLevelProperty() { 
+    public SimpleIntegerProperty subdivisionLevelProperty() {
         if (subdivisionLevelProperty == null) {
             subdivisionLevelProperty = new SimpleIntegerProperty(getSubdivisionLevel()) {
                 @Override protected void invalidated() {
@@ -188,7 +188,7 @@ public class PolygonMeshView extends Parent {
         }
         return subdivisionLevelProperty;
     }
-    
+
     /**
      * Texture mapping boundary rule for Catmull Clark subdivision applied to the mesh
      *
@@ -212,7 +212,7 @@ public class PolygonMeshView extends Parent {
         }
         return boundaryMode;
     }
-    
+
     /**
      * Texture mapping smoothness option for Catmull Clark subdivision applied to the mesh
      *
@@ -221,7 +221,7 @@ public class PolygonMeshView extends Parent {
     private SimpleObjectProperty<MapBorderMode> mapBorderMode;
     public void setMapBorderMode(MapBorderMode mapBorderMode) { mapBorderModeProperty().set(mapBorderMode); }
     public MapBorderMode getMapBorderMode() { return mapBorderMode == null ? MapBorderMode.NOT_SMOOTH : mapBorderMode.get(); }
-    public SimpleObjectProperty<MapBorderMode> mapBorderModeProperty() { 
+    public SimpleObjectProperty<MapBorderMode> mapBorderModeProperty() {
         if (mapBorderMode == null) {
             mapBorderMode = new SimpleObjectProperty<MapBorderMode>(getMapBorderMode()) {
                 @Override protected void invalidated() {
@@ -267,7 +267,7 @@ public class PolygonMeshView extends Parent {
         if (DEBUG) System.out.println("UPDATE MESH -- "+(isWireframe?"WIREFRAME":"SOLID"));
         final int numOfPoints = pmesh.getPoints().size() / pointElementSize;
         if (DEBUG) System.out.println("numOfPoints = " + numOfPoints);
-        
+
         if(isWireframe) {
             // The current triangleMesh implementation gives buggy behavior when the size of faces are shrunken
             // Create a new TriangleMesh as a work around
@@ -389,12 +389,12 @@ public class PolygonMeshView extends Parent {
                 triangleMesh.getPoints().setAll(pmesh.getPoints());
             }
         }
-        
+
         if (DEBUG) System.out.println("CREATING TRIANGLE MESH");
         if (DEBUG) System.out.println("    points    = "+Arrays.toString(((TriangleMesh) meshView.getMesh()).getPoints().toArray(null)));
         if (DEBUG) System.out.println("    texCoords = "+Arrays.toString(((TriangleMesh) meshView.getMesh()).getTexCoords().toArray(null)));
         if (DEBUG) System.out.println("    faces     = "+Arrays.toString(((TriangleMesh) meshView.getMesh()).getFaces().toArray(null)));
-    
+
         if (meshView.getMesh() != triangleMesh) {
             meshView.setMesh(triangleMesh);
         }

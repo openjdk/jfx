@@ -56,7 +56,7 @@ TEST(WebKit1, ElementAtPoint)
                       baseURL:[NSURL URLWithString:@"about:blank"]];
 
     Util::run(&didFinishLoad);
-    
+
     NSDictionary *elementDictionary = [mainFrame elementAtPoint:NSMakePoint(30, 50)];
     DOMElement *domElement = [elementDictionary objectForKey:WebElementDOMNodeKey];
     EXPECT_WK_STREQ(@"first", [domElement getAttribute:@"name"]);

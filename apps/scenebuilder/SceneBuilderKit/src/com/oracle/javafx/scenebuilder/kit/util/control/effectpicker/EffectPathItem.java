@@ -217,10 +217,10 @@ public abstract class EffectPathItem extends HBox {
             if (newValue) {
                 // Disable menu item for the Lighting bump input.
                 // javadoc says :
-                // The optional bump map input. If not specified, a bump map 
-                // will be automatically generated from the default input. 
-                // If set to null, or left unspecified, a graphical image of 
-                // the Node to which the Effect is attached will be used to 
+                // The optional bump map input. If not specified, a bump map
+                // will be automatically generated from the default input.
+                // If set to null, or left unspecified, a graphical image of
+                // the Node to which the Effect is attached will be used to
                 // generate a default bump map.
                 // Default value:a Shadow effect with a radius of 10
                 //

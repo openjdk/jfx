@@ -34,7 +34,7 @@ import java.util.LinkedList;
 public class MagicCubePlayer {
 
     private MagicCube magicCube;
-    
+
     private LinkedList<Entry> record = new LinkedList<Entry>();
     private Iterator<Entry> iterator;
     private Runnable onPlayEnd;
@@ -44,7 +44,7 @@ public class MagicCubePlayer {
     public void setOnPlayEnd(Runnable onPlayEnd) {
         this.onPlayEnd = onPlayEnd;
     }
-    
+
     public MagicCubePlayer(MagicCube magicCube) {
         this.magicCube = magicCube;
     }
@@ -52,11 +52,11 @@ public class MagicCubePlayer {
     public void setDoReverseTrick(boolean doReverseTrick) {
         this.doReverseTrick = doReverseTrick;
     }
-    
+
     public void setAutoReverse(boolean autoReverse) {
         this.autoReverse = autoReverse;
     }
-    
+
     private Runnable runnable = new Runnable() {
 
         @Override
@@ -73,7 +73,7 @@ public class MagicCubePlayer {
             }
         }
     };
-    
+
     private Runnable runnableBack = new Runnable() {
 
         @Override
@@ -86,7 +86,7 @@ public class MagicCubePlayer {
             }
         }
     };
-    
+
     public void play() {
         if (autoReverse && doReverseTrick) {
             Entry last1 = record.removeLast();
@@ -98,7 +98,7 @@ public class MagicCubePlayer {
                     throw new RuntimeException("Incorrect algorithm work!");
                 }
                 record.add(new Entry(
-                        last1.axis, layer, 
+                        last1.axis, layer,
                         Math.random() < 0.5 ? -1 : 1));
             }
         }
@@ -106,7 +106,7 @@ public class MagicCubePlayer {
         magicCube.setOnRotateEnd(runnable);
         runnable.run();
     }
-    
+
     public void playBack() {
         if (doReverseTrick) {
             Entry last1 = record.removeLast();
@@ -118,7 +118,7 @@ public class MagicCubePlayer {
         magicCube.setOnRotateEnd(runnableBack);
         runnableBack.run();
     }
-    
+
     public void generateRandom() {
         record.clear();
         Entry entry = null;
@@ -128,7 +128,7 @@ public class MagicCubePlayer {
                 double r1 = Math.random();
                 double r2 = Math.random();
                 double r3 = Math.random();
-                Point3D axis = r1 < 0.333 ? Rotate.X_AXIS : 
+                Point3D axis = r1 < 0.333 ? Rotate.X_AXIS :
                                r1 < 0.666 ? Rotate.Y_AXIS : Rotate.Z_AXIS;
                 int layer = (int) (r2 * 3);
                 int rotate = r3 < 0.5 ? -1 : 1;
@@ -141,13 +141,13 @@ public class MagicCubePlayer {
             }
         }
     }
-    
+
     private void fireOnPlayEnd() {
         if (onPlayEnd != null) {
             onPlayEnd.run();
         }
     }
-    
+
     public static class Entry {
         public Point3D axis;
         public int rotate;
@@ -162,9 +162,9 @@ public class MagicCubePlayer {
         private Entry reverse() {
             return new Entry(axis, layer, -rotate);
         }
-        
+
     }
-    
+
     public boolean rotate(Entry e) {
         return magicCube.rotate(e.axis, e.layer, e.rotate);
     }

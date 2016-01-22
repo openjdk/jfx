@@ -102,7 +102,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_prism_es2_X11GLContext_nInitialize
      * Targeted Cards: Intel HD Graphics, Intel HD Graphics 2000/3000,
      * Radeon HD 2350, GeForce FX (with newer drivers), GeForce 7 series or higher
      *
-     * Check for OpenGL 2.1 or later. 
+     * Check for OpenGL 2.1 or later.
      */
     if ((versionNumbers[0] < 2) || ((versionNumbers[0] == 2) && (versionNumbers[1] < 1))) {
         glXDestroyContext(display, ctx);

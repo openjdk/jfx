@@ -31,7 +31,7 @@ import javafx.event.EventTarget;
 import javafx.event.EventType;
 
 /**
- * Event related to {@link ScrollPane} and virtualised controls such as 
+ * Event related to {@link ScrollPane} and virtualised controls such as
  * {@link ListView}, {@link TableView}, {@link TreeView} and {@link TreeTableView}.
  * @since JavaFX 8.0
  */
@@ -43,7 +43,7 @@ public class ScrollToEvent<T> extends Event {
 //    public static EventType<ScrollToEvent<Node>> scrollToNode() {
 //        return SCROLL_TO_NODE;
 //    }
-//    private static final EventType<ScrollToEvent<Node>> SCROLL_TO_NODE = 
+//    private static final EventType<ScrollToEvent<Node>> SCROLL_TO_NODE =
 //            new EventType<ScrollToEvent<Node>>(ScrollToEvent.ANY, "SCROLL_TO_NODE");
 
     /**
@@ -58,9 +58,9 @@ public class ScrollToEvent<T> extends Event {
     public static EventType<ScrollToEvent<Integer>> scrollToTopIndex() {
         return SCROLL_TO_TOP_INDEX;
     }
-    private static final EventType<ScrollToEvent<Integer>> SCROLL_TO_TOP_INDEX = 
+    private static final EventType<ScrollToEvent<Integer>> SCROLL_TO_TOP_INDEX =
             new EventType<ScrollToEvent<Integer>>(ScrollToEvent.ANY, "SCROLL_TO_TOP_INDEX");
-    
+
 
     /**
      * This event occurs if the user requests scrolling a {@link TableColumnBase}
@@ -70,18 +70,18 @@ public class ScrollToEvent<T> extends Event {
     public static <T extends TableColumnBase<?, ?>> EventType<ScrollToEvent<T>> scrollToColumn() {
         return (EventType<ScrollToEvent<T>>) SCROLL_TO_COLUMN;
     }
-    private static final EventType<?> SCROLL_TO_COLUMN = 
+    private static final EventType<?> SCROLL_TO_COLUMN =
             new EventType<>(ScrollToEvent.ANY, "SCROLL_TO_COLUMN");
-    
+
     private static final long serialVersionUID = -8557345736849482516L;
-    
+
     private final T scrollTarget;
 
     /**
      * Construct a new {@code Event} with the specified event source, target
      * and type. If the source or target is set to {@code null}, it is replaced
      * by the {@code NULL_SOURCE_TARGET} value.
-     * 
+     *
      * @param source the event source which sent the event
      * @param target the event source which sent the event
      * @param type the event type
@@ -91,9 +91,9 @@ public class ScrollToEvent<T> extends Event {
         super(source, target, type);
         assert scrollTarget != null;
         this.scrollTarget = scrollTarget;
-        
+
     }
-    
+
     public T getScrollTarget() {
         return scrollTarget;
     }

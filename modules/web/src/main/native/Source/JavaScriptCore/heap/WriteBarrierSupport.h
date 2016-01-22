@@ -40,11 +40,11 @@ enum WriteBarrierUseKind {
     // array element or property), but not for any other kind of property
     // accesses (such as writes that are a consequence of setter execution).
     WriteBarrierForPropertyAccess,
-    
+
     // This allows specialization for variable accesses (such as global or
     // scoped variables).
     WriteBarrierForVariableAccess,
-    
+
     // This captures all other forms of write barriers. It should always be
     // correct to use a generic access write barrier, even when storing to
     // properties. Hence, if optimization is not necessary, it is preferable
@@ -64,9 +64,9 @@ public:
     static GlobalSamplingCounter usesForPropertiesFromJit;
     static GlobalSamplingCounter usesForVariablesFromJit;
     static GlobalSamplingCounter usesWithoutBarrierFromJit;
-    
+
     static void initialize();
-    
+
     static GlobalSamplingCounter& jitCounterFor(WriteBarrierUseKind useKind)
     {
         switch (useKind) {

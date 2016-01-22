@@ -41,7 +41,7 @@ public class HelloSplitPane extends Application {
 
     private final Slider horizSlider = new Slider();
     private final SplitPane horizSplitPane = new SplitPane();
-    
+
     private final Slider vertSlider = new Slider();
     private final SplitPane vertSplitPane = new SplitPane();
     private final SplitPane mailClient = new SplitPane();

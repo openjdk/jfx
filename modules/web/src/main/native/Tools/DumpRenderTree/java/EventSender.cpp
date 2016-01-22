@@ -352,7 +352,7 @@ static JSValueRef setTouchModifierCallback(JSContextRef context,
     if (argumentCount > 1) {
         JSStringRef string = JSValueToStringCopy(context, arguments[0], exception);
         ASSERT(!exception || !*exception);
-        
+
         jint modifier = 0;
         if (JSStringIsEqualToUTF8CString(string, "alt")) {
             modifier = 1; // com.sun.javafx.webkit.drt.EventSender.ALT
@@ -367,7 +367,7 @@ static JSValueRef setTouchModifierCallback(JSContextRef context,
             modifier = 8; // com.sun.javafx.webkit.drt.EventSender.SHIFT
         }
         JSStringRelease(string);
-        
+
         call(object, setTouchModifierMID,
                 modifier,
                 bool_to_jbool(JSValueToBoolean(context, arguments[1])));

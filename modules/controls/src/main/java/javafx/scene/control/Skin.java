@@ -28,12 +28,12 @@ package javafx.scene.control;
 import javafx.scene.Node;
 
 /**
- * Base class for defining the visual representation of user interface controls 
+ * Base class for defining the visual representation of user interface controls
  * by defining a scene graph of nodes to represent the skin.
  * A user interface control is abstracted behind the {@link Skinnable} interface.
- * 
+ *
  * @param <C> A subtype of Skinnable that the Skin represents. This allows for
- *      Skin implementation to access the {@link Skinnable} implementation, 
+ *      Skin implementation to access the {@link Skinnable} implementation,
  *      which is usually a {@link Control} implementation.
  * @since JavaFX 2.0
  */

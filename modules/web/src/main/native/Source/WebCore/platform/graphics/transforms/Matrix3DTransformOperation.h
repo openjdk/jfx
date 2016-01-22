@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef Matrix3DTransformOperation_h
@@ -39,7 +39,7 @@ public:
 
     TransformationMatrix matrix() const {return m_matrix; }
 
-private:    
+private:
     virtual bool isIdentity() const { return m_matrix.isIdentity(); }
 
     virtual OperationType type() const { return MATRIX_3D; }
@@ -60,7 +60,7 @@ private:
     }
 
     virtual PassRefPtr<TransformOperation> blend(const TransformOperation* from, double progress, bool blendToIdentity = false);
-    
+
     Matrix3DTransformOperation(const TransformationMatrix& mat)
     {
         m_matrix = mat;

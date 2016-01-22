@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -67,11 +67,11 @@ bool CACFLayerTreeHost::acceleratedCompositingAvailable()
 
     tested = true;
 
-    // Initialize available to true since this function will be called from a 
-    // propagation within createRenderer(). We want to be able to return true 
+    // Initialize available to true since this function will be called from a
+    // propagation within createRenderer(). We want to be able to return true
     // when that happens so that the test can continue.
     available = true;
-    
+
     HMODULE library = LoadLibrary(TEXT("d3d9.dll"));
     if (!library) {
         available = false;
@@ -207,7 +207,7 @@ void CACFLayerTreeHost::setRootChildLayer(PlatformCALayer* layer)
     if (m_rootChildLayer)
         m_rootLayer->appendSublayer(m_rootChildLayer.get());
 }
-   
+
 void CACFLayerTreeHost::layerTreeDidChange()
 {
     if (m_isFlushingLayerChanges) {

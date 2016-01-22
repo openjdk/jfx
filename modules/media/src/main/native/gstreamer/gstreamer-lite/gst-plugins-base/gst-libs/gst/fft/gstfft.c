@@ -20,7 +20,7 @@
 /**
  * SECTION:gstfft
  * @short_description: General FFT functions and declarations
- * 
+ *
  * This library includes general definitions and functions, useful for
  * all typed FFT classes.
  */

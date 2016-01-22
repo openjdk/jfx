@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef FilterOperation_h
@@ -72,20 +72,20 @@ public:
     bool operator!=(const FilterOperation& o) const { return !(*this == o); }
 
     virtual PassRefPtr<FilterOperation> blend(const FilterOperation* /*from*/, double /*progress*/, bool /*blendToPassthrough*/ = false)
-    { 
+    {
         ASSERT(!blendingNeedsRendererSize());
-        return 0; 
+        return 0;
     }
 
     virtual PassRefPtr<FilterOperation> blend(const FilterOperation* /*from*/, double /*progress*/, const LayoutSize&, bool /*blendToPassthrough*/ = false)
-    { 
+    {
         ASSERT(blendingNeedsRendererSize());
-        return 0; 
+        return 0;
     }
 
     virtual OperationType type() const { return m_type; }
     virtual bool isSameType(const FilterOperation& o) const { return o.type() == m_type; }
-    
+
     virtual bool isDefault() const { return false; }
 
     // True if the alpha channel of any pixel can change under this operation.
@@ -202,9 +202,9 @@ private:
         const BasicColorMatrixFilterOperation* other = static_cast<const BasicColorMatrixFilterOperation*>(&o);
         return m_amount == other->m_amount;
     }
-    
+
     double passthroughAmount() const;
-    
+
     BasicColorMatrixFilterOperation(double amount, OperationType type)
         : FilterOperation(type)
         , m_amount(amount)

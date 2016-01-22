@@ -37,8 +37,8 @@
 
 using namespace std;
 
-void TextInputController::setMarkedText(JSStringRef text, unsigned int from, unsigned int length) 
-{    
+void TextInputController::setMarkedText(JSStringRef text, unsigned int from, unsigned int length)
+{
     COMPtr<IWebView> webView;
     if (FAILED(frame->webView(&webView)))
         return;
@@ -114,7 +114,7 @@ void TextInputController::insertText(JSStringRef text)
     COMPtr<IWebViewPrivate> viewPrivate;
     if (FAILED(webView->QueryInterface(&viewPrivate)))
         return;
- 
+
     _bstr_t bstr(wstring(JSStringGetCharactersPtr(text), JSStringGetLength(text)).data());
 
     viewPrivate->confirmCompositionForTesting(bstr);

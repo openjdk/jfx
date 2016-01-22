@@ -44,7 +44,7 @@ void initializeGtkSettings()
     GtkSettings* settings = gtk_settings_get_default();
     if (!settings)
         return;
-    g_object_set(settings, 
+    g_object_set(settings,
                  "gtk-xft-dpi", 98304,
                  "gtk-xft-antialias", 1,
                  "gtk-xft-hinting", 0,
@@ -119,7 +119,7 @@ void initializeFontConfigSetting()
     // Ahem is used by many layout tests.
     GUniquePtr<gchar> ahemFontFilename(g_build_filename(FONTS_CONF_DIR, "AHEM____.TTF", nullptr));
     if (!FcConfigAppFontAddFile(config, reinterpret_cast<FcChar8*>(ahemFontFilename.get())))
-        g_error("Could not load font at %s!", ahemFontFilename.get()); 
+        g_error("Could not load font at %s!", ahemFontFilename.get());
 
     static const char* fontFilenames[] = {
         "WebKitWeightWatcher100.ttf",
@@ -137,13 +137,13 @@ void initializeFontConfigSetting()
     for (size_t i = 0; fontFilenames[i]; ++i) {
         GUniquePtr<gchar> fontFilename(g_build_filename(FONTS_CONF_DIR, "..", "..", "fonts", fontFilenames[i], nullptr));
         if (!FcConfigAppFontAddFile(config, reinterpret_cast<FcChar8*>(fontFilename.get())))
-            g_error("Could not load font at %s!", fontFilename.get()); 
+            g_error("Could not load font at %s!", fontFilename.get());
     }
 
     // A font with no valid Fontconfig encoding to test https://bugs.webkit.org/show_bug.cgi?id=47452
     GUniquePtr<gchar> fontWithNoValidEncodingFilename(g_build_filename(FONTS_CONF_DIR, "FontWithNoValidEncoding.fon", nullptr));
     if (!FcConfigAppFontAddFile(config, reinterpret_cast<FcChar8*>(fontWithNoValidEncodingFilename.get())))
-        g_error("Could not load font at %s!", fontWithNoValidEncodingFilename.get()); 
+        g_error("Could not load font at %s!", fontWithNoValidEncodingFilename.get());
 
     if (!FcConfigSetCurrent(config))
         g_error("Could not set the current font configuration!");

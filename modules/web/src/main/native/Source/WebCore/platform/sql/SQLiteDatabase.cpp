@@ -21,7 +21,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -153,9 +153,9 @@ bool SQLiteDatabase::isInterrupted()
     return m_interrupted;
 }
 
-void SQLiteDatabase::setFullsync(bool fsync) 
+void SQLiteDatabase::setFullsync(bool fsync)
 {
-    if (fsync) 
+    if (fsync)
         executeCommand(ASCIILiteral("PRAGMA fullfsync = 1;"));
     else
         executeCommand(ASCIILiteral("PRAGMA fullfsync = 0;"));
@@ -180,12 +180,12 @@ void SQLiteDatabase::setMaximumSize(int64_t size)
 {
     if (size < 0)
         size = 0;
-    
+
     int currentPageSize = pageSize();
 
     ASSERT(currentPageSize || !m_db);
     int64_t newMaxPageCount = currentPageSize ? size / currentPageSize : 0;
-    
+
     MutexLocker locker(m_authorizerLock);
     enableAuthorizer(false);
 
@@ -200,15 +200,15 @@ void SQLiteDatabase::setMaximumSize(int64_t size)
 
 int SQLiteDatabase::pageSize()
 {
-    // Since the page size of a database is locked in at creation and therefore cannot be dynamic, 
+    // Since the page size of a database is locked in at creation and therefore cannot be dynamic,
     // we can cache the value for future use
     if (m_pageSize == -1) {
         MutexLocker locker(m_authorizerLock);
         enableAuthorizer(false);
-        
+
         SQLiteStatement statement(*this, ASCIILiteral("PRAGMA page_size"));
         m_pageSize = statement.getColumnInt(0);
-        
+
         enableAuthorizer(true);
     }
 
@@ -297,7 +297,7 @@ void SQLiteDatabase::clearAllTables()
         LOG(SQLDatabase, "Unable to retrieve list of tables from database");
         return;
     }
-    
+
     for (Vector<String>::iterator table = tables.begin(); table != tables.end(); ++table ) {
         if (*table == "sqlite_sequence")
             continue;
@@ -432,7 +432,7 @@ int SQLiteDatabase::authorizerFunction(void* userData, int actionCode, const cha
             return auth->allowAlterTable(parameter1, parameter2);
         case SQLITE_REINDEX:
             return auth->allowReindex(parameter1);
-#if SQLITE_VERSION_NUMBER >= 3003013 
+#if SQLITE_VERSION_NUMBER >= 3003013
         case SQLITE_ANALYZE:
             return auth->allowAnalyze(parameter1);
         case SQLITE_CREATE_VTABLE:
@@ -459,7 +459,7 @@ void SQLiteDatabase::setAuthorizer(PassRefPtr<DatabaseAuthorizer> auth)
     MutexLocker locker(m_authorizerLock);
 
     m_authorizer = auth;
-    
+
     enableAuthorizer(true);
 }
 

@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -94,14 +94,14 @@ bool RuntimeArray::getOwnPropertySlot(JSObject* object, ExecState* exec, Propert
         slot.setCacheableCustom(thisObject, DontDelete | ReadOnly | DontEnum, thisObject->lengthGetter);
         return true;
     }
-    
+
     unsigned index = propertyName.asIndex();
     if (index < thisObject->getLength()) {
         ASSERT(index != PropertyName::NotAnIndex);
         slot.setCustomIndex(thisObject, DontDelete | DontEnum, index, thisObject->indexGetter);
         return true;
     }
-    
+
     return JSObject::getOwnPropertySlot(thisObject, exec, propertyName, slot);
 }
 
@@ -112,7 +112,7 @@ bool RuntimeArray::getOwnPropertySlotByIndex(JSObject* object, ExecState *exec, 
         slot.setCustomIndex(thisObject, DontDelete | DontEnum, index, thisObject->indexGetter);
         return true;
     }
-    
+
     return JSObject::getOwnPropertySlotByIndex(thisObject, exec, index, slot);
 }
 
@@ -123,13 +123,13 @@ void RuntimeArray::put(JSCell* cell, ExecState* exec, PropertyName propertyName,
         exec->vm().throwException(exec, createRangeError(exec, "Range error"));
         return;
     }
-    
+
     unsigned index = propertyName.asIndex();
     if (index != PropertyName::NotAnIndex) {
         thisObject->getConcreteArray()->setValueAt(exec, index, value);
         return;
     }
-    
+
     JSObject::put(thisObject, exec, propertyName, value, slot);
 }
 
@@ -140,7 +140,7 @@ void RuntimeArray::putByIndex(JSCell* cell, ExecState* exec, unsigned index, JSV
         exec->vm().throwException(exec, createRangeError(exec, "Range error"));
         return;
     }
-    
+
     thisObject->getConcreteArray()->setValueAt(exec, index, value);
 }
 

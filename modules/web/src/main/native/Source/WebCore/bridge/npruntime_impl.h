@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef _NP_RUNTIME_IMPL_H_
@@ -40,7 +40,7 @@ extern void _NPN_GetStringIdentifiers(const NPUTF8** names, int32_t nameCount, N
 extern NPIdentifier _NPN_GetIntIdentifier(int32_t);
 extern bool _NPN_IdentifierIsString(NPIdentifier);
 extern NPUTF8* _NPN_UTF8FromIdentifier(NPIdentifier);
-extern int32_t _NPN_IntFromIdentifier(NPIdentifier);    
+extern int32_t _NPN_IntFromIdentifier(NPIdentifier);
 extern NPObject* _NPN_CreateObject(NPP, NPClass*);
 extern NPObject* _NPN_RetainObject(NPObject*);
 extern void _NPN_ReleaseObject(NPObject*);

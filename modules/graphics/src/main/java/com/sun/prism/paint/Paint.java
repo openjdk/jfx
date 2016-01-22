@@ -59,10 +59,10 @@ public abstract class Paint {
     Paint(Type type, boolean proportional, boolean isMutable) {
         this.type = type;
         this.proportional = proportional;
-        this.isMutable = isMutable; 
+        this.isMutable = isMutable;
     }
 
-    
+
     public final Type getType() {
         return type;
     }
@@ -72,9 +72,9 @@ public abstract class Paint {
     }
 
     public abstract boolean isOpaque();
-    
+
     public boolean isMutable() {
-        return isMutable;       
+        return isMutable;
     }
-    
+
 }

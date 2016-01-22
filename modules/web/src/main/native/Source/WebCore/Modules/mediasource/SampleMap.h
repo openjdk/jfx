@@ -69,7 +69,7 @@ public:
 
     iterator_range findSamplesBetweenPresentationTimes(const MediaTime&, const MediaTime&);
     reverse_iterator_range findDependentSamples(MediaSample*);
-    
+
 private:
     MapType m_presentationSamples;
     MapType m_decodeSamples;

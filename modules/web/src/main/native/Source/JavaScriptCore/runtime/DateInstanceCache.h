@@ -58,13 +58,13 @@ namespace JSC {
         {
             reset();
         }
-        
+
         void reset()
         {
             for (size_t i = 0; i < cacheSize; ++i)
                 m_cache[i].key = QNaN;
         }
-        
+
         DateInstanceData* add(double d)
         {
             CacheEntry& entry = lookup(d);

@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -97,14 +97,14 @@ EncodedJSValue getData(ExecState* exec)
     JSDataView* dataView = jsDynamicCast<JSDataView*>(exec->thisValue());
     if (!dataView)
         return throwVMError(exec, createTypeError(exec, "Receiver of DataView method must be a DataView"));
-    
+
     if (!exec->argumentCount())
         return throwVMError(exec, createTypeError(exec, "Need at least one argument (the byteOffset)"));
-    
+
     unsigned byteOffset = exec->uncheckedArgument(0).toUInt32(exec);
     if (exec->hadException())
         return JSValue::encode(jsUndefined());
-    
+
     bool littleEndian = false;
     unsigned elementSize = sizeof(typename Adaptor::Type);
     if (elementSize > 1 && exec->argumentCount() >= 2) {
@@ -112,16 +112,16 @@ EncodedJSValue getData(ExecState* exec)
         if (exec->hadException())
             return JSValue::encode(jsUndefined());
     }
-    
+
     unsigned byteLength = dataView->length();
     if (elementSize > byteLength || byteOffset > byteLength - elementSize)
         return throwVMError(exec, createRangeError(exec, "Out of bounds access"));
-    
+
     typename Adaptor::Type value = *reinterpret_cast<typename Adaptor::Type*>(static_cast<uint8_t*>(dataView->vector()) + byteOffset);
-    
+
     if (needToFlipBytesIfLittleEndian(littleEndian))
         value = flipBytes(value);
-    
+
     return JSValue::encode(Adaptor::toJSValue(value));
 }
 
@@ -131,18 +131,18 @@ EncodedJSValue setData(ExecState* exec)
     JSDataView* dataView = jsDynamicCast<JSDataView*>(exec->thisValue());
     if (!dataView)
         return throwVMError(exec, createTypeError(exec, "Receiver of DataView method must be a DataView"));
-    
+
     if (exec->argumentCount() < 2)
         return throwVMError(exec, createTypeError(exec, "Need at least two argument (the byteOffset and value)"));
-    
+
     unsigned byteOffset = exec->uncheckedArgument(0).toUInt32(exec);
     if (exec->hadException())
         return JSValue::encode(jsUndefined());
-    
+
     typename Adaptor::Type value = toNativeFromValue<Adaptor>(exec, exec->uncheckedArgument(1));
     if (exec->hadException())
         return JSValue::encode(jsUndefined());
-    
+
     bool littleEndian = false;
     unsigned elementSize = sizeof(typename Adaptor::Type);
     if (elementSize > 1 && exec->argumentCount() >= 3) {
@@ -150,16 +150,16 @@ EncodedJSValue setData(ExecState* exec)
         if (exec->hadException())
             return JSValue::encode(jsUndefined());
     }
-    
+
     unsigned byteLength = dataView->length();
     if (elementSize > byteLength || byteOffset > byteLength - elementSize)
         return throwVMError(exec, createRangeError(exec, "Out of bounds access"));
-    
+
     if (needToFlipBytesIfLittleEndian(littleEndian))
         value = flipBytes(value);
-    
+
     *reinterpret_cast<typename Adaptor::Type*>(static_cast<uint8_t*>(dataView->vector()) + byteOffset) = value;
-    
+
     return JSValue::encode(jsUndefined());
 }
 

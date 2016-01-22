@@ -42,21 +42,21 @@ public final class PluginManager {
 
     private static final ServiceLoader<PluginHandler> pHandlers =
         ServiceLoader.load(PluginHandler.class);
-    
-    private static final TreeMap<String,PluginHandler> hndMap = 
+
+    private static final TreeMap<String,PluginHandler> hndMap =
         new TreeMap<String,PluginHandler>();
-    
-    private static PluginHandler[] hndArray; 
-    
+
+    private static PluginHandler[] hndArray;
+
     private static final HashSet<String> disabledPluginHandlers =
         new HashSet<String>();
 
-    
+
     private static void updatePluginHandlers() {
         log.fine("Update plugin handlers");
 
         hndMap.clear();
-        
+
         Iterator<PluginHandler> iter = pHandlers.iterator();
         while(iter.hasNext()) {
             PluginHandler hnd = iter.next();
@@ -72,21 +72,21 @@ public final class PluginManager {
         Collection<PluginHandler> vals = hndMap.values();
         hndArray = vals.toArray(new PluginHandler[vals.size()]);
     }
-    
+
     static {
         if ("false".equalsIgnoreCase(
-                System.getProperty("com.sun.browser.plugin"))) 
+                System.getProperty("com.sun.browser.plugin")))
         {
             for(PluginHandler hnd : getAvailablePlugins()) {
                 disabledPluginHandlers.add(hnd.getClass().getCanonicalName());
             }
         }
-        
+
         updatePluginHandlers();
     }
-    
+
     public static Plugin createPlugin(URL url, String type, String[] pNames,
-                                        String[] pValues) 
+                                        String[] pValues)
     {
         try {
             PluginHandler hnd =  hndMap.get(type);
@@ -105,8 +105,8 @@ public final class PluginManager {
             return new DefaultPlugin(url, type, pNames, pValues);
         }
     }
-    
-    
+
+
     private static List<PluginHandler> getAvailablePlugins() {
         Vector<PluginHandler> res = new Vector<PluginHandler>();
         Iterator<PluginHandler> iter = pHandlers.iterator();
@@ -132,21 +132,21 @@ public final class PluginManager {
         disabledPluginHandlers.add(hnd.getClass().getCanonicalName());
         updatePluginHandlers();
     }
-    
+
     private static void enablePlugin(PluginHandler hnd) {
         disabledPluginHandlers.remove(hnd.getClass().getCanonicalName());
         updatePluginHandlers();
     }
-    
+
     private static boolean isDisabledPlugin(PluginHandler hnd) {
         return disabledPluginHandlers.contains(
             hnd.getClass().getCanonicalName());
     }
-    
+
     private static boolean supportsMIMEType(String mimeType) {
         return hndMap.containsKey(mimeType);
     }
-    
+
     private static String getPluginNameForMIMEType(String mimeType) {
         PluginHandler hnd = hndMap.get(mimeType);
         if (hnd != null) return hnd.getName();

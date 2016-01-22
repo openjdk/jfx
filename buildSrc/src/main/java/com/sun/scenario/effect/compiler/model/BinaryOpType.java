@@ -47,7 +47,7 @@ public enum BinaryOpType {
     GTEQ (">=", Op.REL),
     LT   ("<",  Op.REL),
     GT   (">",  Op.REL);
-    
+
     private enum Op { MATH, ASSIGN, REL }
     private String symbol;
     private Op op;
@@ -56,7 +56,7 @@ public enum BinaryOpType {
         this.symbol = symbol;
         this.op = op;
     }
-    
+
     public static BinaryOpType forSymbol(String symbol) {
         for (BinaryOpType ot : BinaryOpType.values()) {
             if (ot.getSymbol().equals(symbol)) {
@@ -69,11 +69,11 @@ public enum BinaryOpType {
     public String getSymbol() {
         return symbol;
     }
-    
+
     public boolean isRelational() {
         return (op == Op.REL);
     }
-    
+
     public boolean isAssignment() {
         return (op == Op.ASSIGN);
     }

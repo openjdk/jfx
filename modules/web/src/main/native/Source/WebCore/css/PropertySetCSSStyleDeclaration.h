@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef PropertySetCSSStyleDeclaration_h
@@ -43,11 +43,11 @@ class StyledElement;
 class PropertySetCSSStyleDeclaration : public CSSStyleDeclaration {
 public:
     PropertySetCSSStyleDeclaration(MutableStyleProperties* propertySet) : m_propertySet(propertySet) { }
-    
+
     virtual StyledElement* parentElement() const { return 0; }
     virtual void clearParentElement() { ASSERT_NOT_REACHED(); }
     StyleSheetContents* contextStyleSheet() const;
-    
+
     virtual void ref() override;
     virtual void deref() override;
 
@@ -67,11 +67,11 @@ private:
     virtual PassRefPtr<CSSValue> getPropertyCSSValueInternal(CSSPropertyID) override;
     virtual String getPropertyValueInternal(CSSPropertyID) override;
     virtual void setPropertyInternal(CSSPropertyID, const String& value, bool important, ExceptionCode&) override;
-    
+
     virtual PassRef<MutableStyleProperties> copyProperties() const override;
 
     CSSValue* cloneAndCacheForCSSOM(CSSValue*);
-    
+
 protected:
     enum MutationType { NoChanges, PropertyChanged };
     virtual void willMutate() { }
@@ -91,7 +91,7 @@ public:
     virtual ~StyleRuleCSSStyleDeclaration();
 
     void clearParentRule() { m_parentRule = 0; }
-    
+
     virtual void ref() override;
     virtual void deref() override;
 
@@ -116,10 +116,10 @@ class InlineCSSStyleDeclaration : public PropertySetCSSStyleDeclaration
 public:
     InlineCSSStyleDeclaration(MutableStyleProperties* propertySet, StyledElement* parentElement)
         : PropertySetCSSStyleDeclaration(propertySet)
-        , m_parentElement(parentElement) 
+        , m_parentElement(parentElement)
     {
     }
-    
+
 private:
     virtual CSSStyleSheet* parentStyleSheet() const override;
     virtual StyledElement* parentElement() const override { return m_parentElement; }

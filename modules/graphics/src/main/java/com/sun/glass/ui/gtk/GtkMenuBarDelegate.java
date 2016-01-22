@@ -47,5 +47,5 @@ class GtkMenuBarDelegate implements MenuBarDelegate {
     public long getNativeMenu() {
         return 0;
     }
-    
+
 }

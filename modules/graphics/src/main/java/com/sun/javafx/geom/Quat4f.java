@@ -27,12 +27,12 @@ package com.sun.javafx.geom;
 
 /**
  * A 4 element unit quaternion represented by single precision floating point
- * x,y,z,w coordinates. The quaternion is always normalized. 
+ * x,y,z,w coordinates. The quaternion is always normalized.
  */
 public class Quat4f {
 
     final static double EPS2 = 1.0e-30;
-    
+
     /**
      * The x coordinate.
      */

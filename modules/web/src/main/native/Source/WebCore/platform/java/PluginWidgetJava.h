@@ -10,14 +10,14 @@
 #include "ResourceResponse.h"
 #include "ScrollView.h"
 #include "Widget.h"
- 
+
 #include <wtf/text/WTFString.h>
 
 
 namespace WebCore {
 
     class PluginWidgetJava : public Widget {
-        PassRefPtr<HTMLPlugInElement> m_element; 
+        PassRefPtr<HTMLPlugInElement> m_element;
         String m_url;
         String m_mimeType;
         IntSize m_size;
@@ -26,12 +26,12 @@ namespace WebCore {
 
     public:
         PluginWidgetJava(
-            jobject wfh, 
-            HTMLPlugInElement *element, 
-            const IntSize& size, 
-            const String& url, 
+            jobject wfh,
+            HTMLPlugInElement *element,
+            const IntSize& size,
+            const String& url,
             const String& mimeType,
-            const Vector<String>& paramNames, 
+            const Vector<String>& paramNames,
             const Vector<String>& paramValues);
         virtual ~PluginWidgetJava();
 
@@ -60,7 +60,7 @@ namespace WebCore {
 
         virtual void handleEvent(Event*);
         //virtual void setParent(ScrollView*);//postponed init have to be implemented (just on non-null parent)
-        //virtual void setParentVisible(bool);//pause in rendering 
+        //virtual void setParentVisible(bool);//pause in rendering
 
         //virtual bool isPluginView() const { return true; }
     };

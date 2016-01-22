@@ -54,5 +54,5 @@ final class AnimationAccessorImpl extends AnimationAccessor{
         animation.impl_setCurrentTicks(ticks);
     }
 
-    
+
 }

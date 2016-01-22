@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef FTLState_h
@@ -55,11 +55,11 @@ inline bool showDisassembly()
 
 class State {
     WTF_MAKE_NONCOPYABLE(State);
-    
+
 public:
     State(DFG::Graph& graph);
     ~State();
-    
+
     // None of these things is owned by State. It is the responsibility of
     // FTL phases to properly manage the lifecycle of the module and function.
     DFG::Graph& graph;
@@ -80,7 +80,7 @@ public:
     void* compactUnwind;
     size_t compactUnwindSize;
     RefCountedArray<LSectionWord> stackmapsSection;
-    
+
     void dumpState(const char* when);
 };
 

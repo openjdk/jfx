@@ -50,7 +50,7 @@ public class Ref {
             WCGraphicsManager.getGraphicsManager().deref(this);
         }
     }
-    
+
     public boolean hasRefs() {
         return count > 0;
     }

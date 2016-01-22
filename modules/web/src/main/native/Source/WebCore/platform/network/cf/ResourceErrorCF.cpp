@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -60,7 +60,7 @@ PCCERT_CONTEXT ResourceError::certificate() const
 {
     if (!m_certificate)
         return 0;
-    
+
     return reinterpret_cast<PCCERT_CONTEXT>(CFDataGetBytePtr(m_certificate.get()));
 }
 
@@ -115,7 +115,7 @@ void ResourceError::platformLazyInit()
             }
         }
         m_localizedDescription = (CFStringRef) CFDictionaryGetValue(userInfo.get(), kCFErrorLocalizedDescriptionKey);
-        
+
 #if PLATFORM(WIN)
         m_certificate = wkGetSSLPeerCertificateData(userInfo.get());
 #endif
@@ -162,7 +162,7 @@ CFErrorRef ResourceError::cfError() const
         if (m_certificate)
             wkSetSSLPeerCertificateData(userInfo.get(), m_certificate.get());
 #endif
-        
+
         m_platformError = adoptCF(CFErrorCreate(0, m_domain.createCFString().get(), m_errorCode, userInfo.get()));
     }
 

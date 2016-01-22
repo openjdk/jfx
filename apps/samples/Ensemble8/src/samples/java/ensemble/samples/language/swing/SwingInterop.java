@@ -75,10 +75,10 @@ import javax.swing.table.DefaultTableCellRenderer;
  *  - http.proxyPort
  *
  * e.g. -Dhttp.proxyHost=webcache.mydomain.com -Dhttp.proxyPort=8080
- * 
+ *
  */
 public class SwingInterop extends JApplet {
-    
+
     private static final int PANEL_WIDTH_INT = 675;
     private static final int PANEL_HEIGHT_INT = 400;
     private static final int TABLE_PANEL_HEIGHT_INT = 100;
@@ -100,7 +100,7 @@ public class SwingInterop extends JApplet {
 
         //create tabbed pane
         JTabbedPane tabbedPane = new JTabbedPane();
-        
+
         //JTable
         JTable table = new JTable(tableModel);
         table.setAutoCreateRowSorter(true);
@@ -127,7 +127,7 @@ public class SwingInterop extends JApplet {
         tabbedPane.addTab("Web Browser", browserFxPanel);
 
         add(tabbedPane, BorderLayout.CENTER);
-        
+
         // create JavaFX scene
         Platform.runLater(new Runnable() {
             public void run() {
@@ -144,7 +144,7 @@ public class SwingInterop extends JApplet {
                 try {
                     UIManager.setLookAndFeel("com.sun.java.swing.plaf.nimbus.NimbusLookAndFeel");
                 } catch (Exception e) {}
-                
+
                 JFrame frame = new JFrame("JavaFX in Swing");
                 frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 
@@ -168,7 +168,7 @@ public class SwingInterop extends JApplet {
         browser = createBrowser();
         browserFxPanel.setScene(new Scene(browser));
     }
-    
+
     private BarChart createBarChart() {
         CategoryAxis xAxis = new CategoryAxis();
         xAxis.setCategories(FXCollections.<String>observableArrayList(tableModel.getColumnNames()));

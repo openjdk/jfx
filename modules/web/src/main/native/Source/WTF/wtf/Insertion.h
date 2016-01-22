@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef Insertion_h
@@ -32,21 +32,21 @@ template<typename T>
 class Insertion {
 public:
     Insertion() { }
-    
+
     Insertion(size_t index, T element)
         : m_index(index)
         , m_element(element)
     {
     }
-    
+
     size_t index() const { return m_index; }
     T element() const { return m_element; }
-    
+
     bool operator<(const Insertion& other) const
     {
         return m_index < other.m_index;
     }
-    
+
 private:
     size_t m_index;
     T m_element;

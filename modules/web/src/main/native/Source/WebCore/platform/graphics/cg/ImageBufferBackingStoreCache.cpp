@@ -105,7 +105,7 @@ void ImageBufferBackingStoreCache::insertIntoCache(IOSurfaceAndContextWithCreati
     auto toAdd = new IOSurfaceAndContextWithCreationParams(info);
     auto insertedTuple = m_cachedSurfaces.add(convertSizeToKey(surfaceSize), InfoLinkedList());
     insertedTuple.iterator->value.append(toAdd);
-    
+
     m_pixelsCached += surfaceSize.area();
 }
 
@@ -171,10 +171,10 @@ void ImageBufferBackingStoreCache::deallocate(IOSurfaceRef surface)
 {
     ActiveSurfaceMap::iterator lookup = m_activeSurfaces.find(surface);
     ASSERT(lookup != m_activeSurfaces.end());
-    
+
     auto info = std::move(lookup->value);
     m_activeSurfaces.remove(lookup);
-    
+
     IOSurfaceRef ioSurface = info.surface.get();
     CGContextRef context = info.context.get();
     IntSize surfaceSize(IOSurfaceGetWidth(ioSurface), IOSurfaceGetHeight(ioSurface));

@@ -53,7 +53,7 @@ public class FontTest {
         assertNotNull(names);
         assertImmutableList(names);
     }
-    
+
     @Test
     public void testGetFontNames() {
         String family = Font.getFamilies().get(0);
@@ -61,7 +61,7 @@ public class FontTest {
         assertNotNull(names);
         assertImmutableList(names);
     }
-    
+
     @Test
     public void testFontFactory1() {
         Font font = Font.font("Amble", FontWeight.NORMAL,
@@ -69,12 +69,12 @@ public class FontTest {
         assertEquals("Amble", font.getFamily());
         assertEquals("Amble Italic", font.getName());
         assertEquals(30f, (float) font.getSize());
-        
+
         font = Font.font(null, null, null, -1);
         // The tests against System as default are all commented out
         // as it needs a re-working of StubFontLoader which I consider
         // pointless as its not testing the product, and may give a
-        // fall belief that the product passes. 
+        // fall belief that the product passes.
         //assertEquals("System", font.getFamily());
         assertTrue(0 < font.getSize());
     }
@@ -86,7 +86,7 @@ public class FontTest {
         assertEquals("Amble Bold", font.getName());
         assertEquals(30f, (float) font.getSize());
     }
-    
+
     @Test
     public void testFontFactory3() {
         Font font = Font.font("Amble", FontPosture.ITALIC, 30);
@@ -94,37 +94,37 @@ public class FontTest {
         assertEquals("Amble Italic", font.getName());
         assertEquals(30f, (float) font.getSize());
     }
-    
+
     @Test
     public void testDefault() {
         Font font = Font.getDefault();
         //assertEquals("System", font.getFamily());
     }
-    
+
     @Test
     public void testCtor2() {
         Font font = new Font(20);
         //assertEquals("System", font.getFamily());
         assertEquals(20f, (float) font.getSize());
     }
-    
+
     @Test
     public void testCtor3() {
         Font font = new Font("Amble Bold", 32);
         assertEquals("Amble", font.getFamily());
         assertEquals(32f, (float) font.getSize());
         assertEquals("Amble Bold", font.getName());
-        
+
         Font def = new Font(null, -1);
         //assertEquals("System Regular", def.getName());
         assertTrue(0 < def.getSize());
     }
-    
+
     @Test
     public void testToString() {
         assertNotNull(new Font(12).toString());
     }
-    
+
     @Test
     public void testEqualsHashCode() {
         Font f1 = new Font(12);
@@ -137,13 +137,13 @@ public class FontTest {
         Font f4 = new Font(40);
         assertEquals(f3, f4);
     }
-    
+
     @Test
     public void testSetNative() {
         new Font(12).impl_setNativeFont(new Object(), "", "", "");
         // no assumptions
     }
-    
+
 /*
  * Sad to say, all these tests are not useful since 'ant test' uses
  * a stub toolkit and font loader which cannot implement these, since

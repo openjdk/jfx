@@ -45,8 +45,8 @@
 /* Workaround for bug in MSVCR80.DLL */
 static gsize
 msc_strxfrm_wrapper (char       *string1,
-		     const char *string2,
-		     gsize       count)
+             const char *string2,
+             gsize       count)
 {
   if (!string1 || count <= 0)
     {
@@ -63,20 +63,20 @@ msc_strxfrm_wrapper (char       *string1,
  * g_utf8_collate:
  * @str1: a UTF-8 encoded string
  * @str2: a UTF-8 encoded string
- * 
+ *
  * Compares two strings for ordering using the linguistically
  * correct rules for the [current locale][setlocale].
- * When sorting a large number of strings, it will be significantly 
- * faster to obtain collation keys with g_utf8_collate_key() and 
- * compare the keys with strcmp() when sorting instead of sorting 
+ * When sorting a large number of strings, it will be significantly
+ * faster to obtain collation keys with g_utf8_collate_key() and
+ * compare the keys with strcmp() when sorting instead of sorting
  * the original strings.
- * 
- * Returns: < 0 if @str1 compares before @str2, 
+ *
+ * Returns: < 0 if @str1 compares before @str2,
  *   0 if they compare equal, > 0 if @str1 compares after @str2.
  **/
 gint
 g_utf8_collate (const gchar *str1,
-		const gchar *str2)
+        const gchar *str2)
 {
   gint result;
 
@@ -140,13 +140,13 @@ g_utf8_collate (const gchar *str1,
       gchar *str2_locale = g_convert (str2_norm, -1, charset, "UTF-8", NULL, NULL, NULL);
 
       if (str1_locale && str2_locale)
-	result =  strcoll (str1_locale, str2_locale);
+    result =  strcoll (str1_locale, str2_locale);
       else if (str1_locale)
-	result = -1;
+    result = -1;
       else if (str2_locale)
-	result = 1;
+    result = 1;
       else
-	result = strcmp (str1_norm, str2_norm);
+    result = strcmp (str1_norm, str2_norm);
 
       g_free (str1_locale);
       g_free (str2_locale);
@@ -179,7 +179,7 @@ utf8_encode (char *buf, wchar_t val)
   if (val < 0x80)
     {
       if (buf)
-	*buf++ = (char) val;
+    *buf++ = (char) val;
       retval = 1;
     }
   else
@@ -192,17 +192,17 @@ utf8_encode (char *buf, wchar_t val)
       retval = step;
 
       if (buf)
-	{
-	  *buf = (unsigned char) (~0xff >> step);
-	  --step;
-	  do
-	    {
-	      buf[step] = 0x80 | (val & 0x3f);
-	      val >>= 6;
-	    }
-	  while (--step > 0);
-	  *buf |= val;
-	}
+    {
+      *buf = (unsigned char) (~0xff >> step);
+      --step;
+      do
+        {
+          buf[step] = 0x80 | (val & 0x3f);
+          val >>= 6;
+        }
+      while (--step > 0);
+      *buf |= val;
+    }
     }
 
   return retval;
@@ -332,7 +332,7 @@ carbon_collate_key_for_filename (const gchar *str,
                          | kUCCollateCaseInsensitiveMask
                          | kUCCollateDigitsOverrideMask
                          | kUCCollateDigitsAsNumberMask
-                         | kUCCollatePunctuationSignificantMask, 
+                         | kUCCollatePunctuationSignificantMask,
                         &collator);
 
       if (!collator)
@@ -356,21 +356,21 @@ carbon_collate_key_for_filename (const gchar *str,
  * @len: length of @str, in bytes, or -1 if @str is nul-terminated.
  *
  * Converts a string into a collation key that can be compared
- * with other collation keys produced by the same function using 
- * strcmp(). 
+ * with other collation keys produced by the same function using
+ * strcmp().
  *
- * The results of comparing the collation keys of two strings 
- * with strcmp() will always be the same as comparing the two 
+ * The results of comparing the collation keys of two strings
+ * with strcmp() will always be the same as comparing the two
  * original keys with g_utf8_collate().
- * 
+ *
  * Note that this function depends on the [current locale][setlocale].
- * 
+ *
  * Returns: a newly allocated string. This string should
  *   be freed with g_free() when you are done with it.
  **/
 gchar *
 g_utf8_collate_key (const gchar *str,
-		    gssize       len)
+            gssize       len)
 {
   gchar *result;
 
@@ -435,25 +435,25 @@ g_utf8_collate_key (const gchar *str,
       gchar *str_locale = g_convert (str_norm, -1, charset, "UTF-8", NULL, NULL, NULL);
 
       if (str_locale)
-	{
-	  xfrm_len = strxfrm (NULL, str_locale, 0);
-	  if (xfrm_len < 0 || xfrm_len >= G_MAXINT - 2)
-	    {
-	      g_free (str_locale);
-	      str_locale = NULL;
-	    }
-	}
-      if (str_locale)
-	{
-	  result = g_malloc (xfrm_len + 2);
-	  result[0] = 'A';
-	  strxfrm (result + 1, str_locale, xfrm_len + 1);
-	  
-	  g_free (str_locale);
-	}
+    {
+      xfrm_len = strxfrm (NULL, str_locale, 0);
+      if (xfrm_len < 0 || xfrm_len >= G_MAXINT - 2)
+        {
+          g_free (str_locale);
+          str_locale = NULL;
+        }
     }
-    
-  if (!result) 
+      if (str_locale)
+    {
+      result = g_malloc (xfrm_len + 2);
+      result[0] = 'A';
+      strxfrm (result + 1, str_locale, xfrm_len + 1);
+
+      g_free (str_locale);
+    }
+    }
+
+  if (!result)
     {
       xfrm_len = strlen (str_norm);
       result = g_malloc (xfrm_len + 2);
@@ -481,15 +481,15 @@ g_utf8_collate_key (const gchar *str,
  * @len: length of @str, in bytes, or -1 if @str is nul-terminated.
  *
  * Converts a string into a collation key that can be compared
- * with other collation keys produced by the same function using strcmp(). 
- * 
- * In order to sort filenames correctly, this function treats the dot '.' 
+ * with other collation keys produced by the same function using strcmp().
+ *
+ * In order to sort filenames correctly, this function treats the dot '.'
  * as a special case. Most dictionary orderings seem to consider it
  * insignificant, thus producing the ordering "event.c" "eventgenerator.c"
  * "event.h" instead of "event.c" "event.h" "eventgenerator.c". Also, we
  * would like to treat numbers intelligently so that "file1" "file10" "file5"
  * is sorted as "file1" "file5" "file10".
- * 
+ *
  * Note that this function depends on the [current locale][setlocale].
  *
  * Returns: a newly allocated string. This string should
@@ -499,7 +499,7 @@ g_utf8_collate_key (const gchar *str,
  */
 gchar *
 g_utf8_collate_key_for_filename (const gchar *str,
-				 gssize       len)
+                 gssize       len)
 {
 #ifndef HAVE_CARBON
   GString *result;
@@ -515,25 +515,25 @@ g_utf8_collate_key_for_filename (const gchar *str,
    * How it works:
    *
    * Split the filename into collatable substrings which do
-   * not contain [.0-9] and special-cased substrings. The collatable 
-   * substrings are run through the normal g_utf8_collate_key() and the 
-   * resulting keys are concatenated with keys generated from the 
+   * not contain [.0-9] and special-cased substrings. The collatable
+   * substrings are run through the normal g_utf8_collate_key() and the
+   * resulting keys are concatenated with keys generated from the
    * special-cased substrings.
    *
-   * Special cases: Dots are handled by replacing them with '\1' which 
-   * implies that short dot-delimited substrings are before long ones, 
+   * Special cases: Dots are handled by replacing them with '\1' which
+   * implies that short dot-delimited substrings are before long ones,
    * e.g.
-   * 
+   *
    *   a\1a   (a.a)
    *   a-\1a  (a-.a)
    *   aa\1a  (aa.a)
-   * 
-   * Numbers are handled by prepending to each number d-1 superdigits 
-   * where d = number of digits in the number and SUPERDIGIT is a 
-   * character with an integer value higher than any digit (for instance 
-   * ':'). This ensures that single-digit numbers are sorted before 
-   * double-digit numbers which in turn are sorted separately from 
-   * triple-digit numbers, etc. To avoid strange side-effects when 
+   *
+   * Numbers are handled by prepending to each number d-1 superdigits
+   * where d = number of digits in the number and SUPERDIGIT is a
+   * character with an integer value higher than any digit (for instance
+   * ':'). This ensures that single-digit numbers are sorted before
+   * double-digit numbers which in turn are sorted separately from
+   * triple-digit numbers, etc. To avoid strange side-effects when
    * sorting strings that already contain SUPERDIGITs, a '\2'
    * is also prepended, like this
    *
@@ -543,7 +543,7 @@ g_utf8_collate_key_for_filename (const gchar *str,
    *   file\2:26    (file26)
    *   file\2::100  (file100)
    *   file:foo     (file:foo)
-   * 
+   *
    * This has the side-effect of sorting numbers before everything else (except
    * dots), but this is probably OK.
    *
@@ -569,106 +569,106 @@ g_utf8_collate_key_for_filename (const gchar *str,
   for (prev = p = str; p < end; p++)
     {
       switch (*p)
-	{
-	case '.':
-	  if (prev != p) 
-	    {
-	      collate_key = g_utf8_collate_key (prev, p - prev);
-	      g_string_append (result, collate_key);
-	      g_free (collate_key);
-	    }
-	  
-	  g_string_append (result, COLLATION_SENTINEL "\1");
-	  
-	  /* skip the dot */
-	  prev = p + 1;
-	  break;
-	  
-	case '0':
-	case '1':
-	case '2':
-	case '3':
-	case '4':
-	case '5':
-	case '6':
-	case '7':
-	case '8':
-	case '9':
-	  if (prev != p) 
-	    {
-	      collate_key = g_utf8_collate_key (prev, p - prev);
-	      g_string_append (result, collate_key);
-	      g_free (collate_key);
-	    }
-	  
-	  g_string_append (result, COLLATION_SENTINEL "\2");
-	  
-	  prev = p;
-	  
-	  /* write d-1 colons */
-	  if (*p == '0')
-	    {
-	      leading_zeros = 1;
-	      digits = 0;
-	    }
-	  else
-	    {
-	      leading_zeros = 0;
-	      digits = 1;
-	    }
-	  
-	  while (++p < end)
-	    {
-	      if (*p == '0' && !digits)
-		++leading_zeros;
-	      else if (g_ascii_isdigit(*p))
-		++digits;
-	      else
+    {
+    case '.':
+      if (prev != p)
+        {
+          collate_key = g_utf8_collate_key (prev, p - prev);
+          g_string_append (result, collate_key);
+          g_free (collate_key);
+        }
+
+      g_string_append (result, COLLATION_SENTINEL "\1");
+
+      /* skip the dot */
+      prev = p + 1;
+      break;
+
+    case '0':
+    case '1':
+    case '2':
+    case '3':
+    case '4':
+    case '5':
+    case '6':
+    case '7':
+    case '8':
+    case '9':
+      if (prev != p)
+        {
+          collate_key = g_utf8_collate_key (prev, p - prev);
+          g_string_append (result, collate_key);
+          g_free (collate_key);
+        }
+
+      g_string_append (result, COLLATION_SENTINEL "\2");
+
+      prev = p;
+
+      /* write d-1 colons */
+      if (*p == '0')
+        {
+          leading_zeros = 1;
+          digits = 0;
+        }
+      else
+        {
+          leading_zeros = 0;
+          digits = 1;
+        }
+
+      while (++p < end)
+        {
+          if (*p == '0' && !digits)
+        ++leading_zeros;
+          else if (g_ascii_isdigit(*p))
+        ++digits;
+          else
                 {
- 		  /* count an all-zero sequence as
+          /* count an all-zero sequence as
                    * one digit plus leading zeros
                    */
-          	  if (!digits)
+              if (!digits)
                     {
                       ++digits;
                       --leading_zeros;
-                    }        
-		  break;
+                    }
+          break;
                 }
-	    }
+        }
 
-	  while (digits > 1)
-	    {
-	      g_string_append_c (result, ':');
-	      --digits;
-	    }
+      while (digits > 1)
+        {
+          g_string_append_c (result, ':');
+          --digits;
+        }
 
-	  if (leading_zeros > 0)
-	    {
-	      g_string_append_c (append, (char)leading_zeros);
-	      prev += leading_zeros;
-	    }
-	  
-	  /* write the number itself */
-	  g_string_append_len (result, prev, p - prev);
-	  
-	  prev = p;
-	  --p;	  /* go one step back to avoid disturbing outer loop */
-	  break;
-	  
-	default:
-	  /* other characters just accumulate */
-	  break;
-	}
+      if (leading_zeros > 0)
+        {
+          g_string_append_c (append, (char)leading_zeros);
+          prev += leading_zeros;
+        }
+
+      /* write the number itself */
+      g_string_append_len (result, prev, p - prev);
+
+      prev = p;
+      --p;    /* go one step back to avoid disturbing outer loop */
+      break;
+
+    default:
+      /* other characters just accumulate */
+      break;
     }
-  
-  if (prev != p) 
+    }
+
+  if (prev != p)
     {
       collate_key = g_utf8_collate_key (prev, p - prev);
       g_string_append (result, collate_key);
       g_free (collate_key);
     }
-  
+
   g_string_append (result, append->str);
   g_string_free (append, TRUE);
 

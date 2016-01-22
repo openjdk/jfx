@@ -125,7 +125,7 @@ public class ChoiceBoxBehavior<T> extends BehaviorBase<ChoiceBox<T>> {
     public void mouseReleased(MouseEvent e) {
         ChoiceBox<T> choiceButton = getNode();
         if (choiceButton.isShowing() || !choiceButton.contains(e.getX(), e.getY())) {
-            choiceButton.hide(); // hide if already showing 
+            choiceButton.hide(); // hide if already showing
         }
         else if (e.getButton() == MouseButton.PRIMARY) {
             choiceButton.show();

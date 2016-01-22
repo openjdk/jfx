@@ -517,7 +517,7 @@ public class Window implements EventTarget {
     public Object getUserData() {
         return getProperties().get(USER_DATA_KEY);
     }
-    
+
     /**
      * The {@code Scene} to be rendered on this {@code Stage}. There can only
      * be one {@code Scene} on the {@code Stage} at a time, and a {@code Scene}

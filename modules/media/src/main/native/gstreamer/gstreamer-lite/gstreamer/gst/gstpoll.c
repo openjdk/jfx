@@ -617,7 +617,7 @@ no_socket_pair:
  * timeouts.
  *
  * A timeout is performed with gst_poll_wait(). Multiple timeouts can be
- * performed from different threads. 
+ * performed from different threads.
  *
  * Free-function: gst_poll_free
  *
@@ -1507,7 +1507,7 @@ gst_poll_set_flushing (GstPoll * set, gboolean flushing)
  *
  * Write a byte to the control socket of the controllable @set.
  * This function is mostly useful for timer #GstPoll objects created with
- * gst_poll_new_timer(). 
+ * gst_poll_new_timer().
  *
  * It will make any current and future gst_poll_wait() function return with
  * 1, meaning the control socket is set. After an equal amount of calls to
@@ -1536,7 +1536,7 @@ gst_poll_write_control (GstPoll * set)
  *
  * Read a byte from the control socket of the controllable @set.
  * This function is mostly useful for timer #GstPoll objects created with
- * gst_poll_new_timer(). 
+ * gst_poll_new_timer().
  *
  * Returns: %TRUE on success. %FALSE when @set is not controllable or when there
  * was no byte to read.

@@ -28,7 +28,7 @@ package javafx.beans.value;
 public class ObservableBooleanValueStub extends ObservableValueBase<Boolean> implements ObservableBooleanValue {
 
     private boolean value;
-    
+
     public ObservableBooleanValueStub() {}
     public ObservableBooleanValueStub(boolean initialValue) {value = initialValue;}
 

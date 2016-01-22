@@ -39,10 +39,10 @@ import java.util.Set;
 
 /**
  *
- * 
+ *
  */
 public class ComponentClassMetadata extends ClassMetadata {
-    
+
     private final Set<PropertyMetadata> properties = new HashSet<>();
     private final boolean freeChildPositioning;
     private final ComponentClassMetadata parentMetadata;
@@ -60,7 +60,7 @@ public class ComponentClassMetadata extends ClassMetadata {
     public PropertyName getSubComponentProperty() {
         PropertyName result = null;
         Class<?> componentClass = getKlass();
-        
+
         if (componentClass == javafx.scene.layout.BorderPane.class) {
             // We consider that BorderPane has no subcomponents.
             // left, right, bottom and top components are treated as "accessories".
@@ -86,12 +86,12 @@ public class ComponentClassMetadata extends ClassMetadata {
     public ComponentClassMetadata getParentMetadata() {
         return parentMetadata;
     }
-    
+
     public PropertyMetadata lookupProperty(PropertyName propertyName) {
         PropertyMetadata result = null;
-        
+
         assert propertyName != null;
-        
+
         final Iterator<PropertyMetadata> it = properties.iterator();
         while ((result == null) && it.hasNext()) {
             final PropertyMetadata pm = it.next();
@@ -99,14 +99,14 @@ public class ComponentClassMetadata extends ClassMetadata {
                 result = pm;
             }
         }
-        
+
         return result;
     }
 
     /*
      * Object
      */
-    
+
     @Override
     public int hashCode() {
         return super.hashCode(); // Only to please FindBugs
@@ -116,22 +116,22 @@ public class ComponentClassMetadata extends ClassMetadata {
     public boolean equals(Object obj) {
         return super.equals(obj); // Only to please FindBugs
     }
-    
-    
+
+
     /*
      * Private
      */
-    
+
     private static PropertyName getSubComponentProperty(Class<?> componentClass) {
         final PropertyName result;
-        
+
         assert componentClass != javafx.scene.layout.BorderPane.class
                 && componentClass != javafx.scene.control.DialogPane.class;
-        
+
         /*
          * Component Class -> Sub Component Property
          * =========================================
-         * 
+         *
          * Accordion        panes
          * ButtonBar        buttons
          * ContextMenu      items
@@ -147,12 +147,12 @@ public class ComponentClassMetadata extends ClassMetadata {
          * ToolBar          items
          * TreeTableColumn  columns
          * TreeTableView    columns
-         * 
+         *
          * Group            children
          * Panes            children
          * Other            null
          */
-      
+
         if (componentClass == javafx.scene.control.Accordion.class) {
             result = panesName;
         } else if (componentClass == javafx.scene.control.ButtonBar.class) {
@@ -190,10 +190,10 @@ public class ComponentClassMetadata extends ClassMetadata {
         } else {
             result = null;
         }
-        
+
         return result;
     }
-        
+
     private static final PropertyName buttonsName = new PropertyName("buttons");
     private static final PropertyName columnsName = new PropertyName("columns");
     private static final PropertyName elementsName = new PropertyName("elements");

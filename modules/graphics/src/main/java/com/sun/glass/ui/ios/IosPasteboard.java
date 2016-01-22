@@ -63,8 +63,8 @@ final class IosPasteboard {
     // System pasteboard is used e.g. for common Copy/Paste operations
     // IosPasteboard.General is the only supported type value
     private native long _createSystemPasteboard(int type);
-    
-    /** 
+
+    /**
      * Creates IosPasteboard wrapper object for UIPasteboard's generalPasteboard.
      */
     public IosPasteboard(int type) {
@@ -74,9 +74,9 @@ final class IosPasteboard {
 
     // creates user platform pasteboard for the given name
     private native long _createUserPasteboard(String name);
-    
-    /** 
-     * Creates custom IosPasteboard for given name. E.g. for drag and drop purpose 
+
+    /**
+     * Creates custom IosPasteboard for given name. E.g. for drag and drop purpose
      * we create user UIPasterboard with special name DND.
      * See [UIPasteboard pasteboardWithName:create:] documentation.
      */
@@ -85,7 +85,7 @@ final class IosPasteboard {
         this.ptr = _createUserPasteboard(name);
     }
 
-    /** 
+    /**
      * Returns native pasteboard pointer (UIPasteboard*)
      */
     public long getNativePasteboard() {
@@ -95,10 +95,10 @@ final class IosPasteboard {
 
     // returns name of the native UIPasteboard
     private native String _getName(long ptr);
-    
+
     /**
      * Native pasteboard name getter;
-     * @return name 
+     * @return name
      */
     public String getName() {
         assertValid();
@@ -106,9 +106,9 @@ final class IosPasteboard {
     }
 
     private native String[][] _getUTFs(long ptr);
-    
+
     /**
-     * @return an array of String arrays with multiple UTF types for each item 
+     * @return an array of String arrays with multiple UTF types for each item
      * on the Pasteboard (allows for non homogenous items)
      * the length of the array is the count of available items
      */
@@ -118,19 +118,19 @@ final class IosPasteboard {
     }
 
     private native byte[] _getItemAsRawImage(long ptr, int index);
-    
+
     /**
      * Get the item representation for the given index as raw pixels bytes suitable for Pixels
-     * the platform will try to find the best representation 
+     * the platform will try to find the best representation
      */
     public byte[] getItemAsRawImage(int index) {
         assertValid();
         return _getItemAsRawImage(this.ptr, index);
     }
 
-    
+
     private native String _getItemAsString(long ptr, int index);
-    
+
     /**
      * get the item representation for the given index as String
      * the platform will try to find the best representation
@@ -140,9 +140,9 @@ final class IosPasteboard {
         return _getItemAsString(this.ptr, index);
     }
 
-    
+
     private native String _getItemStringForUTF(long ptr, int index, String utf);
-    
+
     /**
      * get the item representation for the given utf type as String
      */
@@ -151,9 +151,9 @@ final class IosPasteboard {
         return _getItemStringForUTF(this.ptr, index, utf);
     }
 
-     
+
     private native byte[] _getItemBytesForUTF(long ptr, int index, String utf);
-    
+
     /**
      * get the item representation for the given utf type as byte array
      */
@@ -162,9 +162,9 @@ final class IosPasteboard {
         return _getItemBytesForUTF(this.ptr, index, utf);
     }
 
-    
+
     private native long _getItemForUTF(long ptr, int index, String utf);
-    
+
     /**
      * get the item representation for the given utf type as native Objective-C object id
      * the item retain count will increase by 1
@@ -194,7 +194,7 @@ final class IosPasteboard {
     public long putItemsFromArray(Object[] items, int supportedActions) {
         return _putItemsFromArray(this.ptr, items, supportedActions);
     }
-    
+
     private Object[] hashMapToArray(HashMap hashmap) {
         Object[] array = null;
         if ((hashmap != null) && (hashmap.size() > 0)) {
@@ -212,7 +212,7 @@ final class IosPasteboard {
         }
         return array;
     }
-    
+
     public long putItems(HashMap<String,Object>[] items, int supportedActions) {
         assertValid();
         Object array[] = null;
@@ -236,9 +236,9 @@ final class IosPasteboard {
         return _clear(this.ptr);
     }
 
-    
+
     private native long _getSeed(long ptr);
-    
+
     /**
      * retrieve pasteboard seed
      */
@@ -249,10 +249,10 @@ final class IosPasteboard {
 
     // synthesized API
     private native int _getAllowedOperation(long ptr);
-    
+
     /**
      * Check pasteboard-operation allowed in the current pasteboard state.
-     * @return allowed operation 
+     * @return allowed operation
      */
     public int getAllowedOperation() {
         assertValid();
@@ -260,7 +260,7 @@ final class IosPasteboard {
     }
 
     private native void _release(long ptr);
-    
+
     /**
      * Release native pasteboard instance.
      */
@@ -271,7 +271,7 @@ final class IosPasteboard {
         }
         this.ptr = 0L;
     }
-    
+
     private void assertValid() {
         if (this.ptr == 0L) {
             throw new IllegalStateException("The IosPasteboard is not valid");

@@ -52,7 +52,7 @@ final class MeshTempState {
      * Temporary Vec2fs used by MeshUtil to fix tangent space.
      */
     final Vec2f vec2f1 = new Vec2f();
-    final Vec2f vec2f2 = new Vec2f();    
+    final Vec2f vec2f2 = new Vec2f();
 
     /**
      * Temporary variables used by BaseMesh to compute TBN.
@@ -96,7 +96,7 @@ final class MeshTempState {
      * Length: nFaces * 3
      */
     int[] indexBuffer;
-    
+
     /**
      * A temporary short indexBuffer array
      * Length: nFaces * 3

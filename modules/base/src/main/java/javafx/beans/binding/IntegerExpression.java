@@ -76,7 +76,7 @@ public abstract class IntegerExpression extends NumberExpressionBase implements
      * will be returned. Otherwise a new
      * {@link javafx.beans.binding.IntegerBinding} is created that is bound to
      * the {@code ObservableIntegerValue}.
-     * 
+     *
      * @param value
      *            The source {@code ObservableIntegerValue}
      * @return A {@code IntegerExpression} that wraps the
@@ -112,7 +112,7 @@ public abstract class IntegerExpression extends NumberExpressionBase implements
                     }
                 };
     }
-    
+
     /**
      * Returns an {@code IntegerExpression} that wraps an
      * {@link javafx.beans.value.ObservableValue}. If the
@@ -120,20 +120,20 @@ public abstract class IntegerExpression extends NumberExpressionBase implements
      * will be returned. Otherwise a new
      * {@link javafx.beans.binding.IntegerBinding} is created that is bound to
      * the {@code ObservableValue}.
-     * 
+     *
      * <p>
      * Note: this method can be used to convert an {@link ObjectExpression} or
      * {@link javafx.beans.property.ObjectProperty} of specific number type to IntegerExpression, which
      * is essentially an {@code ObservableValue<Number>}. See sample below.
-     * 
+     *
      * <blockquote><pre>
      *   IntegerProperty integerProperty = new SimpleIntegerProperty(1);
      *   ObjectProperty&lt;Integer&gt; objectProperty = new SimpleObjectProperty&lt;&gt;(2);
      *   BooleanBinding binding = integerProperty.greaterThan(IntegerExpression.integerExpression(objectProperty));
      * </pre></blockquote>
-     * 
+     *
      * Note: null values will be interpreted as 0
-     * 
+     *
      * @param value
      *            The source {@code ObservableValue}
      * @return A {@code IntegerExpression} that wraps the
@@ -256,13 +256,13 @@ public abstract class IntegerExpression extends NumberExpressionBase implements
     public IntegerBinding divide(final int other) {
         return (IntegerBinding) Bindings.divide(this, other);
     }
-    
+
     /**
      * Creates an {@link javafx.beans.binding.ObjectExpression} that holds the value
      * of this {@code IntegerExpression}. If the
      * value of this {@code IntegerExpression} changes, the value of the
      * {@code ObjectExpression} will be updated automatically.
-     * 
+     *
      * @return the new {@code ObjectExpression}
      * @since JavaFX 8.0
      */
@@ -276,7 +276,7 @@ public abstract class IntegerExpression extends NumberExpressionBase implements
             public void dispose() {
                 unbind(IntegerExpression.this);
             }
-            
+
             @Override
             protected Integer computeValue() {
                 return IntegerExpression.this.getValue();

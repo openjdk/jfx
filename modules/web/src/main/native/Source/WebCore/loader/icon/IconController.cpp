@@ -12,13 +12,13 @@
  * are met:
  *
  * 1.  Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer. 
+ *     notice, this list of conditions and the following disclaimer.
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
- *     documentation and/or other materials provided with the distribution. 
+ *     documentation and/or other materials provided with the distribution.
  * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
- *     from this software without specific prior written permission. 
+ *     from this software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY APPLE AND ITS CONTRIBUTORS "AS IS" AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
@@ -85,7 +85,7 @@ IconURLs IconController::urlsForTypes(int iconTypesMask)
     IconURLs iconURLs;
     if (m_frame.tree().parent())
         return iconURLs;
-        
+
     if (iconTypesMask & Favicon && !appendToIconURLs(Favicon, &iconURLs))
         iconURLs.append(defaultURL(Favicon));
 
@@ -171,10 +171,10 @@ void IconController::startLoader()
     if (decision == IconLoadUnknown) {
         // In this case, we may end up loading the icon later, but we still want to commit the icon url mapping to the database
         // just in case we don't end up loading later - if we commit the mapping a second time after the load, that's no big deal
-        // We also tell the client to register for the notification that the icon is received now so it isn't missed in case the 
+        // We also tell the client to register for the notification that the icon is received now so it isn't missed in case the
         // icon is later read in from disk
         LOG(IconDatabase, "IconController %p might load icon %s later", this, urlString.ascii().data());
-        m_waitingForLoadDecision = true;    
+        m_waitingForLoadDecision = true;
         m_frame.loader().client().registerForIconNotification();
         commitToDatabase(iconURL);
         return;
@@ -234,7 +234,7 @@ void IconController::continueLoadWithDecision(IconLoadDecision iconLoadDecision)
             m_frame.loader().client().dispatchDidReceiveIcon();
 
         return;
-    } 
+    }
 
     if (!m_iconLoader)
         m_iconLoader = std::make_unique<IconLoader>(m_frame);

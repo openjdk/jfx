@@ -69,8 +69,8 @@ bool SVGResourcesCycleSolver::resourceContainsCycles(RenderElement& renderer) co
         SVGResources* childResources = SVGResourcesCache::cachedResourcesForRenderObject(child);
         if (!childResources)
             continue;
-        
-        // A child of the given 'resource' contains resources. 
+
+        // A child of the given 'resource' contains resources.
         HashSet<RenderSVGResourceContainer*> childResourceSet;
         childResources->buildSetOfResources(childResourceSet);
 

@@ -58,7 +58,7 @@ import static org.junit.Assert.*;
  * @author dgrieve
  */
 public class StyleManagerTest {
-    
+
     public StyleManagerTest() {
     }
 
@@ -71,7 +71,7 @@ public class StyleManagerTest {
         sm.cacheContainerMap_clear();
         sm.set_hasDefaultUserAgentStylesheet(false);
     }
-    
+
     @Test
     public void testMethod_getInstance() {
         Scene scene = new Scene(new Group());
@@ -467,7 +467,7 @@ public class StyleManagerTest {
         sm.setDefaultUserAgentStylesheet("/test/com/sun/javafx/css/ua0.css");
 
         scene.getRoot().applyCss();
-        
+
         int index = sm.platformUserAgentStylesheetContainers_indexOf("/test/com/sun/javafx/css/ua0.css");
         assertEquals(0, index);
 

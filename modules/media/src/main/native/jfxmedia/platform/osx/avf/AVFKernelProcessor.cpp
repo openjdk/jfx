@@ -102,7 +102,7 @@ public:
                         mProcessor->SetAudioUnit(NULL);
                         mProcessor = NULL;
                     }
-                    
+
                     mProcessor = processor;
                     if (mProcessor) {
                         mProcessor->SetAudioUnit(this);

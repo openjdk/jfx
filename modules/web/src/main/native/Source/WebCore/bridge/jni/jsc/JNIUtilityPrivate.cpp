@@ -240,8 +240,8 @@ jvalue convertValueToJValue(ExecState* exec, RootObject* rootObject, JSValue val
                         if (constructorID) {
                             rootObject->gcProtect(object);
                             jlong nativeHandle = ptr_to_jlong(object);
-                            result.l = env->NewObject(jsObjectClass, constructorID,  
-                                nativeHandle, 
+                            result.l = env->NewObject(jsObjectClass, constructorID,
+                                nativeHandle,
                                 com_sun_webkit_dom_JSObject_JS_CONTEXT_OBJECT);
                         }
                     }

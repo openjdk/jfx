@@ -37,35 +37,35 @@ G_BEGIN_DECLS
  */
 
 /* microseconds per second */
-typedef struct _GTimer		GTimer;
+typedef struct _GTimer      GTimer;
 
 #define G_USEC_PER_SEC 1000000
 
 GLIB_AVAILABLE_IN_ALL
-GTimer*  g_timer_new	         (void);
+GTimer*  g_timer_new             (void);
 GLIB_AVAILABLE_IN_ALL
-void	 g_timer_destroy         (GTimer      *timer);
+void     g_timer_destroy         (GTimer      *timer);
 GLIB_AVAILABLE_IN_ALL
-void	 g_timer_start	         (GTimer      *timer);
+void     g_timer_start           (GTimer      *timer);
 GLIB_AVAILABLE_IN_ALL
-void	 g_timer_stop	         (GTimer      *timer);
+void     g_timer_stop            (GTimer      *timer);
 GLIB_AVAILABLE_IN_ALL
-void	 g_timer_reset	         (GTimer      *timer);
+void     g_timer_reset           (GTimer      *timer);
 GLIB_AVAILABLE_IN_ALL
-void	 g_timer_continue        (GTimer      *timer);
+void     g_timer_continue        (GTimer      *timer);
 GLIB_AVAILABLE_IN_ALL
 gdouble  g_timer_elapsed         (GTimer      *timer,
-				  gulong      *microseconds);
+                  gulong      *microseconds);
 
 GLIB_AVAILABLE_IN_ALL
 void     g_usleep                (gulong       microseconds);
 
 GLIB_AVAILABLE_IN_ALL
-void     g_time_val_add          (GTimeVal    *time_, 
+void     g_time_val_add          (GTimeVal    *time_,
                                   glong        microseconds);
 GLIB_AVAILABLE_IN_ALL
 gboolean g_time_val_from_iso8601 (const gchar *iso_date,
-				  GTimeVal    *time_);
+                  GTimeVal    *time_);
 GLIB_AVAILABLE_IN_ALL
 gchar*   g_time_val_to_iso8601   (GTimeVal    *time_) G_GNUC_MALLOC;
 

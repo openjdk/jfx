@@ -30,26 +30,26 @@
 
 G_BEGIN_DECLS
 
-#define GST_TYPE_AUDIO_ENCODER		   (gst_audio_encoder_get_type())
-#define GST_AUDIO_ENCODER(obj)		   (G_TYPE_CHECK_INSTANCE_CAST((obj),GST_TYPE_AUDIO_ENCODER,GstAudioEncoder))
+#define GST_TYPE_AUDIO_ENCODER         (gst_audio_encoder_get_type())
+#define GST_AUDIO_ENCODER(obj)         (G_TYPE_CHECK_INSTANCE_CAST((obj),GST_TYPE_AUDIO_ENCODER,GstAudioEncoder))
 #define GST_AUDIO_ENCODER_CLASS(klass)    (G_TYPE_CHECK_CLASS_CAST((klass),GST_TYPE_AUDIO_ENCODER,GstAudioEncoderClass))
 #define GST_AUDIO_ENCODER_GET_CLASS(obj)  (G_TYPE_INSTANCE_GET_CLASS((obj),GST_TYPE_AUDIO_ENCODER,GstAudioEncoderClass))
-#define GST_IS_AUDIO_ENCODER(obj)	   (G_TYPE_CHECK_INSTANCE_TYPE((obj),GST_TYPE_AUDIO_ENCODER))
+#define GST_IS_AUDIO_ENCODER(obj)      (G_TYPE_CHECK_INSTANCE_TYPE((obj),GST_TYPE_AUDIO_ENCODER))
 #define GST_IS_AUDIO_ENCODER_CLASS(klass) (G_TYPE_CHECK_CLASS_TYPE((klass),GST_TYPE_AUDIO_ENCODER))
-#define GST_AUDIO_ENCODER_CAST(obj)	((GstAudioEncoder *)(obj))
+#define GST_AUDIO_ENCODER_CAST(obj) ((GstAudioEncoder *)(obj))
 
 /**
  * GST_AUDIO_ENCODER_SINK_NAME:
  *
  * the name of the templates for the sink pad
  */
-#define GST_AUDIO_ENCODER_SINK_NAME	"sink"
+#define GST_AUDIO_ENCODER_SINK_NAME "sink"
 /**
  * GST_AUDIO_ENCODER_SRC_NAME:
  *
  * the name of the templates for the source pad
  */
-#define GST_AUDIO_ENCODER_SRC_NAME	        "src"
+#define GST_AUDIO_ENCODER_SRC_NAME          "src"
 
 /**
  * GST_AUDIO_ENCODER_SRC_PAD:
@@ -57,7 +57,7 @@ G_BEGIN_DECLS
  *
  * Gives the pointer to the source #GstPad object of the element.
  */
-#define GST_AUDIO_ENCODER_SRC_PAD(obj)	(GST_AUDIO_ENCODER_CAST (obj)->srcpad)
+#define GST_AUDIO_ENCODER_SRC_PAD(obj)  (GST_AUDIO_ENCODER_CAST (obj)->srcpad)
 
 /**
  * GST_AUDIO_ENCODER_SINK_PAD:
@@ -65,7 +65,7 @@ G_BEGIN_DECLS
  *
  * Gives the pointer to the sink #GstPad object of the element.
  */
-#define GST_AUDIO_ENCODER_SINK_PAD(obj)	(GST_AUDIO_ENCODER_CAST (obj)->sinkpad)
+#define GST_AUDIO_ENCODER_SINK_PAD(obj) (GST_AUDIO_ENCODER_CAST (obj)->sinkpad)
 
 /**
  * GST_AUDIO_ENCODER_INPUT_SEGMENT:

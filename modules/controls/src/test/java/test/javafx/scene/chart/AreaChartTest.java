@@ -69,14 +69,14 @@ public class AreaChartTest extends XYChartTestBase {
         series1.getData().add(new XYChart.Data(50d, 15d));
         series1.getData().add(new XYChart.Data(80d, 10d));
         }
-        
+
         xAxis.setLabel("X Axis");
         yAxis.setLabel("Y Axis");
         ac.setTitle("HelloAreaChart");
-        
+
         return ac;
     }
-    
+
     private StringBuffer getSeriesLineFromPlot() {
         ObservableList<Node> childrenList = XYChartShim.getPlotChildren(ac);
         StringBuffer sb = new StringBuffer();
@@ -106,8 +106,8 @@ public class AreaChartTest extends XYChartTestBase {
             assertEquals(sb.toString(), "L247.0 171.0 L412.0 171.0 L658.0 284.0 ");
         }
     }
-    
-    @Test  
+
+    @Test
     public void testAreaChartWithCategoryAxis() {
         useCategoryAxis = true;
         startApp();
@@ -122,7 +122,7 @@ public class AreaChartTest extends XYChartTestBase {
          ac.getData().addAll(series1);
          pulse();
          assertEquals(0, countSymbols(ac, "chart-area-symbol"));
-         
+
          ac.getData().clear();
          ac.setCreateSymbols(true);
          pulse();

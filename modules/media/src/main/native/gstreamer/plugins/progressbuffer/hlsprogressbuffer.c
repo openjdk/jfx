@@ -96,7 +96,7 @@ GType hls_progress_buffer_get_type (void)
                sizeof (HLSProgressBufferClass),
                (GClassInitFunc) hls_progress_buffer_class_intern_init,
                sizeof(HLSProgressBuffer),
-               (GInstanceInitFunc) hls_progress_buffer_init,               
+               (GInstanceInitFunc) hls_progress_buffer_init,
                (GTypeFlags) 0);
         g_once_init_leave (&gonce_data, (gsize) _type);
     }
@@ -498,7 +498,7 @@ static gboolean hls_progress_buffer_sink_event(GstPad *pad, GstObject *parent, G
                 new_segment.stop = -1;
                 new_segment.position = segment.position;
                 new_segment.time = segment.position;
-                    
+
                 event = gst_event_new_segment (&new_segment);
                 element->send_new_segment = FALSE;
                 ret = gst_pad_push_event(element->srcpad, event);
@@ -550,7 +550,7 @@ static gboolean hls_progress_buffer_sink_event(GstPad *pad, GstObject *parent, G
         element->send_new_segment = TRUE;
         element->is_flushing = FALSE;
         element->srcresult = GST_FLOW_OK;
-        
+
         if (!element->is_eos && gst_pad_is_linked(element->srcpad))
             gst_pad_start_task(element->srcpad, hls_progress_buffer_loop, element, NULL);
 

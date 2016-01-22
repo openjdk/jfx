@@ -76,7 +76,7 @@ inline void ImageBuffer::genericConvertToLuminanceMask()
 {
     IntRect luminanceRect(IntPoint(), internalSize());
     RefPtr<Uint8ClampedArray> srcPixelArray = getUnmultipliedImageData(luminanceRect);
-    
+
     unsigned pixelArrayLength = srcPixelArray->length();
     for (unsigned pixelOffset = 0; pixelOffset < pixelArrayLength; pixelOffset += 4) {
         unsigned char a = srcPixelArray->item(pixelOffset + 3);
@@ -85,7 +85,7 @@ inline void ImageBuffer::genericConvertToLuminanceMask()
         unsigned char r = srcPixelArray->item(pixelOffset);
         unsigned char g = srcPixelArray->item(pixelOffset + 1);
         unsigned char b = srcPixelArray->item(pixelOffset + 2);
-        
+
         double luma = (r * 0.2125 + g * 0.7154 + b * 0.0721) * ((double)a / 255.0);
         srcPixelArray->set(pixelOffset + 3, luma);
     }

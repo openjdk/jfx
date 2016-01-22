@@ -232,7 +232,7 @@ void TestInvocation::invoke()
 #if ENABLE(INSPECTOR) && !PLATFORM(IOS)
     if (shouldOpenWebInspector(m_pathOrURL.c_str()))
         WKInspectorShow(WKPageGetInspector(TestController::shared().mainWebView()->page()));
-#endif // ENABLE(INSPECTOR)        
+#endif // ENABLE(INSPECTOR)
 
     WKPageLoadURL(TestController::shared().mainWebView()->page(), m_url.get());
 
@@ -423,7 +423,7 @@ void TestInvocation::didReceiveMessageFromInjectedBundle(WKStringRef messageName
         TestController::shared().setBeforeUnloadReturnValue(WKBooleanGetValue(beforeUnloadReturnValue));
         return;
     }
-    
+
     if (WKStringIsEqualToUTF8CString(messageName, "AddChromeInputField")) {
         TestController::shared().mainWebView()->addChromeInputField();
         WKRetainPtr<WKStringRef> messageName = adoptWK(WKStringCreateWithUTF8CString("CallAddChromeInputFieldCallback"));
@@ -437,7 +437,7 @@ void TestInvocation::didReceiveMessageFromInjectedBundle(WKStringRef messageName
         WKContextPostMessageToInjectedBundle(TestController::shared().context(), messageName.get(), 0);
         return;
     }
-    
+
     if (WKStringIsEqualToUTF8CString(messageName, "FocusWebView")) {
         TestController::shared().mainWebView()->makeWebViewFirstResponder();
         WKRetainPtr<WKStringRef> messageName = adoptWK(WKStringCreateWithUTF8CString("CallFocusWebViewCallback"));

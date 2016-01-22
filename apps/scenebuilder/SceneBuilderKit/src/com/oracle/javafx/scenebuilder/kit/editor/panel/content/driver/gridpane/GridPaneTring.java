@@ -45,12 +45,12 @@ import javafx.scene.layout.GridPane;
  */
 public class GridPaneTring extends AbstractNodeTring<GridPane> {
 
-    private final GridPaneMosaic mosaic 
+    private final GridPaneMosaic mosaic
             = new GridPaneMosaic("tring", //NOI18N
                     false /* shouldShowTray */,
                     false /* shouldCreateSensors */ );
-    
-    public GridPaneTring(ContentPanelController contentPanelController, 
+
+    public GridPaneTring(ContentPanelController contentPanelController,
             FXOMInstance fxomObject) {
         super(contentPanelController, fxomObject, GridPane.class);
         getRootNode().getChildren().add(0, mosaic.getTopGroup()); // Below handles
@@ -58,7 +58,7 @@ public class GridPaneTring extends AbstractNodeTring<GridPane> {
 
     public void setupWithDropTarget(GridPaneDropTarget dropTarget) {
         assert dropTarget != null;
-        
+
         final int targetColumnIndex
                 = dropTarget.getTargetColumnIndex();
         final int targetRowIndex
@@ -100,22 +100,22 @@ public class GridPaneTring extends AbstractNodeTring<GridPane> {
             mosaic.setTargetGap(targetGapColumnIndex, targetGapRowIndex);
         }
     }
-    
+
     /*
      * AbstractGenericTring
      */
-        
+
     @Override
     protected void layoutDecoration() {
-        
+
         super.layoutDecoration();
-        
+
         if (mosaic.getGridPane() != getSceneGraphObject()) {
             mosaic.setGridPane(getSceneGraphObject());
         } else {
             mosaic.update();
         }
-        
+
         // Update mosaic transform
         mosaic.getTopGroup().getTransforms().clear();
         mosaic.getTopGroup().getTransforms().add(getSceneGraphObjectToDecorationTransform());

@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef FTLExitArgument_h
@@ -46,41 +46,41 @@ public:
     {
         m_representation.format = InvalidValueFormat;
     }
-    
+
     ExitArgument(ValueFormat format, unsigned argument)
     {
         m_representation.format = format;
         m_representation.argument = argument;
     }
-    
+
     explicit ExitArgument(ExitArgumentRepresentation representation)
     {
         m_representation = representation;
     }
-    
+
     bool operator!() const { return m_representation.format == InvalidValueFormat; }
-    
+
     ValueFormat format() const
     {
         ASSERT(*this);
         return m_representation.format;
     }
-    
+
     unsigned argument() const
     {
         ASSERT(*this);
         return m_representation.argument;
     }
-    
+
     ExitArgument withFormat(ValueFormat format)
     {
         return ExitArgument(format, argument());
     }
-    
+
     ExitArgumentRepresentation representation() const { return m_representation; }
-    
+
     void dump(PrintStream&) const;
-    
+
 private:
     ExitArgumentRepresentation m_representation;
 };

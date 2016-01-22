@@ -56,7 +56,7 @@ public:
     static std::unique_ptr<SourceProviderCacheItem> create(const SourceProviderCacheItemCreationParameters&);
     ~SourceProviderCacheItem();
 
-    JSToken closeBraceToken() const 
+    JSToken closeBraceToken() const
     {
         JSToken token;
         token.m_type = CLOSEBRACE;
@@ -72,7 +72,7 @@ public:
 
     unsigned functionNameStart : 31;
     bool needsFullActivation : 1;
-    
+
     unsigned closeBraceLine : 31;
     bool usesEval : 1;
 

@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef ArrayBufferNeuteringWatchpoint_h
@@ -34,21 +34,21 @@ namespace JSC {
 class ArrayBufferNeuteringWatchpoint : public JSCell {
 public:
     typedef JSCell Base;
-    
+
 private:
     ArrayBufferNeuteringWatchpoint(VM&);
-    
+
 public:
     DECLARE_INFO;
-    
+
     static ArrayBufferNeuteringWatchpoint* create(VM&);
 
     static const bool needsDestruction = true;
     static const bool hasImmortalStructure = true;
     static void destroy(JSCell*);
-    
+
     static Structure* createStructure(VM&);
-    
+
     WatchpointSet* set() { return m_set.get(); }
 
 private:

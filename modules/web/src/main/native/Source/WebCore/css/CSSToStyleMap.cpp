@@ -45,7 +45,7 @@ RenderStyle* CSSToStyleMap::style() const
 {
     return m_resolver->style();
 }
-    
+
 RenderStyle* CSSToStyleMap::rootElementStyle() const
 {
     return m_resolver->rootElementStyle();
@@ -55,7 +55,7 @@ bool CSSToStyleMap::useSVGZoomRules() const
 {
     return m_resolver->useSVGZoomRules();
 }
-    
+
 PassRefPtr<StyleImage> CSSToStyleMap::styleImage(CSSPropertyID propertyId, CSSValue* value)
 {
     return m_resolver->styleImage(propertyId, value);

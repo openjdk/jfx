@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -52,7 +52,7 @@ GetByIdStatus GetByIdStatus::computeFromLLInt(CodeBlock* profiledBlock, unsigned
     UNUSED_PARAM(uid);
 #if ENABLE(LLINT)
     Instruction* instruction = profiledBlock->instructions().begin() + bytecodeIndex;
-    
+
     if (instruction[0].u.opcode == LLInt::getOpcode(llint_op_get_array_length))
         return GetByIdStatus(NoInformation, false);
 
@@ -71,7 +71,7 @@ GetByIdStatus GetByIdStatus::computeFromLLInt(CodeBlock* profiledBlock, unsigned
         specificValue = 0;
     if (!isValidOffset(offset))
         return GetByIdStatus(NoInformation, false);
-    
+
     return GetByIdStatus(Simple, false, GetByIdVariant(StructureSet(structure), offset, specificValue));
 #else
     return GetByIdStatus(NoInformation, false);
@@ -82,7 +82,7 @@ bool GetByIdStatus::computeForChain(CodeBlock* profiledBlock, StringImpl* uid, P
 {
 #if ENABLE(JIT)
     RefPtr<IntendedStructureChain> chain = passedChain;
-    
+
     // Validate the chain. If the chain is invalid, then currently the best thing
     // we can do is to assume that TakesSlow is true. In the future, it might be
     // worth exploring reifying the structure chain from the structure we've got
@@ -106,19 +106,19 @@ bool GetByIdStatus::computeForChain(CodeBlock* profiledBlock, StringImpl* uid, P
 
     JSObject* currentObject = chain->terminalPrototype();
     Structure* currentStructure = chain->last();
-    
+
     ASSERT_UNUSED(currentObject, currentObject);
-    
+
     unsigned attributesIgnored;
     JSCell* specificValue;
-    
+
     PropertyOffset offset = currentStructure->getConcurrently(
         *profiledBlock->vm(), uid, attributesIgnored, specificValue);
     if (currentStructure->isDictionary())
         specificValue = 0;
     if (!isValidOffset(offset))
         return false;
-    
+
     m_variants.append(
         GetByIdVariant(StructureSet(chain->head()), offset, specificValue, chain));
     return true;
@@ -140,7 +140,7 @@ GetByIdStatus GetByIdStatus::computeFor(CodeBlock* profiledBlock, StubInfoMap& m
 #if ENABLE(DFG_JIT)
     result = computeForStubInfo(
         locker, profiledBlock, map.get(CodeOrigin(bytecodeIndex)), uid);
-    
+
     if (!result.takesSlowPath()
         && (hasExitSite(locker, profiledBlock, bytecodeIndex)
             || profiledBlock->likelyToTakeSlowCase(bytecodeIndex)))
@@ -151,7 +151,7 @@ GetByIdStatus GetByIdStatus::computeFor(CodeBlock* profiledBlock, StubInfoMap& m
 
     if (!result)
         return computeFromLLInt(profiledBlock, bytecodeIndex, uid);
-    
+
     return result;
 }
 
@@ -162,7 +162,7 @@ GetByIdStatus GetByIdStatus::computeForStubInfo(
 {
     if (!stubInfo || !stubInfo->seen)
         return GetByIdStatus(NoInformation);
-    
+
     if (stubInfo->resetByGC)
         return GetByIdStatus(TakesSlowPath, true);
 
@@ -176,7 +176,7 @@ GetByIdStatus GetByIdStatus::computeForStubInfo(
                 return GetByIdStatus(MakesCalls, true);
         }
     }
-    
+
     // Finally figure out if we can derive an access strategy.
     GetByIdStatus result;
     result.m_state = Simple;
@@ -184,7 +184,7 @@ GetByIdStatus GetByIdStatus::computeForStubInfo(
     switch (stubInfo->accessType) {
     case access_unset:
         return GetByIdStatus(NoInformation);
-        
+
     case access_get_by_id_self: {
         Structure* structure = stubInfo->u.getByIdSelf.baseObjectStructure.get();
         if (structure->takesSlowPathInDFGForImpureProperty())
@@ -196,24 +196,24 @@ GetByIdStatus GetByIdStatus::computeForStubInfo(
             *profiledBlock->vm(), uid, attributesIgnored, specificValue);
         if (!isValidOffset(variant.m_offset))
             return GetByIdStatus(TakesSlowPath, true);
-        
+
         if (structure->isDictionary())
             specificValue = 0;
-        
+
         variant.m_structureSet.add(structure);
         variant.m_specificValue = JSValue(specificValue);
         result.m_variants.append(variant);
         return result;
     }
-        
+
     case access_get_by_id_self_list: {
         for (int listIndex = 0; listIndex < listSize; ++listIndex) {
             ASSERT(list->list[listIndex].isDirect);
-            
+
             Structure* structure = list->list[listIndex].base.get();
             if (structure->takesSlowPathInDFGForImpureProperty())
                 return GetByIdStatus(TakesSlowPath, true);
-            
+
             if (list->list[listIndex].chain.get()) {
                 RefPtr<IntendedStructureChain> chain = adoptRef(new IntendedStructureChain(
                     profiledBlock, structure, list->list[listIndex].chain.get(),
@@ -222,14 +222,14 @@ GetByIdStatus GetByIdStatus::computeForStubInfo(
                     return GetByIdStatus(TakesSlowPath, true);
                 continue;
             }
-            
+
             unsigned attributesIgnored;
             JSCell* specificValue;
             PropertyOffset myOffset = structure->getConcurrently(
                 *profiledBlock->vm(), uid, attributesIgnored, specificValue);
             if (structure->isDictionary())
                 specificValue = 0;
-            
+
             if (!isValidOffset(myOffset))
                 return GetByIdStatus(TakesSlowPath, true);
 
@@ -238,31 +238,31 @@ GetByIdStatus GetByIdStatus::computeForStubInfo(
                 GetByIdVariant& variant = result.m_variants[variantIndex];
                 if (variant.m_chain)
                     continue;
-                
+
                 if (variant.m_offset != myOffset)
                     continue;
 
                 found = true;
                 if (variant.m_structureSet.contains(structure))
                     break;
-                
+
                 if (variant.m_specificValue != JSValue(specificValue))
                     variant.m_specificValue = JSValue();
-                
+
                 variant.m_structureSet.add(structure);
                 break;
             }
-            
+
             if (found)
                 continue;
-            
+
             result.m_variants.append(
                 GetByIdVariant(StructureSet(structure), myOffset, specificValue));
         }
-        
+
         return result;
     }
-        
+
     case access_get_by_id_chain: {
         if (!stubInfo->u.getByIdChain.isDirect)
             return GetByIdStatus(MakesCalls, true);
@@ -275,11 +275,11 @@ GetByIdStatus GetByIdStatus::computeForStubInfo(
             return result;
         return GetByIdStatus(TakesSlowPath, true);
     }
-        
+
     default:
         return GetByIdStatus(TakesSlowPath, true);
     }
-    
+
     RELEASE_ASSERT_NOT_REACHED();
     return GetByIdStatus();
 }
@@ -296,16 +296,16 @@ GetByIdStatus GetByIdStatus::computeFor(
             ConcurrentJITLocker locker(dfgBlock->m_lock);
             result = computeForStubInfo(locker, dfgBlock, dfgMap.get(codeOrigin), uid);
         }
-        
+
         if (result.takesSlowPath())
             return result;
-    
+
         {
             ConcurrentJITLocker locker(profiledBlock->m_lock);
             if (hasExitSite(locker, profiledBlock, codeOrigin.bytecodeIndex, ExitFromFTL))
                 return GetByIdStatus(TakesSlowPath, true);
         }
-        
+
         if (result.isSet())
             return result;
     }
@@ -321,16 +321,16 @@ GetByIdStatus GetByIdStatus::computeFor(VM& vm, Structure* structure, StringImpl
 {
     // For now we only handle the super simple self access case. We could handle the
     // prototype case in the future.
-    
+
     if (!structure)
         return GetByIdStatus(TakesSlowPath);
 
     if (toUInt32FromStringImpl(uid) != PropertyName::NotAnIndex)
         return GetByIdStatus(TakesSlowPath);
-    
+
     if (structure->typeInfo().overridesGetOwnPropertySlot() && structure->typeInfo().type() != GlobalObjectType)
         return GetByIdStatus(TakesSlowPath);
-    
+
     if (!structure->propertyAccessesAreCacheable())
         return GetByIdStatus(TakesSlowPath);
 

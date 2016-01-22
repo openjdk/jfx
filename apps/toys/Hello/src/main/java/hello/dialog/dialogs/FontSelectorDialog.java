@@ -59,20 +59,20 @@ import javafx.scene.text.Text;
 import javafx.util.Callback;
 
 public class FontSelectorDialog extends Dialog<Font> {
-    
+
     private FontPanel fontPanel;
     private Font defaultFont;
 
     public FontSelectorDialog(Font defaultFont) {
         fontPanel = new FontPanel();
         fontPanel.setFont(defaultFont);
-        
+
         this.defaultFont = defaultFont;
-        
+
         setResultConverter(dialogButton -> dialogButton == ButtonType.OK ? fontPanel.getFont() : null);
-                
+
         final DialogPane dialogPane = getDialogPane();
-        
+
         setTitle("Select font");
         dialogPane.setHeaderText("Select font");
 
@@ -81,23 +81,23 @@ public class FontSelectorDialog extends Dialog<Font> {
         dialogPane.getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
         dialogPane.setContent(fontPanel);
     }
-    
 
-    
+
+
     /**************************************************************************
-     * 
+     *
      * Support classes
-     * 
+     *
      **************************************************************************/
 
     /**
-     * Font style as combination of font weight and font posture. 
+     * Font style as combination of font weight and font posture.
      * Weight does not have to be there (represented by null)
      * Posture is required, null posture is converted to REGULAR
      */
     private static class FontStyle implements Comparable<FontStyle> {
 
-        private FontPosture posture; 
+        private FontPosture posture;
         private FontWeight weight;
 
         public FontStyle( FontWeight weight, FontPosture posture ) {
@@ -161,7 +161,7 @@ public class FontSelectorDialog extends Dialog<Font> {
 
         private static String makePretty(Object o) {
             String s = o == null? "": o.toString();
-            if ( !s.isEmpty()) { 
+            if ( !s.isEmpty()) {
                 s = s.replace("_", " ");
                 s = s.substring(0, 1).toUpperCase() + s.substring(1).toLowerCase();
             }
@@ -184,7 +184,7 @@ public class FontSelectorDialog extends Dialog<Font> {
             return ( result != 0 )? result: compareEnums(posture,fs.posture);
         }
 
-    }    
+    }
 
 
     private static class FontPanel extends GridPane {
@@ -280,7 +280,7 @@ public class FontSelectorDialog extends Dialog<Font> {
 
                 @Override public void changed(ObservableValue<? extends String> arg0, String arg1, String arg2) {
                     String fontFamily = listSelection(fontListView);
-                    styleListView.setItems(FXCollections.<FontStyle>observableArrayList(getFontStyles(fontFamily)));       
+                    styleListView.setItems(FXCollections.<FontStyle>observableArrayList(getFontStyles(fontFamily)));
                     refreshSample();
                 }});
 
@@ -335,7 +335,7 @@ public class FontSelectorDialog extends Dialog<Font> {
                             listSelection(fontListView),
                             listSelection(sizeListView));
 
-                } else { 
+                } else {
                     return Font.font(
                             listSelection(fontListView),
                             style.getWeight(),
@@ -365,5 +365,5 @@ public class FontSelectorDialog extends Dialog<Font> {
         private <T> T listSelection(final ListView<T> listView) {
             return listView.selectionModelProperty().get().getSelectedItem();
         }
-    }  
+    }
 }

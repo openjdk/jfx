@@ -364,17 +364,17 @@ void PluginView::paint(GraphicsContext* context, const IntRect& rect)
 bool PluginView::popUpContextMenu(NPMenu *menu)
 {
     NSEvent* currentEvent = [NSApp currentEvent];
-    
+
     // NPN_PopUpContextMenu must be called from within the plug-in's NPP_HandleEvent.
     if (!currentEvent)
         return NPERR_GENERIC_ERROR;
-    
+
     NSWindow* window = [currentEvent window];
     NSView* view = [window contentView];
     [NSMenu popUpContextMenu:(NSMenu*)menu withEvent:currentEvent forView:view];
     return true;
 }
-    
+
 void PluginView::invalidateRect(const IntRect& rect)
 {
     invalidateWindowlessPluginRect(rect);
@@ -403,21 +403,21 @@ void PluginView::handleWheelEvent(WheelEvent *event)
 {
     if (!m_isStarted)
         return;
-    
+
     NPCocoaEvent cocoaEvent;
     initializeNPCocoaEvent(&cocoaEvent);
-    
+
     NSEvent *currentEvent = [NSApp currentEvent];
-    
+
     cocoaEvent.type = NPCocoaEventScrollWheel;
-    
+
     cocoaEvent.data.mouse.pluginX = event->layerX() - m_npWindow.x + m_windowRect.x() - m_element->offsetLeft();
     cocoaEvent.data.mouse.pluginY = event->layerY() - m_npWindow.y + m_windowRect.y() - m_element->offsetTop();
     cocoaEvent.data.mouse.deltaX = [currentEvent deltaX];
     cocoaEvent.data.mouse.deltaY = [currentEvent deltaY];
     cocoaEvent.data.mouse.deltaZ = [currentEvent deltaZ];
     cocoaEvent.data.mouse.modifierFlags = getModifiers(event);
-    
+
     if(!dispatchNPCocoaEvent(cocoaEvent)) {
         LOG(Events, "PluginView::handleMouseEvent(): Wheel event type %d at %d,%d not accepted", cocoaEvent.type,
             cocoaEvent.data.mouse.pluginX, cocoaEvent.data.mouse.pluginY);
@@ -429,7 +429,7 @@ void PluginView::handleMouseEvent(MouseEvent* event)
 {
     if (!m_isStarted)
         return;
-    
+
     NPCocoaEventType eventType;
     int32_t buttonNumber = 0;
     int32_t clickCount = 0;
@@ -505,7 +505,7 @@ void PluginView::handleMouseEvent(MouseEvent* event)
     // return false even if they have handled the event.
     event->setDefaultHandled();
 }
-    
+
 void PluginView::handleKeyboardEvent(KeyboardEvent* event)
 {
     if (!m_isStarted)

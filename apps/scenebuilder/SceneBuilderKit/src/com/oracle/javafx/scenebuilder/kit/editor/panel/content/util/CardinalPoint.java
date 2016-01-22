@@ -37,15 +37,15 @@ import javafx.geometry.Point2D;
 
 /**
  *
- * 
+ *
  */
 public enum CardinalPoint {
     N, NE, E, SE, S, SW, W, NW;
-    
-    
+
+
     public CardinalPoint getOpposite() {
         final CardinalPoint result;
-        
+
         switch(this) {
             case N:
                 result = S;
@@ -76,14 +76,14 @@ public enum CardinalPoint {
                 result = N;
                 break;
         }
-        
+
         return result;
     }
-    
-    
+
+
     public Point2D getPosition(Bounds bounds) {
         final double x, y;
-        
+
         switch(this) {
             case N:
                 x = (bounds.getMinX() + bounds.getMaxX()) / 2.0;
@@ -123,14 +123,14 @@ public enum CardinalPoint {
                 y = bounds.getMinY();
                 break;
         }
-        
+
         return new Point2D(x, y);
     }
-    
-    
+
+
     public Bounds getResizedBounds(Bounds currentBounds, double dx, double dy) {
         /*
-         * 
+         *
          *        NW                N                NE
          *         *----------------*----------------*
          *         |                                 |
@@ -142,8 +142,8 @@ public enum CardinalPoint {
          *         |                                 |
          *         *----------------*----------------*
          *        SW                S                SE
-         * 
-         * 
+         *
+         *
          */
 
         // x axis
@@ -175,7 +175,7 @@ public enum CardinalPoint {
                 newMaxX = maxX;
                 break;
         }
-        
+
         // y axis
         final double minY = currentBounds.getMinY();
         final double maxY = currentBounds.getMaxY();
@@ -208,11 +208,11 @@ public enum CardinalPoint {
 
         return new BoundingBox(newMinX, newMinY, newMaxX - newMinX, newMaxY - newMinY);
     }
-    
-    
+
+
     public Point2D clampVector(double dx, double dy) {
         final double resultDX, resultDY;
-        
+
         switch(this) {
             case N:
             case S:
@@ -229,14 +229,14 @@ public enum CardinalPoint {
                 resultDY = dy;
                 break;
         }
-        
+
         return new Point2D(resultDX, resultDY);
     }
-    
-    
+
+
     public Bounds snapBounds(Bounds bounds, double ratio) {
         /*
-         * 
+         *
          *        NW                N                NE
          *         *----------------*----------------*
          *         |                                 |
@@ -248,10 +248,10 @@ public enum CardinalPoint {
          *         |                                 |
          *         *----------------*----------------*
          *        SW                S                SE
-         * 
-         * 
+         *
+         *
          */
-        
+
         final double minX = bounds.getMinX();
         final double minY = bounds.getMinY();
         final double maxX = bounds.getMaxX();

@@ -54,7 +54,7 @@ public class FxIdEditor extends AutoSuggestEditor {
         super(PROPERTY_NAME, DEFAULT_VALUE, suggestedFxIds); //NOI18N
         initialize(editorController);
     }
-    
+
     private void initialize(EditorController editorController) {
         this.editorController = editorController;
 

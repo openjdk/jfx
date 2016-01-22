@@ -75,10 +75,10 @@ TEST(WebKit1, CloseNewWindowInNavigationPolicyDelegate)
     webView.get().preferences.javaScriptCanOpenWindowsAutomatically = YES;
     webView.get().UIDelegate = [TestDelegate shared];
     [[webView.get() mainFrame] loadRequest:[NSURLRequest requestWithURL:[[NSBundle mainBundle] URLForResource:@"OpenNewWindow" withExtension:@"html" subdirectory:@"TestWebKitAPI.resources"]]];
-    
+
     Util::run(&testFinished);
-    
+
     [pool drain];
 }
-    
+
 } // namespace TestWebKitAPI

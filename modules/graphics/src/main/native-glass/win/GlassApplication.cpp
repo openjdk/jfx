@@ -120,7 +120,7 @@ GlassApplication::~GlassApplication()
     }
     if (m_clipboard) {
         GetEnv()->DeleteGlobalRef(m_clipboard);
-    }     
+    }
 }
 
 LPCTSTR GlassApplication::GetWindowClassNameSuffix()
@@ -154,7 +154,7 @@ LRESULT GlassApplication::WindowProc(UINT msg, WPARAM wParam, LPARAM lParam)
             }
             return 0;
         case WM_CREATE:
-            pInstance = this;        
+            pInstance = this;
             STRACE(_T("GlassApplication: created."));
             break;
         case WM_DESTROY:
@@ -162,7 +162,7 @@ LRESULT GlassApplication::WindowProc(UINT msg, WPARAM wParam, LPARAM lParam)
             //Please, use RegisterClipboardViewer(NULL) instead of UnregisterClipboardViewer.
             RegisterClipboardViewer(NULL);
             return 0;
-        case WM_NCDESTROY: 
+        case WM_NCDESTROY:
             // pInstance is deleted in BaseWnd::StaticWindowProc
             pInstance = NULL;
             STRACE(_T("GlassApplication: destroyed."));
@@ -176,12 +176,12 @@ LRESULT GlassApplication::WindowProc(UINT msg, WPARAM wParam, LPARAM lParam)
             break;
         case WM_DRAWCLIPBOARD:
             if (NULL != m_clipboard) {
-                GetEnv()->CallVoidMethod(m_clipboard, midContentChanged); 
+                GetEnv()->CallVoidMethod(m_clipboard, midContentChanged);
                 CheckAndClearException(GetEnv());
             }
             if (NULL != m_hNextClipboardView) {
                 ::SendMessage(m_hNextClipboardView, WM_DRAWCLIPBOARD, wParam, lParam);
-            }            
+            }
             break;
         case WM_SETTINGCHANGE:
             if ((UINT)wParam != SPI_SETWORKAREA) {
@@ -252,9 +252,9 @@ void GlassApplication::RegisterClipboardViewer(jobject clipboard)
 {
     JNIEnv *env = GetEnv();
     if (NULL != m_clipboard) {
-        //Alarm dispose. We need to release all native resources 
+        //Alarm dispose. We need to release all native resources
         //of previous instance.
-        //It means that user skipped ClipboardAssistance close.  
+        //It means that user skipped ClipboardAssistance close.
         JLObject _clipboard(env, env->NewLocalRef(m_clipboard));
         Java_com_sun_glass_ui_win_WinSystemClipboard_dispose(env, _clipboard);
     }
@@ -272,11 +272,11 @@ void GlassApplication::UnregisterClipboardViewer()
         ::ChangeClipboardChain(GetHWND(), m_hNextClipboardView);
         m_hNextClipboardView = NULL;
         STRACE(_T("UnregisterClipboardViewer"));
-    } 
+    }
     if (NULL != m_clipboard) {
         GetEnv()->DeleteGlobalRef(m_clipboard);
         m_clipboard = NULL;
-    }     
+    }
 }
 
 /* static */
@@ -416,12 +416,12 @@ JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_win_WinApplication__1init
     }
 
     GlassApplication *pApp = new GlassApplication(_this);
-    
+
     HWND hWnd = GlassApplication::GetToolkitHWND();
     if (hWnd == NULL) {
         delete pApp;
     }
-    
+
     return (jlong)hWnd;
 }
 

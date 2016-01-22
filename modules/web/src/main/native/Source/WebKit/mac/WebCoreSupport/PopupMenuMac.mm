@@ -64,7 +64,7 @@ void PopupMenuMac::populate()
 
     BOOL messagesEnabled = [[m_popup menu] menuChangedMessagesEnabled];
     [[m_popup menu] setMenuChangedMessagesEnabled:NO];
-    
+
     // For pullDown menus the first item is hidden.
     if (!m_client->shouldPopOver())
         [m_popup addItemWithTitle:@""];
@@ -151,7 +151,7 @@ void PopupMenuMac::show(const IntRect& r, FrameView* v, int index)
     [m_popup selectItemAtIndex:index];
 
     NSMenu* menu = [m_popup menu];
-    
+
     NSPoint location;
     NSFont* font = m_client->menuStyle().font().primaryFont()->getNSFont();
 
@@ -168,22 +168,22 @@ void PopupMenuMac::show(const IntRect& r, FrameView* v, int index)
         NSFont* defaultFont = [NSFont systemFontOfSize:[font pointSize]];
         vertOffset += [font descender] - [defaultFont descender];
         vertOffset = fminf(NSHeight(r), vertOffset);
-    
+
         location = NSMakePoint(NSMinX(r) + popOverHorizontalAdjust, NSMaxY(r) - vertOffset);
     } else
-        location = NSMakePoint(NSMinX(r) + popUnderHorizontalAdjust, NSMaxY(r) + popUnderVerticalAdjust);    
+        location = NSMakePoint(NSMinX(r) + popUnderHorizontalAdjust, NSMaxY(r) + popUnderVerticalAdjust);
 
     // Save the current event that triggered the popup, so we can clean up our event
     // state after the NSMenu goes away.
     Ref<Frame> frame(v->frame());
     RetainPtr<NSEvent> event = frame->eventHandler().currentNSEvent();
-    
+
     Ref<PopupMenuMac> protector(*this);
 
     RetainPtr<NSView> dummyView = adoptNS([[NSView alloc] initWithFrame:r]);
     [view addSubview:dummyView.get()];
     location = [dummyView convertPoint:location fromView:view];
-    
+
     if (Page* page = frame->page()) {
         WebView* webView = kit(page);
         BEGIN_BLOCK_OBJC_EXCEPTIONS;
@@ -218,7 +218,7 @@ void PopupMenuMac::hide()
 {
     [m_popup dismissPopUp];
 }
-    
+
 void PopupMenuMac::updateFromElement()
 {
 }

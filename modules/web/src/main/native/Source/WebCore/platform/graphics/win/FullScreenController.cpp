@@ -21,7 +21,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -40,11 +40,11 @@
 
 using namespace WebCore;
 
-static const int kFullScreenAnimationDuration = 500; // milliseconds 
+static const int kFullScreenAnimationDuration = 500; // milliseconds
 
 class FullScreenController::Private : public MediaPlayerPrivateFullscreenClient  {
 public:
-    Private(FullScreenController* controller, FullScreenControllerClient* client) 
+    Private(FullScreenController* controller, FullScreenControllerClient* client)
         : m_controller(controller)
         , m_client(client)
         , m_originalHost(0)
@@ -56,7 +56,7 @@ public:
     virtual ~Private() { }
 
     virtual LRESULT fullscreenClientWndProc(HWND, UINT, WPARAM, LPARAM);
-    
+
     FullScreenController* m_controller;
     FullScreenControllerClient* m_client;
     OwnPtr<MediaPlayerPrivateFullscreenWindow> m_fullScreenWindow;

@@ -74,7 +74,7 @@ public class LabeledImplTest {
 
     private static final Labeled LABELED = new Label("label");
     private static final LabeledImpl LABELED_IMPL = new LabeledImpl(LABELED);
-    
+
     private static class Configuration {
         final WritableValue source;
         final WritableValue mirror;
@@ -83,9 +83,9 @@ public class LabeledImplTest {
             this.source = source;
             this.mirror = mirror;
             this.value = value;
-        }        
+        }
     }
-    
+
     private static Configuration config(CssMetaData styleable) {
         WritableValue source = styleable.getStyleableProperty(LABELED);
         WritableValue mirror   = styleable.getStyleableProperty(LABELED_IMPL);
@@ -93,7 +93,7 @@ public class LabeledImplTest {
         if (source != null && mirror != null) {
             final String prop = styleable.getProperty();
             if ("-fx-cursor".equals(prop)) {
-                value = Cursor.HAND;                
+                value = Cursor.HAND;
             } else if ("-fx-effect".equals(prop)) {
                 value = new ColorAdjust(.5, .5, .5, .5);
             } else if ("-fx-focus-traversable".equals(prop)) {
@@ -147,46 +147,46 @@ public class LabeledImplTest {
             } else {
                 fail(prop + " not accounted for");
                 return null;
-            }          
-            
+            }
+
             return new Configuration(source, mirror, value);
         }
 
         fail();
         return null;
     }
-    
+
     private final Configuration configuration;
 
     @Parameters
     public static Collection<Configuration[]> data() {
 
         Collection<Configuration[]> data = new ArrayList<Configuration[]>();
-        
+
         List<CssMetaData<? extends Styleable, ?>> styleables = LabeledImplShim.STYLEABLES_TO_MIRROR;
         for(CssMetaData<? extends Styleable, ?> styleable : styleables) {
-            
+
             // LabeledImpl doesn't track -fx-skin since the Labeled
             // isn't necessarily a Label
             if ("-fx-skin".equals(styleable.getProperty())) continue;
-            
+
             Configuration[] config = new Configuration[] { config(styleable) };
             if (config != null) data.add(config);
         }
-        
-        data.add( new Configuration[] { 
+
+        data.add( new Configuration[] {
             new Configuration(LABELED.textProperty(), LABELED_IMPL.textProperty(), "TEST 1 2 3")
         });
-        
+
         return data;
     }
-    
-    @Test 
+
+    @Test
     public void testMirrorReflectsSource() {
         final WritableValue source = configuration.source;
         final WritableValue mirror = configuration.mirror;
         final Object expected = configuration.value;
-        
+
         source.setValue(expected);
         assertEquals(mirror.toString(), expected, mirror.getValue());
     }

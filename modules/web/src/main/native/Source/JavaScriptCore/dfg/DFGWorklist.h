@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef DFGWorklist_h
@@ -50,62 +50,62 @@ public:
     enum State { NotKnown, Compiling, Compiled };
 
     ~Worklist();
-    
+
     static PassRefPtr<Worklist> create(unsigned numberOfThreads);
-    
+
     void enqueue(PassRefPtr<Plan>);
-    
+
     // This is equivalent to:
     // worklist->waitUntilAllPlansForVMAreReady(vm);
     // worklist->completeAllReadyPlansForVM(vm);
     void completeAllPlansForVM(VM&);
-    
+
     void waitUntilAllPlansForVMAreReady(VM&);
     State completeAllReadyPlansForVM(VM&, CompilationKey = CompilationKey());
     void removeAllReadyPlansForVM(VM&);
-    
+
     State compilationState(CompilationKey);
-    
+
     size_t queueLength();
-    
+
     void suspendAllThreads();
     void resumeAllThreads();
-    
+
     bool isActive() const { return !!m_plans.size(); }
-    
+
     void visitChildren(SlotVisitor&, CodeBlockSet&); // Only called on the main thread after suspending all threads.
-    
+
     void dump(PrintStream&) const;
-    
+
 private:
     Worklist();
     void finishCreation(unsigned numberOfThreads);
-    
+
     void runThread(ThreadData*);
     static void threadFunction(void* argument);
-    
+
     void removeAllReadyPlansForVM(VM&, Vector<RefPtr<Plan>, 8>&);
 
     void dump(const MutexLocker&, PrintStream&) const;
 
     // Used to inform the thread about what work there is left to do.
     Deque<RefPtr<Plan>> m_queue;
-    
+
     // Used to answer questions about the current state of a code block. This
     // is particularly great for the cti_optimize OSR slow path, which wants
     // to know: did I get here because a better version of me just got
     // compiled?
     typedef HashMap<CompilationKey, RefPtr<Plan>> PlanMap;
     PlanMap m_plans;
-    
+
     // Used to quickly find which plans have been compiled and are ready to
     // be completed.
     Vector<RefPtr<Plan>, 16> m_readyPlans;
-    
+
     mutable Mutex m_lock;
     ThreadCondition m_planEnqueued;
     ThreadCondition m_planCompiled;
-    
+
     Vector<std::unique_ptr<ThreadData>> m_threads;
     unsigned m_numberOfActiveThreads;
 };

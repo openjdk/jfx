@@ -210,7 +210,7 @@ public final class Stop {
     /**
      * Returns a hash code for this {@code Stop} object.
      * @return a hash code for this {@code Stop} object.
-     */ 
+     */
     @Override public int hashCode() {
         if (hash == 0) {
             long bits = 17L;
@@ -224,7 +224,7 @@ public final class Stop {
     /**
      * Returns a string representation of this {@code Stop} object.
      * @return a string representation of this {@code Stop} object.
-     */ 
+     */
     @Override public String toString() {
         return color + " " + offset*100 + "%";
     }

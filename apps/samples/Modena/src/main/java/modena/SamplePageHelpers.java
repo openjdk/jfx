@@ -78,7 +78,7 @@ import javafx.scene.shape.Rectangle;
  * Helper static methods for Sample Page
  */
 public class SamplePageHelpers {
-    
+
     static <T extends Node> T withState(T node, String state) {
         if (node != null && state != null) {
             // stop user from being able to change state
@@ -92,19 +92,19 @@ public class SamplePageHelpers {
         }
         return node;
     }
-    
+
     static <T extends Node> T withState(final T node, final String state, final String subNodeStyleClass, final String subNodeState) {
         withState(node, state);
         Platform.runLater(() -> withState(node.lookup(subNodeStyleClass), subNodeState));
         return node;
     }
-    
+
     private static final String[] LETTERS = new String[]{"A","B","C","D","E","F","G","H","I","J","K","L","M","N","O","P","Q","R","S","T","U","V","W","X","Y","Z"};
-    
+
     static ObservableList<String> sampleItems() {
         return sampleItems(7);
     }
-    
+
     static ObservableList<String> sampleItems(int numberOfItems) {
         ArrayList<String> items = new ArrayList<String>();
         if (numberOfItems < 26) {
@@ -118,7 +118,7 @@ public class SamplePageHelpers {
         }
         return FXCollections.observableArrayList(items);
     }
-    
+
     static Node scrollPaneContent() {
         Line l1 = new Line();
         l1.setEndX(200);
@@ -131,7 +131,7 @@ public class SamplePageHelpers {
         l2.setStroke(Color.DODGERBLUE);
         return new Group(new Rectangle(200, 200, Color.PALETURQUOISE), l1, l2);
     }
-    
+
     static Node createTabPane(int numOfTabs, int prefWidth, int prefHeight, String firstTabText, boolean floating, boolean disableFirst, Side side) {
         TabPane tabPane = new TabPane();
         tabPane.setSide(side);
@@ -147,13 +147,13 @@ public class SamplePageHelpers {
         tabPane.setPrefHeight(prefHeight);
         return tabPane;
     }
-    
+
     static Node wrapBdr(Node node) {
         StackPane sp = new StackPane(node);
         sp.setStyle("-fx-border-color: black; -fx-border-width: 3;");
         return sp;
     }
-    
+
     static ToolBar createToolBar(Side side, boolean overFlow, boolean disabled) {
         final boolean vertical = side == Side.LEFT || side == Side.RIGHT;
         ToolBar toolBar = new ToolBar();
@@ -186,7 +186,7 @@ public class SamplePageHelpers {
         }
         return toolBar;
     }
-    
+
     static Accordion createAccordion() {
         Accordion accordian = new Accordion();
         accordian.getPanes().addAll(
@@ -196,7 +196,7 @@ public class SamplePageHelpers {
         );
         return accordian;
     }
-    
+
     static SplitPane createSplitPane(int numOfItems, boolean vertical, Node firstItem) {
         SplitPane splitPane = new SplitPane();
         if(vertical) splitPane.setOrientation(Orientation.VERTICAL);
@@ -207,7 +207,7 @@ public class SamplePageHelpers {
         splitPane.setPrefSize(150, 150);
         return splitPane;
     }
-    
+
     static Pagination createPagination(int numOfPages, boolean bullet, boolean arrows) {
         Pagination pagination = new Pagination(numOfPages);
         if (bullet) pagination.getStyleClass().add("bullet");
@@ -215,7 +215,7 @@ public class SamplePageHelpers {
         pagination.setPageFactory(param -> new Label("Page Label "+param));
         return pagination;
     }
-    
+
     static ListView<String> createListView(int numOfItems, boolean multipleSelection, boolean disable, boolean horiz) {
         ListView<String> listView = new ListView<String>();
         if (horiz) listView.setOrientation(Orientation.HORIZONTAL);
@@ -231,7 +231,7 @@ public class SamplePageHelpers {
         }
         return listView;
     }
-    
+
     static MenuItem[] createMenuItems(int numberOfItems) {
         ArrayList<MenuItem> items = new ArrayList<MenuItem>();
         if (numberOfItems < 26) {
@@ -245,7 +245,7 @@ public class SamplePageHelpers {
         }
         return items.toArray(new MenuItem[items.size()]);
     }
-    
+
     static MenuBar createMenuBar() {
         final MenuBar mb = new MenuBar();
         mb.getMenus().addAll(
@@ -257,20 +257,20 @@ public class SamplePageHelpers {
         Platform.runLater(() -> new ArrayList<Node>(mb.lookupAll(".menu")).get(1).pseudoClassStateChanged(PseudoClass.getPseudoClass("hover"), true));
         return  mb;
     }
-    
+
     static Menu createMenu(String name) {
         Menu m = new Menu(name);
         m.getStyleClass().add(name);
         m.getItems().addAll(createMenuContents());
         return  m;
     }
-    
+
     static Node createContextMenu() {
         Button b = new Button("ContextMenu Right Click Me");
         b.setContextMenu(new ContextMenu(createMenuContents()));
         return b;
     }
-    
+
     static Node createInlineMenu(final boolean selectAll) {
         // create a context menu so we can put it inline in our test page
         final ContextMenu menu = new ContextMenu(createMenuContents());
@@ -303,13 +303,13 @@ public class SamplePageHelpers {
         });
         return contextMenu;
     }
-    
+
     static MenuItem[] createMenuContents() {
         List<MenuItem> menuItems = new ArrayList<>();
         final Menu menu11 = new Menu("_New");
         MenuItem menu12 = new MenuItem("_Open");
         menu12.getStyleClass().add("OpenMenuItem");
-        menu12.setAccelerator(new KeyCharacterCombination("]", 
+        menu12.setAccelerator(new KeyCharacterCombination("]",
                 KeyCombination.SHIFT_DOWN, KeyCombination.META_DOWN));
         Menu menu13 = new Menu("_Submenu");
         MenuItem menu15 = new MenuItem("E_xit");
@@ -349,16 +349,16 @@ public class SamplePageHelpers {
         MenuItem menu131 = new MenuItem("Item _1");
         MenuItem menu132 = new MenuItem("Item _2");
         menu13.getItems().addAll(menu131, menu132);
-        
+
         return menuItems.toArray(new MenuItem[menuItems.size()]);
     }
-    
+
     static final Image recorder48 = new Image(SamplePageHelpers.class.getResource("recorder-icon-48.png").toExternalForm());
-    
+
     static ImageView createGraphic() {
         return new ImageView(recorder48);
     }
-    
+
     static Node createGreyButton(double percentageGrey) {
         int grey = (int)(percentageGrey*255);
         int percentage = (int)(percentageGrey * 100);

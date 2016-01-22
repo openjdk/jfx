@@ -134,7 +134,7 @@ public  class Polygon extends Shape {
      */
     @Deprecated
     @Override
-	public Path2D impl_configShape() {
+    public Path2D impl_configShape() {
         double p1 = getPoints().get(0);
         double p2 = getPoints().get(1);
         shape.reset();

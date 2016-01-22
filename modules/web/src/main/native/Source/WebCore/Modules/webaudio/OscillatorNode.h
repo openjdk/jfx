@@ -54,7 +54,7 @@ public:
     static PassRefPtr<OscillatorNode> create(AudioContext*, float sampleRate);
 
     virtual ~OscillatorNode();
-    
+
     // AudioNode
     virtual void process(size_t framesToProcess) override;
     virtual void reset() override;
@@ -82,7 +82,7 @@ private:
 
     // One of the waveform types defined in the enum.
     unsigned short m_type;
-    
+
     // Frequency value in Hertz.
     RefPtr<AudioParam> m_frequency;
 
@@ -101,7 +101,7 @@ private:
     // Stores sample-accurate values calculated according to frequency and detune.
     AudioFloatArray m_phaseIncrements;
     AudioFloatArray m_detuneValues;
-    
+
     RefPtr<PeriodicWave> m_periodicWave;
 
     // Cache the wave tables for different waveform types, except CUSTOM.

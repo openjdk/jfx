@@ -31,7 +31,7 @@
 namespace WebCore {
 
 class AudioParam;
-    
+
 class BiquadFilterNode : public AudioBasicProcessorNode {
 public:
     // These must be defined as in the .idl file and must match those in the BiquadProcessor class.
@@ -48,7 +48,7 @@ public:
 
     static PassRefPtr<BiquadFilterNode> create(AudioContext* context, float sampleRate)
     {
-        return adoptRef(new BiquadFilterNode(context, sampleRate));      
+        return adoptRef(new BiquadFilterNode(context, sampleRate));
     }
 
     String type() const;

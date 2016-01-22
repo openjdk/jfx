@@ -60,14 +60,14 @@ public class ProfileController extends AnchorPane implements Initializable {
     private CheckBox subscribed;
     @FXML
     private Hyperlink logout;
-    @FXML 
+    @FXML
     private Button save;
-    
-    @FXML 
+
+    @FXML
     private Label success;
-    
+
     private FXMLLoginDemoApp application;
-    
+
     public void setApp(FXMLLoginDemoApp application){
         this.application = application;
         User loggedUser = application.getLoggedUser();
@@ -84,17 +84,17 @@ public class ProfileController extends AnchorPane implements Initializable {
     @Override
     public void initialize(URL location, ResourceBundle resources) {
     }
-    
+
     public void processLogout(ActionEvent event) {
         if (application == null){
             // We are running in isolated FXML, possibly in Scene Builder.
             // NO-OP.
             return;
         }
-        
+
         application.userLogout();
     }
-    
+
     public void saveProfile(ActionEvent event) {
         if (application == null){
             // We are running in isolated FXML, possibly in Scene Builder.
@@ -109,7 +109,7 @@ public class ProfileController extends AnchorPane implements Initializable {
         loggedUser.setAddress(address.getText());
         animateMessage();
     }
-    
+
     public void resetProfile(ActionEvent event){
         if (application == null){
             return;
@@ -119,7 +119,7 @@ public class ProfileController extends AnchorPane implements Initializable {
         subscribed.setSelected(false);
         address.setText("");
         success.setOpacity(0.0);
-        
+
     }
 
     private void animateMessage() {

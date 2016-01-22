@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef DFGScoreBoard_h
@@ -54,7 +54,7 @@ public:
     {
         assertClear();
     }
-    
+
     void assertClear()
     {
 #if !ASSERT_DISABLED
@@ -114,7 +114,7 @@ public:
     {
         use(child.node());
     }
-    
+
     void useIfHasResult(Edge child)
     {
         if (!child)
@@ -128,7 +128,7 @@ public:
     {
         return m_highWatermark;
     }
-    
+
 #ifndef NDEBUG
     void dump()
     {
@@ -158,10 +158,10 @@ public:
 
 private:
     static uint32_t max() { return std::numeric_limits<uint32_t>::max(); }
-    
+
     // The size of the span of virtual registers that this code block will use.
     unsigned m_highWatermark;
-    
+
     // For every virtual register that has been allocated (either currently alive, or in
     // the free list), we keep a count of the number of remaining uses until it is dead
     // (0, in the case of entries in the free list). Since there is an entry for every

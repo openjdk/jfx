@@ -43,12 +43,12 @@ import javafx.scene.control.skin.TableRowSkin;
  * <p>TableRow is an {@link javafx.scene.control.IndexedCell IndexedCell}, but
  * rarely needs to be used by developers creating TableView instances. The only
  * time TableRow is likely to be encountered at all by a developer is if they
- * wish to create a custom {@link TableView#rowFactoryProperty() rowFactory} 
+ * wish to create a custom {@link TableView#rowFactoryProperty() rowFactory}
  * that replaces an entire row of a TableView.</p>
  *
  * <p>More often than not, it is actually easier for a developer to customize
  * individual cells in a row, rather than the whole row itself. To do this,
- * you can specify a custom {@link TableColumn#cellFactoryProperty() cellFactory} 
+ * you can specify a custom {@link TableColumn#cellFactoryProperty() cellFactory}
  * on each TableColumn instance.</p>
  *
  * @see TableView
@@ -83,7 +83,7 @@ public class TableRow<T> extends IndexedCell<T> {
      *                                                                         *
      **************************************************************************/
 
-    
+
 
     /***************************************************************************
      *                                                                         *
@@ -115,14 +115,14 @@ public class TableRow<T> extends IndexedCell<T> {
     private final WeakInvalidationListener weakFocusedListener = new WeakInvalidationListener(focusedListener);
     private final WeakInvalidationListener weakEditingListener = new WeakInvalidationListener(editingListener);
 
-    
-    
+
+
     /***************************************************************************
      *                                                                         *
      * Properties                                                              *
      *                                                                         *
      **************************************************************************/
-    
+
     // --- TableView
     private ReadOnlyObjectWrapper<TableView<T>> tableView;
     private void setTableView(TableView<T> value) {
@@ -163,7 +163,7 @@ public class TableRow<T> extends IndexedCell<T> {
 
                             oldTableView.editingCellProperty().removeListener(weakEditingListener);
                         }
-                        
+
                         weakTableViewRef = null;
                     }
 
@@ -180,7 +180,7 @@ public class TableRow<T> extends IndexedCell<T> {
                         }
 
                         tableView.editingCellProperty().addListener(weakEditingListener);
-                        
+
                         weakTableViewRef = new WeakReference<TableView<T>>(get());
                     }
                 }
@@ -231,7 +231,7 @@ public class TableRow<T> extends IndexedCell<T> {
     private void updateItem(int oldIndex) {
         TableView<T> tv = getTableView();
         if (tv == null || tv.getItems() == null) return;
-        
+
         final List<T> items = tv.getItems();
         final int itemCount = items == null ? -1 : items.size();
 
@@ -270,7 +270,7 @@ public class TableRow<T> extends IndexedCell<T> {
             }
         }
     }
-    
+
     private void updateSelection() {
         /*
          * This cell should be selected if the selection mode of the table
@@ -281,7 +281,7 @@ public class TableRow<T> extends IndexedCell<T> {
          * selected.
          */
         if (getIndex() == -1) return;
-        
+
         TableView<T> table = getTableView();
         boolean isSelected = table != null &&
                 table.getSelectionModel() != null &&
@@ -293,21 +293,21 @@ public class TableRow<T> extends IndexedCell<T> {
 
     private void updateFocus() {
         if (getIndex() == -1) return;
-        
+
         TableView<T> table = getTableView();
         if (table == null) return;
-        
+
         TableView.TableViewSelectionModel<T> sm = table.getSelectionModel();
         TableView.TableViewFocusModel<T> fm = table.getFocusModel();
         if (sm == null || fm == null) return;
-        
+
         boolean isFocused = ! sm.isCellSelectionEnabled() && fm.isFocused(getIndex());
         setFocused(isFocused);
     }
 
     private void updateEditing() {
         if (getIndex() == -1) return;
-        
+
         TableView<T> table = getTableView();
         if (table == null) return;
 

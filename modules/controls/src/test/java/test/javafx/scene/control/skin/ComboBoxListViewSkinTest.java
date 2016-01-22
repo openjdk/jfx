@@ -46,12 +46,12 @@ public class ComboBoxListViewSkinTest {
         comboBox = new ComboBox();
         skin = new ComboBoxListViewSkin(comboBox);
         comboBox.setSkin(skin);
-        
+
         sm = comboBox.getSelectionModel();
         listView = (ListView)skin.getPopupContent();
         listSm = listView.getSelectionModel();
     }
-    
+
     @Test public void testListViewSelectionEqualsComboBox() {
         comboBox.getItems().addAll("Apple", "Orange", "Banana");
         sm.select("Orange");
@@ -59,7 +59,7 @@ public class ComboBoxListViewSkinTest {
         assertEquals("Orange", sm.getSelectedItem());
         assertEquals("Orange", listSm.getSelectedItem());
     }
-    
+
     @Test public void test_rt19431_ListViewSelectionIsNullWhenComBoxChangesEditableProperty() {
         comboBox.getItems().addAll("Apple", "Orange", "Banana");
         sm.select("Orange");
@@ -68,5 +68,5 @@ public class ComboBoxListViewSkinTest {
         assertNull(sm.getSelectedItem());
         assertNull(listSm.getSelectedItem());
     }
-    
+
 }

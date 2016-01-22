@@ -41,8 +41,8 @@ import org.junit.Test;
 import static org.junit.Assert.*;
 
 public class DoublePropertyTest {
-	
-	private static final Object NO_BEAN = null;
+
+    private static final Object NO_BEAN = null;
     private static final String NO_NAME_1 = null;
     private static final String NO_NAME_2 = "";
     private static final double VALUE_1 = Math.PI;
@@ -86,12 +86,12 @@ public class DoublePropertyTest {
         p2.set(VALUE_1);
         assertEquals(VALUE_1, p1.get(), EPSILON);
         assertEquals(VALUE_1, p2.get(), EPSILON);
-        
+
         p1.unbindBidirectional(p2);
         p1.set(VALUE_2);
         assertEquals(VALUE_2, p1.get(), EPSILON);
         assertEquals(VALUE_1, p2.get(), EPSILON);
-        
+
         p1.set(VALUE_1);
         p2.set(VALUE_2);
         assertEquals(VALUE_1, p1.get(), EPSILON);
@@ -102,10 +102,10 @@ public class DoublePropertyTest {
     public void testToString() {
         final DoubleProperty v0 = new DoublePropertyStub(NO_BEAN, NO_NAME_1);
         assertEquals("DoubleProperty [value: " + DEFAULT + "]", v0.toString());
-        
+
         final DoubleProperty v1 = new DoublePropertyStub(NO_BEAN, NO_NAME_2);
         assertEquals("DoubleProperty [value: " + DEFAULT + "]", v1.toString());
-        
+
         final Object bean = new Object();
         final String name = "My name";
         final DoubleProperty v2 = new DoublePropertyStub(bean, name);
@@ -128,7 +128,7 @@ public class DoublePropertyTest {
         v5.set(VALUE_1);
         assertEquals("DoubleProperty [name: My name, value: " + VALUE_1 + "]", v5.toString());
     }
-    
+
     @Test
     public void testAsObject() {
         final DoubleProperty valueModel = new SimpleDoubleProperty(2d);
@@ -139,12 +139,12 @@ public class DoublePropertyTest {
         assertEquals(-4354.3, exp.getValue(), EPSILON);
         valueModel.set(5e11);
         assertEquals(5e11, exp.getValue(), EPSILON);
-        
+
         exp.set(1234.0);
         assertEquals(1234.0, valueModel.doubleValue(), EPSILON);
-        
+
     }
-    
+
     @Test
     public void testObjectToDouble() {
         final ObjectProperty<Double> valueModel = new SimpleObjectProperty<Double>();
@@ -155,7 +155,7 @@ public class DoublePropertyTest {
         assertEquals(-4354.3, exp.doubleValue(), EPSILON);
         valueModel.set(5e11);
         assertEquals(5e11, exp.doubleValue(), EPSILON);
-        
+
         exp.set(1234.0);
         assertEquals(1234.0, valueModel.getValue(), EPSILON);
     }
@@ -190,7 +190,7 @@ public class DoublePropertyTest {
         public void set(double value) {
             this.value = value;
         }
-        
+
         @Override
         public void bind(ObservableValue<? extends Number> observable) {
             fail("Not in use");

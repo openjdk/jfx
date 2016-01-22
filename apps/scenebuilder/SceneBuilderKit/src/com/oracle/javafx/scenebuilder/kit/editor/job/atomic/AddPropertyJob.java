@@ -44,17 +44,17 @@ public class AddPropertyJob extends Job {
     private final FXOMProperty property;
     private final FXOMInstance targetInstance;
     private final int targetIndex;
-    
-    public AddPropertyJob(FXOMProperty property, 
+
+    public AddPropertyJob(FXOMProperty property,
             FXOMInstance targetInstance,
             int targetIndex,
             EditorController editorController) {
         super(editorController);
-        
+
         assert property != null;
         assert targetInstance != null;
         assert targetIndex >= -1;
-        
+
         this.property = property;
         this.targetInstance = targetInstance;
         this.targetIndex = targetIndex;
@@ -63,7 +63,7 @@ public class AddPropertyJob extends Job {
     /*
      * Job
      */
-    
+
     @Override
     public boolean isExecutable() {
         return property.getParentInstance() == null;
@@ -77,22 +77,22 @@ public class AddPropertyJob extends Job {
     @Override
     public void undo() {
         assert property.getParentInstance() == targetInstance;
-        
+
         getEditorController().getFxomDocument().beginUpdate();
         property.removeFromParentInstance();
         getEditorController().getFxomDocument().endUpdate();
-        
+
         assert property.getParentInstance() == null;
     }
 
     @Override
     public void redo() {
         assert property.getParentInstance() == null;
-        
+
         getEditorController().getFxomDocument().beginUpdate();
         property.addToParentInstance(targetIndex, targetInstance);
         getEditorController().getFxomDocument().endUpdate();
-        
+
         assert property.getParentInstance() == targetInstance;
     }
 
@@ -101,5 +101,5 @@ public class AddPropertyJob extends Job {
         // Should normally not reach the user
         return getClass().getSimpleName();
     }
-    
+
 }

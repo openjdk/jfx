@@ -31,7 +31,7 @@ param sampler alphaTex;
 /**
  * All textures are normalized to 0..1 so we don't have to care that
  * the Cb and Cr textures may be 1/2 or 1/4 the size of luma and alpha
- * 
+ *
  * Texture scale values are determined by physical versus content sizes
  * so we can adjust the actual sampler coords.
  *
@@ -57,7 +57,7 @@ float4 paint(float2 texCoord)
     RGBA.r = luma + (1.5966 * cr);
     RGBA.g = luma - (0.3920 * cb) - (0.8132 * cr);
     RGBA.b = luma + (2.0184 * cb);
-    
+
     // nonzero alpha scale indicates the presence of an alpha channel, otherwise it's set to 1.0
     if (lumaAlphaScale.z > 0.0) {
         RGBA.a = sample(alphaTex, texCoord * lumaAlphaScale.zw).a;

@@ -79,7 +79,7 @@ enum PreferredPrimitiveType { NoPreference, PreferNumber, PreferString };
 enum ECMAMode { StrictMode, NotStrictMode };
 
 typedef int64_t EncodedJSValue;
-    
+
 union EncodedValueDescriptor {
     int64_t asInt64;
 #if USE(JSVALUE32_64)
@@ -87,7 +87,7 @@ union EncodedValueDescriptor {
 #elif USE(JSVALUE64)
     JSCell* ptr;
 #endif
-        
+
 #if CPU(BIG_ENDIAN)
     struct {
         int32_t tag;
@@ -215,7 +215,7 @@ public:
     bool isGetterSetter() const;
     bool isObject() const;
     bool inherits(const ClassInfo*) const;
-        
+
     // Extracting the value.
     bool getString(ExecState*, WTF::String&) const;
     WTF::String getString(ExecState*) const; // null string if not a string
@@ -223,7 +223,7 @@ public:
 
     // Extracting integer values.
     bool getUInt32(uint32_t&) const;
-        
+
     // Basic conversions.
     JSValue toPrimitive(ExecState*, PreferredPrimitiveType = NoPreference) const;
     bool getPrimitiveNumber(ExecState*, double& number, JSValue&);
@@ -273,7 +273,7 @@ public:
     bool isCell() const;
     JSCell* asCell() const;
     JS_EXPORT_PRIVATE bool isValidCallee();
-        
+
     JSValue structureOrUndefined() const;
 
     JS_EXPORT_PRIVATE void dump(PrintStream&) const;
@@ -285,7 +285,7 @@ public:
     // converted to Int52s and back again.
     static const unsigned numberOfInt52Bits = 52;
     static const unsigned int52ShiftAmount = 12;
-    
+
     static ptrdiff_t offsetOfPayload() { return OBJECT_OFFSETOF(JSValue, u.asBits.payload); }
     static ptrdiff_t offsetOfTag() { return OBJECT_OFFSETOF(JSValue, u.asBits.tag); }
 

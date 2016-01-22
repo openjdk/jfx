@@ -78,7 +78,7 @@ public:
         , m_layerID(layerID)
         , m_representation(PlatformLayerIDRepresentation)
     { }
-    
+
     operator GraphicsLayer*() const
     {
         ASSERT(m_representation == GraphicsLayerRepresentation);
@@ -96,7 +96,7 @@ public:
         ASSERT(m_representation != PlatformLayerRepresentation);
         return m_layerID;
     }
-    
+
     bool operator ==(const LayerRepresentation& other) const
     {
         if (m_representation != other.m_representation)
@@ -115,7 +115,7 @@ public:
         ASSERT_NOT_REACHED();
         return true;
     }
-    
+
     LayerRepresentation toRepresentation(Type representation) const
     {
         switch (representation) {
@@ -134,7 +134,7 @@ public:
 
     bool representsGraphicsLayer() const { return m_representation == GraphicsLayerRepresentation; }
     bool representsPlatformLayerID() const { return m_representation == PlatformLayerIDRepresentation; }
-    
+
 private:
     union {
         GraphicsLayer* m_graphicsLayer;
@@ -149,7 +149,7 @@ class ScrollingStateNode {
 public:
     ScrollingStateNode(ScrollingNodeType, ScrollingStateTree&, ScrollingNodeID);
     virtual ~ScrollingStateNode();
-    
+
     ScrollingNodeType nodeType() const { return m_nodeType; }
 
     virtual PassOwnPtr<ScrollingStateNode> clone(ScrollingStateTree& adoptiveTree) = 0;
@@ -169,7 +169,7 @@ public:
 
     ChangedProperties changedProperties() const { return m_changedProperties; }
     void setChangedProperties(ChangedProperties changedProperties) { m_changedProperties = changedProperties; }
-    
+
     virtual void syncLayerPositionForViewportRect(const LayoutRect& /*viewportRect*/) { }
 
     const LayerRepresentation& layer() const { return m_layer; }

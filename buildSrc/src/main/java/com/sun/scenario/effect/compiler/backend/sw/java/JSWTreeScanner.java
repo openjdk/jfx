@@ -43,23 +43,23 @@ class JSWTreeScanner extends TreeScanner {
     private int vectorIndex = 0;
     private boolean inFieldSelect = false;
     private char selectedField = 'x';
-    
+
     JSWTreeScanner() {
         this(null);
     }
-    
+
     JSWTreeScanner(String funcName) {
         this.funcName = funcName;
     }
-    
+
     private void output(String s) {
         sb.append(s);
     }
-    
+
     String getResult() {
         return (sb != null) ? sb.toString() : null;
     }
-    
+
     @Override
     public void visitArrayAccessExpr(ArrayAccessExpr e) {
         if (e.getExpr() instanceof VariableExpr &&
@@ -138,7 +138,7 @@ class JSWTreeScanner extends TreeScanner {
     @Override
     public void visitExprStmt(ExprStmt s) {
         Expr expr = s.getExpr();
-        
+
         outputPreambles(expr);
 
         Type t = expr.getResultType();
@@ -168,7 +168,7 @@ class JSWTreeScanner extends TreeScanner {
         scan(e.getExpr());
         inFieldSelect = false;
     }
-    
+
     @Override
     public void visitForStmt(ForStmt s) {
         output("for (");
@@ -190,7 +190,7 @@ class JSWTreeScanner extends TreeScanner {
             JSWBackend.putFuncDef(d);
         }
     }
-    
+
     @Override
     public void visitGlueBlock(GlueBlock b) {
         JSWBackend.addGlueBlock(b.getText());
@@ -203,7 +203,7 @@ class JSWTreeScanner extends TreeScanner {
             output("f");
         }
     }
-    
+
     @Override
     public void visitParenExpr(ParenExpr e) {
         output("(");
@@ -225,7 +225,7 @@ class JSWTreeScanner extends TreeScanner {
         if (funcName == null) {
             throw new RuntimeException("Return statement not expected");
         }
-        
+
         Type t = expr.getResultType();
         if (t.isVector()) {
             inVectorOp = true;
@@ -261,7 +261,7 @@ class JSWTreeScanner extends TreeScanner {
         output(e.getOp().toString());
         scan(e.getExpr());
     }
-    
+
     @Override
     public void visitVarDecl(VarDecl d) {
         Variable var = d.getVariable();
@@ -271,7 +271,7 @@ class JSWTreeScanner extends TreeScanner {
         }
 
         outputPreambles(d);
-        
+
         Type t = var.getType();
         if (t.isVector()) {
             inVectorOp = true;
@@ -330,7 +330,7 @@ class JSWTreeScanner extends TreeScanner {
         output(")");
         scan(s.getStmt());
     }
-    
+
     private void outputPreambles(Tree tree) {
         JSWCallScanner scanner = new JSWCallScanner();
         scanner.scan(tree);

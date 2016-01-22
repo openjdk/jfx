@@ -45,16 +45,16 @@ static bool isValidRegisterForLiveness(CodeBlock* codeBlock, int operand)
 {
     if (codeBlock->isConstantRegisterIndex(operand))
         return false;
-    
+
     VirtualRegister virtualReg(operand);
     if (!virtualReg.isLocal())
         return false;
-    
+
     if (codeBlock->captureCount()
         && operand <= codeBlock->captureStart()
         && operand > codeBlock->captureEnd())
         return false;
-    
+
     return true;
 }
 
@@ -76,13 +76,13 @@ public:
         : m_bits(bits)
     {
     }
-    
+
     void operator()(CodeBlock* codeBlock, Instruction*, OpcodeID, int operand)
     {
         if (isValidRegisterForLiveness(codeBlock, operand))
             setForOperand(codeBlock, m_bits, operand);
     }
-    
+
 private:
     FastBitVector& m_bits;
 };
@@ -137,16 +137,16 @@ static void stepOverInstruction(CodeBlock* codeBlock, Vector<RefPtr<BytecodeBasi
 {
     uses.clearAll();
     defs.clearAll();
-    
+
     SetBit setUses(uses);
     SetBit setDefs(defs);
     computeUsesForBytecodeOffset(codeBlock, bytecodeOffset, setUses);
     computeDefsForBytecodeOffset(codeBlock, bytecodeOffset, setDefs);
-    
+
     out.exclude(defs);
     out.merge(uses);
-    
-    // If we have an exception handler, we want the live-in variables of the 
+
+    // If we have an exception handler, we want the live-in variables of the
     // exception handler block to be included in the live-in of this particular bytecode.
     if (HandlerInfo* handler = codeBlock->handlerForBytecodeOffset(bytecodeOffset)) {
         BytecodeBasicBlock* handlerBlock = findBasicBlockWithLeaderOffset(basicBlocks, handler->target);
@@ -171,7 +171,7 @@ static void computeLocalLivenessForBytecodeOffset(CodeBlock* codeBlock, Bytecode
         unsigned bytecodeOffset = block->bytecodeOffsets()[i];
         if (targetOffset > bytecodeOffset)
             break;
-        
+
         stepOverInstruction(codeBlock, basicBlocks, bytecodeOffset, uses, defs, out);
     }
 
@@ -261,7 +261,7 @@ FastBitVector getLivenessInfo(CodeBlock* codeBlock, const FastBitVector& out)
 
         if (virtualRegisterForLocal(i).offset() > codeBlock->captureStart())
             result.set(i);
-        else 
+        else
             result.set(numCapturedVars + i);
     }
     return result;
@@ -279,19 +279,19 @@ void BytecodeLivenessAnalysis::computeFullLiveness(FullBytecodeLiveness& result)
     FastBitVector out;
     FastBitVector uses;
     FastBitVector defs;
-    
+
     result.m_codeBlock = m_codeBlock;
     result.m_map.clear();
-    
+
     for (unsigned i = m_basicBlocks.size(); i--;) {
         BytecodeBasicBlock* block = m_basicBlocks[i].get();
         if (block->isEntryBlock() || block->isExitBlock())
             continue;
-        
+
         out = block->out();
         uses.resize(out.numBits());
         defs.resize(out.numBits());
-        
+
         for (unsigned i = block->bytecodeOffsets().size(); i--;) {
             unsigned bytecodeOffset = block->bytecodeOffsets()[i];
             stepOverInstruction(m_codeBlock, m_basicBlocks, bytecodeOffset, uses, defs, out);

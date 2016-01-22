@@ -150,7 +150,7 @@ class StringImpl {
     friend class AtomicStringImpl;
     friend class JSC::LLInt::Data;
     friend class JSC::LLIntOffsetsExtractor;
-    
+
 private:
     enum BufferOwnership {
         BufferInternal,
@@ -493,15 +493,15 @@ public:
             result <<= 1;
         return result;
     }
-    
+
     size_t costDuringGC()
     {
         if (isStatic())
             return 0;
-        
+
         if (bufferOwnership() == BufferSubstring)
             return divideRoundedUp(substringBuffer()->costDuringGC(), refCount());
-        
+
         size_t result = m_length;
         if (!is8Bit())
             result <<= 1;
@@ -550,7 +550,7 @@ public:
 
 private:
     static WTF_EXPORT_STRING_API bool utf8Impl(const UChar* characters, unsigned length, char*& buffer, size_t bufferSize, ConversionMode);
-    
+
     // The high bits of 'hash' are always empty, but we prefer to store our flags
     // in the low bits because it makes them slightly more efficient to access.
     // So, we shift left and right when setting and getting our hash code.
@@ -560,7 +560,7 @@ private:
         // Multiple clients assume that StringHasher is the canonical string hash function.
         ASSERT(hash == (is8Bit() ? StringHasher::computeHashAndMaskTop8Bits(m_data8, m_length) : StringHasher::computeHashAndMaskTop8Bits(m_data16, m_length)));
         ASSERT(!(hash & (s_flagMask << (8 * sizeof(hash) - s_flagCount)))); // Verify that enough high bits are empty.
-        
+
         hash <<= s_flagCount;
         ASSERT(!(hash & m_hashAndFlags)); // Verify that enough low bits are empty after shift.
         ASSERT(hash); // Verify that 0 is a valid sentinel hash value.
@@ -591,19 +591,19 @@ public:
             return existingHash();
         return hashSlowCase();
     }
-    
+
     bool isStatic() const { return m_refCount & s_refCountFlagIsStaticString; }
 
     inline size_t refCount() const
     {
         return m_refCount / s_refCountIncrement;
     }
-    
+
     inline bool hasOneRef() const
     {
         return m_refCount == s_refCountIncrement;
     }
-    
+
     // This method is useful for assertions.
     inline bool hasAtLeastOneRef() const
     {
@@ -618,7 +618,7 @@ public:
 
     inline void deref()
     {
-        ASSERT(!isCompilationThread());        
+        ASSERT(!isCompilationThread());
         unsigned tempRefCount = m_refCount - s_refCountIncrement;
         if (!tempRefCount) {
             StringImpl::destroy(this);
@@ -979,7 +979,7 @@ ALWAYS_INLINE bool equal(const LChar* a, const LChar* b, unsigned length)
 ALWAYS_INLINE bool equal(const UChar* a, const UChar* b, unsigned length)
 {
     unsigned dwordLength = length >> 2;
-    
+
     if (dwordLength) {
         const uint64_t* aDWordCharacters = reinterpret_cast<const uint64_t*>(a);
         const uint64_t* bDWordCharacters = reinterpret_cast<const uint64_t*>(b);
@@ -1023,7 +1023,7 @@ ALWAYS_INLINE bool equal(const LChar* a, const LChar* b, unsigned length)
     if (length) {
         const LChar* aRemainder = reinterpret_cast<const LChar*>(aCharacters);
         const LChar* bRemainder = reinterpret_cast<const LChar*>(bCharacters);
-        
+
         for (unsigned i = 0; i <  length; ++i) {
             if (aRemainder[i] != bRemainder[i])
                 return false;
@@ -1037,16 +1037,16 @@ ALWAYS_INLINE bool equal(const UChar* a, const UChar* b, unsigned length)
 {
     const uint32_t* aCharacters = reinterpret_cast<const uint32_t*>(a);
     const uint32_t* bCharacters = reinterpret_cast<const uint32_t*>(b);
-    
+
     unsigned wordLength = length >> 1;
     for (unsigned i = 0; i != wordLength; ++i) {
         if (*aCharacters++ != *bCharacters++)
             return false;
     }
-    
+
     if (length & 1 && *reinterpret_cast<const UChar*>(aCharacters) != *reinterpret_cast<const UChar*>(bCharacters))
         return false;
-    
+
     return true;
 }
 #elif PLATFORM(IOS) && WTF_ARM_ARCH_AT_LEAST(7)
@@ -1225,7 +1225,7 @@ inline size_t findNextLineStart(const CharacterType* characters, unsigned length
         // There can only be a start of a new line if there are more characters
         // beyond the current character.
         if (index < length) {
-            // The 3 common types of line terminators are 1. \r\n (Windows), 
+            // The 3 common types of line terminators are 1. \r\n (Windows),
             // 2. \r (old MacOS) and 3. \n (Unix'es).
 
             if (c == '\n')
@@ -1239,7 +1239,7 @@ inline size_t findNextLineStart(const CharacterType* characters, unsigned length
             // But, there's only a start of a new line if there are more
             // characters beyond the \r\n.
             if (++index < length)
-                return index; 
+                return index;
         }
     }
     return notFound;

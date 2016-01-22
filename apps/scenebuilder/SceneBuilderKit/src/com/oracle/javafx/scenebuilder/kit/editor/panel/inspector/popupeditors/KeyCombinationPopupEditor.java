@@ -99,7 +99,7 @@ public class KeyCombinationPopupEditor extends PopupEditor {
         super(propMeta, selectedClasses);
         initialize(editorController);
     }
-    
+
     private void initialize(EditorController editorController) {
         this.editorController = editorController;
     }
@@ -424,7 +424,7 @@ public class KeyCombinationPopupEditor extends PopupEditor {
             super("", null, suggestedKeys); //NOI18N
             initialize(editorController);
         }
-        
+
         private void initialize(EditorController editorController) {
             this.editorController = editorController;
             EventHandler<ActionEvent> onActionListener = t -> {
@@ -529,7 +529,7 @@ public class KeyCombinationPopupEditor extends PopupEditor {
             if (object == null) {
                 return I18N.getString("inspector.keycombination.none");
             }
-            return object.getKey() + "_" + object.getValue(); //NOI18N 
+            return object.getKey() + "_" + object.getValue(); //NOI18N
         }
 
         @Override

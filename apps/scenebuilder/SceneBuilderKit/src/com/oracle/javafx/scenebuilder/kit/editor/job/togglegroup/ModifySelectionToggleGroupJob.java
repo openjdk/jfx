@@ -54,28 +54,28 @@ public class ModifySelectionToggleGroupJob extends BatchDocumentJob {
 
     public ModifySelectionToggleGroupJob(String toggleGroupId, EditorController editorController) {
         super(editorController);
-        
+
         assert editorController.getFxomDocument() != null;
-        
+
         this.toggleGroupId = toggleGroupId;
     }
-    
-    
+
+
     /*
      * BatchSelectionJob
      */
-    
+
     @Override
     protected List<Job> makeSubJobs() {
         final List<Job> result = new ArrayList<>();
-        
+
         /*
          * Checks that toggleGroupId is:
          *  0) either null
          *  1) either an unused fx:id
          *  2) either the fx:id of an existing ToggleGroup instance
          */
-        
+
         final boolean executable;
         if (toggleGroupId == null) {
             executable = true;
@@ -93,7 +93,7 @@ public class ModifySelectionToggleGroupJob extends BatchDocumentJob {
                 executable = false;
             }
         }
-        
+
         /*
          * Creates some ModifyToggleGroupJob instances
          */
@@ -110,7 +110,7 @@ public class ModifySelectionToggleGroupJob extends BatchDocumentJob {
                 }
             }
         }
-        
+
         return result;
     }
 
@@ -118,5 +118,5 @@ public class ModifySelectionToggleGroupJob extends BatchDocumentJob {
     protected String makeDescription() {
         return I18N.getString("job.set.toggle.group");
     }
-    
+
 }

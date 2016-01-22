@@ -33,7 +33,7 @@
 namespace WTF {
 
 namespace double_conversion {
-    
+
     enum BignumDtoaMode {
         // Return the shortest correct representation.
         // For example the output of 0.299999999999999988897 is (the less accurate but
@@ -46,7 +46,7 @@ namespace double_conversion {
         // Return a fixed number of digits, no matter what the exponent is.
         BIGNUM_DTOA_PRECISION
     };
-    
+
     // Converts the given double 'v' to ascii.
     // The result should be interpreted as buffer * 10^(point-length).
     // The buffer will be null-terminated.
@@ -78,7 +78,7 @@ namespace double_conversion {
     // and a terminating null-character.
     void BignumDtoa(double v, BignumDtoaMode mode, int requested_digits,
                     BufferReference<char> buffer, int* length, int* point);
-    
+
 }  // namespace double_conversion
 
 } // namespace WTF

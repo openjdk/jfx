@@ -80,7 +80,7 @@ public class UsePredefinedSizeJob extends Job {
         }
         buildSubJobs();
     }
-    
+
     /*
      * Job
      */
@@ -134,7 +134,7 @@ public class UsePredefinedSizeJob extends Job {
         if (editorController.getFxomDocument() != null && (fxomObject instanceof FXOMInstance)) {
             final FXOMInstance fxomInstance = (FXOMInstance) fxomObject;
             final Object sceneGraphObject = fxomInstance.getSceneGraphObject();
-            
+
             if (sceneGraphObject instanceof WebView
                     || sceneGraphObject instanceof Region) {
                 subJobs.addAll(modifyHeightJobs(fxomInstance));
@@ -208,10 +208,10 @@ public class UsePredefinedSizeJob extends Job {
         }
         return result;
     }
-    
+
     private double getWidthFromSize(Size size) {
         assert size != Size.SIZE_PREFERRED;
-        
+
         if (size == Size.SIZE_DEFAULT) {
             return editorController.getDefaultRootContainerWidth();
         }
@@ -219,14 +219,14 @@ public class UsePredefinedSizeJob extends Job {
         String sizeString = size.toString();
         return Double.parseDouble(sizeString.substring(5, sizeString.indexOf('x'))); //NOI18N
     }
-    
+
     private double getHeightFromSize(Size size) {
         assert size != Size.SIZE_PREFERRED;
-        
+
         if (size == Size.SIZE_DEFAULT) {
             return editorController.getDefaultRootContainerHeight();
         }
-        
+
         String sizeString = size.toString();
         return Double.parseDouble(sizeString.substring(sizeString.indexOf('x') + 1, sizeString.length())); //NOI18N
     }

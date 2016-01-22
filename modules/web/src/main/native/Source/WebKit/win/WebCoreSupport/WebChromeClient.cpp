@@ -21,7 +21,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -374,12 +374,12 @@ void WebChromeClient::closeWindowSoon()
 {
     // We need to remove the parent WebView from WebViewSets here, before it actually
     // closes, to make sure that JavaScript code that executes before it closes
-    // can't find it. Otherwise, window.open will select a closed WebView instead of 
+    // can't find it. Otherwise, window.open will select a closed WebView instead of
     // opening a new one <rdar://problem/3572585>.
 
     // We also need to stop the load to prevent further parsing or JavaScript execution
     // after the window has torn down <rdar://problem/4161660>.
-  
+
     // FIXME: This code assumes that the UI delegate will respond to a webViewClose
     // message by actually closing the WebView. Safari guarantees this behavior, but other apps might not.
     // This approach is an inherent limitation of not making a close execute immediately
@@ -549,8 +549,8 @@ bool WebChromeClient::shouldUnavailablePluginMessageBeButton(RenderEmbeddedObjec
     COMPtr<IWebUIDelegate> uiDelegate;
     if (FAILED(m_webView->uiDelegate(&uiDelegate)))
         return false;
-    
-    // If the UI delegate implements IWebUIDelegatePrivate3, 
+
+    // If the UI delegate implements IWebUIDelegatePrivate3,
     // which contains didPressMissingPluginButton, then the message should be a button.
     COMPtr<IWebUIDelegatePrivate3> uiDelegatePrivate3(Query, uiDelegate);
     return uiDelegatePrivate3;
@@ -697,7 +697,7 @@ void WebChromeClient::runOpenPanel(Frame*, PassRefPtr<FileChooser> prpFileChoose
                 WCHAR* nextFilePtr = files + file.length() + 1;
                 String nextFile(nextFilePtr);
                 // If multiple files are selected, there will be a directory name first, which we don't want to add to the vector.
-                // We know a single file was selected if there is only one filename in the list.  
+                // We know a single file was selected if there is only one filename in the list.
                 // In that case, we don't want to skip adding the first (and only) name.
                 if (files != fileBuf.data() || nextFile.isEmpty())
                     fileList.append(file);
@@ -841,7 +841,7 @@ void WebChromeClient::enterFullScreenForElement(Element* element)
         COMPtr<IDOMElement> domElement(AdoptCOM, DOMElement::createInstance(element));
         if (uiDelegatePrivate4 && SUCCEEDED(uiDelegatePrivate4->enterFullScreenForElement(domElement.get())))
             return;
-    } 
+    }
 
     m_webView->setFullScreenElement(element);
     m_webView->fullScreenController()->enterFullScreen();

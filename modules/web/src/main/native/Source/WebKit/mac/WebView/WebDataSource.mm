@@ -6,13 +6,13 @@
  * are met:
  *
  * 1.  Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer. 
+ *     notice, this list of conditions and the following disclaimer.
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
- *     documentation and/or other materials provided with the distribution. 
+ *     documentation and/or other materials provided with the distribution.
  * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
- *     from this software without specific prior written permission. 
+ *     from this software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY APPLE AND ITS CONTRIBUTORS "AS IS" AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
@@ -190,14 +190,14 @@ static inline void addTypesFromClass(NSMutableDictionary *allTypes, Class objCCl
     WebResource *resource = [self subresourceForURL:URL];
     if (resource)
         return [resource _fileWrapperRepresentation];
-    
+
     NSCachedURLResponse *cachedResponse = [[self _webView] _cachedResponseForURL:URL];
     if (cachedResponse) {
         NSFileWrapper *wrapper = [[[NSFileWrapper alloc] initRegularFileWithContents:[cachedResponse data]] autorelease];
         [wrapper setPreferredFilename:[[cachedResponse response] suggestedFilename]];
         return wrapper;
     }
-    
+
     return nil;
 }
 #endif
@@ -211,9 +211,9 @@ static inline void addTypesFromClass(NSMutableDictionary *allTypes, Class objCCl
 {
     if (!toPrivate(_private)->loader)
         return NO;
-        
+
     NSString *cacheDir = [NSString _webkit_localCacheDirectoryWithBundleIdentifier:destinationBundleIdentifier];
-    
+
     return ApplicationCacheStorage::storeCopyOfCache(cacheDir, toPrivate(_private)->loader->applicationCacheHost());
 }
 
@@ -294,7 +294,7 @@ static inline void addTypesFromClass(NSMutableDictionary *allTypes, Class objCCl
 {
     // protect self temporarily, as the bridge receivedData call could remove our last ref
     RetainPtr<WebDataSource*> protect(self);
-    
+
     [[self representation] receivedData:data withDataSource:self];
     [[[[self webFrame] frameView] documentView] dataSourceUpdated:self];
 }
@@ -316,11 +316,11 @@ static inline void addTypesFromClass(NSMutableDictionary *allTypes, Class objCCl
 {
     static NSMutableDictionary *repTypes = nil;
     static BOOL addedImageTypes = NO;
-    
+
     if (!repTypes) {
         repTypes = [[NSMutableDictionary alloc] init];
         addTypesFromClass(repTypes, [WebHTMLRepresentation class], [WebHTMLRepresentation supportedNonImageMIMETypes]);
-        
+
         // Since this is a "secret default" we don't both registering it.
         BOOL omitPDFSupport = [[NSUserDefaults standardUserDefaults] boolForKey:@"WebKitOmitPDFSupport"];
         if (!omitPDFSupport)
@@ -332,12 +332,12 @@ static inline void addTypesFromClass(NSMutableDictionary *allTypes, Class objCCl
 #undef WebPDFRepresentation
 #endif
     }
-    
+
     if (!addedImageTypes && !allowImageTypeOmission) {
         addTypesFromClass(repTypes, [WebHTMLRepresentation class], [WebHTMLRepresentation supportedImageMIMETypes]);
         addedImageTypes = YES;
     }
-    
+
     return repTypes;
 }
 
@@ -366,7 +366,7 @@ static inline void addTypesFromClass(NSMutableDictionary *allTypes, Class objCCl
             return fragment;
         } else if (MIMETypeRegistry::isSupportedImageMIMEType(MIMEType)) {
             return [self _documentFragmentWithImageResource:mainResource];
-            
+
         }
     }
     return nil;
@@ -386,15 +386,15 @@ static inline void addTypesFromClass(NSMutableDictionary *allTypes, Class objCCl
 {
     if (!resource)
         return 0;
-    
+
     [self addSubresource:resource];
-    
+
     DOMElement *imageElement = [[[self webFrame] DOMDocument] createElement:@"img"];
-    
+
     // FIXME: calling _web_originalDataAsString on a file URL returns an absolute path. Workaround this.
     NSURL *URL = [resource URL];
     [imageElement setAttribute:@"src" value:[URL isFileURL] ? [URL absoluteString] : [URL _web_originalDataAsString]];
-    
+
     return imageElement;
 }
 
@@ -454,7 +454,7 @@ static inline void addTypesFromClass(NSMutableDictionary *allTypes, Class objCCl
 
     ASSERT(loader);
     _private = static_cast<void*>(new WebDataSourcePrivate(loader));
-        
+
     LOG(Loading, "creating datasource for %@", static_cast<NSURL *>(toPrivate(_private)->loader->request().url()));
 
     if ((toPrivate(_private)->includedInWebKitStatistics = [[self webFrame] _isIncludedInWebKitStatistics]))
@@ -485,7 +485,7 @@ static inline void addTypesFromClass(NSMutableDictionary *allTypes, Class objCCl
         RefPtr<ResourceBuffer> mainResourceBuffer = toPrivate(_private)->loader->mainResourceData();
         if (mainResourceBuffer) {
             RefPtr<SharedBuffer> mainResourceData = mainResourceBuffer->sharedBuffer();
-            if (mainResourceData && 
+            if (mainResourceData &&
                 mainResourceData->memoryMappedNotificationCallbackData() == self &&
                 mainResourceData->memoryMappedNotificationCallback() == BufferMemoryMapped) {
                 mainResourceData->setMemoryMappedNotificationCallback(nullptr, nullptr);
@@ -493,7 +493,7 @@ static inline void addTypesFromClass(NSMutableDictionary *allTypes, Class objCCl
         }
     }
 #endif
-    
+
 #if USE(QUICK_LOOK)
     // Added in -[WebCoreResourceHandleAsDelegate connection:didReceiveResponse:].
     if (NSURL *url = [[self response] URL])
@@ -590,7 +590,7 @@ static inline void addTypesFromClass(NSMutableDictionary *allTypes, Class objCCl
     // it makes no sense to grab a WebArchive from an uncommitted document.
     if (!toPrivate(_private)->loader->isCommitted())
         return nil;
-        
+
     return [[[WebArchive alloc] _initWithCoreLegacyWebArchive:LegacyWebArchive::create(core([self webFrame]))] autorelease];
 }
 
@@ -620,12 +620,12 @@ static inline void addTypesFromClass(NSMutableDictionary *allTypes, Class objCCl
 - (WebResource *)subresourceForURL:(NSURL *)URL
 {
     RefPtr<ArchiveResource> subresource = toPrivate(_private)->loader->subresource(URL);
-    
+
     return subresource ? [[[WebResource alloc] _initWithCoreResource:subresource.get()] autorelease] : nil;
 }
 
 - (void)addSubresource:(WebResource *)subresource
-{    
+{
     toPrivate(_private)->loader->addArchiveResource([subresource _coreResource]);
 }
 

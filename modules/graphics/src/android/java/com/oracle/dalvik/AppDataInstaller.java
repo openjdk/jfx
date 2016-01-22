@@ -40,7 +40,7 @@ import android.content.res.AssetManager;
 
 public class AppDataInstaller {
     private static final String TAG = "AppDataInstaller";
-    
+
    String       storageDir;
     AssetManager assetManager;
 
@@ -59,7 +59,7 @@ public class AppDataInstaller {
             // Loop through all the files and folders
             ZipEntry entry = null;
             while ((entry = zis.getNextEntry()) != null) {
-                String innerFileName = dstDirName + File.separator 
+                String innerFileName = dstDirName + File.separator
                     + entry.getName();
                 File innerFile = new File(innerFileName);
                 if (innerFile.exists()) {
@@ -70,10 +70,10 @@ public class AppDataInstaller {
                     innerFile.mkdirs();
                 } else {
                     // Create a file output stream
-                    FileOutputStream outputStream = 
+                    FileOutputStream outputStream =
                         new FileOutputStream(innerFileName);
                     final int BUFFER_SIZE = 2048;
-                    BufferedOutputStream bufferedOutputStream = 
+                    BufferedOutputStream bufferedOutputStream =
                         new BufferedOutputStream(outputStream, BUFFER_SIZE);
 
                     // Write output
@@ -100,12 +100,12 @@ public class AppDataInstaller {
 
     public void copyAssetsTree(String src, String dst) {
         // scan assets
-        Log.v(TAG, "AppDataInstaller.copyAssetsTree(): copyDir: src=" 
+        Log.v(TAG, "AppDataInstaller.copyAssetsTree(): copyDir: src="
                            + src + " dst=" + dst);
 
         try {
             String[] fileList = assetManager.list(src);
-            Log.v(TAG, "Sample.onCreate: # of assets in " + src 
+            Log.v(TAG, "Sample.onCreate: # of assets in " + src
                                + ": " + fileList.length);
             if (fileList.length <= 0) {
                 // file
@@ -117,7 +117,7 @@ public class AppDataInstaller {
                 File dstFile = new File(dst);
                 OutputStream os = new FileOutputStream(dstFile);
                 final int BUFFER_SIZE = 2048;
-                BufferedOutputStream bufferedOutputStream = 
+                BufferedOutputStream bufferedOutputStream =
                     new BufferedOutputStream(os, BUFFER_SIZE);
 
                 byte[] buf = new byte[BUFFER_SIZE];
@@ -132,7 +132,7 @@ public class AppDataInstaller {
             } else {
                 // dir
                 // create target directory
-                Log.v(TAG, 
+                Log.v(TAG,
                      "copyAssetsTree: Creating dir: " + dst);
                 File dstFile = new File(dst);
                 if (dstFile.exists()) {
@@ -159,10 +159,10 @@ public class AppDataInstaller {
                     if (fileName.endsWith(ZIPPED_RENAMED_JPG_SUFFIX)) {
                         String newSrc = src + "/" + fileName;
                         handleAssetZipFile(newSrc, dst);
-                    } else if (fileName.length() > RENAMED_JPG_SUFFIX.length() 
+                    } else if (fileName.length() > RENAMED_JPG_SUFFIX.length()
                                && fileName.endsWith(RENAMED_JPG_SUFFIX)) {
                         String newSrc = src + "/" + fileName;
-                        String newDst = dst + "/" 
+                        String newDst = dst + "/"
                             + fileName.substring(0, fileName.length()
                                                  - RENAMED_JPG_SUFFIX.length());
                         copyAssetsTree(newSrc, newDst);

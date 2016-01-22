@@ -57,13 +57,13 @@ public class CheckMenuItemTest {
         checkMenuItemOneArg = new CheckMenuItem("one");
         checkMenuItemTwoArg = new CheckMenuItem("two", node);
     }
-    
-   
-   
+
+
+
     /*********************************************************************
      * Tests for default values                                         *
      ********************************************************************/
-    
+
     @Test public void defaultConstructorShouldSetStyleClassTo_checkmenuitem() {
         assertStyleClassContains(checkMenuItem, "check-menu-item");
     }
@@ -73,7 +73,7 @@ public class CheckMenuItemTest {
     @Test public void twoArgConstructorShouldSetStyleClassTo_checkmenuitem() {
         assertStyleClassContains(checkMenuItemTwoArg, "check-menu-item");
     }
-    
+
     @Test public void defaultTxtNull() {
         assertNull(checkMenuItem.getText());
     }
@@ -92,11 +92,11 @@ public class CheckMenuItemTest {
         assertFalse(checkMenuItem.isSelected());
     }
 
-    
+
     /*********************************************************************
      * Tests for property binding                                        *
      ********************************************************************/
-    
+
     @Test public void selectedPropertyHasBeanReference() {
         assertSame(checkMenuItem, checkMenuItem.selectedProperty().getBean());
     }
@@ -112,22 +112,22 @@ public class CheckMenuItemTest {
         checkMenuItem.setSelected(true);
         assertTrue(checkMenuItem.selectedProperty().getValue());
     }
-    
+
     @Test public void setSelectedAndSeeValue() {
         checkMenuItem.setSelected(false);
         assertFalse(checkMenuItem.isSelected());
     }
-    
+
     @Test public void setSelectedTrueAndSeeIfStyleSelectedExists() {
         checkMenuItem.setSelected(true);
         assertTrue(checkMenuItem.getStyleClass().contains("selected"));
     }
-    
+
     @Test public void setSelectedFalseAndSeeIfStyleSelectedDoesNotExists() {
         checkMenuItem.setSelected(false);
         assertFalse(checkMenuItem.getStyleClass().contains("selected"));
     }
-    
+
     @Test public void defaultConstructorShouldHaveNoGraphic() {
         assertNull(cmi.getGraphic());
     }
@@ -218,5 +218,5 @@ public class CheckMenuItemTest {
         cmi.selectedProperty().bind(other);
         assertEquals(other.get(), cmi.isSelected());
     }
-    
+
 }

@@ -34,7 +34,7 @@ import javafx.event.EventType;
  * track pad, touch screen or other similar device.
  * <p>
  * When the scrolling is produced by a touch gesture (such as dragging a finger
- * over a touch screen), it is surrounded by the {@code SCROLL_STARTED} and 
+ * over a touch screen), it is surrounded by the {@code SCROLL_STARTED} and
  * {@code SCROLL_FINISHED} events. Changing number of involved touch points during
  * the scrolling is considered a new gesture, so the pair of
  * {@code SCROLL_FINISHED} and {@code SCROLL_STARTED} notifications is delivered
@@ -51,15 +51,15 @@ import javafx.event.EventType;
  * top-most node picked on mouse cursor location. The delivery is independent
  * of current focus owner.
  * <p>
- * The event provides two different types of scrolling values: pixel-based and 
- * character/line-based. The basic {@code deltaX} and {@code deltaY} values 
+ * The event provides two different types of scrolling values: pixel-based and
+ * character/line-based. The basic {@code deltaX} and {@code deltaY} values
  * give reasonable results when used as number of pixels
- * to scroll (The {@code totalDeltaX} and {@code totalDeltaY} contain the 
+ * to scroll (The {@code totalDeltaX} and {@code totalDeltaY} contain the
  * cumulative values for the whole gesture, zeros for mouse wheel).
  * For scrolling text (or other line-based content as tables) the
- * {@code textDelta} values should be used if they are available. The 
- * {@code textDeltaXUnits} and {@code textDeltaYUnits} determine how to 
- * interpret the {@code textDeltaX} and {@code textDeltaY} values. If the 
+ * {@code textDelta} values should be used if they are available. The
+ * {@code textDeltaXUnits} and {@code textDeltaYUnits} determine how to
+ * interpret the {@code textDeltaX} and {@code textDeltaY} values. If the
  * units are set to {@code NONE}, the text-based values are not available
  * (not provided by the underlying platform) and the pixel-based values
  * need to be used.
@@ -85,7 +85,7 @@ import javafx.event.EventType;
  * <code><pre>
     switch(event.getTextDeltaYUnits()) {
         case LINES:
-            // scroll about event.getTextDeltaY() lines 
+            // scroll about event.getTextDeltaY() lines
             break;
         case PAGES:
             // scroll about event.getTextDeltaY() pages
@@ -313,20 +313,20 @@ public final class ScrollEvent extends GestureEvent {
                 totalDeltaY, multiplierX, multiplierY, textDeltaXUnits, textDeltaX,
                 textDeltaYUnits, textDeltaY, touchCount, pickResult);
     }
-    
+
     private final double deltaX;
 
     /**
      * Gets the horizontal scroll amount. This value should be interpreted
      * as a number of pixels to scroll. When scrolling a text-based content,
-     * the {@code textDeltaX} and {@code textDeltaXUnits} values should be 
+     * the {@code textDeltaX} and {@code textDeltaXUnits} values should be
      * considered first.
      * <p>
      * The sign of the value is reversed compared to the coordinate system
-     * (when you scroll right, the content actually needs to go left). So the 
+     * (when you scroll right, the content actually needs to go left). So the
      * returned value can be simply added to the content's {@code X}
      * coordinate.
-     * 
+     *
      * @return Number of pixels to scroll horizontally.
      */
     public double getDeltaX() {
@@ -338,20 +338,20 @@ public final class ScrollEvent extends GestureEvent {
     /**
      * Gets the vertical scroll amount. This value should be interpreted
      * as a number of pixels to scroll. When scrolling a line-based content,
-     * the {@code textDeltaY} and {@code textDeltaYUnits} values should be 
+     * the {@code textDeltaY} and {@code textDeltaYUnits} values should be
      * considered first.
      * <p>
      * The sign of the value is reversed compared to the coordinate system
-     * (when you scroll down, the content actually needs to go up). So the 
+     * (when you scroll down, the content actually needs to go up). So the
      * returned value can be simply added to the content's {@code Y}
      * coordinate.
-     * 
+     *
      * @return Number of pixels to scroll vertically.
      */
     public double getDeltaY() {
         return deltaY;
     }
-    
+
     private double totalDeltaX;
 
     /**
@@ -398,9 +398,9 @@ public final class ScrollEvent extends GestureEvent {
      * Gets the horizontal scrolling units for text-based scrolling.
      * The returned value indicates how to interpret the {@code getTextDeltaX()}
      * value. If the returned value is {@code NONE}, the text-based
-     * scrolling value is not available and the pixel-based 
+     * scrolling value is not available and the pixel-based
      * {@code getDeltaX()} value needs to be used.
-     * 
+     *
      * @return the horizontal scrolling units for text-based scrolling
      */
     public HorizontalTextScrollUnits getTextDeltaXUnits() {
@@ -413,36 +413,36 @@ public final class ScrollEvent extends GestureEvent {
      * Gets the vertical scrolling units for text-based scrolling.
      * The returned value indicates how to interpret the {@code getTextDeltaY()}
      * value. If the returned value is {@code NONE}, the text-based
-     * scrolling value is not available and the pixel-based 
+     * scrolling value is not available and the pixel-based
      * {@code getDeltaY()} value needs to be used.
-     * 
+     *
      * @return the vertical scrolling units for text-based scrolling
      */
     public VerticalTextScrollUnits getTextDeltaYUnits() {
         return textDeltaYUnits;
     }
-    
+
     private final double textDeltaX;
 
     /**
-     * Gets the horizontal text-based scroll amount. This value should be 
-     * interpreted according to the {@code getTextDeltaXUnits()} value. 
-     * 
-     * @return Number of units to scroll horizontally, zero if the text-based 
+     * Gets the horizontal text-based scroll amount. This value should be
+     * interpreted according to the {@code getTextDeltaXUnits()} value.
+     *
+     * @return Number of units to scroll horizontally, zero if the text-based
      * horizontal scrolling data is not available {@code getTextDeltaXUnits()}
      * returns {@code NONE}
      */
     public double getTextDeltaX() {
         return textDeltaX;
     }
-    
+
     private final double textDeltaY;
 
     /**
-     * Gets the vertical text-based scroll amount. This value should be 
-     * interpreted according to the {@code getTextDeltaYUnits()} value. 
-     * 
-     * @return Number of units to scroll vertically, zero if the text-based 
+     * Gets the vertical text-based scroll amount. This value should be
+     * interpreted according to the {@code getTextDeltaYUnits()} value.
+     *
+     * @return Number of units to scroll vertically, zero if the text-based
      * vertical scrolling data is not available {@code getTextDeltaYUnits()}
      * returns {@code NONE}
      */
@@ -488,7 +488,7 @@ public final class ScrollEvent extends GestureEvent {
     /**
      * Returns a string representation of this {@code ScrollEvent} object.
      * @return a string representation of this {@code ScrollEvent} object.
-     */ 
+     */
     @Override public String toString() {
         final StringBuilder sb = new StringBuilder("ScrollEvent [");
 
@@ -557,7 +557,7 @@ public final class ScrollEvent extends GestureEvent {
     public EventType<ScrollEvent> getEventType() {
         return (EventType<ScrollEvent>) super.getEventType();
     }
-    
+
     /**
      * Horizontal text-based scrolling units.
      * @since JavaFX 2.0
@@ -568,7 +568,7 @@ public final class ScrollEvent extends GestureEvent {
          * provided by the underlying platform).
          */
         NONE,
-        
+
         /**
          * The horizontal text-based scrolling amount is a number of characters
          * to scroll.

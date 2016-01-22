@@ -73,7 +73,7 @@ public class SequentialTransitionApp extends Application {
         root.setPrefSize(245, 100);
         root.setMinSize(Pane.USE_PREF_SIZE, Pane.USE_PREF_SIZE);
         root.setMaxSize(Pane.USE_PREF_SIZE, Pane.USE_PREF_SIZE);
-        
+
         // create rectangle
         Rectangle rect = new Rectangle(-25,-25,50, 50);
         rect.setArcHeight(15);
@@ -88,29 +88,29 @@ public class SequentialTransitionApp extends Application {
         fadeTransition.setToValue(0.3);
         fadeTransition.setCycleCount(2);
         fadeTransition.setAutoReverse(true);
-        
+
         TranslateTransition translateTransition = new TranslateTransition(Duration.seconds(2));
         translateTransition.setFromX(50);
         translateTransition.setToX(220);
         translateTransition.setCycleCount(2);
         translateTransition.setAutoReverse(true);
-        
+
         RotateTransition rotateTransition = new RotateTransition(Duration.seconds(2));
         rotateTransition.setByAngle(180);
         rotateTransition.setCycleCount(4);
         rotateTransition.setAutoReverse(true);
-               
+
         ScaleTransition scaleTransition = new ScaleTransition(Duration.seconds(2));
         scaleTransition.setToX(2);
         scaleTransition.setToY(2);
         scaleTransition.setCycleCount(2);
         scaleTransition.setAutoReverse(true);
-        // create sequential transition to do 4 transitions one after another       
-        sequentialTransition = new SequentialTransition(rect, 
+        // create sequential transition to do 4 transitions one after another
+        sequentialTransition = new SequentialTransition(rect,
                 fadeTransition, translateTransition, rotateTransition, scaleTransition);
         sequentialTransition.setCycleCount(Timeline.INDEFINITE);
         sequentialTransition.setAutoReverse(true);
-        
+
         return root;
     }
 

@@ -36,10 +36,10 @@ import java.util.Locale;
 
 /**
  *
- * 
+ *
  */
 public class LibraryItemNameComparator implements Comparator<LibraryItem> {
-    
+
     /**
      * The comparison done here is performed on the name property of the
      * LibraryItem, and it is done ignoring the case.

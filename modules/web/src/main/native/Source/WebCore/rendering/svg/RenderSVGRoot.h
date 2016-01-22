@@ -57,7 +57,7 @@ public:
     virtual bool hasRelativeIntrinsicLogicalWidth() const override;
     virtual bool hasRelativeLogicalHeight() const override;
 
-    // localToBorderBoxTransform maps local SVG viewport coordinates to local CSS box coordinates.  
+    // localToBorderBoxTransform maps local SVG viewport coordinates to local CSS box coordinates.
     const AffineTransform& localToBorderBoxTransform() const { return m_localToBorderBoxTransform; }
 
     // The flag is cleared at the beginning of each layout() pass. Elements then call this

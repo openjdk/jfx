@@ -130,7 +130,7 @@ Element* MathMLSelectElement::getSelectedSemanticsChild()
     if (!child)
         return child;
 
-    if (!child->isMathMLElement() || !toMathMLElement(child)->isPresentationMathML()) { 
+    if (!child->isMathMLElement() || !toMathMLElement(child)->isPresentationMathML()) {
         // The first child is not a presentation MathML element. Hence we move to the second child and start searching an annotation child that could be displayed.
         child = child->nextElementSibling();
     } else if (!toMathMLElement(child)->isSemanticAnnotation()) {

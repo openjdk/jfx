@@ -43,7 +43,7 @@ XSLImportRule::~XSLImportRule()
 {
     if (m_styleSheet)
         m_styleSheet->setParentStyleSheet(0);
-    
+
     if (m_cachedSheet)
         m_cachedSheet->removeClient(this);
 }
@@ -61,7 +61,7 @@ void XSLImportRule::setXSLStyleSheet(const String& href, const URL& baseURL, con
 
     m_styleSheet->parseString(sheet);
     m_loading = false;
-    
+
     if (parent)
         parent->checkLoaded();
 }
@@ -84,28 +84,28 @@ void XSLImportRule::loadSheet()
 
     if (rootSheet)
         cachedResourceLoader = rootSheet->cachedResourceLoader();
-    
+
     String absHref = m_strHref;
     XSLStyleSheet* parentSheet = parentStyleSheet();
     if (!parentSheet->baseURL().isNull())
         // use parent styleheet's URL as the base URL
         absHref = URL(parentSheet->baseURL(), m_strHref).string();
-    
+
     // Check for a cycle in our import chain.  If we encounter a stylesheet
     // in our parent chain with the same URL, then just bail.
     for (XSLStyleSheet* parentSheet = parentStyleSheet(); parentSheet; parentSheet = parentSheet->parentStyleSheet()) {
         if (absHref == parentSheet->baseURL().string())
             return;
     }
-    
+
     CachedResourceRequest request(ResourceRequest(cachedResourceLoader->document()->completeURL(absHref)));
     if (m_cachedSheet)
         m_cachedSheet->removeClient(this);
     m_cachedSheet = cachedResourceLoader->requestXSLStyleSheet(request);
-    
+
     if (m_cachedSheet) {
         m_cachedSheet->addClient(this);
-        
+
         // If the imported sheet is in the cache, then setXSLStyleSheet gets called,
         // and the sheet even gets parsed (via parseString).  In this case we have
         // loaded (even if our subresources haven't), so if we have a stylesheet after

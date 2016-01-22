@@ -142,7 +142,7 @@ bool SVGTests::parseAttribute(const QualifiedName& name, const AtomicString& val
         m_systemLanguage.value.reset(value);
         return true;
     }
-    
+
     return false;
 }
 
@@ -208,7 +208,7 @@ SVGStringList& SVGTests::requiredFeatures()
 
 SVGStringList& SVGTests::requiredExtensions()
 {
-    m_requiredExtensions.shouldSynchronize = true;    
+    m_requiredExtensions.shouldSynchronize = true;
     return m_requiredExtensions.value;
 }
 

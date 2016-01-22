@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef DFGEdgeDominates_h
@@ -36,7 +36,7 @@ namespace JSC { namespace DFG {
 
 class EdgeDominates {
     static const bool verbose = false;
-    
+
 public:
     EdgeDominates(Graph& graph, BasicBlock* block)
         : m_graph(graph)
@@ -44,7 +44,7 @@ public:
         , m_result(true)
     {
     }
-    
+
     void operator()(Node*, Edge edge)
     {
         bool result = m_graph.m_dominators.dominates(edge.node()->misc.owner, m_block);
@@ -55,7 +55,7 @@ public:
         }
         m_result &= result;
     }
-    
+
     bool result() const { return m_result; }
 
 private:

@@ -62,7 +62,7 @@ public class ResizableWrappingText extends Text implements ChangeListener{
         setTextOrigin(VPos.TOP);
         textProperty().addListener(this);
     }
-    
+
     @Override public void changed(ObservableValue ov, Object t, Object t1) {
         if (ov == textProperty()) {
             final Parent parent = getParent();

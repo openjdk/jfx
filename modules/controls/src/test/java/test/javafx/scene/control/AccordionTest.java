@@ -47,13 +47,13 @@ import test.com.sun.javafx.pgstub.StubToolkit;
 
 /**
  */
-public class AccordionTest {    
+public class AccordionTest {
     private Accordion accordion;
     private Toolkit tk;
     private Scene scene;
     private Stage stage;
-    private StackPane root;    
-    
+    private StackPane root;
+
     @Before public void setup() {
         tk = (StubToolkit)Toolkit.getToolkit();//This step is not needed (Just to make sure StubToolkit is loaded into VM)
         accordion = new Accordion();
@@ -165,7 +165,7 @@ public class AccordionTest {
         a.setAnimated(false);
         b.setAnimated(false);
         c.setAnimated(false);
-        
+
         accordion.getPanes().addAll(a, b, c);
         root.setPrefSize(100, 300);
         root.getChildren().add(accordion);
@@ -173,11 +173,11 @@ public class AccordionTest {
         root.applyCss();
         root.autosize();
         root.layout();
-        
-        final double expectedPrefWidth = PlatformImpl.isCaspian() ? 54 : 
+
+        final double expectedPrefWidth = PlatformImpl.isCaspian() ? 54 :
                                          PlatformImpl.isModena()  ? 52 :
                                          0;
-        
+
         assertEquals(expectedPrefWidth, accordion.prefWidth(-1), 1e-100);
         assertEquals(60, accordion.prefHeight(-1), 1e-100);
 
@@ -187,38 +187,38 @@ public class AccordionTest {
         root.layout();
 
         assertEquals(expectedPrefWidth, accordion.prefWidth(-1), 1e-100);
-        
-        final double expectedPrefHeight = PlatformImpl.isCaspian() ? 170 : 
+
+        final double expectedPrefHeight = PlatformImpl.isCaspian() ? 170 :
                                           PlatformImpl.isModena()  ? 161 :
                                           0;
         assertEquals(expectedPrefHeight, accordion.prefHeight(-1), 1e-100);
     }
-    
+
     @Test public void aiobeWhenFocusIsOnAControlInsideTheAccordion_RT22027() {
         Button b1 = new Button("A");
         Button b2 = new Button("B");
-        
+
         TitledPane a = new TitledPane("A", b1);
         TitledPane b = new TitledPane("B", b2);
-        
+
         accordion.getPanes().addAll(a, b);
         accordion.setExpandedPane(a);
         accordion.setLayoutX(200);
-        
+
         root.setPrefSize(800, 800);
         root.getChildren().add(accordion);
         b1.requestFocus();
         show();
-        
+
         root.applyCss();
         root.autosize();
         root.layout();
-                
-        KeyEventFirer keyboard = new KeyEventFirer(b1);                
 
-        try {        
+        KeyEventFirer keyboard = new KeyEventFirer(b1);
+
+        try {
             keyboard.doKeyPress(KeyCode.HOME);
-            tk.firePulse(); 
+            tk.firePulse();
         } catch (Exception e) {
             fail();
         }

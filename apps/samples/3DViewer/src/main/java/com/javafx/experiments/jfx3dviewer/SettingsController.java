@@ -111,7 +111,7 @@ public class SettingsController implements Initializable {
     public Slider farClipSlider;
     public Label nearClipLabel;
     public Label farClipLabel;
-    
+
     @Override public void initialize(URL location, ResourceBundle resources) {
         // keep one pane open always
         settings.expandedPaneProperty().addListener((observable, oldValue, newValue) -> Platform.runLater(

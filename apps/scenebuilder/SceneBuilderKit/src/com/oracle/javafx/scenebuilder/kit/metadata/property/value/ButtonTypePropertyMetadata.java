@@ -42,13 +42,13 @@ import javafx.scene.control.ButtonType;
 
 /**
  *
- * 
+ *
  */
 public class ButtonTypePropertyMetadata extends ComplexPropertyMetadata<ButtonType> {
-    
+
     private static Map<ButtonType, String> buttonTypeMap;
-    
-    public ButtonTypePropertyMetadata(PropertyName name, boolean readWrite, 
+
+    public ButtonTypePropertyMetadata(PropertyName name, boolean readWrite,
             ButtonType defaultValue, InspectorPath inspectorPath) {
         super(name, ButtonType.class, readWrite, defaultValue, inspectorPath);
     }
@@ -66,18 +66,18 @@ public class ButtonTypePropertyMetadata extends ComplexPropertyMetadata<ButtonTy
             buttonTypeMap.put(ButtonType.YES,     "YES"      ); //NOI18N
             buttonTypeMap = Collections.unmodifiableMap(buttonTypeMap);
         }
-        
+
         return buttonTypeMap;
     }
-    
-    
+
+
     /*
      * ComplexPropertyMetadata
      */
     @Override
     public FXOMInstance makeFxomInstanceFromValue(ButtonType value, FXOMDocument fxomDocument) {
         final FXOMInstance result;
-        
+
         final String buttonName = getButtonTypeMap().get(value);
         if (buttonName != null) {
             // It's a standard button type
@@ -89,7 +89,7 @@ public class ButtonTypePropertyMetadata extends ComplexPropertyMetadata<ButtonTy
             result = new FXOMInstance(fxomDocument, ButtonType.class);
             result.setFxConstant(getButtonTypeMap().get(ButtonType.APPLY));
         }
-        
+
         return result;
     }
 }

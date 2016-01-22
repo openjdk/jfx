@@ -108,13 +108,13 @@ public class WebColorFieldSkin extends InputFieldSkin {
                 } else {
                     // calling setText results in updateValue - so we set this flag to true
                     // so that when this is true updateValue simply returns.
-                    noChangeInValue = true; 
+                    noChangeInValue = true;
                     getTextField().setText(Utils.formatHexString(newValue));
                     noChangeInValue = false;
                 }
             } catch (java.lang.IllegalArgumentException ex) {
                 System.out.println("Failed to parse ["+text+"]");
             }
-        } 
+        }
     }
 }

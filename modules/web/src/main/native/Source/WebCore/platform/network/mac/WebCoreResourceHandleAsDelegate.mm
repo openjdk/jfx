@@ -68,7 +68,7 @@ using namespace WebCore;
         return nil;
 
     redirectResponse = synthesizeRedirectResponseIfNecessary(connection, newRequest, redirectResponse);
-    
+
     // See <rdar://problem/5380697>. This is a workaround for a behavior change in CFNetwork where willSendRequest gets called more often.
     if (!redirectResponse)
         return newRequest;
@@ -77,7 +77,7 @@ using namespace WebCore;
     if ([redirectResponse isKindOfClass:[NSHTTPURLResponse class]])
         LOG(Network, "Handle %p delegate connection:%p willSendRequest:%@ redirectResponse:%d, Location:<%@>", m_handle, connection, [newRequest description], static_cast<int>([(id)redirectResponse statusCode]), [[(id)redirectResponse allHeaderFields] objectForKey:@"Location"]);
     else
-        LOG(Network, "Handle %p delegate connection:%p willSendRequest:%@ redirectResponse:non-HTTP", m_handle, connection, [newRequest description]); 
+        LOG(Network, "Handle %p delegate connection:%p willSendRequest:%@ redirectResponse:non-HTTP", m_handle, connection, [newRequest description]);
 #endif
 
     ResourceRequest request = newRequest;

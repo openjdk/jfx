@@ -38,31 +38,31 @@
 #include <wtf/RefPtr.h>
 
 namespace WebCore {
-    
+
 class PlatformSpeechSynthesizerClient;
 class SpeechSynthesisVoice;
-    
+
 class SpeechSynthesis : public PlatformSpeechSynthesizerClient, public RefCounted<SpeechSynthesis> {
 public:
     static PassRefPtr<SpeechSynthesis> create();
-    
+
     bool pending() const;
     bool speaking() const;
     bool paused() const;
-    
+
     void speak(SpeechSynthesisUtterance*);
     void cancel();
     void pause();
     void resume();
-    
+
     const Vector<RefPtr<SpeechSynthesisVoice>>& getVoices();
-    
+
     // Used in testing to use a mock platform synthesizer
     void setPlatformSynthesizer(PassOwnPtr<PlatformSpeechSynthesizer>);
-    
+
 private:
     SpeechSynthesis();
-    
+
     // PlatformSpeechSynthesizerClient override methods.
     virtual void voicesDidChange() override;
     virtual void didStartSpeaking(PassRefPtr<PlatformSpeechSynthesisUtterance>) override;
@@ -75,7 +75,7 @@ private:
     void startSpeakingImmediately(SpeechSynthesisUtterance*);
     void handleSpeakingCompleted(SpeechSynthesisUtterance*, bool errorOccurred);
     void fireEvent(const AtomicString& type, SpeechSynthesisUtterance*, unsigned long charIndex, const String& name);
-    
+
 #if PLATFORM(IOS)
     // Restrictions to change default behaviors.
     enum BehaviorRestrictionFlags {
@@ -83,11 +83,11 @@ private:
         RequireUserGestureForSpeechStartRestriction = 1 << 0,
     };
     typedef unsigned BehaviorRestrictions;
-    
+
     bool userGestureRequiredForSpeechStart() const { return m_restrictions & RequireUserGestureForSpeechStartRestriction; }
     void removeBehaviorRestriction(BehaviorRestrictions restriction) { m_restrictions &= ~restriction; }
 #endif
-    
+
     OwnPtr<PlatformSpeechSynthesizer> m_platformSpeechSynthesizer;
     Vector<RefPtr<SpeechSynthesisVoice>> m_voiceList;
     SpeechSynthesisUtterance* m_currentSpeechUtterance;
@@ -97,7 +97,7 @@ private:
     BehaviorRestrictions m_restrictions;
 #endif
 };
-    
+
 } // namespace WebCore
 
 #endif // ENABLE(SPEECH_SYNTHESIS)

@@ -19,13 +19,13 @@ String getLocalizedProperty(String name)
     static JGClass cls(env->FindClass("com/sun/webkit/LocalizedStrings"));
     ASSERT(cls);
 
-    static jmethodID mid = env->GetStaticMethodID(cls, 
+    static jmethodID mid = env->GetStaticMethodID(cls,
         "getLocalizedProperty",
         "(Ljava/lang/String;)Ljava/lang/String;");
     ASSERT(mid);
 
-    
-    JLString ls(static_cast<jstring>(env->CallStaticObjectMethod(cls, mid, 
+
+    JLString ls(static_cast<jstring>(env->CallStaticObjectMethod(cls, mid,
         (jstring)name.toJavaString(env))));
     CheckAndClearException(env);
 
@@ -103,7 +103,7 @@ String contextMenuItemTagOpenImageInNewWindow()
 }
 
 String contextMenuItemTagDownloadImageToDisk()
-{  
+{
     return String(); // UNSUPPORTED: getLocalizedProperty("contextMenuItemTagDownloadImageToDisk");
 }
 

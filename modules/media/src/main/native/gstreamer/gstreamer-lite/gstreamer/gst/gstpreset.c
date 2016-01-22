@@ -35,12 +35,12 @@
  * One method that is useful to be overridden is gst_preset_get_property_names().
  * With that one can control which properties are saved and in which order.
  *
- * The default implementation supports presets located in a system directory, 
+ * The default implementation supports presets located in a system directory,
  * application specific directory and in the users home directory. When getting
- * a list of presets individual presets are read and overlaid in 1) system, 
+ * a list of presets individual presets are read and overlaid in 1) system,
  * 2) application and 3) user order. Whenever an earlier entry is newer, the
- * later entries will be updated. 
- * 
+ * later entries will be updated.
+ *
  */
 /* FIXME:
  * - non racyness
@@ -1118,7 +1118,7 @@ gst_preset_get_meta (GstPreset * preset, const gchar * name, const gchar * tag,
  * @app_dir: the application specific preset dir
  *
  * Sets an extra directory as an absolute path that should be considered when
- * looking for presets. Any presets in the application dir will shadow the 
+ * looking for presets. Any presets in the application dir will shadow the
  * system presets.
  *
  * Returns: %TRUE for success, %FALSE if the dir already has been set

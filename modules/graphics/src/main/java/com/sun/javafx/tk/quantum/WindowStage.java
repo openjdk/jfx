@@ -95,7 +95,7 @@ class WindowStage extends GlassStage {
     }
 
     private static final Locale LOCALE = Locale.getDefault();
-    
+
     private static final ResourceBundle RESOURCES =
         ResourceBundle.getBundle(WindowStage.class.getPackage().getName() +
                                  ".QuantumMessagesBundle", LOCALE);
@@ -176,10 +176,10 @@ class WindowStage extends GlassStage {
                             // fall through
                         case DECORATED:
                             windowMask |=
-                                Window.TITLED | Window.CLOSABLE | 
+                                Window.TITLED | Window.CLOSABLE |
                                 Window.MINIMIZABLE | Window.MAXIMIZABLE;
                             if (ownerWindow != null || modality != Modality.NONE) {
-                                windowMask &= 
+                                windowMask &=
                                     ~(Window.MINIMIZABLE | Window.MAXIMIZABLE);
                             }
                             resizable = true;
@@ -216,11 +216,11 @@ class WindowStage extends GlassStage {
     protected GlassStage getOwner() {
         return owner;
     }
-    
+
     protected ViewScene getViewScene() {
         return (ViewScene)getScene();
     }
-    
+
     StageStyle getStyle() {
         return style;
     }
@@ -230,7 +230,7 @@ class WindowStage extends GlassStage {
         scene.setSecurityContext(acc);
         return scene;
     }
-    
+
     /**
      * Set the scene to be displayed in this stage
      *
@@ -274,7 +274,7 @@ class WindowStage extends GlassStage {
             QuantumRenderer.getInstance().disposePresentable(painter.presentable);   // latched on RT
         }
     }
-    
+
     @Override public void setBounds(float x, float y, boolean xSet, boolean ySet,
                                     float w, float h, float cw, float ch,
                                     float xGravity, float yGravity)
@@ -314,8 +314,8 @@ class WindowStage extends GlassStage {
         int ph = (int) (h > 0 ? Math.ceil(h * pScale) : h);
         int pcw = (int) (cw > 0 ? Math.ceil(cw * pScale) : cw);
         int pch = (int) (ch > 0 ? Math.ceil(ch * pScale) : ch);
-        platformWindow.setBounds(px, py, xSet, ySet, 
-                                 pw, ph, pcw, pch, 
+        platformWindow.setBounds(px, py, xSet, ySet,
+                                 pw, ph, pcw, pch,
                                  xGravity, yGravity);
     }
 
@@ -520,14 +520,14 @@ class WindowStage extends GlassStage {
                 appletWindow.assertStageOrder();
             }
         }
-        
+
         applyFullScreen();
     }
-    
+
     @Override boolean isVisible() {
         return platformWindow.isVisible();
     }
-    
+
     @Override public void setOpacity(float opacity) {
         platformWindow.setAlpha(opacity);
         GlassScene gs = getScene();
@@ -566,7 +566,7 @@ class WindowStage extends GlassStage {
         } else {
             platformWindow.setLevel(Level.NORMAL);
         }
-        
+
     }
 
     @Override public void setResizable(boolean resizable) {
@@ -585,7 +585,7 @@ class WindowStage extends GlassStage {
     void exitFullScreen() {
         setFullScreen(false);
     }
-    
+
     boolean isApplet() {
         return isPrimaryStage && null != appletWindow;
     }
@@ -761,7 +761,7 @@ class WindowStage extends GlassStage {
             appletWindow.assertStageOrder();
         }
     }
-    
+
     @Override public void close() {
         super.close();
         QuantumToolkit.runWithRenderLock(() -> {
@@ -816,7 +816,7 @@ class WindowStage extends GlassStage {
     @Override public void requestFocus() {
         platformWindow.requestFocus();
     }
-    
+
     @Override public void requestFocus(FocusCause cause) {
         switch (cause) {
             case TRAVERSED_FORWARD:
@@ -853,8 +853,8 @@ class WindowStage extends GlassStage {
             ((WindowStage) owner).setEnabled(enabled);
         }
         /*
-         * RT-17588 - exit if stage is closed from under us as 
-         *            any further access to the Glass layer 
+         * RT-17588 - exit if stage is closed from under us as
+         *            any further access to the Glass layer
          *            will throw an exception
          */
         if (enabled && (platformWindow == null || platformWindow.isClosed())) {
@@ -885,13 +885,13 @@ class WindowStage extends GlassStage {
     }
 
     @Override
-    public void requestInput(String text, int type, double width, double height, 
+    public void requestInput(String text, int type, double width, double height,
                         double Mxx, double Mxy, double Mxz, double Mxt,
-                        double Myx, double Myy, double Myz, double Myt, 
+                        double Myx, double Myy, double Myz, double Myt,
                         double Mzx, double Mzy, double Mzz, double Mzt) {
-        platformWindow.requestInput(text, type, width, height, 
-                                    Mxx, Mxy, Mxz, Mxt, 
-                                    Myx, Myy, Myz, Myt, 
+        platformWindow.requestInput(text, type, width, height,
+                                    Mxx, Mxy, Mxz, Mxt,
+                                    Myx, Myy, Myz, Myt,
                                     Mzx, Mzy, Mzz, Mzt);
     }
 

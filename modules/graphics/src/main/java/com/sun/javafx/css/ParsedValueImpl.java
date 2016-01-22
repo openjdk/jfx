@@ -40,7 +40,7 @@ import java.net.MalformedURLException;
 import java.net.URL;
 
 /**
- * Implementation details behind a {@link ParsedValueImpl}. 
+ * Implementation details behind a {@link ParsedValueImpl}.
  */
 public class ParsedValueImpl<V, T> extends ParsedValue<V,T> {
 
@@ -483,7 +483,7 @@ public class ParsedValueImpl<V, T> extends ParsedValue<V,T> {
                 os.writeByte(VALUE);
             } else {
                 os.writeByte(NULL_VALUE);
-            }            
+            }
             final int nLayers = (layers != null) ? layers.length : 0;
             os.writeInt(nLayers);
             for (int l=0; l<nLayers; l++) {

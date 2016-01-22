@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -55,42 +55,42 @@ public:
         // We don't care that you're using callee-save or stack registers.
         m_usedRegisters.exclude(RegisterSet::stackRegisters());
         m_usedRegisters.exclude(RegisterSet::calleeSaveRegisters());
-        
+
         // The return register doesn't need to be saved.
         if (m_returnRegister != InvalidGPRReg)
             m_usedRegisters.clear(m_returnRegister);
-        
+
         size_t stackBytesNeededForReturnAddress = wordSize;
-        
+
         m_offsetToSavingArea =
             (std::max(m_numArgs, NUMBER_OF_ARGUMENT_REGISTERS) - NUMBER_OF_ARGUMENT_REGISTERS) * wordSize;
-        
+
         for (unsigned i = std::min(NUMBER_OF_ARGUMENT_REGISTERS, numArgs); i--;)
             m_callingConventionRegisters.set(GPRInfo::toArgumentRegister(i));
         if (returnRegister != InvalidGPRReg)
             m_callingConventionRegisters.set(GPRInfo::returnValueGPR);
         m_callingConventionRegisters.filter(m_usedRegisters);
-        
+
         unsigned numberOfCallingConventionRegisters =
             m_callingConventionRegisters.numberOfSetRegisters();
-        
+
         size_t offsetToThunkSavingArea =
             m_offsetToSavingArea +
             numberOfCallingConventionRegisters * wordSize;
-        
+
         m_stackBytesNeeded =
             offsetToThunkSavingArea +
             stackBytesNeededForReturnAddress +
             (m_usedRegisters.numberOfSetRegisters() - numberOfCallingConventionRegisters) * wordSize;
-        
+
         size_t stackAlignment = 16;
-        
+
         m_stackBytesNeeded = (m_stackBytesNeeded + stackAlignment - 1) & ~(stackAlignment - 1);
-        
+
         m_jit.subPtr(CCallHelpers::TrustedImm32(m_stackBytesNeeded), CCallHelpers::stackPointerRegister);
-        
+
         m_thunkSaveSet = m_usedRegisters;
-        
+
         // This relies on all calling convention registers also being temp registers.
         unsigned stackIndex = 0;
         for (unsigned i = GPRInfo::numberOfRegisters; i--;) {
@@ -100,15 +100,15 @@ public:
             m_jit.storePtr(reg, CCallHelpers::Address(CCallHelpers::stackPointerRegister, m_offsetToSavingArea + (stackIndex++) * wordSize));
             m_thunkSaveSet.clear(reg);
         }
-        
+
         m_offset = offsetToThunkSavingArea;
     }
-    
+
     ~CallContext()
     {
         if (m_returnRegister != InvalidGPRReg)
             m_jit.move(GPRInfo::returnValueGPR, m_returnRegister);
-        
+
         unsigned stackIndex = 0;
         for (unsigned i = GPRInfo::numberOfRegisters; i--;) {
             GPRReg reg = GPRInfo::toRegister(i);
@@ -116,25 +116,25 @@ public:
                 continue;
             m_jit.loadPtr(CCallHelpers::Address(CCallHelpers::stackPointerRegister, m_offsetToSavingArea + (stackIndex++) * wordSize), reg);
         }
-        
+
         m_jit.addPtr(CCallHelpers::TrustedImm32(m_stackBytesNeeded), CCallHelpers::stackPointerRegister);
     }
-    
+
     RegisterSet usedRegisters() const
     {
         return m_thunkSaveSet;
     }
-    
+
     ptrdiff_t offset() const
     {
         return m_offset;
     }
-    
+
     SlowPathCallKey keyWithTarget(void* callTarget) const
     {
         return SlowPathCallKey(usedRegisters(), callTarget, offset());
     }
-    
+
     MacroAssembler::Call makeCall(void* callTarget, MacroAssembler::JumpList* exceptionTarget)
     {
         MacroAssembler::Call result = m_jit.call();
@@ -144,7 +144,7 @@ public:
             exceptionTarget->append(m_jit.emitExceptionCheck());
         return result;
     }
-    
+
 private:
     State& m_state;
     RegisterSet m_usedRegisters;
@@ -164,7 +164,7 @@ void storeCodeOrigin(State& state, CCallHelpers& jit, CodeOrigin codeOrigin)
 {
     if (!codeOrigin.isSet())
         return;
-    
+
     unsigned index = state.jitCode->common.addCodeOrigin(codeOrigin);
     unsigned locationBits = CallFrame::Location::encodeAsCodeOriginIndex(index);
     jit.store32(
@@ -187,7 +187,7 @@ MacroAssembler::Call callOperation(
 }
 
 MacroAssembler::Call callOperation(
-    State& state, const RegisterSet& usedRegisters, CCallHelpers& jit, 
+    State& state, const RegisterSet& usedRegisters, CCallHelpers& jit,
     CodeOrigin codeOrigin, MacroAssembler::JumpList* exceptionTarget,
     V_JITOperation_ESsiJJI operation, StructureStubInfo* stubInfo, GPRReg value,
     GPRReg object, StringImpl* uid)

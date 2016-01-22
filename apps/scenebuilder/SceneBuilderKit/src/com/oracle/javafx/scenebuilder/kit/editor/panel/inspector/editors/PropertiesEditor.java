@@ -47,7 +47,7 @@ import javafx.util.Duration;
 
 /**
  *
- * 
+ *
  */
 public abstract class PropertiesEditor extends Editor {
 
@@ -67,7 +67,7 @@ public abstract class PropertiesEditor extends Editor {
     public HBox getNameNode() {
         return nameNode;
     }
-    
+
     public String getPropertyNameText() {
         return name;
     }
@@ -78,11 +78,11 @@ public abstract class PropertiesEditor extends Editor {
     public final MenuButton getMenu() {
         if (menu == null) {
             menu = new MenuButton();
-            
+
             Region region = new Region();
             menu.setGraphic(region);
             region.getStyleClass().add("cog-shape"); //NOI18N
-            
+
             menu.getStyleClass().add("cog-menubutton"); //NOI18N
             menu.setOpacity(0);
             fadeTransition = new FadeTransition(Duration.millis(500), menu);

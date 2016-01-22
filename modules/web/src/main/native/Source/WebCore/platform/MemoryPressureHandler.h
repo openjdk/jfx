@@ -92,7 +92,7 @@ private:
     Mutex m_observerMutex;
 #endif
 };
- 
+
 // Function to obtain the global memory pressure object.
 MemoryPressureHandler& memoryPressureHandler();
 

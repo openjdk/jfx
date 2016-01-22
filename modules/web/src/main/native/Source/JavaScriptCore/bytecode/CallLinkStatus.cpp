@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -46,12 +46,12 @@ CallLinkStatus::CallLinkStatus(JSValue value)
 {
     if (!value || !value.isCell())
         return;
-    
+
     m_structure = value.asCell()->structure();
-    
+
     if (!value.asCell()->inherits(JSFunction::info()))
         return;
-    
+
     m_executable = jsCast<JSFunction*>(value.asCell())->executable();
 }
 
@@ -59,10 +59,10 @@ JSFunction* CallLinkStatus::function() const
 {
     if (!m_callTarget || !m_callTarget.isCell())
         return 0;
-    
+
     if (!m_callTarget.asCell()->inherits(JSFunction::info()))
         return 0;
-    
+
     return jsCast<JSFunction*>(m_callTarget.asCell());
 }
 
@@ -70,10 +70,10 @@ InternalFunction* CallLinkStatus::internalFunction() const
 {
     if (!m_callTarget || !m_callTarget.isCell())
         return 0;
-    
+
     if (!m_callTarget.asCell()->inherits(InternalFunction::info()))
         return 0;
-    
+
     return jsCast<InternalFunction*>(m_callTarget.asCell());
 }
 
@@ -81,7 +81,7 @@ Intrinsic CallLinkStatus::intrinsicFor(CodeSpecializationKind kind) const
 {
     if (!m_executable)
         return NoIntrinsic;
-    
+
     return m_executable->intrinsicFor(kind);
 }
 
@@ -101,14 +101,14 @@ CallLinkStatus CallLinkStatus::computeFromLLInt(const ConcurrentJITLocker& locke
 #endif
 
     VM& vm = *profiledBlock->vm();
-    
+
     Instruction* instruction = profiledBlock->instructions().begin() + bytecodeIndex;
     OpcodeID op = vm.interpreter->getOpcodeID(instruction[0].u.opcode);
     if (op != op_call && op != op_construct)
         return CallLinkStatus();
-    
+
     LLIntCallLinkInfo* callLinkInfo = instruction[5].u.callLinkInfo;
-    
+
     return CallLinkStatus(callLinkInfo->lastSeenCallee.get());
 #else
     return CallLinkStatus();
@@ -118,7 +118,7 @@ CallLinkStatus CallLinkStatus::computeFromLLInt(const ConcurrentJITLocker& locke
 CallLinkStatus CallLinkStatus::computeFor(CodeBlock* profiledBlock, unsigned bytecodeIndex)
 {
     ConcurrentJITLocker locker(profiledBlock->m_lock);
-    
+
     UNUSED_PARAM(profiledBlock);
     UNUSED_PARAM(bytecodeIndex);
 #if ENABLE(DFG_JIT)
@@ -126,22 +126,22 @@ CallLinkStatus CallLinkStatus::computeFor(CodeBlock* profiledBlock, unsigned byt
         || profiledBlock->hasExitSite(locker, DFG::FrequentExitSite(bytecodeIndex, BadCacheWatchpoint))
         || profiledBlock->hasExitSite(locker, DFG::FrequentExitSite(bytecodeIndex, BadExecutable)))
         return takesSlowPath();
-    
+
     if (!profiledBlock->hasBaselineJITProfiling())
         return computeFromLLInt(locker, profiledBlock, bytecodeIndex);
-    
+
     if (profiledBlock->couldTakeSlowCase(bytecodeIndex))
         return takesSlowPath();
-    
+
     CallLinkInfo& callLinkInfo = profiledBlock->getCallLinkInfo(bytecodeIndex);
-    
+
     CallLinkStatus result = computeFor(locker, callLinkInfo);
     if (!result)
         return computeFromLLInt(locker, profiledBlock, bytecodeIndex);
-    
+
     if (profiledBlock->hasExitSite(locker, DFG::FrequentExitSite(bytecodeIndex, BadFunction)))
         result.makeClosureCall();
-    
+
     return result;
 #else
     return CallLinkStatus();
@@ -153,11 +153,11 @@ CallLinkStatus CallLinkStatus::computeFor(const ConcurrentJITLocker&, CallLinkIn
 {
     if (callLinkInfo.stub)
         return CallLinkStatus(callLinkInfo.stub->executable(), callLinkInfo.stub->structure());
-    
+
     JSFunction* target = callLinkInfo.lastSeenCallee.get();
     if (!target)
         return CallLinkStatus();
-    
+
     if (callLinkInfo.hasSeenClosure)
         return CallLinkStatus(target->executable(), target->structure());
 
@@ -173,14 +173,14 @@ void CallLinkStatus::computeDFGStatuses(
     CodeBlock* baselineCodeBlock = dfgCodeBlock->alternative();
     DFG::JITCode* jitCode = dfgCodeBlock->jitCode()->dfg();
     RELEASE_ASSERT(dfgCodeBlock->numberOfCallLinkInfos() <= jitCode->slowPathCalls.size());
-    
+
     for (size_t i = dfgCodeBlock->numberOfCallLinkInfos(); i--;) {
         CallLinkInfo& info = dfgCodeBlock->callLinkInfo(i);
         CodeOrigin codeOrigin = info.codeOrigin;
-        
+
         bool takeSlowPath;
         bool badFunction;
-        
+
         // Check if we had already previously made a terrible mistake in the FTL for this
         // code origin. Note that this is approximate because we could have a monovariant
         // inline in the FTL that ended up failing. We should fix that at some point by
@@ -199,7 +199,7 @@ void CallLinkStatus::computeDFGStatuses(
             badFunction =
                 currentBaseline->hasExitSite(locker, DFG::FrequentExitSite(codeOrigin.bytecodeIndex, BadFunction, ExitFromFTL));
         }
-        
+
         {
             ConcurrentJITLocker locker(dfgCodeBlock->m_lock);
             if (takeSlowPath || jitCode->slowPathCalls[i] >= Options::couldTakeSlowCaseMinimumCount())
@@ -217,7 +217,7 @@ void CallLinkStatus::computeDFGStatuses(
 #else
     UNUSED_PARAM(dfgCodeBlock);
 #endif // ENABLE(DFG_JIT)
-    
+
     if (verbose) {
         dataLog("Context map:\n");
         ContextMap::iterator iter = map.begin();
@@ -235,7 +235,7 @@ CallLinkStatus CallLinkStatus::computeFor(
     ContextMap::const_iterator iter = map.find(codeOrigin);
     if (iter != map.end())
         return iter->value;
-    
+
     return computeFor(profiledBlock, codeOrigin.bytecodeIndex);
 }
 
@@ -245,24 +245,24 @@ void CallLinkStatus::dump(PrintStream& out) const
         out.print("Not Set");
         return;
     }
-    
+
     CommaPrinter comma;
-    
+
     if (m_isProved)
         out.print(comma, "Statically Proved");
-    
+
     if (m_couldTakeSlowPath)
         out.print(comma, "Could Take Slow Path");
-    
+
     if (m_callTarget)
         out.print(comma, "Known target: ", m_callTarget);
-    
+
     if (m_executable) {
         out.print(comma, "Executable/CallHash: ", RawPointer(m_executable));
         if (!isCompilationThread())
             out.print("/", m_executable->hashFor(CodeForCall));
     }
-    
+
     if (m_structure)
         out.print(comma, "Structure: ", RawPointer(m_structure));
 }

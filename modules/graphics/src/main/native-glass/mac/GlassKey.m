@@ -42,7 +42,7 @@ struct KeyMapEntry
 {
     unsigned short        keyCode;
     jint                  jKeyCode;
-    BOOL                  sendJavaChars;            
+    BOOL                  sendJavaChars;
 };
 
 static const struct KeyMapEntry gKeyMap[] =
@@ -247,7 +247,7 @@ jint GetJavaKeyCode(NSEvent *event)
 jcharArray GetJavaKeyChars(JNIEnv *env, NSEvent *event)
 {
     NSString *chars = [event characters];
-    
+
     unsigned short keyCode = [event keyCode];
     BOOL needChars = NO;
     // Not the fastest implementation...
@@ -264,7 +264,7 @@ jcharArray GetJavaKeyChars(JNIEnv *env, NSEvent *event)
         // Return an empty array instead of NULL
         return (*env)->NewCharArray(env, 0);
     }
-    
+
     jchar jc[16];
     [chars getCharacters:jc range:NSMakeRange(0, [chars length])];
     jcharArray jChars = (*env)->NewCharArray(env, (jsize)[chars length]);
@@ -283,7 +283,7 @@ BOOL GetMacKey(jint javaKeyCode, unsigned short *outMacKeyCode)
             return YES;
         }
     }
-    
+
     // ??? unknown VK
     return NO;
 }
@@ -296,7 +296,7 @@ NSString* GetStringForJavaKey(jchar jKeyCode) {
     {
         return [[NSString stringWithFormat:@"%c", jKeyCode] lowercaseString];
     }
-    
+
     unichar   unicode = 0;
     switch (jKeyCode)
     {
@@ -364,7 +364,7 @@ NSString* GetStringForJavaKey(jchar jKeyCode) {
         default:
             break;
     }
-    
+
     if (unicode != 0)
     {
         LOG("GetStringForJavaKey: unicode %x", unicode);

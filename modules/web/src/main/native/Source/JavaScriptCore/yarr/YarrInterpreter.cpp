@@ -1259,7 +1259,7 @@ public:
         case ByteTerm::TypeUncheckInput:
             input.uncheckInput(currentTerm().checkInputCount);
             MATCH_NEXT();
-                
+
         case ByteTerm::TypeDotStarEnclosure:
             if (matchDotStarEnclosure(currentTerm(), context))
                 return JSRegExpMatch;
@@ -1490,7 +1490,7 @@ public:
     {
         m_bodyDisjunction->terms.append(ByteTerm::UncheckInput(count));
     }
-    
+
     void assertionBOL(unsigned inputPosition)
     {
         m_bodyDisjunction->terms.append(ByteTerm::BOL(inputPosition));

@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef IntPoint_h
@@ -69,7 +69,7 @@ public:
     void setX(int x) { m_x = x; }
     void setY(int y) { m_y = y; }
 
-    void move(const IntSize& s) { move(s.width(), s.height()); } 
+    void move(const IntSize& s) { move(s.width(), s.height()); }
     void moveBy(const IntPoint& offset) { move(offset.x(), offset.y()); }
     void move(int dx, int dy) { m_x += dx; m_y += dy; }
     void scale(float sx, float sy)
@@ -77,7 +77,7 @@ public:
         m_x = lroundf(static_cast<float>(m_x * sx));
         m_y = lroundf(static_cast<float>(m_y * sy));
     }
-    
+
     IntPoint expandedTo(const IntPoint& other) const
     {
         return IntPoint(m_x > other.m_x ? m_x : other.m_x,

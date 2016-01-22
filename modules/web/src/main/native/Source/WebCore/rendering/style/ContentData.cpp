@@ -36,14 +36,14 @@ namespace WebCore {
 std::unique_ptr<ContentData> ContentData::clone() const
 {
     auto result = cloneInternal();
-    
+
     ContentData* lastNewData = result.get();
     for (const ContentData* contentData = next(); contentData; contentData = contentData->next()) {
         auto newData = contentData->cloneInternal();
         lastNewData->setNext(std::move(newData));
         lastNewData = lastNewData->next();
     }
-        
+
     return result;
 }
 

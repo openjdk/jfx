@@ -59,7 +59,7 @@ JSPropertyNameIterator* JSPropertyNameIterator::create(ExecState* exec, JSObject
     if (!o->structure()->hasNonEnumerableProperties() && !o->structure()->hasGetterSetterProperties()
         && !o->structure()->isUncacheableDictionary() && !o->structure()->typeInfo().overridesGetPropertyNames())
         numCacheableSlots = propertyNames.numCacheableSlots();
-    
+
     JSPropertyNameIterator* jsPropertyNameIterator = new (NotNull, allocateCell<JSPropertyNameIterator>(vm.heap)) JSPropertyNameIterator(exec, propertyNames.data(), numCacheableSlots);
     jsPropertyNameIterator->finishCreation(vm, propertyNames.data(), o);
 
@@ -68,10 +68,10 @@ JSPropertyNameIterator* JSPropertyNameIterator::create(ExecState* exec, JSObject
 
     if (o->structure()->typeInfo().overridesGetPropertyNames())
         return jsPropertyNameIterator;
-    
+
     if (hasIndexedProperties(o->structure()->indexingType()))
         return jsPropertyNameIterator;
-    
+
     size_t count = normalizePrototypeChain(exec, o);
     StructureChain* structureChain = o->structure()->prototypeChain(exec);
     WriteBarrier<Structure>* structure = structureChain->head();

@@ -30,7 +30,7 @@ class SVGLengthList : public Vector<SVGLength> {
 public:
     SVGLengthList() { }
 
-    void parse(const String& value, SVGLengthMode); 
+    void parse(const String& value, SVGLengthMode);
     String valueAsString() const;
 };
 

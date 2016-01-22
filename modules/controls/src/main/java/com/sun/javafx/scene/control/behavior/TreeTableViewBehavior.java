@@ -46,9 +46,9 @@ public class TreeTableViewBehavior<T> extends TableViewBehaviorBase<TreeTableVie
     /**************************************************************************
      *                                                                        *
      * Listeners                                                              *
-     *                                                                        *  
+     *                                                                        *
      *************************************************************************/
-    
+
     private final ChangeListener<TreeTableView.TreeTableViewSelectionModel<T>> selectionModelListener =
             (observable, oldValue, newValue) -> {
                 if (oldValue != null) {
@@ -58,16 +58,16 @@ public class TreeTableViewBehavior<T> extends TableViewBehaviorBase<TreeTableVie
                     newValue.getSelectedCells().addListener(weakSelectedCellsListener);
                 }
             };
-    
-    private final WeakChangeListener<TreeTableView.TreeTableViewSelectionModel<T>> weakSelectionModelListener = 
+
+    private final WeakChangeListener<TreeTableView.TreeTableViewSelectionModel<T>> weakSelectionModelListener =
             new WeakChangeListener<>(selectionModelListener);
-    
-    
-    
+
+
+
     /**************************************************************************
      *                                                                        *
      * Constructors                                                           *
-     *                                                                        *  
+     *                                                                        *
      *************************************************************************/
 
     public TreeTableViewBehavior(TreeTableView<T>  control) {
@@ -96,14 +96,14 @@ public class TreeTableViewBehavior<T> extends TableViewBehaviorBase<TreeTableVie
         }
     }
 
-    
-    
+
+
     /**************************************************************************
      *                                                                        *
      * Implement TableViewBehaviorBase abstract methods                       *
-     *                                                                        *  
+     *                                                                        *
      *************************************************************************/
-    
+
     /** {@inheritDoc}  */
     @Override protected int getItemCount() {
         return getNode().getExpandedItemCount();
@@ -150,7 +150,7 @@ public class TreeTableViewBehavior<T> extends TableViewBehaviorBase<TreeTableVie
     }
 
     /** {@inheritDoc}  */
-    @Override protected TablePositionBase<TreeTableColumn<T, ?>> 
+    @Override protected TablePositionBase<TreeTableColumn<T, ?>>
             getTablePosition(int row, TableColumnBase<TreeItem<T>, ?> tc) {
         return new TreeTablePosition(getNode(), row, (TreeTableColumn)tc);
     }
@@ -174,9 +174,9 @@ public class TreeTableViewBehavior<T> extends TableViewBehaviorBase<TreeTableVie
     /**************************************************************************
      *                                                                        *
      * Tree-related implementation                                            *
-     *                                                                        *  
+     *                                                                        *
      *************************************************************************/
-    
+
     /**
      * The next methods handle the left/right arrow input differently depending
      * on whether we are in row or cell selection.
@@ -192,7 +192,7 @@ public class TreeTableViewBehavior<T> extends TableViewBehaviorBase<TreeTableVie
             expandRow();
         }
     }
-    
+
     private void leftArrowPressed() {
         if (getNode().getSelectionModel().isCellSelectionEnabled()) {
             if (isRTL()) {
@@ -204,16 +204,16 @@ public class TreeTableViewBehavior<T> extends TableViewBehaviorBase<TreeTableVie
             collapseRow();
         }
     }
-    
+
     private void expandRow() {
         Callback<TreeItem<T>, Integer> getIndex = p -> getNode().getRow(p);
         TreeViewBehavior.expandRow(getNode().getSelectionModel(), getIndex);
     }
-    
+
     private void expandAll() {
         TreeViewBehavior.expandAll(getNode().getRoot());
     }
-    
+
     private void collapseRow() {
         TreeTableView<T> control = getNode();
         TreeViewBehavior.collapseRow(control.getSelectionModel(), control.getRoot(), control.isShowRoot());

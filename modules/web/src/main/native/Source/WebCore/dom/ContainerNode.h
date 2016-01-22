@@ -37,7 +37,7 @@ class RenderElement;
 
 typedef void (*NodeCallback)(Node&, unsigned);
 
-namespace Private { 
+namespace Private {
     template<class GenericNode, class GenericNodeContainer>
     void addChildNodesToDeletionQueue(GenericNode*& head, GenericNode*& tail, GenericNodeContainer&);
 };

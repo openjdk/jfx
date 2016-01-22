@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -71,7 +71,7 @@ IndexedAbstractHeap::IndexedAbstractHeap(LContext context, AbstractHeap* parent,
             break;
         }
     }
-    
+
     if (!m_canShift)
         m_scaleTerm = constInt(intPtrType(context), m_elementSize, ZeroExtend);
 }
@@ -84,7 +84,7 @@ TypedPointer IndexedAbstractHeap::baseIndex(Output& out, LValue base, LValue ind
 {
     if (indexAsConstant.isInt32())
         return out.address(base, at(indexAsConstant.asInt32()), offset);
-    
+
     LValue result;
     if (m_canShift) {
         if (!m_scaleTerm)
@@ -93,14 +93,14 @@ TypedPointer IndexedAbstractHeap::baseIndex(Output& out, LValue base, LValue ind
             result = out.add(base, out.shl(index, m_scaleTerm));
     } else
         result = out.add(base, out.mul(index, m_scaleTerm));
-    
+
     return TypedPointer(atAnyIndex(), out.addPtr(result, m_offset + offset));
 }
 
 const AbstractField& IndexedAbstractHeap::atSlow(ptrdiff_t index)
 {
     ASSERT(static_cast<size_t>(index) >= m_smallIndices.size());
-    
+
     if (UNLIKELY(!m_largeIndices))
         m_largeIndices = adoptPtr(new MapType());
 
@@ -133,10 +133,10 @@ void IndexedAbstractHeap::initialize(AbstractField& field, ptrdiff_t signedIndex
     //    Blah_neg_A
     //
     // This is important because LLVM uses the string to distinguish the types.
-    
+
     static const char* negSplit = "_neg_";
     static const char* posSplit = "_";
-    
+
     bool negative;
     size_t index;
     if (signedIndex < 0) {
@@ -146,33 +146,33 @@ void IndexedAbstractHeap::initialize(AbstractField& field, ptrdiff_t signedIndex
         negative = false;
         index = signedIndex;
     }
-    
+
     for (unsigned power = 4; power <= sizeof(void*) * 8; power += 4) {
         if (isGreaterThanNonZeroPowerOfTwo(index, power))
             continue;
-        
+
         unsigned numHexlets = power >> 2;
-        
+
         size_t stringLength = m_heapNameLength + (negative ? strlen(negSplit) : strlen(posSplit)) + numHexlets;
         char* characters;
         m_largeIndexNames.append(CString::newUninitialized(stringLength, characters));
-        
+
         memcpy(characters, m_heapForAnyIndex.heapName(), m_heapNameLength);
         if (negative)
             memcpy(characters + m_heapNameLength, negSplit, strlen(negSplit));
         else
             memcpy(characters + m_heapNameLength, posSplit, strlen(posSplit));
-        
+
         size_t accumulator = index;
         for (unsigned i = 0; i < numHexlets; ++i) {
             characters[stringLength - i - 1] = lowerNibbleToASCIIHexDigit(accumulator);
             accumulator >>= 4;
         }
-        
+
         field.initialize(&m_heapForAnyIndex, characters, m_offset + signedIndex * m_elementSize);
         return;
     }
-    
+
     RELEASE_ASSERT_NOT_REACHED();
 }
 

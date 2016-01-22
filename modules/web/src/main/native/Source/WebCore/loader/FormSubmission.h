@@ -91,7 +91,7 @@ public:
     static PassRefPtr<FormSubmission> create(HTMLFormElement*, const Attributes&, PassRefPtr<Event> event, bool lockHistory, FormSubmissionTrigger);
 
     void populateFrameLoadRequest(FrameLoadRequest&);
-    
+
     URL requestURL() const;
 
     Method method() const { return m_method; }

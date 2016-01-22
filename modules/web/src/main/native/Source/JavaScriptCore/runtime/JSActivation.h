@@ -25,7 +25,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
- 
+
 #ifndef JSActivation_h
 #define JSActivation_h
 
@@ -38,11 +38,11 @@
 namespace JSC {
 
 class Register;
-    
+
 class JSActivation : public JSVariableObject {
 private:
     JSActivation(VM&, CallFrame*, Register*, SymbolTable*);
-    
+
 public:
     typedef JSVariableObject Base;
 
@@ -60,7 +60,7 @@ public:
         activation->finishCreation(vm);
         return activation;
     }
-        
+
     static JSActivation* create(VM& vm, CallFrame* callFrame, CodeBlock* codeBlock)
     {
         return create(vm, callFrame, callFrame->registers() + codeBlock->framePointerOffsetToGetActivationRegisters(), codeBlock);
@@ -78,7 +78,7 @@ public:
     static JSValue toThis(JSCell*, ExecState*, ECMAMode);
 
     void tearOff(VM&);
-        
+
     DECLARE_INFO;
 
     static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue proto) { return Structure::create(vm, globalObject, proto, TypeInfo(ActivationObjectType, StructureFlags), info()); }
@@ -132,7 +132,7 @@ inline JSActivation* asActivation(JSValue value)
     ASSERT(asObject(value)->inherits(JSActivation::info()));
     return jsCast<JSActivation*>(asObject(value));
 }
-    
+
 ALWAYS_INLINE JSActivation* Register::activation() const
 {
     return asActivation(jsValue());

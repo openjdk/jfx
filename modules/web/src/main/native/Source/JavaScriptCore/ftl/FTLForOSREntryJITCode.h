@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef FTLForOSREntryJITCode_h
@@ -47,18 +47,18 @@ class ForOSREntryJITCode : public FTL::JITCode {
 public:
     ForOSREntryJITCode();
     ~ForOSREntryJITCode();
-    
+
     void initializeEntryBuffer(VM&, unsigned numCalleeRegisters);
     ScratchBuffer* entryBuffer() const { return m_entryBuffer; }
-    
+
     void setBytecodeIndex(unsigned value) { m_bytecodeIndex = value; }
     unsigned bytecodeIndex() const { return m_bytecodeIndex; }
-    
+
     void countEntryFailure() { m_entryFailureCount++; }
     unsigned entryFailureCount() const { return m_entryFailureCount; }
-    
+
     ForOSREntryJITCode* ftlForOSREntry();
-    
+
 private:
     ScratchBuffer* m_entryBuffer; // Only for OSR entry code blocks.
     unsigned m_bytecodeIndex;

@@ -38,7 +38,7 @@ NameNodeList::NameNodeList(ContainerNode& rootNode, const AtomicString& name)
 NameNodeList::~NameNodeList()
 {
     ownerNode().nodeLists()->removeCacheWithAtomicName(this, m_name);
-} 
+}
 
 bool NameNodeList::nodeMatches(Element* testNode) const
 {

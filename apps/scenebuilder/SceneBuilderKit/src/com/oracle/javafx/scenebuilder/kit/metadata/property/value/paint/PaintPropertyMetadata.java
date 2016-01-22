@@ -64,8 +64,8 @@ public class PaintPropertyMetadata extends ComplexPropertyMetadata<Paint> {
     /*
      * ComplexPropertyMetadata
      */
-    
-    
+
+
     @Override
     public Paint makeValueFromString(String string) {
         return colorMetadata.makeValueFromString(string);
@@ -85,7 +85,7 @@ public class PaintPropertyMetadata extends ComplexPropertyMetadata<Paint> {
     @Override
     public FXOMInstance makeFxomInstanceFromValue(Paint value, FXOMDocument fxomDocument) {
         final FXOMInstance result;
-        
+
         if (value instanceof Color) {
             result = colorMetadata.makeFxomInstanceFromValue((Color) value, fxomDocument);
         } else if (value instanceof ImagePattern) {
@@ -98,7 +98,7 @@ public class PaintPropertyMetadata extends ComplexPropertyMetadata<Paint> {
             assert false;
             result = colorMetadata.makeFxomInstanceFromValue(Color.BLACK, fxomDocument);
         }
-        
+
         return result;
     }
 

@@ -46,7 +46,7 @@ public interface ByteToBytePixelConverter
      *     }
      * }
      * </pre>
-     * 
+     *
      * @param srcarr the byte array containing the source data
      * @param srcoff the index in the array of the first source pixel data
      * @param srcscanbytes number of array indices between rows of data in the source
@@ -76,7 +76,7 @@ public interface ByteToBytePixelConverter
      *     }
      * }
      * </pre>
-     * 
+     *
      * @param srcbuf the nio buffer containing the source data
      * @param srcoff the absolute location in the buffer of the first source pixel data
      * @param srcscanbytes number of buffer elements between rows of data in the source
@@ -106,7 +106,7 @@ public interface ByteToBytePixelConverter
      *     }
      * }
      * </pre>
-     * 
+     *
      * @param srcarr the byte array containing the source data
      * @param srcoff the index in the array of the first source pixel data
      * @param srcscanbytes number of array indices between rows of data in the source

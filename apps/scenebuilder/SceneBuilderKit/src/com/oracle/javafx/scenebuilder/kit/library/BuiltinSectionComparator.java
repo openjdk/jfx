@@ -40,9 +40,9 @@ import java.util.List;
  * @treatAsPrivate
  */
 public class BuiltinSectionComparator implements Comparator<String> {
-    
+
     private static final List<String> orderedSections = new ArrayList<>();
-    
+
     static {
         orderedSections.add(BuiltinLibrary.TAG_CONTAINERS);
         orderedSections.add(BuiltinLibrary.TAG_CONTROLS);
@@ -52,8 +52,8 @@ public class BuiltinSectionComparator implements Comparator<String> {
         orderedSections.add(BuiltinLibrary.TAG_CHARTS);
         orderedSections.add(BuiltinLibrary.TAG_3D);
     }
-    
-    
+
+
     /*
      * Comparator
      */
@@ -62,11 +62,11 @@ public class BuiltinSectionComparator implements Comparator<String> {
     public int compare(String section1, String section2) {
         assert section1 != null;
         assert section2 != null;
-        
+
         final int index1 = orderedSections.indexOf(section1);
         final int index2 = orderedSections.indexOf(section2);
         final int result;
-        
+
         if ((index1 != -1) && (index2 != -1)) {
             // section1 and section2 are both predefined names
             result = Integer.compare(index1, index2);
@@ -80,8 +80,8 @@ public class BuiltinSectionComparator implements Comparator<String> {
             // section1 and section2 are both custom
             result = section1.compareTo(section2);
         }
-        
+
         return result;
     }
-    
+
 }

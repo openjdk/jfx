@@ -32,9 +32,9 @@
 #include <PiscesSysutils.h>
 
 /**
- * This function simply copies data from source transformation matrix pointed to 
+ * This function simply copies data from source transformation matrix pointed to
  * by transformS to destination pointed to by transformD.
- */  
+ */
 void
 pisces_transform_assign(Transform6* transformD, const Transform6* transformS) {
     memcpy(transformD, transformS, sizeof(Transform6));
@@ -42,8 +42,8 @@ pisces_transform_assign(Transform6* transformD, const Transform6* transformS) {
 
 /**
  * This function computes inverse transformation matrix of *transform. Result is
- * stored in structure pointed to by transform. 
- */ 
+ * stored in structure pointed to by transform.
+ */
 void
 pisces_transform_invert(Transform6* transform) {
     jfloat fm00 = transform->m00/65536.0f;
@@ -73,9 +73,9 @@ pisces_transform_invert(Transform6* transform) {
  * Multiplicates transformation matrixes *transformD and *transformS. Result is
  * stored in *transformD. Matrix *transformD is multiplied by matrix *transformS
  * from right (*transformD = *transformD.*transformS).
- */   
+ */
 void
-pisces_transform_multiply(Transform6* transformD, 
+pisces_transform_multiply(Transform6* transformD,
                           const Transform6* transformS) {
     jlong _m00 = ((jlong)transformD->m00*transformS->m00 +
                   (jlong)transformD->m01*transformS->m10) >> 16;

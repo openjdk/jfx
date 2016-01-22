@@ -57,10 +57,10 @@ GCController::GCController()
 
 void GCController::garbageCollectSoon()
 {
-    // We only use reportAbandonedObjectGraph on systems with CoreFoundation 
-    // since it uses a runloop-based timer that is currently only available on 
-    // systems with CoreFoundation. If and when the notion of a run loop is pushed 
-    // down into WTF so that more platforms can take advantage of it, we will be 
+    // We only use reportAbandonedObjectGraph on systems with CoreFoundation
+    // since it uses a runloop-based timer that is currently only available on
+    // systems with CoreFoundation. If and when the notion of a run loop is pushed
+    // down into WTF so that more platforms can take advantage of it, we will be
     // able to use reportAbandonedObjectGraph on more platforms.
 #if USE(CF)
     JSLockHolder lock(JSDOMWindow::commonVM());

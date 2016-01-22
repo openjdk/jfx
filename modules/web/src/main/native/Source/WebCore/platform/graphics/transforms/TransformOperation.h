@@ -37,11 +37,11 @@ namespace WebCore {
 class TransformOperation : public RefCounted<TransformOperation> {
 public:
     enum OperationType {
-        SCALE_X, SCALE_Y, SCALE, 
-        TRANSLATE_X, TRANSLATE_Y, TRANSLATE, 
+        SCALE_X, SCALE_Y, SCALE,
+        TRANSLATE_X, TRANSLATE_Y, TRANSLATE,
         ROTATE,
         ROTATE_Z = ROTATE,
-        SKEW_X, SKEW_Y, SKEW, 
+        SKEW_X, SKEW_Y, SKEW,
         MATRIX,
         SCALE_Z, SCALE_3D,
         TRANSLATE_Z, TRANSLATE_3D,
@@ -65,7 +65,7 @@ public:
 
     virtual OperationType type() const = 0;
     virtual bool isSameType(const TransformOperation&) const { return false; }
-    
+
     bool is3DOperation() const
     {
         OperationType opType = type();

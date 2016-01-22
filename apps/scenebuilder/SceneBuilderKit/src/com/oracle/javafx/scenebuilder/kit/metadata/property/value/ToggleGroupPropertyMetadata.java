@@ -48,30 +48,30 @@ public class ToggleGroupPropertyMetadata extends SingleValuePropertyMetadata<Str
         super(name, String.class, readWrite, defaultValue, inspectorPath);
     }
 
-    
+
     /*
      * SingleValuePropertyMetadata
      */
-    
+
     @Override
     public String makeValueFromString(String string) {
         final PrefixedValue pv = new PrefixedValue(string);
         final String result;
-        
+
         if (pv.isExpression()) {
             result = pv.getSuffix();
         } else {
             assert false : "Unexpected prefixed value " + string;
             result = null;
         }
-        
+
         return result;
     }
 
     @Override
     public String makeValueFromFxomInstance(FXOMInstance valueFxomInstance) {
         final String result;
-        
+
         if (valueFxomInstance.getDeclaredClass() == ToggleGroup.class) {
             result = valueFxomInstance.getFxId();
         } else {
@@ -79,7 +79,7 @@ public class ToggleGroupPropertyMetadata extends SingleValuePropertyMetadata<Str
                     + valueFxomInstance.getDeclaredClass().getSimpleName();
             result = null;
         }
-        
+
         return result;
     }
 
@@ -97,5 +97,5 @@ public class ToggleGroupPropertyMetadata extends SingleValuePropertyMetadata<Str
     public FXOMInstance makeFxomInstanceFromValue(String value, FXOMDocument fxomDocument) {
         throw new UnsupportedOperationException("Should not be invoked"); //NOI18N
     }
-    
+
 }

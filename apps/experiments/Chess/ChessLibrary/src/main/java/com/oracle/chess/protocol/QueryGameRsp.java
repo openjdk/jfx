@@ -50,7 +50,7 @@ public class QueryGameRsp extends GameRsp {
     public void setMoves(List<String> moves) {
         this.moves = moves;
     }
-    
+
     public void addMove(String move) {
         if (moves == null) {
             moves = new ArrayList<>();

@@ -33,7 +33,7 @@ param float3 gamma; // gamma.x := gamma and gamma.y := 1/gamma
 //must inverse gamma each
 float4 paint(float2 texCoord, float2 texCoord2, float4 jslVertexColor)
 {
-    // Sub-pixel positioning 
+    // Sub-pixel positioning
     float unitXCoord = gamma.z;
     float2 dTexCoord = texCoord;
 
@@ -71,7 +71,7 @@ float4 paint(float2 texCoord, float2 texCoord2, float4 jslVertexColor)
     *
     * The SRC_OVER result of LCD blending to opaque destination can be obtained
     * via equation:
-    * (2) LCDResult = d*(1 - g*s.a) + g*s 
+    * (2) LCDResult = d*(1 - g*s.a) + g*s
     * provided d.a == 1
     * If we ignore transparent part of destination equation (2) becomes:
     * (3) LCDOpaqueDstResult = (d/d.a) * (1 - g*s.a) + g*s
@@ -85,7 +85,7 @@ float4 paint(float2 texCoord, float2 texCoord2, float4 jslVertexColor)
     * 3. Must satisfy pre-multiplication condition.
     * Mathematically these conditions can be expressed:
     * 1. f(1) = LCDOpaqueDstResult = (d/d.a)*(1 - g*s.a) + g*s
-    * 
+    *
     * 2. f(0) = d * (1 - avg(g) * s.a) + avg(g) * s
     *         = avg(g) * s
     * Since d == <0,0,0,0>

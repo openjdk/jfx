@@ -94,7 +94,7 @@ import javafx.stage.Stage;
  * @playground chart.titleSide
  */
 public class CurveFittedAreaChartApp extends Application {
-    
+
     private CurveFittedAreaChart chart;
     private NumberAxis xAxis;
     private NumberAxis yAxis;
@@ -120,7 +120,7 @@ public class CurveFittedAreaChartApp extends Application {
         chart.getStylesheets().add(curveFittedChartCss);
         return chart;
     }
-   
+
     @Override public void start(Stage primaryStage) throws Exception {
         primaryStage.setResizable(false);
         primaryStage.setScene(new Scene(createContent()));

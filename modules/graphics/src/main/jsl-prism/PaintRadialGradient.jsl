@@ -47,7 +47,7 @@ param float4 m0;
 param float4 m1;
 param float3 precalc;
 param float3 perspVec;
- 
+
 float4 paint(float2 winCoord)
 {
     /*

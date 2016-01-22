@@ -35,7 +35,7 @@ enum EUnicodeBidi {
     Isolate,
     Plaintext,
     IsolateOverride,
-}; 
+};
 
 inline bool isIsolated(const EUnicodeBidi& unicodeBidi)
 {

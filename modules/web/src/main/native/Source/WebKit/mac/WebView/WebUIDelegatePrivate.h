@@ -6,13 +6,13 @@
  * are met:
  *
  * 1.  Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer. 
+ *     notice, this list of conditions and the following disclaimer.
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
- *     documentation and/or other materials provided with the distribution. 
+ *     documentation and/or other materials provided with the distribution.
  * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
- *     from this software without specific prior written permission. 
+ *     from this software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY APPLE AND ITS CONTRIBUTORS "AS IS" AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
@@ -49,12 +49,12 @@
 #define WebMenuItemTagSearchInGoogle OldWebMenuItemTagSearchWeb
 
 #define WEBMENUITEMTAG_WEBKIT_3_0_SPI_START 2000
-enum { 
+enum {
     // The next three values were used in WebKit 2.0 for SPI. In WebKit 3.0 these are API, with different values.
     OldWebMenuItemTagSearchInSpotlight = 1000,
     OldWebMenuItemTagSearchWeb,
     OldWebMenuItemTagLookUpInDictionary,
-    // FIXME: These should move to WebUIDelegate.h as part of the WebMenuItemTag enum there, when we're not in API freeze 
+    // FIXME: These should move to WebUIDelegate.h as part of the WebMenuItemTag enum there, when we're not in API freeze
     // Note that these values must be kept aligned with values in WebCore/ContextMenuItem.h
     WebMenuItemTagOpenLink = WEBMENUITEMTAG_WEBKIT_3_0_SPI_START,
     WebMenuItemTagIgnoreGrammar,
@@ -223,7 +223,7 @@ extern NSString *WebConsoleMessageErrorMessageLevel;
 
 /*!
     @method webView:decidePolicyForGeolocationRequestFromOrigin:frame:listener:
-    @abstract 
+    @abstract
     @param webView The WebView sending the delegate method.
     @param origin The security origin that would like to use Geolocation.
     @param frame The WebFrame whose JavaScript initiated this call.

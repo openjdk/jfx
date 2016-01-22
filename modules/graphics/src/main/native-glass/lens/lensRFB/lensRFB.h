@@ -22,7 +22,7 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
- 
+
 #ifndef __LENS_RFB_H__
 #define __LENS_RFB_H__
 

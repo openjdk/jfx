@@ -60,11 +60,11 @@ public class BendingPages extends Region {
     private Path shadow = new Path();
 
     private ObjectProperty<Node> frontPage = new SimpleObjectProperty<Node>(new Region());
-    
+
     public ObjectProperty<Node> frontPageProperty() {
         return frontPage;
     }
-    
+
     public Node getFrontPage() {
         return frontPage.get();
     }
@@ -82,7 +82,7 @@ public class BendingPages extends Region {
     public Node getBackPage() {
         return backPage.get();
     }
-    
+
     public void setBackPage(Node backPage) {
         this.backPage.set(backPage);
     }
@@ -103,9 +103,9 @@ public class BendingPages extends Region {
         layoutInArea(frontPage.get(), 0, 0, getWidth(), getHeight(), 0, HPos.LEFT, VPos.TOP);
         layoutInArea(backPage.get(), 0, 0, getWidth(), getHeight(), 0, HPos.LEFT, VPos.TOP);
     }
-    
+
     private ObjectProperty<Point2D> closedOffset = new SimpleObjectProperty<>(new Point2D(50, 100));
-    
+
     /**
      * Offset is subtracted from right bottom corner. (0, 0) is fully closed
      * (100, 200) is opened by (-100, -200).
@@ -114,17 +114,17 @@ public class BendingPages extends Region {
     public ObjectProperty<Point2D> closedOffsetProperty() {
         return closedOffset;
     }
-    
+
     public Point2D getClosedOffset() {
         return closedOffset.get();
     }
-    
+
     public void setClosedOffset(Point2D from) {
         this.closedOffset.set(from);
     }
-    
+
     private ObjectProperty<Point2D> openedOffset = new SimpleObjectProperty<>(new Point2D(250, 250));
-    
+
     /**
      * Offset is added to top left corner of maximum opened corner. (0, 0) is
      * fully opened. (2 * width - 100, 2 * height - 200) is opened by (-100, -200).
@@ -133,25 +133,25 @@ public class BendingPages extends Region {
     public ObjectProperty<Point2D> openedOffsetProperty() {
         return openedOffset;
     }
-    
+
     public Point2D getOpenedOffset() {
         return openedOffset.get();
     }
-    
+
     public void setOpenedOffset(Point2D openedOffset) {
         this.openedOffset.set(openedOffset);
     }
-    
+
     private DoubleProperty gripSize = new SimpleDoubleProperty(100);
-    
+
     public DoubleProperty gripSizeProperty() {
         return gripSize;
     }
-    
+
     public double getGripSize() {
         return gripSize.get();
     }
-    
+
     public void setGripSize(double gripSize) {
         this.gripSize.set(gripSize);
     }
@@ -163,15 +163,15 @@ public class BendingPages extends Region {
             frontPage.get().setMouseTransparent(false);
         }
     }
-    
-    static enum AnimationState { NO_ANIMATION, FOLLOWING_MOVING_MOUSE, 
-            FOLLOWING_DRAGGING_MOUSE, ANIMATION 
+
+    static enum AnimationState { NO_ANIMATION, FOLLOWING_MOVING_MOUSE,
+            FOLLOWING_DRAGGING_MOUSE, ANIMATION
     };
     static enum State { CLOSED, OPENED };
-    
+
     private State state = CLOSED;
     private AnimationState animState = NO_ANIMATION;
-    
+
     private Timeline animation;
 
     public BendingPages() {
@@ -181,11 +181,11 @@ public class BendingPages extends Region {
         shadow.setId("frontPageShadow");
         shadow.setMouseTransparent(true);
         getChildren().setAll(backPage.get(), frontPage.get(), frontPageBack, shadow);
-        
+
         backPage.addListener((ObservableValue<? extends Node> arg0, Node arg1, Node arg2) -> {
             getChildren().set(0, arg2);
         });
-        
+
         frontPage.addListener((ObservableValue<? extends Node> arg0, Node oldPage, Node newPage) -> {
             if (bookBend != null) {
                 bookBend.detach();
@@ -194,7 +194,7 @@ public class BendingPages extends Region {
             bookBend = new BookBend(newPage, frontPageBack, shadow);
             setTarget();
         });
-        
+
         addEventFilter(MouseEvent.MOUSE_MOVED, (MouseEvent me) -> {
             if (withinGrip(me)) {
                 animState = FOLLOWING_MOVING_MOUSE;
@@ -204,7 +204,7 @@ public class BendingPages extends Region {
                 endFollowingMouse();
             }
         });
-        
+
         setOnMousePressed((MouseEvent me) -> {
             if (withinGrip(me)) {
                 animState = FOLLOWING_DRAGGING_MOUSE;
@@ -214,7 +214,7 @@ public class BendingPages extends Region {
                 me.consume();
             }
         });
-        
+
         setOnMouseDragged((MouseEvent me) -> {
             if (animState == FOLLOWING_DRAGGING_MOUSE) {
                 setTarget(me);
@@ -224,21 +224,21 @@ public class BendingPages extends Region {
                 me.consume();
             }
         });
-        
+
         setOnMouseExited((MouseEvent me) -> {
             if (animState == FOLLOWING_MOVING_MOUSE) {
                 endFollowingMouse();
                 me.consume();
             }
         });
-        
+
         setOnMouseReleased((MouseEvent me) -> {
             if (animState == FOLLOWING_DRAGGING_MOUSE && !me.isStillSincePress()) {
                 endFollowingMouse();
                 me.consume();
             }
         });
-        
+
         setOnMouseClicked((MouseEvent me) -> {
             if (me.isStillSincePress() && (withinGrip(me) || withinPath(me))) {
                 if (state == OPENED) {
@@ -251,7 +251,7 @@ public class BendingPages extends Region {
                 me.consume();
             }
         });
-        
+
         layoutBoundsProperty().addListener((ObservableValue<? extends Bounds> arg0, Bounds arg1, Bounds arg2) -> {
             if (state == State.CLOSED) {
                 setTarget();
@@ -262,13 +262,13 @@ public class BendingPages extends Region {
             }
         });
     }
-    
+
     private boolean withinGrip(MouseEvent me) {
         if (state == CLOSED) {
-            return getWidth() - me.getX() <= gripSize.doubleValue() 
+            return getWidth() - me.getX() <= gripSize.doubleValue()
                     && getHeight() - me.getY() <= gripSize.doubleValue();
         } else {
-            return me.getX() <= gripSize.doubleValue() 
+            return me.getX() <= gripSize.doubleValue()
                     && me.getY() <= gripSize.doubleValue();
         }
     }
@@ -277,9 +277,9 @@ public class BendingPages extends Region {
         boolean contains = frontPageBack.contains(me.getX(), me.getY());
         return contains;
     }
-    
+
     private void endFollowingMouse() {
-        if (animState != FOLLOWING_MOVING_MOUSE) { 
+        if (animState != FOLLOWING_MOVING_MOUSE) {
             if (deltaX >= 0 && deltaY >= 0) {
                 state = CLOSED;
             } else {
@@ -289,7 +289,7 @@ public class BendingPages extends Region {
         setTarget();
         animateTo();
     }
-    
+
     private double targetX, targetY;
     private double deltaX, deltaY;
 
@@ -302,7 +302,7 @@ public class BendingPages extends Region {
             targetY = me.getY();
         }
     }
-    
+
     private void setTarget() {
         if (state == State.CLOSED) {
             targetX = getWidth() - closedOffset.get().getX();
@@ -312,11 +312,11 @@ public class BendingPages extends Region {
             targetY = -getHeight() + openedOffset.get().getY();
         }
     }
-    
+
     private void update() {
         bookBend.update(targetX, targetY);
     }
-    
+
     private void animateTo() {
         final double fx = bookBend.getTargetX();
         final double fy = bookBend.getTargetY();
@@ -337,7 +337,7 @@ public class BendingPages extends Region {
         animState = ANIMATION;
         fixMouseTransparency();
     }
-    
+
     /**
      * Sets colors for path gradient. Values are used on next update().
      * @param pathColor Color for path

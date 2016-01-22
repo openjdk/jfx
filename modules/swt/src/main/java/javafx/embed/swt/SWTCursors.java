@@ -53,7 +53,7 @@ class SWTCursors {
 
         final com.sun.javafx.tk.Toolkit fxToolkit =
                 com.sun.javafx.tk.Toolkit.getToolkit();
-        BufferedImage awtImage = 
+        BufferedImage awtImage =
                 (BufferedImage) fxToolkit.toExternalImage(
                                               cursorFrame.getPlatformImage(),
                                               BufferedImage.class);

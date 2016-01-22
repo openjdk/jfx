@@ -718,7 +718,7 @@ gst_navigation_event_parse_key_event (GstEvent * event, const gchar ** key)
  * event.
  * @y: Pointer to a gdouble to receive the y coordinate of the mouse button
  * event.
- * 
+ *
  * Retrieve the details of either a #GstNavigation mouse button press event or
  * a mouse button release event. Determine which type the event is using
  * gst_navigation_event_get_type() to retrieve the #GstNavigationEventType.

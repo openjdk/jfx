@@ -37,23 +37,23 @@ import javafx.collections.ObservableList;
  * the level of code duplication.
  */
 class TableUtil {
-    
-    private TableUtil() { 
+
+    private TableUtil() {
         // no-op
     }
-    
+
     static void removeTableColumnListener(List<? extends TableColumnBase> list,
                         final InvalidationListener columnVisibleObserver,
                         final InvalidationListener columnSortableObserver,
                         final InvalidationListener columnSortTypeObserver,
                         final InvalidationListener columnComparatorObserver) {
-    
+
         if (list == null) return;
         for (TableColumnBase col : list) {
             col.visibleProperty().removeListener(columnVisibleObserver);
             col.sortableProperty().removeListener(columnSortableObserver);
             col.comparatorProperty().removeListener(columnComparatorObserver);
-            
+
 //            col.sortTypeProperty().removeListener(columnSortTypeObserver);
             if (col instanceof TableColumn) {
                 ((TableColumn)col).sortTypeProperty().removeListener(columnSortTypeObserver);
@@ -74,19 +74,19 @@ class TableUtil {
                         final InvalidationListener columnSortableObserver,
                         final InvalidationListener columnSortTypeObserver,
                         final InvalidationListener columnComparatorObserver) {
-        
+
         if (list == null) return;
         for (TableColumnBase col : list) {
             col.visibleProperty().addListener(columnVisibleObserver);
             col.sortableProperty().addListener(columnSortableObserver);
             col.comparatorProperty().addListener(columnComparatorObserver);
-            
+
             if (col instanceof TableColumn) {
                 ((TableColumn)col).sortTypeProperty().addListener(columnSortTypeObserver);
             } else if (col instanceof TreeTableColumn) {
                 ((TreeTableColumn)col).sortTypeProperty().addListener(columnSortTypeObserver);
             }
-            
+
             addTableColumnListener(col.getColumns(),
                                    columnVisibleObserver,
                                    columnSortableObserver,
@@ -112,8 +112,8 @@ class TableUtil {
             addColumnsListener(col.getColumns(), cl);
         }
     }
-    
-    static void handleSortFailure(ObservableList<? extends TableColumnBase> sortOrder, 
+
+    static void handleSortFailure(ObservableList<? extends TableColumnBase> sortOrder,
             SortEventType sortEventType, final Object... supportInfo) {
         // if the sort event is consumed we need to back out the previous
         // action so that the UI is not in an incorrect state
@@ -124,7 +124,7 @@ class TableUtil {
         } else if (sortEventType == SortEventType.SORT_ORDER_CHANGE) {
             // Revert the sortOrder list to what it was previously
             ListChangeListener.Change change = (ListChangeListener.Change) supportInfo[0];
-            
+
             final List toRemove = new ArrayList();
             final List toAdd = new ArrayList();
             while (change.next()) {
@@ -136,7 +136,7 @@ class TableUtil {
                     toAdd.addAll(change.getRemoved());
                 }
             }
-            
+
             sortOrder.removeAll(toRemove);
             sortOrder.addAll(toAdd);
         } else if (sortEventType == SortEventType.COLUMN_SORTABLE_CHANGE) {
@@ -145,7 +145,7 @@ class TableUtil {
             // no-op - it is ok for the comparator to remain as-is
         }
     }
-    
+
     private static void revertSortType(TableColumnBase changedColumn) {
         if (changedColumn instanceof TableColumn) {
             TableColumn tableColumn = (TableColumn)changedColumn;
@@ -169,29 +169,29 @@ class TableUtil {
             }
         }
     }
-    
+
     static enum SortEventType {
          SORT_ORDER_CHANGE,
          COLUMN_SORT_TYPE_CHANGE,
          COLUMN_SORTABLE_CHANGE,
          COLUMN_COMPARATOR_CHANGE
      }
-    
-    
-    
-    
-    
+
+
+
+
+
     /**
      * The constrained resize algorithm used by TableView and TreeTableView.
      * @param prop
      * @param isFirstRun
      * @param tableWidth
      * @param visibleLeafColumns
-     * @return 
+     * @return
      */
-    static boolean constrainedResize(ResizeFeaturesBase prop, 
-                                     boolean isFirstRun, 
-                                     double tableWidth, 
+    static boolean constrainedResize(ResizeFeaturesBase prop,
+                                     boolean isFirstRun,
+                                     double tableWidth,
                                      List<? extends TableColumnBase<?,?>> visibleLeafColumns) {
         TableColumnBase<?,?> column = prop.getColumn();
         double delta = prop.getDelta();
@@ -395,7 +395,7 @@ class TableUtil {
         if (column == null || column.getColumns().isEmpty()) {
             return Collections.emptyList();
         }
-        
+
         List<TableColumnBase<?,?>> tablecolumns = new ArrayList<TableColumnBase<?,?>>();
         for (TableColumnBase c : column.getColumns()) {
             if (! c.isVisible()) continue;
@@ -460,5 +460,5 @@ class TableUtil {
         // see isClean above for why this is done
         return isClean ? 0.0 : remainingDelta;
     }
-    
+
 }

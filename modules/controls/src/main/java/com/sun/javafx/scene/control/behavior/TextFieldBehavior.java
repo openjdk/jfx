@@ -116,11 +116,11 @@ public class TextFieldBehavior extends TextInputControlBehavior<TextField> {
 
     private void handleFocusChange() {
         TextField textField = getNode();
-        
+
         if (textField.isFocused()) {
             if (PlatformUtil.isIOS()) {
                 // special handling of focus on iOS is required to allow to
-                // control native keyboard, because nat. keyboard is poped-up only when native 
+                // control native keyboard, because nat. keyboard is poped-up only when native
                 // text component gets focus. When we have JFX keyboard we can remove this code
                 TextInputTypes type = TextInputTypes.TEXT_FIELD;
                 if (textField.getClass().equals(javafx.scene.control.PasswordField.class)) {
@@ -139,7 +139,7 @@ public class TextFieldBehavior extends TextInputControlBehavior<TextField> {
 
                 // we need to display native text input component on the place where JFX component is drawn
                 // all parameters needed to do that are passed to native impl. here
-                textField.getScene().getWindow().impl_getPeer().requestInput(text, type.ordinal(), w, h, 
+                textField.getScene().getWindow().impl_getPeer().requestInput(text, type.ordinal(), w, h,
                         trans.getMxx(), trans.getMxy(), trans.getMxz(), trans.getMxt(),// + insets.getLeft(),
                         trans.getMyx(), trans.getMyy(), trans.getMyz(), trans.getMyt(),// + insets.getTop(),
                         trans.getMzx(), trans.getMzy(), trans.getMzz(), trans.getMzt());
@@ -341,7 +341,7 @@ public class TextFieldBehavior extends TextInputControlBehavior<TextField> {
 
         if (contextMenu.isShowing()) {
             contextMenu.hide();
-        } else if (textField.getContextMenu() == null && 
+        } else if (textField.getContextMenu() == null &&
                    textField.getOnContextMenuRequested() == null) {
             double screenX = e.getScreenX();
             double screenY = e.getScreenY();
@@ -414,11 +414,11 @@ public class TextFieldBehavior extends TextInputControlBehavior<TextField> {
     protected void mouseTripleClick(TextPosInfo hit) {
         getNode().selectAll();
     }
-    
-    // Enumeration of all types of text input that can be simulated on 
-    // touch device, such as iPad. Type is passed to native code and 
+
+    // Enumeration of all types of text input that can be simulated on
+    // touch device, such as iPad. Type is passed to native code and
     // native text component is shown. It's used as workaround for iOS
-    // devices since keyboard control is not possible without native 
+    // devices since keyboard control is not possible without native
     // text component being displayed
     enum TextInputTypes {
         TEXT_FIELD,

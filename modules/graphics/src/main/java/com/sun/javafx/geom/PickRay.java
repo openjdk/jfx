@@ -291,7 +291,7 @@ public class PickRay {
         t.deltaTransform(direction, direction);
     }
 
-    public void inverseTransform(BaseTransform t) 
+    public void inverseTransform(BaseTransform t)
             throws NoninvertibleTransformException {
         t.inverseTransform(origin, origin);
         t.inverseDeltaTransform(direction, direction);

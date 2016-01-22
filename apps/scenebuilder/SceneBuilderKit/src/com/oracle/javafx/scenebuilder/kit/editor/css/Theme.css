@@ -39,32 +39,32 @@
 .theme-presets {
     -sb-base: rgb(147, 147, 147);
     -sb-base-dark: derive(-sb-base, -25%);
-    
+
     -sb-header-text: derive(-sb-base, -70%);
     -sb-header-text-dimmed: derive(-sb-base, -30%);
     -sb-header-detail: derive(-sb-base, -40%);
     -sb-header-height: 32;
-    
+
     -sb-content-text: derive(-sb-base, -50%);
     -sb-content-text-dimmed: derive(-sb-base, -20%);
     -sb-content-detail: derive(-sb-base, -25%);
     -sb-content-background: derive(-sb-base, 98%);
-    
+
     -sb-grad-hi: derive(-sb-base, 110%);
     -sb-sharp-edge-hi: derive(-sb-base, 90%);
     -sb-flat: derive(-sb-base, 60%);
     -sb-sharp-edge-lo: derive(-sb-base, 20%);
-    
+
     -sb-scrollbar-thumb: derive(-sb-base, 60%);
-    
+
     -sb-focus-color: -fx-focus-color;
     -sb-focus-inner-background: rgba(255, 255, 255, 0.4);
     -sb-selected-bar-color: rgb(75, 155, 210);
     -sb-selected-bar-unfocused-color: derive(-sb-content-background, -15%);
-    
+
     -sb-line-art: derive(-sb-base, 40%);
     -sb-line-art-accent: red;
-    
+
     -sb-css-winner-color: rgb(210, 240, 255);
     -sb-warning-panel: rgb(230, 225, 140);
     -sb-warning-panel-text: derive(-sb-base, -50%);
@@ -129,9 +129,9 @@
  ******************************************************************************/
 
 .theme-presets .accordion > .titled-pane > .title {
-    -fx-background-color: 
+    -fx-background-color:
         derive(-sb-content-background, -35%), -sb-sharp-edge-lo, -sb-sharp-edge-hi, -sb-flat;
-    -fx-background-insets: 0 0 -1 0, 0, 1 0 0 0, 2 0 0 0; 
+    -fx-background-insets: 0 0 -1 0, 0, 1 0 0 0, 2 0 0 0;
     -fx-padding: 0.385em 0.692em 0.231em 0.692em;
     -fx-font-size: 0.875em;
     -fx-alignment: center-right;
@@ -144,7 +144,7 @@
     -fx-background-insets: 0 0 -1 0, 0, 1 0 1 0, 2 0 0 0;
 }
 .theme-presets .accordion > .titled-pane > .title > .arrow-button {
-    -fx-padding: -0.154em 0.583em 0.0em 0.0em; 
+    -fx-padding: -0.154em 0.583em 0.0em 0.0em;
 }
 .theme-presets .accordion > .titled-pane > .title > .arrow-button > .arrow {
     -fx-background-color: -sb-header-detail;
@@ -159,9 +159,9 @@
  * Common UI Styling - Panel Backgrounds                                       *
  ******************************************************************************/
 
-.theme-presets .property-sheet, 
-.theme-presets .property-sheet > .viewport, 
-.theme-presets .SBKIT-library-panel, 
+.theme-presets .property-sheet,
+.theme-presets .property-sheet > .viewport,
+.theme-presets .SBKIT-library-panel,
 .theme-presets .SBKIT-library-panel .accordion > .titled-pane > .content,
 .theme-presets .SBKIT-hierarchy-panel .tree-view {
     -fx-border-color: null;
@@ -210,7 +210,7 @@
 .theme-presets .scroll-bar:horizontal > .increment-button {
     -fx-padding: 0.692em 0.077em 0.692em 0.077em;
 }
-.theme-presets .scroll-bar .increment-arrow, 
+.theme-presets .scroll-bar .increment-arrow,
 .theme-presets .scroll-bar .decrement-arrow {
     -fx-padding: 0;
 }
@@ -284,7 +284,7 @@
     the selected item */
     -fx-background-color: null;
 }
-.theme-presets.SBKIT-library-panel .list-view .scroll-bar {    
+.theme-presets.SBKIT-library-panel .list-view .scroll-bar {
     /* Cursor may dynamically change when working in library / hierarchy.
        Set back the cursor to its default. */
     -fx-cursor: default;
@@ -306,7 +306,7 @@
 .theme-presets.SBKIT-library-panel .library-section-label {
     -fx-text-fill: derive(-sb-content-text, 10%);
     -fx-font-size: 0.875em;
-    -fx-background-color: 
+    -fx-background-color:
         derive(-sb-sharp-edge-lo, 65%),
         linear-gradient(to right, derive(-sb-content-background, 40%) 0%, -sb-content-background 70%);
     -fx-background-insets: -4 -2 -4 -12, -3 -2 -3 -12;
@@ -361,7 +361,7 @@
     -fx-text-fill: -sb-content-text;
 }
 .theme-presets.SBKIT-hierarchy-panel .hierarchy-first-cell {
-/*    -fx-padding: 4 0 0 1; 
+/*    -fx-padding: 4 0 0 1;
     -fx-background-insets: 4 0 0 0;*/
 }
 
@@ -485,7 +485,7 @@
 }
 
 .theme-presets.SBKIT-content-panel .selection-rect {
-    -fx-stroke: null; 
+    -fx-stroke: null;
     -fx-fill: rgba(0, 0, 0, 0.05);
 }
 
@@ -748,20 +748,20 @@
     -fx-padding: 0.308em 0.308em 0.385em 0.385em;
 }
 
-.theme-presets.property-sheet .hyperlink, 
+.theme-presets.property-sheet .hyperlink,
 .theme-presets.property-sheet .hyperlink:visited {
     -fx-text-fill: -sb-content-text;
     -fx-padding: 3 4 2 0;
     -fx-underline: false;
 }
-.theme-presets.property-sheet .hyperlink:hover, 
+.theme-presets.property-sheet .hyperlink:hover,
 .theme-presets.property-sheet .hyperlink:visited:hover {
     -fx-underline: true;
 }
 
-.theme-presets.property-sheet .button, 
-.theme-presets.property-sheet .choice-box, 
-.theme-presets.property-sheet .menu-button, 
+.theme-presets.property-sheet .button,
+.theme-presets.property-sheet .choice-box,
+.theme-presets.property-sheet .menu-button,
 .theme-presets.property-sheet .toggle-button {
     -fx-padding: 4 6 3 6;
     -fx-background-radius: 0;
@@ -781,11 +781,11 @@
     -fx-padding: 3 5 3 5;
 }
 
-.theme-presets.property-sheet .choice-box > .open-button, 
+.theme-presets.property-sheet .choice-box > .open-button,
 .theme-presets.property-sheet .menu-button > .arrow-button {
     -fx-padding: 2 0 2 0;
 }
-.theme-presets.property-sheet .choice-box > .label, 
+.theme-presets.property-sheet .choice-box > .label,
 .theme-presets.property-sheet .menu-button > .label {
     -fx-padding: 0 4 0 0;
 }
@@ -850,7 +850,7 @@
  ******************************************************************************/
 
 .sub-section-background {
-    -fx-background-color:  
+    -fx-background-color:
         derive(-sb-sharp-edge-lo, 65%),
         linear-gradient(to left, derive(-sb-content-background, 40%) 0%, -sb-content-background 70%);
     -fx-background-insets: 7 -1 8 -10, 8 -1 9 -10;
@@ -968,7 +968,7 @@
 
 .theme-presets.property-sheet .symbol-prefix {
     -fx-text-fill: -sb-content-text-dimmed;
-    -fx-background-color: 
+    -fx-background-color:
         derive(-sb-content-background, -15%), -sb-content-background;
     -fx-background-insets: 0, 1 0 1 1;
     -fx-padding: 4 3 3 5;
@@ -978,7 +978,7 @@
  * Property Sheet Panels - Suggestive ListView                                 *
  ******************************************************************************/
 
-.theme-presets.property-sheet .auto-suggest-popup, 
+.theme-presets.property-sheet .auto-suggest-popup,
 .theme-presets.property-sheet .auto-suggest-popup .custom-menu-item {
     -fx-padding: 0;
 }
@@ -1147,15 +1147,15 @@
     -fx-min-height: 25;
 }
 .theme-presets.SBKIT-css-panel .toggle-button:selected {
-    -fx-background-color: 
-        derive(-sb-sharp-edge-lo, -25%), 
-        derive(-sb-sharp-edge-lo, -10%), 
+    -fx-background-color:
+        derive(-sb-sharp-edge-lo, -25%),
+        derive(-sb-sharp-edge-lo, -10%),
         linear-gradient(to bottom, derive(-sb-flat, -20% ) 0%, derive(-sb-flat, -12% ) 20%);
     -fx-background-insets: -1 0 0 0, 0, 0 1 1 1;
 }
 .theme-presets.SBKIT-css-panel .toggle-button:focused {
-    -fx-background-color: 
-        -fx-focus-color, 
+    -fx-background-color:
+        -fx-focus-color,
         linear-gradient(to bottom, derive(-sb-flat, -20% ) 0%, derive(-sb-flat, -12% ) 20%);
     -fx-background-insets: -1 0 0 0, 0 1 1 1;
 }

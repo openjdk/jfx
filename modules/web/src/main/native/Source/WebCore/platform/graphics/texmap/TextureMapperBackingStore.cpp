@@ -55,7 +55,7 @@ void TextureMapperTile::updateContents(TextureMapper* textureMapper, GraphicsLay
 
     BitmapTextureImageBuffer* texture = dynamic_cast<BitmapTextureImageBuffer*>(m_texture.get());
     ASSERT(texture);
-    
+
     GraphicsContext* context = texture->graphicsContext();
     context->save();
     context->setImageInterpolationQuality(textureMapper->imageInterpolationQuality());

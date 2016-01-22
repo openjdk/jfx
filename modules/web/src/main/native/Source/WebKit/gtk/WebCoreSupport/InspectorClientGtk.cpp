@@ -104,7 +104,7 @@ InspectorFrontendChannel* InspectorClient::openInspectorFrontend(InspectorContro
     }
 
     webkit_web_inspector_set_web_view(webInspector, inspectorWebView);
- 
+
     webkit_web_view_load_uri(inspectorWebView, "resource:///org/webkitgtk/inspector/UserInterface/Main.html");
 
     gtk_widget_show(GTK_WIDGET(inspectorWebView));
@@ -116,7 +116,7 @@ InspectorFrontendChannel* InspectorClient::openInspectorFrontend(InspectorContro
 
     // The inspector must be in it's own PageGroup to avoid deadlock while debugging.
     m_frontendPage->setGroupName("");
-    
+
     return this;
 }
 

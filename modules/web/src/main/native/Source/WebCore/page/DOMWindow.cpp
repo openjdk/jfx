@@ -1036,7 +1036,7 @@ bool DOMWindow::confirm(const String& message)
 {
     if (!m_frame)
         return false;
-    
+
     // Pages are not allowed to cause modal alerts during BeforeUnload dispatch.
     if (page() && page()->isAnyFrameHandlingBeforeUnloadEvent()) {
         printErrorMessage("Use of window.confirm is not allowed during beforeunload event dispatch.");
@@ -1113,7 +1113,7 @@ bool DOMWindow::find(const String& string, bool caseSensitive, bool backwards, b
     if (!isCurrentlyDisplayedInFrame())
         return false;
 
-    // FIXME (13016): Support wholeWord, searchInFrames and showDialog.    
+    // FIXME (13016): Support wholeWord, searchInFrames and showDialog.
     FindOptions options = (backwards ? Backwards : 0) | (caseSensitive ? 0 : CaseInsensitive) | (wrap ? WrapAround : 0);
     return m_frame->editor().findString(string, options);
 }
@@ -1266,7 +1266,7 @@ void DOMWindow::setName(const String& string)
     m_frame->tree().setName(string);
 }
 
-void DOMWindow::setStatus(const String& string) 
+void DOMWindow::setStatus(const String& string)
 {
     m_status = string;
 
@@ -1279,9 +1279,9 @@ void DOMWindow::setStatus(const String& string)
 
     ASSERT(m_frame->document()); // Client calls shouldn't be made when the frame is in inconsistent state.
     page->chrome().setStatusbarText(m_frame, m_status);
-} 
-    
-void DOMWindow::setDefaultStatus(const String& string) 
+}
+
+void DOMWindow::setDefaultStatus(const String& string)
 {
     m_defaultStatus = string;
 
@@ -1631,7 +1631,7 @@ static void didAddStorageEventListener(DOMWindow* window)
     // Creating these WebCore::Storage objects informs the system that we'd like to receive
     // notifications about storage events that might be triggered in other processes. Rather
     // than subscribe to these notifications explicitly, we subscribe to them implicitly to
-    // simplify the work done by the system. 
+    // simplify the work done by the system.
     window->localStorage(IGNORE_EXCEPTION);
     window->sessionStorage(IGNORE_EXCEPTION);
 }

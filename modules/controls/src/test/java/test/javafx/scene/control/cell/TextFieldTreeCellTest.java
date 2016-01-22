@@ -37,9 +37,9 @@ import org.junit.Test;
 import static org.junit.Assert.*;
 
 public class TextFieldTreeCellTest {
-    
+
     private StringConverter<Object> converter;
-    
+
     @Before public void setup() {
         converter = new StringConverter<Object>() {
             @Override public String toString(Object object) {
@@ -51,22 +51,22 @@ public class TextFieldTreeCellTest {
             }
         };
     }
-    
+
     /**************************************************************************
-     * 
+     *
      * Test for public static Callback<TreeView<String>, TreeCell<String>> forTreeView()
-     * 
+     *
      **************************************************************************/
 
-    
+
     @Test public void testStatic_forTreeView_noArgs_ensureCellFactoryIsNotNull() {
         Callback<TreeView<String>, TreeCell<String>> cellFactory = TextFieldTreeCell.forTreeView();
         assertNotNull(cellFactory);
     }
-    
+
     @Test public void testStatic_forTreeView_noArgs_ensureCellFactoryCreatesCells() {
         Callback<TreeView<String>, TreeCell<String>> cellFactory = TextFieldTreeCell.forTreeView();
-        
+
         TreeView<String> treeView = new TreeView<>();
         TextFieldTreeCell<String> cell = (TextFieldTreeCell<String>)cellFactory.call(treeView);
         assertNotNull(cell);
@@ -74,30 +74,30 @@ public class TextFieldTreeCellTest {
 
     @Test public void testStatic_forTreeView_callback_ensureCellHasNonNullStringConverter() {
         Callback<TreeView<String>, TreeCell<String>> cellFactory = TextFieldTreeCell.forTreeView();
-        
+
         TreeView<String> treeView = new TreeView<>();
         TextFieldTreeCell<String> cell = (TextFieldTreeCell<String>)cellFactory.call(treeView);
         assertNotNull(cell.getConverter());
     }
-    
-    
-    
+
+
+
     /**************************************************************************
-     * 
+     *
      * Test for public static <T> Callback<TreeView<T>, TreeCell<T>> forTreeView(
      *       final StringConverter<T> converter)
-     * 
+     *
      **************************************************************************/
 
-    
+
     @Test public void testStatic_forTreeView_converter_ensureCellFactoryIsNotNull() {
         Callback<TreeView<Object>, TreeCell<Object>> cellFactory = TextFieldTreeCell.forTreeView(converter);
         assertNotNull(cellFactory);
     }
-    
+
     @Test public void testStatic_forTreeView_converter_ensureCellFactoryCreatesCells() {
         Callback<TreeView<Object>, TreeCell<Object>> cellFactory = TextFieldTreeCell.forTreeView(converter);
-        
+
         TreeView<Object> treeView = new TreeView<>();
         TextFieldTreeCell<Object> cell = (TextFieldTreeCell<Object>)cellFactory.call(treeView);
         assertNotNull(cell);
@@ -105,63 +105,63 @@ public class TextFieldTreeCellTest {
 
     @Test public void testStatic_forTreeView_converter_ensureCellHasSetStringConverter() {
         Callback<TreeView<Object>, TreeCell<Object>> cellFactory = TextFieldTreeCell.forTreeView(converter);
-        
+
         TreeView<Object> treeView = new TreeView<>();
         TextFieldTreeCell<Object> cell = (TextFieldTreeCell<Object>)cellFactory.call(treeView);
         assertNotNull(cell.getConverter());
         assertEquals(converter, cell.getConverter());
     }
-    
-    
-    
+
+
+
     /**************************************************************************
-     * 
+     *
      * Constructor tests for default constructor
-     * 
+     *
      **************************************************************************/
 
     @Test public void testConstructor_noArgs_defaultStringConverterIsNull() {
         TextFieldTreeCell<Object> cell = new TextFieldTreeCell<>();
         assertNull(cell.getConverter());
     }
-    
+
     @Test public void testConstructor_noArgs_defaultStyleClass() {
         TextFieldTreeCell<Object> cell = new TextFieldTreeCell<>();
         assertTrue(cell.getStyleClass().contains("text-field-tree-cell"));
     }
-    
+
     @Test public void testConstructor_noArgs_defaultGraphicIsNull() {
         TextFieldTreeCell<Object> cell = new TextFieldTreeCell<>();
         assertNull(cell.getGraphic());
     }
-    
-    
+
+
     /**************************************************************************
-     * 
+     *
      * Constructor tests for one-arg constructor
-     * 
+     *
      **************************************************************************/
-    
+
     @Test public void testConstructor_converter_defaultStringConverterIsNotNull() {
         TextFieldTreeCell<Object> cell = new TextFieldTreeCell<>(converter);
         assertNotNull(cell.getConverter());
     }
-    
+
     @Test public void testConstructor_converter_defaultStyleClass() {
         TextFieldTreeCell<Object> cell = new TextFieldTreeCell<>(converter);
         assertTrue(cell.getStyleClass().contains("text-field-tree-cell"));
     }
-    
+
     @Test public void testConstructor_converter_defaultGraphicIsACheckBox() {
         TextFieldTreeCell<Object> cell = new TextFieldTreeCell<>(converter);
         assertNull(cell.getGraphic());
     }
-    
-    
+
+
     /**************************************************************************
-     * 
+     *
      * updateItem tests
-     * 
+     *
      **************************************************************************/
 
     @Test public void test_updateItem_isEmpty_graphicIsNull() {
@@ -169,20 +169,20 @@ public class TextFieldTreeCellTest {
         cell.updateItem("TEST", true);
         assertNull(cell.getGraphic());
     }
-    
+
     @Test public void test_updateItem_isEmpty_textIsNull() {
         TextFieldTreeCell<Object> cell = new TextFieldTreeCell<>();
         cell.updateItem("TEST", true);
         assertNull(cell.getText());
     }
-    
+
     @Test public void test_updateItem_isNotEmpty_textIsNotNull() {
         TextFieldTreeCell<Object> cell = new TextFieldTreeCell<>();
         cell.updateItem("TEST", false);
         assertNotNull(cell.getText());
         assertEquals("TEST", cell.getText());
     }
-    
+
     @Test public void test_updateItem_isNotEmpty_textIsNotNull_nullConverter() {
         TextFieldTreeCell<Object> cell = new TextFieldTreeCell<>();
         cell.setConverter(null);
@@ -190,7 +190,7 @@ public class TextFieldTreeCellTest {
         assertNotNull(cell.getText());
         assertEquals("TEST", cell.getText());
     }
-    
+
     @Test public void test_updateItem_isNotEmpty_textIsNotNull_nonNullConverter() {
         TextFieldTreeCell<Object> cell = new TextFieldTreeCell<>();
         cell.setConverter(

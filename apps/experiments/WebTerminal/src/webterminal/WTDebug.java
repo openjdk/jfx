@@ -37,7 +37,7 @@ import org.w3c.dom.*;
 /** Some debugging utilities. */
 
 public class WTDebug {
-static 
+static
     PrintStream origErr;
     public static void init() {
         if (origErr == null)

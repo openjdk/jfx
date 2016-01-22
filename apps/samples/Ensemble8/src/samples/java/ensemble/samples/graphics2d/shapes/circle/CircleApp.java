@@ -48,8 +48,8 @@ import javafx.stage.Stage;
  * @see javafx.scene.shape.Circle
  * @see javafx.scene.shape.Shape
  * @see javafx.scene.paint.Color
- * @related /Graphics 2d/Shapes/Arc 
- * @related /Graphics 2d/Shapes/Ellipse 
+ * @related /Graphics 2d/Shapes/Arc
+ * @related /Graphics 2d/Shapes/Ellipse
  * @playground circle1.fill (name="Circle 1 Fill")
  * @playground circle1.radius (name="Circle 1 Radius", min=10, max=40)
  * @playground circle2.stroke (name="Circle 1 Stroke")

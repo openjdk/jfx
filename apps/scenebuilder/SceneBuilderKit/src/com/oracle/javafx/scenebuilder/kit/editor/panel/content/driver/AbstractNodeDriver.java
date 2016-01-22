@@ -85,14 +85,14 @@ public abstract class AbstractNodeDriver extends AbstractDriver {
     /*
      * AbstractDriver
      */
-    
+
     @Override
     public AbstractHandles<?> makeHandles(FXOMObject fxomObject) {
         assert fxomObject.getSceneGraphObject() instanceof Node;
         assert fxomObject instanceof FXOMInstance;
         return new NodeHandles(contentPanelController, (FXOMInstance)fxomObject);
     }
-    
+
     @Override
     public AbstractPring<?> makePring(FXOMObject fxomObject) {
         assert fxomObject.getSceneGraphObject() instanceof Node;
@@ -111,12 +111,12 @@ public abstract class AbstractNodeDriver extends AbstractDriver {
     @Override
     public AbstractResizer<?> makeResizer(FXOMObject fxomObject) {
         final AbstractResizer<?> result;
-        
+
         /*
-         * To avoid creating one driver for each resizer, 
+         * To avoid creating one driver for each resizer,
          * we make the dispatch here:
          */
-        
+
         final Object sceneGraphObject = fxomObject.getSceneGraphObject();
         if (sceneGraphObject instanceof ImageView) {
             result = new ImageViewResizer((ImageView) sceneGraphObject);
@@ -141,10 +141,10 @@ public abstract class AbstractNodeDriver extends AbstractDriver {
         } else {
             result = null;
         }
-        
+
         return result;
     }
-    
+
     @Override
     public FXOMObject refinePick(Node hitNode, double sceneX, double sceneY, FXOMObject fxomObject) {
         return fxomObject;
@@ -154,9 +154,9 @@ public abstract class AbstractNodeDriver extends AbstractDriver {
     public AbstractDropTarget makeDropTarget(FXOMObject fxomObject, double sceneX, double sceneY) {
         assert fxomObject instanceof FXOMInstance;
         assert fxomObject.getSceneGraphObject() != null; // Because mouse cannot be above a unresolved component
-        
+
         final AbstractDropTarget result;
-        
+
         final FXOMInstance fxomInstance = (FXOMInstance) fxomObject;
         final DesignHierarchyMask mask = new DesignHierarchyMask(fxomObject);
         if (mask.isFreeChildPositioning()) {
@@ -168,14 +168,14 @@ public abstract class AbstractNodeDriver extends AbstractDriver {
                 result = new ContainerZDropTarget(fxomInstance, null);
             }
         }
-        
+
         return result;
     }
 
     @Override
     public Node getInlineEditorBounds(FXOMObject fxomObject) {
         final Node result;
-        
+
         final Object sceneGraphObject = fxomObject.getSceneGraphObject();
         if (sceneGraphObject instanceof ComboBox) {
             result = (ComboBox<?>) sceneGraphObject;
@@ -190,21 +190,21 @@ public abstract class AbstractNodeDriver extends AbstractDriver {
         } else {
             result = null;
         }
-        
+
         return result;
     }
 
     @Override
     public boolean intersectsBounds(FXOMObject fxomObject, Bounds bounds) {
         assert fxomObject.getSceneGraphObject() instanceof Node;
-        
+
         // Note: bounds are in root scene coordinates
-        final Node sceneGraphNode 
+        final Node sceneGraphNode
                 = (Node) fxomObject.getSceneGraphObject();
-        final Bounds sceneGraphNodeBounds 
+        final Bounds sceneGraphNodeBounds
                 = sceneGraphNode.localToScene(sceneGraphNode.getLayoutBounds(), true /* rootScene */);
 
         return sceneGraphNodeBounds.intersects(bounds);
     }
-    
+
 }

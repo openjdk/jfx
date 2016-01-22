@@ -60,7 +60,7 @@ private:
     {
          m_mask.setMaskDefaults();
     }
-    
+
     CSSReflectionDirection m_direction;
     Length m_offset;
     NinePieceImage m_mask;

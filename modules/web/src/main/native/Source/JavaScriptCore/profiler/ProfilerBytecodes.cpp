@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -54,14 +54,14 @@ void Bytecodes::dump(PrintStream& out) const
 JSValue Bytecodes::toJS(ExecState* exec) const
 {
     JSObject* result = constructEmptyObject(exec);
-    
+
     result->putDirect(exec->vm(), exec->propertyNames().bytecodesID, jsNumber(m_id));
     result->putDirect(exec->vm(), exec->propertyNames().inferredName, jsString(exec, String::fromUTF8(m_inferredName)));
     result->putDirect(exec->vm(), exec->propertyNames().sourceCode, jsString(exec, String::fromUTF8(m_sourceCode)));
     result->putDirect(exec->vm(), exec->propertyNames().hash, jsString(exec, String::fromUTF8(toCString(m_hash))));
     result->putDirect(exec->vm(), exec->propertyNames().instructionCount, jsNumber(m_instructionCount));
     addSequenceProperties(exec, result);
-    
+
     return result;
 }
 

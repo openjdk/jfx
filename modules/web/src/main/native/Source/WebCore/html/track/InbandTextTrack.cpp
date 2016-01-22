@@ -62,7 +62,7 @@ InbandTextTrack::InbandTextTrack(ScriptExecutionContext* context, TextTrackClien
     , m_private(trackPrivate)
 {
     m_private->setClient(this);
-    
+
     switch (m_private->kind()) {
     case InbandTextTrackPrivate::Subtitles:
         setKind(TextTrack::subtitlesKeyword());
@@ -120,7 +120,7 @@ bool InbandTextTrack::isSDH() const
 {
     if (!m_private)
         return false;
-    
+
     return m_private->isSDH();
 }
 
@@ -128,7 +128,7 @@ bool InbandTextTrack::containsOnlyForcedSubtitles() const
 {
     if (!m_private)
         return false;
-    
+
     return m_private->containsOnlyForcedSubtitles();
 }
 
@@ -136,7 +136,7 @@ bool InbandTextTrack::isMainProgramContent() const
 {
     if (!m_private)
         return false;
-    
+
     return m_private->isMainProgramContent();
 }
 
@@ -144,10 +144,10 @@ bool InbandTextTrack::isEasyToRead() const
 {
     if (!m_private)
         return false;
-    
+
     return m_private->isEasyToRead();
 }
-    
+
 size_t InbandTextTrack::inbandTrackIndex()
 {
     ASSERT(m_private);

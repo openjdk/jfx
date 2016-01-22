@@ -49,7 +49,7 @@ public class Splash extends Parent {
     private static final int STATE_SHOW_STRIKE = 1;
     private static final int STATE_SUN = 2;
 
-    private ImageView background; 
+    private ImageView background;
     private ImageView brick;
     private ImageView brickShadow;
     private ImageView breaker;
@@ -109,7 +109,7 @@ public class Splash extends Parent {
         });
         timeline.getKeyFrames().add(kf);
     }
-    
+
     public void start() {
         background.requestFocus();
         timeline.play();

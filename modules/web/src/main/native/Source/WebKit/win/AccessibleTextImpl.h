@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef AccessibleTextImpl_h
@@ -54,7 +54,7 @@ public:
     virtual HRESULT STDMETHODCALLTYPE scrollSubstringToPoint(long startIndex, long endIndex, enum IA2CoordinateType coordinateType, long x, long y);
     virtual HRESULT STDMETHODCALLTYPE get_newText(IA2TextSegment* newText);
     virtual HRESULT STDMETHODCALLTYPE get_oldText(IA2TextSegment* oldText);
-    
+
     // IAccessibleText2
     virtual HRESULT STDMETHODCALLTYPE get_attributeRange(long offset, BSTR filter, long* startOffset, long* endOffset, BSTR* attributeValues);
 

@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef JSArrayBufferViewInlines_h
@@ -66,10 +66,10 @@ inline unsigned JSArrayBufferView::byteOffset()
 {
     if (!hasArrayBuffer())
         return 0;
-    
+
     ptrdiff_t delta =
         static_cast<uint8_t*>(m_vector) - static_cast<uint8_t*>(buffer()->data());
-    
+
     unsigned result = static_cast<unsigned>(delta);
     ASSERT(static_cast<ptrdiff_t>(result) == delta);
     return result;

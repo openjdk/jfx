@@ -67,7 +67,7 @@ public class CheckBoxApp extends Application {
         vbox.setMaxSize(Region.USE_PREF_SIZE, Region.USE_PREF_SIZE);
         return vbox;
     }
-    
+
     @Override public void start(Stage primaryStage) throws Exception {
         primaryStage.setScene(new Scene(createContent()));
         primaryStage.show();

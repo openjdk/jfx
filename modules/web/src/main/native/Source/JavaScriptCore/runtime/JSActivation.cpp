@@ -25,7 +25,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
- 
+
 #include "config.h"
 #include "JSActivation.h"
 
@@ -88,7 +88,7 @@ inline bool JSActivation::symbolTablePut(ExecState* exec, PropertyName propertyN
 {
     VM& vm = exec->vm();
     ASSERT(!Heap::heap(value) || Heap::heap(value) == Heap::heap(this));
-    
+
     SymbolTableEntry entry = symbolTable()->inlineGet(propertyName.uid());
     if (entry.isNull())
         return false;
@@ -132,7 +132,7 @@ void JSActivation::getOwnNonIndexPropertyNames(JSObject* object, ExecState* exec
 inline bool JSActivation::symbolTablePutWithAttributes(VM& vm, PropertyName propertyName, JSValue value, unsigned attributes)
 {
     ASSERT(!Heap::heap(value) || Heap::heap(value) == Heap::heap(this));
-    
+
     WriteBarrierBase<Unknown>* reg;
     {
         ConcurrentJITLocker locker(symbolTable()->m_lock);
@@ -143,7 +143,7 @@ inline bool JSActivation::symbolTablePutWithAttributes(VM& vm, PropertyName prop
         ASSERT(!entry.isNull());
         if (!isValid(entry))
             return false;
-        
+
         entry.setAttributes(attributes);
         reg = &registerAt(entry.getIndex());
     }
@@ -173,7 +173,7 @@ bool JSActivation::getOwnPropertySlot(JSObject* object, ExecState* exec, Propert
         return true;
     }
 
-    // We don't call through to JSObject because there's no way to give an 
+    // We don't call through to JSObject because there's no way to give an
     // activation object getter properties or a prototype.
     ASSERT(!thisObject->hasGetterSetterProperties());
     ASSERT(thisObject->prototype().isNull());
@@ -188,7 +188,7 @@ void JSActivation::put(JSCell* cell, ExecState* exec, PropertyName propertyName,
     if (thisObject->symbolTablePut(exec, propertyName, value, slot.isStrictMode()))
         return;
 
-    // We don't call through to JSObject because __proto__ and getter/setter 
+    // We don't call through to JSObject because __proto__ and getter/setter
     // properties are non-standard extensions that other implementations do not
     // expose in the activation object.
     ASSERT(!thisObject->hasGetterSetterProperties());
@@ -226,7 +226,7 @@ EncodedJSValue JSActivation::argumentsGetter(ExecState*, JSObject* slotBase, Enc
     JSValue arguments = JSValue(Arguments::create(callFrame->vm(), callFrame));
     callFrame->uncheckedR(argumentsRegister.offset()) = arguments;
     callFrame->uncheckedR(realArgumentsRegister) = arguments;
-    
+
     ASSERT(callFrame->uncheckedR(realArgumentsRegister).jsValue().inherits(Arguments::info()));
     return JSValue::encode(callFrame->uncheckedR(realArgumentsRegister).jsValue());
 }

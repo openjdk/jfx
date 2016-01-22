@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -49,9 +49,9 @@ void VariableAccessDataDump::dump(PrintStream& out) const
             break;
         }
     }
-    
+
     ASSERT(index != std::numeric_limits<unsigned>::max());
-    
+
     if (!index) {
         out.print("a");
         return;
@@ -61,7 +61,7 @@ void VariableAccessDataDump::dump(PrintStream& out) const
         out.print(CharacterDump('A' + (index % 26)));
         index /= 26;
     }
-    
+
     if (m_data->isCaptured())
         out.print("*");
     else if (m_data->shouldNeverUnbox())

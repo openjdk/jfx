@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -45,7 +45,7 @@ bool tryToDisassembleWithUDis86(const MacroAssemblerCodePtr& codePtr, size_t siz
 #endif
     ud_set_pc(&disassembler, bitwise_cast<uintptr_t>(codePtr.executableAddress()));
     ud_set_syntax(&disassembler, UD_SYN_ATT);
-    
+
     uint64_t currentPC = disassembler.pc;
     while (ud_disassemble(&disassembler)) {
         char pcString[20];
@@ -53,7 +53,7 @@ bool tryToDisassembleWithUDis86(const MacroAssemblerCodePtr& codePtr, size_t siz
         out.printf("%s%16s: %s\n", prefix, pcString, ud_insn_asm(&disassembler));
         currentPC = disassembler.pc;
     }
-    
+
     return true;
 }
 

@@ -115,7 +115,7 @@ void RunLoop::performWork()
 
             function = m_functionQueue.takeFirst();
         }
-        
+
         function();
     }
 }

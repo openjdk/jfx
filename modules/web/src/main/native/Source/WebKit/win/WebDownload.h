@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef WebDownload_h
@@ -68,15 +68,15 @@ public:
 
     // IWebDownload
     virtual HRESULT STDMETHODCALLTYPE initWithRequest(
-        /* [in] */ IWebURLRequest* request, 
+        /* [in] */ IWebURLRequest* request,
         /* [in] */ IWebDownloadDelegate* delegate);
 
     virtual HRESULT STDMETHODCALLTYPE initToResumeWithBundle(
-        /* [in] */ BSTR bundlePath, 
+        /* [in] */ BSTR bundlePath,
         /* [in] */ IWebDownloadDelegate* delegate);
 
     virtual HRESULT STDMETHODCALLTYPE canResumeDownloadDecodedWithEncodingMIMEType(
-        /* [in] */ BSTR mimeType, 
+        /* [in] */ BSTR mimeType,
         /* [out, retval] */ BOOL* result);
 
     virtual HRESULT STDMETHODCALLTYPE start();
@@ -89,7 +89,7 @@ public:
         /* [out, retval] */ BOOL* result);
 
     virtual HRESULT STDMETHODCALLTYPE bundlePathForTargetPath(
-        /* [in] */ BSTR target, 
+        /* [in] */ BSTR target,
         /* [out, retval] */ BSTR* bundle);
 
     virtual HRESULT STDMETHODCALLTYPE request(
@@ -99,7 +99,7 @@ public:
         /* [in] */ BOOL deletesFileUponFailure);
 
     virtual HRESULT STDMETHODCALLTYPE setDestination(
-        /* [in] */ BSTR path, 
+        /* [in] */ BSTR path,
         /* [in] */ BOOL allowOverwrite);
 
     // IWebURLAuthenticationChallengeSender
@@ -110,7 +110,7 @@ public:
         /* [in] */ IWebURLAuthenticationChallenge* challenge);
 
     virtual HRESULT STDMETHODCALLTYPE useCredential(
-        /* [in] */ IWebURLCredential* credential, 
+        /* [in] */ IWebURLCredential* credential,
         /* [in] */ IWebURLAuthenticationChallenge* challenge);
 
 #if USE(CFNETWORK)

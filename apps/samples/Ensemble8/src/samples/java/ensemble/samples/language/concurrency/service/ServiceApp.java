@@ -63,8 +63,8 @@ import javafx.stage.Stage;
  */
 public class ServiceApp extends Application {
 
- final GetDailySalesService service = new GetDailySalesService();    
-    
+ final GetDailySalesService service = new GetDailySalesService();
+
     public Parent createContent() {
        VBox vbox = new VBox(5);
         vbox.setPadding(new Insets(12));
@@ -110,7 +110,7 @@ public class ServiceApp extends Application {
         service.start();
         return stack;
     }
-   
+
     @Override public void start(Stage primaryStage) throws Exception {
         primaryStage.setScene(new Scene(createContent()));
         primaryStage.show();

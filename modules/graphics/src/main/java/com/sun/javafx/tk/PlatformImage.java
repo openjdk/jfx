@@ -42,7 +42,7 @@ public interface PlatformImage {
      * pixel covers in terms of the pixels of this image.
      * A 72DPI platform image would return 1.0f.
      * A 144DPI platform image would return 2.0f.
-     * 
+     *
      * @return the number of actual image pixels per 72DPI virtual pixel
      */
     public float getPixelScale();

@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef CodeBlockHash_h
@@ -47,23 +47,23 @@ public:
         : m_hash(0)
     {
     }
-    
+
     explicit CodeBlockHash(unsigned hash)
         : m_hash(hash)
     {
     }
-    
+
     CodeBlockHash(const SourceCode&, CodeSpecializationKind);
-    
+
     explicit CodeBlockHash(const char*);
 
     bool isSet() const { return !!m_hash; }
     bool operator!() const { return !isSet(); }
-    
+
     unsigned hash() const { return m_hash; }
-    
+
     void dump(PrintStream&) const;
-    
+
     // Comparison methods useful for bisection.
     bool operator==(const CodeBlockHash& other) const { return hash() == other.hash(); }
     bool operator!=(const CodeBlockHash& other) const { return hash() != other.hash(); }
@@ -71,7 +71,7 @@ public:
     bool operator>(const CodeBlockHash& other) const { return hash() > other.hash(); }
     bool operator<=(const CodeBlockHash& other) const { return hash() <= other.hash(); }
     bool operator>=(const CodeBlockHash& other) const { return hash() >= other.hash(); }
-    
+
 private:
     unsigned m_hash;
 };

@@ -14,7 +14,7 @@ namespace WebCore {
 
 class FontPlatformData {
 public:
-    FontPlatformData() 
+    FontPlatformData()
         {};
 
     FontPlatformData(float size, bool bold, bool italic)
@@ -45,12 +45,12 @@ public:
     float size() const { return m_size; }
 
     bool isHashTableDeletedValue() const {
-        return m_jFont.isHashTableDeletedValue(); 
+        return m_jFont.isHashTableDeletedValue();
     }
     bool operator == (const FontPlatformData &) const;
     FontPlatformData& operator = (const FontPlatformData &);
 
-    PassRefPtr<RQRef> nativeFontData() const { return m_jFont; } 
+    PassRefPtr<RQRef> nativeFontData() const { return m_jFont; }
     static jint getJavaFontID(const JLObject &font);
 
     FontOrientation orientation() const { return Horizontal; } // FIXME: Implement.

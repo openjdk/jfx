@@ -81,23 +81,23 @@ static __inline__ void GlassLog(char *message, ...)
         }
         NSDate *now = [NSDate dateWithTimeIntervalSinceNow:0.0f];
         NSTimeInterval interval = [now timeIntervalSinceDate:date];
-        
+
         va_list argList;
         static char buffer[4096];
         memset(buffer, 0x00, sizeof(buffer));
-        
+
         va_start(argList, message);
         vsnprintf(buffer, sizeof(buffer)-1, message, argList);
         va_end(argList);
-        
+
         static char line[4096];
         memset(line, 0x00, sizeof(line));
         snprintf(line, sizeof(line)-1, "[time:%.6f, thread:%15p, main:%d] %s\n", interval, (void*)pthread_self(), pthread_main_np(), buffer);
-        
+
 #if !defined (GLASS_USE_FILE_LOG) && !defined (GLASS_USE_WINDOW_LOG)
         NSLog(@"%s", line);
 #endif
-        
+
 #if defined (GLASS_USE_FILE_LOG)
         if (log_file == NULL)
         {
@@ -112,7 +112,7 @@ static __inline__ void GlassLog(char *message, ...)
             fflush(log_file);
         }
 #endif
-        
+
 #if defined (GLASS_USE_WINDOW_LOG)
         if (window_log == nil)
         {

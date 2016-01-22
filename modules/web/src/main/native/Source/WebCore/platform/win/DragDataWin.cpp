@@ -21,7 +21,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -59,7 +59,7 @@ DragData::DragData(const DragDataMap& data, const IntPoint& clientPosition, cons
 bool DragData::containsURL(Frame*, FilenameConversionPolicy filenamePolicy) const
 {
     if (m_platformDragData)
-        return SUCCEEDED(m_platformDragData->QueryGetData(urlWFormat())) 
+        return SUCCEEDED(m_platformDragData->QueryGetData(urlWFormat()))
             || SUCCEEDED(m_platformDragData->QueryGetData(urlFormat()))
             || (filenamePolicy == ConvertFilenames
                 && (SUCCEEDED(m_platformDragData->QueryGetData(filenameWFormat()))
@@ -83,7 +83,7 @@ const DragDataMap& DragData::dragDataMap()
         Vector<String> dataStrings;
         getClipboardData(m_platformDragData, &dataFormat, dataStrings);
         if (!dataStrings.isEmpty())
-            m_dragDataMap.set(dataFormat.cfFormat, dataStrings); 
+            m_dragDataMap.set(dataFormat.cfFormat, dataStrings);
     }
     return m_dragDataMap;
 }
@@ -151,7 +151,7 @@ void DragData::asFilenames(Vector<String>& result) const
         if (FAILED(m_platformDragData->GetData(cfHDropFormat(), &medium)))
             return;
 
-        HDROP hdrop = reinterpret_cast<HDROP>(GlobalLock(medium.hGlobal)); 
+        HDROP hdrop = reinterpret_cast<HDROP>(GlobalLock(medium.hGlobal));
 
         if (!hdrop)
             return;
@@ -160,7 +160,7 @@ void DragData::asFilenames(Vector<String>& result) const
         for (unsigned i = 0; i < numFiles; i++) {
             if (!DragQueryFileW(hdrop, i, filename, WTF_ARRAY_LENGTH(filename)))
                 continue;
-            result.append(static_cast<UChar*>(filename)); 
+            result.append(static_cast<UChar*>(filename));
         }
 
         // Free up memory from drag
@@ -200,14 +200,14 @@ bool DragData::canSmartReplace() const
 
 bool DragData::containsCompatibleContent() const
 {
-    return containsPlainText() || containsURL(0) 
+    return containsPlainText() || containsURL(0)
         || ((m_platformDragData) ? (containsHTML(m_platformDragData) || containsFilenames(m_platformDragData))
             : (containsHTML(&m_dragDataMap) || containsFilenames(&m_dragDataMap)))
         || containsColor();
 }
 
 PassRefPtr<DocumentFragment> DragData::asFragment(Frame* frame, Range&, bool, bool&) const
-{     
+{
     /*
      * Order is richest format first. On OSX this is:
      * * Web Archive
@@ -217,7 +217,7 @@ PassRefPtr<DocumentFragment> DragData::asFragment(Frame* frame, Range&, bool, bo
      * * TIFF
      * * PICT
      */
-     
+
     if (m_platformDragData) {
         if (containsFilenames(m_platformDragData)) {
             if (PassRefPtr<DocumentFragment> fragment = fragmentFromFilenames(frame->document(), m_platformDragData))

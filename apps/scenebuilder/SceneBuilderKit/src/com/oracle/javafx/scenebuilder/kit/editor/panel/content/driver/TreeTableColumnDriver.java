@@ -60,14 +60,14 @@ public class TreeTableColumnDriver extends AbstractDriver {
     /*
      * AbstractDriver
      */
-    
+
     @Override
     public AbstractHandles<?> makeHandles(FXOMObject fxomObject) {
         assert fxomObject.getSceneGraphObject() instanceof TreeTableColumn;
         assert fxomObject instanceof FXOMInstance;
         return new TreeTableColumnHandles(contentPanelController, (FXOMInstance)fxomObject);
     }
-    
+
     @Override
     public AbstractPring<?> makePring(FXOMObject fxomObject) {
         assert fxomObject.getSceneGraphObject() instanceof TreeTableColumn;
@@ -80,7 +80,7 @@ public class TreeTableColumnDriver extends AbstractDriver {
         assert dropTarget != null;
         assert dropTarget.getTargetObject() instanceof FXOMInstance;
         assert dropTarget.getTargetObject().getSceneGraphObject() instanceof TreeTableColumn;
-        
+
         return new TreeTableColumnTring(contentPanelController, (FXOMInstance) dropTarget.getTargetObject());
     }
 
@@ -88,7 +88,7 @@ public class TreeTableColumnDriver extends AbstractDriver {
     public AbstractResizer<?> makeResizer(FXOMObject fxomObject) {
         return null;
     }
-    
+
     @Override
     public FXOMObject refinePick(Node hitNode, double sceneX, double sceneY, FXOMObject fxomObject) {
         // TODO(elp) : implement TableColumnDriver.refinePick()
@@ -113,16 +113,16 @@ public class TreeTableColumnDriver extends AbstractDriver {
     @Override
     public boolean intersectsBounds(FXOMObject fxomObject, Bounds bounds) {
         assert fxomObject.getSceneGraphObject() instanceof TreeTableColumn;
-        
-        final TreeTableColumn<?,?> tc 
+
+        final TreeTableColumn<?,?> tc
                 = (TreeTableColumn<?,?>) fxomObject.getSceneGraphObject();
-        final TreeTableView<?> tv 
+        final TreeTableView<?> tv
                 = tc.getTreeTableView();
-        final TreeTableViewDesignInfoX di 
+        final TreeTableViewDesignInfoX di
                 = new TreeTableViewDesignInfoX();
-        final Bounds tcBounds 
+        final Bounds tcBounds
                 = tv.localToScene(di.getColumnBounds(tc), true /* rootScene */);
-        
+
         return tcBounds.intersects(bounds);
     }
 }

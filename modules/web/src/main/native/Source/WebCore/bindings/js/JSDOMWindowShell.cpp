@@ -77,7 +77,7 @@ void JSDOMWindowShell::setWindow(PassRefPtr<DOMWindow> domWindow)
     // Explicitly protect the global object's prototype so it isn't collected
     // when we allocate the global object. (Once the global object is fully
     // constructed, it can mark its own prototype.)
-    
+
     VM& vm = *JSDOMWindow::commonVM();
     Structure* prototypeStructure = JSDOMWindowPrototype::createStructure(vm, 0, jsNull());
     Strong<JSDOMWindowPrototype> prototype(vm, JSDOMWindowPrototype::create(vm, 0, prototypeStructure));

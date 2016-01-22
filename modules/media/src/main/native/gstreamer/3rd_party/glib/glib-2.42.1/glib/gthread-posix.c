@@ -149,7 +149,7 @@ g_mutex_get_impl (GMutex *mutex)
  * It is not necessary to initialize a mutex that has been
  * statically allocated.
  *
- * |[<!-- language="C" --> 
+ * |[<!-- language="C" -->
  *   typedef struct {
  *     GMutex m;
  *     ...
@@ -323,7 +323,7 @@ g_rec_mutex_get_impl (GRecMutex *rec_mutex)
  * It is not necessary to initialise a recursive mutex that has been
  * statically allocated.
  *
- * |[<!-- language="C" --> 
+ * |[<!-- language="C" -->
  *   typedef struct {
  *     GRecMutex m;
  *     ...
@@ -481,7 +481,7 @@ g_rw_lock_get_impl (GRWLock *lock)
  * necessary to initialise a reader-writer lock that has been statically
  * allocated.
  *
- * |[<!-- language="C" --> 
+ * |[<!-- language="C" -->
  *   typedef struct {
  *     GRWLock l;
  *     ...
@@ -824,7 +824,7 @@ g_cond_broadcast (GCond *cond)
  * condition variable (extending the example presented in the
  * documentation for #GCond):
  *
- * |[<!-- language="C" --> 
+ * |[<!-- language="C" -->
  * gpointer
  * pop_data_timed (void)
  * {
@@ -958,7 +958,7 @@ g_cond_wait_until (GCond  *cond,
  * be properly initialised by default (ie: to all zeros).  See the
  * examples below.
  *
- * |[<!-- language="C" --> 
+ * |[<!-- language="C" -->
  * static GPrivate name_key = G_PRIVATE_INIT (g_free);
  *
  * // return value should not be freed
@@ -1110,12 +1110,12 @@ g_private_replace (GPrivate *key,
 
 /* {{{1 GThread */
 
-#define posix_check_err(err, name) G_STMT_START{			\
-  int error = (err); 							\
-  if (error)	 		 		 			\
-    g_error ("file %s: line %d (%s): error '%s' during '%s'",		\
-           __FILE__, __LINE__, G_STRFUNC,				\
-           g_strerror (error), name);					\
+#define posix_check_err(err, name) G_STMT_START{            \
+  int error = (err);                            \
+  if (error)                                \
+    g_error ("file %s: line %d (%s): error '%s' during '%s'",       \
+           __FILE__, __LINE__, G_STRFUNC,               \
+           g_strerror (error), name);                   \
   }G_STMT_END
 
 #define posix_check_cmd(cmd) posix_check_err (cmd, #cmd)
@@ -1173,7 +1173,7 @@ g_system_thread_new (GThreadFunc   thread_func,
 
   if (ret == EAGAIN)
     {
-      g_set_error (error, G_THREAD_ERROR, G_THREAD_ERROR_AGAIN, 
+      g_set_error (error, G_THREAD_ERROR, G_THREAD_ERROR_AGAIN,
                    "Error creating thread: %s", g_strerror (ret));
       g_slice_free (GThreadPosix, thread);
       return NULL;

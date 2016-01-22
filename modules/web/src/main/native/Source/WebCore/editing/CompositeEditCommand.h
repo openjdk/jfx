@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef CompositeEditCommand_h
@@ -154,20 +154,20 @@ protected:
     PassRefPtr<Node> insertNewDefaultParagraphElementAt(const Position&);
 
     PassRefPtr<Node> moveParagraphContentsToNewBlockIfNecessary(const Position&);
-    
+
     void pushAnchorElementDown(Element&);
-    
+
     void moveParagraph(const VisiblePosition&, const VisiblePosition&, const VisiblePosition&, bool preserveSelection = false, bool preserveStyle = true);
     void moveParagraphs(const VisiblePosition&, const VisiblePosition&, const VisiblePosition&, bool preserveSelection = false, bool preserveStyle = true);
     void moveParagraphWithClones(const VisiblePosition& startOfParagraphToMove, const VisiblePosition& endOfParagraphToMove, Element* blockElement, Node* outerNode);
     void cloneParagraphUnderNewElement(Position& start, Position& end, Node* outerNode, Element* blockElement);
     void cleanupAfterDeletion(VisiblePosition destination = VisiblePosition());
-    
+
     bool breakOutOfEmptyListItem();
     bool breakOutOfEmptyMailBlockquotedParagraph();
-    
+
     Position positionAvoidingSpecialElementBoundary(const Position&);
-    
+
     PassRefPtr<Node> splitTreeToNode(Node*, Node*, bool splitAncestor = false);
 
     Vector<RefPtr<EditCommand>> m_commands;
@@ -177,7 +177,7 @@ private:
 
     RefPtr<EditCommandComposition> m_composition;
 };
-    
+
 void applyCommand(PassRefPtr<CompositeEditCommand>);
 
 inline CompositeEditCommand* toCompositeEditCommand(EditCommand* command)

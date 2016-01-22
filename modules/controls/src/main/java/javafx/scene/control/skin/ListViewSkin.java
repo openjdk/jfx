@@ -207,7 +207,7 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListCell<
         flow.setCellFactory(flow -> createCell());
         flow.setFixedCellSize(control.getFixedCellSize());
         getChildren().add(flow);
-        
+
         EventHandler<MouseEvent> ml = event -> {
             // RT-15127: cancel editing on scroll. This is a bit extreme
             // (we are cancelling editing on touching the scrollbars).
@@ -227,7 +227,7 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListCell<
         };
         flow.getVbar().addEventFilter(MouseEvent.MOUSE_PRESSED, ml);
         flow.getHbar().addEventFilter(MouseEvent.MOUSE_PRESSED, ml);
-        
+
         updateRowCount();
 
         control.itemsProperty().addListener(new WeakInvalidationListener(itemsChangeListener));
@@ -453,10 +453,10 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListCell<
         rowCountDirty = true;
         getSkinnable().requestLayout();
     }
-    
+
     private final void updatePlaceholderRegionVisibility() {
         boolean visible = getItemCount() == 0;
-        
+
         if (visible) {
             placeholderNode = getSkinnable().getPlaceholder();
             if (placeholderNode == null && (EMPTY_LIST_TEXT != null && ! EMPTY_LIST_TEXT.isEmpty())) {
@@ -485,7 +485,7 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListCell<
         return new ListCell<T>() {
             @Override public void updateItem(T item, boolean empty) {
                 super.updateItem(item, empty);
-                
+
                 if (empty) {
                     setText(null);
                     setGraphic(null);

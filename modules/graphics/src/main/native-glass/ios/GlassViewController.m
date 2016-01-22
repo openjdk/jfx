@@ -32,14 +32,14 @@
 // change happens.
 @implementation GlassViewController
 
-- (void)didRotateFromInterfaceOrientation:(UIInterfaceOrientation)fromInterfaceOrientation 
+- (void)didRotateFromInterfaceOrientation:(UIInterfaceOrientation)fromInterfaceOrientation
 {
     GlassApplication * app =  (GlassApplication*)[[UIApplication sharedApplication] delegate];
     [app GlassApplicationDidChangeScreenParameters];
 }
 
 - (BOOL)shouldAutorotateToInterfaceOrientation:(UIInterfaceOrientation)interfaceOrientation
-{  
+{
     return [self supportsOrientation:interfaceOrientation];
 }
 
@@ -48,7 +48,7 @@
     orient = [self interfaceOrientation];
 }
 
--(void)willAnimateRotationToInterfaceOrientation:(UIInterfaceOrientation)toInterfaceOrientation duration:(NSTimeInterval)duration 
+-(void)willAnimateRotationToInterfaceOrientation:(UIInterfaceOrientation)toInterfaceOrientation duration:(NSTimeInterval)duration
 {
     if ((orient < 3 && toInterfaceOrientation > 2) ||
         (orient > 2 && toInterfaceOrientation < 3)) {
@@ -62,7 +62,7 @@
                     gw.bounds = CGRectMake(0.0, 0.0, gw.bounds.size.height, gw.bounds.size.width);
                     gw.center = CGPointMake(gw.center.y, gw.center.x);
                     [UIView commitAnimations];
-                
+
                 break;
             }
         }
@@ -77,7 +77,7 @@
     NSDictionary * dict = [mainBundle infoDictionary];
     NSArray * values = (NSArray *)[dict valueForKey:@"UISupportedInterfaceOrientations"];
     NSString * sInterfaceOrientation = nil;
-    
+
     switch (interfaceOrientation) {
         case UIInterfaceOrientationPortrait:
             sInterfaceOrientation = @"UIInterfaceOrientationPortrait";
@@ -92,7 +92,7 @@
             sInterfaceOrientation = @"UIInterfaceOrientationLandscapeRight";
             break;
     }
-    
+
     if (values != nil) {
         for (NSString * value in values) {
             if ([value isEqualToString:sInterfaceOrientation] == YES) {
@@ -100,8 +100,8 @@
             }
         }
     }
-    
-    
+
+
     return NO;
 }
 

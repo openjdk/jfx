@@ -135,7 +135,7 @@ public abstract class NGShape3D extends NGNode {
                      * There is a limit on the number of lights that can affect
                      * a 3D shape. (Currently we simply select the first 3)
                      * Thus it is important to select the most relevant lights.
-                     * 
+                     *
                      * One such way would be to sort lights according to
                      * intensity, which becomes especially relevant when lights
                      * are attenuated. Only the most intense set of lights

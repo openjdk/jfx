@@ -81,7 +81,7 @@ public class FadeTransitionApp extends Application {
         fadeTransition.setToValue(0.2);
         fadeTransition.setCycleCount(Timeline.INDEFINITE);
         fadeTransition.setAutoReverse(true);
-        
+
         return root;
     }
 

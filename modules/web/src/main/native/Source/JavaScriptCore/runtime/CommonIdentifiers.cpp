@@ -52,7 +52,7 @@ const Identifier* CommonIdentifiers::getPrivateName(const Identifier& ident) con
 {
     return m_builtinNames->getPrivateName(ident);
 }
-    
+
 Identifier CommonIdentifiers::getPublicName(const Identifier& ident) const
 {
     return m_builtinNames->getPublicName(ident);

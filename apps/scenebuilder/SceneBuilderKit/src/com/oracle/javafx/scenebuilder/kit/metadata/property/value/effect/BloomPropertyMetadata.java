@@ -44,7 +44,7 @@ import javafx.scene.effect.Bloom;
  *
  */
 public class BloomPropertyMetadata extends ComplexPropertyMetadata<Bloom> {
-    
+
     private final EffectPropertyMetadata inputMetadata
             = new EffectPropertyMetadata(new PropertyName("input"), //NOI18N
             true /* readWrite */, null, InspectorPath.UNUSED);
@@ -52,7 +52,7 @@ public class BloomPropertyMetadata extends ComplexPropertyMetadata<Bloom> {
             = new DoublePropertyMetadata(new PropertyName("threshold"), //NOI18N
             DoublePropertyMetadata.DoubleKind.OPACITY, true /* readWrite */, 0.3, InspectorPath.UNUSED);
 
-    public BloomPropertyMetadata(PropertyName name, boolean readWrite, 
+    public BloomPropertyMetadata(PropertyName name, boolean readWrite,
             Bloom defaultValue, InspectorPath inspectorPath) {
         super(name, Bloom.class, readWrite, defaultValue, inspectorPath);
     }
@@ -60,14 +60,14 @@ public class BloomPropertyMetadata extends ComplexPropertyMetadata<Bloom> {
     /*
      * ComplexPropertyMetadata
      */
-    
+
     @Override
     public FXOMInstance makeFxomInstanceFromValue(Bloom value, FXOMDocument fxomDocument) {
         final FXOMInstance result = new FXOMInstance(fxomDocument, value.getClass());
-        
+
         inputMetadata.setValue(result, value.getInput());
         thresholdMetadata.setValue(result, value.getThreshold());
-        
+
         return result;
     }
 }

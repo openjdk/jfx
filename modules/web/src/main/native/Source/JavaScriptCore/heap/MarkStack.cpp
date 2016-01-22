@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -85,7 +85,7 @@ void MarkStackArray::stealSomeCellsFrom(MarkStackArray& other, size_t idleThread
 
     validatePrevious();
     other.validatePrevious();
-        
+
     // If other has an entire segment, steal it and return.
     if (other.m_numberOfSegments > 1) {
         // Move the heads of the lists aside. We'll push them back on after.
@@ -98,10 +98,10 @@ void MarkStackArray::stealSomeCellsFrom(MarkStackArray& other, size_t idleThread
 
         m_numberOfSegments++;
         other.m_numberOfSegments--;
-        
+
         m_segments.push(myHead);
         other.m_segments.push(otherHead);
-    
+
         validatePrevious();
         other.validatePrevious();
         return;

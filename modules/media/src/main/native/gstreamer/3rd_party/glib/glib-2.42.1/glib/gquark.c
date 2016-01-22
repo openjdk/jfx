@@ -130,7 +130,7 @@ g_quark_try_string (const gchar *string)
   if (quark_ht)
     quark = GPOINTER_TO_UINT (g_hash_table_lookup (quark_ht, string));
   G_UNLOCK (quark_global);
-  
+
   return quark;
 }
 

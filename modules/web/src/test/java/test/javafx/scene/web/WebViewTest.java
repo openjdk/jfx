@@ -53,13 +53,13 @@ public class WebViewTest extends TestBase {
         checkFontScale(view, SCALE);
         checkZoom(view, ZOOM);
     }
-    
+
     void checkFontScale(WebView view, float scale) {
         assertEquals("WebView.fontScale", scale, view.getFontScale(), DELTA);
         assertEquals("WebPage.zoomFactor",
                 scale, WebEngineShim.getPage(view.getEngine()).getZoomFactor(true), DELTA);
     }
-    
+
     private void setFontScale(final WebView view, final float scale) throws Exception {
         submit(() -> {
             view.setFontScale(scale);

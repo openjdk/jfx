@@ -99,7 +99,7 @@ public abstract class Chart extends Region {
     };
     // Determines if chart content should be mirrored if node orientation is right-to-left.
     boolean useChartContentMirroring = true;
-    
+
     /** Animator for animating stuff on the chart */
     private final ChartLayoutAnimator animator = new ChartLayoutAnimator(chartContent);
 
@@ -133,7 +133,7 @@ public abstract class Chart extends Region {
         @Override protected void invalidated() {
             requestLayout();
         }
-        
+
         @Override
         public CssMetaData<Chart,Side> getCssMetaData() {
             return StyleableProperties.TITLE_SIDE;
@@ -190,7 +190,7 @@ public abstract class Chart extends Region {
         @Override protected void invalidated() {
             requestLayout();
         }
-            
+
         @Override
         public CssMetaData<Chart,Boolean> getCssMetaData() {
             return StyleableProperties.LEGEND_VISIBLE;
@@ -222,7 +222,7 @@ public abstract class Chart extends Region {
             if(legend instanceof Legend) ((Legend)legend).setVertical(Side.LEFT.equals(legendSide) || Side.RIGHT.equals(legendSide));
             requestLayout();
         }
-        
+
         @Override
         public CssMetaData<Chart,Side> getCssMetaData() {
             return StyleableProperties.LEGEND_SIDE;
@@ -447,7 +447,7 @@ public abstract class Chart extends Region {
                 return (StyleableProperty<Side>)(WritableValue<Side>)node.titleSideProperty();
             }
         };
-        
+
         private static final CssMetaData<Chart,Side> LEGEND_SIDE =
             new CssMetaData<Chart,Side>("-fx-legend-side",
                 new EnumConverter<Side>(Side.class),
@@ -463,7 +463,7 @@ public abstract class Chart extends Region {
                 return (StyleableProperty<Side>)(WritableValue<Side>)node.legendSideProperty();
             }
         };
-        
+
         private static final CssMetaData<Chart,Boolean> LEGEND_VISIBLE =
             new CssMetaData<Chart,Boolean>("-fx-legend-visible",
                 BooleanConverter.getInstance(), Boolean.TRUE) {
@@ -481,7 +481,7 @@ public abstract class Chart extends Region {
 
         private static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES;
         static {
-            final List<CssMetaData<? extends Styleable, ?>> styleables = 
+            final List<CssMetaData<? extends Styleable, ?>> styleables =
                 new ArrayList<CssMetaData<? extends Styleable, ?>>(Region.getClassCssMetaData());
             styleables.add(TITLE_SIDE);
             styleables.add(LEGEND_VISIBLE);

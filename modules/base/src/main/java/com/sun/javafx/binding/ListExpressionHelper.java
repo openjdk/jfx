@@ -43,11 +43,11 @@ import static javafx.collections.ListChangeListener.Change;
  * A convenience class for creating implementations of {@link javafx.beans.value.ObservableValue}.
  * It contains all of the infrastructure support for value invalidation- and
  * change event notification.
- * 
+ *
  * This implementation can handle adding and removing listeners while the
  * observers are being notified, but it is not thread-safe.
- * 
- * 
+ *
+ *
  */
 public abstract class ListExpressionHelper<E> extends ExpressionHelperBase {
 
@@ -287,8 +287,8 @@ public abstract class ListExpressionHelper<E> extends ExpressionHelperBase {
             currentValue = observable.getValue();
             if (currentValue != oldValue) {
                 final int safeSize = (currentValue == null)? 0 : currentValue.size();
-                final ObservableList<E> safeOldValue = (oldValue == null)? 
-                        FXCollections.<E>emptyObservableList() 
+                final ObservableList<E> safeOldValue = (oldValue == null)?
+                        FXCollections.<E>emptyObservableList()
                         : FXCollections.unmodifiableObservableList(oldValue);
                 final Change<E> change = new NonIterableChange.GenericAddRemoveChange<E>(0, safeSize, safeOldValue, observable);
                 listener.onChanged(change);

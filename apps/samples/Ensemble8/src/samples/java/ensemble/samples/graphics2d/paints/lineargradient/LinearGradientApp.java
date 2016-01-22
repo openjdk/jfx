@@ -44,7 +44,7 @@ import javafx.scene.shape.Rectangle;
 import javafx.stage.Stage;
 
 /**
- * A sample with two rectangles, one filled with a simple linear gradient and one 
+ * A sample with two rectangles, one filled with a simple linear gradient and one
  * filled with a more complex gradient using the reflection cycle method.
  *
  * @sampleName Linear Gradient
@@ -89,17 +89,17 @@ public class LinearGradientApp extends Application {
         HBox hb = new HBox(10);
         hb.setAlignment(Pos.CENTER);
         hb.getChildren().addAll(rect1, rect2);
-       
+
         return hb;
     }
-    
+
     private Rectangle createRectangle(Color color) {
         Rectangle rect1 = new Rectangle(0, 45, 20, 20);
         //Fill rectangle with color
         rect1.setFill(color);
         return rect1;
     }
-    
+
     @Override
     public void start(Stage primaryStage) throws Exception {
         primaryStage.setScene(new Scene(createContent()));

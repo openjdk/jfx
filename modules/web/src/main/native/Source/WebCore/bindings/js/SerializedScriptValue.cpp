@@ -935,7 +935,7 @@ private:
     {
         writeLittleEndian(m_buffer, i);
     }
-    
+
     void write(uint16_t ch)
     {
         writeLittleEndian(m_buffer, ch);
@@ -945,7 +945,7 @@ private:
     {
         writeConstantPoolIndex(m_constantPool, i);
     }
-    
+
     void writeObjectIndex(unsigned i)
     {
         writeConstantPoolIndex(m_objectPool, i);
@@ -1475,15 +1475,15 @@ private:
             , m_index(index)
         {
         }
-        
+
         CachedString* operator->() { ASSERT(m_base); return &m_base->at(m_index); }
-        
+
     private:
         Vector<CachedString>* m_base;
         size_t m_index;
     };
 
-    CloneDeserializer(ExecState* exec, JSGlobalObject* globalObject, 
+    CloneDeserializer(ExecState* exec, JSGlobalObject* globalObject,
                       MessagePortArray* messagePorts, ArrayBufferContentsArray* arrayBufferContents,
                       const Vector<uint8_t>& buffer)
         : CloneBase(exec)
@@ -2669,7 +2669,7 @@ void SerializedScriptValue::maybeThrowExceptionIfSerializationFailed(ExecState* 
 {
     if (code == SuccessfullyCompleted)
         return;
-    
+
     switch (code) {
     case StackOverflowError:
         exec->vm().throwException(exec, createStackOverflowError(exec));

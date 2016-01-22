@@ -44,7 +44,7 @@ import javafx.scene.shape.Rectangle;
 
 /**
  *
- * 
+ *
  */
 public class RectangleResizer extends AbstractResizer<Rectangle> {
 
@@ -53,7 +53,7 @@ public class RectangleResizer extends AbstractResizer<Rectangle> {
     private final PropertyName widthName  = new PropertyName("width"); //NOI18N
     private final PropertyName heightName = new PropertyName("height"); //NOI18N
     private final List<PropertyName> propertyNames = new ArrayList<>();
-    
+
     public RectangleResizer(Rectangle sceneGraphObject) {
         super(sceneGraphObject);
         originalWidth  = sceneGraphObject.getWidth();
@@ -65,14 +65,14 @@ public class RectangleResizer extends AbstractResizer<Rectangle> {
     /*
      * AbstractResizer
      */
-    
+
     @Override
     public final Bounds computeBounds(double width, double height) {
         final double minX = sceneGraphObject.getX();
         final double minY = sceneGraphObject.getY();
         return new BoundingBox(minX, minY, Math.round(width), Math.round(height));
     }
- 
+
     @Override
     public Feature getFeature() {
         return Feature.FREE;
@@ -103,7 +103,7 @@ public class RectangleResizer extends AbstractResizer<Rectangle> {
     public Object getValue(PropertyName propertyName) {
         assert propertyName != null;
         assert propertyNames.contains(propertyName);
-        
+
         final Object result;
         if (propertyName.equals(widthName)) {
             result = sceneGraphObject.getWidth();
@@ -113,7 +113,7 @@ public class RectangleResizer extends AbstractResizer<Rectangle> {
             // Emergency code
             result = null;
         }
-        
+
         return result;
     }
 

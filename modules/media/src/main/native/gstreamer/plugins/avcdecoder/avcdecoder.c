@@ -87,7 +87,7 @@ GType avcdecoder_get_type (void)
                sizeof (AvcDecoderClass),
                (GClassInitFunc) avcdecoder_class_intern_init,
                sizeof(AvcDecoder),
-               (GInstanceInitFunc) avcdecoder_init,               
+               (GInstanceInitFunc) avcdecoder_init,
                (GTypeFlags) 0);
         g_once_init_leave (&gonce_data, (gsize) _type);
     }
@@ -113,7 +113,7 @@ avcdecoder_class_init (AvcDecoderClass * klass)
 {
     GstElementClass *gstelement_class = (GstElementClass *) klass;
     GObjectClass *gobject_class = (GObjectClass*)klass;
-    
+
     gst_element_class_set_details_simple(gstelement_class,
                                          "AVCDecoder",
                                          "Codec/Decoder/Video",
@@ -124,9 +124,9 @@ avcdecoder_class_init (AvcDecoderClass * klass)
                                         gst_static_pad_template_get (&src_factory));
     gst_element_class_add_pad_template (gstelement_class,
                                         gst_static_pad_template_get (&sink_factory));
-    
+
     gstelement_class->change_state = avcdecoder_change_state;
-    
+
     gobject_class->dispose = avcdecoder_dispose;
 }
 
@@ -175,7 +175,7 @@ avcdecoder_init (AvcDecoder * decode)
     }
 
     gst_pad_use_fixed_caps (decode->srcpad);
-    
+
     g_mutex_init(&decode->mutex);
 }
 
@@ -183,11 +183,11 @@ static void
 avcdecoder_dispose(GObject* object)
 {
     AvcDecoder* decode = AVCDECODER(object);
-    
+
     avcdecoder_state_destroy (decode);
-    
+
     g_mutex_clear(&decode->mutex);
-    
+
     G_OBJECT_CLASS(parent_class)->dispose(object);
 }
 
@@ -242,7 +242,7 @@ avcdecoder_decoder_output_callback (void* userData,
                                     CVImageBufferRef imageBuffer)
 {
     AvcDecoder *decode = AVCDECODER (userData);
-    
+
     if(decode->is_flushing)
     {
         return;
@@ -302,7 +302,7 @@ avcdecoder_decoder_output_callback (void* userData,
     }
 
     GstBuffer* buf = NULL;
-    
+
     if (isGap)
     {
         // Push a flagged, empty buffer it there is a problem.
@@ -344,8 +344,8 @@ avcdecoder_decoder_output_callback (void* userData,
                 {
                     memcpy (info.data, image_data, info.size);
                     gst_buffer_unmap(buf, &info);
-                    GST_BUFFER_TIMESTAMP(buf) = timestamp;                    
-                }                
+                    GST_BUFFER_TIMESTAMP(buf) = timestamp;
+                }
             }
 
             CVPixelBufferUnlockBaseAddress (imageBuffer, 0); // ignore return value
@@ -366,7 +366,7 @@ avcdecoder_decoder_output_callback (void* userData,
     g_mutex_lock(&decode->mutex);
 
     g_queue_insert_sorted(decode->ordered_frames, buf, avcdecoder_buffer_compare, NULL);
-    
+
     GstBuffer* frame;
     GstFlowReturn ret = GST_FLOW_OK;
     while(ret == GST_FLOW_OK && !decode->is_flushing && NULL != (frame = g_queue_peek_head(decode->ordered_frames)))
@@ -403,7 +403,7 @@ avcdecoder_decoder_output_callback (void* userData,
             break;
         }
     }
-    
+
     g_mutex_unlock(&decode->mutex);
 }
 
@@ -529,7 +529,7 @@ avcdecoder_init_decoder (AvcDecoder *decode, GstCaps* videoSpecificCaps)
 {
     GstFlowReturn ret = GST_FLOW_OK;
     OSStatus status = kVDADecoderNoErr;
-    
+
     // Initialize the element structure.
     if (FALSE == decode->is_initialized)
     {
@@ -575,7 +575,7 @@ avcdecoder_init_decoder (AvcDecoder *decode, GstCaps* videoSpecificCaps)
         CFNumberRef height = CFNumberCreate(kCFAllocatorDefault, kCFNumberSInt32Type, &avcHeight);
         SInt32 sourceFormat = 'avc1';
         CFNumberRef avcFormat = CFNumberCreate(kCFAllocatorDefault, kCFNumberSInt32Type, &sourceFormat);
-        
+
         GstBuffer*  videoSpecificBuffer = gst_value_get_buffer (videoSpecificValue);
         GstMapInfo info;
         CFDataRef avcCData = NULL;
@@ -592,7 +592,7 @@ avcdecoder_init_decoder (AvcDecoder *decode, GstCaps* videoSpecificCaps)
         CFDictionarySetValue(decoderConfiguration, kVDADecoderConfiguration_Height, height);
         CFDictionarySetValue(decoderConfiguration, kVDADecoderConfiguration_Width, width);
         CFDictionarySetValue(decoderConfiguration, kVDADecoderConfiguration_SourceFormat, avcFormat);
-        if (avcCData != NULL)            
+        if (avcCData != NULL)
             CFDictionarySetValue(decoderConfiguration, kVDADecoderConfiguration_avcCData, avcCData);
 
         // Note: For 'yuvs' the formatType should be kYUVSPixelFormat.
@@ -682,7 +682,7 @@ avcdecoder_init_decoder (AvcDecoder *decode, GstCaps* videoSpecificCaps)
             ret = GST_FLOW_ERROR;
         }
     }
-    
+
     return ret;
 }
 
@@ -724,7 +724,7 @@ avcdecoder_sink_event (GstPad * pad, GstObject *parent, GstEvent * event)
         {
             // Set a flag indicating a new segment has begun.
             decode->is_newsegment = TRUE;
-            decode->previous_timestamp = GST_CLOCK_TIME_NONE;            
+            decode->previous_timestamp = GST_CLOCK_TIME_NONE;
             gst_event_copy_segment(event, &segment);
             if(GST_FORMAT_TIME == segment.format)
             {
@@ -732,7 +732,7 @@ avcdecoder_sink_event (GstPad * pad, GstObject *parent, GstEvent * event)
             }
             break;
         }
-        
+
         case GST_EVENT_CAPS:
         {
             GstCaps *caps;
@@ -753,7 +753,7 @@ avcdecoder_sink_event (GstPad * pad, GstObject *parent, GstEvent * event)
     // Push the event downstream.
     if (!ret)
         ret = gst_pad_push_event (decode->srcpad, event);
- 
+
     return ret;
 }
 
@@ -802,13 +802,13 @@ avcdecoder_chain (GstPad * pad, GstObject *parent, GstBuffer * buf)
                                                         2,
                                                         &kCFTypeDictionaryKeyCallBacks,
                                                         &kCFTypeDictionaryValueCallBacks);
-        
+
         GstMapInfo info;
         CFTypeRef buffer = NULL;
         if (gst_buffer_map(buf, &info, GST_MAP_READ))
         {
             buffer = CFDataCreate(kCFAllocatorDefault, info.data, info.size);
-            gst_buffer_unmap(buf, &info);        
+            gst_buffer_unmap(buf, &info);
 
             // Send the encoded frame to the VDADecoder.
             status = VDADecoderDecode (decode->decoder, 0, buffer, frame_info);

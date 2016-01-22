@@ -159,9 +159,9 @@ IntRect RenderTextLineBoxes::boundingBox(const RenderText& renderer) const
         if (current == m_first || current->logicalRight() > logicalRightSide)
             logicalRightSide = current->logicalRight();
     }
-    
+
     bool isHorizontal = renderer.style().isHorizontalWritingMode();
-    
+
     float x = isHorizontal ? logicalLeftSide : m_first->x();
     float y = isHorizontal ? m_first->y() : logicalLeftSide;
     float width = isHorizontal ? logicalRightSide - logicalLeftSide : m_last->logicalBottom() - x;
@@ -181,11 +181,11 @@ LayoutRect RenderTextLineBoxes::visualOverflowBoundingBox(const RenderText& rend
         logicalLeftSide = std::min(logicalLeftSide, current->logicalLeftVisualOverflow());
         logicalRightSide = std::max(logicalRightSide, current->logicalRightVisualOverflow());
     }
-    
+
     auto logicalTop = m_first->logicalTopVisualOverflow();
     auto logicalWidth = logicalRightSide - logicalLeftSide;
     auto logicalHeight = m_last->logicalBottomVisualOverflow() - logicalTop;
-    
+
     LayoutRect rect(logicalLeftSide, logicalTop, logicalWidth, logicalHeight);
     if (!renderer.style().isHorizontalWritingMode())
         rect = rect.transposedRect();
@@ -464,11 +464,11 @@ static IntRect ellipsisRectForBox(const InlineTextBox& box, unsigned start, unsi
     auto ellipsis = box.root().ellipsisBox();
     if (!ellipsis)
         return IntRect();
-    
+
     IntRect rect;
     int ellipsisStartPosition = std::max<int>(start - box.start(), 0);
     int ellipsisEndPosition = std::min<int>(end - box.start(), box.len());
-    
+
     // The ellipsis should be considered to be selected if the end of
     // the selection is past the beginning of the truncation and the
     // beginning of the selection is before or at the beginning of the truncation.
@@ -662,7 +662,7 @@ bool RenderTextLineBoxes::dirtyRange(RenderText& renderer, unsigned start, unsig
         if (current->lineBreakObj() == &renderer && current->lineBreakPos() > end)
             current->setLineBreakPos(current->lineBreakPos() + lengthDelta);
     }
-    
+
     // If the text node is empty, dirty the line where new text will be inserted.
     if (!m_first && renderer.parent()) {
         renderer.parent()->dirtyLinesFromChangedChild(&renderer);

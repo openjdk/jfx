@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -38,10 +38,10 @@ ApplicationCacheResource::ApplicationCacheResource(const URL& url, const Resourc
 {
 }
 
-void ApplicationCacheResource::addType(unsigned type) 
+void ApplicationCacheResource::addType(unsigned type)
 {
     // Caller should take care of storing the new type in database.
-    m_type |= type; 
+    m_type |= type;
 }
 
 int64_t ApplicationCacheResource::estimatedSizeInStorage()
@@ -78,7 +78,7 @@ void ApplicationCacheResource::dumpType(unsigned type)
         printf("foreign ");
     if (type & Fallback)
         printf("fallback ");
-    
+
     printf("\n");
 }
 #endif

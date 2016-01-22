@@ -22,7 +22,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -53,8 +53,8 @@ static PassRefPtr<Geoposition> createGeoposition(GeolocationPosition* position)
 {
     if (!position)
         return 0;
-    
-    RefPtr<Coordinates> coordinates = Coordinates::create(position->latitude(), position->longitude(), position->canProvideAltitude(), position->altitude(), 
+
+    RefPtr<Coordinates> coordinates = Coordinates::create(position->latitude(), position->longitude(), position->canProvideAltitude(), position->altitude(),
                                                           position->accuracy(), position->canProvideAltitudeAccuracy(), position->altitudeAccuracy(),
                                                           position->canProvideHeading(), position->heading(), position->canProvideSpeed(), position->speed());
     return Geoposition::create(coordinates.release(), convertSecondsToDOMTimeStamp(position->timestamp()));
@@ -541,7 +541,7 @@ void Geolocation::clearWatch(int watchID)
     if (GeoNotifier* notifier = m_watchers.find(watchID))
         m_pendingForPermissionNotifiers.remove(notifier);
     m_watchers.remove(watchID);
-    
+
     if (!hasListeners())
         stopUpdating();
 }
@@ -554,7 +554,7 @@ void Geolocation::setIsAllowed(bool allowed)
     // This may be due to either a new position from the service, or a cached
     // position.
     m_allowGeolocation = allowed ? Yes : No;
-    
+
 #if PLATFORM(IOS)
     if (m_isSuspended)
         return;
@@ -594,7 +594,7 @@ void Geolocation::sendError(GeoNotifierVector& notifiers, PositionError* error)
      GeoNotifierVector::const_iterator end = notifiers.end();
      for (GeoNotifierVector::const_iterator it = notifiers.begin(); it != end; ++it) {
          RefPtr<GeoNotifier> notifier = *it;
-         
+
          notifier->runErrorCallback(error);
      }
 }
@@ -617,7 +617,7 @@ void Geolocation::stopTimersForOneShots()
 {
     GeoNotifierVector copy;
     copyToVector(m_oneShots, copy);
-    
+
     stopTimer(copy);
 }
 
@@ -625,7 +625,7 @@ void Geolocation::stopTimersForWatchers()
 {
     GeoNotifierVector copy;
     m_watchers.getNotifiersVector(copy);
-    
+
     stopTimer(copy);
 }
 
@@ -678,7 +678,7 @@ void Geolocation::copyToSet(const GeoNotifierVector& src, GeoNotifierSet& dest)
 void Geolocation::handleError(PositionError* error)
 {
     ASSERT(error);
-    
+
     GeoNotifierVector oneShotsCopy;
     copyToVector(m_oneShots, oneShotsCopy);
 
@@ -730,13 +730,13 @@ void Geolocation::makeSuccessCallbacks()
 {
     ASSERT(lastPosition());
     ASSERT(isAllowed());
-    
+
     GeoNotifierVector oneShotsCopy;
     copyToVector(m_oneShots, oneShotsCopy);
-    
+
     GeoNotifierVector watchersCopy;
     m_watchers.getNotifiersVector(watchersCopy);
-    
+
     // Clear the lists before we make the callbacks, to avoid clearing notifiers
     // added by calls to Geolocation methods from the callbacks, and to prevent
     // further callbacks to these notifiers.
@@ -799,7 +799,7 @@ void Geolocation::stopUpdating()
 
 void Geolocation::handlePendingPermissionNotifiers()
 {
-    // While we iterate through the list, we need not worry about list being modified as the permission 
+    // While we iterate through the list, we need not worry about list being modified as the permission
     // is already set to Yes/No and no new listeners will be added to the pending list
     GeoNotifierSet::const_iterator end = m_pendingForPermissionNotifiers.end();
     for (GeoNotifierSet::const_iterator iter = m_pendingForPermissionNotifiers.begin(); iter != end; ++iter) {
@@ -818,5 +818,5 @@ void Geolocation::handlePendingPermissionNotifiers()
 }
 
 } // namespace WebCore
-                                                        
+
 #endif // ENABLE(GEOLOCATION)

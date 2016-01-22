@@ -44,14 +44,14 @@ import javafx.geometry.Orientation;
 SeparatorMenuItem separatorMenuItem = new SeparatorMenuItem();
 </code></pre>
  * <p>
- * 
+ *
  * @see CustomMenuItem
  * @see MenuItem
  * @see Menu
  * @since JavaFX 2.0
  */
 public class SeparatorMenuItem extends CustomMenuItem {
-    
+
     /***************************************************************************
      *                                                                         *
      * Constructors                                                            *
@@ -65,9 +65,9 @@ public class SeparatorMenuItem extends CustomMenuItem {
         super(new Separator(Orientation.HORIZONTAL), false);
         getStyleClass().add(DEFAULT_STYLE_CLASS);
     }
-    
-    
-    
+
+
+
     /***************************************************************************
      *                                                                         *
      * Stylesheet Handling                                                     *

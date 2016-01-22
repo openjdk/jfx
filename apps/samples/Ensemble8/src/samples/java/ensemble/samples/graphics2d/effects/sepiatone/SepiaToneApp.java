@@ -46,7 +46,7 @@ import javafx.stage.Stage;
  * @sampleName Sepia Tone
  * @preview preview.png
  * @playground sepiaTone.level (name="SepiaTone Level", min=0, max=1)
- * 
+ *
  * @see javafx.scene.effect.SepiaTone
  * @see javafx.scene.effect.Effect
  * @embedded

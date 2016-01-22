@@ -116,7 +116,7 @@ bool SVGTextQuery::executeQuery(Data* queryData, ProcessTextFragmentCallback fra
 
         queryData->isVerticalText = queryData->textRenderer->style().svgStyle().isVerticalWritingMode();
         const Vector<SVGTextFragment>& fragments = queryData->textBox->textFragments();
-    
+
         // Loop over all text fragments in this text box, firing a callback for each.
         unsigned fragmentCount = fragments.size();
         for (unsigned i = 0; i < fragmentCount; ++i) {

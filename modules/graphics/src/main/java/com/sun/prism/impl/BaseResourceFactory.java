@@ -141,7 +141,7 @@ public abstract class BaseResourceFactory implements ResourceFactory {
         while (w > 1 && h > 1) {
             size += ((long) w) * ((long) h);
             w = (w + 1) >> 1;
-            h = (h + 1) >> 1;            
+            h = (h + 1) >> 1;
         }
         size += 1;
         return size * bytesPerPixel;

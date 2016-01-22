@@ -50,9 +50,9 @@ G_BEGIN_DECLS
  * and (un)set using GST_OBJECT_FLAG_SET () and GST_OBJECT_FLAG_UNSET ().
  */
 typedef enum {
-  GST_BIN_FLAG_NO_RESYNC	= (GST_ELEMENT_FLAG_LAST << 0),
+  GST_BIN_FLAG_NO_RESYNC    = (GST_ELEMENT_FLAG_LAST << 0),
   /* padding */
-  GST_BIN_FLAG_LAST		= (GST_ELEMENT_FLAG_LAST << 5)
+  GST_BIN_FLAG_LAST     = (GST_ELEMENT_FLAG_LAST << 5)
 } GstBinFlags;
 
 /**
@@ -76,21 +76,21 @@ typedef struct _GstBinPrivate GstBinPrivate;
  *
  * Gets the number of children in a bin.
  */
-#define GST_BIN_NUMCHILDREN(bin)	(GST_BIN_CAST(bin)->numchildren)
+#define GST_BIN_NUMCHILDREN(bin)    (GST_BIN_CAST(bin)->numchildren)
 /**
  * GST_BIN_CHILDREN:
  * @bin: a #GstBin
  *
  * Gets the list with children in a bin.
  */
-#define GST_BIN_CHILDREN(bin)		(GST_BIN_CAST(bin)->children)
+#define GST_BIN_CHILDREN(bin)       (GST_BIN_CAST(bin)->children)
 /**
  * GST_BIN_CHILDREN_COOKIE:
  * @bin: a #GstBin
  *
  * Gets the children cookie that watches the children list.
  */
-#define GST_BIN_CHILDREN_COOKIE(bin)	(GST_BIN_CAST(bin)->children_cookie)
+#define GST_BIN_CHILDREN_COOKIE(bin)    (GST_BIN_CAST(bin)->children_cookie)
 
 /**
  * GstBin:
@@ -109,23 +109,23 @@ typedef struct _GstBinPrivate GstBinPrivate;
  * the LOCK is taken.
  */
 struct _GstBin {
-  GstElement	 element;
+  GstElement     element;
 
   /*< public >*/ /* with LOCK */
   /* our children, subclass are supposed to update these
    * fields to reflect their state with _iterate_*() */
-  gint		 numchildren;
-  GList		*children;
-  guint32	 children_cookie;
+  gint       numchildren;
+  GList     *children;
+  guint32    children_cookie;
 
   GstBus        *child_bus;
   GList         *messages;
 
-  gboolean	 polling;
+  gboolean   polling;
   gboolean       state_dirty;
 
   gboolean       clock_dirty;
-  GstClock	*provided_clock;
+  GstClock  *provided_clock;
   GstElement    *clock_provider;
 
   /*< private >*/
@@ -155,44 +155,44 @@ struct _GstBinClass {
   GThreadPool  *pool;
 
   /* signals */
-  void		(*element_added)	(GstBin *bin, GstElement *child);
-  void		(*element_removed)	(GstBin *bin, GstElement *child);
+  void      (*element_added)    (GstBin *bin, GstElement *child);
+  void      (*element_removed)  (GstBin *bin, GstElement *child);
 
   /*< public >*/
   /* virtual methods for subclasses */
-  gboolean	(*add_element)		(GstBin *bin, GstElement *element);
-  gboolean	(*remove_element)	(GstBin *bin, GstElement *element);
+  gboolean  (*add_element)      (GstBin *bin, GstElement *element);
+  gboolean  (*remove_element)   (GstBin *bin, GstElement *element);
 
-  void		(*handle_message)	(GstBin *bin, GstMessage *message);
+  void      (*handle_message)   (GstBin *bin, GstMessage *message);
 
   /*< private >*/
   /* signal */
-  gboolean	(*do_latency)           (GstBin *bin);
+  gboolean  (*do_latency)           (GstBin *bin);
 
   /*< private >*/
   gpointer _gst_reserved[GST_PADDING];
 };
 
-GType		gst_bin_get_type		(void);
-GstElement*	gst_bin_new			(const gchar *name);
+GType       gst_bin_get_type        (void);
+GstElement* gst_bin_new         (const gchar *name);
 
 /* add and remove elements from the bin */
-gboolean	gst_bin_add			(GstBin *bin, GstElement *element);
-gboolean	gst_bin_remove			(GstBin *bin, GstElement *element);
+gboolean    gst_bin_add         (GstBin *bin, GstElement *element);
+gboolean    gst_bin_remove          (GstBin *bin, GstElement *element);
 
 /* retrieve a single child */
-GstElement*	gst_bin_get_by_name		 (GstBin *bin, const gchar *name);
-GstElement*	gst_bin_get_by_name_recurse_up	 (GstBin *bin, const gchar *name);
-GstElement*	gst_bin_get_by_interface	 (GstBin *bin, GType iface);
+GstElement* gst_bin_get_by_name      (GstBin *bin, const gchar *name);
+GstElement* gst_bin_get_by_name_recurse_up   (GstBin *bin, const gchar *name);
+GstElement* gst_bin_get_by_interface     (GstBin *bin, GType iface);
 
 /* retrieve multiple children */
-GstIterator*    gst_bin_iterate_elements	 (GstBin *bin);
-GstIterator*    gst_bin_iterate_sorted		 (GstBin *bin);
-GstIterator*    gst_bin_iterate_recurse		 (GstBin *bin);
+GstIterator*    gst_bin_iterate_elements     (GstBin *bin);
+GstIterator*    gst_bin_iterate_sorted       (GstBin *bin);
+GstIterator*    gst_bin_iterate_recurse      (GstBin *bin);
 
-GstIterator*	gst_bin_iterate_sinks		 (GstBin *bin);
-GstIterator*	gst_bin_iterate_sources		 (GstBin *bin);
-GstIterator*	gst_bin_iterate_all_by_interface (GstBin *bin, GType iface);
+GstIterator*    gst_bin_iterate_sinks        (GstBin *bin);
+GstIterator*    gst_bin_iterate_sources      (GstBin *bin);
+GstIterator*    gst_bin_iterate_all_by_interface (GstBin *bin, GType iface);
 
 /* latency */
 gboolean        gst_bin_recalculate_latency      (GstBin * bin);

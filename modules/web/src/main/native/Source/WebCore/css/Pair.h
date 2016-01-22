@@ -52,7 +52,7 @@ public:
 
     String cssText() const
     {
-    
+
         return generateCSSString(first()->cssText(), second()->cssText());
     }
 

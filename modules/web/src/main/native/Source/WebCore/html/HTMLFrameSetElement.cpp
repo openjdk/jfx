@@ -151,7 +151,7 @@ void HTMLFrameSetElement::parseAttribute(const QualifiedName& name, const Atomic
 bool HTMLFrameSetElement::rendererIsNeeded(const RenderStyle& style)
 {
     // For compatibility, frames render even when display: none is set.
-    // However, we delay creating a renderer until stylesheets have loaded. 
+    // However, we delay creating a renderer until stylesheets have loaded.
     return style.isStyleAvailable();
 }
 
@@ -159,7 +159,7 @@ RenderPtr<RenderElement> HTMLFrameSetElement::createElementRenderer(PassRef<Rend
 {
     if (style.get().hasContent())
         return RenderElement::createFor(*this, std::move(style));
-    
+
     return createRenderer<RenderFrameSet>(*this, std::move(style));
 }
 

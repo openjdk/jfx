@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef DFGCommon_h
@@ -133,7 +133,7 @@ enum GraphForm {
     // LoadStore form is suitable for CFG transformations, as well as strength
     // reduction, folding, and CSE.
     LoadStore,
-    
+
     // ThreadedCPS form means that basic blocks list up-front which locals they
     // expect to be live at the head, and which locals they make available at the
     // tail. ThreadedCPS form also implies that:
@@ -150,7 +150,7 @@ enum GraphForm {
     // ThreadedCPS form is suitable for data flow analysis (CFA, prediction
     // propagation), register allocation, and code generation.
     ThreadedCPS,
-    
+
     // SSA form. See DFGSSAConversionPhase.h for a description.
     SSA
 };
@@ -159,7 +159,7 @@ enum GraphForm {
 enum UnificationState {
     // BasicBlock-local accesses to variables are appropriately unified with each other.
     LocallyUnified,
-    
+
     // Unification has been performed globally.
     GloballyUnified
 };

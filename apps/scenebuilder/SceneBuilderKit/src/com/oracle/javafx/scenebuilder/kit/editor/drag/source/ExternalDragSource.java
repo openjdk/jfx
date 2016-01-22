@@ -82,10 +82,10 @@ public class ExternalDragSource extends AbstractDragSource {
 
     public ExternalDragSource(Dragboard clipboardContent, FXOMDocument targetDocument, Window ownerWindow) {
         super(ownerWindow);
-        
+
         assert clipboardContent != null;
         assert targetDocument != null;
-        
+
         this.dragboard = clipboardContent;
         this.targetDocument = targetDocument;
     }
@@ -98,18 +98,18 @@ public class ExternalDragSource extends AbstractDragSource {
         return lastException;
     }
 
-    
+
     /*
      * AbstractDragSource
      */
-    
+
     @Override
     public boolean isAcceptable() {
         // All external drag sources are 'acceptable'
         return true;
     }
 
-    
+
     @Override
     public List<FXOMObject> getDraggedObjects() {
         if (draggedObjects == null) {
@@ -142,7 +142,7 @@ public class ExternalDragSource extends AbstractDragSource {
                     sceneGraphNode.setLayoutX(dxy);
                     sceneGraphNode.setLayoutY(dxy);
                     dxy += 20.0;
-                    
+
                     group.getChildren().add(sceneGraphNode);
                 }
             }
@@ -150,7 +150,7 @@ public class ExternalDragSource extends AbstractDragSource {
             scene.getClass(); // used to dummy thing to silence FindBugs
             group.applyCss();
             group.layout();
-            
+
             // Initialize singleImageView
             if (draggedObjects.size() != 1) {
                 singleImageViewOnly = false;
@@ -170,27 +170,27 @@ public class ExternalDragSource extends AbstractDragSource {
                 }
             }
         }
-        
+
         return draggedObjects;
     }
 
     @Override
     public FXOMObject getHitObject() {
         final FXOMObject result;
-        
+
         if (getDraggedObjects().isEmpty()) {
             result = null;
         } else {
             result = getDraggedObjects().get(0);
         }
-        
+
         return result;
     }
-    
+
     @Override
     public double getHitX() {
         final double result;
-        
+
         final FXOMObject hitObject = getHitObject();
         if (hitObject == null) {
             result = Double.NaN;
@@ -201,14 +201,14 @@ public class ExternalDragSource extends AbstractDragSource {
         } else {
             result = 0.0;
         }
-        
+
         return result;
     }
 
     @Override
     public double getHitY() {
         final double result;
-        
+
         final FXOMObject hitObject = getHitObject();
         if (hitObject == null) {
             result = Double.NaN;
@@ -219,7 +219,7 @@ public class ExternalDragSource extends AbstractDragSource {
         } else {
             result = 0.0;
         }
-        
+
         return result;
     }
 
@@ -248,21 +248,21 @@ public class ExternalDragSource extends AbstractDragSource {
                 result.getChildren().add(shadowNode);
             }
         }
-        
+
         // Translate the group so that it is centered above (layoutX, layoutY)
         final Bounds b = result.getBoundsInParent();
         final double centerX = (b.getMinX() + b.getMaxX()) / 2.0;
         final double centerY = (b.getMinY() + b.getMaxY()) / 2.0;
         result.setTranslateX(-centerX);
         result.setTranslateY(-centerY);
-        
+
         return result;
     }
 
     @Override
     public String makeDropJobDescription() {
         final String result;
-        
+
         if (inputFiles.size() == 1) {
             final Path inputPath = Paths.get(inputFiles.get(0).toURI());
             result = I18N.getString("drop.job.insert.from.single.file",
@@ -271,7 +271,7 @@ public class ExternalDragSource extends AbstractDragSource {
             result = I18N.getString("drop.job.insert.from.multiple.files",
                     inputFiles.size());
         }
-        
+
         return result;
     }
 
@@ -286,10 +286,10 @@ public class ExternalDragSource extends AbstractDragSource {
             }
             nodeOnly = nonNodeCount == 0;
         }
-        
+
         return nodeOnly;
     }
-    
+
     @Override
     public boolean isSingleImageViewOnly() {
         // singleImageViewOnly is initialized lazily by getDraggedObjects()
@@ -310,34 +310,34 @@ public class ExternalDragSource extends AbstractDragSource {
         getDraggedObjects();
         return singleContextMenuOnly;
     }
-    
+
     /*
      * Object
      */
-    
+
     @Override
     public String toString() {
         return getClass().getSimpleName() + ": dragboard=(" + dragboard + ")"; //NOI18N
     }
-    
-    
+
+
     /*
      * Private
      */
-    
+
     /*
      * Utilities that should probably go somewhere else.
      */
-    
-    static FXOMDocument makeFxomDocumentFromImageURL(Image image, 
+
+    static FXOMDocument makeFxomDocumentFromImageURL(Image image,
             double fitSize) throws IOException {
 
         assert image != null;
         assert fitSize > 0.0;
-        
+
         final double imageWidth = image.getWidth();
         final double imageHeight = image.getHeight();
-        
+
         final double fitWidth, fitHeight;
         final double imageSize = Math.max(imageWidth, imageHeight);
         if (imageSize < fitSize) {
@@ -350,19 +350,19 @@ public class ExternalDragSource extends AbstractDragSource {
             fitWidth = Math.floor(imageWidth * scale);
             fitHeight = Math.floor(imageHeight * scale);
         }
-        
+
         return makeFxomDocumentFromImageURL(image, fitWidth, fitHeight);
     }
-    
+
     static final PropertyName imageName = new PropertyName("image"); //NOI18N
     static final PropertyName fitWidthName = new PropertyName("fitWidth"); //NOI18N
     static final PropertyName fitHeightName = new PropertyName("fitHeight"); //NOI18N
-    
+
     static FXOMDocument makeFxomDocumentFromImageURL(Image image, double fitWidth, double fitHeight) {
         final FXOMDocument result = new FXOMDocument();
         final FXOMInstance imageView = new FXOMInstance(result, ImageView.class);
-        
-        final ComponentClassMetadata imageViewMeta 
+
+        final ComponentClassMetadata imageViewMeta
                 = Metadata.getMetadata().queryComponentMetadata(ImageView.class);
         final PropertyMetadata imagePropMeta
                 = imageViewMeta.lookupProperty(imageName);
@@ -370,11 +370,11 @@ public class ExternalDragSource extends AbstractDragSource {
                 = imageViewMeta.lookupProperty(fitWidthName);
         final PropertyMetadata fitHeightPropMeta
                 = imageViewMeta.lookupProperty(fitHeightName);
-        
+
         assert imagePropMeta instanceof ImagePropertyMetadata;
         assert fitWidthPropMeta instanceof DoublePropertyMetadata;
         assert fitHeightPropMeta instanceof DoublePropertyMetadata;
-        
+
         final ImagePropertyMetadata imageMeta
                 = (ImagePropertyMetadata) imagePropMeta;
         final DoublePropertyMetadata fitWidthMeta
@@ -385,9 +385,9 @@ public class ExternalDragSource extends AbstractDragSource {
         imageMeta.setValue(imageView, new DesignImage(image));
         fitWidthMeta.setValue(imageView, fitWidth);
         fitHeightMeta.setValue(imageView, fitHeight);
-        
+
         result.setFxomRoot(imageView);
-        
+
         return result;
     }
 }

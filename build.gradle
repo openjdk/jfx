@@ -1625,7 +1625,7 @@ project(":graphics") {
     classes << {
         // Copy all of the download libraries to the libs directory for the sake of the IDEs
         File libsDir = rootProject.file("build/libs");
-        
+
         // In some IDEs (Eclipse for example), touching these libraries
         // cauese a full build within the IDE. When gradle is used
         // outside of the IDE, for example to build the native code,
@@ -1667,7 +1667,7 @@ project(":controls") {
     test {
         def cssDir = file("$buildDir/classes/main/javafx")
         jvmArgs "-Djavafx.toolkit=test.com.sun.javafx.pgstub.StubToolkit",
-            "-DCSS_META_DATA_TEST_DIR=$cssDir"        
+            "-DCSS_META_DATA_TEST_DIR=$cssDir"
     }
 
     // TODO Css2Bin really should be moved out and put into buildSrc if it can be
@@ -2159,7 +2159,7 @@ project(":fxpackager") {
     } catch (MissingPropertyException ignore) {
         packagerDevOpts.addAll("image")
     }
-    
+
     task packagerDev(dependsOn: [jar, packagerFakeJar], type:JavaExec) {
         workingDir = project.file("build/tmp/tests/appResources/")
         classpath = project.files("build/libs/ant-javafx.jar", "build/classes/test", "build/resources/test")
@@ -2197,7 +2197,7 @@ project(":media") {
 
     def nativeSrcDir = file("${projectDir}/src/main/native")
     def generatedHeadersDir = file("${buildDir}/generated-src/headers")
-    
+
     task generateHeaders(dependsOn: compileJava) {
         enabled = IS_COMPILE_MEDIA
         doLast {
@@ -2228,7 +2228,7 @@ project(":media") {
             }
         }
     }
-    
+
     task generateMediaErrorHeader(dependsOn: [compileToolsJava, compileJava]) {
         enabled = IS_COMPILE_MEDIA
         doLast {
@@ -2249,28 +2249,28 @@ project(":media") {
     task buildNativeTargets {
         enabled = IS_COMPILE_MEDIA
     }
-    
-    compileTargets { t->        
+
+    compileTargets { t->
         def targetProperties = project.rootProject.ext[t.upper]
         def nativeOutputDir = file("${buildDir}/native/${t.name}")
         def projectDir = t.name.startsWith("arm") ? "linux" : t.name
         def mediaProperties = targetProperties.media
         // Makefile for OSX needs to know if we're building for parfait
         def compileParfait = IS_COMPILE_PARFAIT ? "true" : "false"
-        
+
         def buildNative = task("build${t.capital}Native", dependsOn: [generateHeaders, generateMediaErrorHeader]) {
             enabled = targetProperties.compileMediaNative
             if (!targetProperties.compileMediaNative) {
                 println("Not compiling native Media for ${t.name} per configuration request");
-            } 
+            }
 
             doLast {
                 exec {
                     commandLine ("make", "${makeJobsFlag}", "-C", "${nativeSrcDir}/jfxmedia/projects/${projectDir}")
                     args("JAVA_HOME=${JDK_HOME}", "GENERATED_HEADERS_DIR=${generatedHeadersDir}",
                          "OUTPUT_DIR=${nativeOutputDir}", "BUILD_TYPE=${buildType}", "BASE_NAME=jfxmedia",
-                         "COMPILE_PARFAIT=${compileParfait}", 
-                         IS_64 ? "ARCH=x64" : "ARCH=x32", 
+                         "COMPILE_PARFAIT=${compileParfait}",
+                         IS_64 ? "ARCH=x64" : "ARCH=x32",
                         "CC=${mediaProperties.compiler}", "LINKER=${mediaProperties.linker}")
 
                     if (t.name == "win") {
@@ -2285,8 +2285,8 @@ project(":media") {
                     }
                 }
             }
-        }        
-        
+        }
+
         // check for the property disable${name} = true
         def boolean disabled = targetProperties.containsKey('disableMedia') ? targetProperties.get('disableMedia') : false
         if (!disabled) {
@@ -2297,7 +2297,7 @@ project(":media") {
                     exec {
                         commandLine ("make", "${makeJobsFlag}", "-C", "${nativeSrcDir}/gstreamer/projects/${projectDir}/gstreamer-lite")
                         args("OUTPUT_DIR=${nativeOutputDir}", "BUILD_TYPE=${buildType}", "BASE_NAME=gstreamer-lite",
-                             IS_64 ? "ARCH=x64" : "ARCH=x32", "CC=${mediaProperties.compiler}", 
+                             IS_64 ? "ARCH=x64" : "ARCH=x32", "CC=${mediaProperties.compiler}",
                              "AR=${mediaProperties.ar}", "LINKER=${mediaProperties.linker}")
 
                         if (t.name == "win") {
@@ -2322,9 +2322,9 @@ project(":media") {
                 doLast {
                     exec {
                         commandLine ("make", "${makeJobsFlag}", "-C", "${nativeSrcDir}/gstreamer/projects/${projectDir}/fxplugins")
-                        args("OUTPUT_DIR=${nativeOutputDir}", "BUILD_TYPE=${buildType}", "BASE_NAME=fxplugins", 
+                        args("OUTPUT_DIR=${nativeOutputDir}", "BUILD_TYPE=${buildType}", "BASE_NAME=fxplugins",
                              "ON2_SRCDIR=${project.ext.ON2_SRCDIR}", "ON2_LIB=${project.ext.ON2_LIB}",
-                             IS_64 ? "ARCH=x64" : "ARCH=x32", 
+                             IS_64 ? "ARCH=x64" : "ARCH=x32",
                              "CC=${mediaProperties.compiler}", "AR=${mediaProperties.ar}", "LINKER=${mediaProperties.linker}")
 
                         if (t.name == "win") {
@@ -2342,7 +2342,7 @@ project(":media") {
                     }
                 }
             }
-            
+
             buildNative.dependsOn buildPlugins
 
             if (t.name == "linux") {
@@ -2357,9 +2357,9 @@ project(":media") {
                                 if (dir.exists()) {
                                     exec {
                                         commandLine ("make", "${makeJobsFlag}", "-C", "${nativeSrcDir}/gstreamer/projects/linux/avplugin")
-                                        args("CC=${mediaProperties.compiler}", "LINKER=${mediaProperties.linker}", 
-                                             "OUTPUT_DIR=${nativeOutputDir}", "BUILD_TYPE=${buildType}", 
-                                             "BASE_NAME=avplugin", "VERSION=${version}", "LIBAV_DIR=${libavDir}", 
+                                        args("CC=${mediaProperties.compiler}", "LINKER=${mediaProperties.linker}",
+                                             "OUTPUT_DIR=${nativeOutputDir}", "BUILD_TYPE=${buildType}",
+                                             "BASE_NAME=avplugin", "VERSION=${version}", "LIBAV_DIR=${libavDir}",
                                               IS_64 ? "ARCH=x64" : "ARCH=x32")
                                     }
                                 }
@@ -2368,8 +2368,8 @@ project(":media") {
                             // Building fxavcodec plugin (libav plugin)
                             exec {
                                 commandLine ("make", "${makeJobsFlag}", "-C", "${nativeSrcDir}/gstreamer/projects/linux/avplugin")
-                                args("CC=${mediaProperties.compiler}", "LINKER=${mediaProperties.linker}", 
-                                     "OUTPUT_DIR=${nativeOutputDir}", "BUILD_TYPE=${buildType}", 
+                                args("CC=${mediaProperties.compiler}", "LINKER=${mediaProperties.linker}",
+                                     "OUTPUT_DIR=${nativeOutputDir}", "BUILD_TYPE=${buildType}",
                                      "BASE_NAME=avplugin", IS_64 ? "ARCH=x64" : "ARCH=x32")
                             }
                         }
@@ -2411,7 +2411,7 @@ project(":media") {
                     }
                 }
 
-	        def buildGlib = task("build${t.capital}Glib", dependsOn: [buildResources]) {
+            def buildGlib = task("build${t.capital}Glib", dependsOn: [buildResources]) {
                     enabled = IS_COMPILE_MEDIA
                     doLast {
                         exec {
@@ -2445,10 +2445,10 @@ project(":media") {
                 buildGStreamer.dependsOn buildGlib
             }
         }
-        
+
         buildNativeTargets.dependsOn buildNative
     }
- 
+
     jar {
         exclude("headergen/**")
 
@@ -2473,7 +2473,7 @@ project(":web") {
         systemProperty 'monocle.platform', 'Headless'
         systemProperty 'prism.order', 'sw'
     }
-    
+
     if (!IS_COMPILE_WEBKIT) {
         // Include wrapper classes that are otherwise generated by native build
         sourceSets.main.java.srcDirs += "src/main/java-wrappers"
@@ -2541,7 +2541,7 @@ project(":web") {
 
         def compileNativeTask = task("compileNative${t.capital}", dependsOn: generateHeaders) << {
             println "Building Webkit configuration /$webkitConfig/ into $webkitOutputDir"
-            
+
             def dependencyFile = configurations.webkit.filter(
                     { File f -> f.getName().contains(classifier) }
                 ).getSingleFile()
@@ -2643,7 +2643,7 @@ load(qt_config)""")
                 into "$buildDir/test/${t.name}"
             }
         }
-    
+
         if (IS_WINDOWS && t.name == "win") {
             def webkitProperties = project.rootProject.ext[t.upper].webkit
             def rcTask = project.task("rc${t.capital}", type: CompileResourceTask) {
@@ -2656,7 +2656,7 @@ load(qt_config)""")
             }
             compileNativeTask.dependsOn rcTask
         }
-        
+
         def compileGeneratedTask = task("compileGenerated${t.capital}", type: JavaCompile, dependsOn: compileNativeTask) {
             def gensrcDir = "$webkitOutputDir/$webkitConfig/WebCore/generated/java"
             doFirst {
@@ -2672,13 +2672,13 @@ load(qt_config)""")
         }
 
         compileGenerated.dependsOn compileGeneratedTask
-            
+
         if (!targetProperties.compileWebnodeNative) {
             println("Not compiling native Webkit for ${t.name} per configuration request");
             compileNativeTask.enabled = false
         }
     }
-    
+
     def drtClasses = "com/sun/javafx/webkit/drt/**"
     jar.exclude(drtClasses)
     task drtJar(type: Jar, dependsOn: compileJava) {
@@ -2716,7 +2716,7 @@ project(":systemTests") {
             exclude("**/javafx/embed/swing/*.*");
             exclude("**/com/sun/javafx/application/Swing*.*");
         }
-        
+
         forkEvery = 1
     }
 }
@@ -2955,7 +2955,7 @@ compileTargets { t ->
     // cross compiles they have done. For example, I might have:
     //      build/ios-sdk/rt/lib/ext/jfxrt.jar
     //      build/armhf-sdk/rt/lib/ext/jfxrt.jar
-    // and so forth. The default host build will always install into 'sdk' 
+    // and so forth. The default host build will always install into 'sdk'
     // allowing for uses where a known sdk path is needed (like IDEs)
     //      build/sdk/rt/lib/ext/jfxrt.jar
     // This arrangement allows for multiple independent SDKs to
@@ -2998,7 +2998,7 @@ compileTargets { t ->
                      "com/sun/scenario/effect/impl/hw/d3d"
                      )
         }
-        if (!targetProperties.includeGTK) { //usually IS_LINUX 
+        if (!targetProperties.includeGTK) { //usually IS_LINUX
             exclude (
                      "com/sun/glass/ui/gtk",
                      "com/sun/prism/es2/EGL*",
@@ -3173,7 +3173,7 @@ compileTargets { t ->
                         from ("$LIBRARY_STUB/${library("glib-lite")}")
                     }
                 }
-                
+
                 def libDest = targetProperties.libDest
                 into ("build/${sdkDirName}/rt/$libDest")
             }

@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef DFGClobberize_h
@@ -79,10 +79,10 @@ void clobberize(Graph& graph, Node* node, ReadFunctor& read, WriteFunctor& write
     //   can use it for IR dumps. No promises on whether the answers are sound
     //   prior to type inference - though they probably could be if we did some
     //   small hacking.
-    
+
     if (edgesUseStructure(graph, node))
         read(JSCell_structure);
-    
+
     switch (node->op()) {
     case JSConstant:
     case WeakJSConstant:
@@ -135,7 +135,7 @@ void clobberize(Graph& graph, Node* node, ReadFunctor& read, WriteFunctor& write
     case DoubleAsInt32:
     case Check:
         return;
-        
+
     case MovHint:
     case ZombieHint:
     case Upsilon:
@@ -158,13 +158,13 @@ void clobberize(Graph& graph, Node* node, ReadFunctor& read, WriteFunctor& write
     case InvalidationPoint:
         write(SideState);
         return;
-        
+
     case VariableWatchpoint:
     case TypedArrayWatchpoint:
         read(Watchpoint_fire);
         write(SideState);
         return;
-        
+
     case NotifyWrite:
         write(Watchpoint_fire);
         write(SideState);
@@ -176,7 +176,7 @@ void clobberize(Graph& graph, Node* node, ReadFunctor& read, WriteFunctor& write
         write(SideState);
         write(Watchpoint_fire);
         return;
-        
+
     case FunctionReentryWatchpoint:
         read(Watchpoint_fire);
         return;
@@ -194,7 +194,7 @@ void clobberize(Graph& graph, Node* node, ReadFunctor& read, WriteFunctor& write
     case TypeOf:
         read(MiscFields);
         return;
-        
+
     case GetById:
     case GetByIdFlush:
     case PutById:
@@ -211,24 +211,24 @@ void clobberize(Graph& graph, Node* node, ReadFunctor& read, WriteFunctor& write
         read(World);
         write(World);
         return;
-        
+
     case GetCallee:
         read(AbstractHeap(Variables, JSStack::Callee));
         return;
-        
+
     case GetLocal:
     case GetArgument:
         read(AbstractHeap(Variables, node->local()));
         return;
-        
+
     case SetLocal:
         write(AbstractHeap(Variables, node->local()));
         return;
-        
+
     case GetLocalUnlinked:
         read(AbstractHeap(Variables, node->unlinkedLocal()));
         return;
-        
+
     case GetByVal: {
         ArrayMode mode = node->arrayMode();
         switch (mode.type()) {
@@ -239,16 +239,16 @@ void clobberize(Graph& graph, Node* node, ReadFunctor& read, WriteFunctor& write
             read(World);
             write(World);
             return;
-            
+
         case Array::ForceExit:
             write(SideState);
             return;
-            
+
         case Array::Generic:
             read(World);
             write(World);
             return;
-            
+
         case Array::String:
             if (mode.isOutOfBounds()) {
                 read(World);
@@ -257,12 +257,12 @@ void clobberize(Graph& graph, Node* node, ReadFunctor& read, WriteFunctor& write
             }
             // This appears to read nothing because it's only reading immutable data.
             return;
-            
+
         case Array::Arguments:
             read(Arguments_registers);
             read(Variables);
             return;
-            
+
         case Array::Int32:
             if (mode.isInBounds()) {
                 read(Butterfly_publicLength);
@@ -273,7 +273,7 @@ void clobberize(Graph& graph, Node* node, ReadFunctor& read, WriteFunctor& write
             read(World);
             write(World);
             return;
-            
+
         case Array::Double:
             if (mode.isInBounds()) {
                 read(Butterfly_publicLength);
@@ -284,7 +284,7 @@ void clobberize(Graph& graph, Node* node, ReadFunctor& read, WriteFunctor& write
             read(World);
             write(World);
             return;
-            
+
         case Array::Contiguous:
             if (mode.isInBounds()) {
                 read(Butterfly_publicLength);
@@ -295,14 +295,14 @@ void clobberize(Graph& graph, Node* node, ReadFunctor& read, WriteFunctor& write
             read(World);
             write(World);
             return;
-            
+
         case Array::ArrayStorage:
         case Array::SlowPutArrayStorage:
             // Give up on life for now.
             read(World);
             write(World);
             return;
-            
+
         case Array::Int8Array:
         case Array::Int16Array:
         case Array::Int32Array:
@@ -334,23 +334,23 @@ void clobberize(Graph& graph, Node* node, ReadFunctor& read, WriteFunctor& write
             read(World);
             write(World);
             return;
-            
+
         case Array::ForceExit:
             write(SideState);
             return;
-            
+
         case Array::Generic:
             read(World);
             write(World);
             return;
-            
+
         case Array::Arguments:
             read(Arguments_registers);
             read(Arguments_numArguments);
             read(Arguments_slowArguments);
             write(Variables);
             return;
-            
+
         case Array::Int32:
             if (node->arrayMode().isOutOfBounds()) {
                 read(World);
@@ -362,7 +362,7 @@ void clobberize(Graph& graph, Node* node, ReadFunctor& read, WriteFunctor& write
             read(IndexedInt32Properties);
             write(IndexedInt32Properties);
             return;
-            
+
         case Array::Double:
             if (node->arrayMode().isOutOfBounds()) {
                 read(World);
@@ -374,7 +374,7 @@ void clobberize(Graph& graph, Node* node, ReadFunctor& read, WriteFunctor& write
             read(IndexedDoubleProperties);
             write(IndexedDoubleProperties);
             return;
-            
+
         case Array::Contiguous:
             if (node->arrayMode().isOutOfBounds()) {
                 read(World);
@@ -386,7 +386,7 @@ void clobberize(Graph& graph, Node* node, ReadFunctor& read, WriteFunctor& write
             read(IndexedContiguousProperties);
             write(IndexedContiguousProperties);
             return;
-            
+
         case Array::ArrayStorage:
         case Array::SlowPutArrayStorage:
             // Give up on life for now.
@@ -411,7 +411,7 @@ void clobberize(Graph& graph, Node* node, ReadFunctor& read, WriteFunctor& write
         RELEASE_ASSERT_NOT_REACHED();
         return;
     }
-        
+
     case CheckStructure:
     case StructureTransitionWatchpoint:
     case CheckArray:
@@ -419,31 +419,31 @@ void clobberize(Graph& graph, Node* node, ReadFunctor& read, WriteFunctor& write
     case InstanceOf:
         read(JSCell_structure);
         return;
-        
+
     case CheckExecutable:
         read(JSFunction_executable);
         return;
-        
+
     case PutStructure:
     case PhantomPutStructure:
         write(JSCell_structure);
         return;
-        
+
     case AllocatePropertyStorage:
         write(JSObject_butterfly);
         clobberizeForAllocation(read, write);
         return;
-        
+
     case ReallocatePropertyStorage:
         read(JSObject_butterfly);
         write(JSObject_butterfly);
         clobberizeForAllocation(read, write);
         return;
-        
+
     case GetButterfly:
         read(JSObject_butterfly);
         return;
-        
+
     case Arrayify:
     case ArrayifyToStructure:
         read(JSCell_structure);
@@ -452,32 +452,32 @@ void clobberize(Graph& graph, Node* node, ReadFunctor& read, WriteFunctor& write
         write(JSObject_butterfly);
         clobberizeForAllocation(read, write);
         return;
-        
+
     case GetIndexedPropertyStorage:
         if (node->arrayMode().type() == Array::String)
             return;
         read(JSArrayBufferView_vector);
         return;
-        
+
     case GetTypedArrayByteOffset:
         read(JSArrayBufferView_vector);
         read(JSArrayBufferView_mode);
         read(Butterfly_arrayBuffer);
         read(ArrayBuffer_data);
         return;
-        
+
     case GetByOffset:
         read(AbstractHeap(NamedProperties, graph.m_storageAccessData[node->storageAccessDataIndex()].identifierNumber));
         return;
-        
+
     case MultiGetByOffset:
         read(AbstractHeap(NamedProperties, node->multiGetByOffsetData().identifierNumber));
         return;
-        
+
     case PutByOffset:
         write(AbstractHeap(NamedProperties, graph.m_storageAccessData[node->storageAccessDataIndex()].identifierNumber));
         return;
-        
+
     case GetArrayLength: {
         ArrayMode mode = node->arrayMode();
         switch (mode.type()) {
@@ -488,45 +488,45 @@ void clobberize(Graph& graph, Node* node, ReadFunctor& read, WriteFunctor& write
         case Array::SlowPutArrayStorage:
             read(Butterfly_publicLength);
             return;
-            
+
         case Array::String:
             return;
-            
+
         case Array::Arguments:
             read(Arguments_overrideLength);
             read(Arguments_numArguments);
             return;
-            
+
         default:
             read(JSArrayBufferView_length);
             return;
         }
     }
-        
+
     case GetMyScope:
         read(AbstractHeap(Variables, JSStack::ScopeChain));
         return;
-        
+
     case SkipTopScope:
         read(AbstractHeap(Variables, graph.activationRegister()));
         return;
-        
+
     case GetClosureRegisters:
         read(JSVariableObject_registers);
         return;
-        
+
     case GetClosureVar:
         read(AbstractHeap(Variables, node->varNumber()));
         return;
-        
+
     case PutClosureVar:
         write(AbstractHeap(Variables, node->varNumber()));
         return;
-        
+
     case GetGlobalVar:
         read(AbstractHeap(Absolute, node->registerPointer()));
         return;
-        
+
     case PutGlobalVar:
         write(AbstractHeap(Absolute, node->registerPointer()));
         return;
@@ -543,7 +543,7 @@ void clobberize(Graph& graph, Node* node, ReadFunctor& read, WriteFunctor& write
     case NewFunctionExpression:
         clobberizeForAllocation(read, write);
         return;
-        
+
     case NewTypedArray:
         clobberizeForAllocation(read, write);
         switch (node->child1().useKind()) {
@@ -557,7 +557,7 @@ void clobberize(Graph& graph, Node* node, ReadFunctor& read, WriteFunctor& write
             RELEASE_ASSERT_NOT_REACHED();
             return;
         }
-        
+
     case RegExpExec:
     case RegExpTest:
         read(RegExpState);
@@ -571,7 +571,7 @@ void clobberize(Graph& graph, Node* node, ReadFunctor& read, WriteFunctor& write
             return;
         }
         return;
-        
+
     case CompareEq:
     case CompareLess:
     case CompareLessEq:
@@ -582,19 +582,19 @@ void clobberize(Graph& graph, Node* node, ReadFunctor& read, WriteFunctor& write
         read(World);
         write(World);
         return;
-        
+
     case ToString:
         switch (node->child1().useKind()) {
         case StringObjectUse:
         case StringOrStringObjectUse:
             return;
-            
+
         case CellUse:
         case UntypedUse:
             read(World);
             write(World);
             return;
-            
+
         default:
             RELEASE_ASSERT_NOT_REACHED();
             return;
@@ -603,20 +603,20 @@ void clobberize(Graph& graph, Node* node, ReadFunctor& read, WriteFunctor& write
     case TearOffActivation:
         write(JSVariableObject_registers);
         return;
-        
+
     case TearOffArguments:
         write(Arguments_registers);
         return;
-        
+
     case GetMyArgumentsLength:
         read(AbstractHeap(Variables, graph.argumentsRegisterFor(node->origin.semantic)));
         read(AbstractHeap(Variables, JSStack::ArgumentCount));
         return;
-        
+
     case GetMyArgumentByVal:
         read(Variables);
         return;
-        
+
     case CheckArgumentsNotCreated:
         read(AbstractHeap(Variables, graph.argumentsRegisterFor(node->origin.semantic)));
         return;
@@ -625,7 +625,7 @@ void clobberize(Graph& graph, Node* node, ReadFunctor& read, WriteFunctor& write
         write(SideState);
         clobberizeForAllocation(read, write);
         return;
-        
+
     case CountExecution:
     case CheckWatchdogTimer:
         read(InternalState);
@@ -638,12 +638,12 @@ void clobberize(Graph& graph, Node* node, ReadFunctor& read, WriteFunctor& write
         read(BarrierState);
         write(BarrierState);
         return;
-        
+
     case LastNodeType:
         RELEASE_ASSERT_NOT_REACHED();
         return;
     }
-    
+
     RELEASE_ASSERT_NOT_REACHED();
 }
 
@@ -659,11 +659,11 @@ public:
         : m_result(false)
     {
     }
-    
+
     void operator()(AbstractHeap) { m_result = true; }
-    
+
     bool result() const { return m_result; }
-    
+
 private:
     bool m_result;
 };
@@ -677,14 +677,14 @@ public:
         , m_result(false)
     {
     }
-    
+
     void operator()(AbstractHeap otherHeap)
     {
         if (m_result)
             return;
         m_result = m_heap.overlaps(otherHeap);
     }
-    
+
     bool result() const { return m_result; }
 
 private:

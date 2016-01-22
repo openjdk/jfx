@@ -42,7 +42,7 @@ private:
     virtual InsertionNotificationRequest insertedInto(ContainerNode&) override;
     virtual RenderPtr<RenderElement> createElementRenderer(PassRef<RenderStyle>) override;
 };
-    
+
 }
 
 #endif // ENABLE(MATHML)

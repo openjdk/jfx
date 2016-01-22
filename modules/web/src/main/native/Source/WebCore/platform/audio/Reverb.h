@@ -35,7 +35,7 @@
 namespace WebCore {
 
 class AudioBus;
-    
+
 // Multi-channel convolution reverb with channel matrixing - one or more ReverbConvolver objects are used internally.
 
 class Reverb {

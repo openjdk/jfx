@@ -42,19 +42,19 @@ import java.util.Map;
 import javafx.util.Pair;
 
 /**
- * A SAX/Pull style parser for JSON. It provides event call backs as it reads 
- * the JSON stream keeping only the minimal state needed to provide key/value 
+ * A SAX/Pull style parser for JSON. It provides event call backs as it reads
+ * the JSON stream keeping only the minimal state needed to provide key/value
  * pairs and a depth.
- * 
- * Designed to be very small and light weight and as fast as possible even 
+ *
+ * Designed to be very small and light weight and as fast as possible even
  * without a JIT.
  */
 public class JSONParserJP {
     private static enum Type {STRING,NUMBER,BOOLEAN,NULL};
-    
+
     /**
      * Parses the given url and prints out the callback events to aid debugging.
-     * 
+     *
      * @param url The url to load and parse
      */
     public static void debugParse(String url) {
@@ -64,10 +64,10 @@ public class JSONParserJP {
             ex.printStackTrace(System.out);
         }
     }
-    
+
     /**
      * Parses the given url and fires the data into the given callback.
-     * 
+     *
      * @param url The url to load and parse
      * @param callback a generic callback to receive the parse events
      * @throws IOException if thrown by the stream
@@ -83,10 +83,10 @@ public class JSONParserJP {
             throw ex;
         }
     }
-    
+
     /**
      * Parses the given url and fires the data into the given callback.
-     * 
+     *
      * @param url The url to load and parse
      * @param callback a generic callback to receive the parse events
      * @throws IOException if thrown by the stream
@@ -110,7 +110,7 @@ public class JSONParserJP {
         connection.setRequestMethod("POST");
         connection.setRequestProperty("Content-Type","application/x-www-form-urlencoded");
         connection.setRequestProperty("Content-Length", Integer.toString(urlParameters.toString().getBytes().length));
-        connection.setRequestProperty("Content-Language", "en-US");  
+        connection.setRequestProperty("Content-Language", "en-US");
         connection.setUseCaches (false);
         connection.setDoInput(true);
         connection.setDoOutput(true);
@@ -130,10 +130,10 @@ public class JSONParserJP {
             System.err.println("====== ERROR WITH HTTP POST TO ["+url+"] -- params="+urlParameters+" =========");
             System.err.println("====== RESPONSE "+connection.getResponseCode()+" ["+connection.getResponseMessage()+"] =========");
             try (InputStream in = connection.getErrorStream()) {
-                //Get Response	
+                //Get Response
                 BufferedReader rd = new BufferedReader(new InputStreamReader(in));
                 String line;
-                StringBuilder response = new StringBuilder(); 
+                StringBuilder response = new StringBuilder();
                 while((line = rd.readLine()) != null) {
                   response.append(line);
                   response.append('\r');
@@ -142,7 +142,7 @@ public class JSONParserJP {
             }
         }
     }
-   
+
     private static final int NORMAL           = 0;
     private static final int QUOTE            = 1;
     private static final int QUOTE_ESCAPE     = 2;
@@ -150,7 +150,7 @@ public class JSONParserJP {
     private static final int NULL             = 4;
     private static final int TRUE             = 5;
     private static final int FALSE            = 6;
-    
+
     /**
      * Parses the given input reader and fires the data into the given callback.
      *
@@ -502,50 +502,50 @@ public class JSONParserJP {
             throw ex;
         }
     }
-    
+
     public static interface Callback {
         /**
         * Indicates that the parser ran into start of object '{'
-        * 
-        * @param objectName if this object is value of key/value pair the 
+        *
+        * @param objectName if this object is value of key/value pair the
         *                   this is the key name, otherwise its null
-        * @param depth      The current depth, number of parent objects and  
+        * @param depth      The current depth, number of parent objects and
         *                   arrays that contain this object
         */
         public void startObject(String objectName, int depth);
 
         /**
         * Indicates that the parser ran into end of object '}'
-        * 
-        * @param objectName if this object is value of key/value pair the 
+        *
+        * @param objectName if this object is value of key/value pair the
         *                   this is the key name, otherwise its null
-        * @param depth      The current depth, number of parent objects and  
+        * @param depth      The current depth, number of parent objects and
         *                   arrays that contain this object
         */
         public void endObject(String objectName, int depth);
 
         /**
         * Indicates that the parser ran into start of array '['
-        * 
-        * @param arrayName  if this array is value of key/value pair the 
+        *
+        * @param arrayName  if this array is value of key/value pair the
         *                   this is the key name, otherwise its null
-        * @param depth      The current depth, number of parent objects and  
+        * @param depth      The current depth, number of parent objects and
         *                   arrays that contain this array
         */
         public void startArray(String arrayName, int depth);
 
         /**
         * Indicates that the parser ran into start of array ']'
-        * 
-        * @param arrayName  if this array is value of key/value pair the 
+        *
+        * @param arrayName  if this array is value of key/value pair the
         *                   this is the key name, otherwise its null
-        * @param depth      The current depth, number of parent objects and  
+        * @param depth      The current depth, number of parent objects and
         *                   arrays that contain this array
         */
         public void endArray(String arrayName, int depth);
 
         /**
-        * Submits a string vale from the JSON data, a JSON null is passed 
+        * Submits a string vale from the JSON data, a JSON null is passed
         * as (value == null)
         */
         public void stringValue(String value, int depth);
@@ -554,7 +554,7 @@ public class JSONParserJP {
         * Submits a numeric value from the JSON data
         */
         public void numberValue(double value, int depth);
-        
+
         /**
         * Submits a boolean value from the JSON data
         */
@@ -570,16 +570,16 @@ public class JSONParserJP {
 
         /**
         * This method indicates if the parsing job is canceled
-        * 
+        *
         * @return true if the parser should stop where it is
         */
         public boolean isCanceled();
     }
-    
+
     public static class PrintCallback implements Callback {
         private String indent = "";
         private final PrintStream out;
-        
+
         public PrintCallback(PrintStream out) {
             this.out = out;
         }
@@ -611,7 +611,7 @@ public class JSONParserJP {
         @Override public void numberValue(double value, int depth) {
             out.println(indent+"numberValue["+value+","+depth+")");
         }
-        
+
         @Override public void booleanValue(boolean value, int depth) {
             out.println(indent+"booleanValue["+value+","+depth+")");
         }
@@ -622,7 +622,7 @@ public class JSONParserJP {
 
         @Override public boolean isCanceled() { return false; }
     }
-    
+
     /**
      * An adapter to make it cleaner in implementations that don't need to implement everything.
      */

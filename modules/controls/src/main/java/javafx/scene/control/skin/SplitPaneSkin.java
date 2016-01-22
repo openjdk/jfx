@@ -86,7 +86,7 @@ public class SplitPaneSkin extends SkinBase<SplitPane> {
         super(control);
 //        control.setManaged(false);
         horizontal = getSkinnable().getOrientation() == Orientation.HORIZONTAL;
-        
+
         contentRegions = FXCollections.<Content>observableArrayList();
         contentDividers = FXCollections.<ContentDivider>observableArrayList();
 
@@ -545,7 +545,7 @@ public class SplitPaneSkin extends SkinBase<SplitPane> {
             }
         });
     }
-          
+
     private void checkDividerPosition(ContentDivider divider, double newPos, double oldPos) {
         double dividerWidth = divider.prefWidth(-1);
         Content left = getLeft(divider);
@@ -555,8 +555,8 @@ public class SplitPaneSkin extends SkinBase<SplitPane> {
         double maxLeft = left == null ? 0 :
             left.getContent() != null ? (horizontal) ? left.getContent().maxWidth(-1) : left.getContent().maxHeight(-1) : 0;
         double maxRight = right == null ? 0 :
-            right.getContent() != null ? (horizontal) ? right.getContent().maxWidth(-1) : right.getContent().maxHeight(-1) : 0;                        
-               
+            right.getContent() != null ? (horizontal) ? right.getContent().maxWidth(-1) : right.getContent().maxHeight(-1) : 0;
+
         double previousDividerPos = 0;
         double nextDividerPos = getSize();
         int index = contentDividers.indexOf(divider);
@@ -575,23 +575,23 @@ public class SplitPaneSkin extends SkinBase<SplitPane> {
                 nextDividerPos = getAbsoluteDividerPos(contentDividers.get(index + 1));
             }
         }
-        
+
         // Set the divider into the correct position by looking at the max and min content sizes.
         checkDividerPos = false;
         if (newPos > oldPos) {
             double max = previousDividerPos == 0 ? maxLeft : previousDividerPos + dividerWidth + maxLeft;
-            double min = nextDividerPos - minRight - dividerWidth;                
+            double min = nextDividerPos - minRight - dividerWidth;
             double stopPos = Math.min(max, min);
-            if (newPos >= stopPos) {                
+            if (newPos >= stopPos) {
                 setAbsoluteDividerPos(divider, stopPos);
             } else {
-                double rightMax = nextDividerPos - maxRight - dividerWidth;                    
+                double rightMax = nextDividerPos - maxRight - dividerWidth;
                 if (newPos <= rightMax) {
                     setAbsoluteDividerPos(divider, rightMax);
-                } else {                    
+                } else {
                     setAbsoluteDividerPos(divider, newPos);
                 }
-            }             
+            }
         } else {
             double max = nextDividerPos - maxRight - dividerWidth;
             double min = previousDividerPos == 0 ? minLeft : previousDividerPos + minLeft + dividerWidth;
@@ -605,13 +605,13 @@ public class SplitPaneSkin extends SkinBase<SplitPane> {
                 } else {
                     setAbsoluteDividerPos(divider, newPos);
                 }
-            }                
-        }                    
+            }
+        }
         checkDividerPos = true;
     }
-    
+
     private void addDivider(SplitPane.Divider d) {
-        ContentDivider c = new ContentDivider(d);        
+        ContentDivider c = new ContentDivider(d);
         c.setInitialPos(d.getPosition());
         c.setDividerPos(-1);
         ChangeListener<Number> posPropertyListener = new PosPropertyListener(c);
@@ -699,7 +699,7 @@ public class SplitPaneSkin extends SkinBase<SplitPane> {
             }
         }
     }
-   
+
     // Updates the divider with the SplitPane.Divider's position
     // The value updated to SplitPane.Divider will be the center of the divider.
     // The returned position will be the left edge of the divider
@@ -717,14 +717,14 @@ public class SplitPaneSkin extends SkinBase<SplitPane> {
     // Pos is the percentage location from SplitPane.Divider.
     private double posToDividerPos(ContentDivider divider, double pos) {
         double newPos = getSize() * pos;
-        if (pos == 1) {                
+        if (pos == 1) {
             newPos -= divider.prefWidth(-1);
         } else {
             newPos -= divider.prefWidth(-1)/2;
-        }       
-        return Math.round(newPos);                    
+        }
+        return Math.round(newPos);
     }
-    
+
     private double totalMinSize() {
         double dividerWidth = !contentDividers.isEmpty() ? contentDividers.size() * contentDividers.get(0).prefWidth(-1) : 0;
         double minSize = 0;
@@ -759,7 +759,7 @@ public class SplitPaneSkin extends SkinBase<SplitPane> {
         if (available.isEmpty()) {
             return size;
         }
-                
+
         size = snapSize(size);
         int portion = (int)(size)/available.size();
         int remainder;
@@ -813,7 +813,7 @@ public class SplitPaneSkin extends SkinBase<SplitPane> {
         if (available.isEmpty()) {
             return size;
         }
-        
+
         size = snapSize(size);
         int portion = (int)(size)/available.size();
         int remainder;
@@ -861,7 +861,7 @@ public class SplitPaneSkin extends SkinBase<SplitPane> {
             if (resize && !c.isResizableWithParent()) {
                 c.setArea(c.getResizableWithParentArea());
             }
-            
+
             c.setX(startX);
             c.setY(startY);
             if (horizontal) {
@@ -884,7 +884,7 @@ public class SplitPaneSkin extends SkinBase<SplitPane> {
                 startY += getLeft(d).getArea() + (i == 0 ? 0 : dividerWidth);
             }
             d.setX(startX);
-            d.setY(startY);              
+            d.setY(startY);
             setAbsoluteDividerPos(d, (horizontal ? d.getX() : d.getY()));
             d.posExplicit = false;
         }
@@ -915,7 +915,7 @@ public class SplitPaneSkin extends SkinBase<SplitPane> {
                 positionInArea(c, c.getX() + paddingX, c.getY() + paddingY, dividerWidth, height,
                     /*baseline ignored*/0, HPos.CENTER, VPos.CENTER);
             } else {
-                c.resize(width, dividerWidth);                
+                c.resize(width, dividerWidth);
                 positionInArea(c, c.getX() + paddingX, c.getY() + paddingY, width, dividerWidth,
                     /*baseline ignored*/0, HPos.CENTER, VPos.CENTER);
             }
@@ -1071,7 +1071,7 @@ public class SplitPaneSkin extends SkinBase<SplitPane> {
         public void setPosPropertyListener(ChangeListener<Number> listener) {
             this.listener = listener;
         }
-                
+
         @Override protected double computeMinWidth(double height) {
             return computePrefWidth(height);
         }

@@ -179,7 +179,7 @@ namespace JSC {
                 ASSERT(m_table == other.m_table);
                 return m_position != other.m_position;
             }
-            
+
             ConstIterator& operator++()
             {
                 ASSERT(m_position < m_table->compactSize);
@@ -196,7 +196,7 @@ namespace JSC {
                     ++m_position;
                 ASSERT(m_position <= m_table->compactSize);
             }
-            
+
             const HashTable* m_table;
             int m_position;
         };
@@ -218,7 +218,7 @@ namespace JSC {
             StringImpl* impl = propertyName.uid();
             if (!impl)
                 return 0;
-        
+
             ASSERT(table);
 
             const HashEntry* entry = &table[impl->existingHash() & compactHashSizeMask];

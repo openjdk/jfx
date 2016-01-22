@@ -399,7 +399,7 @@ public class CssPanelController extends AbstractFxmlPanelController {
     }
 
     /**
-     * 
+     *
      * @param selectionListener selection listener.
      * @treatAsPrivate
      */
@@ -408,7 +408,7 @@ public class CssPanelController extends AbstractFxmlPanelController {
     }
 
     /**
-     * 
+     *
      * @param path path.
      * @treatAsPrivate
      */
@@ -424,7 +424,7 @@ public class CssPanelController extends AbstractFxmlPanelController {
     }
 
     /**
-     * 
+     *
      * @param mess message.
      * @treatAsPrivate
      */
@@ -654,7 +654,7 @@ public class CssPanelController extends AbstractFxmlPanelController {
             viewMessage(I18N.getString("csspanel.multiselection"));
             return;
         }
-        
+
         if (selectedObject != null) { // Update content.
             fillSelectionContent();
             collectCss();
@@ -717,11 +717,11 @@ public class CssPanelController extends AbstractFxmlPanelController {
         FXOMDocument fxomDoc = getEditorController().getFxomDocument();
         assert fxomDoc != null;
         Node enclosingNode = getEnclosingNode(fxomDoc, node);
-        // The componentRootNode can be a skin structure (Tab, Column), in this case the enclosingNode 
+        // The componentRootNode can be a skin structure (Tab, Column), in this case the enclosingNode
         // is not == to the componentRootNode. That is why we need to compare the enclosingNode of both
         // n and componentRootNode nodes.
         Node componentRootNodeEnclosingNode = getEnclosingNode(fxomDoc, componentRootNode);
-        // this is a skin's node and not a node from a component located inside 
+        // this is a skin's node and not a node from a component located inside
         // the skin (eg: SplitPane content being a Button is not part of the SplitPane Skin.
         boolean isOtherComponentNode = enclosingNode != componentRootNodeEnclosingNode;
         if (componentRootNode != node && !node.getStyleClass().isEmpty() && !isOtherComponentNode && !(node instanceof Skin)) {
@@ -1716,7 +1716,7 @@ public class CssPanelController extends AbstractFxmlPanelController {
      */
     public static void attachLookupStyles(Object component, CssPropertyState css, CssStyle lookupRoot, TreeItem<Node> parent) {
         // Some lookup that comes from the SB itself, skip them.
-        // This is expected, these lookups are superceeded by the 
+        // This is expected, these lookups are superceeded by the
         // CssUtils.createCSSFrontier
         ArrayList<String> cssPropertyList = new ArrayList<>();
         // cssPropertyList will allow to check that the same css property is not added multiple times
@@ -1999,7 +1999,7 @@ public class CssPanelController extends AbstractFxmlPanelController {
 //                                // OK, this is a lookup name.
 //                                Object obj = pv.convert(null);
 //                            } else {
-//                                
+//
 //                            }
                         } else {
                             lookupRoot = style.getLookupChain().get(lookupIndex);
@@ -2052,7 +2052,7 @@ public class CssPanelController extends AbstractFxmlPanelController {
 //                                // OK, this is a lookup name.
 //                                Object obj = pv.convert(null);
 //                            } else {
-//                                
+//
 //                            }
                             } else {
                                 lookupRoot = style.getLookupChain().get(lookupIndex);
@@ -2091,13 +2091,13 @@ public class CssPanelController extends AbstractFxmlPanelController {
         String l = CssValueConverter.toCssString(style.getCssProperty(), style.getCssRule(), style.getParsedValue());
         return new Label(l);
     }
-    
+
     private static synchronized Image getLookupImage() {
         if (lookups == null) {
             lookups = new Image(
                 CssPanelController.class.getResource("images/css-lookup-icon.png").toExternalForm()); //NOI18N
         }
-        
+
         return lookups;
     }
 

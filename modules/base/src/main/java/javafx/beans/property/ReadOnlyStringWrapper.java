@@ -30,7 +30,7 @@ package javafx.beans.property;
  * creates two properties that are synchronized. One property is read-only
  * and can be passed to external users. The other property is read- and
  * writable and should be used internally only.
- * 
+ *
  * @since JavaFX 2.0
  */
 public class ReadOnlyStringWrapper extends SimpleStringProperty {
@@ -45,7 +45,7 @@ public class ReadOnlyStringWrapper extends SimpleStringProperty {
 
     /**
      * The constructor of {@code ReadOnlyStringWrapper}
-     * 
+     *
      * @param initialValue
      *            the initial value of the wrapped value
      */
@@ -55,7 +55,7 @@ public class ReadOnlyStringWrapper extends SimpleStringProperty {
 
     /**
      * The constructor of {@code ReadOnlyStringWrapper}
-     * 
+     *
      * @param bean
      *            the bean of this {@code ReadOnlyStringProperty}
      * @param name
@@ -67,7 +67,7 @@ public class ReadOnlyStringWrapper extends SimpleStringProperty {
 
     /**
      * The constructor of {@code ReadOnlyStringWrapper}
-     * 
+     *
      * @param bean
      *            the bean of this {@code ReadOnlyStringProperty}
      * @param name
@@ -83,7 +83,7 @@ public class ReadOnlyStringWrapper extends SimpleStringProperty {
     /**
      * Returns the readonly property, that is synchronized with this
      * {@code ReadOnlyStringWrapper}.
-     * 
+     *
      * @return the readonly property
      */
     public ReadOnlyStringProperty getReadOnlyProperty() {
@@ -105,7 +105,7 @@ public class ReadOnlyStringWrapper extends SimpleStringProperty {
     }
 
     private class ReadOnlyPropertyImpl extends ReadOnlyStringPropertyBase {
-        
+
         @Override
         public String get() {
             return ReadOnlyStringWrapper.this.get();

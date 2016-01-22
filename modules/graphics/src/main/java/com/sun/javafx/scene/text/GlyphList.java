@@ -30,7 +30,7 @@ import com.sun.javafx.geom.RectBounds;
 
 
 public interface GlyphList {
-    
+
     /**
      * Returns the number of glyphs in GlyphList.
      */
@@ -68,26 +68,26 @@ public interface GlyphList {
     public RectBounds getLineBounds();
 
     /**
-     * The top-left location of the GlyphList relative to 
+     * The top-left location of the GlyphList relative to
      * the origin of the Text Layout.
      */
     public Point2D getLocation();
 
-    /** 
+    /**
      * Maps the given glyph index to the char offset.
      * (used during rendering (selection))
      */
     public int getCharOffset(int glyphIndex);
-    
-    
+
+
     /**
-     * Means that this GlyphList was shaped using complex processing (ICU), 
-     * either because it is complex script or because font features were 
-     * requested. 
+     * Means that this GlyphList was shaped using complex processing (ICU),
+     * either because it is complex script or because font features were
+     * requested.
      * (used outside text layout in rendering)
      */
     public boolean isComplex();
-    
+
     /**
      * Used during layout children (for rich text)
      * can be null (for non-rich text) but never null for rich text.

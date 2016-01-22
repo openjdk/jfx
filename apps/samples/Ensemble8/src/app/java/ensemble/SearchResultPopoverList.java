@@ -126,12 +126,12 @@ public class SearchResultPopoverList extends PopoverTreeList<SearchResult> imple
 
     @Override public void handleShown() { }
     @Override public void handleHidden() { }
-    
-    
+
+
     @Override public ListCell<SearchResult> call(ListView<SearchResult> p) {
         return new SearchResultListCell();
     }
-    
+
     private class IconPane extends Pane {
         private Region samplesIcon = new Region();
         private Label classesIcon = new Label("C");
@@ -147,7 +147,7 @@ public class SearchResultPopoverList extends PopoverTreeList<SearchResult> imple
         private Rectangle fieldsLine = new Rectangle(0,0,40,1);
         private Rectangle enumsLine = new Rectangle(0,0,40,1);
         private Rectangle documentationLine = new Rectangle(0,0,40,1);
-        
+
         public IconPane() {
             getStyleClass().add("search-icon-pane");
             samplesIcon.getStyleClass().add("samples-icon");
@@ -162,7 +162,7 @@ public class SearchResultPopoverList extends PopoverTreeList<SearchResult> imple
                                 classesLine,propertiesLine,methodsLine,fieldsLine,enumsLine,documentationLine);
             setMouseTransparent(true);
         }
-        
+
         private Node getIconForDocType(DocumentType docType) {
             switch(docType) {
                 case SAMPLE:
@@ -173,7 +173,7 @@ public class SearchResultPopoverList extends PopoverTreeList<SearchResult> imple
                     return fieldsIcon;
                 case METHOD:
                     return methodsIcon;
-                case PROPERTY: 
+                case PROPERTY:
                     return propertiesIcon;
                 case ENUM:
                     return enumsIcon;
@@ -182,7 +182,7 @@ public class SearchResultPopoverList extends PopoverTreeList<SearchResult> imple
             }
             return null;
         }
-        
+
         private Rectangle getLineForDocType(DocumentType docType) {
             switch(docType) {
                 case CLASS:
@@ -191,7 +191,7 @@ public class SearchResultPopoverList extends PopoverTreeList<SearchResult> imple
                     return fieldsLine;
                 case METHOD:
                     return methodsLine;
-                case PROPERTY: 
+                case PROPERTY:
                     return propertiesLine;
                 case ENUM:
                     return enumsLine;
@@ -207,7 +207,7 @@ public class SearchResultPopoverList extends PopoverTreeList<SearchResult> imple
                 if (cell.isVisible()) visibleCells.add(cell);
             }
             Collections.sort(visibleCells, (Node o1, Node o2) -> Double.compare(o1.getLayoutY(), o2.getLayoutY()));
-            
+
             samplesIcon.setLayoutX(8);
             samplesIcon.resize(24, 24);
             classesIcon.setLayoutX(8);
@@ -222,8 +222,8 @@ public class SearchResultPopoverList extends PopoverTreeList<SearchResult> imple
             enumsIcon.resize(24, 24);
             documentationIcon.setLayoutX(8);
             documentationIcon.resize(24, 24);
-            
-            
+
+
             samplesIcon.setVisible(false);
             classesIcon.setVisible(false);
             propertiesIcon.setVisible(false);
@@ -267,14 +267,14 @@ public class SearchResultPopoverList extends PopoverTreeList<SearchResult> imple
             }
 
         }
-        
+
         private final DocumentType getDocumentTypeForCell(SearchResultListCell cell) {
             SearchResult searchResult = cell.getItem();
             return searchResult == null ? null : searchResult.getDocumentType();
         }
     }
-    
-    
+
+
     private class SearchResultListCell extends ListCell<SearchResult> implements Skin<SearchResultListCell>, EventHandler {
         private static final int TEXT_GAP = 6;
         private ImageView arrow = new ImageView(RIGHT_ARROW);
@@ -282,7 +282,7 @@ public class SearchResultPopoverList extends PopoverTreeList<SearchResult> imple
         private Label details = new Label();
         private int cellIndex;
         private Rectangle topLine = new Rectangle(0,0,1,1);
-        
+
         private SearchResultListCell() {
             super();
             //System.out.println("CREATED TimeSlot CELL " + (cellIndex));
@@ -296,10 +296,10 @@ public class SearchResultPopoverList extends PopoverTreeList<SearchResult> imple
             getChildren().addAll(arrow,title,details,topLine);
             setOnMouseClicked(this);
 
-            // listen to changes of this cell being added and removed from list 
+            // listen to changes of this cell being added and removed from list
             // and when it or its parent is moved. If any of those things change
             // then update the iconPane's layout. requestLayout() will be called
-            // many times for any change of cell layout in the list but that 
+            // many times for any change of cell layout in the list but that
             // dosn't matter as they will all be batched up by layout machanisim
             // and iconPane.layoutChildren() will only be called once per frame.
             final ChangeListener<Bounds> boundsChangeListener = (ObservableValue<? extends Bounds> ov, Bounds t, Bounds t1) -> {

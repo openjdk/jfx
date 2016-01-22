@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -77,7 +77,7 @@ ULONG STDMETHODCALLTYPE WebScriptObject::Release(void)
 
 // WebScriptObject ------------------------------------------------------------
 
-HRESULT STDMETHODCALLTYPE WebScriptObject::throwException( 
+HRESULT STDMETHODCALLTYPE WebScriptObject::throwException(
     /* [in] */ BSTR /*exceptionMessage*/,
     /* [retval][out] */ BOOL* /*result*/)
 {
@@ -85,7 +85,7 @@ HRESULT STDMETHODCALLTYPE WebScriptObject::throwException(
     return E_NOTIMPL;
 }
 
-HRESULT STDMETHODCALLTYPE WebScriptObject::callWebScriptMethod( 
+HRESULT STDMETHODCALLTYPE WebScriptObject::callWebScriptMethod(
     /* [in] */ BSTR /*name*/,
     /* [size_is][in] */ const VARIANT /*args*/[  ],
     /* [in] */ int /*cArgs*/,
@@ -95,7 +95,7 @@ HRESULT STDMETHODCALLTYPE WebScriptObject::callWebScriptMethod(
     return E_NOTIMPL;
 }
 
-HRESULT STDMETHODCALLTYPE WebScriptObject::evaluateWebScript( 
+HRESULT STDMETHODCALLTYPE WebScriptObject::evaluateWebScript(
     /* [in] */ BSTR /*script*/,
     /* [retval][out] */ VARIANT* /*result*/)
 {
@@ -103,21 +103,21 @@ HRESULT STDMETHODCALLTYPE WebScriptObject::evaluateWebScript(
     return E_NOTIMPL;
 }
 
-HRESULT STDMETHODCALLTYPE WebScriptObject::removeWebScriptKey( 
+HRESULT STDMETHODCALLTYPE WebScriptObject::removeWebScriptKey(
     /* [in] */ BSTR /*name*/)
 {
     ASSERT_NOT_REACHED();
     return E_NOTIMPL;
 }
 
-HRESULT STDMETHODCALLTYPE WebScriptObject::stringRepresentation( 
+HRESULT STDMETHODCALLTYPE WebScriptObject::stringRepresentation(
     /* [retval][out] */ BSTR* /*stringRepresentation*/)
 {
     ASSERT_NOT_REACHED();
     return E_NOTIMPL;
 }
 
-HRESULT STDMETHODCALLTYPE WebScriptObject::webScriptValueAtIndex( 
+HRESULT STDMETHODCALLTYPE WebScriptObject::webScriptValueAtIndex(
     /* [in] */ unsigned int /*index*/,
     /* [retval][out] */ VARIANT* /*result*/)
 {
@@ -125,7 +125,7 @@ HRESULT STDMETHODCALLTYPE WebScriptObject::webScriptValueAtIndex(
     return E_NOTIMPL;
 }
 
-HRESULT STDMETHODCALLTYPE WebScriptObject::setWebScriptValueAtIndex( 
+HRESULT STDMETHODCALLTYPE WebScriptObject::setWebScriptValueAtIndex(
     /* [in] */ unsigned int /*index*/,
     /* [in] */ VARIANT /*val*/)
 {
@@ -133,7 +133,7 @@ HRESULT STDMETHODCALLTYPE WebScriptObject::setWebScriptValueAtIndex(
     return E_NOTIMPL;
 }
 
-HRESULT STDMETHODCALLTYPE WebScriptObject::setException( 
+HRESULT STDMETHODCALLTYPE WebScriptObject::setException(
     /* [in] */ BSTR /*description*/)
 {
     ASSERT_NOT_REACHED();

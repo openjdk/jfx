@@ -67,7 +67,7 @@ bool MediaSessionManager::has(MediaSession::MediaType type) const
 int MediaSessionManager::count(MediaSession::MediaType type) const
 {
     ASSERT(type >= MediaSession::None && type <= MediaSession::WebAudio);
-    
+
     int count = 0;
     for (auto* session : m_sessions) {
         if (session->mediaType() == type)

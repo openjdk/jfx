@@ -164,7 +164,7 @@ void PageVisibilityStateWithWindowChanges::runTest(View view)
     EXPECT_JS_EQ(view, "document.visibilityState", "hidden");
     EXPECT_JS_EQ(view, "document.hidden", "true");
 }
-    
+
 TEST_F(PageVisibilityStateWithWindowChanges, WebKit)
 {
     runWebKit1Test();

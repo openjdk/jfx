@@ -67,7 +67,7 @@ public class TwoLevelFocusComboBehavior extends TwoLevelFocusBehavior {
     /*
     ** don't allow the Node handle a key event if it is in externalFocus mode.
     ** the only keyboard actions allowed are the navigation keys......
-    */ 
+    */
     final EventDispatcher preemptiveEventDispatcher = (event, tail) -> {
 
         // block the event from being passed down to children

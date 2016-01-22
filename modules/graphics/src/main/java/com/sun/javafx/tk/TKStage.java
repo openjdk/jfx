@@ -105,7 +105,7 @@ public interface TKStage {
     public void setIconified(boolean iconified);
 
     public void setMaximized(boolean maximized);
-    
+
     public void setAlwaysOnTop(boolean alwaysOnTop);
 
     public void setResizable(boolean resizable);
@@ -125,7 +125,7 @@ public interface TKStage {
     public void toBack();
     public void toFront();
     public void close();
-    
+
     public void requestFocus(FocusCause cause);
 
     /**
@@ -184,7 +184,7 @@ public interface TKStage {
      * @see #grabFocus
      */
     public void ungrabFocus();
-    
+
     /**
      * Requests text input in form of native keyboard for text component
      * contained by this Window. Native text input component is drawn on the place

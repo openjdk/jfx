@@ -28,9 +28,9 @@ package javafx.beans.property;
 /**
  * This class provides a full implementation of a {@link Property} wrapping a
  * {@code String} value.
- * 
+ *
  * @see StringPropertyBase
- * 
+ *
  * @since JavaFX 2.0
  */
 public class SimpleStringProperty extends StringPropertyBase {
@@ -66,7 +66,7 @@ public class SimpleStringProperty extends StringPropertyBase {
 
     /**
      * The constructor of {@code StringProperty}
-     * 
+     *
      * @param initialValue
      *            the initial value of the wrapped value
      */
@@ -76,7 +76,7 @@ public class SimpleStringProperty extends StringPropertyBase {
 
     /**
      * The constructor of {@code StringProperty}
-     * 
+     *
      * @param bean
      *            the bean of this {@code StringProperty}
      * @param name
@@ -89,7 +89,7 @@ public class SimpleStringProperty extends StringPropertyBase {
 
     /**
      * The constructor of {@code StringProperty}
-     * 
+     *
      * @param bean
      *            the bean of this {@code StringProperty}
      * @param name

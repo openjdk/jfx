@@ -61,22 +61,22 @@ public:
 
     VideoFacingMode facingMode() const { return m_facingMode; }
     void setFacingMode(VideoFacingMode facingMode) { m_facingMode = facingMode; }
-    
+
     unsigned long width() const { return m_width; }
     void setWidth(unsigned long width) { m_width = width; }
-    
+
     unsigned long height() const { return m_height; }
     void setHeight(unsigned long height) { m_height = height; }
-    
+
     float frameRate() const { return m_frameRate; }
     void setFrameRate(float frameRate) { m_frameRate = frameRate; }
-    
+
     float aspectRatio() const { return m_aspectRatio; }
     void setAspectRatio(float aspectRatio) { m_aspectRatio = aspectRatio; }
-    
+
     unsigned long volume() const { return m_volume; }
     void setVolume(unsigned long volume) { m_volume = volume; }
-    
+
 private:
     SourceType m_sourceType;
     AtomicString m_sourceId;

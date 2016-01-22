@@ -39,7 +39,7 @@ NSAttributedString *attributedStringByStrippingAttachmentCharacters(NSAttributed
     NSRange attachmentRange;
     NSString *originalString = [attributedString string];
     static NSString *attachmentCharString = nil;
-    
+
     if (!attachmentCharString) {
         unichar chars[2];
         if (!attachmentCharString) {
@@ -48,18 +48,18 @@ NSAttributedString *attributedStringByStrippingAttachmentCharacters(NSAttributed
             attachmentCharString = [[NSString alloc] initWithCharacters:chars length:1];
         }
     }
-    
+
     attachmentRange = [originalString rangeOfString:attachmentCharString];
     if (attachmentRange.location != NSNotFound && attachmentRange.length > 0) {
         NSMutableAttributedString *newAttributedString = [[attributedString mutableCopyWithZone:NULL] autorelease];
-        
+
         while (attachmentRange.location != NSNotFound && attachmentRange.length > 0) {
             [newAttributedString replaceCharactersInRange:attachmentRange withString:@""];
             attachmentRange = [[newAttributedString string] rangeOfString:attachmentCharString];
         }
         return newAttributedString;
     }
-    
+
     return attributedString;
 }
 

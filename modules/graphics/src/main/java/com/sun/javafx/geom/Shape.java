@@ -41,19 +41,19 @@ import com.sun.javafx.geom.transform.BaseTransform;
  * outline.
  * <p>
  * <b>Definition of insideness:</b>
- * A point is considered to lie inside a 
+ * A point is considered to lie inside a
  * <code>Shape</code> if and only if:
  * <ul>
  * <li> it lies completely
- * inside the<code>Shape</code> boundary <i>or</i> 
+ * inside the<code>Shape</code> boundary <i>or</i>
  * <li>
- * it lies exactly on the <code>Shape</code> boundary <i>and</i> the 
+ * it lies exactly on the <code>Shape</code> boundary <i>and</i> the
  * space immediately adjacent to the
- * point in the increasing <code>X</code> direction is 
+ * point in the increasing <code>X</code> direction is
  * entirely inside the boundary <i>or</i>
  * <li>
  * it lies exactly on a horizontal boundary segment <b>and</b> the
- * space immediately adjacent to the point in the 
+ * space immediately adjacent to the point in the
  * increasing <code>Y</code> direction is inside the boundary.
  * </ul>
  * <p>The <code>contains</code> and <code>intersects</code> methods
@@ -63,7 +63,7 @@ import com.sun.javafx.geom.transform.BaseTransform;
  * unclosed shapes to be implicitly closed for the purpose of
  * determining if a shape contains or intersects a rectangle or if a
  * shape contains a point.
- * 
+ *
  * @see com.sun.javafx.geom.PathIterator
  * @see com.sun.javafx.geom.transform.BaseTransform
  * @see com.sun.javafx.geom.FlatteningPathIterator
@@ -82,11 +82,11 @@ public abstract class Shape {
     public abstract RectBounds getBounds();
 
     /**
-     * Tests if the specified coordinates are inside the boundary of the 
+     * Tests if the specified coordinates are inside the boundary of the
      * <code>Shape</code>.
      * @param x the specified X coordinate to be tested
      * @param y the specified Y coordinate to be tested
-     * @return <code>true</code> if the specified coordinates are inside 
+     * @return <code>true</code> if the specified coordinates are inside
      *         the <code>Shape</code> boundary; <code>false</code>
      *         otherwise.
      */
@@ -96,7 +96,7 @@ public abstract class Shape {
      * Tests if a specified {@link Point2D} is inside the boundary
      * of the <code>Shape</code>.
      * @param p the specified <code>Point2D</code> to be tested
-     * @return <code>true</code> if the specified <code>Point2D</code> is 
+     * @return <code>true</code> if the specified <code>Point2D</code> is
      *          inside the boundary of the <code>Shape</code>;
      *      <code>false</code> otherwise.
      */
@@ -105,10 +105,10 @@ public abstract class Shape {
     }
 
     /**
-     * Tests if the interior of the <code>Shape</code> intersects the 
+     * Tests if the interior of the <code>Shape</code> intersects the
      * interior of a specified rectangular area.
-     * The rectangular area is considered to intersect the <code>Shape</code> 
-     * if any point is contained in both the interior of the 
+     * The rectangular area is considered to intersect the <code>Shape</code>
+     * if any point is contained in both the interior of the
      * <code>Shape</code> and the specified rectangular area.
      * <p>
      * The {@code Shape.intersects()} method allows a {@code Shape}
@@ -125,7 +125,7 @@ public abstract class Shape {
      * return {@code true} even though the rectangular area does not
      * intersect the {@code Shape}.
      * The {@link com.sun.javafx.geom.Area Area} class performs
-     * more accurate computations of geometric intersection than most 
+     * more accurate computations of geometric intersection than most
      * {@code Shape} objects and therefore can be used if a more precise
      * answer is required.
      *
@@ -137,16 +137,16 @@ public abstract class Shape {
      * @param h the height of the specified rectangular area
      * @return <code>true</code> if the interior of the <code>Shape</code> and
      *      the interior of the rectangular area intersect, or are
-     *      both highly likely to intersect and intersection calculations 
+     *      both highly likely to intersect and intersection calculations
      *      would be too expensive to perform; <code>false</code> otherwise.
      */
     public abstract boolean intersects(float x, float y, float w, float h);
 
     /**
-     * Tests if the interior of the <code>Shape</code> intersects the 
+     * Tests if the interior of the <code>Shape</code> intersects the
      * interior of a specified rectangular area.
-     * The rectangular area is considered to intersect the <code>Shape</code> 
-     * if any point is contained in both the interior of the 
+     * The rectangular area is considered to intersect the <code>Shape</code>
+     * if any point is contained in both the interior of the
      * <code>Shape</code> and the specified rectangular area.
      * <p>
      * The {@code Shape.intersects()} method allows a {@code Shape}
@@ -163,7 +163,7 @@ public abstract class Shape {
      * return {@code true} even though the rectangular area does not
      * intersect the {@code Shape}.
      * The {@link com.sun.javafx.geom.Area Area} class performs
-     * more accurate computations of geometric intersection than most 
+     * more accurate computations of geometric intersection than most
      * {@code Shape} objects and therefore can be used if a more precise
      * answer is required.
      *
@@ -175,7 +175,7 @@ public abstract class Shape {
      * @param h the height of the specified rectangular area
      * @return <code>true</code> if the interior of the <code>Shape</code> and
      *      the interior of the rectangular area intersect, or are
-     *      both highly likely to intersect and intersection calculations 
+     *      both highly likely to intersect and intersection calculations
      *      would be too expensive to perform; <code>false</code> otherwise.
      */
     public boolean intersects(RectBounds r) {
@@ -187,10 +187,10 @@ public abstract class Shape {
     }
 
     /**
-     * Tests if the interior of the <code>Shape</code> entirely contains 
+     * Tests if the interior of the <code>Shape</code> entirely contains
      * the specified rectangular area.  All coordinates that lie inside
      * the rectangular area must lie within the <code>Shape</code> for the
-     * entire rectanglar area to be considered contained within the 
+     * entire rectanglar area to be considered contained within the
      * <code>Shape</code>.
      * <p>
      * The {@code Shape.contains()} method allows a {@code Shape}
@@ -207,7 +207,7 @@ public abstract class Shape {
      * return {@code false} even though the {@code Shape} contains
      * the rectangular area.
      * The {@link com.sun.javafx.geom.Area Area} class performs
-     * more accurate geometric computations than most 
+     * more accurate geometric computations than most
      * {@code Shape} objects and therefore can be used if a more precise
      * answer is required.
      *
@@ -219,9 +219,9 @@ public abstract class Shape {
      * @param h the height of the specified rectangular area
      * @return <code>true</code> if the interior of the <code>Shape</code>
      *      entirely contains the specified rectangular area;
-     *      <code>false</code> otherwise or, if the <code>Shape</code>    
-     *      contains the rectangular area and the   
-     *      <code>intersects</code> method returns <code>true</code> 
+     *      <code>false</code> otherwise or, if the <code>Shape</code>
+     *      contains the rectangular area and the
+     *      <code>intersects</code> method returns <code>true</code>
      *      and the containment calculations would be too expensive to
      *      perform.
      * @see #intersects
@@ -229,7 +229,7 @@ public abstract class Shape {
     public abstract boolean contains(float x, float y, float w, float h);
 
     /**
-     * Tests if the interior of the <code>Shape</code> entirely contains the 
+     * Tests if the interior of the <code>Shape</code> entirely contains the
      * specified <code>RectBounds</code>.
      * The {@code Shape.contains()} method allows a {@code Shape}
      * implementation to conservatively return {@code false} when:
@@ -245,7 +245,7 @@ public abstract class Shape {
      * return {@code false} even though the {@code Shape} contains
      * the {@code RectBounds}.
      * The {@link com.sun.javafx.geom.Area Area} class performs
-     * more accurate geometric computations than most 
+     * more accurate geometric computations than most
      * {@code Shape} objects and therefore can be used if a more precise
      * answer is required.
      *
@@ -256,7 +256,7 @@ public abstract class Shape {
      *          contains the <code>RectBounds</code> and the
      *          <code>intersects</code> method returns <code>true</code>
      *          and the containment calculations would be too expensive to
-     *          perform. 
+     *          perform.
      * @see #contains(float, float, float, float)
      */
     public boolean contains(RectBounds r) {
@@ -268,8 +268,8 @@ public abstract class Shape {
     }
 
     /**
-     * Returns an iterator object that iterates along the 
-     * <code>Shape</code> boundary and provides access to the geometry of the 
+     * Returns an iterator object that iterates along the
+     * <code>Shape</code> boundary and provides access to the geometry of the
      * <code>Shape</code> outline.  If an optional {@link BaseTransform}
      * is specified, the coordinates returned in the iteration are
      * transformed accordingly.
@@ -279,15 +279,15 @@ public abstract class Shape {
      * independently from any other <code>PathIterator</code> objects in use
      * at the same time.
      * <p>
-     * It is recommended, but not guaranteed, that objects 
+     * It is recommended, but not guaranteed, that objects
      * implementing the <code>Shape</code> interface isolate iterations
      * that are in process from any changes that might occur to the original
      * object's geometry during such iterations.
      *
      * @param tx an optional <code>BaseTransform</code> to be applied to the
-     *      coordinates as they are returned in the iteration, or 
+     *      coordinates as they are returned in the iteration, or
      *      <code>null</code> if untransformed coordinates are desired
-     * @return a new <code>PathIterator</code> object, which independently    
+     * @return a new <code>PathIterator</code> object, which independently
      *      traverses the geometry of the <code>Shape</code>.
      */
     public abstract PathIterator getPathIterator(BaseTransform tx);
@@ -314,22 +314,22 @@ public abstract class Shape {
      * defined by the particular implementation that is used.
      * <p>
      * Each call to this method returns a fresh <code>PathIterator</code>
-     * object that traverses the <code>Shape</code> object geometry 
+     * object that traverses the <code>Shape</code> object geometry
      * independently from any other <code>PathIterator</code> objects in use at
      * the same time.
      * <p>
-     * It is recommended, but not guaranteed, that objects 
+     * It is recommended, but not guaranteed, that objects
      * implementing the <code>Shape</code> interface isolate iterations
      * that are in process from any changes that might occur to the original
      * object's geometry during such iterations.
      *
      * @param tx an optional <code>BaseTransform</code> to be applied to the
-     *      coordinates as they are returned in the iteration, or 
+     *      coordinates as they are returned in the iteration, or
      *      <code>null</code> if untransformed coordinates are desired
      * @param flatness the maximum distance that the line segments used to
      *          approximate the curved segments are allowed to deviate
      *          from any point on the original curve
-     * @return a new <code>PathIterator</code> that independently traverses 
+     * @return a new <code>PathIterator</code> that independently traverses
      *         a flattened view of the geometry of the  <code>Shape</code>.
      */
     public abstract PathIterator getPathIterator(BaseTransform tx, float flatness);
@@ -977,7 +977,7 @@ public abstract class Shape {
        }
        return true;
     }
-    
+
     /**
      * {@inheritDoc}
      */
@@ -1008,7 +1008,7 @@ public abstract class Shape {
         }
         return out;
     }
-    
+
     /**
      * The bitmask that indicates that a point lies to the left of
      * this <code>Rectangle2D</code>.
@@ -1187,7 +1187,7 @@ public abstract class Shape {
             }
         }
     }
-    
+
     public static void accumulateCubic(float bbox[], int off, float t,
                                        float v0, float vc0, float vc1, float v1)
     {

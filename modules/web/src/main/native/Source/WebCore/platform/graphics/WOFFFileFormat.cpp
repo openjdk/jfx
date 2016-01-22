@@ -215,5 +215,5 @@ bool convertWOFFToSfnt(SharedBuffer* woff, Vector<char>& sfnt)
 
     return sfnt.size() == totalSfntSize;
 }
-    
+
 } // namespace WebCore

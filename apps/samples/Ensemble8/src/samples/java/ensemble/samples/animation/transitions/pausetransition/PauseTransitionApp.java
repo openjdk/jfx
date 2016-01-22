@@ -71,7 +71,7 @@ public class PauseTransitionApp extends Application {
         Pane root = new Pane();
         root.setPrefSize(245, 100);
         root.setMinSize(Pane.USE_PREF_SIZE, Pane.USE_PREF_SIZE);
-        root.setMaxSize(Pane.USE_PREF_SIZE, Pane.USE_PREF_SIZE);        
+        root.setMaxSize(Pane.USE_PREF_SIZE, Pane.USE_PREF_SIZE);
         // create rectangle
         Rectangle rect = new Rectangle(-25, -25, 50, 50);
         rect.setArcHeight(15);
@@ -84,17 +84,17 @@ public class PauseTransitionApp extends Application {
         TranslateTransition translateTrans1 = new TranslateTransition(seconds(2));
         translateTrans1.setFromX(50);
         translateTrans1.setToX(150);
-        
+
         PauseTransition pauseTrans = new PauseTransition(seconds(2));
-           
+
         TranslateTransition translateTrans2 = new TranslateTransition(seconds(2));
         translateTrans2.setFromX(150);
         translateTrans2.setToX(200);
-        
+
         animation = new SequentialTransition(rect, translateTrans1, pauseTrans, translateTrans2);
         animation.setCycleCount(Timeline.INDEFINITE);
         animation.setAutoReverse(true);
- 
+
         return root;
     }
 

@@ -104,7 +104,7 @@ public abstract class OnInvalidateMethodsTestBase {
                     }
                 }
             }
-            
+
         }
 
         private Path getPathNode(Class<? extends PathElement> pathElementClazz) throws Exception {

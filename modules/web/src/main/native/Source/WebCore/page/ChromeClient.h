@@ -197,7 +197,7 @@ public:
 
     // Callback invoked when the application cache fails to save a cache object
     // because storing it would grow the database file past its defined maximum
-    // size or past the amount of free space on the device. 
+    // size or past the amount of free space on the device.
     // The chrome client would need to take some action such as evicting some
     // old caches.
     virtual void reachedMaxAppCacheSize(int64_t spaceNeeded) = 0;
@@ -267,10 +267,10 @@ public:
     virtual void runOpenPanel(Frame*, PassRefPtr<FileChooser>) = 0;
     // Asynchronous request to load an icon for specified filenames.
     virtual void loadIconForFiles(const Vector<String>&, FileIconLoader*) = 0;
-        
+
     virtual void elementDidFocus(const Node*) { };
     virtual void elementDidBlur(const Node*) { };
-    
+
     virtual bool shouldPaintEntireContents() const { return false; }
 
     // Allows ports to customize the type of graphics layers created by this page.
@@ -303,7 +303,7 @@ public:
 
     // Returns a bitfield indicating conditions that can trigger the compositor.
     virtual CompositingTriggerFlags allowedCompositingTriggers() const { return static_cast<CompositingTriggerFlags>(AllTriggers); }
-    
+
     // Returns true if layer tree updates are disabled.
     virtual bool layerTreeStateIsFrozen() const { return false; }
 
@@ -316,7 +316,7 @@ public:
     virtual bool supportsFullscreenForNode(const Node*) { return false; }
     virtual void enterFullscreenForNode(Node*) { }
     virtual void exitFullscreenForNode(Node*) { }
-    virtual bool requiresFullscreenForVideoPlayback() { return false; } 
+    virtual bool requiresFullscreenForVideoPlayback() { return false; }
 
 #if ENABLE(FULLSCREEN_API)
     virtual bool supportsFullScreenForElement(const Element*, bool) { return false; }
@@ -375,7 +375,7 @@ public:
     virtual bool shouldRunModalDialogDuringPageDismissal(const DialogType&, const String& dialogMessage, FrameLoader::PageDismissalType) const { UNUSED_PARAM(dialogMessage); return true; }
 
     virtual void numWheelEventHandlersChanged(unsigned) = 0;
-        
+
     virtual bool isSVGImageChromeClient() const { return false; }
 
 #if ENABLE(POINTER_LOCK)

@@ -48,20 +48,20 @@ import static org.junit.Assert.*;
 public class TextAreaTest {
     private TextArea txtArea;//Empty string
     private TextArea dummyTxtArea;//With string value
-    
+
     @Before public void setup() {
         txtArea = new TextArea();
         dummyTxtArea = new TextArea("dummy");
     }
-    
+
     /*********************************************************************
      * Tests for the constructors                                        *
      ********************************************************************/
-    
+
     @Test public void defaultConstructorShouldHaveEmptyString() {
         assertEquals("", txtArea.getText());
     }
-    
+
     @Test public void oneStrArgConstructorShouldHaveString() {
         assertEquals("dummy", dummyTxtArea.getText());
     }
@@ -69,7 +69,7 @@ public class TextAreaTest {
     /*********************************************************************
      * Tests for the null checks                                         *
      ********************************************************************/
-    
+
     @Test public void checkContentNotNull() {
         assertNotNull(TextInputControlShim.getContent(txtArea));
     }
@@ -100,7 +100,7 @@ public class TextAreaTest {
     @Test public void defaultConstructorShouldSetStyleClassTo_textarea() {
         assertStyleClassContains(txtArea, "text-area");
     }
-    
+
     @Test public void defaultParagraphListNotNull() {
         assertNotNull(dummyTxtArea.getParagraphs());
     }
@@ -134,7 +134,7 @@ public class TextAreaTest {
     @Test public void oneArgStrConstructorShouldSetStyleClassTo_textarea() {
         assertStyleClassContains(dummyTxtArea, "text-area");
     }
-    
+
     @Test public void checkTextSetGet() {
         dummyTxtArea.setText("junk");
         assertEquals(dummyTxtArea.getText(), "junk");
@@ -185,7 +185,7 @@ public class TextAreaTest {
         strPr.setValue("newvalue");
         assertEquals("Text cannot be bound", txtArea.getText(),  "newvalue");
     }
-    
+
     @Test public void checkScrollLeftPropertyBind() {
         DoubleProperty dbPr = new SimpleDoubleProperty(200.0);
         txtArea.scrollLeftProperty().bind(dbPr);
@@ -193,7 +193,7 @@ public class TextAreaTest {
         dbPr.setValue(300.0);
         assertEquals(txtArea.getScrollLeft(), 300.0, 0.0);
     }
-    
+
     @Test public void checkScrollTopPropertyBind() {
         DoubleProperty dbPr = new SimpleDoubleProperty(200.0);
         txtArea.scrollTopProperty().bind(dbPr);
@@ -201,7 +201,7 @@ public class TextAreaTest {
         dbPr.setValue(300.0);
         assertEquals(txtArea.getScrollTop(), 300.0, 0.0);
     }
-    
+
     @Test public void checkPrefColumnPropertyBind() {
         DoubleProperty dbPr = new SimpleDoubleProperty(200.0);
         txtArea.prefColumnCountProperty().bind(dbPr);
@@ -209,7 +209,7 @@ public class TextAreaTest {
         dbPr.setValue(300.0);
         assertEquals(txtArea.getPrefColumnCount(), 300.0, 0.0);
     }
-    
+
     @Test public void checkPrefRowPropertyBind() {
         DoubleProperty dbPr = new SimpleDoubleProperty(200.0);
         txtArea.prefRowCountProperty().bind(dbPr);
@@ -217,7 +217,7 @@ public class TextAreaTest {
         dbPr.setValue(300.0);
         assertEquals(txtArea.getPrefRowCount(), 300.0, 0.0);
     }
-    
+
     @Test public void checkWrapTextPropertyBind() {
         BooleanProperty boolPr = new SimpleBooleanProperty(true);
         txtArea.wrapTextProperty().bind(boolPr);
@@ -225,7 +225,7 @@ public class TextAreaTest {
         boolPr.setValue(false);
         assertFalse(txtArea.isWrapText());
     }
-    
+
     /*********************************************************************
      * Miscellaneous Tests                                               *
      ********************************************************************/
@@ -263,7 +263,7 @@ public class TextAreaTest {
             assertNotNull(iofb);
         }
     }
-    
+
     @Test public void insertTextAtNegativeIndexValue() {
         try {
             dummyTxtArea.insertText(-1, "sometext");
@@ -292,7 +292,7 @@ public class TextAreaTest {
             assertNotNull(iobe);
         }
     }
-    
+
     @Test public void deleteNegativeRangeOfText() {
         try {
             dummyTxtArea.deleteText(3, 2);
@@ -301,7 +301,7 @@ public class TextAreaTest {
             assertNotNull(iae);
         }
     }
-    
+
     @Test public void deleteOutOfRangeEndIndexText() {
         try {
             dummyTxtArea.deleteText(0, 200);
@@ -373,7 +373,7 @@ public class TextAreaTest {
 
     @Test public void setWrapTextAndSeeValueIsReflectedInModel() {
         txtArea.setWrapText(true);
-        assertTrue(txtArea.wrapTextProperty().getValue()); 
+        assertTrue(txtArea.wrapTextProperty().getValue());
     }
 
     @Test public void setWrapTextAndSeeValue() {
@@ -401,7 +401,7 @@ public class TextAreaTest {
         dummyTxtArea = new TextArea("dummy\nanother");
         assertEquals(dummyTxtArea.getParagraphs().size(), 2.0, 0.0);
     }
-    
+
     @Test public void createTextThroughConstructorAndCheckParagraphContents() {
         dummyTxtArea = new TextArea("dummy\nanother");
         assertEquals(dummyTxtArea.getParagraphs().get(0).toString(), "dummy");
@@ -412,12 +412,12 @@ public class TextAreaTest {
         dummyTxtArea.appendText("another");
         assertEquals(dummyTxtArea.getText(), "dummyanother");
     }
-    
+
     @Test public void appendNormalTextAndCheckParagraphCount() {
         dummyTxtArea.appendText("another");
         assertEquals(dummyTxtArea.getParagraphs().size(), 1.0, 0.0);
     }
-    
+
     @Test public void addNormalTextAndCheckParagraphContents() {
         dummyTxtArea.appendText("another");
         assertEquals(dummyTxtArea.getParagraphs().get(0).toString(), "dummyanother");
@@ -428,7 +428,7 @@ public class TextAreaTest {
         dummyTxtArea.appendText("\nanother");
         assertEquals(dummyTxtArea.getParagraphs().size(), 2.0, 0.0);
     }
-    
+
     @Test public void addParaTextAndCheckParagraphContents() {
         dummyTxtArea.appendText("\nanother");
         assertEquals(dummyTxtArea.getParagraphs().get(0).toString(), "dummy");
@@ -439,12 +439,12 @@ public class TextAreaTest {
         dummyTxtArea.insertText(0,"another");
         assertEquals(dummyTxtArea.getText(), "anotherdummy");
     }
-    
+
     @Test public void insertNormalTextAndCheckParagraphCount() {
         dummyTxtArea.insertText(0,"another");
         assertEquals(dummyTxtArea.getParagraphs().size(), 1.0, 0.0);
     }
-    
+
     @Test public void insertNormalTextAndCheckParagraphContents() {
         dummyTxtArea.insertText(0,"another");
         assertEquals(dummyTxtArea.getParagraphs().get(0).toString(), "anotherdummy");
@@ -455,7 +455,7 @@ public class TextAreaTest {
         dummyTxtArea.insertText(0,"another\n");
         assertEquals(dummyTxtArea.getParagraphs().size(), 2.0, 0.0);
     }
-    
+
     @Test public void insertParaTextAndCheckParagraphContents() {
         dummyTxtArea.insertText(0,"another\n");
         assertEquals(dummyTxtArea.getParagraphs().get(0).toString(), "another");
@@ -467,7 +467,7 @@ public class TextAreaTest {
         dummyTxtArea.deleteText(0,5);//Retain the \n character
         assertEquals(dummyTxtArea.getParagraphs().size(), 2.0, 0.0);
     }
-    
+
     @Test public void deleteNormalTextAndCheckParagraphContents() {
         dummyTxtArea.appendText("\nanother");
         dummyTxtArea.deleteText(0,5);//Retain the \n character
@@ -480,7 +480,7 @@ public class TextAreaTest {
         dummyTxtArea.deleteText(0,6);//This will delete a paragraph coz next line char is also deleted
         assertEquals(dummyTxtArea.getParagraphs().size(), 1.0, 0.0);
     }
-    
+
     @Test public void deleteParagraphAndCheckParagraphContents() {
         dummyTxtArea.appendText("\nanother");
         dummyTxtArea.deleteText(0,6);

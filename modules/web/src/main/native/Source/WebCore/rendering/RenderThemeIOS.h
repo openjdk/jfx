@@ -31,10 +31,10 @@
 #include "RenderTheme.h"
 
 namespace WebCore {
-    
+
 class RenderStyle;
 class GraphicsContext;
-    
+
 class RenderThemeIOS : public RenderTheme {
 public:
     static PassRefPtr<RenderTheme> create();

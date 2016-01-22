@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef Uint16WithFraction_h
@@ -163,7 +163,7 @@ public:
         // 'floor' is simple the integer portion of the value.
         uint32_t floor = m_values[0];
 
-        // If floor is non-zero, 
+        // If floor is non-zero,
         if (floor) {
             m_values[0] = 0;
             m_leadingZeros = 1;
@@ -196,7 +196,7 @@ public:
     }
 
     // Return true if the sum of this plus addend would be greater than 1.
-    bool sumGreaterThanOne(const Uint16WithFraction& addend) 
+    bool sumGreaterThanOne(const Uint16WithFraction& addend)
     {
         ASSERT(checkConsistency());
         ASSERT(addend.checkConsistency());

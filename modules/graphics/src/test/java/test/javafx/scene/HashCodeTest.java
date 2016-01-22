@@ -45,8 +45,8 @@ import org.junit.Test;
 public class HashCodeTest  {
 
     private static final boolean VERBOSE = false;
-    
-    
+
+
     void checkEqualsAndHashCode(Object o1, Object o2, boolean isEqual, boolean isNaN) {
 
         int o1Hash = o1.hashCode();
@@ -57,9 +57,9 @@ public class HashCodeTest  {
         if (o1EqualsO2 == isEqual) {
             if (o1EqualsO2 && (o1Hash != o2Hash)) {
                 errMsg.append("ERROR: Equal objects have different hashCode");
-                errMsg.append("\n    o1 = ").append(o1); 
+                errMsg.append("\n    o1 = ").append(o1);
                 errMsg.append("\n    o2 = ").append(o2);
-                
+
                 errMsg.append("\n    o1.hashCode() = ").append(Integer.toHexString(o1Hash)).append(", o2.hashCode() = ").append(Integer.toHexString(o2Hash));
                 fail(errMsg.toString());
             }
@@ -79,7 +79,7 @@ public class HashCodeTest  {
                     errMsg.append("Warning: Non-equal objects have same hashCode");
                     errMsg.append("\n    o1 = ").append(o1);
                     errMsg.append("\n    o2 = ").append(o2);
-                    
+
                     errMsg.append("\n    o1.hashCode() = ").append(Integer.toHexString(o1Hash)).append(", o2.hashCode() = ").append(Integer.toHexString(o2Hash));
                     fail(errMsg.toString());
                 }
@@ -169,7 +169,7 @@ public class HashCodeTest  {
         checkEqualsAndHashCode(p1, p2, true, false);
 
         // Cannot test -0 versus +0 due to RT-xxxx
-        
+
         //p1 = Point2D { x:1 y:-0.0 }
         //p2 = Point2D { x:1 y:0.0 }
         //checkEqualsAndHashCode(p1, p2, true, false);
@@ -194,11 +194,11 @@ public class HashCodeTest  {
         checkEqualsAndHashCode(b1, b2, true, false);
 
         // Cannot test -0 versus +0 due to RT-xxxx
-        
+
         //b1 = BoundingBox(0.0 minY:1 width:0 height:0 }
         //b2 = BoundingBox(-0.0 minY:1 width:0 height:0 }
         //checkEqualsAndHashCode(b1, b2, true, false);
-        
+
 
         b1 = new BoundingBox(1.0f, Float.POSITIVE_INFINITY,0.0f,0.0f);
         b2 = new BoundingBox(Float.POSITIVE_INFINITY, 1.0f, 0.0f, 0.0f);

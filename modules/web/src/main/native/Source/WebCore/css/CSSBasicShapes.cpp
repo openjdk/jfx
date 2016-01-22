@@ -103,7 +103,7 @@ static String buildCircleString(const String& radius, const String& centerX, con
     char separator[] = " ";
     StringBuilder result;
     result.appendLiteral(opening);
-    if (!radius.isNull()) 
+    if (!radius.isNull())
         result.append(radius);
 
     if (!centerX.isNull() || !centerY.isNull()) {
@@ -285,7 +285,7 @@ static String buildPolygonString(const WindRule& windRule, const Vector<String>&
     char nonZeroOpening[] = "polygon(nonzero, ";
     char commaSeparator[] = ", ";
     COMPILE_ASSERT(sizeof(evenOddOpening) == sizeof(nonZeroOpening), polygon_string_openings_have_same_length);
-    
+
     // Compute the required capacity in advance to reduce allocations.
     size_t length = sizeof(evenOddOpening) - 1;
     for (size_t i = 0; i < points.size(); i += 2) {

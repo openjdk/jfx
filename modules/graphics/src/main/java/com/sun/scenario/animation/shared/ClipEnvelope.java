@@ -31,13 +31,13 @@ import com.sun.javafx.animation.TickCalculation;
 
 /**
  * An instance of ClipEnvelope handles the loop-part of a clip.
- * 
+ *
  * The functionality to react on a pulse-signal from the timer is implemented in
  * two classes: ClipEnvelope and ClipCore. ClipEnvelope is responsible for the
  * "loop-part" (keeping track of the number of cycles, handling the direction of
  * the clip etc.). ClipCore takes care of the inner part (interpolating the
  * values, triggering the action-functions, ...)
- * 
+ *
  * Both classes have an abstract public definition and can only be created using
  * the factory method create(). The intent is to provide a general
  * implementation plus eventually some fast-track implementations for common use
@@ -59,7 +59,7 @@ public abstract class ClipEnvelope {
     protected double currentRate = rate;
     protected boolean inTimePulse = false;
     protected boolean aborted = false;
-    
+
     protected ClipEnvelope(Animation animation) {
         this.animation = animation;
         if (animation != null) {
@@ -107,9 +107,9 @@ public abstract class ClipEnvelope {
             inTimePulse = false;
         }
     }
-    
+
     protected abstract double calculateCurrentRate();
-    
+
     protected void setCurrentRate(double currentRate) {
         this.currentRate = currentRate;
         AnimationAccessor.getDefault().setCurrentRate(animation, currentRate);

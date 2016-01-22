@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -50,7 +50,7 @@ HRESULT STDMETHODCALLTYPE DOMEventListener::QueryInterface(const IID &riid, void
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE DOMEventListener::handleEvent( 
+HRESULT STDMETHODCALLTYPE DOMEventListener::handleEvent(
     /* [in] */ IDOMEvent* /*evt*/)
 {
     return E_NOTIMPL;
@@ -70,7 +70,7 @@ WebEventListener::~WebEventListener()
 
 bool WebEventListener::operator==(const WebCore::EventListener& other)
 {
-    return (other.type() == CPPEventListenerType 
+    return (other.type() == CPPEventListenerType
         && reinterpret_cast<const WebEventListener*>(&other)->m_iDOMEventListener == m_iDOMEventListener);
 }
 
@@ -149,43 +149,43 @@ HRESULT STDMETHODCALLTYPE DOMEvent::QueryInterface(const IID &riid, void** ppvOb
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE DOMEvent::type( 
+HRESULT STDMETHODCALLTYPE DOMEvent::type(
     /* [retval][out] */ BSTR* /*result*/)
 {
     return E_NOTIMPL;
 }
 
-HRESULT STDMETHODCALLTYPE DOMEvent::target( 
+HRESULT STDMETHODCALLTYPE DOMEvent::target(
     /* [retval][out] */ IDOMEventTarget** /*result*/)
 {
     return E_NOTIMPL;
 }
 
-HRESULT STDMETHODCALLTYPE DOMEvent::currentTarget( 
+HRESULT STDMETHODCALLTYPE DOMEvent::currentTarget(
     /* [retval][out] */ IDOMEventTarget** /*result*/)
 {
     return E_NOTIMPL;
 }
 
-HRESULT STDMETHODCALLTYPE DOMEvent::eventPhase( 
+HRESULT STDMETHODCALLTYPE DOMEvent::eventPhase(
     /* [retval][out] */ unsigned short* /*result*/)
 {
     return E_NOTIMPL;
 }
 
-HRESULT STDMETHODCALLTYPE DOMEvent::bubbles( 
+HRESULT STDMETHODCALLTYPE DOMEvent::bubbles(
     /* [retval][out] */ BOOL* /*result*/)
 {
     return E_NOTIMPL;
 }
 
-HRESULT STDMETHODCALLTYPE DOMEvent::cancelable( 
+HRESULT STDMETHODCALLTYPE DOMEvent::cancelable(
     /* [retval][out] */ BOOL* /*result*/)
 {
     return E_NOTIMPL;
 }
 
-HRESULT STDMETHODCALLTYPE DOMEvent::timeStamp( 
+HRESULT STDMETHODCALLTYPE DOMEvent::timeStamp(
     /* [retval][out] */ DOMTimeStamp* /*result*/)
 {
     return E_NOTIMPL;
@@ -201,7 +201,7 @@ HRESULT STDMETHODCALLTYPE DOMEvent::preventDefault( void)
     return E_NOTIMPL;
 }
 
-HRESULT STDMETHODCALLTYPE DOMEvent::initEvent( 
+HRESULT STDMETHODCALLTYPE DOMEvent::initEvent(
     /* [in] */ BSTR /*eventTypeArg*/,
     /* [in] */ BOOL /*canBubbleArg*/,
     /* [in] */ BOOL /*cancelableArg*/)
@@ -223,19 +223,19 @@ HRESULT STDMETHODCALLTYPE DOMUIEvent::QueryInterface(REFIID riid, void** ppvObje
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE DOMUIEvent::view( 
+HRESULT STDMETHODCALLTYPE DOMUIEvent::view(
     /* [retval][out] */ IDOMWindow** /*result*/)
 {
     return E_NOTIMPL;
 }
 
-HRESULT STDMETHODCALLTYPE DOMUIEvent::detail( 
+HRESULT STDMETHODCALLTYPE DOMUIEvent::detail(
     /* [retval][out] */ long* /*result*/)
 {
     return E_NOTIMPL;
 }
 
-HRESULT STDMETHODCALLTYPE DOMUIEvent::initUIEvent( 
+HRESULT STDMETHODCALLTYPE DOMUIEvent::initUIEvent(
     /* [in] */ BSTR /*type*/,
     /* [in] */ BOOL /*canBubble*/,
     /* [in] */ BOOL /*cancelable*/,
@@ -245,13 +245,13 @@ HRESULT STDMETHODCALLTYPE DOMUIEvent::initUIEvent(
     return E_NOTIMPL;
 }
 
-HRESULT STDMETHODCALLTYPE DOMUIEvent::keyCode( 
+HRESULT STDMETHODCALLTYPE DOMUIEvent::keyCode(
     /* [retval][out] */ long* /*result*/)
 {
     return E_NOTIMPL;
 }
 
-HRESULT STDMETHODCALLTYPE DOMUIEvent::charCode( 
+HRESULT STDMETHODCALLTYPE DOMUIEvent::charCode(
     /* [retval][out] */ long* /*result*/)
 {
     return E_NOTIMPL;
@@ -269,19 +269,19 @@ HRESULT STDMETHODCALLTYPE DOMUIEvent::unused2(
     return E_NOTIMPL;
 }
 
-HRESULT STDMETHODCALLTYPE DOMUIEvent::pageX( 
+HRESULT STDMETHODCALLTYPE DOMUIEvent::pageX(
     /* [retval][out] */ long* /*result*/)
 {
     return E_NOTIMPL;
 }
 
-HRESULT STDMETHODCALLTYPE DOMUIEvent::pageY( 
+HRESULT STDMETHODCALLTYPE DOMUIEvent::pageY(
     /* [retval][out] */ long* /*result*/)
 {
     return E_NOTIMPL;
 }
 
-HRESULT STDMETHODCALLTYPE DOMUIEvent::which( 
+HRESULT STDMETHODCALLTYPE DOMUIEvent::which(
     /* [retval][out] */ long* /*result*/)
 {
     return E_NOTIMPL;
@@ -301,7 +301,7 @@ HRESULT STDMETHODCALLTYPE DOMKeyboardEvent::QueryInterface(REFIID riid, void** p
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE DOMKeyboardEvent::keyIdentifier( 
+HRESULT STDMETHODCALLTYPE DOMKeyboardEvent::keyIdentifier(
     /* [retval][out] */ BSTR* /*result*/)
 {
     return E_NOTIMPL;
@@ -313,13 +313,13 @@ HRESULT STDMETHODCALLTYPE DOMKeyboardEvent::location(
     return E_NOTIMPL;
 }
 
-HRESULT STDMETHODCALLTYPE DOMKeyboardEvent::keyLocation( 
+HRESULT STDMETHODCALLTYPE DOMKeyboardEvent::keyLocation(
     /* [retval][out] */ unsigned long* /*result*/)
 {
     return E_NOTIMPL;
 }
 
-HRESULT STDMETHODCALLTYPE DOMKeyboardEvent::ctrlKey( 
+HRESULT STDMETHODCALLTYPE DOMKeyboardEvent::ctrlKey(
     /* [retval][out] */ BOOL* result)
 {
     *result = FALSE;
@@ -331,7 +331,7 @@ HRESULT STDMETHODCALLTYPE DOMKeyboardEvent::ctrlKey(
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE DOMKeyboardEvent::shiftKey( 
+HRESULT STDMETHODCALLTYPE DOMKeyboardEvent::shiftKey(
     /* [retval][out] */ BOOL* result)
 {
     *result = FALSE;
@@ -343,7 +343,7 @@ HRESULT STDMETHODCALLTYPE DOMKeyboardEvent::shiftKey(
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE DOMKeyboardEvent::altKey( 
+HRESULT STDMETHODCALLTYPE DOMKeyboardEvent::altKey(
     /* [retval][out] */ BOOL* result)
 {
     *result = FALSE;
@@ -355,7 +355,7 @@ HRESULT STDMETHODCALLTYPE DOMKeyboardEvent::altKey(
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE DOMKeyboardEvent::metaKey( 
+HRESULT STDMETHODCALLTYPE DOMKeyboardEvent::metaKey(
     /* [retval][out] */ BOOL* result)
 {
     *result = FALSE;
@@ -367,7 +367,7 @@ HRESULT STDMETHODCALLTYPE DOMKeyboardEvent::metaKey(
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE DOMKeyboardEvent::altGraphKey( 
+HRESULT STDMETHODCALLTYPE DOMKeyboardEvent::altGraphKey(
     /* [retval][out] */ BOOL* result)
 {
     *result = FALSE;
@@ -379,14 +379,14 @@ HRESULT STDMETHODCALLTYPE DOMKeyboardEvent::altGraphKey(
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE DOMKeyboardEvent::getModifierState( 
+HRESULT STDMETHODCALLTYPE DOMKeyboardEvent::getModifierState(
     /* [in] */ BSTR /*keyIdentifierArg*/,
     /* [retval][out] */ BOOL* /*result*/)
 {
     return E_NOTIMPL;
 }
 
-HRESULT STDMETHODCALLTYPE DOMKeyboardEvent::initKeyboardEvent( 
+HRESULT STDMETHODCALLTYPE DOMKeyboardEvent::initKeyboardEvent(
     /* [in] */ BSTR /*type*/,
     /* [in] */ BOOL /*canBubble*/,
     /* [in] */ BOOL /*cancelable*/,
@@ -416,31 +416,31 @@ HRESULT STDMETHODCALLTYPE DOMMouseEvent::QueryInterface(REFIID riid, void** ppvO
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE DOMMouseEvent::screenX( 
+HRESULT STDMETHODCALLTYPE DOMMouseEvent::screenX(
     /* [retval][out] */ long* /*result*/)
 {
     return E_NOTIMPL;
 }
 
-HRESULT STDMETHODCALLTYPE DOMMouseEvent::screenY( 
+HRESULT STDMETHODCALLTYPE DOMMouseEvent::screenY(
     /* [retval][out] */ long* /*result*/)
 {
     return E_NOTIMPL;
 }
 
-HRESULT STDMETHODCALLTYPE DOMMouseEvent::clientX( 
+HRESULT STDMETHODCALLTYPE DOMMouseEvent::clientX(
     /* [retval][out] */ long* /*result*/)
 {
     return E_NOTIMPL;
 }
 
-HRESULT STDMETHODCALLTYPE DOMMouseEvent::clientY( 
+HRESULT STDMETHODCALLTYPE DOMMouseEvent::clientY(
     /* [retval][out] */ long* /*result*/)
 {
     return E_NOTIMPL;
 }
 
-HRESULT STDMETHODCALLTYPE DOMMouseEvent::ctrlKey( 
+HRESULT STDMETHODCALLTYPE DOMMouseEvent::ctrlKey(
     /* [retval][out] */ BOOL* result)
 {
     *result = FALSE;
@@ -452,7 +452,7 @@ HRESULT STDMETHODCALLTYPE DOMMouseEvent::ctrlKey(
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE DOMMouseEvent::shiftKey( 
+HRESULT STDMETHODCALLTYPE DOMMouseEvent::shiftKey(
     /* [retval][out] */ BOOL* result)
 {
     *result = FALSE;
@@ -464,7 +464,7 @@ HRESULT STDMETHODCALLTYPE DOMMouseEvent::shiftKey(
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE DOMMouseEvent::altKey( 
+HRESULT STDMETHODCALLTYPE DOMMouseEvent::altKey(
     /* [retval][out] */ BOOL* result)
 {
     *result = FALSE;
@@ -476,7 +476,7 @@ HRESULT STDMETHODCALLTYPE DOMMouseEvent::altKey(
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE DOMMouseEvent::metaKey( 
+HRESULT STDMETHODCALLTYPE DOMMouseEvent::metaKey(
     /* [retval][out] */ BOOL* result)
 {
     *result = FALSE;
@@ -488,19 +488,19 @@ HRESULT STDMETHODCALLTYPE DOMMouseEvent::metaKey(
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE DOMMouseEvent::button( 
+HRESULT STDMETHODCALLTYPE DOMMouseEvent::button(
     /* [retval][out] */ unsigned short* /*result*/)
 {
     return E_NOTIMPL;
 }
 
-HRESULT STDMETHODCALLTYPE DOMMouseEvent::relatedTarget( 
+HRESULT STDMETHODCALLTYPE DOMMouseEvent::relatedTarget(
     /* [retval][out] */ IDOMEventTarget** /*result*/)
 {
     return E_NOTIMPL;
 }
 
-HRESULT STDMETHODCALLTYPE DOMMouseEvent::initMouseEvent( 
+HRESULT STDMETHODCALLTYPE DOMMouseEvent::initMouseEvent(
     /* [in] */ BSTR /*type*/,
     /* [in] */ BOOL /*canBubble*/,
     /* [in] */ BOOL /*cancelable*/,
@@ -520,37 +520,37 @@ HRESULT STDMETHODCALLTYPE DOMMouseEvent::initMouseEvent(
     return E_NOTIMPL;
 }
 
-HRESULT STDMETHODCALLTYPE DOMMouseEvent::offsetX( 
+HRESULT STDMETHODCALLTYPE DOMMouseEvent::offsetX(
     /* [retval][out] */ long* /*result*/)
 {
     return E_NOTIMPL;
 }
 
-HRESULT STDMETHODCALLTYPE DOMMouseEvent::offsetY( 
+HRESULT STDMETHODCALLTYPE DOMMouseEvent::offsetY(
     /* [retval][out] */ long* /*result*/)
 {
     return E_NOTIMPL;
 }
 
-HRESULT STDMETHODCALLTYPE DOMMouseEvent::x( 
+HRESULT STDMETHODCALLTYPE DOMMouseEvent::x(
     /* [retval][out] */ long* /*result*/)
 {
     return E_NOTIMPL;
 }
 
-HRESULT STDMETHODCALLTYPE DOMMouseEvent::y( 
+HRESULT STDMETHODCALLTYPE DOMMouseEvent::y(
     /* [retval][out] */ long* /*result*/)
 {
     return E_NOTIMPL;
 }
 
-HRESULT STDMETHODCALLTYPE DOMMouseEvent::fromElement( 
+HRESULT STDMETHODCALLTYPE DOMMouseEvent::fromElement(
     /* [retval][out] */ IDOMNode** /*result*/)
 {
     return E_NOTIMPL;
 }
 
-HRESULT STDMETHODCALLTYPE DOMMouseEvent::toElement( 
+HRESULT STDMETHODCALLTYPE DOMMouseEvent::toElement(
     /* [retval][out] */ IDOMNode** /*result*/)
 {
     return E_NOTIMPL;
@@ -570,31 +570,31 @@ HRESULT STDMETHODCALLTYPE DOMMutationEvent::QueryInterface(REFIID riid, void** p
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE DOMMutationEvent::relatedNode( 
+HRESULT STDMETHODCALLTYPE DOMMutationEvent::relatedNode(
     /* [retval][out] */ IDOMNode** /*result*/)
 {
     return E_NOTIMPL;
 }
 
-HRESULT STDMETHODCALLTYPE DOMMutationEvent::prevValue( 
+HRESULT STDMETHODCALLTYPE DOMMutationEvent::prevValue(
     /* [retval][out] */ BSTR* /*result*/)
 {
     return E_NOTIMPL;
 }
 
-HRESULT STDMETHODCALLTYPE DOMMutationEvent::newValue( 
+HRESULT STDMETHODCALLTYPE DOMMutationEvent::newValue(
     /* [retval][out] */ BSTR* /*result*/)
 {
     return E_NOTIMPL;
 }
 
-HRESULT STDMETHODCALLTYPE DOMMutationEvent::attrName( 
+HRESULT STDMETHODCALLTYPE DOMMutationEvent::attrName(
     /* [retval][out] */ BSTR* /*result*/)
 {
     return E_NOTIMPL;
 }
 
-HRESULT STDMETHODCALLTYPE DOMMutationEvent::attrChange( 
+HRESULT STDMETHODCALLTYPE DOMMutationEvent::attrChange(
     /* [retval][out] */ unsigned short* /*result*/)
 {
     return E_NOTIMPL;
@@ -627,19 +627,19 @@ HRESULT STDMETHODCALLTYPE DOMOverflowEvent::QueryInterface(REFIID riid, void** p
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE DOMOverflowEvent::orient( 
+HRESULT STDMETHODCALLTYPE DOMOverflowEvent::orient(
     /* [retval][out] */ unsigned short* /*result*/)
 {
     return E_NOTIMPL;
 }
 
-HRESULT STDMETHODCALLTYPE DOMOverflowEvent::horizontalOverflow( 
+HRESULT STDMETHODCALLTYPE DOMOverflowEvent::horizontalOverflow(
     /* [retval][out] */ BOOL* /*result*/)
 {
     return E_NOTIMPL;
 }
 
-HRESULT STDMETHODCALLTYPE DOMOverflowEvent::verticalOverflow( 
+HRESULT STDMETHODCALLTYPE DOMOverflowEvent::verticalOverflow(
     /* [retval][out] */ BOOL* /*result*/)
 {
     return E_NOTIMPL;
@@ -659,103 +659,103 @@ HRESULT STDMETHODCALLTYPE DOMWheelEvent::QueryInterface(REFIID riid, void** ppvO
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE DOMWheelEvent::screenX( 
+HRESULT STDMETHODCALLTYPE DOMWheelEvent::screenX(
     /* [retval][out] */ long* /*result*/)
 {
     return E_NOTIMPL;
 }
 
-HRESULT STDMETHODCALLTYPE DOMWheelEvent::screenY( 
+HRESULT STDMETHODCALLTYPE DOMWheelEvent::screenY(
     /* [retval][out] */ long* /*result*/)
 {
     return E_NOTIMPL;
 }
 
-HRESULT STDMETHODCALLTYPE DOMWheelEvent::clientX( 
+HRESULT STDMETHODCALLTYPE DOMWheelEvent::clientX(
     /* [retval][out] */ long* /*result*/)
 {
     return E_NOTIMPL;
 }
 
-HRESULT STDMETHODCALLTYPE DOMWheelEvent::clientY( 
+HRESULT STDMETHODCALLTYPE DOMWheelEvent::clientY(
     /* [retval][out] */ long* /*result*/)
 {
     return E_NOTIMPL;
 }
 
-HRESULT STDMETHODCALLTYPE DOMWheelEvent::ctrlKey( 
+HRESULT STDMETHODCALLTYPE DOMWheelEvent::ctrlKey(
     /* [retval][out] */ BOOL* /*result*/)
 {
     return E_NOTIMPL;
 }
 
-HRESULT STDMETHODCALLTYPE DOMWheelEvent::shiftKey( 
+HRESULT STDMETHODCALLTYPE DOMWheelEvent::shiftKey(
     /* [retval][out] */ BOOL* /*result*/)
 {
     return E_NOTIMPL;
 }
 
-HRESULT STDMETHODCALLTYPE DOMWheelEvent::altKey( 
+HRESULT STDMETHODCALLTYPE DOMWheelEvent::altKey(
     /* [retval][out] */ BOOL* /*result*/)
 {
     return E_NOTIMPL;
 }
 
-HRESULT STDMETHODCALLTYPE DOMWheelEvent::metaKey( 
+HRESULT STDMETHODCALLTYPE DOMWheelEvent::metaKey(
     /* [retval][out] */ BOOL* /*result*/)
 {
     return E_NOTIMPL;
 }
 
-HRESULT STDMETHODCALLTYPE DOMWheelEvent::wheelDelta( 
+HRESULT STDMETHODCALLTYPE DOMWheelEvent::wheelDelta(
     /* [retval][out] */ long* /*result*/)
 {
     return E_NOTIMPL;
 }
 
-HRESULT STDMETHODCALLTYPE DOMWheelEvent::wheelDeltaX( 
+HRESULT STDMETHODCALLTYPE DOMWheelEvent::wheelDeltaX(
     /* [retval][out] */ long* /*result*/)
 {
     return E_NOTIMPL;
 }
 
-HRESULT STDMETHODCALLTYPE DOMWheelEvent::wheelDeltaY( 
+HRESULT STDMETHODCALLTYPE DOMWheelEvent::wheelDeltaY(
     /* [retval][out] */ long* /*result*/)
 {
     return E_NOTIMPL;
 }
 
-HRESULT STDMETHODCALLTYPE DOMWheelEvent::offsetX( 
+HRESULT STDMETHODCALLTYPE DOMWheelEvent::offsetX(
     /* [retval][out] */ long* /*result*/)
 {
     return E_NOTIMPL;
 }
 
-HRESULT STDMETHODCALLTYPE DOMWheelEvent::offsetY( 
+HRESULT STDMETHODCALLTYPE DOMWheelEvent::offsetY(
     /* [retval][out] */ long* /*result*/)
 {
     return E_NOTIMPL;
 }
 
-HRESULT STDMETHODCALLTYPE DOMWheelEvent::x( 
+HRESULT STDMETHODCALLTYPE DOMWheelEvent::x(
     /* [retval][out] */ long* /*result*/)
 {
     return E_NOTIMPL;
 }
 
-HRESULT STDMETHODCALLTYPE DOMWheelEvent::y( 
+HRESULT STDMETHODCALLTYPE DOMWheelEvent::y(
     /* [retval][out] */ long* /*result*/)
 {
     return E_NOTIMPL;
 }
 
-HRESULT STDMETHODCALLTYPE DOMWheelEvent::isHorizontal( 
+HRESULT STDMETHODCALLTYPE DOMWheelEvent::isHorizontal(
     /* [retval][out] */ BOOL* /*result*/)
 {
     return E_NOTIMPL;
 }
 
-HRESULT STDMETHODCALLTYPE DOMWheelEvent::initWheelEvent( 
+HRESULT STDMETHODCALLTYPE DOMWheelEvent::initWheelEvent(
     /* [in] */ long /*wheelDeltaX*/,
     /* [in] */ long /*wheelDeltaY*/,
     /* [in] */ IDOMWindow* /*view*/,

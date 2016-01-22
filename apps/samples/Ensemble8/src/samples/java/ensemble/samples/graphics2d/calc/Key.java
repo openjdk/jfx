@@ -43,18 +43,18 @@ import javafx.scene.text.Font;
 import javafx.scene.text.Text;
 
 public class Key extends Parent {
-    
+
     public enum Code {
-        
+
         DIGIT_0(0, "0"), DIGIT_1(1, "1"), DIGIT_2(2, "2"), DIGIT_3(3, "3"),
         DIGIT_4(4, "4"), DIGIT_5(5, "5"), DIGIT_6(6, "6"), DIGIT_7(7, "7"),
         DIGIT_8(8, "8"), DIGIT_9(9, "9"), M_PLUS(10, "M+"), M_MINUS(11, "M-"),
         M(12, "M"), DIVIDE(13, "/"), MULTIPLY(14, "X"), ADD(15, "+"),
         SUBTRACT(16, "-"), EQUALS(17, "="), CLEAR(18, "C"), DECIMAL(19, ".");
-        
+
         private String text;
         private int value;
-        
+
         Code(int value, String text){
             this.value = value;
             this.text = text;
@@ -67,7 +67,7 @@ public class Key extends Parent {
         public int getValue() {
             return value;
         }
-        
+
     }
 
     public static final double WIDTH = 50;

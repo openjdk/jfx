@@ -6,13 +6,13 @@
  * are met:
  *
  * 1.  Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer. 
+ *     notice, this list of conditions and the following disclaimer.
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
- *     documentation and/or other materials provided with the distribution. 
+ *     documentation and/or other materials provided with the distribution.
  * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
- *     from this software without specific prior written permission. 
+ *     from this software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY APPLE AND ITS CONTRIBUTORS "AS IS" AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
@@ -93,13 +93,13 @@ static bool printSupportedFeatures = false;
 static RetainPtr<CFStringRef> persistentUserStyleSheetLocation;
 
 volatile bool done;
-// This is the topmost frame that is loading, during a given load, or nil when no load is 
+// This is the topmost frame that is loading, during a given load, or nil when no load is
 // in progress.  Usually this is the same as the main frame, but not always.  In the case
 // where a frameset is loaded, and then new content is loaded into one of the child frames,
 // that child frame is the "topmost frame that is loading".
 IWebFrame* topLoadingFrame;     // !nil iff a load is in progress
 static COMPtr<IWebHistoryItem> prevTestBFItem;  // current b/f item at the end of the previous test
-PolicyDelegate* policyDelegate; 
+PolicyDelegate* policyDelegate;
 COMPtr<FrameLoadDelegate> sharedFrameLoadDelegate;
 COMPtr<UIDelegate> sharedUIDelegate;
 COMPtr<EditingDelegate> sharedEditingDelegate;
@@ -572,7 +572,7 @@ static void dumpHistoryItem(IWebHistoryItem* item, int indent, bool current)
     if (wcsstr(url, L"file:/") == url) {
         static wchar_t* layoutTestsString = L"/LayoutTests/";
         static wchar_t* fileTestString = L"(file test):";
-        
+
         wchar_t* result = wcsstr(url, layoutTestsString);
         if (result == NULL)
             return;
@@ -763,7 +763,7 @@ void dump()
                 goto fail;
             framePrivate->renderTreeAsExternalRepresentation(gTestRunner->isPrinting(), &resultString);
         }
-        
+
         if (!resultString)
             printf("ERROR: nil result from %s", ::gTestRunner->dumpAsText() ? "IDOMElement::innerText" : "IFrameViewPrivate::renderTreeAsExternalRepresentation");
         else {
@@ -913,7 +913,7 @@ static void resetDefaultsToConsistentValues(IWebPreferences* preferences)
 static void resetWebViewToConsistentStateBeforeTesting()
 {
     COMPtr<IWebView> webView;
-    if (FAILED(frame->webView(&webView))) 
+    if (FAILED(frame->webView(&webView)))
         return;
 
     webView->setPolicyDelegate(0);
@@ -1012,7 +1012,7 @@ static String findFontFallback(const char* pathOrUrl)
     }
 
     for (Vector<String>::iterator pos = possiblePaths.begin(); pos != possiblePaths.end(); ++pos) {
-        pathToFontFallback = WebCore::pathByAppendingComponent(*pos, "resources\\"); 
+        pathToFontFallback = WebCore::pathByAppendingComponent(*pos, "resources\\");
 
         if (::PathIsDirectoryW(pathToFontFallback.charactersWithNullTermination().data()))
             return pathToFontFallback;
@@ -1057,7 +1057,7 @@ static void runTest(const string& inputLine)
     static BSTR methodBStr = SysAllocString(TEXT("GET"));
 
     BSTR urlBStr;
- 
+
     CFStringRef str = CFStringCreateWithCString(0, pathOrURL.c_str(), kCFStringEncodingWindowsLatin1);
     CFURLRef url = CFURLCreateWithString(0, str, 0);
 
@@ -1096,7 +1096,7 @@ static void runTest(const string& inputLine)
         COMPtr<IWebViewPrivate> viewPrivate;
         if (SUCCEEDED(webView->QueryInterface(&viewPrivate))) {
             if (shouldLogHistoryDelegates(pathOrURL.c_str())) {
-                gTestRunner->setDumpHistoryDelegateCallbacks(true);            
+                gTestRunner->setDumpHistoryDelegateCallbacks(true);
                 viewPrivate->setHistoryDelegate(sharedHistoryDelegate.get());
             } else
                 viewPrivate->setHistoryDelegate(0);
@@ -1415,7 +1415,7 @@ int main(int argc, const char* argv[])
         return -1;
     if (FAILED(tmpIconDatabase->sharedIconDatabase(&iconDatabase)))
         return -1;
-        
+
     if (FAILED(webView->mainFrame(&frame)))
         return -1;
 
@@ -1440,7 +1440,7 @@ int main(int argc, const char* argv[])
             char* newLineCharacter = strchr(filenameBuffer, '\n');
             if (newLineCharacter)
                 *newLineCharacter = '\0';
-            
+
             if (strlen(filenameBuffer) == 0)
                 continue;
 
@@ -1454,7 +1454,7 @@ int main(int argc, const char* argv[])
 
     if (threaded)
         stopJavaScriptThreads();
-    
+
     delete policyDelegate;
     frame->Release();
 

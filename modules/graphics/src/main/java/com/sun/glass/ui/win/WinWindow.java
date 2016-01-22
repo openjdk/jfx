@@ -89,9 +89,9 @@ class WinWindow extends Window {
     @Override native protected void _setCursor(long ptr, Cursor cursor);
 
     @Override
-    protected void _requestInput(long ptr, String text, int type, double width, double height, 
+    protected void _requestInput(long ptr, String text, int type, double width, double height,
                                     double Mxx, double Mxy, double Mxz, double Mxt,
-                                    double Myx, double Myy, double Myz, double Myt, 
+                                    double Myx, double Myy, double Myz, double Myt,
                                     double Mzx, double Mzy, double Mzz, double Mzt) {
         throw new UnsupportedOperationException("Not supported yet.");
     }
@@ -100,12 +100,12 @@ class WinWindow extends Window {
     protected void _releaseInput(long ptr) {
         throw new UnsupportedOperationException("Not supported yet.");
     }
-    
+
 
     private boolean deferredClosing = false;
     private boolean closingRequested = false;
 
-    /** 
+    /**
      * Defer destroying the window to avoid a crash when using a native dialog
      * (like a file chooser).
      */

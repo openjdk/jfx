@@ -30,7 +30,7 @@
 #include "RenderMathMLRow.h"
 
 namespace WebCore {
-    
+
 class RenderMathMLMenclose final: public RenderMathMLRow {
 public:
     RenderMathMLMenclose(Element&, PassRef<RenderStyle>);
@@ -43,7 +43,7 @@ private:
     virtual void computePreferredLogicalWidths() override;
     bool checkNotationalValuesValidity(const Vector<String>&) const;
 };
-    
+
 }
 
 #endif // ENABLE(MATHML)

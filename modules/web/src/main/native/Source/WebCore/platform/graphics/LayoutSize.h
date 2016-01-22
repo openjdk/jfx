@@ -51,7 +51,7 @@ public:
     LayoutSize(LayoutUnit width, LayoutUnit height) : m_width(width), m_height(height) { }
 
     explicit LayoutSize(const FloatSize& size) : m_width(size.width()), m_height(size.height()) { }
-    
+
     LayoutUnit width() const { return m_width; }
     LayoutUnit height() const { return m_height; }
 
@@ -62,19 +62,19 @@ public:
     bool isZero() const { return !m_width && !m_height; }
 
     float aspectRatio() const { return static_cast<float>(m_width) / static_cast<float>(m_height); }
-    
+
     void expand(LayoutUnit width, LayoutUnit height)
     {
         m_width += width;
         m_height += height;
     }
-    
+
     void shrink(LayoutUnit width, LayoutUnit height)
     {
         m_width -= width;
         m_height -= height;
     }
-    
+
     void scale(float scale)
     {
         m_width *= scale;
@@ -86,7 +86,7 @@ public:
         m_width *= widthScale;
         m_height *= heightScale;
     }
-    
+
     LayoutSize expandedTo(const LayoutSize& other) const
     {
         return LayoutSize(m_width > other.m_width ? m_width : other.m_width,
@@ -103,7 +103,7 @@ public:
     {
         *this = expandedTo(LayoutSize());
     }
-    
+
     void clampToMinimumSize(const LayoutSize& minimumSize)
     {
         if (m_width < minimumSize.width())

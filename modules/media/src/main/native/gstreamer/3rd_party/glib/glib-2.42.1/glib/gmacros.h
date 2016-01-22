@@ -8,7 +8,7 @@
  *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.	 See the GNU
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
@@ -39,7 +39,7 @@
 
 /* Here we provide G_GNUC_EXTENSION as an alias for __extension__,
  * where this is valid. This allows for warningless compilation of
- * "long long" types even in the presence of '-ansi -pedantic'. 
+ * "long long" types even in the presence of '-ansi -pedantic'.
  */
 #if     __GNUC__ > 2 || (__GNUC__ == 2 && __GNUC_MINOR__ >= 8)
 #define G_GNUC_EXTENSION __extension__
@@ -84,7 +84,7 @@
   __attribute__((__const__))
 #define G_GNUC_UNUSED                           \
   __attribute__((__unused__))
-#define G_GNUC_NO_INSTRUMENT			\
+#define G_GNUC_NO_INSTRUMENT            \
   __attribute__((__no_instrument_function__))
 #else   /* !__GNUC__ */
 #define G_GNUC_PRINTF( format_idx, arg_idx )
@@ -110,16 +110,16 @@
 #endif /* __GNUC__ */
 
 #if    __GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 6)
-#define G_GNUC_BEGIN_IGNORE_DEPRECATIONS		\
-  _Pragma ("GCC diagnostic push")			\
+#define G_GNUC_BEGIN_IGNORE_DEPRECATIONS        \
+  _Pragma ("GCC diagnostic push")           \
   _Pragma ("GCC diagnostic ignored \"-Wdeprecated-declarations\"")
-#define G_GNUC_END_IGNORE_DEPRECATIONS			\
+#define G_GNUC_END_IGNORE_DEPRECATIONS          \
   _Pragma ("GCC diagnostic pop")
 #elif defined (_MSC_VER) && (_MSC_VER >= 1500)
-#define G_GNUC_BEGIN_IGNORE_DEPRECATIONS		\
+#define G_GNUC_BEGIN_IGNORE_DEPRECATIONS        \
   __pragma (warning (push))  \
   __pragma (warning (disable : 4996))
-#define G_GNUC_END_IGNORE_DEPRECATIONS			\
+#define G_GNUC_END_IGNORE_DEPRECATIONS          \
   __pragma (warning (pop))
 #elif defined (__clang__)
 #define G_GNUC_BEGIN_IGNORE_DEPRECATIONS \
@@ -171,8 +171,8 @@
 #define G_ANALYZER_NORETURN
 #endif
 
-#define G_STRINGIFY(macro_or_string)	G_STRINGIFY_ARG (macro_or_string)
-#define	G_STRINGIFY_ARG(contents)	#contents
+#define G_STRINGIFY(macro_or_string)    G_STRINGIFY_ARG (macro_or_string)
+#define G_STRINGIFY_ARG(contents)   #contents
 
 #ifndef __GI_SCANNER__ /* The static assert macro really confuses the introspection parser */
 #define G_PASTE_ARGS(identifier1,identifier2) identifier1 ## identifier2
@@ -187,9 +187,9 @@
 
 /* Provide a string identifying the current code position */
 #if defined(__GNUC__) && (__GNUC__ < 3) && !defined(__cplusplus)
-#define G_STRLOC	__FILE__ ":" G_STRINGIFY (__LINE__) ":" __PRETTY_FUNCTION__ "()"
+#define G_STRLOC    __FILE__ ":" G_STRINGIFY (__LINE__) ":" __PRETTY_FUNCTION__ "()"
 #else
-#define G_STRLOC	__FILE__ ":" G_STRINGIFY (__LINE__)
+#define G_STRLOC    __FILE__ ":" G_STRINGIFY (__LINE__)
 #endif
 
 /* Provide a string identifying the current function, non-concatenatable */
@@ -225,36 +225,36 @@
 #  endif /* !__cplusplus */
 #endif
 
-#ifndef	FALSE
-#define	FALSE	(0)
+#ifndef FALSE
+#define FALSE   (0)
 #endif
 
-#ifndef	TRUE
-#define	TRUE	(!FALSE)
+#ifndef TRUE
+#define TRUE    (!FALSE)
 #endif
 
-#undef	MAX
+#undef  MAX
 #define MAX(a, b)  (((a) > (b)) ? (a) : (b))
 
-#undef	MIN
+#undef  MIN
 #define MIN(a, b)  (((a) < (b)) ? (a) : (b))
 
-#undef	ABS
-#define ABS(a)	   (((a) < 0) ? -(a) : (a))
+#undef  ABS
+#define ABS(a)     (((a) < 0) ? -(a) : (a))
 
-#undef	CLAMP
+#undef  CLAMP
 #define CLAMP(x, low, high)  (((x) > (high)) ? (high) : (((x) < (low)) ? (low) : (x)))
 
 /* Count the number of elements in an array. The array must be defined
  * as such; using this with a dynamically allocated array will give
  * incorrect results.
  */
-#define G_N_ELEMENTS(arr)		(sizeof (arr) / sizeof ((arr)[0]))
+#define G_N_ELEMENTS(arr)       (sizeof (arr) / sizeof ((arr)[0]))
 
 /* Macros by analogy to GINT_TO_POINTER, GPOINTER_TO_INT
  */
-#define GPOINTER_TO_SIZE(p)	((gsize) (p))
-#define GSIZE_TO_POINTER(s)	((gpointer) (gsize) (s))
+#define GPOINTER_TO_SIZE(p) ((gsize) (p))
+#define GSIZE_TO_POINTER(s) ((gpointer) (gsize) (s))
 
 /* Provide convenience macros for handling structure
  * fields through their offsets.
@@ -264,7 +264,7 @@
 #define G_STRUCT_OFFSET(struct_type, member) \
       ((glong) offsetof (struct_type, member))
 #else
-#define G_STRUCT_OFFSET(struct_type, member)	\
+#define G_STRUCT_OFFSET(struct_type, member)    \
       ((glong) ((guint8*) &((struct_type*) 0)->member))
 #endif
 
@@ -295,12 +295,12 @@
 #endif
 
 /*
- * The G_LIKELY and G_UNLIKELY macros let the programmer give hints to 
+ * The G_LIKELY and G_UNLIKELY macros let the programmer give hints to
  * the compiler about the expected result of an expression. Some compilers
  * can use this information for optimizations.
  *
  * The _G_BOOLEAN_EXPR macro is intended to trigger a gcc warning when
- * putting assignments in g_return_if_fail ().  
+ * putting assignments in g_return_if_fail ().
  */
 #if defined(__GNUC__) && (__GNUC__ > 2) && defined(__OPTIMIZE__)
 #define _G_BOOLEAN_EXPR(expr)                   \

@@ -63,7 +63,7 @@ public class HelloLabel extends Application {
 
         Scene scene = new Scene(vbox, 280,480);
         //scene.getStylesheets().add("hello/hello.css");
-        
+
 
         Label label = new Label("Text");
         vbox.getChildren().add(wrapHBoxAroundLabel(label));
@@ -132,7 +132,7 @@ public class HelloLabel extends Application {
 
         label = new Label("line one.\nno spacing.");
         vbox.getChildren().add(wrapHBoxAroundLabel(label));
-  
+
         label = new Label("line one.\nspacing please.");
         label.setLineSpacing(10);
         vbox.getChildren().add(wrapHBoxAroundLabel(label));

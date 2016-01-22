@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -51,7 +51,7 @@ bool AccessibilityMenuListPopup::isOffScreen() const
 {
     if (!m_parent)
         return true;
-    
+
     return m_parent->isCollapsed();
 }
 
@@ -59,7 +59,7 @@ bool AccessibilityMenuListPopup::isEnabled() const
 {
     if (!m_parent)
         return false;
-    
+
     return m_parent->isEnabled();
 }
 
@@ -86,7 +86,7 @@ bool AccessibilityMenuListPopup::press() const
 {
     if (!m_parent)
         return false;
-    
+
     m_parent->press();
     return true;
 }
@@ -95,7 +95,7 @@ void AccessibilityMenuListPopup::addChildren()
 {
     if (!m_parent)
         return;
-    
+
     Node* selectNode = m_parent->node();
     if (!selectNode)
         return;
@@ -121,7 +121,7 @@ void AccessibilityMenuListPopup::childrenChanged()
             cache->remove(child->axObjectID());
         }
     }
-    
+
     m_children.clear();
     m_haveChildren = false;
     addChildren();

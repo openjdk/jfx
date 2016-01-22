@@ -49,7 +49,7 @@ static PassRefPtr<SharedBuffer> loadResourceSharedBufferFallback()
 
 static PassRefPtr<SharedBuffer> loadResourceSharedBuffer(const char* name)
 {
-    RefPtr<SharedBuffer> buffer = SharedBuffer::createWithContentsOfFile(makeString(DATA_DIR "/webkit-1.0/images/", name, ".png"));    
+    RefPtr<SharedBuffer> buffer = SharedBuffer::createWithContentsOfFile(makeString(DATA_DIR "/webkit-1.0/images/", name, ".png"));
     if (buffer)
         return buffer.release();
     return loadResourceSharedBufferFallback();

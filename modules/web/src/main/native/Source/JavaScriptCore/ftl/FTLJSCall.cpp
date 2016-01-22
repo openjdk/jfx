@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -51,7 +51,7 @@ void JSCall::emit(CCallHelpers& jit)
     CCallHelpers::Jump slowPath = jit.branchPtrWithPatch(
         CCallHelpers::NotEqual, GPRInfo::regT0, m_targetToCheck,
         CCallHelpers::TrustedImmPtr(0));
-    
+
     jit.loadPtr(
         CCallHelpers::Address(GPRInfo::regT0, JSFunction::offsetOfScopeChain()),
         GPRInfo::regT1);
@@ -60,13 +60,13 @@ void JSCall::emit(CCallHelpers& jit)
         CCallHelpers::Address(
             CCallHelpers::stackPointerRegister,
             sizeof(Register) * (JSStack::ScopeChain - JSStack::CallerFrameAndPCSize)));
-    
+
     m_fastCall = jit.nearCall();
     CCallHelpers::Jump done = jit.jump();
-    
+
     slowPath.link(&jit);
     m_slowCall = jit.nearCall();
-    
+
     done.link(&jit);
 }
 
@@ -75,10 +75,10 @@ void JSCall::link(VM& vm, LinkBuffer& linkBuffer, CallLinkInfo& callInfo)
     ThunkGenerator generator = linkThunkGeneratorFor(
         m_node->op() == DFG::Construct ? CodeForConstruct : CodeForCall,
         MustPreserveRegisters);
-    
+
     linkBuffer.link(
         m_slowCall, FunctionPtr(vm.getCTIStub(generator).code().executableAddress()));
-    
+
     callInfo.isFTL = true;
     callInfo.callType = m_node->op() == DFG::Construct ? CallLinkInfo::Construct : CallLinkInfo::Call;
     callInfo.codeOrigin = m_node->origin.semantic;

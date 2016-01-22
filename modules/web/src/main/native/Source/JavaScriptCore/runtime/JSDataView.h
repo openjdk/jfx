@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef JSDataView_h
@@ -35,25 +35,25 @@ class JSDataView : public JSArrayBufferView {
 public:
     typedef JSArrayBufferView Base;
     static const unsigned elementSize = 1;
-    
+
 protected:
     JSDataView(VM&, ConstructionContext&, ArrayBuffer*);
-    
+
 public:
     static JSDataView* create(
         ExecState*, Structure*, PassRefPtr<ArrayBuffer>, unsigned byteOffset,
         unsigned byteLength);
-    
+
     // Dummy methods, which don't actually work; these are just in place to
     // placate some template specialization we do elsewhere.
     static JSDataView* createUninitialized(ExecState*, Structure*, unsigned length);
     static JSDataView* create(ExecState*, Structure*, unsigned length);
     bool set(ExecState*, JSObject*, unsigned offset, unsigned length);
-    
+
     ArrayBuffer* buffer() const { return m_buffer; }
-    
+
     PassRefPtr<DataView> typedImpl();
-    
+
     static const TypedArrayType TypedArrayStorageType = TypeDataView;
 
 protected:
@@ -61,10 +61,10 @@ protected:
 
     static ArrayBuffer* slowDownAndWasteMemory(JSArrayBufferView*);
     static PassRefPtr<ArrayBufferView> getTypedArrayImpl(JSArrayBufferView*);
-    
+
 public:
     static Structure* createStructure(VM&, JSGlobalObject*, JSValue prototype);
-    
+
     DECLARE_EXPORT_INFO;
 
 private:

@@ -2745,7 +2745,7 @@ static const struct {
     gunichar    start;
     guint16     chars;
     guint16     script;
-} g_script_table[] = { 
+} g_script_table[] = {
  { 0x2000,    12, G_UNICODE_SCRIPT_COMMON },
  { 0x200c,     2, G_UNICODE_SCRIPT_INHERITED },
  { 0x200e,    87, G_UNICODE_SCRIPT_COMMON },

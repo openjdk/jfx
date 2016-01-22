@@ -36,10 +36,10 @@ import java.util.Set;
  *
  */
 public final class StyleCacheEntry {
-    
+
     public StyleCacheEntry() {
     }
-    
+
     public CalculatedValue get(String property) {
 
         CalculatedValue cv = null;
@@ -63,7 +63,7 @@ public final class StyleCacheEntry {
         private final Set<PseudoClass>[] pseudoClassStates;
         private final double fontSize;
         private int hash = Integer.MIN_VALUE;
-    
+
         public Key(Set<PseudoClass>[] pseudoClassStates, Font font) {
 
             this.pseudoClassStates = new Set[pseudoClassStates.length];
@@ -72,7 +72,7 @@ public final class StyleCacheEntry {
                 this.pseudoClassStates[n].addAll(pseudoClassStates[n]);
             }
             this.fontSize = font != null ? font.getSize() : Font.getDefault().getSize();
-            
+
         }
 
         @Override public String toString() {
@@ -83,7 +83,7 @@ public final class StyleCacheEntry {
             long bits = Double.doubleToLongBits(value);
             return (int)(bits ^ (bits >>> 32));
         }
-        
+
         @Override
         public int hashCode() {
             if (hash == Integer.MIN_VALUE) {
@@ -158,7 +158,7 @@ public final class StyleCacheEntry {
         }
 
     }
-        
+
 //    private final Reference<StyleCacheEntry> sharedCacheRef;
     private Map<String,CalculatedValue> calculatedValues;
 //    private CalculatedValue  font; // for use in converting font relative sizes

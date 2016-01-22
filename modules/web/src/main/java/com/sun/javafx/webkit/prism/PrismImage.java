@@ -63,7 +63,7 @@ abstract class PrismImage extends WCImage {
     }
 
     @Override
-    protected final String toDataURL(String mimeType) {       
+    protected final String toDataURL(String mimeType) {
         Object image = UIClientImpl.toBufferedImage(javafx.scene.image.Image.impl_fromPlatformImage(getImage()));
         if (image instanceof BufferedImage) {
             Iterator<ImageWriter> it = ImageIO.getImageWritersByMIMEType(mimeType);

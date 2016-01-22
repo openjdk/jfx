@@ -45,13 +45,13 @@ public interface AppletWindow {
 
     public void setBackgroundColor(int color); // RGB triplet: 0xRRGGBB
     public void setForegroundColor(int color);
-    
+
     public void setVisible(boolean state);
-    
+
     public void setSize(int width, int height);
     public int getWidth();
     public int getHeight();
-    
+
     public void setPosition(int x, int y);
     public int getPositionX();
     public int getPositionY();

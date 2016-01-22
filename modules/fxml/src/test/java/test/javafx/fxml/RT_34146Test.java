@@ -36,7 +36,7 @@ public final class RT_34146Test {
     public void testCanCallAbstractMethodFromPrivateClass() throws IOException {
         final FXMLLoader fxmlLoader =
                 new FXMLLoader(getClass().getResource("rt_34146.fxml"));
-        
+
         final ConcreteController concreteController =
                 new ConcreteController();
         fxmlLoader.setController(concreteController);

@@ -143,7 +143,7 @@ public class WinMsiBundlerTest {
         Map<String, Object> bundleParams = new HashMap<>();
 
         bundleParams.put(BUILD_ROOT.getID(), tmpBase);
-        
+
         bundleParams.put(APP_NAME.getID(), "Smoke Test");
         bundleParams.put(MAIN_CLASS.getID(), "hello.HelloRectangle");
         bundleParams.put(PREFERENCES_ID.getID(), "the/really/long/preferences/id");
@@ -171,7 +171,7 @@ public class WinMsiBundlerTest {
      *     <li>Where to build it</li>
      *     <li>The jar containing the application (with a main-class attribute)</li>
      * </ul>
-     * 
+     *
      * All other values will be driven off of those two values.
      */
     @Test
@@ -283,7 +283,7 @@ public class WinMsiBundlerTest {
 
         bundler.validate(bundleParams);
     }
-    
+
     @Test
     public void testValidateVersion() {
         String validVersions[] = {null, "1", "255", "1.0", "255.255.0", "255.255.6000"};
@@ -479,7 +479,7 @@ public class WinMsiBundlerTest {
                 new String[]{"application/x-vnd.test-bogus", "application/x-vnd.test-fake"},
                 new File[]{new File(appResourcesDir, "small.ico"), new File(appResourcesDir, "small.ico")});
     }
-    
+
     private void testFileAssociation(String appName, String description, String extensions,
                                      String contentType, File icon)
         throws IOException, ConfigException, UnsupportedPlatformException
@@ -495,7 +495,7 @@ public class WinMsiBundlerTest {
         assertEquals("Sanity: description same length as extensions", description.length, extensions.length);
         assertEquals("Sanity: extensions same length as contentType", extensions.length, contentType.length);
         assertEquals("Sanity: contentType same length as icon", contentType.length, icon.length);
-        
+
         AbstractBundler bundler = new WinMsiBundler();
 
         assertNotNull(bundler.getName());
@@ -520,7 +520,7 @@ public class WinMsiBundlerTest {
         bundleParams.put(VENDOR.getID(), "Packager Tests");
 
         List<Map<String, Object>> associations = new ArrayList<>();
-        
+
         for (int i = 0; i < description.length; i++) {
             Map<String, Object> fileAssociation = new HashMap<>();
             fileAssociation.put(FA_DESCRIPTION.getID(), description[i]);

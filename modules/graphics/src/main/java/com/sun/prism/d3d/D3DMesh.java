@@ -69,7 +69,7 @@ class D3DMesh extends BaseMesh {
         return context.buildNativeGeometry(nativeHandle, vertexBuffer,
                 vertexBufferLength, indexBufferInt, indexBufferLength);
     }
-    
+
     @Override
     public boolean buildNativeGeometry(float[] vertexBuffer, int vertexBufferLength,
             short[] indexBufferShort, int indexBufferLength) {

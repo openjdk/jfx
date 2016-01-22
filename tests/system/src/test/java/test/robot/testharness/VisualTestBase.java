@@ -135,7 +135,7 @@ public abstract class VisualTestBase {
         stages.add(stage);
         return stage;
     }
-    
+
     protected void sleep(long millis) {
         try {
             Thread.sleep(millis);
@@ -177,7 +177,7 @@ public abstract class VisualTestBase {
                     + " but was:" + colorToString(actual));
         }
     }
-    
+
     protected boolean testColorEquals(Color expected, Color actual, double delta) {
         double deltaRed = Math.abs(expected.getRed() - actual.getRed());
         double deltaGreen = Math.abs(expected.getGreen() - actual.getGreen());

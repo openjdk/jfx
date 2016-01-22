@@ -42,7 +42,7 @@ namespace JSC {
         }
 
         DECLARE_INFO;
-        
+
     protected:
         void finishCreation(VM&, JSGlobalObject*, JSString*);
         static const unsigned StructureFlags = StringObject::StructureFlags;

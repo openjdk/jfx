@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef ScrollbarTheme_h
@@ -50,7 +50,7 @@ public:
 
     virtual bool paint(ScrollbarThemeClient*, GraphicsContext*, const IntRect& /*damageRect*/) { return false; }
     virtual ScrollbarPart hitTest(ScrollbarThemeClient*, const IntPoint&) { return NoPart; }
-    
+
     virtual int scrollbarThickness(ScrollbarControlSize = RegularScrollbar) { return 0; }
 
     virtual ScrollbarButtonsPlacement buttonsPlacement() const { return ScrollbarButtonsSingle; }
@@ -61,7 +61,7 @@ public:
     virtual void updateScrollbarOverlayStyle(ScrollbarThemeClient*) { }
 
     virtual void themeChanged() {}
-    
+
     virtual bool invalidateOnMouseEnterExit() { return false; }
 
     void invalidateParts(ScrollbarThemeClient* scrollbar, ScrollbarControlPartMask mask)

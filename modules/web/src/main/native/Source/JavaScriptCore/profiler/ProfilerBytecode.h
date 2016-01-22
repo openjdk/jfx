@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef ProfilerBytecode_h
@@ -38,18 +38,18 @@ public:
         : m_bytecodeIndex(std::numeric_limits<unsigned>::max())
     {
     }
-    
+
     Bytecode(unsigned bytecodeIndex, OpcodeID opcodeID, const CString& description)
         : m_bytecodeIndex(bytecodeIndex)
         , m_opcodeID(opcodeID)
         , m_description(description)
     {
     }
-    
+
     unsigned bytecodeIndex() const { return m_bytecodeIndex; }
     OpcodeID opcodeID() const { return m_opcodeID; }
     const CString& description() const { return m_description; }
-    
+
     JSValue toJS(ExecState*) const;
 private:
     unsigned m_bytecodeIndex;

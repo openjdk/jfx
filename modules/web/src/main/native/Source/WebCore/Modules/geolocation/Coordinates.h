@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef Coordinates_h
@@ -47,7 +47,7 @@ public:
     double altitudeAccuracy(bool& isNull) const;
     double heading(bool& isNull) const;
     double speed(bool& isNull) const;
-    
+
 private:
     Coordinates(double latitude, double longitude, bool providesAltitude, double altitude, double accuracy, bool providesAltitudeAccuracy, double altitudeAccuracy, bool providesHeading, double heading, bool providesSpeed, double speed)
         : m_latitude(latitude)
@@ -71,13 +71,13 @@ private:
     double m_altitudeAccuracy;
     double m_heading;
     double m_speed;
-    
+
     bool m_canProvideAltitude;
     bool m_canProvideAltitudeAccuracy;
     bool m_canProvideHeading;
     bool m_canProvideSpeed;
 };
-    
+
 } // namespace WebCore
 
 #endif // Coordinates_h

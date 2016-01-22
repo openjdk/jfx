@@ -38,12 +38,12 @@ import javafx.stage.Window;
 
 /**
  *
- * 
+ *
  */
 public class ErrorDialog extends AlertDialog {
-    
+
     private String debugInfo;
-    
+
     public ErrorDialog(Window owner) {
         super(owner);
         setOKButtonVisible(false);
@@ -55,19 +55,19 @@ public class ErrorDialog extends AlertDialog {
         setActionRunnable(() -> showDetailsDialog());
         updateActionButtonVisibility(); // not visible by default
     }
-    
+
     public String getDebugInfo() {
         return debugInfo;
     }
-    
+
     public void setDebugInfo(String debugInfo) {
         this.debugInfo = debugInfo;
         updateActionButtonVisibility();
     }
-    
+
     public void setDebugInfoWithThrowable(Throwable t) {
         final String info;
-        
+
         if (t == null) {
             info = null;
         } else {
@@ -76,19 +76,19 @@ public class ErrorDialog extends AlertDialog {
             t./**/printStackTrace(pw);
             info = sw.toString();
         }
-        
+
         setDebugInfo(info);
     }
-    
-    
+
+
     /*
      * Private
      */
-    
+
     private void updateActionButtonVisibility() {
         setActionButtonVisible(debugInfo != null);
     }
-    
+
     private void showDetailsDialog() {
         final TextViewDialog detailDialog = new TextViewDialog(null);
         detailDialog.setText(debugInfo);

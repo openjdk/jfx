@@ -2494,7 +2494,7 @@ gst_structure_fixate_field_nearest_int (GstStructure * structure,
   if (value == NULL) {
     return FALSE;
   }
-#endif // GSTREAMER_LITE  
+#endif // GSTREAMER_LITE
 
   if (G_VALUE_TYPE (value) == G_TYPE_INT) {
     /* already fixed */
@@ -2753,7 +2753,7 @@ gst_structure_fixate_field_nearest_fraction (GstStructure * structure,
   if (value == NULL) {
     return FALSE;
   }
-#endif // GSTREAMER_LITE  
+#endif // GSTREAMER_LITE
 
   if (G_VALUE_TYPE (value) == GST_TYPE_FRACTION) {
     /* already fixed */

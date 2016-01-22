@@ -45,7 +45,7 @@ public:
     }
 
     const String& contentType() const { return m_data.contentType(); }
-    const String& contentDisposition() const { return m_data.contentDisposition(); }    
+    const String& contentDisposition() const { return m_data.contentDisposition(); }
     const BlobDataItemList& items() const { return m_data.items(); }
 
 private:

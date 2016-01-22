@@ -29,15 +29,15 @@
 
 G_BEGIN_DECLS
 
-#define GST_TYPE_TYPE_FIND_ELEMENT		(gst_type_find_element_get_type ())
-#define GST_TYPE_FIND_ELEMENT(obj) 		(G_TYPE_CHECK_INSTANCE_CAST ((obj), GST_TYPE_TYPE_FIND_ELEMENT, GstTypeFindElement))
-#define GST_IS_TYPE_FIND_ELEMENT(obj) 		(G_TYPE_CHECK_INSTANCE_TYPE ((obj), GST_TYPE_TYPE_FIND_ELEMENT))
-#define GST_TYPE_FIND_ELEMENT_CLASS(klass) 	(G_TYPE_CHECK_CLASS_CAST ((klass), GST_TYPE_TYPE_FIND_ELEMENT, GstTypeFindElementClass))
-#define GST_IS_TYPE_FIND_ELEMENT_CLASS(klass) 	(G_TYPE_CHECK_CLASS_TYPE ((klass), GST_TYPE_TYPE_FIND_ELEMENT))
-#define GST_TYPE_FIND_ELEMENT_GET_CLASS(obj) 	(G_TYPE_INSTANCE_GET_CLASS ((obj), GST_TYPE_TYPE_FIND_ELEMENT, GstTypeFindElementClass))
+#define GST_TYPE_TYPE_FIND_ELEMENT      (gst_type_find_element_get_type ())
+#define GST_TYPE_FIND_ELEMENT(obj)      (G_TYPE_CHECK_INSTANCE_CAST ((obj), GST_TYPE_TYPE_FIND_ELEMENT, GstTypeFindElement))
+#define GST_IS_TYPE_FIND_ELEMENT(obj)       (G_TYPE_CHECK_INSTANCE_TYPE ((obj), GST_TYPE_TYPE_FIND_ELEMENT))
+#define GST_TYPE_FIND_ELEMENT_CLASS(klass)  (G_TYPE_CHECK_CLASS_CAST ((klass), GST_TYPE_TYPE_FIND_ELEMENT, GstTypeFindElementClass))
+#define GST_IS_TYPE_FIND_ELEMENT_CLASS(klass)   (G_TYPE_CHECK_CLASS_TYPE ((klass), GST_TYPE_TYPE_FIND_ELEMENT))
+#define GST_TYPE_FIND_ELEMENT_GET_CLASS(obj)    (G_TYPE_INSTANCE_GET_CLASS ((obj), GST_TYPE_TYPE_FIND_ELEMENT, GstTypeFindElementClass))
 
-typedef struct _GstTypeFindElement 		GstTypeFindElement;
-typedef struct _GstTypeFindElementClass 	GstTypeFindElementClass;
+typedef struct _GstTypeFindElement      GstTypeFindElement;
+typedef struct _GstTypeFindElementClass     GstTypeFindElementClass;
 
 /**
  * GstTypeFindElement:
@@ -45,16 +45,16 @@ typedef struct _GstTypeFindElementClass 	GstTypeFindElementClass;
  * Opaque #GstTypeFindElement data structure
  */
 struct _GstTypeFindElement {
-  GstElement		element;
+  GstElement        element;
 
-  GstPad *		sink;
-  GstPad *		src;
+  GstPad *      sink;
+  GstPad *      src;
 
-  guint			min_probability;
-  GstCaps *		caps;
+  guint         min_probability;
+  GstCaps *     caps;
 
-  guint			mode;
-  GstAdapter *		adapter;
+  guint         mode;
+  GstAdapter *      adapter;
 
   GList *               cached_events;
   GstCaps *             force_caps;
@@ -67,12 +67,12 @@ struct _GstTypeFindElement {
 };
 
 struct _GstTypeFindElementClass {
-  GstElementClass 	parent_class;
+  GstElementClass   parent_class;
 
   /* signals */
-  void 			(*have_type) 	(GstTypeFindElement *element,
-					 guint		     probability,
-					 GstCaps            *caps);
+  void          (*have_type)    (GstTypeFindElement *element,
+                     guint           probability,
+                     GstCaps            *caps);
 };
 
 G_GNUC_INTERNAL GType gst_type_find_element_get_type (void);

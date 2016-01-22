@@ -310,7 +310,7 @@ public class MapBindingTest {
 
 
 //    private class MapChangeListenerMock implements MapChangeListener<Object, Object> {
-//        
+//
 //        private Change<? extends Object> change;
 //        private int counter;
 //
@@ -319,7 +319,7 @@ public class MapBindingTest {
 //            this.change = change;
 //            counter++;
 //        }
-//        
+//
 //        private void reset() {
 //            change = null;
 //            counter = 0;

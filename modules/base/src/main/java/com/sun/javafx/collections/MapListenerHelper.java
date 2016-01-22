@@ -72,7 +72,7 @@ public abstract class MapListenerHelper<K, V> extends ExpressionHelperBase {
             helper.fireValueChangedEvent(change);
         }
     }
-    
+
     public static <K, V> boolean hasListeners(MapListenerHelper<K, V> helper) {
         return helper != null;
     }

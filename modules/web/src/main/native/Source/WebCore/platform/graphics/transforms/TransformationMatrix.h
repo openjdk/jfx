@@ -93,23 +93,23 @@ public:
 
     void setMatrix(double a, double b, double c, double d, double e, double f)
     {
-        m_matrix[0][0] = a; m_matrix[0][1] = b; m_matrix[0][2] = 0; m_matrix[0][3] = 0; 
-        m_matrix[1][0] = c; m_matrix[1][1] = d; m_matrix[1][2] = 0; m_matrix[1][3] = 0; 
-        m_matrix[2][0] = 0; m_matrix[2][1] = 0; m_matrix[2][2] = 1; m_matrix[2][3] = 0; 
+        m_matrix[0][0] = a; m_matrix[0][1] = b; m_matrix[0][2] = 0; m_matrix[0][3] = 0;
+        m_matrix[1][0] = c; m_matrix[1][1] = d; m_matrix[1][2] = 0; m_matrix[1][3] = 0;
+        m_matrix[2][0] = 0; m_matrix[2][1] = 0; m_matrix[2][2] = 1; m_matrix[2][3] = 0;
         m_matrix[3][0] = e; m_matrix[3][1] = f; m_matrix[3][2] = 0; m_matrix[3][3] = 1;
     }
-    
+
     void setMatrix(double m11, double m12, double m13, double m14,
                    double m21, double m22, double m23, double m24,
                    double m31, double m32, double m33, double m34,
                    double m41, double m42, double m43, double m44)
     {
-        m_matrix[0][0] = m11; m_matrix[0][1] = m12; m_matrix[0][2] = m13; m_matrix[0][3] = m14; 
-        m_matrix[1][0] = m21; m_matrix[1][1] = m22; m_matrix[1][2] = m23; m_matrix[1][3] = m24; 
-        m_matrix[2][0] = m31; m_matrix[2][1] = m32; m_matrix[2][2] = m33; m_matrix[2][3] = m34; 
+        m_matrix[0][0] = m11; m_matrix[0][1] = m12; m_matrix[0][2] = m13; m_matrix[0][3] = m14;
+        m_matrix[1][0] = m21; m_matrix[1][1] = m22; m_matrix[1][2] = m23; m_matrix[1][3] = m24;
+        m_matrix[2][0] = m31; m_matrix[2][1] = m32; m_matrix[2][2] = m33; m_matrix[2][3] = m34;
         m_matrix[3][0] = m41; m_matrix[3][1] = m42; m_matrix[3][2] = m43; m_matrix[3][3] = m44;
     }
-    
+
     TransformationMatrix& operator =(const TransformationMatrix &t)
     {
         setMatrix(t.m_matrix);
@@ -203,7 +203,7 @@ public:
     void setM43(double f) { m_matrix[3][2] = f; }
     double m44() const { return m_matrix[3][3]; }
     void setM44(double f) { m_matrix[3][3] = f; }
-    
+
     double a() const { return m_matrix[0][0]; }
     void setA(double a) { m_matrix[0][0] = a; }
 
@@ -233,18 +233,18 @@ public:
     TransformationMatrix& rotate(double d) { return rotate3d(0, 0, d); }
     TransformationMatrix& rotateFromVector(double x, double y);
     TransformationMatrix& rotate3d(double rx, double ry, double rz);
-    
+
     // The vector (x,y,z) is normalized if it's not already. A vector of
     // (0,0,0) uses a vector of (0,0,1).
     TransformationMatrix& rotate3d(double x, double y, double z, double angle);
-    
+
     TransformationMatrix& translate(double tx, double ty);
     TransformationMatrix& translate3d(double tx, double ty, double tz);
 
     // translation added with a post-multiply
     TransformationMatrix& translateRight(double tx, double ty);
     TransformationMatrix& translateRight3d(double tx, double ty, double tz);
-    
+
     TransformationMatrix& flipX();
     TransformationMatrix& flipY();
     TransformationMatrix& skew(double angleX, double angleY);
@@ -278,7 +278,7 @@ public:
         double translateX, translateY, translateZ;
         double perspectiveX, perspectiveY, perspectiveZ, perspectiveW;
     } Decomposed4Type;
-    
+
     bool decompose2(Decomposed2Type&) const;
     void recompose2(const Decomposed2Type&);
 
@@ -291,7 +291,7 @@ public:
 
     bool isAffine() const
     {
-        return (m13() == 0 && m14() == 0 && m23() == 0 && m24() == 0 && 
+        return (m13() == 0 && m14() == 0 && m23() == 0 && m24() == 0 &&
                 m31() == 0 && m32() == 0 && m33() == 1 && m34() == 0 && m43() == 0 && m44() == 1);
     }
 
@@ -327,7 +327,7 @@ public:
     {
         return multiply(t);
     }
-    
+
     // result = *this * t
     TransformationMatrix operator*(const TransformationMatrix& t) const
     {
@@ -363,7 +363,7 @@ public:
 
     // This method returns the matrix without 3D components.
     TransformationMatrix to2dTransform() const;
-    
+
     typedef float FloatMatrix4[16];
     void toColumnMajorFloatArray(FloatMatrix4& result) const;
 

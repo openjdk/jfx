@@ -82,7 +82,7 @@ protected:
     virtual void svgAttributeChanged(const QualifiedName&) override;
 
     virtual bool rendererIsNeeded(const RenderStyle&) override { return false; }
-    
+
 private:
     BEGIN_DECLARE_ANIMATED_PROPERTIES(SVGComponentTransferFunctionElement)
         DECLARE_ANIMATED_ENUMERATION(Type, type, ComponentTransferType)

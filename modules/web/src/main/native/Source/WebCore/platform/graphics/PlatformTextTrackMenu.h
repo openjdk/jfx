@@ -39,7 +39,7 @@ class PlatformTextTrack;
 class PlatformTextTrackMenuClient {
 public:
     virtual ~PlatformTextTrackMenuClient() { }
-    
+
     virtual void setSelectedTextTrack(PassRefPtr<PlatformTextTrack>) = 0;
     virtual Vector<RefPtr<PlatformTextTrack>> platformTextTracks() = 0;
 };

@@ -80,7 +80,7 @@ namespace WebCore {
         // Do not call these functions. They are just scaffolding to support the Objective-C bindings.
         // They operate in the main thread normal world, and they swallow JS exceptions.
         short acceptNode(Node* node) const { return acceptNode(execStateFromNode(mainThreadNormalWorld(), node), node); }
-        
+
         void setCondition(PassRefPtr<NodeFilterCondition> condition) { ASSERT(!m_condition); m_condition = condition; }
 
     private:

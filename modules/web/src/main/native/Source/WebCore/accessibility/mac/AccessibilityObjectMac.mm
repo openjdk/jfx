@@ -46,20 +46,20 @@ void AccessibilityObject::overrideAttachmentParent(AccessibilityObject* parent)
 {
     if (!isAttachment())
         return;
-    
+
     id parentWrapper = nil;
     if (parent) {
         if (parent->accessibilityIsIgnored())
             parent = parent->parentObjectUnignored();
         parentWrapper = parent->wrapper();
     }
-    
+
     [[wrapper() attachmentView] accessibilitySetOverrideValue:parentWrapper forAttribute:NSAccessibilityParentAttribute];
 }
-    
+
 bool AccessibilityObject::accessibilityIgnoreAttachment() const
 {
-    // FrameView attachments are now handled by AccessibilityScrollView, 
+    // FrameView attachments are now handled by AccessibilityScrollView,
     // so if this is the attachment, it should be ignored.
     Widget* widget = 0;
     if (isAttachment() && (widget = widgetForAttachmentView()) && widget->isFrameView())
@@ -67,7 +67,7 @@ bool AccessibilityObject::accessibilityIgnoreAttachment() const
 
     if ([wrapper() attachmentView])
         return [[wrapper() attachmentView] accessibilityIsIgnored];
-    
+
     // Attachments are ignored by default (unless we determine that we should expose them).
     return true;
 }
@@ -81,7 +81,7 @@ AccessibilityObjectInclusion AccessibilityObject::accessibilityPlatformIncludesO
     // Special case is when the unknown object is actually an attachment.
     if (roleValue() == UnknownRole && !isAttachment())
         return IgnoreObject;
-    
+
     if (RenderObject* renderer = this->renderer()) {
         // The legend element is ignored if it lives inside of a fieldset element that uses it to generate alternative text.
         if (renderer->isLegend()) {
@@ -90,10 +90,10 @@ AccessibilityObjectInclusion AccessibilityObject::accessibilityPlatformIncludesO
                 return IgnoreObject;
         }
     }
-    
+
     return DefaultBehavior;
 }
-    
+
 } // WebCore
 
 #endif // HAVE(ACCESSIBILITY)

@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef MediaController_h
@@ -53,32 +53,32 @@ public:
     bool containsMediaElement(HTMLMediaElement*) const;
 
     const String& mediaGroup() const { return m_mediaGroup; }
-    
+
     virtual PassRefPtr<TimeRanges> buffered() const override;
     virtual PassRefPtr<TimeRanges> seekable() const override;
     virtual PassRefPtr<TimeRanges> played() override;
-    
+
     virtual double duration() const override;
     virtual double currentTime() const override;
     virtual void setCurrentTime(double) override;
-    
+
     virtual bool paused() const override { return m_paused; }
     virtual void play() override;
     virtual void pause() override;
     void unpause();
-    
+
     virtual double defaultPlaybackRate() const override { return m_defaultPlaybackRate; }
     virtual void setDefaultPlaybackRate(double) override;
-    
+
     virtual double playbackRate() const override;
     virtual void setPlaybackRate(double) override;
-    
+
     virtual double volume() const override { return m_volume; }
     virtual void setVolume(double, ExceptionCode&) override;
-    
+
     virtual bool muted() const override { return m_muted; }
     virtual void setMuted(bool) override;
-    
+
     virtual ReadyState readyState() const override { return m_readyState; }
 
     enum PlaybackState { WAITING, PLAYING, ENDED };
@@ -93,18 +93,18 @@ public:
     virtual bool hasClosedCaptions() const override;
     virtual void setClosedCaptionsVisible(bool) override;
     virtual bool closedCaptionsVisible() const override { return m_closedCaptionsVisible; }
-    
+
     virtual bool supportsScanning() const override;
-    
+
     virtual void beginScrubbing() override;
     virtual void endScrubbing() override;
-    
+
     virtual bool canPlay() const override;
-    
+
     virtual bool isLiveStream() const override;
-    
+
     virtual bool hasCurrentSrc() const override;
-    
+
     virtual void returnToRealtime() override;
 
     bool isBlocked() const;

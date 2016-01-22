@@ -177,7 +177,7 @@ GType mpegts_demuxer_get_type (void)
                sizeof (MpegTSDemuxerClass),
                (GClassInitFunc) mpegts_demuxer_class_intern_init,
                sizeof(MpegTSDemuxer),
-               (GInstanceInitFunc) mpegts_demuxer_init,               
+               (GInstanceInitFunc) mpegts_demuxer_init,
                (GTypeFlags) 0);
         g_once_init_leave (&gonce_data, (gsize) _type);
     }
@@ -208,7 +208,7 @@ static int64_t              mpegts_demuxer_seek(void *opaque, int64_t offset, in
 static void mpegts_demuxer_class_init(MpegTSDemuxerClass *g_class)
 {
     GstElementClass *gstelement_class = GST_ELEMENT_CLASS(g_class);
-    
+
     g_class->audio_source_template = gst_static_pad_template_get (&audio_source_template);
     g_class->video_source_template = gst_static_pad_template_get (&video_source_template);
 
@@ -221,7 +221,7 @@ static void mpegts_demuxer_class_init(MpegTSDemuxerClass *g_class)
                 "Codec/Parser",
                 "Parses MPEG2 transport streams",
                 "Oracle Corporation");
-    
+
     G_OBJECT_CLASS (g_class)->finalize = GST_DEBUG_FUNCPTR(mpegts_demuxer_finalize);
     gstelement_class->change_state = mpegts_demuxer_change_state;
 
@@ -511,7 +511,7 @@ static void mpegts_demuxer_add_pad(MpegTSDemuxer *demuxer, GstPad *pad, GstCaps 
     caps_event = gst_event_new_caps(caps);
     if (caps_event)
         gst_pad_push_event (pad, caps_event);
-    gst_caps_unref (caps);    
+    gst_caps_unref (caps);
     gst_element_add_pad(GST_ELEMENT(demuxer), pad);
 }
 
@@ -706,7 +706,7 @@ static GstFlowReturn process_video_packet(MpegTSDemuxer *demuxer, AVPacket *pack
             newsegment.time = stream->segment.time;
             newsegment.position = stream->segment.position;
             newsegment_event = gst_event_new_segment(&newsegment);
-            
+
             GST_BUFFER_FLAG_SET(buffer, GST_BUFFER_FLAG_DISCONT);
             stream->discont = FALSE;
 
@@ -793,7 +793,7 @@ static GstFlowReturn process_audio_packet(MpegTSDemuxer *demuxer, AVPacket *pack
             newsegment.time = stream->segment.time;
             newsegment.position = stream->segment.position;
             newsegment_event = gst_event_new_segment(&newsegment);
-            
+
             GST_BUFFER_FLAG_SET(buffer, GST_BUFFER_FLAG_DISCONT);
             stream->discont = FALSE;
 

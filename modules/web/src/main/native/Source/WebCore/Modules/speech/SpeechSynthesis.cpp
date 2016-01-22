@@ -36,12 +36,12 @@
 #include <wtf/CurrentTime.h>
 
 namespace WebCore {
-    
+
 PassRefPtr<SpeechSynthesis> SpeechSynthesis::create()
 {
     return adoptRef(new SpeechSynthesis);
 }
-    
+
 SpeechSynthesis::SpeechSynthesis()
     : m_currentSpeechUtterance(0)
     , m_isPaused(false)
@@ -50,7 +50,7 @@ SpeechSynthesis::SpeechSynthesis()
 #endif
 {
 }
-    
+
 void SpeechSynthesis::setPlatformSynthesizer(PassOwnPtr<PlatformSpeechSynthesizer> synthesizer)
 {
     m_platformSpeechSynthesizer = synthesizer;
@@ -59,12 +59,12 @@ void SpeechSynthesis::setPlatformSynthesizer(PassOwnPtr<PlatformSpeechSynthesize
     m_utteranceQueue.clear();
     m_isPaused = false;
 }
-    
+
 void SpeechSynthesis::voicesDidChange()
 {
     m_voiceList.clear();
 }
-    
+
 const Vector<RefPtr<SpeechSynthesisVoice>>& SpeechSynthesis::getVoices()
 {
     if (m_voiceList.size())
@@ -116,7 +116,7 @@ void SpeechSynthesis::speak(SpeechSynthesisUtterance* utterance)
 {
     if (!utterance)
         return;
- 
+
     // Like Audio, we should require that the user interact to start a speech synthesis session.
 #if PLATFORM(IOS)
     if (ScriptController::processingUserGesture())
@@ -124,9 +124,9 @@ void SpeechSynthesis::speak(SpeechSynthesisUtterance* utterance)
     else if (userGestureRequiredForSpeechStart())
         return;
 #endif
-    
+
     m_utteranceQueue.append(utterance);
-    
+
     // If the queue was empty, speak this immediately and add it to the queue.
     if (m_utteranceQueue.size() == 1)
         startSpeakingImmediately(utterance);
@@ -141,7 +141,7 @@ void SpeechSynthesis::cancel()
     if (m_platformSpeechSynthesizer)
         m_platformSpeechSynthesizer->cancel();
     current = 0;
-    
+
     // The platform should have called back immediately and cleared the current utterance.
     ASSERT(!m_currentSpeechUtterance);
 }
@@ -162,7 +162,7 @@ void SpeechSynthesis::fireEvent(const AtomicString& type, SpeechSynthesisUtteran
 {
     utterance->dispatchEvent(SpeechSynthesisEvent::create(type, charIndex, (monotonicallyIncreasingTime() - utterance->startTime()), name));
 }
-    
+
 void SpeechSynthesis::handleSpeakingCompleted(SpeechSynthesisUtterance* utterance, bool errorOccurred)
 {
     ASSERT(utterance);
@@ -176,13 +176,13 @@ void SpeechSynthesis::handleSpeakingCompleted(SpeechSynthesisUtterance* utteranc
         ASSERT(firstUtterance == utterance);
         if (firstUtterance == utterance)
             m_utteranceQueue.removeFirst();
-        
+
         // Start the next job if there is one pending.
         if (!m_utteranceQueue.isEmpty())
             startSpeakingImmediately(m_utteranceQueue.first().get());
     }
 }
-    
+
 void SpeechSynthesis::boundaryEventOccurred(PassRefPtr<PlatformSpeechSynthesisUtterance> utterance, SpeechBoundary boundary, unsigned charIndex)
 {
     DEFINE_STATIC_LOCAL(const String, wordBoundaryString, (ASCIILiteral("word")));
@@ -205,7 +205,7 @@ void SpeechSynthesis::didStartSpeaking(PassRefPtr<PlatformSpeechSynthesisUtteran
     if (utterance->client())
         fireEvent(eventNames().startEvent, static_cast<SpeechSynthesisUtterance*>(utterance->client()), 0, String());
 }
-    
+
 void SpeechSynthesis::didPauseSpeaking(PassRefPtr<PlatformSpeechSynthesisUtterance> utterance)
 {
     m_isPaused = true;
@@ -225,7 +225,7 @@ void SpeechSynthesis::didFinishSpeaking(PassRefPtr<PlatformSpeechSynthesisUttera
     if (utterance->client())
         handleSpeakingCompleted(static_cast<SpeechSynthesisUtterance*>(utterance->client()), false);
 }
-    
+
 void SpeechSynthesis::speakingErrorOccurred(PassRefPtr<PlatformSpeechSynthesisUtterance> utterance)
 {
     if (utterance->client())

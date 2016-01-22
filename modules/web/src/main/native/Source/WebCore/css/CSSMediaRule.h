@@ -46,7 +46,7 @@ private:
     CSSMediaRule(StyleRuleMedia*, CSSStyleSheet*);
 
     MediaQuerySet* mediaQueries() const;
-    
+
     mutable RefPtr<MediaList> m_mediaCSSOMWrapper;
 };
 

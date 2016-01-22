@@ -86,34 +86,34 @@ public:
     }
 
     void removeLast()
-    { 
+    {
         ASSERT(m_size);
         m_size--;
     }
 
-    JSValue last() 
+    JSValue last()
     {
         ASSERT(m_size);
         return JSValue::decode(slotFor(m_size - 1));
     }
-        
+
     static void markLists(HeapRootVisitor&, ListSet&);
 
 private:
     JS_EXPORT_PRIVATE void slowAppend(JSValue);
-        
+
     EncodedJSValue& slotFor(int item) const
     {
         return m_buffer[item];
     }
-        
+
     EncodedJSValue* mallocBase()
     {
         if (m_capacity == static_cast<int>(inlineCapacity))
             return 0;
         return &slotFor(0);
     }
-        
+
     int m_size;
     int m_capacity;
     EncodedJSValue m_inlineBuffer[inlineCapacity];
@@ -169,7 +169,7 @@ public:
 
     bool isEmpty() const { return !m_argCount; }
     size_t size() const { return m_argCount; }
-        
+
     JS_EXPORT_PRIVATE void getSlice(int startIndex, ArgList& result) const;
 
 private:

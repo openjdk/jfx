@@ -52,7 +52,7 @@ import javafx.scene.input.Clipboard;
  *
  */
 public class PasteJob extends BatchSelectionJob {
-    
+
     private FXOMObject targetObject;
     private List<FXOMObject> newObjects;
 
@@ -63,7 +63,7 @@ public class PasteJob extends BatchSelectionJob {
     @Override
     protected List<Job> makeSubJobs() {
         final List<Job> result = new ArrayList<>();
-        
+
         final FXOMDocument fxomDocument = getEditorController().getFxomDocument();
         if (fxomDocument != null) {
 
@@ -74,9 +74,9 @@ public class PasteJob extends BatchSelectionJob {
             assert newObjects != null; // But possible empty
 
             if (newObjects.isEmpty() == false) {
-                
+
                 // Retrieve the target FXOMObject :
-                // If the document is empty (root object is null), then the target 
+                // If the document is empty (root object is null), then the target
                 // object is null.
                 // If the selection is root or is empty, the target object is
                 // the root object.
@@ -107,7 +107,7 @@ public class PasteJob extends BatchSelectionJob {
                     // Build InsertAsSubComponent jobs
                     final DesignHierarchyMask targetMask = new DesignHierarchyMask(targetObject);
                     if (targetMask.isAcceptingSubComponent(newObjects)) {
-                        
+
                         final double relocateDelta;
                         if (targetMask.isFreeChildPositioning()) {
                             final int pasteJobCount = countPasteJobs();
@@ -137,21 +137,21 @@ public class PasteJob extends BatchSelectionJob {
                 }
             }
         }
-        
+
         return result;
     }
 
-    
+
     @Override
     protected String makeDescription() {
         final String result;
-        
+
         if (newObjects.size() == 1) {
             result = makeSingleSelectionDescription();
         } else {
             result = makeMultipleSelectionDescription();
         }
-        
+
         return result;
     }
 
@@ -194,10 +194,10 @@ public class PasteJob extends BatchSelectionJob {
         final int objectCount = newObjects.size();
         return I18N.getString("label.action.edit.paste.n", objectCount);
     }
-    
+
     private int countPasteJobs() {
         int result = 0;
-        
+
         final List<Job> undoStack = getEditorController().getJobManager().getUndoStack();
         for (Job job : undoStack) {
             if (job instanceof PasteJob) {
@@ -211,7 +211,7 @@ public class PasteJob extends BatchSelectionJob {
                 break;
             }
         }
-        
+
         return result;
     }
 }

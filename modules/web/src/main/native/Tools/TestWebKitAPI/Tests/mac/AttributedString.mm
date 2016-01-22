@@ -90,7 +90,7 @@ void AttributedStringTest_Strikethrough::runTest(View view)
     NSAttributedString *attrString = attributedString(view, NSMakeRange(0, 5));
 
     EXPECT_WK_STREQ("Lorem", [attrString string]);
-    
+
     NSDictionary *attributes = [attrString attributesAtIndex:0 effectiveRange:0];
     ASSERT_NOT_NULL([attributes objectForKey:NSStrikethroughStyleAttributeName]);
     ASSERT_TRUE([[attributes objectForKey:NSStrikethroughStyleAttributeName] isKindOfClass:[NSNumber class]]);

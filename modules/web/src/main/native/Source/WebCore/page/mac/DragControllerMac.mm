@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #import "config.h"
@@ -51,7 +51,7 @@ bool DragController::isCopyKeyDown(DragData& dragData)
 {
     return dragData.flags() & DragApplicationIsCopyKeyDown;
 }
-    
+
 DragOperation DragController::dragOperation(DragData& dragData)
 {
     if ((dragData.flags() & DragApplicationIsModal) || !dragData.containsURL(&m_page.mainFrame()))
@@ -66,7 +66,7 @@ DragOperation DragController::dragOperation(DragData& dragData)
 const IntSize& DragController::maxDragImageSize()
 {
     static const IntSize maxDragImageSize(400, 400);
-    
+
     return maxDragImageSize;
 }
 

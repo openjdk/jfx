@@ -321,7 +321,7 @@ static size_t getPlatformThreadRegisters(const PlatformThread& platformThread, P
 #elif CPU(X86_64)
     unsigned user_count = x86_THREAD_STATE64_COUNT;
     thread_state_flavor_t flavor = x86_THREAD_STATE64;
-#elif CPU(PPC) 
+#elif CPU(PPC)
     unsigned user_count = PPC_THREAD_STATE_COUNT;
     thread_state_flavor_t flavor = PPC_THREAD_STATE;
 #elif CPU(PPC64)
@@ -339,7 +339,7 @@ static size_t getPlatformThreadRegisters(const PlatformThread& platformThread, P
 
     kern_return_t result = thread_get_state(platformThread, flavor, (thread_state_t)&regs, &user_count);
     if (result != KERN_SUCCESS) {
-        WTFReportFatalError(__FILE__, __LINE__, WTF_PRETTY_FUNCTION, 
+        WTFReportFatalError(__FILE__, __LINE__, WTF_PRETTY_FUNCTION,
                             "JavaScript garbage collection failed because thread_get_state returned an error (%d). This is probably the result of running inside Rosetta, which is not supported.", result);
         CRASH();
     }

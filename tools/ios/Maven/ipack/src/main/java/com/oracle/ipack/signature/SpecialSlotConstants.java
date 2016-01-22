@@ -29,17 +29,17 @@ public final class SpecialSlotConstants {
     /* Info.plist */
     public static final int CD_INFO_SLOT = 1;
     /* internal requirements */
-	public static final int CD_REQUIREMENTS_SLOT = 2;
+    public static final int CD_REQUIREMENTS_SLOT = 2;
     /* resource directory */
-	public static final int CD_RESOURCE_DIR_SLOT = 3;
+    public static final int CD_RESOURCE_DIR_SLOT = 3;
     /* Application specific slot */
-	public static final int CD_APPLICATION_SLOT = 4;
+    public static final int CD_APPLICATION_SLOT = 4;
     /* embedded entitlement configuration */
     public static final int CD_ENTITLEMENT_SLOT = 5;
     /* CodeDirectory */
-	public static final int CD_CODE_DIRECTORY_SLOT = 0;
+    public static final int CD_CODE_DIRECTORY_SLOT = 0;
     /* CMS signature */
-	public static final int CD_SIGNATURE_SLOT = 0x10000;
+    public static final int CD_SIGNATURE_SLOT = 0x10000;
 
     private SpecialSlotConstants() {
     }

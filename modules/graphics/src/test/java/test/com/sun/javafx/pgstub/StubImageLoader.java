@@ -46,7 +46,7 @@ public final class StubImageLoader implements ImageLoader {
                            final boolean preserveRatio,
                            final boolean smooth) {
         this.source = source;
-        
+
         this.imageInfo = imageInfo;
         this.loadWidth = loadWidth;
         this.loadHeight = loadHeight;

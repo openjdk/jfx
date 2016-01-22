@@ -40,38 +40,38 @@ import com.sun.javafx.binding.ExpressionHelper;
  * @since JavaFX 2.0
  */
 public abstract class ReadOnlyObjectPropertyBase<T> extends ReadOnlyObjectProperty<T> {
-    
+
     ExpressionHelper<T> helper;
 
-    @Override 
+    @Override
     public void addListener(InvalidationListener listener) {
         helper = ExpressionHelper.addListener(helper, this, listener);
     }
 
-    @Override 
+    @Override
     public void removeListener(InvalidationListener listener) {
         helper = ExpressionHelper.removeListener(helper, listener);
     }
-    
+
     @Override
     public void addListener(ChangeListener<? super T> listener) {
         helper = ExpressionHelper.addListener(helper, this, listener);
     }
 
-    @Override 
+    @Override
     public void removeListener(ChangeListener<? super T> listener) {
         helper = ExpressionHelper.removeListener(helper, listener);
     }
-    
+
     /**
      * Sends notifications to all attached
      * {@link javafx.beans.InvalidationListener InvalidationListeners} and
      * {@link javafx.beans.value.ChangeListener ChangeListeners}.
-     * 
+     *
      * This method needs to be called, if the value of this property changes.
      */
     protected void fireValueChangedEvent() {
         ExpressionHelper.fireValueChangedEvent(helper);
     }
-    
+
 }

@@ -73,13 +73,13 @@ import javafx.css.converter.StringConverter;
  * placement of {@link #headerProperty() headers}, {@link #graphicProperty() graphics},
  * {@link #contentProperty() content}, and {@link #getButtonTypes() buttons}.
  * The default implementation of DialogPane (that is, the DialogPane class itself)
- * handles the layout via the normal {@link #layoutChildren()} method. This 
- * method may be overridden by subclasses wishing to handle the layout in an 
+ * handles the layout via the normal {@link #layoutChildren()} method. This
+ * method may be overridden by subclasses wishing to handle the layout in an
  * alternative fashion).
- * 
- * <p>In addition to the {@link #headerProperty() header} and 
- * {@link #contentProperty() content} properties, there exists 
- * {@link #headerTextProperty() header text} and 
+ *
+ * <p>In addition to the {@link #headerProperty() header} and
+ * {@link #contentProperty() content} properties, there exists
+ * {@link #headerTextProperty() header text} and
  * {@link #contentTextProperty() content text} properties. The way the *Text
  * properties work is that they are a lower precedence compared to the Node
  * properties, but they are far more convenient for developers in the common case,
@@ -107,56 +107,56 @@ import javafx.css.converter.StringConverter;
  * </ol>
  *
  * <p>DialogPane operates on the concept of {@link ButtonType}. A ButtonType is
- * a descriptor of a single button that should be represented visually in the 
+ * a descriptor of a single button that should be represented visually in the
  * DialogPane. Developers who create a DialogPane therefore must specify the
- * button types that they want to display, and this is done via the 
- * {@link #getButtonTypes()} method, which returns a modifiable 
+ * button types that they want to display, and this is done via the
+ * {@link #getButtonTypes()} method, which returns a modifiable
  * {@link ObservableList}, which users can add to and remove from as desired.
- * 
+ *
  * <p>The {@link ButtonType} class defines a number of pre-defined button types,
  * such as {@link ButtonType#OK} and {@link ButtonType#CANCEL}. Many users of the
  * JavaFX dialogs API will find that these pre-defined button types meet their
- * needs, particularly due to their built-in support for 
- * {@link ButtonData#isDefaultButton() default} and 
+ * needs, particularly due to their built-in support for
+ * {@link ButtonData#isDefaultButton() default} and
  * {@link ButtonData#isCancelButton() cancel} buttons, as well as the benefit of
  * the strings being translated into all languages which JavaFX is translated to.
  * For users that want to define their own {@link ButtonType} (most commonly to
  * define a button with custom text), they may do so via the constructors available
  * on the {@link ButtonType} class.
- * 
+ *
  * <p>Developers will quickly find that the amount of configurability offered
  * via the {@link ButtonType} class is minimal. This is intentional, but does not
  * mean that developers can not modify the buttons created by the {@link ButtonType}
  * that have been specified. To do this, developers simply call the
  * {@link #lookupButton(ButtonType)} method with the ButtonType (assuming it has
  * already been set in the {@link #getButtonTypes()} list. The returned Node is
- * typically of type {@link Button}, but this depends on if the 
+ * typically of type {@link Button}, but this depends on if the
  * {@link #createButton(ButtonType)} method has been overridden.
- * 
+ *
  * <p>The DialogPane class offers a few methods that can be overridden by
  * subclasses, to more easily enable custom functionality. These methods include
  * the following:
- * 
+ *
  * <ul>
  *   <li>{@link #createButton(ButtonType)}
  *   <li>{@link #createDetailsButton()}
  *   <li>{@link #createButtonBar()}
  * </ul>
- * 
- * <p>These methods are documented, so please take note of the expectations 
+ *
+ * <p>These methods are documented, so please take note of the expectations
  * placed on any developer who wishes to override these methods with their own
  * functionality.
- * 
+ *
  * @see Dialog
  * @since JavaFX 8u40
  */
 @DefaultProperty("buttonTypes")
 public class DialogPane extends Pane {
-    
+
     /**************************************************************************
-     * 
+     *
      * Static fields
-     * 
+     *
      **************************************************************************/
 
     /**
@@ -172,57 +172,57 @@ public class DialogPane extends Pane {
         label.setPrefWidth(360);
         return label;
     }
-    
-    
-    
+
+
+
     /**************************************************************************
-     * 
+     *
      * Private fields
-     * 
+     *
      **************************************************************************/
-    
+
     private final GridPane headerTextPanel;
     private final Label contentLabel;
     private final StackPane graphicContainer;
     private final Node buttonBar;
-    
+
     private final ObservableList<ButtonType> buttons = FXCollections.observableArrayList();
-    
+
     private final Map<ButtonType, Node> buttonNodes = new WeakHashMap<>();
 
     private Node detailsButton;
-    
+
     // this is not a property - we have a package-scope setDialog method that
     // sets this field. It is set by Dialog if the DialogPane is set inside a Dialog.
     private Dialog<?> dialog;
-        
-    
-    
+
+
+
     /**************************************************************************
-     * 
+     *
      * Constructors
-     * 
+     *
      **************************************************************************/
-    
+
     /**
      * Creates a new DialogPane instance with a style class of 'dialog-pane'.
      */
     public DialogPane() {
         getStyleClass().add("dialog-pane");
-        
+
         headerTextPanel = new GridPane();
         getChildren().add(headerTextPanel);
-        
+
         graphicContainer = new StackPane();
-        
+
         contentLabel = createContentLabel("");
         getChildren().add(contentLabel);
-        
+
         buttonBar = createButtonBar();
         if (buttonBar != null) {
             getChildren().add(buttonBar);
         }
-        
+
         buttons.addListener((ListChangeListener<ButtonType>) c -> {
             while (c.next()) {
                 if (c.wasRemoved()) {
@@ -240,23 +240,23 @@ public class DialogPane extends Pane {
             }
         });
     }
-    
-    
-    
+
+
+
     /**************************************************************************
-     * 
+     *
      * Properties
-     * 
+     *
      **************************************************************************/
 
     // --- graphic
     private final ObjectProperty<Node> graphicProperty = new StyleableObjectProperty<Node>() {
-        // The graphic is styleable by css, but it is the 
-        // imageUrlProperty that handles the style value. 
+        // The graphic is styleable by css, but it is the
+        // imageUrlProperty that handles the style value.
         @Override public CssMetaData getCssMetaData() {
             return StyleableProperties.GRAPHIC;
         }
-                        
+
         @Override public Object getBean() {
             return DialogPane.this;
         }
@@ -264,9 +264,9 @@ public class DialogPane extends Pane {
         @Override public String getName() {
             return "graphic";
         }
-        
+
         WeakReference<Node> graphicRef = new WeakReference<>(null);
-        
+
         protected void invalidated() {
             Node oldGraphic = graphicRef.get();
             if (oldGraphic != null) {
@@ -282,7 +282,7 @@ public class DialogPane extends Pane {
     /**
      * The dialog graphic, presented either in the header, if one is showing, or
      * to the left of the {@link #contentProperty() content}.
-     * 
+     *
      * @return An ObjectProperty wrapping the current graphic.
      */
     public final ObjectProperty<Node> graphicProperty() {
@@ -296,22 +296,22 @@ public class DialogPane extends Pane {
     /**
      * Sets the dialog graphic, which will be displayed either in the header, if
      * one is showing, or to the left of the {@link #contentProperty() content}.
-     * 
+     *
      * @param graphic
      *            The new dialog graphic, or null if no graphic should be shown.
      */
     public final void setGraphic(Node graphic) {
         this.graphicProperty.set(graphic);
     }
-    
-    
+
+
     // --- imageUrl (this is NOT public API, except via CSS)
     // Note that this code is a copy/paste from Labeled
     private StyleableStringProperty imageUrl = null;
     /**
      * The imageUrl property is set from CSS and then the graphic property is
      * set from the invalidated method. This ensures that the same image isn't
-     * reloaded. 
+     * reloaded.
      */
     private StyleableStringProperty imageUrlProperty() {
         if (imageUrl == null) {
@@ -420,13 +420,13 @@ public class DialogPane extends Pane {
                 public CssMetaData<DialogPane,String> getCssMetaData() {
                     return StyleableProperties.GRAPHIC;
                 }
-                
+
             };
         }
         return imageUrl;
     }
 
-    
+
     // --- header
     private final ObjectProperty<Node> header = new SimpleObjectProperty<Node>(null) {
         WeakReference<Node> headerRef = new WeakReference<>(null);
@@ -435,7 +435,7 @@ public class DialogPane extends Pane {
             if (oldHeader != null) {
                 getChildren().remove(oldHeader);
             }
-            
+
             Node newHeader = getHeader();
             headerRef = new WeakReference<>(newHeader);
             updateHeaderArea();
@@ -444,7 +444,7 @@ public class DialogPane extends Pane {
 
     /**
      * Node which acts as the dialog pane header.
-     * 
+     *
      * @return the header of the dialog pane.
      */
     public final Node getHeader() {
@@ -453,7 +453,7 @@ public class DialogPane extends Pane {
 
     /**
      * Assigns the dialog pane header. Any Node can be used.
-     * 
+     *
      * @param header The new header of the DialogPane.
      */
     public final void setHeader(Node header) {
@@ -470,8 +470,8 @@ public class DialogPane extends Pane {
     public final ObjectProperty<Node> headerProperty() {
         return header;
     }
-    
-    
+
+
 
     // --- header text
     private final StringProperty headerText = new SimpleStringProperty(this, "headerText") {
@@ -480,7 +480,7 @@ public class DialogPane extends Pane {
             requestLayout();
         }
     };
-    
+
     /**
      * Sets the string to show in the dialog header area. Note that the header text
      * is lower precedence than the {@link #headerProperty() header node}, meaning
@@ -494,14 +494,14 @@ public class DialogPane extends Pane {
     public final void setHeaderText(String headerText) {
         this.headerText.set(headerText);
     }
-    
+
     /**
      * Returns the currently-set header text for this DialogPane.
      */
     public final String getHeaderText() {
         return headerText.get();
     }
-    
+
     /**
      * A property representing the header text for the dialog pane. The header text
      * is lower precedence than the {@link #headerProperty() header node}, meaning
@@ -525,7 +525,7 @@ public class DialogPane extends Pane {
             if (oldContent != null) {
                 getChildren().remove(oldContent);
             }
-            
+
             Node newContent = getContent();
             contentRef = new WeakReference<>(newContent);
             updateContentArea();
@@ -536,7 +536,7 @@ public class DialogPane extends Pane {
      * Returns the dialog content as a Node (even if it was set as a String
      * using {@link #setContentText(String)} - this was simply transformed into a
      * {@link Node} (most probably a {@link Label}).
-     * 
+     *
      * @return dialog's content
      */
     public final Node getContent() {
@@ -545,7 +545,7 @@ public class DialogPane extends Pane {
 
     /**
      * Assign dialog content. Any Node can be used
-     * 
+     *
      * @param content
      *            dialog's content
      */
@@ -559,8 +559,8 @@ public class DialogPane extends Pane {
     public final ObjectProperty<Node> contentProperty() {
         return content;
     }
-    
-    
+
+
     // --- content text
     private final StringProperty contentText = new SimpleStringProperty(this, "contentText") {
         @Override protected void invalidated() {
@@ -568,7 +568,7 @@ public class DialogPane extends Pane {
             requestLayout();
         }
     };
-    
+
     /**
      * Sets the string to show in the dialog content area. Note that the content text
      * is lower precedence than the {@link #contentProperty() content node}, meaning
@@ -578,14 +578,14 @@ public class DialogPane extends Pane {
     public final void setContentText(String contentText) {
         this.contentText.set(contentText);
     }
-    
+
     /**
      * Returns the currently-set content text for this DialogPane.
      */
     public final String getContentText() {
         return contentText.get();
     }
-    
+
     /**
      * A property representing the content text for the dialog pane. The content text
      * is lower precedence than the {@link #contentProperty() content node}, meaning
@@ -596,7 +596,7 @@ public class DialogPane extends Pane {
         return contentText;
     }
 
-    
+
     // --- expandable content
     private final ObjectProperty<Node> expandableContentProperty = new SimpleObjectProperty<Node>(null) {
         WeakReference<Node> expandableContentRef = new WeakReference<>(null);
@@ -605,17 +605,17 @@ public class DialogPane extends Pane {
             if (oldExpandableContent != null) {
                 getChildren().remove(oldExpandableContent);
             }
-            
+
             Node newExpandableContent = getExpandableContent();
             expandableContentRef = new WeakReference<Node>(newExpandableContent);
             if (newExpandableContent != null) {
                 newExpandableContent.setVisible(isExpanded());
                 newExpandableContent.setManaged(isExpanded());
-                
+
                 if (!newExpandableContent.getStyleClass().contains("expandable-content")) { //$NON-NLS-1$
                     newExpandableContent.getStyleClass().add("expandable-content"); //$NON-NLS-1$
                 }
-                
+
                 getChildren().add(newExpandableContent);
             }
         }
@@ -670,7 +670,7 @@ public class DialogPane extends Pane {
 
     /**
      * Returns whether or not the dialogPane is expanded.
-     * 
+     *
      * @return true if dialogPane is expanded.
      */
     public final boolean isExpanded() {
@@ -680,7 +680,7 @@ public class DialogPane extends Pane {
     /**
      * Sets whether the dialogPane is expanded. This only makes sense when there
      * is {@link #expandableContentProperty() expandable content} to show.
-     * 
+     *
      * @param value true if dialogPane should be expanded.
      */
     public final void setExpanded(boolean value) {
@@ -688,59 +688,59 @@ public class DialogPane extends Pane {
     }
 
 
-    
+
     /**************************************************************************
-     * 
+     *
      * Public API
-     * 
+     *
      **************************************************************************/
 
     // --- button types
     /**
-     * Observable list of button types used for the dialog button bar area 
-     * (created via the {@link #createButtonBar()} method). Modifying the contents 
+     * Observable list of button types used for the dialog button bar area
+     * (created via the {@link #createButtonBar()} method). Modifying the contents
      * of this list will immediately change the buttons displayed to the user
      * within the dialog pane.
-     * 
-     * @return The {@link ObservableList} of {@link ButtonType button types} 
+     *
+     * @return The {@link ObservableList} of {@link ButtonType button types}
      *         available to the user.
      */
     public final ObservableList<ButtonType> getButtonTypes() {
         return buttons;
     }
-    
+
     /**
-     * This method provides a way in which developers may retrieve the actual 
-     * Node for a given {@link ButtonType} (assuming it is part of the 
+     * This method provides a way in which developers may retrieve the actual
+     * Node for a given {@link ButtonType} (assuming it is part of the
      * {@link #getButtonTypes() button types} list).
-     * 
+     *
      * @param buttonType The {@link ButtonType} for which a Node representation is requested.
-     * @return The Node used to represent the button type, as created by 
+     * @return The Node used to represent the button type, as created by
      *         {@link #createButton(ButtonType)}, and only if the button type
      *         is part of the {@link #getButtonTypes() button types} list, otherwise null.
      */
     public final Node lookupButton(ButtonType buttonType) {
         return buttonNodes.get(buttonType);
     }
-    
+
     /**
      * This method can be overridden by subclasses to provide the button bar.
      * Note that by overriding this method, the developer must take on multiple
      * responsibilities:
-     * 
+     *
      * <ol>
-     *   <li>The developer must immediately iterate through all 
-     *   {@link #getButtonTypes() button types} and call 
-     *   {@link #createButton(ButtonType)} for each of them in turn. 
-     *   <li>The developer must add a listener to the 
+     *   <li>The developer must immediately iterate through all
+     *   {@link #getButtonTypes() button types} and call
+     *   {@link #createButton(ButtonType)} for each of them in turn.
+     *   <li>The developer must add a listener to the
      *   {@link #getButtonTypes() button types} list, and when this list changes
      *   update the button bar as appropriate.
-     *   <li>Similarly, the developer must watch for changes to the 
+     *   <li>Similarly, the developer must watch for changes to the
      *   {@link #expandableContentProperty() expandable content} property,
-     *   adding and removing the details button (created via 
+     *   adding and removing the details button (created via
      *   {@link #createDetailsButton()} method).
      * </ol>
-     * 
+     *
      * <p>The default implementation of this method creates and returns a new
      * {@link ButtonBar} instance.
      */
@@ -751,16 +751,16 @@ public class DialogPane extends Pane {
         updateButtons(buttonBar);
         getButtonTypes().addListener((ListChangeListener<? super ButtonType>) c -> updateButtons(buttonBar));
         expandableContentProperty().addListener(o -> updateButtons(buttonBar));
-        
+
         return buttonBar;
     }
-    
+
     /**
      * This method can be overridden by subclasses to create a custom button that
      * will subsequently inserted into the DialogPane button area (created via
      * the {@link #createButtonBar()} method, but mostly commonly it is an instance
      * of {@link ButtonBar}.
-     * 
+     *
      * @param buttonType The {@link ButtonType} to create a button from.
      * @return A JavaFX {@link Node} that represents the given {@link ButtonType},
      *         most commonly an instance of {@link Button}.
@@ -777,20 +777,20 @@ public class DialogPane extends Pane {
                 dialog.setResultAndClose(buttonType, true);
             }
         });
-        
+
         return button;
     }
-    
+
     /**
      * This method can be overridden by subclasses to create a custom details button.
-     * 
+     *
      * <p>To override this method you must do two things:
      * <ol>
      *   <li>The button will need to have its own code set to handle mouse / keyboard
      *       interaction and to toggle the state of the
      *       {@link #expandedProperty() expanded} property.
      *   <li>If your button changes its visuals based on whether the dialog pane
-     *       is expanded or collapsed, you should add a listener to the 
+     *       is expanded or collapsed, you should add a listener to the
      *       {@link #expandedProperty() expanded} property, so that you may update
      *       the button visuals.
      * </ol>
@@ -815,7 +815,7 @@ public class DialogPane extends Pane {
     }
 
     private double oldHeight = -1;
-    
+
     /** {@inheritDoc} */
     @Override protected void layoutChildren() {
         final boolean hasHeader = hasHeader();
@@ -854,7 +854,7 @@ public class DialogPane extends Pane {
         final double topPadding = snappedTopInset();
         final double rightPadding = snappedRightInset();
         final double bottomPadding = snappedBottomInset();
-        
+
         // create the nodes up front so we can work out sizing
         final Node header = getActualHeader();
         final Node content = getActualContent();
@@ -883,10 +883,10 @@ public class DialogPane extends Pane {
             contentAreaHeight = h - (headerPrefHeight + expandableContentPrefHeight + buttonBarPrefHeight);
             contentAndGraphicHeight = hasHeader ? contentAreaHeight : Math.max(graphicPrefHeight, contentAreaHeight);
         }
-        
+
         double x = leftPadding;
         double y = topPadding;
-        
+
         if (! hasHeader) {
             if (graphic != null) {
                 graphic.resizeRelocate(x, y, graphicPrefWidth, graphicPrefHeight);
@@ -899,12 +899,12 @@ public class DialogPane extends Pane {
 
         content.resizeRelocate(x, y, availableContentWidth, contentAreaHeight);
         y += hasHeader ? contentAreaHeight : contentAndGraphicHeight;
-        
+
         if (expandableContent != null) {
             expandableContent.resizeRelocate(leftPadding, y, w - rightPadding, expandableContentPrefHeight);
             y += expandableContentPrefHeight;
         }
-        
+
         if (buttonBar != null) {
             buttonBar.resizeRelocate(leftPadding,
                                      y,
@@ -966,20 +966,20 @@ public class DialogPane extends Pane {
 
         return snapSize(minHeight);
     }
-    
+
     /** {@inheritDoc} */
     @Override protected double computePrefWidth(double height) {
         double headerPrefWidth = hasHeader() ? getActualHeader().prefWidth(height) + 10 : 0;
         double contentPrefWidth = getActualContent().prefWidth(height);
         double buttonBarPrefWidth = buttonBar == null ? 0 : buttonBar.prefWidth(height);
         double graphicPrefWidth = getActualGraphic().prefWidth(height);
-        
+
         double expandableContentPrefWidth = 0;
         final Node expandableContent = getExpandableContent();
         if (isExpanded() && expandableContent != null) {
             expandableContentPrefWidth = expandableContent.prefWidth(height);
         }
-        
+
         double prefWidth = snappedLeftInset() +
                (hasHeader() ? 0 : graphicPrefWidth) +
                Math.max(Math.max(headerPrefWidth, expandableContentPrefWidth), Math.max(contentPrefWidth, buttonBarPrefWidth)) +
@@ -1009,29 +1009,29 @@ public class DialogPane extends Pane {
         if (isExpanded() && expandableContent != null) {
             expandableContentPrefHeight = expandableContent.prefHeight(width);
         }
-        
+
         double prefHeight = snappedTopInset() +
-               headerPrefHeight + 
-               Math.max(graphicPrefHeight, contentPrefHeight) + 
-               expandableContentPrefHeight + 
-               buttonBarPrefHeight + 
+               headerPrefHeight +
+               Math.max(graphicPrefHeight, contentPrefHeight) +
+               expandableContentPrefHeight +
+               buttonBarPrefHeight +
                snappedBottomInset();
 
         return snapSize(prefHeight);
     }
-    
-    
-    
+
+
+
     /**************************************************************************
-     * 
+     *
      * Private implementation
-     * @param buttonBar 
-     * 
+     * @param buttonBar
+     *
      **************************************************************************/
-    
+
     private void updateButtons(ButtonBar buttonBar) {
         buttonBar.getButtons().clear();
-        
+
         // show details button if expandable content is present
         if (hasExpandableContent()) {
             if (detailsButton == null) {
@@ -1045,41 +1045,41 @@ public class DialogPane extends Pane {
         boolean hasDefault = false;
         for (ButtonType cmd : getButtonTypes()) {
             Node button = buttonNodes.computeIfAbsent(cmd, dialogButton -> createButton(cmd));
-            
+
             // keep only first default button
             if (button instanceof Button) {
                 ButtonData buttonType = cmd.getButtonData();
-                
+
                 ((Button)button).setDefaultButton(!hasDefault && buttonType != null && buttonType.isDefaultButton());
                 ((Button)button).setCancelButton(buttonType != null && buttonType.isCancelButton());
-                
+
                 hasDefault |= buttonType != null && buttonType.isDefaultButton();
             }
             buttonBar.getButtons().add(button);
         }
     }
-    
+
     private Node getActualContent() {
         Node content = getContent();
         return content == null ? contentLabel : content;
     }
-    
+
     private Node getActualHeader() {
         Node header = getHeader();
         return header == null ? headerTextPanel : header;
     }
-    
+
     private Node getActualGraphic() {
         return headerTextPanel;
     }
-    
+
     private void updateHeaderArea() {
         Node header = getHeader();
         if (header != null) {
             if (! getChildren().contains(header)) {
                 getChildren().add(header);
             }
-            
+
             headerTextPanel.setVisible(false);
             headerTextPanel.setManaged(false);
         } else {
@@ -1094,7 +1094,7 @@ public class DialogPane extends Pane {
             if (headerText != null && ! headerText.isEmpty()) {
                 headerTextPanel.getStyleClass().add("header-panel"); //$NON-NLS-1$
             }
-    
+
             // on left of header is the text
             Label headerLabel = new Label(headerText);
             headerLabel.setWrapText(true);
@@ -1124,23 +1124,23 @@ public class DialogPane extends Pane {
             graphicColumn.setFillWidth(false);
             graphicColumn.setHgrow(Priority.NEVER);
             headerTextPanel.getColumnConstraints().setAll(textColumn , graphicColumn);
-            
+
             headerTextPanel.setVisible(true);
             headerTextPanel.setManaged(true);
         }
     }
-    
+
     private void updateContentArea() {
         Node content = getContent();
         if (content != null) {
             if (! getChildren().contains(content)) {
                 getChildren().add(content);
             }
-            
+
             if (! content.getStyleClass().contains("content")) {
                 content.getStyleClass().add("content");
             }
-            
+
             contentLabel.setVisible(false);
             contentLabel.setManaged(false);
         } else {
@@ -1151,7 +1151,7 @@ public class DialogPane extends Pane {
             contentLabel.setManaged(visible);
         }
     }
-    
+
     boolean hasHeader() {
         return getHeader() != null || isTextHeader();
     }
@@ -1160,17 +1160,17 @@ public class DialogPane extends Pane {
         String headerText = getHeaderText();
         return headerText != null && !headerText.isEmpty();
     }
-    
+
     boolean hasExpandableContent() {
         return getExpandableContent() != null;
     }
-    
+
     void setDialog(Dialog<?> dialog) {
         this.dialog = dialog;
     }
-    
-    
-    
+
+
+
     /***************************************************************************
      *                                                                         *
      * Stylesheet Handling                                                     *
@@ -1181,8 +1181,8 @@ public class DialogPane extends Pane {
       * @treatAsPrivate implementation detail
       */
     private static class StyleableProperties {
-        
-        private static final CssMetaData<DialogPane,String> GRAPHIC = 
+
+        private static final CssMetaData<DialogPane,String> GRAPHIC =
             new CssMetaData<DialogPane,String>("-fx-graphic",
                 StringConverter.getInstance()) {
 
@@ -1197,7 +1197,7 @@ public class DialogPane extends Pane {
                 return n.imageUrlProperty();
             }
         };
-        
+
         private static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES;
         static {
             final List<CssMetaData<? extends Styleable, ?>> styleables = new ArrayList<>(Region.getClassCssMetaData());

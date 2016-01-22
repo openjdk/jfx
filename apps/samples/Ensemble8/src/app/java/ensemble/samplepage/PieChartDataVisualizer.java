@@ -53,7 +53,7 @@ import javafx.util.StringConverter;
 
 
 public class PieChartDataVisualizer extends TableView<Data> {
-    
+
     PieChart chart;
 
     public PieChartDataVisualizer(final PieChart chart) {
@@ -62,18 +62,18 @@ public class PieChartDataVisualizer extends TableView<Data> {
         setEditable(true);
         setMinHeight(100);
         setMinWidth(100);
-        
+
         chart.dataProperty().addListener((ObservableValue<? extends ObservableList<Data>> ov, ObservableList<Data> t, ObservableList<Data> t1) -> {
             setItems(t1);
         });
-        
+
         TableColumn<Data, String> nameColumn = new TableColumn<>("Name");
         nameColumn.setCellValueFactory((CellDataFeatures<Data, String> p) -> p.getValue().nameProperty());
         nameColumn.setCellFactory(TextFieldTableCell.<Data>forTableColumn());
         nameColumn.setEditable(true);
         nameColumn.setSortable(false);
         nameColumn.setMinWidth(80);
-        
+
         TableColumn<Data, Number> pieValueColumn = new TableColumn<>("PieValue");
         pieValueColumn.setCellValueFactory((CellDataFeatures<Data, Number> p) -> p.getValue().pieValueProperty());
         pieValueColumn.setCellFactory(TextFieldTableCell.<Data, Number>forTableColumn(new StringConverter<Number>() {
@@ -98,7 +98,7 @@ public class PieChartDataVisualizer extends TableView<Data> {
         pieValueColumn.setEditable(true);
         pieValueColumn.setSortable(false);
         pieValueColumn.setMinWidth(80);
-        
+
         setOnContextMenuRequested((ContextMenuEvent t) -> {
             Node node = t.getPickResult().getIntersectedNode();
             while (node != null && !(node instanceof TableRow) && !(node instanceof TableCell)) {

@@ -338,7 +338,7 @@ protected:
     void finishCreation(VM& vm, const Vector<String>& arguments)
     {
         Base::finishCreation(vm);
-        
+
         addFunction(vm, "debug", functionDebug, 1);
         addFunction(vm, "describe", functionDescribe, 1);
         addFunction(vm, "print", functionPrint, 1);
@@ -371,11 +371,11 @@ protected:
         addConstructableFunction(vm, "Element", functionCreateElement, 1);
         addFunction(vm, "getElement", functionGetElement, 1);
         addFunction(vm, "setElementRoot", functionSetElementRoot, 2);
-        
+
         putDirectNativeFunction(vm, this, Identifier(&vm, "DFGTrue"), 0, functionFalse, DFGTrue, DontEnum | JSC::Function);
-        
+
         addFunction(vm, "effectful42", functionEffectful42, 0);
-        
+
         JSArray* array = constructEmptyArray(globalExec(), 0);
         for (size_t i = 0; i < arguments.size(); ++i)
             array->putDirectIndex(globalExec(), i, jsString(globalExec(), arguments[i]));
@@ -387,7 +387,7 @@ protected:
         Identifier identifier(&vm, name);
         putDirect(vm, identifier, JSFunction::create(vm, this, arguments, identifier.string(), function));
     }
-    
+
     void addConstructableFunction(VM& vm, const char* name, NativeFunction function, unsigned arguments)
     {
         Identifier identifier(&vm, name);
@@ -411,11 +411,11 @@ static inline String stringFromUTF(const char* utf8)
     while (*pos > 0)
         pos++;
     size_t asciiLength = pos - utf8;
-    
+
     // Fast case - string is all ascii.
     if (!*pos)
         return String(utf8, asciiLength);
-    
+
     // Slow case - contains non-ascii characters, use fromUTF8WithLatin1Fallback.
     ASSERT(*pos < 0);
     ASSERT(strlen(utf8) == asciiLength + strlen(pos));
@@ -586,7 +586,7 @@ EncodedJSValue JSC_HOST_CALL functionRun(ExecState* exec)
         exec->vm().throwException(globalObject->globalExec(), exception);
         return JSValue::encode(jsUndefined());
     }
-    
+
     return JSValue::encode(jsNumber(stopWatch.getElapsedMS()));
 }
 
@@ -598,7 +598,7 @@ EncodedJSValue JSC_HOST_CALL functionLoad(ExecState* exec)
         return JSValue::encode(exec->vm().throwException(exec, createError(exec, "Could not open file.")));
 
     JSGlobalObject* globalObject = exec->lexicalGlobalObject();
-    
+
     JSValue evaluationException;
     JSValue result = evaluate(globalObject->globalExec(), jscSource(script.data(), fileName), JSValue(), &evaluationException);
     if (evaluationException)
@@ -664,7 +664,7 @@ EncodedJSValue JSC_HOST_CALL functionReadline(ExecState* exec)
     Vector<char, 256> line;
     int c;
     while ((c = getchar()) != EOF) {
-        // FIXME: Should we also break on \r? 
+        // FIXME: Should we also break on \r?
         if (c == '\n')
             break;
         line.append(c);
@@ -692,11 +692,11 @@ EncodedJSValue JSC_HOST_CALL functionReoptimizationRetryCount(ExecState* exec)
 {
     if (exec->argumentCount() < 1)
         return JSValue::encode(jsUndefined());
-    
+
     CodeBlock* block = getSomeBaselineCodeBlockForFunction(exec->argument(0));
     if (!block)
         return JSValue::encode(jsNumber(0));
-    
+
     return JSValue::encode(jsNumber(block->reoptimizationRetryCounter()));
 }
 
@@ -704,14 +704,14 @@ EncodedJSValue JSC_HOST_CALL functionTransferArrayBuffer(ExecState* exec)
 {
     if (exec->argumentCount() < 1)
         return JSValue::encode(exec->vm().throwException(exec, createError(exec, "Not enough arguments")));
-    
+
     JSArrayBuffer* buffer = jsDynamicCast<JSArrayBuffer*>(exec->argument(0));
     if (!buffer)
         return JSValue::encode(exec->vm().throwException(exec, createError(exec, "Expected an array buffer")));
-    
+
     ArrayBufferContents dummyContents;
     buffer->impl()->transfer(dummyContents);
-    
+
     return JSValue::encode(jsUndefined());
 }
 
@@ -756,7 +756,7 @@ static NO_RETURN_DUE_TO_CRASH void timeoutThreadMain(void*)
 {
     auto timeout = std::chrono::microseconds(static_cast<std::chrono::microseconds::rep>(s_desiredTimeout * 1000000));
     std::this_thread::sleep_for(timeout);
-    
+
     dataLog("Timed out after ", s_desiredTimeout, " seconds!\n");
     CRASH();
 }
@@ -899,7 +899,7 @@ static bool runWithScripts(GlobalObject* globalObject, const Vector<Script>& scr
 static void runInteractive(GlobalObject* globalObject)
 {
     String interpreterName("Interpreter");
-    
+
     bool shouldQuit = false;
     while (!shouldQuit) {
 #if HAVE(READLINE) && !RUNNING_FROM_XCODE
@@ -918,13 +918,13 @@ static void runInteractive(GlobalObject* globalObject)
                 break;
             add_history(line);
         } while (error.m_syntaxErrorType == ParserError::SyntaxErrorRecoverable);
-        
+
         if (error.m_type != ParserError::ErrorNone) {
             printf("%s:%d\n", error.m_message.utf8().data(), error.m_line);
             continue;
         }
-        
-        
+
+
         JSValue evaluationException;
         JSValue returnValue = evaluate(globalObject->globalExec(), makeSource(source, interpreterName), JSValue(), &evaluationException);
 #else
@@ -932,7 +932,7 @@ static void runInteractive(GlobalObject* globalObject)
         Vector<char, 256> line;
         int c;
         while ((c = getchar()) != EOF) {
-            // FIXME: Should we also break on \r? 
+            // FIXME: Should we also break on \r?
             if (c == '\n')
                 break;
             line.append(c);
@@ -1045,7 +1045,7 @@ void CommandLine::parseArguments(int argc, char** argv)
         // NOTE: At this point, we know that the arg starts with "--". Skip it.
         if (JSC::Options::setOption(&arg[2])) {
             // The arg was recognized as a VM option and has been parsed.
-            continue; // Just continue with the next arg. 
+            continue; // Just continue with the next arg.
         }
 
         // This arg is not recognized by the VM nor by jsc. Pass it on to the
@@ -1077,7 +1077,7 @@ int jscmain(int argc, char** argv)
 
         if (options.m_profile && !vm->m_perBytecodeProfiler)
             vm->m_perBytecodeProfiler = adoptPtr(new Profiler::Database(*vm));
-    
+
         GlobalObject* globalObject = GlobalObject::create(*vm, GlobalObject::createStructure(*vm, jsNull()), options.m_arguments);
         bool success = runWithScripts(globalObject, options.m_scripts, options.m_dump);
         if (options.m_interactive && success)
@@ -1087,13 +1087,13 @@ int jscmain(int argc, char** argv)
 
         if (options.m_exitCode)
             printf("jsc exiting %d\n", result);
-    
+
         if (options.m_profile) {
             if (!vm->m_perBytecodeProfiler->save(options.m_profilerOutput.utf8().data()))
                 fprintf(stderr, "could not save profiler output.\n");
         }
     }
-    
+
     return result;
 }
 

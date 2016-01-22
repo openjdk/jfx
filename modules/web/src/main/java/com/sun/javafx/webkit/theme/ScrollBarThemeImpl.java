@@ -182,7 +182,7 @@ public final class ScrollBarThemeImpl extends ScrollBarTheme {
             accessor.addChild(sb);
         }
         adjustScrollBar(sb, w, h, orientation, value, visibleSize, totalSize);
-        
+
         return new ScrollBarRef(sb);
     }
 
@@ -193,7 +193,7 @@ public final class ScrollBarThemeImpl extends ScrollBarTheme {
         if (sb == null) {
             return;
         }
-        
+
         if (log.isLoggable(Level.FINEST)) {
             log.log(Level.FINEST, "[{0}, {1} {2}x{3}], {4}",
                     new Object[] {x, y, sb.getWidth(), sb.getHeight(),
@@ -204,7 +204,7 @@ public final class ScrollBarThemeImpl extends ScrollBarTheme {
         Renderer.getRenderer().render(sb, g);
         g.restoreState();
     }
-    
+
     @Override public WCSize getWidgetSize(Ref widget) {
         ScrollBar sb = (ScrollBar)((ScrollBarRef)widget).asControl();
         if (sb != null) {
@@ -313,7 +313,7 @@ public final class ScrollBarThemeImpl extends ScrollBarTheme {
     @Override protected int getThumbLength(int w, int h, int orientation,
                                            int value,
                                            int visibleSize, int totalSize)
-    {        
+    {
         ScrollBar testSB = testSBRef.get();
         if (testSB == null) {
             return 0;
@@ -323,7 +323,7 @@ public final class ScrollBarThemeImpl extends ScrollBarTheme {
             return 0;
         }
         adjustScrollBar(testSB, w, h, orientation, value, visibleSize, totalSize);
-        
+
         double len = 0;
         if (orientation == VERTICAL_SCROLLBAR) {
             len = thumb.getLayoutBounds().getHeight();

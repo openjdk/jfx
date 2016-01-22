@@ -98,7 +98,7 @@ public class DatePickerSkin extends ComboBoxPopupControl<LocalDate> {
             @Override public void invalidated(Observable observable) {
                 if (!rounding) {
                     Insets padding = arrow.getPadding();
-                    Insets rounded = new Insets(Math.round(padding.getTop()), Math.round(padding.getRight()), 
+                    Insets rounded = new Insets(Math.round(padding.getTop()), Math.round(padding.getRight()),
                                                 Math.round(padding.getBottom()), Math.round(padding.getLeft()));
                     if (!rounded.equals(padding)) {
                         rounding = true;

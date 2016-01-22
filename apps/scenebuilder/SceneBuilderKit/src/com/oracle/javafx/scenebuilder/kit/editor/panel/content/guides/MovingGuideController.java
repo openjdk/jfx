@@ -44,7 +44,7 @@ import javafx.scene.paint.Paint;
  *
  */
 public class MovingGuideController {
-    
+
     private final double MATCH_DISTANCE = 6.0;
 
     private final HorizontalLineIndex horizontalLineIndex = new HorizontalLineIndex();
@@ -52,20 +52,20 @@ public class MovingGuideController {
     private final MovingGuideRenderer renderer;
     private double suggestedDX;
     private double suggestedDY;
-    
+
     public MovingGuideController(Paint chromeColor, Bounds scopeInScene) {
         this.renderer = new MovingGuideRenderer(chromeColor, scopeInScene);
     }
-    
+
     public void addSampleBounds(Node node) {
         assert node != null;
         assert node.getScene() != null;
-        
+
         final Bounds layoutBounds = node.getLayoutBounds();
         final Bounds boundsInScene = node.localToScene(layoutBounds, true /* rootScene */);
         addSampleBounds(boundsInScene, true /* addMiddle */);
     }
-    
+
     public void addSampleBounds(Bounds boundsInScene, boolean addMiddle) {
         final double minX = boundsInScene.getMinX();
         final double minY = boundsInScene.getMinY();
@@ -73,40 +73,40 @@ public class MovingGuideController {
         final double maxY = boundsInScene.getMaxY();
         final double midX = (minX + maxX) / 2.0;
         final double midY = (minY + maxY) / 2.0;
-        
+
         horizontalLineIndex.addLine(new HorizontalSegment(minX, maxX, minY));
         horizontalLineIndex.addLine(new HorizontalSegment(minX, maxX, maxY));
         verticalLineIndex.addLine(new VerticalSegment(minX, minY, maxY));
         verticalLineIndex.addLine(new VerticalSegment(maxX, minY, maxY));
-        
+
         if (addMiddle) {
             horizontalLineIndex.addLine(new HorizontalSegment(minX, maxX, midY));
             verticalLineIndex.addLine(new VerticalSegment(midX, minY, maxY));
         }
     }
-    
+
     public void clearSampleBounds() {
         horizontalLineIndex.clear();
         verticalLineIndex.clear();
         clear();
     }
-    
+
     public boolean hasSampleBounds() {
         return (horizontalLineIndex.isEmpty() == false) || (verticalLineIndex.isEmpty() == false);
     }
-    
+
     public void clear() {
         renderer.setLines(Collections.emptyList(), Collections.emptyList());
     }
-    
+
     public void match(Bounds targetBounds) {
         List<HorizontalSegment> horizontalMatchingLines;
         List<VerticalSegment> verticalMatchingLines;
         boolean matchedHorizontally = false;
         boolean matchedVertically = false;
-        
+
         // Match horizontal center line of targetBounds
-        horizontalMatchingLines 
+        horizontalMatchingLines
                 = horizontalLineIndex.matchCenter(targetBounds, MATCH_DISTANCE);
         if (horizontalMatchingLines.isEmpty() == false) {
             matchedHorizontally = true;
@@ -117,10 +117,10 @@ public class MovingGuideController {
             final double targetMidY = (targetMinY + targetMaxY) / 2.0;
             suggestedDY = line.getY1() - targetMidY;
         }
-        
+
         // Match north boundary of targetBounds
         if (matchedHorizontally == false) {
-            horizontalMatchingLines 
+            horizontalMatchingLines
                     = horizontalLineIndex.matchNorth(targetBounds, MATCH_DISTANCE);
             if (horizontalMatchingLines.isEmpty() == false) {
                 matchedHorizontally = true;
@@ -129,10 +129,10 @@ public class MovingGuideController {
                 suggestedDY = line.getY1() - targetBounds.getMinY();
             }
         }
-        
+
         // Match south boundary of targetBounds
         if (matchedHorizontally == false) {
-            horizontalMatchingLines 
+            horizontalMatchingLines
                     = horizontalLineIndex.matchSouth(targetBounds, MATCH_DISTANCE);
             if (horizontalMatchingLines.isEmpty() == false) {
                 matchedHorizontally = true;
@@ -141,13 +141,13 @@ public class MovingGuideController {
                 suggestedDY = line.getY1() - targetBounds.getMaxY();
             }
         }
-        
+
         if (matchedHorizontally == false) {
             suggestedDY = 0.0;
         }
-        
+
         // Match vertical center line of targetBounds
-        verticalMatchingLines 
+        verticalMatchingLines
                 = verticalLineIndex.matchCenter(targetBounds, MATCH_DISTANCE);
         if (verticalMatchingLines.isEmpty() == false) {
             matchedVertically = true;
@@ -158,10 +158,10 @@ public class MovingGuideController {
             final double targetMidX = (targetMinX + targetMaxX) / 2.0;
             suggestedDX = line.getX1() - targetMidX;
         }
-        
+
         // Match west boundary of targetBounds
         if (matchedVertically == false) {
-            verticalMatchingLines 
+            verticalMatchingLines
                     = verticalLineIndex.matchWest(targetBounds, MATCH_DISTANCE);
             if (verticalMatchingLines.isEmpty() == false) {
                 matchedVertically = true;
@@ -170,10 +170,10 @@ public class MovingGuideController {
                 suggestedDX = line.getX1() - targetBounds.getMinX();
             }
         }
-        
+
         // Match east boundary of targetBounds
         if (matchedVertically == false) {
-            verticalMatchingLines 
+            verticalMatchingLines
                     = verticalLineIndex.matchEast(targetBounds, MATCH_DISTANCE);
             if (verticalMatchingLines.isEmpty() == false) {
                 matchedVertically = true;
@@ -182,24 +182,24 @@ public class MovingGuideController {
                 suggestedDX = line.getX1() - targetBounds.getMaxX();
             }
         }
-        
+
         if (matchedVertically == false) {
             suggestedDX = 0.0;
         }
-        
+
         renderer.setLines(horizontalMatchingLines, verticalMatchingLines);
     }
-    
-    
+
+
     public double getSuggestedDX() {
         return suggestedDX;
     }
-    
-    
+
+
     public double getSuggestedDY() {
         return suggestedDY;
     }
-    
+
     public Group getGuideGroup() {
         return renderer.getGuideGroup();
     }

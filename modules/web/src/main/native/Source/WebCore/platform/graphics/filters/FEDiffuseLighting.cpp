@@ -59,7 +59,7 @@ bool FEDiffuseLighting::setLightingColor(const Color& lightingColor)
     return true;
 }
 
-float FEDiffuseLighting::surfaceScale() const 
+float FEDiffuseLighting::surfaceScale() const
 {
     return m_surfaceScale;
 }
@@ -117,7 +117,7 @@ const LightSource* FEDiffuseLighting::lightSource() const
 }
 
 void FEDiffuseLighting::setLightSource(PassRefPtr<LightSource> lightSource)
-{    
+{
     m_lightSource = lightSource;
 }
 

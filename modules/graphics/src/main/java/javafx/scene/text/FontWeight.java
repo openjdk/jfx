@@ -36,54 +36,54 @@ package javafx.scene.text;
  */
 public enum FontWeight {
 
-    /** 
+    /**
      * represents Thin font weight (100).
      */
     THIN(100, "Thin"),
 
-    /** 
+    /**
      * represents 'Extra Light' font weight (200).
      */
     EXTRA_LIGHT(200, "Extra Light", "Ultra Light"),
 
-    /** 
+    /**
      * represents Light font weight (300).
      */
     LIGHT(300, "Light"),
 
-    /** 
+    /**
      * represents Normal font weight (400).
      */
     NORMAL(400, "Normal", "Regular"),
 
-    /** 
+    /**
      * represents Medium font weight (500).
      */
     MEDIUM(500, "Medium"),
 
-    /** 
+    /**
      * represents 'Demi Bold' font weight (600).
      */
     SEMI_BOLD(600, "Semi Bold", "Demi Bold"),
 
-    /** 
+    /**
      * represents Bold font weight (700).
      */
     BOLD(700, "Bold"),
 
-    /** 
+    /**
      * represents 'Extra Bold' font weight (800).
      */
     EXTRA_BOLD(800, "Extra Bold", "Ultra Bold"),
 
-    /** 
+    /**
      * represents Black font weight (900).
      */
     BLACK(900, "Black", "Heavy");
 
     private final int weight;
     private final String[] names;
-    
+
     private FontWeight(int weight, String... names) {
         this.weight = weight;
         this.names = names;
@@ -98,20 +98,20 @@ public enum FontWeight {
         return weight;
     }
 
-    /** 
+    /**
      * Returns {@code FontWeight} by its name.
      *
      * @param name name of the {@code FontWeight}
      */
     public static FontWeight findByName(String name) {
         if (name == null) return null;
-        
+
         for (FontWeight w : FontWeight.values()) {
             for (String n : w.names) {
                 if (n.equalsIgnoreCase(name)) return w;
             }
         }
-        
+
         return null;
     }
 

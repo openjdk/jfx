@@ -110,7 +110,7 @@ public interface ObservableList<E> extends List<E>, Observable {
      * @since JavaFX 8.0
      */
     //RT-35165
-    //Removing Defender Methods from the ObservableList API. 
+    //Removing Defender Methods from the ObservableList API.
     //public default FilteredList<E> filtered(Predicate<E> predicate) {
     //    return new FilteredList<>(this, predicate);
     //}

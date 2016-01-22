@@ -85,7 +85,7 @@ public class RobotBuilder {
         lGroup.setLayoutX(400);
         lGroup.setLayoutY(10);
 
-    	//Rectangle's coordinates
+        //Rectangle's coordinates
         final int recX = 50;
         final int recY = 50;
 
@@ -200,101 +200,101 @@ public class RobotBuilder {
 
 
    public void robotKeyTest(final TextField field, final TextField result) {
-		field.requestFocus();
-		new AnimationTimer() {
-			long startTime = System.nanoTime();
-			@Override 
-			public void handle(long now) {
-				if (now > startTime + 3000000000l){ 
-					stop(); 
-					field.setText("Failed");
-				} else if (field.isFocused()) {
-					stop();
-					Robot robot = com.sun.glass.ui.Application.GetApplication().createRobot();
-					robot.keyPress(KeyEvent.VK_T);
-					robot.keyRelease(KeyEvent.VK_T);
-					robot.keyPress(KeyEvent.VK_E);
-					robot.keyRelease(KeyEvent.VK_E);
-					robot.keyPress(KeyEvent.VK_S);
-					robot.keyRelease(KeyEvent.VK_S);
-					robot.keyPress(KeyEvent.VK_T);
-					robot.keyRelease(KeyEvent.VK_T);
-					robot.destroy();
-					new AnimationTimer() {
-						long startTime = System.nanoTime();
-						@Override
-						public void handle(long now) {
-							if (now > startTime + 3000000000l){ 
-								stop();
-								result.setText("Failed");
-							} else if ((field.getText()).equals("test")) { 
-								stop();
-								result.setText("Passed");
-							}
-						}
-					}.start();
-				}
-			}
-		}.start();
-	}
+        field.requestFocus();
+        new AnimationTimer() {
+            long startTime = System.nanoTime();
+            @Override
+            public void handle(long now) {
+                if (now > startTime + 3000000000l){
+                    stop();
+                    field.setText("Failed");
+                } else if (field.isFocused()) {
+                    stop();
+                    Robot robot = com.sun.glass.ui.Application.GetApplication().createRobot();
+                    robot.keyPress(KeyEvent.VK_T);
+                    robot.keyRelease(KeyEvent.VK_T);
+                    robot.keyPress(KeyEvent.VK_E);
+                    robot.keyRelease(KeyEvent.VK_E);
+                    robot.keyPress(KeyEvent.VK_S);
+                    robot.keyRelease(KeyEvent.VK_S);
+                    robot.keyPress(KeyEvent.VK_T);
+                    robot.keyRelease(KeyEvent.VK_T);
+                    robot.destroy();
+                    new AnimationTimer() {
+                        long startTime = System.nanoTime();
+                        @Override
+                        public void handle(long now) {
+                            if (now > startTime + 3000000000l){
+                                stop();
+                                result.setText("Failed");
+                            } else if ((field.getText()).equals("test")) {
+                                stop();
+                                result.setText("Passed");
+                            }
+                        }
+                    }.start();
+                }
+            }
+        }.start();
+    }
 
     public void robotWheelTest(final ListView<String> lv, final TextField result,
                                                             Stage currentStage){
 
-		//Caclulation of ListView minimal coordinates
-		Bounds bounds = lv.localToScreen(new BoundingBox(0, 0, 
-	        lv.getBoundsInParent().getWidth(),
-	        lv.getBoundsInParent().getHeight()));
-		int x = 10 + (int) bounds.getMinX();
-		int y = 10 + (int) bounds.getMinY();
+        //Caclulation of ListView minimal coordinates
+        Bounds bounds = lv.localToScreen(new BoundingBox(0, 0,
+            lv.getBoundsInParent().getWidth(),
+            lv.getBoundsInParent().getHeight()));
+        int x = 10 + (int) bounds.getMinX();
+        int y = 10 + (int) bounds.getMinY();
 
-		final Robot robot =
+        final Robot robot =
                     com.sun.glass.ui.Application.GetApplication().createRobot();
         robot.mouseMove(x, y);
         robot.mousePress(Robot.MOUSE_LEFT_BTN);
         robot.mouseRelease(Robot.MOUSE_LEFT_BTN);
 
-		new AnimationTimer() {
-			long startTime = System.nanoTime();
-			@Override 
-			public void handle(long now) {
-				if (now > startTime + 3000000000l){ 
-					stop(); 
-					result.setText("Failed");
-				} else if (lv.isFocused()) {
-					stop();
-					robot.mouseWheel(-5);
-					robot.mousePress(Robot.MOUSE_LEFT_BTN);
+        new AnimationTimer() {
+            long startTime = System.nanoTime();
+            @Override
+            public void handle(long now) {
+                if (now > startTime + 3000000000l){
+                    stop();
+                    result.setText("Failed");
+                } else if (lv.isFocused()) {
+                    stop();
+                    robot.mouseWheel(-5);
+                    robot.mousePress(Robot.MOUSE_LEFT_BTN);
                     robot.mouseRelease(Robot.MOUSE_LEFT_BTN);
                     robot.destroy();
-					new AnimationTimer() {
-						long startTime = System.nanoTime();
-						@Override
-						public void handle(long now) {
-							if (now > startTime + 3000000000l){ 
-								stop();
-								result.setText("Scroll Down Failed");
-							} else if (!lv.getSelectionModel().
+                    new AnimationTimer() {
+                        long startTime = System.nanoTime();
+                        @Override
+                        public void handle(long now) {
+                            if (now > startTime + 3000000000l){
+                                stop();
+                                result.setText("Scroll Down Failed");
+                            } else if (!lv.getSelectionModel().
                                     selectedItemProperty().getValue().
                                     equals("a")) {
-								        stop();
-								    result.setText("Scroll Down Passed");
-							}
-						}
-					}.start();
-				}
-			}
-		}.start();
-	}
+                                        stop();
+                                    result.setText("Scroll Down Passed");
+                            }
+                        }
+                    }.start();
+                }
+            }
+        }.start();
+    }
 
     public void robotPixelTest(final TextField result, Stage currentStage){
 
-	Bounds bounds = rec1.localToScreen(new BoundingBox(0, 0, 
-			rec1.getBoundsInParent().getWidth(),
+    Bounds bounds = rec1.localToScreen(new BoundingBox(0, 0,
+            rec1.getBoundsInParent().getWidth(),
                         rec1.getBoundsInParent().getHeight()));
-	int x = 53 + (int) bounds.getMinX();
-	int y = 53 + (int) bounds.getMinY();
-	int answer = assertPixelEquals(x, y, Color.RED) +
+    int x = 53 + (int) bounds.getMinX();
+    int y = 53 + (int) bounds.getMinY();
+    int answer = assertPixelEquals(x, y, Color.RED) +
                      assertPixelEquals(x + 40, y, Color.BLUE) +
                      assertPixelEquals(x + 80, y, Color.YELLOW) +
                      assertPixelEquals(x + 120, y, Color.GREEN);
@@ -349,9 +349,9 @@ public class RobotBuilder {
 
         return false;
     }
-       
+
     public Popup robotScreenTest(final TextField result, Stage stage){
-	
+
         Bounds bounds = rec1.localToScreen(new BoundingBox(0, 0,
                 rec1.getBoundsInParent().getWidth(),
                 rec1.getBoundsInParent().getHeight()));

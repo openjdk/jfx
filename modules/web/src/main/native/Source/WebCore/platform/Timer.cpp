@@ -21,7 +21,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -139,10 +139,10 @@ private:
     friend bool operator>(TimerHeapIterator, TimerHeapIterator);
     friend bool operator<=(TimerHeapIterator, TimerHeapIterator);
     friend bool operator>=(TimerHeapIterator, TimerHeapIterator);
-    
+
     friend TimerHeapIterator operator+(TimerHeapIterator, size_t);
     friend TimerHeapIterator operator+(size_t, TimerHeapIterator);
-    
+
     friend TimerHeapIterator operator-(TimerHeapIterator, size_t);
     friend ptrdiff_t operator-(TimerHeapIterator, TimerHeapIterator);
 
@@ -171,15 +171,15 @@ public:
 
 inline bool TimerHeapLessThanFunction::operator()(const TimerBase* a, const TimerBase* b) const
 {
-    // The comparisons below are "backwards" because the heap puts the largest 
+    // The comparisons below are "backwards" because the heap puts the largest
     // element first and we want the lowest time to be the first one in the heap.
     double aFireTime = a->m_nextFireTime;
     double bFireTime = b->m_nextFireTime;
     if (bFireTime != aFireTime)
         return bFireTime < aFireTime;
-    
-    // We need to look at the difference of the insertion orders instead of comparing the two 
-    // outright in case of overflow. 
+
+    // We need to look at the difference of the insertion orders instead of comparing the two
+    // outright in case of overflow.
     unsigned difference = a->m_heapInsertionOrder - b->m_heapInsertionOrder;
     return difference < std::numeric_limits<unsigned>::max() / 2;
 }

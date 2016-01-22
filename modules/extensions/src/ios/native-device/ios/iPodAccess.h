@@ -33,11 +33,11 @@
 
 
 @interface IPodAccess : NSObject {
- 
+
     @private
-    
+
     MPMediaQuery* query;
-    
+
 }
 
 @property (retain) MPMediaQuery *query;
@@ -45,16 +45,16 @@
 
 - (void) createQuery;
 
-- (void) addNumberPredicateForKey: (int) predicateKey 
+- (void) addNumberPredicateForKey: (int) predicateKey
                             value: (int) predicateValue;
 
-- (void) addStringPredicateForKey: (int) predicateKey 
+- (void) addStringPredicateForKey: (int) predicateKey
                             value: (NSString *) predicateValue;
 
-- (void) fillItemListOfMediaQuery: (jobject) obj 
+- (void) fillItemListOfMediaQuery: (jobject) obj
                            jniEnv: (JNIEnv *) env;
 
-- (void) fillCollectionsOfMediaQuery: (jobject) obj 
+- (void) fillCollectionsOfMediaQuery: (jobject) obj
                               jniEnv: (JNIEnv *) env;
 
 - (void) setGroupingType: (int) type;

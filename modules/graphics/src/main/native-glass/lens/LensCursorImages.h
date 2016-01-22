@@ -22,7 +22,7 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
- 
+
 #include <jni.h>
 
 jbyte *lensCursorsGetCursor(int type, int *width, int *height, int withTrans);

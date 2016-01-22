@@ -146,7 +146,7 @@ public class MoveRowJob extends BatchSelectionJob {
             // If the target index is associated to an existing constraints value :
             // we remove the target constraints and add it back at new position
             // No need to move the constraints of the row above/below :
-            // indeed, they are automatically shifted while updating the target ones 
+            // indeed, they are automatically shifted while updating the target ones
             if (targetConstraints != null) {
                 // First remove current target constraints
                 final Job removeValueJob = new RemoveObjectJob(

@@ -31,7 +31,7 @@
 #include "SlotVisitorInlines.h"
 
 namespace JSC {
-    
+
 const ClassInfo JSMap::s_info = { "Map", &Base::s_info, 0, 0, CREATE_METHOD_TABLE(JSMap) };
 
 void JSMap::visitChildren(JSCell* cell, SlotVisitor& visitor)

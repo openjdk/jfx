@@ -73,21 +73,21 @@ G_DEFINE_QUARK (g-shell-error-quark, g_shell_error)
  * Otherwise double quotes preserve things literally.
  */
 
-static gboolean 
+static gboolean
 unquote_string_inplace (gchar* str, gchar** end, GError** err)
 {
   gchar* dest;
   gchar* s;
   gchar quote_char;
-  
+
   g_return_val_if_fail(end != NULL, FALSE);
   g_return_val_if_fail(err == NULL || *err == NULL, FALSE);
   g_return_val_if_fail(str != NULL, FALSE);
-  
+
   dest = s = str;
 
   quote_char = *s;
-  
+
   if (!(*s == '"' || *s == '\''))
     {
       g_set_error_literal (err,
@@ -106,7 +106,7 @@ unquote_string_inplace (gchar* str, gchar** end, GError** err)
       while (*s)
         {
           g_assert(s > dest); /* loop invariant */
-      
+
           switch (*s)
             {
             case '"':
@@ -156,7 +156,7 @@ unquote_string_inplace (gchar* str, gchar** end, GError** err)
       while (*s)
         {
           g_assert(s > dest); /* loop invariant */
-          
+
           if (*s == '\'')
             {
               /* End of the string, return now */
@@ -175,11 +175,11 @@ unquote_string_inplace (gchar* str, gchar** end, GError** err)
           g_assert(s > dest); /* loop invariant */
         }
     }
-  
+
   /* If we reach here this means the close quote was never encountered */
 
   *dest = '\0';
-  
+
   g_set_error_literal (err,
                        G_SHELL_ERROR,
                        G_SHELL_ERROR_BAD_QUOTING,
@@ -191,14 +191,14 @@ unquote_string_inplace (gchar* str, gchar** end, GError** err)
 /**
  * g_shell_quote:
  * @unquoted_string: a literal string
- * 
+ *
  * Quotes a string so that the shell (/bin/sh) will interpret the
  * quoted string to mean @unquoted_string. If you pass a filename to
  * the shell, for example, you should first quote it with this
  * function.  The return value must be freed with g_free(). The
  * quoting style used is undefined (single or double quotes may be
  * used).
- * 
+ *
  * Returns: quoted string
  **/
 gchar*
@@ -213,7 +213,7 @@ g_shell_quote (const gchar *unquoted_string)
   GString *dest;
 
   g_return_val_if_fail (unquoted_string != NULL, NULL);
-  
+
   dest = g_string_new ("'");
 
   p = unquoted_string;
@@ -234,7 +234,7 @@ g_shell_quote (const gchar *unquoted_string)
 
   /* close the quote */
   g_string_append_c (dest, '\'');
-  
+
   return g_string_free (dest, FALSE);
 }
 
@@ -242,7 +242,7 @@ g_shell_quote (const gchar *unquoted_string)
  * g_shell_unquote:
  * @quoted_string: shell-quoted string
  * @error: error return location or NULL
- * 
+ *
  * Unquotes a string as the shell (/bin/sh) would. Only handles
  * quotes; if a string contains file globs, arithmetic operators,
  * variables, backticks, redirections, or other special-to-the-shell
@@ -257,7 +257,7 @@ g_shell_quote (const gchar *unquoted_string)
  * double quotes are handled, as are escapes including escaped
  * newlines. The return value must be freed with g_free(). Possible
  * errors are in the #G_SHELL_ERROR domain.
- * 
+ *
  * Shell quoting rules are a bit strange. Single quotes preserve the
  * literal string exactly. escape sequences are not allowed; not even
  * \' - if you want a ' in the quoted text, you have to do something
@@ -275,9 +275,9 @@ g_shell_unquote (const gchar *quoted_string,
   gchar *end;
   gchar *start;
   GString *retval;
-  
+
   g_return_val_if_fail (quoted_string != NULL, NULL);
-  
+
   unquoted = g_strdup (quoted_string);
 
   start = unquoted;
@@ -291,7 +291,7 @@ g_shell_unquote (const gchar *quoted_string,
     {
       /* Append all non-quoted chars, honoring backslash escape
        */
-      
+
       while (*start && !(*start == '"' || *start == '\''))
         {
           if (*start == '\\')
@@ -300,7 +300,7 @@ g_shell_unquote (const gchar *quoted_string,
                * except newline, which is removed if it follows
                * a backslash outside of quotes
                */
-              
+
               ++start;
               if (*start)
                 {
@@ -332,10 +332,10 @@ g_shell_unquote (const gchar *quoted_string,
 
   g_free (unquoted);
   return g_string_free (retval, FALSE);
-  
+
  error:
   g_assert (error == NULL || *error != NULL);
-  
+
   g_free (unquoted);
   g_string_free (retval, TRUE);
   return NULL;
@@ -361,7 +361,7 @@ g_shell_unquote (const gchar *quoted_string,
  *
  *    Tokenization steps, from UNIX98 with operator stuff removed,
  *    are:
- * 
+ *
  *    1) "If the current character is backslash, single-quote or
  *        double-quote (\, ' or ") and it is not quoted, it will affect
  *        quoting for subsequent characters up to the end of the quoted
@@ -442,7 +442,7 @@ tokenize_command_line (const gchar *command_line,
   current_quote = '\0';
   quoted = FALSE;
   p = command_line;
- 
+
   while (*p)
     {
       if (current_quote == '\\')
@@ -470,7 +470,7 @@ tokenize_command_line (const gchar *command_line,
             ++p;
 
           current_quote = '\0';
-          
+
           if (*p == '\0')
             break;
         }
@@ -510,7 +510,7 @@ tokenize_command_line (const gchar *command_line,
                 {
                   delimit_token (&current_token, &retval);
                 }
-              
+
               /* discard all unquoted blanks (don't add them to a token) */
               break;
 
@@ -519,7 +519,7 @@ tokenize_command_line (const gchar *command_line,
                * escapes are maybe appended next time through the loop,
                * comment chars are never appended.
                */
-              
+
             case '\'':
             case '"':
               ensure_token (&current_token);
@@ -532,7 +532,7 @@ tokenize_command_line (const gchar *command_line,
 
             case '#':
               if (p == command_line)
-	        { /* '#' was the first char */
+            { /* '#' was the first char */
                   current_quote = *p;
                   break;
                 }
@@ -546,7 +546,7 @@ tokenize_command_line (const gchar *command_line,
                   default:
                     ensure_token (&current_token);
                     g_string_append_c (current_token, *p);
-		    break;
+            break;
                 }
               break;
 
@@ -560,13 +560,13 @@ tokenize_command_line (const gchar *command_line,
             }
         }
 
-      /* We need to count consecutive backslashes mod 2, 
+      /* We need to count consecutive backslashes mod 2,
        * to detect escaped doublequotes.
        */
       if (*p != '\\')
-	quoted = FALSE;
+    quoted = FALSE;
       else
-	quoted = !quoted;
+    quoted = !quoted;
 
       ++p;
     }
@@ -589,7 +589,7 @@ tokenize_command_line (const gchar *command_line,
                      _("Text ended before matching quote was found for %c."
                        " (The text was '%s')"),
                      current_quote, command_line);
-      
+
       goto error;
     }
 
@@ -602,7 +602,7 @@ tokenize_command_line (const gchar *command_line,
 
       goto error;
     }
-  
+
   /* we appended backward */
   retval = g_slist_reverse (retval);
 
@@ -623,7 +623,7 @@ tokenize_command_line (const gchar *command_line,
  * @argvp: (out) (optional) (array length=argcp zero-terminated=1): return
  *   location for array of args, or %NULL
  * @error: (optional): return location for error, or %NULL
- * 
+ *
  * Parses a command line into an argument vector, in much the same way
  * the shell would, but without many of the expansions the shell would
  * perform (variable expansion, globs, operators, filename expansion,
@@ -633,7 +633,7 @@ tokenize_command_line (const gchar *command_line,
  * does contain such expansions, they are passed through
  * literally. Possible errors are those from the #G_SHELL_ERROR
  * domain. Free the returned vector with g_strfreev().
- * 
+ *
  * Returns: %TRUE on success, %FALSE if error set
  **/
 gboolean
@@ -648,7 +648,7 @@ g_shell_parse_argv (const gchar *command_line,
   GSList *tokens = NULL;
   gint i;
   GSList *tmp_list;
-  
+
   g_return_val_if_fail (command_line != NULL, FALSE);
 
   tokens = tokenize_command_line (command_line, error);
@@ -663,7 +663,7 @@ g_shell_parse_argv (const gchar *command_line,
    * remove any zero-length words that didn't contain quotes
    * originally; but since there's no expansion we know all words have
    * nonzero length, unless they contain quotes.
-   * 
+   *
    * So, we simply remove quotes, and don't do any field splitting or
    * empty word removal, since we know there was no way to introduce
    * such things.
@@ -686,9 +686,9 @@ g_shell_parse_argv (const gchar *command_line,
       tmp_list = g_slist_next (tmp_list);
       ++i;
     }
-  
+
   g_slist_free_full (tokens, g_free);
-  
+
   if (argcp)
     *argcp = argc;
 
@@ -704,6 +704,6 @@ g_shell_parse_argv (const gchar *command_line,
   g_assert (error == NULL || *error != NULL);
   g_strfreev (argv);
   g_slist_free_full (tokens, g_free);
-  
+
   return FALSE;
 }

@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -63,7 +63,7 @@ public:
         allocators().add(this);
         // Don't preallocate any memory here.
     }
-    
+
     virtual ~DemandExecutableAllocator()
     {
         {
@@ -105,29 +105,29 @@ protected:
     virtual void* allocateNewSpace(size_t& numPages)
     {
         size_t newNumPages = (((numPages * pageSize() + JIT_ALLOCATOR_LARGE_ALLOC_SIZE - 1) / JIT_ALLOCATOR_LARGE_ALLOC_SIZE * JIT_ALLOCATOR_LARGE_ALLOC_SIZE) + pageSize() - 1) / pageSize();
-        
+
         ASSERT(newNumPages >= numPages);
-        
+
         numPages = newNumPages;
-        
+
 #ifdef EXECUTABLE_MEMORY_LIMIT
         if (bytesAllocatedByAllAllocators() >= EXECUTABLE_MEMORY_LIMIT)
             return 0;
 #endif
-        
+
         PageReservation reservation = PageReservation::reserve(numPages * pageSize(), OSAllocator::JSJITCodePages, EXECUTABLE_POOL_WRITABLE, true);
         RELEASE_ASSERT(reservation);
-        
+
         reservations.append(reservation);
-        
+
         return reservation.base();
     }
-    
+
     virtual void notifyNeedPage(void* page)
     {
         OSAllocator::commit(page, pageSize(), EXECUTABLE_POOL_WRITABLE, true);
     }
-    
+
     virtual void notifyPageIsFree(void* page)
     {
         OSAllocator::decommit(page, pageSize());

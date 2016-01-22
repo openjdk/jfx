@@ -39,7 +39,7 @@ public:
 
 private:
     SVGFontFaceUriElement(const QualifiedName&, Document&);
-    
+
     virtual void parseAttribute(const QualifiedName&, const AtomicString&) override;
     virtual void childrenChanged(const ChildChange&) override;
     virtual InsertionNotificationRequest insertedInto(ContainerNode&) override;

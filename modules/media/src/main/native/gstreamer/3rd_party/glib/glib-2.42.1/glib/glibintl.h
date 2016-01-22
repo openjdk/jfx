@@ -34,7 +34,7 @@ const gchar * glib_pgettext (const gchar *msgctxtid,
 #define dgettext(Domain,String) (String)
 #define dcgettext(Domain,String,Type) (String)
 #define dngettext(Domain,String1,String2,N) ((N) == 1 ? (String1) : (String2))
-#define bindtextdomain(Domain,Directory) (Domain) 
+#define bindtextdomain(Domain,Directory) (Domain)
 #define bind_textdomain_codeset(Domain,Codeset)
 #endif
 

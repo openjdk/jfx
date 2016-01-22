@@ -6,13 +6,13 @@
  * are met:
  *
  * 1.  Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer. 
+ *     notice, this list of conditions and the following disclaimer.
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
- *     documentation and/or other materials provided with the distribution. 
+ *     documentation and/or other materials provided with the distribution.
  * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
- *     from this software without specific prior written permission. 
+ *     from this software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY APPLE AND ITS CONTRIBUTORS "AS IS" AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
@@ -85,7 +85,7 @@ void NetscapePlugInStreamLoader::didReceiveResponse(const ResourceResponse& resp
 
     if (!response.isHTTP())
         return;
-    
+
     if (m_client->wantsAllStreams())
         return;
 
@@ -107,7 +107,7 @@ void NetscapePlugInStreamLoader::didReceiveBuffer(PassRefPtr<SharedBuffer> buffe
 void NetscapePlugInStreamLoader::didReceiveDataOrBuffer(const char* data, int length, PassRefPtr<SharedBuffer> buffer, long long encodedDataLength, DataPayloadType dataPayloadType)
 {
     Ref<NetscapePlugInStreamLoader> protect(*this);
-    
+
     m_client->didReceiveData(this, buffer ? buffer->data() : data, buffer ? buffer->size() : length);
 
     ResourceLoader::didReceiveDataOrBuffer(data, length, buffer, encodedDataLength, dataPayloadType);
@@ -138,7 +138,7 @@ void NetscapePlugInStreamLoader::willCancel(const ResourceError& error)
 
 void NetscapePlugInStreamLoader::didCancel(const ResourceError&)
 {
-    // We need to remove the stream loader after the call to didFail, since didFail can 
+    // We need to remove the stream loader after the call to didFail, since didFail can
     // spawn a new run loop and if the loader has been removed it won't be deferred when
     // the document loader is asked to defer loading.
     m_documentLoader->removePlugInStreamLoader(this);

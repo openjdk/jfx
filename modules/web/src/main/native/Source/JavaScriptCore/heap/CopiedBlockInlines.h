@@ -32,13 +32,13 @@
 #include "MarkedBlock.h"
 
 namespace JSC {
-    
+
 inline bool CopiedBlock::shouldReportLiveBytes(SpinLockHolder&, JSCell* owner)
 {
     // We want to add to live bytes if the owner isn't part of the remembered set or
-    // if this block was allocated during the last cycle. 
+    // if this block was allocated during the last cycle.
     // If we always added live bytes we would double count for elements in the remembered
-    // set across collections. 
+    // set across collections.
     // If we didn't always add live bytes to new blocks, we'd get too few.
     bool ownerIsRemembered = MarkedBlock::blockFor(owner)->isRemembered(owner);
     return !ownerIsRemembered || !m_isOld;

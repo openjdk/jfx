@@ -59,12 +59,12 @@
  * |[
  * Usage:
  *   testtreemodel [OPTION...] - test tree model performance
- *  
+ *
  * Help Options:
  *   -h, --help               Show help options
  *   --help-all               Show all help options
  *   --help-gtk               Show GTK+ Options
- *  
+ *
  * Application Options:
  *   -r, --repeats=N          Average over N repetitions
  *   -m, --max-size=M         Test up to 2^M items
@@ -88,7 +88,7 @@
  *
  * Here is a complete example of setting up GOption to parse the example
  * commandline above and produce the example help output.
- * |[<!-- language="C" --> 
+ * |[<!-- language="C" -->
  * static gint repeats = 2;
  * static gint max_size = 8;
  * static gboolean verbose = FALSE;
@@ -147,7 +147,7 @@
  * The following example shows how you can use #GOptionContext directly
  * in order to correctly deal with Unicode filenames on Windows:
  *
- * |[<!-- language="C" --> 
+ * |[<!-- language="C" -->
  * int
  * main (int argc, char **argv)
  * {
@@ -1733,7 +1733,7 @@ free_pending_nulls (GOptionContext *context,
 }
 
 /* Use a platform-specific mechanism to look up the first argument to
- * the current process. 
+ * the current process.
  * Note if you implement this for other platforms, also add it to
  * tests/option-argv0.c
  */
@@ -1746,9 +1746,9 @@ platform_get_argv0 (void)
   gsize len;
 
   if (!g_file_get_contents ("/proc/self/cmdline",
-			    &cmdline,
-			    &len,
-			    NULL))
+                &cmdline,
+                &len,
+                NULL))
     return NULL;
   /* Sanity check for a NUL terminator. */
   if (!memchr (cmdline, 0, len))
@@ -1839,14 +1839,14 @@ g_option_context_parse (GOptionContext   *context,
       gchar *prgname;
 
       if (argc && argv && *argc)
-	prgname = g_path_get_basename ((*argv)[0]);
+    prgname = g_path_get_basename ((*argv)[0]);
       else
-	prgname = platform_get_argv0 ();
+    prgname = platform_get_argv0 ();
 
       if (prgname)
-	g_set_prgname (prgname);
+    g_set_prgname (prgname);
       else
-	g_set_prgname ("<unknown>");
+    g_set_prgname ("<unknown>");
 
       g_free (prgname);
     }

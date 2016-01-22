@@ -236,7 +236,7 @@ public class CssContentMaker {
             if (node.getScene() == null) {
                 // The node is not visible (ContextMenu, Tooltip, ...)
                 // A node MUST be in the scene to allow for CSS content collect,
-                // so we add it (temporarily) to the scene. 
+                // so we add it (temporarily) to the scene.
                 Node inScene = CssUtils.getFirstAncestorWithNonNullScene(node);
                 if (inScene == null) {
                     // May happen if the Content Panel is not present
@@ -373,7 +373,7 @@ public class CssContentMaker {
         }
         return matchingStyles;
     }
-    
+
 //    protected static void printStyles(List<Style> styles) {
 //        for (Style style : styles) {
 //            printStyle(style);

@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef VisibleSelection_h
@@ -46,7 +46,7 @@ public:
     VisibleSelection(const Position&, const Position&, EAffinity = SEL_DEFAULT_AFFINITY, bool isDirectional = false);
 
     VisibleSelection(const Range*, EAffinity = SEL_DEFAULT_AFFINITY, bool isDirectional = false);
-    
+
     VisibleSelection(const VisiblePosition&, bool isDirectional = false);
     VisibleSelection(const VisiblePosition&, const VisiblePosition&, bool isDirectional = false);
 
@@ -61,12 +61,12 @@ public:
     void setBase(const VisiblePosition&);
     void setExtent(const Position&);
     void setExtent(const VisiblePosition&);
-    
+
     Position base() const { return m_base; }
     Position extent() const { return m_extent; }
     Position start() const { return m_start; }
     Position end() const { return m_end; }
-    
+
     VisiblePosition visibleStart() const { return VisiblePosition(m_start, isRange() ? DOWNSTREAM : affinity()); }
     VisiblePosition visibleEnd() const { return VisiblePosition(m_end, isRange() ? UPSTREAM : affinity()); }
     VisiblePosition visibleBase() const { return VisiblePosition(m_base, isRange() ? (isBaseFirst() ? UPSTREAM : DOWNSTREAM) : affinity()); }
@@ -88,7 +88,7 @@ public:
     void appendTrailingWhitespace();
 
     bool expandUsingGranularity(TextGranularity granularity);
-    
+
     // We don't yet support multi-range selections, so we only ever have one range to return.
     PassRefPtr<Range> firstRange() const;
 
@@ -96,7 +96,7 @@ public:
     // for historical reasons.  toNormalizedRange contracts the range around
     // text, and moves the caret upstream before returning the range.
     PassRefPtr<Range> toNormalizedRange() const;
-    
+
     Element* rootEditableElement() const;
     bool isContentEditable() const;
     bool hasEditableStyle() const;

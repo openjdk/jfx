@@ -38,7 +38,7 @@ package com.oracle.javafx.scenebuilder.kit.metadata.util;
 class StaticPropertyIntrospector {
     final private Object targetObject;
     final private Class<?> residenceClass;
-    
+
     public StaticPropertyIntrospector(Object targetObject, Class<?> residenceClass) {
         this.targetObject = targetObject;
         this.residenceClass = residenceClass;
@@ -51,12 +51,12 @@ class StaticPropertyIntrospector {
     public Class<?> getResidenceClass() {
         return residenceClass;
     }
-    
+
     public Object getValue(String propertyName) {
         // So far we have no use for this : we'll implement when needed.
         throw new UnsupportedOperationException("Not yet implemented"); //NOI18N
     }
-    
+
     public void setValue(String propertyName, Object value) {
         // So far we have no use for this : we'll implement when needed.
         throw new UnsupportedOperationException("Not yet implemented"); //NOI18N

@@ -182,7 +182,7 @@ void CSSGradientValue::addStops(Gradient* gradient, RenderElement* renderer, con
                 float length;
                 if (stop.m_position->isLength())
                     length = stop.m_position->computeLength<float>(&style, &rootStyle, style.effectiveZoom());
-                else 
+                else
                     length = stop.m_position->cssCalcValue()->toCalcValue(&style, &rootStyle, style.effectiveZoom())->evaluate(gradientLength);
                 stops[i].offset = (gradientLength > 0) ? length / gradientLength : 0;
             } else {
@@ -564,7 +564,7 @@ String CSSLinearGradientValue::customCSSText() const
                 result.append(stop.m_position->cssText());
             }
         }
-        
+
     }
 
     result.append(')');
@@ -632,7 +632,7 @@ static void endPointsFromAngle(float angleDeg, const IntSize& size, FloatPoint& 
     float endX = c / (slope - perpendicularSlope);
     float endY = perpendicularSlope * endX + c;
 
-    // We computed the end point, so set the second point, 
+    // We computed the end point, so set the second point,
     // taking into account the moved origin and the fact that we're in drawing space (+y = down).
     secondPoint.set(halfWidth + endX, halfHeight - endY);
     // Reflect around the center for the start point.
@@ -682,7 +682,7 @@ PassRefPtr<Gradient> CSSLinearGradientValue::createGradient(RenderElement* rende
                 // Compute angle, and flip it back to "bearing angle" degrees.
                 float angle = 90 - rad2deg(atan2(rise, run));
                 endPointsFromAngle(angle, size, firstPoint, secondPoint, m_gradientType);
-            } else if (m_firstX || m_firstY) { 
+            } else if (m_firstX || m_firstY) {
                 secondPoint = computeEndPoint(m_firstX.get(), m_firstY.get(), renderer->style(), rootStyle, size);
                 if (m_firstX)
                     firstPoint.setX(size.width() - secondPoint.x());

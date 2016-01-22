@@ -142,9 +142,9 @@ public abstract class WCRenderQueue extends Ref {
             }
         }
     }
-    
+
     protected abstract void disposeGraphics();
-    
+
     private void fwkDisposeGraphics() {
         disposeGraphics();
     }

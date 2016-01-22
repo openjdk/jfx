@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -32,7 +32,7 @@ using namespace WebCore;
 
 const double SMILTime::unresolvedValue = DBL_MAX;
 // Just a big value smaller than DBL_MAX. Our times are relative to 0, we don't really need the full range.
-const double SMILTime::indefiniteValue = FLT_MAX;    
+const double SMILTime::indefiniteValue = FLT_MAX;
 
 SMILTime WebCore::operator+(const SMILTime& a, const SMILTime& b)
 {

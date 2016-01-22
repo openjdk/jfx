@@ -45,14 +45,14 @@ import javafx.scene.Node;
  *
  */
 public abstract class AbstractDriver {
-    
+
     protected final ContentPanelController contentPanelController;
-    
+
     public AbstractDriver(ContentPanelController contentPanelController) {
         assert contentPanelController != null;
         this.contentPanelController = contentPanelController;
-    } 
-    
+    }
+
     public abstract AbstractHandles<?> makeHandles(FXOMObject fxomObject);
     public abstract AbstractPring<?> makePring(FXOMObject fxomObject);
     public abstract AbstractTring<?> makeTring(AbstractDropTarget dropTarget);

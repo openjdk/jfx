@@ -81,7 +81,7 @@ public class RotateTransitionApp extends Application {
         rotateTransition.setToAngle(720);
         rotateTransition.setCycleCount(Timeline.INDEFINITE);
         rotateTransition.setAutoReverse(true);
-        
+
         return root;
     }
 

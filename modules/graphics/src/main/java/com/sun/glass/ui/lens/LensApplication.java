@@ -819,7 +819,7 @@ final class LensApplication extends Application {
     private Object _runLoop() {
         // Note: this method can be recursively called
         // so do not add any platform initialization code here !
-        
+
         final RunLoopControl control = new RunLoopControl();
 
         //push this new instance on the stack
@@ -1163,7 +1163,7 @@ final class LensApplication extends Application {
             }
 
             //continue process events only if not already consumed
-            if (!handleDragEvents(view, eventType, x, y, absx, absy, button, modifiers)) {                
+            if (!handleDragEvents(view, eventType, x, y, absx, absy, button, modifiers)) {
                 postMouseEvent(view, eventType, x, y, absx, absy,
                                button, modifiers,
                                isPopupTrigger, isSynthesized);
@@ -1411,7 +1411,7 @@ final class LensApplication extends Application {
                     if (lastEvent instanceof LensTouchEvent) {
                         LensTouchEvent e = (LensTouchEvent) lastEvent;
                         if (e.view == view &&
-                            e.id == id && 
+                            e.id == id &&
                             (e.state == TouchEvent.TOUCH_MOVED || e.state == TouchEvent.TOUCH_STILL)) {
                             // Rewrite the coordinates of the scheduled event
                             // with the coordinates of this event.
@@ -1429,11 +1429,11 @@ final class LensApplication extends Application {
                     }
                 }
             }
-             
+
             if (!isEventCompacted) {
                 postEvent(new LensTouchEvent(view, TouchEvent.TOUCH_MOVED, id, x, y, absX, absY));
             }
-            
+
         }
     }
 
@@ -1457,7 +1457,7 @@ final class LensApplication extends Application {
             } else {
                  postEvent(new LensTouchEvent(view, state, id, x, y, absX, absY));
             }
-                
+
             if (LensLogger.getLogger().isLoggable(Level.FINE)) {
                 LensLogger.getLogger().fine("Touch event "
                                             + state + " at "
@@ -1490,10 +1490,10 @@ final class LensApplication extends Application {
                                             + " on " + view);
             }
             synchronized (eventList) {
-                // Try to match this multitouch event against a the last multi touch 
+                // Try to match this multitouch event against a the last multi touch
                 // pending event on the queue, if they match and event type is move,
                 // update the existing event with the new values instead of posting a new event
-                // This code assume that the order of touch points doesn't 
+                // This code assume that the order of touch points doesn't
                 //change between events
                 boolean match = false;
                 if (!eventList.isEmpty()) {
@@ -1511,7 +1511,7 @@ final class LensApplication extends Application {
                                     //check if event is motion related
                                     if ((e.states[i] != TouchEvent.TOUCH_MOVED &&
                                          e.states[i] != TouchEvent.TOUCH_STILL) ||
-                                        (states[i] != TouchEvent.TOUCH_MOVED && 
+                                        (states[i] != TouchEvent.TOUCH_MOVED &&
                                          states[i] != TouchEvent.TOUCH_STILL)) {
                                         match = false;
                                     }
@@ -1605,7 +1605,7 @@ final class LensApplication extends Application {
 
         postEvent(new LensDeviceEvent(flags, attach));
     }
-    
+
     /**
      * Notify changes in screen settings from native layer
      * This method is triggered when native code detects a change in e.g. screen orientation
@@ -1613,9 +1613,9 @@ final class LensApplication extends Application {
     private void notifyScreenSettingsChanged() {
         if (LensLogger.getLogger().isLoggable(Level.FINE)) {
             LensLogger.getLogger().fine("Notify screen settings changed");
-        }    
+        }
         postEvent(new LensScreenEvent());
-    }   
+    }
 
     //*******************************************************************
 
@@ -1663,7 +1663,7 @@ final class LensApplication extends Application {
         cursorVisible = visible;
         if (deviceFlags[DEVICE_POINTER] >= 1) {
             LensCursor.setVisible_impl(visible);
-        }     
+        }
     }
 
     @Override

@@ -71,16 +71,16 @@ public abstract class SLBackend extends TreeScanner {
     protected boolean isPixcoordReferenced;
     protected boolean isVertexColorReferenced;
     protected int maxTexCoordIndex = -1;
-    
+
     protected SLBackend(JSLParser parser, ProgramUnit program) {
         this.parser = parser;
         scan(program);
     }
-    
+
     protected final void output(String s) {
         sb.append(s);
     }
-    
+
     public final String getShader() {
         return getHeader() + sb.toString();
     }
@@ -107,11 +107,11 @@ public abstract class SLBackend extends TreeScanner {
     }
 
     protected abstract String getType(Type t);
-    
+
     protected abstract String getQualifier(Qualifier q);
-    
+
     protected abstract String getVar(String v);
-    
+
     protected abstract String getFuncName(String f);
 
     @Override
@@ -212,7 +212,7 @@ public abstract class SLBackend extends TreeScanner {
             if (unrollVar != null) {
                 throw new RuntimeException("Unrolling of nested 'for' loops not yet supported");
             }
-            
+
             // TODO: This is very flimsy code; to make this work for real we
             // will need much more validation of conditions, etc...
             String maxName = null;
@@ -295,7 +295,7 @@ public abstract class SLBackend extends TreeScanner {
         scan(e.getExpr());
         output(")");
     }
-    
+
     @Override
     public void visitProgramUnit(ProgramUnit p) {
         super.visitProgramUnit(p);

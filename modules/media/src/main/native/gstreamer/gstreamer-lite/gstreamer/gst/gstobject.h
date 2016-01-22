@@ -36,12 +36,12 @@ G_BEGIN_DECLS
 #define GST_DISABLE_GST_DEBUG
 #endif // GSTREAMER_LITE
 
-#define GST_TYPE_OBJECT			(gst_object_get_type ())
-#define GST_IS_OBJECT(obj)		(G_TYPE_CHECK_INSTANCE_TYPE ((obj), GST_TYPE_OBJECT))
-#define GST_IS_OBJECT_CLASS(klass)	(G_TYPE_CHECK_CLASS_TYPE ((klass), GST_TYPE_OBJECT))
-#define GST_OBJECT_GET_CLASS(obj)	(G_TYPE_INSTANCE_GET_CLASS ((obj), GST_TYPE_OBJECT, GstObjectClass))
-#define GST_OBJECT(obj)			(G_TYPE_CHECK_INSTANCE_CAST ((obj), GST_TYPE_OBJECT, GstObject))
-#define GST_OBJECT_CLASS(klass)		(G_TYPE_CHECK_CLASS_CAST ((klass), GST_TYPE_OBJECT, GstObjectClass))
+#define GST_TYPE_OBJECT         (gst_object_get_type ())
+#define GST_IS_OBJECT(obj)      (G_TYPE_CHECK_INSTANCE_TYPE ((obj), GST_TYPE_OBJECT))
+#define GST_IS_OBJECT_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), GST_TYPE_OBJECT))
+#define GST_OBJECT_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), GST_TYPE_OBJECT, GstObjectClass))
+#define GST_OBJECT(obj)         (G_TYPE_CHECK_INSTANCE_CAST ((obj), GST_TYPE_OBJECT, GstObject))
+#define GST_OBJECT_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), GST_TYPE_OBJECT, GstObjectClass))
 #define GST_OBJECT_CAST(obj)            ((GstObject*)(obj))
 #define GST_OBJECT_CLASS_CAST(klass)    ((GstObjectClass*)(klass))
 
@@ -195,7 +195,7 @@ struct _GstObject {
 struct _GstObjectClass {
   GInitiallyUnownedClass parent_class;
 
-  const gchar	*path_string_separator;
+  const gchar   *path_string_separator;
 
   /* signals */
   void          (*deep_notify)      (GstObject * object, GstObject * orig, GParamSpec * pspec);
@@ -208,34 +208,34 @@ struct _GstObjectClass {
 };
 
 /* normal GObject stuff */
-GType		gst_object_get_type		(void);
+GType       gst_object_get_type     (void);
 
 /* name routines */
-gboolean	gst_object_set_name		(GstObject *object, const gchar *name);
-gchar*		gst_object_get_name		(GstObject *object);
+gboolean    gst_object_set_name     (GstObject *object, const gchar *name);
+gchar*      gst_object_get_name     (GstObject *object);
 
 /* parentage routines */
-gboolean	gst_object_set_parent		(GstObject *object, GstObject *parent);
-GstObject*	gst_object_get_parent		(GstObject *object);
-void		gst_object_unparent		(GstObject *object);
-gboolean	gst_object_has_ancestor		(GstObject *object, GstObject *ancestor);
+gboolean    gst_object_set_parent       (GstObject *object, GstObject *parent);
+GstObject*  gst_object_get_parent       (GstObject *object);
+void        gst_object_unparent     (GstObject *object);
+gboolean    gst_object_has_ancestor     (GstObject *object, GstObject *ancestor);
 
 void            gst_object_default_deep_notify  (GObject *object, GstObject *orig,
                                                  GParamSpec *pspec, gchar **excluded_props);
 
 /* refcounting + life cycle */
-gpointer	gst_object_ref			(gpointer object);
-void		gst_object_unref		(gpointer object);
-gpointer        gst_object_ref_sink		(gpointer object);
+gpointer    gst_object_ref          (gpointer object);
+void        gst_object_unref        (gpointer object);
+gpointer        gst_object_ref_sink     (gpointer object);
 
 /* replace object pointer */
-gboolean        gst_object_replace		(GstObject **oldobj, GstObject *newobj);
+gboolean        gst_object_replace      (GstObject **oldobj, GstObject *newobj);
 
 /* printing out the 'path' of the object */
-gchar *		gst_object_get_path_string	(GstObject *object);
+gchar *     gst_object_get_path_string  (GstObject *object);
 
 /* misc utils */
-gboolean	gst_object_check_uniqueness	(GList *list, const gchar *name);
+gboolean    gst_object_check_uniqueness (GList *list, const gchar *name);
 
 /* controller functions */
 #include <gst/gstcontrolbinding.h>

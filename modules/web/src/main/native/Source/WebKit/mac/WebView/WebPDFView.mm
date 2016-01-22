@@ -6,13 +6,13 @@
  * are met:
  *
  * 1.  Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer. 
+ *     notice, this list of conditions and the following disclaimer.
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
- *     documentation and/or other materials provided with the distribution. 
+ *     documentation and/or other materials provided with the distribution.
  * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
- *     from this software without specific prior written permission. 
+ *     from this software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY APPLE AND ITS CONTRIBUTORS "AS IS" AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
@@ -140,13 +140,13 @@ static void _applicationInfoForMIMEType(NSString *type, NSString **name, NSImage
 #pragma clang diagnostic pop
     if (error != noErr)
         return;
-    
+
     NSString *appPath = [appURL path];
     CFRelease (appURL);
-    
-    *image = [[NSWorkspace sharedWorkspace] iconForFile:appPath];  
-    [*image setSize:NSMakeSize(16.f,16.f)];  
-    
+
+    *image = [[NSWorkspace sharedWorkspace] iconForFile:appPath];
+    [*image setSize:NSMakeSize(16.f,16.f)];
+
     NSString *appName = [[NSFileManager defaultManager] displayNameAtPath:appPath];
     *name = appName;
 }
@@ -157,10 +157,10 @@ static BOOL _PDFSelectionsAreEqual(PDFSelection *selectionA, PDFSelection *selec
 {
     NSArray *aPages = [selectionA pages];
     NSArray *bPages = [selectionB pages];
-    
+
     if (![aPages isEqual:bPages])
         return NO;
-    
+
     int count = [aPages count];
     int i;
     for (i = 0; i < count; ++i) {
@@ -170,7 +170,7 @@ static BOOL _PDFSelectionsAreEqual(PDFSelection *selectionA, PDFSelection *selec
             return NO;
         }
     }
-    
+
     return YES;
 }
 
@@ -294,7 +294,7 @@ static BOOL _PDFSelectionsAreEqual(PDFSelection *selectionA, PDFSelection *selec
     // the key loop similar to the way NSScrollView does this.
     NSWindow *window = [self window];
     id newFirstResponder = nil;
-    
+
     if ([window keyViewSelectionDirection] == NSSelectingPrevious) {
         NSView *previousValidKeyView = [self previousValidKeyView];
         if ((previousValidKeyView != self) && (previousValidKeyView != PDFSubview))
@@ -304,15 +304,15 @@ static BOOL _PDFSelectionsAreEqual(PDFSelection *selectionA, PDFSelection *selec
         if ([PDFDocumentView acceptsFirstResponder])
             newFirstResponder = PDFDocumentView;
     }
-    
+
     if (!newFirstResponder)
         return NO;
-    
+
     if (![window makeFirstResponder:newFirstResponder])
         return NO;
-    
+
     [[dataSource webFrame] _clearSelectionInOtherFrames];
-    
+
     return YES;
 }
 
@@ -332,16 +332,16 @@ static BOOL _PDFSelectionsAreEqual(PDFSelection *selectionA, PDFSelection *selec
     self = [super initWithFrame:frame];
     if (self) {
         [self setAutoresizingMask:NSViewWidthSizable | NSViewHeightSizable];
-        
+
         Class previewViewClass = [[self class] _PDFPreviewViewClass];
-        
+
         // We might not have found a previewViewClass, but if we did find it
         // then we should be able to create an instance.
         if (previewViewClass) {
             previewView = [[previewViewClass alloc] initWithFrame:frame];
             ASSERT(previewView);
         }
-        
+
         NSView *topLevelPDFKitView = nil;
         if (previewView) {
             // We'll retain the PDFSubview here so that it is equally retained in all
@@ -353,19 +353,19 @@ static BOOL _PDFSelectionsAreEqual(PDFSelection *selectionA, PDFSelection *selec
             PDFSubview = [[[[self class] _PDFViewClass] alloc] initWithFrame:frame];
             topLevelPDFKitView = PDFSubview;
         }
-        
+
         ASSERT(PDFSubview);
-        
+
         [topLevelPDFKitView setAutoresizingMask:NSViewWidthSizable | NSViewHeightSizable];
         [self addSubview:topLevelPDFKitView];
-        
+
         [PDFSubview setDelegate:self];
         written = NO;
         // Messaging this proxy is the same as messaging PDFSubview, with the side effect that the
         // PDF viewing defaults are updated afterwards
         PDFSubviewProxy = (PDFView *)[[WebPDFPrefUpdatingProxy alloc] initWithView:self];
     }
-    
+
     return self;
 }
 
@@ -375,12 +375,12 @@ static BOOL _PDFSelectionsAreEqual(PDFSelection *selectionA, PDFSelection *selec
 - (void)_recursiveDisplayRectIfNeededIgnoringOpacity:(NSRect)rect isVisibleRect:(BOOL)isVisibleRect rectIsVisibleRectForView:(NSView *)visibleView topView:(BOOL)topView
 {
     CGContextRef context = (CGContextRef)[[NSGraphicsContext currentContext] graphicsPort];
-    
+
     bool allowsSmoothing = CGContextGetAllowsFontSmoothing(context);
     bool allowsSubpixelQuantization = CGContextGetAllowsFontSubpixelQuantization(context);
-    
+
     [super _recursiveDisplayRectIfNeededIgnoringOpacity:rect isVisibleRect:isVisibleRect rectIsVisibleRectForView:visibleView topView:topView];
-    
+
     CGContextSetAllowsFontSmoothing(context, allowsSmoothing);
     CGContextSetAllowsFontSubpixelQuantization(context, allowsSubpixelQuantization);
 }
@@ -388,12 +388,12 @@ static BOOL _PDFSelectionsAreEqual(PDFSelection *selectionA, PDFSelection *selec
 - (void)_recursiveDisplayAllDirtyWithLockFocus:(BOOL)needsLockFocus visRect:(NSRect)visRect
 {
     CGContextRef context = (CGContextRef)[[NSGraphicsContext currentContext] graphicsPort];
-    
+
     bool allowsSmoothing = CGContextGetAllowsFontSmoothing(context);
     bool allowsSubpixelQuantization = CGContextGetAllowsFontSubpixelQuantization(context);
-    
+
     [super _recursiveDisplayAllDirtyWithLockFocus:needsLockFocus visRect:visRect];
-    
+
     CGContextSetAllowsFontSmoothing(context, allowsSmoothing);
     CGContextSetAllowsFontSubpixelQuantization(context, allowsSubpixelQuantization);
 }
@@ -401,12 +401,12 @@ static BOOL _PDFSelectionsAreEqual(PDFSelection *selectionA, PDFSelection *selec
 - (void)_recursive:(BOOL)recurse displayRectIgnoringOpacity:(NSRect)displayRect inContext:(NSGraphicsContext *)graphicsContext topView:(BOOL)topView
 {
     CGContextRef context = (CGContextRef)[graphicsContext graphicsPort];
-    
+
     bool allowsSmoothing = CGContextGetAllowsFontSmoothing(context);
     bool allowsSubpixelQuantization = CGContextGetAllowsFontSubpixelQuantization(context);
-    
+
     [super _recursive:recurse displayRectIgnoringOpacity:displayRect inContext:graphicsContext topView:topView];
-    
+
     CGContextSetAllowsFontSmoothing(context, allowsSmoothing);
     CGContextSetAllowsFontSubpixelQuantization(context, allowsSubpixelQuantization);
 }
@@ -415,9 +415,9 @@ static BOOL _PDFSelectionsAreEqual(PDFSelection *selectionA, PDFSelection *selec
 {
     bool allowsSmoothing = CGContextGetAllowsFontSmoothing(context);
     bool allowsSubpixelQuantization = CGContextGetAllowsFontSubpixelQuantization(context);
-    
+
     [super _recursive:recurseX displayRectIgnoringOpacity:displayRect inGraphicsContext:graphicsContext CGContext:context topView:isTopView shouldChangeFontReferenceColor:shouldChangeFontReferenceColor];
-    
+
     CGContextSetAllowsFontSmoothing(context, allowsSmoothing);
     CGContextSetAllowsFontSubpixelQuantization(context, allowsSubpixelQuantization);
 }
@@ -426,15 +426,15 @@ static BOOL _PDFSelectionsAreEqual(PDFSelection *selectionA, PDFSelection *selec
 {
     // Start with the menu items supplied by PDFKit, with WebKit tags applied
     NSMutableArray *items = [self _menuItemsFromPDFKitForEvent:theEvent];
-    
+
     // Add in an "Open with <default PDF viewer>" item
     NSString *appName = nil;
     NSImage *appIcon = nil;
-    
+
     _applicationInfoForMIMEType([dataSource _responseMIMEType], &appName, &appIcon);
     if (!appName)
         appName = UI_STRING_INTERNAL("Finder", "Default application name for Open With context menu");
-    
+
     // To match the PDFKit style, we'll add Open with Preview even when there's no document yet to view, and
     // disable it using validateUserInterfaceItem.
     NSString *title = [NSString stringWithFormat:UI_STRING_INTERNAL("Open with %@", "context menu item for PDF"), appName];
@@ -444,16 +444,16 @@ static BOOL _PDFSelectionsAreEqual(PDFSelection *selectionA, PDFSelection *selec
         [item setImage:appIcon];
     [items insertObject:item atIndex:0];
     [item release];
-    
+
     [items insertObject:[NSMenuItem separatorItem] atIndex:1];
-    
+
     // pass the items off to the WebKit context menu mechanism
     WebView *webView = [[dataSource webFrame] webView];
     ASSERT(webView);
     NSMenu *menu = [webView _menuForElement:[self elementAtPoint:[self convertPoint:[theEvent locationInWindow] fromView:nil]] defaultItems:items];
-    
+
     // The delegate has now had the opportunity to add items to the standard PDF-related items, or to
-    // remove or modify some of the PDF-related items. In 10.4, the PDF context menu did not go through 
+    // remove or modify some of the PDF-related items. In 10.4, the PDF context menu did not go through
     // the standard WebKit delegate path, and so the standard PDF-related items always appeared. For
     // clients that create their own context menu by hand-picking specific items from the default list, such as
     // Safari, none of the PDF-related items will appear until the client is rewritten to explicitly
@@ -475,7 +475,7 @@ static BOOL _PDFSelectionsAreEqual(PDFSelection *selectionA, PDFSelection *selec
             [menuItemCopy release];
         }
     }
-    
+
     return menu;
 }
 
@@ -486,7 +486,7 @@ static BOOL _PDFSelectionsAreEqual(PDFSelection *selectionA, PDFSelection *selec
     NSView *documentView = [PDFSubview documentView];
     if (documentView) {
         [documentView setNextKeyView:aView];
-        
+
         // We need to make the documentView be the next view in the keyview loop.
         // It would seem more sensible to do this in our init method, but it turns out
         // that [NSClipView setDocumentView] won't call this method if our next key view
@@ -505,32 +505,32 @@ static BOOL _PDFSelectionsAreEqual(PDFSelection *selectionA, PDFSelection *selec
     NSWindow *newWindow = [self window];
     if (!newWindow)
         return;
-    
+
     [self _trackFirstResponder];
     NSNotificationCenter *notificationCenter = [NSNotificationCenter defaultCenter];
     [notificationCenter addObserver:self
-                           selector:@selector(_trackFirstResponder) 
+                           selector:@selector(_trackFirstResponder)
                                name:NSWindowDidUpdateNotification
                              object:newWindow];
-    
+
     [notificationCenter addObserver:self
-                           selector:@selector(_scaleOrDisplayModeOrPageChanged:) 
+                           selector:@selector(_scaleOrDisplayModeOrPageChanged:)
                                name:_webkit_PDFViewScaleChangedNotification
                              object:PDFSubview];
-    
+
     [notificationCenter addObserver:self
-                           selector:@selector(_scaleOrDisplayModeOrPageChanged:) 
+                           selector:@selector(_scaleOrDisplayModeOrPageChanged:)
                                name:_webkit_PDFViewDisplayModeChangedNotification
                              object:PDFSubview];
-    
+
     [notificationCenter addObserver:self
-                           selector:@selector(_scaleOrDisplayModeOrPageChanged:) 
+                           selector:@selector(_scaleOrDisplayModeOrPageChanged:)
                                name:_webkit_PDFViewPageChangedNotification
                              object:PDFSubview];
-    
-    [notificationCenter addObserver:self 
+
+    [notificationCenter addObserver:self
                            selector:@selector(_PDFDocumentViewMightHaveScrolled:)
-                               name:NSViewBoundsDidChangeNotification 
+                               name:NSViewBoundsDidChangeNotification
                              object:[self _clipViewForPDFDocumentView]];
 }
 
@@ -541,7 +541,7 @@ static BOOL _PDFSelectionsAreEqual(PDFSelection *selectionA, PDFSelection *selec
     NSWindow *oldWindow = [self window];
     if (!oldWindow)
         return;
-    
+
     NSNotificationCenter *notificationCenter = [NSNotificationCenter defaultCenter];
     [notificationCenter removeObserver:self
                                   name:NSWindowDidUpdateNotification
@@ -555,11 +555,11 @@ static BOOL _PDFSelectionsAreEqual(PDFSelection *selectionA, PDFSelection *selec
     [notificationCenter removeObserver:self
                                   name:_webkit_PDFViewPageChangedNotification
                                 object:PDFSubview];
-    
+
     [notificationCenter removeObserver:self
-                                  name:NSViewBoundsDidChangeNotification 
+                                  name:NSViewBoundsDidChangeNotification
                                 object:[self _clipViewForPDFDocumentView]];
-    
+
     firstResponderIsPDFDocumentView = NO;
 }
 
@@ -567,13 +567,13 @@ static BOOL _PDFSelectionsAreEqual(PDFSelection *selectionA, PDFSelection *selec
 
 - (BOOL)validateUserInterfaceItemWithoutDelegate:(id <NSValidatedUserInterfaceItem>)item
 {
-    SEL action = [item action];    
+    SEL action = [item action];
     if (action == @selector(takeFindStringFromSelection:) || action == @selector(centerSelectionInVisibleArea:) || action == @selector(jumpToSelection:))
         return [PDFSubview currentSelection] != nil;
-    
+
     if (action == @selector(_openWithFinder:))
         return [PDFSubview document] != nil;
-    
+
     if (action == @selector(_lookUpInDictionaryFromMenu:))
         return [self _canLookUpInDictionary];
 
@@ -628,7 +628,7 @@ static BOOL _PDFSelectionsAreEqual(PDFSelection *selectionA, PDFSelection *selec
         return;
 
     dataSource = [ds retain];
-    
+
     // FIXME: There must be some better place to put this. There is no comment in ChangeLog
     // explaining why it's in this method.
     [self setFrame:[[self superview] frame]];
@@ -660,9 +660,9 @@ static BOOL _PDFSelectionsAreEqual(PDFSelection *selectionA, PDFSelection *selec
 {
     WebFrame *frame = [dataSource webFrame];
     ASSERT(frame);
-    
+
     return [NSDictionary dictionaryWithObjectsAndKeys:
-        frame, WebElementFrameKey, 
+        frame, WebElementFrameKey,
         [NSNumber numberWithBool:[self _pointIsInSelection:point]], WebElementIsSelectedKey,
         nil];
 }
@@ -728,22 +728,22 @@ static BOOL isFrameInRange(WebFrame *frame, DOMRange *range)
 
     PDFSelection *previousMatch = nil;
     NSMutableArray *matches = [[NSMutableArray alloc] initWithCapacity:limit];
-    
+
     for (;;) {
         PDFSelection *nextMatch = [self _nextMatchFor:string direction:YES caseSensitive:!(options & WebFindOptionsCaseInsensitive) wrap:NO fromSelection:previousMatch startInSelection:NO];
         if (!nextMatch)
             break;
-        
+
         [matches addObject:nextMatch];
         previousMatch = nextMatch;
 
         if ([matches count] >= limit)
             break;
     }
-    
+
     [self _setTextMatches:matches];
     [matches release];
-    
+
     return [matches count];
 }
 
@@ -758,16 +758,16 @@ static BOOL isFrameInRange(WebFrame *frame, DOMRange *range)
     NSSet *visiblePages = [self _visiblePDFPages];
     NSEnumerator *matchEnumerator = [textMatches objectEnumerator];
     PDFSelection *match;
-    
+
     while ((match = [matchEnumerator nextObject]) != nil) {
         NSEnumerator *pages = [[match pages] objectEnumerator];
         PDFPage *page;
         while ((page = [pages nextObject]) != nil) {
-            
+
             // Skip pages that aren't visible (needed for non-continuous modes, see 5362989)
             if (![visiblePages containsObject:page])
                 continue;
-            
+
             NSRect selectionOnPageInPDFViewCoordinates = [PDFSubview convertRect:[match boundsForPage:page] fromPage:page];
             [result addObject:[NSValue valueWithRect:selectionOnPageInPDFViewCoordinates]];
         }
@@ -791,7 +791,7 @@ static BOOL isFrameInRange(WebFrame *frame, DOMRange *range)
 - (NSAttributedString *)attributedString
 {
     // changing the selection is a hack, but the only way to get an attr string is via PDFSelection
-    
+
     // must copy this selection object because we change the selection which seems to release it
     PDFSelection *savedSelection = [[PDFSubview currentSelection] copy];
     [PDFSubview selectAll:nil];
@@ -804,9 +804,9 @@ static BOOL isFrameInRange(WebFrame *frame, DOMRange *range)
         // Otherwise, we could collapse this code with the case above.
         [PDFSubview clearSelection];
     }
-    
+
     result = [self _scaledAttributedString:result];
-    
+
     return result;
 }
 
@@ -936,10 +936,10 @@ static BOOL isFrameInRange(WebFrame *frame, DOMRange *range)
         else
             result = NSUnionRect(result, selectionOnPageInPDFViewCoordinates);
     }
-    
+
     // Convert result to be in documentView (selectionView) coordinates
     result = [PDFSubview convertRect:result toView:[PDFSubview documentView]];
-    
+
     return result;
 }
 
@@ -961,8 +961,8 @@ static BOOL isFrameInRange(WebFrame *frame, DOMRange *range)
     // FIXME 4604366: this doesn't handle text at non-actual size
     NSMutableAttributedString *attributedString = [[self selectedAttributedString] mutableCopy];
     NSRange wholeStringRange = NSMakeRange(0, [attributedString length]);
-    
-    // Modify the styles in the attributed string to draw black text, no background, and no underline. We draw 
+
+    // Modify the styles in the attributed string to draw black text, no background, and no underline. We draw
     // no underline because it would look ugly.
     [attributedString beginEditing];
     [attributedString removeAttribute:NSBackgroundColorAttributeName range:wholeStringRange];
@@ -970,13 +970,13 @@ static BOOL isFrameInRange(WebFrame *frame, DOMRange *range)
     if (forceBlackText)
         [attributedString addAttribute:NSForegroundColorAttributeName value:[NSColor colorWithDeviceWhite:0.0f alpha:1.0f] range:wholeStringRange];
     [attributedString endEditing];
-    
+
     NSImage* selectionImage = [[[NSImage alloc] initWithSize:[self selectionRect].size] autorelease];
-    
+
     [selectionImage lockFocus];
     [attributedString drawAtPoint:NSZeroPoint];
     [selectionImage unlockFocus];
-    
+
     [attributedString release];
 
     return selectionImage;
@@ -996,12 +996,12 @@ static BOOL isFrameInRange(WebFrame *frame, DOMRange *range)
 - (void)writeSelectionWithPasteboardTypes:(NSArray *)types toPasteboard:(NSPasteboard *)pasteboard
 {
     NSAttributedString *attributedString = [self selectedAttributedString];
-    
+
     if ([types containsObject:NSRTFDPboardType]) {
         NSData *RTFDData = [attributedString RTFDFromRange:NSMakeRange(0, [attributedString length]) documentAttributes:nil];
         [pasteboard setData:RTFDData forType:NSRTFDPboardType];
-    }        
-    
+    }
+
     if ([types containsObject:NSRTFPboardType]) {
         if ([attributedString containsAttachments])
             attributedString = attributedStringByStrippingAttachmentCharacters(attributedString);
@@ -1009,7 +1009,7 @@ static BOOL isFrameInRange(WebFrame *frame, DOMRange *range)
         NSData *RTFData = [attributedString RTFFromRange:NSMakeRange(0, [attributedString length]) documentAttributes:nil];
         [pasteboard setData:RTFData forType:NSRTFPboardType];
     }
-    
+
     if ([types containsObject:NSStringPboardType])
         [pasteboard setString:[self selectedString] forType:NSStringPboardType];
 }
@@ -1091,12 +1091,12 @@ static BOOL isFrameInRange(WebFrame *frame, DOMRange *range)
 {
     static Class PDFPreviewViewClass = nil;
     static BOOL checkedForPDFPreviewViewClass = NO;
-    
+
     if (!checkedForPDFPreviewViewClass) {
         checkedForPDFPreviewViewClass = YES;
         PDFPreviewViewClass = [[WebPDFView PDFKitBundle] classNamed:@"PDFPreviewView"];
     }
-    
+
     // This class might not be available; callers need to deal with a nil return here.
     return PDFPreviewViewClass;
 }
@@ -1204,9 +1204,9 @@ static BOOL isFrameInRange(WebFrame *frame, DOMRange *range)
         [NSNumber numberWithInt:WebMenuItemPDFNextPage], NSStringFromSelector(@selector(goToNextPage:)),
         [NSNumber numberWithInt:WebMenuItemPDFPreviousPage], NSStringFromSelector(@selector(goToPreviousPage:)),
         nil];
-    
+
     // Leave these menu items out, since WebKit inserts equivalent ones. Note that we leave out PDFKit's "Look Up in Dictionary"
-    // item here because WebKit already includes an item with the same title and purpose. We map WebKit's to PDFKit's 
+    // item here because WebKit already includes an item with the same title and purpose. We map WebKit's to PDFKit's
     // "Look Up in Dictionary" via the implementation of -[WebPDFView _lookUpInDictionaryFromMenu:].
     NSSet *unwantedActions = [[NSSet alloc] initWithObjects:
                               NSStringFromSelector(@selector(_searchInSpotlight:)),
@@ -1214,29 +1214,29 @@ static BOOL isFrameInRange(WebFrame *frame, DOMRange *range)
                               NSStringFromSelector(@selector(_searchInDictionary:)),
                               NSStringFromSelector(@selector(copy:)),
                               nil];
-    
+
     NSEnumerator *e = [[[PDFSubview menuForEvent:theEvent] itemArray] objectEnumerator];
     NSMenuItem *item;
     while ((item = [e nextObject]) != nil) {
-        
+
         NSString *actionString = NSStringFromSelector([item action]);
-        
+
         if ([unwantedActions containsObject:actionString])
             continue;
-        
+
         // Copy items since a menu item can be in only one menu at a time, and we don't
         // want to modify the original menu supplied by PDFKit.
         NSMenuItem *itemCopy = [item copy];
         [copiedItems addObject:itemCopy];
         [itemCopy release];
-        
+
         // Include all of PDFKit's separators for now. At the end we'll remove any ones that were made
         // useless by removing PDFKit's menu items.
         if ([itemCopy isSeparatorItem])
             continue;
 
         NSNumber *tagNumber = [actionsToTags objectForKey:actionString];
-        
+
         int tag;
         if (tagNumber != nil)
             tag = [tagNumber intValue];
@@ -1246,7 +1246,7 @@ static BOOL isFrameInRange(WebFrame *frame, DOMRange *range)
             tag = WebMenuItemTagOther;
             LOG_ERROR("no WebKit menu item tag found for PDF context menu item action \"%@\", using WebMenuItemTagOther", actionString);
         }
-        
+
         if ([itemCopy tag] == 0) {
             [itemCopy setTag:tag];
             if ([itemCopy target] == PDFSubview) {
@@ -1257,15 +1257,15 @@ static BOOL isFrameInRange(WebFrame *frame, DOMRange *range)
         } else
             LOG_ERROR("PDF context menu item %@ came with tag %d, so no WebKit tag was applied. This could mean that the item doesn't appear in clients such as Safari.", [itemCopy title], [itemCopy tag]);
     }
-    
+
     [actionsToTags release];
     [unwantedActions release];
-    
+
     // Since we might have removed elements supplied by PDFKit, and we want to minimize our hardwired
     // knowledge of the order and arrangement of PDFKit's menu items, we need to remove any bogus
     // separators that were left behind.
     [copiedItems _webkit_removeUselessMenuItemSeparators];
-    
+
     return copiedItems;
 }
 
@@ -1273,20 +1273,20 @@ static BOOL isFrameInRange(WebFrame *frame, DOMRange *range)
 {
     if (![string length])
         return nil;
-    
+
     int options = 0;
     if (!forward)
         options |= NSBackwardsSearch;
-    
+
     if (!caseFlag)
         options |= NSCaseInsensitiveSearch;
-    
+
     PDFDocument *document = [PDFSubview document];
-    
+
     PDFSelection *selectionForInitialSearch = [initialSelection copy];
     if (startInSelection) {
         // Initially we want to include the selected text in the search. PDFDocument's API always searches from just
-        // past the passed-in selection, so we need to pass a selection that's modified appropriately. 
+        // past the passed-in selection, so we need to pass a selection that's modified appropriately.
         // FIXME 4182863: Ideally we'd use a zero-length selection at the edge of the current selection, but zero-length
         // selections don't work in PDFDocument. So instead we make a one-length selection just before or after the
         // current selection, which works for our purposes even when the current selection is at an edge of the
@@ -1306,10 +1306,10 @@ static BOOL isFrameInRange(WebFrame *frame, DOMRange *range)
     // If we first searched in the selection, and we found the selection, search again from just past the selection
     if (startInSelection && _PDFSelectionsAreEqual(foundSelection, initialSelection))
         foundSelection = [document findString:string fromSelection:initialSelection withOptions:options];
-    
+
     if (!foundSelection && wrapFlag)
         foundSelection = [document findString:string fromSelection:nil withOptions:options];
-    
+
     return foundSelection;
 }
 
@@ -1320,9 +1320,9 @@ static BOOL isFrameInRange(WebFrame *frame, DOMRange *range)
         NSBeep();
         return;
     }
-    
+
     NSString *opath = [self _path];
-    
+
     if (opath) {
         if (!written) {
             // Create a PDF file with the minimal permissions (only accessible to the current user, see 4145714)
@@ -1331,11 +1331,11 @@ static BOOL isFrameInRange(WebFrame *frame, DOMRange *range)
             [permissions release];
 
             [[NSFileManager defaultManager] createFileAtPath:opath contents:[dataSource data] attributes:fileAttributes];
-            
+
             [fileAttributes release];
             written = YES;
         }
-        
+
         if (![[NSWorkspace sharedWorkspace] openFile:opath]) {
             // NSWorkspace couldn't open file.  Do we need an alert
             // here?  We ignore the error elsewhere.
@@ -1348,17 +1348,17 @@ static BOOL isFrameInRange(WebFrame *frame, DOMRange *range)
     // Generate path once.
     if (path)
         return path;
-    
+
     NSString *filename = [[dataSource response] suggestedFilename];
-    NSFileManager *manager = [NSFileManager defaultManager]; 
+    NSFileManager *manager = [NSFileManager defaultManager];
     NSString *temporaryPDFDirectoryPath = [self _temporaryPDFDirectoryPath];
-    
+
     if (!temporaryPDFDirectoryPath) {
         // This should never happen; if it does we'll fail silently on non-debug builds.
         ASSERT_NOT_REACHED();
         return nil;
     }
-    
+
     path = [temporaryPDFDirectoryPath stringByAppendingPathComponent:filename];
     if ([manager fileExistsAtPath:path]) {
         NSString *pathTemplatePrefix = [temporaryPDFDirectoryPath stringByAppendingPathComponent:@"XXXXXX-"];
@@ -1376,21 +1376,21 @@ static BOOL isFrameInRange(WebFrame *frame, DOMRange *range)
         }
         free(cPath);
     }
-    
+
     [path retain];
-    
+
     return path;
 }
 
 - (void)_PDFDocumentViewMightHaveScrolled:(NSNotification *)notification
-{ 
+{
     NSClipView *clipView = [self _clipViewForPDFDocumentView];
     ASSERT([notification object] == clipView);
-    
+
     NSPoint scrollPosition = [clipView bounds].origin;
     if (NSEqualPoints(scrollPosition, lastScrollPosition))
         return;
-    
+
     lastScrollPosition = scrollPosition;
     WebView *webView = [self _webView];
     [[webView _UIDelegateForwarder] webView:webView didScrollDocumentInFrameView:[[dataSource webFrame] frameView]];
@@ -1406,9 +1406,9 @@ static BOOL isFrameInRange(WebFrame *frame, DOMRange *range)
     PDFPage *page = [PDFSubview pageForPoint:point nearest:NO];
     if (!page)
         return NO;
-    
+
     NSRect selectionRect = [PDFSubview convertRect:[[PDFSubview currentSelection] boundsForPage:page] fromPage:page];
-    
+
     return NSPointInRect(point, selectionRect);
 }
 
@@ -1428,19 +1428,19 @@ static BOOL isFrameInRange(WebFrame *frame, DOMRange *range)
 {
     if (!unscaledAttributedString)
         return nil;
-    
+
     float scaleFactor = [PDFSubview scaleFactor];
     if (scaleFactor == 1.0)
         return unscaledAttributedString;
-    
+
     NSMutableAttributedString *result = [[unscaledAttributedString mutableCopy] autorelease];
     unsigned int length = [result length];
     NSRange effectiveRange = NSMakeRange(0,0);
-    
-    [result beginEditing];    
+
+    [result beginEditing];
     while (NSMaxRange(effectiveRange) < length) {
         NSFont *unscaledFont = [result attribute:NSFontAttributeName atIndex:NSMaxRange(effectiveRange) effectiveRange:&effectiveRange];
-        
+
         if (!unscaledFont) {
             // FIXME: We can't scale the font if we don't know what it is. We should always know what it is,
             // but sometimes don't due to PDFKit issue 5089411. When that's addressed, we can remove this
@@ -1448,12 +1448,12 @@ static BOOL isFrameInRange(WebFrame *frame, DOMRange *range)
             LOG_ERROR("no font attribute found in range %@ for attributed string \"%@\" on page %@ (see radar 5089411)", NSStringFromRange(effectiveRange), result, [[dataSource request] URL]);
             continue;
         }
-        
+
         NSFont *scaledFont = [NSFont fontWithName:[unscaledFont fontName] size:[unscaledFont pointSize]*scaleFactor];
         [result addAttribute:NSFontAttributeName value:scaledFont range:effectiveRange];
     }
     [result endEditing];
-    
+
     return result;
 }
 
@@ -1467,13 +1467,13 @@ static BOOL isFrameInRange(WebFrame *frame, DOMRange *range)
 - (NSString *)_temporaryPDFDirectoryPath
 {
     // Returns nil if the temporary PDF directory didn't exist and couldn't be created
-    
+
     static NSString *_temporaryPDFDirectoryPath = nil;
-    
+
     if (!_temporaryPDFDirectoryPath) {
         NSString *temporaryDirectoryTemplate = [NSTemporaryDirectory() stringByAppendingPathComponent:@"WebKitPDFs-XXXXXX"];
         char *cTemplate = strdup([temporaryDirectoryTemplate fileSystemRepresentation]);
-        
+
         if (!mkdtemp(cTemplate)) {
             // This should never happen; if it does we'll fail silently on non-debug builds.
             ASSERT_NOT_REACHED();
@@ -1482,10 +1482,10 @@ static BOOL isFrameInRange(WebFrame *frame, DOMRange *range)
             // so only the current user can add to it or view its contents.
             _temporaryPDFDirectoryPath = [[[NSFileManager defaultManager] stringWithFileSystemRepresentation:cTemplate length:strlen(cTemplate)] retain];
         }
-        
+
         free(cTemplate);
     }
-    
+
     return _temporaryPDFDirectoryPath;
 }
 
@@ -1495,13 +1495,13 @@ static BOOL isFrameInRange(WebFrame *frame, DOMRange *range)
     BOOL newFirstResponderIsPDFDocumentView = [[self window] firstResponder] == [PDFSubview documentView];
     if (newFirstResponderIsPDFDocumentView == firstResponderIsPDFDocumentView)
         return;
-    
+
     // This next clause is the entire purpose of _trackFirstResponder. In other WebDocument
     // view classes this is done in a resignFirstResponder override, but in this case the
     // first responder view is a PDFKit class that we can't subclass.
     if (newFirstResponderIsPDFDocumentView && ![[dataSource _webView] maintainsInactiveSelection])
         [self deselectAll];
-    
+
     firstResponderIsPDFDocumentView = newFirstResponderIsPDFDocumentView;
 }
 
@@ -1516,7 +1516,7 @@ static BOOL isFrameInRange(WebFrame *frame, DOMRange *range)
 }
 
 - (void)_updatePreferencesSoon
-{   
+{
     // Consolidate calls; due to the WebPDFPrefUpdatingProxy method, this can be called multiple times with a single user action
     // such as showing the context menu.
     if (_willUpdatePreferencesSoon)
@@ -1536,26 +1536,26 @@ static BOOL isFrameInRange(WebFrame *frame, DOMRange *range)
     PDFDocument *pdfDocument = [PDFSubview document];
     if (!pdfDocument)
         return nil;
-    
+
     NSRect pdfViewBounds = [PDFSubview bounds];
     PDFPage *topLeftPage = [PDFSubview pageForPoint:NSMakePoint(NSMinX(pdfViewBounds), NSMaxY(pdfViewBounds)) nearest:YES];
     PDFPage *bottomRightPage = [PDFSubview pageForPoint:NSMakePoint(NSMaxX(pdfViewBounds), NSMinY(pdfViewBounds)) nearest:YES];
-    
+
     // only page-free documents should return nil for either of these two since we passed YES for nearest:
     if (!topLeftPage) {
         ASSERT(!bottomRightPage);
         return nil;
     }
-    
+
     NSUInteger firstVisiblePageIndex = [pdfDocument indexForPage:topLeftPage];
     NSUInteger lastVisiblePageIndex = [pdfDocument indexForPage:bottomRightPage];
-    
+
     if (firstVisiblePageIndex > lastVisiblePageIndex) {
         NSUInteger swap = firstVisiblePageIndex;
         firstVisiblePageIndex = lastVisiblePageIndex;
         lastVisiblePageIndex = swap;
     }
-    
+
     NSMutableSet *result = [NSMutableSet set];
     NSUInteger pageIndex;
     for (pageIndex = firstVisiblePageIndex; pageIndex <= lastVisiblePageIndex; ++pageIndex)
@@ -1577,7 +1577,7 @@ static BOOL isFrameInRange(WebFrame *frame, DOMRange *range)
 
 - (void)forwardInvocation:(NSInvocation *)invocation
 {
-    [invocation invokeWithTarget:[view _PDFSubview]];    
+    [invocation invokeWithTarget:[view _PDFSubview]];
     [view _updatePreferencesSoon];
 }
 

@@ -77,7 +77,7 @@ TEST(WebKit2, ShouldGoToBackForwardListItem)
 
     WKPageLoadURL(webView.page(), adoptWK(Util::createURLForResource("simple", "html")).get());
     Util::run(&finished);
-    
+
     finished = false;
     WKPageLoadURL(webView.page(), adoptWK(Util::createURLForResource("simple-iframe", "html")).get());
     Util::run(&finished);
@@ -85,7 +85,7 @@ TEST(WebKit2, ShouldGoToBackForwardListItem)
     finished = false;
     WKPageGoBack(webView.page());
     Util::run(&finished);
-    
+
     EXPECT_EQ(receivedProperBackForwardCallbacks, true);
 }
 

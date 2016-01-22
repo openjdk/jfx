@@ -42,34 +42,34 @@ int main(int argc, char *argv[]) {
 #if !__has_feature(objc_arc)
     NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
 #endif
-    
+
     int result = 1;
-    
+
     @try {
         setlocale(LC_ALL, "en_US.utf8");
 
         NSBundle *mainBundle = [NSBundle mainBundle];
         NSString *mainBundlePath = [mainBundle bundlePath];
         NSString *libraryName = [mainBundlePath stringByAppendingPathComponent:@"Contents/MacOS/libpackager.dylib"];
-        
+
         void* library = dlopen([libraryName UTF8String], RTLD_LAZY);
-        
+
         if (library == NULL) {
             NSLog(@"%@ not found.\n", libraryName);
         }
-        
+
         if (library != NULL) {
             start_launcher start = (start_launcher)dlsym(library, "start_launcher");
             stop_launcher stop = (stop_launcher)dlsym(library, "stop_launcher");
-            
+
             if (start(argc, argv) == true) {
                 result = 0;
-                
+
                 if (stop != NULL) {
                     stop();
                 }
             }
-     
+
             dlclose(library);
         }
     } @catch (NSException *exception) {
@@ -80,6 +80,6 @@ int main(int argc, char *argv[]) {
 #if !__has_feature(objc_arc)
     [pool drain];
 #endif
-    
+
     return result;
 }

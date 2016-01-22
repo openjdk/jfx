@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -103,7 +103,7 @@ HRESULT STDMETHODCALLTYPE DOMNode::QueryInterface(REFIID riid, void** ppvObject)
 
 // DOMNode --------------------------------------------------------------------
 
-HRESULT STDMETHODCALLTYPE DOMNode::nodeName( 
+HRESULT STDMETHODCALLTYPE DOMNode::nodeName(
     /* [retval][out] */ BSTR* result)
 {
     if (!result)
@@ -116,7 +116,7 @@ HRESULT STDMETHODCALLTYPE DOMNode::nodeName(
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE DOMNode::nodeValue( 
+HRESULT STDMETHODCALLTYPE DOMNode::nodeValue(
     /* [retval][out] */ BSTR* result)
 {
     if (!m_node)
@@ -128,21 +128,21 @@ HRESULT STDMETHODCALLTYPE DOMNode::nodeValue(
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE DOMNode::setNodeValue( 
+HRESULT STDMETHODCALLTYPE DOMNode::setNodeValue(
     /* [in] */ BSTR /*value*/)
 {
     ASSERT_NOT_REACHED();
     return E_NOTIMPL;
 }
 
-HRESULT STDMETHODCALLTYPE DOMNode::nodeType( 
+HRESULT STDMETHODCALLTYPE DOMNode::nodeType(
     /* [retval][out] */ unsigned short* /*result*/)
 {
     ASSERT_NOT_REACHED();
     return E_NOTIMPL;
 }
 
-HRESULT STDMETHODCALLTYPE DOMNode::parentNode( 
+HRESULT STDMETHODCALLTYPE DOMNode::parentNode(
     /* [retval][out] */ IDOMNode** result)
 {
     *result = 0;
@@ -152,7 +152,7 @@ HRESULT STDMETHODCALLTYPE DOMNode::parentNode(
     return *result ? S_OK : E_FAIL;
 }
 
-HRESULT STDMETHODCALLTYPE DOMNode::childNodes( 
+HRESULT STDMETHODCALLTYPE DOMNode::childNodes(
     /* [retval][out] */ IDOMNodeList** result)
 {
     if (!m_node)
@@ -165,28 +165,28 @@ HRESULT STDMETHODCALLTYPE DOMNode::childNodes(
     return *result ? S_OK : E_FAIL;
 }
 
-HRESULT STDMETHODCALLTYPE DOMNode::firstChild( 
+HRESULT STDMETHODCALLTYPE DOMNode::firstChild(
     /* [retval][out] */ IDOMNode** /*result*/)
 {
     ASSERT_NOT_REACHED();
     return E_NOTIMPL;
 }
 
-HRESULT STDMETHODCALLTYPE DOMNode::lastChild( 
+HRESULT STDMETHODCALLTYPE DOMNode::lastChild(
     /* [retval][out] */ IDOMNode** /*result*/)
 {
     ASSERT_NOT_REACHED();
     return E_NOTIMPL;
 }
 
-HRESULT STDMETHODCALLTYPE DOMNode::previousSibling( 
+HRESULT STDMETHODCALLTYPE DOMNode::previousSibling(
     /* [retval][out] */ IDOMNode** /*result*/)
 {
     ASSERT_NOT_REACHED();
     return E_NOTIMPL;
 }
 
-HRESULT STDMETHODCALLTYPE DOMNode::nextSibling( 
+HRESULT STDMETHODCALLTYPE DOMNode::nextSibling(
     /* [retval][out] */ IDOMNode** result)
 {
     if (!result)
@@ -198,14 +198,14 @@ HRESULT STDMETHODCALLTYPE DOMNode::nextSibling(
     return *result ? S_OK : E_FAIL;
 }
 
-HRESULT STDMETHODCALLTYPE DOMNode::attributes( 
+HRESULT STDMETHODCALLTYPE DOMNode::attributes(
     /* [retval][out] */ IDOMNamedNodeMap** /*result*/)
 {
     ASSERT_NOT_REACHED();
     return E_NOTIMPL;
 }
 
-HRESULT STDMETHODCALLTYPE DOMNode::ownerDocument( 
+HRESULT STDMETHODCALLTYPE DOMNode::ownerDocument(
     /* [retval][out] */ IDOMDocument** result)
 {
     if (!result)
@@ -217,7 +217,7 @@ HRESULT STDMETHODCALLTYPE DOMNode::ownerDocument(
     return *result ? S_OK : E_FAIL;
 }
 
-HRESULT STDMETHODCALLTYPE DOMNode::insertBefore( 
+HRESULT STDMETHODCALLTYPE DOMNode::insertBefore(
     /* [in] */ IDOMNode* newChild,
     /* [in] */ IDOMNode* refChild,
     /* [retval][out] */ IDOMNode** result)
@@ -245,7 +245,7 @@ HRESULT STDMETHODCALLTYPE DOMNode::insertBefore(
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE DOMNode::replaceChild( 
+HRESULT STDMETHODCALLTYPE DOMNode::replaceChild(
     /* [in] */ IDOMNode* /*newChild*/,
     /* [in] */ IDOMNode* /*oldChild*/,
     /* [retval][out] */ IDOMNode** /*result*/)
@@ -254,7 +254,7 @@ HRESULT STDMETHODCALLTYPE DOMNode::replaceChild(
     return E_NOTIMPL;
 }
 
-HRESULT STDMETHODCALLTYPE DOMNode::removeChild( 
+HRESULT STDMETHODCALLTYPE DOMNode::removeChild(
     /* [in] */ IDOMNode* oldChild,
     /* [retval][out] */ IDOMNode** result)
 {
@@ -279,7 +279,7 @@ HRESULT STDMETHODCALLTYPE DOMNode::removeChild(
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE DOMNode::appendChild( 
+HRESULT STDMETHODCALLTYPE DOMNode::appendChild(
     /* [in] */ IDOMNode* /*oldChild*/,
     /* [retval][out] */ IDOMNode** /*result*/)
 {
@@ -287,14 +287,14 @@ HRESULT STDMETHODCALLTYPE DOMNode::appendChild(
     return E_NOTIMPL;
 }
 
-HRESULT STDMETHODCALLTYPE DOMNode::hasChildNodes( 
+HRESULT STDMETHODCALLTYPE DOMNode::hasChildNodes(
     /* [retval][out] */ BOOL* /*result*/)
 {
     ASSERT_NOT_REACHED();
     return E_NOTIMPL;
 }
 
-HRESULT STDMETHODCALLTYPE DOMNode::cloneNode( 
+HRESULT STDMETHODCALLTYPE DOMNode::cloneNode(
     /* [in] */ BOOL /*deep*/,
     /* [retval][out] */ IDOMNode** /*result*/)
 {
@@ -308,7 +308,7 @@ HRESULT STDMETHODCALLTYPE DOMNode::normalize( void)
     return E_NOTIMPL;
 }
 
-HRESULT STDMETHODCALLTYPE DOMNode::isSupported( 
+HRESULT STDMETHODCALLTYPE DOMNode::isSupported(
     /* [in] */ BSTR /*feature*/,
     /* [in] */ BSTR /*version*/,
     /* [retval][out] */ BOOL* /*result*/)
@@ -317,42 +317,42 @@ HRESULT STDMETHODCALLTYPE DOMNode::isSupported(
     return E_NOTIMPL;
 }
 
-HRESULT STDMETHODCALLTYPE DOMNode::namespaceURI( 
+HRESULT STDMETHODCALLTYPE DOMNode::namespaceURI(
     /* [retval][out] */ BSTR* /*result*/)
 {
     ASSERT_NOT_REACHED();
     return E_NOTIMPL;
 }
 
-HRESULT STDMETHODCALLTYPE DOMNode::prefix( 
+HRESULT STDMETHODCALLTYPE DOMNode::prefix(
     /* [retval][out] */ BSTR* /*result*/)
 {
     ASSERT_NOT_REACHED();
     return E_NOTIMPL;
 }
 
-HRESULT STDMETHODCALLTYPE DOMNode::setPrefix( 
+HRESULT STDMETHODCALLTYPE DOMNode::setPrefix(
     /* [in] */ BSTR /*prefix*/)
 {
     ASSERT_NOT_REACHED();
     return E_NOTIMPL;
 }
 
-HRESULT STDMETHODCALLTYPE DOMNode::localName( 
+HRESULT STDMETHODCALLTYPE DOMNode::localName(
     /* [retval][out] */ BSTR* /*result*/)
 {
     ASSERT_NOT_REACHED();
     return E_NOTIMPL;
 }
 
-HRESULT STDMETHODCALLTYPE DOMNode::hasAttributes( 
+HRESULT STDMETHODCALLTYPE DOMNode::hasAttributes(
     /* [retval][out] */ BOOL* /*result*/)
 {
     ASSERT_NOT_REACHED();
     return E_NOTIMPL;
 }
 
-HRESULT STDMETHODCALLTYPE DOMNode::isSameNode( 
+HRESULT STDMETHODCALLTYPE DOMNode::isSameNode(
     /* [in] */ IDOMNode* other,
     /* [retval][out] */ BOOL* result)
 {
@@ -375,7 +375,7 @@ HRESULT STDMETHODCALLTYPE DOMNode::isSameNode(
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE DOMNode::isEqualNode( 
+HRESULT STDMETHODCALLTYPE DOMNode::isEqualNode(
     /* [in] */ IDOMNode* /*other*/,
     /* [retval][out] */ BOOL* /*result*/)
 {
@@ -383,7 +383,7 @@ HRESULT STDMETHODCALLTYPE DOMNode::isEqualNode(
     return E_NOTIMPL;
 }
 
-HRESULT STDMETHODCALLTYPE DOMNode::textContent( 
+HRESULT STDMETHODCALLTYPE DOMNode::textContent(
     /* [retval][out] */ BSTR* result)
 {
     if (!result)
@@ -394,7 +394,7 @@ HRESULT STDMETHODCALLTYPE DOMNode::textContent(
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE DOMNode::setTextContent( 
+HRESULT STDMETHODCALLTYPE DOMNode::setTextContent(
     /* [in] */ BSTR /*text*/)
 {
     ASSERT_NOT_REACHED();
@@ -474,7 +474,7 @@ IDOMNode* DOMNode::createInstance(WebCore::Node* n)
     WebCore::Node::NodeType nodeType = n->nodeType();
 
     switch (nodeType) {
-        case WebCore::Node::ELEMENT_NODE: 
+        case WebCore::Node::ELEMENT_NODE:
         {
             IDOMElement* newElement = DOMElement::createInstance(static_cast<WebCore::Element*>(n));
             if (newElement) {
@@ -522,7 +522,7 @@ HRESULT STDMETHODCALLTYPE DOMNodeList::QueryInterface(REFIID riid, void** ppvObj
 
 // IDOMNodeList ---------------------------------------------------------------
 
-HRESULT STDMETHODCALLTYPE DOMNodeList::item( 
+HRESULT STDMETHODCALLTYPE DOMNodeList::item(
     /* [in] */ UINT index,
     /* [retval][out] */ IDOMNode **result)
 {
@@ -538,7 +538,7 @@ HRESULT STDMETHODCALLTYPE DOMNodeList::item(
     return *result ? S_OK : E_FAIL;
 }
 
-HRESULT STDMETHODCALLTYPE DOMNodeList::length( 
+HRESULT STDMETHODCALLTYPE DOMNodeList::length(
         /* [retval][out] */ UINT *result)
 {
     *result = 0;
@@ -598,28 +598,28 @@ HRESULT STDMETHODCALLTYPE DOMDocument::QueryInterface(REFIID riid, void** ppvObj
 
 // DOMDocument ----------------------------------------------------------------
 
-HRESULT STDMETHODCALLTYPE DOMDocument::doctype( 
+HRESULT STDMETHODCALLTYPE DOMDocument::doctype(
     /* [retval][out] */ IDOMDocumentType** /*result*/)
 {
     ASSERT_NOT_REACHED();
     return E_NOTIMPL;
 }
 
-HRESULT STDMETHODCALLTYPE DOMDocument::implementation( 
+HRESULT STDMETHODCALLTYPE DOMDocument::implementation(
     /* [retval][out] */ IDOMImplementation** /*result*/)
 {
     ASSERT_NOT_REACHED();
     return E_NOTIMPL;
 }
 
-HRESULT STDMETHODCALLTYPE DOMDocument::documentElement( 
+HRESULT STDMETHODCALLTYPE DOMDocument::documentElement(
     /* [retval][out] */ IDOMElement** result)
 {
     *result = DOMElement::createInstance(m_document->documentElement());
     return *result ? S_OK : E_FAIL;
 }
 
-HRESULT STDMETHODCALLTYPE DOMDocument::createElement( 
+HRESULT STDMETHODCALLTYPE DOMDocument::createElement(
     /* [in] */ BSTR tagName,
     /* [retval][out] */ IDOMElement** result)
 {
@@ -632,14 +632,14 @@ HRESULT STDMETHODCALLTYPE DOMDocument::createElement(
     return *result ? S_OK : E_FAIL;
 }
 
-HRESULT STDMETHODCALLTYPE DOMDocument::createDocumentFragment( 
+HRESULT STDMETHODCALLTYPE DOMDocument::createDocumentFragment(
     /* [retval][out] */ IDOMDocumentFragment** /*result*/)
 {
     ASSERT_NOT_REACHED();
     return E_NOTIMPL;
 }
 
-HRESULT STDMETHODCALLTYPE DOMDocument::createTextNode( 
+HRESULT STDMETHODCALLTYPE DOMDocument::createTextNode(
     /* [in] */ BSTR /*data*/,
     /* [retval][out] */ IDOMText** /*result*/)
 {
@@ -647,7 +647,7 @@ HRESULT STDMETHODCALLTYPE DOMDocument::createTextNode(
     return E_NOTIMPL;
 }
 
-HRESULT STDMETHODCALLTYPE DOMDocument::createComment( 
+HRESULT STDMETHODCALLTYPE DOMDocument::createComment(
     /* [in] */ BSTR /*data*/,
     /* [retval][out] */ IDOMComment** /*result*/)
 {
@@ -655,7 +655,7 @@ HRESULT STDMETHODCALLTYPE DOMDocument::createComment(
     return E_NOTIMPL;
 }
 
-HRESULT STDMETHODCALLTYPE DOMDocument::createCDATASection( 
+HRESULT STDMETHODCALLTYPE DOMDocument::createCDATASection(
     /* [in] */ BSTR /*data*/,
     /* [retval][out] */ IDOMCDATASection** /*result*/)
 {
@@ -663,7 +663,7 @@ HRESULT STDMETHODCALLTYPE DOMDocument::createCDATASection(
     return E_NOTIMPL;
 }
 
-HRESULT STDMETHODCALLTYPE DOMDocument::createProcessingInstruction( 
+HRESULT STDMETHODCALLTYPE DOMDocument::createProcessingInstruction(
     /* [in] */ BSTR /*target*/,
     /* [in] */ BSTR /*data*/,
     /* [retval][out] */ IDOMProcessingInstruction** /*result*/)
@@ -672,7 +672,7 @@ HRESULT STDMETHODCALLTYPE DOMDocument::createProcessingInstruction(
     return E_NOTIMPL;
 }
 
-HRESULT STDMETHODCALLTYPE DOMDocument::createAttribute( 
+HRESULT STDMETHODCALLTYPE DOMDocument::createAttribute(
     /* [in] */ BSTR /*name*/,
     /* [retval][out] */ IDOMAttr** /*result*/)
 {
@@ -680,7 +680,7 @@ HRESULT STDMETHODCALLTYPE DOMDocument::createAttribute(
     return E_NOTIMPL;
 }
 
-HRESULT STDMETHODCALLTYPE DOMDocument::createEntityReference( 
+HRESULT STDMETHODCALLTYPE DOMDocument::createEntityReference(
     /* [in] */ BSTR /*name*/,
     /* [retval][out] */ IDOMEntityReference** /*result*/)
 {
@@ -688,7 +688,7 @@ HRESULT STDMETHODCALLTYPE DOMDocument::createEntityReference(
     return E_NOTIMPL;
 }
 
-HRESULT STDMETHODCALLTYPE DOMDocument::getElementsByTagName( 
+HRESULT STDMETHODCALLTYPE DOMDocument::getElementsByTagName(
     /* [in] */ BSTR tagName,
     /* [retval][out] */ IDOMNodeList** result)
 {
@@ -700,7 +700,7 @@ HRESULT STDMETHODCALLTYPE DOMDocument::getElementsByTagName(
     return *result ? S_OK : E_FAIL;
 }
 
-HRESULT STDMETHODCALLTYPE DOMDocument::importNode( 
+HRESULT STDMETHODCALLTYPE DOMDocument::importNode(
     /* [in] */ IDOMNode* /*importedNode*/,
     /* [in] */ BOOL /*deep*/,
     /* [retval][out] */ IDOMNode** /*result*/)
@@ -709,7 +709,7 @@ HRESULT STDMETHODCALLTYPE DOMDocument::importNode(
     return E_NOTIMPL;
 }
 
-HRESULT STDMETHODCALLTYPE DOMDocument::createElementNS( 
+HRESULT STDMETHODCALLTYPE DOMDocument::createElementNS(
     /* [in] */ BSTR /*namespaceURI*/,
     /* [in] */ BSTR /*qualifiedName*/,
     /* [retval][out] */ IDOMElement** /*result*/)
@@ -718,7 +718,7 @@ HRESULT STDMETHODCALLTYPE DOMDocument::createElementNS(
     return E_NOTIMPL;
 }
 
-HRESULT STDMETHODCALLTYPE DOMDocument::createAttributeNS( 
+HRESULT STDMETHODCALLTYPE DOMDocument::createAttributeNS(
     /* [in] */ BSTR /*namespaceURI*/,
     /* [in] */ BSTR /*qualifiedName*/,
     /* [retval][out] */ IDOMAttr** /*result*/)
@@ -727,7 +727,7 @@ HRESULT STDMETHODCALLTYPE DOMDocument::createAttributeNS(
     return E_NOTIMPL;
 }
 
-HRESULT STDMETHODCALLTYPE DOMDocument::getElementsByTagNameNS( 
+HRESULT STDMETHODCALLTYPE DOMDocument::getElementsByTagNameNS(
     /* [in] */ BSTR namespaceURI,
     /* [in] */ BSTR localName,
     /* [retval][out] */ IDOMNodeList** result)
@@ -741,7 +741,7 @@ HRESULT STDMETHODCALLTYPE DOMDocument::getElementsByTagNameNS(
     return *result ? S_OK : E_FAIL;
 }
 
-HRESULT STDMETHODCALLTYPE DOMDocument::getElementById( 
+HRESULT STDMETHODCALLTYPE DOMDocument::getElementById(
     /* [in] */ BSTR elementId,
     /* [retval][out] */ IDOMElement** result)
 {
@@ -755,7 +755,7 @@ HRESULT STDMETHODCALLTYPE DOMDocument::getElementById(
 
 // DOMDocument - IDOMViewCSS --------------------------------------------------
 
-HRESULT STDMETHODCALLTYPE DOMDocument::getComputedStyle( 
+HRESULT STDMETHODCALLTYPE DOMDocument::getComputedStyle(
     /* [in] */ IDOMElement* elt,
     /* [in] */ BSTR pseudoElt,
     /* [retval][out] */ IDOMCSSStyleDeclaration** result)
@@ -771,17 +771,17 @@ HRESULT STDMETHODCALLTYPE DOMDocument::getComputedStyle(
 
     WebCore::DOMWindow* dv = m_document->defaultView();
     String pseudoEltString(pseudoElt);
-    
+
     if (!dv)
         return E_FAIL;
-    
+
     *result = DOMCSSStyleDeclaration::createInstance(dv->getComputedStyle(element, pseudoEltString.impl()).get());
     return *result ? S_OK : E_FAIL;
 }
 
 // DOMDocument - IDOMDocumentEvent --------------------------------------------
 
-HRESULT STDMETHODCALLTYPE DOMDocument::createEvent( 
+HRESULT STDMETHODCALLTYPE DOMDocument::createEvent(
     /* [in] */ BSTR eventType,
     /* [retval][out] */ IDOMEvent **result)
 {
@@ -856,7 +856,7 @@ HRESULT DOMWindow::document(
 }
 
 HRESULT DOMWindow::getComputedStyle(
-    /* [in] */ IDOMElement* element, 
+    /* [in] */ IDOMElement* element,
     /* [in] */ BSTR pseudoElement)
 {
     ASSERT_NOT_REACHED();
@@ -864,9 +864,9 @@ HRESULT DOMWindow::getComputedStyle(
 }
 
 HRESULT DOMWindow::getMatchedCSSRules(
-    /* [in] */ IDOMElement* element, 
-    /* [in] */ BSTR pseudoElement, 
-    /* [in] */ BOOL authorOnly, 
+    /* [in] */ IDOMElement* element,
+    /* [in] */ BSTR pseudoElement,
+    /* [in] */ BOOL authorOnly,
     /* [out, retval] */ IDOMCSSRuleList** result)
 {
     ASSERT_NOT_REACHED();
@@ -983,7 +983,7 @@ HRESULT STDMETHODCALLTYPE DOMElement::QueryInterface(REFIID riid, void** ppvObje
 
 // DOMElement - IDOMNodeExtensions---------------------------------------------
 
-HRESULT STDMETHODCALLTYPE DOMElement::boundingBox( 
+HRESULT STDMETHODCALLTYPE DOMElement::boundingBox(
     /* [retval][out] */ LPRECT rect)
 {
     ::SetRectEmpty(rect);
@@ -1003,7 +1003,7 @@ HRESULT STDMETHODCALLTYPE DOMElement::boundingBox(
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE DOMElement::lineBoxRects( 
+HRESULT STDMETHODCALLTYPE DOMElement::lineBoxRects(
     /* [size_is][in] */ RECT* /*rects*/,
     /* [in] */ int /*cRects*/)
 {
@@ -1012,7 +1012,7 @@ HRESULT STDMETHODCALLTYPE DOMElement::lineBoxRects(
 
 // IDOMElement ----------------------------------------------------------------
 
-HRESULT STDMETHODCALLTYPE DOMElement::tagName( 
+HRESULT STDMETHODCALLTYPE DOMElement::tagName(
         /* [retval][out] */ BSTR* result)
 {
     if (!m_element)
@@ -1024,8 +1024,8 @@ HRESULT STDMETHODCALLTYPE DOMElement::tagName(
     *result = BString(m_element->tagName()).release();
     return S_OK;
 }
-    
-HRESULT STDMETHODCALLTYPE DOMElement::getAttribute( 
+
+HRESULT STDMETHODCALLTYPE DOMElement::getAttribute(
         /* [in] */ BSTR name,
         /* [retval][out] */ BSTR* result)
 {
@@ -1038,8 +1038,8 @@ HRESULT STDMETHODCALLTYPE DOMElement::getAttribute(
         return E_OUTOFMEMORY;
     return S_OK;
 }
-    
-HRESULT STDMETHODCALLTYPE DOMElement::setAttribute( 
+
+HRESULT STDMETHODCALLTYPE DOMElement::setAttribute(
         /* [in] */ BSTR name,
         /* [in] */ BSTR value)
 {
@@ -1052,47 +1052,47 @@ HRESULT STDMETHODCALLTYPE DOMElement::setAttribute(
     m_element->setAttribute(nameString, valueString, ec);
     return ec ? E_FAIL : S_OK;
 }
-    
-HRESULT STDMETHODCALLTYPE DOMElement::removeAttribute( 
+
+HRESULT STDMETHODCALLTYPE DOMElement::removeAttribute(
         /* [in] */ BSTR /*name*/)
 {
     ASSERT_NOT_REACHED();
     return E_NOTIMPL;
 }
-    
-HRESULT STDMETHODCALLTYPE DOMElement::getAttributeNode( 
+
+HRESULT STDMETHODCALLTYPE DOMElement::getAttributeNode(
         /* [in] */ BSTR /*name*/,
         /* [retval][out] */ IDOMAttr** /*result*/)
 {
     ASSERT_NOT_REACHED();
     return E_NOTIMPL;
 }
-    
-HRESULT STDMETHODCALLTYPE DOMElement::setAttributeNode( 
+
+HRESULT STDMETHODCALLTYPE DOMElement::setAttributeNode(
         /* [in] */ IDOMAttr* /*newAttr*/,
         /* [retval][out] */ IDOMAttr** /*result*/)
 {
     ASSERT_NOT_REACHED();
     return E_NOTIMPL;
 }
-    
-HRESULT STDMETHODCALLTYPE DOMElement::removeAttributeNode( 
+
+HRESULT STDMETHODCALLTYPE DOMElement::removeAttributeNode(
         /* [in] */ IDOMAttr* /*oldAttr*/,
         /* [retval][out] */ IDOMAttr** /*result*/)
 {
     ASSERT_NOT_REACHED();
     return E_NOTIMPL;
 }
-    
-HRESULT STDMETHODCALLTYPE DOMElement::getElementsByTagName( 
+
+HRESULT STDMETHODCALLTYPE DOMElement::getElementsByTagName(
         /* [in] */ BSTR /*name*/,
         /* [retval][out] */ IDOMNodeList** /*result*/)
 {
     ASSERT_NOT_REACHED();
     return E_NOTIMPL;
 }
-    
-HRESULT STDMETHODCALLTYPE DOMElement::getAttributeNS( 
+
+HRESULT STDMETHODCALLTYPE DOMElement::getAttributeNS(
         /* [in] */ BSTR /*namespaceURI*/,
         /* [in] */ BSTR /*localName*/,
         /* [retval][out] */ BSTR* /*result*/)
@@ -1100,8 +1100,8 @@ HRESULT STDMETHODCALLTYPE DOMElement::getAttributeNS(
     ASSERT_NOT_REACHED();
     return E_NOTIMPL;
 }
-    
-HRESULT STDMETHODCALLTYPE DOMElement::setAttributeNS( 
+
+HRESULT STDMETHODCALLTYPE DOMElement::setAttributeNS(
         /* [in] */ BSTR /*namespaceURI*/,
         /* [in] */ BSTR /*qualifiedName*/,
         /* [in] */ BSTR /*value*/)
@@ -1109,16 +1109,16 @@ HRESULT STDMETHODCALLTYPE DOMElement::setAttributeNS(
     ASSERT_NOT_REACHED();
     return E_NOTIMPL;
 }
-    
-HRESULT STDMETHODCALLTYPE DOMElement::removeAttributeNS( 
+
+HRESULT STDMETHODCALLTYPE DOMElement::removeAttributeNS(
         /* [in] */ BSTR /*namespaceURI*/,
         /* [in] */ BSTR /*localName*/)
 {
     ASSERT_NOT_REACHED();
     return E_NOTIMPL;
 }
-    
-HRESULT STDMETHODCALLTYPE DOMElement::getAttributeNodeNS( 
+
+HRESULT STDMETHODCALLTYPE DOMElement::getAttributeNodeNS(
         /* [in] */ BSTR /*namespaceURI*/,
         /* [in] */ BSTR /*localName*/,
         /* [retval][out] */ IDOMAttr** /*result*/)
@@ -1126,16 +1126,16 @@ HRESULT STDMETHODCALLTYPE DOMElement::getAttributeNodeNS(
     ASSERT_NOT_REACHED();
     return E_NOTIMPL;
 }
-    
-HRESULT STDMETHODCALLTYPE DOMElement::setAttributeNodeNS( 
+
+HRESULT STDMETHODCALLTYPE DOMElement::setAttributeNodeNS(
         /* [in] */ IDOMAttr* /*newAttr*/,
         /* [retval][out] */ IDOMAttr** /*result*/)
 {
     ASSERT_NOT_REACHED();
     return E_NOTIMPL;
 }
-    
-HRESULT STDMETHODCALLTYPE DOMElement::getElementsByTagNameNS( 
+
+HRESULT STDMETHODCALLTYPE DOMElement::getElementsByTagNameNS(
         /* [in] */ BSTR /*namespaceURI*/,
         /* [in] */ BSTR /*localName*/,
         /* [retval][out] */ IDOMNodeList** /*result*/)
@@ -1143,16 +1143,16 @@ HRESULT STDMETHODCALLTYPE DOMElement::getElementsByTagNameNS(
     ASSERT_NOT_REACHED();
     return E_NOTIMPL;
 }
-    
-HRESULT STDMETHODCALLTYPE DOMElement::hasAttribute( 
+
+HRESULT STDMETHODCALLTYPE DOMElement::hasAttribute(
         /* [in] */ BSTR /*name*/,
         /* [retval][out] */ BOOL* /*result*/)
 {
     ASSERT_NOT_REACHED();
     return E_NOTIMPL;
 }
-    
-HRESULT STDMETHODCALLTYPE DOMElement::hasAttributeNS( 
+
+HRESULT STDMETHODCALLTYPE DOMElement::hasAttributeNS(
         /* [in] */ BSTR /*namespaceURI*/,
         /* [in] */ BSTR /*localName*/,
         /* [retval][out] */ BOOL* /*result*/)
@@ -1187,7 +1187,7 @@ HRESULT DOMElement::coreElement(void **element)
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE DOMElement::isEqual( 
+HRESULT STDMETHODCALLTYPE DOMElement::isEqual(
     /* [in] */ IDOMElement *other,
     /* [retval][out] */ BOOL *result)
 {
@@ -1200,7 +1200,7 @@ HRESULT STDMETHODCALLTYPE DOMElement::isEqual(
     HRESULT hr = other->QueryInterface(IID_IDOMElementPrivate, (void**) &otherPriv);
     if (FAILED(hr))
         return hr;
-    
+
     void* otherCoreEle;
     hr = otherPriv->coreElement(&otherCoreEle);
     otherPriv->Release();
@@ -1211,7 +1211,7 @@ HRESULT STDMETHODCALLTYPE DOMElement::isEqual(
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE DOMElement::isFocused( 
+HRESULT STDMETHODCALLTYPE DOMElement::isFocused(
     /* [retval][out] */ BOOL *result)
 {
     if (!m_element)
@@ -1313,7 +1313,7 @@ HRESULT STDMETHODCALLTYPE DOMElement::shadowPseudoId(
 
 // IDOMElementCSSInlineStyle --------------------------------------------------
 
-HRESULT STDMETHODCALLTYPE DOMElement::style( 
+HRESULT STDMETHODCALLTYPE DOMElement::style(
     /* [retval][out] */ IDOMCSSStyleDeclaration** result)
 {
     if (!result)
@@ -1331,7 +1331,7 @@ HRESULT STDMETHODCALLTYPE DOMElement::style(
 
 // IDOMElementExtensions ------------------------------------------------------
 
-HRESULT STDMETHODCALLTYPE DOMElement::offsetLeft( 
+HRESULT STDMETHODCALLTYPE DOMElement::offsetLeft(
     /* [retval][out] */ int* result)
 {
     if (!m_element)
@@ -1341,7 +1341,7 @@ HRESULT STDMETHODCALLTYPE DOMElement::offsetLeft(
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE DOMElement::offsetTop( 
+HRESULT STDMETHODCALLTYPE DOMElement::offsetTop(
     /* [retval][out] */ int* result)
 {
     if (!m_element)
@@ -1351,7 +1351,7 @@ HRESULT STDMETHODCALLTYPE DOMElement::offsetTop(
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE DOMElement::offsetWidth( 
+HRESULT STDMETHODCALLTYPE DOMElement::offsetWidth(
     /* [retval][out] */ int* result)
 {
     if (!m_element)
@@ -1361,7 +1361,7 @@ HRESULT STDMETHODCALLTYPE DOMElement::offsetWidth(
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE DOMElement::offsetHeight( 
+HRESULT STDMETHODCALLTYPE DOMElement::offsetHeight(
     /* [retval][out] */ int* result)
 {
     if (!m_element)
@@ -1371,7 +1371,7 @@ HRESULT STDMETHODCALLTYPE DOMElement::offsetHeight(
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE DOMElement::offsetParent( 
+HRESULT STDMETHODCALLTYPE DOMElement::offsetParent(
     /* [retval][out] */ IDOMElement** /*result*/)
 {
     // FIXME
@@ -1379,7 +1379,7 @@ HRESULT STDMETHODCALLTYPE DOMElement::offsetParent(
     return E_NOTIMPL;
 }
 
-HRESULT STDMETHODCALLTYPE DOMElement::clientWidth( 
+HRESULT STDMETHODCALLTYPE DOMElement::clientWidth(
     /* [retval][out] */ int* result)
 {
     if (!m_element)
@@ -1389,7 +1389,7 @@ HRESULT STDMETHODCALLTYPE DOMElement::clientWidth(
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE DOMElement::clientHeight( 
+HRESULT STDMETHODCALLTYPE DOMElement::clientHeight(
     /* [retval][out] */ int* result)
 {
     if (!m_element)
@@ -1399,7 +1399,7 @@ HRESULT STDMETHODCALLTYPE DOMElement::clientHeight(
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE DOMElement::scrollLeft( 
+HRESULT STDMETHODCALLTYPE DOMElement::scrollLeft(
     /* [retval][out] */ int* result)
 {
     if (!m_element)
@@ -1409,7 +1409,7 @@ HRESULT STDMETHODCALLTYPE DOMElement::scrollLeft(
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE DOMElement::setScrollLeft( 
+HRESULT STDMETHODCALLTYPE DOMElement::setScrollLeft(
     /* [in] */ int /*newScrollLeft*/)
 {
     // FIXME
@@ -1417,7 +1417,7 @@ HRESULT STDMETHODCALLTYPE DOMElement::setScrollLeft(
     return E_NOTIMPL;
 }
 
-HRESULT STDMETHODCALLTYPE DOMElement::scrollTop( 
+HRESULT STDMETHODCALLTYPE DOMElement::scrollTop(
     /* [retval][out] */ int* result)
 {
     if (!m_element)
@@ -1427,7 +1427,7 @@ HRESULT STDMETHODCALLTYPE DOMElement::scrollTop(
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE DOMElement::setScrollTop( 
+HRESULT STDMETHODCALLTYPE DOMElement::setScrollTop(
     /* [in] */ int /*newScrollTop*/)
 {
     // FIXME
@@ -1435,7 +1435,7 @@ HRESULT STDMETHODCALLTYPE DOMElement::setScrollTop(
     return E_NOTIMPL;
 }
 
-HRESULT STDMETHODCALLTYPE DOMElement::scrollWidth( 
+HRESULT STDMETHODCALLTYPE DOMElement::scrollWidth(
     /* [retval][out] */ int* result)
 {
     if (!m_element)
@@ -1445,7 +1445,7 @@ HRESULT STDMETHODCALLTYPE DOMElement::scrollWidth(
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE DOMElement::scrollHeight( 
+HRESULT STDMETHODCALLTYPE DOMElement::scrollHeight(
     /* [retval][out] */ int* result)
 {
     if (!m_element)
@@ -1455,7 +1455,7 @@ HRESULT STDMETHODCALLTYPE DOMElement::scrollHeight(
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE DOMElement::scrollIntoView( 
+HRESULT STDMETHODCALLTYPE DOMElement::scrollIntoView(
     /* [in] */ BOOL alignWithTop)
 {
     if (!m_element)
@@ -1465,7 +1465,7 @@ HRESULT STDMETHODCALLTYPE DOMElement::scrollIntoView(
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE DOMElement::scrollIntoViewIfNeeded( 
+HRESULT STDMETHODCALLTYPE DOMElement::scrollIntoViewIfNeeded(
     /* [in] */ BOOL centerIfNeeded)
 {
     if (!m_element)

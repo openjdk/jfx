@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef CopiedAllocator_h
@@ -35,7 +35,7 @@ namespace JSC {
 class CopiedAllocator {
 public:
     CopiedAllocator();
-    
+
     bool fastPathShouldSucceed(size_t bytes) const;
     CheckedBoolean tryAllocate(size_t bytes, void** outPtr);
     CheckedBoolean tryAllocateDuringCopying(size_t bytes, void** outPtr);
@@ -44,7 +44,7 @@ public:
     CopiedBlock* resetCurrentBlock();
     void setCurrentBlock(CopiedBlock*);
     size_t currentCapacity();
-    
+
     bool isValid() { return !!m_currentBlock; }
 
     CopiedBlock* currentBlock() { return m_currentBlock; }
@@ -55,7 +55,7 @@ public:
     // that would have been gross.
     size_t m_currentRemaining;
     char* m_currentPayloadEnd;
-    CopiedBlock* m_currentBlock; 
+    CopiedBlock* m_currentBlock;
 };
 
 inline CopiedAllocator::CopiedAllocator()
@@ -68,20 +68,20 @@ inline CopiedAllocator::CopiedAllocator()
 inline bool CopiedAllocator::fastPathShouldSucceed(size_t bytes) const
 {
     ASSERT(is8ByteAligned(reinterpret_cast<void*>(bytes)));
-    
+
     return bytes <= m_currentRemaining;
 }
 
 inline CheckedBoolean CopiedAllocator::tryAllocate(size_t bytes, void** outPtr)
 {
     ASSERT(is8ByteAligned(reinterpret_cast<void*>(bytes)));
-    
+
     // This code is written in a gratuitously low-level manner, in order to
     // serve as a kind of template for what the JIT would do. Note that the
     // way it's written it ought to only require one register, which doubles
     // as the result, provided that the compiler does a minimal amount of
     // control flow simplification and the bytes argument is a constant.
-    
+
     size_t currentRemaining = m_currentRemaining;
     if (bytes > currentRemaining)
         return false;
@@ -108,20 +108,20 @@ inline CheckedBoolean CopiedAllocator::tryReallocate(
     ASSERT(is8ByteAligned(oldPtr));
     ASSERT(is8ByteAligned(reinterpret_cast<void*>(oldBytes)));
     ASSERT(is8ByteAligned(reinterpret_cast<void*>(newBytes)));
-    
+
     ASSERT(newBytes > oldBytes);
-    
+
     size_t additionalBytes = newBytes - oldBytes;
-    
+
     size_t currentRemaining = m_currentRemaining;
     if (m_currentPayloadEnd - currentRemaining - oldBytes != static_cast<char*>(oldPtr))
         return false;
-    
+
     if (additionalBytes > currentRemaining)
         return false;
-    
+
     m_currentRemaining = currentRemaining - additionalBytes;
-    
+
     return true;
 }
 

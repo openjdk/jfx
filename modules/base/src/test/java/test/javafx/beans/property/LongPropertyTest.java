@@ -41,7 +41,7 @@ import org.junit.Test;
 import static org.junit.Assert.*;
 
 public class LongPropertyTest {
-    
+
     private static final Object NO_BEAN = null;
     private static final String NO_NAME_1 = null;
     private static final String NO_NAME_2 = "";
@@ -73,45 +73,45 @@ public class LongPropertyTest {
     public void testBindBidirectional() {
         final LongProperty p1 = new SimpleLongProperty(VALUE_2);
         final LongProperty p2 = new SimpleLongProperty(VALUE_1);
-        
+
         p1.bindBidirectional(p2);
         assertEquals(VALUE_1, p1.get());
         assertEquals(VALUE_1, p2.get());
-        
+
         p1.set(VALUE_2);
         assertEquals(VALUE_2, p1.get());
         assertEquals(VALUE_2, p2.get());
-        
+
         p2.set(VALUE_1);
         assertEquals(VALUE_1, p1.get());
         assertEquals(VALUE_1, p2.get());
-        
+
         p1.unbindBidirectional(p2);
         p1.set(VALUE_2);
         assertEquals(VALUE_2, p1.get());
         assertEquals(VALUE_1, p2.get());
-        
+
         p1.set(VALUE_1);
         p2.set(VALUE_2);
         assertEquals(VALUE_1, p1.get());
         assertEquals(VALUE_2, p2.get());
     }
-    
+
     @Test
     public void testToString() {
         final LongProperty v0 = new LongPropertyStub(NO_BEAN, NO_NAME_1);
         assertEquals("LongProperty [value: " + DEFAULT + "]", v0.toString());
-        
+
         final LongProperty v1 = new LongPropertyStub(NO_BEAN, NO_NAME_2);
         assertEquals("LongProperty [value: " + DEFAULT + "]", v1.toString());
-        
+
         final Object bean = new Object();
         final String name = "My name";
         final LongProperty v2 = new LongPropertyStub(bean, name);
         assertEquals("LongProperty [bean: " + bean.toString() + ", name: My name, value: " + DEFAULT + "]", v2.toString());
         v2.set(VALUE_1);
         assertEquals("LongProperty [bean: " + bean.toString() + ", name: My name, value: " + VALUE_1 + "]", v2.toString());
-        
+
         final LongProperty v3 = new LongPropertyStub(bean, NO_NAME_1);
         assertEquals("LongProperty [bean: " + bean.toString() + ", value: " + DEFAULT + "]", v3.toString());
         v3.set(VALUE_1);
@@ -127,7 +127,7 @@ public class LongPropertyTest {
         v5.set(VALUE_1);
         assertEquals("LongProperty [name: My name, value: " + VALUE_1 + "]", v5.toString());
     }
-    
+
     @Test
     public void testAsObject() {
         final LongProperty valueModel = new SimpleLongProperty();
@@ -138,11 +138,11 @@ public class LongPropertyTest {
         assertEquals(Long.valueOf(-4354L), exp.getValue());
         valueModel.set(5L);
         assertEquals(Long.valueOf(5L), exp.getValue());
-        
+
         exp.set(10L);
         assertEquals(10L, valueModel.longValue());
     }
-    
+
     @Test
     public void testObjectToLong() {
         final ObjectProperty<Long> valueModel = new SimpleObjectProperty<Long>(2L);
@@ -153,17 +153,17 @@ public class LongPropertyTest {
         assertEquals(-4354L, exp.longValue());
         valueModel.set(5L);
         assertEquals(5L, exp.longValue());
-        
+
         exp.set(10L);
         assertEquals(Long.valueOf(10L), valueModel.getValue());
     }
-    
+
     private class LongPropertyStub extends LongProperty {
-        
+
         private final Object bean;
         private final String name;
         private long value;
-        
+
         private LongPropertyStub(Object bean, String name) {
             this.bean = bean;
             this.name = name;
@@ -188,7 +188,7 @@ public class LongPropertyTest {
         public void set(long value) {
             this.value = value;
         }
-        
+
         @Override
         public void bind(ObservableValue<? extends Number> observable) {
             fail("Not in use");

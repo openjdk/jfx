@@ -32,7 +32,7 @@
 #include <wtf/OwnPtr.h>
 #include <wtf/PassOwnPtr.h>
 #include <wtf/RefPtr.h>
- 
+
 namespace WebCore {
 
 class AsyncScrollingCoordinator;
@@ -40,12 +40,12 @@ class AsyncScrollingCoordinator;
 // The ScrollingStateTree is a tree that managed ScrollingStateNodes. The nodes keep track of the current
 // state of scrolling related properties. Whenever any properties change, the scrolling coordinator
 // will be informed and will schedule a timer that will clone the new state tree and send it over to
-// the scrolling thread, avoiding locking. 
+// the scrolling thread, avoiding locking.
 
 class ScrollingStateTree {
     friend class ScrollingStateNode;
 public:
-    
+
     static PassOwnPtr<ScrollingStateTree> create(AsyncScrollingCoordinator* = 0);
     ~ScrollingStateTree();
 
@@ -55,7 +55,7 @@ public:
     ScrollingNodeID attachNode(ScrollingNodeType, ScrollingNodeID, ScrollingNodeID parentID);
     void detachNode(ScrollingNodeID);
     void clear();
-    
+
     const Vector<ScrollingNodeID>& removedNodes() const { return m_nodesRemovedSinceLastCommit; }
     void setRemovedNodes(Vector<ScrollingNodeID>);
 
@@ -67,7 +67,7 @@ public:
 
     bool hasNewRootStateNode() const { return m_hasNewRootStateNode; }
     void setHasNewRootStateNode(bool hasNewRoot) { m_hasNewRootStateNode = hasNewRoot; }
-    
+
     int nodeCount() const { return m_stateNodeMap.size(); }
 
     typedef HashMap<ScrollingNodeID, ScrollingStateNode*> StateNodeMap;

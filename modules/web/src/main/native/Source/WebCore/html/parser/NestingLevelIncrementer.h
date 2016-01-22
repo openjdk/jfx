@@ -38,12 +38,12 @@ public:
     {
         ++(*m_nestingLevel);
     }
-            
+
     ~NestingLevelIncrementer()
     {
         --(*m_nestingLevel);
     }
-            
+
 private:
     unsigned* m_nestingLevel;
 };

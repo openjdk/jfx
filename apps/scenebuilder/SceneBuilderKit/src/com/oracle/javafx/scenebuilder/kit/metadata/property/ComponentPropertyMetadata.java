@@ -36,10 +36,10 @@ import com.oracle.javafx.scenebuilder.kit.metadata.klass.ComponentClassMetadata;
 
 /**
  *
- * 
+ *
  */
 public class ComponentPropertyMetadata extends PropertyMetadata {
-    
+
     private final ComponentClassMetadata classMetadata;
     private final boolean collection;
 
@@ -60,7 +60,7 @@ public class ComponentPropertyMetadata extends PropertyMetadata {
     /*
      * Object
      */
-    
+
     @Override
     public int hashCode() { // To please FindBugs
         return super.hashCode();
@@ -74,8 +74,8 @@ public class ComponentPropertyMetadata extends PropertyMetadata {
         if (PropertyMetadata.class != obj.getClass()) {
             return false;
         }
-        
+
         return super.equals(obj);
     }
-    
+
 }

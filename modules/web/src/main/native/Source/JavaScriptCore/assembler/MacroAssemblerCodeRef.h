@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef MacroAssemblerCodeRef_h
@@ -254,7 +254,7 @@ public:
     }
 
     void* value() const { return m_value; }
-    
+
     void dump(PrintStream& out) const
     {
         out.print(RawPointer(m_value));
@@ -284,7 +284,7 @@ public:
     {
         ASSERT_VALID_CODE_POINTER(m_value);
     }
-    
+
     static MacroAssemblerCodePtr createFromExecutableAddress(void* value)
     {
         ASSERT_VALID_CODE_POINTER(value);
@@ -319,7 +319,7 @@ public:
     {
         return !!m_value ? reinterpret_cast<UnspecifiedBoolType*>(1) : 0;
     }
-    
+
     bool operator==(const MacroAssemblerCodePtr& other) const
     {
         return m_value == other.m_value;
@@ -333,34 +333,34 @@ public:
         }
         out.print(name, "(executable = ", RawPointer(executableAddress()), ", dataLocation = ", RawPointer(dataLocation()), ")");
     }
-    
+
     void dump(PrintStream& out) const
     {
         dumpWithName("CodePtr", out);
     }
-    
+
     enum EmptyValueTag { EmptyValue };
     enum DeletedValueTag { DeletedValue };
-    
+
     MacroAssemblerCodePtr(EmptyValueTag)
         : m_value(emptyValue())
     {
     }
-    
+
     MacroAssemblerCodePtr(DeletedValueTag)
         : m_value(deletedValue())
     {
     }
-    
+
     bool isEmptyValue() const { return m_value == emptyValue(); }
     bool isDeletedValue() const { return m_value == deletedValue(); }
-    
+
     unsigned hash() const { return PtrHash<void*>::hash(m_value); }
 
 private:
     static void* emptyValue() { return bitwise_cast<void*>(static_cast<intptr_t>(1)); }
     static void* deletedValue() { return bitwise_cast<void*>(static_cast<intptr_t>(2)); }
-    
+
     void* m_value;
 };
 
@@ -401,7 +401,7 @@ public:
         ASSERT(m_executableMemory->start());
         ASSERT(m_codePtr);
     }
-    
+
     // Use this only when you know that the codePtr refers to code that is
     // already being kept alive through some other means. Typically this means
     // that codePtr is immortal.
@@ -409,7 +409,7 @@ public:
     {
         return MacroAssemblerCodeRef(codePtr);
     }
-    
+
 #if ENABLE(LLINT)
     // Helper for creating self-managed code refs from LLInt.
     static MacroAssemblerCodeRef createLLIntCodeRef(LLIntCode codeId)
@@ -422,30 +422,30 @@ public:
     {
         return m_executableMemory.get();
     }
-    
+
     MacroAssemblerCodePtr code() const
     {
         return m_codePtr;
     }
-    
+
     size_t size() const
     {
         if (!m_executableMemory)
             return 0;
         return m_executableMemory->sizeInBytes();
     }
-    
+
     bool tryToDisassemble(const char* prefix) const
     {
         return JSC::tryToDisassemble(m_codePtr, size(), prefix, WTF::dataFile());
     }
-    
+
     typedef void* (MacroAssemblerCodeRef::*UnspecifiedBoolType);
     operator UnspecifiedBoolType*() const
     {
         return !!m_codePtr ? reinterpret_cast<UnspecifiedBoolType*>(1) : 0;
     }
-    
+
     void dump(PrintStream& out) const
     {
         m_codePtr.dumpWithName("CodeRef", out);

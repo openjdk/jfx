@@ -29,7 +29,7 @@ package javafx.collections;
  * to track changes when they occur. In order to track changes, the internal
  * array is encapsulated and there is no direct access available from the outside.
  * Bulk operations are supported but they always do a copy of the data range.
- * 
+ *
  * @see ArrayChangeListener
  * @since JavaFX 8.0
  */
@@ -139,7 +139,7 @@ public interface ObservableFloatArray extends ObservableArray<ObservableFloatArr
 
     /**
      * Copies a portion of specified array into this observable array. Throws
-     * the same exceptions as {@link System#arraycopy(java.lang.Object, 
+     * the same exceptions as {@link System#arraycopy(java.lang.Object,
      * int, java.lang.Object, int, int) System.arraycopy()} method.
      * @param destIndex the starting destination position in this observable array
      * @param src source array to copy
@@ -161,7 +161,7 @@ public interface ObservableFloatArray extends ObservableArray<ObservableFloatArr
 
     /**
      * Sets a single value in the array. Avoid using this method if many values
-     * are updated, use {@linkplain #set(int, float[], int, int)} update method 
+     * are updated, use {@linkplain #set(int, float[], int, int)} update method
      * instead with as minimum number of invocations as possible.
      * @param index index of the value to set
      * @param value new value for the given index
@@ -171,30 +171,30 @@ public interface ObservableFloatArray extends ObservableArray<ObservableFloatArr
     public void set(int index, float value);
 
     /**
-     * Returns an array containing copy of the observable array. 
-     * If the observable array fits in the specified array, it is copied therein. 
+     * Returns an array containing copy of the observable array.
+     * If the observable array fits in the specified array, it is copied therein.
      * Otherwise, a new array is allocated with the size of the observable array.
      *
      * @param dest the array into which the observable array to be copied,
-     *          if it is big enough; otherwise, a new float array is allocated. 
+     *          if it is big enough; otherwise, a new float array is allocated.
      *          Ignored, if null.
      * @return a float array containing the copy of the observable array
      */
     public float[] toArray(float[] dest);
 
     /**
-     * Returns an array containing copy of specified portion of the observable array. 
-     * If specified portion of the observable array fits in the specified array, 
+     * Returns an array containing copy of specified portion of the observable array.
+     * If specified portion of the observable array fits in the specified array,
      * it is copied therein. Otherwise, a new array of given length is allocated.
      *
      * @param srcIndex starting position in the observable array
-     * @param dest the array into which specified portion of the observable array 
-     *          to be copied, if it is big enough; 
-     *          otherwise, a new float array is allocated. 
+     * @param dest the array into which specified portion of the observable array
+     *          to be copied, if it is big enough;
+     *          otherwise, a new float array is allocated.
      *          Ignored, if null.
      * @param length length of portion to copy
      * @return a float array containing the copy of specified portion the observable array
      */
     public float[] toArray(int srcIndex, float[] dest, int length);
-    
+
 }

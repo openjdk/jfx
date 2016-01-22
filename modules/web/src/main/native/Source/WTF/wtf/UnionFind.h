@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef UnionFind_h
@@ -66,14 +66,14 @@ public:
         : m_parent(0)
     {
     }
-    
+
     bool isRoot() const
     {
         bool result = !m_parent;
         ASSERT(result == (const_cast<UnionFind<T>*>(this)->find() == this));
         return result;
     }
-    
+
     T* find()
     {
         T* result = static_cast<T*>(this);
@@ -87,18 +87,18 @@ public:
             m_parent = result;
         return result;
     }
-    
+
     void unify(T* other)
     {
         T* a = static_cast<T*>(this)->find();
         T* b = other->find();
-        
+
         ASSERT(!a->m_parent);
         ASSERT(!b->m_parent);
-        
+
         if (a == b)
             return;
-        
+
         a->m_parent = b;
     }
 private:

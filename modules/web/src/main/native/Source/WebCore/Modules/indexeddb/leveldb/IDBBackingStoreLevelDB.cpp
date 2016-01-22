@@ -548,7 +548,7 @@ void IDBBackingStoreLevelDB::getOrEstablishIDBDatabaseMetadata(const String& nam
     bool found = false;
 
     IDBDatabaseMetadata resultMetadata;
-    
+
     bool ok = getInt(m_db.get(), key, resultMetadata.id, found);
     if (!ok) {
         INTERNAL_READ_ERROR(GetIDBDatabaseMetaData);

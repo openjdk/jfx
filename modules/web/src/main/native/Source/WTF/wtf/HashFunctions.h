@@ -61,7 +61,7 @@ namespace WTF {
     }
 
     // Thomas Wang's 32 Bit Mix Function: http://www.cris.com/~Ttwang/tech/inthash.htm
-    inline unsigned intHash(uint32_t key) 
+    inline unsigned intHash(uint32_t key)
     {
         key += ~(key << 15);
         key ^= (key >> 10);
@@ -71,7 +71,7 @@ namespace WTF {
         key ^= (key >> 16);
         return key;
     }
-    
+
     // Thomas Wang's 64 bit Mix Function: http://www.cris.com/~Ttwang/tech/inthash.htm
     inline unsigned intHash(uint64_t key)
     {
@@ -149,7 +149,7 @@ namespace WTF {
         {
             return DefaultHash<T>::Hash::equal(a.first, b.first) && DefaultHash<U>::Hash::equal(a.second, b.second);
         }
-        static const bool safeToCompareToEmptyOrDeleted = DefaultHash<T>::Hash::safeToCompareToEmptyOrDeleted 
+        static const bool safeToCompareToEmptyOrDeleted = DefaultHash<T>::Hash::safeToCompareToEmptyOrDeleted
                                                             && DefaultHash<U>::Hash::safeToCompareToEmptyOrDeleted;
     };
 

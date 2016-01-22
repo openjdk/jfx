@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -101,7 +101,7 @@ ULONG STDMETHODCALLTYPE WebError::Release(void)
 
 // IWebError ------------------------------------------------------------------
 
-HRESULT STDMETHODCALLTYPE WebError::init( 
+HRESULT STDMETHODCALLTYPE WebError::init(
     /* [in] */ BSTR domain,
     /* [in] */ int code,
     /* [in] */ BSTR url)
@@ -109,15 +109,15 @@ HRESULT STDMETHODCALLTYPE WebError::init(
     m_error = ResourceError(String(domain, SysStringLen(domain)), code, String(url, SysStringLen(url)), String());
     return S_OK;
 }
-  
-HRESULT STDMETHODCALLTYPE WebError::code( 
+
+HRESULT STDMETHODCALLTYPE WebError::code(
     /* [retval][out] */ int* result)
 {
     *result = m_error.errorCode();
     return S_OK;
 }
-        
-HRESULT STDMETHODCALLTYPE WebError::domain( 
+
+HRESULT STDMETHODCALLTYPE WebError::domain(
     /* [retval][out] */ BSTR* result)
 {
     if (!result)
@@ -126,8 +126,8 @@ HRESULT STDMETHODCALLTYPE WebError::domain(
     *result = BString(m_error.domain()).release();
     return S_OK;
 }
-               
-HRESULT STDMETHODCALLTYPE WebError::localizedDescription( 
+
+HRESULT STDMETHODCALLTYPE WebError::localizedDescription(
     /* [retval][out] */ BSTR* result)
 {
     if (!result)
@@ -145,36 +145,36 @@ HRESULT STDMETHODCALLTYPE WebError::localizedDescription(
     return S_OK;
 }
 
-        
-HRESULT STDMETHODCALLTYPE WebError::localizedFailureReason( 
+
+HRESULT STDMETHODCALLTYPE WebError::localizedFailureReason(
     /* [retval][out] */ BSTR* /*result*/)
 {
     ASSERT_NOT_REACHED();
     return E_NOTIMPL;
 }
-        
-HRESULT STDMETHODCALLTYPE WebError::localizedRecoveryOptions( 
+
+HRESULT STDMETHODCALLTYPE WebError::localizedRecoveryOptions(
     /* [retval][out] */ IEnumVARIANT** /*result*/)
 {
     ASSERT_NOT_REACHED();
     return E_NOTIMPL;
 }
-        
-HRESULT STDMETHODCALLTYPE WebError::localizedRecoverySuggestion( 
+
+HRESULT STDMETHODCALLTYPE WebError::localizedRecoverySuggestion(
     /* [retval][out] */ BSTR* /*result*/)
 {
     ASSERT_NOT_REACHED();
     return E_NOTIMPL;
 }
-       
-HRESULT STDMETHODCALLTYPE WebError::recoverAttempter( 
+
+HRESULT STDMETHODCALLTYPE WebError::recoverAttempter(
     /* [retval][out] */ IUnknown** /*result*/)
 {
     ASSERT_NOT_REACHED();
     return E_NOTIMPL;
 }
-        
-HRESULT STDMETHODCALLTYPE WebError::userInfo( 
+
+HRESULT STDMETHODCALLTYPE WebError::userInfo(
     /* [retval][out] */ IPropertyBag** result)
 {
     if (!result)
@@ -187,7 +187,7 @@ HRESULT STDMETHODCALLTYPE WebError::userInfo(
     return m_userInfo.copyRefTo(result);
 }
 
-HRESULT STDMETHODCALLTYPE WebError::failingURL( 
+HRESULT STDMETHODCALLTYPE WebError::failingURL(
     /* [retval][out] */ BSTR* result)
 {
     if (!result)
@@ -197,7 +197,7 @@ HRESULT STDMETHODCALLTYPE WebError::failingURL(
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE WebError::isPolicyChangeError( 
+HRESULT STDMETHODCALLTYPE WebError::isPolicyChangeError(
     /* [retval][out] */ BOOL *result)
 {
     if (!result)
@@ -208,7 +208,7 @@ HRESULT STDMETHODCALLTYPE WebError::isPolicyChangeError(
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE WebError::sslPeerCertificate( 
+HRESULT STDMETHODCALLTYPE WebError::sslPeerCertificate(
     /* [retval][out] */ OLE_HANDLE* result)
 {
     if (!result)

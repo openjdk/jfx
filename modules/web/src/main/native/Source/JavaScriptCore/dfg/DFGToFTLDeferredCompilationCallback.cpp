@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -57,7 +57,7 @@ void ToFTLDeferredCompilationCallback::compilationDidBecomeReadyAsynchronously(
             "Optimizing compilation of ", *codeBlock, " (for ", *m_dfgCodeBlock,
             ") did become ready.\n");
     }
-    
+
     m_dfgCodeBlock->jitCode()->dfg()->forceOptimizationSlowPathConcurrently(
         m_dfgCodeBlock.get());
 }
@@ -70,7 +70,7 @@ void ToFTLDeferredCompilationCallback::compilationDidComplete(
             "Optimizing compilation of ", *codeBlock, " (for ", *m_dfgCodeBlock,
             ") result: ", result, "\n");
     }
-    
+
     if (m_dfgCodeBlock->replacement() != m_dfgCodeBlock) {
         if (Options::verboseOSR()) {
             dataLog(
@@ -79,10 +79,10 @@ void ToFTLDeferredCompilationCallback::compilationDidComplete(
         }
         return;
     }
-    
+
     if (result == CompilationSuccessful)
         codeBlock->install();
-    
+
     m_dfgCodeBlock->jitCode()->dfg()->setOptimizationThresholdBasedOnCompilationResult(
         m_dfgCodeBlock.get(), result);
 }

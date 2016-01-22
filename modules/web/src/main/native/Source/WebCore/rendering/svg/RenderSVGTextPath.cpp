@@ -47,9 +47,9 @@ Path RenderSVGTextPath::layoutPath() const
     Element* targetElement = SVGURIReference::targetElementFromIRIString(textPathElement().href(), document());
     if (!targetElement || !targetElement->hasTagName(SVGNames::pathTag))
         return Path();
-    
+
     SVGPathElement* pathElement = toSVGPathElement(targetElement);
-    
+
     Path pathData;
     updatePathFromGraphicsElement(pathElement, pathData);
 

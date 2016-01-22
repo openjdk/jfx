@@ -63,7 +63,7 @@ struct {
     MonitorInfoStruct *pMonitorInfos;
 } g_MonitorInfos;
 
-typedef enum _Monitor_DPI_Type { 
+typedef enum _Monitor_DPI_Type {
     MDT_Effective_DPI  = 0,
     MDT_Angular_DPI    = 1,
     MDT_Raw_DPI        = 2,
@@ -297,10 +297,10 @@ jobject CreateJavaMonitorFromMIS(JNIEnv *env, MonitorInfoStruct *pMIS)
                           pMIS->fxWork.top,
                           pMIS->fxWork.right  - pMIS->fxWork.left,
                           pMIS->fxWork.bottom - pMIS->fxWork.top,
-                              
+
                           pMIS->dpiX,
                           pMIS->dpiY,
-                          
+
                           pMIS->uiScale,
                           pMIS->renderScale);
     if (CheckAndClearException(env)) return NULL;
@@ -403,7 +403,7 @@ void anchorTo(MonitorInfoStruct *pMIS,
     }
 
     if (xBefore) fxX -= monW;
-    if (yBefore) fxY -= monH;    
+    if (yBefore) fxY -= monH;
     pMIS->fxMonitor.left   = fxX;
     pMIS->fxMonitor.top    = fxY;
     pMIS->fxMonitor.right  = fxX + monW;

@@ -47,7 +47,7 @@ public class Ball extends Circle {
     private static final Duration DURATION = Duration.millis(850);
     private static final double FLOOR = HEIGHT / 2 - HEIGHT_CORRECTION - 10;
     private Timeline timeline;
-    
+
     public Ball(final int index) {
         initBall(index);
     }
@@ -69,7 +69,7 @@ public class Ball extends Circle {
 
     }
 
-    
+
     private void createTimeline() {
         timeline = new Timeline();
         timeline.setCycleCount(Timeline.INDEFINITE);

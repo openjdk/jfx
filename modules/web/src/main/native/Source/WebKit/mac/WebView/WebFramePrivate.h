@@ -6,13 +6,13 @@
  * are met:
  *
  * 1.  Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer. 
+ *     notice, this list of conditions and the following disclaimer.
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
- *     documentation and/or other materials provided with the distribution. 
+ *     documentation and/or other materials provided with the distribution.
  * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
- *     from this software without specific prior written permission. 
+ *     from this software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY APPLE AND ITS CONTRIBUTORS "AS IS" AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
@@ -248,12 +248,12 @@ typedef enum {
 - (BOOL)_allowsFollowingLink:(NSURL *)URL;
 
 #if !TARGET_OS_IPHONE
-// Sets whether the scrollbars, if any, should be shown inside the document's border 
-// (thus overlapping some content) or outside the webView's border (default behavior). 
+// Sets whether the scrollbars, if any, should be shown inside the document's border
+// (thus overlapping some content) or outside the webView's border (default behavior).
 // Changing this flag changes the size of the contentView and maintains the size of the frameView.
 - (void)setAllowsScrollersToOverlapContent:(BOOL)flag;
 
-// Sets if the scrollbar is always hidden, regardless of other scrollbar visibility settings. 
+// Sets if the scrollbar is always hidden, regardless of other scrollbar visibility settings.
 // This does not affect the scrollability of the document.
 - (void)setAlwaysHideHorizontalScroller:(BOOL)flag;
 - (void)setAlwaysHideVerticalScroller:(BOOL)flag;

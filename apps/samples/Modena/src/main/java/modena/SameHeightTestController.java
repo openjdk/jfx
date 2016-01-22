@@ -52,7 +52,7 @@ import javafx.scene.text.Text;
  * Controller to auto align guidelines
  */
 public class SameHeightTestController implements Initializable{
-    
+
     private @FXML Button horizFirstButton;
     private @FXML TextField vertFirstTextField;
     private @FXML Region horizBaseLine;
@@ -82,7 +82,7 @@ public class SameHeightTestController implements Initializable{
             updateArrowLinePositions();
         });
     }
-    
+
     private void updateArrowLinePositions() {
         double left = arrowButton.localToScene(0, 0).getX() - arrowButtonContainer.localToScene(0, 0).getX();
         arrowButtonLeftLine.setLayoutX(left-1);

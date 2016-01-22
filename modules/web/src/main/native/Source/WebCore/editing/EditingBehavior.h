@@ -68,7 +68,7 @@ public:
     {
         return m_type == EditingUnixBehavior;
     }
-    
+
     // On Mac and Windows, pressing backspace (when it isn't handled otherwise) should navigate back.
     bool shouldNavigateBackOnBackspace() const
     {

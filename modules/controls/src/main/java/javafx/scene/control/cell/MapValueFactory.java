@@ -44,26 +44,26 @@ import javafx.util.Callback;
 
 /**
  * A convenience implementation of the Callback interface, designed specifically
- * for use within the {@link TableColumn} 
+ * for use within the {@link TableColumn}
  * {@link TableColumn#cellValueFactoryProperty() cell value factory}. An example
  * of how to use this class is:
- * 
+ *
  * <pre><code>
  * ObservableList<Map> personsMapList = ...
- * 
+ *
  * TableColumn&lt;Map, String&gt; firstNameColumn = new TableColumn&lt;Map, String&gt;("First Name");
  * firstNameColumn.setCellValueFactory(new MapValueFactory&lt;String&gt;("firstName"));
- * 
+ *
  * TableView<Map> table = new TableView<Map>(personMapList);
  * tableView.getColumns().setAll(firstNameColumn);
  * </code></pre>
- * 
- * <p>In this example, there is a list of Map instances, where each Map instance 
- * representsa single row in the TableView. The "firstName" string is used as a 
- * key into this map, and the value corresponding to this key is returned, if 
+ *
+ * <p>In this example, there is a list of Map instances, where each Map instance
+ * representsa single row in the TableView. The "firstName" string is used as a
+ * key into this map, and the value corresponding to this key is returned, if
  * one exists. If the value is an {@link ObservableValue}, then this is returned
  * directly, otherwise the value is wrapped in a {@link ReadOnlyObjectWrapper}.
- * 
+ *
  * @see TableColumn
  * @see TableView
  * @see TableCell
@@ -74,29 +74,29 @@ import javafx.util.Callback;
 public class MapValueFactory<T> implements Callback<CellDataFeatures<Map,T>, ObservableValue<T>> {
 
     private final Object key;
-    
+
     /**
-     * Creates a default MapValueFactory, which will use the provided key to 
+     * Creates a default MapValueFactory, which will use the provided key to
      * lookup the value for cells in the {@link TableColumn} in which this
-     * MapValueFactory is installed (via the 
+     * MapValueFactory is installed (via the
      * {@link TableColumn#cellValueFactoryProperty() cell value factory} property.
-     * 
+     *
      * @param key The key to use to lookup the value in the {@code Map}.
      */
     public MapValueFactory(final @NamedArg("key") Object key) {
         this.key = key;
     }
-    
+
     @Override public ObservableValue<T> call(CellDataFeatures<Map, T> cdf) {
         Map map = cdf.getValue();
         Object value = map.get(key);
-        
+
         // ideally the map will contain observable values directly, and in which
         // case we can just return this observable value.
         if (value instanceof ObservableValue) {
             return (ObservableValue)value;
         }
-        
+
         // TODO
         // If we are here, the value in the map for the given key is not observable,
         // but perhaps the Map is an ObservableMap. If this is the case, we
@@ -106,7 +106,7 @@ public class MapValueFactory<T> implements Callback<CellDataFeatures<Map,T>, Obs
 //            ObservableMap oMap = (ObservableMap) map;
 //            // ....
 //        }
-        
+
         // Often time there is special case code to deal with specific observable
         // value types, so we try to wrap in the most specific type.
         if (value instanceof Boolean) {
@@ -122,7 +122,7 @@ public class MapValueFactory<T> implements Callback<CellDataFeatures<Map,T>, Obs
         } else if (value instanceof String) {
             return (ObservableValue<T>) new ReadOnlyStringWrapper((String)value);
         }
-        
+
         // fall back to an object wrapper
         return new ReadOnlyObjectWrapper<T>((T)value);
     }

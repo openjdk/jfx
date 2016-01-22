@@ -22,7 +22,7 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
- 
+
 #ifndef GLTRACE_OS_H
 #define GLTRACE_OS_H
 

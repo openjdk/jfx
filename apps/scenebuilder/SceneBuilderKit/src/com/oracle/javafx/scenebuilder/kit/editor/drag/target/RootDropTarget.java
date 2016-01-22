@@ -46,7 +46,7 @@ public class RootDropTarget extends AbstractDropTarget {
     /*
      * AbstractDropTarget
      */
-    
+
     @Override
     public FXOMObject getTargetObject() {
         return null;
@@ -62,15 +62,15 @@ public class RootDropTarget extends AbstractDropTarget {
     public Job makeDropJob(AbstractDragSource dragSource, EditorController editorController) {
         assert dragSource != null;
         assert dragSource.getDraggedObjects().size() == 1;
-        
+
         final FXOMObject newRoot = dragSource.getDraggedObjects().get(0);
-        return new SetDocumentRootJob(newRoot, true /* usePredefinedSize */, 
+        return new SetDocumentRootJob(newRoot, true /* usePredefinedSize */,
                 dragSource.makeDropJobDescription(), editorController);
     }
-    
+
     @Override
     public boolean isSelectRequiredAfterDrop() {
         return true;
     }
-    
+
 }

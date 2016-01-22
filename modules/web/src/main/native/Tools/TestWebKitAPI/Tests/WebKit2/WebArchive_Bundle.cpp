@@ -54,7 +54,7 @@ void WebArchiveTest::didReceiveMessage(WKBundleRef bundle, WKStringRef messageNa
 
     if (WKGetTypeID(body) != WKBundlePageGetTypeID())
         return;
-    
+
     WKBundleFrameRef frame = WKBundlePageGetMainFrame(static_cast<WKBundlePageRef>(body));
     if (!frame)
         return;

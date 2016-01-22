@@ -49,7 +49,7 @@ import javafx.stage.Stage;
  * variable non-homogenous row heights.
  *
  * @sampleName HorizontalListView
- * @preview preview.png 
+ * @preview preview.png
  * @see javafx.scene.control.ListView
  * @see javafx.scene.control.SelectionModel
  * @related /Controls/Listview/ListViewCellFactory

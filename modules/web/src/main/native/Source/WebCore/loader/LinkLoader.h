@@ -68,7 +68,7 @@ private:
     Timer<LinkLoader> m_linkLoadTimer;
     Timer<LinkLoader> m_linkLoadingErrorTimer;
 };
-    
+
 }
 
 #endif

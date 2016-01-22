@@ -39,11 +39,11 @@ import java.util.Set;
  *
  */
 public class JavaLanguage {
-    
+
     /**
-     * Returns true if value is a valid identifier (as specified 
+     * Returns true if value is a valid identifier (as specified
      * in Java Language Specification, section 3.8).
-     * 
+     *
      * @param value string to test (can be null or empty)
      * @return true if value is a valid java identifier.
      */
@@ -57,17 +57,17 @@ public class JavaLanguage {
                 && ! isBooleanLiteral(value)
                 && ! isNullLiteral(value);
     }
-    
-    
+
+
     /**
      * Returns true if value is a valid class name (fully qualified or not).
-     * 
+     *
      * @param value string to test (can be null or empty)
      * @return  true if value is a valid class name
      */
     public static boolean isClassName(String value) {
         boolean result;
-        
+
         if (value == null) {
             result = false;
         } else {
@@ -79,14 +79,14 @@ public class JavaLanguage {
                 }
             }
         }
-        
+
         return result;
     }
-    
+
     /*
      * Private
      */
-    
+
     private static boolean isIdentifierChars(String value) {
         if (value == null || value.isEmpty()
                 || !Character.isJavaIdentifierStart(value.codePointAt(0))) {
@@ -101,7 +101,7 @@ public class JavaLanguage {
         }
         return true;
     }
-    
+
     private static Set<String> keywords;
     private static synchronized boolean isKeyword(String value) {
         if (keywords == null) {
@@ -121,11 +121,11 @@ public class JavaLanguage {
         }
         return keywords.contains(value);
     }
-    
+
     private static boolean isBooleanLiteral(String value) {
         return value.equals("true") || value.equals("false"); //NOI18N
     }
-    
+
     private static boolean isNullLiteral(String value) {
         return value.equals("null"); //NOI18N
     }

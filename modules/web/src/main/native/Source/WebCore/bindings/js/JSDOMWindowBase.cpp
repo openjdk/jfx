@@ -75,7 +75,7 @@ void JSDOMWindowBase::finishCreation(VM& vm, JSDOMWindowShell* shell)
         GlobalPropertyInfo(vm.propertyNames->document, jsNull(), DontDelete | ReadOnly),
         GlobalPropertyInfo(vm.propertyNames->window, m_shell, DontDelete | ReadOnly)
     };
-    
+
     addStaticGlobals(staticGlobals, WTF_ARRAY_LENGTH(staticGlobals));
 }
 

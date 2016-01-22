@@ -59,7 +59,7 @@ public:
 };
 
 typedef HashMap<unsigned, OwnPtr<PresentationAttributeCacheEntry>, AlreadyHashed> PresentationAttributeCache;
-    
+
 static bool operator!=(const PresentationAttributeCacheKey& a, const PresentationAttributeCacheKey& b)
 {
     if (a.tagName != b.tagName)
@@ -217,7 +217,7 @@ void StyledElement::inlineStyleChanged()
     elementData()->setStyleAttributeIsDirty(true);
     InspectorInstrumentation::didInvalidateStyleAttr(&document(), this);
 }
-    
+
 bool StyledElement::setInlineStyleProperty(CSSPropertyID propertyID, CSSValueID identifier, bool important)
 {
     ensureMutableInlineStyle().setProperty(propertyID, cssValuePool().createIdentifierValue(identifier), important);
@@ -273,12 +273,12 @@ void StyledElement::addSubresourceAttributeURLs(ListHashSet<URL>& urls) const
 
 static inline bool attributeNameSort(const std::pair<AtomicStringImpl*, AtomicString>& p1, const std::pair<AtomicStringImpl*, AtomicString>& p2)
 {
-    // Sort based on the attribute name pointers. It doesn't matter what the order is as long as it is always the same. 
+    // Sort based on the attribute name pointers. It doesn't matter what the order is as long as it is always the same.
     return p1.first < p2.first;
 }
 
 void StyledElement::makePresentationAttributeCacheKey(PresentationAttributeCacheKey& result) const
-{    
+{
     // FIXME: Enable for SVG.
     if (namespaceURI() != xhtmlNamespaceURI)
         return;
@@ -368,7 +368,7 @@ void StyledElement::addPropertyToPresentationAttributeStyle(MutableStyleProperti
 {
     style.setProperty(propertyID, cssValuePool().createValue(value, unit));
 }
-    
+
 void StyledElement::addPropertyToPresentationAttributeStyle(MutableStyleProperties& style, CSSPropertyID propertyID, const String& value)
 {
     style.setProperty(propertyID, value, false, &document().elementSheet().contents());

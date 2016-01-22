@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef CheckedArithmetic_h
@@ -139,7 +139,7 @@ template <typename Target, typename Source> struct BoundsChecker<Target, Source,
             return false;
         // If our (unsigned) Target is the same or greater width we can
         // convert value to type Target without losing precision
-        if (sizeof(Target) >= sizeof(Source)) 
+        if (sizeof(Target) >= sizeof(Source))
             return static_cast<Target>(value) <= std::numeric_limits<Target>::max();
         // The signed Source type has greater precision than the target so
         // max(Target) -> Source will widen.
@@ -151,7 +151,7 @@ template <typename Target, typename Source> struct BoundsChecker<Target, Source,
     static bool inBounds(Source value)
     {
         // Signed target with an unsigned source
-        if (sizeof(Target) <= sizeof(Source)) 
+        if (sizeof(Target) <= sizeof(Source))
             return value <= static_cast<Source>(std::numeric_limits<Target>::max());
         // Target is Wider than Source so we're guaranteed to fit any value in
         // unsigned Source
@@ -173,7 +173,7 @@ template <typename Target, typename Source> static inline bool isInBounds(Source
 
 template <typename T> struct RemoveChecked {
     typedef T CleanType;
-    static const CleanType DefaultValue = 0;    
+    static const CleanType DefaultValue = 0;
 };
 
 template <typename T> struct RemoveChecked<Checked<T, CrashOnOverflow>> {
@@ -225,7 +225,7 @@ template <typename U, typename V> struct ResultBase<U, V, false, true> {
 template <typename U, typename V> struct Result : ResultBase<typename RemoveChecked<U>::CleanType, typename RemoveChecked<V>::CleanType> {
 };
 
-template <typename LHS, typename RHS, typename ResultType = typename Result<LHS, RHS>::ResultType, 
+template <typename LHS, typename RHS, typename ResultType = typename Result<LHS, RHS>::ResultType,
     bool lhsSigned = std::numeric_limits<LHS>::is_signed, bool rhsSigned = std::numeric_limits<RHS>::is_signed> struct ArithmeticOperations;
 
 template <typename LHS, typename RHS, typename ResultType> struct ArithmeticOperations<LHS, RHS, ResultType, true, true> {
@@ -344,7 +344,7 @@ template <typename ResultType> struct ArithmeticOperations<int, unsigned, Result
         result = static_cast<ResultType>(temp);
         return true;
     }
-    
+
     static inline bool sub(int64_t lhs, int64_t rhs, ResultType& result)
     {
         int64_t temp = lhs - rhs;
@@ -378,7 +378,7 @@ template <typename ResultType> struct ArithmeticOperations<unsigned, int, Result
     {
         return ArithmeticOperations<int, unsigned, ResultType>::add(rhs, lhs, result);
     }
-    
+
     static inline bool sub(int64_t lhs, int64_t rhs, ResultType& result)
     {
         return ArithmeticOperations<int, unsigned, ResultType>::sub(lhs, rhs, result);
@@ -416,7 +416,7 @@ template <typename U, typename V> static inline bool safeEquals(U lhs, V rhs)
 }
 
 enum ResultOverflowedTag { ResultOverflowed };
-    
+
 template <typename T, class OverflowHandler> class Checked : public OverflowHandler {
 public:
     template <typename _T, class _OverflowHandler> friend class Checked;
@@ -437,14 +437,14 @@ public:
             this->overflowed();
         m_value = static_cast<T>(value);
     }
-    
+
     template <typename V> Checked(const Checked<T, V>& rhs)
         : m_value(rhs.m_value)
     {
         if (rhs.hasOverflowed())
             this->overflowed();
     }
-    
+
     template <typename U> Checked(const Checked<U, OverflowHandler>& rhs)
         : OverflowHandler(rhs)
     {
@@ -452,7 +452,7 @@ public:
             this->overflowed();
         m_value = static_cast<T>(rhs.m_value);
     }
-    
+
     template <typename U, typename V> Checked(const Checked<U, V>& rhs)
     {
         if (rhs.hasOverflowed())
@@ -461,7 +461,7 @@ public:
             this->overflowed();
         m_value = static_cast<T>(rhs.m_value);
     }
-    
+
     const Checked& operator=(Checked rhs)
     {
         this->clearOverflow();
@@ -470,17 +470,17 @@ public:
         m_value = static_cast<T>(rhs.m_value);
         return *this;
     }
-    
+
     template <typename U> const Checked& operator=(U value)
     {
         return *this = Checked(value);
     }
-    
+
     template <typename U, typename V> const Checked& operator=(const Checked<U, V>& rhs)
     {
         return *this = Checked(rhs);
     }
-    
+
     // prefix
     const Checked& operator++()
     {
@@ -489,7 +489,7 @@ public:
         m_value++;
         return *this;
     }
-    
+
     const Checked& operator--()
     {
         if (m_value == std::numeric_limits<T>::min())
@@ -497,7 +497,7 @@ public:
         m_value--;
         return *this;
     }
-    
+
     // postfix operators
     const Checked operator++(int)
     {
@@ -505,14 +505,14 @@ public:
             this->overflowed();
         return Checked(m_value++);
     }
-    
+
     const Checked operator--(int)
     {
         if (m_value == std::numeric_limits<T>::min())
             this->overflowed();
         return Checked(m_value--);
     }
-    
+
     // Boolean operators
     bool operator!() const
     {
@@ -536,7 +536,7 @@ public:
             CRASH();
         return m_value;
     }
-    
+
     inline CheckedState safeGet(T& value) const WARN_UNUSED_RETURN
     {
         value = m_value;
@@ -581,7 +581,7 @@ public:
     {
         return *this *= (double)rhs;
     }
-    
+
     template <typename U, typename V> const Checked operator+=(Checked<U, V> rhs)
     {
         if (rhs.hasOverflowed())
@@ -615,7 +615,7 @@ public:
             this->overflowed();
         return safeEquals(m_value, rhs);
     }
-    
+
     template <typename U, typename V> const Checked operator==(Checked<U, V> rhs)
     {
         return unsafeGet() == Checked(rhs.unsafeGet());

@@ -63,7 +63,7 @@ protected:
 
     virtual bool isPresentationAttribute(const QualifiedName&) const override;
     virtual void collectStyleForPresentationAttribute(const QualifiedName&, const AtomicString&, MutableStyleProperties&) override;
-private:    
+private:
 
     virtual void updateSelectedChild() { };
 };

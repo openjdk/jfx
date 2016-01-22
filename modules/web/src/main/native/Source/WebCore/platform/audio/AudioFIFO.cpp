@@ -113,7 +113,7 @@ void AudioFIFO::push(const AudioBus* sourceBus)
         if (part2Length)
             memcpy(destination, source + part1Length, part2Length * sizeof(*destination));
     }
-        
+
     m_framesInFifo += sourceLength;
     ASSERT(m_framesInFifo <= m_fifoLength);
     m_writeIndex = updateIndex(m_writeIndex, sourceLength);

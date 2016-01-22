@@ -99,16 +99,16 @@ void WindowContextBase::notify_state(jint glass_state) {
 }
 
 void WindowContextBase::process_state(GdkEventWindowState* event) {
-    if (event->changed_mask & 
+    if (event->changed_mask &
             (GDK_WINDOW_STATE_ICONIFIED | GDK_WINDOW_STATE_MAXIMIZED)) {
-        
+
         if (event->changed_mask & GDK_WINDOW_STATE_ICONIFIED) {
             is_iconified = event->new_window_state & GDK_WINDOW_STATE_ICONIFIED;
-        } 
+        }
         if (event->changed_mask & GDK_WINDOW_STATE_MAXIMIZED) {
             is_maximized = event->new_window_state & GDK_WINDOW_STATE_MAXIMIZED;
         }
-        
+
         jint stateChangeEvent;
 
         if (is_iconified) {
@@ -127,7 +127,7 @@ void WindowContextBase::process_state(GdkEventWindowState* event) {
         notify_state(stateChangeEvent);
     } else if (event->changed_mask & GDK_WINDOW_STATE_ABOVE) {
         notify_on_top( event->new_window_state & GDK_WINDOW_STATE_ABOVE);
-    } 
+    }
 }
 
 void WindowContextBase::process_focus(GdkEventFocus* event) {
@@ -180,7 +180,7 @@ void destroy_and_delete_ctx(WindowContext* ctx) {
 
         if (!ctx->get_events_count()) {
             delete ctx;
-        } 
+        }
         // else: ctx will be deleted in EventsCounterHelper after completing
         // an event processing
     }
@@ -464,7 +464,7 @@ void WindowContextBase::paint(void* data, jint width, jint height)
     if (!is_visible()) {
         return;
     }
-    
+
     cairo_t* context;
     context = gdk_cairo_create(GDK_DRAWABLE(gdk_window));
 
@@ -648,7 +648,7 @@ WindowContextTop::WindowContextTop(jobject _jwindow, WindowContext* _owner, long
     jwindow = mainEnv->NewGlobalRef(_jwindow);
 
     gtk_widget =  gtk_window_new(type == POPUP ? GTK_WINDOW_POPUP : GTK_WINDOW_TOPLEVEL);
-    
+
     if (gchar* app_name = get_application_name()) {
         gtk_window_set_wmclass(GTK_WINDOW(gtk_widget), app_name, app_name);
         g_free(app_name);
@@ -872,7 +872,7 @@ void WindowContextTop::process_net_wm_property() {
     static GdkAtom atom_atom = gdk_atom_intern_static_string("ATOM");
     static GdkAtom atom_net_wm_state_hidden = gdk_atom_intern_static_string("_NET_WM_STATE_HIDDEN");
     static GdkAtom atom_net_wm_state_above = gdk_atom_intern_static_string("_NET_WM_STATE_ABOVE");
-    
+
     gint length;
 
     glong* atoms = NULL;
@@ -899,7 +899,7 @@ void WindowContextTop::process_net_wm_property() {
                     ? com_sun_glass_events_WindowEvent_MINIMIZE
                     : com_sun_glass_events_WindowEvent_RESTORE);
         }
-        
+
         notify_on_top(is_above);
     }
 }
@@ -1468,7 +1468,7 @@ static gboolean plug_configure(GtkWidget *widget, GdkEvent *event, gpointer user
 
 WindowContextPlug::WindowContextPlug(jobject _jwindow, void* _owner) :
         WindowContextBase(),
-        parent() 
+        parent()
 {
     jwindow = mainEnv->NewGlobalRef(_jwindow);
 
@@ -1848,7 +1848,7 @@ void WindowContextChild::exit_fullscreen() {
     full_screen_window->detach_from_java();
 
     full_screen_window->set_view(NULL);
-    
+
     full_screen_window->set_visible(false);
 
     destroy_and_delete_ctx(full_screen_window);

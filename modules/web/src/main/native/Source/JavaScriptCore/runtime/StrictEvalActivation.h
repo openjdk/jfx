@@ -48,7 +48,7 @@ public:
     {
         return Structure::create(vm, globalObject, prototype, TypeInfo(ObjectType, StructureFlags), info());
     }
-    
+
     DECLARE_INFO;
 
 protected:

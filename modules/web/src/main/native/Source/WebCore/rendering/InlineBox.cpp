@@ -58,7 +58,7 @@ InlineBox::~InlineBox()
 #endif
 
 void InlineBox::removeFromParent()
-{ 
+{
     if (parent())
         parent()->removeChild(this);
 }
@@ -137,13 +137,13 @@ LayoutUnit InlineBox::lineHeight() const
     return boxModelObject()->lineHeight(m_bitfields.firstLine(), isHorizontal() ? HorizontalLine : VerticalLine, PositionOnContainingLine);
 }
 
-int InlineBox::caretMinOffset() const 
-{ 
+int InlineBox::caretMinOffset() const
+{
     return m_renderer.caretMinOffset();
 }
 
-int InlineBox::caretMaxOffset() const 
-{ 
+int InlineBox::caretMaxOffset() const
+{
     return m_renderer.caretMaxOffset();
 }
 
@@ -163,7 +163,7 @@ void InlineBox::adjustPosition(float dx, float dy)
 }
 
 const RootInlineBox& InlineBox::root() const
-{ 
+{
     if (parent())
         return parent()->root();
     ASSERT_WITH_SECURITY_IMPLICATION(isRootInlineBox());
@@ -171,7 +171,7 @@ const RootInlineBox& InlineBox::root() const
 }
 
 RootInlineBox& InlineBox::root()
-{ 
+{
     if (parent())
         return parent()->root();
     ASSERT_WITH_SECURITY_IMPLICATION(isRootInlineBox());
@@ -211,7 +211,7 @@ InlineBox* InlineBox::nextLeafChild() const
         leaf = parent()->nextLeafChild();
     return leaf;
 }
-    
+
 InlineBox* InlineBox::prevLeafChild() const
 {
     InlineBox* leaf = 0;
@@ -248,7 +248,7 @@ bool InlineBox::canAccommodateEllipsis(bool ltr, int blockEdge, int ellipsisWidt
     // Non-replaced elements can always accommodate an ellipsis.
     if (!m_renderer.isReplaced())
         return true;
-    
+
     IntRect boxRect(left(), 0, m_logicalWidth, 10);
     IntRect ellipsisRect(ltr ? blockEdge - ellipsisWidth : blockEdge, 0, ellipsisWidth, 10);
     return !(boxRect.intersects(ellipsisRect));
@@ -262,7 +262,7 @@ float InlineBox::placeEllipsisBox(bool, float, float, float, float& truncatedWid
 }
 
 void InlineBox::clearKnownToHaveNoOverflow()
-{ 
+{
     m_bitfields.setKnownToHaveNoOverflow(false);
     if (parent() && parent()->knownToHaveNoOverflow())
         parent()->clearKnownToHaveNoOverflow();

@@ -40,7 +40,7 @@ import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
  *
  */
 public class RemoveFxControllerJob extends Job {
-    
+
     private final FXOMObject fxomObject;
     private String oldFxController;
 
@@ -53,7 +53,7 @@ public class RemoveFxControllerJob extends Job {
     /*
      * Job
      */
-    
+
     @Override
     public boolean isExecutable() {
         return fxomObject.getFxController() != null;
@@ -83,5 +83,5 @@ public class RemoveFxControllerJob extends Job {
     public String getDescription() {
         return getClass().getSimpleName(); // Should not reach user
     }
-    
+
 }

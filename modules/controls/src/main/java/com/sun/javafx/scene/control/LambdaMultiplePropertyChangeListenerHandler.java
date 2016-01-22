@@ -52,7 +52,7 @@ public final class LambdaMultiplePropertyChangeListenerHandler {
         };
         this.weakPropertyChangedListener = new WeakChangeListener<>(propertyChangedListener);
     }
-    
+
     /**
      * Subclasses can invoke this method to register that we want to listen to
      * property change events for the given property.

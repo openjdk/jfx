@@ -1500,7 +1500,7 @@ public class GridPaneTest {
         MockResizable child3 = new MockResizable(10,10, 10,10, 10,10);
         gridpane.add(child1, 0, 0);
         gridpane.add(child2, 1, 0);
-        gridpane.add(child3, 2, 0);       
+        gridpane.add(child3, 2, 0);
         GridPane.setConstraints(child3, 2, 0, 2, 2);
 
         RowConstraints row1 = new RowConstraints();
@@ -1523,7 +1523,7 @@ public class GridPaneTest {
         MockResizable child3 = new MockResizable(10,10, 10,10, 10,10);
         gridpane.add(child1, 0, 0);
         gridpane.add(child2, 0, 1);
-        gridpane.add(child3, 0, 2);       
+        gridpane.add(child3, 0, 2);
         GridPane.setConstraints(child3, 0, 2, 2, 2);
 
         ColumnConstraints col1 = new ColumnConstraints();
@@ -2930,83 +2930,83 @@ public class GridPaneTest {
         assertEquals(150, child2.getHeight(), 1e-100);
         assertEquals(150, child2.getWidth(), 1e-100);
     }
-    
+
     @Test
     public void testMultiRowWithOneRowEmpty() {
         MockResizable childMulti = new MockResizable(100, 500, 100, 500, Double.MAX_VALUE, Double.MAX_VALUE);
         gridpane.add(childMulti, 0, 0, 1, 3);
-        
+
         MockResizable child1 = new MockResizable(100, 300);
         MockResizable child2 = new MockResizable(100, 300);
-        
+
         gridpane.add(child1, 1, 0);
         gridpane.add(child2, 1, 2);
-        
+
         gridpane.resize(500, 500);
         gridpane.layout();
-        
+
         assertEquals(100, child1.getLayoutX(), 1e-100);
         assertEquals(0, child1.getLayoutY(), 1e-100);
         assertEquals(250, child1.getHeight(), 1e-100);
         assertEquals(100, child1.getWidth(), 1e-100);
-        
+
         assertEquals(100, child2.getLayoutX(), 1e-100);
         assertEquals(250, child2.getLayoutY(), 1e-100);
         assertEquals(250, child2.getHeight(), 1e-100);
         assertEquals(100, child2.getWidth(), 1e-100);
-        
+
     }
-    
+
     @Test
     public void testMultiColumnWithOneColumnEmpty() {
         MockResizable childMulti = new MockResizable(500, 100, 500, 100, Double.MAX_VALUE, Double.MAX_VALUE);
         gridpane.add(childMulti, 0, 0, 3, 1);
-        
+
         MockResizable child1 = new MockResizable(300, 100);
         MockResizable child2 = new MockResizable(300, 100);
-        
+
         gridpane.add(child1, 0, 1);
         gridpane.add(child2, 2, 1);
-        
+
         gridpane.resize(500, 500);
         gridpane.layout();
-        
+
         assertEquals(0, child1.getLayoutX(), 1e-100);
         assertEquals(100, child1.getLayoutY(), 1e-100);
         assertEquals(100, child1.getHeight(), 1e-100);
         assertEquals(250, child1.getWidth(), 1e-100);
-        
+
         assertEquals(250, child2.getLayoutX(), 1e-100);
         assertEquals(100, child2.getLayoutY(), 1e-100);
         assertEquals(100, child2.getHeight(), 1e-100);
         assertEquals(250, child2.getWidth(), 1e-100);
-        
+
     }
-    
+
     @Test
     public void testAddRowWithMultiRowNodes() {
         MockNode spanNode = new MockNode();
         MockNode node2 = new MockNode();
         MockNode node3 = new MockNode();
-        
+
         GridPane.setRowSpan(spanNode, 2);
         gridpane.addRow(0, spanNode, node2);
         gridpane.addRow(1, node3);
-        
+
         assertEquals(1, GridPane.getRowIndex(node3), 1e-100);
         assertEquals(1, GridPane.getColumnIndex(node3), 1e-100);
     }
-    
+
     @Test
     public void testAddColumnWithMultiColumnNodes() {
         MockNode spanNode = new MockNode();
         MockNode node2 = new MockNode();
         MockNode node3 = new MockNode();
-        
+
         GridPane.setColumnSpan(spanNode, 2);
         gridpane.addColumn(0, spanNode, node2);
         gridpane.addColumn(1, node3);
-        
+
         assertEquals(1, GridPane.getColumnIndex(node3), 1e-100);
         assertEquals(1, GridPane.getRowIndex(node3), 1e-100);
     }

@@ -284,7 +284,7 @@ int GlassInputTextInfo::GetClauseInfo(int*& lpBndClauseW) {
 //
 int GlassInputTextInfo::GetAttributeInfo(int*& lpBndAttrW, BYTE*& lpValAttrW) {
 
-    lpBndAttrW = NULL;    
+    lpBndAttrW = NULL;
     lpValAttrW = NULL;
 
     if (m_cStrW == 0 || m_cAttrW != m_cStrW) {

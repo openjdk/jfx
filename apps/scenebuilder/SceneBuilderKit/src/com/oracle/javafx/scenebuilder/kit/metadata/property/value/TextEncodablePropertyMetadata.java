@@ -41,11 +41,11 @@ import com.oracle.javafx.scenebuilder.kit.metadata.util.PropertyName;
  */
 public abstract class TextEncodablePropertyMetadata<T> extends SingleValuePropertyMetadata<T> {
 
-    public TextEncodablePropertyMetadata(PropertyName name, Class<T> valueClass, 
+    public TextEncodablePropertyMetadata(PropertyName name, Class<T> valueClass,
             boolean readWrite, T defaultValue, InspectorPath inspectorPath) {
         super(name, valueClass, readWrite, defaultValue, inspectorPath);
     }
-    
+
     public String getValueString(FXOMInstance fxomInstance) {
         return getValue(fxomInstance).toString();
     }
@@ -53,7 +53,7 @@ public abstract class TextEncodablePropertyMetadata<T> extends SingleValueProper
     /*
      * SingleValuePropertyMetadata
      */
-    
+
     @Override
     public T makeValueFromFxomInstance(FXOMInstance valueFxomInstance) {
         return getValueClass().cast(valueFxomInstance.getSceneGraphObject());

@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -676,7 +676,7 @@ static id containerValueToObject(JSGlobalContextRef context, JSContainerConverto
     JSContainerConvertor convertor(context);
     convertor.add(task);
     ASSERT(!convertor.isWorkListEmpty());
-    
+
     do {
         JSContainerConvertor::Task current = convertor.take();
         ASSERT(JSValueIsObject(context, current.js));
@@ -685,7 +685,7 @@ static id containerValueToObject(JSGlobalContextRef context, JSContainerConverto
         if (current.type == ContainerArray) {
             ASSERT([current.objc isKindOfClass:[NSMutableArray class]]);
             NSMutableArray *array = (NSMutableArray *)current.objc;
-        
+
             JSStringRef lengthString = JSStringCreateWithUTF8CString("length");
             unsigned length = JSC::toUInt32(JSValueToNumber(context, JSObjectGetProperty(context, js, lengthString, 0), 0));
             JSStringRelease(lengthString);
@@ -952,7 +952,7 @@ JSValueRef objectToValue(JSContext *context, id object)
                 }
             }
         }
-        
+
     } while (!convertor.isWorkListEmpty());
 
     return task.js;

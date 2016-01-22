@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef DFGSlowPathGenerator_h
@@ -75,13 +75,13 @@ public:
         , m_to(jit->m_jit.label())
     {
     }
-    
+
 protected:
     void linkFrom(SpeculativeJIT* jit)
     {
         m_from.link(&jit->m_jit);
     }
-    
+
     void jumpTo(SpeculativeJIT* jit)
     {
         jit->m_jit.jump().linkTo(m_to, &jit->m_jit);
@@ -105,12 +105,12 @@ public:
         if (m_spillMode == NeedToSpill)
             jit->silentSpillAllRegistersImpl(false, m_plans, extractResult(result));
     }
-    
+
     virtual MacroAssembler::Call call() const override
     {
         return m_call;
     }
-    
+
 protected:
     void setUp(SpeculativeJIT* jit)
     {
@@ -120,12 +120,12 @@ protected:
                 jit->silentSpill(m_plans[i]);
         }
     }
-    
+
     void recordCall(MacroAssembler::Call call)
     {
         m_call = call;
     }
-    
+
     void tearDown(SpeculativeJIT* jit)
     {
         if (m_spillMode == NeedToSpill) {
@@ -154,7 +154,7 @@ public:
             from, jit, function, spillMode, result)
     {
     }
-    
+
 protected:
     virtual void generateInternal(SpeculativeJIT* jit) override
     {
@@ -178,7 +178,7 @@ public:
         , m_argument1(argument1)
     {
     }
-    
+
 protected:
     virtual void generateInternal(SpeculativeJIT* jit) override
     {
@@ -206,7 +206,7 @@ public:
         , m_argument2(argument2)
     {
     }
-    
+
 protected:
     virtual void generateInternal(SpeculativeJIT* jit) override
     {
@@ -237,7 +237,7 @@ public:
     {
     }
 
-protected:    
+protected:
     virtual void generateInternal(SpeculativeJIT* jit) override
     {
         this->setUp(jit);
@@ -272,7 +272,7 @@ public:
         , m_argument4(argument4)
     {
     }
-    
+
 protected:
     void generateInternal(SpeculativeJIT* jit)
     {
@@ -312,7 +312,7 @@ public:
     {
     }
 
-protected:    
+protected:
     void generateInternal(SpeculativeJIT* jit)
     {
         this->setUp(jit);

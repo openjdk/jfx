@@ -47,7 +47,7 @@ public:
     void registerCreateInjectedBundleTestFunction(const std::string&, CreateInjectedBundleTestFunction);
 
     WKBundleRef bundle() const { return m_bundle; }
-    
+
 private:
     InjectedBundleController();
     ~InjectedBundleController();

@@ -43,7 +43,7 @@ public:
     virtual void didReceiveMessageToPage(WKBundleRef, WKBundlePageRef, WKStringRef messageName, WKTypeRef messageBody) { }
 
     std::string name() const { return m_identifier; }
-    
+
     template<typename TestClassTy> class Register {
     public:
         Register(const std::string& test)
@@ -52,7 +52,7 @@ public:
         }
 
     private:
-        static InjectedBundleTest* create(const std::string& identifier) 
+        static InjectedBundleTest* create(const std::string& identifier)
         {
             return new TestClassTy(identifier);
         }

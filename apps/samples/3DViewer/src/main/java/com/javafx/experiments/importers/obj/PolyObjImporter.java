@@ -66,7 +66,7 @@ public class PolyObjImporter {
             return uvIndex - 1;
         }
     }
-    
+
     private int normalIndex(int normalIndex) {
         if (normalIndex < 0) {
             return normalIndex + normals.size() / 3;
@@ -103,15 +103,15 @@ public class PolyObjImporter {
     public PolyObjImporter(InputStream inputStream) throws IOException {
         read(inputStream);
     }
-    
+
     public PolygonMesh getMesh() {
         return meshes.values().iterator().next();
     }
-    
+
     public Material getMaterial() {
         return materials.values().iterator().next();
     }
-    
+
     public PolygonMesh getMesh(String key) {
         return meshes.get(key);
     }
@@ -119,7 +119,7 @@ public class PolyObjImporter {
     public Material getMaterial(String key) {
         return materials.get(key);
     }
-    
+
     public PolygonMeshView buildPolygonMeshView(String key) {
         PolygonMeshView polygonMeshView = new PolygonMeshView();
         polygonMeshView.setId(key);
@@ -128,7 +128,7 @@ public class PolyObjImporter {
 //        polygonMeshView.setCullFace(CullFace.NONE); TODO
         return polygonMeshView;
     }
-    
+
     public static void setDebug(boolean debug) {
         PolyObjImporter.debug = debug;
     }
@@ -147,7 +147,7 @@ public class PolyObjImporter {
     private int facesStart = 0;
     private int facesNormalStart = 0;
     private int smoothingGroupsStart = 0;
-    
+
     private void read(InputStream inputStream) throws IOException {
         BufferedReader br = new BufferedReader(new InputStreamReader(inputStream));
         String line;
@@ -239,13 +239,13 @@ public class PolyObjImporter {
             }
         }
         addMesh(key);
-        
-        log("Totally loaded " + (vertexes.size() / 3.) + " vertexes, " 
-                + (uvs.size() / 2.) + " uvs, " 
-                + (faces.size() / 6.) + " faces, " 
+
+        log("Totally loaded " + (vertexes.size() / 3.) + " vertexes, "
+                + (uvs.size() / 2.) + " uvs, "
+                + (faces.size() / 6.) + " faces, "
                 + smoothingGroups.size() + " smoothing groups.");
     }
-    
+
     private void addMesh(String key) {
         if (facesStart >= faces.size()) {
             // we're only interested in faces
@@ -262,7 +262,7 @@ public class PolyObjImporter {
 
         int[][] faceArrays = new int[faces.size()-facesStart][];
         int[][] faceNormalArrays = new int[faceNormals.size()-facesNormalStart][];
-        
+
         for (int i = facesStart; i < faces.size();i++) {
             int[] faceIndexes = faces.get(i);
             int[] faceNormalIndexes = faceNormals.get(i);
@@ -293,7 +293,7 @@ public class PolyObjImporter {
                 }
                 faceIndexes[j+1] = nuvi;
 //                faces.set(i + 1, nuvi);
-                
+
                 int ni = faceNormalIndexes[j/2];
                 Integer nni = normalMap.get(ni);
                 if (nni == null) {
@@ -321,7 +321,7 @@ public class PolyObjImporter {
                 newUVs.toFloatArray(),
                 faceArrays
         );
-        
+
         // Use normals if they are provided
         if (useNormals) {
             int[] smGroups = SmoothingGroups.calcSmoothGroups(faceArrays, faceNormalArrays, newNormals.toFloatArray());
@@ -329,7 +329,7 @@ public class PolyObjImporter {
         } else {
             mesh.getFaceSmoothingGroups().setAll(((IntegerArrayList) smoothingGroups.subList(smoothingGroupsStart, smoothingGroups.size())).toIntArray());
         }
-        
+
         if (debug) {
             System.out.println("mesh.points = " + mesh.getPoints());
             System.out.println("mesh.texCoords = " + mesh.getTexCoords());
@@ -346,14 +346,14 @@ public class PolyObjImporter {
         }
         meshes.put(key, mesh);
         materials.put(key, material);
-        
+
         log("Added mesh '" + key + "' of " + (mesh.getPoints().size()/3) + " vertexes, "
                 + (mesh.getTexCoords().size()/2) + " uvs, "
                 + mesh.faces.length + " faces, "
                 + 0 + " smoothing groups.");
         log("material diffuse color = " + ((PhongMaterial) material).getDiffuseColor());
         log("material diffuse map = " + ((PhongMaterial) material).getDiffuseMap());
-        
+
         facesStart = faces.size();
         facesNormalStart = faceNormals.size();
         smoothingGroupsStart = smoothingGroups.size();

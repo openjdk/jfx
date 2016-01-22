@@ -65,7 +65,7 @@ public class WinMsiBundler  extends AbstractBundler {
             WinServiceBundler.class,
             params -> new WinServiceBundler(),
             null);
-    
+
     public static final BundlerParamInfo<Boolean> CAN_USE_WIX36 = new WindowsBundlerParam<>(
             I18N.getString("param.can-use-wix36.name"),
             I18N.getString("param.can-use-wix36.description"),
@@ -256,7 +256,7 @@ public class WinMsiBundler  extends AbstractBundler {
     private static double findToolVersion(String toolName) {
         try {
             if (toolName == null || "".equals(toolName)) return 0f;
-            
+
             ProcessBuilder pb = new ProcessBuilder(
                     toolName,
                     "/?");
@@ -285,9 +285,9 @@ public class WinMsiBundler  extends AbstractBundler {
             APP_BUNDLER.fetchFrom(p).doValidate(p);
 
             if (SERVICE_HINT.fetchFrom(p)) {
-                SERVICE_BUNDLER.fetchFrom(p).validate(p);                
+                SERVICE_BUNDLER.fetchFrom(p).validate(p);
             }
-            
+
             double candleVersion = findToolVersion(TOOL_CANDLE_EXECUTABLE.fetchFrom(p));
             double lightVersion = findToolVersion(TOOL_LIGHT_EXECUTABLE.fetchFrom(p));
 
@@ -354,7 +354,7 @@ public class WinMsiBundler  extends AbstractBundler {
                     }
                 }
             }
-            
+
             return true;
         } catch (RuntimeException re) {
             if (re.getCause() instanceof ConfigException) {
@@ -416,7 +416,7 @@ public class WinMsiBundler  extends AbstractBundler {
         File bundleRoot = MSI_IMAGE_DIR.fetchFrom(p);
         File appDir = APP_BUNDLER.fetchFrom(p).doBundle(p, bundleRoot, true);
         p.put(WIN_APP_IMAGE.getID(), appDir);
-        
+
         if (SERVICE_HINT.fetchFrom(p) && appDir != null) {
             // just copies the service launcher to the app root folder
             appDir = SERVICE_BUNDLER.fetchFrom(p).doBundle(p, appDir, true);
@@ -438,7 +438,7 @@ public class WinMsiBundler  extends AbstractBundler {
                 }
             }
         }
-        
+
         // copy file association icons
         List<Map<String, ? super Object>> fileAssociations = FILE_ASSOCIATIONS.fetchFrom(p);
         for (Map<String, ? super Object> fileAssociation : fileAssociations) {
@@ -446,7 +446,7 @@ public class WinMsiBundler  extends AbstractBundler {
             if (icon == null) {
                 continue;
             }
-            
+
             File faIconFile = new File(appDir, icon.getName());
 
             if (icon.exists()) {
@@ -506,7 +506,7 @@ public class WinMsiBundler  extends AbstractBundler {
                     IOUtils.copyFile(configScriptSrc, configScript);
                     Log.info(MessageFormat.format(I18N.getString("message.running-wsh-script"), configScript.getAbsolutePath()));
                     IOUtils.run("wscript", configScript, VERBOSE.fetchFrom(p));
-                }                
+                }
                 return buildMSI(p, outdir);
             }
             return null;
@@ -640,7 +640,7 @@ public class WinMsiBundler  extends AbstractBundler {
         Writer w = new BufferedWriter(new FileWriter(getConfig_ProjectFile(params)));
         w.write(preprocessTextResource(
                 WinAppBundler.WIN_BUNDLER_PREFIX + getConfig_ProjectFile(params).getName(),
-                I18N.getString("resource.wix-config-file"), 
+                I18N.getString("resource.wix-config-file"),
                 MSI_PROJECT_TEMPLATE, data, VERBOSE.fetchFrom(params),
                 DROP_IN_RESOURCES_ROOT.fetchFrom(params)));
         w.close();
@@ -661,12 +661,12 @@ public class WinMsiBundler  extends AbstractBundler {
         "     </Publish>\n" +
         "     <Publish Dialog=\"InstallDirDlg\" Control=\"Back\"" +
         "              Event=\"NewDialog\" Value=\"WelcomeDlg\" Order=\"2\"> 1" +
-        "     </Publish>\n";            
+        "     </Publish>\n";
 
     /**
      * Creates UI element using WiX built-in dialog sets - WixUI_InstallDir/WixUI_Minimal.
      * The dialog sets are the closest to what we want to implement.
-     * 
+     *
      * WixUI_Minimal for license dialog only
      * WixUI_InstallDir for installdir dialog only or for both installdir/license dialogs
      */
@@ -690,14 +690,14 @@ public class WinMsiBundler  extends AbstractBundler {
 
         return uiBlock;
     }
-    
+
     private String getAppCDSBlock(Map<String, ? super Object> params) {
         String cdsBlock = "";
         if (UNLOCK_COMMERCIAL_FEATURES.fetchFrom(params) && ENABLE_APP_CDS.fetchFrom(params)
                         && ("install".equals(APP_CDS_CACHE_MODE.fetchFrom(params))
                         || "auto+install".equals(APP_CDS_CACHE_MODE.fetchFrom(params))))
         {
-            cdsBlock = 
+            cdsBlock =
                     "     <CustomAction Id=\"CACHE_CDS\"\n" +
                     "          Directory=\"APPLICATIONFOLDER\"\n" +
                     "          ExeCommand=\"[APPLICATIONFOLDER]" + WinAppBundler.getLauncherName(params) +" -Xappcds:generatecache\"\n" +
@@ -710,7 +710,7 @@ public class WinMsiBundler  extends AbstractBundler {
         }
         return cdsBlock;
     }
-    
+
     private void walkFileTree(Map<String, ? super Object> params, File root, PrintStream out, String prefix) {
         List<File> dirs = new ArrayList<>();
         List<File> files = new ArrayList<>();
@@ -904,7 +904,7 @@ public class WinMsiBundler  extends AbstractBundler {
                 needServiceEntries = true;
             }
         }
-        
+
         if (needServiceEntries) {
             out.println(prefix + " <Component Id=\"comp" + (compId++) + "\" DiskId=\"1\""
                     + " Guid=\"" + UUID.randomUUID().toString() + "\""
@@ -1016,7 +1016,7 @@ public class WinMsiBundler  extends AbstractBundler {
         }
         //component is defined in the template.wsx
         out.println("    <ComponentRef Id=\"CleanupMainApplicationFolder\" />");
-        out.println(" </Feature>");        
+        out.println(" </Feature>");
         out.println("</Include>");
 
         out.close();
@@ -1035,7 +1035,7 @@ public class WinMsiBundler  extends AbstractBundler {
             return licenseFiles.get(0);
         }
     }
-    
+
     private boolean prepareWiXConfig(Map<String, ? super Object> params) throws IOException {
         return prepareMainProjectFile(params) && prepareContentList(params);
 
@@ -1063,13 +1063,13 @@ public class WinMsiBundler  extends AbstractBundler {
         IOUtils.exec(pb, VERBOSE.fetchFrom(params));
 
         Log.verbose(MessageFormat.format(I18N.getString("message.generating-msi"), msiOut.getAbsolutePath()));
-        
+
         boolean enableLicenseUI = (getLicenseFile(params) != null);
         boolean enableInstalldirUI = INSTALLDIR_CHOOSER.fetchFrom(params);
 
         List<String> commandLine = new ArrayList<>();
 
-        commandLine.add(TOOL_LIGHT_EXECUTABLE.fetchFrom(params));        
+        commandLine.add(TOOL_LIGHT_EXECUTABLE.fetchFrom(params));
         if (enableLicenseUI) {
             commandLine.add("-dWixUILicenseRtf="+getLicenseFile(params));
         }
@@ -1085,7 +1085,7 @@ public class WinMsiBundler  extends AbstractBundler {
         }
         commandLine.add("-out");
         commandLine.add(msiOut.getAbsolutePath());
-        
+
         //create .msi
         pb = new ProcessBuilder(commandLine);
 
@@ -1097,22 +1097,22 @@ public class WinMsiBundler  extends AbstractBundler {
 
         return msiOut;
     }
-    
-    public static void ensureByMutationFileIsRTF(File f) {        
+
+    public static void ensureByMutationFileIsRTF(File f) {
         if (f == null || !f.isFile()) return;
 
         try {
             boolean existingLicenseIsRTF = false;
-            
+
             try (FileInputStream fin = new FileInputStream(f)) {
                 byte[] firstBits = new byte[7];
-                
+
                 if (fin.read(firstBits) == firstBits.length) {
                     String header = new String(firstBits);
                     existingLicenseIsRTF = "{\\rtf1\\".equals(header);
                 }
             }
-        
+
             if (!existingLicenseIsRTF) {
                 List<String> oldLicense = Files.readAllLines(f.toPath());
                 try (Writer w = Files.newBufferedWriter(f.toPath(), Charset.forName("Windows-1252"))) {
@@ -1121,11 +1121,11 @@ public class WinMsiBundler  extends AbstractBundler {
                     oldLicense.forEach(l -> {
                         try {
                             for (char c : l.toCharArray()) {
-                                //0x00 <= ch < 0x20	Escaped (\'hh)
+                                //0x00 <= ch < 0x20 Escaped (\'hh)
                                 //0x20 <= ch < 0x80 Raw(non - escaped) character
                                 //0x80 <= ch <= 0xFF Escaped(\ 'hh)
                                 //0x5C, 0x7B, 0x7D (special RTF characters\,{,})Escaped(\'hh)
-                                // ch > 0xff Escaped (\\ud###?) 
+                                // ch > 0xff Escaped (\\ud###?)
                                 if (c < 0x10) {
                                     w.write("\\'0");
                                     w.write(Integer.toHexString(c));

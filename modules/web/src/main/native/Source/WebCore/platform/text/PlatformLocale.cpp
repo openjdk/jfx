@@ -349,7 +349,7 @@ String Locale::formatDateTime(const DateComponents& date, FormatType formatType)
     case DateComponents::Month:
         builder.build(formatType == FormatTypeShort ? shortMonthFormat() : monthFormat());
         break;
-    case DateComponents::Week:    
+    case DateComponents::Week:
 #if ENABLE(INPUT_TYPE_WEEK)
         builder.build(weekFormatInLDML());
         break;

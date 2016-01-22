@@ -29,5 +29,5 @@ import java.io.InputStream;
 import java.util.concurrent.CountDownLatch;
 
 public interface OutputListener {
-    public void captureOutputStream(InputStream stream, CountDownLatch doneSignal); 
+    public void captureOutputStream(InputStream stream, CountDownLatch doneSignal);
 }

@@ -25,7 +25,7 @@
 package javafx.css;
 
 /**
- * 
+ *
  * @since 9
  */
 public final class StyleClass {
@@ -53,5 +53,5 @@ public final class StyleClass {
 
     // index of this StyleClass in styleClasses list.
     private final int index;
-   
+
 }

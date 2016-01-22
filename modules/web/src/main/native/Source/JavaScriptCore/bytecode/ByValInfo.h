@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef ByValInfo_h
@@ -153,14 +153,14 @@ inline JITArrayMode jitArrayModeForStructure(Structure* structure)
 {
     if (isOptimizableIndexingType(structure->indexingType()))
         return jitArrayModeForIndexingType(structure->indexingType());
-    
+
     ASSERT(hasOptimizableIndexingForClassInfo(structure->classInfo()));
     return jitArrayModeForClassInfo(structure->classInfo());
 }
 
 struct ByValInfo {
     ByValInfo() { }
-    
+
     ByValInfo(unsigned bytecodeIndex, CodeLocationJump badTypeJump, JITArrayMode arrayMode, int16_t badTypeJumpToDone, int16_t returnAddressToSlowPath)
         : bytecodeIndex(bytecodeIndex)
         , badTypeJump(badTypeJump)
@@ -170,7 +170,7 @@ struct ByValInfo {
         , slowPathCount(0)
     {
     }
-    
+
     unsigned bytecodeIndex;
     CodeLocationJump badTypeJump;
     JITArrayMode arrayMode; // The array mode that was baked into the inline JIT code.

@@ -42,7 +42,7 @@ import javafx.scene.paint.Paint;
 
 /**
  *
- * 
+ *
  */
 public class TabTring extends AbstractTring<Tab> {
 
@@ -51,13 +51,13 @@ public class TabTring extends AbstractTring<Tab> {
     public TabTring(ContentPanelController contentPanelController, FXOMInstance fxomInstance) {
         super(contentPanelController, fxomInstance, Tab.class);
         assert fxomInstance.getSceneGraphObject() instanceof Tab;
-        
+
         tabOutline = new TabOutline(getSceneGraphObject());
         tabOutline.getRingPath().getStyleClass().add(TARGET_RING_CLASS);
         tabOutline.getRingPath().setMouseTransparent(true);
         getRootNode().getChildren().add(tabOutline.getRingPath());
     }
-    
+
     public FXOMInstance getFxomInstance() {
         return (FXOMInstance) getFxomObject();
     }
@@ -65,22 +65,22 @@ public class TabTring extends AbstractTring<Tab> {
     /*
      * AbstractPring
      */
-    
+
     @Override
     protected void layoutDecoration() {
         tabOutline.layout(this);
     }
-    
+
     @Override
     public void changeStroke(Paint stroke) {
         tabOutline.getRingPath().setStroke(stroke);
     }
-    
-    
+
+
     /*
      * AbstractDecoration
      */
-    
+
     @Override
     public Bounds getSceneGraphObjectBounds() {
         return getSceneGraphObject().getTabPane().getLayoutBounds();

@@ -48,15 +48,15 @@ public class HelloChoiceBox extends Application {
 
         // control buttons
         VBox vbox = new VBox(5);
-        
+
         Button slt = new Button("Select item 2");
         slt.setOnAction(t -> choiceBox.getSelectionModel().select(2));
         vbox.getChildren().add(slt);
-        
+
         Button clearItems = new Button("Clear items sequence");
         clearItems.setOnAction(t -> choiceBox.getItems().clear());
         vbox.getChildren().add(clearItems);
-        
+
         HBox hbox = new HBox(10);
         hbox.getChildren().addAll(choiceBox, vbox);
         stage.setScene(new Scene(hbox));

@@ -152,7 +152,7 @@ JSValue JSHistory::pushState(ExecState* exec)
     String title = valueToStringWithUndefinedOrNullCheck(exec, exec->argument(1));
     if (exec->hadException())
         return jsUndefined();
-        
+
     String url;
     if (exec->argumentCount() > 2) {
         url = valueToStringWithUndefinedOrNullCheck(exec, exec->argument(2));
@@ -178,7 +178,7 @@ JSValue JSHistory::replaceState(ExecState* exec)
     String title = valueToStringWithUndefinedOrNullCheck(exec, exec->argument(1));
     if (exec->hadException())
         return jsUndefined();
-        
+
     String url;
     if (exec->argumentCount() > 2) {
         url = valueToStringWithUndefinedOrNullCheck(exec, exec->argument(2));

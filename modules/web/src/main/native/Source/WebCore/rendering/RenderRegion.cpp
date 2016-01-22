@@ -217,7 +217,7 @@ bool RenderRegion::isLastRegion() const
 
     return m_flowThread->lastRegion() == this;
 }
-    
+
 void RenderRegion::styleDidChange(StyleDifference diff, const RenderStyle* oldStyle)
 {
     RenderBlockFlow::styleDidChange(diff, oldStyle);
@@ -232,7 +232,7 @@ void RenderRegion::styleDidChange(StyleDifference diff, const RenderStyle* oldSt
 void RenderRegion::computeOverflowFromFlowThread()
 {
     ASSERT(isValid());
-    
+
     LayoutRect layoutRect;
     {
         // When getting the overflow from the flow thread we need to temporarly reset the current flow thread because
@@ -282,7 +282,7 @@ void RenderRegion::repaintFlowThreadContentRectangle(const LayoutRect& repaintRe
 
     // Now switch to the region's writing mode coordinate space and let it repaint itself.
     flipForWritingMode(clippedRect);
-    
+
     // Issue the repaint.
     repaintRectangle(clippedRect, immediate);
 }
@@ -313,7 +313,7 @@ void RenderRegion::attachRegion()
 {
     if (documentBeingDestroyed())
         return;
-    
+
     // A region starts off invalid.
     setIsValid(false);
 
@@ -321,7 +321,7 @@ void RenderRegion::attachRegion()
     // The flow thread lifetime is influenced by the number of regions attached to it,
     // and we are attaching the region to the flow thread.
     installFlowThread();
-    
+
     if (!m_flowThread)
         return;
 
@@ -457,7 +457,7 @@ void RenderRegion::ensureOverflowForBox(const RenderBox* box, RefPtr<RenderOverf
 {
     RenderFlowThread* flowThread = this->flowThread();
     ASSERT(flowThread);
-    
+
     RenderBoxRegionInfo* boxInfo = renderBoxRegionInfo(box);
     if (!boxInfo && !forceCreation)
         return;
@@ -466,17 +466,17 @@ void RenderRegion::ensureOverflowForBox(const RenderBox* box, RefPtr<RenderOverf
         overflow = boxInfo->overflow();
         return;
     }
-    
+
     LayoutRect borderBox = box->borderBoxRectInRegion(this);
     LayoutRect clientBox;
     ASSERT(flowThread->objectShouldPaintInFlowRegion(box, this));
 
     if (!borderBox.isEmpty()) {
         borderBox = rectFlowPortionForBox(box, borderBox);
-        
+
         clientBox = box->clientBoxRectInRegion(this);
         clientBox = rectFlowPortionForBox(box, clientBox);
-        
+
         flowThread->flipForWritingModeLocalCoordinates(borderBox);
         flowThread->flipForWritingModeLocalCoordinates(clientBox);
     }
@@ -504,7 +504,7 @@ LayoutRect RenderRegion::rectFlowPortionForBox(const RenderBox* box, const Layou
     } else {
         if (this != startRegion)
             mappedRect.shiftXEdgeTo(std::max<LayoutUnit>(logicalTopForFlowThreadContent(), mappedRect.x()));
-            
+
         if (this != endRegion)
             mappedRect.setWidth(std::max<LayoutUnit>(0, std::min<LayoutUnit>(logicalBottomForFlowThreadContent() - mappedRect.x(), mappedRect.width())));
     }
@@ -516,7 +516,7 @@ LayoutRect RenderRegion::rectFlowPortionForBox(const RenderBox* box, const Layou
             portionRect = toRenderNamedFlowFragment(this)->flowThreadPortionRectForClipping(this == startRegion, this == endRegion);
         else
             portionRect = flowThreadPortionRect();
-        
+
         mappedRect.intersect(portionRect);
     }
 
@@ -557,7 +557,7 @@ LayoutRect RenderRegion::layoutOverflowRectForBox(const RenderBox* box)
 {
     RefPtr<RenderOverflow> overflow;
     ensureOverflowForBox(box, overflow, true);
-    
+
     ASSERT(overflow);
     return overflow->layoutOverflowRect();
 }

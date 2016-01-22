@@ -50,9 +50,9 @@ public class DocumentationIndexer {
     static {
         System.setProperty("java.net.useSystemProxies", "true");
     }
-    
+
     private enum State {DEFAULT, BOOK_TITLE, CHAPTER, SECT1, SECT_H1_H2};
-    
+
     public static class Section {
         public final String name;
         public final String content;
@@ -68,7 +68,7 @@ public class DocumentationIndexer {
             return "Section{" + "name=" + name + ", content=" + content + '}';
         }
     }
-    
+
     public static class DocPage {
         public final String bookTitle;
         public final String chapter;
@@ -82,26 +82,26 @@ public class DocumentationIndexer {
             this.sections = sections;
         }
     }
-    
+
     private static int tmpIndex = 0;
-    
+
     private static final String[][] REPLACEMENTS = {
-        
+
         // Remove any comments
-        { "(?s)<!--.*?-->", "" }, 
-        
+        { "(?s)<!--.*?-->", "" },
+
         // Remove scripts and styles
-        { "(?s)<(script|style).*?</\\1>", "" }, 
-        
+        { "(?s)<(script|style).*?</\\1>", "" },
+
         // Remove unnecessary tags
-        { "(?i)</?(?!html\\b|div\\b|h1\\b|h2\\b|a\\b|img\\b)(\\w+\\b)[^>]*>", "" }, 
-        
+        { "(?i)</?(?!html\\b|div\\b|h1\\b|h2\\b|a\\b|img\\b)(\\w+\\b)[^>]*>", "" },
+
         // Remove malformed garbage from links
         { "(?x) <a (?:\\s+ (?: (href \\s* = \\s* \\\"[^\\\"]*\\\") "
             + "| (name \\s* = \\s* \\\"[^\\\"]*\\\") "
             + "| \\w+\\s*=\\s*\\\"[^\\\"]*\\\" "
-            + "| \\w+\\s*=\\s*[^\\s\\\">]+))* \\s* >", "<a $1 $2>" }, 
-        
+            + "| \\w+\\s*=\\s*[^\\s\\\">]+))* \\s* >", "<a $1 $2>" },
+
 //        { "(?i)</?[a-z]+\b(<!div|h1|h2|a|img)[^>]*>", "" }, // Remove unnecessary tags
 //        { "</?(?:p|br)[^>]*>", "" }, // Remove unnecessary tags
 //        { "<meta [^>]+>", "" },
@@ -118,15 +118,15 @@ public class DocumentationIndexer {
 //        { "<span class=red>", "<span class=\"red\">" },
     };
     private static final Pattern[] COMPILED_PATTERNS = new Pattern[REPLACEMENTS.length];
-    
+
     static {
         for (int i = 0; i < REPLACEMENTS.length; i++) {
             COMPILED_PATTERNS[i] = Pattern.compile(REPLACEMENTS[i][0]);
         }
     }
-    
+
     public static DocPage parseDocsPage(final String url, String content) throws Exception {
-        
+
         for (int i = 0; i < REPLACEMENTS.length; i++) {
             content = COMPILED_PATTERNS[i].matcher(content).replaceAll(REPLACEMENTS[i][1]);
         }
@@ -143,13 +143,13 @@ public class DocumentationIndexer {
             throw new RuntimeException("\"Failed to parse '" + url + "', see content in " + filename + ".", e);
         }
     }
-    
+
     public static void main(String[] args) throws Exception {
 //        final String url = "https://docs.oracle.com/javafx/2/layout/builtin_layouts.htm#sthref15";
         final String url = "https://docs.oracle.com/javafx/2/overview/jfxpub-overview.htm";
         parseDocsPage(url, BuildEnsembleSearchIndex.grabWebPage(url).toString());
     }
-    
+
     private static class DocHandler extends DefaultHandler {
         private final String url;
         private State state = State.DEFAULT;
@@ -203,7 +203,7 @@ public class DocumentationIndexer {
                         nextUrl = url.substring(0,url.lastIndexOf('/')+1) + currentLink;
                     }
                     break;
-                case SECT1: 
+                case SECT1:
                     if ("div".equals(localName)) {
                         divDepth ++;
                     } else if ("h1".equals(localName) || "h2".equals(localName)) {
@@ -211,7 +211,7 @@ public class DocumentationIndexer {
                         buf.setLength(0);
                     }
                     break;
-            }       
+            }
         }
 
         @Override public void endElement(String uri, String localName, String qName) throws SAXException {
@@ -266,7 +266,7 @@ public class DocumentationIndexer {
             }
         }
 
-        // AVOID LONG WAITS FOR 
+        // AVOID LONG WAITS FOR
         @Override public InputSource resolveEntity(String publicId, String systemId) throws IOException, SAXException {
             return new InputSource(new StringReader(""));
         }

@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef DisplayRefreshMonitor_h
@@ -51,22 +51,22 @@ class DisplayRefreshMonitorManager;
 class DisplayRefreshMonitorClient {
     friend class DisplayRefreshMonitor;
     friend class DisplayRefreshMonitorManager;
-    
+
 public:
     DisplayRefreshMonitorClient();
     virtual ~DisplayRefreshMonitorClient();
-    
+
     virtual void displayRefreshFired(double timestamp) = 0;
 
 private:
     void fireDisplayRefreshIfNeeded(double timestamp);
-    
+
     void setDisplayID(PlatformDisplayID displayID)
     {
         m_displayID = displayID;
         m_displayIDIsSet = true;
     }
-    
+
     bool m_scheduled;
     bool m_displayIDIsSet;
     PlatformDisplayID m_displayID;
@@ -82,18 +82,18 @@ public:
     {
         return adoptRef(new DisplayRefreshMonitor(displayID));
     }
-    
+
     ~DisplayRefreshMonitor();
-    
+
     // Return true if callback request was scheduled, false if it couldn't be
     // (e.g., hardware refresh is not available)
     bool requestRefreshCallback();
     void windowScreenDidChange(PlatformDisplayID);
-    
+
     bool hasClients() const { return m_clients.size(); }
     void addClient(DisplayRefreshMonitorClient*);
     bool removeClient(DisplayRefreshMonitorClient*);
-    
+
     PlatformDisplayID displayID() const { return m_displayID; }
 
     bool shouldBeTerminated() const
@@ -101,7 +101,7 @@ public:
         const int maxInactiveFireCount = 10;
         return !m_scheduled && m_unscheduledFireCount > maxInactiveFireCount;
     }
-    
+
 private:
     explicit DisplayRefreshMonitor(PlatformDisplayID);
 
@@ -135,7 +135,7 @@ private:
 };
 
 //
-// Singleton manager for all the DisplayRefreshMonitors. This is the interface to the 
+// Singleton manager for all the DisplayRefreshMonitors. This is the interface to the
 // outside world. It distributes requests to the appropriate monitor. When the display
 // refresh event fires, the passed DisplayRefreshMonitorClient is called directly on
 // the main thread.
@@ -143,7 +143,7 @@ private:
 class DisplayRefreshMonitorManager {
 public:
     static DisplayRefreshMonitorManager* sharedManager();
-    
+
     void registerClient(DisplayRefreshMonitorClient*);
     void unregisterClient(DisplayRefreshMonitorClient*);
 
@@ -153,7 +153,7 @@ public:
 private:
     friend class DisplayRefreshMonitor;
     void displayDidRefresh(DisplayRefreshMonitor*);
-    
+
     DisplayRefreshMonitorManager() { }
     DisplayRefreshMonitor* ensureMonitorForClient(DisplayRefreshMonitorClient*);
 

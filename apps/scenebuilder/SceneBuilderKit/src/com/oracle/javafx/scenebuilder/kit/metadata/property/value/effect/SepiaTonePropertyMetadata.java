@@ -44,7 +44,7 @@ import javafx.scene.effect.SepiaTone;
  *
  */
 public class SepiaTonePropertyMetadata extends ComplexPropertyMetadata<SepiaTone> {
-    
+
     private final EffectPropertyMetadata inputMetadata
             = new EffectPropertyMetadata(new PropertyName("input"), //NOI18N
             true /* readWrite */, null, InspectorPath.UNUSED);
@@ -52,7 +52,7 @@ public class SepiaTonePropertyMetadata extends ComplexPropertyMetadata<SepiaTone
             = new DoublePropertyMetadata(new PropertyName("level"), //NOI18N
             DoublePropertyMetadata.DoubleKind.EFFECT_SIZE, true /* readWrite */, 1.0, InspectorPath.UNUSED);
 
-    public SepiaTonePropertyMetadata(PropertyName name, boolean readWrite, 
+    public SepiaTonePropertyMetadata(PropertyName name, boolean readWrite,
             SepiaTone defaultValue, InspectorPath inspectorPath) {
         super(name, SepiaTone.class, readWrite, defaultValue, inspectorPath);
     }
@@ -60,11 +60,11 @@ public class SepiaTonePropertyMetadata extends ComplexPropertyMetadata<SepiaTone
     /*
      * ComplexPropertyMetadata
      */
-    
+
     @Override
     public FXOMInstance makeFxomInstanceFromValue(SepiaTone value, FXOMDocument fxomDocument) {
         final FXOMInstance result = new FXOMInstance(fxomDocument, getValueClass());
-        
+
         inputMetadata.setValue(result, value.getInput());
         levelMetadata.setValue(result, value.getLevel());
 

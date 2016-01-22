@@ -108,9 +108,9 @@ bool Animation::animationsMatch(const Animation* o, bool matchPlayStates) const
 {
     if (!o)
         return false;
-    
+
     bool result = m_name == o->m_name
-                  && m_property == o->m_property 
+                  && m_property == o->m_property
                   && m_mode == o->m_mode
                   && m_iterationCount == o->m_iterationCount
                   && m_delay == o->m_delay

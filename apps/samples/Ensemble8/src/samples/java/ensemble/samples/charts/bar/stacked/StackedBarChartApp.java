@@ -96,7 +96,7 @@ import javafx.stage.Stage;
  * @playground chart.titleSide
  */
 public class StackedBarChartApp extends Application {
-    
+
     private StackedBarChart chart;
     private CategoryAxis xAxis;
     private NumberAxis yAxis;
@@ -105,24 +105,24 @@ public class StackedBarChartApp extends Application {
         String[] years = {"2007", "2008", "2009"};
         xAxis = new CategoryAxis(observableArrayList(years));
         yAxis = new NumberAxis("Units Sold", 0.0d, 10000.0d, 1000.0d);
-        
-        ObservableList<StackedBarChart.Series> barChartData = 
+
+        ObservableList<StackedBarChart.Series> barChartData =
                 observableArrayList(
-                    new StackedBarChart.Series("Region 1", 
+                    new StackedBarChart.Series("Region 1",
                         observableArrayList(
                             new StackedBarChart.Data(years[0], 567d),
                             new StackedBarChart.Data(years[1], 1292d),
                             new StackedBarChart.Data(years[2], 1292d)
                         )
                     ),
-                    new StackedBarChart.Series("Region 2", 
+                    new StackedBarChart.Series("Region 2",
                         observableArrayList(
                             new StackedBarChart.Data(years[0], 956),
                             new StackedBarChart.Data(years[1], 1665),
                             new StackedBarChart.Data(years[2], 2559)
                         )
                     ),
-                    new StackedBarChart.Series("Region 3", 
+                    new StackedBarChart.Series("Region 3",
                         observableArrayList(
                             new StackedBarChart.Data(years[0], 1154),
                             new StackedBarChart.Data(years[1], 1927),
@@ -134,8 +134,8 @@ public class StackedBarChartApp extends Application {
         chart = new StackedBarChart(xAxis, yAxis, barChartData, 25.0d);
         return chart;
     }
-    
-    
+
+
     @Override public void start(Stage primaryStage) throws Exception {
         primaryStage.setScene(new Scene(createContent()));
         primaryStage.show();
@@ -147,5 +147,5 @@ public class StackedBarChartApp extends Application {
      */
     public static void main(String[] args) {
         launch(args);
-    }    
+    }
 }

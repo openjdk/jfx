@@ -35,16 +35,16 @@ package com.oracle.javafx.scenebuilder.kit.editor.messagelog;
  *
  */
 public class MessageLogEntry {
-    
+
     public enum Type {
         INFO,
         WARNING
     };
-    
+
     private final Type type;
     private final String text;
     private final String timestamp;
-    
+
     public MessageLogEntry(Type type, String text, String timestamp) {
         this.type = type;
         this.text = text;
@@ -62,5 +62,5 @@ public class MessageLogEntry {
     public String getTimestamp() {
         return timestamp;
     }
-    
+
 }

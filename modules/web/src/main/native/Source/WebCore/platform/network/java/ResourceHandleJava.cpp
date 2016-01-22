@@ -33,10 +33,10 @@ void ResourceHandle::cancel()
 
 //utatodo: merge artifact
 void ResourceHandle::platformLoadResourceSynchronously(NetworkingContext* context,
-                                               const ResourceRequest& request, 
+                                               const ResourceRequest& request,
                                                StoredCredentials,
-                                               ResourceError& error, 
-                                               ResourceResponse& response, 
+                                               ResourceError& error,
+                                               ResourceResponse& response,
                                                Vector<char>& data)
 {
     URLLoader::loadSynchronously(context, request, error, response, data);

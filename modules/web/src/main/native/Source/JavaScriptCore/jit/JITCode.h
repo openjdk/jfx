@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef JITCode_h
@@ -62,17 +62,17 @@ public:
         DFGJIT,
         FTLJIT
     };
-    
+
     static JITType bottomTierJIT()
     {
         return BaselineJIT;
     }
-    
+
     static JITType topTierJIT()
     {
         return FTLJIT;
     }
-    
+
     static JITType nextTierJIT(JITType jitType)
     {
         switch (jitType) {
@@ -85,7 +85,7 @@ public:
             return None;
         }
     }
-    
+
     static bool isExecutableScript(JITType jitType)
     {
         switch (jitType) {
@@ -96,7 +96,7 @@ public:
             return true;
         }
     }
-    
+
     static bool couldBeInterpreted(JITType jitType)
     {
         switch (jitType) {
@@ -107,7 +107,7 @@ public:
             return false;
         }
     }
-    
+
     static bool isJIT(JITType jitType)
     {
         switch (jitType) {
@@ -119,50 +119,50 @@ public:
             return false;
         }
     }
-    
+
     static bool isLowerTier(JITType expectedLower, JITType expectedHigher)
     {
         RELEASE_ASSERT(isExecutableScript(expectedLower));
         RELEASE_ASSERT(isExecutableScript(expectedHigher));
         return expectedLower < expectedHigher;
     }
-    
+
     static bool isHigherTier(JITType expectedHigher, JITType expectedLower)
     {
         return isLowerTier(expectedLower, expectedHigher);
     }
-    
+
     static bool isLowerOrSameTier(JITType expectedLower, JITType expectedHigher)
     {
         return !isHigherTier(expectedLower, expectedHigher);
     }
-    
+
     static bool isHigherOrSameTier(JITType expectedHigher, JITType expectedLower)
     {
         return isLowerOrSameTier(expectedLower, expectedHigher);
     }
-    
+
     static bool isOptimizingJIT(JITType jitType)
     {
         return jitType == DFGJIT || jitType == FTLJIT;
     }
-    
+
     static bool isBaselineCode(JITType jitType)
     {
         return jitType == InterpreterThunk || jitType == BaselineJIT;
     }
-    
+
 protected:
     JITCode(JITType);
-    
+
 public:
     virtual ~JITCode();
-    
+
     JITType jitType() const
     {
         return m_jitType;
     }
-    
+
     template<typename PointerType>
     static JITType jitTypeFor(PointerType jitCode)
     {
@@ -170,24 +170,24 @@ public:
             return None;
         return jitCode->jitType();
     }
-    
+
     virtual CodePtr addressForCall(VM&, ExecutableBase*, ArityCheckMode, RegisterPreservationMode) = 0;
     virtual void* executableAddressAtOffset(size_t offset) = 0;
     void* executableAddress() { return executableAddressAtOffset(0); }
     virtual void* dataAddressAtOffset(size_t offset) = 0;
     virtual unsigned offsetOf(void* pointerIntoCode) = 0;
-    
+
     virtual DFG::CommonData* dfgCommon();
     virtual DFG::JITCode* dfg();
     virtual FTL::JITCode* ftl();
     virtual FTL::ForOSREntryJITCode* ftlForOSREntry();
-    
+
     JSValue execute(VM*, ProtoCallFrame*);
-    
+
     void* start() { return dataAddressAtOffset(0); }
     virtual size_t size() = 0;
     void* end() { return reinterpret_cast<void*>(reinterpret_cast<uintptr_t>(start()) + size()); }
-    
+
     virtual bool contains(void*) = 0;
 
 private:
@@ -217,7 +217,7 @@ public:
     DirectJITCode(JITType);
     DirectJITCode(CodeRef, CodePtr withArityCheck, JITType);
     virtual ~DirectJITCode();
-    
+
     void initializeCodeRef(CodeRef, CodePtr withArityCheck);
 
     virtual CodePtr addressForCall(VM&, ExecutableBase*, ArityCheckMode, RegisterPreservationMode) override;
@@ -229,9 +229,9 @@ private:
     };
 
     RegisterPreservationWrappers* ensureWrappers();
-    
+
     CodePtr m_withArityCheck;
-    
+
     std::unique_ptr<RegisterPreservationWrappers> m_wrappers;
 };
 
@@ -240,7 +240,7 @@ public:
     NativeJITCode(JITType);
     NativeJITCode(CodeRef, JITType);
     virtual ~NativeJITCode();
-    
+
     void initializeCodeRef(CodeRef);
 
     virtual CodePtr addressForCall(VM&, ExecutableBase*, ArityCheckMode, RegisterPreservationMode) override;

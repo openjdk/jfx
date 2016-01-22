@@ -108,9 +108,9 @@ public class BundlersTest {
         for (Bundler bundler : Bundlers.createBundlersInstance().getBundlers()) {
             Collection<BundlerParamInfo<?>> params = bundler.getBundleParameters();
             if (params == null) continue; // caught by another test
-            
+
             Map<String, List<BundlerParamInfo<?>>> paramsGroupMap = params.stream().collect(Collectors.groupingBy(BundlerParamInfo::getID));
-            
+
             for (Map.Entry<String, List<BundlerParamInfo<?>>> paramGroupEntry : paramsGroupMap.entrySet()) {
                 if (paramGroupEntry.getValue().size() > 1) {
                     System.err.println("Duplicate param '" + paramGroupEntry.getKey() + "' for bundler '" + bundler.getID() + "'");
@@ -121,7 +121,7 @@ public class BundlersTest {
 
         assertFalse("Parameter list within a bundler has a duplicate ID.", duplicateFound);
     }
-    
+
     boolean assertMetadata(Bundler bundler, BundlerParamInfo<?> bpi, String checkDescription, Function<BundlerParamInfo, Boolean> check) {
         try {
             if (!check.apply(bpi)) {
@@ -139,7 +139,7 @@ public class BundlersTest {
             return re.getCause() instanceof ConfigException;
         }
     }
-    
+
     @Test
     public void testCommonBundlerParameterMetadata() {
         boolean metadataValid = true;
@@ -192,7 +192,7 @@ public class BundlersTest {
         assertEquals(linux, bundlerIDs.contains("linux.app"));
         assertEquals(linux, bundlerIDs.contains("deb"));
         assertEquals(linux, bundlerIDs.contains("rpm"));
-        
+
         boolean windows = System.getProperty("os.name").toLowerCase().startsWith("win");
         assertEquals(windows, bundlerIDs.contains("windows.app"));
         assertEquals(windows, bundlerIDs.contains("msi"));
@@ -202,7 +202,7 @@ public class BundlersTest {
     @Test
     public void noNullBundlerIDs() {
         Collection<String> bundlerIDs = getBundlerIDs();
-        
+
         assertFalse(bundlerIDs.contains(null));
         assertFalse(bundlerIDs.contains("null"));
     }
@@ -221,7 +221,7 @@ public class BundlersTest {
                 duplicateFound = true;
             }
         }
-        
+
         assertFalse("Bundlers have a duplicate ID", duplicateFound);
     }
 
@@ -265,7 +265,7 @@ public class BundlersTest {
             assertTrue("RuntimeException wraps a ConfigException", re.getCause() instanceof ConfigException);
         }
     }
-    
+
     @Test
     public void fileAssociationExtensions() {
         Map<String, ? super Object> params = new TreeMap<>();
@@ -274,13 +274,13 @@ public class BundlersTest {
 
         params.put(FA_EXTENSIONS.getID(), "foo");
         assertEquals(Arrays.asList("foo"), FA_EXTENSIONS.fetchFrom(params));
-        
+
         params.put(FA_EXTENSIONS.getID(), "foo bar");
         assertEquals(Arrays.asList("foo", "bar"), FA_EXTENSIONS.fetchFrom(params));
-        
+
         params.put(FA_EXTENSIONS.getID(), "foo,bar,baz");
         assertEquals(Arrays.asList("foo", "bar", "baz"), FA_EXTENSIONS.fetchFrom(params));
-        
+
     }
 
     @Test
@@ -288,29 +288,29 @@ public class BundlersTest {
         Map<String, ? super Object> params = new TreeMap<>();
 
         assertEquals(null, FA_EXTENSIONS.fetchFrom(params));
-        
+
         params.put(FA_EXTENSIONS.getID(), "application/foo");
         assertEquals(Arrays.asList("application/foo"), FA_EXTENSIONS.fetchFrom(params));
 
         params.put(FA_EXTENSIONS.getID(), "application/foo application/bar");
         assertEquals(Arrays.asList("application/foo", "application/bar"), FA_EXTENSIONS.fetchFrom(params));
-        
+
         params.put(FA_EXTENSIONS.getID(), "application/foo,application/bar,application/baz");
         assertEquals(Arrays.asList("application/foo", "application/bar", "application/baz"), FA_EXTENSIONS.fetchFrom(params));
-        
+
     }
 
     public static void testValidValueForBaseParam(BundlerParamInfo baseParam, String baseParamValue,
                                                   BundlerParamInfo derivedParam)
     {
-        Map<String, ? super Object> params;        
+        Map<String, ? super Object> params;
         params = new TreeMap<>();
 
         params.put(baseParam.getID(), baseParamValue);
         // shouldn't trigger exception
         assertEquals(derivedParam.fetchFrom(params), baseParamValue);
     }
-    
+
     public static void testInvalidValueForBaseParam(BundlerParamInfo baseParam, String baseParamValue,
                                                     BundlerParamInfo derivedParam)
     {
@@ -320,7 +320,7 @@ public class BundlersTest {
 
             params.put(baseParam.getID(), baseParamValue);
             // should trigger exception
-            derivedParam.getStringConverter().apply(derivedParam.fetchFrom(params), params);        
+            derivedParam.getStringConverter().apply(derivedParam.fetchFrom(params), params);
 
             fail("An exception should have been thrown");
         } catch(IllegalArgumentException ex) {

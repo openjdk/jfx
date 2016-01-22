@@ -124,7 +124,7 @@ void GtkAdjustmentWatcher::setVerticalAdjustment(GtkAdjustment* newAdjustment)
 void GtkAdjustmentWatcher::adjustmentValueChanged(GtkAdjustment* adjustment)
 {
     FrameView* frameView = core(m_webView)->mainFrame().view();
-    Scrollbar* scrollbar = (adjustment == m_horizontalAdjustment.get()) ? 
+    Scrollbar* scrollbar = (adjustment == m_horizontalAdjustment.get()) ?
         frameView->horizontalScrollbar() : frameView->verticalScrollbar();
     if (!scrollbar)
         return;

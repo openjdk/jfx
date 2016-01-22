@@ -22,7 +22,7 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
- 
+
 #ifndef GLTRACE_GLES_H
 #define GLTRACE_GLES_H
 
@@ -49,7 +49,7 @@
         DLFCN_HOOK_PUSH(); \
     }
 
-#define GLESEPILOG() 
+#define GLESEPILOG()
 
 typedef void(*proto_glActiveTexture)(GLenum texture);
 typedef void(*proto_glAttachShader) (GLuint program, GLuint shader);

@@ -67,7 +67,7 @@ public:
     bool hasImage() const { return m_data->image; }
     StyleImage* image() const { return m_data->image.get(); }
     void setImage(PassRefPtr<StyleImage> image) { m_data.access()->image = image; }
-    
+
     const LengthBox& imageSlices() const { return m_data->imageSlices; }
     void setImageSlices(LengthBox slices) { m_data.access()->imageSlices = std::move(slices); }
 
@@ -82,7 +82,7 @@ public:
 
     ENinePieceImageRule horizontalRule() const { return static_cast<ENinePieceImageRule>(m_data->horizontalRule); }
     void setHorizontalRule(ENinePieceImageRule rule) { m_data.access()->horizontalRule = rule; }
-    
+
     ENinePieceImageRule verticalRule() const { return static_cast<ENinePieceImageRule>(m_data->verticalRule); }
     void setVerticalRule(ENinePieceImageRule rule) { m_data.access()->verticalRule = rule; }
 
@@ -96,7 +96,7 @@ public:
     {
         m_data.access()->borderSlices = other.m_data->borderSlices;
     }
-    
+
     void copyOutsetFrom(const NinePieceImage& other)
     {
         m_data.access()->outset = other.m_data->outset;

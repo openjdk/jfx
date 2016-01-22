@@ -45,7 +45,7 @@ protected:
 
     InstrumentingAgents* m_instrumentingAgents;
 };
-    
+
 } // namespace WebCore
 
 #endif // !defined(InspectorWebAgentBase_h)

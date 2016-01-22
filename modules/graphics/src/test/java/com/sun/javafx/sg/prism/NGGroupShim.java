@@ -41,7 +41,7 @@ public class NGGroupShim extends NGGroup {
             DirtyRegionContainer dirtyRegionContainer,
             final BaseTransform tx,
             final GeneralTransform3D pvTx) {
-        return super.accumulateGroupDirtyRegion(clip, dirtyRegionTemp, 
+        return super.accumulateGroupDirtyRegion(clip, dirtyRegionTemp,
                 regionPool, dirtyRegionContainer, tx, pvTx);
     }
 
@@ -51,8 +51,8 @@ public class NGGroupShim extends NGGroup {
                                   final DirtyRegionContainer dirtyRegionContainer,
                                   final BaseTransform tx,
                                   final GeneralTransform3D pvTx) {
-        return super.accumulateNodeDirtyRegion(clip, dirtyRegionTemp, 
+        return super.accumulateNodeDirtyRegion(clip, dirtyRegionTemp,
                 dirtyRegionContainer, tx, pvTx);
     }
-    
+
 }

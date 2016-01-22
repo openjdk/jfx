@@ -44,7 +44,7 @@ private:
     virtual WrappedImagePtr data() const override { return m_image.get(); }
 
     virtual PassRefPtr<CSSValue> cssValue() const override;
-    
+
     virtual bool canRender(const RenderObject*, float multiplier) const override;
     virtual bool isLoaded() const override;
     virtual bool errorOccurred() const override;

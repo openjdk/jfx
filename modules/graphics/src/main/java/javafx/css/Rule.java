@@ -151,7 +151,7 @@ final public class Rule {
     void setStylesheet(Stylesheet stylesheet) {
 
         this.stylesheet = stylesheet;
-        
+
         if (stylesheet != null && stylesheet.getUrl() != null) {
             final String stylesheetUrl = stylesheet.getUrl();
 
@@ -210,7 +210,7 @@ final public class Rule {
         long mask = 0;
         for (int i = 0; i < selectors.size(); i++) {
             Selector sel = selectors.get(i);
-            if (sel.applies(node, triggerStates, 0)) {                
+            if (sel.applies(node, triggerStates, 0)) {
                 mask |= 1l << i;
             }
         }

@@ -52,34 +52,34 @@ import org.junit.Test;
 
 public class HyperlinkTest {
     private Hyperlink link;
-    
+
     @Before public void setup() {
         link = new Hyperlink();
     }
-    
+
     /*********************************************************************
      * Tests for the constructors                                        *
      ********************************************************************/
-    
+
     @Test public void defaultConstructorShouldHaveNoGraphicAndEmptyString() {
         assertNull(link.getGraphic());
         assertEquals("", link.getText());
     }
-    
+
     @Test public void oneArgConstructorShouldHaveNoGraphicAndSpecifiedString() {
         Hyperlink link2 = new Hyperlink(null);
         assertNull(link2.getGraphic());
         assertNull(link2.getText());
-        
+
         link2 = new Hyperlink("");
         assertNull(link2.getGraphic());
         assertEquals("", link2.getText());
-        
+
         link2 = new Hyperlink("Hello");
         assertNull(link2.getGraphic());
         assertEquals("Hello", link2.getText());
     }
-    
+
     @Test public void twoArgConstructorShouldHaveSpecifiedGraphicAndSpecifiedString() {
         Hyperlink link2 = new Hyperlink(null, null);
         assertNull(link2.getGraphic());
@@ -94,40 +94,40 @@ public class HyperlinkTest {
     @Test public void defaultConstructorShouldSetStyleClassTo_hyperlink() {
         assertStyleClassContains(link, "hyperlink");
     }
-    
+
     @Test public void oneArgConstructorShouldSetStyleClassTo_hyperlink() {
         Hyperlink link2 = new Hyperlink(null);
         assertStyleClassContains(link2, "hyperlink");
     }
-    
+
     @Test public void twoArgConstructorShouldSetStyleClassTo_hyperlink() {
         Hyperlink link2 = new Hyperlink(null, null);
         assertStyleClassContains(link2, "hyperlink");
     }
-    
+
     @Test public void defaultConstructorShouldSetAlignmentToCENTER_LEFT() {
         assertEquals(Pos.CENTER_LEFT, link.getAlignment());
     }
-    
+
     @Test public void oneArgConstructorShouldSetAlignmentToCENTER_LEFT() {
         Hyperlink link2 = new Hyperlink(null);
         assertEquals(Pos.CENTER_LEFT, link2.getAlignment());
     }
-    
+
     @Test public void twoArgConstructorShouldSetAlignmentToCENTER_LEFT() {
         Hyperlink link2 = new Hyperlink(null, null);
         assertEquals(Pos.CENTER_LEFT, link2.getAlignment());
     }
-    
+
     @Test public void defaultConstructorShouldSetCursorToHAND() {
         assertSame(Cursor.HAND, link.getCursor());
     }
-    
+
     @Test public void oneArgConstructorShouldSetCursorToHAND() {
         Hyperlink link2 = new Hyperlink(null);
         assertSame(Cursor.HAND, link2.getCursor());
     }
-    
+
     @Test public void twoArgConstructorShouldSetCursorToHAND() {
         Hyperlink link2 = new Hyperlink(null, null);
         assertSame(Cursor.HAND, link2.getCursor());
@@ -148,23 +148,23 @@ public class HyperlinkTest {
         assertFalse(link.isVisited());
         assertFalse(link.visitedProperty().get());
     }
-    
+
     @Test public void settingVisitedShouldWork() {
         link.setVisited(true);
         assertTrue(link.isVisited());
     }
-    
+
     @Test public void settingVisitedAndThenCreatingAModelAndReadingTheValueStillWorks() {
         link.setVisited(true);
         assertTrue(link.visitedProperty().get());
     }
-    
+
     @Test public void visitedCanBeBound() {
         BooleanProperty other = new SimpleBooleanProperty(true);
         link.visitedProperty().bind(other);
         assertTrue(link.isVisited());
     }
-    
+
     @Test public void visitedPropertyIsNotStyleable() {
         try {
             CssMetaData styleable = ((StyleableProperty)link.visitedProperty()).getCssMetaData();
@@ -175,7 +175,7 @@ public class HyperlinkTest {
             org.junit.Assert.fail(e.toString());
         }
     }
-    
+
     @Ignore ("replaced by visitedPropertyIsNotStyleable")
     @Test public void whenVisitedIsBound_impl_cssSettable_ReturnsFalse() {
         // will return null!
@@ -184,26 +184,26 @@ public class HyperlinkTest {
         BooleanProperty other = new SimpleBooleanProperty(true);
         link.visitedProperty().bind(other);
     }
-    
+
     @Ignore ("replaced by visitedPropertyIsNotStyleable")
     @Test public void whenVisitedIsSpecifiedViaCSSAndIsNotBound_impl_cssSettable_ReturnsFalse() {
         // will return null!
         CssMetaData styleable = ((StyleableProperty)link.visitedProperty()).getCssMetaData();
         assertFalse(styleable.isSettable(link));
     }
-    
+
     @Ignore ("replaced by visitedPropertyIsNotStyleable")
     @Test public void cannotSpecifyVisitedViaCSS() {
         // will return null!
         ((StyleableProperty)link.visitedProperty()).applyStyle(null, Boolean.TRUE);
         assertFalse(link.isVisited());
     }
-    
+
     @Test public void settingVisitedSetsPseudoClass() {
         link.setVisited(true);
         assertPseudoClassExists(link, "visited");
     }
-    
+
     @Test public void clearingVisitedClearsPseudoClass() {
         link.setVisited(true);
         link.setVisited(false);
@@ -217,7 +217,7 @@ public class HyperlinkTest {
     @Test public void visitedNameIsCorrect() {
         assertEquals("visited", link.visitedProperty().getName());
     }
-    
+
     /********************************************************************************
      *                                                                              *
      *                         Tests for onAction property                          *
@@ -228,51 +228,51 @@ public class HyperlinkTest {
         assertNull(link.getOnAction());
         assertNull(link.onActionProperty().getValue());
     }
-    
+
     @Test public void onActionCanBeSet() {
         final EventHandler<ActionEvent> handler = new EventHandlerStub();
         link.setOnAction(handler);
         assertEquals(handler, link.getOnAction());
     }
-    
+
     @Test public void onActionSetToNonDefaultValueIsReflectedInModel() {
         final EventHandler<ActionEvent> handler = new EventHandlerStub();
         link.setOnAction(handler);
         assertEquals(handler, link.onActionProperty().getValue());
     }
-    
+
     @Test public void onActionCanBeCleared() {
         final EventHandler<ActionEvent> handler = new EventHandlerStub();
         link.setOnAction(handler);
         link.setOnAction(null);
         assertNull(link.getOnAction());
     }
-    
+
     @Test public void onActionCanBeBound() {
         final EventHandler<ActionEvent> handler = new EventHandlerStub();
         ObjectProperty<EventHandler<ActionEvent>> other = new SimpleObjectProperty<EventHandler<ActionEvent>>(handler);
         link.onActionProperty().bind(other);
         assertEquals(handler, link.getOnAction());
     }
-    
+
     @Test public void onActionCalledWhenHyperlinkIsFired() {
         final EventHandlerStub handler = new EventHandlerStub();
         link.setOnAction(handler);
         link.fire();
         assertTrue(handler.called);
     }
-    
+
     @Test public void onActionCalledWhenNullWhenHyperlinkIsFiredIsNoOp() {
         link.fire(); // should throw no exceptions, if it does, the test fails
     }
-    
+
     public static final class EventHandlerStub implements EventHandler<ActionEvent> {
         boolean called = false;
         @Override public void handle(ActionEvent event) {
             called = true;
         }
     };
-    
+
     /********************************************************************************
      *                                                                              *
      *                            Tests for fire method                             *

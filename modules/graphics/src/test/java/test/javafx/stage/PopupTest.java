@@ -87,7 +87,7 @@ public class PopupTest {
 
     private void pulse() {
         toolkit.fireTestPulse();
-    }    
+    }
 
     @Test
     public void testShow() {
@@ -95,20 +95,20 @@ public class PopupTest {
         Popup p1 = new Popup();
         p1.show(stage);
         assertTrue(p1.isShowing());
-        
+
         // test showing popup with invisible parent
         stage.hide();
         Popup p2 = new Popup();
         p2.show(stage);
         assertFalse(p2.isShowing());
-        
+
         // test showing popup without parent
         // TODO should result in an exception
 //        Popup p3 = new Popup();
 //        p3.show(null);
 //        assertFalse(p3.isVisible());
     }
-        
+
     @Test
     public void testShowNoAutofix() {
         Popup p1 = new Popup();
@@ -116,7 +116,7 @@ public class PopupTest {
         p1.show(stage);
         assertTrue(p1.isShowing());
     }
-            
+
     @Test
     public void testShowLocation() {
         Popup p1 = new Popup();
@@ -270,7 +270,7 @@ public class PopupTest {
         p1.hide();
         assertFalse(p1.isShowing());
     }
-    
+
     @Test
     public void testHideAll() {
         Popup p1 = new Popup();
@@ -289,18 +289,18 @@ public class PopupTest {
         assertFalse(p1.isShowing());
         assertFalse(p2.isShowing());
     }
-    
+
     @Test
     public void testAutoHiding() {
         Popup p1 = new Popup();
         p1.setAutoHide(true);
         p1.show(stage);
-        
+
         Rectangle rect = new Rectangle();
         p1.getContent().add(rect);
         rect.requestFocus();
         assertTrue(p1.isShowing());
-      
+
         // hiding popup stage removes the focus (in stubbed environment)
         p1.hide();
         assertFalse(p1.isShowing());
@@ -332,7 +332,7 @@ public class PopupTest {
         // all the AutoHide features are not implemented yet.
         //assertTrue(p1.isVisible());
     }
-    
+
     @Test
     public void testAutoHidingTree() {
         Popup p0 = new Popup();
@@ -342,7 +342,7 @@ public class PopupTest {
         Rectangle rect = new Rectangle();
         p0.getContent().add(rect);
         rect.requestFocus();
-        
+
         Popup p1 = new Popup();
         p1.setAutoHide(true);
         p1.show(p0);
@@ -353,7 +353,7 @@ public class PopupTest {
         Rectangle rect2 = new Rectangle();
         p2.getContent().add(rect2);
         rect2.requestFocus();
-    
+
         assertTrue(p1.isShowing());
         assertTrue(p2.isShowing());
         assertTrue(p0.isShowing());
@@ -368,7 +368,7 @@ public class PopupTest {
         assertFalse(p2.isShowing());
         assertTrue(p0.isShowing());
     }
-    
+
     @Test
     public void testOnAutohide() {
         Popup p1 = new Popup();
@@ -389,44 +389,44 @@ public class PopupTest {
         // test whether runnable ran
         assertTrue(done);
     }
- 
-    
+
+
     @Ignore ("Not sure how this ever worked, or what the point is")
     @Test
     public void testPeerListener() {
         Popup p = new Popup();
         p.setAutoHide(true);
         p.show(stage);
-        
+
         StubPopupStage peer = (StubPopupStage) p.impl_getPeer();
-        p.sizeToScene();        
+        p.sizeToScene();
 
         double width = p.getWidth();
         double height = p.getHeight();
-        
+
         // test changing dimensions to same values
-        p.sizeToScene();        
+        p.sizeToScene();
         assertEquals(width, p.getWidth(), 1e-100);
         assertEquals(height, p.getHeight(), 1e-100);
-        
+
         // these methods shouldn't do anything for popups,
         // width and height should stay the same
         peer.close();
         assertEquals(width, p.getWidth(), 1e-100);
         assertEquals(height, p.getHeight(), 1e-100);
-        
+
         peer.setFullScreen(true);
         assertEquals(width, p.getWidth(), 1e-100);
         assertEquals(height, p.getHeight(), 1e-100);
-        
+
         peer.setIconified(true);
         assertEquals(width, p.getWidth(), 1e-100);
         assertEquals(height, p.getHeight(), 1e-100);
-        
+
         peer.setResizable(true);
         assertEquals(width, p.getWidth(), 1e-100);
         assertEquals(height, p.getHeight(), 1e-100);
-        
+
         peer.setLocation(0, 0);
         assertEquals(0, p.getX(), 1e-100);
         assertEquals(0, p.getY(), 1e-100);
@@ -630,7 +630,7 @@ public class PopupTest {
                                 KeyCode.ESCAPE,
                                 false, false, false, false));
             assertEquals(1, keyEventCounter.getValue());
-            
+
         } finally {
             stage.removeEventHandler(MouseEvent.MOUSE_PRESSED,
                                      mouseEventCounter);
@@ -653,7 +653,7 @@ public class PopupTest {
     @Test(expected=IllegalArgumentException.class)
     public void testShowWithOwnerThatWouldCreateCycle1() {
         final Popup popup = new Popup();
-        popup.show(popup);                
+        popup.show(popup);
     }
 
     @Test(expected=IllegalArgumentException.class)
@@ -716,11 +716,11 @@ public class PopupTest {
 
         System.out.println(javafx.scene.shape.Sphere.class.getResource("Sphere.class"));
     }
-    
+
     @Test
     public void testCursorInheritance() {
         stage.getScene().setCursor(Cursor.CLOSED_HAND);
-        
+
         final Popup popup = new Popup();
 
         popup.show(stage);

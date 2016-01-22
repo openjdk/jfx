@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -104,18 +104,18 @@ void ScriptExecutable::installCode(CodeBlock* genericCodeBlock)
 {
     RELEASE_ASSERT(genericCodeBlock->ownerExecutable() == this);
     RELEASE_ASSERT(JITCode::isExecutableScript(genericCodeBlock->jitType()));
-    
+
     VM& vm = *genericCodeBlock->vm();
-    
+
     if (vm.m_perBytecodeProfiler)
         vm.m_perBytecodeProfiler->ensureBytecodesFor(genericCodeBlock);
-    
+
     ASSERT(vm.heap.isDeferred());
-    
+
     CodeSpecializationKind kind = genericCodeBlock->specializationKind();
-    
+
     RefPtr<CodeBlock> oldCodeBlock;
-    
+
     switch (kind) {
     case CodeForCall:
         m_jitCodeForCall = genericCodeBlock->jitCode();
@@ -130,34 +130,34 @@ void ScriptExecutable::installCode(CodeBlock* genericCodeBlock)
         m_numParametersForConstruct = genericCodeBlock->numParameters();
         break;
     }
-    
+
     switch (genericCodeBlock->codeType()) {
     case GlobalCode: {
         ProgramExecutable* executable = jsCast<ProgramExecutable*>(this);
         ProgramCodeBlock* codeBlock = static_cast<ProgramCodeBlock*>(genericCodeBlock);
-        
+
         ASSERT(kind == CodeForCall);
-        
+
         oldCodeBlock = executable->m_programCodeBlock;
         executable->m_programCodeBlock = codeBlock;
         break;
     }
-        
+
     case EvalCode: {
         EvalExecutable* executable = jsCast<EvalExecutable*>(this);
         EvalCodeBlock* codeBlock = static_cast<EvalCodeBlock*>(genericCodeBlock);
-        
+
         ASSERT(kind == CodeForCall);
-        
+
         oldCodeBlock = executable->m_evalCodeBlock;
         executable->m_evalCodeBlock = codeBlock;
         break;
     }
-        
+
     case FunctionCode: {
         FunctionExecutable* executable = jsCast<FunctionExecutable*>(this);
         FunctionCodeBlock* codeBlock = static_cast<FunctionCodeBlock*>(genericCodeBlock);
-        
+
         switch (kind) {
         case CodeForCall:
             oldCodeBlock = executable->m_codeBlockForCall;
@@ -197,7 +197,7 @@ PassRefPtr<CodeBlock> ScriptExecutable::newCodeBlockFor(
             executable, executable->m_unlinkedEvalCodeBlock.get(), *scope,
             executable->source().provider()));
     }
-    
+
     if (classInfo() == ProgramExecutable::info()) {
         ProgramExecutable* executable = jsCast<ProgramExecutable*>(this);
         RELEASE_ASSERT(kind == CodeForCall);
@@ -207,7 +207,7 @@ PassRefPtr<CodeBlock> ScriptExecutable::newCodeBlockFor(
             executable, executable->m_unlinkedProgramCodeBlock.get(), *scope,
             executable->source().provider(), executable->source().startColumn()));
     }
-    
+
     RELEASE_ASSERT(classInfo() == FunctionExecutable::info());
     RELEASE_ASSERT(function);
     FunctionExecutable* executable = jsCast<FunctionExecutable*>(this);
@@ -219,7 +219,7 @@ PassRefPtr<CodeBlock> ScriptExecutable::newCodeBlockFor(
     UnlinkedFunctionCodeBlock* unlinkedCodeBlock =
         executable->m_unlinkedExecutable->codeBlockFor(
             *vm, executable->m_source, kind, debuggerMode, profilerMode, error);
-    recordParse(executable->m_unlinkedExecutable->features(), executable->m_unlinkedExecutable->hasCapturedVariables(), lineNo(), lastLine(), startColumn(), endColumn()); 
+    recordParse(executable->m_unlinkedExecutable->features(), executable->m_unlinkedExecutable->hasCapturedVariables(), lineNo(), lastLine(), startColumn(), endColumn());
     if (!unlinkedCodeBlock) {
         exception = vm->throwException(
             globalObject->globalExec(),
@@ -234,7 +234,7 @@ PassRefPtr<CodeBlock> ScriptExecutable::newCodeBlockFor(
         function->addNameScopeIfNeeded(*vm);
         *scope = function->scope();
     }
-    
+
     SourceProvider* provider = executable->source().provider();
     unsigned sourceOffset = executable->source().startOffset();
     unsigned startColumn = executable->source().startColumn();
@@ -256,7 +256,7 @@ PassRefPtr<CodeBlock> ScriptExecutable::newReplacementCodeBlockFor(
         result->setAlternative(baseline);
         return result;
     }
-    
+
     if (classInfo() == ProgramExecutable::info()) {
         RELEASE_ASSERT(kind == CodeForCall);
         ProgramExecutable* executable = jsCast<ProgramExecutable*>(this);
@@ -306,20 +306,20 @@ JSObject* ScriptExecutable::prepareForExecutionImpl(
 {
     VM& vm = exec->vm();
     DeferGC deferGC(vm.heap);
-    
+
     JSObject* exception = 0;
     RefPtr<CodeBlock> codeBlock = newCodeBlockFor(kind, function, scope, exception);
     if (!codeBlock) {
         RELEASE_ASSERT(exception);
         return exception;
     }
-    
+
     if (Options::validateBytecode())
         codeBlock->validate();
-    
+
     bool shouldUseLLInt;
 #if !ENABLE(JIT)
-    // No JIT implies use of the C Loop LLINT. Override the options to reflect this. 
+    // No JIT implies use of the C Loop LLINT. Override the options to reflect this.
     Options::useLLInt() = true;
     shouldUseLLInt = true;
 #elif ENABLE(LLINT)
@@ -327,19 +327,19 @@ JSObject* ScriptExecutable::prepareForExecutionImpl(
 #else
     shouldUseLLInt = false;
 #endif
-    
+
     if (shouldUseLLInt)
         setupLLInt(vm, codeBlock.get());
     else
         setupJIT(vm, codeBlock.get());
-    
+
     installCode(codeBlock.get());
     return 0;
 }
 
 const ClassInfo EvalExecutable::s_info = { "EvalExecutable", &ScriptExecutable::s_info, 0, 0, CREATE_METHOD_TABLE(EvalExecutable) };
 
-EvalExecutable* EvalExecutable::create(ExecState* exec, const SourceCode& source, bool isInStrictContext) 
+EvalExecutable* EvalExecutable::create(ExecState* exec, const SourceCode& source, bool isInStrictContext)
 {
     JSGlobalObject* globalObject = exec->lexicalGlobalObject();
     if (!globalObject->evalEnabled()) {
@@ -626,13 +626,13 @@ String FunctionExecutable::paramString() const
 void ExecutableBase::dump(PrintStream& out) const
 {
     ExecutableBase* realThis = const_cast<ExecutableBase*>(this);
-    
+
     if (classInfo() == NativeExecutable::info()) {
         NativeExecutable* native = jsCast<NativeExecutable*>(realThis);
         out.print("NativeExecutable:", RawPointer(bitwise_cast<void*>(native->function())), "/", RawPointer(bitwise_cast<void*>(native->constructor())));
         return;
     }
-    
+
     if (classInfo() == EvalExecutable::info()) {
         EvalExecutable* eval = jsCast<EvalExecutable*>(realThis);
         if (CodeBlock* codeBlock = eval->codeBlock())
@@ -641,7 +641,7 @@ void ExecutableBase::dump(PrintStream& out) const
             out.print("EvalExecutable w/o CodeBlock");
         return;
     }
-    
+
     if (classInfo() == ProgramExecutable::info()) {
         ProgramExecutable* eval = jsCast<ProgramExecutable*>(realThis);
         if (CodeBlock* codeBlock = eval->codeBlock())
@@ -650,7 +650,7 @@ void ExecutableBase::dump(PrintStream& out) const
             out.print("ProgramExecutable w/o CodeBlock");
         return;
     }
-    
+
     FunctionExecutable* function = jsCast<FunctionExecutable*>(realThis);
     if (!function->eitherCodeBlock())
         out.print("FunctionExecutable w/o CodeBlock");
@@ -667,7 +667,7 @@ CodeBlockHash ExecutableBase::hashFor(CodeSpecializationKind kind) const
 {
     if (this->classInfo() == NativeExecutable::info())
         return jsCast<const NativeExecutable*>(this)->hashFor(kind);
-    
+
     return jsCast<const ScriptExecutable*>(this)->hashFor(kind);
 }
 
@@ -675,7 +675,7 @@ CodeBlockHash NativeExecutable::hashFor(CodeSpecializationKind kind) const
 {
     if (kind == CodeForCall)
         return CodeBlockHash(static_cast<unsigned>(bitwise_cast<size_t>(m_function)));
-    
+
     RELEASE_ASSERT(kind == CodeForConstruct);
     return CodeBlockHash(static_cast<unsigned>(bitwise_cast<size_t>(m_constructor)));
 }

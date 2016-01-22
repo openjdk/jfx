@@ -24,7 +24,7 @@
  * @short_description: tag mappings and support functions for plugins
  *                     dealing with ID3v1 and ID3v2 tags
  * @see_also: #GstTagList
- * 
+ *
  * <refsect2>
  * <para>
  * Contains various utility functions for plugins to parse or create
@@ -303,7 +303,7 @@ gst_tag_list_new_from_id3v1 (const guint8 * data)
 /**
  * gst_tag_id3_genre_count:
  *
- * Gets the number of ID3v1 genres that can be identified. Winamp genres are 
+ * Gets the number of ID3v1 genres that can be identified. Winamp genres are
  * included.
  *
  * Returns: the number of ID3v1 genres that can be identified

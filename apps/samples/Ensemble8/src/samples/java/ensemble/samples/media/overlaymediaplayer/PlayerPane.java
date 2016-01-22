@@ -72,17 +72,17 @@ public class PlayerPane extends Region {
         private HBox mediaTopBar;
         private HBox mediaBottomBar;
         private ParallelTransition transition = null;
-        final double mediaWidth = 480;  
-        final double mediaHeight = 270;  
-        
+        final double mediaWidth = 480;
+        final double mediaHeight = 270;
+
         @Override protected void layoutChildren() {
             final double controlHeight = 40;
             final double controlOffset = 115;
-            mediaView.relocate(0, 0);  
+            mediaView.relocate(0, 0);
             mediaView.setFitWidth(mediaWidth);
             mediaView.setFitHeight(mediaHeight);
-            topBar.resizeRelocate(0, 0, mediaWidth, controlHeight);  
-            bottomBar.resizeRelocate(controlOffset, mediaHeight - controlHeight, mediaWidth, controlHeight);  
+            topBar.resizeRelocate(0, 0, mediaWidth, controlHeight);
+            bottomBar.resizeRelocate(controlOffset, mediaHeight - controlHeight, mediaWidth, controlHeight);
         }
 
         @Override protected double computeMinWidth(double height) {
@@ -127,11 +127,11 @@ public class PlayerPane extends Region {
                 FadeTransition fadeTransition1 = new FadeTransition(Duration.millis(200), topBar);
                 fadeTransition1.setToValue(1.0);
                 fadeTransition1.setInterpolator(Interpolator.EASE_OUT);
-                
+
                 FadeTransition fadeTransition2 = new FadeTransition(Duration.millis(200), bottomBar);
                 fadeTransition2.setToValue(1.0);
                 fadeTransition2.setInterpolator(Interpolator.EASE_OUT);
-                
+
                 transition = new ParallelTransition(fadeTransition1, fadeTransition2);
                 transition.play();
             });
@@ -142,7 +142,7 @@ public class PlayerPane extends Region {
                 FadeTransition fadeTransitionTop = new FadeTransition(Duration.millis(800), topBar);
                 fadeTransitionTop.setToValue(0.0);
                 fadeTransitionTop.setInterpolator(Interpolator.EASE_OUT);
-                
+
                 FadeTransition fadeTransitionBottom = new FadeTransition(Duration.millis(800), bottomBar);
                 fadeTransitionBottom.setToValue(0.0);
                 fadeTransitionBottom.setInterpolator(Interpolator.EASE_OUT);
@@ -157,7 +157,7 @@ public class PlayerPane extends Region {
             mp.setOnPlaying(() -> {
                 if (stopRequested) {
                     mp.pause();
-                    stopRequested = false; 
+                    stopRequested = false;
                 }
             });
             mp.setOnReady(() -> {
@@ -200,7 +200,7 @@ public class PlayerPane extends Region {
                 }
             });
             mediaTopBar.getChildren().add(timeSlider);
-            
+
             // Play label
             playTime = new Label();
             playTime.setPrefWidth(75);
@@ -229,7 +229,7 @@ public class PlayerPane extends Region {
             });
             HBox.setHgrow(volumeSlider, Priority.ALWAYS);
             mediaTopBar.getChildren().add(volumeSlider);
-                        
+
             final EventHandler<ActionEvent> backAction = (ActionEvent e) -> {
                 mp.seek(Duration.ZERO);
             };
@@ -255,11 +255,11 @@ public class PlayerPane extends Region {
             Button backButton = new Button("Back");
             backButton.setId("back-button");
             backButton.setOnAction(backAction);
- 
+
             Button stopButton = new Button("Stop");
             stopButton.setId("stop-button");
             stopButton.setOnAction(stopAction);
- 
+
             Button playButton = new Button("Play");
             playButton.setId("play-button");
             playButton.setOnAction(playAction);
@@ -267,7 +267,7 @@ public class PlayerPane extends Region {
             Button pauseButton = new Button("Pause");
             pauseButton.setId("pause-button");
             pauseButton.setOnAction(pauseAction);
- 
+
             Button forwardButton = new Button("Forward");
             forwardButton.setId("forward-button");
             forwardButton.setOnAction(forwardAction);
@@ -276,11 +276,11 @@ public class PlayerPane extends Region {
 
             topBar.getItems().add(mediaTopBar);
             bottomBar.getItems().add(mediaBottomBar);
-            
+
             getChildren().addAll(mediaView, topBar, bottomBar);
 
-            topBar.setOpacity(0.0); 
-            bottomBar.setOpacity(0.0); 
+            topBar.setOpacity(0.0);
+            bottomBar.setOpacity(0.0);
         }
 
         protected void updateValues() {

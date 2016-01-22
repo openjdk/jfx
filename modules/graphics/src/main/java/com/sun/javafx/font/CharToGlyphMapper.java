@@ -43,7 +43,7 @@ public abstract class CharToGlyphMapper {
     public static final int INVISIBLE_GLYPH_ID = 0xffff;
 
     protected int missingGlyph = MISSING_GLYPH;
-    
+
     public boolean canDisplay(char cp) {
         int glyph = charToGlyph(cp);
         return glyph != missingGlyph;
@@ -63,7 +63,7 @@ public abstract class CharToGlyphMapper {
         return getGlyphCode(unicode);
     }
 
-    public void charsToGlyphs(int start, int count, char[] unicodes, 
+    public void charsToGlyphs(int start, int count, char[] unicodes,
                               int[] glyphs, int glyphStart) {
         for (int i=0; i<count; i++) {
             int code = unicodes[start + i]; // char is unsigned.
@@ -84,11 +84,11 @@ public abstract class CharToGlyphMapper {
             glyphs[glyphStart + i] = getGlyphCode(code);
         }
     }
-    
+
     public void charsToGlyphs(int start, int count, char[] unicodes, int[] glyphs) {
         charsToGlyphs(start, count, unicodes, glyphs, 0);
     }
-    
+
     public void charsToGlyphs(int count, char[] unicodes, int[] glyphs) {
         charsToGlyphs(0, count, unicodes, glyphs, 0);
     }

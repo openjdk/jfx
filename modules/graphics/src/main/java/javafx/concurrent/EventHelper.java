@@ -40,7 +40,7 @@ import static javafx.concurrent.WorkerStateEvent.WORKER_STATE_FAILED;
  */
 class EventHelper {
     private final EventTarget target;
-    
+
     private final ObjectProperty<EventHandler<WorkerStateEvent>> onReady;
     final ObjectProperty<EventHandler<WorkerStateEvent>> onReadyProperty() { return onReady; }
     final EventHandler<WorkerStateEvent> getOnReady() { return onReady.get(); }
@@ -112,7 +112,7 @@ class EventHelper {
             }
         };
     }
-    
+
     /**
      * Registers an event handler to this task. Any event filters are first
      * processed, then the specified onFoo event handlers, and finally any

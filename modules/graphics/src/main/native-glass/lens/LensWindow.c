@@ -22,7 +22,7 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
- 
+
 #include "LensCommon.h"
 #include "wm/LensWindowManager.h"
 #include "com_sun_glass_ui_lens_LensWindow.h"
@@ -34,7 +34,7 @@
 #define LENS_STATIC_WINDOWS_LIST_SIZE 4
 
 LensResult glass_window_NativeWindow_release(JNIEnv *env,
-                                             NativeWindow window) {    
+                                             NativeWindow window) {
 
     GLASS_LOG_FINE("NativeWindow_release on window %d[%p]",
                    window ? (signed int)window->id : -1,
@@ -51,16 +51,16 @@ LensResult glass_window_NativeWindow_release(JNIEnv *env,
     if (windowsListSize > LENS_STATIC_WINDOWS_LIST_SIZE) {
         notifList = (NativeWindow*)malloc(windowsListSize * sizeof(NativeWindow));
     }
-   
+
     while (w) {
-        GLASS_LOG_FINER("checking if w(%i)->owner(%i[%p]) == window %i[%p]", 
+        GLASS_LOG_FINER("checking if w(%i)->owner(%i[%p]) == window %i[%p]",
                         w->id,
                         w->owner?w->owner->id:-1,
                         w->owner,
                         window->id,window);
 
         if (w->owner == window) {
-            GLASS_LOG_FINE("Closing window %i[%p] - owned by closing window %i[%p]", 
+            GLASS_LOG_FINE("Closing window %i[%p] - owned by closing window %i[%p]",
                            w->id,w,
                            window->id,window);
 
@@ -71,7 +71,7 @@ LensResult glass_window_NativeWindow_release(JNIEnv *env,
 
     glass_window_list_unlock();
 
-    {   
+    {
         int i;
         for (i = 0; i <= notifyListIndex; ++i) {
             GLASS_LOG_FINER("Sending CLOSE event to window %i[%p]", notifList[i]->id, notifList[i]);
@@ -131,7 +131,7 @@ static jlong glass_create_native_window
 
         window->lensWindow = (*env)->NewGlobalRef(env, jWindow);
 
-        GLASS_LOG_FINE("Allocated NativeWindow window = %p, owner = %d[%p] lensWindow=%p", 
+        GLASS_LOG_FINE("Allocated NativeWindow window = %p, owner = %d[%p] lensWindow=%p",
                        window,
                        owner?owner->id:-1,
                        owner,
@@ -154,7 +154,7 @@ static jlong glass_create_native_window
             // set the root of the tree, which could be us.
             window->root = owner ? owner->root : window;
 
-            if ((result = glass_window_PlatformWindowData_create(env, window)) 
+            if ((result = glass_window_PlatformWindowData_create(env, window))
                         == LENS_OK) {
                 GLASS_LOG_FINE("NativeWindow created window %d[%p]->data(%p)",
                                window->id, window, window->data);
@@ -195,8 +195,8 @@ JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_lens_LensWindow__1createChildWindo
         return 0; //can't have a child without an owner
     }
 
-    return glass_create_native_window(env, jWindow, 
-        owner, 
+    return glass_create_native_window(env, jWindow,
+        owner,
         owner->screen,
         0);
 }
@@ -215,8 +215,8 @@ JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_lens_LensWindow__1createWindow
 
     NativeWindow owner = (NativeWindow)jlong_to_ptr(ownerNativeWindowPtr);
 
-    return glass_create_native_window(env, jWindow, 
-        owner, 
+    return glass_create_native_window(env, jWindow,
+        owner,
         nativeScreen,
         creationMask);
 }
@@ -569,7 +569,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_lens_LensWindow__1setEnabled
         if (!enabled && window->view && window == lens_wm_getMouseWindow()) {
             glass_application_notifyMouseEvent(env,
                                                window,
-                                               com_sun_glass_events_MouseEvent_EXIT, 
+                                               com_sun_glass_events_MouseEvent_EXIT,
                                                0,0,0,0,
                                                com_sun_glass_events_MouseEvent_BUTTON_NONE);
 
@@ -596,7 +596,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_lens_LensWindow__1setMinimumSiz
             env, glass_NullPointerException, "Window handle is null");
     } else {
 
-        GLASS_LOG_FINE("set window %d[%p] minimum size to %ix%i", 
+        GLASS_LOG_FINE("set window %d[%p] minimum size to %ix%i",
                        window->id, window, width, height);
         result = glass_window_setMinimumSize(env, window, width, height);
     }
@@ -773,9 +773,9 @@ char *lens_window_getNativeStateName(NativeWindowState state) {
     }
 }
 
-/* 
+/*
  * Link list of allocated windows
- * The list will be saved in Z order with head the deepest from the user, 
+ * The list will be saved in Z order with head the deepest from the user,
  * tail closest.
  * impls that need Z order should also call toFront, toBack so that Z order is maintained.
  */
@@ -896,7 +896,7 @@ jboolean glass_window_list_toBack(NativeWindow window) {
 }
 
 /*
- * add a newly created window to the window list. 
+ * add a newly created window to the window list.
  * Will be added either:
  *   closest Z to user
  *   on top of its parent
@@ -919,11 +919,11 @@ void glass_window_list_add(NativeWindow window) {
         windowList_tail->nextWindow = window;
     }
 
-    window->previousWindow = windowList_tail; 
+    window->previousWindow = windowList_tail;
     window->nextWindow = NULL; //we are now the tail
- 
+
     windowList_tail = window; //update the tail
-    
+
     windowList_size++;
 
     glass_window_list_unlock();
@@ -992,9 +992,9 @@ void glass_window_listPrint() {
     glass_window_list_unlock();
 }
 
-/* 
+/*
  * FocusWindow
- * The window that currently has focus. 
+ * The window that currently has focus.
  * Note, this may be NULL.
  */
 static NativeWindow focusedWindow = NULL;

@@ -6,13 +6,13 @@
  * are met:
  *
  * 1.  Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer. 
+ *     notice, this list of conditions and the following disclaimer.
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
- *     documentation and/or other materials provided with the distribution. 
+ *     documentation and/or other materials provided with the distribution.
  * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
- *     from this software without specific prior written permission. 
+ *     from this software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY APPLE AND ITS CONTRIBUTORS "AS IS" AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
@@ -49,12 +49,12 @@ class WebNetscapePluginEventHandler;
 typedef union PluginPort {
 #ifndef NP_NO_QUICKDRAW
     NP_Port qdPort;
-#endif        
+#endif
     NP_CGContext cgPort;
 } PluginPort;
 
-// Because the Adobe 7.x Acrobat plug-in has a hard coded check for a view named 
-// "WebNetscapePluginDocumentView", this class must retain the old name in order 
+// Because the Adobe 7.x Acrobat plug-in has a hard coded check for a view named
+// "WebNetscapePluginDocumentView", this class must retain the old name in order
 // for the plug-in to function correctly. (rdar://problem/4699455)
 #define WebNetscapePluginView WebNetscapePluginDocumentView
 
@@ -64,11 +64,11 @@ typedef union PluginPort {
     RetainPtr<CALayer> _pluginLayer;
     unsigned _dataLengthReceived;
     RetainPtr<NSError> _error;
-        
+
     unsigned argsCount;
     char **cAttributes;
     char **cValues;
-        
+
     NPP plugin;
     NPWindow window;
     NPWindow lastSetWindow;
@@ -76,14 +76,14 @@ typedef union PluginPort {
     PluginPort lastSetPort;
     NPDrawingModel drawingModel;
     NPEventModel eventModel;
-    
+
 #ifndef NP_NO_QUICKDRAW
     // This is only valid when drawingModel is NPDrawingModelQuickDraw
     GWorldPtr offscreenGWorld;
 #endif
 
     OwnPtr<WebNetscapePluginEventHandler> _eventHandler;
-    
+
     BOOL inSetWindow;
     BOOL shouldStopSoon;
 
@@ -91,16 +91,16 @@ typedef union PluginPort {
     std::unique_ptr<HashMap<uint32_t, std::unique_ptr<PluginTimer>>> timers;
 
     unsigned pluginFunctionCallDepth;
-    
+
     int32_t specifiedHeight;
     int32_t specifiedWidth;
-            
+
     HashSet<RefPtr<WebNetscapePluginStream>> streams;
     RetainPtr<NSMapTable> _pendingFrameLoads;
-    
+
     BOOL _isFlash;
     BOOL _isSilverlight;
-    
+
     NSMutableDictionary *_containerChecksInProgress;
     uint32_t _currentContainerCheckRequestID;
 }
@@ -177,7 +177,7 @@ typedef union PluginPort {
 - (NPError)getVariable:(NPNURLVariable)variable forURL:(const char*)url value:(char**)value length:(uint32_t*)length;
 - (NPError)setVariable:(NPNURLVariable)variable forURL:(const char*)url value:(const char*)value length:(uint32_t)length;
 - (NPError)getAuthenticationInfoWithProtocol:(const char*) protocol host:(const char*)host port:(int32_t)port scheme:(const char*)scheme realm:(const char*)realm
-                                    username:(char**)username usernameLength:(uint32_t*)usernameLength 
+                                    username:(char**)username usernameLength:(uint32_t*)usernameLength
                                     password:(char**)password passwordLength:(uint32_t*)passwordLength;
 - (char*)resolveURL:(const char*)url forTarget:(const char*)target;
 @end

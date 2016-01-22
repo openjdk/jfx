@@ -51,7 +51,7 @@ public class MapExpressionTest {
     private static final Integer data2_0 = 42;
     private static final Integer data2_1 = -3;
     private static final Integer datax = Integer.MAX_VALUE;
-    
+
     private MapProperty<Number, Integer> opNull;
     private MapProperty<Number, Integer> opEmpty;
     private MapProperty<Number, Integer> op1;
@@ -204,7 +204,7 @@ public class MapExpressionTest {
         assertTrue(op1.isNotNull().get());
         assertTrue(op2.isNotNull().get());
     }
-    
+
     @Test
     public void testAsString() {
         assertEquals("null", opNull.asString().get());

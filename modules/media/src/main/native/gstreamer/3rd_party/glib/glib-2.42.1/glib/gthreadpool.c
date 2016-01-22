@@ -165,7 +165,7 @@ g_thread_pool_wait_for_new_pool (void)
                       g_thread_self (), local_max_idle_time / 1000.0));
 
           pool = g_async_queue_timeout_pop (unused_thread_queue,
-					    local_max_idle_time * 1000);
+                        local_max_idle_time * 1000);
         }
       else
         {
@@ -260,7 +260,7 @@ g_thread_pool_wait_for_new_task (GRealThreadPool *pool)
                       g_async_queue_length_unlocked (pool->queue)));
 
           task = g_async_queue_timeout_pop_unlocked (pool->queue,
-						     G_USEC_PER_SEC / 2);
+                             G_USEC_PER_SEC / 2);
         }
     }
   else

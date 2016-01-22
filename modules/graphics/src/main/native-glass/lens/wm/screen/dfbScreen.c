@@ -22,7 +22,7 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
- 
+
 #include "LensCommon.h"
 #include "input/LensInput.h"
 #include "wm/LensWindowManager.h"
@@ -72,7 +72,7 @@ func_dfb_pixelformat_name_t func_dfb_pixelformat_name;
 
 struct _PlatformWindowData {
     IDirectFBWindow *dfbWindow;
-    
+
     u8 opacity;
 
     jboolean isUnderGrab;
@@ -132,13 +132,13 @@ static void releaseReasources() {
         GLASS_LOG_FINER("IDirectFBDisplayLayer->Release(primaryLayer =%p)",
                         primaryLayer);
         primaryLayer->Release(primaryLayer);
-	primaryLayer = NULL;
+    primaryLayer = NULL;
     }
     if (dfb != NULL) {
         GLASS_LOG_FINE("Releasing DFB interface");
         GLASS_LOG_FINER("IDirectFB->Release(dfb=%p)", dfb);
         dfb->Release(dfb);
-	dfb = NULL;
+    dfb = NULL;
     }
 
     DEBUG_FUNC_EXIT();
@@ -146,13 +146,13 @@ static void releaseReasources() {
 
 /**
  * Service function to enable/disable the console cursor blink
- * 
+ *
  * @param mode JNI_TRUE enabled, JNI_FALSE disabled
- * 
+ *
  * @return jboolean JNI_TRUE on success
  */
 static jboolean dfb_setCursorBlink(jboolean mode) {
-     
+
      int fd = open ("/sys/class/graphics/fbcon/cursor_blink", O_WRONLY);
      jboolean result = JNI_FALSE;
 
@@ -279,7 +279,7 @@ jboolean glass_application_initialize(JNIEnv *env) {
         //Disable signal handler and don't long input driver
         const char *args[] = {
             "java",
-            "--dfb:no-deinit-check,no-sighandler,disable-module=linux_input" 
+            "--dfb:no-deinit-check,no-sighandler,disable-module=linux_input"
         };
         int         argc   = sizeof(args) / sizeof(args[0]);
         char      **argp   = (char **) args;
@@ -386,7 +386,7 @@ void glass_pixel_attachIntBuffer(JNIEnv *env, jint *src,
     NativeScreen primaryScreen = glass_screen_getMainScreen();
 
     GLASS_LOG_FINER("Repaint %ix%i", width, height);
-    
+
 
     do {
         unsigned char *fb;
@@ -422,7 +422,7 @@ void glass_pixel_attachIntBuffer(JNIEnv *env, jint *src,
                                                         height));
             dimensionsUpdated = JNI_TRUE;
         }
-        
+
         GLASS_LOG_FINER("Getting window's %i surface", window->id);
         DFBBREAK(dfbWindow->GetSurface(window->data->dfbWindow ,
                                                      &view->data->surface));
@@ -448,12 +448,12 @@ void glass_pixel_attachIntBuffer(JNIEnv *env, jint *src,
                        view->bounds.y,
                        view->bounds.width,
                        view->bounds.height);
-        
-        
+
+
 
         DFBBREAK(surface->Lock(surface, DSLF_WRITE,
                                (void **) &fb, &pitch));
-        
+
         if (view->bounds.width > pitch || height > view->bounds.height) {
             GLASS_LOG_FINER("attachIntBuffer was called with width = %d height = %d "
                            "offset = %d",
@@ -472,7 +472,7 @@ void glass_pixel_attachIntBuffer(JNIEnv *env, jint *src,
             }
             return;
         }
-        
+
         GLASS_LOG_FINEST(
             "IDirectFBSurface->Lock(surface=%p, DSLF_WRITE) returned data=%p pitch=%i",
             surface, fb, pitch);
@@ -537,7 +537,7 @@ void glass_pixel_attachIntBuffer(JNIEnv *env, jint *src,
         GLASS_LOG_FINEST("IDirectFBSurface->Flip(surface=%p, DSFLIP_WAIT)",
                          surface);
         DFBBREAK(surface->Flip(surface, NULL, DSFLIP_WAIT));
-        //we can unhide window as its content is up-to-date 
+        //we can unhide window as its content is up-to-date
         if (dimensionsUpdated) {
             DFBBREAK(dfbWindow->SetOpacity(window->data->dfbWindow, window->alpha*255));
         }
@@ -804,7 +804,7 @@ jboolean glass_screen_capture(jint x,
                 GLASS_LOG_WARNING("[Error] Pixel(s) requested is out of"
                                   " surface bounds");
                 result = JNI_FALSE;
-                break;                
+                break;
             }
 
             DFBBREAK(primarySurface->Lock(primarySurface,  DSLF_READ,
@@ -821,7 +821,7 @@ jboolean glass_screen_capture(jint x,
                            x, y, width, height, pitch);
 
             switch (pixelFormat) {
-                
+
                 case DSPF_RGB24:
                 case DSPF_RGB32:
                 case DSPF_ARGB: {
@@ -860,10 +860,10 @@ jboolean glass_screen_capture(jint x,
                                 jshort pixel = (jshort)(fb[1] << 8 | fb[0]);
 
                                 /**
-                                 * We are dealing with 5-6-5 pixel format, so we need 
-                                 * to mask out the relevant bits of each color, 
-                                 * turn it to 8-8-8 pixel format and shift them to the proper 
-                                 * location as the pixel is represented in 32 bits. 
+                                 * We are dealing with 5-6-5 pixel format, so we need
+                                 * to mask out the relevant bits of each color,
+                                 * turn it to 8-8-8 pixel format and shift them to the proper
+                                 * location as the pixel is represented in 32 bits.
                                  */
 
                                 //Masking out the relevant bits of each color
@@ -936,7 +936,7 @@ LensResult lens_platform_windowSetVisible(JNIEnv *env,
                    window->id, window,
                    (visible)?"visible":"invisible");
 
-    do {        
+    do {
         if (visible == JNI_TRUE) {
             GLASS_LOG_FINE("IDirectFBWindow->SetOpacity(window=%p, %i)",
                            dfbWindow, window->data->opacity);

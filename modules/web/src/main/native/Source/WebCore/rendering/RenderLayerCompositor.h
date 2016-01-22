@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef RenderLayerCompositor_h
@@ -88,7 +88,7 @@ typedef unsigned CompositingReasons;
 // composited RenderLayers. It determines which RenderLayers
 // become compositing, and creates and maintains a hierarchy of
 // GraphicsLayers based on the RenderLayer painting order.
-// 
+//
 // There is one RenderLayerCompositor per RenderView.
 
 class RenderLayerCompositor : public GraphicsLayerClient, public GraphicsLayerUpdaterClient {
@@ -123,7 +123,7 @@ public:
     // at specific times.
     void scheduleLayerFlush(bool canThrottle);
     void flushPendingLayerChanges(bool isFlushRoot = true);
-    
+
     // flushPendingLayerChanges() flushes the entire GraphicsLayer tree, which can cross frame boundaries.
     // This call returns the rootmost compositor that is being flushed (including self).
     RenderLayerCompositor* enclosingCompositorFlushingLayers() const;
@@ -133,7 +133,7 @@ public:
 
     // Called when something outside WebKit affects the visible rect (e.g. delegated scrolling). Might schedule a layer flush.
     void didChangeVisibleRect();
-    
+
     // Rebuild the tree of compositing layers
     void updateCompositingLayers(CompositingUpdateType, RenderLayer* updateRoot = nullptr);
     // This is only used when state changes and we do not exepect a style update or layout to happen soon (e.g. when
@@ -142,14 +142,14 @@ public:
 
     // Update the maps that we use to distribute layers to coresponding regions.
     void updateRenderFlowThreadLayersIfNeeded();
-    
+
     // Update the compositing state of the given layer. Returns true if that state changed.
     enum CompositingChangeRepaint { CompositingChangeRepaintNow, CompositingChangeWillRepaintLater };
     bool updateLayerCompositingState(RenderLayer&, CompositingChangeRepaint = CompositingChangeRepaintNow);
 
     // Update the geometry for compositing children of compositingAncestor.
     void updateCompositingDescendantGeometry(RenderLayer& compositingAncestor, RenderLayer&, bool compositedChildrenOnly);
-    
+
     // Whether layer's backing needs a graphics layer to do clipping by an ancestor (non-stacking-context parent with overflow).
     bool clippedByAncestor(RenderLayer&) const;
     // Whether layer's backing needs a graphics layer to clip z-order children of the given layer.
@@ -161,16 +161,16 @@ public:
     bool supportsFixedRootBackgroundCompositing() const;
     bool needsFixedRootBackgroundLayer(const RenderLayer&) const;
     GraphicsLayer* fixedRootBackgroundLayer() const;
-    
+
     // Return the bounding box required for compositing layer and its childern, relative to ancestorLayer.
     // If layerBoundingBox is not 0, on return it contains the bounding box of this layer only.
     LayoutRect calculateCompositedBounds(const RenderLayer&, const RenderLayer& ancestorLayer) const;
 
     // Repaint the appropriate layers when the given RenderLayer starts or stops being composited.
     void repaintOnCompositingChange(RenderLayer&);
-    
+
     void repaintInCompositedAncestor(RenderLayer&, const LayoutRect&);
-    
+
     // Notify us that a layer has been added or removed
     void layerWasAdded(RenderLayer& parent, RenderLayer& child);
     void layerWillBeRemoved(RenderLayer& parent, RenderLayer& child);
@@ -202,14 +202,14 @@ public:
     RootLayerAttachment rootLayerAttachment() const { return m_rootLayerAttachment; }
     void updateRootLayerAttachment();
     void updateRootLayerPosition();
-    
+
     void setIsInWindow(bool);
 
     void clearBackingForAllLayers();
-    
+
     void layerBecameComposited(const RenderLayer&) { ++m_compositedLayerCount; }
     void layerBecameNonComposited(const RenderLayer&);
-    
+
 #if ENABLE(VIDEO)
     // Use by RenderVideo to ask if it should try to use accelerated compositing.
     bool canAccelerateVideoRendering(RenderVideo&) const;
@@ -218,7 +218,7 @@ public:
     // Walk the tree looking for layers with 3d transforms. Useful in case you need
     // to know if there is non-affine content, e.g. for drawing into an image.
     bool has3DContent() const;
-    
+
     // Most platforms connect compositing layer trees between iframes and their parent document.
     // Some (currently just Mac) allow iframes to do their own compositing.
     static bool allowsIndependentlyCompositedFrames(const FrameView*);
@@ -248,7 +248,7 @@ public:
     virtual void notifyFlushBeforeDisplayRefresh(const GraphicsLayer*) override;
 
     void layerTiledBackingUsageChanged(const GraphicsLayer*, bool /*usingTiledBacking*/);
-    
+
     bool keepLayersPixelAligned() const;
     bool acceleratedDrawingEnabled() const { return m_acceleratedDrawingEnabled; }
 
@@ -295,7 +295,7 @@ public:
 
     void setLayerFlushThrottlingEnabled(bool);
     void disableLayerFlushThrottlingTemporarilyForInteraction();
-    
+
     void didPaintBacking(RenderLayerBacking*);
 
     void setRootExtendedBackgroundColor(const Color&);
@@ -309,11 +309,11 @@ private:
     virtual void paintContents(const GraphicsLayer*, GraphicsContext&, GraphicsLayerPaintingPhase, const FloatRect&) override;
 
     virtual bool isTrackingRepaints() const override;
-    
+
     // GraphicsLayerUpdaterClient implementation
     virtual void flushLayers(GraphicsLayerUpdater*) override;
     virtual void customPositionForVisibleRectComputation(const GraphicsLayer*, FloatPoint&) const override;
-    
+
     // Whether the given RL needs a compositing layer.
     bool needsToBeComposited(const RenderLayer&, RenderLayer::ViewportConstrainedNotCompositedReason* = 0) const;
     // Whether the layer has an intrinsic need for compositing layer.
@@ -344,7 +344,7 @@ private:
     // Recurses down the tree, parenting descendant compositing layers and collecting an array of child layers for the current compositing layer.
     void rebuildCompositingLayerTree(RenderLayer&, Vector<GraphicsLayer*>& childGraphicsLayersOfEnclosingLayer, int depth);
 
-    // Recurses down the RenderFlowThread tree, parenting descendant compositing layers and collecting an array of child 
+    // Recurses down the RenderFlowThread tree, parenting descendant compositing layers and collecting an array of child
     // layers for the current compositing layer corresponding to the anonymous region (that belongs to the region's parent).
     void rebuildRegionCompositingLayerTree(RenderNamedFlowFragment*, Vector<GraphicsLayer*>& childList, int depth);
 
@@ -352,7 +352,7 @@ private:
 
     // Recurses down the tree, updating layer geometry only.
     void updateLayerTreeGeometry(RenderLayer&, int depth);
-    
+
     // Hook compositing layers together
     void setCompositingParent(RenderLayer& childLayer, RenderLayer* parentLayer);
     void removeCompositedChildren(RenderLayer&);
@@ -367,7 +367,7 @@ private:
 
     void attachRootLayer(RootLayerAttachment);
     void detachRootLayer();
-    
+
     void rootLayerAttachmentChanged();
 
     void updateOverflowControlsLayers();
@@ -377,10 +377,10 @@ private:
     void notifyIFramesOfCompositingChange();
 
     bool isFlushingLayers() const { return m_flushingLayers; }
-    
+
     Page* page() const;
     TiledBacking* pageTiledBacking() const;
-    
+
     GraphicsLayerFactory* graphicsLayerFactory() const;
     ScrollingCoordinator* scrollingCoordinator() const;
 

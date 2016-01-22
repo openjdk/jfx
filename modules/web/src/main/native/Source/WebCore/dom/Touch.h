@@ -46,7 +46,7 @@ public:
             unsigned identifier, int screenX, int screenY, int pageX, int pageY,
             int radiusX, int radiusY, float rotationAngle, float force)
     {
-        return adoptRef(new Touch(frame, target, identifier, screenX, 
+        return adoptRef(new Touch(frame, target, identifier, screenX,
                 screenY, pageX, pageY, radiusX, radiusY, rotationAngle, force));
     }
 

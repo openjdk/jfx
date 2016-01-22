@@ -225,7 +225,7 @@ public class CssValueConverter {
     }
 
     // The difference between retrieveValue and getCssStringValue
-    // is that the ParsedValue is converted in the retrieveValue case, and is not converted in the 
+    // is that the ParsedValue is converted in the retrieveValue case, and is not converted in the
     // getCssStringValue
     // When converting, we loose the CSS textual format present in the CSS source,
     // for instance the lookup information, or 'em' unit.
@@ -340,9 +340,9 @@ public class CssValueConverter {
     @SuppressWarnings("rawtypes")
     private static String getRadiusCssString(String property, ParsedValue value) {
         // TODO : Ideally should be included in the generic getCssString() method
-        
-        // See  http://www.w3.org/TR/css3-background/#the-border-radius 
-        
+
+        // See  http://www.w3.org/TR/css3-background/#the-border-radius
+
         assert property.equals("-fx-background-radius") || property.equals("-fx-border-radius"); //NOI18N
         StringBuilder sbAll = new StringBuilder();
         Object obj = value.getValue();
@@ -367,7 +367,7 @@ public class CssValueConverter {
             boolean areEquals = true;
             int index2 = 0;
             for (ParsedValue[] pvArray1 : pvArray2) {
-                // horizontal or vertical list 
+                // horizontal or vertical list
                 for (ParsedValue pvItem2 : pvArray1) {
                     obj = pvItem2.getValue();
                     if (!(obj instanceof Size)) {
@@ -665,7 +665,7 @@ public class CssValueConverter {
             return bs.toString();
         }
         StringBuilder builder = new StringBuilder();
-        //top, right, bottom, and left 
+        //top, right, bottom, and left
         if (property.equals("-fx-border-color")) { //NOI18N
             if (bs.getTopStroke().equals(bs.getBottomStroke())
                     && bs.getRightStroke().equals(bs.getBottomStroke())
@@ -823,7 +823,7 @@ public class CssValueConverter {
         if (property == null) {
             return bs;
         }
-        //top, right, bottom, and left 
+        //top, right, bottom, and left
         if (property.equals("-fx-border-color")) { //NOI18N
             if (bs.getTopStroke().equals(bs.getBottomStroke())
                     && bs.getRightStroke().equals(bs.getBottomStroke())
@@ -886,7 +886,7 @@ public class CssValueConverter {
 
     private static void handleCornerRadii(CornerRadii cr, StringBuilder builder) {
         // Each radius has a vertical and horizontal radius
-        // See  http://www.w3.org/TR/css3-background/#the-border-radius 
+        // See  http://www.w3.org/TR/css3-background/#the-border-radius
 
         double topLeftH = cr.getTopLeftHorizontalRadius();
         double topLeftV = cr.getTopLeftVerticalRadius();
@@ -904,7 +904,7 @@ public class CssValueConverter {
                 // Same radius for all => single value
                 builder.append(EditorUtils.valAsStr(topLeftH));
             } else {
-                // Same value for vertical and horizontal radii 
+                // Same value for vertical and horizontal radii
                 // => 4 values for topLeft, topRight, bottomLeft, bottomRight
                 builder.append(EditorUtils.valAsStr(topLeftH)).append(" "). //NOI18N
                         append(EditorUtils.valAsStr(topRightH)).append(" "). //NOI18N

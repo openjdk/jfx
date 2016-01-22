@@ -70,7 +70,7 @@ public class PlatformUtil {
     private static final boolean MAC = os.startsWith("Mac");
     private static final boolean LINUX = os.startsWith("Linux") && !ANDROID;
     private static final boolean SOLARIS = os.startsWith("SunOS");
-    private static final boolean IOS = os.startsWith("iOS");    
+    private static final boolean IOS = os.startsWith("iOS");
 
     /**
      * Utility method used to determine whether the version number as
@@ -95,14 +95,14 @@ public class PlatformUtil {
     public static boolean isWindows(){
         return WINDOWS;
     }
-    
+
     /**
      * Returns true if the operating system is at least Windows Vista(v6.0).
      */
     public static boolean isWinVistaOrLater(){
         return WINDOWS_VISTA_OR_LATER;
     }
-    
+
     /**
      * Returns true if the operating system is at least Windows 7(v6.1).
      */
@@ -169,7 +169,7 @@ public class PlatformUtil {
     public static String getEmbeddedType() {
         return embeddedType;
     }
-    
+
     /**
      * Returns true if the operating system is iOS
      */
@@ -205,7 +205,7 @@ public class PlatformUtil {
         }
         if (!foundPlatform) {
             System.err.println(
-                    "Warning: No settings found for javafx.platform='" 
+                    "Warning: No settings found for javafx.platform='"
                     + javafxPlatform + "'");
         }
     }
@@ -275,7 +275,7 @@ public class PlatformUtil {
             return null;
         });
     }
-    
+
     public static boolean isAndroid() {
        return ANDROID;
     }

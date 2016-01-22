@@ -30,10 +30,10 @@ import javafx.animation.Animation.Status;
 import javafx.util.Duration;
 
 public class InfiniteClipEnvelope extends ClipEnvelope {
-    
+
     private boolean autoReverse;
     private long pos;
-    
+
     protected InfiniteClipEnvelope(Animation animation) {
         super(animation);
         if (animation != null) {
@@ -51,7 +51,7 @@ public class InfiniteClipEnvelope extends ClipEnvelope {
         return !autoReverse? rate
                 : (ticks % (2 * cycleTicks) < cycleTicks)? rate : -rate;
     }
-    
+
     @Override
     public ClipEnvelope setCycleDuration(Duration cycleDuration) {
         if (cycleDuration.isIndefinite()) {
@@ -83,7 +83,7 @@ public class InfiniteClipEnvelope extends ClipEnvelope {
         }
         this.rate = rate;
     }
-    
+
     @Override
     public void timePulse(long currentTick) {
         if (cycleTicks == 0L) {

@@ -32,9 +32,9 @@ import com.sun.javafx.geom.transform.BaseTransform;
  * coordinate space.  This class, like all of the Java 2D API, uses a
  * default coordinate system called <i>user space</i> in which the y-axis
  * values increase downward and x-axis values increase to the right.  For
- * more information on the user space coordinate system, see the 
+ * more information on the user space coordinate system, see the
  * <a href="http://java.sun.com/j2se/1.3/docs/guide/2d/spec/j2d-intro.fm2.html#61857">
- * Coordinate Systems</a> section of the Java 2D Programmer's Guide.  
+ * Coordinate Systems</a> section of the Java 2D Programmer's Guide.
  *
  * @version     1.37, 05/05/07
  */
@@ -86,7 +86,7 @@ public class Line2D extends Shape {
     }
 
     /**
-     * Sets the location of the end points of this <code>Line2D</code> 
+     * Sets the location of the end points of this <code>Line2D</code>
      * to the specified float coordinates.
      * @param x1 the X coordinate of the start point
      * @param y1 the Y coordinate of the start point
@@ -127,7 +127,7 @@ public class Line2D extends Shape {
         b.setBoundsAndSort(x1, y1, x2, y2);
         return b;
     }
-    
+
     /**
      * @inheritDoc
      */
@@ -177,10 +177,10 @@ public class Line2D extends Shape {
         }
         return true;
     }
-    
+
     /**
-     * Returns an indicator of where the specified point 
-     * {@code (px,py)} lies with respect to the line segment from 
+     * Returns an indicator of where the specified point
+     * {@code (px,py)} lies with respect to the line segment from
      * {@code (x1,y1)} to {@code (x2,y2)}.
      * The return value can be either 1, -1, or 0 and indicates
      * in which direction the specified line must pivot around its
@@ -189,18 +189,18 @@ public class Line2D extends Shape {
      * <p>A return value of 1 indicates that the line segment must
      * turn in the direction that takes the positive X axis towards
      * the negative Y axis.  In the default coordinate system used by
-     * Java 2D, this direction is counterclockwise.  
+     * Java 2D, this direction is counterclockwise.
      * <p>A return value of -1 indicates that the line segment must
      * turn in the direction that takes the positive X axis towards
-     * the positive Y axis.  In the default coordinate system, this 
+     * the positive Y axis.  In the default coordinate system, this
      * direction is clockwise.
      * <p>A return value of 0 indicates that the point lies
-     * exactly on the line segment.  Note that an indicator value 
-     * of 0 is rare and not useful for determining colinearity 
-     * because of floating point rounding issues. 
-     * <p>If the point is colinear with the line segment, but 
+     * exactly on the line segment.  Note that an indicator value
+     * of 0 is rare and not useful for determining colinearity
+     * because of floating point rounding issues.
+     * <p>If the point is colinear with the line segment, but
      * not between the end points, then the value will be -1 if the point
-     * lies "beyond {@code (x1,y1)}" or 1 if the point lies 
+     * lies "beyond {@code (x1,y1)}" or 1 if the point lies
      * "beyond {@code (x2,y2)}".
      *
      * @param x1 the X coordinate of the start point of the
@@ -256,9 +256,9 @@ public class Line2D extends Shape {
     }
 
     /**
-     * Returns an indicator of where the specified point 
+     * Returns an indicator of where the specified point
      * {@code (px,py)} lies with respect to this line segment.
-     * See the method comments of 
+     * See the method comments of
      * {@link #relativeCCW(double, double, double, double, double, double)}
      * to interpret the return value.
      * @param px the X coordinate of the specified point
@@ -279,7 +279,7 @@ public class Line2D extends Shape {
      * See the method comments of
      * {@link #relativeCCW(double, double, double, double, double, double)}
      * to interpret the return value.
-     * @param p the specified <code>Point2D</code> to be compared 
+     * @param p the specified <code>Point2D</code> to be compared
      *          with this <code>Line2D</code>
      * @return an integer that indicates the position of the specified
      *         <code>Point2D</code> with respect to this <code>Line2D</code>
@@ -290,8 +290,8 @@ public class Line2D extends Shape {
     }
 
     /**
-     * Tests if the line segment from {@code (x1,y1)} to 
-     * {@code (x2,y2)} intersects the line segment from {@code (x3,y3)} 
+     * Tests if the line segment from {@code (x1,y1)} to
+     * {@code (x2,y2)} intersects the line segment from {@code (x3,y3)}
      * to {@code (x4,y4)}.
      *
      * @param x1 the X coordinate of the start point of the first
@@ -310,9 +310,9 @@ public class Line2D extends Shape {
      *           specified line segment
      * @param y4 the Y coordinate of the end point of the second
      *           specified line segment
-     * @return <code>true</code> if the first specified line segment 
-     *          and the second specified line segment intersect  
-     *          each other; <code>false</code> otherwise.  
+     * @return <code>true</code> if the first specified line segment
+     *          and the second specified line segment intersect
+     *          each other; <code>false</code> otherwise.
      */
     public static boolean linesIntersect(float x1, float y1,
                      float x2, float y2,
@@ -326,7 +326,7 @@ public class Line2D extends Shape {
     }
 
     /**
-     * Tests if the line segment from {@code (x1,y1)} to 
+     * Tests if the line segment from {@code (x1,y1)} to
      * {@code (x2,y2)} intersects this line segment.
      *
      * @param x1 the X coordinate of the start point of the
@@ -348,7 +348,7 @@ public class Line2D extends Shape {
      * Tests if the specified line segment intersects this line segment.
      * @param l the specified <code>Line2D</code>
      * @return <code>true</code> if this line segment and the specified line
-     *          segment intersect each other; 
+     *          segment intersect each other;
      *          <code>false</code> otherwise.
      */
     public boolean intersectsLine(Line2D l) {
@@ -358,9 +358,9 @@ public class Line2D extends Shape {
     /**
      * Returns the square of the distance from a point to a line segment.
      * The distance measured is the distance between the specified
-     * point and the closest point between the specified end points.  
+     * point and the closest point between the specified end points.
      * If the specified point intersects the line segment in between the
-     * end points, this method returns 0.0.     
+     * end points, this method returns 0.0.
      *
      * @param x1 the X coordinate of the start point of the
      *           specified line segment
@@ -432,7 +432,7 @@ public class Line2D extends Shape {
     /**
      * Returns the distance from a point to a line segment.
      * The distance measured is the distance between the specified
-     * point and the closest point between the specified end points.  
+     * point and the closest point between the specified end points.
      * If the specified point intersects the line segment in between the
      * end points, this method returns 0.0.
      *
@@ -462,7 +462,7 @@ public class Line2D extends Shape {
     /**
      * Returns the square of the distance from a point to this line segment.
      * The distance measured is the distance between the specified
-     * point and the closest point between the current line's end points.  
+     * point and the closest point between the current line's end points.
      * If the specified point intersects the line segment in between the
      * end points, this method returns 0.0.
      *
@@ -479,16 +479,16 @@ public class Line2D extends Shape {
     }
 
     /**
-     * Returns the square of the distance from a <code>Point2D</code> to 
+     * Returns the square of the distance from a <code>Point2D</code> to
      * this line segment.
      * The distance measured is the distance between the specified
-     * point and the closest point between the current line's end points.  
+     * point and the closest point between the current line's end points.
      * If the specified point intersects the line segment in between the
      * end points, this method returns 0.0.
      * @param pt the specified <code>Point2D</code> being measured against
      *           this line segment.
      * @return a double value that is the square of the distance from the
-     *          specified <code>Point2D</code> to the current 
+     *          specified <code>Point2D</code> to the current
      *          line segment.
      * @see #ptLineDistSq(Point2D)
      */
@@ -499,7 +499,7 @@ public class Line2D extends Shape {
     /**
      * Returns the distance from a point to this line segment.
      * The distance measured is the distance between the specified
-     * point and the closest point between the current line's end points.  
+     * point and the closest point between the current line's end points.
      * If the specified point intersects the line segment in between the
      * end points, this method returns 0.0.
      *
@@ -507,7 +507,7 @@ public class Line2D extends Shape {
      *           measured against this line segment
      * @param py the Y coordinate of the specified point being
      *           measured against this line segment
-     * @return a double value that is the distance from the specified 
+     * @return a double value that is the distance from the specified
      *          point to the current line segment.
      * @see #ptLineDist(double, double)
      */
@@ -519,7 +519,7 @@ public class Line2D extends Shape {
      * Returns the distance from a <code>Point2D</code> to this line
      * segment.
      * The distance measured is the distance between the specified
-     * point and the closest point between the current line's end points.  
+     * point and the closest point between the current line's end points.
      * If the specified point intersects the line segment in between the
      * end points, this method returns 0.0.
      * @param pt the specified <code>Point2D</code> being measured
@@ -537,7 +537,7 @@ public class Line2D extends Shape {
      * Returns the square of the distance from a point to a line.
      * The distance measured is the distance between the specified
      * point and the closest point on the infinitely-extended line
-     * defined by the specified coordinates.  If the specified point 
+     * defined by the specified coordinates.  If the specified point
      * intersects the line, this method returns 0.0.
      *
      * @param x1 the X coordinate of the start point of the specified line
@@ -581,7 +581,7 @@ public class Line2D extends Shape {
      * Returns the distance from a point to a line.
      * The distance measured is the distance between the specified
      * point and the closest point on the infinitely-extended line
-     * defined by the specified coordinates.  If the specified point 
+     * defined by the specified coordinates.  If the specified point
      * intersects the line, this method returns 0.0.
      *
      * @param x1 the X coordinate of the start point of the specified line
@@ -607,14 +607,14 @@ public class Line2D extends Shape {
      * Returns the square of the distance from a point to this line.
      * The distance measured is the distance between the specified
      * point and the closest point on the infinitely-extended line
-     * defined by this <code>Line2D</code>.  If the specified point 
+     * defined by this <code>Line2D</code>.  If the specified point
      * intersects the line, this method returns 0.0.
      *
      * @param px the X coordinate of the specified point being
      *           measured against this line
      * @param py the Y coordinate of the specified point being
      *           measured against this line
-     * @return a double value that is the square of the distance from a 
+     * @return a double value that is the square of the distance from a
      *          specified point to the current line.
      * @see #ptSegDistSq(double, double)
      */
@@ -623,11 +623,11 @@ public class Line2D extends Shape {
     }
 
     /**
-     * Returns the square of the distance from a specified 
+     * Returns the square of the distance from a specified
      * <code>Point2D</code> to this line.
      * The distance measured is the distance between the specified
      * point and the closest point on the infinitely-extended line
-     * defined by this <code>Line2D</code>.  If the specified point 
+     * defined by this <code>Line2D</code>.  If the specified point
      * intersects the line, this method returns 0.0.
      * @param pt the specified <code>Point2D</code> being measured
      *           against this line
@@ -644,7 +644,7 @@ public class Line2D extends Shape {
      * Returns the distance from a point to this line.
      * The distance measured is the distance between the specified
      * point and the closest point on the infinitely-extended line
-     * defined by this <code>Line2D</code>.  If the specified point 
+     * defined by this <code>Line2D</code>.  If the specified point
      * intersects the line, this method returns 0.0.
      *
      * @param px the X coordinate of the specified point being
@@ -663,10 +663,10 @@ public class Line2D extends Shape {
      * Returns the distance from a <code>Point2D</code> to this line.
      * The distance measured is the distance between the specified
      * point and the closest point on the infinitely-extended line
-     * defined by this <code>Line2D</code>.  If the specified point 
+     * defined by this <code>Line2D</code>.  If the specified point
      * intersects the line, this method returns 0.0.
      * @param pt the specified <code>Point2D</code> being measured
-     * @return a double value that is the distance from a specified 
+     * @return a double value that is the distance from a specified
      *          <code>Point2D</code> to the current line.
      * @see #ptSegDist(Point2D)
      */
@@ -677,8 +677,8 @@ public class Line2D extends Shape {
     /**
      * Returns an iteration object that defines the boundary of this
      * <code>Line2D</code>.
-     * The iterator for this class is not multi-threaded safe, 
-     * which means that this <code>Line2D</code> class does not 
+     * The iterator for this class is not multi-threaded safe,
+     * which means that this <code>Line2D</code> class does not
      * guarantee that modifications to the geometry of this
      * <code>Line2D</code> object do not affect any iterations of that
      * geometry that are already in process.
@@ -697,12 +697,12 @@ public class Line2D extends Shape {
      * which means that this <code>Line2D</code> class does not
      * guarantee that modifications to the geometry of this
      * <code>Line2D</code> object do not affect any iterations of that
-     * geometry that are already in process. 
+     * geometry that are already in process.
      * @param tx the specified <code>BaseTransform</code>
-     * @param flatness the maximum amount that the control points for a 
+     * @param flatness the maximum amount that the control points for a
      *      given curve can vary from colinear before a subdivided
      *      curve is replaced by a straight line connecting the
-     *      end points.  Since a <code>Line2D</code> object is 
+     *      end points.  Since a <code>Line2D</code> object is
      *          always flat, this parameter is ignored.
      * @return a <code>PathIterator</code> that defines the boundary of the
      *          flattened <code>Line2D</code>

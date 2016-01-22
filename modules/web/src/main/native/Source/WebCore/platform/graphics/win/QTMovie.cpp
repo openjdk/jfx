@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "config.h"
 
@@ -49,7 +49,7 @@ static const long mpeg4ObjectDescriptionTrackType = 'odsm';
 static const long mpeg4SceneDescriptionTrackType = 'sdsm';
 static const long closedCaptionDisplayPropertyID = 'disp';
 
-// Resizing GWorlds is slow, give them a minimum size so size of small 
+// Resizing GWorlds is slow, give them a minimum size so size of small
 // videos can be animated smoothly
 static const int cGWorldMinWidth = 640;
 static const int cGWorldMinHeight = 360;
@@ -140,7 +140,7 @@ QTMoviePrivate::~QTMoviePrivate()
         CFRelease(m_currentURL);
 }
 
-void QTMoviePrivate::startTask() 
+void QTMoviePrivate::startTask()
 {
     if (!m_tasking) {
         QTMovieTask::sharedTask()->addTaskClient(this);
@@ -149,7 +149,7 @@ void QTMoviePrivate::startTask()
     QTMovieTask::sharedTask()->updateTaskTimer();
 }
 
-void QTMoviePrivate::endTask() 
+void QTMoviePrivate::endTask()
 {
     if (m_tasking) {
         QTMovieTask::sharedTask()->removeTaskClient(this);
@@ -158,7 +158,7 @@ void QTMoviePrivate::endTask()
     QTMovieTask::sharedTask()->updateTaskTimer();
 }
 
-void QTMoviePrivate::task() 
+void QTMoviePrivate::task()
 {
     ASSERT(m_tasking);
 
@@ -170,7 +170,7 @@ void QTMoviePrivate::task()
     }
 
     // GetMovieLoadState documentation says that you should not call it more often than every quarter of a second.
-    if (systemTime() >= m_lastLoadStateCheckTime + 0.25 || m_loadError) { 
+    if (systemTime() >= m_lastLoadStateCheckTime + 0.25 || m_loadError) {
         // If load fails QT's load state is QTMovieLoadStateComplete.
         // This is different from QTKit API and seems strange.
         long loadState = m_loadError ? QTMovieLoadStateError : GetMovieLoadState(m_movie);
@@ -190,7 +190,7 @@ void QTMoviePrivate::task()
 
             for (size_t i = 0; i < m_clients.size(); ++i)
                 m_clients[i]->movieLoadStateChanged(m_movieWin);
-            
+
             if (shouldRestorePlaybackState && m_timeToRestore != -1.0f) {
                 m_movieWin->setCurrentTime(m_timeToRestore);
                 m_timeToRestore = -1.0f;
@@ -339,9 +339,9 @@ float QTMovie::rate() const
 void QTMovie::setRate(float rate)
 {
     if (!m_private->m_movie)
-        return;    
+        return;
     m_private->m_timeToRestore = -1.0f;
-    
+
     if (m_private->m_movieController)
         MCDoAction(m_private->m_movieController, mcActionPrerollAndPlay, (void *)FloatToFixed(rate));
     else
@@ -373,7 +373,7 @@ void QTMovie::setCurrentTime(float time) const
         return;
 
     m_private->m_timeToRestore = -1.0f;
-    
+
     m_private->m_seeking = true;
     TimeScale scale = GetMovieTimeScale(m_private->m_movie);
     if (m_private->m_movieController) {
@@ -481,15 +481,15 @@ void QTMovie::load(CFURLRef url, bool preservesPitch)
         DisposeMovie(m_private->m_movie);
         m_private->m_movie = 0;
         m_private->m_loadState = 0;
-    }  
+    }
 
     // Define a property array for NewMovieFromProperties.
-    QTNewMoviePropertyElement movieProps[9]; 
-    ItemCount moviePropCount = 0; 
+    QTNewMoviePropertyElement movieProps[9];
+    ItemCount moviePropCount = 0;
 
     bool boolTrue = true;
-    
-    // Disable streaming support for now. 
+
+    // Disable streaming support for now.
     CFStringRef scheme = CFURLCopyScheme(url);
     bool isRTSP = CFStringHasPrefix(scheme, CFSTR("rtsp:"));
     CFRelease(scheme);
@@ -510,69 +510,69 @@ void QTMovie::load(CFURLRef url, bool preservesPitch)
         CFRetain(url);
     }
 
-    // Add the movie data location to the property array 
-    movieProps[moviePropCount].propClass = kQTPropertyClass_DataLocation; 
-    movieProps[moviePropCount].propID = kQTDataLocationPropertyID_CFURL; 
-    movieProps[moviePropCount].propValueSize = sizeof(m_private->m_currentURL); 
-    movieProps[moviePropCount].propValueAddress = &(m_private->m_currentURL); 
-    movieProps[moviePropCount].propStatus = 0; 
-    moviePropCount++; 
+    // Add the movie data location to the property array
+    movieProps[moviePropCount].propClass = kQTPropertyClass_DataLocation;
+    movieProps[moviePropCount].propID = kQTDataLocationPropertyID_CFURL;
+    movieProps[moviePropCount].propValueSize = sizeof(m_private->m_currentURL);
+    movieProps[moviePropCount].propValueAddress = &(m_private->m_currentURL);
+    movieProps[moviePropCount].propStatus = 0;
+    moviePropCount++;
 
-    movieProps[moviePropCount].propClass = kQTPropertyClass_MovieInstantiation; 
-    movieProps[moviePropCount].propID = kQTMovieInstantiationPropertyID_DontAskUnresolvedDataRefs; 
-    movieProps[moviePropCount].propValueSize = sizeof(boolTrue); 
-    movieProps[moviePropCount].propValueAddress = &boolTrue; 
-    movieProps[moviePropCount].propStatus = 0; 
-    moviePropCount++; 
+    movieProps[moviePropCount].propClass = kQTPropertyClass_MovieInstantiation;
+    movieProps[moviePropCount].propID = kQTMovieInstantiationPropertyID_DontAskUnresolvedDataRefs;
+    movieProps[moviePropCount].propValueSize = sizeof(boolTrue);
+    movieProps[moviePropCount].propValueAddress = &boolTrue;
+    movieProps[moviePropCount].propStatus = 0;
+    moviePropCount++;
 
-    movieProps[moviePropCount].propClass = kQTPropertyClass_MovieInstantiation; 
-    movieProps[moviePropCount].propID = kQTMovieInstantiationPropertyID_AsyncOK; 
-    movieProps[moviePropCount].propValueSize = sizeof(boolTrue); 
-    movieProps[moviePropCount].propValueAddress = &boolTrue; 
-    movieProps[moviePropCount].propStatus = 0; 
-    moviePropCount++; 
+    movieProps[moviePropCount].propClass = kQTPropertyClass_MovieInstantiation;
+    movieProps[moviePropCount].propID = kQTMovieInstantiationPropertyID_AsyncOK;
+    movieProps[moviePropCount].propValueSize = sizeof(boolTrue);
+    movieProps[moviePropCount].propValueAddress = &boolTrue;
+    movieProps[moviePropCount].propStatus = 0;
+    moviePropCount++;
 
-    movieProps[moviePropCount].propClass = kQTPropertyClass_NewMovieProperty; 
-    movieProps[moviePropCount].propID = kQTNewMoviePropertyID_Active; 
-    movieProps[moviePropCount].propValueSize = sizeof(boolTrue); 
-    movieProps[moviePropCount].propValueAddress = &boolTrue; 
-    movieProps[moviePropCount].propStatus = 0; 
-    moviePropCount++; 
+    movieProps[moviePropCount].propClass = kQTPropertyClass_NewMovieProperty;
+    movieProps[moviePropCount].propID = kQTNewMoviePropertyID_Active;
+    movieProps[moviePropCount].propValueSize = sizeof(boolTrue);
+    movieProps[moviePropCount].propValueAddress = &boolTrue;
+    movieProps[moviePropCount].propStatus = 0;
+    moviePropCount++;
 
-    movieProps[moviePropCount].propClass = kQTPropertyClass_NewMovieProperty; 
-    movieProps[moviePropCount].propID = kQTNewMoviePropertyID_DontInteractWithUser; 
-    movieProps[moviePropCount].propValueSize = sizeof(boolTrue); 
-    movieProps[moviePropCount].propValueAddress = &boolTrue; 
-    movieProps[moviePropCount].propStatus = 0; 
-    moviePropCount++; 
+    movieProps[moviePropCount].propClass = kQTPropertyClass_NewMovieProperty;
+    movieProps[moviePropCount].propID = kQTNewMoviePropertyID_DontInteractWithUser;
+    movieProps[moviePropCount].propValueSize = sizeof(boolTrue);
+    movieProps[moviePropCount].propValueAddress = &boolTrue;
+    movieProps[moviePropCount].propStatus = 0;
+    moviePropCount++;
 
     movieProps[moviePropCount].propClass = kQTPropertyClass_MovieInstantiation;
     movieProps[moviePropCount].propID = '!url';
-    movieProps[moviePropCount].propValueSize = sizeof(boolTrue); 
-    movieProps[moviePropCount].propValueAddress = &boolTrue; 
-    movieProps[moviePropCount].propStatus = 0; 
-    moviePropCount++; 
-
-    movieProps[moviePropCount].propClass = kQTPropertyClass_MovieInstantiation; 
-    movieProps[moviePropCount].propID = 'site';
-    movieProps[moviePropCount].propValueSize = sizeof(boolTrue); 
-    movieProps[moviePropCount].propValueAddress = &boolTrue; 
-    movieProps[moviePropCount].propStatus = 0; 
+    movieProps[moviePropCount].propValueSize = sizeof(boolTrue);
+    movieProps[moviePropCount].propValueAddress = &boolTrue;
+    movieProps[moviePropCount].propStatus = 0;
     moviePropCount++;
 
-    movieProps[moviePropCount].propClass = kQTPropertyClass_Audio; 
+    movieProps[moviePropCount].propClass = kQTPropertyClass_MovieInstantiation;
+    movieProps[moviePropCount].propID = 'site';
+    movieProps[moviePropCount].propValueSize = sizeof(boolTrue);
+    movieProps[moviePropCount].propValueAddress = &boolTrue;
+    movieProps[moviePropCount].propStatus = 0;
+    moviePropCount++;
+
+    movieProps[moviePropCount].propClass = kQTPropertyClass_Audio;
     movieProps[moviePropCount].propID = kQTAudioPropertyID_RateChangesPreservePitch;
-    movieProps[moviePropCount].propValueSize = sizeof(preservesPitch); 
-    movieProps[moviePropCount].propValueAddress = &preservesPitch; 
-    movieProps[moviePropCount].propStatus = 0; 
-    moviePropCount++; 
+    movieProps[moviePropCount].propValueSize = sizeof(preservesPitch);
+    movieProps[moviePropCount].propValueAddress = &preservesPitch;
+    movieProps[moviePropCount].propStatus = 0;
+    moviePropCount++;
 
     bool allowCaching = !m_private->m_privateBrowsing;
-    movieProps[moviePropCount].propClass = kQTPropertyClass_MovieInstantiation; 
+    movieProps[moviePropCount].propClass = kQTPropertyClass_MovieInstantiation;
     movieProps[moviePropCount].propID = 'pers';
-    movieProps[moviePropCount].propValueSize = sizeof(allowCaching); 
-    movieProps[moviePropCount].propValueAddress = &allowCaching; 
-    movieProps[moviePropCount].propStatus = 0; 
+    movieProps[moviePropCount].propValueSize = sizeof(allowCaching);
+    movieProps[moviePropCount].propValueAddress = &allowCaching;
+    movieProps[moviePropCount].propStatus = 0;
     moviePropCount++;
 
     ASSERT(moviePropCount <= WTF_ARRAY_LENGTH(movieProps));
@@ -580,7 +580,7 @@ void QTMovie::load(CFURLRef url, bool preservesPitch)
 
 end:
     m_private->startTask();
-    // get the load fail callback quickly 
+    // get the load fail callback quickly
     if (m_private->m_loadError)
         QTMovieTask::sharedTask()->updateTaskTimer(0);
     else {
@@ -588,7 +588,7 @@ end:
 
         // Set the aperture mode property on a movie to signal that we want aspect ratio
         // and clean aperture dimensions. Don't worry about errors, we can't do anything if
-        // the installed version of QT doesn't support it and it isn't serious enough to 
+        // the installed version of QT doesn't support it and it isn't serious enough to
         // warrant failing.
         QTSetMovieProperty(m_private->m_movie, kQTPropertyClass_Visual, kQTVisualPropertyID_ApertureMode, sizeof(mode), &mode);
     }
@@ -629,7 +629,7 @@ void QTMovie::disableUnsupportedTracks(unsigned& enabledTrackCount, unsigned& to
         Track currentTrack = GetMovieIndTrack(m_private->m_movie, trackIndex);
         if (!currentTrack)
             continue;
-        
+
         // Check to see if the track is disabled already, we should move along.
         // We don't need to re-disable it.
         if (!GetTrackEnabled(currentTrack))
@@ -640,19 +640,19 @@ void QTMovie::disableUnsupportedTracks(unsigned& enabledTrackCount, unsigned& to
         Media trackMedia = GetTrackMedia(currentTrack);
         if (!trackMedia)
             continue;
-        
+
         // Grab the media type for this track. Make sure that we don't
         // get an error in doing so. If we do, then something really funky is
         // wrong.
         OSType mediaType;
         GetMediaHandlerDescription(trackMedia, &mediaType, nil, nil);
-        OSErr mediaErr = GetMoviesError();    
+        OSErr mediaErr = GetMoviesError();
         if (mediaErr != noErr)
             continue;
-        
+
         if (!allowedTrackTypes->contains(mediaType)) {
 
-            // Different mpeg variants import as different track types so check for the "mpeg 
+            // Different mpeg variants import as different track types so check for the "mpeg
             // characteristic" instead of hard coding the (current) list of mpeg media types.
             if (GetMovieIndTrackType(m_private->m_movie, 1, 'mpeg', movieTrackCharacteristic | movieTrackEnabledOnly))
                 continue;
@@ -660,15 +660,15 @@ void QTMovie::disableUnsupportedTracks(unsigned& enabledTrackCount, unsigned& to
             SetTrackEnabled(currentTrack, false);
             --enabledTrackCount;
         }
-        
+
         // Grab the track reference count for chapters. This will tell us if it
         // has chapter tracks in it. If there aren't any references, then we
         // can move on the next track.
         long referenceCount = GetTrackReferenceCount(currentTrack, kTrackReferenceChapterList);
         if (referenceCount <= 0)
             continue;
-        
-        long referenceIndex = 0;        
+
+        long referenceIndex = 0;
         while (1) {
             // If we get nothing here, we've overstepped our bounds and can stop
             // looking. Chapter indices here are 1-based as well - hence, the
@@ -677,12 +677,12 @@ void QTMovie::disableUnsupportedTracks(unsigned& enabledTrackCount, unsigned& to
             Track chapterTrack = GetTrackReference(currentTrack, kTrackReferenceChapterList, referenceIndex);
             if (!chapterTrack)
                 break;
-            
+
             // Try to grab the media for the track.
             Media chapterMedia = GetTrackMedia(chapterTrack);
             if (!chapterMedia)
                 continue;
-        
+
             // Grab the media type for this track. Make sure that we don't
             // get an error in doing so. If we do, then something really
             // funky is wrong.
@@ -691,17 +691,17 @@ void QTMovie::disableUnsupportedTracks(unsigned& enabledTrackCount, unsigned& to
             OSErr mediaErr = GetMoviesError();
             if (mediaErr != noErr)
                 continue;
-            
+
             // Check to see if the track is a video track. We don't care about
             // other non-video tracks.
             if (mediaType != VideoMediaType)
                 continue;
-            
+
             // Check to see if the track is already disabled. If it is, we
             // should move along.
             if (!GetTrackEnabled(chapterTrack))
                 continue;
-            
+
             // Disabled the evil, evil track.
             SetTrackEnabled(chapterTrack, false);
             --enabledTrackCount;
@@ -745,7 +745,7 @@ QTTrackArray QTMovie::videoTracks() const
     return tracks;
 }
 
-bool QTMovie::hasClosedCaptions() const 
+bool QTMovie::hasClosedCaptions() const
 {
     if (!m_private->m_movie)
         return false;
@@ -765,7 +765,7 @@ void QTMovie::setClosedCaptionsVisible(bool visible)
     QTSetTrackProperty(ccTrack, closedCaptionTrackType, closedCaptionDisplayPropertyID, sizeof(doDisplay), &doDisplay);
 }
 
-long QTMovie::timeScale() const 
+long QTMovie::timeScale() const
 {
     if (!m_private->m_movie)
         return 0;
@@ -775,7 +775,7 @@ long QTMovie::timeScale() const
 
 static void getMIMETypeCallBack(const char* type);
 
-static void initializeSupportedTypes() 
+static void initializeSupportedTypes()
 {
     if (gSupportedTypes)
         return;
@@ -788,7 +788,7 @@ static void initializeSupportedTypes()
 
     // QuickTime doesn't have an importer for video/quicktime. Add it manually.
     CFArrayAppendValue(gSupportedTypes, CFSTR("video/quicktime"));
-    
+
     wkGetQuickTimeMIMETypeList(getMIMETypeCallBack);
 }
 
@@ -830,7 +830,7 @@ void QTMovie::getSupportedType(unsigned index, const UChar*& str, unsigned& len)
     CFRange range = { 0, len };
     CFStringGetCharacters(cfstr, range, staticBuffer);
     str = reinterpret_cast<const UChar*>(staticBuffer);
-    
+
 }
 
 CGAffineTransform QTMovie::getTransform() const
@@ -880,7 +880,7 @@ void QTMovie::setPrivateBrowsingMode(bool privateBrowsing)
     }
 }
 
-bool QTMovie::initializeQuickTime() 
+bool QTMovie::initializeQuickTime()
 {
     static bool initialized = false;
     static bool initializationSucceeded = false;
@@ -904,7 +904,7 @@ bool QTMovie::initializeQuickTime()
     return initializationSucceeded;
 }
 
-Movie QTMovie::getMovieHandle() const 
+Movie QTMovie::getMovieHandle() const
 {
     return m_private->m_movie;
 }

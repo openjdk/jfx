@@ -37,12 +37,12 @@
 #include <wtf/Vector.h>
 
 namespace WebCore {
-    
+
 class LayerPool {
     WTF_MAKE_NONCOPYABLE(LayerPool);
 public:
     static LayerPool* sharedPool();
-    
+
     void addLayer(const RefPtr<PlatformCALayer>&);
     RefPtr<PlatformCALayer> takeLayerWithSize(const IntSize&);
 

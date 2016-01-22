@@ -73,7 +73,7 @@ public:
     void setWindowFrame(WKRect);
 
     void didInitializeClients();
-    
+
     void addChromeInputField();
     void removeChromeInputField();
     void makeWebViewFirstResponder();

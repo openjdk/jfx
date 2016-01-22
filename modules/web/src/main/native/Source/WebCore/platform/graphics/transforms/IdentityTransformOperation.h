@@ -35,7 +35,7 @@ public:
     {
         return adoptRef(new IdentityTransformOperation());
     }
-        
+
 private:
     virtual bool isIdentity() const { return true; }
     virtual OperationType type() const { return IDENTITY; }

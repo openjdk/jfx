@@ -53,7 +53,7 @@ public:
     void setX(LayoutUnit x) { m_x = x; }
     void setY(LayoutUnit y) { m_y = y; }
 
-    void move(const LayoutSize& s) { move(s.width(), s.height()); } 
+    void move(const LayoutSize& s) { move(s.width(), s.height()); }
     void moveBy(const LayoutPoint& offset) { move(offset.x(), offset.y()); }
     void move(LayoutUnit dx, LayoutUnit dy) { m_x += dx; m_y += dy; }
     void scale(float sx, float sy)
@@ -61,7 +61,7 @@ public:
         m_x *= sx;
         m_y *= sy;
     }
-    
+
     LayoutPoint expandedTo(const LayoutPoint& other) const
     {
         return LayoutPoint(std::max(m_x, other.m_x), std::max(m_y, other.m_y));

@@ -37,7 +37,7 @@ namespace JSC {
     class GetterSetter : public JSCell {
         friend class JIT;
 
-    private:        
+    private:
         GetterSetter(VM& vm)
             : JSCell(vm, vm.getterSetterStructure.get())
         {
@@ -63,12 +63,12 @@ namespace JSC {
         {
             return Structure::create(vm, globalObject, prototype, TypeInfo(GetterSetterType, OverridesVisitChildren), info());
         }
-        
+
         DECLARE_INFO;
 
     private:
         WriteBarrier<JSObject> m_getter;
-        WriteBarrier<JSObject> m_setter;  
+        WriteBarrier<JSObject> m_setter;
     };
 
     GetterSetter* asGetterSetter(JSValue);

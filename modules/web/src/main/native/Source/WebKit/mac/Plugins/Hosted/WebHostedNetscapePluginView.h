@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #if USE(PLUGIN_HOST_PROCESS)
@@ -39,11 +39,11 @@ namespace WebKit {
 {
     RetainPtr<NSArray> _attributeKeys;
     RetainPtr<NSArray> _attributeValues;
-    
+
     RetainPtr<CALayer> _pluginLayer;
     BOOL _hostsLayersInWindowServer;
     WKSoftwareCARendererRef _softwareRenderer;
-    
+
     NSSize _previousSize;
     RefPtr<WebKit::NetscapePluginInstanceProxy> _proxy;
 }

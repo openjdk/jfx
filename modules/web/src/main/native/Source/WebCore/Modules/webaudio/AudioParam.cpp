@@ -74,12 +74,12 @@ bool AudioParam::smooth()
     bool useTimelineValue = false;
     if (context())
         m_value = m_timeline.valueForContextTime(context(), narrowPrecisionToFloat(m_value), useTimelineValue);
-    
+
     if (m_smoothedValue == m_value) {
         // Smoothed value has already approached and snapped to value.
         return true;
     }
-    
+
     if (useTimelineValue)
         m_smoothedValue = m_value;
     else {

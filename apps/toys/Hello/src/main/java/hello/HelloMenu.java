@@ -75,11 +75,11 @@ public class HelloMenu extends Application {
 
         final Menu menu11 = makeMenu("_New", new ImageView(new Image("hello/about_16.png")));
         MenuItem menu12 = new MenuItem("_Open", new ImageView(new Image("hello/folder_16.png")));
-        menu12.setAccelerator(new KeyCharacterCombination("]", 
+        menu12.setAccelerator(new KeyCharacterCombination("]",
                 KeyCombination.SHIFT_DOWN, KeyCombination.META_DOWN));
         menu12.setOnAction(actionHandler);
         Menu menu13 = makeMenu("_Submenu");
-        showMessagesItem = new CheckMenuItem("Enable onShowing/onHiding _messages", 
+        showMessagesItem = new CheckMenuItem("Enable onShowing/onHiding _messages",
                                              new ImageView(new Image("hello/about_16.png")));
         MenuItem menu15 = new MenuItem("E_xit");
         menu15.setOnAction(t -> System.exit(0));
@@ -139,7 +139,7 @@ public class HelloMenu extends Application {
         menu27.setDisable(false);
         menu2.getItems().addAll(menu21, menu22, new SeparatorMenuItem(), menu23,
                  menu24, menu25, menu26, menu27);
-        
+
 
         // --- Menu 3
         Menu menu3 = makeMenu("_Radio/CheckBox");
@@ -173,7 +173,7 @@ public class HelloMenu extends Application {
         menuBar.getMenus().add(menu1);
         menuBar.getMenus().add(menu2);
         menuBar.getMenus().add(menu3);
-        
+
         if (os != null && os.startsWith("Mac")) {
             Menu systemMenuBarMenu = makeMenu("MenuBar _Options");
 
@@ -201,7 +201,7 @@ public class HelloMenu extends Application {
 
     private EventHandler showHideHandler = t -> {
         Menu menu = (Menu)t.getSource();
-        if (t.getEventType() == Menu.ON_SHOWING && 
+        if (t.getEventType() == Menu.ON_SHOWING &&
                 menu.getText().equals("_Submenu")) {
             Date date = new Date();
             String time = new SimpleDateFormat("HH:mm:ss").format(date);

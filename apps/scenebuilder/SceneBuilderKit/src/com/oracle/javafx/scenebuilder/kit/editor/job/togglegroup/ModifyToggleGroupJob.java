@@ -55,20 +55,20 @@ import java.util.List;
  *
  */
 public class ModifyToggleGroupJob extends BatchDocumentJob {
-    
-    private static final PropertyName toggleGroupName 
+
+    private static final PropertyName toggleGroupName
             = new PropertyName("toggleGroup"); //NOI18N
-    
+
     private final FXOMObject targetObject;
     private final String toggleGroupId;
 
-    public ModifyToggleGroupJob(FXOMObject fxomObject, String toggleGroupId, 
+    public ModifyToggleGroupJob(FXOMObject fxomObject, String toggleGroupId,
             EditorController editorController) {
         super(editorController);
-        
+
         assert fxomObject != null;
         assert (toggleGroupId == null) || JavaLanguage.isIdentifier(toggleGroupId);
-        
+
         this.targetObject = fxomObject;
         this.toggleGroupId = toggleGroupId;
     }
@@ -76,7 +76,7 @@ public class ModifyToggleGroupJob extends BatchDocumentJob {
     /*
      * CompositeJob
      */
-    
+
     @Override
     protected List<Job> makeSubJobs() {
         final List<Job> result = new ArrayList<>();
@@ -89,35 +89,35 @@ public class ModifyToggleGroupJob extends BatchDocumentJob {
                 /*
                  * Case #0 : toggleGroupId is null
                  *      => removes toggleGroup FXOMProperty if needed
-                 * 
+                 *
                  * Case #1 : targetObject.toggleGroup is undefined
                  *      => adds FXOMPropertyT for toggleGroup="$toggleGroupId"      //NOI18N
-                 * 
+                 *
                  * Case #2 : targetObject defines the ToggleGroup instance
                  *      => removes toggleGroup FXOMPropertyC
                  *      => adds FXOMPropertyT for toggleGroup="$toggleGroupId"      //NOI18N
-                 * 
+                 *
                  * Case #3 : targetObject refers to a ToggleGroup instance
                  *      => removes toggleGroup FXOMPropertyT
                  *      => adds FXOMPropertyT for toggleGroup="$toggleGroupId"      //NOI18N
                  */
-                
+
                 final FXOMDocument fxomDocument
                         = targetInstance.getFxomDocument();
-                final FXOMProperty fxomProperty 
+                final FXOMProperty fxomProperty
                         = targetInstance.getProperties().get(toggleGroupName);
-                
+
                 if (fxomProperty != null) { // Case #0 #2 or #3
                     final Job removePropertyJob
                             = new RemovePropertyJob(fxomProperty, getEditorController());
                     result.add(removePropertyJob);
                 }
-                
+
                 // Case #1, #2 and #3
                 if (toggleGroupId != null) {
                     final PrefixedValue pv
                             = new PrefixedValue(PrefixedValue.Type.EXPRESSION, toggleGroupId);
-                    final FXOMPropertyT newProperty 
+                    final FXOMPropertyT newProperty
                             = new FXOMPropertyT(fxomDocument, toggleGroupName, pv.toString());
                     final Job addPropertyJob
                             = new AddPropertyJob(newProperty, targetInstance, -1, getEditorController());
@@ -125,13 +125,13 @@ public class ModifyToggleGroupJob extends BatchDocumentJob {
                 }
             }
         }
-        
+
         return result;
     }
-    
+
     @Override
     protected String makeDescription() {
         return getClass().getSimpleName(); // Should not reach the user
     }
-    
+
 }

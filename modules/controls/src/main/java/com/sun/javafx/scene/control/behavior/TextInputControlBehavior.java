@@ -328,7 +328,7 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
         return keyMapping(keyBinding, eventHandler, null);
     }
 
-    protected KeyMapping keyMapping(KeyBinding keyBinding, final EventHandler<KeyEvent> eventHandler, 
+    protected KeyMapping keyMapping(KeyBinding keyBinding, final EventHandler<KeyEvent> eventHandler,
                                     Predicate<KeyEvent> interceptor) {
         return new KeyMapping(keyBinding,
                               e -> {
@@ -450,7 +450,7 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
     private void nextCharacterVisually(boolean moveRight) {
         if (isMixed()) {
             TextInputControlSkin<?> skin = (TextInputControlSkin<?>)textInputControl.getSkin();
-	    skin.moveCaret(TextUnit.CHARACTER, moveRight ? Direction.RIGHT : Direction.LEFT, false);
+        skin.moveCaret(TextUnit.CHARACTER, moveRight ? Direction.RIGHT : Direction.LEFT, false);
         } else if (moveRight != isRTLText()) {
             textInputControl.forward();
         } else {

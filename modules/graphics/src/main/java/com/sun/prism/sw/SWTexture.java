@@ -276,7 +276,7 @@ abstract class SWTexture implements Texture {
      * from this texture, but using the new {@code WrapMode}.
      * The new texture will be locked (in contrast to the similarly-named
      * method in BaseTexture).
-     * 
+     *
      * @param altMode the new {@code WrapMode} for the new texture
      * @return a new, locked, texture object sharing all information with
      *         this texture except for the {@code WrapMode}

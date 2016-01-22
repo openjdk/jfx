@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -67,7 +67,7 @@ void CallFrame::setCurrentVPC(Instruction* vpc)
     setLocationAsBytecodeOffset(vpc - codeBlock()->instructions().begin());
 }
 #endif
-    
+
 #if ENABLE(DFG_JIT)
 unsigned CallFrame::bytecodeOffsetFromCodeOriginIndex()
 {
@@ -129,7 +129,7 @@ JSGlobalObject* CallFrame::vmEntryGlobalObject()
     if (this == lexicalGlobalObject()->globalExec())
         return lexicalGlobalObject();
 
-    // For any ExecState that's not a globalExec, the 
+    // For any ExecState that's not a globalExec, the
     // dynamic global object must be set since code is running
     ASSERT(vm().entryScope);
     return vm().entryScope->globalObject();

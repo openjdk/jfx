@@ -34,7 +34,7 @@ class StyleRuleImport;
 class CSSImportRule : public CSSRule {
 public:
     static PassRefPtr<CSSImportRule> create(StyleRuleImport* rule, CSSStyleSheet* sheet) { return adoptRef(new CSSImportRule(rule, sheet)); }
-    
+
     virtual ~CSSImportRule();
 
     virtual CSSRule::Type type() const override { return IMPORT_RULE; }

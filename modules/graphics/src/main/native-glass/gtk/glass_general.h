@@ -38,7 +38,7 @@
 
 #define FILE_PREFIX "file://"
 #define URI_LIST_COMMENT_PREFIX "#"
-#define URI_LIST_LINE_BREAK "\r\n" 
+#define URI_LIST_LINE_BREAK "\r\n"
 
 extern JNIEnv* mainEnv; // Use only with main loop thread!!!
 
@@ -162,7 +162,7 @@ private:
     extern jmethodID jWindowNotifyMoveToAnotherScreen; // com.sun.glass.ui.Window#notifyMoveToAnotherScreen (Lcom/sun/glass/ui/Screen;)V
     extern jmethodID jWindowNotifyDelegatePtr; //com.sun.glass.ui.Window#notifyDelegatePtr (J)V
     extern jmethodID jWindowNotifyLevelChanged; //com.sun.glass.ui.Window#notifyLevelChanged (I)V
-    
+
     extern jmethodID jWindowIsEnabled; // com.sun.glass.ui.Window#isEnabled ()Z
     extern jfieldID jWindowPtr; // com.sun.glass.ui.Window#ptr
     extern jfieldID jCursorPtr; // com.sun.glass.ui.Cursor#ptr

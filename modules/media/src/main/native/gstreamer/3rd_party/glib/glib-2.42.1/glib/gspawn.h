@@ -246,7 +246,7 @@ gboolean g_spawn_command_line_async (const gchar          *command_line,
 
 GLIB_AVAILABLE_IN_2_34
 gboolean g_spawn_check_exit_status (gint      exit_status,
-				    GError  **error);
+                    GError  **error);
 
 GLIB_AVAILABLE_IN_ALL
 void g_spawn_close_pid (GPid pid);

@@ -22,7 +22,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef Gradient_h
@@ -83,19 +83,19 @@ namespace WebCore {
         {
             if (m_p0 == p)
                 return;
-            
+
             m_p0 = p;
-            
+
             invalidateHash();
         }
-        
+
         void setP1(const FloatPoint& p)
         {
             if (m_p1 == p)
                 return;
-            
+
             m_p1 = p;
-            
+
             invalidateHash();
         }
 
@@ -142,7 +142,7 @@ namespace WebCore {
         };
 
         void setStopsSorted(bool s) { m_stopsSorted = s; }
-        
+
         void setSpreadMethod(GradientSpreadMethod);
         GradientSpreadMethod spreadMethod() const { return m_spreadMethod; }
         void setGradientSpaceTransform(const AffineTransform& gradientSpaceTransformation);

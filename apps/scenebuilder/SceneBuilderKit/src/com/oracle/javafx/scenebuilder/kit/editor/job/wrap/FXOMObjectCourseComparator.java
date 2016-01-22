@@ -47,11 +47,11 @@ public class FXOMObjectCourseComparator {
     private static final int B1GREATER = 1;
     private static final int B2GREATER = -1;
     // The "fuzz" here means that the algorithm which dispatches nodes into
-    // grid cells will be a little more lenient and allow 2 nodes which 
+    // grid cells will be a little more lenient and allow 2 nodes which
     // overlap by 1pixel only to be dispatched each in its own cell.
     //
-    // So if my two buttons boundsInParent overlap by one pixel - they 
-    // will still be assigned to two neighbor cells instead of being 
+    // So if my two buttons boundsInParent overlap by one pixel - they
+    // will still be assigned to two neighbor cells instead of being
     // put in the same cell.
     public static final double OVERLAP_FUZZ = 1.0;
 

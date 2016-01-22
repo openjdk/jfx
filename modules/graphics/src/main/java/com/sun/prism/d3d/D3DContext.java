@@ -195,7 +195,7 @@ class D3DContext extends BaseShaderContext {
         m[8] = (m[8] + m[12])/2;
         m[9] = (m[9] + m[13])/2;
         m[10] = (m[10] + m[14])/2;
-        m[11] = (m[11] + m[15])/2; 
+        m[11] = (m[11] + m[15])/2;
         projViewTx.set(m);
         return projViewTx;
     }

@@ -29,7 +29,7 @@ import java.lang.ref.WeakReference;
 
 /**
  * This class is used to represent a single row/column/cell in a table. Concrete
- * subclasses of this abstract class are used in the {@link TableView} and 
+ * subclasses of this abstract class are used in the {@link TableView} and
  * {@link TreeTableView} APIs to represent which rows/columns/cells
  * are currently selected, focused, being edited, etc. Note that this class is
  * immutable once it is created.
@@ -44,22 +44,22 @@ import java.lang.ref.WeakReference;
  * @since JavaFX 8.0
  */
 public abstract class TablePositionBase<TC extends TableColumnBase> {
-    
+
     /***************************************************************************
      *                                                                         *
      * Constructors                                                            *
      *                                                                         *
-     **************************************************************************/  
+     **************************************************************************/
 
     /**
      * Constructs a TablePositionBase instance to represent the given row/column
-     * position in the underlying table instance (which is not part of the 
+     * position in the underlying table instance (which is not part of the
      * abstract TablePositionBase class, but is part of concrete subclasses such
-     * as {@link TablePosition} and {@link TreeTablePosition}). In all cases, 
+     * as {@link TablePosition} and {@link TreeTablePosition}). In all cases,
      * all fields inside TablePositionBase instances are referenced weakly so as
-     * to prevent memory leaks. This means that it is possible (but unlikely) 
+     * to prevent memory leaks. This means that it is possible (but unlikely)
      * that the get methods will return null.
-     * 
+     *
      * @param row The row that this TablePosition is representing.
      * @param tableColumn The TableColumn instance that this TablePosition represents.
      */
@@ -67,9 +67,9 @@ public abstract class TablePositionBase<TC extends TableColumnBase> {
         this.row = row;
         this.tableColumnRef = new WeakReference<TC>(tableColumn);
     }
-    
-    
-    
+
+
+
     /***************************************************************************
      *                                                                         *
      * Instance Variables                                                      *
@@ -79,27 +79,27 @@ public abstract class TablePositionBase<TC extends TableColumnBase> {
     private final int row;
     private final WeakReference<TC> tableColumnRef;
 
-    
+
 
     /***************************************************************************
      *                                                                         *
      * Public API                                                              *
      *                                                                         *
      **************************************************************************/
-    
+
     /**
      * The row that this TablePosition represents in the TableView.
      */
     public int getRow() {
         return row;
     }
-    
+
     /**
      * The column index that this TablePosition represents in the TableView. It
      * is -1 if the TableView or TableColumn instances are null.
      */
     public abstract int getColumn();
-    
+
     /**
      * The TableColumn that this TablePosition represents in the TableView.
      */
@@ -135,12 +135,12 @@ public abstract class TablePositionBase<TC extends TableColumnBase> {
     /**
      * Returns a hash code for this {@code TablePosition} object.
      * @return a hash code for this {@code TablePosition} object.
-     */ 
+     */
     @Override public int hashCode() {
         int hash = 5;
         hash = 79 * hash + this.row;
         TableColumnBase tableColumn = getTableColumn();
-        hash = 79 * hash + (tableColumn != null ? tableColumn.hashCode() : 0); 
+        hash = 79 * hash + (tableColumn != null ? tableColumn.hashCode() : 0);
         return hash;
     }
 }

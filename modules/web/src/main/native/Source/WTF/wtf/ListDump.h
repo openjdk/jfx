@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef ListDump_h
@@ -40,7 +40,7 @@ public:
         , m_comma(comma)
     {
     }
-    
+
     void dump(PrintStream& out) const
     {
         for (typename T::const_iterator iter = m_list.begin(); iter != m_list.end(); ++iter)
@@ -61,13 +61,13 @@ public:
         , m_comma(comma)
     {
     }
-    
+
     void dump(PrintStream& out) const
     {
         for (typename T::const_iterator iter = m_map.begin(); iter != m_map.end(); ++iter)
             out.print(m_comma, iter->key, m_arrow, iter->value);
     }
-    
+
 private:
     const T& m_map;
     const char* m_arrow;

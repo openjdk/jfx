@@ -137,7 +137,7 @@ import sun.util.logging.PlatformLogger.Level;
 public class JFXPanel extends JComponent {
 
     private final static PlatformLogger log = PlatformLogger.getLogger(JFXPanel.class.getName());
-    
+
     private static AtomicInteger instanceCount = new AtomicInteger(0);
     private static PlatformImpl.FinishListener finishListener;
 
@@ -155,14 +155,14 @@ public class JFXPanel extends JComponent {
     // The logical size of the FX content
     private int pWidth;
     private int pHeight;
-    
+
     // The scale factor, used to translate b/w the logical (the FX content dimension)
     // and physical (the back buffer's dimension) coordinate spaces
     private int scaleFactor = 1;
 
     // Preferred size set from FX
     private volatile int pPreferredWidth = -1;
-    private volatile int pPreferredHeight = -1;    
+    private volatile int pPreferredHeight = -1;
 
     // Cached copy of this component's location on screen to avoid
     // calling getLocationOnScreen() under the tree lock on FX thread
@@ -179,7 +179,7 @@ public class JFXPanel extends JComponent {
     private AtomicInteger disableCount = new AtomicInteger(0);
 
     private boolean isCapturingMouse = false;
-            
+
     private synchronized void registerFinishListener() {
         if (instanceCount.getAndIncrement() > 0) {
             // Already registered
@@ -335,7 +335,7 @@ public class JFXPanel extends JComponent {
         if (scenePeer == null || !isFxEnabled()) {
             return;
         }
-        
+
         // FX only supports 3 buttons so don't send the event for other buttons
         switch (e.getID()) {
             case MouseEvent.MOUSE_DRAGGED:
@@ -439,7 +439,7 @@ public class JFXPanel extends JComponent {
         if (scenePeer == null || !isFxEnabled()) {
             return;
         }
-        
+
         char[] chars = (e.getKeyChar() == KeyEvent.CHAR_UNDEFINED)
                        ? new char[] {}
                        : new char[] { SwingEvents.keyCharToEmbedKeyChar(e.getKeyChar()) };
@@ -513,7 +513,7 @@ public class JFXPanel extends JComponent {
             Insets i = getBorder().getBorderInsets(this);
             pWidth -= (i.left + i.right);
             pHeight -= (i.top + i.bottom);
-        }        
+        }
         if (oldWidth != pWidth || oldHeight != pHeight) {
             createResizePixelBuffer(scaleFactor);
             sendResizeEventToFX();
@@ -619,7 +619,7 @@ public class JFXPanel extends JComponent {
                 // Transform old size to the new coordinate space.
                 int oldW = (int)Math.round(oldIm.getWidth() * ratio);
                 int oldH = (int)Math.round(oldIm.getHeight() * ratio);
-                 
+
                 Graphics g = pixelsIm.getGraphics();
                 try {
                     g.drawImage(oldIm, 0, 0, oldW, oldH, null);
@@ -629,7 +629,7 @@ public class JFXPanel extends JComponent {
             }
         }
     }
-    
+
     @Override
     protected void processInputMethodEvent(InputMethodEvent e) {
         if (e.getID() == InputMethodEvent.INPUT_METHOD_TEXT_CHANGED) {
@@ -668,7 +668,7 @@ public class JFXPanel extends JComponent {
         }
         DataBufferInt dataBuf = (DataBufferInt)pixelsIm.getRaster().getDataBuffer();
         int[] pixelsData = dataBuf.getData();
-        IntBuffer buf = IntBuffer.wrap(pixelsData);           
+        IntBuffer buf = IntBuffer.wrap(pixelsData);
         if (!scenePeer.getPixels(buf, pWidth, pHeight)) {
             // In this case we just render what we have so far in the buffer.
         }
@@ -690,7 +690,7 @@ public class JFXPanel extends JComponent {
             int newScaleFactor = scaleFactor;
             if (g instanceof SunGraphics2D) {
                 newScaleFactor = ((SunGraphics2D)g).surfaceData.getDefaultScale();
-            }            
+            }
             if (scaleFactor != newScaleFactor) {
                 createResizePixelBuffer(newScaleFactor);
                 // The scene will request repaint.
@@ -828,7 +828,7 @@ public class JFXPanel extends JComponent {
         pixelsIm = null;
         pWidth = 0;
         pHeight = 0;
-        
+
         super.removeNotify();
 
         AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
@@ -841,7 +841,7 @@ public class JFXPanel extends JComponent {
 
         deregisterFinishListener();
     }
-    
+
     private void invokeOnClientEDT(Runnable r) {
         AppContext context = SunToolkit.targetToAppContext(this);
         if (context == null) {
@@ -889,7 +889,7 @@ public class JFXPanel extends JComponent {
                 scenePeer.setSize(pWidth, pHeight);
             }
             scenePeer.setPixelScaleFactor(scaleFactor);
-            
+
             invokeOnClientEDT(() -> {
                 dnd = new SwingDnD(JFXPanel.this, scenePeer);
                 dnd.addNotify();

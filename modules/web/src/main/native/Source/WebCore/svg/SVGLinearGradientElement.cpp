@@ -109,7 +109,7 @@ void SVGLinearGradientElement::svgAttributeChanged(const QualifiedName& attrName
     }
 
     SVGElementInstance::InvalidationGuard invalidationGuard(this);
-    
+
     updateRelativeLengthsInformation();
 
     if (RenderObject* object = renderer())

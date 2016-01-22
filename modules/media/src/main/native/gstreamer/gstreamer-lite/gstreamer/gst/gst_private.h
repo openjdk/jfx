@@ -156,10 +156,10 @@ gboolean priv_gst_structure_parse_fields (gchar *str, gchar ** end, GstStructure
 
 /* registry cache backends */
 G_GNUC_INTERNAL
-gboolean		priv_gst_registry_binary_read_cache	(GstRegistry * registry, const char *location);
+gboolean        priv_gst_registry_binary_read_cache (GstRegistry * registry, const char *location);
 
 G_GNUC_INTERNAL
-gboolean		priv_gst_registry_binary_write_cache	(GstRegistry * registry, GList * plugins, const char *location);
+gboolean        priv_gst_registry_binary_write_cache    (GstRegistry * registry, GList * plugins, const char *location);
 
 
 G_GNUC_INTERNAL
@@ -305,14 +305,14 @@ struct _GstPlugin {
   GstObject       object;
 
   /*< private >*/
-  GstPluginDesc	desc;
+  GstPluginDesc desc;
 
   GstPluginDesc *orig_desc;
 
-  gchar *	filename;
-  gchar *	basename;       /* base name (non-dir part) of plugin path */
+  gchar *   filename;
+  gchar *   basename;       /* base name (non-dir part) of plugin path */
 
-  GModule *	module;		/* contains the module if plugin is loaded */
+  GModule * module;     /* contains the module if plugin is loaded */
 
   off_t         file_size;
   time_t        file_mtime;

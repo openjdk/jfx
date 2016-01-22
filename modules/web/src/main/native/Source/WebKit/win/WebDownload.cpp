@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -127,7 +127,7 @@ ULONG STDMETHODCALLTYPE WebDownload::Release(void)
 // IWebDownload -------------------------------------------------------------------
 
 HRESULT STDMETHODCALLTYPE WebDownload::canResumeDownloadDecodedWithEncodingMIMEType(
-        /* [in] */ BSTR, 
+        /* [in] */ BSTR,
         /* [out, retval] */ BOOL*)
 {
     notImplemented();
@@ -135,7 +135,7 @@ HRESULT STDMETHODCALLTYPE WebDownload::canResumeDownloadDecodedWithEncodingMIMET
 }
 
 HRESULT STDMETHODCALLTYPE WebDownload::bundlePathForTargetPath(
-        /* [in] */ BSTR targetPath, 
+        /* [in] */ BSTR targetPath,
         /* [out, retval] */ BSTR* bundlePath)
 {
     if (!targetPath)

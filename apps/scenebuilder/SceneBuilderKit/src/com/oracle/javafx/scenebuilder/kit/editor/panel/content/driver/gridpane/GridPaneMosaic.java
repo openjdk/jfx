@@ -56,12 +56,12 @@ import javafx.scene.shape.Rectangle;
  *
  */
 class GridPaneMosaic {
-    
+
     public final static double NORTH_TRAY_SIZE = 22;
     public final static double SOUTH_TRAY_SIZE = NORTH_TRAY_SIZE;
     public final static double WEST_TRAY_SIZE = 24;
     public final static double EAST_TRAY_SIZE = WEST_TRAY_SIZE;
-    
+
     private final Group topGroup = new Group();
     private final Path gridPath = new Path();
     private final Group hgapLinesGroup = new Group();
@@ -75,14 +75,14 @@ class GridPaneMosaic {
     private final Line targetGapShadowH= new Line();
     private final Group hgapSensorsGroup = new Group();
     private final Group vgapSensorsGroup = new Group();
-    
+
     private final Quad gridAreaQuad = new Quad();
     private final List<Quad> gridHoleQuads = new ArrayList<>();
 
     private final String baseStyleClass;
     private final boolean shouldShowTrays;
     private final boolean shouldCreateSensors;
-    
+
     private GridPane gridPane;
     private int columnCount;
     private int rowCount;
@@ -94,14 +94,14 @@ class GridPaneMosaic {
     private int targetGapColumnIndex = -1;
     private int targetGapRowIndex = -1;
     private Color trayColor;
-    
+
     public GridPaneMosaic(String baseStyleClass, boolean shouldShowTrays, boolean shouldCreateSensors) {
         assert baseStyleClass != null;
-        
+
         this.baseStyleClass = baseStyleClass;
         this.shouldShowTrays = shouldShowTrays;
         this.shouldCreateSensors = shouldCreateSensors;
-        
+
         final List<Node> topChildren = topGroup.getChildren();
         topChildren.add(gridPath);              // Mouse transparent
         topChildren.add(hgapLinesGroup);        // Mouse transparent
@@ -116,24 +116,24 @@ class GridPaneMosaic {
         topChildren.add(hgapSensorsGroup);
         topChildren.add(vgapSensorsGroup);
         gridAreaQuad.addToPath(gridPath);
-        
+
         gridPath.setMouseTransparent(true);
         gridPath.getStyleClass().add("gap");
         gridPath.getStyleClass().add(baseStyleClass);
-        
+
         hgapLinesGroup.setMouseTransparent(true);
         vgapLinesGroup.setMouseTransparent(true);
-        
+
         targetCellShadow.setMouseTransparent(true);
         targetCellShadow.getStyleClass().add("gap");
         targetCellShadow.getStyleClass().add("selected");
         targetCellShadow.getStyleClass().add(baseStyleClass);
-        
+
         targetGapShadowV.setMouseTransparent(true);
         targetGapShadowV.getStyleClass().add("gap");
         targetGapShadowV.getStyleClass().add("hilit");
         targetGapShadowV.getStyleClass().add(baseStyleClass);
-        
+
         targetGapShadowH.setMouseTransparent(true);
         targetGapShadowH.getStyleClass().add("gap");
         targetGapShadowH.getStyleClass().add("hilit");
@@ -152,20 +152,20 @@ class GridPaneMosaic {
         this.gridPane = gridPane;
         update();
     }
-    
+
     public void setTrayColor(Color trayColor) {
         this.trayColor = trayColor;
         if (shouldShowTrays) {
             updateTrayColor();
         }
     }
-    
+
     public void setSelectedColumnIndexes(Set<Integer> indexes) {
         selectedColumnIndexes.clear();
         selectedColumnIndexes.addAll(indexes);
         update();
     }
-    
+
     public void setSelectedRowIndexes(Set<Integer> indexes) {
         selectedRowIndexes.clear();
         selectedRowIndexes.addAll(indexes);
@@ -180,20 +180,20 @@ class GridPaneMosaic {
         this.targetGapRowIndex = -1;
         update();
     }
-    
+
     public void setTargetGap(int targetGapColumnIndex, int targetGapRowIndex) {
         assert (-1 <= targetGapColumnIndex) && (targetGapColumnIndex <= columnCount);
         assert (-1 <= targetGapRowIndex) && (targetGapRowIndex <= rowCount);
-        
+
         this.targetGapColumnIndex = targetGapColumnIndex;
         this.targetGapRowIndex = targetGapRowIndex;
         this.targetColumnIndex = -1;
         this.targetRowIndex = -1;
         update();
     }
-    
+
     public void update() {
-        
+
         columnCount = Deprecation.getGridPaneColumnCount(gridPane);
         rowCount = Deprecation.getGridPaneRowCount(gridPane);
         if ((columnCount == 0) || (rowCount == 0)) {
@@ -205,7 +205,7 @@ class GridPaneMosaic {
                 this.cellBounds.add(Deprecation.getGridPaneCellBounds(gridPane, c, r));
             }
         }
-        
+
         gridAreaQuad.setBounds(gridPane.getLayoutBounds());
         adjustHoleItems();
         adjustHGapLines();
@@ -222,14 +222,14 @@ class GridPaneMosaic {
             adjustGapSensors(hgapSensorsGroup.getChildren(), Cursor.H_RESIZE, hgapSensorCount);
             adjustGapSensors(vgapSensorsGroup.getChildren(), Cursor.V_RESIZE, vgapSensorCount);
         }
-        
+
         if (columnCount >= 1) {
             assert rowCount >= 1;
-            
+
             updateHoleBounds();
             updateHGapLines();
             updateVGapLines();
-            
+
             if (shouldShowTrays) {
                 updateNorthTrayBounds();
                 updateSouthTrayBounds();
@@ -240,7 +240,7 @@ class GridPaneMosaic {
                 updateSelection(southTrayGroup.getChildren(), selectedColumnIndexes);
                 updateSelection(westTrayGroup.getChildren(), selectedRowIndexes);
                 updateSelection(eastTrayGroup.getChildren(), selectedRowIndexes);
-                
+
                 updateTrayColor();
             }
 
@@ -248,26 +248,26 @@ class GridPaneMosaic {
                 updateHGapSensors();
                 updateVGapSensors();
             }
-        
-            
+
+
             updateTargetCell();
             updateTargetGap();
         }
     }
-    
-    
+
+
     public List<Node> getNorthTrayNodes() {
         return northTrayGroup.getChildren();
     }
-    
+
     public List<Node> getSouthTrayNodes() {
         return southTrayGroup.getChildren();
     }
-    
+
     public List<Node> getWestTrayNodes() {
         return westTrayGroup.getChildren();
     }
-    
+
     public List<Node> getEastTrayNodes() {
         return eastTrayGroup.getChildren();
     }
@@ -279,16 +279,16 @@ class GridPaneMosaic {
     public List<Node> getVgapSensorNodes() {
         return vgapSensorsGroup.getChildren();
     }
-    
-    
+
+
     /*
      * Private
      */
-    
-    
+
+
     private void adjustHoleItems() {
         final int holeCount = columnCount * rowCount;
-        
+
         while (gridHoleQuads.size() < holeCount) {
             final Quad holeQuad = new Quad(false /* clockwise */); // Counterclockwise !!
             holeQuad.addToPath(gridPath);
@@ -300,8 +300,8 @@ class GridPaneMosaic {
             gridHoleQuads.remove(cellIndex);
         }
     }
-    
-    
+
+
     private void adjustHGapLines() {
         final int hgapLineCount;
         if (gridPane.getHgap() == 0) {
@@ -317,7 +317,7 @@ class GridPaneMosaic {
             children.remove(0);
         }
     }
-    
+
     private void adjustVGapLines() {
         final int vgapLineCount;
         if (gridPane.getVgap() == 0) {
@@ -333,7 +333,7 @@ class GridPaneMosaic {
             children.remove(0);
         }
     }
-    
+
     private Line makeGapLine() {
         final Line result = new Line();
         result.getStyleClass().add("gap");
@@ -341,10 +341,10 @@ class GridPaneMosaic {
         result.getStyleClass().add(baseStyleClass);
         return result;
     }
-    
-    
+
+
     private void adjustTrayItems(List<Node> trayChildren, String direction, int targetCount) {
-        
+
         while (trayChildren.size() < targetCount) {
             final int trayIndex = trayChildren.size();
             trayChildren.add(makeTrayLabel(trayIndex, direction));
@@ -354,7 +354,7 @@ class GridPaneMosaic {
             trayChildren.remove(trayIndex);
         }
     }
-    
+
     private Label makeTrayLabel(int num, String direction) {
         final Label result = new Label();
         result.getStyleClass().add("tray");
@@ -371,13 +371,13 @@ class GridPaneMosaic {
             final String style = "-fx-background-color:"+ webColor +";";//NOI18N
             result.setStyle(style);
         }
-        
+
         return result;
     }
-    
+
     private void updateTrayColor() {
         final String style;
-        
+
         if (trayColor == null) {
             style = "";//NOI18N
         } else {
@@ -390,18 +390,18 @@ class GridPaneMosaic {
         adjustTrayStyle(westTrayGroup.getChildren(), style);
         adjustTrayStyle(eastTrayGroup.getChildren(), style);
     }
-    
-    
+
+
     private void adjustTrayStyle(List<Node> trayChildren, String style) {
-        
+
         for (Node tray : trayChildren) {
             assert tray instanceof Label;
             final Label trayLabel = (Label) tray;
             trayLabel.setStyle(style);
         }
     }
-    
-    
+
+
     private void adjustGapSensors(List<Node> gapSensors, Cursor cursor, int targetCount) {
         while (gapSensors.size() < targetCount) {
             gapSensors.add(makeGapSensor(cursor));
@@ -411,7 +411,7 @@ class GridPaneMosaic {
             gapSensors.remove(gapIndex);
         }
     }
-    
+
     private Line makeGapSensor(Cursor cursor) {
         final Line result = new Line();
         result.setCursor(cursor);
@@ -419,9 +419,9 @@ class GridPaneMosaic {
 
         return result;
     }
-    
-    
-    
+
+
+
     private void updateHGapSensors() {
         final List<Node> children = hgapSensorsGroup.getChildren();
         final int sensorCount = children.size();
@@ -432,14 +432,14 @@ class GridPaneMosaic {
              *   y0  +----------------+       +-----------------+
              *       |   topLeftCell  |       |   topRightCell  |
              *       +----------------+       +-----------------+
-             * 
+             *
              *       ...
-             * 
+             *
              *       +----------------+       +-----------------+
              *       | bottomLeftCell |       |                 |
              *   y1  +----------------+       +-----------------+
              */
-            
+
             final Bounds topLeftCellBounds = getCellBounds(i, 0);
             final Bounds topRightCellBounds = getCellBounds(i+1, 0);
             final Bounds bottomLeftCellBounds = getCellBounds(i, rowCount-1);
@@ -457,24 +457,24 @@ class GridPaneMosaic {
             line.setStrokeWidth(strokeWidth);
         }
     }
-    
+
     private void updateVGapSensors() {
         final List<Node> children = vgapSensorsGroup.getChildren();
         final int sensorCount = children.size();
         assert (sensorCount == 0) || (sensorCount == rowCount-1);
         for (int i = 0; i < sensorCount; i++) {
-            
+
             /*
              *       x0                                        x1
              *       +----------------+       +-----------------+
              *       |   topLeftCell  |  ...  |   topRightCell  |
              *   y0  +----------------+       +-----------------+
-             *   ym 
+             *   ym
              *   y1  +----------------+       +-----------------+
              *       | bottomLeftCell |  ...  |                 |
              *       +----------------+       +-----------------+
              */
-            
+
             final Bounds topLeftCellBounds = getCellBounds(0, i);
             final Bounds bottomLeftCellBounds = getCellBounds(0, i+1);
             final Bounds topRightCellBounds = getCellBounds(columnCount-1, i);
@@ -492,7 +492,7 @@ class GridPaneMosaic {
             line.setStrokeWidth(strokeWidth);
         }
     }
-    
+
     private void updateHoleBounds() {
         for (int c = 0; c < columnCount; c++) {
             for (int r = 0; r < rowCount; r++) {
@@ -501,7 +501,7 @@ class GridPaneMosaic {
             }
         }
     }
-    
+
     private void updateHGapLines() {
         final List<Node> children = hgapLinesGroup.getChildren();
         final int lineCount = children.size();
@@ -521,7 +521,7 @@ class GridPaneMosaic {
             line.setEndY(endY);
         }
     }
-    
+
     private void updateVGapLines() {
         final List<Node> children = vgapLinesGroup.getChildren();
         final int lineCount = children.size();
@@ -541,18 +541,18 @@ class GridPaneMosaic {
             line.setEndY(snappedY);
         }
     }
-    
-    
+
+
     private void updateNorthTrayBounds() {
         final List<Node> northTrayChildren = northTrayGroup.getChildren();
         assert northTrayChildren.size() == columnCount;
-        
+
         for (int c = 0; c < columnCount; c++) {
             updateNorthTrayBounds(c, (Label)northTrayChildren.get(c));
         }
     }
-    
-    
+
+
     private void updateNorthTrayBounds(int column, Label label) {
         final Bounds gb = gridPane.getLayoutBounds();
         final Bounds cb = getCellBounds(column, 0);
@@ -577,25 +577,25 @@ class GridPaneMosaic {
         final double y1 = cb.getMaxY();
         assert x0 <= x1;
         assert y0 <= y1;
-        
+
         label.setPrefWidth(x1 - x0);
         label.setPrefHeight(NORTH_TRAY_SIZE);
-        
+
         final Bounds area = new BoundingBox(x0, y0, x1-x0, y1-y0);
         relocateNode(label, area, CardinalPoint.N);
     }
-    
-    
+
+
     private void updateSouthTrayBounds() {
         final List<Node> trayChildren = southTrayGroup.getChildren();
         assert trayChildren.size() == columnCount;
-        
+
         for (int c = 0; c < columnCount; c++) {
             updateSouthTrayBounds(c, (Label)trayChildren.get(c));
         }
     }
-    
-    
+
+
     private void updateSouthTrayBounds(int column, Label label) {
         final Bounds gb = gridPane.getLayoutBounds();
         final Bounds cb = getCellBounds(column, 0);
@@ -623,22 +623,22 @@ class GridPaneMosaic {
 
         label.setPrefWidth(x1 - x0);
         label.setPrefHeight(SOUTH_TRAY_SIZE);
-        
+
         final Bounds area = new BoundingBox(x0, y0, x1-x0, y1-y0);
         relocateNode(label, area, CardinalPoint.S);
     }
-    
-    
+
+
     private void updateWestTrayBounds() {
         final List<Node> trayChildren = westTrayGroup.getChildren();
         assert trayChildren.size() == rowCount;
-        
+
         for (int r = 0; r < rowCount; r++) {
             updateWestTrayBounds(r, (Label)trayChildren.get(r));
         }
     }
-    
-    
+
+
     private void updateWestTrayBounds(int row, Label label) {
         final Bounds gb = gridPane.getLayoutBounds();
         final Bounds cb = getCellBounds(0,row);
@@ -646,10 +646,10 @@ class GridPaneMosaic {
 
         /*
          *         x0                    x1
-         *         .   .                 . 
-         *         .   .                 . 
-         *         .   .                 . 
-         *         |   |                 |      
+         *         .   .                 .
+         *         .   .                 .
+         *         .   .                 .
+         *         |   |                 |
          * y0 +----+---+-----------------+...
          *    |    |   |                 |
          *    |    |   |                 |
@@ -659,10 +659,10 @@ class GridPaneMosaic {
          *    |    |   |                 |
          *    |    |   |                 |
          * y1 +----+---+-----------------+...
-         *         |   |                 |      
-         *         .   .                 . 
-         *         .   .                 . 
-         *         .   .                 . 
+         *         |   |                 |
+         *         .   .                 .
+         *         .   .                 .
+         *         .   .                 .
          *      ^    ^
          *      |    |
          *      |    padding.left
@@ -679,24 +679,24 @@ class GridPaneMosaic {
 
         label.setPrefWidth(y1 - y0);
         label.setPrefHeight(WEST_TRAY_SIZE);
-        
+
         final Bounds area = new BoundingBox(x0, y0, x1-x0, y1-y0);
         relocateNode(label, area, CardinalPoint.W);
     }
-    
-    
-    
-    
+
+
+
+
     private void updateEastTrayBounds() {
         final List<Node> trayChildren = eastTrayGroup.getChildren();
         assert trayChildren.size() == rowCount;
-        
+
         for (int r = 0; r < rowCount; r++) {
             updateEastTrayBounds(r, (Label)trayChildren.get(r));
         }
     }
-    
-    
+
+
     private void updateEastTrayBounds(int row, Label label) {
         final Bounds gb = gridPane.getLayoutBounds();
         final Bounds cb = getCellBounds(0,row);
@@ -704,10 +704,10 @@ class GridPaneMosaic {
 
         /*
          *             x0                    x1
-         *             .                 .   . 
-         *             .                 .   . 
-         *             .                 .   . 
-         *             |                 |   |      
+         *             .                 .   .
+         *             .                 .   .
+         *             .                 .   .
+         *             |                 |   |
          * y0          +-----------------+---+----+...
          *             |                 |   |    |
          *             |                 |   |    |
@@ -717,14 +717,14 @@ class GridPaneMosaic {
          *             |                 |   |    |
          *             |                 |   |    |
          * y1          +-----------------+---+----+...
-         *             |                 |      
-         *             .                 . 
-         *             .                 . 
-         *             .                 . 
+         *             |                 |
+         *             .                 .
+         *             .                 .
+         *             .                 .
          *                                  ^    ^
          *                                  |    |
          *                                  |    west(r)
-         *                                  |    
+         *                                  |
          *                                  padding.right
          */
 
@@ -737,20 +737,20 @@ class GridPaneMosaic {
 
         label.setPrefWidth(y1 - y0);
         label.setPrefHeight(EAST_TRAY_SIZE);
-        
+
         final Bounds area = new BoundingBox(x0, y0, x1-x0, y1-y0);
         relocateNode(label, area, CardinalPoint.E);
     }
-    
-    
+
+
     private void relocateNode(Label node, Bounds area, CardinalPoint cp) {
         assert node != null;
-        
+
         final double nodeW = node.getPrefWidth();
         final double nodeH = node.getPrefHeight();
         final double areaW = area.getWidth();
         final double areaH = area.getHeight();
-                
+
         /*
          * From
          *
@@ -778,7 +778,7 @@ class GridPaneMosaic {
          *           |                          |
          *           |                          |
          *           +--------------------------+
-         * 
+         *
          * to South
          *           +--------------------------+
          *           |                          |
@@ -814,7 +814,7 @@ class GridPaneMosaic {
          *           |                          |
          *           +--------------------------+
          */
-        
+
         final double rotation, translateX, translateY;
         switch(cp) {
             case N:
@@ -842,22 +842,22 @@ class GridPaneMosaic {
                 rotation = translateX = translateY = 0;
                 break;
         }
-        
+
         final double nodeCenterX = nodeW / 2.0;
         final double nodeCenterY = nodeH / 2.0;
         final double layoutDX = area.getMinX() - nodeCenterX + translateX;
         final double layoutDY = area.getMinY() - nodeCenterY + translateY;
-        
+
         node.setLayoutX(layoutDX);
         node.setLayoutY(layoutDY);
         node.setRotate(rotation);
     }
-    
-    
-    
+
+
+
     private void updateSelection(List<Node> trayChildren, Set<Integer> selectedIndexes) {
         final String selectedClass = "selected";
-        
+
         for (int i = 0, count = trayChildren.size(); i < count; i++) {
             final List<String> trayStyleClasses = trayChildren.get(i).getStyleClass();
             if (selectedIndexes.contains(i)) {
@@ -871,8 +871,8 @@ class GridPaneMosaic {
             }
         }
     }
-    
-    
+
+
     private void updateTargetCell() {
         if (targetColumnIndex == -1) {
             assert targetRowIndex == -1;
@@ -886,23 +886,23 @@ class GridPaneMosaic {
             targetCellShadow.setHeight(tb.getHeight());
         }
     }
-    
-    
+
+
     private Bounds getCellBounds(int c, int r) {
         final int cellIndex = getCellIndex(c, r);
         assert cellIndex < cellBounds.size();
         return cellBounds.get(cellIndex);
     }
-    
+
     private int getCellIndex(int c, int r) {
         return c * rowCount + r;
     }
-    
-    
+
+
     private static final double MIN_STROKE_WIDTH = 8;
-    
+
     private void updateTargetGap() {
-        
+
         /*
          * targetGapShadowV
          */
@@ -910,7 +910,7 @@ class GridPaneMosaic {
             targetGapShadowV.setVisible(false);
         } else {
             targetGapShadowV.setVisible(true);
-            
+
             final double startX, startY, endY, strokeWidth;
             if (targetGapColumnIndex < columnCount) {
                 final Bounds topCellBounds = getCellBounds(targetGapColumnIndex, 0);
@@ -940,7 +940,7 @@ class GridPaneMosaic {
             targetGapShadowV.setEndY(endY);
             targetGapShadowV.setStrokeWidth(Math.max(strokeWidth, MIN_STROKE_WIDTH));
         }
-        
+
         /*
          * targetGapShadowH
          */
@@ -948,7 +948,7 @@ class GridPaneMosaic {
             targetGapShadowH.setVisible(false);
         } else {
             targetGapShadowH.setVisible(true);
-            
+
             final double startX, endX, startY, strokeWidth;
             if (targetGapRowIndex < rowCount) {
                 final Bounds leftCellBounds = getCellBounds(0, targetGapRowIndex);
@@ -978,6 +978,6 @@ class GridPaneMosaic {
             targetGapShadowH.setEndY(startY);
             targetGapShadowH.setStrokeWidth(Math.max(strokeWidth, MIN_STROKE_WIDTH));
         }
-        
+
     }
 }

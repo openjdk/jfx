@@ -69,7 +69,7 @@ public:
                 openStatus = U_ZERO_ERROR;
                 iterator = ubrk_open(UBRK_LINE, currentTextBreakLocaleID(), 0, 0, &openStatus);
             }
-                
+
             if (U_FAILURE(openStatus)) {
                 LOG_ERROR("ubrk_open failed with status %d", openStatus);
                 return 0;

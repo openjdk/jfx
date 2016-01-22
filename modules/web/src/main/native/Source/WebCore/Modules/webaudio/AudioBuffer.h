@@ -42,7 +42,7 @@ class AudioBus;
 typedef int ExceptionCode;
 
 class AudioBuffer : public RefCounted<AudioBuffer> {
-public:   
+public:
     static PassRefPtr<AudioBuffer> create(unsigned numberOfChannels, size_t numberOfFrames, float sampleRate);
 
     // Returns 0 if data is not a valid audio file.
@@ -69,7 +69,7 @@ public:
     void releaseMemory();
 
     size_t memoryCost() const;
-    
+
 protected:
     AudioBuffer(unsigned numberOfChannels, size_t numberOfFrames, float sampleRate);
     explicit AudioBuffer(AudioBus*);

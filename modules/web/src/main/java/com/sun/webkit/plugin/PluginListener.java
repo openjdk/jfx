@@ -42,7 +42,7 @@ public interface PluginListener {
 
     /**
      * Plagin-intiated event
-     * 
+     *
      * @param eventId
      * @param name
      * @param params

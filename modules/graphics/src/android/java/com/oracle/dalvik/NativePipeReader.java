@@ -26,14 +26,14 @@ package com.oracle.dalvik;
 
 import android.os.Handler;
 
-public class NativePipeReader extends Thread { 
-   
+public class NativePipeReader extends Thread {
+
     /**
-     * onTextReceived 
-     * callback to return read text from pipe 
-     * called on the same thread that NativePipeReader was 
+     * onTextReceived
+     * callback to return read text from pipe
+     * called on the same thread that NativePipeReader was
      * created on.
-     * 
+     *
      * @param text
      */
     public interface OnTextReceivedListener {
@@ -42,9 +42,9 @@ public class NativePipeReader extends Thread {
 
     public interface Client extends OnTextReceivedListener {
         /**
-         * initPipe 
-         * called to set up pipe and redirect 
-         * 
+         * initPipe
+         * called to set up pipe and redirect
+         *
          * @return int, fd of output end of pipe
          */
         public int initPipe();
@@ -53,8 +53,8 @@ public class NativePipeReader extends Thread {
         public void onTextReceived(String text);
 
         /**
-         * cleanupPipe 
-         * called after last data is read from pipe and thread 
+         * cleanupPipe
+         * called after last data is read from pipe and thread
          * is about to exit
          *
          */
@@ -68,7 +68,7 @@ public class NativePipeReader extends Thread {
         super("NativePipeReader");
         setDaemon(true);
         this.client = client;
-        this.handler = new Handler();    
+        this.handler = new Handler();
     }
 
     private volatile boolean stop = false;
@@ -90,19 +90,19 @@ public class NativePipeReader extends Thread {
         client.cleanupPipe();
     }
 
-    public static NativePipeReader 
+    public static NativePipeReader
     getDefaultReader(OnTextReceivedListener listener) {
         return new NativePipeReader(
                                    new StdoutStderrClient(listener));
     }
 
     /**
-     * readPipe 
-     * native method to read text from the 
-     * pipe. 
+     * readPipe
+     * native method to read text from the
+     * pipe.
      * this method may(should) block
-     * 
-     * @return String 
+     *
+     * @return String
      */
     private native String readPipe(int fd);
 
@@ -140,7 +140,7 @@ public class NativePipeReader extends Thread {
         public void onTextReceived(final String text) {
             handler.post(new Runnable() {
                              public void run() {
-                                 listener.onTextReceived(text); 
+                                 listener.onTextReceived(text);
                              }
                          });
         }

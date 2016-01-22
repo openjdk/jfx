@@ -54,7 +54,7 @@ void dumpWebViewAsPixelsAndCompareWithExpected(const std::string& expectedHash)
 #endif
         context = createBitmapContextFromWebView(gTestRunner->testOnscreen(), gTestRunner->testRepaint(), gTestRunner->testRepaintSweepHorizontally(), gTestRunner->dumpSelectionRect());
     ASSERT(context);
-    
+
     // Compute the hash of the bitmap context pixels
     char actualHash[33];
     computeMD5HashStringForBitmapContext(context.get(), actualHash);
@@ -66,7 +66,7 @@ void dumpWebViewAsPixelsAndCompareWithExpected(const std::string& expectedHash)
         ASSERT(expectedHash.length() == 32);
 
         printf("\nExpectedHash: %s\n", expectedHash.c_str()); // FIXME: No need for the leading newline.
-        
+
         if (expectedHash == actualHash) // FIXME: do case insensitive compare
             dumpImage = false;
     }

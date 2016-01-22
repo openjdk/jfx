@@ -42,8 +42,8 @@
 - (void)begin;
 - (void)end;
 
-- (void)requestInput:(NSString *)text type:(int)type width:(double)width height:(double)height 
-                 mxx:(double)mxx mxy:(double)mxy mxz:(double)mxz mxt:(double)mxt 
+- (void)requestInput:(NSString *)text type:(int)type width:(double)width height:(double)height
+                 mxx:(double)mxx mxy:(double)mxy mxz:(double)mxz mxt:(double)mxt
                  myx:(double)myx myy:(double)myy myz:(double)myz myt:(double)myt
                  mzx:(double)mzx mzy:(double)mzy mzz:(double)mzz mzt:(double)mzt;
 - (void)releaseInput;

@@ -139,7 +139,7 @@ namespace JSC {
         RegisterID* get() { return m_local; }
 
         bool isReadOnly() { return m_attributes & ReadOnly; }
-        
+
         bool isCaptured() { return m_isCaptured; }
         CaptureMode captureMode() { return isCaptured() ? IsCaptured : NotCaptured; }
 
@@ -166,7 +166,7 @@ namespace JSC {
         BytecodeGenerator(VM&, EvalNode*, UnlinkedEvalCodeBlock*, DebuggerMode, ProfilerMode);
 
         ~BytecodeGenerator();
-        
+
         VM* vm() const { return m_vm; }
         const CommonIdentifiers& propertyNames() const { return *m_vm->propertyNames; }
 
@@ -183,7 +183,7 @@ namespace JSC {
 
         bool isCaptured(int operand);
         CaptureMode captureMode(int operand) { return isCaptured(operand) ? IsCaptured : NotCaptured; }
-        
+
         Local local(const Identifier&);
         Local constLocal(const Identifier&);
 
@@ -285,7 +285,7 @@ namespace JSC {
         }
 
         void emitExpressionInfo(const JSTextPosition& divot, const JSTextPosition& divotStart, const JSTextPosition& divotEnd)
-        {            
+        {
             ASSERT(divot.offset >= divotStart.offset);
             ASSERT(divotEnd.offset >= divot.offset);
 
@@ -379,14 +379,14 @@ namespace JSC {
         RegisterID* emitDeleteByVal(RegisterID* dst, RegisterID* base, RegisterID* property);
         RegisterID* emitPutByIndex(RegisterID* base, unsigned index, RegisterID* value);
         void emitPutGetterSetter(RegisterID* base, const Identifier& property, RegisterID* getter, RegisterID* setter);
-        
+
         ExpectedFunction expectedFunctionForIdentifier(const Identifier&);
         RegisterID* emitCall(RegisterID* dst, RegisterID* func, ExpectedFunction, CallArguments&, const JSTextPosition& divot, const JSTextPosition& divotStart, const JSTextPosition& divotEnd);
         RegisterID* emitCallEval(RegisterID* dst, RegisterID* func, CallArguments&, const JSTextPosition& divot, const JSTextPosition& divotStart, const JSTextPosition& divotEnd);
         RegisterID* emitCallVarargs(RegisterID* dst, RegisterID* func, RegisterID* thisRegister, RegisterID* arguments, RegisterID* firstFreeRegister, RegisterID* profileHookRegister, const JSTextPosition& divot, const JSTextPosition& divotStart, const JSTextPosition& divotEnd);
 
         void emitEnumeration(ThrowableExpressionData* enumerationNode, ExpressionNode* subjectNode, const std::function<void(BytecodeGenerator&, RegisterID*)>& callBack);
-        
+
         RegisterID* emitReturn(RegisterID* src);
         RegisterID* emitEnd(RegisterID* src) { return emitUnaryNoDstOp(op_end, src); }
 
@@ -419,7 +419,7 @@ namespace JSC {
         RegisterID* popTryAndEmitCatch(TryData*, RegisterID* targetRegister, Label* end);
 
         void emitThrow(RegisterID* exc)
-        { 
+        {
             m_usesExceptions = true;
             emitUnaryNoDstOp(op_throw, exc);
         }
@@ -461,14 +461,14 @@ namespace JSC {
 
         bool shouldEmitProfileHooks() { return m_shouldEmitProfileHooks; }
         bool shouldEmitDebugHooks() { return m_shouldEmitDebugHooks; }
-        
+
         bool isStrictMode() const { return m_codeBlock->isStrictMode(); }
-        
+
         bool isBuiltinFunction() const { return m_isBuiltinFunction; }
-        
+
     private:
         friend class Label;
-        
+
         void emitOpcode(OpcodeID);
         UnlinkedArrayAllocationProfile newArrayAllocationProfile();
         UnlinkedObjectAllocationProfile newObjectAllocationProfile();
@@ -490,12 +490,12 @@ namespace JSC {
 
         typedef HashMap<double, JSValue> NumberMap;
         typedef HashMap<StringImpl*, JSString*, IdentifierRepHash> IdentifierStringMap;
-        
+
         // Helper for emitCall() and emitConstruct(). This works because the set of
         // expected functions have identical behavior for both call and construct
         // (i.e. "Object()" is identical to "new Object()").
         ExpectedFunction emitExpectedFunctionSnippet(RegisterID* dst, RegisterID* func, ExpectedFunction, CallArguments&, Label* done);
-        
+
         RegisterID* emitCall(OpcodeID, RegisterID* dst, RegisterID* func, ExpectedFunction, CallArguments&, const JSTextPosition& divot, const JSTextPosition& divotStart, const JSTextPosition& divotEnd);
 
         RegisterID* newRegister();
@@ -511,7 +511,7 @@ namespace JSC {
 
         // Ditto. Returns true if a new RegisterID was added, false if a pre-existing RegisterID was re-used.
         bool addVar(const Identifier&, ConstantMode, WatchMode, RegisterID*&);
-        
+
         // Adds an anonymous var slot. To give this slot a name, add it to symbolTable().
         RegisterID* addVar()
         {
@@ -544,7 +544,7 @@ namespace JSC {
         unsigned addRegExp(RegExp*);
 
         unsigned addConstantBuffer(unsigned length);
-        
+
         UnlinkedFunctionExecutable* makeFunction(FunctionBodyNode* body)
         {
             return UnlinkedFunctionExecutable::create(m_vm, m_scopeNode->source(), body, false, isBuiltinFunction() ? UnlinkedBuiltinFunction : UnlinkedNormalFunction);
@@ -594,7 +594,7 @@ namespace JSC {
         void createArgumentsIfNecessary();
         void createActivationIfNecessary();
         RegisterID* createLazyRegisterIfNecessary(RegisterID*);
-        
+
         unsigned watchableVariable(int operand)
         {
             VirtualRegister reg(operand);
@@ -607,12 +607,12 @@ namespace JSC {
                 return UINT_MAX;
             return addConstant(ident);
         }
-        
+
         bool hasWatchableVariable(int operand)
         {
             return watchableVariable(operand) != UINT_MAX;
         }
-        
+
         Vector<UnlinkedInstruction, 0, UnsafeVectorOverflow> m_instructions;
 
         bool m_shouldEmitDebugHooks;
@@ -648,7 +648,7 @@ namespace JSC {
         Vector<ForInContext> m_forInContextStack;
         Vector<TryContext> m_tryContextStack;
         Vector<std::pair<RefPtr<RegisterID>, const DeconstructionPatternNode*>> m_deconstructedParameters;
-        
+
         Vector<TryRange> m_tryRanges;
         SegmentedVector<TryData, 8> m_tryData;
 
@@ -663,7 +663,7 @@ namespace JSC {
         HashMap<unsigned int, FunctionBodyNode*, WTF::IntHash<unsigned int>, WTF::UnsignedWithZeroKeyHashTraits<unsigned int>> m_lazyFunctions;
         typedef HashMap<FunctionBodyNode*, unsigned> FunctionOffsetMap;
         FunctionOffsetMap m_functionOffsets;
-        
+
         // Constant pool
         IdentifierMap m_identifierMap;
         JSValueMap m_jsValueMap;

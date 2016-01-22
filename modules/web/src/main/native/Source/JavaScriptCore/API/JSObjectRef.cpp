@@ -63,7 +63,7 @@ JSClassRef JSClassCreate(const JSClassDefinition* definition)
     RefPtr<OpaqueJSClass> jsClass = (definition->attributes & kJSClassAttributeNoAutomaticPrototype)
         ? OpaqueJSClass::createNoAutomaticPrototype(definition)
         : OpaqueJSClass::create(definition);
-    
+
     return jsClass.release().leakRef();
 }
 
@@ -137,7 +137,7 @@ JSObjectRef JSObjectMakeFunction(JSContextRef ctx, JSStringRef name, unsigned pa
 
     startingLineNumber = std::max(1, startingLineNumber);
     Identifier nameID = name ? name->identifier(&exec->vm()) : Identifier(exec, "anonymous");
-    
+
     MarkedArgumentBuffer args;
     for (unsigned i = 0; i < parameterCount; i++)
         args.append(jsString(exec, parameterNames[i]->string()));
@@ -249,7 +249,7 @@ JSObjectRef JSObjectMakeRegExp(JSContextRef ctx, size_t argumentCount, const JSV
         exec->clearException();
         result = 0;
     }
-    
+
     return toRef(result);
 }
 
@@ -291,7 +291,7 @@ bool JSObjectHasProperty(JSContextRef ctx, JSObjectRef object, JSStringRef prope
     APIEntryShim entryShim(exec);
 
     JSObject* jsObject = toJS(object);
-    
+
     return jsObject->hasProperty(exec, propertyName->identifier(&exec->vm()));
 }
 
@@ -375,7 +375,7 @@ void JSObjectSetPropertyAtIndex(JSContextRef ctx, JSObjectRef object, unsigned p
 
     JSObject* jsObject = toJS(object);
     JSValue jsValue = toJS(exec, value);
-    
+
     jsObject->methodTable()->putByIndex(jsObject, exec, propertyIndex, jsValue, false);
     if (exec->hadException()) {
         if (exception)
@@ -407,7 +407,7 @@ bool JSObjectDeleteProperty(JSContextRef ctx, JSObjectRef object, JSStringRef pr
 void* JSObjectGetPrivate(JSObjectRef object)
 {
     JSObject* jsObject = uncheckedToJS(object);
-    
+
     if (jsObject->inherits(JSCallbackObject<JSGlobalObject>::info()))
         return jsCast<JSCallbackObject<JSGlobalObject>*>(jsObject)->getPrivate();
     if (jsObject->inherits(JSCallbackObject<JSDestructibleObject>::info()))
@@ -416,14 +416,14 @@ void* JSObjectGetPrivate(JSObjectRef object)
     if (jsObject->inherits(JSCallbackObject<JSAPIWrapperObject>::info()))
         return jsCast<JSCallbackObject<JSAPIWrapperObject>*>(jsObject)->getPrivate();
 #endif
-    
+
     return 0;
 }
 
 bool JSObjectSetPrivate(JSObjectRef object, void* data)
 {
     JSObject* jsObject = uncheckedToJS(object);
-    
+
     if (jsObject->inherits(JSCallbackObject<JSGlobalObject>::info())) {
         jsCast<JSCallbackObject<JSGlobalObject>*>(jsObject)->setPrivate(data);
         return true;
@@ -438,7 +438,7 @@ bool JSObjectSetPrivate(JSObjectRef object, void* data)
         return true;
     }
 #endif
-        
+
     return false;
 }
 
@@ -594,7 +594,7 @@ public:
         , vm(vm)
     {
     }
-    
+
     unsigned refCount;
     VM* vm;
     Vector<JSRetainPtr<JSStringRef>> array;
@@ -620,7 +620,7 @@ JSPropertyNameArrayRef JSObjectCopyPropertyNames(JSContextRef ctx, JSObjectRef o
     propertyNames->array.reserveInitialCapacity(size);
     for (size_t i = 0; i < size; ++i)
         propertyNames->array.uncheckedAppend(JSRetainPtr<JSStringRef>(Adopt, OpaqueJSString::create(array[i].string()).leakRef()));
-    
+
     return JSPropertyNameArrayRetain(propertyNames);
 }
 

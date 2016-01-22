@@ -46,7 +46,7 @@ public interface TestedObservableMaps {
     Callable<ObservableMap<String, String>> CHECKED_OBSERVABLE_HASH_MAP = () -> FXCollections.checkedObservableMap(FXCollections.observableMap(new HashMap()), String.class, String.class);
 
     Callable<ObservableMap<String, String>> SYNCHRONIZED_OBSERVABLE_HASH_MAP = () -> FXCollections.synchronizedObservableMap(FXCollections.observableMap(new HashMap<String, String>()));
-    
+
     Callable<ObservableMap<String, String>> OBSERVABLE_MAP_PROPERTY = () -> new SimpleMapProperty<>(FXCollections.observableMap(new HashMap<String, String>()));
 
     static class CallableTreeMapImpl implements Callable<ObservableMap<String, String>> {

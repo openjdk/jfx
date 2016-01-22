@@ -45,7 +45,7 @@ import javafx.scene.paint.Color;
  *
  */
 public class SpotLightPropertyMetadata extends ComplexPropertyMetadata<Light.Spot> {
-    
+
     private final ColorPropertyMetadata colorMetadata
             = new ColorPropertyMetadata(new PropertyName("color"), //NOI18N
             true, Color.WHITE, InspectorPath.UNUSED);
@@ -61,8 +61,8 @@ public class SpotLightPropertyMetadata extends ComplexPropertyMetadata<Light.Spo
     private final DoublePropertyMetadata specularExponentMetadata
             = new DoublePropertyMetadata(new PropertyName("specularExponent"), //NOI18N
             DoublePropertyMetadata.DoubleKind.COORDINATE, true, 1.0, InspectorPath.UNUSED);
-    
-    public SpotLightPropertyMetadata(PropertyName name, boolean readWrite, 
+
+    public SpotLightPropertyMetadata(PropertyName name, boolean readWrite,
             Light.Spot defaultValue, InspectorPath inspectorPath) {
         super(name, Light.Spot.class, readWrite, defaultValue, inspectorPath);
     }
@@ -70,11 +70,11 @@ public class SpotLightPropertyMetadata extends ComplexPropertyMetadata<Light.Spo
     /*
      * ComplexPropertyMetadata
      */
-    
+
     @Override
     public FXOMInstance makeFxomInstanceFromValue(Light.Spot value, FXOMDocument fxomDocument) {
         final FXOMInstance result = new FXOMInstance(fxomDocument, getValueClass());
-        
+
         colorMetadata.setValue(result, value.getColor());
         pointsAtXMetadata.setValue(result, value.getX());
         pointsAtYMetadata.setValue(result, value.getY());
@@ -83,5 +83,5 @@ public class SpotLightPropertyMetadata extends ComplexPropertyMetadata<Light.Spo
 
         return result;
     }
-    
+
 }

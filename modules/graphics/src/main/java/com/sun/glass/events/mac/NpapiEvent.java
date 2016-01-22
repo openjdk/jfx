@@ -31,7 +31,7 @@ import com.sun.glass.ui.Window;
 
 // used by Mac OS X impl for handling an NPAPI event sent from plugin to Glass process
 public class NpapiEvent {
-    
+
     // draw
     final static public int NPCocoaEventDrawRect            = 1;
     // mouse
@@ -52,7 +52,7 @@ public class NpapiEvent {
     final static public int NPCocoaEventScrollWheel         = 13;
     // text input
     final static public int NPCocoaEventTextInput           = 14;
-    
+
     private native static void _dispatchCocoaNpapiDrawEvent(long windowPtr, int type,
             long context, double x, double y, double width, double height);
     private native static void _dispatchCocoaNpapiMouseEvent(long windowPtr, int type,
@@ -65,7 +65,7 @@ public class NpapiEvent {
             boolean hasFocus);
     private native static void _dispatchCocoaNpapiTextInputEvent(long windowPtr, int type,
             String text);
-    
+
     final private static boolean getBoolean(Map eventInfo, String key) {
         boolean value = false;
         {

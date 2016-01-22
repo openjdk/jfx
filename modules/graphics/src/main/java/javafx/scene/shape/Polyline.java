@@ -145,7 +145,7 @@ public  class Polyline extends Shape {
      */
     @Deprecated
     @Override
-	public Path2D impl_configShape() {
+    public Path2D impl_configShape() {
         double p1 = getPoints().get(0);
         double p2 = getPoints().get(1);
         shape.reset();
@@ -183,7 +183,7 @@ public  class Polyline extends Shape {
      *                                                                         *
      **************************************************************************/
 
-    /** 
+    /**
      * Some sub-class of Shape, such as {@link Line}, override the
      * default value for the {@link Shape#fill} property. This allows
      * CSS to get the correct initial value.
@@ -193,9 +193,9 @@ public  class Polyline extends Shape {
     @Deprecated
     protected Paint impl_cssGetFillInitialValue() {
         return null;
-    }    
-    
-    /** 
+    }
+
+    /**
      * Some sub-class of Shape, such as {@link Line}, override the
      * default value for the {@link Shape#stroke} property. This allows
      * CSS to get the correct initial value.
@@ -205,8 +205,8 @@ public  class Polyline extends Shape {
     @Deprecated
     protected Paint impl_cssGetStrokeInitialValue() {
         return Color.BLACK;
-    }    
-    
+    }
+
     /**
      * Returns a string representation of this {@code Polyline} object.
      * @return a string representation of this {@code Polyline} object.

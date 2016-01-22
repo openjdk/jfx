@@ -29,7 +29,7 @@ package javafx.collections;
  * to track changes when they occur. In order to track changes, the internal
  * array is encapsulated and there is no direct access available from the outside.
  * Bulk operations are supported but they always do a copy of the data range.
- * 
+ *
  * @see ArrayChangeListener
  * @since JavaFX 8.0
  */
@@ -75,7 +75,7 @@ public interface ObservableIntegerArray extends ObservableArray<ObservableIntege
     public void addAll(int... elements);
 
     /**
-     * Appends content of a given observable array to the end of this array. 
+     * Appends content of a given observable array to the end of this array.
      * Capacity is increased if necessary to match the new size of the data.
      * @param src observable array with elements to append
      */
@@ -139,7 +139,7 @@ public interface ObservableIntegerArray extends ObservableArray<ObservableIntege
 
     /**
      * Copies a portion of specified array into this observable array. Throws
-     * the same exceptions as {@link System#arraycopy(java.lang.Object, 
+     * the same exceptions as {@link System#arraycopy(java.lang.Object,
      * int, java.lang.Object, int, int) System.arraycopy()} method.
      * @param destIndex the starting destination position in this observable array
      * @param src source array to copy
@@ -171,30 +171,30 @@ public interface ObservableIntegerArray extends ObservableArray<ObservableIntege
     public void set(int index, int value);
 
     /**
-     * Returns an array containing copy of the observable array. 
-     * If the observable array fits in the specified array, it is copied therein. 
+     * Returns an array containing copy of the observable array.
+     * If the observable array fits in the specified array, it is copied therein.
      * Otherwise, a new array is allocated with the size of the observable array.
      *
      * @param dest the array into which the observable array to be copied,
-     *          if it is big enough; otherwise, a new int array is allocated. 
+     *          if it is big enough; otherwise, a new int array is allocated.
      *          Ignored, if null.
      * @return an int array containing the copy of the observable array
      */
     public int[] toArray(int[] dest);
 
     /**
-     * Returns an array containing copy of specified portion of the observable array. 
-     * If specified portion of the observable array fits in the specified array, 
+     * Returns an array containing copy of specified portion of the observable array.
+     * If specified portion of the observable array fits in the specified array,
      * it is copied therein. Otherwise, a new array of given length is allocated.
      *
      * @param srcIndex starting position in the observable array
-     * @param dest the array into which specified portion of the observable array 
-     *          to be copied, if it is big enough; 
-     *          otherwise, a new int array is allocated. 
+     * @param dest the array into which specified portion of the observable array
+     *          to be copied, if it is big enough;
+     *          otherwise, a new int array is allocated.
      *          Ignored, if null.
      * @param length length of portion to copy
      * @return an int array containing the copy of specified portion the observable array
      */
     public int[] toArray(int srcIndex, int[] dest, int length);
-    
+
 }

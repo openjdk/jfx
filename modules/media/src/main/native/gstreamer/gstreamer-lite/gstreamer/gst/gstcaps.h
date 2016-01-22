@@ -47,7 +47,7 @@ GST_EXPORT GType _gst_caps_type;
  * Extra flags for a caps.
  */
 typedef enum {
-  GST_CAPS_FLAG_ANY	= (GST_MINI_OBJECT_FLAG_LAST << 0)
+  GST_CAPS_FLAG_ANY = (GST_MINI_OBJECT_FLAG_LAST << 0)
 } GstCapsFlags;
 
 /**
@@ -427,31 +427,31 @@ gboolean          gst_caps_is_empty                (const GstCaps *caps);
 gboolean          gst_caps_is_fixed                (const GstCaps *caps);
 gboolean          gst_caps_is_always_compatible    (const GstCaps *caps1,
                                                     const GstCaps *caps2);
-gboolean          gst_caps_is_subset		   (const GstCaps *subset,
-						    const GstCaps *superset);
+gboolean          gst_caps_is_subset           (const GstCaps *subset,
+                            const GstCaps *superset);
 gboolean          gst_caps_is_subset_structure     (const GstCaps *caps,
                                                     const GstStructure *structure);
 gboolean          gst_caps_is_subset_structure_full (const GstCaps *caps,
                                                      const GstStructure *structure,
                                                      const GstCapsFeatures *features);
-gboolean          gst_caps_is_equal		   (const GstCaps *caps1,
-						    const GstCaps *caps2);
+gboolean          gst_caps_is_equal        (const GstCaps *caps1,
+                            const GstCaps *caps2);
 gboolean          gst_caps_is_equal_fixed          (const GstCaps *caps1,
-						    const GstCaps *caps2);
+                            const GstCaps *caps2);
 gboolean          gst_caps_can_intersect           (const GstCaps * caps1,
-						    const GstCaps * caps2);
-gboolean          gst_caps_is_strictly_equal	   (const GstCaps *caps1,
-						    const GstCaps *caps2);
+                            const GstCaps * caps2);
+gboolean          gst_caps_is_strictly_equal       (const GstCaps *caps1,
+                            const GstCaps *caps2);
 
 
 /* operations */
 GstCaps *         gst_caps_intersect               (GstCaps *caps1,
-						    GstCaps *caps2) G_GNUC_WARN_UNUSED_RESULT;
+                            GstCaps *caps2) G_GNUC_WARN_UNUSED_RESULT;
 GstCaps *         gst_caps_intersect_full          (GstCaps *caps1,
-						    GstCaps *caps2,
+                            GstCaps *caps2,
                                                     GstCapsIntersectMode mode) G_GNUC_WARN_UNUSED_RESULT;
-GstCaps *         gst_caps_subtract		   (GstCaps *minuend,
-						    GstCaps *subtrahend) G_GNUC_WARN_UNUSED_RESULT;
+GstCaps *         gst_caps_subtract        (GstCaps *minuend,
+                            GstCaps *subtrahend) G_GNUC_WARN_UNUSED_RESULT;
 GstCaps *         gst_caps_normalize               (GstCaps *caps) G_GNUC_WARN_UNUSED_RESULT;
 GstCaps *         gst_caps_simplify                (GstCaps *caps) G_GNUC_WARN_UNUSED_RESULT;
 

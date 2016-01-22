@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #if USE(PLUGIN_HOST_PROCESS) && ENABLE(NETSCAPE_PLUGIN_API)
@@ -51,7 +51,7 @@ namespace WebKit {
 NetscapePluginHostManager& NetscapePluginHostManager::shared()
 {
     DEFINE_STATIC_LOCAL(NetscapePluginHostManager, pluginHostManager, ());
-    
+
     return pluginHostManager;
 }
 
@@ -61,7 +61,7 @@ NetscapePluginHostManager::NetscapePluginHostManager()
     : m_pluginVendorPort(MACH_PORT_NULL)
 {
 }
- 
+
 NetscapePluginHostManager::~NetscapePluginHostManager()
 {
 }
@@ -69,17 +69,17 @@ NetscapePluginHostManager::~NetscapePluginHostManager()
 NetscapePluginHostProxy* NetscapePluginHostManager::hostForPlugin(const WTF::String& pluginPath, cpu_type_t pluginArchitecture, const String& bundleIdentifier)
 {
     PluginHostMap::AddResult result = m_pluginHosts.add(pluginPath, nullptr);
-    
+
     // The package was already in the map, just return it.
     if (!result.isNewEntry)
         return result.iterator->value;
-        
+
     mach_port_t clientPort;
     if (mach_port_allocate(mach_task_self(), MACH_PORT_RIGHT_RECEIVE, &clientPort) != KERN_SUCCESS) {
         m_pluginHosts.remove(result.iterator);
         return 0;
     }
-    
+
     mach_port_t pluginHostPort;
     ProcessSerialNumber pluginHostPSN;
     if (!spawnPluginHost(pluginPath, pluginArchitecture, clientPort, pluginHostPort, pluginHostPSN)) {
@@ -87,15 +87,15 @@ NetscapePluginHostProxy* NetscapePluginHostManager::hostForPlugin(const WTF::Str
         m_pluginHosts.remove(result.iterator);
         return 0;
     }
-    
+
     // Since Flash NPObjects add methods dynamically, we don't want to cache when a property/method doesn't exist
     // on an object because it could be added later.
     bool shouldCacheMissingPropertiesAndMethods = bundleIdentifier != "com.macromedia.Flash Player.plugin";
-    
+
     NetscapePluginHostProxy* hostProxy = new NetscapePluginHostProxy(clientPort, pluginHostPort, pluginHostPSN, shouldCacheMissingPropertiesAndMethods);
-    
+
     result.iterator->value = hostProxy;
-    
+
     return hostProxy;
 }
 
@@ -114,7 +114,7 @@ bool NetscapePluginHostManager::spawnPluginHost(const String& pluginPath, cpu_ty
     NSString *pluginHostAppExecutablePath = [[NSBundle bundleWithPath:pluginHostAppPath] executablePath];
 
     RetainPtr<CFStringRef> localization = adoptCF(WKCopyCFLocalizationPreferredName(NULL));
-    
+
     NSDictionary *launchProperties = [[NSDictionary alloc] initWithObjectsAndKeys:
                                       pluginHostAppExecutablePath, @"pluginHostPath",
                                       [NSNumber numberWithInt:pluginArchitecture], @"cpuType",
@@ -133,7 +133,7 @@ bool NetscapePluginHostManager::spawnPluginHost(const String& pluginPath, cpu_ty
         m_pluginVendorPort = MACH_PORT_NULL;
         if (!initializeVendorPort())
             return false;
-        
+
         // And spawn the plug-in host again.
         kr = _WKPASpawnPluginHost(m_pluginVendorPort, reinterpret_cast<uint8_t*>(const_cast<void*>([data bytes])), [data length], &pluginHostPort);
     }
@@ -143,17 +143,17 @@ bool NetscapePluginHostManager::spawnPluginHost(const String& pluginPath, cpu_ty
         LOG_ERROR("Failed to spawn plug-in host, error %x", kr);
         return false;
     }
-    
+
     NSString *visibleName = [NSString stringWithFormat:UI_STRING_INTERNAL("%@ (%@ Internet plug-in)",
                                                                  "visible name of the plug-in host process. The first argument is the plug-in name "
                                                                  "and the second argument is the application name."),
                              [[(NSString*)pluginPath lastPathComponent] stringByDeletingPathExtension], [[NSProcessInfo processInfo] processName]];
-    
+
     NSDictionary *hostProperties = [[NSDictionary alloc] initWithObjectsAndKeys:
                                     visibleName, @"visibleName",
                                     (NSString *)pluginPath, @"bundlePath",
                                     nil];
-    
+
     data = [NSPropertyListSerialization dataWithPropertyList:hostProperties format:NSPropertyListBinaryFormat_v1_0 options:0 error:NULL];
     ASSERT(data);
 
@@ -168,7 +168,7 @@ bool NetscapePluginHostManager::spawnPluginHost(const String& pluginPath, cpu_ty
 
     kr = _WKPHCheckInWithPluginHost(pluginHostPort, (uint8_t*)[data bytes], [data length], clientPort, psn.highLongOfPSN, psn.lowLongOfPSN, renderServerPort,
                                     &pluginHostPSN.highLongOfPSN, &pluginHostPSN.lowLongOfPSN);
-    
+
     if (kr != KERN_SUCCESS) {
         mach_port_deallocate(mach_task_self(), pluginHostPort);
         LOG_ERROR("Failed to check in with plug-in host, error %x", kr);
@@ -189,15 +189,15 @@ bool NetscapePluginHostManager::initializeVendorPort()
         LOG_ERROR("Failed to look up the plug-in agent port");
         return false;
     }
-    
+
     NSData *appNameData = [[[NSProcessInfo processInfo] processName] dataUsingEncoding:NSUTF8StringEncoding];
-    
+
     // Tell the plug-in agent that we exist.
     if (_WKPACheckInApplication(pluginAgentPort, (uint8_t*)[appNameData bytes], [appNameData length], &m_pluginVendorPort) != KERN_SUCCESS)
         return false;
 
     // FIXME: Should we add a notification for when the vendor port dies?
-    
+
     return true;
 }
 
@@ -221,22 +221,22 @@ PassRefPtr<NetscapePluginInstanceProxy> NetscapePluginHostManager::instantiatePl
         return 0;
 
     RetainPtr<NSMutableDictionary> properties = adoptNS([[NSMutableDictionary alloc] init]);
-    
+
     if (mimeType)
         [properties.get() setObject:mimeType forKey:@"mimeType"];
 
     ASSERT_ARG(userAgent, userAgent);
     [properties.get() setObject:userAgent forKey:@"userAgent"];
-    
+
     ASSERT_ARG(attributeKeys, attributeKeys);
     [properties.get() setObject:attributeKeys forKey:@"attributeKeys"];
-    
+
     ASSERT_ARG(attributeValues, attributeValues);
     [properties.get() setObject:attributeValues forKey:@"attributeValues"];
 
     if (sourceURL)
         [properties.get() setObject:[sourceURL absoluteString] forKey:@"sourceURL"];
-    
+
     [properties.get() setObject:[NSNumber numberWithBool:fullFrame] forKey:@"fullFrame"];
     [properties.get() setObject:[NSNumber numberWithBool:isPrivateBrowsingEnabled] forKey:@"privateBrowsingEnabled"];
     [properties.get() setObject:[NSNumber numberWithBool:isAcceleratedCompositingEnabled] forKey:@"acceleratedCompositingEnabled"];
@@ -244,20 +244,20 @@ PassRefPtr<NetscapePluginInstanceProxy> NetscapePluginHostManager::instantiatePl
 
     NSData *data = [NSPropertyListSerialization dataWithPropertyList:properties.get() format:NSPropertyListBinaryFormat_v1_0 options:0 error:nullptr];
     ASSERT(data);
-    
+
     RefPtr<NetscapePluginInstanceProxy> instance = NetscapePluginInstanceProxy::create(hostProxy, pluginView, fullFrame);
     uint32_t requestID = instance->nextRequestID();
     kern_return_t kr = _WKPHInstantiatePlugin(hostProxy->port(), requestID, (uint8_t*)[data bytes], [data length], instance->pluginID());
     if (kr == MACH_SEND_INVALID_DEST) {
         // Invalidate the instance.
         instance->invalidate();
-        
+
         // The plug-in host must have died, but we haven't received the death notification yet.
         pluginHostDied(hostProxy);
 
         // Try to spawn it again.
         hostProxy = hostForPlugin(pluginPath, pluginArchitecture, bundleIdentifier);
-        
+
         // Create a new instance.
         instance = NetscapePluginInstanceProxy::create(hostProxy, pluginView, fullFrame);
         requestID = instance->nextRequestID();
@@ -269,7 +269,7 @@ PassRefPtr<NetscapePluginInstanceProxy> NetscapePluginHostManager::instantiatePl
         instance->cleanup();
         return nullptr;
     }
-    
+
     instance->setRenderContextID(reply->m_renderContextID);
     instance->setRendererType(reply->m_rendererType);
 
@@ -284,14 +284,14 @@ void NetscapePluginHostManager::createPropertyListFile(const String& pluginPath,
 
     _WKPHCreatePluginMIMETypesPreferences(hostProxy->port());
 }
-    
+
 void NetscapePluginHostManager::didCreateWindow()
 {
     // See if any of our hosts are in full-screen mode.
     PluginHostMap::iterator end = m_pluginHosts.end();
     for (PluginHostMap::iterator it = m_pluginHosts.begin(); it != end; ++it) {
         NetscapePluginHostProxy* hostProxy = it->value;
-        
+
         if (!hostProxy->isMenuBarVisible()) {
             // Make ourselves the front process.
             ProcessSerialNumber psn;

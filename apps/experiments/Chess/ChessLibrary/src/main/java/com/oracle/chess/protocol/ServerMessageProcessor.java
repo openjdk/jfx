@@ -48,5 +48,5 @@ public interface ServerMessageProcessor {
     public Message process(SendActionRsp message);
 
     public Message process(CheckCredentials message);
-    
+
 }

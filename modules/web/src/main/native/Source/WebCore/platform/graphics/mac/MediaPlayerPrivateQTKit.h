@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef MediaPlayerPrivateQTKit_h
@@ -52,7 +52,7 @@ OBJC_CLASS WebCoreMovieObserver;
 #endif
 
 namespace WebCore {
-    
+
 class MediaPlayerPrivateQTKit : public MediaPlayerPrivateInterface {
 public:
     ~MediaPlayerPrivateQTKit();
@@ -88,7 +88,7 @@ private:
     bool hasAudio() const;
     bool supportsFullscreen() const;
     virtual bool supportsScanning() const { return true; }
-    
+
     void load(const String& url);
 #if ENABLE(MEDIA_SOURCE)
     virtual void load(const String&, MediaSourcePrivateClient*);
@@ -96,18 +96,18 @@ private:
     void cancelLoad();
     void loadInternal(const String& url);
     void resumeLoad();
-    
+
     void play();
-    void pause();    
+    void pause();
     void prepareToPlay();
-    
+
     bool paused() const;
     bool seeking() const;
-    
+
     float duration() const;
     float currentTime() const;
     void seek(float time);
-    
+
     void setRate(float);
     void setVolume(float);
     void setPreservesPitch(bool);
@@ -119,15 +119,15 @@ private:
 
     MediaPlayer::NetworkState networkState() const { return m_networkState; }
     MediaPlayer::ReadyState readyState() const { return m_readyState; }
-    
+
     PassRefPtr<TimeRanges> buffered() const;
     float maxTimeSeekable() const;
     bool didLoadingProgress() const;
     unsigned totalBytes() const;
-    
+
     void setVisible(bool);
     void setSize(const IntSize&);
-    
+
     virtual bool hasAvailableVideoFrame() const;
 
     void paint(GraphicsContext*, const IntRect&);
@@ -146,42 +146,42 @@ private:
     enum MediaRenderingMode { MediaRenderingNone, MediaRenderingMovieView, MediaRenderingSoftwareRenderer, MediaRenderingMovieLayer };
     MediaRenderingMode currentRenderingMode() const;
     MediaRenderingMode preferredRenderingMode() const;
-    
+
     void setUpVideoRendering();
     void tearDownVideoRendering();
     bool hasSetUpVideoRendering() const;
-    
+
     void createQTMovieView();
     void detachQTMovieView();
-    
+
     enum QTVideoRendererMode { QTVideoRendererModeDefault, QTVideoRendererModeListensForNewImages };
     void createQTVideoRenderer(QTVideoRendererMode rendererMode);
     void destroyQTVideoRenderer();
-    
+
     void createQTMovieLayer();
     void destroyQTMovieLayer();
 
     QTTime createQTTime(float time) const;
-    
+
     void updateStates();
     void doSeek();
     void cancelSeek();
     void seekTimerFired(Timer<MediaPlayerPrivateQTKit>&);
     float maxTimeLoaded() const;
     void disableUnsupportedTracks();
-    
+
     void sawUnsupportedTracks();
     void cacheMovieScale();
     bool metaDataAvailable() const { return m_qtMovie && m_readyState >= MediaPlayer::HaveMetadata; }
 
     bool isReadyForVideoSetup() const;
-    
+
     virtual float mediaTimeForTimeValue(float) const;
 
     virtual double maximumDurationToCacheMediaTime() const { return 5; }
 
     virtual void setPrivateBrowsingMode(bool);
-    
+
     NSMutableDictionary* commonMovieAttributes();
 
     virtual String engineDescription() const { return "QTKit"; }

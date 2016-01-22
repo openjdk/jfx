@@ -281,15 +281,15 @@ PluginPackage* PluginDatabase::findPlugin(const URL& url, String& mimeType)
 {
     if (!mimeType.isEmpty())
         return pluginForMIMEType(mimeType);
-    
+
     String filename = url.lastPathComponent();
     if (filename.endsWith('/'))
         return 0;
-    
+
     int extensionPos = filename.reverseFind('.');
     if (extensionPos == -1)
         return 0;
-    
+
     String mimeTypeForExtension = MIMETypeForExtension(filename.substring(extensionPos + 1));
     PluginPackage* plugin = pluginForMIMEType(mimeTypeForExtension);
     if (!plugin) {
@@ -297,7 +297,7 @@ PluginPackage* PluginDatabase::findPlugin(const URL& url, String& mimeType)
         // corresponding to the extension.
         return 0;
     }
-    
+
     mimeType = mimeTypeForExtension;
     return plugin;
 }

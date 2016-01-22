@@ -2,25 +2,25 @@
  *
  * Copyright (c) 2002-2009 Vivek Thampi
  * All rights reserved.
- * 
- * Redistribution and use in source and binary forms, with or without modification, 
+ *
+ * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
- * 
- *     * Redistributions of source code must retain the above copyright notice, 
+ *
+ *     * Redistributions of source code must retain the above copyright notice,
  *       this list of conditions and the following disclaimer.
- *     * Redistributions in binary form must reproduce the above copyright notice, 
- *       this list of conditions and the following disclaimer in the documentation 
+ *     * Redistributions in binary form must reproduce the above copyright notice,
+ *       this list of conditions and the following disclaimer in the documentation
  *       and/or other materials provided with the distribution.
- * 
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
- * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED 
- * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE 
- * DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR 
- * ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES 
- * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; 
- * LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON 
- * ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT 
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS 
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+ * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+ * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+ * DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR
+ * ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+ * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+ * LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
+ * ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #ifndef UD_DECODE_H
@@ -101,7 +101,7 @@
 enum ud_operand_code {
     OP_NONE,
 
-    OP_A,      OP_E,      OP_M,       OP_G,       
+    OP_A,      OP_E,      OP_M,       OP_G,
     OP_I,
 
     OP_AL,     OP_CL,     OP_DL,      OP_BL,
@@ -113,25 +113,25 @@ enum ud_operand_code {
     OP_AX,     OP_CX,     OP_DX,      OP_BX,
     OP_SI,     OP_DI,     OP_SP,      OP_BP,
 
-    OP_rAX,    OP_rCX,    OP_rDX,     OP_rBX,  
+    OP_rAX,    OP_rCX,    OP_rDX,     OP_rBX,
     OP_rSP,    OP_rBP,    OP_rSI,     OP_rDI,
 
-    OP_rAXr8,  OP_rCXr9,  OP_rDXr10,  OP_rBXr11,  
+    OP_rAXr8,  OP_rCXr9,  OP_rDXr10,  OP_rBXr11,
     OP_rSPr12, OP_rBPr13, OP_rSIr14,  OP_rDIr15,
 
     OP_eAX,    OP_eCX,    OP_eDX,     OP_eBX,
     OP_eSP,    OP_eBP,    OP_eSI,     OP_eDI,
 
-    OP_ES,     OP_CS,     OP_SS,      OP_DS,  
+    OP_ES,     OP_CS,     OP_SS,      OP_DS,
     OP_FS,     OP_GS,
 
     OP_ST0,    OP_ST1,    OP_ST2,     OP_ST3,
     OP_ST4,    OP_ST5,    OP_ST6,     OP_ST7,
 
-    OP_J,      OP_S,      OP_O,          
-    OP_I1,     OP_I3, 
+    OP_J,      OP_S,      OP_O,
+    OP_I1,     OP_I3,
 
-    OP_V,      OP_W,      OP_Q,       OP_P, 
+    OP_V,      OP_W,      OP_Q,       OP_P,
 
     OP_R,      OP_C,  OP_D,       OP_VR,  OP_PR,
 
@@ -152,8 +152,8 @@ enum ud_operand_size {
     SZ_RDQ = 7,
 
     /* the following values are used as is,
-     * and thus hard-coded. changing them 
-     * will break internals 
+     * and thus hard-coded. changing them
+     * will break internals
      */
     SZ_B   = 8,
     SZ_W   = 16,
@@ -169,20 +169,20 @@ enum ud_operand_size {
 } UD_ATTR_PACKED;
 
 
-/* A single operand of an entry in the instruction table. 
+/* A single operand of an entry in the instruction table.
  * (internal use only)
  */
-struct ud_itab_entry_operand 
+struct ud_itab_entry_operand
 {
   enum ud_operand_code type;
   enum ud_operand_size size;
 };
 
 
-/* A single entry in an instruction table. 
+/* A single entry in an instruction table.
  *(internal use only)
  */
-struct ud_itab_entry 
+struct ud_itab_entry
 {
   enum ud_mnemonic_code         mnemonic;
   struct ud_itab_entry_operand  operand1;
@@ -196,9 +196,9 @@ struct ud_lookup_table_list_entry {
     enum ud_table_type type;
     const char *meta;
 };
-     
 
-static inline unsigned int sse_pfx_idx( const unsigned int pfx ) 
+
+static inline unsigned int sse_pfx_idx( const unsigned int pfx )
 {
     /* 00 = 0
      * f2 = 1
@@ -208,7 +208,7 @@ static inline unsigned int sse_pfx_idx( const unsigned int pfx )
     return ( ( pfx & 0xf ) + 1 ) / 2;
 }
 
-static inline unsigned int mode_idx( const unsigned int mode ) 
+static inline unsigned int mode_idx( const unsigned int mode )
 {
     /* 16 = 0
      * 32 = 1
@@ -230,7 +230,7 @@ static inline unsigned int vendor_idx( const unsigned int vendor )
     switch ( vendor ) {
         case UD_VENDOR_AMD: return 0;
         case UD_VENDOR_INTEL: return 1;
-        case UD_VENDOR_ANY: return 2; 
+        case UD_VENDOR_ANY: return 2;
         default: return 2;
     }
 }

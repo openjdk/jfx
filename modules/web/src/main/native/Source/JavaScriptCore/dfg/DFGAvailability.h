@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef DFGAvailability_h
@@ -42,59 +42,59 @@ public:
         , m_flushedAt(DeadFlush)
     {
     }
-    
+
     explicit Availability(Node* node)
         : m_node(node)
         , m_flushedAt(ConflictingFlush)
     {
     }
-    
+
     explicit Availability(FlushedAt flushedAt)
         : m_node(unavailableMarker())
         , m_flushedAt(flushedAt)
     {
     }
-    
+
     Availability(Node* node, FlushedAt flushedAt)
         : m_node(node)
         , m_flushedAt(flushedAt)
     {
     }
-    
+
     static Availability unavailable()
     {
         return Availability(unavailableMarker(), FlushedAt(ConflictingFlush));
     }
-    
+
     Availability withFlush(FlushedAt flush) const
     {
         return Availability(m_node, flush);
     }
-    
+
     Availability withNode(Node* node) const
     {
         return Availability(node, m_flushedAt);
     }
-    
+
     Availability withUnavailableNode() const
     {
         return withNode(unavailableMarker());
     }
-    
+
     bool nodeIsUndecided() const { return !m_node; }
     bool nodeIsUnavailable() const { return m_node == unavailableMarker(); }
-    
+
     bool hasNode() const { return !nodeIsUndecided() && !nodeIsUnavailable(); }
-    
+
     Node* node() const
     {
         ASSERT(!nodeIsUndecided());
         ASSERT(!nodeIsUnavailable());
         return m_node;
     }
-    
+
     FlushedAt flushedAt() const { return m_flushedAt; }
-    
+
     bool operator!() const { return nodeIsUnavailable() && flushedAt().format() == ConflictingFlush; }
 
     bool operator==(const Availability& other) const
@@ -102,14 +102,14 @@ public:
         return m_node == other.m_node
             && m_flushedAt == other.m_flushedAt;
     }
-    
+
     Availability merge(const Availability& other) const
     {
         return Availability(
             mergeNodes(m_node, other.m_node),
             m_flushedAt.merge(other.m_flushedAt));
     }
-    
+
     void dump(PrintStream&) const;
     void dumpInContext(PrintStream&, DumpContext*) const;
 
@@ -124,12 +124,12 @@ private:
             return a;
         return unavailableMarker();
     }
-    
+
     static Node* unavailableMarker()
     {
         return bitwise_cast<Node*>(static_cast<intptr_t>(1));
     }
-    
+
     Node* m_node;
     FlushedAt m_flushedAt;
 };

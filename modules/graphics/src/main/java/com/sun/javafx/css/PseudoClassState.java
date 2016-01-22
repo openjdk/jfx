@@ -46,14 +46,14 @@ public final class PseudoClassState extends BitSet<PseudoClass> {
 
     PseudoClassState(List<String> pseudoClassNames) {
         super();
-        
+
         int nMax = pseudoClassNames != null ? pseudoClassNames.size() : 0;
         for(int n=0; n<nMax; n++) {
             final PseudoClass sc = getPseudoClass(pseudoClassNames.get(n));
             add(sc);
         }
-    }           
-    
+    }
+
     /** {@inheritDoc} */
     @Override
     public Object[] toArray() {
@@ -76,7 +76,7 @@ public final class PseudoClassState extends BitSet<PseudoClass> {
                     PseudoClass impl = getPseudoClass(n);
                     a[index++] = (T) impl;
                 }
-                    
+
             }
         }
         return a;
@@ -92,7 +92,7 @@ public final class PseudoClassState extends BitSet<PseudoClass> {
         }
         return strings.toString();
     }
-   
+
     @Override
     protected PseudoClass cast(Object o) {
         if (o == null) {
@@ -101,7 +101,7 @@ public final class PseudoClassState extends BitSet<PseudoClass> {
         PseudoClass pseudoClass = (PseudoClass) o;
         return pseudoClass;
     }
-    
+
     @Override
     protected PseudoClass getT(int index) {
         return getPseudoClass(index);
@@ -109,24 +109,24 @@ public final class PseudoClassState extends BitSet<PseudoClass> {
 
     @Override
     protected int getIndex(PseudoClass t) {
-        
+
         if (t instanceof PseudoClassImpl) {
             return ((PseudoClassImpl)t).getIndex();
         }
-        
+
         final String pseudoClass = t.getPseudoClassName();
         Integer index = pseudoClassMap.get(pseudoClass);
-        
+
         if (index == null) {
             index = Integer.valueOf(pseudoClasses.size());
             pseudoClasses.add(new PseudoClassImpl(pseudoClass, index.intValue()));
-            pseudoClassMap.put(pseudoClass, index);        
+            pseudoClassMap.put(pseudoClass, index);
         }
         return index.intValue();
-        
+
     }
 
-   
+
     /**
      * @see javafx.css.PseudoClass#getPseudoClass(String)
      */
@@ -137,35 +137,35 @@ public final class PseudoClassState extends BitSet<PseudoClass> {
         }
 
         PseudoClass instance = null;
-        
+
         final Integer value = pseudoClassMap.get(pseudoClass);
         final int index = value != null ? value.intValue() : -1;
-        
+
         final int size = pseudoClasses.size();
         assert index < size;
-        
+
         if (index != -1 && index < size) {
             instance = pseudoClasses.get(index);
         }
-        
+
         if (instance == null) {
             instance = new PseudoClassImpl(pseudoClass, size);
             pseudoClasses.add(instance);
             pseudoClassMap.put(pseudoClass, Integer.valueOf(size));
         }
-        
+
         return instance;
     }
-   
+
     static PseudoClass getPseudoClass(int index) {
        if (0 <= index && index < pseudoClasses.size()) {
            return pseudoClasses.get(index);
        }
        return null;
     }
-   
+
     // package private for unit test purposes
-    static final Map<String,Integer> pseudoClassMap = 
+    static final Map<String,Integer> pseudoClassMap =
             new HashMap<String,Integer>(64);
 
     static final List<PseudoClass> pseudoClasses =

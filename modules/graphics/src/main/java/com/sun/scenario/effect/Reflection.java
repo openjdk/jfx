@@ -33,7 +33,7 @@ import com.sun.javafx.geom.RectBounds;
 import com.sun.javafx.geom.Rectangle;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.scenario.effect.impl.state.RenderState;
-  
+
 /**
  * An effect that renders a reflected version of the input below the
  * actual input content.
@@ -283,7 +283,7 @@ public class Reflection extends CoreEffect<RenderState> {
         }
         drc.merge(newDRC);
         regionPool.checkIn(newDRC);
-        
+
         return drc;
     }
 

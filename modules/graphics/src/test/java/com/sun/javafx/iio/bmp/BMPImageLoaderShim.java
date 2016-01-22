@@ -34,5 +34,5 @@ public class BMPImageLoaderShim {
     public static boolean isPow2Minus1(int i) {
         return BMPImageLoader.isPow2Minus1(i);
     }
-    
+
 }

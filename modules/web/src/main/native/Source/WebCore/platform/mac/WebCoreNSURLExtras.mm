@@ -6,13 +6,13 @@
  * are met:
  *
  * 1.  Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer. 
+ *     notice, this list of conditions and the following disclaimer.
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
- *     documentation and/or other materials provided with the distribution. 
+ *     documentation and/or other materials provided with the distribution.
  * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
- *     from this software without specific prior written permission. 
+ *     from this software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY APPLE AND ITS CONTRIBUTORS "AS IS" AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
@@ -53,15 +53,15 @@ namespace WebCore {
 static inline BOOL isLookalikeCharacter(int charCode)
 {
     // This function treats the following as unsafe, lookalike characters:
-    // any non-printable character, any character considered as whitespace that isn't already converted to a space by ICU, 
+    // any non-printable character, any character considered as whitespace that isn't already converted to a space by ICU,
     // any ignorable character, and emoji characters related to locks.
-    
-    // We also considered the characters in Mozilla's blacklist (http://kb.mozillazine.org/Network.IDN.blacklist_chars), 
+
+    // We also considered the characters in Mozilla's blacklist (http://kb.mozillazine.org/Network.IDN.blacklist_chars),
     // and included all of these characters that ICU can encode.
-    
+
     if (!u_isprint(charCode) || u_isUWhiteSpace(charCode) || u_hasBinaryProperty(charCode, UCHAR_DEFAULT_IGNORABLE_CODE_POINT))
         return YES;
-    
+
     switch (charCode) {
         case 0x00ED: /* LATIN SMALL LETTER I WITH ACUTE */
         case 0x01C3: /* LATIN LETTER RETROFLEX CLICK */
@@ -124,20 +124,20 @@ static BOOL readIDNScriptWhiteListFile(NSString *filename)
     FILE *file = fopen([filename fileSystemRepresentation], "r");
     if (!file)
         return NO;
-    
+
     // Read a word at a time.
     // Allow comments, starting with # character to the end of the line.
     while (1) {
         // Skip a comment if present.
         if (fscanf(file, " #%*[^\n\r]%*[\n\r]") == EOF)
             break;
-        
+
         // Read a script name if present.
         char word[33];
         int result = fscanf(file, " %32[^# \t\n\r]%*[^# \t\n\r] ", word);
         if (result == EOF)
             break;
-        
+
         if (result == 1) {
             // Got a word, map to script code and put it into the array.
             int32_t script = u_getPropertyValueEnum(UCHAR_SCRIPT, word);
@@ -161,10 +161,10 @@ static void readIDNScriptWhiteList(void)
         if (readIDNScriptWhiteListFile([[dirs objectAtIndex:i] stringByAppendingPathComponent:@"IDNScriptWhiteList.txt"]))
             return;
     }
-    
+
     // Fall back on white list inside bundle.
     NSBundle *bundle = [NSBundle bundleWithIdentifier:@"com.apple.WebCore"];
-    
+
     if (!readIDNScriptWhiteListFile([bundle pathForResource:@"IDNScriptWhiteList" ofType:@"txt"]))
         CRASH();
 }
@@ -172,7 +172,7 @@ static void readIDNScriptWhiteList(void)
 static BOOL allCharactersInIDNScriptWhiteList(const UChar *buffer, int32_t length)
 {
     pthread_once(&IDNScriptWhiteListFileRead, readIDNScriptWhiteList);
-    
+
     int32_t i = 0;
     while (i < length) {
         UChar32 c;
@@ -194,7 +194,7 @@ static BOOL allCharactersInIDNScriptWhiteList(const UChar *buffer, int32_t lengt
         uint32_t mask = 1 << (script % 32);
         if (!(IDNScriptWhiteList[index] & mask))
             return NO;
-        
+
         if (isLookalikeCharacter(c))
             return NO;
     }
@@ -206,7 +206,7 @@ static BOOL allCharactersAllowedByTLDRules(const UChar* buffer, int32_t length)
     // Skip trailing dot for root domain.
     if (buffer[length - 1] == '.')
         length--;
-    
+
     if (length > 3 && buffer[length - 3] == '.'
         && buffer[length - 2] == 0x0440 // CYRILLIC SMALL LETTER ER
         && buffer[length - 1] == 0x0444) // CYRILLIC SMALL LETTER EF
@@ -214,20 +214,20 @@ static BOOL allCharactersAllowedByTLDRules(const UChar* buffer, int32_t length)
         // Rules defined by <http://www.cctld.ru/ru/docs/rulesrf.php>. This code only checks requirements that matter for presentation purposes.
         for (int32_t i = length - 4; i; --i) {
             UChar ch = buffer[i];
-            
+
             // Only modern Russian letters, digits and dashes are allowed.
             if ((ch >= 0x0430 && ch <= 0x044f) || ch == 0x0451|| (ch >= '0' && ch <= '9') || ch == '-')
                 continue;
-            
+
             // Only check top level domain. Lower level registrars may have different rules.
             if (ch == '.')
                 break;
-            
+
             return NO;
         }
         return YES;
     }
-    
+
     // Not a known top level domain with special rules.
     return NO;
 }
@@ -239,13 +239,13 @@ static NSString *mapHostNameWithRange(NSString *string, NSRange range, BOOL enco
 {
     if (range.length > HOST_NAME_BUFFER_LENGTH)
         return nil;
-    
+
     if (![string length])
         return nil;
-    
+
     UChar sourceBuffer[HOST_NAME_BUFFER_LENGTH];
     UChar destinationBuffer[HOST_NAME_BUFFER_LENGTH];
-    
+
     if (encode && [string rangeOfString:@"%" options:NSLiteralSearch range:range].location != NSNotFound) {
         NSString *substring = [string substringWithRange:range];
         substring = CFBridgingRelease(CFURLCreateStringByReplacingPercentEscapes(NULL, (CFStringRef)substring, CFSTR("")));
@@ -254,21 +254,21 @@ static NSString *mapHostNameWithRange(NSString *string, NSRange range, BOOL enco
             range = NSMakeRange(0, [string length]);
         }
     }
-    
+
     int length = range.length;
     [string getCharacters:sourceBuffer range:range];
-    
+
     UErrorCode error = U_ZERO_ERROR;
     int32_t numCharactersConverted = (encode ? uidna_IDNToASCII : uidna_IDNToUnicode)(sourceBuffer, length, destinationBuffer, HOST_NAME_BUFFER_LENGTH, UIDNA_ALLOW_UNASSIGNED, NULL, &error);
     if (error != U_ZERO_ERROR)
         return nil;
-    
+
     if (numCharactersConverted == length && !memcmp(sourceBuffer, destinationBuffer, length * sizeof(UChar)))
         return nil;
-    
+
     if (!encode && !allCharactersInIDNScriptWhiteList(destinationBuffer, numCharactersConverted) && !allCharactersAllowedByTLDRules(destinationBuffer, numCharactersConverted))
         return nil;
-    
+
     return makeString ? (NSString *)[NSString stringWithCharacters:destinationBuffer length:numCharactersConverted] : string;
 }
 
@@ -276,7 +276,7 @@ BOOL hostNameNeedsDecodingWithRange(NSString *string, NSRange range)
 {
      return mapHostNameWithRange(string, range, NO, NO) != nil;
 }
- 
+
 BOOL hostNameNeedsEncodingWithRange(NSString *string, NSRange range)
 {
      return mapHostNameWithRange(string, range, YES,  NO) != nil;
@@ -309,11 +309,11 @@ static void collectRangesThatNeedMapping(NSString *string, NSRange range, void *
     BOOL needsMapping = encode ? hostNameNeedsEncodingWithRange(string, range) : hostNameNeedsDecodingWithRange(string, range);
     if (!needsMapping)
         return;
-    
+
     NSMutableArray **array = (NSMutableArray **)context;
     if (!*array)
         *array = [[NSMutableArray alloc] init];
-    
+
     [*array addObject:[NSValue valueWithRange:range]];
 }
 
@@ -338,14 +338,14 @@ static void applyHostNameFunctionToMailToURLString(NSString *string, StringRange
     // In a mailto: URL, host names come after a '@' character and end with a '>' or ',' or '?' character.
     // Skip quoted strings so that characters in them don't confuse us.
     // When we find a '?' character, we are past the part of the URL that contains host names.
-    
+
     static NSCharacterSet *hostNameOrStringStartCharacters = retain([NSCharacterSet characterSetWithCharactersInString:@"\"@?"]);
     static NSCharacterSet *hostNameEndCharacters = retain([NSCharacterSet characterSetWithCharactersInString:@">,?"]);
     static NSCharacterSet *quotedStringCharacters = retain([NSCharacterSet characterSetWithCharactersInString:@"\"\\"]);
-    
+
     unsigned stringLength = [string length];
     NSRange remaining = NSMakeRange(0, stringLength);
-    
+
     while (1) {
         // Find start of host name or of quoted string.
         NSRange hostNameOrStringStart = [string rangeOfCharacterFromSet:hostNameOrStringStartCharacters options:0 range:remaining];
@@ -355,10 +355,10 @@ static void applyHostNameFunctionToMailToURLString(NSString *string, StringRange
         unichar c = [string characterAtIndex:hostNameOrStringStart.location];
         remaining.location = NSMaxRange(hostNameOrStringStart);
         remaining.length = stringLength - remaining.location;
-        
+
         if (c == '?')
             return;
-        
+
         if (c == '@') {
             // Find end of host name.
             unsigned hostNameStart = remaining.location;
@@ -372,10 +372,10 @@ static void applyHostNameFunctionToMailToURLString(NSString *string, StringRange
                 remaining.length = stringLength - remaining.location;
                 done = NO;
             }
-            
+
             // Process host name range.
             f(string, NSMakeRange(hostNameStart, hostNameEnd.location - hostNameStart), context);
-            
+
             if (done)
                 return;
         } else {
@@ -389,11 +389,11 @@ static void applyHostNameFunctionToMailToURLString(NSString *string, StringRange
                 c = [string characterAtIndex:escapedCharacterOrStringEnd.location];
                 remaining.location = NSMaxRange(escapedCharacterOrStringEnd);
                 remaining.length = stringLength - remaining.location;
-                
+
                 // If we are the end of the string, then break from the string loop back to the host name loop.
                 if (c == '"')
                     break;
-                
+
                 // Skip escaped character.
                 ASSERT(c == '\\');
                 if (!remaining.length)
@@ -411,14 +411,14 @@ static void applyHostNameFunctionToURLString(NSString *string, StringRangeApplie
     // Find hostnames. Too bad we can't use any real URL-parsing code to do this,
     // but we have to do it before doing all the %-escaping, and this is the only
     // code we have that parses mailto URLs anyway.
-    
+
     // Maybe we should implement this using a character buffer instead?
-    
+
     if (hasCaseInsensitivePrefix(string, @"mailto:")) {
         applyHostNameFunctionToMailToURLString(string, f, context);
         return;
     }
-    
+
     // Find the host name in a hierarchical URL.
     // It comes after a "://" sequence, with scheme characters preceding.
     // If ends with the end of the string or a ":", "/", or a "?".
@@ -426,44 +426,44 @@ static void applyHostNameFunctionToURLString(NSString *string, StringRangeApplie
     NSRange separatorRange = [string rangeOfString:@"://"];
     if (separatorRange.location == NSNotFound)
         return;
-    
+
     // Check that all characters before the :// are valid scheme characters.
     static NSCharacterSet *nonSchemeCharacters = retain([[NSCharacterSet characterSetWithCharactersInString:@"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+-."] invertedSet]);
     if ([string rangeOfCharacterFromSet:nonSchemeCharacters options:0 range:NSMakeRange(0, separatorRange.location)].location != NSNotFound)
         return;
-    
+
     unsigned stringLength = [string length];
-    
+
     static NSCharacterSet *hostTerminators = retain([NSCharacterSet characterSetWithCharactersInString:@":/?#"]);
-    
+
     // Start after the separator.
     unsigned authorityStart = NSMaxRange(separatorRange);
-    
+
     // Find terminating character.
     NSRange hostNameTerminator = [string rangeOfCharacterFromSet:hostTerminators options:0 range:NSMakeRange(authorityStart, stringLength - authorityStart)];
     unsigned hostNameEnd = hostNameTerminator.location == NSNotFound ? stringLength : hostNameTerminator.location;
-    
+
     // Find "@" for the start of the host name.
     NSRange userInfoTerminator = [string rangeOfString:@"@" options:0 range:NSMakeRange(authorityStart, hostNameEnd - authorityStart)];
     unsigned hostNameStart = userInfoTerminator.location == NSNotFound ? authorityStart : NSMaxRange(userInfoTerminator);
-    
+
     f(string, NSMakeRange(hostNameStart, hostNameEnd - hostNameStart), context);
 }
 
 static NSString *mapHostNames(NSString *string, BOOL encode)
 {
     // Generally, we want to optimize for the case where there is one host name that does not need mapping.
-    
+
     if (encode && [string canBeConvertedToEncoding:NSASCIIStringEncoding])
         return string;
-    
+
     // Make a list of ranges that actually need mapping.
     NSMutableArray *hostNameRanges = nil;
     StringRangeApplierFunction f = encode ? collectRangesThatNeedEncoding : collectRangesThatNeedDecoding;
     applyHostNameFunctionToURLString(string, f, &hostNameRanges);
     if (!hostNameRanges)
         return string;
-    
+
     // Do the mapping.
     NSMutableString *mutableCopy = [string mutableCopy];
     unsigned i = [hostNameRanges count];
@@ -486,7 +486,7 @@ static char hexDigit(int i)
     if (i < 0 || i > 16)
         return '0';
 
-    return (i >= 10) ? i - 10 + 'A' : i += '0'; 
+    return (i >= 10) ? i - 10 + 'A' : i += '0';
 }
 
 static int hexDigitValue(char c)
@@ -515,11 +515,11 @@ NSURL *URLByTruncatingOneCharacterBeforeComponent(NSURL *URL, CFIndex component)
 {
     if (!URL)
         return nil;
-    
+
     CFRange fragRg = CFURLGetByteRangeForComponent((CFURLRef)URL, static_cast<CFURLComponentType>(component), NULL);
     if (fragRg.location == kCFNotFound)
         return URL;
-    
+
     UInt8 *urlBytes, buffer[2048];
     CFIndex numBytes = CFURLGetBytes((CFURLRef)URL, buffer, 2048);
     if (numBytes == -1) {
@@ -528,11 +528,11 @@ NSURL *URLByTruncatingOneCharacterBeforeComponent(NSURL *URL, CFIndex component)
         CFURLGetBytes((CFURLRef)URL, urlBytes, numBytes);
     } else
         urlBytes = buffer;
-        
+
     NSURL *result = (NSURL *)CFMakeCollectable(CFURLCreateWithBytes(NULL, urlBytes, fragRg.location - 1, kCFStringEncodingUTF8, NULL));
     if (!result)
         result = (NSURL *)CFMakeCollectable(CFURLCreateWithBytes(NULL, urlBytes, fragRg.location - 1, kCFStringEncodingISOLatin1, NULL));
-        
+
     if (urlBytes != buffer)
         free(urlBytes);
     return result ? [result autorelease] : URL;
@@ -547,19 +547,19 @@ NSURL *URLWithData(NSData *data, NSURL *baseURL)
 {
     if (!data)
         return nil;
-    
+
     NSURL *result = nil;
     size_t length = [data length];
     if (length > 0) {
         // work around <rdar://4470771>: CFURLCreateAbsoluteURLWithBytes(.., TRUE) doesn't remove non-path components.
         baseURL = URLByRemovingResourceSpecifier(baseURL);
-        
+
         const UInt8 *bytes = static_cast<const UInt8*>([data bytes]);
-        
+
         // CFURLCreateAbsoluteURLWithBytes would complain to console if we passed a path to it.
         if (bytes[0] == '/' && !baseURL)
             return nil;
-        
+
         // NOTE: We use UTF-8 here since this encoding is used when computing strings when returning URL components
         // (e.g calls to NSURL -path). However, this function is not tolerant of illegal UTF-8 sequences, which
         // could either be a malformed string or bytes in a different encoding, like shift-jis, so we fall back
@@ -569,7 +569,7 @@ NSURL *URLWithData(NSData *data, NSURL *baseURL)
             result = CFBridgingRelease(CFURLCreateAbsoluteURLWithBytes(NULL, bytes, length, kCFStringEncodingISOLatin1, (CFURLRef)baseURL, YES));
     } else
             result = [NSURL URLWithString:@""];
-                
+
     return result;
 }
 
@@ -579,15 +579,15 @@ NSURL *URLWithUserTypedString(NSString *string, NSURL *URL)
         return nil;
 
     string = mapHostNames(stringByTrimmingWhitespace(string), YES);
-    
+
     NSData *userTypedData = [string dataUsingEncoding:NSUTF8StringEncoding];
     ASSERT(userTypedData);
-    
+
     const UInt8* inBytes = static_cast<const UInt8 *>([userTypedData bytes]);
     int inLength = [userTypedData length];
     if (!inLength)
         return [NSURL URLWithString:@""];
-    
+
     char* outBytes = static_cast<char *>(malloc(inLength * 3)); // large enough to %-escape every character
     char* p = outBytes;
     int outLength = 0;
@@ -603,7 +603,7 @@ NSURL *URLWithUserTypedString(NSString *string, NSURL *URL)
             outLength++;
         }
     }
-    
+
     NSData *data = [NSData dataWithBytesNoCopy:outBytes length:outLength]; // adopts outBytes
     return URLWithData(data, URL);
 }
@@ -623,17 +623,17 @@ static BOOL hasQuestionMarkOnlyQueryString(NSURL *URL)
 NSData *dataForURLComponentType(NSURL *URL, CFIndex componentType)
 {
     static int URLComponentTypeBufferLength = 2048;
-    
+
     UInt8 staticAllBytesBuffer[URLComponentTypeBufferLength];
     UInt8 *allBytesBuffer = staticAllBytesBuffer;
-    
+
     CFIndex bytesFilled = CFURLGetBytes((CFURLRef)URL, allBytesBuffer, URLComponentTypeBufferLength);
     if (bytesFilled == -1) {
         CFIndex bytesToAllocate = CFURLGetBytes((CFURLRef)URL, NULL, 0);
         allBytesBuffer = static_cast<UInt8 *>(malloc(bytesToAllocate));
         bytesFilled = CFURLGetBytes((CFURLRef)URL, allBytesBuffer, bytesToAllocate);
     }
-    
+
     CFRange range;
     if (componentType != completeURL) {
         range = CFURLGetByteRangeForComponent((CFURLRef)URL, static_cast<CFURLComponentType>(componentType), NULL);
@@ -643,16 +643,16 @@ NSData *dataForURLComponentType(NSURL *URL, CFIndex componentType)
         range.location = 0;
         range.length = bytesFilled;
     }
-    
-    NSData *componentData = [NSData dataWithBytes:allBytesBuffer + range.location length:range.length]; 
-    
+
+    NSData *componentData = [NSData dataWithBytes:allBytesBuffer + range.location length:range.length];
+
     const unsigned char *bytes = static_cast<const unsigned char *>([componentData bytes]);
     NSMutableData *resultData = [NSMutableData data];
     // NOTE: add leading '?' to query strings non-zero length query strings.
     // NOTE: retain question-mark only query strings.
     if (componentType == kCFURLComponentQuery) {
         if (range.length > 0 || hasQuestionMarkOnlyQueryString(URL))
-            [resultData appendBytes:"?" length:1];    
+            [resultData appendBytes:"?" length:1];
     }
     for (int i = 0; i < range.length; i++) {
         unsigned char c = bytes[i];
@@ -661,17 +661,17 @@ NSData *dataForURLComponentType(NSURL *URL, CFIndex componentType)
             escaped[0] = '%';
             escaped[1] = hexDigit(c >> 4);
             escaped[2] = hexDigit(c & 0xf);
-            [resultData appendBytes:escaped length:3];    
+            [resultData appendBytes:escaped length:3];
         } else {
             char b[1];
             b[0] = c;
-            [resultData appendBytes:b length:1];    
-        }               
+            [resultData appendBytes:b length:1];
+        }
     }
-    
+
     if (staticAllBytesBuffer != allBytesBuffer)
         free(allBytesBuffer);
-    
+
     return resultData;
 }
 
@@ -680,7 +680,7 @@ static NSURL *URLByRemovingComponentAndSubsequentCharacter(NSURL *URL, CFURLComp
     CFRange range = CFURLGetByteRangeForComponent((CFURLRef)URL, component, 0);
     if (range.location == kCFNotFound)
         return URL;
-    
+
     // Remove one subsequent character.
     range.length++;
 
@@ -692,18 +692,18 @@ static NSURL *URLByRemovingComponentAndSubsequentCharacter(NSURL *URL, CFURLComp
         CFURLGetBytes((CFURLRef)URL, buffer.data(), numBytes);
     }
     UInt8* urlBytes = buffer.data();
-        
+
     if (numBytes < range.location)
         return URL;
     if (numBytes < range.location + range.length)
         range.length = numBytes - range.location;
-        
+
     memmove(urlBytes + range.location, urlBytes + range.location + range.length, numBytes - range.location + range.length);
-    
+
     NSURL *result = (NSURL *)CFMakeCollectable(CFURLCreateWithBytes(NULL, urlBytes, numBytes - range.length, kCFStringEncodingUTF8, NULL));
     if (!result)
         result = (NSURL *)CFMakeCollectable(CFURLCreateWithBytes(NULL, urlBytes, numBytes - range.length, kCFStringEncodingISOLatin1, NULL));
-                
+
     return result ? [result autorelease] : URL;
 }
 
@@ -722,10 +722,10 @@ NSData *originalURLData(NSURL *URL)
         bytesFilled = CFURLGetBytes((CFURLRef)URL, buffer, bytesToAllocate);
         ASSERT(bytesFilled == bytesToAllocate);
     }
-    
+
     // buffer is adopted by the NSData
     NSData *data = [NSData dataWithBytesNoCopy:buffer length:bytesFilled freeWhenDone:YES];
-    
+
     NSURL *baseURL = (NSURL *)CFURLGetBaseURL((CFURLRef)URL);
     if (baseURL)
         return originalURLData(URLWithData(data, baseURL));
@@ -737,21 +737,21 @@ static CFStringRef createStringWithEscapedUnsafeCharacters(CFStringRef string)
     CFIndex length = CFStringGetLength(string);
     Vector<UChar, 2048> sourceBuffer(length);
     CFStringGetCharacters(string, CFRangeMake(0, length), sourceBuffer.data());
-    
+
     Vector<UChar, 2048> outBuffer;
-    
+
     CFIndex i = 0;
     while (i < length) {
         UChar32 c;
         U16_NEXT(sourceBuffer, i, length, c)
-        
+
         if (isLookalikeCharacter(c)) {
             uint8_t utf8Buffer[4];
             CFIndex offset = 0;
             UBool failure = false;
             U8_APPEND(utf8Buffer, offset, 4, c, failure)
             ASSERT(!failure);
-            
+
             for (CFIndex j = 0; j < offset; ++j) {
                 outBuffer.append('%');
                 outBuffer.append(hexDigit(utf8Buffer[j] >> 4));
@@ -767,7 +767,7 @@ static CFStringRef createStringWithEscapedUnsafeCharacters(CFStringRef string)
                 outBuffer.append(utf16Buffer[j]);
         }
     }
-    
+
     return CFStringCreateWithCharacters(NULL, outBuffer.data(), outBuffer.size());
 }
 
@@ -776,9 +776,9 @@ NSString *userVisibleString(NSURL *URL)
     NSData *data = originalURLData(URL);
     const unsigned char *before = static_cast<const unsigned char*>([data bytes]);
     int length = [data length];
-    
+
     bool needsHostNameDecoding = false;
-    
+
     const unsigned char *p = before;
     int bufferLength = (length * 3) + 1;
     char *after = static_cast<char *>(malloc(bufferLength)); // large enough to %-escape every character
@@ -800,21 +800,21 @@ NSString *userVisibleString(NSURL *URL)
             i += 2;
         } else {
             *q++ = c;
-            
+
             // Check for "xn--" in an efficient, non-case-sensitive, way.
             if (c == '-' && i >= 3 && !needsHostNameDecoding && (q[-4] | 0x20) == 'x' && (q[-3] | 0x20) == 'n' && q[-2] == '-')
                 needsHostNameDecoding = true;
         }
     }
     *q = '\0';
-    
-    // Check string to see if it can be converted to display using UTF-8  
+
+    // Check string to see if it can be converted to display using UTF-8
     NSString *result = [NSString stringWithUTF8String:after];
     if (!result) {
         // Could not convert to UTF-8.
         // Convert characters greater than 0x7f to escape sequences.
         // Shift current string to the end of the buffer
-        // then we will copy back bytes to the start of the buffer 
+        // then we will copy back bytes to the start of the buffer
         // as we convert.
         int afterlength = q - after;
         char *p = after + bufferLength - afterlength - 1;
@@ -833,9 +833,9 @@ NSString *userVisibleString(NSURL *URL)
         *q = '\0';
         result = [NSString stringWithUTF8String:after];
     }
-    
+
     free(after);
-    
+
     result = mapHostNames(result, !needsHostNameDecoding);
     result = [result precomposedStringWithCanonicalMapping];
     return CFBridgingRelease(createStringWithEscapedUnsafeCharacters((CFStringRef)result));
@@ -845,14 +845,14 @@ BOOL isUserVisibleURL(NSString *string)
 {
     BOOL valid = YES;
     // get buffer
-    
+
     char static_buffer[1024];
     const char *p;
     BOOL success = CFStringGetCString((CFStringRef)string, static_buffer, 1023, kCFStringEncodingUTF8);
     p = success ? static_buffer : [string UTF8String];
-    
+
     int length = strlen(p);
-    
+
     // check for characters <= 0x20 or >=0x7f, %-escape sequences of %7f, and xn--, these
     // are the things that will lead _web_userVisibleString to actually change things.
     for (int i = 0; i < length; i++) {
@@ -876,7 +876,7 @@ BOOL isUserVisibleURL(NSString *string)
             }
         }
     }
-    
+
     return valid;
 }
 

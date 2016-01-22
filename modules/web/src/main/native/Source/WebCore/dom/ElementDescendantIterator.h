@@ -141,7 +141,7 @@ inline ElementDescendantIterator<ElementType> ElementDescendantIteratorAdapter<E
 {
     return ElementDescendantIterator<ElementType>(m_root);
 }
-    
+
 template <typename ElementType>
 inline ElementDescendantIterator<ElementType> ElementDescendantIteratorAdapter<ElementType>::beginAt(ElementType& descendant)
 {

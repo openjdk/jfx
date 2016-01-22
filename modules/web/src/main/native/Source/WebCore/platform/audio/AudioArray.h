@@ -64,9 +64,9 @@ public:
 
         if (m_allocation)
             fastFree(m_allocation);
-        
+
         bool isAllocationGood = false;
-        
+
         while (!isAllocationGood) {
             // Initially we try to allocate the exact size, but if it's not aligned
             // then we'll have to reallocate and from then on allocate extra.

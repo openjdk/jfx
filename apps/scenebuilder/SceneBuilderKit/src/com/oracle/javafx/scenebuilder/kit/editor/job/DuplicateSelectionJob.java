@@ -66,7 +66,7 @@ public class DuplicateSelectionJob extends BatchSelectionJob {
         final List<Job> result = new LinkedList<>();
 
         if (canDuplicate()) { // (1)
-            
+
             final Selection selection = getEditorController().getSelection();
             final AbstractSelectionGroup asg = selection.getGroup();
             assert asg instanceof ObjectSelectionGroup; // Because of (1)

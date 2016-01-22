@@ -6,13 +6,13 @@
  * are met:
  *
  * 1.  Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer. 
+ *     notice, this list of conditions and the following disclaimer.
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
- *     documentation and/or other materials provided with the distribution. 
+ *     documentation and/or other materials provided with the distribution.
  * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
- *     from this software without specific prior written permission. 
+ *     from this software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY APPLE AND ITS CONTRIBUTORS "AS IS" AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
@@ -95,49 +95,49 @@ ULONG STDMETHODCALLTYPE WebKitStatistics::Release(void)
 
 // IWebKitStatistics ------------------------------------------------------------------------------
 
-HRESULT STDMETHODCALLTYPE WebKitStatistics::webViewCount( 
+HRESULT STDMETHODCALLTYPE WebKitStatistics::webViewCount(
     /* [retval][out] */ int *count)
 {
     *count = WebViewCount;
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE WebKitStatistics::frameCount( 
+HRESULT STDMETHODCALLTYPE WebKitStatistics::frameCount(
     /* [retval][out] */ int *count)
 {
     *count = WebFrameCount;
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE WebKitStatistics::dataSourceCount( 
+HRESULT STDMETHODCALLTYPE WebKitStatistics::dataSourceCount(
     /* [retval][out] */ int *count)
 {
     *count = WebDataSourceCount;
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE WebKitStatistics::viewCount( 
+HRESULT STDMETHODCALLTYPE WebKitStatistics::viewCount(
     /* [retval][out] */ int *count)
 {
     *count = WebFrameViewCount;
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE WebKitStatistics::HTMLRepresentationCount( 
+HRESULT STDMETHODCALLTYPE WebKitStatistics::HTMLRepresentationCount(
     /* [retval][out] */ int *count)
 {
     *count = WebHTMLRepresentationCount;
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE WebKitStatistics::comClassCount( 
+HRESULT STDMETHODCALLTYPE WebKitStatistics::comClassCount(
     /* [retval][out] */ int *classCount)
 {
     *classCount = gClassCount;
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE WebKitStatistics::comClassNameCounts( 
+HRESULT STDMETHODCALLTYPE WebKitStatistics::comClassNameCounts(
     /* [retval][out] */ BSTR *output)
 {
     typedef HashCountedSet<String>::const_iterator Iterator;

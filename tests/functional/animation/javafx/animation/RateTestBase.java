@@ -37,7 +37,7 @@ public abstract class RateTestBase extends AnimationFunctionalTestBase {
     // to be called from @Test test()
     protected void doTest() {
         set.timeline.setCycleCount(4);
-        
+
         set.timeline.setRate(0.5f);
         check(4500, 8500);
 

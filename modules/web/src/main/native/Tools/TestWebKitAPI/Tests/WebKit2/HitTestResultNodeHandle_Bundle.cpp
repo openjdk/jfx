@@ -45,7 +45,7 @@ public:
         WKRetainPtr<WKBundleNodeHandleRef> nodeHandle(AdoptWK, WKBundleHitTestResultCopyNodeHandle(hitTestResult));
         if (!nodeHandle)
             return;
-        
+
         WKBundlePostMessage(InjectedBundleController::shared().bundle(), Util::toWK("HitTestResultNodeHandleTestDoneMessageName").get(), Util::toWK("HitTestResultNodeHandleTestDoneMessageBody").get());
     }
 
@@ -56,7 +56,7 @@ public:
 
         contextMenuClient.base.version = 0;
         contextMenuClient.getContextMenuFromDefaultMenu = getContextMenuFromDefaultMenu;
-    
+
         WKBundlePageSetContextMenuClient(page, &contextMenuClient.base);
     }
 };

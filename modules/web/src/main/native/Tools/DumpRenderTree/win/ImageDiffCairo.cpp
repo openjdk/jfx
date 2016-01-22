@@ -117,21 +117,21 @@ static cairo_surface_t* createDifferenceImage(cairo_surface_t* baselineImage, ca
             float alpha = pixelDifference(baselinePixel[3], actualPixel[3]);
 
             float distance = sqrtf(red * red + green * green + blue * blue + alpha * alpha) / 2.0;
-            
+
             *diffPixel++ = static_cast<unsigned char>(distance * 255);
-            
+
             if (distance >= 1.0 / 255.0) {
                 ++count;
                 sum += distance;
                 if (distance > maxDistance)
                     maxDistance = distance;
             }
-            
+
             baselinePixel += s_bytesPerPixel;
             actualPixel += s_bytesPerPixel;
         }
     }
-    
+
     // Compute the difference as a percentage combining both the number of different pixels and their difference amount i.e. the average distance over the entire image
     if (count > 0)
         difference = 100.0f * sum / (height * width);
@@ -145,10 +145,10 @@ static cairo_surface_t* createDifferenceImage(cairo_surface_t* baselineImage, ca
 
     // Generate a normalized diff image
     normalizeBuffer(maxDistance, reinterpret_cast<unsigned char*>(diffBuffer), height * width);
-        
-    cairo_surface_t* diffImage = cairo_image_surface_create_for_data(diffPixel, CAIRO_FORMAT_ARGB32, width, height, width * s_bytesPerPixel); 
+
+    cairo_surface_t* diffImage = cairo_image_surface_create_for_data(diffPixel, CAIRO_FORMAT_ARGB32, width, height, width * s_bytesPerPixel);
     cairo_surface_set_user_data(diffImage, &s_imageDataKey, diffBuffer, releaseMallocBuffer);
-    
+
     return diffImage;
 }
 
@@ -209,7 +209,7 @@ int main(int argc, const char* argv[])
         if (actualImage && baselineImage) {
             cairo_surface_t* diffImage = 0;
             float difference = 100.0;
-            
+
             if ((cairo_image_surface_get_width(actualImage) == cairo_image_surface_get_width(baselineImage))
                 && (cairo_image_surface_get_height(actualImage) == cairo_image_surface_get_height(baselineImage))
                 && (imageHasAlpha(actualImage) == imageHasAlpha(baselineImage))) {
@@ -222,7 +222,7 @@ int main(int argc, const char* argv[])
                 }
             } else
                 fputs("error, test and reference image have different properties.\n", stderr);
-                
+
             if (difference > 0.0) {
                 if (diffImage) {
                     RetainPtr<CFMutableDataRef> imageData = adoptCF(CFDataCreateMutable(0, 0));
@@ -232,11 +232,11 @@ int main(int argc, const char* argv[])
                     cairo_surface_destroy(diffImage);
                     diffImage = 0;
                 }
-                
+
                 fprintf(stdout, "diff: %01.2f%% failed\n", difference);
             } else
                 fprintf(stdout, "diff: %01.2f%% passed\n", difference);
-            
+
             cairo_surface_destroy(actualImage);
             cairo_surface_destroy(baselineImage);
             actualImage = 0;

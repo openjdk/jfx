@@ -197,7 +197,7 @@ Method *JavaClass::methodNamed(PropertyName propertyName, Instance*) const
                             pname = pname.substringSharingImpl(0, pnameLength);
                             methodParamLength -= 3;
                             methodParam = methodParam
-                                .substringSharingImpl(2, methodParamLength); 
+                                .substringSharingImpl(2, methodParamLength);
                         } else {
                           break;
                         }

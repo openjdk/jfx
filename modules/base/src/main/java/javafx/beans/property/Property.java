@@ -31,8 +31,8 @@ import javafx.beans.value.WritableValue;
 /**
  * Generic interface that defines the methods common to all (writable)
  * properties independent of their type.
- * 
- * 
+ *
+ *
  * @param <T>
  *            the type of the wrapped value
  * @since JavaFX 2.0
@@ -44,7 +44,7 @@ public interface Property<T> extends ReadOnlyProperty<T>, WritableValue<T> {
      * <p>
      * Note that JavaFX has all the bind calls implemented through weak listeners. This means the bound property
      * can be garbage collected and stopped from being updated.
-     * 
+     *
      * @param observable
      *            The observable this {@code Property} should be bound to.
      * @throws NullPointerException
@@ -54,7 +54,7 @@ public interface Property<T> extends ReadOnlyProperty<T>, WritableValue<T> {
 
     /**
      * Remove the unidirectional binding for this {@code Property}.
-     * 
+     *
      * If the {@code Property} is not bound, calling this method has no effect.
      * @see #bind(javafx.beans.value.ObservableValue)
      */
@@ -80,7 +80,7 @@ public interface Property<T> extends ReadOnlyProperty<T>, WritableValue<T> {
      * <p>
      * JavaFX bidirectional binding implementation use weak listeners. This means bidirectional binding does not prevent
      * properties from being garbage collected.
-     * 
+     *
      * @param other
      *            the other {@code Property}
      * @throws NullPointerException
@@ -93,7 +93,7 @@ public interface Property<T> extends ReadOnlyProperty<T>, WritableValue<T> {
     /**
      * Remove a bidirectional binding between this {@code Property} and another
      * one.
-     * 
+     *
      * If no bidirectional binding between the properties exists, calling this
      * method has no effect.
      *

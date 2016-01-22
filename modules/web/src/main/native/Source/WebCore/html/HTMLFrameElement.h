@@ -43,7 +43,7 @@ private:
 
     virtual bool rendererIsNeeded(const RenderStyle&) override;
     virtual RenderPtr<RenderElement> createElementRenderer(PassRef<RenderStyle>) override;
-    
+
     virtual void parseAttribute(const QualifiedName&, const AtomicString&) override;
 
 #if ENABLE(FULLSCREEN_API)

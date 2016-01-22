@@ -176,7 +176,7 @@ static PlatformWheelEventPhase momentumPhaseForEvent(NSEvent *event)
 
 static PlatformWheelEventPhase phaseForEvent(NSEvent *event)
 {
-    uint32_t phase = PlatformWheelEventPhaseNone; 
+    uint32_t phase = PlatformWheelEventPhaseNone;
     if ([event phase] & NSEventPhaseBegan)
         phase |= PlatformWheelEventPhaseBegan;
     if ([event phase] & NSEventPhaseStationary)
@@ -211,32 +211,32 @@ static inline String unmodifiedTextFromEvent(NSEvent* event)
 
 String keyIdentifierForKeyEvent(NSEvent* event)
 {
-    if ([event type] == NSFlagsChanged) 
+    if ([event type] == NSFlagsChanged)
         switch ([event keyCode]) {
             case 54: // Right Command
             case 55: // Left Command
                 return String("Meta");
-                
+
             case 57: // Capslock
                 return String("CapsLock");
-                
+
             case 56: // Left Shift
             case 60: // Right Shift
                 return String("Shift");
-                
+
             case 58: // Left Alt
             case 61: // Right Alt
                 return String("Alt");
-                
+
             case 59: // Left Ctrl
             case 62: // Right Ctrl
                 return String("Control");
-                
+
             default:
                 ASSERT_NOT_REACHED();
                 return emptyString();
         }
-    
+
     NSString *s = [event charactersIgnoringModifiers];
     if ([s length] != 1) {
         LOG(Events, "received an unexpected number of characters in key event: %u", [s length]);
@@ -281,7 +281,7 @@ static bool isKeypadEvent(NSEvent* event)
         case 92: // 9
             return true;
      }
-     
+
      return false;
 }
 
@@ -353,22 +353,22 @@ static inline bool isKeyUpEvent(NSEvent *event)
         case 54: // Right Command
         case 55: // Left Command
             return ([event modifierFlags] & NSCommandKeyMask) == 0;
-            
+
         case 57: // Capslock
             return ([event modifierFlags] & NSAlphaShiftKeyMask) == 0;
-            
+
         case 56: // Left Shift
         case 60: // Right Shift
             return ([event modifierFlags] & NSShiftKeyMask) == 0;
-            
+
         case 58: // Left Alt
         case 61: // Right Alt
             return ([event modifierFlags] & NSAlternateKeyMask) == 0;
-            
+
         case 59: // Left Ctrl
         case 62: // Right Ctrl
             return ([event modifierFlags] & NSControlKeyMask) == 0;
-            
+
         case 63: // Function
             return ([event modifierFlags] & NSFunctionKeyMask) == 0;
     }
@@ -404,7 +404,7 @@ public:
         m_globalPosition                    = globalPointForEvent(event);
         m_button                            = mouseButtonForEvent(event);
         m_clickCount                        = clickCountForEvent(event);
-        
+
         // Mac specific
         m_modifierFlags                     = [event modifierFlags];
         m_eventNumber                       = [event eventNumber];

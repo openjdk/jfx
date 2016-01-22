@@ -40,7 +40,7 @@ bool CVVideoFrame::IsFormatSupported(OSType format) {
 }
 
 CVVideoFrame::CVVideoFrame(CVPixelBufferRef buf, double frameTime, uint64_t frameHostTime)
-: 
+:
   pixelBuffer(buf),
   frameHostTime(frameHostTime)
 {
@@ -70,7 +70,7 @@ CVVideoFrame::CVVideoFrame(CVPixelBufferRef buf, double frameTime, uint64_t fram
     if (type != gLastFormat) {
         gLastFormat = type;
     }
-    
+
     // determine frame type, throw an exception if it's unsupported
     switch (type) {
         case kCVPixelFormatType_32BGRA:            // 'BGRA': 32 bit BGRA
@@ -116,7 +116,7 @@ void CVVideoFrame::PrepareChunky()
     if (kCVReturnSuccess != cr) {
         throw "CVVideoFrame: Unable to lock PixelBuffer base address";
     }
-    
+
     m_pvPlaneData[0] = CVPixelBufferGetBaseAddress(pixelBuffer);
     m_piPlaneStrides[0] = (int)CVPixelBufferGetBytesPerRow(pixelBuffer);
     m_pulPlaneSize[0] = m_piPlaneStrides[0] * m_iEncodedHeight;
@@ -157,7 +157,7 @@ void CVVideoFrame::Dispose()
 
 CVideoFrame *CVVideoFrame::ConvertToFormat(FrameType type)
 {
-    if(YCbCr_422 == m_typeFrame && BGRA_PRE == type) { 
+    if(YCbCr_422 == m_typeFrame && BGRA_PRE == type) {
         CVPixelBufferRef destPixelBuffer = NULL;
         if(kCVReturnSuccess == CVPixelBufferCreate(NULL, m_iEncodedWidth, m_iEncodedHeight,
                                                    k32ARGBPixelFormat, NULL, &destPixelBuffer)) {
@@ -165,7 +165,7 @@ CVideoFrame *CVVideoFrame::ConvertToFormat(FrameType type)
                 uint8_t* bgra = (uint8_t*)CVPixelBufferGetBaseAddress(destPixelBuffer);
                 int32_t bgraStride = (int32_t)CVPixelBufferGetBytesPerRow(destPixelBuffer);
                 uint8_t* srcData = (uint8_t*)m_pvPlaneData[0];
-                
+
                 if(0 == ColorConvert_YCbCr422p_to_BGRA32_no_alpha(bgra,
                                                                   bgraStride,
                                                                   m_iEncodedWidth,

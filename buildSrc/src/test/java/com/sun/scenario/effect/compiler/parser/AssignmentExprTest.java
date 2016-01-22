@@ -59,7 +59,7 @@ public class AssignmentExprTest extends ParserBase {
     public void coreROVar() throws Exception {
         BinaryExpr tree = parseTreeFor("pos0 = float2(1.0)");
     }
-    
+
     @Test(expected = RuntimeException.class)
     public void coreROVarField() throws Exception {
         BinaryExpr tree = parseTreeFor("pos0.x = 1.0");

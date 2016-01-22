@@ -57,7 +57,7 @@ public class FloatMapTest extends EffectsTestBase {
         floatMap.setWidth(2);
         assertEquals(2, floatMap.getWidth());
         pulse();
-        assertEquals(2, ((com.sun.scenario.effect.FloatMap) 
+        assertEquals(2, ((com.sun.scenario.effect.FloatMap)
                 FloatMapShim.getImpl(floatMap)).getWidth());
     }
 
@@ -67,7 +67,7 @@ public class FloatMapTest extends EffectsTestBase {
         assertEquals(1, floatMap.getWidth());
         assertEquals(1, floatMap.widthProperty().get());
         pulse();
-        assertEquals(1, ((com.sun.scenario.effect.FloatMap) 
+        assertEquals(1, ((com.sun.scenario.effect.FloatMap)
                 FloatMapShim.getImpl(floatMap)).getWidth());
     }
 
@@ -79,8 +79,8 @@ public class FloatMapTest extends EffectsTestBase {
         floatMap.setWidth(0);
         assertEquals(0, floatMap.getWidth());
         pulse();
-        assertEquals(1, ((com.sun.scenario.effect.FloatMap) 
-                FloatMapShim.getImpl(floatMap)).getWidth());      
+        assertEquals(1, ((com.sun.scenario.effect.FloatMap)
+                FloatMapShim.getImpl(floatMap)).getWidth());
     }
 
     @Test
@@ -91,8 +91,8 @@ public class FloatMapTest extends EffectsTestBase {
         floatMap.setWidth(4097);
         assertEquals(4097, floatMap.getWidth());
         pulse();
-        assertEquals(4096, ((com.sun.scenario.effect.FloatMap) 
-                FloatMapShim.getImpl(floatMap)).getWidth());              
+        assertEquals(4096, ((com.sun.scenario.effect.FloatMap)
+                FloatMapShim.getImpl(floatMap)).getWidth());
     }
 
     @Test
@@ -101,7 +101,7 @@ public class FloatMapTest extends EffectsTestBase {
         floatMap.setHeight(5);
         assertEquals(5, floatMap.getHeight());
         pulse();
-        assertEquals(5, ((com.sun.scenario.effect.FloatMap) 
+        assertEquals(5, ((com.sun.scenario.effect.FloatMap)
                 FloatMapShim.getImpl(floatMap)).getHeight());
     }
 
@@ -111,7 +111,7 @@ public class FloatMapTest extends EffectsTestBase {
         assertEquals(1, floatMap.getHeight());
         assertEquals(1, floatMap.heightProperty().get());
         pulse();
-        assertEquals(1, ((com.sun.scenario.effect.FloatMap) 
+        assertEquals(1, ((com.sun.scenario.effect.FloatMap)
                 FloatMapShim.getImpl(floatMap)).getHeight());
     }
 
@@ -123,7 +123,7 @@ public class FloatMapTest extends EffectsTestBase {
         floatMap.setHeight(0);
         assertEquals(0, floatMap.getHeight());
         pulse();
-        assertEquals(1, ((com.sun.scenario.effect.FloatMap) 
+        assertEquals(1, ((com.sun.scenario.effect.FloatMap)
                 FloatMapShim.getImpl(floatMap)).getHeight());
     }
 
@@ -135,7 +135,7 @@ public class FloatMapTest extends EffectsTestBase {
         floatMap.setHeight(4097);
         assertEquals(4097, floatMap.getHeight());
         pulse();
-        assertEquals(4096, ((com.sun.scenario.effect.FloatMap) 
+        assertEquals(4096, ((com.sun.scenario.effect.FloatMap)
                 FloatMapShim.getImpl(floatMap)).getHeight());
     }
 
@@ -160,7 +160,7 @@ public class FloatMapTest extends EffectsTestBase {
         assertEquals(0.5f, data[0], 1e-100);
         assertEquals(0.4f, data[1], 1e-100);
         assertEquals(0.0f, data[2], 1e-100);
-        assertEquals(0.0f, data[3], 1e-100);        
+        assertEquals(0.0f, data[3], 1e-100);
     }
 
     @Test
@@ -172,9 +172,9 @@ public class FloatMapTest extends EffectsTestBase {
         assertEquals(0.5f, data[0], 1e-100);
         assertEquals(0.4f, data[1], 1e-100);
         assertEquals(0.3f, data[2], 1e-100);
-        assertEquals(0.0f, data[3], 1e-100);        
+        assertEquals(0.0f, data[3], 1e-100);
     }
-    
+
     @Test
     public void testSetSamples6() {
         floatMap.setSamples(0, 0, 0.5f, 0.4f, 0.3f, 0.2f);
@@ -184,9 +184,9 @@ public class FloatMapTest extends EffectsTestBase {
         assertEquals(0.5f, data[0], 1e-100);
         assertEquals(0.4f, data[1], 1e-100);
         assertEquals(0.3f, data[2], 1e-100);
-        assertEquals(0.2f, data[3], 1e-100);      
+        assertEquals(0.2f, data[3], 1e-100);
     }
-    
+
     @Test
     public void testSetSample() {
         floatMap.setSample(0, 0, 0, 0.5f);
@@ -199,7 +199,7 @@ public class FloatMapTest extends EffectsTestBase {
         assertEquals(0.5f, data[0], 1e-100);
         assertEquals(0.4f, data[1], 1e-100);
         assertEquals(0.3f, data[2], 1e-100);
-        assertEquals(0.2f, data[3], 1e-100);      
+        assertEquals(0.2f, data[3], 1e-100);
     }
 
     @Test
@@ -254,12 +254,12 @@ public class FloatMapTest extends EffectsTestBase {
         assertEquals(2, floatMap.getWidth(), 1e-100);
         assertEquals(3, floatMap.getHeight(), 1e-100);
         pulse();
-        assertEquals(2, ((com.sun.scenario.effect.FloatMap) 
+        assertEquals(2, ((com.sun.scenario.effect.FloatMap)
                 FloatMapShim.getImpl(floatMap)).getWidth());
-        assertEquals(3, ((com.sun.scenario.effect.FloatMap) 
+        assertEquals(3, ((com.sun.scenario.effect.FloatMap)
                 FloatMapShim.getImpl(floatMap)).getHeight());
     }
-    
+
     @Test
     public void testCreateWithDefaultParams() {
         floatMap = new FloatMap(1, 1);
@@ -269,9 +269,9 @@ public class FloatMapTest extends EffectsTestBase {
         assertEquals(1, floatMap.getWidth(), 1e-100);
         assertEquals(1, floatMap.getHeight(), 1e-100);
         pulse();
-        assertEquals(1, ((com.sun.scenario.effect.FloatMap) 
+        assertEquals(1, ((com.sun.scenario.effect.FloatMap)
                 FloatMapShim.getImpl(floatMap)).getWidth());
-        assertEquals(1, ((com.sun.scenario.effect.FloatMap) 
+        assertEquals(1, ((com.sun.scenario.effect.FloatMap)
                 FloatMapShim.getImpl(floatMap)).getHeight());
     }
 

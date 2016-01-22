@@ -39,7 +39,7 @@ import static org.junit.Assert.assertEquals;
 public class JavaBeanDoublePropertyTest extends JavaBeanPropertyTestBase<Number> {
 
     private static final double EPSILON = 1e-12;
-    
+
     private static final double[] VALUES = new double[] {Math.PI, -Math.E};
 
     @Override

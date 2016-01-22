@@ -26,7 +26,7 @@
 package javafx.geometry;
 
 /**
- * Orientation 
+ * Orientation
  * @since JavaFX 2.0
  */
 public enum Orientation {

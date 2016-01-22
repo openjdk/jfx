@@ -30,7 +30,7 @@ import com.sun.prism.PixelSource;
 
 /**
  * EmbeddedState is intended to provide for a shadow copy the View/Scene state
- * similar to the shadow Graph, providing a static snapshot until the Scene 
+ * similar to the shadow Graph, providing a static snapshot until the Scene
  * is rendered.  EmbeddedState captures state that is specific to embedding.
  */
 final class EmbeddedState extends SceneState {
@@ -41,7 +41,7 @@ final class EmbeddedState extends SceneState {
 
     /**
      * Put the pixels on the screen.
-     * 
+     *
      * @param source - the source for the Pixels object to be uploaded
      */
     @Override

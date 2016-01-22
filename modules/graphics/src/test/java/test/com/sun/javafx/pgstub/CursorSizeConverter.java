@@ -55,7 +55,7 @@ public abstract class CursorSizeConverter {
 
         @Override
         public Dimension2D getBestCursorSize(
-                final int preferredWidth, 
+                final int preferredWidth,
                 final int preferredHeight) {
             return constantSize;
         }

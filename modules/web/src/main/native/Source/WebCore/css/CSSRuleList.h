@@ -43,9 +43,9 @@ public:
 
     virtual unsigned length() const = 0;
     virtual CSSRule* item(unsigned index) const = 0;
-    
+
     virtual CSSStyleSheet* styleSheet() const = 0;
-    
+
 protected:
     CSSRuleList();
 };
@@ -58,10 +58,10 @@ public:
     virtual void deref();
 
     Vector<RefPtr<CSSRule>>& rules() { return m_rules; }
-    
+
     virtual CSSStyleSheet* styleSheet() const { return 0; }
 
-private:    
+private:
     StaticCSSRuleList();
     ~StaticCSSRuleList();
 
@@ -77,7 +77,7 @@ template <class Rule>
 class LiveCSSRuleList : public CSSRuleList {
 public:
     LiveCSSRuleList(Rule* rule) : m_rule(rule) { }
-    
+
     virtual void ref() { m_rule->ref(); }
     virtual void deref() { m_rule->deref(); }
 
@@ -85,7 +85,7 @@ private:
     virtual unsigned length() const { return m_rule->length(); }
     virtual CSSRule* item(unsigned index) const  { return m_rule->item(index); }
     virtual CSSStyleSheet* styleSheet() const { return m_rule->parentStyleSheet(); }
-    
+
     Rule* m_rule;
 };
 

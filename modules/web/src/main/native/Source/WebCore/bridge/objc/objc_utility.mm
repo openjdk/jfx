@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -87,7 +87,7 @@ ObjcValue convertValueToObjcValue(ExecState* exec, JSValue value, ObjcValueType 
     switch (type) {
         case ObjcObjectType: {
             JSLockHolder lock(exec);
-            
+
             JSGlobalObject *originGlobalObject = exec->vmEntryGlobalObject();
             RootObject* originRootObject = findRootObject(originGlobalObject);
 
@@ -97,7 +97,7 @@ ObjcValue convertValueToObjcValue(ExecState* exec, JSValue value, ObjcValueType 
 
             if (!globalObject)
                 globalObject = originGlobalObject;
-                
+
             RootObject* rootObject = findRootObject(globalObject);
             result.objectValue =  rootObject
                 ? [webScriptObjectClass() _convertValueToObjcValue:value originRootObject:originRootObject rootObject:rootObject]
@@ -175,7 +175,7 @@ JSValue convertNSStringToString(ExecState* exec, NSString *nsstring)
 JSValue convertObjcValueToValue(ExecState* exec, void* buffer, ObjcValueType type, RootObject* rootObject)
 {
     JSLockHolder lock(exec);
-    
+
     switch (type) {
         case ObjcObjectType: {
             id obj = *(id*)buffer;
@@ -232,7 +232,7 @@ JSValue convertObjcValueToValue(ExecState* exec, void* buffer, ObjcValueType typ
             fprintf(stderr, "%s: invalid type (%d)\n", __PRETTY_FUNCTION__, (int)type);
             ASSERT_NOT_REACHED();
     }
-    
+
     return jsUndefined();
 }
 

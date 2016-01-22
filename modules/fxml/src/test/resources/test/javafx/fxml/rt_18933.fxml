@@ -28,10 +28,10 @@ questions.
 <?import javafx.scene.control.*?>
 
 <ListView id="library-listview" prefHeight="200.0" prefWidth="100.0"
-    xmlns:fx="http://javafx.com/fxml"> 
-    <items> 
-        <String fx:value="one"/> 
-        <String fx:value="two"/> 
-        <String fx:value="three"/> 
-   </items> 
-</ListView> 
+    xmlns:fx="http://javafx.com/fxml">
+    <items>
+        <String fx:value="one"/>
+        <String fx:value="two"/>
+        <String fx:value="three"/>
+   </items>
+</ListView>

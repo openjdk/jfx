@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef LinkBuffer_h
@@ -62,7 +62,7 @@ class VM;
 //
 class LinkBuffer {
     WTF_MAKE_NONCOPYABLE(LinkBuffer); WTF_MAKE_FAST_ALLOCATED;
-    
+
     typedef MacroAssemblerCodeRef CodeRef;
     typedef MacroAssemblerCodePtr CodePtr;
     typedef MacroAssembler::Label Label;
@@ -115,7 +115,7 @@ public:
     ~LinkBuffer()
     {
     }
-    
+
     bool didFailToAllocate() const
     {
         return !m_didAllocate;
@@ -125,7 +125,7 @@ public:
     {
         return !didFailToAllocate();
     }
-    
+
     // These methods are used to link or set values at code generation time.
 
     void link(Call call, FunctionPtr function)
@@ -134,12 +134,12 @@ public:
         call.m_label = applyOffset(call.m_label);
         MacroAssembler::linkCall(code(), call, function);
     }
-    
+
     void link(Call call, CodeLocationLabel label)
     {
         link(call, FunctionPtr(label.executableAddress()));
     }
-    
+
     void link(Jump jump, CodeLocationLabel label)
     {
         jump.m_label = applyOffset(jump.m_label);
@@ -165,7 +165,7 @@ public:
     }
 
     // These methods are used to obtain handles to allow the code to be relinked / repatched later.
-    
+
     CodeLocationLabel entrypoint()
     {
         return CodeLocationLabel(code());
@@ -204,7 +204,7 @@ public:
     {
         return CodeLocationDataLabel32(MacroAssembler::getLinkerAddress(code(), applyOffset(label.m_label)));
     }
-    
+
     CodeLocationDataLabelCompact locationOf(DataLabelCompact label)
     {
         return CodeLocationDataLabelCompact(MacroAssembler::getLinkerAddress(code(), applyOffset(label.m_label)));
@@ -237,7 +237,7 @@ public:
     // complete generation of the code. Alternatively, call
     // finalizeCodeWithoutDisassembly() directly if you have your own way of
     // displaying disassembly.
-    
+
     JS_EXPORT_PRIVATE CodeRef finalizeCodeWithoutDisassembly();
     JS_EXPORT_PRIVATE CodeRef finalizeCodeWithDisassembly(const char* format, ...) WTF_ATTRIBUTE_PRINTF(2, 3);
 
@@ -250,7 +250,7 @@ public:
     {
         return m_code;
     }
-    
+
     size_t size()
     {
         return m_size;
@@ -264,13 +264,13 @@ private:
 #endif
         return src;
     }
-    
+
     // Keep this private! - the underlying code should only be obtained externally via finalizeCode().
     void* code()
     {
         return m_code;
     }
-    
+
     void allocate(size_t initialSize, void* ownerUID, JITCompilationEffort);
     void shrink(size_t newSize);
 
@@ -285,11 +285,11 @@ private:
 #if DUMP_LINK_STATISTICS
     static void dumpLinkStatistics(void* code, size_t initialSize, size_t finalSize);
 #endif
-    
+
 #if DUMP_CODE
     static void dumpCode(void* code, size_t);
 #endif
-    
+
     RefPtr<ExecutableMemoryHandle> m_executableMemory;
     size_t m_size;
 #if ENABLE(BRANCH_COMPACTION)

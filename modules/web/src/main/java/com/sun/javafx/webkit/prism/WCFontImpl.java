@@ -96,7 +96,7 @@ final class WCFontImpl extends WCFont {
                                    font.getFontResource().isItalic(),
                                    size));
     }
-    
+
     @Override public int getOffsetForPosition(String str, float x) {
         TextLayout layout = TextUtilities.createLayout(str, font);
         GlyphList[] runs = layout.getRuns();

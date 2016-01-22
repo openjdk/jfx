@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -97,7 +97,7 @@ void JIT::emitEnterOptimizationCheck()
         return;
 
     JumpList skipOptimize;
-    
+
     skipOptimize.append(branchAdd32(Signed, TrustedImm32(Options::executionCounterIncrementForEntry()), AbsoluteAddress(m_codeBlock->addressOfJITExecuteCounter())));
     ASSERT(!m_bytecodeOffset);
     callOperation(operationOptimize, m_bytecodeOffset);
@@ -135,7 +135,7 @@ void JIT::privateCompileMainPass()
 {
     jitAssertTagsInPlace();
     jitAssertArgumentCountSane();
-    
+
     Instruction* instructionsBegin = m_codeBlock->instructions().begin();
     unsigned instructionCount = m_codeBlock->instructions().size();
 
@@ -157,7 +157,7 @@ void JIT::privateCompileMainPass()
 #if ENABLE(JIT_VERBOSE)
         dataLogF("Old JIT emitting code for bc#%u at offset 0x%lx.\n", m_bytecodeOffset, (long)debugOffset());
 #endif
-        
+
         OpcodeID opcodeID = m_interpreter->getOpcodeID(currentInstruction->u.opcode);
 
         if (m_compilation) {
@@ -318,7 +318,7 @@ void JIT::privateCompileSlowCases()
     m_putByIdIndex = 0;
     m_byValInstructionIndex = 0;
     m_callLinkInfoIndex = 0;
-    
+
     // Use this to assert that slow-path code associates new profiling sites with existing
     // ValueProfiles rather than creating new ones. This ensures that for a given instruction
     // (say, get_by_id) we get combined statistics for both the fast-path executions of that
@@ -333,7 +333,7 @@ void JIT::privateCompileSlowCases()
         unsigned firstTo = m_bytecodeOffset;
 
         Instruction* currentInstruction = instructionsBegin + m_bytecodeOffset;
-        
+
         RareCaseProfile* rareCaseProfile = 0;
         if (shouldEmitProfiling())
             rareCaseProfile = m_codeBlock->addRareCaseProfile(m_bytecodeOffset);
@@ -341,7 +341,7 @@ void JIT::privateCompileSlowCases()
 #if ENABLE(JIT_VERBOSE)
         dataLogF("Old JIT emitting slow code for bc#%u at offset 0x%lx.\n", m_bytecodeOffset, (long)debugOffset());
 #endif
-        
+
         if (m_disassembler)
             m_disassembler->setForBytecodeSlowPath(m_bytecodeOffset, label());
 
@@ -416,7 +416,7 @@ void JIT::privateCompileSlowCases()
 
         RELEASE_ASSERT_WITH_MESSAGE(iter == m_slowCases.end() || firstTo != iter->to, "Not enough jumps linked in slow case codegen.");
         RELEASE_ASSERT_WITH_MESSAGE(firstTo == (iter - 1)->to, "Too many jumps linked in slow case codegen.");
-        
+
         if (shouldEmitProfiling())
             add32(TrustedImm32(1), AbsoluteAddress(&rareCaseProfile->m_counter));
 
@@ -458,7 +458,7 @@ CompilationResult JIT::privateCompile(JITCompilationEffort effort)
         RELEASE_ASSERT_NOT_REACHED();
         break;
     }
-    
+
     switch (m_codeBlock->codeType()) {
     case GlobalCode:
     case EvalCode:
@@ -470,7 +470,7 @@ CompilationResult JIT::privateCompile(JITCompilationEffort effort)
         m_codeBlock->m_shouldAlwaysBeInlined &= canInline(level) && DFG::mightInlineFunction(m_codeBlock);
         break;
     }
-    
+
     if (Options::showDisassembly() || m_vm->m_perBytecodeProfiler)
         m_disassembler = adoptPtr(new JITDisassembler(m_codeBlock));
     if (m_vm->m_perBytecodeProfiler) {
@@ -480,7 +480,7 @@ CompilationResult JIT::privateCompile(JITCompilationEffort effort)
                 Profiler::Baseline));
         m_compilation->addProfiledBytecodes(*m_vm->m_perBytecodeProfiler, m_codeBlock);
     }
-    
+
     if (m_disassembler)
         m_disassembler->setStartOfCode(label());
 
@@ -528,7 +528,7 @@ CompilationResult JIT::privateCompile(JITCompilationEffort effort)
     privateCompileMainPass();
     privateCompileLinkPass();
     privateCompileSlowCases();
-    
+
     if (m_disassembler)
         m_disassembler->setEndOfSlowPath(label());
 
@@ -570,9 +570,9 @@ CompilationResult JIT::privateCompile(JITCompilationEffort effort)
     }
 
     ASSERT(m_jmpTable.isEmpty());
-    
+
     privateCompileExceptionHandlers();
-    
+
     if (m_disassembler)
         m_disassembler->setEndOfCode(label());
 
@@ -586,7 +586,7 @@ CompilationResult JIT::privateCompile(JITCompilationEffort effort)
         unsigned bytecodeOffset = record.bytecodeOffset;
 
         if (record.type != SwitchRecord::String) {
-            ASSERT(record.type == SwitchRecord::Immediate || record.type == SwitchRecord::Character); 
+            ASSERT(record.type == SwitchRecord::Immediate || record.type == SwitchRecord::Character);
             ASSERT(record.jumpTable.simpleJumpTable->branchOffsets.size() == record.jumpTable.simpleJumpTable->ctiOffsets.size());
 
             record.jumpTable.simpleJumpTable->ctiDefault = patchBuffer.locationOf(m_labels[bytecodeOffset + record.defaultOffset]);
@@ -600,7 +600,7 @@ CompilationResult JIT::privateCompile(JITCompilationEffort effort)
 
             record.jumpTable.stringJumpTable->ctiDefault = patchBuffer.locationOf(m_labels[bytecodeOffset + record.defaultOffset]);
 
-            StringJumpTable::StringOffsetTable::iterator end = record.jumpTable.stringJumpTable->offsetTable.end();            
+            StringJumpTable::StringOffsetTable::iterator end = record.jumpTable.stringJumpTable->offsetTable.end();
             for (StringJumpTable::StringOffsetTable::iterator it = record.jumpTable.stringJumpTable->offsetTable.begin(); it != end; ++it) {
                 unsigned offset = it->value.branchOffset;
                 it->value.ctiOffset = offset ? patchBuffer.locationOf(m_labels[bytecodeOffset + offset]) : record.jumpTable.stringJumpTable->ctiDefault;
@@ -629,7 +629,7 @@ CompilationResult JIT::privateCompile(JITCompilationEffort effort)
         CodeLocationLabel doneTarget = patchBuffer.locationOf(m_byValCompilationInfo[i].doneTarget);
         CodeLocationLabel slowPathTarget = patchBuffer.locationOf(m_byValCompilationInfo[i].slowPathTarget);
         CodeLocationCall returnAddress = patchBuffer.locationOf(m_byValCompilationInfo[i].returnAddress);
-        
+
         m_codeBlock->byValInfo(i) = ByValInfo(
             m_byValCompilationInfo[i].bytecodeIndex,
             badTypeJump,
@@ -665,21 +665,21 @@ CompilationResult JIT::privateCompile(JITCompilationEffort effort)
         m_disassembler->reportToProfiler(m_compilation.get(), patchBuffer);
         m_vm->m_perBytecodeProfiler->addCompilation(m_compilation);
     }
-    
+
     CodeRef result = patchBuffer.finalizeCodeWithoutDisassembly();
-    
+
     m_vm->machineCodeBytesPerBytecodeWordForBaselineJIT.add(
         static_cast<double>(result.size()) /
         static_cast<double>(m_codeBlock->instructions().size()));
-    
+
     m_codeBlock->shrinkToFit(CodeBlock::LateShrink);
     m_codeBlock->setJITCode(
         adoptRef(new DirectJITCode(result, withArityCheck, JITCode::BaselineJIT)));
-    
+
 #if ENABLE(JIT_VERBOSE)
     dataLogF("JIT generated code for %p at [%p, %p).\n", m_codeBlock, result.executableMemory()->start(), result.executableMemory()->end());
 #endif
-    
+
     return CompilationSuccessful;
 }
 
@@ -698,7 +698,7 @@ void JIT::privateCompileExceptionHandlers()
 
     if (!m_exceptionChecks.empty())
         m_exceptionChecks.link(this);
-    
+
     // lookupExceptionHandler is passed two arguments, the VM and the exec (the CallFrame*).
     move(GPRInfo::callFrameRegister, GPRInfo::argumentGPR1);
 

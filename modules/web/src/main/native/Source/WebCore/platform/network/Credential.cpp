@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "config.h"
 #include "Credential.h"
@@ -35,10 +35,10 @@ Credential::Credential()
     , m_persistence(CredentialPersistenceNone)
 #if CERTIFICATE_CREDENTIALS_SUPPORTED
     , m_type(CredentialTypePassword)
-#endif    
+#endif
 {
 }
-   
+
 // Need to enforce empty, non-null strings due to the pickiness of the String == String operator
 // combined with the semantics of the String(NSString*) constructor
 Credential::Credential(const String& user, const String& password, CredentialPersistence persistence)
@@ -50,7 +50,7 @@ Credential::Credential(const String& user, const String& password, CredentialPer
 #endif
 {
 }
-    
+
 Credential::Credential(const Credential& original, CredentialPersistence persistence)
     : m_user(original.user())
     , m_password(original.password())
@@ -69,30 +69,30 @@ bool Credential::isEmpty() const
     if (m_type == CredentialTypeClientCertificate && (m_identity || m_certificates))
         return false;
 #endif
-    
+
     return m_user.isEmpty() && m_password.isEmpty();
 }
-    
+
 const String& Credential::user() const
-{ 
-    return m_user; 
+{
+    return m_user;
 }
 
-const String& Credential::password() const 
-{ 
-    return m_password; 
+const String& Credential::password() const
+{
+    return m_password;
 }
 
-bool Credential::hasPassword() const 
-{ 
-    return !m_password.isEmpty(); 
+bool Credential::hasPassword() const
+{
+    return !m_password.isEmpty();
 }
 
-CredentialPersistence Credential::persistence() const 
-{ 
-    return m_persistence; 
+CredentialPersistence Credential::persistence() const
+{
+    return m_persistence;
 }
-    
+
 #if CERTIFICATE_CREDENTIALS_SUPPORTED
 Credential::Credential(SecIdentityRef identity, CFArrayRef certificates, CredentialPersistence persistence)
     : m_user("")
@@ -103,17 +103,17 @@ Credential::Credential(SecIdentityRef identity, CFArrayRef certificates, Credent
     , m_type(CredentialTypeClientCertificate)
 {
 }
-    
+
 SecIdentityRef Credential::identity() const
 {
     return m_identity.get();
 }
-    
+
 CFArrayRef Credential::certificates() const
 {
     return m_certificates.get();
 }
-    
+
 CredentialType Credential::type() const
 {
     return m_type;
@@ -126,12 +126,12 @@ bool operator==(const Credential& a, const Credential& b)
     // have the persistence property.
     if (a.persistence() != b.persistence())
         return false;
-    
+
 #if CERTIFICATE_CREDENTIALS_SUPPORTED
     CredentialType aType = a.type();
     if (aType != b.type())
         return false;
-    
+
     // Comparing identity and certificate chain pointers is valid only
     // for client certificate type credentials.
     //
@@ -141,20 +141,20 @@ bool operator==(const Credential& a, const Credential& b)
             return false;
         if (a.certificates() != b.certificates())
             return false;
-        
+
         // We only need to check identity and certificates to compare
         // client certificate based credentials.
         return true;
     }
-    
+
     ASSERT(a.type() == CredentialTypePassword && b.type() == CredentialTypePassword);
-#endif    
-    
+#endif
+
     if (a.user() != b.user())
         return false;
     if (a.password() != b.password())
         return false;
-        
+
     return true;
 }
 

@@ -36,7 +36,7 @@
 #include "RenderStyle.h"
 
 namespace WebCore {
-    
+
 using namespace HTMLNames;
 
 AccessibilityList::AccessibilityList(RenderObject* renderer)
@@ -57,12 +57,12 @@ bool AccessibilityList::computeAccessibilityIsIgnored() const
 {
     return accessibilityIsIgnoredByDefault();
 }
-    
+
 bool AccessibilityList::isUnorderedList() const
 {
     if (!m_renderer)
         return false;
-    
+
     Node* node = m_renderer->node();
 
     // The ARIA spec says the "list" role is supposed to mimic a UL or OL tag.
@@ -70,7 +70,7 @@ bool AccessibilityList::isUnorderedList() const
     // On the Mac, there's no distinction to the client.
     if (ariaRoleAttribute() == ListRole)
         return true;
-    
+
     return node && node->hasTagName(ulTag);
 }
 
@@ -84,14 +84,14 @@ bool AccessibilityList::isOrderedList() const
         return true;
 
     Node* node = m_renderer->node();
-    return node && node->hasTagName(olTag);    
+    return node && node->hasTagName(olTag);
 }
 
 bool AccessibilityList::isDescriptionList() const
 {
     if (!m_renderer)
         return false;
-    
+
     Node* node = m_renderer->node();
     return node && node->hasTagName(dlTag);
 }
@@ -99,11 +99,11 @@ bool AccessibilityList::isDescriptionList() const
 AccessibilityRole AccessibilityList::determineAccessibilityRole()
 {
     m_ariaRole = determineAriaRoleAttribute();
-    
+
     // Directory is mapped to list for now, but does not adhere to the same heuristics.
     if (ariaRoleAttribute() == DirectoryRole)
         return ListRole;
-    
+
     // Heuristic to determine if this list is being used for layout or for content.
     //   1. If it's a named list, like ol or aria=list, then it's a list.
     //      1a. Unless the list has no children, then it's not a list.
@@ -111,12 +111,12 @@ AccessibilityRole AccessibilityList::determineAccessibilityRole()
     //   3. If it does not display list markers and has only one child, it's not a list.
     //   4. If it does not have any listitem children, it's not a list.
     //   5. Otherwise it's a list (for now).
-    
+
     AccessibilityRole role = ListRole;
-    
+
     // Temporarily set role so that we can query children (otherwise canHaveChildren returns false).
     m_role = role;
-    
+
     unsigned listItemCount = 0;
     bool hasVisibleMarkers = false;
 
@@ -137,7 +137,7 @@ AccessibilityRole AccessibilityList::determineAccessibilityRole()
             }
         }
     }
-    
+
     bool unorderedList = isUnorderedList();
     // Non <ul> lists and ARIA lists only need to have one child.
     // <ul> lists need to have 1 child, or visible markers.
@@ -149,11 +149,11 @@ AccessibilityRole AccessibilityList::determineAccessibilityRole()
 
     return role;
 }
-    
+
 AccessibilityRole AccessibilityList::roleValue() const
 {
     ASSERT(m_role != UnknownRole);
     return m_role;
 }
-    
+
 } // namespace WebCore

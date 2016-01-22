@@ -105,7 +105,7 @@ adapt (guint    delta,
     }
 
   return k + ((PUNYCODE_BASE - PUNYCODE_TMIN + 1) * delta /
-	      (delta + PUNYCODE_SKEW));
+          (delta + PUNYCODE_SKEW));
 }
 
 /* Punycode encoder, RFC 3492 section 6.3. The algorithm is
@@ -115,7 +115,7 @@ adapt (guint    delta,
 static gboolean
 punycode_encode (const gchar *input_utf8,
                  gsize        input_utf8_length,
-		 GString     *output)
+         GString     *output)
 {
   guint delta, handled_chars, num_basic_chars, bias, j, q, k, t, digit;
   gunichar n, m, *input;
@@ -124,7 +124,7 @@ punycode_encode (const gchar *input_utf8,
 
   /* Convert from UTF-8 to Unicode code points */
   input = g_utf8_to_ucs4 (input_utf8, input_utf8_length, NULL,
-			  &input_length, NULL);
+              &input_length, NULL);
   if (!input)
     return FALSE;
 
@@ -132,10 +132,10 @@ punycode_encode (const gchar *input_utf8,
   for (j = num_basic_chars = 0; j < input_length; j++)
     {
       if (PUNYCODE_IS_BASIC (input[j]))
-	{
-	  g_string_append_c (output, g_ascii_tolower (input[j]));
-	  num_basic_chars++;
-	}
+    {
+      g_string_append_c (output, g_ascii_tolower (input[j]));
+      num_basic_chars++;
+    }
     }
   if (num_basic_chars)
     g_string_append_c (output, '-');
@@ -150,47 +150,47 @@ punycode_encode (const gchar *input_utf8,
     {
       /* let m = the minimum {non-basic} code point >= n in the input */
       for (m = G_MAXUINT, j = 0; j < input_length; j++)
-	{
-	  if (input[j] >= n && input[j] < m)
-	    m = input[j];
-	}
+    {
+      if (input[j] >= n && input[j] < m)
+        m = input[j];
+    }
 
       if (m - n > (G_MAXUINT - delta) / (handled_chars + 1))
-	goto fail;
+    goto fail;
       delta += (m - n) * (handled_chars + 1);
       n = m;
 
       for (j = 0; j < input_length; j++)
-	{
-	  if (input[j] < n)
-	    {
-	      if (++delta == 0)
-		goto fail;
-	    }
-	  else if (input[j] == n)
-	    {
-	      q = delta;
-	      for (k = PUNYCODE_BASE; ; k += PUNYCODE_BASE)
-		{
-		  if (k <= bias)
-		    t = PUNYCODE_TMIN;
-		  else if (k >= bias + PUNYCODE_TMAX)
-		    t = PUNYCODE_TMAX;
-		  else
-		    t = k - bias;
-		  if (q < t)
-		    break;
-		  digit = t + (q - t) % (PUNYCODE_BASE - t);
-		  g_string_append_c (output, encode_digit (digit));
-		  q = (q - t) / (PUNYCODE_BASE - t);
-		}
+    {
+      if (input[j] < n)
+        {
+          if (++delta == 0)
+        goto fail;
+        }
+      else if (input[j] == n)
+        {
+          q = delta;
+          for (k = PUNYCODE_BASE; ; k += PUNYCODE_BASE)
+        {
+          if (k <= bias)
+            t = PUNYCODE_TMIN;
+          else if (k >= bias + PUNYCODE_TMAX)
+            t = PUNYCODE_TMAX;
+          else
+            t = k - bias;
+          if (q < t)
+            break;
+          digit = t + (q - t) % (PUNYCODE_BASE - t);
+          g_string_append_c (output, encode_digit (digit));
+          q = (q - t) / (PUNYCODE_BASE - t);
+        }
 
-	      g_string_append_c (output, encode_digit (q));
-	      bias = adapt (delta, handled_chars + 1, handled_chars == num_basic_chars);
-	      delta = 0;
-	      handled_chars++;
-	    }
-	}
+          g_string_append_c (output, encode_digit (q));
+          bias = adapt (delta, handled_chars + 1, handled_chars == num_basic_chars);
+          delta = 0;
+          handled_chars++;
+        }
+    }
 
       delta++;
       n++;
@@ -221,15 +221,15 @@ remove_junk (const gchar *str,
     {
       ch = g_utf8_get_char (p);
       if (idna_is_junk (ch))
-	{
-	  if (!cleaned)
-	    {
-	      cleaned = g_string_new (NULL);
-	      g_string_append_len (cleaned, str, p - str);
-	    }
-	}
+    {
+      if (!cleaned)
+        {
+          cleaned = g_string_new (NULL);
+          g_string_append_len (cleaned, str, p - str);
+        }
+    }
       else if (cleaned)
-	g_string_append_unichar (cleaned, ch);
+    g_string_append_unichar (cleaned, ch);
     }
 
   if (cleaned)
@@ -247,7 +247,7 @@ contains_uppercase_letters (const gchar *str,
   for (p = str; len == -1 ? *p : p < str + len; p = g_utf8_next_char (p))
     {
       if (g_unichar_isupper (g_utf8_get_char (p)))
-	return TRUE;
+    return TRUE;
     }
   return FALSE;
 }
@@ -261,7 +261,7 @@ contains_non_ascii (const gchar *str,
   for (p = str; len == -1 ? *p : p < str + len; p++)
     {
       if ((guchar)*p > 0x80)
-	return TRUE;
+    return TRUE;
     }
   return FALSE;
 }
@@ -284,13 +284,13 @@ idna_is_prohibited (gunichar ch)
 
     case G_UNICODE_OTHER_SYMBOL:
       if (ch == 0xFFFC || ch == 0xFFFD ||
-	  (ch >= 0x2FF0 && ch <= 0x2FFB))
-	return TRUE;
+      (ch >= 0x2FF0 && ch <= 0x2FFB))
+    return TRUE;
       return FALSE;
 
     case G_UNICODE_NON_SPACING_MARK:
       if (ch == 0x0340 || ch == 0x0341)
-	return TRUE;
+    return TRUE;
       return FALSE;
 
     default:
@@ -370,11 +370,11 @@ nameprep (const gchar *hostname,
   for (p = name; *p; p = g_utf8_next_char (p))
     {
       if (idna_is_prohibited (g_utf8_get_char (p)))
-	{
-	  name = NULL;
+    {
+      name = NULL;
           g_free (tmp);
-	  goto done;
-	}
+      goto done;
+    }
     }
 
   /* FIXME: We're supposed to verify certain constraints on bidi
@@ -436,27 +436,27 @@ g_hostname_to_ascii (const gchar *hostname)
     {
       unicode = FALSE;
       for (p = label; *p && !idna_is_dot (p); p++)
-	{
-	  if ((guchar)*p > 0x80)
-	    unicode = TRUE;
-	}
+    {
+      if ((guchar)*p > 0x80)
+        unicode = TRUE;
+    }
 
       oldlen = out->len;
       llen = p - label;
       if (unicode)
-	{
+    {
           if (!strncmp (label, IDNA_ACE_PREFIX, IDNA_ACE_PREFIX_LEN))
             goto fail;
 
-	  g_string_append (out, IDNA_ACE_PREFIX);
-	  if (!punycode_encode (label, llen, out))
-	    goto fail;
-	}
+      g_string_append (out, IDNA_ACE_PREFIX);
+      if (!punycode_encode (label, llen, out))
+        goto fail;
+    }
       else
         g_string_append_len (out, label, llen);
 
       if (out->len - oldlen > 63)
-	goto fail;
+    goto fail;
 
       label += llen;
       if (*label)
@@ -521,15 +521,15 @@ punycode_decode (const gchar *input,
   if (split > input)
     {
       output_chars = g_array_sized_new (FALSE, FALSE, sizeof (gunichar),
-					split - input);
+                    split - input);
       input_length -= (split - input) + 1;
       while (input < split)
-	{
-	  gunichar ch = (gunichar)*input++;
-	  if (!PUNYCODE_IS_BASIC (ch))
-	    goto fail;
-	  g_array_append_val (output_chars, ch);
-	}
+    {
+      gunichar ch = (gunichar)*input++;
+      if (!PUNYCODE_IS_BASIC (ch))
+        goto fail;
+      g_array_append_val (output_chars, ch);
+    }
       input++;
     }
   else
@@ -540,32 +540,32 @@ punycode_decode (const gchar *input,
       oldi = i;
       w = 1;
       for (k = PUNYCODE_BASE; ; k += PUNYCODE_BASE)
-	{
-	  if (!input_length--)
-	    goto fail;
-	  digit = decode_digit (*input++);
-	  if (digit >= PUNYCODE_BASE)
-	    goto fail;
-	  if (digit > (G_MAXUINT - i) / w)
-	    goto fail;
-	  i += digit * w;
-	  if (k <= bias)
-	    t = PUNYCODE_TMIN;
-	  else if (k >= bias + PUNYCODE_TMAX)
-	    t = PUNYCODE_TMAX;
-	  else
-	    t = k - bias;
-	  if (digit < t)
-	    break;
-	  if (w > G_MAXUINT / (PUNYCODE_BASE - t))
-	    goto fail;
-	  w *= (PUNYCODE_BASE - t);
-	}
+    {
+      if (!input_length--)
+        goto fail;
+      digit = decode_digit (*input++);
+      if (digit >= PUNYCODE_BASE)
+        goto fail;
+      if (digit > (G_MAXUINT - i) / w)
+        goto fail;
+      i += digit * w;
+      if (k <= bias)
+        t = PUNYCODE_TMIN;
+      else if (k >= bias + PUNYCODE_TMAX)
+        t = PUNYCODE_TMAX;
+      else
+        t = k - bias;
+      if (digit < t)
+        break;
+      if (w > G_MAXUINT / (PUNYCODE_BASE - t))
+        goto fail;
+      w *= (PUNYCODE_BASE - t);
+    }
 
       bias = adapt (i - oldi, output_chars->len + 1, oldi == 0);
 
       if (i / (output_chars->len + 1) > G_MAXUINT - n)
-	goto fail;
+    goto fail;
       n += i / (output_chars->len + 1);
       i %= (output_chars->len + 1);
 
@@ -611,15 +611,15 @@ g_hostname_to_unicode (const gchar *hostname)
     {
       llen = idna_end_of_label (hostname) - hostname;
       if (!g_ascii_strncasecmp (hostname, IDNA_ACE_PREFIX, IDNA_ACE_PREFIX_LEN))
-	{
-	  hostname += IDNA_ACE_PREFIX_LEN;
-	  llen -= IDNA_ACE_PREFIX_LEN;
-	  if (!punycode_decode (hostname, llen, out))
-	    {
-	      g_string_free (out, TRUE);
-	      return NULL;
-	    }
-	}
+    {
+      hostname += IDNA_ACE_PREFIX_LEN;
+      llen -= IDNA_ACE_PREFIX_LEN;
+      if (!punycode_decode (hostname, llen, out))
+        {
+          g_string_free (out, TRUE);
+          return NULL;
+        }
+    }
       else
         {
           gboolean unicode;
@@ -669,12 +669,12 @@ g_hostname_is_ascii_encoded (const gchar *hostname)
   while (1)
     {
       if (!g_ascii_strncasecmp (hostname, IDNA_ACE_PREFIX, IDNA_ACE_PREFIX_LEN))
-	return TRUE;
+    return TRUE;
       hostname = idna_end_of_label (hostname);
       if (*hostname)
         hostname = g_utf8_next_char (hostname);
       if (!*hostname)
-	return FALSE;
+    return FALSE;
     }
 }
 

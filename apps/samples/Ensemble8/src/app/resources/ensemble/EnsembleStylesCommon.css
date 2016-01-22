@@ -50,8 +50,8 @@
     -fx-font-family: "Source Sans Pro";
     -fx-font-size: 14;
     -fx-padding: 5px;
-    -fx-text-fill: #777777; 
-    -fx-graphic-text-gap: 8px; 
+    -fx-text-fill: #777777;
+    -fx-graphic-text-gap: 8px;
 }
 .sample-large-preview {
     -fx-background-color: white;
@@ -160,7 +160,7 @@
 }
 .sample-tree-list-cell {
     -fx-background-color: white;
-    -fx-border-color: transparent transparent #dfdfdf transparent; 
+    -fx-border-color: transparent transparent #dfdfdf transparent;
     -fx-padding: 0 30 0 20;
     -fx-font-size: 15px;
     -fx-text-fill: #363636;

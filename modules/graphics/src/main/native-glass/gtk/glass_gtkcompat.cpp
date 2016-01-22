@@ -43,7 +43,7 @@ typedef struct _DeviceGrabContext {
 static void grab_mouse_device(GdkDevice *device, DeviceGrabContext *context);
 static void ungrab_mouse_device(GdkDevice *device);
 
-GdkScreen * 
+GdkScreen *
 glass_gdk_window_get_screen(GdkWindow * gdkWindow) {
     GdkVisual * gdkVisual = gdk_window_get_visual(gdkWindow);
     return gdk_visual_get_screen(gdkVisual);
@@ -171,7 +171,7 @@ grab_mouse_device(GdkDevice *device, DeviceGrabContext *context) {
         if (status == GDK_GRAB_SUCCESS) {
             context->grabbed = TRUE;
         }
-    }    
+    }
 }
 
 static void
@@ -198,7 +198,7 @@ void glass_gdk_display_get_pointer(GdkDisplay* display, gint* x, gint *y) {
 
 #else /* GTK_CHECK_VERSION(3, 0, 0) */
 
-GdkScreen * 
+GdkScreen *
 glass_gdk_window_get_screen(GdkWindow * gdkWindow) {
     return gdk_window_get_screen(gdkWindow);
 }

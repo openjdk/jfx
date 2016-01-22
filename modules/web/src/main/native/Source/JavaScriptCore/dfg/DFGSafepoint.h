@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef DFGSafepoint_h
@@ -43,13 +43,13 @@ class Safepoint {
 public:
     Safepoint(Plan&);
     ~Safepoint();
-    
+
     void add(Scannable*);
-    
+
     void begin();
-    
+
     void visitChildren(SlotVisitor&);
-    
+
 private:
     Plan& m_plan;
     Vector<Scannable*> m_scannables;

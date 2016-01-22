@@ -45,31 +45,31 @@ import javafx.scene.control.TitledPane;
  *
  */
 class TransientStateBackup {
-    
+
     private final FXOMDocument fxomDocument;
     private final Map<FXOMObject, FXOMObject> tabPaneMap = new HashMap<>();
     private final Map<FXOMObject, FXOMObject> accordionMap = new HashMap<>();
 
     public TransientStateBackup(FXOMDocument fxomDocument) {
         assert fxomDocument != null;
-        
+
         this.fxomDocument = fxomDocument;
-        
+
         final List<FXOMObject> candidates = new ArrayList<>();
         if (this.fxomDocument.getFxomRoot() != null) {
             candidates.add(this.fxomDocument.getFxomRoot());
         }
-        
+
         while (candidates.isEmpty() == false) {
             final FXOMObject candidate = candidates.get(0);
             candidates.remove(0);
-            
+
             final Object sceneGraphObject = candidate.getSceneGraphObject();
             if (sceneGraphObject instanceof TabPane) {
                 final TabPane tabPane = (TabPane) sceneGraphObject;
                 final Tab currentTab = tabPane.getSelectionModel().getSelectedItem();
                 if (currentTab != null) {
-                    final FXOMObject tabObject 
+                    final FXOMObject tabObject
                             = candidate.searchWithSceneGraphObject(currentTab);
                     if (tabObject != null) {
                         tabPaneMap.put(candidate, tabObject);
@@ -86,21 +86,21 @@ class TransientStateBackup {
                     }
                 }
             }
-            
+
             candidates.addAll(candidate.getChildObjects());
         }
     }
-    
+
     public void restore() {
         final List<FXOMObject> candidates = new ArrayList<>();
         if (this.fxomDocument.getFxomRoot() != null) {
             candidates.add(this.fxomDocument.getFxomRoot());
         }
-        
+
         while (candidates.isEmpty() == false) {
             final FXOMObject candidate = candidates.get(0);
             candidates.remove(0);
-            
+
             final Object sceneGraphObject = candidate.getSceneGraphObject();
             if (sceneGraphObject instanceof TabPane) {
                 final TabPane tabPane = (TabPane) sceneGraphObject;
@@ -121,7 +121,7 @@ class TransientStateBackup {
                     accordion.setExpandedPane(titledPane);
                 }
             }
-            
+
             candidates.addAll(candidate.getChildObjects());
         }
     }

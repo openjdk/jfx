@@ -39,10 +39,10 @@ import javafx.util.Duration;
  It manipulates the data in our Model on a polled basis.
 
  Note: The manipulation of our Model data is done on a timeline which is
- run on the JavaFX event thread. 
+ run on the JavaFX event thread.
 
- This polling could be done on a separate thread, but care would need to be 
- taken with the update of the model elements to ensure that all of the updates 
+ This polling could be done on a separate thread, but care would need to be
+ taken with the update of the model elements to ensure that all of the updates
  end up on the event thread.
  */
 public class Controller implements EventHandler<ActionEvent> {

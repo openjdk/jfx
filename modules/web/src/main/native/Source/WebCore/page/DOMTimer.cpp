@@ -50,7 +50,7 @@ static const int maxTimerNestingLevel = 5;
 static const double oneMillisecond = 0.001;
 
 static int timerNestingLevel = 0;
-    
+
 static inline bool shouldForwardUserGesture(int interval, int nestingLevel)
 {
     return UserGestureIndicator::processingUserGesture()

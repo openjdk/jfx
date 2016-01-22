@@ -43,7 +43,7 @@ import javafx.scene.control.TextField;
 public abstract class NumberField extends TextField {
     // Constants allowed for this editor
     List<String> constants = new ArrayList<>();
-    
+
     public NumberField() {
     }
 
@@ -51,7 +51,7 @@ public abstract class NumberField extends TextField {
         this.constants.clear();
         this.constants.addAll(constants);
     }
-    
+
     public String getNewText(int start, int end, String text) {
         String oldText = getText();
         String toReplace = oldText.substring(start, end);

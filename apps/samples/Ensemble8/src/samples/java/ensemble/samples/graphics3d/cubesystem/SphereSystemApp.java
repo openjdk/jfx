@@ -185,14 +185,14 @@ public class SphereSystemApp extends Application {
                 new KeyValue(cube1_8.rx.angleProperty(), -7200.0),
                 new KeyValue(cube1_9.rx.angleProperty(), 7200.0)));
         animation.setCycleCount(Timeline.INDEFINITE);
-        
+
         PerspectiveCamera camera = new PerspectiveCamera(true);
         camera.setFarClip(1500);
-        camera.getTransforms().add(new Translate(0, 0, -900));        
-        
+        camera.getTransforms().add(new Translate(0, 0, -900));
+
         SubScene subScene = new SubScene(sceneRoot, 640, 480, true, SceneAntialiasing.BALANCED);
         subScene.setCamera(camera);
-        
+
         return new Group(subScene);
     }
 

@@ -136,7 +136,7 @@ public abstract class ScrollTestBase extends ParameterizedTestBase {
         point1Y += deltaY;
         device.setPoint(p1, point1X, point1Y);
         device.sync();
-        TestLogShim.waitForLogContaining("TouchPoint: MOVED %d, %d", point1X, 
+        TestLogShim.waitForLogContaining("TouchPoint: MOVED %d, %d", point1X,
                 point1Y);
         if (firstMove) {
             totalDeltaX = deltaX;

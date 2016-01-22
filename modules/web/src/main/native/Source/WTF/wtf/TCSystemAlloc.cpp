@@ -1,10 +1,10 @@
 // Copyright (c) 2005, 2007, Google Inc.
 // All rights reserved.
-// 
+//
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are
 // met:
-// 
+//
 //     * Redistributions of source code must retain the above copyright
 // notice, this list of conditions and the following disclaimer.
 //     * Redistributions in binary form must reproduce the above
@@ -14,7 +14,7 @@
 //     * Neither the name of Google Inc. nor the names of its
 // contributors may be used to endorse or promote products derived from
 // this software without specific prior written permission.
-// 
+//
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 // "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
 // LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -80,7 +80,7 @@ static bool use_sbrk = false;
 
 #if HAVE(MMAP)
 static bool use_mmap = true;
-#endif 
+#endif
 
 #if HAVE(VIRTUALALLOC)
 static bool use_VirtualAlloc = true;
@@ -105,12 +105,12 @@ DEFINE_int32(malloc_devmem_limit, 0,
 
 static void* TrySbrk(size_t size, size_t *actual_size, size_t alignment) {
   size = ((size + alignment - 1) / alignment) * alignment;
-  
+
   // could theoretically return the "extra" bytes here, but this
   // is simple and correct.
-  if (actual_size) 
+  if (actual_size)
     *actual_size = size;
-    
+
   void* result = sbrk(size);
   if (result == reinterpret_cast<void*>(-1)) {
     sbrk_failure = true;
@@ -152,12 +152,12 @@ static void* TryMmap(size_t size, size_t *actual_size, size_t alignment) {
   if (pagesize == 0) pagesize = getpagesize();
   if (alignment < pagesize) alignment = pagesize;
   size = ((size + alignment - 1) / alignment) * alignment;
-  
+
   // could theoretically return the "extra" bytes here, but this
   // is simple and correct.
-  if (actual_size) 
+  if (actual_size)
     *actual_size = size;
-    
+
   // Ask for extra memory if alignment > pagesize
   size_t extra = 0;
   if (alignment > pagesize) {
@@ -211,16 +211,16 @@ static void* TryVirtualAlloc(size_t size, size_t *actual_size, size_t alignment)
 
   // could theoretically return the "extra" bytes here, but this
   // is simple and correct.
-  if (actual_size) 
+  if (actual_size)
     *actual_size = size;
-    
+
   // Ask for extra memory if alignment > pagesize
   size_t extra = 0;
   if (alignment > pagesize) {
     extra = alignment - pagesize;
   }
   void* result = VirtualAlloc(NULL, size + extra,
-                              MEM_RESERVE | MEM_COMMIT | MEM_TOP_DOWN, 
+                              MEM_RESERVE | MEM_COMMIT | MEM_TOP_DOWN,
                               PAGE_READWRITE);
 
   if (result == NULL) {
@@ -256,7 +256,7 @@ static void* TryDevMem(size_t size, size_t *actual_size, size_t alignment) {
   static off_t physmem_base;  // next physical memory address to allocate
   static off_t physmem_limit; // maximum physical address allowed
   static int physmem_fd;      // file descriptor for /dev/mem
-  
+
   // Check if we should use /dev/mem allocation.  Note that it may take
   // a while to get this flag initialized, so meanwhile we fall back to
   // the next allocator.  (It looks like 7MB gets allocated before
@@ -266,7 +266,7 @@ static void* TryDevMem(size_t size, size_t *actual_size, size_t alignment) {
     // try us again next time.
     return NULL;
   }
-  
+
   if (!initialized) {
     physmem_fd = open("/dev/mem", O_RDWR);
     if (physmem_fd < 0) {
@@ -277,23 +277,23 @@ static void* TryDevMem(size_t size, size_t *actual_size, size_t alignment) {
     physmem_limit = FLAGS_malloc_devmem_limit*1024LL*1024LL;
     initialized = true;
   }
-  
+
   // Enforce page alignment
   if (pagesize == 0) pagesize = getpagesize();
   if (alignment < pagesize) alignment = pagesize;
   size = ((size + alignment - 1) / alignment) * alignment;
-    
+
   // could theoretically return the "extra" bytes here, but this
   // is simple and correct.
   if (actual_size)
     *actual_size = size;
-    
+
   // Ask for extra memory if alignment > pagesize
   size_t extra = 0;
   if (alignment > pagesize) {
     extra = alignment - pagesize;
   }
-  
+
   // check to see if we have any memory left
   if (physmem_limit != 0 && physmem_base + size + extra > physmem_limit) {
     devmem_failure = true;
@@ -306,13 +306,13 @@ static void* TryDevMem(size_t size, size_t *actual_size, size_t alignment) {
     return NULL;
   }
   uintptr_t ptr = reinterpret_cast<uintptr_t>(result);
-  
+
   // Adjust the return memory so it is aligned
   size_t adjust = 0;
   if ((ptr & (alignment - 1)) != 0) {
     adjust = alignment - (ptr & (alignment - 1));
   }
-  
+
   // Return the unused virtual memory to the system
   if (adjust > 0) {
     munmap(reinterpret_cast<void*>(ptr), adjust);
@@ -320,10 +320,10 @@ static void* TryDevMem(size_t size, size_t *actual_size, size_t alignment) {
   if (adjust < extra) {
     munmap(reinterpret_cast<void*>(ptr + adjust + size), extra - adjust);
   }
-  
+
   ptr += adjust;
   physmem_base += adjust + size;
-  
+
   return reinterpret_cast<void*>(ptr);
 }
 #endif
@@ -331,7 +331,7 @@ static void* TryDevMem(size_t size, size_t *actual_size, size_t alignment) {
 void* TCMalloc_SystemAlloc(size_t size, size_t *actual_size, size_t alignment) {
   // Discard requests that overflow
   if (size + alignment < size) return NULL;
-    
+
   SpinLockHolder lock_holder(&spinlock);
 
   // Enforce minimum alignment
@@ -346,14 +346,14 @@ void* TCMalloc_SystemAlloc(size_t size, size_t *actual_size, size_t alignment) {
       void* result = TryDevMem(size, actual_size, alignment);
       if (result != NULL) return result;
     }
-    
+
     if (use_sbrk && !sbrk_failure) {
       void* result = TrySbrk(size, actual_size, alignment);
       if (result != NULL) return result;
     }
 #endif
 
-#if HAVE(MMAP)    
+#if HAVE(MMAP)
     if (use_mmap && !mmap_failure) {
       void* result = TryMmap(size, actual_size, alignment);
       if (result != NULL) return result;

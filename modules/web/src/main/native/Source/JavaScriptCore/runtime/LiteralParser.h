@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef LiteralParser_h
@@ -43,15 +43,15 @@ enum JSONPPathEntryType {
     JSONPPathEntryTypeCall // <prior entries>(JSON)
 };
 
-enum ParserState { StartParseObject, StartParseArray, StartParseExpression, 
-                   StartParseStatement, StartParseStatementEndStatement, 
+enum ParserState { StartParseObject, StartParseArray, StartParseExpression,
+                   StartParseStatement, StartParseStatementEndStatement,
                    DoParseObjectStartExpression, DoParseObjectEndExpression,
                    DoParseArrayStartExpression, DoParseArrayEndExpression };
-enum TokenType { TokLBracket, TokRBracket, TokLBrace, TokRBrace, 
-                 TokString, TokIdentifier, TokNumber, TokColon, 
+enum TokenType { TokLBracket, TokRBracket, TokLBrace, TokRBrace,
+                 TokString, TokIdentifier, TokNumber, TokColon,
                  TokLParen, TokRParen, TokComma, TokTrue, TokFalse,
                  TokNull, TokEnd, TokDot, TokAssign, TokSemi, TokError };
-    
+
 struct JSONPPathEntry {
     JSONPPathEntryType m_type;
     Identifier m_pathEntryName;
@@ -94,16 +94,16 @@ public:
         , m_mode(mode)
     {
     }
-    
+
     String getErrorMessage()
-    { 
+    {
         if (!m_lexer.getErrorMessage().isEmpty())
             return String::format("JSON Parse error: %s", m_lexer.getErrorMessage().ascii().data()).impl();
         if (!m_parseErrorMessage.isEmpty())
             return String::format("JSON Parse error: %s", m_parseErrorMessage.ascii().data()).impl();
         return ASCIILiteral("JSON Parse error: Unable to parse JSON string");
     }
-    
+
     JSValue tryLiteralParse()
     {
         m_lexer.next();
@@ -114,7 +114,7 @@ public:
             return JSValue();
         return result;
     }
-    
+
     bool tryJSONPParse(Vector<JSONPData>&, bool needsFullSourceInfo);
 
 private:
@@ -126,16 +126,16 @@ private:
             , m_end(characters + length)
         {
         }
-        
+
         TokenType next();
-        
+
         const LiteralParserToken<CharType>& currentToken()
         {
             return m_currentToken;
         }
-        
+
         String getErrorMessage() { return m_lexErrorMessage; }
-        
+
     private:
         String m_lexErrorMessage;
         template <ParserMode mode> TokenType lex(LiteralParserToken<CharType>&);
@@ -147,7 +147,7 @@ private:
         const CharType* m_ptr;
         const CharType* m_end;
     };
-    
+
     class StackGuard;
     JSValue parse(ParserState);
 

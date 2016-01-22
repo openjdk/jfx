@@ -45,7 +45,7 @@ void JSAudioBufferSourceNode::setBuffer(ExecState* exec, JSValue value)
         exec->vm().throwException(exec, createTypeError(exec, "Value is not of type AudioBuffer"));
         return;
     }
-    
+
     if (!impl().setBuffer(buffer))
         exec->vm().throwException(exec, createTypeError(exec, "AudioBuffer unsupported number of channels"));
 }

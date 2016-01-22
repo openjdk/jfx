@@ -90,9 +90,9 @@ public final class Dragboard extends Clipboard {
 
     // PENDING_DOC_REVIEW
     /**
-     * Sets the visual representation of data being transfered 
+     * Sets the visual representation of data being transfered
      * in a drag and drop gesture.
-     * Uses the given image for the drag view with the offsetX and offsetY 
+     * Uses the given image for the drag view with the offsetX and offsetY
      * specifying cursor position over the image.
      * This method should be called only when starting drag and drop operation
      * in the DRAG_DETECTED handler, calling it at other times
@@ -109,7 +109,7 @@ public final class Dragboard extends Clipboard {
     }
 
     /**
-     * Sets the visual representation of data being transfered 
+     * Sets the visual representation of data being transfered
      * in a drag and drop gesture.
      * This method should be called only when starting drag and drop operation
      * in the DRAG_DETECTED handler, calling it at other times

@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef ArrayProfile_h
@@ -144,7 +144,7 @@ public:
         , m_observedArrayModes(0)
     {
     }
-    
+
     ArrayProfile(unsigned bytecodeOffset)
         : m_bytecodeOffset(bytecodeOffset)
         , m_lastSeenStructure(0)
@@ -156,37 +156,37 @@ public:
         , m_observedArrayModes(0)
     {
     }
-    
+
     unsigned bytecodeOffset() const { return m_bytecodeOffset; }
-    
+
     Structure** addressOfLastSeenStructure() { return &m_lastSeenStructure; }
     ArrayModes* addressOfArrayModes() { return &m_observedArrayModes; }
     bool* addressOfMayStoreToHole() { return &m_mayStoreToHole; }
     bool* addressOfOutOfBounds() { return &m_outOfBounds; }
-    
+
     void observeStructure(Structure* structure)
     {
         m_lastSeenStructure = structure;
     }
-    
+
     void computeUpdatedPrediction(const ConcurrentJITLocker&, CodeBlock*);
-    
+
     ArrayModes observedArrayModes(const ConcurrentJITLocker&) const { return m_observedArrayModes; }
     bool mayInterceptIndexedAccesses(const ConcurrentJITLocker&) const { return m_mayInterceptIndexedAccesses; }
-    
+
     bool mayStoreToHole(const ConcurrentJITLocker&) const { return m_mayStoreToHole; }
     bool outOfBounds(const ConcurrentJITLocker&) const { return m_outOfBounds; }
-    
+
     bool usesOriginalArrayStructures(const ConcurrentJITLocker&) const { return m_usesOriginalArrayStructures; }
-    
+
     CString briefDescription(const ConcurrentJITLocker&, CodeBlock*);
     CString briefDescriptionWithoutUpdating(const ConcurrentJITLocker&);
-    
+
 private:
     friend class LLIntOffsetsExtractor;
-    
+
     static Structure* polymorphicStructure() { return static_cast<Structure*>(reinterpret_cast<void*>(1)); }
-    
+
     unsigned m_bytecodeOffset;
     Structure* m_lastSeenStructure;
     bool m_mayStoreToHole; // This flag may become overloaded to indicate other special cases that were encountered during array access, as it depends on indexing type. Since we currently have basically just one indexing type (two variants of ArrayStorage), this flag for now just means exactly what its name implies.

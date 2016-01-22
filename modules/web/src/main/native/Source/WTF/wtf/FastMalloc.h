@@ -51,15 +51,15 @@ namespace WTF {
         ~TryMallocReturnValue() { ASSERT(!m_data); }
         template <typename T> bool getValue(T& data) WARN_UNUSED_RETURN;
         template <typename T> operator PossiblyNull<T>()
-        { 
-            T value; 
-            getValue(value); 
+        {
+            T value;
+            getValue(value);
             return PossiblyNull<T>(value);
-        } 
+        }
     private:
         mutable void* m_data;
     };
-    
+
     template <typename T> bool TryMallocReturnValue::getValue(T& data)
     {
         union u { void* data; T target; } res;
@@ -77,13 +77,13 @@ namespace WTF {
 
     WTF_EXPORT_PRIVATE void fastFree(void*);
 
-#ifndef NDEBUG    
+#ifndef NDEBUG
     WTF_EXPORT_PRIVATE void fastMallocForbid();
     WTF_EXPORT_PRIVATE void fastMallocAllow();
 #endif
 
     WTF_EXPORT_PRIVATE void releaseFastMallocFreeMemory();
-    
+
     struct FastMallocStatistics {
         size_t reservedVMBytes;
         size_t committedVMBytes;
@@ -136,7 +136,7 @@ namespace WTF {
     // is implemented.
 
     namespace Internal {
-    
+
         // Handle a detected alloc/free mismatch. By default this calls CRASH().
         void fastMallocMatchFailed(void* p);
 
@@ -150,7 +150,7 @@ namespace WTF {
             ValidationHeader* header = fastMallocValidationHeader(p);
             if (header->m_prefix != static_cast<unsigned>(ValidationPrefix))
                 fastMallocMatchFailed(p);
-            
+
             return reinterpret_cast<ValidationTag*>(static_cast<char*>(p) + header->m_size);
         }
 
@@ -182,7 +182,7 @@ namespace WTF {
     {
         if (!p)
             return;
-    
+
         Internal::ValidationHeader* header = Internal::fastMallocValidationHeader(p);
         if (header->m_prefix != static_cast<unsigned>(Internal::ValidationPrefix))
             Internal::fastMallocMatchFailed(p);
@@ -197,11 +197,11 @@ namespace WTF {
     {
         if (!p)
             return;
-        
+
         Internal::ValidationHeader* header = Internal::fastMallocValidationHeader(p);
         if (header->m_prefix != static_cast<unsigned>(Internal::ValidationPrefix))
             Internal::fastMallocMatchFailed(p);
-        
+
         if (*Internal::fastMallocValidationSuffix(p) != Internal::ValidationSuffix)
             Internal::fastMallocMatchFailed(p);
     }
@@ -233,7 +233,7 @@ using WTF::tryFastMalloc;
 using WTF::tryFastRealloc;
 using WTF::tryFastZeroedMalloc;
 
-#ifndef NDEBUG    
+#ifndef NDEBUG
 using WTF::fastMallocForbid;
 using WTF::fastMallocAllow;
 #endif

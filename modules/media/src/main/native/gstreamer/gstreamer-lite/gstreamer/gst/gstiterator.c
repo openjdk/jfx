@@ -225,7 +225,7 @@ gst_list_iterator_free (GstListIterator * it)
  * Create a new iterator designed for iterating @list.
  *
  * The list you iterate is usually part of a data structure @owner and is
- * protected with @lock. 
+ * protected with @lock.
  *
  * The iterator will use @lock to retrieve the next item of the list and it
  * will then call the @item function before releasing @lock again.
@@ -294,7 +294,7 @@ gst_iterator_pop (GstIterator * it)
  * @it: The #GstIterator to iterate
  * @elem: (out caller-allocates): pointer to hold next element
  *
- * Get the next item from the iterator in @elem. 
+ * Get the next item from the iterator in @elem.
  *
  * Only when this function returns %GST_ITERATOR_OK, @elem will contain a valid
  * value. @elem must have been initialized to the type of the iterator or
@@ -307,7 +307,7 @@ gst_iterator_pop (GstIterator * it)
  *
  * A return value of %GST_ITERATOR_RESYNC indicates that the element list was
  * concurrently updated. The user of @it should call gst_iterator_resync() to
- * get the newly updated list. 
+ * get the newly updated list.
  *
  * A return value of %GST_ITERATOR_ERROR indicates an unrecoverable fatal error.
  *

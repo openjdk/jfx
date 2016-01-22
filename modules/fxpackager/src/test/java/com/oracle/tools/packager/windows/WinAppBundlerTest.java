@@ -169,7 +169,7 @@ public class WinAppBundlerTest {
      *     <li>Where to build it</li>
      *     <li>The jar containing the application (with a main-class attribute)</li>
      * </ul>
-     * 
+     *
      * All other values will be driven off of those two values.
      */
     @Test
@@ -213,7 +213,7 @@ public class WinAppBundlerTest {
         try (FileInputStream fis = new FileInputStream(new File(root, WinAppBundler.getLauncherCfgName(params)))) {
             Properties p = new Properties();
             p.load(fis);
-            
+
             // - verify we have app.mainjar, app.version, app.identifier, app.preferences, app.mainclass, and app.classpath
             assertNotNull(p.getProperty("app.runtime"));
             assertNotNull(p.getProperty("app.mainjar"));
@@ -266,7 +266,7 @@ public class WinAppBundlerTest {
         bundleParams.put(PRELOADER_CLASS.getID(), "hello.HelloPreloader");
         bundleParams.put(USER_JVM_OPTIONS.getID(), "-Xmx=256M\n");
         bundleParams.put(VERSION.getID(), "1.2.3.4");
-        
+
         if (runtimeJdk != null) {
             bundleParams.put(WIN_RUNTIME.getID(), runtimeJdk);
         } else {

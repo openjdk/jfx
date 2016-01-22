@@ -101,11 +101,11 @@ EncodedJSValue JSC_HOST_CALL JSPromisePrototypeFuncThen(ExecState* exec)
 
     // 3. Let 'C' be the result of calling Get(promise, "constructor").
     JSValue C = promise->get(exec, exec->propertyNames().constructor);
-    
+
     // 4. ReturnIfAbrupt(C).
     if (exec->hadException())
         return JSValue::encode(jsUndefined());
-    
+
     // 5. Let 'deferred' be the result of calling GetDeferred(C).
     JSValue deferred = createJSPromiseDeferredFromConstructor(exec, C);
 
@@ -122,7 +122,7 @@ EncodedJSValue JSC_HOST_CALL JSPromisePrototypeFuncThen(ExecState* exec)
     CallData onRejectedCallData;
     CallType onRejectedCallType = getCallData(onRejected, onRejectedCallData);
     JSObject* rejectionHandler = (onRejectedCallType == CallTypeNone) ? createThrowerFunction(vm, globalObject) : asObject(onRejected);
-    
+
     // 9. Let 'fulfillmentHandler' be a new built-in function object as defined in Identity Functions
     // 10. If IsCallable(onFulfilled), set fulfillmentHandler to onFulfilled
     JSValue onFulfilled = exec->argument(0);
@@ -193,7 +193,7 @@ EncodedJSValue JSC_HOST_CALL JSPromisePrototypeFuncCatch(ExecState* exec)
 
     // 1. Let 'promise' be the this value.
     JSValue promise = exec->thisValue();
-    
+
     // 2. Return the result of calling Invoke(promise, "then", (undefined, onRejected)).
     // NOTE: Invoke does not seem to be defined anywhere, so I am guessing here.
     JSValue thenValue = promise.get(exec, exec->vm().propertyNames->then);

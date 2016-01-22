@@ -49,7 +49,7 @@ public class ReadOnlyJavaBeanPropertyBuilderHelper {
             this.descriptor = null;
         }
     }
-    
+
     public void beanClass(Class<?> beanClass) {
         if ((beanClass == null)? this.beanClass != null : !beanClass.equals(this.beanClass)) {
             ReflectUtil.checkPackageAccess(beanClass);
@@ -69,7 +69,7 @@ public class ReadOnlyJavaBeanPropertyBuilderHelper {
             }
         }
     }
-    
+
     public Object getBean() {
         return bean;
     }
@@ -112,5 +112,5 @@ public class ReadOnlyJavaBeanPropertyBuilderHelper {
         }
         return descriptor;
     }
-    
+
 }

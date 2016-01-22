@@ -60,7 +60,7 @@ class UpdateScheduleTask extends Task<Void> {
 
     @Override protected Void call() throws Exception {
         System.out.println("UpdateScheduleTask events = "+Arrays.toString(events));
-        
+
         final StringBuilder urlParameters = new StringBuilder();
         urlParameters.append("code=");
         urlParameters.append(password);
@@ -77,7 +77,7 @@ class UpdateScheduleTask extends Task<Void> {
         connection.setRequestMethod("POST");
         connection.setRequestProperty("Content-Type","application/x-www-form-urlencoded");
         connection.setRequestProperty("Content-Length", Integer.toString(urlParameters.toString().getBytes().length));
-        connection.setRequestProperty("Content-Language", "en-US");  
+        connection.setRequestProperty("Content-Language", "en-US");
         connection.setUseCaches (false);
         connection.setDoInput(true);
         connection.setDoOutput(true);
@@ -93,10 +93,10 @@ class UpdateScheduleTask extends Task<Void> {
             System.err.println("====== ERROR WITH HTTP POST TO ["+urlObj+"] -- params="+urlParameters+" =========");
             System.err.println("====== RESPONSE "+connection.getResponseCode()+" ["+connection.getResponseMessage()+"] =========");
             try (InputStream in = connection.getErrorStream()) {
-                //Get Response	
+                //Get Response
                 BufferedReader rd = new BufferedReader(new InputStreamReader(in));
                 String line;
-                StringBuilder response = new StringBuilder(); 
+                StringBuilder response = new StringBuilder();
                 while((line = rd.readLine()) != null) {
                   response.append(line);
                   response.append('\r');

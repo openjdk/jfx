@@ -26,7 +26,7 @@
 package com.sun.pisces;
 
 public abstract class AbstractSurface implements Surface {
-    
+
     private long nativePtr = 0L;
     private int width;
     private int height;
@@ -45,7 +45,7 @@ public abstract class AbstractSurface implements Surface {
         this.width = width;
         this.height = height;
     }
-        
+
     public final void getRGB(int[] argb, int offset, int scanLength, int x, int y, int width, int height) {
         this.rgbCheck(argb.length, offset, scanLength, x, y, width, height);
         this.getRGBImpl(argb, offset, scanLength, x, y, width, height);

@@ -63,17 +63,17 @@ import javafx.collections.ObservableList;
 
 /**
  *
- * 
+ *
  */
 public class UserLibrary extends Library {
-    
+
     public enum State { READY, WATCHING };
     public static final String TAG_USER_DEFINED = "Custom"; //NOI18N
-    
+
     private final String path;
     private final BuiltinSectionComparator sectionComparator
             = new BuiltinSectionComparator();
-    
+
     private final ObservableList<JarReport> jarReports = FXCollections.observableArrayList();
     private final ObservableList<JarReport> previousJarReports = FXCollections.observableArrayList();
     private final ObservableList<Path> fxmlFileReports = FXCollections.observableArrayList();
@@ -89,43 +89,43 @@ public class UserLibrary extends Library {
     // the user defined one displayed in the Library panel.
     // As a consequence an empty file means we display all items.
     private final String filterFileName = "filter.txt"; //NOI18N
-    
-    
+
+
     /*
      * Public
      */
-    
+
     public UserLibrary(String path) {
         this.path = path;
     }
-    
+
     public String getPath() {
         return path;
     }
-    
+
     public ObservableList<JarReport> getJarReports() {
         return jarReports;
     }
-    
+
     public ObservableList<JarReport> getPreviousJarReports() {
         return previousJarReports;
     }
-    
+
     public ObservableList<Path> getFxmlFileReports() {
         return fxmlFileReports;
     }
-    
+
     public ObservableList<Path> getPreviousFxmlFileReports() {
         return previousFxmlFileReports;
     }
-    
+
     public synchronized State getState() {
         return state;
     }
-    
+
     public synchronized void startWatching() {
         assert state == State.READY;
-        
+
         if (state == State.READY) {
             assert watcher == null;
             assert watcherThread == null;
@@ -138,17 +138,17 @@ public class UserLibrary extends Library {
             state = State.WATCHING;
         }
     }
-    
+
     public synchronized void stopWatching() {
         assert state == State.WATCHING;
-        
+
         if (state == State.WATCHING) {
             assert watcher != null;
             assert watcherThread != null;
             assert exception == null;
-            
+
             watcherThread.interrupt();
-            
+
             try {
                 watcherThread.join();
             } catch(InterruptedException x) {
@@ -157,7 +157,7 @@ public class UserLibrary extends Library {
                 watcher = null;
                 watcherThread = null;
                 state = State.READY;
-                
+
                 // In READY state, we release the class loader.
                 // This enables library import to manipulate jar files.
                 changeClassLoader(null);
@@ -165,15 +165,15 @@ public class UserLibrary extends Library {
             }
         }
     }
-    
+
     public int getExplorationCount() {
         return explorationCountProperty.get();
     }
-    
+
     public ReadOnlyIntegerProperty explorationCountProperty() {
         return explorationCountProperty;
     }
-    
+
     public Object getExplorationDate() {
         return explorationDateProperty.get();
     }
@@ -181,7 +181,7 @@ public class UserLibrary extends Library {
     public ReadOnlyObjectProperty<Date> explorationDateProperty() {
         return explorationDateProperty;
     }
-    
+
     public void setFilter(List<String> classnames) throws FileNotFoundException, IOException {
         if (classnames != null && classnames.size() > 0) {
             File filterFile = new File(getFilterFileName());
@@ -191,7 +191,7 @@ public class UserLibrary extends Library {
             for (String classname : classnames) {
                 allClassnames.add(classname);
             }
-            
+
             Path filterFilePath = Paths.get(getPath(), filterFileName);
             Path formerFilterFilePath = Paths.get(getPath(), filterFileName + ".tmp"); //NOI18N
             Files.deleteIfExists(formerFilterFilePath);
@@ -225,7 +225,7 @@ public class UserLibrary extends Library {
             }
         }
     }
-    
+
     public List<String> getFilter() throws FileNotFoundException, IOException {
         List<String> res = new ArrayList<>();
         File filterFile = new File(getFilterFileName());
@@ -245,11 +245,11 @@ public class UserLibrary extends Library {
     /*
      * Package
      */
-    
+
     String getFilterFileName() {
         return getPath() + File.separator + filterFileName;
     }
-    
+
     void updateJarReports(Collection<JarReport> newJarReports) {
         if (Platform.isFxApplicationThread()) {
             previousJarReports.setAll(jarReports);
@@ -261,7 +261,7 @@ public class UserLibrary extends Library {
             });
         }
     }
-    
+
     void updateFxmlFileReports(Collection<Path> newFxmlFileReports) {
         if (Platform.isFxApplicationThread()) {
             previousFxmlFileReports.setAll(fxmlFileReports);
@@ -273,7 +273,7 @@ public class UserLibrary extends Library {
             });
         }
     }
-    
+
     void setItems(Collection<LibraryItem> items) {
         if (Platform.isFxApplicationThread()) {
             itemsProperty.setAll(items);
@@ -281,7 +281,7 @@ public class UserLibrary extends Library {
             Platform.runLater(() -> itemsProperty.setAll(items));
         }
     }
-    
+
     void addItems(Collection<LibraryItem> items) {
         if (Platform.isFxApplicationThread()) {
             itemsProperty.addAll(items);
@@ -289,7 +289,7 @@ public class UserLibrary extends Library {
             Platform.runLater(() -> itemsProperty.addAll(items));
         }
     }
-    
+
     void updateClassLoader(ClassLoader newClassLoader) {
         if (Platform.isFxApplicationThread()) {
             changeClassLoader(newClassLoader);
@@ -297,7 +297,7 @@ public class UserLibrary extends Library {
             Platform.runLater(() -> changeClassLoader(newClassLoader));
         }
     }
-    
+
     void updateExplorationCount(int count) {
         if (Platform.isFxApplicationThread()) {
             explorationCountProperty.set(count);
@@ -305,7 +305,7 @@ public class UserLibrary extends Library {
             Platform.runLater(() -> explorationCountProperty.set(count));
         }
     }
-    
+
     void updateExplorationDate(Date date) {
         if (Platform.isFxApplicationThread()) {
             explorationDateProperty.set(date);
@@ -313,7 +313,7 @@ public class UserLibrary extends Library {
             Platform.runLater(() -> explorationDateProperty.set(date));
         }
     }
-    
+
     /*
      * Library
      */
@@ -321,14 +321,14 @@ public class UserLibrary extends Library {
     public Comparator<String> getSectionComparator() {
         return sectionComparator;
     }
-    
+
     /*
      * Private
      */
-    
+
     private void changeClassLoader(ClassLoader newClassLoader) {
         assert Platform.isFxApplicationThread();
-        
+
         /*
          * Before changing to the new class loader,
          * we invoke URLClassLoader.close() on the existing one
@@ -343,15 +343,15 @@ public class UserLibrary extends Library {
                 x.printStackTrace();
             }
         }
-        
+
         // Now moves to the new class loader
         classLoaderProperty.set(newClassLoader);
     }
-    
+
     /*
      * Debug
      */
-    
+
     public static void main(String[] args) throws Exception {
         final String path = "/Users/elp/Desktop/MyLib"; //NOI18N
         final UserLibrary lib = new UserLibrary(path);

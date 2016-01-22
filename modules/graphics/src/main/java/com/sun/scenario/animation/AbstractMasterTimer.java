@@ -78,7 +78,7 @@ public abstract class AbstractMasterTimer {
         }
         return null;
     };
-    
+
     private boolean paused = false;
     private long totalPausedTime;
     private long startPauseTime;

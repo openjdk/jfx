@@ -66,7 +66,7 @@ void WebVTTTokenizer::reset()
     m_token = 0;
     m_buffer.clear();
 }
-    
+
 bool WebVTTTokenizer::nextToken(SegmentedString& source, WebVTTToken& token)
 {
     // If we have a token in progress, then we're supposed to be called back
@@ -198,7 +198,7 @@ bool WebVTTTokenizer::nextToken(SegmentedString& source, WebVTTToken& token)
         WEBVTT_ADVANCE_TO(StartTagAnnotationState);
     }
     END_STATE()
-    
+
     WEBVTT_BEGIN_STATE(EndTagOpenState) {
         if (cc == '>' || cc == kEndOfFileMarker) {
             m_token->beginEndTag('\0');

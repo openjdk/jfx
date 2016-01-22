@@ -146,7 +146,7 @@ static JSValue decode(ExecState* exec, const char* doNotUnescape, bool strict)
 {
     JSStringBuilder builder;
     String str = exec->argument(0).toString(exec)->value(exec);
-    
+
     if (str.is8Bit())
         return decode(exec, str.characters8(), str.length(), doNotUnescape, strict);
     return decode(exec, str.characters16(), str.length(), doNotUnescape, strict);
@@ -413,17 +413,17 @@ static double toDouble(const CharType* characters, unsigned size)
         if (!isStrWhiteSpace(*characters))
             break;
     }
-    
+
     // Empty string.
     if (characters == endCharacters)
         return 0.0;
-    
+
     double number;
     if (characters[0] == '0' && characters + 2 < endCharacters && (characters[1] | 0x20) == 'x' && isASCIIHexDigit(characters[2]))
         number = jsHexIntegerLiteral(characters, endCharacters);
     else
         number = jsStrDecimalLiteral(characters, endCharacters);
-    
+
     // Allow trailing white space.
     for (; characters < endCharacters; ++characters) {
         if (!isStrWhiteSpace(*characters))
@@ -431,7 +431,7 @@ static double toDouble(const CharType* characters, unsigned size)
     }
     if (characters != endCharacters)
         return QNaN;
-    
+
     return number;
 }
 
@@ -513,7 +513,7 @@ EncodedJSValue JSC_HOST_CALL globalFuncEval(ExecState* exec)
     } else {
         LiteralParser<UChar> preparser(exec, s.characters16(), s.length(), NonStrictJSON);
         if (JSValue parsedObject = preparser.tryLiteralParse())
-            return JSValue::encode(parsedObject);        
+            return JSValue::encode(parsedObject);
     }
 
     JSGlobalObject* calleeGlobalObject = exec->callee()->globalObject();
@@ -628,7 +628,7 @@ EncodedJSValue JSC_HOST_CALL globalFuncEscape(ExecState* exec)
             }
         }
 
-        return JSValue::encode(builder.build(exec));        
+        return JSValue::encode(builder.build(exec));
     }
 
     const UChar* c = str.characters16();
@@ -656,7 +656,7 @@ EncodedJSValue JSC_HOST_CALL globalFuncUnescape(ExecState* exec)
     String str = exec->argument(0).toString(exec)->value(exec);
     int k = 0;
     int len = str.length();
-    
+
     if (str.is8Bit()) {
         const LChar* characters = str.characters8();
         LChar convertedLChar;
@@ -675,7 +675,7 @@ EncodedJSValue JSC_HOST_CALL globalFuncUnescape(ExecState* exec)
             }
             builder.append(*c);
             k++;
-        }        
+        }
     } else {
         const UChar* characters = str.characters16();
 

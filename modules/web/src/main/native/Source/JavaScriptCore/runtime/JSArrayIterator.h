@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef JSArrayIterator_h
@@ -64,7 +64,7 @@ public:
     size_t nextIndex() const { return m_nextIndex; }
     void setNextIndex(size_t nextIndex) { m_nextIndex = nextIndex; }
     void finish() { m_nextIndex = std::numeric_limits<uint32_t>::max(); }
-    
+
     using JSNonFinalObject::arrayStorageOrNull;
     static ptrdiff_t offsetOfIterationKind() { return OBJECT_OFFSETOF(JSArrayIterator, m_iterationKind); }
     static ptrdiff_t offsetOfIteratedObject() { return OBJECT_OFFSETOF(JSArrayIterator, m_iteratedObject); }
@@ -82,7 +82,7 @@ private:
 
     void finishCreation(VM&, JSGlobalObject*, ArrayIterationKind, JSObject* iteratedObject);
     static void visitChildren(JSCell*, SlotVisitor&);
-    
+
     ArrayIterationKind m_iterationKind;
     WriteBarrier<JSObject> m_iteratedObject;
     uint32_t m_nextIndex;

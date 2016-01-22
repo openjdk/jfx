@@ -172,7 +172,7 @@ void SVGFELightElement::svgAttributeChanged(const QualifiedName& attrName)
     }
 
     SVGElementInstance::InvalidationGuard invalidationGuard(this);
-    
+
     if (attrName == SVGNames::azimuthAttr
         || attrName == SVGNames::elevationAttr
         || attrName == SVGNames::xAttr

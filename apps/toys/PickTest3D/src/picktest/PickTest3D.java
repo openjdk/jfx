@@ -87,9 +87,9 @@ public class PickTest3D extends Application {
 
     double anchorX, anchorY, anchorAngle;
     boolean cameraInMove = false;
-    
+
     private static final WritableImage diffuseMap = new WritableImage(16,16);
-        
+
     private static final WritableImage pressedMap = new WritableImage(1,1);
 
     private static final double SPINNER_OFFSET = 300;
@@ -106,7 +106,7 @@ public class PickTest3D extends Application {
             }
         }
     }
-    
+
     private void make2By16CheckerPattern(PixelWriter pWriter, int start, int end, int startValue) {
         int endValue = startValue == 0Xffffffff ? 0Xff000000 : 0Xffffffff;
         setArgb(pWriter, 0, 2, start, end, startValue);
@@ -141,7 +141,7 @@ public class PickTest3D extends Application {
 
         PixelWriter pWriter = pressedMap.getPixelWriter();
         pWriter.setArgb(0, 0, 0Xff0f0f0f);
-        
+
         primaryStage.setTitle("3D picking test");
 
         final PerspectiveCamera camera = new PerspectiveCamera();
@@ -403,7 +403,7 @@ public class PickTest3D extends Application {
         return parent;
     }
 
-    private static void activateSphere(final Sphere sphere, final String name, 
+    private static void activateSphere(final Sphere sphere, final String name,
             final RotableGroup handleOf) {
 
         activateShape(sphere, name);
@@ -420,7 +420,7 @@ public class PickTest3D extends Application {
                 if (ndivs == divs) {
                     return;
                 }
-  
+
                 Sphere s = new Sphere(sphere.getRadius(), ndivs);
                 s.setMaterial(sphere.getMaterial());
                 s.setTranslateX(sphere.getTranslateX());

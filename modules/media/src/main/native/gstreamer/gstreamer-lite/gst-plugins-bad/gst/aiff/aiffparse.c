@@ -1075,7 +1075,7 @@ gst_aiff_parse_stream_headers (GstAiffParse * aiff)
   }
 
   /* We read all the chunks (in pull mode) or reached the SSND chunk
-   * (in push mode). We must have both COMM and SSND now; error out 
+   * (in push mode). We must have both COMM and SSND now; error out
    * otherwise.
    */
   if (!aiff->got_comm) {

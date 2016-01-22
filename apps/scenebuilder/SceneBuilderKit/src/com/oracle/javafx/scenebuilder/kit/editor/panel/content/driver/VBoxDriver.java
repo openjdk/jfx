@@ -57,24 +57,24 @@ public class VBoxDriver extends AbstractNodeDriver {
      */
     @Override
     public AbstractDropTarget makeDropTarget(FXOMObject fxomObject, double sceneX, double sceneY) {
-        
+
         assert fxomObject instanceof FXOMInstance;
         assert fxomObject.getSceneGraphObject() instanceof VBox;
-        
+
         final VBox hbox = (VBox) fxomObject.getSceneGraphObject();
         assert hbox.getScene() != null;
-        
+
         final double localY = hbox.sceneToLocal(sceneX, sceneY, true /* rootScene */).getY();
         final int childCount = hbox.getChildrenUnmodifiable().size();
-        
+
         final int targetIndex;
         if (childCount == 0) {
             // No children : we append
             targetIndex = -1;
-            
+
         } else {
             assert childCount >= 1;
-            
+
             int childIndex = 0;
             double midY;
             do {
@@ -82,7 +82,7 @@ public class VBoxDriver extends AbstractNodeDriver {
                 Bounds childBounds = child.getBoundsInParent();
                 midY = (childBounds.getMinY() + childBounds.getMaxY()) / 2.0;
             } while ((localY > midY) && (childIndex < childCount));
-            
+
             if (localY <= midY) {
                 assert childIndex-1 < childCount;
                 targetIndex = childIndex-1;
@@ -90,7 +90,7 @@ public class VBoxDriver extends AbstractNodeDriver {
                 targetIndex = -1;
             }
         }
-        
+
         final FXOMObject beforeChild;
         if (targetIndex == -1) {
             beforeChild = null;
@@ -102,17 +102,17 @@ public class VBoxDriver extends AbstractNodeDriver {
                 beforeChild = null;
             }
         }
-        
+
         return new ContainerZDropTarget((FXOMInstance)fxomObject, beforeChild);
     }
-    
-    
+
+
     @Override
     public AbstractTring<?> makeTring(AbstractDropTarget dropTarget) {
-        assert dropTarget instanceof ContainerZDropTarget; 
+        assert dropTarget instanceof ContainerZDropTarget;
         assert dropTarget.getTargetObject() instanceof FXOMInstance;
         assert dropTarget.getTargetObject().getSceneGraphObject() instanceof VBox;
-        
+
         final ContainerZDropTarget zDropTarget = (ContainerZDropTarget) dropTarget;
         final int targetIndex;
         if (zDropTarget.getBeforeChild() == null) {
@@ -120,7 +120,7 @@ public class VBoxDriver extends AbstractNodeDriver {
         } else {
             targetIndex = zDropTarget.getBeforeChild().getIndexInParentProperty();
         }
-        return new VBoxTring(contentPanelController, 
+        return new VBoxTring(contentPanelController,
                 (FXOMInstance) dropTarget.getTargetObject(),
                 targetIndex);
     }

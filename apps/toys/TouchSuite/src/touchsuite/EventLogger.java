@@ -86,7 +86,7 @@ public class EventLogger extends Application {
                 }
 
             });
-            
+
             setOnMouseExited(new EventHandler<MouseEvent>() {
 
                 @Override
@@ -94,9 +94,9 @@ public class EventLogger extends Application {
                     System.out.println(colorName + " circle received: MouseExited");
                     t.consume();
                 }
-            
+
             });
-            
+
             setOnMouseDragged(new EventHandler<MouseEvent>() {
 
                 @Override
@@ -104,9 +104,9 @@ public class EventLogger extends Application {
                     System.out.println(colorName + " circle received: MouseDragged");
                     t.consume();
                 }
-            
+
             });
-            
+
             setOnMouseMoved(new EventHandler<MouseEvent>() {
 
                 @Override
@@ -114,9 +114,9 @@ public class EventLogger extends Application {
                     System.out.println(colorName + " circle received: MouseMoved");
                     t.consume();
                 }
-            
+
             });
-            
+
             setOnMousePressed(new EventHandler<MouseEvent>() {
 
                 @Override
@@ -124,9 +124,9 @@ public class EventLogger extends Application {
                     System.out.println(colorName + " circle received: MousePressed");
                     t.consume();
                 }
-            
+
             });
-            
+
             setOnMouseReleased(new EventHandler<MouseEvent>() {
 
                 @Override
@@ -135,17 +135,17 @@ public class EventLogger extends Application {
                     t.consume();
                 }
             });
-            
+
             setOnMouseClicked(new EventHandler<MouseEvent>() {
-                
+
                 @Override
                 public void handle(MouseEvent t) {
                     System.out.println(colorName + " circle received: MouseClicked");
                     t.consume();
                 }
             });
-            
-            
+
+
             //TouchEvents
             setOnTouchPressed(new EventHandler<TouchEvent>() {
                 @Override public void handle(TouchEvent event) {
@@ -239,8 +239,8 @@ public class EventLogger extends Application {
                     event.consume();
                 }
             });
-            
-            
+
+
             //ScrollEvent
             setOnScrollStarted(new EventHandler<ScrollEvent>(){
                 @Override
@@ -249,7 +249,7 @@ public class EventLogger extends Application {
                     t.consume();
                 }
             });
-            
+
             setOnScrollFinished(new EventHandler<ScrollEvent>(){
                 @Override
                 public void handle(ScrollEvent t) {
@@ -257,7 +257,7 @@ public class EventLogger extends Application {
                     t.consume();
                 }
             });
-            
+
             setOnScroll(new EventHandler<ScrollEvent>(){
                 @Override
                 public void handle(ScrollEvent t) {
@@ -265,8 +265,8 @@ public class EventLogger extends Application {
                     t.consume();
                 }
             });
-            
-            
+
+
             //ZoomEvents
             setOnZoomStarted(new EventHandler<ZoomEvent>(){
                 @Override
@@ -275,7 +275,7 @@ public class EventLogger extends Application {
                     t.consume();
                 }
             });
-            
+
             setOnZoomFinished(new EventHandler<ZoomEvent>(){
                 @Override
                 public void handle(ZoomEvent t) {
@@ -283,7 +283,7 @@ public class EventLogger extends Application {
                     t.consume();
                 }
             });
-            
+
             setOnZoom(new EventHandler<ZoomEvent>(){
                 @Override
                 public void handle(ZoomEvent t) {
@@ -291,8 +291,8 @@ public class EventLogger extends Application {
                     t.consume();
                 }
             });
-            
-            
+
+
             //RotateEvents
             setOnRotationStarted(new EventHandler<RotateEvent>(){
                 @Override
@@ -301,7 +301,7 @@ public class EventLogger extends Application {
                     t.consume();
                 }
             });
-            
+
             setOnRotationFinished(new EventHandler<RotateEvent>(){
                 @Override
                 public void handle(RotateEvent t) {
@@ -309,7 +309,7 @@ public class EventLogger extends Application {
                     t.consume();
                 }
             });
-            
+
             setOnRotate(new EventHandler<RotateEvent>(){
                 @Override
                 public void handle(RotateEvent t) {
@@ -317,7 +317,7 @@ public class EventLogger extends Application {
                     t.consume();
                 }
             });
-            
+
             //SwipeEvents
             setOnSwipeDown(new EventHandler<SwipeEvent>(){
                 @Override
@@ -326,25 +326,25 @@ public class EventLogger extends Application {
                     t.consume();
                 }
             });
-            
+
             setOnSwipeUp(new EventHandler<SwipeEvent>(){
-                
+
                 @Override
                 public void handle(SwipeEvent t) {
                     System.out.println(colorName + " circle received: SwipeUp");
                     t.consume();
                 }
             });
-            
+
             setOnSwipeLeft(new EventHandler<SwipeEvent>(){
-                
+
                 @Override
                 public void handle(SwipeEvent t) {
                     System.out.println(colorName + " circle received: SwipeLeft");
                     t.consume();
                 }
             });
-            
+
             setOnSwipeRight(new EventHandler<SwipeEvent>(){
 
                 @Override
@@ -353,7 +353,7 @@ public class EventLogger extends Application {
                     t.consume();
                 }
             });
-            
+
             //MouseDragEvents
             setOnMouseDragEntered(new EventHandler<MouseDragEvent>(){
 
@@ -363,7 +363,7 @@ public class EventLogger extends Application {
                     t.consume();
                 }
             });
-            
+
             setOnMouseDragExited(new EventHandler<MouseDragEvent>(){
 
                 @Override
@@ -372,7 +372,7 @@ public class EventLogger extends Application {
                     t.consume();
                 }
             });
-            
+
             setOnMouseDragOver(new EventHandler<MouseDragEvent>(){
 
                 @Override
@@ -381,7 +381,7 @@ public class EventLogger extends Application {
                     t.consume();
                 }
             });
-            
+
             setOnMouseDragReleased(new EventHandler<MouseDragEvent>(){
 
                 @Override
@@ -390,13 +390,13 @@ public class EventLogger extends Application {
                     t.consume();
                 }
             });
-            
-            
+
+
         }
 
-        
+
     }
-    
+
     private static class TouchRectangle extends Rectangle {
         private long touchId = -1;
         double touchx, touchy;
@@ -405,7 +405,7 @@ public class EventLogger extends Application {
         public TouchRectangle(Color color) {
             super(0,0,1024,1024);
             setFill(color);
-            
+
             setOnMouseEntered(new EventHandler<MouseEvent>() {
 
                 @Override
@@ -415,7 +415,7 @@ public class EventLogger extends Application {
                 }
 
             });
-            
+
             setOnMouseExited(new EventHandler<MouseEvent>() {
 
                 @Override
@@ -423,9 +423,9 @@ public class EventLogger extends Application {
                     System.out.println("Rectangle received: MouseExited");
                     t.consume();
                 }
-            
+
             });
-            
+
             setOnMouseDragged(new EventHandler<MouseEvent>() {
 
                 @Override
@@ -433,9 +433,9 @@ public class EventLogger extends Application {
                     System.out.println("Rectangle received: MouseDragged");
                     t.consume();
                 }
-            
+
             });
-            
+
             setOnMouseMoved(new EventHandler<MouseEvent>() {
 
                 @Override
@@ -443,9 +443,9 @@ public class EventLogger extends Application {
                     System.out.println("Rectangle received: MouseMoved");
                     t.consume();
                 }
-            
+
             });
-            
+
             setOnMousePressed(new EventHandler<MouseEvent>() {
 
                 @Override
@@ -453,9 +453,9 @@ public class EventLogger extends Application {
                     System.out.println("Rectangle received: MousePressed");
                     t.consume();
                 }
-            
+
             });
-            
+
             setOnMouseReleased(new EventHandler<MouseEvent>() {
 
                 @Override
@@ -464,22 +464,22 @@ public class EventLogger extends Application {
                     t.consume();
                 }
             });
-            
+
             setOnMouseClicked(new EventHandler<MouseEvent>() {
-                
+
                 @Override
                 public void handle(MouseEvent t) {
                     System.out.println("Rectangle received: MouseClicked");
                     t.consume();
                 }
             });
-            
-            
+
+
             //TouchEvents
             setOnTouchPressed(new EventHandler<TouchEvent>() {
                 @Override public void handle(TouchEvent event) {
                     System.out.println("Rectangle received: TouchPressed");
-                    
+
                     event.consume();
                 }
             });
@@ -487,7 +487,7 @@ public class EventLogger extends Application {
             setOnTouchReleased(new EventHandler<TouchEvent>() {
                 @Override public void handle(TouchEvent event) {
                     System.out.println("Rectangle received: TouchReleased");
-                    
+
                     event.consume();
                 }
             });
@@ -495,7 +495,7 @@ public class EventLogger extends Application {
             setOnTouchMoved(new EventHandler<TouchEvent>() {
                 @Override public void handle(TouchEvent event) {
                     System.out.println("Rectangle received: TouchMoved separateHandler");
-                    
+
                     event.consume();
                 }
             });
@@ -508,7 +508,7 @@ public class EventLogger extends Application {
                             && event.getEventType() != TouchEvent.TOUCH_STATIONARY) {
                         return;
                     }
-                    
+
                     if(event.getEventType() == TouchEvent.TOUCH_MOVED) {
                         System.out.println("Rectangle received: TouchMoved");
                     } else {
@@ -517,8 +517,8 @@ public class EventLogger extends Application {
                     event.consume();
                 }
             });
-            
-            
+
+
             //ScrollEvent
             setOnScrollStarted(new EventHandler<ScrollEvent>(){
                 @Override
@@ -527,7 +527,7 @@ public class EventLogger extends Application {
                     t.consume();
                 }
             });
-            
+
             setOnScrollFinished(new EventHandler<ScrollEvent>(){
                 @Override
                 public void handle(ScrollEvent t) {
@@ -535,7 +535,7 @@ public class EventLogger extends Application {
                     t.consume();
                 }
             });
-            
+
             setOnScroll(new EventHandler<ScrollEvent>(){
                 @Override
                 public void handle(ScrollEvent t) {
@@ -543,8 +543,8 @@ public class EventLogger extends Application {
                     t.consume();
                 }
             });
-            
-            
+
+
             //ZoomEvents
             setOnZoomStarted(new EventHandler<ZoomEvent>(){
                 @Override
@@ -553,7 +553,7 @@ public class EventLogger extends Application {
                     t.consume();
                 }
             });
-            
+
             setOnZoomFinished(new EventHandler<ZoomEvent>(){
                 @Override
                 public void handle(ZoomEvent t) {
@@ -561,7 +561,7 @@ public class EventLogger extends Application {
                     t.consume();
                 }
             });
-            
+
             setOnZoom(new EventHandler<ZoomEvent>(){
                 @Override
                 public void handle(ZoomEvent t) {
@@ -569,8 +569,8 @@ public class EventLogger extends Application {
                     t.consume();
                 }
             });
-            
-            
+
+
             //RotateEvents
             setOnRotationStarted(new EventHandler<RotateEvent>(){
                 @Override
@@ -579,7 +579,7 @@ public class EventLogger extends Application {
                     t.consume();
                 }
             });
-            
+
             setOnRotationFinished(new EventHandler<RotateEvent>(){
                 @Override
                 public void handle(RotateEvent t) {
@@ -587,7 +587,7 @@ public class EventLogger extends Application {
                     t.consume();
                 }
             });
-            
+
             setOnRotate(new EventHandler<RotateEvent>(){
                 @Override
                 public void handle(RotateEvent t) {
@@ -595,7 +595,7 @@ public class EventLogger extends Application {
                     t.consume();
                 }
             });
-            
+
             //SwipeEvents
             setOnSwipeDown(new EventHandler<SwipeEvent>(){
                 @Override
@@ -604,25 +604,25 @@ public class EventLogger extends Application {
                     t.consume();
                 }
             });
-            
+
             setOnSwipeUp(new EventHandler<SwipeEvent>(){
-                
+
                 @Override
                 public void handle(SwipeEvent t) {
                     System.out.println("Rectangle received: SwipeUp");
                     t.consume();
                 }
             });
-            
+
             setOnSwipeLeft(new EventHandler<SwipeEvent>(){
-                
+
                 @Override
                 public void handle(SwipeEvent t) {
                     System.out.println("Rectangle received: SwipeLeft");
                     t.consume();
                 }
             });
-            
+
             setOnSwipeRight(new EventHandler<SwipeEvent>(){
 
                 @Override
@@ -631,7 +631,7 @@ public class EventLogger extends Application {
                     t.consume();
                 }
             });
-            
+
             //MouseDragEvents
             setOnMouseDragEntered(new EventHandler<MouseDragEvent>(){
 
@@ -641,7 +641,7 @@ public class EventLogger extends Application {
                     t.consume();
                 }
             });
-            
+
             setOnMouseDragExited(new EventHandler<MouseDragEvent>(){
 
                 @Override
@@ -650,7 +650,7 @@ public class EventLogger extends Application {
                     t.consume();
                 }
             });
-            
+
             setOnMouseDragOver(new EventHandler<MouseDragEvent>(){
 
                 @Override
@@ -659,7 +659,7 @@ public class EventLogger extends Application {
                     t.consume();
                 }
             });
-            
+
             setOnMouseDragReleased(new EventHandler<MouseDragEvent>(){
 
                 @Override
@@ -668,11 +668,11 @@ public class EventLogger extends Application {
                     t.consume();
                 }
             });
-            
-            
+
+
         }
 
-        
+
     }
 
     public static String info() {

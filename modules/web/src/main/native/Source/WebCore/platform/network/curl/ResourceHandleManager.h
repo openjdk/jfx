@@ -95,7 +95,7 @@ private:
     Vector<ResourceHandle*> m_resourceHandleList;
     const CString m_certificatePath;
     int m_runningJobs;
-    
+
     String m_proxy;
     ProxyType m_proxyType;
 };

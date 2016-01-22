@@ -907,7 +907,7 @@ public abstract class AffineBase extends BaseTransform {
                         (float) dst.getMinZ(),
                         (float) (dst.getMaxX() + mxt),
                         (float) (dst.getMaxY() + myt),
-                        (float) dst.getMaxZ());              
+                        (float) dst.getMaxZ());
                 break;
             case (APPLY_SHEAR | APPLY_TRANSLATE):
                 dst = dst.deriveWithNewBoundsAndSort((float) (src.getMinY() * mxy + mxt),

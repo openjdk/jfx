@@ -164,7 +164,7 @@ RegExpFunctionalTestCollector::~RegExpFunctionalTestCollector()
 void RegExpFunctionalTestCollector::outputEscapedString(const String& s, bool escapeSlash)
 {
     int len = s.length();
-    
+
     for (int i = 0; i < len; ++i) {
         UChar c = s[i];
 
@@ -211,7 +211,7 @@ void RegExpFunctionalTestCollector::outputEscapedString(const String& s, bool es
         default:
             if (c > 0x7f)
                 fprintf(m_file, "\\u%04x", c);
-            else 
+            else
                 fputc(c, m_file);
             break;
         }
@@ -505,7 +505,7 @@ void RegExp::matchCompareWithInterpreter(const String& s, int startOffset, int* 
     int interpreterResult = 0;
     int differences = 0;
 
-    // Initialize interpreterOffsetVector with the return value (index 0) and the 
+    // Initialize interpreterOffsetVector with the return value (index 0) and the
     // first subpattern start indicies (even index values) set to -1.
     // No need to init the subpattern end indicies.
     for (unsigned j = 0, i = 0; i < m_numSubpatterns + 1; j += 2, i++)

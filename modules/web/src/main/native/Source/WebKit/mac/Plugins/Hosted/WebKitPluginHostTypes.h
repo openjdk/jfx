@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef WebKitPluginHostTypes_h
@@ -37,11 +37,11 @@ typedef char* data_t;
 
 enum LoadURLFlags {
     IsPost = 1 << 0,
-    PostDataIsFile = 1 << 1, 
+    PostDataIsFile = 1 << 1,
     AllowHeadersInPostData = 1 << 2,
     AllowPopups = 1 << 3,
 };
- 
+
 enum InvokeType {
     Invoke,
     InvokeDefault,

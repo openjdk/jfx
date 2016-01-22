@@ -49,9 +49,9 @@ void RenderMathMLMenclose::addChild(RenderObject* newChild, RenderObject* before
     MathMLMencloseElement* menclose = toMathMLMencloseElement(element());
     // Allow an anonymous RenderMathMLSquareRoot to handle drawing the radical
     // notation, rather than duplicating the code needed to paint a root.
-    if (!firstChild() && menclose->isRadical())        
+    if (!firstChild() && menclose->isRadical())
         RenderMathMLBlock::addChild(RenderMathMLSquareRoot::createAnonymousWithParentRenderer(*this).leakPtr());
-    
+
     if (newChild) {
         if (firstChild() && menclose->isRadical())
             toRenderElement(firstChild())->addChild(newChild, beforeChild && beforeChild->parent() == firstChild() ? beforeChild : nullptr);
@@ -100,7 +100,7 @@ void RenderMathMLMenclose::paint(PaintInfo& info, const LayoutPoint& paintOffset
 
     if (info.context->paintingDisabled() || info.phase != PaintPhaseForeground || style().visibility() != VISIBLE)
         return;
-    
+
     MathMLMencloseElement* menclose = toMathMLMencloseElement(element());
     const Vector<String>& notationValues = menclose->notationValues();
     size_t notationalValueSize = notationValues.size();

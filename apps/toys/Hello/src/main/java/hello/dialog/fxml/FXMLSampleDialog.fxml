@@ -30,7 +30,7 @@
             </padding>
         </GridPane>
     </content>
-    
+
     <buttonTypes>
         <ButtonType fx:constant="OK" />
         <ButtonType fx:constant="CANCEL" />

@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -36,7 +36,7 @@ ExecutableBase* AssemblyHelpers::executableFor(const CodeOrigin& codeOrigin)
 {
     if (!codeOrigin.inlineCallFrame)
         return m_codeBlock->ownerExecutable();
-    
+
     return codeOrigin.inlineCallFrame->executable.get();
 }
 
@@ -45,12 +45,12 @@ Vector<BytecodeAndMachineOffset>& AssemblyHelpers::decodedCodeMapFor(CodeBlock* 
     ASSERT(codeBlock == codeBlock->baselineVersion());
     ASSERT(codeBlock->jitType() == JITCode::BaselineJIT);
     ASSERT(codeBlock->jitCodeMap());
-    
+
     HashMap<CodeBlock*, Vector<BytecodeAndMachineOffset>>::AddResult result = m_decodedCodeMaps.add(codeBlock, Vector<BytecodeAndMachineOffset>());
-    
+
     if (result.isNewEntry)
         codeBlock->jitCodeMap()->decode(result.iterator->value);
-    
+
     return result.iterator->value;
 }
 
@@ -118,7 +118,7 @@ void AssemblyHelpers::jitAssertTagsInPlace()
     Jump ok = branch64(Equal, GPRInfo::tagTypeNumberRegister, TrustedImm64(TagTypeNumber));
     breakpoint();
     ok.link(this);
-    
+
     ok = branch64(Equal, GPRInfo::tagMaskRegister, TrustedImm64(TagMask));
     breakpoint();
     ok.link(this);

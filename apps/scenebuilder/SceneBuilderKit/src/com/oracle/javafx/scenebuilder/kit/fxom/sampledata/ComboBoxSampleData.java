@@ -40,7 +40,7 @@ import javafx.scene.control.ComboBox;
  *
  */
 class ComboBoxSampleData extends AbstractSampleData {
-    
+
     private final List<String> samples = new ArrayList<>();
 
     public ComboBoxSampleData() {
@@ -52,25 +52,25 @@ class ComboBoxSampleData extends AbstractSampleData {
     /*
      * AbstractSampleData
      */
-    
+
     @Override
     public void applyTo(Object sceneGraphObject) {
         assert sceneGraphObject != null;
-        
-        @SuppressWarnings("unchecked")        
+
+        @SuppressWarnings("unchecked")
         final ComboBox<String> comboBox = (ComboBox<String>) sceneGraphObject;
         comboBox.getItems().clear();
         comboBox.getItems().addAll(samples);
         comboBox.getSelectionModel().select(samples.get(0));
     }
-    
+
     @Override
     public void removeFrom(Object sceneGraphObject) {
         assert sceneGraphObject != null;
-        
-        @SuppressWarnings("unchecked")        
+
+        @SuppressWarnings("unchecked")
         final ComboBox<String> comboBox = (ComboBox<String>) sceneGraphObject;
         comboBox.getItems().clear();
     }
-    
+
 }

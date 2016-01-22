@@ -32,7 +32,7 @@
 
 @interface GlassHelper : NSObject
 {
-    
+
 }
 
 + (void)SetGlassClassLoader:(jobject)classLoader withEnv:(JNIEnv*)env;

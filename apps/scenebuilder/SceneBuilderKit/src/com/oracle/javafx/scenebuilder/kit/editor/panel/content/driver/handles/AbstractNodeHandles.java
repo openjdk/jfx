@@ -38,19 +38,19 @@ import javafx.scene.Node;
 
 /**
  *
- * 
+ *
  */
 public abstract class AbstractNodeHandles<T extends Node> extends AbstractGenericHandles<T> {
-    
+
     public AbstractNodeHandles(ContentPanelController contentPanelController,
             FXOMInstance fxomInstance, Class<T> sceneGraphObjectClass) {
         super(contentPanelController, fxomInstance, sceneGraphObjectClass);
     }
-    
+
     public FXOMInstance getFxomInstance() {
         return (FXOMInstance) getFxomObject();
     }
-    
+
     /*
      * AbstractGenericHandles
      */

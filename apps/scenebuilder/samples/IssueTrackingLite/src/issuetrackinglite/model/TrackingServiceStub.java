@@ -67,7 +67,7 @@ public class TrackingServiceStub implements TrackingService {
         if (change.wasAdded()) projectNames.add(change.getKey());
         if (change.wasRemoved()) projectNames.remove(change.getKey());
     };
-    
+
     {
         projectNames.addAll(projectsMap.keySet());
         projectsMap.addListener(projectsMapChangeListener);
@@ -172,7 +172,7 @@ public class TrackingServiceStub implements TrackingService {
             projectsMap.get(val2.getProjectName()).remove(val2.getId());
         }
     };
-    
+
     final AtomicInteger issueCounter = new AtomicInteger(0);
     final ObservableMap<String, IssueStub> issuesMap;
     {

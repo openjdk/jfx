@@ -46,7 +46,7 @@ namespace WebCore {
 
 class GraphicsContext;
 class IntRect;
-    
+
 class Icon : public RefCounted<Icon> {
 public:
     static PassRefPtr<Icon> createIconForFiles(const Vector<String>& filenames);

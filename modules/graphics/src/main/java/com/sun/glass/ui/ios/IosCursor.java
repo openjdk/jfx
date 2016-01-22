@@ -42,7 +42,7 @@ final class IosCursor extends Cursor {
         super(x, y, pixels);
     }
 
-    @Override 
+    @Override
     native protected long _createCursor(int x, int y, Pixels pixels);
     native private void _set(int type);
     native private void _setCustom(long ptr);

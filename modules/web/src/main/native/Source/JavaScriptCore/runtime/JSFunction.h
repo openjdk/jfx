@@ -48,7 +48,7 @@ namespace JSC {
     JS_EXPORT_PRIVATE EncodedJSValue JSC_HOST_CALL callHostFunctionAsConstructor(ExecState*);
 
     JS_EXPORT_PRIVATE String getCalculatedDisplayName(CallFrame*, JSObject*);
-    
+
     class JSFunction : public JSDestructibleObject {
         friend class JIT;
         friend class DFG::SpeculativeJIT;
@@ -67,11 +67,11 @@ namespace JSC {
             function->finishCreation(vm);
             return function;
         }
-        
+
         static JSFunction* createBuiltinFunction(VM&, FunctionExecutable*, JSGlobalObject*);
-        
+
         static void destroy(JSCell*);
-        
+
         JS_EXPORT_PRIVATE String name(ExecState*);
         JS_EXPORT_PRIVATE String displayName(ExecState*);
         const String calculatedDisplayName(ExecState*);
@@ -107,10 +107,10 @@ namespace JSC {
 
         DECLARE_EXPORT_INFO;
 
-        static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype) 
+        static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype)
         {
             ASSERT(globalObject);
-            return Structure::create(vm, globalObject, prototype, TypeInfo(JSFunctionType, StructureFlags), info()); 
+            return Structure::create(vm, globalObject, prototype, TypeInfo(JSFunctionType, StructureFlags), info());
         }
 
         NativeFunction nativeFunction();
@@ -140,7 +140,7 @@ namespace JSC {
                 return createAllocationProfile(exec, inlineCapacity);
             return &m_allocationProfile;
         }
-        
+
         Structure* allocationStructure() { return m_allocationProfile.structure(); }
 
         InlineWatchpointSet& allocationProfileWatchpointSet()
@@ -157,7 +157,7 @@ namespace JSC {
 
         JS_EXPORT_PRIVATE JSFunction(VM&, JSGlobalObject*, Structure*);
         JSFunction(VM&, FunctionExecutable*, JSScope*);
-        
+
         void finishCreation(VM&, NativeExecutable*, int length, const String& name);
         using Base::finishCreation;
 
@@ -175,7 +175,7 @@ namespace JSC {
 
     private:
         friend class LLIntOffsetsExtractor;
-        
+
         static EncodedJSValue argumentsGetter(ExecState*, JSObject*, EncodedJSValue, PropertyName);
         static EncodedJSValue callerGetter(ExecState*, JSObject*, EncodedJSValue, PropertyName);
         static EncodedJSValue lengthGetter(ExecState*, JSObject*, EncodedJSValue, PropertyName);

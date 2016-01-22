@@ -37,7 +37,7 @@ namespace WebCore {
 
 class MediaStreamSourceCapabilityRange {
 public:
-    
+
     MediaStreamSourceCapabilityRange(float min, float max, bool supported = true)
         : m_type(Float)
     {
@@ -45,7 +45,7 @@ public:
         m_max.asFloat = max;
         m_supported = supported;
     }
-    
+
     MediaStreamSourceCapabilityRange(unsigned long min, unsigned long max, bool supported = true)
         : m_type(ULong)
     {
@@ -53,7 +53,7 @@ public:
         m_max.asULong = max;
         m_supported = supported;
     }
-    
+
     MediaStreamSourceCapabilityRange()
     {
         m_type = Undefined;
@@ -61,19 +61,19 @@ public:
         m_max.asULong = 0;
         m_supported = false;
     }
-    
+
     enum Type { Undefined, Float, ULong };
-    
+
     union ValueUnion {
         unsigned long asULong;
         float asFloat;
     };
-    
+
     const ValueUnion& min() const { return m_min; }
     const ValueUnion& max() const { return m_max; }
     Type type() const { return m_type; }
     bool supported() const { return m_supported; }
-    
+
 private:
     ValueUnion m_min;
     ValueUnion m_max;

@@ -56,7 +56,7 @@ class SVGPathElement final : public SVGGraphicsElement,
                              public SVGExternalResourcesRequired {
 public:
     static PassRefPtr<SVGPathElement> create(const QualifiedName&, Document&);
-    
+
     float getTotalLength();
     SVGPoint getPointAtLength(float distance);
     unsigned getPathSegAtLength(float distance);

@@ -273,17 +273,17 @@ bool WEBPImageDecoder::decode(bool onlySize)
 
     switch (WebPIUpdate(m_decoder, dataBytes, dataSize)) {
     case VP8_STATUS_OK:
-        if ((m_formatFlags & ICCP_FLAG) && !ignoresGammaAndColorProfile()) 
+        if ((m_formatFlags & ICCP_FLAG) && !ignoresGammaAndColorProfile())
             applyColorProfile(dataBytes, dataSize, buffer);
         buffer.setStatus(ImageFrame::FrameComplete);
         clear();
         return true;
     case VP8_STATUS_SUSPENDED:
-        if ((m_formatFlags & ICCP_FLAG) && !ignoresGammaAndColorProfile()) 
+        if ((m_formatFlags & ICCP_FLAG) && !ignoresGammaAndColorProfile())
             applyColorProfile(dataBytes, dataSize, buffer);
         return false;
     default:
-        clear();                         
+        clear();
         return setFailed();
     }
 }

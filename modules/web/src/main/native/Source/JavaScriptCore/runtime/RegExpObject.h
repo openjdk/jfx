@@ -25,7 +25,7 @@
 #include "RegExp.h"
 
 namespace JSC {
-    
+
     class RegExpObject : public JSNonFinalObject {
     public:
         typedef JSNonFinalObject Base;

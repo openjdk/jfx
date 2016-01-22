@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -633,7 +633,7 @@ private:
 
 // We clamp recursion well beyond anything reasonable.
 static const unsigned maximumFilterRecursion = 40000;
-enum WalkerState { StateUnknown, ArrayStartState, ArrayStartVisitMember, ArrayEndVisitMember, 
+enum WalkerState { StateUnknown, ArrayStartState, ArrayStartVisitMember, ArrayEndVisitMember,
                                  ObjectStartState, ObjectStartVisitMember, ObjectEndVisitMember };
 NEVER_INLINE JSValue Walker::walk(JSValue unfiltered)
 {
@@ -641,12 +641,12 @@ NEVER_INLINE JSValue Walker::walk(JSValue unfiltered)
     Vector<uint32_t, 16, UnsafeVectorOverflow> indexStack;
     LocalStack<JSObject, 16> objectStack(m_exec->vm());
     LocalStack<JSArray, 16> arrayStack(m_exec->vm());
-    
+
     Vector<WalkerState, 16, UnsafeVectorOverflow> stateStack;
     WalkerState state = StateUnknown;
     JSValue inValue = unfiltered;
     JSValue outValue = jsNull();
-    
+
     while (1) {
         switch (state) {
             arrayStartState:
@@ -680,7 +680,7 @@ NEVER_INLINE JSValue Walker::walk(JSValue unfiltered)
                     else
                         inValue = jsUndefined();
                 }
-                    
+
                 if (inValue.isObject()) {
                     stateStack.append(ArrayEndVisitMember);
                     goto stateUnknown;
@@ -800,12 +800,12 @@ EncodedJSValue JSC_HOST_CALL JSONProtoFuncParse(ExecState* exec)
         LiteralParser<UChar> jsonParser(exec, source.characters16(), source.length(), StrictJSON);
         unfiltered = jsonParser.tryLiteralParse();
         if (!unfiltered)
-            return throwVMError(exec, createSyntaxError(exec, jsonParser.getErrorMessage()));        
+            return throwVMError(exec, createSyntaxError(exec, jsonParser.getErrorMessage()));
     }
-    
+
     if (exec->argumentCount() < 2)
         return JSValue::encode(unfiltered);
-    
+
     JSValue function = exec->uncheckedArgument(1);
     CallData callData;
     CallType callType = getCallData(function, callData);

@@ -75,7 +75,7 @@ GLIB_AVAILABLE_IN_ALL
 void     g_queue_free           (GQueue           *queue);
 GLIB_AVAILABLE_IN_ALL
 void     g_queue_free_full      (GQueue           *queue,
-				GDestroyNotify    free_func);
+                GDestroyNotify    free_func);
 GLIB_AVAILABLE_IN_ALL
 void     g_queue_init           (GQueue           *queue);
 GLIB_AVAILABLE_IN_ALL

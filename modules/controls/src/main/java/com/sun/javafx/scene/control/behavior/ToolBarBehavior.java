@@ -38,7 +38,7 @@ import static com.sun.javafx.scene.control.inputmap.InputMap.KeyMapping;
 public class ToolBarBehavior extends BehaviorBase<ToolBar> {
     private final InputMap<ToolBar> toolBarInputMap;
 
-    public ToolBarBehavior(ToolBar toolbar) {        
+    public ToolBarBehavior(ToolBar toolbar) {
         super(toolbar);
 
         // create a map for toolbar-specific mappings (this reuses the default

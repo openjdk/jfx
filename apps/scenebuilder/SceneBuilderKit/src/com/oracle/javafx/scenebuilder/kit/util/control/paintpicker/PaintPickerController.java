@@ -98,11 +98,11 @@ public class PaintPickerController {
     public boolean isLiveUpdate() {
         return liveUpdate.get();
     }
-    
+
     public void setLiveUpdate(boolean value) {
         liveUpdate.setValue(value);
     }
-    
+
     public ColorPicker getColorPicker() {
         return colorPicker;
     }
@@ -114,7 +114,7 @@ public class PaintPickerController {
     public PaintPicker.Delegate getDelegate() {
         return delegate;
     }
-    
+
     public VBox getRoot() {
         return root_vbox;
     }
@@ -125,7 +125,7 @@ public class PaintPickerController {
      * @param min
      * @param value
      * @param max
-     * @return 
+     * @return
      * @treatAsPrivate
      */
     public static double clamp(double min, double value, double max) {
@@ -137,7 +137,7 @@ public class PaintPickerController {
     void setDelegate(PaintPicker.Delegate delegate) {
         this.delegate = delegate;
     }
-    
+
     public Mode getMode() {
         final Mode mode;
         final Paint value = getPaintProperty();

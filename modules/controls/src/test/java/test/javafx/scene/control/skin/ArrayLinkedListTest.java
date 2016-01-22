@@ -43,7 +43,7 @@ public class ArrayLinkedListTest {
     @Before public void setUp() {
         list = new ArrayLinkedListShim<String>();
     }
-    
+
     @Test public void testArrayLinkedList_Empty_GetFirstReturnsNull() {
         assertNull(list.getFirst());
     }

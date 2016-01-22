@@ -40,7 +40,7 @@ public interface PixelReader {
      * This method returns the {@code PixelFormat} in which the surface
      * stores its pixels, or a roughly equivalent pixel format into which
      * it can easily convert its pixels for purposes of reading them.
-     * 
+     *
      * @return the {@code PixelFormat} that best describes the underlying
      *         pixels
      */
@@ -52,7 +52,7 @@ public interface PixelReader {
      * The 32-bit integer will contain the 4 color components in separate
      * 8-bit fields in ARGB order from the most significant byte to the least
      * significant byte.
-     * 
+     *
      * @param x the X coordinate of the pixel color to read
      * @param y the Y coordinate of the pixel color to read
      * @return a 32-bit representation of the color in the format
@@ -64,7 +64,7 @@ public interface PixelReader {
     /**
      * Reads the color of a pixel from the specified coordinates in the
      * surface and returns the value as a {@link Color} object.
-     * 
+     *
      * @param x the X coordinate of the pixel color to read
      * @param y the Y coordinate of the pixel color to read
      * @return the Color object representing the color of the indicated
@@ -87,7 +87,7 @@ public interface PixelReader {
      * Pixel data for adjacent rows will be stored offset from each other
      * by the number of buffer data elements defined by
      * {@code scanlineStride}.
-     * 
+     *
      * @param x the X coordinate of the rectangular region to read
      * @param y the Y coordinate of the rectangular region to read
      * @param w the width of the rectangular region to read
@@ -121,7 +121,7 @@ public interface PixelReader {
      * Pixel data for adjacent rows will be stored offset from each other
      * by the number of byte array elements defined by
      * {@code scanlineStride}.
-     * 
+     *
      * @param x the X coordinate of the rectangular region to read
      * @param y the Y coordinate of the rectangular region to read
      * @param w the width of the rectangular region to read
@@ -155,7 +155,7 @@ public interface PixelReader {
      * Pixel data for adjacent rows will be stored offset from each other
      * by the number of int array elements defined by
      * {@code scanlineStride}.
-     * 
+     *
      * @param x the X coordinate of the rectangular region to read
      * @param y the Y coordinate of the rectangular region to read
      * @param w the width of the rectangular region to read

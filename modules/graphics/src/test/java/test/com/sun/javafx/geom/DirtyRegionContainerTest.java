@@ -35,7 +35,7 @@ public class DirtyRegionContainerTest {
     static RectBounds[] nonIntersecting_3_Regions = new RectBounds[] {
             new RectBounds(0, 0, 20, 20),
             new RectBounds(25, 25, 50, 50),
-            new RectBounds(60, 60, 100, 100)            
+            new RectBounds(60, 60, 100, 100)
         };
 
     @Test
@@ -135,7 +135,7 @@ public class DirtyRegionContainerTest {
     @Test
     public void test_addDirtyRegion_has_space_intersect_once() {
         DirtyRegionContainer drc = getDRC_initialized();
-        
+
         drc.addDirtyRegion(new RectBounds(10, 10, 22, 15));
 
         Assert.assertEquals(3, drc.size());
@@ -147,7 +147,7 @@ public class DirtyRegionContainerTest {
     @Test
     public void test_addDirtyRegion_has_space_intersect_twice() {
         DirtyRegionContainer drc = getDRC_initialized();
-        
+
         drc.addDirtyRegion(new RectBounds(10, 10, 40, 40));
 
         Assert.assertEquals(2, drc.size());
@@ -172,7 +172,7 @@ public class DirtyRegionContainerTest {
         drc.addDirtyRegion(new RectBounds(10, 10, 22, 15));
 
         Assert.assertEquals(4, drc.size());
-        Assert.assertEquals(new RectBounds(120, 120, 150, 150), drc.getDirtyRegion(0));        
+        Assert.assertEquals(new RectBounds(120, 120, 150, 150), drc.getDirtyRegion(0));
         Assert.assertEquals(new RectBounds(25, 25, 50, 50), drc.getDirtyRegion(1));
         Assert.assertEquals(new RectBounds(60, 60, 100, 100), drc.getDirtyRegion(2));
         Assert.assertEquals(new RectBounds(0, 0, 22, 20), drc.getDirtyRegion(3));

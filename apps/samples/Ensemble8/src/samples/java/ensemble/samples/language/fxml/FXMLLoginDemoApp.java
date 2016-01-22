@@ -47,11 +47,11 @@ import javafx.scene.Parent;
 
 /**
  * FXML-based Login screen sample
- *  
+ *
  * @sampleName FXML Login Demo
- * @preview preview.png 
- * @see java.util.HashMap 
- * @see java.util.Map 
+ * @preview preview.png
+ * @see java.util.HashMap
+ * @see java.util.Map
  * @see java.io.InputStream
  * @see java.util.logging.Level
  * @see java.util.logging.Logger
@@ -59,7 +59,7 @@ import javafx.scene.Parent;
  * @see javafx.fxml.FXMLLoader
  * @see javafx.fxml.Initializable
  * @see javafx.fxml.JavaFXBuilderFactory
- * @see javafx.stage.Stage 
+ * @see javafx.stage.Stage
  * @embedded
  */
 
@@ -69,12 +69,12 @@ public class FXMLLoginDemoApp extends Application {
     private User loggedUser;
     private final double MINIMUM_WINDOW_WIDTH = 390.0;
     private final double MINIMUM_WINDOW_HEIGHT = 500.0;
-    
+
     public Parent createContent() {
         gotoLogin();
         return root;
     }
-   
+
     @Override public void start(Stage primaryStage) throws Exception {
         primaryStage.setResizable(false);
         primaryStage.setScene(new Scene(createContent()));
@@ -83,12 +83,12 @@ public class FXMLLoginDemoApp extends Application {
 
     public static void main(String[] args) {
         Application.launch(args);
-    } 
+    }
 
     public User getLoggedUser() {
         return loggedUser;
     }
-        
+
     public boolean userLogging(String userId, String password){
         if (Authenticator.validate(userId, password)) {
             loggedUser = User.of(userId);
@@ -98,12 +98,12 @@ public class FXMLLoginDemoApp extends Application {
             return false;
         }
     }
-    
+
     void userLogout(){
         loggedUser = null;
         gotoLogin();
     }
-    
+
     private void gotoProfile() {
         try {
             ProfileController profile = (ProfileController) replaceSceneContent("Profile.fxml");
@@ -136,5 +136,5 @@ public class FXMLLoginDemoApp extends Application {
         root.getChildren().removeAll();
         root.getChildren().addAll(page);
         return (Initializable) loader.getController();
-    }    
+    }
 }

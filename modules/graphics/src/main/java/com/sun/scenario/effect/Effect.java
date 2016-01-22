@@ -312,7 +312,7 @@ public abstract class Effect {
     /**
      * Returns the dirty region container containing dirty regions affected
      * by this filter operation.
-     * 
+     *
      * @param defaultInput the default input {@code Effect} to be used in
      *                     all cases where a filter has a null input
      * @param drc the container of dirty regions in scene coordinates.
@@ -334,7 +334,7 @@ public abstract class Effect {
         if (merge == null) {
             merge = regionPool.checkOut();
         }
-        
+
         return merge;
     }
 

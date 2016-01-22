@@ -47,7 +47,7 @@ import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
 
 /**
  *
- * 
+ *
  */
 public abstract class AbstractGenericTring<T> extends AbstractTring<T> {
 
@@ -56,11 +56,11 @@ public abstract class AbstractGenericTring<T> extends AbstractTring<T> {
     private final LineTo lineTo1 = new LineTo();
     private final LineTo lineTo2 = new LineTo();
     private final LineTo lineTo3 = new LineTo();
-    
+
     public AbstractGenericTring(ContentPanelController contentPanelController,
             FXOMObject fxomObject, Class<T> sceneGraphClass) {
         super(contentPanelController, fxomObject, sceneGraphClass);
-        
+
         final List<PathElement> ringElements = ringPath.getElements();
         ringElements.add(moveTo0);
         ringElements.add(lineTo1);
@@ -71,21 +71,21 @@ public abstract class AbstractGenericTring<T> extends AbstractTring<T> {
         ringPath.setMouseTransparent(true);
         getRootNode().getChildren().add(ringPath);
     }
-    
+
     /*
      * AbstractPring
      */
-    
+
     @Override
     protected void layoutDecoration() {
         final Bounds b = getSceneGraphObjectBounds();
-        
+
         final boolean snapToPixel = true;
         final Point2D p0 = sceneGraphObjectToDecoration(b.getMinX(), b.getMinY(), snapToPixel);
         final Point2D p1 = sceneGraphObjectToDecoration(b.getMaxX(), b.getMinY(), snapToPixel);
         final Point2D p2 = sceneGraphObjectToDecoration(b.getMaxX(), b.getMaxY(), snapToPixel);
         final Point2D p3 = sceneGraphObjectToDecoration(b.getMinX(), b.getMaxY(), snapToPixel);
-        
+
         moveTo0.setX(p0.getX());
         moveTo0.setY(p0.getY());
         lineTo1.setX(p1.getX());
@@ -94,9 +94,9 @@ public abstract class AbstractGenericTring<T> extends AbstractTring<T> {
         lineTo2.setY(p2.getY());
         lineTo3.setX(p3.getX());
         lineTo3.setY(p3.getY());
-        
+
     }
-    
+
     @Override
     public void changeStroke(Paint stroke) {
         ringPath.setStroke(stroke);

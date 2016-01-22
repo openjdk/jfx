@@ -6,13 +6,13 @@
  * are met:
  *
  * 1.  Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer. 
+ *     notice, this list of conditions and the following disclaimer.
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
- *     documentation and/or other materials provided with the distribution. 
+ *     documentation and/or other materials provided with the distribution.
  * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
- *     from this software without specific prior written permission. 
+ *     from this software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY APPLE AND ITS CONTRIBUTORS "AS IS" AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
@@ -179,7 +179,7 @@ void AnimationBase::updateStateMachine(AnimStateInput input, double param)
 
     if (input == AnimationStateInputPauseOverride) {
         if (m_animState == AnimationStateStartWaitResponse) {
-            // If we are in AnimationStateStartWaitResponse, the animation will get canceled before 
+            // If we are in AnimationStateStartWaitResponse, the animation will get canceled before
             // we get a response, so move to the next state.
             endAnimation();
             updateStateMachine(AnimationStateInputStartTimeSet, beginAnimationUpdateTime());
@@ -288,7 +288,7 @@ void AnimationBase::updateStateMachine(AnimStateInput input, double param)
                 if (m_object && m_object->element())
                     m_compAnim->animationController()->addElementChangeToDispatch(*m_object->element());
             } else {
-                // We are pausing while waiting for a start response. Cancel the animation and wait. When 
+                // We are pausing while waiting for a start response. Cancel the animation and wait. When
                 // we unpause, we will act as though the start timer just fired
                 m_pauseTime = beginAnimationUpdateTime();
                 pauseAnimation(beginAnimationUpdateTime() - m_startTime);
@@ -327,7 +327,7 @@ void AnimationBase::updateStateMachine(AnimStateInput input, double param)
 
                 LOG(Animations, "%p AnimationState %s -> Done", this, nameForState(m_animState));
                 m_animState = AnimationStateDone;
-                
+
                 if (m_object) {
                     if (m_animation->fillsForwards()) {
                         LOG(Animations, "%p AnimationState %s -> FillingForwards", this, nameForState(m_animState));
@@ -412,10 +412,10 @@ void AnimationBase::updateStateMachine(AnimStateInput input, double param)
                 }
                 break;
             }
-            
+
             if (input == AnimationStateInputStartTimeSet) {
                 ASSERT(m_animState == AnimationStatePausedWaitResponse);
-                
+
                 // We are paused but we got the callback that notifies us that an accelerated animation started.
                 // We ignore the start time and just move into the paused-run state.
                 LOG(Animations, "%p AnimationState %s -> PausedRun", this, nameForState(m_animState));
@@ -439,7 +439,7 @@ void AnimationBase::updateStateMachine(AnimStateInput input, double param)
             break;
     }
 }
-    
+
 void AnimationBase::fireAnimationEventsIfNeeded()
 {
     if (!m_compAnim)
@@ -455,20 +455,20 @@ void AnimationBase::fireAnimationEventsIfNeeded()
     // can still access the resources of its CompositeAnimation as needed.
     Ref<AnimationBase> protect(*this);
     Ref<CompositeAnimation> protectCompositeAnimation(*m_compAnim);
-    
+
     // Check for start timeout
     if (m_animState == AnimationStateStartWaitTimer) {
         if (beginAnimationUpdateTime() - m_requestedStartTime >= m_animation->delay())
             updateStateMachine(AnimationStateInputStartTimerFired, 0);
         return;
     }
-    
+
     double elapsedDuration = beginAnimationUpdateTime() - m_startTime;
     // FIXME: we need to ensure that elapsedDuration is never < 0. If it is, this suggests that
     // we had a recalcStyle() outside of beginAnimationUpdate()/endAnimationUpdate().
     // Also check in getTimeToNextEvent().
     elapsedDuration = std::max(elapsedDuration, 0.0);
-    
+
     // Check for end timeout
     if (m_totalDuration >= 0 && elapsedDuration >= m_totalDuration) {
         // We may still be in AnimationStateLooping if we've managed to skip a
@@ -485,13 +485,13 @@ void AnimationBase::fireAnimationEventsIfNeeded()
             double durationLeft = m_animation->duration() - fmod(elapsedDuration, m_animation->duration());
             m_nextIterationDuration = elapsedDuration + durationLeft;
         }
-        
+
         if (elapsedDuration >= m_nextIterationDuration) {
             // Set to the next iteration
             double previous = m_nextIterationDuration;
             double durationLeft = m_animation->duration() - fmod(elapsedDuration, m_animation->duration());
             m_nextIterationDuration = elapsedDuration + durationLeft;
-            
+
             // Send the event
             updateStateMachine(AnimationStateInputLoopTimerFired, previous);
         }
@@ -516,18 +516,18 @@ void AnimationBase::updatePlayState(EAnimPlayState playState)
 
 double AnimationBase::timeToNextService()
 {
-    // Returns the time at which next service is required. -1 means no service is required. 0 means 
+    // Returns the time at which next service is required. -1 means no service is required. 0 means
     // service is required now, and > 0 means service is required that many seconds in the future.
     if (paused() || isNew() || m_animState == AnimationStateFillingForwards)
         return -1;
-    
+
     if (m_animState == AnimationStateStartWaitTimer) {
         double timeFromNow = m_animation->delay() - (beginAnimationUpdateTime() - m_requestedStartTime);
         return std::max(timeFromNow, 0.0);
     }
-    
+
     fireAnimationEventsIfNeeded();
-        
+
     // In all other cases, we need service right away.
     return 0;
 }
@@ -619,7 +619,7 @@ void AnimationBase::getTimeToNextEvent(double& time, bool& isLooping) const
         durationLeft = m_animation->duration() > 0 ? (m_animation->duration() - fmod(elapsedDuration, m_animation->duration())) : 0;
         nextIterationTime = elapsedDuration + durationLeft;
     }
-    
+
     if (m_totalDuration < 0 || nextIterationTime < m_totalDuration) {
         // We are not at the end yet
         ASSERT(nextIterationTime > 0);
@@ -628,7 +628,7 @@ void AnimationBase::getTimeToNextEvent(double& time, bool& isLooping) const
         // We are at the end
         isLooping = false;
     }
-    
+
     time = durationLeft;
 }
 
@@ -640,7 +640,7 @@ void AnimationBase::goIntoEndingOrLoopingState()
     LOG(Animations, "%p AnimationState %s -> %s", this, nameForState(m_animState), isLooping ? "Looping" : "Ending");
     m_animState = isLooping ? AnimationStateLooping : AnimationStateEnding;
 }
-  
+
 void AnimationBase::freezeAtTime(double t)
 {
     if (!m_compAnim)
@@ -673,7 +673,7 @@ double AnimationBase::beginAnimationUpdateTime() const
 
 double AnimationBase::getElapsedTime() const
 {
-    if (paused())    
+    if (paused())
         return m_pauseTime - m_startTime;
     if (m_startTime <= 0)
         return 0;

@@ -51,7 +51,7 @@ public class SmoothingGroups {
     private int[][] faces;
     private int[][] faceNormals;
     private float[] normals;
-    
+
     private Edge[][] faceEdges;
 
     public SmoothingGroups(int faces[][], int[][] faceNormals, float[] normals) {
@@ -113,7 +113,7 @@ public class SmoothingGroups {
             }
         }
     }
-    
+
     private Map<Edge, List<Integer>> getAdjacentFaces() {
         Map<Edge, List<Integer>> adjacentFaces = new HashMap<Edge, List<Integer>>();
         for (int f = 0; f < faceEdges.length; f++) {
@@ -137,7 +137,7 @@ public class SmoothingGroups {
     Vec3f getNormal(int index) {
         return new Vec3f(normals[index * 3], normals[index * 3 + 1], normals[index * 3 + 2]);
     }
-    
+
     private static final float normalAngle = 0.9994f; // cos(2)
 
     private static boolean isNormalsEqual(Vec3f n1, Vec3f n2) {
@@ -215,7 +215,7 @@ public class SmoothingGroups {
 
     private int[] calcSmoothGroups() {
         computeFaceEdges();
-        
+
         // edge -> [faces]
         Map<Edge, List<Integer>> adjacentFaces = getAdjacentFaces();
 
@@ -227,7 +227,7 @@ public class SmoothingGroups {
 
         return generateSmGroups(groups);
     }
-    
+
     private class Edge {
         int from, to;
         int fromNormal, toNormal;
@@ -238,7 +238,7 @@ public class SmoothingGroups {
             this.fromNormal = Math.min(fromNormal, toNormal);
             this.toNormal = Math.max(fromNormal, toNormal);
         }
-        
+
         public boolean isSmooth(Edge edge) {
             boolean smooth = (isNormalsEqual(getNormal(fromNormal), getNormal(edge.fromNormal)) && isNormalsEqual(getNormal(toNormal), getNormal(edge.toNormal))) ||
                     (isNormalsEqual(getNormal(fromNormal), getNormal(edge.toNormal)) && isNormalsEqual(getNormal(toNormal), getNormal(edge.fromNormal)));
@@ -283,7 +283,7 @@ public class SmoothingGroups {
         SmoothingGroups smoothGroups = new SmoothingGroups(faces, faceNormals, normals);
         return smoothGroups.calcSmoothGroups();
     }
-    
+
     /**
      * Calculates smoothing groups for data formatted in TriangleMesh style
      * @param flatFaces An array of faces, where each triangle face is represented by 6 (vertex and uv) indices

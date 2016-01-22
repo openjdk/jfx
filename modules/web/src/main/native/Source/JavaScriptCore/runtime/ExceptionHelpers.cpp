@@ -81,7 +81,7 @@ JSObject* createStackOverflowError(JSGlobalObject* globalObject)
 
 JSObject* createUndefinedVariableError(ExecState* exec, const Identifier& ident)
 {
-    
+
     if (ident.impl()->isEmptyUnique()) {
         String message(makeString("Can't find private variable: @", exec->propertyNames().getPublicName(ident).string()));
         return createReferenceError(exec, message);
@@ -89,7 +89,7 @@ JSObject* createUndefinedVariableError(ExecState* exec, const Identifier& ident)
     String message(makeString("Can't find variable: ", ident.string()));
     return createReferenceError(exec, message);
 }
-    
+
 JSString* errorDescriptionForValue(ExecState* exec, JSValue v)
 {
     VM& vm = exec->vm();
@@ -114,12 +114,12 @@ JSString* errorDescriptionForValue(ExecState* exec, JSValue v)
             return vm.smallStrings.functionString();
         return jsString(exec, object->methodTable()->className(object));
     }
-    
+
     // The JSValue should never be empty, so this point in the code should never be reached.
     ASSERT_NOT_REACHED();
     return vm.smallStrings.emptyString();
 }
-    
+
 JSObject* createError(ExecState* exec, ErrorFactory errorFactory, JSValue value, const String& message)
 {
     String errorMessage = makeString(errorDescriptionForValue(exec, value)->value(exec), " ", message);

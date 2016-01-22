@@ -32,7 +32,7 @@ def pkgconfig
 def jniPlatform
 if (IS_MAC) {
     jniPlatform="darwin"
-    fetchExternalTools('X86EGL', [ "x86egl-01.tgz" ], 
+    fetchExternalTools('X86EGL', [ "x86egl-01.tgz" ],
         rootProject.CROSS_TOOLS_DIR, rootProject.IS_IMPORT_CROSS_TOOLS)
     sdk=file("${rootProject.CROSS_TOOLS_DIR}/x86egl-01")
     pkgconfig="${sdk}/bin/pkg-config"
@@ -322,12 +322,12 @@ X86EGL.glass.javahInclude = [
     "com/sun/glass/events/**",
     "com/sun/glass/ui/*"]
 X86EGL.glass.variants = [ ]
-if (X86EGL.includeLens) { 
+if (X86EGL.includeLens) {
     X86EGL.glass.variants.addAll("eglfb", "directfb", "fb", "lensport" );
     X86EGL.glass.javahInclude.addAll("com/sun/glass/ui/lens/*");
     X86EGL.javafxPlatformProperties = X86EGL.javafxPlatformProperties + lensPlatformAdditions
 }
-if (X86EGL.includeMonocle) { 
+if (X86EGL.includeMonocle) {
     X86EGL.glass.variants.addAll("monocle", "monocle_x11");
     X86EGL.glass.javahInclude.addAll(
         "com/sun/glass/ui/monocle/*",

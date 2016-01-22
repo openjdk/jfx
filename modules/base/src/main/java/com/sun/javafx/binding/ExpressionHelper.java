@@ -35,11 +35,11 @@ import java.util.Arrays;
  * A convenience class for creating implementations of {@link javafx.beans.value.ObservableValue}.
  * It contains all of the infrastructure support for value invalidation- and
  * change event notification.
- * 
+ *
  * This implementation can handle adding and removing listeners while the
  * observers are being notified, but it is not thread-safe.
- * 
- * 
+ *
+ *
  */
 public abstract class ExpressionHelper<T> extends ExpressionHelperBase {
 
@@ -53,28 +53,28 @@ public abstract class ExpressionHelper<T> extends ExpressionHelperBase {
         observable.getValue(); // validate observable
         return (helper == null)? new SingleInvalidation<T>(observable, listener) : helper.addListener(listener);
     }
-    
+
     public static <T> ExpressionHelper<T> removeListener(ExpressionHelper<T> helper, InvalidationListener listener) {
         if (listener == null) {
             throw new NullPointerException();
         }
         return (helper == null)? null : helper.removeListener(listener);
     }
-    
+
     public static <T> ExpressionHelper<T> addListener(ExpressionHelper<T> helper, ObservableValue<T> observable, ChangeListener<? super T> listener) {
         if ((observable == null) || (listener == null)) {
             throw new NullPointerException();
         }
         return (helper == null)? new SingleChange<T>(observable, listener) : helper.addListener(listener);
     }
-    
+
     public static <T> ExpressionHelper<T> removeListener(ExpressionHelper<T> helper, ChangeListener<? super T> listener) {
         if (listener == null) {
             throw new NullPointerException();
         }
         return (helper == null)? null : helper.removeListener(listener);
     }
-    
+
     public static <T> void fireValueChangedEvent(ExpressionHelper<T> helper) {
         if (helper != null) {
             helper.fireValueChangedEvent();
@@ -92,25 +92,25 @@ public abstract class ExpressionHelper<T> extends ExpressionHelperBase {
 
     protected abstract ExpressionHelper<T> addListener(InvalidationListener listener);
     protected abstract ExpressionHelper<T> removeListener(InvalidationListener listener);
-    
+
     protected abstract ExpressionHelper<T> addListener(ChangeListener<? super T> listener);
     protected abstract ExpressionHelper<T> removeListener(ChangeListener<? super T> listener);
-    
+
     protected abstract void fireValueChangedEvent();
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // Implementations
 
     private static class SingleInvalidation<T> extends ExpressionHelper<T> {
-        
+
         private final InvalidationListener listener;
-        
+
         private SingleInvalidation(ObservableValue<T> expression, InvalidationListener listener) {
             super(expression);
             this.listener = listener;
         }
-        
-        @Override 
+
+        @Override
         protected ExpressionHelper<T> addListener(InvalidationListener listener) {
             return new Generic<T>(observable, this.listener, listener);
         }
@@ -139,19 +139,19 @@ public abstract class ExpressionHelper<T> extends ExpressionHelperBase {
             }
         }
     }
-    
+
     private static class SingleChange<T> extends ExpressionHelper<T> {
-        
+
         private final ChangeListener<? super T> listener;
         private T currentValue;
-        
+
         private SingleChange(ObservableValue<T> observable, ChangeListener<? super T> listener) {
             super(observable);
             this.listener = listener;
             this.currentValue = observable.getValue();
         }
-        
-        @Override 
+
+        @Override
         protected ExpressionHelper<T> addListener(InvalidationListener listener) {
             return new Generic<T>(observable, listener, this.listener);
         }
@@ -185,16 +185,16 @@ public abstract class ExpressionHelper<T> extends ExpressionHelperBase {
             }
         }
     }
-    
+
     private static class Generic<T> extends ExpressionHelper<T> {
-        
+
         private InvalidationListener[] invalidationListeners;
         private ChangeListener<? super T>[] changeListeners;
         private int invalidationSize;
         private int changeSize;
         private boolean locked;
         private T currentValue;
-        
+
         private Generic(ObservableValue<T> observable, InvalidationListener listener0, InvalidationListener listener1) {
             super(observable);
             this.invalidationListeners = new InvalidationListener[] {listener0, listener1};

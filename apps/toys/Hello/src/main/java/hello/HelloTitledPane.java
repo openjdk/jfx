@@ -45,7 +45,7 @@ import javafx.scene.text.Font;
 import javafx.stage.Stage;
 
 public class HelloTitledPane extends Application {
-    
+
     public static void main(String[] args) {
         Application.launch(args);
     }

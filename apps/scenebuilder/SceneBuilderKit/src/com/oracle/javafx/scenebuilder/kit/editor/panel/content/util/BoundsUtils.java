@@ -42,7 +42,7 @@ import javafx.scene.Node;
  *
  */
 public class BoundsUtils {
-    
+
     public static Bounds makeBounds(Point2D p1, Point2D p2) {
         return new BoundingBox(
                 Math.min(p1.getX(), p2.getX()),
@@ -50,16 +50,16 @@ public class BoundsUtils {
                 Math.abs(p2.getX() - p1.getX()),
                 Math.abs(p2.getY() - p1.getY()));
     }
-    
-    
+
+
     public static boolean equals(Bounds b1, Bounds b2) {
         return MathUtils.equals(b1.getMinX(), b2.getMinX()) &&
                 MathUtils.equals(b1.getMinY(), b2.getMinY()) &&
                 MathUtils.equals(b1.getMaxX(), b2.getMaxX()) &&
                 MathUtils.equals(b1.getMaxY(), b2.getMaxY());
-                
+
     }
-    
+
     public static Bounds inset(Bounds bounds, double dx, double dy) {
         final double minX = bounds.getMinX() + dx;
         final double minY = bounds.getMinY() + dy;
@@ -67,8 +67,8 @@ public class BoundsUtils {
         final double maxY = bounds.getMaxY() - dy;
         return new BoundingBox(minX, minY, maxX - minX, maxY - minY);
     }
-    
-    
+
+
     public static EdgeInfo distanceToEdges(Bounds b, double x, double y, Node node) {
         assert b != null;
         assert node != null;
@@ -82,7 +82,7 @@ public class BoundsUtils {
             final double minY = b.getMinY();
             final double maxX = b.getMaxX();
             final double maxY = b.getMaxY();
-            
+
             final Point2D p1 = node.localToScene(minX, minY, true /* rootScene */);
             final Point2D p2 = node.localToScene(maxX, minY, true /* rootScene */);
             final Point2D p3 = node.localToScene(maxX, maxY, true /* rootScene */);
@@ -108,10 +108,10 @@ public class BoundsUtils {
 
             return new EdgeInfo(nd, ed, sd, wd);
         }
-        
+
         return result;
     }
-    
+
     public static class EdgeInfo {
         private final double northDistance;
         private final double eastDistance;
@@ -153,8 +153,8 @@ public class BoundsUtils {
         }
 
     }
-    
-    
+
+
     private static double distance(Point2D p1, Point2D p2) {
         final double dx = p2.getX() - p1.getX();
         final double dy = p2.getY() - p1.getY();

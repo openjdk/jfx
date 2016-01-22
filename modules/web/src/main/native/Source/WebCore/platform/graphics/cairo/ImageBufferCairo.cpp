@@ -190,7 +190,7 @@ PassRefPtr<cairo_surface_t> copySurfaceToImageAndAdjustRect(cairo_surface_t* sur
     // otherwise we create a temporary surface image
     if (surfaceType == CAIRO_SURFACE_TYPE_IMAGE)
         return surface;
-    
+
     rect.setX(0);
     rect.setY(0);
     return adoptRef(cairo_image_surface_create(CAIRO_FORMAT_ARGB32, rect.width(), rect.height()));

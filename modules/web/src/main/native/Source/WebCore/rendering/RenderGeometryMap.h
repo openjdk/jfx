@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef RenderGeometryMap_h
@@ -95,13 +95,13 @@ public:
     // If the container is the RenderView, the scroll offset is applied, but not the scale.
     FloatPoint mapToContainer(const FloatPoint&, const RenderLayerModelObject*) const;
     FloatQuad mapToContainer(const FloatRect&, const RenderLayerModelObject*) const;
-    
+
     // Called by code walking the renderer or layer trees.
     void pushMappingsToAncestor(const RenderLayer*, const RenderLayer* ancestorLayer);
     void popMappingsToAncestor(const RenderLayer*);
     void pushMappingsToAncestor(const RenderObject*, const RenderLayerModelObject* ancestorRenderer);
     void popMappingsToAncestor(const RenderLayerModelObject*);
-    
+
     // The following methods should only be called by renderers inside a call to pushMappingsToAncestor().
 
     // Push geometry info between this renderer and some ancestor. The ancestor must be its container() or some
@@ -118,7 +118,7 @@ private:
 
     void stepInserted(const RenderGeometryMapStep&);
     void stepRemoved(const RenderGeometryMapStep&);
-    
+
     bool hasNonUniformStep() const { return m_nonUniformStepsCount; }
     bool hasTransformStep() const { return m_transformedStepsCount; }
     bool hasFixedPositionStep() const { return m_fixedStepsCount; }

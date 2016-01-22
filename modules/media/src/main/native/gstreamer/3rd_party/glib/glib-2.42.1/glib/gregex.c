@@ -868,7 +868,7 @@ g_match_info_get_match_count (const GMatchInfo *match_info)
  * return %FALSE, you can check if the match was partial calling
  * g_match_info_is_partial_match().
  *
- * The difference between #G_REGEX_MATCH_PARTIAL_SOFT and 
+ * The difference between #G_REGEX_MATCH_PARTIAL_SOFT and
  * #G_REGEX_MATCH_PARTIAL_HARD is that when a partial match is encountered
  * with #G_REGEX_MATCH_PARTIAL_SOFT, matching continues to search for a
  * possible complete match, while with #G_REGEX_MATCH_PARTIAL_HARD matching
@@ -1318,9 +1318,9 @@ g_regex_new (const gchar         *pattern,
       g_once_init_leave (&initialised, supports_utf8 && supports_ucp ? 1 : 2);
     }
 
-  if (G_UNLIKELY (initialised != 1)) 
+  if (G_UNLIKELY (initialised != 1))
     {
-      g_set_error_literal (error, G_REGEX_ERROR, G_REGEX_ERROR_COMPILE, 
+      g_set_error_literal (error, G_REGEX_ERROR, G_REGEX_ERROR_COMPILE,
                            _("PCRE library is compiled with incompatible options"));
       return NULL;
     }
@@ -1639,14 +1639,14 @@ g_regex_match_simple (const gchar        *pattern,
  * To retrieve all the non-overlapping matches of the pattern in
  * string you can use g_match_info_next().
  *
- * |[<!-- language="C" --> 
+ * |[<!-- language="C" -->
  * static void
  * print_uppercase_words (const gchar *string)
  * {
  *   // Print all uppercase-only words.
  *   GRegex *regex;
  *   GMatchInfo *match_info;
- *  
+ *
  *   regex = g_regex_new ("[A-Z]+", 0, 0, NULL);
  *   g_regex_match (regex, string, 0, &match_info);
  *   while (g_match_info_matches (match_info))
@@ -1712,7 +1712,7 @@ g_regex_match (const GRegex      *regex,
  * To retrieve all the non-overlapping matches of the pattern in
  * string you can use g_match_info_next().
  *
- * |[<!-- language="C" --> 
+ * |[<!-- language="C" -->
  * static void
  * print_uppercase_words (const gchar *string)
  * {
@@ -1720,7 +1720,7 @@ g_regex_match (const GRegex      *regex,
  *   GRegex *regex;
  *   GMatchInfo *match_info;
  *   GError *error = NULL;
- *   
+ *
  *   regex = g_regex_new ("[A-Z]+", 0, 0, NULL);
  *   g_regex_match_full (regex, string, -1, 0, 0, &match_info, &error);
  *   while (g_match_info_matches (match_info))
@@ -2836,7 +2836,7 @@ g_regex_replace_literal (const GRegex      *regex,
  *
  * The following example uses g_regex_replace_eval() to replace multiple
  * strings at once:
- * |[<!-- language="C" --> 
+ * |[<!-- language="C" -->
  * static gboolean
  * eval_cb (const GMatchInfo *info,
  *          GString          *res,

@@ -30,29 +30,29 @@ import javafx.scene.Node;
 import javafx.scene.control.Skin;
 
 public class HTMLEditorSkin implements Skin<HTMLEditor> {
-    
+
     private String text;
     private final HTMLEditor editor;
-    
+
     public HTMLEditorSkin(HTMLEditor editor) {
         this.editor = editor;
     }
-    
+
     public String getHTMLText() {
         return text;
     }
-    
+
     public void setHTMLText(String text) {
         this.text = text;
     }
-    
+
     public HTMLEditor getSkinnable() {
         return editor;
     }
-    
+
     public Node getNode() {
         return editor;
     }
-    
+
     public void dispose() {}
 }

@@ -52,21 +52,21 @@ import javafx.scene.layout.RowConstraints;
 
 /**
  *
- * 
+ *
  */
 public class GridSelectionGroup extends AbstractSelectionGroup {
-    
+
     public enum Type { ROW, COLUMN };
-    
+
     private final FXOMObject parentObject;
     private final Type type;
     private final Set<Integer> indexes = new HashSet<>();
-    
+
     public GridSelectionGroup(FXOMObject parentObject, Type type, int index) {
         assert parentObject != null;
         assert parentObject.getSceneGraphObject() instanceof GridPane;
         assert index >= 0;
-        
+
         this.parentObject = parentObject;
         this.type = type;
         this.indexes.add(index);
@@ -77,7 +77,7 @@ public class GridSelectionGroup extends AbstractSelectionGroup {
         assert parentObject.getSceneGraphObject() instanceof GridPane;
         assert indexes != null;
         assert indexes.isEmpty() == false;
-        
+
         this.parentObject = parentObject;
         this.type = type;
         this.indexes.addAll(indexes);
@@ -90,14 +90,14 @@ public class GridSelectionGroup extends AbstractSelectionGroup {
     public Type getType() {
         return type;
     }
-    
+
     public Set<Integer> getIndexes() {
         return Collections.unmodifiableSet(indexes);
-    }    
-    
+    }
+
     public List<FXOMInstance> collectConstraintInstances() {
         final List<FXOMInstance> result;
-        
+
         switch(type) {
             case ROW:
                 result = collectRowConstraintsInstances();
@@ -108,13 +108,13 @@ public class GridSelectionGroup extends AbstractSelectionGroup {
             default:
                 throw new RuntimeException("Bug");
         }
-        
+
         return result;
     }
-    
+
     public List<FXOMObject> collectSelectedObjects() {
         final List<FXOMObject> result;
-        
+
         switch(type) {
             case ROW:
                 result = collectSelectedObjectsInRow();
@@ -125,14 +125,14 @@ public class GridSelectionGroup extends AbstractSelectionGroup {
             default:
                 throw new RuntimeException("Bug");
         }
-        
+
         return result;
     }
-    
+
     /*
      * AbstractSelectionGroup
      */
-    
+
     @Override
     public FXOMObject getAncestor() {
         return parentObject;
@@ -141,7 +141,7 @@ public class GridSelectionGroup extends AbstractSelectionGroup {
     @Override
     public boolean isValid(FXOMDocument fxomDocument) {
         assert fxomDocument != null;
-        
+
         final boolean result;
         final FXOMObject fxomRoot = fxomDocument.getFxomRoot();
         if (fxomRoot == null) {
@@ -149,11 +149,11 @@ public class GridSelectionGroup extends AbstractSelectionGroup {
         } else {
             result = (parentObject == fxomRoot) || parentObject.isDescendantOf(fxomRoot);
         }
-        
+
         return result;
     }
-    
-    
+
+
     /*
      * Cloneable
      */
@@ -161,8 +161,8 @@ public class GridSelectionGroup extends AbstractSelectionGroup {
     public GridSelectionGroup clone() throws CloneNotSupportedException {
         return (GridSelectionGroup)super.clone();
     }
-    
-    
+
+
     /*
      * Object
      */
@@ -195,21 +195,21 @@ public class GridSelectionGroup extends AbstractSelectionGroup {
         }
         return true;
     }
-    
-    
+
+
     /*
      * Private
      */
-    
+
     static private final PropertyName rowConstraintsName
             = new PropertyName("rowConstraints");
-    
+
     private List<FXOMInstance> collectRowConstraintsInstances() {
         final List<FXOMInstance> result = new ArrayList<>();
-        
-        final FXOMInstance gridPaneInstance 
+
+        final FXOMInstance gridPaneInstance
                 = (FXOMInstance) parentObject;
-        final FXOMProperty fxomProperty 
+        final FXOMProperty fxomProperty
                 = gridPaneInstance.getProperties().get(rowConstraintsName);
         if (fxomProperty != null) {
             assert fxomProperty instanceof FXOMPropertyC;
@@ -223,19 +223,19 @@ public class GridSelectionGroup extends AbstractSelectionGroup {
                 }
             }
         }
-        
+
         return result;
     }
-    
+
     static private final PropertyName columnConstraintsName
             = new PropertyName("columnConstraints");
-    
+
     private List<FXOMInstance> collectColumnConstraintsInstances() {
         final List<FXOMInstance> result = new ArrayList<>();
-        
-        final FXOMInstance gridPaneInstance 
+
+        final FXOMInstance gridPaneInstance
                 = (FXOMInstance) parentObject;
-        final FXOMProperty fxomProperty 
+        final FXOMProperty fxomProperty
                 = gridPaneInstance.getProperties().get(columnConstraintsName);
         if (fxomProperty != null) {
             assert fxomProperty instanceof FXOMPropertyC;
@@ -249,11 +249,11 @@ public class GridSelectionGroup extends AbstractSelectionGroup {
                 }
             }
         }
-        
+
         return result;
     }
-    
-    
+
+
     private static final IntegerPropertyMetadata columnIndexMeta =
             new IntegerPropertyMetadata(
                 new PropertyName("columnIndex", GridPane.class), //NOI18N
@@ -263,10 +263,10 @@ public class GridSelectionGroup extends AbstractSelectionGroup {
 
     private List<FXOMObject> collectSelectedObjectsInColumn() {
         final List<FXOMObject> result = new ArrayList<>();
-        
+
         final DesignHierarchyMask m = new DesignHierarchyMask(parentObject);
         assert m.isAcceptingSubComponent();
-        
+
         for (int i = 0, count = m.getSubComponentCount(); i <  count; i++) {
             final FXOMObject childObject = m.getSubComponentAtIndex(i);
             if (childObject instanceof FXOMInstance) {
@@ -277,10 +277,10 @@ public class GridSelectionGroup extends AbstractSelectionGroup {
                 }
             }
         }
-        
+
         return result;
     }
-    
+
     private static final IntegerPropertyMetadata rowIndexMeta =
             new IntegerPropertyMetadata(
                 new PropertyName("rowIndex", GridPane.class), //NOI18N
@@ -290,10 +290,10 @@ public class GridSelectionGroup extends AbstractSelectionGroup {
 
     private List<FXOMObject> collectSelectedObjectsInRow() {
         final List<FXOMObject> result = new ArrayList<>();
-        
+
         final DesignHierarchyMask m = new DesignHierarchyMask(parentObject);
         assert m.isAcceptingSubComponent();
-        
+
         for (int i = 0, count = m.getSubComponentCount(); i <  count; i++) {
             final FXOMObject childObject = m.getSubComponentAtIndex(i);
             if (childObject instanceof FXOMInstance) {
@@ -304,8 +304,8 @@ public class GridSelectionGroup extends AbstractSelectionGroup {
                 }
             }
         }
-        
+
         return result;
     }
-    
+
 }

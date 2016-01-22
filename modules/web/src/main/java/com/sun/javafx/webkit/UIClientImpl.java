@@ -76,7 +76,7 @@ public final class UIClientImpl implements UIClient {
     private WebEngine getWebEngine() {
         return accessor.getEngine();
     }
-    
+
     private AccessControlContext getAccessContext() {
         return accessor.getPage().getAccessControlContext();
     }
@@ -113,7 +113,7 @@ public final class UIClientImpl implements UIClient {
     @Override public void closePage() {
         notifyVisibilityChanged(false);
     }
-    
+
     @Override public void showView() {
         notifyVisibilityChanged(true);
     }
@@ -199,7 +199,7 @@ public final class UIClientImpl implements UIClient {
             }
             chooser.setInitialDirectory(dir);
         }
-        
+
         if (multiple) {
             List<File> files = chooser.showOpenMultipleDialog(win);
             if (files != null) {

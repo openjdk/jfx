@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef Operands_h
@@ -51,29 +51,29 @@ template<typename T, typename Traits = OperandValueTraits<T>>
 class Operands {
 public:
     Operands() { }
-    
+
     explicit Operands(size_t numArguments, size_t numLocals)
     {
         m_arguments.fill(Traits::defaultValue(), numArguments);
         m_locals.fill(Traits::defaultValue(), numLocals);
     }
-    
+
     template<typename U, typename OtherTraits>
     explicit Operands(OperandsLikeTag, const Operands<U, OtherTraits>& other)
     {
         m_arguments.fill(Traits::defaultValue(), other.numberOfArguments());
         m_locals.fill(Traits::defaultValue(), other.numberOfLocals());
     }
-    
+
     size_t numberOfArguments() const { return m_arguments.size(); }
     size_t numberOfLocals() const { return m_locals.size(); }
-    
+
     T& argument(size_t idx) { return m_arguments[idx]; }
     const T& argument(size_t idx) const { return m_arguments[idx]; }
-    
+
     T& local(size_t idx) { return m_locals[idx]; }
     const T& local(size_t idx) const { return m_locals[idx]; }
-    
+
     template<OperandKind operandKind>
     size_t sizeFor() const
     {
@@ -95,7 +95,7 @@ public:
             return argument(idx);
         return local(idx);
     }
-    
+
     void ensureLocals(size_t size)
     {
         if (size <= m_locals.size())
@@ -106,33 +106,33 @@ public:
         for (size_t i = oldSize; i < m_locals.size(); ++i)
             m_locals[i] = Traits::defaultValue();
     }
-    
+
     void setLocal(size_t idx, const T& value)
     {
         ensureLocals(idx + 1);
-        
+
         m_locals[idx] = value;
     }
-    
+
     T getLocal(size_t idx)
     {
         if (idx >= m_locals.size())
             return Traits::defaultValue();
         return m_locals[idx];
     }
-    
+
     void setArgumentFirstTime(size_t idx, const T& value)
     {
         ASSERT(m_arguments[idx] == Traits::defaultValue());
         argument(idx) = value;
     }
-    
+
     void setLocalFirstTime(size_t idx, const T& value)
     {
         ASSERT(idx >= m_locals.size() || m_locals[idx] == Traits::defaultValue());
         setLocal(idx, value);
     }
-    
+
     T& operand(int operand)
     {
         if (operandIsArgument(operand)) {
@@ -149,7 +149,7 @@ public:
     }
 
     const T& operand(int operand) const { return const_cast<const T&>(const_cast<Operands*>(this)->operand(operand)); }
-    
+
     bool hasOperand(int operand) const
     {
         if (operandIsArgument(operand))
@@ -160,7 +160,7 @@ public:
     {
         return hasOperand(reg.offset());
     }
-    
+
     void setOperand(int operand, const T& value)
     {
         if (operandIsArgument(operand)) {
@@ -168,10 +168,10 @@ public:
             m_arguments[argument] = value;
             return;
         }
-        
+
         setLocal(VirtualRegister(operand).toLocal(), value);
     }
-    
+
     void setOperand(VirtualRegister virtualRegister, const T& value)
     {
         setOperand(virtualRegister.offset(), value);
@@ -219,17 +219,17 @@ public:
     {
         return indexForOperand(reg.offset());
     }
-    
+
     void setOperandFirstTime(int operand, const T& value)
     {
         if (operandIsArgument(operand)) {
             setArgumentFirstTime(VirtualRegister(operand).toArgument(), value);
             return;
         }
-        
+
         setLocalFirstTime(VirtualRegister(operand).toLocal(), value);
     }
-    
+
     void fill(T value)
     {
         for (size_t i = 0; i < m_arguments.size(); ++i)
@@ -237,27 +237,27 @@ public:
         for (size_t i = 0; i < m_locals.size(); ++i)
             m_locals[i] = value;
     }
-    
+
     void clear()
     {
         fill(Traits::defaultValue());
     }
-    
+
     bool operator==(const Operands& other) const
     {
         ASSERT(numberOfArguments() == other.numberOfArguments());
         ASSERT(numberOfLocals() == other.numberOfLocals());
-        
+
         return m_arguments == other.m_arguments && m_locals == other.m_locals;
     }
-    
+
     void dumpInContext(PrintStream& out, DumpContext* context) const;
-    
+
     void dump(PrintStream& out) const
     {
         dumpInContext(out, 0);
     }
-    
+
 private:
     Vector<T, 8> m_arguments;
     Vector<T, 16> m_locals;

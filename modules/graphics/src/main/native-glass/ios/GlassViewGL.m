@@ -52,10 +52,10 @@ static EAGLContext * ctx = nil;
 
     self = [super initWithFrame:frame];
     if (self) {
-        
+
         GET_MAIN_JENV;
         jmethodID initMethod = (*env)->GetMethodID(env, mat_jIntegerClass, "<init>", "(I)V");
-        
+
         self->isHiDPIAware = NO;
         if (jproperties != NULL)
         {
@@ -68,14 +68,14 @@ static EAGLContext * ctx = nil;
         }
         [self setContentScaleFactor:(self->isHiDPIAware ?[[UIScreen mainScreen] scale]:1.0)];
         [self setContentMode:UIViewContentModeTopLeft];
-        
+
         CAEAGLLayer * layer = (CAEAGLLayer*) self.layer;
 
         layer.opaque = NO;
 
         //increase clientContext retain count
         clientContext = [clientEAGLContext retain];
-        
+
         if (ctx == nil) {
             layer.opaque = YES;
             ctx = [[EAGLContext alloc] initWithAPI:kEAGLRenderingAPIOpenGLES2 sharegroup:[clientContext sharegroup]];
@@ -87,20 +87,20 @@ static EAGLContext * ctx = nil;
             GLASS_LOG("Failed to set current context");
             return self;
         }
-        
+
         glGenFramebuffers(1, &frameBuffer);
         glBindFramebuffer(GL_FRAMEBUFFER, frameBuffer);
-        
+
         glGenRenderbuffers(1, &renderBuffer);
         glBindRenderbuffer(GL_RENDERBUFFER, renderBuffer);
-        
+
         [ctx renderbufferStorage:GL_RENDERBUFFER fromDrawable: layer];
-        
-        
+
+
         glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_RENDERBUFFER, renderBuffer);
 
         glFlush();
-        
+
         GLASS_LOG("Created GLView - context %@, renderbuffer is %d , framebuffer is %d",
                      ctx, renderBuffer, frameBuffer);
 
@@ -110,7 +110,7 @@ static EAGLContext * ctx = nil;
 
 
 - (void)dealloc {
-    //release OpenGL resources 
+    //release OpenGL resources
     glDeleteRenderbuffers(1, &renderBuffer);
     glDeleteFramebuffers(1, &frameBuffer);
     [clientContext release];
@@ -175,20 +175,20 @@ static EAGLContext * ctx = nil;
                 clientContext = (EAGLContext*)jlong_to_ptr(jcontextPtr);
             }
         }
-        
+
     }
-    
+
 
     self = [super initWithFrame: frame withClientContext:clientContext withJProperties:(jobject)jproperties];
     GLASS_LOG("in GlassViewGL:initWithFrame ... self == %p, frame %@", self, NSStringFromCGRect(frame));
-    
+
     if (self != nil)
     {
         GET_MAIN_JENV;
         jmethodID initMethod = (*env)->GetMethodID(env, mat_jIntegerClass, "<init>", "(I)V");
 
         self->delegate = [[GlassViewDelegate alloc] initWithView:self withJview:jView];
-        
+
         {
             jobject jSyncKey = (*env)->NewObject(env, mat_jIntegerClass, initMethod, com_sun_glass_ui_View_Capability_kSyncKeyValue);
             jobject jSyncKeyValue = (*env)->CallObjectMethod(env, jproperties, mat_jMapGetMethod, jSyncKey);
@@ -197,8 +197,8 @@ static EAGLContext * ctx = nil;
                 (*env)->CallBooleanMethod(env, jSyncKeyValue, mat_jBooleanValueMethod);
             }
         }
-        
-        
+
+
         // UIScrollView configuration. We're emulating scrolling, so don't show the
         // scrollbars, and immediately deliver touches to the view.
         [self setShowsHorizontalScrollIndicator:NO];
@@ -206,14 +206,14 @@ static EAGLContext * ctx = nil;
         [self setDelaysContentTouches:NO];
         [self setCanCancelContentTouches:NO];
         [self setDirectionalLockEnabled:NO];
-        
+
         if (displayLink == NULL) {
             // A system version of 3.1 or greater is required to use CADisplayLink. The NSTimer
             // class is used as fallback when it isn't available.
             NSString *reqSysVer = @"3.1";
             NSString *currSysVer = [[UIDevice currentDevice] systemVersion];
             GLASS_LOG("GlassViewGL: reqSysVer %@ currSysVer %@", reqSysVer, currSysVer);
-            
+
             if ([currSysVer compare:reqSysVer options:NSNumericSearch] != NSOrderedAscending) {
                 displayLink = [[UIScreen mainScreen] displayLinkWithTarget:[GlassTimer getDelegate]
                                                                   selector:@selector(displayLinkUpdate:)];
@@ -230,7 +230,7 @@ static EAGLContext * ctx = nil;
          */
         [self setNeedsDisplay];
     }
-    
+
     return self;
 }
 
@@ -284,7 +284,7 @@ static EAGLContext * ctx = nil;
     CGFloat centerOffsetY = (contentHeight - [self bounds].size.height) / 2.0;
     CGFloat xDistanceFromCenter = fabs(currentOffset.x - centerOffsetX);
     CGFloat yDistanceFromCenter = fabs(currentOffset.y - centerOffsetY);
-    
+
     if (xDistanceFromCenter > (contentWidth / 4.0) ||
         yDistanceFromCenter > (contentHeight / 4.0)) {
         [self->delegate contentWillRecenter];
@@ -293,10 +293,10 @@ static EAGLContext * ctx = nil;
 }
 
 - (void)_setBounds
-{   
+{
     [super setFrame:self->_bounds];
     [self->delegate setBounds:self->_bounds];
-    
+
     CGRect viewFrame = self.frame;
     self.contentSize = CGSizeMake(viewFrame.size.width * 4, viewFrame.size.height * 4);
 }
@@ -305,9 +305,9 @@ static EAGLContext * ctx = nil;
 - (void)setFrame:(CGRect)boundsRect
 {
     GLASS_LOG("GlassViewGL.setBounds %f,%f,%f, %f ", boundsRect.origin.x, boundsRect.origin.y,boundsRect.size.width,boundsRect.size.height);
-    
+
     self->_bounds = boundsRect;
-        
+
     if ([[NSThread currentThread] isMainThread] == YES) {
         [self _setBounds];
     } else {
@@ -322,44 +322,44 @@ static EAGLContext * ctx = nil;
     if ([EAGLContext currentContext] != clientContext) {
         [EAGLContext setCurrentContext:clientContext];
     }
-    
+
     if (clientContext != nil) {
         GLint currentFrameBuffer, currentRenderBuffer;
         glGetIntegerv(GL_FRAMEBUFFER_BINDING, (GLint *) & currentFrameBuffer);
         glGetIntegerv(GL_RENDERBUFFER_BINDING, (GLint *) & currentRenderBuffer);
-        
-        
+
+
         //rebind framebuffer / renderbuffer if neccessary
         if (currentRenderBuffer != renderBuffer) {
             glBindRenderbuffer(GL_RENDERBUFFER, renderBuffer);
         }
-        
+
         if (currentFrameBuffer != frameBuffer) {
             glBindFramebuffer(GL_FRAMEBUFFER, frameBuffer);
         }
-            
+
         GLint width, height;
         glGetRenderbufferParameteriv(GL_RENDERBUFFER, GL_RENDERBUFFER_WIDTH, &width);
         glGetRenderbufferParameteriv(GL_RENDERBUFFER, GL_RENDERBUFFER_HEIGHT, &height);
-    
+
         CAEAGLLayer * layer = (CAEAGLLayer*) self.layer;
-        
+
         if ((layer.bounds.size.width * layer.contentsScale) != width ||
             (layer.bounds.size.height * layer.contentsScale) != height) {
             GLASS_LOG("Resizing renderBufferStorage (original size == %d,%d) new size == %f,%f ",
                   width, height, layer.bounds.size.width, layer.bounds.size.height);
-        
+
             [clientContext renderbufferStorage:GL_RENDERBUFFER fromDrawable: layer];
         }
     }
-    
+
     GLASS_LOG("GlassViewGL.begin for %@, current %@, renderBuffer %d, frameBuffer %d",self,[EAGLContext currentContext], renderBuffer, frameBuffer);
     GLASS_LOG("BEGIN THREAD %@",[NSThread currentThread]);
 
     // we could clear the surface for the client, but the client should be responsible for drawing
     // and if garbage appears on the screen it's because the client is not drawing in response to system repaints
     // glClear(GL_COLOR_BUFFER_BIT);
-    
+
     // now we are good to paint
 }
 
@@ -372,68 +372,68 @@ static EAGLContext * ctx = nil;
 }
 
 // send also font size and font family, bg color, text color, baseline, ...?
-- (void)requestInput:(NSString *)text type:(int)type width:(double)width height:(double)height 
-                 mxx:(double)mxx mxy:(double)mxy mxz:(double)mxz mxt:(double)mxt 
+- (void)requestInput:(NSString *)text type:(int)type width:(double)width height:(double)height
+                 mxx:(double)mxx mxy:(double)mxy mxz:(double)mxz mxt:(double)mxt
                  myx:(double)myx myy:(double)myy myz:(double)myz myt:(double)myt
                  mzx:(double)mzx mzy:(double)mzy mzz:(double)mzz mzt:(double)mzt
 {
 
     if (type == 0 || type == 1) { // TextField or PasswordField
-        
+
         UITextField* textField = [[UITextField alloc] initWithFrame:CGRectMake(mxt + 1, myt + 1, width - 2, height - 2)];
-        
+
         textField.text = text;
-        
+
         [self setUpKeyboardForText:(id)textField];
-        
+
         if (type == 1) {
             textField.secureTextEntry = YES; // Password field behavior
         }
-        
+
         [self setUpLayerForText:(id)textField];
-        
+
         textField.font = [UIFont systemFontOfSize:15];
         textField.inputAccessoryView = inputAccessoryView;
         textField.contentVerticalAlignment = UIControlContentVerticalAlignmentCenter;
         textField.borderStyle = UITextBorderStyleNone;
         textField.layer.borderColor =[[UIColor clearColor] CGColor];
         // textField.backgroundColor = [UIColor clearColor];
-        
+
         textField.delegate = self->delegate;
-        
+
         nativeView = textField;
-        
+
     } else if (type == 3) { // TextArea
-        
+
         UITextView* textView = [[UITextView alloc] initWithFrame:CGRectMake(mxt + 1, myt + 1, width - 2, height - 2)];
-        
+
         textView.text = text;
-        
+
         [self setUpKeyboardForText:(id)textView];
-                
+
         [self setUpLayerForText:(id)textView];
-        
+
         textView.font = [UIFont systemFontOfSize:15];
         textView.inputAccessoryView = inputAccessoryView;
-        
+
         nativeView = textView;
-        
+
     }
-    
+
     if (![[self.superview subviews] containsObject:nativeView]) {
-        
+
         [self.superview addSubview:nativeView];
-        
-        [[NSNotificationCenter defaultCenter] addObserver:self 
-                                                 selector:@selector(textChanged:) 
+
+        [[NSNotificationCenter defaultCenter] addObserver:self
+                                                 selector:@selector(textChanged:)
                                                      name:UITextViewTextDidChangeNotification
                                                    object:nativeView];
-        
-        [[NSNotificationCenter defaultCenter] addObserver:self 
-                                                 selector:@selector(textChanged:) 
+
+        [[NSNotificationCenter defaultCenter] addObserver:self
+                                                 selector:@selector(textChanged:)
                                                      name:UITextFieldTextDidChangeNotification
                                                    object:nativeView];
-        
+
         [nativeView becomeFirstResponder];
     }
 }
@@ -467,32 +467,32 @@ static EAGLContext * ctx = nil;
         [[NSNotificationCenter defaultCenter] removeObserver:self name:UITextFieldTextDidChangeNotification object:nativeView];
         [nativeView resignFirstResponder];
         [nativeView removeFromSuperview];
-        
+
         [nativeView release];
         nativeView = nil;
     }
 }
 
-- (UIView *)inputAccessoryView 
+- (UIView *)inputAccessoryView
 {
     if (!inputAccessoryView) {
-        
+
         UIToolbar *tlbr = [[UIToolbar alloc] init];
         tlbr.barStyle = UIBarStyleBlackTranslucent;
         [tlbr sizeToFit];
-        
+
         UIBarButtonItem *cancelBtn =[[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemCancel target:self action:@selector(cancelClicked)];
         UIBarButtonItem *flexible = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemFlexibleSpace target:nil action:nil];
         UIBarButtonItem *doneBtn =[[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemDone target:self action:@selector(doneClicked)];
-        
+
         [tlbr setItems:[NSArray arrayWithObjects:cancelBtn, flexible, doneBtn, nil]];
-        
+
         [cancelBtn release];
         [doneBtn release];
         [flexible release];
 
         inputAccessoryView = tlbr;
-        
+
     }
     return inputAccessoryView;
 }
@@ -500,14 +500,14 @@ static EAGLContext * ctx = nil;
 - (void)textChanged:(NSNotification *) notification
 {
     if ([notification object] != nativeView) return;
-    
+
     NSString *str = [[notification object] text];
-    
-    [self->delegate sendJavaInputMethodEvent:str 
-                              clauseBoundary:nil 
-                                attrBoundary:nil 
-                                   attrValue:nil 
-                         committedTextLength:[str length] 
+
+    [self->delegate sendJavaInputMethodEvent:str
+                              clauseBoundary:nil
+                                attrBoundary:nil
+                                   attrValue:nil
+                         committedTextLength:[str length]
                                     caretPos:0
                                   visiblePos:0];
 }

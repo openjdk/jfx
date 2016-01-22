@@ -48,7 +48,7 @@ public:
         arguments->finishCreation(callFrame);
         return arguments;
     }
-        
+
     static Arguments* create(VM& vm, CallFrame* callFrame, InlineCallFrame* inlineCallFrame)
     {
         Arguments* arguments = new (NotNull, allocateCell<Arguments>(vm.heap)) Arguments(callFrame);
@@ -60,10 +60,10 @@ public:
 
 private:
     enum NoParametersType { NoParameters };
-        
+
     Arguments(CallFrame*);
     Arguments(CallFrame*, NoParametersType);
-        
+
 public:
     DECLARE_INFO;
 
@@ -71,29 +71,29 @@ public:
 
     void fillArgList(ExecState*, MarkedArgumentBuffer&);
 
-    uint32_t length(ExecState* exec) const 
+    uint32_t length(ExecState* exec) const
     {
         if (UNLIKELY(m_overrodeLength))
             return get(exec, exec->propertyNames().length).toUInt32(exec);
-        return m_numArguments; 
+        return m_numArguments;
     }
-        
+
     void copyToArguments(ExecState*, CallFrame*, uint32_t length);
     void tearOff(CallFrame*);
     void tearOff(CallFrame*, InlineCallFrame*);
     bool isTornOff() const { return m_registerArray.get(); }
     void didTearOffActivation(ExecState*, JSActivation*);
 
-    static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype) 
-    { 
-        return Structure::create(vm, globalObject, prototype, TypeInfo(ObjectType, StructureFlags), info()); 
+    static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype)
+    {
+        return Structure::create(vm, globalObject, prototype, TypeInfo(ObjectType, StructureFlags), info());
     }
-    
+
     static ptrdiff_t offsetOfNumArguments() { return OBJECT_OFFSETOF(Arguments, m_numArguments); }
     static ptrdiff_t offsetOfRegisters() { return OBJECT_OFFSETOF(Arguments, m_registers); }
     static ptrdiff_t offsetOfSlowArgumentData() { return OBJECT_OFFSETOF(Arguments, m_slowArgumentData); }
     static ptrdiff_t offsetOfOverrodeLength() { return OBJECT_OFFSETOF(Arguments, m_overrodeLength); }
-    
+
 protected:
     static const unsigned StructureFlags = OverridesGetOwnPropertySlot | InterceptsGetOwnPropertySlotByIndexEvenWhenLengthIsNotZero | OverridesVisitChildren | OverridesGetPropertyNames | JSObject::StructureFlags;
 
@@ -130,7 +130,7 @@ private:
     // We make these full byte booleans to make them easy to test from the JIT,
     // and because even if they were single-bit booleans we still wouldn't save
     // any space.
-    bool m_overrodeLength; 
+    bool m_overrodeLength;
     bool m_overrodeCallee;
     bool m_overrodeCaller;
     bool m_isStrictMode;
@@ -142,7 +142,7 @@ private:
         std::unique_ptr<SlowArgument[]> slowArguments;
         int bytecodeToMachineCaptureOffset; // Add this if you have a bytecode offset into captured registers and you want the machine offset instead. Subtract if you want to do the opposite.
     };
-    
+
     std::unique_ptr<SlowArgumentData> m_slowArgumentData;
 
     WriteBarrier<JSFunction> m_callee;
@@ -275,7 +275,7 @@ inline void Arguments::finishCreation(CallFrame* callFrame, InlineCallFrame* inl
 
     JSFunction* callee = inlineCallFrame->calleeForCallFrame(callFrame);
     m_numArguments = inlineCallFrame->arguments.size() - 1;
-    
+
     if (m_numArguments) {
         int offsetForArgumentOne = inlineCallFrame->arguments[1].virtualRegister().offset();
         m_registers = reinterpret_cast<WriteBarrierBase<Unknown>*>(callFrame->registers()) + offsetForArgumentOne - virtualRegisterForArgument(1).offset();

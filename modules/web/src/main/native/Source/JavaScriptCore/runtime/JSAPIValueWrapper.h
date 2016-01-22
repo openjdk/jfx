@@ -41,10 +41,10 @@ namespace JSC {
         {
             return Structure::create(vm, globalObject, prototype, TypeInfo(APIValueWrapperType, OverridesVisitChildren | OverridesGetPropertyNames), info());
         }
-        
+
         DECLARE_EXPORT_INFO;
-        
-        static JSAPIValueWrapper* create(ExecState* exec, JSValue value) 
+
+        static JSAPIValueWrapper* create(ExecState* exec, JSValue value)
         {
             VM& vm = exec->vm();
             JSAPIValueWrapper* wrapper = new (NotNull, allocateCell<JSAPIValueWrapper>(vm.heap)) JSAPIValueWrapper(exec);

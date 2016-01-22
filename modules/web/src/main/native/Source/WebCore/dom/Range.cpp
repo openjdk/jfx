@@ -332,7 +332,7 @@ bool Range::isPointInRange(Node* refNode, int offset, ExceptionCode& ec)
 short Range::comparePoint(Node* refNode, int offset, ExceptionCode& ec) const
 {
     // http://developer.mozilla.org/en/docs/DOM:range.comparePoint
-    // This method returns -1, 0 or 1 depending on if the point described by the 
+    // This method returns -1, 0 or 1 depending on if the point described by the
     // refNode node and an offset within the node is before, same as, or after the range respectively.
 
     if (!m_start.container()) {
@@ -380,7 +380,7 @@ Range::CompareResults Range::compareNode(Node* refNode, ExceptionCode& ec) const
         ec = NOT_FOUND_ERR;
         return NODE_BEFORE;
     }
-    
+
     if (!m_start.container() && refNode->inDocument()) {
         ec = INVALID_STATE_ERR;
         return NODE_BEFORE;
@@ -398,7 +398,7 @@ Range::CompareResults Range::compareNode(Node* refNode, ExceptionCode& ec) const
 
     ContainerNode* parentNode = refNode->parentNode();
     int nodeIndex = refNode->nodeIndex();
-    
+
     if (!parentNode) {
         // if the node is the top document we should return NODE_BEFORE_AND_AFTER
         // but we throw to match firefox behavior
@@ -603,7 +603,7 @@ bool Range::intersectsNode(Node* refNode, ExceptionCode& ec)
 
     ContainerNode* parentNode = refNode->parentNode();
     int nodeIndex = refNode->nodeIndex();
-    
+
     if (!parentNode) {
         // if the node is the top document we should return NODE_BEFORE_AND_AFTER
         // but we throw to match firefox behavior
@@ -618,7 +618,7 @@ bool Range::intersectsNode(Node* refNode, ExceptionCode& ec)
                comparePoint(parentNode, nodeIndex + 1, ec) > 0) { // ends after end
         return false;
     }
-    
+
     return true; // all other cases
 }
 
@@ -639,7 +639,7 @@ static inline Node* childOfCommonRootBeforeOffset(Node* container, unsigned offs
 {
     ASSERT(container);
     ASSERT(commonRoot);
-    
+
     if (!commonRoot->contains(container))
         return 0;
 
@@ -794,7 +794,7 @@ PassRefPtr<Node> Range::processContentsBetweenOffsets(ActionType action, PassRef
     ASSERT(startOffset <= endOffset);
 
     // This switch statement must be consistent with that of lengthOfContentsInNode.
-    RefPtr<Node> result;   
+    RefPtr<Node> result;
     switch (container->nodeType()) {
     case Node::TEXT_NODE:
     case Node::CDATA_SECTION_NODE:
@@ -903,7 +903,7 @@ PassRefPtr<Node> Range::processAncestorsAndTheirSiblings(ActionType action, Node
         // FIXME: This assertion may fail if DOM is modified during mutation event
         // FIXME: Share code with Range::processNodes
         ASSERT(!firstChildInAncestorToProcess || firstChildInAncestorToProcess->parentNode() == ancestor);
-        
+
         NodeVector nodes;
         for (Node* child = firstChildInAncestorToProcess.get(); child;
             child = (direction == ProcessContentsForward) ? child->nextSibling() : child->previousSibling())
@@ -1046,7 +1046,7 @@ void Range::insertNode(PassRefPtr<Node> prpNewNode, ExceptionCode& ec)
         RefPtr<Text> newText = toText(container.get())->splitText(m_start.offset(), ec);
         if (ec)
             return;
-        
+
         container = m_start.container();
         container->parentNode()->insertBefore(newNode.release(), newText.get(), ec);
         if (ec)
@@ -1454,7 +1454,7 @@ void Range::surroundContents(PassRefPtr<Node> passNewParent, ExceptionCode& ec)
     // Raise a HIERARCHY_REQUEST_ERR if m_start.container() doesn't accept children like newParent.
     Node* parentOfNewParent = m_start.container();
 
-    // If m_start.container() is a character data node, it will be split and it will be its parent that will 
+    // If m_start.container() is a character data node, it will be split and it will be its parent that will
     // need to accept newParent (or in the case of a comment, it logically "would" be inserted into the parent,
     // although this will fail below for another reason).
     if (parentOfNewParent->isCharacterDataNode())
@@ -1463,7 +1463,7 @@ void Range::surroundContents(PassRefPtr<Node> passNewParent, ExceptionCode& ec)
         ec = HIERARCHY_REQUEST_ERR;
         return;
     }
-    
+
     if (newParent->contains(m_start.container())) {
         ec = HIERARCHY_REQUEST_ERR;
         return;
@@ -1532,7 +1532,7 @@ void Range::checkDeleteExtract(ExceptionCode& ec)
     ec = 0;
     if (!commonAncestorContainer(ec) || ec)
         return;
-        
+
     Node* pastLast = pastLastNode();
     for (Node* n = firstNode(); n != pastLast; n = NodeTraversal::next(n)) {
         if (n->isReadOnlyNode()) {
@@ -1637,7 +1637,7 @@ void Range::textRects(Vector<IntRect>& rects, bool useSelectionHeight, RangeInFi
         allFixed &= isFixed;
         someFixed |= isFixed;
     }
-    
+
     if (inFixed)
         *inFixed = allFixed ? EntirelyFixedPosition : (someFixed ? PartiallyFixedPosition : NotFixedPosition);
 }
@@ -1788,7 +1788,7 @@ void Range::collectSelectionRects(Vector<SelectionRect>& rects)
         VisiblePosition endPosition(createLegacyEditingPosition(endContainer, endOffset), VP_DEFAULT_AFFINITY);
         VisiblePosition brPosition(createLegacyEditingPosition(stopNode, 0), VP_DEFAULT_AFFINITY);
         if (endPosition == brPosition)
-            rects.last().setIsLineBreak(true);    
+            rects.last().setIsLineBreak(true);
     }
 
     int lineTop = std::numeric_limits<int>::max();
@@ -1906,7 +1906,7 @@ void Range::collectSelectionRects(Vector<SelectionRect>& rects)
         } else if (currentRect.lineNumber() < maxLineNumber) {
             if (interiorUnionRect.isEmpty()) {
                 // Start collecting interior rects.
-                interiorUnionRect = currentRect.rect();         
+                interiorUnionRect = currentRect.rect();
             } else if (interiorUnionRect.intersects(currentRect.rect())
                 || interiorUnionRect.maxX() == currentRect.rect().x()
                 || interiorUnionRect.maxY() == currentRect.rect().y()
@@ -2221,7 +2221,7 @@ void Range::getBorderAndTextQuads(Vector<FloatQuad>& quads) const
                 const RenderText& renderText = toRenderText(*renderer);
                 int startOffset = (node == startContainer) ? m_start.offset() : 0;
                 int endOffset = (node == endContainer) ? m_end.offset() : INT_MAX;
-                
+
                 auto textQuads = renderText.absoluteQuadsForRange(startOffset, endOffset);
                 ownerDocument().adjustFloatQuadsForScrollAndAbsoluteZoomAndFrameScale(textQuads, renderText.style());
 

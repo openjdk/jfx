@@ -27,7 +27,7 @@
 #include <wtf/Vector.h>
 
 namespace JSC {
-    
+
     class Structure;
     class StructureChain;
 

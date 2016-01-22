@@ -58,7 +58,7 @@ public class Jfx3dViewerApp extends Application {
 
         List<String> args = getParameters().getRaw();
         if (!args.isEmpty()) {
-            sessionManager.getProperties().setProperty(FILE_URL_PROPERTY, 
+            sessionManager.getProperties().setProperty(FILE_URL_PROPERTY,
                     new File(args.get(0)).toURI().toURL().toString());
         }
         contentModel = new ContentModel();

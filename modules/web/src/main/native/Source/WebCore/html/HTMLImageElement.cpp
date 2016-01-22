@@ -404,7 +404,7 @@ bool HTMLImageElement::isServerMap() const
         return false;
 
     const AtomicString& usemap = fastGetAttribute(usemapAttr);
-    
+
     // If the usemap attribute starts with '#', it refers to a map element in the document.
     if (usemap.string()[0] == '#')
         return false;

@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -173,7 +173,7 @@ void DragController::dragEnded()
     m_dragInitiator = 0;
     m_didInitiateDrag = false;
     m_page.dragCaretController().clear();
-    
+
     m_client.dragEnded();
 }
 
@@ -339,14 +339,14 @@ bool DragController::tryDocumentDrag(DragData& dragData, DragDestinationAction a
         Element* element = elementUnderMouse(m_documentUnderMouse.get(), point);
         if (!element)
             return false;
-        
+
         HTMLInputElement* elementAsFileInput = asFileInput(element);
         if (m_fileInputElementUnderMouse != elementAsFileInput) {
             if (m_fileInputElementUnderMouse)
                 m_fileInputElementUnderMouse->setCanReceiveDroppedFiles(false);
             m_fileInputElementUnderMouse = elementAsFileInput;
         }
-        
+
         if (!m_fileInputElementUnderMouse)
             m_page.dragCaretController().setCaretPosition(m_documentUnderMouse->frame()->visiblePositionForPoint(point));
 
@@ -365,7 +365,7 @@ bool DragController::tryDocumentDrag(DragData& dragData, DragDestinationAction a
                 dragSession.numberOfItemsToBeAccepted = 0;
             else
                 dragSession.numberOfItemsToBeAccepted = 1;
-            
+
             if (!dragSession.numberOfItemsToBeAccepted)
                 dragSession.operation = DragOperationNone;
             m_fileInputElementUnderMouse->setCanReceiveDroppedFiles(dragSession.numberOfItemsToBeAccepted);
@@ -374,10 +374,10 @@ bool DragController::tryDocumentDrag(DragData& dragData, DragDestinationAction a
             // be loaded into the view the number of dragged items is 1.
             dragSession.numberOfItemsToBeAccepted = numberOfFiles != 1 ? 0 : 1;
         }
-        
+
         return true;
     }
-    
+
     // We are not over an editable region. Make sure we're clearing any prior drag cursor.
     m_page.dragCaretController().clear();
     if (m_fileInputElementUnderMouse)
@@ -579,7 +579,7 @@ static DragOperation defaultOperationForDrag(DragOperation srcOpMask)
         return DragOperationCopy;
     if (srcOpMask & DragOperationLink)
         return DragOperationLink;
-    
+
     // FIXME: Does IE really return "generic" even if no operations were allowed by the source?
     return DragOperationGeneric;
 }

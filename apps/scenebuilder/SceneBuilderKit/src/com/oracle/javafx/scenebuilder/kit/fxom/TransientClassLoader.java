@@ -38,25 +38,25 @@ import java.net.URL;
 /**
  * This class loader delegates all its tasks to its parent class loader but
  * overrides ClassLoader.getResource().
- * 
+ *
  * The getResource() invokes the parent class loader implementation and checks
  * if the result is null or not. When null (ie no existing resource match), it
  * returns a dummy URL in place of null.
- * 
+ *
  * This class loader is instantiated by FXOMLoader and passed to FXMLLoader.
  * It avoids FXMLLoader to break and interrupt loading when a classpath relative
  * URL is unresolved.
  */
 class TransientClassLoader extends ClassLoader {
-    
+
     public TransientClassLoader(ClassLoader parentClassLoader) {
         super(parentClassLoader);
     }
-    
+
     /*
      * ClassLoader
      */
-    
+
     @Override
     public URL getResource(String name) {
         URL  result = super.getResource(name);

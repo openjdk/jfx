@@ -26,7 +26,7 @@
 #include "SVGNames.h"
 
 namespace WebCore {
-    
+
 inline SVGFontFaceNameElement::SVGFontFaceNameElement(const QualifiedName& tagName, Document& document)
     : SVGElement(tagName, document)
 {

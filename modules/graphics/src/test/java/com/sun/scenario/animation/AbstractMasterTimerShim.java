@@ -30,13 +30,13 @@ public class AbstractMasterTimerShim {
     public static boolean isPaused(AbstractMasterTimer amt) {
         return amt.isPaused();
     }
-    
+
     public static long getTotalPausedTime(AbstractMasterTimer amt) {
         return amt.getTotalPausedTime();
     }
-    
+
     public static long getStartPauseTime(AbstractMasterTimer amt) {
         return amt.getStartPauseTime();
     }
-    
+
 }

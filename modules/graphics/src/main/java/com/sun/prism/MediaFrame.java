@@ -101,7 +101,7 @@ public interface MediaFrame {
      * converted
      */
     public MediaFrame convertToFormat(PixelFormat fmt);
-    
+
     /**
      * This method will prevent the frame from being deallocated or recycled. It
      * is very important to balance the use of this method by calling releaseFrame
@@ -109,7 +109,7 @@ public interface MediaFrame {
      * never be released which could lead to out of memory conditions.
      */
     public void holdFrame();
-    
+
     /**
      * When you're finished with a video frame, call this to allow the media
      * subsystem to deallocate or recycle the frame immediately.

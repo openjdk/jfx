@@ -35,7 +35,7 @@
 #include "PaintInfo.h"
 
 namespace WebCore {
-    
+
 using namespace MathMLNames;
 
 static const float gLineThin = 0.33f;
@@ -60,7 +60,7 @@ void RenderMathMLFraction::fixChildStyle(RenderObject* child)
 void RenderMathMLFraction::updateFromElement()
 {
     // FIXME: mfrac where bevelled=true will need to reorganize the descendants
-    if (isEmpty()) 
+    if (isEmpty())
         return;
 
     RenderObject* numeratorWrapper = firstChild();
@@ -93,24 +93,24 @@ void RenderMathMLFraction::addChild(RenderObject* child, RenderObject* /* before
         RenderPtr<RenderMathMLBlock> numeratorWrapper = createAnonymousMathMLBlock();
         fixChildStyle(numeratorWrapper.get());
         RenderMathMLBlock::addChild(numeratorWrapper.leakPtr());
-        
+
         RenderPtr<RenderMathMLBlock> denominatorWrapper = createAnonymousMathMLBlock();
         fixChildStyle(denominatorWrapper.get());
         RenderMathMLBlock::addChild(denominatorWrapper.leakPtr());
     }
-    
+
     if (firstChild()->isEmpty())
         toRenderElement(firstChild())->addChild(child);
     else
         toRenderElement(lastChild())->addChild(child);
-    
+
     updateFromElement();
 }
 
 void RenderMathMLFraction::styleDidChange(StyleDifference diff, const RenderStyle* oldStyle)
 {
     RenderMathMLBlock::styleDidChange(diff, oldStyle);
-    
+
     for (RenderObject* child = firstChild(); child; child = child->nextSibling())
         fixChildStyle(child);
     updateFromElement();
@@ -143,19 +143,19 @@ void RenderMathMLFraction::paint(PaintInfo& info, const LayoutPoint& paintOffset
     RenderMathMLBlock::paint(info, paintOffset);
     if (info.context->paintingDisabled() || info.phase != PaintPhaseForeground || style().visibility() != VISIBLE)
         return;
-    
+
     RenderBox* denominatorWrapper = lastChildBox();
     if (!denominatorWrapper || !m_lineThickness)
         return;
 
     IntPoint adjustedPaintOffset = roundedIntPoint(paintOffset + location() + denominatorWrapper->location() + LayoutPoint(0, m_lineThickness / 2));
-    
+
     GraphicsContextStateSaver stateSaver(*info.context);
-    
+
     info.context->setStrokeThickness(m_lineThickness);
     info.context->setStrokeStyle(SolidStroke);
     info.context->setStrokeColor(style().visitedDependentColor(CSSPropertyColor), ColorSpaceSRGB);
-    
+
     info.context->drawLine(adjustedPaintOffset, IntPoint(adjustedPaintOffset.x() + denominatorWrapper->pixelSnappedOffsetWidth(), adjustedPaintOffset.y()));
 }
 

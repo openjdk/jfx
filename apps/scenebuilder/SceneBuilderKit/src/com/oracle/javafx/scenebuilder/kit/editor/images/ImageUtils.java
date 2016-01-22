@@ -47,7 +47,7 @@ import javafx.stage.Stage;
  *
  */
 public abstract class ImageUtils {
-    
+
     static final String NODE_ICONS_DIR = "nodeicons"; //NOI18N
     static final String UI_DIR = "ui"; //NOI18N
     static final String MISSING_ICON = "MissingIcon.png"; //NOI18N
@@ -80,7 +80,7 @@ public abstract class ImageUtils {
      * Returns the image corresponding to the specified name.
      * The file MUST be located in the NODE_ICONS_DIR.
      * @param name
-     * @return 
+     * @return
      */
     public static Image getNodeIcon(String name) {
         final URL resource = getNodeIconURL(name);
@@ -100,7 +100,7 @@ public abstract class ImageUtils {
         hiddenStage.close();
         return contentImage;
     }
-    
+
     public static synchronized Cursor getClosedHandCursor() {
         if (closed_hand_cursor == null) {
             final URL url = ImageUtils.class.getResource(UI_DIR + "/" + CLOSED_HAND); //NOI18N
@@ -109,7 +109,7 @@ public abstract class ImageUtils {
         }
         return closed_hand_cursor;
     }
-    
+
     public static synchronized Cursor getOpenHandCursor() {
         if (open_hand_cursor == null) {
             final URL url = ImageUtils.class.getResource(UI_DIR + "/" + OPEN_HAND); //NOI18N
@@ -118,7 +118,7 @@ public abstract class ImageUtils {
         }
         return open_hand_cursor;
     }
-    
+
     public static synchronized Image getWarningBadgeImage() {
         if (warning_badge_image == null) {
             final URL url = ImageUtils.class.getResource(UI_DIR + "/" + WARNING_BADGE); //NOI18N
@@ -126,7 +126,7 @@ public abstract class ImageUtils {
         }
         return warning_badge_image;
     }
-    
+
     public static synchronized Cursor getCSSCursor() {
         if (css_cursor == null) {
             final URL url = ImageUtils.class.getResource(UI_DIR + "/" + CSS_CURSOR); //NOI18N
@@ -134,7 +134,7 @@ public abstract class ImageUtils {
         }
         return css_cursor;
     }
-    
+
     /**
      * Returns the URL corresponding to the specified name.
      * The file MUST be located in the NODE_ICONS_DIR.
@@ -144,7 +144,7 @@ public abstract class ImageUtils {
     public static URL getNodeIconURL(String name) {
         return ImageUtils.class.getResource(NODE_ICONS_DIR + "/" + name); //NOI18N
     }
-    
+
     /**
      * Returns the URL corresponding to the specified name.
      * The file MUST be located in the UI_DIR.

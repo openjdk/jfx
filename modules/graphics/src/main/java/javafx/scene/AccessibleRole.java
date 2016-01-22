@@ -26,8 +26,8 @@
 package javafx.scene;
 
 /**
- * This enum describes the accessible role for a {@link Node}. 
- * 
+ * This enum describes the accessible role for a {@link Node}.
+ *
  * The role is used by assistive technologies such as screen readers
  * to decide the set of actions and attributes for a node.  For example,
  * when the screen reader needs the current value of a slider, it
@@ -41,7 +41,7 @@ package javafx.scene;
  * @see AccessibleAttribute#ROLE
  * @see Node#queryAccessibleAttribute(AccessibleAttribute, Object...)
  * @see Node#executeAccessibleAction(AccessibleAction, Object...)
- * 
+ *
  * @since JavaFX 8u40
  */
 public enum AccessibleRole {
@@ -194,8 +194,8 @@ public enum AccessibleRole {
      * It is strongly recommended that a text description of the image be provided
      * for each {@link ImageView}.  This can be done by setting either
      * {@link Node#accessibleTextProperty()} for the {@link ImageView}
-     * or by using {@link AccessibleAttribute#LABELED_BY}. 
-     * </p> 
+     * or by using {@link AccessibleAttribute#LABELED_BY}.
+     * </p>
      */
     IMAGE_VIEW,
 
@@ -543,7 +543,7 @@ public enum AccessibleRole {
      * </ul>
      */
     TOGGLE_BUTTON,
-    
+
     /**
      * Tooltip role.
      * </p>

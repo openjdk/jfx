@@ -39,7 +39,7 @@ public class FontMetrics {
             float maxDescent, float leading, Font font) {
         return new FontMetrics(maxAscent, ascent, xheight, descent, maxDescent, leading, font);
     }
-    
+
     /**
      * The distance from the baseline to the max character height.
      * This value is always positive
@@ -49,7 +49,7 @@ public class FontMetrics {
     public final float getMaxAscent() {
         return maxAscent;
     }
-    
+
     /**
      * The distance from the baseline to the avg max character height.
      * this value is always positive
@@ -59,7 +59,7 @@ public class FontMetrics {
     public final float getAscent() {
         return ascent;
     }
-    
+
     /**
      * The distance from the baseline to the top of the avg. lowercase letter.
      */
@@ -68,7 +68,7 @@ public class FontMetrics {
     public final float getXheight() {
         return xheight;
     }
-    
+
     /**
      * The baseline is the imaginary line upon which letters without descenders
      * (for example, the lowercase letter "a") sits. In terms of the font
@@ -80,7 +80,7 @@ public class FontMetrics {
     public final int getBaseline() {
         return baseline;
     }
-    
+
     /**
      * The distance from the baseline down to the lowest avg. descender. This
      * value is always positive
@@ -90,7 +90,7 @@ public class FontMetrics {
     public final float getDescent() {
         return descent;
     }
-    
+
     /**
      * The distance from the baseline down to the absolute lowest descender.
      * this value is always positive
@@ -100,7 +100,7 @@ public class FontMetrics {
     public final float getMaxDescent() {
         return maxDescent;
     }
-    
+
     /**
      * The amount of space between lines of text in this font. This is the
      * amount of space between he maxDecent of one line and the maxAscent
@@ -111,7 +111,7 @@ public class FontMetrics {
     public final float getLeading() {
         return leading;
     }
-    
+
     /**
      * The maximum line height for a line of text in this font
      */
@@ -120,7 +120,7 @@ public class FontMetrics {
     public final float getLineHeight() {
         return lineHeight;
     }
-    
+
     /**
      * The font that was used to construct these metrics.
      */

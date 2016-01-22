@@ -40,9 +40,9 @@ import javafx.scene.paint.Color;
 import javafx.stage.Stage;
 
 public class HelloCheckBox extends Application {
-    
+
     private CheckBox createSteadyStateControl(String text) {
-        
+
         CheckBox checkBox = new CheckBox(text);
         for(String pseudoClass : text.split(" ")) {
             checkBox.pseudoClassStateChanged(PseudoClass.getPseudoClass(pseudoClass), true);
@@ -51,7 +51,7 @@ public class HelloCheckBox extends Application {
         checkBox.setMouseTransparent(true);
         return checkBox;
     }
-    
+
     @Override public void start(Stage stage) {
 
         CheckBox[] steadyStateControls = new CheckBox[] {
@@ -65,12 +65,12 @@ public class HelloCheckBox extends Application {
             createSteadyStateControl("focused"),
             createSteadyStateControl("hover")
         };
-        
+
         VBox steadyState = new VBox(7);
         steadyState.setTranslateX(20);
-        steadyState.getChildren().add(new Label("Steady pseudo-class state samples")); 
+        steadyState.getChildren().add(new Label("Steady pseudo-class state samples"));
         steadyState.getChildren().addAll(steadyStateControls);
-        
+
         CheckBox cbox = new CheckBox("Indeterminate CheckBox");
         cbox.setIndeterminate(true);
         cbox.setAllowIndeterminate(true);
@@ -88,16 +88,16 @@ public class HelloCheckBox extends Application {
         VBox vbox = new VBox(7);
         vbox.setAlignment(Pos.CENTER);
         vbox.getChildren().addAll(label, cbox);
-        
+
         CheckBox twoStateCheckBox = new CheckBox("Two-state check box");
         twoStateCheckBox.setAllowIndeterminate(false);
         twoStateCheckBox.setIndeterminate(false);
         twoStateCheckBox.setSelected(true);
-        
+
         Label twoStateLabel = new Label();
         twoStateLabel.textProperty().bind(Bindings.when(twoStateCheckBox.selectedProperty()).
                                              then("Selected"). otherwise("Not selected"));
-        
+
         VBox vbox2 = new VBox(7);
         vbox2.setAlignment(Pos.CENTER);
         vbox2.getChildren().addAll(twoStateLabel, twoStateCheckBox);
@@ -105,7 +105,7 @@ public class HelloCheckBox extends Application {
         CheckBox focusCheckBox = new CheckBox("Focus indicator");
         focusCheckBox.setAllowIndeterminate(false);
         focusCheckBox.setIndeterminate(false);
-        
+
         Label focusLabel = new Label();
         StringExpression s = Bindings.concat(Bindings.when(focusCheckBox.focusedProperty()).
                                                 then("Focused"). otherwise("Not focused"),
@@ -125,7 +125,7 @@ public class HelloCheckBox extends Application {
                                      vbox2, new Separator(),
                                      vbox3, new Separator(),
                                      steadyState);
-        
+
         Scene scene = new Scene(mainbox, 400, 450);
         scene.setFill(Color.SKYBLUE);
         stage.setTitle("Hello CheckBox");

@@ -257,14 +257,14 @@ class Loader {
             MNode c = n.getIncomingConnectionToType("ma[" + i + "]", "joint");
             Joint jn = (Joint) resolveNode(c);
             jointNodes.add(jn);
-            
+
             Parent rootChild = jn; // root's child, which is an ancestor of joint jn
             while (rootChild.getParent() != null) {
                 rootChild = rootChild.getParent();
             }
             jointForest.add(rootChild);
         }
-        
+
         MNode outputMeshMNode = resolveOutputMesh(n);
         MNode inputMeshMNode = resolveInputMesh(n);
         if (inputMeshMNode == null || outputMeshMNode == null) {
@@ -273,7 +273,7 @@ class Loader {
         // We must be able to find the original converter in the meshConverters map
         MNode origOrigMesh = resolveOrigInputMesh(n);
         //               println("ORIG ORIG={origOrigMesh}");
-        
+
         // TODO: What is with this? origMesh
         resolveNode(origOrigMesh).setVisible(false);
 
@@ -293,14 +293,14 @@ class Loader {
                 weights[j][i] = j < curWeights.getSize() ? curWeights.get(j) : 0;
             }
         }
-        
+
         Node sourceMayaMeshNode = resolveNode(inputMeshMNode);
         Node targetMayaMeshNode = resolveNode(outputMeshMNode);
-        
+
         if (sourceMayaMeshNode.getClass().equals(PolygonMeshView.class)) {
             PolygonMeshView sourceMayaMeshView = (PolygonMeshView) sourceMayaMeshNode;
             PolygonMeshView targetMayaMeshView = (PolygonMeshView) targetMayaMeshNode;
-            
+
             PolygonMesh sourceMesh = (PolygonMesh) sourceMayaMeshView.getMesh();
             SkinningMesh targetMesh = new SkinningMesh(sourceMesh, weights, bindPreMatrix, bindGlobalMatrix, jointNodes, new ArrayList(jointForest));
             targetMayaMeshView.setMesh(targetMesh);
@@ -328,7 +328,7 @@ class Loader {
             targetMesh.getFaceSmoothingGroups().setAll(sourceMesh.getFaceSmoothingGroups());
         }
     }
-    
+
     private class SkinningMeshTimer extends AnimationTimer {
         private SkinningMesh mesh;
         SkinningMeshTimer(SkinningMesh mesh) {
@@ -520,7 +520,7 @@ class Loader {
             }
         }
     }
-    
+
     protected void processJointType(MNode n, Group parentNode) {
         // [Note to Alex]: I've re-enabled joints, but not skinning yet [John]
         Node result;
@@ -1673,7 +1673,7 @@ class Loader {
                 }
             }
             int[][] facesArray = ff.toArray(new int[ff.size()][]);
-            
+
             int[][] faceNormals = new int[facesArray.length][];
             int normalInd = 0;
             for (int f = 0; f < faceNormals.length; f++) {
@@ -1702,7 +1702,7 @@ class Loader {
             List<Integer> ff = new ArrayList<Integer>();
             List<Integer> nn = new ArrayList<Integer>();
             int nIndex = 0;
-            
+
             for (int f = 0; f < faces.size(); f++) {
                 MPolyFace.FaceData faceData = faces.get(f);
                 int[] faceEdges = faceData.getFaceEdges();
@@ -1757,7 +1757,7 @@ class Loader {
                 smGroups = new int[fff.length/6];
                 Arrays.fill(smGroups, 1);
             }
-            
+
             mesh.getPoints().setAll(points);
             mesh.getTexCoords().setAll(texCoords);
             mesh.getFaces().setAll(fff);

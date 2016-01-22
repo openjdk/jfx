@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef ProfilerDatabase_h
@@ -45,30 +45,30 @@ class Database {
 public:
     JS_EXPORT_PRIVATE Database(VM&);
     JS_EXPORT_PRIVATE ~Database();
-    
+
     int databaseID() const { return m_databaseID; }
-    
+
     Bytecodes* ensureBytecodesFor(CodeBlock*);
     void notifyDestruction(CodeBlock*);
-    
+
     void addCompilation(PassRefPtr<Compilation>);
-    
+
     // Converts the database to a JavaScript object that is suitable for JSON stringification.
     // Note that it's probably a good idea to use an ExecState* associated with a global
     // object that is "clean" - i.e. array and object prototypes haven't had strange things
     // done to them. And yes, it should be appropriate to just use a globalExec here.
     JS_EXPORT_PRIVATE JSValue toJS(ExecState*) const;
-    
+
     // Converts the database to a JavaScript object using a private temporary global object,
     // and then returns the JSON representation of that object.
     JS_EXPORT_PRIVATE String toJSON() const;
-    
+
     // Saves the JSON representation (from toJSON()) to the given file. Returns false if the
     // save failed.
     JS_EXPORT_PRIVATE bool save(const char* filename) const;
 
     void registerToSaveAtExit(const char* filename);
-    
+
 private:
     // Use a full-blown adaptive mutex because:
     // - There is only one ProfilerDatabase per VM. The size overhead of the system's
@@ -83,14 +83,14 @@ private:
     //   but a spinlock won't.
     typedef Mutex Lock;
     typedef MutexLocker Locker;
-    
+
 
     void addDatabaseToAtExit();
     void removeDatabaseFromAtExit();
     void performAtExitSave() const;
     static Database* removeFirstAtExitDatabase();
     static void atExitCallback();
-    
+
     int m_databaseID;
     VM& m_vm;
     SegmentedVector<Bytecodes> m_bytecodes;

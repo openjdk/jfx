@@ -231,7 +231,7 @@ void ElementRuleCollector::matchUserRules(bool includeEmptyRules)
 {
     if (!m_ruleSets.userStyle())
         return;
-    
+
     clearMatchedRules();
 
     m_result.ranges.lastUserRule = m_result.matchedProperties.size() - 1;
@@ -262,7 +262,7 @@ void ElementRuleCollector::matchUARules()
 void ElementRuleCollector::matchUARules(RuleSet* rules)
 {
     clearMatchedRules();
-    
+
     m_result.ranges.lastUARule = m_result.matchedProperties.size() - 1;
     StyleResolver::RuleRange ruleRange = m_result.ranges.UARuleRange();
     collectMatchingRules(MatchRequest(rules), ruleRange);
@@ -423,7 +423,7 @@ void ElementRuleCollector::matchAllRules(bool matchAuthorAndUserStyles, bool inc
                 m_result.addMatchedProperties(textDirection == LTR ? leftToRightDeclaration() : rightToLeftDeclaration());
         }
     }
-    
+
     // Check the rules in author sheets next.
     if (matchAuthorAndUserStyles)
         matchAuthorRules(false);

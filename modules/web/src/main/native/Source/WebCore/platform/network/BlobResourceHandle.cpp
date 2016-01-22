@@ -358,7 +358,7 @@ int BlobResourceHandle::readSync(char* buf, int length)
         // If there is no more remaining data to read, we are done.
         if (!m_totalRemainingSize || m_readItemCount >= m_blobData->items().size())
             break;
-        
+
         const BlobDataItem& item = m_blobData->items().at(m_readItemCount);
         int bytesRead = 0;
         if (item.type == BlobDataItem::Data)

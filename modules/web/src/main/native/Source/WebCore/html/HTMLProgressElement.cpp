@@ -135,7 +135,7 @@ bool HTMLProgressElement::isDeterminate() const
 {
     return fastHasAttribute(valueAttr);
 }
-    
+
 void HTMLProgressElement::didElementStateChange()
 {
     m_value->setWidthPercentage(position() * 100);

@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -62,7 +62,7 @@ PlatformCALayerWinInternal::~PlatformCALayerWinInternal()
 void PlatformCALayerWinInternal::displayCallback(CACFLayerRef caLayer, CGContextRef context)
 {
     ASSERT(isMainThread());
-    
+
     if (!owner() || !owner()->owner())
         return;
 
@@ -110,13 +110,13 @@ void PlatformCALayerWinInternal::displayCallback(CACFLayerRef caLayer, CGContext
             CGContextSetRGBFillColor(context, colors[0], colors[1], colors[2], colors[3]);
         } else
             CGContextSetRGBFillColor(context, 1.0f, 0.0f, 0.0f, 0.8f);
-        
+
         CGRect aBounds = layerBounds;
 
         aBounds.size.width = 10 + 10 * text.length();
         aBounds.size.height = 22;
         CGContextFillRect(context, aBounds);
-        
+
         FontDescription desc;
 
         NONCLIENTMETRICS metrics;
@@ -125,7 +125,7 @@ void PlatformCALayerWinInternal::displayCallback(CACFLayerRef caLayer, CGContext
         desc.setOneFamily(metrics.lfSmCaptionFont.lfFaceName);
 
         desc.setComputedSize(18);
-        
+
         Font font = Font(desc, 0, 0);
         font.update(0);
 
@@ -133,7 +133,7 @@ void PlatformCALayerWinInternal::displayCallback(CACFLayerRef caLayer, CGContext
         cg.setFillColor(Color::black, ColorSpaceDeviceRGB);
         cg.drawText(font, TextRun(text), IntPoint(aBounds.origin.x + 5, aBounds.origin.y + 17));
 
-        CGContextRestoreGState(context);        
+        CGContextRestoreGState(context);
     }
 
     CGContextRestoreGState(context);
@@ -309,7 +309,7 @@ PlatformCALayer* PlatformCALayerWinInternal::sublayerAtIndex(int index) const
     CFArrayRef sublayers = CACFLayerGetSublayers(owner()->platformLayer());
     if (!sublayers || index < 0 || CFArrayGetCount(sublayers) <= index)
         return 0;
-    
+
     return PlatformCALayer::platformCALayer(static_cast<CACFLayerRef>(const_cast<void*>(CFArrayGetValueAtIndex(sublayers, index))));
 }
 
@@ -365,11 +365,11 @@ CGSize PlatformCALayerWinInternal::constrainedSize(const CGSize& size) const
             tileRows = ceilf(sqrtf(cMaxTileCount * constrainedSize.height / constrainedSize.width));
             tileColumns = floorf(cMaxTileCount / tileRows);
         }
-        
+
         constrainedSize.width = tileColumns * m_tileSize.width;
         constrainedSize.height = tileRows * m_tileSize.height;
     }
-    
+
     return constrainedSize;
 }
 
@@ -406,7 +406,7 @@ CACFLayerRef PlatformCALayerWinInternal::tileAtIndex(int index)
     CFArrayRef sublayers = CACFLayerGetSublayers(m_tileParent.get());
     if (!sublayers || index < 0 || index >= tileCount())
         return 0;
-    
+
     return static_cast<CACFLayerRef>(const_cast<void*>(CFArrayGetValueAtIndex(sublayers, index)));
 }
 

@@ -78,7 +78,7 @@ public class TableViewApp extends Application {
         tableView.getColumns().addAll(firstNameCol, lastNameCol, emailCol);
         return tableView;
     }
-   
+
     @Override public void start(Stage primaryStage) throws Exception {
         primaryStage.setScene(new Scene(createContent()));
         primaryStage.show();

@@ -90,7 +90,7 @@ public:
     void updateCurrentTranslate();
 
     SMILTimeContainer* timeContainer() const { return m_timeContainer.get(); }
-    
+
     void pauseAnimations();
     void unpauseAnimations();
     bool animationsPaused() const;

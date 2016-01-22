@@ -75,7 +75,7 @@ public class Calculator extends Parent {
     private double opNum2;
     private double memNum;
     private int selIndex;
-    
+
     private boolean keyNavigatorActive;
 
     public Calculator() {
@@ -164,7 +164,7 @@ public class Calculator extends Parent {
                     onKey(key);
                 });
                 keys[i * Util.KEY_CODES[0].length + j] = key;
-                
+
             }
         }
     }
@@ -389,7 +389,7 @@ public class Calculator extends Parent {
         } else if(text.equals("=")){
             onEquals();
         }
-        
+
         switch (e.getCode()) {
             case DELETE:
                 onClear();
@@ -444,12 +444,12 @@ public class Calculator extends Parent {
         keys[index].setCellStroke(true);
         keyNavigatorActive = true;
     }
-    
+
     private void clearSelKey(){
         for(Key key : keys){
             key.setCellStroke(false);
         }
         keyNavigatorActive = false;
     }
-    
+
 }

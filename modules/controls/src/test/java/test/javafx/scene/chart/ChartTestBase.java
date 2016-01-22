@@ -39,15 +39,15 @@ import javafx.scene.shape.*;
 public abstract class ChartTestBase {
     private Scene scene;
     private Stage stage;
-    StubToolkit toolkit = (StubToolkit) Toolkit.getToolkit(); 
+    StubToolkit toolkit = (StubToolkit) Toolkit.getToolkit();
     private Chart chart;
-    
+
     @Before
     public void setUp() {
         chart = createChart();
         chart.setAnimated(false);
     }
-    
+
     protected void startApp() {
         scene = new Scene(chart,800,600);
         stage = new Stage();
@@ -56,39 +56,39 @@ public abstract class ChartTestBase {
         toolkit.setAnimationTime(0);
         pulse();
     }
-    
+
     protected void pulse() {
         toolkit.fireTestPulse();
     }
-    
+
     protected Scene getTestScene() {
         return this.scene;
     }
-    
+
     protected void setTestScene(Scene scene) {
         this.scene = scene;
     }
-    
+
     protected Stage getTestStage() {
         return this.stage;
     }
-    
+
     protected void setTestStage(Stage stage) {
         this.stage = stage;
     }
-    
+
     protected abstract Chart createChart();
-    
+
     StringBuffer computeSVGPath(Path line) {
         StringBuffer str = new StringBuffer();
         for(PathElement pe : line.getElements()) {
             if (pe instanceof LineTo) {
                 str.append("L"+((LineTo)pe).getX()+" "+((LineTo)pe).getY()+" ");
-            } 
+            }
         }
         return str;
     }
-    
+
     StringBuffer computeBoundsString(Region r1, Region r2, Region r3) {
         StringBuffer str = new StringBuffer();
         str.append(Math.round(r1.getLayoutX())

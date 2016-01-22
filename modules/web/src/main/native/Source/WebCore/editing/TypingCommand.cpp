@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -52,7 +52,7 @@ public:
     , m_selectInsertedText(selectInsertedText)
     , m_text(text)
     { }
-    
+
     void operator()(size_t lineOffset, size_t lineLength, bool isLastLine) const
     {
         if (isLastLine) {
@@ -64,7 +64,7 @@ public:
             m_typingCommand->insertParagraphSeparator();
         }
     }
-    
+
 private:
     TypingCommand* m_typingCommand;
     bool m_selectInsertedText;
@@ -153,7 +153,7 @@ void TypingCommand::insertText(Document& document, const String& text, Options o
 
     if (!text.isEmpty())
         frame->editor().updateMarkersForWordsAffectedByEditing(isSpaceOrNewline(text.deprecatedCharacters()[0]));
-    
+
     insertText(document, text, frame->selection().selection(), options, composition);
 }
 
@@ -166,7 +166,7 @@ void TypingCommand::insertText(Document& document, const String& text, const Vis
     VisibleSelection currentSelection = frame->selection().selection();
 
     String newText = dispatchBeforeTextInsertedEvent(text, selectionForInsertion, compositionType == TextCompositionUpdate);
-    
+
     // Set the starting and ending selection appropriately if we are using a selection
     // that is different from the current selection.  In the future, we should change EditCommand
     // to deal with custom selections in a general way that can be used by all of the commands.
@@ -250,7 +250,7 @@ void TypingCommand::doApply()
 {
     if (!endingSelection().isNonOrphanedCaretOrRange())
         return;
-        
+
     if (m_commandType == DeleteKey)
         if (m_commands.isEmpty())
             m_openedByBackwardDelete = true;
@@ -302,10 +302,10 @@ void TypingCommand::markMisspellingsAfterTyping(ETypingCommand commandType)
     if (!frame.editor().isContinuousSpellCheckingEnabled())
         return;
 #endif
-    // Take a look at the selection that results after typing and determine whether we need to spellcheck. 
+    // Take a look at the selection that results after typing and determine whether we need to spellcheck.
     // Since the word containing the current selection is never marked, this does a check to
     // see if typing made a new word that is not in the current selection. Basically, you
-    // get this by being at the end of a word and typing a space.    
+    // get this by being at the end of a word and typing a space.
     VisiblePosition start(endingSelection().start(), endingSelection().affinity());
     VisiblePosition previous = start.previous();
     if (previous.isNotNull()) {
@@ -404,7 +404,7 @@ void TypingCommand::insertParagraphSeparatorInQuotedContent()
         insertParagraphSeparator();
         return;
     }
-        
+
     applyCommandToComposite(BreakBlockquoteCommand::create(document()));
     typingAddedToOpenCommand(InsertParagraphSeparatorInQuotedContent);
 }
@@ -512,7 +512,7 @@ void TypingCommand::deleteKeyPressed(TextGranularity granularity, bool killRing)
         ASSERT_NOT_REACHED();
         break;
     }
-    
+
     ASSERT(!selectionToDelete.isNone());
     if (selectionToDelete.isNone()) {
 #if PLATFORM(IOS)
@@ -523,10 +523,10 @@ void TypingCommand::deleteKeyPressed(TextGranularity granularity, bool killRing)
 #endif
         return;
     }
-    
+
     if (selectionToDelete.isCaret() || !frame.selection().shouldDeleteSelection(selectionToDelete))
         return;
-    
+
     if (killRing)
         frame.editor().addToKillRing(selectionToDelete.toNormalizedRange().get(), false);
     // Make undo select everything that has been deleted, unless an undo will undo more than just this deletion.
@@ -610,7 +610,7 @@ void TypingCommand::forwardDeleteKeyPressed(TextGranularity granularity, bool ki
         ASSERT_NOT_REACHED();
         break;
     }
-    
+
     ASSERT(!selectionToDelete.isNone());
     if (selectionToDelete.isNone()) {
 #if PLATFORM(IOS)
@@ -621,10 +621,10 @@ void TypingCommand::forwardDeleteKeyPressed(TextGranularity granularity, bool ki
 #endif
         return;
     }
-    
+
     if (selectionToDelete.isCaret() || !frame.selection().shouldDeleteSelection(selectionToDelete))
         return;
-        
+
     if (killRing)
         frame.editor().addToKillRing(selectionToDelete.toNormalizedRange().get(), false);
     // make undo select what was deleted

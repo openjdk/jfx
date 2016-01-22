@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef PutByIdStatus_h
@@ -54,7 +54,7 @@ public:
         // It's known to often take slow path.
         TakesSlowPath
     };
-    
+
     PutByIdStatus()
         : m_state(NoInformation)
         , m_oldStructure(0)
@@ -63,7 +63,7 @@ public:
         , m_offset(invalidOffset)
     {
     }
-    
+
     explicit PutByIdStatus(State state)
         : m_state(state)
         , m_oldStructure(0)
@@ -73,7 +73,7 @@ public:
     {
         ASSERT(m_state == NoInformation || m_state == TakesSlowPath);
     }
-    
+
     PutByIdStatus(
         State state,
         Structure* oldStructure,
@@ -91,25 +91,25 @@ public:
         ASSERT(!((m_state != SimpleTransition) && m_structureChain));
         ASSERT((m_state == NoInformation || m_state == TakesSlowPath) == (m_offset == invalidOffset));
     }
-    
+
     static PutByIdStatus computeFor(CodeBlock*, StubInfoMap&, unsigned bytecodeIndex, StringImpl* uid);
     static PutByIdStatus computeFor(VM&, JSGlobalObject*, Structure*, StringImpl* uid, bool isDirect);
-    
+
     static PutByIdStatus computeFor(CodeBlock* baselineBlock, CodeBlock* dfgBlock, StubInfoMap& baselineMap, StubInfoMap& dfgMap, CodeOrigin, StringImpl* uid);
-    
+
     State state() const { return m_state; }
-    
+
     bool isSet() const { return m_state != NoInformation; }
     bool operator!() const { return m_state == NoInformation; }
     bool isSimpleReplace() const { return m_state == SimpleReplace; }
     bool isSimpleTransition() const { return m_state == SimpleTransition; }
     bool takesSlowPath() const { return m_state == TakesSlowPath; }
-    
+
     Structure* oldStructure() const { return m_oldStructure; }
     Structure* newStructure() const { return m_newStructure; }
     IntendedStructureChain* structureChain() const { return m_structureChain.get(); }
     PropertyOffset offset() const { return m_offset; }
-    
+
 private:
 #if ENABLE(DFG_JIT)
     static bool hasExitSite(const ConcurrentJITLocker&, CodeBlock*, unsigned bytecodeIndex, ExitingJITType = ExitFromAnything);
@@ -118,7 +118,7 @@ private:
     static PutByIdStatus computeForStubInfo(const ConcurrentJITLocker&, CodeBlock*, StructureStubInfo*, StringImpl* uid);
 #endif
     static PutByIdStatus computeFromLLInt(CodeBlock*, unsigned bytecodeIndex, StringImpl* uid);
-    
+
     State m_state;
     Structure* m_oldStructure;
     Structure* m_newStructure;

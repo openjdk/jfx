@@ -89,13 +89,13 @@ public class StructureTest {
         if (content != null) {
             for (Node node : content) {
                 if (node == child) {
-                    count++; 
+                    count++;
                 }
             }
         }
         return count;
     }
-    
+
     /**
      * Checks whether child occurs exactly once in the content observableArrayList.
      */
@@ -199,7 +199,7 @@ public class StructureTest {
         Group group = new Group();
         Scene scene = new Scene(group);
         ParentShim.getChildren(group).add(child);
-        
+
         assertSame("group.getScene() is scene", scene, group.getScene());
         assertSame("child.getScene() is scene", scene, child.getScene());
     }
@@ -210,7 +210,7 @@ public class StructureTest {
         Group group = new Group();
         Scene scene = new Scene(group);
         ParentShim.getChildren(group).add(child);
-        
+
 
         assertSame("group.getScene() is scene", scene, group.getScene());
         assertSame("child.getScene() is scene", scene, child.getScene());
@@ -229,9 +229,9 @@ public class StructureTest {
     @Test public void testUnparentG() {
         StubNode child = new StubNode();
         Group parent = new Group(child);
-        
+
         ParentShim.getChildren(parent).remove(child);
-        
+
 
         assertEquals("parent.content is zero size", 0, ParentShim.getChildren(parent).size());
         assertNull("child.parent is null", child.getParent());
@@ -276,7 +276,7 @@ public class StructureTest {
         } catch (IllegalArgumentException iae) {
             // expected
         }
-        
+
         assertSame("p1.clip is child", child, p1.getClip());
         assertNull("p2.clip is null", p2.getClip());
         assertTrue("notChild of p2", notChild(child, p2));
@@ -423,7 +423,7 @@ public class StructureTest {
         StubNode n2 = new StubNode();
         n2.setId("n2");
         Group g = new Group(n0, n1, n2);
-        
+
         ObservableList<Node> content = ParentShim.getChildren(g);
         try {
             content.add(n1);
@@ -431,12 +431,12 @@ public class StructureTest {
         } catch (IllegalArgumentException iae) {
             // expected
         }
-        
+
         assertEquals("g.content is size 3", 3, ParentShim.getChildren(g).size());
         assertSame("g.content[0] is n0", n0, ParentShim.getChildren(g).get(0));
         assertSame("g.content[1] is n1", n1, ParentShim.getChildren(g).get(1));
         assertSame("g.content[2] is n2", n2, ParentShim.getChildren(g).get(2));
-        
+
     }
 
 
@@ -448,7 +448,7 @@ public class StructureTest {
         StubNode n2 = new StubNode();
         n2.setId("n2");
         Group g = new Group(n0, n1, n2);
-        
+
         ParentShim.getChildren(g).remove(1);
         ObservableList<Node> n = javafx.collections.FXCollections.<Node>observableArrayList();
         n.addAll(n1,n1);
@@ -473,7 +473,7 @@ public class StructureTest {
         StubNode n2 = new StubNode();
         n2.setId("n2");
         Group g = new Group(n0, n1, n2);
-        
+
         try {
             ParentShim.getChildren(g).set(1, n0);
             fail("No exception thrown.");
@@ -576,7 +576,7 @@ public class StructureTest {
     @Test public void testCircularGG() {
         Group node1 = new Group();
         Group node2 = new Group(node1);
-        
+
         ObservableList<Node> content = ParentShim.getChildren(node1);
         try {
             content.add(node2);
@@ -613,7 +613,7 @@ public class StructureTest {
         } catch (IllegalArgumentException iae) {
             // expected
         }
-        
+
         assertTrue("node1 is not a child of itself", notChild(node1, node1));
         assertNull("node1.parent is null", node1.getParent());
     }
@@ -657,7 +657,7 @@ public class StructureTest {
 // * A stub node that contains as little functionality as possible.
 // *
 class StubNode extends Node {
-    
+
     // * Returning null from impl_createPGNode() causes crashes,
     // * so return a PGGroup.
     // *

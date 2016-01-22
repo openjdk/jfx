@@ -43,8 +43,8 @@ enum LengthType {
     Undefined
 };
 
-class CalculationValue;    
-    
+class CalculationValue;
+
 struct Length {
     WTF_MAKE_FAST_ALLOCATED;
 public:
@@ -64,13 +64,13 @@ public:
     {
         ASSERT(t != Calculated);
     }
-    
+
     Length(LayoutUnit v, LengthType t, bool q = false)
         : m_floatValue(v.toFloat()), m_quirk(q), m_type(t), m_isFloat(true)
     {
         ASSERT(t != Calculated);
     }
-    
+
     Length(float v, LengthType t, bool q = false)
         : m_floatValue(v), m_quirk(q), m_type(t), m_isFloat(true)
     {
@@ -80,7 +80,7 @@ public:
     Length(double v, LengthType t, bool q = false)
         : m_quirk(q), m_type(t), m_isFloat(true)
     {
-        m_floatValue = static_cast<float>(v);    
+        m_floatValue = static_cast<float>(v);
     }
 
     explicit Length(PassRefPtr<CalculationValue>);
@@ -112,26 +112,26 @@ public:
     {
         if (isCalculated())
             decrementCalculatedRef();
-    }  
-    
+    }
+
     bool operator==(const Length& o) const { return (m_type == o.m_type) && (m_quirk == o.m_quirk) && (isUndefined() || (getFloatValue() == o.getFloatValue()) || isCalculatedEqual(o)); }
     bool operator!=(const Length& o) const { return !(*this == o); }
 
     const Length& operator*=(float v)
-    {       
+    {
         if (isCalculated()) {
             ASSERT_NOT_REACHED();
             return *this;
         }
-        
+
         if (m_isFloat)
             m_floatValue = static_cast<float>(m_floatValue * v);
-        else        
+        else
             m_intValue = static_cast<int>(m_intValue * v);
-        
+
         return *this;
     }
-    
+
     inline float value() const
     {
         return getFloatValue();
@@ -182,14 +182,14 @@ public:
     {
         m_type = t;
         m_floatValue = value;
-        m_isFloat = true;    
+        m_isFloat = true;
     }
 
     void setValue(LengthType t, LayoutUnit value)
     {
         m_type = t;
         m_floatValue = value;
-        m_isFloat = true;    
+        m_isFloat = true;
     }
 
     void setValue(float value)
@@ -199,16 +199,16 @@ public:
 
     bool isUndefined() const { return type() == Undefined; }
 
-    // FIXME calc: https://bugs.webkit.org/show_bug.cgi?id=80357. A calculated Length 
+    // FIXME calc: https://bugs.webkit.org/show_bug.cgi?id=80357. A calculated Length
     // always contains a percentage, and without a maxValue passed to these functions
     // it's impossible to determine the sign or zero-ness. We assume all calc values
-    // are positive and non-zero for now.    
-    bool isZero() const 
+    // are positive and non-zero for now.
+    bool isZero() const
     {
         ASSERT(!isUndefined());
         if (isCalculated())
             return false;
-            
+
         return m_isFloat ? !m_floatValue : !m_intValue;
     }
     bool isPositive() const
@@ -217,17 +217,17 @@ public:
             return false;
         if (isCalculated())
             return true;
-                
+
         return getFloatValue() > 0;
     }
     bool isNegative() const
     {
         if (isUndefined() || isCalculated())
             return false;
-            
+
         return getFloatValue() < 0;
     }
-    
+
     bool isAuto() const { return type() == Auto; }
     bool isRelative() const { return type() == Relative; }
     bool isPercent() const { return type() == Percent || type() == Calculated; }
@@ -247,22 +247,22 @@ public:
         // Blend two lengths to produce a new length that is in between them.  Used for animation.
         if (from.type() == Calculated || type() == Calculated)
             return blendMixedTypes(from, progress);
-        
+
         if (!from.isZero() && !isZero() && from.type() != type())
             return blendMixedTypes(from, progress);
 
         if (from.isZero() && isZero())
             return *this;
-        
+
         LengthType resultType = type();
         if (isZero())
             resultType = from.type();
-        
+
         if (resultType == Percent) {
             float fromPercent = from.isZero() ? 0 : from.percent();
             float toPercent = isZero() ? 0 : percent();
             return Length(WebCore::blend(fromPercent, toPercent, progress), Percent);
-        } 
+        }
 
         float fromValue = from.isZero() ? 0 : from.value();
         float toValue = isZero() ? 0 : value();
@@ -314,8 +314,8 @@ private:
         return getIntValue();
     }
     void incrementCalculatedRef() const;
-    void decrementCalculatedRef() const;    
-    
+    void decrementCalculatedRef() const;
+
     union {
         int m_intValue;
         float m_floatValue;

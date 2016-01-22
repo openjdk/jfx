@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef RUNTIME_ROOT_H_
@@ -56,12 +56,12 @@ class RootObject : public RefCounted<RootObject>, private JSC::WeakHandleOwner {
 
 public:
     virtual ~RootObject();
-    
+
     static PassRefPtr<RootObject> create(const void* nativeHandle, JSGlobalObject*);
 
     bool isValid() { return m_isValid; }
     void invalidate();
-    
+
     void gcProtect(JSObject*);
     void gcUnprotect(JSObject*);
     bool gcIsProtected(JSObject*);
@@ -86,7 +86,7 @@ private:
     virtual void finalize(JSC::Handle<JSC::Unknown>, void* context) override;
 
     bool m_isValid;
-    
+
     const void* m_nativeHandle;
     Strong<JSGlobalObject> m_globalObject;
 

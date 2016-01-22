@@ -42,7 +42,7 @@ import javafx.scene.paint.Material;
  */
 public class MaterialPropertyMetadata extends ComplexPropertyMetadata<Material> {
 
-    public MaterialPropertyMetadata(PropertyName name, boolean readWrite, 
+    public MaterialPropertyMetadata(PropertyName name, boolean readWrite,
             Material defaultValue, InspectorPath inspectorPath) {
         super(name, Material.class, readWrite, defaultValue, inspectorPath);
     }
@@ -51,5 +51,5 @@ public class MaterialPropertyMetadata extends ComplexPropertyMetadata<Material> 
     public FXOMInstance makeFxomInstanceFromValue(Material value, FXOMDocument fxomDocument) {
         throw new UnsupportedOperationException("Not supported yet."); //NOI18N
     }
-    
+
 }

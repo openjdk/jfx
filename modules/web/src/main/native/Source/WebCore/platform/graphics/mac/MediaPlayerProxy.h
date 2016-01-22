@@ -54,13 +54,13 @@ enum MediaPlayerProxyNotificationType {
 
     MediaPlayerNotificationMediaValidated = 1,
     MediaPlayerNotificationMediaFailedToValidate,
-    
+
     MediaPlayerNotificationStartUsingNetwork,
     MediaPlayerNotificationStopUsingNetwork,
 
     MediaPlayerNotificationEnteredFullscreen,
     MediaPlayerNotificationExitedFullscreen,
-    
+
     MediaPlayerNotificationReadyForInspection,
     MediaPlayerNotificationReadyForPlayback,
     MediaPlayerNotificationDidPlayToTheEnd,
@@ -77,7 +77,7 @@ enum MediaPlayerProxyNotificationType {
     MediaPlayerNotificationVolumeDidChange,
     MediaPlayerNotificationMutedDidChange,
     MediaPlayerNotificationTimeJumped,
-    
+
     MediaPlayerNotificationPlayPauseButtonPressed,
     MediaPlayerNotificationRateDidChange,
     MediaPlayerNotificationGainFocus,

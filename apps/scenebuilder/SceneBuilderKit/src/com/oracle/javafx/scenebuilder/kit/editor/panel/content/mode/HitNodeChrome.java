@@ -44,22 +44,22 @@ import javafx.scene.transform.Transform;
  *
  */
 public class HitNodeChrome extends AbstractDecoration<Object> {
-    
+
     private Node hitNode;
     private final RegionRectangle chrome = new RegionRectangle();
     private Node closestNode;
 
     public HitNodeChrome(ContentPanelController contentPanelController, FXOMObject fxomObject, Node hitNode) {
         super(contentPanelController, fxomObject, Object.class);
-        
+
         assert hitNode != null;
         assert hitNode.getScene() != null;
-        
+
         this.hitNode = hitNode;
         this.closestNode = findClosestNode();
         assert closestNode != null;
         assert closestNode.getScene() == hitNode.getScene();
-        
+
         chrome.setMouseTransparent(true);
         chrome.getRegion().getStyleClass().add("css-pick-chrome"); //NOI18N
         getRootNode().getChildren().add(chrome);
@@ -68,8 +68,8 @@ public class HitNodeChrome extends AbstractDecoration<Object> {
     public Node getHitNode() {
         return hitNode;
     }
-    
-    
+
+
     /*
      * AbstractDecoration
      */
@@ -101,13 +101,13 @@ public class HitNodeChrome extends AbstractDecoration<Object> {
     @Override
     protected void layoutDecoration() {
         assert chrome.getScene() != null;
-        
+
         if (getState() != State.CLEAN) {
             chrome.setVisible(false);
         } else {
             assert hitNode.getScene() != null;
             assert hitNode.getScene() == closestNode.getScene();
-            
+
             final Transform t = getContentPanelController().computeSceneGraphToRudderLayerTransform(hitNode);
             chrome.getTransforms().clear();
             chrome.getTransforms().add(t);
@@ -120,14 +120,14 @@ public class HitNodeChrome extends AbstractDecoration<Object> {
     @Override
     public State getState() {
         State result = super.getState();
-        
+
         if (result == State.CLEAN) {
             final Node newClosestNode = findClosestNode();
             if (closestNode != newClosestNode) {
                 result = State.NEEDS_RECONCILE;
             }
         }
-        
+
         return result;
     }
 
@@ -137,12 +137,12 @@ public class HitNodeChrome extends AbstractDecoration<Object> {
         hitNode = closestNode = findClosestNode();
     }
 
-    
-    
+
+
     /*
      * Private
      */
-    
+
     private Node findClosestNode() {
         final FXOMObject nodeObject = getFxomObject().getClosestNode();
         assert nodeObject != null; // At least the root is a Node

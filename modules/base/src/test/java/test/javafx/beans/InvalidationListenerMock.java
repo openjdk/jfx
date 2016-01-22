@@ -38,17 +38,17 @@ public class InvalidationListenerMock implements InvalidationListener {
     private int counter = 0;
 
     @Override public void invalidated(Observable valueModel) {
-    	this.observable = valueModel;
+        this.observable = valueModel;
         counter++;
     }
-    
+
     public void reset() {
-    	observable = null;
+        observable = null;
         counter = 0;
     }
 
     public void check(Observable observable, int counter) {
-    	assertEquals(observable, this.observable);
+        assertEquals(observable, this.observable);
         assertEquals(counter, this.counter);
         reset();
     }

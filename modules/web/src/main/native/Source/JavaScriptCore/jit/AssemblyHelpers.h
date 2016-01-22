@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef AssemblyHelpers_h
@@ -54,7 +54,7 @@ public:
             ASSERT(m_baselineCodeBlock->jitType() == JITCode::None || JITCode::isBaselineCode(m_baselineCodeBlock->jitType()));
         }
     }
-    
+
     CodeBlock* codeBlock() { return m_codeBlock; }
     VM* vm() { return m_vm; }
     AssemblerType_T& assembler() { return m_assembler; }
@@ -248,7 +248,7 @@ public:
         return branch32(MacroAssembler::NotEqual, reg, TrustedImm32(JSValue::CellTag));
 #endif
     }
-    
+
     static Address addressForByteOffset(ptrdiff_t byteOffset)
     {
         return Address(GPRInfo::callFrameRegister, byteOffset);
@@ -393,16 +393,16 @@ public:
     {
         move(owner, scratch1);
         move(owner, scratch2);
-    
+
         andPtr(TrustedImmPtr(MarkedBlock::blockMask), scratch1);
         andPtr(TrustedImmPtr(~MarkedBlock::blockMask), scratch2);
-    
+
 #if USE(JSVALUE64)
         rshift64(TrustedImm32(MarkedBlock::atomShiftAmount + MarkedBlock::markByteShiftAmount), scratch2);
 #else
         rshift32(TrustedImm32(MarkedBlock::atomShiftAmount + MarkedBlock::markByteShiftAmount), scratch2);
 #endif
-    
+
         return branchTest8(Zero, BaseIndex(scratch1, scratch2, TimesOne, MarkedBlock::offsetOfMarks()));
     }
 
@@ -422,7 +422,7 @@ public:
         move64ToDouble(gpr, fpr);
         return fpr;
     }
-    
+
     // Here are possible arrangements of source, target, scratch:
     // - source, target, scratch can all be separate registers.
     // - source and target can be the same but scratch is separate.
@@ -432,16 +432,16 @@ public:
         // Is it an int32?
         signExtend32ToPtr(source, scratch);
         Jump isInt32 = branch64(Equal, source, scratch);
-        
+
         // Nope, it's not, but regT0 contains the int64 value.
         convertInt64ToDouble(source, fpScratch);
         boxDouble(fpScratch, target);
         Jump done = jump();
-        
+
         isInt32.link(this);
         zeroExtend32ToPtr(source, target);
         or64(GPRInfo::tagTypeNumberRegister, target);
-        
+
         done.link(this);
     }
 #endif
@@ -456,7 +456,7 @@ public:
         moveIntsToDouble(payloadGPR, tagGPR, fpr, scratchFPR);
     }
 #endif
-    
+
     enum ExceptionCheckKind { NormalExceptionCheck, InvertedExceptionCheck };
     Jump emitExceptionCheck(ExceptionCheckKind kind = NormalExceptionCheck)
     {
@@ -487,52 +487,52 @@ public:
     {
         return codeBlock()->globalObjectFor(codeOrigin);
     }
-    
+
     bool isStrictModeFor(CodeOrigin codeOrigin)
     {
         if (!codeOrigin.inlineCallFrame)
             return codeBlock()->isStrictMode();
         return jsCast<FunctionExecutable*>(codeOrigin.inlineCallFrame->executable.get())->isStrictMode();
     }
-    
+
     ECMAMode ecmaModeFor(CodeOrigin codeOrigin)
     {
         return isStrictModeFor(codeOrigin) ? StrictMode : NotStrictMode;
     }
-    
+
     ExecutableBase* executableFor(const CodeOrigin& codeOrigin);
-    
+
     CodeBlock* baselineCodeBlockFor(const CodeOrigin& codeOrigin)
     {
         return baselineCodeBlockForOriginAndBaselineCodeBlock(codeOrigin, baselineCodeBlock());
     }
-    
+
     CodeBlock* baselineCodeBlockFor(InlineCallFrame* inlineCallFrame)
     {
         if (!inlineCallFrame)
             return baselineCodeBlock();
         return baselineCodeBlockForInlineCallFrame(inlineCallFrame);
     }
-    
+
     CodeBlock* baselineCodeBlock()
     {
         return m_baselineCodeBlock;
     }
-    
+
     VirtualRegister baselineArgumentsRegisterFor(InlineCallFrame* inlineCallFrame)
     {
         if (!inlineCallFrame)
             return baselineCodeBlock()->argumentsRegister();
-        
+
         return VirtualRegister(baselineCodeBlockForInlineCallFrame(
             inlineCallFrame)->argumentsRegister().offset() + inlineCallFrame->stackOffset);
     }
-    
+
     VirtualRegister baselineArgumentsRegisterFor(const CodeOrigin& codeOrigin)
     {
         return baselineArgumentsRegisterFor(codeOrigin.inlineCallFrame);
     }
-    
+
     SymbolTable* symbolTableFor(const CodeOrigin& codeOrigin)
     {
         return baselineCodeBlockFor(codeOrigin)->symbolTable();
@@ -555,7 +555,7 @@ public:
         RELEASE_ASSERT(recovery.technique() == DisplacedInJSStack);
         return (recovery.virtualRegister().offset() - 1) * sizeof(Register);
     }
-    
+
     int offsetOfArgumentsIncludingThis(const CodeOrigin& codeOrigin)
     {
         return offsetOfArgumentsIncludingThis(codeOrigin.inlineCallFrame);
@@ -570,14 +570,14 @@ public:
         ASSERT(owner != scratch1);
         ASSERT(owner != scratch2);
         ASSERT(scratch1 != scratch2);
-        
+
 #if ENABLE(WRITE_BARRIER_PROFILING)
         emitCount(WriteBarrierCounters::jitCounterFor(useKind));
 #endif
     }
 
     Vector<BytecodeAndMachineOffset>& decodedCodeMapFor(CodeBlock*);
-    
+
 protected:
     VM* m_vm;
     CodeBlock* m_codeBlock;

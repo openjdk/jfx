@@ -41,9 +41,9 @@ int eventq_push(Event e) {
         eventq->head->prev = e;
         e->next = eventq->head;
         eventq->head = e;
-    } 
+    }
     eventq->size++;
-    pthread_cond_signal(&eventq->cv); 
+    pthread_cond_signal(&eventq->cv);
     pthread_mutex_unlock(&eventq->mtx);
     return TRUE;
 }
@@ -56,9 +56,9 @@ Event eventq_pop() {
     if (eventq->size == 1) {
         eventq->head = NULL;
         eventq->tail = NULL;
-    } else {        
+    } else {
         eventq->tail = eventq->tail->prev;
-        eventq->tail->next = NULL;    
+        eventq->tail->next = NULL;
     }
     eventq->size--;
     return back;
@@ -67,15 +67,15 @@ Event eventq_pop() {
 void *eventq_loop(void *args) {
     pthread_mutex_lock(&eventq->mtx);
     JNIEnv *env;
-    if ((*eventq->jvm)->AttachCurrentThread(eventq->jvm, 
+    if ((*eventq->jvm)->AttachCurrentThread(eventq->jvm,
             (void **) &env, NULL) != JNI_OK) {
         LOGE(TAG, "Failed attach to vm thread.");
         return 0;
     }
     while(TRUE) {
        while (eventq->size == 0 && eventq->running) {
-         pthread_cond_wait(&eventq->cv, &eventq->mtx);         
-       }       
+         pthread_cond_wait(&eventq->cv, &eventq->mtx);
+       }
        if (!eventq->running) break;
        if (eventq->size == 0) {
             continue;
@@ -84,9 +84,9 @@ void *eventq_loop(void *args) {
        if (eventq->size == 1) {
            eventq->head = NULL;
            eventq->tail = NULL;
-       } else {        
+       } else {
            eventq->tail = eventq->tail->prev;
-           eventq->tail->next = NULL;    
+           eventq->tail->next = NULL;
        }
        eventq->size--;
        eventq->process(env, e);
@@ -101,7 +101,7 @@ void eventq_stop() {
     pthread_mutex_lock(&eventq->mtx);
     eventq->running = FALSE;
     pthread_cond_signal(&eventq->cv);
-    pthread_mutex_unlock(&eventq->mtx);        
+    pthread_mutex_unlock(&eventq->mtx);
 }
 
 int eventq_start(JNIEnv *env) {
@@ -126,7 +126,7 @@ EventQ eventq_getInstance() {
     if (!eventq) {
         eventq = (EventQ) malloc(sizeof(_EventQ));
         pthread_mutex_init(&eventq->mtx , NULL);
-        pthread_cond_init(&eventq->cv, NULL);        
+        pthread_cond_init(&eventq->cv, NULL);
         eventq->size = 0;
         eventq->head = NULL;
         eventq->tail = NULL;
@@ -136,7 +136,7 @@ EventQ eventq_getInstance() {
         eventq->pop = &eventq_pop;
         eventq->loop = &eventq_loop;
         LOGV(TAG, "Notification queue instance created.");
-    }    
+    }
     return eventq;
 }
 

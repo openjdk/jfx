@@ -87,7 +87,7 @@ public final class PrismSettings {
     public static final boolean forceUploadingPainter;
     public static final boolean forceAlphaTestShader;
     public static final boolean forceNonAntialiasedShape;
-    
+
 
     private PrismSettings() {
     }

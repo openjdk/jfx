@@ -30,7 +30,7 @@ public class DmpKey {
     public static final short DINA22 = 0x22;
     public static final short DINA42 = 0x42;
     public static final short DINA5A = 0x5a;
-    
+
     public static final short DINA06 = 0x06;
     public static final short DINA0E = 0x0e;
     public static final short DINA16 = 0x16;
@@ -47,7 +47,7 @@ public class DmpKey {
     public static final short DINA6E = 0x6e;
     public static final short DINA76 = 0x76;
     public static final short DINA7E = 0x7e;
-    
+
     public static final short DINA00 = 0x00;
     public static final short DINA08 = 0x08;
     public static final short DINA10 = 0x10;
@@ -64,7 +64,7 @@ public class DmpKey {
     public static final short DINA68 = 0x68;
     public static final short DINA70 = 0x70;
     public static final short DINA78 = 0x78;
-    
+
     public static final short DINA04 = 0x04;
     public static final short DINA0C = 0x0c;
     public static final short DINA14 = 0x14;
@@ -81,7 +81,7 @@ public class DmpKey {
     public static final short DINA6C = 0x6c;
     public static final short DINA74 = 0x74;
     public static final short DINA7C = 0x7c;
-    
+
     public static final short DINA01 = 0x01;
     public static final short DINA09 = 0x09;
     public static final short DINA11 = 0x11;
@@ -98,7 +98,7 @@ public class DmpKey {
     public static final short DINA69 = 0x69;
     public static final short DINA71 = 0x71;
     public static final short DINA79 = 0x79;
-    
+
     public static final short DINA25 = 0x25;
     public static final short DINA2D = 0x2d;
     public static final short DINA35 = 0x35;
@@ -109,7 +109,7 @@ public class DmpKey {
     public static final short DINA6D = 0x6d;
     public static final short DINA75 = 0x75;
     public static final short DINA7D = 0x7d;
-    
+
     public static final short DINADC = 0xdc;
     public static final short DINAF2 = 0xf2;
     public static final short DINAAB = 0xab;
@@ -125,8 +125,8 @@ public class DmpKey {
     public static final short DINA91 = 0x91;
     public static final short DINAB6 = 0xb6;
     public static final short DINAB4 = 0xb4;
-    
-    
+
+
     public static final short DINC00 = 0x00;
     public static final short DINC01 = 0x01;
     public static final short DINC02 = 0x02;
@@ -143,7 +143,7 @@ public class DmpKey {
     public static final short DINC19 = 0x19;
     public static final short DINC1A = 0x1a;
     public static final short DINC1B = 0x1b;
-    
+
     public static final short DINC20 = 0x20;
     public static final short DINC21 = 0x21;
     public static final short DINC22 = 0x22;
@@ -160,7 +160,7 @@ public class DmpKey {
     public static final short DINC39 = 0x39;
     public static final short DINC3A = 0x3a;
     public static final short DINC3B = 0x3b;
-    
+
     public static final short DINC40 = 0x40;
     public static final short DINC41 = 0x41;
     public static final short DINC42 = 0x42;
@@ -177,7 +177,7 @@ public class DmpKey {
     public static final short DINC59 = 0x59;
     public static final short DINC5A = 0x5a;
     public static final short DINC5B = 0x5b;
-    
+
     public static final short DINC60 = 0x60;
     public static final short DINC61 = 0x61;
     public static final short DINC62 = 0x62;
@@ -194,10 +194,10 @@ public class DmpKey {
     public static final short DINC79 = 0x79;
     public static final short DINC7A = 0x7a;
     public static final short DINC7B = 0x7b;
-    
+
     public static final short DIND40 = 0x40;
-    
-    
+
+
     public static final short DINA80 = 0x80;
     public static final short DINA90 = 0x90;
     public static final short DINAA0 = 0xa0;
@@ -213,7 +213,7 @@ public class DmpKey {
     public static final short DINADD = 0xdd;
     public static final short DINAF8 = 0xf0;
     public static final short DINAFE = 0xfe;
-    
+
     public static final short DINBF8 = 0xf8;
     public static final short DINAC0 = 0xb0;
     public static final short DINAC1 = 0xb1;

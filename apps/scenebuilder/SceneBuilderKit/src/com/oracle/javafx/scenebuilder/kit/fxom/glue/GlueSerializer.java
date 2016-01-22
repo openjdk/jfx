@@ -39,32 +39,32 @@ import java.util.Map;
 
 /**
  *
- * 
+ *
  */
 class GlueSerializer {
-    
+
     private static final XMLAttrComparator attrComparator
             = new XMLAttrComparator();
-    
+
     private final GlueDocument document;
-    
+
     public GlueSerializer(GlueDocument document) {
         assert document.getRootElement() != null;
         this.document = document;
     }
-    
-    
+
+
     /*
      * Object
      */
-    
+
     @Override
     public String toString() {
         final XMLBuffer result = new XMLBuffer();
-        
+
         result.addLineSeparator();
         result.addLineSeparator();
-        
+
         Class<? extends GlueAuxiliary> lastAuxiliaryClass = null;
         for (GlueAuxiliary auxiliary : document.getHeader()) {
             if ((lastAuxiliaryClass != null) && (lastAuxiliaryClass != auxiliary.getClass())) {
@@ -76,17 +76,17 @@ class GlueSerializer {
             result.addLineSeparator();
             lastAuxiliaryClass = auxiliary.getClass();
         }
-        
+
         if (lastAuxiliaryClass != null) {
             result.addLineSeparator();
         }
-        
+
         serializeElement(document.getRootElement(), result);
         result.addLineSeparator();
-        
+
         return result.toString();
     }
-    
+
     private void serializeElement(GlueElement element, XMLBuffer xmlBuffer) {
         if (element.isSynthetic()) {
             for (GlueElement child : element.getChildren()) {
@@ -113,7 +113,7 @@ class GlueSerializer {
             xmlBuffer.endElement();
         }
     }
-    
+
     private void serializeAuxiliary(GlueAuxiliary auxiliary, XMLBuffer xmlBuffer) {
         if (auxiliary instanceof GlueCharacters) {
             final GlueCharacters characters = (GlueCharacters) auxiliary;
@@ -134,17 +134,17 @@ class GlueSerializer {
             xmlBuffer.addProcessingInstruction(instruction.getTarget(), instruction.getData());
         }
     }
-    
-    
+
+
     private void serializeAttributes(GlueElement element, XMLBuffer xmlBuffer) {
-        
+
         final Map<String, String> attributes = element.getAttributes();
         final List<Map.Entry<String,String>> attrNames = new ArrayList<>();
         for (Map.Entry<String, String> entry : attributes.entrySet()) {
             attrNames.add(new SimpleEntry<>(entry.getKey(), entry.getValue()));
         }
         Collections.sort(attrNames, attrComparator);
-        
+
         for (Map.Entry<String,String> e : attrNames) {
             xmlBuffer.addAttribute(e.getKey(), e.getValue());
         }

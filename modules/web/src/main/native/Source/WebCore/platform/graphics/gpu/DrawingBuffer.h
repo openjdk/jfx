@@ -81,7 +81,7 @@ public:
 
     // Create the depth/stencil and multisample buffers, if needed.
     void createSecondaryBuffers();
-    
+
     void resizeDepthStencil(int sampleCount);
 
     // Copies the multisample color buffer to the normal color buffer and leaves m_fbo bound

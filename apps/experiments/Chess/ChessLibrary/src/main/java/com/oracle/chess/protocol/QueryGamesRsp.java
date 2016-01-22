@@ -35,7 +35,7 @@ import java.util.List;
 public class QueryGamesRsp extends MessageRsp {
 
     public static class Game {
-        
+
         private String gameId;
 
         private String summary;
@@ -112,7 +112,7 @@ public class QueryGamesRsp extends MessageRsp {
         }
         games.add(game);
     }
-    
+
     public List<Game> getGames() {
         return games;
     }

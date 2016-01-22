@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef WebFrame_H
@@ -93,65 +93,65 @@ public:
     virtual ULONG STDMETHODCALLTYPE Release(void);
 
     //IWebFrame
-    virtual HRESULT STDMETHODCALLTYPE name( 
+    virtual HRESULT STDMETHODCALLTYPE name(
         /* [retval][out] */ BSTR *frameName);
-    
-    virtual HRESULT STDMETHODCALLTYPE webView( 
+
+    virtual HRESULT STDMETHODCALLTYPE webView(
         /* [retval][out] */ IWebView **view);
 
     virtual HRESULT STDMETHODCALLTYPE frameView(
         /* [retval][out] */ IWebFrameView **view);
 
-    virtual HRESULT STDMETHODCALLTYPE DOMDocument( 
+    virtual HRESULT STDMETHODCALLTYPE DOMDocument(
         /* [retval][out] */ IDOMDocument** document);
 
     virtual HRESULT STDMETHODCALLTYPE DOMWindow(/* [retval][out] */ IDOMWindow**);
-    
-    virtual HRESULT STDMETHODCALLTYPE frameElement( 
+
+    virtual HRESULT STDMETHODCALLTYPE frameElement(
         /* [retval][out] */ IDOMHTMLElement **frameElement);
-    
-    virtual HRESULT STDMETHODCALLTYPE loadRequest( 
+
+    virtual HRESULT STDMETHODCALLTYPE loadRequest(
         /* [in] */ IWebURLRequest *request);
-    
-    virtual HRESULT STDMETHODCALLTYPE loadData( 
+
+    virtual HRESULT STDMETHODCALLTYPE loadData(
         /* [in] */ IStream *data,
         /* [in] */ BSTR mimeType,
         /* [in] */ BSTR textEncodingName,
         /* [in] */ BSTR url);
-    
-    virtual HRESULT STDMETHODCALLTYPE loadHTMLString( 
+
+    virtual HRESULT STDMETHODCALLTYPE loadHTMLString(
         /* [in] */ BSTR string,
         /* [in] */ BSTR baseURL);
-    
-    virtual HRESULT STDMETHODCALLTYPE loadAlternateHTMLString( 
+
+    virtual HRESULT STDMETHODCALLTYPE loadAlternateHTMLString(
         /* [in] */ BSTR str,
         /* [in] */ BSTR baseURL,
         /* [in] */ BSTR unreachableURL);
-    
-    virtual HRESULT STDMETHODCALLTYPE loadArchive( 
+
+    virtual HRESULT STDMETHODCALLTYPE loadArchive(
         /* [in] */ IWebArchive *archive);
-    
-    virtual HRESULT STDMETHODCALLTYPE dataSource( 
+
+    virtual HRESULT STDMETHODCALLTYPE dataSource(
         /* [retval][out] */ IWebDataSource **source);
-    
-    virtual HRESULT STDMETHODCALLTYPE provisionalDataSource( 
+
+    virtual HRESULT STDMETHODCALLTYPE provisionalDataSource(
         /* [retval][out] */ IWebDataSource **source);
-    
+
     virtual HRESULT STDMETHODCALLTYPE stopLoading( void);
-    
+
     virtual HRESULT STDMETHODCALLTYPE reload( void);
-    
-    virtual HRESULT STDMETHODCALLTYPE findFrameNamed( 
+
+    virtual HRESULT STDMETHODCALLTYPE findFrameNamed(
         /* [in] */ BSTR name,
         /* [retval][out] */ IWebFrame **frame);
-    
-    virtual HRESULT STDMETHODCALLTYPE parentFrame( 
+
+    virtual HRESULT STDMETHODCALLTYPE parentFrame(
         /* [retval][out] */ IWebFrame **frame);
-    
-    virtual HRESULT STDMETHODCALLTYPE childFrames( 
+
+    virtual HRESULT STDMETHODCALLTYPE childFrames(
         /* [retval][out] */ IEnumVARIANT **enumFrames);
 
-    virtual HRESULT STDMETHODCALLTYPE currentForm( 
+    virtual HRESULT STDMETHODCALLTYPE currentForm(
         /* [retval][out] */ IDOMElement **formElement);
 
     virtual /* [local] */ JSGlobalContextRef STDMETHODCALLTYPE globalContext();
@@ -179,47 +179,47 @@ public:
     virtual HRESULT STDMETHODCALLTYPE firstLayoutDone(
         /* [retval][out] */ BOOL* result);
 
-    virtual HRESULT STDMETHODCALLTYPE loadType( 
+    virtual HRESULT STDMETHODCALLTYPE loadType(
         /* [retval][out] */ WebFrameLoadType* type);
 
-    virtual HRESULT STDMETHODCALLTYPE pendingFrameUnloadEventCount( 
+    virtual HRESULT STDMETHODCALLTYPE pendingFrameUnloadEventCount(
         /* [retval][out] */ UINT* result);
 
     virtual HRESULT STDMETHODCALLTYPE unused2();
-    
-    virtual HRESULT STDMETHODCALLTYPE setInPrintingMode( 
+
+    virtual HRESULT STDMETHODCALLTYPE setInPrintingMode(
         /* [in] */ BOOL value,
         /* [in] */ HDC printDC);
-        
-    virtual HRESULT STDMETHODCALLTYPE getPrintedPageCount( 
+
+    virtual HRESULT STDMETHODCALLTYPE getPrintedPageCount(
         /* [in] */ HDC printDC,
         /* [retval][out] */ UINT *pageCount);
-    
-    virtual HRESULT STDMETHODCALLTYPE spoolPages( 
+
+    virtual HRESULT STDMETHODCALLTYPE spoolPages(
         /* [in] */ HDC printDC,
         /* [in] */ UINT startPage,
         /* [in] */ UINT endPage,
         /* [retval][out] */ void* ctx);
 
-    virtual HRESULT STDMETHODCALLTYPE isFrameSet( 
+    virtual HRESULT STDMETHODCALLTYPE isFrameSet(
         /* [retval][out] */ BOOL* result);
 
-    virtual HRESULT STDMETHODCALLTYPE string( 
+    virtual HRESULT STDMETHODCALLTYPE string(
         /* [retval][out] */ BSTR* result);
 
-    virtual HRESULT STDMETHODCALLTYPE size( 
+    virtual HRESULT STDMETHODCALLTYPE size(
         /* [retval][out] */ SIZE *size);
 
-    virtual HRESULT STDMETHODCALLTYPE hasScrollBars( 
+    virtual HRESULT STDMETHODCALLTYPE hasScrollBars(
         /* [retval][out] */ BOOL *result);
-    
-    virtual HRESULT STDMETHODCALLTYPE contentBounds( 
-        /* [retval][out] */ RECT *result);
-    
-    virtual HRESULT STDMETHODCALLTYPE frameBounds( 
+
+    virtual HRESULT STDMETHODCALLTYPE contentBounds(
         /* [retval][out] */ RECT *result);
 
-    virtual HRESULT STDMETHODCALLTYPE isDescendantOfFrame( 
+    virtual HRESULT STDMETHODCALLTYPE frameBounds(
+        /* [retval][out] */ RECT *result);
+
+    virtual HRESULT STDMETHODCALLTYPE isDescendantOfFrame(
         /* [in] */ IWebFrame *ancestor,
         /* [retval][out] */ BOOL *result);
 
@@ -247,7 +247,7 @@ public:
         /* [in] */ OLE_HANDLE deviceContext);
 
     virtual HRESULT STDMETHODCALLTYPE elementDoesAutoComplete(
-        /* [in] */ IDOMElement* element, 
+        /* [in] */ IDOMElement* element,
         /* [retval][out] */ BOOL* result);
 
     virtual HRESULT STDMETHODCALLTYPE pauseAnimation(BSTR animationName, IDOMNode*, double secondsFromNow, BOOL* animationWasRunning);
@@ -284,16 +284,16 @@ public:
     virtual HRESULT STDMETHODCALLTYPE suspendAnimations();
 
     // IWebDocumentText
-    virtual HRESULT STDMETHODCALLTYPE supportsTextEncoding( 
+    virtual HRESULT STDMETHODCALLTYPE supportsTextEncoding(
         /* [retval][out] */ BOOL* result);
-    
-    virtual HRESULT STDMETHODCALLTYPE selectedString( 
+
+    virtual HRESULT STDMETHODCALLTYPE selectedString(
         /* [retval][out] */ BSTR* result);
-    
+
     virtual HRESULT STDMETHODCALLTYPE selectAll();
-    
+
     virtual HRESULT STDMETHODCALLTYPE deselectAll();
-    
+
     // FrameLoaderClient
     virtual void frameLoaderDestroyed();
 

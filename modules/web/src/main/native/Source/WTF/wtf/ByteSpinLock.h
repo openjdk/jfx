@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef ByteSpinLock_h
@@ -48,15 +48,15 @@ public:
             std::this_thread::yield();
         memoryBarrierAfterLock();
     }
-    
+
     void unlock()
     {
         memoryBarrierBeforeUnlock();
         m_lock = 0;
     }
-    
+
     bool isHeld() const { return !!m_lock; }
-    
+
 private:
     uint8_t m_lock;
 };

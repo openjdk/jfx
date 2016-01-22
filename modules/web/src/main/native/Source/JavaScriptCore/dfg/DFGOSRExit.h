@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef DFGOSRExit_h
@@ -59,7 +59,7 @@ enum SpeculationRecoveryType {
 // === SpeculationRecovery ===
 //
 // This class provides additional information that may be associated with a
-// speculation check - for example 
+// speculation check - for example
 class SpeculationRecovery {
 public:
     SpeculationRecovery(SpeculationRecoveryType type, GPRReg dest, GPRReg src)
@@ -87,25 +87,25 @@ private:
 // going into baseline code.
 struct OSRExit : public OSRExitBase {
     OSRExit(ExitKind, JSValueSource, MethodOfGettingAValueProfile, SpeculativeJIT*, unsigned streamIndex, unsigned recoveryIndex = UINT_MAX);
-    
+
     MacroAssemblerCodeRef m_code;
-    
+
     JSValueSource m_jsValueSource;
     MethodOfGettingAValueProfile m_valueProfile;
 
     unsigned m_patchableCodeOffset;
-    
+
     unsigned m_recoveryIndex;
-    
+
     void setPatchableCodeOffset(MacroAssembler::PatchableJump);
     MacroAssembler::Jump getPatchableCodeOffsetAsJump() const;
     CodeLocationJump codeLocationForRepatch(CodeBlock*) const;
     void correctJump(LinkBuffer&);
 
     unsigned m_streamIndex;
-    
+
     RefPtr<ValueRecoveryOverride> m_valueRecoveryOverride;
-    
+
     bool considerAddingAsFrequentExitSite(CodeBlock* profiledCodeBlock)
     {
         return OSRExitBase::considerAddingAsFrequentExitSite(profiledCodeBlock, ExitFromDFG);

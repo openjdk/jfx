@@ -803,7 +803,7 @@ public class HTMLEditorSkin extends SkinBase<HTMLEditor> {
             }
         });
     }
-    
+
     private String colorValueToHex(Color c) {
         return String.format((Locale)null, "#%02x%02x%02x",
                              Math.round(c.getRed() * 255),
@@ -965,7 +965,7 @@ public class HTMLEditorSkin extends SkinBase<HTMLEditor> {
 
             Object selectedFont = fontFamilyComboBox.getValue();
             if (selectedFont instanceof String) {
-                if (!selectedFont.equals(fontFamilyStr)) { 
+                if (!selectedFont.equals(fontFamilyStr)) {
 
                     ObservableList<String> fontFamilyItems = fontFamilyComboBox.getItems();
                     String selectedComboFont = null;
@@ -1094,7 +1094,7 @@ public class HTMLEditorSkin extends SkinBase<HTMLEditor> {
     private boolean isCommandEnabled(String command) {
         return webPage.queryCommandEnabled(command);
     }
-    
+
     private void setContentEditable(boolean b) {
         HTMLDocument htmlDocument = (HTMLDocument)webPage.getDocument(webPage.getMainFrame());
         HTMLElement htmlDocumentElement = (HTMLElement)htmlDocument.getDocumentElement();

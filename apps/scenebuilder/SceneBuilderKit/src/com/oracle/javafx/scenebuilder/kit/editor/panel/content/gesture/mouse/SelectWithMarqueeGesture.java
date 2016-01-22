@@ -51,16 +51,16 @@ import javafx.scene.shape.Rectangle;
 
 /**
  *
- * 
+ *
  */
 public class SelectWithMarqueeGesture extends AbstractMouseGesture {
-    
+
     private FXOMObject hitObject;
     private FXOMObject scopeObject;
     private AbstractPring<?> scopeHilit;
     private final Set<FXOMObject> candidates = new HashSet<>();
     private final Rectangle marqueeRect = new Rectangle();
-    
+
     public SelectWithMarqueeGesture(ContentPanelController contentPanelController) {
         super(contentPanelController);
     }
@@ -75,7 +75,7 @@ public class SelectWithMarqueeGesture extends AbstractMouseGesture {
     public FXOMObject getHitObject() {
         return hitObject;
     }
-    
+
     /*
      * AbstractMouseGesture
      */
@@ -111,7 +111,7 @@ public class SelectWithMarqueeGesture extends AbstractMouseGesture {
         // If an object is below the mouse, then we select it.
         // Else we unselect all.
         if (isMouseDidDrag() == false) {
-            final Selection selection 
+            final Selection selection
                     = contentPanelController.getEditorController().getSelection();
             if (hitObject != null) {
                 selection.select(hitObject);
@@ -128,17 +128,17 @@ public class SelectWithMarqueeGesture extends AbstractMouseGesture {
     @Override
     protected void userDidCancel() {
     }
-    
-    
+
+
     /*
      * Private
      */
-    
+
     private void showScopeHilit() {
         if (scopeObject != null) {
             final AbstractDriver driver
                     = contentPanelController.lookupDriver(scopeObject);
-            final Group rudderLayer 
+            final Group rudderLayer
                     = contentPanelController.getRudderLayer();
             assert driver != null;
             scopeHilit = driver.makePring(scopeObject);
@@ -146,8 +146,8 @@ public class SelectWithMarqueeGesture extends AbstractMouseGesture {
             rudderLayer.getChildren().add(scopeHilit.getRootNode());
         }
     }
-    
-    
+
+
     private void hideScopeHilit() {
         if (scopeHilit != null) {
             final Group rudderLayer = contentPanelController.getRudderLayer();
@@ -156,53 +156,53 @@ public class SelectWithMarqueeGesture extends AbstractMouseGesture {
             scopeHilit = null;
         }
     }
-    
+
     private void showMarqueeRect() {
         final Group rudderLayer = contentPanelController.getRudderLayer();
         rudderLayer.getChildren().add(marqueeRect);
         updateMarqueeRect();
     }
-    
+
     private void updateMarqueeRect() {
         final double xPressed = getMousePressedEvent().getSceneX();
         final double yPressed = getMousePressedEvent().getSceneY();
         final double xCurrent = getLastMouseEvent().getSceneX();
         final double yCurrent = getLastMouseEvent().getSceneY();
-        
+
         final double xMin = Math.min(xPressed, xCurrent);
         final double yMin = Math.min(yPressed, yCurrent);
         final double xMax = Math.max(xPressed, xCurrent);
         final double yMax = Math.max(yPressed, yCurrent);
-        
+
         final Group rudderLayer = contentPanelController.getRudderLayer();
         final Point2D p0 = rudderLayer.sceneToLocal(xMin, yMin, true /* rootScene */);
         final Point2D p1 = rudderLayer.sceneToLocal(xMax, yMax, true /* rootScene */);
-        
+
         marqueeRect.setX(p0.getX());
         marqueeRect.setY(p0.getY());
         marqueeRect.setWidth(p1.getX() - p0.getX());
         marqueeRect.setHeight(p1.getY() - p0.getY());
     }
-    
+
     private void hideMarqueeRect() {
         final Group rudderLayer = contentPanelController.getRudderLayer();
         rudderLayer.getChildren().remove(marqueeRect);
     }
-    
-    
+
+
     private void updateSelection() {
         final double xPressed = getMousePressedEvent().getSceneX();
         final double yPressed = getMousePressedEvent().getSceneY();
         final double xCurrent = getLastMouseEvent().getSceneX();
         final double yCurrent = getLastMouseEvent().getSceneY();
-        
+
         final double xMin = Math.min(xPressed, xCurrent);
         final double yMin = Math.min(yPressed, yCurrent);
         final double xMax = Math.max(xPressed, xCurrent);
         final double yMax = Math.max(yPressed, yCurrent);
-        final BoundingBox marqueeBounds 
+        final BoundingBox marqueeBounds
                 = new BoundingBox(xMin, yMin, xMax - xMin, yMax - yMin);
-        
+
         final Set<FXOMObject> winners = new HashSet<>();
         for (FXOMObject candidate : candidates) {
             final AbstractDriver driver
@@ -211,13 +211,13 @@ public class SelectWithMarqueeGesture extends AbstractMouseGesture {
                 winners.add(candidate);
             }
         }
-        
+
         final Selection selection
                 = contentPanelController.getEditorController().getSelection();
         selection.select(winners);
     }
-    
-    
+
+
     private void collectCandidates() {
         if (scopeObject == null) {
             // Only one candidate : the root object

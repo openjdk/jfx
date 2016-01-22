@@ -66,7 +66,7 @@ public class BorderPaneApp extends Application {
         ToolBar toolbar = new ToolBar();
         toolbar.getItems().add(new Button("Home"));
         toolbar.getItems().add(new Button("Options"));
-        toolbar.getItems().add(new Button("Help"));      
+        toolbar.getItems().add(new Button("Help"));
         borderPane.setTop(toolbar);
 
         //Left content
@@ -75,11 +75,11 @@ public class BorderPaneApp extends Application {
         VBox leftVbox = new VBox();
         leftVbox.getChildren().addAll(label1, leftButton);
         borderPane.setLeft(leftVbox);
-    
+
         //Right content
         Label rightlabel1 = new Label("Right hand");
         Button rightButton = new Button("right");
-      
+
         VBox rightVbox = new VBox();
         rightVbox.getChildren().addAll(rightlabel1, rightButton);
         borderPane.setRight(rightVbox);

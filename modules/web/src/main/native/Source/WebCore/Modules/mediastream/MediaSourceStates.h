@@ -47,7 +47,7 @@ public:
     float aspectRatio() const { return m_sourceStates.aspectRatio(); }
     const AtomicString& facingMode() const;
     unsigned long volume() const { return m_sourceStates.volume(); }
-    
+
     bool hasVideoSource() const { return m_sourceStates.sourceType() == MediaStreamSourceStates::Camera; }
 
 private:

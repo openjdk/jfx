@@ -41,7 +41,7 @@ class RenderRubyBase final : public RenderBlockFlow {
 public:
     RenderRubyBase(Document&, PassRef<RenderStyle>);
     virtual ~RenderRubyBase();
-    
+
     virtual const char* renderName() const { return "RenderRubyBase (anonymous)"; }
 
     virtual bool isRubyBase() const { return true; }

@@ -126,12 +126,12 @@ void CSSGroupingRule::appendCssTextForItems(StringBuilder& result) const
 }
 
 unsigned CSSGroupingRule::length() const
-{ 
-    return m_groupRule->childRules().size(); 
+{
+    return m_groupRule->childRules().size();
 }
 
 CSSRule* CSSGroupingRule::item(unsigned index) const
-{ 
+{
     if (index >= length())
         return 0;
     ASSERT(m_childRuleCSSOMWrappers.size() == m_groupRule->childRules().size());

@@ -128,7 +128,7 @@ private:
         FloatPoint scrollPosition;
         bool isProgrammaticScroll;
         SetOrSyncScrollingLayerPosition updateLayerPositionAction;
-        
+
         bool matchesUpdateType(const ScheduledScrollUpdate& other) const
         {
             return nodeID == other.nodeID

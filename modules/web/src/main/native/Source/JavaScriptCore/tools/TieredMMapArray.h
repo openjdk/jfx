@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef TieredMMapArray_h
@@ -81,7 +81,7 @@ public:
             RELEASE_ASSERT(newDirectorySize < oldDirectorySize);
             m_directory = OSAllocator::reallocateCommitted(m_directory, oldDirectorySize, newDirectorySize);
 
-            // 
+            //
             size_t newDirectoryCount = m_directoryCount * 2;
             for (size_t block = m_directoryCount; block < newDirectoryCount; ++block)
                 m_directory[block] = 0;

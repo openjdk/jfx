@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -37,7 +37,7 @@ void CompressedLazyOperandValueProfileHolder::computeUpdatedPredictions(const Co
 {
     if (!m_data)
         return;
-    
+
     for (unsigned i = 0; i < m_data->size(); ++i)
         m_data->at(i).computeUpdatedPrediction(locker);
 }
@@ -53,7 +53,7 @@ LazyOperandValueProfile* CompressedLazyOperandValueProfileHolder::add(
                 return &m_data->at(i);
         }
     }
-    
+
     m_data->append(LazyOperandValueProfile(key));
     return &m_data->last();
 }
@@ -65,10 +65,10 @@ void LazyOperandValueProfileParser::initialize(
     const ConcurrentJITLocker&, CompressedLazyOperandValueProfileHolder& holder)
 {
     ASSERT(m_map.isEmpty());
-    
+
     if (!holder.m_data)
         return;
-    
+
     LazyOperandValueProfile::List& data = *holder.m_data;
     for (unsigned i = 0; i < data.size(); ++i)
         m_map.add(data[i].key(), &data[i]);
@@ -79,10 +79,10 @@ LazyOperandValueProfile* LazyOperandValueProfileParser::getIfPresent(
 {
     HashMap<LazyOperandValueProfileKey, LazyOperandValueProfile*>::const_iterator iter =
         m_map.find(key);
-    
+
     if (iter == m_map.end())
         return 0;
-    
+
     return iter->value;
 }
 
@@ -92,7 +92,7 @@ SpeculatedType LazyOperandValueProfileParser::prediction(
     LazyOperandValueProfile* profile = getIfPresent(key);
     if (!profile)
         return SpecNone;
-    
+
     return profile->computeUpdatedPrediction(locker);
 }
 

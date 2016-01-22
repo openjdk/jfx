@@ -42,7 +42,7 @@ namespace JSC {
             : JSNonFinalObject(vm, vm.notAnObjectStructure.get())
         {
         }
-        
+
     public:
         typedef JSNonFinalObject Base;
 
@@ -61,7 +61,7 @@ namespace JSC {
         DECLARE_INFO;
 
      private:
-        
+
         static const unsigned StructureFlags = OverridesGetOwnPropertySlot | InterceptsGetOwnPropertySlotByIndexEvenWhenLengthIsNotZero | OverridesGetPropertyNames | JSObject::StructureFlags;
 
         // JSValue methods

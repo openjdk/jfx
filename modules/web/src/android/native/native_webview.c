@@ -24,7 +24,7 @@
  */
 
 // WARNING: WE ARE REPLACING THESE CALLS WITH JAVA CALLS
-#include "com_sun_webkit_NativeWebView.h" 
+#include "com_sun_webkit_NativeWebView.h"
 #include "symbol.h"
 
 #define LIBANDROID_WEBVIEW_SO "libandroid_webview.so"
@@ -57,7 +57,7 @@ jint JNI_OnLoad(JavaVM *vm, void *reserved) {
     return JNI_VERSION_1_6;
 }
 
-void init_functions(JNIEnv *env) {    
+void init_functions(JNIEnv *env) {
     void *libandroid_webview = dlopen(LIBANDROID_WEBVIEW_SO, RTLD_LAZY | RTLD_GLOBAL);
     if (!libandroid_webview) {
         THROW_RUNTIME_EXCEPTION(env, "dlopen error: %s", dlerror());
@@ -190,5 +190,5 @@ void fire_load_event(int id, int frameID, int state, char *url, char *content_ty
     (*env)->CallStaticVoidMethod(env, jNativeWebViewClass,
             jNativeWebView_fire_load_event,
             id, frameID, state, jurl, jcontentType, progress, error_code);
-    CHECK_EXCEPTION(env);    
+    CHECK_EXCEPTION(env);
 }

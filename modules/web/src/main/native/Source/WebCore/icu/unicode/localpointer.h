@@ -18,7 +18,7 @@
 #define __LOCALPOINTER_H__
 
 /**
- * \file 
+ * \file
  * \brief C++ API: "Smart pointers" for use with and in ICU4C C++ code.
  *
  * These classes are inspired by

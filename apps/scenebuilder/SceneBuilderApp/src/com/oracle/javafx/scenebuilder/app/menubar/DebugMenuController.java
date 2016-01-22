@@ -59,52 +59,52 @@ import javafx.scene.control.SeparatorMenuItem;
  *
  */
 class DebugMenuController {
-    
+
     private final Menu menu = new Menu("Debug"); //NOI18N
     private final DocumentWindowController documentWindowController;
-    
+
     public DebugMenuController(DocumentWindowController documentWindowController) {
-        
+
         this.documentWindowController = documentWindowController;
         /*
          * User Library Folder
          */
-        final String applicationDataFolder 
+        final String applicationDataFolder
                 = AppPlatform.getApplicationDataFolder();
-        final MenuItem libraryFolderMenuItem 
+        final MenuItem libraryFolderMenuItem
                 = new MenuItem();
         libraryFolderMenuItem.setText(applicationDataFolder);
         libraryFolderMenuItem.setOnAction(t -> handleRevealPath(applicationDataFolder));
-        
+
         final Menu libraryFolderMenu = new Menu("Application Data Folder"); //NOI18N
         libraryFolderMenu.getItems().add(libraryFolderMenuItem);
-        
+
         /*
          * Layout
          */
-        final MenuItem layoutMenuItem 
+        final MenuItem layoutMenuItem
                 = new MenuItem();
         layoutMenuItem.setText("Check \"localToSceneTransform Properties\" in Content Panel"); //NOI18N
         layoutMenuItem.setOnAction(t -> {
             System.out.println("CHECK LOCAL TO SCENE TRANSFORM BEGINS"); //NOI18N
-            final ContentPanelController cpc 
+            final ContentPanelController cpc
                     = DebugMenuController.this.documentWindowController.getContentPanelController();
             checkLocalToSceneTransform(cpc.getPanelRoot());
             System.out.println("CHECK LOCAL TO SCENE TRANSFORM ENDS"); //NOI18N
         });
-                
+
         /*
          * Tool theme
          */
         final MenuItem useDefaultThemeMenuItem = new MenuItem();
         useDefaultThemeMenuItem.setText("Use Default Theme"); //NOI18N
-        useDefaultThemeMenuItem.setOnAction(t -> SceneBuilderApp.getSingleton().performControlAction(SceneBuilderApp.ApplicationControlAction.USE_DEFAULT_THEME, 
+        useDefaultThemeMenuItem.setOnAction(t -> SceneBuilderApp.getSingleton().performControlAction(SceneBuilderApp.ApplicationControlAction.USE_DEFAULT_THEME,
                 DebugMenuController.this.documentWindowController));
         final MenuItem useDarkThemeMenuItem = new MenuItem();
         useDarkThemeMenuItem.setText("Use Dark Theme"); //NOI18N
-        useDarkThemeMenuItem.setOnAction(t -> SceneBuilderApp.getSingleton().performControlAction(SceneBuilderApp.ApplicationControlAction.USE_DARK_THEME, 
+        useDarkThemeMenuItem.setOnAction(t -> SceneBuilderApp.getSingleton().performControlAction(SceneBuilderApp.ApplicationControlAction.USE_DARK_THEME,
                 DebugMenuController.this.documentWindowController));
-        
+
         /*
          * Undo/redo stack
          */
@@ -115,7 +115,7 @@ class DebugMenuController {
             assert t.getTarget() instanceof Menu;
             undoRedoStackMenuShowing((Menu) t.getTarget());
         });
-                
+
         menu.getItems().add(libraryFolderMenu);
         menu.getItems().add(new SeparatorMenuItem());
         menu.getItems().add(layoutMenuItem);
@@ -125,16 +125,16 @@ class DebugMenuController {
         menu.getItems().add(new SeparatorMenuItem());
         menu.getItems().add(undoRedoStack);
     }
-    
+
     public Menu getMenu() {
         return menu;
     }
-    
-    
+
+
     /*
      * Private
      */
-    
+
     private void handleRevealPath(String path) {
         try {
             EditorPlatform.revealInFileBrowser(new File(path));
@@ -146,19 +146,19 @@ class DebugMenuController {
             d.showAndWait();
         }
     }
-    
-    
+
+
     private void checkLocalToSceneTransform(Node node) {
-        
+
         final Point2D p1 = node.localToScene(0, 0);
         final Point2D p2 = node.getLocalToSceneTransform().transform(0, 0);
-        
+
         final boolean okX = MathUtils.equals(p1.getX(), p2.getX(), 0.0000001);
         final boolean okY = MathUtils.equals(p1.getY(), p2.getY(), 0.0000001);
         if ((okX == false) || (okY == false)) {
             System.out.println("CHECK FAILED FOR " + node + ", p1=" + p1 + ", p2=" + p2); //NOI18N
         }
-        
+
         if (node instanceof Parent) {
             final Parent parent = (Parent) node;
             for (Node child : parent.getChildrenUnmodifiable()) {
@@ -166,20 +166,20 @@ class DebugMenuController {
             }
         }
     }
-    
+
     /*
      * Private (undo/redo stack)
      */
-    
+
     private void undoRedoStackMenuShowing(Menu menu) {
         final JobManager jobManager
                 = documentWindowController.getEditorController().getJobManager();
-        
+
         final List<Job> redoStack = jobManager.getRedoStack();
         final List<Job> undoStack = jobManager.getUndoStack();
-        
+
         final List<MenuItem> menuItems = menu.getItems();
-        
+
         menuItems.clear();
         if (redoStack.isEmpty()) {
             menuItems.add(makeMenuItem("Redo Stack Empty", true)); //NOI18N
@@ -188,9 +188,9 @@ class DebugMenuController {
                 menuItems.add(0, makeJobMenuItem(job));
             }
         }
-        
+
         menuItems.add(new SeparatorMenuItem());
-        
+
         if (undoStack.isEmpty()) {
             menuItems.add(makeMenuItem("Undo Stack Empty", true)); //NOI18N
         } else {
@@ -199,19 +199,19 @@ class DebugMenuController {
             }
         }
     }
-    
-    
+
+
     private MenuItem makeMenuItem(String text, boolean disable) {
         final MenuItem result = new MenuItem();
         result.setText(text);
         result.setDisable(disable);
         return result;
     }
-    
-    
+
+
     private MenuItem makeJobMenuItem(Job job) {
         final MenuItem result;
-        
+
         if (job instanceof CompositeJob) {
             final CompositeJob compositeJob = (CompositeJob)job;
             final Menu newMenu = new Menu(compositeJob.getClass().getSimpleName());
@@ -230,21 +230,21 @@ class DebugMenuController {
         } else {
             result = new MenuItem(job.getClass().getSimpleName());
         }
-        
+
         return result;
     }
-    
+
     private void addJobMenuItems(List<Job> jobs, Menu targetMenu) {
         for (Job job : jobs) {
             targetMenu.getItems().add(makeJobMenuItem(job));
         }
-        
+
         if (targetMenu.getItems().isEmpty()) {
             targetMenu.getItems().add(makeMenuItem("Empty", true)); //NOI18N
         }
     }
-    
-    
+
+
     private void addJobMenuItems(UpdateReferencesJob j, Menu targetMenu) {
         targetMenu.getItems().add(makeJobMenuItem(j.getSubJob()));
         final List<Job> fixJobs = j.getFixJobs();

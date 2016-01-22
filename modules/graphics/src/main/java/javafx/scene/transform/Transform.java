@@ -250,7 +250,7 @@ public abstract class Transform implements Cloneable, EventTarget {
      * once it is needed and computed for some operation.
      */
     private SoftReference<Transform> inverseCache = null;
-    
+
     private WeakReferenceQueue impl_nodes = new WeakReferenceQueue();
 
     /* *************************************************************************
@@ -1257,7 +1257,7 @@ public abstract class Transform implements Cloneable, EventTarget {
         Point3D p6 = transform(bounds.getMaxX(), bounds.getMaxY(), bounds.getMaxZ());
         Point3D p7 = transform(bounds.getMaxX(), bounds.getMinY(), bounds.getMinZ());
         Point3D p8 = transform(bounds.getMaxX(), bounds.getMinY(), bounds.getMaxZ());
-        
+
         return BoundsUtils.createBoundingBox(p1, p2, p3, p4, p5, p6, p7, p8);
     }
 
@@ -1415,7 +1415,7 @@ public abstract class Transform implements Cloneable, EventTarget {
      */
     public Point2D deltaTransform(double x, double y) {
         ensureCanTransform2DPoint();
-        
+
         return new Point2D(
             getMxx() * x + getMxy() * y,
             getMyx() * x + getMyy() * y);
@@ -1864,7 +1864,7 @@ public abstract class Transform implements Cloneable, EventTarget {
      * {@code TransformChangedEvent} with it's single type
      * {@code TRANSFORM_CHANGED}.
      * <p>
-     * 
+     *
      * @param <T> the specific event class of the filter
      * @param eventType the type of the events to receive by the filter
      * @param eventFilter the filter to register

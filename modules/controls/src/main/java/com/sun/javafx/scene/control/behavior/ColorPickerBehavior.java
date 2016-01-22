@@ -37,9 +37,9 @@ public class ColorPickerBehavior extends ComboBoxBaseBehavior<Color> {
      * Constructors                                                            *
      *                                                                         *
      **************************************************************************/
-    
+
     /**
-     * 
+     *
      */
     public ColorPickerBehavior(final ColorPicker colorPicker) {
         super(colorPicker);
@@ -52,7 +52,7 @@ public class ColorPickerBehavior extends ComboBoxBaseBehavior<Color> {
      *************************************************************************/
 
     @Override public void onAutoHide(PopupControl popup) {
-        // when we click on some non  interactive part of the 
+        // when we click on some non  interactive part of the
         // Color Palette - we do not want to hide.
         if (!popup.isShowing() && getNode().isShowing()) {
             // Popup was dismissed. Maybe user clicked outside or typed ESCAPE.

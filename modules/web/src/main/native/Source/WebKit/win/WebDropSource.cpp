@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -53,7 +53,7 @@ HRESULT WebDropSource::createInstance(WebView* webView, IDropSource** result)
 
 WebDropSource::WebDropSource(WebView* webView)
 : m_ref(1)
-, m_dropped(false) 
+, m_dropped(false)
 , m_webView(webView)
 {
     gClassCount++;
@@ -69,7 +69,7 @@ WebDropSource::~WebDropSource()
 STDMETHODIMP WebDropSource::QueryInterface(REFIID riid, void** ppvObject)
 {
     *ppvObject = 0;
-    if (IsEqualIID(riid, IID_IUnknown) || 
+    if (IsEqualIID(riid, IID_IUnknown) ||
         IsEqualIID(riid, IID_IDropSource)) {
         *ppvObject = this;
         AddRef();
@@ -129,7 +129,7 @@ STDMETHODIMP WebDropSource::GiveFeedback(DWORD dwEffect)
     // show the cursor.
     if (dwEffect != DROPEFFECT_NONE)
         return DRAGDROP_S_USEDEFAULTCURSORS;
-    
+
     HWND viewWindow;
     if (FAILED(m_webView->viewWindow(reinterpret_cast<OLE_HANDLE*>(&viewWindow))))
         return DRAGDROP_S_USEDEFAULTCURSORS;
@@ -150,8 +150,8 @@ STDMETHODIMP WebDropSource::GiveFeedback(DWORD dwEffect)
         return DRAGDROP_S_USEDEFAULTCURSORS;
 
     // When dragging inside a WebView and the drag is not allowed, don't show the not allowed icon,
-    // instead, show the pointer cursor.   
+    // instead, show the pointer cursor.
     // FIXME <rdar://7577595>: Custom cursors aren't supported during drag and drop (default to pointer).
-    view->setCursor(pointerCursor()); 
+    view->setCursor(pointerCursor());
     return S_OK;
 }

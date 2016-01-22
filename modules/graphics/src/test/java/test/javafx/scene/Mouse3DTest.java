@@ -2031,7 +2031,7 @@ public class Mouse3DTest {
         MouseEvent e = me.event;
         assertNotNull(e);
         assertCoordinates(e, 10, 50, 10, 50, 0);
-        assertPickResult(e.getPickResult(), r, point(10, 50, 0), 
+        assertPickResult(e.getPickResult(), r, point(10, 50, 0),
                 1562.82032, NOFACE, null);
 
         e = sme.event;

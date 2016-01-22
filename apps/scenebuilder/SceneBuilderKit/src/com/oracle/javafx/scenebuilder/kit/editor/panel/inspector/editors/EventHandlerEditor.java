@@ -111,7 +111,7 @@ public class EventHandlerEditor extends AutoSuggestEditor {
         // methodeName mode by default
         switchToMethodNameMode();
     }
-    
+
     @Override
     public Object getValue() {
         String valueTf = getTextField().getText();

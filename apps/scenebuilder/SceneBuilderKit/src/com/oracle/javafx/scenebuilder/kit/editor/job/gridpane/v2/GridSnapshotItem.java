@@ -44,7 +44,7 @@ import javafx.scene.layout.Priority;
  *
  */
 public class GridSnapshotItem {
-        
+
         private final Integer columnIndex;
         private final Integer rowIndex;
         private final Integer columnSpan;
@@ -53,11 +53,11 @@ public class GridSnapshotItem {
         private final Priority hgrow;
         private final VPos valignment;
         private final HPos halignment;
-        
+
         public GridSnapshotItem(FXOMObject fxomObject) {
             assert fxomObject != null;
             assert fxomObject.getSceneGraphObject() instanceof Node;
-            
+
             final Node node = (Node) fxomObject.getSceneGraphObject();
             this.columnIndex = GridPane.getColumnIndex(node);
             this.rowIndex = GridPane.getRowIndex(node);
@@ -74,7 +74,7 @@ public class GridSnapshotItem {
             assert fxomObject.getSceneGraphObject() instanceof Node;
             assert columnIndex >= 0;
             assert rowIndex >= 0;
-            
+
             this.columnIndex = columnIndex;
             this.rowIndex = rowIndex;
             this.columnSpan = null;
@@ -116,11 +116,11 @@ public class GridSnapshotItem {
         public HPos getHalignment() {
             return halignment;
         }
-        
+
         public GridBounds getBounds() {
             final int actualColumnIndex = (columnIndex == null) ? 0 : columnIndex;
             final int actualRowIndex = (rowIndex == null) ? 0 : rowIndex;
-            
+
             final int actualColumnSpan;
             if ((columnSpan == null) || (columnSpan == GridPane.REMAINING)) {
                 actualColumnSpan = 1;
@@ -133,7 +133,7 @@ public class GridSnapshotItem {
             } else {
                 actualRowSpan = rowSpan;
             }
-            
+
             return new GridBounds(actualColumnIndex, actualRowIndex, actualColumnSpan, actualRowSpan);
         }
 }

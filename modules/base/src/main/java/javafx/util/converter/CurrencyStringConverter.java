@@ -34,31 +34,31 @@ import javafx.util.StringConverter;
 /**
  * <p>{@link StringConverter} implementation for {@link Number} values
  * that represent currency.</p>
- * 
+ *
  * @see PercentageStringConverter
  * @see NumberStringConverter
  * @see StringConverter
  * @since JavaFX 2.1
  */
 public class CurrencyStringConverter extends NumberStringConverter {
-    
+
     // ------------------------------------------------------------ Constructors
     public CurrencyStringConverter() {
         this(Locale.getDefault());
     }
-    
+
     public CurrencyStringConverter(Locale locale) {
         this(locale, null);
     }
-    
+
     public CurrencyStringConverter(String pattern) {
         this(Locale.getDefault(), pattern);
     }
-    
+
     public CurrencyStringConverter(Locale locale, String pattern) {
         super(locale, pattern, null);
     }
-    
+
     public CurrencyStringConverter(NumberFormat numberFormat) {
         super(null, null, numberFormat);
     }
@@ -69,7 +69,7 @@ public class CurrencyStringConverter extends NumberStringConverter {
     /** {@inheritDoc} */
     @Override protected NumberFormat getNumberFormat() {
         Locale _locale = locale == null ? Locale.getDefault() : locale;
-        
+
         if (numberFormat != null) {
             return numberFormat;
         } else if (pattern != null) {

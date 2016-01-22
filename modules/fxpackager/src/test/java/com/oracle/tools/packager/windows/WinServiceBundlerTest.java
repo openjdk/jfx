@@ -53,7 +53,7 @@ import com.oracle.tools.packager.ConfigException;
 import com.oracle.tools.packager.UnsupportedPlatformException;
 
 public class WinServiceBundlerTest {
-    
+
     static File tmpBase;
     static File workDir;
     static File appResourcesDir;
@@ -66,12 +66,12 @@ public class WinServiceBundlerTest {
         Assume.assumeNotNull(WinMsiBundler.TOOL_LIGHT_EXECUTABLE.fetchFrom(new HashMap<>()));
         Assume.assumeNotNull(WinMsiBundler.TOOL_CANDLE_EXECUTABLE.fetchFrom(new HashMap<>()));
     }
-    
+
     public static void assumeInnoSetupPresent() {
         // only run if we have InnoSetup installed
         Assume.assumeNotNull(WinExeBundler.TOOL_INNO_SETUP_COMPILER_EXECUTABLE.fetchFrom(new HashMap<>()));
     }
-    
+
     @BeforeClass
     public static void prepareApp() {
         // only run on windows
@@ -148,13 +148,13 @@ public class WinServiceBundlerTest {
 
         bundleParams.put(SERVICE_HINT.getID(), true);
         bundleParams.put(SYSTEM_WIDE.getID(), true);
-        
+
         boolean valid = bundler.validate(bundleParams);
         assertTrue(valid);
 
         File output = bundler.execute(bundleParams, new File(workDir, "smoke"));
         assertNotNull(output);
-        
+
         // make sure that the service launcher is there
         File launcher = WinServiceBundler.getLauncherSvc(output, bundleParams);
         assertTrue(launcher.exists());
@@ -224,7 +224,7 @@ public class WinServiceBundlerTest {
             bundleParams.put(SYSTEM_WIDE.getID(), false);
 
             bundler.validate(bundleParams);
-            
+
             // if we get here we fail
             assertTrue("ConfigException should have been thrown", false);
         } catch (ConfigException ignore) {
@@ -239,7 +239,7 @@ public class WinServiceBundlerTest {
         Bundler bundler = new WinExeBundler();
 
         Map<String, Object> bundleParams = new HashMap<>();
-        
+
         bundleParams.put(BUILD_ROOT.getID(), tmpBase);
         bundleParams.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
 
@@ -247,10 +247,10 @@ public class WinServiceBundlerTest {
 
         bundleParams.put(SERVICE_HINT.getID(), true);
         bundleParams.put(SYSTEM_WIDE.getID(), true);
-        
-        bundler.validate(bundleParams);        
+
+        bundler.validate(bundleParams);
     }
-    
+
     @Test
     public void winMsiService() throws Exception {
         assumeWiXPresent();
@@ -261,7 +261,7 @@ public class WinServiceBundlerTest {
 
         bundleParams.put(SERVICE_HINT.getID(), true);
         bundleParams.put(SYSTEM_WIDE.getID(), true);
-        
+
         bundleParams.put(START_ON_INSTALL.getID(), true);
         bundleParams.put(STOP_ON_UNINSTALL.getID(), true);
         bundleParams.put(RUN_AT_STARTUP.getID(), true);
@@ -279,7 +279,7 @@ public class WinServiceBundlerTest {
 
         bundleParams.put(BUILD_ROOT.getID(), tmpBase);
         bundleParams.put(VERBOSE.getID(), true);
-        
+
         // assert it validates
         boolean valid = bundler.validate(bundleParams);
         assertTrue(valid);
@@ -303,18 +303,18 @@ public class WinServiceBundlerTest {
 
         try {
             Bundler bundler = new WinMsiBundler();
-    
+
             Map<String, Object> bundleParams = new HashMap<>();
-            
+
             bundleParams.put(BUILD_ROOT.getID(), tmpBase);
             bundleParams.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
             bundleParams.put(VERBOSE.getID(), true);
-    
+
             bundleParams.put(SERVICE_HINT.getID(), true);
             bundleParams.put(SYSTEM_WIDE.getID(), false);
-            
+
             bundler.validate(bundleParams);
-    
+
             // if we get here we fail
             assertTrue("ConfigException should have been thrown", false);
         } catch (ConfigException ignore) {
@@ -329,14 +329,14 @@ public class WinServiceBundlerTest {
         Bundler bundler = new WinMsiBundler();
 
         Map<String, Object> bundleParams = new HashMap<>();
-        
+
         bundleParams.put(BUILD_ROOT.getID(), tmpBase);
         bundleParams.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
         bundleParams.put(VERBOSE.getID(), true);
 
         bundleParams.put(SERVICE_HINT.getID(), true);
         bundleParams.put(SYSTEM_WIDE.getID(), true);
-        
-        bundler.validate(bundleParams);        
+
+        bundler.validate(bundleParams);
     }
 }

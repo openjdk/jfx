@@ -40,9 +40,9 @@ final class IosTimer extends Timer implements Runnable {
     }
 
     @Override native protected long _start(Runnable runnable);
-    
+
     native protected void _stopVsyncTimer(long timer);
-    
+
     @Override
     protected long _start(Runnable runnable, int period) {
         timerThread = new Thread(this);

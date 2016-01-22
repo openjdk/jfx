@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef DFGMergeMode_h
@@ -31,11 +31,11 @@ namespace JSC { namespace DFG {
 enum MergeMode {
     // Don't merge the state in AbstractState with basic blocks.
     DontMerge,
-    
+
     // Merge the state in AbstractState with the tail of the basic
     // block being analyzed.
     MergeToTail,
-    
+
     // Merge the state in AbstractState with the tail of the basic
     // block, and with the heads of successor blocks.
     MergeToSuccessors

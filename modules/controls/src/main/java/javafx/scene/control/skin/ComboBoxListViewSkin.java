@@ -79,23 +79,23 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
     // This may one day become a property on the ComboBox itself.
     private static final String COMBO_BOX_ROWS_TO_MEASURE_WIDTH_KEY = "comboBoxRowsToMeasureWidth";
 
-    
-    
+
+
     /***************************************************************************
      *                                                                         *
      * Private fields                                                          *
      *                                                                         *
-     **************************************************************************/    
-    
+     **************************************************************************/
+
     private final ComboBox<T> comboBox;
     private ObservableList<T> comboBoxItems;
-    
+
     private ListCell<T> buttonCell;
     private Callback<ListView<T>, ListCell<T>> cellFactory;
-    
+
     private final ListView<T> listView;
     private ObservableList<T> listViewItems;
-    
+
     private boolean listSelectionLock = false;
     private boolean listViewSelectionDirty = false;
 
@@ -108,7 +108,7 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
      * Listeners                                                               *
      *                                                                         *
      **************************************************************************/
-    
+
     private boolean itemCountDirty;
     private final ListChangeListener<T> listViewItemsListener = new ListChangeListener<T>() {
         @Override public void onChanged(ListChangeListener.Change<? extends T> c) {
@@ -118,11 +118,11 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
     };
 
     private final InvalidationListener itemsObserver;
-    
+
     private final WeakListChangeListener<T> weakListViewItemsListener =
             new WeakListChangeListener<T>(listViewItemsListener);
 
-    
+
     /***************************************************************************
      *                                                                         *
      * Constructors                                                            *
@@ -151,18 +151,18 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
             updateListViewItems();
         };
         control.itemsProperty().addListener(new WeakInvalidationListener(itemsObserver));
-        
+
         // listview for popup
         this.listView = createListView();
-        
+
         // Fix for RT-21207. Additional code related to this bug is further below.
         this.listView.setManaged(false);
         getChildren().add(listView);
         // -- end of fix
-                
+
         updateListViewItems();
         updateCellFactory();
-        
+
         updateButtonCell();
 
         // Fix for RT-19431 (also tested via ComboBoxListViewSkinTest)
@@ -251,9 +251,9 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
         } else {
             displayNode = buttonCell;
         }
-        
+
         updateDisplayNode();
-        
+
         return displayNode;
     }
 
@@ -317,7 +317,7 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
                 listViewSelectionDirty = false;
             }
         }
-        
+
         super.layoutChildren(x, y, w, h);
     }
 
@@ -385,14 +385,14 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
 
     private void updateValue() {
         T newValue = comboBox.getValue();
-        
+
         SelectionModel<T> listViewSM = listView.getSelectionModel();
 
         // RT-22386: We need to test to see if the value is in the comboBox
         // items list. If it isn't, then we should clear the listview
         // selection
         final int indexOfNewValue = getIndexOfComboBoxValueInItemsList();
-        
+
         if (newValue == null && indexOfNewValue == -1) {
             listViewSM.clearSelection();
         } else {
@@ -448,15 +448,15 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
             return s == null || s.isEmpty();
         }
     }
-    
+
     private int getIndexOfComboBoxValueInItemsList() {
         T value = comboBox.getValue();
         int index = comboBoxItems.indexOf(value);
         return index;
     }
-    
+
     private void updateButtonCell() {
-        buttonCell = comboBox.getButtonCell() != null ? 
+        buttonCell = comboBox.getButtonCell() != null ?
                 comboBox.getButtonCell() : getDefaultCellFactory().call(listView);
         buttonCell.setMouseTransparent(true);
         buttonCell.updateListView(listView);
@@ -472,7 +472,7 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
         cellFactory = cf != null ? cf : getDefaultCellFactory();
         listView.setCellFactory(cellFactory);
     }
-    
+
     private Callback<ListView<T>, ListCell<T>> getDefaultCellFactory() {
         return new Callback<ListView<T>, ListCell<T>>() {
             @Override public ListCell<T> call(ListView<T> listView) {
@@ -485,7 +485,7 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
             }
         };
     }
-    
+
     private ListView<T> createListView() {
         final ListView<T> _listView = new ListView<T>() {
 
@@ -496,7 +496,7 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
             @Override protected double computeMinHeight(double width) {
                 return 30;
             }
-            
+
             @Override protected double computePrefWidth(double height) {
                 double pw;
                 if (getSkin() instanceof ListViewSkin) {
@@ -505,12 +505,12 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
                         skin.updateRowCount();
                         itemCountDirty = false;
                     }
-                    
+
                     int rowsToMeasure = -1;
                     if (comboBox.getProperties().containsKey(COMBO_BOX_ROWS_TO_MEASURE_WIDTH_KEY)) {
                         rowsToMeasure = (Integer) comboBox.getProperties().get(COMBO_BOX_ROWS_TO_MEASURE_WIDTH_KEY);
                     }
-                    
+
                     pw = Math.max(comboBox.getWidth(), skin.getMaxCellWidth(rowsToMeasure) + 30);
                 } else {
                     pw = Math.max(100, comboBox.getWidth());
@@ -542,11 +542,11 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
             updateDisplayNode();
             comboBox.notifyAccessibleAttributeChanged(AccessibleAttribute.TEXT);
         });
-         
+
         comboBox.getSelectionModel().selectedItemProperty().addListener(o -> {
             listViewSelectionDirty = true;
         });
-        
+
         _listView.addEventFilter(MouseEvent.MOUSE_RELEASED, t -> {
             // RT-18672: Without checking if the user is clicking in the
             // scrollbar area of the ListView, the comboBox will hide. Therefore,
@@ -575,10 +575,10 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
                 comboBox.hide();
             }
         });
-        
+
         return _listView;
     }
-    
+
     private double getListViewPrefHeight() {
         double ph;
         if (listView.getSkin() instanceof VirtualContainerBase) {
@@ -589,31 +589,31 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
             double ch = comboBoxItems.size() * 25;
             ph = Math.min(ch, 200);
         }
-        
+
         return ph;
     }
 
 
-    
+
     /**************************************************************************
-     * 
+     *
      * API for testing
-     * 
+     *
      *************************************************************************/
-    
+
     ListView<T> getListView() {
         return listView;
     }
-    
-    
-    
+
+
+
 
     /***************************************************************************
      *                                                                         *
      * Stylesheet Handling                                                     *
      *                                                                         *
      **************************************************************************/
-    
+
     // These three pseudo class states are duplicated from Cell
     private static final PseudoClass PSEUDO_CLASS_SELECTED =
             PseudoClass.getPseudoClass("selected");

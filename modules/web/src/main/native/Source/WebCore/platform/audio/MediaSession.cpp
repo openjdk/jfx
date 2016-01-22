@@ -113,7 +113,7 @@ bool MediaSession::clientWillPausePlayback()
             m_stateToRestore = Paused;
         return false;
     }
-    
+
     setState(Paused);
     return true;
 }
@@ -128,5 +128,5 @@ MediaSession::MediaType MediaSession::mediaType() const
 {
     return m_client.mediaType();
 }
-    
+
 }

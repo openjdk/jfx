@@ -34,7 +34,7 @@ class PlatformCALayerWin final : public PlatformCALayer {
 public:
     static PassRefPtr<PlatformCALayer> create(LayerType, PlatformCALayerClient*);
     static PassRefPtr<PlatformCALayer> create(PlatformLayer*, PlatformCALayerClient*);
-    
+
     ~PlatformCALayerWin();
 
     virtual bool usesTiledBackingLayer() const override { return false; }
@@ -130,7 +130,7 @@ public:
     virtual void updateCustomAppearance(GraphicsLayer::CustomAppearance customAppearance) override { m_customAppearance = customAppearance; }
 
     virtual TiledBacking* tiledBacking() override { return nullptr; }
-    
+
     virtual PlatformCALayer* rootLayer() const override;
     virtual void setNeedsLayout() override;
     virtual void setNeedsCommit() override;

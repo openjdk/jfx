@@ -57,5 +57,5 @@ public class TextBreakIteratorShim {
         return TextBreakIterator.invokeMethod(iterator, method, pos);
 
     }
-    
+
 }

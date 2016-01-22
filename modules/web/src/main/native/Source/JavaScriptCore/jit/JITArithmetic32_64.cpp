@@ -100,7 +100,7 @@ void JIT::emit_compareAndJump(OpcodeID opcode, int op1, int op2, unsigned target
         addSlowCase(failures);
         addJump(branch32(condition, regT0, Imm32(asString(getConstantOperand(op2))->tryGetValue()[0])), target);
         return;
-    } 
+    }
     if (isOperandConstantImmediateInt(op1)) {
         emitLoad(op2, regT3, regT2);
         notInt32Op2.append(branch32(NotEqual, regT3, TrustedImm32(JSValue::Int32Tag)));
@@ -308,9 +308,9 @@ void JIT::emit_op_unsigned(Instruction* currentInstruction)
 {
     int result = currentInstruction[1].u.operand;
     int op1 = currentInstruction[2].u.operand;
-    
+
     emitLoad(op1, regT1, regT0);
-    
+
     addSlowCase(branch32(NotEqual, regT1, TrustedImm32(JSValue::Int32Tag)));
     addSlowCase(branch32(LessThan, regT0, TrustedImm32(0)));
     emitStoreInt32(result, regT0, result == op1);
@@ -320,7 +320,7 @@ void JIT::emitSlow_op_unsigned(Instruction* currentInstruction, Vector<SlowCaseE
 {
     linkSlowCase(iter);
     linkSlowCase(iter);
-    
+
     JITSlowPathCall slowPathCall(this, currentInstruction, slow_path_unsigned);
     slowPathCall.call();
 }
@@ -638,7 +638,7 @@ void JIT::emitSub32Constant(int dst, int op, int32_t constant, ResultType opType
     // Int32 case.
     emitLoad(op, regT1, regT0);
     Jump notInt32 = branch32(NotEqual, regT1, TrustedImm32(JSValue::Int32Tag));
-    addSlowCase(branchSub32(Overflow, regT0, Imm32(constant), regT2, regT3));   
+    addSlowCase(branchSub32(Overflow, regT0, Imm32(constant), regT2, regT3));
     emitStoreInt32(dst, regT2, (op == dst));
 
     // Double case.
@@ -746,16 +746,16 @@ void JIT::emitBinaryDoubleOp(OpcodeID opcodeID, int dst, int op1, int op2, Opera
                 // not an integer, we increment a count. If this together with the slow case counter
                 // are below threshold then the DFG JIT will compile this division with a specualtion
                 // that the remainder is zero.
-                
+
                 // As well, there are cases where a double result here would cause an important field
                 // in the heap to sometimes have doubles in it, resulting in double predictions getting
                 // propagated to a use site where it might cause damage (such as the index to an array
                 // access). So if we are DFG compiling anything in the program, we want this code to
                 // ensure that it produces integers whenever possible.
-                
+
                 // FIXME: This will fail to convert to integer if the result is zero. We should
                 // distinguish between positive zero and negative zero here.
-                
+
                 JumpList notInteger;
                 branchConvertDoubleToInt32(fpRegT1, regT2, notInteger, fpRegT0);
                 // If we've got an integer, we might as well make that the result of the division.
@@ -846,16 +846,16 @@ void JIT::emitBinaryDoubleOp(OpcodeID opcodeID, int dst, int op1, int op2, Opera
                 // not an integer, we increment a count. If this together with the slow case counter
                 // are below threshold then the DFG JIT will compile this division with a specualtion
                 // that the remainder is zero.
-                
+
                 // As well, there are cases where a double result here would cause an important field
                 // in the heap to sometimes have doubles in it, resulting in double predictions getting
                 // propagated to a use site where it might cause damage (such as the index to an array
                 // access). So if we are DFG compiling anything in the program, we want this code to
                 // ensure that it produces integers whenever possible.
-                
+
                 // FIXME: This will fail to convert to integer if the result is zero. We should
                 // distinguish between positive zero and negative zero here.
-                
+
                 JumpList notInteger;
                 branchConvertDoubleToInt32(fpRegT0, regT2, notInteger, fpRegT1);
                 // If we've got an integer, we might as well make that the result of the division.
@@ -1018,16 +1018,16 @@ void JIT::emit_op_div(Instruction* currentInstruction)
     // not an integer, we increment a count. If this together with the slow case counter
     // are below threshold then the DFG JIT will compile this division with a specualtion
     // that the remainder is zero.
-    
+
     // As well, there are cases where a double result here would cause an important field
     // in the heap to sometimes have doubles in it, resulting in double predictions getting
     // propagated to a use site where it might cause damage (such as the index to an array
     // access). So if we are DFG compiling anything in the program, we want this code to
     // ensure that it produces integers whenever possible.
-    
+
     // FIXME: This will fail to convert to integer if the result is zero. We should
     // distinguish between positive zero and negative zero here.
-    
+
     JumpList notInteger;
     branchConvertDoubleToInt32(fpRegT0, regT2, notInteger, fpRegT1);
     // If we've got an integer, we might as well make that the result of the division.

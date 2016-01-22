@@ -113,7 +113,7 @@ public class HorizontalBarChartApp extends Application {
         yAxis.setCategories(FXCollections.<String>observableArrayList(Arrays
                 .asList(years)));
         xAxis.setLabel("Price");
-        
+
         // add starting data
         XYChart.Series<Number, String> series1 = new XYChart.Series<>();
         series1.setName("Data Series 1");
@@ -121,21 +121,21 @@ public class HorizontalBarChartApp extends Application {
                 new XYChart.Data<Number, String>(567, years[0]),
                 new XYChart.Data<Number, String>(1292, years[1]),
                 new XYChart.Data<Number, String>(2180, years[2]));
-        
+
         XYChart.Series<Number, String> series2 = new XYChart.Series<>();
         series2.setName("Data Series 2");
         series2.getData().addAll(
                 new XYChart.Data<Number, String>(956, years[0]),
                 new XYChart.Data<Number, String>(1665, years[1]),
                 new XYChart.Data<Number, String>(2450, years[2]));
-        
+
         XYChart.Series<Number, String> series3 = new XYChart.Series<>();
         series3.setName("Data Series 3");
         series3.getData().addAll(
                 new XYChart.Data<Number, String>(800, years[0]),
                 new XYChart.Data<Number, String>(1000, years[1]),
                 new XYChart.Data<Number, String>(2800, years[2]));
-        
+
         chart.getData().add(series1);
         chart.getData().add(series2);
         chart.getData().add(series3);

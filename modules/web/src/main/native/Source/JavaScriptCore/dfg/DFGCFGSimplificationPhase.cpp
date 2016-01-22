@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -43,14 +43,14 @@ public:
         : Phase(graph, "CFG simplification")
     {
     }
-    
+
     bool run()
     {
         const bool extremeLogging = false;
 
         bool outerChanged = false;
         bool innerChanged;
-        
+
         do {
             innerChanged = false;
             for (BlockIndex blockIndex = 0; blockIndex < m_graph.numBlocks(); ++blockIndex) {
@@ -58,7 +58,7 @@ public:
                 if (!block)
                     continue;
                 ASSERT(block->isReachable);
-            
+
                 switch (block->last()->op()) {
                 case Jump: {
                     // Successor with one predecessor -> merge.
@@ -71,7 +71,7 @@ public:
                         innerChanged = outerChanged = true;
                         break;
                     }
-                
+
                     // FIXME: Block only has a jump -> remove. This is tricky though because of
                     // liveness. What we really want is to slam in a phantom at the end of the
                     // block, after the terminal. But we can't right now. :-(
@@ -83,7 +83,7 @@ public:
                     // https://bugs.webkit.org/show_bug.cgi?id=126778
                     break;
                 }
-                
+
                 case Branch: {
                     // Branch on constant -> jettison the not-taken block and merge.
                     if (isKnownDirection(block->cfaBranchDirection)) {
@@ -99,14 +99,14 @@ public:
                             if (extremeLogging)
                                 m_graph.dump();
                             m_graph.dethread();
-                        
+
                             ASSERT(block->last()->isTerminal());
                             NodeOrigin boundaryNodeOrigin = block->last()->origin;
                             block->last()->convertToPhantom();
                             ASSERT(block->last()->refCount() == 1);
-                        
+
                             jettisonBlock(block, jettisonedBlock, boundaryNodeOrigin);
-                        
+
                             block->appendNode(
                                 m_graph, SpecNone, Jump, boundaryNodeOrigin,
                                 OpInfo(targetBlock));
@@ -114,29 +114,29 @@ public:
                         innerChanged = outerChanged = true;
                         break;
                     }
-                    
+
                     if (block->successor(0) == block->successor(1)) {
                         convertToJump(block, block->successor(0));
                         innerChanged = outerChanged = true;
                         break;
                     }
-                    
+
                     // Branch to same destination -> jump.
                     // FIXME: this will currently not be hit because of the lack of jump-only
                     // block simplification.
-                    
+
                     break;
                 }
-                    
+
                 case Switch: {
                     SwitchData* data = block->last()->switchData();
-                    
+
                     // Prune out cases that end up jumping to default.
                     for (unsigned i = 0; i < data->cases.size(); ++i) {
                         if (data->cases[i].target == data->fallThrough)
                             data->cases[i--] = data->cases.takeLast();
                     }
-                    
+
                     // If there are no cases other than default then this turns
                     // into a jump.
                     if (data->cases.isEmpty()) {
@@ -144,7 +144,7 @@ public:
                         innerChanged = outerChanged = true;
                         break;
                     }
-                    
+
                     // Switch on constant -> jettison all other targets and merge.
                     if (block->last()->child1()->hasConstant()) {
                         JSValue value = m_graph.valueOfJSConstant(block->last()->child1().node());
@@ -155,31 +155,31 @@ public:
                             if (found == TrueTriState)
                                 targetBlock = data->cases[i].target;
                         }
-                        
+
                         if (found == MixedTriState)
                             break;
                         if (found == FalseTriState)
                             targetBlock = data->fallThrough;
                         ASSERT(targetBlock);
-                        
+
                         Vector<BasicBlock*, 1> jettisonedBlocks;
                         for (unsigned i = block->numSuccessors(); i--;) {
                             BasicBlock* jettisonedBlock = block->successor(i);
                             if (jettisonedBlock != targetBlock)
                                 jettisonedBlocks.append(jettisonedBlock);
                         }
-                        
+
                         if (targetBlock->predecessors.size() == 1) {
                             if (extremeLogging)
                                 m_graph.dump();
                             m_graph.dethread();
-                            
+
                             mergeBlocks(block, targetBlock, jettisonedBlocks);
                         } else {
                             if (extremeLogging)
                                 m_graph.dump();
                             m_graph.dethread();
-                            
+
                             NodeOrigin boundaryNodeOrigin = block->last()->origin;
                             block->last()->convertToPhantom();
                             for (unsigned i = jettisonedBlocks.size(); i--;)
@@ -192,12 +192,12 @@ public:
                     }
                     break;
                 }
-                    
+
                 default:
                     break;
                 }
             }
-            
+
             if (innerChanged) {
                 // Here's the reason for this pass:
                 // Blocks: A, B, C, D, E, F
@@ -228,16 +228,16 @@ public:
                 // This implies that when a block is unreachable, we must inspect its
                 // successors' Phi functions to remove any references from them into the
                 // removed block.
-                
+
                 m_graph.invalidateCFG();
                 m_graph.resetReachability();
                 m_graph.killUnreachableBlocks();
             }
-            
+
             if (Options::validateGraphAtEachPhase())
                 validate(m_graph);
         } while (innerChanged);
-        
+
         return outerChanged;
     }
 
@@ -255,7 +255,7 @@ private:
             ASSERT(branch->op() == Branch || branch->op() == Switch);
             branch->convertToPhantom();
             ASSERT(branch->refCount() == 1);
-            
+
             block->appendNode(
                 m_graph, SpecNone, Jump, branch->origin, OpInfo(targetBlock));
         }
@@ -269,20 +269,20 @@ private:
         if (livenessNode->variableAccessData()->isCaptured())
             return;
         block->appendNode(
-            m_graph, SpecNone, PhantomLocal, nodeOrigin, 
+            m_graph, SpecNone, PhantomLocal, nodeOrigin,
             OpInfo(livenessNode->variableAccessData()));
     }
-    
+
     void jettisonBlock(BasicBlock* block, BasicBlock* jettisonedBlock, NodeOrigin boundaryNodeOrigin)
     {
         for (size_t i = 0; i < jettisonedBlock->variablesAtHead.numberOfArguments(); ++i)
             keepOperandAlive(block, jettisonedBlock, boundaryNodeOrigin, virtualRegisterForArgument(i));
         for (size_t i = 0; i < jettisonedBlock->variablesAtHead.numberOfLocals(); ++i)
             keepOperandAlive(block, jettisonedBlock, boundaryNodeOrigin, virtualRegisterForLocal(i));
-        
+
         fixJettisonedPredecessors(block, jettisonedBlock);
     }
-    
+
     void fixJettisonedPredecessors(BasicBlock* block, BasicBlock* jettisonedBlock)
     {
         jettisonedBlock->removePredecessor(block);
@@ -292,14 +292,14 @@ private:
     {
         return Vector<BasicBlock*, 1>();
     }
-    
+
     Vector<BasicBlock*, 1> oneBlock(BasicBlock* block)
     {
         Vector<BasicBlock*, 1> result;
         result.append(block);
         return result;
     }
-    
+
     void mergeBlocks(
         BasicBlock* firstBlock, BasicBlock* secondBlock,
         Vector<BasicBlock*, 1> jettisonedBlocks)
@@ -309,35 +309,35 @@ private:
         // SetLocals in the first block are relinked. If jettisonedBlock is not NoBlock,
         // then Phantoms are inserted for anything that the jettisonedBlock would have
         // kept alive.
-        
+
         // Remove the terminal of firstBlock since we don't need it anymore. Well, we don't
         // really remove it; we actually turn it into a Phantom.
         ASSERT(firstBlock->last()->isTerminal());
         NodeOrigin boundaryNodeOrigin = firstBlock->last()->origin;
         firstBlock->last()->convertToPhantom();
         ASSERT(firstBlock->last()->refCount() == 1);
-        
+
         for (unsigned i = jettisonedBlocks.size(); i--;) {
             BasicBlock* jettisonedBlock = jettisonedBlocks[i];
-            
+
             // Time to insert ghosties for things that need to be kept alive in case we OSR
             // exit prior to hitting the firstBlock's terminal, and end up going down a
             // different path than secondBlock.
-            
+
             for (size_t i = 0; i < jettisonedBlock->variablesAtHead.numberOfArguments(); ++i)
                 keepOperandAlive(firstBlock, jettisonedBlock, boundaryNodeOrigin, virtualRegisterForArgument(i));
             for (size_t i = 0; i < jettisonedBlock->variablesAtHead.numberOfLocals(); ++i)
                 keepOperandAlive(firstBlock, jettisonedBlock, boundaryNodeOrigin, virtualRegisterForLocal(i));
         }
-        
+
         for (size_t i = 0; i < secondBlock->phis.size(); ++i)
             firstBlock->phis.append(secondBlock->phis[i]);
 
         for (size_t i = 0; i < secondBlock->size(); ++i)
             firstBlock->append(secondBlock->at(i));
-        
+
         ASSERT(firstBlock->last()->isTerminal());
-        
+
         // Fix the predecessors of my new successors. This is tricky, since we are going to reset
         // all predecessors anyway due to reachability analysis. But we need to fix the
         // predecessors eagerly to ensure that we know what they are in case the next block we
@@ -350,15 +350,15 @@ private:
                     successor->predecessors[j] = firstBlock;
             }
         }
-        
+
         // Fix the predecessors of my former successors. Again, we'd rather not do this, but it's
         // an unfortunate necessity. See above comment.
         for (unsigned i = jettisonedBlocks.size(); i--;)
             fixJettisonedPredecessors(firstBlock, jettisonedBlocks[i]);
-        
+
         firstBlock->valuesAtTail = secondBlock->valuesAtTail;
         firstBlock->cfaBranchDirection = secondBlock->cfaBranchDirection;
-        
+
         m_graph.killBlock(secondBlock);
     }
 };

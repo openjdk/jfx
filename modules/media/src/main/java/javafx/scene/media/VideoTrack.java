@@ -60,12 +60,12 @@ public final class VideoTrack extends Track {
 
     VideoTrack(long trackID, Map<String,Object> metadata) {
         super(trackID, metadata);
-        
+
         Object value = metadata.get("video width");
         if (null != value && value instanceof Number) {
             this.width = ((Number)value).intValue();
         }
-        
+
         value = metadata.get("video height");
         if (null != value && value instanceof Number) {
             this.height = ((Number)value).intValue();

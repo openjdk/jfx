@@ -49,7 +49,7 @@ public class TimelineTest {
     private static final double DEFAULT_RATE = 1.0;
     private static final int DEFAULT_REPEAT_COUNT = 1;
     private static final boolean DEFAULT_AUTO_REVERSE = false;
-    
+
     private static final double EPSILON = 1e-12;
 
     private Timeline timeline;
@@ -58,15 +58,15 @@ public class TimelineTest {
     public void setUp() {
         timeline = new Timeline();
     }
-    
+
     @Test
     public void testDefaultValues() {
         final Duration oneSec = Duration.millis(1000);
         final KeyFrame kf0 = new KeyFrame(Duration.ZERO);
         final KeyFrame kf1 = new KeyFrame(oneSec, "oneSec");
 
-    	// empty ctor
-    	final Timeline timeline0 = new Timeline();
+        // empty ctor
+        final Timeline timeline0 = new Timeline();
         assertTrue(timeline0.getKeyFrames().isEmpty());
         assertEquals(DEFAULT_RATE, timeline0.getRate(), EPSILON);
         assertEquals(0.0, timeline0.getCurrentRate(), EPSILON);
@@ -94,9 +94,9 @@ public class TimelineTest {
         assertEquals(42.0, timeline1.getTargetFramerate(), EPSILON);
         assertEquals(null, timeline1.getOnFinished());
         assertTrue(timeline1.getCuePoints().isEmpty());
-        
-    	// only keyframes
-    	final Timeline timeline2 = new Timeline(kf0, kf1);
+
+        // only keyframes
+        final Timeline timeline2 = new Timeline(kf0, kf1);
         assertEquals(Arrays.asList(kf0, kf1), timeline2.getKeyFrames());
         assertEquals(DEFAULT_RATE, timeline2.getRate(), EPSILON);
         assertEquals(0.0, timeline2.getCurrentRate(), EPSILON);
@@ -131,7 +131,7 @@ public class TimelineTest {
         final Duration oneSec = Duration.millis(1000);
         final KeyFrame kf0 = new KeyFrame(Duration.ZERO);
         final KeyFrame kf1 = new KeyFrame(oneSec, "oneSec");
-        
+
         // insert key frame
         timeline.getKeyFrames().add(kf1);
         assertEquals(Collections.singletonList(kf1), timeline.getKeyFrames());

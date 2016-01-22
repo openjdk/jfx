@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef LayerFlushScheduler_h
@@ -31,7 +31,7 @@
 #include <wtf/RetainPtr.h>
 
 namespace WebCore {
-    
+
 class LayerFlushScheduler {
     WTF_MAKE_NONCOPYABLE(LayerFlushScheduler);
 public:
@@ -49,7 +49,7 @@ public:
 private:
     bool m_isSuspended;
     LayerFlushSchedulerClient* m_client;
-    
+
 #if PLATFORM(COCOA)
     RetainPtr<CFRunLoopObserverRef> m_runLoopObserver;
     static void runLoopObserverCallback(CFRunLoopObserverRef, CFRunLoopActivity, void* context);

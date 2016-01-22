@@ -40,7 +40,7 @@ static void glass_g_hash_table_insert_int(GHashTable *table, gint key, gint valu
 }
 
 static void initialize_key()
-{ 
+{
     keymap = g_hash_table_new(g_direct_hash, g_direct_equal);
     glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(Return), com_sun_glass_events_KeyEvent_VK_ENTER);
     glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(BackSpace), com_sun_glass_events_KeyEvent_VK_BACKSPACE);
@@ -209,7 +209,7 @@ static void initialize_key()
     glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(KP_Insert), com_sun_glass_events_KeyEvent_VK_INSERT);
     glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(KP_Delete), com_sun_glass_events_KeyEvent_VK_DELETE);
     glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(KP_Divide), com_sun_glass_events_KeyEvent_VK_DIVIDE);
-    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(KP_Begin), 
+    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(KP_Begin),
             com_sun_glass_events_KeyEvent_VK_CLEAR); // 5 key on keypad with Num Lock turned off
 
     glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(F1), com_sun_glass_events_KeyEvent_VK_F1);
@@ -295,7 +295,7 @@ jint gdk_modifier_mask_to_glass(guint mask)
     glass_mask |= (mask & GDK_BUTTON2_MASK) ? com_sun_glass_events_KeyEvent_MODIFIER_BUTTON_MIDDLE : 0;
     glass_mask |= (mask & GDK_BUTTON3_MASK) ? com_sun_glass_events_KeyEvent_MODIFIER_BUTTON_SECONDARY : 0;
     glass_mask |= (mask & GDK_SUPER_MASK) ? com_sun_glass_events_KeyEvent_MODIFIER_WINDOWS : 0; // XXX: is this OK?
-    
+
     return glass_mask;
 }
 

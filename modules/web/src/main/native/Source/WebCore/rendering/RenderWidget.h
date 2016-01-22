@@ -55,7 +55,7 @@ private:
 
     static unsigned s_widgetHierarchyUpdateSuspendCount;
 };
-    
+
 class RenderWidget : public RenderReplaced, private OverlapTestRequestClient {
 public:
     virtual ~RenderWidget();

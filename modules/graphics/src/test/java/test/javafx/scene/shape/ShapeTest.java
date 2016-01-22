@@ -110,12 +110,12 @@ public class ShapeTest {
         NodeTest.assertBooleanPropertySynced(
                 shape, "smooth", "smooth", false);
     }
-    
+
     boolean listChangeCalled = false;
     @Test public void testStrokeDashArray() {
         // there is no strokeDashArrayProperty or this test
         // would be in Shape_properties_Test
-        final ObservableList<Double> expected = 
+        final ObservableList<Double> expected =
                 FXCollections.observableArrayList(Double.valueOf(1),
                                                   Double.valueOf(2),
                                                   Double.valueOf(3));
@@ -129,14 +129,14 @@ public class ShapeTest {
             assertTrue(c.next());
             Assert.assertEquals(expected, c.getAddedSubList());
         });
-        
+
         shape.getStrokeDashArray().addAll(expected);
         actual = shape.getStrokeDashArray();
         assertEquals(expected, actual);
-        
+
         assertTrue(listChangeCalled);
     }
-    
+
     @Test public void testGetStrokeDashArrayViaCSSPropertyIsNotNull() {
         final Shape shape = new StubShape();
         Double[] actual = null;
@@ -150,20 +150,20 @@ public class ShapeTest {
         }
         assertNotNull(actual);
     }
-    
+
     @Test public void testGetStrokeDashArrayViaCSSPropertyIsSame() {
         final Shape shape = new StubShape();
         shape.getStrokeDashArray().addAll(5d, 7d, 1d, 3d);
         Double[] actuals = null;
         List<CssMetaData<? extends Styleable, ?>> styleables = shape.getCssMetaData();
-        
+
         for (CssMetaData styleable : styleables) {
             if ("-fx-stroke-dash-array".equals(styleable.getProperty())) {
                 WritableValue writable = styleable.getStyleableProperty(shape);
                 actuals = (Double[])writable.getValue();
             }
         }
-        
+
         final Double[] expecteds = new Double[] {5d, 7d, 1d, 3d};
         Assert.assertArrayEquals(expecteds, actuals);
     }
@@ -172,7 +172,7 @@ public class ShapeTest {
         final Shape shape = new StubShape();
         List<Double> actual = null;
         List<CssMetaData<? extends Styleable, ?>> styleables = shape.getCssMetaData();
-        
+
         for (CssMetaData styleable : styleables) {
             if ("-fx-stroke-dash-array".equals(styleable.getProperty())) {
                 StyleableProperty styleableProperty = styleable.getStyleableProperty(shape);
@@ -180,16 +180,16 @@ public class ShapeTest {
                 actual = shape.getStrokeDashArray();
             }
         }
-        
+
         final List<Double> expected = new ArrayList();
         Collections.addAll(expected, 5d, 7d, 1d, 3d);
         assertEquals(expected, actual);
     }
-    
+
     // RT-18647: ClassCastException: [Ljava.lang.Double; cannot be cast to javafx.collections.ObservableList
     @Test public void testRT_18647() {
         final Scene scene = new Scene(new Group(), 500, 500);
-        
+
         final Shape shape = new StubShape();
         shape.setStyle("-fx-stroke-dash-array: 5 7 1 3;");
 
@@ -200,8 +200,8 @@ public class ShapeTest {
         Collections.addAll(expected, 5d, 7d, 1d, 3d);
 
         List<Double> actual = shape.getStrokeDashArray();
-        assertEquals(expected, actual);        
-        
+        assertEquals(expected, actual);
+
     }
 
     boolean listenerCalled = false;

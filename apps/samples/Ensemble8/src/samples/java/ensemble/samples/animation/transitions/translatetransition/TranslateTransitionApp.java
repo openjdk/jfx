@@ -68,8 +68,8 @@ public class TranslateTransitionApp extends Application {
         Pane root = new Pane();
         root.setPrefSize(245, 80);
         root.setMinSize(Pane.USE_PREF_SIZE, Pane.USE_PREF_SIZE);
-        root.setMaxSize(Pane.USE_PREF_SIZE, Pane.USE_PREF_SIZE);       
-        
+        root.setMaxSize(Pane.USE_PREF_SIZE, Pane.USE_PREF_SIZE);
+
         Circle circle = new Circle(20, Color.CRIMSON);
         circle.setTranslateX(20);
         circle.setTranslateY(20);
@@ -79,7 +79,7 @@ public class TranslateTransitionApp extends Application {
         translateTransition.setToX(220);
         translateTransition.setCycleCount(Timeline.INDEFINITE);
         translateTransition.setAutoReverse(true);
- 
+
         return root;
     }
 

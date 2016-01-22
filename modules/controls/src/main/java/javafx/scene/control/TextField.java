@@ -55,17 +55,17 @@ import javafx.css.Styleable;
 /**
  * Text input component that allows a user to enter a single line of
  * unformatted text. Unlike in previous releases of JavaFX, support for multi-line
- * input is not available as part of the TextField control, however this is 
+ * input is not available as part of the TextField control, however this is
  * the sole-purpose of the {@link TextArea} control. Additionally, if you want
  * a form of rich-text editing, there is also the
  * {@link javafx.scene.web.HTMLEditor HTMLEditor} control.
- * 
+ *
  * <p>TextField supports the notion of showing {@link #promptTextProperty() prompt text}
- * to the user when there is no {@link #textProperty() text} already in the 
+ * to the user when there is no {@link #textProperty() text} already in the
  * TextField (either via the user, or set programmatically). This is a useful
  * way of informing the user as to what is expected in the text field, without
  * having to resort to {@link Tooltip tooltips} or on-screen {@link Label labels}.
- * 
+ *
  * @see TextArea
  * @since JavaFX 2.0
  */
@@ -172,7 +172,7 @@ public class TextField extends TextInputControl {
     private IntegerProperty prefColumnCount = new StyleableIntegerProperty(DEFAULT_PREF_COLUMN_COUNT) {
 
         private int oldValue = get();
-        
+
         @Override
         protected void invalidated() {
             int value = get();
@@ -185,7 +185,7 @@ public class TextField extends TextInputControl {
             }
             oldValue = value;
         }
-        
+
         @Override public CssMetaData<TextField,Number> getCssMetaData() {
             return StyleableProperties.PREF_COLUMN_COUNT;
         }

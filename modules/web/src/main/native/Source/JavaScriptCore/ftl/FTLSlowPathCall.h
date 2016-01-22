@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef FTLSlowPathCall_h
@@ -40,16 +40,16 @@ class State;
 class SlowPathCall {
 public:
     SlowPathCall() { }
-    
+
     SlowPathCall(MacroAssembler::Call call, const SlowPathCallKey& key)
         : m_call(call)
         , m_key(key)
     {
     }
-    
+
     MacroAssembler::Call call() const { return m_call; }
     SlowPathCallKey key() const { return m_key; }
-    
+
 private:
     MacroAssembler::Call m_call;
     SlowPathCallKey m_key;

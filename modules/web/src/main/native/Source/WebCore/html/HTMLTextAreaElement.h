@@ -52,7 +52,7 @@ public:
     virtual bool valueMissing() const override;
     virtual bool tooLong() const override;
     bool isValidValue(const String&) const;
-    
+
     virtual TextControlInnerTextElement* innerTextElement() const override;
 
     void rendererWillBeDestroyed();
@@ -84,7 +84,7 @@ private:
     virtual bool isRequiredFormControl() const override { return isRequired(); }
 
     virtual void defaultEventHandler(Event*) override;
-    
+
     virtual void subtreeHasChanged() override;
 
     virtual bool isEnumeratable() const override { return true; }

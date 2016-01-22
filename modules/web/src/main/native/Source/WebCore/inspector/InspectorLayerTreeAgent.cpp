@@ -209,7 +209,7 @@ int InspectorLayerTreeAgent::idForNode(ErrorString* errorString, Node* node)
         return 0;
 
     InspectorDOMAgent* domAgent = m_instrumentingAgents->inspectorDOMAgent();
-    
+
     int nodeId = domAgent->boundNodeId(node);
     if (!nodeId)
         nodeId = domAgent->pushNodeToFrontend(errorString, domAgent->boundNodeId(&node->document()), node);
@@ -249,7 +249,7 @@ void InspectorLayerTreeAgent::reasonsForCompositingLayer(ErrorString* errorStrin
         compositingReasons->setPlugin(true);
     else if (reasonsBitmask & CompositingReasonIFrame)
         compositingReasons->setIFrame(true);
-    
+
     if (reasonsBitmask & CompositingReasonBackfaceVisibilityHidden)
         compositingReasons->setBackfaceVisibilityHidden(true);
 

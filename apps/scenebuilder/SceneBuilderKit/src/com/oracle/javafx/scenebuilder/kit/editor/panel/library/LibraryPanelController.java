@@ -119,15 +119,15 @@ public class LibraryPanelController extends AbstractFxmlPanelController {
     @FXML
     Label noSearchResults;
     @FXML ListView<LibraryListItem> libSearchList;
-    
+
     @FXML ListView<LibraryListItem> libList = null;
-    
+
     @FXML StackPane libPane;
 
     /*
      * Public
      */
-    
+
     /**
      * Creates a library panel controller for the specified editor controller.
      *
@@ -167,7 +167,7 @@ public class LibraryPanelController extends AbstractFxmlPanelController {
         final List<File> importedFiles = performSelectJarOrFxmlFile();
         processImportJarFxml(importedFiles);
     }
-    
+
     /**
      * @treatAsPrivate Perform the import of the selection
      * @param objects the FXOM objects to import to customize the Library content.
@@ -175,11 +175,11 @@ public class LibraryPanelController extends AbstractFxmlPanelController {
     public void performImportSelection(List<FXOMObject> objects) {
         processInternalImport(objects);
     }
-    
+
     /*
      * AbstractPanelController
      */
-    
+
     /**
      * @treatAsPrivate FXOM document did change.
      * @param oldDocument the previous fxom document or null
@@ -210,7 +210,7 @@ public class LibraryPanelController extends AbstractFxmlPanelController {
         // FXOMDocument has been modified by a job.
         // Library panel should probably not care for now.
     }
-    
+
     /**
      * @treatAsPrivate Selection did change.
      */
@@ -221,7 +221,7 @@ public class LibraryPanelController extends AbstractFxmlPanelController {
     /*
      * AbstractFxmlPanelController
      */
-    
+
     /**
      * @treatAsPrivate Controller did load fxml.
      */
@@ -232,7 +232,7 @@ public class LibraryPanelController extends AbstractFxmlPanelController {
         assert libList != null;
         assert noSearchResults != null;
         assert libSearchList != null;
-        
+
         startListeningToDrop();
         setDisplayMode(DISPLAY_MODE.SECTIONS);
         populateLibraryPanel();
@@ -311,25 +311,25 @@ public class LibraryPanelController extends AbstractFxmlPanelController {
                     }
                 }
     };
-    
+
     private DISPLAY_MODE currentDisplayMode;
     private DISPLAY_MODE previousDisplayMode = DISPLAY_MODE.SECTIONS;
-    
+
     public void setPreviousDisplayMode(DISPLAY_MODE displayMode) {
         this.previousDisplayMode = displayMode;
     }
-    
+
     public void setDisplayMode(DISPLAY_MODE displayMode) {
         this.currentDisplayMode = displayMode;
         displayModeDidChange(displayMode);
     }
-    
+
     public DISPLAY_MODE getDisplayMode() {
         return currentDisplayMode;
     }
-    
+
     final ListChangeListener<LibraryItem> libraryItemListener = change -> libraryDidChange(null);
-    
+
     private final ChangeListener<Library> libraryListener = (ov, t, t1) -> {
         // When a jar is imported this listener is called two times.
         // First the UserLibrary is turned into BuiltinLibrary, then it is
@@ -350,11 +350,11 @@ public class LibraryPanelController extends AbstractFxmlPanelController {
         // Silencing the one below means I dunno how to get the selected index.
 //            libraryDidChange(t);
     };
-    
+
     private void startListeningToLibrary() {
         getEditorController().libraryProperty().addListener(libraryListener);
     }
-    
+
     // For now there is no scenario where this method might be of some use.
 //    private void stopListeningToLibrary() {
 //        getEditorController().libraryProperty().removeListener(libraryListener);
@@ -369,21 +369,21 @@ public class LibraryPanelController extends AbstractFxmlPanelController {
             populateLibraryPanel();
         }
     }
-    
+
     private String getExpandedSectionName() {
         String sectionName = null;
-        
+
         if (libAccordion != null && libAccordion.getExpandedPane() != null) {
             sectionName = libAccordion.getExpandedPane().getText();
         }
-        
+
 //        System.out.println("getExpandedSectionName " + sectionName);
         return sectionName;
     }
-    
+
 //    private String getSelectedItemName() {
 //        String selectedItemName = null;
-//        
+//
 //        if (libAccordion != null && libAccordion.getExpandedPane() != null) {
 //            final ListView<?> list = (ListView<?>)libAccordion.getExpandedPane().getContent();
 //            Object selectedItem = list.getSelectionModel().getSelectedItem();
@@ -391,11 +391,11 @@ public class LibraryPanelController extends AbstractFxmlPanelController {
 //                selectedItemName = ((LibraryListItem)selectedItem).getLibItem().getName();
 //            }
 //        }
-//        
+//
 ////        System.out.println("getSelectedItemName " + selectedItemName);
 //        return selectedItemName;
 //    }
-    
+
     // We need to discover the sections and the content of each one before being
     // able to populate the panel.
     // Each section is a TitledPane that contains a ListView of LibraryItem.
@@ -408,10 +408,10 @@ public class LibraryPanelController extends AbstractFxmlPanelController {
         LinkedHashMap<String, ArrayList<LibraryItem>> libData = new LinkedHashMap<>();
         TreeSet<String> sectionNames = new TreeSet<>(getEditorController().getLibrary().getSectionComparator());
         List<TitledPane> panes = libAccordion.getPanes();
-        
+
         searchData.clear();
         getLibList().getItems().clear();
-        
+
         if (getEditorController().getLibrary().getItems().size() > 0) {
             // Construct a sorted set of all lib section names.
             for (LibraryItem item : getEditorController().getLibrary().getItems()) {
@@ -467,14 +467,14 @@ public class LibraryPanelController extends AbstractFxmlPanelController {
             getLibList().addEventHandler(KeyEvent.KEY_RELEASED, keyEventHandler);
         }
     }
-    
+
     private void expandPaneWithName(String paneName) {
         String sectionName = paneName;
-        
+
         if (sectionName == null) {
             sectionName = BuiltinLibrary.TAG_CONTAINERS;
         }
-        
+
         for (TitledPane tp : libAccordion.getPanes()) {
             if (tp.getText().equals(sectionName)) {
 //                System.out.println("expandPaneWithName - Expand section " + sectionName);
@@ -482,7 +482,7 @@ public class LibraryPanelController extends AbstractFxmlPanelController {
             }
         }
     }
-    
+
     private void searchPatternDidChange() {
         if (searchPattern == null || searchPattern.isEmpty()) {
             currentDisplayMode = previousDisplayMode;
@@ -492,7 +492,7 @@ public class LibraryPanelController extends AbstractFxmlPanelController {
                 currentDisplayMode = DISPLAY_MODE.SEARCH;
             }
         }
-        
+
         // The filtering is done by ignoring case, and by retaining any item that
         // contains the given pattern. An opened question is to filter as soon as
         // the pattern is two or more characters long: for now we react from the
@@ -517,18 +517,18 @@ public class LibraryPanelController extends AbstractFxmlPanelController {
             }
             rawFilteredItem.clear();
         }
-        
+
         setDisplayMode(currentDisplayMode);
     }
-    
+
     // Key events listened onto the ListView
     // For some reason the listener when set on the cell (see LibraryListCell)
     // is never called, probably because it is the ListView which has the focus.
     private final EventHandler<KeyEvent> keyEventHandler = e -> handleKeyEvent(e);
-    
+
     private final Callback<ListView<LibraryListItem>, ListCell<LibraryListItem>> cb
             = param -> new LibraryListCell(getEditorController());
-    
+
     private void handleKeyEvent(KeyEvent e) {
         // On ENTER we try to insert the item which is selected within the Library.
         if (e.getCode() == KeyCode.ENTER) {
@@ -542,15 +542,15 @@ public class LibraryPanelController extends AbstractFxmlPanelController {
             assert rawItem instanceof LibraryListItem;
             final LibraryListItem listitem = (LibraryListItem)rawItem;
             final LibraryItem item = listitem.getLibItem();
-             
+
             if (getEditorController().canPerformInsert(item)) {
                 getEditorController().performInsert(item);
             }
-            
+
             e.consume();
         }
     }
-    
+
     private void startListeningToDrop() {
         libPane.setOnDragDropped(t -> {
 //                System.out.println("libPane onDragDropped");
@@ -591,7 +591,7 @@ public class LibraryPanelController extends AbstractFxmlPanelController {
                 }
             }
         });
-        
+
         libPane.setOnDragExited(t -> {
 //                System.out.println("libPane onDragExited");
             if (initiateImportDialog) {
@@ -611,8 +611,8 @@ public class LibraryPanelController extends AbstractFxmlPanelController {
                 timer.schedule(timerTask, 600); // milliseconds
             }
         });
-        
-        
+
+
         libPane.setOnDragOver(t -> {
 //                System.out.println("libPane onDragOver");
             AbstractDragSource dragSource = getEditorController().getDragController().getDragSource();
@@ -623,7 +623,7 @@ public class LibraryPanelController extends AbstractFxmlPanelController {
                 t.acceptTransferModes(TransferMode.COPY);
             }
         });
-        
+
         // This one is called only if lib is the source of the drop.
         libPane.setOnDragDone(t -> {
             assert getEditorController().getDragController().getDragSource() != null;
@@ -631,9 +631,9 @@ public class LibraryPanelController extends AbstractFxmlPanelController {
             t.getDragboard().clear();
             t.consume();
         });
-        
+
     }
-    
+
     // An internal import is an import to the Library initiated from within
     // SceneBuilder (from Content or Hierarchy).
     // We stop the watching thread to avoid potential parsing of a file that
@@ -652,7 +652,7 @@ public class LibraryPanelController extends AbstractFxmlPanelController {
                 break;
             }
         }
-        
+
         if (hasDependencies) {
             userLibraryUpdateRejected();
         } else {
@@ -682,7 +682,7 @@ public class LibraryPanelController extends AbstractFxmlPanelController {
                 if (currentDisplayMode.equals(DISPLAY_MODE.SECTIONS)) {
                     sectionNameToKeepOpened = UserLibrary.TAG_USER_DEFINED;
                 }
-                    
+
                 ((UserLibrary) getEditorController().getLibrary()).startWatching();
             }
         }
@@ -709,7 +709,7 @@ public class LibraryPanelController extends AbstractFxmlPanelController {
             errorDialog.showAndWait();
         }
     }
-    
+
     private File getUniqueFxmlFileName(String prefix, String libDir) {
         int suffix = 0;
         File file = null;
@@ -717,10 +717,10 @@ public class LibraryPanelController extends AbstractFxmlPanelController {
             suffix++;
             file = new File(libDir + File.separator + prefix + "_" + suffix + ".fxml"); //NOI18N
         }
-        
+
         return file;
     }
-    
+
     private void processImportJarFxml(List<File> importedFiles) {
         if (importedFiles != null && !importedFiles.isEmpty()) {
             sectionNameToKeepOpened = getExpandedSectionName();
@@ -731,7 +731,7 @@ public class LibraryPanelController extends AbstractFxmlPanelController {
 
                 if (!fxmlFiles.isEmpty() && enoughFreeSpaceOnDisk(fxmlFiles) && ! hasDependencies(fxmlFiles)) {
                     copyFilesToUserLibraryDir(fxmlFiles);
-                    
+
                     if (currentDisplayMode.equals(DISPLAY_MODE.SECTIONS)) {
                         sectionNameToKeepOpened = UserLibrary.TAG_USER_DEFINED;
                     }
@@ -763,19 +763,19 @@ public class LibraryPanelController extends AbstractFxmlPanelController {
             }
         }
     }
-    
+
     private List<File> getSubsetOfFiles(String pattern, List<File> files) {
         final List<File> res = new ArrayList<>();
-        
+
         for (File file : files) {
             if (file.getName().endsWith(pattern)) {
                 res.add(file);
             }
         }
-        
+
         return res;
     }
-    
+
     private boolean createUserLibraryDir(Path libPath) {
         boolean dirCreated = false;
         try {
@@ -790,10 +790,10 @@ public class LibraryPanelController extends AbstractFxmlPanelController {
             errorDialog.setDebugInfoWithThrowable(ioe);
             errorDialog.showAndWait();
         }
-        
+
         return dirCreated;
     }
-    
+
     private boolean enoughFreeSpaceOnDisk(List<File> files) {
         long totalSize = Long.MAX_VALUE; // bytes
         try {
@@ -809,11 +809,11 @@ public class LibraryPanelController extends AbstractFxmlPanelController {
             errorDialog.setDebugInfoWithThrowable(ioe);
             errorDialog.showAndWait();
         }
-        
+
         final File libFile = new File(((UserLibrary)getEditorController().getLibrary()).getPath());
         return totalSize < libFile.getFreeSpace();
     }
-    
+
     // Each copy is done via an intermediate temporary file that is renamed if
     // the copy goes well (for atomicity). If a copy fails we try to erase the
     // temporary file to stick to an as clean as possible disk content.
@@ -824,11 +824,11 @@ public class LibraryPanelController extends AbstractFxmlPanelController {
         String savedFileName = ""; //NOI18N
         Path tempTargetPath = null;
         setUserLibraryPathString();
-        
+
         // Here we deactivate the UserLib so that it unlocks the files contained
         // in the lib dir in the file system meaning (especially on Windows).
         ((UserLibrary) getEditorController().getLibrary()).stopWatching();
-        
+
         try {
             for (File file : files) {
                 savedFileName = file.getName();
@@ -867,7 +867,7 @@ public class LibraryPanelController extends AbstractFxmlPanelController {
             errorDialog.showAndWait();
         }
     }
-    
+
     /**
      * Open a file chooser that allows to select one or more FXML and JAR file.
      * @return the list of selected files
@@ -899,7 +899,7 @@ public class LibraryPanelController extends AbstractFxmlPanelController {
     }
 
     private static final PropertyName valueName = new PropertyName("value"); //NOI18N
-    
+
     private boolean hasDependencies(List<File> fxmlFiles) {
         boolean hasDependencies = false;
         boolean scanWentWell = true;
@@ -932,22 +932,22 @@ public class LibraryPanelController extends AbstractFxmlPanelController {
     private boolean hasDependencies(File fxmlFile) throws IOException {
         boolean res = false;
         URL location;
-        
+
         location = fxmlFile.toURI().toURL();
         FXOMDocument fxomDocument =
                 new FXOMDocument(FXOMDocument.readContentFromURL(location), location,
                         getEditorController().getFxomDocument().getClassLoader(),
                         getEditorController().getFxomDocument().getResources());
         res = hasDependencies(fxomDocument.getFxomRoot());
-        
+
         return res;
     }
-    
+
     private boolean hasDependencies(FXOMObject rootFxomObject) {
         final List<Path> targetPaths = getDependenciesPaths(rootFxomObject);
         return targetPaths.size() > 0;
     }
-    
+
     private List<Path> getDependenciesPaths(FXOMObject rootFxomObject) {
 
         final List<Path> targetPaths = new ArrayList<>();
@@ -958,7 +958,7 @@ public class LibraryPanelController extends AbstractFxmlPanelController {
                 targetPaths.add(path);
             }
         }
-        
+
         for (FXOMObject fxomObject : rootFxomObject.collectObjectWithSceneGraphObjectClass(URL.class)) {
             if (fxomObject instanceof FXOMInstance) {
                 final FXOMInstance urlInstance = (FXOMInstance) fxomObject;
@@ -977,11 +977,11 @@ public class LibraryPanelController extends AbstractFxmlPanelController {
 
         return targetPaths;
     }
-    
-    
+
+
     private Path extractPath(FXOMPropertyT p) {
         Path result;
-        
+
         final PrefixedValue pv = new PrefixedValue(p.getValue());
         if (pv.isPlainString()) {
             try {
@@ -1021,15 +1021,15 @@ public class LibraryPanelController extends AbstractFxmlPanelController {
                         result = null;
                     }
                 }
-                
+
             }
         } else {
             result = null;
         }
-        
+
         return result;
     }
-    
+
     private void setUserLibraryPathString() {
         if (getEditorController().getLibrary() instanceof UserLibrary
                 && userLibraryPathString == null) {
@@ -1037,12 +1037,12 @@ public class LibraryPanelController extends AbstractFxmlPanelController {
             assert userLibraryPathString != null;
         }
     }
-    
+
     private ListView<LibraryListItem> getLibList() {
         if (libList == null) {
             libList = new ListView<>();
         }
-        
+
         return libList;
     }
 }

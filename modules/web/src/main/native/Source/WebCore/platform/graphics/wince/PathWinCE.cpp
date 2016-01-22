@@ -150,7 +150,7 @@ bool Path::hasCurrentPoint() const
     // Not sure if this is correct. At the meantime, we do what other ports
     // do.
     // See https://bugs.webkit.org/show_bug.cgi?id=27266,
-    // https://bugs.webkit.org/show_bug.cgi?id=27187, and 
+    // https://bugs.webkit.org/show_bug.cgi?id=27187, and
     // http://trac.webkit.org/changeset/45873
     return !isEmpty();
 }

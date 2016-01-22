@@ -37,7 +37,7 @@
  *
  * Base64 is an encoding that allows a sequence of arbitrary bytes to be
  * encoded as a sequence of printable ASCII characters. For the definition
- * of Base64, see 
+ * of Base64, see
  * [RFC 1421](http://www.ietf.org/rfc/rfc1421.txt)
  * or
  * [RFC 2045](http://www.ietf.org/rfc/rfc2045.txt).

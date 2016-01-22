@@ -32,7 +32,7 @@
 #include "RenderMathMLBlock.h"
 
 namespace WebCore {
-    
+
 class RenderMathMLScripts;
 
 class RenderMathMLScriptsWrapper : public RenderMathMLBlock {
@@ -76,13 +76,13 @@ public:
     RenderMathMLScripts(Element&, PassRef<RenderStyle>);
     virtual void addChild(RenderObject* child, RenderObject* beforeChild = 0) override;
     virtual void removeChild(RenderObject&) override;
-    
+
     virtual RenderMathMLOperator* unembellishedOperator();
     virtual int firstLineBaseline() const override;
 
 protected:
     virtual void layout();
-    
+
 private:
     void addChildInternal(bool normalInsertion, RenderObject* child, RenderObject* beforeChild = 0);
     void removeChildInternal(bool normalRemoval, RenderObject& child);

@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef ParserArena_h
@@ -111,7 +111,7 @@ namespace JSC {
         m_recentIdentifiers[characters[0]] = &m_identifiers.last();
         return m_identifiers.last();
     }
-    
+
     inline const Identifier& IdentifierArena::makeNumericIdentifier(VM* vm, double number)
     {
         m_identifiers.append(Identifier(vm, String::numberToStringECMAScript(number)));

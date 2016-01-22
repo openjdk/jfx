@@ -21,7 +21,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -71,9 +71,9 @@ void ThreadTimers::setSharedTimer(SharedTimer* sharedTimer)
         m_sharedTimer->stop();
         m_pendingSharedTimerFireTime = 0;
     }
-    
+
     m_sharedTimer = sharedTimer;
-    
+
     if (sharedTimer) {
         m_sharedTimer->setFiredFunction(ThreadTimers::sharedTimerFired);
         updateSharedTimer();
@@ -84,7 +84,7 @@ void ThreadTimers::updateSharedTimer()
 {
     if (!m_sharedTimer)
         return;
-        
+
     if (m_firingTimers || m_timerHeap.isEmpty()) {
         m_pendingSharedTimerFireTime = 0;
         m_sharedTimer->stop();
@@ -95,7 +95,7 @@ void ThreadTimers::updateSharedTimer()
             // No need to restart the timer if both the pending fire time and the new fire time are in the past.
             if (m_pendingSharedTimerFireTime <= currentMonotonicTime && nextFireTime <= currentMonotonicTime)
                 return;
-        } 
+        }
         m_pendingSharedTimerFireTime = nextFireTime;
         m_sharedTimer->setFireInterval(std::max(nextFireTime - currentMonotonicTime, 0.0));
     }

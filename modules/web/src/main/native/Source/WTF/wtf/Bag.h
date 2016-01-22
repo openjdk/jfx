@@ -37,13 +37,13 @@ private:
         T m_item;
         Node* m_next;
     };
-    
+
 public:
     Bag()
         : m_head(0)
     {
     }
-    
+
     ~Bag()
     {
         while (m_head) {
@@ -52,7 +52,7 @@ public:
             delete current;
         }
     }
-    
+
     T* add()
     {
         Node* newNode = new Node;
@@ -60,25 +60,25 @@ public:
         m_head = newNode;
         return &newNode->m_item;
     }
-    
+
     class iterator {
     public:
         iterator()
             : m_node(0)
         {
         }
-        
+
         // This is sort of cheating; it's equivalent to iter == end().
         bool operator!() const { return !m_node; }
-        
+
         T* operator*() const { return &m_node->m_item; }
-        
+
         iterator& operator++()
         {
             m_node = m_node->m_next;
             return *this;
         }
-        
+
         bool operator==(const iterator& other) const
         {
             return m_node == other.m_node;
@@ -87,18 +87,18 @@ public:
         template<typename U> friend class WTF::Bag;
         Node* m_node;
     };
-    
+
     iterator begin()
     {
         iterator result;
         result.m_node = m_head;
         return result;
     }
-    
+
     iterator end() { return iterator(); }
-    
+
     bool isEmpty() const { return !m_head; }
-    
+
 private:
     Node* m_head;
 };

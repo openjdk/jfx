@@ -210,33 +210,33 @@ public class ScrollEventTest {
     @Test
     public void shouldDeliverScrollEventToPickedNode() {
         Scene scene = createScene();
-        Rectangle rect = 
+        Rectangle rect =
                 (Rectangle) scene.getRoot().getChildrenUnmodifiable().get(0);
-        
+
         scrolled = false;
         rect.setOnScroll(event -> {
             scrolled = true;
         });
-        
+
         ((StubScene) scene.impl_getPeer()).getListener().scrollEvent(
                 ScrollEvent.SCROLL, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
                 50, 50, 50, 50, false, false, false, false, false, false);
-        
+
         assertFalse(scrolled);
 
         ((StubScene) scene.impl_getPeer()).getListener().scrollEvent(
                 ScrollEvent.SCROLL, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
                 150, 150, 150, 150, false, false, false, false, false, false);
-        
+
         assertTrue(scrolled);
     }
-    
+
     @Test
     public void shouldUseMultiplier() {
         Scene scene = createScene();
-        Rectangle rect = 
+        Rectangle rect =
                 (Rectangle) scene.getRoot().getChildrenUnmodifiable().get(0);
-        
+
         scrolled = false;
         rect.setOnScroll(event -> {
             Assert.assertEquals(66.0, event.getDeltaX(), 0.0001);
@@ -245,20 +245,20 @@ public class ScrollEventTest {
             Assert.assertEquals(198.0, event.getTotalDeltaY(), 0.0001);
             scrolled = true;
         });
-        
+
         ((StubScene) scene.impl_getPeer()).getListener().scrollEvent(
                 ScrollEvent.SCROLL, 2, 3, 4, 6, 33, 33, 1, 1, 1, 1, 1,
                 150, 150, 150, 150, false, false, false, false, false, false);
-        
+
         assertTrue(scrolled);
     }
 
     @Test
     public void shouldUseTextDeltasForUnitsAndValues() {
         Scene scene = createScene();
-        Rectangle rect = 
+        Rectangle rect =
                 (Rectangle) scene.getRoot().getChildrenUnmodifiable().get(0);
-        
+
         scrolled = false;
         rect.setOnScroll(event -> {
             Assert.assertEquals(0.0, event.getTextDeltaX(), 0.0001);
@@ -284,7 +284,7 @@ public class ScrollEventTest {
                 ScrollEvent.SCROLL, 2, 3, 4, 6, 33, 33, 1, 4, 5, 3, 3,
                 150, 150, 150, 150, false, false, false, false, false, false);
         assertTrue(scrolled);
-        
+
         scrolled = false;
         rect.setOnScroll(event -> {
             Assert.assertEquals(0.0, event.getTextDeltaX(), 0.0001);
@@ -297,15 +297,15 @@ public class ScrollEventTest {
                 ScrollEvent.SCROLL, 2, 3, 4, 6, 33, 33, 5, -1, -1, 3, 3,
                 150, 150, 150, 150, false, false, false, false, false, false);
         assertTrue(scrolled);
-        
+
     }
-    
+
     @Test
     public void shouldPassModifiers() {
         Scene scene = createScene();
-        Rectangle rect = 
+        Rectangle rect =
                 (Rectangle) scene.getRoot().getChildrenUnmodifiable().get(0);
-        
+
         scrolled = false;
         rect.setOnScroll(event -> {
             assertTrue(event.isShiftDown());
@@ -413,7 +413,7 @@ public class ScrollEventTest {
                 150, 150, 150, 150, true, false, true, false, true, false);
         assertTrue(scrolled);
     }
-    
+
     @Test
     public void shouldPassEventType() {
         Scene scene = createScene();
@@ -819,7 +819,7 @@ public class ScrollEventTest {
 
     private Scene createScene() {
         final Group root = new Group();
-        
+
         final Scene scene = new Scene(root, 400, 400);
 
         Rectangle rect = new Rectangle(100, 100, 100, 100);
@@ -830,7 +830,7 @@ public class ScrollEventTest {
         Stage stage = new Stage();
         stage.setScene(scene);
         stage.show();
-        
+
         return scene;
     }
 }

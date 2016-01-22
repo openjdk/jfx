@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -42,12 +42,12 @@ void JSTextTrackList::visitChildren(JSCell* cell, SlotVisitor& visitor)
     COMPILE_ASSERT(StructureFlags & OverridesVisitChildren, OverridesVisitChildrenWithoutSettingFlag);
     ASSERT(jsTextTrackList->structure()->typeInfo().overridesVisitChildren());
     Base::visitChildren(jsTextTrackList, visitor);
-    
+
     TextTrackList& textTrackList = jsTextTrackList->impl();
     visitor.addOpaqueRoot(root(textTrackList.element()));
     textTrackList.visitJSEventListeners(visitor);
 }
-    
+
 } // namespace WebCore
 
 #endif

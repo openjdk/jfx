@@ -70,7 +70,7 @@ namespace JSC {
             return loc->value.ctiOffset;
         }
 #endif
-        
+
         void clear()
         {
             offsetTable.clear();
@@ -101,7 +101,7 @@ namespace JSC {
             return ctiDefault;
         }
 #endif
-        
+
         void clear()
         {
             branchOffsets.clear();

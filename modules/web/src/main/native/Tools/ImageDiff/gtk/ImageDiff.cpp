@@ -37,7 +37,7 @@
 using namespace std;
 
 static double tolerance = 0;
-static GOptionEntry commandLineOptionEntries[] = 
+static GOptionEntry commandLineOptionEntries[] =
 {
     { "tolerance", 0, 0, G_OPTION_ARG_DOUBLE, &tolerance, "Percentage difference between images before considering them different", "T" },
     { 0, 0, 0, G_OPTION_ARG_NONE, 0, 0, 0 },

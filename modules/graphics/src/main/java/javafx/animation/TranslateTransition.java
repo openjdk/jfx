@@ -49,38 +49,38 @@ import javafx.util.Duration;
  * The ({@code toX}, {@code toY}, {@code toZ}) value takes precedence if both (
  * {@code toX}, {@code toY}, {@code toZ}) and ({@code byX}, {@code byY},
  * {@code byZ}) values are specified.
- * 
+ *
  * <p>
  * Code Segment Example:
  * </p>
- * 
+ *
  * <pre>
  * <code>
  * import javafx.scene.shape.*;
  * import javafx.animation.transition.*;
- * 
+ *
  * ...
- * 
+ *
  *     Rectangle rect = new Rectangle (100, 40, 100, 100);
  *     rect.setArcHeight(50);
  *     rect.setArcWidth(50);
  *     rect.setFill(Color.VIOLET);
- * 
+ *
  *     TranslateTransition tt = new TranslateTransition(Duration.millis(2000), rect);
  *     tt.setByX(200f);
  *     tt.setCycleCount(4f);
  *     tt.setAutoReverse(true);
- * 
+ *
  *     tt.play();
- * 
+ *
  * ...
- * 
+ *
  * </code>
  * </pre>
- * 
+ *
  * @see Transition
  * @see Animation
- * 
+ *
  * @since JavaFX 2.0
  */
 public final class TranslateTransition extends Transition {
@@ -138,7 +138,7 @@ public final class TranslateTransition extends Transition {
      *
      * Setting duration to value lower than {@link Duration#ZERO} will result
      * in {@link IllegalArgumentException}.
-     * 
+     *
      * @defaultValue 400ms
      */
     private ObjectProperty<Duration> duration;
@@ -193,7 +193,7 @@ public final class TranslateTransition extends Transition {
      * {@code TranslateTransition}. If the value of {@code fromX} is changed for
      * a running {@code TranslateTransition}, the animation has to be stopped
      * and started again to pick up the new value.
-     * 
+     *
      * @defaultValue {@code Double.NaN}
      */
     private DoubleProperty fromX;
@@ -224,7 +224,7 @@ public final class TranslateTransition extends Transition {
      * {@code TranslateTransition}. If the value of {@code fromY} is changed for
      * a running {@code TranslateTransition}, the animation has to be stopped
      * and started again to pick up the new value.
-     * 
+     *
      * @defaultValue {@code Double.NaN}
      */
     private DoubleProperty fromY;
@@ -255,7 +255,7 @@ public final class TranslateTransition extends Transition {
      * {@code TranslateTransition}. If the value of {@code fromZ} is changed for
      * a running {@code TranslateTransition}, the animation has to be stopped
      * and started again to pick up the new value.
-     * 
+     *
      * @defaultValue {@code Double.NaN}
      */
     private DoubleProperty fromZ;
@@ -285,7 +285,7 @@ public final class TranslateTransition extends Transition {
      * {@code TranslateTransition}. If the value of {@code toX} is changed for a
      * running {@code TranslateTransition}, the animation has to be stopped and
      * started again to pick up the new value.
-     * 
+     *
      * @defaultValue {@code Double.NaN}
      */
     private DoubleProperty toX;
@@ -315,7 +315,7 @@ public final class TranslateTransition extends Transition {
      * {@code TranslateTransition}. If the value of {@code toY} is changed for a
      * running {@code TranslateTransition}, the animation has to be stopped and
      * started again to pick up the new value.
-     * 
+     *
      * @defaultValue {@code Double.NaN}
      */
     private DoubleProperty toY;
@@ -345,7 +345,7 @@ public final class TranslateTransition extends Transition {
      * {@code TranslateTransition}. If the value of {@code toZ} is changed for a
      * running {@code TranslateTransition}, the animation has to be stopped and
      * started again to pick up the new value.
-     * 
+     *
      * @defaultValue {@code Double.NaN}
      */
     private DoubleProperty toZ;
@@ -457,7 +457,7 @@ public final class TranslateTransition extends Transition {
 
     /**
      * The constructor of {@code TranslateTransition}
-     * 
+     *
      * @param duration
      *            The duration of the {@code TranslateTransition}
      * @param node
@@ -471,7 +471,7 @@ public final class TranslateTransition extends Transition {
 
     /**
      * The constructor of {@code TranslateTransition}
-     * 
+     *
      * @param duration
      *            The duration of the {@code TranslateTransition}
      */

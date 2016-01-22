@@ -119,9 +119,9 @@ public final class GeneralTransform3D implements CanTransformVec3d {
         assert ((index >= 0) && (index < mat.length));
         return mat[index];
     }
-    
+
     private Vec3d tempV3d;
-    
+
     public BaseBounds transform(BaseBounds src, BaseBounds dst) {
         if (tempV3d == null) {
             tempV3d = new Vec3d();
@@ -252,7 +252,7 @@ public final class GeneralTransform3D implements CanTransformVec3d {
      * Note that the field of view is specified in radians.
      *
      * @param verticalFOV specifies whether the fov is vertical (Y direction).
-     * 
+     *
      * @param fov specifies the field of view in radians
      *
      * @param aspect specifies the aspect ratio. The aspect ratio is the ratio
@@ -266,7 +266,7 @@ public final class GeneralTransform3D implements CanTransformVec3d {
      *
      * @return this transform
      */
-    public GeneralTransform3D perspective(boolean verticalFOV, 
+    public GeneralTransform3D perspective(boolean verticalFOV,
             double fov, double aspect, double zNear, double zFar) {
         double sine;
         double cotangent;
@@ -720,7 +720,7 @@ public final class GeneralTransform3D implements CanTransformVec3d {
      *     [  0  0  0  1 ].
      * this = this * scaletx.
      * </pre>
-     * 
+     *
      * @param sx the X coordinate scale factor
      * @param sy the Y coordinate scale factor
      * @param sz the Z coordinate scale factor

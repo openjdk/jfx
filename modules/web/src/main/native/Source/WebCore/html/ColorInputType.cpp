@@ -118,7 +118,7 @@ void ColorInputType::createShadowSubtree()
     colorSwatch->setPseudo(AtomicString("-webkit-color-swatch", AtomicString::ConstructFromLiteral));
     wrapperElement->appendChild(colorSwatch.release(), ASSERT_NO_EXCEPTION);
     element().userAgentShadowRoot()->appendChild(wrapperElement.release(), ASSERT_NO_EXCEPTION);
-    
+
     updateColorSwatch();
 }
 

@@ -33,5 +33,5 @@ import javafx.scene.Node;
 public interface TraverseListener {
 
     public void onTraverse(Node node, Bounds bounds);
-    
+
 }

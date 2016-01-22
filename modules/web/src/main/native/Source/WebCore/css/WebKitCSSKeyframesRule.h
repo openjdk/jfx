@@ -41,18 +41,18 @@ class WebKitCSSKeyframeRule;
 class StyleRuleKeyframes : public StyleRuleBase {
 public:
     static PassRef<StyleRuleKeyframes> create() { return adoptRef(*new StyleRuleKeyframes()); }
-    
+
     ~StyleRuleKeyframes();
-    
+
     const Vector<RefPtr<StyleKeyframe>>& keyframes() const { return m_keyframes; }
-    
+
     void parserAppendKeyframe(PassRefPtr<StyleKeyframe>);
     void wrapperAppendKeyframe(PassRefPtr<StyleKeyframe>);
     void wrapperRemoveKeyframe(unsigned);
 
-    String name() const { return m_name; }    
+    String name() const { return m_name; }
     void setName(const String& name) { m_name = AtomicString(name); }
-    
+
     int findKeyframeIndex(const String& key) const;
 
     PassRef<StyleRuleKeyframes> copy() const { return adoptRef(*new StyleRuleKeyframes(*this)); }

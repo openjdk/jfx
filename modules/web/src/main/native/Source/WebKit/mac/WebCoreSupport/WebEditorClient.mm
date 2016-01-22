@@ -7,13 +7,13 @@
  * are met:
  *
  * 1.  Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer. 
+ *     notice, this list of conditions and the following disclaimer.
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
- *     documentation and/or other materials provided with the distribution. 
+ *     documentation and/or other materials provided with the distribution.
  * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
- *     from this software without specific prior written permission. 
+ *     from this software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY APPLE AND ITS CONTRIBUTORS "AS IS" AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
@@ -102,7 +102,7 @@ static WebViewInsertAction kit(EditorInsertAction coreAction)
 
 @interface WebUndoStep : NSObject
 {
-    RefPtr<UndoStep> m_step;   
+    RefPtr<UndoStep> m_step;
 }
 
 + (WebUndoStep *)stepWithUndoStep:(PassRefPtr<UndoStep>)step;
@@ -317,10 +317,10 @@ void WebEditorClient::startDelayingAndCoalescingContentChangeNotifications()
 void WebEditorClient::stopDelayingAndCoalescingContentChangeNotifications()
 {
     m_delayingContentChangeNotifications = false;
-    
+
     if (m_hasDelayedContentChangeNotification)
         this->respondToChangedContents();
-    
+
     m_hasDelayedContentChangeNotification = false;
 }
 #endif
@@ -331,7 +331,7 @@ void WebEditorClient::respondToChangedContents()
     NSView <WebDocumentView> *view = [[[m_webView selectedFrame] frameView] documentView];
     if ([view isKindOfClass:[WebHTMLView class]])
         [(WebHTMLView *)view _updateFontPanel];
-    [[NSNotificationCenter defaultCenter] postNotificationName:WebViewDidChangeNotification object:m_webView];    
+    [[NSNotificationCenter defaultCenter] postNotificationName:WebViewDidChangeNotification object:m_webView];
 #else
     if (m_delayingContentChangeNotifications) {
         m_hasDelayedContentChangeNotification = true;
@@ -407,15 +407,15 @@ NSURL *WebEditorClient::canonicalizeURLString(NSString *URLString)
 
 static NSArray *createExcludedElementsForAttributedStringConversion()
 {
-    NSArray *elements = [[NSArray alloc] initWithObjects: 
+    NSArray *elements = [[NSArray alloc] initWithObjects:
         // Omit style since we want style to be inline so the fragment can be easily inserted.
-        @"style", 
+        @"style",
         // Omit xml so the result is not XHTML.
-        @"xml", 
+        @"xml",
         // Omit tags that will get stripped when converted to a fragment anyway.
-        @"doctype", @"html", @"head", @"body", 
+        @"doctype", @"html", @"head", @"body",
         // Omit deprecated tags.
-        @"applet", @"basefont", @"center", @"dir", @"font", @"isindex", @"menu", @"s", @"strike", @"u", 
+        @"applet", @"basefont", @"center", @"dir", @"font", @"isindex", @"menu", @"s", @"strike", @"u",
         // Omit object so no file attachments are part of the fragment.
         @"object", nil];
     CFRetain(elements);
@@ -429,7 +429,7 @@ static NSString *NSExcludedElementsDocumentAttribute = @"ExcludedElements";
 DocumentFragment* WebEditorClient::documentFragmentFromAttributedString(NSAttributedString *string, Vector<RefPtr<ArchiveResource>>& resources)
 {
     static NSArray *excludedElements = createExcludedElementsForAttributedStringConversion();
-    
+
     NSDictionary *dictionary = [NSDictionary dictionaryWithObject:excludedElements forKey:NSExcludedElementsDocumentAttribute];
 
     NSArray *subResources;
@@ -540,7 +540,7 @@ void WebEditorClient::toggleAutomaticSpellingCorrection()
 #endif // USE(AUTOMATIC_TEXT_REPLACEMENT)
 
 bool WebEditorClient::shouldInsertNode(Node *node, Range* replacingRange, EditorInsertAction givenAction)
-{ 
+{
     return [[m_webView _editingDelegateForwarder] webView:m_webView shouldInsertNode:kit(node) replacingDOMRange:kit(replacingRange) givenAction:(WebViewInsertAction)givenAction];
 }
 
@@ -597,7 +597,7 @@ static NSString* undoNameForEditAction(EditAction editAction)
 void WebEditorClient::registerUndoOrRedoStep(PassRefPtr<UndoStep> step, bool isRedo)
 {
     ASSERT(step);
-    
+
     NSUndoManager *undoManager = [m_webView undoManager];
 #if PLATFORM(IOS)
     // While we are undoing, we shouldn't be asked to register another Undo operation, we shouldn't even be touching the DOM.  But
@@ -634,14 +634,14 @@ void WebEditorClient::clearUndoRedoOperations()
         int groupingLevel = [undoManager groupingLevel];
         for (int i = 0; i < groupingLevel; ++i)
             [undoManager endUndoGrouping];
-        
+
         [undoManager removeAllActionsWithTarget:m_undoTarget.get()];
-        
+
         for (int i = 0; i < groupingLevel; ++i)
             [undoManager beginUndoGrouping];
-        
+
         m_haveUndoRedoOperations = NO;
-    }    
+    }
 }
 
 bool WebEditorClient::canCopyCut(Frame*, bool defaultValue) const
@@ -673,7 +673,7 @@ void WebEditorClient::undo()
 void WebEditorClient::redo()
 {
     if (canRedo())
-        [[m_webView undoManager] redo];    
+        [[m_webView undoManager] redo];
 }
 
 void WebEditorClient::handleKeyboardEvent(KeyboardEvent* event)
@@ -741,7 +741,7 @@ void WebEditorClient::textDidChangeInTextField(Element* element)
 
 static SEL selectorForKeyEvent(KeyboardEvent* event)
 {
-    // FIXME: This helper function is for the auto-fill code so we can pass a selector to the form delegate.  
+    // FIXME: This helper function is for the auto-fill code so we can pass a selector to the form delegate.
     // Eventually, we should move all of the auto-fill code down to WebKit and remove the need for this function by
     // not relying on the selector in the new implementation.
     // The key identifiers are from <http://www.w3.org/TR/DOM-Level-3-Events/keyset.html#KeySet-Set>
@@ -803,19 +803,19 @@ void WebEditorClient::writeDataToPasteboard(NSDictionary* representation)
         [[m_webView _UIKitDelegateForwarder] writeDataToPasteboard:representation];
 }
 
-NSArray* WebEditorClient::supportedPasteboardTypesForCurrentSelection() 
+NSArray* WebEditorClient::supportedPasteboardTypesForCurrentSelection()
 {
-    if ([[m_webView _UIKitDelegateForwarder] respondsToSelector:@selector(supportedPasteboardTypesForCurrentSelection)]) 
-        return [[m_webView _UIKitDelegateForwarder] supportedPasteboardTypesForCurrentSelection]; 
+    if ([[m_webView _UIKitDelegateForwarder] respondsToSelector:@selector(supportedPasteboardTypesForCurrentSelection)])
+        return [[m_webView _UIKitDelegateForwarder] supportedPasteboardTypesForCurrentSelection];
 
-    return nil; 
+    return nil;
 }
 
 NSArray* WebEditorClient::readDataFromPasteboard(NSString* type, int index)
 {
     if ([[m_webView _UIKitDelegateForwarder] respondsToSelector:@selector(readDataFromPasteboard:withIndex:)])
         return [[m_webView _UIKitDelegateForwarder] readDataFromPasteboard:type withIndex:index];
-    
+
     return nil;
 }
 
@@ -823,7 +823,7 @@ bool WebEditorClient::hasRichlyEditableSelection()
 {
     if ([[m_webView _UIKitDelegateForwarder] respondsToSelector:@selector(hasRichlyEditableSelection)])
         return [[m_webView _UIKitDelegateForwarder] hasRichlyEditableSelection];
-    
+
     return false;
 }
 
@@ -831,7 +831,7 @@ int WebEditorClient::getPasteboardItemsCount()
 {
     if ([[m_webView _UIKitDelegateForwarder] respondsToSelector:@selector(getPasteboardItemsCount)])
         return [[m_webView _UIKitDelegateForwarder] getPasteboardItemsCount];
-    
+
     return 0;
 }
 
@@ -842,7 +842,7 @@ WebCore::DocumentFragment* WebEditorClient::documentFragmentFromDelegate(int ind
         if (fragmentFromDelegate)
             return core(fragmentFromDelegate);
     }
-    
+
     return 0;
 }
 
@@ -858,7 +858,7 @@ int WebEditorClient::pasteboardChangeCount()
 {
     if ([[m_webView _UIKitDelegateForwarder] respondsToSelector:@selector(getPasteboardChangeCount)])
         return [[m_webView _UIKitDelegateForwarder] getPasteboardChangeCount];
-    
+
     return 0;
 }
 
@@ -913,7 +913,7 @@ void WebEditorClient::checkSpellingOfString(StringView text, int* misspellingLoc
         else
             *misspellingLocation = range.location;
     }
-    
+
     if (misspellingLength)
         *misspellingLength = range.length;
 }
@@ -1046,7 +1046,7 @@ void WebEditorClient::updateSpellingUIWithGrammarString(const String& badGrammar
     NSRange grammarRange = NSMakeRange(grammarDetail.location, grammarDetail.length);
     NSString* grammarUserDescription = grammarDetail.userDescription;
     NSDictionary* grammarDetailDict = [NSDictionary dictionaryWithObjectsAndKeys:[NSValue valueWithRange:grammarRange], NSGrammarRange, grammarUserDescription, NSGrammarUserDescription, corrections, NSGrammarCorrections, nil];
-    
+
     [[NSSpellChecker sharedSpellChecker] updateSpellingPanelWithGrammarString:badGrammarPhrase detail:grammarDetailDict];
 }
 
@@ -1148,7 +1148,7 @@ void WebEditorClient::requestCheckingOfString(PassRefPtr<WebCore::TextCheckingRe
     NSRunLoop* currentLoop = [NSRunLoop currentRunLoop];
     [[NSSpellChecker sharedSpellChecker] requestCheckingOfString:m_textCheckingRequest->data().text() range:range types:NSTextCheckingAllSystemTypes options:0 inSpellDocumentWithTag:0
                                          completionHandler:^(NSInteger, NSArray* results, NSOrthography*, NSInteger) {
-            [currentLoop performSelector:@selector(perform) 
+            [currentLoop performSelector:@selector(perform)
                                   target:[[[WebEditorSpellCheckResponder alloc] initWithClient:this sequence:sequence results:results] autorelease]
                                 argument:nil order:0 modes:[NSArray arrayWithObject:NSDefaultRunLoopMode]];
         }];

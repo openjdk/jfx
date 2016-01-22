@@ -155,7 +155,7 @@ EncodedJSValue JSC_HOST_CALL functionProtoFuncApply(ExecState* exec)
                 applyArgs.append(asObject(array)->get(exec, i));
         }
     }
-    
+
     return JSValue::encode(call(exec, thisValue, callType, callData, exec->argument(0), applyArgs));
 }
 

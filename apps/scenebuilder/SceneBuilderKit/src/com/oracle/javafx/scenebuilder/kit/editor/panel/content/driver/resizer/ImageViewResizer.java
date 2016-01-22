@@ -45,7 +45,7 @@ import com.oracle.javafx.scenebuilder.kit.util.MathUtils;
 
 /**
  *
- * 
+ *
  */
 public class ImageViewResizer extends AbstractResizer<ImageView> {
 
@@ -54,21 +54,21 @@ public class ImageViewResizer extends AbstractResizer<ImageView> {
     private final PropertyName fitWidthName = new PropertyName("fitWidth"); //NOI18N
     private final PropertyName fitHeightName = new PropertyName("fitHeight"); //NOI18N
     private final List<PropertyName> propertyNames = new ArrayList<>();
-    
+
     public ImageViewResizer(ImageView sceneGraphObject) {
         super(sceneGraphObject);
         originalFitWidth   = sceneGraphObject.getFitWidth();
         originalFitHeight  = sceneGraphObject.getFitHeight();
         propertyNames.add(fitWidthName);
         propertyNames.add(fitHeightName);
-//        assert BoundsUtils.equals(sceneGraphObject.getLayoutBounds(), 
+//        assert BoundsUtils.equals(sceneGraphObject.getLayoutBounds(),
 //                computeBounds(originalFitWidth, originalFitHeight));
     }
 
     /*
      * AbstractResizer
      */
-    
+
     @Override
     public final Bounds computeBounds(double width, double height) {
         final double minX = sceneGraphObject.getX();
@@ -88,7 +88,7 @@ public class ImageViewResizer extends AbstractResizer<ImageView> {
         return new BoundingBox(minX, minY, Math.round(actualWidth), Math.round(actualHeight));
     }
 
-    
+
     @Override
     public Feature getFeature() {
         return Feature.FREE;
@@ -119,7 +119,7 @@ public class ImageViewResizer extends AbstractResizer<ImageView> {
     public Object getValue(PropertyName propertyName) {
         assert propertyName != null;
         assert propertyNames.contains(propertyName);
-        
+
         final Object result;
         if (propertyName.equals(fitWidthName)) {
             result = sceneGraphObject.getFitWidth();
@@ -129,7 +129,7 @@ public class ImageViewResizer extends AbstractResizer<ImageView> {
             // Emergency code
             result = null;
         }
-        
+
         return result;
     }
 

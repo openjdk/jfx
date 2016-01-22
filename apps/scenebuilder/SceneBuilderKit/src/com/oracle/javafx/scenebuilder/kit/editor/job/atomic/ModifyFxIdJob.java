@@ -92,14 +92,14 @@ public class ModifyFxIdJob extends Job {
     @Override
     public String getDescription() {
         final String result;
-        
+
         if (newValue == null) {
             assert oldValue != null;
             result = I18N.getString("job.remove.fxid", oldValue);
         } else {
             result = I18N.getString("job.set.fxid", newValue);
         }
-        
+
         return result;
     }
 }

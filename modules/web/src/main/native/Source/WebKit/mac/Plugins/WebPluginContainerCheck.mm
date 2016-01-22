@@ -6,13 +6,13 @@
  * are met:
  *
  * 1.  Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer. 
+ *     notice, this list of conditions and the following disclaimer.
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
- *     documentation and/or other materials provided with the distribution. 
+ *     documentation and/or other materials provided with the distribution.
  * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
- *     from this software without specific prior written permission. 
+ *     from this software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY APPLE AND ITS CONTRIBUTORS "AS IS" AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
@@ -59,16 +59,16 @@ using namespace WebCore;
 {
     if (!(self = [super init]))
         return nil;
-    
+
     _request = [request copy];
     _target = [target copy];
     _resultObject = [obj retain];
     _resultSelector = selector;
     _contextInfo = [contextInfo retain];
-    
+
     // controller owns us so don't retain, to avoid cycle
     _controller = controller;
-    
+
     return self;
 }
 
@@ -95,7 +95,7 @@ using namespace WebCore;
 {
     if (_contextInfo)
         wtfObjcMsgSend<void>(_resultObject, _resultSelector, (policy == PolicyUse), _contextInfo);
-    else     
+    else
         wtfObjcMsgSend<void>(_resultObject, _resultSelector, (policy == PolicyUse));
 
     // this will call indirectly call cancel
@@ -151,7 +151,7 @@ using namespace WebCore;
                     decidePolicyForNavigationAction:action
                                             request:_request
                                               frame:targetFrame
-                                   decisionListener:_listener];        
+                                   decisionListener:_listener];
     }
 }
 
@@ -173,7 +173,7 @@ using namespace WebCore;
 
     [_request release];
     _request = nil;
-    
+
     [_target release];
     _target = nil;
 
@@ -185,7 +185,7 @@ using namespace WebCore;
     _resultObject = nil;
 
     _controller = nil;
-    
+
     [_contextInfo release];
     _contextInfo = nil;
 
@@ -194,7 +194,7 @@ using namespace WebCore;
 
 - (id)contextInfo
 {
-    return _contextInfo;   
+    return _contextInfo;
 }
 
 @end

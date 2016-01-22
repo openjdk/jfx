@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -40,7 +40,7 @@
 namespace JSC {
 
 #if USE(CF)
-    
+
 const CFTimeInterval HeapTimer::s_decade = 60 * 60 * 24 * 365 * 10;
 
 static const void* retainAPILock(const void* info)
@@ -117,7 +117,7 @@ Ecore_Timer* HeapTimer::add(double delay, void* agent)
 {
     return ecore_timer_add(delay, reinterpret_cast<Ecore_Task_Cb>(timerEvent), agent);
 }
-    
+
 void HeapTimer::stop()
 {
     if (!m_timer)
@@ -130,11 +130,11 @@ void HeapTimer::stop()
 bool HeapTimer::timerEvent(void* info)
 {
     HeapTimer* agent = static_cast<HeapTimer*>(info);
-    
+
     APIEntryShim shim(agent->m_vm);
     agent->doWork();
     agent->m_timer = 0;
-    
+
     return ECORE_CALLBACK_CANCEL;
 }
 #else
@@ -152,6 +152,6 @@ void HeapTimer::invalidate()
 }
 
 #endif
-    
+
 
 } // namespace JSC

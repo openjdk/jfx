@@ -838,7 +838,7 @@ public class SceneTest {
 
     @Test public void testProperties() {
         final Scene scene = new Scene(new Group(), 300, 200);
-        
+
         javafx.collections.ObservableMap<Object, Object> properties = scene.getProperties();
 
         /* If we ask for it, we should get it.

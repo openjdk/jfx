@@ -46,7 +46,7 @@ public class ObservableFloatValueStub extends ObservableValueBase<Number> implem
     public Float getValue() {
         return value;
     }
-    
+
    @Override
     public int intValue() {
         return (int) value;

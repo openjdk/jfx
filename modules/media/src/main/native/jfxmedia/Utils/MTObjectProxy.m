@@ -29,7 +29,7 @@
 static int add_arg_type(NSMutableString *destString, const char *type)
 {
     int index = 0;
-    
+
     switch (type[index++]) {
         case _C_ID:
             [destString appendString:@"id"];
@@ -154,7 +154,7 @@ static NSString *dump_method_signature(SEL selector, NSMethodSignature *sig)
     NSMutableString *desc = [[[NSMutableString alloc] init] autorelease];
     NSString *selString = NSStringFromSelector(selector);
     NSArray *selComps = [selString componentsSeparatedByString:@":"];
-    
+
     type = sig.methodReturnType;
     [desc appendString:@"- ("];
     add_arg_type(desc, type);
@@ -235,7 +235,7 @@ static NSString *dump_method_signature(SEL selector, NSMethodSignature *sig)
 - (void) forwardInvocation:(NSInvocation *)invocation
 {
     if (!target) return;
-    
+
     if (logMessages) {
         NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
         NSLog(@"[P(%p -> %p) forwardInvocation:{%@}]",
@@ -244,7 +244,7 @@ static NSString *dump_method_signature(SEL selector, NSMethodSignature *sig)
               );
         [pool drain];
     }
-    
+
     [invocation setTarget:target];
     if (targetThread && ![[NSThread currentThread] isEqualTo:targetThread]) {
         [invocation performSelector:@selector(invoke) onThread:targetThread withObject:nil waitUntilDone:YES];

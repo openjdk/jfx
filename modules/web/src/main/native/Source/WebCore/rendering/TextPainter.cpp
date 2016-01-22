@@ -102,7 +102,7 @@ void TextPainter::paintText()
 {
     ASSERT(m_savedDrawingStateForMask.m_textPaintStyle);
     ASSERT(m_savedDrawingStateForMask.m_selectionPaintStyle);
-    
+
     FloatPoint boxOrigin = m_boxRect.location();
 
     if (!m_paintSelectedTextOnly) {
@@ -163,7 +163,7 @@ void TextPainter::paintText()
 void TextPainter::paintTextInContext(GraphicsContext& context, float amountToIncreaseStrokeWidthBy)
 {
     SavedDrawingStateForMask savedDrawingStateForMask = m_savedDrawingStateForMask;
-    
+
     ASSERT(m_savedDrawingStateForMask.m_textPaintStyle);
     ASSERT(m_savedDrawingStateForMask.m_selectionPaintStyle);
     m_savedDrawingStateForMask.m_context = &context;

@@ -101,7 +101,7 @@ import javafx.stage.Stage;
  * @playground chart.legendVisible
  * @playground chart.title
  * @playground chart.titleSide
- * @embedded 
+ * @embedded
  */
 public class AreaChartApp extends Application {
 
@@ -143,8 +143,8 @@ public class AreaChartApp extends Application {
         chart = new AreaChart(xAxis, yAxis, areaChartData);
         return chart;
     }
-    
-   
+
+
     @Override public void start(Stage primaryStage) throws Exception {
         primaryStage.setScene(new Scene(createContent()));
         primaryStage.show();

@@ -160,7 +160,7 @@ public class PreferencesRecordDocument {
         final EditorController ec = documentWindowController.getEditorController();
         ec.sceneStyleSheetProperty().addListener(sceneStyleSheetsListener);
     }
-    
+
     public void resetDocumentPreferences() {
         this.documentPreferences = null;
     }
@@ -527,7 +527,7 @@ public class PreferencesRecordDocument {
         // Since SB 2.0 b11, the visibility of Library and Document was handled
         // independently from the Left visibility.
         // Starting from SB 2.0 b12, the visibility of Library and Document is
-        // linked to the Left visibility. 
+        // linked to the Left visibility.
         // We need to handle new preferences as well as old ones :
         // hence the value set for Library and Document visible property.
         setLibraryVisible(lv && libv);
@@ -574,7 +574,7 @@ public class PreferencesRecordDocument {
         final URL fxmlLocation = documentWindowController.getEditorController().getFxmlLocation();
         if (fxmlLocation == null) {
             // Document has not been saved => nothing to write
-            // This is the case with initial empty document 
+            // This is the case with initial empty document
             return;
         }
 

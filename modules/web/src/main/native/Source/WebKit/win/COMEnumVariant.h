@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef COMEnumVariant_h
@@ -60,7 +60,7 @@ private:
 
     COMEnumVariant(const ContainerType& container)
         : m_refCount(0)
-        , m_container(container)       
+        , m_container(container)
         , m_currentPos(m_container.begin())
     {
     }
@@ -75,7 +75,7 @@ private:
 
 // COMEnumVariant ------------------------------------------------------------------
 template<typename ContainerType>
-COMEnumVariant<typename ContainerType>* COMEnumVariant<ContainerType>::adopt(ContainerType& container) 
+COMEnumVariant<typename ContainerType>* COMEnumVariant<ContainerType>::adopt(ContainerType& container)
 {
     COMEnumVariant* instance = new COMEnumVariant;
     instance->m_container.swap(container);
@@ -149,7 +149,7 @@ HRESULT STDMETHODCALLTYPE COMEnumVariant<ContainerType>::Next(ULONG celt, VARIAN
 }
 
 template<typename ContainerType>
-HRESULT STDMETHODCALLTYPE COMEnumVariant<ContainerType>::Skip(ULONG celt) 
+HRESULT STDMETHODCALLTYPE COMEnumVariant<ContainerType>::Skip(ULONG celt)
 {
     for (unsigned i = 0; i < celt; i++) {
         if (m_currentPos == m_container.end())
@@ -159,14 +159,14 @@ HRESULT STDMETHODCALLTYPE COMEnumVariant<ContainerType>::Skip(ULONG celt)
     }
     return S_OK;
 }
-    
+
 template<typename ContainerType>
-HRESULT STDMETHODCALLTYPE COMEnumVariant<ContainerType>::Reset() 
+HRESULT STDMETHODCALLTYPE COMEnumVariant<ContainerType>::Reset()
 {
     m_currentPos = m_container.begin();
     return S_OK;
 }
-    
+
 template<typename ContainerType>
 HRESULT STDMETHODCALLTYPE COMEnumVariant<ContainerType>::Clone(IEnumVARIANT** ppEnum)
 {

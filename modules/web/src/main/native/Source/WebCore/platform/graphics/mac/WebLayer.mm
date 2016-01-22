@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -296,13 +296,13 @@ void drawRepaintIndicator(CGContextRef context, PlatformCALayer* platformCALayer
             [self class],
             self,
             [self name],
-            aBounds.origin.x, aBounds.origin.y, aBounds.size.width, aBounds.size.height, 
+            aBounds.origin.x, aBounds.origin.y, aBounds.size.width, aBounds.size.height,
             aPos.x, aPos.y,
             static_cast<unsigned long>([[self sublayers] count]),
             [self masksToBounds]];
-    
+
     NSMutableString* curDesc = [NSMutableString stringWithString:selfString];
-    
+
     if ([[self sublayers] count] > 0)
         [curDesc appendString:@"\n"];
 

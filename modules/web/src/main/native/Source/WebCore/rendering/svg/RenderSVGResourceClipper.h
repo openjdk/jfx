@@ -55,7 +55,7 @@ public:
     virtual FloatRect resourceBoundingBox(const RenderObject&) override;
 
     virtual RenderSVGResourceType resourceType() const { return ClipperResourceType; }
-    
+
     bool hitTestClipContent(const FloatRect&, const FloatPoint&);
 
     SVGUnitTypes::SVGUnitType clipPathUnits() const { return clipPathElement().clipPathUnits(); }

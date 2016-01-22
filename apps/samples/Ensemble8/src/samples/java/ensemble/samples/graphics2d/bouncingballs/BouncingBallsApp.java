@@ -44,13 +44,13 @@ import javafx.event.EventHandler;
 import javafx.geometry.Insets;
 
 /**
- * A sample that shows animated bouncing balls. 
- * Select a ball to start or stop the animation. 
+ * A sample that shows animated bouncing balls.
+ * Select a ball to start or stop the animation.
  * Select the reset button to stop all the balls.
- *  
+ *
  * @sampleName Bouncing Balls
- * @preview preview.png 
- *  
+ * @preview preview.png
+ *
  * @see java.util.ArrayList
  * @see java.util.List
  * @see javafx.util.Duration
@@ -78,7 +78,7 @@ import javafx.geometry.Insets;
  * @see javafx.animation.Animation.Status
  * @see javafx.event.EventHandler
  * @see javafx.event.ActionEvent
- * @see javafx.scene.input.MouseEvent 
+ * @see javafx.scene.input.MouseEvent
  * @see javafx.geometry.Insets
  * @embedded
  */

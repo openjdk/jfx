@@ -28,23 +28,23 @@
 NSString *NSStringFromJavaString(JNIEnv *env, jstring js)
 {
     NSString *outString = nil;
-    
+
     if (NULL != env && 0 != js) {
         jboolean isCopy = JNI_FALSE;
         const jchar *jsChars = (*env)->GetStringChars(env, js, &isCopy);
-        
+
         outString = [NSString stringWithCharacters:(const unichar *)jsChars
                                             length:(*env)->GetStringLength(env, js)];
         (*env)->ReleaseStringChars(env, js, jsChars);
     }
-    
+
     return outString;
 }
 
 jstring JavaStringFromNSString(JNIEnv *env, NSString *ns)
 {
     jstring outString = 0;
-    
+
     if (NULL != env && nil != ns) {
         jsize length;
         if (ns.length > INT32_MAX) {
@@ -57,7 +57,7 @@ jstring JavaStringFromNSString(JNIEnv *env, NSString *ns)
         if (!strBuf) {
             return 0;
         }
-        
+
         @try {
             [ns getCharacters:strBuf range:NSMakeRange(0, length)];
         }
@@ -65,11 +65,11 @@ jstring JavaStringFromNSString(JNIEnv *env, NSString *ns)
             free(strBuf);
             return 0;
         }
-        
+
         outString = (*env)->NewString(env, strBuf, length);
         free(strBuf);
     }
-    
+
     return outString;
 }
 

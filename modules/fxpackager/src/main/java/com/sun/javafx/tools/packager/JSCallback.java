@@ -28,10 +28,10 @@ package com.sun.javafx.tools.packager;
 import com.sun.javafx.tools.ant.Callback;
 
 /**
- * Ant-independent version of the Callback class. 
- * 
+ * Ant-independent version of the Callback class.
+ *
  * @see Callback
- * 
+ *
  */
 class JSCallback {
 

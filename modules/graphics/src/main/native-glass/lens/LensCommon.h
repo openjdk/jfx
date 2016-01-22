@@ -22,7 +22,7 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
- 
+
 #ifndef LENS_COMMON_H
 #define LENS_COMMON_H
 
@@ -144,20 +144,20 @@ void glass_throw_exception_by_name(JNIEnv *env,
  * Lens porting layer error codes
  */
 typedef enum _LensResult{
-    LENS_OK         = 0, 
+    LENS_OK         = 0,
     LENS_FAILED     = 1
 }LensResult;
 
-/**                                                   
+/**
  * Data structure that define NativeWindow and NativeView bounds
- * structures 
- */                                                   
-typedef struct {                                      
-    int x;                                            
-    int y;                                            
-    int width;                                        
-    int height;                                       
-}LensBounds;                                          
+ * structures
+ */
+typedef struct {
+    int x;
+    int y;
+    int width;
+    int height;
+}LensBounds;
 
 //forward declarations for native structures
 typedef struct _PlatformWindowData *PlatformWindowData; //Window's platform specific data
@@ -167,7 +167,7 @@ typedef struct _NativeView *NativeView; //forward decleration for native view da
 typedef struct _NativeScreen *NativeScreen;
 
 
-/* 
+/*
  * Utility routine to convert a char * string into a jcharArray
  * call glass_jcharArray_release to release the created reference
  *
@@ -176,8 +176,8 @@ typedef struct _NativeScreen *NativeScreen;
  */
 jcharArray glass_util_strToJcharArray(JNIEnv *env, char *str);
 
-/* 
- * Utility routine to release the reference created by 
+/*
+ * Utility routine to release the reference created by
  * glass_str_to_jcharArray
  * @param env
  * @param jcharArray to release
@@ -217,9 +217,9 @@ struct _NativeScreen {
 
 /**
  * Init and cache the main screen
- * 
- * @param env 
- * 
+ *
+ * @param env
+ *
  * @return LensResult LENS_OK on success
  */
 NativeScreen lens_screen_initialize(JNIEnv *env);
@@ -240,9 +240,9 @@ NativeScreen glass_screen_getMainScreen();
 void glass_screen_clear();
 
 /**
- * Get access to the screen frame buffer, if available 
- * 
- * @return char* pointer to the frame buffer, NULL if not available  
+ * Get access to the screen frame buffer, if available
+ *
+ * @return char* pointer to the frame buffer, NULL if not available
  */
 char *lens_screen_getFrameBuffer();
 
@@ -251,9 +251,9 @@ char *lens_screen_getFrameBuffer();
  * array containing a copy of the frame buffer.
  *
  * The pixel format of the buffer should be the same as
- * LensPixels.getNativeFormat_impl() 
- *  
- * Note: 1x1 pixels are a valid value 
+ * LensPixels.getNativeFormat_impl()
+ *
+ * Note: 1x1 pixels are a valid value
  *
  * @param x the X top left coordinate of the capture area
  * @param y the Y top left coordinate of the capture area
@@ -287,7 +287,7 @@ jboolean glass_screen_capture(jint x,
  */
 JavaVM *glass_application_GetVM();
 
-/** 
+/**
  * service function to report and clear any pending exception
  * @param env the JNI env
  * @return true if an error was detected/reported
@@ -342,17 +342,17 @@ void glass_application_request_native_event_loop(JNIEnv *env,
 /**
  * Inform the LensApplication singleton event thread for key
  * event
- * 
+ *
  * @param env
  * @param window window the window that received the event
  * @param type event type (com_sun_glass_events_KeyEvent_*)
- * @param jfxKeyCode key code for the event 
+ * @param jfxKeyCode key code for the event
  *                   (com_sun_glass_events_KeyEvent_VK_*)
- * @param isRepeatEvent JNI_TRUE when the event is a repeat 
+ * @param isRepeatEvent JNI_TRUE when the event is a repeat
  *                      event
- *                  
+ *
  */
-void glass_application_notifyKeyEvent(JNIEnv *env, 
+void glass_application_notifyKeyEvent(JNIEnv *env,
                                       NativeWindow window,
                                       int type,
                                       int jfxKeyCode,
@@ -360,8 +360,8 @@ void glass_application_notifyKeyEvent(JNIEnv *env,
 
 /**
  * Notifications for mouse events
- * 
- * @param env 
+ *
+ * @param env
  * @param window the window that received the event
  * @param eventType one of com_sun_glass_events_MouseEvent_
  * @param x position relative to window
@@ -369,21 +369,21 @@ void glass_application_notifyKeyEvent(JNIEnv *env,
  * @param absx absolute position on screen
  * @param absy absolute position on screen
  * @param button button code for button reltaed events
- * @param modifiers MANDATORY - mask of currently pressed 
+ * @param modifiers MANDATORY - mask of currently pressed
  *                  special keys and mouse buttons.
  */
 void glass_application_notifyMouseEvent(JNIEnv *env,
                                         NativeWindow window,
                                         int eventType,
                                         int x,
-                                        int y, 
+                                        int y,
                                         int absx,
                                         int absy,
                                         int button);
 
 /**
  * Notify LensApplication of scroll event
- * 
+ *
  * @param env
  * @param window A reference to LenApplication object
  * @param x mouse x position relative to window
@@ -392,7 +392,7 @@ void glass_application_notifyMouseEvent(JNIEnv *env,
  * @param yabs mouse y absolute position on screen
  * @param dx horizontal scroll delta
  * @param dy vertical scroll delta
- * @param modifiersMask mask of currently pressed pecial keys 
+ * @param modifiersMask mask of currently pressed pecial keys
  *                      and mouse buttons.
  */
 void glass_application_notifyScrollEvent(JNIEnv *env,
@@ -412,7 +412,7 @@ void glass_application_notifyScrollEvent(JNIEnv *env,
  * @param lensWindow A reference to LensWindow object
  * @param state the state of the finger location (e.g.
  * TouchEvent.TOUCH_PRESSED)
- * @param id The event ID 
+ * @param id The event ID
  * @param x x position relative to window
  * @param y y position relative to window
  * @param xabs x absolute position
@@ -531,17 +531,17 @@ void glass_application_notifyViewEvent(JNIEnv *env,
                                        int width,
                                        int height);
 
-/** 
- * Notify the view for context menu hint, usually mouse right 
- * click or some keyboard sequence 
- * 
+/**
+ * Notify the view for context menu hint, usually mouse right
+ * click or some keyboard sequence
+ *
  * @param env
  * @param view the view to notify
  * @param x relative to the view
  * @param y relative to the view
  * @param xAbs relative to the screen
  * @param yAbs relative to the screen
- * @param isKeyboardTrigger true if generated by keyboard 
+ * @param isKeyboardTrigger true if generated by keyboard
  *                          sequence
  */
 void glass_application_notifyMenuEvent(JNIEnv *env,
@@ -562,24 +562,24 @@ void glass_application_notifyDeviceEvent(JNIEnv *env,
                                          jboolean attach);
 
 /**
- * Call Window.java::add(Window window) private method that adds 
- * a window to the visible window list. 
- * Windows on that list are the actual windows rendered by 
- * Quantum/Prism 
- * 
- * @param env 
+ * Call Window.java::add(Window window) private method that adds
+ * a window to the visible window list.
+ * Windows on that list are the actual windows rendered by
+ * Quantum/Prism
+ *
+ * @param env
  * @param window the window to add
  */
 void glass_application_addWindowToVisibleWindowList(JNIEnv *env,
                                                     NativeWindow window);
 
 /**
- * Call Window.java::remove(Window window) private method that 
- * removes a window from the visible window list. 
- * Windows on that list are the actual windows rendered by 
- * Quantum/Prism 
- * 
- * @param env 
+ * Call Window.java::remove(Window window) private method that
+ * removes a window from the visible window list.
+ * Windows on that list are the actual windows rendered by
+ * Quantum/Prism
+ *
+ * @param env
  * @param window the window to remove
  */
 void glass_application_RemoveWindowFromVisibleWindowList(JNIEnv *env,
@@ -598,74 +598,74 @@ typedef enum _NativeWindowState{
     NWS_FULLSCREEN
 } NativeWindowState;
 
-/**                                                                      
+/**
  * This data structure represent the native information
- * associated with the Glass window (FX stage). Window can have 
+ * associated with the Glass window (FX stage). Window can have
  * only one view attached to it in given time, or no view at all
- */                                                                      
-struct _NativeWindow {                                           
-    //reference for LensWindow object                                    
+ */
+struct _NativeWindow {
+    //reference for LensWindow object
     jobject lensWindow;
-    
-    //if the window had an owner it means the window is a sub window, usualy a 
+
+    //if the window had an owner it means the window is a sub window, usualy a
     //'pop-up'
     NativeWindow owner;
 
-    //the screen which the window belong to (will be required 
+    //the screen which the window belong to (will be required
     //for multi-screen support)
     NativeScreen screen;
-                                                                         
-    //id of this window (should be set by the platform)                  
+
+    //id of this window (should be set by the platform)
     int id;
     //the current opacity of the window
     unsigned char opacity;
 
     // creation mask
     int creationMask;
-                                                                         
-    LensBounds currentBounds;                                            
-    //cached bound is used when window is changed to                     
+
+    LensBounds currentBounds;
+    //cached bound is used when window is changed to
     //minimized/maximized/fullscreen state. When restoring a window those
-    //values are used                                                    
+    //values are used
     LensBounds cachedBounds;
-    
+
     //indicate whether the window should read and process events.
-    //usually used when each window have its own event loop handler 
+    //usually used when each window have its own event loop handler
     //and may be used latter for enabling/disabling windows
-    jboolean processEvents;                                           
-                                                                         
-    //window restrictions                                                
-    int minWidth;                                                        
-    int maxWidth;                                                        
-    int minHeight;                                                       
-    int maxHeight;                                                       
-                                                                         
-    NativeWindowState state;                                      
-                                                                         
-    //windows link list                                                  
-    NativeWindow previousWindow;                                
-    NativeWindow nextWindow;                                    
-                                                                         
-    //changed according to different platforms                           
-    PlatformWindowData data;                                     
-                                                                         
-    //Windows view (will be set through attachViewToWindow)              
-    NativeView view;                                             
+    jboolean processEvents;
+
+    //window restrictions
+    int minWidth;
+    int maxWidth;
+    int minHeight;
+    int maxHeight;
+
+    NativeWindowState state;
+
+    //windows link list
+    NativeWindow previousWindow;
+    NativeWindow nextWindow;
+
+    //changed according to different platforms
+    PlatformWindowData data;
+
+    //Windows view (will be set through attachViewToWindow)
+    NativeView view;
 
     //root window of this tree - the window with no owner
     //will match this NativeWindow if is the root.
     NativeWindow root;
-                                                                         
+
     float alpha;
 
-    jboolean hideCursorInFulscreen;                                      
+    jboolean hideCursorInFulscreen;
 
     jboolean isFocusable;
     jboolean isVisible;
     jboolean isEnabled;
 
-                                                                         
-};                                                           
+
+};
 
 /**
  * Service function to convert NativeWindowState to a string
@@ -677,21 +677,21 @@ struct _NativeWindow {
 char *lens_window_getNativeStateName(NativeWindowState state);
 
 /**
- * Service function that release _NativeWindow resources and 
- * calling glass_window_PlatformWindowRelease to release 
- * platform resources 
- * 
- * @param env 
- * @param window 
- * 
+ * Service function that release _NativeWindow resources and
+ * calling glass_window_PlatformWindowRelease to release
+ * platform resources
+ *
+ * @param env
+ * @param window
+ *
  * @return LensResult LENS_OK on success
  */
 LensResult glass_window_NativeWindow_release(JNIEnv *env, NativeWindow window);
 
 /**
- * Create and initialize any platform specific window related 
- * resources 
- * 
+ * Create and initialize any platform specific window related
+ * resources
+ *
  * @param env
  * @param window as created in
  *               Java_com_sun_glass_ui_lens_LensWindow__1createWindow
@@ -701,11 +701,11 @@ LensResult glass_window_PlatformWindowData_create(JNIEnv *env,
                                                   NativeWindow window);
 
 /**
- * Release the platform window resources 
- *  
+ * Release the platform window resources
+ *
  * @param data As was created by
  *                            glass_window_PlatformWindowData_create()
- * 
+ *
  * @return LensResult LENS_OK on success
  */
 LensResult glass_window_PlatformWindowRelease(JNIEnv *env, NativeWindow window);
@@ -925,22 +925,22 @@ jboolean glass_window_setMaximumSize(JNIEnv *env,
 
 /**
  * This service function checks if given width and height can be
- * applied to the given window by comparing them to the window's 
- * max and min attributes that were set by 
+ * applied to the given window by comparing them to the window's
+ * max and min attributes that were set by
  * glass_window_setMaximumSize() and
  * glass_window_setMinimumSize().
  * If given values are out of bounds they will be update with
  * the closest in bounds values to match the restrictions.
- * 
- * 
+ *
+ *
  * @param window the window to check
  * @param width [IN/OUT] the requested width of a window. Will
  *              be changed to value within bounds
  * @param height [IN/OUT] the requested height of a window. Will
  *              be changed to value within bounds
- * @return JNI_TRUE means values are valid, JNI_FALSE means 
+ * @return JNI_TRUE means values are valid, JNI_FALSE means
  *         values are not valid and have been updated.
- * 
+ *
  */
 jboolean glass_window_check_bounds(NativeWindow window,
                                    int *width,
@@ -987,7 +987,7 @@ jboolean glass_window_minimize(JNIEnv *env,
 
 
 /**
- * Lock the windows list. 
+ * Lock the windows list.
  * Blocks until the window list lock is available. May not be
  * called twice from the same thread without unlocking in
  * between.
@@ -995,9 +995,9 @@ jboolean glass_window_minimize(JNIEnv *env,
 void glass_window_list_lock();
 
 /**
- * Check that *window* exists in the windows list. Not 
- * using locks. Use glass_window_list_lock() 
- * and glass_window_list_unlock() before and after the 
+ * Check that *window* exists in the windows list. Not
+ * using locks. Use glass_window_list_lock()
+ * and glass_window_list_unlock() before and after the
  * function call.
  * @return true - if window exists, false otherwise.
  */
@@ -1011,14 +1011,14 @@ void glass_window_list_unlock();
 /**
  * Return the list size. Not protected by Mutex. Use
  * glass_window_list_lock/unlock in the calling context
- *  
+ *
  * @return int - the list size
  */
 int glass_window_list_getSize();
 
 /**
- * Get the first (farthest) window in the window list. Not 
- * protected by Mutex. Use glass_window_list_lock/unlock in the 
+ * Get the first (farthest) window in the window list. Not
+ * protected by Mutex. Use glass_window_list_lock/unlock in the
  * calling context
  *
  * @return First window or NULL for empty list
@@ -1026,8 +1026,8 @@ int glass_window_list_getSize();
 NativeWindow glass_window_list_getHead();
 
 /**
- * Get the last (closest)  window in the window list. Not 
- * protected by Mutex. Use glass_window_list_lock/unlock in the 
+ * Get the last (closest)  window in the window list. Not
+ * protected by Mutex. Use glass_window_list_lock/unlock in the
  * calling context
  *
  * @return last window or NULL for empty list
@@ -1035,17 +1035,17 @@ NativeWindow glass_window_list_getHead();
 NativeWindow glass_window_list_getTail();
 
 /**
- * Reorder windows list putting window in the front. This 
- * function is thread safe and uses 
- * glass_window_list_lock/unlock during operation 
+ * Reorder windows list putting window in the front. This
+ * function is thread safe and uses
+ * glass_window_list_lock/unlock during operation
  *
  * @param window window
  */
 jboolean glass_window_list_toFront(NativeWindow window);
 
 /**
- * Reorder windows list putting window in the back. This 
- * function is thread safe and uses 
+ * Reorder windows list putting window in the back. This
+ * function is thread safe and uses
  * glass_window_list_lock/unlock during operation
  *
  * @param window window
@@ -1054,15 +1054,15 @@ jboolean glass_window_list_toBack(NativeWindow window);
 
 /**
  * Add a window to the windows list. This function is thread safe
- * and uses glass_window_list_lock/unlock during operation 
+ * and uses glass_window_list_lock/unlock during operation
  *
  * @param window window
  */
 void glass_window_list_add(NativeWindow window);
 
 /**
- * Remove a window from the windows list. This 
- * function is thread safe and uses 
+ * Remove a window from the windows list. This
+ * function is thread safe and uses
  * glass_window_list_lock/unlock during operation
  *
  * @param window window
@@ -1070,15 +1070,15 @@ void glass_window_list_add(NativeWindow window);
 void glass_window_list_remove(NativeWindow window);
 
 /**
- * Print the content of the windows list to the console. Used 
- * for debugging.This function is thread safe and uses 
- * glass_window_list_lock/unlock during operation 
+ * Print the content of the windows list to the console. Used
+ * for debugging.This function is thread safe and uses
+ * glass_window_list_lock/unlock during operation
  */
 void glass_window_listPrint();
 
 /**
- * Get the current focused window (as was set by 
- * glass_window_setFocusedWindow()) 
+ * Get the current focused window (as was set by
+ * glass_window_setFocusedWindow())
  *
  * @return Focused window or NULL if no window is focused
  */
@@ -1087,19 +1087,19 @@ NativeWindow glass_window_getFocusedWindow();
 /**
  * Set the current focused window
  *
- * @param window window or NULL 
+ * @param window window or NULL
  */
 LensResult glass_window_setFocusedWindow(NativeWindow window);
 
 /**
- * Service function that will reset the focused window, i.e 
- * glass_window_getFocusedWindow() will return NULL, if its 
- * equal to the provided window 
- * 
- * @param window if focused window is equal to this window the 
+ * Service function that will reset the focused window, i.e
+ * glass_window_getFocusedWindow() will return NULL, if its
+ * equal to the provided window
+ *
+ * @param window if focused window is equal to this window the
  *               focus will be reset
- * 
- * @return LensResult LENS_OK on success 
+ *
+ * @return LensResult LENS_OK on success
  */
 LensResult glass_window_resetFocusedWindow(NativeWindow window);
 
@@ -1136,38 +1136,38 @@ struct _NativeView {
 
 
 /**
- * Create platform specific data for view. 
- *  
- * The platform should allocate and initiliaze any resource that 
- * it requires and register it to the view->data field. 
- *  
- * 
+ * Create platform specific data for view.
+ *
+ * The platform should allocate and initiliaze any resource that
+ * it requires and register it to the view->data field.
+ *
+ *
  * @param view Allocated and initialized NativeView
- * 
+ *
  * @return LensResult LENS_OK on success
- * 
+ *
  */
 LensResult glass_view_PlatformViewData_create(NativeView view);
 
 /**
  * Release PlatformViewData resources
- * 
- * 
+ *
+ *
  * @param env env
  * @param data as created by
  *                         glass_view_PlatformViewData_create
- * 
+ *
  * @return LensResult LENS_OK on success
  */
 LensResult glass_view_PlatformViewRelease(JNIEnv *env, NativeView view);
 
 /**
  * Service funtion to close NativeView
- * 
+ *
  * @param env env
- * @param view as created in 
+ * @param view as created in
  *             Java_com_sun_glass_ui_lens_LensView__1createNativeView
- * 
+ *
  * @return LensResult LENS_OK on success
  */
 LensResult glass_view_releaseNativeView(JNIEnv *env, NativeView view);
@@ -1212,15 +1212,15 @@ void glass_view_setParent(JNIEnv* env,
  * need to notify view with
  * com_sun_glass_events_ViewEvent_FULLSCREEN_ENTER event on
  * completion
- * 
- * 
+ *
+ *
  * @param env
  * @param view as created by
  *                         Java_com_sun_glass_ui_lens_LensView__1createNativeView
  * @param animate should transformation will be animated
  * @param keepRatio keep the same ratio of the surface
  * @param hideCursor when JNI_TRUE
- * 
+ *
  * @return jboolean JNI_TRUE on success
  */
 jboolean glass_view_enterFullscreen(JNIEnv* env,
@@ -1247,13 +1247,13 @@ jboolean glass_view_exitFullscreen(JNIEnv *env,
 
 /**
  * Calculate the biggest surface possible to fit full screen,
- * while keeping the original surface ratio required for 
- * glass_view_enterFullscreen when keepRatio is true 
- *  
- * The function will update the NativeView::bounds field to 
- * represent the new bounds 
- * 
- * 
+ * while keeping the original surface ratio required for
+ * glass_view_enterFullscreen when keepRatio is true
+ *
+ * The function will update the NativeView::bounds field to
+ * represent the new bounds
+ *
+ *
  * @param screen  [IN] screen information
  * @param view [IN/OUT] current surface
  */
@@ -1281,7 +1281,7 @@ void glass_view_fitSurfaceToScreen(NativeScreen screen,
  * documentation for more information and usage.
  *
  * @param env
- * @param array jint* of pixels 
+ * @param array jint* of pixels
  * @param window
  * @param width
  * @param height
@@ -1303,14 +1303,14 @@ void glass_pixel_attachIntBuffer(JNIEnv *env,
 /**
  * Post scroll event to current window
  *
- * @param wheelAmt - wheeling direction - 
+ * @param wheelAmt - wheeling direction -
  *                 com_sun_glass_ui_Robot_WHEEL_UP/WHEEL_DOWN
- *  
- * @param x - x coordinate required for scroll event 
- *  
- * @param y - y coordinate required for scroll event 
- *  
- * @return jboolean JNI_TRUE on success 
+ *
+ * @param x - x coordinate required for scroll event
+ *
+ * @param y - y coordinate required for scroll event
+ *
+ * @return jboolean JNI_TRUE on success
  */
 jboolean glass_robot_postScrollEvent(JNIEnv *env,
                                      jint wheelAmt);
@@ -1320,7 +1320,7 @@ jboolean glass_robot_postScrollEvent(JNIEnv *env,
  *
  * @param keyEventType
  *                     com_sun_glass_events_KeyEvent_PRESS/RELEASE
- * @param jfxKeyCode The JFX kecode as described in 
+ * @param jfxKeyCode The JFX kecode as described in
  *                   com_sun_glass_events_KeyEvent.h
  *
  * @return jboolean JNI_TRUE on success
@@ -1363,75 +1363,75 @@ jboolean  glass_robot_getMouseLocation(jint *x, jint *y);
 /////////// Input events
 
 /**
- * Currently all platforms shares the same key maps based on linux 
- * kernel key codes. 
- *  
- * The functions bellow are utility functions to retrieve information 
- * from that table. 
- *  
- * If a future platform will not be able to use this services, the service 
- * should be extended to support proprietary platform key codes and use the same 
- * functions provided bellow. 
- *  
- * Note: unicode is not supported 
+ * Currently all platforms shares the same key maps based on linux
+ * kernel key codes.
+ *
+ * The functions bellow are utility functions to retrieve information
+ * from that table.
+ *
+ * If a future platform will not be able to use this services, the service
+ * should be extended to support proprietary platform key codes and use the same
+ * functions provided bellow.
+ *
+ * Note: unicode is not supported
  */
 
 /**
- * Most of mouse and key events requires, and some times 
- * depends, on the modifiers mask defined in 
- * com_sun_glass_events_KeyEvent_MODIFIER_* 
- *  
- * The functions bellow provides and API to manage them 
+ * Most of mouse and key events requires, and some times
+ * depends, on the modifiers mask defined in
+ * com_sun_glass_events_KeyEvent_MODIFIER_*
+ *
+ * The functions bellow provides and API to manage them
  */
 
 /**
- * Return the VK code represent the given character on the platform, 
- * if available. 
- * Return com_sun_glass_events_KeyEvent_VK_UNDEFINED otherwise. 
- *  
- * NOTE: currently unicode is not supported 
- * 
+ * Return the VK code represent the given character on the platform,
+ * if available.
+ * Return com_sun_glass_events_KeyEvent_VK_UNDEFINED otherwise.
+ *
+ * NOTE: currently unicode is not supported
+ *
  * @param c the charcter requied
- * 
- * @return int 
+ *
+ * @return int
  */
 int glass_inputEvents_getJavaKeyCodeFromJChar(jchar c);
 
 /**
- * Return the string represtation of a key. Modifiers are 
- * respected. 
- * 
- * @param jfxKeyCode one of 
+ * Return the string represtation of a key. Modifiers are
+ * respected.
+ *
+ * @param jfxKeyCode one of
  *                   com_sun_glass_events_KeyEvent_VK_*
  * @param keyStr [OUT] the string
- * 
+ *
  * @return LensResult JNI_TRUE on success
  */
 LensResult glass_inputEvents_getKeyChar(int jfxKeyCode, char **keyStr);
 
 /**
- * Check if either to use the shift version ('upper case') or 
- * normal version('lower case') of a key based on current 
- * modifiers mask including caps lock. 
- * 
- * @param keyCode one of 
+ * Check if either to use the shift version ('upper case') or
+ * normal version('lower case') of a key based on current
+ * modifiers mask including caps lock.
+ *
+ * @param keyCode one of
  *                   com_sun_glass_events_KeyEvent_VK_*
- * 
- * @return jboolean JNI_TRUE if key should represented by the 
+ *
+ * @return jboolean JNI_TRUE if key should represented by the
  *         'shifted' version
  */
 jboolean glass_inputEvents_checkForShift(int keyCode);
 
 /**
- * Translate platform key code to JFX key code. 
- *  
- * Note: Currently only linux kernel key codes are supported. 
- * This method and the data structures its depends on should be 
- * changed if more platform code should be supported 
- * 
- * @param platformKeyCode 
- * 
- * @return int one of 
+ * Translate platform key code to JFX key code.
+ *
+ * Note: Currently only linux kernel key codes are supported.
+ * This method and the data structures its depends on should be
+ * changed if more platform code should be supported
+ *
+ * @param platformKeyCode
+ *
+ * @return int one of
  *                   com_sun_glass_events_KeyEvent_VK_*
  */
 int glass_inputEvents_getJavaKeycodeFromPlatformKeyCode(int platformKeyCode);
@@ -1439,41 +1439,41 @@ int glass_inputEvents_getJavaKeycodeFromPlatformKeyCode(int platformKeyCode);
 /**
  * Update modifiers related to key events. Unrelated key events
  * will be ignored, so its safe to call this for any key event.
- * 
- * @param keyCode com_sun_glass_events_KeyEvent_VK_* 
+ *
+ * @param keyCode com_sun_glass_events_KeyEvent_VK_*
  * @param eventType one of com_sun_glass_events_KeyEvent_
- * 
- * @param keyCode 
- * @param eventType 
+ *
+ * @param keyCode
+ * @param eventType
  */
 void glass_inputEvents_updateKeyModifiers(int keyCode, int eventType);
 
 /**
- * Update modifiers related to mouse events. 
+ * Update modifiers related to mouse events.
  * Unrelated events will be ignored so its safe to call this for
- * any mouse event. 
- * 
- * 
+ * any mouse event.
+ *
+ *
  * @param button one of com_sun_glass_events_MouseEvent_BUTTON_
  * @param eventType one of com_sun_glass_events_MouseEvent_*
  */
 void glass_inputEvents_updateMouseButtonModifiers(int button, int eventType);
 
 /**
- * Get current modifiers mask which is a bit mask of 
- * com_sun_glass_events_KeyEvent_MODIFIER_* 
- * 
- * @return int current mask (can be 
+ * Get current modifiers mask which is a bit mask of
+ * com_sun_glass_events_KeyEvent_MODIFIER_*
+ *
+ * @return int current mask (can be
  *         com_sun_glass_events_KeyEvent_MODIFIER_NONE)
  */
 int glass_inputEvents_getModifiers();
 
 /**
  * Check if current key is considered as a modifier
- * 
- * @param jfxKeyCode key to check. one of 
+ *
+ * @param jfxKeyCode key to check. one of
  *                   com_sun_glass_events_KeyEvent_VK_*
- * 
+ *
  * @return jboolean JNI_TRUE if its a modifier
  */
 jboolean glass_inputEvents_isKeyModifier(int jfxKeyCode);
@@ -1485,17 +1485,17 @@ jboolean glass_inputEvents_isKeyModifier(int jfxKeyCode);
 
 /////////// Cursor
 /**
- * Set the cursor to the one specified by ptr.  
- * 
- * @param ptr a pointer/handle to a custom cursor returned by 
+ * Set the cursor to the one specified by ptr.
+ *
+ * @param ptr a pointer/handle to a custom cursor returned by
  *  glass_cursor_createNativeCursor().
  */
 void glass_cursor_setNativeCursor(jlong ptr);
 
 /**
- * Release the cursor specified by ptr.  
- * 
- * @param ptr a pointer/handle to a custom cursor returned by 
+ * Release the cursor specified by ptr.
+ *
+ * @param ptr a pointer/handle to a custom cursor returned by
  *  glass_cursor_createNativeCursor().
  */
 void glass_cursor_releaseNativeCursor(jlong ptr);
@@ -1503,20 +1503,20 @@ void glass_cursor_releaseNativeCursor(jlong ptr);
 
 /**
  * Create a cursor represented by srcArray, pointing to (x,y)
- * 
- * @param x the the cursor x hotspot. 
+ *
+ * @param x the the cursor x hotspot.
  * @param y the the cursor y hotspot.
- * @param srcArray the image of the cursor - ARGB. 
+ * @param srcArray the image of the cursor - ARGB.
  * @param width the width of the cursor.
  * @param height the height of the cursor.
  */
-jlong glass_cursor_createNativeCursor(JNIEnv *env,jint x, jint y,  
+jlong glass_cursor_createNativeCursor(JNIEnv *env,jint x, jint y,
                                       jbyte* srcArray, jint width, jint height);
 
 /**
  * Set the cursor to be visible or not.
- * 
- * @param isVisible true iff the cursor should be seen. 
+ *
+ * @param isVisible true iff the cursor should be seen.
  */
 void glass_cursor_setVisible(jboolean isVisible);
 

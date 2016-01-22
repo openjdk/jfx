@@ -43,7 +43,7 @@ import com.oracle.javafx.scenebuilder.kit.fxom.FXOMPropertyC;
 public class RemovePropertyValueJob extends Job {
 
     private final FXOMObject targetValue;
-    
+
     private FXOMPropertyC parentProperty;
     private int indexInParentProperty;
     private RemovePropertyJob removePropertyJob;
@@ -52,12 +52,12 @@ public class RemovePropertyValueJob extends Job {
         super(editorController);
         this.targetValue = value;
     }
-    
-    
+
+
     /*
      * Job
      */
-    
+
     @Override
     public boolean isExecutable() {
         return targetValue.getParentProperty() != null;
@@ -67,7 +67,7 @@ public class RemovePropertyValueJob extends Job {
     public void execute() {
         assert parentProperty == null;
         assert isExecutable();
-        
+
         parentProperty = targetValue.getParentProperty();
         indexInParentProperty = targetValue.getIndexInParentProperty();
         if ((parentProperty.getValues().size() == 1) && (parentProperty.getParentInstance() != null)) {
@@ -75,7 +75,7 @@ public class RemovePropertyValueJob extends Job {
             // => parent property must also be removed from its parent instance
             removePropertyJob = new RemovePropertyJob(parentProperty, getEditorController());
         }
-        
+
         // Note : below we may have to run removePropertyJob.execute() so
         // we cannot re-use redo() here.
         getEditorController().getFxomDocument().beginUpdate();
@@ -89,7 +89,7 @@ public class RemovePropertyValueJob extends Job {
     @Override
     public void undo() {
         assert targetValue.getParentProperty() == null;
-        
+
         getEditorController().getFxomDocument().beginUpdate();
         targetValue.addToParentProperty(indexInParentProperty, parentProperty);
         if (removePropertyJob != null) {
@@ -105,7 +105,7 @@ public class RemovePropertyValueJob extends Job {
     public void redo() {
         assert targetValue.getParentProperty() == parentProperty;
         assert targetValue.getIndexInParentProperty() == indexInParentProperty;
-        
+
         getEditorController().getFxomDocument().beginUpdate();
         if (removePropertyJob != null) {
             removePropertyJob.redo();
@@ -119,10 +119,10 @@ public class RemovePropertyValueJob extends Job {
     @Override
     public String getDescription() {
         // Should normally not reach the user
-        return getClass().getSimpleName() 
-                + "[" 
+        return getClass().getSimpleName()
+                + "["
                 + targetValue.getGlueElement().getTagName()
                 + "]";
     }
-    
+
 }

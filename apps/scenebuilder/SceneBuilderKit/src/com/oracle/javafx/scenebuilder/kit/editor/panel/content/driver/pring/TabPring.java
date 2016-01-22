@@ -45,7 +45,7 @@ import javafx.scene.paint.Paint;
 
 /**
  *
- * 
+ *
  */
 public class TabPring extends AbstractPring<Tab> {
 
@@ -61,23 +61,23 @@ public class TabPring extends AbstractPring<Tab> {
     //     +--------------------------------------+
     //     7                                      6
     //
-        
+
 
     private final TabOutline tabOutline;
 
     private Node tabNode; // Skin node representing the tab
-    
+
     public TabPring(ContentPanelController contentPanelController, FXOMInstance fxomInstance) {
         super(contentPanelController, fxomInstance, Tab.class);
         assert fxomInstance.getSceneGraphObject() instanceof Tab;
-        
+
         tabOutline = new TabOutline(getSceneGraphObject());
         tabOutline.getRingPath().getStyleClass().add(PARENT_RING_CLASS);
         getRootNode().getChildren().add(tabOutline.getRingPath());
-        
+
         attachPring(tabOutline.getRingPath());
     }
-    
+
     public FXOMInstance getFxomInstance() {
         return (FXOMInstance) getFxomObject();
     }
@@ -85,22 +85,22 @@ public class TabPring extends AbstractPring<Tab> {
     /*
      * AbstractPring
      */
-    
+
     @Override
     protected void layoutDecoration() {
         tabOutline.layout(this);
     }
-    
+
     @Override
     public void changeStroke(Paint stroke) {
         tabOutline.getRingPath().setStroke(stroke);
     }
-    
-    
+
+
     /*
      * AbstractDecoration
      */
-    
+
     @Override
     public Bounds getSceneGraphObjectBounds() {
         return getSceneGraphObject().getTabPane().getLayoutBounds();
@@ -114,11 +114,11 @@ public class TabPring extends AbstractPring<Tab> {
     @Override
     protected void startListeningToSceneGraphObject() {
         assert tabNode == null;
-        
+
         final TabPane tabPane = getSceneGraphObject().getTabPane();
         startListeningToLayoutBounds(tabPane);
         startListeningToLocalToSceneTransform(tabPane);
-        
+
         final TabPaneDesignInfoX di = new TabPaneDesignInfoX();
         tabNode = di.getTabNode(tabPane, getSceneGraphObject());
         startListeningToBoundsInParent(tabNode);
@@ -127,30 +127,30 @@ public class TabPring extends AbstractPring<Tab> {
     @Override
     protected void stopListeningToSceneGraphObject() {
         assert tabNode != null;
-        
+
         final TabPane tabPane = getSceneGraphObject().getTabPane();
         stopListeningToLayoutBounds(tabPane);
         stopListeningToLocalToSceneTransform(tabPane);
         stopListeningToBoundsInParent(tabNode);
-        
+
         tabNode = null;
     }
 
     @Override
     public AbstractGesture findGesture(Node node) {
         final AbstractGesture result;
-        
+
         if (node == tabOutline.getRingPath()) {
-            result = new SelectWithPringGesture(getContentPanelController(), 
+            result = new SelectWithPringGesture(getContentPanelController(),
                     getFxomInstance());
         } else {
             result = null;
         }
-        
+
         return result;
     }
-    
-    /* 
+
+    /*
      * Wraper to avoid the 'leaking this in constructor' warning emitted by NB.
      */
     private void attachPring(Node node) {

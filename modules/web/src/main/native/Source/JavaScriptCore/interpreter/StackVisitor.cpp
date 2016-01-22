@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -252,7 +252,7 @@ Arguments* StackVisitor::Frame::createArguments()
         ASSERT(m_inlineCallFrame);
         arguments = Arguments::create(vm, physicalFrame, m_inlineCallFrame);
         arguments->tearOff(physicalFrame, m_inlineCallFrame);
-    } else 
+    } else
 #endif
     {
         arguments = Arguments::create(vm, physicalFrame);
@@ -267,16 +267,16 @@ Arguments* StackVisitor::Frame::existingArguments()
         return 0;
     if (!codeBlock()->usesArguments())
         return 0;
-    
+
     VirtualRegister reg;
-        
+
 #if ENABLE(DFG_JIT)
     if (isInlinedFrame())
         reg = inlineCallFrame()->argumentsRegister;
     else
 #endif // ENABLE(DFG_JIT)
         reg = codeBlock()->argumentsRegister();
-    
+
     JSValue result = callFrame()->r(unmodifiedArgumentsRegister(reg).offset()).jsValue();
     if (!result)
         return 0;

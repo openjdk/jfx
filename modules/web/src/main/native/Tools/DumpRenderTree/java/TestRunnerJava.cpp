@@ -201,9 +201,9 @@ void TestRunner::setMainFrameIsFirstResponder(bool enabled)
     // FIXME: implement
 }
 
-void TestRunner::setMockGeolocationPosition(double latitude, double longitude, double accuracy, 
-    bool canProvideAltitude, double altitude, bool canProvideAltitudeAccuracy, 
-    double altitudeAccuracy, bool canProvideHeading, double heading, 
+void TestRunner::setMockGeolocationPosition(double latitude, double longitude, double accuracy,
+    bool canProvideAltitude, double altitude, bool canProvideAltitudeAccuracy,
+    double altitudeAccuracy, bool canProvideHeading, double heading,
     bool canProvideSpeed, double speed)
 {
     // FIXME: implement
@@ -339,27 +339,27 @@ void TestRunner::evaluateScriptInIsolatedWorld(unsigned worldId, JSObjectRef glo
     // FIXME: implement
 }
 
-void TestRunner::abortModal() 
+void TestRunner::abortModal()
 {
     //FIXME: implement
 }
 
 void TestRunner::addOriginAccessWhitelistEntry(
-    JSStringRef sourceOrigin, 
-    JSStringRef destinationProtocol, 
-    JSStringRef destinationHost, 
+    JSStringRef sourceOrigin,
+    JSStringRef destinationProtocol,
+    JSStringRef destinationHost,
     bool allowDestinationSubdomains)
 {
     //FIXME: implement
 }
 
-void TestRunner::apiTestGoToCurrentBackForwardItem() 
+void TestRunner::apiTestGoToCurrentBackForwardItem()
 {
     //FIXME: implement
 }
 
 void TestRunner::apiTestNewWindowDataLoadBaseURL(
-    JSStringRef utf8Data, 
+    JSStringRef utf8Data,
     JSStringRef baseURL)
 {
     //FIXME: implement
@@ -367,14 +367,14 @@ void TestRunner::apiTestNewWindowDataLoadBaseURL(
 
 // Simulate a request an embedding application could make, populating per-session credential storage.
 void TestRunner::authenticateSession(
-    JSStringRef url, 
-    JSStringRef username, 
+    JSStringRef url,
+    JSStringRef username,
     JSStringRef password)
 {
     //FIXME: implement
 }
 
-bool TestRunner::callShouldCloseOnWebView() 
+bool TestRunner::callShouldCloseOnWebView()
 {
     // FIXME: Implement for testing fix for https://bugs.webkit.org/show_bug.cgi?id=27481
     return false;

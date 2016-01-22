@@ -110,7 +110,7 @@ public class TestApplication extends Application {
                 }
                 ready.release();
             });
-            ready.acquire();          
+            ready.acquire();
         }
         return stage;
     }
@@ -231,7 +231,7 @@ public class TestApplication extends Application {
 
     public static void addTouchListeners() throws Exception {
         Consumer<List<TouchPoint>> logTouchPoints = (tps) -> {
-            TestLogShim.log("Touch points count: [" + tps.size() +"]"); 
+            TestLogShim.log("Touch points count: [" + tps.size() +"]");
             for (TouchPoint tp : tps) {
                 TestLogShim.log("TouchPoint: " + tp.getState() + " "
                         + (int) tp.getScreenX() + ", " + (int) tp.getScreenY()

@@ -40,12 +40,12 @@ package javafx.beans;
  * this library mark themselves as invalid when the first invalidation event
  * occurs. They do not generate anymore invalidation events until their value is
  * recomputed and valid again.
- * 
+ *
  * @see javafx.beans.value.ObservableValue
  * @see javafx.collections.ObservableList
  * @see javafx.collections.ObservableMap
- * 
- * 
+ *
+ *
  * @since JavaFX 2.0
  */
 public interface Observable {
@@ -65,9 +65,9 @@ public interface Observable {
      * listener by calling {@link #removeListener(InvalidationListener)
      * removeListener} after use or to use an instance of
      * {@link WeakInvalidationListener} avoid this situation.
-     * 
+     *
      * @see #removeListener(InvalidationListener)
-     * 
+     *
      * @param listener
      *            The listener to register
      * @throws NullPointerException
@@ -83,9 +83,9 @@ public interface Observable {
      * never added) then this method call is a no-op. If it had been previously
      * added then it will be removed. If it had been added more than once, then
      * only the first occurrence will be removed.
-     * 
+     *
      * @see #addListener(InvalidationListener)
-     * 
+     *
      * @param listener
      *            The listener to remove
      * @throws NullPointerException

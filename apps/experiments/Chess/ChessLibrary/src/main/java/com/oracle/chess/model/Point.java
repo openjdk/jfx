@@ -67,7 +67,7 @@ public final class Point {
     public Point incrementY(int delta) {
         return fromXY(x, y + delta);
     }
-    
+
     @Override
     public int hashCode() {
         return y * 8 + x;

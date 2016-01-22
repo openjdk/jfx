@@ -166,7 +166,7 @@ void computeBytecodeBasicBlocks(CodeBlock* codeBlock, Vector<RefPtr<BytecodeBasi
         if (block->isEntryBlock() || block->isExitBlock())
             continue;
 
-        bool fallsThrough = true; 
+        bool fallsThrough = true;
         for (unsigned bytecodeOffset = block->leaderBytecodeOffset(); bytecodeOffset < block->leaderBytecodeOffset() + block->totalBytecodeLength();) {
             const Instruction& currentInstruction = instructionsBegin[bytecodeOffset];
             OpcodeID opcodeID = interpreter->getOpcodeID(currentInstruction.u.opcode);
@@ -179,7 +179,7 @@ void computeBytecodeBasicBlocks(CodeBlock* codeBlock, Vector<RefPtr<BytecodeBasi
                 break;
             }
 
-            // If we found a throw, get the HandlerInfo for this instruction to see where we will jump. 
+            // If we found a throw, get the HandlerInfo for this instruction to see where we will jump.
             // If there isn't one, treat this throw as a terminal. This is true even if we have a finally
             // block because the finally block will create its own catch, which will generate a HandlerInfo.
             if (isThrow(opcodeID)) {

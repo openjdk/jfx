@@ -33,22 +33,22 @@ package com.oracle.javafx.scenebuilder.kit.metadata.klass;
 
 /**
  *
- * 
+ *
  */
 public abstract class ValueClassMetadata extends ClassMetadata {
 
     // Typing additions : size, angle...
     // Null value treatment
-    
+
     public ValueClassMetadata(Class<?> klass) {
         super(klass);
     }
-    
+
 
     /*
      * Object
      */
-    
+
     @Override
     public int hashCode() {
         return super.hashCode(); // Only to please FindBugs

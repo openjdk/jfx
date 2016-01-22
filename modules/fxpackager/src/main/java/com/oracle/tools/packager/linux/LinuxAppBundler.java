@@ -53,7 +53,7 @@ public class LinuxAppBundler extends AbstractImageBundler {
 
     private static final ResourceBundle I18N =
             ResourceBundle.getBundle(LinuxAppBundler.class.getName());
-    
+
     protected static final String LINUX_BUNDLER_PREFIX =
             BUNDLER_PREFIX + "linux" + File.separator;
     private static final String EXECUTABLE_NAME = "JavaAppLauncher";
@@ -314,7 +314,7 @@ public class LinuxAppBundler extends AbstractImageBundler {
         if (preloader != null) {
             out.println("jvmarg."+idx+"=-Djavafx.preloader="+preloader);
         }
-        
+
         //app.id required for setting user preferences (Java Preferences API)
         out.println("app.preferences.id=" + PREFERENCES_ID.fetchFrom(params));
         out.println("app.identifier=" + IDENTIFIER.fetchFrom(params));

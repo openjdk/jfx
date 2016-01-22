@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -139,7 +139,7 @@ ULONG STDMETHODCALLTYPE WebMutableURLRequest::Release(void)
 
 // IWebURLRequest --------------------------------------------------------------------
 
-HRESULT STDMETHODCALLTYPE WebMutableURLRequest::requestWithURL( 
+HRESULT STDMETHODCALLTYPE WebMutableURLRequest::requestWithURL(
     /* [in] */ BSTR /*theURL*/,
     /* [optional][in] */ WebURLRequestCachePolicy /*cachePolicy*/,
     /* [optional][in] */ double /*timeoutInterval*/)
@@ -148,35 +148,35 @@ HRESULT STDMETHODCALLTYPE WebMutableURLRequest::requestWithURL(
     return E_NOTIMPL;
 }
 
-HRESULT STDMETHODCALLTYPE WebMutableURLRequest::allHTTPHeaderFields( 
+HRESULT STDMETHODCALLTYPE WebMutableURLRequest::allHTTPHeaderFields(
     /* [retval][out] */ IPropertyBag** /*result*/)
 {
     ASSERT_NOT_REACHED();
     return E_NOTIMPL;
 }
 
-HRESULT STDMETHODCALLTYPE WebMutableURLRequest::cachePolicy( 
+HRESULT STDMETHODCALLTYPE WebMutableURLRequest::cachePolicy(
     /* [retval][out] */ WebURLRequestCachePolicy* result)
 {
     *result = kit(m_request.cachePolicy());
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE WebMutableURLRequest::HTTPBody( 
+HRESULT STDMETHODCALLTYPE WebMutableURLRequest::HTTPBody(
     /* [retval][out] */ IStream** /*result*/)
 {
     ASSERT_NOT_REACHED();
     return E_NOTIMPL;
 }
 
-HRESULT STDMETHODCALLTYPE WebMutableURLRequest::HTTPBodyStream( 
+HRESULT STDMETHODCALLTYPE WebMutableURLRequest::HTTPBodyStream(
     /* [retval][out] */ IStream** /*result*/)
 {
     ASSERT_NOT_REACHED();
     return E_NOTIMPL;
 }
 
-HRESULT STDMETHODCALLTYPE WebMutableURLRequest::HTTPMethod( 
+HRESULT STDMETHODCALLTYPE WebMutableURLRequest::HTTPMethod(
     /* [retval][out] */ BSTR* result)
 {
     BString httpMethod = BString(m_request.httpMethod());
@@ -184,7 +184,7 @@ HRESULT STDMETHODCALLTYPE WebMutableURLRequest::HTTPMethod(
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE WebMutableURLRequest::HTTPShouldHandleCookies( 
+HRESULT STDMETHODCALLTYPE WebMutableURLRequest::HTTPShouldHandleCookies(
     /* [retval][out] */ BOOL* result)
 {
     bool shouldHandleCookies = m_request.allowCookies();
@@ -193,7 +193,7 @@ HRESULT STDMETHODCALLTYPE WebMutableURLRequest::HTTPShouldHandleCookies(
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE WebMutableURLRequest::initWithURL( 
+HRESULT STDMETHODCALLTYPE WebMutableURLRequest::initWithURL(
     /* [in] */ BSTR url,
     /* [optional][in] */ WebURLRequestCachePolicy cachePolicy,
     /* [optional][in] */ double timeoutInterval)
@@ -205,28 +205,28 @@ HRESULT STDMETHODCALLTYPE WebMutableURLRequest::initWithURL(
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE WebMutableURLRequest::mainDocumentURL( 
+HRESULT STDMETHODCALLTYPE WebMutableURLRequest::mainDocumentURL(
     /* [retval][out] */ BSTR* result)
 {
     *result = MarshallingHelpers::URLToBSTR(m_request.firstPartyForCookies());
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE WebMutableURLRequest::timeoutInterval( 
+HRESULT STDMETHODCALLTYPE WebMutableURLRequest::timeoutInterval(
     /* [retval][out] */ double* result)
 {
     *result = m_request.timeoutInterval();
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE WebMutableURLRequest::URL( 
+HRESULT STDMETHODCALLTYPE WebMutableURLRequest::URL(
     /* [retval][out] */ BSTR* result)
 {
     *result = MarshallingHelpers::URLToBSTR(m_request.url());
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE WebMutableURLRequest::valueForHTTPHeaderField( 
+HRESULT STDMETHODCALLTYPE WebMutableURLRequest::valueForHTTPHeaderField(
     /* [in] */ BSTR field,
     /* [retval][out] */ BSTR* result)
 {
@@ -264,7 +264,7 @@ HRESULT STDMETHODCALLTYPE WebMutableURLRequest::isEqual(
 
 // IWebMutableURLRequest --------------------------------------------------------
 
-HRESULT STDMETHODCALLTYPE WebMutableURLRequest::addValue( 
+HRESULT STDMETHODCALLTYPE WebMutableURLRequest::addValue(
     /* [in] */ BSTR value,
     /* [in] */ BSTR field)
 {
@@ -272,14 +272,14 @@ HRESULT STDMETHODCALLTYPE WebMutableURLRequest::addValue(
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE WebMutableURLRequest::setAllHTTPHeaderFields( 
+HRESULT STDMETHODCALLTYPE WebMutableURLRequest::setAllHTTPHeaderFields(
     /* [in] */ IPropertyBag* /*headerFields*/)
 {
     ASSERT_NOT_REACHED();
     return E_NOTIMPL;
 }
 
-HRESULT STDMETHODCALLTYPE WebMutableURLRequest::setCachePolicy( 
+HRESULT STDMETHODCALLTYPE WebMutableURLRequest::setCachePolicy(
     /* [in] */ WebURLRequestCachePolicy policy)
 {
     m_request.setCachePolicy(core(policy));
@@ -314,42 +314,42 @@ HRESULT WebMutableURLRequest::setHTTPBodyStream(IStream* data)
     return setHTTPBody(data);
 }
 
-HRESULT STDMETHODCALLTYPE WebMutableURLRequest::setHTTPMethod( 
+HRESULT STDMETHODCALLTYPE WebMutableURLRequest::setHTTPMethod(
     /* [in] */ BSTR method)
 {
     m_request.setHTTPMethod(String(method));
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE WebMutableURLRequest::setHTTPShouldHandleCookies( 
+HRESULT STDMETHODCALLTYPE WebMutableURLRequest::setHTTPShouldHandleCookies(
     /* [in] */ BOOL handleCookies)
 {
     m_request.setAllowCookies(handleCookies);
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE WebMutableURLRequest::setMainDocumentURL( 
+HRESULT STDMETHODCALLTYPE WebMutableURLRequest::setMainDocumentURL(
     /* [in] */ BSTR theURL)
 {
     m_request.setFirstPartyForCookies(MarshallingHelpers::BSTRToKURL(theURL));
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE WebMutableURLRequest::setTimeoutInterval( 
+HRESULT STDMETHODCALLTYPE WebMutableURLRequest::setTimeoutInterval(
     /* [in] */ double timeoutInterval)
 {
     m_request.setTimeoutInterval(timeoutInterval);
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE WebMutableURLRequest::setURL( 
+HRESULT STDMETHODCALLTYPE WebMutableURLRequest::setURL(
     /* [in] */ BSTR url)
 {
     m_request.setURL(MarshallingHelpers::BSTRToKURL(url));
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE WebMutableURLRequest::setValue( 
+HRESULT STDMETHODCALLTYPE WebMutableURLRequest::setValue(
     /* [in] */ BSTR value,
     /* [in] */ BSTR field)
 {

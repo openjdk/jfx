@@ -45,7 +45,7 @@ public class Square {
     public Square(int x, int y) {
         this(x, y, null);
     }
-    
+
     public Square(int x, int y, Piece piece) {
         point = new Point(x, y);
         this.piece = piece;

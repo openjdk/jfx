@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -44,9 +44,9 @@ static const char *symbolLookupCallback(
     // if we try to disassemble garbage, since our code generator never uses them. These include things
     // like PC-relative references.
     static const bool crashOnUnexpected = false;
-    
+
     char* symbolString = static_cast<char*>(opaque);
-    
+
     switch (*referenceType) {
     case LLVMDisassembler_ReferenceType_InOut_None:
         return 0;
@@ -63,10 +63,10 @@ static const char *symbolLookupCallback(
             dataLog("referenceType = ", RawPointer(referenceType), ", *referenceType = ", *referenceType, "\n");
             dataLog("referencePC = ", referencePC, "\n");
             dataLog("referenceName = ", RawPointer(referenceName), "\n");
-            
+
             RELEASE_ASSERT_NOT_REACHED();
         }
-        
+
         *referenceName = "unimplemented reference type!";
         *referenceType = LLVMDisassembler_ReferenceType_InOut_None;
         snprintf(
@@ -81,7 +81,7 @@ bool tryToDisassembleWithLLVM(
     InstructionSubsetHint)
 {
     initializeLLVM();
-    
+
     const char* triple;
 #if CPU(X86_64)
     triple = "x86_64-apple-darwin";
@@ -94,17 +94,17 @@ bool tryToDisassembleWithLLVM(
 #endif
 
     char symbolString[symbolStringSize];
-    
+
     LLVMDisasmContextRef disassemblyContext =
         llvm->CreateDisasm(triple, symbolString, 0, 0, symbolLookupCallback);
     RELEASE_ASSERT(disassemblyContext);
-    
+
     char pcString[20];
     char instructionString[1000];
-    
+
     uint8_t* pc = static_cast<uint8_t*>(codePtr.executableAddress());
     uint8_t* end = pc + size;
-    
+
     while (pc < end) {
         snprintf(
             pcString, sizeof(pcString), "0x%lx",
@@ -113,17 +113,17 @@ bool tryToDisassembleWithLLVM(
         size_t instructionSize = llvm->DisasmInstruction(
             disassemblyContext, pc, end - pc, bitwise_cast<uintptr_t>(pc),
             instructionString, sizeof(instructionString));
-        
+
         if (!instructionSize)
             snprintf(instructionString, sizeof(instructionString), ".byte 0x%02x", *pc++);
         else
             pc += instructionSize;
-        
+
         out.printf("%s%16s: %s\n", prefix, pcString, instructionString);
     }
-    
+
     llvm->DisasmDispose(disassemblyContext);
-    
+
     return true;
 }
 

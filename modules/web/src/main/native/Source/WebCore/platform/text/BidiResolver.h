@@ -39,14 +39,14 @@ public:
     {
         reset();
     }
-    
+
     void reset()
     {
         m_numMidpoints = 0;
         m_currentMidpoint = 0;
         m_betweenMidpoints = false;
     }
-    
+
     void startIgnoringSpaces(const Iterator& midpoint)
     {
         ASSERT(!(m_numMidpoints % 2));
@@ -354,7 +354,7 @@ void BidiResolver<Iterator, Run>::checkDirectionInLowerRaiseEmbeddingLevel()
         && m_status.last != U_BOUNDARY_NEUTRAL
         && m_status.last != U_RIGHT_TO_LEFT_EMBEDDING
         && m_status.last != U_LEFT_TO_RIGHT_EMBEDDING
-        && m_status.last != U_RIGHT_TO_LEFT_OVERRIDE 
+        && m_status.last != U_RIGHT_TO_LEFT_OVERRIDE
         && m_status.last != U_LEFT_TO_RIGHT_OVERRIDE
         && m_status.last != U_POP_DIRECTIONAL_FORMAT);
     if (m_direction == U_OTHER_NEUTRAL)
@@ -680,7 +680,7 @@ void BidiResolver<Iterator, Run>::createBidiRunsForLine(const Iterator& end, Vis
                     } else if (m_status.lastStrong != U_LEFT_TO_RIGHT) {
                         //last stuff takes embedding dir
                         if (context()->dir() == U_RIGHT_TO_LEFT) {
-                            m_eor = m_last; 
+                            m_eor = m_last;
                             m_direction = U_RIGHT_TO_LEFT;
                         }
                         appendRun();
@@ -900,7 +900,7 @@ void BidiResolver<Iterator, Run>::createBidiRunsForLine(const Iterator& end, Vis
             }
             m_current = end;
             m_status = stateAtEnd.m_status;
-            m_sor = stateAtEnd.m_sor; 
+            m_sor = stateAtEnd.m_sor;
             m_eor = stateAtEnd.m_eor;
             m_last = stateAtEnd.m_last;
             m_reachedEndOfLine = stateAtEnd.m_reachedEndOfLine;
@@ -924,7 +924,7 @@ void BidiResolver<Iterator, Run>::createBidiRunsForLine(const Iterator& end, Vis
             if (committed && pastEnd) {
                 m_current = end;
                 m_status = stateAtEnd.m_status;
-                m_sor = stateAtEnd.m_sor; 
+                m_sor = stateAtEnd.m_sor;
                 m_eor = stateAtEnd.m_eor;
                 m_last = stateAtEnd.m_last;
                 m_reachedEndOfLine = stateAtEnd.m_reachedEndOfLine;

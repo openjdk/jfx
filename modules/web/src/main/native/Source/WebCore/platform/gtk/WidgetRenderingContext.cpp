@@ -74,7 +74,7 @@ WidgetRenderingContext::WidgetRenderingContext(GraphicsContext* graphicsContext,
 {
     RenderThemeGtk* theme = static_cast<RenderThemeGtk*>(RenderTheme::defaultTheme().get());
 
-    // Fallback: We failed to create an RGBA colormap earlier, so we cannot properly paint 
+    // Fallback: We failed to create an RGBA colormap earlier, so we cannot properly paint
     // to a temporary surface and preserve transparency. To ensure decent widget rendering, just
     // paint directly to the target drawable. This will not render CSS rotational transforms properly.
     if (!theme->m_themePartsHaveRGBAColormap && graphicsContext->gdkWindow()) {

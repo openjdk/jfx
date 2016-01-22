@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #import "WebCache.h"
@@ -60,7 +60,7 @@
     WTF::initializeMainThreadToProcessMainThread();
     RunLoop::initializeMainRunLoop();
 #endif
-    InitWebCoreSystemInterface();   
+    InitWebCoreSystemInterface();
 }
 
 + (NSArray *)statistics
@@ -232,7 +232,7 @@
 {
     if (!url)
         return nullptr;
-    
+
     WebCore::CachedResource* cachedResource = WebCore::memoryCache()->resourceForURL(url);
     if (!cachedResource || !cachedResource->isImage())
         return nullptr;

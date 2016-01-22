@@ -96,14 +96,14 @@ public class FitToParentObjectJob extends BatchDocumentJob {
             return result; // subJobs is empty => isExecutable will return false
         }
         // Preview version : Node must be resizable (as in SB 1.1)
-        // TODO : if the object is not resizable, 
+        // TODO : if the object is not resizable,
         // update its bounds but do not anchor it.
         final Node childNode = (Node) childObject;
         if (childNode.isResizable() == false) {
             return result; // subJobs is empty => isExecutable will return false
         }
         // Preview version : Parent node must be an AnchorPane (as in SB 1.1)
-        // TODO : if the object container is a Pane, 
+        // TODO : if the object container is a Pane,
         // update its bounds but do not anchor it.
         final Object parentObject = parentInstance.getSceneGraphObject();
         if ((parentObject instanceof AnchorPane) == false) {
@@ -168,7 +168,7 @@ public class FitToParentObjectJob extends BatchDocumentJob {
         }
         return result;
     }
-    
+
     @Override
     protected String makeDescription() {
         final StringBuilder sb = new StringBuilder();

@@ -178,7 +178,7 @@ ALWAYS_INLINE void MapData::const_iterator::internalIncrement()
         index++;
     m_index = index;
 }
-    
+
 ALWAYS_INLINE bool MapData::const_iterator::ensureSlot()
 {
     // When an iterator exists outside of host cost it is possible for

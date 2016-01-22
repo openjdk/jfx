@@ -35,7 +35,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 final class LocalizedStrings {
-    private final static Logger log = 
+    private final static Logger log =
         Logger.getLogger(LocalizedStrings.class.getName());
 
     private final static ResourceBundle BUNDLE =

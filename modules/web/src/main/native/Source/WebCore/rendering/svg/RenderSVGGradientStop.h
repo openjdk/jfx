@@ -26,7 +26,7 @@
 #include "SVGStopElement.h"
 
 namespace WebCore {
-    
+
 class SVGGradientElement;
 
 // This class exists mostly so we can hear about gradient stop style changes

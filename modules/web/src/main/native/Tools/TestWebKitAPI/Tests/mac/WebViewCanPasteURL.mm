@@ -45,9 +45,9 @@ TEST(WebKit1, WebViewCanPasteURL)
     DOMElement *documentElement = [document documentElement];
     DOMHTMLAnchorElement *anchor = (DOMHTMLAnchorElement *)[documentElement querySelector:@"a"];
     NSString *text = [anchor href];
-    
+
     EXPECT_EQ(String("http://www.webkit.org/"), String(text));
-    
+
     [webView release];
 }
 

@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -146,10 +146,10 @@ static double mediaTimeToCurrentTime(CFTimeInterval t)
 void PlatformCALayerMac::setOwner(PlatformCALayerClient* owner)
 {
     PlatformCALayer::setOwner(owner);
-    
+
     // Change the delegate's owner if needed
     if (m_delegate)
-        [static_cast<WebAnimationDelegate*>(m_delegate.get()) setOwner:this];        
+        [static_cast<WebAnimationDelegate*>(m_delegate.get()) setOwner:this];
 }
 
 static NSString *toCAFilterType(PlatformCALayer::FilterType type)
@@ -198,7 +198,7 @@ PlatformCALayerMac::PlatformCALayerMac(LayerType layerType, PlatformCALayerClien
 
     if (layerClass)
         m_layer = adoptNS([[layerClass alloc] init]);
-    
+
     commonInit();
 }
 
@@ -215,7 +215,7 @@ void PlatformCALayerMac::commonInit()
     BEGIN_BLOCK_OBJC_EXCEPTIONS
     // Save a pointer to 'this' in the CALayer
     [m_layer.get() setValue:[NSValue valueWithPointer:this] forKey:platformCALayerPointer];
-    
+
     // Clear all the implicit animations on the CALayer
     [m_layer web_disableAllActions];
 
@@ -251,7 +251,7 @@ PassRefPtr<PlatformCALayer> PlatformCALayerMac::clone(PlatformCALayerClient* own
         break;
     };
     RefPtr<PlatformCALayer> newLayer = PlatformCALayerMac::create(type, owner);
-    
+
     newLayer->setPosition(position());
     newLayer->setBounds(bounds());
     newLayer->setAnchorPoint(anchorPoint());
@@ -285,7 +285,7 @@ PassRefPtr<PlatformCALayer> PlatformCALayerMac::clone(PlatformCALayerClient* own
 PlatformCALayerMac::~PlatformCALayerMac()
 {
     [m_layer.get() setValue:nil forKey:platformCALayerPointer];
-    
+
     // Remove the owner pointer from the delegate in case there is a pending animationStarted event.
     [static_cast<WebAnimationDelegate*>(m_delegate.get()) setOwner:nil];
 
@@ -308,7 +308,7 @@ void PlatformCALayerMac::setNeedsDisplay(const FloatRect* dirtyRect)
         [m_layer.get() setNeedsDisplay];
     END_BLOCK_OBJC_EXCEPTIONS
 }
-    
+
 void PlatformCALayerMac::setContentsChanged()
 {
     BEGIN_BLOCK_OBJC_EXCEPTIONS
@@ -392,11 +392,11 @@ void PlatformCALayerMac::addAnimationForKey(const String& key, PlatformCAAnimati
         m_delegate = adoptNS(webAnimationDelegate);
         [webAnimationDelegate setOwner:this];
     }
-    
+
     CAPropertyAnimation* propertyAnimation = static_cast<CAPropertyAnimation*>(animation->platformAnimation());
     if (![propertyAnimation delegate])
         [propertyAnimation setDelegate:static_cast<id>(m_delegate.get())];
-     
+
     BEGIN_BLOCK_OBJC_EXCEPTIONS
     [m_layer.get() addAnimation:animation->m_animation.get() forKey:key];
     END_BLOCK_OBJC_EXCEPTIONS
@@ -445,7 +445,7 @@ void PlatformCALayerMac::setBounds(const FloatRect& value)
 {
     BEGIN_BLOCK_OBJC_EXCEPTIONS
     [m_layer.get() setBounds:value];
-    
+
     if (requiresCustomAppearanceUpdateOnBoundsChange())
         updateCustomAppearance(m_customAppearance);
 
@@ -657,7 +657,7 @@ bool PlatformCALayerMac::filtersCanBeComposited(const FilterOperations& filters)
     // Return false if there are no filters to avoid needless work
     if (!filters.size())
         return false;
-    
+
     for (unsigned i = 0; i < filters.size(); ++i) {
         const FilterOperation* filterOperation = filters.at(i);
         switch (filterOperation->type()) {

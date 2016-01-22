@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #import "config.h"
@@ -41,7 +41,7 @@ static void timerFired(CFRunLoopTimerRef, void*);
 
 class PowerObserver {
     WTF_MAKE_NONCOPYABLE(PowerObserver);
-    
+
 public:
     static PassOwnPtr<PowerObserver> create()
     {
@@ -146,7 +146,7 @@ void setSharedTimerFireInterval(double interval)
     CFAbsoluteTime fireDate = CFAbsoluteTimeGetCurrent() + interval;
     sharedTimer = CFRunLoopTimerCreate(0, fireDate, 0, 0, 0, timerFired, 0);
     CFRunLoopAddTimer(CFRunLoopGetCurrent(), sharedTimer, kCFRunLoopCommonModes);
-    
+
     if (!PowerObserver)
         PowerObserver = PowerObserver::create().leakPtr();
 }

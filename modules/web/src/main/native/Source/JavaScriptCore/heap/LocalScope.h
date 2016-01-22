@@ -30,7 +30,7 @@
 #include "Local.h"
 
 namespace JSC {
-/*  
+/*
     A LocalScope is a temporary scope in which Locals are allocated. When a
     LocalScope goes out of scope, all the Locals created in it are destroyed.
 
@@ -43,7 +43,7 @@ class LocalScope {
 public:
     explicit LocalScope(VM&);
     ~LocalScope();
-    
+
     template <typename T> Local<T> release(Local<T>); // Destroys all other locals in the scope.
 
 private:

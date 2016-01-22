@@ -75,15 +75,15 @@ WRAPPEDAPI int (*wr_vc_dispmanx_display_close)(DISPMANX_DISPLAY_HANDLE_T display
 WRAPPEDAPI DISPMANX_DISPLAY_HANDLE_T (*wr_vc_dispmanx_display_open)
                                       (uint32_t device);
 
-WRAPPEDAPI DISPMANX_ELEMENT_HANDLE_T (*wr_vc_dispmanx_element_add) 
+WRAPPEDAPI DISPMANX_ELEMENT_HANDLE_T (*wr_vc_dispmanx_element_add)
                                       (DISPMANX_UPDATE_HANDLE_T update,
                                        DISPMANX_DISPLAY_HANDLE_T display,
-                                       int32_t layer, const VC_RECT_T *dest_rect, 
+                                       int32_t layer, const VC_RECT_T *dest_rect,
                                        DISPMANX_RESOURCE_HANDLE_T src,
-                                       const VC_RECT_T *src_rect, 
+                                       const VC_RECT_T *src_rect,
                                        DISPMANX_PROTECTION_T protection,
-                                       VC_DISPMANX_ALPHA_T *alpha, 
-                                       DISPMANX_CLAMP_T *clamp, 
+                                       VC_DISPMANX_ALPHA_T *alpha,
+                                       DISPMANX_CLAMP_T *clamp,
                                        DISPMANX_TRANSFORM_T transform);
 
 WRAPPEDAPI DISPMANX_UPDATE_HANDLE_T (*wr_vc_dispmanx_update_start)
@@ -112,19 +112,19 @@ WRAPPEDAPI int (*wr_vc_dispmanx_element_change_attributes)
                  VC_IMAGE_TRANSFORM_T transform);
 
 WRAPPEDAPI DISPMANX_RESOURCE_HANDLE_T (*wr_vc_dispmanx_resource_create)
-                                       (VC_IMAGE_TYPE_T type, uint32_t width, 
-                                        uint32_t height, 
+                                       (VC_IMAGE_TYPE_T type, uint32_t width,
+                                        uint32_t height,
                                         uint32_t *native_image_handle);
 
 WRAPPEDAPI int (*wr_vc_dispmanx_resource_delete)
                 (DISPMANX_RESOURCE_HANDLE_T res);
 
-WRAPPEDAPI int (*wr_vc_dispmanx_snapshot) (DISPMANX_DISPLAY_HANDLE_T display, 
+WRAPPEDAPI int (*wr_vc_dispmanx_snapshot) (DISPMANX_DISPLAY_HANDLE_T display,
                 DISPMANX_RESOURCE_HANDLE_T snapshot_resource,
                 VC_IMAGE_TRANSFORM_T transform);
 
 WRAPPEDAPI int (*wr_vc_dispmanx_element_change_source)
-                (DISPMANX_UPDATE_HANDLE_T update, 
+                (DISPMANX_UPDATE_HANDLE_T update,
                  DISPMANX_ELEMENT_HANDLE_T element,
                  DISPMANX_RESOURCE_HANDLE_T src);
 

@@ -43,15 +43,15 @@ import javafx.scene.effect.FloatMap;
  *
  */
 public class FloatMapPropertyMetadata extends ComplexPropertyMetadata<FloatMap> {
-    
+
     private final IntegerPropertyMetadata widthMetadata
             = new IntegerPropertyMetadata(new PropertyName("width"), //NOI18N
             true, 1, InspectorPath.UNUSED);
     private final IntegerPropertyMetadata heightMetadata
             = new IntegerPropertyMetadata(new PropertyName("height"), //NOI18N
             true, 1, InspectorPath.UNUSED);
-    
-    public FloatMapPropertyMetadata(PropertyName name, boolean readWrite, 
+
+    public FloatMapPropertyMetadata(PropertyName name, boolean readWrite,
             FloatMap defaultValue, InspectorPath inspectorPath) {
         super(name, FloatMap.class, readWrite, defaultValue, inspectorPath);
     }
@@ -59,15 +59,15 @@ public class FloatMapPropertyMetadata extends ComplexPropertyMetadata<FloatMap> 
     /*
      * ComplexPropertyMetadata
      */
-    
+
     @Override
     public FXOMInstance makeFxomInstanceFromValue(FloatMap value, FXOMDocument fxomDocument) {
         final FXOMInstance result = new FXOMInstance(fxomDocument, getValueClass());
-        
+
         widthMetadata.setValue(result, value.getWidth());
         heightMetadata.setValue(result, value.getHeight());
 
         return result;
     }
-    
+
 }

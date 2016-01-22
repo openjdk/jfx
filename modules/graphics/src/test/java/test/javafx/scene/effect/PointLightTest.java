@@ -51,7 +51,7 @@ public class PointLightTest extends LightTestBase {
         effect.setX(1.0f);
         assertEquals(1.0f, effect.getX(), 1e-100);
         pulse();
-        assertEquals(1.0f, ((com.sun.scenario.effect.light.PointLight) 
+        assertEquals(1.0f, ((com.sun.scenario.effect.light.PointLight)
                 LightShim.impl_getImpl(effect)).getX(), 1e-100);
     }
 
@@ -61,7 +61,7 @@ public class PointLightTest extends LightTestBase {
         assertEquals(0f, effect.getX(), 1e-100);
         assertEquals(0f, effect.xProperty().get(), 1e-100);
         pulse();
-        assertEquals(0f, ((com.sun.scenario.effect.light.PointLight) 
+        assertEquals(0f, ((com.sun.scenario.effect.light.PointLight)
                 LightShim.impl_getImpl(effect)).getX(), 1e-100);
     }
 
@@ -71,7 +71,7 @@ public class PointLightTest extends LightTestBase {
         effect.setY(1.0f);
         assertEquals(1.0f, effect.getY(), 1e-100);
         pulse();
-        assertEquals(1.0f, ((com.sun.scenario.effect.light.PointLight) 
+        assertEquals(1.0f, ((com.sun.scenario.effect.light.PointLight)
                 LightShim.impl_getImpl(effect)).getY(), 1e-100);
     }
 
@@ -81,7 +81,7 @@ public class PointLightTest extends LightTestBase {
         assertEquals(0f, effect.getY(), 1e-100);
         assertEquals(0f, effect.yProperty().get(), 1e-100);
         pulse();
-        assertEquals(0f, ((com.sun.scenario.effect.light.PointLight) 
+        assertEquals(0f, ((com.sun.scenario.effect.light.PointLight)
                 LightShim.impl_getImpl(effect)).getY(), 1e-100);
     }
 
@@ -91,7 +91,7 @@ public class PointLightTest extends LightTestBase {
         effect.setZ(1.0f);
         assertEquals(1.0f, effect.getZ(), 1e-100);
         pulse();
-        assertEquals(1.0f, ((com.sun.scenario.effect.light.PointLight) 
+        assertEquals(1.0f, ((com.sun.scenario.effect.light.PointLight)
                 LightShim.impl_getImpl(effect)).getZ(), 1e-100);
     }
 
@@ -101,7 +101,7 @@ public class PointLightTest extends LightTestBase {
         assertEquals(0f, effect.getZ(), 1e-100);
         assertEquals(0f, effect.zProperty().get(), 1e-100);
         pulse();
-        assertEquals(0f, ((com.sun.scenario.effect.light.PointLight) 
+        assertEquals(0f, ((com.sun.scenario.effect.light.PointLight)
                 LightShim.impl_getImpl(effect)).getZ(), 1e-100);
     }
 
@@ -150,14 +150,14 @@ public class PointLightTest extends LightTestBase {
         assertEquals(2, effect.getY(), 1e-100);
         assertEquals(3, effect.getZ(), 1e-100);
         assertEquals(Color.RED, effect.getColor());
-        pulse();        
-        assertEquals(1.0f, ((com.sun.scenario.effect.light.PointLight) 
+        pulse();
+        assertEquals(1.0f, ((com.sun.scenario.effect.light.PointLight)
                 LightShim.impl_getImpl(effect)).getX(), 1e-100);
-        assertEquals(2.0f, ((com.sun.scenario.effect.light.PointLight) 
+        assertEquals(2.0f, ((com.sun.scenario.effect.light.PointLight)
                 LightShim.impl_getImpl(effect)).getY(), 1e-100);
-        assertEquals(3.0f, ((com.sun.scenario.effect.light.PointLight) 
+        assertEquals(3.0f, ((com.sun.scenario.effect.light.PointLight)
                 LightShim.impl_getImpl(effect)).getZ(), 1e-100);
-        Color4f c = ((com.sun.scenario.effect.light.PointLight) 
+        Color4f c = ((com.sun.scenario.effect.light.PointLight)
                 LightShim.impl_getImpl(effect)).getColor();
         assertEquals(1f, c.getRed(), 1e-5);
         assertEquals(0f, c.getGreen(), 1e-5);
@@ -173,14 +173,14 @@ public class PointLightTest extends LightTestBase {
         assertEquals(0, effect.getY(), 1e-100);
         assertEquals(0, effect.getZ(), 1e-100);
         assertEquals(Color.WHITE, effect.getColor());
-        pulse();        
-        assertEquals(0f, ((com.sun.scenario.effect.light.PointLight) 
+        pulse();
+        assertEquals(0f, ((com.sun.scenario.effect.light.PointLight)
                 LightShim.impl_getImpl(effect)).getX(), 1e-100);
-        assertEquals(0f, ((com.sun.scenario.effect.light.PointLight) 
+        assertEquals(0f, ((com.sun.scenario.effect.light.PointLight)
                 LightShim.impl_getImpl(effect)).getY(), 1e-100);
-        assertEquals(0f, ((com.sun.scenario.effect.light.PointLight) 
+        assertEquals(0f, ((com.sun.scenario.effect.light.PointLight)
                 LightShim.impl_getImpl(effect)).getZ(), 1e-100);
-        Color4f c = ((com.sun.scenario.effect.light.PointLight) 
+        Color4f c = ((com.sun.scenario.effect.light.PointLight)
                 LightShim.impl_getImpl(effect)).getColor();
         assertEquals(1f, c.getRed(), 1e-5);
         assertEquals(1f, c.getGreen(), 1e-5);

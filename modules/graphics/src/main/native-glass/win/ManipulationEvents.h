@@ -66,16 +66,16 @@ protected:
 
 
 class ManipulationEventSinkWithInertia : public ManipulationEventSink
-{    
+{
 public:
-    ManipulationEventSinkWithInertia(IManipulationProcessor *manip, 
+    ManipulationEventSinkWithInertia(IManipulationProcessor *manip,
                                      IInertiaProcessor *inertia,
                                      ViewContainer *window, HWND hwnd)
         : ManipulationEventSink(manip, window, hwnd)
     {
         m_inertiaSink = new ManipulationEventSink(inertia, window, hwnd);
     }
-    
+
     virtual ~ManipulationEventSinkWithInertia()
     {
         if (m_inertiaSink) {

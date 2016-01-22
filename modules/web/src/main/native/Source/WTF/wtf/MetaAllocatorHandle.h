@@ -6,13 +6,13 @@
  * are met:
  *
  * 1.  Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer. 
+ *     notice, this list of conditions and the following disclaimer.
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
- *     documentation and/or other materials provided with the distribution. 
+ *     documentation and/or other materials provided with the distribution.
  * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
- *     from this software without specific prior written permission. 
+ *     from this software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY APPLE AND ITS CONTRIBUTORS "AS IS" AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
@@ -41,52 +41,52 @@ class MetaAllocator;
 class MetaAllocatorHandle : public ThreadSafeRefCounted<MetaAllocatorHandle>, public RedBlackTree<MetaAllocatorHandle, void*>::Node {
 private:
     MetaAllocatorHandle(MetaAllocator*, void* start, size_t sizeInBytes, void* ownerUID);
-    
+
 public:
     WTF_EXPORT_PRIVATE ~MetaAllocatorHandle();
-    
+
     void* start() const
     {
         return m_start;
     }
-    
+
     void* end() const
     {
         return reinterpret_cast<void*>(endAsInteger());
     }
-    
+
     uintptr_t startAsInteger() const
     {
         return reinterpret_cast<uintptr_t>(m_start);
     }
-    
+
     uintptr_t endAsInteger() const
     {
         return startAsInteger() + m_sizeInBytes;
     }
-        
+
     size_t sizeInBytes() const
     {
         return m_sizeInBytes;
     }
-    
+
     bool containsIntegerAddress(uintptr_t address) const
     {
         return address - startAsInteger() < sizeInBytes();
     }
-    
+
     bool contains(void* address) const
     {
         return containsIntegerAddress(reinterpret_cast<uintptr_t>(address));
     }
-        
+
     WTF_EXPORT_PRIVATE void shrink(size_t newSizeInBytes);
-    
+
     bool isManaged()
     {
         return !!m_allocator;
     }
-        
+
     MetaAllocator* allocator()
     {
         ASSERT(m_allocator);
@@ -102,10 +102,10 @@ public:
     {
         return m_start;
     }
-    
+
 private:
     friend class MetaAllocator;
-    
+
     MetaAllocator* m_allocator;
     void* m_start;
     size_t m_sizeInBytes;

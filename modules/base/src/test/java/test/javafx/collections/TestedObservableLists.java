@@ -49,7 +49,7 @@ public interface TestedObservableLists {
     Callable<ObservableList<String>> CHECKED_OBSERVABLE_ARRAY_LIST = () -> FXCollections.checkedObservableList(FXCollections.observableList(new ArrayList()), String.class);
 
     Callable<ObservableList<String>> SYNCHRONIZED_OBSERVABLE_ARRAY_LIST = () -> FXCollections.synchronizedObservableList(FXCollections.observableList(new ArrayList<String>()));
-    
+
     Callable<ObservableList<String>> OBSERVABLE_LIST_PROPERTY = () -> new SimpleListProperty<>(FXCollections.observableList(new ArrayList<String>()));
-    
+
 }

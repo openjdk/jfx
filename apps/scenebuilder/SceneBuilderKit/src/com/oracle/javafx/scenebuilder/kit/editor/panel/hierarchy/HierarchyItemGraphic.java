@@ -46,7 +46,7 @@ import javafx.scene.image.Image;
  * @treatAsPrivate
  */
 public class HierarchyItemGraphic extends HierarchyItem {
-    
+
     // The accessory owner. Used for the equals method.
     private final DesignHierarchyMask owner;
 
@@ -57,7 +57,7 @@ public class HierarchyItemGraphic extends HierarchyItem {
      * @param fxomObject The FX object represented by this item
      */
     public HierarchyItemGraphic(
-            final DesignHierarchyMask owner, 
+            final DesignHierarchyMask owner,
             final FXOMObject fxomObject) {
         assert owner != null;
         this.owner = owner;

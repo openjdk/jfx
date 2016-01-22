@@ -33,7 +33,7 @@ import java.util.List;
 import javafx.scene.image.Image;
 
 /**
- * Data container for {@link Clipboard} data. It can hold multiple data in 
+ * Data container for {@link Clipboard} data. It can hold multiple data in
  * several data formats.
  * @since JavaFX 2.0
  */
@@ -66,7 +66,7 @@ public class ClipboardContent extends HashMap<DataFormat, Object> {
     }
 
     /**
-     * Gets the plain text String from the {@code ClipboardContent} 
+     * Gets the plain text String from the {@code ClipboardContent}
      * which had previously been put. This is equivalent to invoking
      * {@code get(DataFormat.PLAIN_TEXT)}. If no such entry exists,
      * null is returned.

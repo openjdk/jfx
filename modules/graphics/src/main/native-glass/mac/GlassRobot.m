@@ -96,7 +96,7 @@ static inline void PostGlassMouseEvent(CGPoint location, UInt32 buttons, BOOL bu
                         type = buttonPressed ? kCGEventOtherMouseDown : kCGEventOtherMouseUp;
                         break;
                 }
-                
+
                 CGEventRef newEvent = CGEventCreateMouseEvent(NULL, type, location, (CGMouseButton)index);
                 CGEventPost(kCGHIDEventTap, newEvent);
                 CFRelease(newEvent);
@@ -150,7 +150,7 @@ static inline void PostGlassKeyEvent(jint code, BOOL keyPressed)
     for (; buttons != 0; index++, buttons >>= 1)
     {
         if (buttons & 1)
-        {        
+        {
             switch (index)
             {
                 case 0:
@@ -206,7 +206,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_mac_MacRobot__1init
 (JNIEnv *env, jobject jrobot)
 {
     LOG("Java_com_sun_glass_ui_mac_MacRobot__1init");
-    
+
     return ptr_to_jlong([[GlassRobot alloc] init]);
 }
 
@@ -232,7 +232,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacRobot__1keyPress
 (JNIEnv *env, jobject jrobot, jint code)
 {
     LOG("Java_com_sun_glass_ui_mac_MacRobot__1keyPress");
-    
+
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
     GLASS_POOL_ENTER
     {
@@ -250,7 +250,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacRobot__1keyRelease
 (JNIEnv *env, jobject jrobot, jint code)
 {
     LOG("Java_com_sun_glass_ui_mac_MacRobot__1keyRelease");
-    
+
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
     GLASS_POOL_ENTER
     {
@@ -268,7 +268,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacRobot__1mouseMove
 (JNIEnv *env, jobject jrobot, jlong ptr, jint x, jint y)
 {
     LOG("Java_com_sun_glass_ui_mac_MacRobot__1mouseMove");
-    
+
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
     GLASS_POOL_ENTER
     {
@@ -287,9 +287,9 @@ JNIEXPORT jint JNICALL Java_com_sun_glass_ui_mac_MacRobot__1getMouseX
 (JNIEnv *env, jobject jrobot, jlong ptr)
 {
     LOG("Java_com_sun_glass_ui_mac_MacRobot__1getMouseX");
-    
+
     jint x = 0;
-    
+
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
     GLASS_POOL_ENTER
     {
@@ -297,7 +297,7 @@ JNIEXPORT jint JNICALL Java_com_sun_glass_ui_mac_MacRobot__1getMouseX
         x = (jint)[robot getMousePosFlipped].x;
     }
     GLASS_POOL_EXIT;
-    
+
     return x;
 }
 
@@ -310,9 +310,9 @@ JNIEXPORT jint JNICALL Java_com_sun_glass_ui_mac_MacRobot__1getMouseY
 (JNIEnv *env, jobject jrobot, jlong ptr)
 {
     LOG("Java_com_sun_glass_ui_mac_MacRobot__1getMouseY");
-    
+
     jint y = 0;
-    
+
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
     GLASS_POOL_ENTER
     {
@@ -320,7 +320,7 @@ JNIEXPORT jint JNICALL Java_com_sun_glass_ui_mac_MacRobot__1getMouseY
         y = (jint)[robot getMousePosFlipped].y;
     }
     GLASS_POOL_EXIT;
-    
+
     return y;
 }
 
@@ -333,7 +333,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacRobot__1mousePress
 (JNIEnv *env, jobject jrobot, jlong ptr, jint buttons)
 {
     LOG("Java_com_sun_glass_ui_mac_MacRobot__1mousePress");
-    
+
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
     GLASS_POOL_ENTER
     {
@@ -352,7 +352,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacRobot__1mouseRelease
 (JNIEnv *env, jobject jrobot, jlong ptr, jint buttons)
 {
     LOG("Java_com_sun_glass_ui_mac_MacRobot__1mouseRelease");
-    
+
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
     GLASS_POOL_ENTER
     {
@@ -371,7 +371,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacRobot__1mouseWheel
 (JNIEnv *env, jobject jrobot, jint wheelAmt)
 {
     LOG("Java_com_sun_glass_ui_mac_MacRobot__1mouseWheel");
-    
+
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
     GLASS_POOL_ENTER
     {
@@ -391,9 +391,9 @@ JNIEXPORT jint JNICALL Java_com_sun_glass_ui_mac_MacRobot__1getPixelColor
 (JNIEnv *env, jobject jrobot, jint x, jint y)
 {
     LOG("Java_com_sun_glass_ui_mac_MacRobot__1getPixelColor");
-    
+
     jint color = 0;
-    
+
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
     GLASS_POOL_ENTER
     {
@@ -420,7 +420,7 @@ JNIEXPORT jint JNICALL Java_com_sun_glass_ui_mac_MacRobot__1getPixelColor
         }
     }
     GLASS_POOL_EXIT;
-    
+
     return color;
 }
 
@@ -433,7 +433,7 @@ JNIEXPORT jobject JNICALL Java_com_sun_glass_ui_mac_MacRobot__1getScreenCapture
 (JNIEnv *env, jobject jrobot, jint x, jint y, jint width, jint height, jboolean isHiDPI)
 {
     LOG("Java_com_sun_glass_ui_mac_MacRobot__1getScreenCapture");
-    
+
     jobject pixels = NULL;
 
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);

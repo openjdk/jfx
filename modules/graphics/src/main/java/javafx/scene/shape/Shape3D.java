@@ -59,17 +59,17 @@ import sun.util.logging.PlatformLogger;
  * Note that this is a conditional feature. See
  * {@link javafx.application.ConditionalFeature#SCENE3D ConditionalFeature.SCENE3D}
  * for more information.
- * 
+ *
  * @since JavaFX 8.0
  */
 public abstract class Shape3D extends Node {
     // NOTE: Need a way to specify shape tessellation resolution, may use metric relate to window resolution
     // Will not support dynamic refinement in FX8
-    
+
     // TODO: 3D - May provide user convenient utility to compose images in a single image for shapes such as Box or Cylinder
 
     private static final PhongMaterial DEFAULT_MATERIAL = new PhongMaterial();
-    
+
     protected Shape3D() {
         if (!Platform.isSupported(ConditionalFeature.SCENE3D)) {
             String logname = Shape3D.class.getName();
@@ -97,7 +97,7 @@ public abstract class Shape3D extends Node {
     public final Material getMaterial() {
         return material == null ? null : material.get();
     }
-   
+
     public final ObjectProperty<Material> materialProperty() {
         if (material == null) {
             material = new SimpleObjectProperty<Material>(Shape3D.this,
@@ -160,7 +160,7 @@ public abstract class Shape3D extends Node {
             };
         }
         return drawMode;
-    }  
+    }
 
     /**
      * Defines the cullFace this {@code Shape3D}.
@@ -189,7 +189,7 @@ public abstract class Shape3D extends Node {
             };
         }
         return cullFace;
-    }  
+    }
 
     /**
      * @treatAsPrivate implementation detail
@@ -243,5 +243,5 @@ public abstract class Shape3D extends Node {
     public Object impl_processMXNode(MXNodeAlgorithm alg, MXNodeAlgorithmContext ctx) {
         throw new UnsupportedOperationException("Not supported yet.");
     }
-    
+
 }

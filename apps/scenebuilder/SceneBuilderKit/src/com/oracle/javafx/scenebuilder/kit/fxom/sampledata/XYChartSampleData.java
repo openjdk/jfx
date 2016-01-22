@@ -50,7 +50,7 @@ import javafx.scene.chart.XYChart;
  *
  */
 class XYChartSampleData extends AbstractSampleData {
-    
+
     private final List<XYChart.Series<Object,Object>> samples = new ArrayList<>();
     private final List<String> categories = new ArrayList<>();
     private Class<?> sampleXAxisClass;
@@ -58,10 +58,10 @@ class XYChartSampleData extends AbstractSampleData {
 
     public static boolean isKnownXYChart(Object obj) {
         final boolean result;
-        
+
         if (obj instanceof XYChart) {
             final Class<?> objClass = obj.getClass();
-            result = (objClass == BarChart.class 
+            result = (objClass == BarChart.class
                     || objClass == AreaChart.class
                     || objClass == BubbleChart.class
                     || objClass == LineChart.class
@@ -71,19 +71,19 @@ class XYChartSampleData extends AbstractSampleData {
         } else {
             result = false;
         }
-        
+
         return result;
     }
 
     /*
      * AbstractSampleData
      */
-    
+
     @Override
     public void applyTo(Object sceneGraphObject) {
         assert sceneGraphObject instanceof XYChart;
-        
-        @SuppressWarnings("unchecked")        
+
+        @SuppressWarnings("unchecked")
         final XYChart<Object,Object> xyChart = (XYChart<Object,Object>) sceneGraphObject;
         updateSamples(xyChart);
         xyChart.getData().clear();
@@ -97,12 +97,12 @@ class XYChartSampleData extends AbstractSampleData {
             axis.getCategories().setAll(categories);
         }
     }
-    
+
     @Override
     public void removeFrom(Object sceneGraphObject) {
         assert sceneGraphObject instanceof XYChart;
-        
-        @SuppressWarnings("unchecked")        
+
+        @SuppressWarnings("unchecked")
         final XYChart<Object,Object> xyChart = (XYChart<Object,Object>) sceneGraphObject;
         xyChart.getData().clear();
         if (xyChart.getXAxis().getClass() == CategoryAxis.class) {
@@ -114,21 +114,21 @@ class XYChartSampleData extends AbstractSampleData {
             axis.getCategories().clear();
         }
     }
-    
-    
+
+
     /*
      * Private
      */
-    
+
     private void updateSamples(XYChart<?,?> xyChart) {
-        
+
         final Class<?> xAxisClass = xyChart.getXAxis().getClass();
         final Class<?> yAxisClass = xyChart.getYAxis().getClass();
-        
+
         if ((xAxisClass != sampleXAxisClass) || (yAxisClass != sampleYAxisClass)) {
             sampleXAxisClass = xAxisClass;
             sampleYAxisClass = yAxisClass;
-            
+
             for (int i = 0; i < 3; i++) {
                 final XYChart.Series<Object, Object> serie = new XYChart.Series<>();
                 for (int j = 0; j < 10; j++) {
@@ -140,7 +140,7 @@ class XYChartSampleData extends AbstractSampleData {
                 }
                 samples.add(serie);
             }
-            
+
             categories.clear();
             if ((sampleXAxisClass == CategoryAxis.class) || (sampleYAxisClass == CategoryAxis.class)) {
                 for (int j = 0; j < 10; j++) {
@@ -149,10 +149,10 @@ class XYChartSampleData extends AbstractSampleData {
             }
         }
     }
-    
+
     private Object makeValue(Class<?> axisClass, int index) {
         final Object result;
-        
+
         if (axisClass == NumberAxis.class) {
             result = Math.random() * 100.0;
         } else if (axisClass == CategoryAxis.class) {
@@ -161,7 +161,7 @@ class XYChartSampleData extends AbstractSampleData {
             assert false : "Unexpected Axis subclass" + axisClass;
             result = String.valueOf(index);
         }
-        
+
         return result;
     }
 }

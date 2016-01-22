@@ -75,21 +75,21 @@ public class TreeTableColumnTest {
     private TreeTableColumn<Person,String> column;
     private TreeTableView<Person> table;
     private TreeItem<Person> root;
-    
+
     @Before public void setup() {
         root = new TreeItem<Person>(null);
         root.setExpanded(true);
-        
+
         root.getChildren().setAll(
                 new TreeItem(new Person("Humphrey McPhee", 76)),
                 new TreeItem(new Person("Justice Caldwell", 30)),
                 new TreeItem(new Person("Orrin Davies", 30)),
                 new TreeItem(new Person("Emma Wilson", 8)));
-        
+
         column = new TreeTableColumn<Person,String>("");
         table = new TreeTableView<Person>(root);
     }
-    
+
 
     /*********************************************************************
      * Tests for the constructors                                        *
@@ -1308,7 +1308,7 @@ public class TreeTableColumnTest {
 
         sl.dispose();
     }
-    
+
 
 
 

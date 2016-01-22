@@ -269,7 +269,7 @@ static void repaintChildrenDuringLayoutIfMoved(RenderDeprecatedFlexibleBox* box,
         // repaint ourselves (and the child) anyway.
         if (!box->selfNeedsLayout() && child->checkForRepaintDuringLayout())
             child->repaintDuringLayoutIfMoved(oldChildRects[childIndex]);
-        
+
         ++childIndex;
     }
     ASSERT(childIndex == oldChildRects.size());
@@ -307,7 +307,7 @@ void RenderDeprecatedFlexibleBox::layoutBlock(bool relayoutChildren, LayoutUnit)
 
     ChildFrameRects oldChildRects;
     appendChildFrameRects(this, oldChildRects);
-    
+
     dirtyForLayoutFromPercentageHeightDescendants();
 
     if (isHorizontal())
@@ -374,7 +374,7 @@ static void layoutChildIfNeededApplyingDelta(RenderBox* child, const LayoutSize&
 {
     if (!child->needsLayout())
         return;
-    
+
     child->view().addLayoutDelta(layoutDelta);
     child->layoutIfNeeded();
     child->view().addLayoutDelta(-layoutDelta);
@@ -393,7 +393,7 @@ void RenderDeprecatedFlexibleBox::layoutHorizontalBox(bool relayoutChildren)
     FlexBoxIterator iterator(this);
     unsigned int highestFlexGroup = 0;
     unsigned int lowestFlexGroup = 0;
-    bool haveFlex = false, flexingChildren = false; 
+    bool haveFlex = false, flexingChildren = false;
     gatherFlexChildrenInfo(iterator, relayoutChildren, highestFlexGroup, lowestFlexGroup, haveFlex);
 
     RenderBlock::startDelayUpdateScrollInfo();
@@ -422,18 +422,18 @@ void RenderDeprecatedFlexibleBox::layoutHorizontalBox(bool relayoutChildren)
 
             if (child->isOutOfFlowPositioned())
                 continue;
-            
+
             LayoutSize& childLayoutDelta = childLayoutDeltas[childIndex++];
-            
+
             // Compute the child's vertical margins.
             child->computeAndSetBlockDirectionMargins(this);
 
             if (!child->needsLayout())
                 child->markForPaginationRelayoutIfNeeded();
-            
+
             // Apply the child's current layout delta.
             layoutChildIfNeededApplyingDelta(child, childLayoutDelta);
-            
+
             // Now do the layout.
             layoutChildIfNeededApplyingDelta(child, childLayoutDelta);
 
@@ -486,9 +486,9 @@ void RenderDeprecatedFlexibleBox::layoutHorizontalBox(bool relayoutChildren)
                 }
                 continue;
             }
-            
+
             LayoutSize& childLayoutDelta = childLayoutDeltas[childIndex++];
-            
+
             if (child->style().visibility() == COLLAPSE) {
                 // visibility: collapsed children do not participate in our positioning.
                 // But we need to lay them out.
@@ -694,7 +694,7 @@ void RenderDeprecatedFlexibleBox::layoutVerticalBox(bool relayoutChildren)
     FlexBoxIterator iterator(this);
     unsigned int highestFlexGroup = 0;
     unsigned int lowestFlexGroup = 0;
-    bool haveFlex = false, flexingChildren = false; 
+    bool haveFlex = false, flexingChildren = false;
     gatherFlexChildrenInfo(iterator, relayoutChildren, highestFlexGroup, lowestFlexGroup, haveFlex);
 
     // We confine the line clamp ugliness to vertical flexible boxes (thus keeping it out of
@@ -733,7 +733,7 @@ void RenderDeprecatedFlexibleBox::layoutVerticalBox(bool relayoutChildren)
                 }
                 continue;
             }
-            
+
             LayoutSize& childLayoutDelta = childLayoutDeltas[childIndex++];
 
             if (child->style().visibility() == COLLAPSE) {

@@ -21,7 +21,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -241,8 +241,8 @@ Element* FocusController::findFocusableElementDescendingDownIntoFrameDocument(Fo
 bool FocusController::setInitialFocus(FocusDirection direction, KeyboardEvent* event)
 {
     bool didAdvanceFocus = advanceFocus(direction, event, true);
-    
-    // If focus is being set initially, accessibility needs to be informed that system focus has moved 
+
+    // If focus is being set initially, accessibility needs to be informed that system focus has moved
     // into the web area again, even if focus did not change within WebCore. PostNotification is called instead
     // of handleFocusedUIElementChanged, because this will send the notification even if the element is the same.
     if (AXObjectCache* cache = focusedOrMainFrame().document()->existingAXObjectCache())
@@ -320,7 +320,7 @@ bool FocusController::advanceFocusInDocumentOrder(FocusDirection direction, Keyb
         setFocusedFrame(owner.contentFrame());
         return true;
     }
-    
+
     // FIXME: It would be nice to just be able to call setFocusedElement(node) here, but we can't do
     // that because some elements (e.g. HTMLInputElement and HTMLTextAreaElement) do extra work in
     // their focus() methods.
@@ -548,7 +548,7 @@ static void clearSelectionIfNeeded(Frame* oldFocusedFrame, Frame* newFocusedFram
 {
     if (!oldFocusedFrame || !newFocusedFrame)
         return;
-        
+
     if (oldFocusedFrame->document() != newFocusedFrame->document())
         return;
 
@@ -563,7 +563,7 @@ static void clearSelectionIfNeeded(Frame* oldFocusedFrame, Frame* newFocusedFram
     Node* selectionStartNode = selection.start().deprecatedNode();
     if (selectionStartNode == newFocusedNode || selectionStartNode->isDescendantOf(newFocusedNode) || selectionStartNode->deprecatedShadowAncestorNode() == newFocusedNode)
         return;
-        
+
     if (Node* mousePressNode = newFocusedFrame->eventHandler().mousePressNode()) {
         if (mousePressNode->renderer() && !mousePressNode->canStartSelection()) {
             // Don't clear the selection for contentEditable elements, but do clear it for input and textarea. See bug 38696.
@@ -585,7 +585,7 @@ bool FocusController::setFocusedElement(Element* element, PassRefPtr<Frame> newF
 {
     RefPtr<Frame> oldFocusedFrame = focusedFrame();
     RefPtr<Document> oldDocument = oldFocusedFrame ? oldFocusedFrame->document() : 0;
-    
+
     Element* oldFocusedElement = oldDocument ? oldDocument->focusedElement() : 0;
     if (oldFocusedElement == element)
         return true;
@@ -611,7 +611,7 @@ bool FocusController::setFocusedElement(Element* element, PassRefPtr<Frame> newF
         m_page.editorClient()->setInputMethodState(element->shouldUseInputMethod());
         return true;
     }
-    
+
     if (oldDocument && oldDocument != &newDocument.get())
         oldDocument->setFocusedElement(0);
 
@@ -661,7 +661,7 @@ void FocusController::setActiveInternal(bool active)
     }
 
     focusedOrMainFrame().selection().pageActivationChanged();
-    
+
     if (m_focusedFrame && isFocused())
         dispatchEventsOnWindowAndFocusedElement(m_focusedFrame->document(), active);
 }

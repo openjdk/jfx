@@ -52,7 +52,7 @@ public:
         return adoptRef(new MediaQuerySet(mediaString, true));
     }
     ~MediaQuerySet();
-    
+
     bool parse(const String&);
     bool add(const String&);
     bool remove(const String&);
@@ -60,10 +60,10 @@ public:
     void addMediaQuery(std::unique_ptr<MediaQuery>);
 
     const Vector<std::unique_ptr<MediaQuery>>& queryVector() const { return m_queries; }
-    
+
     int lastLine() const { return m_lastLine; }
     void setLastLine(int lastLine) { m_lastLine = lastLine; }
-    
+
     String mediaText() const;
 
     PassRefPtr<MediaQuerySet> copy() const { return adoptRef(new MediaQuerySet(*this)); }
@@ -72,7 +72,7 @@ private:
     MediaQuerySet();
     MediaQuerySet(const String& mediaQuery, bool fallbackToDescription);
     MediaQuerySet(const MediaQuerySet&);
-    
+
     unsigned m_fallbackToDescriptor : 1; // true if failed media query parsing should fallback to media description parsing.
     signed m_lastLine : 31;
     Vector<std::unique_ptr<MediaQuery>> m_queries;

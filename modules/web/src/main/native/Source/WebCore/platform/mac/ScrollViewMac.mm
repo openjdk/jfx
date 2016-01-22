@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #import "config.h"
@@ -62,7 +62,7 @@ void ScrollView::platformAddChild(Widget* child)
     NSView *parentView = documentView();
     NSView *childView = child->getOuterView();
     ASSERT(![parentView isDescendantOf:childView]);
-    
+
     // Suppress the resetting of drag margins since we know we can't affect them.
     NSWindow *window = [parentView window];
     BOOL resetDragMargins = [window _needsToResetDragMargins];
@@ -131,7 +131,7 @@ void ScrollView::platformSetContentsSize()
     BEGIN_BLOCK_OBJC_EXCEPTIONS;
     int w = m_contentsSize.width();
     int h = m_contentsSize.height();
-    LOG(Frames, "%p %@ at w %d h %d\n", documentView(), [(id)[documentView() class] className], w, h);            
+    LOG(Frames, "%p %@ at w %d h %d\n", documentView(), [(id)[documentView() class] className], w, h);
     [documentView() setFrameSize:NSMakeSize(std::max(0, w), std::max(0, h))];
     END_BLOCK_OBJC_EXCEPTIONS;
 }

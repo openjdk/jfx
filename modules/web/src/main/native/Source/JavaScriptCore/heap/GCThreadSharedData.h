@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef GCThreadSharedData_h
@@ -54,7 +54,7 @@ class GCThreadSharedData {
 public:
     GCThreadSharedData(VM*);
     ~GCThreadSharedData();
-    
+
     void reset();
 
     void didStartMarking();
@@ -69,7 +69,7 @@ public:
     size_t childBytesCopied();
     size_t childDupStrings();
 #endif
-    
+
 private:
     friend class GCThread;
     friend class SlotVisitor;
@@ -81,7 +81,7 @@ private:
 
     VM* m_vm;
     CopiedSpace* m_copiedSpace;
-    
+
     bool m_shouldHashCons;
 
     Vector<GCThread*> m_gcThreads;

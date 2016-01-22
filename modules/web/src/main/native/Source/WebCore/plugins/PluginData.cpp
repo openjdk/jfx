@@ -55,7 +55,7 @@ const PluginInfo* PluginData::pluginInfoForMimeType(const String& mimeType) cons
 {
     for (unsigned i = 0; i < m_mimes.size(); ++i) {
         const MimeClassInfo& info = m_mimes[i];
-    
+
         if (info.type == mimeType)
             return &m_plugins[m_mimePluginIndices[i]];
     }
@@ -85,7 +85,7 @@ void PluginData::refresh()
 void PluginData::initPlugins(const Page* page)
 {
     ASSERT(m_plugins.isEmpty());
-    
+
     platformStrategies()->pluginStrategy()->getPluginInfo(page, m_plugins);
 }
 

@@ -59,7 +59,7 @@ public class SnapshotParameters {
     public boolean isDepthBuffer() {
         return depthBuffer;
     }
-    
+
     boolean isDepthBufferInternal() {
         if(!Platform.isSupported(ConditionalFeature.SCENE3D)) {
             return false;
@@ -70,10 +70,10 @@ public class SnapshotParameters {
     /**
      * Sets the depthBuffer flag to the specified value.
      * The default value is false.
-     * 
+     *
      * Note that this is a conditional feature. See
      * {@link javafx.application.ConditionalFeature#SCENE3D ConditionalFeature.SCENE3D}
-     * 
+     *
      * @param depthBuffer the depthBuffer to set
      */
     public void setDepthBuffer(boolean depthBuffer) {
@@ -93,14 +93,14 @@ public class SnapshotParameters {
     public Camera getCamera() {
         return camera;
     }
-    
+
     Camera defaultCamera;
-    
+
     Camera getEffectiveCamera() {
         if (camera instanceof PerspectiveCamera
                 && !Platform.isSupported(ConditionalFeature.SCENE3D)) {
             if (defaultCamera == null) {
-                // According to Scene.doSnapshot, temporarily, it adjusts camera                 
+                // According to Scene.doSnapshot, temporarily, it adjusts camera
                 // viewport to the snapshot size. So, its viewport doesn't matter.
                 defaultCamera = new ParallelCamera();
             }

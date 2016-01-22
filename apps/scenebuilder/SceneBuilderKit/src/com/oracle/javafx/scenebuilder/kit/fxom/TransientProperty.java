@@ -39,10 +39,10 @@ import java.util.Map;
 
 /**
  *
- * 
+ *
  */
 class TransientProperty extends TransientNode {
-    
+
     private final PropertyName name;
     private final GlueElement propertyElement;
     private final List<FXOMObject> values = new ArrayList<>();
@@ -53,11 +53,11 @@ class TransientProperty extends TransientNode {
             PropertyName name,
             GlueElement propertyElement) {
         super(parentNode);
-        
+
         assert name != null;
         assert propertyElement != null;
         assert propertyElement.getTagName().equals(name.toString());
-        
+
         this.name = name;
         this.propertyElement = propertyElement;
     }
@@ -72,30 +72,30 @@ class TransientProperty extends TransientNode {
 
     public FXOMProperty makeFxomProperty(FXOMDocument fxomDocument) {
         final FXOMProperty result;
-        
+
         if (collectedProperties.isEmpty()) {
             /*
              * Two cases:
-             * 
+             *
              * 1) (values.size() == 0)
              *
              *    => it's a textual property expressed as plain text
              *    => for example with Button.text:
              *    <Button><text>OK</text></Button>
-             * 
+             *
              * 2) (values.size() == 1) &&
              *    (values.get(0).properties().size() == 0) &&
              *    (values.get(0).getFxValue() != null
-             * 
+             *
              *    => it's a textual property expressed with fx:value
              *    => we create an FXOMPropertyT instance
              *    => for example with Button.text:
-             * 
+             *
              *    <Button><text><String fx:value="OK"/></text></Button>
-             * 
-             * 
+             *
+             *
              * 3) else
-             * 
+             *
              *    => it's a complex property
              *    => we create an FXOMPropertyC instance
              */
@@ -116,12 +116,12 @@ class TransientProperty extends TransientNode {
                             propertyElement, value.getGlueElement(), fxValue);
                 } else {
                     // Case #3
-                    result = new FXOMPropertyC(fxomDocument, name, 
+                    result = new FXOMPropertyC(fxomDocument, name,
                             values, propertyElement);
                 }
             } else {
                 // Case #3
-                result = new FXOMPropertyC(fxomDocument, name, 
+                result = new FXOMPropertyC(fxomDocument, name,
                         values, propertyElement);
             }
         } else {
@@ -130,7 +130,7 @@ class TransientProperty extends TransientNode {
             assert getSceneGraphObject() instanceof Map;
             result = new FXOMPropertyT(fxomDocument, name, "fake-value");
         }
-        
+
         return result;
     }
 }

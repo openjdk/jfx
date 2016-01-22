@@ -33,10 +33,10 @@ import com.sun.javafx.sg.prism.NGNode;
 import com.sun.javafx.sg.prism.NGParallelCamera;
 
 /**
- * Specifies a parallel camera for rendering a scene without perspective correction. 
- * 
+ * Specifies a parallel camera for rendering a scene without perspective correction.
+ *
  * <p>If a scene contains only 2D transforms, then the following details are not
- * relevant. 
+ * relevant.
  * This camera defines a viewing volume for a parallel (orthographic) projection;
  * a rectangular box. This camera is always located at center of the window and
  * looks along the positive z-axis. The coordinate system defined by this camera

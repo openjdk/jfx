@@ -31,7 +31,7 @@
 #include "dalvikUtils.h"
 #include "../wm/LensWindowManager.h"
 #include "com_sun_glass_ui_lens_LensApplication.h"
-#include "com_sun_glass_events_TouchEvent.h"    
+#include "com_sun_glass_events_TouchEvent.h"
 #include "com_sun_glass_ui_android_SoftwareKeyboard.h"
 #include "com_sun_glass_ui_android_Activity.h"
 #include "javafxports_android_FXActivity_InternalSurfaceView.h"
@@ -43,7 +43,7 @@
     if (env) {                                                              \
       (*ENV)->ThrowNew(ENV,                                                 \
           (*ENV)->FindClass(ENV, "java/lang/RuntimeException"), error_msg); \
-    }                                                                       
+    }
 
 #ifdef DEBUG
     static void *get_check_symbol(JNIEnv *env, void *handle, const char *name) {
@@ -59,7 +59,7 @@
 #endif
 
 #define ANDROID_LIB   "libactivity.so"
-    
+
 static int bind = 0;
 
 static ANativeWindow *(*_ANDROID_getNativeWindow)();
@@ -76,7 +76,7 @@ void bind_activity(JNIEnv *env) {
         THROW_RUNTIME_EXCEPTION(env, "dlopen failed with error: ", dlerror());
         return;
     }
-    
+
     _ANDROID_getNativeWindow = GET_SYMBOL(env, libandroid, "android_getNativeWindow");
     _ANDROID_getDataDir = GET_SYMBOL(env, libandroid, "android_getDataDir");
     _ANDROID_notifyGlassStarted = GET_SYMBOL(env, libandroid, "android_notifyGlassStarted");
@@ -87,16 +87,16 @@ void bind_activity(JNIEnv *env) {
 }
 
 ANativeWindow *android_getNativeWindow(JNIEnv *env) {
-    if(!bind) bind_activity(env);    
+    if(!bind) bind_activity(env);
     return (*_ANDROID_getNativeWindow)();
 }
 
 const char *android_getDataDir(JNIEnv *env) {
-    if(!bind) bind_activity(env);    
-    return (*_ANDROID_getDataDir)();    
+    if(!bind) bind_activity(env);
+    return (*_ANDROID_getDataDir)();
 }
 
-jboolean lens_input_initialize(JNIEnv *env) {        
+jboolean lens_input_initialize(JNIEnv *env) {
     uint32_t flags = 0;
     flags |= 1 << com_sun_glass_ui_lens_LensApplication_DEVICE_MULTITOUCH;
     glass_application_notifyDeviceEvent(env, flags, 1);
@@ -131,10 +131,10 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_android_SoftwareKeyboard__1hide
 JNIEXPORT void JNICALL Java_com_sun_glass_ui_android_DalvikInput_onMultiTouchEventNative
   (JNIEnv *env, jobject that, jint jcount, jintArray jactions, jintArray jids, jintArray jxs, jintArray jys) {
     GLASS_LOG_FINE("Call InternalSurfaceView_onMultiTouchEventNative");
-    
+
     jlong jlongids[jcount];
 
-    int *actions = (*env)->GetIntArrayElements(env, jactions, 0);    
+    int *actions = (*env)->GetIntArrayElements(env, jactions, 0);
     int *ids = (*env)->GetIntArrayElements(env, jids, 0);
     int *xs = (*env)->GetIntArrayElements(env, jxs, 0);
     int *ys = (*env)->GetIntArrayElements(env, jys, 0);
@@ -146,7 +146,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_android_DalvikInput_onMultiTouchEve
             primary = actions[i] == com_sun_glass_events_TouchEvent_TOUCH_RELEASED && jcount == 1 ? -1 : i;
         }
     }
-    
+
     lens_wm_notifyMultiTouchEvent(env,
            jcount,
            actions,
@@ -154,11 +154,11 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_android_DalvikInput_onMultiTouchEve
            xs,
            ys,
            primary);
-    
+
     (*env)->ReleaseIntArrayElements(env, jactions, actions, 0);
     (*env)->ReleaseIntArrayElements(env, jids, ids, 0);
     (*env)->ReleaseIntArrayElements(env, jxs, xs, 0);
-    (*env)->ReleaseIntArrayElements(env, jys, ys, 0);    
+    (*env)->ReleaseIntArrayElements(env, jys, ys, 0);
 }
 
 /*
@@ -167,13 +167,13 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_android_DalvikInput_onMultiTouchEve
  * Signature: (IILjava/lang/String;)V
  */
 JNIEXPORT void JNICALL Java_com_sun_glass_ui_android_DalvikInput_onKeyEventNative
-  (JNIEnv *env, jobject that, jint action, jint keycode, jstring s) {    
+  (JNIEnv *env, jobject that, jint action, jint keycode, jstring s) {
     GLASS_LOG_FINEST("Key event: [action: %s, keyCode: %i]",
             describe_key_action(action), keycode);
     int type = to_jfx_key_action(action);
     int linux_keycode = to_linux_keycode(keycode);
     GLASS_LOG_FINEST("Translated to linux keycode: [%i]", linux_keycode);
-    if (linux_keycode > 0) {        
+    if (linux_keycode > 0) {
         NativeWindow window = glass_window_getFocusedWindow();
         if (!window) {
             GLASS_LOG_FINE("Haven't got focused window. Terminate notifying key event.");
@@ -207,8 +207,8 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_android_DalvikInput_onSurfaceChange
  */
 JNIEXPORT void JNICALL Java_com_sun_glass_ui_android_DalvikInput_onSurfaceChangedNative__III
  (JNIEnv *env, jobject that, jint fmt, jint w, jint h) {
-    GLASS_LOG_FINEST("Notify JFX that surface has changed."); 
-    GLASS_LOG_FINEST("Surface format:%d width:%d height%d", fmt, w, h);     
+    GLASS_LOG_FINEST("Notify JFX that surface has changed.");
+    GLASS_LOG_FINEST("Surface format:%d width:%d height%d", fmt, w, h);
     glass_application_notifyScreenSettingsChanged(env);
     lens_wm_repaint_all(env);
 }
@@ -230,9 +230,9 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_android_DalvikInput_onSurfaceRedraw
  * Signature: (I)V
  */
 JNIEXPORT void JNICALL Java_com_sun_glass_ui_android_DalvikInput_onConfigurationChangedNative
-  (JNIEnv *env, jobject that, jint flags) {    
+  (JNIEnv *env, jobject that, jint flags) {
     GLASS_LOG_FINEST("Call configuration changed.");
-    glass_application_notifyScreenSettingsChanged(env);   
+    glass_application_notifyScreenSettingsChanged(env);
     lens_wm_repaint_all(env);
 }
 

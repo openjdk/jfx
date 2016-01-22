@@ -41,7 +41,7 @@ import javafx.scene.shape.SVGPath;
  * Helper class for creating tree views for testing
  */
 public class SamplePageTreeHelper {
-    
+
     private static final String RSS = "M13.33,13.334h-1.693c0-4.954-4.016-8.97-8.97-8.97V2.66"
             + "9l0.243-0.002c5.757,0,10.423,4.667,10.423,10.425L13.33,13.334z M9.45,13.334H7."
             + "758c0-2.812-2.279-5.091-5.091-5.091V6.551l0.243-0.005c3.615,0,6.545,2.93,6.545"
@@ -55,19 +55,19 @@ public class SamplePageTreeHelper {
             + "-2.542-1.961-4.605-4.379-4.605l-0.173,0.002c-0.673-2.396-3.037-4.165-5.849-4.1"
             + "65c-3.268,0-5.931,2.389-6.037,5.374L3.385,8.682C1.459,8.682-0.104,10.475-0.104"
             + ",12.685z";
-    
-    private static Node createRSS() { 
+
+    private static Node createRSS() {
         SVGPath sp = new SVGPath();
         sp.setContent(RSS);
         return sp;
     }
-    
-    private static Node createCLOUD() { 
+
+    private static Node createCLOUD() {
         SVGPath sp = new SVGPath();
         sp.setContent(CLOUD);
         return sp;
     }
-    
+
     static TreeView createTreeView(int width) {
         final TreeItem<String> root = new TreeItem<String>("Root node");
         final TreeItem<String> childNode1 = new TreeItem<String>("Child Node 1", createCLOUD());
@@ -91,7 +91,7 @@ public class SamplePageTreeHelper {
         final TreeItem<String> childNode19 = new TreeItem<String>("Child Node 19");
         final TreeItem<String> childNode20 = new TreeItem<String>("Child Node 20");
         final TreeItem<String> childNode21 = new TreeItem<String>("Child Node 21");
-    
+
         root.setExpanded(true);
         root.getChildren().setAll(childNode1, childNode2, childNode3);
         childNode3.setExpanded(true);
@@ -101,7 +101,7 @@ public class SamplePageTreeHelper {
                 childNode13, childNode14, childNode15,
                 childNode16, childNode17, childNode18,
                 childNode19, childNode20, childNode21);
-        
+
         final TreeView treeView = new TreeView(root);
         treeView.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
         treeView.setShowRoot(true);

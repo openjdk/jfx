@@ -25,26 +25,26 @@
 
 G_BEGIN_DECLS
 
-#define GST_TYPE_BASE_TRANSFORM		   (gst_base_transform_get_type())
-#define GST_BASE_TRANSFORM(obj)		   (G_TYPE_CHECK_INSTANCE_CAST((obj),GST_TYPE_BASE_TRANSFORM,GstBaseTransform))
+#define GST_TYPE_BASE_TRANSFORM        (gst_base_transform_get_type())
+#define GST_BASE_TRANSFORM(obj)        (G_TYPE_CHECK_INSTANCE_CAST((obj),GST_TYPE_BASE_TRANSFORM,GstBaseTransform))
 #define GST_BASE_TRANSFORM_CLASS(klass)    (G_TYPE_CHECK_CLASS_CAST((klass),GST_TYPE_BASE_TRANSFORM,GstBaseTransformClass))
 #define GST_BASE_TRANSFORM_GET_CLASS(obj)  (G_TYPE_INSTANCE_GET_CLASS((obj),GST_TYPE_BASE_TRANSFORM,GstBaseTransformClass))
-#define GST_IS_BASE_TRANSFORM(obj)	   (G_TYPE_CHECK_INSTANCE_TYPE((obj),GST_TYPE_BASE_TRANSFORM))
+#define GST_IS_BASE_TRANSFORM(obj)     (G_TYPE_CHECK_INSTANCE_TYPE((obj),GST_TYPE_BASE_TRANSFORM))
 #define GST_IS_BASE_TRANSFORM_CLASS(klass) (G_TYPE_CHECK_CLASS_TYPE((klass),GST_TYPE_BASE_TRANSFORM))
-#define GST_BASE_TRANSFORM_CAST(obj)	((GstBaseTransform *)(obj))
+#define GST_BASE_TRANSFORM_CAST(obj)    ((GstBaseTransform *)(obj))
 
 /**
  * GST_BASE_TRANSFORM_SINK_NAME:
  *
  * The name of the templates for the sink pad.
  */
-#define GST_BASE_TRANSFORM_SINK_NAME	"sink"
+#define GST_BASE_TRANSFORM_SINK_NAME    "sink"
 /**
  * GST_BASE_TRANSFORM_SRC_NAME:
  *
  * The name of the templates for the source pad.
  */
-#define GST_BASE_TRANSFORM_SRC_NAME	"src"
+#define GST_BASE_TRANSFORM_SRC_NAME "src"
 
 /**
  * GST_BASE_TRANSFORM_SRC_PAD:
@@ -52,7 +52,7 @@ G_BEGIN_DECLS
  *
  * Gives the pointer to the source #GstPad object of the element.
  */
-#define GST_BASE_TRANSFORM_SRC_PAD(obj)		(GST_BASE_TRANSFORM_CAST (obj)->srcpad)
+#define GST_BASE_TRANSFORM_SRC_PAD(obj)     (GST_BASE_TRANSFORM_CAST (obj)->srcpad)
 
 /**
  * GST_BASE_TRANSFORM_SINK_PAD:
@@ -60,7 +60,7 @@ G_BEGIN_DECLS
  *
  * Gives the pointer to the sink #GstPad object of the element.
  */
-#define GST_BASE_TRANSFORM_SINK_PAD(obj)	(GST_BASE_TRANSFORM_CAST (obj)->sinkpad)
+#define GST_BASE_TRANSFORM_SINK_PAD(obj)    (GST_BASE_TRANSFORM_CAST (obj)->sinkpad)
 
 /**
  * GST_BASE_TRANSFORM_FLOW_DROPPED:
@@ -80,12 +80,12 @@ typedef struct _GstBaseTransformPrivate GstBaseTransformPrivate;
  * The opaque #GstBaseTransform data structure.
  */
 struct _GstBaseTransform {
-  GstElement	 element;
+  GstElement     element;
 
   /*< protected >*/
   /* source and sink pads */
-  GstPad	*sinkpad;
-  GstPad	*srcpad;
+  GstPad    *sinkpad;
+  GstPad    *srcpad;
 
   /* MT-protected (with STREAM_LOCK) */
   gboolean       have_segment;
@@ -203,10 +203,10 @@ struct _GstBaseTransformClass {
   gboolean       transform_ip_on_passthrough;
 
   /* virtual methods for subclasses */
-  GstCaps*	(*transform_caps) (GstBaseTransform *trans,
+  GstCaps*  (*transform_caps) (GstBaseTransform *trans,
                                    GstPadDirection direction,
                                    GstCaps *caps, GstCaps *filter);
-  GstCaps*	(*fixate_caps)	  (GstBaseTransform *trans,
+  GstCaps*  (*fixate_caps)    (GstBaseTransform *trans,
                                    GstPadDirection direction, GstCaps *caps,
                                    GstCaps *othercaps);
   gboolean      (*accept_caps)    (GstBaseTransform *trans, GstPadDirection direction,
@@ -264,21 +264,21 @@ struct _GstBaseTransformClass {
 
 GType           gst_base_transform_get_type         (void);
 
-void		gst_base_transform_set_passthrough  (GstBaseTransform *trans,
-	                                             gboolean passthrough);
-gboolean	gst_base_transform_is_passthrough   (GstBaseTransform *trans);
+void        gst_base_transform_set_passthrough  (GstBaseTransform *trans,
+                                                 gboolean passthrough);
+gboolean    gst_base_transform_is_passthrough   (GstBaseTransform *trans);
 
-void		gst_base_transform_set_in_place     (GstBaseTransform *trans,
-	                                             gboolean in_place);
-gboolean	gst_base_transform_is_in_place      (GstBaseTransform *trans);
+void        gst_base_transform_set_in_place     (GstBaseTransform *trans,
+                                                 gboolean in_place);
+gboolean    gst_base_transform_is_in_place      (GstBaseTransform *trans);
 
-void		gst_base_transform_update_qos       (GstBaseTransform *trans,
-						     gdouble proportion,
-						     GstClockTimeDiff diff,
-						     GstClockTime timestamp);
-void		gst_base_transform_set_qos_enabled  (GstBaseTransform *trans,
-		                                     gboolean enabled);
-gboolean	gst_base_transform_is_qos_enabled   (GstBaseTransform *trans);
+void        gst_base_transform_update_qos       (GstBaseTransform *trans,
+                             gdouble proportion,
+                             GstClockTimeDiff diff,
+                             GstClockTime timestamp);
+void        gst_base_transform_set_qos_enabled  (GstBaseTransform *trans,
+                                             gboolean enabled);
+gboolean    gst_base_transform_is_qos_enabled   (GstBaseTransform *trans);
 
 void            gst_base_transform_set_gap_aware    (GstBaseTransform *trans,
                                                      gboolean gap_aware);
@@ -291,8 +291,8 @@ void            gst_base_transform_get_allocator    (GstBaseTransform *trans,
                                                      GstAllocator **allocator,
                                                      GstAllocationParams *params);
 
-void		gst_base_transform_reconfigure_sink (GstBaseTransform *trans);
-void		gst_base_transform_reconfigure_src  (GstBaseTransform *trans);
+void        gst_base_transform_reconfigure_sink (GstBaseTransform *trans);
+void        gst_base_transform_reconfigure_src  (GstBaseTransform *trans);
 G_END_DECLS
 
 #endif /* __GST_BASE_TRANSFORM_H__ */

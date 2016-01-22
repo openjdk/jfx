@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "config.h"
 
@@ -42,7 +42,7 @@ static const long minimumQuickTimeVersion = 0x07300000; // 7.3
 
 static LPCWSTR fullscreenQTMovieGWorldPointerProp = L"fullscreenQTMovieGWorldPointer";
 
-// Resizing GWorlds is slow, give them a minimum size so size of small 
+// Resizing GWorlds is slow, give them a minimum size so size of small
 // videos can be animated smoothly
 static const int cGWorldMinWidth = 640;
 static const int cGWorldMinHeight = 360;
@@ -197,13 +197,13 @@ void QTMovieGWorldPrivate::createGWorld()
 
     m_gWorldWidth = max(cGWorldMinWidth, m_width);
     m_gWorldHeight = max(cGWorldMinHeight, m_height);
-    Rect bounds; 
+    Rect bounds;
     bounds.top = 0;
-    bounds.left = 0; 
+    bounds.left = 0;
     bounds.right = m_gWorldWidth;
     bounds.bottom = m_gWorldHeight;
-    OSErr err = QTNewGWorld(&m_gWorld, k32BGRAPixelFormat, &bounds, 0, 0, 0); 
-    if (err) 
+    OSErr err = QTNewGWorld(&m_gWorld, k32BGRAPixelFormat, &bounds, 0, 0, 0);
+    if (err)
         return;
     GetMovieGWorld(m_movie, &m_savedGWorld, 0);
     SetMovieGWorld(m_movie, m_gWorld, 0);
@@ -218,12 +218,12 @@ void QTMovieGWorldPrivate::clearGWorld()
         return;
 
     GrafPtr savePort;
-    GetPort(&savePort); 
+    GetPort(&savePort);
     MacSetPort((GrafPtr)m_gWorld);
 
-    Rect bounds; 
+    Rect bounds;
     bounds.top = 0;
-    bounds.left = 0; 
+    bounds.left = 0;
     bounds.right = m_gWorldWidth;
     bounds.bottom = m_gWorldHeight;
     EraseRect(&bounds);
@@ -240,7 +240,7 @@ void QTMovieGWorldPrivate::setSize(int width, int height)
 
     // Do not change movie box before reaching load state loaded as we grab
     // the initial size when task() sees that state for the first time, and
-    // we need the initial size to be able to scale movie properly. 
+    // we need the initial size to be able to scale movie properly.
     if (!m_movie || m_loadState < QTMovieLoadStateLoaded)
         return;
 
@@ -256,9 +256,9 @@ void QTMovieGWorldPrivate::updateMovieSize()
     if (!m_movie || m_loadState < QTMovieLoadStateLoaded)
         return;
 
-    Rect bounds; 
+    Rect bounds;
     bounds.top = 0;
-    bounds.left = 0; 
+    bounds.left = 0;
     bounds.right = m_width;
     bounds.bottom = m_height;
     SetMovieBox(m_movie, &bounds);
@@ -272,7 +272,7 @@ void QTMovieGWorldPrivate::deleteGWorld()
     if (m_movie)
         SetMovieGWorld(m_movie, m_savedGWorld, 0);
     m_savedGWorld = 0;
-    DisposeGWorld(m_gWorld); 
+    DisposeGWorld(m_gWorld);
     m_gWorld = 0;
     m_gWorldWidth = 0;
     m_gWorldHeight = 0;
@@ -352,17 +352,17 @@ void QTMovieGWorld::paint(HDC hdc, int x, int y)
     if (!m_private->m_gWorld)
         return;
 
-    HDC hdcSrc = static_cast<HDC>(GetPortHDC(reinterpret_cast<GrafPtr>(m_private->m_gWorld))); 
+    HDC hdcSrc = static_cast<HDC>(GetPortHDC(reinterpret_cast<GrafPtr>(m_private->m_gWorld)));
     if (!hdcSrc)
         return;
 
     // FIXME: If we could determine the movie has no alpha, we could use BitBlt for those cases, which might be faster.
-    BLENDFUNCTION blendFunction; 
+    BLENDFUNCTION blendFunction;
     blendFunction.BlendOp = AC_SRC_OVER;
     blendFunction.BlendFlags = 0;
     blendFunction.SourceConstantAlpha = 255;
     blendFunction.AlphaFormat = AC_SRC_ALPHA;
-    AlphaBlend(hdc, x, y, m_private->m_width, m_private->m_height, hdcSrc, 
+    AlphaBlend(hdc, x, y, m_private->m_width, m_private->m_height, hdcSrc,
          0, 0, m_private->m_width, m_private->m_height, blendFunction);
 }
 
@@ -392,8 +392,8 @@ LRESULT QTMovieGWorld::fullscreenWndProc(HWND wnd, UINT message, WPARAM wParam, 
 HWND QTMovieGWorld::enterFullscreen(QTMovieGWorldFullscreenClient* client)
 {
     m_private->m_fullscreenClient = client;
-    
-    BeginFullScreen(&m_private->m_fullscreenRestoreState, 0, 0, 0, &m_private->m_fullscreenWindow, 0, fullScreenAllowEvents); 
+
+    BeginFullScreen(&m_private->m_fullscreenRestoreState, 0, 0, 0, &m_private->m_fullscreenWindow, 0, fullScreenAllowEvents);
     QTMLSetWindowWndProc(m_private->m_fullscreenWindow, fullscreenWndProc);
     CreatePortAssociation(GetPortNativeWindow(m_private->m_fullscreenWindow), 0, 0);
 
@@ -459,7 +459,7 @@ void QTMovieGWorld::setMovie(PassRefPtr<QTMovie> movie)
     }
 }
 
-QTMovie* QTMovieGWorld::movie() const 
+QTMovie* QTMovieGWorld::movie() const
 {
     return m_private->m_qtMovie.get();
 }

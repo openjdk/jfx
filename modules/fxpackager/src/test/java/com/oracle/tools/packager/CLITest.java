@@ -63,7 +63,7 @@ public class CLITest {
 
         runtimeJdk = System.getenv("PACKAGER_JDK_ROOT");
         runtimeJre = System.getenv("PACKAGER_JRE_ROOT");
-        
+
     }
 
     @Test
@@ -85,11 +85,11 @@ public class CLITest {
     public void smokeParams() throws Exception {
         File f = File.createTempFile("fx-param-test", ".properties");
         try (FileOutputStream fos = new FileOutputStream(f);
-            PrintStream ps = new PrintStream(fos)) 
+            PrintStream ps = new PrintStream(fos))
         {
             ps.println("param1=foo");
             ps.println("param2=bar");
-            
+
             com.sun.javafx.tools.packager.Main.main("-deploy",
                     "-verbose", // verbose is required or test will call System.exit() on failures and break the build
                     "-srcfiles", fakeMainJar.getCanonicalPath(),
@@ -172,7 +172,7 @@ public class CLITest {
     public void userJvmArgNoValue() throws Exception {
         PrintStream oldOut = System.out;
         try (ByteArrayOutputStream baos = new ByteArrayOutputStream();
-             PrintStream outStr = new PrintStream(baos)) 
+             PrintStream outStr = new PrintStream(baos))
         {
             System.setOut(outStr);
             com.sun.javafx.tools.packager.Main.main("-deploy",
@@ -187,10 +187,10 @@ public class CLITest {
                     "-BuserJvmOptions=-Xmx1g",
                     "-BuserJvmOptions=-Xms512m");
             ResourceBundle I18N = ResourceBundle.getBundle(AbstractImageBundler.class.getName());
-            
+
             outStr.flush();
             oldOut.println(baos);
-            Assert.assertTrue("Look for expected failure message", 
+            Assert.assertTrue("Look for expected failure message",
                     baos.toString().contains(I18N.getString("error.empty-user-jvm-option-value.advice")));
         } finally {
             System.setOut(oldOut);

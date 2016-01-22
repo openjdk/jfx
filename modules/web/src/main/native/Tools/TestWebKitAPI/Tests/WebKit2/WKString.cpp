@@ -43,7 +43,7 @@ TEST(WebKit2, WKString)
     EXPECT_STREQ("hello", buffer);
 
     delete[] buffer;
-    
+
     maxSize = WKStringGetLength(string);
     EXPECT_EQ(5u, maxSize);
 
@@ -51,20 +51,20 @@ TEST(WebKit2, WKString)
     WKChar* uniBuffer = new WKChar[maxSize+1];
     actualSize = WKStringGetCharacters(string, uniBuffer, maxSize);
     EXPECT_EQ(5u, actualSize);
-    
+
     WKChar helloBuffer[] = { 'h', 'e', 'l', 'l', 'o' };
     EXPECT_TRUE(!memcmp(uniBuffer, helloBuffer, 10));
-    
+
     // Test passing a buffer length < the string length.
     actualSize = WKStringGetCharacters(string, uniBuffer, maxSize - 1);
     EXPECT_EQ(4u, actualSize);
-    
+
     // Test passing a buffer length > the string length.
     actualSize = WKStringGetCharacters(string, uniBuffer, maxSize + 1);
     EXPECT_EQ(5u, actualSize);
-    
+
     delete[] uniBuffer;
-    
+
     WKRelease(string);
 }
 

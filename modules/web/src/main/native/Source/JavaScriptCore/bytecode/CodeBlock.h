@@ -102,7 +102,7 @@ public:
     enum CopyParsedBlockTag { CopyParsedBlock };
 protected:
     CodeBlock(CopyParsedBlockTag, CodeBlock& other);
-        
+
     CodeBlock(ScriptExecutable* ownerExecutable, UnlinkedCodeBlock*, JSScope*, PassRefPtr<SourceProvider>, unsigned sourceOffset, unsigned firstLineColumnOffset);
 
     WriteBarrier<JSGlobalObject> m_globalObject;
@@ -131,14 +131,14 @@ public:
     CodeBlock* alternative() { return m_alternative.get(); }
     PassRefPtr<CodeBlock> releaseAlternative() { return m_alternative.release(); }
     void setAlternative(PassRefPtr<CodeBlock> alternative) { m_alternative = alternative; }
-    
+
     CodeSpecializationKind specializationKind() const
     {
         return specializationFromIsConstruct(m_isConstructor);
     }
-    
+
     CodeBlock* baselineAlternative();
-    
+
     // FIXME: Get rid of this.
     // https://bugs.webkit.org/show_bug.cgi?id=123677
     CodeBlock* baselineVersion();
@@ -184,7 +184,7 @@ public:
     Bag<StructureStubInfo>::iterator end() { return m_stubInfos.end(); }
 
     void resetStub(StructureStubInfo&);
-    
+
     ByValInfo& getByValInfo(unsigned bytecodeIndex)
     {
         return *(binarySearch<ByValInfo, unsigned>(m_byValInfos, m_byValInfos.size(), bytecodeIndex, getByValInfoBytecodeIndex));
@@ -206,9 +206,9 @@ public:
 
 #if ENABLE(JIT)
     void unlinkCalls();
-        
+
     void linkIncomingCall(ExecState* callerFrame, CallLinkInfo*);
-        
+
     bool isIncomingCallAlreadyLinked(CallLinkInfo* incoming)
     {
         return m_incomingCalls.isOnList(incoming);
@@ -227,7 +227,7 @@ public:
     {
         return m_jitCodeMap.get();
     }
-    
+
     unsigned bytecodeOffset(Instruction* returnAddress)
     {
         RELEASE_ASSERT(returnAddress >= instructions().begin() && returnAddress < instructions().end());
@@ -247,16 +247,16 @@ public:
     unsigned instructionCount() const { return m_instructions.size(); }
 
     int argumentIndexAfterCapture(size_t argument);
-    
+
     bool hasSlowArguments();
     const SlowArgument* machineSlowArguments();
 
     // Exactly equivalent to codeBlock->ownerExecutable()->installCode(codeBlock);
     void install();
-    
+
     // Exactly equivalent to codeBlock->ownerExecutable()->newReplacementCodeBlockFor(codeBlock->specializationKind())
     PassRefPtr<CodeBlock> newReplacement();
-    
+
     void setJITCode(PassRefPtr<JITCode> code)
     {
         ASSERT(m_heap->isDeferred());
@@ -279,7 +279,7 @@ public:
     {
         return jitType() == JITCode::BaselineJIT;
     }
-    
+
 #if ENABLE(JIT)
     virtual CodeBlock* replacement() = 0;
 
@@ -297,7 +297,7 @@ public:
 #endif
 
     void jettison(Profiler::JettisonReason, ReoptimizationMode = DontCountReoptimization);
-    
+
     ScriptExecutable* ownerExecutable() const { return m_ownerExecutable.get(); }
 
     void setVM(VM* vm) { m_vm = vm; }
@@ -348,21 +348,21 @@ public:
         ASSERT(m_activationRegister.isValid() == m_needsActivation);
         return m_needsActivation;
     }
-    
+
     unsigned captureCount() const
     {
         if (!symbolTable())
             return 0;
         return symbolTable()->captureCount();
     }
-    
+
     int captureStart() const
     {
         if (!symbolTable())
             return 0;
         return symbolTable()->captureStart();
     }
-    
+
     int captureEnd() const
     {
         if (!symbolTable())
@@ -371,7 +371,7 @@ public:
     }
 
     bool isCaptured(VirtualRegister operand, InlineCallFrame* = 0) const;
-    
+
     int framePointerOffsetToGetActivationRegisters(int machineCaptureStart);
     int framePointerOffsetToGetActivationRegisters();
 
@@ -548,13 +548,13 @@ public:
     {
         return m_jitCode->dfgCommon()->codeOrigins;
     }
-    
+
     // Having code origins implies that there has been some inlining.
     bool hasCodeOrigins()
     {
         return JITCode::isOptimizingJIT(jitType());
     }
-        
+
     bool canGetCodeOrigin(unsigned index)
     {
         if (!hasCodeOrigins())
@@ -689,7 +689,7 @@ public:
             return *m_livenessAnalysis;
         }
     }
-    
+
     void validate();
 
     // Jump Tables
@@ -847,7 +847,7 @@ public:
     void forceOptimizationSlowPathConcurrently();
 
     void setOptimizationThresholdBasedOnCompilationResult(CompilationResult);
-    
+
     uint32_t osrExitCounter() const { return m_osrExitCounter; }
 
     void countOSRExit() { m_osrExitCounter++; }
@@ -893,13 +893,13 @@ public:
     void setSteppingMode(SteppingMode);
 
     void clearDebuggerRequests() { m_debuggerRequests = 0; }
-    
+
     // FIXME: Make these remaining members private.
 
     int m_numCalleeRegisters;
     int m_numVars;
     bool m_isConstructor : 1;
-    
+
     // This is intentionally public; it's the responsibility of anyone doing any
     // of the following to hold the lock:
     //
@@ -917,10 +917,10 @@ public:
     // without holding any locks, because the GC is guaranteed to wait until any
     // concurrent compilation threads finish what they're doing.
     mutable ConcurrentJITLock m_lock;
-    
+
     bool m_shouldAlwaysBeInlined; // Not a bitfield because the JIT wants to store to it.
     bool m_allTransitionsHaveBeenMarked : 1; // Initialized and used on every GC.
-    
+
     bool m_didFailFTLCompilation : 1;
     bool m_hasBeenCompiledWithFTL : 1;
 
@@ -941,17 +941,17 @@ protected:
 
 private:
     friend class CodeBlockSet;
-    
+
     CodeBlock* specialOSREntryBlockOrNull();
-    
+
     void noticeIncomingCall(ExecState* callerFrame);
-    
+
     double optimizationThresholdScalingFactor();
 
 #if ENABLE(JIT)
     ClosureCallStubRoutine* findClosureCallForReturnPC(ReturnAddressPtr);
 #endif
-        
+
     void updateAllPredictionsAndCountLiveness(unsigned& numberOfLiveNonArgumentValueProfiles, unsigned& numberOfSamplesInProfiles);
 
     void setConstantRegisters(const Vector<WriteBarrier<Unknown>>& constants)
@@ -980,7 +980,7 @@ private:
     void dumpValueProfiling(PrintStream&, const Instruction*&, bool& hasPrintedProfiling);
     void dumpArrayProfiling(PrintStream&, const Instruction*&, bool& hasPrintedProfiling);
     void dumpRareCaseProfile(PrintStream&, const char* name, RareCaseProfile*, bool& hasPrintedProfiling);
-        
+
 #if ENABLE(DFG_JIT)
     bool shouldImmediatelyAssumeLivenessDuringScan()
     {
@@ -1004,10 +1004,10 @@ private:
 #else
     bool shouldImmediatelyAssumeLivenessDuringScan() { return true; }
 #endif
-    
+
     void propagateTransitions(SlotVisitor&);
     void determineLiveness(SlotVisitor&);
-        
+
     void stronglyVisitStrongReferences(SlotVisitor&);
     void stronglyVisitWeakReferences(SlotVisitor&);
 
@@ -1016,7 +1016,7 @@ private:
         if (!m_rareData)
             m_rareData = adoptPtr(new RareData);
     }
-    
+
 #if ENABLE(JIT)
     void resetStubInternal(RepatchBuffer&, StructureStubInfo&);
     void resetStubDuringGCInternal(RepatchBuffer&, StructureStubInfo&);
@@ -1084,7 +1084,7 @@ private:
     Vector<WriteBarrier<FunctionExecutable>> m_functionExprs;
 
     RefPtr<CodeBlock> m_alternative;
-    
+
     ExecutionCounter m_llintExecuteCounter;
 
     ExecutionCounter m_jitExecuteCounter;
@@ -1092,7 +1092,7 @@ private:
     uint32_t m_osrExitCounter;
     uint16_t m_optimizationDelayCounter;
     uint16_t m_reoptimizationRetryCounter;
-    
+
     mutable CodeBlockHash m_hash;
 
     std::unique_ptr<BytecodeLivenessAnalysis> m_livenessAnalysis;
@@ -1129,7 +1129,7 @@ protected:
     : CodeBlock(CopyParsedBlock, other)
     {
     }
-        
+
     GlobalCodeBlock(ScriptExecutable* ownerExecutable, UnlinkedCodeBlock* unlinkedCodeBlock, JSScope* scope, PassRefPtr<SourceProvider> sourceProvider, unsigned sourceOffset, unsigned firstLineColumnOffset)
         : CodeBlock(ownerExecutable, unlinkedCodeBlock, scope, sourceProvider, sourceOffset, firstLineColumnOffset)
     {
@@ -1161,21 +1161,21 @@ public:
     : GlobalCodeBlock(CopyParsedBlock, other)
     {
     }
-        
+
     EvalCodeBlock(EvalExecutable* ownerExecutable, UnlinkedEvalCodeBlock* unlinkedCodeBlock, JSScope* scope, PassRefPtr<SourceProvider> sourceProvider)
         : GlobalCodeBlock(ownerExecutable, unlinkedCodeBlock, scope, sourceProvider, 0, 1)
     {
     }
-    
+
     const Identifier& variable(unsigned index) { return unlinkedEvalCodeBlock()->variable(index); }
     unsigned numVariables() { return unlinkedEvalCodeBlock()->numVariables(); }
-    
+
 #if ENABLE(JIT)
 protected:
     virtual CodeBlock* replacement() override;
     virtual DFG::CapabilityLevel capabilityLevelInternal() override;
 #endif
-    
+
 private:
     UnlinkedEvalCodeBlock* unlinkedEvalCodeBlock() const { return jsCast<UnlinkedEvalCodeBlock*>(unlinkedCodeBlock()); }
 };
@@ -1191,7 +1191,7 @@ public:
         : CodeBlock(ownerExecutable, unlinkedCodeBlock, scope, sourceProvider, sourceOffset, firstLineColumnOffset)
     {
     }
-    
+
 #if ENABLE(JIT)
 protected:
     virtual CodeBlock* replacement() override;
@@ -1218,11 +1218,11 @@ inline int CodeBlock::argumentIndexAfterCapture(size_t argument)
 {
     if (argument >= static_cast<size_t>(symbolTable()->parameterCount()))
         return CallFrame::argumentOffset(argument);
-    
+
     const SlowArgument* slowArguments = symbolTable()->slowArguments();
     if (!slowArguments || slowArguments[argument].status == SlowArgument::Normal)
         return CallFrame::argumentOffset(argument);
-    
+
     ASSERT(slowArguments[argument].status == SlowArgument::Captured);
     return slowArguments[argument].index;
 }
@@ -1250,10 +1250,10 @@ inline JSValue ExecState::argumentAfterCapture(size_t argument)
 {
     if (argument >= argumentCount())
         return jsUndefined();
-    
+
     if (!codeBlock())
         return this[argumentOffset(argument)].jsValue();
-    
+
     return this[codeBlock()->argumentIndexAfterCapture(argument)].jsValue();
 }
 
@@ -1261,17 +1261,17 @@ inline void CodeBlockSet::mark(void* candidateCodeBlock)
 {
     // We have to check for 0 and -1 because those are used by the HashMap as markers.
     uintptr_t value = reinterpret_cast<uintptr_t>(candidateCodeBlock);
-    
+
     // This checks for both of those nasty cases in one go.
     // 0 + 1 = 1
     // -1 + 1 = 0
     if (value + 1 <= 1)
         return;
-    
+
     HashSet<CodeBlock*>::iterator iter = m_set.find(static_cast<CodeBlock*>(candidateCodeBlock));
     if (iter == m_set.end())
         return;
-    
+
     mark(*iter);
 }
 
@@ -1279,10 +1279,10 @@ inline void CodeBlockSet::mark(CodeBlock* codeBlock)
 {
     if (!codeBlock)
         return;
-    
+
     if (codeBlock->m_mayBeExecuting)
         return;
-    
+
     codeBlock->m_mayBeExecuting = true;
 #if ENABLE(GGC)
     m_currentlyExecuting.append(codeBlock);

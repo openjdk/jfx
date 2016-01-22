@@ -43,24 +43,24 @@ import com.oracle.javafx.scenebuilder.kit.fxom.FXOMPropertyT;
  *
  */
 public class ReplacePropertyValueJobT extends Job {
-    
+
     private final FXOMPropertyT hostProperty;
     private final FXOMObject newValue;
-    
+
     private FXOMInstance hostInstance;
     private FXOMPropertyC newProperty;
 
     public ReplacePropertyValueJobT(FXOMPropertyT hostProperty, FXOMObject newValue, EditorController editorController) {
         super(editorController);
-        
+
         assert hostProperty != null;
         assert newValue != null;
-        
+
         this.hostProperty = hostProperty;
         this.newValue = newValue;
     }
 
-    
+
     /*
      * Job
      */
@@ -73,7 +73,7 @@ public class ReplacePropertyValueJobT extends Job {
     public void execute() {
         hostInstance = hostProperty.getParentInstance();
         newProperty = new FXOMPropertyC(hostProperty.getFxomDocument(), hostProperty.getName());
-        
+
         // Now same as redo()
         redo();
     }
@@ -82,7 +82,7 @@ public class ReplacePropertyValueJobT extends Job {
     public void undo() {
         assert hostProperty.getParentInstance() == null;
         assert newProperty.getParentInstance() == hostInstance;
-        
+
         newProperty.removeFromParentInstance();
         newValue.removeFromParentProperty();
         hostProperty.addToParentInstance(-1, hostInstance);
@@ -92,7 +92,7 @@ public class ReplacePropertyValueJobT extends Job {
     public void redo() {
         assert hostProperty.getParentInstance() == hostInstance;
         assert newProperty.getParentInstance() == null;
-        
+
         hostProperty.removeFromParentInstance();
         newValue.addToParentProperty(-1, newProperty);
         newProperty.addToParentInstance(-1, hostInstance);
@@ -102,7 +102,7 @@ public class ReplacePropertyValueJobT extends Job {
     public String getDescription() {
         return getClass().getSimpleName();
     }
-    
-    
-    
+
+
+
 }

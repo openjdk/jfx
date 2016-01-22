@@ -27,7 +27,7 @@
 #include "AccessibilityMockObject.h"
 
 namespace WebCore {
-    
+
 AccessibilityMockObject::AccessibilityMockObject()
     : m_parent(0)
 {
@@ -36,10 +36,10 @@ AccessibilityMockObject::AccessibilityMockObject()
 AccessibilityMockObject::~AccessibilityMockObject()
 {
 }
-    
+
 bool AccessibilityMockObject::computeAccessibilityIsIgnored() const
 {
     return accessibilityIsIgnoredByDefault();
 }
-    
+
 }

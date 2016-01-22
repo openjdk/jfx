@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef DFGLazyJSValue_h
@@ -51,7 +51,7 @@ public:
     {
         u.value = JSValue::encode(value);
     }
-    
+
     static LazyJSValue singleCharacterString(UChar character)
     {
         LazyJSValue result;
@@ -59,7 +59,7 @@ public:
         result.u.character = character;
         return result;
     }
-    
+
     static LazyJSValue knownStringImpl(StringImpl* string)
     {
         LazyJSValue result;
@@ -67,36 +67,36 @@ public:
         result.u.stringImpl = string;
         return result;
     }
-    
+
     JSValue tryGetValue() const
     {
         if (m_kind == KnownValue)
             return value();
         return JSValue();
     }
-    
+
     JSValue getValue(VM&) const;
-    
+
     JSValue value() const
     {
         ASSERT(m_kind == KnownValue);
         return JSValue::decode(u.value);
     }
-    
+
     UChar character() const
     {
         ASSERT(m_kind == SingleCharacterString);
         return u.character;
     }
-    
+
     StringImpl* stringImpl() const
     {
         ASSERT(m_kind == KnownStringImpl);
         return u.stringImpl;
     }
-    
+
     TriState strictEqual(const LazyJSValue& other) const;
-    
+
     unsigned switchLookupValue() const
     {
         // NB. Not every kind of JSValue will be able to give you a switch lookup
@@ -112,10 +112,10 @@ public:
             return 0;
         }
     }
-    
+
     void dump(PrintStream&) const;
     void dumpInContext(PrintStream&, DumpContext*) const;
-    
+
 private:
     union {
         EncodedJSValue value;

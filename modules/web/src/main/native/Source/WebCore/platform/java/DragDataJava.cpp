@@ -69,7 +69,7 @@ bool DragData::canSmartReplace() const
     return containsPlainText()
         && containsURL();
     */
-    return false; 
+    return false;
 }
 
 bool DragData::containsCompatibleContent() const
@@ -81,7 +81,7 @@ bool DragData::containsCompatibleContent() const
 }
 
 PassRefPtr<DocumentFragment> DragData::asFragment(Frame* frame, Range&, bool, bool&) const
-{     
+{
     /*
      * Order is richest format first. On OSX this is:
      * * Web Archive

@@ -50,7 +50,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_prism_es2_MacGLContext_nInitialize
     char *tmpVersionStr;
     int versionNumbers[2];
     const char *glExtensions;
-    
+
     jlong pixelFormat = 0;
     jlong win = 0;
     jlong context = 0;

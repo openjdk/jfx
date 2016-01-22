@@ -41,11 +41,11 @@ import javafx.scene.control.PasswordField;
 import javafx.util.Callback;
 
 /**
- * The controller for the custom Keypad component - see 'Keypad.fxml' 
+ * The controller for the custom Keypad component - see 'Keypad.fxml'
  * and 'Keypad.java'.
  */
 public final class KeypadController implements Initializable {
-            
+
     @FXML //  fx:id="del"
     private Button del; // Value injected by FXMLLoader
 
@@ -56,14 +56,14 @@ public final class KeypadController implements Initializable {
     private PasswordField display; // Value injected by FXMLLoader
 
     private Callback<String, Boolean> validateCallback = null;
-    
+
     // Handler for Button[Button[id=null, styleClass=button]] onAction
     // Handler for Button[fx:id="del"] onAction
     // Handler for Button[fx:id="ok"] onAction
     public void keyPressed(ActionEvent event) {
         // handle the event here
         if (event.getTarget() instanceof Button) {
-            if (event.getTarget() == del && !display.getText().isEmpty()) {                
+            if (event.getTarget() == del && !display.getText().isEmpty()) {
                 delete();
             } else if (event.getTarget() == ok) {
                 validateCallback.call(display.getText());
@@ -74,11 +74,11 @@ public final class KeypadController implements Initializable {
             event.consume();
         }
     }
-    
+
     private void delete() {
         display.setText(display.getText().substring(0, display.getText().length() -1));
     }
-    
+
     private void append(String s) {
         String text = display.getText();
         if (text == null) text = "";
@@ -91,9 +91,9 @@ public final class KeypadController implements Initializable {
         assert ok != null : "fx:id=\"ok\" was not injected: check your FXML file 'Keypad.fxml'.";
         assert display != null : "fx:id=\"password\" was not injected: check your FXML file 'Keypad.fxml'.";
     }
-    
+
     void setValidateCallback(Callback<String,Boolean> validateCB) {
         validateCallback = validateCB;
     }
-    
+
 }

@@ -6,13 +6,13 @@
  * are met:
  *
  * 1.  Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer. 
+ *     notice, this list of conditions and the following disclaimer.
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
- *     documentation and/or other materials provided with the distribution. 
+ *     documentation and/or other materials provided with the distribution.
  * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
- *     from this software without specific prior written permission. 
+ *     from this software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY APPLE AND ITS CONTRIBUTORS "AS IS" AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
@@ -43,7 +43,7 @@ WebDocumentLoaderMac::WebDocumentLoaderMac(const ResourceRequest& request, const
 static inline bool needsDataLoadWorkaround(WebView *webView)
 {
 #if !PLATFORM(IOS)
-    static bool needsWorkaround = !WebKitLinkedOnOrAfter(WEBKIT_FIRST_VERSION_WITHOUT_ADOBE_INSTALLER_QUIRK) 
+    static bool needsWorkaround = !WebKitLinkedOnOrAfter(WEBKIT_FIRST_VERSION_WITHOUT_ADOBE_INSTALLER_QUIRK)
                                   && [[[NSBundle mainBundle] bundleIdentifier] isEqualToString:@"com.adobe.Installers.Setup"];
     return needsWorkaround;
 #else
@@ -61,7 +61,7 @@ void WebDocumentLoaderMac::setDataSource(WebDataSource *dataSource, WebView *web
 
     m_resourceLoadDelegate = [webView resourceLoadDelegate];
     m_downloadDelegate = [webView downloadDelegate];
-    
+
     // Some clients run the run loop in a way that prevents the data load timer
     // from firing. We work around that issue here. See <rdar://problem/5266289>
     // and <rdar://problem/5049509>.
@@ -106,13 +106,13 @@ void WebDocumentLoaderMac::increaseLoadCount(unsigned long identifier)
 void WebDocumentLoaderMac::decreaseLoadCount(unsigned long identifier)
 {
     HashSet<unsigned long>::iterator it = m_loadingResources.find(identifier);
-    
+
     // It is valid for a load to be cancelled before it's started.
     if (it == m_loadingResources.end())
         return;
-    
+
     m_loadingResources.remove(it);
-    
+
     if (m_loadingResources.isEmpty()) {
         m_resourceLoadDelegate = 0;
         m_downloadDelegate = 0;

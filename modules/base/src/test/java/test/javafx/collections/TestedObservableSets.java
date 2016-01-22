@@ -43,7 +43,7 @@ public interface TestedObservableSets {
     Callable<ObservableSet<String>> CHECKED_OBSERVABLE_HASH_SET = () -> FXCollections.checkedObservableSet(FXCollections.observableSet(new HashSet()), String.class);
 
     Callable<ObservableSet<String>> SYNCHRONIZED_OBSERVABLE_HASH_SET = () -> FXCollections.synchronizedObservableSet(FXCollections.observableSet(new HashSet<String>()));
-    
+
     Callable<ObservableSet<String>> OBSERVABLE_SET_PROPERTY = () -> new SimpleSetProperty<>(FXCollections.observableSet(new HashSet<String>()));
 
     static class CallableTreeSetImpl implements Callable<ObservableSet<String>> {

@@ -26,7 +26,7 @@ unsigned EventHandler::accessKeyModifiers()
 
 PassRefPtr<Clipboard> EventHandler::createDraggingClipboard() const
 {
-    return Clipboard::createForDragAndDrop();    
+    return Clipboard::createForDragAndDrop();
 }
 
 void EventHandler::focusDocumentView()

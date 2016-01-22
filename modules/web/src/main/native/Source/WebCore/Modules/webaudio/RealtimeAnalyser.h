@@ -42,7 +42,7 @@ class RealtimeAnalyser {
 public:
     RealtimeAnalyser();
     virtual ~RealtimeAnalyser();
-    
+
     void reset();
 
     size_t fftSize() const { return m_fftSize; }
@@ -79,19 +79,19 @@ private:
     // The audio thread writes the input audio here.
     AudioFloatArray m_inputBuffer;
     unsigned m_writeIndex;
-    
+
     size_t m_fftSize;
     std::unique_ptr<FFTFrame> m_analysisFrame;
     void doFFTAnalysis();
-    
+
     // doFFTAnalysis() stores the floating-point magnitude analysis data here.
     AudioFloatArray m_magnitudeBuffer;
     AudioFloatArray& magnitudeBuffer() { return m_magnitudeBuffer; }
 
     // A value between 0 and 1 which averages the previous version of m_magnitudeBuffer with the current analysis magnitude data.
-    double m_smoothingTimeConstant;    
+    double m_smoothingTimeConstant;
 
-    // The range used when converting when using getByteFrequencyData(). 
+    // The range used when converting when using getByteFrequencyData().
     double m_minDecibels;
     double m_maxDecibels;
 };

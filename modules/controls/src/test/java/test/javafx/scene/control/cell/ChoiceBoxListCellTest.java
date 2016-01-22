@@ -39,9 +39,9 @@ import org.junit.Test;
 import static org.junit.Assert.*;
 
 public class ChoiceBoxListCellTest {
-    
+
     private StringConverter<Object> converter;
-    
+
     @Before public void setup() {
         converter = new StringConverter<Object>() {
             @Override public String toString(Object object) {
@@ -53,22 +53,22 @@ public class ChoiceBoxListCellTest {
             }
         };
     }
-    
+
     /**************************************************************************
-     * 
+     *
      * Test for public static Callback<ListView<T>, ListCell<T>> forListView(T... items)
-     * 
+     *
      **************************************************************************/
 
-    
+
     @Test public void testStatic_forListView_noArgs_ensureCellFactoryIsNotNull() {
         Callback<ListView<String>, ListCell<String>> cellFactory = ChoiceBoxListCell.forListView();
         assertNotNull(cellFactory);
     }
-    
+
     @Test public void testStatic_forListView_noArgs_ensureCellFactoryCreatesCells() {
         Callback<ListView<String>, ListCell<String>> cellFactory = ChoiceBoxListCell.forListView();
-        
+
         ListView<String> listView = new ListView<>();
         ChoiceBoxListCell<String> cell = (ChoiceBoxListCell<String>)cellFactory.call(listView);
         assertNotNull(cell);
@@ -76,19 +76,19 @@ public class ChoiceBoxListCellTest {
 
     @Test public void testStatic_forListView_noArgs_ensureCellHasNonNullStringConverter() {
         Callback<ListView<String>, ListCell<String>> cellFactory = ChoiceBoxListCell.forListView();
-        
+
         ListView<String> listView = new ListView<>();
         ChoiceBoxListCell<String> cell = (ChoiceBoxListCell<String>)cellFactory.call(listView);
         assertNotNull(cell.getConverter());
     }
-    
-    
-    
+
+
+
     /**************************************************************************
-     * 
+     *
      * Test for public static <T> Callback<ListView<T>, ListCell<T>> forListView(
      *       final ObservableList<T> items)
-     * 
+     *
      **************************************************************************/
 
     @Test public void testStatic_forListView_items_ensureSuccessWhenItemsIsNull() {
@@ -122,53 +122,53 @@ public class ChoiceBoxListCellTest {
     }
 
     /**************************************************************************
-     * 
+     *
      * Constructor tests for default constructor
-     * 
+     *
      **************************************************************************/
 
     @Test public void testConstructor_noArgs_defaultStringConverterIsNotNull() {
         ChoiceBoxListCell<Object> cell = new ChoiceBoxListCell<>();
         assertNotNull(cell.getConverter());
     }
-    
+
     @Test public void testConstructor_noArgs_defaultStyleClass() {
         ChoiceBoxListCell<Object> cell = new ChoiceBoxListCell<>();
         assertTrue(cell.getStyleClass().contains("choice-box-list-cell"));
     }
-    
+
     @Test public void testConstructor_noArgs_defaultGraphicIsNull() {
         ChoiceBoxListCell<Object> cell = new ChoiceBoxListCell<>();
         assertNull(cell.getGraphic());
     }
-    
-    
+
+
     /**************************************************************************
-     * 
+     *
      * Constructor tests for one-arg constructor
-     * 
+     *
      **************************************************************************/
-    
+
     @Test public void testConstructor_converter_defaultStringConverterIsNotNull() {
         ChoiceBoxListCell<Object> cell = new ChoiceBoxListCell<>(converter);
         assertNotNull(cell.getConverter());
     }
-    
+
     @Test public void testConstructor_converter_defaultStyleClass() {
         ChoiceBoxListCell<Object> cell = new ChoiceBoxListCell<>(converter);
         assertTrue(cell.getStyleClass().contains("choice-box-list-cell"));
     }
-    
+
     @Test public void testConstructor_converter_defaultGraphicIsACheckBox() {
         ChoiceBoxListCell<Object> cell = new ChoiceBoxListCell<>(converter);
         assertNull(cell.getGraphic());
     }
-    
-    
+
+
     /**************************************************************************
-     * 
+     *
      * updateItem tests
-     * 
+     *
      **************************************************************************/
 
     @Test public void test_updateItem_isEmpty_graphicIsNull() {
@@ -176,20 +176,20 @@ public class ChoiceBoxListCellTest {
         cell.updateItem("TEST", true);
         assertNull(cell.getGraphic());
     }
-    
+
     @Test public void test_updateItem_isEmpty_textIsNull() {
         ChoiceBoxListCell<Object> cell = new ChoiceBoxListCell<>();
         cell.updateItem("TEST", true);
         assertNull(cell.getText());
     }
-    
+
     @Test public void test_updateItem_isNotEmpty_textIsNotNull() {
         ChoiceBoxListCell<Object> cell = new ChoiceBoxListCell<>();
         cell.updateItem("TEST", false);
         assertNotNull(cell.getText());
         assertEquals("TEST", cell.getText());
     }
-    
+
     @Test public void test_updateItem_isNotEmpty_textIsNotNull_nullConverter() {
         ChoiceBoxListCell<Object> cell = new ChoiceBoxListCell<>();
         cell.setConverter(null);
@@ -197,7 +197,7 @@ public class ChoiceBoxListCellTest {
         assertNotNull(cell.getText());
         assertEquals("TEST", cell.getText());
     }
-    
+
     @Test public void test_updateItem_isNotEmpty_textIsNotNull_nonNullConverter() {
         ChoiceBoxListCell<Object> cell = new ChoiceBoxListCell<>();
         cell.setConverter(

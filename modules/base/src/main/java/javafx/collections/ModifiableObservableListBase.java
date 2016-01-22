@@ -217,7 +217,7 @@ public abstract class ModifiableObservableListBase<E> extends ObservableListBase
      *
      * <p>For the description of possible exceptions, please refer to the documentation
      * of {@link #set(int, java.lang.Object) } method.
-     * 
+     *
      * @param index the position where to set the element
      * @param element the element that will be set at the specified position
      * @return the old element at the specified position

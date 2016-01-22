@@ -45,18 +45,18 @@ import sun.reflect.misc.ReflectUtil;
 
 // Java Object exported to JavaScript
 class ExportedJavaObject {
-    
+
     private final JS2JavaBridge owner;
     private final String objId; // id to call
     private final Object javaObject;
     private final Class cls;
     private Method[] methods;
     private List<String> jsNames = new ArrayList<String>(1);
-    
+
     private JS2JavaBridge getJSBridge() {
         return owner;
     }
-        
+
     public ExportedJavaObject(JS2JavaBridge owner, String objId, Object javaObject) {
         this.owner = owner;
         this.objId = objId;
@@ -69,19 +69,19 @@ class ExportedJavaObject {
     public String getObjectId() {
         return objId;
     }
-    
+
     public Object getJavaObject() {
         return javaObject;
     }
-    
+
     public void addJSName(String jsName) {
         jsNames.add(jsName);
     }
-    
+
     public List<String> getJSNames() {
         return Collections.unmodifiableList(jsNames);
     }
-    
+
     public String getJSDecl() {
         StringBuilder sb = new StringBuilder();
         sb.append("{\n");
@@ -101,7 +101,7 @@ class ExportedJavaObject {
                 }
             }
             sb.append(") {");
-            
+
             sb.append(" return ").append(owner.getJavaBridge()).append(".call('").append(objId).append(":").append(i).append("', [");
             if (params.length > 0) {
                 sb.append("p0");
@@ -114,7 +114,7 @@ class ExportedJavaObject {
         sb.append("}");
         return sb.toString();
     }
-    
+
     public class CallException extends Exception {
         public CallException(String message) {
             super(message);
@@ -123,7 +123,7 @@ class ExportedJavaObject {
             super(message, cause);
         }
     }
-        
+
     // Handle casting like Long to Integer, Integer to int, etc
     private Object cast(Class<?> desiredType, Object value) throws Exception {
         log("ExportedJavaObject.cast: desired=" + desiredType.getSimpleName()
@@ -169,7 +169,7 @@ class ExportedJavaObject {
         }
         return desiredType.cast(value);
     }
-    
+
     // returns JSON-encoded result
     public String call(final String methodName, final String args) throws CallException {
         try {
@@ -187,7 +187,7 @@ class ExportedJavaObject {
             throw new UndeclaredThrowableException(e);
         }
     }
-    
+
     private String callWorker(String methodName, String args) throws CallException {
         // methodName is an index in methods array
         Method m;
@@ -200,7 +200,7 @@ class ExportedJavaObject {
 
         log("call: " + javaObject.getClass().getSimpleName()
                 + "." + m.getName() + "(" + args + ")");
-        
+
         // we always encode paramaters as array
         Object[] params;
         try {
@@ -255,7 +255,7 @@ class ExportedJavaObject {
             throw new CallException("Result encoding error", ex);
         }
     }
-    
+
     private Method[] getPublicMethods(final Class clz) {
         Method[] m = clz.getMethods();
         ArrayList<Method> am = new ArrayList<Method>();
@@ -264,17 +264,17 @@ class ExportedJavaObject {
                 am.add(m[i]);
             }
         }
-        
+
         Method[] publicMethods = new Method[am.size()];
         return am.toArray(publicMethods);
     }
-    
+
     static void log(String s) {
         JS2JavaBridge.log(s);
     }
-    
+
     static void log(Exception ex) {
         JS2JavaBridge.log(ex);
     }
-    
+
 }

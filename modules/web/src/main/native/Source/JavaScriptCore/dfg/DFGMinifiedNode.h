@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef DFGMinifiedNode_h
@@ -53,36 +53,36 @@ inline bool belongsInMinifiedGraph(NodeType type)
 class MinifiedNode {
 public:
     MinifiedNode() { }
-    
+
     static MinifiedNode fromNode(Node*);
-    
+
     MinifiedID id() const { return m_id; }
     NodeType op() const { return m_op; }
-    
+
     bool hasConstant() const { return hasConstantNumber() || hasWeakConstant(); }
-    
+
     bool hasConstantNumber() const { return hasConstantNumber(m_op); }
-    
+
     unsigned constantNumber() const
     {
         ASSERT(hasConstantNumber(m_op));
         return m_info;
     }
-    
+
     bool hasWeakConstant() const { return hasWeakConstant(m_op); }
-    
+
     JSCell* weakConstant() const
     {
         ASSERT(hasWeakConstant(m_op));
         return bitwise_cast<JSCell*>(m_info);
     }
-    
+
     static MinifiedID getID(MinifiedNode* node) { return node->id(); }
     static bool compareByNodeIndex(const MinifiedNode& a, const MinifiedNode& b)
     {
         return a.m_id < b.m_id;
     }
-    
+
 private:
     static bool hasConstantNumber(NodeType type)
     {
@@ -92,7 +92,7 @@ private:
     {
         return type == WeakJSConstant;
     }
-    
+
     MinifiedID m_id;
     uintptr_t m_info;
     NodeType m_op;

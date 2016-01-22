@@ -28,9 +28,9 @@ package javafx.beans.property;
 /**
  * This class provides a full implementation of a {@link Property} wrapping a
  * {@code boolean} value.
- * 
+ *
  * @see BooleanPropertyBase
- * 
+ *
  * @since JavaFX 2.0
  */
 public class SimpleBooleanProperty extends BooleanPropertyBase {
@@ -66,7 +66,7 @@ public class SimpleBooleanProperty extends BooleanPropertyBase {
 
     /**
      * The constructor of {@code BooleanProperty}
-     * 
+     *
      * @param initialValue
      *            the initial value of the wrapped value
      */
@@ -76,7 +76,7 @@ public class SimpleBooleanProperty extends BooleanPropertyBase {
 
     /**
      * The constructor of {@code BooleanProperty}
-     * 
+     *
      * @param bean
      *            the bean of this {@code BooleanProperty}
      * @param name
@@ -89,7 +89,7 @@ public class SimpleBooleanProperty extends BooleanPropertyBase {
 
     /**
      * The constructor of {@code BooleanProperty}
-     * 
+     *
      * @param bean
      *            the bean of this {@code BooleanProperty}
      * @param name

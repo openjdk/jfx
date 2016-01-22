@@ -49,10 +49,10 @@ public class Main extends Application {
     VBox launcher = new VBox(15);
     Info info = new Info();
 
-    
-    //Use to register EventLogger 
+
+    //Use to register EventLogger
     private static final boolean DEBUG = false;
-    
+
     @Override public void start(Stage stage) {
         stage.setTitle("Touch Suite");
 
@@ -76,7 +76,7 @@ public class Main extends Application {
         if (DEBUG) {
             register("Event Logger", EventLogger.class, EventLogger.info());
         }
-            
+
         stage.setScene(scene);
         stage.show();
     }

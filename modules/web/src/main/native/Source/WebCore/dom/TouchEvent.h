@@ -44,8 +44,8 @@ public:
     {
         return adoptRef(new TouchEvent);
     }
-    static PassRefPtr<TouchEvent> create(TouchList* touches, 
-            TouchList* targetTouches, TouchList* changedTouches, 
+    static PassRefPtr<TouchEvent> create(TouchList* touches,
+            TouchList* targetTouches, TouchList* changedTouches,
             const AtomicString& type, PassRefPtr<AbstractView> view,
             int screenX, int screenY, int pageX, int pageY,
             bool ctrlKey, bool altKey, bool shiftKey, bool metaKey)
@@ -56,8 +56,8 @@ public:
     }
 
     void initTouchEvent(TouchList* touches, TouchList* targetTouches,
-            TouchList* changedTouches, const AtomicString& type, 
-            PassRefPtr<AbstractView> view, int screenX, int screenY, 
+            TouchList* changedTouches, const AtomicString& type,
+            PassRefPtr<AbstractView> view, int screenX, int screenY,
             int clientX, int clientY,
             bool ctrlKey, bool altKey, bool shiftKey, bool metaKey);
 

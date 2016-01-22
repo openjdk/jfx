@@ -57,7 +57,7 @@ public final class Node_properties_Test extends PropertiesTestBase {
         final Group testParent = new Group();
         final Node testNode = new Rectangle();
         testParent.getChildren().add(testNode);
-        
+
         final EventHandler testEventHandler =
                 event -> {
                 };
@@ -142,7 +142,7 @@ public final class Node_properties_Test extends PropertiesTestBase {
 //            config(testNode, "focused", , ),
             config(testNode, "focusTraversable", false, true),
 //            config(testNode, "treeVisible", , ),
-            config(testNode, "eventDispatcher", 
+            config(testNode, "eventDispatcher",
                    null,
                    new EventHandlerManager(null)),
             config(testNode,

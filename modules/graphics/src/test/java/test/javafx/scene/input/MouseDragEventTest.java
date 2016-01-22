@@ -235,10 +235,10 @@ public class MouseDragEventTest {
 
         // Press
         w.event(MouseEvent.MOUSE_PRESSED, 150, 150);
-        
+
         w.getSource().getDragEntered().assertNotCalled();
         w.getSource().getAny().assertNotCalled();
-        
+
         // Move - initiates the gesture
         w.event(MouseEvent.MOUSE_DRAGGED, 160, 151);
 
@@ -258,7 +258,7 @@ public class MouseDragEventTest {
         w.getSourceParent().getDragEnteredTarget().assertCoords(160, 150);
         w.getScene().getDragEntered().assertCalled();
         w.getScene().getDragEntered().assertCoords(160, 150);
-        
+
         w.event(MouseEvent.MOUSE_RELEASED, 160, 150);
 
         w.clear();
@@ -334,7 +334,7 @@ public class MouseDragEventTest {
         w.getSourceParent().getDragOver().assertCoords(160, 150);
         w.getScene().getDragOver().assertCalled();
         w.getScene().getDragOver().assertCoords(160, 150);
-        
+
         w.event(MouseEvent.MOUSE_RELEASED, 160, 150);
 
         w.clear();
@@ -361,7 +361,7 @@ public class MouseDragEventTest {
         w.getSourceParent().getDragReleased().assertCoords(170, 150);
         w.getScene().getDragReleased().assertCalled();
         w.getScene().getDragReleased().assertCoords(170, 150);
-        
+
         w.clear();
     }
 
@@ -677,7 +677,7 @@ public class MouseDragEventTest {
 
         // Release
         w.event(MouseEvent.MOUSE_RELEASED, 410, 150);
-        
+
         w.getSource().getAny().assertNotCalled();
         w.getBelowSource().getAny().assertNotCalled();
         w.getSourceParent().getAny().assertNotCalled();

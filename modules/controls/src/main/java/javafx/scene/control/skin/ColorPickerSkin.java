@@ -84,7 +84,7 @@ public class ColorPickerSkin extends ComboBoxPopupControl<Color> {
 
     private Label displayNode;
     private StackPane pickerColorBox;
-    private Rectangle colorRect; 
+    private Rectangle colorRect;
     private ColorPalette popupContent;
 
     private final ColorPickerBehavior behavior;
@@ -609,7 +609,7 @@ public class ColorPickerSkin extends ComboBoxPopupControl<Color> {
     **************************************************************************/
 
      private static class StyleableProperties {
-        private static final CssMetaData<ColorPicker,Boolean> COLOR_LABEL_VISIBLE = 
+        private static final CssMetaData<ColorPicker,Boolean> COLOR_LABEL_VISIBLE =
                 new CssMetaData<ColorPicker,Boolean>("-fx-color-label-visible",
                 BooleanConverter.getInstance(), Boolean.TRUE) {
 
@@ -617,7 +617,7 @@ public class ColorPickerSkin extends ComboBoxPopupControl<Color> {
                 final ColorPickerSkin skin = (ColorPickerSkin) n.getSkin();
                 return skin.colorLabelVisible == null || !skin.colorLabelVisible.isBound();
             }
-            
+
             @Override public StyleableProperty<Boolean> getStyleableProperty(ColorPicker n) {
                 final ColorPickerSkin skin = (ColorPickerSkin) n.getSkin();
                 return (StyleableProperty<Boolean>)(WritableValue<Boolean>)skin.colorLabelVisible;

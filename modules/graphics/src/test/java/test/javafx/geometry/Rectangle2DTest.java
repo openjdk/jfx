@@ -75,7 +75,7 @@ public class Rectangle2DTest {
 
         assertFalse(r.intersects(-1, 1, 1, 1));
         assertFalse(r.intersects(.1f, 1, 1, 1));
-        
+
     }
 
     @Test

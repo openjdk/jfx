@@ -64,7 +64,7 @@ final class J2DFontFactory implements FontFactory {
         return prismFontFactory.createFont(family, bold, italic, size);
     }
 
-    public synchronized PGFont deriveFont(PGFont font, boolean bold, 
+    public synchronized PGFont deriveFont(PGFont font, boolean bold,
                                           boolean italic, float size) {
         return prismFontFactory.deriveFont(font, bold, italic, size);
     }
@@ -102,7 +102,7 @@ final class J2DFontFactory implements FontFactory {
             return createFont(DEFAULT_FULLNAME, size);
         }
 
-        PGFont font = prismFontFactory.loadEmbeddedFont(name, fontStream, 
+        PGFont font = prismFontFactory.loadEmbeddedFont(name, fontStream,
                                                         size, register);
 
         if (font == null) return null;
@@ -113,7 +113,7 @@ final class J2DFontFactory implements FontFactory {
 
     /**
      * Printing uses the 2D pipeline which isn't initialised until
-     * printing begins, so grabs a copy of the file holding an 
+     * printing begins, so grabs a copy of the file holding an
      * embedded font to 2D on first use.
      */
     public static void registerFont(final FontResource fr) {
@@ -139,14 +139,14 @@ final class J2DFontFactory implements FontFactory {
         });
     }
 
-    public PGFont loadEmbeddedFont(String name, String path, 
+    public PGFont loadEmbeddedFont(String name, String path,
                                    float size, boolean register) {
 
         if (!hasPermission()) {
             return createFont(DEFAULT_FULLNAME, size);
         }
 
-        PGFont font = prismFontFactory.loadEmbeddedFont(name, path, 
+        PGFont font = prismFontFactory.loadEmbeddedFont(name, path,
                                                         size, register);
 
         if (font == null) return null;
@@ -211,7 +211,7 @@ final class J2DFontFactory implements FontFactory {
                 );
             }
         }
-    
+
         if (getCompositeFontUIResource != null) {
             try {
                 return

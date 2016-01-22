@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -59,10 +59,10 @@ void ClobberSet::addAll(const ClobberSet& other)
     //
     // If the other heap has a super heap, we make sure it's present but don't
     // modify its value - so we had it directly already then this doesn't change.
-    
+
     if (this == &other)
         return;
-    
+
     HashMap<AbstractHeap, bool>::const_iterator iter = other.m_clobbers.begin();
     HashMap<AbstractHeap, bool>::const_iterator end = other.m_clobbers.end();
     for (; iter != end; ++iter)

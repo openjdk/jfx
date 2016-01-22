@@ -146,7 +146,7 @@ gst_color_balance_list_channels (GstColorBalance * balance)
  *
  * Sets the current value of the channel to the passed value, which must
  * be between min_value and max_value.
- * 
+ *
  * See Also: The #GstColorBalanceChannel.min_value and
  *         #GstColorBalanceChannel.max_value members of the
  *         #GstColorBalanceChannel object.
@@ -169,11 +169,11 @@ gst_color_balance_set_value (GstColorBalance * balance,
  *
  * Retrieve the current value of the indicated channel, between min_value
  * and max_value.
- * 
+ *
  * See Also: The #GstColorBalanceChannel.min_value and
  *         #GstColorBalanceChannel.max_value members of the
  *         #GstColorBalanceChannel object.
- * 
+ *
  * Returns: The current value of the channel.
  */
 gint

@@ -51,7 +51,7 @@ public:
     {
         return &m_data.get() == &o.m_data.get() || m_data.get() == o.m_data.get();
     }
-    
+
     bool operator!=(const DataRef<T>& o) const
     {
         return &m_data.get() != &o.m_data.get() && m_data.get() != o.m_data.get();

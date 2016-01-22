@@ -240,7 +240,7 @@ public final class Board {
     public Piece getPiece(Point p) {
         return squares[p.getX()][p.getY()].getPiece();
     }
-    
+
     public boolean hasPiece(Point p) {
         return squares[p.getX()][p.getY()].getPiece() != null;
     }
@@ -274,7 +274,7 @@ public final class Board {
     public void setPiece(Piece piece, Point p) {
         final Square sq = squares[p.getX()][p.getY()];
         sq.setPiece(piece);
-        
+
         // Keep track of the kings
         if (piece == WHITE_KING && whiteKing != sq) {
             whiteKing.setPiece(null);

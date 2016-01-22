@@ -39,28 +39,28 @@ public:
     {
         return m_keywordTable.entry(m_vm, ident);
     }
-    
+
     const HashEntry* getKeyword(const Identifier& ident) const
     {
         return m_keywordTable.entry(m_vm, ident);
     }
-    
+
     ~Keywords()
     {
         m_keywordTable.deleteTable();
     }
-    
+
 private:
     friend class VM;
-    
+
     explicit Keywords(VM&);
-    
+
     VM& m_vm;
     const HashTable m_keywordTable;
 };
 
 enum LexerFlags {
-    LexerFlagsIgnoreReservedWords = 1, 
+    LexerFlagsIgnoreReservedWords = 1,
     LexerFlagsDontBuildStrings = 2,
     LexexFlagsDontBuildKeywords = 4
 };
@@ -142,9 +142,9 @@ private:
     ALWAYS_INLINE bool atEnd() const;
     ALWAYS_INLINE T peek(int offset) const;
     struct UnicodeHexValue {
-        
+
         enum ValueType { ValidHex, IncompleteHex, InvalidHex };
-        
+
         explicit UnicodeHexValue(int value)
             : m_value(value)
         {
@@ -166,7 +166,7 @@ private:
             ASSERT(m_value >= 0);
             return m_value;
         }
-        
+
     private:
         int m_value;
     };
@@ -402,7 +402,7 @@ ALWAYS_INLINE JSTokenType Lexer<T>::lexExpectIdentifier(JSToken* tokenRecord, un
 
     m_lastToken = IDENT;
     return IDENT;
-    
+
 slowCase:
     return lex(tokenRecord, lexerFlags, strictMode);
 }

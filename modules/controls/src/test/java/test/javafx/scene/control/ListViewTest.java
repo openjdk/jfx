@@ -424,7 +424,7 @@ public class ListViewTest {
             ex.printStackTrace();
         }
 
-        // the list is totally changing (it is being cleared), so we should 
+        // the list is totally changing (it is being cleared), so we should
         // be nulling out the selection model state
         mod = FXCollections.observableArrayList();
         mod.add(System.currentTimeMillis()+"");
@@ -598,7 +598,7 @@ public class ListViewTest {
         listView.setPrefHeight(100);
         listView.setCellFactory(CheckBoxListCell.forListView(param -> new ReadOnlyBooleanWrapper(true)));
 
-        // because only the first row has data, all other rows should be 
+        // because only the first row has data, all other rows should be
         // empty (and not contain check boxes - we just check the first four here)
         VirtualFlowTestUtils.assertRowsNotEmpty(listView, 0, 1);
         VirtualFlowTestUtils.assertCellNotEmpty(VirtualFlowTestUtils.getCell(listView, 0));

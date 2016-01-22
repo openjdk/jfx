@@ -37,11 +37,11 @@ public class Person {
     private final SimpleStringProperty lastName;
     private final SimpleStringProperty email;
     private final ReadOnlyIntegerWrapper age;
-    
+
     public Person(String fName, int age) {
         this(fName, null, null, age);
     }
-    
+
     public Person(String fName, String lName, String email) {
         this(fName, lName, email, 0);
     }
@@ -69,7 +69,7 @@ public class Person {
     public void setFirstName(String fName) {
         firstName.set(fName);
     }
-    
+
     public StringProperty firstNameProperty() {
         return firstName;
     }
@@ -97,7 +97,7 @@ public class Person {
     public StringProperty emailProperty() {
         return email;
     }
-    
+
     public final int getAge() {return age.get();}
     public ReadOnlyIntegerProperty ageProperty() {return age.getReadOnlyProperty();}
 

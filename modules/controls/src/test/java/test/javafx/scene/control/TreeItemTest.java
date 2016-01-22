@@ -105,7 +105,7 @@ public class TreeItemTest {
         assertEquals(rootChild3, rootChild4.previousSibling());
         assertNull(rootChild4.nextSibling());
     }
-    
+
     @Test public void testGetSiblingsFromNullSibling() {
         assertNull(rootChild2.previousSibling(null));
         assertNull(rootChild2.nextSibling(null));
@@ -195,19 +195,19 @@ public class TreeItemTest {
         assertTrue(root.getChildren().size() == 1);
         assertEquals(child1, root.getChildren().get(0));
     }
-    
+
     @Test public void ensureRootNodeHas0Level() {
         final TreeItem root = new TreeItem("Node");
         assertEquals(0, TreeView.getNodeLevel(root));
     }
-    
+
     @Test public void ensureChildOfRootNodeHas1Level() {
         final TreeItem root = new TreeItem("Node");
         final TreeItem child1 = new TreeItem("child1");
         root.getChildren().addAll(child1);
         assertEquals(1, TreeView.getNodeLevel(child1));
     }
-    
+
     @Test public void ensureGrandchildOfRootNodeHas2Level() {
         final TreeItem root = new TreeItem("Node");
         final TreeItem child1 = new TreeItem("child1");
@@ -216,14 +216,14 @@ public class TreeItemTest {
         child1.getChildren().addAll(grandchild1);
         assertEquals(2, TreeView.getNodeLevel(grandchild1));
     }
-    
+
     @Test public void detachNodeFromParent_observeThatLevelDecreases() {
         final TreeItem root = new TreeItem("Node");
         final TreeItem child1 = new TreeItem("child1");
         final TreeItem grandchild1 = new TreeItem("grandchild1");
         root.getChildren().addAll(child1);
         child1.getChildren().addAll(grandchild1);
-        
+
         // detach child1 from the root node, thus decreasing the level of itself
         // and all children
         root.getChildren().clear();

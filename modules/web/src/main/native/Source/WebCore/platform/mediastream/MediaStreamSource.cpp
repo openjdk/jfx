@@ -54,7 +54,7 @@ MediaStreamSource::MediaStreamSource(const String& id, Type type, const String& 
 {
     if (!m_id.isEmpty())
         return;
-    
+
     m_id = createCanonicalUUIDString();
 }
 
@@ -80,7 +80,7 @@ void MediaStreamSource::setReadyState(ReadyState readyState)
         startProducingData();
         return;
     }
-    
+
     // There are no more consumers of this source's data, shut it down as appropriate.
     if (m_readyState == Ended)
         stopProducingData();

@@ -33,20 +33,20 @@
 #if JSC_OBJC_API_ENABLED
 
 namespace JSC {
-    
+
 class JSAPIWrapperObject : public JSDestructibleObject {
 public:
     typedef JSDestructibleObject Base;
-    
+
     void finishCreation(VM&);
     static void visitChildren(JSCell*, JSC::SlotVisitor&);
-    
+
     void* wrappedObject() { return m_wrappedObject; }
     void setWrappedObject(void*);
 
 protected:
     static const unsigned StructureFlags = OverridesVisitChildren | Base::StructureFlags;
-    
+
     JSAPIWrapperObject(VM&, Structure*);
 
 private:

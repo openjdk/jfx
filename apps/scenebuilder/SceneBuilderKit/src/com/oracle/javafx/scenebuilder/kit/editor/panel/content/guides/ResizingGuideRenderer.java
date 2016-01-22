@@ -45,7 +45,7 @@ import javafx.scene.paint.Paint;
  *
  */
 public class ResizingGuideRenderer {
-    
+
     private static final String NID_RESIZING_GUIDE = "resizingGuide"; //NOI18N
 
     private final Group guideGroup = new Group();
@@ -53,27 +53,27 @@ public class ResizingGuideRenderer {
     private final Set<ResizingGuideChrome> reusableChromes = new HashSet<>();
     private final Paint chromeColor;
     private final double chromeSideLength;
-    
+
     public ResizingGuideRenderer(Paint chromeColor, double chromeSideLength) {
         this.chromeColor = chromeColor;
         this.chromeSideLength = chromeSideLength;
         guideGroup.setMouseTransparent(true);
     }
-    
+
     public void setSegments(List<AbstractSegment> segments) {
         assert segments != null;
         assert guideGroup.getScene() != null;
-        
+
         final Set<AbstractSegment> currentSegments = chromeMap.keySet();
-        
+
         final Set<AbstractSegment> newSegments = new HashSet<>();
         newSegments.addAll(segments);
         newSegments.removeAll(currentSegments);
-        
+
         final Set<AbstractSegment> obsoleteSegments = new HashSet<>();
         obsoleteSegments.addAll(currentSegments);
         obsoleteSegments.removeAll(segments);
-        
+
         for (AbstractSegment s : obsoleteSegments) {
             final ResizingGuideChrome chrome = chromeMap.get(s);
             assert chrome != null;
@@ -81,7 +81,7 @@ public class ResizingGuideRenderer {
             chromeMap.remove(s);
             chrome.setVisible(false);
         }
-        
+
         for (AbstractSegment s : newSegments) {
             final ResizingGuideChrome chrome;
             if (reusableChromes.isEmpty()) {
@@ -99,14 +99,14 @@ public class ResizingGuideRenderer {
             chrome.setup(p1.getX(), p1.getY(), p2.getX(), p2.getY());
             chromeMap.put(s, chrome);
         }
-        
+
 //        assert chromeMap.keySet().size() == segments.size()
 //                : "chromeMap.keySet().size()=" + chromeMap.keySet().size()
 //                + ", segments.size()=" + segments.size();
 //        assert chromeMap.size() + reusableChromes.size() == guideGroup.getChildren().size();
     }
-    
-    
+
+
     public Group getGuideGroup() {
         return guideGroup;
     }

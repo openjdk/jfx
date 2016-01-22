@@ -32,7 +32,7 @@
 
 namespace JSC {
 
-GlobalMemoryStatistics globalMemoryStatistics() 
+GlobalMemoryStatistics globalMemoryStatistics()
 {
     GlobalMemoryStatistics stats;
 

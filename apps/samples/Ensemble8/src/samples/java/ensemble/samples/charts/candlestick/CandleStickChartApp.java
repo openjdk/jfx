@@ -101,7 +101,7 @@ import javafx.stage.Stage;
  * @playground chart.titleSide
  */
 public class CandleStickChartApp extends Application {
-    
+
     // DAY, OPEN, CLOSE, HIGH, LOW, AVERAGE
     private static double[][] data = new double[][]{
             {1,  25, 20, 32, 16, 20},
@@ -140,7 +140,7 @@ public class CandleStickChartApp extends Application {
     private CandleStickChart chart;
     private NumberAxis xAxis;
     private NumberAxis yAxis;
-            
+
     public Parent createContent() {
         xAxis = new NumberAxis(0,32,1);
         xAxis.setMinorTickCount(0);
@@ -166,14 +166,14 @@ public class CandleStickChartApp extends Application {
         }
         return chart;
     }
-    
+
     @Override public void start(Stage primaryStage) throws Exception {
         primaryStage.setScene(new Scene(createContent()));
         primaryStage.show();
     }
-    
-    /** 
-     * Java main for when running without JavaFX launcher 
+
+    /**
+     * Java main for when running without JavaFX launcher
      * @param args command line arguments
      */
     public static void main(String[] args) { launch(args); }

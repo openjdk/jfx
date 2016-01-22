@@ -76,7 +76,7 @@ public  class Rectangle extends Shape {
     private static final int NON_RECTILINEAR_TYPE_MASK = ~(
             BaseTransform.TYPE_TRANSLATION |
             BaseTransform.TYPE_MASK_SCALE |
-            BaseTransform.TYPE_QUADRANT_ROTATION | 
+            BaseTransform.TYPE_QUADRANT_ROTATION |
             BaseTransform.TYPE_FLIP);
 
     /**
@@ -305,8 +305,8 @@ public  class Rectangle extends Shape {
                 public void invalidated() {
                     impl_markDirty(DirtyBits.NODE_GEOMETRY);
                 }
-                
-                @Override 
+
+                @Override
                 public CssMetaData<Rectangle, Number> getCssMetaData() {
                     return StyleableProperties.ARC_WIDTH;
                 }
@@ -355,11 +355,11 @@ public  class Rectangle extends Shape {
                     impl_markDirty(DirtyBits.NODE_GEOMETRY);
                 }
 
-                @Override 
+                @Override
                 public CssMetaData<Rectangle, Number> getCssMetaData() {
                     return StyleableProperties.ARC_HEIGHT;
                 }
-                
+
                 @Override
                 public Object getBean() {
                     return Rectangle.this;
@@ -409,7 +409,7 @@ public  class Rectangle extends Shape {
                 return (StyleableProperty<Number>)node.arcHeightProperty();
             }
 
-        };         
+        };
          private static final CssMetaData<Rectangle,Number> ARC_WIDTH =
             new CssMetaData<Rectangle,Number>("-fx-arc-width",
                 SizeConverter.getInstance(), 0.0) {
@@ -425,7 +425,7 @@ public  class Rectangle extends Shape {
             }
 
         };
-         
+
          private static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES;
          static {
             final List<CssMetaData<? extends Styleable, ?>> styleables =
@@ -436,7 +436,7 @@ public  class Rectangle extends Shape {
 
          }
     }
-     
+
     /**
      * @return The CssMetaData associated with this class, which may include the
      * CssMetaData of its super classes.
@@ -451,8 +451,8 @@ public  class Rectangle extends Shape {
      *
      * @since JavaFX 8.0
      */
-    
-    
+
+
     @Override
     public List<CssMetaData<? extends Styleable, ?>> getCssMetaData() {
         return getClassCssMetaData();
@@ -518,7 +518,7 @@ public  class Rectangle extends Shape {
      */
     @Deprecated
     @Override
-	public RoundRectangle2D impl_configShape() {
+    public RoundRectangle2D impl_configShape() {
         if ((getArcWidth() > 0) && (getArcHeight() > 0)) {
             shape.setRoundRect((float)getX(), (float)getY(),
                     (float)getWidth(), (float)getHeight(),

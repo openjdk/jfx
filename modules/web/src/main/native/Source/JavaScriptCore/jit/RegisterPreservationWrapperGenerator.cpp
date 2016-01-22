@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -38,24 +38,24 @@ namespace JSC {
 RegisterSet registersToPreserve()
 {
     RegisterSet calleeSaves = RegisterSet::calleeSaveRegisters();
-    
+
     // No need to preserve FP since that always gets preserved anyway.
     calleeSaves.clear(GPRInfo::callFrameRegister);
-    
+
     return calleeSaves;
 }
 
 ptrdiff_t registerPreservationOffset()
 {
     unsigned numberOfCalleeSaves = registersToPreserve().numberOfSetRegisters();
-    
+
     // Need to preserve the old return PC.
     unsigned numberOfValuesToSave = numberOfCalleeSaves + 1;
-    
+
     // Alignment. Preserve the same alignment invariants that the caller imposed.
     unsigned numberOfNewStackSlots =
         WTF::roundUpToMultipleOf(stackAlignmentRegisters(), numberOfValuesToSave);
-    
+
     return sizeof(Register) * numberOfNewStackSlots;
 }
 
@@ -65,19 +65,19 @@ MacroAssemblerCodeRef generateRegisterPreservationWrapper(VM& vm, ExecutableBase
     // We shouldn't ever be generating wrappers for native functions.
     RegisterSet toSave = registersToPreserve();
     ptrdiff_t offset = registerPreservationOffset();
-    
+
     AssemblyHelpers jit(&vm, 0);
-    
+
     jit.preserveReturnAddressAfterCall(GPRInfo::regT1);
     jit.load32(
         AssemblyHelpers::Address(
             AssemblyHelpers::stackPointerRegister,
             (JSStack::ArgumentCount - JSStack::CallerFrameAndPCSize) * sizeof(Register) + PayloadOffset),
         GPRInfo::regT2);
-    
+
     // Place the stack pointer where we want it to be.
     jit.subPtr(AssemblyHelpers::TrustedImm32(offset), AssemblyHelpers::stackPointerRegister);
-    
+
     // Compute the number of things we will be copying.
     jit.add32(
         AssemblyHelpers::TrustedImm32(
@@ -86,7 +86,7 @@ MacroAssemblerCodeRef generateRegisterPreservationWrapper(VM& vm, ExecutableBase
 
     ASSERT(!toSave.get(GPRInfo::regT4));
     jit.move(AssemblyHelpers::stackPointerRegister, GPRInfo::regT4);
-    
+
     AssemblyHelpers::Label loop = jit.label();
     jit.sub32(AssemblyHelpers::TrustedImm32(1), GPRInfo::regT2);
     jit.load64(AssemblyHelpers::Address(GPRInfo::regT4, offset), GPRInfo::regT0);
@@ -97,7 +97,7 @@ MacroAssemblerCodeRef generateRegisterPreservationWrapper(VM& vm, ExecutableBase
     // At this point regT4 + offset points to where we save things.
     ptrdiff_t currentOffset = 0;
     jit.storePtr(GPRInfo::regT1, AssemblyHelpers::Address(GPRInfo::regT4, currentOffset));
-    
+
     for (GPRReg gpr = AssemblyHelpers::firstRegister(); gpr <= AssemblyHelpers::lastRegister(); gpr = static_cast<GPRReg>(gpr + 1)) {
         if (!toSave.get(gpr))
             continue;
@@ -110,26 +110,26 @@ MacroAssemblerCodeRef generateRegisterPreservationWrapper(VM& vm, ExecutableBase
         currentOffset += sizeof(Register);
         jit.storeDouble(fpr, AssemblyHelpers::Address(GPRInfo::regT4, currentOffset));
     }
-    
+
     // Assume that there aren't any saved FP registers.
-    
+
     // Restore the tag registers.
     jit.move(AssemblyHelpers::TrustedImm64(TagTypeNumber), GPRInfo::tagTypeNumberRegister);
     jit.add64(AssemblyHelpers::TrustedImm32(TagMask - TagTypeNumber), GPRInfo::tagTypeNumberRegister, GPRInfo::tagMaskRegister);
-    
+
     jit.move(
         AssemblyHelpers::TrustedImmPtr(
             vm.getCTIStub(registerRestorationThunkGenerator).code().executableAddress()),
         GPRInfo::nonArgGPR0);
     jit.restoreReturnAddressBeforeReturn(GPRInfo::nonArgGPR0);
     AssemblyHelpers::Jump jump = jit.jump();
-    
+
     LinkBuffer linkBuffer(vm, &jit, GLOBAL_THUNK_ID);
     linkBuffer.link(jump, CodeLocationLabel(target));
 
     if (Options::verboseFTLToJSThunk())
         dataLog("Need a thunk for calls from FTL to non-FTL version of ", *executable, "\n");
-    
+
     return FINALIZE_DFG_CODE(linkBuffer, ("Register preservation wrapper for %s/%s, %p", toCString(executable->hashFor(CodeForCall)).data(), toCString(executable->hashFor(CodeForConstruct)).data(), target.executableAddress()));
 #else // ENABLE(FTL_JIT)
     UNUSED_PARAM(vm);
@@ -150,25 +150,25 @@ static void generateRegisterRestoration(AssemblyHelpers& jit)
 #if ENABLE(FTL_JIT)
     RegisterSet toSave = registersToPreserve();
     ptrdiff_t offset = registerPreservationOffset();
-    
+
     ASSERT(!toSave.get(GPRInfo::regT4));
 
     // We need to place the stack pointer back to where the caller thought they left it.
     // But also, in order to recover the registers, we need to figure out how big the
     // arguments area is.
-    
+
     jit.load32(
         AssemblyHelpers::Address(
             AssemblyHelpers::stackPointerRegister,
             (JSStack::ArgumentCount - JSStack::CallerFrameAndPCSize) * sizeof(Register) + PayloadOffset),
         GPRInfo::regT4);
-    
+
     jit.move(GPRInfo::regT4, GPRInfo::regT2);
     jit.lshift32(AssemblyHelpers::TrustedImm32(3), GPRInfo::regT2);
-    
+
     jit.addPtr(AssemblyHelpers::TrustedImm32(offset), AssemblyHelpers::stackPointerRegister);
     jit.addPtr(AssemblyHelpers::stackPointerRegister, GPRInfo::regT2);
-    
+
     // We saved things at:
     //
     //     adjSP + (JSStack::CallFrameHeaderSize - JSStack::CallerFrameAndPCSize + NumArgs) * 8
@@ -181,13 +181,13 @@ static void generateRegisterRestoration(AssemblyHelpers& jit)
     //
     //     origSP + NumArgs * 8
     //   = adjSP + offset + NumArgs * 8
-    // 
+    //
     // So if we subtract offset and then add JSStack::CallFrameHeaderSize and subtract
     // JSStack::CallerFrameAndPCSize, we'll get the thing we want.
     ptrdiff_t currentOffset = -offset + sizeof(Register) * (
         JSStack::CallFrameHeaderSize - JSStack::CallerFrameAndPCSize);
     jit.loadPtr(AssemblyHelpers::Address(GPRInfo::regT2, currentOffset), GPRInfo::regT1);
-    
+
     for (GPRReg gpr = AssemblyHelpers::firstRegister(); gpr <= AssemblyHelpers::lastRegister(); gpr = static_cast<GPRReg>(gpr + 1)) {
         if (!toSave.get(gpr))
             continue;
@@ -200,21 +200,21 @@ static void generateRegisterRestoration(AssemblyHelpers& jit)
         currentOffset += sizeof(Register);
         jit.loadDouble(AssemblyHelpers::Address(GPRInfo::regT2, currentOffset), fpr);
     }
-    
+
     // Thunks like this rely on the ArgumentCount being intact. Pay it forward.
     jit.store32(
         GPRInfo::regT4,
         AssemblyHelpers::Address(
             AssemblyHelpers::stackPointerRegister,
             (JSStack::ArgumentCount - JSStack::CallerFrameAndPCSize) * sizeof(Register) + PayloadOffset));
-    
+
     if (!ASSERT_DISABLED) {
         AssemblyHelpers::Jump ok = jit.branchPtr(
             AssemblyHelpers::Above, GPRInfo::regT1, AssemblyHelpers::TrustedImmPtr(static_cast<size_t>(0x1000)));
         jit.breakpoint();
         ok.link(&jit);
     }
-    
+
     jit.jump(GPRInfo::regT1);
 #else // ENABLE(FTL_JIT)
     UNUSED_PARAM(jit);

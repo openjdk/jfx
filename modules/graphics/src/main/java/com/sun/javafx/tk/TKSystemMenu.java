@@ -34,15 +34,15 @@ import com.sun.javafx.menu.MenuBase;
  * We use this interface to access the Glass native system menu
  */
 public interface TKSystemMenu {
-    
+
     /**
-     * Check whether top level global system menubar support is 
+     * Check whether top level global system menubar support is
      * available on this OS.  Currently supported on Mac OSX only.
      *
      * @return  whether top-level global system menus are supported
      */
     public boolean isSupported();
-    
+
     public void setMenus(List<MenuBase> menus);
-    
+
 }

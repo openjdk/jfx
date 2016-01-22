@@ -1,4 +1,4 @@
-.root {    
+.root {
     -fx-font: 14px "Helvetica";
 }
 
@@ -41,31 +41,31 @@
     -fx-border-image-source: url("images/popover-list-border.png");
     -fx-border-image-slice: 11 fill;
     -fx-border-image-width: 11;
-    -fx-padding: -11; 
+    -fx-padding: -11;
 }
 
 .list-of-links-transparent {
     -fx-border-image-source: url("images/ios-list-transparent.png");
     -fx-border-image-slice: 11 fill;
     -fx-border-image-width: 11;
-    -fx-padding: -11; 
+    -fx-padding: -11;
 }
 .popover-dialog {
     -fx-border-image-source: url("images/popover-no-arrow.png");
     -fx-border-image-slice: 78 50 60 50 fill;
     -fx-border-image-width: 78 50 60 50;
-    -fx-padding: -42 -36 0 0; 
+    -fx-padding: -42 -36 0 0;
 }
 .popover-dialog-linen {
     -fx-background-image: url("images/blue-linen.jpg");
     -fx-border-image-source: url("images/popover-no-arrow-empty.png");
     -fx-border-image-slice: 78 50 60 50;
     -fx-border-image-width: 78 50 60 50;
-    -fx-padding: -42 -36 0 0; 
+    -fx-padding: -42 -36 0 0;
     -fx-border-image-insets: -71 -44 -54 -44;
 }
 
-.large-red-button .text{   
+.large-red-button .text{
     -fx-effect: dropshadow( three-pass-box , rgba(0,0,0,0.9) , 0, 0.0 , 0 , -1 );
 }
 .large-red-button {
@@ -77,13 +77,13 @@
     -fx-border-image-source: url("images/large-red-button.png");
     -fx-border-image-slice: 14 fill;
     -fx-border-image-width: 14;
-    -fx-padding: -3 10 -3 10; 
+    -fx-padding: -3 10 -3 10;
 }
 .large-red-button:disabled, .large-blue-button:disabled  {
     -fx-opacity: 0.2;
 }
 
-.large-blue-button .text{   
+.large-blue-button .text{
     -fx-effect: dropshadow( three-pass-box , rgba(0,0,0,0.9) , 0, 0.0 , 0 , -1 );
 }
 .large-blue-button {
@@ -95,10 +95,10 @@
     -fx-border-image-source: url("images/large-blue-button.png");
     -fx-border-image-slice: 14 fill;
     -fx-border-image-width: 14;
-    -fx-padding: -3 10 -3 10; 
+    -fx-padding: -3 10 -3 10;
 }
 
-.large-light-blue-button .text{   
+.large-light-blue-button .text{
     -fx-effect: dropshadow( three-pass-box , rgba(0,0,0,0.9) , 0, 0.0 , 0 , -1 );
 }
 .large-light-blue-button {
@@ -110,7 +110,7 @@
     -fx-border-image-source: url("images/large-light-blue-button.png");
     -fx-border-image-slice: 14 fill;
     -fx-border-image-width: 14;
-    -fx-padding: -3 10 -3 10; 
+    -fx-padding: -3 10 -3 10;
 }
 .large-light-blue-button:pressed {
     -fx-border-image-source: url("images/large-light-blue-button-pressed.png");
@@ -124,7 +124,7 @@
     -fx-border-image-source: url("images/large-gray-button.png");
     -fx-border-image-slice: 14 fill;
     -fx-border-image-width: 14;
-    -fx-padding: -3 10 -3 10; 
+    -fx-padding: -3 10 -3 10;
 }
 .large-gray-button:pressed {
     -fx-border-image-source: url("images/large-gray-button-pressed.png");
@@ -135,7 +135,7 @@
     -fx-border-image-source: url("images/search.png");
     -fx-border-image-slice: 0 15 0 30 fill;
     -fx-border-image-width: 0 15 0 30;
-    -fx-padding: 0 50 0 0; 
+    -fx-padding: 0 50 0 0;
     -fx-prompt-text-fill: #b4b3b4;
     -fx-text-fill: black;
     -fx-cursor: text;
@@ -154,7 +154,7 @@
 /* ****** POPOVER ******************************************************************************* */
 
 .popover {
-    -fx-padding: 44 7 7 7; 
+    -fx-padding: 44 7 7 7;
 }
 
 .popover-frame {
@@ -321,12 +321,12 @@
     -fx-border-image-source: url("images/filter-popover.png");
     -fx-border-image-slice: 92 56 59 45 fill;
     -fx-border-image-width: 92 56 59 45;
-    -fx-padding: -42 -36 0 0; 
+    -fx-padding: -42 -36 0 0;
 }
 .session-filter-pane-titlebar-text {
     -fx-font-size: 20px;
     -fx-font-weight: bold;
-    -fx-fill: white;    
+    -fx-fill: white;
     -fx-effect: dropshadow( three-pass-box , rgba(0,0,0,0.9) , 0, 0.0 , 0 , -1 );
 }
 #session-filter-pane-cancel-button {
@@ -340,7 +340,7 @@
 .session-filter-popover-content {
     -fx-font-size: 12px;
     -fx-font-weight: bold;
-    -fx-padding: -11; 
+    -fx-padding: -11;
 }
 .popover-list-item {
     -fx-border-color: transparent transparent #cacaca transparent;
@@ -371,7 +371,7 @@
     -fx-border-image-source: url("images/ios-list-transparent.png");
     -fx-border-image-slice: 11 fill;
     -fx-border-image-width: 11;
-    /*-fx-padding: -11;*/ 
+    /*-fx-padding: -11;*/
 }
 #tweet-button {
     -fx-skin: "com.sun.javafx.scene.control.skin.ButtonSkin";
@@ -410,7 +410,7 @@
     -fx-border-image-source: url("images/ios-list-transparent.png");
     -fx-border-image-slice: 11 fill;
     -fx-border-image-width: 11;
-    -fx-padding: -11; 
+    -fx-padding: -11;
 }
 #venue-room-session-list .popover-tree-list-cell {
     -fx-background-color: null;

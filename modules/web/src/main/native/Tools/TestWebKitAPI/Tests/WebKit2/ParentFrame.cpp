@@ -39,7 +39,7 @@ static void didReceiveMessageFromInjectedBundle(WKContextRef, WKStringRef messag
 
     EXPECT_WK_STREQ("DidCheckParentFrame", messageName);
     EXPECT_EQ(WKBooleanGetTypeID(), WKGetTypeID(body));
-    
+
     isParentFrameCheckSuccessful = WKBooleanGetValue(static_cast<WKBooleanRef>(body));
 }
 

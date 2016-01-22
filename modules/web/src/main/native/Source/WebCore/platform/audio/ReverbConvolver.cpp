@@ -153,7 +153,7 @@ void ReverbConvolver::backgroundThreadEntry()
 {
     while (!m_wantsToExit) {
         // Wait for realtime thread to give us more input
-        m_moreInputBuffered = false;        
+        m_moreInputBuffered = false;
         {
             std::unique_lock<std::mutex> lock(m_backgroundThreadMutex);
 
@@ -163,7 +163,7 @@ void ReverbConvolver::backgroundThreadEntry()
         // Process all of the stages until their read indices reach the input buffer's write index
         int writeIndex = m_inputBuffer.writeIndex();
 
-        // Even though it doesn't seem like every stage needs to maintain its own version of readIndex 
+        // Even though it doesn't seem like every stage needs to maintain its own version of readIndex
         // we do this in case we want to run in more than one background thread.
         int readIndex;
 
@@ -184,7 +184,7 @@ void ReverbConvolver::process(const AudioChannel* sourceChannel, AudioChannel* d
     ASSERT(isSafe);
     if (!isSafe)
         return;
-        
+
     const float* source = sourceChannel->data();
     float* destination = destinationChannel->mutableData();
     bool isDataSafe = source && destination;
@@ -201,13 +201,13 @@ void ReverbConvolver::process(const AudioChannel* sourceChannel, AudioChannel* d
 
     // Finally read from accumulation buffer
     m_accumulationBuffer.readAndClear(destination, framesToProcess);
-        
+
     // Now that we've buffered more input, wake up our background thread.
-    
+
     // We use use std::unique_lock with std::try_lock here because this is run on the real-time
     // thread where it is a disaster for the lock to be contended (causes audio glitching).  It's OK if we fail to
     // signal from time to time, since we'll get to it the next time we're called.  We're called repeatedly
-    // and frequently (around every 3ms).  The background thread is processing well into the future and has a considerable amount of 
+    // and frequently (around every 3ms).  The background thread is processing well into the future and has a considerable amount of
     // leeway here...
     std::unique_lock<std::mutex> lock(m_backgroundThreadMutex, std::try_to_lock);
     if (!lock.owns_lock())

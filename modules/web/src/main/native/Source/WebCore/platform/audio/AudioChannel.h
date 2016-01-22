@@ -87,7 +87,7 @@ public:
     float* mutableData()
     {
         clearSilentFlag();
-        return m_rawPointer ? m_rawPointer : m_memBuffer->data(); 
+        return m_rawPointer ? m_rawPointer : m_memBuffer->data();
     }
 
     const float* data() const { return m_rawPointer ? m_rawPointer : m_memBuffer->data(); }

@@ -42,7 +42,7 @@ public class KeyEventTest {
 
     private final Node node1 = new TestNode();
     private final Node node2 = new TestNode();
-    
+
     public KeyEvent testKeyEvent(EventTarget target, String character, KeyCode code, boolean shiftDown, boolean controlDown, boolean altDown, boolean metaDown) {
         return new KeyEvent(null, target, KeyEvent.KEY_PRESSED, character, null, code, shiftDown, controlDown, altDown, metaDown);
     }

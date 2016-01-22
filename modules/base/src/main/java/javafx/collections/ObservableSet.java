@@ -32,7 +32,7 @@ import javafx.beans.Observable;
 
 /**
  * A set that allows observers to track changes when they occur.
- * 
+ *
  * @see SetChangeListener
  * @see SetChangeListener.Change
  * @since JavaFX 2.1

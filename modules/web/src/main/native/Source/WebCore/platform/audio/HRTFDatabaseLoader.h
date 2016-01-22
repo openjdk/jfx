@@ -51,24 +51,24 @@ public:
 
     // Both constructor and destructor must be called from the main thread.
     ~HRTFDatabaseLoader();
-    
+
     // Returns true once the default database has been completely loaded.
     bool isLoaded() const;
 
     // waitForLoaderThreadCompletion() may be called more than once and is thread-safe.
     void waitForLoaderThreadCompletion();
-    
+
     HRTFDatabase* database() { return m_hrtfDatabase.get(); }
 
     float databaseSampleRate() const { return m_databaseSampleRate; }
-    
+
     // Called in asynchronous loading thread.
     void load();
 
 private:
     // Both constructor and destructor must be called from the main thread.
     explicit HRTFDatabaseLoader(float sampleRate);
-    
+
     // If it hasn't already been loaded, creates a new thread and initiates asynchronous loading of the default database.
     // This must be called from the main thread.
     void loadAsynchronously();

@@ -33,22 +33,22 @@ import static com.sun.javafx.ext.device.ios.ipod.MediaFilter.MediaFilterType;
 
 /**
  * The MediaQuery class is the central entity of the iPod library access API. Its purpose is to provide
- * access to the user's iPod library content. It allows you to retrieve lists of media items fulfilling 
+ * access to the user's iPod library content. It allows you to retrieve lists of media items fulfilling
  * certain criteria and group them by some shared properties. E.g. it is possible to filter out media items
- * of a particular genre, composer, title, etc. See the MediaFilter class description for the list of 
+ * of a particular genre, composer, title, etc. See the MediaFilter class description for the list of
  * available filters. It is possible to use multiple filters at the same time.
  * <br/>
- * The MediaQuery class also supports so called grouping. Grouping allows you to retrieve sorted and arranged 
+ * The MediaQuery class also supports so called grouping. Grouping allows you to retrieve sorted and arranged
  * collections of media items. The arrangement you get depends on the value you set by calling the
  * MediaQuery.setGrouping() method.
  * <br/>
  * The possible arrangements you can achieve with grouping are as follows:
  * <ul>
  * <li><strong>Title</strong> - groups and sorts media item collections by title.</li>
- * <li><strong>Album</strong> - groups and sorts media item collections by album, 
+ * <li><strong>Album</strong> - groups and sorts media item collections by album,
  * and sorts songs within an album by track order.</li>
  * <li><strong>Artist</strong> - groups and sorts media item collections by performing artist.</li>
- * <li><strong>AlbumArtist</strong> - groups and sorts media item collections by album artist 
+ * <li><strong>AlbumArtist</strong> - groups and sorts media item collections by album artist
  * (the primary performing artist for an album as a whole).</li>
  * <li><strong>Composer</strong> - groups and sorts media item collections by composer.</li>
  * <li><strong>Genre</strong> - groups and sorts media item collections by musical or film genre.</li>
@@ -56,7 +56,7 @@ import static com.sun.javafx.ext.device.ios.ipod.MediaFilter.MediaFilterType;
  * <li><strong>PodcastTitle</strong> - groups and sorts media item collections by podcast title.</li>
  * </ul>
  * The following code example creates an instance of the MediaQuery class to get a list of all items in the
- * user's iPod library: 
+ * user's iPod library:
  * <pre>
  * final MediaQuery mQuery = new MediaQuery();
  * final List&lt;MediaItem&gt; list = mQuery.getItems();
@@ -65,13 +65,13 @@ import static com.sun.javafx.ext.device.ios.ipod.MediaFilter.MediaFilterType;
  * The filters will make sure that we get a list of all musical items of the artist "TheBigLooser"
  * <pre>
  * final MediaQuery mQuery = new MediaQuery();
- * 
+ *
  * final MediaFilter artistFilter = new MediaFilter(MediaFilter.MediaFilterType.Artist, "TheBigLooser");
  * mQuery.addFilter(artistFilter);
- * 
+ *
  * final MediaFilter typeFilter = new MediaFilter(MediaFilter.MediaFilterType.MediaType, MediaItem.MediaItemType.Music);
  * mQuery.addFilter(typeFilter);
- * 
+ *
  * final List&lt;MediaItem&gt; list = mQuery.getItems();
  * </pre>
  * If you add the following line, your results will be sorted and grouped by the album on which they appeared.
@@ -81,7 +81,7 @@ import static com.sun.javafx.ext.device.ios.ipod.MediaFilter.MediaFilterType;
  * However, remember that when you employ grouping, you are supposed to receive media item collections in a form
  * of a List of Lists (List&lt;List&lt;MediaItem&gt;&gt;) of media items.
  * <p>
- * The following example demonstrates how to use both filtering, grouping and how to display each media item's 
+ * The following example demonstrates how to use both filtering, grouping and how to display each media item's
  * properties:
  * <pre>
  * final MediaQuery mediaQuery = new MediaQuery();
@@ -122,7 +122,7 @@ import static com.sun.javafx.ext.device.ios.ipod.MediaFilter.MediaFilterType;
 public class MediaQuery {
 
     /**
-     * The MediaGroupingType enum defines valid values for grouping of a MediaQuery. See the 
+     * The MediaGroupingType enum defines valid values for grouping of a MediaQuery. See the
      * MediaQuery description for an explanation of the grouping functionality.
      *
      */
@@ -159,13 +159,13 @@ public class MediaQuery {
          * Groups and sorts media item collections by podcast title.
          */
         PodcastTitle(7);
-        
+
         private final int value;
-        
+
         private MediaGroupingType(int value) {
             this.value = value;
         }
-        
+
         /**
          * Returns the integer value associated with this enum value.
          * @return the integer value associated with this enum value.
@@ -174,13 +174,13 @@ public class MediaQuery {
             return value;
         }
     }
-    
+
     private List<MediaFilter> filters;
     private MediaGroupingType groupingType;
-    
+
     private List<MediaItem> items;
     private List<List<MediaItem>> collections;
-    
+
     /* Native methods */
     private native void nCreateQuery();
     private native void nAddNumberPredicate(int key, int value);
@@ -189,16 +189,16 @@ public class MediaQuery {
     private native void nFillItemList();
     private native void nFillCollections();
     private native void nDisposeQuery();
-    
+
     /* Methods called from native to fill up the lists */
     private void addMediaItem(final MediaItem item) {
         items.add(item);
     }
-    
+
     private void addCollection(final List<MediaItem> collection) {
         collections.add(collection);
     }
-    
+
     /**
      * Instantiates a new MediaQuery with no filtering and no grouping. Calling <code>getItems()</code>
      * right after this constructor would result in all media items from the iPod library being returned.
@@ -208,7 +208,7 @@ public class MediaQuery {
         items = new LinkedList<MediaItem>();
         collections = new LinkedList<List<MediaItem>>();
     }
-    
+
     /**
      * Constructs a new MediaQuery instance and adds the given MediaFilter to the query.
      * @param filter An initial MediaFilter filter
@@ -217,7 +217,7 @@ public class MediaQuery {
         this();
         addFilter(filter);
     }
-    
+
     /**
      * Adds another MediaFilter to this query.
      * @param filter the MediaFilter to be added to this query
@@ -233,10 +233,10 @@ public class MediaQuery {
     public void removeFilter(final MediaFilter filter) {
         filters.remove(filter);
     }
-    
+
     private void setupFilters() {
         for (final MediaFilter filter : filters) {
-            final MediaFilterType type = filter.getFilterType(); 
+            final MediaFilterType type = filter.getFilterType();
             if (type == MediaFilterType.MediaType) {
                 final MediaItem.MediaItemType mediaType = (MediaItem.MediaItemType) filter.getFilterValue();
                 nAddNumberPredicate(type.getValue(), mediaType.getValue());
@@ -258,17 +258,17 @@ public class MediaQuery {
      * @return a list of media items being a result of this query evaluation
      */
     public List<MediaItem> getItems() {
-        
+
         nCreateQuery();
         setupFilters();
-        
+
         if (!items.isEmpty()) {
             items.clear();
         }
-        
+
         nFillItemList();
         nDisposeQuery();
-        
+
         return items;
     }
 
@@ -284,26 +284,26 @@ public class MediaQuery {
      * Returns a list of media items from the iPod library that fulfill all the criteria imposed
      * by all the filters that were added to this query prior to this call, arranged and grouped
      * by the grouping type set by calling the <code>setGroupingType</code> method. Collections are
-     * returned in a form of lists of media items. See the <code>MediaQuery</code> class description 
+     * returned in a form of lists of media items. See the <code>MediaQuery</code> class description
      * for an example on how to use grouping.
      * @return
      */
     public List<List<MediaItem>> getCollections() {
-        
+
         nCreateQuery();
         setupFilters();
-        
+
         if (!collections.isEmpty()) {
             for (final List<MediaItem> collection : collections) {
                 collection.clear();
             }
             collections.clear();
         }
-        
+
         nSetGroupingType(groupingType.getValue());
         nFillCollections();
         nDisposeQuery();
-        
+
         return collections;
     }
 

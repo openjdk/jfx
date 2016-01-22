@@ -68,7 +68,7 @@ PasteboardNotificationsTest::PasteboardNotificationsTest(const std::string& iden
 }
 
 void PasteboardNotificationsTest::didCreatePage(WKBundleRef bundle, WKBundlePageRef page)
-{    
+{
     WKBundlePageEditorClientV1 pageEditorClient;
     memset(&pageEditorClient, 0, sizeof(pageEditorClient));
 

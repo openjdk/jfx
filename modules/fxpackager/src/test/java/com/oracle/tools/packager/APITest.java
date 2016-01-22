@@ -108,7 +108,7 @@ public class APITest {
                 ));
             }
         }
-        
+
         for (int i = 0; i < runtimes.size(); i++) {
             Map<String, Object> params = new HashMap<>();
 
@@ -136,7 +136,7 @@ public class APITest {
                 System.err.println("Bundle at - " + output);
                 assertNotNull(output);
                 assertTrue(output.exists());
-            }            
+            }
         }
     }
 }

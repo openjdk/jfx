@@ -27,9 +27,9 @@
 #import "GlassView.h"
 #import "GlassDragDelegate.h"
 
-// 
+//
 @interface GlassMainWindow : UIWindow {
-    
+
 }
 -(void) sendEvent:(UIEvent *)event;
 @end
@@ -43,14 +43,14 @@
 @interface GlassWindow : UIView
 {
     jobject             jWindow; // Glass java Window object
-    
+
 @public
-    
+
     UIView              *owner;
     UIView<GlassView>   *view; // GlassView owned by this GlassWindow
     UIView              *hostView; // GlassWindow's subview and container of GlassView, Webnode etc.
     GlassWindow         *parentWindow;
-    
+
     BOOL                isFocusable; // if isFocusable and isEnabled, then can become key window
     BOOL                isTransparent; // YES if window is not opaque
     BOOL                isResizable;
@@ -60,11 +60,11 @@
     // temporarily hold new frame origin, size, etc. when updating frame on the main NSThread
     CGFloat             _setFrameX, _setFrameY, _setFrameWidth, _setFrameHeight;
     jboolean            _setFrameDisplay, _setFrameAnimated;
-    
+
     jint                _setLevel;
-    
+
     jfloat              _setAlpha; // temporarily hold alpha value while updating it on main NSThread
-    
+
     BOOL                isEnabled; //see is Focusable
     jfloat              minWidth, minHeight, maxWidth, maxHeight;
 
@@ -84,8 +84,8 @@
 
 // display system keyboard and editable textfield allowing user to enter/edit text
 // here we differentiate from other platforms with accessible key events
-- (void)requestInput:(NSString *)text type:(int)type width:(double)width height:(double)height 
-                 mxx:(double)mxx mxy:(double)mxy mxz:(double)mxz mxt:(double)mxt 
+- (void)requestInput:(NSString *)text type:(int)type width:(double)width height:(double)height
+                 mxx:(double)mxx mxy:(double)mxy mxz:(double)mxz mxt:(double)mxt
                  myx:(double)myx myy:(double)myy myz:(double)myz myt:(double)myt
                  mzx:(double)mzx mzy:(double)mzy mzz:(double)mzz mzt:(double)mzt;
 - (void)releaseInput;
@@ -93,6 +93,6 @@
 - (void)becomeKeyWindow; // window become key window (receives keyboard and other non-touch events)
 - (void)resignKeyWindow; // window is not key any more
 - (void)makeKeyWindow;   // request window to become key
-- (BOOL)isKeyWindow; 
+- (BOOL)isKeyWindow;
 
 @end

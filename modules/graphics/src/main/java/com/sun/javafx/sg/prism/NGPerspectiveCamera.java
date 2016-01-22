@@ -56,7 +56,7 @@ public class NGPerspectiveCamera extends NGCamera {
     public void setVerticalFieldOfView(boolean verticalFieldOfView) {
         this.verticalFieldOfView = verticalFieldOfView;
     }
-    
+
     @Override
     public PickRay computePickRay(float x, float y, PickRay pickRay) {
         return PickRay.computePerspectivePickRay(x, y, fixedEyeAtCameraZero,

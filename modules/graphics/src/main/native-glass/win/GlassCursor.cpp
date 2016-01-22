@@ -136,7 +136,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_win_WinCursor__1initIDs
 
     cls = env->FindClass("com/sun/glass/ui/Cursor");
     if (env->ExceptionCheck()) return;
-    
+
     javaIDs.Cursor.getType = env->GetMethodID(cls, "getType", "()I");
     ASSERT(javaIDs.Cursor.getType);
     if (env->ExceptionCheck()) return;
@@ -145,7 +145,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_win_WinCursor__1initIDs
     ASSERT(javaIDs.Cursor.getNativeCursor);
     if (env->ExceptionCheck()) return;
 }
-        
+
 /*
  * Class:     com_sun_glass_ui_win_WinCursor
  * Method:    _createCursor

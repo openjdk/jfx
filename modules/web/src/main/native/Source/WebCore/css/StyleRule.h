@@ -58,7 +58,7 @@ public:
     };
 
     Type type() const { return static_cast<Type>(m_type); }
-    
+
     bool isCharsetRule() const { return type() == Charset; }
     bool isFontFaceRule() const { return type() == FontFace; }
     bool isKeyframesRule() const { return type() == Keyframes; }
@@ -96,7 +96,7 @@ protected:
 
 private:
     void destroy();
-    
+
     PassRefPtr<CSSRule> createCSSOMWrapper(CSSStyleSheet* parentSheet, CSSRule* parentRule) const;
 
     unsigned m_type : 5;
@@ -110,13 +110,13 @@ public:
     {
         return adoptRef(*new StyleRule(sourceLine, std::move(properties)));
     }
-    
+
     ~StyleRule();
 
     const CSSSelectorList& selectorList() const { return m_selectorList; }
     const StyleProperties& properties() const { return m_properties.get(); }
     MutableStyleProperties& mutableProperties();
-    
+
     void parserAdoptSelectorVector(Vector<std::unique_ptr<CSSParserSelector>>& selectors) { m_selectorList.adoptSelectorVector(selectors); }
     void wrapperAdoptSelectorList(CSSSelectorList& selectors) { m_selectorList.adopt(selectors); }
     void parserAdoptSelectorArray(CSSSelector* selectors) { m_selectorList.adoptSelectorArray(selectors); }
@@ -146,7 +146,7 @@ inline const StyleRule* toStyleRule(const StyleRuleBase* rule)
 class StyleRuleFontFace : public StyleRuleBase {
 public:
     static PassRef<StyleRuleFontFace> create(PassRef<StyleProperties> properties) { return adoptRef(*new StyleRuleFontFace(std::move(properties))); }
-    
+
     ~StyleRuleFontFace();
 
     const StyleProperties& properties() const { return m_properties.get(); }
@@ -168,7 +168,7 @@ public:
 
     ~StyleRulePage();
 
-    const CSSSelector* selector() const { return m_selectorList.first(); }    
+    const CSSSelector* selector() const { return m_selectorList.first(); }
     const StyleProperties& properties() const { return m_properties.get(); }
     MutableStyleProperties& mutableProperties();
 
@@ -180,7 +180,7 @@ public:
 private:
     StyleRulePage(PassRef<StyleProperties>);
     StyleRulePage(const StyleRulePage&);
-    
+
     Ref<StyleProperties> m_properties;
     CSSSelectorList m_selectorList;
 };
@@ -188,14 +188,14 @@ private:
 class StyleRuleGroup : public StyleRuleBase {
 public:
     const Vector<RefPtr<StyleRuleBase>>& childRules() const { return m_childRules; }
-    
+
     void wrapperInsertRule(unsigned, PassRef<StyleRuleBase>);
     void wrapperRemoveRule(unsigned);
-    
+
 protected:
     StyleRuleGroup(Type, Vector<RefPtr<StyleRuleBase>>& adoptRule);
     StyleRuleGroup(const StyleRuleGroup&);
-    
+
 private:
     Vector<RefPtr<StyleRuleBase>> m_childRules;
 };
@@ -253,7 +253,7 @@ public:
 private:
     StyleRuleRegion(Vector<std::unique_ptr<CSSParserSelector>>*, Vector<RefPtr<StyleRuleBase>>& adoptRules);
     StyleRuleRegion(const StyleRuleRegion&);
-    
+
     CSSSelectorList m_selectorList;
 };
 

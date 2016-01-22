@@ -20,9 +20,9 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
- 
+
 #import "config.h"
 #import "FrameSelection.h"
 
@@ -40,13 +40,13 @@ static CGRect accessibilityConvertScreenRect(CGRect bounds)
         CGFloat screenHeight = NSHeight([(NSScreen *)[screens objectAtIndex:0] frame]);
         bounds.origin.y = (screenHeight - (bounds.origin.y + bounds.size.height));
     } else
-        bounds = CGRectZero;    
-    
+        bounds = CGRectZero;
+
     return bounds;
 }
 #endif // !PLATFORM(IOS)
-    
-    
+
+
 void FrameSelection::notifyAccessibilityForSelectionChange()
 {
     Document* document = m_frame->document();

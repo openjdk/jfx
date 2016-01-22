@@ -1458,7 +1458,7 @@ ContentSecurityPolicy::~ContentSecurityPolicy()
 {
 }
 
-void ContentSecurityPolicy::copyStateFrom(const ContentSecurityPolicy* other) 
+void ContentSecurityPolicy::copyStateFrom(const ContentSecurityPolicy* other)
 {
     ASSERT(m_policies.isEmpty());
     for (CSPDirectiveListVector::const_iterator iter = other->m_policies.begin(); iter != other->m_policies.end(); ++iter)

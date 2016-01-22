@@ -134,7 +134,7 @@ public class CheckBoxSkin extends LabeledSkinBase<CheckBox> {
     /** {@inheritDoc} */
     @Override protected void layoutChildren(final double x, final double y,
             final double w, final double h) {
-        final CheckBox checkBox = getSkinnable(); 
+        final CheckBox checkBox = getSkinnable();
         final double boxWidth = snapSize(box.prefWidth(-1));
         final double boxHeight = snapSize(box.prefHeight(-1));
         final double computeWidth = Math.max(checkBox.prefWidth(-1), checkBox.minWidth(-1));
@@ -148,4 +148,4 @@ public class CheckBoxSkin extends LabeledSkinBase<CheckBox> {
         box.resize(boxWidth, boxHeight);
         positionInArea(box, xOffset, yOffset, boxWidth, maxHeight, 0, checkBox.getAlignment().getHpos(), checkBox.getAlignment().getVpos());
     }
-}    
+}

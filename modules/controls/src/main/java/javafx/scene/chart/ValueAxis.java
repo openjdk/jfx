@@ -73,7 +73,7 @@ public abstract class ValueAxis<T extends Number> extends Axis<T> {
     /**
      * The current value for the lowerBound of this axis, ie min value.
      * This may be the same as lowerBound or different. It is used by NumberAxis to animate the
-     * lowerBound from the old value to the new value. 
+     * lowerBound from the old value to the new value.
      */
     protected final DoubleProperty currentLowerBound = new SimpleDoubleProperty(this, "currentLowerBound");
 
@@ -105,7 +105,7 @@ public abstract class ValueAxis<T extends Number> extends Axis<T> {
     public final void setMinorTickVisible(boolean value) { minorTickVisible.set(value); }
     public final BooleanProperty minorTickVisibleProperty() { return minorTickVisible; }
 
-    
+
     /** The scale factor from data units to visual units */
     private ReadOnlyDoubleWrapper scale = new ReadOnlyDoubleWrapper(this, "scale", 0) {
         @Override
@@ -276,7 +276,7 @@ public abstract class ValueAxis<T extends Number> extends Axis<T> {
      * @return Range information, this is implementation dependent
      */
     @Override protected final Object autoRange(double length) {
-        // guess a sensible starting size for label size, that is approx 2 lines vertically or 2 charts horizontally        
+        // guess a sensible starting size for label size, that is approx 2 lines vertically or 2 charts horizontally
         if (isAutoRanging()) {
             // guess a sensible starting size for label size, that is approx 2 lines vertically or 2 charts horizontally
             double labelSize = getTickLabelFont().getSize() * 2;
@@ -319,9 +319,9 @@ public abstract class ValueAxis<T extends Number> extends Axis<T> {
      * @return The calculated range
      */
     protected Object autoRange(double minValue, double maxValue, double length, double labelSize) {
-        return null; // this method should have been abstract as there is no way for it to 
+        return null; // this method should have been abstract as there is no way for it to
         // return anything correct. so just return null.
-        
+
     }
 
     /**
@@ -534,7 +534,7 @@ public abstract class ValueAxis<T extends Number> extends Axis<T> {
                 return (StyleableProperty<Number>)(WritableValue<Number>)n.minorTickLengthProperty();
             }
         };
-        
+
         private static final CssMetaData<ValueAxis<? extends Number>,Number> MINOR_TICK_COUNT =
             new CssMetaData<ValueAxis<? extends Number>,Number>("-fx-minor-tick-count",
                 SizeConverter.getInstance(), 5) {
@@ -549,7 +549,7 @@ public abstract class ValueAxis<T extends Number> extends Axis<T> {
                 return (StyleableProperty<Number>)(WritableValue<Number>)n.minorTickCountProperty();
             }
         };
-        
+
          private static final CssMetaData<ValueAxis<? extends Number>,Boolean> MINOR_TICK_VISIBLE =
             new CssMetaData<ValueAxis<? extends Number>,Boolean>("-fx-minor-tick-visible",
                  BooleanConverter.getInstance(), Boolean.TRUE) {

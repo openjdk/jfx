@@ -41,7 +41,7 @@ namespace WebCore {
 
     class ResourceRequest : public ResourceRequestBase {
     public:
-        ResourceRequest(const String& url) 
+        ResourceRequest(const String& url)
             : ResourceRequestBase(URL(ParsedURLString, url), UseProtocolCachePolicy)
 #if PLATFORM(IOS)
             , m_mainResourceRequest(false)
@@ -49,7 +49,7 @@ namespace WebCore {
         {
         }
 
-        ResourceRequest(const URL& url) 
+        ResourceRequest(const URL& url)
             : ResourceRequestBase(url, UseProtocolCachePolicy)
 #if PLATFORM(IOS)
             , m_mainResourceRequest(false)
@@ -57,7 +57,7 @@ namespace WebCore {
         {
         }
 
-        ResourceRequest(const URL& url, const String& referrer, ResourceRequestCachePolicy policy = UseProtocolCachePolicy) 
+        ResourceRequest(const URL& url, const String& referrer, ResourceRequestCachePolicy policy = UseProtocolCachePolicy)
             : ResourceRequestBase(url, policy)
 #if PLATFORM(IOS)
             , m_mainResourceRequest(false)
@@ -65,7 +65,7 @@ namespace WebCore {
         {
             setHTTPReferrer(referrer);
         }
-        
+
         ResourceRequest()
             : ResourceRequestBase(URL(), UseProtocolCachePolicy)
 #if PLATFORM(IOS)
@@ -73,7 +73,7 @@ namespace WebCore {
 #endif
         {
         }
-        
+
 #if USE(CFNETWORK)
 #if PLATFORM(COCOA)
         ResourceRequest(NSURLRequest *);

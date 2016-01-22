@@ -41,7 +41,7 @@ public class InvMpu {
     public static final short INV_XYZ_GYRO    = INV_X_GYRO | INV_Y_GYRO | INV_Z_GYRO;
     public static final short INV_XYZ_ACCEL   = 0x08;
     public static final short INV_XYZ_COMPASS = 0x01;
-    
+
     public static final short MPU_INT_STATUS_DATA_READY       = 0x0001;
     public static final short MPU_INT_STATUS_DMP              = 0x0002;
     public static final short MPU_INT_STATUS_PLL_READY        = 0x0004;
@@ -60,7 +60,7 @@ public class InvMpu {
     void mpu_write_mem(int CFG_20, int i, byte[] tmp) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
-    
+
     /* Hardware registers needed by driver. */
     private static class gyro_reg_s {
         short who_am_i;
@@ -107,7 +107,7 @@ public class InvMpu {
         /* The I2C_MST_VDDIO bit is in this register. */
         short yg_offs_tc;
     };
-    
+
     /* Information specific to a particular device. */
     private static class hw_s {
         short addr;
@@ -118,7 +118,7 @@ public class InvMpu {
         int bank_size;
         int compass_fsr;
     };
-    
+
     /* When entering motion interrupt mode, the driver keeps track of the
      * previous state so that it can be restored at a later time.
      * TODO: This is tacky. Fix it.
@@ -132,7 +132,7 @@ public class InvMpu {
         short fifo_sensors;
         short dmp_on;
     };
-    
+
     /* Cached chip configuration data.
      * TODO: A lot of these can be handled with a bitmask.
      */
@@ -179,7 +179,7 @@ public class InvMpu {
         short compass_addr;
         short[] mag_sens_adj = new short[3];
     };
-    
+
     /* Information for self-test. */
     private static class test_s {
         long gyro_sens;
@@ -197,7 +197,7 @@ public class InvMpu {
         float max_g;
         float max_accel_var;
     };
-    
+
     /* Gyro driver state variables. */
     private static class gyro_state_s {
         final gyro_reg_s reg = new gyro_reg_s();
@@ -205,7 +205,7 @@ public class InvMpu {
         final chip_cfg_s chip_cfg = new chip_cfg_s();
         final test_s test = new test_s();
     };
-    
+
     /* Filter configurations. */
     private static enum lpf_e {
         INV_FILTER_256HZ_NOLPF2,
@@ -219,7 +219,7 @@ public class InvMpu {
         NUM_FILTER,
         INVALID
     };
-    
+
     /* Full scale ranges. */
     private static enum gyro_fsr_e {
         INV_FSR_250DPS,
@@ -229,7 +229,7 @@ public class InvMpu {
         NUM_GYRO_FSR,
         INVALID
     };
-    
+
     /* Full scale ranges. */
     private static enum accel_fsr_e {
         INV_FSR_2G,
@@ -239,14 +239,14 @@ public class InvMpu {
         NUM_ACCEL_FSR,
         INVALID
     };
-    
+
     /* Clock sources. */
     private static enum clock_sel_e {
         INV_CLK_INTERNAL,
         INV_CLK_PLL,
         NUM_CLK
     };
-    
+
     /* Low-power accel wakeup rates. */
     private static enum lp_accel_rate_e {
         INV_LPA_1_25HZ,
@@ -254,7 +254,7 @@ public class InvMpu {
         INV_LPA_20HZ,
         INV_LPA_40HZ
     };
-    
+
     private static final short BIT_I2C_MST_VDDIO   = 0x80;
     private static final short BIT_FIFO_EN         = 0x40;
     private static final short BIT_DMP_EN          = 0x80;
@@ -296,36 +296,36 @@ public class InvMpu {
     private static final short BIT_STBY_ZG         = 0x01;
     private static final short BIT_STBY_XYZA       = BIT_STBY_XA | BIT_STBY_YA | BIT_STBY_ZA;
     private static final short BIT_STBY_XYZG       = BIT_STBY_XG | BIT_STBY_YG | BIT_STBY_ZG;
-    
+
     private static final short SUPPORTS_AK89xx_HIGH_SENS   = 0x00;
     private static final short AK89xx_FSR                  = 9830;
-    
+
     private static final short AKM_REG_WHOAMI      = 0x00;
-    
+
     private static final short AKM_REG_ST1         = 0x02;
     private static final short AKM_REG_HXL         = 0x03;
     private static final short AKM_REG_ST2         = 0x09;
-    
+
     private static final short AKM_REG_CNTL        = 0x0A;
     private static final short AKM_REG_ASTC        = 0x0C;
     private static final short AKM_REG_ASAX        = 0x10;
     private static final short AKM_REG_ASAY        = 0x11;
     private static final short AKM_REG_ASAZ        = 0x12;
-    
+
     private static final short AKM_DATA_READY      = 0x01;
     private static final short AKM_DATA_OVERRUN    = 0x02;
     private static final short AKM_OVERFLOW        = 0x80;
     private static final short AKM_DATA_ERROR      = 0x40;
-    
+
     private static final short AKM_BIT_SELF_TEST   = 0x40;
-    
+
     private static final short AKM_POWER_DOWN          = 0x00 | SUPPORTS_AK89xx_HIGH_SENS;
     private static final short AKM_SINGLE_MEASUREMENT  = 0x01 | SUPPORTS_AK89xx_HIGH_SENS;
     private static final short AKM_FUSE_ROM_ACCESS     = 0x0F | SUPPORTS_AK89xx_HIGH_SENS;
     private static final short AKM_MODE_SELF_TEST      = 0x08 | SUPPORTS_AK89xx_HIGH_SENS;
-    
+
     private static final short AKM_WHOAMI      = 0x48;
-    
+
     private static gyro_state_s st = new gyro_state_s();
     static {
         st.reg.who_am_i       = 0x75;
@@ -367,7 +367,7 @@ public class InvMpu {
         st.reg.s0_do          = 0x63;
         st.reg.s1_do          = 0x64;
         st.reg.i2c_delay_ctrl = 0x67;
-        
+
         st.hw.addr           = 0x68;
         st.hw.max_fifo       = 1024;
         st.hw.num_reg        = 118;
@@ -375,7 +375,7 @@ public class InvMpu {
         st.hw.temp_offset    = -521;
         st.hw.bank_size      = 256;
         st.hw.compass_fsr    = AK89xx_FSR;
-        
+
         st.test.gyro_sens      = 32768/250;
         st.test.accel_sens     = 32768/16;
         st.test.reg_rate_div   = 0;    /* 1kHz. */
@@ -391,14 +391,14 @@ public class InvMpu {
         st.test.max_g          = 0.95f;
         st.test.max_accel_var  = 0.14f;
     }
-    
+
     private static final int MAX_PACKET_LENGTH = 12;
-    
+
     private static final int MAX_COMPASS_SAMPLE_RATE = 100;
-    
+
     private I2CBus bus = null;
     private I2CDevice device = null;
-    
+
     public boolean set_i2c(int i2c_bus, short i2c_address) {
         st.hw.addr = i2c_address;
         try {
@@ -409,7 +409,7 @@ public class InvMpu {
         }
         return true;
     }
-        
+
     /**
      *  @brief      Enable/disable data ready interrupt.
      *  If the DMP is on, the DMP interrupt is enabled. Otherwise, the data ready
@@ -420,7 +420,7 @@ public class InvMpu {
     private boolean set_int_enable(boolean enable)
     {
         byte tmp;
-        
+
         if (st.chip_cfg.dmp_on) {
             if (enable)
                 tmp = BIT_DMP_INT_EN;
@@ -450,7 +450,7 @@ public class InvMpu {
         }
         return true;
     }
-    
+
     /**
      *  @brief      Initialize hardware.
      *  Initial configuration:\n
@@ -469,21 +469,21 @@ public class InvMpu {
         try {
             byte[] data = new byte[6];
             byte rev;
-            
+
             /* Reset device. */
             data[0] = (byte)BIT_RESET;
             device.write(st.reg.pwr_mgmt_1, data[0]);
             TimeUnit.MILLISECONDS.sleep(100);
-            
+
             /* Wake up chip. */
             data[0] = 0x00;
             device.write(st.reg.pwr_mgmt_1, data[0]);
-            
+
             /* Check product revision. */
             device.read(st.reg.accel_offs, data, 0, 6);
-            
+
             rev = (byte) (((data[5] & 0x01) << 2) | ((data[3] & 0x01) << 1) | (data[1] & 0x01));
-            
+
             if (rev != 0) {
                 /* Congrats, these parts are better. */
                 if (rev == 1)
@@ -506,7 +506,7 @@ public class InvMpu {
                 } else
                     st.chip_cfg.accel_half = 0;
             }
-            
+
             /* Set to invalid values to ensure no I2C writes are skipped. */
             st.chip_cfg.sensors = 0xFF;
             st.chip_cfg.gyro_fsr = gyro_fsr_e.INVALID;
@@ -533,7 +533,7 @@ public class InvMpu {
             st.chip_cfg.dmp_on = false;
             st.chip_cfg.dmp_loaded = false;
             st.chip_cfg.dmp_sample_rate = 0;
-            
+
             if (!mpu_set_gyro_fsr(2000))
                 return false;
             if (!mpu_set_accel_fsr(2))
@@ -544,13 +544,13 @@ public class InvMpu {
                 return false;
             if (!mpu_configure_fifo((short)0))
                 return false;
-            
+
             if (useMag) {
                 setup_compass();
                 if (!mpu_set_compass_sample_rate(10))
                     return false;
             }
-            
+
             mpu_set_sensors((short)0);
         } catch (IOException ex) {
             ex.printStackTrace(System.err);
@@ -559,10 +559,10 @@ public class InvMpu {
             ex.printStackTrace(System.err);
             return false;
         }
-        
+
         return true;
     }
-    
+
     /**
      *  @brief      Enter low-power accel-only mode.
      *  In low-power accel mode, the chip goes to sleep and only wakes up to sample
@@ -581,10 +581,10 @@ public class InvMpu {
     boolean mpu_lp_accel_mode(int rate)
     {
         byte[] tmp = new byte[2];
-        
+
         if (rate > 40)
             return false;
-        
+
         if (rate == 0) {
             mpu_set_int_latched(false);
             tmp[0] = 0;
@@ -630,10 +630,10 @@ public class InvMpu {
         st.chip_cfg.clk_src = clock_sel_e.INV_CLK_INTERNAL;
         st.chip_cfg.lp_accel_mode = true;
         mpu_configure_fifo((short)0);
-        
+
         return true;
     }
-    
+
     /**
      *  @brief      Read temperature data directly from the registers.
      *  @param[out] data        Data in q16 format.
@@ -685,7 +685,7 @@ public class InvMpu {
         } catch (IOException ex) {
             return false;
         }
-        
+
         fg[0] = (short) (((data[0] >> 4) + 8) & 0xf);
         fg[1] = (short) (((data[1] >> 4) + 8) & 0xf);
         fg[2] = (short) (((data[2] >> 4) + 8) & 0xf);
@@ -699,7 +699,7 @@ public class InvMpu {
         } catch (IOException ex) {
             return false;
         }
-        
+
         got_accel[0] = (short) (((short)data[0] << 8) | data[1]);
         got_accel[1] = (short) (((short)data[2] << 8) | data[3]);
         got_accel[2] = (short) (((short)data[4] << 8) | data[5]);
@@ -720,10 +720,10 @@ public class InvMpu {
         } catch (IOException ex) {
             return false;
         }
-        
+
         return true;
     }
-    
+
     /**
      *  @brief  Reset FIFO read/write pointers.
      *  @return 0 if successful.
@@ -776,7 +776,7 @@ public class InvMpu {
         }
         return true;
     }
-    
+
     /**
      *  @brief      Set the gyro full-scale range.
      *  @param[in]  fsr Desired full-scale range.
@@ -786,7 +786,7 @@ public class InvMpu {
     {
         if (st.chip_cfg.sensors == 0)
             return false;
-        
+
         gyro_fsr_e gyro_fsr;
         switch (fsr) {
             case 250:
@@ -804,7 +804,7 @@ public class InvMpu {
             default:
                 return false;
         }
-        
+
         if (st.chip_cfg.gyro_fsr == gyro_fsr)
             return true;
         try {
@@ -816,7 +816,7 @@ public class InvMpu {
         st.chip_cfg.gyro_fsr = gyro_fsr;
         return true;
     }
-    
+
     /**
      *  @brief      Get the accel full-scale range.
      *  @param[out] fsr Current full-scale range.
@@ -844,7 +844,7 @@ public class InvMpu {
             fsr[0] <<= 1;
         return true;
     }
-    
+
     /**
      *  @brief      Set the accel full-scale range.
      *  @param[in]  fsr Desired full-scale range.
@@ -854,7 +854,7 @@ public class InvMpu {
     {
         if (st.chip_cfg.sensors == 0)
             return false;
-        
+
         accel_fsr_e accel_fsr;
         switch (fsr) {
             case 2:
@@ -872,7 +872,7 @@ public class InvMpu {
             default:
                 return false;
         }
-        
+
         if (st.chip_cfg.accel_fsr == accel_fsr)
             return true;
         try {
@@ -884,7 +884,7 @@ public class InvMpu {
         st.chip_cfg.accel_fsr = accel_fsr;
         return true;
     }
-    
+
     /**
      *  @brief      Set digital low pass filter.
      *  The following LPF settings are supported: 188, 98, 42, 20, 10, 5.
@@ -895,7 +895,7 @@ public class InvMpu {
     {
         if (st.chip_cfg.sensors == 0)
             return false;
-        
+
         lpf_e mpu_lpf;
         if (lpf >= 188)
             mpu_lpf = lpf_e.INV_FILTER_188HZ;
@@ -909,7 +909,7 @@ public class InvMpu {
             mpu_lpf = lpf_e.INV_FILTER_10HZ;
         else
             mpu_lpf = lpf_e.INV_FILTER_5HZ;
-        
+
         if (st.chip_cfg.lpf == mpu_lpf)
             return true;
         try {
@@ -921,7 +921,7 @@ public class InvMpu {
         st.chip_cfg.lpf = mpu_lpf;
         return true;
     }
-    
+
     /**
      *  @brief      Set sampling rate.
      *  Sampling rate must be between 4Hz and 1kHz.
@@ -932,7 +932,7 @@ public class InvMpu {
     {
         if (st.chip_cfg.sensors == 0)
             return false;
-        
+
         if (st.chip_cfg.dmp_on)
             return false;
         else {
@@ -951,24 +951,24 @@ public class InvMpu {
                 rate = 4;
             else if (rate > 1000)
                 rate = 1000;
-            
+
             byte data = (byte) (1000 / rate - 1);
             try {
                 device.write(st.reg.rate_div, data);
             } catch (IOException ex) {
                 return false;
             }
-            
+
             st.chip_cfg.sample_rate = 1000 / (1 + data);
-            
+
             mpu_set_compass_sample_rate(Math.min(st.chip_cfg.compass_sample_rate, MAX_COMPASS_SAMPLE_RATE));
-            
+
             /* Automatically set LPF to 1/2 sampling rate. */
             mpu_set_lpf(st.chip_cfg.sample_rate / 2);
             return true;
         }
     }
-    
+
     /**
      *  @brief      Set compass sampling rate.
      *  The compass on the auxiliary I2C bus is read by the MPU hardware at a
@@ -984,7 +984,7 @@ public class InvMpu {
     {
         if (rate == 0 || rate > st.chip_cfg.sample_rate || rate > MAX_COMPASS_SAMPLE_RATE)
             return false;
-        
+
         byte div = (byte)(st.chip_cfg.sample_rate / rate - 1);
         try {
             device.write(st.reg.s4_ctrl, div);
@@ -994,7 +994,7 @@ public class InvMpu {
         st.chip_cfg.compass_sample_rate = st.chip_cfg.sample_rate / (div + 1);
         return true;
     }
-    
+
     /**
      *  @brief      Select which sensors are pushed to FIFO.
      *  @e sensors can contain a combination of the following flags:
@@ -1007,10 +1007,10 @@ public class InvMpu {
     boolean mpu_configure_fifo(short sensors)
     {
         boolean result = true;
-        
+
         /* Compass data isn't going into the FIFO. Stop trying. */
         sensors &= ~INV_XYZ_COMPASS;
-        
+
         if (st.chip_cfg.dmp_on) {
             return true;
         } else {
@@ -1039,11 +1039,11 @@ public class InvMpu {
                 }
             }
         }
-        
+
         return result;
     }
-    
-    
+
+
     /**
      *  @brief      Turn specific sensors on/off.
      *  @e sensors can contain a combination of the following flags:
@@ -1070,7 +1070,7 @@ public class InvMpu {
             return false;
         }
         st.chip_cfg.clk_src = clock_sel_e.values()[data & ~BIT_SLEEP];
-        
+
         data = 0;
         if ((sensors & INV_X_GYRO) == 0)
             data |= BIT_STBY_XG;
@@ -1086,11 +1086,11 @@ public class InvMpu {
             st.chip_cfg.sensors = 0;
             return false;
         }
-        
+
         if ((sensors != 0) && (sensors != INV_XYZ_ACCEL))
             /* Latched interrupts only used in LP accel mode. */
             mpu_set_int_latched(false);
-        
+
         byte user_ctrl;
         try {
             user_ctrl = (byte)device.read(st.reg.user_ctrl);
@@ -1120,7 +1120,7 @@ public class InvMpu {
         } catch (IOException ex) {
             return false;
         }
-        
+
         st.chip_cfg.sensors = sensors;
         st.chip_cfg.lp_accel_mode = false;
         try {
@@ -1129,7 +1129,7 @@ public class InvMpu {
         }
         return true;
     }
-    
+
     /**
      *  @brief      Read the MPU interrupt status registers.
      *  @param[out] status  Mask of interrupt bits.
@@ -1139,19 +1139,19 @@ public class InvMpu {
     {
         if (st.chip_cfg.sensors == 0)
             return false;
-        
+
         byte[] tmp = new byte[2];
         try {
             device.read(st.reg.dmp_int_status, tmp, 0, 2);
         } catch (IOException ex) {
             return false;
         }
-        
+
         ByteBuffer.wrap(tmp).order(ByteOrder.BIG_ENDIAN).asShortBuffer().get(status);
         assert status[0] == (short)((tmp[0] << 8) | tmp[1]);
         return true;
     }
-    
+
     /**
      *  @brief      Get one unparsed packet from the FIFO.
      *  This function should be used if the packet is to be parsed elsewhere.
@@ -1164,21 +1164,21 @@ public class InvMpu {
             return false;
         if (st.chip_cfg.sensors == 0)
             return false;
-        
+
         byte[] tmp = new byte[2];
         try {
             device.read(st.reg.fifo_count_h, tmp, 0, 2);
         } catch (IOException ex) {
             return false;
         }
-        
+
         ByteBuffer bb = ByteBuffer.allocate(4);
         bb.order(ByteOrder.BIG_ENDIAN);
         bb.put(new byte[2]);
         bb.put(tmp);
         int fifo_count = bb.getInt(0);
         assert fifo_count == (((tmp[0]&0xFF) << 8) | (tmp[1]&0xFF));
-        
+
         if (fifo_count < data.length) {
             more[0] = 0;
             return false;
@@ -1196,7 +1196,7 @@ public class InvMpu {
                 return false;
             }
         }
-        
+
         try {
             device.read(st.reg.fifo_r_w, data, 0, data.length);
         } catch (IOException ex) {
@@ -1205,7 +1205,7 @@ public class InvMpu {
         more[0] = (short)((fifo_count / data.length) - 1);
         return true;
     }
-    
+
     /**
      *  @brief      Set device to bypass mode.
      *  @param[in]  bypass_on   1 to enable bypass mode.
@@ -1215,7 +1215,7 @@ public class InvMpu {
     {
         if (st.chip_cfg.bypass_mode == bypass_on)
             return true;
-        
+
         try {
             byte tmp;
             if (bypass_on != 0) {
@@ -1254,7 +1254,7 @@ public class InvMpu {
         }
         return true;
     }
-    
+
     /**
      *  @brief      Enable latched interrupts.
      *  Any MPU register will clear the interrupt.
@@ -1265,7 +1265,7 @@ public class InvMpu {
     {
         if (st.chip_cfg.latched_int == enable)
             return true;
-        
+
         byte tmp;
         if (enable)
             tmp = BIT_LATCH_EN | BIT_ANY_RD_CLR;
@@ -1275,7 +1275,7 @@ public class InvMpu {
             tmp |= BIT_BYPASS_EN;
         if (st.chip_cfg.active_low_int)
             tmp |= BIT_ACTL;
-        
+
         try {
             device.write(st.reg.int_pin_cfg, tmp);
         } catch (IOException ex) {
@@ -1284,7 +1284,7 @@ public class InvMpu {
         st.chip_cfg.latched_int = enable;
         return true;
     }
-    
+
     /**
      *  @brief      Write to the DMP memory.
      *  This function prevents I2C writes past the bank boundaries. The DMP memory
@@ -1300,16 +1300,16 @@ public class InvMpu {
             return false;
         if (st.chip_cfg.sensors == 0)
             return false;
-        
+
         byte[] tmp = new byte[2];
         ByteBuffer.wrap(tmp).order(ByteOrder.BIG_ENDIAN).asShortBuffer().put(mem_addr);
         assert tmp[0] == (byte)(mem_addr >> 8);
         assert tmp[1] == (byte)(mem_addr & 0xFF);
-        
+
         /* Check bank boundaries. */
         if ((tmp[1]&0xFF) + length > st.hw.bank_size)
             return false;
-        
+
         try {
             device.write(st.reg.bank_sel, tmp, 0, 2);
             device.write(st.reg.mem_r_w, data, offset, length);
@@ -1318,7 +1318,7 @@ public class InvMpu {
         }
         return true;
     }
-    
+
     /**
      *  @brief      Read from the DMP memory.
      *  This function prevents I2C reads past the bank boundaries. The DMP memory
@@ -1330,21 +1330,21 @@ public class InvMpu {
      */
     boolean mpu_read_mem(short mem_addr, byte[] data, int offset, int length)
     {
-        
+
         if (data == null)
             return false;
         if (st.chip_cfg.sensors == 0)
             return false;
-        
+
         byte[] tmp = new byte[2];
         ByteBuffer.wrap(tmp).order(ByteOrder.BIG_ENDIAN).asShortBuffer().put(mem_addr);
         assert tmp[0] == (byte)(mem_addr >> 8);
         assert tmp[1] == (byte)(mem_addr & 0xFF);
-        
+
         /* Check bank boundaries. */
         if ((tmp[1]&0xFF) + length > st.hw.bank_size)
             return false;
-        
+
         try {
             device.write(st.reg.bank_sel, tmp, 0, 2);
             device.read(st.reg.mem_r_w, data, offset, length);
@@ -1353,7 +1353,7 @@ public class InvMpu {
         }
         return true;
     }
-    
+
     /**
      *  @brief      Load and verify DMP image.
      *  @param[in]  length      Length of DMP image.
@@ -1368,13 +1368,13 @@ public class InvMpu {
             /* DMP should only be loaded once. */
             return false;
         }
-        
+
         int this_write;
         /* Must divide evenly into st.hw->bank_size to avoid bank crossings. */
         int load_chunk = 16;
         byte[] cur = new byte[load_chunk];
         byte[] tmp = new byte[2];
-        
+
         if (firmware == null) {
             return false;
         }
@@ -1386,12 +1386,12 @@ public class InvMpu {
             if (!mpu_read_mem((short)ii, cur, 0, this_write)) {
                 return false;
             }
-            if (!Arrays.equals(Arrays.copyOfRange(firmware, ii, ii+this_write), 
+            if (!Arrays.equals(Arrays.copyOfRange(firmware, ii, ii+this_write),
                     (cur.length == this_write) ? cur : Arrays.copyOfRange(cur, 0, this_write))) {
                 return false;
             }
         }
-        
+
         /* Set program start address. */
         ByteBuffer.wrap(tmp).order(ByteOrder.BIG_ENDIAN).asShortBuffer().put(start_addr);
         assert tmp[0] == (start_addr >> 8);
@@ -1401,12 +1401,12 @@ public class InvMpu {
         } catch (IOException ex) {
             return false;
         }
-        
+
         st.chip_cfg.dmp_loaded = true;
         st.chip_cfg.dmp_sample_rate = sample_rate;
         return true;
     }
-    
+
     /**
      *  @brief      Enable/disable DMP support.
      *  @param[in]  enable  1 to turn on the DMP.
@@ -1416,7 +1416,7 @@ public class InvMpu {
     {
         if (st.chip_cfg.dmp_on == enable)
             return true;
-        
+
         try {
             byte tmp;
             if (enable) {
@@ -1449,15 +1449,15 @@ public class InvMpu {
         }
         return true;
     }
-    
+
     /* This initialization is similar to the one in ak8975.c. */
     private boolean setup_compass()
     {
         byte[] data = new byte[4];
         short akm_addr;
-        
+
         mpu_set_bypass((short)1);
-        
+
         /* Find compass. Possible addresses range from 0x0C to 0x0F. */
         for (akm_addr = 0x0C; akm_addr <= 0x0F; akm_addr++) {
             boolean result = true;
@@ -1470,73 +1470,73 @@ public class InvMpu {
             if (result && (data[0] == AKM_WHOAMI))
                 break;
         }
-        
+
         if (akm_addr > 0x0F) {
             /* TODO: Handle this case in all compass-related functions. */
             System.out.printf("Compass not found.\n");
             return false;
         }
-        
+
         try {
             st.chip_cfg.compass_addr = akm_addr;
             I2CDevice compassDevice = bus.getDevice(st.chip_cfg.compass_addr);
-            
+
             data[0] = AKM_POWER_DOWN;
             compassDevice.write(AKM_REG_CNTL, data[0]);
             TimeUnit.MILLISECONDS.sleep(1);
-            
+
             data[0] = AKM_FUSE_ROM_ACCESS;
             compassDevice.write(AKM_REG_CNTL, data[0]);
             TimeUnit.MILLISECONDS.sleep(1);
-            
+
             /* Get sensitivity adjustment data from fuse ROM. */
             compassDevice.read(AKM_REG_ASAX, data, 0, 3);
             st.chip_cfg.mag_sens_adj[0] = (short)((data[0] & 0xFF) + 128);
             st.chip_cfg.mag_sens_adj[1] = (short)((data[1] & 0xFF) + 128);
             st.chip_cfg.mag_sens_adj[2] = (short)((data[2] & 0xFF) + 128);
-            
+
             data[0] = AKM_POWER_DOWN;
             compassDevice.write(AKM_REG_CNTL, data[0]);
             TimeUnit.MILLISECONDS.sleep(1);
-            
+
             mpu_set_bypass((short)0);
-            
+
             /* Set up master mode, master clock, and ES bit. */
             data[0] = 0x40;
             device.write(st.reg.i2c_mst, data[0]);
-            
+
             /* Slave 0 reads from AKM data registers. */
             data[0] = (byte) (BIT_I2C_READ | st.chip_cfg.compass_addr);
             device.write(st.reg.s0_addr, data[0]);
-            
+
             /* Compass reads start at this register. */
             data[0] = AKM_REG_ST1;
             device.write(st.reg.s0_reg, data[0]);
-            
+
             /* Enable slave 0, 8-byte reads. */
             data[0] = (byte)(BIT_SLAVE_EN | 8);
             device.write(st.reg.s0_ctrl, data[0]);
-            
+
             /* Slave 1 changes AKM measurement mode. */
             data[0] = (byte)st.chip_cfg.compass_addr;
             device.write(st.reg.s1_addr, data[0]);
-            
+
             /* AKM measurement mode register. */
             data[0] = AKM_REG_CNTL;
             device.write(st.reg.s1_reg, data[0]);
-            
+
             /* Enable slave 1, 1-byte writes. */
             data[0] = (byte)(BIT_SLAVE_EN | 1);
             device.write(st.reg.s1_ctrl, data[0]);
-            
+
             /* Set slave 1 data. */
             data[0] = AKM_SINGLE_MEASUREMENT;
             device.write(st.reg.s1_do, data[0]);
-            
+
             /* Trigger slave 0 and slave 1 actions at each sample. */
             data[0] = 0x03;
             device.write(st.reg.i2c_delay_ctrl, data[0]);
-            
+
             /* For the MPU9150, the auxiliary I2C bus needs to be set to VDD. */
             data[0] = (byte)BIT_I2C_MST_VDDIO;
             device.write(st.reg.yg_offs_tc, data[0]);
@@ -1547,7 +1547,7 @@ public class InvMpu {
         }
         return true;
     }
-    
+
     /**
      *  @brief      Read raw compass data.
      *  @param[out] data        Raw data in hardware units.
@@ -1557,31 +1557,31 @@ public class InvMpu {
     public boolean mpu_get_compass_reg(short[] data, long[] timestamp)
     {
         byte[] tmp = new byte[8];
-        
+
         if ((st.chip_cfg.sensors & INV_XYZ_COMPASS) == 0)
             return false;
-        
+
         try {
             device.read(st.reg.raw_compass, tmp, 0, 8);
         } catch (IOException ex) {
             return false;
         }
-        
+
         /* AK8975 doesn't have the overrun error bit. */
         if ((tmp[0] & AKM_DATA_READY) == 0)
             return false;
         if ((tmp[7] & AKM_OVERFLOW) != 0 || (tmp[7] & AKM_DATA_ERROR) != 0)
             return false;
-        
+
         ByteBuffer.wrap(tmp, 1, 6).order(ByteOrder.LITTLE_ENDIAN).asShortBuffer().get(data);
         assert data[0] == (short)(((tmp[2]&0xFF) << 8) | (tmp[1]&0xFF));
         assert data[1] == (short)(((tmp[4]&0xFF) << 8) | (tmp[3]&0xFF));
         assert data[2] == (short)(((tmp[6]&0xFF) << 8) | (tmp[5]&0xFF));
-        
+
         data[0] = (short) (((long)data[0] * st.chip_cfg.mag_sens_adj[0]) >> 8);
         data[1] = (short) (((long)data[1] * st.chip_cfg.mag_sens_adj[1]) >> 8);
         data[2] = (short) (((long)data[2] * st.chip_cfg.mag_sens_adj[2]) >> 8);
-        
+
         if (timestamp != null && timestamp.length > 0)
             timestamp[0] = System.currentTimeMillis();
 

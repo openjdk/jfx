@@ -41,7 +41,7 @@ FrameTree::~FrameTree()
         child->setView(0);
 }
 
-void FrameTree::setName(const AtomicString& name) 
+void FrameTree::setName(const AtomicString& name)
 {
     m_name = name;
     if (!parent()) {
@@ -58,8 +58,8 @@ void FrameTree::clearName()
     m_uniqueName = AtomicString();
 }
 
-Frame* FrameTree::parent() const 
-{ 
+Frame* FrameTree::parent() const
+{
     return m_parent;
 }
 
@@ -268,10 +268,10 @@ Frame* FrameTree::find(const AtomicString& name) const
 {
     if (name == "_self" || name == "_current" || name.isEmpty())
         return &m_thisFrame;
-    
+
     if (name == "_top")
         return &top();
-    
+
     if (name == "_parent")
         return parent() ? parent() : &m_thisFrame;
 
@@ -296,7 +296,7 @@ Frame* FrameTree::find(const AtomicString& name) const
     Page* page = m_thisFrame.page();
     if (!page)
         return nullptr;
-    
+
     for (auto* otherPage : page->group().pages()) {
         if (otherPage == page)
             continue;
@@ -375,7 +375,7 @@ Frame* FrameTree::traversePreviousWithWrap(bool wrap) const
         return prevSibling->tree().deepLastChild();
     if (Frame* parentFrame = parent())
         return parentFrame;
-    
+
     // no siblings, no parent, self==top
     if (wrap)
         return deepLastChild();

@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef RepatchBuffer_h
@@ -62,7 +62,7 @@ public:
         ExecutableAllocator::makeExecutable(m_start, m_size);
 #endif
     }
-    
+
     CodeBlock* codeBlock() const { return m_codeBlock; }
 
     void relink(CodeLocationJump jump, CodeLocationLabel destination)
@@ -109,7 +109,7 @@ public:
     {
         relink(CodeLocationCall(CodePtr(returnAddress)), label);
     }
-    
+
     void relinkCallerToTrampoline(ReturnAddressPtr returnAddress, CodePtr newCalleeFunction)
     {
         relinkCallerToTrampoline(returnAddress, CodeLocationLabel(newCalleeFunction));
@@ -119,27 +119,27 @@ public:
     {
         relink(CodeLocationCall(CodePtr(returnAddress)), function);
     }
-    
+
     void relinkNearCallerToTrampoline(ReturnAddressPtr returnAddress, CodeLocationLabel label)
     {
         relink(CodeLocationNearCall(CodePtr(returnAddress)), label);
     }
-    
+
     void relinkNearCallerToTrampoline(ReturnAddressPtr returnAddress, CodePtr newCalleeFunction)
     {
         relinkNearCallerToTrampoline(returnAddress, CodeLocationLabel(newCalleeFunction));
     }
-    
+
     void replaceWithLoad(CodeLocationConvertibleLoad label)
     {
         MacroAssembler::replaceWithLoad(label);
     }
-    
+
     void replaceWithAddressComputation(CodeLocationConvertibleLoad label)
     {
         MacroAssembler::replaceWithAddressComputation(label);
     }
-    
+
     void setLoadInstructionIsActive(CodeLocationConvertibleLoad label, bool isActive)
     {
         if (isActive)
@@ -152,17 +152,17 @@ public:
     {
         return MacroAssembler::startOfBranchPtrWithPatchOnRegister(label);
     }
-    
+
     static CodeLocationLabel startOfPatchableBranchPtrWithPatchOnAddress(CodeLocationDataLabelPtr label)
     {
         return MacroAssembler::startOfPatchableBranchPtrWithPatchOnAddress(label);
     }
-    
+
     void replaceWithJump(CodeLocationLabel instructionStart, CodeLocationLabel destination)
     {
         MacroAssembler::replaceWithJump(instructionStart, destination);
     }
-    
+
     // This is a *bit* of a silly API, since we currently always also repatch the
     // immediate after calling this. But I'm fine with that, since this just feels
     // less yucky.

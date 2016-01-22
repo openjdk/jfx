@@ -213,12 +213,12 @@ struct Scope {
     {
         return m_declaredVariables.contains(ident.impl());
     }
-    
+
     bool hasDeclaredParameter(const Identifier& ident)
     {
         return m_declaredParameters.contains(ident.impl()) || m_declaredVariables.contains(ident.impl());
     }
-    
+
     void declareWrite(const Identifier* ident)
     {
         ASSERT(m_strictMode);
@@ -239,7 +239,7 @@ struct Scope {
             m_shadowsArguments = true;
         return isValidStrictMode;
     }
-    
+
     enum BindingResult {
         BindingFailed,
         StrictBindingFailed,
@@ -251,7 +251,7 @@ struct Scope {
         bool newEntry = m_declaredVariables.add(ident->string().impl()).isNewEntry;
         bool isValidStrictMode = newEntry && m_vm->propertyNames->eval != *ident && !isArguments;
         m_isValidStrictMode = m_isValidStrictMode && isValidStrictMode;
-    
+
         if (isArguments)
             m_shadowsArguments = true;
         if (!newEntry)
@@ -442,18 +442,18 @@ private:
         , m_parser(parser)
         {
         }
-        
+
         ~AutoPopScopeRef()
         {
             if (m_parser)
                 m_parser->popScope(*this, false);
         }
-        
+
         void setPopped()
         {
             m_parser = 0;
         }
-        
+
     private:
         Parser* m_parser;
     };
@@ -462,7 +462,7 @@ private:
     {
         return ScopeRef(&m_scopeStack, m_scopeStack.size() - 1);
     }
-    
+
     ScopeRef pushScope()
     {
         bool isFunction = false;
@@ -474,7 +474,7 @@ private:
         m_scopeStack.append(Scope(m_vm, isFunction, isStrict));
         return currentScope();
     }
-    
+
     bool popScopeInternal(ScopeRef& scope, bool shouldTrackClosedVariables)
     {
         ASSERT_UNUSED(scope, scope.index() == m_scopeStack.size() - 1);
@@ -483,18 +483,18 @@ private:
         m_scopeStack.removeLast();
         return result;
     }
-    
+
     bool popScope(ScopeRef& scope, bool shouldTrackClosedVariables)
     {
         return popScopeInternal(scope, shouldTrackClosedVariables);
     }
-    
+
     bool popScope(AutoPopScopeRef& scope, bool shouldTrackClosedVariables)
     {
         scope.setPopped();
         return popScopeInternal(scope, shouldTrackClosedVariables);
     }
-    
+
     bool declareVariable(const Identifier* ident)
     {
         unsigned i = m_scopeStack.size() - 1;
@@ -505,7 +505,7 @@ private:
         }
         return m_scopeStack[i].declareVariable(ident);
     }
-    
+
     NEVER_INLINE bool hasDeclaredVariable(const Identifier& ident)
     {
         unsigned i = m_scopeStack.size() - 1;
@@ -516,7 +516,7 @@ private:
         }
         return m_scopeStack[i].hasDeclaredVariable(ident);
     }
-    
+
     NEVER_INLINE bool hasDeclaredParameter(const Identifier& ident)
     {
         unsigned i = m_scopeStack.size() - 1;
@@ -527,16 +527,16 @@ private:
         }
         return m_scopeStack[i].hasDeclaredParameter(ident);
     }
-    
+
     void declareWrite(const Identifier* ident)
     {
         if (!m_syntaxAlreadyValidated || strictMode())
             m_scopeStack.last().declareWrite(ident);
     }
-    
+
     ScopeStack m_scopeStack;
-    
-    const SourceProviderCacheItem* findCachedFunctionInfo(int openBracePos) 
+
+    const SourceProviderCacheItem* findCachedFunctionInfo(int openBracePos)
     {
         return m_functionCache ? m_functionCache->get(openBracePos) : 0;
     }
@@ -544,7 +544,7 @@ private:
     Parser();
     String parseInner();
 
-    void didFinishParsing(SourceElements*, ParserArenaData<DeclarationStacks::VarStack>*, 
+    void didFinishParsing(SourceElements*, ParserArenaData<DeclarationStacks::VarStack>*,
         ParserArenaData<DeclarationStacks::FunctionStack>*, CodeFeatures, int, IdentifierSet&, const Vector<RefPtr<StringImpl>>&&);
 
     // Used to determine type of error to report.
@@ -589,22 +589,22 @@ private:
         SourceProvider* sourceProvider = m_source->provider();
         return sourceProvider->getRange(tokenStart(), tokenEndPosition().offset);
     }
-    
+
     ALWAYS_INLINE bool match(JSTokenType expected)
     {
         return m_token.m_type == expected;
     }
-    
+
     ALWAYS_INLINE bool isofToken()
     {
         return m_token.m_type == IDENT && *m_token.m_data.ident == m_vm->propertyNames->of;
     }
-    
+
     ALWAYS_INLINE unsigned tokenStart()
     {
         return m_token.m_location.startOffset;
     }
-    
+
     ALWAYS_INLINE const JSTextPosition& tokenStartPosition()
     {
         return m_token.m_startPosition;
@@ -614,7 +614,7 @@ private:
     {
         return m_token.m_location.line;
     }
-    
+
     ALWAYS_INLINE int tokenColumn()
     {
         return tokenStart() - tokenLineStart();
@@ -624,12 +624,12 @@ private:
     {
         return m_token.m_endPosition;
     }
-    
+
     ALWAYS_INLINE unsigned tokenLineStart()
     {
         return m_token.m_location.lineStartOffset;
     }
-    
+
     ALWAYS_INLINE const JSTokenLocation& tokenLocation()
     {
         return m_token.m_location;
@@ -639,7 +639,7 @@ private:
     {
         m_errorMessage = msg;
     }
-    
+
     NEVER_INLINE void logError(bool);
     template <typename A> NEVER_INLINE void logError(bool, const A&);
     template <typename A, typename B> NEVER_INLINE void logError(bool, const A&, const B&);
@@ -648,19 +648,19 @@ private:
     template <typename A, typename B, typename C, typename D, typename E> NEVER_INLINE void logError(bool, const A&, const B&, const C&, const D&, const E&);
     template <typename A, typename B, typename C, typename D, typename E, typename F> NEVER_INLINE void logError(bool, const A&, const B&, const C&, const D&, const E&, const F&);
     template <typename A, typename B, typename C, typename D, typename E, typename F, typename G> NEVER_INLINE void logError(bool, const A&, const B&, const C&, const D&, const E&, const F&, const G&);
-    
+
     NEVER_INLINE void updateErrorWithNameAndMessage(const char* beforeMsg, String name, const char* afterMsg)
     {
         m_errorMessage = makeString(beforeMsg, " '", name, "' ", afterMsg);
     }
-    
+
     NEVER_INLINE void updateErrorMessage(const char* msg)
     {
         ASSERT(msg);
         m_errorMessage = String(msg);
         ASSERT(!m_errorMessage.isNull());
     }
-    
+
     void startLoop() { currentScope()->startLoop(); }
     void endLoop() { currentScope()->endLoop(); }
     void startSwitch() { currentScope()->startSwitch(); }
@@ -703,7 +703,7 @@ private:
         }
         return result;
     }
-    
+
     template <class TreeBuilder> TreeSourceElements parseSourceElements(TreeBuilder&, SourceElementsMode);
     template <class TreeBuilder> TreeStatement parseStatement(TreeBuilder&, const Identifier*& directive, unsigned* directiveLiteralLength = 0);
     template <class TreeBuilder> TreeStatement parseFunctionDeclaration(TreeBuilder&);
@@ -750,7 +750,7 @@ private:
     template <class TreeBuilder> NEVER_INLINE bool parseFunctionInfo(TreeBuilder&, FunctionRequirements, FunctionParseMode, bool nameIsInContainingScope, const Identifier*&, TreeFormalParameterList&, TreeFunctionBody&, unsigned& openBraceOffset, unsigned& closeBraceOffset, int& bodyStartLine, unsigned& bodyStartColumn);
     ALWAYS_INLINE int isBinaryOperator(JSTokenType);
     bool allowAutomaticSemicolon();
-    
+
     bool autoSemiColon()
     {
         if (m_token.m_type == SEMICOLON) {
@@ -759,12 +759,12 @@ private:
         }
         return allowAutomaticSemicolon();
     }
-    
+
     bool canRecurse()
     {
         return m_vm->isSafeToRecurse();
     }
-    
+
     const JSTextPosition& lastTokenEndPosition() const
     {
         return m_lastTokenEndPosition;
@@ -781,7 +781,7 @@ private:
         unsigned oldLastLineNumber;
         unsigned oldLineNumber;
     };
-    
+
     ALWAYS_INLINE SavePoint createSavePoint()
     {
         ASSERT(!hasError());
@@ -792,7 +792,7 @@ private:
         result.oldLineNumber = m_lexer->lineNumber();
         return result;
     }
-    
+
     ALWAYS_INLINE void restoreSavePoint(const SavePoint& savePoint)
     {
         m_errorMessage = String();
@@ -816,21 +816,21 @@ private:
         result.nonTrivialExpressionCount = m_nonTrivialExpressionCount;
         return result;
     }
-    
+
     ALWAYS_INLINE void restoreState(const ParserState& state)
     {
         m_assignmentCount = state.assignmentCount;
         m_nonLHSCount = state.nonLHSCount;
         m_nonTrivialExpressionCount = state.nonTrivialExpressionCount;
-        
+
     }
-    
+
 
     VM* m_vm;
     const SourceCode* m_source;
     ParserArena* m_arena;
     OwnPtr<LexerType> m_lexer;
-    
+
     bool m_hasStackOverflow;
     String m_errorMessage;
     JSToken m_token;
@@ -852,19 +852,19 @@ private:
     Vector<RefPtr<StringImpl>> m_closedVariables;
     CodeFeatures m_features;
     int m_numConstants;
-    
+
     struct DepthManager {
         DepthManager(int* depth)
         : m_originalDepth(*depth)
         , m_depth(depth)
         {
         }
-        
+
         ~DepthManager()
         {
             *m_depth = m_originalDepth;
         }
-        
+
     private:
         int m_originalDepth;
         int* m_depth;
@@ -940,7 +940,7 @@ PassRefPtr<ParsedNode> Parser<LexerType>::parse(ParserError& error)
                 errorType = ParserError::SyntaxErrorRecoverable;
             else if (m_token.m_type & UnterminatedErrorTokenFlag)
                 errorType = ParserError::SyntaxErrorUnterminatedLiteral;
-            
+
             if (isEvalNode<ParsedNode>())
                 error = ParserError(ParserError::EvalError, errorType, m_token, errMsg, errLine);
             else

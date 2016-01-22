@@ -39,7 +39,7 @@ typedef struct _GstTagDemuxPrivate GstTagDemuxPrivate;
  * GstTagDemuxResult:
  * @GST_TAG_DEMUX_RESULT_BROKEN_TAG: cannot parse tag, just skip it
  * @GST_TAG_DEMUX_RESULT_AGAIN     : call again with less or more data
- * @GST_TAG_DEMUX_RESULT_OK	   : parsed tag successfully
+ * @GST_TAG_DEMUX_RESULT_OK    : parsed tag successfully
  *
  * Result values from the parse_tag virtual function.
  */

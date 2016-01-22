@@ -36,11 +36,11 @@ import javafx.beans.Observable;
  * A convenience class for creating implementations of {@link ObservableValue}.
  * It contains all of the infrastructure support for value invalidation- and
  * change event notification.
- * 
+ *
  * This implementation can handle adding and removing listeners while the
  * observers are being notified, but it is not thread-safe.
- * 
- * 
+ *
+ *
  * @since JavaFX 2.0
  */
 public abstract class ObservableValueBase<T> implements ObservableValue<T> {
@@ -81,7 +81,7 @@ public abstract class ObservableValueBase<T> implements ObservableValue<T> {
 
     /**
      * Notify the currently registered observers of a value change.
-     * 
+     *
      * This implementation will ignore all adds and removes of observers that
      * are done while a notification is processed. The changes take effect in
      * the following call to fireValueChangedEvent.

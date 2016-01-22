@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -42,16 +42,16 @@ public:
         : Phase(graph, "liveness analysis")
     {
     }
-    
+
     bool run()
     {
         ASSERT(m_graph.m_form == SSA);
-        
+
         // Liveness is a backwards analysis; the roots are the blocks that
         // end in a terminal (Return/Throw/ThrowReferenceError). For now, we
         // use a fixpoint formulation since liveness is a rapid analysis with
         // convergence guaranteed after O(connectivity).
-        
+
         // Start by assuming that everything is dead.
         for (BlockIndex blockIndex = m_graph.numBlocks(); blockIndex--;) {
             BasicBlock* block = m_graph.block(blockIndex);
@@ -60,13 +60,13 @@ public:
             block->ssa->liveAtHead.clear();
             block->ssa->liveAtTail.clear();
         }
-        
+
         do {
             m_changed = false;
             for (BlockIndex blockIndex = m_graph.numBlocks(); blockIndex--;)
                 process(blockIndex);
         } while (m_changed);
-        
+
         if (!m_graph.block(0)->ssa->liveAtHead.isEmpty()) {
             dataLog(
                 "Bad liveness analysis result: live at root is not empty: ",
@@ -75,7 +75,7 @@ public:
             m_graph.dump();
             CRASH();
         }
-        
+
         return true;
     }
 
@@ -85,14 +85,14 @@ private:
         BasicBlock* block = m_graph.block(blockIndex);
         if (!block)
             return;
-        
+
         // FIXME: It's likely that this can be improved, for static analyses that use
         // HashSets. https://bugs.webkit.org/show_bug.cgi?id=118455
         m_live = block->ssa->liveAtTail;
-        
+
         for (unsigned nodeIndex = block->size(); nodeIndex--;) {
             Node* node = block->at(nodeIndex);
-            
+
             // Given an Upsilon:
             //
             //    n: Upsilon(@x, ^p)
@@ -110,7 +110,7 @@ private:
             //    n: Thingy(@a, @b, @c)
             //
             // We say that it def's @n and uses @a, @b, @c.
-            
+
             switch (node->op()) {
             case Upsilon: {
                 Node* phi = node->phi();
@@ -119,37 +119,37 @@ private:
                 m_live.add(node->child1().node());
                 break;
             }
-                
+
             case Phi: {
                 break;
             }
-                
+
             default:
                 m_live.remove(node);
                 DFG_NODE_DO_TO_CHILDREN(m_graph, node, addChildUse);
                 break;
             }
         }
-        
+
         if (m_live == block->ssa->liveAtHead)
             return;
-        
+
         m_changed = true;
         block->ssa->liveAtHead = m_live;
         for (unsigned i = block->predecessors.size(); i--;)
             block->predecessors[i]->ssa->liveAtTail.add(m_live.begin(), m_live.end());
     }
-    
+
     void addChildUse(Node*, Edge& edge)
     {
         addChildUse(edge);
     }
-    
+
     void addChildUse(Edge& edge)
     {
         edge.setKillStatus(m_live.add(edge.node()).isNewEntry ? DoesKill : DoesNotKill);
     }
-    
+
     bool m_changed;
     HashSet<Node*> m_live;
 };

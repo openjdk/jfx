@@ -44,8 +44,8 @@ import javafx.scene.paint.Color;
  * A calculator that performs simple math exercises.
  *
  * @sampleName Calculator
- * @preview preview.png 
- *  
+ * @preview preview.png
+ *
  * @see javafx.application.Application
  * @see javafx.stage.Stage
  * @see javafx.scene.Scene
@@ -66,7 +66,7 @@ import javafx.scene.paint.Color;
  */
 
 public class CalculatorApp extends Application {
-    
+
 
     public Parent createContent() {
         final Calculator calculator = new Calculator();

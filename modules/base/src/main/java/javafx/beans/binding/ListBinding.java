@@ -81,7 +81,7 @@ public abstract class ListBinding<E> extends ListExpression<E> implements Bindin
 
     private SizeProperty size0;
     private EmptyProperty empty0;
-    
+
     @Override
     public ReadOnlyIntegerProperty sizeProperty() {
         if (size0 == null) {
@@ -254,7 +254,7 @@ public abstract class ListBinding<E> extends ListExpression<E> implements Bindin
      */
     protected void onInvalidating() {
     }
-    
+
     private void invalidateProperties() {
         if (size0 != null) {
             size0.fireValueChangedEvent();

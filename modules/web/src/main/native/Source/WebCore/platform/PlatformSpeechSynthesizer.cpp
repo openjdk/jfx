@@ -29,7 +29,7 @@
 #if ENABLE(SPEECH_SYNTHESIS)
 
 namespace WebCore {
-    
+
 PassOwnPtr<PlatformSpeechSynthesizer> PlatformSpeechSynthesizer::create(PlatformSpeechSynthesizerClient* client)
 {
     return adoptPtr(new PlatformSpeechSynthesizer(client));

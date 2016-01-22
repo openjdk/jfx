@@ -40,9 +40,9 @@ public final class Token {
         this.type = type;
         this.text = text;
         this.line = line;
-        this.offset = offset;        
+        this.offset = offset;
     }
-    
+
     public Token(int type, String text) {
         this(type, text, -1, -1);
     }

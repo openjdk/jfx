@@ -44,12 +44,12 @@
 .chart-area-symbol {
     -fx-background-color: white;
 }
-.chart-series-area-line { 
-    -fx-stroke: white; 
-    -fx-stroke-width: 2px; 
+.chart-series-area-line {
+    -fx-stroke: white;
+    -fx-stroke-width: 2px;
 }
-.chart-series-area-fill { 
-    -fx-fill: linear-gradient(to right, white, rgba(255,255,255,0)); 
+.chart-series-area-fill {
+    -fx-fill: linear-gradient(to right, white, rgba(255,255,255,0));
     -fx-blend-mode: OVERLAY;
 }
 .axis {

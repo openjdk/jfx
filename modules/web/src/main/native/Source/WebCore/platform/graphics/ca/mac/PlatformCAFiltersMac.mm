@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -64,14 +64,14 @@ void PlatformCAFilters::setFiltersOnLayer(PlatformLayer* layer, const FilterOper
         END_BLOCK_OBJC_EXCEPTIONS
         return;
     }
-    
+
     // Assume filtersCanBeComposited was called and it returned true.
     ASSERT(PlatformCALayerMac::filtersCanBeComposited(filters));
-    
+
     BEGIN_BLOCK_OBJC_EXCEPTIONS
-    
+
     RetainPtr<NSMutableArray> array = adoptNS([[NSMutableArray alloc] init]);
-    
+
     for (unsigned i = 0; i < filters.size(); ++i) {
         String filterName = String::format("filter_%d", i);
         const FilterOperation* filterOperation = filters.at(i);
@@ -295,7 +295,7 @@ void PlatformCAFilters::setFiltersOnLayer(PlatformLayer* layer, const FilterOper
 
     if ([array.get() count] > 0)
         [layer setFilters:array.get()];
-    
+
     END_BLOCK_OBJC_EXCEPTIONS
 }
 
@@ -306,7 +306,7 @@ RetainPtr<NSValue> PlatformCAFilters::filterValueForOperation(const FilterOperat
 #endif
     FilterOperation::OperationType type = operation->type();
     RetainPtr<id> value;
-    
+
     switch (type) {
     case FilterOperation::GRAYSCALE: {
         // CIFilter: inputIntensity
@@ -356,7 +356,7 @@ RetainPtr<NSValue> PlatformCAFilters::filterValueForOperation(const FilterOperat
             const BasicColorMatrixFilterOperation* op = static_cast<const BasicColorMatrixFilterOperation*>(operation);
             amount = op->amount();
         }
-        
+
         value = [NSNumber numberWithDouble:amount];
         break;
     }
@@ -387,7 +387,7 @@ RetainPtr<NSValue> PlatformCAFilters::filterValueForOperation(const FilterOperat
 
         double multiplier = 1 - amount * 2;
 
-        // The color matrix animation for invert does a scale of each color component by a value that goes from 
+        // The color matrix animation for invert does a scale of each color component by a value that goes from
         // 1 (when amount is 0) to -1 (when amount is 1). Then the color values are offset by amount. This has the
         // effect of performing the operation: c' = c * -1 + 1, which inverts the color.
         CIVector* rowVector = 0;
@@ -413,12 +413,12 @@ RetainPtr<NSValue> PlatformCAFilters::filterValueForOperation(const FilterOperat
             const BasicComponentTransferFilterOperation* op = static_cast<const BasicComponentTransferFilterOperation*>(operation);
             amount = op->amount();
         }
-        
+
         value = adoptNS([[CIVector alloc] initWithX:0 Y:0 Z:0 W:amount]);
 #endif
         break;
     }
-    
+
     case FilterOperation::BRIGHTNESS: {
 #if USE_CA_FILTERS
         // Brightness CAFilter: inputColorMatrix
@@ -431,7 +431,7 @@ RetainPtr<NSValue> PlatformCAFilters::filterValueForOperation(const FilterOperat
             const BasicComponentTransferFilterOperation* op = static_cast<const BasicComponentTransferFilterOperation*>(operation);
             amount = op->amount();
         }
-        
+
         CIVector* rowVector = 0;
         switch (internalFilterPropertyIndex) {
         case 0: rowVector = [[CIVector alloc] initWithX:amount Y:0 Z:0 W:0]; break; // inputRVector
@@ -469,14 +469,14 @@ RetainPtr<NSValue> PlatformCAFilters::filterValueForOperation(const FilterOperat
             const BlurFilterOperation* op = static_cast<const BlurFilterOperation*>(operation);
             amount = floatValueForLength(op->stdDeviation(), 0);
         }
-        
+
         value = [NSNumber numberWithDouble:amount];
         break;
     }
     default:
         break;
     }
-    
+
     return value;
 }
 
@@ -492,11 +492,11 @@ RetainPtr<NSValue> PlatformCAFilters::colorMatrixValueForFilter(const FilterOper
             static_cast<float>(WebCore::blend(sepiaNoneConstants[0][0], sepiaFullConstants[0][0], t)),
             static_cast<float>(WebCore::blend(sepiaNoneConstants[0][1], sepiaFullConstants[0][1], t)),
             static_cast<float>(WebCore::blend(sepiaNoneConstants[0][2], sepiaFullConstants[0][2], t)), 0, 0,
-            
+
             static_cast<float>(WebCore::blend(sepiaNoneConstants[1][0], sepiaFullConstants[1][0], t)),
             static_cast<float>(WebCore::blend(sepiaNoneConstants[1][1], sepiaFullConstants[1][1], t)),
             static_cast<float>(WebCore::blend(sepiaNoneConstants[1][2], sepiaFullConstants[1][2], t)), 0, 0,
-            
+
             static_cast<float>(WebCore::blend(sepiaNoneConstants[2][0], sepiaFullConstants[2][0], t)),
             static_cast<float>(WebCore::blend(sepiaNoneConstants[2][1], sepiaFullConstants[2][1], t)),
             static_cast<float>(WebCore::blend(sepiaNoneConstants[2][2], sepiaFullConstants[2][2], t)), 0, 0,

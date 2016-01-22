@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -42,7 +42,7 @@ BasicBlock* createPreHeader(Graph& graph, BlockInsertionSet& insertionSet, Basic
     BasicBlock* preHeader = insertionSet.insertBefore(block);
     preHeader->appendNode(
         graph, SpecNone, Jump, block->at(0)->origin, OpInfo(block));
-    
+
     for (unsigned predecessorIndex = 0; predecessorIndex < block->predecessors.size(); predecessorIndex++) {
         BasicBlock* predecessor = block->predecessors[predecessorIndex];
         if (graph.m_dominators.dominates(block, predecessor))
@@ -57,7 +57,7 @@ BasicBlock* createPreHeader(Graph& graph, BlockInsertionSet& insertionSet, Basic
             preHeader->predecessors.append(predecessor);
         }
     }
-    
+
     block->predecessors.append(preHeader);
     return preHeader;
 }
@@ -69,12 +69,12 @@ public:
         , m_insertionSet(graph)
     {
     }
-    
+
     bool run()
     {
         m_graph.m_dominators.computeIfNecessary(m_graph);
         m_graph.m_naturalLoops.computeIfNecessary(m_graph);
-        
+
         for (unsigned loopIndex = m_graph.m_naturalLoops.numLoops(); loopIndex--;) {
             const NaturalLoop& loop = m_graph.m_naturalLoops.loop(loopIndex);
             BasicBlock* existingPreHeader = 0;
@@ -94,10 +94,10 @@ public:
             }
             if (!needsNewPreHeader)
                 continue;
-            
+
             createPreHeader(m_graph, m_insertionSet, loop.header());
         }
-        
+
         return m_insertionSet.execute();
     }
 

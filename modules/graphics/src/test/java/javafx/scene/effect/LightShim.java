@@ -30,5 +30,5 @@ public class LightShim {
     public static com.sun.scenario.effect.light.Light impl_getImpl(Light light) {
         return light.impl_getImpl();
     }
-    
+
 }

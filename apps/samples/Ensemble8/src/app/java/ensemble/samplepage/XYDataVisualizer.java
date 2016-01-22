@@ -72,7 +72,7 @@ import javafx.util.StringConverter;
 
 
 public class XYDataVisualizer<X, Y> extends TreeTableView<XYChartItem<X, Y>> {
-    
+
     XYChart<X, Y> chart;
     private Class<?> clzX;
     double minY, maxY;
@@ -84,17 +84,17 @@ public class XYDataVisualizer<X, Y> extends TreeTableView<XYChartItem<X, Y>> {
         setRoot(new MyTreeItem(root));
         setMinHeight(100);
         setMinWidth(100);
-        
+
         parseData();
-        
+
         if (!getRoot().getChildren().isEmpty()) {
             getRoot().getChildren().get(0).setExpanded(true);
         }
-        
+
         chart.dataProperty().addListener((ObservableValue<? extends ObservableList<Series<X, Y>>> ov, ObservableList<Series<X, Y>> t, ObservableList<Series<X, Y>> t1) -> {
             setRoot(new MyTreeItem(new XYChartItem<X, Y>(t1)));
         });
-        
+
         TreeTableColumn<XYChartItem<X, Y>, String> nameColumn = new TreeTableColumn<>("Name");
         nameColumn.setCellValueFactory((CellDataFeatures<XYChartItem<X, Y>, String> p) -> {
             if (p.getValue() != null) {
@@ -106,7 +106,7 @@ public class XYDataVisualizer<X, Y> extends TreeTableView<XYChartItem<X, Y>> {
         nameColumn.setEditable(true);
         nameColumn.setSortable(false);
         nameColumn.setMinWidth(70);
-        
+
         TreeTableColumn<XYChartItem<X, Y>, X> xValueColumn = new TreeTableColumn<>("XValue");
         xValueColumn.setCellValueFactory((CellDataFeatures<XYChartItem<X, Y>, X> p) -> {
             if (p.getValue() != null) {
@@ -122,7 +122,7 @@ public class XYDataVisualizer<X, Y> extends TreeTableView<XYChartItem<X, Y>> {
                     public String toString(X t) {
                         return t == null ? null : t.toString();
                     }
-                    
+
                     @Override
                     public X fromString(String string) {
                         if (string == null) {
@@ -151,7 +151,7 @@ public class XYDataVisualizer<X, Y> extends TreeTableView<XYChartItem<X, Y>> {
         xValueColumn.setEditable(true);
         xValueColumn.setSortable(false);
         xValueColumn.setMinWidth(50);
-        
+
         TreeTableColumn<XYChartItem<X, Y>, Y> yValueColumn = new TreeTableColumn<>("YValue");
         yValueColumn.setCellValueFactory((CellDataFeatures<XYChartItem<X, Y>, Y> p) -> {
             if (p.getValue() != null) {
@@ -161,12 +161,12 @@ public class XYDataVisualizer<X, Y> extends TreeTableView<XYChartItem<X, Y>> {
             }
         });
         yValueColumn.setCellFactory((TreeTableColumn<XYChartItem<X, Y>, Y> p) -> new TextFieldTreeTableCell<>(new StringConverter<Y>() {
-            
+
             @Override
             public String toString(Y t) {
                 return t == null ? null : t.toString();
             }
-            
+
             @Override
             public Y fromString(String string) {
                 if (string == null) {
@@ -179,7 +179,7 @@ public class XYDataVisualizer<X, Y> extends TreeTableView<XYChartItem<X, Y>> {
         yValueColumn.setEditable(true);
         yValueColumn.setSortable(false);
         yValueColumn.setMinWidth(50);
-        
+
         TreeTableColumn<XYChartItem<X, Y>, Object> extraValueColumn = new TreeTableColumn<>("Extra Value");
         extraValueColumn.setCellValueFactory((CellDataFeatures<XYChartItem<X, Y>, Object> p) -> {
             if (p.getValue() != null) {
@@ -190,9 +190,9 @@ public class XYDataVisualizer<X, Y> extends TreeTableView<XYChartItem<X, Y>> {
         });
         extraValueColumn.setMinWidth(100);
         extraValueColumn.setSortable(false);
-        
+
         getColumns().setAll(nameColumn, xValueColumn, yValueColumn, extraValueColumn);
-        
+
         setOnContextMenuRequested((ContextMenuEvent t) -> {
             Node node = t.getPickResult().getIntersectedNode();
             while (node != null && !(node instanceof TreeTableRow) && !(node instanceof TreeTableCell)) {
@@ -248,7 +248,7 @@ public class XYDataVisualizer<X, Y> extends TreeTableView<XYChartItem<X, Y>> {
                 Object parentValue = selectedItem.getParent().getValue().getValue();
                 if (parentValue instanceof ObservableList) {
                     ObservableList parentList = (ObservableList) parentValue;
-                    
+
                     insertSeries(parentList.indexOf(value), parentList);
                 }
             }
@@ -292,7 +292,7 @@ public class XYDataVisualizer<X, Y> extends TreeTableView<XYChartItem<X, Y>> {
 
         setContextMenu(contextMenu);
     }
-    
+
     private ObservableList generateData() {
         seriesIndex = 1;
         categoryIndex = 1;
@@ -308,7 +308,7 @@ public class XYDataVisualizer<X, Y> extends TreeTableView<XYChartItem<X, Y>> {
     private void insertSeries(ObservableList parentList) {
         insertSeries(parentList.size(), parentList);
     }
-    
+
     private void insertSeries(int index, ObservableList parentList) {
         ObservableList observableArrayList = FXCollections.observableArrayList();
 
@@ -331,11 +331,11 @@ public class XYDataVisualizer<X, Y> extends TreeTableView<XYChartItem<X, Y>> {
             }
         }
 
-        parentList.add(index < 0 ? parentList.size() : index, 
+        parentList.add(index < 0 ? parentList.size() : index,
                 new XYChart.Series<>("Series " + (seriesIndex++),
                 observableArrayList));
-    }    
-    
+    }
+
     private int categoryIndex = 1;
 
     public Data<Integer, Integer> insertItem(int index, ObservableList<Data> list) {
@@ -351,24 +351,24 @@ public class XYDataVisualizer<X, Y> extends TreeTableView<XYChartItem<X, Y>> {
         }
         if (chart.getXAxis() instanceof NumberAxis) {
             NumberAxis xAxis = (NumberAxis) chart.getXAxis();
-            double lower = prev == null 
-                    ? xAxis.getLowerBound() - 2 * xAxis.getTickUnit() 
+            double lower = prev == null
+                    ? xAxis.getLowerBound() - 2 * xAxis.getTickUnit()
                     : ((Number) prev.getXValue()).doubleValue();
-            double upper = next == null 
-                    ? xAxis.getUpperBound() + 2 * xAxis.getTickUnit() 
+            double upper = next == null
+                    ? xAxis.getUpperBound() + 2 * xAxis.getTickUnit()
                     : ((Number) next.getXValue()).doubleValue();
             Data item = new XYChart.Data<>(
-                    Math.random() * (upper - lower) + lower, 
+                    Math.random() * (upper - lower) + lower,
                     Math.random() * (maxY - minY) + minY);
             list.add(index, item);
             return item;
         } else if (chart.getXAxis() instanceof CategoryAxis) {
             CategoryAxis xAxis = (CategoryAxis) chart.getXAxis();
-            int lower = prev == null 
-                    ? -1 
+            int lower = prev == null
+                    ? -1
                     : xAxis.getCategories().indexOf(prev.getXValue());
-            int upper = next == null 
-                    ? xAxis.getCategories().size() 
+            int upper = next == null
+                    ? xAxis.getCategories().size()
                     : xAxis.getCategories().indexOf(next.getXValue());
             String category;
             if (upper - lower <= 1) {
@@ -378,7 +378,7 @@ public class XYDataVisualizer<X, Y> extends TreeTableView<XYChartItem<X, Y>> {
                 category = xAxis.getCategories().get(
                         (int) (Math.random() * (upper - lower - 1) + lower + 1));
             }
-            Data item = new XYChart.Data<>(category, 
+            Data item = new XYChart.Data<>(category,
                     Math.random() * (maxY - minY) + minY);
             list.add(index, item);
             return item;
@@ -388,8 +388,8 @@ public class XYDataVisualizer<X, Y> extends TreeTableView<XYChartItem<X, Y>> {
 
     public Data<Integer, Integer> insertItem(ObservableList<Data> list) {
         return insertItem(list.size(), list);
-    }    
-    
+    }
+
     private void parseData() {
         boolean editable = true;
         for (Series<X, Y> series : chart.getData()) {
@@ -415,9 +415,9 @@ public class XYDataVisualizer<X, Y> extends TreeTableView<XYChartItem<X, Y>> {
         }
         setEditable(editable);
     }
-    
+
     private static class MyTreeItem<X, Y> extends TreeItem<XYChartItem<X, Y>> {
-        
+
         {
             expandedProperty().addListener((ObservableValue<? extends Boolean> ov, Boolean t, Boolean expanded) -> {
                 if (expanded) {
@@ -426,7 +426,7 @@ public class XYDataVisualizer<X, Y> extends TreeTableView<XYChartItem<X, Y>> {
                         ListContentBinding.bind(getChildren(), children, (Object p) -> new MyTreeItem(new XYDataVisualizer.XYChartItem(p), false));
                         if (getChildren().size() == 1) {
                             getChildren().get(0).setExpanded(true);
-                        } 
+                        }
                     }
                 }
             });
@@ -436,23 +436,23 @@ public class XYDataVisualizer<X, Y> extends TreeTableView<XYChartItem<X, Y>> {
         public boolean isLeaf() {
             return getValue().isLeaf();
         }
-        
+
         public MyTreeItem(XYChartItem t) {
             this(t, true);
         }
-        
+
         public MyTreeItem(XYChartItem t, boolean expand) {
             super(t);
             setExpanded(expand);
         }
     }
-    
+
     public static class XYChartItem<X, Y> {
-        
+
         private boolean leaf = true;
         private ObservableList children;
         private Object value;
-        
+
         public XYChartItem(Object value) {
             this.value = value;
             if (value == null) {
@@ -475,15 +475,15 @@ public class XYDataVisualizer<X, Y> extends TreeTableView<XYChartItem<X, Y>> {
                 extraValue.bindBidirectional(data.extraValueProperty());
             }
         }
-        
+
         public ObservableList getChildren() {
             return children;
         }
-        
+
         public boolean isLeaf() {
             return leaf;
         }
-        
+
         private ObjectProperty<X> xValue = new SimpleObjectProperty<>();
 
         public ObjectProperty<X> xValueProperty() {
@@ -491,19 +491,19 @@ public class XYDataVisualizer<X, Y> extends TreeTableView<XYChartItem<X, Y>> {
         }
 
         private ObjectProperty<Y> yValue = new SimpleObjectProperty<>();
-        
+
         public ObjectProperty<Y> yValueProperty() {
             return yValue;
         }
 
         private ObjectProperty<Object> extraValue = new SimpleObjectProperty<>();
-        
+
         public ObjectProperty<Object> extraValueProperty() {
             return extraValue;
         }
-        
+
         private StringProperty name = new SimpleStringProperty();
-        
+
         public StringProperty nameProperty() {
             return name;
         }
@@ -512,9 +512,9 @@ public class XYDataVisualizer<X, Y> extends TreeTableView<XYChartItem<X, Y>> {
             return value;
         }
     }
-    
+
     private static class ListContentBinding<EF, ET> implements ListChangeListener<EF>, WeakListener {
-        
+
         public static <EF, ET> Object bind(List<ET> list1, ObservableList<? extends EF> list2, Callback<EF, ET> converter) {
 //            checkParameters(list1, list2);
             final ListContentBinding<EF, ET> contentBinding = new ListContentBinding<>(list1, converter);
@@ -590,12 +590,12 @@ public class XYDataVisualizer<X, Y> extends TreeTableView<XYChartItem<X, Y>> {
 
         private Collection<? extends ET> convert(List<? extends EF> addedSubList) {
             List<ET> res = new ArrayList<>(addedSubList.size());
-            
+
             for (EF elem : addedSubList) {
                 res.add(converter.call(elem));
             }
-            
+
             return res;
         }
-    }    
+    }
 }

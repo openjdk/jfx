@@ -1460,7 +1460,7 @@ void HTMLInputElement::documentDidResumeFromPageCache()
 #if ENABLE(INPUT_TYPE_COLOR)
     // <input type=color> uses documentWillSuspendForPageCache to detach the color picker UI,
     // so it should not be reset when being loaded from page cache.
-    if (isColorControl()) 
+    if (isColorControl())
         return;
 #endif // ENABLE(INPUT_TYPE_COLOR)
     reset();
@@ -1567,7 +1567,7 @@ void HTMLInputElement::selectColorInColorChooser(const Color& color)
     static_cast<ColorInputType*>(m_inputType.get())->didChooseColor(color);
 }
 #endif
-    
+
 #if ENABLE(DATALIST_ELEMENT)
 HTMLElement* HTMLInputElement::list() const
 {
@@ -1792,7 +1792,7 @@ String HTMLInputElement::defaultToolTip() const
     return m_inputType->defaultToolTip();
 }
 
-bool HTMLInputElement::shouldAppearIndeterminate() const 
+bool HTMLInputElement::shouldAppearIndeterminate() const
 {
     return m_inputType->supportsIndeterminateAppearance() && indeterminate();
 }

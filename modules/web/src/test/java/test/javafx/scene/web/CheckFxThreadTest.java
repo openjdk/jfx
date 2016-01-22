@@ -31,47 +31,47 @@ import org.junit.Test;
 
 
 public class CheckFxThreadTest extends TestBase {
-    
+
     @Test public void testWebEngineMethods() {
         try {
             getEngine().load("about:blank");
             fail("WebEngine.load() didn't throw IllegalStateException");
         } catch (IllegalStateException e) {
         }
-        
+
         try {
             getEngine().loadContent("simple HTML paragraph");
             fail("WebEngine.loadContent(String) didn't throw IllegalStateException");
         } catch (IllegalStateException e) {
         }
-        
+
         try {
             getEngine().loadContent("plain text", "text/plain");
             fail("WebEngine.loadContent(String, String) didn't throw IllegalStateException");
         } catch (IllegalStateException e) {
         }
-        
+
         try {
             getEngine().reload();
             fail("WebEngine.reload() didn't throw IllegalStateException");
         } catch (IllegalStateException e) {
         }
-        
+
         try {
             getEngine().getLoadWorker().cancel();
             fail("WebEngine.getLoadWorker().cancel() didn't throw IllegalStateException");
         } catch (IllegalStateException e) {
         }
-        
+
         try {
             getEngine().executeScript("window");
             fail("WebEngine.executeScript() didn't throw IllegalStateException");
         } catch (IllegalStateException e) {
         }
     }
-    
+
     @Test public void testWebEngineProperties() {
-        
+
         // javaScriptEnabled
         try {
             getEngine().setJavaScriptEnabled(false);
@@ -80,7 +80,7 @@ public class CheckFxThreadTest extends TestBase {
         }
 
         getEngine().isJavaScriptEnabled();
-        
+
         try {
             getEngine().javaScriptEnabledProperty().set(true);
             fail("WebEngine.javaScriptEnabledProperty.set() didn't throw IllegalStateException");
@@ -95,14 +95,14 @@ public class CheckFxThreadTest extends TestBase {
         }
 
         getEngine().getUserStyleSheetLocation();
-        
+
         try {
             getEngine().userStyleSheetLocationProperty().set(null);
             fail("WebEngine.userStyleSheetLocationProperty.set() didn't throw IllegalStateException");
         } catch (IllegalStateException e) {
         }
     }
-    
+
     @Test public void testWebViewProperties() {
 
         // contextMenuEnabled
@@ -113,7 +113,7 @@ public class CheckFxThreadTest extends TestBase {
         }
 
         getView().isContextMenuEnabled();
-        
+
         try {
             getView().contextMenuEnabledProperty().set(true);
             fail("WebView.contextMenuEnabledProperty().set() didn't throw IllegalStateException");
@@ -143,7 +143,7 @@ public class CheckFxThreadTest extends TestBase {
         }
 
         getView().getFontScale();
-        
+
         try {
             getView().fontScaleProperty().set(2.0);
             fail("WebView.fontScaleProperty.set() didn't throw IllegalStateException");
@@ -158,7 +158,7 @@ public class CheckFxThreadTest extends TestBase {
         }
 
         getView().getFontSmoothingType();
-        
+
         try {
             getView().fontSmoothingTypeProperty().set(FontSmoothingType.LCD);
             fail("WebView.fontSmoothingTypeProperty.set() didn't throw IllegalStateException");

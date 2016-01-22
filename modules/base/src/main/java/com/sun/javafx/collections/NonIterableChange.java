@@ -53,7 +53,7 @@ public abstract class NonIterableChange<E> extends Change<E> {
         checkState();
         return to;
     }
-    
+
     private static final int[] EMPTY_PERM = new int[0];
 
     @Override
@@ -66,7 +66,7 @@ public abstract class NonIterableChange<E> extends Change<E> {
     public boolean next() {
         if (invalid) {
             invalid = false;
-            return true; 
+            return true;
         }
         return false;
     }
@@ -75,7 +75,7 @@ public abstract class NonIterableChange<E> extends Change<E> {
     public void reset() {
         invalid = true;
     }
-    
+
     public void checkState() {
         if (invalid) {
             throw new IllegalStateException("Invalid Change state: next() must be called before inspecting the Change.");
@@ -179,17 +179,17 @@ public abstract class NonIterableChange<E> extends Change<E> {
             return permutation;
         }
     }
-    
+
     public static class SimpleUpdateChange<E> extends NonIterableChange<E>{
 
         public SimpleUpdateChange(int position, ObservableList<E> list) {
             this(position, position + 1, list);
         }
-        
+
         public SimpleUpdateChange(int from, int to, ObservableList<E> list) {
             super(from, to, list);
         }
-        
+
         @Override
         public List<E> getRemoved() {
             return Collections.<E>emptyList();
@@ -199,7 +199,7 @@ public abstract class NonIterableChange<E> extends Change<E> {
         public boolean wasUpdated() {
             return true;
         }
-        
+
     }
-    
+
 }

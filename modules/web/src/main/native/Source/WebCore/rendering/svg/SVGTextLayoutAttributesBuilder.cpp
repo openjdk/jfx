@@ -150,7 +150,7 @@ void SVGTextLayoutAttributesBuilder::buildCharacterDataMap(RenderSVGText* textRo
             data.y = 0;
     }
 
-    // Fill character data map using child text positioning elements in top-down order. 
+    // Fill character data map using child text positioning elements in top-down order.
     unsigned size = m_textPositions.size();
     for (unsigned i = 0; i < size; ++i)
         fillCharacterDataMap(m_textPositions[i]);

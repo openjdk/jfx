@@ -42,7 +42,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_prism_d3d_D3DResourceFactory_nGetContext
 {
     D3DPipelineManager *pMgr = D3DPipelineManager::GetInstance();
     RETURN_STATUS_IF_NULL(pMgr, 0L);
-    
+
     D3DContext *pCtx = NULL;
     HRESULT res = pMgr->GetD3DContext(adapterOrdinal, &pCtx);
     if (SUCCEEDED(res)) {
@@ -76,11 +76,11 @@ Java_com_sun_prism_d3d_D3DResourceFactory_nCreateTexture
 
     D3DResourceManager *pMgr = pCtx->GetResourceManager();
     RETURN_STATUS_IF_NULL(pMgr, 0L);
-    
+
     D3DResource *pTexResource;
     D3DFORMAT format = D3DFMT_UNKNOWN;
     HRESULT res;
-    
+
     // only considered when the format isn't explicitly requested
     BOOL isOpaque = FALSE;
 
@@ -141,7 +141,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_prism_d3d_D3DResourceFactory_nCreateSwapCha
 {
     D3DContext *pCtx = (D3DContext*)jlong_to_ptr(ctx);
     RETURN_STATUS_IF_NULL(pCtx, 0L);
-    
+
     HWND hWnd = (HWND)(jlong_to_ptr(hwnd));
     if (!::IsWindow(hWnd)) {
         TraceLn1(NWT_TRACE_ERROR, "nGetSwapChain: hwnd=%x is not a window\n", hWnd);
@@ -191,7 +191,7 @@ JNIEXPORT jint JNICALL Java_com_sun_prism_d3d_D3DResourceFactory_nReleaseResourc
 JNIEXPORT jint JNICALL Java_com_sun_prism_d3d_D3DResourceFactory_nGetMaximumTextureSize
   (JNIEnv *, jclass, jlong ctx)
 {
-    D3DContext *pCtx = (D3DContext*)jlong_to_ptr(ctx);    
+    D3DContext *pCtx = (D3DContext*)jlong_to_ptr(ctx);
     RETURN_STATUS_IF_NULL(pCtx, -1);
 
     D3DCAPS9 *caps = pCtx->GetDeviceCaps();
@@ -403,7 +403,7 @@ static HRESULT D3DResourceFactory_nReadPixels(D3DContext *pCtx, D3DResource *pRe
 
     IDirect3DDevice9 *pd3dDevice = pCtx->Get3DDevice();
     RETURN_STATUS_IF_NULL(pd3dDevice, E_FAIL);
-    
+
     IDirect3DSurface9 *pSrc = pResource->GetSurface();
     RETURN_STATUS_IF_NULL(pSrc, E_FAIL);
 
@@ -549,7 +549,7 @@ JNIEXPORT jint JNICALL Java_com_sun_prism_d3d_D3DResourceFactory_nTestCooperativ
 {
     D3DContext *pCtx = (D3DContext*)jlong_to_ptr(context);
     RETURN_STATUS_IF_NULL(pCtx, E_FAIL);
-    
+
     return pCtx->TestCooperativeLevel();
 }
 
@@ -558,7 +558,7 @@ JNIEXPORT jint JNICALL Java_com_sun_prism_d3d_D3DResourceFactory_nResetDevice
 {
     D3DContext *pCtx = (D3DContext*)jlong_to_ptr(context);
     RETURN_STATUS_IF_NULL(pCtx, E_FAIL);
-    
+
     return pCtx->ResetContext();
 }
 

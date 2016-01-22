@@ -127,7 +127,7 @@ import javafx.util.Callback;
 /**
  * An editor controller is the central object which coordinates the editing
  * of an FXML document across the different panels (hierarchy, content,
- * inspector...). 
+ * inspector...).
  * <p>
  * An editor controller is associated to an FXML document. It can perform
  * editing and control actions on this document. It also maintains the list of
@@ -137,7 +137,7 @@ import javafx.util.Callback;
  * to the editor and update their content accordingly.
  */
 public class EditorController {
-    
+
     /**
      * An 'edit' action is an action which modifies the document associated
      * to this editor. It makes the document dirty and pushes a
@@ -199,9 +199,9 @@ public class EditorController {
         WRAP_IN_TOOL_BAR,
         WRAP_IN_VBOX
     }
-    
+
     /**
-     * A 'control' action does not modify the document. It only changes a 
+     * A 'control' action does not modify the document. It only changes a
      * state or a mode in this editor.
      */
     public enum ControlAction {
@@ -217,7 +217,7 @@ public class EditorController {
         TOGGLE_CSS_SELECTION,
         TOGGLE_SAMPLE_DATA
     }
-    
+
     /**
      * Predefined sizes (width x height).
      * Preferred one refers to the one explicitly set by the user: it is for
@@ -233,7 +233,7 @@ public class EditorController {
         SIZE_PREFERRED,
         SIZE_DEFAULT
     }
-    
+
     private final Selection selection = new Selection();
     private final JobManager jobManager = new JobManager(this, 50);
     private final MessageLog messageLog = new MessageLog();
@@ -242,19 +242,19 @@ public class EditorController {
     private final InlineEditController inlineEditController = new InlineEditController(this);
     private final ContextMenuController contextMenuController = new ContextMenuController(this);
     private final WatchingController watchingController = new WatchingController(this);
-    
+
     // At start-up the setter for the two variables below might be called by the
     // Preferences controller.
     private double defaultRootContainerWidth = 600;
     private double defaultRootContainerHeight = 400;
-    
-    private final ObjectProperty<FXOMDocument> fxomDocumentProperty 
+
+    private final ObjectProperty<FXOMDocument> fxomDocumentProperty
             = new SimpleObjectProperty<>();
-    private final ObjectProperty<URL> fxmlLocationProperty 
+    private final ObjectProperty<URL> fxmlLocationProperty
             = new SimpleObjectProperty<>();
-    private final ObjectProperty<Library> libraryProperty 
+    private final ObjectProperty<Library> libraryProperty
             = new SimpleObjectProperty<>(BuiltinLibrary.getLibrary());
-    private final ObjectProperty<Glossary> glossaryProperty 
+    private final ObjectProperty<Glossary> glossaryProperty
             = new SimpleObjectProperty<>(new BuiltinGlossary());
     private final ObjectProperty<ResourceBundle> resourcesProperty
             = new SimpleObjectProperty<>(null);
@@ -268,13 +268,13 @@ public class EditorController {
             = new SimpleBooleanProperty(false);
     private final SimpleStringProperty toolStylesheetProperty
             = new SimpleStringProperty(getBuiltinToolStylesheet());
-    
+
     private Callback<Void, Boolean> requestTextEditingSessionEnd;
-    
+
     private static String builtinToolStylesheet;
     private static File nextInitialDirectory = new File(System.getProperty("user.home")); //NOI18N
-    
-    
+
+
     /**
      * Creates an empty editor controller (ie it has no associated fxom document).
      */
@@ -311,7 +311,7 @@ public class EditorController {
 
     /**
      * Set the height to use by default for the root container.
-     * 
+     *
      * @param defaultRootContainerHeight the new root container's default height.
      */
     public void setDefaultRootContainerHeight(double defaultRootContainerHeight) {
@@ -321,22 +321,22 @@ public class EditorController {
     /**
      * Sets the fxml content to be edited by this editor.
      * A null value makes this editor empty.
-     * 
+     *
      * @param fxmlText null or the fxml text to be edited
      * @throws IOException if fxml text cannot be parsed and loaded correctly.
      */
     public void setFxmlText(String fxmlText) throws IOException {
         setFxmlTextAndLocation(fxmlText, getFxmlLocation());
     }
-    
+
     /**
      * Returns null or the fxml content being edited by this editor.
-     * 
+     *
      * @return null or the fxml content being edited by this editor.
      */
     public String getFxmlText() {
         final String result;
-        
+
         final FXOMDocument fxomDocument = getFxomDocument();
         if (fxomDocument == null) {
             result = null;
@@ -350,48 +350,48 @@ public class EditorController {
                 fxomDocument.setSampleDataEnabled(true);
             }
         }
-        
+
         return result;
     }
-    
+
     /**
      * Returns true if fxml content being edited can be returned safely.
      * This method will return false if there is a text editing session on-going.
-     * 
+     *
      * @return true if fxml content being edited can be returned safely.
      */
     public boolean canGetFxmlText() {
         final boolean result;
-        
+
         if (requestTextEditingSessionEnd == null) {
             result = true;
         } else {
             result = requestTextEditingSessionEnd.call(null);
             // If the callback returns true, then it should have call
-            // textEditingSessionDidEnd() 
+            // textEditingSessionDidEnd()
             // => requestTextEditingSessionEnd should be null
             assert (requestTextEditingSessionEnd == null) || (result == false);
         }
-        
+
         return result;
     }
-    
+
     /**
      * Tells this editor that a text editing session has started.
-     * The editor controller may invoke the requestSessionEnd() callback 
+     * The editor controller may invoke the requestSessionEnd() callback
      * if it needs the text editing session to stop. The callback should;
      *   - either stop the text editing session, invoke textEditingSessionDidEnd()
      *     and return true
      *   - either keep the text editing session on-going and return false
-     * 
-     * @param requestSessionEnd Callback that should end the text editing session or return false  
+     *
+     * @param requestSessionEnd Callback that should end the text editing session or return false
      */
     public void textEditingSessionDidBegin(Callback<Void, Boolean> requestSessionEnd) {
         assert requestTextEditingSessionEnd == null;
         requestTextEditingSessionEnd = requestSessionEnd;
     }
-    
-    
+
+
     /**
      * Tells this editor that the text editing session has ended.
      */
@@ -399,14 +399,14 @@ public class EditorController {
         assert requestTextEditingSessionEnd != null;
         requestTextEditingSessionEnd = null;
     }
-    
+
     /*
      * Returns true if a text editing session is currently on going.
      */
     public boolean isTextEditingSessionOnGoing() {
         return requestTextEditingSessionEnd != null;
     }
-    
+
     /**
      * The property holding the fxml location associated to this editor.
      * @return the property holding the fxml location associated to this editor.
@@ -414,12 +414,12 @@ public class EditorController {
     public ObservableValue<URL> fxmlLocationProperty() {
         return fxmlLocationProperty;
     }
-    
+
     /**
      * Sets the location of the fxml being edited.
      * If null value is passed, fxml text is being interpreted with any location
      * (ie some references may be broken).
-     * 
+     *
      * @param fxmlLocation null or the location of the fxml being edited.
      */
     public void setFxmlLocation(URL fxmlLocation) {
@@ -433,21 +433,21 @@ public class EditorController {
             EditorController.updateNextInitialDirectory(newInitialDirectory);
         }
     }
-    
+
     /**
      * Returns the library used by this editor.
-     * 
+     *
      * @return the library used by this editor (never null).
      */
     public Library getLibrary() {
         return libraryProperty.getValue();
     }
-    
+
     /**
      * Sets the library used by this editor.
-     * When this method is called, user scene graph is fully rebuilt using 
+     * When this method is called, user scene graph is fully rebuilt using
      * the new library and all panel refresh their contents.
-     * 
+     *
      * @param library the library to be used by this editor (never null).
      */
     public void setLibrary(Library library) {
@@ -457,131 +457,131 @@ public class EditorController {
         libraryProperty.getValue().classLoaderProperty().addListener(libraryClassLoaderListener);
         libraryClassLoaderDidChange();
     }
-    
+
     /**
      * The property holding the library used by this editor.
-     * 
+     *
      * @return the property holding the library used by this editor (never null).
      */
     public ObservableValue<Library> libraryProperty() {
         return libraryProperty;
     }
-    
+
     /**
      * Returns the glossary used by this editor.
-     * 
+     *
      * @return the glossary used by this editor (never null).
      */
     public Glossary getGlossary() {
         return glossaryProperty.getValue();
     }
-    
+
     /**
      * Sets the glossary used by this editor.
      * The Inspector panel(s) connected to this editor will update
      * their suggested lists in Code section.
-     * 
+     *
      * @param glossary the glossary to be used by this editor (never null).
      */
     public void setLibrary(Glossary glossary) {
         assert glossary != null;
         glossaryProperty.setValue(glossary);
     }
-    
+
     /**
      * The property holding the glossary used by this editor.
-     * 
+     *
      * @return the property holding the glossary used by this editor (never null).
      */
     public ObservableValue<Glossary> glossaryProperty() {
         return glossaryProperty;
     }
-    
+
     /**
      * Returns the resource bundle used by this editor.
-     * 
+     *
      * @return  the resource bundle used by this editor.
      */
     public ResourceBundle getResources() {
         return resourcesProperty.getValue();
     }
-    
+
     /**
      * Sets the resource bundle used by this editor.
      * Content and Preview panels sharing this editor will update
      * their content to use this new theme.
-     * 
+     *
      * @param resources null of the resource bundle to be used by this editor.
      */
     public void setResources(ResourceBundle resources) {
         resourcesProperty.setValue(resources);
         resourcesDidChange();
     }
-    
+
     /**
      * The property holding the resource bundle used by this editor.
-     * 
+     *
      * @return the property holding the resource bundle used by this editor (never null).
      */
     public ObservableValue<ResourceBundle> resourcesProperty() {
         return resourcesProperty;
     }
-    
+
     /**
      * Returns the theme used by this editor.
-     * 
+     *
      * @return the theme used by this editor.
      */
     public Theme getTheme() {
         return themeProperty.getValue();
     }
-    
+
     /**
      * Sets the theme used by this editor.
      * Content and Preview panels sharing this editor will update
      * their content to use this new theme.
-     * 
+     *
      * @param theme the theme to be used by this editor
      */
     public void setTheme(Theme theme) {
         themeProperty.setValue(theme);
     }
-    
+
     /**
      * The property holding the theme used by this editor.
-     * 
+     *
      * @return the property holding the theme associated to the editor (never null).
      */
     public ObservableValue<Theme> themeProperty() {
         return themeProperty;
     }
-    
+
     /**
-     * 
+     *
      * @return the list of scene style sheet used by this editor
      */
     public ObservableList<File> getSceneStyleSheets() {
         return sceneStyleSheetProperty.getValue();
     }
-    
+
     /**
-     * 
+     *
      * @param styleSheets the list of scene style sheet to be used by this editor
      */
     public void setSceneStyleSheets(ObservableList<File> styleSheets) {
         sceneStyleSheetProperty.setValue(styleSheets);
     }
-    
+
     /**
      * The property holding the list of scene style sheet used by this editor.
-     * 
+     *
      * @return the property holding the set of scene style sheet used by the editor,
      * or null if has not been set.
      */
     public ObservableListValue<File> sceneStyleSheetProperty() {
         return sceneStyleSheetProperty;
     }
-    
+
     /**
      * Returns true if 'pick mode' is enabled for this editor.
      * @return true if 'pick mode' is enabled for this editor.
@@ -589,39 +589,39 @@ public class EditorController {
     public boolean isPickModeEnabled() {
         return pickModeEnabledProperty.getValue();
     }
-    
+
     /**
      * Enables or disables 'pick mode' on this editor.
-     * 
+     *
      * @param pickModeEnabled true if 'pick mode' should be enabled.
      */
     public void setPickModeEnabled(boolean pickModeEnabled) {
         pickModeEnabledProperty.setValue(pickModeEnabled);
     }
-    
+
     /**
      * The property indicating if 'pick mode' is enabled or not.
-     * 
+     *
      * @return the property indicating if 'pick mode' is enabled or not.
      */
     public ObservableValue<Boolean> pickModeEnabledProperty() {
         return pickModeEnabledProperty;
     }
-    
+
     /**
      * Returns true if content and preview panels attached to this editor
      * should display sample data.
-     * 
+     *
      * @return true if content and preview panels should display sample data.
      */
     public boolean isSampleDataEnabled() {
         return sampleDataEnabledProperty.getValue();
     }
-    
+
     /**
      * Enables or disables display of sample data in content and preview panels
      * attached to this editor.
-     * 
+     *
      * @param sampleDataEnabled true if sample data should be displayed
      */
     public void setSampleDataEnabled(boolean sampleDataEnabled) {
@@ -631,31 +631,31 @@ public class EditorController {
             getFxomDocument().setSampleDataEnabled(isSampleDataEnabled());
         }
     }
-    
+
     /**
      * The property indicating if sample data should be displayed or not.
-     * 
+     *
      * @return the property indicating if sample data should be displayed or not.
      */
     public ObservableValue<Boolean> sampleDataEnabledProperty() {
         return sampleDataEnabledProperty;
     }
-    
-    
+
+
     /**
      * Returns null or the location of the fxml being edited.
-     * 
+     *
      * @return null or the location of the fxml being edited.
      */
     public URL getFxmlLocation() {
         return fxmlLocationProperty.getValue();
     }
-    
+
     /**
      * Sets both fxml text and location to be edited by this editor.
      * Performs setFxmlText() and setFxmlLocation() but in a optimized manner
      * (it avoids an extra scene graph refresh).
-     * 
+     *
      * @param fxmlText null or the fxml text to be edited
      * @param fxmlLocation null or the location of the fxml text being edited
      * @throws IOException if fxml text cannot be parsed and loaded correctly.
@@ -664,12 +664,12 @@ public class EditorController {
         updateFxomDocument(fxmlText, fxmlLocation, getResources());
         this.fxmlLocationProperty.setValue(fxmlLocation);
     }
-    
+
     /**
      * Sets fxml text, location and resources to be edited by this editor.
      * Performs setFxmlText(), setFxmlLocation() and setResources() but in an
      * optimized manner (it avoids extra scene graph refresh).
-     * 
+     *
      * @param fxmlText null or the fxml text to be edited
      * @param fxmlLocation null or the location of the fxml text being edited
      * @param resources null or the resource bundle used to load the fxml text
@@ -680,7 +680,7 @@ public class EditorController {
         updateFxomDocument(fxmlText, fxmlLocation, resources);
         this.fxmlLocationProperty.setValue(fxmlLocation);
     }
-    
+
     /**
      * The property holding the document associated to this editor.
      * @return the property holding the document associated to this editor.
@@ -688,38 +688,38 @@ public class EditorController {
     public ObservableValue<FXOMDocument> fxomDocumentProperty() {
         return fxomDocumentProperty;
     }
-    
+
     /**
      * Returns the document associated to this editor.
-     * 
+     *
      * @return the document associated to this editor.
      */
     public FXOMDocument getFxomDocument() {
         return fxomDocumentProperty.getValue();
     }
-    
+
     /**
      * Returns the tool stylesheet associated to this editor controller.
      * Its default value equals to getBuiltinToolStylesheet().
-     * 
+     *
      * @return the tool stylesheet associated to this editor controller (never null)
      */
     public String getToolStylesheet() {
         return toolStylesheetProperty.getValue();
     }
-    
+
     /**
      * Sets the tool stylesheet associated to this editor controller.
      * Each panel connected to this editor controller will install this style
      * sheet in its root object.
-     * 
+     *
      * @param stylesheet the tool stylesheet associated to this editor controller (never null)
      */
     public void setToolStylesheet(String stylesheet) {
         assert stylesheet != null;
         toolStylesheetProperty.setValue(stylesheet);
     }
-    
+
     /**
      * The property holding tool stylesheet associated to this editor controller.
      * @return the property holding tool stylesheet associated to this editor controller.
@@ -727,11 +727,11 @@ public class EditorController {
     public ObservableValue<String> toolStylesheetProperty() {
         return toolStylesheetProperty;
     }
-    
+
     /**
      * Returns the builtin tool stylesheet.
      * This is the default value for EditorController#toolStylesheet property.
-     * 
+     *
      * @return the builtin tool stylesheet.
      */
     public static synchronized String getBuiltinToolStylesheet() {
@@ -742,7 +742,7 @@ public class EditorController {
         }
         return builtinToolStylesheet;
     }
-    
+
     /**
      * Starts file watching on this editor.
      * This editor will now monitor the files referenced by the FXML text
@@ -752,17 +752,17 @@ public class EditorController {
     public void startFileWatching() {
         watchingController.start();
     }
-    
+
     /**
      * Stops file watching on this editor.
      */
     public void stopFileWatching() {
         watchingController.stop();
     }
-    
+
     /**
      * Returns true if file watching is started on this editor.
-     * 
+     *
      * @return true if file watching is started on this editor.
      */
     public boolean isFileWatchingStarted() {
@@ -771,35 +771,35 @@ public class EditorController {
 
     /**
      * @treatAsPrivate Returns the selection associated to this editor.
-     * 
+     *
      * @return  the selection associated to this editor.
      */
     public Selection getSelection() {
         return selection;
     }
-    
-    
+
+
     /**
      * @treatAsPrivate Returns the job manager associated to this editor.
-     * 
+     *
      * @return  the job manager associated to this editor.
      */
     public JobManager getJobManager() {
         return jobManager;
     }
-    
+
     /**
      * @treatAsPrivate Returns the message log associated to this editor.
-     * 
+     *
      * @return  the message log associated to this editor.
      */
     public MessageLog getMessageLog() {
         return messageLog;
     }
-    
+
     /**
      * @treatAsPrivate Returns the error report associated to this editor.
-     * 
+     *
      * @return  the error report associated to this editor.
      */
     public ErrorReport getErrorReport() {
@@ -808,25 +808,25 @@ public class EditorController {
 
     /**
      * @treatAsPrivate Returns the drag controller associated to this editor.
-     * 
+     *
      * @return the drag controller associated to this editor.
      */
     public DragController getDragController() {
         return dragController;
     }
-    
+
     /**
      * @treatAsPrivate Returns the inline edit controller associated to this editor.
-     * 
+     *
      * @return the inline edit controller associated to this editor.
      */
     public InlineEditController getInlineEditController() {
         return inlineEditController;
     }
-    
+
     /**
      * @treatAsPrivate Returns the context menu controller associated to this editor.
-     * 
+     *
      * @return the context menu controller associated to this editor.
      */
     public ContextMenuController getContextMenuController() {
@@ -836,22 +836,22 @@ public class EditorController {
     /**
      * Returns true if the undo action is permitted (ie there is something
      * to be undone).
-     * 
+     *
      * @return true if the undo action is permitted.
      */
     public boolean canUndo() {
         return jobManager.canUndo();
     }
-    
+
     /**
      * Returns null or the description of the action to be undone.
-     * 
+     *
      * @return null or the description of the action to be undone.
      */
     public String getUndoDescription() {
         return jobManager.getUndoDescription();
     }
-    
+
     /**
      * Performs the undo action.
      */
@@ -859,26 +859,26 @@ public class EditorController {
         jobManager.undo();
         assert getFxomDocument().isUpdateOnGoing() == false;
     }
-    
+
     /**
      * Returns true if the redo action is permitted (ie there is something
      * to be redone).
-     * 
+     *
      * @return true if the redo action is permitted.
      */
     public boolean canRedo() {
         return jobManager.canRedo();
     }
-    
+
     /**
      * Returns null or the description of the action to be redone.
-     * 
+     *
      * @return null or the description of the action to be redone.
      */
     public String getRedoDescription() {
         return jobManager.getRedoDescription();
     }
-    
+
     /**
      * Performs the redo action.
      */
@@ -886,17 +886,17 @@ public class EditorController {
         jobManager.redo();
         assert getFxomDocument().isUpdateOnGoing() == false;
     }
-    
+
     /**
      * Clears the undo/redo stack of this editor controller.
      */
     public void clearUndoRedo() {
         jobManager.clear();
     }
-    
+
     /**
      * Performs an edit action.
-     * 
+     *
      * @param editAction the edit action to be performed.
      */
     public void performEditAction(EditAction editAction) {
@@ -1133,10 +1133,10 @@ public class EditorController {
         }
         assert getFxomDocument().isUpdateOnGoing() == false;
     }
-    
+
     /**
      * Returns true if the specified edit action is permitted.
-     * 
+     *
      * @param editAction the edit action to be tested.
      * @return true if the specified edit action is permitted.
      */
@@ -1293,7 +1293,7 @@ public class EditorController {
                 break;
             }
             case USE_COMPUTED_SIZES: {
-                final UseComputedSizesSelectionJob job 
+                final UseComputedSizesSelectionJob job
                         = new UseComputedSizesSelectionJob(this);
                 result = job.isExecutable();
                 break;
@@ -1374,13 +1374,13 @@ public class EditorController {
                 result = false;
                 break;
         }
-        
+
         return result;
     }
-    
+
     /**
      * Performs the specified control action.
-     * 
+     *
      * @param controlAction the control action to be performed.
      */
     public void performControlAction(ControlAction controlAction) {
@@ -1425,10 +1425,10 @@ public class EditorController {
                 throw new UnsupportedOperationException("Not yet implemented"); //NOI18N
         }
     }
-    
+
     /**
      * Returns true if the specified control action is permitted.
-     * 
+     *
      * @param controlAction the control action to be tested.
      * @return true if the specified control action is permitted.
      */
@@ -1477,16 +1477,16 @@ public class EditorController {
                 result = false;
                 break;
         }
-        
+
         return result;
     }
-    
+
     /**
      * Performs the 'import' FXML edit action.
      * This action creates an object matching the root node of the selected
      * FXML file and insert it in the document (either as root if the document
      * is empty or under the selection common ancestor node otherwise).
-     * 
+     *
      * @param fxmlFile the FXML file to be imported
      */
     public void performImportFxml(File fxmlFile) {
@@ -1496,16 +1496,16 @@ public class EditorController {
     /**
      * Performs the 'import' media edit action.
      * This action creates an object matching the type of the selected
-     * media file (either ImageView or MediaView) and insert it in the document 
-     * (either as root if the document is empty or under the selection common 
+     * media file (either ImageView or MediaView) and insert it in the document
+     * (either as root if the document is empty or under the selection common
      * ancestor node otherwise).
-     * 
+     *
      * @param mediaFile the media file to be imported
      */
     public void performImportMedia(File mediaFile) {
         performImport(mediaFile);
     }
-    
+
     private void performImport(File file) {
         final ImportFileJob job = new ImportFileJob(file, this);
         if (job.isExecutable()) {
@@ -1575,7 +1575,7 @@ public class EditorController {
      * Performs the 'insert' edit action. This action creates an object
      * matching the specified library item and insert it in the document
      * (according the selection state).
-     * 
+     *
      * @param libraryItem the library item describing the object to be inserted.
      */
     public void performInsert(LibraryItem libraryItem) {
@@ -1613,7 +1613,7 @@ public class EditorController {
     /**
      * Returns true if the 'insert' action is permitted with the specified
      * library item.
-     * 
+     *
      * @param libraryItem the library item describing the object to be inserted.
      * @return true if the 'insert' action is permitted.
      */
@@ -1662,7 +1662,7 @@ public class EditorController {
      * Performs the 'wrap' edit action. This action creates an object
      * matching the specified class and reparent all the selected objects
      * below this new object.
-     * 
+     *
      * @param wrappingClass the wrapping class
      */
     public void performWrap(Class<? extends Parent> wrappingClass) {
@@ -1670,7 +1670,7 @@ public class EditorController {
         final AbstractWrapInJob job = AbstractWrapInJob.getWrapInJob(this, wrappingClass);
         jobManager.push(job);
     }
-    
+
     /**
      * Returns true if the 'wrap' action is permitted with the specified class.
      *
@@ -1688,9 +1688,9 @@ public class EditorController {
     private static List<Class<? extends Parent>> classesSupportingWrapping;
 
     /**
-     * Return the list of classes that can be passed to 
+     * Return the list of classes that can be passed to
      * {@link EditorController#performWrap(java.lang.Class)}.
-     * 
+     *
      * @return the list of classes.
      */
     public synchronized static Collection<Class<? extends Parent>> getClassesSupportingWrapping() {
@@ -1716,7 +1716,7 @@ public class EditorController {
             classesSupportingWrapping.add(javafx.scene.layout.VBox.class);
             classesSupportingWrapping = Collections.unmodifiableList(classesSupportingWrapping);
         }
-        
+
         return classesSupportingWrapping;
     }
 
@@ -1727,7 +1727,7 @@ public class EditorController {
         assert canPerformCopy(); // (1)
         assert selection.getGroup() instanceof ObjectSelectionGroup; // Because of (1)
         final ObjectSelectionGroup osg = (ObjectSelectionGroup) selection.getGroup();
-        
+
         final ClipboardEncoder encoder = new ClipboardEncoder(osg.getSortedItems());
         assert encoder.isEncodable();
         Clipboard.getSystemClipboard().setContent(encoder.makeEncoding());
@@ -1741,7 +1741,7 @@ public class EditorController {
     private boolean canPerformCopy() {
         return selection.getGroup() instanceof ObjectSelectionGroup;
     }
-    
+
     /**
      * Performs the select all control action.
      * Select all sub components of the selection common ancestor.
@@ -1809,7 +1809,7 @@ public class EditorController {
     /**
      * Returns true if the root object is not selected and if the sub components
      * of the selection common ancestor are not all already selected.
-     * 
+     *
      * @return if the root object is not selected and if the sub components of
      * the selection common ancestor are not all already selected.
      */
@@ -1836,7 +1836,7 @@ public class EditorController {
                     final FXOMObject bottom = mask.getAccessory(Accessory.BOTTOM);
                     for (FXOMObject bpAccessoryObject : new FXOMObject[] {
                         top, left, center, right, bottom}) {
-                        if (bpAccessoryObject != null 
+                        if (bpAccessoryObject != null
                                 && selection.isSelected(bpAccessoryObject) == false) {
                             return true;
                         }
@@ -1860,7 +1860,7 @@ public class EditorController {
         }
         return false;
     }
-    
+
     /**
      * Performs the select parent control action.
      * If the selection is multiple, we select the common ancestor.
@@ -1884,13 +1884,13 @@ public class EditorController {
         final FXOMObject rootObject = getFxomDocument().getFxomRoot();
         return !selection.isEmpty() && !selection.isSelected(rootObject);
     }
-    
+
     /**
      * Performs the select next control action.
      */
     private void performSelectNext() {
         assert canPerformSelectNext(); // (1)
-        
+
         final AbstractSelectionGroup asg = selection.getGroup();
         if (asg instanceof ObjectSelectionGroup) {
             final ObjectSelectionGroup osg = (ObjectSelectionGroup) asg;
@@ -1976,13 +1976,13 @@ public class EditorController {
         }
         return false;
     }
-        
+
     /**
      * Performs the select previous control action.
      */
     private void performSelectPrevious() {
         assert canPerformSelectPrevious(); // (1)
-        
+
         final AbstractSelectionGroup asg = selection.getGroup();
         if (asg instanceof ObjectSelectionGroup) {
             final ObjectSelectionGroup osg = (ObjectSelectionGroup) asg;
@@ -2005,7 +2005,7 @@ public class EditorController {
             selection.select((FXOMInstance) gridPane, gsg.getType(), previousIndex);
         }
     }
-    
+
     /**
      * Returns true if the selection is single and the container of the selected
      * object container contains a child previous to the selected one.
@@ -2041,7 +2041,7 @@ public class EditorController {
         }
         return false;
     }
-        
+
     /**
      * Performs the select none control action.
      */
@@ -2052,28 +2052,28 @@ public class EditorController {
 
     /**
      * Returns true if the selection is not empty.
-     * 
+     *
      * @return if the selection is not empty.
      */
     private boolean canPerformSelectNone() {
         return getSelection().isEmpty() == false;
     }
-        
+
     /**
      * If selection contains single FXOM object and this an fx:include instance, then
      * returns the included file. Else returns null.
-     * 
+     *
      * If the selection is single and is an included FXOM object :
-     * 1) if included file source does not start with /, 
+     * 1) if included file source does not start with /,
      *    it's a path relative to the document location.
      *   - if FXOM document location is null (document not saved yet), return null
      *   - else return selection included file
-     * 
-     * 2) if included file source starts with /, 
+     *
+     * 2) if included file source starts with /,
      *    it's a path relative to the document class loader.
      *   - if FXOM document class loader is null, return null
      *   - else return selection included file
-     * 
+     *
      * @return the included file associated to the selected object or null.
      */
     public File getIncludedFile() {
@@ -2133,13 +2133,13 @@ public class EditorController {
 
     /**
      * Returns true if the selection is an included file that can be edited/revealed.
-     * 
+     *
      * @return true if the selection is an included file that can be edited/revealed.
      */
     private boolean canPerformIncludedFileAction() {
         return getIncludedFile() != null;
     }
-    
+
     private void performEditIncludedFile() {
         assert canPerformIncludedFileAction(); // (1)
         final File includedFile = getIncludedFile();
@@ -2149,7 +2149,7 @@ public class EditorController {
         } catch (IOException ioe) {
             final ErrorDialog errorDialog = new ErrorDialog(null);
             errorDialog.setTitle(I18N.getString("error.file.open.title"));
-            errorDialog.setMessage(I18N.getString("error.file.open.message", 
+            errorDialog.setMessage(I18N.getString("error.file.open.message",
                     includedFile.getAbsolutePath()));
             errorDialog.setDebugInfoWithThrowable(ioe);
             errorDialog.showAndWait();
@@ -2226,7 +2226,7 @@ public class EditorController {
         final Job addContextMenuJob = new AddContextMenuToSelectionJob(this);
         getJobManager().push(addContextMenuJob);
     }
-    
+
     /**
      * Returns true if the 'add tooltip' action is permitted with the current
      * selection.
@@ -2248,13 +2248,13 @@ public class EditorController {
         final Job addTooltipJob = new AddTooltipToSelectionJob(this);
         getJobManager().push(addTooltipJob);
    }
-    
+
     /**
      * Returns the URL of the CSS style associated to EditorController class.
      * This stylesheet contains rules shareable by all other components of
      * SB kit.
-     * 
-     * @return URL of EditorController class style sheet (never null). 
+     *
+     * @return URL of EditorController class style sheet (never null).
      */
     private static URL stylesheet = null;
     public synchronized static URL getStylesheet() {
@@ -2264,11 +2264,11 @@ public class EditorController {
         }
         return stylesheet;
     }
-    
-    
+
+
     /**
      * Returns the last directory selected from the file chooser.
-     * 
+     *
      * @return the last selected directory (never null).
      */
     public static File getNextInitialDirectory() {
@@ -2277,9 +2277,9 @@ public class EditorController {
 
     /**
      * @treatAsPrivate
-     * 
+     *
      * Updates the initial directory used by the file chooser.
-     * 
+     *
      * @param chosenFile the selected file from which the initial directory is set.
      */
     public static void updateNextInitialDirectory(File chosenFile) {
@@ -2293,52 +2293,52 @@ public class EditorController {
 
     /**
      * @treatAsPrivate
-     * 
+     *
      * @return true if the current FXOM document represents a 3D layout, false
      *         otherwise.
      */
     public boolean is3D() {
         boolean res = false;
         FXOMDocument doc = getFxomDocument();
-        
+
         if (doc != null) {
             Object sgroot = doc.getSceneGraphRoot();
-            
+
             if (sgroot instanceof Node) {
                 final Bounds rootBounds = ((Node)sgroot).getLayoutBounds();
                 res = (rootBounds.getDepth() > 0);
             }
         }
-        
+
         return res;
     }
-    
-    
+
+
     /**
      * @treatAsPrivate
-     * 
+     *
      * @return true if the current FXOM document is an instance of a Node, false
      * otherwise.
      */
     public boolean isNode() {
         boolean res = false;
         FXOMDocument doc = getFxomDocument();
-        
+
         if (doc != null) {
             Object sgroot = doc.getSceneGraphRoot();
-            
+
             if (sgroot instanceof Node) {
                 res = true;
             }
         }
-        
+
         return res;
     }
 
     /**
      * @treatAsPrivate
-     * 
-     * @return true if the current selection objects are all instances of a Node, 
+     *
+     * @return true if the current selection objects are all instances of a Node,
      * false otherwise.
      */
     public boolean isSelectionNode() {
@@ -2356,11 +2356,11 @@ public class EditorController {
         }
         return true;
     }
-    
+
     /*
      * Private
      */
-    
+
     private boolean isSelectionControl() {
         final AbstractSelectionGroup asg = selection.getGroup();
         if (asg instanceof ObjectSelectionGroup) {
@@ -2379,7 +2379,7 @@ public class EditorController {
 
     private void updateFxomDocument(String fxmlText, URL fxmlLocation, ResourceBundle resources) throws IOException {
         final FXOMDocument newFxomDocument;
-        
+
         if (fxmlText != null) {
             newFxomDocument = new FXOMDocument(fxmlText, fxmlLocation, getLibrary().getClassLoader(), resources);
         } else {
@@ -2390,28 +2390,28 @@ public class EditorController {
         messageLog.clear();
         errorReport.setFxomDocument(newFxomDocument);
         fxomDocumentProperty.setValue(newFxomDocument);
-        
+
         watchingController.fxomDocumentDidChange();
-        
+
     }
-    
+
     private final ChangeListener<ClassLoader> libraryClassLoaderListener
             = (ov, t, t1) -> libraryClassLoaderDidChange();
-    
+
     private void libraryClassLoaderDidChange() {
         if (getFxomDocument() != null) {
             errorReport.forget();
             getFxomDocument().setClassLoader(libraryProperty.get().getClassLoader());
         }
     }
-    
+
     private void resourcesDidChange() {
         if (getFxomDocument() != null) {
             errorReport.forget();
             getFxomDocument().setResources(getResources());
         }
     }
-    
+
     private void jobManagerRevisionDidChange() {
         errorReport.forget();
         watchingController.jobManagerRevisionDidChange();

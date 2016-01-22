@@ -6,13 +6,13 @@
  * are met:
  *
  * 1.  Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer. 
+ *     notice, this list of conditions and the following disclaimer.
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
- *     documentation and/or other materials provided with the distribution. 
+ *     documentation and/or other materials provided with the distribution.
  * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
- *     from this software without specific prior written permission. 
+ *     from this software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY APPLE AND ITS CONTRIBUTORS "AS IS" AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
@@ -88,7 +88,7 @@
     @property documentViewShouldHandlePrint
     @abstract Called by the host application before it initializes and runs a print operation.
     @discussion If NO is returned, the host application will abort its print operation and call -printDocumentView on the
-    WebFrameView.  The document view is then expected to run its own print operation.  If YES is returned, the host 
+    WebFrameView.  The document view is then expected to run its own print operation.  If YES is returned, the host
     application's print operation will continue as normal.
 */
 @property (nonatomic, readonly) BOOL documentViewShouldHandlePrint;

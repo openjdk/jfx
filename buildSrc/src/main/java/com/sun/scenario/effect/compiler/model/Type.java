@@ -46,27 +46,27 @@ public enum Type {
     SAMPLER(BaseType.SAMPLER, 1),
     LSAMPLER(BaseType.SAMPLER, 1),
     FSAMPLER(BaseType.SAMPLER, 1);
-    
+
     private final BaseType baseType;
     private final int numFields;
-    
+
     private Type(BaseType baseType, int numFields) {
         this.baseType = baseType;
         this.numFields = numFields;
     }
-    
+
     public BaseType getBaseType() {
         return baseType;
     }
-    
+
     public int getNumFields() {
         return numFields;
     }
-    
+
     public boolean isVector() {
         return numFields > 1;
     }
-    
+
     /**
      * Returns a {@code Type} instance given a lowercase token string.
      * For example, given "float3", this method will return {@code Type.FLOAT3}.
@@ -74,7 +74,7 @@ public enum Type {
     public static Type fromToken(String s) {
         return valueOf(s.toUpperCase(Locale.ENGLISH));
     }
-    
+
     @Override
     public String toString() {
         return name().toLowerCase(Locale.ENGLISH);

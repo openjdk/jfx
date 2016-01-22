@@ -77,7 +77,7 @@ private:
 
     RefPtr<FilterEffect> m_lastEffect;
 };
-    
+
 } // namespace WebCore
 
 #endif // ENABLE(FILTERS)

@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef ApplicationCache_h
@@ -47,17 +47,17 @@ typedef Vector<std::pair<URL, URL>> FallbackURLVector;
 class ApplicationCache : public RefCounted<ApplicationCache> {
 public:
     static PassRefPtr<ApplicationCache> create() { return adoptRef(new ApplicationCache); }
-    
+
     static void deleteCacheForOrigin(SecurityOrigin*);
-    
+
     ~ApplicationCache();
 
     void addResource(PassRefPtr<ApplicationCacheResource> resource);
     unsigned removeResource(const String& url);
-    
+
     void setManifestResource(PassRefPtr<ApplicationCacheResource> manifest);
     ApplicationCacheResource* manifestResource() const { return m_manifest; }
-    
+
     void setGroup(ApplicationCacheGroup*);
     ApplicationCacheGroup* group() const { return m_group; }
 
@@ -75,7 +75,7 @@ public:
     void setFallbackURLs(const FallbackURLVector&);
     const FallbackURLVector& fallbackURLs() const { return m_fallbackURLs; }
     bool urlMatchesFallbackNamespace(const URL&, URL* fallbackURL = 0);
-    
+
 #ifndef NDEBUG
     void dump();
 #endif
@@ -83,20 +83,20 @@ public:
     typedef HashMap<String, RefPtr<ApplicationCacheResource>> ResourceMap;
     ResourceMap::const_iterator begin() const { return m_resources.begin(); }
     ResourceMap::const_iterator end() const { return m_resources.end(); }
-    
+
     void setStorageID(unsigned storageID) { m_storageID = storageID; }
     unsigned storageID() const { return m_storageID; }
     void clearStorageID();
-    
+
     static bool requestIsHTTPOrHTTPSGet(const ResourceRequest&);
 
     static int64_t diskUsageForOrigin(SecurityOrigin*);
-    
+
     int64_t estimatedSizeInStorage() const { return m_estimatedSizeInStorage; }
 
 private:
     ApplicationCache();
-    
+
     ApplicationCacheGroup* m_group;
     ResourceMap m_resources;
     ApplicationCacheResource* m_manifest;

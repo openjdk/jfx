@@ -39,7 +39,7 @@ public:
     static PassRefPtr<PerformanceMark> create(const String& name, double startTime) { return adoptRef(new PerformanceMark(name, startTime)); }
 
     virtual bool isMark() { return true; }
-    
+
 private:
     PerformanceMark(const String& name, double startTime) : PerformanceEntry(name, "mark", startTime, startTime) { }
     ~PerformanceMark() { }

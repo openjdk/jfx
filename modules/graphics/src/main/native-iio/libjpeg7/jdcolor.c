@@ -287,7 +287,7 @@ ycck_rgb_convert (j_decompress_ptr cinfo,
       outptr[RGB_RED] = range_limit[r];
       outptr[RGB_GREEN] = range_limit[g];
       outptr[RGB_BLUE] = range_limit[b];
-     
+
       outptr += RGB_PIXELSIZE;
     }
   }
@@ -338,7 +338,7 @@ cmyk_rgb_convert (j_decompress_ptr cinfo,
       outptr[RGB_RED] = range_limit[r];
       outptr[RGB_GREEN] = range_limit[g];
       outptr[RGB_BLUE] = range_limit[b];
-     
+
       outptr += RGB_PIXELSIZE;
     }
   }

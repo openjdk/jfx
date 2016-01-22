@@ -46,7 +46,7 @@ public interface VideoDataBuffer {
      * Retrieve the data buffer for the specified plane. For chunky formats,
      * pass {@link PACKED_FORMAT_PLANE} as the plane index. If an invalid plane
      * index is passed this method returns null.
-     * 
+     *
      * @param plane The numeric index of the plane
      * @return the {@code ByteBuffer} containing video data for the specified
      * plane or null for non-existent or invalid planes

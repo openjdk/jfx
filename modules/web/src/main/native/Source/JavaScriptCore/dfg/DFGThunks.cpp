@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -41,11 +41,11 @@ namespace JSC { namespace DFG {
 MacroAssemblerCodeRef osrExitGenerationThunkGenerator(VM* vm)
 {
     MacroAssembler jit;
-    
+
     size_t scratchSize = sizeof(EncodedJSValue) * (GPRInfo::numberOfRegisters + FPRInfo::numberOfRegisters);
     ScratchBuffer* scratchBuffer = vm->scratchBufferForSize(scratchSize);
     EncodedJSValue* buffer = static_cast<EncodedJSValue*>(scratchBuffer->dataBuffer());
-    
+
     for (unsigned i = 0; i < GPRInfo::numberOfRegisters; ++i) {
 #if USE(JSVALUE64)
         jit.store64(GPRInfo::toRegister(i), buffer + i);
@@ -57,7 +57,7 @@ MacroAssemblerCodeRef osrExitGenerationThunkGenerator(VM* vm)
         jit.move(MacroAssembler::TrustedImmPtr(buffer + GPRInfo::numberOfRegisters + i), GPRInfo::regT0);
         jit.storeDouble(FPRInfo::toRegister(i), MacroAssembler::Address(GPRInfo::regT0));
     }
-    
+
     // Tell GC mark phase how much of the scratch buffer is active during call.
     jit.move(MacroAssembler::TrustedImmPtr(scratchBuffer->activeLengthPtr()), GPRInfo::regT0);
     jit.storePtr(MacroAssembler::TrustedImmPtr(scratchSize), MacroAssembler::Address(GPRInfo::regT0));
@@ -85,36 +85,36 @@ MacroAssemblerCodeRef osrExitGenerationThunkGenerator(VM* vm)
         jit.load32(buffer + i, GPRInfo::toRegister(i));
 #endif
     }
-    
+
     jit.jump(MacroAssembler::AbsoluteAddress(&vm->osrExitJumpDestination));
-    
+
     LinkBuffer patchBuffer(*vm, &jit, GLOBAL_THUNK_ID);
-    
+
     patchBuffer.link(functionCall, compileOSRExit);
-    
+
     return FINALIZE_CODE(patchBuffer, ("DFG OSR exit generation thunk"));
 }
 
 MacroAssemblerCodeRef osrEntryThunkGenerator(VM* vm)
 {
     MacroAssembler jit;
-    
+
     // We get passed the address of a scratch buffer. The first 8-byte slot of the buffer
     // is the frame size. The second 8-byte slot is the pointer to where we are supposed to
     // jump. The remaining bytes are the new call frame header followed by the locals.
-    
+
     ptrdiff_t offsetOfFrameSize = 0; // This is the DFG frame count.
     ptrdiff_t offsetOfTargetPC = offsetOfFrameSize + sizeof(EncodedJSValue);
     ptrdiff_t offsetOfPayload = offsetOfTargetPC + sizeof(EncodedJSValue);
     ptrdiff_t offsetOfLocals = offsetOfPayload + sizeof(Register) * JSStack::CallFrameHeaderSize;
-    
+
     jit.move(GPRInfo::returnValueGPR2, GPRInfo::regT0);
     jit.loadPtr(MacroAssembler::Address(GPRInfo::regT0, offsetOfFrameSize), GPRInfo::regT1); // Load the frame size.
     jit.move(GPRInfo::regT1, GPRInfo::regT2);
     jit.lshiftPtr(MacroAssembler::Imm32(3), GPRInfo::regT2);
     jit.move(GPRInfo::callFrameRegister, MacroAssembler::stackPointerRegister);
     jit.subPtr(GPRInfo::regT2, MacroAssembler::stackPointerRegister);
-    
+
     MacroAssembler::Label loop = jit.label();
     jit.subPtr(MacroAssembler::TrustedImm32(1), GPRInfo::regT1);
     jit.move(GPRInfo::regT1, GPRInfo::regT4);
@@ -124,13 +124,13 @@ MacroAssemblerCodeRef osrEntryThunkGenerator(VM* vm)
     jit.store32(GPRInfo::regT2, MacroAssembler::BaseIndex(GPRInfo::callFrameRegister, GPRInfo::regT4, MacroAssembler::TimesEight, -static_cast<intptr_t>(sizeof(Register))));
     jit.store32(GPRInfo::regT3, MacroAssembler::BaseIndex(GPRInfo::callFrameRegister, GPRInfo::regT4, MacroAssembler::TimesEight, -static_cast<intptr_t>(sizeof(Register)) + static_cast<intptr_t>(sizeof(int32_t))));
     jit.branchPtr(MacroAssembler::NotEqual, GPRInfo::regT1, MacroAssembler::TrustedImmPtr(bitwise_cast<void*>(-static_cast<intptr_t>(JSStack::CallFrameHeaderSize)))).linkTo(loop, &jit);
-    
+
     jit.loadPtr(MacroAssembler::Address(GPRInfo::regT0, offsetOfTargetPC), GPRInfo::regT1);
     MacroAssembler::Jump ok = jit.branchPtr(MacroAssembler::Above, GPRInfo::regT1, MacroAssembler::TrustedImmPtr(bitwise_cast<void*>(static_cast<intptr_t>(1000))));
     jit.breakpoint();
     ok.link(&jit);
     jit.jump(GPRInfo::regT1);
-    
+
     LinkBuffer patchBuffer(*vm, &jit, GLOBAL_THUNK_ID);
     return FINALIZE_CODE(patchBuffer, ("DFG OSR entry thunk"));
 }

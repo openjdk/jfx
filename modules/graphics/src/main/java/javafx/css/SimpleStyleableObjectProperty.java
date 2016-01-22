@@ -30,7 +30,7 @@ import javafx.beans.property.SimpleObjectProperty;
 
 /**
  * This class extends {@code SimpleObjectProperty} and provides a full
- * implementation of a {@code StyleableProperty}.  
+ * implementation of a {@code StyleableProperty}.
  *
  * This class is used to make a {@link javafx.beans.property.ObjectProperty},
  * that would otherwise be implemented as a {@link SimpleObjectProperty},

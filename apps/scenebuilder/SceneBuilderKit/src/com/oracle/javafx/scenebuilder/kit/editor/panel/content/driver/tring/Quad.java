@@ -42,27 +42,27 @@ import javafx.scene.shape.PathElement;
 
 /**
  *
- * 
+ *
  */
 public class Quad {
-    
+
     private final boolean clockwise;
     private final MoveTo moveTo0 = new MoveTo();
     private final LineTo lineTo1 = new LineTo();
     private final LineTo lineTo2 = new LineTo();
     private final LineTo lineTo3 = new LineTo();
-    
+
     public Quad(boolean clockwise) {
         this.clockwise = clockwise;
     }
-    
+
     public Quad() {
         this(true /* clockwise */);
     }
 
     public void addToPath(Path path) {
         assert path != null;
-        
+
         final List<PathElement> ringElements = path.getElements();
         if (clockwise) {
             ringElements.add(moveTo0);
@@ -77,11 +77,11 @@ public class Quad {
         }
         ringElements.add(new ClosePath());
     }
-    
+
     public void removeFromPath(Path path) {
         assert path != null;
         assert path.getElements().contains(moveTo0);
-        
+
         final List<PathElement> ringElements = path.getElements();
         ringElements.remove(moveTo0);
         ringElements.remove(lineTo1);
@@ -92,7 +92,7 @@ public class Quad {
     public double getX0() {
         return moveTo0.getX();
     }
-    
+
     public void setX0(double x) {
         moveTo0.setX(x);
     }
@@ -163,7 +163,7 @@ public class Quad {
         lineTo3.setX(bounds.getMinX());
         lineTo3.setY(bounds.getMaxY());
     }
-    
+
     public void insets(Insets insets) {
         moveTo0.setX(moveTo0.getX() + insets.getLeft());
         moveTo0.setY(moveTo0.getY() + insets.getTop());
@@ -174,7 +174,7 @@ public class Quad {
         lineTo3.setX(lineTo3.getX() + insets.getLeft());
         lineTo3.setY(lineTo3.getY() - insets.getBottom());
     }
-    
+
     public void insets(Insets insets, double minInset) {
         assert minInset >= 0.0;
         moveTo0.setX(moveTo0.getX() + Math.max(minInset, insets.getLeft()));

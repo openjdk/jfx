@@ -59,7 +59,7 @@ public class ValueExtractor {
         addValueExtractor(Slider.class,         sl -> sl.getValue());
         addValueExtractor(TextArea.class,       ta -> ta.getText());
         addValueExtractor(TextField.class,      tf -> tf.getText());
-        
+
         addValueExtractor(ListView.class, lv -> {
             MultipleSelectionModel<?> sm = lv.getSelectionModel();
             return sm.getSelectionMode() == SelectionMode.MULTIPLE ? sm.getSelectedItems() : sm.getSelectedItem();
@@ -77,33 +77,33 @@ public class ValueExtractor {
             return sm.getSelectionMode() == SelectionMode.MULTIPLE ? sm.getSelectedItems() : sm.getSelectedItem();
         });
     }
-    
+
     private ValueExtractor() {
         // no-op
     }
-    
+
     public static <T> void addValueExtractor(Class<T> clazz, Callback<T, Object> extractor) {
         valueExtractors.put(clazz, extractor);
     }
-    
+
     /**
      * Attempts to return a value for the given Node. This is done by checking
      * the map of value extractors, contained within this class. This
      * map contains value extractors for common UI controls, but more extractors
      * can be added by calling {@link #addValueExtractor(Class, javafx.util.Callback)}.
-     * 
+     *
      * @param n The node from whom a value will hopefully be extracted.
      * @return The value of the given node.
      */
     @SuppressWarnings({"rawtypes", "unchecked"})
     public static Object getValue(Node n) {
         Object value = null;
-        
+
         if (value == null && valueExtractors.containsKey(n.getClass())) {
             Callback callback = valueExtractors.get(n.getClass());
             value = callback.call(n);
         }
-        
+
         return value;
     }
 }

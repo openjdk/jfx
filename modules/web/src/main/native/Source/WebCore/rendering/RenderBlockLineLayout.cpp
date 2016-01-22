@@ -470,9 +470,9 @@ static inline void setLogicalWidthForTextRun(RootInlineBox* lineBox, BidiRun* ru
         int boxAscent = font.fontMetrics().ascent() - baselineShift;
         int boxDescent = font.fontMetrics().descent() + baselineShift;
         if (boxAscent > rootDescent ||  boxDescent > rootAscent)
-            glyphOverflow.computeBounds = true; 
+            glyphOverflow.computeBounds = true;
     }
-    
+
     LayoutUnit hyphenWidth = 0;
     if (toInlineTextBox(run->box())->hasHyphen())
         hyphenWidth = measureHyphenWidth(renderer, font, &fallbackFonts);
@@ -481,10 +481,10 @@ static inline void setLogicalWidthForTextRun(RootInlineBox* lineBox, BidiRun* ru
 
     bool kerningIsEnabled = font.typesettingFeatures() & Kerning;
     bool canUseSimpleFontCodePath = renderer->canUseSimpleFontCodePath();
-    
+
     // Since we don't cache glyph overflows, we need to re-measure the run if
     // the style is linebox-contain: glyph.
-    
+
     if (!lineBox->fitsToGlyphs() && canUseSimpleFontCodePath) {
         int lastEndOffset = run->m_start;
         for (size_t i = 0, size = wordMeasurements.size(); i < size && lastEndOffset < run->m_stop; ++i) {
@@ -551,12 +551,12 @@ static inline void computeExpansionForJustifiedText(BidiRun* firstRun, BidiRun* 
 #endif
         if (!r->box() || r == trailingSpaceRun)
             continue;
-        
+
         if (r->renderer().isText()) {
             unsigned opportunitiesInRun = expansionOpportunities[i++];
-            
+
             ASSERT(opportunitiesInRun <= expansionOpportunityCount);
-            
+
             // Only justify text if whitespace is collapsed.
             if (r->renderer().style().collapseWhiteSpace()) {
                 InlineTextBox* textBox = toInlineTextBox(r->box());
@@ -626,8 +626,8 @@ static void updateLogicalInlinePositions(RenderBlockFlow& block, float& lineLogi
 void RenderBlockFlow::computeInlineDirectionPositionsForLine(RootInlineBox* lineBox, const LineInfo& lineInfo, BidiRun* firstRun, BidiRun* trailingSpaceRun, bool reachedEnd, GlyphOverflowAndFallbackFontsMap& textBoxDataMap, VerticalPositionCache& verticalPositionCache, WordMeasurements& wordMeasurements)
 {
     ETextAlign textAlign = textAlignmentForLine(!reachedEnd && !lineBox->endsWithBreak());
-    
-    // CSS 2.1: "'Text-indent' only affects a line if it is the first formatted line of an element. For example, the first line of an anonymous block 
+
+    // CSS 2.1: "'Text-indent' only affects a line if it is the first formatted line of an element. For example, the first line of an anonymous block
     // box is only affected if it is the first child of its parent element."
     // CSS3 "text-indent", "-webkit-each-line" affects the first line of the block container as well as each line after a forced line break,
     // but does not affect lines after a soft wrap break.
@@ -683,7 +683,7 @@ void RenderBlockFlow::computeInlineDirectionPositionsForLine(RootInlineBox* line
     lineBox->placeBoxesInInlineDirection(lineLogicalLeft, needsWordSpacing, textBoxDataMap);
 }
 
-BidiRun* RenderBlockFlow::computeInlineDirectionPositionsForSegment(RootInlineBox* lineBox, const LineInfo& lineInfo, ETextAlign textAlign, float& logicalLeft, 
+BidiRun* RenderBlockFlow::computeInlineDirectionPositionsForSegment(RootInlineBox* lineBox, const LineInfo& lineInfo, ETextAlign textAlign, float& logicalLeft,
     float& availableLogicalWidth, BidiRun* firstRun, BidiRun* trailingSpaceRun, GlyphOverflowAndFallbackFontsMap& textBoxDataMap, VerticalPositionCache& verticalPositionCache,
     WordMeasurements& wordMeasurements)
 {
@@ -991,18 +991,18 @@ RootInlineBox* RenderBlockFlow::createLineBoxesFromBidiRuns(BidiRunList<BidiRun>
         return 0;
 
     lineBox->setEndsWithBreak(lineInfo.previousLineBrokeCleanly());
-    
+
     bool isSVGRootInlineBox = lineBox->isSVGRootInlineBox();
-    
+
     GlyphOverflowAndFallbackFontsMap textBoxDataMap;
-    
+
     // Now we position all of our text runs horizontally.
     if (!isSVGRootInlineBox)
         computeInlineDirectionPositionsForLine(lineBox, lineInfo, bidiRuns.firstRun(), trailingSpaceRun, end.atEnd(), textBoxDataMap, verticalPositionCache, wordMeasurements);
-    
+
     // Now position our text runs vertically.
     computeBlockDirectionPositionsForLine(lineBox, bidiRuns.firstRun(), textBoxDataMap, verticalPositionCache);
-    
+
     // SVG text layout code computes vertical & horizontal positions on its own.
     // Note that we still need to execute computeVerticalPositionsForLine() as
     // it calls InlineTextBox::positionLineBox(), which tracks whether the box
@@ -1012,10 +1012,10 @@ RootInlineBox* RenderBlockFlow::createLineBoxesFromBidiRuns(BidiRunList<BidiRun>
         ASSERT_WITH_SECURITY_IMPLICATION(isSVGText());
         toSVGRootInlineBox(lineBox)->computePerCharacterLayoutInformation();
     }
-    
+
     // Compute our overflow now.
     lineBox->computeOverflow(lineBox->lineTop(), lineBox->lineBottom(), textBoxDataMap);
-    
+
     return lineBox;
 }
 
@@ -1549,7 +1549,7 @@ void RenderBlockFlow::linkToEndLineIfNeeded(LineLayoutState& layoutState)
             deleteLineRange(layoutState, layoutState.endLine());
         }
     }
-    
+
     if (m_floatingObjects && (layoutState.checkForFloatsFromLastLine() || positionNewFloats()) && lastRootBox()) {
         // In case we have a float on the last line, it might not be positioned up to now.
         // This has to be done before adding in the bottom border/padding, or the float will
@@ -1609,7 +1609,7 @@ void RenderBlockFlow::layoutLineBoxes(bool relayoutChildren, LayoutUnit& repaint
     ASSERT(!m_simpleLineLayout);
 
     setLogicalHeight(borderAndPaddingBefore());
-    
+
     // Lay out our hypothetical grid line as though it occurs at the top of the block.
     if (view().layoutState() && view().layoutState()->lineGrid() == this)
         layoutLineGridBox();
@@ -1915,10 +1915,10 @@ bool RenderBlockFlow::checkPaginationAndFloatsAtEndLine(LineLayoutState& layoutS
                 return false;
         }
     }
-    
+
     if (!lineDelta || !m_floatingObjects)
         return true;
-    
+
     // See if any floats end in the range along which we want to shift the lines vertically.
     LayoutUnit logicalTop = std::min(logicalHeight(), layoutState.endLineLogicalTop());
 
@@ -1969,7 +1969,7 @@ bool RenderBlockFlow::matchedEndLine(LineLayoutState& layoutState, const InlineB
             // We have a match.
             if (line->lineBreakBidiStatus() != resolver.status())
                 return false; // ...but the bidi state doesn't match.
-            
+
             bool matched = false;
             RootInlineBox* result = line->nextRootBox();
             layoutState.setEndLine(result);

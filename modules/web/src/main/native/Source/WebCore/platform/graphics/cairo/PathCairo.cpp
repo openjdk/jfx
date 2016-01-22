@@ -107,7 +107,7 @@ bool Path::hasCurrentPoint() const
     return !isEmpty();
 }
 
-FloatPoint Path::currentPoint() const 
+FloatPoint Path::currentPoint() const
 {
     if (isNull())
         return FloatPoint();

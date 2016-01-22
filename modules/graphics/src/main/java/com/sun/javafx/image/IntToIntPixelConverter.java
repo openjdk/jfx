@@ -46,7 +46,7 @@ public interface IntToIntPixelConverter
      *     }
      * }
      * </pre>
-     * 
+     *
      * @param srcbuf the int array containing the source data
      * @param srcoff the index in the array of the first source pixel data
      * @param srcscanints number of array indices between rows of data in the source
@@ -76,7 +76,7 @@ public interface IntToIntPixelConverter
      *     }
      * }
      * </pre>
-     * 
+     *
      * @param srcbuf the nio buffer containing the source data
      * @param srcoff the absolute location in the buffer of the first source pixel data
      * @param srcscanints number of buffer elements between rows of data in the source
@@ -106,7 +106,7 @@ public interface IntToIntPixelConverter
      *     }
      * }
      * </pre>
-     * 
+     *
      * @param srcbuf the int array containing the source data
      * @param srcoff the index in the array of the first source pixel data
      * @param srcscanints number of array indices between rows of data in the source

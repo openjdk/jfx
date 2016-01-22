@@ -20,9 +20,9 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
- 
+
 #include "config.h"
 #include "CachedPage.h"
 
@@ -249,7 +249,7 @@ void CachedFrame::destroy()
 {
     if (!m_document)
         return;
-    
+
     // Only CachedFrames that are still in the PageCache should be destroyed in this manner
     ASSERT(m_document->inPageCache());
     ASSERT(m_view);
@@ -261,7 +261,7 @@ void CachedFrame::destroy()
         m_view->frame().detachFromPage();
         m_view->frame().loader().detachViewsAndDocumentLoader();
     }
-    
+
     for (int i = m_childFrames.size() - 1; i >= 0; --i)
         m_childFrames[i]->destroy();
 
@@ -295,7 +295,7 @@ int CachedFrame::descendantFrameCount() const
     int count = m_childFrames.size();
     for (size_t i = 0; i < m_childFrames.size(); ++i)
         count += m_childFrames[i]->descendantFrameCount();
-    
+
     return count;
 }
 

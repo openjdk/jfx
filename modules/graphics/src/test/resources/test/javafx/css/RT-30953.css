@@ -31,7 +31,7 @@
     -fx-background-insets: 1 2 3;
     -fx-background-insets: 1 2 3 4;
     -fx-background-insets: 1, 1;
-    -fx-background-insets: 1 2 3 4, 1 2 3 4;    
+    -fx-background-insets: 1 2 3 4, 1 2 3 4;
     -fx-background-repeat: repeat-x;
     -fx-background-repeat: repeat-y;
     -fx-background-repeat: repeat;
@@ -41,20 +41,20 @@
     -fx-background-repeat: no-repeat;
     -fx-background-repeat: repeat no-repeat;
     -fx-background-repeat: repeat-x, repeat-y;
-    -fx-background-repeat: repeat no-repeat, round space;    
+    -fx-background-repeat: repeat no-repeat, round space;
     -fx-background-size: 100px;
     -fx-background-size: 100px 100px;
     -fx-background-size: auto;
     -fx-background-size: cover;
     -fx-background-size: contain;
     -fx-background-size: stretch;
-    -fx-background-size: stretch, contain;        
+    -fx-background-size: stretch, contain;
     -fx-border-color: red;
     -fx-border-color: red yellow;
     -fx-border-color: red yellow green;
     -fx-border-color: red yellow green blue;
     -fx-border-color: red, red;
-    -fx-border-color: red yellow green blue, red yellow green blue; 
+    -fx-border-color: red yellow green blue, red yellow green blue;
     -fx-border-radius: 1;
     -fx-border-radius: 1 2;
     -fx-border-radius: 1 2 3;
@@ -66,7 +66,7 @@
     -fx-border-insets: 1 2 3;
     -fx-border-insets: 1 2 3 4;
     -fx-border-insets: 1, 1;
-    -fx-border-insets: 1 2 3 4, 1 2 3 4;        
+    -fx-border-insets: 1 2 3 4, 1 2 3 4;
    -fx-border-style: solid;
     -fx-border-style: solid phase 10;
     -fx-border-style: dotted;
@@ -99,13 +99,13 @@
     -fx-border-width: 1 2 3;
     -fx-border-width: 1 2 3 4;
     -fx-border-width: 1, 1;
-    -fx-border-width: 1 2 3 4, 1 2 3 4;        
+    -fx-border-width: 1 2 3 4, 1 2 3 4;
     -fx-border-image-insets: 1;
     -fx-border-image-insets: 1 2;
     -fx-border-image-insets: 1 2 3;
     -fx-border-image-insets: 1 2 3 4;
     -fx-border-image-insets: 1, 1;
-    -fx-border-image-insets: 1 2 3 4, 1 2 3 4;        
+    -fx-border-image-insets: 1 2 3 4, 1 2 3 4;
     -fx-border-image-repeat: repeat-x;
     -fx-border-image-repeat: repeat-y;
     -fx-border-image-repeat: repeat;
@@ -115,7 +115,7 @@
     -fx-border-image-repeat: no-repeat;
     -fx-border-image-repeat: repeat no-repeat;
     -fx-border-image-repeat: repeat-x, repeat-y;
-    -fx-border-image-repeat: repeat no-repeat, round space;     
+    -fx-border-image-repeat: repeat no-repeat, round space;
     -fx-border-image-slice: 10%;
     -fx-border-image-slice: 10% fill;
     -fx-border-image-slice: 10% 10%;
@@ -125,7 +125,7 @@
     -fx-border-image-slice: 10% 10% 10% 10% fill;
     -fx-border-image-slice: 10%, 10%;
     -fx-border-image-slice: 10% fill, 10% fill;
-    -fx-border-image-slice: 10% 10% 10% 10% fill, 10% 10% 10% 10% fill;        
+    -fx-border-image-slice: 10% 10% 10% 10% fill, 10% 10% 10% 10% fill;
     -fx-border-image-source: url("duke.png");
     -fx-border-image-source: url("duke.png"), url("duke.png");
     -fx-border-image-width: 1;
@@ -133,19 +133,19 @@
     -fx-border-image-width: 1 2 3;
     -fx-border-image-width: 1 2 3 4;
     -fx-border-image-width: 1, 1;
-    -fx-border-image-width: 1 2 3 4, 1 2 3 4;        
+    -fx-border-image-width: 1 2 3 4, 1 2 3 4;
     -fx-padding: 1;
     -fx-padding: 1 2;
     -fx-padding: 1 2 3;
     -fx-padding: 1 2 3 4;
     -fx-padding: 1, 1;
-    -fx-padding: 1 2 3 4, 1 2 3 4;        
+    -fx-padding: 1 2 3 4, 1 2 3 4;
     -fx-label-padding: 1;
     -fx-label-padding: 1 2;
     -fx-label-padding: 1 2 3;
     -fx-label-padding: 1 2 3 4;
     -fx-label-padding: 1, 1;
-    -fx-label-padding: 1 2 3 4, 1 2 3 4;        
+    -fx-label-padding: 1 2 3 4, 1 2 3 4;
     -fx-shape: "M150 0 L75 200 L225 200 Z";
     -fx-font-size: 18pt;
     -fx-font-size: 1.5em;
@@ -231,4 +231,4 @@
     -fx-hbar-policy: always;
     -fx-hbar-policy: as-needed;
 }
-    
+

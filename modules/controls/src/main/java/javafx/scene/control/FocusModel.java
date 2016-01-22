@@ -88,14 +88,14 @@ public abstract class FocusModel<T> {
     final void setFocusedItem(T value) { focusedItem.set(value); }
 
 
-            
+
     /***********************************************************************
      *                                                                     *
      * Public Focus API                                                    *
      *                                                                     *
      **********************************************************************/
 
-    
+
     /**
      * Returns the number of items in the data model that underpins the control.
      * An example would be that a ListView focus model would likely return
@@ -103,11 +103,11 @@ public abstract class FocusModel<T> {
      * indices is between 0 and whatever is returned by this method.
      */
     protected abstract int getItemCount();
-    
+
     /**
      * Returns the item at the given index. An example using ListView would be
      * <code>listView.getItems().get(index)</code>.
-     * 
+     *
      * @param index The index of the item that is requested from the underlying
      *      data model.
      * @return Returns null if the index is out of bounds, or an element of type

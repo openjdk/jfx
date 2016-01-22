@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef Position_h
@@ -164,7 +164,7 @@ public:
     // Returns true if the visually equivalent positions around have different editability
     bool atEditingBoundary() const;
     Node* parentEditingBoundary() const;
-    
+
     bool atStartOfTree() const;
     bool atEndOfTree() const;
 
@@ -172,11 +172,11 @@ public:
     // These aren't really basic "position" operations. More high level editing helper functions.
     Position leadingWhitespacePosition(EAffinity, bool considerNonCollapsibleWhitespace = false) const;
     Position trailingWhitespacePosition(EAffinity, bool considerNonCollapsibleWhitespace = false) const;
-    
+
     // These return useful visually equivalent positions.
     Position upstream(EditingBoundaryCrossingRule = CannotCrossEditingBoundary) const;
     Position downstream(EditingBoundaryCrossingRule = CannotCrossEditingBoundary) const;
-    
+
     bool isCandidate() const;
     bool isRenderedCharacter() const;
     bool rendersInDifferentPosition(const Position&) const;
@@ -199,7 +199,7 @@ public:
     static Node* rootUserSelectAllForNode(Node*) { return 0; }
 #endif
     static ContainerNode* findParent(const Node*);
-    
+
     void debugPosition(const char* msg = "") const;
 
 #ifndef NDEBUG
@@ -207,10 +207,10 @@ public:
     void showAnchorTypeAndOffset() const;
     void showTreeForThis() const;
 #endif
-    
+
 private:
     int offsetForPositionAfterAnchor() const;
-    
+
     Position previousCharacterPosition(EAffinity) const;
     Position nextCharacterPosition(EAffinity) const;
 
@@ -251,17 +251,17 @@ inline bool operator<(const Position& a, const Position& b)
     return b.anchorNode()->compareDocumentPosition(a.anchorNode()) == Node::DOCUMENT_POSITION_PRECEDING;
 }
 
-inline bool operator>(const Position& a, const Position& b) 
+inline bool operator>(const Position& a, const Position& b)
 {
     return !a.isNull() && !b.isNull() && a != b && b < a;
 }
 
-inline bool operator>=(const Position& a, const Position& b) 
+inline bool operator>=(const Position& a, const Position& b)
 {
     return !a.isNull() && !b.isNull() && (a == b || a > b);
 }
 
-inline bool operator<=(const Position& a, const Position& b) 
+inline bool operator<=(const Position& a, const Position& b)
 {
     return !a.isNull() && !b.isNull() && (a == b || a < b);
 }
@@ -323,7 +323,7 @@ inline int minOffsetForNode(Node* anchorNode, int offset)
     int newOffset = 0;
     for (Node* node = anchorNode->firstChild(); node && newOffset < offset; node = node->nextSibling())
         newOffset++;
-    
+
     return newOffset;
 }
 
@@ -335,8 +335,8 @@ inline bool offsetIsBeforeLastNodeOffset(int offset, Node* anchorNode)
     int currentOffset = 0;
     for (Node* node = anchorNode->firstChild(); node && currentOffset < offset; node = node->nextSibling())
         currentOffset++;
-    
-    
+
+
     return offset < currentOffset;
 }
 

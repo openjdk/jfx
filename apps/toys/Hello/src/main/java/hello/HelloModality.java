@@ -65,7 +65,7 @@ public class HelloModality extends Application {
         checker.setLayoutX(25);
         checker.setLayoutY(40);
         root.getChildren().add(checker);
-        
+
         // Setup Modality Selection
         final ToggleGroup modalityGroup = new ToggleGroup();
         final RadioButton noneButton = new RadioButton("NONE");
@@ -185,7 +185,7 @@ public class HelloModality extends Application {
         ownedFileChooser.setLayoutX(25);
         ownedFileChooser.setLayoutY(240);
         root.getChildren().add(ownedFileChooser);
-        
+
         Button button3 = new Button("File Chooser");
         button3.setLayoutX(200);
         button3.setLayoutY(240);

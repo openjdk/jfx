@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef ArrayAllocationProfile_h
@@ -38,7 +38,7 @@ public:
         , m_lastArray(0)
     {
     }
-    
+
     IndexingType selectIndexingType()
     {
         JSArray* lastArray = m_lastArray;
@@ -46,22 +46,22 @@ public:
             updateIndexingType();
         return m_currentIndexingType;
     }
-    
+
     JSArray* updateLastAllocation(JSArray* lastArray)
     {
         m_lastArray = lastArray;
         return lastArray;
     }
-    
+
     JS_EXPORT_PRIVATE void updateIndexingType();
-    
+
     static IndexingType selectIndexingTypeFor(ArrayAllocationProfile* profile)
     {
         if (!profile)
             return ArrayWithUndecided;
         return profile->selectIndexingType();
     }
-    
+
     static JSArray* updateLastAllocationFor(ArrayAllocationProfile* profile, JSArray* lastArray)
     {
         if (profile)
@@ -70,7 +70,7 @@ public:
     }
 
 private:
-    
+
     IndexingType m_currentIndexingType;
     JSArray* m_lastArray;
 };

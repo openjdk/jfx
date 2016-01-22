@@ -6,13 +6,13 @@
  * are met:
  *
  * 1.  Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer. 
+ *     notice, this list of conditions and the following disclaimer.
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
- *     documentation and/or other materials provided with the distribution. 
+ *     documentation and/or other materials provided with the distribution.
  * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
- *     from this software without specific prior written permission. 
+ *     from this software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY APPLE AND ITS CONTRIBUTORS "AS IS" AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
@@ -170,7 +170,7 @@ static void initializeAudioSession()
     if (view == nil) {
         return nil;
     }
-    
+
     if (pluginViews == nil) {
         pluginViews = [[NSMutableSet alloc] init];
     }
@@ -206,7 +206,7 @@ static void initializeAudioSession()
 
 - (void)setDataSource:(WebDataSource *)dataSource
 {
-    _dataSource = dataSource;    
+    _dataSource = dataSource;
 }
 
 - (void)dealloc
@@ -240,7 +240,7 @@ static void initializeAudioSession()
     GraphicsLayer* layerForWidget = coreView->graphicsLayerForPlatformWidget(view);
     if (!layerForWidget)
         return nil;
-    
+
     return layerForWidget->platformLayer();
 }
 #endif
@@ -282,10 +282,10 @@ static void initializeAudioSession()
 {
     if (_started)
         return;
-    
+
     if ([_views count] > 0)
         LOG(Plugins, "starting WebKit plugins : %@", [_views description]);
-    
+
     int count = [_views count];
     for (int i = 0; i < count; i++) {
         id aView = [_views objectAtIndex:i];
@@ -308,7 +308,7 @@ static void initializeAudioSession()
     if ([_views count] > 0) {
         LOG(Plugins, "stopping WebKit plugins: %@", [_views description]);
     }
-    
+
     int viewsCount = [_views count];
     for (int i = 0; i < viewsCount; i++)
         [self stopOnePlugin:[_views objectAtIndex:i]];
@@ -385,7 +385,7 @@ static void initializeAudioSession()
         LOG_ERROR("can't add a plug-in to a defunct WebPluginController");
         return;
     }
-    
+
     if (![_views containsObject:view]) {
         [_views addObject:view];
 #if !PLATFORM(IOS)
@@ -419,7 +419,7 @@ static void initializeAudioSession()
         if (!oldDefersCallbacks)
             [[self webView] setDefersCallbacks:NO];
 #endif
-        
+
         if (_started) {
             LOG(Plugins, "starting plug-in %@", view);
             if ([view respondsToSelector:@selector(webPlugInStart)]) {
@@ -429,7 +429,7 @@ static void initializeAudioSession()
                 JSC::JSLock::DropAllLocks dropAllLocks(JSDOMWindowBase::commonVM());
                 [view pluginStart];
             }
-            
+
             if ([view respondsToSelector:@selector(setContainingWindow:)]) {
                 JSC::JSLock::DropAllLocks dropAllLocks(JSDOMWindowBase::commonVM());
                 [view setContainingWindow:[_documentView window]];
@@ -453,12 +453,12 @@ static void initializeAudioSession()
         if (_started)
             [self stopOnePlugin:view];
         [self destroyOnePlugin:view];
-        
+
 #if ENABLE(NETSCAPE_PLUGIN_API)
         if (Frame* frame = core([self webFrame]))
             frame->script().cleanupScriptObjectsForPlugin(self);
 #endif
-        
+
         [pluginViews removeObject:view];
 #if !PLATFORM(IOS)
         [[_documentView _webView] removePluginInstanceView:view];
@@ -488,7 +488,7 @@ static void cancelOutstandingCheck(const void *item, void *context)
 }
 
 - (void)destroyAllPlugins
-{    
+{
     [self stopAllPlugins];
 
     if ([_views count] > 0) {
@@ -496,17 +496,17 @@ static void cancelOutstandingCheck(const void *item, void *context)
     }
 
     [self _cancelOutstandingChecks];
-    
+
     int viewsCount = [_views count];
     for (int i = 0; i < viewsCount; i++) {
         id aView = [_views objectAtIndex:i];
         [self destroyOnePlugin:aView];
-        
+
 #if ENABLE(NETSCAPE_PLUGIN_API)
         if (Frame* frame = core([self webFrame]))
             frame->script().cleanupScriptObjectsForPlugin(self);
 #endif
-        
+
         [pluginViews removeObject:aView];
 #if !PLATFORM(IOS)
         [[_documentView _webView] removePluginInstanceView:aView];
@@ -646,7 +646,7 @@ static void cancelOutstandingCheck(const void *item, void *context)
 }
 
 - (void)pluginView:(NSView *)pluginView receivedResponse:(NSURLResponse *)response
-{    
+{
     if ([pluginView respondsToSelector:@selector(webPlugInMainResourceDidReceiveResponse:)])
         [pluginView webPlugInMainResourceDidReceiveResponse:response];
     else {
@@ -659,7 +659,7 @@ static void cancelOutstandingCheck(const void *item, void *context)
                                                           MIMEType:[response MIMEType]];
         [_dataSource _documentLoader]->cancelMainResourceLoad(error);
         [error release];
-    }        
+    }
 }
 
 - (void)pluginView:(NSView *)pluginView receivedData:(NSData *)data

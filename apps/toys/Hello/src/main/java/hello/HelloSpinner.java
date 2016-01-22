@@ -60,7 +60,7 @@ public class HelloSpinner extends Application {
                 new ComboBox<>(FXCollections.observableArrayList("Integer", "Double", "List<String>", "LocalDate", "LocalTime"));
         spinnerValueFactoryOptions.getSelectionModel().selectedItemProperty().addListener((o, oldValue, newValue) -> {
             if (newValue == null) return;
-            
+
             switch (newValue) {
                 default:
                 case "Integer": {

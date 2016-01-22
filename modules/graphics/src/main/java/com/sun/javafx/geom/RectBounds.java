@@ -47,11 +47,11 @@ public final class RectBounds extends BaseBounds {
         minX = minY = 0.0f;
         maxX = maxY = -1.0f;
     }
-    
+
     @Override public BaseBounds copy() {
         return new RectBounds(minX, minY, maxX, maxY);
     }
-    
+
     /**
      * Creates a RectBounds based on the minX, minY, maxX, and maxY values specified.
      */
@@ -269,7 +269,7 @@ public final class RectBounds extends BaseBounds {
         this.maxX = maxX;
         this.maxY = maxY;
     }
-    
+
     /**
      * Sets the bounds based on the given coords, and also ensures that after
      * having done so that this RectBounds instance is normalized.
@@ -341,7 +341,7 @@ public final class RectBounds extends BaseBounds {
         }
         unionWith(x, y, x, y);
     }
-    
+
     public void add(float x, float y) {
         unionWith(x, y, x, y);
     }
@@ -464,7 +464,7 @@ public final class RectBounds extends BaseBounds {
         // NaN values will cause the comparisons to fail and return "empty"
         return !(maxX >= minX && maxY >= minY);
     }
-    
+
     /**
      * Adjusts the edges of this RectBounds "outward" toward integral boundaries,
      * such that the rounded bounding box will always full enclose the original
@@ -476,7 +476,7 @@ public final class RectBounds extends BaseBounds {
         maxX = (float) Math.ceil(maxX);
         maxY = (float) Math.ceil(maxY);
     }
-    
+
     public void grow(float h, float v) {
         minX -= h;
         maxX += h;
@@ -515,7 +515,7 @@ public final class RectBounds extends BaseBounds {
             minY = tmp;
         }
     }
-    
+
     @Override public void translate(float x, float y, float z) {
         setMinX(getMinX() + x);
         setMinY(getMinY() + y);

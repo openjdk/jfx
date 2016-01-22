@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef Geoposition_h
@@ -47,7 +47,7 @@ public:
 
     DOMTimeStamp timestamp() const { return m_timestamp; }
     Coordinates* coords() const { return m_coordinates.get(); }
-    
+
 private:
     Geoposition(PassRefPtr<Coordinates> coordinates, DOMTimeStamp timestamp)
         : m_coordinates(coordinates)
@@ -59,7 +59,7 @@ private:
     RefPtr<Coordinates> m_coordinates;
     DOMTimeStamp m_timestamp;
 };
-    
+
 } // namespace WebCore
 
 #endif // Geoposition_h

@@ -189,53 +189,53 @@ public class ZoomEventTest {
     @Test
     public void shouldDeliverZoomEventToPickedNode() {
         Scene scene = createScene();
-        Rectangle rect = 
+        Rectangle rect =
                 (Rectangle) scene.getRoot().getChildrenUnmodifiable().get(0);
-        
+
         zoomed = false;
         rect.setOnZoom(event -> {
             zoomed = true;
         });
-        
+
         ((StubScene) scene.impl_getPeer()).getListener().zoomEvent(
                 ZoomEvent.ZOOM, 1, 1,
                 50, 50, 50, 50, false, false, false, false, false, false);
-        
+
         assertFalse(zoomed);
 
         ((StubScene) scene.impl_getPeer()).getListener().zoomEvent(
                 ZoomEvent.ZOOM, 1, 1,
                 150, 150, 150, 150, false, false, false, false, false, false);
-        
+
         assertTrue(zoomed);
     }
-    
+
     @Test
     public void shouldPassFactors() {
         Scene scene = createScene();
-        Rectangle rect = 
+        Rectangle rect =
                 (Rectangle) scene.getRoot().getChildrenUnmodifiable().get(0);
-        
+
         zoomed = false;
         rect.setOnZoom(event -> {
             Assert.assertEquals(1.2, event.getZoomFactor(), 0.0001);
             Assert.assertEquals(2.4, event.getTotalZoomFactor(), 0.0001);
             zoomed = true;
         });
-        
+
         ((StubScene) scene.impl_getPeer()).getListener().zoomEvent(
                 ZoomEvent.ZOOM, 1.2, 2.4,
                 150, 150, 150, 150, false, false, false, false, false, false);
-        
+
         assertTrue(zoomed);
     }
 
     @Test
     public void shouldPassModifiers() {
         Scene scene = createScene();
-        Rectangle rect = 
+        Rectangle rect =
                 (Rectangle) scene.getRoot().getChildrenUnmodifiable().get(0);
-        
+
         zoomed = false;
         rect.setOnZoom(event -> {
             assertTrue(event.isShiftDown());
@@ -643,7 +643,7 @@ public class ZoomEventTest {
 
     private Scene createScene() {
         final Group root = new Group();
-        
+
         final Scene scene = new Scene(root, 400, 400);
 
         Rectangle rect = new Rectangle(100, 100, 100, 100);
@@ -654,7 +654,7 @@ public class ZoomEventTest {
         Stage stage = new Stage();
         stage.setScene(scene);
         stage.show();
-        
+
         return scene;
     }
 }

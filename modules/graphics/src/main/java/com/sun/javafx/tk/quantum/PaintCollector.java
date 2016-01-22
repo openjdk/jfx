@@ -187,7 +187,7 @@ final class PaintCollector implements CompletionListener {
      * rendering vsync hinted pulse will process these dirty scenes.
      *
      * <p>This method must only be called on the FX Thread</p>
-     * 
+     *
      * @param scene    The scene which is dirty. This must not be null.
      */
     final void addDirtyScene(GlassScene scene) {
@@ -219,7 +219,7 @@ final class PaintCollector implements CompletionListener {
      * be removed. Potentially this means that after this call the
      * PaintCollector will no longer have any dirty scenes and will
      * no longer require a repaint.
-     * 
+     *
      * <p>This method is typically called when a scene is removed
      * from a stage, or when visible becomes false.
      * </p>
@@ -292,7 +292,7 @@ final class PaintCollector implements CompletionListener {
         // of things here that could be happening in parallel.
         if (allWorkCompletedLatch.getCount() == 1) {
             // In some cases we need to tell the toolkit that
-            // now would be a great time to vsync! 
+            // now would be a great time to vsync!
             if (needsHint && !toolkit.hasNativeSystemVsync()) {
                 toolkit.vsyncHint();
             }

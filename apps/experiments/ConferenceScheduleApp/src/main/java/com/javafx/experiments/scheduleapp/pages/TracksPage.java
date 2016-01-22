@@ -93,7 +93,7 @@ public class TracksPage extends Page{
             }
         });
     }
-    
+
     private void updateTracks() {
         box.getChildren().clear();
         for (final Track track: dataService.getTracks()) {
@@ -132,7 +132,7 @@ public class TracksPage extends Page{
             box.getChildren().add(trackBox);
         }
     }
-    
+
     @Override public void reset() {
         scrollPane.setHvalue(0);
         scrollPane.setVvalue(0);

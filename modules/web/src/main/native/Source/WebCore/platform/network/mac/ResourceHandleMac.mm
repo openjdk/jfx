@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #import "config.h"
@@ -133,7 +133,7 @@ void ResourceHandle::createNSURLConnection(id delegate, bool shouldUseCredential
 
     if (shouldUseCredentialStorage && firstRequest().url().protocolIsInHTTPFamily()) {
         if (d->m_user.isEmpty() && d->m_pass.isEmpty()) {
-            // <rdar://problem/7174050> - For URLs that match the paths of those previously challenged for HTTP Basic authentication, 
+            // <rdar://problem/7174050> - For URLs that match the paths of those previously challenged for HTTP Basic authentication,
             // try and reuse the credential preemptively, as allowed by RFC 2617.
             d->m_initialCredential = CredentialStorage::get(firstRequest().url());
         } else {
@@ -143,7 +143,7 @@ void ResourceHandle::createNSURLConnection(id delegate, bool shouldUseCredential
             CredentialStorage::set(Credential(d->m_user, d->m_pass, CredentialPersistenceNone), firstRequest().url());
         }
     }
-        
+
     if (!d->m_initialCredential.isEmpty()) {
         // FIXME: Support Digest authentication, and Proxy-Authorization.
         applyBasicAuthorizationHeader(firstRequest(), d->m_initialCredential);
@@ -267,7 +267,7 @@ bool ResourceHandle::start()
 #endif
 
     LOG(Network, "Handle %p starting connection %p for %@", this, connection(), firstRequest().nsURLRequest(DoNotUpdateHTTPBody));
-    
+
     if (d->m_connection) {
         if (d->m_defersLoading)
             wkSetNSURLConnectionDefersCallbacks(connection(), YES);
@@ -363,7 +363,7 @@ void ResourceHandle::platformLoadResourceSynchronously(NetworkingContext* contex
     LOG(Network, "ResourceHandle::platformLoadResourceSynchronously:%@ allowStoredCredentials:%u", request.nsURLRequest(DoNotUpdateHTTPBody), storedCredentials);
 
     ASSERT(!request.isEmpty());
-    
+
     OwnPtr<SynchronousLoaderClient> client = SynchronousLoaderClient::create();
     client->setAllowStoredCredentials(storedCredentials == AllowStoredCredentials);
 
@@ -393,12 +393,12 @@ void ResourceHandle::platformLoadResourceSynchronously(NetworkingContext* contex
 
     [handle->connection() scheduleInRunLoop:[NSRunLoop currentRunLoop] forMode:(NSString *)synchronousLoadRunLoopMode()];
     [handle->connection() start];
-    
+
     while (!client->isDone())
         [[NSRunLoop currentRunLoop] runMode:(NSString *)synchronousLoadRunLoopMode() beforeDate:[NSDate distantFuture]];
 
     error = client->error();
-    
+
     [handle->connection() cancel];
 
     if (error.isNull())
@@ -434,7 +434,7 @@ void ResourceHandle::willSendRequest(ResourceRequest& request, const ResourceRes
         String lastHTTPMethod = d->m_lastHTTPMethod;
         if (!equalIgnoringCase(lastHTTPMethod, request.httpMethod())) {
             request.setHTTPMethod(lastHTTPMethod);
-    
+
             FormData* body = d->m_firstRequest.httpBody();
             if (!equalIgnoringCase(lastHTTPMethod, "GET") && body && !body->isEmpty())
                 request.setHTTPBody(body);
@@ -467,7 +467,7 @@ void ResourceHandle::willSendRequest(ResourceRequest& request, const ResourceRes
             Credential credential = CredentialStorage::get(request.url());
             if (!credential.isEmpty()) {
                 d->m_initialCredential = credential;
-                
+
                 // FIXME: Support Digest authentication, and Proxy-Authorization.
                 applyBasicAuthorizationHeader(request, d->m_initialCredential);
             }

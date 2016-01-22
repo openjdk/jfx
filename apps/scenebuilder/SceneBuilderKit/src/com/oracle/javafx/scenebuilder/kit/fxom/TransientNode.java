@@ -33,13 +33,13 @@ package com.oracle.javafx.scenebuilder.kit.fxom;
 
 /**
  *
- * 
+ *
  */
 class TransientNode {
-    
+
     private final TransientNode parentNode;
     private Object sceneGraphObject;
-    
+
     public TransientNode(TransientNode parentNode) {
         this.parentNode = parentNode;
     }
@@ -55,5 +55,5 @@ class TransientNode {
     public void setSceneGraphObject(Object sceneGraphObject) {
         this.sceneGraphObject = sceneGraphObject;
     }
-    
+
 }

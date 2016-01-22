@@ -76,17 +76,17 @@ String CachedCSSStyleSheet::encoding() const
 {
     return m_decoder->encoding().name();
 }
-    
-const String CachedCSSStyleSheet::sheetText(bool enforceMIMEType, bool* hasValidMIMEType) const 
-{ 
+
+const String CachedCSSStyleSheet::sheetText(bool enforceMIMEType, bool* hasValidMIMEType) const
+{
     ASSERT(!isPurgeable());
 
     if (!m_data || m_data->isEmpty() || !canUseSheet(enforceMIMEType, hasValidMIMEType))
         return String();
-    
+
     if (!m_decodedSheetText.isNull())
         return m_decodedSheetText;
-    
+
     // Don't cache the decoded text, regenerating is cheap and it can use quite a bit of memory
     String sheetText = m_decoder->decode(m_data->data(), m_data->size());
     sheetText.append(m_decoder->flush());
@@ -122,7 +122,7 @@ bool CachedCSSStyleSheet::canUseSheet(bool enforceMIMEType, bool* hasValidMIMETy
 {
     if (errorOccurred())
         return false;
-        
+
     if (!enforceMIMEType && !hasValidMIMEType)
         return true;
 

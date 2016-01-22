@@ -27,7 +27,7 @@
 #include "HTMLElement.h"
 
 namespace WebCore {
-    
+
 class HTMLSelectElement;
 
 class HTMLOptGroupElement final : public HTMLElement {
@@ -36,7 +36,7 @@ public:
 
     virtual bool isDisabledFormControl() const override;
     HTMLSelectElement* ownerSelectElement() const;
-    
+
     String groupLabelText() const;
 
 private:

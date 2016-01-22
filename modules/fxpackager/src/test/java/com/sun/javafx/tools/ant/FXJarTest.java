@@ -128,10 +128,10 @@ public class FXJarTest {
         FXJar j = new FXJar();
         j.execute();
     }
-    
+
     private static final String CODEBASE_ATTRIBUTE_NAME = "Codebase";
     private static final String CODEBASE_ATTRIBUTE_VALUE = "www.example.com";
-    
+
     @Test
     public void codebaseAttributeTest() throws IOException, ManifestException {
         fxjar.setCodebase(CODEBASE_ATTRIBUTE_VALUE);
@@ -183,7 +183,7 @@ public class FXJarTest {
     private static final String PERMISSIONS_ATTRIBUTE_NAME = "Permissions";
     private static final String PERMISSIONS_ATTRIBUTE_ALLPERMS_VALUE = "all-permissions";
     private static final String PERMISSIONS_ATTRIBUTE_SANDBOX_VALUE = "sandbox";
-    
+
     @Test
     public void allpermsAttributeTest() throws IOException, ManifestException {
         Permissions perms = fxjar.createPermissions();
@@ -208,7 +208,7 @@ public class FXJarTest {
         assertEquals(PERMISSIONS_ATTRIBUTE_SANDBOX_VALUE,
                 m.getMainAttributes().getValue(PERMISSIONS_ATTRIBUTE_NAME));
     }
-    
+
     @Test
     public void permissionsAttributeDefaultTest() throws IOException, ManifestException {
         fxjar.execute();
@@ -239,11 +239,11 @@ public class FXJarTest {
     public void allpermsManifestConflictTest() throws IOException, ManifestException {
         Permissions perms = fxjar.createPermissions();
         perms.setElevated(true);
-        
+
         org.apache.tools.ant.taskdefs.Manifest mf = fxjar.createManifest();
         mf.addConfiguredAttribute(new org.apache.tools.ant.taskdefs.Manifest.Attribute(
                 PERMISSIONS_ATTRIBUTE_NAME, PERMISSIONS_ATTRIBUTE_ALLPERMS_VALUE));
-        
+
         fxjar.execute();
     }
 

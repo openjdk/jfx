@@ -131,8 +131,8 @@ public class HelloWindowAbuse extends Application {
         }
 
         //The creation/closing of popups is done in a thread and is
-        // designed to work so that each "flicker" batch does not 
-        // happen until the previous one completes. This is done so 
+        // designed to work so that each "flicker" batch does not
+        // happen until the previous one completes. This is done so
         // that we don't just have and excess of "flickers" pending
         // on the event thread choking out the processing of other events.
 

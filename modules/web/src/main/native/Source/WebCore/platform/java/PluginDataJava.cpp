@@ -12,7 +12,7 @@ namespace WebCore {
 void init_plugins(bool refresh, Vector<PluginInfo> *plugins) {
 /*
     JNIEnv* env = WebCore_GetJavaEnv();
- 
+
     jclass clsPluginManager
         = env->FindClass("com/sun/webkit/plugin/PluginManager");
     ASSERT(clsPluginManager);
@@ -35,7 +35,7 @@ void init_plugins(bool refresh, Vector<PluginInfo> *plugins) {
     }
 
     jint count = 0;
-    count = env->CallStaticIntMethod(clsPluginManager, midGetCount); 
+    count = env->CallStaticIntMethod(clsPluginManager, midGetCount);
 
     if (count > 0) {
         static jmethodID midGetPlugin = 0;

@@ -214,7 +214,7 @@ public class Main {
                         }
                     }
                     if (srcdir != null && !srcdir.isDirectory()) {
-                        throw new PackagerException("ERR_InvalidDirectory", srcdir.getAbsolutePath());                            
+                        throw new PackagerException("ERR_InvalidDirectory", srcdir.getAbsolutePath());
                     }
                     if (!srcfilesSet) {
                         //using "." as default dir is confusing. Require explicit list of inputs
@@ -346,7 +346,7 @@ public class Main {
                         deployParams.addTemplate(templateInFile, templateOutFile);
                     }
                     if (srcdir != null && !srcdir.isDirectory()) {
-                        throw new PackagerException("ERR_InvalidDirectory", srcdir.getAbsolutePath());                            
+                        throw new PackagerException("ERR_InvalidDirectory", srcdir.getAbsolutePath());
                     }
                     if (!srcfilesSet) {
                         //using "." as default dir is confusing. Require explicit list of inputs
@@ -375,7 +375,7 @@ public class Main {
                         }
                     }
                     if (srcdir != null && !srcdir.isDirectory()) {
-                        throw new PackagerException("ERR_InvalidDirectory", srcdir.getAbsolutePath());                            
+                        throw new PackagerException("ERR_InvalidDirectory", srcdir.getAbsolutePath());
                     }
                     if (!srcfilesSet) {
                         //using "." as default dir is confusing. Require explicit list of inputs
@@ -415,7 +415,7 @@ public class Main {
                         }
                     }
                     if (srcdir != null && !srcdir.isDirectory()) {
-                        throw new PackagerException("ERR_InvalidDirectory", srcdir.getAbsolutePath());                            
+                        throw new PackagerException("ERR_InvalidDirectory", srcdir.getAbsolutePath());
                     }
                     if (!srcfilesSet) {
                         //using "." as default dir is confusing. Require explicit list of inputs
@@ -513,7 +513,7 @@ public class Main {
             }
         }
     }
-    
+
     public static void showBundlerHelp(String bundlerName, boolean verbose) {
         //TODO I18N
         if ("bundlers".equals(bundlerName)) {

@@ -39,7 +39,7 @@ package javafx.event;
 public interface EventDispatchChain {
     /**
      * Appends the specified {@code EventDispatcher} to this chain. Returns a
-     * reference to the chain with the appended element. 
+     * reference to the chain with the appended element.
      * <p>
      * The caller shouldn't assume that this {@code EventDispatchChain} remains
      * unchanged nor that the returned value will reference a different chain

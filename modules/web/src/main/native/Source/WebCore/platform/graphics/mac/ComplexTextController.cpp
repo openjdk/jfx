@@ -426,7 +426,7 @@ void ComplexTextController::ComplexTextRun::setIsNonMonotonic()
 unsigned ComplexTextController::indexOfCurrentRun(unsigned& leftmostGlyph)
 {
     leftmostGlyph = 0;
-    
+
     size_t runCount = m_complexTextRuns.size();
     if (m_currentRun >= runCount)
         return runCount;
@@ -645,11 +645,11 @@ void ComplexTextController::adjustGlyphsAndAdvances()
 
             advance.width += fontData->syntheticBoldOffset();
 
- 
-            // We special case spaces in two ways when applying word rounding. 
-            // First, we round spaces to an adjusted width in all fonts. 
-            // Second, in fixed-pitch fonts we ensure that all glyphs that 
-            // match the width of the space glyph have the same width as the space glyph. 
+
+            // We special case spaces in two ways when applying word rounding.
+            // First, we round spaces to an adjusted width in all fonts.
+            // Second, in fixed-pitch fonts we ensure that all glyphs that
+            // match the width of the space glyph have the same width as the space glyph.
             if (m_run.applyWordRounding() && roundedAdvanceWidth == roundedSpaceWidth && (fontData->pitch() == FixedPitch || glyph == fontData->spaceGlyph()))
                 advance.width = fontData->adjustedSpaceWidth();
 
@@ -691,31 +691,31 @@ void ComplexTextController::adjustGlyphsAndAdvances()
             }
 
             // Apply rounding hacks if needed.
-            // We adjust the width of the last character of a "word" to ensure an integer width. 
-            // Force characters that are used to determine word boundaries for the rounding hack 
-            // to be integer width, so the following words will start on an integer boundary. 
-            if (m_run.applyWordRounding() && Font::isRoundingHackCharacter(ch)) 
-                advance.width = ceilCGFloat(advance.width); 
+            // We adjust the width of the last character of a "word" to ensure an integer width.
+            // Force characters that are used to determine word boundaries for the rounding hack
+            // to be integer width, so the following words will start on an integer boundary.
+            if (m_run.applyWordRounding() && Font::isRoundingHackCharacter(ch))
+                advance.width = ceilCGFloat(advance.width);
 
-            // Check to see if the next character is a "rounding hack character", if so, adjust the 
-            // width so that the total run width will be on an integer boundary. 
-            if ((m_run.applyWordRounding() && !lastGlyph && Font::isRoundingHackCharacter(nextCh)) || (m_run.applyRunRounding() && lastGlyph)) { 
-                CGFloat totalWidth = widthSinceLastCommit + advance.width; 
-                widthSinceLastCommit = ceilCGFloat(totalWidth); 
-                CGFloat extraWidth = widthSinceLastCommit - totalWidth; 
-                if (m_run.ltr()) 
-                    advance.width += extraWidth; 
-                else { 
-                    if (m_lastRoundingGlyph) 
-                        m_adjustedAdvances[m_lastRoundingGlyph - 1].width += extraWidth; 
-                    else 
-                        m_finalRoundingWidth = extraWidth; 
-                    m_lastRoundingGlyph = m_adjustedAdvances.size() + 1; 
-                } 
-                m_totalWidth += widthSinceLastCommit; 
-                widthSinceLastCommit = 0; 
-            } else 
-                widthSinceLastCommit += advance.width; 
+            // Check to see if the next character is a "rounding hack character", if so, adjust the
+            // width so that the total run width will be on an integer boundary.
+            if ((m_run.applyWordRounding() && !lastGlyph && Font::isRoundingHackCharacter(nextCh)) || (m_run.applyRunRounding() && lastGlyph)) {
+                CGFloat totalWidth = widthSinceLastCommit + advance.width;
+                widthSinceLastCommit = ceilCGFloat(totalWidth);
+                CGFloat extraWidth = widthSinceLastCommit - totalWidth;
+                if (m_run.ltr())
+                    advance.width += extraWidth;
+                else {
+                    if (m_lastRoundingGlyph)
+                        m_adjustedAdvances[m_lastRoundingGlyph - 1].width += extraWidth;
+                    else
+                        m_finalRoundingWidth = extraWidth;
+                    m_lastRoundingGlyph = m_adjustedAdvances.size() + 1;
+                }
+                m_totalWidth += widthSinceLastCommit;
+                widthSinceLastCommit = 0;
+            } else
+                widthSinceLastCommit += advance.width;
 
             // FIXME: Combining marks should receive a text emphasis mark if they are combine with a space.
             if (m_forTextEmphasis && (!Font::canReceiveTextEmphasis(ch) || (U_GET_GC_MASK(ch) & U_GC_M_MASK)))
@@ -724,7 +724,7 @@ void ComplexTextController::adjustGlyphsAndAdvances()
             advance.height *= -1;
             m_adjustedAdvances.append(advance);
             m_adjustedGlyphs.append(glyph);
-            
+
             FloatRect glyphBounds = fontData->boundsForGlyph(glyph);
             glyphBounds.move(glyphOrigin.x, glyphOrigin.y);
             m_minGlyphBoundingBoxX = std::min(m_minGlyphBoundingBoxX, glyphBounds.x());
@@ -733,7 +733,7 @@ void ComplexTextController::adjustGlyphsAndAdvances()
             m_maxGlyphBoundingBoxY = std::max(m_maxGlyphBoundingBoxY, glyphBounds.maxY());
             glyphOrigin.x += advance.width;
             glyphOrigin.y += advance.height;
-            
+
             lastCharacterIndex = characterIndex;
         }
         if (!isMonotonic)

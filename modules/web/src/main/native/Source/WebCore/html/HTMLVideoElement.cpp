@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -62,9 +62,9 @@ PassRefPtr<HTMLVideoElement> HTMLVideoElement::create(const QualifiedName& tagNa
     return videoElement.release();
 }
 
-bool HTMLVideoElement::rendererIsNeeded(const RenderStyle& style) 
+bool HTMLVideoElement::rendererIsNeeded(const RenderStyle& style)
 {
-    return HTMLElement::rendererIsNeeded(style); 
+    return HTMLElement::rendererIsNeeded(style);
 }
 
 RenderPtr<RenderElement> HTMLVideoElement::createElementRenderer(PassRef<RenderStyle> style)
@@ -146,14 +146,14 @@ void HTMLVideoElement::parseAttribute(const QualifiedName& name, const AtomicStr
     }
 #else
     else
-        HTMLMediaElement::parseAttribute(name, value);    
+        HTMLMediaElement::parseAttribute(name, value);
 #endif
 }
 
 bool HTMLVideoElement::supportsFullscreen() const
 {
     Page* page = document().page();
-    if (!page) 
+    if (!page)
         return false;
 
     if (!player() || !player()->supportsFullscreen())
@@ -254,7 +254,7 @@ void HTMLVideoElement::paintCurrentFrameInContext(GraphicsContext* context, cons
     MediaPlayer* player = HTMLMediaElement::player();
     if (!player)
         return;
-    
+
     player->setVisible(true); // Make player visible or it won't draw.
     player->paintCurrentFrameInContext(context, destRect);
 }
@@ -270,7 +270,7 @@ bool HTMLVideoElement::hasAvailableVideoFrame() const
 {
     if (!player())
         return false;
-    
+
     return player()->hasVideo() && player()->hasAvailableVideoFrame();
 }
 
@@ -287,7 +287,7 @@ void HTMLVideoElement::webkitEnterFullscreen(ExceptionCode& ec)
     if (isFullscreen())
         return;
 
-    // Generate an exception if this isn't called in response to a user gesture, or if the 
+    // Generate an exception if this isn't called in response to a user gesture, or if the
     // element does not support fullscreen.
     if (!mediaSession().fullscreenPermitted(*this) || !supportsFullscreen()) {
         ec = INVALID_STATE_ERR;

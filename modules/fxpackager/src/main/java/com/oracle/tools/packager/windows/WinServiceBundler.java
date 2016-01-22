@@ -44,16 +44,16 @@ import com.oracle.tools.packager.UnsupportedPlatformException;
 
 public class WinServiceBundler extends AbstractBundler {
 
-    private static final ResourceBundle I18N = 
+    private static final ResourceBundle I18N =
             ResourceBundle.getBundle(WinServiceBundler.class.getName());
-    
+
     private final static String EXECUTABLE_SVC_NAME = "WinLauncherSvc.exe";
-    
+
     public WinServiceBundler() {
         super();
         baseResourceLoader = WinResources.class;
     }
-    
+
     @Override
     public String getName() {
         return I18N.getString("bundler.name");
@@ -85,7 +85,7 @@ public class WinServiceBundler extends AbstractBundler {
                 BUILD_ROOT
         );
     }
-    
+
     @Override
     public boolean validate(Map<String, ? super Object> params)
             throws UnsupportedPlatformException, ConfigException
@@ -127,27 +127,27 @@ public class WinServiceBundler extends AbstractBundler {
 
         return true;
     }
-    
+
     @Override
     public File execute(Map<String, ? super Object> params, File outputParentDir) {
         return doBundle(params, outputParentDir, false);
     }
-    
+
     static String getAppName(Map<String, ? super Object>  p) {
         return APP_NAME.fetchFrom(p);
     }
-    
+
     static String getAppSvcName(Map<String, ? super Object>  p) {
         return APP_NAME.fetchFrom(p) + "Svc";
     }
-    
+
     public static File getLauncherSvc(File outDir, Map<String, ? super Object> p) {
         return new File(outDir, getAppName(p) + "Svc.exe");
     }
-    
+
     /*
      * Copies the service launcher to the output folder
-     * 
+     *
      * Note that the bundler doesn't create folder structure and
      * just copies the launcher to the output folder
      */
@@ -162,14 +162,14 @@ public class WinServiceBundler extends AbstractBundler {
             if (!dependentTask) {
                 Log.info(MessageFormat.format(I18N.getString("message.creating-service-bundle"), getAppSvcName(p), outputDirectory.getAbsolutePath()));
             }
-            
+
             // Copy executable to install application as service
             File executableSvcFile = getLauncherSvc(outputDirectory, p);
             IOUtils.copyFromURL(
                     WinResources.class.getResource(EXECUTABLE_SVC_NAME),
                     executableSvcFile);
             executableSvcFile.setExecutable(true, false);
-            
+
             if (!dependentTask) {
                 Log.info(MessageFormat.format(I18N.getString("message.result-dir"), outputDirectory.getAbsolutePath()));
             }
@@ -180,7 +180,7 @@ public class WinServiceBundler extends AbstractBundler {
             Log.debug(ex);
             return null;
         }
-        
+
     }
 
 }

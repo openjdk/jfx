@@ -89,7 +89,7 @@ public class MockListObserver<E> implements ListChangeListener<E> {
     public void check0() {
         assertEquals(0, calls.size());
     }
-    
+
     public void check1AddRemove(ObservableList<E> list,
                        List<E> removed,
                        int from,
@@ -136,13 +136,13 @@ public class MockListObserver<E> implements ListChangeListener<E> {
         assertEquals(to, call.to);
         assertArrayEquals(perm, call.permutation);
     }
-    
+
     public void check1Update(ObservableList<E> list, int from, int to) {
         assertFalse(tooManyCalls);
         assertEquals(1, calls.size());
         checkUpdate(0, list, from, to);
     }
-    
+
     public void checkUpdate(int idx, ObservableList<E> list, int from, int to) {
         assertFalse(tooManyCalls);
         Call<E> call = calls.get(idx);

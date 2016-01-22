@@ -35,10 +35,10 @@ typedef struct _FieldDesc {
 }
 FieldDesc;
 
-jboolean initializeFieldIds(jfieldID* dest, JNIEnv* env, jclass classHandle, 
+jboolean initializeFieldIds(jfieldID* dest, JNIEnv* env, jclass classHandle,
                             const FieldDesc* fields);
 
-jboolean initializeStaticFieldIds(jfieldID* dest, JNIEnv* env, 
+jboolean initializeStaticFieldIds(jfieldID* dest, JNIEnv* env,
                                   jclass classHandle, const FieldDesc* fields);
 
 void JNI_ThrowNew(JNIEnv* env, const char* throwable, const char* message);

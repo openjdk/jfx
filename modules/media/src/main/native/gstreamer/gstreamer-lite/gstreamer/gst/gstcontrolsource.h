@@ -73,7 +73,7 @@ struct _GstTimedValue
  * Returns: %TRUE if the value was successfully calculated.
  *
  */
-typedef gboolean (* GstControlSourceGetValue) (GstControlSource *self, 
+typedef gboolean (* GstControlSourceGetValue) (GstControlSource *self,
     GstClockTime timestamp, gdouble *value);
 
 /**
@@ -89,7 +89,7 @@ typedef gboolean (* GstControlSourceGetValue) (GstControlSource *self,
  * Returns: %TRUE if the values were successfully calculated.
  *
  */
-typedef gboolean (* GstControlSourceGetValueArray) (GstControlSource *self, 
+typedef gboolean (* GstControlSourceGetValueArray) (GstControlSource *self,
     GstClockTime timestamp, GstClockTime interval, guint n_values, gdouble *values);
 
 /**

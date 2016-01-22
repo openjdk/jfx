@@ -147,7 +147,7 @@ public class PhongLighting extends CoreEffect<RenderState> {
         this.light = light;
         updatePeerKey("PhongLighting_" + light.getType().name());
     }
-    
+
     /**
      * Returns the diffuse constant.
      *
@@ -352,7 +352,7 @@ public class PhongLighting extends CoreEffect<RenderState> {
 
         drc1.merge(drc2);
         regionPool.checkIn(drc2);
-        
+
         return drc1;
     }
 }

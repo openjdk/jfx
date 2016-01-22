@@ -62,7 +62,7 @@ public:
     void extractLineBox(InlineFlowBox*);
     void attachLineBox(InlineFlowBox*);
     void removeLineBox(InlineFlowBox*);
-    
+
     void dirtyLineBoxes();
     void dirtyLinesFromChangedChild(RenderBoxModelObject* parent, RenderObject* child);
 

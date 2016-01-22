@@ -110,7 +110,7 @@ public:
     static void setDomainRelaxationForbiddenForURLScheme(bool forbidden, const String& scheme);
     static void setSerializeHTTPLoads(bool);
     static void setShouldTrackVisitedLinks(bool);
-    
+
     // TextInputController
     static void setComposition(Evas_Object*, const char*, int, int);
     static bool hasComposition(const Evas_Object*);

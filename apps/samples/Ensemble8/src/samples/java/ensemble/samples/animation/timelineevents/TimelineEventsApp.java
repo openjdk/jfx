@@ -71,7 +71,7 @@ public class TimelineEventsApp extends Application {
     //variable for storing actual frame
     private Integer i=0;
 
-    public Parent createContent() {  
+    public Parent createContent() {
         //create a circle with effect
         final Circle circle = new Circle(20,  Color.rgb(156,216,255));
         circle.setEffect(new Lighting());
@@ -120,12 +120,12 @@ public class TimelineEventsApp extends Application {
         timeline.play();
         timer.start();
     }
-    
+
     @Override public void stop() {
         timeline.stop();
         timer.stop();
-    }   
-    
+    }
+
     @Override
     public void start(Stage primaryStage) throws Exception {
         primaryStage.setResizable(false);

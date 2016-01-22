@@ -100,7 +100,7 @@ final class NetworkContext {
     /**
      * Checks whether a URL is valid or not. I.E. if we do have a protocol
      * handler to deal with it.
-     * 
+     *
      * @param url the <code>String</code> containing the url to check.
      * @return <code>true</code> if we can handle the url. <code>false</code>
      *         otherwise.
@@ -186,7 +186,7 @@ final class NetworkContext {
                 (PrivilegedAction<Integer>) () -> Integer.getInteger("http.maxConnections", -1));
         return propValue >= 0 ? propValue : DEFAULT_HTTP_MAX_CONNECTIONS;
     }
-    
+
     /**
      * Thread factory for URL loader threads.
      */

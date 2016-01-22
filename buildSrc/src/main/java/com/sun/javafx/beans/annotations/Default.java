@@ -35,7 +35,7 @@ import java.lang.annotation.Target;
  * Specifies the default value for the property corresponding to a constructor
  * parameter in an immutable class. This allows the generated Builder class to
  * work correctly when no value is supplied for that parameter.
- * 
+ *
  */
 @Retention(RetentionPolicy.SOURCE)
 @Target(ElementType.PARAMETER)
@@ -49,7 +49,7 @@ public @interface Default {
      * {@code @Default("")} would indicate {@code 0.0} for a parameter of type
      * {@code double} or {@code null} for a parameter of type {@code String}.
      * </p>
-     * 
+     *
      * <p>
      * Note: for parameters of type {@code String}, it is easy to forget the
      * quotes around a string literal. A string parameter whose default is the

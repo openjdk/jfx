@@ -131,7 +131,7 @@ public abstract class LinearConvolveRenderState implements RenderState {
      * be padded out to the appropriate size with 0s so that the shader
      * constant pool will be fully initialized and the extra unneeded
      * convolution samples will be ignored by the 0 weights.
-     * 
+     *
      * @param ksize the number of computed convolution kernel weights
      * @return the number of convolution weights which will be applied by
      *         the associated peer.
@@ -149,7 +149,7 @@ public abstract class LinearConvolveRenderState implements RenderState {
      * "Close enough" in this context is measured by whether or not using
      * the coordinate in a linear interpolating sampling operation on 8-bit
      * per sample images will cause the next pixel over to be blended in.
-     * 
+     *
      * @param v the value being summed across the pixels
      * @param size the number of pixels being summed across
      * @return true if the accumulated value will be negligible
@@ -165,7 +165,7 @@ public abstract class LinearConvolveRenderState implements RenderState {
      * "Close enough" in this context is measured by whether or not using
      * the coordinate in a linear interpolating sampling operation on 8-bit
      * per sample images will cause the next pixel over to be blended in.
-     * 
+     *
      * @param v the value being summed across the pixels
      * @param size the number of pixels being summed across
      * @return true if the accumulated value will be close enough to size
@@ -181,7 +181,7 @@ public abstract class LinearConvolveRenderState implements RenderState {
      * This value is dependent only on the original {@code Effect} from which
      * this {@code RenderState} was instantiated and does not vary as the
      * filter operation progresses.
-     * 
+     *
      * @return true if this is a shadow operation
      */
     public abstract boolean isShadow();
@@ -192,7 +192,7 @@ public abstract class LinearConvolveRenderState implements RenderState {
      * This value is dependent only on the original {@code Effect} from which
      * this {@code RenderState} was instantiated and does not vary as the
      * filter operation progresses.
-     * 
+     *
      * @return the {@code Color4f} for the shadow color, or null
      */
     public abstract Color4f getShadowColor();
@@ -206,7 +206,7 @@ public abstract class LinearConvolveRenderState implements RenderState {
      * represent the actual kernel size used when the indicated pass actually
      * occurs if the {@link #validatePassInput()} method needs to choose
      * different values when it sees the incoming image source.
-     * 
+     *
      * @param pass the pass for which the intended kernel size is desired
      * @return the intended kernel size for the requested pass
      */
@@ -217,7 +217,7 @@ public abstract class LinearConvolveRenderState implements RenderState {
      * This condition is calculated at the start of the render operation and
      * is based on whether the perturbations of the convolution kernel would
      * be noticeable at all in the coordinate space of the output.
-     * 
+     *
      * @return true if the operation is a global NOP
      */
     public abstract boolean isNop();
@@ -230,7 +230,7 @@ public abstract class LinearConvolveRenderState implements RenderState {
      * convolution operation will be performed and to scale its data for
      * the {@code getPass*()} methods relative to the source dimensions and
      * transform.
-     * 
+     *
      * @param src the {@code ImageData} object supplied by the source effect
      * @param pass the pass of the operation being applied (usually horizontal
      *             for pass 0 and vertical for pass 1)
@@ -242,7 +242,7 @@ public abstract class LinearConvolveRenderState implements RenderState {
     /**
      * Returns true if the operation of the currently validated pass would
      * be a NOP operation.
-     * 
+     *
      * @return true if the current pass is a NOP
      */
     public abstract boolean isPassNop();
@@ -251,7 +251,7 @@ public abstract class LinearConvolveRenderState implements RenderState {
      * Return the {@code EffectPeer} to be used to perform the currently
      * validated pass of the convolution operation, or null if this pass
      * is a NOP.
-     * 
+     *
      * @param r the {@code Renderer} being used for this filter operation
      * @param fctx the {@code FilterContext} being used for this filter operation
      * @return the {@code EffectPeer} to use for this pass, or null
@@ -287,7 +287,7 @@ public abstract class LinearConvolveRenderState implements RenderState {
     /**
      * Return a hint about the way that the weights will be applied to the
      * pixels for the currently validated pass.
-     * 
+     *
      * @return the appropriate {@link PassType} that describes the filtering
      *         operation for this pass of the algorithm
      */
@@ -346,7 +346,7 @@ public abstract class LinearConvolveRenderState implements RenderState {
      * the color components, in the range {@code [0, 1]} for the shadow color
      * to be substituted for the input colors.
      * This method will only be called if {@link #isShadow()} returns true.
-     * 
+     *
      * @return the array of 4 floats representing the shadow color components
      */
     public abstract float[] getPassShadowColorComponents();
@@ -354,7 +354,7 @@ public abstract class LinearConvolveRenderState implements RenderState {
     /**
      * Returns the appropriate kernel size for the pass that was last
      * validated using validateInput().
-     * 
+     *
      * @return the pixel kernel size of the current pass
      */
     public abstract int getPassKernelSize();

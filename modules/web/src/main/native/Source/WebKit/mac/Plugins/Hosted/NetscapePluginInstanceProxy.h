@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #if USE(PLUGIN_HOST_PROCESS)
@@ -57,35 +57,35 @@ class HostedNetscapePluginStream;
 class NetscapePluginHostProxy;
 class PluginRequest;
 class ProxyInstance;
-    
+
 class NetscapePluginInstanceProxy : public RefCounted<NetscapePluginInstanceProxy> {
 public:
     static PassRefPtr<NetscapePluginInstanceProxy> create(NetscapePluginHostProxy*, WebHostedNetscapePluginView *, bool fullFramePlugin);
     ~NetscapePluginInstanceProxy();
-    
-    uint32_t pluginID() const 
+
+    uint32_t pluginID() const
     {
         ASSERT(m_pluginID);
-        
+
         return m_pluginID;
     }
     uint32_t renderContextID() const { ASSERT(fastMallocSize(this)); return m_renderContextID; }
     void setRenderContextID(uint32_t renderContextID) { m_renderContextID = renderContextID; }
-    
+
     RendererType rendererType() const { return m_rendererType; }
     void setRendererType(RendererType rendererType) { m_rendererType = rendererType; }
-    
+
     WebHostedNetscapePluginView *pluginView() const { ASSERT(fastMallocSize(this)); return m_pluginView; }
     NetscapePluginHostProxy* hostProxy() const { ASSERT(fastMallocSize(this)); return m_pluginHostProxy; }
-    
+
     bool cancelStreamLoad(uint32_t streamID, NPReason);
     void disconnectStream(HostedNetscapePluginStream*);
-    
+
     void setManualStream(PassRefPtr<HostedNetscapePluginStream>);
     HostedNetscapePluginStream* manualStream() const { return m_manualStream.get(); }
-    
+
     void pluginHostDied();
-    
+
     void resize(NSRect size, NSRect clipRect);
     void destroy();
     void focusChanged(bool hasFocus);
@@ -94,7 +94,7 @@ public:
 
     void setShouldHostLayersInWindowServer(bool);
     void layerHostingModeChanged(bool hostsLayersInWindowServer, uint32_t renderContextID);
-    
+
     void mouseEvent(NSView *pluginView, NSEvent *, NPCocoaEventType);
     void keyEvent(NSView *pluginView, NSEvent *, NPCocoaEventType);
     void insertText(NSString *);
@@ -103,12 +103,12 @@ public:
     void flagsChanged(NSEvent *);
     void print(CGContextRef, unsigned width, unsigned height);
     void snapshot(CGContextRef, unsigned width, unsigned height);
-    
+
     void startTimers(bool throttleTimers);
     void stopTimers();
-    
+
     void invalidateRect(double x, double y, double width, double height);
-    
+
     // NPRuntime
     bool getWindowNPObject(uint32_t& objectID);
     bool getPluginElementNPObject(uint32_t& objectID);
@@ -119,9 +119,9 @@ public:
     bool invokeDefault(uint32_t objectID, data_t argumentsData, mach_msg_type_number_t argumentsLength, data_t& resultData, mach_msg_type_number_t& resultLength);
     bool construct(uint32_t objectID, data_t argumentsData, mach_msg_type_number_t argumentsLength, data_t& resultData, mach_msg_type_number_t& resultLength);
     bool enumerate(uint32_t objectID, data_t& resultData, mach_msg_type_number_t& resultLength);
-    
+
     bool getProperty(uint32_t objectID, const JSC::Identifier& propertyName, data_t &resultData, mach_msg_type_number_t& resultLength);
-    bool getProperty(uint32_t objectID, unsigned propertyName, data_t &resultData, mach_msg_type_number_t& resultLength);    
+    bool getProperty(uint32_t objectID, unsigned propertyName, data_t &resultData, mach_msg_type_number_t& resultLength);
     bool setProperty(uint32_t objectID, const JSC::Identifier& propertyName, data_t valueData, mach_msg_type_number_t valueLength);
     bool setProperty(uint32_t objectID, unsigned propertyName, data_t valueData, mach_msg_type_number_t valueLength);
     bool removeProperty(uint32_t objectID, const JSC::Identifier& propertyName);
@@ -129,17 +129,17 @@ public:
     bool hasProperty(uint32_t objectID, const JSC::Identifier& propertyName);
     bool hasProperty(uint32_t objectID, unsigned propertyName);
     bool hasMethod(uint32_t objectID, const JSC::Identifier& methodName);
-    
+
     void status(const char* message);
     NPError loadURL(const char* url, const char* target, const char* postData, uint32_t postDataLength, LoadURLFlags, uint32_t& requestID);
 
     bool getCookies(data_t urlData, mach_msg_type_number_t urlLength, data_t& cookiesData, mach_msg_type_number_t& cookiesLength);
     bool setCookies(data_t urlData, mach_msg_type_number_t urlLength, data_t cookiesData, mach_msg_type_number_t cookiesLength);
-             
+
     bool getProxy(data_t urlData, mach_msg_type_number_t urlLength, data_t& proxyData, mach_msg_type_number_t& proxyLength);
-    bool getAuthenticationInfo(data_t protocolData, data_t hostData, uint32_t port, data_t schemeData, data_t realmData, 
+    bool getAuthenticationInfo(data_t protocolData, data_t hostData, uint32_t port, data_t schemeData, data_t realmData,
                                data_t& usernameData, mach_msg_type_number_t& usernameLength, data_t& passwordData, mach_msg_type_number_t& passwordLength);
-    bool convertPoint(double sourceX, double sourceY, NPCoordinateSpace sourceSpace, 
+    bool convertPoint(double sourceX, double sourceY, NPCoordinateSpace sourceSpace,
                       double& destX, double& destY, NPCoordinateSpace destSpace);
 
     PassRefPtr<JSC::Bindings::Instance> createBindingsInstance(PassRefPtr<JSC::Bindings::RootObject>);
@@ -153,25 +153,25 @@ public:
 
     void addInstance(ProxyInstance*);
     void removeInstance(ProxyInstance*);
-    
+
     void cleanup();
     void invalidate();
-    
+
     void willCallPluginFunction();
     void didCallPluginFunction(bool& stopped);
     bool shouldStop();
-    
+
     uint32_t nextRequestID();
-    
+
     uint32_t checkIfAllowedToLoadURL(const char* url, const char* target);
     void cancelCheckIfAllowedToLoadURL(uint32_t checkID);
     void checkIfAllowedToLoadURLResult(uint32_t checkID, bool allowed);
 
     void resolveURL(const char* url, const char* target, data_t& resolvedURLData, mach_msg_type_number_t& resolvedURLLength);
-    
+
     void didDraw();
     void privateBrowsingModeDidChange(bool isPrivateBrowsingEnabled);
-    
+
     static void setGlobalException(const WTF::String&);
     static void moveGlobalExceptionToExecState(JSC::ExecState*);
 
@@ -183,20 +183,20 @@ public:
             BooleanAndData,
             Boolean
         };
-        
-        Reply(Type type) 
+
+        Reply(Type type)
             : m_type(type)
         {
         }
-        
+
         virtual ~Reply() { }
-    
+
         Type m_type;
     };
 
     struct InstantiatePluginReply : public Reply {
         static const int ReplyType = InstantiatePlugin;
-        
+
         InstantiatePluginReply(kern_return_t resultCode, uint32_t renderContextID, RendererType rendererType)
             : Reply(InstantiatePlugin)
             , m_resultCode(resultCode)
@@ -204,7 +204,7 @@ public:
             , m_rendererType(rendererType)
         {
         }
-                 
+
         kern_return_t m_resultCode;
         uint32_t m_renderContextID;
         RendererType m_rendererType;
@@ -212,48 +212,48 @@ public:
 
     struct GetScriptableNPObjectReply : public Reply {
         static const Reply::Type ReplyType = GetScriptableNPObject;
-        
+
         GetScriptableNPObjectReply(uint32_t objectID)
             : Reply(ReplyType)
             , m_objectID(objectID)
         {
         }
-            
+
         uint32_t m_objectID;
     };
-    
+
     struct BooleanReply : public Reply {
         static const Reply::Type ReplyType = Boolean;
-        
+
         BooleanReply(boolean_t result)
             : Reply(ReplyType)
             , m_result(result)
         {
         }
-        
+
         boolean_t m_result;
     };
 
     struct BooleanAndDataReply : public Reply {
         static const Reply::Type ReplyType = BooleanAndData;
-        
+
         BooleanAndDataReply(boolean_t returnValue, RetainPtr<CFDataRef> result)
             : Reply(ReplyType)
             , m_returnValue(returnValue)
             , m_result(result)
         {
         }
-        
+
         boolean_t m_returnValue;
         RetainPtr<CFDataRef> m_result;
     };
-    
+
     void setCurrentReply(uint32_t requestID, std::unique_ptr<Reply> reply)
     {
         ASSERT(!m_replies.contains(requestID));
         m_replies.add(requestID, std::move(reply));
     }
-    
+
     template <typename T>
     std::unique_ptr<T> waitForReply(uint32_t requestID)
     {
@@ -265,7 +265,7 @@ public:
         auto reply = processRequestsAndWaitForReply(requestID);
         if (reply)
             ASSERT(reply->m_type == T::ReplyType);
-        
+
         m_waitingForReply = false;
 
         bool stopped = false;
@@ -277,43 +277,43 @@ public:
 
         return std::unique_ptr<T>(static_cast<T*>(reply.release()));
     }
-    
+
     void webFrameDidFinishLoadWithReason(WebFrame*, NPReason);
 
 private:
     NetscapePluginInstanceProxy(NetscapePluginHostProxy*, WebHostedNetscapePluginView*, bool fullFramePlugin);
 
     NPError loadRequest(NSURLRequest*, const char* cTarget, bool currentEventIsUserGesture, uint32_t& streamID);
-    
+
     class PluginRequest;
     void performRequest(PluginRequest*);
     void evaluateJavaScript(PluginRequest*);
-    
+
     void stopAllStreams();
     std::unique_ptr<Reply> processRequestsAndWaitForReply(uint32_t requestID);
-    
+
     NetscapePluginHostProxy* m_pluginHostProxy;
     WebHostedNetscapePluginView *m_pluginView;
 
     void requestTimerFired(WebCore::Timer<NetscapePluginInstanceProxy>*);
     WebCore::Timer<NetscapePluginInstanceProxy> m_requestTimer;
     Deque<RefPtr<PluginRequest>> m_pluginRequests;
-    
+
     HashMap<uint32_t, RefPtr<HostedNetscapePluginStream>> m_streams;
 
     uint32_t m_currentURLRequestID;
-    
+
     uint32_t m_pluginID;
     uint32_t m_renderContextID;
     RendererType m_rendererType;
-    
+
     bool m_waitingForReply;
     HashMap<uint32_t, std::unique_ptr<Reply>> m_replies;
-    
+
     // NPRuntime
 
     void addValueToArray(NSMutableArray *, JSC::ExecState* exec, JSC::JSValue value);
-    
+
     bool demarshalValueFromArray(JSC::ExecState*, NSArray *array, NSUInteger& index, JSC::JSValue& result);
     void demarshalValues(JSC::ExecState*, data_t valuesData, mach_msg_type_number_t valuesLength, JSC::MarkedArgumentBuffer& result);
 
@@ -346,7 +346,7 @@ private:
     uint32_t m_urlCheckCounter;
     typedef HashMap<uint32_t, RetainPtr<id>> URLCheckMap;
     URLCheckMap m_urlChecks;
-    
+
     unsigned m_pluginFunctionCallDepth;
     bool m_shouldStopSoon;
     uint32_t m_currentRequestID;
@@ -364,13 +364,13 @@ private:
     static bool m_inDestroy;
 
     bool m_pluginIsWaitingForDraw;
-    
+
     RefPtr<HostedNetscapePluginStream> m_manualStream;
 
     typedef HashMap<WebFrame*, RefPtr<PluginRequest>> FrameLoadMap;
     FrameLoadMap m_pendingFrameLoads;
 };
-    
+
 } // namespace WebKit
 
 #endif // NetscapePluginInstanceProxy_h

@@ -37,7 +37,7 @@ import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
 
 /**
- * This is a very simple theme of constants for styles used though out the 
+ * This is a very simple theme of constants for styles used though out the
  * application. This allows us to avoid the cost of CSS.
  */
 public class Theme {

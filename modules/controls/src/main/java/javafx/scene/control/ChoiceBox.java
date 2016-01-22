@@ -54,7 +54,7 @@ import javafx.beans.DefaultProperty;
  * will display to the user these choices and allow them to pick exactly one
  * choice. When not showing, the current choice is displayed.
  * <p>
- * By default, the ChoiceBox has no item selected unless otherwise specified. 
+ * By default, the ChoiceBox has no item selected unless otherwise specified.
  * Although the ChoiceBox will only allow a user to select from the predefined
  * list, it is possible for the developer to specify the selected item to be
  * something other than what is available in the predefined list. This is
@@ -65,11 +65,11 @@ import javafx.beans.DefaultProperty;
  * specify the selected item and then the items. Either way will function
  * correctly.
  * <p>
- * ChoiceBox item selection is handled by 
+ * ChoiceBox item selection is handled by
  * {@link javafx.scene.control.SelectionModel SelectionModel}
- * As with ListView and ComboBox, it is possible to modify the 
- * {@link javafx.scene.control.SelectionModel SelectionModel} that is used, 
- * although this is likely to be rarely changed. ChoiceBox supports only a 
+ * As with ListView and ComboBox, it is possible to modify the
+ * {@link javafx.scene.control.SelectionModel SelectionModel} that is used,
+ * although this is likely to be rarely changed. ChoiceBox supports only a
  * single selection model, hence the default used is a {@link SingleSelectionModel}.
  *
  * <pre>
@@ -144,7 +144,7 @@ public class ChoiceBox<T> extends Control {
         setAccessibleRole(AccessibleRole.COMBO_BOX);
         setItems(items);
         setSelectionModel(new ChoiceBoxSelectionModel<T>(this));
-        
+
         // listen to the value property, if the value is
         // set to something that exists in the items list, update the
         // selection model to indicate that this is the selected item
@@ -170,7 +170,7 @@ public class ChoiceBox<T> extends Control {
      * in the items list should be selected, or to listen to changes in the
      * selection to know which item has been chosen.
      */
-    private ObjectProperty<SingleSelectionModel<T>> selectionModel = 
+    private ObjectProperty<SingleSelectionModel<T>> selectionModel =
             new SimpleObjectProperty<SingleSelectionModel<T>>(this, "selectionModel") {
          private SelectionModel<T> oldSM = null;
         @Override protected void invalidated() {
@@ -185,16 +185,16 @@ public class ChoiceBox<T> extends Control {
                     ChoiceBox.this.setValue(sm.getSelectedItem());
                 }
             }
-        }                
+        }
     };
-    
+
     private ChangeListener<T> selectedItemListener = (ov, t, t1) -> {
         if (! valueProperty().isBound()) {
             setValue(t1);
         }
     };
 
-    
+
     public final void setSelectionModel(SingleSelectionModel<T> value) { selectionModel.set(value); }
     public final SingleSelectionModel<T> getSelectionModel() { return selectionModel.get(); }
     public final ObjectProperty<SingleSelectionModel<T>> selectionModelProperty() { return selectionModel; }
@@ -300,27 +300,27 @@ public class ChoiceBox<T> extends Control {
             }
         }
     };
-    
+
     /**
      * Allows a way to specify how to represent objects in the items list. When
-     * a StringConverter is set, the object toString method is not called and 
-     * instead its toString(object T) is called, passing the objects in the items list. 
-     * This is useful when using domain objects in a ChoiceBox as this property 
+     * a StringConverter is set, the object toString method is not called and
+     * instead its toString(object T) is called, passing the objects in the items list.
+     * This is useful when using domain objects in a ChoiceBox as this property
      * allows for customization of the representation. Also, any of the pre-built
-     * Converters available in the {@link javafx.util.converter} package can be set. 
+     * Converters available in the {@link javafx.util.converter} package can be set.
      * @since JavaFX 2.1
      */
     public ObjectProperty<StringConverter<T>> converterProperty() { return converter; }
-    private ObjectProperty<StringConverter<T>> converter = 
+    private ObjectProperty<StringConverter<T>> converter =
             new SimpleObjectProperty<StringConverter<T>>(this, "converter", null);
     public final void setConverter(StringConverter<T> value) { converterProperty().set(value); }
     public final StringConverter<T> getConverter() {return converterProperty().get(); }
-    
+
     /**
      * The value of this ChoiceBox is defined as the selected item in the ChoiceBox
-     * selection model. The valueProperty is synchronized with the selectedItem. 
-     * This property allows for bi-directional binding of external properties to the 
-     * ChoiceBox and updates the selection model accordingly. 
+     * selection model. The valueProperty is synchronized with the selectedItem.
+     * This property allows for bi-directional binding of external properties to the
+     * ChoiceBox and updates the selection model accordingly.
      * @since JavaFX 2.1
      */
     public ObjectProperty<T> valueProperty() { return value; }
@@ -503,7 +503,7 @@ public class ChoiceBox<T> extends Control {
                 throw new NullPointerException("ChoiceBox can not be null");
             }
             this.choiceBox = cb;
-       
+
             /*
              * The following two listeners are used in conjunction with
              * SelectionModel.select(T obj) to allow for a developer to select
@@ -575,7 +575,7 @@ public class ChoiceBox<T> extends Control {
             } else {
                 super.select(index);
             }
-            
+
             if (choiceBox.isShowing()) {
                 choiceBox.hide();
             }

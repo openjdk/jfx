@@ -98,7 +98,7 @@ AudioFileReader::~AudioFileReader()
 
     if (m_audioFileID)
         AudioFileClose(m_audioFileID);
-        
+
     m_audioFileID = 0;
 }
 
@@ -188,7 +188,7 @@ PassRefPtr<AudioBus> AudioFileReader::createBus(float sampleRate, bool mixToMono
     AudioFloatArray bufR;
     float* bufferL = 0;
     float* bufferR = 0;
-    
+
     // Setup AudioBufferList in preparation for reading
     AudioBufferList* bufferList = createAudioBufferList(numberOfChannels);
 

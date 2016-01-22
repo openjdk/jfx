@@ -63,7 +63,7 @@ public class HelloSeparator extends Application {
 
             offsetY += 45;
             offsetX += 5;
-            
+
             ((Group)scene.getRoot()).getChildren().add(s);
         }
 

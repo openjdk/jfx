@@ -123,7 +123,7 @@ public class DeleteColumnJob extends BatchSelectionJob {
         targetIndex = iterator.next();
         while (targetIndex != -1) {
             // Move the columns content :
-            // - from the target index 
+            // - from the target index
             // - to the next target index if any or the last column index otherwise
             int fromIndex, toIndex;
 
@@ -138,9 +138,9 @@ public class DeleteColumnJob extends BatchSelectionJob {
                 toIndex = columnsSize - 1;
             }
 
-            // When we delete 2 consecutive columns 
+            // When we delete 2 consecutive columns
             // => no content to move between the 2 columns
-            // When we delete the last column 
+            // When we delete the last column
             // => no column content to move after the last column
             if (nextTargetIndex != (targetIndex + 1)
                     && fromIndex < columnsSize) {

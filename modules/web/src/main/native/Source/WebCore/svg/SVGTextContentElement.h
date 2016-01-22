@@ -112,10 +112,10 @@ private:
     static PassRefPtr<SVGAnimatedProperty> lookupOrCreateTextLengthWrapper(SVGElement* contextElement);
     mutable SVGSynchronizableAnimatedProperty<SVGLength> m_textLength;
     SVGLength m_specifiedTextLength;
-  
+
     BEGIN_DECLARE_ANIMATED_PROPERTIES(SVGTextContentElement)
         DECLARE_ANIMATED_ENUMERATION(LengthAdjust, lengthAdjust, SVGLengthAdjustType)
-        DECLARE_ANIMATED_BOOLEAN(ExternalResourcesRequired, externalResourcesRequired) 
+        DECLARE_ANIMATED_BOOLEAN(ExternalResourcesRequired, externalResourcesRequired)
     END_DECLARE_ANIMATED_PROPERTIES
 };
 

@@ -33,15 +33,15 @@
     if (self != nil)
     {
         self->point = p;
-        
+
         [self useOptimizedDrawing:NO];
         [self setContentView:hostView];
         [self setInitialFirstResponder:view];
         [self makeFirstResponder:view];
         [self setCollectionBehavior:NSWindowCollectionBehaviorFullScreenPrimary];
-        
+
         [self setBackgroundColor:[NSColor colorWithCalibratedRed:0.0f green:0.0f blue:0.0f alpha:0.0f]];
-        
+
         [hostView release];
     }
     return self;
@@ -79,7 +79,7 @@
 
 - (NSPoint)point
 {
-    return self->point;        
+    return self->point;
 }
 
 @end

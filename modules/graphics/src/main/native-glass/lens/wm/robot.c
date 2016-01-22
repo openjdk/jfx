@@ -22,7 +22,7 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
- 
+
 #include "input/LensInput.h"
 #include "wm/LensWindowManager.h"
 #include "com_sun_glass_events_WindowEvent.h"
@@ -79,16 +79,16 @@ jboolean glass_robot_postMouseEvent(JNIEnv *env,
     jint glassMouseButton;
 
     switch (buttons) {
-        case com_sun_glass_ui_Robot_MOUSE_LEFT_BTN : 
+        case com_sun_glass_ui_Robot_MOUSE_LEFT_BTN :
             glassMouseButton = com_sun_glass_events_MouseEvent_BUTTON_LEFT;
             break;
-        case com_sun_glass_ui_Robot_MOUSE_RIGHT_BTN : 
+        case com_sun_glass_ui_Robot_MOUSE_RIGHT_BTN :
             glassMouseButton = com_sun_glass_events_MouseEvent_BUTTON_RIGHT;
             break;
-        case com_sun_glass_ui_Robot_MOUSE_MIDDLE_BTN : 
+        case com_sun_glass_ui_Robot_MOUSE_MIDDLE_BTN :
             glassMouseButton = com_sun_glass_events_MouseEvent_BUTTON_OTHER;
             break;
-        default: 
+        default:
             glassMouseButton = com_sun_glass_events_MouseEvent_BUTTON_NONE;
             break;
     }

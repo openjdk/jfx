@@ -374,10 +374,10 @@ WIN.media.gstreamerRcFlags = ["/d", "JFX_FNAME=gstreamer-lite.dll", "/d", "JFX_I
 WIN.media.fxpluginsRcFlags = ["/d", "JFX_FNAME=fxplugins.dll", "/d", "JFX_INTERNAL_NAME=fxplugins", rcFlags].flatten()
 WIN.media.jfxmediaRcFlags = ["/d", "JFX_FNAME=jfxmedia.dll", "/d", "JFX_INTERNAL_NAME=jfxmedia", rcFlags].flatten()
 def parfaitPath = System.getenv("PARFAIT_PATH");
-WIN.media.compiler = IS_COMPILE_PARFAIT ? "${parfaitPath}/parfait-cl.exe" : "cl.exe"; 
-WIN.media.linker = IS_COMPILE_PARFAIT ? "${parfaitPath}/parfait-link.exe" : "link.exe"; 
-WIN.media.ar = IS_COMPILE_PARFAIT ? "${parfaitPath}/parfait-lib.exe" : "lib.exe"; 
- 
+WIN.media.compiler = IS_COMPILE_PARFAIT ? "${parfaitPath}/parfait-cl.exe" : "cl.exe";
+WIN.media.linker = IS_COMPILE_PARFAIT ? "${parfaitPath}/parfait-link.exe" : "link.exe";
+WIN.media.ar = IS_COMPILE_PARFAIT ? "${parfaitPath}/parfait-lib.exe" : "lib.exe";
+
 WIN.webkit = [:]
 WIN.webkit.rcCompiler = rcCompiler
 WIN.webkit.rcSource = defaultRcSource

@@ -22,7 +22,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
- 
+
 #import <WebCore/SecurityOrigin.h>
 #import <WebCore/StorageTrackerClient.h>
 
@@ -32,7 +32,7 @@ class WebStorageTrackerClient : public WebCore::StorageTrackerClient {
 public:
     static WebStorageTrackerClient* sharedWebStorageTrackerClient();
     static void dispatchDidModifyOriginOnMainThread(void* context);
-    
+
     virtual ~WebStorageTrackerClient();
     virtual void dispatchDidModifyOrigin(const String& originIdentifier);
     virtual void dispatchDidModifyOrigin(PassRefPtr<SecurityOrigin>);

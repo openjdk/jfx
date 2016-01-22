@@ -6,13 +6,13 @@
  * are met:
  *
  * 1.  Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer. 
+ *     notice, this list of conditions and the following disclaimer.
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
- *     documentation and/or other materials provided with the distribution. 
+ *     documentation and/or other materials provided with the distribution.
  * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
- *     from this software without specific prior written permission. 
+ *     from this software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY APPLE AND ITS CONTRIBUTORS "AS IS" AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
@@ -45,12 +45,12 @@ String homeDirectoryPath()
 String openTemporaryFile(const String& prefix, PlatformFileHandle& platformFileHandle)
 {
     platformFileHandle = invalidPlatformFileHandle;
-    
+
     Vector<char> temporaryFilePath(PATH_MAX);
     if (!confstr(_CS_DARWIN_USER_TEMP_DIR, temporaryFilePath.data(), temporaryFilePath.size()))
         return String();
 
-    // Shrink the vector.   
+    // Shrink the vector.
     temporaryFilePath.shrink(strlen(temporaryFilePath.data()));
     ASSERT(temporaryFilePath.last() == '/');
 
@@ -92,7 +92,7 @@ bool canExcludeFromBackup()
 bool excludeFromBackup(const String& path)
 {
     // It is critical to pass FALSE for excludeByPath because excluding by path requires root privileges.
-    CSBackupSetItemExcluded(pathAsURL(path).get(), TRUE, FALSE); 
+    CSBackupSetItemExcluded(pathAsURL(path).get(), TRUE, FALSE);
     return true;
 }
 

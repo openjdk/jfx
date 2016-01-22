@@ -59,9 +59,9 @@ public class TreeTableViewDesignInfoX {
         final TreeTableView<?> tv = treeTableColumn.getTreeTableView();
         final Bounds tb = tv.getLayoutBounds();
         final Bounds hb = getColumnHeaderBounds(treeTableColumn);
-        
+
         //
-        //           x0             x1          
+        //           x0             x1
         //
         //     +--------------------------------------+
         // y0  |     +--------------+                 |
@@ -73,32 +73,32 @@ public class TreeTableViewDesignInfoX {
         //     |                                      |
         // y1  +--------------------------------------+
         //
-        
+
         final double x0 = hb.getMinX();
         final double x1 = hb.getMaxX();
         final double y0 = hb.getMinY();
         final double y1 = tb.getMaxY();
-        
+
         return new BoundingBox(x0, y0, x1 - x0, y1 - y0);
     }
-    
-    
+
+
     public Bounds getColumnHeaderBounds(TreeTableColumn<?,?> treeTableColumn) {
         final TreeTableView<?> tv = treeTableColumn.getTreeTableView();
         final Node hn = getColumnNode(treeTableColumn);
         return Deprecation.localToLocal(hn, hn.getLayoutBounds(), tv);
     }
-    
-    
+
+
     public Node getColumnNode(TreeTableColumn<?,?> tableColumn) {
         assert tableColumn != null;
         assert tableColumn.getTreeTableView() != null;
-        
+
 
         // Looks for the sub nodes which match the .column-header CSS selector
         final TreeTableView<?> tableView = tableColumn.getTreeTableView();
         final Set<Node> set = tableView.lookupAll(".column-header"); //NOI18N
-        
+
         // Searches the result for the node associated to 'tableColumn'.
         // This item has (TableColumn.class, tableColumn) in its property list.
         Node result = null;
@@ -114,11 +114,11 @@ public class TreeTableViewDesignInfoX {
 
         return result;
     }
-    
-    
+
+
     public <T> TreeTableColumn<T,?> lookupColumn(TreeTableView<T>  tableView, double sceneX, double sceneY) {
         TreeTableColumn<T,?> result = null;
-        
+
         //
         //                     x
         //          +--------------------------------------+
@@ -134,7 +134,7 @@ public class TreeTableViewDesignInfoX {
         //          |                                      |
         //          +--------------------------------------+
         //
-        
+
         // Walk through the column to see if one contains 'x' vertical
         List<TreeTableColumn<T,?>> tableColumns = tableView.getColumns();
         List<TreeTableColumn<T,?>> columnPath = new ArrayList<>();
@@ -147,7 +147,7 @@ public class TreeTableViewDesignInfoX {
                 tableColumns = Collections.emptyList(); // To stop the loop
             }
         }
-        
+
         if (columnPath.isEmpty()) {
             // No column contains sceneX
             result = null;
@@ -163,35 +163,35 @@ public class TreeTableViewDesignInfoX {
                     break;
                 }
             }
-            
+
             if (result == null) {
                 // No column in columnPath contains sceneX => case #3
                 result = columnPath.get(0);
             }
         }
-        
+
         return result;
     }
-    
-    
+
+
     private <T> TreeTableColumn<T,?> lookupColumn(
             List<TreeTableColumn<T,?>> tableColumns, double sceneX) {
         TreeTableColumn<T,?> result = null;
-        
+
         // Walk through the columns to see if one contains 'x' vertical
         for (TreeTableColumn<T,?> tc : tableColumns) {
             final Node headerNode = getColumnNode(tc);
             if (headerNode != null) {
                 final Bounds headerBounds = headerNode.getLayoutBounds();
                 final Point2D p = headerNode.sceneToLocal(sceneX, 0, true /* rootScene */);
-                if ((headerBounds.getMinX() <= p.getX()) 
+                if ((headerBounds.getMinX() <= p.getX())
                         && (p.getX() < headerBounds.getMaxX())) {
                     result = tc;
                     break;
                 }
             }
         }
-        
+
         return result;
     }
 }

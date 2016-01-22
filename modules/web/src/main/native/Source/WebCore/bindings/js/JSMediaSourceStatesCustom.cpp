@@ -47,7 +47,7 @@ JSValue JSMediaSourceStates::height(ExecState*) const
 {
     if (!impl().hasVideoSource())
         return jsUndefined();
-    
+
     return jsNumber(impl().height());
 }
 
@@ -55,7 +55,7 @@ JSValue JSMediaSourceStates::frameRate(ExecState*) const
 {
     if (!impl().hasVideoSource())
         return jsUndefined();
-    
+
     return jsNumber(impl().frameRate());
 }
 
@@ -63,7 +63,7 @@ JSValue JSMediaSourceStates::aspectRatio(ExecState*) const
 {
     if (!impl().hasVideoSource())
         return jsUndefined();
-    
+
     return jsNumber(impl().aspectRatio());
 }
 
@@ -75,7 +75,7 @@ JSValue JSMediaSourceStates::facingMode(ExecState* exec) const
     const AtomicString& mode = impl().facingMode();
     if (mode.isEmpty())
         return jsUndefined();
-    
+
     return jsStringWithCache(exec, impl().facingMode());
 }
 
@@ -83,7 +83,7 @@ JSValue JSMediaSourceStates::volume(ExecState*) const
 {
     if (impl().hasVideoSource())
         return jsUndefined();
-    
+
     return jsNumber(impl().volume());
 }
 

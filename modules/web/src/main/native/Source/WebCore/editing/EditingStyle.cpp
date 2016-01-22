@@ -282,7 +282,7 @@ bool HTMLAttributeEquivalent::valueIsPresentInStyle(Element* element, StylePrope
 {
     RefPtr<CSSValue> value = attributeValueAsCSSValue(element);
     RefPtr<CSSValue> styleValue = style->getPropertyCSSValue(m_propertyID);
-    
+
     return compareCSSValuePtr(value, styleValue);
 }
 
@@ -297,7 +297,7 @@ PassRefPtr<CSSValue> HTMLAttributeEquivalent::attributeValueAsCSSValue(Element* 
     ASSERT(element);
     if (!element->hasAttribute(m_attrName))
         return 0;
-    
+
     RefPtr<MutableStyleProperties> dummyStyle;
     dummyStyle = MutableStyleProperties::create();
     dummyStyle->setProperty(m_propertyID, element->getAttribute(m_attrName));
@@ -379,11 +379,11 @@ static RGBA32 cssValueToRGBA(CSSValue* colorValue)
 {
     if (!colorValue || !colorValue->isPrimitiveValue())
         return Color::transparent;
-    
+
     CSSPrimitiveValue* primitiveColor = toCSSPrimitiveValue(colorValue);
     if (primitiveColor->isRGBColor())
         return primitiveColor->getRGBA32Value();
-    
+
     RGBA32 rgba = 0;
     CSSParser::parseColor(rgba, colorValue->cssText());
     return rgba;
@@ -467,7 +467,7 @@ void EditingStyle::init(Node* node, PropertiesToInclude propertiesToInclude)
 
 void EditingStyle::removeTextFillAndStrokeColorsIfNeeded(RenderStyle* renderStyle)
 {
-    // If a node's text fill color is invalid, then its children use 
+    // If a node's text fill color is invalid, then its children use
     // their font-color as their text fill color (they don't
     // inherit it).  Likewise for stroke color.
     if (!renderStyle->textFillColor().isValid())
@@ -900,7 +900,7 @@ bool EditingStyle::elementIsStyledSpanOrHTMLEquivalent(const HTMLElement* elemen
 
     if (!elementIsSpanOrElementEquivalent && !matchedAttributes)
         return false; // element is not a span, a html element equivalent, or font element.
-    
+
     if (element->getAttribute(HTMLNames::classAttr) == AppleStyleSpanClass)
         matchedAttributes++;
 
@@ -1048,7 +1048,7 @@ PassRefPtr<EditingStyle> EditingStyle::wrappingStyleForSerialization(Node* conte
 
         // Call collapseTextDecorationProperties first or otherwise it'll copy the value over from in-effect to text-decorations.
         wrappingStyle->collapseTextDecorationProperties();
-        
+
         return wrappingStyle.release();
     }
 
@@ -1119,7 +1119,7 @@ static PassRefPtr<MutableStyleProperties> styleFromMatchedRulesForElement(Elemen
         if (matchedRules[i]->isStyleRule())
             style->mergeAndOverrideOnConflict(static_pointer_cast<StyleRule>(matchedRules[i])->properties());
     }
-    
+
     return style.release();
 }
 
@@ -1127,7 +1127,7 @@ void EditingStyle::mergeStyleFromRules(StyledElement* element)
 {
     RefPtr<MutableStyleProperties> styleFromMatchedRules = styleFromMatchedRulesForElement(element,
         StyleResolver::AuthorCSSRules | StyleResolver::CrossOriginCSSRules);
-    // Styles from the inline style declaration, held in the variable "style", take precedence 
+    // Styles from the inline style declaration, held in the variable "style", take precedence
     // over those from matched rules.
     if (m_mutableStyle)
         styleFromMatchedRules->mergeAndOverrideOnConflict(*m_mutableStyle);
@@ -1140,7 +1140,7 @@ void EditingStyle::mergeStyleFromRulesForSerialization(StyledElement* element)
 {
     mergeStyleFromRules(element);
 
-    // The property value, if it's a percentage, may not reflect the actual computed value.  
+    // The property value, if it's a percentage, may not reflect the actual computed value.
     // For example: style="height: 1%; overflow: visible;" in quirksmode
     // FIXME: There are others like this, see <rdar://problem/5195123> Slashdot copy/paste fidelity problem
     RefPtr<MutableStyleProperties> fromComputedStyle = MutableStyleProperties::create();
@@ -1258,13 +1258,13 @@ PassRefPtr<EditingStyle> EditingStyle::styleAtSelectionStart(const VisibleSelect
 
     Position position = adjustedSelectionStartForStyleComputation(selection);
 
-    // If the pos is at the end of a text node, then this node is not fully selected. 
-    // Move it to the next deep equivalent position to avoid removing the style from this node. 
-    // e.g. if pos was at Position("hello", 5) in <b>hello<div>world</div></b>, we want Position("world", 0) instead. 
-    // We only do this for range because caret at Position("hello", 5) in <b>hello</b>world should give you font-weight: bold. 
-    Node* positionNode = position.containerNode(); 
-    if (selection.isRange() && positionNode && positionNode->isTextNode() && position.computeOffsetInContainerNode() == positionNode->maxCharacterOffset()) 
-        position = nextVisuallyDistinctCandidate(position); 
+    // If the pos is at the end of a text node, then this node is not fully selected.
+    // Move it to the next deep equivalent position to avoid removing the style from this node.
+    // e.g. if pos was at Position("hello", 5) in <b>hello<div>world</div></b>, we want Position("world", 0) instead.
+    // We only do this for range because caret at Position("hello", 5) in <b>hello</b>world should give you font-weight: bold.
+    Node* positionNode = position.containerNode();
+    if (selection.isRange() && positionNode && positionNode->isTextNode() && position.computeOffsetInContainerNode() == positionNode->maxCharacterOffset())
+        position = nextVisuallyDistinctCandidate(position);
 
     Element* element = position.element();
     if (!element)
@@ -1362,7 +1362,7 @@ WritingDirection EditingStyle::textDirectionForSelection(const VisibleSelection&
         // In the range case, make sure that the embedding element persists until the end of the range.
         if (selection.isRange() && !end.deprecatedNode()->isDescendantOf(node))
             return NaturalWritingDirection;
-        
+
         foundDirection = directionValue == CSSValueLtr ? LeftToRightWritingDirection : RightToLeftWritingDirection;
     }
     hasNestedOrMultipleEmbeddings = false;
@@ -1370,7 +1370,7 @@ WritingDirection EditingStyle::textDirectionForSelection(const VisibleSelection&
 }
 
 static void reconcileTextDecorationProperties(MutableStyleProperties* style)
-{    
+{
     RefPtr<CSSValue> textDecorationsInEffect = style->getPropertyCSSValue(CSSPropertyWebkitTextDecorationsInEffect);
     RefPtr<CSSValue> textDecoration = style->getPropertyCSSValue(CSSPropertyTextDecoration);
     // We shouldn't have both text-decoration and -webkit-text-decorations-in-effect because that wouldn't make sense.
@@ -1617,9 +1617,9 @@ bool isTransparentColorValue(CSSValue* cssValue)
         return true;
     if (!cssValue->isPrimitiveValue())
         return false;
-    CSSPrimitiveValue* value = toCSSPrimitiveValue(cssValue);    
+    CSSPrimitiveValue* value = toCSSPrimitiveValue(cssValue);
     if (value->isRGBColor())
-        return !alphaChannel(value->getRGBA32Value());    
+        return !alphaChannel(value->getRGBA32Value());
     return value->getValueID() == CSSValueTransparent;
 }
 

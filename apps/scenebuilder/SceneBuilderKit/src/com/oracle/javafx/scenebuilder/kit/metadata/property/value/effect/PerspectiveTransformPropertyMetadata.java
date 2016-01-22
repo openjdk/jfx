@@ -44,7 +44,7 @@ import javafx.scene.effect.PerspectiveTransform;
  *
  */
 public class PerspectiveTransformPropertyMetadata extends ComplexPropertyMetadata<PerspectiveTransform> {
-    
+
     private final EffectPropertyMetadata inputMetadata
             = new EffectPropertyMetadata(new PropertyName("input"), //NOI18N
             true /* readWrite */, null, InspectorPath.UNUSED);
@@ -73,7 +73,7 @@ public class PerspectiveTransformPropertyMetadata extends ComplexPropertyMetadat
             = new DoublePropertyMetadata(new PropertyName("ury"), //NOI18N
             DoublePropertyMetadata.DoubleKind.COORDINATE, true /* readWrite */, 0.0, InspectorPath.UNUSED);
 
-    public PerspectiveTransformPropertyMetadata(PropertyName name, boolean readWrite, 
+    public PerspectiveTransformPropertyMetadata(PropertyName name, boolean readWrite,
             PerspectiveTransform defaultValue, InspectorPath inspectorPath) {
         super(name, PerspectiveTransform.class, readWrite, defaultValue, inspectorPath);
     }
@@ -81,11 +81,11 @@ public class PerspectiveTransformPropertyMetadata extends ComplexPropertyMetadat
     /*
      * ComplexPropertyMetadata
      */
-    
+
     @Override
     public FXOMInstance makeFxomInstanceFromValue(PerspectiveTransform value, FXOMDocument fxomDocument) {
         final FXOMInstance result = new FXOMInstance(fxomDocument, value.getClass());
-        
+
         inputMetadata.setValue(result, value.getInput());
         llxMetadata.setValue(result, value.getLlx());
         llyMetadata.setValue(result, value.getLly());

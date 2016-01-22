@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2010 Apple Inc. All rights reserved.
- * 
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
  * are met:
@@ -9,7 +9,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY APPLE INC. AND ITS CONTRIBUTORS ``AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
  * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -38,7 +38,7 @@ class RenderFullScreenPlaceholder final : public RenderBlockFlow {
 public:
     RenderFullScreenPlaceholder(RenderFullScreen& owner, PassRef<RenderStyle> style)
         : RenderBlockFlow(owner.document(), std::move(style))
-        , m_owner(owner) 
+        , m_owner(owner)
     {
     }
 
@@ -58,7 +58,7 @@ RenderFullScreen::RenderFullScreen(Document& document, PassRef<RenderStyle> styl
     : RenderFlexibleBox(document, std::move(style))
     , m_placeholder(0)
 {
-    setReplaced(false); 
+    setReplaced(false);
 }
 
 void RenderFullScreen::willBeDestroyed()
@@ -92,13 +92,13 @@ static PassRef<RenderStyle> createFullScreenStyle()
     fullscreenStyle.get().setJustifyContent(JustifyCenter);
     fullscreenStyle.get().setAlignItems(AlignCenter);
     fullscreenStyle.get().setFlexDirection(FlowColumn);
-    
+
     fullscreenStyle.get().setPosition(FixedPosition);
     fullscreenStyle.get().setWidth(Length(100.0, Percent));
     fullscreenStyle.get().setHeight(Length(100.0, Percent));
     fullscreenStyle.get().setLeft(Length(0, WebCore::Fixed));
     fullscreenStyle.get().setTop(Length(0, WebCore::Fixed));
-    
+
     fullscreenStyle.get().setBackgroundColor(Color::black);
 
     return fullscreenStyle;
@@ -124,7 +124,7 @@ RenderFullScreen* RenderFullScreen::wrapRenderer(RenderObject* object, RenderEle
 
             parent->addChild(fullscreenRenderer, object);
             object->removeFromParent();
-            
+
             // Always just do a full layout to ensure that line boxes get deleted properly.
             // Because objects moved from |parent| to |fullscreenRenderer|, we want to
             // make new line boxes instead of leaving the old ones around.

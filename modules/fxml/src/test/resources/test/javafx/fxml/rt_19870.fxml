@@ -26,7 +26,7 @@ questions.
 
 <?import test.javafx.fxml.*?>
 
-<fx:root type="test.javafx.fxml.Widget" 
+<fx:root type="test.javafx.fxml.Widget"
     name="My Widget" xmlns:fx="http://javafx.com/fxml">
     <Widget fx:id="childWidget" name="Child Widget" onEnabledChange="#handleChildWidgetEnabledChange"/>
 </fx:root>

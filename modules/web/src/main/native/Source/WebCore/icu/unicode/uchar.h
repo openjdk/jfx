@@ -1135,7 +1135,7 @@ enum UBlockCode {
      * Unicode 4.0.1 renames the "Cyrillic Supplementary" block to "Cyrillic Supplement".
      * @stable ICU 2.2
      */
-    UBLOCK_CYRILLIC_SUPPLEMENTARY = 97, 
+    UBLOCK_CYRILLIC_SUPPLEMENTARY = 97,
     /** @stable ICU 3.0  */
     UBLOCK_CYRILLIC_SUPPLEMENT = UBLOCK_CYRILLIC_SUPPLEMENTARY, /*[0500]*/
     /** @stable ICU 2.2 */

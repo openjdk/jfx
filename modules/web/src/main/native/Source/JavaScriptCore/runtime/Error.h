@@ -56,7 +56,7 @@ namespace JSC {
     JS_EXPORT_PRIVATE JSObject* createNotEnoughArgumentsError(ExecState*);
     JSObject* createURIError(ExecState*, const String&);
 
-    // Methods to add 
+    // Methods to add
     bool hasErrorInfo(ExecState*, JSObject* error);
     // ExecState wrappers.
     JSObject* addErrorInfo(ExecState*, JSObject* error, int line, const SourceCode&);
@@ -90,19 +90,19 @@ namespace JSC {
             function->finishCreation(vm, String());
             return function;
         }
-    
+
         static EncodedJSValue JSC_HOST_CALL constructThrowTypeError(ExecState* exec)
         {
             throwTypeError(exec, static_cast<StrictModeTypeErrorFunction*>(exec->callee())->m_message);
             return JSValue::encode(jsNull());
         }
-    
+
         static ConstructType getConstructData(JSCell*, ConstructData& constructData)
         {
             constructData.native.function = constructThrowTypeError;
             return ConstructTypeHost;
         }
-    
+
         static EncodedJSValue JSC_HOST_CALL callThrowTypeError(ExecState* exec)
         {
             throwTypeError(exec, static_cast<StrictModeTypeErrorFunction*>(exec->callee())->m_message);
@@ -117,9 +117,9 @@ namespace JSC {
 
         DECLARE_INFO;
 
-        static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype) 
-        { 
-            return Structure::create(vm, globalObject, prototype, TypeInfo(ObjectType, StructureFlags), info()); 
+        static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype)
+        {
+            return Structure::create(vm, globalObject, prototype, TypeInfo(ObjectType, StructureFlags), info());
         }
 
     private:

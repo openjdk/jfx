@@ -26,9 +26,9 @@
 package javafx.scene.control;
 
 /**
- * An enumeration used to specify how many items may be selected in a 
+ * An enumeration used to specify how many items may be selected in a
  * {@link MultipleSelectionModel}.
- * 
+ *
  * @see SelectionModel
  * @see MultipleSelectionModel
  * @since JavaFX 2.0

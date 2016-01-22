@@ -37,23 +37,23 @@ import java.util.List;
 
 /**
  *
- * 
+ *
  */
 public class JarReport {
-    
+
     private final Path jar;
     private final List<JarReportEntry> entries = new ArrayList<>();
 
     public JarReport(Path jar) {
         this.jar = jar;
     }
-    
+
     public Path getJar() {
         return jar;
     }
-    
+
     public List<JarReportEntry> getEntries() {
         return entries;
-    }    
-    
+    }
+
 }

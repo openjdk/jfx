@@ -1,5 +1,5 @@
 /* GIO - GLib Input, Output and Streaming Library
- * 
+ *
  * Copyright (C) 2006-2007 Red Hat, Inc.
  *
  * This library is free software; you can redistribute it and/or
@@ -48,7 +48,7 @@ unescape_character (const char *scanner)
 {
   int first_digit;
   int second_digit;
-  
+
   first_digit = g_ascii_xdigit_value (*scanner++);
   if (first_digit < 0)
     return -1;
@@ -65,7 +65,7 @@ unescape_character (const char *scanner)
  * @escaped_string: (allow-none): A string, may be %NULL
  * @escaped_string_end: (allow-none): Pointer to end of @escaped_string, may be %NULL
  * @illegal_characters: (allow-none): An optional string of illegal characters not to be allowed, may be %NULL
- * 
+ *
  * Unescapes a segment of an escaped string.
  *
  * If any of the characters in @illegal_characters or the character zero appears
@@ -83,55 +83,55 @@ unescape_character (const char *scanner)
  **/
 char *
 g_uri_unescape_segment (const char *escaped_string,
-			const char *escaped_string_end,
-			const char *illegal_characters)
+            const char *escaped_string_end,
+            const char *illegal_characters)
 {
   const char *in;
   char *out, *result;
   gint character;
-  
+
   if (escaped_string == NULL)
     return NULL;
-  
+
   if (escaped_string_end == NULL)
     escaped_string_end = escaped_string + strlen (escaped_string);
-  
+
   result = g_malloc (escaped_string_end - escaped_string + 1);
-  
+
   out = result;
   for (in = escaped_string; in < escaped_string_end; in++)
     {
       character = *in;
-      
+
       if (*in == '%')
-	{
-	  in++;
-	  
-	  if (escaped_string_end - in < 2)
-	    {
-	      /* Invalid escaped char (to short) */
-	      g_free (result);
-	      return NULL;
-	    }
-	  
-	  character = unescape_character (in);
-	  
-	  /* Check for an illegal character. We consider '\0' illegal here. */
-	  if (character <= 0 ||
-	      (illegal_characters != NULL &&
-	       strchr (illegal_characters, (char)character) != NULL))
-	    {
-	      g_free (result);
-	      return NULL;
-	    }
-	  
-	  in++; /* The other char will be eaten in the loop header */
-	}
+    {
+      in++;
+
+      if (escaped_string_end - in < 2)
+        {
+          /* Invalid escaped char (to short) */
+          g_free (result);
+          return NULL;
+        }
+
+      character = unescape_character (in);
+
+      /* Check for an illegal character. We consider '\0' illegal here. */
+      if (character <= 0 ||
+          (illegal_characters != NULL &&
+           strchr (illegal_characters, (char)character) != NULL))
+        {
+          g_free (result);
+          return NULL;
+        }
+
+      in++; /* The other char will be eaten in the loop header */
+    }
       *out++ = (char)character;
     }
-  
+
   *out = '\0';
-  
+
   return result;
 }
 
@@ -140,23 +140,23 @@ g_uri_unescape_segment (const char *escaped_string,
  * @escaped_string: an escaped string to be unescaped.
  * @illegal_characters: (allow-none): a string of illegal characters not to be
  *      allowed, or %NULL.
- * 
+ *
  * Unescapes a whole escaped string.
- * 
+ *
  * If any of the characters in @illegal_characters or the character zero appears
  * as an escaped character in @escaped_string then that is an error and %NULL
  * will be returned. This is useful it you want to avoid for instance having a
  * slash being expanded in an escaped path element, which might confuse pathname
  * handling.
  *
- * Returns: an unescaped version of @escaped_string. The returned string 
+ * Returns: an unescaped version of @escaped_string. The returned string
  * should be freed when no longer needed.
  *
  * Since: 2.16
  **/
 char *
 g_uri_unescape_string (const char *escaped_string,
-		       const char *illegal_characters)
+               const char *illegal_characters)
 {
   return g_uri_unescape_segment (escaped_string, NULL, illegal_characters);
 }
@@ -164,14 +164,14 @@ g_uri_unescape_string (const char *escaped_string,
 /**
  * g_uri_parse_scheme:
  * @uri: a valid URI.
- * 
+ *
  * Gets the scheme portion of a URI string. RFC 3986 decodes the scheme as:
  * |[
- * URI = scheme ":" hier-part [ "?" query ] [ "#" fragment ] 
+ * URI = scheme ":" hier-part [ "?" query ] [ "#" fragment ]
  * ]|
  * Common schemes include "file", "http", "svn+ssh", etc.
- * 
- * Returns: The "Scheme" component of the URI, or %NULL on error. 
+ *
+ * Returns: The "Scheme" component of the URI, or %NULL on error.
  * The returned string should be freed when no longer needed.
  *
  * Since: 2.16
@@ -186,31 +186,31 @@ g_uri_parse_scheme (const char  *uri)
 
   /* From RFC 3986 Decodes:
    * URI         = scheme ":" hier-part [ "?" query ] [ "#" fragment ]
-   */ 
+   */
 
   p = uri;
-  
+
   /* Decode scheme:
      scheme      = ALPHA *( ALPHA / DIGIT / "+" / "-" / "." )
   */
 
   if (!g_ascii_isalpha (*p))
     return NULL;
-  
+
   while (1)
     {
       c = *p++;
-      
+
       if (c == ':')
-	break;
-      
+    break;
+
       if (!(g_ascii_isalnum(c) ||
-	    c == '+' ||
-	    c == '-' ||
-	    c == '.'))
-	return NULL;
+        c == '+' ||
+        c == '-' ||
+        c == '.'))
+    return NULL;
     }
-  
+
   return g_strndup (uri, p - uri - 1);
 }
 
@@ -220,7 +220,7 @@ g_uri_parse_scheme (const char  *uri)
  * @reserved_chars_allowed: (allow-none): a string of reserved characters that
  *      are allowed to be used, or %NULL.
  * @allow_utf8: %TRUE if the result can include UTF-8 characters.
- * 
+ *
  * Escapes a string for use in a URI.
  *
  * Normally all characters that are not "unreserved" (i.e. ASCII alphanumerical
@@ -228,25 +228,25 @@ g_uri_parse_scheme (const char  *uri)
  * But if you specify characters in @reserved_chars_allowed they are not
  * escaped. This is useful for the "reserved" characters in the URI
  * specification, since those are allowed unescaped in some portions of
- * a URI. 
- * 
- * Returns: an escaped version of @unescaped. The returned string should be 
+ * a URI.
+ *
+ * Returns: an escaped version of @unescaped. The returned string should be
  * freed when no longer needed.
  *
  * Since: 2.16
  **/
 char *
 g_uri_escape_string (const char *unescaped,
-		     const char  *reserved_chars_allowed,
-		     gboolean     allow_utf8)
+             const char  *reserved_chars_allowed,
+             gboolean     allow_utf8)
 {
   GString *s;
 
   g_return_val_if_fail (unescaped != NULL, NULL);
 
   s = g_string_sized_new (strlen (unescaped) + 10);
-  
+
   g_string_append_uri_escaped (s, unescaped, reserved_chars_allowed, allow_utf8);
-  
+
   return g_string_free (s, FALSE);
 }

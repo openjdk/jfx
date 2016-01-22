@@ -42,7 +42,7 @@ class Timer {
         }
 
         class Exception {};
-        
+
         Timer() : id(0)
         {
             if (++timersCount == 1) {

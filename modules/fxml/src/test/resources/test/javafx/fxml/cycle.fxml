@@ -29,9 +29,9 @@ questions.
 <?import javafx.scene.layout.*?>
 
 <Scene width="320" height="240" xmlns:fx="http://javafx.com/fxml">
-    <VBox fx:id="root"> 
+    <VBox fx:id="root">
         <children>
             <fx:include source="leaf3.fxml" />
         </children>
-    </VBox> 
+    </VBox>
 </Scene>

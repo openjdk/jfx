@@ -37,7 +37,7 @@ import org.junit.runners.Parameterized;
 
 /**
  * Tests for iterators of ObservableList.
- * 
+ *
  */
 @RunWith(Parameterized.class)
 public class ObservableListIteratorTest {
@@ -519,7 +519,7 @@ public class ObservableListIteratorTest {
         try { iter.next(); } catch (ConcurrentModificationException e) {return;}
         fail("Expected ConcurrentModificationException");
     }
-    
+
     @Test
     public void testConcurrencyGetIteratorNext() {
         iter = list.listIterator();
@@ -637,7 +637,7 @@ public class ObservableListIteratorTest {
         try { iter.remove(); } catch (ConcurrentModificationException e) {return;}
         fail("Expected ConcurrentModificationException");
     }
-    
+
     @Test
     public void testConcurrencyAddIndexedIteratorRemove() {
         iter = list.listIterator();

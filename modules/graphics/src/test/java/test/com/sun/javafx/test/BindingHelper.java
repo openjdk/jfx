@@ -73,7 +73,7 @@ public final class BindingHelper {
                                         final Object value) {
         setWritableValue(value.getClass(), writableValue, value);
     }
-    
+
     public static void setWritableValue(final Class<?> typeClass,
                                         final Object writableValue,
                                         final Object value) {

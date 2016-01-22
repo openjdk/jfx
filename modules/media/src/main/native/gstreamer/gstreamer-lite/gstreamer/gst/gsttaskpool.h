@@ -94,7 +94,7 @@ gpointer        gst_task_pool_push        (GstTaskPool *pool, GstTaskPoolFunctio
                                            gpointer user_data, GError **error);
 void            gst_task_pool_join        (GstTaskPool *pool, gpointer id);
 
-void		gst_task_pool_cleanup     (GstTaskPool *pool);
+void        gst_task_pool_cleanup     (GstTaskPool *pool);
 
 G_END_DECLS
 

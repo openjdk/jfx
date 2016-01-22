@@ -40,13 +40,13 @@ import org.junit.Test;
 import static org.junit.Assert.*;
 
 public class ProgressBarTableCellTest {
-    
+
     private SimpleBooleanProperty booleanProperty;
     private Callback<Integer, ObservableValue<Boolean>> callback;
     private StringConverter<Object> converter;
     private TableView<Object> tableView;
     private TableColumn<Object, Object> tableColumn;
-    
+
     @Before public void setup() {
         tableView = new TableView<>();
         tableColumn = new TableColumn<>();
@@ -56,55 +56,55 @@ public class ProgressBarTableCellTest {
             @Override public String toString(Object object) {
                 return null;
             }
-            
+
             @Override public Object fromString(String string) {
                 return null;
             }
         };
     }
-    
+
     private void setTableViewAndTableColumn(TableCell cell) {
         cell.updateTableView(tableView);
         cell.updateTableColumn(tableColumn);
     }
-    
-    
-    
+
+
+
     /**************************************************************************
-     * 
+     *
      * Test for public static <T> Callback<TableColumn<S,Double>, TableCell<T,Double>> forTableColumn()
-     * 
+     *
      **************************************************************************/
 
-    
+
     @Test public void testStatic_forTableColumn_noArgs_ensureCellFactoryIsNotNull() {
         assertFalse(booleanProperty.get());
         Callback<TableColumn<Object, Double>, TableCell<Object, Double>> cellFactory = ProgressBarTableCell.forTableColumn();
         assertNotNull(cellFactory);
     }
-    
+
     @Test public void testStatic_forTableColumn_noArgs_ensureCellFactoryCreatesCells() {
         assertFalse(booleanProperty.get());
         Callback<TableColumn<Object, Double>, TableCell<Object, Double>> cellFactory = ProgressBarTableCell.forTableColumn();
-        
+
         TableColumn tableColumn = new TableColumn<>();
         ProgressBarTableCell<Object> cell = (ProgressBarTableCell<Object>)cellFactory.call(tableColumn);
         assertNotNull(cell);
     }
 
-    
+
     /**************************************************************************
-     * 
+     *
      * Constructor tests for default constructor
-     * 
+     *
      **************************************************************************/
 
-    
+
     @Test public void testConstructor_noArgs_defaultStyleClass() {
         ProgressBarTableCell<Object> cell = new ProgressBarTableCell<>();
         assertTrue(cell.getStyleClass().contains("progress-bar-table-cell"));
     }
-    
+
     @Test public void testConstructor_noArgs_defaultGraphicIsNull() {
         ProgressBarTableCell<Object> cell = new ProgressBarTableCell<>();
         assertNull(cell.getGraphic());
@@ -113,9 +113,9 @@ public class ProgressBarTableCellTest {
 
 
     /**************************************************************************
-     * 
+     *
      * updateItem tests
-     * 
+     *
      **************************************************************************/
 
     @Test public void test_updateItem_isEmpty_graphicIsNull() {
@@ -123,13 +123,13 @@ public class ProgressBarTableCellTest {
         cell.updateItem(0.5, true);
         assertNull(cell.getGraphic());
     }
-    
+
     @Test public void test_updateItem_isEmpty_textIsNull() {
         ProgressBarTableCell<Object> cell = new ProgressBarTableCell<>();
         cell.updateItem(0.5, true);
         assertNull(cell.getText());
     }
-    
+
     @Test public void test_updateItem_isNotEmpty_graphicIsNotNull() {
         ProgressBarTableCell<Object> cell = new ProgressBarTableCell<>();
         setTableViewAndTableColumn(cell);
@@ -152,19 +152,19 @@ public class ProgressBarTableCellTest {
         assertNotNull(cell.getGraphic());
         assertEquals(Double.MAX_VALUE, ((ProgressBar)cell.getGraphic()).getMaxWidth(), 0.0);
     }
-    
+
 //    /**************************************************************************
-//     * 
+//     *
 //     * test checkbox selection state is bound
-//     * 
+//     *
 //     **************************************************************************/
-//    
+//
 //    @Test public void test_booleanPropertyChangeUpdatesCheckBoxSelection() {
 //        ProgressBarTableCell<Object, Object> cell = new ProgressBarTableCell<>(callback);
 //        setTableViewAndTableColumn(cell);
 //        cell.updateItem("TEST", false);
 //        CheckBox cb = (CheckBox)cell.getGraphic();
-//        
+//
 //        assertFalse(cb.isSelected());
 //        booleanProperty.set(true);
 //        assertTrue(cb.isScaleShape());
@@ -172,13 +172,13 @@ public class ProgressBarTableCellTest {
 //        booleanProperty.set(false);
 //        assertFalse(cb.isSelected());
 //    }
-//    
+//
 //    @Test public void test_checkBoxSelectionUpdatesBooleanProperty() {
 //        ProgressBarTableCell<Object, Object> cell = new ProgressBarTableCell<>(callback);
 //        setTableViewAndTableColumn(cell);
 //        cell.updateItem("TEST", false);
 //        CheckBox cb = (CheckBox)cell.getGraphic();
-//        
+//
 //        assertFalse(booleanProperty.get());
 //        cb.setSelected(true);
 //        assertTrue(booleanProperty.get());

@@ -38,7 +38,7 @@ class XSLImportRule : private CachedStyleSheetClient {
 public:
     XSLImportRule(XSLStyleSheet* parentSheet, const String& href);
     virtual ~XSLImportRule();
-    
+
     const String& href() const { return m_strHref; }
     XSLStyleSheet* styleSheet() const { return m_styleSheet.get(); }
 
@@ -47,10 +47,10 @@ public:
 
     bool isLoading();
     void loadSheet();
-    
+
 private:
     virtual void setXSLStyleSheet(const String& href, const URL& baseURL, const String& sheet);
-    
+
     XSLStyleSheet* m_parentStyleSheet;
     String m_strHref;
     RefPtr<XSLStyleSheet> m_styleSheet;

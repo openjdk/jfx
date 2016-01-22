@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef StructureStubClearingWatchpoint_h
@@ -53,7 +53,7 @@ public:
         : m_holder(holder)
     {
     }
-    
+
     StructureStubClearingWatchpoint(
         WatchpointsOnStructureStubInfo& holder,
         PassOwnPtr<StructureStubClearingWatchpoint> next)
@@ -61,9 +61,9 @@ public:
         , m_next(next)
     {
     }
-    
+
     virtual ~StructureStubClearingWatchpoint();
-    
+
     static StructureStubClearingWatchpoint* push(
         WatchpointsOnStructureStubInfo& holder,
         OwnPtr<StructureStubClearingWatchpoint>& head);
@@ -83,18 +83,18 @@ public:
         , m_stubInfo(stubInfo)
     {
     }
-    
+
     ~WatchpointsOnStructureStubInfo();
-    
+
     StructureStubClearingWatchpoint* addWatchpoint();
-    
+
     static StructureStubClearingWatchpoint* ensureReferenceAndAddWatchpoint(
         RefPtr<WatchpointsOnStructureStubInfo>& holderRef,
         CodeBlock*, StructureStubInfo*);
-    
+
     CodeBlock* codeBlock() const { return m_codeBlock; }
     StructureStubInfo* stubInfo() const { return m_stubInfo; }
-    
+
 private:
     CodeBlock* m_codeBlock;
     StructureStubInfo* m_stubInfo;

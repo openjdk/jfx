@@ -59,7 +59,7 @@ public class ColorApp extends Application {
         VBox vBox = new VBox();
         vBox.setSpacing(10);
         vBox.setAlignment(Pos.CENTER);
-        
+
         HBox hBox = new HBox();
         hBox.setSpacing(6);
         hBox.setAlignment(Pos.CENTER);
@@ -68,7 +68,7 @@ public class ColorApp extends Application {
                 createRectangle(Color.hsb( 30.0, 1.0, 1.0)), // hue, saturation, brightness
                 createRectangle(Color.hsb( 60.0, 1.0, 1.0)), // hue, saturation, brightness
                 createRectangle(Color.hsb(120.0, 1.0, 1.0)), // hue, saturation, brightness
-                createRectangle(Color.hsb(160.0, 1.0, 1.0)), // hue, saturation, brightness                
+                createRectangle(Color.hsb(160.0, 1.0, 1.0)), // hue, saturation, brightness
                 createRectangle(Color.hsb(200.0, 1.0, 1.0)), // hue, saturation, brightness
                 createRectangle(Color.hsb(240.0, 1.0, 1.0)), // hue, saturation, brightness
                 createRectangle(Color.hsb(280.0, 1.0, 1.0)), // hue, saturation, brightness
@@ -83,13 +83,13 @@ public class ColorApp extends Application {
                 createRectangle(Color.hsb( 30.0, 0.5, 1.0)), // hue, saturation, brightness
                 createRectangle(Color.hsb( 60.0, 0.5, 1.0)), // hue, saturation, brightness
                 createRectangle(Color.hsb(120.0, 0.5, 1.0)), // hue, saturation, brightness
-                createRectangle(Color.hsb(160.0, 0.5, 1.0)), // hue, saturation, brightness                
+                createRectangle(Color.hsb(160.0, 0.5, 1.0)), // hue, saturation, brightness
                 createRectangle(Color.hsb(200.0, 0.5, 1.0)), // hue, saturation, brightness
                 createRectangle(Color.hsb(240.0, 0.5, 1.0)), // hue, saturation, brightness
                 createRectangle(Color.hsb(280.0, 0.5, 1.0)), // hue, saturation, brightness
                 createRectangle(Color.hsb(320.0, 0.5, 1.0))  // hue, saturation, brightness
                 );
-        
+
         HBox hBox3 = new HBox();
         hBox3.setSpacing(6);
         hBox3.setAlignment(Pos.CENTER);
@@ -98,13 +98,13 @@ public class ColorApp extends Application {
                 createRectangle(Color.hsb( 30.0, 1.0, 0.5)), // hue, saturation, brightness
                 createRectangle(Color.hsb( 60.0, 1.0, 0.5)), // hue, saturation, brightness
                 createRectangle(Color.hsb(120.0, 1.0, 0.5)), // hue, saturation, brightness
-                createRectangle(Color.hsb(160.0, 1.0, 0.5)), // hue, saturation, brightness                
+                createRectangle(Color.hsb(160.0, 1.0, 0.5)), // hue, saturation, brightness
                 createRectangle(Color.hsb(200.0, 1.0, 0.5)), // hue, saturation, brightness
                 createRectangle(Color.hsb(240.0, 1.0, 0.5)), // hue, saturation, brightness
                 createRectangle(Color.hsb(280.0, 1.0, 0.5)), // hue, saturation, brightness
                 createRectangle(Color.hsb(320.0, 1.0, 0.5))  // hue, saturation, brightness
                 );
-        
+
         HBox hBox4 = new HBox();
         hBox4.setSpacing(6);
         hBox4.setAlignment(Pos.CENTER);
@@ -119,18 +119,18 @@ public class ColorApp extends Application {
                 createRectangle(Color.grayRgb(179)), //define gray color
                 createRectangle(Color.grayRgb(179, 0.5)) //opacity can be adjusted in all constructors
                 );
-        
+
         vBox.getChildren().addAll(hBox, hBox2, hBox3, hBox4);
         return vBox;
     }
-    
+
     private Rectangle createRectangle(Color color) {
         Rectangle rect1 = new Rectangle(0, 45, 20, 20);
         //Fill rectangle with color
         rect1.setFill(color);
         return rect1;
     }
-    
+
     @Override
     public void start(Stage primaryStage) throws Exception {
         primaryStage.setScene(new Scene(createContent()));

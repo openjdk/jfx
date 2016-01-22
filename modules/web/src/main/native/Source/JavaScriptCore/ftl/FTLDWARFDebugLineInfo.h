@@ -70,7 +70,7 @@ private:
         bool prologueEnd;
         bool epilogueBegin;
     };
-    
+
     void printLineInfo(LineInfo&);
     void printLineInfo();
 
@@ -134,5 +134,5 @@ private:
 };
 
 } } // namespace JSC::FTL
-    
+
 #endif // FTLDWARFDebugLineInfo_h

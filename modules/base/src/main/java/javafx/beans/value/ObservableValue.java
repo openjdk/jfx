@@ -64,10 +64,10 @@ import javafx.beans.Observable;
  * Important note: attaching a {@code ChangeListener} enforces eager computation
  * even if the implementation of the {@code ObservableValue} supports lazy
  * evaluation.
- * 
+ *
  * @param <T>
  *            The type of the wrapped value.
- * 
+ *
  * @see ObservableBooleanValue
  * @see ObservableDoubleValue
  * @see ObservableFloatValue
@@ -76,8 +76,8 @@ import javafx.beans.Observable;
  * @see ObservableNumberValue
  * @see ObservableObjectValue
  * @see ObservableStringValue
- * 
- * 
+ *
+ *
  * @since JavaFX 2.0
  */
 public interface ObservableValue<T> extends Observable {
@@ -97,9 +97,9 @@ public interface ObservableValue<T> extends Observable {
      * listener by calling {@link #removeListener(ChangeListener)
      * removeListener} after use or to use an instance of
      * {@link WeakChangeListener} avoid this situation.
-     * 
+     *
      * @see #removeListener(ChangeListener)
-     * 
+     *
      * @param listener
      *            The listener to register
      * @throws NullPointerException
@@ -115,9 +115,9 @@ public interface ObservableValue<T> extends Observable {
      * never added) then this method call is a no-op. If it had been previously
      * added then it will be removed. If it had been added more than once, then
      * only the first occurrence will be removed.
-     * 
+     *
      * @see #addListener(ChangeListener)
-     * 
+     *
      * @param listener
      *            The listener to remove
      * @throws NullPointerException
@@ -127,7 +127,7 @@ public interface ObservableValue<T> extends Observable {
 
     /**
      * Returns the current value of this {@code ObservableValue}
-     * 
+     *
      * @return The current value
      */
     T getValue();

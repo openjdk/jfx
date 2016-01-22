@@ -54,11 +54,11 @@ public:
     virtual PassRefPtr<NetscapePlugInStreamLoader> schedulePluginStreamLoad(Frame*, NetscapePlugInStreamLoaderClient*, const ResourceRequest&);
     virtual void remove(ResourceLoader*);
     virtual void crossOriginRedirectReceived(ResourceLoader*, const URL& redirectURL);
-    
+
     virtual void servePendingRequests(ResourceLoadPriority minimumPriority = ResourceLoadPriorityVeryLow);
     virtual void suspendPendingRequests();
     virtual void resumePendingRequests();
-    
+
     bool isSerialLoadingEnabled() const { return m_isSerialLoadingEnabled; }
     virtual void setSerialLoadingEnabled(bool b) { m_isSerialLoadingEnabled = b; }
 
@@ -88,7 +88,7 @@ private:
     public:
         HostInformation(const String&, unsigned);
         ~HostInformation();
-        
+
         const String& name() const { return m_name; }
         void schedule(ResourceLoader*, ResourceLoadPriority = ResourceLoadPriorityVeryLow);
         void addLoadInProgress(ResourceLoader*);
@@ -99,7 +99,7 @@ private:
         typedef Deque<RefPtr<ResourceLoader>> RequestQueue;
         RequestQueue& requestsPending(ResourceLoadPriority priority) { return m_requestsPending[priority]; }
 
-    private:                    
+    private:
         RequestQueue m_requestsPending[ResourceLoadPriorityHighest + 1];
         typedef HashSet<RefPtr<ResourceLoader>> RequestMap;
         RequestMap m_requestsLoading;
@@ -111,14 +111,14 @@ private:
         CreateIfNotFound,
         FindOnly
     };
-    
+
     HostInformation* hostForURL(const URL&, CreateHostPolicy = FindOnly);
     void servePendingRequests(HostInformation*, ResourceLoadPriority);
 
     typedef HashMap<String, HostInformation*, StringHash> HostMap;
     HostMap m_hosts;
     HostInformation* m_nonHTTPProtocolHost;
-        
+
     Timer<ResourceLoadScheduler> m_requestTimer;
 
     unsigned m_suspendPendingRequestsCount;

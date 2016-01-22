@@ -397,14 +397,14 @@ public:
     DocumentType* doctype() const;
 
     DOMImplementation* implementation();
-    
+
     Element* documentElement() const
     {
         return m_documentElement.get();
     }
 
     bool hasManifest() const;
-    
+
     virtual PassRefPtr<Element> createElement(const AtomicString& tagName, ExceptionCode&);
     PassRefPtr<DocumentFragment> createDocumentFragment();
     PassRefPtr<Text> createTextNode(const String& data);
@@ -519,7 +519,7 @@ public:
     bool sawElementsInKnownNamespaces() const { return m_sawElementsInKnownNamespaces; }
 
     StyleResolver& ensureStyleResolver()
-    { 
+    {
         if (!m_styleResolver)
             createStyleResolver();
         return *m_styleResolver;
@@ -616,7 +616,7 @@ public:
     // to get visually ordered hebrew and arabic pages right
     void setVisuallyOrdered();
     bool visuallyOrdered() const { return m_visuallyOrdered; }
-    
+
     DocumentLoader* loader() const;
 
     void open(Document* ownerDocument = 0);
@@ -662,17 +662,17 @@ public:
     Frame* findUnsafeParentScrollPropagationBoundary();
 
     CSSStyleSheet& elementSheet();
-    
+
     virtual PassRefPtr<DocumentParser> createParser();
     DocumentParser* parser() const { return m_parser.get(); }
     ScriptableDocumentParser* scriptableDocumentParser() const;
-    
+
     bool printing() const { return m_printing; }
     void setPrinting(bool p) { m_printing = p; }
 
     bool paginatedForScreen() const { return m_paginatedForScreen; }
     void setPaginatedForScreen(bool p) { m_paginatedForScreen = p; }
-    
+
     bool paginated() const { return printing() || paginatedForScreen(); }
 
     enum CompatibilityMode { QuirksMode, LimitedQuirksMode, NoQuirksMode };
@@ -700,7 +700,7 @@ public:
     bool shouldScheduleLayout();
     bool isLayoutTimerActive();
     std::chrono::milliseconds elapsedTime() const;
-    
+
     void setTextColor(const Color& color) { m_textColor = color; }
     Color textColor() const { return m_textColor; }
 
@@ -730,7 +730,7 @@ public:
     UserActionElementSet& userActionElements()  { return m_userActionElements; }
     const UserActionElementSet& userActionElements() const { return m_userActionElements; }
 
-    // The m_ignoreAutofocus flag specifies whether or not the document has been changed by the user enough 
+    // The m_ignoreAutofocus flag specifies whether or not the document has been changed by the user enough
     // for WebCore to ignore the autofocus attribute on any form controls
     bool ignoreAutofocus() const { return m_ignoreAutofocus; };
     void setIgnoreAutofocus(bool shouldIgnore = true) { m_ignoreAutofocus = shouldIgnore; };
@@ -744,7 +744,7 @@ public:
     // Updates for :target (CSS3 selector).
     void setCSSTarget(Element*);
     Element* cssTarget() const { return m_cssTarget; }
-    
+
     void scheduleForcedStyleRecalc();
     void scheduleStyleRecalc();
     void unscheduleStyleRecalc();
@@ -784,7 +784,7 @@ public:
 
     DOMWindow* domWindow() const { return m_domWindow.get(); }
     // In DOM Level 2, the Document's DOMWindow is called the defaultView.
-    DOMWindow* defaultView() const { return domWindow(); } 
+    DOMWindow* defaultView() const { return domWindow(); }
 
     // Helper functions for forwarding DOMWindow event related tasks to the DOMWindow if it exists.
     void setWindowAttributeEventListener(const AtomicString& eventType, const QualifiedName& attributeName, const AtomicString& value);
@@ -843,7 +843,7 @@ public:
     // Called when <meta name="apple-mobile-web-app-orientations"> changes.
     void processWebAppOrientations();
 #endif
-    
+
     void processViewport(const String& features, ViewportArguments::Type origin);
     void updateViewportArguments();
     void processReferrerPolicy(const String& policy);
@@ -896,7 +896,7 @@ public:
     //
     const URL& firstPartyForCookies() const { return m_firstPartyForCookies; }
     void setFirstPartyForCookies(const URL& url) { m_firstPartyForCookies = url; }
-    
+
     // The following implements the rule from HTML 4 for what valid names are.
     // To get this right for all the XML cases, we probably have to improve this or move it
     // and make it sensitive to the type of document.
@@ -931,14 +931,14 @@ public:
     String queryCommandValue(const String& command);
 
     // designMode support
-    enum InheritedBool { off = false, on = true, inherit };    
+    enum InheritedBool { off = false, on = true, inherit };
     void setDesignMode(InheritedBool value);
     InheritedBool getDesignMode() const;
     bool inDesignMode() const;
 
     Document* parentDocument() const;
     Document& topDocument() const;
-    
+
     ScriptRunner* scriptRunner() { return m_scriptRunner.get(); }
 
     HTMLScriptElement* currentScript() const { return !m_currentScriptStack.isEmpty() ? m_currentScriptStack.last().get() : 0; }
@@ -997,7 +997,7 @@ public:
     void suspendScriptedAnimationControllerCallbacks();
     void resumeScriptedAnimationControllerCallbacks();
     virtual void scriptedAnimationControllerSetThrottled(bool);
-    
+
     void windowScreenDidChange(PlatformDisplayID);
 
     void finishedParsing();
@@ -1005,7 +1005,7 @@ public:
     bool inPageCache() const { return m_inPageCache; }
     void setInPageCache(bool flag);
 
-    // Elements can register themselves for the "documentWillSuspendForPageCache()" and  
+    // Elements can register themselves for the "documentWillSuspendForPageCache()" and
     // "documentDidResumeFromPageCache()" callbacks
     void registerForPageCacheSuspensionCallbacks(Element*);
     void unregisterForPageCacheSuspensionCallbacks(Element*);
@@ -1097,12 +1097,12 @@ public:
     MediaCanStartListener* takeAnyMediaCanStartListener();
 
     const QualifiedName& idAttributeName() const { return m_idAttributeName; }
-    
+
 #if ENABLE(FULLSCREEN_API)
     bool webkitIsFullScreen() const { return m_fullScreenElement.get(); }
     bool webkitFullScreenKeyboardInputAllowed() const { return m_fullScreenElement.get() && m_areKeysEnabledInFullScreen; }
     Element* webkitCurrentFullScreenElement() const { return m_fullScreenElement.get(); }
-    
+
     enum FullScreenCheckType {
         EnforceIFrameAllowFullScreenRequirement,
         ExemptIFrameAllowFullScreenRequirement,
@@ -1110,16 +1110,16 @@ public:
 
     void requestFullScreenForElement(Element*, unsigned short flags, FullScreenCheckType);
     void webkitCancelFullScreen();
-    
+
     void webkitWillEnterFullScreenForElement(Element*);
     void webkitDidEnterFullScreenForElement(Element*);
     void webkitWillExitFullScreenForElement(Element*);
     void webkitDidExitFullScreenForElement(Element*);
-    
+
     void setFullScreenRenderer(RenderFullScreen*);
     RenderFullScreen* fullScreenRenderer() const { return m_fullScreenRenderer; }
     void fullScreenRendererDestroyed();
-    
+
     void fullScreenChangeDelayTimerFired(Timer<Document>&);
     bool fullScreenIsAllowedForElement(Element*) const;
     void fullScreenElementRemoved();
@@ -1313,7 +1313,7 @@ private:
     void pendingTasksTimerFired(Timer<Document>&);
 
     static void didReceiveTask(void*);
-    
+
     template <typename CharacterType>
     void displayBufferModifiedByEncodingInternal(CharacterType*, unsigned) const;
 
@@ -1408,7 +1408,7 @@ private:
 
     uint64_t m_domTreeVersion;
     static uint64_t s_globalTreeVersion;
-    
+
     HashSet<NodeIterator*> m_nodeIterators;
     HashSet<Range*> m_ranges;
 
@@ -1453,7 +1453,7 @@ private:
 
     OwnPtr<AXObjectCache> m_axObjectCache;
     const OwnPtr<DocumentMarkerController> m_markers;
-    
+
     Timer<Document> m_updateFocusAppearanceTimer;
     Timer<Document> m_resetHiddenFocusElementTimer;
 
@@ -1469,7 +1469,7 @@ private:
     RefPtr<SerializedScriptValue> m_pendingStateObject;
     std::chrono::steady_clock::time_point m_startTime;
     bool m_overMinimumLayoutThreshold;
-    
+
     std::unique_ptr<ScriptRunner> m_scriptRunner;
 
     Vector<RefPtr<HTMLScriptElement>> m_currentScriptStack;
@@ -1576,7 +1576,7 @@ private:
     RefPtr<MediaQueryMatcher> m_mediaQueryMatcher;
     bool m_writeRecursionIsTooDeep;
     unsigned m_writeRecursionDepth;
-    
+
     unsigned m_wheelEventHandlerCount;
 #if ENABLE(TOUCH_EVENTS)
     OwnPtr<TouchEventTargetSet> m_touchEventTargets;
@@ -1638,7 +1638,7 @@ private:
     void platformSuspendOrStopActiveDOMObjects();
 
     bool m_scheduledTasksAreSuspended;
-    
+
     bool m_visualUpdatesAllowed;
     Timer<Document> m_visualUpdatesSuppressionTimer;
 

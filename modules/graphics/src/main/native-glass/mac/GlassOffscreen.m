@@ -49,12 +49,12 @@
     if (self != nil)
     {
         self->_ctx = CGLRetainContext(ctx);
-        
+
         self->_backgroundR = 1.0f;
         self->_backgroundG = 1.0f;
         self->_backgroundB = 1.0f;
         self->_backgroundA = 1.0f;
-        
+
         [self setContext];
         {
             self->_offscreen = [[GlassFrameBufferObject alloc] init];
@@ -133,7 +133,7 @@
 
 - (void)unsetContext
 {
-    CGLSetCurrentContext(self->_ctxToRestore);    
+    CGLSetCurrentContext(self->_ctxToRestore);
     CGLUnlockContext(self->_ctx);
 }
 
@@ -188,9 +188,9 @@
                 break;
         }
         glClear(GL_COLOR_BUFFER_BIT);
-#endif        
+#endif
         [self->_offscreen blitForWidth:width andHeight:height];
-        
+
         self->_dirty = GL_FALSE;
     }
 }

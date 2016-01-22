@@ -58,17 +58,17 @@ public class ScrollPaneTest {
         tk = (StubToolkit)Toolkit.getToolkit();//This step is not needed (Just to make sure StubToolkit is loaded into VM)
         scrollPane = new ScrollPane();
     }
-    
-   
-   
+
+
+
     /*********************************************************************
      * Tests for default values                                         *
      ********************************************************************/
-    
+
     @Test public void defaultConstructorShouldSetStyleClassTo_scrollpane() {
         assertStyleClassContains(scrollPane, "scroll-pane");
     }
-    
+
     @Test public void defaultFocusTraversibleIsFalse() {
         assertFalse(scrollPane.isFocusTraversable());
     }
@@ -132,7 +132,7 @@ public class ScrollPaneTest {
     /*********************************************************************
      * Tests for property binding                                        *
      ********************************************************************/
-    
+
     @Test public void checkHBarPolicyPropertyBind() {
         ObjectProperty objPr = new SimpleObjectProperty<ScrollPane.ScrollBarPolicy>(ScrollPane.ScrollBarPolicy.ALWAYS);
         scrollPane.hbarPolicyProperty().bind(objPr);
@@ -140,7 +140,7 @@ public class ScrollPaneTest {
         objPr.setValue(ScrollPane.ScrollBarPolicy.NEVER);
         assertSame("HBarPolicyProperty cannot be bound", scrollPane.hbarPolicyProperty().getValue(), ScrollPane.ScrollBarPolicy.NEVER);
     }
-    
+
     @Test public void checkVBarPolicyPropertyBind() {
         ObjectProperty objPr = new SimpleObjectProperty<ScrollPane.ScrollBarPolicy>(ScrollPane.ScrollBarPolicy.ALWAYS);
         scrollPane.vbarPolicyProperty().bind(objPr);
@@ -148,7 +148,7 @@ public class ScrollPaneTest {
         objPr.setValue(ScrollPane.ScrollBarPolicy.NEVER);
         assertSame("VBarPolicyProperty cannot be bound", scrollPane.vbarPolicyProperty().getValue(), ScrollPane.ScrollBarPolicy.NEVER);
     }
-    
+
     @Test public void checkHValuePropertyBind() {
         DoubleProperty objPr = new SimpleDoubleProperty(2.0);
         scrollPane.hvalueProperty().bind(objPr);
@@ -156,7 +156,7 @@ public class ScrollPaneTest {
         objPr.setValue(5.0);
         assertEquals("hvalueProperty cannot be bound", scrollPane.hvalueProperty().getValue(), 5.0, 0.0);
     }
-    
+
     @Test public void checkHminPropertyBind() {
         DoubleProperty objPr = new SimpleDoubleProperty(2.0);
         scrollPane.hminProperty().bind(objPr);
@@ -164,7 +164,7 @@ public class ScrollPaneTest {
         objPr.setValue(5.0);
         assertEquals("hminProperty cannot be bound", scrollPane.hminProperty().getValue(), 5.0, 0.0);
     }
-    
+
     @Test public void checkHmaxPropertyBind() {
         DoubleProperty objPr = new SimpleDoubleProperty(2.0);
         scrollPane.hmaxProperty().bind(objPr);
@@ -172,7 +172,7 @@ public class ScrollPaneTest {
         objPr.setValue(5.0);
         assertEquals("hmaxProperty cannot be bound", scrollPane.hmaxProperty().getValue(), 5.0, 0.0);
     }
-    
+
     @Test public void checkVValuePropertyBind() {
         DoubleProperty objPr = new SimpleDoubleProperty(2.0);
         scrollPane.vvalueProperty().bind(objPr);
@@ -180,7 +180,7 @@ public class ScrollPaneTest {
         objPr.setValue(5.0);
         assertEquals("vvalueProperty cannot be bound", scrollPane.vvalueProperty().getValue(), 5.0, 0.0);
     }
-    
+
     @Test public void checkVminPropertyBind() {
         DoubleProperty objPr = new SimpleDoubleProperty(2.0);
         scrollPane.vminProperty().bind(objPr);
@@ -188,7 +188,7 @@ public class ScrollPaneTest {
         objPr.setValue(5.0);
         assertEquals("vminProperty cannot be bound", scrollPane.vminProperty().getValue(), 5.0, 0.0);
     }
-    
+
     @Test public void checkVmaxPropertyBind() {
         DoubleProperty objPr = new SimpleDoubleProperty(2.0);
         scrollPane.vmaxProperty().bind(objPr);
@@ -196,7 +196,7 @@ public class ScrollPaneTest {
         objPr.setValue(5.0);
         assertEquals("vmaxProperty cannot be bound", scrollPane.vmaxProperty().getValue(), 5.0, 0.0);
     }
-    
+
     @Test public void checkFitToWidthPropertyBind() {
         BooleanProperty objPr = new SimpleBooleanProperty(true);
         scrollPane.fitToWidthProperty().bind(objPr);
@@ -204,7 +204,7 @@ public class ScrollPaneTest {
         objPr.setValue(false);
         assertEquals("FitToWidth cannot be bound", scrollPane.fitToWidthProperty().getValue(), false);
     }
-    
+
     @Test public void checkFitToHeigtPropertyBind() {
         BooleanProperty objPr = new SimpleBooleanProperty(true);
         scrollPane.fitToHeightProperty().bind(objPr);
@@ -212,7 +212,7 @@ public class ScrollPaneTest {
         objPr.setValue(false);
         assertEquals("FitToHeigt cannot be bound", scrollPane.fitToHeightProperty().getValue(), false);
     }
-    
+
     @Test public void checkPannablePropertyBind() {
         BooleanProperty objPr = new SimpleBooleanProperty(true);
         scrollPane.pannableProperty().bind(objPr);
@@ -247,7 +247,7 @@ public class ScrollPaneTest {
         assertSame("viewportBoundsProperty cannot be bound", scrollPane.viewportBoundsProperty().getValue(), b);
     }
 
-    
+
     @Test public void hbarPolicyPropertyHasBeanReference() {
         assertSame(scrollPane, scrollPane.hbarPolicyProperty().getBean());
     }
@@ -360,8 +360,8 @@ public class ScrollPaneTest {
         assertEquals("viewportBounds", scrollPane.viewportBoundsProperty().getName());
     }
 
-    
-    
+
+
     /*********************************************************************
      * Check for Pseudo classes                                          *
      ********************************************************************/
@@ -398,7 +398,7 @@ public class ScrollPaneTest {
         assertPseudoClassDoesNotExist(scrollPane, "pannable");
     }
 
-    
+
     /*********************************************************************
      * CSS related Tests                                                 *
      ********************************************************************/
@@ -500,130 +500,130 @@ public class ScrollPaneTest {
         scrollPane.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
         assertSame(scrollPane.hbarPolicyProperty().getValue(), ScrollPane.ScrollBarPolicy.NEVER);
     }
-    
+
     @Test public void setHbarPolicyAndSeeValue() {
         scrollPane.setHbarPolicy(ScrollPane.ScrollBarPolicy.ALWAYS);
         assertSame(scrollPane.getHbarPolicy(), ScrollPane.ScrollBarPolicy.ALWAYS);
     }
-    
+
     @Test public void setVbarPolicyAndSeeValueIsReflectedInModel() {
         scrollPane.setVbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
         assertSame(scrollPane.vbarPolicyProperty().getValue(), ScrollPane.ScrollBarPolicy.NEVER);
     }
-    
+
     @Test public void setVbarPolicyAndSeeValue() {
         scrollPane.setVbarPolicy(ScrollPane.ScrollBarPolicy.ALWAYS);
         assertSame(scrollPane.getVbarPolicy(), ScrollPane.ScrollBarPolicy.ALWAYS);
     }
-    
+
     @Test public void setHvalueAndSeeValueIsReflectedInModel() {
         scrollPane.setHvalue(30.0);
         assertEquals(scrollPane.hvalueProperty().getValue(), 30.0, 0.0);
     }
-    
+
     @Test public void setHvalueAndSeeValue() {
         scrollPane.setHvalue(30.0);
         assertEquals(scrollPane.getHvalue(), 30.0, 0.0);
     }
-    
+
     @Test public void setHminAndSeeValueIsReflectedInModel() {
         scrollPane.setHmin(30.0);
         assertEquals(scrollPane.hminProperty().getValue(), 30.0, 0.0);
     }
-    
+
     @Test public void setHminAndSeeValue() {
         scrollPane.setHmin(30.0);
         assertEquals(scrollPane.getHmin(), 30.0, 0.0);
     }
-    
+
     @Test public void setHmaxAndSeeValueIsReflectedInModel() {
         scrollPane.setHmax(30.0);
         assertEquals(scrollPane.hmaxProperty().getValue(), 30.0, 0.0);
     }
-    
+
     @Test public void setHmaxAndSeeValue() {
         scrollPane.setHmax(30.0);
         assertEquals(scrollPane.getHmax(), 30.0, 0.0);
     }
-    
+
     @Test public void setVvalueAndSeeValueIsReflectedInModel() {
         scrollPane.setVvalue(30.0);
         assertEquals(scrollPane.vvalueProperty().getValue(), 30.0, 0.0);
     }
-    
+
     @Test public void setVvalueAndSeeValue() {
         scrollPane.setVvalue(30.0);
         assertEquals(scrollPane.getVvalue(), 30.0, 0.0);
     }
-    
+
     @Test public void setVminAndSeeValueIsReflectedInModel() {
         scrollPane.setVmin(30.0);
         assertEquals(scrollPane.vminProperty().getValue(), 30.0, 0.0);
     }
-    
+
     @Test public void setVminAndSeeValue() {
         scrollPane.setVmin(30.0);
         assertEquals(scrollPane.getVmin(), 30.0, 0.0);
     }
-    
+
     @Test public void setVmaxAndSeeValueIsReflectedInModel() {
         scrollPane.setVmax(30.0);
         assertEquals(scrollPane.vmaxProperty().getValue(), 30.0, 0.0);
     }
-    
+
     @Test public void setVmaxAndSeeValue() {
         scrollPane.setVmax(30.0);
         assertEquals(scrollPane.getVmax(), 30.0, 0.0);
     }
-    
+
     @Test public void setFitToWidthAndSeeValueIsReflectedInModel() {
         scrollPane.setFitToWidth(true);
         assertSame(scrollPane.fitToWidthProperty().getValue(), true);
     }
-    
+
     @Test public void setFitToWidthAndSeeValue() {
         scrollPane.setFitToWidth(true);
         assertSame(scrollPane.isFitToWidth(), true);
     }
-    
+
     @Test public void setFitToHeightAndSeeValueIsReflectedInModel() {
         scrollPane.setFitToHeight(true);
         assertSame(scrollPane.fitToHeightProperty().getValue(), true);
     }
-    
+
     @Test public void setFitToHeightAndSeeValue() {
         scrollPane.setFitToHeight(true);
         assertSame(scrollPane.isFitToHeight(), true);
     }
-    
+
     @Test public void setPannableAndSeeValueIsReflectedInModel() {
         scrollPane.setPannable(true);
         assertSame(scrollPane.pannableProperty().getValue(), true);
     }
-    
+
     @Test public void setPannableAndSeeValue() {
         scrollPane.setPannable(true);
         assertSame(scrollPane.isPannable(), true);
     }
-    
+
     @Test public void setPrefViewportWidthAndSeeValueIsReflectedInModel() {
         scrollPane.setPrefViewportWidth(46.0);
         assertEquals(scrollPane.prefViewportWidthProperty().getValue(), 46.0, 0.0);
     }
-    
+
     @Test public void setPrefViewportWidthAndSeeValue() {
         scrollPane.setPrefViewportWidth(54.0);
         assertEquals(scrollPane.getPrefViewportWidth(), 54.0, 0.0);
     }
-    
+
     @Test public void setPrefViewportHeightAndSeeValueIsReflectedInModel() {
         scrollPane.setPrefViewportHeight(46.0);
         assertEquals(scrollPane.prefViewportHeightProperty().getValue(), 46.0, 0.0);
     }
-    
+
     @Test public void setPrefViewportHeightAndSeeValue() {
         scrollPane.setPrefViewportHeight(54.0);
         assertEquals(scrollPane.getPrefViewportHeight(), 54.0, 0.0);
     }
-    
+
 }

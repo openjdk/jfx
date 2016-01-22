@@ -44,11 +44,11 @@ class GtkMenuDelegate implements MenuDelegate {
     public boolean setEnabled(boolean enabled) {
         return true;
     }
-    
+
    public boolean setPixels(Pixels pixels) {
         return false;
     }
-    
+
     public boolean insert(MenuDelegate menu, int pos) {
         return true;
     }
@@ -64,5 +64,5 @@ class GtkMenuDelegate implements MenuDelegate {
     public boolean remove(MenuItemDelegate item, int pos) {
         return true;
     }
-    
+
 }

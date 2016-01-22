@@ -58,13 +58,13 @@ public class ResizeColumnGesture extends AbstractMouseGesture {
 
     private static final PropertyName columnConstraintsName
             = new PropertyName("columnConstraints"); //NOI18N
-    private static final ValuePropertyMetadata columnConstraintsMeta 
+    private static final ValuePropertyMetadata columnConstraintsMeta
             = new ColumnConstraintsListPropertyMetadata(
                 columnConstraintsName,
                 true, /* readWrite */
                 Collections.emptyList(), /* defaultValue */
                 InspectorPath.UNUSED);
-    
+
     private final GridPaneHandles gridPaneHandles;
     private final FXOMInstance fxomInstance;
     private final int columnIndex;
@@ -74,21 +74,21 @@ public class ResizeColumnGesture extends AbstractMouseGesture {
 
     public ResizeColumnGesture(GridPaneHandles gridPaneHandles, int columnIndex) {
         super(gridPaneHandles.getContentPanelController());
-        
+
         assert columnIndex >= 0;
-        
+
         this.gridPaneHandles = gridPaneHandles;
         this.fxomInstance = gridPaneHandles.getFxomInstance(); // Shortcut
         this.gridPane = (GridPane) fxomInstance.getSceneGraphObject(); // Shortcut
         this.columnIndex = columnIndex;
-        
+
         assert this.columnIndex < Deprecation.getGridPaneColumnCount(this.gridPane);
     }
 
     /*
      * AbstractMouseGesture
      */
-    
+
     @Override
     protected void mousePressed() {
         // Everthing is done in mouseDragStarted
@@ -97,9 +97,9 @@ public class ResizeColumnGesture extends AbstractMouseGesture {
     @Override
     protected void mouseDragStarted() {
         assert resizer == null;
-        
+
         resizer = new GridPaneColumnResizer(gridPane, columnIndex);
-        
+
         // Now same as mouseDragged
         mouseDragged();
     }
@@ -107,7 +107,7 @@ public class ResizeColumnGesture extends AbstractMouseGesture {
     @Override
     protected void mouseDragged() {
         assert resizer != null;
-        
+
         final double startSceneX = getMousePressedEvent().getSceneX();
         final double startSceneY = getMousePressedEvent().getSceneY();
         final double currentSceneX = getLastMouseEvent().getSceneX();
@@ -115,7 +115,7 @@ public class ResizeColumnGesture extends AbstractMouseGesture {
         final Point2D start = gridPane.sceneToLocal(startSceneX, startSceneY, true /* rootScene */);
         final Point2D current = gridPane.sceneToLocal(currentSceneX, currentSceneY, true /* rootScene */);
         final double dx = current.getX() - start.getX();
-        
+
         resizer.updateWidth(dx);
         gridPane.layout();
         gridPaneHandles.layoutDecoration();
@@ -124,25 +124,25 @@ public class ResizeColumnGesture extends AbstractMouseGesture {
     @Override
     protected void mouseDragEnded() {
         assert resizer != null;
-        
+
         /*
          * Three steps
-         * 
+         *
          * 1) Collects the modified column constraints list
          * 2) Reverts to initial sizing
          *    => this step is equivalent to userDidCancel()
          * 3) Push a BatchModifyObjectJob to officially resize the columns
          */
-        
+
         // Step #1
-        final List<ColumnConstraints> newConstraints 
+        final List<ColumnConstraints> newConstraints
                 = cloneColumnConstraintsList(gridPane);
 
         // Step #2
         userDidCancel();
-        
+
         // Step #3
-        final EditorController editorController 
+        final EditorController editorController
                 = contentPanelController.getEditorController();
         final ModifyObjectJob j = new ModifyObjectJob(
                 fxomInstance,
@@ -151,7 +151,7 @@ public class ResizeColumnGesture extends AbstractMouseGesture {
                 editorController,
                 I18N.getString("label.action.edit.resize.column"));
         editorController.getJobManager().push(j);
-        
+
         gridPaneHandles.layoutDecoration();
         resizer = null; // For sake of symetry...
     }
@@ -171,27 +171,27 @@ public class ResizeColumnGesture extends AbstractMouseGesture {
         resizer.revertToOriginalSize();
         gridPane.layout();
     }
-    
-    
-    
+
+
+
     /*
      * Private
      */
-    
+
     private List<ColumnConstraints> cloneColumnConstraintsList(GridPane gridPane) {
         final List<ColumnConstraints> result = new ArrayList<>();
-        
+
         for (ColumnConstraints cc : gridPane.getColumnConstraints()) {
             result.add(cloneColumnConstraints(cc));
         }
-        
+
         return result;
     }
-    
-    
+
+
     private ColumnConstraints cloneColumnConstraints(ColumnConstraints cc) {
         final ColumnConstraints result = new ColumnConstraints();
-        
+
         result.setFillWidth(cc.isFillWidth());
         result.setHalignment(cc.getHalignment());
         result.setHgrow(cc.getHgrow());
@@ -199,7 +199,7 @@ public class ResizeColumnGesture extends AbstractMouseGesture {
         result.setMinWidth(cc.getMinWidth());
         result.setPercentWidth(cc.getPercentWidth());
         result.setPrefWidth(cc.getPrefWidth());
-        
+
         return result;
     }
 }

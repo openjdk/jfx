@@ -31,7 +31,7 @@ import javafx.scene.paint.Paint;
 import javafx.scene.text.Font;
 
 /*
- * border-color	<paint> | <paint> <paint> <paint> <paint> [ , [<paint> | <paint> <paint> <paint> <paint>] ]*	null
+ * border-color <paint> | <paint> <paint> <paint> <paint> [ , [<paint> | <paint> <paint> <paint> <paint>] ]*    null
  */
 public final class LayeredBorderPaintConverter extends StyleConverter<ParsedValue<ParsedValue<?,Paint>[],Paint[]>[], Paint[][]> {
     /**

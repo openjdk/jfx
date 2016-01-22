@@ -34,11 +34,11 @@ import javafx.collections.ListChangeListener;
 /**
  * SelectionModel is an abstract class used by UI controls to provide a
  * consistent API for maintaining selection.
- * 
+ *
  * @param <T> The type of the item contained in the control that can be selected.
  * @since JavaFX 2.0
  */
-public abstract class SelectionModel<T> { 
+public abstract class SelectionModel<T> {
 
     /***************************************************************************
      *                                                                         *
@@ -48,7 +48,7 @@ public abstract class SelectionModel<T> {
 
     /**
      * <p>Refers to the selected index property, which is used to indicate
-     * the currently selected index value in the selection model. The selected 
+     * the currently selected index value in the selection model. The selected
      * index is either -1,
      * to represent that there is no selection, or an integer value that is within
      * the range of the underlying data model size.
@@ -66,10 +66,10 @@ public abstract class SelectionModel<T> {
     public final ReadOnlyIntegerProperty selectedIndexProperty() { return selectedIndex.getReadOnlyProperty(); }
     private ReadOnlyIntegerWrapper selectedIndex = new ReadOnlyIntegerWrapper(this, "selectedIndex", -1);
     protected final void setSelectedIndex(int value) { selectedIndex.set(value); }
-    
+
     /**
-     * <p>Returns the integer value indicating the currently selected index in 
-     * this model. If there are multiple items selected, this will return the 
+     * <p>Returns the integer value indicating the currently selected index in
+     * this model. If there are multiple items selected, this will return the
      * most recent selection made.
      *
      * <p>Note that the returned value is a snapshot in time - if you wish to
@@ -100,13 +100,13 @@ public abstract class SelectionModel<T> {
     public final ReadOnlyObjectProperty<T> selectedItemProperty() { return selectedItem.getReadOnlyProperty(); }
     private ReadOnlyObjectWrapper<T> selectedItem = new ReadOnlyObjectWrapper<T>(this, "selectedItem");
     protected final void setSelectedItem(T value) { selectedItem.set(value); }
-    
+
     /**
      * Returns the currently selected object (which resides in the selected index
      * position). If there are multiple items selected, this will return the
      * object contained at the index returned by getSelectedIndex() (which is
      * always the index to the most recently selected item).
-     * 
+     *
      * <p>Note that the returned value is a snapshot in time - if you wish to
      * observe the selection model for changes to the selected item, you can
      * add a ChangeListener as such:
@@ -124,28 +124,28 @@ public abstract class SelectionModel<T> {
      *                                                                         *
      * Constructor                                                             *
      *                                                                         *
-     **************************************************************************/    
-    
+     **************************************************************************/
+
     /**
      * Creates a default SelectionModel instance.
      */
     public SelectionModel() { }
-    
+
 
     /***************************************************************************
      *                                                                         *
      * Selection API                                                           *
      *                                                                         *
      **************************************************************************/
-    
+
 
     /**
      * A method that clears any selection prior to setting the selection to the
      * given index. The purpose of this method is to avoid having to call
-     * {@link #clearSelection()} first, meaning that observers that are listening to 
+     * {@link #clearSelection()} first, meaning that observers that are listening to
      * the {@link #selectedIndexProperty() selected index} property will not
      * see the selected index being temporarily set to -1.
-     * 
+     *
      * @param index The index that should be the only selected index in this
      *      selection model.
      */
@@ -164,7 +164,7 @@ public abstract class SelectionModel<T> {
      * unselected. However, if multiple selection is implemented, then calling
      * select on an already selected index will have the effect of making the index
      * the new selected index (as returned by {@link #getSelectedIndex()}.
-     * 
+     *
      * @param index The position of the item to select in the selection model.
      */
     public abstract void select(int index);

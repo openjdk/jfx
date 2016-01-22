@@ -38,12 +38,12 @@ G_BEGIN_DECLS
 
 /* This function returns prime numbers spaced by approximately 1.5-2.0
  * and is for use in resizing data structures which prefer
- * prime-valued sizes.	The closest spaced prime function returns the
+ * prime-valued sizes.  The closest spaced prime function returns the
  * next largest prime, or the highest it knows about which is about
  * MAXINT/4.
  */
 GLIB_AVAILABLE_IN_ALL
-guint	   g_spaced_primes_closest (guint num) G_GNUC_CONST;
+guint      g_spaced_primes_closest (guint num) G_GNUC_CONST;
 
 G_END_DECLS
 

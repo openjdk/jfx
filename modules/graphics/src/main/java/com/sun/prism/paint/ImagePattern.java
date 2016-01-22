@@ -57,7 +57,7 @@ public final class ImagePattern extends Paint {
     public float getX() {
         return x;
     }
-    
+
     public float getY() {
         return y;
     }

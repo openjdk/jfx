@@ -37,10 +37,10 @@ import javafx.scene.layout.Region;
 
 /**
  *
- * 
+ *
  */
 public class DoublePropertyMetadata extends TextEncodablePropertyMetadata<java.lang.Double> {
-    
+
     public enum DoubleKind {
         COORDINATE,         // any double
         NULLABLE_COORDINATE,// any double or null
@@ -62,14 +62,14 @@ public class DoublePropertyMetadata extends TextEncodablePropertyMetadata<java.l
         assert (kind != DoubleKind.NULLABLE_COORDINATE) || (defaultValue == null);
         this.kind = kind;
     }
-    
+
     public DoubleKind getKind() {
         return kind;
     }
-    
+
     public boolean isValidValue(Double value) {
         final boolean result;
-        
+
         if (kind == DoubleKind.NULLABLE_COORDINATE) {
             result = true;
         } else if (value == null) {
@@ -86,7 +86,7 @@ public class DoublePropertyMetadata extends TextEncodablePropertyMetadata<java.l
                     result = ((0 <= value) || (value == Region.USE_COMPUTED_SIZE));
                     break;
                 case USE_PREF_SIZE:
-                    result = (0 <= value) 
+                    result = (0 <= value)
                             || (value == Region.USE_COMPUTED_SIZE)
                             || (value == Region.USE_PREF_SIZE);
                     break;
@@ -106,13 +106,13 @@ public class DoublePropertyMetadata extends TextEncodablePropertyMetadata<java.l
                     break;
             }
         }
-        
+
         return result;
     }
-    
+
     public Double getCanonicalValue(Double value) {
         final Double result;
-        
+
         if (value == null) {
             result = null;
         } else {
@@ -140,14 +140,14 @@ public class DoublePropertyMetadata extends TextEncodablePropertyMetadata<java.l
                     break;
             }
         }
-        
+
         return result;
     }
 
     /*
      * SingleValuePropertyMetadata
      */
-    
+
     @Override
     public Double makeValueFromString(String string) {
         return Double.valueOf(string);

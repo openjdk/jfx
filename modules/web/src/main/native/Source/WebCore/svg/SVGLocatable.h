@@ -40,7 +40,7 @@ public:
     virtual SVGElement* farthestViewportElement() const = 0;
 
     enum StyleUpdateStrategy { AllowStyleUpdate, DisallowStyleUpdate };
-    
+
     virtual FloatRect getBBox(StyleUpdateStrategy) = 0;
     virtual AffineTransform getCTM(StyleUpdateStrategy) = 0;
     virtual AffineTransform getScreenCTM(StyleUpdateStrategy) = 0;

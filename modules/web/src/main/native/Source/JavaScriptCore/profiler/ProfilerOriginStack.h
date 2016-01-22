@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef ProfilerOriginStack_h
@@ -44,31 +44,31 @@ class Database;
 class OriginStack {
 public:
     OriginStack() { }
-    
+
     OriginStack(WTF::HashTableDeletedValueType);
-    
+
     explicit OriginStack(const Origin&);
-    
+
     explicit OriginStack(Database&, CodeBlock*, const CodeOrigin&);
-    
+
     ~OriginStack();
-    
+
     void append(const Origin&);
-    
+
     bool operator!() const { return m_stack.isEmpty(); }
-    
+
     unsigned size() const { return m_stack.size(); }
     const Origin& fromBottom(unsigned i) const { return m_stack[i]; }
     const Origin& fromTop(unsigned i) const { return m_stack[m_stack.size() - i - 1]; }
-    
+
     bool operator==(const OriginStack&) const;
     unsigned hash() const;
-    
+
     bool isHashTableDeletedValue() const;
-    
+
     void dump(PrintStream&) const;
     JSValue toJS(ExecState*) const;
-    
+
 private:
     Vector<Origin, 1> m_stack;
 };

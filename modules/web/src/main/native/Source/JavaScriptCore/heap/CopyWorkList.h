@@ -46,14 +46,14 @@ public:
         ASSERT(!(bitwise_cast<uintptr_t>(cell) & static_cast<uintptr_t>(mask)));
         ASSERT(static_cast<uintptr_t>(token) <= mask);
     }
-    
+
     JSCell* cell() const { return bitwise_cast<JSCell*>(m_value & ~static_cast<uintptr_t>(mask)); }
     CopyToken token() const { return static_cast<CopyToken>(m_value & mask); }
-    
+
 private:
     static const unsigned requiredAlignment = 8;
     static const unsigned mask = requiredAlignment - 1;
-    
+
     uintptr_t m_value;
 };
 
@@ -104,7 +104,7 @@ public:
         if (m_currentIndex >= m_currentSegment->size()) {
             m_currentIndex = 0;
             m_currentSegment = m_currentSegment->next();
-        
+
             ASSERT(!m_currentSegment || m_currentSegment->size());
         }
 
@@ -115,7 +115,7 @@ public:
     {
         return m_currentSegment == other.m_currentSegment && m_currentIndex == other.m_currentIndex;
     }
-    
+
     bool operator!=(const CopyWorkListIterator& other) const
     {
         return !(*this == other);
@@ -133,7 +133,7 @@ private:
         , m_currentIndex(startIndex)
     {
     }
-    
+
     CopyWorkListSegment* m_currentSegment;
     size_t m_currentIndex;
 };

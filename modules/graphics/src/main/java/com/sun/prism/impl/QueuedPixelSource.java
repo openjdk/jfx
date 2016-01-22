@@ -110,7 +110,7 @@ public class QueuedPixelSource implements PixelSource {
      * Or it may be an object that reuses a buffer from a previously
      * used (but not active) {@code Pixels} object.
      * Or it may be a brand new object.
-     * 
+     *
      * @param w the width of the desired Pixels object
      * @param h the height of the desired Pixels object
      * @param scale the scale of the desired Pixels object
@@ -164,7 +164,7 @@ public class QueuedPixelSource implements PixelSource {
      * Place the indicated {@code Pixels} object into the enqueued state,
      * replacing any other objects that are currently enqueued but not yet
      * being used by the consumer.
-     * 
+     *
      * @param pixels the {@code Pixels} object to be enqueued
      */
     public synchronized void enqueuePixels(Pixels pixels) {

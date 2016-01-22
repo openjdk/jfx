@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef SimpleStats_h
@@ -41,39 +41,39 @@ public:
         , m_sumOfSquares(0)
     {
     }
-    
+
     void add(double value)
     {
         m_count++;
         m_sum += value;
         m_sumOfSquares += value * value;
     }
-    
+
     bool operator!() const
     {
         return !m_count;
     }
-    
+
     double count() const
     {
         return m_count;
     }
-    
+
     double sum() const
     {
         return m_sum;
     }
-    
+
     double sumOfSquares() const
     {
         return m_sumOfSquares;
     }
-    
+
     double mean() const
     {
         return m_sum / m_count;
     }
-    
+
     // NB. This gives a biased variance as it divides by the number of samples rather
     // than the degrees of freedom. This is fine once the count grows large, which in
     // our case will happen rather quickly.
@@ -81,27 +81,27 @@ public:
     {
         if (m_count < 2)
             return 0;
-        
+
         // Compute <x^2> - <x>^2
         double secondMoment = m_sumOfSquares / m_count;
         double firstMoment = m_sum / m_count;
-        
+
         double result = secondMoment - firstMoment * firstMoment;
-        
+
         // It's possible to get -epsilon. Protect against this and turn it into
         // +0.
         if (result <= 0)
             return 0;
-        
+
         return result;
     }
-    
+
     // NB. This gives a biased standard deviation. See above.
     double standardDeviation() const
     {
         return sqrt(variance());
     }
-    
+
 private:
     double m_count;
     double m_sum;

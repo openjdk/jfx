@@ -65,9 +65,9 @@ import java.io.IOException;
  * <p>
  * During simple press-drag-release gesture, the other nodes are not involved
  * and don't get any events. If these nodes need to be involved in the gesture,
- * full press-drag-release gesture has to be activated. This gesture is 
+ * full press-drag-release gesture has to be activated. This gesture is
  * best used for connecting nodes by "wires", dragging nodes to other nodes etc.
- * This gesture type is more closely described at 
+ * This gesture type is more closely described at
  * {@link javafx.scene.input.MouseDragEvent MouseDragEvent} which contains
  * the events delivered to the gesture targets.
  * <p>
@@ -131,7 +131,7 @@ import java.io.IOException;
 public class MouseEvent extends InputEvent {
 
     private static final long serialVersionUID = 20121107L;
-    
+
     /**
      * Common supertype for all mouse event types.
      */
@@ -157,7 +157,7 @@ public class MouseEvent extends InputEvent {
     /**
      * This event occurs when mouse button has been clicked (pressed and
      * released on the same node). This event provides a button-like behavior
-     * to any node. Note that even long drags can generate click event (it 
+     * to any node. Note that even long drags can generate click event (it
      * is delivered to the top-most node on which the mouse was both
      * pressed and released).
      */
@@ -268,7 +268,7 @@ public class MouseEvent extends InputEvent {
 
     /**
      * Copies this event for a different source and target.
-     * In most cases you don't need to use this method, it's called 
+     * In most cases you don't need to use this method, it's called
      * automatically when you fire the event.
      * @param newSource New event source
      * @param newTarget New event target
@@ -472,7 +472,7 @@ public class MouseEvent extends InputEvent {
     /**
      * Horizontal position of the event relative to the
      * origin of the MouseEvent's source.
-     * 
+     *
      * @return horizontal position of the event relative to the
      * origin of the MouseEvent's source.
      */
@@ -489,7 +489,7 @@ public class MouseEvent extends InputEvent {
     /**
      * Vertical position of the event relative to the
      * origin of the MouseEvent's source.
-     * 
+     *
      * @return vertical position of the event relative to the
      * origin of the MouseEvent's source.
      */
@@ -556,7 +556,7 @@ public class MouseEvent extends InputEvent {
      * the boundsInParent of the root-most parent of the MouseEvent's node.
      * Note that in 3D scene, this represents the flat coordinates after
      * applying the projection transformations.
-     * 
+     *
      * @return horizontal position of the event relative to the
      * origin of the {@code Scene} that contains the MouseEvent's source
      */
@@ -579,7 +579,7 @@ public class MouseEvent extends InputEvent {
      * the boundsInParent of the root-most parent of the MouseEvent's node.
      * Note that in 3D scene, this represents the flat coordinates after
      * applying the projection transformations.
-     * 
+     *
      * @return vertical position of the event relative to the
      * origin of the {@code Scene} that contains the MouseEvent's source
      */
@@ -594,7 +594,7 @@ public class MouseEvent extends InputEvent {
 
     /**
      * Which, if any, of the mouse buttons is responsible for this event.
-     * 
+     *
      * @return mouse button whose state change caused this event
      */
     public final MouseButton getButton() {
@@ -603,26 +603,26 @@ public class MouseEvent extends InputEvent {
 
     /**
      * Number of mouse clicks associated with this event.
-     * All MOUSE_MOVED events have the clickCount value equal to 0. The 
+     * All MOUSE_MOVED events have the clickCount value equal to 0. The
      * value is increased with MOUSE_PRESSED event and stays like
-     * that for all subsequent events till MOUSE_RELEASED, including the 
+     * that for all subsequent events till MOUSE_RELEASED, including the
      * afterwards generated MOUSE_CLICKED event. The value is increased
      * to numbers higher than one if all the events between two subsequent
-     * presses happen on a small region and in a small time (according 
+     * presses happen on a small region and in a small time (according
      * to native operating system configuration).
      */
     private final int clickCount;
 
     /**
      * Returns number of mouse clicks associated with this event.
-     * All MOUSE_MOVED events have the clickCount value equal to 0. The 
+     * All MOUSE_MOVED events have the clickCount value equal to 0. The
      * value is increased with MOUSE_PRESSED event and stays like
-     * that for all subsequent events till MOUSE_RELEASED, including the 
+     * that for all subsequent events till MOUSE_RELEASED, including the
      * afterwards generated MOUSE_CLICKED event. The value is increased
      * to numbers higher than one if all the events between two subsequent
-     * presses happen on a small region and in a small time (according 
+     * presses happen on a small region and in a small time (according
      * to native operating system configuration).
-     * 
+     *
      * @return number of mouse clicks associated with this event
      */
     public final int getClickCount() {
@@ -630,24 +630,24 @@ public class MouseEvent extends InputEvent {
     }
 
     /**
-     * Whether the mouse cursor left the hysteresis region since the previous 
+     * Whether the mouse cursor left the hysteresis region since the previous
      * press.
      */
     private final boolean stillSincePress;
-    
+
     /**
-     * Indicates whether the mouse cursor stayed in the system-provided 
+     * Indicates whether the mouse cursor stayed in the system-provided
      * hysteresis area since last pressed event that occurred before this event.
      * <p>
      * Click event is generated for a node if mouse was both pressed and
      * released over the node, regardless of mouse movements between the press
      * and release. If a node wants to react differently on a simple click and
-     * on a mouse drag, it should use a system-supplied short distance 
-     * threshold to decide between click and drag (users often perform 
+     * on a mouse drag, it should use a system-supplied short distance
+     * threshold to decide between click and drag (users often perform
      * inadvertent tiny movements during a click). It can be easily achieved
      * by ignoring all drags with this method returning {@code true} and
      * ignoring all clicks with this method returning {@code false}.
-     * 
+     *
      * @return true if there were no significant mouse movements (out of
      * system hysteresis area) since the last pressed event that occurred
      * before this event.
@@ -655,7 +655,7 @@ public class MouseEvent extends InputEvent {
     public final boolean isStillSincePress() {
         return stillSincePress;
     }
-    
+
     /**
      * Whether or not the Shift modifier is down on this event.
      */
@@ -788,13 +788,13 @@ public class MouseEvent extends InputEvent {
     private final boolean primaryButtonDown;
 
     /**
-     * Returns {@code true} if primary button (button 1, usually the left) 
-     * is currently pressed. Note that this is different from the 
+     * Returns {@code true} if primary button (button 1, usually the left)
+     * is currently pressed. Note that this is different from the
      * {@code getButton()} method that indicates which button press was
      * responsible for this event while this method indicates whether the
      * primary button is depressed.
      *
-     * @return {@code true} if primary button (button 1, usually the left) 
+     * @return {@code true} if primary button (button 1, usually the left)
      * is currently pressed
      */
     public final boolean isPrimaryButtonDown() {
@@ -803,7 +803,7 @@ public class MouseEvent extends InputEvent {
 
     /**
      * {@code true} if secondary button (button 3, usually the right) is currently
-     * pressed. Note that this is different from the {@link #getButton() button} 
+     * pressed. Note that this is different from the {@link #getButton() button}
      * variable in that the {@code button} variable indicates which button press was
      * responsible for this event while this variable indicates whether the
      * primary button is depressed.
@@ -811,13 +811,13 @@ public class MouseEvent extends InputEvent {
     private final boolean secondaryButtonDown;
 
     /**
-     * Returns {@code true} if secondary button (button 1, usually the right) 
-     * is currently pressed. Note that this is different from the 
+     * Returns {@code true} if secondary button (button 1, usually the right)
+     * is currently pressed. Note that this is different from the
      * {@code getButton()} method that indicates which button press was
      * responsible for this event while this method indicates whether the
      * secondary button is depressed.
      *
-     * @return {@code true} if secondary button (button 3, usually the right) 
+     * @return {@code true} if secondary button (button 3, usually the right)
      * is currently pressed
      */
     public final boolean isSecondaryButtonDown() {
@@ -834,8 +834,8 @@ public class MouseEvent extends InputEvent {
     private final boolean middleButtonDown;
 
     /**
-     * Returns {@code true} if middle button (button 2) 
-     * is currently pressed. Note that this is different from the 
+     * Returns {@code true} if middle button (button 2)
+     * is currently pressed. Note that this is different from the
      * {@code getButton()} method that indicates which button press was
      * responsible for this event while this method indicates whether the
      * middle button is depressed.
@@ -849,7 +849,7 @@ public class MouseEvent extends InputEvent {
     /**
      * Returns a string representation of this {@code MouseEvent} object.
      * @return a string representation of this {@code MouseEvent} object.
-     */ 
+     */
     @Override public String toString() {
         final StringBuilder sb = new StringBuilder("MouseEvent [");
 
@@ -907,14 +907,14 @@ public class MouseEvent extends InputEvent {
 
     /**
      * Returns information about the pick.
-     * 
+     *
      * @return new PickResult object that contains information about the pick
      * @since JavaFX 8.0
      */
     public final PickResult getPickResult() {
         return pickResult;
     }
-    
+
     /**
      * These properties need to live in a separate object shared among all the
      * copied events to make sure that the values are propagated to the

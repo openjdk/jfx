@@ -22,7 +22,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #import "config.h"
@@ -62,9 +62,9 @@ Class kitClass(WebCore::Event* impl)
         if (desiredInterface == WebCore::TextEventInterfaceType)
             return [DOMTextEvent class];
         if (desiredInterface == WebCore::WheelEventInterfaceType)
-            return [DOMWheelEvent class];        
+            return [DOMWheelEvent class];
 #if PLATFORM(IOS) && ENABLE(TOUCH_EVENTS)
-        if (desiredInterface == WebCore::TouchEventInterfaceType) 
+        if (desiredInterface == WebCore::TouchEventInterfaceType)
             return [DOMTouchEvent class];
 #endif
 #if ENABLE(IOS_GESTURE_EVENTS)

@@ -43,7 +43,7 @@ public abstract class TableColumnComparatorBase<S,T> implements Comparator<S> {
     public TableColumnComparatorBase(TableColumnBase<S,T>... columns) {
         this(Arrays.asList(columns));
     }
-    
+
     public TableColumnComparatorBase(List<? extends TableColumnBase> columns) {
         this.columns = new ArrayList<TableColumnBase>(columns);
     }
@@ -56,12 +56,12 @@ public abstract class TableColumnComparatorBase<S,T> implements Comparator<S> {
     @Override public int compare(S o1, S o2) {
         for (TableColumnBase<S,T> tc : columns) {
             if (! isSortable(tc)) continue;
-            
+
             T value1 = tc.getCellData(o1);
             T value2 = tc.getCellData(o2);
-            
+
             int result = doCompare(tc, value1, value2);
-            
+
             if (result != 0) {
                 return result;
             }
@@ -92,65 +92,65 @@ public abstract class TableColumnComparatorBase<S,T> implements Comparator<S> {
     @Override public String toString() {
         return "TableColumnComparatorBase [ columns: " + getColumns() + "] ";
     }
-    
+
     public abstract boolean isSortable(final TableColumnBase<S,T> tcb);
     public abstract int doCompare(final TableColumnBase<S,T> tcb, final T value1, final T value2);
-    
-    
-    
-    
-    
+
+
+
+
+
     public static final class TableColumnComparator<S,T> extends TableColumnComparatorBase<S, T> {
-        
+
         public TableColumnComparator(TableColumn<S,T>... columns) {
             super(Arrays.asList(columns));
         }
-        
+
         public TableColumnComparator(List<TableColumn<S,T>> columns) {
             super(columns);
         }
-        
+
         @Override public boolean isSortable(final TableColumnBase<S,T> tcb) {
             TableColumn<S, T> tc = (TableColumn<S,T>)tcb;
             return tc.getSortType() != null && tc.isSortable();
         }
-        
+
         @Override public int doCompare(final TableColumnBase<S,T> tcb, final T value1, final T value2) {
             TableColumn<S, T> tc = (TableColumn<S,T>)tcb;
             Comparator<T> c = tc.getComparator();
             switch (tc.getSortType()) {
                 case ASCENDING: return c.compare(value1, value2);
-                case DESCENDING: return c.compare(value2, value1);    
+                case DESCENDING: return c.compare(value2, value1);
             }
             return 0;
         }
     }
-    
-    
+
+
     public static final class TreeTableColumnComparator<S,T> extends TableColumnComparatorBase<S, T> {
-        
+
         public TreeTableColumnComparator(TreeTableColumn<S,T>... columns) {
             super(Arrays.asList(columns));
         }
-        
+
         public TreeTableColumnComparator(List<TreeTableColumn<S,T>> columns) {
             super(columns);
         }
-        
+
         @Override public boolean isSortable(final TableColumnBase<S,T> tcb) {
             TreeTableColumn<S, T> tc = (TreeTableColumn<S,T>)tcb;
             return tc.getSortType() != null && tc.isSortable();
         }
-        
+
         @Override public int doCompare(final TableColumnBase<S,T> tcb, final T value1, final T value2) {
             TreeTableColumn<S, T> tc = (TreeTableColumn<S,T>)tcb;
             Comparator<T> c = tc.getComparator();
             switch (tc.getSortType()) {
                 case ASCENDING: return c.compare(value1, value2);
-                case DESCENDING: return c.compare(value2, value1);    
+                case DESCENDING: return c.compare(value2, value1);
             }
             return 0;
         }
     }
-    
+
 }

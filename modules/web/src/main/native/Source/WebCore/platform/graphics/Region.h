@@ -108,7 +108,7 @@ private:
         typedef const Span* SpanIterator;
         SpanIterator spans_begin() const;
         SpanIterator spans_end() const;
-        
+
         typedef const int* SegmentIterator;
         SegmentIterator segments_begin(SpanIterator) const;
         SegmentIterator segments_end(SpanIterator) const;
@@ -125,7 +125,7 @@ private:
 
         template<typename CompareOperation>
         static bool compareShapes(const Shape& shape1, const Shape& shape2);
-        
+
         bool isValid() const;
 
         // For encoding/decoding only.
@@ -143,7 +143,7 @@ private:
         struct UnionOperation;
         struct IntersectOperation;
         struct SubtractOperation;
-        
+
         template<typename Operation>
         static Shape shapeOperation(const Shape& shape1, const Shape& shape2);
 
@@ -175,7 +175,7 @@ static inline Region intersect(const Region& a, const Region& b)
 
     return result;
 }
-    
+
 static inline Region subtract(const Region& a, const Region& b)
 {
     Region result(a);

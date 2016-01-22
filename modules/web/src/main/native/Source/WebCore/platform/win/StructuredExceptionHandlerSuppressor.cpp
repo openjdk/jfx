@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -86,7 +86,7 @@ StructuredExceptionHandlerSuppressor::StructuredExceptionHandlerSuppressor(Excep
     // Windows puts an __try/__except block around some calls, such as hooks.
     // The exception handler then ignores system exceptions like invalid addresses
     // and null pointers. This class can be used to remove this block and prevent
-    // it from catching the exception. Typically this will cause the exception to crash 
+    // it from catching the exception. Typically this will cause the exception to crash
     // which is often desirable to allow crashlogs to be recorded for debugging purposed.
     // While this class is in scope we replace the Windows exception handler with a custom
     // handler that indicates exceptions that should not be handled.

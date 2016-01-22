@@ -29,28 +29,28 @@ gint                  g_printf    (gchar const *format,
                                    ...) G_GNUC_PRINTF (1, 2);
 GLIB_AVAILABLE_IN_ALL
 gint                  g_fprintf   (FILE        *file,
-				   gchar const *format,
-				   ...) G_GNUC_PRINTF (2, 3);
+                   gchar const *format,
+                   ...) G_GNUC_PRINTF (2, 3);
 GLIB_AVAILABLE_IN_ALL
 gint                  g_sprintf   (gchar       *string,
-				   gchar const *format,
-				   ...) G_GNUC_PRINTF (2, 3);
+                   gchar const *format,
+                   ...) G_GNUC_PRINTF (2, 3);
 
 GLIB_AVAILABLE_IN_ALL
 gint                  g_vprintf   (gchar const *format,
                                    va_list      args) G_GNUC_PRINTF(1, 0);
 GLIB_AVAILABLE_IN_ALL
 gint                  g_vfprintf  (FILE        *file,
-				   gchar const *format,
-				   va_list      args) G_GNUC_PRINTF(2, 0);
+                   gchar const *format,
+                   va_list      args) G_GNUC_PRINTF(2, 0);
 GLIB_AVAILABLE_IN_ALL
 gint                  g_vsprintf  (gchar       *string,
-				   gchar const *format,
-				   va_list      args) G_GNUC_PRINTF(2, 0);
+                   gchar const *format,
+                   va_list      args) G_GNUC_PRINTF(2, 0);
 GLIB_AVAILABLE_IN_ALL
 gint                  g_vasprintf (gchar      **string,
-				   gchar const *format,
-				   va_list      args) G_GNUC_PRINTF(2, 0);
+                   gchar const *format,
+                   va_list      args) G_GNUC_PRINTF(2, 0);
 
 G_END_DECLS
 

@@ -64,10 +64,10 @@ import com.sun.javafx.scene.control.skin.Utils;
 
 /**
  * Table-like controls (such as {@link TableView} and {@link TreeTableView}) are
- * made up of zero or more instances of a concrete TableColumnBase subclass 
+ * made up of zero or more instances of a concrete TableColumnBase subclass
  * ({@link TableColumn} and {@link TreeTableColumn}, respectively). Each
  * table column in a table is responsible for displaying (and editing) the contents
- * of that column. As well as being responsible for displaying and editing data 
+ * of that column. As well as being responsible for displaying and editing data
  * for a single column, a table column also contains the necessary properties to:
  * <ul>
  *    <li>Be resized (using {@link #minWidthProperty() minWidth}/{@link #prefWidthProperty() prefWidth}/{@link #maxWidthProperty() maxWidth}
@@ -75,21 +75,21 @@ import com.sun.javafx.scene.control.skin.Utils;
  *    <li>Have its {@link #visibleProperty() visibility} toggled
  *    <li>Display {@link #textProperty() header text}
  *    <li>Display any {@link #getColumns() nested columns} it may contain
- *    <li>Have a {@link #contextMenuProperty() context menu} when the user 
+ *    <li>Have a {@link #contextMenuProperty() context menu} when the user
  *      right-clicks the column header area
- *    <li>Have the contents of the table be sorted (using 
+ *    <li>Have the contents of the table be sorted (using
  *      {@link #comparatorProperty() comparator}, {@link #sortable sortable} and
  *      sortType).
  * </ul>
  * </p>
- * 
- * When instantiating a concrete subclass of TableColumnBase, perhaps the two 
- * most important properties to set are the column {@link #textProperty() text} 
- * (what to show in the column header area), and the column 
- * {@code cell value factory} (which is used to populate individual cells in the 
- * column). Refer to the class documentation for {@link TableColumn} and 
+ *
+ * When instantiating a concrete subclass of TableColumnBase, perhaps the two
+ * most important properties to set are the column {@link #textProperty() text}
+ * (what to show in the column header area), and the column
+ * {@code cell value factory} (which is used to populate individual cells in the
+ * column). Refer to the class documentation for {@link TableColumn} and
  * {@link TreeTableColumn} for more information.
- * 
+ *
  * @param <S> The type of the UI control (e.g. the type of the 'row').
  * @param <T> The type of the content in all cells in this table column.
  * @see TableColumn
@@ -99,21 +99,21 @@ import com.sun.javafx.scene.control.skin.Utils;
  */
 @IDProperty("id")
 public abstract class TableColumnBase<S,T> implements EventTarget, Styleable {
-    
+
     /***************************************************************************
      *                                                                         *
      * Static properties and methods                                           *
      *                                                                         *
      **************************************************************************/
-    
+
     // NOTE: If these numbers change, update the copy of this value in TableColumnHeader
     static final double DEFAULT_WIDTH = 80.0F;
     static final double DEFAULT_MIN_WIDTH = 10.0F;
     static final double DEFAULT_MAX_WIDTH = 5000.0F;
-    
+
     /**
      * By default all columns will use this comparator to perform sorting. This
-     * comparator simply performs null checks, and checks if the object is 
+     * comparator simply performs null checks, and checks if the object is
      * {@link Comparable}. If it is, the {@link Comparable#compareTo(java.lang.Object)}
      * method is called, otherwise this method will defer to
      * {@link Collator#compare(java.lang.String, java.lang.String)}.
@@ -129,14 +129,14 @@ public abstract class TableColumnBase<S,T> implements EventTarget, Styleable {
 
         return Collator.getInstance().compare(obj1.toString(), obj2.toString());
     };
-    
-    
-    
+
+
+
     /***************************************************************************
      *                                                                         *
      * Constructors                                                            *
      *                                                                         *
-     **************************************************************************/    
+     **************************************************************************/
 
     /**
      * Creates a default TableColumn with default cell factory, comparator, and
@@ -154,34 +154,34 @@ public abstract class TableColumnBase<S,T> implements EventTarget, Styleable {
     protected TableColumnBase(String text) {
         setText(text);
     }
-    
-    
-    
+
+
+
     /***************************************************************************
      *                                                                         *
      * Listeners                                                               *
      *                                                                         *
      **************************************************************************/
-    
-    
-    
+
+
+
     /***************************************************************************
      *                                                                         *
      * Instance Variables                                                      *
      *                                                                         *
      **************************************************************************/
-    
+
     final EventHandlerManager eventHandlerManager = new EventHandlerManager(this);
-    
-    
-    
+
+
+
     /***************************************************************************
      *                                                                         *
      * Properties                                                              *
      *                                                                         *
      **************************************************************************/
-    
-    
+
+
     // --- Text
     /**
      * This is the text to show in the header for this column.
@@ -190,8 +190,8 @@ public abstract class TableColumnBase<S,T> implements EventTarget, Styleable {
     public final StringProperty textProperty() { return text; }
     public final void setText(String value) { text.set(value); }
     public final String getText() { return text.get(); }
-    
-    
+
+
     // --- Visible
     /**
      * Toggling this will immediately toggle the visibility of this column,
@@ -219,8 +219,8 @@ public abstract class TableColumnBase<S,T> implements EventTarget, Styleable {
     public final void setVisible(boolean value) { visibleProperty().set(value); }
     public final boolean isVisible() { return visible.get(); }
     public final BooleanProperty visibleProperty() { return visible; }
-    
-    
+
+
     // --- Parent Column
     /**
      * This read-only property will always refer to the parent of this column,
@@ -248,8 +248,8 @@ public abstract class TableColumnBase<S,T> implements EventTarget, Styleable {
         }
         return parentColumn;
     }
-    
-    
+
+
     // --- Menu
     /**
      * This menu will be shown whenever the user right clicks within the header
@@ -284,12 +284,12 @@ public abstract class TableColumnBase<S,T> implements EventTarget, Styleable {
         }
         return contextMenu;
     }
-    
-    
+
+
     // --- Id
     /**
-     * The id of this TableColumnBase. This simple string identifier is useful 
-     * for finding a specific TableColumnBase within a UI control that uses 
+     * The id of this TableColumnBase. This simple string identifier is useful
+     * for finding a specific TableColumnBase within a UI control that uses
      * TableColumnBase instances. The default value is {@code null}.
      *
      * @defaultValue null
@@ -304,7 +304,7 @@ public abstract class TableColumnBase<S,T> implements EventTarget, Styleable {
         return id;
     }
 
-    
+
     // --- style
     /**
      * A string representation of the CSS style associated with this
@@ -327,8 +327,8 @@ public abstract class TableColumnBase<S,T> implements EventTarget, Styleable {
         }
         return style;
     }
-    
-    
+
+
     // --- Style class
     private final ObservableList<String> styleClass = FXCollections.observableArrayList();
     /**
@@ -342,8 +342,8 @@ public abstract class TableColumnBase<S,T> implements EventTarget, Styleable {
     @Override public ObservableList<String> getStyleClass() {
         return styleClass;
     }
-    
-    
+
+
     // --- Graphic
     /**
      * <p>The graphic to show in the table column to allow the user to
@@ -362,30 +362,30 @@ public abstract class TableColumnBase<S,T> implements EventTarget, Styleable {
         }
         return graphic;
     }
-    
-    
+
+
     // --- Sort node
     /**
      * <p>The node to use as the "sort arrow", shown to the user in situations where
      * the table column is part of the sort order. It may be the only item in
-     * the sort order, or it may be a secondary, tertiary, or latter sort item, 
+     * the sort order, or it may be a secondary, tertiary, or latter sort item,
      * and the node should reflect this visually. This is only used in the case of
-     * the table column being in the sort order (refer to, for example, 
+     * the table column being in the sort order (refer to, for example,
      * {@link TableView#getSortOrder()} and {@link TreeTableView#getSortOrder()}).
-     * If not specified, the table column skin implementation is responsible for 
+     * If not specified, the table column skin implementation is responsible for
      * providing a default sort node.
-     * 
+     *
      * <p>The sort node is commonly seen represented as a triangle that rotates
-     * on screen to indicate whether the table column is part of the sort order, 
-     * and if so, whether the sort is ascending or descending, and what position in 
+     * on screen to indicate whether the table column is part of the sort order,
+     * and if so, whether the sort is ascending or descending, and what position in
      * the sort order it is in.
      */
     private ObjectProperty<Node> sortNode = new SimpleObjectProperty<Node>(this, "sortNode");
     public final void setSortNode(Node value) { sortNodeProperty().set(value); }
     public final Node getSortNode() { return sortNode.get(); }
     public final ObjectProperty<Node> sortNodeProperty() { return sortNode; }
-    
-    
+
+
     // --- Width
     /**
      * The width of this column. Modifying this will result in the column width
@@ -398,8 +398,8 @@ public abstract class TableColumnBase<S,T> implements EventTarget, Styleable {
     public final double getWidth() { return width.get(); }
     void setWidth(double value) { width.set(value); }
     private ReadOnlyDoubleWrapper width = new ReadOnlyDoubleWrapper(this, "width", DEFAULT_WIDTH);
-    
-    
+
+
     // --- Minimum Width
     /**
      * The minimum width the table column is permitted to be resized to.
@@ -421,8 +421,8 @@ public abstract class TableColumnBase<S,T> implements EventTarget, Styleable {
         }
         return minWidth;
     }
-    
-    
+
+
     // --- Preferred Width
     /**
      * The preferred width of the TableColumn.
@@ -435,8 +435,8 @@ public abstract class TableColumnBase<S,T> implements EventTarget, Styleable {
             impl_setWidth(getPrefWidth());
         }
     };
-    
-    
+
+
     // --- Maximum Width
     // The table does not resize properly if this is set to Number.MAX_VALUE,
     // so I've arbitrarily chosen a better, smaller number.
@@ -451,8 +451,8 @@ public abstract class TableColumnBase<S,T> implements EventTarget, Styleable {
             impl_setWidth(getWidth());
         }
     };
-    
-    
+
+
     // --- Resizable
     /**
      * Used to indicate whether the width of this column can change. It is up
@@ -472,8 +472,8 @@ public abstract class TableColumnBase<S,T> implements EventTarget, Styleable {
         return resizable == null ? true : resizable.get();
     }
 
-    
-    
+
+
     // --- Sortable
     /**
      * <p>A boolean property to toggle on and off the 'sortability' of this column.
@@ -500,9 +500,9 @@ public abstract class TableColumnBase<S,T> implements EventTarget, Styleable {
     public final boolean isSortable() {
         return sortable == null ? true : sortable.get();
     }
-    
-    
-    
+
+
+
     // --- Reorderable
     /**
      * A boolean property to toggle on and off the 'reorderability' of this column
@@ -548,11 +548,11 @@ public abstract class TableColumnBase<S,T> implements EventTarget, Styleable {
         return comparator == null ? DEFAULT_COMPARATOR : comparator.get();
     }
 
-    
+
     // --- Editable
     /**
-     * Specifies whether this table column allows editing. This, unlike 
-     * {@link TableView#editableProperty()} and 
+     * Specifies whether this table column allows editing. This, unlike
+     * {@link TableView#editableProperty()} and
      * {@link TreeTableView#editableProperty()}, is true by default.
      */
     private BooleanProperty editable;
@@ -568,19 +568,19 @@ public abstract class TableColumnBase<S,T> implements EventTarget, Styleable {
         }
         return editable;
     }
-    
-    
+
+
     // --- Properties
     private static final Object USER_DATA_KEY = new Object();
-    
+
     // A map containing a set of properties for this TableColumn
     private ObservableMap<Object, Object> properties;
 
     /**
-      * Returns an observable map of properties on this table column for use 
+      * Returns an observable map of properties on this table column for use
       * primarily by application developers.
       *
-      * @return an observable map of properties on this table column for use 
+      * @return an observable map of properties on this table column for use
       * primarily by application developers
      */
     public final ObservableMap<Object, Object> getProperties() {
@@ -589,7 +589,7 @@ public abstract class TableColumnBase<S,T> implements EventTarget, Styleable {
         }
         return properties;
     }
-    
+
     /**
      * Tests if this table column has properties.
      * @return true if node has properties.
@@ -598,7 +598,7 @@ public abstract class TableColumnBase<S,T> implements EventTarget, Styleable {
         return properties != null && ! properties.isEmpty();
     }
 
-     
+
     // --- UserData
     /**
      * Convenience method for setting a single Object property that can be
@@ -623,14 +623,14 @@ public abstract class TableColumnBase<S,T> implements EventTarget, Styleable {
     public Object getUserData() {
         return getProperties().get(USER_DATA_KEY);
     }
-    
-    
+
+
     /***************************************************************************
      *                                                                         *
      * Public API                                                              *
      *                                                                         *
-     **************************************************************************/    
-    
+     **************************************************************************/
+
     /**
      * This enables support for nested columns, which can be useful to group
      * together related data. For example, we may have a 'Name' column with
@@ -641,16 +641,16 @@ public abstract class TableColumnBase<S,T> implements EventTarget, Styleable {
      * just the leaf columns. In other words, this is purely a visual feature.</p>
      *
      * @return An ObservableList containing TableColumnBase instances (or subclasses)
-     *      that are the children of this TableColumnBase. If these children 
-     *      TableColumnBase instances are set as visible, they will appear 
+     *      that are the children of this TableColumnBase. If these children
+     *      TableColumnBase instances are set as visible, they will appear
      *      beneath this table column.
      */
     public abstract ObservableList<? extends TableColumnBase<S,?>> getColumns();
-    
+
     /**
-     * Returns the actual value for a cell at a given row index (and which 
+     * Returns the actual value for a cell at a given row index (and which
      * belongs to this table column).
-     * 
+     *
      * @param index The row index for which the data is required.
      * @return The data that belongs to the cell at the intersection of the given
      *      row index and the table column that this method is called on.
@@ -662,9 +662,9 @@ public abstract class TableColumnBase<S,T> implements EventTarget, Styleable {
 
     /**
      * Returns the actual value for a cell from the given item.
-     * 
+     *
      * @param item The item from which a value of type T should be extracted.
-     * @return The data that should be used in a specific cell in this 
+     * @return The data that should be used in a specific cell in this
      *      column, based on the item passed in as an argument.
      */
     public final T getCellData(final S item) {
@@ -677,35 +677,35 @@ public abstract class TableColumnBase<S,T> implements EventTarget, Styleable {
      * index (which is of type S). In other words, this method expects to receive
      * an integer value that is greater than or equal to zero, and less than the
      * size of the underlying data model. If the index is
-     * valid, this method will return an ObservableValue&lt;T&gt; for this 
+     * valid, this method will return an ObservableValue&lt;T&gt; for this
      * specific column.
-     * 
-     * <p>This is achieved by calling the {@code cell value factory}, and 
+     *
+     * <p>This is achieved by calling the {@code cell value factory}, and
      * returning whatever it returns when passed a {@code CellDataFeatures} (see,
-     * for example, the CellDataFeatures classes belonging to 
-     * {@link TableColumn.CellDataFeatures TableColumn} and 
-     * {@link TreeTableColumn.CellDataFeatures TreeTableColumn} for more 
+     * for example, the CellDataFeatures classes belonging to
+     * {@link TableColumn.CellDataFeatures TableColumn} and
+     * {@link TreeTableColumn.CellDataFeatures TreeTableColumn} for more
      * information).
-     * 
-     * @param index The index of the item (of type S) for which an 
+     *
+     * @param index The index of the item (of type S) for which an
      *      ObservableValue&lt;T&gt; is sought.
      * @return An ObservableValue&lt;T&gt; for this specific table column.
      */
     public abstract ObservableValue<T> getCellObservableValue(int index);
-    
+
     /**
      * Attempts to return an ObservableValue&lt;T&gt; for the given item (which
      * is of type S). In other words, this method expects to receive an object from
-     * the underlying data model for the entire 'row' in the table, and it must 
+     * the underlying data model for the entire 'row' in the table, and it must
      * return an ObservableValue&lt;T&gt; for the value in this specific column.
-     * 
-     * <p>This is achieved by calling the {@code cell value factory}, and 
+     *
+     * <p>This is achieved by calling the {@code cell value factory}, and
      * returning whatever it returns when passed a {@code CellDataFeatures} (see,
-     * for example, the CellDataFeatures classes belonging to 
-     * {@link TableColumn.CellDataFeatures TableColumn} and 
-     * {@link TreeTableColumn.CellDataFeatures TreeTableColumn} for more 
+     * for example, the CellDataFeatures classes belonging to
+     * {@link TableColumn.CellDataFeatures TableColumn} and
+     * {@link TreeTableColumn.CellDataFeatures TreeTableColumn} for more
      * information).
-     * 
+     *
      * @param item The item (of type S) for which an ObservableValue&lt;T&gt; is
      *      sought.
      * @return An ObservableValue&lt;T&gt; for this specific table column.
@@ -718,7 +718,7 @@ public abstract class TableColumnBase<S,T> implements EventTarget, Styleable {
     }
 
     /**
-     * Registers an event handler to this table column. The TableColumnBase class allows 
+     * Registers an event handler to this table column. The TableColumnBase class allows
      * registration of listeners which will be notified when editing occurs.
      * Note however that TableColumnBase is <b>not</b> a Node, and therefore no visual
      * events will be fired on it.
@@ -730,7 +730,7 @@ public abstract class TableColumnBase<S,T> implements EventTarget, Styleable {
     public <E extends Event> void addEventHandler(EventType<E> eventType, EventHandler<E> eventHandler) {
         eventHandlerManager.addEventHandler(eventType, eventHandler);
     }
-    
+
     /**
      * Unregisters a previously registered event handler from this table column. One
      * handler might have been registered for different event types, so the
@@ -745,13 +745,13 @@ public abstract class TableColumnBase<S,T> implements EventTarget, Styleable {
         eventHandlerManager.removeEventHandler(eventType, eventHandler);
     }
 
-    
-    
+
+
     /***************************************************************************
      *                                                                         *
      * Private Implementation                                                  *
      *                                                                         *
-     **************************************************************************/        
+     **************************************************************************/
 
     /**
      * @treatAsPrivate implementation detail
@@ -764,7 +764,7 @@ public abstract class TableColumnBase<S,T> implements EventTarget, Styleable {
 
     void updateColumnWidths() {
         if (! getColumns().isEmpty()) {
-            // zero out the width and min width values, and iterate to 
+            // zero out the width and min width values, and iterate to
             // ensure the new value is equal to the sum of all children
             // columns
             double _minWidth = 0.0f;
@@ -785,7 +785,7 @@ public abstract class TableColumnBase<S,T> implements EventTarget, Styleable {
         }
     }
 
-    
+
     /***************************************************************************
      *                                                                         *
      * Stylesheet Handling                                                     *
@@ -799,8 +799,8 @@ public abstract class TableColumnBase<S,T> implements EventTarget, Styleable {
         return FXCollections.emptyObservableSet();
     }
 
-    
-    
+
+
     /***************************************************************************
      *                                                                         *
      * Support Interfaces                                                      *

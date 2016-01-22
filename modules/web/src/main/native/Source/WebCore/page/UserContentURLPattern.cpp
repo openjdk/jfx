@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -152,10 +152,10 @@ struct MatchTester
 {
     const String m_pattern;
     unsigned m_patternIndex;
-    
+
     const String m_test;
     unsigned m_testIndex;
-    
+
     MatchTester(const String& pattern, const String& test)
     : m_pattern(pattern)
     , m_patternIndex(0)
@@ -163,7 +163,7 @@ struct MatchTester
     , m_testIndex(0)
     {
     }
-    
+
     bool testStringFinished() const { return m_testIndex >= m_test.length(); }
     bool patternStringFinished() const { return m_patternIndex >= m_pattern.length(); }
 
@@ -175,7 +175,7 @@ struct MatchTester
             m_patternIndex++;
         }
     }
-    
+
     void eatSameChars()
     {
         while (!patternStringFinished() && !testStringFinished()) {
@@ -201,15 +201,15 @@ struct MatchTester
                 return true;
             return false;
         }
-  
+
         // Pattern is empty but not string, this is not a match.
         if (patternStringFinished())
             return false;
-        
+
         // If we don't encounter a *, then we're hosed.
         if (m_pattern[m_patternIndex] != '*')
             return false;
-        
+
         while (!testStringFinished()) {
             MatchTester nextMatch(*this);
             nextMatch.m_patternIndex++;

@@ -152,7 +152,7 @@ public class LinuxAppBundlerTest {
 
         boolean valid = bundler.validate(bundleParams);
         assertTrue(valid);
-        
+
         File output = bundler.execute(bundleParams, new File(workDir, "smoke"));
         validatePackageCfg(output, bundleParams);
     }
@@ -163,7 +163,7 @@ public class LinuxAppBundlerTest {
      *     <li>Where to build it</li>
      *     <li>The jar containing the application (with a main-class attribute)</li>
      * </ul>
-     * 
+     *
      * All other values will be driven off of those two values.
      */
     @Test
@@ -351,7 +351,7 @@ public class LinuxAppBundlerTest {
         File output = bundler.execute(bundleParams, new File(workDir, "launchers"));
         validatePackageCfg(output, bundleParams);
     }
-    
+
     /**
      * User a JRE instead of a JDK
      */

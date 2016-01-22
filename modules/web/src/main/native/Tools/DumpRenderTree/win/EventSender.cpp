@@ -7,13 +7,13 @@
  * are met:
  *
  * 1.  Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer. 
+ *     notice, this list of conditions and the following disclaimer.
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
- *     documentation and/or other materials provided with the distribution. 
+ *     documentation and/or other materials provided with the distribution.
  * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
- *     from this software without specific prior written permission. 
+ *     from this software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY APPLE AND ITS CONTRIBUTORS "AS IS" AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
@@ -147,7 +147,7 @@ static JSValueRef contextClickCallback(JSContextRef context, JSObjectRef functio
     down = false;
     msg = makeMsg(webViewWindow, WM_RBUTTONUP, 0, MAKELPARAM(lastMousePosition.x, lastMousePosition.y));
     dispatchMessage(&msg);
-    
+
     return JSValueMakeUndefined(context);
 }
 
@@ -208,7 +208,7 @@ static JSValueRef mouseDownCallback(JSContextRef context, JSObjectRef function, 
     WPARAM wparam = 0;
     if (argumentCount >= 2)
         wparam |= buildModifierFlags(context, arguments[1]);
-        
+
     MSG msg = makeMsg(webViewWindow, mouseType, wparam, MAKELPARAM(lastMousePosition.x, lastMousePosition.y));
     if (!msgQueue[endOfQueue].delay)
         dispatchMessage(&msg);
@@ -358,7 +358,7 @@ static JSValueRef mouseMoveToCallback(JSContextRef context, JSObjectRef function
 void replaySavedEvents(HRESULT* oleDragAndDropReturnValue)
 {
     replayingSavedEvents = true;
-  
+
     MSG msg = { 0 };
 
     while (startOfQueue < endOfQueue && !msgQueue[startOfQueue].delay) {
@@ -457,7 +457,7 @@ static JSValueRef keyDownCallback(JSContextRef context, JSObjectRef function, JS
     COMPtr<IWebFramePrivate> framePrivate;
     if (SUCCEEDED(frame->QueryInterface(&framePrivate)))
         framePrivate->layout();
-    
+
     JSStringRef character = JSValueToStringCopy(context, arguments[0], exception);
     ASSERT(!*exception);
     int virtualKeyCode;
@@ -581,7 +581,7 @@ static JSValueRef dispatchMessageCallback(JSContextRef context, JSObjectRef func
     COMPtr<IWebFramePrivate> framePrivate;
     if (SUCCEEDED(frame->QueryInterface(&framePrivate)))
         framePrivate->layout();
-    
+
     MSG msg = {};
     msg.hwnd = webViewWindow;
     msg.message = JSValueToNumber(context, arguments[0], exception);
@@ -704,7 +704,7 @@ static JSValueRef beginDragWithFilesCallback(JSContextRef context, JSObjectRef f
     UChar* data = reinterpret_cast<UChar*>(reinterpret_cast<BYTE*>(dropFiles) + sizeof(DROPFILES));
     for (size_t i = 0; i < files.size(); ++i)
         data[i] = files[i];
-    GlobalUnlock(hDropMedium.hGlobal); 
+    GlobalUnlock(hDropMedium.hGlobal);
 
     STGMEDIUM hFileNameMedium = {0};
     hFileNameMedium.tymed = TYMED_HGLOBAL;

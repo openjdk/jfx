@@ -47,7 +47,7 @@ public final class PrismPrintGraphics
             pg.setClipRect(cr);
             return pg;
         }
-    } 
+    }
 
     static class PagePresentable extends J2DPresentable {
         private int width;

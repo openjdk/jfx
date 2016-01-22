@@ -44,11 +44,11 @@ static GlassWindow   * focusOwner; // currently focused GlassWindow - i.e. key e
 -(id)initWithFrame:(CGRect)frame {
     self = [super initWithFrame:frame];
 
-    [[NSNotificationCenter defaultCenter] addObserver:self 
-                                             selector:@selector(keyboardDidShow:) 
-                                                 name:UIKeyboardDidShowNotification 
+    [[NSNotificationCenter defaultCenter] addObserver:self
+                                             selector:@selector(keyboardDidShow:)
+                                                 name:UIKeyboardDidShowNotification
                                                object:nil];
-    
+
     [[NSNotificationCenter defaultCenter] addObserver:self
                                              selector:@selector(keyboardDidHide:)
                                                  name:UIKeyboardDidHideNotification
@@ -137,7 +137,7 @@ static GlassMainView * masterWindowHost = nil;
 - (void)_sendJavaWindowResizeEvent:(int)type forFrame:(CGRect)frame;
 
 - (void)becomeKeyWindow;
-- (void)resignKeyWindow;    
+- (void)resignKeyWindow;
 - (void)windowWillClose;
 - (void)sendEvent:(UIEvent *)event;
 @end
@@ -231,9 +231,9 @@ static inline void setWindowFrame(GlassWindow *window, CGFloat x, CGFloat y, CGF
     NSAssert([[NSThread currentThread] isMainThread] == YES, @"must be on main thread" );
     [self _ungrabFocus];
     [self setHidden:YES];
-    
+
     [self windowWillClose];
-    
+
     [masterWindowHost release];
     [masterWindow release];//decrease retaincount
 }
@@ -257,29 +257,29 @@ static inline void setWindowFrame(GlassWindow *window, CGFloat x, CGFloat y, CGF
     {
         self->jWindow = jwindow;
         self->isFocusable = YES; // can become key window
-        
+
         self->suppressWindowMoveEvent = NO;
         self->suppressWindowResizeEvent = NO;
         self->isEnabled = YES;
-                        
+
         //default values of min/max frame sizes
         self->minWidth = self->minHeight = 0.0f;
         self->maxWidth = self->maxHeight = CGFLOAT_MAX;
-        
+
         self->childWindows = [NSMutableArray arrayWithCapacity:(NSUInteger)1];
         self->childWindows = [self->childWindows retain];
-        
+
         // default to opaque
         [self _setTransparent:NO];
-        
+
         [self setAutoresizesSubviews:NO];
-        
+
     }
     return self;
 }
 
 
-#pragma mark --- 
+#pragma mark ---
 
 - (void)_setTransparent:(BOOL)state
 {
@@ -316,9 +316,9 @@ static inline void setWindowFrame(GlassWindow *window, CGFloat x, CGFloat y, CGF
     GLASS_LOG("_GlassWindow _setFrame called");
     NSAssert([[NSThread currentThread] isMainThread] == YES, @"must be on main thread" );
     CGRect frameRect = CGRectMake(0.0, 0.0, self->_setFrameWidth, self->_setFrameHeight);
-    
+
     GLASS_LOG("bounds width, height before constraining %f, %f ", self->_setFrameWidth, self->_setFrameHeight);
-    
+
     CGSize constrainedSize = [self _constrainBounds:frameRect];
     //if larger than maxSize | smaller than minSize
     if (frameRect.size.width != constrainedSize.width ||
@@ -328,19 +328,19 @@ static inline void setWindowFrame(GlassWindow *window, CGFloat x, CGFloat y, CGF
         frameRect.size.width = constrainedSize.width;
         frameRect.size.height = constrainedSize.height;
     }
-    
+
     GLASS_LOG("bounds width, height after constraining %f, %f ", self->_setFrameWidth, self->_setFrameHeight);
 
-    
+
     [self setBounds: frameRect];
-    
-    
+
+
     CGPoint newCenter = CGPointMake(self->_setFrameX + self->_setFrameWidth / 2, self->_setFrameY + self->_setFrameHeight / 2);
-    
+
     [self setCenter:newCenter];
-    
+
     GLASS_LOG("BOUNDS after GlassWindow _setFrame == %f, %f, center == %f %f",[self bounds].size.width,[self bounds].size.height ,[self center].x, [self center].y);
-    
+
     GLASS_LOG("FRAME after GlassWindow _setFrame == %f, %f, %f, %f",[self frame].size.width,[self frame].size.height ,[self frame].origin.x, [self frame].origin.y);
 }
 
@@ -352,11 +352,11 @@ static inline void setWindowFrame(GlassWindow *window, CGFloat x, CGFloat y, CGF
         frameRect = [[self superview] bounds];
         GLASS_LOG("primaryStage resized to %f, %f",frameRect.size.width, frameRect.size.height);
     }
-    
+
     [super setBounds:frameRect];
-    
+
     [self->hostView setFrame:frameRect];//hostView is always same size as GlassWindow
-    
+
     for(GlassViewGL * subView in [self->hostView subviews]) {
         if(subView != nil && [subView isKindOfClass:[GlassViewGL class]] == YES) {
             [subView setFrame:frameRect];
@@ -369,17 +369,17 @@ static inline void setWindowFrame(GlassWindow *window, CGFloat x, CGFloat y, CGF
 -(void) setCenter:(CGPoint)center
 {
     CGPoint newCenter = center;
-    
+
     if (self->owner == nil) { // primary Stage
         GLASS_LOG("primaryStage was asked to setCenter to %f, %f",center.x, center.y);
         CGRect frameRect = [[self superview] bounds];
         newCenter = CGPointMake(frameRect.size.width/2, frameRect.size.height/2);
-        
+
         GLASS_LOG("primaryStage setCenter to %f, %f",newCenter.x, newCenter.y);
     }
-    
+
     [super setCenter:newCenter];
-    
+
     [self _sendJavaWindowMoveEventForFrame:CGRectMake([self center].x - [self bounds].size.width / 2, [self center].y - [self bounds].size.height / 2, [self bounds].size.width,[self bounds].size.height )];
 }
 
@@ -388,7 +388,7 @@ static inline void setWindowFrame(GlassWindow *window, CGFloat x, CGFloat y, CGF
 {
     GLASS_LOG("GlassWindow _constrainBounds called");
     CGSize size = frame.size;
-        
+
     CGSize constrained = CGSizeMake(frame.size.width, frame.size.height);
     {
         if (size.width < self->minWidth)
@@ -460,7 +460,7 @@ static inline void setWindowFrame(GlassWindow *window, CGFloat x, CGFloat y, CGF
     if ([[NSThread currentThread] isMainThread] == YES) {
         [self _orderBack];
     } else {
-        [self performSelectorOnMainThread:@selector(_orderBack) withObject:nil waitUntilDone:YES];    
+        [self performSelectorOnMainThread:@selector(_orderBack) withObject:nil waitUntilDone:YES];
     }
 }
 
@@ -486,11 +486,11 @@ static inline void setWindowFrame(GlassWindow *window, CGFloat x, CGFloat y, CGF
 
 
 - (void) orderFrontRegardless
-{   
+{
     if ([[NSThread currentThread] isMainThread] == YES) {
         [self _orderFrontRegardless];
     } else {
-        [self performSelectorOnMainThread:@selector(_orderFrontRegardless) withObject:nil waitUntilDone:YES];    
+        [self performSelectorOnMainThread:@selector(_orderFrontRegardless) withObject:nil waitUntilDone:YES];
     }
 }
 
@@ -501,7 +501,7 @@ static inline void setWindowFrame(GlassWindow *window, CGFloat x, CGFloat y, CGF
     if (child != nil) {
         child->parentWindow = self;
         [self->childWindows addObject:child];
-        
+
         [child _setBoundsAndPosition];
     }
 }
@@ -533,10 +533,10 @@ static inline void setWindowFrame(GlassWindow *window, CGFloat x, CGFloat y, CGF
     if (s_grabWindow != self) {
         return;
     }
-    
+
     GET_MAIN_JENV;
     (*env)->CallVoidMethod(env, self->jWindow, jWindowNotifyFocusUngrab);
-     
+
     s_grabWindow = nil;
 }
 
@@ -547,7 +547,7 @@ static inline void setWindowFrame(GlassWindow *window, CGFloat x, CGFloat y, CGF
     if (!s_grabWindow) {
         return;
     }
-    
+
     // If this window doesn't belong to an owned windows hierarchy that
     // holds the grab currently, then the grab should be released.
     for (GlassWindow * window = self; window; window = window->parentWindow) {
@@ -555,7 +555,7 @@ static inline void setWindowFrame(GlassWindow *window, CGFloat x, CGFloat y, CGF
             return;
         }
     }
-        
+
     [GlassWindow _resetGrab];
 }
 
@@ -566,7 +566,7 @@ static inline void setWindowFrame(GlassWindow *window, CGFloat x, CGFloat y, CGF
     if (s_grabWindow == self) {
         return;
     }
-        
+
     [GlassWindow _resetGrab];
     s_grabWindow = self;
 }
@@ -579,17 +579,17 @@ static inline void setWindowFrame(GlassWindow *window, CGFloat x, CGFloat y, CGF
     {
         GLASS_LOG("making GlassWindow Visible %p",self);
         [self setHidden:NO];
-        
+
         if (self->isFocusable == YES) {
             GLASS_LOG("making GlassWindow key %p",self);
             [self makeKeyWindow];
         }
-        
+
         [self orderFrontRegardless];
     } else {
         [self orderFrontRegardless];
     }
-    
+
     if ((self->owner != nil && self->parentWindow == nil))
     {
         [(GlassWindow *)self->owner addChildWindow:self];
@@ -638,9 +638,9 @@ static inline void setWindowFrame(GlassWindow *window, CGFloat x, CGFloat y, CGF
 - (void) makeKeyWindow
 {
     if (self->isEnabled && self->isFocusable && focusOwner != self) {
-        
+
         [focusOwner resignKeyWindow];
-    
+
         [self becomeKeyWindow];
     }
 }
@@ -654,17 +654,17 @@ static inline void setWindowFrame(GlassWindow *window, CGFloat x, CGFloat y, CGF
 {
     GLASS_LOG("Window did become key");
     NSAssert([[NSThread currentThread] isMainThread] == YES, @"must be on main thread" );
-    
-    
+
+
     GET_MAIN_JENV;
     if (!self->isEnabled)
     {
         (*env)->CallVoidMethod(env, self->jWindow, mat_jWindowNotifyFocusDisabled);
         return;
     }
-    
+
     focusOwner = self;
-    
+
     (*env)->CallVoidMethod(env, self->jWindow, mat_jWindowNotifyFocus, com_sun_glass_events_WindowEvent_FOCUS_GAINED);
 }
 
@@ -673,13 +673,13 @@ static inline void setWindowFrame(GlassWindow *window, CGFloat x, CGFloat y, CGF
 {
     GLASS_LOG("Window did resign key");
     NSAssert([[NSThread currentThread] isMainThread] == YES, @"must be on main thread" );
-    
+
     if (focusOwner == self) {
         focusOwner = nil;
     }
-    
+
     [self _ungrabFocus];
-    
+
     GET_MAIN_JENV;
     (*env)->CallVoidMethod(env, self->jWindow, mat_jWindowNotifyFocus, com_sun_glass_events_WindowEvent_FOCUS_LOST);
 }
@@ -694,13 +694,13 @@ static inline void setWindowFrame(GlassWindow *window, CGFloat x, CGFloat y, CGF
     {
         [self->parentWindow removeChildWindow:self];
     }
-    
+
     // Call the notification method
     GET_MAIN_JENV;
     (*env)->CallVoidMethod(env, self->jWindow, mat_jWindowNotifyDestroy);
-    
+
     if (childWindows != NULL) {
-    
+
         // Finally, close owned windows to mimic MS Windows behavior
         for (GlassWindow * child in self->childWindows)
         {
@@ -709,33 +709,33 @@ static inline void setWindowFrame(GlassWindow *window, CGFloat x, CGFloat y, CGF
 
         [childWindows release];
     }
-    
+
     [self->hostView removeFromSuperview];
     [self->hostView release];
-    
+
     if ([self superview] != nil) {
         [self removeFromSuperview];
     }
-    
+
     if (focusOwner == self) {
         focusOwner = nil;
     }
-        
+
     (*jEnv)->DeleteGlobalRef(jEnv, self->jWindow);
     GLASS_CHECK_EXCEPTION(jEnv);
-    
+
     self->jWindow = NULL;
 }
 
 
-- (void) requestInput:(NSString *)text type:(int)type width:(double)width height:(double)height 
-                  mxx:(double)mxx mxy:(double)mxy mxz:(double)mxz mxt:(double)mxt 
+- (void) requestInput:(NSString *)text type:(int)type width:(double)width height:(double)height
+                  mxx:(double)mxx mxy:(double)mxy mxz:(double)mxz mxt:(double)mxt
                   myx:(double)myx myy:(double)myy myz:(double)myz myt:(double)myt
                   mzx:(double)mzx mzy:(double)mzy mzz:(double)mzz mzt:(double)mzt
 
 {
-    [view requestInput:text type:type width:width height:height 
-                   mxx:mxx mxy:mxy mxz:mxz mxt:mxt 
+    [view requestInput:text type:type width:width height:height
+                   mxx:mxx mxy:mxy mxz:mxz mxt:mxt
                    myx:myx myy:myy myz:myz myt:myt
                    mzx:mzx mzy:mzy mzz:mzz mzt:mzt];
 }
@@ -755,67 +755,67 @@ jlong _1createWindow(JNIEnv *env, jobject jWindow, jlong jOwnerPtr, jlong jScree
     [[NSThread currentThread] isMainThread];
     if ([[NSThread currentThread] isMainThread] == NO) NSLog(@"[1] must be on main thread");
     NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
-    
+
     GlassWindow *window;
-    
+
     {
         UIScreen *screen = (UIScreen*)jlong_to_ptr(jScreenPtr);
         BOOL hidden = YES;
         if (jOwnerPtr == 0L) {
             // no owner means it is the primary stage; Decorated primary stage shows status bar by default
             hidden = ((jStyleMask & com_sun_glass_ui_Window_TITLED) == 0);
-            
+
             NSObject * values = [[NSBundle mainBundle] objectForInfoDictionaryKey:@"UIStatusBarHidden"];
             //we prefer explicit settings from .plist
             if (values != nil) {
                 hidden = (values == @(YES))?YES:NO;
             }
-            
-            [UIApplication sharedApplication].statusBarHidden = hidden;    
+
+            [UIApplication sharedApplication].statusBarHidden = hidden;
         }
 
-        
+
         if (masterWindow == nil) {
             //We have to remove rootViewController of splashscreen UIWindow in order to avoid
             //StatusBar orientation change ...
             UIWindow *splashScreen = [[UIApplication sharedApplication] keyWindow];
             splashScreen.rootViewController = nil;
-                        
+
             GLASS_LOG("SCREEN: %@", screen);
             CGRect applicationFrame = [screen bounds];
             GLASS_LOG("FRAME: %@", applicationFrame);
 
             masterWindow = [[GlassMainWindow alloc] initWithFrame:applicationFrame];
             masterWindowHost = [[GlassMainView alloc] initWithFrame:CGRectMake(0.0, 0.0, applicationFrame.size.width, applicationFrame.size.height)];
-            
+
             // Set GlassViewController - responsible for orientation change, etc.
             GlassViewController *rvc = [[GlassViewController alloc] init];
             [rvc setView:masterWindowHost];
             [masterWindow setRootViewController:rvc];
             [rvc release];
-            
+
             [masterWindow setHidden:NO];
             [masterWindowHost setHidden:NO];
         } else {
             masterWindow = [masterWindow retain];//increase retain count per each GlassWindow
             masterWindowHost = [masterWindowHost retain];
         }
-        
+
         [masterWindow setAutoresizesSubviews:YES];
         [masterWindowHost setAutoresizesSubviews:NO];
-        
+
         [masterWindow makeKeyWindow];
-        
+
         GLASS_LOG("GlassWindow _1createWindow");
         window = [[GlassWindow alloc] initWithScreen:screen jwindow:jWindow];
-        
+
         window->isResizable = NO;
- 
+
         window->hostView = [[UIView alloc] init];
         [window->hostView setAutoresizesSubviews:NO];
-        
+
         [window addSubview:window->hostView];
-        
+
         window.backgroundColor = [UIColor whiteColor];
 
         if ((jStyleMask & com_sun_glass_ui_Window_TRANSPARENT) != 0)
@@ -826,12 +826,12 @@ jlong _1createWindow(JNIEnv *env, jobject jWindow, jlong jOwnerPtr, jlong jScree
         {
             [window _setTransparent:NO];
         }
-        
+
         [masterWindowHost addSubview:window];
-        
+
         if (jOwnerPtr != 0L)
         {
-            GLASS_LOG("Adding %p window as usbview of owner window %lld", window, jOwnerPtr); 
+            GLASS_LOG("Adding %p window as usbview of owner window %lld", window, jOwnerPtr);
             window->owner = (UIWindow*)jlong_to_ptr(jOwnerPtr);
         } else {
             NSArray *views = [masterWindowHost subviews];
@@ -843,9 +843,9 @@ jlong _1createWindow(JNIEnv *env, jobject jWindow, jlong jOwnerPtr, jlong jScree
         }
     }
     [pool drain];
-    
+
     GLASS_CHECK_EXCEPTION(env);
-    
+
     return ptr_to_jlong(window);
 }
 
@@ -886,7 +886,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_ios_IosWindow__1createWindow
 (JNIEnv *env, jobject jwindow, jlong jownerPtr, jlong jscreenPtr, jint jstyleMask)
 {
     jlong value;
-    
+
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
     GLASS_POOL_ENTER;
     {
@@ -896,7 +896,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_ios_IosWindow__1createWindow
         {
             value = _1createWindow(env, jWindowRef, jownerPtr, jscreenPtr, jstyleMask);
             GLASS_LOG("Java_com_sun_glass_ui_ios_IosWindow__1createWindow  from NSMainThread called");
-            
+
         }
         else
         {
@@ -911,7 +911,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_ios_IosWindow__1createWindow
     }
     GLASS_POOL_EXIT;
     GLASS_CHECK_EXCEPTION(env);
-    
+
     return value;
 }
 
@@ -924,7 +924,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_ios_IosWindow__1createWindow
 JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_ios_IosWindow__1createChildWindow
 (JNIEnv *env, jobject jwindow, jlong parent) {
     GLASS_LOG("Java_com_sun_glass_ui_ios_IosWindow__1createChildWindow");
-    // implementation comes here 
+    // implementation comes here
     return 0L;
 }
 
@@ -959,7 +959,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_ios_IosWindow__1close
     }
     GLASS_POOL_EXIT;
     GLASS_CHECK_EXCEPTION(env);
-    
+
     return JNI_TRUE;
 }
 
@@ -971,23 +971,23 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_ios_IosWindow__1close
  */
 JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_ios_IosWindow__1setView
 (JNIEnv *env, jobject jwindow, jlong windowPtr, jobject jview) {
-    
+
     if ([[NSThread currentThread] isMainThread] == NO) NSLog(@"[2] must be on main thread");
 
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
     GLASS_POOL_ENTER;
-    GLASS_LOG("Java_com_sun_glass_ui_ios_IosWindow__1setView");  
+    GLASS_LOG("Java_com_sun_glass_ui_ios_IosWindow__1setView");
     {
         GlassWindow *window = getGlassWindow(env, windowPtr);
-        
+
         window->view = getiOSView(env, jview);
-        
-        
+
+
         GLASS_LOG("window: %@", window);
         GLASS_LOG("frame: %.2f,%.2f %.2fx%.2f", [window frame].origin.x, [window frame].origin.y, [window frame].size.width, [window frame].size.height);
         GLASS_LOG("view: %@", window->view);
         GLASS_LOG("frame: %.2f,%.2f %.2fx%.2f", [window->view frame].origin.x, [window->view frame].origin.y, [window->view frame].size.width, [window->view frame].size.height);
-        
+
         if (window->view != nil)
         {
             window->suppressWindowMoveEvent = YES; // RT-11215
@@ -1000,7 +1000,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_ios_IosWindow__1setView
                     windowFrame.origin.y = [window center].y - viewFrame.size.height / 2;
                     setWindowFrame(window, windowFrame.origin.x, windowFrame.origin.y, windowFrame.size.width, windowFrame.size.height, JNI_TRUE, JNI_FALSE);
                 }
-                
+
                 if ([[NSThread currentThread] isMainThread] == YES)
                 {
                     [window->hostView addSubview: window->view];
@@ -1015,7 +1015,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_ios_IosWindow__1setView
     }
     GLASS_POOL_EXIT;
     GLASS_CHECK_EXCEPTION(env);
-    
+
     return JNI_TRUE;
 }
 
@@ -1027,7 +1027,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_ios_IosWindow__1setView
  */
 JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_ios_IosWindow__1setMenubar
 (JNIEnv *env, jobject jwindow, jlong windowPtr, jlong menubarPtr) {
-    
+
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
     GLASS_POOL_ENTER;
     {
@@ -1036,8 +1036,8 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_ios_IosWindow__1setMenubar
     }
     GLASS_POOL_EXIT;
     GLASS_CHECK_EXCEPTION(env);
-    
-    return JNI_TRUE; 
+
+    return JNI_TRUE;
 }
 
 
@@ -1049,7 +1049,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_ios_IosWindow__1setMenubar
 JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_ios_IosWindow__1minimize
 (JNIEnv *env, jobject jwindow, jlong windowPtr, jboolean minimize) {
     GLASS_LOG("Java_com_sun_glass_ui_ios_IosWindow__1minimize called.");
-    
+
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
     GLASS_POOL_ENTER;
     {
@@ -1057,7 +1057,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_ios_IosWindow__1minimize
     }
     GLASS_POOL_EXIT;
     GLASS_CHECK_EXCEPTION(env);
-    
+
     return JNI_TRUE;
 }
 
@@ -1077,7 +1077,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_ios_IosWindow__1maximize
     }
     GLASS_POOL_EXIT;
     GLASS_CHECK_EXCEPTION(env);
-    
+
     return JNI_TRUE;
 }
 
@@ -1099,18 +1099,18 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_ios_IosWindow__1setBounds
     GLASS_POOL_ENTER;
     {
         GLASS_LOG("Called setBounds with x %ld,y %ld,xSet %d,ySet %d,w %ld,h %ld,cw %ld,ch %ld",x,y,xSet,ySet,w,h,cw,ch);
-        
+
         GlassWindow *window = (GlassWindow *)jlong_to_ptr(jPtr);
-        
+
         CGPoint origin = CGPointMake([window center].x - [window bounds].size.width / 2, [window center].y - [window bounds].size.height / 2);
         GLASS_LOG("window original position x,y %f, %f",origin.x,origin.y);
-        
+
         CGSize size = [window bounds].size;
-        GLASS_LOG("window size w,h %f,%f",size.width,size.height); 
-        
+        GLASS_LOG("window size w,h %f,%f",size.width,size.height);
+
         CGSize sizeForClient = CGRectMake(0, 0, cw > 0 ? cw : 0, ch > 0 ? ch : 0).size;
         GLASS_LOG("sizeForClient %f, %f", sizeForClient.width, sizeForClient.height);
-                
+
         CGFloat newX = xSet == JNI_TRUE ? x : origin.x;
         CGFloat newY = ySet == JNI_TRUE ? y : origin.y;
         CGFloat newW = (w > 0) ? w :
@@ -1118,9 +1118,9 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_ios_IosWindow__1setBounds
         CGFloat newH = (h > 0) ? h :
         (ch > 0) ? sizeForClient.height : size.height;
         GLASS_LOG("FRAME: x,y,w,h - %f, %f, %f %f",newX, newY, newW, newH);
-        
+
         setWindowFrame(window, newX, newY, newW, newH, JNI_TRUE, JNI_FALSE);
-        
+
         //Let's notify JavaFX about move,size change (as we don't have window's size,position) Notifications on iOS
         if(xSet == JNI_TRUE || ySet == JNI_TRUE) {
             [window _sendJavaWindowMoveEventForFrame:CGRectMake([window center].x - [window bounds].size.width / 2, [window center].y - [window bounds].size.height / 2, [window bounds].size.width,[window bounds].size.height )];
@@ -1198,7 +1198,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_ios_IosWindow__1requestFocus
 (JNIEnv *env, jobject jwindow, jlong windowPtr) {
     GLASS_LOG("Java_com_sun_glass_ui_ios_IosWindow__1requestFocus  called.");
     jboolean focused;
-    
+
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
     GLASS_POOL_ENTER;
     {
@@ -1220,7 +1220,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_ios_IosWindow__1requestFocus
     }
     GLASS_POOL_EXIT;
     GLASS_CHECK_EXCEPTION(env);
-    
+
     return focused;
 }
 
@@ -1234,7 +1234,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_ios_IosWindow__1grabFocus
 (JNIEnv *env, jobject jwindow, jlong windowPtr) {
     GLASS_LOG("Java_com_sun_glass_ui_ios_IosWindow__1grabFocus");
     jboolean ret;
-    
+
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
     GLASS_POOL_ENTER;
     {
@@ -1251,7 +1251,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_ios_IosWindow__1grabFocus
     }
     GLASS_POOL_EXIT;
     GLASS_CHECK_EXCEPTION(env);
-     
+
     return ret;
 }
 
@@ -1264,12 +1264,12 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_ios_IosWindow__1grabFocus
 JNIEXPORT void JNICALL Java_com_sun_glass_ui_ios_IosWindow__1ungrabFocus
 (JNIEnv *env, jobject jwindow, jlong windowPtr) {
     GLASS_LOG("Java_com_sun_glass_ui_ios_IosWindow__1ungrabFocus");
-       
+
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
     GLASS_POOL_ENTER;
     {
         GlassWindow * window = getGlassWindow(env, windowPtr);
-        
+
         if ([[NSThread currentThread] isMainThread] == YES)
         {
             [window _ungrabFocus];
@@ -1297,7 +1297,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_ios_IosWindow__1setTitle
     }
     GLASS_POOL_EXIT;
     GLASS_CHECK_EXCEPTION(env);
-    
+
     return JNI_TRUE;
 }
 
@@ -1315,7 +1315,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_ios_IosWindow__1setLevel
     {
         GlassWindow *window = getGlassWindow(env, windowPtr);
         window->_setLevel = level;
-        
+
         if ([[NSThread currentThread] isMainThread] == YES)
         {
             [window _setLevel];
@@ -1346,10 +1346,10 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_ios_IosWindow__1setResizable
         {
             window->isResizable = resizeable;
         }
-    }    
+    }
     GLASS_POOL_EXIT;
     GLASS_CHECK_EXCEPTION(env);
-    
+
     return JNI_TRUE;
 }
 
@@ -1386,7 +1386,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_ios_IosWindow__1setAlpha
     {
         GlassWindow *window = getGlassWindow(env, windowPtr);
         window->_setAlpha = alpha;
-        
+
         if ([[NSThread currentThread] isMainThread] == YES)
         {
             [window _setAlpha];
@@ -1424,7 +1424,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_ios_IosWindow__1setBackground
     }
     GLASS_POOL_EXIT;
     GLASS_CHECK_EXCEPTION(env);
-    
+
     return JNI_TRUE;
 }
 
@@ -1443,7 +1443,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_ios_IosWindow__1setMinimumSize
         GlassWindow *window = getGlassWindow(env, windowPtr);
         window->minWidth = (jfloat) width;
         window->minHeight = (jfloat) height;
-        
+
         if ([[NSThread currentThread] isMainThread] == YES)
         {
             [window _setMinimumSize];
@@ -1455,7 +1455,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_ios_IosWindow__1setMinimumSize
     }
     GLASS_POOL_EXIT;
     GLASS_CHECK_EXCEPTION(env);
-    
+
     return JNI_TRUE;
 }
 
@@ -1474,7 +1474,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_ios_IosWindow__1setMaximumSize
         GlassWindow *window = getGlassWindow(env, windowPtr);
         window->maxWidth = (jfloat)(width >= 0 ? width : CGFLOAT_MAX);
         window->maxHeight = (jfloat)(height >= 0 ? height : CGFLOAT_MAX);
-        
+
         if ([[NSThread currentThread] isMainThread] == YES)
         {
             [window _setMaximumSize];
@@ -1486,7 +1486,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_ios_IosWindow__1setMaximumSize
     }
     GLASS_POOL_EXIT;
     GLASS_CHECK_EXCEPTION(env);
-    
+
     return JNI_TRUE;
 }
 
@@ -1611,10 +1611,10 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_ios_IosWindow__1setEnabled
     GLASS_LOG("Java_com_sun_glass_ui_ios_IosWindow__1setEnabled called.");
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
     GLASS_POOL_ENTER;
-    
+
     GlassWindow *window = (GlassWindow*)jlong_to_ptr(windowPtr);
     [window setEnabled:(BOOL)enabled];
-    
+
     GLASS_POOL_EXIT;
     GLASS_CHECK_EXCEPTION(env);
 }
@@ -1626,16 +1626,16 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_ios_IosWindow__1setEnabled
  * Signature: (JLjava/lang/String;IDDDDDDDDDDDDDD)V
  */
 JNIEXPORT void JNICALL Java_com_sun_glass_ui_ios_IosWindow__1requestInput
-(JNIEnv *env, jobject jwin, jlong ptr, jstring text, jint type, jdouble width, jdouble height, 
-    jdouble mxx, jdouble mxy, jdouble mxz, jdouble mxt, 
-    jdouble myx, jdouble myy, jdouble myz, jdouble myt, 
+(JNIEnv *env, jobject jwin, jlong ptr, jstring text, jint type, jdouble width, jdouble height,
+    jdouble mxx, jdouble mxy, jdouble mxz, jdouble mxt,
+    jdouble myx, jdouble myy, jdouble myz, jdouble myt,
     jdouble mzx, jdouble mzy, jdouble mzz, jdouble mzt)
 {
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
     GLASS_POOL_ENTER;
 
     GlassWindow *window = getGlassWindow(env, ptr);
-    
+
     const char *str;
     str = (*env)->GetStringUTFChars(env, text, NULL);
     if (str == nil) {
@@ -1644,9 +1644,9 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_ios_IosWindow__1requestInput
     NSString *nsstr = [NSString stringWithUTF8String:str];
     (*env)->ReleaseStringUTFChars(env, text, str);
 
-    [window requestInput:nsstr type:(int)type width:(double)width height:(double)height 
+    [window requestInput:nsstr type:(int)type width:(double)width height:(double)height
                      mxx:(double)mxx mxy:(double)mxy mxz:(double)mxz mxt:(double)mxt
-                     myx:(double)myx myy:(double)myy myz:(double)myz myt:(double)myt 
+                     myx:(double)myx myy:(double)myy myz:(double)myz myt:(double)myt
                      mzx:(double)mzx mzy:(double)mzy mzz:(double)mzz mzt:(double)mzt];
     GLASS_POOL_EXIT;
     GLASS_CHECK_EXCEPTION(env);
@@ -1654,18 +1654,18 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_ios_IosWindow__1requestInput
 
 
 /*
- * Class:     com_sun_glass_ui_ios_IosWindow                                                                                                                                                                                      
- * Method:    _releaseInput                                                                                                                                                                                                       
- * Signature: (J)V                                                                                                                                                                                                                
- */                                                                                                                                                                                                                               
+ * Class:     com_sun_glass_ui_ios_IosWindow
+ * Method:    _releaseInput
+ * Signature: (J)V
+ */
 JNIEXPORT void JNICALL Java_com_sun_glass_ui_ios_IosWindow__1releaseInput (JNIEnv *env, jobject jwin, jlong ptr)
 {
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
     GLASS_POOL_ENTER;
-    
+
     GlassWindow *window = getGlassWindow(env, ptr);
     [window releaseInput];
-    
+
     GLASS_POOL_EXIT;
     GLASS_CHECK_EXCEPTION(env);
 }

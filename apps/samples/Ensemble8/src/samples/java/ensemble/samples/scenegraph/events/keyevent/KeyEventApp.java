@@ -45,7 +45,7 @@ import javafx.stage.Stage;
 
 /**
  * A sample that demonstrates various key events and their usage. Type in the
- * text box to view the triggered events: key pressed, key typed and key 
+ * text box to view the triggered events: key pressed, key typed and key
  * released. Pressing the Shift, Ctrl, and Alt keys also trigger events.
  *
  * @sampleName KeyEvent

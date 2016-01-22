@@ -147,7 +147,7 @@ public abstract class MenuButtonBehaviorBase<C extends MenuButton> extends Butto
                 control.hide();
             } else {
                 if (e.getButton() == MouseButton.PRIMARY) {
-                    control.show();    
+                    control.show();
                 }
             }
         }

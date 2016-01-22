@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef WebNotificationCenter_H
@@ -46,23 +46,23 @@ public:
     virtual ULONG STDMETHODCALLTYPE Release(void);
 
     // IWebNotificationCenter
-    virtual HRESULT STDMETHODCALLTYPE defaultCenter( 
+    virtual HRESULT STDMETHODCALLTYPE defaultCenter(
         /* [retval][out] */ IWebNotificationCenter **center);
-    
-    virtual HRESULT STDMETHODCALLTYPE addObserver( 
+
+    virtual HRESULT STDMETHODCALLTYPE addObserver(
         /* [in] */ IWebNotificationObserver *observer,
         /* [in] */ BSTR notificationName,
         /* [in] */ IUnknown *anObject);
-    
-    virtual HRESULT STDMETHODCALLTYPE postNotification( 
+
+    virtual HRESULT STDMETHODCALLTYPE postNotification(
         /* [in] */ IWebNotification *notification);
-    
-    virtual HRESULT STDMETHODCALLTYPE postNotificationName( 
+
+    virtual HRESULT STDMETHODCALLTYPE postNotificationName(
         /* [in] */ BSTR notificationName,
         /* [in] */ IUnknown *anObject,
         /* [optional][in] */ IPropertyBag *userInfo);
-    
-    virtual HRESULT STDMETHODCALLTYPE removeObserver( 
+
+    virtual HRESULT STDMETHODCALLTYPE removeObserver(
         /* [in] */ IWebNotificationObserver *anObserver,
         /* [in] */ BSTR notificationName,
         /* [optional][in] */ IUnknown *anObject);

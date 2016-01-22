@@ -49,7 +49,7 @@ public:
             && listStyle() == other.listStyle()
             && separator() == other.separator();
     }
-    
+
     PassRefPtr<Counter> cloneForCSSOM() const
     {
         return create(m_identifier ? m_identifier->cloneForCSSOM() : 0

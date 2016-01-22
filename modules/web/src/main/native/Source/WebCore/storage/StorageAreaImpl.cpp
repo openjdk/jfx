@@ -61,8 +61,8 @@ inline StorageAreaImpl::StorageAreaImpl(StorageType storageType, PassRefPtr<Secu
     ASSERT(isMainThread());
     ASSERT(m_securityOrigin);
     ASSERT(m_storageMap);
-    
-    // Accessing the shared global StorageTracker when a StorageArea is created 
+
+    // Accessing the shared global StorageTracker when a StorageArea is created
     // ensures that the tracker is properly initialized before anyone actually needs to use it.
     StorageTracker::tracker();
 }
@@ -226,7 +226,7 @@ void StorageAreaImpl::clearForOriginDeletion()
 {
     ASSERT(!m_isShutdown);
     blockUntilImportComplete();
-    
+
     if (m_storageMap->length()) {
         unsigned quota = m_storageMap->quota();
         m_storageMap = StorageMap::create(quota);
@@ -237,12 +237,12 @@ void StorageAreaImpl::clearForOriginDeletion()
         m_storageAreaSync->scheduleCloseDatabase();
     }
 }
-    
+
 void StorageAreaImpl::sync()
 {
     ASSERT(!m_isShutdown);
     blockUntilImportComplete();
-    
+
     if (m_storageAreaSync)
         m_storageAreaSync->scheduleSync();
 }

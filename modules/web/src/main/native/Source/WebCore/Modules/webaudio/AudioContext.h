@@ -71,7 +71,7 @@ class OscillatorNode;
 class PeriodicWave;
 
 // AudioContext is the cornerstone of the web audio API and all AudioNodes are created from it.
-// For thread safety between the audio thread and the main thread, it has a rendering graph locking mechanism. 
+// For thread safety between the audio thread and the main thread, it has a rendering graph locking mechanism.
 
 class AudioContext : public ActiveDOMObject, public ThreadSafeRefCounted<AudioContext>, public EventTargetWithInlineData, public MediaCanStartListener {
 public:
@@ -84,7 +84,7 @@ public:
     virtual ~AudioContext();
 
     bool isInitialized() const;
-    
+
     bool isOfflineContext() { return m_isOfflineContext; }
 
     // Returns true when initialize() was called AND all asynchronous initialization has completed.
@@ -105,7 +105,7 @@ public:
 
     void incrementActiveSourceCount();
     void decrementActiveSourceCount();
-    
+
     PassRefPtr<AudioBuffer> createBuffer(unsigned numberOfChannels, size_t numberOfFrames, float sampleRate, ExceptionCode&);
     PassRefPtr<AudioBuffer> createBuffer(ArrayBuffer*, bool mixToMono, ExceptionCode&);
 
@@ -130,7 +130,7 @@ public:
     PassRefPtr<DelayNode> createDelay(double maxDelayTime, ExceptionCode&);
     PassRefPtr<PannerNode> createPanner();
     PassRefPtr<ConvolverNode> createConvolver();
-    PassRefPtr<DynamicsCompressorNode> createDynamicsCompressor();    
+    PassRefPtr<DynamicsCompressorNode> createDynamicsCompressor();
     PassRefPtr<AnalyserNode> createAnalyser();
     PassRefPtr<ScriptProcessorNode> createScriptProcessor(size_t bufferSize, ExceptionCode&);
     PassRefPtr<ScriptProcessorNode> createScriptProcessor(size_t bufferSize, size_t numberOfInputChannels, ExceptionCode&);
@@ -178,14 +178,14 @@ public:
     //
     // Thread Safety and Graph Locking:
     //
-    
+
     void setAudioThread(ThreadIdentifier thread) { m_audioThread = thread; } // FIXME: check either not initialized or the same
     ThreadIdentifier audioThread() const { return m_audioThread; }
     bool isAudioThread() const;
 
     // Returns true only after the audio thread has been started and then shutdown.
     bool isAudioThreadFinished() { return m_isAudioThreadFinished; }
-    
+
     // mustReleaseLock is set to true if we acquired the lock in this method call and caller must unlock(), false if it was previously acquired.
     void lock(bool& mustReleaseLock);
 
@@ -208,7 +208,7 @@ public:
         {
             m_context.lock(m_mustReleaseLock);
         }
-        
+
         ~AutoLocker()
         {
             if (m_mustReleaseLock)
@@ -219,7 +219,7 @@ public:
         AudioContext& m_context;
         bool m_mustReleaseLock;
     };
-    
+
     // In AudioNode::deref() a tryLock() is used for calling finishDeref(), but if it fails keep track here.
     void addDeferredFinishDeref(AudioNode*);
 
@@ -245,7 +245,7 @@ public:
 
     void startRendering();
     void fireCompletionEvent();
-    
+
     static unsigned s_hardwareContextCount;
 
     // Restrictions to change default behaviors.
@@ -265,9 +265,9 @@ public:
 protected:
     explicit AudioContext(Document&);
     AudioContext(Document&, unsigned numberOfChannels, size_t numberOfFrames, float sampleRate);
-    
+
     static bool isSampleRateRangeGood(float sampleRate);
-    
+
 private:
     void constructCommon();
 
@@ -340,10 +340,10 @@ private:
     Mutex m_contextGraphMutex;
     volatile ThreadIdentifier m_audioThread;
     volatile ThreadIdentifier m_graphOwnerThread; // if the lock is held then this is the thread which owns it, otherwise == UndefinedThreadIdentifier
-    
+
     // Only accessed in the audio thread.
     Vector<AudioNode*> m_deferredFinishDerefList;
-    
+
     // HRTF Database loader
     RefPtr<HRTFDatabaseLoader> m_hrtfDatabaseLoader;
 
@@ -352,12 +352,12 @@ private:
     virtual void derefEventTarget() override { deref(); }
 
     RefPtr<AudioBuffer> m_renderTarget;
-    
+
     bool m_isOfflineContext;
 
     AsyncAudioDecoder m_audioDecoder;
 
-    // This is considering 32 is large enough for multiple channels audio. 
+    // This is considering 32 is large enough for multiple channels audio.
     // It is somewhat arbitrary and could be increased if necessary.
     enum { MaxNumberOfChannels = 32 };
 

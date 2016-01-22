@@ -38,7 +38,7 @@ import sun.reflect.misc.MethodUtil;
 public abstract class Utilities {
 
     private static Utilities instance;
-    
+
     public static synchronized void setUtilities(Utilities util) {
         instance = util;
     }
@@ -54,7 +54,7 @@ public abstract class Utilities {
     private static String fwkGetMIMETypeForExtension(String ext) {
         return MimeTypeMapHolder.MIME_TYPE_MAP.get(ext);
     }
-    
+
     private static final class MimeTypeMapHolder {
         private static final Map<String, String> MIME_TYPE_MAP =
                 createMimeTypeMap();

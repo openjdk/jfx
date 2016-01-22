@@ -238,7 +238,7 @@ public final class TraversalTest {
         public int getCallCounter() {
             return callCounter;
         }
-        
+
         public Node getLastNode() {
             return lastNode;
         }

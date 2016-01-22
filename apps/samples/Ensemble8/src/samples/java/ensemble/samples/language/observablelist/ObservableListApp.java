@@ -123,7 +123,7 @@ public class ObservableListApp extends Application {
 
         VBox vBoxTop = new VBox(10);
         vBoxTop.setAlignment(Pos.CENTER);
-  
+
         VBox vBoxBottom = new VBox();
         vBoxBottom.setAlignment(Pos.CENTER);
         vBoxBottom.setSpacing(10);

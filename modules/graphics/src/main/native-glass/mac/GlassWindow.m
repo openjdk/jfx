@@ -222,10 +222,10 @@ GLASS_NS_WINDOW_IMPLEMENTATION
 
 - (id)accessibilityAttributeValue:(NSString *)attribute
 {
-    /* 
+    /*
     * The default value of AXRoleDescription for a NSPanel is 'system dialog'.
     * While this is correct for an average cocoa application it is not appropriate
-    * for JFX, where all NSPanels are decoration-less windows used to implement 
+    * for JFX, where all NSPanels are decoration-less windows used to implement
     * tooltip, context menus, combo boxes, etc.
     */
     if ([NSAccessibilityRoleDescriptionAttribute isEqualToString: attribute]) {
@@ -245,13 +245,13 @@ GLASS_NS_WINDOW_IMPLEMENTATION
     if (self->fullscreenWindow == fsWindow) {
         return;
     }
-    
+
     [self _ungrabFocus];
-    
+
     NSWindow *from, *to;
     from = self->fullscreenWindow ? self->fullscreenWindow : self->nsWindow;
     to = fsWindow ? fsWindow : self->nsWindow;
-    
+
     NSArray * children = [from childWindows];
     for (NSUInteger i=0; i<[children count]; i++)
     {
@@ -261,9 +261,9 @@ GLASS_NS_WINDOW_IMPLEMENTATION
             [to addChildWindow:child ordered:NSWindowAbove];
         }
     }
-    
+
     self->fullscreenWindow = fsWindow;
-    
+
     GET_MAIN_JENV;
     (*env)->CallVoidMethod(env, self->jWindow, jWindowNotifyDelegatePtr, ptr_to_jlong(fsWindow));
     GLASS_CHECK_EXCEPTION(env);
@@ -281,13 +281,13 @@ GLASS_NS_WINDOW_IMPLEMENTATION
         NSPoint p = [NSEvent mouseLocation];
         NSRect frame = [self->nsWindow frame];
         NSRect contentRect = [self->nsWindow contentRectForFrameRect:frame];
-        
+
         if (p.y >= (frame.origin.y + contentRect.size.height))
         {
             // Click to the titlebar
             [self _ungrabFocus];
         }
-        
+
         [self _checkUngrab];
     }
 }
@@ -392,19 +392,19 @@ static NSMutableArray * embeddedWindowsList = nil;
     if (self->parent != nil)
     {
         BOOL fullscreen = (fsWindow != nil);
-        
+
         CALayer *layer = [self->gWindow->view layer];
         if ([layer isKindOfClass:[GlassLayer3D class]] == YES)
         {
             [((CAOpenGLLayer*)layer) setAsynchronous:fullscreen];
-            
+
             layer = [self->parent->gWindow->view layer];
             if ([layer isKindOfClass:[GlassLayer3D class]] == YES)
             {
                 [((CAOpenGLLayer*)layer) setAsynchronous:!fullscreen];
             }
         }
-        
+
         self->fullscreenWindow = fsWindow;
     }
 }
@@ -431,7 +431,7 @@ static NSMutableArray * embeddedWindowsList = nil;
 static jlong _createWindowCommonDo(JNIEnv *env, jobject jWindow, jlong jOwnerPtr, jlong jScreenPtr, jint jStyleMask, jboolean jIsChild)
 {
     GlassWindow *window = nil;
-    
+
     NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
     {
         NSUInteger styleMask = NSBorderlessWindowMask;
@@ -447,7 +447,7 @@ static jlong _createWindowCommonDo(JNIEnv *env, jobject jWindow, jlong jOwnerPtr
             {
                 styleMask = styleMask|NSClosableWindowMask;
             }
-            
+
             if (((jStyleMask&com_sun_glass_ui_Window_MINIMIZABLE) != 0) ||
                 ((jStyleMask&com_sun_glass_ui_Window_MAXIMIZABLE) != 0))
             {
@@ -455,11 +455,11 @@ static jlong _createWindowCommonDo(JNIEnv *env, jobject jWindow, jlong jOwnerPtr
                 // so if clients requests either one, we turn them both on
                 styleMask = styleMask|NSMiniaturizableWindowMask;
             }
-            
+
             if ((jStyleMask&com_sun_glass_ui_Window_UNIFIED) != 0) {
                 styleMask = styleMask|NSTexturedBackgroundWindowMask;
             }
-            
+
             if ((jStyleMask&com_sun_glass_ui_Window_UTILITY) != 0)
             {
                 styleMask = styleMask | NSUtilityWindowMask | NSNonactivatingPanelMask;
@@ -477,10 +477,10 @@ static jlong _createWindowCommonDo(JNIEnv *env, jobject jWindow, jlong jOwnerPtr
         CGFloat y = 0.0f;
         CGFloat w = 0.0f;
         CGFloat h = 0.0f;
-        
+
         NSScreen *screen = (NSScreen*)jlong_to_ptr(jScreenPtr);
         window = [[GlassWindow alloc] _initWithContentRect:NSMakeRect(x, y, w, h) styleMask:styleMask screen:screen jwindow:jWindow jIsChild:jIsChild];
-        
+
         if ((jStyleMask & com_sun_glass_ui_Window_UNIFIED) != 0) {
             //Prevent the textured effect from disappearing on border thickness recalculation
             [window->nsWindow setAutorecalculatesContentBorderThickness:NO forEdge:NSMaxYEdge];
@@ -505,13 +505,13 @@ static jlong _createWindowCommonDo(JNIEnv *env, jobject jWindow, jlong jOwnerPtr
                 GlassEmbeddedWindow *parent = getGlassEmbeddedWindow(env, jOwnerPtr);
                 GlassEmbeddedWindow *ewindow = (GlassEmbeddedWindow*)window->nsWindow;
                 parent->child = ewindow; // not retained (use weak reference?)
-                
+
                 ewindow->parent = parent; // not retained (use weak reference?)
             }
         }
         window->isResizable = NO;
         window->isDecorated = (jStyleMask&com_sun_glass_ui_Window_TITLED) != 0;
-        /* 10.7 full screen window support */ 
+        /* 10.7 full screen window support */
         if ([NSWindow instancesRespondToSelector:@selector(toggleFullScreen:)]) {
             NSWindowCollectionBehavior behavior = [window->nsWindow collectionBehavior];
             if (window->isDecorated && !window->owner)
@@ -527,7 +527,7 @@ static jlong _createWindowCommonDo(JNIEnv *env, jobject jWindow, jlong jOwnerPtr
             }
             [window->nsWindow setCollectionBehavior: behavior];
         }
-        
+
         window->isTransparent = (jStyleMask & com_sun_glass_ui_Window_TRANSPARENT) != 0;
         if (window->isTransparent == YES)
         {
@@ -540,7 +540,7 @@ static jlong _createWindowCommonDo(JNIEnv *env, jobject jWindow, jlong jOwnerPtr
             [window->nsWindow setHasShadow:YES];
             [window->nsWindow setOpaque:YES];
         }
-        
+
         window->fullscreenWindow = nil;
 
         window->isSizeAssigned = NO;
@@ -560,9 +560,9 @@ static jlong _createWindowCommonDo(JNIEnv *env, jobject jWindow, jlong jOwnerPtr
         }
     }
     [pool drain];
-    
+
     GLASS_CHECK_EXCEPTION(env);
-    
+
     return ptr_to_jlong(window->nsWindow);
 }
 
@@ -570,9 +570,9 @@ static jlong _createWindowCommon
 (JNIEnv *env, jobject jWindow, jlong jOwnerPtr, jlong jScreenPtr, jint jStyleMask, jboolean jIsChild)
 {
     LOG("_createWindowCommon");
-    
+
     jlong value = 0L;
-    
+
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
     GLASS_POOL_ENTER;
     {
@@ -581,7 +581,7 @@ static jlong _createWindowCommon
     }
     GLASS_POOL_EXIT;
     GLASS_CHECK_EXCEPTION(env);
-    
+
     LOG("   window: %p", value);
     return value;
 }
@@ -597,75 +597,75 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacWindow__1initIDs
 (JNIEnv *env, jclass jClass)
 {
     LOG("Java_com_sun_glass_ui_mac_MacWindow__1initIDs");
-    
+
     if (jWindowClass == NULL)
     {
         jWindowClass = (*env)->NewGlobalRef(env, jClass);
     }
-    
+
     if (jMenuBarDelegateClass == NULL)
     {
         jMenuBarDelegateClass = (*env)->NewGlobalRef(env, [GlassHelper ClassForName:"com.sun.glass.ui.mac.MacMenuBarDelegate" withEnv:env]);
     }
-    
+
     if (jViewClass == NULL)
     {
         jViewClass = (*env)->NewGlobalRef(env, [GlassHelper ClassForName:"com.sun.glass.ui.View" withEnv:env]);
     }
-    
+
     if (jScreenClass == NULL)
     {
         jScreenClass = (*env)->NewGlobalRef(env, [GlassHelper ClassForName:"com.sun.glass.ui.Screen" withEnv:env]);
     }
-    
+
     if (jWindowNotifyMove == NULL)
     {
         jWindowNotifyMove = (*env)->GetMethodID(env, jWindowClass, "notifyMove", "(II)V");
         if ((*env)->ExceptionCheck(env)) return;
     }
-    
+
     if (jWindowNotifyResize == NULL)
     {
         jWindowNotifyResize = (*env)->GetMethodID(env, jWindowClass, "notifyResize", "(III)V");
         if ((*env)->ExceptionCheck(env)) return;
     }
-    
+
     if (jWindowNotifyMoveToAnotherScreen == NULL)
     {
         jWindowNotifyMoveToAnotherScreen = (*env)->GetMethodID(env, jWindowClass, "notifyMoveToAnotherScreen", "(Lcom/sun/glass/ui/Screen;)V");
         if ((*env)->ExceptionCheck(env)) return;
     }
-    
+
     if (jWindowNotifyClose == NULL)
     {
         jWindowNotifyClose = (*env)->GetMethodID(env, jWindowClass, "notifyClose", "()V");
         if ((*env)->ExceptionCheck(env)) return;
     }
-    
+
     if (jWindowNotifyFocus == NULL)
     {
         jWindowNotifyFocus = (*env)->GetMethodID(env, jWindowClass, "notifyFocus", "(I)V");
         if ((*env)->ExceptionCheck(env)) return;
     }
-    
+
     if (jWindowNotifyFocusUngrab == NULL)
     {
         jWindowNotifyFocusUngrab = (*env)->GetMethodID(env, jWindowClass, "notifyFocusUngrab", "()V");
         if ((*env)->ExceptionCheck(env)) return;
     }
-    
+
     if (jWindowNotifyFocusDisabled == NULL)
     {
         jWindowNotifyFocusDisabled = (*env)->GetMethodID(env, jWindowClass, "notifyFocusDisabled", "()V");
         if ((*env)->ExceptionCheck(env)) return;
     }
-    
+
     if (jWindowNotifyDestroy == NULL)
     {
         jWindowNotifyDestroy = (*env)->GetMethodID(env, jWindowClass, "notifyDestroy", "()V");
         if ((*env)->ExceptionCheck(env)) return;
     }
-    
+
     if (jWindowNotifyDelegatePtr == NULL)
     {
         jWindowNotifyDelegatePtr = (*env)->GetMethodID(env, jWindowClass, "notifyDelegatePtr", "(J)V");
@@ -681,7 +681,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_mac_MacWindow__1createWindow
 (JNIEnv *env, jobject jWindow, jlong jOwnerPtr, jlong jScreenPtr, jint jStyleMask)
 {
     LOG("Java_com_sun_glass_ui_mac_MacWindow__1createWindow");
-    
+
     return _createWindowCommon(env, jWindow, jOwnerPtr, jScreenPtr, jStyleMask, JNI_FALSE);
 }
 
@@ -695,7 +695,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_mac_MacWindow__1createChildWindow
 {
     LOG("Java_com_sun_glass_ui_mac_MacWindow__1createChildWindow");
     LOG("   owner: %p", jOwnerPtr);
-    
+
     jlong jScreenPtr = 0L;
     jint jStyleMask = NSBorderlessWindowMask;
     if (jOwnerPtr == BROWSER_PARENT_ID)
@@ -712,7 +712,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_mac_MacWindow__1createChildWindow
             return (jlong)0;
         }
     }
-    
+
     return _createWindowCommon(env, jWindow, jOwnerPtr, jScreenPtr, jStyleMask, JNI_TRUE);
 }
 
@@ -726,7 +726,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacWindow__1setLevel
 {
     LOG("Java_com_sun_glass_ui_mac_MacWindow__1setLevel");
     if (!jPtr) return;
-    
+
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
     GLASS_POOL_ENTER;
     {
@@ -757,7 +757,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacWindow__1setFocusable
 {
     LOG("Java_com_sun_glass_ui_mac_MacWindow__1setCanBecomeActive");
     if (!jPtr) return;
-    
+
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
     GLASS_POOL_ENTER;
     {
@@ -778,7 +778,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacWindow__1setEnabled
 {
     LOG("Java_com_sun_glass_ui_mac_MacWindow__1setEnabled");
     if (!jPtr) return;
-    
+
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
     GLASS_POOL_ENTER;
     {
@@ -805,17 +805,17 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacWindow__1setEnabled
     GLASS_CHECK_EXCEPTION(env);
 }
 
-/*                                                                                                     
- * Class:     com_sun_glass_ui_mac_MacWindow                                                     
- * Method:    _setAlpha                                                                                
- * Signature: (F)V                                                                                     
+/*
+ * Class:     com_sun_glass_ui_mac_MacWindow
+ * Method:    _setAlpha
+ * Signature: (F)V
  */
 JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacWindow__1setAlpha
 (JNIEnv *env, jobject jWindow, jlong jPtr, jfloat jAlpha)
 {
     LOG("Java_com_sun_glass_ui_mac_MacWindow__1setAlpha");
     if (!jPtr) return;
-    
+
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
     GLASS_POOL_ENTER;
     {
@@ -826,17 +826,17 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacWindow__1setAlpha
     GLASS_CHECK_EXCEPTION(env);
 }
 
-/*                                                                                                     
- * Class:     com_sun_glass_ui_mac_MacWindow                                                     
+/*
+ * Class:     com_sun_glass_ui_mac_MacWindow
  * Method:    _setBackground
- * Signature: (JFFF)Z                                                                           
+ * Signature: (JFFF)Z
  */
 JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_mac_MacWindow__1setBackground
 (JNIEnv *env, jobject jWindow, jlong jPtr, jfloat r, jfloat g, jfloat b)
 {
     LOG("Java_com_sun_glass_ui_mac_MacWindow__1setBackground");
     if (!jPtr) return JNI_FALSE;
-    
+
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
     GLASS_POOL_ENTER;
     {
@@ -845,14 +845,14 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_mac_MacWindow__1setBackground
     }
     GLASS_POOL_EXIT;
     GLASS_CHECK_EXCEPTION(env);
-    
+
     return JNI_TRUE; // gznote: remove this return value if unused
 }
 
 /*
- * Class:     com_sun_glass_ui_mac_MacWindow                                                     
- * Method:    _setView                                                                                 
- * Signature: (J)Z                                        
+ * Class:     com_sun_glass_ui_mac_MacWindow
+ * Method:    _setView
+ * Signature: (J)Z
  */
 JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_mac_MacWindow__1setView
 (JNIEnv *env, jobject jWindow, jlong jPtr, jobject jview)
@@ -861,7 +861,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_mac_MacWindow__1setView
     LOG("   window: %p", jPtr);
     LOG("   view: %p", getMacView(env, jview));
     if (!jPtr) return JNI_FALSE;
-    
+
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
     GLASS_POOL_ENTER;
     {
@@ -896,7 +896,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_mac_MacWindow__1setView
             {
                 [((CAOpenGLLayer*)layer) setOpaque:[window->nsWindow isOpaque]];
             }
-            
+
             window->suppressWindowMoveEvent = YES; // RT-11215
             {
                 NSRect viewFrame = [window->view frame];
@@ -907,7 +907,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_mac_MacWindow__1setView
                     windowFrame.origin.y = [window->nsWindow frame].origin.y;
                     [window _setWindowFrameWithRect:NSMakeRect(windowFrame.origin.x, windowFrame.origin.y, windowFrame.size.width, windowFrame.size.height) withDisplay:JNI_TRUE withAnimate:JNI_FALSE];
                 }
-                
+
                 [window->nsWindow setContentView:[window->view superview]]; // use our superview not ourselves!
                 [window->nsWindow setInitialFirstResponder:window->view];
                 [window->nsWindow makeFirstResponder:window->view];
@@ -921,7 +921,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_mac_MacWindow__1setView
     }
     GLASS_POOL_EXIT;
     GLASS_CHECK_EXCEPTION(env);
-    
+
     return JNI_TRUE; // gznote: remove this return value if unused
 }
 
@@ -935,7 +935,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_mac_MacWindow__1setMenubar
 {
     LOG("Java_com_sun_glass_ui_mac_MacWindow__1setMenubar");
     if (!jPtr) return JNI_FALSE;
-    
+
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
     GLASS_POOL_ENTER;
     {
@@ -946,59 +946,59 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_mac_MacWindow__1setMenubar
     }
     GLASS_POOL_EXIT;
     GLASS_CHECK_EXCEPTION(env);
-    
+
     return JNI_TRUE; // gznote: remove this return value if unused
 }
 
-/*                                                                                                     
- * Class:     com_sun_glass_ui_mac_MacWindow                                                     
- * Method:    _close                                                                                   
- * Signature: ()V                                                                                      
+/*
+ * Class:     com_sun_glass_ui_mac_MacWindow
+ * Method:    _close
+ * Signature: ()V
  */
 JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_mac_MacWindow__1close
 (JNIEnv *env, jclass cls, jlong jPtr)
 {
     LOG("Java_com_sun_glass_ui_mac_MacWindow__1close");
     if (!jPtr) return JNI_FALSE;
-    
+
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
     GLASS_POOL_ENTER;
     {
         GlassWindow *window = getGlassWindow(env, jPtr);
         // this call will always close the window
         // without calling the windowShouldClose
-        
+
         // RT-39813 When closing a window as the result of a global right-click
         //          mouse event outside the bounds of the window, using an immediate
         //          [window->nsWindow close] crashes the JDK as the AppKit at this
         //          point still has another [NSWindow _resignKeyFocus] from the
         //          right-click handling in [NSApplication sendEvent].  This defers
         //          the close until the [NSWindow _resignKeyFocus] can be performed.
-        
+
         [window->nsWindow performSelectorOnMainThread:@selector(close) withObject:nil waitUntilDone:NO];
-         
+
         // The NSWindow will be automatically released after closing
-        // The GlassWindow is released in the [NSWindow dealloc] override        
+        // The GlassWindow is released in the [NSWindow dealloc] override
     }
     GLASS_POOL_EXIT;
     GLASS_CHECK_EXCEPTION(env);
-    
+
     return JNI_TRUE; // gznote: remove this return value if unused
 }
 
-/*                                                                                                     
- * Class:     com_sun_glass_ui_mac_MacWindow                                                     
+/*
+ * Class:     com_sun_glass_ui_mac_MacWindow
  * Method:    _requestFocus
- * Signature: (J)Z                                                                                      
+ * Signature: (J)Z
  */
 JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_mac_MacWindow__1requestFocus
 (JNIEnv *env, jobject jWindow, jlong jPtr)
 {
     LOG("Java_com_sun_glass_ui_mac_MacWindow__1requestFocus");
     if (!jPtr) return JNI_FALSE;
-    
+
     jboolean focused = JNI_FALSE;
-    
+
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
     GLASS_POOL_ENTER;
     {
@@ -1015,7 +1015,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_mac_MacWindow__1requestFocus
     }
     GLASS_POOL_EXIT;
     GLASS_CHECK_EXCEPTION(env);
-    
+
     return focused;
 }
 
@@ -1031,7 +1031,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_mac_MacWindow__1grabFocus
     if (!jPtr) return JNI_FALSE;
 
     jboolean ret = JNI_FALSE;
-    
+
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
     GLASS_POOL_ENTER;
     {
@@ -1042,7 +1042,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_mac_MacWindow__1grabFocus
     }
     GLASS_POOL_EXIT;
     GLASS_CHECK_EXCEPTION(env);
-    
+
     return ret;
 }
 
@@ -1056,7 +1056,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacWindow__1ungrabFocus
 {
     LOG("Java_com_sun_glass_ui_mac_MacWindow__1ungrabFocus");
     if (!jPtr) return;
-    
+
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
     GLASS_POOL_ENTER;
     {
@@ -1078,19 +1078,19 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_mac_MacWindow__1maximize
 {
     LOG("Java_com_sun_glass_ui_mac_MacWindow__1maximize");
     if (!jPtr) return JNI_FALSE;
-    
+
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
     GLASS_POOL_ENTER;
     {
         GlassWindow *window = getGlassWindow(env, jPtr);
         window->suppressWindowResizeEvent = YES;
-        
+
         if ((maximize == JNI_TRUE) && (isZoomed == JNI_FALSE))
         {
             window->preZoomedRect = [window->nsWindow frame];
-            
+
             if ([window->nsWindow styleMask] != NSBorderlessWindowMask)
-            { 
+            {
                 [window->nsWindow zoom:nil];
                 // windowShouldZoom will be called automatically in this case
             }
@@ -1098,7 +1098,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_mac_MacWindow__1maximize
             {
                 NSRect visibleRect = [[window _getScreen] visibleFrame];
                 [window _setWindowFrameWithRect:NSMakeRect(visibleRect.origin.x, visibleRect.origin.y, visibleRect.size.width, visibleRect.size.height) withDisplay:JNI_TRUE withAnimate:JNI_TRUE];
-                
+
                 // calling windowShouldZoom will send Java maximize event
                 [window windowShouldZoom:window->nsWindow toFrame:[window->nsWindow frame]];
             }
@@ -1107,12 +1107,12 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_mac_MacWindow__1maximize
         {
             [window _restorePreZoomedRect];
         }
-        
+
         window->suppressWindowResizeEvent = NO;
     }
     GLASS_POOL_EXIT;
     GLASS_CHECK_EXCEPTION(env);
-    
+
     return JNI_TRUE; // gznote: remove this return value if unused
 }
 
@@ -1133,7 +1133,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacWindow__1setBounds
     LOG("   w x h: %dx%d", w, h);
     LOG("   cw x ch: %dx%d", cw, ch);
     if (!jPtr) return;
-    
+
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
     GLASS_POOL_ENTER;
     {
@@ -1156,7 +1156,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_mac_MacWindow__1setMinimumSize
 {
     LOG("Java_com_sun_glass_ui_mac_MacWindow__1setMinimumSize");
     if (!jPtr) return JNI_FALSE;
-    
+
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
     GLASS_POOL_ENTER;
     {
@@ -1165,7 +1165,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_mac_MacWindow__1setMinimumSize
     }
     GLASS_POOL_EXIT;
     GLASS_CHECK_EXCEPTION(env);
-    
+
     return JNI_TRUE; // gznote: remove this return value if unused
 }
 
@@ -1179,7 +1179,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_mac_MacWindow__1setMaximumSize
 {
     LOG("Java_com_sun_glass_ui_mac_MacWindow__1setMaximumSize");
     if (!jPtr) return JNI_FALSE;
-    
+
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
     GLASS_POOL_ENTER;
     {
@@ -1189,21 +1189,21 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_mac_MacWindow__1setMaximumSize
     }
     GLASS_POOL_EXIT;
     GLASS_CHECK_EXCEPTION(env);
-    
+
     return JNI_TRUE; // gznote: remove this return value if unused
 }
 
-/*                                                                                                     
- * Class:     com_sun_glass_ui_mac_MacWindow                                                     
- * Method:    _setResizable                                                                              
- * Signature: (Z)Z                                                                                     
+/*
+ * Class:     com_sun_glass_ui_mac_MacWindow
+ * Method:    _setResizable
+ * Signature: (Z)Z
  */
 JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_mac_MacWindow__1setResizable
 (JNIEnv *env, jobject jWindow, jlong jPtr, jboolean jResizable)
 {
     LOG("Java_com_sun_glass_ui_mac_MacWindow__1setResizable");
     if (!jPtr) return JNI_FALSE;
-    
+
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
     GLASS_POOL_ENTER;
     {
@@ -1212,17 +1212,17 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_mac_MacWindow__1setResizable
         {
             [window performSelectorOnMainThread:@selector(_setResizable) withObject:nil waitUntilDone:YES];
         }
-    }        
+    }
     GLASS_POOL_EXIT;
     GLASS_CHECK_EXCEPTION(env);
-    
+
     return JNI_TRUE;
 }
 
-/*                                                                                                     
- * Class:     com_sun_glass_ui_mac_MacWindow                                                     
- * Method:    _setVisible                                                                              
- * Signature: (Z)Z                                                                                     
+/*
+ * Class:     com_sun_glass_ui_mac_MacWindow
+ * Method:    _setVisible
+ * Signature: (Z)Z
  */
 JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_mac_MacWindow__1setVisible
 (JNIEnv *env, jobject jWindow, jlong jPtr, jboolean jVisible)
@@ -1230,9 +1230,9 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_mac_MacWindow__1setVisible
     LOG("Java_com_sun_glass_ui_mac_MacWindow__1setVisible: %d", jVisible);
     LOG("   window: %p", jPtr);
     if (!jPtr) return JNI_FALSE;
-    
+
     jboolean now = JNI_FALSE;
-    
+
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
     GLASS_POOL_ENTER;
     {
@@ -1258,8 +1258,8 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_mac_MacWindow__1setVisible
             [window->nsWindow orderOut:window->nsWindow];
         }
         now = [window->nsWindow isVisible] ? JNI_TRUE : JNI_FALSE;
-        
-        // RT-22502 temp workaround: bring plugin window in front of a browser 
+
+        // RT-22502 temp workaround: bring plugin window in front of a browser
         if (now == YES)
         {
             static BOOL isBackgroundOnlyAppChecked = NO;
@@ -1267,7 +1267,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_mac_MacWindow__1setVisible
             if (isBackgroundOnlyAppChecked == NO)
             {
                 isBackgroundOnlyAppChecked = YES;
-                
+
                 ProcessSerialNumber psn;
                 if (GetCurrentProcess(&psn) == noErr)
                 {
@@ -1285,13 +1285,13 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_mac_MacWindow__1setVisible
     }
     GLASS_POOL_EXIT;
     GLASS_CHECK_EXCEPTION(env);
-    
+
     return now;
 }
 
-/*                                                                                                     
- * Class:     com_sun_glass_ui_mac_MacWindow                                                     
- * Method:    _setTitle                                                                                
+/*
+ * Class:     com_sun_glass_ui_mac_MacWindow
+ * Method:    _setTitle
  * Signature: (Ljava/lang/String;)Z
  */
 JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_mac_MacWindow__1setTitle
@@ -1300,38 +1300,38 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_mac_MacWindow__1setTitle
     LOG("Java_com_sun_glass_ui_mac_MacWindow__1setTitle");
     LOG("   window: %p", jPtr);
     if (!jPtr) return JNI_FALSE;
-    
+
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
     GLASS_POOL_ENTER;
     {
         GlassWindow *window = getGlassWindow(env, jPtr);
-        
+
         NSString *title = [GlassHelper nsStringWithJavaString:jTitle withEnv:env];
         LOG("   title: %s", [title UTF8String]);
         [window->nsWindow setTitle:title];
     }
     GLASS_POOL_EXIT;
     GLASS_CHECK_EXCEPTION(env);
-    
+
     return JNI_TRUE; // gnote: remove this return value if unused
 }
 
-/*                                                                                                     
- * Class:     com_sun_glass_ui_mac_MacWindow                                                     
- * Method:    _minimize                                                                                
- * Signature: (Z)V                                                                                     
+/*
+ * Class:     com_sun_glass_ui_mac_MacWindow
+ * Method:    _minimize
+ * Signature: (Z)V
  */
 JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_mac_MacWindow__1minimize
 (JNIEnv *env, jobject jWindow, jlong jPtr, jboolean jMiniaturize)
 {
     LOG("Java_com_sun_glass_ui_mac_MacWindow__1minimize");
     if (!jPtr) return JNI_FALSE;
-    
+
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
     GLASS_POOL_ENTER;
     {
         GlassWindow *window = getGlassWindow(env, jPtr);
-        
+
         if (jMiniaturize == JNI_TRUE)
         {
             [window->nsWindow miniaturize:nil];
@@ -1343,7 +1343,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_mac_MacWindow__1minimize
     }
     GLASS_POOL_EXIT;
     GLASS_CHECK_EXCEPTION(env);
-    
+
     return JNI_TRUE; // gnote: remove this return value if unused
 }
 
@@ -1357,7 +1357,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacWindow__1setIcon
 {
     LOG("Java_com_sun_glass_ui_mac_MacWindow__1setIcon");
     if (!jPtr) return;
-    
+
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
     GLASS_POOL_ENTER;
     {
@@ -1372,7 +1372,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacWindow__1setIcon
                 {
                     [window->nsWindow setTitle:@"Untitled"];
                 }
-                
+
                 // http://www.cocoabuilder.com/archive/cocoa/199554-nswindow-title-bar-icon-without-representedurl.html
                 [window->nsWindow setRepresentedURL:[NSURL fileURLWithPath:[window->nsWindow title]]];
                 [[window->nsWindow standardWindowButton:NSWindowDocumentIconButton] setImage:image];
@@ -1399,7 +1399,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacWindow__1toFront
     LOG("Java_com_sun_glass_ui_mac_MacWindow__1toFront");
     LOG("   window: %p", jPtr);
     if (!jPtr) return;
-    
+
     GLASS_POOL_ENTER;
     {
         GlassWindow *window = getGlassWindow(env, jPtr);
@@ -1419,7 +1419,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacWindow__1toBack
 {
     LOG("Java_com_sun_glass_ui_mac_MacWindow__1toBack");
     if (!jPtr) return;
-    
+
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
     GLASS_POOL_ENTER;
     {
@@ -1441,7 +1441,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacWindow__1enterModal
 {
     LOG("Java_com_sun_glass_ui_mac_MacWindow__1enterModal");
     if (!jPtr) return;
-    
+
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
     GLASS_POOL_ENTER;
     {
@@ -1461,7 +1461,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacWindow__1enterModalWithWindo
 (JNIEnv *env, jobject jWindow, jlong jDialogPtr, jlong jWindowPtr)
 {
     LOG("Java_com_sun_glass_ui_mac_MacWindow__1enterModalWithWindow");
-    
+
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
     GLASS_POOL_ENTER;
     {
@@ -1482,7 +1482,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacWindow__1exitModal
 {
     LOG("Java_com_sun_glass_ui_mac_MacWindow__1exitModal");
     if (!jPtr) return;
-    
+
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
     GLASS_POOL_ENTER;
     {
@@ -1503,9 +1503,9 @@ JNIEXPORT jint JNICALL Java_com_sun_glass_ui_mac_MacWindow__1getEmbeddedX
 {
     LOG("Java_com_sun_glass_ui_mac_MacWindow__1getEmbeddedX");
     if (!jPtr) return 0;
-    
+
     jint x = 0;
-    
+
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
     GLASS_POOL_ENTER;
     {
@@ -1514,7 +1514,7 @@ JNIEXPORT jint JNICALL Java_com_sun_glass_ui_mac_MacWindow__1getEmbeddedX
     }
     GLASS_POOL_EXIT;
     GLASS_CHECK_EXCEPTION(env);
-    
+
     return x;
 }
 
@@ -1528,15 +1528,15 @@ JNIEXPORT jint JNICALL Java_com_sun_glass_ui_mac_MacWindow__1getEmbeddedY
 {
     LOG("Java_com_sun_glass_ui_mac_MacWindow__1getEmbeddedX");
     if (!jPtr) return 0;
-    
+
     jint y = 0;
-    
+
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
     GLASS_POOL_ENTER;
     {
         GlassEmbeddedWindow *window = getGlassEmbeddedWindow(env, jPtr);
         NSRect frameRect = [window frame];
-        
+
         // flip y coorindate
         NSScreen *screen = [[NSScreen screens] objectAtIndex:0];
         NSRect screenFrame = screen.frame;
@@ -1544,6 +1544,6 @@ JNIEXPORT jint JNICALL Java_com_sun_glass_ui_mac_MacWindow__1getEmbeddedY
     }
     GLASS_POOL_EXIT;
     GLASS_CHECK_EXCEPTION(env);
-    
+
     return y;
 }

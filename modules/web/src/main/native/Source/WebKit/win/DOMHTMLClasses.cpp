@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -88,7 +88,7 @@ HRESULT STDMETHODCALLTYPE DOMHTMLCollection::QueryInterface(REFIID riid, void** 
 
 // DOMHTMLCollection ----------------------------------------------------------
 
-HRESULT STDMETHODCALLTYPE DOMHTMLCollection::length( 
+HRESULT STDMETHODCALLTYPE DOMHTMLCollection::length(
     /* [retval][out] */ UINT* result)
 {
     *result = 0;
@@ -99,7 +99,7 @@ HRESULT STDMETHODCALLTYPE DOMHTMLCollection::length(
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE DOMHTMLCollection::item( 
+HRESULT STDMETHODCALLTYPE DOMHTMLCollection::item(
     /* [in] */ UINT index,
     /* [retval][out] */ IDOMNode** node)
 {
@@ -111,7 +111,7 @@ HRESULT STDMETHODCALLTYPE DOMHTMLCollection::item(
     return *node ? S_OK : E_FAIL;
 }
 
-HRESULT STDMETHODCALLTYPE DOMHTMLCollection::namedItem( 
+HRESULT STDMETHODCALLTYPE DOMHTMLCollection::namedItem(
     /* [in] */ BSTR /*name*/,
     /* [retval][out] */ IDOMNode** /*node*/)
 {
@@ -155,7 +155,7 @@ IDOMHTMLOptionsCollection* DOMHTMLOptionsCollection::createInstance(WebCore::HTM
     return optionsCollection;
 }
 
-HRESULT STDMETHODCALLTYPE DOMHTMLOptionsCollection::length( 
+HRESULT STDMETHODCALLTYPE DOMHTMLOptionsCollection::length(
     /* [retval][out] */ unsigned int* result)
 {
     if (!result)
@@ -165,14 +165,14 @@ HRESULT STDMETHODCALLTYPE DOMHTMLOptionsCollection::length(
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE DOMHTMLOptionsCollection::setLength( 
+HRESULT STDMETHODCALLTYPE DOMHTMLOptionsCollection::setLength(
     /* [in] */ unsigned int /*length*/)
 {
     ASSERT_NOT_REACHED();
     return E_NOTIMPL;
 }
 
-HRESULT STDMETHODCALLTYPE DOMHTMLOptionsCollection::item( 
+HRESULT STDMETHODCALLTYPE DOMHTMLOptionsCollection::item(
     /* [in] */ unsigned int index,
     /* [retval][out] */ IDOMNode** result)
 {
@@ -184,7 +184,7 @@ HRESULT STDMETHODCALLTYPE DOMHTMLOptionsCollection::item(
     return *result ? S_OK : E_FAIL;
 }
 
-HRESULT STDMETHODCALLTYPE DOMHTMLOptionsCollection::namedItem( 
+HRESULT STDMETHODCALLTYPE DOMHTMLOptionsCollection::namedItem(
     /* [in] */ BSTR /*name*/,
     /* [retval][out] */ IDOMNode** /*result*/)
 {
@@ -208,7 +208,7 @@ HRESULT STDMETHODCALLTYPE DOMHTMLDocument::QueryInterface(REFIID riid, void** pp
 
 // DOMHTMLDocument ------------------------------------------------------------
 
-HRESULT STDMETHODCALLTYPE DOMHTMLDocument::title( 
+HRESULT STDMETHODCALLTYPE DOMHTMLDocument::title(
         /* [retval][out] */ BSTR* result)
 {
     if (!result)
@@ -222,29 +222,29 @@ HRESULT STDMETHODCALLTYPE DOMHTMLDocument::title(
     *result = BString(m_document->title()).release();
     return S_OK;
 }
-    
-HRESULT STDMETHODCALLTYPE DOMHTMLDocument::setTitle( 
+
+HRESULT STDMETHODCALLTYPE DOMHTMLDocument::setTitle(
         /* [in] */ BSTR /*title*/)
 {
     ASSERT_NOT_REACHED();
     return E_NOTIMPL;
 }
-    
-HRESULT STDMETHODCALLTYPE DOMHTMLDocument::referrer( 
+
+HRESULT STDMETHODCALLTYPE DOMHTMLDocument::referrer(
         /* [retval][out] */ BSTR* /*result*/)
 {
     ASSERT_NOT_REACHED();
     return E_NOTIMPL;
 }
-    
-HRESULT STDMETHODCALLTYPE DOMHTMLDocument::domain( 
+
+HRESULT STDMETHODCALLTYPE DOMHTMLDocument::domain(
         /* [retval][out] */ BSTR* /*result*/)
 {
     ASSERT_NOT_REACHED();
     return E_NOTIMPL;
 }
-    
-HRESULT STDMETHODCALLTYPE DOMHTMLDocument::URL( 
+
+HRESULT STDMETHODCALLTYPE DOMHTMLDocument::URL(
         /* [retval][out] */ BSTR* result)
 {
     if (!result)
@@ -253,8 +253,8 @@ HRESULT STDMETHODCALLTYPE DOMHTMLDocument::URL(
     *result = BString(toHTMLDocument(m_document)->url()).release();
     return S_OK;
 }
-    
-HRESULT STDMETHODCALLTYPE DOMHTMLDocument::body( 
+
+HRESULT STDMETHODCALLTYPE DOMHTMLDocument::body(
         /* [retval][out] */ IDOMHTMLElement** bodyElement)
 {
     *bodyElement = 0;
@@ -268,36 +268,36 @@ HRESULT STDMETHODCALLTYPE DOMHTMLDocument::body(
         return domElement->QueryInterface(IID_IDOMHTMLElement, (void**) bodyElement);
     return E_FAIL;
 }
-    
-HRESULT STDMETHODCALLTYPE DOMHTMLDocument::setBody( 
+
+HRESULT STDMETHODCALLTYPE DOMHTMLDocument::setBody(
         /* [in] */ IDOMHTMLElement* /*body*/)
 {
     ASSERT_NOT_REACHED();
     return E_NOTIMPL;
 }
-    
-HRESULT STDMETHODCALLTYPE DOMHTMLDocument::images( 
+
+HRESULT STDMETHODCALLTYPE DOMHTMLDocument::images(
         /* [retval][out] */ IDOMHTMLCollection** /*collection*/)
 {
     ASSERT_NOT_REACHED();
     return E_NOTIMPL;
 }
-    
-HRESULT STDMETHODCALLTYPE DOMHTMLDocument::applets( 
+
+HRESULT STDMETHODCALLTYPE DOMHTMLDocument::applets(
         /* [retval][out] */ IDOMHTMLCollection** /*collection*/)
 {
     ASSERT_NOT_REACHED();
     return E_NOTIMPL;
 }
-    
-HRESULT STDMETHODCALLTYPE DOMHTMLDocument::links( 
+
+HRESULT STDMETHODCALLTYPE DOMHTMLDocument::links(
         /* [retval][out] */ IDOMHTMLCollection** /*collection*/)
 {
     ASSERT_NOT_REACHED();
     return E_NOTIMPL;
 }
-    
-HRESULT STDMETHODCALLTYPE DOMHTMLDocument::forms( 
+
+HRESULT STDMETHODCALLTYPE DOMHTMLDocument::forms(
         /* [retval][out] */ IDOMHTMLCollection** collection)
 {
     *collection = 0;
@@ -309,63 +309,63 @@ HRESULT STDMETHODCALLTYPE DOMHTMLDocument::forms(
     *collection = DOMHTMLCollection::createInstance(forms.get());
     return S_OK;
 }
-    
-HRESULT STDMETHODCALLTYPE DOMHTMLDocument::anchors( 
+
+HRESULT STDMETHODCALLTYPE DOMHTMLDocument::anchors(
         /* [retval][out] */ IDOMHTMLCollection** /*collection*/)
 {
     ASSERT_NOT_REACHED();
     return E_NOTIMPL;
 }
-    
-HRESULT STDMETHODCALLTYPE DOMHTMLDocument::cookie( 
+
+HRESULT STDMETHODCALLTYPE DOMHTMLDocument::cookie(
         /* [retval][out] */ BSTR* /*result*/)
 {
     ASSERT_NOT_REACHED();
     return E_NOTIMPL;
 }
-    
-HRESULT STDMETHODCALLTYPE DOMHTMLDocument::setCookie( 
+
+HRESULT STDMETHODCALLTYPE DOMHTMLDocument::setCookie(
         /* [in] */ BSTR /*cookie*/)
 {
     ASSERT_NOT_REACHED();
     return E_NOTIMPL;
 }
-    
+
 HRESULT STDMETHODCALLTYPE DOMHTMLDocument::open( void)
 {
     ASSERT_NOT_REACHED();
     return E_NOTIMPL;
 }
-    
+
 HRESULT STDMETHODCALLTYPE DOMHTMLDocument::close( void)
 {
     ASSERT_NOT_REACHED();
     return E_NOTIMPL;
 }
-    
-HRESULT STDMETHODCALLTYPE DOMHTMLDocument::write( 
+
+HRESULT STDMETHODCALLTYPE DOMHTMLDocument::write(
         /* [in] */ BSTR /*text*/)
 {
     ASSERT_NOT_REACHED();
     return E_NOTIMPL;
 }
-    
-HRESULT STDMETHODCALLTYPE DOMHTMLDocument::writeln( 
+
+HRESULT STDMETHODCALLTYPE DOMHTMLDocument::writeln(
         /* [in] */ BSTR /*text*/)
 {
     ASSERT_NOT_REACHED();
     return E_NOTIMPL;
 }
-    
-HRESULT STDMETHODCALLTYPE DOMHTMLDocument::getElementById_( 
+
+HRESULT STDMETHODCALLTYPE DOMHTMLDocument::getElementById_(
         /* [in] */ BSTR /*elementId*/,
         /* [retval][out] */ IDOMElement** /*element*/)
 {
     ASSERT_NOT_REACHED();
     return E_NOTIMPL;
 }
-    
-HRESULT STDMETHODCALLTYPE DOMHTMLDocument::getElementsByName( 
+
+HRESULT STDMETHODCALLTYPE DOMHTMLDocument::getElementsByName(
         /* [in] */ BSTR /*elementName*/,
         /* [retval][out] */ IDOMNodeList** /*nodeList*/)
 {
@@ -389,7 +389,7 @@ HRESULT STDMETHODCALLTYPE DOMHTMLElement::QueryInterface(REFIID riid, void** ppv
 
 // DOMHTMLElement -------------------------------------------------------------
 
-HRESULT STDMETHODCALLTYPE DOMHTMLElement::idName( 
+HRESULT STDMETHODCALLTYPE DOMHTMLElement::idName(
         /* [retval][out] */ BSTR* result)
 {
     if (!result)
@@ -400,85 +400,85 @@ HRESULT STDMETHODCALLTYPE DOMHTMLElement::idName(
     *result = BString(idString).release();
     return S_OK;
 }
-    
-HRESULT STDMETHODCALLTYPE DOMHTMLElement::setIdName( 
+
+HRESULT STDMETHODCALLTYPE DOMHTMLElement::setIdName(
         /* [in] */ BSTR /*idName*/)
 {
     ASSERT_NOT_REACHED();
     return E_NOTIMPL;
 }
-    
-HRESULT STDMETHODCALLTYPE DOMHTMLElement::title( 
+
+HRESULT STDMETHODCALLTYPE DOMHTMLElement::title(
         /* [retval][out] */ BSTR* /*result*/)
 {
     ASSERT_NOT_REACHED();
     return E_NOTIMPL;
 }
-    
-HRESULT STDMETHODCALLTYPE DOMHTMLElement::setTitle( 
+
+HRESULT STDMETHODCALLTYPE DOMHTMLElement::setTitle(
         /* [in] */ BSTR /*title*/)
 {
     ASSERT_NOT_REACHED();
     return E_NOTIMPL;
 }
-    
-HRESULT STDMETHODCALLTYPE DOMHTMLElement::lang( 
+
+HRESULT STDMETHODCALLTYPE DOMHTMLElement::lang(
         /* [retval][out] */ BSTR* /*result*/)
 {
     ASSERT_NOT_REACHED();
     return E_NOTIMPL;
 }
-    
-HRESULT STDMETHODCALLTYPE DOMHTMLElement::setLang( 
+
+HRESULT STDMETHODCALLTYPE DOMHTMLElement::setLang(
         /* [in] */ BSTR /*lang*/)
 {
     ASSERT_NOT_REACHED();
     return E_NOTIMPL;
 }
-    
-HRESULT STDMETHODCALLTYPE DOMHTMLElement::dir( 
+
+HRESULT STDMETHODCALLTYPE DOMHTMLElement::dir(
         /* [retval][out] */ BSTR* /*result*/)
 {
     ASSERT_NOT_REACHED();
     return E_NOTIMPL;
 }
-    
-HRESULT STDMETHODCALLTYPE DOMHTMLElement::setDir( 
+
+HRESULT STDMETHODCALLTYPE DOMHTMLElement::setDir(
         /* [in] */ BSTR /*dir*/)
 {
     ASSERT_NOT_REACHED();
     return E_NOTIMPL;
 }
-    
-HRESULT STDMETHODCALLTYPE DOMHTMLElement::className( 
+
+HRESULT STDMETHODCALLTYPE DOMHTMLElement::className(
         /* [retval][out] */ BSTR* /*result*/)
 {
     ASSERT_NOT_REACHED();
     return E_NOTIMPL;
 }
-    
-HRESULT STDMETHODCALLTYPE DOMHTMLElement::setClassName( 
+
+HRESULT STDMETHODCALLTYPE DOMHTMLElement::setClassName(
         /* [in] */ BSTR /*className*/)
 {
     ASSERT_NOT_REACHED();
     return E_NOTIMPL;
 }
 
-HRESULT STDMETHODCALLTYPE DOMHTMLElement::innerHTML( 
+HRESULT STDMETHODCALLTYPE DOMHTMLElement::innerHTML(
         /* [retval][out] */ BSTR* /*result*/)
 {
     ASSERT_NOT_REACHED();
     return E_NOTIMPL;
 }
-        
-HRESULT STDMETHODCALLTYPE DOMHTMLElement::setInnerHTML( 
+
+HRESULT STDMETHODCALLTYPE DOMHTMLElement::setInnerHTML(
         /* [in] */ BSTR /*html*/)
 {
     ASSERT_NOT_REACHED();
     return E_NOTIMPL;
 }
-        
-HRESULT STDMETHODCALLTYPE DOMHTMLElement::innerText( 
+
+HRESULT STDMETHODCALLTYPE DOMHTMLElement::innerText(
         /* [retval][out] */ BSTR* result)
 {
     ASSERT(m_element && m_element->isHTMLElement());
@@ -486,8 +486,8 @@ HRESULT STDMETHODCALLTYPE DOMHTMLElement::innerText(
     *result = BString(innerTextString.deprecatedCharacters(), innerTextString.length()).release();
     return S_OK;
 }
-        
-HRESULT STDMETHODCALLTYPE DOMHTMLElement::setInnerText( 
+
+HRESULT STDMETHODCALLTYPE DOMHTMLElement::setInnerText(
         /* [in] */ BSTR text)
 {
     ASSERT(m_element && m_element->isHTMLElement());
@@ -514,49 +514,49 @@ HRESULT STDMETHODCALLTYPE DOMHTMLFormElement::QueryInterface(REFIID riid, void**
 
 // DOMHTMLFormElement ---------------------------------------------------------
 
-HRESULT STDMETHODCALLTYPE DOMHTMLFormElement::elements( 
+HRESULT STDMETHODCALLTYPE DOMHTMLFormElement::elements(
         /* [retval][out] */ IDOMHTMLCollection** /*result*/)
 {
     ASSERT_NOT_REACHED();
     return E_NOTIMPL;
 }
-    
-HRESULT STDMETHODCALLTYPE DOMHTMLFormElement::length( 
+
+HRESULT STDMETHODCALLTYPE DOMHTMLFormElement::length(
         /* [retval][out] */ int* /*result*/)
 {
     ASSERT_NOT_REACHED();
     return E_NOTIMPL;
 }
-    
-HRESULT STDMETHODCALLTYPE DOMHTMLFormElement::name( 
+
+HRESULT STDMETHODCALLTYPE DOMHTMLFormElement::name(
         /* [retval][out] */ BSTR* /*result*/)
 {
     ASSERT_NOT_REACHED();
     return E_NOTIMPL;
 }
-    
-HRESULT STDMETHODCALLTYPE DOMHTMLFormElement::setName( 
+
+HRESULT STDMETHODCALLTYPE DOMHTMLFormElement::setName(
         /* [in] */ BSTR /*name*/)
 {
     ASSERT_NOT_REACHED();
     return E_NOTIMPL;
 }
-    
-HRESULT STDMETHODCALLTYPE DOMHTMLFormElement::acceptCharset( 
+
+HRESULT STDMETHODCALLTYPE DOMHTMLFormElement::acceptCharset(
         /* [retval][out] */ BSTR* /*result*/)
 {
     ASSERT_NOT_REACHED();
     return E_NOTIMPL;
 }
-    
-HRESULT STDMETHODCALLTYPE DOMHTMLFormElement::setAcceptCharset( 
+
+HRESULT STDMETHODCALLTYPE DOMHTMLFormElement::setAcceptCharset(
         /* [in] */ BSTR /*acceptCharset*/)
 {
     ASSERT_NOT_REACHED();
     return E_NOTIMPL;
 }
-    
-HRESULT STDMETHODCALLTYPE DOMHTMLFormElement::action( 
+
+HRESULT STDMETHODCALLTYPE DOMHTMLFormElement::action(
         /* [retval][out] */ BSTR* result)
 {
     ASSERT(m_element && isHTMLFormElement(m_element));
@@ -564,29 +564,29 @@ HRESULT STDMETHODCALLTYPE DOMHTMLFormElement::action(
     *result = BString(actionString.deprecatedCharacters(), actionString.length()).release();
     return S_OK;
 }
-    
-HRESULT STDMETHODCALLTYPE DOMHTMLFormElement::setAction( 
+
+HRESULT STDMETHODCALLTYPE DOMHTMLFormElement::setAction(
         /* [in] */ BSTR /*action*/)
 {
     ASSERT_NOT_REACHED();
     return E_NOTIMPL;
 }
-    
-HRESULT STDMETHODCALLTYPE DOMHTMLFormElement::encType( 
+
+HRESULT STDMETHODCALLTYPE DOMHTMLFormElement::encType(
         /* [retval][out] */ BSTR* /*result*/)
 {
     ASSERT_NOT_REACHED();
     return E_NOTIMPL;
 }
-    
-HRESULT STDMETHODCALLTYPE DOMHTMLFormElement::setEnctype( 
+
+HRESULT STDMETHODCALLTYPE DOMHTMLFormElement::setEnctype(
         /* [retval][out] */ BSTR* /*encType*/)
 {
     ASSERT_NOT_REACHED();
     return E_NOTIMPL;
 }
-    
-HRESULT STDMETHODCALLTYPE DOMHTMLFormElement::method( 
+
+HRESULT STDMETHODCALLTYPE DOMHTMLFormElement::method(
         /* [retval][out] */ BSTR* result)
 {
     ASSERT(m_element && isHTMLFormElement(m_element));
@@ -594,34 +594,34 @@ HRESULT STDMETHODCALLTYPE DOMHTMLFormElement::method(
     *result = BString(methodString.deprecatedCharacters(), methodString.length()).release();
     return S_OK;
 }
-    
-HRESULT STDMETHODCALLTYPE DOMHTMLFormElement::setMethod( 
+
+HRESULT STDMETHODCALLTYPE DOMHTMLFormElement::setMethod(
         /* [in] */ BSTR /*method*/)
 {
     ASSERT_NOT_REACHED();
     return E_NOTIMPL;
 }
-    
-HRESULT STDMETHODCALLTYPE DOMHTMLFormElement::target( 
+
+HRESULT STDMETHODCALLTYPE DOMHTMLFormElement::target(
         /* [retval][out] */ BSTR* /*result*/)
 {
     ASSERT_NOT_REACHED();
     return E_NOTIMPL;
 }
-    
-HRESULT STDMETHODCALLTYPE DOMHTMLFormElement::setTarget( 
+
+HRESULT STDMETHODCALLTYPE DOMHTMLFormElement::setTarget(
         /* [in] */ BSTR /*target*/)
 {
     ASSERT_NOT_REACHED();
     return E_NOTIMPL;
 }
-    
+
 HRESULT STDMETHODCALLTYPE DOMHTMLFormElement::submit( void)
 {
     ASSERT_NOT_REACHED();
     return E_NOTIMPL;
 }
-    
+
 HRESULT STDMETHODCALLTYPE DOMHTMLFormElement::reset( void)
 {
     ASSERT_NOT_REACHED();
@@ -646,56 +646,56 @@ HRESULT STDMETHODCALLTYPE DOMHTMLSelectElement::QueryInterface(REFIID riid, void
 
 // DOMHTMLSelectElement -------------------------------------------------------
 
-HRESULT STDMETHODCALLTYPE DOMHTMLSelectElement::type( 
+HRESULT STDMETHODCALLTYPE DOMHTMLSelectElement::type(
         /* [retval][out] */ BSTR* /*result*/)
 {
     ASSERT_NOT_REACHED();
     return E_NOTIMPL;
 }
-    
-HRESULT STDMETHODCALLTYPE DOMHTMLSelectElement::selectedIndex( 
+
+HRESULT STDMETHODCALLTYPE DOMHTMLSelectElement::selectedIndex(
         /* [retval][out] */ int* /*result*/)
 {
     ASSERT_NOT_REACHED();
     return E_NOTIMPL;
 }
-    
-HRESULT STDMETHODCALLTYPE DOMHTMLSelectElement::setSelectedIndx( 
+
+HRESULT STDMETHODCALLTYPE DOMHTMLSelectElement::setSelectedIndx(
         /* [in] */ int /*selectedIndex*/)
 {
     ASSERT_NOT_REACHED();
     return E_NOTIMPL;
 }
-    
-HRESULT STDMETHODCALLTYPE DOMHTMLSelectElement::value( 
+
+HRESULT STDMETHODCALLTYPE DOMHTMLSelectElement::value(
         /* [retval][out] */ BSTR* /*result*/)
 {
     ASSERT_NOT_REACHED();
     return E_NOTIMPL;
 }
-    
-HRESULT STDMETHODCALLTYPE DOMHTMLSelectElement::setValue( 
+
+HRESULT STDMETHODCALLTYPE DOMHTMLSelectElement::setValue(
         /* [in] */ BSTR /*value*/)
 {
     ASSERT_NOT_REACHED();
     return E_NOTIMPL;
 }
-    
-HRESULT STDMETHODCALLTYPE DOMHTMLSelectElement::length( 
+
+HRESULT STDMETHODCALLTYPE DOMHTMLSelectElement::length(
         /* [retval][out] */ int* /*result*/)
 {
     ASSERT_NOT_REACHED();
     return E_NOTIMPL;
 }
-    
-HRESULT STDMETHODCALLTYPE DOMHTMLSelectElement::form( 
+
+HRESULT STDMETHODCALLTYPE DOMHTMLSelectElement::form(
         /* [retval][out] */ IDOMHTMLFormElement** /*result*/)
 {
     ASSERT_NOT_REACHED();
     return E_NOTIMPL;
 }
-    
-HRESULT STDMETHODCALLTYPE DOMHTMLSelectElement::options( 
+
+HRESULT STDMETHODCALLTYPE DOMHTMLSelectElement::options(
         /* [retval][out] */ IDOMHTMLOptionsCollection** result)
 {
     if (!result)
@@ -712,95 +712,95 @@ HRESULT STDMETHODCALLTYPE DOMHTMLSelectElement::options(
     *result = DOMHTMLOptionsCollection::createInstance(options.get());
     return S_OK;
 }
-    
-HRESULT STDMETHODCALLTYPE DOMHTMLSelectElement::disabled( 
+
+HRESULT STDMETHODCALLTYPE DOMHTMLSelectElement::disabled(
         /* [retval][out] */ BOOL* /*result*/)
 {
     ASSERT_NOT_REACHED();
     return E_NOTIMPL;
 }
-    
-HRESULT STDMETHODCALLTYPE DOMHTMLSelectElement::setDisabled( 
+
+HRESULT STDMETHODCALLTYPE DOMHTMLSelectElement::setDisabled(
         /* [in] */ BOOL /*disabled*/)
 {
     ASSERT_NOT_REACHED();
     return E_NOTIMPL;
 }
-    
-HRESULT STDMETHODCALLTYPE DOMHTMLSelectElement::multiple( 
+
+HRESULT STDMETHODCALLTYPE DOMHTMLSelectElement::multiple(
         /* [retval][out] */ BOOL* /*result*/)
 {
     ASSERT_NOT_REACHED();
     return E_NOTIMPL;
 }
-    
-HRESULT STDMETHODCALLTYPE DOMHTMLSelectElement::setMultiple( 
+
+HRESULT STDMETHODCALLTYPE DOMHTMLSelectElement::setMultiple(
         /* [in] */ BOOL /*multiple*/)
 {
     ASSERT_NOT_REACHED();
     return E_NOTIMPL;
 }
-    
-HRESULT STDMETHODCALLTYPE DOMHTMLSelectElement::name( 
+
+HRESULT STDMETHODCALLTYPE DOMHTMLSelectElement::name(
         /* [retval][out] */ BSTR* /*result*/)
 {
     ASSERT_NOT_REACHED();
     return E_NOTIMPL;
 }
-    
-HRESULT STDMETHODCALLTYPE DOMHTMLSelectElement::setName( 
+
+HRESULT STDMETHODCALLTYPE DOMHTMLSelectElement::setName(
         /* [in] */ BSTR /*name*/)
 {
     ASSERT_NOT_REACHED();
     return E_NOTIMPL;
 }
-    
-HRESULT STDMETHODCALLTYPE DOMHTMLSelectElement::size( 
+
+HRESULT STDMETHODCALLTYPE DOMHTMLSelectElement::size(
         /* [retval][out] */ int* /*size*/)
 {
     ASSERT_NOT_REACHED();
     return E_NOTIMPL;
 }
-    
-HRESULT STDMETHODCALLTYPE DOMHTMLSelectElement::setSize( 
+
+HRESULT STDMETHODCALLTYPE DOMHTMLSelectElement::setSize(
         /* [in] */ int /*size*/)
 {
     ASSERT_NOT_REACHED();
     return E_NOTIMPL;
 }
-    
-HRESULT STDMETHODCALLTYPE DOMHTMLSelectElement::tabIndex( 
+
+HRESULT STDMETHODCALLTYPE DOMHTMLSelectElement::tabIndex(
         /* [retval][out] */ int* /*result*/)
 {
     ASSERT_NOT_REACHED();
     return E_NOTIMPL;
 }
-    
-HRESULT STDMETHODCALLTYPE DOMHTMLSelectElement::setTabIndex( 
+
+HRESULT STDMETHODCALLTYPE DOMHTMLSelectElement::setTabIndex(
         /* [in] */ int /*tabIndex*/)
 {
     ASSERT_NOT_REACHED();
     return E_NOTIMPL;
 }
-    
-HRESULT STDMETHODCALLTYPE DOMHTMLSelectElement::add( 
+
+HRESULT STDMETHODCALLTYPE DOMHTMLSelectElement::add(
         /* [in] */ IDOMHTMLElement* /*element*/,
         /* [in] */ IDOMHTMLElement* /*before*/)
 {
     ASSERT_NOT_REACHED();
     return E_NOTIMPL;
 }
-    
-HRESULT STDMETHODCALLTYPE DOMHTMLSelectElement::remove( 
+
+HRESULT STDMETHODCALLTYPE DOMHTMLSelectElement::remove(
         /* [in] */ int /*index*/)
 {
     ASSERT_NOT_REACHED();
     return E_NOTIMPL;
 }
-    
+
 // DOMHTMLSelectElement - IFormsAutoFillTransitionSelect ----------------------
 
-HRESULT STDMETHODCALLTYPE DOMHTMLSelectElement::activateItemAtIndex( 
+HRESULT STDMETHODCALLTYPE DOMHTMLSelectElement::activateItemAtIndex(
     /* [in] */ int index)
 {
     ASSERT(m_element);
@@ -829,28 +829,28 @@ HRESULT STDMETHODCALLTYPE DOMHTMLOptionElement::QueryInterface(REFIID riid, void
 
 // DOMHTMLOptionElement -------------------------------------------------------
 
-HRESULT STDMETHODCALLTYPE DOMHTMLOptionElement::form( 
+HRESULT STDMETHODCALLTYPE DOMHTMLOptionElement::form(
         /* [retval][out] */ IDOMHTMLFormElement** /*result*/)
 {
     ASSERT_NOT_REACHED();
     return E_NOTIMPL;
 }
-    
-HRESULT STDMETHODCALLTYPE DOMHTMLOptionElement::defaultSelected( 
+
+HRESULT STDMETHODCALLTYPE DOMHTMLOptionElement::defaultSelected(
         /* [retval][out] */ BOOL* /*result*/)
 {
     ASSERT_NOT_REACHED();
     return E_NOTIMPL;
 }
-    
-HRESULT STDMETHODCALLTYPE DOMHTMLOptionElement::setDefaultSelected( 
+
+HRESULT STDMETHODCALLTYPE DOMHTMLOptionElement::setDefaultSelected(
         /* [in] */ BOOL /*defaultSelected*/)
 {
     ASSERT_NOT_REACHED();
     return E_NOTIMPL;
 }
-    
-HRESULT STDMETHODCALLTYPE DOMHTMLOptionElement::text( 
+
+HRESULT STDMETHODCALLTYPE DOMHTMLOptionElement::text(
         /* [retval][out] */ BSTR* result)
 {
     if (!result)
@@ -865,29 +865,29 @@ HRESULT STDMETHODCALLTYPE DOMHTMLOptionElement::text(
     *result = BString(optionElement->text()).release();
     return S_OK;
 }
-    
-HRESULT STDMETHODCALLTYPE DOMHTMLOptionElement::index( 
+
+HRESULT STDMETHODCALLTYPE DOMHTMLOptionElement::index(
         /* [retval][out] */ int* /*result*/)
 {
     ASSERT_NOT_REACHED();
     return E_NOTIMPL;
 }
-    
-HRESULT STDMETHODCALLTYPE DOMHTMLOptionElement::disabled( 
+
+HRESULT STDMETHODCALLTYPE DOMHTMLOptionElement::disabled(
         /* [retval][out] */ BOOL* /*result*/)
 {
     ASSERT_NOT_REACHED();
     return E_NOTIMPL;
 }
-    
-HRESULT STDMETHODCALLTYPE DOMHTMLOptionElement::setDisabled( 
+
+HRESULT STDMETHODCALLTYPE DOMHTMLOptionElement::setDisabled(
         /* [in] */ BOOL /*disabled*/)
 {
     ASSERT_NOT_REACHED();
     return E_NOTIMPL;
 }
-    
-HRESULT STDMETHODCALLTYPE DOMHTMLOptionElement::label( 
+
+HRESULT STDMETHODCALLTYPE DOMHTMLOptionElement::label(
         /* [retval][out] */ BSTR* result)
 {
     if (!result)
@@ -902,36 +902,36 @@ HRESULT STDMETHODCALLTYPE DOMHTMLOptionElement::label(
     *result = BString(optionElement->label()).release();
     return S_OK;
 }
-    
-HRESULT STDMETHODCALLTYPE DOMHTMLOptionElement::setLabel( 
+
+HRESULT STDMETHODCALLTYPE DOMHTMLOptionElement::setLabel(
         /* [in] */ BSTR /*label*/)
 {
     ASSERT_NOT_REACHED();
     return E_NOTIMPL;
 }
-    
-HRESULT STDMETHODCALLTYPE DOMHTMLOptionElement::selected( 
+
+HRESULT STDMETHODCALLTYPE DOMHTMLOptionElement::selected(
         /* [retval][out] */ BOOL* /*result*/)
 {
     ASSERT_NOT_REACHED();
     return E_NOTIMPL;
 }
-    
-HRESULT STDMETHODCALLTYPE DOMHTMLOptionElement::setSelected( 
+
+HRESULT STDMETHODCALLTYPE DOMHTMLOptionElement::setSelected(
         /* [in] */ BOOL /*selected*/)
 {
     ASSERT_NOT_REACHED();
     return E_NOTIMPL;
 }
-    
-HRESULT STDMETHODCALLTYPE DOMHTMLOptionElement::value( 
+
+HRESULT STDMETHODCALLTYPE DOMHTMLOptionElement::value(
         /* [retval][out] */ BSTR* /*result*/)
 {
     ASSERT_NOT_REACHED();
     return E_NOTIMPL;
 }
-    
-HRESULT STDMETHODCALLTYPE DOMHTMLOptionElement::setValue( 
+
+HRESULT STDMETHODCALLTYPE DOMHTMLOptionElement::setValue(
         /* [in] */ BSTR /*value*/)
 {
     ASSERT_NOT_REACHED();
@@ -948,7 +948,7 @@ HRESULT STDMETHODCALLTYPE DOMHTMLInputElement::QueryInterface(REFIID riid, void*
     else if (IsEqualGUID(riid, IID_IFormsAutoFillTransition))
         *ppvObject = static_cast<IFormsAutoFillTransition*>(this);
     else if (IsEqualGUID(riid, IID_IFormPromptAdditions))
-        *ppvObject = static_cast<IFormPromptAdditions*>(this);    
+        *ppvObject = static_cast<IFormPromptAdditions*>(this);
     else
         return DOMHTMLElement::QueryInterface(riid, ppvObject);
 
@@ -958,35 +958,35 @@ HRESULT STDMETHODCALLTYPE DOMHTMLInputElement::QueryInterface(REFIID riid, void*
 
 // DOMHTMLInputElement --------------------------------------------------------
 
-HRESULT STDMETHODCALLTYPE DOMHTMLInputElement::defaultValue( 
+HRESULT STDMETHODCALLTYPE DOMHTMLInputElement::defaultValue(
         /* [retval][out] */ BSTR* /*result*/)
 {
     ASSERT_NOT_REACHED();
     return E_NOTIMPL;
 }
-    
-HRESULT STDMETHODCALLTYPE DOMHTMLInputElement::setDefaultValue( 
+
+HRESULT STDMETHODCALLTYPE DOMHTMLInputElement::setDefaultValue(
         /* [in] */ BSTR /*val*/)
 {
     ASSERT_NOT_REACHED();
     return E_NOTIMPL;
 }
-    
-HRESULT STDMETHODCALLTYPE DOMHTMLInputElement::defaultChecked( 
+
+HRESULT STDMETHODCALLTYPE DOMHTMLInputElement::defaultChecked(
         /* [retval][out] */ BOOL* /*result*/)
 {
     ASSERT_NOT_REACHED();
     return E_NOTIMPL;
 }
-    
-HRESULT STDMETHODCALLTYPE DOMHTMLInputElement::setDefaultChecked( 
+
+HRESULT STDMETHODCALLTYPE DOMHTMLInputElement::setDefaultChecked(
         /* [in] */ BSTR /*checked*/)
 {
     ASSERT_NOT_REACHED();
     return E_NOTIMPL;
 }
-    
-HRESULT STDMETHODCALLTYPE DOMHTMLInputElement::form( 
+
+HRESULT STDMETHODCALLTYPE DOMHTMLInputElement::form(
         /* [retval][out] */ IDOMHTMLElement** result)
 {
     if (!result)
@@ -1000,78 +1000,78 @@ HRESULT STDMETHODCALLTYPE DOMHTMLInputElement::form(
         return domElement->QueryInterface(IID_IDOMHTMLElement, (void**) result);
     return E_FAIL;
 }
-    
-HRESULT STDMETHODCALLTYPE DOMHTMLInputElement::accept( 
+
+HRESULT STDMETHODCALLTYPE DOMHTMLInputElement::accept(
         /* [retval][out] */ BSTR* /*result*/)
 {
     ASSERT_NOT_REACHED();
     return E_NOTIMPL;
 }
-    
-HRESULT STDMETHODCALLTYPE DOMHTMLInputElement::setAccept( 
+
+HRESULT STDMETHODCALLTYPE DOMHTMLInputElement::setAccept(
         /* [in] */ BSTR /*accept*/)
 {
     ASSERT_NOT_REACHED();
     return E_NOTIMPL;
 }
-    
-HRESULT STDMETHODCALLTYPE DOMHTMLInputElement::accessKey( 
+
+HRESULT STDMETHODCALLTYPE DOMHTMLInputElement::accessKey(
         /* [retval][out] */ BSTR* /*result*/)
 {
     ASSERT_NOT_REACHED();
     return E_NOTIMPL;
 }
-    
-HRESULT STDMETHODCALLTYPE DOMHTMLInputElement::setAccessKey( 
+
+HRESULT STDMETHODCALLTYPE DOMHTMLInputElement::setAccessKey(
         /* [in] */ BSTR /*key*/)
 {
     ASSERT_NOT_REACHED();
     return E_NOTIMPL;
 }
-    
-HRESULT STDMETHODCALLTYPE DOMHTMLInputElement::align( 
+
+HRESULT STDMETHODCALLTYPE DOMHTMLInputElement::align(
         /* [retval][out] */ BSTR* /*result*/)
 {
     ASSERT_NOT_REACHED();
     return E_NOTIMPL;
 }
-    
-HRESULT STDMETHODCALLTYPE DOMHTMLInputElement::setAlign( 
+
+HRESULT STDMETHODCALLTYPE DOMHTMLInputElement::setAlign(
         /* [in] */ BSTR /*align*/)
 {
     ASSERT_NOT_REACHED();
     return E_NOTIMPL;
 }
-    
-HRESULT STDMETHODCALLTYPE DOMHTMLInputElement::alt( 
+
+HRESULT STDMETHODCALLTYPE DOMHTMLInputElement::alt(
         /* [retval][out] */ BSTR* /*result*/)
 {
     ASSERT_NOT_REACHED();
     return E_NOTIMPL;
 }
-    
-HRESULT STDMETHODCALLTYPE DOMHTMLInputElement::setAlt( 
+
+HRESULT STDMETHODCALLTYPE DOMHTMLInputElement::setAlt(
         /* [in] */ BSTR /*alt*/)
 {
     ASSERT_NOT_REACHED();
     return E_NOTIMPL;
 }
-    
-HRESULT STDMETHODCALLTYPE DOMHTMLInputElement::checked( 
+
+HRESULT STDMETHODCALLTYPE DOMHTMLInputElement::checked(
         /* [retval][out] */ BOOL* /*result*/)
 {
     ASSERT_NOT_REACHED();
     return E_NOTIMPL;
 }
-    
-HRESULT STDMETHODCALLTYPE DOMHTMLInputElement::setChecked( 
+
+HRESULT STDMETHODCALLTYPE DOMHTMLInputElement::setChecked(
         /* [in] */ BOOL /*checked*/)
 {
     ASSERT_NOT_REACHED();
     return E_NOTIMPL;
 }
-    
-HRESULT STDMETHODCALLTYPE DOMHTMLInputElement::disabled( 
+
+HRESULT STDMETHODCALLTYPE DOMHTMLInputElement::disabled(
         /* [retval][out] */ BOOL* result)
 {
     ASSERT(m_element && isHTMLInputElement(m_element));
@@ -1079,43 +1079,43 @@ HRESULT STDMETHODCALLTYPE DOMHTMLInputElement::disabled(
     *result = inputElement->isDisabledFormControl() ? TRUE : FALSE;
     return S_OK;
 }
-    
-HRESULT STDMETHODCALLTYPE DOMHTMLInputElement::setDisabled( 
+
+HRESULT STDMETHODCALLTYPE DOMHTMLInputElement::setDisabled(
         /* [in] */ BOOL /*disabled*/)
 {
     ASSERT_NOT_REACHED();
     return E_NOTIMPL;
 }
-    
-HRESULT STDMETHODCALLTYPE DOMHTMLInputElement::maxLength( 
+
+HRESULT STDMETHODCALLTYPE DOMHTMLInputElement::maxLength(
         /* [retval][out] */ int* /*result*/)
 {
     ASSERT_NOT_REACHED();
     return E_NOTIMPL;
 }
-    
-HRESULT STDMETHODCALLTYPE DOMHTMLInputElement::setMaxLength( 
+
+HRESULT STDMETHODCALLTYPE DOMHTMLInputElement::setMaxLength(
         /* [in] */ int /*maxLength*/)
 {
     ASSERT_NOT_REACHED();
     return E_NOTIMPL;
 }
-    
-HRESULT STDMETHODCALLTYPE DOMHTMLInputElement::name( 
+
+HRESULT STDMETHODCALLTYPE DOMHTMLInputElement::name(
         /* [retval][out] */ BSTR* /*name*/)
 {
     ASSERT_NOT_REACHED();
     return E_NOTIMPL;
 }
-    
-HRESULT STDMETHODCALLTYPE DOMHTMLInputElement::setName( 
+
+HRESULT STDMETHODCALLTYPE DOMHTMLInputElement::setName(
         /* [in] */ BSTR /*name*/)
 {
     ASSERT_NOT_REACHED();
     return E_NOTIMPL;
 }
-    
-HRESULT STDMETHODCALLTYPE DOMHTMLInputElement::readOnly( 
+
+HRESULT STDMETHODCALLTYPE DOMHTMLInputElement::readOnly(
         /* [retval][out] */ BOOL* result)
 {
     ASSERT(m_element && isHTMLInputElement(m_element));
@@ -1123,64 +1123,64 @@ HRESULT STDMETHODCALLTYPE DOMHTMLInputElement::readOnly(
     *result = inputElement->isReadOnly() ? TRUE : FALSE;
     return S_OK;
 }
-    
-HRESULT STDMETHODCALLTYPE DOMHTMLInputElement::setReadOnly( 
+
+HRESULT STDMETHODCALLTYPE DOMHTMLInputElement::setReadOnly(
         /* [in] */ BOOL /*readOnly*/)
 {
     ASSERT_NOT_REACHED();
     return E_NOTIMPL;
 }
-    
-HRESULT STDMETHODCALLTYPE DOMHTMLInputElement::size( 
+
+HRESULT STDMETHODCALLTYPE DOMHTMLInputElement::size(
         /* [retval][out] */ unsigned int* /*result*/)
 {
     ASSERT_NOT_REACHED();
     return E_NOTIMPL;
 }
-    
-HRESULT STDMETHODCALLTYPE DOMHTMLInputElement::setSize( 
+
+HRESULT STDMETHODCALLTYPE DOMHTMLInputElement::setSize(
         /* [in] */ unsigned int /*size*/)
 {
     ASSERT_NOT_REACHED();
     return E_NOTIMPL;
 }
-    
-HRESULT STDMETHODCALLTYPE DOMHTMLInputElement::src( 
+
+HRESULT STDMETHODCALLTYPE DOMHTMLInputElement::src(
         /* [retval][out] */ BSTR* /*result*/)
 {
     ASSERT_NOT_REACHED();
     return E_NOTIMPL;
 }
-    
-HRESULT STDMETHODCALLTYPE DOMHTMLInputElement::setSrc( 
+
+HRESULT STDMETHODCALLTYPE DOMHTMLInputElement::setSrc(
         /* [in] */ BSTR /*src*/)
 {
     ASSERT_NOT_REACHED();
     return E_NOTIMPL;
 }
-    
-HRESULT STDMETHODCALLTYPE DOMHTMLInputElement::tabIndex( 
+
+HRESULT STDMETHODCALLTYPE DOMHTMLInputElement::tabIndex(
         /* [retval][out] */ int* /*result*/)
 {
     ASSERT_NOT_REACHED();
     return E_NOTIMPL;
 }
-    
-HRESULT STDMETHODCALLTYPE DOMHTMLInputElement::setTabIndex( 
+
+HRESULT STDMETHODCALLTYPE DOMHTMLInputElement::setTabIndex(
         /* [in] */ int /*tabIndex*/)
 {
     ASSERT_NOT_REACHED();
     return E_NOTIMPL;
 }
-    
-HRESULT STDMETHODCALLTYPE DOMHTMLInputElement::type( 
+
+HRESULT STDMETHODCALLTYPE DOMHTMLInputElement::type(
         /* [retval][out] */ BSTR* /*result*/)
 {
     ASSERT_NOT_REACHED();
     return E_NOTIMPL;
 }
-    
-HRESULT STDMETHODCALLTYPE DOMHTMLInputElement::setType( 
+
+HRESULT STDMETHODCALLTYPE DOMHTMLInputElement::setType(
         /* [in] */ BSTR type)
 {
     ASSERT(m_element && isHTMLInputElement(m_element));
@@ -1189,22 +1189,22 @@ HRESULT STDMETHODCALLTYPE DOMHTMLInputElement::setType(
     inputElement->setType(typeString);
     return S_OK;
 }
-    
-HRESULT STDMETHODCALLTYPE DOMHTMLInputElement::useMap( 
+
+HRESULT STDMETHODCALLTYPE DOMHTMLInputElement::useMap(
         /* [retval][out] */ BSTR* /*result*/)
 {
     ASSERT_NOT_REACHED();
     return E_NOTIMPL;
 }
-    
-HRESULT STDMETHODCALLTYPE DOMHTMLInputElement::setUseMap( 
+
+HRESULT STDMETHODCALLTYPE DOMHTMLInputElement::setUseMap(
         /* [in] */ BSTR /*useMap*/)
 {
     ASSERT_NOT_REACHED();
     return E_NOTIMPL;
 }
-    
-HRESULT STDMETHODCALLTYPE DOMHTMLInputElement::value( 
+
+HRESULT STDMETHODCALLTYPE DOMHTMLInputElement::value(
         /* [retval][out] */ BSTR* result)
 {
     ASSERT(m_element && isHTMLInputElement(m_element));
@@ -1215,8 +1215,8 @@ HRESULT STDMETHODCALLTYPE DOMHTMLInputElement::value(
         return E_OUTOFMEMORY;
     return S_OK;
 }
-    
-HRESULT STDMETHODCALLTYPE DOMHTMLInputElement::setValue( 
+
+HRESULT STDMETHODCALLTYPE DOMHTMLInputElement::setValue(
         /* [in] */ BSTR value)
 {
     ASSERT(m_element && isHTMLInputElement(m_element));
@@ -1242,14 +1242,14 @@ HRESULT STDMETHODCALLTYPE DOMHTMLInputElement::select( void)
     inputElement->select();
     return S_OK;
 }
-    
+
 HRESULT STDMETHODCALLTYPE DOMHTMLInputElement::click( void)
 {
     ASSERT_NOT_REACHED();
     return E_NOTIMPL;
 }
 
-HRESULT STDMETHODCALLTYPE DOMHTMLInputElement::setSelectionStart( 
+HRESULT STDMETHODCALLTYPE DOMHTMLInputElement::setSelectionStart(
     /* [in] */ long start)
 {
     ASSERT(m_element && isHTMLInputElement(m_element));
@@ -1258,7 +1258,7 @@ HRESULT STDMETHODCALLTYPE DOMHTMLInputElement::setSelectionStart(
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE DOMHTMLInputElement::selectionStart( 
+HRESULT STDMETHODCALLTYPE DOMHTMLInputElement::selectionStart(
     /* [retval][out] */ long *start)
 {
     ASSERT(m_element && isHTMLInputElement(m_element));
@@ -1267,7 +1267,7 @@ HRESULT STDMETHODCALLTYPE DOMHTMLInputElement::selectionStart(
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE DOMHTMLInputElement::setSelectionEnd( 
+HRESULT STDMETHODCALLTYPE DOMHTMLInputElement::setSelectionEnd(
     /* [in] */ long end)
 {
     ASSERT(m_element && isHTMLInputElement(m_element));
@@ -1276,7 +1276,7 @@ HRESULT STDMETHODCALLTYPE DOMHTMLInputElement::setSelectionEnd(
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE DOMHTMLInputElement::selectionEnd( 
+HRESULT STDMETHODCALLTYPE DOMHTMLInputElement::selectionEnd(
     /* [retval][out] */ long *end)
 {
     ASSERT(m_element && isHTMLInputElement(m_element));
@@ -1297,7 +1297,7 @@ HRESULT STDMETHODCALLTYPE DOMHTMLInputElement::isTextField(
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE DOMHTMLInputElement::rectOnScreen( 
+HRESULT STDMETHODCALLTYPE DOMHTMLInputElement::rectOnScreen(
     /* [retval][out] */ LPRECT rect)
 {
     ASSERT(m_element);
@@ -1317,7 +1317,7 @@ HRESULT STDMETHODCALLTYPE DOMHTMLInputElement::rectOnScreen(
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE DOMHTMLInputElement::replaceCharactersInRange( 
+HRESULT STDMETHODCALLTYPE DOMHTMLInputElement::replaceCharactersInRange(
     /* [in] */ int startTarget,
     /* [in] */ int endTarget,
     /* [in] */ BSTR replacementString,
@@ -1339,7 +1339,7 @@ HRESULT STDMETHODCALLTYPE DOMHTMLInputElement::replaceCharactersInRange(
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE DOMHTMLInputElement::selectedRange( 
+HRESULT STDMETHODCALLTYPE DOMHTMLInputElement::selectedRange(
     /* [out] */ int* start,
     /* [out] */ int* end)
 {
@@ -1351,7 +1351,7 @@ HRESULT STDMETHODCALLTYPE DOMHTMLInputElement::selectedRange(
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE DOMHTMLInputElement::setAutofilled( 
+HRESULT STDMETHODCALLTYPE DOMHTMLInputElement::setAutofilled(
     /* [in] */ BOOL filled)
 {
     ASSERT(m_element);
@@ -1373,7 +1373,7 @@ HRESULT STDMETHODCALLTYPE DOMHTMLInputElement::isAutofilled(
 
 // DOMHTMLInputElement -- IFormPromptAdditions ------------------------------------
 
-HRESULT STDMETHODCALLTYPE DOMHTMLInputElement::isUserEdited( 
+HRESULT STDMETHODCALLTYPE DOMHTMLInputElement::isUserEdited(
     /* [retval][out] */ BOOL *result)
 {
     if (!result)
@@ -1397,7 +1397,7 @@ HRESULT STDMETHODCALLTYPE DOMHTMLTextAreaElement::QueryInterface(REFIID riid, vo
     if (IsEqualGUID(riid, IID_IDOMHTMLTextAreaElement))
         *ppvObject = static_cast<IDOMHTMLTextAreaElement*>(this);
     else if (IsEqualGUID(riid, IID_IFormPromptAdditions))
-        *ppvObject = static_cast<IFormPromptAdditions*>(this);    
+        *ppvObject = static_cast<IFormPromptAdditions*>(this);
     else
         return DOMHTMLElement::QueryInterface(riid, ppvObject);
 
@@ -1407,21 +1407,21 @@ HRESULT STDMETHODCALLTYPE DOMHTMLTextAreaElement::QueryInterface(REFIID riid, vo
 
 // DOMHTMLTextAreaElement -----------------------------------------------------
 
-HRESULT STDMETHODCALLTYPE DOMHTMLTextAreaElement::defaultValue( 
+HRESULT STDMETHODCALLTYPE DOMHTMLTextAreaElement::defaultValue(
         /* [retval][out] */ BSTR* /*result*/)
 {
     ASSERT_NOT_REACHED();
     return E_NOTIMPL;
 }
-    
-HRESULT STDMETHODCALLTYPE DOMHTMLTextAreaElement::setDefaultValue( 
+
+HRESULT STDMETHODCALLTYPE DOMHTMLTextAreaElement::setDefaultValue(
         /* [in] */ BSTR /*val*/)
 {
     ASSERT_NOT_REACHED();
     return E_NOTIMPL;
 }
-    
-HRESULT STDMETHODCALLTYPE DOMHTMLTextAreaElement::form( 
+
+HRESULT STDMETHODCALLTYPE DOMHTMLTextAreaElement::form(
         /* [retval][out] */ IDOMHTMLElement** result)
 {
     if (!result)
@@ -1435,113 +1435,113 @@ HRESULT STDMETHODCALLTYPE DOMHTMLTextAreaElement::form(
         return domElement->QueryInterface(IID_IDOMHTMLElement, (void**) result);
     return E_FAIL;
 }
-    
-HRESULT STDMETHODCALLTYPE DOMHTMLTextAreaElement::accessKey( 
+
+HRESULT STDMETHODCALLTYPE DOMHTMLTextAreaElement::accessKey(
         /* [retval][out] */ BSTR* /*result*/)
 {
     ASSERT_NOT_REACHED();
     return E_NOTIMPL;
 }
-    
-HRESULT STDMETHODCALLTYPE DOMHTMLTextAreaElement::setAccessKey( 
+
+HRESULT STDMETHODCALLTYPE DOMHTMLTextAreaElement::setAccessKey(
         /* [in] */ BSTR /*key*/)
 {
     ASSERT_NOT_REACHED();
     return E_NOTIMPL;
 }
-    
-HRESULT STDMETHODCALLTYPE DOMHTMLTextAreaElement::cols( 
+
+HRESULT STDMETHODCALLTYPE DOMHTMLTextAreaElement::cols(
         /* [retval][out] */ int* /*result*/)
 {
     ASSERT_NOT_REACHED();
     return E_NOTIMPL;
 }
-    
-HRESULT STDMETHODCALLTYPE DOMHTMLTextAreaElement::setCols( 
+
+HRESULT STDMETHODCALLTYPE DOMHTMLTextAreaElement::setCols(
         /* [in] */ int /*cols*/)
 {
     ASSERT_NOT_REACHED();
     return E_NOTIMPL;
 }
-    
-HRESULT STDMETHODCALLTYPE DOMHTMLTextAreaElement::disabled( 
+
+HRESULT STDMETHODCALLTYPE DOMHTMLTextAreaElement::disabled(
         /* [retval][out] */ BOOL* /*result*/)
 {
     ASSERT_NOT_REACHED();
     return E_NOTIMPL;
 }
-    
-HRESULT STDMETHODCALLTYPE DOMHTMLTextAreaElement::setDisabled( 
+
+HRESULT STDMETHODCALLTYPE DOMHTMLTextAreaElement::setDisabled(
         /* [in] */ BOOL /*disabled*/)
 {
     ASSERT_NOT_REACHED();
     return E_NOTIMPL;
 }
-    
-HRESULT STDMETHODCALLTYPE DOMHTMLTextAreaElement::name( 
+
+HRESULT STDMETHODCALLTYPE DOMHTMLTextAreaElement::name(
         /* [retval][out] */ BSTR* /*name*/)
 {
     ASSERT_NOT_REACHED();
     return E_NOTIMPL;
 }
-    
-HRESULT STDMETHODCALLTYPE DOMHTMLTextAreaElement::setName( 
+
+HRESULT STDMETHODCALLTYPE DOMHTMLTextAreaElement::setName(
         /* [in] */ BSTR /*name*/)
 {
     ASSERT_NOT_REACHED();
     return E_NOTIMPL;
 }
-    
-HRESULT STDMETHODCALLTYPE DOMHTMLTextAreaElement::readOnly( 
+
+HRESULT STDMETHODCALLTYPE DOMHTMLTextAreaElement::readOnly(
         /* [retval][out] */ BOOL* /*result*/)
 {
     ASSERT_NOT_REACHED();
     return E_NOTIMPL;
 }
-    
-HRESULT STDMETHODCALLTYPE DOMHTMLTextAreaElement::setReadOnly( 
+
+HRESULT STDMETHODCALLTYPE DOMHTMLTextAreaElement::setReadOnly(
         /* [in] */ BOOL /*readOnly*/)
 {
     ASSERT_NOT_REACHED();
     return E_NOTIMPL;
 }
-    
-HRESULT STDMETHODCALLTYPE DOMHTMLTextAreaElement::rows( 
+
+HRESULT STDMETHODCALLTYPE DOMHTMLTextAreaElement::rows(
         /* [retval][out] */ int* /*result*/)
 {
     ASSERT_NOT_REACHED();
     return E_NOTIMPL;
 }
-    
-HRESULT STDMETHODCALLTYPE DOMHTMLTextAreaElement::setRows( 
+
+HRESULT STDMETHODCALLTYPE DOMHTMLTextAreaElement::setRows(
         /* [in] */ int /*rows*/)
 {
     ASSERT_NOT_REACHED();
     return E_NOTIMPL;
 }
-    
-HRESULT STDMETHODCALLTYPE DOMHTMLTextAreaElement::tabIndex( 
+
+HRESULT STDMETHODCALLTYPE DOMHTMLTextAreaElement::tabIndex(
         /* [retval][out] */ int* /*result*/)
 {
     ASSERT_NOT_REACHED();
     return E_NOTIMPL;
 }
-    
-HRESULT STDMETHODCALLTYPE DOMHTMLTextAreaElement::setTabIndex( 
+
+HRESULT STDMETHODCALLTYPE DOMHTMLTextAreaElement::setTabIndex(
         /* [in] */ int /*tabIndex*/)
 {
     ASSERT_NOT_REACHED();
     return E_NOTIMPL;
 }
-    
-HRESULT STDMETHODCALLTYPE DOMHTMLTextAreaElement::type( 
+
+HRESULT STDMETHODCALLTYPE DOMHTMLTextAreaElement::type(
         /* [retval][out] */ BSTR* /*result*/)
 {
     ASSERT_NOT_REACHED();
     return E_NOTIMPL;
 }
-    
-HRESULT STDMETHODCALLTYPE DOMHTMLTextAreaElement::value( 
+
+HRESULT STDMETHODCALLTYPE DOMHTMLTextAreaElement::value(
         /* [retval][out] */ BSTR* result)
 {
     ASSERT(m_element && isHTMLTextAreaElement(m_element));
@@ -1552,8 +1552,8 @@ HRESULT STDMETHODCALLTYPE DOMHTMLTextAreaElement::value(
         return E_OUTOFMEMORY;
     return S_OK;
 }
-    
-HRESULT STDMETHODCALLTYPE DOMHTMLTextAreaElement::setValue( 
+
+HRESULT STDMETHODCALLTYPE DOMHTMLTextAreaElement::setValue(
         /* [in] */ BSTR value)
 {
     ASSERT(m_element && isHTMLTextAreaElement(m_element));
@@ -1561,7 +1561,7 @@ HRESULT STDMETHODCALLTYPE DOMHTMLTextAreaElement::setValue(
     textareaElement->setValue(String((UChar*) value, SysStringLen(value)));
     return S_OK;
 }
-    
+
 HRESULT STDMETHODCALLTYPE DOMHTMLTextAreaElement::select( void)
 {
     ASSERT(m_element && isHTMLTextAreaElement(m_element));
@@ -1572,7 +1572,7 @@ HRESULT STDMETHODCALLTYPE DOMHTMLTextAreaElement::select( void)
 
 // DOMHTMLTextAreaElement -- IFormPromptAdditions ------------------------------------
 
-HRESULT STDMETHODCALLTYPE DOMHTMLTextAreaElement::isUserEdited( 
+HRESULT STDMETHODCALLTYPE DOMHTMLTextAreaElement::isUserEdited(
     /* [retval][out] */ BOOL *result)
 {
     if (!result)
@@ -1601,7 +1601,7 @@ HRESULT STDMETHODCALLTYPE DOMHTMLIFrameElement::QueryInterface(REFIID riid, void
 
 // DOMHTMLIFrameElement -------------------------------------------------------------
 
-HRESULT STDMETHODCALLTYPE DOMHTMLIFrameElement::contentFrame( 
+HRESULT STDMETHODCALLTYPE DOMHTMLIFrameElement::contentFrame(
     /* [retval][out] */ IWebFrame **result)
 {
     if (!result)

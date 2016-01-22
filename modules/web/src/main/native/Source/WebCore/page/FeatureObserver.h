@@ -135,5 +135,5 @@ private:
 };
 
 } // namespace WebCore
-    
+
 #endif // FeatureObserver_h

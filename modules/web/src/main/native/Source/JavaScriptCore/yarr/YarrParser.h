@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef YarrParser_h
@@ -341,7 +341,7 @@ private:
 
                 restoreState(state);
             }
-            
+
             // Not a backreference, and not octal.
             if (peek() >= '8') {
                 delegate.atomPatternCharacter('\\');
@@ -423,7 +423,7 @@ private:
         default:
             delegate.atomPatternCharacter(consume());
         }
-        
+
         return true;
     }
 
@@ -501,7 +501,7 @@ private:
             case ':':
                 m_delegate.atomParenthesesSubpatternBegin(false);
                 break;
-            
+
             case '=':
                 m_delegate.atomParentheticalAssertionBegin();
                 break;
@@ -509,7 +509,7 @@ private:
             case '!':
                 m_delegate.atomParentheticalAssertionBegin(true);
                 break;
-            
+
             default:
                 m_err = ParenthesesTypeInvalid;
             }
@@ -642,7 +642,7 @@ private:
                 if (peekIsDigit()) {
                     unsigned min = consumeNumber();
                     unsigned max = min;
-                    
+
                     if (tryConsume(','))
                         max = peekIsDigit() ? consumeNumber() : quantifyInfinite;
 
@@ -709,7 +709,7 @@ private:
     // Misc helper functions:
 
     typedef unsigned ParseState;
-    
+
     ParseState saveState()
     {
         return m_index;

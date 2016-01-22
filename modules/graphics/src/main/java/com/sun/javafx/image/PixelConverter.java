@@ -44,7 +44,7 @@ public interface PixelConverter<T extends Buffer, U extends Buffer> {
      *     }
      * }
      * </pre>
-     * 
+     *
      * @param srcbuf the nio buffer containing the source data
      * @param srcoff the absolute location in the buffer of the first source pixel data
      * @param srcscanelems number of buffer elements between rows of data in the source

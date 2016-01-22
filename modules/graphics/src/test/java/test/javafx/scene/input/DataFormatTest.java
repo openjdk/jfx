@@ -36,7 +36,7 @@ import static org.junit.Assert.*;
 
 @RunWith(Parameterized.class)
 public class DataFormatTest {
-    
+
     static DataFormat customFormat = new DataFormat("Custom1", "Custom2");
     static DataFormat uniqueFormat = new DataFormat("Unique");
 
@@ -52,7 +52,7 @@ public class DataFormatTest {
             { customFormat, "Custom1", "Custom2" }
         });
     }
-    
+
     private DataFormat format;
     private String mime1;
     private String mime2;
@@ -62,7 +62,7 @@ public class DataFormatTest {
         this.mime1 = mime1;
         this.mime2 = mime2;
     }
-    
+
     @Test
     public void testMimeTypes() {
         assertEquals(mime2 != null ? 2 : 1, format.getIdentifiers().size());
@@ -76,7 +76,7 @@ public class DataFormatTest {
     public void dataFormatsShouldBeFound() {
         assertSame(format, DataFormat.lookupMimeType(mime1));
         if (mime2 != null) {
-            assertSame(format, DataFormat.lookupMimeType(mime2));            
+            assertSame(format, DataFormat.lookupMimeType(mime2));
         }
     }
 

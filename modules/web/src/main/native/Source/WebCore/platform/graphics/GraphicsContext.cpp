@@ -142,7 +142,7 @@ void GraphicsContext::drawRaisedEllipse(const FloatRect& rect, const Color& elli
     setStrokeColor(ellipseColor, ellipseColorSpace);
     setFillColor(ellipseColor, ellipseColorSpace);
 
-    drawEllipse(rect);  
+    drawEllipse(rect);
 
     restore();
 }
@@ -498,7 +498,7 @@ float GraphicsContext::drawBidiText(const Font& font, const TextRun& run, const 
     bidiResolver.createBidiRunsForLine(TextRunIterator(&run, run.length()));
 #else
     bidiResolver.createBidiRunsForLine(TextRunIterator(&run, length < 0 ? run.length() : length));
-#endif    
+#endif
     if (!bidiRuns.runCount())
 #if !PLATFORM(IOS)
         return;
@@ -798,12 +798,12 @@ void GraphicsContext::fillRectWithRoundedHole(const IntRect& rect, const Rounded
     WindRule oldFillRule = fillRule();
     Color oldFillColor = fillColor();
     ColorSpace oldFillColorSpace = fillColorSpace();
-    
+
     setFillRule(RULE_EVENODD);
     setFillColor(color, colorSpace);
 
     fillPath(path);
-    
+
     setFillRule(oldFillRule);
     setFillColor(oldFillColor, oldFillColorSpace);
 }

@@ -41,7 +41,7 @@ import static org.junit.Assert.fail;
 import org.junit.Test;
 
 public class LoadNotificationsTest extends TestBase {
-    
+
     Set<State> log = new HashSet<State>();
     AssertionError assertion;
     String currentUrl;
@@ -55,14 +55,14 @@ public class LoadNotificationsTest extends TestBase {
         currentUrl = "no.such.file";
         testUrl(currentUrl);
     }
-    
+
     @Test public void testEmptyLoad() {
         currentUrl = "about:blank";
         testUrl(null);
         testUrl("");
         testUrl("about:blank");
     }
-    
+
     private void testUrl(String url) {
         log.clear();
         assertion = null;
@@ -96,7 +96,7 @@ public class LoadNotificationsTest extends TestBase {
                     state == SUCCEEDED || state == FAILED);
         }
     }
-    
+
     /**
      * Check that by the time LoadWorker.state changes, all other LoadWorker
      * properties except for [running] have been set. E.g. when state becomes
@@ -108,7 +108,7 @@ public class LoadNotificationsTest extends TestBase {
         WebEngine web = getEngine();
         Worker<Void> worker = web.getLoadWorker();
         log.add(newValue);
-        
+
         try {
             switch (newValue) {
                 case READY:
@@ -129,7 +129,7 @@ public class LoadNotificationsTest extends TestBase {
                     assertNull("LoadWorker.exception should be null", worker.getException());
                     assertTrue("LoadWorker.message should read 'Loading [url]'",
                             worker.getMessage().matches("Loading .*" + currentUrl));
-                    
+
                     assertNull("WebEngine.document should be null", web.getDocument());
                     assertNull("WebEngine.title should be null", web.getTitle());
                     assertTrue("WebEngine.location should be set",
@@ -143,7 +143,7 @@ public class LoadNotificationsTest extends TestBase {
                     assertNull("LoadWorker.exception should be null", worker.getException());
                     assertTrue("LoadWorker.message should read 'Loading complete'",
                             worker.getMessage().startsWith("Loading complete"));
-                    
+
                     assertNotNull("WebEngine.document should be set", web.getDocument());
                     assertTrue("WebEngine.location should be set",
                             web.getLocation().endsWith(currentUrl));
@@ -167,13 +167,13 @@ public class LoadNotificationsTest extends TestBase {
             assertion = e;
         }
     }
-    
+
     private void check() {
         // check if any assertions have failed
         if (assertion != null) {
             throw assertion;
         }
-        
+
         // check that we have transitioned through all relevant states
         // (order of states is checked in the changed() method)
         assertTrue("State.READY was never set", log.contains(READY));

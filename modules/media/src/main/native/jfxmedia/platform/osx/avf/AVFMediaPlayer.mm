@@ -197,7 +197,7 @@ static CVReturn displayLinkCallback(CVDisplayLinkRef displayLink,
     self.player = nil;
     self.playerItem = nil;
     self.playerOutput = nil;
-    
+
     if (_audioSpectrum) {
         delete _audioSpectrum;
         _audioSpectrum = NULL;
@@ -267,7 +267,7 @@ static CVReturn displayLinkCallback(CVDisplayLinkRef displayLink,
                 return;
             }
             _playerOutput.suppressesPlayerRendering = YES;
-            
+
             // Set up the display link (do we need this??)
             // might need to create a display link context struct that retains us
             // rather than passing self as the context
@@ -522,7 +522,7 @@ static CVReturn displayLinkCallback(CVDisplayLinkRef displayLink,
             TRACK_LOG(@"    width: %d", width);
             TRACK_LOG(@"    height: %d", height);
             TRACK_LOG(@"    frame rate: %2.2f", frameRate);
-            
+
             eventHandler->SendVideoTrackEvent(outTrack);
             delete outTrack;
 

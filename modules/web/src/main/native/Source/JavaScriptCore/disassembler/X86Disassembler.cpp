@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -50,7 +50,7 @@ bool tryToDisassemble(const MacroAssemblerCodePtr& codePtr, size_t size, const c
 
     if (Options::forceLLVMDisassembler())
         return tryToDisassembleWithLLVM(codePtr, size, prefix, out, subsetHint);
-    
+
     if (subsetHint == MacroAssemblerSubset
         && tryToDisassembleWithUDis86(codePtr, size, prefix, out, MacroAssemblerSubset))
         return true;
@@ -58,12 +58,12 @@ bool tryToDisassemble(const MacroAssemblerCodePtr& codePtr, size_t size, const c
     if (subsetHint == LLVMSubset
         && tryToDisassembleWithLLVM(codePtr, size, prefix, out, LLVMSubset))
         return true;
-    
+
     if (tryToDisassembleWithUDis86(codePtr, size, prefix, out, subsetHint))
         return true;
     if (tryToDisassembleWithLLVM(codePtr, size, prefix, out, subsetHint))
         return true;
-    
+
     RELEASE_ASSERT_NOT_REACHED();
     return false;
 }

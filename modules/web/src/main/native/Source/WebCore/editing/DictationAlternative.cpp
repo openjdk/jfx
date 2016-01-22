@@ -34,7 +34,7 @@ DictationAlternative::DictationAlternative(unsigned start, unsigned length, uint
     , dictationContext(context)
 {
 }
-    
+
 DictationAlternative::DictationAlternative()
     : rangeStart(0)
     , rangeLength(0)

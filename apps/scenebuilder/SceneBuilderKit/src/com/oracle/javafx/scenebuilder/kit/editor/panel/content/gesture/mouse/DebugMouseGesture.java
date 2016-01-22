@@ -36,12 +36,12 @@ import javafx.scene.input.KeyEvent;
 
 /**
  *
- * 
+ *
  */
 public class DebugMouseGesture extends AbstractMouseGesture {
 
     private final String title;
-    
+
     public DebugMouseGesture(ContentPanelController contentPanelController, String title) {
         super(contentPanelController);
         this.title = title;
@@ -50,7 +50,7 @@ public class DebugMouseGesture extends AbstractMouseGesture {
     /*
      * AbstractMouseGesture
      */
-    
+
     @Override
     protected void mousePressed() {
         System.out.println("DebugMouseGesture.mousePressed");
@@ -85,12 +85,12 @@ public class DebugMouseGesture extends AbstractMouseGesture {
     protected void userDidCancel() {
         System.out.println("DebugMouseGesture.keyEvent");
     }
-    
-    
+
+
     /*
      * Object
      */
-    
+
     @Override
     public String toString() {
         return getClass().getSimpleName() + "[" + title + "]";

@@ -59,12 +59,12 @@ import javafx.geometry.Rectangle2D;
  * {@code WebEngine} is a non-visual object capable of managing one Web page
  * at a time. One can load Web pages into an engine, track loading progress,
  * access document model of a loaded page, and execute JavaScript on the page.
- * 
+ *
  * <p>Loading is always asynchronous. Methods that initiate loading return
  * immediately after scheduling a job, so one must not assume loading is
  * complete by that time. {@link #getLoadWorker} method can be used to track
  * loading status.
- * 
+ *
  * <p>A number of JavaScript handlers and callbacks may be registered with a
  * {@code WebEngine}. These are invoked when a script running on the page
  * accesses user interface elements that lie beyond the control of the
@@ -87,7 +87,7 @@ final public class WebEngine {
      * The Worker which shows progress of the web engine as it loads pages.
      */
     private final LoadWorker loadWorker = new LoadWorker();
-    
+
     /**
      * Returns a {@link javafx.concurrent.Worker} object that can be used to
      * track loading progress.
@@ -95,21 +95,21 @@ final public class WebEngine {
     public final Worker<Void> getLoadWorker() {
         return loadWorker;
     }
-    
+
     private void updateProgress(double p) {
         LoadWorker lw = (LoadWorker) getLoadWorker();
         if (lw != null) {
             lw.updateProgress(p);
         }
     }
-    
+
     private void updateState(Worker.State s) {
         LoadWorker lw = (LoadWorker) getLoadWorker();
         if (lw != null) {
             lw.updateState(s);
         }
     }
-    
+
     /**
      * The final document. This may be null if no document has been loaded.
      */
@@ -120,12 +120,12 @@ final public class WebEngine {
      * failed to load, returns {@code null}.
      */
     public final Document getDocument() { return document.getValue(); }
-    
+
     /**
      * Document object for the current Web page. The value is {@code null}
      * if the Web page failed to load.
-     */   
-    public final ReadOnlyObjectProperty<Document> documentProperty() { 
+     */
+    public final ReadOnlyObjectProperty<Document> documentProperty() {
         return document;
     }
 
@@ -133,13 +133,13 @@ final public class WebEngine {
      * The location of the current page. This may return null.
      */
     private final ReadOnlyStringWrapper location = new ReadOnlyStringWrapper(this, "location");
-    
+
     /**
      * Returns URL of the current Web page. If the current page has no URL,
      * returns an empty String.
-     */   
+     */
     public final String getLocation() { return location.getValue(); }
-    
+
     /**
      * URL of the current Web page. If the current page has no URL,
      * the value is an empty String.
@@ -150,25 +150,25 @@ final public class WebEngine {
      * The page title.
      */
     private final ReadOnlyStringWrapper title = new ReadOnlyStringWrapper(this, "title");
-    
+
     /**
      * Returns title of the current Web page. If the current page has no title,
      * returns {@code null}.
      */
     public final String getTitle() { return title.getValue(); }
-    
+
     /**
      * Title of the current Web page. If the current page has no title,
      * the value is {@code null}.
      */
     public final ReadOnlyStringProperty titleProperty() { return title.getReadOnlyProperty(); }
-    
+
     //
     // Settings
-    
+
     /**
      * Specifies whether JavaScript execution is enabled.
-     * 
+     *
      * @defaultValue true
      * @since JavaFX 2.2
      */
@@ -181,14 +181,14 @@ final public class WebEngine {
     public final boolean isJavaScriptEnabled() {
         return javaScriptEnabled == null ? true : javaScriptEnabled.get();
     }
-    
+
     private Debugger debugger = new DebuggerImpl();
-    
-    @Deprecated 
+
+    @Deprecated
     public Debugger impl_getDebugger(){
         return debugger;
     }
-    
+
     public final BooleanProperty javaScriptEnabledProperty() {
         if (javaScriptEnabled == null) {
             javaScriptEnabled = new BooleanPropertyBase(true) {
@@ -207,14 +207,14 @@ final public class WebEngine {
         }
         return javaScriptEnabled;
     }
-    
+
     /**
      * Location of the user stylesheet as a string URL.
-     * 
+     *
      * <p>This should be a local URL, i.e. either {@code 'data:'},
      * {@code 'file:'}, or {@code 'jar:'}. Remote URLs are not allowed
      * for security reasons.
-     * 
+     *
      * @defaultValue null
      * @since JavaFX 2.2
      */
@@ -232,7 +232,7 @@ final public class WebEngine {
         if (userStyleSheetLocation == null) {
             userStyleSheetLocation = new StringPropertyBase(null) {
                 private final static String DATA_PREFIX = "data:text/css;charset=utf-8;base64,";
-                
+
                 @Override public void invalidated() {
                     checkThread();
                     String url = get();
@@ -261,11 +261,11 @@ final public class WebEngine {
         }
         return userStyleSheetLocation;
     }
-    
+
     /**
      * Specifies user agent ID string. This string is the value of the
      * {@code User-Agent} HTTP header.
-     * 
+     *
      * @defaultValue system dependent
      * @since JavaFX 8.0
      */
@@ -297,58 +297,58 @@ final public class WebEngine {
         }
         return userAgent;
     }
-    
+
     private final ObjectProperty<EventHandler<WebEvent<String>>> onAlert
             = new SimpleObjectProperty<EventHandler<WebEvent<String>>>(this, "onAlert");
-    
+
     /**
      * Returns the JavaScript {@code alert} handler.
      * @see #onAlertProperty
      * @see #setOnAlert
-     */  
+     */
     public final EventHandler<WebEvent<String>> getOnAlert() { return onAlert.get(); }
-    
+
     /**
      * Sets the JavaScript {@code alert} handler.
      * @see #onAlertProperty
      * @see #getOnAlert
      */
     public final void setOnAlert(EventHandler<WebEvent<String>> handler) { onAlert.set(handler); }
-    
+
     /**
      * JavaScript {@code alert} handler property. This handler is invoked
      * when a script running on the Web page calls the {@code alert} function.
      */
     public final ObjectProperty<EventHandler<WebEvent<String>>> onAlertProperty() { return onAlert; }
 
-    
+
     private final ObjectProperty<EventHandler<WebEvent<String>>> onStatusChanged
             = new SimpleObjectProperty<EventHandler<WebEvent<String>>>(this, "onStatusChanged");
-    
+
     /**
      * Returns the JavaScript status handler.
      * @see #onStatusChangedProperty
      * @see #setOnStatusChanged
      */
     public final EventHandler<WebEvent<String>> getOnStatusChanged() { return onStatusChanged.get(); }
-    
+
     /**
      * Sets the JavaScript status handler.
      * @see #onStatusChangedProperty
      * @see #getOnStatusChanged
      */
     public final void setOnStatusChanged(EventHandler<WebEvent<String>> handler) { onStatusChanged.set(handler); }
-    
+
     /**
      * JavaScript status handler property. This handler is invoked when
      * a script running on the Web page sets {@code window.status} property.
      */
     public final ObjectProperty<EventHandler<WebEvent<String>>> onStatusChangedProperty() { return onStatusChanged; }
 
-    
+
     private final ObjectProperty<EventHandler<WebEvent<Rectangle2D>>> onResized
             = new SimpleObjectProperty<EventHandler<WebEvent<Rectangle2D>>>(this, "onResized");
-    
+
     /**
      * Returns the JavaScript window resize handler.
      * @see #onResizedProperty
@@ -362,7 +362,7 @@ final public class WebEngine {
      * @see #getOnResized
      */
     public final void setOnResized(EventHandler<WebEvent<Rectangle2D>> handler) { onResized.set(handler); }
-    
+
     /**
      * JavaScript window resize handler property. This handler is invoked
      * when a script running on the Web page moves or resizes the
@@ -370,10 +370,10 @@ final public class WebEngine {
      */
     public final ObjectProperty<EventHandler<WebEvent<Rectangle2D>>> onResizedProperty() { return onResized; }
 
-    
+
     private final ObjectProperty<EventHandler<WebEvent<Boolean>>> onVisibilityChanged
             = new SimpleObjectProperty<EventHandler<WebEvent<Boolean>>>(this, "onVisibilityChanged");
-    
+
     /**
      * Returns the JavaScript window visibility handler.
      * @see #onVisibilityChangedProperty
@@ -395,11 +395,11 @@ final public class WebEngine {
      */
     public final ObjectProperty<EventHandler<WebEvent<Boolean>>> onVisibilityChangedProperty() { return onVisibilityChanged; }
 
-    
+
     private final ObjectProperty<Callback<PopupFeatures, WebEngine>> createPopupHandler
             = new SimpleObjectProperty<Callback<PopupFeatures, WebEngine>>(this, "createPopupHandler",
             p -> WebEngine.this);
-    
+
     /**
      * Returns the JavaScript popup handler.
      * @see #createPopupHandlerProperty
@@ -414,7 +414,7 @@ final public class WebEngine {
      * @see PopupFeatures
      */
     public final void setCreatePopupHandler(Callback<PopupFeatures, WebEngine> handler) { createPopupHandler.set(handler); }
-    
+
     /**
      * JavaScript popup handler property. This handler is invoked when a script
      * running on the Web page requests a popup to be created.
@@ -424,29 +424,29 @@ final public class WebEngine {
      * {@code null}.
      * <p>By default, a popup handler is installed that opens popups in this
      * {@code WebEngine}.
-     * 
+     *
      * @see PopupFeatures
      */
     public final ObjectProperty<Callback<PopupFeatures, WebEngine>> createPopupHandlerProperty() { return createPopupHandler; }
 
-    
+
     private final ObjectProperty<Callback<String, Boolean>> confirmHandler
             = new SimpleObjectProperty<Callback<String, Boolean>>(this, "confirmHandler");
-    
+
     /**
      * Returns the JavaScript {@code confirm} handler.
      * @see #confirmHandlerProperty
      * @see #setConfirmHandler
      */
     public final Callback<String, Boolean> getConfirmHandler() { return confirmHandler.get(); }
-    
+
     /**
      * Sets the JavaScript {@code confirm} handler.
      * @see #confirmHandlerProperty
      * @see #getConfirmHandler
      */
     public final void setConfirmHandler(Callback<String, Boolean> handler) { confirmHandler.set(handler); }
-    
+
     /**
      * JavaScript {@code confirm} handler property. This handler is invoked
      * when a script running on the Web page calls the {@code confirm} function.
@@ -455,10 +455,10 @@ final public class WebEngine {
      */
     public final ObjectProperty<Callback<String, Boolean>> confirmHandlerProperty() { return confirmHandler; }
 
-    
+
     private final ObjectProperty<Callback<PromptData, String>> promptHandler
             = new SimpleObjectProperty<Callback<PromptData, String>>(this, "promptHandler");
-    
+
     /**
      * Returns the JavaScript {@code prompt} handler.
      * @see #promptHandlerProperty
@@ -474,7 +474,7 @@ final public class WebEngine {
      * @see PromptData
      */
     public final void setPromptHandler(Callback<PromptData, String> handler) { promptHandler.set(handler); }
-    
+
     /**
      * JavaScript {@code prompt} handler property. This handler is invoked
      * when a script running on the Web page calls the {@code prompt} function.
@@ -530,16 +530,16 @@ final public class WebEngine {
      */
     public void load(String url) {
         checkThread();
-        
+
         if (url == null) {
             url = "";
         }
-        
+
         if (view.get() != null) {
             _loadUrl(view.get().getNativeHandle(), url);
         }
     }
-    
+
     /* Loads a web page */
     private native void _loadUrl(long handle, String url);
 
@@ -565,7 +565,7 @@ final public class WebEngine {
         checkThread();
         _loadContent(view.get().getNativeHandle(), content);
     }
-    
+
     /* Loads the given content directly */
     private native void _loadContent(long handle, String content);
 
@@ -599,12 +599,12 @@ final public class WebEngine {
      */
     public Object executeScript(String script) {
         checkThread();
-        
+
         StringBuilder b = new StringBuilder(js2javaBridge.getJavaBridge()).append(".fxEvaluate('");
         b.append(escapeScript(script));
         b.append("')");
         String retVal = _executeScript(view.get().getNativeHandle(), b.toString());
-    
+
         try {
             return js2javaBridge.decode(retVal);
         } catch (Exception ex) {
@@ -612,18 +612,18 @@ final public class WebEngine {
         }
         return null;
     }
-    
+
     void executeScriptDirect(String script) {
         _executeScript(view.get().getNativeHandle(), script);
     }
-    
+
     /* Executes a script in the context of the current page */
     private native String _executeScript(long handle, String script);
 
     void setView(WebView view) {
         this.view.setValue(view);
     }
-    
+
     private void stop() {
         checkThread();
     }
@@ -680,9 +680,9 @@ final public class WebEngine {
     static void checkThread() {
         Toolkit.getToolkit().checkFxUserThread();
     }
-    
+
     private final class LoadWorker implements Worker<Void> {
-        
+
         private final ReadOnlyObjectWrapper<State> state = new ReadOnlyObjectWrapper<State>(this, "state", State.READY);
         @Override public final State getState() { checkThread(); return state.get(); }
         @Override public final ReadOnlyObjectProperty<State> stateProperty() { checkThread(); return state.getReadOnlyProperty(); }
@@ -784,7 +784,7 @@ final public class WebEngine {
 
         Throwable describeError(int errorCode) {
             String reason = "Unknown error";
-            
+
             return new Throwable(reason);
         }
     }
@@ -829,9 +829,9 @@ final public class WebEngine {
     ///////////////////////////////////////////////
     // JavaScript to Java bridge
     ///////////////////////////////////////////////
-    
+
     private JS2JavaBridge js2javaBridge = null;
-    
+
     public void exportObject(String jsName, Object object) {
         synchronized (loadedLock) {
             if (js2javaBridge == null) {
@@ -840,19 +840,19 @@ final public class WebEngine {
             js2javaBridge.exportObject(jsName, object);
         }
     }
-    
-    
+
+
     interface PageListener {
         void onLoadStarted();
         void onLoadFinished();
         void onLoadFailed();
         void onJavaCall(String args);
     }
-    
+
     private PageListener pageListener = null;
     private boolean loaded = false;
     private final Object loadedLock = new Object();
-    
+
     void setPageListener(PageListener listener) {
         synchronized (loadedLock) {
             pageListener = listener;
@@ -867,11 +867,11 @@ final public class WebEngine {
             }
         }
     }
-    
+
     boolean isLoaded() {
         return loaded;
     }
-    
+
     // notifications are called from WebView
     void notifyLoadStarted() {
         synchronized (loadedLock) {
@@ -944,17 +944,17 @@ final public class WebEngine {
     AccessControlContext getAccessControlContext() {
         return accessControlContext;
     }
-    
+
     private void dispatchWebEvent(final EventHandler handler, final WebEvent ev) {
         AccessController.doPrivileged(new PrivilegedAction<Void>() {
-            @Override 
+            @Override
             public Void run() {
                 handler.handle(ev);
                 return null;
             }
         }, getAccessControlContext());
     }
-    
+
     private class DebuggerImpl implements Debugger {
         private Callback<String, Void> callback;
 

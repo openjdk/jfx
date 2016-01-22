@@ -99,7 +99,7 @@ public class PieChart extends Chart {
     private static final int MIN_PIE_RADIUS = 25;
     private static final double LABEL_TICK_GAP = 6;
     private static final double LABEL_BALL_RADIUS = 2;
-    private BitSet colorBits = new BitSet(8); 
+    private BitSet colorBits = new BitSet(8);
     private double centerX;
     private double centerY;
     private double pieRadius;
@@ -413,7 +413,7 @@ public class PieChart extends Chart {
             if (item.getPieValue() < 0) {
                 node.getStyleClass().add("negative");
             }
-        }                
+        }
     }
 
     private void dataItemAdded(final Data item, int index) {
@@ -990,7 +990,7 @@ public class PieChart extends Chart {
             textNode.setAccessibleRoleDescription("slice");
             textNode.focusTraversableProperty().bind(Platform.accessibilityActiveProperty());
             textNode.accessibleTextProperty().bind( new StringBinding() {
-                {bind(nameProperty(), currentPieValueProperty());} 
+                {bind(nameProperty(), currentPieValueProperty());}
                 @Override protected String computeValue() {
                     return getName() + " represents " + getCurrentPieValue() + " percent";
                 }

@@ -42,7 +42,7 @@ public:
 
 #if PLATFORM(JAVA)
     PlatformTouchEvent(JNIEnv* env, jint id, jobject touchData,
-		       jboolean shift, jboolean ctrl, jboolean alt, jboolean meta, jfloat timestamp);
+               jboolean shift, jboolean ctrl, jboolean alt, jboolean meta, jfloat timestamp);
 #endif
 
     const Vector<PlatformTouchPoint>& touchPoints() const { return m_touchPoints; }

@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -62,12 +62,12 @@
 
 namespace WebCore {
 
-// FIXME: This class is currently empty on Mac, but will get populated as 
+// FIXME: This class is currently empty on Mac, but will get populated as
 // the restructuring in https://bugs.webkit.org/show_bug.cgi?id=66903 is done
 class GraphicsContext3DPrivate {
 public:
     GraphicsContext3DPrivate(GraphicsContext3D*) { }
-    
+
     ~GraphicsContext3DPrivate() { }
 };
 
@@ -75,22 +75,22 @@ public:
 static void setPixelFormat(Vector<CGLPixelFormatAttribute>& attribs, int colorBits, int depthBits, bool accelerated, bool supersample, bool closest, bool antialias)
 {
     attribs.clear();
-    
+
     attribs.append(kCGLPFAColorSize);
     attribs.append(static_cast<CGLPixelFormatAttribute>(colorBits));
     attribs.append(kCGLPFADepthSize);
     attribs.append(static_cast<CGLPixelFormatAttribute>(depthBits));
-    
+
     if (accelerated)
         attribs.append(kCGLPFAAccelerated);
     else {
         attribs.append(kCGLPFARendererID);
         attribs.append(static_cast<CGLPixelFormatAttribute>(kCGLRendererGenericFloatID));
     }
-        
+
     if (supersample && !antialias)
         attribs.append(kCGLPFASupersample);
-        
+
     if (closest)
         attribs.append(kCGLPFAClosestPolicy);
 
@@ -101,7 +101,7 @@ static void setPixelFormat(Vector<CGLPixelFormatAttribute>& attribs, int colorBi
         attribs.append(kCGLPFASamples);
         attribs.append(static_cast<CGLPixelFormatAttribute>(4));
     }
-        
+
     attribs.append(static_cast<CGLPixelFormatAttribute>(0));
 }
 #endif // !PLATFORM(IOS)
@@ -144,7 +144,7 @@ GraphicsContext3D::GraphicsContext3D(GraphicsContext3D::Attributes attrs, HostWi
     Vector<CGLPixelFormatAttribute> attribs;
     CGLPixelFormatObj pixelFormatObj = 0;
     GLint numPixelFormats = 0;
-    
+
     // If we're configured to demand the software renderer, we'll
     // do so. We attempt to create contexts in this order:
     //
@@ -160,7 +160,7 @@ GraphicsContext3D::GraphicsContext3D(GraphicsContext3D::Attributes attrs, HostWi
     // If none of that works, we simply fail and set m_contextObj to 0.
 
     bool useMultisampling = m_attrs.antialias;
-    
+
     setPixelFormat(attribs, 32, 32, !attrs.forceSoftwareRenderer, true, false, useMultisampling);
     CGLChoosePixelFormat(attribs.data(), &pixelFormatObj, &numPixelFormats);
 
@@ -185,7 +185,7 @@ GraphicsContext3D::GraphicsContext3D(GraphicsContext3D::Attributes attrs, HostWi
 
     CGLError err = CGLCreateContext(pixelFormatObj, 0, &m_contextObj);
     CGLDestroyPixelFormat(pixelFormatObj);
-    
+
     if (err != kCGLNoError || !m_contextObj) {
         // We were unable to create the context.
         m_contextObj = 0;
@@ -204,7 +204,7 @@ GraphicsContext3D::GraphicsContext3D(GraphicsContext3D::Attributes attrs, HostWi
         }
     }
 #endif // !PLATFORM(IOS)
-    
+
     validateAttributes();
 
     // Create the WebGLLayer
@@ -215,7 +215,7 @@ GraphicsContext3D::GraphicsContext3D(GraphicsContext3D::Attributes attrs, HostWi
 #endif
 #ifndef NDEBUG
         [m_webGLLayer.get() setName:@"WebGL Layer"];
-#endif    
+#endif
     END_BLOCK_OBJC_EXCEPTIONS
 
 #if !PLATFORM(IOS)
@@ -259,7 +259,7 @@ GraphicsContext3D::GraphicsContext3D(GraphicsContext3D::Attributes attrs, HostWi
         if (m_attrs.stencil || m_attrs.depth)
             ::glGenRenderbuffersEXT(1, &m_multisampleDepthStencilBuffer);
     }
-    
+
     // ANGLE initialization.
 
     ShBuiltInResources ANGLEResources;
@@ -275,13 +275,13 @@ GraphicsContext3D::GraphicsContext3D(GraphicsContext3D::Attributes attrs, HostWi
 
     // Always set to 1 for OpenGL ES.
     ANGLEResources.MaxDrawBuffers = 1;
-    
+
     GC3Dint range[2], precision;
     getShaderPrecisionFormat(GraphicsContext3D::FRAGMENT_SHADER, GraphicsContext3D::HIGH_FLOAT, range, &precision);
     ANGLEResources.FragmentPrecisionHigh = (range[0] || range[1] || precision);
 
     m_compiler.setResources(ANGLEResources);
-    
+
 #if !PLATFORM(IOS)
     ::glEnable(GL_VERTEX_PROGRAM_POINT_SIZE);
     ::glEnable(GL_POINT_SPRITE);

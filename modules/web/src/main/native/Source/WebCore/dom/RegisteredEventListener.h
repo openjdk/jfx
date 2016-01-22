@@ -40,7 +40,7 @@ namespace WebCore {
         RefPtr<EventListener> listener;
         bool useCapture;
     };
-    
+
     inline bool operator==(const RegisteredEventListener& a, const RegisteredEventListener& b)
     {
         return *a.listener == *b.listener && a.useCapture == b.useCapture;

@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -118,7 +118,7 @@ CFURLRequestRef ResourceRequest::cfURLRequest(HTTPBodyUpdatePolicy bodyPolicy) c
     return m_cfRequest.get();
 }
 
-static inline void setHeaderFields(CFMutableURLRequestRef request, const HTTPHeaderMap& requestHeaders) 
+static inline void setHeaderFields(CFMutableURLRequestRef request, const HTTPHeaderMap& requestHeaders)
 {
     // Remove existing headers first, as some of them may no longer be present in the map.
     RetainPtr<CFDictionaryRef> oldHeaderFields = adoptCF(CFURLRequestCopyAllHTTPHeaderFields(request));
@@ -410,7 +410,7 @@ unsigned initializeMaximumHTTPConnectionCountPerHost()
 
     return unlimitedConnectionCount;
 }
-    
+
 #if PLATFORM(IOS)
 void initializeHTTPConnectionSettingsOnStartup()
 {

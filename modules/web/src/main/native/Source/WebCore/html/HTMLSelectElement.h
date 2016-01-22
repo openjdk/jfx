@@ -108,7 +108,7 @@ public:
     void setActiveSelectionAnchorIndex(int);
     void setActiveSelectionEndIndex(int);
     void updateListBoxSelection(bool deselectOtherOptions);
-    
+
     // For use in the implementation of HTMLOptionElement.
     void optionSelectionStateChanged(HTMLOptionElement*, bool optionIsSelected);
     bool allowsNonContiguousSelection() const { return m_allowsNonContiguousSelection; };
@@ -118,13 +118,13 @@ protected:
 
 private:
     virtual const AtomicString& formControlType() const override;
-    
+
     virtual bool isKeyboardFocusable(KeyboardEvent*) const override;
     virtual bool isMouseFocusable() const override;
 
     virtual void dispatchFocusEvent(PassRefPtr<Element> oldFocusedElement, FocusDirection) override final;
     virtual void dispatchBlurEvent(PassRefPtr<Element> newFocusedElement) override final;
-    
+
     virtual bool canStartSelection() const override { return false; }
 
     virtual bool isEnumeratable() const override { return true; }

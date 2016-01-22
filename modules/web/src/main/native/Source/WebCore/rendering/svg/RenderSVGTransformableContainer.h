@@ -25,7 +25,7 @@
 #include "SVGGraphicsElement.h"
 
 namespace WebCore {
-    
+
 class SVGGraphicsElement;
 class RenderSVGTransformableContainer final : public RenderSVGContainer {
 public:

@@ -28,7 +28,7 @@
 #include "PlatformWebView.h"
 
 namespace TestWebKitAPI {
-    
+
 static bool loaded;
 
 static void didFinishLoadForFrame(WKPageRef page, WKFrameRef frame, WKTypeRef userData, const void* clientInfo)
@@ -49,7 +49,7 @@ TEST(WebKit2, CloseThenTerminate)
 
     loaderClient.base.version = 0;
     loaderClient.didFinishLoadForFrame = didFinishLoadForFrame;
-    
+
     WKPageSetPageLoaderClient(webView.page(), &loaderClient.base);
 
     WKRetainPtr<WKURLRef> url(AdoptWK, Util::createURLForResource("simple", "html"));

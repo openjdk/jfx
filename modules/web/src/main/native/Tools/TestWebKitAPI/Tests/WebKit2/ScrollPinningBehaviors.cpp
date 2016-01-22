@@ -52,17 +52,17 @@ static void didFinishDocumentLoadForFrame(WKPageRef page, WKFrameRef frame, WKTy
     EXPECT_JS_EQ(page, "window.scrollY", "2834");
 
     WKPageSetScrollPinningBehavior(page, kWKScrollPinningBehaviorPinToTop);
-    
+
     EXPECT_JS_EQ(page, "window.scrollY", "0");
     EXPECT_JS_EQ(page, "window.scrollTo(0,200)", "undefined");
     EXPECT_JS_EQ(page, "window.scrollY", "0");
-    
+
     WKPageSetScrollPinningBehavior(page, kWKScrollPinningBehaviorDoNotPin);
-    
+
     EXPECT_JS_EQ(page, "window.scrollY", "0");
     EXPECT_JS_EQ(page, "window.scrollTo(0,200)", "undefined");
     EXPECT_JS_EQ(page, "window.scrollY", "200");
-    
+
     testDone = true;
 }
 

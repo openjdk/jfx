@@ -41,7 +41,7 @@ public:
     Free(FreeMode, MarkedSpace*);
     void operator()(MarkedBlock*);
     ReturnType returnValue();
-    
+
 private:
     FreeMode m_freeMode;
     MarkedSpace* m_markedSpace;
@@ -219,15 +219,15 @@ void MarkedSpace::resumeAllocating()
 bool MarkedSpace::isPagedOut(double deadline)
 {
     for (size_t cellSize = preciseStep; cellSize <= preciseCutoff; cellSize += preciseStep) {
-        if (allocatorFor(cellSize).isPagedOut(deadline) 
-            || normalDestructorAllocatorFor(cellSize).isPagedOut(deadline) 
+        if (allocatorFor(cellSize).isPagedOut(deadline)
+            || normalDestructorAllocatorFor(cellSize).isPagedOut(deadline)
             || immortalStructureDestructorAllocatorFor(cellSize).isPagedOut(deadline))
             return true;
     }
 
     for (size_t cellSize = impreciseStep; cellSize <= impreciseCutoff; cellSize += impreciseStep) {
-        if (allocatorFor(cellSize).isPagedOut(deadline) 
-            || normalDestructorAllocatorFor(cellSize).isPagedOut(deadline) 
+        if (allocatorFor(cellSize).isPagedOut(deadline)
+            || normalDestructorAllocatorFor(cellSize).isPagedOut(deadline)
             || immortalStructureDestructorAllocatorFor(cellSize).isPagedOut(deadline))
             return true;
     }

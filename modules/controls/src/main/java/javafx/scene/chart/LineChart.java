@@ -73,7 +73,7 @@ import javafx.css.StyleableProperty;
 /**
  * Line Chart plots a line connecting the data points in a series. The data points
  * themselves can be represented by symbols optionally. Line charts are usually used
- * to view data trends over time or category. 
+ * to view data trends over time or category.
  * @since JavaFX 2.0
  */
 public class LineChart<X,Y> extends XYChart<X,Y> {
@@ -87,7 +87,7 @@ public class LineChart<X,Y> extends XYChart<X,Y> {
     private Series<X,Y> seriesOfDataRemoved = null;
     private Data<X,Y> dataItemBeingRemoved = null;
     private FadeTransition fadeSymbolTransition = null;
-    private Map<Data<X,Y>, Double> XYValueMap = 
+    private Map<Data<X,Y>, Double> XYValueMap =
                                 new HashMap<Data<X,Y>, Double>();
     private Timeline seriesRemoveTimeline = null;
     // -------------- PUBLIC PROPERTIES ----------------------------------------
@@ -205,17 +205,17 @@ public class LineChart<X,Y> extends XYChart<X,Y> {
                     if(yData != null) yData.add(data.getYValue());
                 }
             }
-            // RT-32838 No need to invalidate range if there is one data item - whose value is zero. 
+            // RT-32838 No need to invalidate range if there is one data item - whose value is zero.
             if(xData != null && !(xData.size() == 1 && getXAxis().toNumericValue(xData.get(0)) == 0)) {
                 xa.invalidateRange(xData);
             }
             if(yData != null && !(yData.size() == 1 && getYAxis().toNumericValue(yData.get(0)) == 0)) {
                 ya.invalidateRange(yData);
             }
-            
+
         }
     }
-    
+
     @Override protected void dataItemAdded(final Series<X,Y> series, int itemIndex, final Data<X,Y> item) {
         final Node symbol = createSymbol(series, getData().indexOf(series), item, itemIndex);
         if (shouldAnimate()) {
@@ -286,7 +286,7 @@ public class LineChart<X,Y> extends XYChart<X,Y> {
                                         item.getXValue(), Interpolator.EASE_BOTH))
                 );
             }
-            
+
         } else {
             if (symbol != null) getPlotChildren().add(symbol);
         }
@@ -372,7 +372,7 @@ public class LineChart<X,Y> extends XYChart<X,Y> {
     /** @inheritDoc */
     @Override protected void dataItemChanged(Data<X, Y> item) {
     }
-    
+
     @Override protected void seriesChanged(ListChangeListener.Change<? extends Series> c) {
         // Update style classes for all series lines and symbols
         // Note: is there a more efficient way of doing this?
@@ -510,10 +510,10 @@ public class LineChart<X,Y> extends XYChart<X,Y> {
         }
         final Node symbol = item.getNode();
         if (symbol != null) getPlotChildren().remove(symbol);
-        
+
         item.setSeries(null);
         removeDataItemFromDisplay(series, item);
-        
+
         // restore values to item
         Double value = XYValueMap.get(item);
         if (value != null) {
@@ -537,7 +537,7 @@ public class LineChart<X,Y> extends XYChart<X,Y> {
         Timeline t = new Timeline();
         // save data values in case the same data item gets added immediately.
         XYValueMap.put(item, ((Number)item.getYValue()).doubleValue());
-            
+
         t.getKeyFrames().addAll(new KeyFrame(Duration.ZERO, new KeyValue(item.currentYProperty(),
                 item.getCurrentY()), new KeyValue(item.currentXProperty(),
                 item.getCurrentX())),
@@ -595,7 +595,7 @@ public class LineChart<X,Y> extends XYChart<X,Y> {
     // -------------- STYLESHEET HANDLING --------------------------------------
 
     private static class StyleableProperties {
-        private static final CssMetaData<LineChart<?,?>,Boolean> CREATE_SYMBOLS = 
+        private static final CssMetaData<LineChart<?,?>,Boolean> CREATE_SYMBOLS =
             new CssMetaData<LineChart<?,?>,Boolean>("-fx-create-symbols",
                 BooleanConverter.getInstance(), Boolean.TRUE) {
 

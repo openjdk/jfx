@@ -147,7 +147,7 @@ MAKE_QUANTIZE_FUNC_NAME (name) (AudioConvertCtx *ctx, gdouble *src,     \
 
 #define ADD_DITHER_RPDF_I()                                             \
         rand = gst_fast_random_int32_range (bias - dither,              \
-	    bias + dither);                                             \
+        bias + dither);                                             \
         if (rand > 0 && tmp > 0 && G_MAXINT32 - tmp <= rand)            \
                 tmp = G_MAXINT32;                                       \
         else if (rand < 0 && tmp < 0 && G_MININT32 - tmp >= rand)       \

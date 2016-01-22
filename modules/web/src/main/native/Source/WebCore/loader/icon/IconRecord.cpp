@@ -6,13 +6,13 @@
  * are met:
  *
  * 1.  Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer. 
+ *     notice, this list of conditions and the following disclaimer.
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
- *     documentation and/or other materials provided with the distribution. 
+ *     documentation and/or other materials provided with the distribution.
  * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
- *     from this software without specific prior written permission. 
+ *     from this software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY APPLE AND ITS CONTRIBUTORS "AS IS" AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
@@ -58,7 +58,7 @@ Image* IconRecord::image(const IntSize&)
     // FIXME rdar://4680377 - For size right now, we are returning our one and only image and the Bridge
     // is resizing it in place.  We need to actually store all the original representations here and return a native
     // one, or resize the best one to the requested size and cache that result.
-    
+
     return m_image.get();
 }
 
@@ -73,7 +73,7 @@ void IconRecord::setImageData(PassRefPtr<SharedBuffer> data)
         LOG(IconDatabase, "Manual image data for iconURL '%s' FAILED - it was probably invalid image data", m_iconURL.ascii().data());
         m_image.clear();
     }
-    
+
     m_dataSet = true;
 }
 
@@ -81,7 +81,7 @@ void IconRecord::loadImageFromResource(const char* resource)
 {
     if (!resource)
         return;
-        
+
     m_image = Image::loadPlatformResource(resource);
     m_dataSet = true;
 }
@@ -99,8 +99,8 @@ IconSnapshot IconRecord::snapshot(bool forDeletion) const
 {
     if (forDeletion)
         return IconSnapshot(m_iconURL, 0, 0);
-    
+
     return IconSnapshot(m_iconURL, m_stamp, m_image ? m_image->data() : 0);
 }
 
-} // namespace WebCore    
+} // namespace WebCore

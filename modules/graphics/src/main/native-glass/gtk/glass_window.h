@@ -152,7 +152,7 @@ public:
     virtual void process_mouse_cross(GdkEventCrossing*) = 0;
     virtual void process_key(GdkEventKey*) = 0;
     virtual void process_state(GdkEventWindowState*) = 0;
-    
+
     virtual void notify_state(jint) = 0;
     virtual void notify_on_top(bool) {}
 
@@ -203,7 +203,7 @@ protected:
      * It is mostly used for popup windows.
      */
     static WindowContext* sm_grab_window;
-    
+
     /*
      * sm_mouse_drag_window points to a WindowContext from which a mouse drag started.
      * This WindowContext holding a mouse grab during this drag. After releasing

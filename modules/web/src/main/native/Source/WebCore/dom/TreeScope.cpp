@@ -385,7 +385,7 @@ TreeScope* commonTreeScope(Node* nodeA, Node* nodeB)
     // If the nodes had no common tree scope, return immediately.
     if (indexA == treeScopesA.size())
         return nullptr;
-    
+
     return treeScopesA[indexA] == treeScopesB[indexB] ? treeScopesA[indexA] : nullptr;
 }
 

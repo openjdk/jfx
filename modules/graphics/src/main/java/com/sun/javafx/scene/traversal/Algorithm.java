@@ -39,7 +39,7 @@ import javafx.scene.Node;
  *
  */
 public interface Algorithm {
-    
+
     /**
      * Traverse from owner, in direction dir.
      * Return a the new target Node or null if no suitable target is found.
@@ -65,5 +65,5 @@ public interface Algorithm {
      * @return the last node
      */
     public Node selectLast(TraversalContext context);
-    
+
 }

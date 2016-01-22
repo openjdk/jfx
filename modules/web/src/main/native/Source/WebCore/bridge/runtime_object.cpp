@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -69,33 +69,33 @@ EncodedJSValue RuntimeObject::fallbackObjectGetter(ExecState* exec, JSObject* sl
 
     if (!instance)
         return JSValue::encode(throwInvalidAccessError(exec));
-    
+
     instance->begin();
 
     Class *aClass = instance->getClass();
     JSValue result = aClass->fallbackObject(exec, instance.get(), propertyName);
 
     instance->end();
-            
+
     return JSValue::encode(result);
 }
 
 EncodedJSValue RuntimeObject::fieldGetter(ExecState* exec, JSObject* slotBase, EncodedJSValue, PropertyName propertyName)
-{    
+{
     RuntimeObject* thisObj = jsCast<RuntimeObject*>(slotBase);
     RefPtr<Instance> instance = thisObj->m_instance;
 
     if (!instance)
         return JSValue::encode(throwInvalidAccessError(exec));
-    
+
     instance->begin();
 
     Class *aClass = instance->getClass();
     Field* aField = aClass->fieldNamed(propertyName, instance.get());
     JSValue result = aField->valueFromInstance(exec, instance.get());
-    
+
     instance->end();
-            
+
     return JSValue::encode(result);
 }
 
@@ -106,13 +106,13 @@ EncodedJSValue RuntimeObject::methodGetter(ExecState* exec, JSObject* slotBase, 
 
     if (!instance)
         return JSValue::encode(throwInvalidAccessError(exec));
-    
+
     instance->begin();
 
     JSValue method = instance->getMethod(exec, propertyName);
 
     instance->end();
-            
+
     return JSValue::encode(method);
 }
 
@@ -123,13 +123,13 @@ bool RuntimeObject::getOwnPropertySlot(JSObject* object, ExecState *exec, Proper
         throwInvalidAccessError(exec);
         return false;
     }
-    
+
     RefPtr<Instance> instance = thisObject->m_instance;
 
     instance->begin();
-    
+
     Class *aClass = instance->getClass();
-    
+
     if (aClass) {
         // See if the instance has a field with the specified name.
         Field *aField = aClass->fieldNamed(propertyName, instance.get());
@@ -142,7 +142,7 @@ bool RuntimeObject::getOwnPropertySlot(JSObject* object, ExecState *exec, Proper
             // that method.
             if (aClass->methodNamed(propertyName, instance.get())) {
                 slot.setCustom(thisObject, DontDelete | ReadOnly, thisObject->methodGetter);
-                
+
                 instance->end();
                 return true;
             }
@@ -155,9 +155,9 @@ bool RuntimeObject::getOwnPropertySlot(JSObject* object, ExecState *exec, Proper
             return true;
         }
     }
-        
+
     instance->end();
-    
+
     return instance->getOwnPropertySlot(thisObject, exec, propertyName, slot);
 }
 
@@ -168,7 +168,7 @@ void RuntimeObject::put(JSCell* cell, ExecState* exec, PropertyName propertyName
         throwInvalidAccessError(exec);
         return;
     }
-    
+
     RefPtr<Instance> instance = thisObject->m_instance;
     instance->begin();
 
@@ -193,7 +193,7 @@ JSValue RuntimeObject::defaultValue(const JSObject* object, ExecState* exec, Pre
     const RuntimeObject* thisObject = jsCast<const RuntimeObject*>(object);
     if (!thisObject->m_instance)
         return throwInvalidAccessError(exec);
-    
+
     RefPtr<Instance> instance = thisObject->m_instance;
 
     instance->begin();
@@ -217,11 +217,11 @@ CallType RuntimeObject::getCallData(JSCell* cell, CallData& callData)
     RuntimeObject* thisObject = jsCast<RuntimeObject*>(cell);
     if (!thisObject->m_instance)
         return CallTypeNone;
-    
+
     RefPtr<Instance> instance = thisObject->m_instance;
     if (!instance->supportsInvokeDefaultMethod())
         return CallTypeNone;
-    
+
     callData.native.function = callRuntimeObject;
     return CallTypeHost;
 }
@@ -235,7 +235,7 @@ static EncodedJSValue JSC_HOST_CALL callRuntimeConstructor(ExecState* exec)
     ArgList args(exec);
     JSValue result = instance->invokeConstruct(exec, args);
     instance->end();
-    
+
     ASSERT(result);
     return JSValue::encode(result.isObject() ? jsCast<JSObject*>(result.asCell()) : constructor);
 }
@@ -245,11 +245,11 @@ ConstructType RuntimeObject::getConstructData(JSCell* cell, ConstructData& const
     RuntimeObject* thisObject = jsCast<RuntimeObject*>(cell);
     if (!thisObject->m_instance)
         return ConstructTypeNone;
-    
+
     RefPtr<Instance> instance = thisObject->m_instance;
     if (!instance->supportsConstruct())
         return ConstructTypeNone;
-    
+
     constructData.native.function = callRuntimeConstructor;
     return ConstructTypeHost;
 }
@@ -263,7 +263,7 @@ void RuntimeObject::getOwnPropertyNames(JSObject* object, ExecState* exec, Prope
     }
 
     RefPtr<Instance> instance = thisObject->m_instance;
-    
+
     instance->begin();
     instance->getPropertyNames(exec, propertyNames);
     instance->end();

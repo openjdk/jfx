@@ -10,13 +10,13 @@
  * are met:
  *
  * 1.  Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer. 
+ *     notice, this list of conditions and the following disclaimer.
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
- *     documentation and/or other materials provided with the distribution. 
+ *     documentation and/or other materials provided with the distribution.
  * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
- *     from this software without specific prior written permission. 
+ *     from this software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY APPLE AND ITS CONTRIBUTORS "AS IS" AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
@@ -88,7 +88,7 @@ static inline bool skipEquals(const String& str, unsigned &pos)
     return skipWhiteSpace(str, pos, false) && str[pos++] == '=' && skipWhiteSpace(str, pos, false);
 }
 
-// True if a value present, incrementing pos to next space or semicolon, if any.  
+// True if a value present, incrementing pos to next space or semicolon, if any.
 // Note: might return pos == str.length().
 static inline bool skipValue(const String& str, unsigned& pos)
 {
@@ -163,20 +163,20 @@ ContentDispositionType contentDispositionType(const String& contentDisposition)
     // We have a content-disposition of "attachment" or unknown.
     // RFC 2183, section 2.8 says that an unknown disposition
     // value should be treated as "attachment"
-    return ContentDispositionAttachment;  
+    return ContentDispositionAttachment;
 }
 
 bool parseHTTPRefresh(const String& refresh, bool fromHttpEquivMeta, double& delay, String& url)
 {
     unsigned len = refresh.length();
     unsigned pos = 0;
-    
+
     if (!skipWhiteSpace(refresh, pos, fromHttpEquivMeta))
         return false;
-    
+
     while (pos != len && refresh[pos] != ',' && refresh[pos] != ';')
         ++pos;
-    
+
     if (pos == len) { // no URL
         url = String();
         bool ok;
@@ -187,7 +187,7 @@ bool parseHTTPRefresh(const String& refresh, bool fromHttpEquivMeta, double& del
         delay = refresh.left(pos).stripWhiteSpace().toDouble(&ok);
         if (!ok)
             return false;
-        
+
         ++pos;
         skipWhiteSpace(refresh, pos, fromHttpEquivMeta);
         unsigned urlStartPos = pos;
@@ -211,7 +211,7 @@ bool parseHTTPRefresh(const String& refresh, bool fromHttpEquivMeta, double& del
                 if (refresh[urlEndPos] == quotationMark)
                     break;
             }
-            
+
             // https://bugs.webkit.org/show_bug.cgi?id=27868
             // Sometimes there is no closing quote for the end of the URL even though there was an opening quote.
             // If we looped over the entire alleged URL string back to the opening quote, just go ahead and use everything
@@ -250,7 +250,7 @@ String filenameFromHTTPContentDisposition(const String& value)
 
         if (key.isEmpty() || key != "filename")
             continue;
-        
+
         String value = keyValuePairs[i].substring(valueStartPos + 1).stripWhiteSpace();
 
         // Remove quotes if there are any
@@ -312,26 +312,26 @@ void findCharsetInMediaType(const String& mediaType, unsigned int& charsetPos, u
 
     size_t pos = start;
     unsigned length = mediaType.length();
-    
+
     while (pos < length) {
         pos = mediaType.find("charset", pos, false);
         if (pos == notFound || pos == 0) {
             charsetLen = 0;
             return;
         }
-        
+
         // is what we found a beginning of a word?
         if (mediaType[pos-1] > ' ' && mediaType[pos-1] != ';') {
             pos += 7;
             continue;
         }
-        
+
         pos += 7;
 
         // skip whitespace
         while (pos != length && mediaType[pos] <= ' ')
             ++pos;
-    
+
         if (mediaType[pos++] != '=') // this "charset" substring wasn't a parameter name, but there may be others
             continue;
 
@@ -494,7 +494,7 @@ bool parseRange(const String& range, long long& rangeOffset, long long& rangeEnd
     rangeOffset = rangeEnd = rangeSuffixLength = -1;
 
     // The "bytes" unit identifier should be present.
-    static const char bytesStart[] = "bytes="; 
+    static const char bytesStart[] = "bytes=";
     if (!range.startsWith(bytesStart, false))
         return false;
     String byteRange = range.substring(sizeof(bytesStart) - 1);

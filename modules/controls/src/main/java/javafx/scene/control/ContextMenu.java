@@ -101,7 +101,7 @@ textField.setOnAction(new EventHandler&lt;ActionEvent&gt;() {
         contextMenu.show(textField, Side.BOTTOM, 0, 0);
     }
 });
- 
+
 Group root = (Group) scene.getRoot();
 root.getChildren().add(textField);
 </code></pre>

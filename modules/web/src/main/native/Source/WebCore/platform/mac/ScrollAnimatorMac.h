@@ -95,7 +95,7 @@ private:
     virtual void handleWheelEventPhase(PlatformWheelEventPhase) override;
 
     virtual void cancelAnimations();
-    
+
     virtual void notifyPositionChanged(const FloatSize& delta);
     virtual void contentAreaWillPaint() const;
     virtual void mouseEnteredContentArea() const;
@@ -127,7 +127,7 @@ private:
     virtual void notifyContentAreaScrolled(const FloatSize& delta) override;
 
     // sendContentAreaScrolledSoon() will do the same work that sendContentAreaScrolled() does except
-    // it does it after a zero-delay timer fires. This will prevent us from updating overlay scrollbar 
+    // it does it after a zero-delay timer fires. This will prevent us from updating overlay scrollbar
     // information during layout.
     void sendContentAreaScrolled(const FloatSize& scrollDelta);
     void sendContentAreaScrolledSoon(const FloatSize& scrollDelta);

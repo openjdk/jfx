@@ -31,7 +31,7 @@ import com.sun.glass.events.WindowEvent;
 
 
 class GlassEventUtils {
-    
+
     private GlassEventUtils() {
     }
 
@@ -65,7 +65,7 @@ class GlassEventUtils {
                 return "UNKNOWN";
         }
     }
-    
+
     public static String getViewEventString(int type) {
         switch (type) {
             case ViewEvent.ADD:
@@ -86,7 +86,7 @@ class GlassEventUtils {
                 return "UNKNOWN";
         }
     }
-    
+
     public static String getWindowEventString(int type) {
         switch (type) {
             case WindowEvent.RESIZE:

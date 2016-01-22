@@ -61,18 +61,18 @@ void EqualPowerPanner::pan(double azimuth, double /*elevation*/, const AudioBus*
     if (!isOutputSafe)
         return;
 
-    const float* sourceL = inputBus->channel(0)->data();                               
+    const float* sourceL = inputBus->channel(0)->data();
     const float* sourceR = numberOfInputChannels > 1 ? inputBus->channel(1)->data() : sourceL;
     float* destinationL = outputBus->channelByType(AudioBus::ChannelLeft)->mutableData();
     float* destinationR = outputBus->channelByType(AudioBus::ChannelRight)->mutableData();
-    
+
     if (!sourceL || !sourceR || !destinationL || !destinationR)
         return;
-    
+
     // Clamp azimuth to allowed range of -180 -> +180.
     azimuth = std::max(-180.0, azimuth);
     azimuth = std::min(180.0, azimuth);
-    
+
     // Alias the azimuth ranges behind us to in front of us:
     // -90 -> -180 to -90 -> 0 and 90 -> 180 to 90 -> 0
     if (azimuth < -90)
@@ -101,21 +101,21 @@ void EqualPowerPanner::pan(double azimuth, double /*elevation*/, const AudioBus*
 
     desiredGainL = cos(0.5 * piDouble * desiredPanPosition);
     desiredGainR = sin(0.5 * piDouble * desiredPanPosition);
-   
+
     // Don't de-zipper on first render call.
     if (m_isFirstRender) {
         m_isFirstRender = false;
         m_gainL = desiredGainL;
         m_gainR = desiredGainR;
     }
-    
+
     // Cache in local variables.
     double gainL = m_gainL;
     double gainR = m_gainR;
-    
+
     // Get local copy of smoothing constant.
     const double SmoothingConstant = m_smoothingConstant;
-    
+
     int n = framesToProcess;
 
     if (numberOfInputChannels == 1) { // For mono source case.

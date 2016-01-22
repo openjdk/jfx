@@ -300,7 +300,7 @@ public class SetBindingTest {
 
 
 //    private class SetChangeListenerMock implements SetChangeListener<Object> {
-//        
+//
 //        private Change<? extends Object> change;
 //        private int counter;
 //
@@ -309,7 +309,7 @@ public class SetBindingTest {
 //            this.change = change;
 //            counter++;
 //        }
-//        
+//
 //        private void reset() {
 //            change = null;
 //            counter = 0;

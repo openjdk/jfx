@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef ProfilerCompilation_h
@@ -51,31 +51,31 @@ class Compilation : public RefCounted<Compilation> {
 public:
     Compilation(Bytecodes*, CompilationKind);
     ~Compilation();
-    
+
     void addProfiledBytecodes(Database&, CodeBlock*);
     unsigned profiledBytecodesSize() const { return m_profiledBytecodes.size(); }
     const ProfiledBytecodes& profiledBytecodesAt(unsigned i) const { return m_profiledBytecodes[i]; }
-    
+
     void noticeInlinedGetById() { m_numInlinedGetByIds++; }
     void noticeInlinedPutById() { m_numInlinedPutByIds++; }
     void noticeInlinedCall() { m_numInlinedCalls++; }
-    
+
     Bytecodes* bytecodes() const { return m_bytecodes; }
     CompilationKind kind() const { return m_kind; }
-    
+
     void addDescription(const CompiledBytecode&);
     void addDescription(const OriginStack&, const CString& description);
     ExecutionCounter* executionCounterFor(const OriginStack&);
     void addOSRExitSite(const Vector<const void*>& codeAddresses);
     OSRExit* addOSRExit(unsigned id, const OriginStack&, ExitKind, bool isWatchpoint);
-    
+
     void setJettisonReason(JettisonReason jettisonReason)
     {
         m_jettisonReason = jettisonReason;
     }
-    
+
     JSValue toJS(ExecState*) const;
-    
+
 private:
     Bytecodes* m_bytecodes;
     CompilationKind m_kind;

@@ -26,7 +26,7 @@
 package com.sun.javafx.geom;
 
 /**
- * The <code>PathIterator</code> interface provides the mechanism 
+ * The <code>PathIterator</code> interface provides the mechanism
  * for objects that implement the {@link java.awt.Shape Shape}
  * interface to return the geometry of their boundary by allowing
  * a caller to retrieve the path of that boundary a segment at a
@@ -46,9 +46,9 @@ package com.sun.javafx.geom;
  * Be aware that manually closing an outline as opposed to using a
  * "CLOSE" segment to close the path might result in different line
  * style decorations being used at the end points of the subpath.
- * For example, the {@link java.awt.BasicStroke BasicStroke} object 
- * uses a line "JOIN" decoration to connect the first and last points 
- * if a "CLOSE" segment is encountered, whereas simply ending the path 
+ * For example, the {@link java.awt.BasicStroke BasicStroke} object
+ * uses a line "JOIN" decoration to connect the first and last points
+ * if a "CLOSE" segment is encountered, whereas simply ending the path
  * on the same coordinate as the beginning coordinate results in line
  * "CAP" decorations being used at the ends.
  *
@@ -155,7 +155,7 @@ public interface PathIterator {
 
     /**
      * Tests if the iteration is complete.
-     * @return <code>true</code> if all the segments have 
+     * @return <code>true</code> if all the segments have
      * been read; <code>false</code> otherwise.
      */
     public boolean isDone();

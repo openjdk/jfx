@@ -56,7 +56,7 @@ namespace JSC {
 
         static bool getOwnPropertySlot(JSObject*, ExecState*, PropertyName, PropertySlot&);
     };
-    
+
     JSCell* JSC_HOST_CALL stringFromCharCode(ExecState*, int32_t);
 
 } // namespace JSC

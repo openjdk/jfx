@@ -34,13 +34,13 @@ public enum UnaryOpType {
     PLUS   ("+"),
     MINUS  ("-"),
     NOT    ("!");
-    
+
     private String symbol;
 
     private UnaryOpType(String symbol) {
         this.symbol = symbol;
     }
-    
+
     public static UnaryOpType forSymbol(String symbol) {
         for (UnaryOpType ot : UnaryOpType.values()) {
             if (ot.getSymbol().equals(symbol)) {
@@ -53,7 +53,7 @@ public enum UnaryOpType {
     public String getSymbol() {
         return symbol;
     }
-    
+
     @Override
     public String toString() {
         return symbol;

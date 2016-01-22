@@ -22,7 +22,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef BitmapImage_h
@@ -79,13 +79,13 @@ public:
         , m_duration(0)
         , m_haveMetadata(false)
         , m_isComplete(false)
-        , m_hasAlpha(true) 
+        , m_hasAlpha(true)
         , m_frameBytes(0)
     {
     }
 
     ~FrameData()
-    { 
+    {
         clear(true);
     }
 
@@ -134,7 +134,7 @@ public:
     static PassRefPtr<Image> createFromName(const char* name);
 #endif
     virtual ~BitmapImage();
-    
+
     virtual bool isBitmapImage() const override { return true; }
 
     virtual bool hasSingleSecurityOrigin() const override;
@@ -195,7 +195,7 @@ public:
     virtual ImageOrientation orientationForCurrentFrame() override { return frameOrientationAtIndex(currentFrame()); }
 
     virtual bool currentFrameKnownToBeOpaque() override;
-    
+
     bool canAnimate();
 
 private:

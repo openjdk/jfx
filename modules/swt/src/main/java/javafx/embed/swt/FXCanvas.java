@@ -124,7 +124,7 @@ import org.eclipse.swt.events.MouseWheelListener;
  *            group.getChildren().add(button);
  *            return scene;
  *        }
- *    
+ *
  *        public static void main(String[] args) {
  *            Display display = new Display();
  *            Shell shell = new Shell(display);
@@ -141,7 +141,7 @@ import org.eclipse.swt.events.MouseWheelListener;
  *    }
  * </pre>
  *
- * 
+ *
  * @since JavaFX 2.0
  */
 public class FXCanvas extends Canvas {
@@ -154,12 +154,12 @@ public class FXCanvas extends Canvas {
 
     private int pWidth = 0;
     private int pHeight = 0;
-    
+
     private volatile int pPreferredWidth = -1;
     private volatile int pPreferredHeight = -1;
-    
+
     private IntBuffer pixelsBuf = null;
-    
+
     // This filter runs when any widget is moved
     Listener moveFilter = event -> {
         // If a parent has moved, send a move event to FX
@@ -189,9 +189,9 @@ public class FXCanvas extends Canvas {
         }
         return 1.0;
     }
-    
+
     private DropTarget dropTarget;
-    
+
     static Transfer [] StandardTransfers = new Transfer [] {
         TextTransfer.getInstance(),
         RTFTransfer.getInstance(),
@@ -201,14 +201,14 @@ public class FXCanvas extends Canvas {
         FileTransfer.getInstance(),
     };
     static Transfer [] CustomTransfers = new Transfer [0];
-        
+
     static Transfer [] getAllTransfers () {
         Transfer [] transfers = new Transfer[StandardTransfers.length + CustomTransfers.length];
         System.arraycopy(StandardTransfers, 0, transfers, 0, StandardTransfers.length);
         System.arraycopy(CustomTransfers, 0, transfers, StandardTransfers.length, CustomTransfers.length);
         return transfers;
     }
-    
+
     static Transfer getCustomTransfer(String mime) {
         for (int i=0; i<CustomTransfers.length; i++) {
             if (((CustomTransfer)CustomTransfers[i]).getMime().equals(mime)) {
@@ -222,19 +222,19 @@ public class FXCanvas extends Canvas {
         CustomTransfers = newCustom;
         return transfer;
     }
-    
+
     private static Field windowField;
     private static Method windowMethod;
     private static Method screenMethod;
     private static Method backingScaleFactorMethod;
-    
+
     static {
         if (SWT.getPlatform().equals("cocoa")) {
             try {
                 windowField = Shell.class.getDeclaredField("window");
                 windowField.setAccessible(true);
 
-                Class nsViewClass = Class.forName("org.eclipse.swt.internal.cocoa.NSView");            
+                Class nsViewClass = Class.forName("org.eclipse.swt.internal.cocoa.NSView");
                 windowMethod = nsViewClass.getDeclaredMethod("window");
                 windowMethod.setAccessible(true);
 
@@ -250,7 +250,7 @@ public class FXCanvas extends Canvas {
             }
         }
     }
-    
+
     /**
      * @inheritDoc
      */
@@ -296,13 +296,13 @@ public class FXCanvas extends Canvas {
             Application.GetApplication().setName(Display.getAppName());
         });
     }
-    
+
     static ArrayList<DropTarget> targets = new ArrayList<>();
-    
+
     DropTarget getDropTarget() {
         return dropTarget;
     }
-    
+
     void setDropTarget(DropTarget newTarget) {
         if (dropTarget != null) {
             targets.remove(dropTarget);
@@ -313,7 +313,7 @@ public class FXCanvas extends Canvas {
             targets.add(dropTarget);
         }
     }
-    
+
     static void updateDropTarget() {
         // Update all drop targets rather than just this target
         //
@@ -342,7 +342,7 @@ public class FXCanvas extends Canvas {
         }
         return super.computeSize(wHint, hHint, changed);
     }
-    
+
     /**
      * Returns the JavaFX scene attached to this {@code FXCanvas}.
      *
@@ -472,14 +472,14 @@ public class FXCanvas extends Canvas {
             @Override
             public void keyPressed(KeyEvent e) {
                 FXCanvas.this.sendKeyEventToFX(e, SWT.KeyDown);
-                
+
             }
             @Override
             public void keyReleased(KeyEvent e) {
                 FXCanvas.this.sendKeyEventToFX(e, SWT.KeyUp);
             }
         });
-        
+
         addMenuDetectListener(e -> {
             Runnable r = () -> {
                 if (isDisposed()) return;
@@ -569,7 +569,7 @@ public class FXCanvas extends Canvas {
         pe.gc.drawImage(image, 0, 0, width, height, 0, 0, pWidth, pHeight);
         image.dispose();
     }
-    
+
     private void sendMoveEventToFX() {
         if ((stagePeer == null) /*|| !isShowing()*/) {
             return;
@@ -578,7 +578,7 @@ public class FXCanvas extends Canvas {
         Point los = toDisplay(rect.x, rect.y);
         stagePeer.setLocation(los.x, los.y);
     }
-    
+
     private void sendMouseEventToFX(MouseEvent me, int embedMouseType) {
         if (scenePeer == null) {
             return;
@@ -640,7 +640,7 @@ public class FXCanvas extends Canvas {
                 SWTEvents.getWheelRotation(me, embedMouseType),
                 false);  // RT-32990: popup trigger not implemented
     }
-    
+
     private void sendKeyEventToFX(final KeyEvent e, int type) {
         if (scenePeer == null /*|| !isFxEnabled()*/) {
             return;
@@ -670,7 +670,7 @@ public class FXCanvas extends Canvas {
                     SWTEvents.keyModifiersToEmbedKeyModifiers(stateMask));
         }
     }
-    
+
     private void sendMenuEventToFX(MenuDetectEvent me) {
         if (scenePeer == null /*|| !isFxEnabled()*/) {
             return;
@@ -680,11 +680,11 @@ public class FXCanvas extends Canvas {
     }
 
     private void sendResizeEventToFX() {
-        
+
         // force the panel to draw right away (avoid black rectangle)
         redraw();
         update();
-        
+
         pWidth = getClientArea().width;
         pHeight = getClientArea().height;
 
@@ -697,14 +697,14 @@ public class FXCanvas extends Canvas {
         stagePeer.setSize(pWidth, pHeight);
         scenePeer.setSize(pWidth, pHeight);
     }
-    
+
     private void resizePixelBuffer(double newScaleFactor) {
         lastPixelsBuf = null;
         if ((pWidth <= 0) || (pHeight <= 0)) {
             pixelsBuf = null;
         } else {
             pixelsBuf = IntBuffer.allocate((int)Math.round(pWidth * newScaleFactor) *
-                                           (int)Math.round(pHeight * newScaleFactor));            
+                                           (int)Math.round(pHeight * newScaleFactor));
             // The bg color may show through on resize. See RT-34380.
             RGB rgb = getBackground().getRGB();
             Arrays.fill(pixelsBuf.array(), rgb.red << 16 | rgb.green << 8 | rgb.blue);
@@ -752,7 +752,7 @@ public class FXCanvas extends Canvas {
                    return null;
             }
         }
-        
+
         Set<TransferMode> getTransferModes(int bits) {
             Set<TransferMode> set = new HashSet<TransferMode>();
             if ((bits & DND.DROP_COPY) != 0) set.add(TransferMode.COPY);
@@ -761,7 +761,7 @@ public class FXCanvas extends Canvas {
             if ((bits & DND.DROP_LINK) != 0) set.add(TransferMode.LINK);
             return set;
         }
-        
+
         ImageData createImageData(Pixels pixels) {
             if (pixels == null) return null;
             int width = pixels.getWidth();
@@ -859,7 +859,7 @@ public class FXCanvas extends Canvas {
                     throw new IllegalArgumentException("Invalid transfer mode");
             }
         }
-        
+
         int getDragActions(Set<TransferMode> set) {
             int result = 0;
             for (TransferMode mode : set) {
@@ -867,7 +867,7 @@ public class FXCanvas extends Canvas {
             }
             return result;
         }
-        
+
         Transfer getTransferType(String mime) {
             if (mime.equals("text/plain")) return TextTransfer.getInstance();
             if (mime.equals("text/rtf")) return RTFTransfer.getInstance();
@@ -879,7 +879,7 @@ public class FXCanvas extends Canvas {
             }
             return getCustomTransfer(mime);
         }
-        
+
         Transfer [] getTransferTypes(String [] mimeTypes) {
             int count= 0;
             Transfer [] transfers = new Transfer [mimeTypes.length];
@@ -894,7 +894,7 @@ public class FXCanvas extends Canvas {
             }
             return transfers;
         }
-        
+
         String getMime(Transfer transfer) {
             if (transfer.equals(TextTransfer.getInstance())) return "text/plain";
             if (transfer.equals(RTFTransfer.getInstance())) return "text/rtf"; ;
@@ -905,7 +905,7 @@ public class FXCanvas extends Canvas {
             if (transfer instanceof CustomTransfer) return ((CustomTransfer)transfer).getMime();
             return null;
         }
-        
+
         String [] getMimes(Transfer [] transfers, TransferData data) {
             int count= 0;
             String [] result = new String [transfers.length];
@@ -1120,7 +1120,7 @@ public class FXCanvas extends Canvas {
             }
 
             // platform cursor not cached yet
-            final org.eclipse.swt.graphics.Cursor platformCursor = 
+            final org.eclipse.swt.graphics.Cursor platformCursor =
                     SWTCursors.embedCursorToCursor(cursorFrame);
             cursorFrame.setPlatforCursor(org.eclipse.swt.graphics.Cursor.class, platformCursor);
 

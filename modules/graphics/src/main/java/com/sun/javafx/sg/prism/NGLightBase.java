@@ -62,8 +62,8 @@ public class NGLightBase extends NGNode {
     }
 
     public void setColor(Object value) {
-        // Null check is done on the scenegraph side, 
-        // by design value can never be null. 
+        // Null check is done on the scenegraph side,
+        // by design value can never be null.
         if (!this.color.equals(value)) {
             this.color = (Color)value;
             visualsChanged();

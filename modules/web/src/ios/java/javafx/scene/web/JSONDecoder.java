@@ -33,17 +33,17 @@ import java.util.Map;
 
 
 class JSONDecoder {
-    
+
     private final JS2JavaBridge owner;
-    
+
     public JSONDecoder(JS2JavaBridge owner) {
         this.owner = owner;
     }
-    
+
     public Object decode(String string) {
         return decode(new StringCharacterIterator(string));
     }
-    
+
     // decodes object starting from it.current()
     private Object decode(CharacterIterator it) {
         char ch = getSignificant(it);
@@ -97,14 +97,14 @@ class JSONDecoder {
             return Double.valueOf(sNum);
         } else {
             long val = Long.parseLong(sNum);
-            if ((val <= Integer.MAX_VALUE) && (Integer.MIN_VALUE <= val)) { 
+            if ((val <= Integer.MAX_VALUE) && (Integer.MIN_VALUE <= val)) {
                 return new Integer((int) val);
             } else {
                 return new Double(val);
             }
         }
     }
-    
+
     // iterates until it.current points to a significant symbol (non-whitespace)
     private char getSignificant(CharacterIterator it) {
         char ch = it.current();
@@ -113,7 +113,7 @@ class JSONDecoder {
         }
         return ch;
     }
-    
+
     // returns a len-symbol string starting from it.currect
     // on return it.current points to next char after the last string symbol
     private String getString(CharacterIterator it, int len) {
@@ -124,7 +124,7 @@ class JSONDecoder {
         }
         return new String(buffer);
     }
-    
+
     // decodes string (it.current points to starting quote)
     private String decodeString(CharacterIterator it) {
         StringBuilder sb = new StringBuilder();
@@ -171,7 +171,7 @@ class JSONDecoder {
         it.next();  // skip final quote, NOP if DONE
         return sb.toString();
     }
-    
+
     private int dehex(char ch) {
         if (ch >= '0' && ch <= '9') {
             return ch - '0';
@@ -184,17 +184,17 @@ class JSONDecoder {
         }
         throw new IllegalArgumentException("Wrong unicode value");
     }
-    
+
     // decodes array (it.current points to '[')
     private Object[] decodeArray(CharacterIterator it) {
         ArrayList arr = new ArrayList();
-        
+
         it.next();  // skip '['
         char ch = getSignificant(it);
         while (ch != ']') {
             Object obj = decode(it);
             arr.add(obj);
-                
+
             ch = getSignificant(it);
             switch (ch) {
                 case ',':
@@ -207,10 +207,10 @@ class JSONDecoder {
             }
         }
         it.next();  // skip final ']'
-        
+
         return arr.toArray();
     }
-    
+
     // decodes object (it.current points to '{')
     private Object decodeObject(CharacterIterator it) {
         Map<String, Object> map = new HashMap<String, Object>();
@@ -242,7 +242,7 @@ class JSONDecoder {
             }
         }
         it.next();  // skip final '}'
-        
+
         return map;
     }
 }

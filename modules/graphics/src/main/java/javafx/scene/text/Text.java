@@ -1411,7 +1411,7 @@ public class Text extends Shape {
             }
          };
 
-	 private final static List<CssMetaData<? extends Styleable, ?>> STYLEABLES;
+     private final static List<CssMetaData<? extends Styleable, ?>> STYLEABLES;
          static {
             final List<CssMetaData<? extends Styleable, ?>> styleables =
                 new ArrayList<CssMetaData<? extends Styleable, ?>>(Shape.getClassCssMetaData());
@@ -1954,7 +1954,7 @@ public class Text extends Shape {
                 int start = (Integer)parameters[0];
                 int end = (Integer)parameters[1];
                 PathElement[] elements = impl_getRangeShape(start, end + 1);
-                /* Each bounds is defined by a MoveTo (top-left) followed by 
+                /* Each bounds is defined by a MoveTo (top-left) followed by
                  * 4 LineTo (to top-right, bottom-right, bottom-left, back to top-left).
                  */
                 Bounds[] bounds = new Bounds[elements.length / 5];
@@ -1963,7 +1963,7 @@ public class Text extends Shape {
                     MoveTo topLeft = (MoveTo)elements[index];
                     LineTo topRight = (LineTo)elements[index+1];
                     LineTo bottomRight = (LineTo)elements[index+2];
-                    BoundingBox b = new BoundingBox(topLeft.getX(), topLeft.getY(), 
+                    BoundingBox b = new BoundingBox(topLeft.getX(), topLeft.getY(),
                                                     topRight.getX() - topLeft.getX(),
                                                     bottomRight.getY() - topRight.getY());
                     bounds[i] = localToScreen(b);

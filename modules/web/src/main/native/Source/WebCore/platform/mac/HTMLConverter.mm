@@ -572,7 +572,7 @@ static PlatformFont *_fontForNameAndSize(NSString *fontName, CGFloat size, NSMut
 {
     NSString *result = nil;
     BOOL inherit = YES;
-    DOMElement *element = (DOMElement *)node;    
+    DOMElement *element = (DOMElement *)node;
     if (element && [element nodeType] == DOM_ELEMENT_NODE) {
         DOMCSSStyleDeclaration *computedStyle;
         DOMCSSStyleDeclaration *specifiedStyle;
@@ -748,7 +748,7 @@ static inline BOOL _getFloat(DOMCSSPrimitiveValue *primitiveValue, CGFloat *val)
     BOOL result = NO;
     BOOL inherit = YES;
     CGFloat floatVal = 0;
-    DOMElement *element = (DOMElement *)node;    
+    DOMElement *element = (DOMElement *)node;
     if (element && [element nodeType] == DOM_ELEMENT_NODE) {
         DOMCSSStyleDeclaration *computedStyle, *specifiedStyle;
         inherit = NO;
@@ -839,7 +839,7 @@ static inline NSColor *_colorForRGBColor(DOMRGBColor *domRGBColor, BOOL ignoreBl
     NSColor *color = [domRGBColor _color];
     NSColorSpace *colorSpace = [color colorSpace];
     const CGFloat ColorEpsilon = 1 / (2 * (CGFloat)255.0);
-    
+
     if (color) {
         if ([colorSpace isEqual:[NSColorSpace genericGrayColorSpace]] || [colorSpace isEqual:[NSColorSpace deviceGrayColorSpace]]) {
             CGFloat white, alpha;
@@ -950,7 +950,7 @@ static inline NSShadow *_shadowForShadowStyle(NSString *shadowStyle)
     }
     return NO;
 }
-    
+
 - (DOMElement *)_blockLevelElementForNode:(DOMNode *)node
 {
     DOMElement *element = (DOMElement *)node;
@@ -968,7 +968,7 @@ static inline NSShadow *_shadowForShadowStyle(NSString *shadowStyle)
     BOOL haveResult = NO;
     BOOL isColor = [@"color" isEqualToString:key];
     BOOL isBackgroundColor = [@"background-color" isEqualToString:key];
-    DOMElement *element = (DOMElement *)node;    
+    DOMElement *element = (DOMElement *)node;
     if (element && [element nodeType] == DOM_ELEMENT_NODE) {
         DOMCSSStyleDeclaration *computedStyle, *specifiedStyle;
         inherit = NO;
@@ -1055,7 +1055,7 @@ static inline NSShadow *_shadowForShadowStyle(NSString *shadowStyle)
 
     if (fontSize <= 0.0)
         fontSize = 12;
-    
+
 #if PLATFORM(IOS)
     if (actualFont)
         font = [actualFont fontWithSize:fontSize];
@@ -1167,7 +1167,7 @@ static inline NSShadow *_shadowForShadowStyle(NSString *shadowStyle)
     }
     if (element != blockElement && [_writingDirectionArray count] > 0)
         [attrs setObject:[NSArray arrayWithArray:_writingDirectionArray] forKey:NSWritingDirectionAttributeName];
-    
+
     if (blockElement) {
         NSMutableParagraphStyle *paragraphStyle = [[[self class] defaultParagraphStyle] mutableCopy];
         NSString *blockTag = [blockElement tagName];
@@ -1463,7 +1463,7 @@ static inline NSShadow *_shadowForShadowStyle(NSString *shadowStyle)
         if ([self _getFloat:&val forNode:element property:@"width"])
             [block setValue:val type:NSTextBlockAbsoluteValueType forDimension:NSTextBlockWidth];
     }
-    
+
     if ([self _getFloat:&val forNode:element property:@"min-width"])
         [block setValue:val type:NSTextBlockAbsoluteValueType forDimension:NSTextBlockMinimumWidth];
     if ([self _getFloat:&val forNode:element property:@"max-width"])
@@ -1482,7 +1482,7 @@ static inline NSShadow *_shadowForShadowStyle(NSString *shadowStyle)
         [block setWidth:val + extraPadding type:NSTextBlockAbsoluteValueType forLayer:NSTextBlockPadding edge:NSMaxXEdge]; else [block setWidth:extraPadding type:NSTextBlockAbsoluteValueType forLayer:NSTextBlockPadding edge:NSMaxXEdge];
     if ([self _getFloat:&val forNode:element property:@"padding-bottom"])
         [block setWidth:val + extraPadding type:NSTextBlockAbsoluteValueType forLayer:NSTextBlockPadding edge:NSMaxYEdge]; else [block setWidth:extraPadding type:NSTextBlockAbsoluteValueType forLayer:NSTextBlockPadding edge:NSMaxYEdge];
-    
+
     if ([self _getFloat:&val forNode:element property:@"border-left-width"])
         [block setWidth:val type:NSTextBlockAbsoluteValueType forLayer:NSTextBlockBorder edge:NSMinXEdge];
     if ([self _getFloat:&val forNode:element property:@"border-top-width"])
@@ -1563,7 +1563,7 @@ static inline NSDate *_dateForString(NSString *string)
     if (!read2DigitNumber(&p, &component) || *p++ != 'Z')
         return nil;
     [dateComponents setSecond:component];
-    
+
 #if PLATFORM(IOS) || __MAC_OS_X_VERSION_MIN_REQUIRED >= 1090
     NSString *calendarIdentifier = NSCalendarIdentifierGregorian;
 #else
@@ -1667,7 +1667,7 @@ static NSInteger _colCompare(id block1, id block2, void *)
     if ([@"HEAD" isEqualToString:tag] && !embedded)
         [self _processHeadElement:element];
     else if (!displayVal || !([@"none" isEqualToString:displayVal] || [@"table-column" isEqualToString:displayVal] || [@"table-column-group" isEqualToString:displayVal])) {
-        if ([self _elementIsBlockLevel:element] && ![@"BR" isEqualToString:tag] && !([@"table-cell" isEqualToString:displayVal] && [_textTables count] == 0) 
+        if ([self _elementIsBlockLevel:element] && ![@"BR" isEqualToString:tag] && !([@"table-cell" isEqualToString:displayVal] && [_textTables count] == 0)
             && !([_textLists count] > 0 && [@"block" isEqualToString:displayVal] && ![@"LI" isEqualToString:tag] && ![@"UL" isEqualToString:tag] && ![@"OL" isEqualToString:tag]))
             [self _newParagraphForElement:element tag:tag allowEmpty:NO suppressTrailingSpace:YES];
         return YES;
@@ -1922,7 +1922,7 @@ static NSInteger _colCompare(id block1, id block2, void *)
     CGFloat markerLocation;
     CGFloat listLocation;
     CGFloat pointSize;
-    
+
     if (range.length == 0 || range.location >= textLength)
         return;
     if (NSMaxRange(range) > textLength)
@@ -1948,7 +1948,7 @@ static NSInteger _colCompare(id block1, id block2, void *)
                     range.length += insertLength;
                     paragraphRange.length += insertLength;
                     if (paragraphRange.location < _domRangeStartIndex) _domRangeStartIndex += insertLength;
-                    
+
                     newStyle = [paragraphStyle mutableCopy];
                     listLocation = (listIndex + 1) * 36;
                     markerLocation = listLocation - 25;
@@ -1973,7 +1973,7 @@ static NSInteger _colCompare(id block1, id block2, void *)
                     [tab release];
                     if (!_flags.isIndexing && !_flags.isTesting) [_attrStr addAttribute:NSParagraphStyleAttributeName value:newStyle range:paragraphRange];
                     [newStyle release];
-                    
+
                     idx = NSMaxRange(paragraphRange);
                 } else {
                     // skip any deeper-nested lists
@@ -2136,7 +2136,7 @@ static NSInteger _colCompare(id block1, id block2, void *)
     CFMutableStringRef mutstr = NULL;
     whitespaceVal = [self _stringForNode:text property:@"white-space"];
     transformVal = [self _stringForNode:text property:@"text-transform"];
-    
+
     if (_domRange) {
         if (text == [_domRange startContainer]) {
             startOffset = (NSUInteger)[_domRange startOffset];
@@ -2235,7 +2235,7 @@ static NSInteger _colCompare(id block1, id block2, void *)
         return;
     if (_domRange && !_flags.reachedStart && _domStartAncestors && ![_domStartAncestors containsObject:node])
         return;
-    
+
     nodeType = [node nodeType];
     childNodes = [self _childrenForNode:node];
     count = [childNodes count];
@@ -2253,7 +2253,7 @@ static NSInteger _colCompare(id block1, id block2, void *)
             isEnd = YES;
         }
     }
-    
+
     if (nodeType == DOM_DOCUMENT_NODE || nodeType == DOM_DOCUMENT_FRAGMENT_NODE) {
         for (NSUInteger i = 0; i < count; i++) {
             if (isStart && i == startOffset)
@@ -2295,7 +2295,7 @@ static NSInteger _colCompare(id block1, id block2, void *)
     } else if (nodeType == DOM_TEXT_NODE || nodeType == DOM_CDATA_SECTION_NODE) {
         [self _processText:(DOMCharacterData *)node];
     }
-    
+
     if (isEnd) _flags.reachedEnd = YES;
 }
 
@@ -2359,7 +2359,7 @@ static NSInteger _colCompare(id block1, id block2, void *)
     if (-1 == _errorCode) {
         DOMNode *commonAncestorContainer = [_domRange commonAncestorContainer];
         DOMNode *ancestorContainer = [_domRange startContainer];
-        
+
         _domStartAncestors = [[NSMutableArray alloc] init];
         while (ancestorContainer) {
             [_domStartAncestors addObject:ancestorContainer];
@@ -2418,7 +2418,7 @@ static NSInteger _colCompare(id block1, id block2, void *)
     self = [super init];
     if (!self)
         return nil;
-    
+
     _attrStr = [[NSMutableAttributedString alloc] init];
     _documentAttrs = [[NSMutableDictionary alloc] init];
 
@@ -2452,7 +2452,7 @@ static NSInteger _colCompare(id block1, id block2, void *)
 
     _flags.isIndexing = (_indexingLimit > 0);
     _flags.isTesting = 0;
-    
+
     return self;
 }
 
@@ -2488,7 +2488,7 @@ static NSInteger _colCompare(id block1, id block2, void *)
         Node* endContainer = currentTextRange->endContainer();
         int startOffset = currentTextRange->startOffset();
         int endOffset = currentTextRange->endOffset();
-        
+
         if (startContainer == endContainer && (startOffset == endOffset - 1)) {
             Node* node = startContainer->childNode(startOffset);
             if (node && node->hasTagName(imgTag)) {
@@ -2553,25 +2553,25 @@ static NSFileWrapper *fileWrapperForURL(DocumentLoader *dataSource, NSURL *URL)
         [wrapper setPreferredFilename:filename];
         return wrapper;
     }
-    
+
     NSMutableURLRequest *request = [[NSMutableURLRequest alloc] initWithURL:URL];
 
     NSCachedURLResponse *cachedResponse = [[NSURLCache sharedURLCache] cachedResponseForRequest:request];
     [request release];
-    
+
     if (cachedResponse) {
         NSFileWrapper *wrapper = [[[NSFileWrapper alloc] initRegularFileWithContents:[cachedResponse data]] autorelease];
         [wrapper setPreferredFilename:[[cachedResponse response] suggestedFilename]];
         return wrapper;
     }
-    
+
     return nil;
 }
 
 static NSFileWrapper *fileWrapperForElement(Element* element)
 {
     NSFileWrapper *wrapper = nil;
-    
+
     const AtomicString& attr = element->getAttribute(srcAttr);
     if (!attr.isEmpty()) {
         NSURL *URL = element->document().completeURL(attr);

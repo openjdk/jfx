@@ -54,11 +54,11 @@ void WillSendSubmitEventTest::didCreatePage(WKBundleRef bundle, WKBundlePageRef 
 {
     WKBundlePageFormClientV1 formClient;
     memset(&formClient, 0, sizeof(formClient));
-    
+
     formClient.base.version = 1;
     formClient.base.clientInfo = this;
     formClient.willSendSubmitEvent = willSendSubmitEvent;
-    
+
     WKBundlePageSetFormClient(page, &formClient.base);
 }
 

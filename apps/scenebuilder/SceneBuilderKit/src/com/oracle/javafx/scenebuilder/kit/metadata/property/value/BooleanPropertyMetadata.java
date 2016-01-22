@@ -36,11 +36,11 @@ import com.oracle.javafx.scenebuilder.kit.metadata.util.PropertyName;
 
 /**
  *
- * 
+ *
  */
 public class BooleanPropertyMetadata extends TextEncodablePropertyMetadata<java.lang.Boolean> {
 
-    public BooleanPropertyMetadata(PropertyName name, boolean readWrite, 
+    public BooleanPropertyMetadata(PropertyName name, boolean readWrite,
             Boolean defaultValue, InspectorPath inspectorPath) {
         super(name, Boolean.class, readWrite, defaultValue, inspectorPath);
     }
@@ -48,10 +48,10 @@ public class BooleanPropertyMetadata extends TextEncodablePropertyMetadata<java.
     /*
      * TextEncodablePropertyMetadata
      */
-    
+
     @Override
     public Boolean makeValueFromString(String string) {
         return Boolean.valueOf(string);
     }
-    
+
 }

@@ -790,12 +790,12 @@ public class FlowPaneTest {
         assertEquals(100, last.getLayoutBounds().getWidth(), 1e-100);
         assertEquals(100, last.getLayoutBounds().getHeight(), 1e-100);
     }
-    
+
     @Test public void testFlowPaneSetMarginConstraint() {
         MockResizable child1 = new MockResizable(100,200, 300,400, 500,600);
 
         assertNull(FlowPane.getMargin(child1));
-        
+
         Insets margin = new Insets(10,20,30,40);
         FlowPane.setMargin(child1, margin);
         assertEquals(margin, FlowPane.getMargin(child1));
@@ -835,7 +835,7 @@ public class FlowPaneTest {
         assertEquals(100, last.getLayoutBounds().getHeight(), 1e-100);
     }
 
-    // FlowPane does not shrink their children to be smaller than their preferred sizes 
+    // FlowPane does not shrink their children to be smaller than their preferred sizes
     @Test public void testHorizontalFlowPaneFitsChildWithinHeightIfPossible() {
         MockResizable child = new MockResizable(10,20, 200,200, 500,500);
 

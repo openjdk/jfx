@@ -22,7 +22,7 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
- 
+
 #include "LensCommon.h"
 #include "com_sun_glass_ui_lens_LensView.h"
 #include "wm/LensWindowManager.h"
@@ -308,8 +308,8 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_lens_LensView__1setParent
     NativeWindow parent = (NativeWindow) jlong_to_ptr(nativeWindowPtr);
     // window can be NULL if being removed
 
-    GLASS_LOG_FINE("set parent of view %p to window %d[%p] old window %d[%p]", 
-                   view, 
+    GLASS_LOG_FINE("set parent of view %p to window %d[%p] old window %d[%p]",
+                   view,
                    parent?parent->id:-1,
                    parent,
                    view->parent?view->parent->id:-1,

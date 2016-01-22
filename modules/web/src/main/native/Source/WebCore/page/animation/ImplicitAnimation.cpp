@@ -6,13 +6,13 @@
  * are met:
  *
  * 1.  Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer. 
+ *     notice, this list of conditions and the following disclaimer.
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
- *     documentation and/or other materials provided with the distribution. 
+ *     documentation and/or other materials provided with the distribution.
  * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
- *     from this software without specific prior written permission. 
+ *     from this software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY APPLE AND ITS CONTRIBUTORS "AS IS" AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
@@ -134,7 +134,7 @@ void ImplicitAnimation::onAnimationEnd(double elapsedTime)
     RefPtr<KeyframeAnimation> keyframeAnim = m_compAnim->getAnimationForProperty(m_animatingProperty);
     if (keyframeAnim)
         keyframeAnim->setUnanimatedStyle(m_toStyle);
-    
+
     sendTransitionEvent(eventNames().transitionendEvent, elapsedTime);
     endAnimation();
 }
@@ -146,7 +146,7 @@ bool ImplicitAnimation::sendTransitionEvent(const AtomicString& eventType, doubl
 
         if (shouldSendEventForListener(listenerType)) {
             String propertyName = getPropertyNameString(m_animatingProperty);
-                
+
             // Dispatch the event
             RefPtr<Element> element = m_object->element();
 
@@ -178,7 +178,7 @@ void ImplicitAnimation::reset(RenderStyle* to)
     // Restart the transition
     if (m_fromStyle && m_toStyle)
         updateStateMachine(AnimationStateInputRestartAnimation, -1);
-        
+
     // set the transform animation list
     validateTransformFunctionList();
 #if ENABLE(CSS_FILTERS)
@@ -202,7 +202,7 @@ bool ImplicitAnimation::affectsProperty(CSSPropertyID property) const
 
 bool ImplicitAnimation::isTargetPropertyEqual(CSSPropertyID prop, const RenderStyle* targetStyle)
 {
-    // We can get here for a transition that has not started yet. This would make m_toStyle unset and null. 
+    // We can get here for a transition that has not started yet. This would make m_toStyle unset and null.
     // So we check that here (see <https://bugs.webkit.org/show_bug.cgi?id=26706>)
     if (!m_toStyle)
         return false;
@@ -216,17 +216,17 @@ void ImplicitAnimation::blendPropertyValueInStyle(CSSPropertyID prop, RenderStyl
     // <https://bugs.webkit.org/show_bug.cgi?id=24787>
     if (!m_toStyle)
         return;
-        
+
     CSSPropertyAnimation::blendProperties(this, prop, currentStyle, m_fromStyle.get(), m_toStyle.get(), progress(1, 0, 0));
 }
 
 void ImplicitAnimation::validateTransformFunctionList()
 {
     m_transformFunctionListValid = false;
-    
+
     if (!m_fromStyle || !m_toStyle)
         return;
-        
+
     const TransformOperations* val = &m_fromStyle->transform();
     const TransformOperations* toVal = &m_toStyle->transform();
 
@@ -235,7 +235,7 @@ void ImplicitAnimation::validateTransformFunctionList()
 
     if (val->operations().isEmpty())
         return;
-        
+
     // An emtpy transform list matches anything.
     if (val != toVal && !toVal->operations().isEmpty() && !val->operationsMatch(*toVal))
         return;
@@ -248,10 +248,10 @@ void ImplicitAnimation::validateTransformFunctionList()
 void ImplicitAnimation::checkForMatchingFilterFunctionLists()
 {
     m_filterFunctionListsMatch = false;
-    
+
     if (!m_fromStyle || !m_toStyle)
         return;
-        
+
     const FilterOperations* val = &m_fromStyle->filter();
     const FilterOperations* toVal = &m_toStyle->filter();
 
@@ -260,7 +260,7 @@ void ImplicitAnimation::checkForMatchingFilterFunctionLists()
 
     if (val->operations().isEmpty())
         return;
-        
+
     // An emtpy filter list matches anything.
     if (val != toVal && !toVal->operations().isEmpty() && !val->operationsMatch(*toVal))
         return;
@@ -275,8 +275,8 @@ double ImplicitAnimation::timeToNextService()
     double t = AnimationBase::timeToNextService();
     if (t != 0 || preActive())
         return t;
-        
-    // A return value of 0 means we need service. But if this is an accelerated animation we 
+
+    // A return value of 0 means we need service. But if this is an accelerated animation we
     // only need service at the end of the transition.
     if (CSSPropertyAnimation::animationOfPropertyIsAccelerated(m_animatingProperty) && isAccelerated()) {
         bool isLooping;

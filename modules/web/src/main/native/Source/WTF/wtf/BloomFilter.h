@@ -31,7 +31,7 @@
 namespace WTF {
 
 // Counting bloom filter with k=2 and 8 bit counters. Uses 2^keyBits bytes of memory.
-// False positive rate is approximately (1-e^(-2n/m))^2, where n is the number of unique 
+// False positive rate is approximately (1-e^(-2n/m))^2, where n is the number of unique
 // keys and m is the table size (==2^keyBits).
 template <unsigned keyBits>
 class BloomFilter {
@@ -42,7 +42,7 @@ public:
     static const size_t tableSize = 1 << keyBits;
     static const unsigned keyMask = (1 << keyBits) - 1;
     static uint8_t maximumCount() { return std::numeric_limits<uint8_t>::max(); }
-    
+
     BloomFilter() { clear(); }
 
     void add(unsigned hash);
@@ -51,7 +51,7 @@ public:
     // The filter may give false positives (claim it may contain a key it doesn't)
     // but never false negatives (claim it doesn't contain a key it does).
     bool mayContain(unsigned hash) const { return firstSlot(hash) && secondSlot(hash); }
-    
+
     // The filter must be cleared before reuse even if all keys are removed.
     // Otherwise overflowed keys will stick around.
     void clear();
@@ -78,7 +78,7 @@ private:
 
     uint8_t m_table[tableSize];
 };
-    
+
 template <unsigned keyBits>
 inline void BloomFilter<keyBits>::add(unsigned hash)
 {
@@ -103,7 +103,7 @@ inline void BloomFilter<keyBits>::remove(unsigned hash)
     if (LIKELY(second < maximumCount()))
         --second;
 }
-    
+
 template <unsigned keyBits>
 inline void BloomFilter<keyBits>::clear()
 {

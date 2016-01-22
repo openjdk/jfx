@@ -138,7 +138,7 @@ bool JSCell::getPrimitiveNumber(ExecState* exec, double& number, JSValue& value)
 }
 
 double JSCell::toNumber(ExecState* exec) const
-{ 
+{
     if (isString())
         return static_cast<const JSString*>(this)->toNumber(exec);
     return static_cast<const JSObject*>(this)->toNumber(exec);

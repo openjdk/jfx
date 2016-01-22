@@ -26,7 +26,7 @@
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
-    
+
 class AffineTransform;
 class SVGTransformList;
 

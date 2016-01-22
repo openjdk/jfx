@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef MacroAssemblerX86_h
@@ -69,12 +69,12 @@ public:
     {
         m_assembler.addl_im(imm.m_value, address.m_ptr);
     }
-    
+
     void add32(AbsoluteAddress address, RegisterID dest)
     {
         m_assembler.addl_mr(address.m_ptr, dest);
     }
-    
+
     void add64(TrustedImm32 imm, AbsoluteAddress address)
     {
         m_assembler.addl_im(imm.m_value, address.m_ptr);
@@ -85,17 +85,17 @@ public:
     {
         m_assembler.andl_im(imm.m_value, address.m_ptr);
     }
-    
+
     void or32(TrustedImm32 imm, AbsoluteAddress address)
     {
         m_assembler.orl_im(imm.m_value, address.m_ptr);
     }
-    
+
     void or32(RegisterID reg, AbsoluteAddress address)
     {
         m_assembler.orl_rm(reg, address.m_ptr);
     }
-    
+
     void sub32(TrustedImm32 imm, AbsoluteAddress address)
     {
         m_assembler.subl_im(imm.m_value, address.m_ptr);
@@ -105,7 +105,7 @@ public:
     {
         m_assembler.movl_mr(address, dest);
     }
-    
+
     void load8(const void* address, RegisterID dest)
     {
         m_assembler.movzbl_mr(address, dest);
@@ -144,7 +144,7 @@ public:
     {
         m_assembler.movl_rm(src, address);
     }
-    
+
     void store8(RegisterID src, void* address)
     {
         m_assembler.movb_rm(src, address);
@@ -155,7 +155,7 @@ public:
         ASSERT(-128 <= imm.m_value && imm.m_value < 128);
         m_assembler.movb_i8m(imm.m_value, address);
     }
-    
+
     // Possibly clobbers src.
     void moveDoubleToInts(FPRegisterID src, RegisterID dest1, RegisterID dest2)
     {
@@ -224,7 +224,7 @@ public:
         m_assembler.movl_i32r(initialValue.asIntptr(), dest);
         return DataLabelPtr(this);
     }
-    
+
     Jump branch8(RelationalCondition cond, AbsoluteAddress left, TrustedImm32 right)
     {
         m_assembler.cmpb_im(right.m_value, left.m_ptr);
@@ -269,7 +269,7 @@ public:
     static bool supportsFloatingPointTruncate() { return isSSE2Present(); }
     static bool supportsFloatingPointSqrt() { return isSSE2Present(); }
     static bool supportsFloatingPointAbs() { return isSSE2Present(); }
-    
+
     static FunctionPtr readCallTarget(CodeLocationCall call)
     {
         intptr_t offset = reinterpret_cast<int32_t*>(call.dataLocation())[-1];
@@ -277,7 +277,7 @@ public:
     }
 
     static bool canJumpReplacePatchableBranchPtrWithPatch() { return true; }
-    
+
     static CodeLocationLabel startOfBranchPtrWithPatchOnRegister(CodeLocationDataLabelPtr label)
     {
         const int opcodeBytes = 1;
@@ -287,7 +287,7 @@ public:
         ASSERT(totalBytes >= maxJumpReplacementSize());
         return label.labelAtOffset(-totalBytes);
     }
-    
+
     static CodeLocationLabel startOfPatchableBranchPtrWithPatchOnAddress(CodeLocationDataLabelPtr label)
     {
         const int opcodeBytes = 1;
@@ -298,7 +298,7 @@ public:
         ASSERT(totalBytes >= maxJumpReplacementSize());
         return label.labelAtOffset(-totalBytes);
     }
-    
+
     static void revertJumpReplacementToBranchPtrWithPatch(CodeLocationLabel instructionStart, RegisterID reg, void* initialValue)
     {
         X86Assembler::revertJumpTo_cmpl_ir_force32(instructionStart.executableAddress(), reinterpret_cast<intptr_t>(initialValue), reg);

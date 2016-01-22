@@ -476,10 +476,10 @@ static void doRedirect(ResourceHandle* handle)
 
     if (crossOrigin) {
         // If the network layer carries over authentication headers from the original request
-        // in a cross-origin redirect, we want to clear those headers here. 
+        // in a cross-origin redirect, we want to clear those headers here.
         newRequest.clearHTTPAuthorization();
 
-        // TODO: We are losing any username and password specified in the redirect URL, as this is the 
+        // TODO: We are losing any username and password specified in the redirect URL, as this is the
         // same behavior as the CFNet port. We should investigate if this is really what we want.
     }
 

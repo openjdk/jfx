@@ -22,7 +22,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -654,7 +654,7 @@ AccessibilityUIElement AccessibilityUIElement::getChildAtIndex(unsigned index)
 }
 
 unsigned AccessibilityUIElement::indexOfChild(AccessibilityUIElement* element)
-{ 
+{
     // FIXME: implement
     return 0;
 }
@@ -1054,8 +1054,8 @@ bool AccessibilityUIElement::ariaIsGrabbed() const
 }
 
 JSStringRef AccessibilityUIElement::ariaDropEffects() const
-{   
-    return nullptr; 
+{
+    return nullptr;
 }
 
 bool AccessibilityUIElement::isExpanded() const
@@ -1183,7 +1183,7 @@ JSStringRef AccessibilityUIElement::stringForRange(unsigned location, unsigned l
 
     String string = atk_text_get_text(ATK_TEXT(m_element), location, location + length);
     return JSStringCreateWithUTF8CString(string.utf8().data());
-} 
+}
 
 JSStringRef AccessibilityUIElement::attributedStringForRange(unsigned, unsigned)
 {

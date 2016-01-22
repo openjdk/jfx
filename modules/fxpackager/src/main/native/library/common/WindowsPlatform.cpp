@@ -678,8 +678,8 @@ std::vector<TString> WindowsLibrary::DumpPEFile(PIMAGE_DOS_HEADER dosHeader) {
 
     // Verify that the e_lfanew field gave us a reasonable
     // pointer and the PE signature.
-	// TODO: To really fix JDK-8131321 this condition needs to be changed. There is a matching change
-	// in JavaVirtualMachine.cpp that also needs to be changed.
+    // TODO: To really fix JDK-8131321 this condition needs to be changed. There is a matching change
+    // in JavaVirtualMachine.cpp that also needs to be changed.
     if (pNTHeader->Signature == IMAGE_NT_SIGNATURE) {
         DWORD base = (DWORD)dosHeader;
         result = GetImportsSection(base, pNTHeader);

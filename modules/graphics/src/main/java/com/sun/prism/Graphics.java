@@ -39,7 +39,7 @@ import com.sun.prism.paint.Color;
 import com.sun.prism.paint.Paint;
 
 /**
- * 
+ *
  */
 public interface Graphics {
 

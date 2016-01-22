@@ -37,14 +37,14 @@ JNIEXPORT jstring JNICALL Java_com_sun_glass_ui_mac_MacSystemClipboard_00024Form
 (JNIEnv *env, jclass clazz, jstring mime)
 {
     jstring result = nil;
-    
+
     GLASS_POOL_ENTER;
     {
         CFStringRef cfMIME = (CFStringRef)[GlassHelper nsStringWithJavaString:mime withEnv:env];
         NSString* nsUTI = (NSString *)UTTypeCreatePreferredIdentifierForTag(kUTTagClassMIMEType,
                                                                             cfMIME,
                                                                             (CFStringRef)@"public.mime-type");
-        [nsUTI autorelease];    
+        [nsUTI autorelease];
         result = (*env) -> NewStringUTF(env, [nsUTI UTF8String]);
     }
     GLASS_POOL_EXIT;

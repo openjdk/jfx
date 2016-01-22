@@ -49,7 +49,7 @@ import org.junit.runners.Parameterized.Parameters;
 
 @RunWith(Parameterized.class)
 public class SelectorPartitioningTest {
-    
+
     public SelectorPartitioningTest(final Data data) {
         this.data = data;
         this.instance = new SelectorPartitioning();
@@ -60,19 +60,19 @@ public class SelectorPartitioningTest {
     private static class Data {
         final Color  color;
         final String stylesheetText;
-        
+
         Data(Color color, String stylesheetText) {
             this.color = color;
             this.stylesheetText = stylesheetText;
         }
-        
+
     }
-    
+
     private static class SimpleData extends Data {
-        
+
         final SimpleSelector selector;
         final boolean matches;
-        
+
         SimpleData(String type, String styleClass, String id, Color color) {
             this(type, styleClass, id, color, true);
         }
@@ -86,20 +86,20 @@ public class SelectorPartitioningTest {
                     .append(Double.valueOf(color.getGreen()*255).intValue()).append(",")
                     .append(Double.valueOf(color.getBlue()*255).intValue()).append(");}")
                 ).toString());
-            List<String> styleClasses = 
+            List<String> styleClasses =
                 styleClass != null ? Arrays.asList(styleClass.split("\\.")) : null;
-            this.selector = 
-                SimpleSelectorShim.getSimpleSelector(type, styleClasses, null, id);            
+            this.selector =
+                SimpleSelectorShim.getSimpleSelector(type, styleClasses, null, id);
             this.matches = matches;
         }
     }
-    
+
     private static class ComplexData extends Data {
 
         final SimpleData[] data;
         final SimpleSelector selector;
         final int matches;
-        
+
         ComplexData(SimpleSelector selector, SimpleData... data) {
             super(Color.TRANSPARENT, combineStylesheets(data));
             this.data = data;
@@ -110,7 +110,7 @@ public class SelectorPartitioningTest {
             }
             this.matches = n;
         }
-        
+
         static String combineStylesheets(Data... data) {
             StringBuilder buf = new StringBuilder();
             for (Data datum : data) {
@@ -119,8 +119,8 @@ public class SelectorPartitioningTest {
             return buf.toString();
         }
     }
-    
-    
+
+
     @Parameters
     public static Collection data() {
 
@@ -144,7 +144,7 @@ public class SelectorPartitioningTest {
             new Object[] {new SimpleData("*", null, "c", Color.rgb(red += 10, 0, 0))},
             /* selector = *.b#c */
             new Object[] {new SimpleData("*", "b", "c", Color.rgb(red += 10, 0, 0))},
-            
+
             new Object[] {
                 new ComplexData(
                     (SimpleSelector)Selector.createSelector("*.b"),
@@ -187,33 +187,33 @@ public class SelectorPartitioningTest {
                     new SimpleData("*", "b.c", null, Color.rgb(0, green += 10, 0), true)
                 )}
         });
-    }    
+    }
 
     @Test
     public void testSelectorPartitionAndMatch() {
 
-        Stylesheet stylesheet = 
+        Stylesheet stylesheet =
                 new CssParser().parse(data.stylesheetText);
-                
+
         for (Rule rule : stylesheet.getRules()) {
             for (Selector selector : RuleShim.getUnobservedSelectorList(rule)) {
                 instance.partition(selector);
             }
         }
-        
+
         if (data instanceof SimpleData) {
-            testWithSimpleData((SimpleData)data, stylesheet);            
+            testWithSimpleData((SimpleData)data, stylesheet);
         } else {
             testWithComplexData((ComplexData)data, stylesheet);
         }
     }
-    
+
     private void testWithSimpleData(SimpleData simpleData, Stylesheet stylesheet) {
-                
+
         SimpleSelector simple = simpleData.selector;
-        
+
         List<Selector> matched = instance.match(simple.getId(), simple.getName(), simple.getStyleClassSet());
-        
+
         assertEquals(1,matched.size());
         Selector selector = matched.get(0);
 
@@ -221,24 +221,24 @@ public class SelectorPartitioningTest {
 
         assertEquals(1,RuleShim.getUnobservedDeclarationList(rule).size());
         Declaration decl = RuleShim.getUnobservedDeclarationList(rule).get(0);
-        
+
         assertEquals("-fx-fill", DeclarationShim.get_property(decl));
-        
+
         Color color = (Color)DeclarationShim.get_parsedValue(decl).convert(null);
-        
+
         assertEquals(simpleData.selector.toString(), data.color.getRed(), color.getRed(), 0.00001);
         assertEquals(simpleData.selector.toString(), data.color.getGreen(), color.getGreen(), 0.00001);
         assertEquals(simpleData.selector.toString(), data.color.getBlue(), color.getBlue(), 0.00001);
-                
+
     }
-    
+
     private void testWithComplexData(ComplexData complexData, Stylesheet stylesheet) {
-                
+
         SimpleSelector simple = complexData.selector;
-        
+
         List<Selector> matched = instance.match(simple.getId(), simple.getName(), simple.getStyleClassSet());
         assertEquals(complexData.matches, matched.size());
-        
+
         for(Selector s1 : matched) {
             for (SimpleData datum : complexData.data) {
                 Selector s2 = datum.selector;
@@ -249,5 +249,5 @@ public class SelectorPartitioningTest {
         }
 
     }
-    
+
 }

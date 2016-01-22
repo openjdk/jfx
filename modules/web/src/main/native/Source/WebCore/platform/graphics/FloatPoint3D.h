@@ -120,7 +120,7 @@ public:
 
     float lengthSquared() const { return this->dot(*this); }
     float length() const { return sqrtf(lengthSquared()); }
-    
+
     float distanceTo(const FloatPoint3D& a) const;
 
 private:

@@ -45,11 +45,11 @@ import static com.sun.scenario.effect.compiler.model.Type.*;
 class SSEFuncImpls {
 
     private static Map<Function, FuncImpl> funcs = new HashMap<Function, FuncImpl>();
-    
+
     static FuncImpl get(Function func) {
         return funcs.get(func);
     }
-    
+
     static {
         // float4 sample(sampler s, float2 loc)
         declareFunctionSample(SAMPLER);
@@ -62,7 +62,7 @@ class SSEFuncImpls {
 
         // int intcast(float x)
         declareFunctionIntCast();
-        
+
         // <ftype> min(<ftype> x, <ftype> y)
         // <ftype> min(<ftype> x, float y)
         declareOverloadsMinMax("min", "((x_tmp$1 < y_tmp$2) ? x_tmp$1 : y_tmp$2)");
@@ -122,7 +122,7 @@ class SSEFuncImpls {
         // <ftype> mix(<ftype> x, <ftype> y, <ftype> a)
         // <ftype> mix(<ftype> x, <ftype> y, float a)
         declareOverloadsMix();
-        
+
         // <ftype> normalize(<ftype> x)
         declareOverloadsNormalize();
 
@@ -132,7 +132,7 @@ class SSEFuncImpls {
         // <ftype> ddy(<ftype> p)
         declareOverloadsSimple("ddy", "<ddy() not implemented for sw backends>");
     }
-    
+
     private static void declareFunction(FuncImpl impl,
                                         String name, Type... ptypes)
     {
@@ -142,7 +142,7 @@ class SSEFuncImpls {
         }
         funcs.put(f, impl);
     }
-    
+
     /**
      * Used to declare sample function:
      *   float4 sample([l,f]sampler s, float2 loc)
@@ -223,9 +223,9 @@ class SSEFuncImpls {
         };
         declareFunction(fimpl, "intcast", FLOAT);
     }
-    
+
     /**
-     * Used to declare simple functions of the following form: 
+     * Used to declare simple functions of the following form:
      *   <ftype> name(<ftype> x)
      */
     private static void declareOverloadsSimple(String name, final String pattern) {
@@ -265,7 +265,7 @@ class SSEFuncImpls {
     }
 
     /**
-     * Used to declare normalize functions of the following form: 
+     * Used to declare normalize functions of the following form:
      *   <ftype> normalize(<ftype> x)
      */
     private static void declareOverloadsNormalize() {
@@ -283,7 +283,7 @@ class SSEFuncImpls {
                 if (n > 3) s += "+\n(x_tmp_w * x_tmp_w)";
                 preamble = "float denom = sqrt(" + s + ");\n";
             }
-            
+
             final boolean useSuffix = (type != FLOAT);
             FuncImpl fimpl = new FuncImpl() {
                 @Override
@@ -302,7 +302,7 @@ class SSEFuncImpls {
     }
 
     /**
-     * Used to declare dot functions of the following form: 
+     * Used to declare dot functions of the following form:
      *   float dot(<ftype> x, <ftype> y)
      */
     private static void declareOverloadsDot() {
@@ -327,9 +327,9 @@ class SSEFuncImpls {
             declareFunction(fimpl, name, type, type);
         }
     }
-    
+
     /**
-     * Used to declare distance functions of the following form: 
+     * Used to declare distance functions of the following form:
      *   float distance(<ftype> x, <ftype> y)
      */
     private static void declareOverloadsDistance() {
@@ -354,12 +354,12 @@ class SSEFuncImpls {
             declareFunction(fimpl, name, type, type);
         }
     }
-    
+
     /**
      * Used to declare min/max functions of the following form:
      *   <ftype> name(<ftype> x, <ftype> y)
      *   <ftype> name(<ftype> x, float y)
-     * 
+     *
      * TODO: this is currently geared to simple functions like
      * min and max; we should make this more general...
      */
@@ -377,11 +377,11 @@ class SSEFuncImpls {
                 }
             };
             declareFunction(fimpl, name, type, type);
-            
+
             if (type == FLOAT) {
                 continue;
             }
-            
+
             // declare (vectype,float) variants
             fimpl = new FuncImpl() {
                 public String toString(int i, List<Expr> params) {
@@ -406,7 +406,7 @@ class SSEFuncImpls {
         final String pattern =
             "(val_tmp$1 < min_tmp$2) ? min_tmp$2 : \n" +
             "(val_tmp$1 > max_tmp$2) ? max_tmp$2 : val_tmp$1";
-        
+
         for (Type type : new Type[] {FLOAT, FLOAT2, FLOAT3, FLOAT4}) {
             // declare (vectype,vectype,vectype) variants
             final boolean useSuffix = (type != FLOAT);
@@ -420,11 +420,11 @@ class SSEFuncImpls {
                 }
             };
             declareFunction(fimpl, name, type, type, type);
-            
+
             if (type == FLOAT) {
                 continue;
             }
-            
+
             // declare (vectype,float,float) variants
             fimpl = new FuncImpl() {
                 public String toString(int i, List<Expr> params) {
@@ -451,7 +451,7 @@ class SSEFuncImpls {
             "(val_tmp$1 < min_tmp$2) ? 0.0f : \n" +
             "(val_tmp$1 > max_tmp$2) ? 1.0f : \n" +
             "(val_tmp$1 / (max_tmp$2 - min_tmp$2))";
-        
+
         for (Type type : new Type[] {FLOAT, FLOAT2, FLOAT3, FLOAT4}) {
             // declare (vectype,vectype,vectype) variants
             final boolean useSuffix = (type != FLOAT);
@@ -465,11 +465,11 @@ class SSEFuncImpls {
                 }
             };
             declareFunction(fimpl, name, type, type, type);
-            
+
             if (type == FLOAT) {
                 continue;
             }
-            
+
             // declare (float,float,vectype) variants
             fimpl = new FuncImpl() {
                 public String toString(int i, List<Expr> params) {
@@ -483,7 +483,7 @@ class SSEFuncImpls {
             declareFunction(fimpl, name, FLOAT, FLOAT, type);
         }
     }
-    
+
     /**
      * Used to declare mix functions of the following form:
      *   <ftype> mix(<ftype> x, <ftype> y, <ftype> a)
@@ -493,7 +493,7 @@ class SSEFuncImpls {
         final String name = "mix";
         final String pattern =
             "(x_tmp$1 * (1.0f - a_tmp$2) + y_tmp$1 * a_tmp$2)";
-        
+
         for (Type type : new Type[] {FLOAT, FLOAT2, FLOAT3, FLOAT4}) {
             // declare (vectype,vectype,vectype) variants
             final boolean useSuffix = (type != FLOAT);
@@ -507,11 +507,11 @@ class SSEFuncImpls {
                 }
             };
             declareFunction(fimpl, name, type, type, type);
-            
+
             if (type == FLOAT) {
                 continue;
             }
-            
+
             // declare (vectype,vectype,float) variants
             fimpl = new FuncImpl() {
                 public String toString(int i, List<Expr> params) {

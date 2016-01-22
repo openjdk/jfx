@@ -57,7 +57,7 @@ LayoutUnit RenderLineBreak::lineHeight(bool firstLine, LineDirectionMode /*direc
 
     if (m_cachedLineHeight == invalidLineHeight)
         m_cachedLineHeight = style().computedLineHeight(&view());
-    
+
     return m_cachedLineHeight;
 }
 
@@ -113,7 +113,7 @@ int RenderLineBreak::caretMinOffset() const
 }
 
 int RenderLineBreak::caretMaxOffset() const
-{ 
+{
     return 1;
 }
 

@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -63,7 +63,7 @@ InbandTextTrackPrivate::Kind InbandTextTrackPrivateAVCF::kind() const
         return InbandTextTrackPrivate::None;
 
     CFStringRef mediaType = AVCFMediaSelectionOptionGetMediaType(mediaSelectionOption());
-    
+
     if (CFStringCompare(mediaType, AVCFMediaTypeClosedCaption, kCFCompareCaseInsensitive) == kCFCompareEqualTo)
         return InbandTextTrackPrivate::Captions;
     if (CFStringCompare(mediaType, AVCFMediaTypeSubtitle, kCFCompareCaseInsensitive) == kCFCompareEqualTo) {
@@ -76,7 +76,7 @@ InbandTextTrackPrivate::Kind InbandTextTrackPrivateAVCF::kind() const
             return InbandTextTrackPrivate::Captions;
         if (AVCFMediaSelectionOptionHasMediaCharacteristic(mediaSelectionOption(), AVCFMediaCharacteristicDescribesMusicAndSoundForAccessibility))
             return InbandTextTrackPrivate::Captions;
-        
+
         return InbandTextTrackPrivate::Subtitles;
     }
 
@@ -97,7 +97,7 @@ bool InbandTextTrackPrivateAVCF::isSDH() const
 {
     if (!m_mediaSelectionOption)
         return false;
-    
+
     CFStringRef mediaType = AVCFMediaSelectionOptionGetMediaType(mediaSelectionOption());
 
     if (CFStringCompare(mediaType, AVCFMediaTypeSubtitle, kCFCompareCaseInsensitive) != kCFCompareEqualTo)
@@ -109,12 +109,12 @@ bool InbandTextTrackPrivateAVCF::isSDH() const
 
     return false;
 }
-    
+
 bool InbandTextTrackPrivateAVCF::containsOnlyForcedSubtitles() const
 {
     if (!m_mediaSelectionOption)
         return false;
-    
+
     return AVCFMediaSelectionOptionHasMediaCharacteristic(mediaSelectionOption(), AVCFMediaCharacteristicContainsOnlyForcedSubtitles);
 }
 
@@ -122,7 +122,7 @@ bool InbandTextTrackPrivateAVCF::isMainProgramContent() const
 {
     if (!m_mediaSelectionOption)
         return false;
-    
+
     return AVCFMediaSelectionOptionHasMediaCharacteristic(mediaSelectionOption(), AVCFMediaCharacteristicIsMainProgramContent);
 }
 

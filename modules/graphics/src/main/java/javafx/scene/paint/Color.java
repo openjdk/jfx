@@ -644,7 +644,7 @@ public final class Color extends Paint implements Interpolatable<Color> {
      * @throws NullPointerException if the {@code value} is {@code null}
      * @throws IllegalArgumentException if the {@code value} specifies
      *      an unsupported color name or illegal hexadecimal value
-     * @return a {@code Color} object holding the value represented 
+     * @return a {@code Color} object holding the value represented
      * by the string argument
      * @see #web(String)
      * @since JavaFX 2.1
@@ -1916,7 +1916,7 @@ public final class Color extends Paint implements Interpolatable<Color> {
         }
         return platformPaint;
     }
-    
+
     /**
      * @inheritDoc
      */

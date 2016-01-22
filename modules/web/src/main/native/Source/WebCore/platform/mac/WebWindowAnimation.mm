@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #import "config.h"
@@ -38,7 +38,7 @@ static const CGFloat slowMotionFactor = 10;
 
 static NSTimeInterval WebWindowAnimationDurationFromDuration(NSTimeInterval duration)
 {
-    return ([[NSApp currentEvent] modifierFlags] & NSShiftKeyMask) ? duration * slowMotionFactor : duration;        
+    return ([[NSApp currentEvent] modifierFlags] & NSShiftKeyMask) ? duration * slowMotionFactor : duration;
 }
 
 static NSRect scaledRect(NSRect _initialFrame, NSRect _finalFrame, CGFloat factor)
@@ -132,23 +132,23 @@ static CGFloat squaredDistance(NSPoint point1, NSPoint point2)
 {
     static const CGFloat maxAdditionalDuration = 1;
     static const CGFloat speedFactor = 0.0001f;
-    
+
     CGFloat maxDist = squaredDistance(_initialFrame.origin, _finalFrame.origin);
     CGFloat dist;
-    
+
     dist = squaredDistance(NSMakePoint(NSMaxX(_initialFrame), NSMinY(_initialFrame)), NSMakePoint(NSMaxX(_finalFrame), NSMinY(_finalFrame)));
     if (dist > maxDist)
         maxDist = dist;
-    
+
     dist = squaredDistance(NSMakePoint(NSMaxX(_initialFrame), NSMaxY(_initialFrame)), NSMakePoint(NSMaxX(_finalFrame), NSMaxY(_finalFrame)));
     if (dist > maxDist)
         maxDist = dist;
-    
+
     dist = squaredDistance(NSMakePoint(NSMinX(_initialFrame), NSMinY(_initialFrame)), NSMakePoint(NSMinX(_finalFrame), NSMinY(_finalFrame)));
     if (dist > maxDist)
         maxDist = dist;
-    
-    return MIN(sqrt(maxDist) * speedFactor, maxAdditionalDuration);    
+
+    return MIN(sqrt(maxDist) * speedFactor, maxAdditionalDuration);
 }
 
 - (void)startAnimation
@@ -185,7 +185,7 @@ static CGFloat squaredDistance(NSPoint point1, NSPoint point2)
 {
     self = [self init];
     if (!self)
-        return nil;    
+        return nil;
     _window = window;
     _initialAlpha = initialAlpha;
     _finalAlpha = finalAlpha;

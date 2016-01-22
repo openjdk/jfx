@@ -127,7 +127,7 @@ public abstract class PopupWindow extends Window {
             hide();
         }
     };
-    
+
     private WeakChangeListener<Boolean> weakOwnerNodeListener = new WeakChangeListener(changeListener);
 
     public PopupWindow() {
@@ -431,8 +431,8 @@ public abstract class PopupWindow extends Window {
         }
 
         final Scene sceneValue = getScene();
-        SceneHelper.parentEffectiveOrientationInvalidated(sceneValue);            
-        
+        SceneHelper.parentEffectiveOrientationInvalidated(sceneValue);
+
         // RT-28447
         final Scene ownerScene = getRootWindow(owner).getScene();
         if (ownerScene != null) {
@@ -463,7 +463,7 @@ public abstract class PopupWindow extends Window {
             if (c.isShowing()) {
                 c.hide();
             }
-        }        
+        }
         children.clear();
         super.hide();
         // RT-28454 when popup hides, remove listeners; these are added when the popup shows.

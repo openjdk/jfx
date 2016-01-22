@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef WebGLRenderingContext_h
@@ -319,7 +319,7 @@ public:
 
     void removeSharedObject(WebGLSharedObject*);
     void removeContextObject(WebGLContextObject*);
-    
+
     unsigned getMaxVertexAttribs() const { return m_maxVertexAttribs; }
 
     // ANGLE_instanced_arrays extension functions.
@@ -415,7 +415,7 @@ private:
 
     // List of bound VBO's. Used to maintain info about sizes for ARRAY_BUFFER and stored values for ELEMENT_ARRAY_BUFFER
     RefPtr<WebGLBuffer> m_boundArrayBuffer;
-    
+
     RefPtr<WebGLVertexArrayObjectOES> m_defaultVertexArrayObject;
     RefPtr<WebGLVertexArrayObjectOES> m_boundVertexArrayObject;
     void setBoundVertexArrayObject(PassRefPtr<WebGLVertexArrayObjectOES> arrayObject)
@@ -425,14 +425,14 @@ private:
         else
             m_boundVertexArrayObject = m_defaultVertexArrayObject;
     }
-    
+
     class VertexAttribValue {
     public:
         VertexAttribValue()
         {
             initValue();
         }
-        
+
         void initValue()
         {
             value[0] = 0.0f;
@@ -440,7 +440,7 @@ private:
             value[2] = 0.0f;
             value[3] = 1.0f;
         }
-        
+
         GC3Dfloat value[4];
     };
     Vector<VertexAttribValue> m_vertexAttribValue;

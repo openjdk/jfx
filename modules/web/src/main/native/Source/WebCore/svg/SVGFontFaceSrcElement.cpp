@@ -31,9 +31,9 @@
 #include "SVGNames.h"
 
 namespace WebCore {
-    
+
 using namespace SVGNames;
-    
+
 inline SVGFontFaceSrcElement::SVGFontFaceSrcElement(const QualifiedName& tagName, Document& document)
     : SVGElement(tagName, document)
 {

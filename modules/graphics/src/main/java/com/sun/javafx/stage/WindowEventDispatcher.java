@@ -48,7 +48,7 @@ public class WindowEventDispatcher extends CompositeEventDispatcher {
         this(new EventRedirector(window),
              new WindowCloseRequestHandler(window),
              new EventHandlerManager(window));
-        
+
     }
 
     public WindowEventDispatcher(
@@ -70,7 +70,7 @@ public class WindowEventDispatcher extends CompositeEventDispatcher {
     public final WindowCloseRequestHandler getWindowCloseRequestHandler() {
         return windowCloseRequestHandler;
     }
-    
+
     public final EventHandlerManager getEventHandlerManager() {
         return eventHandlerManager;
     }

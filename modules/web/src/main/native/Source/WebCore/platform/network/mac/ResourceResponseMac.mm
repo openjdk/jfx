@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #import "config.h"
@@ -107,7 +107,7 @@ void ResourceResponse::platformLazyInit(InitLevel initLevel)
 
     if (m_isNull || !m_nsResponse)
         return;
-    
+
     if (m_initLevel < CommonFieldsOnly && initLevel >= CommonFieldsOnly) {
         NSAutoreleasePool* pool = [[NSAutoreleasePool alloc] init];
 
@@ -128,14 +128,14 @@ void ResourceResponse::platformLazyInit(InitLevel initLevel)
             m_httpStatusCode = [httpResponse statusCode];
 
             NSDictionary *headers = [httpResponse allHeaderFields];
-            
+
             for (unsigned i = 0; i < WTF_ARRAY_LENGTH(commonHeaderFields); ++i) {
                 if (NSString* headerValue = [headers objectForKey:commonHeaderFields[i]])
                     m_httpHeaderFields.set([commonHeaderFields[i] UTF8String], headerValue);
             }
         } else
             m_httpStatusCode = 0;
-        
+
         [pool drain];
     }
 
@@ -155,18 +155,18 @@ void ResourceResponse::platformLazyInit(InitLevel initLevel)
             NSEnumerator *e = [headers keyEnumerator];
             while (NSString *name = [e nextObject])
                 m_httpHeaderFields.set(name, [headers objectForKey:name]);
-            
+
             [pool drain];
         }
     }
-     
+
     if (m_initLevel < AllFields && initLevel >= AllFields)
         m_suggestedFilename = [m_nsResponse.get() suggestedFilename];
 
     m_initLevel = initLevel;
 }
 
-    
+
 bool ResourceResponse::platformCompare(const ResourceResponse& a, const ResourceResponse& b)
 {
     return a.nsURLResponse() == b.nsURLResponse();

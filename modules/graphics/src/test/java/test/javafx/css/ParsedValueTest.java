@@ -397,7 +397,7 @@ public class ParsedValueTest {
         assertFalse(value6.equals(value7));
         assertFalse(value7.equals(value6));
     }
-    
+
     private void writeBinary(ParsedValueImpl parsedValue) {
 
         try {
@@ -409,9 +409,9 @@ public class ParsedValueTest {
         } catch (IOException ioe) {
             org.junit.Assert.fail(parsedValue.toString());
         }
-        
+
     }
-    
+
     /**
      * Test of writeBinary method, of class ParsedValueImpl.
      */
@@ -419,14 +419,14 @@ public class ParsedValueTest {
     public void testWriteReadBinary() throws Exception {
         Font font = Font.getDefault();
         Size size = new Size(1.0, SizeUnits.EM);
-        
+
         ParsedValueImpl parsedValue =
             new ParsedValueImpl<ParsedValue<?,Size>,Number>(
                 new ParsedValueImpl<Size,Size>(new Size(1.0, SizeUnits.EM), null),
                 SizeConverter.getInstance());
 
         writeBinary(parsedValue);
-        
+
         parsedValue =
                 new ParsedValueImpl<ParsedValue[],Number[]>(
                     new ParsedValueImpl[] {
@@ -436,7 +436,7 @@ public class ParsedValueTest {
                 );
 
         writeBinary(parsedValue);
-        
+
         parsedValue =
                 new ParsedValueImpl<ParsedValue[][],Number[][]>(
                     new ParsedValueImpl[][] {
@@ -452,7 +452,7 @@ public class ParsedValueTest {
                 );
 
         writeBinary(parsedValue);
-        
+
         parsedValue =
                 new ParsedValueImpl<ParsedValue[][],Number[][]>(
                     new ParsedValueImpl[][] {
@@ -468,7 +468,7 @@ public class ParsedValueTest {
                 );
 
         writeBinary(parsedValue);
-        
+
         parsedValue =
                 new ParsedValueImpl<ParsedValue[][],Number[][]>(
                     new ParsedValueImpl[][] {
@@ -481,7 +481,7 @@ public class ParsedValueTest {
                 );
 
         writeBinary(parsedValue);
-        
+
     }
 
     private void writeAndReadBinary(ParsedValueImpl<?,?> parsedValue) {
@@ -501,8 +501,8 @@ public class ParsedValueTest {
             System.err.println(ioe);
             org.junit.Assert.fail(parsedValue.toString());
         }
-        
-    }    
+
+    }
     /**
      * Test of readBinary method, of class ParsedValueImpl.
      */
@@ -510,14 +510,14 @@ public class ParsedValueTest {
     public void testReadBinary() throws Exception {
         Font font = Font.getDefault();
         Size size = new Size(1.0, SizeUnits.EM);
-        
+
         ParsedValueImpl parsedValue =
             new ParsedValueImpl<ParsedValue<?,Size>,Number>(
                 new ParsedValueImpl<Size,Size>(new Size(1.0, SizeUnits.EM), null),
                 SizeConverter.getInstance());
 
         writeAndReadBinary(parsedValue);
-        
+
         parsedValue =
                 new ParsedValueImpl<ParsedValue[],Number[]>(
                     new ParsedValueImpl[] {
@@ -527,7 +527,7 @@ public class ParsedValueTest {
                 );
 
         writeAndReadBinary(parsedValue);
-        
+
         parsedValue =
                 new ParsedValueImpl<ParsedValue[][],Number[][]>(
                     new ParsedValueImpl[][] {
@@ -543,7 +543,7 @@ public class ParsedValueTest {
                 );
 
         writeAndReadBinary(parsedValue);
-        
+
         parsedValue =
                 new ParsedValueImpl<ParsedValue[][],Number[][]>(
                     new ParsedValueImpl[][] {
@@ -559,7 +559,7 @@ public class ParsedValueTest {
                 );
 
         writeAndReadBinary(parsedValue);
-        
+
         parsedValue =
                 new ParsedValueImpl<ParsedValue[][],Number[][]>(
                     new ParsedValueImpl[][] {

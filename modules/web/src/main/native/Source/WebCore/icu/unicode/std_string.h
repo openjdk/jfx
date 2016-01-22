@@ -18,7 +18,7 @@
 #define __STD_STRING_H__
 
 /**
- * \file 
+ * \file
  * \brief C++ API: Central ICU header for including the C++ standard &lt;string&gt;
  *                 header and for related definitions.
  */

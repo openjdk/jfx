@@ -39,20 +39,20 @@ G_BEGIN_DECLS
  */
 #if !defined (G_VA_COPY)
 #  if defined (__GNUC__) && defined (__PPC__) && (defined (_CALL_SYSV) || defined (_WIN32))
-#    define G_VA_COPY(ap1, ap2)	  (*(ap1) = *(ap2))
+#    define G_VA_COPY(ap1, ap2)   (*(ap1) = *(ap2))
 #  elif defined (G_VA_COPY_AS_ARRAY)
-#    define G_VA_COPY(ap1, ap2)	  memmove ((ap1), (ap2), sizeof (va_list))
+#    define G_VA_COPY(ap1, ap2)   memmove ((ap1), (ap2), sizeof (va_list))
 #  else /* va_list is a pointer */
-#    define G_VA_COPY(ap1, ap2)	  ((ap1) = (ap2))
+#    define G_VA_COPY(ap1, ap2)   ((ap1) = (ap2))
 #  endif /* va_list is a pointer */
 #endif /* !G_VA_COPY */
 
 /* inlining hassle. for compilers that don't allow the 'inline' keyword,
  * mostly because of strict ANSI C compliance or dumbness, we try to fall
  * back to either '__inline__' or '__inline'.
- * G_CAN_INLINE is defined in glibconfig.h if the compiler seems to be 
- * actually *capable* to do function inlining, in which case inline 
- * function bodies do make sense. we also define G_INLINE_FUNC to properly 
+ * G_CAN_INLINE is defined in glibconfig.h if the compiler seems to be
+ * actually *capable* to do function inlining, in which case inline
+ * function bodies do make sense. we also define G_INLINE_FUNC to properly
  * export the function prototypes if no inlining can be performed.
  * inline function bodies have to be special cased with G_CAN_INLINE and a
  * .c file specific macro to allow one compiled instance with extern linkage
@@ -74,9 +74,9 @@ G_BEGIN_DECLS
 #ifdef G_IMPLEMENT_INLINES
 #  define G_INLINE_FUNC _GLIB_EXTERN
 #  undef  G_CAN_INLINE
-#elif defined (__GNUC__) 
+#elif defined (__GNUC__)
 #  define G_INLINE_FUNC static __inline __attribute__ ((unused))
-#elif defined (G_CAN_INLINE) 
+#elif defined (G_CAN_INLINE)
 #  define G_INLINE_FUNC static inline
 #else /* can't inline */
 #  define G_INLINE_FUNC _GLIB_EXTERN
@@ -91,7 +91,7 @@ const gchar *         g_get_home_dir         (void);
 GLIB_AVAILABLE_IN_ALL
 const gchar *         g_get_tmp_dir          (void);
 GLIB_AVAILABLE_IN_ALL
-const gchar *         g_get_host_name	     (void);
+const gchar *         g_get_host_name        (void);
 GLIB_AVAILABLE_IN_ALL
 const gchar *         g_get_prgname          (void);
 GLIB_AVAILABLE_IN_ALL
@@ -187,27 +187,27 @@ typedef struct _GDebugKey GDebugKey;
 struct _GDebugKey
 {
   const gchar *key;
-  guint	       value;
+  guint        value;
 };
 
 /* Miscellaneous utility functions
  */
 GLIB_AVAILABLE_IN_ALL
 guint                 g_parse_debug_string (const gchar     *string,
-					    const GDebugKey *keys,
-					    guint            nkeys);
+                        const GDebugKey *keys,
+                        guint            nkeys);
 
 GLIB_AVAILABLE_IN_ALL
 gint                  g_snprintf           (gchar       *string,
-					    gulong       n,
-					    gchar const *format,
-					    ...) G_GNUC_PRINTF (3, 4);
+                        gulong       n,
+                        gchar const *format,
+                        ...) G_GNUC_PRINTF (3, 4);
 GLIB_AVAILABLE_IN_ALL
 gint                  g_vsnprintf          (gchar       *string,
-					    gulong       n,
-					    gchar const *format,
-					    va_list      args)
-					    G_GNUC_PRINTF(3, 0);
+                        gulong       n,
+                        gchar const *format,
+                        va_list      args)
+                        G_GNUC_PRINTF(3, 0);
 
 GLIB_AVAILABLE_IN_ALL
 void                  g_nullify_pointer    (gpointer    *nullify_location);
@@ -239,7 +239,7 @@ gchar *g_format_size_for_display (goffset size);
 typedef void (*GVoidFunc) (void);
 #define ATEXIT(proc) g_ATEXIT(proc)
 GLIB_DEPRECATED
-void	g_atexit		(GVoidFunc    func);
+void    g_atexit        (GVoidFunc    func);
 
 #ifdef G_OS_WIN32
 /* It's a bad idea to wrap atexit() on Windows. If the GLib DLL calls
@@ -263,18 +263,18 @@ gchar*  g_find_program_in_path  (const gchar *program);
 
 /* Bit tests
  */
-G_INLINE_FUNC gint	g_bit_nth_lsf (gulong  mask,
-				       gint    nth_bit) G_GNUC_CONST;
-G_INLINE_FUNC gint	g_bit_nth_msf (gulong  mask,
-				       gint    nth_bit) G_GNUC_CONST;
-G_INLINE_FUNC guint	g_bit_storage (gulong  number) G_GNUC_CONST;
+G_INLINE_FUNC gint  g_bit_nth_lsf (gulong  mask,
+                       gint    nth_bit) G_GNUC_CONST;
+G_INLINE_FUNC gint  g_bit_nth_msf (gulong  mask,
+                       gint    nth_bit) G_GNUC_CONST;
+G_INLINE_FUNC guint g_bit_storage (gulong  number) G_GNUC_CONST;
 
 /* inline function implementations
  */
 #if defined (G_CAN_INLINE) || defined (__G_UTILS_C__)
 G_INLINE_FUNC gint
 g_bit_nth_lsf (gulong mask,
-	       gint   nth_bit)
+           gint   nth_bit)
 {
   if (G_UNLIKELY (nth_bit < -1))
     nth_bit = -1;
@@ -282,13 +282,13 @@ g_bit_nth_lsf (gulong mask,
     {
       nth_bit++;
       if (mask & (1UL << nth_bit))
-	return nth_bit;
+    return nth_bit;
     }
   return -1;
 }
 G_INLINE_FUNC gint
 g_bit_nth_msf (gulong mask,
-	       gint   nth_bit)
+           gint   nth_bit)
 {
   if (nth_bit < 0 || G_UNLIKELY (nth_bit > GLIB_SIZEOF_LONG * 8))
     nth_bit = GLIB_SIZEOF_LONG * 8;
@@ -296,7 +296,7 @@ g_bit_nth_msf (gulong mask,
     {
       nth_bit--;
       if (mask & (1UL << nth_bit))
-	return nth_bit;
+    return nth_bit;
     }
   return -1;
 }
@@ -305,10 +305,10 @@ g_bit_storage (gulong number)
 {
 #if defined(__GNUC__) && (__GNUC__ >= 4) && defined(__OPTIMIZE__)
   return G_LIKELY (number) ?
-	   ((GLIB_SIZEOF_LONG * 8U - 1) ^ (guint) __builtin_clzl(number)) + 1 : 1;
+       ((GLIB_SIZEOF_LONG * 8U - 1) ^ (guint) __builtin_clzl(number)) + 1 : 1;
 #else
   guint n_bits = 0;
-  
+
   do
     {
       n_bits++;
@@ -342,30 +342,30 @@ g_bit_storage (gulong number)
 #ifndef G_PLATFORM_WIN32
 # define G_WIN32_DLLMAIN_FOR_DLL_NAME(static, dll_name)
 #else
-# define G_WIN32_DLLMAIN_FOR_DLL_NAME(static, dll_name)			\
-static char *dll_name;							\
-									\
-BOOL WINAPI								\
-DllMain (HINSTANCE hinstDLL,						\
-	 DWORD     fdwReason,						\
-	 LPVOID    lpvReserved)						\
-{									\
-  wchar_t wcbfr[1000];							\
-  char *tem;								\
-  switch (fdwReason)							\
-    {									\
-    case DLL_PROCESS_ATTACH:						\
+# define G_WIN32_DLLMAIN_FOR_DLL_NAME(static, dll_name)         \
+static char *dll_name;                          \
+                                    \
+BOOL WINAPI                             \
+DllMain (HINSTANCE hinstDLL,                        \
+     DWORD     fdwReason,                       \
+     LPVOID    lpvReserved)                     \
+{                                   \
+  wchar_t wcbfr[1000];                          \
+  char *tem;                                \
+  switch (fdwReason)                            \
+    {                                   \
+    case DLL_PROCESS_ATTACH:                        \
       GetModuleFileNameW ((HMODULE) hinstDLL, wcbfr, G_N_ELEMENTS (wcbfr)); \
-      tem = g_utf16_to_utf8 (wcbfr, -1, NULL, NULL, NULL);		\
-      dll_name = g_path_get_basename (tem);				\
-      g_free (tem);							\
-      break;								\
-    }									\
-									\
-  return TRUE;								\
+      tem = g_utf16_to_utf8 (wcbfr, -1, NULL, NULL, NULL);      \
+      dll_name = g_path_get_basename (tem);             \
+      g_free (tem);                         \
+      break;                                \
+    }                                   \
+                                    \
+  return TRUE;                              \
 }
 
-#endif	/* !G_DISABLE_DEPRECATED */
+#endif  /* !G_DISABLE_DEPRECATED */
 
 #endif /* G_PLATFORM_WIN32 */
 

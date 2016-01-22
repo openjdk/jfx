@@ -12,7 +12,7 @@ class ResourceError : public ResourceErrorBase {
 public:
     ResourceError() {}
 
-    ResourceError(const String& domain, int errorCode, 
+    ResourceError(const String& domain, int errorCode,
                   const String& failingURL, const String& localizedDescription)
         : ResourceErrorBase(domain, errorCode, failingURL, localizedDescription)
     {

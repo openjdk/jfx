@@ -27,8 +27,8 @@ questions.
 <?import test.javafx.fxml.*?>
 <?import java.lang.*?>
 <Widget xmlns:fx="http://javafx.com/fxml">
-    <Widget fx:id="widget1" 
-            styles="@@a, %%b, $$c, \@c, \%d, \$e" 
+    <Widget fx:id="widget1"
+            styles="@@a, %%b, $$c, \@c, \%d, \$e"
             names="@@a, %%b, $$c, \@c, \%d, \$e,"
             ratios="1.0, 2.0, 3.0"/>
 </Widget>

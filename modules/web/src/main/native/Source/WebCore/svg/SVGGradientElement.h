@@ -85,7 +85,7 @@ public:
     };
 
     Vector<Gradient::ColorStop> buildStops();
- 
+
 protected:
     SVGGradientElement(const QualifiedName&, Document&);
 

@@ -49,7 +49,7 @@ void copyToDragPasteboardIfNeeded(id<NSDraggingInfo> sender)
         [sender draggingSequenceNumber] != lastDragSesionNumber)
     {
         lastDragSesionNumber = [sender draggingSequenceNumber];
-        
+
         NSPasteboard* dragPasteboard = [NSPasteboard pasteboardWithName:NSDragPboard];
         [dragPasteboard clearContents];
         for (NSString* type in [sourcePasteboard types])
@@ -63,7 +63,7 @@ static inline void DumpPasteboard(NSPasteboard *pasteboard)
 {
     NSLog(@"\n");
     NSLog(@"DumpPasteboard");
-    
+
     NSArray *items = [pasteboard pasteboardItems];
     if ([items count] > 0)
     {
@@ -76,9 +76,9 @@ static inline void DumpPasteboard(NSPasteboard *pasteboard)
             {
                 NSString *type = [types objectAtIndex:j];
                 NSLog(@"--------- type: %@", type);
-                
+
                 NSUInteger length = 128;
-                
+
                 NSData *data = [item dataForType:type];
                 NSString *string = [item stringForType:type];
                 id representation = nil;
@@ -96,21 +96,21 @@ static inline void DumpPasteboard(NSPasteboard *pasteboard)
             }
         }
     }
-    
+
     NSLog(@"\n");
 }
 
 static inline jbyteArray ByteArrayFromPixels(JNIEnv *env, void *data, size_t width, size_t height)
 {
     jbyteArray javaArray = NULL;
-    
+
     if (data != NULL)
     {
         jsize length = 4*(jsize)(width*height);
-        
+
         javaArray = (*env)->NewByteArray(env, length + 4*(1+1)); // pixels + (width+height)
         GLASS_CHECK_EXCEPTION(env);
-        
+
         if (javaArray != NULL)
         {
             jbyte *w = (jbyte*)&width;
@@ -137,26 +137,26 @@ static inline jbyteArray ByteArrayFromPixels(JNIEnv *env, void *data, size_t wid
             GLASS_CHECK_EXCEPTION(env);
         }
     }
-    
+
     return javaArray;
 }
 
 static inline jbyteArray ByteArrayFromNSData(JNIEnv *env, NSData *data)
 {
     jbyteArray javaArray = NULL;
-    
+
     if (data != nil)
     {
         javaArray = (*env)->NewByteArray(env, (jsize)[data length]);
         GLASS_CHECK_EXCEPTION(env);
-        
+
         if (javaArray != NULL)
         {
             (*env)->SetByteArrayRegion(env, javaArray, 0, (jsize)[data length], (jbyte *)[data bytes]);
             GLASS_CHECK_EXCEPTION(env);
         }
     }
-    
+
     return javaArray;
 }
 
@@ -203,7 +203,7 @@ static inline void SetNSPasteboardItemValueForUtf(JNIEnv *env, NSPasteboardItem 
     {
         isString = YES;
     }
-    
+
     if (isString == YES)
     {
         NSString *string = nil;
@@ -236,12 +236,12 @@ static inline void SetNSPasteboardItemValueForUtf(JNIEnv *env, NSPasteboardItem 
             if (array != nil) {
                 if (sizeof(array) == sizeof(jint) * 2) {
                     jint x = CFSwapInt32BigToHost(((jint *)array)[0]);
-                    jint y = CFSwapInt32BigToHost(((jint *)array)[1]);                    
+                    jint y = CFSwapInt32BigToHost(((jint *)array)[1]);
                     offset = NSMakePoint((float)x, (float)y);
                 }
                 (*env)->ReleaseByteArrayElements(env, jValue, array, 0);
             }
-            
+
             [item setString:NSStringFromPoint(offset) forType:DRAG_IMAGE_OFFSET];
         }
         else
@@ -275,7 +275,7 @@ static inline NSPasteboardItem *NSPasteboardItemFromArray(JNIEnv *env, jobjectAr
                 {
                     jstring jUtf = (*env)->GetObjectArrayElement(env, jRepresentation, com_sun_glass_ui_mac_MacPasteboard_UtfIndex);
                     jobject jObject = (*env)->GetObjectArrayElement(env, jRepresentation, com_sun_glass_ui_mac_MacPasteboard_ObjectIndex);
-                    
+
                     NSString *utf = nil;
                     {
                         const jchar *chars = (*env)->GetStringChars(env, jUtf, NULL);
@@ -307,7 +307,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacPasteboard__1initIDs
 (JNIEnv *env, jclass jPasteboard)
 {
     LOG("Java_com_sun_glass_ui_mac_MacPasteboard__1initIDs");
-    
+
 //    NSLog(@"NSPasteboardTypeString: %@", NSPasteboardTypeString);
 //    NSLog(@"NSPasteboardTypePDF: %@", NSPasteboardTypePDF);
 //    NSLog(@"NSPasteboardTypeTIFF: %@", NSPasteboardTypeTIFF);
@@ -334,14 +334,14 @@ JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_mac_MacPasteboard__1createSystemPa
 (JNIEnv *env, jobject jPasteboard, jint jType)
 {
     LOG("Java_com_sun_glass_ui_mac_MacPasteboard__1createSystemPasteboard: %d", jType);
-    
+
     jlong ptr = 0L;
-    
+
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
     GLASS_POOL_ENTER;
     {
         NSPasteboard *pasteboard = nil;
-        
+
         switch (jType)
         {
             case com_sun_glass_ui_mac_MacPasteboard_General:
@@ -351,12 +351,12 @@ JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_mac_MacPasteboard__1createSystemPa
                 pasteboard = [NSPasteboard pasteboardWithName:NSDragPboard];
                 break;
         }
-        
+
         ptr = ptr_to_jlong(pasteboard);
     }
     GLASS_POOL_EXIT;
     GLASS_CHECK_EXCEPTION(env);
-    
+
     return ptr;
 }
 
@@ -369,9 +369,9 @@ JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_mac_MacPasteboard__1createUserPast
 (JNIEnv *env, jobject jPasteboard, jstring jName)
 {
     LOG("Java_com_sun_glass_ui_mac_MacPasteboard__1createUserPasteboard");
-    
+
     jlong ptr = 0L;
-    
+
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
     GLASS_POOL_ENTER;
     {
@@ -390,7 +390,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_mac_MacPasteboard__1createUserPast
     }
     GLASS_POOL_EXIT;
     GLASS_CHECK_EXCEPTION(env);
-    
+
     return ptr;
 }
 
@@ -403,9 +403,9 @@ JNIEXPORT jstring JNICALL Java_com_sun_glass_ui_mac_MacPasteboard__1getName
 (JNIEnv *env, jobject jPasteboard, jlong jPtr)
 {
     LOG("Java_com_sun_glass_ui_mac_MacPasteboard__1getName");
-    
+
     jstring name = NULL;
-    
+
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
     GLASS_POOL_ENTER;
     {
@@ -415,7 +415,7 @@ JNIEXPORT jstring JNICALL Java_com_sun_glass_ui_mac_MacPasteboard__1getName
     }
     GLASS_POOL_EXIT;
     GLASS_CHECK_EXCEPTION(env);
-    
+
     return name;
 }
 
@@ -428,15 +428,15 @@ JNIEXPORT jobjectArray JNICALL Java_com_sun_glass_ui_mac_MacPasteboard__1getUTFs
 (JNIEnv *env, jobject jPasteboard, jlong jPtr)
 {
     LOG("Java_com_sun_glass_ui_mac_MacPasteboard__1getUTFs");
-    
+
     jobjectArray utfs = NULL;
-    
+
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
     GLASS_POOL_ENTER;
     {
         NSPasteboard *pasteboard = (NSPasteboard*)jlong_to_ptr(jPtr);
         //DumpPasteboard(pasteboard);
-        
+
         NSArray *items = [pasteboard pasteboardItems];
         if ([items count] > 0)
         {
@@ -447,7 +447,7 @@ JNIEXPORT jobjectArray JNICALL Java_com_sun_glass_ui_mac_MacPasteboard__1getUTFs
             for (NSUInteger i=0; i<[items count]; i++)
             {
                 NSPasteboardItem *item = [items objectAtIndex:i];
-                
+
                 NSArray *types = [item types];
                 if ([types count] > 0)
                 {
@@ -473,7 +473,7 @@ JNIEXPORT jobjectArray JNICALL Java_com_sun_glass_ui_mac_MacPasteboard__1getUTFs
     }
     GLASS_POOL_EXIT;
     GLASS_CHECK_EXCEPTION(env);
-    
+
     return utfs;
 }
 
@@ -486,9 +486,9 @@ JNIEXPORT jbyteArray JNICALL Java_com_sun_glass_ui_mac_MacPasteboard__1getItemAs
 (JNIEnv *env, jobject jPasteboard, jlong jPtr, jint jIndex)
 {
     LOG("Java_com_sun_glass_ui_mac_MacPasteboard__1getItemAsRawImage");
-    
+
     jbyteArray bytes = NULL;
-    
+
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
     GLASS_POOL_ENTER;
     {
@@ -496,7 +496,7 @@ JNIEXPORT jbyteArray JNICALL Java_com_sun_glass_ui_mac_MacPasteboard__1getItemAs
         {
             NSPasteboard *pasteboard = (NSPasteboard*)jlong_to_ptr(jPtr);
             NSArray *items = [pasteboard pasteboardItems];
-            
+
             NSPasteboardItem *item = [items objectAtIndex:(NSUInteger)jIndex];
             if (item != nil)
             {
@@ -507,7 +507,7 @@ JNIEXPORT jbyteArray JNICALL Java_com_sun_glass_ui_mac_MacPasteboard__1getItemAs
                                  NSPasteboardTypePNG,
                                  NSPasteboardTypePDF,
                                  nil];
-                
+
                 NSData *data = nil;
                 for (NSUInteger i=0; i<[utfs count]; i++)
                 {
@@ -517,7 +517,7 @@ JNIEXPORT jbyteArray JNICALL Java_com_sun_glass_ui_mac_MacPasteboard__1getItemAs
                         break;
                     }
                 }
-                
+
                 NSImage *image = [[[NSImage alloc] initWithData:data] autorelease];
                 if (image == nil)
                 {
@@ -525,7 +525,7 @@ JNIEXPORT jbyteArray JNICALL Java_com_sun_glass_ui_mac_MacPasteboard__1getItemAs
                     NSString *file = [item stringForType:(NSString*)kUTTypeURL];
                     if (file != nil)
                     {
-                        NSURL *url = [NSURL URLWithString:file]; 
+                        NSURL *url = [NSURL URLWithString:file];
                         image = [[[NSImage alloc] initByReferencingURL:url] autorelease];
                     }
                 }
@@ -535,11 +535,11 @@ JNIEXPORT jbyteArray JNICALL Java_com_sun_glass_ui_mac_MacPasteboard__1getItemAs
                     NSString *file = [item stringForType:(NSString*)kUTTypeFileURL];
                     if (file != nil)
                     {
-                        NSURL *url = [NSURL URLWithString:file]; 
+                        NSURL *url = [NSURL URLWithString:file];
                         image = [[[NSImage alloc] initByReferencingURL:url] autorelease];
                     }
                 }
-                
+
 #if 0
                 // last try: if no image yet, try asking the pastebard for one (it's not per item though)
                 if ((image == nil) && ([NSImage canInitWithPasteboard:pasteboard]))
@@ -547,11 +547,11 @@ JNIEXPORT jbyteArray JNICALL Java_com_sun_glass_ui_mac_MacPasteboard__1getItemAs
                     image = [[[NSImage alloc] initWithPasteboard:pasteboard] autorelease];
                 }
 #endif
-                
+
                 if (image != nil)
                 {
                     CGImageRef cgImage = [image CGImageForProposedRect:NULL context:nil hints:nil];
-                    
+
                     size_t width = CGImageGetWidth(cgImage);
                     size_t height = CGImageGetHeight(cgImage);
                     uint32_t *pixels = malloc(4*width*height);
@@ -562,9 +562,9 @@ JNIEXPORT jbyteArray JNICALL Java_com_sun_glass_ui_mac_MacPasteboard__1getItemAs
                         CGContextSetBlendMode(ctx, kCGBlendModeCopy);
                         CGContextDrawImage(ctx, CGRectMake(0, 0, width, height), cgImage);
                         CGContextFlush(ctx);
-                        
+
                         bytes = ByteArrayFromPixels(env, pixels, width, height);
-                        
+
                         CGColorSpaceRelease(space);
                         free(pixels);
                     }
@@ -574,7 +574,7 @@ JNIEXPORT jbyteArray JNICALL Java_com_sun_glass_ui_mac_MacPasteboard__1getItemAs
     }
     GLASS_POOL_EXIT;
     GLASS_CHECK_EXCEPTION(env);
-    
+
     return bytes;
 }
 
@@ -587,9 +587,9 @@ JNIEXPORT jstring JNICALL Java_com_sun_glass_ui_mac_MacPasteboard__1getItemStrin
 (JNIEnv *env, jobject jPasteboard, jlong jPtr, jint jIndex, jstring jUtf)
 {
     LOG("Java_com_sun_glass_ui_mac_MacPasteboard__1getItemStringForUTF");
-    
+
     jstring string = NULL;
-    
+
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
     GLASS_POOL_ENTER;
     {
@@ -623,7 +623,7 @@ JNIEXPORT jstring JNICALL Java_com_sun_glass_ui_mac_MacPasteboard__1getItemStrin
     }
     GLASS_POOL_EXIT;
     GLASS_CHECK_EXCEPTION(env);
-    
+
     return string;
 }
 
@@ -636,9 +636,9 @@ JNIEXPORT jbyteArray JNICALL Java_com_sun_glass_ui_mac_MacPasteboard__1getItemBy
 (JNIEnv *env, jobject jPasteboard, jlong jPtr, jint jIndex, jstring jUtf)
 {
     LOG("Java_com_sun_glass_ui_mac_MacPasteboard__1getItemBytesForUTF");
-    
+
     jbyteArray bytes = NULL;
-    
+
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
     GLASS_POOL_ENTER;
     {
@@ -659,7 +659,7 @@ JNIEXPORT jbyteArray JNICALL Java_com_sun_glass_ui_mac_MacPasteboard__1getItemBy
                 NSPasteboard *pasteboard = (NSPasteboard*)jlong_to_ptr(jPtr);
                 NSArray *items = [pasteboard pasteboardItems];
                 NSPasteboardItem *item = [items objectAtIndex:(NSUInteger)jIndex];
-                
+
                 NSData *data = [item dataForType:utf];
                 bytes = ByteArrayFromNSData(env, data);
             }
@@ -667,7 +667,7 @@ JNIEXPORT jbyteArray JNICALL Java_com_sun_glass_ui_mac_MacPasteboard__1getItemBy
     }
     GLASS_POOL_EXIT;
     GLASS_CHECK_EXCEPTION(env);
-    
+
     return bytes;
 }
 
@@ -680,15 +680,15 @@ JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_mac_MacPasteboard__1putItemsFromAr
 (JNIEnv *env, jobject jPasteboard, jlong jPtr, jobjectArray jObjects, jint supportedActions)
 {
     LOG("Java_com_sun_glass_ui_mac_MacPasteboard__1putItemsFromArray");
-    
+
     jlong seed = 0L;
-    
+
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
     GLASS_POOL_ENTER;
     {
         NSPasteboard *pasteboard = (NSPasteboard*)jlong_to_ptr(jPtr);
         seed = [pasteboard clearContents];
-        
+
         jsize itemCount = (*env)->GetArrayLength(env, jObjects);
         //NSLog(@"Java_com_sun_glass_ui_mac_MacPasteboard__1putItems itemCount: %d", itemCount);
         if (itemCount > 0)
@@ -704,10 +704,10 @@ JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_mac_MacPasteboard__1putItemsFromAr
                     [objects addObject:item];
                 }
             }
-            
+
             // http://developer.apple.com/library/mac/#documentation/cocoa/Conceptual/PasteboardGuide106/Articles/pbCustom.html
             [pasteboard writeObjects:objects];
-            
+
             if (pasteboard == [NSPasteboard pasteboardWithName:NSDragPboard])
             {
                 [GlassDragSource flushWithMask:supportedActions];
@@ -716,7 +716,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_mac_MacPasteboard__1putItemsFromAr
     }
     GLASS_POOL_EXIT;
     GLASS_CHECK_EXCEPTION(env);
-    
+
     return seed;
 }
 
@@ -729,9 +729,9 @@ JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_mac_MacPasteboard__1clear
 (JNIEnv *env, jobject jPasteboard, jlong jPtr)
 {
     LOG("Java_com_sun_glass_ui_mac_MacPasteboard__1clear");
-    
+
     jlong seed = 0L;
-    
+
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
     GLASS_POOL_ENTER;
     {
@@ -740,7 +740,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_mac_MacPasteboard__1clear
     }
     GLASS_POOL_EXIT;
     GLASS_CHECK_EXCEPTION(env);
-    
+
     return seed;
 }
 
@@ -753,9 +753,9 @@ JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_mac_MacPasteboard__1getSeed
 (JNIEnv *env, jobject jPasteboard, jlong jPtr)
 {
     LOG("Java_com_sun_glass_ui_mac_MacPasteboard__1getSeed");
-    
+
     jlong seed = 0L;
-    
+
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
     GLASS_POOL_ENTER;
     {
@@ -764,7 +764,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_mac_MacPasteboard__1getSeed
     }
     GLASS_POOL_EXIT;
     GLASS_CHECK_EXCEPTION(env);
-    
+
     return seed;
 }
 
@@ -777,7 +777,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacPasteboard__1release
 (JNIEnv *env, jobject jPasteboard, jlong jPtr)
 {
     LOG("Java_com_sun_glass_ui_mac_MacPasteboard__1release");
-    
+
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
     GLASS_POOL_ENTER;
     {
@@ -797,9 +797,9 @@ JNIEXPORT jint JNICALL Java_com_sun_glass_ui_mac_MacPasteboard__1getAllowedOpera
 (JNIEnv *env, jobject jPasteboard, jlong jPtr)
 {
     LOG("Java_com_sun_glass_ui_mac_MacPasteboard__1getAllowedOperation");
-    
+
     jint mask = 0;
-    
+
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
     GLASS_POOL_ENTER;
     {
@@ -817,6 +817,6 @@ JNIEXPORT jint JNICALL Java_com_sun_glass_ui_mac_MacPasteboard__1getAllowedOpera
     }
     GLASS_POOL_EXIT;
     GLASS_CHECK_EXCEPTION(env);
-    
+
     return mask;
 }

@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -165,25 +165,25 @@ NPObject* _NPN_CreateNoScriptObject(void)
 bool _NPN_InvokeDefault(NPP, NPObject* o, const NPVariant* args, uint32_t argCount, NPVariant* result)
 {
     if (o->_class == NPScriptObjectClass) {
-        JavaScriptObject* obj = reinterpret_cast<JavaScriptObject*>(o); 
-        
+        JavaScriptObject* obj = reinterpret_cast<JavaScriptObject*>(o);
+
         VOID_TO_NPVARIANT(*result);
-        
+
         // Lookup the function object.
         RootObject* rootObject = obj->rootObject;
         if (!rootObject || !rootObject->isValid())
             return false;
-        
+
         ExecState* exec = rootObject->globalObject()->globalExec();
         JSLockHolder lock(exec);
-        
+
         // Call the function object.
         JSValue function = obj->imp;
         CallData callData;
         CallType callType = getCallData(function, callData);
         if (callType == CallTypeNone)
             return false;
-        
+
         MarkedArgumentBuffer argList;
         getListFromVariantArgs(exec, args, argCount, rootObject, argList);
         JSValue resultV = JSC::call(exec, function, callType, callData, function, argList);
@@ -191,11 +191,11 @@ bool _NPN_InvokeDefault(NPP, NPObject* o, const NPVariant* args, uint32_t argCou
         // Convert and return the result of the function call.
         convertValueToNPVariant(exec, resultV, result);
         exec->clearException();
-        return true;        
+        return true;
     }
 
     if (o->_class->invokeDefault)
-        return o->_class->invokeDefault(o, args, argCount, result);    
+        return o->_class->invokeDefault(o, args, argCount, result);
     VOID_TO_NPVARIANT(*result);
     return true;
 }
@@ -203,7 +203,7 @@ bool _NPN_InvokeDefault(NPP, NPObject* o, const NPVariant* args, uint32_t argCou
 bool _NPN_Invoke(NPP npp, NPObject* o, NPIdentifier methodName, const NPVariant* args, uint32_t argCount, NPVariant* result)
 {
     if (o->_class == NPScriptObjectClass) {
-        JavaScriptObject* obj = reinterpret_cast<JavaScriptObject*>(o); 
+        JavaScriptObject* obj = reinterpret_cast<JavaScriptObject*>(o);
 
         IdentifierRep* i = static_cast<IdentifierRep*>(methodName);
         if (!i->isString())
@@ -243,7 +243,7 @@ bool _NPN_Invoke(NPP npp, NPObject* o, NPIdentifier methodName, const NPVariant*
 
     if (o->_class->invoke)
         return o->_class->invoke(o, methodName, args, argCount, result);
-    
+
     VOID_TO_NPVARIANT(*result);
     return true;
 }
@@ -251,7 +251,7 @@ bool _NPN_Invoke(NPP npp, NPObject* o, NPIdentifier methodName, const NPVariant*
 bool _NPN_Evaluate(NPP instance, NPObject* o, NPString* s, NPVariant* variant)
 {
     if (o->_class == NPScriptObjectClass) {
-        JavaScriptObject* obj = reinterpret_cast<JavaScriptObject*>(o); 
+        JavaScriptObject* obj = reinterpret_cast<JavaScriptObject*>(o);
 
         RootObject* rootObject = obj->rootObject;
         if (!rootObject || !rootObject->isValid())
@@ -264,7 +264,7 @@ bool _NPN_Evaluate(NPP instance, NPObject* o, NPString* s, NPVariant* variant)
         ExecState* exec = rootObject->globalObject()->globalExec();
         JSLockHolder lock(exec);
         String scriptString = convertNPStringToUTF16(s);
-        
+
         JSValue returnValue = JSC::evaluate(rootObject->globalObject()->globalExec(), makeSource(scriptString), JSC::JSValue());
 
         convertValueToNPVariant(exec, returnValue, variant);
@@ -279,7 +279,7 @@ bool _NPN_Evaluate(NPP instance, NPObject* o, NPString* s, NPVariant* variant)
 bool _NPN_GetProperty(NPP, NPObject* o, NPIdentifier propertyName, NPVariant* variant)
 {
     if (o->_class == NPScriptObjectClass) {
-        JavaScriptObject* obj = reinterpret_cast<JavaScriptObject*>(o); 
+        JavaScriptObject* obj = reinterpret_cast<JavaScriptObject*>(o);
 
         RootObject* rootObject = obj->rootObject;
         if (!rootObject || !rootObject->isValid())
@@ -287,7 +287,7 @@ bool _NPN_GetProperty(NPP, NPObject* o, NPIdentifier propertyName, NPVariant* va
 
         ExecState* exec = rootObject->globalObject()->globalExec();
         IdentifierRep* i = static_cast<IdentifierRep*>(propertyName);
-        
+
         JSLockHolder lock(exec);
         JSValue result;
         if (i->isString())
@@ -313,7 +313,7 @@ bool _NPN_GetProperty(NPP, NPObject* o, NPIdentifier propertyName, NPVariant* va
 bool _NPN_SetProperty(NPP, NPObject* o, NPIdentifier propertyName, const NPVariant* variant)
 {
     if (o->_class == NPScriptObjectClass) {
-        JavaScriptObject* obj = reinterpret_cast<JavaScriptObject*>(o); 
+        JavaScriptObject* obj = reinterpret_cast<JavaScriptObject*>(o);
 
         RootObject* rootObject = obj->rootObject;
         if (!rootObject || !rootObject->isValid())
@@ -341,7 +341,7 @@ bool _NPN_SetProperty(NPP, NPObject* o, NPIdentifier propertyName, const NPVaria
 bool _NPN_RemoveProperty(NPP, NPObject* o, NPIdentifier propertyName)
 {
     if (o->_class == NPScriptObjectClass) {
-        JavaScriptObject* obj = reinterpret_cast<JavaScriptObject*>(o); 
+        JavaScriptObject* obj = reinterpret_cast<JavaScriptObject*>(o);
 
         RootObject* rootObject = obj->rootObject;
         if (!rootObject || !rootObject->isValid())
@@ -376,7 +376,7 @@ bool _NPN_RemoveProperty(NPP, NPObject* o, NPIdentifier propertyName)
 bool _NPN_HasProperty(NPP, NPObject* o, NPIdentifier propertyName)
 {
     if (o->_class == NPScriptObjectClass) {
-        JavaScriptObject* obj = reinterpret_cast<JavaScriptObject*>(o); 
+        JavaScriptObject* obj = reinterpret_cast<JavaScriptObject*>(o);
 
         RootObject* rootObject = obj->rootObject;
         if (!rootObject || !rootObject->isValid())
@@ -405,7 +405,7 @@ bool _NPN_HasProperty(NPP, NPObject* o, NPIdentifier propertyName)
 bool _NPN_HasMethod(NPP, NPObject* o, NPIdentifier methodName)
 {
     if (o->_class == NPScriptObjectClass) {
-        JavaScriptObject* obj = reinterpret_cast<JavaScriptObject*>(o); 
+        JavaScriptObject* obj = reinterpret_cast<JavaScriptObject*>(o);
 
         IdentifierRep* i = static_cast<IdentifierRep*>(methodName);
         if (!i->isString())
@@ -421,10 +421,10 @@ bool _NPN_HasMethod(NPP, NPObject* o, NPIdentifier methodName)
         exec->clearException();
         return !func.isUndefined();
     }
-    
+
     if (o->_class->hasMethod)
         return o->_class->hasMethod(o, methodName);
-    
+
     return false;
 }
 
@@ -438,12 +438,12 @@ void _NPN_SetException(NPObject*, const NPUTF8* message)
 bool _NPN_Enumerate(NPP, NPObject* o, NPIdentifier** identifier, uint32_t* count)
 {
     if (o->_class == NPScriptObjectClass) {
-        JavaScriptObject* obj = reinterpret_cast<JavaScriptObject*>(o); 
-        
+        JavaScriptObject* obj = reinterpret_cast<JavaScriptObject*>(o);
+
         RootObject* rootObject = obj->rootObject;
         if (!rootObject || !rootObject->isValid())
             return false;
-        
+
         ExecState* exec = rootObject->globalObject()->globalExec();
         JSLockHolder lock(exec);
         PropertyNameArray propertyNames(exec);
@@ -452,7 +452,7 @@ bool _NPN_Enumerate(NPP, NPObject* o, NPIdentifier** identifier, uint32_t* count
         unsigned size = static_cast<unsigned>(propertyNames.size());
         // FIXME: This should really call NPN_MemAlloc but that's in WebKit
         NPIdentifier* identifiers = static_cast<NPIdentifier*>(malloc(sizeof(NPIdentifier) * size));
-        
+
         for (unsigned i = 0; i < size; ++i)
             identifiers[i] = _NPN_GetStringIdentifier(propertyNames[i].string().utf8().data());
 
@@ -462,10 +462,10 @@ bool _NPN_Enumerate(NPP, NPObject* o, NPIdentifier** identifier, uint32_t* count
         exec->clearException();
         return true;
     }
-    
+
     if (NP_CLASS_STRUCT_VERSION_HAS_ENUM(o->_class) && o->_class->enumerate)
         return o->_class->enumerate(o, identifier, count);
-    
+
     return false;
 }
 
@@ -473,37 +473,37 @@ bool _NPN_Construct(NPP, NPObject* o, const NPVariant* args, uint32_t argCount, 
 {
     if (o->_class == NPScriptObjectClass) {
         JavaScriptObject* obj = reinterpret_cast<JavaScriptObject*>(o);
-        
+
         VOID_TO_NPVARIANT(*result);
-        
+
         // Lookup the constructor object.
         RootObject* rootObject = obj->rootObject;
         if (!rootObject || !rootObject->isValid())
             return false;
-        
+
         ExecState* exec = rootObject->globalObject()->globalExec();
         JSLockHolder lock(exec);
-        
+
         // Call the constructor object.
         JSValue constructor = obj->imp;
         ConstructData constructData;
         ConstructType constructType = getConstructData(constructor, constructData);
         if (constructType == ConstructTypeNone)
             return false;
-        
+
         MarkedArgumentBuffer argList;
         getListFromVariantArgs(exec, args, argCount, rootObject, argList);
         JSValue resultV = JSC::construct(exec, constructor, constructType, constructData, argList);
-        
+
         // Convert and return the result.
         convertValueToNPVariant(exec, resultV, result);
         exec->clearException();
         return true;
     }
-    
+
     if (NP_CLASS_STRUCT_VERSION_HAS_CTOR(o->_class) && o->_class->construct)
         return o->_class->construct(o, args, argCount, result);
-    
+
     return false;
 }
 

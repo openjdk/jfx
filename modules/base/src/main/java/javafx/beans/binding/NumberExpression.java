@@ -70,7 +70,7 @@ public interface NumberExpression extends ObservableNumberValue {
     /**
      * Creates a new {@link javafx.beans.binding.NumberBinding} that calculates
      * the negation of {@code NumberExpression}.
-     * 
+     *
      * @return the new {@code NumberBinding}
      */
     NumberBinding negate();
@@ -82,7 +82,7 @@ public interface NumberExpression extends ObservableNumberValue {
      * Creates a new {@link javafx.beans.binding.NumberBinding} that calculates
      * the sum of this {@code NumberExpression} and another
      * {@link javafx.beans.value.ObservableNumberValue}.
-     * 
+     *
      * @param other
      *            the second {@code ObservableNumberValue}
      * @return the new {@code NumberBinding}
@@ -94,7 +94,7 @@ public interface NumberExpression extends ObservableNumberValue {
     /**
      * Creates a new {@link javafx.beans.binding.NumberBinding} that calculates
      * the sum of this {@code NumberExpression} and a constant value.
-     * 
+     *
      * @param other
      *            the constant value
      * @return the new {@code NumberBinding}
@@ -104,7 +104,7 @@ public interface NumberExpression extends ObservableNumberValue {
     /**
      * Creates a new {@link javafx.beans.binding.NumberBinding} that calculates
      * the sum of this {@code NumberExpression} and a constant value.
-     * 
+     *
      * @param other
      *            the constant value
      * @return the new {@code NumberBinding}
@@ -114,7 +114,7 @@ public interface NumberExpression extends ObservableNumberValue {
     /**
      * Creates a new {@link javafx.beans.binding.NumberBinding} that calculates
      * the sum of this {@code NumberExpression} and a constant value.
-     * 
+     *
      * @param other
      *            the constant value
      * @return the new {@code NumberBinding}
@@ -124,7 +124,7 @@ public interface NumberExpression extends ObservableNumberValue {
     /**
      * Creates a new {@link javafx.beans.binding.NumberBinding} that calculates
      * the sum of this {@code NumberExpression} and a constant value.
-     * 
+     *
      * @param other
      *            the constant value
      * @return the new {@code NumberBinding}
@@ -138,7 +138,7 @@ public interface NumberExpression extends ObservableNumberValue {
      * Creates a new {@link javafx.beans.binding.NumberBinding} that calculates
      * the difference of this {@code NumberExpression} and another
      * {@link javafx.beans.value.ObservableNumberValue}.
-     * 
+     *
      * @param other
      *            the second {@code ObservableNumberValue}
      * @return the new {@code NumberBinding}
@@ -150,7 +150,7 @@ public interface NumberExpression extends ObservableNumberValue {
     /**
      * Creates a new {@link javafx.beans.binding.NumberBinding} that calculates
      * the difference of this {@code NumberExpression} and a constant value.
-     * 
+     *
      * @param other
      *            the constant value
      * @return the new {@code NumberBinding}
@@ -160,7 +160,7 @@ public interface NumberExpression extends ObservableNumberValue {
     /**
      * Creates a new {@link javafx.beans.binding.NumberBinding} that calculates
      * the difference of this {@code NumberExpression} and a constant value.
-     * 
+     *
      * @param other
      *            the constant value
      * @return the new {@code NumberBinding}
@@ -170,7 +170,7 @@ public interface NumberExpression extends ObservableNumberValue {
     /**
      * Creates a new {@link javafx.beans.binding.NumberBinding} that calculates
      * the difference of this {@code NumberExpression} and a constant value.
-     * 
+     *
      * @param other
      *            the constant value
      * @return the new {@code NumberBinding}
@@ -180,7 +180,7 @@ public interface NumberExpression extends ObservableNumberValue {
     /**
      * Creates a new {@link javafx.beans.binding.NumberBinding} that calculates
      * the difference of this {@code NumberExpression} and a constant value.
-     * 
+     *
      * @param other
      *            the constant value
      * @return the new {@code NumberBinding}
@@ -194,7 +194,7 @@ public interface NumberExpression extends ObservableNumberValue {
      * Creates a new {@link javafx.beans.binding.NumberBinding} that calculates
      * the product of this {@code NumberExpression} and another
      * {@link javafx.beans.value.ObservableNumberValue}.
-     * 
+     *
      * @param other
      *            the second {@code ObservableNumberValue}
      * @return the new {@code NumberBinding}
@@ -206,7 +206,7 @@ public interface NumberExpression extends ObservableNumberValue {
     /**
      * Creates a new {@link javafx.beans.binding.NumberBinding} that calculates
      * the product of this {@code NumberExpression} and a constant value.
-     * 
+     *
      * @param other
      *            the constant value
      * @return the new {@code NumberBinding}
@@ -216,7 +216,7 @@ public interface NumberExpression extends ObservableNumberValue {
     /**
      * Creates a new {@link javafx.beans.binding.NumberBinding} that calculates
      * the product of this {@code NumberExpression} and a constant value.
-     * 
+     *
      * @param other
      *            the constant value
      * @return the new {@code NumberBinding}
@@ -226,7 +226,7 @@ public interface NumberExpression extends ObservableNumberValue {
     /**
      * Creates a new {@link javafx.beans.binding.NumberBinding} that calculates
      * the product of this {@code NumberExpression} and a constant value.
-     * 
+     *
      * @param other
      *            the constant value
      * @return the new {@code NumberBinding}
@@ -236,7 +236,7 @@ public interface NumberExpression extends ObservableNumberValue {
     /**
      * Creates a new {@link javafx.beans.binding.NumberBinding} that calculates
      * the product of this {@code NumberExpression} and a constant value.
-     * 
+     *
      * @param other
      *            the constant value
      * @return the new {@code NumberBinding}
@@ -250,7 +250,7 @@ public interface NumberExpression extends ObservableNumberValue {
      * Creates a new {@link javafx.beans.binding.NumberBinding} that calculates
      * the division of this {@code NumberExpression} and another
      * {@link javafx.beans.value.ObservableNumberValue}.
-     * 
+     *
      * @param other
      *            the second {@code ObservableNumberValue}
      * @return the new {@code NumberBinding}
@@ -262,7 +262,7 @@ public interface NumberExpression extends ObservableNumberValue {
     /**
      * Creates a new {@link javafx.beans.binding.NumberBinding} that calculates
      * the division of this {@code NumberExpression} and a constant value.
-     * 
+     *
      * @param other
      *            the constant value
      * @return the new {@code NumberBinding}
@@ -272,7 +272,7 @@ public interface NumberExpression extends ObservableNumberValue {
     /**
      * Creates a new {@link javafx.beans.binding.NumberBinding} that calculates
      * the division of this {@code NumberExpression} and a constant value.
-     * 
+     *
      * @param other
      *            the constant value
      * @return the new {@code NumberBinding}
@@ -282,7 +282,7 @@ public interface NumberExpression extends ObservableNumberValue {
     /**
      * Creates a new {@link javafx.beans.binding.NumberBinding} that calculates
      * the division of this {@code NumberExpression} and a constant value.
-     * 
+     *
      * @param other
      *            the constant value
      * @return the new {@code NumberBinding}
@@ -292,7 +292,7 @@ public interface NumberExpression extends ObservableNumberValue {
     /**
      * Creates a new {@link javafx.beans.binding.NumberBinding} that calculates
      * the division of this {@code NumberExpression} and a constant value.
-     * 
+     *
      * @param other
      *            the constant value
      * @return the new {@code NumberBinding}
@@ -310,7 +310,7 @@ public interface NumberExpression extends ObservableNumberValue {
      * When comparing floating-point numbers it is recommended to use the
      * {@link #isEqualTo(ObservableNumberValue, double) isEqualTo()} method that
      * allows a small tolerance.
-     * 
+     *
      * @param other
      *            the second {@code ObservableNumberValue}
      * @return the new {@code BooleanBinding}
@@ -329,7 +329,7 @@ public interface NumberExpression extends ObservableNumberValue {
      * <p>
      * Allowing a small tolerance is recommended when comparing floating-point
      * numbers because of rounding-errors.
-     * 
+     *
      * @param other
      *            the second {@code ObservableNumberValue}
      * @param epsilon
@@ -350,7 +350,7 @@ public interface NumberExpression extends ObservableNumberValue {
      * <p>
      * Allowing a small tolerance is recommended when comparing floating-point
      * numbers because of rounding-errors.
-     * 
+     *
      * @param other
      *            the constant value
      * @param epsilon
@@ -369,7 +369,7 @@ public interface NumberExpression extends ObservableNumberValue {
      * <p>
      * Allowing a small tolerance is recommended when comparing floating-point
      * numbers because of rounding-errors.
-     * 
+     *
      * @param other
      *            the constant value
      * @param epsilon
@@ -385,7 +385,7 @@ public interface NumberExpression extends ObservableNumberValue {
      * When comparing floating-point numbers it is recommended to use the
      * {@link #isEqualTo(long, double) isEqualTo()} method that allows a small
      * tolerance.
-     * 
+     *
      * @param other
      *            the constant value
      * @return the new {@code BooleanBinding}
@@ -402,7 +402,7 @@ public interface NumberExpression extends ObservableNumberValue {
      * <p>
      * Allowing a small tolerance is recommended when comparing floating-point
      * numbers because of rounding-errors.
-     * 
+     *
      * @param other
      *            the constant value
      * @param epsilon
@@ -418,7 +418,7 @@ public interface NumberExpression extends ObservableNumberValue {
      * When comparing floating-point numbers it is recommended to use the
      * {@link #isEqualTo(int, double) isEqualTo()} method that allows a small
      * tolerance.
-     * 
+     *
      * @param other
      *            the constant value
      * @return the new {@code BooleanBinding}
@@ -435,7 +435,7 @@ public interface NumberExpression extends ObservableNumberValue {
      * <p>
      * Allowing a small tolerance is recommended when comparing floating-point
      * numbers.
-     * 
+     *
      * @param other
      *            the constant value
      * @param epsilon
@@ -455,7 +455,7 @@ public interface NumberExpression extends ObservableNumberValue {
      * When comparing floating-point numbers it is recommended to use the
      * {@link #isNotEqualTo(ObservableNumberValue, double) isNotEqualTo()}
      * method that allows a small tolerance.
-     * 
+     *
      * @param other
      *            the second {@code ObservableNumberValue}
      * @return the new {@code BooleanBinding}
@@ -474,7 +474,7 @@ public interface NumberExpression extends ObservableNumberValue {
      * <p>
      * Allowing a small tolerance is recommended when comparing floating-point
      * numbers because of rounding-errors.
-     * 
+     *
      * @param other
      *            the second {@code ObservableNumberValue}
      * @param epsilon
@@ -496,7 +496,7 @@ public interface NumberExpression extends ObservableNumberValue {
      * <p>
      * Allowing a small tolerance is recommended when comparing floating-point
      * numbers.
-     * 
+     *
      * @param other
      *            the constant value
      * @param epsilon
@@ -515,7 +515,7 @@ public interface NumberExpression extends ObservableNumberValue {
      * <p>
      * Allowing a small tolerance is recommended when comparing floating-point
      * numbers.
-     * 
+     *
      * @param other
      *            the constant value
      * @param epsilon
@@ -531,7 +531,7 @@ public interface NumberExpression extends ObservableNumberValue {
      * When comparing floating-point numbers it is recommended to use the
      * {@link #isNotEqualTo(long, double) isNotEqualTo()} method that allows a
      * small tolerance.
-     * 
+     *
      * @param other
      *            the constant value
      * @return the new {@code BooleanBinding}
@@ -548,7 +548,7 @@ public interface NumberExpression extends ObservableNumberValue {
      * <p>
      * Allowing a small tolerance is recommended when comparing floating-point
      * numbers.
-     * 
+     *
      * @param other
      *            the constant value
      * @param epsilon
@@ -564,7 +564,7 @@ public interface NumberExpression extends ObservableNumberValue {
      * When comparing floating-point numbers it is recommended to use the
      * {@link #isNotEqualTo(int, double) isNotEqualTo()} method that allows a
      * small tolerance.
-     * 
+     *
      * @param other
      *            the constant value
      * @return the new {@code BooleanBinding}
@@ -581,7 +581,7 @@ public interface NumberExpression extends ObservableNumberValue {
      * <p>
      * Allowing a small tolerance is recommended when comparing floating-point
      * numbers.
-     * 
+     *
      * @param other
      *            the constant value
      * @param epsilon
@@ -597,7 +597,7 @@ public interface NumberExpression extends ObservableNumberValue {
      * Creates a new {@link javafx.beans.binding.BooleanBinding} that holds {@code true}
      * if this {@code NumberExpression} is greater than another
      * {@link javafx.beans.value.ObservableNumberValue}.
-     * 
+     *
      * @param other
      *            the second {@code ObservableNumberValue}
      * @return the new {@code BooleanBinding}
@@ -609,7 +609,7 @@ public interface NumberExpression extends ObservableNumberValue {
     /**
      * Creates a new {@link javafx.beans.binding.BooleanBinding} that holds {@code true}
      * if this {@code NumberExpression} is greater than a constant value.
-     * 
+     *
      * @param other
      *            the constant value
      * @return the new {@code BooleanBinding}
@@ -619,7 +619,7 @@ public interface NumberExpression extends ObservableNumberValue {
     /**
      * Creates a new {@link javafx.beans.binding.BooleanBinding} that holds {@code true}
      * if this {@code NumberExpression} is greater than a constant value.
-     * 
+     *
      * @param other
      *            the constant value
      * @return the new {@code BooleanBinding}
@@ -629,7 +629,7 @@ public interface NumberExpression extends ObservableNumberValue {
     /**
      * Creates a new {@link javafx.beans.binding.BooleanBinding} that holds {@code true}
      * if this {@code NumberExpression} is greater than a constant value.
-     * 
+     *
      * @param other
      *            the constant value
      * @return the new {@code BooleanBinding}
@@ -639,7 +639,7 @@ public interface NumberExpression extends ObservableNumberValue {
     /**
      * Creates a new {@link javafx.beans.binding.BooleanBinding} that holds {@code true}
      * if this {@code NumberExpression} is greater than a constant value.
-     * 
+     *
      * @param other
      *            the constant value
      * @return the new {@code BooleanBinding}
@@ -653,7 +653,7 @@ public interface NumberExpression extends ObservableNumberValue {
      * Creates a new {@link javafx.beans.binding.BooleanBinding} that holds {@code true}
      * if this {@code NumberExpression} is lesser than another
      * {@link javafx.beans.value.ObservableNumberValue}.
-     * 
+     *
      * @param other
      *            the second {@code ObservableNumberValue}
      * @return the new {@code BooleanBinding}
@@ -665,7 +665,7 @@ public interface NumberExpression extends ObservableNumberValue {
     /**
      * Creates a new {@link javafx.beans.binding.BooleanBinding} that holds {@code true}
      * if this {@code NumberExpression} is lesser than a constant value.
-     * 
+     *
      * @param other
      *            the constant value
      * @return the new {@code BooleanBinding}
@@ -675,7 +675,7 @@ public interface NumberExpression extends ObservableNumberValue {
     /**
      * Creates a new {@link javafx.beans.binding.BooleanBinding} that holds {@code true}
      * if this {@code NumberExpression} is lesser than a constant value.
-     * 
+     *
      * @param other
      *            the constant value
      * @return the new {@code BooleanBinding}
@@ -685,7 +685,7 @@ public interface NumberExpression extends ObservableNumberValue {
     /**
      * Creates a new {@link javafx.beans.binding.BooleanBinding} that holds {@code true}
      * if this {@code NumberExpression} is lesser than a constant value.
-     * 
+     *
      * @param other
      *            the constant value
      * @return the new {@code BooleanBinding}
@@ -695,7 +695,7 @@ public interface NumberExpression extends ObservableNumberValue {
     /**
      * Creates a new {@link javafx.beans.binding.BooleanBinding} that holds {@code true}
      * if this {@code NumberExpression} is lesser than a constant value.
-     * 
+     *
      * @param other
      *            the constant value
      * @return the new {@code BooleanBinding}
@@ -709,7 +709,7 @@ public interface NumberExpression extends ObservableNumberValue {
      * Creates a new {@link javafx.beans.binding.BooleanBinding} that holds {@code true}
      * if this {@code NumberExpression} is greater than or equal to another
      * {@link javafx.beans.value.ObservableNumberValue}.
-     * 
+     *
      * @param other
      *            the second {@code ObservableNumberValue}
      * @return the new {@code BooleanBinding}
@@ -722,7 +722,7 @@ public interface NumberExpression extends ObservableNumberValue {
      * Creates a new {@link javafx.beans.binding.BooleanBinding} that holds {@code true}
      * if this {@code NumberExpression} is greater than or equal to a constant
      * value.
-     * 
+     *
      * @param other
      *            the constant value
      * @return the new {@code BooleanBinding}
@@ -733,7 +733,7 @@ public interface NumberExpression extends ObservableNumberValue {
      * Creates a new {@link javafx.beans.binding.BooleanBinding} that holds {@code true}
      * if this {@code NumberExpression} is greater than or equal to a constant
      * value.
-     * 
+     *
      * @param other
      *            the constant value
      * @return the new {@code BooleanBinding}
@@ -744,7 +744,7 @@ public interface NumberExpression extends ObservableNumberValue {
      * Creates a new {@link javafx.beans.binding.BooleanBinding} that holds {@code true}
      * if this {@code NumberExpression} is greater than or equal to a constant
      * value.
-     * 
+     *
      * @param other
      *            the constant value
      * @return the new {@code BooleanBinding}
@@ -755,7 +755,7 @@ public interface NumberExpression extends ObservableNumberValue {
      * Creates a new {@link javafx.beans.binding.BooleanBinding} that holds {@code true}
      * if this {@code NumberExpression} is greater than or equal to a constant
      * value.
-     * 
+     *
      * @param other
      *            the constant value
      * @return the new {@code BooleanBinding}
@@ -769,7 +769,7 @@ public interface NumberExpression extends ObservableNumberValue {
      * Creates a new {@link javafx.beans.binding.BooleanBinding} that holds {@code true}
      * if this {@code NumberExpression} is less than or equal to another
      * {@link javafx.beans.value.ObservableNumberValue}.
-     * 
+     *
      * @param other
      *            the second {@code ObservableNumberValue}
      * @return the new {@code BooleanBinding}
@@ -782,7 +782,7 @@ public interface NumberExpression extends ObservableNumberValue {
      * Creates a new {@link javafx.beans.binding.BooleanBinding} that holds {@code true}
      * if this {@code NumberExpression} is less than or equal to a constant
      * value.
-     * 
+     *
      * @param other
      *            the constant value
      * @return the new {@code BooleanBinding}
@@ -793,7 +793,7 @@ public interface NumberExpression extends ObservableNumberValue {
      * Creates a new {@link javafx.beans.binding.BooleanBinding} that holds {@code true}
      * if this {@code NumberExpression} is less than or equal to a constant
      * value.
-     * 
+     *
      * @param other
      *            the constant value
      * @return the new {@code BooleanBinding}
@@ -804,7 +804,7 @@ public interface NumberExpression extends ObservableNumberValue {
      * Creates a new {@link javafx.beans.binding.BooleanBinding} that holds {@code true}
      * if this {@code NumberExpression} is less than or equal to a constant
      * value.
-     * 
+     *
      * @param other
      *            the constant value
      * @return the new {@code BooleanBinding}
@@ -815,7 +815,7 @@ public interface NumberExpression extends ObservableNumberValue {
      * Creates a new {@link javafx.beans.binding.BooleanBinding} that holds {@code true}
      * if this {@code NumberExpression} is less than or equal to a constant
      * value.
-     * 
+     *
      * @param other
      *            the constant value
      * @return the new {@code BooleanBinding}
@@ -832,7 +832,7 @@ public interface NumberExpression extends ObservableNumberValue {
      * {@code StringBinding} will be updated automatically.
      * <p>
      * The conversion is done without any formatting applied.
-     * 
+     *
      * @return the new {@code StringBinding}
      */
     StringBinding asString();
@@ -845,7 +845,7 @@ public interface NumberExpression extends ObservableNumberValue {
      * <p>
      * The result is formatted according to the formatting {@code String}. See
      * {@code java.util.Formatter} for formatting rules.
-     * 
+     *
      * @param format
      *            the formatting {@code String}
      * @return the new {@code StringBinding}
@@ -862,7 +862,7 @@ public interface NumberExpression extends ObservableNumberValue {
      * the passed in {@code Locale}. See {@code java.util.Formatter} for
      * formatting rules. See {@code java.util.Locale} for details on
      * {@code Locale}.
-     * 
+     *
      * @param format
      *            the formatting {@code String}
      * @return the new {@code StringBinding}

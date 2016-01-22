@@ -34,7 +34,7 @@ import javafx.scene.shape.Rectangle;
 import org.junit.Test;
 
 public class ClipBoundsTest {
-    
+
     /***************************************************************************
      *                                                                         *
      *                          Clipping and Effects                           *
@@ -56,7 +56,7 @@ public class ClipBoundsTest {
         assertEquals(box(10, 10, 90, 90), rect.getBoundsInLocal());
         assertEquals(rect.getBoundsInLocal(), rect.getBoundsInParent());
     }
-    
+
     // test clipping with a group clips according to the groups bounds
     public @Test void testClippingWithGroup() {
         Rectangle r1 = new Rectangle(20, 20, 50, 50);
@@ -64,11 +64,11 @@ public class ClipBoundsTest {
         Group group = new Group(r1, r2);
         Rectangle rect = new Rectangle(100, 100);
         rect.setClip(group);
-        
+
         assertEquals(box(20, 20, 80, 50), rect.getBoundsInLocal());
         assertEquals(rect.getBoundsInLocal(), rect.getBoundsInParent());
     }
-    
+
     // test clipping with a node that is also clipped yields the correct bounds
     public @Test void testClippingWithClippedRectangle() {
         // clip's bounds should be 20, 20, 50, 50
@@ -119,7 +119,7 @@ public class ClipBoundsTest {
 
     // test clipping with an image results in the right bounds
     // test clipping with text results in the right bounds
-    
+
     // test changing the clips bounds also changes the bounds of the clip parent
     public @Test void testChangingClipBounds() {
         Rectangle clip = new Rectangle(50, 50);
@@ -128,40 +128,40 @@ public class ClipBoundsTest {
 
         assertEquals(box(0, 0, 50, 50), rect.getBoundsInLocal());
         assertEquals(rect.getBoundsInLocal(), rect.getBoundsInParent());
-        
+
         clip.setWidth(60);
         clip.setHeight(60);
         assertEquals(box(0, 0, 60, 60), rect.getBoundsInLocal());
-        assertEquals(rect.getBoundsInLocal(), rect.getBoundsInParent());        
+        assertEquals(rect.getBoundsInLocal(), rect.getBoundsInParent());
     }
-    
+
     // test setting a clip changes the bounds
     public @Test void testSettingClip() {
         Rectangle rect = new Rectangle(100, 100);
 
         assertEquals(box(0, 0, 100, 100), rect.getBoundsInLocal());
         assertEquals(rect.getBoundsInLocal(), rect.getBoundsInParent());
-        
+
         rect.setClip(new Rectangle(50, 50));
 
         assertEquals(box(0, 0, 50, 50), rect.getBoundsInLocal());
-        assertEquals(rect.getBoundsInLocal(), rect.getBoundsInParent());        
+        assertEquals(rect.getBoundsInLocal(), rect.getBoundsInParent());
     }
-    
+
     // test swapping clips changes the bounds
     public @Test void testSwappingClip() {
         Rectangle clip = new Rectangle(50, 50);
         Rectangle rect = new Rectangle(100, 100);
         rect.setClip(clip);
-        
+
         assertEquals(box(0, 0, 50, 50), rect.getBoundsInLocal());
         assertEquals(rect.getBoundsInLocal(), rect.getBoundsInParent());
-        
+
         rect.setClip(new Rectangle(10, 10, 50, 50));
         assertEquals(box(10, 10, 50, 50), rect.getBoundsInLocal());
         assertEquals(rect.getBoundsInLocal(), rect.getBoundsInParent());
     }
-    
+
     // test removing the clip changes the bounds
     public @Test void testRemovingClip() {
         Rectangle clip = new Rectangle(50, 50);
@@ -169,12 +169,12 @@ public class ClipBoundsTest {
         rect.setClip(clip);
         assertEquals(box(0, 0, 50, 50), rect.getBoundsInLocal());
         assertEquals(rect.getBoundsInLocal(), rect.getBoundsInParent());
-        
+
         rect.setClip(null);
         assertEquals(box(0, 0, 100, 100), rect.getBoundsInLocal());
         assertEquals(rect.getBoundsInLocal(), rect.getBoundsInParent());
     }
-    
+
     // test setting the clip and changing the geom of the Node give right bounds
     public @Test void testClippingAndChangingGeometry() {
         Rectangle clip = new Rectangle(50, 50);
@@ -182,7 +182,7 @@ public class ClipBoundsTest {
         rect.setClip(clip);
         assertEquals(box(0, 0, 50, 50), rect.getBoundsInLocal());
         assertEquals(rect.getBoundsInLocal(), rect.getBoundsInParent());
-        
+
         rect.setWidth(20);
         assertEquals(box(0, 0, 20, 50), rect.getBoundsInLocal());
         assertEquals(rect.getBoundsInLocal(), rect.getBoundsInParent());

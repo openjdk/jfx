@@ -94,7 +94,7 @@ void DynamicsCompressorNode::initialize()
     if (isInitialized())
         return;
 
-    AudioNode::initialize();    
+    AudioNode::initialize();
     m_dynamicsCompressor = std::make_unique<DynamicsCompressor>(sampleRate(), defaultNumberOfOutputChannels);
 }
 

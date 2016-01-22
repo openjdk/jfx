@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -42,11 +42,11 @@ public:
         : Phase(graph, "OSR availability analysis")
     {
     }
-    
+
     bool run()
     {
         ASSERT(m_graph.m_form == SSA);
-        
+
         for (BlockIndex blockIndex = m_graph.numBlocks(); blockIndex--;) {
             BasicBlock* block = m_graph.block(blockIndex);
             if (!block)
@@ -54,7 +54,7 @@ public:
             block->ssa->availabilityAtHead.fill(Availability());
             block->ssa->availabilityAtTail.fill(Availability());
         }
-        
+
         BasicBlock* root = m_graph.block(0);
         for (unsigned argument = root->ssa->availabilityAtHead.numberOfArguments(); argument--;) {
             root->ssa->availabilityAtHead.argument(argument) =
@@ -69,23 +69,23 @@ public:
             for (unsigned local = root->ssa->availabilityAtHead.numberOfLocals(); local--;)
                 root->ssa->availabilityAtHead.local(local) = Availability::unavailable();
         }
-        
+
         // This could be made more efficient by processing blocks in reverse postorder.
         Operands<Availability> availability;
         bool changed;
         do {
             changed = false;
-            
+
             for (BlockIndex blockIndex = 0; blockIndex < m_graph.numBlocks(); ++blockIndex) {
                 BasicBlock* block = m_graph.block(blockIndex);
                 if (!block)
                     continue;
-                
+
                 availability = block->ssa->availabilityAtHead;
-                
+
                 for (unsigned nodeIndex = 0; nodeIndex < block->size(); ++nodeIndex) {
                     Node* node = block->at(nodeIndex);
-                    
+
                     switch (node->op()) {
                     case SetLocal: {
                         VariableAccessData* variable = node->variableAccessData();
@@ -93,37 +93,37 @@ public:
                             Availability(node->child1().node(), variable->flushedAt());
                         break;
                     }
-                        
+
                     case GetArgument: {
                         VariableAccessData* variable = node->variableAccessData();
                         availability.operand(variable->local()) =
                             Availability(node, variable->flushedAt());
                         break;
                     }
-                        
+
                     case MovHint: {
                         availability.operand(node->unlinkedLocal()) =
                             Availability(node->child1().node());
                         break;
                     }
-                        
+
                     case ZombieHint: {
                         availability.operand(node->unlinkedLocal()) =
                             Availability::unavailable();
                         break;
                     }
-                        
+
                     default:
                         break;
                     }
                 }
-                
+
                 if (availability == block->ssa->availabilityAtTail)
                     continue;
-                
+
                 block->ssa->availabilityAtTail = availability;
                 changed = true;
-                
+
                 for (unsigned successorIndex = block->numSuccessors(); successorIndex--;) {
                     BasicBlock* successor = block->successor(successorIndex);
                     for (unsigned i = availability.size(); i--;) {
@@ -133,7 +133,7 @@ public:
                 }
             }
         } while (changed);
-        
+
         return true;
     }
 };

@@ -75,7 +75,7 @@ static bool compareTuples(std::pair<float, float> l, std::pair<float, float> r)
 static DashArray translateIntersectionPointsToSkipInkBoundaries(const DashArray& intersections, float dilationAmount, float totalWidth)
 {
     ASSERT(!(intersections.size() % 2));
-    
+
     // Step 1: Make pairs so we can sort based on range starting-point. We dilate the ranges in this step as well.
     Vector<std::pair<float, float>> tuples;
     for (auto i = intersections.begin(); i != intersections.end(); i++, i++)
@@ -114,7 +114,7 @@ static DashArray translateIntersectionPointsToSkipInkBoundaries(const DashArray&
         result.append(previous);
         result.append(totalWidth);
     }
-    
+
     return result;
 }
 
@@ -268,7 +268,7 @@ LayoutRect InlineTextBox::localSelectionRect(int startPos, int endPos) const
 {
     int sPos = std::max(startPos - m_start, 0);
     int ePos = std::min(endPos - m_start, (int)m_len);
-    
+
     if (sPos > ePos)
         return LayoutRect();
 
@@ -323,7 +323,7 @@ void InlineTextBox::attachLine()
 {
     if (!extracted())
         return;
-    
+
     renderer().attachTextBox(*this);
 }
 
@@ -336,7 +336,7 @@ float InlineTextBox::placeEllipsisBox(bool flowIsLTR, float visibleLeftEdge, flo
 
     // For LTR this is the left edge of the box, for RTL, the right edge in parent coordinates.
     float ellipsisX = flowIsLTR ? visibleRightEdge - ellipsisWidth : visibleLeftEdge + ellipsisWidth;
-    
+
     // Criteria for full truncation:
     // LTR: the left edge of the ellipsis is to the left of our text run.
     // RTL: the right edge of the ellipsis is to the right of our text run.
@@ -475,14 +475,14 @@ bool InlineTextBox::emphasisMarkExistsAndIsAbove(const RenderStyle& style, bool&
     TextEmphasisPosition emphasisPosition = style.textEmphasisPosition();
     ASSERT(!((emphasisPosition & TextEmphasisPositionOver) && (emphasisPosition & TextEmphasisPositionUnder)));
     ASSERT(!((emphasisPosition & TextEmphasisPositionLeft) && (emphasisPosition & TextEmphasisPositionRight)));
-    
+
     if (emphasisPositionHasNeitherLeftNorRight(emphasisPosition))
         above = emphasisPosition & TextEmphasisPositionOver;
     else if (style.isHorizontalWritingMode())
         above = emphasisPosition & TextEmphasisPositionOver;
     else
         above = emphasisPosition & TextEmphasisPositionRight;
-    
+
     if ((style.isHorizontalWritingMode() && (emphasisPosition & TextEmphasisPositionUnder))
         || (!style.isHorizontalWritingMode() && (emphasisPosition & TextEmphasisPositionLeft)))
         return true; // Ruby text is always over, so it cannot suppress emphasis marks under.
@@ -512,17 +512,17 @@ void InlineTextBox::paint(PaintInfo& paintInfo, const LayoutPoint& paintOffset, 
     LayoutUnit logicalRightSide = logicalRightVisualOverflow();
     LayoutUnit logicalStart = logicalLeftSide + (isHorizontal() ? paintOffset.x() : paintOffset.y());
     LayoutUnit logicalExtent = logicalRightSide - logicalLeftSide;
-    
+
     LayoutUnit paintEnd = isHorizontal() ? paintInfo.rect.maxX() : paintInfo.rect.maxY();
     LayoutUnit paintStart = isHorizontal() ? paintInfo.rect.x() : paintInfo.rect.y();
-    
+
     LayoutPoint adjustedPaintOffset = roundedIntPoint(paintOffset);
-    
+
     if (logicalStart >= paintEnd || logicalStart + logicalExtent <= paintStart)
         return;
 
     bool isPrinting = renderer().document().printing();
-    
+
     // Determine whether or not we're selected.
     bool haveSelection = !isPrinting && paintInfo.phase != PaintPhaseTextClip && selectionState() != RenderObject::SelectionNone;
     if (!haveSelection && paintInfo.phase == PaintPhaseSelection)
@@ -549,7 +549,7 @@ void InlineTextBox::paint(PaintInfo& paintInfo, const LayoutPoint& paintOffset, 
     GraphicsContext* context = paintInfo.context;
 
     const RenderStyle& lineStyle = this->lineStyle();
-    
+
     adjustedPaintOffset.move(0, lineStyle.isHorizontalWritingMode() ? 0 : -logicalHeight());
 
     FloatPoint boxOrigin = locationIncludingFlipping();
@@ -672,10 +672,10 @@ void InlineTextBox::paint(PaintInfo& paintInfo, const LayoutPoint& paintOffset, 
 
                 if (underline.endOffset <= start())
                     // underline is completely before this run.  This might be an underline that sits
-                    // before the first run we draw, or underlines that were within runs we skipped 
+                    // before the first run we draw, or underlines that were within runs we skipped
                     // due to truncation.
                     continue;
-                
+
                 if (underline.startOffset <= end()) {
                     // underline intersects this run.  Paint it.
                     paintCompositionUnderline(context, boxOrigin, underline);
@@ -688,7 +688,7 @@ void InlineTextBox::paint(PaintInfo& paintInfo, const LayoutPoint& paintOffset, 
             }
         }
     }
-    
+
     if (shouldRotate)
         context->concatCTM(rotation(boxRect, Counterclockwise));
 }
@@ -741,7 +741,7 @@ void InlineTextBox::paintSelection(GraphicsContext* context, const FloatPoint& b
 
     GraphicsContextStateSaver stateSaver(*context);
     updateGraphicsContext(*context, TextPaintStyle(c, style.colorSpace())); // Don't draw text at all!
-    
+
     // If the text is truncated, let the thing being painted in the truncation
     // draw its own highlight.
     int length = m_truncation != cNoTruncation ? m_truncation : m_len;
@@ -799,7 +799,7 @@ void InlineTextBox::paintCompositionBackground(GraphicsContext* context, const F
 #else
     Color c = style.compositionFillColor();
 #endif
-    
+
     updateGraphicsContext(*context, TextPaintStyle(c, style.colorSpace())); // Don't draw text at all!
 
     int deltaY = renderer().style().isFlippedLinesWritingMode() ? selectionBottom() - logicalBottom() : logicalTop() - selectionTop();
@@ -1024,7 +1024,7 @@ static FloatRect boundingBoxForAllActiveDecorations(InlineTextBox& inlineTextBox
     FloatRect boundingBox;
     if (decoration & TextDecorationUnderline) {
         int underlineOffset = computeUnderlineOffset(lineStyle.textUnderlinePosition(), lineStyle.fontMetrics(), &inlineTextBox, textDecorationThickness);
-        
+
         boundingBox.unite(boundingBoxForSingleDecoration(context, textDecorationThickness, width, localOrigin, decorationStyle, isPrinting, underlineOffset + doubleOffset, underlineOffset, baseline + 1));
     }
     if (decoration & TextDecorationOverline)
@@ -1050,13 +1050,13 @@ void InlineTextBox::paintDecoration(GraphicsContext& context, const FloatPoint& 
         if (!isLeftToRightDirection())
             localOrigin.move(m_logicalWidth - width, 0);
     }
-    
+
     // Get the text decoration colors.
     Color underline, overline, linethrough;
     renderer().getTextDecorationColors(decoration, underline, overline, linethrough, true);
     if (isFirstLine())
         renderer().getTextDecorationColors(decoration, underline, overline, linethrough, true, true);
-    
+
     // Use a special function for underlines to get the positioning exactly right.
     bool isPrinting = renderer().document().printing();
 
@@ -1119,11 +1119,11 @@ void InlineTextBox::paintDecoration(GraphicsContext& context, const FloatPoint& 
 
         // Offset between lines - always non-zero, so lines never cross each other.
         float doubleOffset = textDecorationThickness + 1;
-        
+
         bool clipDecorationToMask = false;
-        
+
         GraphicsContextStateSaver stateSaver(context, false);
-        
+
         if (clipDecorationToMask) {
             const float skipInkGapWidth = 1;
 
@@ -1141,7 +1141,7 @@ void InlineTextBox::paintDecoration(GraphicsContext& context, const FloatPoint& 
 
                 maskContext.fillRect(enclosingDeviceRect);
                 maskContext.setCompositeOperation(CompositeClear);
-    
+
                 textPainter.paintTextInContext(maskContext, skipInkGapWidth);
 
                 context.clipToImageBuffer(imageBuffer.get(), enclosingDeviceRect);
@@ -1282,7 +1282,7 @@ void InlineTextBox::paintDocumentMarker(GraphicsContext* pt, const FloatPoint& b
     if (!markerSpansWholeBox || grammar || isDictationMarker) {
         int startPosition = std::max<int>(marker->startOffset() - m_start, 0);
         int endPosition = std::min<int>(marker->endOffset() - m_start, m_len);
-        
+
         if (m_truncation != cNoTruncation)
             endPosition = std::min<int>(endPosition, m_truncation);
 
@@ -1296,7 +1296,7 @@ void InlineTextBox::paintDocumentMarker(GraphicsContext* pt, const FloatPoint& b
         IntRect markerRect = enclosingIntRect(font.selectionRectForText(run, startPoint, selHeight, startPosition, endPosition));
         start = markerRect.x() - startPoint.x();
         width = markerRect.width();
-        
+
         // Store rendered rects for bad grammar markers, so we can hit-test against it elsewhere in order to
         // display a toolTip. We don't do this for misspelling markers.
         if (grammar || isDictationMarker) {
@@ -1305,7 +1305,7 @@ void InlineTextBox::paintDocumentMarker(GraphicsContext* pt, const FloatPoint& b
             toRenderedDocumentMarker(marker)->setRenderedRect(markerRect);
         }
     }
-    
+
     // IMPORTANT: The misspelling underline is not considered when calculating the text bounds, so we have to
     // make sure to fit within those bounds.  This means the top pixel(s) of the underline will overlap the
     // bottom pixel(s) of the glyphs in smaller font sizes.  The alternatives are to increase the line spacing (bad!!)
@@ -1341,7 +1341,7 @@ void InlineTextBox::paintTextMatchMarker(GraphicsContext* pt, const FloatPoint& 
     IntRect markerRect = enclosingIntRect(font.selectionRectForText(run, IntPoint(x(), selectionTop()), selHeight, sPos, ePos));
     markerRect = renderer().localToAbsoluteQuad(FloatRect(markerRect)).enclosingBoundingBox();
     toRenderedDocumentMarker(marker)->setRenderedRect(markerRect);
-    
+
     // Optionally highlight the text
     if (renderer().frame().editor().markedTextMatchesAreHighlighted()) {
         Color color = marker->activeMatch() ? renderer().theme().platformActiveTextSearchHighlightColor() : renderer().theme().platformInactiveTextSearchHighlightColor();
@@ -1357,18 +1357,18 @@ void InlineTextBox::computeRectForReplacementMarker(DocumentMarker* marker, cons
     // Replacement markers are not actually drawn, but their rects need to be computed for hit testing.
     int top = selectionTop();
     int h = selectionHeight();
-    
+
     int sPos = std::max(marker->startOffset() - m_start, (unsigned)0);
     int ePos = std::min(marker->endOffset() - m_start, (unsigned)m_len);
     TextRun run = constructTextRun(style, font);
     IntPoint startPoint = IntPoint(x(), top);
-    
+
     // Compute and store the rect associated with this marker.
     IntRect markerRect = enclosingIntRect(font.selectionRectForText(run, startPoint, h, sPos, ePos));
     markerRect = renderer().localToAbsoluteQuad(FloatRect(markerRect)).enclosingBoundingBox();
     toRenderedDocumentMarker(marker)->setRenderedRect(markerRect);
 }
-    
+
 void InlineTextBox::paintDocumentMarkers(GraphicsContext* pt, const FloatPoint& boxOrigin, const RenderStyle& style, const Font& font, bool background)
 {
     if (!renderer().textNode())
@@ -1381,7 +1381,7 @@ void InlineTextBox::paintDocumentMarkers(GraphicsContext* pt, const FloatPoint& 
     // Note end() points at the last char, not one past it like endOffset and ranges do.
     for ( ; markerIt != markers.end(); ++markerIt) {
         DocumentMarker* marker = *markerIt;
-        
+
         // Paint either the background markers or the foreground markers, but not both
         switch (marker->type()) {
             case DocumentMarker::Grammar:
@@ -1408,11 +1408,11 @@ void InlineTextBox::paintDocumentMarkers(GraphicsContext* pt, const FloatPoint& 
             // marker is completely before this run.  This might be a marker that sits before the
             // first run we draw, or markers that were within runs we skipped due to truncation.
             continue;
-        
+
         if (marker->startOffset() > end())
             // marker is completely after this run, bail.  A later run will paint it.
             break;
-        
+
         // marker intersects this run.  Paint it.
         switch (marker->type()) {
             case DocumentMarker::Spelling:
@@ -1446,7 +1446,7 @@ void InlineTextBox::paintCompositionUnderline(GraphicsContext* ctx, const FloatP
 {
     if (m_truncation == cFullTruncation)
         return;
-    
+
     float start = 0; // start of line to draw, relative to tx
     float width = m_logicalWidth; // how much line to draw
     bool useWholeWidth = true;

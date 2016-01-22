@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef HeapTimer_h
@@ -55,10 +55,10 @@ public:
 #else
     HeapTimer(VM*);
 #endif
-    
+
     JS_EXPORT_PRIVATE virtual ~HeapTimer();
     virtual void doWork() = 0;
-    
+
 protected:
     VM* m_vm;
 
@@ -76,7 +76,7 @@ protected:
     void stop();
     Ecore_Timer* m_timer;
 #endif
-    
+
 private:
     void invalidate();
 };

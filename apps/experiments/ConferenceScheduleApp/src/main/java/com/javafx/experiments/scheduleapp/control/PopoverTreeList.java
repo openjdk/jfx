@@ -50,7 +50,7 @@ import javafx.util.Callback;
  * (it is the Control, the Skin, and the CellFactory all in one).
  */
 public class PopoverTreeList<T> extends ListView<T> implements Callback<ListView<T>, ListCell<T>> {
-    
+
     public PopoverTreeList(){
         getStyleClass().clear();
         setSkin(new ListViewSkin<T>(this));
@@ -60,7 +60,7 @@ public class PopoverTreeList<T> extends ListView<T> implements Callback<ListView
     @Override public ListCell<T> call(ListView<T> p) {
         return new TreeItemListCell();
     }
-    
+
     protected void itemClicked(T item) {}
 
     private class TreeItemListCell extends ListCell<T> implements EventHandler<MouseEvent> {
@@ -75,7 +75,7 @@ public class PopoverTreeList<T> extends ListView<T> implements Callback<ListView
             getChildren().add(arrow);
             setOnMouseClicked(this);
         }
-        
+
         @Override public void handle(MouseEvent t) {
             itemClicked(getItem());
         }
@@ -98,7 +98,7 @@ public class PopoverTreeList<T> extends ListView<T> implements Callback<ListView
             arrow.setLayoutX(w - arrowBounds.getWidth() - 12);
             arrow.setLayoutY((int)((h - arrowBounds.getHeight())/2d));
         }
-        
+
         // CELL METHODS
         @Override protected void updateItem(T item, boolean empty) {
             // let super do its work

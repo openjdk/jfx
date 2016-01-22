@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -92,7 +92,7 @@ void WebDocumentLoader::detachFromFrame()
     if (m_dataSource) {
         WebDataSource* dataSourceToBeReleased = m_dataSource;
         // It's important to null out m_dataSource before calling release on the data source.  That release can cause the data
-        // source to be deleted - which ends up calling loader->detachDataSource() which makes the assumption that the loader no 
+        // source to be deleted - which ends up calling loader->detachDataSource() which makes the assumption that the loader no
         // longer holds a reference to the data source.
         m_dataSource = 0;
         dataSourceToBeReleased->Release();

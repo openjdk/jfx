@@ -757,7 +757,7 @@ final class HLSConnectionHolder extends ConnectionHolder {
             }
         }
 
-        private String getNextMediaFile() {            
+        private String getNextMediaFile() {
             if (isLive) {
                 synchronized (lock) {
                     isLiveWaiting = ((mediaFileIndex + 1) >= mediaFiles.size());

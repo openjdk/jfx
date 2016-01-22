@@ -29,7 +29,7 @@ namespace WebCore {
 
 class HitTestResult;
 class HTMLImageElement;
-    
+
 class HTMLMapElement final : public HTMLElement {
 public:
     static PassRefPtr<HTMLMapElement> create(Document&);
@@ -39,7 +39,7 @@ public:
     const AtomicString& getName() const { return m_name; }
 
     bool mapMouseEvent(LayoutPoint location, const LayoutSize&, HitTestResult&);
-    
+
     HTMLImageElement* imageElement();
     PassRefPtr<HTMLCollection> areas();
 

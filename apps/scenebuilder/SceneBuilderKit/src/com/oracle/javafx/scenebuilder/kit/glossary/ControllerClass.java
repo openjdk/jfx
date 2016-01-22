@@ -79,7 +79,7 @@ class ControllerClass {
     private static final Pattern EVENT_PATTERN_2 = Pattern.compile(publicToken + staticFinalToken + staticFinalToken + voidToken + "(" + //NOI18N
             methodNameToken + "\\(" + typeEventToken + argEventToken + "\\)#)" + throwsToken + exceptionToken + startBlockToken);//NOI18N
     private static final Pattern EVENT_PATTERN_3 = Pattern.compile(publicToken + staticFinalToken + staticFinalToken + voidToken + "(" + //NOI18N
-            methodNameToken + "\\(#\\s*?#?\\)#)" + throwsToken + exceptionToken + startBlockToken);//NOI18N  
+            methodNameToken + "\\(#\\s*?#?\\)#)" + throwsToken + exceptionToken + startBlockToken);//NOI18N
     private final String javaContent;
     private final String tokenizedContent;
     private final boolean isInitializable;

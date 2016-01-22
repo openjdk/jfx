@@ -67,7 +67,7 @@ private:
     }
 
     virtual PassRefPtr<TransformOperation> blend(const TransformOperation* from, double progress, bool blendToIdentity = false);
-    
+
     MatrixTransformOperation(double a, double b, double c, double d, double e, double f)
         : m_a(a)
         , m_b(b)
@@ -87,7 +87,7 @@ private:
         , m_f(t.f())
     {
     }
-    
+
     double m_a;
     double m_b;
     double m_c;

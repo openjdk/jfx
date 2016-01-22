@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef FullscreenVideoController_h
@@ -45,7 +45,7 @@ class PlatformCALayer;
 class HUDWidget {
 public:
     HUDWidget(const WebCore::IntRect& rect) : m_rect(rect) { }
-    
+
     virtual ~HUDWidget() { }
 
     virtual void draw(WebCore::GraphicsContext&) = 0;
@@ -116,9 +116,9 @@ public:
 private:
     // MediaPlayerPrivateFullscreenWindowClient
     virtual LRESULT fullscreenClientWndProc(HWND, UINT message, WPARAM, LPARAM);
-    
+
     void ensureWindow();
-    
+
     bool canPlay() const;
     void play();
     void pause();

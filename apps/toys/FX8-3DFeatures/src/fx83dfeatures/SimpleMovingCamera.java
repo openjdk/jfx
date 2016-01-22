@@ -40,13 +40,13 @@ public class SimpleMovingCamera extends Application {
     PointLight pointLight;
     Sphere sphere;
     PhongMaterial material;
-    PerspectiveCamera camera;    
+    PerspectiveCamera camera;
     Group cameraGroup;
     TranslateTransition transTrans;
     double fovValue;
     double rotateCamera = 0.0;
     double translateCamera = 0.0;
-    
+
 
     private Scene buildScene() {
         material = new PhongMaterial();
@@ -73,7 +73,7 @@ public class SimpleMovingCamera extends Application {
         scene.setFill(Color.GRAY);
         scene.setCamera(camera);
         System.err.println("Camera FOV = " + (fovValue = camera.getFieldOfView()));
-        
+
         transTrans = new TranslateTransition(Duration.seconds(5), cameraGroup);
         transTrans.setAutoReverse(true);
         transTrans.setCycleCount(Timeline.INDEFINITE);

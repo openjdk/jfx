@@ -69,7 +69,7 @@ inline void ConservativeRoots::genericAddPointer(void* p, TinyBloomFilter filter
     markHook.mark(p);
 
     m_copiedSpace->pinIfNecessary(p);
-    
+
     MarkedBlock* candidate = MarkedBlock::blockFor(p);
     if (filter.ruleOut(reinterpret_cast<Bits>(candidate))) {
         ASSERT(!candidate || !m_blocks->set().contains(candidate));
@@ -132,7 +132,7 @@ public:
         , m_second(second)
     {
     }
-    
+
     void mark(void* address)
     {
         m_first.mark(address);

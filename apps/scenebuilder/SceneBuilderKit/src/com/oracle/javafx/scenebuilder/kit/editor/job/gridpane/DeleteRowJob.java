@@ -123,7 +123,7 @@ public class DeleteRowJob extends BatchSelectionJob {
         targetIndex = iterator.next();
         while (targetIndex != -1) {
             // Move the rows content :
-            // - from the target index 
+            // - from the target index
             // - to the next target index if any or the last row index otherwise
             int fromIndex, toIndex;
 
@@ -138,9 +138,9 @@ public class DeleteRowJob extends BatchSelectionJob {
                 toIndex = rowsSize - 1;
             }
 
-            // When we delete 2 consecutive rows 
+            // When we delete 2 consecutive rows
             // => no content to move between the 2 rows
-            // When we delete the last row 
+            // When we delete the last row
             // => no row content to move below the last row
             if (nextTargetIndex != (targetIndex + 1)
                     && fromIndex < rowsSize) {

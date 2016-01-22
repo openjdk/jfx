@@ -71,10 +71,10 @@ abstract public class Selector {
 
     // same as the matches method expect return true/false rather than a match
     public abstract boolean applies(Styleable styleable);
-    
+
     // same as applies, but will return pseudoclass state that it finds along the way
     public abstract boolean applies(Styleable styleable, Set<PseudoClass>[] triggerStates, int bit);
-    
+
     /**
      * Determines whether the current state of the node and its parents
      * matches the pseudo-classes defined (if any) for this selector.
@@ -101,12 +101,12 @@ abstract public class Selector {
         else
             return CompoundSelector.readBinary(bssVersion, is,strings);
     }
-    
+
     public static Selector createSelector(final String cssSelector) {
         if (cssSelector == null || cssSelector.length() == 0) {
             return null; // actually return a default no-match selector
         }
-        
+
         // A very primitive parser
         List<SimpleSelector> selectors = new ArrayList<SimpleSelector>();
         List<Combinator> combinators = new ArrayList<Combinator>();
@@ -132,7 +132,7 @@ abstract public class Selector {
             }
         }
         parts.add(cssSelector.substring(start));
-        
+
         for (int i=0; i<parts.size(); i++) {
             final String part = parts.get(i);
             if (part != null && !part.equals("")) {
@@ -144,14 +144,14 @@ abstract public class Selector {
                         pseudoClasses.add(pseudoClassParts[j].trim());
                     }
                 }
-                
+
                 // Now that we've read off the pseudo classes, we can go ahead and pull
                 // apart the beginning.
                 final String selector = pseudoClassParts[0].trim();
                 // There might be style classes, so lets peel those off next
                 String[] styleClassParts = selector.split("\\.");
                 List<String> styleClasses = new ArrayList<String>();
-                
+
                 // If the first one is an empty string, then it started with a pseudo class
                 // If the first one starts with a #, it was an id
                 // Otherwise, it was a name
@@ -168,16 +168,16 @@ abstract public class Selector {
                 } else {
                     name = styleClassParts[0].trim();
                 }
-                
+
                 selectors.add(new SimpleSelector(name, styleClasses, pseudoClasses, id));
             }
         }
-        
+
         if (selectors.size() == 1) {
             return selectors.get(0);
         } else {
             return new CompoundSelector(selectors, combinators);
         }
     }
-    
+
 }

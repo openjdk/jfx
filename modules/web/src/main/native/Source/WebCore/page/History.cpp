@@ -140,7 +140,7 @@ void History::stateObjectAdded(PassRefPtr<SerializedScriptValue> data, const Str
 {
     if (!m_frame || !m_frame->page())
         return;
-    
+
     URL fullURL = urlForState(urlString);
     if (!fullURL.isValid() || !m_frame->document()->securityOrigin()->canRequest(fullURL)) {
         ec = SECURITY_ERR;
@@ -151,7 +151,7 @@ void History::stateObjectAdded(PassRefPtr<SerializedScriptValue> data, const Str
         m_frame->loader().history().pushState(data, title, fullURL.string());
     else if (stateObjectType == StateObjectType::Replace)
         m_frame->loader().history().replaceState(data, title, fullURL.string());
-            
+
     if (!urlString.isEmpty())
         m_frame->document()->updateURLForPushOrReplaceState(fullURL);
 

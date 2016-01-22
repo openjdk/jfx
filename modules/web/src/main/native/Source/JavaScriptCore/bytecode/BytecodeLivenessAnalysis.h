@@ -39,10 +39,10 @@ class FullBytecodeLiveness;
 class BytecodeLivenessAnalysis {
 public:
     BytecodeLivenessAnalysis(CodeBlock*);
-    
+
     bool operandIsLiveAtBytecodeOffset(int operand, unsigned bytecodeOffset);
     FastBitVector getLivenessInfoAtBytecodeOffset(unsigned bytecodeOffset);
-    
+
     void computeFullLiveness(FullBytecodeLiveness& result);
 
 private:

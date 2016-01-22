@@ -87,7 +87,7 @@ public class UpdateSelectionJob extends Job {
     @Override
     public void execute() {
         final Selection selection = getEditorController().getSelection();
-        
+
         // Saves the current selection
         try {
             if (selection.getGroup() == null) {
@@ -98,7 +98,7 @@ public class UpdateSelectionJob extends Job {
         } catch(CloneNotSupportedException x) {
             throw new RuntimeException("Bug", x);
         }
-        
+
         // Now same as redo()
         redo();
     }
@@ -122,5 +122,5 @@ public class UpdateSelectionJob extends Job {
         // Not expected to reach the user
         return getClass().getSimpleName();
     }
-    
+
 }

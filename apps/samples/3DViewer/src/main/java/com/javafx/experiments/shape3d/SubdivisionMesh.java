@@ -46,25 +46,25 @@ public class SubdivisionMesh extends PolygonMesh {
     private BoundaryMode boundaryMode;
     private MapBorderMode mapBorderMode;
     private final List<SymbolicPolygonMesh> symbolicMeshes;
-    
+
     private boolean pointValuesDirty;
     private boolean meshDirty;
     private boolean subdivisionLevelDirty;
-    
-    /** 
+
+    /**
      * Describes whether the edges and points at the boundary are treated as creases
      */
     public enum BoundaryMode {
         /**
          * Only edges at the boundary are treated as creases
          */
-        CREASE_EDGES, 
+        CREASE_EDGES,
         /**
          * Edges and points at the boundary are treated as creases
          */
         CREASE_ALL
     }
-    
+
     /**
      * Describes how the new texture coordinate for the control point is defined
      */
@@ -72,23 +72,23 @@ public class SubdivisionMesh extends PolygonMesh {
         /**
          * Jeeps the same uvs for all control points
          */
-        NOT_SMOOTH, 
+        NOT_SMOOTH,
         /**
          * Smooths uvs of points at corners
          */
-        SMOOTH_INTERNAL, 
+        SMOOTH_INTERNAL,
         /**
          * Smooths uvs of points at boundaries and original control points (and creases [in the future when creases are defined])
          */
         SMOOTH_ALL
     }
-    
+
     public SubdivisionMesh(PolygonMesh originalMesh, int subdivisionLevel, BoundaryMode boundaryMode, MapBorderMode mapBorderMode) {
         this.originalMesh = originalMesh;
         setSubdivisionLevelForced(subdivisionLevel);
         setBoundaryModeForced(boundaryMode);
         setMapBorderModeForced(mapBorderMode);
-        
+
         symbolicMeshes = new ArrayList<>(4); // the polymesh is usually subdivided up to 3 times
 
         originalMesh.getPoints().addListener((observableArray, sizeChanged, from, to) -> {
@@ -100,7 +100,7 @@ public class SubdivisionMesh extends PolygonMesh {
         });
         originalMesh.getTexCoords().addListener((observableArray, sizeChanged, from, to) -> meshDirty = true);
     }
-    
+
     /**
      * Updates the variables of the underlying polygon mesh.
      * It only updates the fields that need to be updated.
@@ -112,41 +112,41 @@ public class SubdivisionMesh extends PolygonMesh {
             pointValuesDirty = true;
             subdivisionLevelDirty = true;
         }
- 
+
         while (subdivisionLevel >= symbolicMeshes.size()) {
             symbolicMeshes.add(SymbolicSubdivisionBuilder.subdivide(symbolicMeshes.get(symbolicMeshes.size()-1), boundaryMode, mapBorderMode));
             pointValuesDirty = true;
             subdivisionLevelDirty = true;
         }
-        
+
         if (pointValuesDirty) {
             for (int i = 0; i <= subdivisionLevel; i++) {
                 SymbolicPolygonMesh symbolicMesh = symbolicMeshes.get(i);
                 symbolicMesh.points.update();
             }
         }
-        
+
         if (pointValuesDirty || subdivisionLevelDirty) {
             getPoints().setAll(symbolicMeshes.get(subdivisionLevel).points.data);
         }
-        
+
         if (subdivisionLevelDirty) {
             faces = symbolicMeshes.get(subdivisionLevel).faces;
             numEdgesInFaces = -1;
             getFaceSmoothingGroups().setAll(symbolicMeshes.get(subdivisionLevel).faceSmoothingGroups);
             getTexCoords().setAll(symbolicMeshes.get(subdivisionLevel).texCoords);
         }
-        
+
         meshDirty = false;
         pointValuesDirty = false;
         subdivisionLevelDirty = false;
     }
-    
+
     private void setSubdivisionLevelForced(int subdivisionLevel) {
         this.subdivisionLevel = subdivisionLevel;
         subdivisionLevelDirty = true;
     }
-    
+
     private void setBoundaryModeForced(SubdivisionMesh.BoundaryMode boundaryMode) {
         this.boundaryMode = boundaryMode;
         meshDirty = true;
@@ -156,11 +156,11 @@ public class SubdivisionMesh extends PolygonMesh {
         this.mapBorderMode = mapBorderMode;
         meshDirty = true;
     }
-    
+
     public PolygonMesh getOriginalMesh() {
         return originalMesh;
     }
-    
+
     public int getSubdivisionLevel() {
         return subdivisionLevel;
     }
@@ -170,7 +170,7 @@ public class SubdivisionMesh extends PolygonMesh {
             setSubdivisionLevelForced(subdivisionLevel);
         }
     }
-    
+
     public SubdivisionMesh.BoundaryMode getBoundaryMode() {
         return boundaryMode;
     }

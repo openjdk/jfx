@@ -205,9 +205,9 @@ extern "C" {
     }
 
 #ifdef WINDOWS
-	__declspec(dllexport)
+    __declspec(dllexport)
 #endif //WINDOWS
 
-	void stop_launcher() {
+    void stop_launcher() {
     }
 }

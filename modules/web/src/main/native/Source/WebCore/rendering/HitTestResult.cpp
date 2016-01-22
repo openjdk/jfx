@@ -134,7 +134,7 @@ void HitTestResult::setInnerNode(Node* n)
         n = toPseudoElement(n)->hostElement();
     m_innerNode = n;
 }
-    
+
 void HitTestResult::setInnerNonSharedNode(Node* n)
 {
     if (n && n->isPseudoElement())
@@ -142,9 +142,9 @@ void HitTestResult::setInnerNonSharedNode(Node* n)
     m_innerNonSharedNode = n;
 }
 
-void HitTestResult::setURLElement(Element* n) 
-{ 
-    m_innerURLElement = n; 
+void HitTestResult::setURLElement(Element* n)
+{
+    m_innerURLElement = n;
 }
 
 void HitTestResult::setScrollbar(Scrollbar* s)
@@ -192,7 +192,7 @@ String HitTestResult::spellingToolTip(TextDirection& dir) const
     // currently supply strings, but maybe someday markers associated with misspelled words will also.
     if (!m_innerNonSharedNode)
         return String();
-    
+
     DocumentMarker* marker = m_innerNonSharedNode->document().markers().markerContainingPoint(m_hitTestLocation.point(), DocumentMarker::Grammar);
     if (!marker)
         return String();
@@ -204,18 +204,18 @@ String HitTestResult::spellingToolTip(TextDirection& dir) const
 
 String HitTestResult::replacedString() const
 {
-    // Return the replaced string associated with this point, if any. This marker is created when a string is autocorrected, 
+    // Return the replaced string associated with this point, if any. This marker is created when a string is autocorrected,
     // and is used for generating a contextual menu item that allows it to easily be changed back if desired.
     if (!m_innerNonSharedNode)
         return String();
-    
+
     DocumentMarker* marker = m_innerNonSharedNode->document().markers().markerContainingPoint(m_hitTestLocation.point(), DocumentMarker::Replacement);
     if (!marker)
         return String();
-    
+
     return marker->description();
-}    
-    
+}
+
 String HitTestResult::title(TextDirection& dir) const
 {
     dir = LTR;
@@ -271,12 +271,12 @@ String HitTestResult::altDisplayString() const
 {
     if (!m_innerNonSharedNode)
         return String();
-    
+
     if (isHTMLImageElement(m_innerNonSharedNode.get())) {
         HTMLImageElement* image = toHTMLImageElement(m_innerNonSharedNode.get());
         return displayString(image->getAttribute(altAttr), m_innerNonSharedNode.get());
     }
-    
+
     if (isHTMLInputElement(m_innerNonSharedNode.get())) {
         HTMLInputElement* input = toHTMLInputElement(m_innerNonSharedNode.get());
         return displayString(input->alt(), m_innerNonSharedNode.get());
@@ -289,7 +289,7 @@ Image* HitTestResult::image() const
 {
     if (!m_innerNonSharedNode)
         return 0;
-    
+
     auto renderer = m_innerNonSharedNode->renderer();
     if (renderer && renderer->isRenderImage()) {
         RenderImage* image = toRenderImage(renderer);
@@ -320,7 +320,7 @@ URL HitTestResult::absoluteImageURL() const
         || isHTMLImageElement(m_innerNonSharedNode.get())
         || isHTMLInputElement(m_innerNonSharedNode.get())
         || m_innerNonSharedNode->hasTagName(objectTag)
-        || isSVGImageElement(m_innerNonSharedNode.get())) 
+        || isSVGImageElement(m_innerNonSharedNode.get()))
         {
         Element* element = toElement(m_innerNonSharedNode.get());
         urlString = element->imageSourceURL();
@@ -544,7 +544,7 @@ String HitTestResult::titleDisplayString() const
 {
     if (!m_innerURLElement)
         return String();
-    
+
     return displayString(m_innerURLElement->title(), m_innerURLElement.get());
 }
 
@@ -557,8 +557,8 @@ String HitTestResult::textContent() const
 
 // FIXME: This function needs a better name and may belong in a different class. It's not
 // really isContentEditable(); it's more like needsEditingContextMenu(). In many ways, this
-// function would make more sense in the ContextMenu class, except that WebElementDictionary 
-// hooks into it. Anyway, we should architect this better. 
+// function would make more sense in the ContextMenu class, except that WebElementDictionary
+// hooks into it. Anyway, we should architect this better.
 bool HitTestResult::isContentEditable() const
 {
     if (!m_innerNonSharedNode)

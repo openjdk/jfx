@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -61,7 +61,7 @@ bool EmbeddedWidget::createWindow(HWND parentWindow, const IntSize& size)
     SIZE pluginSize(size);
 
     HRESULT hr = m_view->createViewWindow(reinterpret_cast<OLE_HANDLE>(parentWindow), &pluginSize, &window);
-        
+
     if (FAILED(hr) || !window)
         return false;
 
@@ -164,7 +164,7 @@ IntRect EmbeddedWidget::windowClipRect() const
 {
     // Start by clipping to our bounds.
     IntRect clipRect(m_windowRect);
-    
+
     // Take our element and get the clip rect from the enclosing layer and frame view.
     FrameView* parentView = m_element->document().view();
     clipRect.intersect(parentView->windowClipRectForFrameOwner(m_element, true));
@@ -182,7 +182,7 @@ void EmbeddedWidget::setParent(ScrollView* parent)
     if (parent)
         return;
 
-    // If the embedded window or one of its children have the focus, we need to 
+    // If the embedded window or one of its children have the focus, we need to
     // clear it to prevent the web view window from being focused because that can
     // trigger a layout while the plugin element is being detached.
     HWND focusedWindow = ::GetFocus();

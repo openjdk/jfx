@@ -869,7 +869,7 @@ void GraphicsContext::scale(const FloatSize& size)
 }
 
 void GraphicsContext::fillRoundedRect(const FloatRect& rect, const FloatSize& topLeft, const FloatSize& topRight,
-				      const FloatSize& bottomLeft, const FloatSize& bottomRight, const Color& color, ColorSpace) // todo tav Int to Float
+                      const FloatSize& bottomLeft, const FloatSize& bottomRight, const Color& color, ColorSpace) // todo tav Int to Float
 {
     if (paintingDisabled())
         return;

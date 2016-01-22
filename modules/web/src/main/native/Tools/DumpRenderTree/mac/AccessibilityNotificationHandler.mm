@@ -77,7 +77,7 @@
     [[NSNotificationCenter defaultCenter] removeObserver:self];
     JSValueUnprotect([mainFrame globalContext], m_notificationFunctionCallback);
     m_notificationFunctionCallback = 0;
-    
+
     [super dealloc];
 }
 
@@ -85,10 +85,10 @@
 {
     if (!callback)
         return;
- 
-    if (m_notificationFunctionCallback) 
+
+    if (m_notificationFunctionCallback)
         JSValueUnprotect([mainFrame globalContext], m_notificationFunctionCallback);
-    
+
     m_notificationFunctionCallback = callback;
     JSValueProtect([mainFrame globalContext], m_notificationFunctionCallback);
 }

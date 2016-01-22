@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -44,13 +44,13 @@ public:
         , m_insertionSet(graph)
     {
     }
-    
+
     bool run()
     {
         ASSERT(m_graph.m_fixpointState == FixpointNotConverged);
-        
+
         m_changed = false;
-        
+
         for (BlockIndex blockIndex = m_graph.numBlocks(); blockIndex--;) {
             m_block = m_graph.block(blockIndex);
             if (!m_block)
@@ -61,7 +61,7 @@ public:
             }
             m_insertionSet.execute(m_block);
         }
-        
+
         return m_changed;
     }
 
@@ -80,12 +80,12 @@ private:
                 }
             }
             break;
-            
+
         case BitXor:
         case BitAnd:
             handleCommutativity();
             break;
-            
+
         case BitLShift:
         case BitRShift:
         case BitURShift:
@@ -97,7 +97,7 @@ private:
                 }
             }
             break;
-            
+
         case UInt32ToNumber:
             if (m_node->child1()->op() == BitURShift
                 && m_node->child1()->child2()->isConstant()) {
@@ -110,10 +110,10 @@ private:
                 }
             }
             break;
-            
+
         case ArithAdd:
             handleCommutativity();
-            
+
             if (m_graph.isInt32Constant(m_node->child2().node())) {
                 int32_t value = m_graph.valueOfInt32Constant(
                     m_node->child2().node());
@@ -123,11 +123,11 @@ private:
                 }
             }
             break;
-            
+
         case ArithMul:
             handleCommutativity();
             break;
-            
+
         case ArithSub:
             if (m_graph.isInt32Constant(m_node->child2().node())
                 && m_node->isBinaryUseKind(Int32Use)) {
@@ -142,17 +142,17 @@ private:
                 }
             }
             break;
-            
+
         case GetArrayLength:
             if (JSArrayBufferView* view = m_graph.tryGetFoldableViewForChild1(m_node))
                 foldTypedArrayPropertyToConstant(view, jsNumber(view->length()));
             break;
-            
+
         case GetTypedArrayByteOffset:
             if (JSArrayBufferView* view = m_graph.tryGetFoldableView(m_node->child1().node()))
                 foldTypedArrayPropertyToConstant(view, jsNumber(view->byteOffset()));
             break;
-            
+
         case GetIndexedPropertyStorage:
             if (JSArrayBufferView* view = m_graph.tryGetFoldableViewForChild1(m_node)) {
                 if (view->mode() != FastTypedArray) {
@@ -169,12 +169,12 @@ private:
                 }
             }
             break;
-            
+
         default:
             break;
         }
     }
-            
+
     void convertToIdentityOverChild(unsigned childIndex)
     {
         m_insertionSet.insertNode(
@@ -183,24 +183,24 @@ private:
         m_node->convertToIdentity();
         m_changed = true;
     }
-    
+
     void convertToIdentityOverChild1()
     {
         convertToIdentityOverChild(0);
     }
-    
+
     void convertToIdentityOverChild2()
     {
         convertToIdentityOverChild(1);
     }
-    
+
     void foldTypedArrayPropertyToConstant(JSArrayBufferView* view, JSValue constant)
     {
         prepareToFoldTypedArray(view);
         m_graph.convertToConstant(m_node, constant);
         m_changed = true;
     }
-    
+
     void prepareToFoldTypedArray(JSArrayBufferView* view)
     {
         m_insertionSet.insertNode(
@@ -209,13 +209,13 @@ private:
         m_insertionSet.insertNode(
             m_nodeIndex, SpecNone, Phantom, m_node->origin, m_node->children);
     }
-    
+
     void handleCommutativity()
     {
         // If the right side is a constant then there is nothing left to do.
         if (m_node->child2()->hasConstant())
             return;
-        
+
         // This case ensures that optimizations that look for x + const don't also have
         // to look for const + x.
         if (m_node->child1()->hasConstant()) {
@@ -223,7 +223,7 @@ private:
             m_changed = true;
             return;
         }
-        
+
         // This case ensures that CSE is commutativity-aware.
         if (m_node->child1().node() > m_node->child2().node()) {
             std::swap(m_node->child1(), m_node->child2());
@@ -231,14 +231,14 @@ private:
             return;
         }
     }
-    
+
     InsertionSet m_insertionSet;
     BasicBlock* m_block;
     unsigned m_nodeIndex;
     Node* m_node;
     bool m_changed;
 };
-    
+
 bool performStrengthReduction(Graph& graph)
 {
     SamplingRegion samplingRegion("DFG Strength Reduction Phase");

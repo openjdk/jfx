@@ -39,7 +39,7 @@ public class SendMove extends Message {
 
     public SendMove() {
     }
-    
+
     public SendMove(String gameId) {
         super(gameId);
     }
@@ -67,7 +67,7 @@ public class SendMove extends Message {
     public void setPiece(String piece) {
         this.piece = piece;
     }
-    
+
     @Override
     public Message processMe(ServerMessageProcessor processor) {
         return processor.process(this);

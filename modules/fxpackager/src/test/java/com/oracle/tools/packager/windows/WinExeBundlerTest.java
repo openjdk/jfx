@@ -56,7 +56,7 @@ import static com.oracle.tools.packager.windows.WindowsBundlerParam.WIN_RUNTIME;
 import static com.oracle.tools.packager.windows.WindowsBundlerParam.MENU_GROUP;
 import static com.oracle.tools.packager.windows.WindowsBundlerParam.INSTALLDIR_CHOOSER;
 import static org.junit.Assert.*;
- 
+
 public class WinExeBundlerTest {
 
     static File tmpBase;
@@ -174,7 +174,7 @@ public class WinExeBundlerTest {
      *     <li>Where to build it</li>
      *     <li>The jar containing the application (with a main-class attribute)</li>
      * </ul>
-     * 
+     *
      * All other values will be driven off of those two values.
      */
     @Test
@@ -547,5 +547,5 @@ public class WinExeBundlerTest {
         assertNotNull(output);
         assertTrue(output.exists());
     }
-    
+
 }

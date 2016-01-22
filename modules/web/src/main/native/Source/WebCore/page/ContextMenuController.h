@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef ContextMenuController_h
@@ -75,7 +75,7 @@ namespace WebCore {
     private:
         PassOwnPtr<ContextMenu> createContextMenu(Event*);
         void showContextMenu(Event*);
-        
+
         void appendItem(ContextMenuItem&, ContextMenu* parentMenu);
 
         void createAndAppendFontSubMenu(ContextMenuItem&);

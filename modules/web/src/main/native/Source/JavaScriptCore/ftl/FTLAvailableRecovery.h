@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef FTLAvailableRecovery_h
@@ -45,7 +45,7 @@ public:
         , m_right(0)
     {
     }
-    
+
     AvailableRecovery(DFG::Node* node, RecoveryOpcode opcode, LValue left, LValue right, ValueFormat format)
         : m_node(node)
         , m_format(format)
@@ -54,15 +54,15 @@ public:
         , m_right(right)
     {
     }
-    
+
     DFG::Node* node() const { return m_node; }
     ValueFormat format() const { return m_format; }
     RecoveryOpcode opcode() const { return m_opcode; }
     LValue left() const { return m_left; }
     LValue right() const { return m_right; }
-    
+
     void dump(PrintStream&) const;
-    
+
 private:
     DFG::Node* m_node;
     ValueFormat m_format;

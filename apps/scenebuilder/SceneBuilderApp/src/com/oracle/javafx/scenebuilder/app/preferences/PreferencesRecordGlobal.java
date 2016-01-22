@@ -194,11 +194,11 @@ public class PreferencesRecordGlobal {
     public ToolTheme getToolTheme() {
         return toolTheme;
     }
-    
+
     public void setToolTheme(ToolTheme value) {
         toolTheme = value;
     }
-    
+
     public DISPLAY_MODE getLibraryDisplayOption() {
         return libraryDisplayOption;
     }
@@ -222,7 +222,7 @@ public class PreferencesRecordGlobal {
             return CSSAnalyzerColumnsOrder.DEFAULTS_FIRST;
         }
     }
-    
+
     public CSSAnalyzerColumnsOrder getCSSAnalyzerColumnsOrder() {
         if (isCssTableColumnsOrderingReversed()) {
             return CSSAnalyzerColumnsOrder.DEFAULTS_LAST;
@@ -360,7 +360,7 @@ public class PreferencesRecordGlobal {
          }
         app.performControlAction(aca, dwc);
     }
-    
+
     public void refreshLibraryDisplayOption(DocumentWindowController dwc) {
         dwc.refreshLibraryDisplayOption(libraryDisplayOption);
     }
@@ -457,7 +457,7 @@ public class PreferencesRecordGlobal {
         refreshRootContainerHeight(dwc);
         refreshRootContainerWidth(dwc);
     }
-    
+
     /**
      * Read data from the java preferences DB and initialize properties.
      */

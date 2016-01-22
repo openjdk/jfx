@@ -39,7 +39,7 @@ public class ClosePathTest {
         ClosePath closePath = new ClosePath();
         ClosePathShim.addTo(closePath, pgPath);
         assertTrue(pgPath.isClosed());
-                
+
     }
 
     @Test public void toStringShouldReturnNonEmptyString() {
@@ -55,7 +55,7 @@ public class ClosePathTest {
         @Override public void addClosePath() {
             closed = true;
         }
-        
+
         public boolean isClosed() {
             return closed;
         }

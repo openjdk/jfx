@@ -57,7 +57,7 @@ public class HyperLinkApp extends Application {
     public Parent createContent() {
         HBox hbox = new HBox(18);
         hbox.setAlignment(Pos.CENTER);
-        
+
         VBox vbox = new VBox();
         vbox.setSpacing(5);
         vbox.setAlignment(Pos.CENTER_LEFT);
@@ -66,7 +66,7 @@ public class HyperLinkApp extends Application {
         Hyperlink h1 = new Hyperlink("Hyperlink");
         h1.setPrefWidth(80);
         h1.setMinWidth(Hyperlink.USE_PREF_SIZE);
-        
+
         Hyperlink h2 = new Hyperlink("Hyperlink with Image");
         h2.setPrefWidth(200);
         h2.setMinWidth(Hyperlink.USE_PREF_SIZE);
@@ -74,7 +74,7 @@ public class HyperLinkApp extends Application {
 
         vbox.getChildren().addAll(h1, h2);
         hbox.getChildren().add(vbox);
-        
+
         return hbox;
     }
 

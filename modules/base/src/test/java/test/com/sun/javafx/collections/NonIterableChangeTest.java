@@ -34,20 +34,20 @@ import org.junit.Test;
 import static org.junit.Assert.*;
 
 public class NonIterableChangeTest {
-    
+
     ObservableList<String> list;
-    
+
     @Before
     public void setUp() {
         list = FXCollections.observableArrayList("a", "b", "c", "d", "e");
     }
-    
+
     @Test
     public void testSimpleAdd() {
         Change<String> change = new NonIterableChange.SimpleAddChange<String>(0, 1, list);
-        
+
         assertTrue(change.next());
-        
+
         assertTrue(change.wasAdded());
         assertFalse(change.wasRemoved());
         assertFalse(change.wasReplaced());
@@ -60,16 +60,16 @@ public class NonIterableChangeTest {
         assertEquals(0, change.getRemovedSize());
         assertEquals(Arrays.asList(), change.getRemoved());
         assertNotNull(change.toString());
-        
+
         assertFalse(change.next());
     }
-    
+
     @Test
     public void testSimpleRemove() {
         Change<String> change = new NonIterableChange.SimpleRemovedChange<String>(0, 0, "a0", list);
-        
+
         assertTrue(change.next());
-        
+
         assertFalse(change.wasAdded());
         assertTrue(change.wasRemoved());
         assertFalse(change.wasReplaced());
@@ -82,16 +82,16 @@ public class NonIterableChangeTest {
         assertEquals(1, change.getRemovedSize());
         assertEquals(Arrays.asList("a0"), change.getRemoved());
         assertNotNull(change.toString());
-        
+
         assertFalse(change.next());
     }
-    
+
     @Test
     public void testSimpleUpdate() {
         Change<String> change = new NonIterableChange.SimpleUpdateChange<String>(0, 1, list);
-        
+
         assertTrue(change.next());
-        
+
         assertFalse(change.wasAdded());
         assertFalse(change.wasRemoved());
         assertFalse(change.wasReplaced());
@@ -104,16 +104,16 @@ public class NonIterableChangeTest {
         assertEquals(0, change.getRemovedSize());
         assertEquals(Arrays.asList(), change.getRemoved());
         assertNotNull(change.toString());
-        
+
         assertFalse(change.next());
     }
-    
+
     @Test
     public void testSimplePermutation() {
         Change<String> change = new NonIterableChange.SimplePermutationChange<String>(0, 2, new int[] {1, 0}, list);
-        
+
         assertTrue(change.next());
-        
+
         assertFalse(change.wasAdded());
         assertFalse(change.wasRemoved());
         assertFalse(change.wasReplaced());
@@ -128,8 +128,8 @@ public class NonIterableChangeTest {
         assertEquals(0, change.getRemovedSize());
         assertEquals(Arrays.asList(), change.getRemoved());
         assertNotNull(change.toString());
-        
+
         assertFalse(change.next());
     }
-    
+
 }

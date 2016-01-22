@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef WebURLProtectionSpace_h
@@ -51,17 +51,17 @@ public:
         /* [out, retval] */ BSTR* result);
 
     virtual HRESULT STDMETHODCALLTYPE initWithHost(
-        /* [in] */ BSTR host, 
-        /* [in] */ int port, 
-        /* [in] */ BSTR protocol, 
-        /* [in] */ BSTR realm, 
+        /* [in] */ BSTR host,
+        /* [in] */ int port,
+        /* [in] */ BSTR protocol,
+        /* [in] */ BSTR realm,
         /* [in] */ BSTR authenticationMethod);
 
     virtual HRESULT STDMETHODCALLTYPE initWithProxyHost(
-        /* [in] */ BSTR host, 
-        /* [in] */ int port, 
-        /* [in] */ BSTR proxyType, 
-        /* [in] */ BSTR realm, 
+        /* [in] */ BSTR host,
+        /* [in] */ int port,
+        /* [in] */ BSTR proxyType,
+        /* [in] */ BSTR realm,
         /* [in] */ BSTR authenticationMethod);
 
     virtual HRESULT STDMETHODCALLTYPE isProxy(

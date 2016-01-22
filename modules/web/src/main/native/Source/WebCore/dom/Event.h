@@ -56,11 +56,11 @@ DOM_EVENT_INTERFACES_FOR_EACH(DOM_EVENT_INTERFACE_DECLARE)
 
 class Event : public ScriptWrappable, public RefCounted<Event> {
 public:
-    enum PhaseType { 
+    enum PhaseType {
         NONE                = 0,
-        CAPTURING_PHASE     = 1, 
+        CAPTURING_PHASE     = 1,
         AT_TARGET           = 2,
-        BUBBLING_PHASE      = 3 
+        BUBBLING_PHASE      = 3
     };
 
     enum EventType {
@@ -102,7 +102,7 @@ public:
 
     const AtomicString& type() const { return m_type; }
     void setType(const AtomicString& type) { m_type = type; }
-    
+
     EventTarget* target() const { return m_target.get(); }
     void setTarget(PassRefPtr<EventTarget>);
 
@@ -118,7 +118,7 @@ public:
 
     void stopPropagation() { m_propagationStopped = true; }
     void stopImmediatePropagation() { m_immediatePropagationStopped = true; }
-    
+
     // IE Extensions
     EventTarget* srcElement() const { return target(); } // MSIE extension - "the object that fired the event"
 

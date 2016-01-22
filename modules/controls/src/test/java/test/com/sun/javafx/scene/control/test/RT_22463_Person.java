@@ -47,7 +47,7 @@ public class RT_22463_Person {
     @Override public String toString() {
         return getName();
     }
-    
+
     @Override public boolean equals(Object obj) {
         if (obj == null) {
             return false;

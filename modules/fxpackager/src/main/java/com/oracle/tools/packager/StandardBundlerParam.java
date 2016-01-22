@@ -472,8 +472,8 @@ public class StandardBundlerParam<T> extends BundlerParamInfo<T> {
                     p -> Optional.ofNullable(IDENTIFIER.fetchFrom(p)).orElse("").replace('.', '/'),
                     (s, p) -> s
             );
-    
-    public static final StandardBundlerParam<String> PRELOADER_CLASS = 
+
+    public static final StandardBundlerParam<String> PRELOADER_CLASS =
             new StandardBundlerParam<>(
                     I18N.getString("param.preloader.name"),
                     I18N.getString("param.preloader.description"),
@@ -493,7 +493,7 @@ public class StandardBundlerParam<T> extends BundlerParamInfo<T> {
                     // valueOf(null) is false, and we actually do want null in some cases
                     (s, p) -> (s == null || "null".equalsIgnoreCase(s))? true : Boolean.valueOf(s)
             );
-    
+
     public static final StandardBundlerParam<File> DROP_IN_RESOURCES_ROOT =
             new StandardBundlerParam<>(
                     I18N.getString("param.drop-in-resources-root.name"),
@@ -622,7 +622,7 @@ public class StandardBundlerParam<T> extends BundlerParamInfo<T> {
         }
         // it's a pair.  The [0] is the srcdir [1] is the file relative to sourcedir
         List<String[]> filesToCheck = new ArrayList<>();
-        
+
         if (hasMainJar) {
             RelativeFileSet rfs = MAIN_JAR.fetchFrom(params);
             for (String s : rfs.getIncludedFiles()) {
@@ -639,7 +639,7 @@ public class StandardBundlerParam<T> extends BundlerParamInfo<T> {
             }
             for (RelativeFileSet rfs : rfsl) {
                 if (rfs == null) continue;
-                
+
                 for (String s : rfs.getIncludedFiles()) {
                     filesToCheck.add(new String[]{rfs.getBaseDirectory().toString(), s});
                 }

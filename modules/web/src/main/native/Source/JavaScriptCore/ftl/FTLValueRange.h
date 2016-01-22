@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef FTLValueRange_h
@@ -40,19 +40,19 @@ public:
         , m_rangeMetadata(0)
     {
     }
-    
+
     ValueRange(LValue begin, LValue end)
         : m_begin(begin)
         , m_end(end)
         , m_rangeMetadata(0)
     {
     }
-    
+
     LValue begin() const { return m_begin; }
     LValue end() const { return m_end; }
-    
+
     void decorateInstruction(LContext, LValue loadInstruction, unsigned rangeKind) const;
-    
+
 private:
     LValue m_begin;
     LValue m_end;

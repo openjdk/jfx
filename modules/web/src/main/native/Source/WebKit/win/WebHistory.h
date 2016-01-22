@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef WebHistory_H
@@ -54,53 +54,53 @@ public:
     virtual ULONG STDMETHODCALLTYPE Release(void);
 
     // IWebHistory
-    virtual HRESULT STDMETHODCALLTYPE optionalSharedHistory( 
+    virtual HRESULT STDMETHODCALLTYPE optionalSharedHistory(
         /* [retval][out] */ IWebHistory** history);
-    
-    virtual HRESULT STDMETHODCALLTYPE setOptionalSharedHistory( 
+
+    virtual HRESULT STDMETHODCALLTYPE setOptionalSharedHistory(
         /* [in] */ IWebHistory* history);
-    
+
     virtual HRESULT STDMETHODCALLTYPE unused1() override;
     virtual HRESULT STDMETHODCALLTYPE unused2() override;
-    
-    virtual HRESULT STDMETHODCALLTYPE addItems( 
+
+    virtual HRESULT STDMETHODCALLTYPE addItems(
         /* [in] */ int itemCount,
         /* [in] */ IWebHistoryItem** items);
-    
-    virtual HRESULT STDMETHODCALLTYPE removeItems( 
+
+    virtual HRESULT STDMETHODCALLTYPE removeItems(
         /* [in] */ int itemCount,
         /* [in] */ IWebHistoryItem** items);
-    
+
     virtual HRESULT STDMETHODCALLTYPE removeAllItems( void);
-    
-    virtual HRESULT STDMETHODCALLTYPE orderedLastVisitedDays( 
+
+    virtual HRESULT STDMETHODCALLTYPE orderedLastVisitedDays(
         /* [out][in] */ int* count,
         /* [in] */ DATE* calendarDates);
-    
-    virtual HRESULT STDMETHODCALLTYPE orderedItemsLastVisitedOnDay( 
+
+    virtual HRESULT STDMETHODCALLTYPE orderedItemsLastVisitedOnDay(
         /* [out][in] */ int* count,
         /* [in] */ IWebHistoryItem** items,
         /* [in] */ DATE calendarDate);
 
-    virtual HRESULT STDMETHODCALLTYPE itemForURL( 
+    virtual HRESULT STDMETHODCALLTYPE itemForURL(
         /* [in] */ BSTR url,
         /* [retval][out] */ IWebHistoryItem** item);
-    
-    virtual HRESULT STDMETHODCALLTYPE setHistoryItemLimit( 
+
+    virtual HRESULT STDMETHODCALLTYPE setHistoryItemLimit(
         /* [in] */ int limit);
-    
-    virtual HRESULT STDMETHODCALLTYPE historyItemLimit( 
+
+    virtual HRESULT STDMETHODCALLTYPE historyItemLimit(
         /* [retval][out] */ int* limit);
-    
-    virtual HRESULT STDMETHODCALLTYPE setHistoryAgeInDaysLimit( 
+
+    virtual HRESULT STDMETHODCALLTYPE setHistoryAgeInDaysLimit(
         /* [in] */ int limit);
-    
-    virtual HRESULT STDMETHODCALLTYPE historyAgeInDaysLimit( 
+
+    virtual HRESULT STDMETHODCALLTYPE historyAgeInDaysLimit(
         /* [retval][out] */ int* limit);
 
     // IWebHistoryPrivate
 
-    virtual HRESULT STDMETHODCALLTYPE allItems( 
+    virtual HRESULT STDMETHODCALLTYPE allItems(
         /* [out][in] */ int* count,
         /* [retval][out] */ IWebHistoryItem** items);
 

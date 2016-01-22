@@ -39,7 +39,7 @@ void setSharedTimerFireInterval(double fireTime)
 void stopSharedTimer()
 {
     WC_GETJAVAENV_CHKRET(env);
-    
+
     static jmethodID mid = env->GetStaticMethodID(getTimerClass(env),
                                                   "fwkStopTimer", "()V");
     ASSERT(mid);

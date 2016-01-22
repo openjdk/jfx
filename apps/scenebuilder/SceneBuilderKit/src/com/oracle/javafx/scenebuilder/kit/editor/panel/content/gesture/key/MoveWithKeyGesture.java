@@ -51,7 +51,7 @@ import javafx.scene.input.InputEvent;
  *
  */
 public class MoveWithKeyGesture extends AbstractKeyGesture {
-    
+
     private double vectorX;
     private double vectorY;
 
@@ -59,24 +59,24 @@ public class MoveWithKeyGesture extends AbstractKeyGesture {
         super(contentPanelController);
         assert RelocateSelectionJob.isSelectionMovable(contentPanelController.getEditorController()); // (1)
     }
-    
+
     /*
      * AbstractKeyGesture
      */
-    
+
     @Override
     protected void keyPressed() {
-        
+
         final double extend = getLastKeyEvent().isShiftDown() ? 10.0 : 1.0;
         final double moveX = extend * vectorX;
         final double moveY = extend * vectorY;
 
-        final Selection selection 
+        final Selection selection
                 = contentPanelController.getEditorController().getSelection();
         assert selection.getGroup() instanceof ObjectSelectionGroup; // Because (1)
         final ObjectSelectionGroup osg
                 = (ObjectSelectionGroup) selection.getGroup();
-        
+
         /*
          * Updates layoutX/layoutY of the selected scene graph objects.
          */
@@ -91,29 +91,29 @@ public class MoveWithKeyGesture extends AbstractKeyGesture {
     @Override
     protected void keyReleased() {
         keyPressed();
-        
+
         final EditorController editorController
                 = contentPanelController.getEditorController();
-        final Selection selection 
+        final Selection selection
                 = editorController.getSelection();
         assert selection.getGroup() instanceof ObjectSelectionGroup; // Because (1)
-        
+
         final ObjectSelectionGroup osg
                 = (ObjectSelectionGroup) selection.getGroup();
-        
+
         // Builds a RelocateSelectionJob
         final Map<FXOMObject, Point2D> locationMap = new HashMap<>();
         for (FXOMObject selectedObject : osg.getItems()) {
             assert selectedObject.isNode(); // Because (1)
             assert selectedObject instanceof FXOMInstance;
-            
+
             final Node node = (Node) selectedObject.getSceneGraphObject();
             final Point2D layoutXY = new Point2D(node.getLayoutX(), node.getLayoutY());
             locationMap.put(selectedObject, layoutXY);
         }
         final RelocateSelectionJob newRelocateJob
                 = new RelocateSelectionJob(locationMap, editorController);
-        
+
         // ... and pushes it
         // If the current job is already a RelocateSelectionJob,
         // then we see if the new job can be merged with it.
@@ -163,6 +163,6 @@ public class MoveWithKeyGesture extends AbstractKeyGesture {
                 break;
         }
     }
-    
-    
+
+
 }

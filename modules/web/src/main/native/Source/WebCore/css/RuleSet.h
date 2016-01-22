@@ -38,7 +38,7 @@ enum AddRuleFlags {
     RuleCanUseFastCheckSelector   = 1 << 1,
     RuleIsInRegionRule            = 1 << 2,
 };
-    
+
 enum PropertyWhitelistType {
     PropertyWhitelistNone   = 0,
     PropertyWhitelistRegion,
@@ -108,7 +108,7 @@ private:
     mutable JSC::MacroAssemblerCodeRef m_compiledSelectorCodeRef;
 #endif // ENABLE(CSS_SELECTOR_JIT)
 };
-    
+
 struct SameSizeAsRuleData {
 #if ENABLE(CSS_SELECTOR_JIT)
     unsigned compilationStatus;

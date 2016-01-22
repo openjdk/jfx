@@ -40,29 +40,29 @@ import org.junit.Test;
  */
 public class PercentageStringConverterTest {
     private PercentageStringConverter converter;
-    
+
     @Before public void setup() {
         converter = new PercentageStringConverter(Locale.US);
     }
-    
+
     /*********************************************************************
      * Test constructors
-     ********************************************************************/ 
-    
+     ********************************************************************/
+
     @Test public void testDefaultConstructor() {
         PercentageStringConverter c = new PercentageStringConverter();
         assertEquals(Locale.getDefault(), NumberStringConverterShim.getLocale(c));
         assertNull(NumberStringConverterShim.getPattern(c));
         assertNull(NumberStringConverterShim.getNumberFormatVar(c));
     }
-    
+
     @Test public void testConstructor_locale() {
         PercentageStringConverter c = new PercentageStringConverter(Locale.CANADA);
         assertEquals(Locale.CANADA, NumberStringConverterShim.getLocale(c));
         assertNull(NumberStringConverterShim.getPattern(c));
         assertNull(NumberStringConverterShim.getNumberFormatVar(c));
     }
-    
+
     @Test public void testConstructor_numberFormat() {
         NumberFormat format = NumberFormat.getCurrencyInstance(Locale.JAPAN);
         PercentageStringConverter c = new PercentageStringConverter(format);
@@ -70,35 +70,35 @@ public class PercentageStringConverterTest {
         assertNull(NumberStringConverterShim.getPattern(c));
         assertEquals(format, NumberStringConverterShim.getNumberFormatVar(c));
     }
-    
-    
+
+
     /*********************************************************************
      * Test methods
-     ********************************************************************/   
-    
+     ********************************************************************/
+
     @Test public void getNumberFormat_default() {
         assertNotNull(NumberStringConverterShim.getNumberFormat(converter));
     }
-    
+
     @Test public void getNumberFormat_nonNullNumberFormat() {
         NumberFormat nf = NumberFormat.getCurrencyInstance();
         converter = new PercentageStringConverter(nf);
         assertEquals(nf, NumberStringConverterShim.getNumberFormat(converter));
     }
-    
-    
+
+
     /*********************************************************************
      * Test toString / fromString methods
-     ********************************************************************/    
-    
+     ********************************************************************/
+
     @Test public void fromString_testValidStringInput() {
         assertEquals(.1032, converter.fromString("10.32%"));
     }
-    
+
     @Test public void fromString_testValidStringInputWithWhiteSpace() {
         assertEquals(.1032, converter.fromString("      10.32%      "));
     }
-    
+
     @Test public void toString_validInput() {
         assertEquals("10%", converter.toString(.10));
     }

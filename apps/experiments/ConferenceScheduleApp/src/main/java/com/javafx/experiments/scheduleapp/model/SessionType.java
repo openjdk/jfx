@@ -55,5 +55,5 @@ public class SessionType {
 //        new SessionType("Tutorial"),
 //        new SessionType("HOL (Hands-on Lab)"),
 //        new SessionType("Keynote")
-//    });    
+//    });
 }

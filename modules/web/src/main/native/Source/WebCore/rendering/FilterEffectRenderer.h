@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef FilterEffectRenderer_h
@@ -64,14 +64,14 @@ public:
         , m_startedFilterEffect(false)
     {
     }
-    
+
     bool haveFilterEffect() const { return m_haveFilterEffect; }
     bool hasStartedFilterEffect() const { return m_startedFilterEffect; }
 
     bool prepareFilterEffect(RenderLayer*, const LayoutRect& filterBoxRect, const LayoutRect& dirtyRect, const LayoutRect& layerRepaintRect);
     bool beginFilterEffect();
     void applyFilterEffect(GraphicsContext* destinationContext);
-    
+
     GraphicsContext* filterContext() const;
 
     const LayoutRect& repaintRect() const { return m_repaintRect; }
@@ -93,7 +93,7 @@ public:
     }
 
     void setSourceImageRect(const FloatRect& sourceImageRect)
-    { 
+    {
         m_sourceDrawingRegion = sourceImageRect;
         setMaxEffectRects(sourceImageRect);
         setFilterRegion(sourceImageRect);
@@ -113,7 +113,7 @@ public:
     void allocateBackingStoreIfNeeded();
     void clearIntermediateResults();
     void apply();
-    
+
     IntRect outputRect() const { return lastEffect()->hasResult() ? lastEffect()->requestedRegionOfInputImageData(IntRect(m_filterRegion)) : IntRect(); }
 
     bool hasFilterThatMovesPixels() const { return m_hasFilterThatMovesPixels; }
@@ -137,13 +137,13 @@ private:
 
     FilterEffectRenderer();
     virtual ~FilterEffectRenderer();
-    
+
     FloatRect m_sourceDrawingRegion;
     FloatRect m_filterRegion;
-    
+
     FilterEffectList m_effects;
     RefPtr<SourceGraphic> m_sourceGraphic;
-    
+
     IntRectExtent m_outsets;
 
     bool m_graphicsBufferAttached;

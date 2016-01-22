@@ -54,7 +54,7 @@ class ES2Texture<T extends ES2TextureData> extends BaseTexture<ES2TextureResourc
               contentX, contentY, contentWidth, contentHeight, useMipmap);
         this.context = context;
     }
-    
+
     ES2Texture(ES2Context context, ES2TextureResource<T> resource,
                PixelFormat format, WrapMode wrapMode,
                int physicalWidth, int physicalHeight,
@@ -63,7 +63,7 @@ class ES2Texture<T extends ES2TextureData> extends BaseTexture<ES2TextureResourc
     {
         super(resource, format, wrapMode,
               physicalWidth, physicalHeight,
-              contentX, contentY, contentWidth, contentHeight, 
+              contentX, contentY, contentWidth, contentHeight,
               maxContentWidth, maxContentHeight, useMipmap);
         this.context = context;
     }

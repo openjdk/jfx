@@ -7,13 +7,13 @@
  * are met:
  *
  * 1.  Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer. 
+ *     notice, this list of conditions and the following disclaimer.
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
- *     documentation and/or other materials provided with the distribution. 
+ *     documentation and/or other materials provided with the distribution.
  * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
- *     from this software without specific prior written permission. 
+ *     from this software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY APPLE AND ITS CONTRIBUTORS "AS IS" AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
@@ -50,7 +50,7 @@ static JSValueRef setMarkedTextCallback(JSContextRef context, JSObjectRef functi
     ASSERT(!*exception);
 
     TextInputController* controller = static_cast<TextInputController*>(JSObjectGetPrivate(thisObject));
-    
+
     if (controller)
         controller->setMarkedText(str.get(), from, length);
 
@@ -60,7 +60,7 @@ static JSValueRef setMarkedTextCallback(JSContextRef context, JSObjectRef functi
 static JSValueRef hasMarkedTextCallback(JSContextRef context, JSObjectRef function, JSObjectRef thisObject, size_t argumentCount, const JSValueRef arguments[], JSValueRef* exception)
 {
     TextInputController* controller = static_cast<TextInputController*>(JSObjectGetPrivate(thisObject));
-    
+
     if (controller)
         return JSValueMakeBoolean(context, controller->hasMarkedText());
 
@@ -124,12 +124,12 @@ static JSValueRef firstRectForCharacterRangeCallback(JSContextRef context, JSObj
     if (controller) {
         vector<int> rect = controller->firstRectForCharacterRange(start, length);
         if (rect.size() == 4) {
-            JSValueRef argumentsArrayValues[] = 
-            { 
-                JSValueMakeNumber(context, rect[0]), 
-                JSValueMakeNumber(context, rect[1]), 
-                JSValueMakeNumber(context, rect[2]), 
-                JSValueMakeNumber(context, rect[3]), 
+            JSValueRef argumentsArrayValues[] =
+            {
+                JSValueMakeNumber(context, rect[0]),
+                JSValueMakeNumber(context, rect[1]),
+                JSValueMakeNumber(context, rect[2]),
+                JSValueMakeNumber(context, rect[3]),
             };
             JSObjectRef result = JSObjectMakeArray(context, sizeof(argumentsArrayValues) / sizeof(JSValueRef), argumentsArrayValues, exception);
             ASSERT(!*exception);
@@ -147,9 +147,9 @@ static JSValueRef selectedRangeCallback(JSContextRef context, JSObjectRef functi
     if (controller) {
         vector<int> rect = controller->selectedRange();
         if (rect.size() == 2) {
-            JSValueRef argumentsArrayValues[] = { 
-                JSValueMakeNumber(context, rect[0]), 
-                JSValueMakeNumber(context, rect[1]), 
+            JSValueRef argumentsArrayValues[] = {
+                JSValueMakeNumber(context, rect[0]),
+                JSValueMakeNumber(context, rect[1]),
             };
             JSObjectRef result = JSObjectMakeArray(context, sizeof(argumentsArrayValues) / sizeof(JSValueRef), argumentsArrayValues, exception);
             ASSERT(!*exception);
@@ -177,7 +177,7 @@ JSClassRef TextInputController::getJSClass()
 {
     static JSStaticValue* staticValues = TextInputController::staticValues();
     static JSStaticFunction* staticFunctions = TextInputController::staticFunctions();
-    static JSClassDefinition classDefinition = 
+    static JSClassDefinition classDefinition =
     {
         0, kJSClassAttributeNone, "TextInputController", 0, staticValues, staticFunctions,
         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
@@ -188,7 +188,7 @@ JSClassRef TextInputController::getJSClass()
 
 JSStaticValue* TextInputController::staticValues()
 {
-    static JSStaticValue staticValues[] = 
+    static JSStaticValue staticValues[] =
     {
         { 0, 0, 0, 0 }
     };

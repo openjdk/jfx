@@ -24,9 +24,9 @@
  */
 
 #ifndef ANDROID_WEBVIEW_H
-#define	ANDROID_WEBVIEW_H
+#define ANDROID_WEBVIEW_H
 
-#ifdef	__cplusplus
+#ifdef  __cplusplus
 extern "C" {
 #endif
 
@@ -43,9 +43,9 @@ extern "C" {
     void move_to_top(int id);
 
 
-#ifdef	__cplusplus
+#ifdef  __cplusplus
 }
 #endif
 
-#endif	/* ANDROID_WEBVIEW_H */
+#endif  /* ANDROID_WEBVIEW_H */
 

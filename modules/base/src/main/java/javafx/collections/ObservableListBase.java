@@ -185,8 +185,8 @@ public abstract class ObservableListBase<E> extends AbstractList<E>  implements 
      * Must be called before any of the {@code next*} methods is called.
      * For every {@code beginChange()}, there must be a corresponding {@link #endChange() } call.
      * <p>{@code beginChange()} calls can be nested in a {@code beginChange()}/{@code endChange()} block.
-     * 
-     * @see #endChange() 
+     *
+     * @see #endChange()
      */
     protected final void beginChange() {
         changeBuilder.beginChange();

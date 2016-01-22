@@ -39,7 +39,7 @@ import static org.junit.Assert.assertEquals;
 public class JavaBeanFloatPropertyBuilderaTest extends JavaBeanPropertyTestBase<Number> {
 
     private static final float EPSILON = 1e-6f;
-    
+
     private static final float[] VALUES = new float[] {(float)Math.PI, (float)-Math.E};
 
     @Override

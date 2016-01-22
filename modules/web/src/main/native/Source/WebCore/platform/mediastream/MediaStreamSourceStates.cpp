@@ -44,7 +44,7 @@ const AtomicString& MediaStreamSourceStates::facingMode(MediaStreamSourceStates:
     static NeverDestroyed<AtomicString> environmentFacing("environment", AtomicString::ConstructFromLiteral);
     static NeverDestroyed<AtomicString> leftFacing("left", AtomicString::ConstructFromLiteral);
     static NeverDestroyed<AtomicString> rightFacing("right", AtomicString::ConstructFromLiteral);
-    
+
     switch (mode) {
     case MediaStreamSourceStates::User:
         return userFacing;
@@ -57,7 +57,7 @@ const AtomicString& MediaStreamSourceStates::facingMode(MediaStreamSourceStates:
     case MediaStreamSourceStates::Unknown:
         return emptyAtom;
     }
-    
+
     ASSERT_NOT_REACHED();
     return emptyAtom;
 }
@@ -67,7 +67,7 @@ const AtomicString& MediaStreamSourceStates::sourceType(MediaStreamSourceStates:
     static NeverDestroyed<AtomicString> none("none", AtomicString::ConstructFromLiteral);
     static NeverDestroyed<AtomicString> camera("camera", AtomicString::ConstructFromLiteral);
     static NeverDestroyed<AtomicString> microphone("microphone", AtomicString::ConstructFromLiteral);
-    
+
     switch (sourceType) {
     case MediaStreamSourceStates::None:
         return none;
@@ -76,7 +76,7 @@ const AtomicString& MediaStreamSourceStates::sourceType(MediaStreamSourceStates:
     case MediaStreamSourceStates::Microphone:
         return microphone;
     }
-    
+
     ASSERT_NOT_REACHED();
     return emptyAtom;
 }

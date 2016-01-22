@@ -64,7 +64,7 @@ public class Timeline_TS002_02_Test extends AnimationFunctionalTestBase {
         t.play();
         delay((long) t.getTotalDuration().toMillis() / 2); // stop Timeline half-way
         t.stop();
-        
+
         frameIndex = 0;
         t.play();
         delayFor(t);

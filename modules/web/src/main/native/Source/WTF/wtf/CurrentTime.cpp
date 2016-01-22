@@ -244,7 +244,7 @@ double currentTime()
 }
 
 #elif PLATFORM(JAVA) && 0
-// Attention! That can be called from non-Java thread. And very often, 
+// Attention! That can be called from non-Java thread. And very often,
 // so back to native implementation.
 //
 // Return the current system time in seconds, using the classic POSIX epoch of January 1, 1970.
@@ -255,8 +255,8 @@ double currentTime()
 
     static JGClass systemCls(env->FindClass("java/lang/System"));
     static jmethodID currentTimeMillisMID = env->GetStaticMethodID(
-        systemCls, 
-        "currentTimeMillis", 
+        systemCls,
+        "currentTimeMillis",
         "()J");
     ASSERT(currentTimeMillisMID);
 
@@ -328,23 +328,23 @@ double currentCPUTime()
     mach_port_t threadPort = mach_thread_self();
     thread_info(threadPort, THREAD_BASIC_INFO, reinterpret_cast<thread_info_t>(&info), &infoCount);
     mach_port_deallocate(mach_task_self(), threadPort);
-    
+
     double time = info.user_time.seconds + info.user_time.microseconds / 1000000.;
     time += info.system_time.seconds + info.system_time.microseconds / 1000000.;
-    
+
     return time;
 #elif OS(WINDOWS)
     union {
         FILETIME fileTime;
         unsigned long long fileTimeAsLong;
     } userTime, kernelTime;
-    
+
     // GetThreadTimes won't accept null arguments so we pass these even though
     // they're not used.
     FILETIME creationTime, exitTime;
-    
+
     GetThreadTimes(GetCurrentThread(), &creationTime, &exitTime, &kernelTime.fileTime, &userTime.fileTime);
-    
+
     return userTime.fileTimeAsLong / 10000000. + kernelTime.fileTimeAsLong / 10000000.;
 #else
     // FIXME: We should return the time the current thread has spent executing.

@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef DFGPhase_h
@@ -43,28 +43,28 @@ public:
     {
         beginPhase();
     }
-    
+
     ~Phase()
     {
         endPhase();
     }
-    
+
     const char* name() const { return m_name; }
-    
+
     Graph& graph() { return m_graph; }
-    
+
     // Each phase must have a run() method.
-    
+
 protected:
     // Things you need to have a DFG compiler phase.
     Graph& m_graph;
-    
+
     VM& vm() { return m_graph.m_vm; }
     CodeBlock* codeBlock() { return m_graph.m_codeBlock; }
     CodeBlock* profiledBlock() { return m_graph.m_profiledBlock; }
-    
+
     const char* m_name;
-    
+
 private:
     // Call these hooks when starting and finishing.
     void beginPhase();

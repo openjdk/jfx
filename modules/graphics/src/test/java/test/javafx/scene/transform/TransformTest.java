@@ -168,7 +168,7 @@ public class TransformTest {
                 0, 1, 0, 0,
                 0, 0, 1, 0);
     }
-    
+
     @Test
     public void testTransform() {
         Transform t = TransformUtils.immutableTransform(

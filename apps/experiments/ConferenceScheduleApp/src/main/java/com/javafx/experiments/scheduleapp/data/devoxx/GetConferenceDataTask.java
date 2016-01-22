@@ -71,38 +71,38 @@ class GetConferenceDataTask extends Task<Void> {
 
     GetConferenceDataTask(Venue venue) {
         this.venue = venue;
-        
-        trackMap.put("New Languages on the JVM", 
+
+        trackMap.put("New Languages on the JVM",
             new Track("LANG","New Languages on the JVM",
-                "Languages that are build on top of the JVM.", 
+                "Languages that are build on top of the JVM.",
                 TRACK_COLORS[0]));
-        trackMap.put("Methodology", 
+        trackMap.put("Methodology",
             new Track("METH","Methodology",
-                "Methodology and anything related.", 
+                "Methodology and anything related.",
                 TRACK_COLORS[1]));
-        trackMap.put("Java SE", 
+        trackMap.put("Java SE",
             new Track("JSE","Java SE",
-                "Everything Java SE and JavaFX related.", 
+                "Everything Java SE and JavaFX related.",
                 TRACK_COLORS[2]));
-        trackMap.put("Mobile", 
+        trackMap.put("Mobile",
             new Track("MOBI","Mobile",
-                "This includes Android and mobile web.", 
+                "This includes Android and mobile web.",
                 TRACK_COLORS[3]));
-        trackMap.put("Architecture, Cloud and Security", 
+        trackMap.put("Architecture, Cloud and Security",
             new Track("CLOU","Architecture, Cloud and Security",
-                "Architecture, Cloud and Security", 
+                "Architecture, Cloud and Security",
                 TRACK_COLORS[4]));
-        trackMap.put("Java EE", 
+        trackMap.put("Java EE",
             new Track("JEE","Java EE",
-                "All Java all Enterprise.", 
+                "All Java all Enterprise.",
                 TRACK_COLORS[5]));
-        trackMap.put("Web", 
+        trackMap.put("Web",
             new Track("WEB","Web",
-                "This includes HTML5, CSS3 and RIA technologies", 
+                "This includes HTML5, CSS3 and RIA technologies",
                 TRACK_COLORS[6]));
-        trackMap.put("Future<Devoxx>", 
+        trackMap.put("Future<Devoxx>",
             new Track("LANG","Future<Devoxx>",
-                "Micro Controllers (Arduino, Dwengo, Raspberry Pi, ...), Robots, Automotive, Domotica, etc.", 
+                "Micro Controllers (Arduino, Dwengo, Raspberry Pi, ...), Robots, Automotive, Domotica, etc.",
                 TRACK_COLORS[7]));
     }
 
@@ -121,7 +121,7 @@ class GetConferenceDataTask extends Task<Void> {
             }
         });
         System.out.println("SORTED SPEAKERS = "+Arrays.toString(sortedSpeakers.toArray()));
-        
+
         // THEN GET ALL SESSION TIMES
         System.out.println("----------------------------------------");
         try{
@@ -129,7 +129,7 @@ class GetConferenceDataTask extends Task<Void> {
         } catch (Exception e) { e.printStackTrace(); }
         System.out.println("----------------------------------------");
         System.out.println("SESSIONS we have times for SIZE = "+sessionTimesMap.size());
-        
+
         // THEN GET ALL SESSIONS
         System.out.println("----------------------------------------");
         try{
@@ -175,7 +175,7 @@ class GetConferenceDataTask extends Task<Void> {
     public Map<String, SessionType> getTypeMap() {
         return typeMap;
     }
-    
+
     private class SpeakerCallcack extends JSONParserJP.CallbackAdapter {
         private int id;
         private String firstName;
@@ -185,7 +185,7 @@ class GetConferenceDataTask extends Task<Void> {
         private String imageUrl;
         private String twitter;
         private boolean rockStar = false;
-        
+
         @Override public void keyValue(String key, String value, int depth) {
             if(depth == 2) {
                 if ("id".equals(key)) {
@@ -215,7 +215,7 @@ class GetConferenceDataTask extends Task<Void> {
             }
         }
     }
-    
+
     private class SessionCallcack extends JSONParserJP.CallbackAdapter {
         private List<Session> sessions = null;
         public int id;
@@ -259,7 +259,7 @@ class GetConferenceDataTask extends Task<Void> {
                 speakers.add(speakerMap.get(Integer.parseInt(value)));
             }
         }
-        
+
         @Override public void endObject(String objectName, int depth) {
             if(depth == 1) {
                 List<SessionTime> sessionTimes = sessionTimesMap.get(id);
@@ -295,7 +295,7 @@ class GetConferenceDataTask extends Task<Void> {
             }
         }
     }
-    
+
     private class SessionTimeCallcack extends JSONParserJP.CallbackAdapter {
         private List<Session> sessions = null;
         public int id;
@@ -333,7 +333,7 @@ class GetConferenceDataTask extends Task<Void> {
                 }
             }
         }
-        
+
         @Override public void endObject(String objectName, int depth) {
             if(depth == 1) {
                 length = (int)((end.getTime()/60000) - (start.getTime()/60000));

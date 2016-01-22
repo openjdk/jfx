@@ -55,7 +55,7 @@ protected:
 
     String m_name;
 };
-    
+
 } // namespace Inspector
 
 #endif // !defined(InspectorAgentBase_h)

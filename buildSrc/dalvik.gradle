@@ -63,15 +63,15 @@ int compareVersions(String s1, String s2) {
             return 1;
         } else {
             return -1
-        }        
-    }    
+        }
+    }
     return (v2t.size() > v1t.size()) ? -1 : 0
 }
 
 String getLatestToolchain(String ndk, String tch) {
     def max = "0.0"
     def matchFile = null
-    file(cygpath("$ndk/toolchains")).eachFile() {file->        
+    file(cygpath("$ndk/toolchains")).eachFile() {file->
         def filename = file.getName()
         if (filename.startsWith(tch)) {
             def p = filename - "$tch-"
@@ -130,13 +130,13 @@ if (!DALVIK.canBuild) {
 }
 
 def sdk_target = project.hasProperty("ANDROID_SDK_TARGET") ?  "${ANDROID_SDK_TARGET}" : getLatestPlatform(sdk);
-if (!assertDir(file("$sdk/platforms/$sdk_target"))) {            
-    sdk_target = getLatestPlatform(sdk); 
+if (!assertDir(file("$sdk/platforms/$sdk_target"))) {
+    sdk_target = getLatestPlatform(sdk);
     logger.warn("Redefine ANDROID_SDK_TARGET to: [$sdk_target]")
 }
 
 def ndk_target = project.hasProperty("ANDROID_NDK_TARGET") ? "${ANDROID_NDK_TARGET}" : getLatestPlatform(ndk);
-if (!assertDir(file("$ndk/platforms/$ndk_target"))) {            
+if (!assertDir(file("$ndk/platforms/$ndk_target"))) {
     ndk_target = getLatestPlatform(ndk);
     logger.warn("Redefine ANDROID_NDK_TARGET to: [$ndk_target]")
 }
@@ -147,7 +147,7 @@ if (!DALVIK.canBuild) {
     return
 }
 
-def toolchainHome = project.hasProperty("ANDROID_CROSS_TOOLS_VER") ? 
+def toolchainHome = project.hasProperty("ANDROID_CROSS_TOOLS_VER") ?
     "$ndk/toolchains/${ANDROID_CROSS_TOOLS_VER}" : getLatestToolchain(ndk, toolchainArchs[0])
 if (!assertDir(toolchainHome)) {
     toolchainHome = getLatestToolchain(ndk, toolchainArchs[0])
@@ -183,7 +183,7 @@ logger.quiet("ANDROID_SDK_TARGET: $sdk_target")
 logger.quiet("ANDROID_NDK: $ndk")
 logger.quiet("ANDROID_NDK_TARGET: $ndk_target")
 logger.quiet("FREETYPE_DIR: $freetypeDir")
-logger.quiet("Compile native text: $compileNativeText") 
+logger.quiet("Compile native text: $compileNativeText")
 logger.quiet("Android Compiler: $compiler")
 logger.quiet("Android Linker: $linker")
 
@@ -229,7 +229,7 @@ allprojects() {
     task retroClass() <<{
             file classdirs = file ("$buildDir/classes");
             lf = classdirs.listFiles();
-            classdirs.eachDir{t -> 
+            classdirs.eachDir{t ->
                 javaexec {
                     inputdir = t
                     basecp = files(lf, "modules/base/build/classes/main", "modules/graphics/build/classes/main", "modules/controls/build/classes/main").asPath
@@ -356,7 +356,7 @@ project(":graphics") {
         include("com/oracle/**/*")
         dependsOn(compileDalvikLibs)
     }
-    
+
     jarDalvikLibs {
         eachFile {
                 if (it.name.endsWith('.class')) {
@@ -367,7 +367,7 @@ project(":graphics") {
                 }
             }
     }
-     
+
     afterEvaluate {
         addNative(project, "activity")
         if (compileNativeText) {
@@ -382,7 +382,7 @@ project(":graphics") {
         tasks["javahDalvikPrismSW"].enabled = false
         tasks["ccDalvikPrismSW"].enabled = false;
         tasks["linkDalvikPrismSW"].enabled = false;
-        
+
         sdkDalvik  {
             dependsOn(jarDalvikLibs)
             doLast {
@@ -390,7 +390,7 @@ project(":graphics") {
                 copy {
                     from(
                          "modules/graphics/build/libs/activity/dalvik/${props.library(props.activity.lib)}"
-                    )                    
+                    )
                     into ("build/dalvik-sdk/rt/${props.libDest}")
                 }
                 copy {
@@ -449,13 +449,13 @@ project(":controls") {
         }
 
     }
-}        
+}
 
 allprojects {
     afterEvaluate {
         sdkDalvik {
             doLast {
-                ant.jar(update: "true", destfile: "build/dalvik-sdk/rt/lib/ext/jfxrt.jar", 
+                ant.jar(update: "true", destfile: "build/dalvik-sdk/rt/lib/ext/jfxrt.jar",
                     basedir: "build/dalvik-sdk/rt/lib", includes: "*.properties")
             }
         }
@@ -466,7 +466,7 @@ allprojects {
 DALVIK.jfxrtJarExcludes = [
     "**/*.hlsl",
     "com/sun/glass/ui/win",
-    "com/sun/glass/ui/accessible/win",    
+    "com/sun/glass/ui/accessible/win",
     "com/sun/prism/j2d",
     "com/sun/prism/sw",
     "com/sun/glass/ui/accessible/mac",
@@ -520,7 +520,7 @@ com.sun.javafx.gestures.scroll=true
 """
 def sysroot = "$ndk/platforms/$ndk_target/arch-arm"
 
-def ccFlags = ["--sysroot=$sysroot","-std=c99", "-DANDROID", "-c", "-nostdlib", 
+def ccFlags = ["--sysroot=$sysroot","-std=c99", "-DANDROID", "-c", "-nostdlib",
                "-DANDROID_NDK", "-DDALVIK_VM"]
 
 def ccOptFlags = ["-fpic", "-ffunction-sections", "-funwind-tables","-fstack-protector",
@@ -602,7 +602,7 @@ DALVIK.glass.javahInclude = [
 DALVIK.glass.lensport = [:]
 DALVIK.glass.lensport.nativeSource = [
     file("modules/graphics/src/main/native-glass/lens/lensport/initPlatform.c"),
-    file("modules/graphics/src/main/native-glass/lens/wrapped/wrapped_functions.c")    
+    file("modules/graphics/src/main/native-glass/lens/wrapped/wrapped_functions.c")
 ]
 DALVIK.glass.lensport.compiler = compiler
 DALVIK.glass.lensport.linker = linker
@@ -762,7 +762,7 @@ if (BUILD_CLOSED) {
     DALVIK.fontT2K.linker = linker
     DALVIK.fontT2K.linkFlags = [linkFlags, "-lstdc++"].flatten()
     DALVIK.fontT2K.lib = "javafx_font_t2k"
-} 
+}
 
 if (compileNativeText) {
     DALVIK.fontNativeFreetype = [:]
@@ -778,13 +778,13 @@ if (compileNativeText) {
 
     ccFlags += ["-D_ENABLE_HARFBUZZ"]
 
-    DALVIK.fontNativeFreetype.ccFlags = 
+    DALVIK.fontNativeFreetype.ccFlags =
         [ccFlags, ccWarnFlags, ccArchFlags, ccOptFlags,
         ccDebugFlags, ccDefaultIncludeFlags,
-        "-I$freetypeDir/include", "-I$freetypeDir/include/freetype2"].flatten()  
-        
-    DALVIK.fontNativeFreetype.linkFlags = 
-        [linkFlags, "-llog", 
+        "-I$freetypeDir/include", "-I$freetypeDir/include/freetype2"].flatten()
+
+    DALVIK.fontNativeFreetype.linkFlags =
+        [linkFlags, "-llog",
          "-L$freetypeDir/lib", "$freetypeDir/lib/libfreetype.a"].flatten()
 }
 

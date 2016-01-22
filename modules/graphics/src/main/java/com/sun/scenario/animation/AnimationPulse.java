@@ -41,100 +41,100 @@ public class AnimationPulse implements AnimationPulseMBean {
     private static class AnimationPulseHolder {
         private static final AnimationPulse holder = new AnimationPulse();
     }
-    
+
     private static class PulseData {
         private final long startNanos;
         private final long scheduledNanos;
-        
+
         private long animationEndNanos = Long.MIN_VALUE;
         private long paintingStartNanos = Long.MIN_VALUE;
         private long paintingEndNanos = Long.MIN_VALUE;
         private long scenePaintingStartNanos = Long.MIN_VALUE;
         private long scenePaintingEndNanos = Long.MIN_VALUE;
         private long endNanos = Long.MIN_VALUE;
-        
+
         PulseData(long shiftNanos) {
             startNanos = Toolkit.getToolkit().getMasterTimer().nanos();
             scheduledNanos = startNanos + shiftNanos;
         }
-        
-        //time from the scheduledNanos  
+
+        //time from the scheduledNanos
         long getPulseStart(TimeUnit unit) {
-            return unit.convert(startNanos - scheduledNanos, TimeUnit.NANOSECONDS);            
+            return unit.convert(startNanos - scheduledNanos, TimeUnit.NANOSECONDS);
         }
-        
+
         void recordAnimationEnd() {
             animationEndNanos = Toolkit.getToolkit().getMasterTimer().nanos();
         }
-        
+
         long getAnimationDuration(TimeUnit unit) {
-            return (animationEndNanos > Long.MIN_VALUE) 
+            return (animationEndNanos > Long.MIN_VALUE)
               ? unit.convert(animationEndNanos - startNanos, TimeUnit.NANOSECONDS)
               : 0;
         }
-        
+
         long getPaintingDuration(TimeUnit unit) {
-            return (paintingEndNanos > Long.MIN_VALUE && paintingStartNanos > Long.MIN_VALUE) 
+            return (paintingEndNanos > Long.MIN_VALUE && paintingStartNanos > Long.MIN_VALUE)
               ? unit.convert(paintingEndNanos - paintingStartNanos, TimeUnit.NANOSECONDS)
               : 0;
         }
-        
+
         long getScenePaintingDuration(TimeUnit unit) {
-            return (scenePaintingEndNanos > Long.MIN_VALUE && scenePaintingStartNanos > Long.MIN_VALUE) 
+            return (scenePaintingEndNanos > Long.MIN_VALUE && scenePaintingStartNanos > Long.MIN_VALUE)
               ? unit.convert(scenePaintingEndNanos - scenePaintingStartNanos, TimeUnit.NANOSECONDS)
               : 0;
         }
-        
+
         long getPaintingFinalizationDuration(TimeUnit unit) {
-            return (scenePaintingEndNanos > Long.MIN_VALUE && paintingEndNanos > Long.MIN_VALUE) 
+            return (scenePaintingEndNanos > Long.MIN_VALUE && paintingEndNanos > Long.MIN_VALUE)
               ? unit.convert(paintingEndNanos - scenePaintingEndNanos, TimeUnit.NANOSECONDS)
               : 0;
         }
-        
+
         void recordEnd() {
             endNanos = Toolkit.getToolkit().getMasterTimer().nanos();
         }
-        
+
         long getPulseDuration(TimeUnit unit) {
             return unit.convert(endNanos - startNanos, TimeUnit.NANOSECONDS);
         }
-        
-        //time from the scheduledNanos        
+
+        //time from the scheduledNanos
         long getPulseEnd(TimeUnit unit) {
             return unit
                     .convert(endNanos - scheduledNanos, TimeUnit.NANOSECONDS);
         }
-        
+
         long getPulseStartFromNow(TimeUnit unit) {
             return unit.convert(Toolkit.getToolkit().getMasterTimer().nanos() - startNanos,
                     TimeUnit.NANOSECONDS);
         }
-        
+
         long getSkippedPulses() {
-            return getPulseEnd(TimeUnit.MILLISECONDS) 
+            return getPulseEnd(TimeUnit.MILLISECONDS)
               / AnimationPulse.getDefaultBean().getPULSE_DURATION();
         }
-        
+
         static interface Accessor {
             public long get(PulseData pulseData, TimeUnit unit);
         }
-        
+
         static final Accessor PulseStartAccessor = (pulseData1, unit) -> pulseData1.getPulseStart(unit);
-        
+
         static final Accessor AnimationDurationAccessor = (pulseData1, unit) -> pulseData1.getAnimationDuration(unit);
-        
+
         static final Accessor PaintingDurationAccessor = (pulseData1, unit) -> pulseData1.getPaintingDuration(unit);
-        
+
         static final Accessor ScenePaintingDurationAccessor = (pulseData1, unit) -> pulseData1.getScenePaintingDuration(unit);
-        
+
         static final Accessor PulseDurationAccessor = (pulseData1, unit) -> pulseData1.getPulseDuration(unit);
-        
+
         static final Accessor PulseEndAccessor = (pulseData1, unit) -> pulseData1.getPulseEnd(unit);
-        
+
         static final Accessor PaintingPreparationDuration = (pulseData1, unit) -> pulseData1.getPaintingDuration(unit);
-        
+
         static final Accessor PaintingFinalizationDuration = (pulseData1, unit) -> pulseData1.getPaintingFinalizationDuration(unit);
-        
+
 //        @Override
 //        public String toString() {
 //            StringBuilder sb = new StringBuilder(super.toString());
@@ -147,20 +147,20 @@ public class AnimationPulse implements AnimationPulseMBean {
 //            return sb.toString();
 //        }
     }
-    
+
     private final Queue<PulseData> pulseDataQueue = new ConcurrentLinkedQueue<>();
-    
+
     //to be accessed from the EDT
     private PulseData pulseData = null;
-    
-    
 
-    private volatile boolean isEnabled = false; 
+
+
+    private volatile boolean isEnabled = false;
     @Override
     public boolean getEnabled() {
         return isEnabled;
     }
-    
+
     @Override
     public void setEnabled(boolean enabled) {
         if (enabled == isEnabled) {
@@ -169,18 +169,18 @@ public class AnimationPulse implements AnimationPulseMBean {
         isEnabled = enabled;
         //we may want to clean the state on setEanbled(false)
     }
-    
+
     @Override
     public long getPULSE_DURATION() {
         return Toolkit.getToolkit().getMasterTimer().getPulseDuration(1000);
     }
-    
-    
+
+
     @Override
     public long getSkippedPulses() {
         return skippedPulses.get();
     }
-    
+
     @Override
     public long getSkippedPulsesIn1Sec() {
         long rv = 0;
@@ -191,8 +191,8 @@ public class AnimationPulse implements AnimationPulseMBean {
         }
         return rv;
     }
-     
-    
+
+
     public void recordStart(long shiftMillis) {
         if (! getEnabled()) {
             return;
@@ -203,34 +203,34 @@ public class AnimationPulse implements AnimationPulseMBean {
     // cleans items older than 1sec from the queue
     private void purgeOldPulseData() {
         Iterator<PulseData> iterator = pulseDataQueue.iterator();
-        while (iterator.hasNext() 
+        while (iterator.hasNext()
                 && iterator.next().getPulseStartFromNow(TimeUnit.SECONDS) > 1) {
             iterator.remove();
         }
     }
 
     private final AtomicLong pulseCounter = new AtomicLong();
-    
+
     private final AtomicLong startMax = new AtomicLong();
     private final AtomicLong startSum = new AtomicLong();
     private final AtomicLong startAv = new AtomicLong();
-    
+
     private final AtomicLong endMax = new AtomicLong();
     private final AtomicLong endSum = new AtomicLong();
     private final AtomicLong endAv = new AtomicLong();
-    
-    private final AtomicLong animationDurationMax = new AtomicLong(); 
+
+    private final AtomicLong animationDurationMax = new AtomicLong();
     private final AtomicLong animationDurationSum = new AtomicLong();
     private final AtomicLong animationDurationAv = new AtomicLong();
-    
+
     private final AtomicLong paintingDurationMax = new AtomicLong();
     private final AtomicLong paintingDurationSum = new AtomicLong();
     private final AtomicLong paintingDurationAv = new AtomicLong();
-    
+
     private final AtomicLong pulseDurationMax = new AtomicLong();
     private final AtomicLong pulseDurationSum = new AtomicLong();
     private final AtomicLong pulseDurationAv = new AtomicLong();
-    
+
     private final AtomicLong[] maxAndAv = new AtomicLong[] {
             startMax, startSum, startAv,
             endMax, endSum, endAv,
@@ -245,7 +245,7 @@ public class AnimationPulse implements AnimationPulseMBean {
             PulseData.PaintingDurationAccessor,
             PulseData.PulseDurationAccessor
     };
-    
+
     private void updateMaxAndAv() {
         long pulseCounterLong = pulseCounter.incrementAndGet();
         for (int i = 0; i < maxAndAvAccessors.length; i++) {
@@ -256,9 +256,9 @@ public class AnimationPulse implements AnimationPulseMBean {
             maxAndAv[j + 2].set(maxAndAv[j + 1].get() / pulseCounterLong);
         }
     }
-    
+
     private final AtomicLong skippedPulses = new AtomicLong();
-    
+
     private int skipPulses = 100;
     public void recordEnd() {
         if (! getEnabled()) {
@@ -279,8 +279,8 @@ public class AnimationPulse implements AnimationPulseMBean {
         pulseData = null;
     }
 
-    /* 
-     * implementation detail: I wish we had deque in 1.5 but we do not so here we 
+    /*
+     * implementation detail: I wish we had deque in 1.5 but we do not so here we
      * iterate over the whole thing.
      */
     private long getAv(PulseData.Accessor accessor, long timeOut, TimeUnit unit) {
@@ -297,7 +297,7 @@ public class AnimationPulse implements AnimationPulseMBean {
         }
         return (items == 0) ? 0 : time / items;
     }
-    
+
     private long getMax(PulseData.Accessor accessor, long timeOut, TimeUnit unit) {
         if (! getEnabled()) {
             return 0;
@@ -310,123 +310,123 @@ public class AnimationPulse implements AnimationPulseMBean {
         }
         return max;
     }
-    
+
     @Override
     public long getStartMax() {
         return startMax.get();
     }
-    
+
     @Override
     public long getStartAv() {
         return startAv.get();
     }
-    
+
     @Override
     public long getStartMaxIn1Sec() {
         return getMax(PulseData.PulseStartAccessor, 1000, TimeUnit.MILLISECONDS);
     }
-    
+
     @Override
     public long getStartAvIn100Millis() {
         return getAv(PulseData.PulseStartAccessor, 100, TimeUnit.MILLISECONDS);
     }
-    
+
     @Override
     public long getEndMax() {
         return endMax.get();
     }
-    
+
     @Override
     public long getEndMaxIn1Sec() {
         return getMax(PulseData.PulseEndAccessor, 1000, TimeUnit.MILLISECONDS);
     }
-    
+
     @Override
     public long getEndAv() {
         return endAv.get();
     }
-    
+
     @Override
     public long getEndAvIn100Millis() {
         return getAv(PulseData.PulseEndAccessor, 100, TimeUnit.MILLISECONDS);
     }
-    
+
     public void recordAnimationEnd() {
         if (getEnabled() && pulseData != null) {
             pulseData.recordAnimationEnd();
         }
     }
-    
+
     @Override
     public long getAnimationDurationMax() {
         return animationDurationMax.get();
     }
-    
+
     @Override
     public long getAnimationMaxIn1Sec() {
         return getMax(PulseData.AnimationDurationAccessor, 1000, TimeUnit.MILLISECONDS);
     }
-    
+
     @Override
     public long getAnimationDurationAv() {
         return animationDurationAv.get();
     }
-    
+
     @Override
     public long getAnimationDurationAvIn100Millis() {
         return getAv(PulseData.AnimationDurationAccessor, 100, TimeUnit.MILLISECONDS);
     }
-    
+
     @Override
     public long getPaintingDurationMax() {
         return paintingDurationMax.get();
     }
-    
+
     @Override
     public long getPaintingDurationMaxIn1Sec() {
         return getMax(PulseData.PaintingDurationAccessor, 1000, TimeUnit.MILLISECONDS);
     }
-    
+
     @Override
     public long getPaintingDurationAv() {
         return paintingDurationAv.get();
     }
-    
+
     @Override
     public long getPaintingDurationAvIn100Millis() {
         return getAv(PulseData.PaintingDurationAccessor, 100, TimeUnit.MILLISECONDS);
     }
-    
+
     @Override
     public long getScenePaintingDurationMaxIn1Sec() {
         return getMax(PulseData.ScenePaintingDurationAccessor, 1000, TimeUnit.MILLISECONDS);
     }
-    
+
     @Override
     public long getPulseDurationMax() {
         return pulseDurationMax.get();
     }
-    
+
     @Override
     public long getPulseDurationMaxIn1Sec() {
         return getMax(PulseData.PulseDurationAccessor, 1000, TimeUnit.MILLISECONDS);
     }
-    
+
     @Override
     public long getPulseDurationAv() {
         return pulseDurationAv.get();
     }
-    
+
     @Override
     public long getPulseDurationAvIn100Millis() {
         return getAv(PulseData.PulseDurationAccessor, 100, TimeUnit.MILLISECONDS);
     }
-    
+
     @Override
     public long getPaintingPreparationDurationMaxIn1Sec() {
-        return getMax(PulseData.PaintingPreparationDuration, 1000, TimeUnit.MILLISECONDS);    
+        return getMax(PulseData.PaintingPreparationDuration, 1000, TimeUnit.MILLISECONDS);
     }
-    
+
     @Override
     public long getPaintingFinalizationDurationMaxIn1Sec() {
         return getMax(PulseData.PaintingFinalizationDuration, 1000, TimeUnit.MILLISECONDS);

@@ -156,7 +156,7 @@ public abstract class LabeledSkinBase<C extends Labeled> extends SkinBase<C> {
         // Configure the Text node with all of the attributes from the
         // Labeled which apply to it.
         text = new LabeledText(labeled);
-        
+
         updateChildren();
 
         // Labels do not block the mouse by default, unlike most other UI Controls.
@@ -863,7 +863,7 @@ public abstract class LabeledSkinBase<C extends Labeled> extends SkinBase<C> {
     void mnemonicTargetChanged() {
         if (containsMnemonic == true) {
             /*
-            ** was there previously a labelFor  
+            ** was there previously a labelFor
             */
             removeMnemonic();
 

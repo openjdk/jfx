@@ -41,9 +41,9 @@ import java.util.jar.Manifest;
 import static com.oracle.tools.packager.StandardBundlerParam.*;
 
 public class BundleParams {
-      
+
     final protected Map<String, ? super Object> params;
-    
+
     public static final String PARAM_RUNTIME                = "runtime"; // RelativeFileSet
     public static final String PARAM_APP_RESOURCES          = "appResources"; // RelativeFileSet
     public static final String PARAM_TYPE                   = "type"; // BundlerType
@@ -96,13 +96,13 @@ public class BundleParams {
        null means "default" */
     public static final String PARAM_SERVICE_HINT           = "serviceHint"; // Boolean
 
-    
+
     /* Main application class. Not used directly but used to derive default values */
     public static final String PARAM_APPLICATION_CLASS      = "applicationClass"; // String
 
     /* Adds a dialog to let the user choose a directory where the product will be installed. */
     public static final String PARAM_INSTALLDIR_CHOOSER     = "installdirChooser"; // Boolean
-    
+
     /**
      * create a new bundle with all default values
      */
@@ -111,7 +111,7 @@ public class BundleParams {
     }
 
     /**
-     * Create a bundle params with a copy of the params 
+     * Create a bundle params with a copy of the params
      * @param params map of initial parameters to be copied in.
      */
     public BundleParams(Map<String, ?> params) {
@@ -125,7 +125,7 @@ public class BundleParams {
     public <C> C fetchParam(BundlerParamInfo<C> paramInfo) {
         return paramInfo.fetchFrom(params);
     }
-    
+
     @SuppressWarnings("unchecked")
     public <C> C fetchParamWithDefault(Class<C> klass, C defaultValue, String... keys) {
         for (String key : keys) {
@@ -148,7 +148,7 @@ public class BundleParams {
     //NOTE: we do not care about application parameters here
     // as they will be embeded into jar file manifest and
     // java launcher will take care of them!
-    
+
     public Map<String, ? super Object> getBundleParamsAsMap() {
         return new HashMap<>(params);
     }
@@ -193,7 +193,7 @@ public class BundleParams {
     public void setApplicationClass(String applicationClass) {
         putUnlessNull(PARAM_APPLICATION_CLASS, applicationClass);
     }
-    
+
     public void setPrelaoderClass(String preloaderClass) {
         putUnlessNull(PRELOADER_CLASS.getID(), preloaderClass);
     }
@@ -243,13 +243,13 @@ public class BundleParams {
     public void setServiceHint(Boolean b) {
         putUnlessNull(PARAM_SERVICE_HINT, b);
     }
-    
+
     public void setInstalldirChooser(Boolean b) {
         putUnlessNull(PARAM_INSTALLDIR_CHOOSER, b);
     }
-    
+
     public void setSignBundle(Boolean b) { putUnlessNull(SIGN_BUNDLE.getID(), b); }
-    
+
     public com.oracle.tools.packager.RelativeFileSet getRuntime() {
         return getRuntime(params);
     }
@@ -293,7 +293,7 @@ public class BundleParams {
 
     @SuppressWarnings("deprecation")
     public BundleType getType() {
-        return fetchParam(BundleType.class, PARAM_TYPE); 
+        return fetchParam(BundleType.class, PARAM_TYPE);
     }
 
     @SuppressWarnings("deprecation")
@@ -302,9 +302,9 @@ public class BundleParams {
     }
 
     public String getBundleFormat() {
-        return fetchParam(String.class, PARAM_BUNDLE_FORMAT); 
+        return fetchParam(String.class, PARAM_BUNDLE_FORMAT);
     }
-    
+
     public void setBundleFormat(String t) {
         putUnlessNull(PARAM_BUNDLE_FORMAT, t);
     }
@@ -455,7 +455,7 @@ public class BundleParams {
 
     public String getMainClassName() {
         String applicationClass = getApplicationClass();
-        
+
         if (applicationClass == null) {
             return null;
         }
@@ -521,7 +521,7 @@ public class BundleParams {
         if (mainJar != null) {
             return mainJar;
         }
-        
+
         com.oracle.tools.packager.RelativeFileSet appResources = getAppResource();
         String applicationClass = getApplicationClass();
 
@@ -568,7 +568,7 @@ public class BundleParams {
     public void setEmail(String email) {
         putUnlessNull(PARAM_EMAIL, email);
     }
-    
+
     public void putUnlessNull(String param, Object value) {
         if (value != null) {
             params.put(param, value);

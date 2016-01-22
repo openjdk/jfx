@@ -60,6 +60,6 @@ SignalEvent createSignalEvent(SignalEventType type) {
 char *event_toString(Event e) {
     char *out = (char*)malloc(100);
     sprintf(out, "[%s]", e->toString(e));
-    return out;    
+    return out;
 }
 

@@ -71,23 +71,23 @@ import java.util.List;
  * import javafx.application.Application;
  * import javafx.geometry.Rectangle2D;
  * import javafx.scene.Group;
- * import javafx.scene.Scene; 
+ * import javafx.scene.Scene;
  * import javafx.scene.image.Image;
  * import javafx.scene.image.ImageView;
  * import javafx.scene.layout.HBox;
  * import javafx.scene.paint.Color;
- * import javafx.stage.Stage; 
+ * import javafx.stage.Stage;
  *
  * public class HelloMenu extends Application {
- * 
+ *
  *     &#64;Override public void start(Stage stage) {
  *         // load the image
  *         Image image = new Image("flower.png");
- * 
+ *
  *         // simple displays ImageView the image as is
  *         ImageView iv1 = new ImageView();
  *         iv1.setImage(image);
- * 
+ *
  *         // resizes the image to have width of 100 while preserving the ratio and using
  *         // higher quality filtering method; this ImageView is also cached to
  *         // improve performance
@@ -114,13 +114,13 @@ import java.util.List;
  *         box.getChildren().add(iv2);
  *         box.getChildren().add(iv3);
  *         root.getChildren().add(box);
- * 
+ *
  *         stage.setTitle("ImageView");
  *         stage.setWidth(415);
  *         stage.setHeight(200);
- *         stage.setScene(scene); 
- *         stage.sizeToScene(); 
- *         stage.show(); 
+ *         stage.setScene(scene);
+ *         stage.sizeToScene();
+ *         stage.show();
  *     }
  *
  *     public static void main(String[] args) {
@@ -168,7 +168,7 @@ public class ImageView extends Node {
 
     /**
      * Allocates a new ImageView object using the given image.
-     * 
+     *
      * @param image Image that this ImageView uses
      */
     public ImageView(Image image) {
@@ -224,7 +224,7 @@ public class ImageView extends Node {
                     }
                     impl_markDirty(DirtyBits.NODE_CONTENTS);
                 }
-                
+
                 @Override
                 public Object getBean() {
                     return ImageView.this;
@@ -243,7 +243,7 @@ public class ImageView extends Node {
     /**
      * The imageUrl property is set from CSS and then the image property is
      * set from the invalidated method. This ensures that the same image isn't
-     * reloaded. 
+     * reloaded.
      */
     private StringProperty imageUrlProperty() {
         if (imageUrl == null) {
@@ -254,10 +254,10 @@ public class ImageView extends Node {
 
                     final String imageUrl = get();
                     if (imageUrl != null) {
-                        setImage(StyleManager.getInstance().getCachedImage(imageUrl)); 
+                        setImage(StyleManager.getInstance().getCachedImage(imageUrl));
                     } else {
                         setImage(null);
-                    }                    
+                    }
                 }
 
                 @Override
@@ -274,11 +274,11 @@ public class ImageView extends Node {
                 public CssMetaData<ImageView,String> getCssMetaData() {
                     return StyleableProperties.IMAGE;
                 }
-                
+
             };
         }
         return imageUrl;
-    }    
+    }
 
     private final AbstractNotifyListener platformImageChangeListener =
             new AbstractNotifyListener() {
@@ -399,7 +399,7 @@ public class ImageView extends Node {
                 protected void invalidated() {
                     invalidateWidthHeight();
                     impl_markDirty(DirtyBits.NODE_VIEWPORT);
-                    impl_geomChanged();                    
+                    impl_geomChanged();
                 }
 
                 @Override
@@ -667,7 +667,7 @@ public class ImageView extends Node {
         bounds = tx.transform(bounds, bounds);
         return bounds;
     }
-    
+
     private boolean validWH;
 
     private void invalidateWidthHeight() {
@@ -788,7 +788,7 @@ public class ImageView extends Node {
      private static class StyleableProperties {
         // TODO
         // "preserve-ratio","smooth","viewport","fit-width","fit-height"
-         private static final CssMetaData<ImageView, String> IMAGE = 
+         private static final CssMetaData<ImageView, String> IMAGE =
             new CssMetaData<ImageView,String>("-fx-image",
                 URLConverter.getInstance()) {
 
@@ -803,11 +803,11 @@ public class ImageView extends Node {
                 return (StyleableProperty<String>)n.imageUrlProperty();
             }
         };
-            
+
          private static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES;
          static {
-            final List<CssMetaData<? extends Styleable, ?>> styleables = 
-		new ArrayList<CssMetaData<? extends Styleable, ?>>(Node.getClassCssMetaData());
+            final List<CssMetaData<? extends Styleable, ?>> styleables =
+        new ArrayList<CssMetaData<? extends Styleable, ?>>(Node.getClassCssMetaData());
             styleables.add(IMAGE);
             STYLEABLES = Collections.unmodifiableList(styleables);
          }
@@ -827,8 +827,8 @@ public class ImageView extends Node {
      *
      * @since JavaFX 8.0
      */
-    
-    
+
+
     @Override
     public List<CssMetaData<? extends Styleable, ?>> getCssMetaData() {
         return getClassCssMetaData();

@@ -40,7 +40,7 @@ class MeshVertex {
     int index; // indexBuffer
     Vec3f[] norm; // {N, T, B}
     MeshVertex next = null;
-    
+
     static final int IDX_UNDEFINED = -1;
     static final int IDX_SET_SMOOTH = -2;
     static final int IDX_UNITE = -3;
@@ -83,7 +83,7 @@ class MeshVertex {
         return a.tVert == b.tVert && MeshUtil.isTangentOk(a.norm, b.norm);
     }
 
-    /* 
+    /*
      * Weld points, assign new indexes and calculate new TB
      * return current number of points (last index +1)
      */
@@ -175,7 +175,7 @@ class MeshVertex {
         }
     }
 
-    static int processVertices(MeshVertex[] pVerts, int nVertex, 
+    static int processVertices(MeshVertex[] pVerts, int nVertex,
             boolean allHardEdges, boolean allSameSmoothing) {
         int nNewVerts = 0;
         Vec3f normalSum = MeshTempState.getInstance().vec3f1;
@@ -183,7 +183,7 @@ class MeshVertex {
             if (pVerts[i] != null) {
                 if (!allHardEdges) {
                     if (allSameSmoothing) {
-                        // calculate average normal for one smoothing group                        
+                        // calculate average normal for one smoothing group
                         normalSum.set(pVerts[i].norm[0]);
                         for (MeshVertex v = pVerts[i].next; v != null; v = v.next) {
                             normalSum.add(v.norm[0]);

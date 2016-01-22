@@ -79,7 +79,7 @@ void VideoTrackPrivateAVFObjC::setSelected(bool enabled)
     VideoTrackPrivateAVF::setSelected(enabled);
     m_impl->setEnabled(enabled);
 }
-    
+
 }
 
 #endif

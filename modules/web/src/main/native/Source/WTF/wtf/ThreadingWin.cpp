@@ -8,13 +8,13 @@
  * are met:
  *
  * 1.  Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer. 
+ *     notice, this list of conditions and the following disclaimer.
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
- *     documentation and/or other materials provided with the distribution. 
+ *     documentation and/or other materials provided with the distribution.
  * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
- *     from this software without specific prior written permission. 
+ *     from this software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY APPLE AND ITS CONTRIBUTORS "AS IS" AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
@@ -157,7 +157,7 @@ static Mutex& threadMapMutex()
 void initializeThreading()
 {
     static bool isInitialized;
-    
+
     if (isInitialized)
         return;
 
@@ -249,11 +249,11 @@ ThreadIdentifier createThreadInternal(ThreadFunction entryPoint, void* data, con
 int waitForThreadCompletion(ThreadIdentifier threadID)
 {
     ASSERT(threadID);
-    
+
     HANDLE threadHandle = threadHandleForIdentifier(threadID);
     if (!threadHandle)
         LOG_ERROR("ThreadIdentifier %u did not correspond to an active thread when trying to quit", threadID);
- 
+
     DWORD joinResult = WaitForSingleObject(threadHandle, INFINITE);
     if (joinResult == WAIT_FAILED)
         LOG_ERROR("ThreadIdentifier %u was found to be deadlocked trying to quit", threadID);
@@ -295,7 +295,7 @@ void Mutex::lock()
     EnterCriticalSection(&m_mutex.m_internalMutex);
     ++m_mutex.m_recursionCount;
 }
-    
+
 bool Mutex::tryLock()
 {
     // This method is modeled after the behavior of pthread_mutex_trylock,
@@ -305,7 +305,7 @@ bool Mutex::tryLock()
     // tests in WebKit that check to see if the current thread already
     // owned this mutex (see e.g., IconDatabase::getOrCreateIconRecord)
     DWORD result = TryEnterCriticalSection(&m_mutex.m_internalMutex);
-    
+
     if (result != 0) {       // We got the lock
         // If this thread already had the lock, we must unlock and
         // return false so that we mimic the behavior of POSIX's

@@ -370,7 +370,7 @@ public abstract class PropertyEditor extends Editor {
 
     /*
      * State properties
-     * 
+     *
      */
     public boolean isDisabled() {
         return disableProperty.getValue();

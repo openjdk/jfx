@@ -102,7 +102,7 @@ ContentFilter::ContentFilter(const ResourceResponse& response)
     if ([getNEFilterSourceClass() filterRequired]) {
         m_neFilterSource = adoptNS([[getNEFilterSourceClass() alloc] initWithURL:[response.nsURLResponse() URL] direction:NEFilterSourceDirectionInbound socketIdentifier:0]);
         m_neFilterSourceQueue = dispatch_queue_create("com.apple.WebCore.NEFilterSourceQueue", DISPATCH_QUEUE_SERIAL);
-        
+
         long long expectedContentSize = [response.nsURLResponse() expectedContentLength];
         if (expectedContentSize < 0)
             m_originalData = adoptNS([[NSMutableData alloc] init]);
@@ -164,7 +164,7 @@ void ContentFilter::addData(const char* data, int length)
     dispatch_release(neFilterSourceSemaphore);
 #endif
 }
-    
+
 void ContentFilter::finishedAddingData()
 {
     ASSERT(needsMoreData());

@@ -54,7 +54,7 @@ static std::condition_variable& loaderRunLoopConditionVariable()
     return conditionVariable;
 }
 
-static void emptyPerform(void*) 
+static void emptyPerform(void*)
 {
 }
 

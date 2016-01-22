@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -43,11 +43,11 @@ public:
         , m_insertionSet(graph)
     {
     }
-    
+
     bool run()
     {
         ASSERT(m_graph.m_form == ThreadedCPS || m_graph.m_form == SSA);
-        
+
         // First reset the counts to 0 for all nodes.
         for (BlockIndex blockIndex = 0; blockIndex < m_graph.numBlocks(); ++blockIndex) {
             BasicBlock* block = m_graph.block(blockIndex);
@@ -58,7 +58,7 @@ public:
             for (unsigned phiIndex = block->phis.size(); phiIndex--;)
                 block->phis[phiIndex]->setRefCount(0);
         }
-    
+
         // Now find the roots:
         // - Nodes that are must-generate.
         // - Nodes that are reachable from type checks.
@@ -76,7 +76,7 @@ public:
                     m_worklist.append(node);
             }
         }
-        
+
         while (!m_worklist.isEmpty()) {
             while (!m_worklist.isEmpty()) {
                 Node* node = m_worklist.last();
@@ -84,7 +84,7 @@ public:
                 ASSERT(node->shouldGenerate()); // It should not be on the worklist unless it's ref'ed.
                 DFG_NODE_DO_TO_CHILDREN(m_graph, node, countEdge);
             }
-            
+
             if (m_graph.m_form == SSA) {
                 // Find Phi->Upsilon edges, which are represented as meta-data in the
                 // Upsilon.
@@ -104,7 +104,7 @@ public:
                 }
             }
         }
-        
+
         if (m_graph.m_form == SSA) {
             // Need to process the graph in reverse DFS order, so that we get to the uses
             // of a node before we get to the node itself.
@@ -114,15 +114,15 @@ public:
                 fixupBlock(depthFirst[i]);
         } else {
             RELEASE_ASSERT(m_graph.m_form == ThreadedCPS);
-            
+
             for (BlockIndex blockIndex = 0; blockIndex < m_graph.numBlocks(); ++blockIndex)
                 fixupBlock(m_graph.block(blockIndex));
-            
+
             cleanVariables(m_graph.m_arguments);
         }
-        
+
         m_graph.m_refCountState = ExactRefCount;
-        
+
         return true;
     }
 
@@ -136,14 +136,14 @@ private:
         if (!edge->postfixRef())
             m_worklist.append(edge.node());
     }
-    
+
     void countNode(Node* node)
     {
         if (node->postfixRef())
             return;
         m_worklist.append(node);
     }
-    
+
     void countEdge(Node*, Edge edge)
     {
         // Don't count edges that are already counted for their type checks.
@@ -151,22 +151,22 @@ private:
             return;
         countNode(edge.node());
     }
-    
+
     void fixupBlock(BasicBlock* block)
     {
         if (!block)
             return;
-        
+
         switch (m_graph.m_form) {
         case SSA:
             break;
-            
+
         case ThreadedCPS: {
             // Clean up variable links for the block. We need to do this before the actual DCE
             // because we need to see GetLocals, so we can bypass them in situations where the
             // vars-at-tail point to a GetLocal, the GetLocal is dead, but the Phi it points
             // to is alive.
-            
+
             for (unsigned phiIndex = 0; phiIndex < block->phis.size(); ++phiIndex) {
                 if (!block->phis[phiIndex]->shouldGenerate()) {
                     // FIXME: We could actually free nodes here. Except that it probably
@@ -176,12 +176,12 @@ private:
                     block->phis.removeLast();
                 }
             }
-            
+
             cleanVariables(block->variablesAtHead);
             cleanVariables(block->variablesAtTail);
             break;
         }
-            
+
         default:
             RELEASE_ASSERT_NOT_REACHED();
             return;
@@ -191,7 +191,7 @@ private:
             Node* node = block->at(indexInBlock);
             if (node->shouldGenerate())
                 continue;
-                
+
             switch (node->op()) {
             case MovHint: {
                 ASSERT(node->child1().useKind() == UntypedUse);
@@ -203,13 +203,13 @@ private:
                 node->setOpAndDefaultFlags(MovHint);
                 break;
             }
-                
+
             case ZombieHint: {
                 // Currently we assume that DCE runs only once.
                 RELEASE_ASSERT_NOT_REACHED();
                 break;
             }
-            
+
             default: {
                 if (node->flags() & NodeHasVarArgs) {
                     for (unsigned childIdx = node->firstChild(); childIdx < node->firstChild() + node->numChildren(); childIdx++) {
@@ -236,7 +236,7 @@ private:
 
         m_insertionSet.execute(block);
     }
-    
+
     void eliminateIrrelevantPhantomChildren(Node* node)
     {
         for (unsigned i = 0; i < AdjacencyList::Size; ++i) {
@@ -247,7 +247,7 @@ private:
                 node->children.removeEdge(i--);
         }
     }
-    
+
     template<typename VariablesVectorType>
     void cleanVariables(VariablesVectorType& variables)
     {
@@ -268,7 +268,7 @@ private:
             variables[i] = 0;
         }
     }
-    
+
     Vector<Node*, 128> m_worklist;
     InsertionSet m_insertionSet;
 };

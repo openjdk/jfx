@@ -59,7 +59,7 @@ public class HyperlinkSkinTest {
         hyperlink.setPrefHeight(500);
         assertEquals(500, hyperlink.maxHeight(-1), 0);
     }
-    
+
     public static final class HyperlinkSkinMock extends HyperlinkSkin {
         boolean propertyChanged = false;
         int propertyChangeCount = 0;

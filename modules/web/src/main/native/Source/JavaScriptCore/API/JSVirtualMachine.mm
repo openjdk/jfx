@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -104,19 +104,19 @@ static NSMapTable *wrapperCache()
     self = [super init];
     if (!self)
         return nil;
-    
+
     m_group = JSContextGroupRetain(group);
-    
+
     NSPointerFunctionsOptions keyOptions = NSPointerFunctionsOpaqueMemory | NSPointerFunctionsOpaquePersonality;
     NSPointerFunctionsOptions valueOptions = NSPointerFunctionsWeakMemory | NSPointerFunctionsObjectPersonality;
     m_contextCache = [[NSMapTable alloc] initWithKeyOptions:keyOptions valueOptions:valueOptions capacity:0];
-    
+
     NSPointerFunctionsOptions weakIDOptions = NSPointerFunctionsWeakMemory | NSPointerFunctionsObjectPersonality;
     NSPointerFunctionsOptions strongIDOptions = NSPointerFunctionsStrongMemory | NSPointerFunctionsObjectPersonality;
     m_externalObjectGraph = [[NSMapTable alloc] initWithKeyOptions:weakIDOptions valueOptions:strongIDOptions capacity:0];
-   
+
     [JSVMWrapperCache addWrapper:self forJSContextGroupRef:group];
- 
+
     return self;
 }
 
@@ -137,7 +137,7 @@ static id getInternalObjcObject(id object)
             return temp;
         return object;
     }
-    
+
     if ([object isKindOfClass:[JSValue class]]) {
         JSValue *value = static_cast<JSValue *>(object);
         object = tryUnwrapObjcObject([value.context JSGlobalContextRef], [value JSValueRef]);
@@ -147,18 +147,18 @@ static id getInternalObjcObject(id object)
 }
 
 - (void)addManagedReference:(id)object withOwner:(id)owner
-{    
+{
     if ([object isKindOfClass:[JSManagedValue class]])
         [object didAddOwner:owner];
-        
+
     object = getInternalObjcObject(object);
     owner = getInternalObjcObject(owner);
-    
+
     if (!object || !owner)
         return;
-    
+
     JSC::APIEntryShim shim(toJS(m_group));
-    
+
     NSMapTable *ownedObjects = [m_externalObjectGraph objectForKey:owner];
     if (!ownedObjects) {
         NSPointerFunctionsOptions weakIDOptions = NSPointerFunctionsWeakMemory | NSPointerFunctionsObjectPersonality;
@@ -180,22 +180,22 @@ static id getInternalObjcObject(id object)
 
     object = getInternalObjcObject(object);
     owner = getInternalObjcObject(owner);
-    
+
     if (!object || !owner)
         return;
-    
+
     JSC::APIEntryShim shim(toJS(m_group));
-    
+
     NSMapTable *ownedObjects = [m_externalObjectGraph objectForKey:owner];
     if (!ownedObjects)
         return;
-   
+
     size_t count = reinterpret_cast<size_t>(NSMapGet(ownedObjects, object));
     if (count > 1) {
         NSMapInsert(ownedObjects, object, reinterpret_cast<void*>(count - 1));
         return;
     }
-    
+
     if (count == 1)
         NSMapRemove(ownedObjects, object);
 
@@ -252,7 +252,7 @@ void scanExternalObjectGraph(JSC::VM& vm, JSC::SlotVisitor& visitor, void* root)
             if (visitor.containsOpaqueRootTriState(nextRoot) == TrueTriState)
                 continue;
             visitor.addOpaqueRoot(nextRoot);
-            
+
             NSMapTable *ownedObjects = [externalObjectGraph objectForKey:static_cast<id>(nextRoot)];
             id ownedObject;
             NSEnumerator *enumerator = [ownedObjects keyEnumerator];

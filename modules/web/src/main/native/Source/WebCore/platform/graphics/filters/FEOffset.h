@@ -40,7 +40,7 @@ public:
 
     virtual void platformApplySoftware();
     virtual void dump();
-    
+
     virtual void determineAbsolutePaintRect();
 
     virtual TextStream& externalRepresentation(TextStream&, int indention) const;

@@ -38,7 +38,7 @@ NativeScreen lens_screen_initialize(JNIEnv *env) {
     if (localScreen) {
         free(localScreen);
     }
-    ANativeWindow *androidWindow = android_getNativeWindow(env);    
+    ANativeWindow *androidWindow = android_getNativeWindow(env);
     if (!androidWindow) {
         return 0;
     }

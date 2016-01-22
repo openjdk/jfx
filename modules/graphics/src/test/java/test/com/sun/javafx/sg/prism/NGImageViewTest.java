@@ -97,7 +97,7 @@ public class NGImageViewTest extends NGTestBase {
      */
     @Test
     public void computeOpaqueRegionForWholeNumbers() {
-        assertEquals(new RectBounds(10, 10, 26, 26), 
+        assertEquals(new RectBounds(10, 10, 26, 26),
             NGNodeShim.computeOpaqueRegion(imageView, new RectBounds()));
     }
 }

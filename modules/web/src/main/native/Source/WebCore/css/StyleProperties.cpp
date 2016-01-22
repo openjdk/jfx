@@ -1163,7 +1163,7 @@ void MutableStyleProperties::removeEquivalentProperties(const StyleProperties* s
         PropertyReference property = propertyAt(i);
         if (style->propertyMatches(property.id(), property.value()))
             propertiesToRemove.append(property.id());
-    }    
+    }
     // FIXME: This should use mass removal.
     for (unsigned i = 0; i < propertiesToRemove.size(); ++i)
         removeProperty(propertiesToRemove[i]);
@@ -1177,7 +1177,7 @@ void MutableStyleProperties::removeEquivalentProperties(const ComputedStyleExtra
         PropertyReference property = propertyAt(i);
         if (computedStyle->propertyMatches(property.id(), property.value()))
             propertiesToRemove.append(property.id());
-    }    
+    }
     // FIXME: This should use mass removal.
     for (unsigned i = 0; i < propertiesToRemove.size(); ++i)
         removeProperty(propertiesToRemove[i]);

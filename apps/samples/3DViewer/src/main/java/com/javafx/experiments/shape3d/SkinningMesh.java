@@ -62,11 +62,11 @@ public class SkinningMesh extends PolygonMesh {
     private final Transform[] jointToRootTransforms; // the root refers to the group containing all the mesh skinning nodes (i.e. the parent of jointForest)
     private final int nPoints;
     private final int nJoints;
-    
-    
+
+
     /**
      * SkinningMesh constructor
-     * 
+     *
      * @param mesh The binding mesh
      * @param weights A two-dimensional array (nJoints x nPoints) of the influence weights used for skinning
      * @param bindTransforms The binding transforms for every joint
@@ -79,28 +79,28 @@ public class SkinningMesh extends PolygonMesh {
         this.getTexCoords().addAll(mesh.getTexCoords());
         this.faces = mesh.faces;
         this.getFaceSmoothingGroups().addAll(mesh.getFaceSmoothingGroups());
-        
+
         this.weights = weights;
 
         nJoints = joints.size();
         nPoints = getPoints().size()/ getPointElementSize();
-        
-        // Create the jointIndexForest forest. Its structure is the same as 
-        // jointForest, except that this forest have indices information and 
+
+        // Create the jointIndexForest forest. Its structure is the same as
+        // jointForest, except that this forest have indices information and
         // some branches are pruned if they don't contain joints.
         jointIndexForest = new ArrayList<JointIndex>(jointForest.size());
         for (Parent jointRoot : jointForest) {
             jointIndexForest.add(new JointIndex(jointRoot, joints.indexOf(jointRoot), joints));
         }
-        
+
         try {
             bindGlobalInverseTransform = bindGlobalTransform.createInverse();
         } catch (NonInvertibleTransformException ex) {
             System.err.println("Caught NonInvertibleTransformException: " + ex.getMessage());
         }
-        
+
         jointToRootTransforms = new Transform[nJoints];
-        
+
         // For optimization purposes, store the indices of the non-zero weights
         weightIndices = new List[nJoints];
         for (int j = 0; j < nJoints; j++) {
@@ -111,7 +111,7 @@ public class SkinningMesh extends PolygonMesh {
                 }
             }
         }
-        
+
         // Compute the points of the binding mesh relative to the binding transforms
         ObservableFloatArray points = getPoints();
         relativePoints = new float[nJoints][nPoints*3];
@@ -142,7 +142,7 @@ public class SkinningMesh extends PolygonMesh {
             }
         }
     }
-    
+
     private class JointIndex {
         public Node node;
         public int index;
@@ -164,7 +164,7 @@ public class SkinningMesh extends PolygonMesh {
             }
         }
     }
-    
+
     // Updates the jointToRootTransforms by doing a a depth-first search of the jointIndexForest
     private void updateLocalToGlobalTransforms(List<JointIndex> jointIndexForest) {
         for (JointIndex jointIndex : jointIndexForest) {
@@ -179,15 +179,15 @@ public class SkinningMesh extends PolygonMesh {
             updateLocalToGlobalTransforms(jointIndex.children);
         }
     }
-    
+
     // Updates its points only if any of the joints' transforms have changed
     public void update() {
         if (!jointsTransformDirty) {
             return;
         }
-        
+
         updateLocalToGlobalTransforms(jointIndexForest);
-        
+
         float[] points = new float[nPoints*3];
         double[] t = new double[12];
         float[] relativePoint;
@@ -201,7 +201,7 @@ public class SkinningMesh extends PolygonMesh {
             }
         }
         getPoints().set(0, points, 0, points.length);
-        
+
         jointsTransformDirty = false;
     }
 }

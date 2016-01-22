@@ -23,8 +23,8 @@
  * questions.
  */
 
-#ifndef _GLASSCLIPBOARD_H 
-#define _GLASSCLIPBOARD_H 
+#ifndef _GLASSCLIPBOARD_H
+#define _GLASSCLIPBOARD_H
 
 extern jfieldID fidPtr;
 extern jmethodID midContentChanged;
@@ -46,4 +46,4 @@ DROPEFFECT getDROPEFFECT(jint actions);
 
 jint getACTION(DROPEFFECT df);
 
-#endif //_GLASSCLIPBOARD_H 
+#endif //_GLASSCLIPBOARD_H

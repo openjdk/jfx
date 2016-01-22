@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -48,7 +48,7 @@ DragOperation DragController::dragOperation(DragData& dragData)
 {
     //FIXME: to match the macos behaviour we should return DragOperationNone
     //if we are a modal window, we are the drag source, or the window is an attached sheet
-    //If this can be determined from within WebCore operationForDrag can be pulled into 
+    //If this can be determined from within WebCore operationForDrag can be pulled into
     //WebCore itself
     return dragData.containsURL(0) && !m_didInitiateDrag ? DragOperationCopy : DragOperationNone;
 }
@@ -57,11 +57,11 @@ bool DragController::isCopyKeyDown(DragData&)
 {
     return ::GetAsyncKeyState(VK_CONTROL);
 }
-    
+
 const IntSize& DragController::maxDragImageSize()
 {
     static const IntSize maxDragImageSize(200, 200);
-    
+
     return maxDragImageSize;
 }
 

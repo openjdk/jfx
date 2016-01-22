@@ -21,7 +21,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef TextCodecICU_h
@@ -52,7 +52,7 @@ namespace WebCore {
         void releaseICUConverter() const;
         bool needsGBKFallbacks() const { return m_needsGBKFallbacks; }
         void setNeedsGBKFallbacks(bool needsFallbacks) { m_needsGBKFallbacks = needsFallbacks; }
-        
+
         int decodeToBuffer(UChar* buffer, UChar* bufferLimit, const char*& source,
             const char* sourceLimit, int32_t* offsets, bool flush, UErrorCode& err);
 

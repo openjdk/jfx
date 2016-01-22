@@ -43,14 +43,14 @@ import java.util.List;
 
 /**
  *
- * 
+ *
  */
 public class EnumerationPropertyMetadata extends ValuePropertyMetadata {
-    
+
     public static final String EQUIV_NONE = "NONE"; //NOI18N
     public static final String EQUIV_AUTOMATIC = "AUTOMATIC"; //NOI18N
     public static final String EQUIV_INHERITED = "INHERIT"; //NOI18N
-    
+
     private final Class<?> enumClass;
     private final Enum<?> defaultValue;
     private final String nullEquivalent;
@@ -64,7 +64,7 @@ public class EnumerationPropertyMetadata extends ValuePropertyMetadata {
         this.defaultValue = defaultValue;
         this.nullEquivalent = null;
     }
-    
+
     public EnumerationPropertyMetadata(PropertyName name, Class<?> enumClass,
             String nullEquivalent, boolean readWrite, InspectorPath inspectorPath) {
         super(name, readWrite, inspectorPath);
@@ -74,10 +74,10 @@ public class EnumerationPropertyMetadata extends ValuePropertyMetadata {
         this.defaultValue = null;
         this.nullEquivalent = nullEquivalent;
     }
-    
+
     public String getValue(FXOMInstance fxomInstance) {
         final String result;
-        
+
         if (isReadWrite()) {
             final FXOMProperty fxomProperty = fxomInstance.getProperties().get(getName());
             if (fxomProperty == null) {
@@ -104,20 +104,20 @@ public class EnumerationPropertyMetadata extends ValuePropertyMetadata {
                 result = o.toString();
             }
         }
-        
+
         return result;
     }
 
     public void setValue(FXOMInstance fxomInstance, String value) {
         assert isReadWrite();
         assert value != null;
-        
+
         final FXOMProperty fxomProperty = fxomInstance.getProperties().get(getName());
         if (fxomProperty == null) {
             // propertyName is not specified in the fxom instance.
             if (value.equals(getDefaultValue()) == false) {
                 // We insert a new fxom property
-                final FXOMPropertyT newProperty 
+                final FXOMPropertyT newProperty
                         = new FXOMPropertyT(fxomInstance.getFxomDocument(),
                         getName(), value);
                 newProperty.addToParentInstance(-1, fxomInstance);
@@ -132,7 +132,7 @@ public class EnumerationPropertyMetadata extends ValuePropertyMetadata {
             }
         }
     }
-    
+
     public String getDefaultValue() {
         final String result;
         if (isReadWrite()) {
@@ -143,10 +143,10 @@ public class EnumerationPropertyMetadata extends ValuePropertyMetadata {
         }
         return result;
     }
-    
+
     public List<String> getValidValues() {
         final List<String> result = new ArrayList<>();
-        
+
         for (Object e : enumClass.getEnumConstants()) {
             result.add(e.toString());
         }
@@ -156,14 +156,14 @@ public class EnumerationPropertyMetadata extends ValuePropertyMetadata {
                 result.add(0, nullEquivalent);
             }
         }
-        
+
         return result;
     }
-    
+
     /*
      * ValuePropertyMetadata
      */
-    
+
     @Override
     public Class<?> getValueClass() {
         return enumClass;

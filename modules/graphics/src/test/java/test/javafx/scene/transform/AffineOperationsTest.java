@@ -815,7 +815,7 @@ public class AffineOperationsTest {
             // doesn't make sense
             return;
         }
-        
+
         final double sx = 1.0 / a.getMxx();
         final double sy = 1.0 / a.getMyy();
         final double sz = 1.0 / a.getMzz();

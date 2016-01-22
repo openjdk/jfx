@@ -37,7 +37,7 @@ public final class Rook extends Piece {
     protected Rook(Color color) {
         super(color);
     }
-    
+
     @Override
     public boolean isValidMove(int x1, int y1, int x2, int y2) {
         if (!super.isValidMove(x1, y1, x2, y2)) {

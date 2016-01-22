@@ -163,11 +163,11 @@ public class PackagerLib {
                                 attrs.getValue(Attributes.Name.CLASS_PATH);
                     }
                     if (createJarParams.codebase == null) {
-                        createJarParams.codebase = 
+                        createJarParams.codebase =
                                 attrs.getValue(new Attributes.Name("Codebase"));
                     }
                     if (createJarParams.allPermissions == null) {
-                        String value  = 
+                        String value  =
                                 attrs.getValue(new Attributes.Name("Permissions"));
                         if (value != null) {
                             createJarParams.allPermissions = Boolean.valueOf(value);
@@ -230,13 +230,13 @@ public class PackagerLib {
             attr.put(Attributes.Name.CLASS_PATH, cp);
         }
 
-        String existingSetting = attr.getValue("Permissions"); 
+        String existingSetting = attr.getValue("Permissions");
         if (existingSetting == null) {
             attr.put(new Attributes.Name("Permissions"),
                     Boolean.TRUE.equals(createJarParams.allPermissions) ? "all-permissions" : "sandbox");
-        } else if (createJarParams.allPermissions != null && !Boolean.valueOf(existingSetting).equals(createJarParams.allPermissions)) { 
+        } else if (createJarParams.allPermissions != null && !Boolean.valueOf(existingSetting).equals(createJarParams.allPermissions)) {
             throw new PackagerException(
-                "ERR_ContradictorySetting", "Permissions"); 
+                "ERR_ContradictorySetting", "Permissions");
         }
 
         existingSetting = attr.getValue("Codebase");
@@ -248,7 +248,7 @@ public class PackagerLib {
             throw new PackagerException(
                     "ERR_ContradictorySetting", "Codebase");
         }
-        
+
         attr.put(new Attributes.Name("JavaFX-Version"), createJarParams.fxVersion);
 
         if (createJarParams.preloader != null) {
@@ -354,7 +354,7 @@ public class PackagerLib {
                         throw new PackagerException("MSG_BundlerFailed", bundler.getID(), bundler.getName());
                     }
                 }
-                
+
             } catch (UnsupportedPlatformException e) {
                 com.oracle.tools.packager.Log.debug(MessageFormat.format(bundle.getString("MSG_BundlerPlatformException"), bundler.getName()));
             } catch (ConfigException e) {

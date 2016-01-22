@@ -36,7 +36,7 @@ import javafx.scene.layout.Region;
 import com.javafx.experiments.scheduleapp.data.DataService;
 
 public abstract class Page extends Region {
-    
+
     private final String name;
     protected final DataService dataService;
 
@@ -51,7 +51,7 @@ public abstract class Page extends Region {
     public String getName() {
         return name;
     }
-    
+
     public void pageTabClicked() {
     }
 

@@ -63,5 +63,5 @@ public abstract class RunAwayTask extends AbstractTask {
     }
 
     protected abstract void loop(int count) throws Exception;
-    
+
 }

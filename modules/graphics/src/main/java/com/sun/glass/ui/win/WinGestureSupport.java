@@ -43,7 +43,7 @@ final class WinGestureSupport {
 
     private final static GestureSupport gestures = new GestureSupport(true);
     private final static TouchInputSupport touches =
-            new TouchInputSupport(gestures.createTouchCountListener(), true);    
+            new TouchInputSupport(gestures.createTouchCountListener(), true);
     private static int modifiers;
     private static boolean isDirect;
 
@@ -90,7 +90,7 @@ final class WinGestureSupport {
                                       View.GESTURE_NO_VALUE);
         }
     }
-    
+
     public static void inertiaGestureFinished(View view) {
         gestureFinished(view, 0, true);
     }
@@ -106,12 +106,12 @@ final class WinGestureSupport {
         WinGestureSupport.isDirect = isDirect;
 
         final int touchCount = touches.getTouchCount();
-        
+
         if (touchCount >= 2) {
             gestures.handleTotalZooming(view, modifiers, isDirect, isInertia, x,
                                         y, xAbs, yAbs, totalscale,
                                         totalexpansion);
-        
+
             gestures.handleTotalRotation(view, modifiers, isDirect, isInertia, x,
                                          y, xAbs, yAbs, Math.toDegrees(
                     totalrotation));

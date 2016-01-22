@@ -43,7 +43,7 @@ import javafx.scene.layout.Pane;
 
 /**
  *
- * 
+ *
  */
 public class PaneRelocater extends AbstractRelocater<Pane> {
 
@@ -52,7 +52,7 @@ public class PaneRelocater extends AbstractRelocater<Pane> {
     private final PropertyName layoutXName = new PropertyName("layoutX"); //NOI18N
     private final PropertyName layoutYName = new PropertyName("layoutY"); //NOI18N
     private final List<PropertyName> propertyNames = new ArrayList<>();
-    
+
     public PaneRelocater(Node sceneGraphObject) {
         super(sceneGraphObject, Pane.class);
         this.originalLayoutX = sceneGraphObject.getLayoutX();
@@ -60,8 +60,8 @@ public class PaneRelocater extends AbstractRelocater<Pane> {
         propertyNames.add(layoutXName);
         propertyNames.add(layoutYName);
     }
-    
-    
+
+
     /*
      * AbstractRelocater
      */
@@ -92,7 +92,7 @@ public class PaneRelocater extends AbstractRelocater<Pane> {
     public Object getValue(PropertyName propertyName) {
         assert propertyName != null;
         assert propertyNames.contains(propertyName);
-        
+
         final Object result;
         if (propertyName.equals(layoutXName)) {
             result = sceneGraphObject.getLayoutX();
@@ -102,7 +102,7 @@ public class PaneRelocater extends AbstractRelocater<Pane> {
             // Emergency code
             result = null;
         }
-        
+
         return result;
     }
 

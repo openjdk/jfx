@@ -133,7 +133,7 @@ ImageFrame::ImageFrame()
     , m_disposalMethod(DisposeNotSpecified)
     , m_premultiplyAlpha(true)
 {
-} 
+}
 
 ImageFrame& ImageFrame::operator=(const ImageFrame& other)
 {

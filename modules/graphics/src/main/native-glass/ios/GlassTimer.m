@@ -46,12 +46,12 @@ static NSObject<GlassTimerDelegate> *gDelegate = nil;
     {
         (*jVM)->AttachCurrentThreadAsDaemon(jVM, (void **)&self->_env, NULL);
     }
-    
+
     if (self->_runnable != NULL)
     {
         (*self->_env)->CallVoidMethod(self->_env, self->_runnable, jRunnableRun);
     }
-    
+
 }
 @end
 

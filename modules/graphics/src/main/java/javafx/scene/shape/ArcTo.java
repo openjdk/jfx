@@ -63,12 +63,12 @@ arcTo.setRadiusY(50.0);
 path.getElements().add(moveTo);
 path.getElements().add(arcTo);
 </PRE>
- * 
+ *
  * <p>
  * Following image demonstrates {@code radiusX}, {@code radiusY} and
- * {@code xAxisRotation} parameters: 
- * {@code radiusX} is the horizontal radius of the full ellipse of which this arc is 
- * a partial section, {@code radiusY} is its vertical radius. 
+ * {@code xAxisRotation} parameters:
+ * {@code radiusX} is the horizontal radius of the full ellipse of which this arc is
+ * a partial section, {@code radiusY} is its vertical radius.
  * {@code xAxisRotation} defines the rotation of the ellipse in degrees.
  * </p>
  * <p>
@@ -76,7 +76,7 @@ path.getElements().add(arcTo);
  * </p>
  * <p>
  * In most cases, there are four options of how to draw an arc from
- * starting point to given end coordinates. They can be distinguished by  
+ * starting point to given end coordinates. They can be distinguished by
  * {@code largeArcFlag} and {@code sweepFlag} parameters.
  * {@code largeArcFlag == true} means that the arc greater than 180 degrees will
  * be drawn. {@code sweepFlag == true} means that the arc will be drawn

@@ -316,7 +316,7 @@ public class GradientPicker extends VBox {
         focusAngleRotator.pressedProperty().addListener(liveUpdateListener);
         slider_container.pressedProperty().addListener(liveUpdateListener);
     }
-    
+
     @FXML
     void sliderPressed(MouseEvent event) {
         double percentH = ((100.0 / track_pane.getWidth()) * event.getX()) / 100;

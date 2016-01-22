@@ -57,7 +57,7 @@ public final class GSTPlatform extends Platform {
         "application/vnd.apple.mpegurl",
         "audio/mpegurl"
     };
-    
+
     /**
      * All supported protocols.
      */
@@ -102,7 +102,7 @@ public final class GSTPlatform extends Platform {
     public String[] getSupportedContentTypes() {
         return Arrays.copyOf(CONTENT_TYPES, CONTENT_TYPES.length);
     }
-    
+
     @Override
     public String[] getSupportedProtocols() {
         return Arrays.copyOf(PROTOCOLS, PROTOCOLS.length);

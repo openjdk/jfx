@@ -44,16 +44,16 @@ public class NGImageView extends NGNode {
     private CachingCompoundImage compoundImage;
     private CompoundCoords compoundCoords;
     private float x, y, w, h;
-    
+
     // Coords will be null if there was no viewport specified.
     // In case when we draw a huge image, coords are never null.
     private Coords coords;
     private ViewPort reqviewport;  // ViewPort requested by ImageView
     private ViewPort imgviewport;  // ViewPort scaled to the current image
-    
+
     private boolean renderable = false;
     private boolean coordsOK = false;
-    
+
     private void invalidate() {
         coordsOK = false;
         coords = null;
@@ -61,7 +61,7 @@ public class NGImageView extends NGNode {
         imgviewport = null;
         geometryChanged();
     }
-    
+
     public void setViewport(float vx, float vy, float vw, float vh, float cw, float ch)
     {
         if (vw > 0 && vh > 0) {
@@ -93,7 +93,7 @@ public class NGImageView extends NGNode {
         coords = imgviewport.getClippedCoords(iw, ih, w, h);
         renderable = coords != null;
     }
-    
+
     @Override
     protected void doRender(Graphics g) {
         if (!coordsOK) {
@@ -109,7 +109,7 @@ public class NGImageView extends NGNode {
     private int maxSizeWrapper(ResourceFactory factory) {
         return MAX_SIZE_OVERRIDE > 0 ? MAX_SIZE_OVERRIDE : factory.getMaximumTextureSize();
     }
-    
+
     @Override
     protected void renderContent(Graphics g) {
         int imgW = image.getWidth();
@@ -128,13 +128,13 @@ public class NGImageView extends NGNode {
         } else {
             if (compoundImage == null) compoundImage = new CachingCompoundImage(image, maxSize);
             // coords is null iff there was no viewport specified, but
-            // MegaCoords needs a non-null Coords so we create a dummy one             
+            // MegaCoords needs a non-null Coords so we create a dummy one
             if (coords == null) coords = new Coords(w, h, new ViewPort(0, 0, imgW, imgH));
             if (compoundCoords == null) compoundCoords = new CompoundCoords(compoundImage, coords);
             compoundCoords.draw(g, compoundImage, x, y);
         }
     }
-    
+
     @Override
     protected boolean hasOverlappingContents() {
         return false;
@@ -142,30 +142,30 @@ public class NGImageView extends NGNode {
 
     public void setImage(Object img) {
         Image newImage = (Image)img;
-        
+
         if (image == newImage) return;
-        
+
         boolean needsInvalidate = newImage == null || image == null
                 || image.getPixelScale() != newImage.getPixelScale()
                 || image.getHeight() != newImage.getHeight()
                 || image.getWidth() != newImage.getWidth();
-        
+
         image = newImage;
         compoundImage = null;
 
         if (needsInvalidate) invalidate();
     }
 
-    public void setX(float x) { 
+    public void setX(float x) {
         if (this.x != x) {
-            this.x = x; 
+            this.x = x;
             geometryChanged();
         }
     }
 
-    public void setY(float y) { 
+    public void setY(float y) {
         if (this.y != y) {
-            this.y = y; 
+            this.y = y;
             geometryChanged();
         }
     }

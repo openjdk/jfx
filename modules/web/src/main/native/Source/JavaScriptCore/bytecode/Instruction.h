@@ -52,7 +52,7 @@ struct Instruction {
     {
         u.jsCell.clear();
     }
-        
+
     Instruction(Opcode opcode)
     {
 #if !ENABLE(COMPUTED_GOTO_OPCODES)
@@ -88,7 +88,7 @@ struct Instruction {
     }
 
     Instruction(PropertySlot::GetValueFunc getterFunc) { u.getterFunc = getterFunc; }
-        
+
     Instruction(LLIntCallLinkInfo* callLinkInfo) { u.callLinkInfo = callLinkInfo; }
     Instruction(ValueProfile* profile) { u.profile = profile; }
     Instruction(ArrayProfile* profile) { u.arrayProfile = profile; }
@@ -119,7 +119,7 @@ struct Instruction {
         void* pointer;
         bool* predicatePointer;
     } u;
-        
+
 private:
     Instruction(StructureChain*);
     Instruction(Structure*);

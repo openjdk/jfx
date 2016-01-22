@@ -43,11 +43,11 @@ package com.sun.javafx.ext.device.ios.ipod;
  * <li><strong>AlbumArtist</strong> - the primary performing artist for an album as a whole</li>
  * <li><strong>Genre</strong> - the musical or film genre of the media item</li>
  * <li><strong>Composer</strong> - the musical composer for the media item</li>
- * <li><strong>IsCompilation</strong> - indicates whether the media item is part of a compilation or not. Corresponds to 
+ * <li><strong>IsCompilation</strong> - indicates whether the media item is part of a compilation or not. Corresponds to
  * the &ldquo;Part of a compilation&rdquo; checkbox in the Info tab in the Get Info dialog in iTunes</li>
  * </ul>
- * 
- * Filter values are of the type <code>String</code>, except for the <code>IsCompilation</code> filter type, the value of which 
+ *
+ * Filter values are of the type <code>String</code>, except for the <code>IsCompilation</code> filter type, the value of which
  * is a <code>Boolean</code> and except for the <code>MediaType</code> type, the value of which is of the type <code>enum MediaItemType</code>.
  * <br/>
  * To add a filter to a <code>MediaQuery</code> instance, use <code>MediaQuery.addFilter()</code>.
@@ -61,7 +61,7 @@ public class MediaFilter {
      */
     public static enum MediaFilterType {
         /**
-         * Specifies the type of media items, for example podcasts, videos, etc. For a list of valid media types, 
+         * Specifies the type of media items, for example podcasts, videos, etc. For a list of valid media types,
          * see <code>enum MediaItem.MediaItemType</code> values.
          */
         MediaType(0),
@@ -90,11 +90,11 @@ public class MediaFilter {
          */
         Composer(6),
         /**
-         * Indicates whether the media item is part of a compilation or not. Corresponds to the "Part of a compilation" 
+         * Indicates whether the media item is part of a compilation or not. Corresponds to the "Part of a compilation"
          * checkbox in the Info tab in the Get Info dialog in iTunes.
          */
         IsCompilation(7);
-        
+
         private final int value;
 
         private MediaFilterType(int value) {
@@ -109,7 +109,7 @@ public class MediaFilter {
             return value;
         }
     }
-    
+
     private MediaFilterType filterType;
     private Object filterValue;
 
@@ -124,7 +124,7 @@ public class MediaFilter {
 
     /**
      * Constructs a new media filter of the specified type and value.
-     * 
+     *
      * @param filterType the filter's type
      * @param filterValue the filter's value
      */
@@ -135,7 +135,7 @@ public class MediaFilter {
 
     /**
      * Returns this filter's type.
-     * 
+     *
      * @return this filter's type
      */
     public MediaFilterType getFilterType() {
@@ -144,25 +144,25 @@ public class MediaFilter {
 
     /**
      * Returns this filter's value
-     * 
+     *
      * @return this filter's value
      */
     public Object getFilterValue() {
         return filterValue;
     }
-    
+
     /**
      * Sets this filter's type
-     * 
+     *
      * @param filterType the new type of this filter
      */
     public void setFilterType(final MediaFilterType filterType) {
         this.filterType = filterType;
     }
-    
+
     /**
      * Sets this filter's value
-     * 
+     *
      * @param filterValue the new value of this filter
      */
     public void setFilterValue(final Object filterValue) {

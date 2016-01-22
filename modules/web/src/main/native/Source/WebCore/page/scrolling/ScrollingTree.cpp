@@ -67,13 +67,13 @@ bool ScrollingTree::shouldHandleWheelEventSynchronously(const PlatformWheelEvent
         return true;
 
     bool shouldSetLatch = wheelEvent.shouldConsiderLatching();
-    
+
     if (hasLatchedNode() && !shouldSetLatch)
         return false;
 
     if (shouldSetLatch)
         m_latchedNode = 0;
-    
+
     if (!m_nonFastScrollableRegion.isEmpty()) {
         // FIXME: This is not correct for non-default scroll origins.
         FloatPoint position = wheelEvent.position();
@@ -113,7 +113,7 @@ void ScrollingTree::scrollPositionChangedViaDelegatedScrolling(ScrollingNodeID n
 void ScrollingTree::commitNewTreeState(PassOwnPtr<ScrollingStateTree> scrollingStateTree)
 {
     bool rootStateNodeChanged = scrollingStateTree->hasNewRootStateNode();
-    
+
     ScrollingStateScrollingNode* rootNode = scrollingStateTree->rootStateNode();
     if (rootNode
         && (rootStateNodeChanged
@@ -129,7 +129,7 @@ void ScrollingTree::commitNewTreeState(PassOwnPtr<ScrollingStateTree> scrollingS
         if (rootStateNodeChanged || rootNode->hasChangedProperty(ScrollingStateScrollingNode::NonFastScrollableRegion))
             m_nonFastScrollableRegion = scrollingStateTree->rootStateNode()->nonFastScrollableRegion();
     }
-    
+
     bool scrollRequestIsProgammatic = rootNode ? rootNode->requestedScrollPositionRepresentsProgrammaticScroll() : false;
     TemporaryChange<bool> changeHandlingProgrammaticScroll(m_isHandlingProgrammaticScroll, scrollRequestIsProgammatic);
 
@@ -144,7 +144,7 @@ void ScrollingTree::updateTreeFromStateNode(const ScrollingStateNode* stateNode)
         m_rootNode = nullptr;
         return;
     }
-    
+
     // This fuction recurses through the ScrollingStateTree and updates the corresponding ScrollingTreeNodes.
     // Find the ScrollingTreeNode associated with the current stateNode using the shared ID and our HashMap.
     ScrollingTreeNodeMap::const_iterator it = m_nodeMap.find(stateNode->scrollingNodeID());
@@ -240,13 +240,13 @@ void ScrollingTree::setMainFrameScrollPosition(FloatPoint position)
 bool ScrollingTree::isPointInNonFastScrollableRegion(IntPoint p)
 {
     MutexLocker lock(m_mutex);
-    
+
     return m_nonFastScrollableRegion.contains(p);
 }
 
 bool ScrollingTree::isRubberBandInProgress()
 {
-    MutexLocker lock(m_mutex);    
+    MutexLocker lock(m_mutex);
 
     return m_mainFrameIsRubberBanding;
 }
@@ -304,14 +304,14 @@ bool ScrollingTree::isHandlingProgrammaticScroll()
 void ScrollingTree::setScrollPinningBehavior(ScrollPinningBehavior pinning)
 {
     MutexLocker locker(m_swipeStateMutex);
-    
+
     m_scrollPinningBehavior = pinning;
 }
 
 ScrollPinningBehavior ScrollingTree::scrollPinningBehavior()
 {
     MutexLocker lock(m_swipeStateMutex);
-    
+
     return m_scrollPinningBehavior;
 }
 

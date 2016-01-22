@@ -108,14 +108,14 @@ NotificationCenter* DOMWindowNotifications::webkitNotifications()
     Document* document = m_window->document();
     if (!document)
         return 0;
-    
+
     Page* page = document->page();
     if (!page)
         return 0;
 
     NotificationClient* provider = NotificationController::clientFrom(page);
-    if (provider) 
-        m_notificationCenter = NotificationCenter::create(document, provider);    
+    if (provider)
+        m_notificationCenter = NotificationCenter::create(document, provider);
 
     return m_notificationCenter.get();
 }

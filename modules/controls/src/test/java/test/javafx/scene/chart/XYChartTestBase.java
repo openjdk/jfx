@@ -33,7 +33,7 @@ import javafx.scene.chart.XYChartShim;
 
 
 public abstract class XYChartTestBase extends ChartTestBase {
-    
+
     protected int countSymbols(XYChart chart, String style) {
         int numSymbols = 0;
         ObservableList<Node> childrenList = XYChartShim.getPlotChildren(chart);

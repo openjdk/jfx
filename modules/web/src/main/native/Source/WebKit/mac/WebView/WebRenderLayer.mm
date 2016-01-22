@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #import "WebRenderLayer.h"
@@ -95,7 +95,7 @@ using namespace WebCore;
             layerType = @"composited: container layer";
             break;
     }
-    
+
     if (backing->hasClippingLayer())
         layerType = [layerType stringByAppendingString:@" (clipping)"];
 
@@ -131,13 +131,13 @@ using namespace WebCore;
 - (id)initWithWebFrame:(WebFrame *)webFrame
 {
     self = [super init];
-    
+
     Frame* frame = core(webFrame);
     if (!frame->loader().client().hasHTMLView()) {
         [self release];
         return nil;
     }
-    
+
     RenderObject* renderer = frame->contentRenderer();
     if (!renderer) {
         [self release];
@@ -151,10 +151,10 @@ using namespace WebCore;
         bounds = layer->absoluteBoundingBox();
         composited = layer->isComposited();
         compositingInfo = [[WebRenderLayer compositingInfoForLayer:layer] retain];
-    
+
         [self buildDescendantLayers:layer];
     }
-    
+
     return self;
 }
 
@@ -171,7 +171,7 @@ using namespace WebCore;
     NSMutableArray *childWebLayers = [[NSMutableArray alloc] init];
 
     // Build children in back to front order.
-    
+
     if (Vector<RenderLayer*>* negZOrderList = layer->negZOrderList()) {
         size_t listSize = negZOrderList->size();
 
@@ -200,7 +200,7 @@ using namespace WebCore;
             [childWebLayers addObject:newLayer];
             [newLayer release];
         }
-        
+
         for (size_t i = 0; i < listSize; ++i) {
             RenderLayer* curLayer = normalFlowList->at(i);
 

@@ -70,7 +70,7 @@ public class FieldSelectTest extends ParserBase {
         String tree = parseTreeFor(".abgr");
         assertEquals(tree, ".abgr");
     }
-    
+
     @Test
     public void xyzw() throws Exception {
         String tree = parseTreeFor(".xyzw");

@@ -42,7 +42,7 @@ class NGMediaView extends NGNode {
     private PrismMediaFrameHandler handler;
     private MediaPlayer player;
     private MediaFrameTracker frameTracker;
-    
+
     public void renderNextFrame() {
         visualsChanged();
     }
@@ -96,14 +96,14 @@ class NGMediaView extends NGNode {
         float h = 0;
         float newW = fitWidth;
         float newH = fitHeight;
-        
+
         // determine media width/height
         if (null != player) {
             Media m = player.getMedia();
             w = m.getWidth();
             h = m.getHeight();
         }
-        
+
         if (vw > 0 && vh > 0) {
             viewport.setBounds(vx, vy, vx+vw, vy+vh);
             w = vw;
@@ -151,12 +151,12 @@ class NGMediaView extends NGNode {
         if (null == handler || null == player) {
             return; // not ready yet...
         }
-        
+
         VideoDataBuffer frame = player.impl_getLatestFrame();
         if (null == frame) {
             return;
         }
-        
+
         Texture texture = handler.getTexture(g, frame);
         if (texture != null) {
             float iw = viewport.getWidth();

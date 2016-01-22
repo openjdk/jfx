@@ -74,20 +74,20 @@ public class ColorPickerSkinTest {
          GridPane grid = ColorPickerPaletteShim.getColorGrid(colorPicker);
          double xval = grid.getBoundsInLocal().getMinX();
          double yval = grid.getBoundsInLocal().getMinY();
-        
+
         Scene paletteScene = ColorPickerPaletteShim.getPopup(colorPicker).getScene();
         paletteScene.getWindow().requestFocus();
-        
+
         paletteScene.impl_processMouseEvent(
                 generator.generateMouseEvent(MouseEvent.MOUSE_PRESSED, xval+85, yval+40));
-        
+
         paletteScene.impl_processMouseEvent(
                 generator.generateMouseEvent(MouseEvent.MOUSE_RELEASED, xval+85, yval+40));
         tk.firePulse();
-        
+
         assertEquals(colorPicker.getValue().toString(), "0x330033ff");
     }
-    
+
     @Test public void testEscapeClosesCustomColorDialog() {
 //        final MouseEventGenerator generator = new MouseEventGenerator();
         ColorPickerSkin skin = (ColorPickerSkin)colorPicker.getSkin();
@@ -97,10 +97,10 @@ public class ColorPickerSkinTest {
         tk.firePulse();
         assertTrue(colorPicker.isShowing());
         Hyperlink link = ColorPickerPaletteShim.ColorPallette_getCustomColorLink(colorPicker);
-         
+
         Scene paletteScene = ColorPickerPaletteShim.getPopup(colorPicker).getScene();
         paletteScene.getWindow().requestFocus();
-        
+
         //Click on CustomColor hyperlink to show the custom color dialog.
         Hyperlink hyperlink = ColorPickerPaletteShim.ColorPallette_getCustomColorLink(colorPicker);
         MouseEventFirer mouse = new MouseEventFirer(hyperlink);
@@ -110,14 +110,14 @@ public class ColorPickerSkinTest {
         Stage dialog = ColorPickerPaletteShim.ColorPallette_getCustomColorDialog(colorPicker);
         assertNotNull(dialog);
         assertTrue(dialog.isShowing());
-        
+
         dialog.requestFocus();
         tk.firePulse();
-        
+
         // fire KeyEvent (Escape) on custom color dialog to close it
         KeyEventFirer keyboard = new KeyEventFirer(dialog);
         keyboard.doKeyPress(KeyCode.ESCAPE);
-        tk.firePulse();   
+        tk.firePulse();
         assertTrue(!dialog.isShowing());
     }
 }

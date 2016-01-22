@@ -69,20 +69,20 @@ public:
     double elevationAngle() const { return m_elevationAngle; }
     unsigned numberOfAzimuths() const { return NumberOfTotalAzimuths; }
     float sampleRate() const { return m_sampleRate; }
-    
+
     // Returns the left and right kernels for the given azimuth index.
     // The interpolated delays based on azimuthBlend: 0 -> 1 are returned in frameDelayL and frameDelayR.
     void getKernelsFromAzimuth(double azimuthBlend, unsigned azimuthIndex, HRTFKernel* &kernelL, HRTFKernel* &kernelR, double& frameDelayL, double& frameDelayR);
-    
+
     // Spacing, in degrees, between every azimuth loaded from resource.
     static const unsigned AzimuthSpacing;
-    
+
     // Number of azimuths loaded from resource.
     static const unsigned NumberOfRawAzimuths;
 
     // Interpolates by this factor to get the total number of azimuths from every azimuth loaded from resource.
     static const unsigned InterpolationFactor;
-    
+
     // Total number of azimuths after interpolation.
     static const unsigned NumberOfTotalAzimuths;
 

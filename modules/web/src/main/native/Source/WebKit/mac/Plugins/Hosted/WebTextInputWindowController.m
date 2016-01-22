@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #if USE(PLUGIN_HOST_PROCESS)
@@ -62,9 +62,9 @@
 - (void)dealloc
 {
     [[NSNotificationCenter defaultCenter] removeObserver:self];
-    
+
     [_inputTextView release];
-    
+
     [super dealloc];
 }
 
@@ -73,23 +73,23 @@
     self = [super initWithContentRect:NSZeroRect styleMask:WKGetInputPanelWindowStyle() backing:NSBackingStoreBuffered defer:YES];
     if (!self)
         return nil;
-    
+
     // Set the frame size.
     NSRect visibleFrame = [[NSScreen mainScreen] visibleFrame];
     NSRect frame = NSMakeRect(visibleFrame.origin.x, visibleFrame.origin.y, visibleFrame.size.width, inputWindowHeight);
-     
+
     [self setFrame:frame display:NO];
-        
+
     _inputTextView = [[WebTextInputView alloc] initWithFrame:[self.contentView frame]];
     _inputTextView.autoresizingMask = NSViewWidthSizable | NSViewHeightSizable | NSViewMaxXMargin | NSViewMinXMargin | NSViewMaxYMargin | NSViewMinYMargin;
-        
+
     NSScrollView* scrollView = [[NSScrollView alloc] initWithFrame:[self.contentView frame]];
     scrollView.documentView = _inputTextView;
     self.contentView = scrollView;
     [scrollView release];
-        
+
     [self setFloatingPanel:YES];
-    
+
     [[NSNotificationCenter defaultCenter] addObserver:self
                                              selector:@selector(_keyboardInputSourceChanged:)
                                                  name:NSTextInputContextKeyboardSelectionDidChangeNotification
@@ -123,7 +123,7 @@
 
     if (![[_inputTextView inputContext] handleEvent:event])
         return NO;
-    
+
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
     if ([_inputTextView hasMarkedText]) {
@@ -134,7 +134,7 @@
 
         return YES;
     }
-    
+
     if (hadMarkedText) {
         [self orderOut:nil];
 
@@ -142,7 +142,7 @@
         if ([text length] > 0)
             *string = [[text copy] autorelease];
     }
-            
+
     [_inputTextView setString:@""];
     return hadMarkedText;
 }
@@ -161,7 +161,7 @@
     static WebTextInputWindowController *textInputWindowController;
     if (!textInputWindowController)
         textInputWindowController = [[WebTextInputWindowController alloc] init];
-    
+
     return textInputWindowController;
 }
 
@@ -170,12 +170,12 @@
     self = [super init];
     if (!self)
         return nil;
-    
+
     _panel = [[WebTextInputPanel alloc] init];
-    
+
     return self;
 }
-        
+
 - (NSTextInputContext *)inputContext
 {
     return [_panel _inputContext];

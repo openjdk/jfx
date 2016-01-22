@@ -49,13 +49,13 @@ public class HelloPieChart extends Application {
          data.add(new PieChart.Data("Apple", 30));
         pc.getData().addAll(data);
 
-      
+
         Scene scene = new Scene(pc, 500, 500);
         stage.setScene(scene);
         stage.show();
     }
 
-    
+
     /**
      * @param args the command line arguments
      */

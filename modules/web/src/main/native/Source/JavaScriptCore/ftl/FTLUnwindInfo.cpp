@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -51,16 +51,16 @@ struct CompactUnwind {
 void UnwindInfo::parse(void* section, size_t size, GeneratedFunction generatedFunction)
 {
     m_registers.clear();
-    
+
     RELEASE_ASSERT(section);
     RELEASE_ASSERT(size >= sizeof(CompactUnwind));
-    
+
     CompactUnwind* data = bitwise_cast<CompactUnwind*>(section);
-    
+
     RELEASE_ASSERT(!data->personality); // We don't know how to handle this.
     RELEASE_ASSERT(!data->lsda); // We don't know how to handle this.
     RELEASE_ASSERT(data->function == generatedFunction); // The unwind data better be for our function.
-    
+
     compact_unwind_encoding_t encoding = data->encoding;
     RELEASE_ASSERT(!(encoding & UNWIND_IS_NOT_FUNCTION_START));
     RELEASE_ASSERT(!(encoding & UNWIND_HAS_LSDA));
@@ -68,52 +68,52 @@ void UnwindInfo::parse(void* section, size_t size, GeneratedFunction generatedFu
 
 #if CPU(X86_64)
     RELEASE_ASSERT((encoding & UNWIND_X86_64_MODE_MASK) == UNWIND_X86_64_MODE_RBP_FRAME);
-    
+
     int32_t offset = -((encoding & UNWIND_X86_64_RBP_FRAME_OFFSET) >> 16) * 8;
     uint32_t nextRegisters = encoding;
     for (unsigned i = 5; i--;) {
         uint32_t currentRegister = nextRegisters & 7;
         nextRegisters >>= 3;
-        
+
         switch (currentRegister) {
         case UNWIND_X86_64_REG_NONE:
             break;
-            
+
         case UNWIND_X86_64_REG_RBX:
             m_registers.append(RegisterAtOffset(X86Registers::ebx, offset));
             break;
-            
+
         case UNWIND_X86_64_REG_R12:
             m_registers.append(RegisterAtOffset(X86Registers::r12, offset));
             break;
-            
+
         case UNWIND_X86_64_REG_R13:
             m_registers.append(RegisterAtOffset(X86Registers::r13, offset));
             break;
-            
+
         case UNWIND_X86_64_REG_R14:
             m_registers.append(RegisterAtOffset(X86Registers::r14, offset));
             break;
-            
+
         case UNWIND_X86_64_REG_R15:
             m_registers.append(RegisterAtOffset(X86Registers::r15, offset));
             break;
-            
+
         case UNWIND_X86_64_REG_RBP:
             m_registers.append(RegisterAtOffset(X86Registers::ebp, offset));
             break;
-            
+
         default:
             RELEASE_ASSERT_NOT_REACHED();
         }
-        
+
         offset += 8;
     }
 #elif CPU(ARM64)
     RELEASE_ASSERT((encoding & UNWIND_ARM64_MODE_MASK) == UNWIND_ARM64_MODE_FRAME);
-    
+
     m_registers.append(RegisterAtOffset(ARM64Registers::fp, 0));
-    
+
     int32_t offset = 0;
     if (encoding & UNWIND_ARM64_FRAME_X19_X20_PAIR) {
         m_registers.append(RegisterAtOffset(ARM64Registers::x19, offset -= 8));
@@ -154,7 +154,7 @@ void UnwindInfo::parse(void* section, size_t size, GeneratedFunction generatedFu
 #else
 #error "Unrecognized architecture"
 #endif
-    
+
     std::sort(m_registers.begin(), m_registers.end());
 }
 

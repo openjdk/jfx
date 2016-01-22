@@ -116,7 +116,7 @@ genLinearGradientPaint(Renderer *rdr, jint height) {
     for (j = 0; j < height; j++, y++) {
         x = rdr->_currX;
         pidx = paintOffset;
-        
+
         frac = x * mx + y * my + b;
         for (i = 0; i < width; i++, pidx++) {
             jint ifrac = pad((jint)frac, cycleMethod);
@@ -144,7 +144,7 @@ genRadialGradientPaint(Renderer *rdr, jint height) {
     jfloat cx, cy, fx, fy, r, rsq;
     jfloat cfxcfx, cfycfy, cfxcfy;
     jfloat a00a00, a10a10, a00a10, sube;
-    
+
     float txx, tyy, fxx, fyy, cfx, cfy;
     float A, B, B2, C, C2, U, dU, V, dV, ddV, tmp;
     float _Csq, _C;
@@ -207,7 +207,7 @@ genRadialGradientPaint(Renderer *rdr, jint height) {
         ddV = 2.0f * ((a00a00 + a10a10) * rsq - tmp) * _Csq;
 
         U   = (65536.0f * U); // 65536.0f to be in fixed-point level needed by "frac"
-        V   = (65536.0f * 65536.0f * V); // 65536.0f * 65536.0f to stay in fixed point level after sqrt 
+        V   = (65536.0f * 65536.0f * V); // 65536.0f * 65536.0f to stay in fixed point level after sqrt
         dU  = (65536.0f * dU);
         dV  = (65536.0f * 65536.0f * dV);
         ddV = (65536.0f * 65536.0f * ddV);
@@ -215,18 +215,18 @@ genRadialGradientPaint(Renderer *rdr, jint height) {
             if (V < 0) {
                 V = 0;
             }
-            
+
             ifrac = (jint)(U + PISCESsqrt(V));
-            
+
             U += dU;
             V += dV ;
             dV += ddV;
-            
+
             ifrac = pad(ifrac, cycleMethod);
             ifrac >>= (16 - LG_GRADIENT_MAP_SIZE);
             paint[pidx] = colors[ifrac];
         }
-        
+
         paintOffset += width;
     }
 }
@@ -236,28 +236,28 @@ static INLINE jint interpolate2points(jint p0, jint p1, jint frac) {
     jint r0 = (p0 >> 16) & 0xff;
     jint g0 = (p0 >> 8)  & 0xff;
     jint b0 =  p0        & 0xff;
-    
+
     jint a1 = (p1 >> 24) & 0xff;
     jint r1 = (p1 >> 16) & 0xff;
     jint g1 = (p1 >> 8)  & 0xff;
     jint b1 =  p1        & 0xff;
-    
+
     jint aa = interp(a0, a1, frac);
     jint rr = interp(r0, r1, frac);
     jint gg = interp(g0, g1, frac);
     jint bb = interp(b0, b1, frac);
-    
+
     return (aa << 24) | (rr << 16) | (gg << 8) | bb;
 }
 
 /**
- * Function interpolate4points() takes color ARGB-value of pixel p00 and 
+ * Function interpolate4points() takes color ARGB-value of pixel p00 and
  * recalculates (using linear interpolation) it's color with ARGB values of
- * neighbouring pixels. 
+ * neighbouring pixels.
  * p01 - right neighbour of p00
  * p10 - below p00
- * p11 - below right 
- */    
+ * p11 - below right
+ */
 
 static INLINE jint interpolate4points(jint p00, jint p01, jint p10, jint p11,
                                jint hfrac, jint vfrac) {

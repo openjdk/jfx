@@ -48,7 +48,7 @@ public:
         ASSERT(isMainThread());
         return s_mainThreadState;
     };
-    
+
     static JSC::JSValue call(JSC::ExecState* exec, JSC::JSValue functionObject, JSC::CallType callType, const JSC::CallData& callData, JSC::JSValue thisValue, const JSC::ArgList& args)
     {
         JSMainThreadExecState currentState(exec);

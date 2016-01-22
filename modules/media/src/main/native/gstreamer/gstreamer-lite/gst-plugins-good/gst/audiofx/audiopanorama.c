@@ -185,7 +185,7 @@ gst_audio_panorama_class_init (GstAudioPanoramaClass * klass)
    *
    * Panning method: psychoacoustic mode keeps the same perceived loudness,
    * while simple mode just controls the volume of one channel. It's merely
-   * a matter of taste which method should be chosen. 
+   * a matter of taste which method should be chosen.
    */
   g_object_class_install_property (gobject_class, PROP_METHOD,
       g_param_spec_enum ("method", "Panning method",
@@ -374,7 +374,7 @@ no_format:
 
 /* mono to stereo panning
  * pan: -1.0  0.0  1.0
- * l:    1.0  0.5  0.0  
+ * l:    1.0  0.5  0.0
  * r:    0.0  0.5  1.0
  *
  * FIXME: we should use -3db (1/sqtr(2)) for 50:50

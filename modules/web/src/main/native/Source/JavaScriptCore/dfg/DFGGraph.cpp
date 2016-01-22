@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -71,7 +71,7 @@ Graph::Graph(VM& vm, Plan& plan, LongLivedState& longLivedState)
     , m_refCountState(EverythingIsLive)
 {
     ASSERT(m_profiledBlock);
-    
+
     for (unsigned i = m_mustHandleAbstractValues.size(); i--;)
         m_mustHandleAbstractValues[i].setMostSpecific(*this, plan.mustHandleValues[i]);
 }
@@ -96,10 +96,10 @@ bool Graph::dumpCodeOrigin(PrintStream& out, const char* prefix, Node* previousN
 {
     if (!previousNode)
         return false;
-    
+
     if (previousNode->origin.semantic.inlineCallFrame == currentNode->origin.semantic.inlineCallFrame)
         return false;
-    
+
     Vector<CodeOrigin> previousInlineStack = previousNode->origin.semantic.inlineStack();
     Vector<CodeOrigin> currentInlineStack = currentNode->origin.semantic.inlineStack();
     unsigned commonSize = std::min(previousInlineStack.size(), currentInlineStack.size());
@@ -110,9 +110,9 @@ bool Graph::dumpCodeOrigin(PrintStream& out, const char* prefix, Node* previousN
             break;
         }
     }
-    
+
     bool hasPrinted = false;
-    
+
     // Print the pops.
     for (unsigned i = previousInlineStack.size(); i-- > indexOfDivergence;) {
         out.print(prefix);
@@ -120,7 +120,7 @@ bool Graph::dumpCodeOrigin(PrintStream& out, const char* prefix, Node* previousN
         out.print("<-- ", inContext(*previousInlineStack[i].inlineCallFrame, context), "\n");
         hasPrinted = true;
     }
-    
+
     // Print the pushes.
     for (unsigned i = indexOfDivergence; i < currentInlineStack.size(); ++i) {
         out.print(prefix);
@@ -128,7 +128,7 @@ bool Graph::dumpCodeOrigin(PrintStream& out, const char* prefix, Node* previousN
         out.print("--> ", inContext(*currentInlineStack[i].inlineCallFrame, context), "\n");
         hasPrinted = true;
     }
-    
+
     return hasPrinted;
 }
 
@@ -260,7 +260,7 @@ void Graph::dump(PrintStream& out, const char* prefix, Node* node, DumpContext* 
                 out.print(comma, "arg", operand.toArgument(), "(", VariableAccessDataDump(*this, variableAccessData), ")");
             else
                 out.print(comma, "loc", operand.toLocal(), "(", VariableAccessDataDump(*this, variableAccessData), ")");
-            
+
             operand = variableAccessData->machineLocal();
             if (operand.isValid()) {
                 if (operand.isArgument())
@@ -336,7 +336,7 @@ void Graph::dump(PrintStream& out, const char* prefix, Node* node, DumpContext* 
     out.print(comma, "bc#", node->origin.semantic.bytecodeIndex);
     if (node->origin.semantic != node->origin.forExit)
         out.print(comma, "exit: ", node->origin.forExit);
-    
+
     out.print(")");
 
     if (!skipped) {
@@ -345,7 +345,7 @@ void Graph::dump(PrintStream& out, const char* prefix, Node* node, DumpContext* 
         else if (node->hasHeapPrediction())
             out.print("  predicting ", SpeculationDump(node->getHeapPrediction()));
     }
-    
+
     out.print("\n");
 }
 
@@ -383,7 +383,7 @@ void Graph::dumpBlockHeader(PrintStream& out, const char* prefix, BasicBlock* bl
                 out.print(" #", sortedBlockList[i]);
             out.print("\n");
         }
-        
+
         Vector<const NaturalLoop*> containingLoops =
             m_naturalLoops.loopsOf(block);
         if (!containingLoops.isEmpty()) {
@@ -420,12 +420,12 @@ void Graph::dump(PrintStream& out, DumpContext* context)
     myContext.graph = this;
     if (!context)
         context = &myContext;
-    
+
     dataLog("\n");
     dataLog("DFG for ", CodeBlockWithJITType(m_codeBlock, JITCode::DFGJIT), ":\n");
     dataLog("  Fixpoint state: ", m_fixpointState, "; Form: ", m_form, "; Unification state: ", m_unificationState, "; Ref count state: ", m_refCountState, "\n");
     dataLog("\n");
-    
+
     Node* lastNode = 0;
     for (size_t b = 0; b < m_blocks.size(); ++b) {
         BasicBlock* block = m_blocks[b].get();
@@ -444,7 +444,7 @@ void Graph::dump(PrintStream& out, DumpContext* context)
             out.print("  var links: ", block->variablesAtHead, "\n");
             break;
         }
-            
+
         case SSA: {
             RELEASE_ASSERT(block->ssa);
             out.print("  Flush format: ", block->ssa->flushAtHead, "\n");
@@ -470,7 +470,7 @@ void Graph::dump(PrintStream& out, DumpContext* context)
             out.print("  var links: ", block->variablesAtTail, "\n");
             break;
         }
-            
+
         case SSA: {
             RELEASE_ASSERT(block->ssa);
             out.print("  Flush format: ", block->ssa->flushAtTail, "\n");
@@ -481,7 +481,7 @@ void Graph::dump(PrintStream& out, DumpContext* context)
         } }
         dataLog("\n");
     }
-    
+
     if (!myContext.isEmpty()) {
         myContext.dump(WTF::dataFile());
         dataLog("\n");
@@ -492,12 +492,12 @@ void Graph::dethread()
 {
     if (m_form == LoadStore || m_form == SSA)
         return;
-    
+
     if (logCompilationChanges())
         dataLog("Dethreading DFG graph.\n");
-    
+
     SamplingRegion samplingRegion("DFG Dethreading");
-    
+
     for (BlockIndex blockIndex = m_blocks.size(); blockIndex--;) {
         BasicBlock* block = m_blocks[blockIndex].get();
         if (!block)
@@ -507,7 +507,7 @@ void Graph::dethread()
             phi->children.reset();
         }
     }
-    
+
     m_form = LoadStore;
 }
 
@@ -517,7 +517,7 @@ void Graph::handleSuccessor(Vector<BasicBlock*, 16>& worklist, BasicBlock* block
         successor->isReachable = true;
         worklist.append(successor);
     }
-    
+
     successor->predecessors.append(block);
 }
 
@@ -542,7 +542,7 @@ void Graph::resetReachability()
         block->isReachable = false;
         block->predecessors.clear();
     }
-    
+
     determineReachability();
 }
 
@@ -552,7 +552,7 @@ void Graph::killBlockAndItsContents(BasicBlock* block)
         m_allocator.free(block->phis[phiIndex]);
     for (unsigned nodeIndex = block->size(); nodeIndex--;)
         m_allocator.free(block->at(nodeIndex));
-    
+
     killBlock(block);
 }
 
@@ -564,7 +564,7 @@ void Graph::killUnreachableBlocks()
             continue;
         if (block->isReachable)
             continue;
-        
+
         killBlockAndItsContents(block);
     }
 }
@@ -601,7 +601,7 @@ void Graph::substituteGetLocal(BasicBlock& block, unsigned startIndexInBlock, Va
                 shouldContinue = false;
             break;
         }
-                
+
         case GetLocal: {
             if (node->variableAccessData() != variableAccessData)
                 continue;
@@ -612,7 +612,7 @@ void Graph::substituteGetLocal(BasicBlock& block, unsigned startIndexInBlock, Va
             shouldContinue = false;
             break;
         }
-                
+
         default:
             break;
         }
@@ -625,7 +625,7 @@ void Graph::addForDepthFirstSort(Vector<BasicBlock*>& result, Vector<BasicBlock*
 {
     if (seen.contains(block))
         return;
-    
+
     result.append(block);
     worklist.append(block);
     seen.add(block);
@@ -674,7 +674,7 @@ FullBytecodeLiveness& Graph::livenessFor(CodeBlock* codeBlock)
     HashMap<CodeBlock*, std::unique_ptr<FullBytecodeLiveness>>::iterator iter = m_bytecodeLiveness.find(codeBlock);
     if (iter != m_bytecodeLiveness.end())
         return *iter->value;
-    
+
     std::unique_ptr<FullBytecodeLiveness> liveness = std::make_unique<FullBytecodeLiveness>();
     codeBlock->livenessAnalysis().computeFullLiveness(*liveness);
     FullBytecodeLiveness& result = *liveness;
@@ -692,26 +692,26 @@ bool Graph::isLiveInBytecode(VirtualRegister operand, CodeOrigin codeOrigin)
     for (;;) {
         VirtualRegister reg = VirtualRegister(
             operand.offset() - codeOrigin.stackOffset());
-        
+
         if (operand.offset() < codeOrigin.stackOffset() + JSStack::CallFrameHeaderSize) {
             if (reg.isArgument()) {
                 RELEASE_ASSERT(reg.offset() < JSStack::CallFrameHeaderSize);
-                
+
                 if (!codeOrigin.inlineCallFrame->isClosureCall)
                     return false;
-                
+
                 if (reg.offset() == JSStack::Callee)
                     return true;
                 if (reg.offset() == JSStack::ScopeChain)
                     return true;
-                
+
                 return false;
             }
-            
+
             return livenessFor(codeOrigin.inlineCallFrame).operandIsLive(
                 reg.offset(), codeOrigin.bytecodeIndex);
         }
-        
+
         InlineCallFrame* inlineCallFrame = codeOrigin.inlineCallFrame;
         if (!inlineCallFrame)
             break;
@@ -723,10 +723,10 @@ bool Graph::isLiveInBytecode(VirtualRegister operand, CodeOrigin codeOrigin)
         if (reg.isArgument()
             && static_cast<size_t>(reg.toArgument()) < inlineCallFrame->arguments.size())
             return true;
-        
+
         codeOrigin = inlineCallFrame->caller;
     }
-    
+
     return true;
 }
 
@@ -805,36 +805,36 @@ void Graph::visitChildren(SlotVisitor& visitor)
         BasicBlock* block = this->block(blockIndex);
         if (!block)
             continue;
-        
+
         for (unsigned nodeIndex = 0; nodeIndex < block->size(); ++nodeIndex) {
             Node* node = block->at(nodeIndex);
-            
+
             switch (node->op()) {
             case JSConstant:
             case WeakJSConstant:
                 visitor.appendUnbarrieredReadOnlyValue(valueOfJSConstant(node));
                 break;
-                
+
             case CheckFunction:
                 visitor.appendUnbarrieredReadOnlyPointer(node->function());
                 break;
-                
+
             case CheckExecutable:
                 visitor.appendUnbarrieredReadOnlyPointer(node->executable());
                 break;
-                
+
             case CheckStructure:
                 for (unsigned i = node->structureSet().size(); i--;)
                     visitor.appendUnbarrieredReadOnlyPointer(node->structureSet()[i]);
                 break;
-                
+
             case StructureTransitionWatchpoint:
             case NewObject:
             case ArrayifyToStructure:
             case NewStringObject:
                 visitor.appendUnbarrieredReadOnlyPointer(node->structure());
                 break;
-                
+
             case PutStructure:
             case PhantomPutStructure:
             case AllocatePropertyStorage:
@@ -844,7 +844,7 @@ void Graph::visitChildren(SlotVisitor& visitor)
                 visitor.appendUnbarrieredReadOnlyPointer(
                     node->structureTransitionData().newStructure);
                 break;
-                
+
             default:
                 break;
             }

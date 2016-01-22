@@ -6,13 +6,13 @@
  * are met:
  *
  * 1.  Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer. 
+ *     notice, this list of conditions and the following disclaimer.
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
- *     documentation and/or other materials provided with the distribution. 
+ *     documentation and/or other materials provided with the distribution.
  * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
- *     from this software without specific prior written permission. 
+ *     from this software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY APPLE AND ITS CONTRIBUTORS "AS IS" AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
@@ -62,7 +62,7 @@ public:
     {
         UNUSED_PARAM(numElements);
     }
-    
+
     BoundsCheckedPointer(T* pointer, T* end)
         : m_pointer(pointer)
 #if !ASSERT_DISABLED
@@ -83,7 +83,7 @@ public:
         UNUSED_PARAM(begin);
         UNUSED_PARAM(numElements);
     }
-    
+
     BoundsCheckedPointer(T* pointer, T* begin, T* end)
         : m_pointer(pointer)
 #if !ASSERT_DISABLED
@@ -94,13 +94,13 @@ public:
         UNUSED_PARAM(begin);
         UNUSED_PARAM(end);
     }
-    
+
     BoundsCheckedPointer& operator=(T* value)
     {
         m_pointer = value;
         return *this;
     }
-    
+
     BoundsCheckedPointer& operator+=(ptrdiff_t amount)
     {
         m_pointer += amount;
@@ -112,7 +112,7 @@ public:
         m_pointer -= amount;
         return *this;
     }
-    
+
     BoundsCheckedPointer operator+(ptrdiff_t amount) const
     {
         BoundsCheckedPointer result = *this;
@@ -126,7 +126,7 @@ public:
         result.m_pointer -= amount;
         return result;
     }
-    
+
     BoundsCheckedPointer operator++() // prefix
     {
         m_pointer++;
@@ -152,7 +152,7 @@ public:
         m_pointer--;
         return result;
     }
-    
+
     bool operator<(T* other) const
     {
         return m_pointer < other;
@@ -217,12 +217,12 @@ public:
     {
         return !m_pointer;
     }
-    
+
     T* get()
     {
         return m_pointer;
     }
-    
+
     T& operator*()
     {
         validate();
@@ -246,7 +246,7 @@ public:
         validate(m_pointer + index);
         return m_pointer[index];
     }
-    
+
     // The only thing this has in common with strcat() is that it
     // keeps appending from the given pointer until reaching 0.
     BoundsCheckedPointer& strcat(const T* source)
@@ -260,18 +260,18 @@ private:
     void validate(T* pointer) const
     {
         ASSERT_UNUSED(pointer, pointer >= m_begin);
-        
+
         // This guard is designed to protect against the misaligned case.
         // A simple pointer < m_end would miss the case if, for example,
         // T = int16_t and pointer is 1 byte less than m_end.
         ASSERT_UNUSED(pointer, pointer + 1 <= m_end);
     }
-    
+
     void validate() const
     {
         validate(m_pointer);
     }
-    
+
     T* m_pointer;
 #if !ASSERT_DISABLED
     T* m_begin;

@@ -53,7 +53,7 @@ public:
     virtual RefPtr<CapabilityRange> aspectRatio() const;
     virtual Vector<String> facingMode() const;
     virtual RefPtr<CapabilityRange> volume() const;
-    
+
     bool hasVideoSource() { return m_SourceCapabilities->hasVideoSource(); }
 
 protected:

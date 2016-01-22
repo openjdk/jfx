@@ -69,7 +69,7 @@ public class StopWatchApp extends Application {
         watch.setLayoutY(20);
         return watch;
     }
-  
+
     @Override public void start(Stage primaryStage) throws Exception {
         primaryStage.setResizable(false);
         primaryStage.setScene(new Scene(createContent()));

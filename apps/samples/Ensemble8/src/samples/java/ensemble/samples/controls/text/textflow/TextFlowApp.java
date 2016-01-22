@@ -50,7 +50,7 @@ import javafx.stage.Stage;
 
 /**
  * Demonstrates some simple uses of rich text and TextFlow.The first example
- * shows use of text with different fonts in a TextFlow. Use the Playground to 
+ * shows use of text with different fonts in a TextFlow. Use the Playground to
  * experiment with different Text properties. The second example shows
  * TextFlow and embedded objects.
  *
@@ -91,7 +91,7 @@ public class TextFlowApp extends Application {
     public Parent createContent() {
         String family = "Helvetica";
         double size = 20;
-        
+
         //Simple example
         textFlow = new TextFlow();
         textHello = new Text("Hello ");
@@ -101,7 +101,7 @@ public class TextFlowApp extends Application {
         textWorld = new Text(" World");
         textWorld.setFont(Font.font(family, FontPosture.ITALIC, size));
         textFlow.getChildren().addAll(textHello, textBold, textWorld);
-        
+
         //Example with embedded objects
         TextFlow textFlowEmbedObj = new TextFlow();
         Text textEO1 = new Text("Lets have ");

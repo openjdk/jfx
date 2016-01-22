@@ -55,12 +55,12 @@ public class FlowPaneDriver extends AbstractNodeDriver {
      */
     @Override
     public AbstractDropTarget makeDropTarget(FXOMObject fxomObject, double sceneX, double sceneY) {
-        
+
         assert fxomObject instanceof FXOMInstance;
         assert fxomObject.getSceneGraphObject() instanceof FlowPane;
-        
+
         final int targetIndex = GenericParentTring.lookupCrackIndex(fxomObject, sceneX, sceneY);
-        
+
         final FXOMObject beforeChild;
         if (targetIndex == -1) {
             beforeChild = null;
@@ -72,17 +72,17 @@ public class FlowPaneDriver extends AbstractNodeDriver {
                 beforeChild = null;
             }
         }
-        
+
         return new ContainerZDropTarget((FXOMInstance)fxomObject, beforeChild);
     }
-    
-    
+
+
     @Override
     public AbstractTring<?> makeTring(AbstractDropTarget dropTarget) {
-        assert dropTarget instanceof ContainerZDropTarget; 
+        assert dropTarget instanceof ContainerZDropTarget;
         assert dropTarget.getTargetObject() instanceof FXOMInstance;
         assert dropTarget.getTargetObject().getSceneGraphObject() instanceof FlowPane;
-        
+
         final ContainerZDropTarget zDropTarget = (ContainerZDropTarget) dropTarget;
         final int targetIndex;
         if (zDropTarget.getBeforeChild() == null) {
@@ -90,7 +90,7 @@ public class FlowPaneDriver extends AbstractNodeDriver {
         } else {
             targetIndex = zDropTarget.getBeforeChild().getIndexInParentProperty();
         }
-        return new GenericParentTring(contentPanelController, 
+        return new GenericParentTring(contentPanelController,
                 (FXOMInstance) dropTarget.getTargetObject(),
                 targetIndex);
     }

@@ -90,7 +90,7 @@ namespace JSC {
             thisObject->reifyAllPropertiesIfNecessary(exec);
             JSArray::put(thisObject, exec, propertyName, v, slot);
         }
-        
+
         static void putByIndex(JSCell* cell, ExecState* exec, unsigned propertyName, JSValue v, bool shouldThrow)
         {
             RegExpMatchesArray* thisObject = jsCast<RegExpMatchesArray*>(cell);

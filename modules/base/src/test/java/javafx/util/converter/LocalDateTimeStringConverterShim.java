@@ -50,5 +50,5 @@ public class LocalDateTimeStringConverterShim {
     public static FormatStyle getldtConverterDateStyle(LocalDateTimeStringConverter c) {
         return c.ldtConverter.dateStyle;
     }
-    
+
 }

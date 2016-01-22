@@ -30,7 +30,7 @@
 #include "YarrSyntaxChecker.h"
 
 namespace JSC {
-    
+
 class SyntaxChecker {
 public:
     struct BinaryExprContext {
@@ -63,7 +63,7 @@ public:
     private:
         SyntaxChecker* m_context;
     };
-    
+
     SyntaxChecker(VM* , void*)
     {
     }
@@ -238,7 +238,7 @@ public:
             m_topBinaryExpr = BinaryExpr;
         operandStackDepth++;
     }
-    
+
     // Logic to handle datastructures used during parsing of binary expressions
     void operatorStackPop(int& operatorStackDepth) { operatorStackDepth--; }
     bool operatorStackHasHigherPrecedence(int&, int) { return true; }
@@ -247,12 +247,12 @@ public:
     void appendBinaryOperation(const JSTokenLocation&, int& operandStackDepth, int&, BinaryOperand, BinaryOperand) { operandStackDepth++; }
     void operatorStackAppend(int& operatorStackDepth, int, int) { operatorStackDepth++; }
     int popOperandStack(int&) { int res = m_topBinaryExpr; m_topBinaryExpr = 0; return res; }
-    
+
     void appendUnaryToken(int& stackDepth, int tok, int) { stackDepth = 1; m_topUnaryToken = tok; }
     int unaryTokenStackLastType(int&) { return m_topUnaryToken; }
     JSTextPosition unaryTokenStackLastStart(int&) { return JSTextPosition(0, 0, 0); }
     void unaryTokenStackRemoveLast(int& stackDepth) { stackDepth = 0; }
-    
+
     void assignmentStackAppend(int, int, int, int, int, Operator) { }
     int createAssignment(const JSTokenLocation&, int, int, int, int, int) { RELEASE_ASSERT_NOT_REACHED(); return 1; }
     const Identifier* getName(const Property& property) const { ASSERT(property.name); return property.name; }
@@ -262,7 +262,7 @@ public:
     {
         return 1;
     }
-    
+
     ArrayPattern createArrayPattern(const JSTokenLocation&)
     {
         return 1;

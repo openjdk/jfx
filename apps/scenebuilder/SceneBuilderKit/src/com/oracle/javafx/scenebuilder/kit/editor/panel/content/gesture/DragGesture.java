@@ -71,14 +71,14 @@ import javafx.stage.Window;
 
 /**
  *
- * 
+ *
  */
 public class DragGesture extends AbstractGesture {
-    
+
     private static final Logger LOG = Logger.getLogger(DragGesture.class.getName());
 
     private final double MARGIN = 14.0;
-    
+
     private final DragController dragController;
     private final Set<FXOMObject> pickExcludes = new HashSet<>();
     private DragEvent dragEnteredEvent;
@@ -96,17 +96,17 @@ public class DragGesture extends AbstractGesture {
         super(contentPanelController);
         this.dragController = contentPanelController.getEditorController().getDragController();
     }
-    
+
     /*
      * AbstractDragGesture
      */
-    
+
     @Override
     public void start(InputEvent e, Observer observer) {
         assert e != null;
         assert e instanceof DragEvent;
         assert e.getEventType() == DragEvent.DRAG_ENTERED;
-        
+
         final Node glassLayer = contentPanelController.getGlassLayer();
         assert glassLayer.getOnDragEntered()== null;
         assert glassLayer.getOnDragOver()== null;
@@ -114,7 +114,7 @@ public class DragGesture extends AbstractGesture {
         assert glassLayer.getOnDragDropped()== null;
         assert glassLayer.getOnDragDone()== null;
         assert glassLayer.getOnKeyPressed()== null;
-        
+
         glassLayer.setOnDragEntered(e1 -> {
             lastDragEvent = e1;
             dragEnteredGlassLayer();
@@ -144,7 +144,7 @@ public class DragGesture extends AbstractGesture {
             e1.consume();
         });
         glassLayer.setOnKeyPressed(e1 -> handleKeyPressed(e1));
-        
+
         this.dragEnteredEvent = (DragEvent) e;
         this.lastDragEvent = this.dragEnteredEvent;
         this.observer = observer;
@@ -153,17 +153,17 @@ public class DragGesture extends AbstractGesture {
         assert this.hitParent == null;
         assert this.hitParentMask == null;
         assert this.shadow == null;
-        
+
         setupMovingGuideController();
-        
+
         dragEnteredGlassLayer();
     }
-    
-    
+
+
     /*
      * Private
      */
-    
+
     private void dragEnteredGlassLayer() {
         if (dragController.getDragSource() == null) { // Drag started externally
             final FXOMDocument fxomDocument
@@ -176,35 +176,35 @@ public class DragGesture extends AbstractGesture {
             dragController.begin(dragSource);
             shouldInvokeEnd = true;
         }
-        
+
         // Objects being dragged should be excluded from the pick.
         // We create the exclude list here once.
         pickExcludes.clear();
         pickExcludes.addAll(dragController.getDragSource().getDraggedObjects());
-        
+
         // We show the shadow
         showShadow();
-        
+
         // Now same logic as dragOver
         dragOverGlassLayer();
     }
-    
+
     private void dragOverGlassLayer() {
         /*
          * On Linux, Node.onDragOver() is sometimes called *after*
          * Node.onDragDropped() : see RT-34537.
          * We detect those illegal invocations here and ignore them.
          */
-        
+
         if (lastDragEvent.isDropCompleted()) {
             LOG.log(Level.WARNING, "Ignored dragOver() after dragDropped()"); //NOI18N
         } else {
             dragOverGlassLayerBis();
         }
     }
-    
+
     private void dragOverGlassLayerBis() {
-        
+
         // Let's set what is below the mouse
         final double hitX = lastDragEvent.getSceneX();
         final double hitY = lastDragEvent.getSceneY();
@@ -214,7 +214,7 @@ public class DragGesture extends AbstractGesture {
                 = contentPanelController.getEditorController().getFxomDocument();
             hitObject = fxomDocument.getFxomRoot();
         }
-        
+
         if (hitObject == null) {
             // FXOM document is empty
             dragOverEmptyDocument();
@@ -222,34 +222,34 @@ public class DragGesture extends AbstractGesture {
             dragOverHitObject(hitObject);
         }
     }
-    
+
     private void dragOverEmptyDocument() {
         dragController.setDropTarget(new RootDropTarget());
         lastDragEvent.acceptTransferModes(dragController.getAcceptedTransferModes());
         updateShadow(lastDragEvent.getSceneX(), lastDragEvent.getSceneY());
     }
-    
+
     private void dragOverHitObject(FXOMObject hitObject) {
         assert hitObject != null;
-                
+
         final FXOMDocument fxomDocument
                 = contentPanelController.getEditorController().getFxomDocument();
         final AbstractDragSource dragSource
                 = dragController.getDragSource();
-        final DesignHierarchyMask m 
+        final DesignHierarchyMask m
                 = new DesignHierarchyMask(hitObject);
-        final double hitX 
+        final double hitX
                 = lastDragEvent.getSceneX();
-        final double hitY 
+        final double hitY
                 = lastDragEvent.getSceneY();
-        
+
         assert fxomDocument != null;
         assert dragSource != null;
 
         AbstractDropTarget dropTarget = null;
         FXOMObject newHitParent = null;
         DesignHierarchyMask newHitParentMask = null;
-        
+
         // dragSource is a single ImageView ?
         final boolean hitImageView = hitObject.getSceneGraphObject() instanceof ImageView;
         final boolean externalDragSource = dragSource instanceof ExternalDragSource;
@@ -259,7 +259,7 @@ public class DragGesture extends AbstractGesture {
             newHitParent = hitObject;
             newHitParentMask = m;
         }
-        
+
         // dragSource is a single Tooltip ?
         if (dropTarget == null) {
             if (dragSource.isSingleTooltipOnly()) {
@@ -269,7 +269,7 @@ public class DragGesture extends AbstractGesture {
                 newHitParentMask = m;
             }
         }
-        
+
         // dragSource is a single ContextMenu ?
         if (dropTarget == null) {
             if (dragSource.isSingleContextMenuOnly()) {
@@ -279,7 +279,7 @@ public class DragGesture extends AbstractGesture {
                 newHitParentMask = m;
             }
         }
-        
+
         // hitObject is BorderPane ?
         if (dropTarget == null) {
             if (hitObject.getSceneGraphObject() instanceof BorderPane) {
@@ -290,7 +290,7 @@ public class DragGesture extends AbstractGesture {
                 newHitParentMask = m;
             }
         }
-        
+
         // hitObject has sub-components (ie it is a container)
         if (dropTarget == null) {
             if (m.isAcceptingSubComponent()) {
@@ -300,7 +300,7 @@ public class DragGesture extends AbstractGesture {
                 newHitParentMask = m;
             }
         }
-        
+
         // hitObject accepts Accessory.CONTENT
         if (dropTarget == null) {
             if (m.isAcceptingAccessory(Accessory.CONTENT)) {
@@ -310,7 +310,7 @@ public class DragGesture extends AbstractGesture {
                 newHitParentMask = m;
             }
         }
-        
+
         // hitObject parent is a container ?
         if (dropTarget == null) {
             final FXOMObject hitObjectParent = hitObject.getParentObject();
@@ -324,7 +324,7 @@ public class DragGesture extends AbstractGesture {
                 }
             }
         }
-                
+
         // Update movingGuideController
         if (newHitParent != hitParent) {
             hitParent = newHitParent;
@@ -341,14 +341,14 @@ public class DragGesture extends AbstractGesture {
                 }
             }
         }
-        
+
         final double guidedX, guidedY;
         if (movingGuideController.hasSampleBounds() && (guidesDisabled == false)) {
             updateShadow(hitX, hitY);
             final Bounds shadowBounds = shadow.getLayoutBounds();
             final Bounds shadowBoundsInScene = shadow.localToScene(shadowBounds, true /* rootScene */);
             movingGuideController.match(shadowBoundsInScene);
-            
+
             guidedX = hitX + movingGuideController.getSuggestedDX();
             guidedY = hitY + movingGuideController.getSuggestedDY();
         } else {
@@ -357,7 +357,7 @@ public class DragGesture extends AbstractGesture {
         }
 
         updateShadow(guidedX, guidedY);
-        
+
         if (!MathUtils.equals(guidedX , hitX) || !MathUtils.equals(guidedY, hitY)) {
             assert dropTarget != null;
             assert dropTarget instanceof ContainerXYDropTarget;
@@ -365,14 +365,14 @@ public class DragGesture extends AbstractGesture {
             dropTarget = driver.makeDropTarget(hitParent, guidedX, guidedY);
             assert dropTarget instanceof ContainerXYDropTarget;
         }
-        
+
         dragController.setDropTarget(dropTarget);
         lastDragEvent.acceptTransferModes(dragController.getAcceptedTransferModes());
-        
+
     }
-    
+
     private void dragExitedGlassLayer() {
-        
+
         dragController.setDropTarget(null);
         hideShadow();
         movingGuideController.clearSampleBounds();
@@ -381,25 +381,25 @@ public class DragGesture extends AbstractGesture {
             dragDoneOnGlassLayer();
         }
     }
-    
-    private void dragDroppedOnGlassLayer() {    
+
+    private void dragDroppedOnGlassLayer() {
         lastDragEvent.setDropCompleted(true);
         dragController.commit();
         contentPanelController.getGlassLayer().requestFocus();
     }
-    
+
     private void dragDoneOnGlassLayer() {
         if (shouldInvokeEnd) {
             dragController.end();
         }
         performTermination();
     }
-    
+
     private void handleKeyPressed(KeyEvent e) {
         if (e.getCode() == KeyCode.ESCAPE) {
             dragExitedGlassLayer();
             if (willReceiveDragDone) {
-                // dragDone will not arrive but 
+                // dragDone will not arrive but
                 // we need to execute the corresponding logic
                 dragDoneOnGlassLayer();
             }
@@ -413,8 +413,8 @@ public class DragGesture extends AbstractGesture {
             dragOverGlassLayer();
         }
     }
-    
-    
+
+
     private void performTermination() {
         final Node glassLayer = contentPanelController.getGlassLayer();
         glassLayer.setOnDragEntered(null);
@@ -423,12 +423,12 @@ public class DragGesture extends AbstractGesture {
         glassLayer.setOnDragDropped(null);
         glassLayer.setOnDragDone(null);
         glassLayer.setOnKeyPressed(null);
-        
+
         dismantleMovingGuideController();
-        
+
         observer.gestureDidTerminate(this);
         observer = null;
-        
+
         dragEnteredEvent = null;
         lastDragEvent = null;
         shouldInvokeEnd = false;
@@ -436,40 +436,40 @@ public class DragGesture extends AbstractGesture {
         hitParentMask = null;
         assert shadow == null; // Because dragExitedGlassLayer() called hideShadow()
     }
-    
+
     /*
      * Shadow
      */
-    
+
     private void showShadow() {
         assert shadow == null;
-        
+
         shadow = dragController.getDragSource().makeShadow();
         shadow.setMouseTransparent(true);
         contentPanelController.getRudderLayer().getChildren().add(shadow);
-        
+
         updateShadow(0.0, 0.0);
     }
-    
+
     private void updateShadow(double hitX, double hitY) {
         assert shadow != null;
-        
+
         final Group rudderLayer = contentPanelController.getRudderLayer();
         final Point2D p = rudderLayer.sceneToLocal(hitX, hitY, true /* rootScene */);
         shadow.setLayoutX(p.getX());
         shadow.setLayoutY(p.getY());
     }
-    
+
     private void hideShadow() {
         assert shadow != null;
         contentPanelController.getRudderLayer().getChildren().remove(shadow);
         shadow = null;
     }
-    
+
     /*
      * MovingGuideController
      */
-    
+
     private void setupMovingGuideController() {
         final Bounds scope = contentPanelController.getWorkspacePane().getLayoutBounds();
         final Bounds scopeInScene = contentPanelController.getWorkspacePane().localToScene(scope, true /* rootScene */);
@@ -480,14 +480,14 @@ public class DragGesture extends AbstractGesture {
         assert guideGroup.isMouseTransparent();
         rudderLayer.getChildren().add(guideGroup);
     }
-    
-    
+
+
     private void populateMovingGuideController() {
         assert hitParentMask != null;
         assert hitParentMask.isFreeChildPositioning(); // (1)
-        
+
         movingGuideController.clearSampleBounds();
-        
+
         // Adds N, S, E, W and center lines for each child of the hitParent
         for (int i = 0, c = hitParentMask.getSubComponentCount(); i < c; i++) {
             final FXOMObject child = hitParentMask.getSubComponentAtIndex(i);
@@ -497,12 +497,12 @@ public class DragGesture extends AbstractGesture {
                 movingGuideController.addSampleBounds(childNode);
             }
         }
-        
+
         // Adds N, S, E, W and center lines of the hitParent itself
         assert hitParent.getSceneGraphObject() instanceof Node; // Because (1)
         final Node hitParentNode = (Node) hitParent.getSceneGraphObject();
         movingGuideController.addSampleBounds(hitParentNode);
-        
+
         // If bounds of hitParent are larger enough then adds the margin boundaries
         final Bounds hitParentBounds = hitParentNode.getLayoutBounds();
         final Bounds insetBounds = BoundsUtils.inset(hitParentBounds, MARGIN, MARGIN);
@@ -510,9 +510,9 @@ public class DragGesture extends AbstractGesture {
             final Bounds insetBoundsInScene = hitParentNode.localToScene(insetBounds, true /* rootScene */);
             movingGuideController.addSampleBounds(insetBoundsInScene, false /* addMiddle */);
         }
-    }    
-    
-    
+    }
+
+
     private void dismantleMovingGuideController() {
         assert movingGuideController != null;
         final Group guideGroup = movingGuideController.getGuideGroup();

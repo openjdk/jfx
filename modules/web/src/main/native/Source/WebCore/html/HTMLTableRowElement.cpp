@@ -78,7 +78,7 @@ int HTMLTableRowElement::rowIndex() const
                 ++rIndex;
         }
     }
-    
+
     for (Node *node = table->firstChild(); node; node = node->nextSibling()) {
         if (node->hasTagName(tbodyTag)) {
             HTMLTableSectionElement* section = toHTMLTableSectionElement(node);

@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef JSGenericTypedArrayView_h
@@ -88,20 +88,20 @@ class JSGenericTypedArrayView : public JSArrayBufferView {
 public:
     typedef JSArrayBufferView Base;
     static const unsigned elementSize = sizeof(typename Adaptor::Type);
-    
+
 protected:
     JSGenericTypedArrayView(VM&, ConstructionContext&);
-    
+
 public:
     static JSGenericTypedArrayView* create(ExecState*, Structure*, unsigned length);
     static JSGenericTypedArrayView* createUninitialized(ExecState*, Structure*, unsigned length);
     static JSGenericTypedArrayView* create(ExecState*, Structure*, PassRefPtr<ArrayBuffer>, unsigned byteOffset, unsigned length);
     static JSGenericTypedArrayView* create(VM&, Structure*, PassRefPtr<typename Adaptor::ViewType> impl);
     static JSGenericTypedArrayView* create(Structure*, JSGlobalObject*, PassRefPtr<typename Adaptor::ViewType> impl);
-    
+
     unsigned byteLength() const { return m_length * sizeof(typename Adaptor::Type); }
     size_t byteSize() const { return sizeOf(m_length, sizeof(typename Adaptor::Type)); }
-    
+
     const typename Adaptor::Type* typedVector() const
     {
         return static_cast<const typename Adaptor::Type*>(m_vector);
@@ -121,39 +121,39 @@ public:
     {
         return i < m_length;
     }
-    
+
     typename Adaptor::Type getIndexQuicklyAsNativeValue(unsigned i)
     {
         ASSERT(i < m_length);
         return typedVector()[i];
     }
-    
+
     double getIndexQuicklyAsDouble(unsigned i)
     {
         return Adaptor::toDouble(getIndexQuicklyAsNativeValue(i));
     }
-    
+
     JSValue getIndexQuickly(unsigned i)
     {
         return Adaptor::toJSValue(getIndexQuicklyAsNativeValue(i));
     }
-    
+
     void setIndexQuicklyToNativeValue(unsigned i, typename Adaptor::Type value)
     {
         ASSERT(i < m_length);
         typedVector()[i] = value;
     }
-    
+
     void setIndexQuicklyToDouble(unsigned i, double value)
     {
         setIndexQuicklyToNativeValue(i, toNativeFromValue<Adaptor>(value));
     }
-    
+
     void setIndexQuickly(unsigned i, JSValue value)
     {
         setIndexQuicklyToNativeValue(i, toNativeFromValue<Adaptor>(value));
     }
-    
+
     bool setIndexQuickly(ExecState* exec, unsigned i, JSValue jsValue)
     {
         typename Adaptor::Type value = toNativeFromValue<Adaptor>(exec, jsValue);
@@ -162,7 +162,7 @@ public:
         setIndexQuicklyToNativeValue(i, value);
         return true;
     }
-    
+
     bool canAccessRangeQuickly(unsigned offset, unsigned length)
     {
         return offset <= m_length
@@ -170,27 +170,27 @@ public:
             // check overflow
             && offset + length >= offset;
     }
-    
+
     // Like canSetQuickly, except: if it returns false, it will throw the
     // appropriate exception.
     bool validateRange(ExecState*, unsigned offset, unsigned length);
-    
+
     // Returns true if successful, and false on error; if it returns false
     // then it will have thrown an exception.
     bool set(ExecState*, JSObject*, unsigned offset, unsigned length);
-    
+
     PassRefPtr<typename Adaptor::ViewType> typedImpl()
     {
         return Adaptor::ViewType::create(buffer(), byteOffset(), length());
     }
-    
+
     static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype)
     {
         return Structure::create(vm, globalObject, prototype, TypeInfo(ObjectType, StructureFlags), info(), NonArray);
     }
-    
+
     static const ClassInfo s_info; // This is never accessed directly, since that would break linkage on some compilers.
-    
+
     static const ClassInfo* info()
     {
         switch (Adaptor::typeValue) {
@@ -217,14 +217,14 @@ public:
             return 0;
         }
     }
-    
+
     ArrayBuffer* existingBuffer();
 
     static const TypedArrayType TypedArrayStorageType = Adaptor::typeValue;
-    
+
 protected:
     friend struct TypedArrayClassInfos;
-    
+
     static const unsigned StructureFlags = OverridesGetPropertyNames | OverridesGetOwnPropertySlot | InterceptsGetOwnPropertySlotByIndexEvenWhenLengthIsNotZero | Base::StructureFlags;
 
     static bool getOwnPropertySlot(JSObject*, ExecState*, PropertyName, PropertySlot&);
@@ -235,10 +235,10 @@ protected:
     static bool getOwnPropertySlotByIndex(JSObject*, ExecState*, unsigned propertyName, PropertySlot&);
     static void putByIndex(JSCell*, ExecState*, unsigned propertyName, JSValue, bool shouldThrow);
     static bool deletePropertyByIndex(JSCell*, ExecState*, unsigned propertyName);
-    
+
     static void getOwnNonIndexPropertyNames(JSObject*, ExecState*, PropertyNameArray&, EnumerationMode);
     static void getOwnPropertyNames(JSObject*, ExecState*, PropertyNameArray&, EnumerationMode);
-    
+
     static void visitChildren(JSCell*, SlotVisitor&);
     static void copyBackingStore(JSCell*, CopyVisitor&, CopyToken);
 

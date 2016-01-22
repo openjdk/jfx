@@ -139,7 +139,7 @@ void ScrollingStateNode::setLayer(const LayerRepresentation& layerRepresentation
 {
     if (layerRepresentation == m_layer)
         return;
-    
+
     m_layer = layerRepresentation;
 
     setPropertyChanged(ScrollLayer);
@@ -154,7 +154,7 @@ void ScrollingStateNode::dump(TextStream& ts, int indent) const
         writeIndent(ts, indent + 1);
         size_t size = children()->size();
         ts << "(children " << size << "\n";
-        
+
         for (size_t i = 0; i < size; i++)
             m_children->at(i)->dump(ts, indent + 2);
         writeIndent(ts, indent + 1);

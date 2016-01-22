@@ -70,7 +70,7 @@ public class CutSelectionJob extends InlineSelectionJob {
 
             deleteSelectionSubJob = new DeleteSelectionJob(getEditorController());
             if (deleteSelectionSubJob.isExecutable()) {
-                deleteSelectionSubJob.execute(); 
+                deleteSelectionSubJob.execute();
                 result.add(deleteSelectionSubJob);
             }
         }

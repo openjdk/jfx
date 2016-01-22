@@ -29,11 +29,11 @@
    DEALINGS IN THE SOFTWARE.
    ----------------------------------------------------------------------- */
 
-/* This defines a Java- and 64-bit specific variant of the raw API.	*/
-/* It assumes that "raw" argument blocks look like Java stacks on a	*/
-/* 64-bit machine.  Arguments that can be stored in a single stack	*/
-/* stack slots (longs, doubles) occupy 128 bits, but only the first	*/
-/* 64 bits are actually used.						*/
+/* This defines a Java- and 64-bit specific variant of the raw API. */
+/* It assumes that "raw" argument blocks look like Java stacks on a */
+/* 64-bit machine.  Arguments that can be stored in a single stack  */
+/* stack slots (longs, doubles) occupy 128 bits, but only the first */
+/* 64 bits are actually used.                       */
 
 #include <ffi.h>
 #include <ffi_common.h>
@@ -52,19 +52,19 @@ ffi_java_raw_size (ffi_cif *cif)
   for (i = cif->nargs-1; i >= 0; i--, at++)
     {
       switch((*at) -> type) {
-	case FFI_TYPE_UINT64:
-	case FFI_TYPE_SINT64:
-	case FFI_TYPE_DOUBLE:
-	  result += 2 * FFI_SIZEOF_JAVA_RAW;
-	  break;
-	case FFI_TYPE_STRUCT:
-	  /* No structure parameters in Java.	*/
-	  abort();
-	case FFI_TYPE_COMPLEX:
-	  /* Not supported yet.  */
-	  abort();
-	default:
-	  result += FFI_SIZEOF_JAVA_RAW;
+    case FFI_TYPE_UINT64:
+    case FFI_TYPE_SINT64:
+    case FFI_TYPE_DOUBLE:
+      result += 2 * FFI_SIZEOF_JAVA_RAW;
+      break;
+    case FFI_TYPE_STRUCT:
+      /* No structure parameters in Java.   */
+      abort();
+    case FFI_TYPE_COMPLEX:
+      /* Not supported yet.  */
+      abort();
+    default:
+      result += FFI_SIZEOF_JAVA_RAW;
       }
     }
 
@@ -83,39 +83,39 @@ ffi_java_raw_to_ptrarray (ffi_cif *cif, ffi_java_raw *raw, void **args)
   for (i = 0; i < cif->nargs; i++, tp++, args++)
     {
       switch ((*tp)->type)
-	{
-	case FFI_TYPE_UINT8:
-	case FFI_TYPE_SINT8:
-	  *args = (void*) ((char*)(raw++) + 3);
-	  break;
+    {
+    case FFI_TYPE_UINT8:
+    case FFI_TYPE_SINT8:
+      *args = (void*) ((char*)(raw++) + 3);
+      break;
 
-	case FFI_TYPE_UINT16:
-	case FFI_TYPE_SINT16:
-	  *args = (void*) ((char*)(raw++) + 2);
-	  break;
+    case FFI_TYPE_UINT16:
+    case FFI_TYPE_SINT16:
+      *args = (void*) ((char*)(raw++) + 2);
+      break;
 
 #if FFI_SIZEOF_JAVA_RAW == 8
-	case FFI_TYPE_UINT64:
-	case FFI_TYPE_SINT64:
-	case FFI_TYPE_DOUBLE:
-	  *args = (void *)raw;
-	  raw += 2;
-	  break;
+    case FFI_TYPE_UINT64:
+    case FFI_TYPE_SINT64:
+    case FFI_TYPE_DOUBLE:
+      *args = (void *)raw;
+      raw += 2;
+      break;
 #endif
 
-	case FFI_TYPE_POINTER:
-	  *args = (void*) &(raw++)->ptr;
-	  break;
+    case FFI_TYPE_POINTER:
+      *args = (void*) &(raw++)->ptr;
+      break;
 
-	case FFI_TYPE_COMPLEX:
-	  /* Not supported yet.  */
-	  abort();
+    case FFI_TYPE_COMPLEX:
+      /* Not supported yet.  */
+      abort();
 
-	default:
-	  *args = raw;
-	  raw +=
-	    ALIGN ((*tp)->size, sizeof(ffi_java_raw)) / sizeof(ffi_java_raw);
-	}
+    default:
+      *args = raw;
+      raw +=
+        ALIGN ((*tp)->size, sizeof(ffi_java_raw)) / sizeof(ffi_java_raw);
+    }
     }
 
 #else /* WORDS_BIGENDIAN */
@@ -127,22 +127,22 @@ ffi_java_raw_to_ptrarray (ffi_cif *cif, ffi_java_raw *raw, void **args)
     {
 #if FFI_SIZEOF_JAVA_RAW == 8
       switch((*tp)->type) {
-	case FFI_TYPE_UINT64:
-	case FFI_TYPE_SINT64:
-	case FFI_TYPE_DOUBLE:
-	  *args = (void*) raw;
-	  raw += 2;
-	  break;
-	case FFI_TYPE_COMPLEX:
-	  /* Not supported yet.  */
-	  abort();
-	default:
-	  *args = (void*) raw++;
+    case FFI_TYPE_UINT64:
+    case FFI_TYPE_SINT64:
+    case FFI_TYPE_DOUBLE:
+      *args = (void*) raw;
+      raw += 2;
+      break;
+    case FFI_TYPE_COMPLEX:
+      /* Not supported yet.  */
+      abort();
+    default:
+      *args = (void*) raw++;
       }
 #else /* FFI_SIZEOF_JAVA_RAW != 8 */
-	*args = (void*) raw;
-	raw +=
-	  ALIGN ((*tp)->size, sizeof(ffi_java_raw)) / sizeof(ffi_java_raw);
+    *args = (void*) raw;
+    raw +=
+      ALIGN ((*tp)->size, sizeof(ffi_java_raw)) / sizeof(ffi_java_raw);
 #endif /* FFI_SIZEOF_JAVA_RAW == 8 */
     }
 
@@ -162,81 +162,81 @@ ffi_java_ptrarray_to_raw (ffi_cif *cif, void **args, ffi_java_raw *raw)
   for (i = 0; i < cif->nargs; i++, tp++, args++)
     {
       switch ((*tp)->type)
-	{
-	case FFI_TYPE_UINT8:
+    {
+    case FFI_TYPE_UINT8:
 #if WORDS_BIGENDIAN
-	  *(UINT32*)(raw++) = *(UINT8*) (*args);
+      *(UINT32*)(raw++) = *(UINT8*) (*args);
 #else
-	  (raw++)->uint = *(UINT8*) (*args);
+      (raw++)->uint = *(UINT8*) (*args);
 #endif
-	  break;
+      break;
 
-	case FFI_TYPE_SINT8:
+    case FFI_TYPE_SINT8:
 #if WORDS_BIGENDIAN
-	  *(SINT32*)(raw++) = *(SINT8*) (*args);
+      *(SINT32*)(raw++) = *(SINT8*) (*args);
 #else
-	  (raw++)->sint = *(SINT8*) (*args);
+      (raw++)->sint = *(SINT8*) (*args);
 #endif
-	  break;
+      break;
 
-	case FFI_TYPE_UINT16:
+    case FFI_TYPE_UINT16:
 #if WORDS_BIGENDIAN
-	  *(UINT32*)(raw++) = *(UINT16*) (*args);
+      *(UINT32*)(raw++) = *(UINT16*) (*args);
 #else
-	  (raw++)->uint = *(UINT16*) (*args);
+      (raw++)->uint = *(UINT16*) (*args);
 #endif
-	  break;
+      break;
 
-	case FFI_TYPE_SINT16:
+    case FFI_TYPE_SINT16:
 #if WORDS_BIGENDIAN
-	  *(SINT32*)(raw++) = *(SINT16*) (*args);
+      *(SINT32*)(raw++) = *(SINT16*) (*args);
 #else
-	  (raw++)->sint = *(SINT16*) (*args);
+      (raw++)->sint = *(SINT16*) (*args);
 #endif
-	  break;
+      break;
 
-	case FFI_TYPE_UINT32:
+    case FFI_TYPE_UINT32:
 #if WORDS_BIGENDIAN
-	  *(UINT32*)(raw++) = *(UINT32*) (*args);
+      *(UINT32*)(raw++) = *(UINT32*) (*args);
 #else
-	  (raw++)->uint = *(UINT32*) (*args);
+      (raw++)->uint = *(UINT32*) (*args);
 #endif
-	  break;
+      break;
 
-	case FFI_TYPE_SINT32:
+    case FFI_TYPE_SINT32:
 #if WORDS_BIGENDIAN
-	  *(SINT32*)(raw++) = *(SINT32*) (*args);
+      *(SINT32*)(raw++) = *(SINT32*) (*args);
 #else
-	  (raw++)->sint = *(SINT32*) (*args);
+      (raw++)->sint = *(SINT32*) (*args);
 #endif
-	  break;
+      break;
 
-	case FFI_TYPE_FLOAT:
-	  (raw++)->flt = *(FLOAT32*) (*args);
-	  break;
+    case FFI_TYPE_FLOAT:
+      (raw++)->flt = *(FLOAT32*) (*args);
+      break;
 
 #if FFI_SIZEOF_JAVA_RAW == 8
-	case FFI_TYPE_UINT64:
-	case FFI_TYPE_SINT64:
-	case FFI_TYPE_DOUBLE:
-	  raw->uint = *(UINT64*) (*args);
-	  raw += 2;
-	  break;
+    case FFI_TYPE_UINT64:
+    case FFI_TYPE_SINT64:
+    case FFI_TYPE_DOUBLE:
+      raw->uint = *(UINT64*) (*args);
+      raw += 2;
+      break;
 #endif
 
-	case FFI_TYPE_POINTER:
-	  (raw++)->ptr = **(void***) args;
-	  break;
+    case FFI_TYPE_POINTER:
+      (raw++)->ptr = **(void***) args;
+      break;
 
-	default:
+    default:
 #if FFI_SIZEOF_JAVA_RAW == 8
-	  FFI_ASSERT(0);	/* Should have covered all cases */
+      FFI_ASSERT(0);    /* Should have covered all cases */
 #else
-	  memcpy ((void*) raw->data, (void*)*args, (*tp)->size);
-	  raw +=
-	    ALIGN ((*tp)->size, sizeof(ffi_java_raw)) / sizeof(ffi_java_raw);
+      memcpy ((void*) raw->data, (void*)*args, (*tp)->size);
+      raw +=
+        ALIGN ((*tp)->size, sizeof(ffi_java_raw)) / sizeof(ffi_java_raw);
 #endif
-	}
+    }
     }
 }
 
@@ -311,7 +311,7 @@ ffi_java_raw_to_rvalue (ffi_cif *cif, void *rvalue)
  * and back automatically. */
 
 void ffi_java_raw_call (ffi_cif *cif, void (*fn)(void), void *rvalue,
-			ffi_java_raw *raw)
+            ffi_java_raw *raw)
 {
   void **avalue = (void**) alloca (cif->nargs * sizeof (void*));
   ffi_java_raw_to_ptrarray (cif, raw, avalue);
@@ -319,11 +319,11 @@ void ffi_java_raw_call (ffi_cif *cif, void (*fn)(void), void *rvalue,
   ffi_java_rvalue_to_raw (cif, rvalue);
 }
 
-#if FFI_CLOSURES		/* base system provides closures */
+#if FFI_CLOSURES        /* base system provides closures */
 
 static void
 ffi_java_translate_args (ffi_cif *cif, void *rvalue,
-		    void **avalue, void *user_data)
+            void **avalue, void *user_data)
 {
   ffi_java_raw *raw = (ffi_java_raw*)alloca (ffi_java_raw_size (cif));
   ffi_raw_closure *cl = (ffi_raw_closure*)user_data;
@@ -335,18 +335,18 @@ ffi_java_translate_args (ffi_cif *cif, void *rvalue,
 
 ffi_status
 ffi_prep_java_raw_closure_loc (ffi_java_raw_closure* cl,
-			       ffi_cif *cif,
-			       void (*fun)(ffi_cif*,void*,ffi_java_raw*,void*),
-			       void *user_data,
-			       void *codeloc)
+                   ffi_cif *cif,
+                   void (*fun)(ffi_cif*,void*,ffi_java_raw*,void*),
+                   void *user_data,
+                   void *codeloc)
 {
   ffi_status status;
 
   status = ffi_prep_closure_loc ((ffi_closure*) cl,
-				 cif,
-				 &ffi_java_translate_args,
-				 codeloc,
-				 codeloc);
+                 cif,
+                 &ffi_java_translate_args,
+                 codeloc,
+                 codeloc);
   if (status == FFI_OK)
     {
       cl->fun       = fun;
@@ -362,9 +362,9 @@ ffi_prep_java_raw_closure_loc (ffi_java_raw_closure* cl,
 
 ffi_status
 ffi_prep_java_raw_closure (ffi_java_raw_closure* cl,
-			   ffi_cif *cif,
-			   void (*fun)(ffi_cif*,void*,ffi_java_raw*,void*),
-			   void *user_data)
+               ffi_cif *cif,
+               void (*fun)(ffi_cif*,void*,ffi_java_raw*,void*),
+               void *user_data)
 {
   return ffi_prep_java_raw_closure_loc (cl, cif, fun, user_data, cl);
 }

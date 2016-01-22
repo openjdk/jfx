@@ -33,8 +33,8 @@ package com.oracle.javafx.scenebuilder.kit.fxom.glue;
 
 /**
  *
- * 
+ *
  */
 public abstract class GlueNode {
-    
+
 }

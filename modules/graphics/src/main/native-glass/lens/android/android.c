@@ -34,7 +34,7 @@
 #include "com_sun_glass_events_KeyEvent.h"
 
 #define GET_WINDOW_FROM_SURFACE(p, s) \
-	(!s) ? NULL : ANativeWindow_fromSurface(p, s)
+    (!s) ? NULL : ANativeWindow_fromSurface(p, s)
 
 #define RGBA_8888 1
 #define RGBX_8888 2
@@ -46,8 +46,8 @@
 #define TOUCH_ACTION_UP             1
 #define TOUCH_ACTION_MOVE           2
 #define TOUCH_ACTION_CANCEL         3
-#define TOUCH_ACTION_OUTSIDE		4
-#define TOUCH_ACTION_POINTER_DOWN	5
+#define TOUCH_ACTION_OUTSIDE        4
+#define TOUCH_ACTION_POINTER_DOWN   5
 #define TOUCH_ACTION_POINTER_UP     6
 
 #define KEY_ACTION_DOWN     0
@@ -122,7 +122,7 @@ void init_ids(JNIEnv *env) {
     jFXActivityClass =
             (*env)->NewGlobalRef(env, (*env)->FindClass(env, "com/oracle/dalvik/FXActivity"));
     CHECK_EXCEPTION(env);
- 
+
     jFXActivity_showIME = (*env)->GetMethodID(env, jFXActivityClass,
             "showIME", "()V");
     CHECK_EXCEPTION(env);
@@ -130,7 +130,7 @@ void init_ids(JNIEnv *env) {
     jFXActivity_hideIME = (*env)->GetMethodID(env, jFXActivityClass,
             "hideIME", "()V");
     CHECK_EXCEPTION(env);
-    
+
     jFXActivity_shutdown = (*env)->GetMethodID(env, jFXActivityClass,
             "shutdown", "()V");
     CHECK_EXCEPTION(env);
@@ -153,7 +153,7 @@ void init_ids(JNIEnv *env) {
 void init_functions(JNIEnv *env) {
     const char *libglass_name = "libglass_lens_eglfb.so";
     const char *path = ANDROID_getDataDir();
-    char *libpath = (char *) calloc(strlen(path) + strlen(libglass_name) + 
+    char *libpath = (char *) calloc(strlen(path) + strlen(libglass_name) +
                                      2*strlen(PATH_SEP) + strlen(LIB_DIR) + 1, 1);
     strcpy(libpath, path);
     strcat(libpath, PATH_SEP);
@@ -224,12 +224,12 @@ JNIEXPORT void JNICALL Java_com_oracle_dalvik_FXActivity__1surfaceRedrawNeeded
  */
 JNIEXPORT void JNICALL Java_com_oracle_dalvik_FXActivity_00024InternalSurfaceView_onKeyEventNative
 (JNIEnv *ignore, jobject view, jint action, jint keyCode, jstring characters) {
-    
+
     LOGV(TAG, "Key event: [action: %s, keyCode: %i]\n", describe_key_action(action), keyCode);
     int event_type = to_jfx_key_action(action);
     int linux_keycode = translate_to_linux_keycode(keyCode);
     LOGV(TAG, "Translated to linux keycode: [%i]\n", linux_keycode);
-    if (linux_keycode > 0) {        
+    if (linux_keycode > 0) {
         (*_notifyKeyEvent)(event_type, linux_keycode, 0);
     }
 }
@@ -242,7 +242,7 @@ JNIEXPORT void JNICALL Java_com_oracle_dalvik_FXActivity_00024InternalSurfaceVie
         return;
     }
     int actions_len, ids_len, touchXs_len, touchYs_len;
-    int *actions = getIntArray(env, &actions_len, jactions);    
+    int *actions = getIntArray(env, &actions_len, jactions);
     int *ids = getIntArray(env, &ids_len, jids);
     int *touchXs = getIntArray(env, &touchXs_len, jtouchXs);
     int *touchYs = getIntArray(env, &touchYs_len, jtouchYs);
@@ -250,7 +250,7 @@ JNIEXPORT void JNICALL Java_com_oracle_dalvik_FXActivity_00024InternalSurfaceVie
         actions[i] = to_jfx_touch_action(actions[i]);
     }
     (*_notifyMultiTouchEvent)(jpcount, actions, ids, touchXs, touchYs);
-    
+
     (*env)->ReleaseIntArrayElements(env, jactions, actions, 0);
     (*env)->ReleaseIntArrayElements(env, jids, ids, 0);
     (*env)->ReleaseIntArrayElements(env, jtouchXs, touchXs, 0);
@@ -270,7 +270,7 @@ ANativeWindow *ANDROID_getNativeWindow() {
 const char *ANDROID_getDataDir() {
     JNIEnv *env;
     (*dalvikVM)->AttachCurrentThread(dalvikVM, (JNIEnv **) &env, NULL);
-    jstring jdatadir = (*env)->CallStaticObjectMethod(env, jFXActivityClass, jFXActivity_getDataDir);    
+    jstring jdatadir = (*env)->CallStaticObjectMethod(env, jFXActivityClass, jFXActivity_getDataDir);
     const char *path = (*env)->GetStringUTFChars(env, jdatadir, 0);
     const char *datadir = (char *)calloc(strlen(path), 1);
     strcpy(datadir, path);
@@ -337,15 +337,15 @@ char *describe_surface_format(int f, char *buf) {
 int to_jfx_touch_action(int state) {
     switch (state) {
         case TOUCH_ACTION_DOWN:
-        case TOUCH_ACTION_POINTER_DOWN:    
+        case TOUCH_ACTION_POINTER_DOWN:
             return com_sun_glass_events_TouchEvent_TOUCH_PRESSED;
         case TOUCH_ACTION_UP:
-        case TOUCH_ACTION_POINTER_UP:    
+        case TOUCH_ACTION_POINTER_UP:
             return com_sun_glass_events_TouchEvent_TOUCH_RELEASED;
         case TOUCH_ACTION_MOVE:
             return com_sun_glass_events_TouchEvent_TOUCH_MOVED;
         case TOUCH_ACTION_CANCEL:
-            return com_sun_glass_events_TouchEvent_TOUCH_RELEASED;                    
+            return com_sun_glass_events_TouchEvent_TOUCH_RELEASED;
         case TOUCH_ACTION_STILL:
             return com_sun_glass_events_TouchEvent_TOUCH_STILL;
         default:

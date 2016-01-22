@@ -31,7 +31,7 @@ namespace WTF {
 template <typename Node> class SinglyLinkedList {
 public:
     SinglyLinkedList();
-    
+
     bool isEmpty();
 
     void push(Node*);

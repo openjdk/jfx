@@ -84,7 +84,7 @@ public:
     RenderTable* table() const { return toRenderTable(parent()); }
 
     struct CellStruct {
-        Vector<RenderTableCell*, 1> cells; 
+        Vector<RenderTableCell*, 1> cells;
         bool inColSpan; // true for columns after the first in a colspan
 
         CellStruct()
@@ -223,7 +223,7 @@ public:
     {
         return createAnonymousWithParentRenderer(parent);
     }
-    
+
     virtual void paint(PaintInfo&, const LayoutPoint&) override;
 
 protected:

@@ -48,7 +48,7 @@ void DOMWindowExtension::disconnectFrameForPageCache()
     // Calling out to the client might result in this DOMWindowExtension being destroyed
     // while there is still work to do.
     Ref<DOMWindowExtension> protect(*this);
-    
+
     Frame* frame = this->frame();
     frame->loader().client().dispatchWillDisconnectDOMWindowExtensionFromGlobalObject(this);
 
@@ -60,7 +60,7 @@ void DOMWindowExtension::disconnectFrameForPageCache()
 void DOMWindowExtension::reconnectFrameFromPageCache(Frame* frame)
 {
     ASSERT(m_disconnectedFrame == frame);
-    
+
     DOMWindowProperty::reconnectFrameFromPageCache(frame);
     m_disconnectedFrame = 0;
 

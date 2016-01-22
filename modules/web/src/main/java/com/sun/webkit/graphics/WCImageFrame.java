@@ -26,7 +26,7 @@
 package com.sun.webkit.graphics;
 
 public abstract class WCImageFrame extends Ref {
-    
+
     public abstract WCImage getFrame();
 
     protected void destroyDecodedData() {

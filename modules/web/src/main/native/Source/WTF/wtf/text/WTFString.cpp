@@ -215,7 +215,7 @@ void String::append(const UChar* charactersToAppend, unsigned lengthToAppend)
         return;
 
     unsigned strLength = m_impl->length();
-    
+
     ASSERT(charactersToAppend);
     if (lengthToAppend > std::numeric_limits<unsigned>::max() - strLength)
         CRASH();
@@ -302,7 +302,7 @@ void String::remove(unsigned position, int lengthToRemove)
 
 String String::substring(unsigned pos, unsigned len) const
 {
-    if (!m_impl) 
+    if (!m_impl)
         return String();
     return m_impl->substring(pos, len);
 }
@@ -442,7 +442,7 @@ String String::format(const char *format, ...)
             return String("");
         if (written > 0)
             return StringImpl::create(reinterpret_cast<const LChar*>(buffer.data()), written);
-        
+
         bufferSize <<= 1;
         buffer.resize(bufferSize);
         va_start(args, format);
@@ -476,12 +476,12 @@ String String::format(const char *format, ...)
         return String();
     unsigned len = result;
     buffer.grow(len + 1);
-    
+
     // Now do the formatting again, guaranteed to fit.
     vsnprintf(buffer.data(), buffer.size(), format, args);
 
     va_end(args);
-    
+
     return StringImpl::create(reinterpret_cast<const LChar*>(buffer.data()), len);
 #endif
 }
@@ -735,7 +735,7 @@ CString String::ascii() const
     // preserved, characters outside of this range are converted to '?'.
 
     unsigned length = this->length();
-    if (!length) { 
+    if (!length) {
         char* characterBuffer;
         return CString::newUninitialized(length, characterBuffer);
     }
@@ -751,7 +751,7 @@ CString String::ascii() const
             characterBuffer[i] = ch && (ch < 0x20 || ch > 0x7f) ? '?' : ch;
         }
 
-        return result;        
+        return result;
     }
 
     const UChar* characters = this->characters16();
@@ -797,7 +797,7 @@ CString String::utf8(ConversionMode mode) const
 {
     if (!m_impl)
         return CString("", 0);
-    
+
     return m_impl->utf8(mode);
 }
 
@@ -818,12 +818,12 @@ String String::make16BitFrom8BitSource(const LChar* source, size_t length)
 {
     if (!length)
         return String();
-    
+
     UChar* destination;
     String result = String::createUninitialized(length, destination);
-    
+
     StringImpl::copyChars(destination, source, length);
-    
+
     return result;
 }
 
@@ -843,7 +843,7 @@ String String::fromUTF8(const LChar* stringStart, size_t length)
 
     Vector<UChar, 1024> buffer(length);
     UChar* bufferStart = buffer.data();
- 
+
     UChar* bufferCurrent = bufferStart;
     const char* stringCurrent = reinterpret_cast<const char*>(stringStart);
     if (convertUTF8ToUTF16(&stringCurrent, reinterpret_cast<const char *>(stringStart + length), &bufferCurrent, bufferCurrent + buffer.size()) != conversionOK)
@@ -977,11 +977,11 @@ static unsigned lengthOfCharactersAsInteger(const CharType* data, size_t length)
         if (!isSpaceOrNewline(data[i]))
             break;
     }
-    
+
     // Allow sign.
     if (i != length && (data[i] == '+' || data[i] == '-'))
         ++i;
-    
+
     // Allow digits.
     for (; i != length; ++i) {
         if (!isASCIIDigit(data[i]))

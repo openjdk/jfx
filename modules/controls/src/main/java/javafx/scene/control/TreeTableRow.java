@@ -50,12 +50,12 @@ import javafx.scene.control.TreeTableView.TreeTableViewSelectionModel;
  * <p>TreeTableRow is an {@link javafx.scene.control.IndexedCell IndexedCell}, but
  * rarely needs to be used by developers creating TreeTableView instances. The only
  * time TreeTableRow is likely to be encountered at all by a developer is if they
- * wish to create a custom {@link TreeTableView#rowFactoryProperty() rowFactory} 
+ * wish to create a custom {@link TreeTableView#rowFactoryProperty() rowFactory}
  * that replaces an entire row of a TreeTableView.</p>
  *
  * <p>More often than not, it is actually easier for a developer to customize
  * individual cells in a row, rather than the whole row itself. To do this,
- * you can specify a custom {@link TreeTableColumn#cellFactoryProperty() cellFactory} 
+ * you can specify a custom {@link TreeTableColumn#cellFactoryProperty() cellFactory}
  * on each TreeTableColumn instance.</p>
  *
  * @see TreeTableView
@@ -67,8 +67,8 @@ import javafx.scene.control.TreeTableView.TreeTableViewSelectionModel;
  * @since JavaFX 8.0
  */
 public class TreeTableRow<T> extends IndexedCell<T> {
-    
-    
+
+
     /***************************************************************************
      *                                                                         *
      * Constructors                                                            *
@@ -90,7 +90,7 @@ public class TreeTableRow<T> extends IndexedCell<T> {
      * Callbacks and events                                                    *
      *                                                                         *
      **************************************************************************/
-    
+
     private final ListChangeListener<Integer> selectedListener = c -> {
         updateSelection();
     };
@@ -102,7 +102,7 @@ public class TreeTableRow<T> extends IndexedCell<T> {
     private final InvalidationListener editingListener = valueModel -> {
         updateEditing();
     };
-    
+
     private final InvalidationListener leafListener = new InvalidationListener() {
         @Override public void invalidated(Observable valueModel) {
             // necessary to update the disclosure node in the skin when the
@@ -124,64 +124,64 @@ public class TreeTableRow<T> extends IndexedCell<T> {
         }
         oldExpanded = expanded;
     };
-    
-    private final WeakListChangeListener<Integer> weakSelectedListener = 
+
+    private final WeakListChangeListener<Integer> weakSelectedListener =
             new WeakListChangeListener<Integer>(selectedListener);
-    private final WeakInvalidationListener weakFocusedListener = 
+    private final WeakInvalidationListener weakFocusedListener =
             new WeakInvalidationListener(focusedListener);
-    private final WeakInvalidationListener weakEditingListener = 
+    private final WeakInvalidationListener weakEditingListener =
             new WeakInvalidationListener(editingListener);
-    private final WeakInvalidationListener weakLeafListener = 
+    private final WeakInvalidationListener weakLeafListener =
             new WeakInvalidationListener(leafListener);
-    private final WeakInvalidationListener weakTreeItemExpandedInvalidationListener = 
+    private final WeakInvalidationListener weakTreeItemExpandedInvalidationListener =
             new WeakInvalidationListener(treeItemExpandedInvalidationListener);
-    
-    
-    
+
+
+
     /***************************************************************************
      *                                                                         *
      * Properties                                                              *
      *                                                                         *
      **************************************************************************/
-    
+
     // --- TreeItem
-    private ReadOnlyObjectWrapper<TreeItem<T>> treeItem = 
+    private ReadOnlyObjectWrapper<TreeItem<T>> treeItem =
         new ReadOnlyObjectWrapper<TreeItem<T>>(this, "treeItem") {
-            
+
             TreeItem<T> oldValue = null;
-            
+
             @Override protected void invalidated() {
                 if (oldValue != null) {
                     oldValue.expandedProperty().removeListener(weakTreeItemExpandedInvalidationListener);
                 }
-                
-                oldValue = get(); 
-                
+
+                oldValue = get();
+
                 if (oldValue != null) {
                     oldExpanded = oldValue.isExpanded();
                     oldValue.expandedProperty().addListener(weakTreeItemExpandedInvalidationListener);
                     // fake an invalidation to ensure updated pseudo-class state
-                    weakTreeItemExpandedInvalidationListener.invalidated(oldValue.expandedProperty());            
+                    weakTreeItemExpandedInvalidationListener.invalidated(oldValue.expandedProperty());
                 }
             }
     };
     private void setTreeItem(TreeItem<T> value) {
-        treeItem.set(value); 
+        treeItem.set(value);
     }
-    
+
     /**
      * Returns the TreeItem currently set in this TreeCell.
      */
     public final TreeItem<T> getTreeItem() { return treeItem.get(); }
-    
+
     /**
      * Each TreeTableCell represents at most a single {@link TreeItem}, which is
      * represented by this property.
      */
     public final ReadOnlyObjectProperty<TreeItem<T>> treeItemProperty() { return treeItem.getReadOnlyProperty(); }
 
-    
-    
+
+
     // --- Disclosure Node
     private ObjectProperty<Node> disclosureNode = new SimpleObjectProperty<Node>(this, "disclosureNode");
 
@@ -193,27 +193,27 @@ public class TreeTableRow<T> extends IndexedCell<T> {
      * disclosure node.
      */
     public final void setDisclosureNode(Node value) { disclosureNodeProperty().set(value); }
-    
+
     /**
      * Returns the current disclosure node set in this TreeTableCell.
      */
     public final Node getDisclosureNode() { return disclosureNode.get(); }
-    
+
     /**
      * The disclosure node is commonly seen represented as a triangle that rotates
      * on screen to indicate whether or not the TreeItem that it is placed
      * beside is expanded or collapsed.
      */
     public final ObjectProperty<Node> disclosureNodeProperty() { return disclosureNode; }
-    
-    
+
+
     // --- TreeView
     private ReadOnlyObjectWrapper<TreeTableView<T>> treeTableView = new ReadOnlyObjectWrapper<TreeTableView<T>>(this, "treeTableView") {
         private WeakReference<TreeTableView<T>> weakTreeTableViewRef;
         @Override protected void invalidated() {
             TreeTableViewSelectionModel<T> sm;
             TreeTableViewFocusModel<T> fm;
-            
+
             if (weakTreeTableViewRef != null) {
                 TreeTableView<T> oldTreeTableView = weakTreeTableViewRef.get();
                 if (oldTreeTableView != null) {
@@ -230,7 +230,7 @@ public class TreeTableRow<T> extends IndexedCell<T> {
 
                     oldTreeTableView.editingCellProperty().removeListener(weakEditingListener);
                 }
-                
+
                 weakTreeTableViewRef = null;
             }
 
@@ -249,7 +249,7 @@ public class TreeTableRow<T> extends IndexedCell<T> {
                 }
 
                 get().editingCellProperty().addListener(weakEditingListener);
-                
+
                 weakTreeTableViewRef = new WeakReference<TreeTableView<T>>(get());
             }
 
@@ -257,14 +257,14 @@ public class TreeTableRow<T> extends IndexedCell<T> {
             requestLayout();
         }
     };
-    
+
     private void setTreeTableView(TreeTableView<T> value) { treeTableView.set(value); }
 
     /**
      * Returns the TreeTableView associated with this TreeTableCell.
      */
     public final TreeTableView<T> getTreeTableView() { return treeTableView.get(); }
-    
+
     /**
      * A TreeTableCell is explicitly linked to a single {@link TreeTableView} instance,
      * which is represented by this property.
@@ -282,7 +282,7 @@ public class TreeTableRow<T> extends IndexedCell<T> {
      * @param oldIndex
      * @param newIndex*/
 
-    
+
     @Override void indexChanged(int oldIndex, int newIndex) {
         index = getIndex();
 
@@ -293,7 +293,7 @@ public class TreeTableRow<T> extends IndexedCell<T> {
         updateFocus();
 //        oldIndex = index;
     }
-    
+
 
     /** {@inheritDoc} */
     @Override public void startEdit() {
@@ -301,12 +301,12 @@ public class TreeTableRow<T> extends IndexedCell<T> {
         if (! isEditable() || (treeTable != null && ! treeTable.isEditable())) {
             return;
         }
-        
+
         // it makes sense to get the cell into its editing state before firing
         // the event to the TreeView below, so that's what we're doing here
         // by calling super.startEdit().
         super.startEdit();
-        
+
          // Inform the TreeView of the edit starting.
         if (treeTable != null) {
             treeTable.fireEvent(new TreeTableView.EditEvent<T>(treeTable,
@@ -314,7 +314,7 @@ public class TreeTableRow<T> extends IndexedCell<T> {
                     getTreeItem(),
                     getItem(),
                     null));
-            
+
             treeTable.requestFocus();
         }
     }
@@ -332,14 +332,14 @@ public class TreeTableRow<T> extends IndexedCell<T> {
                     getItem(),
                     newValue));
         }
-        
+
         // update the item within this cell, so that it represents the new value
         if (treeItem != null) {
             treeItem.setValue(newValue);
             updateTreeItem(treeItem);
             updateItem(newValue, false);
         }
-        
+
         // inform parent classes of the commit, so that they can switch us
         // out of the editing state
         super.commitEdit(newValue);
@@ -354,7 +354,7 @@ public class TreeTableRow<T> extends IndexedCell<T> {
     /** {@inheritDoc} */
     @Override public void cancelEdit() {
         if (! isEditing()) return;
-        
+
         TreeTableView<T> treeTable = getTreeTableView();
         if (treeTable != null) {
             treeTable.fireEvent(new TreeTableView.EditEvent<T>(treeTable,
@@ -380,14 +380,14 @@ public class TreeTableRow<T> extends IndexedCell<T> {
      * Private Implementation                                                  *
      *                                                                         *
      **************************************************************************/
-    
+
     private int index = -1;
     private boolean isFirstRun = true;
 
     private void updateItem() {
         TreeTableView<T> tv = getTreeTableView();
         if (tv == null) return;
-        
+
         // Compute whether the index for this cell is for a real item
         boolean valid = index >=0 && index < tv.getExpandedItemCount();
 
@@ -400,7 +400,7 @@ public class TreeTableRow<T> extends IndexedCell<T> {
             // get the new treeItem that is about to go in to the TreeCell
             final TreeItem<T> newTreeItem = tv.getTreeItem(index);
             final T newValue = newTreeItem == null ? null : newTreeItem.getValue();
-            
+
             // For the sake of RT-14279, it is important that the order of these
             // method calls is as shown below. If the order is switched, it is
             // likely that events will be fired where the item is null, even
@@ -433,17 +433,17 @@ public class TreeTableRow<T> extends IndexedCell<T> {
         if (isEmpty()) return;
         if (index == -1 || getTreeTableView() == null) return;
         if (getTreeTableView().getSelectionModel() == null) return;
-        
+
         boolean isSelected = getTreeTableView().getSelectionModel().isSelected(index);
         if (isSelected() == isSelected) return;
-        
+
         updateSelected(isSelected);
     }
 
     private void updateFocus() {
         if (getIndex() == -1 || getTreeTableView() == null) return;
         if (getTreeTableView().getFocusModel() == null) return;
-        
+
         setFocused(getTreeTableView().getFocusModel().isFocused(getIndex()));
     }
 
@@ -473,7 +473,7 @@ public class TreeTableRow<T> extends IndexedCell<T> {
 
     /**
      * Updates the TreeTableView associated with this TreeTableCell.
-     * 
+     *
      * @param treeTable The new TreeTableView that should be associated with this
      *         TreeTableCell.
      * @expert This function is intended to be used by experts, primarily
@@ -481,13 +481,13 @@ public class TreeTableRow<T> extends IndexedCell<T> {
      *         for developers or designers to access this function directly.
      */
     public final void updateTreeTableView(TreeTableView<T> treeTable) {
-        setTreeTableView(treeTable); 
+        setTreeTableView(treeTable);
     }
 
     /**
      * Updates the TreeItem associated with this TreeTableCell.
      *
-     * @param treeItem The new TreeItem that should be associated with this 
+     * @param treeItem The new TreeItem that should be associated with this
      *      TreeTableCell.
      * @expert This function is intended to be used by experts, primarily
      *      by those implementing new Skins. It is not common
@@ -505,7 +505,7 @@ public class TreeTableRow<T> extends IndexedCell<T> {
     }
 
 
-    
+
     /***************************************************************************
      *                                                                         *
      * Stylesheet Handling                                                     *
@@ -516,7 +516,7 @@ public class TreeTableRow<T> extends IndexedCell<T> {
 
     private static final PseudoClass EXPANDED_PSEUDOCLASS_STATE = PseudoClass.getPseudoClass("expanded");
     private static final PseudoClass COLLAPSED_PSEUDOCLASS_STATE = PseudoClass.getPseudoClass("collapsed");
-    
+
     /** {@inheritDoc} */
     @Override protected Skin<?> createDefaultSkin() {
         return new TreeTableRowSkin<T>(this);

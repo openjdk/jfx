@@ -55,7 +55,7 @@ void XMLHttpRequestProgressEventThrottle::dispatchThrottledProgressEvent(bool le
     m_lengthComputable = lengthComputable;
     m_loaded = loaded;
     m_total = total;
-    
+
     if (m_deferEvents) {
         // Only store the latest progress event while suspended.
         m_deferredProgressEvent = XMLHttpRequestProgressEvent::create(eventNames().progressEvent, lengthComputable, loaded, total);

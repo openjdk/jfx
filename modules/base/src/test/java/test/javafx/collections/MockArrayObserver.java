@@ -75,7 +75,7 @@ public class MockArrayObserver<T extends ObservableArray<T>> implements ArrayCha
     public void check0() {
         assertNull(call);
     }
-    
+
     public void checkOnlySizeChanged(T array) {
         assertFalse("Too many array change events", tooManyCalls);
         assertSame(array, call.array);

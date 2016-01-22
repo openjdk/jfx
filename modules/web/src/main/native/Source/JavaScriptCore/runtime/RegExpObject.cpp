@@ -164,9 +164,9 @@ EncodedJSValue regExpObjectIgnoreCase(ExecState*, JSObject* slotBase, EncodedJSV
 {
     return JSValue::encode(jsBoolean(asRegExpObject(slotBase)->regExp()->ignoreCase()));
 }
- 
+
 EncodedJSValue regExpObjectMultiline(ExecState*, JSObject* slotBase, EncodedJSValue, PropertyName)
-{            
+{
     return JSValue::encode(jsBoolean(asRegExpObject(slotBase)->regExp()->multiline()));
 }
 
@@ -276,8 +276,8 @@ static inline JSValue regExpObjectSourceInternal(ExecState* exec, String pattern
     return jsString(exec, result.toString());
 }
 
-    
-    
+
+
 EncodedJSValue regExpObjectSource(ExecState* exec, JSObject* slotBase, EncodedJSValue, PropertyName)
 {
     String pattern = asRegExpObject(slotBase)->regExp()->pattern();

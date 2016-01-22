@@ -26,7 +26,7 @@
 #include "SVGUseElement.h"
 
 namespace WebCore {
-    
+
 RenderSVGTransformableContainer::RenderSVGTransformableContainer(SVGGraphicsElement& element, PassRef<RenderStyle> style)
     : RenderSVGContainer(element, std::move(style))
     , m_needsTransformUpdate(true)

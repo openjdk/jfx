@@ -41,7 +41,7 @@ UIEventInit::UIEventInit(bool bubbles, bool cancelable)
 {
 }
 
-    
+
 UIEvent::UIEvent()
     : m_detail(0)
 {

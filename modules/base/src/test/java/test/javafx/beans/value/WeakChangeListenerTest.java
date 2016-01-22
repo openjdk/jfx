@@ -34,7 +34,7 @@ import org.junit.Test;
 import static org.junit.Assert.*;
 
 public class WeakChangeListenerTest {
-	
+
     @Test(expected=NullPointerException.class)
     public void testConstructWithNull() {
         new WeakChangeListener<Object>(null);
@@ -74,25 +74,25 @@ public class WeakChangeListenerTest {
             return null;
         }
 
-		@Override
-		public void addListener(InvalidationListener listener) {
-			// not used
-		}
+        @Override
+        public void addListener(InvalidationListener listener) {
+            // not used
+        }
 
-		@Override
-		public void addListener(ChangeListener<? super Object> listener) {
-			// not used
-		}
+        @Override
+        public void addListener(ChangeListener<? super Object> listener) {
+            // not used
+        }
 
-		@Override
-		public void removeListener(InvalidationListener listener) {
-			// not used
-		}
+        @Override
+        public void removeListener(InvalidationListener listener) {
+            // not used
+        }
 
-		@Override
-		public void removeListener(ChangeListener<? super Object> listener) {
+        @Override
+        public void removeListener(ChangeListener<? super Object> listener) {
             removeCounter++;
-		}
+        }
 
     }
 

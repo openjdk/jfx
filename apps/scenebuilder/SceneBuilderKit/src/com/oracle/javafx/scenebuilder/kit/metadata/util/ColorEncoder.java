@@ -41,28 +41,28 @@ import javafx.scene.paint.Color;
  *
  */
 public class ColorEncoder {
-    
+
     private static Map<String, Color> standardColors;
     private static Map<Color, String> standardColorNames;
-    
+
     public static String encodeColor(Color color) {
         final String colorName = getStandardColorNames().get(color);
         final String result;
-        
+
         if (colorName != null) {
             result = colorName;
         } else {
             result = makeColorEncoding(color);
         }
-        
+
         return result;
     }
 
     public static synchronized Map<String, Color> getStandardColors() {
-        
+
         if (standardColors == null) {
             standardColors = new HashMap<>();
-            
+
             standardColors.put("ALICEBLUE", Color.ALICEBLUE); //NOI18N
             standardColors.put("ANTIQUEWHITE", Color.ANTIQUEWHITE); //NOI18N
             standardColors.put("AQUA", Color.AQUA); //NOI18N
@@ -214,12 +214,12 @@ public class ColorEncoder {
 
             standardColors = Collections.unmodifiableMap(standardColors);
         }
-        
+
         return standardColors;
     }
-    
+
     public static synchronized Map<Color, String> getStandardColorNames() {
-        
+
         if (standardColorNames == null) {
             standardColorNames = new HashMap<>();
             for (Map.Entry<String, Color> e : getStandardColors().entrySet()) {
@@ -227,11 +227,11 @@ public class ColorEncoder {
             }
             standardColorNames = Collections.unmodifiableMap(standardColorNames);
         }
-        
+
         return standardColorNames;
     }
-    
-    
+
+
     public static String encodeColorToRGBA(Color color) {
         final String result;
         if (color == null) {
@@ -242,7 +242,7 @@ public class ColorEncoder {
             final int blue = (int) (color.getBlue() * 255);
             result = "rgba("+red+","+green+","+blue +","+color.getOpacity()+")";//NOI18N
         }
-        return result;    
+        return result;
     }
 
     /*
@@ -251,7 +251,7 @@ public class ColorEncoder {
     private static String makeColorEncoding(Color c) {
         final int red, green, blue, alpha;
         final String result;
-        
+
         red   = (int) Math.round(c.getRed() * 255.0);
         green = (int) Math.round(c.getGreen() * 255.0);
         blue  = (int) Math.round(c.getBlue() * 255.0);
@@ -261,8 +261,8 @@ public class ColorEncoder {
         } else {
             result = String.format((Locale)null, "#%02x%02x%02x%02x", red, green, blue, alpha); //NOI18N
         }
-        
+
         return result;
     }
-    
+
 }

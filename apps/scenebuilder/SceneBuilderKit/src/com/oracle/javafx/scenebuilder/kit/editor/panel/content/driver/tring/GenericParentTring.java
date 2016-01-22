@@ -46,50 +46,50 @@ import javafx.scene.shape.Line;
 
 /**
  *
- * 
+ *
  */
 public class GenericParentTring extends AbstractNodeTring<Parent> {
-    
+
     private static final double CRACK_MIN_WIDTH = 6;
-    
+
     private final int targetIndex;
     private final Line crackLine = new Line();
 
-    public GenericParentTring(ContentPanelController contentPanelController, 
+    public GenericParentTring(ContentPanelController contentPanelController,
             FXOMInstance fxomInstance, int targetIndex) {
         super(contentPanelController, fxomInstance, Parent.class);
         assert targetIndex >= -1;
         this.targetIndex = targetIndex;
-        
+
         crackLine.getStyleClass().add(TARGET_CRACK_CLASS);
         crackLine.setMouseTransparent(true);
         getRootNode().getChildren().add(crackLine);
     }
 
-    
+
     public static int lookupCrackIndex(FXOMObject fxomObject, double sceneX, double sceneY) {
         assert fxomObject != null;
         assert fxomObject.getSceneGraphObject() instanceof Parent;
-        
+
         final DesignHierarchyMask m = new DesignHierarchyMask(fxomObject);
         final Parent parent = (Parent) m.getFxomObject().getSceneGraphObject();
         final Point2D hitPoint = parent.sceneToLocal(sceneX, sceneY, true /* rootScene */);
         final int childCount = m.getSubComponentCount();
-        
+
         final int targetIndex;
         if (childCount == 0) {
             // No children : we append
             targetIndex = -1;
-            
+
         } else {
             assert childCount >= 1;
-            
+
             final double hitX = hitPoint.getX();
             final double hitY = hitPoint.getY();
             double minDistance = Double.MAX_VALUE;
             int minIndex = -1;
             for (int i = 0, count = childCount; i < count; i++) {
-                final Bounds cb 
+                final Bounds cb
                         = GenericParentTring.computeCrackBounds(m, i);
                 final double midX = (cb.getMinX() + cb.getMaxX()) / 2.0;
                 final double midY = (cb.getMinY() + cb.getMaxY()) / 2.0;
@@ -100,7 +100,7 @@ public class GenericParentTring extends AbstractNodeTring<Parent> {
                 }
             }
 
-            final Bounds cb 
+            final Bounds cb
                     = GenericParentTring.computeCrackBounds(m, -1);
             final double midX = (cb.getMinX() + cb.getMaxX()) / 2.0;
             final double midY = (cb.getMinY() + cb.getMaxY()) / 2.0;
@@ -108,29 +108,29 @@ public class GenericParentTring extends AbstractNodeTring<Parent> {
             if (d < minDistance) {
                 minIndex = -1;
             }
-            
+
             targetIndex = minIndex;
         }
-        
+
         return targetIndex;
     }
-    
+
     /*
      * AbstractGenericTring
      */
-        
+
     @Override
     protected void layoutDecoration() {
-        
+
         super.layoutDecoration();
-        
+
         final DesignHierarchyMask m = new DesignHierarchyMask(getFxomObject());
         final int childCount = m.getSubComponentCount();
-        
+
         if (childCount == 0) {
             // No crack line
             crackLine.setVisible(false);
-            
+
         } else {
             // Computes the crack x
             final Bounds crackBounds = computeCrackBounds(m, targetIndex);
@@ -138,7 +138,7 @@ public class GenericParentTring extends AbstractNodeTring<Parent> {
             final double crackY0 = crackBounds.getMinY();
             final double crackY1 = crackBounds.getMaxY();
             final double strokeWidth = crackBounds.getWidth();
-            
+
             // Updates the crack line
             final boolean snapToPixel = true;
             final Point2D p0 = sceneGraphObjectToDecoration(crackX, crackY0, snapToPixel);
@@ -152,18 +152,18 @@ public class GenericParentTring extends AbstractNodeTring<Parent> {
             crackLine.setStrokeWidth(strokeWidth);
         }
     }
-    
+
     /*
      * Private
      */
-    
+
     private static Bounds computeCrackBounds(DesignHierarchyMask m, int childIndex) {
         assert m != null;
         assert m.isAcceptingSubComponent();
         assert childIndex >= -1;
         assert childIndex < m.getSubComponentCount();
-        
-        
+
+
         final double crackX, crackY0, crackY1, crackWidth;
         final int childCount = m.getSubComponentCount();
         final Node child, skinParent;
@@ -187,9 +187,9 @@ public class GenericParentTring extends AbstractNodeTring<Parent> {
 
             /*        child at                  child at
              *      targetIndex-1             targetIndex
-             * 
+             *
              * y0                           +--------------+   crackY0
-             * y1 +---------------+         |              | 
+             * y1 +---------------+         |              |
              *    |               |         |              |
              *    |   prevBounds  |         |    bounds    |
              *    |               |         |              |
@@ -197,20 +197,20 @@ public class GenericParentTring extends AbstractNodeTring<Parent> {
              *                              |              |
              * y3                           +--------------+   crackY1
              *                   x0  crackX x1
-             * 
-             * 
+             *
+             *
              */
             assert (1 <= childIndex) && (childIndex < childCount);
             child = getChildNode(m, childIndex);
             final Node prevChild = getChildNode(m, childIndex-1);
-            
+
             /*
              * child and prevChild may or may not be visible.
              * For example, when a ToolBar is shrinked, it automatically
              * hides the rightmost children. Those nodes are disconnected
              * from the skin and have a null parent.
              */
-            
+
             final double x0, x1, y0, y2, y1, y3;
             if ((child.getParent() != null) && (prevChild.getParent() != null)) {
                 assert child.getParent() == prevChild.getParent();
@@ -254,7 +254,7 @@ public class GenericParentTring extends AbstractNodeTring<Parent> {
                 crackWidth = CRACK_MIN_WIDTH;
             }
         }
-        
+
         assert m.getFxomObject().getSceneGraphObject() instanceof Parent;
         final Parent parent = (Parent) m.getFxomObject().getSceneGraphObject();
         final double pCrackX, pCrackY0, pCrackY1;
@@ -275,26 +275,26 @@ public class GenericParentTring extends AbstractNodeTring<Parent> {
                 pCrackY0 = 0.0;
                 pCrackY1 = 0.0;
             }
-            
+
         } else {
             pCrackX = crackX;
             pCrackY0 = crackY0;
             pCrackY1 = crackY1;
         }
-        
+
         return new BoundingBox(pCrackX - crackWidth /2, pCrackY0, crackWidth, pCrackY1 - pCrackY0);
     }
-    
-    
+
+
     private static Node getChildNode(DesignHierarchyMask m, int childIndex) {
         assert m != null;
         assert m.isAcceptingSubComponent();
         assert 0 <= childIndex;
         assert childIndex < m.getSubComponentCount();
-        
+
         final FXOMObject childObject = m.getSubComponentAtIndex(childIndex);
         assert childObject.getSceneGraphObject() instanceof Node;
-        
+
         return (Node)childObject.getSceneGraphObject();
     }
 }

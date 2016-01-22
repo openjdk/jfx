@@ -48,7 +48,7 @@ public:
 
 private:
     CSSPageRule(StyleRulePage*, CSSStyleSheet*);
-    
+
     RefPtr<StyleRulePage> m_pageRule;
     mutable RefPtr<StyleRuleCSSStyleDeclaration> m_propertiesCSSOMWrapper;
 };

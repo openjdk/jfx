@@ -96,7 +96,7 @@ static EncodedJSValue JSC_HOST_CALL constructWithStringConstructor(ExecState* ex
 
     if (!exec->argumentCount())
         return JSValue::encode(StringObject::create(vm, globalObject->stringObjectStructure()));
-    
+
     return JSValue::encode(StringObject::create(vm, globalObject->stringObjectStructure(), exec->uncheckedArgument(0).toString(exec)));
 }
 

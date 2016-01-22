@@ -60,5 +60,5 @@ class GtkMenuItemDelegate implements MenuItemDelegate {
     public boolean setChecked(boolean checked) {
         return true;
     }
-    
+
 }

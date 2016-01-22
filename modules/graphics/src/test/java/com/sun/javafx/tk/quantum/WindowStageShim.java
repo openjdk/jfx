@@ -32,5 +32,5 @@ public class WindowStageShim {
     public static Image findBestImage(java.util.List icons, int width, int height) {
         return WindowStage.findBestImage(icons, width, height);
     }
-    
+
 }

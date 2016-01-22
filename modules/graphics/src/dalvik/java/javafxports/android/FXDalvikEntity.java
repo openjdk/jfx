@@ -56,13 +56,13 @@ public class FXDalvikEntity implements SurfaceHolder.Callback,
         private String launcherClassName;
     private String mainClassName;
     private String preloaderClassName;
-    
+
     private static final String TAG = "FXEntity";
     private SurfaceDetails surfaceDetails;
     private static Launcher launcher;
     private final Bundle metadata;
     private final Activity activity;
-    
+
     private static boolean glassHasStarted = false;
     private Method onMultiTouchEventMethod;
     private Method onKeyEventMethod;
@@ -72,7 +72,7 @@ public class FXDalvikEntity implements SurfaceHolder.Callback,
     private Method onSurfaceRedrawNeededNativeMethod;
     private Method onConfigurationChangedNativeMethod;
     private static Method initializeMonocleMethod;
-    
+
     private static InputMethodManager imm;
     private static InternalSurfaceView myView;
     private static CountDownLatch cdlEvLoopFinished;
@@ -82,24 +82,24 @@ public class FXDalvikEntity implements SurfaceHolder.Callback,
     public FXDalvikEntity (Bundle metadata, Activity activity) {
         this.metadata = metadata;
         this.activity = activity;
-        
+
         imm = (InputMethodManager) activity.getSystemService(Context.INPUT_METHOD_SERVICE);
         jfxEventsLoop();
     }
-    
+
     public Activity getActivity() {
         return this.activity;
     }
-    
+
     public void getLauncherAndLaunchApplication() {
 
 
         launcherClassName = metadata.containsKey(META_DATA_LAUNCHER_CLASS) ?
                 metadata.getString(META_DATA_LAUNCHER_CLASS) : DEFAULT_LAUNCHER_CLASS;
-        
+
         mainClassName = metadata.containsKey(META_DATA_MAIN_CLASS) ?
                 metadata.getString(META_DATA_MAIN_CLASS) : null;
-        
+
         preloaderClassName = metadata.containsKey(META_DATA_PRELOADER_CLASS) ?
                 metadata.getString(META_DATA_PRELOADER_CLASS) : null;
         if (mainClassName == null || mainClassName.length() == 0) {
@@ -110,7 +110,7 @@ public class FXDalvikEntity implements SurfaceHolder.Callback,
         if (preloaderClassName != null && preloaderClassName.length() == 0) {
             preloaderClassName = null;
         }
-        
+
         //launch application
         try {
             Class<Launcher> clazz = (Class<Launcher>) Thread.currentThread().getContextClassLoader().loadClass(launcherClassName);
@@ -128,7 +128,7 @@ public class FXDalvikEntity implements SurfaceHolder.Callback,
         myView.getHolder().addCallback(this);
         return myView;
     }
-    
+
   @Override
     public void surfaceCreated(SurfaceHolder holder) {
         Log.v(TAG, "Surface created.");
@@ -210,7 +210,7 @@ public class FXDalvikEntity implements SurfaceHolder.Callback,
     protected void setInitializeMonocleMethod (Method v ) {
         initializeMonocleMethod  = v ;
     }
-        
+
     protected void setOnMultiTouchEventMethod(Method onMultiTouchEventMethod) {
         this.onMultiTouchEventMethod = onMultiTouchEventMethod;
     }
@@ -242,8 +242,8 @@ public class FXDalvikEntity implements SurfaceHolder.Callback,
             Method onConfigurationChangedNativeMethod) {
         this.onConfigurationChangedNativeMethod = onConfigurationChangedNativeMethod;
     }
-    
-    
+
+
     public static void notify_glassHasStarted() {
         Log.v(TAG, "notify_glassHasStarted called in FXActivity. register device now.");
         glassHasStarted = true;
@@ -309,8 +309,8 @@ private static long softInput = 0L;
     private native void _setSurface(Surface surface);
 
     private native void _setDensity(float density);
-    
-    
+
+
     class InternalSurfaceView extends SurfaceView {
 
         public InternalSurfaceView(Context context) {
@@ -383,7 +383,7 @@ private static long softInput = 0L;
         }
     }
 
-    
+
     class DeviceConfiguration {
 
         private static final int ORIENTATION_CHANGE = 1;
@@ -416,13 +416,13 @@ private static long softInput = 0L;
                 } catch (Exception e) {
                     throw new RuntimeException("Failed to invoke com.sun.glass.ui.android.DalvikInput.onConfigurationChangedNative method by reflection", e);
                 }
-       
+
             }
             change = 0;
         }
     }
 
-    
+
     class SurfaceDetails {
 
         Surface surface;

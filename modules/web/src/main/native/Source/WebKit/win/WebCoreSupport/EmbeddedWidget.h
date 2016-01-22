@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef EmbeddedWidget_h
@@ -78,7 +78,7 @@ private:
 
     bool m_isVisible;
     bool m_attachedToWindow;
-        
+
     WebCore::IntRect m_clipRect; // The clip rect to apply to an embedded view.
     WebCore::IntRect m_windowRect; // Our window rect.
 };

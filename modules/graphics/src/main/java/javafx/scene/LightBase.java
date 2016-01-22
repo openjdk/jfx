@@ -85,7 +85,7 @@ public abstract class LightBase extends Node {
             PlatformLogger.getLogger(logname).warning("System can't support "
                                                       + "ConditionalFeature.SCENE3D");
         }
-        
+
         setColor(color);
         this.localToSceneTransformProperty().addListener(observable -> impl_markDirty(DirtyBits.NODE_LIGHT_TRANSFORM));
     }
@@ -214,7 +214,7 @@ public abstract class LightBase extends Node {
 
     private void markChildrenDirty(Node node) {
         if (node instanceof Shape3D) {
-            // Dirty using a lightweight DirtyBits.NODE_DRAWMODE bit   
+            // Dirty using a lightweight DirtyBits.NODE_DRAWMODE bit
             ((Shape3D) node).impl_markDirty(DirtyBits.NODE_DRAWMODE);
         } else if (node instanceof Parent) {
             for (Node child : ((Parent) node).getChildren()) {
@@ -236,7 +236,7 @@ public abstract class LightBase extends Node {
             markOwnerDirty();
         } else if (dirtyBit != DirtyBits.NODE_LIGHT_SCOPE) {
             // Skip NODE_LIGHT_SCOPE dirty since it is processed on scope change.
-            ObservableList<Node> tmpScope = getScope();            
+            ObservableList<Node> tmpScope = getScope();
             for (int i = 0, max = tmpScope.size(); i < max; i++) {
                 markChildrenDirty(tmpScope.get(i));
             }

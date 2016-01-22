@@ -47,11 +47,11 @@ final class WCRenderQueueImpl extends WCRenderQueue {
             });
         }
     }
-    
+
     @Override
     protected void disposeGraphics() {
         PrismInvoker.invokeOnRenderThread(() -> {
-            if (gc != null) {                
+            if (gc != null) {
                 gc.dispose();
             }
         });

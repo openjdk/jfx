@@ -40,7 +40,7 @@ import javafx.scene.control.ChoiceBox;
  *
  */
 class ChoiceBoxSampleData extends AbstractSampleData {
-    
+
     private final List<String> samples = new ArrayList<>();
 
     public ChoiceBoxSampleData() {
@@ -52,25 +52,25 @@ class ChoiceBoxSampleData extends AbstractSampleData {
     /*
      * AbstractSampleData
      */
-    
+
     @Override
     public void applyTo(Object sceneGraphObject) {
         assert sceneGraphObject != null;
-        
-        @SuppressWarnings("unchecked")        
+
+        @SuppressWarnings("unchecked")
         final ChoiceBox<String> choiceBox = (ChoiceBox<String>) sceneGraphObject;
         choiceBox.getItems().clear();
         choiceBox.getItems().addAll(samples);
         choiceBox.getSelectionModel().select(samples.get(0));
     }
-    
+
     @Override
     public void removeFrom(Object sceneGraphObject) {
         assert sceneGraphObject != null;
-        
-        @SuppressWarnings("unchecked")        
+
+        @SuppressWarnings("unchecked")
         final ChoiceBox<String> choiceBox = (ChoiceBox<String>) sceneGraphObject;
         choiceBox.getItems().clear();
     }
-    
+
 }

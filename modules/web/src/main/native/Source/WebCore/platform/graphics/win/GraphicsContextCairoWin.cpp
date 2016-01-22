@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -120,7 +120,7 @@ static void drawBitmapToContext(GraphicsContextPlatformPrivate* context, cairo_t
         cairo_paint_with_alpha(cr, context->layers.last());
     else
         cairo_paint(cr);
-     
+
     // Delete all our junk.
     cairo_surface_destroy(surface);
     cairo_restore(cr);
@@ -166,7 +166,7 @@ void GraphicsContextPlatformPrivate::syncContext(cairo_t* cr)
        return;
 
     cairo_surface_t* surface = cairo_get_target(cr);
-    m_hdc = cairo_win32_surface_get_dc(surface);   
+    m_hdc = cairo_win32_surface_get_dc(surface);
 
     SetGraphicsMode(m_hdc, GM_ADVANCED); // We need this call for themes to honor world transforms.
 }

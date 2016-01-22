@@ -72,7 +72,7 @@ class ViewContainer {
         BOOL HandleViewMouseEvent(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
         BOOL HandleViewInputMethodEvent(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
         LRESULT HandleViewGetAccessible(HWND hwnd, WPARAM wParam, LPARAM lParam);
-    
+
         virtual void HandleViewTimerEvent(HWND hwnd, UINT_PTR timerID);
 
         void InitDropTarget(HWND hwnd);
@@ -86,14 +86,14 @@ class ViewContainer {
     private:
         ViewContainer(const ViewContainer&);
         ViewContainer& operator = (const ViewContainer&);
-    
+
     public:
         enum {
             IDT_GLASS_ANIMATION_ENTER = 0x101,
             IDT_GLASS_ANIMATION_EXIT,
             IDT_GLASS_INERTIAPROCESSOR,
         };
-        
+
         ViewContainer();
 
         inline GlassView * GetGlassView() const { return m_view; }
@@ -107,15 +107,15 @@ class ViewContainer {
         unsigned int HandleViewTouchEvent(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
         void NotifyViewSize(HWND hwnd);
-        
-        void NotifyGesturePerformed(HWND hWnd, 
+
+        void NotifyGesturePerformed(HWND hWnd,
             bool isDirect, bool isInertia,
-            FLOAT x, FLOAT y, 
+            FLOAT x, FLOAT y,
             FLOAT deltaX, FLOAT deltaY,
             FLOAT scaleDelta, FLOAT expansionDelta, FLOAT rotationDelta,
             FLOAT cumulativeDeltaX, FLOAT cumulativeDeltaY,
             FLOAT cumulativeScale, FLOAT cumulativeExpansion, FLOAT cumulativeRotation);
-        
+
         void StartTouchInputInertia(HWND hwnd);
         void StopTouchInputInertia(HWND hwnd);
 };

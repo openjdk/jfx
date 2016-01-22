@@ -46,6 +46,6 @@ float mask(float2 tco, float2 odim)
 
     float ocov = ellipsemask(abstco, odim);
     float icov = ellipsemask(abstco, idim);
-    
+
     return clamp(ocov - icov, 0.0, 1.0);
 }

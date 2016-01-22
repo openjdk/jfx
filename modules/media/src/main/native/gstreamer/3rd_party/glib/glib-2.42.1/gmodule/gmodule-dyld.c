@@ -11,7 +11,7 @@
  *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.	 See the GNU
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
@@ -25,8 +25,8 @@ static gpointer self_module = GINT_TO_POINTER (1);
 
 static gpointer
 _g_module_open (const gchar *file_name,
-		gboolean     bind_lazy,
-		gboolean     bind_local)
+        gboolean     bind_lazy,
+        gboolean     bind_local)
 {
   NSObjectFileImage image;
   NSObjectFileImageReturnCode ret;
@@ -38,28 +38,28 @@ _g_module_open (const gchar *file_name,
   if (ret != NSObjectFileImageSuccess)
     {
       switch (ret)
-	{
-	case NSObjectFileImageInappropriateFile:
-	case NSObjectFileImageFormat:
-	  msg = g_strdup_printf ("%s is not a loadable module", file_name);
-	  break;
+    {
+    case NSObjectFileImageInappropriateFile:
+    case NSObjectFileImageFormat:
+      msg = g_strdup_printf ("%s is not a loadable module", file_name);
+      break;
 
-	case NSObjectFileImageArch:
-	  msg = g_strdup_printf ("%s is not built for this architecture",
-				 file_name);
-	  break;
+    case NSObjectFileImageArch:
+      msg = g_strdup_printf ("%s is not built for this architecture",
+                 file_name);
+      break;
 
-	case NSObjectFileImageAccess:
-	  if (access (file_name, F_OK) == 0)
-	    msg = g_strdup_printf ("%s: permission denied", file_name);
-	  else
-	    msg = g_strdup_printf ("%s: no such file or directory", file_name);
-	  break;
+    case NSObjectFileImageAccess:
+      if (access (file_name, F_OK) == 0)
+        msg = g_strdup_printf ("%s: permission denied", file_name);
+      else
+        msg = g_strdup_printf ("%s: no such file or directory", file_name);
+      break;
 
-	default:
-	  msg = g_strdup_printf ("unknown error for %s", file_name);
-	  break;
-	}
+    default:
+      msg = g_strdup_printf ("unknown error for %s", file_name);
+      break;
+    }
 
       g_module_set_error (msg);
       g_free (msg);
@@ -97,7 +97,7 @@ _g_module_self (void)
 
 static void
 _g_module_close (gpointer handle,
-		 gboolean is_unref)
+         gboolean is_unref)
 {
   if (handle == &self_module)
     return;
@@ -108,7 +108,7 @@ _g_module_close (gpointer handle,
 
 static gpointer
 _g_module_symbol (gpointer     handle,
-		  const gchar *symbol_name)
+          const gchar *symbol_name)
 {
   NSSymbol sym;
   char *msg;
@@ -116,9 +116,9 @@ _g_module_symbol (gpointer     handle,
   if (handle == &self_module)
     {
       if (NSIsSymbolNameDefined (symbol_name))
-	sym = NSLookupAndBindSymbol (symbol_name);
+    sym = NSLookupAndBindSymbol (symbol_name);
       else
-	sym = NULL;
+    sym = NULL;
     }
   else
     sym = NSLookupSymbolInModule (handle, symbol_name);
@@ -136,14 +136,14 @@ _g_module_symbol (gpointer     handle,
 
 static gchar*
 _g_module_build_path (const gchar *directory,
-		      const gchar *module_name)
+              const gchar *module_name)
 {
   if (directory && *directory)
     {
       if (strncmp (module_name, "lib", 3) == 0)
-	return g_strconcat (directory, "/", module_name, NULL);
+    return g_strconcat (directory, "/", module_name, NULL);
       else
-	return g_strconcat (directory, "/lib", module_name, "." G_MODULE_SUFFIX, NULL);
+    return g_strconcat (directory, "/lib", module_name, "." G_MODULE_SUFFIX, NULL);
     }
   else if (strncmp (module_name, "lib", 3) == 0)
     return g_strdup (module_name);

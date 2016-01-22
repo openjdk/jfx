@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #import "config.h"
@@ -41,7 +41,7 @@
 // Wrapping WebCore implementation objects
 
 static NSMapTable* DOMWrapperCache;
-    
+
 #ifdef NEEDS_WRAPPER_CACHE_LOCK
 static Mutex& wrapperCacheLock()
 {
@@ -53,7 +53,7 @@ static Mutex& wrapperCacheLock()
 #if COMPILER(CLANG)
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
-#endif    
+#endif
 
 NSMapTable* createWrapperCache()
 {
@@ -113,21 +113,21 @@ void removeDOMWrapper(DOMObjectInternal* impl)
 
     _private = [[WebScriptObjectPrivate alloc] init];
     _private->isCreatedByDOMWrapper = YES;
-    
+
     return self;
 }
 
 - (void)_initializeScriptDOMNodeImp
 {
     ASSERT(_private->isCreatedByDOMWrapper);
-    
+
     if (![self isKindOfClass:[DOMNode class]]) {
         // DOMObject can't map back to a document, and thus an interpreter,
         // so for now only create wrappers for DOMNodes.
         NSLog(@"%s:%d:  We don't know how to create ObjC JS wrappers from DOMObjects yet.", __FILE__, __LINE__);
         return;
     }
-    
+
     // Extract the WebCore::Node from the ObjectiveC wrapper.
     DOMNode *n = (DOMNode *)self;
     WebCore::Node *nodeImpl = core(n);

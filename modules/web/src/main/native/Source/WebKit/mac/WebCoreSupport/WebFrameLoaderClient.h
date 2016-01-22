@@ -6,13 +6,13 @@
  * are met:
  *
  * 1.  Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer. 
+ *     notice, this list of conditions and the following disclaimer.
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
- *     documentation and/or other materials provided with the distribution. 
+ *     documentation and/or other materials provided with the distribution.
  * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
- *     from this software without specific prior written permission. 
+ *     from this software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY APPLE AND ITS CONTRIBUTORS "AS IS" AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
@@ -104,7 +104,7 @@ private:
     virtual void dispatchDidPushStateWithinPage() override;
     virtual void dispatchDidReplaceStateWithinPage() override;
     virtual void dispatchDidPopStateWithinPage() override;
-    
+
     virtual void dispatchWillClose() override;
     virtual void dispatchDidReceiveIcon() override;
     virtual void dispatchDidStartProvisionalLoad() override;
@@ -165,7 +165,7 @@ private:
     virtual bool shouldFallBack(const WebCore::ResourceError&) override;
 
     virtual WTF::String userAgent(const WebCore::URL&) override;
-    
+
     virtual void savePlatformDataToCachedFrame(WebCore::CachedFrame*) override;
     virtual void transitionToCommittedFromCachedFrame(WebCore::CachedFrame*) override;
 #if PLATFORM(IOS)
@@ -200,20 +200,20 @@ private:
         const Vector<WTF::String>&, const WTF::String&, bool) override;
     virtual void recreatePlugin(WebCore::Widget*) override;
     virtual void redirectDataToPlugin(WebCore::Widget* pluginWidget) override;
-    
+
     virtual PassRefPtr<WebCore::Widget> createJavaAppletWidget(const WebCore::IntSize&, WebCore::HTMLAppletElement*, const WebCore::URL& baseURL,
         const Vector<WTF::String>& paramNames, const Vector<WTF::String>& paramValues) override;
-    
+
 #if ENABLE(PLUGIN_PROXY_FOR_VIDEO)
-    virtual PassRefPtr<WebCore::Widget> createMediaPlayerProxyPlugin(const WebCore::IntSize&, WebCore::HTMLMediaElement*, const WebCore::URL&, 
+    virtual PassRefPtr<WebCore::Widget> createMediaPlayerProxyPlugin(const WebCore::IntSize&, WebCore::HTMLMediaElement*, const WebCore::URL&,
         const Vector<WTF::String>&, const Vector<WTF::String>&, const WTF::String&) override;
     virtual void hideMediaPlayerProxyPlugin(WebCore::Widget*) override;
     virtual void showMediaPlayerProxyPlugin(WebCore::Widget*) override;
 #endif
-    
+
     virtual WebCore::ObjectContentType objectContentType(const WebCore::URL&, const WTF::String& mimeType, bool shouldPreferPlugInsForImages) override;
     virtual WTF::String overrideMediaType() const override;
-    
+
     virtual void dispatchDidClearWindowObjectInWorld(WebCore::DOMWrapperWorld&) override;
 
     virtual void registerForIconNotification(bool listen) override;
@@ -223,11 +223,11 @@ private:
 #endif
 
     virtual RemoteAXObjectRef accessibilityRemoteObject() override { return 0; }
-    
+
     RetainPtr<WebFramePolicyListener> setUpPolicyListener(WebCore::FramePolicyFunction);
 
     NSDictionary *actionDictionary(const WebCore::NavigationAction&, PassRefPtr<WebCore::FormState>) const;
-    
+
     virtual bool canCachePage() const;
 
     virtual PassRefPtr<WebCore::FrameNetworkingContext> createNetworkingContext();

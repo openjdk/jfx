@@ -45,7 +45,7 @@ public class SymbolTable {
     public SymbolTable() {
         declareCoreFunctions();
     }
-    
+
     private Variable declareParamVariable(String name, Type type) {
         return declareVariable(name, type, null, null, -1, null, true);
     }
@@ -80,11 +80,11 @@ public class SymbolTable {
         if (v != null) {
             throw new RuntimeException("Variable '" + name + "' already declared");
         }
-        
+
         if (arraySize == 0) {
             throw new RuntimeException("Array size cannot be zero");
         }
-        
+
         int reg = -1;
         if (qual == Qualifier.PARAM) {
             if (!global) {
@@ -135,16 +135,16 @@ public class SymbolTable {
         declareUserFunction(f);
         return f;
     }
-    
+
     public void enterFrame() {
         global = false;
         localVariableMap.clear();
     }
-    
+
     public void exitFrame() {
         global = true;
     }
-    
+
     private void declareCoreFunctions() {
         globalFunctionSet.addAll(CoreSymbols.getAllFunctions());
     }
@@ -152,19 +152,19 @@ public class SymbolTable {
     public Map<String, Variable> getGlobalVariables() {
         return globalVariableMap;
     }
-    
+
     private boolean isFunctionDeclared(Function func) {
        return globalFunctionSet.contains(func);
     }
-    
+
     private void declareUserFunction(Function func) {
         globalFunctionSet.add(func);
     }
-    
+
     public Function getFunctionForSignature(String name, List<Type> ptypes) {
         return getFunctionForSignature(globalFunctionSet, name, ptypes);
     }
-    
+
     static Function getFunctionForSignature(Set<Function> funcs,
                                             String name,
                                             List<Type> ptypes)
@@ -186,7 +186,7 @@ public class SymbolTable {
         }
         return null;
     }
-    
+
     public Map<String, Variable> getVariablesForScope() {
         if (global) {
             return globalVariableMap;
@@ -194,7 +194,7 @@ public class SymbolTable {
             return localVariableMap;
         }
     }
-    
+
     public int getNumSamplers() {
         return numSamplers;
     }

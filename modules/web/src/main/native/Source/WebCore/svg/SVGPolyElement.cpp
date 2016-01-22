@@ -60,7 +60,7 @@ END_REGISTER_ANIMATED_PROPERTIES
 SVGPolyElement::SVGPolyElement(const QualifiedName& tagName, Document& document)
     : SVGGraphicsElement(tagName, document)
 {
-    registerAnimatedPropertiesForSVGPolyElement();    
+    registerAnimatedPropertiesForSVGPolyElement();
 }
 
 bool SVGPolyElement::isSupportedAttribute(const QualifiedName& attrName)

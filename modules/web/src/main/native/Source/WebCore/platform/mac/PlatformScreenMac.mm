@@ -62,14 +62,14 @@ bool screenIsMonochrome(Widget*)
     return false;
 }
 
-// These functions scale between screen and page coordinates because JavaScript/DOM operations 
+// These functions scale between screen and page coordinates because JavaScript/DOM operations
 // assume that the screen and the page share the same coordinate system.
 
 static PlatformDisplayID displayFromWidget(Widget* widget)
 {
     if (!widget)
         return 0;
-    
+
     ScrollView* view = widget->root();
     if (!view)
         return 0;
@@ -82,11 +82,11 @@ static NSScreen *screenForWidget(Widget* widget, NSWindow *window)
     // Widget is in an NSWindow, use its screen.
     if (window)
         return screenForWindow(window);
-    
+
     // Didn't get an NSWindow; probably WebKit2. Try using the Widget's display ID.
     if (NSScreen *screen = screenForDisplayID(displayFromWidget(widget)))
         return screen;
-    
+
     // Widget's window is offscreen, or no screens. Fall back to the first screen if available.
     return screenForWindow(nil);
 }
@@ -115,11 +115,11 @@ NSScreen *screenForWindow(NSWindow *window)
     NSScreen *screen = [window screen]; // nil if the window is off-screen
     if (screen)
         return screen;
-    
+
     NSArray *screens = [NSScreen screens];
     if ([screens count] > 0)
         return [screens objectAtIndex:0]; // screen containing the menubar
-    
+
     return nil;
 }
 

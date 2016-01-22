@@ -79,7 +79,7 @@ static NSUInteger s_modifierFlags = 0;
 
 static jboolean isInertialScroll(NSEvent *theEvent)
 {
-    enum 
+    enum
     {
         SelectorNotSet,
         MomentumPhaseSelector,
@@ -89,7 +89,7 @@ static jboolean isInertialScroll(NSEvent *theEvent)
 
     static int selector = SelectorNotSet;
 
-    switch (selector) 
+    switch (selector)
     {
         case SelectorNotSet:
             if ([theEvent respondsToSelector:@selector(momentumPhase)])
@@ -143,7 +143,7 @@ static jint getSwipeDirFromEvent(NSEvent *theEvent)
     if (self != nil)
     {
         GET_MAIN_JENV;
-        
+
         self->nsView = view;
         self->jView = (*env)->NewGlobalRef(env, jview);
         self->mouseIsOver = NO;
@@ -180,13 +180,13 @@ static jint getSwipeDirFromEvent(NSEvent *theEvent)
 {
     [self->lastEvent release];
     self->lastEvent = nil;
-    
+
     [self->parentHost release];
     self->parentHost = nil;
-    
+
     [self->parentWindow release];
     self->parentWindow = nil;
-    
+
     [self->fullscreenWindow release];
     self->fullscreenWindow = nil;
 
@@ -223,7 +223,7 @@ static jint getSwipeDirFromEvent(NSEvent *theEvent)
         {
             self->parentWindow = [[self->nsView window] retain];
         }
-        
+
         [[self->nsView window] setAcceptsMouseMovedEvents:YES];
         (*env)->CallVoidMethod(env, self->jView, jViewNotifyEvent, com_sun_glass_events_ViewEvent_ADD);
     }
@@ -241,19 +241,19 @@ static jint getSwipeDirFromEvent(NSEvent *theEvent)
 
 - (void)setFrameOrigin:(NSPoint)newOrigin
 {
-    
+
 }
 
 - (void)setFrameSize:(NSSize)newSize
 {
     LOG("GlassViewDelegate setFrameSize %fx%f", newSize.width, newSize.height);
-    
+
     //NSLog(@"GlassViewDelegate setFrameSize: %dx%d", (int)newSize.width, (int)newSize.height);
     // TODO: listen for resize view's notifications
     GET_MAIN_JENV;
     (*env)->CallVoidMethod(env, self->jView, jViewNotifyResize, (int)newSize.width, (int)newSize.height);
     GLASS_CHECK_EXCEPTION(env);
-    
+
     [self->nsView removeTrackingRect:self->trackingRect];
     self->trackingRect = [self->nsView addTrackingRect:[self->nsView bounds] owner:self->nsView userData:nil assumeInside:NO];
 }
@@ -261,13 +261,13 @@ static jint getSwipeDirFromEvent(NSEvent *theEvent)
 - (void)setFrame:(NSRect)frameRect
 {
     LOG("GlassViewDelegate setFrame %fx%f", frameRect.size.width, frameRect.size.height);
-    
+
     //NSLog(@"GlassViewDelegate setFrame: %d,%d %dx%d", (int)frameRect.origin.x, (int)frameRect.origin.y, (int)frameRect.size.width, (int)frameRect.size.height);
     // TODO: listen for resize view's notifications
     GET_MAIN_JENV;
     (*env)->CallVoidMethod(env, self->jView, jViewNotifyResize, (int)frameRect.size.width, (int)frameRect.size.height);
     GLASS_CHECK_EXCEPTION(env);
-    
+
     [self->nsView removeTrackingRect:self->trackingRect];
     self->trackingRect = [self->nsView addTrackingRect:[self->nsView bounds] owner:self->nsView userData:nil assumeInside:NO];
 }
@@ -307,7 +307,7 @@ static jint getSwipeDirFromEvent(NSEvent *theEvent)
 
     GET_MAIN_JENV;
     jboolean isKeyboardTrigger = JNI_FALSE;
-    (*env)->CallVoidMethod(env, self->jView, jViewNotifyMenu, 
+    (*env)->CallVoidMethod(env, self->jView, jViewNotifyMenu,
                             (jint)viewPoint.x, (jint)viewPoint.y, (jint)basePoint.x, (jint)basePoint.y, isKeyboardTrigger);
     GLASS_CHECK_EXCEPTION(env);
 }
@@ -338,7 +338,7 @@ static jint getSwipeDirFromEvent(NSEvent *theEvent)
             type = com_sun_glass_events_MouseEvent_DOWN;
             button = com_sun_glass_events_MouseEvent_BUTTON_OTHER;
             break;
-            
+
         case NSLeftMouseUp:
             type = com_sun_glass_events_MouseEvent_UP;
             button = com_sun_glass_events_MouseEvent_BUTTON_LEFT;
@@ -351,7 +351,7 @@ static jint getSwipeDirFromEvent(NSEvent *theEvent)
             type = com_sun_glass_events_MouseEvent_UP;
             button = com_sun_glass_events_MouseEvent_BUTTON_OTHER;
             break;
-            
+
         case NSLeftMouseDragged:
             type = com_sun_glass_events_MouseEvent_DRAG;
             button = com_sun_glass_events_MouseEvent_BUTTON_LEFT;
@@ -364,28 +364,28 @@ static jint getSwipeDirFromEvent(NSEvent *theEvent)
             type = com_sun_glass_events_MouseEvent_DRAG;
             button = com_sun_glass_events_MouseEvent_BUTTON_OTHER;
             break;
-            
+
         case NSMouseMoved:
             type = com_sun_glass_events_MouseEvent_MOVE;
             break;
-            
+
         case NSMouseEntered:
             type = com_sun_glass_events_MouseEvent_ENTER;
             [GlassTouches startTracking:self];
             self->lastTrackingNumber = [theEvent trackingNumber];
             break;
-            
+
         case NSMouseExited:
             type = com_sun_glass_events_MouseEvent_EXIT;
             [GlassTouches stopTracking:self];
             self->lastTrackingNumber = [theEvent trackingNumber];
             break;
-            
+
         case NSScrollWheel:
             type = com_sun_glass_events_MouseEvent_WHEEL;
             break;
     }
-    
+
     NSPoint viewPoint = [nsView convertPoint:[theEvent locationInWindow] fromView:nil]; // convert from window coordinates to view coordinates
     CGPoint basePoint = CGEventGetLocation([theEvent CGEvent]);
 
@@ -412,12 +412,12 @@ static jint getSwipeDirFromEvent(NSEvent *theEvent)
             }
         }
     }
-    
+
         //    NSLog(@"Event location: in window %@, in view %@, in base coordinates %d,%d",
         //          NSStringFromPoint([theEvent locationInWindow]),
         //          NSStringFromPoint(viewPoint),
         //          (jint)basePoint.x, (jint)basePoint.y);
-        
+
     jdouble rotationX = 0.0;
     jdouble rotationY = 0.0;
     if (type == com_sun_glass_events_MouseEvent_WHEEL)
@@ -431,7 +431,7 @@ static jint getSwipeDirFromEvent(NSEvent *theEvent)
             return;
         }
     }
-    
+
     BOOL block = NO;
     {
         // RT-5892
@@ -491,9 +491,9 @@ static jint getSwipeDirFromEvent(NSEvent *theEvent)
                 }
             }
         }
-                
+
         jboolean isSynthesized = JNI_FALSE;
-        
+
         jboolean isPopupTrigger = JNI_FALSE;
         if (type == com_sun_glass_events_MouseEvent_DOWN) {
             if (button == com_sun_glass_events_MouseEvent_BUTTON_RIGHT) {
@@ -505,7 +505,7 @@ static jint getSwipeDirFromEvent(NSEvent *theEvent)
                 isPopupTrigger = JNI_TRUE;
             }
         }
-        
+
         [self->lastEvent release];
         self->lastEvent = nil;
         switch (type) {
@@ -542,11 +542,11 @@ static jint getSwipeDirFromEvent(NSEvent *theEvent)
                 self->mouseIsOver = NO;
                 break;
         }
-        
+
         GET_MAIN_JENV;
         if (type == com_sun_glass_events_MouseEvent_WHEEL) {
-            // Detect mouse wheel event sender. 
-            // Can be inertia from scroll gesture, 
+            // Detect mouse wheel event sender.
+            // Can be inertia from scroll gesture,
             // scroll gesture or mouse wheel itself
             //
             // RT-22388, RT-25269
@@ -559,7 +559,7 @@ static jint getSwipeDirFromEvent(NSEvent *theEvent)
             {
                 sender = com_sun_glass_ui_mac_MacGestureSupport_SCROLL_SRC_GESTURE;
             }
-            
+
             const jclass jGestureSupportClass = [GlassHelper ClassForName:"com.sun.glass.ui.mac.MacGestureSupport"
                                                                   withEnv:env];
             if (jGestureSupportClass)
@@ -572,8 +572,8 @@ static jint getSwipeDirFromEvent(NSEvent *theEvent)
                                              rotationX, rotationY);
             }
         } else {
-            (*env)->CallVoidMethod(env, self->jView, jViewNotifyMouse, type, button, 
-                    (jint)viewPoint.x, (jint)viewPoint.y, (jint)basePoint.x, (jint)basePoint.y, 
+            (*env)->CallVoidMethod(env, self->jView, jViewNotifyMouse, type, button,
+                    (jint)viewPoint.x, (jint)viewPoint.y, (jint)basePoint.x, (jint)basePoint.y,
                     modifiers, isPopupTrigger, isSynthesized);
         }
         GLASS_CHECK_EXCEPTION(env);
@@ -797,15 +797,15 @@ static jint getSwipeDirFromEvent(NSEvent *theEvent)
 - (NSDragOperation)sendJavaDndEvent:(id <NSDraggingInfo>)info type:(jint)type
 {
     GET_MAIN_JENV;
-    
+
     NSPoint draggingLocation = [nsView convertPoint:[info draggingLocation] fromView:nil];
     int x = (int)draggingLocation.x;
     int y = (int)draggingLocation.y;
-    
+
     int xAbs = (int)([info draggingLocation].x + [self->nsView window].frame.origin.x);
     int yAbs = (int)([[self->nsView window] screen].frame.size.height - [self->nsView window].frame.origin.y
                      - [info draggingLocation].y);
-    
+
     int mask;
     NSDragOperation operation = [info draggingSourceOperationMask];
 
@@ -817,15 +817,15 @@ static jint getSwipeDirFromEvent(NSEvent *theEvent)
         case com_sun_glass_events_DndEvent_ENTER:
             DNDLOG("com_sun_glass_events_DndEvent_ENTER");
             copyToDragPasteboardIfNeeded(info);
-            mask = (*env)->CallIntMethod(env, self->jView, jViewNotifyDragEnter, x, y, xAbs, yAbs, recommendedAction);           
+            mask = (*env)->CallIntMethod(env, self->jView, jViewNotifyDragEnter, x, y, xAbs, yAbs, recommendedAction);
             break;
         case com_sun_glass_events_DndEvent_UPDATE:
             DNDLOG("com_sun_glass_events_DndEvent_UPDATE");
-            mask = (*env)->CallIntMethod(env, self->jView, jViewNotifyDragOver, x, y, xAbs, yAbs, recommendedAction);        
+            mask = (*env)->CallIntMethod(env, self->jView, jViewNotifyDragOver, x, y, xAbs, yAbs, recommendedAction);
             break;
         case com_sun_glass_events_DndEvent_PERFORM:
             DNDLOG("com_sun_glass_events_DndEvent_PERFORM");
-            mask = (*env)->CallIntMethod(env, self->jView, jViewNotifyDragDrop, x, y, xAbs, yAbs, recommendedAction);            
+            mask = (*env)->CallIntMethod(env, self->jView, jViewNotifyDragDrop, x, y, xAbs, yAbs, recommendedAction);
             break;
         case com_sun_glass_events_DndEvent_EXIT:
             DNDLOG("com_sun_glass_events_DndEvent_EXIT");
@@ -837,9 +837,9 @@ static jint getSwipeDirFromEvent(NSEvent *theEvent)
             break;
     }
     [GlassDragSource setMask:mask];
-    
+
     GLASS_CHECK_EXCEPTION(env);
-    
+
     return [GlassDragSource mapJavaMaskToNsOperation:[GlassDragSource getMask]];
 }
 
@@ -862,7 +862,7 @@ static jint getSwipeDirFromEvent(NSEvent *theEvent)
             //Try to init with drag image specified by the user
             image = [[NSImage alloc] initWithData:[pasteboard dataForType:DRAG_IMAGE_MIME]];
         }
-        
+
         if (image == nil && [NSImage canInitWithPasteboard:pasteboard] == YES)
         {
             // ask the Pasteboard for ist own image representation of its contents
@@ -897,24 +897,24 @@ static jint getSwipeDirFromEvent(NSEvent *theEvent)
             {
                 image = [[NSImage alloc] initWithContentsOfFile:@"/System/Library/CoreServices/CoreTypes.bundle/Contents/Resources/GenericDocumentIcon.icns"];
             }
-            
+
             if (image == nil)
             {
                 image = [[NSImage imageNamed:NSImageNameMultipleDocuments] retain];
             }
-            
+
             [image setSize:NSMakeSize(DEFAULT_DRAG_SIZE, DEFAULT_DRAG_SIZE)];
         }
-        
+
         if (image != nil)
         {
             // select the center of the image as the drag origin
             // TODO http://javafx-jira.kenai.com/browse/RT-17629
             // would be nice to get this info from the Java layer,
-            // so that we could adjust the drag image origin based on where in the src it was clicked on       
+            // so that we could adjust the drag image origin based on where in the src it was clicked on
             dragPoint.x -= ([image size].width/2.0f);
             dragPoint.y += ([image size].height/2.0f);
-            
+
             NSString *offsetString = [pasteboard stringForType:DRAG_IMAGE_OFFSET];
             if (offsetString != nil) {
                 NSPoint offset = NSPointFromString(offsetString);
@@ -928,7 +928,7 @@ static jint getSwipeDirFromEvent(NSEvent *theEvent)
                 if (offset.y > imageHalfY || offset.y < -imageHalfY) {
                     offset.y = imageHalfY * (offset.y > 0 ? 1 : -1);
                 }
-                
+
                 dragPoint.x += offset.x;
                 dragPoint.y -= offset.y;
             }
@@ -939,11 +939,11 @@ static jint getSwipeDirFromEvent(NSEvent *theEvent)
             image = [[NSImage alloc] initWithSize:NSMakeSize(1.0f, 1.0f)];
         }
         [self->nsView dragImage:image at:dragPoint offset:NSZeroSize event:self->lastEvent pasteboard:pasteboard source:self->nsView slideBack:YES];
-        
+
         // main thread blocked here until drag completes
-        
+
         [GlassDragSource setDelegate:nil];
-        
+
         [image release];
     }
     self->dragOperation = NSDragOperationNone;
@@ -999,15 +999,15 @@ static jint getSwipeDirFromEvent(NSEvent *theEvent)
     if ([NSThread isMainThread] == YES)
     {
         // TODO: For some reason result is not always converted to the screen coordinates,
-        // and when we call this method before we set text to updated we get the 
+        // and when we call this method before we set text to updated we get the
         // IndexOutOfBoundsException
-        // In this case we return an empty rectangle so suggestion window is shown at the 
+        // In this case we return an empty rectangle so suggestion window is shown at the
         // bottom left corner of the main screen.
         GET_MAIN_JENV;
-        jdoubleArray theArray = 
-            (jdoubleArray) (*env)->CallObjectMethod(env, 
-                                                    self->jView, 
-                                                    jViewNotifyInputMethodCandidatePosRequest, 
+        jdoubleArray theArray =
+            (jdoubleArray) (*env)->CallObjectMethod(env,
+                                                    self->jView,
+                                                    jViewNotifyInputMethodCandidatePosRequest,
                                                     pos);
         GLASS_CHECK_EXCEPTION(env);
         if (theArray != NULL) {
@@ -1046,7 +1046,7 @@ static jint getSwipeDirFromEvent(NSEvent *theEvent)
 
 /*
  The hierarchy for our view is view -> superview (host) -> window
- 
+
  1. create superview (new host) for our view
  2. create fullscreen window with the new superview
  3. create the background window (for fading out the desktop)
@@ -1067,17 +1067,17 @@ static jint getSwipeDirFromEvent(NSEvent *theEvent)
         [GlassApplication enterFullScreenExitingLoop];
         return;
     }
-    
+
     NSScreen *screen = [[self->nsView window] screen];
 
     NSRect frameInWindowScreenCoords = [self->nsView bounds];
     frameInWindowScreenCoords = [self->parentWindow convertRectToScreen:frameInWindowScreenCoords];
     NSPoint pointInPrimaryScreenCoords = frameInWindowScreenCoords.origin;
-    
+
     // Convert to local screen
     frameInWindowScreenCoords.origin.x -= screen.frame.origin.x;
     frameInWindowScreenCoords.origin.y -= screen.frame.origin.y;
-    
+
     @try
     {
         // 0. Retain the view while it's in the FS mode
@@ -1086,15 +1086,15 @@ static jint getSwipeDirFromEvent(NSEvent *theEvent)
         // 1.
         self->fullscreenHost = [[GlassHostView alloc] initWithFrame:[self->nsView bounds]];
         [self->fullscreenHost setAutoresizesSubviews:YES];
-        
+
         // 2.
         self->fullscreenWindow = [[GlassFullscreenWindow alloc] initWithContentRect:frameInWindowScreenCoords
                                                                        withHostView:self->fullscreenHost
                                                                            withView:self->nsView withScreen:screen
                                                                           withPoint:pointInPrimaryScreenCoords];
-        
+
         // 3.
-        
+
         [self->parentWindow disableFlushWindow];
         {
             // handle plugin case
@@ -1103,7 +1103,7 @@ static jint getSwipeDirFromEvent(NSEvent *theEvent)
                 GlassEmbeddedWindow *window = (GlassEmbeddedWindow*)self->parentWindow;
                 [window setFullscreenWindow:self->fullscreenWindow];
             }
-            
+
             // 4.
             [self->nsView retain];
             {
@@ -1111,13 +1111,13 @@ static jint getSwipeDirFromEvent(NSEvent *theEvent)
                 [self->fullscreenHost addSubview:self->nsView];
             }
             [self->nsView release];
-            
+
             if ([[self->parentWindow delegate] isKindOfClass:[GlassWindow class]] == YES)
             {
                 GlassWindow *window = (GlassWindow*)[self->parentWindow delegate];
                 [window setFullscreenWindow:self->fullscreenWindow];
             }
-            
+
             // 5.
             [self->fullscreenWindow setInitialFirstResponder:self->nsView];
             [self->fullscreenWindow makeFirstResponder:self->nsView];
@@ -1130,9 +1130,9 @@ static jint getSwipeDirFromEvent(NSEvent *theEvent)
             [self->fullscreenWindow orderFrontRegardless];
             [self->fullscreenWindow makeMainWindow];
         }
-        
+
         // 6.
-        
+
         NSRect screenFrame = [screen frame];
         NSRect fullscreenFrame = [screen frame];
         if (keepRatio == YES)
@@ -1152,11 +1152,11 @@ static jint getSwipeDirFromEvent(NSEvent *theEvent)
                 fullscreenFrame.origin.x += (screenFrame.size.width - fullscreenFrame.size.width) / 2.0f;
             }
         }
-        
+
         // 7.
         //[self->fullscreenWindow setBackgroundColor:[NSColor whiteColor]]; // debug
         [self->fullscreenWindow setFrame:frameInWindowScreenCoords display:YES animate:animate];
-        
+
         // 8.
         [self->fullscreenWindow toggleFullScreen:self->fullscreenWindow];
     }
@@ -1171,7 +1171,7 @@ static jint getSwipeDirFromEvent(NSEvent *theEvent)
 - (void)exitFullscreenWithAnimate:(BOOL)animate
 {
     LOG("GlassViewDelegate exitFullscreenWithAnimate");
-    
+
     @try
     {
         if (self->nativeFullScreenModeWindow)
@@ -1181,13 +1181,13 @@ static jint getSwipeDirFromEvent(NSEvent *theEvent)
             [GlassApplication enterFullScreenExitingLoop];
             return;
         }
-        
+
         [self->fullscreenWindow toggleFullScreen:self->fullscreenWindow];
-        
+
         NSRect frame = [self->parentHost bounds];
         frame.origin = [self->fullscreenWindow point];
         [self->fullscreenWindow setFrame:frame display:YES animate:animate];
-        
+
         [self->fullscreenWindow disableFlushWindow];
         {
             [self->nsView retain];
@@ -1196,17 +1196,17 @@ static jint getSwipeDirFromEvent(NSEvent *theEvent)
                 [self->parentHost addSubview:self->nsView];
             }
             [self->nsView release];
-            
+
             // handle plugin case
             if ([[self->nsView window] isKindOfClass:[GlassEmbeddedWindow class]] == YES)
             {
                 GlassEmbeddedWindow *window = (GlassEmbeddedWindow*)[self->nsView window];
                 [window setFullscreenWindow:nil];
             }
-            
+
             [self->parentWindow setInitialFirstResponder:self->nsView];
             [self->parentWindow makeFirstResponder:self->nsView];
-            
+
             if ([[self->parentWindow delegate] isKindOfClass:[GlassWindow class]])
             {
                 GlassWindow *window = (GlassWindow*)[self->parentWindow delegate];
@@ -1215,11 +1215,11 @@ static jint getSwipeDirFromEvent(NSEvent *theEvent)
         }
         [self->fullscreenWindow enableFlushWindow];
         [self->parentWindow enableFlushWindow];
-        
+
         [self->fullscreenWindow orderOut:nil];
         [self->fullscreenWindow close];
         self->fullscreenWindow = nil;
-        
+
         // It was retained upon entering the FS mode
         [self->nsView release];
     }
@@ -1227,7 +1227,7 @@ static jint getSwipeDirFromEvent(NSEvent *theEvent)
     {
         NSLog(@"exitFullscreenWithAnimate caught exception: %@", e);
     }
-    
+
     [self sendJavaFullScreenEvent:NO withNativeWidget:NO];
 }
 

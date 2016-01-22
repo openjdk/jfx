@@ -200,7 +200,7 @@ public class CommonDialogs {
         if (extensionFilters != null) {
             _extensionFilters = extensionFilters.toArray(new ExtensionFilter[extensionFilters.size()]);
         }
-        
+
         if (extensionFilters == null
                 || extensionFilters.isEmpty()
                 || defaultFilterIndex < 0

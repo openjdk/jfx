@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef DFGAllocator_h
@@ -48,17 +48,17 @@ class Allocator {
 public:
     Allocator();
     ~Allocator();
-    
+
     void* allocate(); // Use placement new to allocate, and avoid using this method.
     void free(T*); // Call this method to delete; never use 'delete' directly.
-    
+
     void freeAll(); // Only call this if T has a trivial destructor.
     void reset(); // Like freeAll(), but also returns all memory to the OS.
-    
+
     unsigned indexOf(const T*);
-    
+
     static Allocator* allocatorOf(const T*);
-    
+
 private:
     void* bumpAllocate();
     void* freeListAllocate();
@@ -71,15 +71,15 @@ private:
         T* data() { return bitwise_cast<T*>(bitwise_cast<char*>(this) + headerSize()); }
         bool isInThisRegion(const T* pointer) { return static_cast<unsigned>(pointer - data()) < numberOfThingsPerRegion(); }
         static Region* regionFor(const T* pointer) { return bitwise_cast<Region*>(bitwise_cast<uintptr_t>(pointer) & ~(size() - 1)); }
-        
+
         PageAllocationAligned m_allocation;
         Allocator* m_allocator;
         Region* m_next;
     };
-    
+
     void freeRegionsStartingAt(Region*);
     void startBumpingIn(Region*);
-    
+
     Region* m_regionHead;
     void** m_freeListHead;
     T* m_bumpEnd;
@@ -113,7 +113,7 @@ template<typename T>
 void Allocator<T>::free(T* object)
 {
     object->~T();
-    
+
     void** cell = bitwise_cast<void**>(object);
     *cell = m_freeListHead;
     m_freeListHead = cell;
@@ -127,16 +127,16 @@ void Allocator<T>::freeAll()
         ASSERT(!m_freeListHead);
         return;
     }
-    
+
     // Since the caller is opting out of calling the destructor for any allocated thing,
     // we have two choices, plus a continuum between: we can either just delete all regions
     // (i.e. call reset()), or we can make all regions available for reuse. We do something
     // that optimizes for (a) speed of freeAll(), (b) the assumption that if the user calls
     // freeAll() then they will probably be calling allocate() in the near future. Namely,
     // we free all but one region, and make the remaining region a bump allocation region.
-    
+
     freeRegionsStartingAt(m_regionHead->m_next);
-    
+
     m_regionHead->m_next = 0;
     m_freeListHead = 0;
     startBumpingIn(m_regionHead);
@@ -146,7 +146,7 @@ template<typename T>
 void Allocator<T>::reset()
 {
     freeRegionsStartingAt(m_regionHead);
-    
+
     m_regionHead = 0;
     m_freeListHead = 0;
     m_bumpRemaining = 0;
@@ -197,10 +197,10 @@ void* Allocator<T>::allocateSlow()
 {
     ASSERT(!m_freeListHead);
     ASSERT(!m_bumpRemaining);
-    
+
     if (logCompilationChanges())
         dataLog("Allocating another allocator region.\n");
-    
+
     PageAllocationAligned allocation = PageAllocationAligned::allocate(Region::size(), Region::size(), OSAllocator::JSGCHeapPages);
     if (!static_cast<bool>(allocation))
         CRASH();
@@ -210,7 +210,7 @@ void* Allocator<T>::allocateSlow()
     startBumpingIn(region);
     region->m_next = m_regionHead;
     m_regionHead = region;
-    
+
     void* result = bumpAllocate();
     ASSERT(result);
     return result;

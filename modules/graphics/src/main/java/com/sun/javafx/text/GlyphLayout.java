@@ -129,7 +129,7 @@ public abstract class GlyphLayout {
                                TextSpan span, byte level, boolean complex) {
 
         /* The complex flag indicates complex script, and in general all
-         * bidi scripts are consider complex. That said, using directional 
+         * bidi scripts are consider complex. That said, using directional
          * control (RLO) is possible to force RTL direction on non-complex
          * scripts. Thus, odd level must be threat as complex.
          */

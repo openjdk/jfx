@@ -40,17 +40,17 @@ import java.util.List;
 
 /**
  *
- * 
+ *
  */
 public class BuiltinGlossary extends Glossary {
-    
+
     public BuiltinGlossary() {
     }
 
     /*
      * Glossary
      */
-    
+
     @Override
     public List<String> queryControllerClasses(URL fxmlLocation) {
         if (fxmlLocation == null ) {
@@ -98,7 +98,7 @@ public class BuiltinGlossary extends Glossary {
             }
         }
     }
-    
+
     @Override
     public List<String> queryEventHandlers(URL fxmlLocation, String controllerClass) {
         assert controllerClass != null;
@@ -123,17 +123,17 @@ public class BuiltinGlossary extends Glossary {
             }
         }
     }
-    
+
     // It's better to use URL.toURI than URL.getPath to feed File constructor.
     private File getFileFromURL(URL location) {
         File res;
-        
+
         try {
             res= new File(location.toURI());
         } catch (URISyntaxException ex) {
             throw new RuntimeException("Bug", ex); //NOI18N
         }
-        
+
         return res;
     }
 }

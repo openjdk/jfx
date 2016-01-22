@@ -61,7 +61,7 @@
 typedef struct _ModuleTypeInfo ModuleTypeInfo;
 typedef struct _ModuleInterfaceInfo ModuleInterfaceInfo;
 
-struct _ModuleTypeInfo 
+struct _ModuleTypeInfo
 {
   gboolean  loaded;
   GType     type;
@@ -69,7 +69,7 @@ struct _ModuleTypeInfo
   GTypeInfo info;
 };
 
-struct _ModuleInterfaceInfo 
+struct _ModuleInterfaceInfo
 {
   gboolean       loaded;
   GType          instance_type;
@@ -79,21 +79,21 @@ struct _ModuleInterfaceInfo
 
 static void g_type_module_use_plugin              (GTypePlugin     *plugin);
 static void g_type_module_complete_type_info      (GTypePlugin     *plugin,
-						   GType            g_type,
-						   GTypeInfo       *info,
-						   GTypeValueTable *value_table);
+                           GType            g_type,
+                           GTypeInfo       *info,
+                           GTypeValueTable *value_table);
 static void g_type_module_complete_interface_info (GTypePlugin     *plugin,
-						   GType            instance_type,
-						   GType            interface_type,
-						   GInterfaceInfo  *info);
- 
+                           GType            instance_type,
+                           GType            interface_type,
+                           GInterfaceInfo  *info);
+
 static gpointer parent_class = NULL;
 
 static void
 g_type_module_dispose (GObject *object)
 {
   GTypeModule *module = G_TYPE_MODULE (object);
-  
+
   if (module->type_infos || module->interface_infos)
     {
       g_warning (G_STRLOC ": unsolicitated invocation of g_object_run_dispose() on GTypeModule");
@@ -120,7 +120,7 @@ g_type_module_class_init (GTypeModuleClass *class)
   GObjectClass *gobject_class = G_OBJECT_CLASS (class);
 
   parent_class = G_OBJECT_CLASS (g_type_class_peek_parent (class));
-  
+
   gobject_class->dispose = g_type_module_dispose;
   gobject_class->finalize = g_type_module_finalize;
 }
@@ -162,7 +162,7 @@ g_type_module_get_type (void)
 
       g_type_add_interface_static (type_module_type, G_TYPE_TYPE_PLUGIN, &iface_info);
     }
-  
+
   return type_module_type;
 }
 
@@ -170,12 +170,12 @@ g_type_module_get_type (void)
  * g_type_module_set_name:
  * @module: a #GTypeModule.
  * @name: a human-readable name to use in error messages.
- * 
- * Sets the name for a #GTypeModule 
+ *
+ * Sets the name for a #GTypeModule
  */
 void
 g_type_module_set_name (GTypeModule  *module,
-			const gchar  *name)
+            const gchar  *name)
 {
   g_return_if_fail (G_IS_TYPE_MODULE (module));
 
@@ -185,15 +185,15 @@ g_type_module_set_name (GTypeModule  *module,
 
 static ModuleTypeInfo *
 g_type_module_find_type_info (GTypeModule *module,
-			      GType        type)
+                  GType        type)
 {
   GSList *tmp_list = module->type_infos;
   while (tmp_list)
     {
       ModuleTypeInfo *type_info = tmp_list->data;
       if (type_info->type == type)
-	return type_info;
-      
+    return type_info;
+
       tmp_list = tmp_list->next;
     }
 
@@ -202,17 +202,17 @@ g_type_module_find_type_info (GTypeModule *module,
 
 static ModuleInterfaceInfo *
 g_type_module_find_interface_info (GTypeModule *module,
-				   GType        instance_type,
-				   GType        interface_type)
+                   GType        instance_type,
+                   GType        interface_type)
 {
   GSList *tmp_list = module->interface_infos;
   while (tmp_list)
     {
       ModuleInterfaceInfo *interface_info = tmp_list->data;
       if (interface_info->instance_type == instance_type &&
-	  interface_info->interface_type == interface_type)
-	return interface_info;
-      
+      interface_info->interface_type == interface_type)
+    return interface_info;
+
       tmp_list = tmp_list->next;
     }
 
@@ -222,12 +222,12 @@ g_type_module_find_interface_info (GTypeModule *module,
 /**
  * g_type_module_use:
  * @module: a #GTypeModule
- * 
+ *
  * Increases the use count of a #GTypeModule by one. If the
  * use count was zero before, the plugin will be loaded.
- * If loading the plugin fails, the use count is reset to 
- * its prior value. 
- * 
+ * If loading the plugin fails, the use count is reset to
+ * its prior value.
+ *
  * Returns: %FALSE if the plugin needed to be loaded and
  *  loading the plugin failed.
  */
@@ -240,30 +240,30 @@ g_type_module_use (GTypeModule *module)
   if (module->use_count == 1)
     {
       GSList *tmp_list;
-      
+
       if (!G_TYPE_MODULE_GET_CLASS (module)->load (module))
-	{
-	  module->use_count--;
-	  return FALSE;
-	}
+    {
+      module->use_count--;
+      return FALSE;
+    }
 
       tmp_list = module->type_infos;
       while (tmp_list)
-	{
-	  ModuleTypeInfo *type_info = tmp_list->data;
-	  if (!type_info->loaded)
-	    {
-	      g_warning ("plugin '%s' failed to register type '%s'\n",
-			 module->name ? module->name : "(unknown)",
-			 g_type_name (type_info->type));
-	      module->use_count--;
-	      return FALSE;
-	    }
-	  
-	  tmp_list = tmp_list->next;
-	}
+    {
+      ModuleTypeInfo *type_info = tmp_list->data;
+      if (!type_info->loaded)
+        {
+          g_warning ("plugin '%s' failed to register type '%s'\n",
+             module->name ? module->name : "(unknown)",
+             g_type_name (type_info->type));
+          module->use_count--;
+          return FALSE;
+        }
+
+      tmp_list = tmp_list->next;
     }
- 
+    }
+
   return TRUE;
 }
 
@@ -293,15 +293,15 @@ g_type_module_unuse (GTypeModule *module)
 
       tmp_list = module->type_infos;
       while (tmp_list)
-	{
-	  ModuleTypeInfo *type_info = tmp_list->data;
-	  type_info->loaded = FALSE;
+    {
+      ModuleTypeInfo *type_info = tmp_list->data;
+      type_info->loaded = FALSE;
 
-	  tmp_list = tmp_list->next;
-	}
+      tmp_list = tmp_list->next;
+    }
     }
 }
-	
+
 static void
 g_type_module_use_plugin (GTypePlugin *plugin)
 {
@@ -310,31 +310,31 @@ g_type_module_use_plugin (GTypePlugin *plugin)
   if (!g_type_module_use (module))
     {
       g_warning ("Fatal error - Could not reload previously loaded plugin '%s'\n",
-		 module->name ? module->name : "(unknown)");
+         module->name ? module->name : "(unknown)");
       exit (1);
     }
 }
 
 static void
 g_type_module_complete_type_info (GTypePlugin     *plugin,
-				  GType            g_type,
-				  GTypeInfo       *info,
-				  GTypeValueTable *value_table)
+                  GType            g_type,
+                  GTypeInfo       *info,
+                  GTypeValueTable *value_table)
 {
   GTypeModule *module = G_TYPE_MODULE (plugin);
   ModuleTypeInfo *module_type_info = g_type_module_find_type_info (module, g_type);
 
   *info = module_type_info->info;
-  
+
   if (module_type_info->info.value_table)
     *value_table = *module_type_info->info.value_table;
 }
 
-static void 
+static void
 g_type_module_complete_interface_info (GTypePlugin    *plugin,
-				       GType           instance_type,
-				       GType           interface_type,
-				       GInterfaceInfo *info)
+                       GType           instance_type,
+                       GType           interface_type,
+                       GInterfaceInfo *info)
 {
   GTypeModule *module = G_TYPE_MODULE (plugin);
   ModuleInterfaceInfo *module_interface_info = g_type_module_find_interface_info (module, instance_type, interface_type);
@@ -366,14 +366,14 @@ g_type_module_complete_interface_info (GTypePlugin    *plugin,
  */
 GType
 g_type_module_register_type (GTypeModule     *module,
-			     GType            parent_type,
-			     const gchar     *type_name,
-			     const GTypeInfo *type_info,
-			     GTypeFlags       flags)
+                 GType            parent_type,
+                 const gchar     *type_name,
+                 const GTypeInfo *type_info,
+                 GTypeFlags       flags)
 {
   ModuleTypeInfo *module_type_info = NULL;
   GType type;
-  
+
   g_return_val_if_fail (module != NULL, 0);
   g_return_val_if_fail (type_name != NULL, 0);
   g_return_val_if_fail (type_info != NULL, 0);
@@ -384,10 +384,10 @@ g_type_module_register_type (GTypeModule     *module,
       GTypePlugin *old_plugin = g_type_get_plugin (type);
 
       if (old_plugin != G_TYPE_PLUGIN (module))
-	{
-	  g_warning ("Two different plugins tried to register '%s'.", type_name);
-	  return 0;
-	}
+    {
+      g_warning ("Two different plugins tried to register '%s'.", type_name);
+      return 0;
+    }
     }
 
   if (type)
@@ -397,31 +397,31 @@ g_type_module_register_type (GTypeModule     *module,
       if (module_type_info == NULL)
       {
         g_warning ("Cannot find module type info.");
-	    return 0;
+        return 0;
       }
 #endif // GSTREAMER_LITE
 
       if (module_type_info->parent_type != parent_type)
-	{
-	  const gchar *parent_type_name = g_type_name (parent_type);
-	  
-	  g_warning ("Type '%s' recreated with different parent type.\n"
-		     "(was '%s', now '%s')", type_name,
-		     g_type_name (module_type_info->parent_type),
-		     parent_type_name ? parent_type_name : "(unknown)");
-	  return 0;
-	}
+    {
+      const gchar *parent_type_name = g_type_name (parent_type);
+
+      g_warning ("Type '%s' recreated with different parent type.\n"
+             "(was '%s', now '%s')", type_name,
+             g_type_name (module_type_info->parent_type),
+             parent_type_name ? parent_type_name : "(unknown)");
+      return 0;
+    }
 
       if (module_type_info->info.value_table)
-	g_free ((GTypeValueTable *) module_type_info->info.value_table);
+    g_free ((GTypeValueTable *) module_type_info->info.value_table);
     }
   else
     {
       module_type_info = g_new (ModuleTypeInfo, 1);
-      
+
       module_type_info->parent_type = parent_type;
       module_type_info->type = g_type_register_dynamic (parent_type, type_name, G_TYPE_PLUGIN (module), flags);
-      
+
       module->type_infos = g_slist_prepend (module->type_infos, module_type_info);
     }
 
@@ -429,7 +429,7 @@ g_type_module_register_type (GTypeModule     *module,
   module_type_info->info = *type_info;
   if (type_info->value_table)
     module_type_info->info.value_table = g_memdup (type_info->value_table,
-						   sizeof (GTypeValueTable));
+                           sizeof (GTypeValueTable));
 
   return module_type_info->type;
 }
@@ -450,33 +450,33 @@ g_type_module_register_type (GTypeModule     *module,
  */
 void
 g_type_module_add_interface (GTypeModule          *module,
-			     GType                 instance_type,
-			     GType                 interface_type,
-			     const GInterfaceInfo *interface_info)
+                 GType                 instance_type,
+                 GType                 interface_type,
+                 const GInterfaceInfo *interface_info)
 {
   ModuleInterfaceInfo *module_interface_info = NULL;
-  
+
   g_return_if_fail (module != NULL);
   g_return_if_fail (interface_info != NULL);
 
   if (g_type_is_a (instance_type, interface_type))
     {
       GTypePlugin *old_plugin = g_type_interface_get_plugin (instance_type,
-							     interface_type);
+                                 interface_type);
 
       if (!old_plugin)
-	{
-	  g_warning ("Interface '%s' for '%s' was previously registered statically or for a parent type.",
-		     g_type_name (interface_type), g_type_name (instance_type));
-	  return;
-	}
+    {
+      g_warning ("Interface '%s' for '%s' was previously registered statically or for a parent type.",
+             g_type_name (interface_type), g_type_name (instance_type));
+      return;
+    }
       else if (old_plugin != G_TYPE_PLUGIN (module))
-	{
-	  g_warning ("Two different plugins tried to register interface '%s' for '%s'.",
-		     g_type_name (interface_type), g_type_name (instance_type));
-	  return;
-	}
-      
+    {
+      g_warning ("Two different plugins tried to register interface '%s' for '%s'.",
+             g_type_name (interface_type), g_type_name (instance_type));
+      return;
+    }
+
       module_interface_info = g_type_module_find_interface_info (module, instance_type, interface_type);
 
       g_assert (module_interface_info);
@@ -484,15 +484,15 @@ g_type_module_add_interface (GTypeModule          *module,
   else
     {
       module_interface_info = g_new (ModuleInterfaceInfo, 1);
-      
+
       module_interface_info->instance_type = instance_type;
       module_interface_info->interface_type = interface_type;
-      
+
       g_type_add_interface_dynamic (instance_type, interface_type, G_TYPE_PLUGIN (module));
-      
+
       module->interface_infos = g_slist_prepend (module->interface_infos, module_interface_info);
     }
-  
+
   module_interface_info->loaded = TRUE;
   module_interface_info->info = *interface_info;
 }

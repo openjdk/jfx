@@ -56,21 +56,21 @@ import javafx.beans.value.ObservableValue;
  * <p>
  * Children of this {@code Transition} inherit {@link #nodeProperty() node}, if their
  * {@code node} property is not specified.
- * 
+ *
  * <p>
  * Code Segment Example:
  * </p>
- * 
+ *
  * <pre>
  * <code>
  *     Rectangle rect = new Rectangle (100, 40, 100, 100);
  *     rect.setArcHeight(50);
  *     rect.setArcWidth(50);
  *     rect.setFill(Color.VIOLET);
- * 
+ *
  *     final Duration SEC_2 = Duration.millis(2000);
  *     final Duration SEC_3 = Duration.millis(3000);
- * 
+ *
  *     PauseTransition pt = new PauseTransition(Duration.millis(1000));
  *     FadeTransition ft = new FadeTransition(SEC_3);
  *     ft.setFromValue(1.0f);
@@ -91,15 +91,15 @@ import javafx.beans.value.ObservableValue;
  *     st.setByY(1.5f);
  *     st.setCycleCount(2f);
  *     st.setAutoReverse(true);
- * 
+ *
  *     SequentialTransition seqT = new SequentialTransition (rect, pt, ft, tt, rt, st);
  *     seqT.play();
  * </code>
  * </pre>
- * 
+ *
  * @see Transition
  * @see Animation
- * 
+ *
  * @since JavaFX 2.0
  */
 public final class SequentialTransition extends Transition {
@@ -142,7 +142,7 @@ public final class SequentialTransition extends Transition {
         }
 
     };
-    
+
     /**
      * This {@link javafx.scene.Node} is used in all child {@link Transition
      * Transitions}, that do not define a target {@code Node} themselves. This
@@ -175,7 +175,7 @@ public final class SequentialTransition extends Transition {
     }
 
     private final Set<Animation> childrenSet = new HashSet<Animation>();
-    
+
     private final ObservableList<Animation> children = new VetoableListDecorator<Animation>(new TrackableObservableList<Animation>() {
         @Override
         protected void onChanged(Change<Animation> c) {
@@ -256,7 +256,7 @@ public final class SequentialTransition extends Transition {
 
     /**
      * The constructor of {@code SequentialTransition}.
-     * 
+     *
      * @param node
      *            The target {@link javafx.scene.Node} to be used in child
      *            {@link Transition Transitions} that have no {@code Node} specified
@@ -273,7 +273,7 @@ public final class SequentialTransition extends Transition {
 
     /**
      * The constructor of {@code SequentialTransition}.
-     * 
+     *
      * @param children
      *            The child {@link javafx.animation.Animation Animations} of
      *            this {@code SequentialTransition}
@@ -284,7 +284,7 @@ public final class SequentialTransition extends Transition {
 
     /**
      * The constructor of {@code SequentialTransition}.
-     * 
+     *
      * @param node
      *            The target {@link javafx.scene.Node} to be used in child
      *            {@link Transition Transitions} that have no {@code Node} specified
@@ -324,7 +324,7 @@ public final class SequentialTransition extends Transition {
         for (final Animation animation : getChildren()) {
             currentDur = currentDur.add(animation.getDelay());
             final double absRate = Math.abs(animation.getRate());
-            currentDur = currentDur.add((absRate < EPSILON) ? 
+            currentDur = currentDur.add((absRate < EPSILON) ?
                     animation.getTotalDuration() : animation.getTotalDuration().divide(absRate));
             if (currentDur.isIndefinite()) {
                 break;
@@ -339,7 +339,7 @@ public final class SequentialTransition extends Transition {
     }
 
     private int findNewIndex(long ticks) {
-        if ((curIndex != BEFORE) 
+        if ((curIndex != BEFORE)
                 && (curIndex != end)
                 && (startTimes[curIndex] <= ticks)
                 && (ticks <= startTimes[curIndex + 1])) {
@@ -356,7 +356,7 @@ public final class SequentialTransition extends Transition {
     @Override
     void impl_sync(boolean forceSync) {
         super.impl_sync(forceSync);
-        
+
         if ((forceSync && childrenChanged) || (startTimes == null)) {
             cachedChildren = getChildren().toArray(EMPTY_ANIMATION_ARRAY);
             end = cachedChildren.length;
@@ -658,7 +658,7 @@ public final class SequentialTransition extends Transition {
         if (status == Status.STOPPED && !forceJump) {
             return;
         }
-        
+
         impl_sync(false);
         final double frac = calculateFraction(currentTicks, cycleTicks);
         final long newTicks = Math.max(0, Math.min(getCachedInterpolator().interpolate(0, cycleTicks, frac), cycleTicks));
@@ -720,13 +720,13 @@ public final class SequentialTransition extends Transition {
                 //NOTE: do not clean up forceChildSync[i] here. Another sync will be needed during the play
                 // The reason is we have 2 different use-cases for jumping (1)play from start, (2)play next cycle.
                 // and 2 different types of sub-transitions (A)"by" transitions that need to synchronize on
-                // the current state and move property by certain value and (B)"from-to" transitions that 
+                // the current state and move property by certain value and (B)"from-to" transitions that
                 // move from one point to another on each play/cycle. We can't query if transition is A or B.
                 //
                 // Now for combination 1A we need to synchronize here, as the subsequent jump would move
                 // the property to the previous value. 1B doesn't need to sync here, but it's not unsafe to
                 // do it. As forceChildSync is set only in case (1) and not in case (2), the cycles are always equal.
-                // 
+                //
                 // Now the reason why we cannot clean forceChildSync[i] here is that while we need to sync here,
                 // there might be children of (A)-"by" type that operate on the same property, but fail to synchronize
                 // them when they start would mean they all would have the same value at the beginning.

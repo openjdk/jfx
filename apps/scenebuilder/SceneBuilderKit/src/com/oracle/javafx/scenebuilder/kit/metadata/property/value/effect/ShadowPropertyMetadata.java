@@ -48,7 +48,7 @@ import javafx.scene.paint.Color;
  *
  */
 public class ShadowPropertyMetadata extends ComplexPropertyMetadata<Shadow> {
-    
+
     private final EnumerationPropertyMetadata blurTypeMetadata
             = new EnumerationPropertyMetadata(new PropertyName("blurType"), //NOI18N
             BlurType.class, true, BlurType.THREE_PASS_BOX, InspectorPath.UNUSED);
@@ -68,7 +68,7 @@ public class ShadowPropertyMetadata extends ComplexPropertyMetadata<Shadow> {
             = new DoublePropertyMetadata(new PropertyName("radius"), //NOI18N
             DoublePropertyMetadata.DoubleKind.SIZE, true /* readWrite */, 10.0, InspectorPath.UNUSED);
 
-    public ShadowPropertyMetadata(PropertyName name, boolean readWrite, 
+    public ShadowPropertyMetadata(PropertyName name, boolean readWrite,
             Shadow defaultValue, InspectorPath inspectorPath) {
         super(name, Shadow.class, readWrite, defaultValue, inspectorPath);
     }
@@ -76,11 +76,11 @@ public class ShadowPropertyMetadata extends ComplexPropertyMetadata<Shadow> {
     /*
      * ComplexPropertyMetadata
      */
-    
+
     @Override
     public FXOMInstance makeFxomInstanceFromValue(Shadow value, FXOMDocument fxomDocument) {
         final FXOMInstance result = new FXOMInstance(fxomDocument, value.getClass());
-        
+
         blurTypeMetadata.setValue(result, value.getBlurType().toString());
         colorMetadata.setValue(result, value.getColor());
         heightMetadata.setValue(result, value.getHeight());

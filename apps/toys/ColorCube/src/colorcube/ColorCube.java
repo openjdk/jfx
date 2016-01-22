@@ -175,7 +175,7 @@ public class ColorCube extends Application {
         stage.setScene(scene);
         stage.sizeToScene();
         stage.show();
-        
+
         mainGroup.requestFocus();
         KeyValue kv = new KeyValue (mainGroup.rotateProperty(), Float.valueOf(-360));
         KeyFrame kf = new KeyFrame(Duration.seconds(4), kv);

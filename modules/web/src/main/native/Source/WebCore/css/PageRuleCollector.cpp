@@ -66,7 +66,7 @@ void PageRuleCollector::matchAllPageRules(int pageIndex)
     const bool isLeft = isLeftPage(pageIndex);
     const bool isFirst = isFirstPage(pageIndex);
     const String page = pageName(pageIndex);
-    
+
     matchPageRules(CSSDefaultStyleSheets::defaultPrintStyle, isLeft, isFirst, page);
     matchPageRules(m_ruleSets.userStyle(), isLeft, isFirst, page);
     // Only consider the global author RuleSet for @page rules, as per the HTML5 spec.

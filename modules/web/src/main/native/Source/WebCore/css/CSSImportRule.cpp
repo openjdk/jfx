@@ -75,18 +75,18 @@ String CSSImportRule::cssText() const
         }
     }
     result.append(';');
-    
+
     return result.toString();
 }
 
 CSSStyleSheet* CSSImportRule::styleSheet() const
-{ 
+{
     if (!m_importRule->styleSheet())
         return 0;
 
     if (!m_styleSheetCSSOMWrapper)
         m_styleSheetCSSOMWrapper = CSSStyleSheet::create(*m_importRule->styleSheet(), const_cast<CSSImportRule*>(this));
-    return m_styleSheetCSSOMWrapper.get(); 
+    return m_styleSheetCSSOMWrapper.get();
 }
 
 void CSSImportRule::reattach(StyleRuleBase*)

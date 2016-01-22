@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -78,7 +78,7 @@ static bool truncateTrace(const char* symbolName)
         || !strcmp(symbolName, "WTF::fastMalloc(unsigned long)")
         || !strcmp(symbolName, "WTF::calculateUTCOffset()")
         || !strcmp(symbolName, "JSC::DFG::ByteCodeParser::parseCodeBlock()");
-        
+
 }
 
 // Each trace consists of a sequence of zero or more 'EngineFrame' entries,
@@ -182,7 +182,7 @@ void CodeProfile::report()
     // Output the profile tree.
     dataLogF("Total samples: %lld\n", static_cast<long long>(profile.childCount()));
     profile.dump();
-    
+
     for (size_t i = 0 ; i < m_children.size(); ++i)
         m_children[i]->report();
 

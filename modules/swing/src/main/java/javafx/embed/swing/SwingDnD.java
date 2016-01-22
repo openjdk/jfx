@@ -234,7 +234,7 @@ final class SwingDnD {
         return (dragSource, dragAction) -> {
             assert Toolkit.getToolkit().isFxUserThread();
             assert dragSource != null;
-            
+
             // The method is called from FX Scene just before entering
             // nested event loop servicing DnD events.
             // It should initialize DnD in AWT EDT.
@@ -242,7 +242,7 @@ final class SwingDnD {
                 assert fxDragSource == null;
                 assert swingDragSource == null;
                 assert fxDropTarget == null;
-                
+
                 fxDragSource = dragSource;
                 startDrag(me, dndTransferable, dragSource.
                         getSupportedActions(), dragAction);

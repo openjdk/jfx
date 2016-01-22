@@ -68,7 +68,7 @@ public class FXActivity extends Activity  {
 
     private static final String TAG = "FXActivity";
     private static final String JFX_BUILD = "8u60-b2-SNAPSHOT";
-    
+
     private static final String ACTIVITY_LIB = "activity";
     private static final String META_DATA_LAUNCHER_CLASS = "launcher.class";
     private static final String DEFAULT_LAUNCHER_CLASS = "javafxports.android.DalvikLauncher";
@@ -94,7 +94,7 @@ public class FXActivity extends Activity  {
 
 
     // Cache method handles
-    // Can not access com.sun.glass.ui.android.DalvikInput directly, because the javafx classes are loaded with a different classloader 
+    // Can not access com.sun.glass.ui.android.DalvikInput directly, because the javafx classes are loaded with a different classloader
  //   private Method onMultiTouchEventMethod;
     private Method onKeyEventMethod;
     private Method onSurfaceChangedNativeMethod1;
@@ -104,15 +104,15 @@ public class FXActivity extends Activity  {
 
     //configurations
     private int SCREEN_ORIENTATION = 1;
-    
+
     private String launcherClassName;
     private String mainClassName;
     private String preloaderClassName;
-    
+
     private String currentBuildStamp;
     private Properties classLoaderProperties;
     private File dexInternalStoragePath;
-    
+
     private static final Bundle metadata = new Bundle();
     private FXDalvikEntity fxDalvikEntity;
 
@@ -120,7 +120,7 @@ public class FXActivity extends Activity  {
         Log.v(TAG, "Initializing JavaFX Platform, Using "+JFX_BUILD);
         System.loadLibrary(ACTIVITY_LIB);
     }
-        
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -138,7 +138,7 @@ public class FXActivity extends Activity  {
 
 
         mView = fxDalvikEntity.createView();
-        
+
         mViewGroup = new FrameLayout(this);
         mViewGroup.addView(mView);
         setContentView(mViewGroup);
@@ -164,17 +164,17 @@ public class FXActivity extends Activity  {
             Log.w(TAG, "Error getting Application info.");
         }
 
-        try {            
+        try {
             ActivityInfo ai = FXActivity.this.getPackageManager().getActivityInfo(
                     getIntent().getComponent(), PackageManager.GET_META_DATA);
             if (ai != null && ai.metaData != null) {
-                metadata.putAll(ai.metaData);           
+                metadata.putAll(ai.metaData);
             }
 
         } catch (NameNotFoundException e) {
             Log.w(TAG, "Error getting Activity info.");
         }
-        
+
         int dport = metadata.getInt(META_DATA_DEBUG_PORT);
         if (dport > 0) {
             android.os.Debug.waitForDebugger();
@@ -278,7 +278,7 @@ public class FXActivity extends Activity  {
                 } catch (Exception e) {
                     throw new RuntimeException("Failed to invoke com.sun.glass.ui.android.DalvikInput.onConfigurationChangedNative method by reflection", e);
                 }
-       
+
             }
             change = 0;
         }

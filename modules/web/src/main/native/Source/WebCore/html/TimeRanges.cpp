@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -41,11 +41,11 @@ TimeRanges::TimeRanges(double start, double end)
 PassRefPtr<TimeRanges> TimeRanges::copy() const
 {
     RefPtr<TimeRanges> newSession = TimeRanges::create();
-    
+
     unsigned size = m_ranges.size();
     for (unsigned i = 0; i < size; i++)
         newSession->add(m_ranges[i].m_start, m_ranges[i].m_end);
-    
+
     return newSession.release();
 }
 
@@ -100,8 +100,8 @@ void TimeRanges::unionWith(const TimeRanges* other)
     m_ranges.swap(unioned->m_ranges);
 }
 
-double TimeRanges::start(unsigned index, ExceptionCode& ec) const 
-{ 
+double TimeRanges::start(unsigned index, ExceptionCode& ec) const
+{
     if (index >= length()) {
         ec = INDEX_SIZE_ERR;
         return 0;
@@ -109,8 +109,8 @@ double TimeRanges::start(unsigned index, ExceptionCode& ec) const
     return m_ranges[index].m_start;
 }
 
-double TimeRanges::end(unsigned index, ExceptionCode& ec) const 
-{ 
+double TimeRanges::end(unsigned index, ExceptionCode& ec) const
+{
     if (index >= length()) {
         ec = INDEX_SIZE_ERR;
         return 0;
@@ -118,7 +118,7 @@ double TimeRanges::end(unsigned index, ExceptionCode& ec) const
     return m_ranges[index].m_end;
 }
 
-void TimeRanges::add(double start, double end) 
+void TimeRanges::add(double start, double end)
 {
     ASSERT(start <= end);
     unsigned int overlappingArcIndex;

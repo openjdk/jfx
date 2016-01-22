@@ -30,7 +30,7 @@ import javafx.beans.property.SimpleIntegerProperty;
 
 /**
  * This class extends {@code SimpleIntegerProperty} and provides a full
- * implementation of a {@code StyleableProperty}.  
+ * implementation of a {@code StyleableProperty}.
  *
  * This class is used to make a {@link javafx.beans.property.IntegerProperty},
  * that would otherwise be implemented as a {@link SimpleIntegerProperty},

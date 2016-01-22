@@ -32,9 +32,9 @@ import javafx.stage.Screen;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
 
-public class SensorsTest extends Application {    
+public class SensorsTest extends Application {
 
-    @Override public void start(final Stage stage) {    
+    @Override public void start(final Stage stage) {
         stage.initStyle(StageStyle.UNDECORATED);
 
         final Rectangle2D dims = Screen.getPrimary().getVisualBounds();

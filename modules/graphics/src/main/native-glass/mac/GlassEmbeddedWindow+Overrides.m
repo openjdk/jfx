@@ -58,7 +58,7 @@
 - (void)setContentView:(NSView *)aView
 {
     [super setContentView:self->gWindow->view];
-    
+
     // embed the child layer (offscreen) into the parent layer (offscreen)
     if (self->parent != nil)
     {
@@ -67,11 +67,11 @@
         {
             [((CAOpenGLLayer*)layer) setAsynchronous:NO];
         }
-        
+
         if ([layer isKindOfClass:[GlassLayer3D class]] == YES)
         {
             GlassOffscreen *offscreen = [((GlassLayer3D*)layer) getGlassOffscreen];
-            
+
             layer = [self->parent->gWindow->view layer];
             if ([layer isKindOfClass:[GlassLayer3D class]] == YES)
             {
@@ -96,7 +96,7 @@
 
 - (void)invalidateShadow
 {
-    
+
 }
 
 - (void)setAlphaValue:(CGFloat)windowAlpha
@@ -188,7 +188,7 @@
 - (void)makeKeyWindow
 {
     [super makeKeyWindow];
-    
+
     self->isKeyWindow = YES;
     [[NSNotificationCenter defaultCenter] postNotificationName:NSWindowDidBecomeKeyNotification object:nil userInfo:nil];
     [[self delegate] windowDidBecomeKey:nil];
@@ -197,7 +197,7 @@
 - (void)resignKeyWindow
 {
     [super resignKeyWindow];
-    
+
     self->isKeyWindow = NO;
     [[NSNotificationCenter defaultCenter] postNotificationName:NSWindowDidResignKeyNotification object:nil userInfo:nil];
     [[self delegate] windowDidResignKey:nil];

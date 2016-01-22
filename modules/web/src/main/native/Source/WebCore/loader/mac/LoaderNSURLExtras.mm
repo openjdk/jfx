@@ -7,13 +7,13 @@
  * are met:
  *
  * 1.  Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer. 
+ *     notice, this list of conditions and the following disclaimer.
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
- *     documentation and/or other materials provided with the distribution. 
+ *     documentation and/or other materials provided with the distribution.
  * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
- *     from this software without specific prior written permission. 
+ *     from this software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY APPLE AND ITS CONTRIBUTORS "AS IS" AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
@@ -70,7 +70,7 @@ NSString *suggestedFilenameWithMIMEType(NSURL *url, const String& mimeType)
         extension = [filename pathExtension];
     }
 
-    // Do not correct filenames that are reported with a mime type of tar, and 
+    // Do not correct filenames that are reported with a mime type of tar, and
     // have a filename which has .tar in it or ends in .tgz
     if ((mimeType == "application/tar" || mimeType == "application/x-tar")
         && (hasCaseInsensitiveSubstring(filename, @".tar")

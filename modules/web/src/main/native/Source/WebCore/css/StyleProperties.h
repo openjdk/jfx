@@ -105,7 +105,7 @@ public:
     PassRef<ImmutableStyleProperties> immutableCopyIfNeeded() const;
 
     PassRef<MutableStyleProperties> copyPropertiesInSet(const CSSPropertyID* set, unsigned length) const;
-    
+
     String asText() const;
 
     bool isMutable() const { return m_isMutable; }
@@ -139,7 +139,7 @@ protected:
     unsigned m_cssParserMode : 2;
     mutable unsigned m_isMutable : 1;
     unsigned m_arraySize : 29;
-    
+
 private:
     String getShorthandValue(const StylePropertyShorthand&) const;
     String getCommonValue(const StylePropertyShorthand&) const;

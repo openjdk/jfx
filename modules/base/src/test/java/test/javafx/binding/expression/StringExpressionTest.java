@@ -292,5 +292,5 @@ public class StringExpressionTest {
     public void testFactory_Null() {
         StringExpression.stringExpression(null);
     }
-    
+
 }

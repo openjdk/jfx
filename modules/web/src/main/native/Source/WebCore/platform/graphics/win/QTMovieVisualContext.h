@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef QTMovieVisualContext_h
@@ -41,8 +41,8 @@
 typedef const struct __CFDictionary* CFDictionaryRef;
 typedef struct OpaqueQTVisualContext*   QTVisualContextRef;
 
-// QTCVTimeStamp is a struct containing only a CVTimeStamp.  This is to 
-// work around the inability of CVTimeStamp to be forward declared, in 
+// QTCVTimeStamp is a struct containing only a CVTimeStamp.  This is to
+// work around the inability of CVTimeStamp to be forward declared, in
 // addition to it being declared in different header files when building
 // the QTMovieWin and WebCore projects.
 struct QTCVTimeStamp;

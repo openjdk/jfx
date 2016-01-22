@@ -57,7 +57,7 @@ public abstract class BaseMesh extends BaseGraphicsResource implements Mesh {
     protected static final int TEXCOORD_SIZE_VB = 2;
     protected static final int NORMAL_SIZE_VB = 4;
     //point (3 floats), texcoord (2 floats) and normal (as in 4 floats)
-    protected static final int VERTEX_SIZE_VB = 9; 
+    protected static final int VERTEX_SIZE_VB = 9;
 
     // Data members container for a single face
     //    Vec3i pVerts;
@@ -72,7 +72,7 @@ public abstract class BaseMesh extends BaseGraphicsResource implements Mesh {
         super(disposerRecord);
     }
 
-    public abstract boolean buildNativeGeometry(float[] vertexBuffer, 
+    public abstract boolean buildNativeGeometry(float[] vertexBuffer,
             int vertexBufferLength, int[] indexBufferInt, int indexBufferLength);
 
     public abstract boolean buildNativeGeometry(float[] vertexBuffer,
@@ -162,7 +162,7 @@ public abstract class BaseMesh extends BaseGraphicsResource implements Mesh {
         int numTexCoords = texCoords.length / TEXCOORD_SIZE;
         int numFaces = faces.length / faceIndexSize;
         assert numPoints > 0 && numNormals > 0 && numTexCoords > 0 && numFaces > 0;
-        
+
         Integer mf2vb;
         BaseMesh.MeshGeomComp2VB mp2vb;
         BaseMesh.MeshGeomComp2VB mn2vb;
@@ -185,7 +185,7 @@ public abstract class BaseMesh extends BaseGraphicsResource implements Mesh {
                 instance.triTexCoords[i] = new Vec2f();
             }
         }
-        
+
         for (int faceCount = 0; faceCount < numFaces; faceCount++) {
             int faceIndex = faceCount * faceIndexSize;
             for (int i = 0; i < 3; i++) {
@@ -198,7 +198,7 @@ public abstract class BaseMesh extends BaseGraphicsResource implements Mesh {
 
                 if (vertexBuffer.length <= vbCount) {
                     final int incrementedSize = vbCount + 20; // Let's increment by 20
-                    float[] temp = new float[incrementedSize * VERTEX_SIZE_VB]; 
+                    float[] temp = new float[incrementedSize * VERTEX_SIZE_VB];
                     System.arraycopy(vertexBuffer, 0, temp, 0, vertexBuffer.length);
                     vertexBuffer = temp;
                     // Enlarge cachedNormals, cachedTangents and cachedBitangents too
@@ -210,7 +210,7 @@ public abstract class BaseMesh extends BaseGraphicsResource implements Mesh {
                     cachedTangents = temp;
                     temp = new float[incrementedSize * 3];
                     System.arraycopy(cachedBitangents, 0, temp, 0, cachedBitangents.length);
-                    cachedBitangents = temp;                        
+                    cachedBitangents = temp;
                 }
                 int pointOffset = faces[pointIndex] * POINT_SIZE;
                 int normalOffset = faces[normalIndex] * NORMAL_SIZE;
@@ -256,7 +256,7 @@ public abstract class BaseMesh extends BaseGraphicsResource implements Mesh {
 
                 mt2vb = texCoord2vbMap.get(texCoordOffset);
                 if (mt2vb == null) {
-                    // create 
+                    // create
                     mt2vb = new MeshGeomComp2VB(texCoordOffset, mf2vb);
                     texCoord2vbMap.put(texCoordOffset, mt2vb);
                 } else {
@@ -297,7 +297,7 @@ public abstract class BaseMesh extends BaseGraphicsResource implements Mesh {
 
         numberOfVertices = vbCount / VERTEX_SIZE_VB;
 
-        convertNormalsToQuats(instance, numberOfVertices, 
+        convertNormalsToQuats(instance, numberOfVertices,
                 cachedNormals, cachedTangents, cachedBitangents, vertexBuffer, null);
 
         indexBufferSize = numFaces * 3;
@@ -316,7 +316,7 @@ public abstract class BaseMesh extends BaseGraphicsResource implements Mesh {
                 indexBufferShort[ii] = (short) indexBuffer[ii++];
                 indexBufferShort[ii] = (short) indexBuffer[ii++];
             }
-            indexBuffer = null; // free 
+            indexBuffer = null; // free
             return buildNativeGeometry(vertexBuffer,
                     numberOfVertices * VERTEX_SIZE_VB, indexBufferShort, indexBufferSize);
         }
@@ -355,7 +355,7 @@ public abstract class BaseMesh extends BaseGraphicsResource implements Mesh {
                             int vbIndex = locs[j] * VERTEX_SIZE_VB;
                             vertexBuffer[vbIndex] = points[pointOffset];
                             vertexBuffer[vbIndex + 1] = points[pointOffset + 1];
-                            vertexBuffer[vbIndex + 2] = points[pointOffset + 2];                   
+                            vertexBuffer[vbIndex + 2] = points[pointOffset + 2];
                             dirtyVertices[locs[j]] = true;
                         }
                     } else {
@@ -363,7 +363,7 @@ public abstract class BaseMesh extends BaseGraphicsResource implements Mesh {
                         int vbIndex = loc * VERTEX_SIZE_VB;
                         vertexBuffer[vbIndex] = points[pointOffset];
                         vertexBuffer[vbIndex + 1] = points[pointOffset + 1];
-                        vertexBuffer[vbIndex + 2] = points[pointOffset + 2];                    
+                        vertexBuffer[vbIndex + 2] = points[pointOffset + 2];
                         dirtyVertices[loc] = true;
                     }
                 }
@@ -381,7 +381,7 @@ public abstract class BaseMesh extends BaseGraphicsResource implements Mesh {
                 int texCoordOffset = (startTexCoord + i) * TEXCOORD_SIZE;
                 MeshGeomComp2VB mt2vb = (MeshGeomComp2VB) texCoord2vbMap.get(texCoordOffset);
                 assert mt2vb != null;
-                // mt2vb shouldn't be null. We can't have a texCoord referred by 
+                // mt2vb shouldn't be null. We can't have a texCoord referred by
                 // the faces array that isn't in the vertexBuffer.
                 if (mt2vb != null) {
                     int[] locs = mt2vb.getLocs();
@@ -445,7 +445,7 @@ public abstract class BaseMesh extends BaseGraphicsResource implements Mesh {
         MeshTempState instance = MeshTempState.getInstance();
         for (int i = 0; i < 3; i++) {
             if (instance.triPoints[i] == null) {
-                instance.triPoints[i] = new Vec3f();        
+                instance.triPoints[i] = new Vec3f();
             }
             if (instance.triTexCoords[i] == null) {
                 instance.triTexCoords[i] = new Vec2f();
@@ -454,7 +454,7 @@ public abstract class BaseMesh extends BaseGraphicsResource implements Mesh {
         // Every 3 vertices form a triangle
         for (int j = 0; j < numberOfVertices; j += 3) {
             // Only process the triangle that has one of more dirty vertices
-            if (dirtyVertices[j] || dirtyVertices[j+1] || dirtyVertices[j+2]) {                    
+            if (dirtyVertices[j] || dirtyVertices[j+1] || dirtyVertices[j+2]) {
                 int vbIndex = j * VERTEX_SIZE_VB;
                 // Go thro. the 3 vertices of a triangle
                 for (int i = 0; i < 3; i++) {
@@ -485,7 +485,7 @@ public abstract class BaseMesh extends BaseGraphicsResource implements Mesh {
             }
         }
 
-        convertNormalsToQuats(instance, numberOfVertices, 
+        convertNormalsToQuats(instance, numberOfVertices,
                 cachedNormals, cachedTangents, cachedBitangents, vertexBuffer, dirtyVertices);
 
         if (indexBuffer != null) {
@@ -534,7 +534,7 @@ public abstract class BaseMesh extends BaseGraphicsResource implements Mesh {
         if (updateFaces) {
             buildGeom = true;
         }
-        
+
         if ((!buildGeom) && (vertexBuffer != null)
                 && ((indexBuffer != null) || (indexBufferShort != null))) {
             return updatePNTGeometry(points, pointsFromAndLengthIndices,
@@ -542,7 +542,7 @@ public abstract class BaseMesh extends BaseGraphicsResource implements Mesh {
                     texCoords, texCoordsFromAndLengthIndices);
         }
         return doBuildPNTGeometry(points, normals, texCoords, faces);
-        
+
     }
 
     // Build PointTexCoordGeometry
@@ -558,7 +558,7 @@ public abstract class BaseMesh extends BaseGraphicsResource implements Mesh {
 
         MeshTempState instance = MeshTempState.getInstance();
         // big pool for all possible vertices
-        if (instance.pool == null || instance.pool.length < nFaces * 3) {            
+        if (instance.pool == null || instance.pool.length < nFaces * 3) {
             instance.pool = new MeshVertex[nFaces * 3];
         }
 
@@ -571,8 +571,8 @@ public abstract class BaseMesh extends BaseGraphicsResource implements Mesh {
         } else {
             Arrays.fill(instance.pVertex, 0, instance.pVertex.length, null);
         }
-             
-        // check if all hard edges or all smooth  
+
+        // check if all hard edges or all smooth
         checkSmoothingGroup();
 
         // compute [N, T, B] for each face
@@ -581,13 +581,13 @@ public abstract class BaseMesh extends BaseGraphicsResource implements Mesh {
         // process sm and weld points
         int nNewVerts = MeshVertex.processVertices(instance.pVertex, nVerts,
                 allHardEdges, allSameSmoothing);
-        
+
         if (instance.vertexBuffer == null
                 || instance.vertexBuffer.length < nNewVerts * VERTEX_SIZE_VB) {
             instance.vertexBuffer = new float[nNewVerts * VERTEX_SIZE_VB];
         }
         buildVertexBuffer(instance.pVertex, instance.vertexBuffer);
-        
+
         if (nNewVerts > 0x10000) {
             buildIndexBuffer(instance.pool, instance.indexBuffer, null);
             return buildNativeGeometry(instance.vertexBuffer,
@@ -604,14 +604,14 @@ public abstract class BaseMesh extends BaseGraphicsResource implements Mesh {
 
     private void computeTBNormal(MeshVertex[] pool, MeshVertex[] pVertex, int[] indexBuffer) {
         MeshTempState instance = MeshTempState.getInstance();
-        
+
         // tmp variables
         int[] smFace = instance.smFace;
         int[] triVerts = instance.triVerts;
         Vec3f[] triPoints = instance.triPoints;
         Vec2f[] triTexCoords = instance.triTexCoords;
         Vec3f[] triNormals = instance.triNormals;
-        final String logname = BaseMesh.class.getName(); 
+        final String logname = BaseMesh.class.getName();
 
         for (int f = 0, nDeadFaces = 0, poolIndex = 0; f < nFaces; f++) {
             int index = f * 3;
@@ -682,7 +682,7 @@ public abstract class BaseMesh extends BaseGraphicsResource implements Mesh {
 
         MeshUtil.buildQuat(tm, quat);
 
-        // This will interfer with degenerated triangle unit test. 
+        // This will interfer with degenerated triangle unit test.
         // assert (quat.w >= 0);
 
         if (d < 0) {
@@ -743,7 +743,7 @@ public abstract class BaseMesh extends BaseGraphicsResource implements Mesh {
             }
         }
     }
-    
+
     public int getNumVerts() {
         return nVerts;
     }

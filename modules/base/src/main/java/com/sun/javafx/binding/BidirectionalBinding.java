@@ -108,19 +108,19 @@ public abstract class BidirectionalBinding<T> implements ChangeListener<T>, Weak
             ((ObservableValue) property2).removeListener(binding);
         }
     }
-    
+
     public static BidirectionalBinding bindNumber(Property<Integer> property1, IntegerProperty property2) {
         return bindNumber(property1, (Property<Number>)property2);
     }
-    
+
     public static BidirectionalBinding bindNumber(Property<Long> property1, LongProperty property2) {
         return bindNumber(property1, (Property<Number>)property2);
     }
-    
+
     public static BidirectionalBinding bindNumber(Property<Float> property1, FloatProperty property2) {
         return bindNumber(property1, (Property<Number>)property2);
     }
-    
+
     public static BidirectionalBinding bindNumber(Property<Double> property1, DoubleProperty property2) {
         return bindNumber(property1, (Property<Number>)property2);
     }
@@ -154,15 +154,15 @@ public abstract class BidirectionalBinding<T> implements ChangeListener<T>, Weak
 
     private static <T extends Number> BidirectionalBinding bindNumber(Property<T> property1, Property<Number> property2) {
         checkParameters(property1, property2);
-        
+
         final BidirectionalBinding<Number> binding = new TypedNumberBidirectionalBinding<T>(property1, property2);
-        
+
         property1.setValue((T)property2.getValue());
         property1.addListener(binding);
         property2.addListener(binding);
         return binding;
     }
-    
+
     public static <T extends Number> void unbindNumber(Property<T> property1, Property<Number> property2) {
         checkParameters(property1, property2);
         final BidirectionalBinding binding = new UntypedGenericBidirectionalBinding(property1, property2);
@@ -280,7 +280,7 @@ public abstract class BidirectionalBinding<T> implements ChangeListener<T>, Weak
                                         + " to restore the source property to the previous value."
                                         + " Removing the bidirectional binding from properties " +
                                         property1 + " and " + property2, e2);
-                        } 
+                        }
                         throw new RuntimeException(
                                 "Bidirectional binding failed, setting to the previous value", e);
                     } finally {
@@ -625,7 +625,7 @@ public abstract class BidirectionalBinding<T> implements ChangeListener<T>, Weak
             }
         }
     }
-    
+
     private static class TypedNumberBidirectionalBinding<T extends Number> extends BidirectionalBinding<Number> {
         private final WeakReference<Property<T>> propertyRef1;
         private final WeakReference<Property<Number>> propertyRef2;

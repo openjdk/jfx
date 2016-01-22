@@ -235,7 +235,7 @@ HRESULT STDMETHODCALLTYPE WebIconDatabase::allowDatabaseCleanup(void)
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE WebIconDatabase::iconURLForURL( 
+HRESULT STDMETHODCALLTYPE WebIconDatabase::iconURLForURL(
         /* [in] */ BSTR url,
         /* [retval][out] */ BSTR* iconURL)
 {
@@ -246,14 +246,14 @@ HRESULT STDMETHODCALLTYPE WebIconDatabase::iconURLForURL(
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE WebIconDatabase::isEnabled( 
+HRESULT STDMETHODCALLTYPE WebIconDatabase::isEnabled(
         /* [retval][out] */ BOOL *result)
 {
     *result = iconDatabase().isEnabled();
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE WebIconDatabase::setEnabled( 
+HRESULT STDMETHODCALLTYPE WebIconDatabase::setEnabled(
         /* [in] */ BOOL flag)
 {
     BOOL currentlyEnabled;

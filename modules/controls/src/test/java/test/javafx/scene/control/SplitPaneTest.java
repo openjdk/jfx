@@ -101,10 +101,10 @@ public class SplitPaneTest {
     }
 
 
-    private double convertDividerPostionToAbsolutePostion(double pos, double edge) {        
+    private double convertDividerPostionToAbsolutePostion(double pos, double edge) {
         return (Math.round(pos * edge)) - 3;  // 3 is half the divider width.
     }
-    
+
     /*********************************************************************
      * Tests for default values                                         *
      ********************************************************************/
@@ -318,7 +318,7 @@ public class SplitPaneTest {
         assertEquals(196, spLeft.getLayoutBounds().getWidth(), 1e-100);
         assertEquals(196, spRight.getLayoutBounds().getWidth(), 1e-100);
     }
-    
+
     @Test public void twoDividersHaveTheSamePosition() {
         StackPane spLeft = new StackPane();
         StackPane spCenter = new StackPane();
@@ -345,7 +345,7 @@ public class SplitPaneTest {
         assertEquals(0, spCenter.getLayoutBounds().getWidth(), 1e-100);
         assertEquals(190, spRight.getLayoutBounds().getWidth(), 1e-100);
     }
-        
+
     @Test public void twoDividersHaveTheDifferentPositions() {
         StackPane spLeft = new StackPane();
         StackPane spCenter = new StackPane();
@@ -383,7 +383,7 @@ public class SplitPaneTest {
         spLeft.setMinWidth(28);
         spCenter.setMinWidth(29);
         spRight.setMinWidth(29);
-        
+
         splitPane.setDividerPosition(0, 0.20);
         splitPane.setDividerPosition(1, 0.80);
         splitPane.getItems().addAll(spLeft, spCenter, spRight);
@@ -481,7 +481,7 @@ public class SplitPaneTest {
         spLeft.setMinWidth(80);
         splitPane.getItems().addAll(spLeft, spRight);
         splitPane.setDividerPositions(0);
-        
+
         root.setPrefSize(100, 100);
         root.getChildren().add(splitPane);
         show();
@@ -506,7 +506,7 @@ public class SplitPaneTest {
         spLeft.setMaxWidth(80);
         splitPane.getItems().addAll(spLeft, spRight);
         splitPane.setDividerPositions(1.5);
-        
+
         root.setPrefSize(100, 100);
         root.getChildren().add(splitPane);
         show();
@@ -551,7 +551,7 @@ public class SplitPaneTest {
         assertEquals(0, spCenter.getLayoutBounds().getWidth(), 1e-100);
         assertEquals(0, spRight.getLayoutBounds().getWidth(), 1e-100);
     }
-    
+
     @Test public void checkDividerPositions_RT18805() {
         Button l = new Button("Left Button");
         Button c = new Button("Center Button");
@@ -631,7 +631,7 @@ public class SplitPaneTest {
         pos = splitPane.getDividerPositions();
         p0 = convertDividerPostionToAbsolutePostion(pos[0], w);
         p1 = convertDividerPostionToAbsolutePostion(pos[1], w);
-        
+
         assertEquals(78, p0, 1e-100);
         assertEquals(319, p1, 1e-100);
         assertEquals(78, spLeft.getLayoutBounds().getWidth(), 1e-100);
@@ -1194,8 +1194,8 @@ public class SplitPaneTest {
         assertEquals(28, spLeft.getLayoutBounds().getHeight(), 1e-100);
         assertEquals(29, spCenter.getLayoutBounds().getHeight(), 1e-100);
         assertEquals(29, spRight.getLayoutBounds().getHeight(), 1e-100);
-    }    
-    
+    }
+
     @Test public void positionDividersWithANonResizablePanel_RT22929() {
         StackPane spLeft = new StackPane();
         StackPane spCenter = new StackPane();
@@ -1226,27 +1226,27 @@ public class SplitPaneTest {
         assertEquals(62, p1, 1e-100);
         assertEquals(46, spLeft.getLayoutBounds().getWidth(), 1e-100);
         assertEquals(10, spCenter.getLayoutBounds().getWidth(), 1e-100);
-        assertEquals(30, spRight.getLayoutBounds().getWidth(), 1e-100);       
-        
+        assertEquals(30, spRight.getLayoutBounds().getWidth(), 1e-100);
+
         splitPane.setDividerPosition(0, 0.20);
         root.layout();
 
         pos = splitPane.getDividerPositions();
         p0 = convertDividerPostionToAbsolutePostion(pos[0], w);
-        p1 = convertDividerPostionToAbsolutePostion(pos[1], w);       
+        p1 = convertDividerPostionToAbsolutePostion(pos[1], w);
         assertEquals(17, p0, 1e-100);
         assertEquals(62, p1, 1e-100);
-        
+
         splitPane.setDividerPosition(1, 0.25);
         root.layout();
-                
+
         pos = splitPane.getDividerPositions();
         p0 = convertDividerPostionToAbsolutePostion(pos[0], w);
-        p1 = convertDividerPostionToAbsolutePostion(pos[1], w);       
+        p1 = convertDividerPostionToAbsolutePostion(pos[1], w);
         assertEquals(17, p0, 1e-100);
         assertEquals(62, p1, 1e-100);
     }
-    
+
     @Test public void threeDividersHaveTheSamePosition() {
         StackPane sp1 = new StackPane();
         StackPane sp2 = new StackPane();
@@ -1276,14 +1276,14 @@ public class SplitPaneTest {
         assertEquals(0, sp2.getLayoutBounds().getWidth(), 1e-100);
         assertEquals(0, sp3.getLayoutBounds().getWidth(), 1e-100);
         assertEquals(190, sp4.getLayoutBounds().getWidth(), 1e-100);
-    }    
-    
+    }
+
     @Test public void addItemsInRunLater_RT23063() {
         final SplitPane sp = new SplitPane();
         Stage st = new Stage();
         st.setScene(new Scene(sp, 2000, 2000));
         st.show();
-           
+
         Runnable runnable = () -> {
             StackPane rightsp = new StackPane();
             Label right = new Label("right");
@@ -1296,16 +1296,16 @@ public class SplitPaneTest {
             sp.getItems().addAll(rightsp, leftsp);
         };
         Platform.runLater(runnable);
-                        
+
         sp.applyCss();
         sp.resize(400, 400);
         sp.layout();
-        
+
         assertEquals(1, sp.getDividerPositions().length);
-        
+
         double pos[] = sp.getDividerPositions();
         double p0 = convertDividerPostionToAbsolutePostion(pos[0], 398);
-        assertEquals(196, p0, 1e-100);        
+        assertEquals(196, p0, 1e-100);
     }
 
     @Test public void test_rt_36392() {

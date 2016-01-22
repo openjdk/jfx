@@ -42,11 +42,11 @@ public class ClipboardContentTest {
     @Test
     public void stringShouldBePut() {
         ClipboardContent cc = new ClipboardContent();
-        
+
         assertFalse(cc.hasString());
-        
+
         cc.putString("Hello");
-        
+
         assertTrue(cc.hasString());
         assertEquals("Hello", cc.getString());
     }
@@ -63,11 +63,11 @@ public class ClipboardContentTest {
     @Test
     public void urlShouldBePut() {
         ClipboardContent cc = new ClipboardContent();
-        
+
         assertFalse(cc.hasUrl());
-        
+
         cc.putUrl("http://hello");
-        
+
         assertTrue(cc.hasUrl());
         assertEquals("http://hello", cc.getUrl());
     }
@@ -84,11 +84,11 @@ public class ClipboardContentTest {
     @Test
     public void htmlShouldBePut() {
         ClipboardContent cc = new ClipboardContent();
-        
+
         assertFalse(cc.hasHtml());
-        
+
         cc.putHtml("<html><head></head><body>Hello</body></html>");
-        
+
         assertTrue(cc.hasHtml());
         assertEquals("<html><head></head><body>Hello</body></html>", cc.getHtml());
     }
@@ -101,17 +101,17 @@ public class ClipboardContentTest {
         assertFalse(cc.hasHtml());
         assertNull(cc.getHtml());
     }
-    
+
     @Test
     public void rtfShouldBePut() {
         ClipboardContent cc = new ClipboardContent();
-        
+
         assertFalse(cc.hasRtf());
-        
+
         cc.putRtf("{\\rtf1\\ansi\\uc1{\\colortbl;\\red255\\green0\\blue0;}\\uc1\\b\\i FRED\\par rtf\\par text}");
-        
+
         assertTrue(cc.hasRtf());
-        assertEquals("{\\rtf1\\ansi\\uc1{\\colortbl;\\red255\\green0\\blue0;}\\uc1\\b\\i FRED\\par rtf\\par text}", 
+        assertEquals("{\\rtf1\\ansi\\uc1{\\colortbl;\\red255\\green0\\blue0;}\\uc1\\b\\i FRED\\par rtf\\par text}",
                 cc.getRtf());
     }
 
@@ -128,17 +128,17 @@ public class ClipboardContentTest {
     public void imageShouldBePut() {
         StubToolkit toolkit = (StubToolkit) Toolkit.getToolkit();
         toolkit.getImageLoaderFactory().reset();
-        toolkit.getImageLoaderFactory().registerImage("file:test.png", 
+        toolkit.getImageLoaderFactory().registerImage("file:test.png",
                 new StubPlatformImageInfo(100, 200));
-        
+
         ClipboardContent cc = new ClipboardContent();
         Image i = new Image("file:test.png");
-        
+
         assertFalse(cc.hasImage());
-        
-        
+
+
         cc.putImage(i);
-        
+
         assertTrue(cc.hasImage());
         assertSame(i, cc.getImage());
     }
@@ -161,27 +161,27 @@ public class ClipboardContentTest {
 
     @Test
     public void filesShouldBePut() {
-        
+
         ClipboardContent cc = new ClipboardContent();
         List<File> files = Arrays.asList(new File("."), new File("/"));
-        
+
         assertFalse(cc.hasFiles());
-        
+
         cc.putFiles(files);
-        
+
         assertTrue(cc.hasFiles());
         assertEquals(files, cc.getFiles());
     }
 
     @Test
     public void noFilesShouldBePut() {
-        
+
         ClipboardContent cc = new ClipboardContent();
-        
+
         assertFalse(cc.hasFiles());
-        
+
         cc.putFiles(new ArrayList<File>(0));
-        
+
         assertTrue(cc.hasFiles());
         assertEquals(0, cc.getFiles().size());
     }
@@ -196,30 +196,30 @@ public class ClipboardContentTest {
         assertFalse(cc.hasFiles());
         assertNull(cc.getFiles());
     }
-    
+
     @Test
     public void filesShouldBePutByPath() {
-        
+
         ClipboardContent cc = new ClipboardContent();
         List<File> files = Arrays.asList(new File("."), new File("/"));
-        
+
         assertFalse(cc.hasFiles());
-        
+
         cc.putFilesByPath(Arrays.asList(".", "/"));
-        
+
         assertTrue(cc.hasFiles());
         assertEquals(files, cc.getFiles());
     }
 
     @Test
     public void noFilesShouldBePutByPath() {
-        
+
         ClipboardContent cc = new ClipboardContent();
-        
+
         assertFalse(cc.hasFiles());
-        
+
         cc.putFilesByPath(new ArrayList<String>(0));
-        
+
         assertTrue(cc.hasFiles());
         assertEquals(0, cc.getFiles().size());
     }

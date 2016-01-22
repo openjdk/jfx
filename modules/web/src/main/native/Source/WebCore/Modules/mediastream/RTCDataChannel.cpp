@@ -134,7 +134,7 @@ AtomicString RTCDataChannel::readyState() const
     static NeverDestroyed<AtomicString> openState("open", AtomicString::ConstructFromLiteral);
     static NeverDestroyed<AtomicString> closingState("closing", AtomicString::ConstructFromLiteral);
     static NeverDestroyed<AtomicString> closedState("closed", AtomicString::ConstructFromLiteral);
-    
+
     switch (m_readyState) {
     case ReadyStateConnecting:
         return connectingState;

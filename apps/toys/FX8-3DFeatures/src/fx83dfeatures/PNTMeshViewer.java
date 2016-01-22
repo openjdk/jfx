@@ -107,7 +107,7 @@ public class PNTMeshViewer extends Application {
 
         ToysVec3f[] triPoints = new ToysVec3f[3];
         triPoints[0] = new ToysVec3f();
-        triPoints[1] = new ToysVec3f();      
+        triPoints[1] = new ToysVec3f();
         triPoints[2] = new ToysVec3f();
         ToysVec3f normal = new ToysVec3f();
 //            System.err.println("faces:");
@@ -133,7 +133,7 @@ public class PNTMeshViewer extends Application {
 //            System.err.println("point 0 = " + triPoints[0]);
 //            System.err.println("point 1 = " + triPoints[1]);
 //            System.err.println("point 2 = " + triPoints[2]);
-            
+
             computeNormal(triPoints[0], triPoints[1], triPoints[2], normal);
 //            System.err.println(faces[index + 1] + ": normal = " + normal);
             assert (faces[index + 1] == faces[index + 4]) && (faces[index + 1] == faces[index + 7]);
@@ -144,7 +144,7 @@ public class PNTMeshViewer extends Application {
         }
 
         triMesh.getNormals().set(0, normals, 0, normals.length);
-    
+
     }
 
     TriangleMesh buildTriangleMesh(int subDivX, int subDivY,
@@ -162,7 +162,7 @@ public class PNTMeshViewer extends Application {
         float texCoords[] = new float[numVerts * texCoordSize];
         int faceCount = subDivX * subDivY * 2;
         float normals[] = new float[faceCount * normalSize];
-        int faces[] = new int[ faceCount * faceSize]; 
+        int faces[] = new int[ faceCount * faceSize];
 
         // Create points and texCoords
         for (int y = 0; y <= subDivY; y++) {
@@ -189,7 +189,7 @@ public class PNTMeshViewer extends Application {
         int normalCount = 0;
         ToysVec3f[] triPoints = new ToysVec3f[3];
         triPoints[0] = new ToysVec3f();
-        triPoints[1] = new ToysVec3f();      
+        triPoints[1] = new ToysVec3f();
         triPoints[2] = new ToysVec3f();
         ToysVec3f normal = new ToysVec3f();
         for (int y = 0; y < subDivY; y++) {
@@ -214,7 +214,7 @@ public class PNTMeshViewer extends Application {
                 ii = p11 * 3;
                 triPoints[2].x = points[ii];
                 triPoints[2].y = points[ii + 1];
-                triPoints[2].z = points[ii + 2];                
+                triPoints[2].z = points[ii + 2];
                 computeNormal(triPoints[0], triPoints[1], triPoints[2], normal);
 //                System.err.println("normal = " + normal);
                 int normalIndex = normalCount * normalSize;
@@ -246,7 +246,7 @@ public class PNTMeshViewer extends Application {
                 ii = p00 * 3;
                 triPoints[2].x = points[ii];
                 triPoints[2].y = points[ii + 1];
-                triPoints[2].z = points[ii + 2];                
+                triPoints[2].z = points[ii + 2];
                 computeNormal(triPoints[0], triPoints[1], triPoints[2], normal);
 //                System.err.println("normal = " + normal);
                 normalIndex = normalCount * normalSize;

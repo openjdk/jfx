@@ -71,7 +71,7 @@
     -fx-background-color: null;
     -fx-background-insets: 1 0 -1 0, 0, 1;
     -fx-background-radius: 2.5, 2.5, 1.5;
-    -fx-padding: 0.208333em; 
+    -fx-padding: 0.208333em;
     -fx-background-image: url("../../shared-resources/slider.png");
     -fx-background-repeat: round no-repeat;
 }

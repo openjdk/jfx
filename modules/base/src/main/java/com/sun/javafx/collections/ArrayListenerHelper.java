@@ -75,16 +75,16 @@ public abstract class ArrayListenerHelper<T extends ObservableArray<T>> extends 
     public static  boolean hasListeners(ArrayListenerHelper helper) {
         return helper != null;
     }
-    
+
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // Common implementations
-    
+
     protected final T observable;
 
     public ArrayListenerHelper(T observable) {
         this.observable = observable;
     }
-    
+
     protected abstract ArrayListenerHelper addListener(InvalidationListener listener);
     protected abstract ArrayListenerHelper removeListener(InvalidationListener listener);
 
@@ -92,7 +92,7 @@ public abstract class ArrayListenerHelper<T extends ObservableArray<T>> extends 
     protected abstract ArrayListenerHelper removeListener(ArrayChangeListener<T> listener);
 
     protected abstract void fireValueChangedEvent(boolean sizeChanged, int from, int to);
-    
+
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // Implementations
 

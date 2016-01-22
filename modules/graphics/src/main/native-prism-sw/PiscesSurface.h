@@ -30,35 +30,35 @@
 
 #include "com_sun_pisces_RendererBase.h"
 
-//Color models - supported surfaces 
-/** 
+//Color models - supported surfaces
+/**
  * @defgroup SurfaceTypes Surface types supported in PISCES
  * Surface type. There are many color models used in computer graphics. This is
  * because of finite color count, that can be displayed on different graphic-
- * cards/displays.    
- * 
+ * cards/displays.
+ *
  * @def TYPE_INT_RGB
- * @ingroup SurfaceTypes 
+ * @ingroup SurfaceTypes
  * Surface type TYPE_INT_RGB. There is one byte for every
  * RGB component. Data are stored in array of int. There is no native alpha
  * support in this model.
  * @def TYPE_INT_ARGB
  * @ingroup SurfaceTypes
- * Surface type TYPE_INT_ARGB. There is one byte for every RGB component and 
- * alpha. Data are stored in array of int.   
+ * Surface type TYPE_INT_ARGB. There is one byte for every RGB component and
+ * alpha. Data are stored in array of int.
  * @def TYPE_INT_ARGB_PRE
- * @ingroup SurfaceTypes 
+ * @ingroup SurfaceTypes
  * Surface type TYPE_INT_ARGB_PRE. Every color component is premultiplied by its
  * alpha value. Four bytes are used to store one pixel value.
  * @def TYPE_USHORT_565_RGB
- * @ingroup SurfaceTypes 
+ * @ingroup SurfaceTypes
  * Surface type TYPE_USHORT_565_RGB. This color model uses 2 bytes to store
  * RGB color. 5bits for Red and Blue component and 6 bits for Green component.
  * We use unsigned short array to store the data.
  * @def TYPE_BYTE_GRAY
- * @ingroup SurfaceTypes 
+ * @ingroup SurfaceTypes
  * Surface type TYPE_BYTE_GRAY. This color model uses 256 grades of shade to
- * view data. We use one byte to represent one pixel.        
+ * view data. We use one byte to represent one pixel.
  */
 #define TYPE_INT_ARGB_PRE   com_sun_pisces_RendererBase_TYPE_INT_ARGB_PRE
 
@@ -83,7 +83,7 @@
 typedef struct _Surface {
     jint width;
     jint height;
-  
+
     jint offset;
     jint scanlineStride;
     jint pixelStride;

@@ -76,10 +76,10 @@ ResourceLoadScheduler* resourceLoadScheduler()
 {
     ASSERT(isMainThread());
     static ResourceLoadScheduler* globalScheduler = 0;
-    
+
     if (!globalScheduler) {
         static bool isCallingOutToStrategy = false;
-        
+
         // If we're re-entering resourceLoadScheduler() while calling out to the LoaderStrategy,
         // then the LoaderStrategy is trying to use the default resourceLoadScheduler.
         // So we'll create it here and start using it.
@@ -87,7 +87,7 @@ ResourceLoadScheduler* resourceLoadScheduler()
             globalScheduler = new ResourceLoadScheduler;
             return globalScheduler;
         }
-        
+
         TemporaryChange<bool> recursionGuard(isCallingOutToStrategy, true);
         globalScheduler = platformStrategies()->loaderStrategy()->resourceLoadScheduler();
     }
@@ -234,12 +234,12 @@ void ResourceLoadScheduler::crossOriginRedirectReceived(ResourceLoader* resource
 
 void ResourceLoadScheduler::servePendingRequests(ResourceLoadPriority minimumPriority)
 {
-    LOG(ResourceLoading, "ResourceLoadScheduler::servePendingRequests. m_suspendPendingRequestsCount=%d", m_suspendPendingRequestsCount); 
+    LOG(ResourceLoading, "ResourceLoadScheduler::servePendingRequests. m_suspendPendingRequestsCount=%d", m_suspendPendingRequestsCount);
     if (isSuspendingPendingRequests())
         return;
 
     m_requestTimer.stop();
-    
+
     servePendingRequests(m_nonHTTPProtocolHost, minimumPriority);
 
     Vector<HostInformation*> hostsToServe;
@@ -269,7 +269,7 @@ void ResourceLoadScheduler::servePendingRequests(HostInformation* host, Resource
             RefPtr<ResourceLoader> resourceLoader = requestsPending.first();
 
             // For named hosts - which are only http(s) hosts - we should always enforce the connection limit.
-            // For non-named hosts - everything but http(s) - we should only enforce the limit if the document isn't done parsing 
+            // For non-named hosts - everything but http(s) - we should only enforce the limit if the document isn't done parsing
             // and we don't know all stylesheets yet.
             Document* document = resourceLoader->frameLoader() ? resourceLoader->frameLoader()->frame().document() : 0;
             bool shouldLimitRequests = !host->name().isNull() || (document && (document->parsing() || !document->haveStylesheetsLoaded()));
@@ -303,7 +303,7 @@ void ResourceLoadScheduler::resumePendingRequests()
     if (!m_hosts.isEmpty() || m_nonHTTPProtocolHost->hasRequests())
         scheduleServePendingRequests();
 }
-    
+
 void ResourceLoadScheduler::scheduleServePendingRequests()
 {
     LOG(ResourceLoading, "ResourceLoadScheduler::scheduleServePendingRequests, m_requestTimer.isActive()=%u", m_requestTimer.isActive());
@@ -329,24 +329,24 @@ ResourceLoadScheduler::HostInformation::~HostInformation()
     for (unsigned p = 0; p <= ResourceLoadPriorityHighest; p++)
         ASSERT(m_requestsPending[p].isEmpty());
 }
-    
+
 void ResourceLoadScheduler::HostInformation::schedule(ResourceLoader* resourceLoader, ResourceLoadPriority priority)
 {
     m_requestsPending[priority].append(resourceLoader);
 }
-    
+
 void ResourceLoadScheduler::HostInformation::addLoadInProgress(ResourceLoader* resourceLoader)
 {
     LOG(ResourceLoading, "HostInformation '%s' loading '%s'. Current count %d", m_name.latin1().data(), resourceLoader->url().string().latin1().data(), m_requestsLoading.size());
     m_requestsLoading.add(resourceLoader);
 }
-    
+
 void ResourceLoadScheduler::HostInformation::remove(ResourceLoader* resourceLoader)
 {
     if (m_requestsLoading.remove(resourceLoader))
         return;
-    
-    for (int priority = ResourceLoadPriorityHighest; priority >= ResourceLoadPriorityLowest; --priority) {  
+
+    for (int priority = ResourceLoadPriorityHighest; priority >= ResourceLoadPriorityLowest; --priority) {
         RequestQueue::iterator end = m_requestsPending[priority].end();
         for (RequestQueue::iterator it = m_requestsPending[priority].begin(); it != end; ++it) {
             if (*it == resourceLoader) {
@@ -368,7 +368,7 @@ bool ResourceLoadScheduler::HostInformation::hasRequests() const
     return false;
 }
 
-bool ResourceLoadScheduler::HostInformation::limitRequests(ResourceLoadPriority priority) const 
+bool ResourceLoadScheduler::HostInformation::limitRequests(ResourceLoadPriority priority) const
 {
     if (priority == ResourceLoadPriorityVeryLow && !m_requestsLoading.isEmpty())
         return true;

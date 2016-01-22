@@ -44,7 +44,7 @@ import static ensemble.samplepage.SamplePage.INDENT;
  * The content for Sample Page
  */
 class SamplePageContent extends Region {
-    
+
     private Node playground;
     private Description description;
     private SampleContainer sampleContainer;
@@ -63,10 +63,10 @@ class SamplePageContent extends Region {
 
     @Override protected void layoutChildren() {
         super.layoutChildren();
-        
+
         double maxWidth = getWidth() - 2 * INDENT;
         double maxHeight = getHeight() - 2 * INDENT;
-        
+
         boolean landscape = getWidth() >= getHeight();
         boolean wide = getWidth() >= getHeight() * 1.5;
         if (wide) {

@@ -45,7 +45,7 @@ extern jboolean select_dispman_cursor(LensNativePort *lensPort);
 #if defined(OMAP3) || defined(IMX6_PLATFORM)
 extern jboolean fbFBRobotScreen(jint x, jint y,
                                     jint width, jint height,
-                                    jint *pixels); 
+                                    jint *pixels);
 #endif
 
 #ifdef OMAP3
@@ -67,12 +67,12 @@ jboolean lens_platform_initialize(LensNativePort* lensPort) {
 
     // report the version we actually are
     lensPort->version = NATIVE_LENS_PORT_VERSION;
-    lensPort->setLogger = &setPlatformLogging;    
+    lensPort->setLogger = &setPlatformLogging;
 
 #ifdef USE_DISPMAN
     if (select_dispman_cursor(lensPort)) {
         return JNI_TRUE;
-    } 
+    }
 #endif // USE_DISPMAN
 
 #ifdef IMX6_PLATFORM
@@ -93,7 +93,7 @@ jboolean lens_platform_initialize(LensNativePort* lensPort) {
 #ifdef ANDROID_NDK
     return JNI_TRUE;
 #endif //Android
-    
+
     // Fatal Error
     fprintf(stderr,"Fatal error loading native porting layer in Lens\n");
     exit(-1);
@@ -124,4 +124,4 @@ jboolean prism_platform_initialize(PrismNativePort* prismPort) {
 
     return JNI_TRUE;
 }
- 
+

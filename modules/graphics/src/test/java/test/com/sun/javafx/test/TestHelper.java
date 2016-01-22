@@ -46,7 +46,7 @@ public class TestHelper {
         assertEquals("maxX", expected.getMaxX(), actual.getMaxX(), 1);
         assertEquals("maxY", expected.getMaxY(), actual.getMaxY(), 1);
     }
-    
+
     public static final float EPSILON = 1.0e-4f;
 
     public static void assertAlmostEquals(float a, float b) {
@@ -110,7 +110,7 @@ public class TestHelper {
             float height, float depth) {
         return new BoundingBox(minX, minY, minZ, width, height, depth);
     }
-    
+
     public static BoundingBox box2(int minX, int minY, int maxX, int maxY) {
         return box2((float) minX, (float) minY, (float) maxX, (float) maxY);
     }
@@ -119,7 +119,7 @@ public class TestHelper {
             float maxY) {
         return box(minX, minY, maxX - minX, maxY - minY);
     }
-    
+
     @SuppressWarnings({ "rawtypes", "unchecked" })
     public static void assertImmutableList(List list) {
         try {

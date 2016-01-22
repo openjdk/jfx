@@ -43,11 +43,11 @@ PlatformSpeechSynthesis::PlatformSpeechSynthesis(SpeechSynthesis* synthesis)
     : m_speechSynthesis(synthesis)
 {
 }
-    
+
 void PlatformSpeechSynthesis::platformSpeak(SpeechSynthesisUtterance*)
 {
 }
-    
+
 void PlatformSpeechSynthesis::platformInitializeVoiceList(Vector<RefPtr<SpeechSynthesisVoice> >& voices);
 {
     NSString *defaultVoiceURI = [NSSpeechSynthesizer defaultVoice];
@@ -56,16 +56,16 @@ void PlatformSpeechSynthesis::platformInitializeVoiceList(Vector<RefPtr<SpeechSy
     for (NSUInteger k = 0; k < count; k++) {
         NSString *voiceName = [availableVoices objectAtIndex:k];
         NSDictionary *attributes = [NSSpeechSynthesizer attributesForVoice:voiceName];
-        
+
         NSString *voiceURI = [attributes objectForKey:NSVoiceIdentifier];
         NSString *name = [attributes objectForKey:NSVoiceName];
         NSString *language = [attributes objectForKey:NSVoiceLocaleIdentifier];
-        
+
         // Change to BCP-47 format as defined by spec.
         language = [language stringByReplacingOccurrencesOfString:@"_" withString:@"-"];
-        
+
         bool isDefault = [defaultVoiceURI isEqualToString:voiceURI];
-        
+
         voices.append(SpeechSynthesisVoice::create(voiceURI, name, language, true, isDefault));
     }
 }

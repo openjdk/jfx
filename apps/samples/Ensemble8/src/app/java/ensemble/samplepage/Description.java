@@ -61,7 +61,7 @@ public class Description extends VBox {
     private final Label description;
     private final VBox relatedDocumentsList;
     private final VBox relatedSamples;
-    
+
     public Description(final SamplePage samplePage) {
         this.samplePage = samplePage;
         getStyleClass().add("sample-page-box");

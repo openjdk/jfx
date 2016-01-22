@@ -67,7 +67,7 @@ public:
     void addSubresourceStyleURLs(ListHashSet<URL>&, const StyleSheetContents*) const;
 
     bool hasFailedOrCanceledSubresources() const;
-    
+
     PassRefPtr<CSSValueList> cloneForCSSOM() const;
 
 protected:

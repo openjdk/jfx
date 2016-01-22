@@ -92,7 +92,7 @@ static void notifyHistoryItemChangedImpl(HistoryItem* item) {
 }
 
 void notifyHistoryItemDestroyed(const JLObject &host)
-{    
+{
     WC_GETJAVAENV_CHKRET(env);
     static jmethodID notifyItemDestroyedMID =
             initMethod(env, getJEntryClass(), "notifyItemDestroyed", "()V");
@@ -124,7 +124,7 @@ JNIEXPORT jobject JNICALL Java_com_sun_webkit_BackForwardList_bflItemGetIcon(JNI
     HistoryItem* item = getItem(jitem);
 /*
     if (item != NULL) {
-	// TODO: crashes with DRT
+    // TODO: crashes with DRT
         return *WebCore::iconDatabase().synchronousIconForPageURL(item->url(), WebCore::IntSize(16, 16))->nativeImageForCurrentFrame();
         Image* icon = item->icon();
         if (icon != NULL) {
@@ -173,8 +173,8 @@ JNIEXPORT jobjectArray JNICALL Java_com_sun_webkit_BackForwardList_bflItemGetChi
     jobjectArray children = env->NewObjectArray(item->children().size(), getJEntryClass(), NULL);
     int i = 0;
     for (HistoryItemVector::const_iterator it = item->children().begin();
-	 it != item->children().end();
-	 ++it)
+     it != item->children().end();
+     ++it)
     {
         env->SetObjectArrayElement(children, i++, (jobject)createEntry(&**it, jpage));
     }
@@ -306,7 +306,7 @@ void notifyBackForwardListChanged(const JLObject &host)
 
     static jmethodID notifyChangedMID = initMethod(
         env,
-	getJBFLClass(),
+    getJBFLClass(),
         "notifyChanged",
         "()V");
     ASSERT(notifyChangedMID);

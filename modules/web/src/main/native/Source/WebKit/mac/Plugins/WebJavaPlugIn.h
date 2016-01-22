@@ -6,13 +6,13 @@
  * are met:
  *
  * 1.  Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer. 
+ *     notice, this list of conditions and the following disclaimer.
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
- *     documentation and/or other materials provided with the distribution. 
+ *     documentation and/or other materials provided with the distribution.
  * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
- *     from this software without specific prior written permission. 
+ *     from this software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY APPLE AND ITS CONTRIBUTORS "AS IS" AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
@@ -70,9 +70,9 @@ typedef enum {
     @param exceptionDescription Pass in nil or the address of pointer to a string object.  If any exception
     is thrown by Java the return value will be a description of the exception, otherwise nil.
     @discussion Calls to Java from native code should not make direct
-    use of JNI.  Instead they should use this method to dispatch calls to the 
+    use of JNI.  Instead they should use this method to dispatch calls to the
     Java VM.  This is required to guarantee that the correct thread will receive
-    the call.  webPlugInCallJava:isStatic:returnType:method:arguments:callingURL:exceptionDescription: must 
+    the call.  webPlugInCallJava:isStatic:returnType:method:arguments:callingURL:exceptionDescription: must
     always be called from the AppKit main thread.  This method is only implemented by the Java plug-in.
     @result The result of the method invocation.
 */

@@ -218,7 +218,7 @@ static inline bool base64DecodeInternal(const T* data, unsigned length, Vector<c
     // Valid data is (n * 4 + [0,2,3]) characters long.
     if ((outLength % 4) == 1)
         return false;
-    
+
     // 4-byte to 3-byte conversion
     outLength -= (outLength + 3) / 4;
     if (!outLength)

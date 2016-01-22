@@ -168,7 +168,7 @@ public class InnerShadowTest extends EffectsTestBase {
         effect.setWidth(-0.1f);
         assertEquals(-0.1f, effect.getWidth(), 1e-100);
         pulse();
-        assertEquals(0f, ((com.sun.scenario.effect.InnerShadow) effect.impl_getImpl()).getGaussianWidth(), 1e-100);        
+        assertEquals(0f, ((com.sun.scenario.effect.InnerShadow) effect.impl_getImpl()).getGaussianWidth(), 1e-100);
     }
 
     @Test
@@ -179,7 +179,7 @@ public class InnerShadowTest extends EffectsTestBase {
         effect.setWidth(255.1f);
         assertEquals(255.1f, effect.getWidth(), 1e-100);
         pulse();
-        assertEquals(255f, ((com.sun.scenario.effect.InnerShadow) effect.impl_getImpl()).getGaussianWidth(), 1e-100);              
+        assertEquals(255f, ((com.sun.scenario.effect.InnerShadow) effect.impl_getImpl()).getGaussianWidth(), 1e-100);
     }
 
     @Test
@@ -190,7 +190,7 @@ public class InnerShadowTest extends EffectsTestBase {
         pulse();
         assertEquals(9.0f, ((com.sun.scenario.effect.InnerShadow) effect.impl_getImpl()).getGaussianHeight(), 1e-100);
         // check that radius changed appropriately
-        // radius = (((width + height)/2) -1) /2        
+        // radius = (((width + height)/2) -1) /2
         assertEquals(7.0f, effect.getRadius(), 1e-100);
     }
 
@@ -211,7 +211,7 @@ public class InnerShadowTest extends EffectsTestBase {
         effect.setHeight(-0.1f);
         assertEquals(-0.1f, effect.getHeight(), 1e-100);
         pulse();
-        assertEquals(0f, ((com.sun.scenario.effect.InnerShadow) effect.impl_getImpl()).getGaussianHeight(), 1e-100);       
+        assertEquals(0f, ((com.sun.scenario.effect.InnerShadow) effect.impl_getImpl()).getGaussianHeight(), 1e-100);
     }
 
     @Test
@@ -222,7 +222,7 @@ public class InnerShadowTest extends EffectsTestBase {
         effect.setHeight(255.1f);
         assertEquals(255.1f, effect.getHeight(), 1e-100);
         pulse();
-        assertEquals(255f, ((com.sun.scenario.effect.InnerShadow) effect.impl_getImpl()).getGaussianHeight(), 1e-100);               
+        assertEquals(255f, ((com.sun.scenario.effect.InnerShadow) effect.impl_getImpl()).getGaussianHeight(), 1e-100);
     }
 
     @Test
@@ -254,7 +254,7 @@ public class InnerShadowTest extends EffectsTestBase {
         effect.setRadius(-0.1f);
         assertEquals(-0.1f, effect.getRadius(), 1e-100);
         pulse();
-        assertEquals(0f, ((com.sun.scenario.effect.InnerShadow) effect.impl_getImpl()).getRadius(), 1e-100);        
+        assertEquals(0f, ((com.sun.scenario.effect.InnerShadow) effect.impl_getImpl()).getRadius(), 1e-100);
     }
 
     @Test
@@ -265,7 +265,7 @@ public class InnerShadowTest extends EffectsTestBase {
         effect.setRadius(127.1f);
         assertEquals(127.1f, effect.getRadius(), 1e-100);
         pulse();
-        assertEquals(127f, ((com.sun.scenario.effect.InnerShadow) effect.impl_getImpl()).getRadius(), 1e-100);                
+        assertEquals(127f, ((com.sun.scenario.effect.InnerShadow) effect.impl_getImpl()).getRadius(), 1e-100);
     }
 
     @Test
@@ -311,7 +311,7 @@ public class InnerShadowTest extends EffectsTestBase {
         effect.setChoke(-0.1f);
         assertEquals(-0.1f, effect.getChoke(), 1e-100);
         pulse();
-        assertEquals(0f, ((com.sun.scenario.effect.InnerShadow) effect.impl_getImpl()).getChoke(), 1e-100);        
+        assertEquals(0f, ((com.sun.scenario.effect.InnerShadow) effect.impl_getImpl()).getChoke(), 1e-100);
     }
 
     @Test
@@ -393,7 +393,7 @@ public class InnerShadowTest extends EffectsTestBase {
         assertEquals(9, effect.getWidth(), 1e-100);
 
         pulse();
-        
+
         assertEquals(4, ((com.sun.scenario.effect.InnerShadow) effect.impl_getImpl()).getRadius(), 1e-100);
         assertEquals(9, ((com.sun.scenario.effect.InnerShadow) effect.impl_getImpl()).getGaussianWidth(), 1e-100);
         assertEquals(9, ((com.sun.scenario.effect.InnerShadow) effect.impl_getImpl()).getGaussianHeight(), 1e-100);
@@ -403,7 +403,7 @@ public class InnerShadowTest extends EffectsTestBase {
         Color4f actual = ((com.sun.scenario.effect.InnerShadow) effect.impl_getImpl()).getColor();
         assertColor4fEquals(red, actual);
     }
-    
+
     @Test
     public void testCreateWithParams6() {
         effect = new InnerShadow(BlurType.GAUSSIAN, Color.RED, 4, 0.5, 1, 2);
@@ -459,7 +459,7 @@ public class InnerShadowTest extends EffectsTestBase {
         assertEquals(21, effect.getWidth(), 1e-100);
 
         pulse();
-        
+
         assertEquals(10f, ((com.sun.scenario.effect.InnerShadow) effect.impl_getImpl()).getRadius(), 1e-100);
         assertEquals(21f, ((com.sun.scenario.effect.InnerShadow) effect.impl_getImpl()).getGaussianWidth(), 1e-100);
         assertEquals(21f, ((com.sun.scenario.effect.InnerShadow) effect.impl_getImpl()).getGaussianHeight(), 1e-100);
@@ -469,7 +469,7 @@ public class InnerShadowTest extends EffectsTestBase {
         Color4f actual = ((com.sun.scenario.effect.InnerShadow) effect.impl_getImpl()).getColor();
         assertColor4fEquals(black, actual);
     }
-    
+
     @Test
     public void testCreateWithDefaultParams6() {
         effect = new InnerShadow(BlurType.THREE_PASS_BOX, Color.BLACK, 10, 0, 0, 0);
@@ -590,7 +590,7 @@ public class InnerShadowTest extends EffectsTestBase {
     }
 
     // test whether width/radius are changing correctly if height is bound
-    // and one of them is changed    
+    // and one of them is changed
     @Test
     public void testHeightBound() throws Exception {
         DoubleProperty boundHeight = new SimpleDoubleProperty();

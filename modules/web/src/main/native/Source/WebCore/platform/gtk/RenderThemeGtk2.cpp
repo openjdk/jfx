@@ -399,7 +399,7 @@ bool RenderThemeGtk::paintMenuList(RenderObject* object, const PaintInfo& info, 
         return false;
 
     // We want to decrease the height of the separator based on the focus padding of the button.
-    gint focusPadding = 0, focusWidth = 0; 
+    gint focusPadding = 0, focusWidth = 0;
     gtk_widget_style_get(gtkComboBoxButton(),
                          "focus-line-width", &focusWidth,
                          "focus-padding", &focusPadding, NULL);
@@ -518,7 +518,7 @@ bool RenderThemeGtk::paintSliderThumb(RenderObject* object, const PaintInfo& inf
     // Only some themes have slider thumbs respond to clicks and some don't. This information is
     // gathered via the 'activate-slider' property, but it's deprecated in GTK+ 2.22 and removed in
     // GTK+ 3.x. The drawback of not honoring it is that slider thumbs change color when you click
-    // on them. 
+    // on them.
     IntRect thumbRect(IntPoint(), rect.size());
     WidgetRenderingContext widgetContext(info.context, rect);
     widgetContext.gtkPaintSlider(thumbRect, widget, getGtkStateType(this, object), GTK_SHADOW_OUT, detail, orientation);
@@ -858,7 +858,7 @@ static void getGtkComboBoxPieces(GtkWidget* widget, gpointer data)
         static_cast<ComboBoxWidgetPieces*>(data)->arrow = widget;
         return;
     }
-    if (GTK_IS_SEPARATOR(widget)) 
+    if (GTK_IS_SEPARATOR(widget))
         static_cast<ComboBoxWidgetPieces*>(data)->separator = widget;
 }
 

@@ -27,7 +27,7 @@
 #include "RenderTheme.h"
 
 // If you have an empty placeholder SafariThemeConstants.h, then include SafariTheme.h
-// This is a workaround until a version of WebKitSupportLibrary is released with an updated SafariThemeConstants.h 
+// This is a workaround until a version of WebKitSupportLibrary is released with an updated SafariThemeConstants.h
 #include <SafariTheme/SafariThemeConstants.h>
 #ifndef SafariThemeConstants_h
 #include <SafariTheme/SafariTheme.h>
@@ -77,8 +77,8 @@ public:
     virtual int minimumMenuListSize(RenderStyle*) const;
 
     virtual void adjustSliderThumbSize(RenderStyle*, Element*) const;
-    virtual void adjustSliderThumbStyle(StyleResolver*, RenderStyle*, Element*) const; 
-    
+    virtual void adjustSliderThumbStyle(StyleResolver*, RenderStyle*, Element*) const;
+
     virtual int popupInternalPaddingLeft(RenderStyle*) const;
     virtual int popupInternalPaddingRight(RenderStyle*) const;
     virtual int popupInternalPaddingTop(RenderStyle*) const;
@@ -125,7 +125,7 @@ protected:
 
     virtual void adjustSearchFieldResultsButtonStyle(StyleResolver*, RenderStyle*, Element*) const;
     virtual bool paintSearchFieldResultsButton(RenderObject*, const PaintInfo&, const IntRect&);
- 
+
     virtual bool paintCapsLockIndicator(RenderObject*, const PaintInfo&, const IntRect&);
 
 #if ENABLE(VIDEO)

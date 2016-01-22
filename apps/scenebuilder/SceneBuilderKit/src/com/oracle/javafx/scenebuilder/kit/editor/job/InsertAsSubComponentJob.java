@@ -83,7 +83,7 @@ public class InsertAsSubComponentJob extends BatchSelectionJob {
     @Override
     protected List<Job> makeSubJobs() {
         final List<Job> result;
-        
+
         final boolean executable;
         if (targetObject instanceof FXOMInstance) {
             final DesignHierarchyMask mask = new DesignHierarchyMask(targetObject);
@@ -92,7 +92,7 @@ public class InsertAsSubComponentJob extends BatchSelectionJob {
             // TODO(elp): someday we should support insering in FXOMCollection
             executable = false;
         }
-        
+
         if (executable) {
             final FXOMDocument fxomDocument = targetObject.getFxomDocument();
             final FXOMInstance targetInstance = (FXOMInstance) targetObject;
@@ -116,14 +116,14 @@ public class InsertAsSubComponentJob extends BatchSelectionJob {
 
             final FXOMProperty currentProperty
                     = targetInstance.getProperties().get(subComponentName);
-           
+
             final FXOMPropertyC targetProperty;
             if (currentProperty instanceof FXOMPropertyC) {
                 targetProperty = (FXOMPropertyC) currentProperty;
             } else {
                 targetProperty = new FXOMPropertyC(fxomDocument, subComponentName);
             }
-            
+
             result = new ArrayList<>();
 
             /*
@@ -136,10 +136,10 @@ public class InsertAsSubComponentJob extends BatchSelectionJob {
             /*
              * AddPropertyValueJob
              */
-            final Job addValueJob 
-                    = new AddPropertyValueJob(newObject, 
-                            targetProperty, 
-                            targetIndex, 
+            final Job addValueJob
+                    = new AddPropertyValueJob(newObject,
+                            targetProperty,
+                            targetIndex,
                             getEditorController());
             result.add(addValueJob);
 
@@ -153,20 +153,20 @@ public class InsertAsSubComponentJob extends BatchSelectionJob {
                         -1, getEditorController());
                 result.add(addPropertyJob);
             }
-            
+
             /*
              * PrunePropertiesJob
              */
-            final Job pruneJob = new PrunePropertiesJob(newObject, targetObject, 
+            final Job pruneJob = new PrunePropertiesJob(newObject, targetObject,
                     getEditorController());
             if (pruneJob.isExecutable()) {
                 result.add(0, pruneJob);
             }
-            
+
         } else {
             result = Collections.emptyList();
         }
-        
+
         return result;
     }
 
@@ -189,7 +189,7 @@ public class InsertAsSubComponentJob extends BatchSelectionJob {
             assert false;
             sb.append(newObject.getClass().getSimpleName());
         }
-        
+
         return sb.toString();
     }
 

@@ -46,7 +46,7 @@ public class ObservableDoubleValueStub extends ObservableValueBase<Number> imple
     public Double getValue() {
         return value;
     }
-    
+
    @Override
     public int intValue() {
         return (int) value;

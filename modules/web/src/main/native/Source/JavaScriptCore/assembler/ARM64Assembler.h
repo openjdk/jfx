@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef ARM64Assembler_h
@@ -476,10 +476,10 @@ class ARM64Assembler {
 public:
     typedef ARM64Registers::RegisterID RegisterID;
     typedef ARM64Registers::FPRegisterID FPRegisterID;
-    
+
     static RegisterID firstRegister() { return ARM64Registers::x0; }
     static RegisterID lastRegister() { return ARM64Registers::x28; }
-    
+
     static FPRegisterID firstFPRegister() { return ARM64Registers::q0; }
     static FPRegisterID lastFPRegister() { return ARM64Registers::q31; }
 
@@ -493,7 +493,7 @@ public:
         , m_indexOfTailOfLastWatchpoint(INT_MIN)
     {
     }
-    
+
     AssemblerBuffer& buffer() { return m_buffer; }
 
     // (HS, LO, HI, LS) -> (AE, B, A, BE)
@@ -856,7 +856,7 @@ private:
     enum MemOp {
         MemOp_STORE,
         MemOp_LOAD,
-        MemOp_STORE_V128, 
+        MemOp_STORE_V128,
         MemOp_LOAD_V128,
         MemOp_PREFETCH = 2, // size must be 3
         MemOp_LOAD_signed64 = 2, // size may be 0, 1 or 2
@@ -876,7 +876,7 @@ private:
     enum MoveWideOp {
         MoveWideOp_N = 0,
         MoveWideOp_Z = 2,
-        MoveWideOp_K = 3 
+        MoveWideOp_K = 3
     };
 
     enum LdrLiteralOp {
@@ -1057,7 +1057,7 @@ public:
     {
         insn(excepnGeneration(ExcepnOp_BREAKPOINT, imm, 0));
     }
-    
+
     template<int datasize>
     ALWAYS_INLINE void cbnz(RegisterID rt, int32_t offset = 0)
     {
@@ -1249,7 +1249,7 @@ public:
         CHECK_DATASIZE();
         insn(logicalShiftedRegister(DATASIZE, LogicalOp_EOR, shift, false, rm, amount, rn, rd));
     }
-    
+
     template<int datasize>
     ALWAYS_INLINE void eor(RegisterID rd, RegisterID rn, LogicalImmediate imm)
     {
@@ -1668,7 +1668,7 @@ public:
     {
         insn(nopPseudo());
     }
-    
+
     static void fillNops(void* base, size_t size)
     {
         RELEASE_ASSERT(!(size % sizeof(int32_t)));
@@ -1676,7 +1676,7 @@ public:
         for (int32_t* ptr = static_cast<int32_t*>(base); n--;)
             *ptr++ = nopPseudo();
     }
-    
+
     ALWAYS_INLINE void dmbSY()
     {
         insn(0xd5033fbf);
@@ -2578,13 +2578,13 @@ public:
             brk(0);
         return label();
     }
-    
+
     static void* getRelocatedAddress(void* code, AssemblerLabel label)
     {
         ASSERT(label.isSet());
         return reinterpret_cast<void*>(reinterpret_cast<ptrdiff_t>(code) + label.m_offset);
     }
-    
+
     static int getDifferenceBetweenLabels(AssemblerLabel a, AssemblerLabel b)
     {
         return b.m_offset - a.m_offset;
@@ -2641,7 +2641,7 @@ public:
         ASSERT(to.isSet());
         relinkJumpOrCall<false>(addressOf(from), addressOf(to));
     }
-    
+
     static void linkJump(void* code, AssemblerLabel from, void* to)
     {
         ASSERT(from.isSet());
@@ -2666,12 +2666,12 @@ public:
         *static_cast<int*>(where) = unconditionalBranchImmediate(false, static_cast<int>(offset));
         cacheFlush(where, sizeof(int));
     }
-    
+
     static ptrdiff_t maxJumpReplacementSize()
     {
         return 4;
     }
-    
+
     static void replaceWithLoad(void* where)
     {
         Datasize sf;
@@ -2817,13 +2817,13 @@ public:
         relinkJumpOrCall<false>(reinterpret_cast<int*>(from), to);
         cacheFlush(from, sizeof(int));
     }
-    
+
     static void relinkCall(void* from, void* to)
     {
         relinkJumpOrCall<true>(reinterpret_cast<int*>(from) - 1, to);
         cacheFlush(reinterpret_cast<int*>(from) - 1, sizeof(int));
     }
-    
+
     static void repatchCompact(void* where, int32_t value)
     {
         ASSERT(!(value & ~0x3ff8));
@@ -3203,7 +3203,7 @@ private:
         imm19 = (insn << 8) >> 13;
         rt = static_cast<RegisterID>(insn & 0x1f);
         return (insn & 0x7e000000) == 0x34000000;
-        
+
     }
 
     static bool disassembleConditionalBranchImmediate(void* address, unsigned& op01, int& imm19, Condition &condition)
@@ -3223,7 +3223,7 @@ private:
         bitNumber = static_cast<unsigned>((((insn >> 26) & 0x20)) | ((insn > 19) & 0x1f));
         rt = static_cast<RegisterID>(insn & 0x1f);
         return (insn & 0x7e000000) == 0x36000000;
-        
+
     }
 
     static bool disassembleUnconditionalBranchImmediate(void* address, bool& op, int& imm26)
@@ -3598,7 +3598,7 @@ private:
     {
         return hintPseudo(0);
     }
-    
+
     // 'op' means negate
     ALWAYS_INLINE static int testAndBranchImmediate(bool op, int b50, int imm14, RegisterID rt)
     {

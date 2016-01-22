@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef DFGExitProfile_h
@@ -45,14 +45,14 @@ public:
         , m_jitType(ExitFromAnything)
     {
     }
-    
+
     FrequentExitSite(WTF::HashTableDeletedValueType)
         : m_bytecodeOffset(1) // 1 = deleted value
         , m_kind(ExitKindUnset)
         , m_jitType(ExitFromAnything)
     {
     }
-    
+
     explicit FrequentExitSite(unsigned bytecodeOffset, ExitKind kind, ExitingJITType jitType = ExitFromAnything)
         : m_bytecodeOffset(bytecodeOffset)
         , m_kind(kind)
@@ -64,7 +64,7 @@ public:
             m_bytecodeOffset = 0;
         }
     }
-    
+
     // Use this constructor if you wish for the exit site to be counted globally within its
     // code block.
     explicit FrequentExitSite(ExitKind kind, ExitingJITType jitType = ExitFromAnything)
@@ -73,19 +73,19 @@ public:
         , m_jitType(jitType)
     {
     }
-    
+
     bool operator!() const
     {
         return m_kind == ExitKindUnset;
     }
-    
+
     bool operator==(const FrequentExitSite& other) const
     {
         return m_bytecodeOffset == other.m_bytecodeOffset
             && m_kind == other.m_kind
             && m_jitType == other.m_jitType;
     }
-    
+
     bool subsumes(const FrequentExitSite& other) const
     {
         if (m_bytecodeOffset != other.m_bytecodeOffset)
@@ -96,16 +96,16 @@ public:
             return true;
         return m_jitType == other.m_jitType;
     }
-    
+
     unsigned hash() const
     {
         return WTF::intHash(m_bytecodeOffset) + m_kind + m_jitType * 7;
     }
-    
+
     unsigned bytecodeOffset() const { return m_bytecodeOffset; }
     ExitKind kind() const { return m_kind; }
     ExitingJITType jitType() const { return m_jitType; }
-    
+
     FrequentExitSite withJITType(ExitingJITType jitType) const
     {
         FrequentExitSite result = *this;
@@ -153,7 +153,7 @@ class ExitProfile {
 public:
     ExitProfile();
     ~ExitProfile();
-    
+
     // Add a new frequent exit site. Return true if this is a new one, or false
     // if we already knew about it. This is an O(n) operation, because it errs
     // on the side of keeping the data structure compact. Also, this will only
@@ -161,11 +161,11 @@ public:
     // rare to begin with, and implies doing O(n) operations on the CodeBlock
     // anyway.
     bool add(const ConcurrentJITLocker&, const FrequentExitSite&);
-    
+
     // Get the frequent exit sites for a bytecode index. This is O(n), and is
     // meant to only be used from debugging/profiling code.
     Vector<FrequentExitSite> exitSitesFor(unsigned bytecodeIndex);
-    
+
     // This is O(n) and should be called on less-frequently executed code paths
     // in the compiler. It should be strictly cheaper than building a
     // QueryableExitProfile, if you really expect this to be called infrequently
@@ -179,10 +179,10 @@ public:
     {
         return hasExitSite(locker, FrequentExitSite(bytecodeIndex, kind));
     }
-    
+
 private:
     friend class QueryableExitProfile;
-    
+
     OwnPtr<Vector<FrequentExitSite>> m_frequentExitSites;
 };
 
@@ -190,7 +190,7 @@ class QueryableExitProfile {
 public:
     QueryableExitProfile();
     ~QueryableExitProfile();
-    
+
     void initialize(const ConcurrentJITLocker&, const ExitProfile&);
 
     bool hasExitSite(const FrequentExitSite& site) const
@@ -201,12 +201,12 @@ public:
         }
         return m_frequentExitSites.find(site) != m_frequentExitSites.end();
     }
-    
+
     bool hasExitSite(ExitKind kind) const
     {
         return hasExitSite(FrequentExitSite(kind));
     }
-    
+
     bool hasExitSite(unsigned bytecodeIndex, ExitKind kind) const
     {
         return hasExitSite(FrequentExitSite(bytecodeIndex, kind));

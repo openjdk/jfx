@@ -215,7 +215,7 @@ namespace WebCore {
         static Type copy(const AllowCrossThreadAccessWrapper<T>& wrapper) { return wrapper.value(); }
     };
 
-    template<typename T> AllowCrossThreadAccessWrapper<T> AllowCrossThreadAccess(T* value) 
+    template<typename T> AllowCrossThreadAccessWrapper<T> AllowCrossThreadAccess(T* value)
     {
         return AllowCrossThreadAccessWrapper<T>(value);
     }

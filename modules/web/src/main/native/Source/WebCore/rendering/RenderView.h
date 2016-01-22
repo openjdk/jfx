@@ -109,7 +109,7 @@ public:
     {
         return m_layoutState ? m_layoutState->m_layoutDelta : LayoutSize();
     }
-    void addLayoutDelta(const LayoutSize& delta) 
+    void addLayoutDelta(const LayoutSize& delta)
     {
         if (m_layoutState) {
             m_layoutState->m_layoutDelta += delta;
@@ -119,7 +119,7 @@ public:
 #endif
         }
     }
-    
+
 #if !ASSERT_DISABLED
     bool layoutDeltaMatches(const LayoutSize& delta)
     {
@@ -162,7 +162,7 @@ public:
     void setBestTruncatedAt(int y, RenderBoxModelObject* forRenderer, bool forcedBreak = false);
     int truncatedAt() const { return m_legacyPrinting.m_truncatedAt; }
     void setTruncatedAt(int y)
-    { 
+    {
         m_legacyPrinting.m_truncatedAt = y;
         m_legacyPrinting.m_bestTruncatedAt = 0;
         m_legacyPrinting.m_truncatorWidth = 0;
@@ -185,7 +185,7 @@ public:
 
     // Renderer that paints the root background has background-images which all have background-attachment: fixed.
     bool rootBackgroundIsEntirelyFixed() const;
-    
+
     bool hasRenderNamedFlowThreads() const;
     bool checkTwoPassLayoutForAutoHeightRegions() const;
     FlowThreadController& flowThreadController();
@@ -206,7 +206,7 @@ public:
     void addRenderCounter() { m_renderCounterCount++; }
     void removeRenderCounter() { ASSERT(m_renderCounterCount > 0); m_renderCounterCount--; }
     bool hasRenderCounters() { return m_renderCounterCount; }
-    
+
     IntRect pixelSnappedLayoutOverflowRect() const { return pixelSnappedIntRect(layoutOverflowRect()); }
 
     ImageQualityController& imageQualityController();
@@ -240,7 +240,7 @@ protected:
     virtual const RenderObject* pushMappingToContainer(const RenderLayerModelObject* ancestorToStopAt, RenderGeometryMap&) const override;
     virtual void mapAbsoluteToLocalPoint(MapCoordinatesFlags, TransformState&) const override;
     virtual bool requiresColumns(int desiredColumnCount) const override;
-    
+
 private:
     void initializeLayoutState(LayoutState&);
 
@@ -291,7 +291,7 @@ private:
 
     void pushLayoutStateForCurrentFlowThread(const RenderObject&);
     void popLayoutStateForCurrentFlowThread();
-    
+
     friend class LayoutStateMaintainer;
     friend class LayoutStateDisabler;
 
@@ -400,7 +400,7 @@ public:
                 if (m_disabled)
                     m_view.enableLayoutState();
             }
-            
+
             m_didEnd = true;
         }
     }

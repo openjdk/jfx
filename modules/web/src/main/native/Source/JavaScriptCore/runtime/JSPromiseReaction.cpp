@@ -65,7 +65,7 @@ void ExecutePromiseReactionMicrotask::run(ExecState* exec)
 {
     // 1. Let 'deferred' be reaction.[[Deferred]].
     JSPromiseDeferred* deferred = m_reaction->deferred();
-    
+
     // 2. Let 'handler' be reaction.[[Handler]].
     JSValue handler = m_reaction->handler();
 
@@ -91,7 +91,7 @@ void ExecutePromiseReactionMicrotask::run(ExecState* exec)
 
         performDeferredReject(exec, deferred, exception);
     }
-    
+
     // 5. Let 'handlerResult' be handlerResult.[[value]].
     // Note: Nothing to do.
 
@@ -107,7 +107,7 @@ void ExecutePromiseReactionMicrotask::run(ExecState* exec)
 
     // 7. Let 'updateResult' be the result of calling UpdateDeferredFromPotentialThenable(handlerResult, deferred).
     ThenableStatus updateResult = updateDeferredFromPotentialThenable(exec, handlerResult, deferred);
-    
+
     // 8. ReturnIfAbrupt(updateResult).
     if (exec->hadException())
         return;

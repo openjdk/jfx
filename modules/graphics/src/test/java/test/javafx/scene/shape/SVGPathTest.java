@@ -39,7 +39,7 @@ import org.junit.Test;
 import static org.junit.Assert.*;
 
 public class SVGPathTest {
-    
+
     @Test public void testBoundPropertySync_Content() throws Exception {
         StubSVGPath svgPath = new StubSVGPath();
         svgPath.setContent("M40,60 C42,48 44,30 25,32");

@@ -65,12 +65,12 @@ public class ObservableListWithExtractor {
     public ObservableListWithExtractor(Mode mode) {
         this.mode = mode;
     }
-    
+
     private void updateP0() {
         p0.name.set("bar");
     }
 
-    
+
     @Before
     public void setUp() {
         p0 = new Person();
@@ -82,17 +82,17 @@ public class ObservableListWithExtractor {
             modifiedList = FXCollections.observableArrayList();
             observedList = new ElementObservableListDecorator<Person>(modifiedList, callback);
         }
-        
+
         modifiedList.add(p0);
         observedList.addListener(obs);
     }
-    
+
     @Test
     public void testUpdate_add() {
         updateP0();
         obs.check1Update(modifiedList, 0, 1);
     }
-    
+
     @Test
     public void testUpdate_add1() {
         modifiedList.clear();
@@ -101,7 +101,7 @@ public class ObservableListWithExtractor {
         updateP0();
         obs.check1Update(observedList, 0, 1);
     }
-    
+
     @Test
     public void testUpdate_addAll() {
         modifiedList.clear();
@@ -110,7 +110,7 @@ public class ObservableListWithExtractor {
         updateP0();
         obs.check1Update(observedList, 0, 2);
     }
-    
+
     @Test
     public void testUpdate_addAll1() {
         modifiedList.clear();
@@ -119,7 +119,7 @@ public class ObservableListWithExtractor {
         updateP0();
         obs.check1Update(observedList, 0, 2);
     }
-    
+
     @Test
     public void testUpdate_addAll2() {
         modifiedList.clear();
@@ -128,7 +128,7 @@ public class ObservableListWithExtractor {
         updateP0();
         obs.check1Update(observedList, 0, 2);
     }
-    
+
     @Test
     public void testUpdate_set() {
         Person p1 = new Person();
@@ -139,7 +139,7 @@ public class ObservableListWithExtractor {
         p1.name.set("bar");
         obs.check1Update(observedList, 0, 1);
     }
-    
+
     @Test
     public void testUpdate_setAll() {
         Person p1 = new Person();
@@ -150,7 +150,7 @@ public class ObservableListWithExtractor {
         p1.name.set("bar");
         obs.check1Update(observedList, 0, 1);
     }
-    
+
     @Test
     public void testUpdate_remove() {
         modifiedList.remove(p0);
@@ -158,7 +158,7 @@ public class ObservableListWithExtractor {
         updateP0();
         obs.check0();
     }
-    
+
     @Test
     public void testUpdate_remove1() {
         modifiedList.remove(0);
@@ -166,7 +166,7 @@ public class ObservableListWithExtractor {
         updateP0();
         obs.check0();
     }
-    
+
     @Test
     public void testUpdate_removeAll() {
         modifiedList.removeAll(p0);
@@ -174,7 +174,7 @@ public class ObservableListWithExtractor {
         updateP0();
         obs.check0();
     }
-    
+
     @Test
     public void testUpdate_retainAll() {
         modifiedList.retainAll();
@@ -182,7 +182,7 @@ public class ObservableListWithExtractor {
         updateP0();
         obs.check0();
     }
-    
+
     @Test
     public void testUpdate_iterator_add() {
         modifiedList.clear();
@@ -191,7 +191,7 @@ public class ObservableListWithExtractor {
         updateP0();
         obs.check1Update(observedList, 0, 1);
     }
-    
+
     @Test
     public void testUpdate_iterator_set() {
         Person p1 = new Person();
@@ -204,7 +204,7 @@ public class ObservableListWithExtractor {
         p1.name.set("bar");
         obs.check1Update(observedList, 0, 1);
     }
-    
+
     @Test
     public void testUpdate_sublist_add() {
         List<Person> sublist = modifiedList.subList(0, 1);
@@ -213,7 +213,7 @@ public class ObservableListWithExtractor {
         updateP0();
         obs.check1Update(observedList, 0, 2);
     }
-    
+
     @Test
     public void testUpdate_sublist_add1() {
         List<Person> sublist = modifiedList.subList(0, 1);
@@ -223,7 +223,7 @@ public class ObservableListWithExtractor {
         updateP0();
         obs.check1Update(observedList, 0, 1);
     }
-    
+
     @Test
     public void testUpdate_sublist_addAll() {
         List<Person> sublist = modifiedList.subList(0, 1);
@@ -233,7 +233,7 @@ public class ObservableListWithExtractor {
         updateP0();
         obs.check1Update(observedList, 0, 2);
     }
-    
+
     @Test
     public void testUpdate_sublist_addAll1() {
         List<Person> sublist = modifiedList.subList(0, 1);
@@ -243,7 +243,7 @@ public class ObservableListWithExtractor {
         updateP0();
         obs.check1Update(observedList, 0, 2);
     }
-    
+
     @Test
     public void testUpdate_sublist_set() {
         List<Person> sublist = modifiedList.subList(0, 1);
@@ -255,7 +255,7 @@ public class ObservableListWithExtractor {
         p1.name.set("bar");
         obs.check1Update(observedList, 0, 1);
     }
-    
+
     @Test
     public void testUpdate_sublist_remove() {
         List<Person> sublist = modifiedList.subList(0, 1);
@@ -264,7 +264,7 @@ public class ObservableListWithExtractor {
         updateP0();
         obs.check0();
     }
-    
+
     @Test
     public void testUpdate_sublist_remove1() {
         List<Person> sublist = modifiedList.subList(0, 1);
@@ -273,7 +273,7 @@ public class ObservableListWithExtractor {
         updateP0();
         obs.check0();
     }
-    
+
     @Test
     public void testUpdate_sublist_removeAll() {
         List<Person> sublist = modifiedList.subList(0, 1);
@@ -282,7 +282,7 @@ public class ObservableListWithExtractor {
         updateP0();
         obs.check0();
     }
-    
+
     @Test
     public void testUpdate_sublist_retainAll() {
         List<Person> sublist = modifiedList.subList(0, 1);
@@ -291,7 +291,7 @@ public class ObservableListWithExtractor {
         updateP0();
         obs.check0();
     }
-    
+
     @Test
     public void testUpdate_iterator_sublist_add() {
         List<Person> sublist = modifiedList.subList(0, 1);
@@ -301,7 +301,7 @@ public class ObservableListWithExtractor {
         updateP0();
         obs.check1Update(observedList, 0, 1);
     }
-    
+
     @Test
     public void testUpdate_iterator_sublist_set() {
         List<Person> sublist = modifiedList.subList(0, 1);
@@ -353,5 +353,5 @@ public class ObservableListWithExtractor {
         assertEquals(1, obs.calls.size());
     }
 
-    
+
 }

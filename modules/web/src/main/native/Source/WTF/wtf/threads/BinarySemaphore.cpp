@@ -34,7 +34,7 @@ BinarySemaphore::BinarySemaphore()
     : m_isSet(false)
 {
 }
-    
+
 BinarySemaphore::~BinarySemaphore()
 {
 }

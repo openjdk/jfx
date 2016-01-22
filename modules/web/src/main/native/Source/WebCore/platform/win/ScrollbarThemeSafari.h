@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef ScrollbarThemeSafari_h
@@ -37,7 +37,7 @@ public:
     virtual ~ScrollbarThemeSafari();
 
     virtual int scrollbarThickness(ScrollbarControlSize = RegularScrollbar);
-    
+
     virtual bool supportsControlTints() const { return true; }
 
 protected:
@@ -49,7 +49,7 @@ protected:
     virtual IntRect trackRect(ScrollbarThemeClient*, bool painting = false);
 
     virtual int minimumThumbLength(ScrollbarThemeClient*);
-    
+
     virtual bool shouldCenterOnThumb(ScrollbarThemeClient*, const PlatformMouseEvent&);
 
     virtual void paintTrackBackground(GraphicsContext*, ScrollbarThemeClient*, const IntRect&);

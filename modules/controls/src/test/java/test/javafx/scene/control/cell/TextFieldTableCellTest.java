@@ -42,9 +42,9 @@ import org.junit.Test;
 import static org.junit.Assert.*;
 
 public class TextFieldTableCellTest {
-    
+
     private StringConverter<Object> converter;
-    
+
     @Before public void setup() {
         converter = new StringConverter<Object>() {
             @Override public String toString(Object object) {
@@ -56,22 +56,22 @@ public class TextFieldTableCellTest {
             }
         };
     }
-    
+
     /**************************************************************************
-     * 
+     *
      * Test for public static Callback<TableColumn<String>, TableCell<String>> forTableColumn()
-     * 
+     *
      **************************************************************************/
 
-    
+
     @Test public void testStatic_forTableColumn_noArgs_ensureCellFactoryIsNotNull() {
         Callback<TableColumn<Object,String>, TableCell<Object,String>> cellFactory = TextFieldTableCell.forTableColumn();
         assertNotNull(cellFactory);
     }
-    
+
     @Test public void testStatic_forTableColumn_noArgs_ensureCellFactoryCreatesCells() {
         Callback<TableColumn<Object,String>, TableCell<Object,String>> cellFactory = TextFieldTableCell.forTableColumn();
-        
+
         TableColumn<Object,String> tableColumn = new TableColumn<>();
         TextFieldTableCell<Object,String> cell = (TextFieldTableCell<Object,String>)cellFactory.call(tableColumn);
         assertNotNull(cell);
@@ -79,30 +79,30 @@ public class TextFieldTableCellTest {
 
     @Test public void testStatic_forTableColumn_callback_ensureCellHasNonNullStringConverter() {
         Callback<TableColumn<Object,String>, TableCell<Object,String>> cellFactory = TextFieldTableCell.forTableColumn();
-        
+
         TableColumn<Object,String> tableColumn = new TableColumn<>();
         TextFieldTableCell<Object,String> cell = (TextFieldTableCell<Object,String>)cellFactory.call(tableColumn);
         assertNotNull(cell.getConverter());
     }
-    
-    
-    
+
+
+
     /**************************************************************************
-     * 
+     *
      * Test for public static <T> Callback<TableColumn<T>, TableCell<T>> forTableColumn(
      *       final StringConverter<T> converter)
-     * 
+     *
      **************************************************************************/
 
-    
+
     @Test public void testStatic_forTableColumn_converter_ensureCellFactoryIsNotNull() {
         Callback<TableColumn<Object,Object>, TableCell<Object,Object>> cellFactory = TextFieldTableCell.forTableColumn(converter);
         assertNotNull(cellFactory);
     }
-    
+
     @Test public void testStatic_forTableColumn_converter_ensureCellFactoryCreatesCells() {
         Callback<TableColumn<Object,Object>, TableCell<Object,Object>> cellFactory = TextFieldTableCell.forTableColumn(converter);
-        
+
         TableColumn<Object,Object> tableColumn = new TableColumn<>();
         TextFieldTableCell<Object,Object> cell = (TextFieldTableCell<Object,Object>)cellFactory.call(tableColumn);
         assertNotNull(cell);
@@ -110,63 +110,63 @@ public class TextFieldTableCellTest {
 
     @Test public void testStatic_forTableColumn_converter_ensureCellHasSetStringConverter() {
         Callback<TableColumn<Object,Object>, TableCell<Object,Object>> cellFactory = TextFieldTableCell.forTableColumn(converter);
-        
+
         TableColumn<Object,Object> tableColumn = new TableColumn<>();
         TextFieldTableCell<Object,Object> cell = (TextFieldTableCell<Object,Object>)cellFactory.call(tableColumn);
         assertNotNull(cell.getConverter());
         assertEquals(converter, cell.getConverter());
     }
-    
-    
-    
+
+
+
     /**************************************************************************
-     * 
+     *
      * Constructor tests for default constructor
-     * 
+     *
      **************************************************************************/
 
     @Test public void testConstructor_noArgs_defaultStringConverterIsNull() {
         TextFieldTableCell<?,Object> cell = new TextFieldTableCell<>();
         assertNull(cell.getConverter());
     }
-    
+
     @Test public void testConstructor_noArgs_defaultStyleClass() {
         TextFieldTableCell<?,Object> cell = new TextFieldTableCell<>();
         assertTrue(cell.getStyleClass().contains("text-field-table-cell"));
     }
-    
+
     @Test public void testConstructor_noArgs_defaultGraphicIsNull() {
         TextFieldTableCell<?,Object> cell = new TextFieldTableCell<>();
         assertNull(cell.getGraphic());
     }
-    
-    
+
+
     /**************************************************************************
-     * 
+     *
      * Constructor tests for one-arg constructor
-     * 
+     *
      **************************************************************************/
-    
+
     @Test public void testConstructor_converter_defaultStringConverterIsNotNull() {
         TextFieldTableCell<?,Object> cell = new TextFieldTableCell<>(converter);
         assertNotNull(cell.getConverter());
     }
-    
+
     @Test public void testConstructor_converter_defaultStyleClass() {
         TextFieldTableCell<?,Object> cell = new TextFieldTableCell<>(converter);
         assertTrue(cell.getStyleClass().contains("text-field-table-cell"));
     }
-    
+
     @Test public void testConstructor_converter_defaultGraphicIsACheckBox() {
         TextFieldTableCell<?,Object> cell = new TextFieldTableCell<>(converter);
         assertNull(cell.getGraphic());
     }
-    
-    
+
+
     /**************************************************************************
-     * 
+     *
      * updateItem tests
-     * 
+     *
      **************************************************************************/
 
     @Test public void test_updateItem_isEmpty_graphicIsNull() {
@@ -174,20 +174,20 @@ public class TextFieldTableCellTest {
         cell.updateItem("TEST", true);
         assertNull(cell.getGraphic());
     }
-    
+
     @Test public void test_updateItem_isEmpty_textIsNull() {
         TextFieldTableCell<?,Object> cell = new TextFieldTableCell<>();
         cell.updateItem("TEST", true);
         assertNull(cell.getText());
     }
-    
+
     @Test public void test_updateItem_isNotEmpty_textIsNotNull() {
         TextFieldTableCell<?,Object> cell = new TextFieldTableCell<>();
         cell.updateItem("TEST", false);
         assertNotNull(cell.getText());
         assertEquals("TEST", cell.getText());
     }
-    
+
     @Test public void test_updateItem_isNotEmpty_textIsNotNull_nullConverter() {
         TextFieldTableCell<?,Object> cell = new TextFieldTableCell<>();
         cell.setConverter(null);
@@ -195,7 +195,7 @@ public class TextFieldTableCellTest {
         assertNotNull(cell.getText());
         assertEquals("TEST", cell.getText());
     }
-    
+
     @Test public void test_updateItem_isNotEmpty_textIsNotNull_nonNullConverter() {
         TextFieldTableCell<?,Object> cell = new TextFieldTableCell<>();
         cell.setConverter(

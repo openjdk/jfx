@@ -47,28 +47,28 @@ public class ArcToTest {
     @Test public void testSetGetX() throws Exception {
         TestUtils.testDoublePropertyGetterSetter(new ArcTo(), "x", 123.2, 0.0);
     }
-    
+
     @Test public void testSetGetY() throws Exception {
         TestUtils.testDoublePropertyGetterSetter(new ArcTo(), "y", 123.2, 0.0);
     }
-    
+
     @Test public void testSetGetRadiusX() throws Exception {
         TestUtils.testDoublePropertyGetterSetter(new ArcTo(), "radiusX", 123.2, 0.0);
     }
-    
+
     @Test public void testSetGetRadiusY() throws Exception {
         TestUtils.testDoublePropertyGetterSetter(new ArcTo(), "radiusY", 123.2, 0.0);
     }
-    
-    
+
+
     @Test public void testSetGetXAxisRotation() throws Exception {
         TestUtils.testDoublePropertyGetterSetter(new ArcTo(), "xAxisRotation", 123.2, 0.0);
     }
-    
+
     @Test public void testSetGetLargeArcFlag() throws Exception {
         TestUtils.testBooleanPropertyGetterSetter(new ArcTo(), "largeArcFlag");
     }
-    
+
     @Test public void testSetGetSweepFlag() throws Exception {
         TestUtils.testBooleanPropertyGetterSetter(new ArcTo(), "sweepFlag");
     }
@@ -91,7 +91,7 @@ public class ArcToTest {
 
     private void checkSyncedProperty(String propertyName, Coords coord, double expected)
             throws Exception {
-        
+
         ArcTo arcTo = new ArcTo();
         arcTo.setRadiusX(40.0);arcTo.setRadiusY(50.0);
         arcTo.setX(100.0); arcTo.setY(90.0);

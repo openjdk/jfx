@@ -34,7 +34,7 @@
 #include "AccessibilityTableRow.h"
 
 namespace WebCore {
-    
+
 AccessibilityARIAGridCell::AccessibilityARIAGridCell(RenderObject* renderer)
     : AccessibilityTableCell(renderer)
 {
@@ -54,7 +54,7 @@ AccessibilityTable* AccessibilityARIAGridCell::parentTable() const
     AccessibilityObject* parent = parentObjectUnignored();
     if (!parent)
         return nullptr;
-    
+
     if (parent->isAccessibilityTable())
         return toAccessibilityTable(parent);
 
@@ -64,10 +64,10 @@ AccessibilityTable* AccessibilityARIAGridCell::parentTable() const
     parent = parent->parentObjectUnignored();
     if (!parent || !parent->isAccessibilityTable())
         return nullptr;
-    
+
     return toAccessibilityTable(parent);
 }
-    
+
 void AccessibilityARIAGridCell::rowIndexRange(std::pair<unsigned, unsigned>& rowRange)
 {
     AccessibilityObject* parent = parentObjectUnignored();
@@ -115,9 +115,9 @@ void AccessibilityARIAGridCell::columnIndexRange(std::pair<unsigned, unsigned>& 
             break;
         }
     }
-    
+
     // as far as I can tell, grid cells cannot span columns
-    columnRange.second = 1;    
+    columnRange.second = 1;
 }
-  
+
 } // namespace WebCore

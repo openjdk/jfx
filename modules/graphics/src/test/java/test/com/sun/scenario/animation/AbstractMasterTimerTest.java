@@ -37,15 +37,15 @@ import org.junit.Test;
 import static org.junit.Assert.*;
 
 public class AbstractMasterTimerTest {
-    
+
     private AbstractMasterTimerStub timer;
-    
-    
+
+
     @Before
     public void setUp() {
         timer = new AbstractMasterTimerStub();
     }
-    
+
     @Test
     public void testPauseResume() {
         // pause timer
@@ -53,38 +53,38 @@ public class AbstractMasterTimerTest {
         assertEquals(2L, timer.nanos());
         timer.pause();
         assertEquals(2L, timer.nanos());
-        
+
         // test nanos during pause
         timer.setNanos(5L);
         assertEquals(2L, timer.nanos());
-        
+
         // pause again
         timer.setNanos(10L);
         timer.pause();
         assertEquals(2L, timer.nanos());
-        
+
         // resume
         timer.setNanos(17L);
         timer.resume();
         assertEquals(2L, timer.nanos());
         timer.setNanos(28L);
         assertEquals(13L, timer.nanos());
-        
+
         // resume again
         timer.setNanos(41L);
         timer.resume();
         assertEquals(26L, timer.nanos());
-        
+
         // pause again
         timer.setNanos(58L);
         assertEquals(43L, timer.nanos());
         timer.pause();
         assertEquals(43L, timer.nanos());
-        
+
         // test nanos during pause
         timer.setNanos(77L);
         assertEquals(43L, timer.nanos());
-        
+
         // resume
         timer.setNanos(100L);
         timer.resume();
@@ -96,14 +96,14 @@ public class AbstractMasterTimerTest {
     @Test
     public void testPulseReceiver() {
         final Flag flag = new Flag();
-        
+
         final PulseReceiver pulseReceiver = now -> flag.flag();
-        
+
         // add PulseReceiver
         timer.addPulseReceiver(pulseReceiver);
         timer.simulatePulse();
         assertTrue(flag.isFlagged());
-        
+
         // remove PulseReceiver
         flag.unflag();
         timer.removePulseReceiver(pulseReceiver);
@@ -114,7 +114,7 @@ public class AbstractMasterTimerTest {
     @Test
     public void testAnimationTimers() {
         final Flag flag = new Flag();
-        
+
         final AnimationTimer animationTimer = new AnimationTimer() {
             @Override
             public void handle(long now) {
@@ -123,12 +123,12 @@ public class AbstractMasterTimerTest {
         };
 
         final TimerReceiver timerReceiver = l -> animationTimer.handle(l);
-        
+
         // add AnimationTimer
         timer.addAnimationTimer(timerReceiver);
         timer.simulatePulse();
         assertTrue(flag.isFlagged());
-        
+
         // remove AnimationTimer
         flag.unflag();
         timer.removeAnimationTimer(timerReceiver);
@@ -152,16 +152,16 @@ public class AbstractMasterTimerTest {
             return flagged;
         }
     }
-    
+
     private static class AbstractMasterTimerStub extends AbstractMasterTimer {
-        
+
         private long nanos;
         private DelayedRunnable animationRunnable;
-        
+
         public void setNanos(long nanos) {
             this.nanos = nanos;
         }
-        
+
         public void simulatePulse() {
             if (animationRunnable != null) {
                 animationRunnable.run();
@@ -169,8 +169,8 @@ public class AbstractMasterTimerTest {
         }
 
         @Override public long nanos() {
-            return AbstractMasterTimerShim.isPaused(this) ? 
-                    AbstractMasterTimerShim.getStartPauseTime(this) : 
+            return AbstractMasterTimerShim.isPaused(this) ?
+                    AbstractMasterTimerShim.getStartPauseTime(this) :
                     nanos - AbstractMasterTimerShim.getTotalPausedTime(this);
         }
 
@@ -184,6 +184,6 @@ public class AbstractMasterTimerTest {
         protected int getPulseDuration(int precision) {
             return precision / 60;
         }
-        
+
     };
 }

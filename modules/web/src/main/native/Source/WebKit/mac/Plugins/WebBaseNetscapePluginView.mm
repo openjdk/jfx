@@ -6,13 +6,13 @@
  * are met:
  *
  * 1.  Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer. 
+ *     notice, this list of conditions and the following disclaimer.
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
- *     documentation and/or other materials provided with the distribution. 
+ *     documentation and/or other materials provided with the distribution.
  * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
- *     from this software without specific prior written permission. 
+ *     from this software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY APPLE AND ITS CONTRIBUTORS "AS IS" AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
@@ -93,7 +93,7 @@ using namespace WebCore;
     self = [super initWithFrame:frame];
     if (!self)
         return nil;
-    
+
     _pluginPackage = pluginPackage;
     _element = element;
     _sourceURL = adoptNS([URL copy]);
@@ -116,7 +116,7 @@ using namespace WebCore;
         _mode = NP_FULL;
     else
         _mode = NP_EMBED;
-    
+
     _loadManually = loadManually;
     return self;
 }
@@ -140,7 +140,7 @@ using namespace WebCore;
 {
     return _pluginPackage.get();
 }
-    
+
 - (BOOL)isFlipped
 {
     return YES;
@@ -150,16 +150,16 @@ using namespace WebCore;
 {
     if (!URLCString)
         return nil;
-    
+
     CFStringRef string = CFStringCreateWithCString(kCFAllocatorDefault, URLCString, kCFStringEncodingISOLatin1);
     ASSERT(string); // All strings should be representable in ISO Latin 1
-    
+
     NSString *URLString = [(NSString *)string _web_stringByStrippingReturnCharacters];
     NSURL *URL = [NSURL _web_URLWithDataAsString:URLString relativeToURL:_baseURL.get()];
     CFRelease(string);
     if (!URL)
         return nil;
-    
+
     return URL;
 }
 
@@ -168,7 +168,7 @@ using namespace WebCore;
     NSURL *URL = [self URLWithCString:URLCString];
     if (!URL)
         return nil;
-    
+
     NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:URL];
     Frame* frame = core([self webFrame]);
     if (!frame)
@@ -249,11 +249,11 @@ using namespace WebCore;
     if (_trackingTag) {
         [self removeTrackingRect:_trackingTag];
         _trackingTag = 0;
-        
+
         // Do the following after setting trackingTag to 0 so we don't re-enter.
-        
-        // Balance the retain in resetTrackingRect. Use autorelease in case we hold 
-        // the last reference to the window during tear-down, to avoid crashing AppKit. 
+
+        // Balance the retain in resetTrackingRect. Use autorelease in case we hold
+        // the last reference to the window during tear-down, to avoid crashing AppKit.
         [[self window] autorelease];
     }
 }
@@ -281,10 +281,10 @@ using namespace WebCore;
 - (void)restartTimers
 {
     [self stopTimers];
-    
+
     if (!_isStarted || [[self window] isMiniaturized])
         return;
-    
+
     [self startTimers];
 }
 
@@ -300,7 +300,7 @@ using namespace WebCore;
 - (NSRect)visibleRect
 {
     // WebCore may impose an additional clip (via CSS overflow or clip properties).  Fetch
-    // that clip now.    
+    // that clip now.
     return NSIntersectionRect([self convertRect:[self _windowClipRect] fromView:nil], [super visibleRect]);
 }
 
@@ -313,7 +313,7 @@ using namespace WebCore;
 {
     if (!_isStarted)
         return;
-    
+
     [self windowFocusChanged:activate];
 }
 
@@ -321,24 +321,24 @@ using namespace WebCore;
 {
     if (!_isStarted)
         return;
-    
+
     if (_hasFocus == flag)
         return;
-    
+
     _hasFocus = flag;
-    
+
     [self focusChanged];
 }
 
 - (void)addWindowObservers
 {
     ASSERT([self window]);
-    
+
     NSWindow *theWindow = [self window];
-    
+
     NSNotificationCenter *notificationCenter = [NSNotificationCenter defaultCenter];
-    [notificationCenter addObserver:self selector:@selector(windowWillClose:) 
-                               name:NSWindowWillCloseNotification object:theWindow]; 
+    [notificationCenter addObserver:self selector:@selector(windowWillClose:)
+                               name:NSWindowWillCloseNotification object:theWindow];
     [notificationCenter addObserver:self selector:@selector(windowBecameKey:)
                                name:NSWindowDidBecomeKeyNotification object:theWindow];
     [notificationCenter addObserver:self selector:@selector(windowResignedKey:)
@@ -347,7 +347,7 @@ using namespace WebCore;
                                name:NSWindowDidMiniaturizeNotification object:theWindow];
     [notificationCenter addObserver:self selector:@selector(windowDidDeminiaturize:)
                                name:NSWindowDidDeminiaturizeNotification object:theWindow];
-    
+
     [notificationCenter addObserver:self selector:@selector(loginWindowDidSwitchFromUser:)
                                name:LoginWindowDidSwitchFromUserNotification object:nil];
     [notificationCenter addObserver:self selector:@selector(loginWindowDidSwitchToUser:)
@@ -357,7 +357,7 @@ using namespace WebCore;
 - (void)removeWindowObservers
 {
     NSNotificationCenter *notificationCenter = [NSNotificationCenter defaultCenter];
-    [notificationCenter removeObserver:self name:NSWindowWillCloseNotification        object:nil]; 
+    [notificationCenter removeObserver:self name:NSWindowWillCloseNotification        object:nil];
     [notificationCenter removeObserver:self name:NSWindowDidBecomeKeyNotification     object:nil];
     [notificationCenter removeObserver:self name:NSWindowDidResignKeyNotification     object:nil];
     [notificationCenter removeObserver:self name:NSWindowDidMiniaturizeNotification   object:nil];
@@ -369,31 +369,31 @@ using namespace WebCore;
 - (void)start
 {
     ASSERT([self currentWindow]);
-    
+
     if (_isStarted)
         return;
-    
+
     if (_triedAndFailedToCreatePlugin)
         return;
-    
+
     ASSERT([self webView]);
-    
+
     if (![[[self webView] preferences] arePlugInsEnabled])
         return;
-   
+
     Frame* frame = core([self webFrame]);
     if (!frame)
         return;
     Page* page = frame->page();
     if (!page)
         return;
-    
+
     bool wasDeferring = page->defersLoading();
     if (!wasDeferring)
         page->setDefersLoading(true);
 
     BOOL result = [self createPlugin];
-    
+
     if (!wasDeferring)
         page->setDefersLoading(false);
 
@@ -401,7 +401,7 @@ using namespace WebCore;
         _triedAndFailedToCreatePlugin = YES;
         return;
     }
-    
+
     _isStarted = YES;
 
     [[self webView] addPluginInstanceView:self];
@@ -416,9 +416,9 @@ using namespace WebCore;
         }
         [self restartTimers];
     }
-    
+
     [self resetTrackingRect];
-    
+
     [self loadStream];
 }
 
@@ -426,22 +426,22 @@ using namespace WebCore;
 {
     if (![self shouldStop])
         return;
-    
+
     [self removeTrackingRect];
-    
+
     if (!_isStarted)
         return;
 
     _isStarted = NO;
-    
+
     [[self webView] removePluginInstanceView:self];
-    
+
     // Stop the timers
     [self stopTimers];
-    
+
     // Stop notifications and callbacks.
     [self removeWindowObservers];
-    
+
     [self destroyPlugin];
 }
 
@@ -472,13 +472,13 @@ using namespace WebCore;
         return;
 
     NSImage *snapshot = [[NSImage alloc] initWithSize:boundsSize];
-        
+
     _snapshotting = YES;
     [snapshot lockFocus];
     [self drawRect:[self bounds]];
     [snapshot unlockFocus];
     _snapshotting = NO;
-    
+
     _cachedSnapshot = adoptNS(snapshot);
 }
 
@@ -493,10 +493,10 @@ using namespace WebCore;
     // Once we move to the new window, it will be too late.
     [self removeTrackingRect];
     [self removeWindowObservers];
-    
+
     // Workaround for: <rdar://problem/3822871> resignFirstResponder is not sent to first responder view when it is removed from the window
     [self setHasFocus:NO];
-    
+
     if (!newWindow) {
         if ([[self webView] hostWindow]) {
             // View will be moved out of the actual window but it still has a host window.
@@ -504,7 +504,7 @@ using namespace WebCore;
         } else {
             // View will have no associated windows.
             [self stop];
-            
+
             // Stop observing WebPreferencesChangedInternalNotification -- we only need to observe this when installed in the view hierarchy.
             // When not in the view hierarchy, -viewWillMoveToWindow: and -viewDidMoveToWindow will start/stop the plugin as needed.
             [[NSNotificationCenter defaultCenter] removeObserver:self name:WebPreferencesChangedInternalNotification object:nil];
@@ -519,7 +519,7 @@ using namespace WebCore;
         // the WebView might still has a hostWindow at that point, which prevents the plug-in from being destroyed.
         // There is no need to start the plug-in when moving into a superview.  -viewDidMoveToWindow takes care of that.
         [self stop];
-        
+
         // Stop observing WebPreferencesChangedInternalNotification -- we only need to observe this when installed in the view hierarchy.
         // When not in the view hierarchy, -viewWillMoveToWindow: and -viewDidMoveToWindow will start/stop the plugin as needed.
         [[NSNotificationCenter defaultCenter] removeObserver:self name:WebPreferencesChangedInternalNotification object:nil];
@@ -529,7 +529,7 @@ using namespace WebCore;
 - (void)viewDidMoveToWindow
 {
     [self resetTrackingRect];
-    
+
     if ([self window]) {
         // While in the view hierarchy, observe WebPreferencesChangedInternalNotification so that we can start/stop depending
         // on whether plugins are enabled.
@@ -539,7 +539,7 @@ using namespace WebCore;
                                                    object:nil];
 
         _isPrivateBrowsingEnabled = [[[self webView] preferences] privateBrowsingEnabled];
-        
+
         // View moved to an actual window. Start it if not already started.
         [self start];
 
@@ -562,7 +562,7 @@ using namespace WebCore;
     if (!hostWindow && ![self window]) {
         // View will have no associated windows.
         [self stop];
-        
+
         // Remove WebPreferencesChangedInternalNotification observer -- we will observe once again when we move back into the window
         [[NSNotificationCenter defaultCenter] removeObserver:self name:WebPreferencesChangedInternalNotification object:nil];
     }
@@ -578,10 +578,10 @@ using namespace WebCore;
 
 // MARK: NOTIFICATIONS
 
-- (void)windowWillClose:(NSNotification *)notification 
+- (void)windowWillClose:(NSNotification *)notification
 {
-    [self stop]; 
-} 
+    [self stop];
+}
 
 - (void)windowBecameKey:(NSNotification *)notification
 {
@@ -623,7 +623,7 @@ using namespace WebCore;
 
     if ([notification object] != preferences)
         return;
-    
+
     BOOL arePlugInsEnabled = [preferences arePlugInsEnabled];
     if (_isStarted != arePlugInsEnabled) {
         if (arePlugInsEnabled) {
@@ -635,7 +635,7 @@ using namespace WebCore;
             [self invalidatePluginContentRect:[self bounds]];
         }
     }
-    
+
     BOOL isPrivateBrowsingEnabled = [preferences privateBrowsingEnabled];
     if (isPrivateBrowsingEnabled != _isPrivateBrowsingEnabled) {
         _isPrivateBrowsingEnabled = isPrivateBrowsingEnabled;
@@ -646,21 +646,21 @@ using namespace WebCore;
 - (void)renewGState
 {
     [super renewGState];
-    
+
     // -renewGState is called whenever the view's geometry changes.  It's a little hacky to override this method, but
     // much safer than walking up the view hierarchy and observing frame/bounds changed notifications, since you don't
     // have to track subsequent changes to the view hierarchy and add/remove notification observers.
     // NSOpenGLView uses the exact same technique to reshape its OpenGL surface.
-    
+
     // All of the work this method does may safely be skipped if the view is not in a window.  When the view
     // is moved back into a window, everything should be set up correctly.
     if (![self window])
         return;
-    
+
     [self updateAndSetWindow];
-    
+
     [self resetTrackingRect];
-    
+
     // Check to see if the plugin view is completely obscured (scrolled out of view, for example).
     // For performance reasons, we send null events at a lower rate to plugins which are obscured.
     BOOL oldIsObscured = _isCompletelyObscured;
@@ -677,7 +677,7 @@ using namespace WebCore;
 
 - (BOOL)resignFirstResponder
 {
-    [self setHasFocus:NO];    
+    [self setHasFocus:NO];
     return YES;
 }
 
@@ -750,11 +750,11 @@ using namespace WebCore;
             *destY = sourceY;
         return YES;
     }
-    
+
     NSPoint sourcePoint = NSMakePoint(sourceX, sourceY);
-    
+
     NSPoint sourcePointInScreenSpace;
-    
+
     // First convert to screen space
     switch (sourceSpace) {
         case NPCoordinateSpacePlugin:
@@ -764,14 +764,14 @@ using namespace WebCore;
             sourcePointInScreenSpace = [[self currentWindow] convertBaseToScreen:sourcePointInScreenSpace];
 #pragma clang diagnostic pop
             break;
-            
+
         case NPCoordinateSpaceWindow:
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
             sourcePointInScreenSpace = [[self currentWindow] convertBaseToScreen:sourcePoint];
 #pragma clang diagnostic pop
             break;
-            
+
         case NPCoordinateSpaceFlippedWindow:
             sourcePoint.y = [[self currentWindow] frame].size.height - sourcePoint.y;
 #pragma clang diagnostic push
@@ -779,11 +779,11 @@ using namespace WebCore;
             sourcePointInScreenSpace = [[self currentWindow] convertBaseToScreen:sourcePoint];
 #pragma clang diagnostic pop
             break;
-            
+
         case NPCoordinateSpaceScreen:
             sourcePointInScreenSpace = sourcePoint;
             break;
-            
+
         case NPCoordinateSpaceFlippedScreen:
             sourcePoint.y = [(NSScreen *)[[NSScreen screens] objectAtIndex:0] frame].size.height - sourcePoint.y;
             sourcePointInScreenSpace = sourcePoint;
@@ -791,9 +791,9 @@ using namespace WebCore;
         default:
             return FALSE;
     }
-    
+
     NSPoint destPoint;
-    
+
     // Then convert back to the destination space
     switch (destSpace) {
         case NPCoordinateSpacePlugin:
@@ -803,14 +803,14 @@ using namespace WebCore;
 #pragma clang diagnostic pop
             destPoint = [self convertPoint:destPoint fromView:nil];
             break;
-            
+
         case NPCoordinateSpaceWindow:
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
             destPoint = [[self currentWindow] convertScreenToBase:sourcePointInScreenSpace];
 #pragma clang diagnostic pop
             break;
-            
+
         case NPCoordinateSpaceFlippedWindow:
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
@@ -818,25 +818,25 @@ using namespace WebCore;
 #pragma clang diagnostic pop
             destPoint.y = [[self currentWindow] frame].size.height - destPoint.y;
             break;
-            
+
         case NPCoordinateSpaceScreen:
             destPoint = sourcePointInScreenSpace;
             break;
-            
+
         case NPCoordinateSpaceFlippedScreen:
             destPoint = sourcePointInScreenSpace;
             destPoint.y = [(NSScreen *)[[NSScreen screens] objectAtIndex:0] frame].size.height - destPoint.y;
             break;
-            
+
         default:
             return FALSE;
     }
-    
+
     if (destX)
         *destX = destPoint.x;
     if (destY)
         *destY = destPoint.y;
-    
+
     return TRUE;
 }
 
@@ -846,7 +846,7 @@ using namespace WebCore;
     String relativeURLString = String::fromUTF8(url);
     if (relativeURLString.isNull())
         return CString();
-    
+
     Frame* frame = core([self webFrame]);
     if (!frame)
         return CString();
@@ -854,10 +854,10 @@ using namespace WebCore;
     Frame* targetFrame = frame->tree().find(String::fromUTF8(target));
     if (!targetFrame)
         return CString();
-    
+
     if (!frame->document()->securityOrigin()->canAccess(targetFrame->document()->securityOrigin()))
         return CString();
-  
+
     URL absoluteURL = targetFrame->document()->completeURL(relativeURLString);
     return absoluteURL.string().utf8();
 }
@@ -867,7 +867,7 @@ using namespace WebCore;
     if (RenderBoxModelObject *renderer = toRenderBoxModelObject(_element->renderer())) {
         IntRect contentRect(rect);
         contentRect.move(renderer->borderLeft() + renderer->paddingLeft(), renderer->borderTop() + renderer->paddingTop());
-        
+
         renderer->repaintRectangle(contentRect);
     }
 }
@@ -902,22 +902,22 @@ namespace WebKit {
 bool getAuthenticationInfo(const char* protocolStr, const char* hostStr, int32_t port, const char* schemeStr, const char* realmStr,
                            CString& username, CString& password)
 {
-    if (strcasecmp(protocolStr, "http") != 0 && 
+    if (strcasecmp(protocolStr, "http") != 0 &&
         strcasecmp(protocolStr, "https") != 0)
         return false;
 
     NSString *host = [NSString stringWithUTF8String:hostStr];
     if (!hostStr)
         return false;
-    
+
     NSString *protocol = [NSString stringWithUTF8String:protocolStr];
     if (!protocol)
         return false;
-    
+
     NSString *realm = [NSString stringWithUTF8String:realmStr];
     if (!realm)
         return NPERR_GENERIC_ERROR;
-    
+
     NSString *authenticationMethod = NSURLAuthenticationMethodDefault;
     if (!strcasecmp(protocolStr, "http")) {
         if (!strcasecmp(schemeStr, "basic"))
@@ -925,24 +925,24 @@ bool getAuthenticationInfo(const char* protocolStr, const char* hostStr, int32_t
         else if (!strcasecmp(schemeStr, "digest"))
             authenticationMethod = NSURLAuthenticationMethodHTTPDigest;
     }
-    
+
     RetainPtr<NSURLProtectionSpace> protectionSpace = adoptNS([[NSURLProtectionSpace alloc] initWithHost:host port:port protocol:protocol realm:realm authenticationMethod:authenticationMethod]);
-    
+
     NSURLCredential *credential = mac(CredentialStorage::get(core(protectionSpace.get())));
     if (!credential)
         credential = [[NSURLCredentialStorage sharedCredentialStorage] defaultCredentialForProtectionSpace:protectionSpace.get()];
     if (!credential)
         return false;
-  
+
     if (![credential hasPassword])
         return false;
-    
+
     username = [[credential user] UTF8String];
     password = [[credential password] UTF8String];
-    
+
     return true;
 }
-    
+
 } // namespace WebKit
 
 #endif //  ENABLE(NETSCAPE_PLUGIN_API)

@@ -44,7 +44,7 @@ public final class StyleClassSet  extends BitSet<StyleClass> {
     public StyleClassSet() {
         super();
     }
-    
+
     StyleClassSet(List<String> styleClassNames) {
 
         int nMax = styleClassNames != null ? styleClassNames.size() : 0;
@@ -56,8 +56,8 @@ public final class StyleClassSet  extends BitSet<StyleClass> {
             add(sc);
         }
 
-    }    
-    
+    }
+
     /** {@inheritDoc} */
     @Override
     public Object[] toArray() {
@@ -80,7 +80,7 @@ public final class StyleClassSet  extends BitSet<StyleClass> {
                     StyleClass impl = getStyleClass(n);
                     a[index++] = (T) impl;
                 }
-                    
+
             }
         }
         return a;
@@ -97,10 +97,10 @@ public final class StyleClassSet  extends BitSet<StyleClass> {
                 builder.append(", ");
             }
         }
-        builder.append(']');        
+        builder.append(']');
         return builder.toString();
     }
-   
+
     @Override
     protected StyleClass cast(Object o) {
         if (o == null) {
@@ -109,7 +109,7 @@ public final class StyleClassSet  extends BitSet<StyleClass> {
         StyleClass styleClass = (StyleClass) o;
         return styleClass;
     }
-    
+
     @Override
     protected StyleClass getT(int index) {
         return getStyleClass(index);
@@ -120,7 +120,7 @@ public final class StyleClassSet  extends BitSet<StyleClass> {
         return t.getIndex();
     }
 
-   
+
     /**
      */
     public static StyleClass getStyleClass(String styleClass) {
@@ -130,23 +130,23 @@ public final class StyleClassSet  extends BitSet<StyleClass> {
         }
 
         StyleClass instance = null;
-        
+
         final Integer value = styleClassMap.get(styleClass);
         final int index = value != null ? value.intValue() : -1;
-        
+
         final int size = styleClasses.size();
         assert index < size;
-        
+
         if (index != -1 && index < size) {
             instance = styleClasses.get(index);
         }
-        
+
         if (instance == null) {
             instance = new StyleClass(styleClass, size);
             styleClasses.add(instance);
             styleClassMap.put(styleClass, Integer.valueOf(size));
         }
-        
+
         return instance;
     }
 
@@ -156,13 +156,13 @@ public final class StyleClassSet  extends BitSet<StyleClass> {
        }
        return null;
    }
-   
+
     // package private for unit test purposes
-    static final Map<String,Integer> styleClassMap = 
+    static final Map<String,Integer> styleClassMap =
             new HashMap<String,Integer>(64);
 
     static final List<StyleClass> styleClasses =
             new ArrayList<StyleClass>();
-     
+
 }
 

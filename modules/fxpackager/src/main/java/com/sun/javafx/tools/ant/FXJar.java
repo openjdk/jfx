@@ -82,12 +82,12 @@ public class FXJar extends Task {
     }
 
     private Permissions perms = null;
-    
+
     public Permissions createPermissions() {
         perms = new Permissions();
         return perms;
     }
-    
+
     public Resources createResources() {
         resources = new Resources();
         return resources;
@@ -101,7 +101,7 @@ public class FXJar extends Task {
     public void setDestfile(String v) {
         destFile = v;
     }
-    
+
     /*
      * If specified, then packager adds the "Codebase" attribute to the manifest file
      *
@@ -144,11 +144,11 @@ public class FXJar extends Task {
         if (perms != null) {
             createJarParams.setAllPermissions(perms.getElevated());
         }
-        
+
         if (codebase != null) {
             createJarParams.setCodebase(codebase);
         }
-        
+
         if (platform != null) {
            createJarParams.setFxVersion(platform.get().javafx);
         }

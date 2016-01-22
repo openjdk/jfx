@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef Editor_h
@@ -76,9 +76,9 @@ struct PasteboardURL;
 struct TextCheckingResult;
 
 struct CompositionUnderline {
-    CompositionUnderline() 
+    CompositionUnderline()
         : startOffset(0), endOffset(0), thick(false) { }
-    CompositionUnderline(unsigned s, unsigned e, const Color& c, bool t) 
+    CompositionUnderline(unsigned s, unsigned e, const Color& c, bool t)
         : startOffset(s), endOffset(e), color(c), thick(t) { }
     unsigned startOffset;
     unsigned endOffset;
@@ -148,7 +148,7 @@ public:
     bool selectionStartHasStyle(CSSPropertyID, const String& value) const;
     TriState selectionHasStyle(CSSPropertyID, const String& value) const;
     String selectionStartCSSPropertyValue(CSSPropertyID);
-    
+
     TriState selectionUnorderedListState() const;
     TriState selectionOrderedListState() const;
     PassRefPtr<Node> insertOrderedList();
@@ -159,7 +159,7 @@ public:
     PassRefPtr<Node> increaseSelectionListLevelOrdered();
     PassRefPtr<Node> increaseSelectionListLevelUnordered();
     void decreaseSelectionListLevel();
-   
+
     void removeFormattingAndStyle();
 
     void clearLastEditCommand();
@@ -173,9 +173,9 @@ public:
     void clearText();
     void removeUnchangeableStyles();
 #endif
-    
+
     bool dispatchCPPEvent(const AtomicString&, ClipboardAccessPolicy);
-    
+
     void applyStyle(StyleProperties*, EditAction = EditActionUnspecified);
     void applyParagraphStyle(StyleProperties*, EditAction = EditActionUnspecified);
     void applyStyleToSelection(StyleProperties*, EditAction);
@@ -277,11 +277,11 @@ public:
     void toggleUnderline();
     void setBaseWritingDirection(WritingDirection);
 
-    // smartInsertDeleteEnabled and selectTrailingWhitespaceEnabled are 
+    // smartInsertDeleteEnabled and selectTrailingWhitespaceEnabled are
     // mutually exclusive, meaning that enabling one will disable the other.
     bool smartInsertDeleteEnabled();
     bool isSelectTrailingWhitespaceEnabled();
-    
+
     bool hasBidiSelection() const;
 
     // international text input composition
@@ -326,7 +326,7 @@ public:
     void insertDictationPhrases(PassOwnPtr<Vector<Vector<String> > > dictationPhrases, RetainPtr<id> metadata);
     void setDictationPhrasesAsChildOfElement(PassOwnPtr<Vector<Vector<String> > > dictationPhrases, RetainPtr<id> metadata, Element* element);
 #endif
-    
+
     void addToKillRing(Range*, bool prepend);
 
     void startAlternativeTextUITimer();
@@ -339,7 +339,7 @@ public:
 
     // This is only called on the mac where paste is implemented primarily at the WebKit level.
     void pasteAsPlainTextBypassingDHTML();
- 
+
     void clearMisspellingsAndBadGrammar(const VisibleSelection&);
     void markMisspellingsAndBadGrammar(const VisibleSelection&);
 
@@ -380,7 +380,7 @@ public:
     bool selectionStartHasMarkerFor(DocumentMarker::MarkerType, int from, int length) const;
     void updateMarkersForWordsAffectedByEditing(bool onlyHandleWordsContainingSelection);
     void deletedAutocorrectionAtPosition(const Position&, const String& originalString);
-    
+
     void simplifyMarkup(Node* startNode, Node* endNode);
 
     void deviceScaleFactorChanged();

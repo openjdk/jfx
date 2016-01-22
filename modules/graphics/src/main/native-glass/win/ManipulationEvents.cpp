@@ -60,7 +60,7 @@ HRESULT Connect(_IManipulationEvents* sink, IFace *cp)
 
     DWORD dwCookie;
     hr = pConnPoint->Advise(sink, &dwCookie);
-    
+
     spConnectionContainer->Release();
     pConnPoint->Release();
 
@@ -70,7 +70,7 @@ HRESULT Connect(_IManipulationEvents* sink, IFace *cp)
 } // namespace
 
 
-ManipulationEventSink::ManipulationEventSink(IManipulationProcessor *manip, 
+ManipulationEventSink::ManipulationEventSink(IManipulationProcessor *manip,
                                              ViewContainer *window, HWND hwnd)
     : m_window(window)
     , m_hwnd(hwnd)
@@ -79,7 +79,7 @@ ManipulationEventSink::ManipulationEventSink(IManipulationProcessor *manip,
     Connect(this, manip);
 }
 
-ManipulationEventSink::ManipulationEventSink(IInertiaProcessor *inertia, 
+ManipulationEventSink::ManipulationEventSink(IInertiaProcessor *inertia,
                                              ViewContainer *window, HWND hwnd)
     : m_window(window)
     , m_hwnd(hwnd)
@@ -107,12 +107,12 @@ HRESULT STDMETHODCALLTYPE ManipulationEventSink::ManipulationDelta(
     FLOAT cumulativeDeltaX, FLOAT cumulativeDeltaY,
     FLOAT cumulativeScale, FLOAT cumulativeExpansion, FLOAT cumulativeRotation)
 {
-    // TBD: set to 'true' if source device is a touch screen 
+    // TBD: set to 'true' if source device is a touch screen
     // and to 'false' if source device is a touch pad.
     // So far assume source device on Windows is always a touch screen.
     const bool isDirect = true;
 
-    m_window->NotifyGesturePerformed(m_hwnd, isDirect, m_isInertia, 
+    m_window->NotifyGesturePerformed(m_hwnd, isDirect, m_isInertia,
         x, y, deltaX, deltaY,
         scaleDelta, expansionDelta, rotationDelta,
         cumulativeDeltaX, cumulativeDeltaY,

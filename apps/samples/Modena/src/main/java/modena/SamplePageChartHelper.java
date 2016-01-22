@@ -52,7 +52,7 @@ import javafx.scene.chart.XYChart;
  * Helper class for creating charts for testing
  */
 public class SamplePageChartHelper {
-    
+
     static Node createAreaChart(Boolean stacked) {
         NumberAxis xAxis = new NumberAxis("X Values", 1.0d, 9.0d, 2.0d);
         xAxis.setTickLength(12.0f);
@@ -92,15 +92,15 @@ public class SamplePageChartHelper {
         }
         return areaChart;
     }
-    
+
     static Node createStackedBarChart(boolean horizontal, boolean simple) {
         return createBarChart(horizontal, simple, true);
     }
-    
+
     static Node createBarChart(boolean horizontal, boolean simple) {
         return createBarChart(horizontal, simple, false);
     }
-    
+
     static Node createBarChart(boolean horizontal, boolean simple, boolean stacked) {
         final Random RANDOM = new Random(29782198273l);
         String[] years = {"2001","2002","2003"};
@@ -142,7 +142,7 @@ public class SamplePageChartHelper {
         }
         return barChart;
     }
-    
+
     static Node createBubbleChart(boolean useRightTopAxis) {
         final Random RANDOM = new Random(29782198273l);
         NumberAxis xAxis = new NumberAxis();
@@ -163,7 +163,7 @@ public class SamplePageChartHelper {
         }
         return new BubbleChart(xAxis, yAxis, bubbleChartData);
     }
-    
+
     static Node createLineChart() {
         NumberAxis xAxis = new NumberAxis("Values for X-Axis", 0, 3, 1);
         NumberAxis yAxis = new NumberAxis("Values for Y-Axis", 0, 3, 1);
@@ -185,7 +185,7 @@ public class SamplePageChartHelper {
         );
         return new LineChart(xAxis, yAxis, lineChartData);
     }
-    
+
     static Node createPieChart() {
          ObservableList<PieChart.Data> pieChartData = FXCollections.observableArrayList(
              new PieChart.Data("Sun", 20),
@@ -196,7 +196,7 @@ public class SamplePageChartHelper {
          );
         return new PieChart(pieChartData);
     }
-    
+
     static Node createScatterChart() {
         final Random RANDOM = new Random(29782198273l);
         NumberAxis xAxis = new NumberAxis("X-Axis", 0, 8, 1);

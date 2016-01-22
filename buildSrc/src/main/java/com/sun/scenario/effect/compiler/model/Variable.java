@@ -44,7 +44,7 @@ public class Variable {
     Variable(String name, Type type) {
         this(name, type, null, null, -1, -1, null, false);
     }
-    
+
     Variable(String name, Type type, Qualifier qual, Precision precision,
              int reg, int arraySize, Object constValue, boolean isParam)
     {
@@ -71,7 +71,7 @@ public class Variable {
     public Type getType() {
         return type;
     }
-    
+
     public Qualifier getQualifier() {
         return qual;
     }
@@ -83,23 +83,23 @@ public class Variable {
     public int getReg() {
         return reg;
     }
-    
+
     public boolean isArray() {
         return arraySize > 0;
     }
-    
+
     public int getArraySize() {
         return arraySize;
     }
-    
+
     public Object getConstValue() {
         return constValue;
     }
-    
+
     public boolean isParam() {
         return isParam;
     }
-    
+
     /**
      * Returns the JavaBean-style accessor name for this variable.  For
      * example, if variable.getName() returns "someVariable", this method

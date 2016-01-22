@@ -26,7 +26,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
- 
+
 #include <jvmti.h>
 
 #include "os.h"
@@ -101,7 +101,7 @@ static jvmtiEventCallbacks      callbacks =
           NULL                          // 84   jvmtiEventVMObjectAlloc;
 };
 
-JNIEXPORT jint JNICALL 
+JNIEXPORT jint JNICALL
 Agent_OnLoad(JavaVM *_jvm, char *options, void *reserved)
 {
     jvmtiError err;
@@ -146,7 +146,7 @@ jvmti_VMInit(jvmtiEnv *jvmti, JNIEnv *jni, jthread jthr)
 {
     classThread = (*jni)->FindClass(jni, "java/lang/Thread");
     mthdDumpStack = (*jni)->GetStaticMethodID(jni, classThread, "dumpStack", "()V");
-    
+
     /* GLTrace */
     jclass classGLTrace = (*jni)->FindClass(jni, "com/sun/javafx/logging/GLTrace");
     if ((*jni)->ExceptionOccurred(jni)) {
@@ -159,7 +159,7 @@ jvmti_VMInit(jvmtiEnv *jvmti, JNIEnv *jni, jthread jthr)
 //        fprintf(stderr, "ERROR: GLTrace methods not registered\n" );
         return;
     }
-    
+
     /* Set GLTrace.init to true */
     jfieldID initField = (*jni)->GetStaticFieldID(jni, classGLTrace, "init", "Z" );
     (*jni)->SetStaticBooleanField(jni, classGLTrace, initField, JNI_TRUE );
@@ -176,5 +176,5 @@ dump_java_stack()
     JNIEnv *jni = NULL;
     if ((*jvm)->GetEnv(jvm, (void**)&jni, JNI_VERSION_1_2) == 0 && jni != NULL) {
         (*jni)->CallStaticVoidMethod(jni, classThread, mthdDumpStack);
-    } 
+    }
 }

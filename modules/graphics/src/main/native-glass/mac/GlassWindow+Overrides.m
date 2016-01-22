@@ -52,9 +52,9 @@
         (*env)->DeleteGlobalRef(env, self->jWindow);
         GLASS_CHECK_EXCEPTION(env);
     }
-    
+
     self->jWindow = NULL;
-    
+
     [super dealloc];
 }
 
@@ -66,7 +66,7 @@
     {
         return;
     }
-    
+
     GET_MAIN_JENV;
     if (!self->isEnabled)
     {
@@ -76,7 +76,7 @@
     }
 
     (*env)->CallVoidMethod(env, self->jWindow, jWindowNotifyFocus, com_sun_glass_events_WindowEvent_FOCUS_GAINED);
-    
+
     if (self->menubar != nil)
     {
         [NSApp setMainMenu:self->menubar->menu];
@@ -90,7 +90,7 @@
     {
         return;
     }
-    
+
     [self _ungrabFocus];
 
     GET_MAIN_JENV;
@@ -112,7 +112,7 @@
         NSWindow *child = (NSWindow*)[children objectAtIndex:i];
         [child close];
     }
-    
+
     // Call the notification method
     assert(pthread_main_np() == 1);
     JNIEnv *env = jEnv;
@@ -181,7 +181,7 @@
 {
     GET_MAIN_JENV;
     (*env)->CallVoidMethod(env, jWindow, jWindowNotifyResize, com_sun_glass_events_WindowEvent_MAXIMIZE, (int)newFrame.size.width, (int)newFrame.size.height);
-    
+
     return YES;
 }
 
@@ -201,7 +201,7 @@
 {
     //NSLog(@"windowWillExitFullScreen");
 }
-- (void)windowDidExitFullScreen:(NSNotification *)notification 
+- (void)windowDidExitFullScreen:(NSNotification *)notification
 {
     //NSLog(@"windowDidExitFullScreen");
     [(GlassViewDelegate*)[self->view delegate] sendJavaFullScreenEvent:NO withNativeWidget:YES];
@@ -215,7 +215,7 @@
         GET_MAIN_JENV;
         (*env)->CallVoidMethod(env, jWindow, jWindowNotifyClose);
     }
-    
+
     // it's up to app to decide if the window should be closed
     return FALSE;
 }

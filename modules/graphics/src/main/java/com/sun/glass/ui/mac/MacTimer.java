@@ -56,7 +56,7 @@ final class MacTimer extends Timer {
     static int getMaxPeriod_impl() {
         return maxPeriod;
     }
-    
+
     @Override native protected long _start(Runnable runnable);
     @Override native protected long _start(Runnable runnable, int period);
     @Override native protected void _stop(long timer);

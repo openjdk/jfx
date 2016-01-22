@@ -31,12 +31,12 @@ class SlotVisitor;
 class WeakReferenceHarvester : public ListableHandler<WeakReferenceHarvester> {
 public:
     virtual void visitWeakReferences(SlotVisitor&) = 0;
-    
+
 protected:
     WeakReferenceHarvester()
     {
     }
-    
+
     virtual ~WeakReferenceHarvester() { }
 };
 

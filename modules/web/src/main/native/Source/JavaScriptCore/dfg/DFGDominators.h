@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef DFGDominators_h
@@ -43,25 +43,25 @@ class Dominators : public Analysis<Dominators> {
 public:
     Dominators();
     ~Dominators();
-    
+
     void compute(Graph& graph);
-    
+
     bool dominates(BlockIndex from, BlockIndex to) const
     {
         ASSERT(isValid());
         return m_results[to].get(from);
     }
-    
+
     bool dominates(BasicBlock* from, BasicBlock* to) const
     {
         return dominates(from->index, to->index);
     }
-    
+
     void dump(Graph& graph, PrintStream&) const;
-    
+
 private:
     bool pruneDominators(Graph&, BlockIndex);
-    
+
     Vector<FastBitVector> m_results; // For each block, the bitvector of blocks that dominate it.
     FastBitVector m_scratch; // A temporary bitvector with bit for each block. We recycle this to save new/deletes.
 };

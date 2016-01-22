@@ -42,44 +42,44 @@ import javafx.scene.shape.Line;
 
 /**
  *
- * 
+ *
  */
 public class VBoxTring extends AbstractNodeTring<VBox> {
-        
+
     private final int targetIndex;
     private final Line crackLine = new Line();
 
-    public VBoxTring(ContentPanelController contentPanelController, 
+    public VBoxTring(ContentPanelController contentPanelController,
             FXOMInstance fxomInstance, int targetIndex) {
         super(contentPanelController, fxomInstance, VBox.class);
         assert targetIndex >= -1;
         this.targetIndex = targetIndex;
-        
+
         crackLine.getStyleClass().add(TARGET_CRACK_CLASS);
         crackLine.setMouseTransparent(true);
         getRootNode().getChildren().add(0, crackLine);
     }
-    
-    
+
+
     /*
      * AbstractGenericTring
      */
-        
+
     @Override
     protected void layoutDecoration() {
-        
+
         super.layoutDecoration();
-        
+
         final VBox vbox = getSceneGraphObject();
         final int childCount = vbox.getChildren().size();
-        
+
         if (childCount == 0) {
             // No crack line
             crackLine.setVisible(false);
-            
+
         } else {
             // Computes the crack y
-            
+
             final double crackY;
             final List<Node> children = vbox.getChildren();
             if (targetIndex == -1) {

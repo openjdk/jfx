@@ -64,7 +64,7 @@ public class CheckerMeshViewer extends Application {
     boolean texture = true;
     boolean textureSwitch = false;
     WritableImage diffuseMap;
-    
+
     final static float meshScale = 20;
     final static float minX = -10;
     final static float minY = -10;
@@ -115,7 +115,7 @@ public class CheckerMeshViewer extends Application {
         float points[] = new float[numVerts * pointSize];
         float texCoords[] = new float[numVerts * texCoordSize];
         int faceCount = subDivX * subDivY * 2;
-        int faces[] = new int[ faceCount * faceSize]; 
+        int faces[] = new int[ faceCount * faceSize];
 
         // Create points and texCoords
         for (int y = 0; y <= subDivY; y++) {

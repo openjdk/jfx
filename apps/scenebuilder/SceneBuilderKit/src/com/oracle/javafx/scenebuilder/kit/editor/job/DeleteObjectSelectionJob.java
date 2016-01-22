@@ -55,7 +55,7 @@ public class DeleteObjectSelectionJob extends BatchSelectionJob {
         assert selection.getGroup() instanceof ObjectSelectionGroup;
         final ObjectSelectionGroup osg = (ObjectSelectionGroup) selection.getGroup();
         final List<Job> result = new ArrayList<>();
-        
+
         // Next we make one DeleteObjectJob for each selected objects
         int cannotDeleteCount = 0;
         for (FXOMObject candidate : osg.getFlattenItems()) {
@@ -67,13 +67,13 @@ public class DeleteObjectSelectionJob extends BatchSelectionJob {
                 cannotDeleteCount++;
             }
         }
-        
+
         // If some objects cannot be deleted, then we clear all to
         // make this job not executable.
         if (cannotDeleteCount >= 1) {
             result.clear();
         }
-        
+
         return result;
     }
 
@@ -81,7 +81,7 @@ public class DeleteObjectSelectionJob extends BatchSelectionJob {
     protected String makeDescription() {
         final String result;
         final int subJobCount = getSubJobs().size();
-        
+
         switch (subJobCount) {
             case 0:
                 result = "Unexecutable Delete"; // NO18N
@@ -93,7 +93,7 @@ public class DeleteObjectSelectionJob extends BatchSelectionJob {
                 result = I18N.getString("label.action.edit.delete.n", subJobCount);
                 break;
         }
-        
+
         return result;
     }
 

@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef WTF_Assertions_h
@@ -258,12 +258,12 @@ extern "C" {
 #define NO_RETURN_DUE_TO_ASSERT NO_RETURN_DUE_TO_CRASH
 
 /* ASSERT_WITH_SECURITY_IMPLICATION
- 
+
    Failure of this assertion indicates a possible security vulnerability.
    Class of vulnerabilities that it tests include bad casts, out of bounds
    accesses, use-after-frees, etc. Please file a bug using the security
    template - https://bugs.webkit.org/enter_bug.cgi?product=Security.
- 
+
 */
 #define ASSERT_WITH_SECURITY_IMPLICATION(assertion) \
     (!(assertion) ? \
@@ -298,8 +298,8 @@ while (0)
     } \
 while (0)
 #endif
-                        
-                        
+
+
 /* ASSERT_ARG */
 
 #if ASSERT_ARG_DISABLED

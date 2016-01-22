@@ -273,7 +273,7 @@ public abstract class Preloader extends Application {
         /**
          * Returns a string representation of this {@code ErrorNotification} object.
          * @return a string representation of this {@code ErrorNotification} object.
-         */ 
+         */
         @Override public String toString() {
             StringBuilder str = new StringBuilder("Preloader.ErrorNotification: ");
             str.append(details);

@@ -124,7 +124,7 @@ public class ScrollEventSynthesizer implements EventHandler {
                             ScrollEvent.VerticalTextScrollUnits.NONE, 0,
                             0,new PickResult(me.getTarget(), me.getSceneX(), me.getSceneY())
                             ));
-                    
+
                     /*
                      * final EventType<ScrollEvent> eventType,
             double x, double y,

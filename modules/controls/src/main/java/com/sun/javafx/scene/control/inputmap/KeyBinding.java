@@ -100,7 +100,7 @@ public class KeyBinding {
         alt = value;
         return this;
     }
-    
+
     public final KeyBinding meta() {
         return meta(TRUE);
     }
@@ -109,10 +109,10 @@ public class KeyBinding {
         meta = value;
         return this;
     }
-    
+
     public final KeyBinding shortcut() {
         if (Toolkit.getToolkit().getClass().getName().endsWith("StubToolkit")) {
-            // FIXME: We've hit the terrible StubToolkit (which only appears 
+            // FIXME: We've hit the terrible StubToolkit (which only appears
             // during testing). We will dumb down what we do here
             if (Utils.isMac()) {
                 return meta();
@@ -163,7 +163,7 @@ public class KeyBinding {
     /** {@inheritDoc} */
     @Override public String toString() {
         return "KeyBinding [code=" + code + ", shift=" + shift +
-                ", ctrl=" + ctrl + ", alt=" + alt + 
+                ", ctrl=" + ctrl + ", alt=" + alt +
                 ", meta=" + meta + ", type=" + eventType + "]";
     }
 

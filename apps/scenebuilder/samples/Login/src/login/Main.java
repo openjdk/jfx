@@ -78,7 +78,7 @@ public class Main extends Application {
     public User getLoggedUser() {
         return loggedUser;
     }
-        
+
     public boolean userLogging(String userId, String password){
         System.out.println("got user id " + userId + " password " + password);
         if (Authenticator.validate(userId, password)) {
@@ -91,12 +91,12 @@ public class Main extends Application {
             return false;
         }
     }
-    
+
     void userLogout(){
         loggedUser = null;
         gotoLogin();
     }
-    
+
     private void gotoProfile() {
         try {
             ProfileController profile = (ProfileController) replaceSceneContent("Profile.fxml");
@@ -126,18 +126,18 @@ public class Main extends Application {
         } finally {
             in.close();
         }
-        
+
         // Store the stage width and height in case the user has resized the window
         double stageWidth = stage.getWidth();
         if (!Double.isNaN(stageWidth)) {
             stageWidth -= (stage.getWidth() - stage.getScene().getWidth());
         }
-        
+
         double stageHeight = stage.getHeight();
         if (!Double.isNaN(stageHeight)) {
             stageHeight -= (stage.getHeight() - stage.getScene().getHeight());
         }
-        
+
         Scene scene = new Scene(page);
         if (!Double.isNaN(stageWidth)) {
             page.setPrefWidth(stageWidth);
@@ -145,7 +145,7 @@ public class Main extends Application {
         if (!Double.isNaN(stageHeight)) {
             page.setPrefHeight(stageHeight);
         }
-        
+
         stage.setScene(scene);
         stage.sizeToScene();
         return (Node) loader.getController();

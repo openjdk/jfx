@@ -226,7 +226,7 @@ public class Rectangle {
     public void setBounds(int x, int y, int width, int height) {
         reshape(x, y, width, height);
     }
-    
+
     public void setBounds(BaseBounds b) {
         x = (int) Math.floor(b.getMinX());
         y = (int) Math.floor(b.getMinY());
@@ -336,7 +336,7 @@ public class Rectangle {
         ret.intersectWith(r);
         return ret;
     }
-    
+
     public void intersectWith(Rectangle r) {
         if (r == null) {
             return;
@@ -440,7 +440,7 @@ public class Rectangle {
         }
         this.y = newv;
     }
-    
+
     public RectBounds toRectBounds() {
         return new RectBounds(x, y, x+width, y+height);
     }
@@ -634,7 +634,7 @@ public class Rectangle {
         this.width = width;
         this.height = height;
     }
-    
+
     /**
      * {@inheritDoc}
      */

@@ -81,7 +81,7 @@ public class UnaryExprTest extends PrimaryExprTest {
         assertEquals(tree.getOp(), UnaryOpType.DEC);
         assertEquals(((VariableExpr)tree.getExpr()).getVariable().getName(), "foo");
     }
-    
+
     @Test
     public void postIncrement() throws Exception {
         UnaryExpr tree = parseTreeFor("foo++");

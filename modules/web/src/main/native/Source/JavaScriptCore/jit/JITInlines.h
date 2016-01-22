@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef JITInlines_h
@@ -101,7 +101,7 @@ ALWAYS_INLINE void JIT::updateTopCallFrame()
 {
     ASSERT(static_cast<int>(m_bytecodeOffset) >= 0);
 #if USE(JSVALUE32_64)
-    Instruction* instruction = m_codeBlock->instructions().begin() + m_bytecodeOffset + 1; 
+    Instruction* instruction = m_codeBlock->instructions().begin() + m_bytecodeOffset + 1;
     uint32_t locationBits = CallFrame::Location::encodeAsBytecodeInstruction(instruction);
 #else
     uint32_t locationBits = CallFrame::Location::encodeAsBytecodeOffset(m_bytecodeOffset + 1);
@@ -453,7 +453,7 @@ ALWAYS_INLINE MacroAssembler::Call JIT::callOperation(F_JITOperation_EFJJ operat
     setupArgumentsWithExecState(arg1, arg2Payload, arg2Tag, arg3Payload, arg3Tag);
     return appendCallWithExceptionCheck(operation);
 }
-    
+
 ALWAYS_INLINE MacroAssembler::Call JIT::callOperation(J_JITOperation_EAapJ operation, int dst, ArrayAllocationProfile* arg1, GPRReg arg2Tag, GPRReg arg2Payload)
 {
     setupArgumentsWithExecState(TrustedImmPtr(arg1), arg2Payload, arg2Tag);
@@ -586,7 +586,7 @@ ALWAYS_INLINE void JIT::addSlowCase(JumpList jumpList)
 ALWAYS_INLINE void JIT::addSlowCase()
 {
     ASSERT(m_bytecodeOffset != (unsigned)-1); // This method should only be called during hot/cold path generation, so that m_bytecodeOffset is set.
-    
+
     Jump emptyJump; // Doing it this way to make Windows happy.
     m_slowCases.append(SlowCaseEntry(emptyJump, m_bytecodeOffset));
 }
@@ -694,7 +694,7 @@ inline void JIT::emitValueProfilingSite(ValueProfile* valueProfile)
 #if USE(JSVALUE32_64)
     const RegisterID valueTag = regT1;
 #endif
-    
+
     // We're in a simple configuration: only one bucket, so we can just do a direct
     // store.
 #if USE(JSVALUE64)
@@ -721,10 +721,10 @@ inline void JIT::emitValueProfilingSite()
 inline void JIT::emitArrayProfilingSite(RegisterID structureAndIndexingType, RegisterID scratch, ArrayProfile* arrayProfile)
 {
     UNUSED_PARAM(scratch); // We had found this scratch register useful here before, so I will keep it for now.
-    
+
     RegisterID structure = structureAndIndexingType;
     RegisterID indexingType = structureAndIndexingType;
-    
+
     if (shouldEmitProfiling())
         storePtr(structure, arrayProfile->addressOfLastSeenStructure());
 
@@ -927,7 +927,7 @@ ALWAYS_INLINE bool JIT::getOperandConstantImmediateInt(int op1, int op2, int& op
         op = op1;
         return true;
     }
-    
+
     return false;
 }
 

@@ -54,7 +54,7 @@ void JSBiquadFilterNode::setType(ExecState* exec, JSValue value)
             return;
         }
     }
-    
+
     exec->vm().throwException(exec, createTypeError(exec, "Illegal BiquadFilterNode type"));
 }
 

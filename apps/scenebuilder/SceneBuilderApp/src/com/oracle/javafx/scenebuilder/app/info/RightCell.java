@@ -41,8 +41,8 @@ import javafx.util.Callback;
  *
  */
 class RightCell extends TableCell<IndexEntry, FXOMObject> {
-    
-    
+
+
     /*
      * TableCell
      */
@@ -50,7 +50,7 @@ class RightCell extends TableCell<IndexEntry, FXOMObject> {
     @Override
     protected void updateItem(FXOMObject rightValue, boolean empty) {
         super.updateItem(rightValue, empty);
-        
+
         final String text;
         if (empty) {
             text = ""; //NOI18N
@@ -63,11 +63,11 @@ class RightCell extends TableCell<IndexEntry, FXOMObject> {
         }
         setText(text);
     }
-    
-    
-    
-    
-    public static class Factory 
+
+
+
+
+    public static class Factory
     implements Callback<TableColumn<IndexEntry, FXOMObject>, TableCell<IndexEntry, FXOMObject>> {
 
         /*

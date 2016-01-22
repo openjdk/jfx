@@ -214,8 +214,8 @@ void CachedResource::failBeforeStarting()
 {
     // FIXME: What if resources in other frames were waiting for this revalidation?
     LOG(ResourceLoading, "Cannot start loading '%s'", url().string().latin1().data());
-    if (m_resourceToRevalidate) 
-        memoryCache()->revalidationFailed(this); 
+    if (m_resourceToRevalidate)
+        memoryCache()->revalidationFailed(this);
     error(CachedResource::LoadError);
 }
 
@@ -355,7 +355,7 @@ void CachedResource::error(CachedResource::Status status)
     setLoading(false);
     checkNotify();
 }
-    
+
 void CachedResource::cancelLoad()
 {
     if (!isLoading())
@@ -560,13 +560,13 @@ void CachedResource::setDecodedSize(unsigned size)
     // queue.
     if (inCache())
         memoryCache()->removeFromLRUList(this);
-    
+
     m_decodedSize = size;
-   
-    if (inCache()) { 
+
+    if (inCache()) {
         // Now insert into the new LRU list.
         memoryCache()->insertInLRUList(this);
-        
+
         // Insert into or remove from the live decoded list if necessary.
         // When inserting into the LiveDecodedResourcesList it is possible
         // that the m_lastDecodedAccessTime is still zero or smaller than
@@ -591,7 +591,7 @@ void CachedResource::setEncodedSize(unsigned size)
 
     // The size cannot ever shrink (unless it is being nulled out because of an error).  If it ever does, assert.
     ASSERT(size == 0 || size >= m_encodedSize);
-    
+
     int delta = size - m_encodedSize;
 
     // The object must now be moved to a different queue, since its size has been changed.
@@ -599,13 +599,13 @@ void CachedResource::setEncodedSize(unsigned size)
     // queue.
     if (inCache())
         memoryCache()->removeFromLRUList(this);
-    
+
     m_encodedSize = size;
-   
-    if (inCache()) { 
+
+    if (inCache()) {
         // Now insert into the new LRU list.
         memoryCache()->insertInLRUList(this);
-        
+
         // Update the cache's size totals.
         memoryCache()->adjustSize(hasClients(), delta);
     }
@@ -614,7 +614,7 @@ void CachedResource::setEncodedSize(unsigned size)
 void CachedResource::didAccessDecodedData(double timeStamp)
 {
     m_lastDecodedAccessTime = timeStamp;
-    
+
     if (inCache()) {
         if (m_inLiveDecodedResourcesList) {
             memoryCache()->removeFromLiveDecodedResourcesList(this);
@@ -623,9 +623,9 @@ void CachedResource::didAccessDecodedData(double timeStamp)
         memoryCache()->prune();
     }
 }
-    
-void CachedResource::setResourceToRevalidate(CachedResource* resource) 
-{ 
+
+void CachedResource::setResourceToRevalidate(CachedResource* resource)
+{
     ASSERT(resource);
     ASSERT(!m_resourceToRevalidate);
     ASSERT(resource != this);
@@ -643,8 +643,8 @@ void CachedResource::setResourceToRevalidate(CachedResource* resource)
     m_resourceToRevalidate = resource;
 }
 
-void CachedResource::clearResourceToRevalidate() 
-{ 
+void CachedResource::clearResourceToRevalidate()
+{
     ASSERT(m_resourceToRevalidate);
     if (m_switchingClientsToRevalidatedResource)
         return;
@@ -658,7 +658,7 @@ void CachedResource::clearResourceToRevalidate()
     m_resourceToRevalidate = 0;
     deleteIfPossible();
 }
-    
+
 void CachedResource::switchClientsToRevalidatedResource()
 {
     ASSERT(m_resourceToRevalidate);
@@ -755,7 +755,7 @@ bool CachedResource::canUseCacheValidator() const
 }
 
 bool CachedResource::mustRevalidateDueToCacheHeaders(CachePolicy cachePolicy) const
-{    
+{
     ASSERT(cachePolicy == CachePolicyRevalidate || cachePolicy == CachePolicyCache || cachePolicy == CachePolicyVerify);
 
     if (cachePolicy == CachePolicyRevalidate)
@@ -784,7 +784,7 @@ bool CachedResource::mustRevalidateDueToCacheHeaders(CachePolicy cachePolicy) co
 }
 
 bool CachedResource::isSafeToMakePurgeable() const
-{ 
+{
 #if ENABLE(DISK_IMAGE_CACHE)
     // It does not make sense to have a resource in the disk image cache
     // (memory mapped on disk) and purgeable (in memory). So do not allow
@@ -796,8 +796,8 @@ bool CachedResource::isSafeToMakePurgeable() const
     return !hasClients() && !m_proxyResource && !m_resourceToRevalidate;
 }
 
-bool CachedResource::makePurgeable(bool purgeable) 
-{ 
+bool CachedResource::makePurgeable(bool purgeable)
+{
     if (purgeable) {
         ASSERT(isSafeToMakePurgeable());
 
@@ -807,7 +807,7 @@ bool CachedResource::makePurgeable(bool purgeable)
         }
         if (!m_data)
             return false;
-        
+
         // Should not make buffer purgeable if it has refs other than this since we don't want two copies.
         if (!m_data->hasOneRef())
             return false;
@@ -829,7 +829,7 @@ bool CachedResource::makePurgeable(bool purgeable)
     ASSERT(!hasClients());
 
     if (!m_purgeableData->makePurgeable(false))
-        return false; 
+        return false;
 
     m_data = ResourceBuffer::adoptSharedBuffer(SharedBuffer::adoptPurgeableBuffer(m_purgeableData.release()));
     return true;
@@ -893,10 +893,10 @@ void CachedResource::tryReplaceEncodedData(PassRefPtr<SharedBuffer> newBuffer)
 {
     if (!m_data)
         return;
-    
+
     if (!mayTryReplaceEncodedData())
         return;
-    
+
     // Because the disk cache is asynchronous and racey with regards to the data we might be asked to replace,
     // we need to verify that the new buffer has the same contents as our old buffer.
     if (m_data->size() != newBuffer->size() || memcmp(m_data->data(), newBuffer->data(), m_data->size()))

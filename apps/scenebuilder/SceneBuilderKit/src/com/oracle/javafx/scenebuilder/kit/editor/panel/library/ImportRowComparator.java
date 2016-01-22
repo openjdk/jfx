@@ -40,7 +40,7 @@ class ImportRowComparator implements Comparator<ImportRow> {
 
     public ImportRowComparator() {
     }
-    
+
     /**
      * The comparison done here is performed on the SimpleClassName that is
      * extracted from the JarReportEntry property of the ImportRow; it is done

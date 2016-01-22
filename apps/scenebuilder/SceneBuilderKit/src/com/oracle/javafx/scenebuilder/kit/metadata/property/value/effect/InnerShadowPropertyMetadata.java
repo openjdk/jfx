@@ -48,7 +48,7 @@ import javafx.scene.paint.Color;
  *
  */
 public class InnerShadowPropertyMetadata extends ComplexPropertyMetadata<InnerShadow> {
-    
+
     private final EnumerationPropertyMetadata blurTypeMetadata
             = new EnumerationPropertyMetadata(new PropertyName("blurType"), //NOI18N
             BlurType.class, true, BlurType.THREE_PASS_BOX, InspectorPath.UNUSED);
@@ -77,7 +77,7 @@ public class InnerShadowPropertyMetadata extends ComplexPropertyMetadata<InnerSh
             = new DoublePropertyMetadata(new PropertyName("width"), //NOI18N
             DoublePropertyMetadata.DoubleKind.OPACITY, true /* readWrite */, 21.0, InspectorPath.UNUSED);
 
-    public InnerShadowPropertyMetadata(PropertyName name, boolean readWrite, 
+    public InnerShadowPropertyMetadata(PropertyName name, boolean readWrite,
             InnerShadow defaultValue, InspectorPath inspectorPath) {
         super(name, InnerShadow.class, readWrite, defaultValue, inspectorPath);
     }
@@ -85,11 +85,11 @@ public class InnerShadowPropertyMetadata extends ComplexPropertyMetadata<InnerSh
     /*
      * ComplexPropertyMetadata
      */
-    
+
     @Override
     public FXOMInstance makeFxomInstanceFromValue(InnerShadow value, FXOMDocument fxomDocument) {
         final FXOMInstance result = new FXOMInstance(fxomDocument, value.getClass());
-        
+
         blurTypeMetadata.setValue(result, value.getBlurType().toString());
         chokeMetadata.setValue(result, value.getChoke());
         colorMetadata.setValue(result, value.getColor());

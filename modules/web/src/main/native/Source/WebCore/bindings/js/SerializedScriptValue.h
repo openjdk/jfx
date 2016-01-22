@@ -45,7 +45,7 @@ namespace WebCore {
 class MessagePort;
 typedef Vector<RefPtr<MessagePort>, 1> MessagePortArray;
 typedef Vector<RefPtr<JSC::ArrayBuffer>, 1> ArrayBufferArray;
- 
+
 enum SerializationReturnCode {
     SuccessfullyCompleted,
     StackOverflowError,
@@ -55,7 +55,7 @@ enum SerializationReturnCode {
     DataCloneError,
     UnspecifiedError
 };
-    
+
 enum SerializationErrorMode { NonThrowing, Throwing };
 
 class SharedBuffer;

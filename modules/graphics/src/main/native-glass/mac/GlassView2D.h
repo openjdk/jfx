@@ -31,7 +31,7 @@
 @interface GlassView2D : NSView <GlassView>
 {
         GlassViewDelegate        *delegate;
-    
+
     NSTrackingArea      *trackingArea;
 }
 

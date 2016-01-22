@@ -51,7 +51,7 @@ public class HLSLBackend extends SLBackend {
         qualMap.put("const", "");
         qualMap.put("param", "");
     }
-    
+
     private static final Map<String, String> typeMap = new HashMap<String, String>();
     static {
         typeMap.put("void",    "void");
@@ -71,7 +71,7 @@ public class HLSLBackend extends SLBackend {
         typeMap.put("lsampler","sampler2D");
         typeMap.put("fsampler","sampler2D");
     }
-    
+
     private static final Map<String, String> varMap = new HashMap<String, String>();
     static {
     }
@@ -108,7 +108,7 @@ public class HLSLBackend extends SLBackend {
         String s = funcMap.get(f);
         return (s != null) ? s : f;
     }
-    
+
     @Override
     public void visitFuncDef(FuncDef d) {
         Function func = d.getFunction();
@@ -131,7 +131,7 @@ public class HLSLBackend extends SLBackend {
             super.visitFuncDef(d);
         }
     }
-    
+
     @Override
     public void visitVarDecl(VarDecl d) {
         Variable var = d.getVariable();

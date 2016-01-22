@@ -42,17 +42,17 @@ import javafx.stage.Window;
  *
  */
 public abstract class AbstractDragSource {
-    
+
     private final Window ownerWindow;
-    
+
     public AbstractDragSource(Window ownerWindow) {
         this.ownerWindow = ownerWindow;
     }
-    
+
     public Window getOwnerWindow() {
         return ownerWindow;
     }
-    
+
     public abstract boolean isAcceptable();
     public abstract List<FXOMObject> getDraggedObjects();
     public abstract FXOMObject getHitObject();
@@ -66,5 +66,5 @@ public abstract class AbstractDragSource {
     public abstract boolean isSingleImageViewOnly();
     public abstract boolean isSingleTooltipOnly();
     public abstract boolean isSingleContextMenuOnly();
-    
+
 }

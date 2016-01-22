@@ -8,7 +8,7 @@
  *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.	 See the GNU
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
@@ -35,10 +35,10 @@ G_BEGIN_DECLS
 
 GLIB_AVAILABLE_IN_ALL
 void g_qsort_with_data (gconstpointer    pbase,
-			gint             total_elems,
-			gsize            size,
-			GCompareDataFunc compare_func,
-			gpointer         user_data);
+            gint             total_elems,
+            gsize            size,
+            GCompareDataFunc compare_func,
+            gpointer         user_data);
 
 G_END_DECLS
 

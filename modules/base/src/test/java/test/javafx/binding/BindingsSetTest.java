@@ -36,7 +36,7 @@ import org.junit.Test;
 import static org.junit.Assert.*;
 
 public class BindingsSetTest {
-    
+
     private static final Object data1 = new Object();
     private static final Object data2 = new Object();
 
@@ -55,7 +55,7 @@ public class BindingsSetTest {
     public void testSize() {
         final IntegerBinding size = Bindings.size(property);
         DependencyUtils.checkDependencies(size.getDependencies(), property);
-        
+
         assertEquals(0, size.get());
         property.set(set1);
         assertEquals(2, size.get());

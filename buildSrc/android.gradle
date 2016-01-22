@@ -61,15 +61,15 @@ int compareVersions(String s1, String s2) {
             return 1;
         } else {
             return -1
-        }        
-    }    
+        }
+    }
     return (v2t.size() > v1t.size()) ? -1 : 0
 }
 
 String getLatestToolchain(String ndk, String tch) {
     def max = "0.0"
     def matchFile = null
-    file(cygpath("$ndk/toolchains")).eachFile() {file->        
+    file(cygpath("$ndk/toolchains")).eachFile() {file->
         def filename = file.getName()
         if (filename.startsWith(tch)) {
             def p = filename - "$tch-"
@@ -124,13 +124,13 @@ if (!ANDROID.canBuild) {
 }
 
 def sdk_target = project.hasProperty("ANDROID_SDK_TARGET") ?  "${ANDROID_SDK_TARGET}" : getLatestPlatform(sdk);
-if (!assertDir(file("$sdk/platforms/$sdk_target"))) {            
-    sdk_target = getLatestPlatform(sdk); 
+if (!assertDir(file("$sdk/platforms/$sdk_target"))) {
+    sdk_target = getLatestPlatform(sdk);
     logger.warn("Redefine ANDROID_SDK_TARGET to: [$sdk_target]")
 }
 
 def ndk_target = project.hasProperty("ANDROID_NDK_TARGET") ? "${ANDROID_NDK_TARGET}" : getLatestPlatform(ndk);
-if (!assertDir(file("$ndk/platforms/$ndk_target"))) {            
+if (!assertDir(file("$ndk/platforms/$ndk_target"))) {
     ndk_target = getLatestPlatform(ndk);
     logger.warn("Redefine ANDROID_NDK_TARGET to: [$ndk_target]")
 }
@@ -140,7 +140,7 @@ if (!ANDROID.canBuild) {
     fail("Can't determine sdk or ndk target platform!")
 }
 
-def toolchainHome = project.hasProperty("ANDROID_CROSS_TOOLS_VER") ? 
+def toolchainHome = project.hasProperty("ANDROID_CROSS_TOOLS_VER") ?
     "$ndk/toolchains/${ANDROID_CROSS_TOOLS_VER}" : getLatestToolchain(ndk, toolchainArchs[0])
 if (!assertDir(toolchainHome)) {
     toolchainHome = getLatestToolchain(ndk, toolchainArchs[0])
@@ -175,7 +175,7 @@ logger.quiet("ANDROID_SDK_TARGET: $sdk_target")
 logger.quiet("ANDROID_NDK: $ndk")
 logger.quiet("ANDROID_NDK_TARGET: $ndk_target")
 logger.quiet("FREETYPE_DIR: $freetypeDir")
-logger.quiet("Compile native text: $compileNativeText") 
+logger.quiet("Compile native text: $compileNativeText")
 logger.quiet("Android Compiler: $compiler")
 logger.quiet("Android Linker: $linker")
 
@@ -200,7 +200,7 @@ project(":graphics") {
         include("com/oracle/dalvik/**/*")
         dependsOn(compileDalvikLibs)
     }
-    
+
     afterEvaluate {
         addNative(project, "surface", ["android"])
         addNative(project, "vmlauncher", ["android"])
@@ -221,7 +221,7 @@ project(":graphics") {
                     from(
                          "modules/graphics/build/libs/vmlauncher/android/${props.library(props.vmlauncher.lib)}",
                          "modules/graphics/build/libs/surface/android/${props.library(props.surface.lib)}"
-                    )                    
+                    )
                     into ("build/android-sdk/dalvik/${props.libDest}")
                 }
                 copy {
@@ -260,10 +260,10 @@ project(":controls") {
         }
 
         sdkAndroid {
-            dependsOn(compileControlsJavaAndroid, processControlsResourcesAndroid)        
+            dependsOn(compileControlsJavaAndroid, processControlsResourcesAndroid)
         }
     }
-}        
+}
 
 project(":web") {
     apply plugin: 'java'
@@ -279,7 +279,7 @@ project(":web") {
         }
         def compileWebJavaAndroid = task("compileWebJavaAndroid",
             type: JavaCompile, group: "Build") {
-            
+
             dependsOn(project(":graphics").classes, project(":base").classes)
             description = "Task compiles web component for Android."
             classpath = files(
@@ -318,7 +318,7 @@ project(":web") {
                 copy {
                     from(
                          "modules/web/build/libs/dvkwebview/android/${props.library(props.dvkwebview.lib)}"
-                    )                    
+                    )
                     into ("build/android-sdk/dalvik/${props.libDest}")
                 }
                 copy {
@@ -372,7 +372,7 @@ android.com.sun.javafx.isEmbedded=true
 """
 def sysroot = "$ndk/platforms/$ndk_target/arch-arm"
 
-def ccFlags = ["--sysroot=$sysroot","-std=c99", "-DANDROID", "-c", "-nostdlib", 
+def ccFlags = ["--sysroot=$sysroot","-std=c99", "-DANDROID", "-c", "-nostdlib",
                "-DANDROID_NDK"]
 
 if (project.hasProperty("DALVIK_VM")) {
@@ -473,7 +473,7 @@ ANDROID.glass.lensport = [:]
 ANDROID.glass.lensport.nativeSource = [
     file("modules/graphics/src/main/native-glass/lens/lensport"),
     file("modules/graphics/src/main/native-glass/lens/lensport/initPlatform.c"),
-    file("modules/graphics/src/main/native-glass/lens/lensport/wrapped_functions.c")    
+    file("modules/graphics/src/main/native-glass/lens/lensport/wrapped_functions.c")
 ]
 ANDROID.glass.lensport.compiler = compiler
 ANDROID.glass.lensport.linker = linker
@@ -578,7 +578,7 @@ if (BUILD_CLOSED) {
     ANDROID.fontT2K.linker = linker
     ANDROID.fontT2K.linkFlags = [linkFlags, "-lstdc++"].flatten()
     ANDROID.fontT2K.lib = "javafx_font_t2k"
-} 
+}
 
 if (compileNativeText) {
     ANDROID.fontNativeFreetype = [:]
@@ -594,13 +594,13 @@ if (compileNativeText) {
 
     ccFlags += ["-D_ENABLE_HARFBUZZ"]
 
-    ANDROID.fontNativeFreetype.ccFlags = 
+    ANDROID.fontNativeFreetype.ccFlags =
         [ccFlags, ccWarnFlags, ccArchFlags, ccOptFlags,
         ccDebugFlags, ccDefaultIncludeFlags,
-        "-I$freetypeDir/include", "-I$freetypeDir/include/freetype2"].flatten()  
-        
-    ANDROID.fontNativeFreetype.linkFlags = 
-        [linkFlags, "-llog", 
+        "-I$freetypeDir/include", "-I$freetypeDir/include/freetype2"].flatten()
+
+    ANDROID.fontNativeFreetype.linkFlags =
+        [linkFlags, "-llog",
          "-L$freetypeDir/lib", "$freetypeDir/lib/libfreetype.a"].flatten()
 }
 

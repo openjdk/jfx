@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef ConservativeRoots_h
@@ -45,20 +45,20 @@ public:
     void add(void* begin, void* end);
     void add(void* begin, void* end, JITStubRoutineSet&);
     void add(void* begin, void* end, JITStubRoutineSet&, CodeBlockSet&);
-    
+
     size_t size();
     JSCell** roots();
 
 private:
     static const size_t inlineCapacity = 128;
     static const size_t nonInlineCapacity = 8192 / sizeof(JSCell*);
-    
+
     template<typename MarkHook>
     void genericAddPointer(void*, TinyBloomFilter, MarkHook&);
 
     template<typename MarkHook>
     void genericAddSpan(void*, void* end, MarkHook&);
-    
+
     void grow();
 
     JSCell** m_roots;

@@ -23,7 +23,7 @@
  * questions.
  */
 #ifndef ANDROIDINPUT_H
-#define	ANDROIDINPUT_H
+#define ANDROIDINPUT_H
 
 #include <dlfcn.h>
 #include <sys/types.h>
@@ -32,7 +32,7 @@
 #include <android/keycodes.h>
 #include <linux/input.h>
 
-#ifdef	__cplusplus
+#ifdef  __cplusplus
 extern "C" {
 #endif
 
@@ -45,7 +45,7 @@ extern "C" {
     if (env) {                                                              \
       (*ENV)->ThrowNew(ENV,                                                 \
           (*ENV)->FindClass(ENV, "java/lang/RuntimeException"), error_msg); \
-    }                                                                       
+    }
 
 #ifdef DEBUG
     // This method is good for early debug, but is unneeded for general use
@@ -70,9 +70,9 @@ ANativeWindow *getAndroidNativeWindow();
 void android_shutdown();
 
 const char *android_getDataDir();
-    
-#ifdef	__cplusplus
+
+#ifdef  __cplusplus
 }
 #endif
 
-#endif	/* ANDROIDINPUT_H */
+#endif  /* ANDROIDINPUT_H */

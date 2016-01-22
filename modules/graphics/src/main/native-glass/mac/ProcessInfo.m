@@ -42,7 +42,7 @@ static void _sortArray(NSMutableArray *array)
     NSSet *uniqueElements = [NSSet setWithArray:array];
     [array removeAllObjects];
     [array setArray:[uniqueElements allObjects]];
-    
+
     [array sortUsingComparator:^NSComparisonResult(id obj1, id obj2)
         {
             NSString *string1 = obj1;
@@ -55,7 +55,7 @@ static void _sortArray(NSMutableArray *array)
 static void _printArray(FILE *stream, char *title, NSMutableArray *array)
 {
     pthread_yield_np();
-    
+
     fflush(stream);
     fprintf(stream, title, (int)[array count]);
     for (NSUInteger i=0; i<[array count]; i++)
@@ -88,7 +88,7 @@ static inline char *_runCommand(char *command)
 {
     static char *buffer = NULL;
     NSUInteger bufferSize = 0;
-    
+
     fflush(NULL);
     FILE *file = popen(command, "r");
     if (file != NULL)
@@ -102,18 +102,18 @@ static inline char *_runCommand(char *command)
             buffer = realloc(buffer, bufferSize+chunkLength);
             memcpy((char*)(buffer+bufferSize), chunk, chunkLength);
             bufferSize += chunkLength;
-            
+
             chunkIndex++;
         }
-        
+
         buffer = realloc(buffer, bufferSize+1);
         buffer[bufferSize] = '\0';
-        
+
         pclose(file);
-        
+
         _collectProcess();
     }
-    
+
     if (bufferSize > 0)
     {
         return buffer;
@@ -147,7 +147,7 @@ void printLoadedFiles(FILE *stream)
         char *command = malloc(size);
         memset(command, 0x00, size);
         sprintf(command, LSOF_COMMAND, lsof, getpid());
-        
+
         NSMutableArray *array = [NSMutableArray arrayWithCapacity:100];
         char *output = _runCommand(command);
         if (output != NULL)
@@ -155,7 +155,7 @@ void printLoadedFiles(FILE *stream)
             char *token = strtok(output, "\n");
             output += strlen(token)+1;
             token = strtok(output, "\n");
-            
+
             if (output != NULL)
             {
                 while (token != NULL)
@@ -168,7 +168,7 @@ void printLoadedFiles(FILE *stream)
                         {
                             endIndex++;
                         }
-                        
+
                         [array addObject:[NSString stringWithUTF8String: &token[startIndex]]];
                     }
                     output += strlen(token)+1;
@@ -185,11 +185,11 @@ int64_t getTimeMicroseconds(void)
 {
         struct timeval now;
         gettimeofday(&now, NULL);
-    
+
     int64_t seconds = now.tv_sec;
     seconds *= 1000000L;
     int64_t useconds = now.tv_usec;
-    
+
         return (seconds+useconds);
 }
 
@@ -202,8 +202,8 @@ vm_size_t getRam(void)
     if (kerr == KERN_SUCCESS)
     {
         return info.resident_size;
-    } 
-    else 
+    }
+    else
     {
         return 0;
     }

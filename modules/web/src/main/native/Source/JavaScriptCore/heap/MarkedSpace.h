@@ -85,7 +85,7 @@ public:
     void* allocateWithNormalDestructor(size_t);
     void* allocateWithImmortalStructureDestructor(size_t);
     void* allocateWithoutDestructor(size_t);
- 
+
     void resetAllocators();
 
     void visitWeakSets(HeapRootVisitor&);
@@ -101,14 +101,14 @@ public:
     void resumeAllocating(); // If we just stopped allocation but we didn't do a collection, we need to resume allocation.
 
     typedef HashSet<MarkedBlock*>::iterator BlockIterator;
-    
+
     template<typename Functor> typename Functor::ReturnType forEachLiveCell(HeapIterationScope&, Functor&);
     template<typename Functor> typename Functor::ReturnType forEachLiveCell(HeapIterationScope&);
     template<typename Functor> typename Functor::ReturnType forEachDeadCell(HeapIterationScope&, Functor&);
     template<typename Functor> typename Functor::ReturnType forEachDeadCell(HeapIterationScope&);
     template<typename Functor> typename Functor::ReturnType forEachBlock(Functor&);
     template<typename Functor> typename Functor::ReturnType forEachBlock();
-    
+
     void shrink();
     void freeBlock(MarkedBlock*);
     void freeOrShrinkBlock(MarkedBlock*);

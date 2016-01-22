@@ -31,7 +31,7 @@
 
 - (void)webProcessPlugIn:(WKWebProcessPlugInController *)plugInController initializeWithObject:(id)initializationObject
 {
-}   
+}
 
 @end
 

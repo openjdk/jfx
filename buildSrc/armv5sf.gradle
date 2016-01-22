@@ -304,12 +304,12 @@ ARMV5SF.glass.javahInclude = [
     "com/sun/glass/events/**",
     "com/sun/glass/ui/*"]
 ARMV5SF.glass.variants = [ ]
-if (ARMV5SF.includeLens) { 
+if (ARMV5SF.includeLens) {
     ARMV5SF.glass.variants.addAll("eglfb", "directfb", "fb", "lensport" );
     ARMV5SF.glass.javahInclude.addAll("com/sun/glass/ui/lens/*");
     ARMV5SF.javafxPlatformProperties = ARMV5SF.javafxPlatformProperties + lensPlatformAdditions
 }
-if (ARMV5SF.includeMonocle) { 
+if (ARMV5SF.includeMonocle) {
     ARMV5SF.glass.variants.addAll("monocle", "monocle_x11");
     ARMV5SF.glass.javahInclude.addAll(
         "com/sun/glass/ui/monocle/*",
@@ -405,7 +405,7 @@ ARMV5SF.glass.fb.ccFlags = ["-ffast-math", extraCFlags, "-DLINUX"].flatten()
 ARMV5SF.glass.fb.linker = linker
 ARMV5SF.glass.fb.linkFlags = [lensLFlags].flatten()
 ARMV5SF.glass.fb.lib = "glass_lens_fb"
- 
+
 ARMV5SF.glass.eglx11 = [:]
 ARMV5SF.glass.eglx11.nativeSource = [
     file("modules/graphics/src/main/native-glass/lens"),
@@ -419,7 +419,7 @@ ARMV5SF.glass.eglx11.ccFlags = ["-ffast-math", extraCFlags, "-DLINUX"].flatten()
 ARMV5SF.glass.eglx11.linker = linker
 ARMV5SF.glass.eglx11.linkFlags = [lensLFlags].flatten()
 ARMV5SF.glass.eglx11.lib = "glass_lens_eglx11"
- 
+
 ARMV5SF.glass.gtk = [:]
 ARMV5SF.glass.gtk.nativeSource = file("modules/graphics/src/main/native-glass/gtk")
 ARMV5SF.glass.gtk.compiler = compiler
@@ -441,7 +441,7 @@ ARMV5SF.prism.nativeSource = file("modules/graphics/src/main/native-prism")
 ARMV5SF.prism.compiler = compiler
 ARMV5SF.prism.ccFlags = es2CFlags
 ARMV5SF.prism.linker = linker
-ARMV5SF.prism.linkFlags = es2LFlags 
+ARMV5SF.prism.linkFlags = es2LFlags
 ARMV5SF.prism.lib = "prism_common"
 
 ARMV5SF.prismSW = [:]

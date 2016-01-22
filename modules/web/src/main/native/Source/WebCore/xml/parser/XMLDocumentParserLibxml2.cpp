@@ -730,7 +730,7 @@ static inline void handleNamespaceAttributes(Vector<Attribute>& prefixedAttribut
         QualifiedName parsedName = anyName;
         if (!Element::parseAttributeName(parsedName, XMLNSNames::xmlnsNamespaceURI, namespaceQName, ec))
             return;
-        
+
         prefixedAttributes.append(Attribute(parsedName, namespaceURI));
     }
 }
@@ -1469,7 +1469,7 @@ bool XMLDocumentParser::appendFragmentSource(const String& chunk)
     ASSERT(m_parsingFragment);
 
     CString chunkAsUtf8 = chunk.utf8();
-    
+
     // libxml2 takes an int for a length, and therefore can't handle XML chunks larger than 2 GiB.
     if (chunkAsUtf8.length() > INT_MAX)
         return false;

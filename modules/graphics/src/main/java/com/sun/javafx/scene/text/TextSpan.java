@@ -37,10 +37,10 @@ public interface TextSpan {
      * The font for the span, if null the span is handled as embedded object.
      */
     public Object getFont();
-    
+
     /**
      * The bounds for embedded object, only used the font returns null.
-     * The text for a embedded object should be a single char ("\uFFFC" is 
+     * The text for a embedded object should be a single char ("\uFFFC" is
      * recommended).
      */
     public RectBounds getBounds();

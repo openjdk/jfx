@@ -62,11 +62,11 @@ public class StringEditor extends PropertyEditor {
             textField.selectAll();
         };
         setTextEditorBehavior(this, textField, valueListener);
-        
+
         // Double line editor by default
         setLayoutFormat(LayoutFormat.DOUBLE_LINE);
     }
-    
+
     @Override
     public Object getValue() {
         return EditorUtils.getPlainString(textField.getText());

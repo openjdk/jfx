@@ -31,7 +31,7 @@ import java.util.List;
 public class ChangeHelper {
     public static String addRemoveChangeToString(int from, int to, List<?> list, List<?> removed) {
         StringBuilder b = new StringBuilder();
-                
+
         if (removed.isEmpty()) {
             b.append(list.subList(from, to));
             b.append(" added at ").append(from);

@@ -35,32 +35,32 @@ import javafx.scene.control.TableSelectionModel;
 import javafx.scene.input.MouseButton;
 
 public abstract class TableCellBehaviorBase<S, T, TC extends TableColumnBase<S, ?>, C extends IndexedCell<T>> extends CellBehaviorBase<C> {
-    
+
     /***************************************************************************
      *                                                                         *
      * Private fields                                                          *
      *                                                                         *
-     **************************************************************************/      
+     **************************************************************************/
 
 
     /***************************************************************************
      *                                                                         *
      * Constructors                                                            *
      *                                                                         *
-     **************************************************************************/    
+     **************************************************************************/
 
     public TableCellBehaviorBase(C control) {
         super(control);
     }
-    
-    
-    
+
+
+
     /**************************************************************************
      *                                                                        *
      * Abstract API                                                           *
-     *                                                                        *  
-     *************************************************************************/  
-    
+     *                                                                        *
+     *************************************************************************/
+
     protected abstract TableColumnBase<S, T> getTableColumn(); // getControl().getTableColumn()
     protected abstract int getItemCount();        // tableView.impl_getTreeItemCount()
     protected abstract TableSelectionModel<S> getSelectionModel();
@@ -76,22 +76,22 @@ public abstract class TableCellBehaviorBase<S, T, TC extends TableColumnBase<S, 
 
     protected abstract void focus(int row, TableColumnBase<S,T> tc); //fm.focus(new TreeTablePosition(tableView, row, tableColumn));
 
-    
-    
+
+
     /***************************************************************************
      *                                                                         *
      * Public API                                                              *
      *                                                                         *
-     **************************************************************************/    
-    
+     **************************************************************************/
 
-    
+
+
     /***************************************************************************
      *                                                                         *
      * Private implementation                                                  *
      *                                                                         *
-     **************************************************************************/   
-    
+     **************************************************************************/
+
     protected void doSelect(final double x, final double y, final MouseButton button,
                           final int clickCount, final boolean shiftDown, final boolean shortcutDown) {
         // Note that table.select will reset selection
@@ -104,7 +104,7 @@ public abstract class TableCellBehaviorBase<S, T, TC extends TableColumnBase<S, 
 
         final Control tableView = getCellContainer();
         if (tableView == null) return;
-        
+
         int count = getItemCount();
         if (tableCell.getIndex() >= count) return;
 
@@ -118,7 +118,7 @@ public abstract class TableCellBehaviorBase<S, T, TC extends TableColumnBase<S, 
 
         TableFocusModel fm = getFocusModel();
         if (fm == null) return;
-        
+
         TablePositionBase focusedCell = getFocusedCell();
 
         // if the user has clicked on the disclosure node, we do nothing other
@@ -126,7 +126,7 @@ public abstract class TableCellBehaviorBase<S, T, TC extends TableColumnBase<S, 
         if (handleDisclosureNode(x, y)) {
             return;
         }
-        
+
         // if shift is down, and we don't already have the initial focus index
         // recorded, we record the focus index now so that subsequent shift+clicks
         // result in the correct selection occuring (whilst the focus index moves

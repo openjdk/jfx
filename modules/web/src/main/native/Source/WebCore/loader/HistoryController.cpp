@@ -8,13 +8,13 @@
  * are met:
  *
  * 1.  Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer. 
+ *     notice, this list of conditions and the following disclaimer.
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
- *     documentation and/or other materials provided with the distribution. 
+ *     documentation and/or other materials provided with the distribution.
  * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
- *     from this software without specific prior written permission. 
+ *     from this software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY APPLE AND ITS CONTRIBUTORS "AS IS" AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
@@ -100,7 +100,7 @@ void HistoryController::clearScrollPositionAndViewState()
 /*
  There is a race condition between the layout and load completion that affects restoring the scroll position.
  We try to restore the scroll position at both the first layout and upon load completion.
- 
+
  1) If first layout happens before the load completes, we want to restore the scroll position then so that the
  first time we draw the page is already scrolled to the right place, instead of starting at the top and later
  jumping down.  It is possible that the old scroll position is past the part of the doc laid out so far, in
@@ -114,15 +114,15 @@ void HistoryController::restoreScrollPositionAndViewState()
         return;
 
     ASSERT(m_currentItem);
-    
+
     // FIXME: As the ASSERT attests, it seems we should always have a currentItem here.
     // One counterexample is <rdar://problem/4917290>
     // For now, to cover this issue in release builds, there is no technical harm to returning
-    // early and from a user standpoint - as in the above radar - the previous page load failed 
+    // early and from a user standpoint - as in the above radar - the previous page load failed
     // so there *is* no scroll or view state to restore!
     if (!m_currentItem)
         return;
-    
+
     // FIXME: It would be great to work out a way to put this code in WebCore instead of calling
     // through to the client. It's currently used only for the PDF view on Mac.
     m_frame.loader().client().restoreViewState();
@@ -180,7 +180,7 @@ void HistoryController::saveDocumentState()
 
     Document* document = m_frame.document();
     ASSERT(document);
-    
+
     if (item->isCurrentDocument(document) && document->hasLivingRenderTree()) {
         LOG(Loading, "WebCoreLoading %s: saving form state to %p", m_frame.tree().uniqueName().string().utf8().data(), item);
         item->setDocumentState(document->formElementsState());
@@ -213,7 +213,7 @@ void HistoryController::restoreDocumentState()
         case FrameLoadTypeStandard:
             break;
     }
-    
+
     if (!m_currentItem)
         return;
     if (m_frame.loader().requestedHistoryItem() != m_currentItem.get())
@@ -236,7 +236,7 @@ void HistoryController::invalidateCurrentItemCachedPage()
     // FIXME: This is a grotesque hack to fix <rdar://problem/4059059> Crash in RenderFlow::detach
     // Somehow the PageState object is not properly updated, and is holding onto a stale document.
     // Both Xcode and FileMaker see this crash, Safari does not.
-    
+
     ASSERT(cachedPage->document() == m_frame.document());
     if (cachedPage->document() == m_frame.document()) {
         cachedPage->document()->setInPageCache(false);
@@ -261,7 +261,7 @@ bool HistoryController::shouldStopLoadingForHistoryItem(HistoryItem* targetItem)
 void HistoryController::goToItem(HistoryItem* targetItem, FrameLoadType type)
 {
     ASSERT(!m_frame.tree().parent());
-    
+
     // shouldGoToHistoryItem is a private delegate method. This is needed to fix:
     // <rdar://problem/3951283> can view pages from the back/forward cache that should be disallowed by Parental Controls
     // Ultimately, history item navigations should go through the policy delegate. That's covered in:
@@ -327,7 +327,7 @@ void HistoryController::updateForReload()
 
     if (m_currentItem) {
         pageCache()->remove(m_currentItem.get());
-    
+
         if (m_frame.loader().loadType() == FrameLoadTypeReload || m_frame.loader().loadType() == FrameLoadTypeReloadFromOrigin)
             saveScrollPositionAndViewStateToItem(m_currentItem.get());
     }
@@ -385,7 +385,7 @@ void HistoryController::updateForRedirectWithLockedBackForwardList()
     if (m_frame.loader().documentLoader())
         LOG(History, "WebCoreHistory: Updating History for redirect load in frame %s", m_frame.loader().documentLoader()->title().string().utf8().data());
 #endif
-    
+
     bool needPrivacy = m_frame.settings().privateBrowsingEnabled();
     const URL& historyURL = m_frame.loader().documentLoader()->urlForHistory();
 
@@ -622,11 +622,11 @@ void HistoryController::initializeItem(HistoryItem* item)
     // deal with such things, so we nip that in the bud here.
     // Later we may want to learn to live with nil for URL.
     // See bug 3368236 and related bugs for more information.
-    if (url.isEmpty()) 
+    if (url.isEmpty())
         url = blankURL();
     if (originalURL.isEmpty())
         originalURL = blankURL();
-    
+
     Frame* parentFrame = m_frame.tree().parent();
     String parent = parentFrame ? parentFrame->tree().uniqueName() : "";
     StringWithDirection title = documentLoader->title();
@@ -649,12 +649,12 @@ PassRefPtr<HistoryItem> HistoryController::createItem()
 {
     RefPtr<HistoryItem> item = HistoryItem::create();
     initializeItem(item.get());
-    
+
     // Set the item for which we will save document state
     m_frameLoadComplete = false;
     m_previousItem = m_currentItem;
     m_currentItem = item;
-    
+
     return item.release();
 }
 
@@ -685,7 +685,7 @@ PassRefPtr<HistoryItem> HistoryController::createItemTree(Frame& targetFrame, bo
             // If the child is a frame corresponding to an <object> element that never loaded,
             // we don't want to create a history item, because that causes fallback content
             // to be ignored on reload.
-            
+
             if (!(!hasChildLoaded && childLoader.isHostedByObjectElement()))
                 bfItem->addChildItem(childLoader.history().createItemTree(targetFrame, clipAtTarget));
         }
@@ -769,25 +769,25 @@ bool HistoryController::currentFramesMatchItem(HistoryItem* item) const
 {
     if ((!m_frame.tree().uniqueName().isEmpty() || !item->target().isEmpty()) && m_frame.tree().uniqueName() != item->target())
         return false;
-        
+
     const HistoryItemVector& childItems = item->children();
     if (childItems.size() != m_frame.tree().childCount())
         return false;
-    
+
     unsigned size = childItems.size();
     for (unsigned i = 0; i < size; ++i) {
         if (!m_frame.tree().child(childItems[i]->target()))
             return false;
     }
-    
+
     return true;
 }
 
 void HistoryController::updateBackForwardListClippedAtTarget(bool doClip)
 {
-    // In the case of saving state about a page with frames, we store a tree of items that mirrors the frame tree.  
-    // The item that was the target of the user's navigation is designated as the "targetItem".  
-    // When this function is called with doClip=true we're able to create the whole tree except for the target's children, 
+    // In the case of saving state about a page with frames, we store a tree of items that mirrors the frame tree.
+    // The item that was the target of the user's navigation is designated as the "targetItem".
+    // When this function is called with doClip=true we're able to create the whole tree except for the target's children,
     // which will be loaded in the future. That part of the tree will be filled out as the child loads are committed.
 
     Page* page = m_frame.page();
@@ -839,7 +839,7 @@ void HistoryController::pushState(PassRefPtr<SerializedScriptValue> stateObject,
 
     // Get a HistoryItem tree for the current frame tree.
     RefPtr<HistoryItem> topItem = m_frame.mainFrame().loader().history().createItemTree(m_frame, false);
-    
+
     // Override data in the current item (created by createItemTree) to reflect
     // the pushState() arguments.
     m_currentItem->setTitle(title);

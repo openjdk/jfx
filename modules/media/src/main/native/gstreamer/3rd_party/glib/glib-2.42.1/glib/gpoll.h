@@ -8,7 +8,7 @@
  *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.	 See the GNU
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  * Library General Public License for more details.
  *
  * You should have received a copy of the GNU Library General Public
@@ -91,13 +91,13 @@ struct _GPollFD
 {
 #if defined (G_OS_WIN32) && GLIB_SIZEOF_VOID_P == 8
 #ifndef __GTK_DOC_IGNORE__
-  gint64	fd;
+  gint64    fd;
 #endif
 #else
-  gint		fd;
+  gint      fd;
 #endif
-  gushort 	events;
-  gushort 	revents;
+  gushort   events;
+  gushort   revents;
 };
 
 /**
@@ -119,8 +119,8 @@ struct _GPollFD
 GLIB_AVAILABLE_IN_ALL
 gint
 g_poll (GPollFD *fds,
-	guint    nfds,
-	gint     timeout);
+    guint    nfds,
+    gint     timeout);
 
 G_END_DECLS
 

@@ -6,13 +6,13 @@
  * are met:
  *
  * 1.  Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer. 
+ *     notice, this list of conditions and the following disclaimer.
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
- *     documentation and/or other materials provided with the distribution. 
+ *     documentation and/or other materials provided with the distribution.
  * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
- *     from this software without specific prior written permission. 
+ *     from this software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY APPLE AND ITS CONTRIBUTORS "AS IS" AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
@@ -54,66 +54,66 @@ public:
 class RedBlackTreeTest : public testing::Test {
 public:
     unsigned m_counter;
-    
+
     virtual void SetUp()
     {
         m_counter = 0;
     }
-    
+
     virtual void TearDown()
     {
     }
-    
+
     struct Pair {
         char key;
         unsigned value;
-        
+
         Pair() { }
-        
+
         Pair(char key, unsigned value)
             : key(key)
             , value(value)
         {
         }
-        
+
         bool operator==(const Pair& other) const
         {
             return key == other.key;
         }
-        
+
         bool operator<(const Pair& other) const
         {
             return key < other.key;
         }
     };
-    
+
     typedef Vector<Pair, 16> PairVector;
-    
+
     PairVector findExact(PairVector& asVector, char key)
     {
         PairVector result;
-        
+
         for (size_t index = 0; index < asVector.size(); ++index) {
             if (asVector.at(index).key == key)
                 result.append(asVector.at(index));
         }
-        
+
         std::sort(result.begin(), result.end());
-        
+
         return result;
     }
-    
+
     void remove(PairVector& asVector, size_t index)
     {
         asVector.at(index) = asVector.last();
         asVector.removeLast();
     }
-    
+
     PairVector findLeastGreaterThanOrEqual(PairVector& asVector, char key)
     {
         char bestKey = 0; // assignment to make gcc happy
         bool foundKey = false;
-        
+
         for (size_t index = 0; index < asVector.size(); ++index) {
             if (asVector.at(index).key >= key) {
                 if (asVector.at(index).key < bestKey || !foundKey) {
@@ -122,67 +122,67 @@ public:
                 }
             }
         }
-        
+
         PairVector result;
-        
+
         if (!foundKey)
             return result;
-        
+
         return findExact(asVector, bestKey);
     }
-    
+
     void assertFoundAndRemove(PairVector& asVector, char key, unsigned value)
     {
             bool found = false;
             size_t foundIndex = 0; // make compilers happy
-            
+
             for (size_t index = 0; index < asVector.size(); ++index) {
                 if (asVector.at(index).key == key
                     && asVector.at(index).value == value) {
                     EXPECT_TRUE(!found);
-                    
+
                     found = true;
                     foundIndex = index;
                 }
             }
-            
+
             EXPECT_TRUE(found);
-            
+
             remove(asVector, foundIndex);
     }
-    
+
     // This deliberately passes a copy of the vector.
     void assertEqual(RedBlackTree<TestNode, char>& asTree, PairVector asVector)
     {
         for (TestNode* current = asTree.first(); current; current = current->successor())
             assertFoundAndRemove(asVector, current->m_key, current->m_value);
     }
-    
+
     void assertSameValuesForKey(RedBlackTree<TestNode, char>& asTree, TestNode* node, PairVector foundValues, char key)
     {
         if (node) {
             EXPECT_EQ(node->m_key, key);
-            
+
             TestNode* prevNode = node;
             do {
                 node = prevNode;
                 prevNode = prevNode->predecessor();
             } while (prevNode && prevNode->m_key == key);
-            
+
             EXPECT_EQ(node->m_key, key);
             EXPECT_TRUE(!prevNode || prevNode->m_key < key);
-            
+
             do {
                 assertFoundAndRemove(foundValues, node->m_key, node->m_value);
-                
+
                 node = node->successor();
                 EXPECT_TRUE(!node || node->m_key >= key);
             } while (node && node->m_key == key);
         }
-        
+
         EXPECT_TRUE(foundValues.isEmpty());
     }
-    
+
     // The control string is a null-terminated list of commands. Each
     // command is two characters, with the first identifying the operation
     // and the second giving a key. The commands are:
@@ -194,15 +194,15 @@ public:
     {
         PairVector asVector;
         RedBlackTree<TestNode, char> asTree;
-        
+
         for (const char* current = controlString; *current; current += 2) {
             char command = current[0];
             char key = current[1];
             unsigned value = ++m_counter;
-            
+
             ASSERT(command);
             ASSERT(key);
-            
+
             switch (command) {
             case '+': {
                 TestNode* node = new TestNode(key, value);
@@ -210,7 +210,7 @@ public:
                 asVector.append(Pair(key, value));
                 break;
             }
-                
+
             case '*': {
                 TestNode* node = asTree.findExact(key);
                 if (node)
@@ -228,7 +228,7 @@ public:
                     EXPECT_TRUE(findLeastGreaterThanOrEqual(asVector, key).isEmpty());
                 break;
             }
-                
+
             case '!': {
                 while (true) {
                     TestNode* node = asTree.remove(key);
@@ -242,12 +242,12 @@ public:
                 }
                 break;
             }
-                
+
             default:
                 ASSERT_NOT_REACHED();
                 break;
             }
-            
+
             EXPECT_EQ(asTree.size(), asVector.size());
             assertEqual(asTree, asVector);
         }

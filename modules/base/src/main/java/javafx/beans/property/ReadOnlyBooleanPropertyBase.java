@@ -38,38 +38,38 @@ import com.sun.javafx.binding.ExpressionHelper;
  * @since JavaFX 2.0
  */
 public abstract class ReadOnlyBooleanPropertyBase extends ReadOnlyBooleanProperty {
-    
+
     ExpressionHelper<Boolean> helper;
 
-    @Override 
+    @Override
     public void addListener(InvalidationListener listener) {
         helper = ExpressionHelper.addListener(helper, this, listener);
     }
 
-    @Override 
+    @Override
     public void removeListener(InvalidationListener listener) {
         helper = ExpressionHelper.removeListener(helper, listener);
     }
-    
+
     @Override
     public void addListener(ChangeListener<? super Boolean> listener) {
         helper = ExpressionHelper.addListener(helper, this, listener);
     }
 
-    @Override 
+    @Override
     public void removeListener(ChangeListener<? super Boolean> listener) {
         helper = ExpressionHelper.removeListener(helper, listener);
     }
-    
+
     /**
      * Sends notifications to all attached
      * {@link javafx.beans.InvalidationListener InvalidationListeners} and
      * {@link javafx.beans.value.ChangeListener ChangeListeners}.
-     * 
+     *
      * This method needs to be called, if the value of this property changes.
      */
     protected void fireValueChangedEvent() {
         ExpressionHelper.fireValueChangedEvent(helper);
     }
-    
+
 }

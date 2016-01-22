@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -49,11 +49,11 @@ public:
         , m_insertionSet(graph)
     {
     }
-    
+
     bool run()
     {
         bool changed = false;
-        
+
         for (BlockIndex blockIndex = 0; blockIndex < m_graph.numBlocks(); ++blockIndex) {
             BasicBlock* block = m_graph.block(blockIndex);
             if (!block)
@@ -61,7 +61,7 @@ public:
             if (block->cfaFoundConstants)
                 changed |= foldConstants(block);
         }
-        
+
         return changed;
     }
 
@@ -73,11 +73,11 @@ private:
         for (unsigned indexInBlock = 0; indexInBlock < block->size(); ++indexInBlock) {
             if (!m_state.isValid())
                 break;
-            
+
             Node* node = block->at(indexInBlock);
 
             bool eliminated = false;
-                    
+
             switch (node->op()) {
             case CheckArgumentsNotCreated: {
                 if (!isEmptySpeculation(
@@ -88,7 +88,7 @@ private:
                 eliminated = true;
                 break;
             }
-                    
+
             case CheckStructure:
             case ArrayifyToStructure: {
                 AbstractValue& value = m_state.forNode(node->child1());
@@ -120,7 +120,7 @@ private:
                 }
                 break;
             }
-                
+
             case CheckArray:
             case Arrayify: {
                 if (!node->arrayMode().alreadyChecked(m_graph, node, m_state.forNode(node->child1())))
@@ -129,7 +129,7 @@ private:
                 eliminated = true;
                 break;
             }
-                
+
             case CheckFunction: {
                 if (m_state.forNode(node->child1()).value() != node->function())
                     break;
@@ -137,7 +137,7 @@ private:
                 eliminated = true;
                 break;
             }
-                
+
             case CheckInBounds: {
                 JSValue left = m_state.forNode(node->child1()).value();
                 JSValue right = m_state.forNode(node->child2()).value();
@@ -147,10 +147,10 @@ private:
                     eliminated = true;
                     break;
                 }
-                
+
                 break;
             }
-                
+
             case MultiGetByOffset: {
                 Edge childEdge = node->child1();
                 Node* child = childEdge.node();
@@ -159,83 +159,83 @@ private:
                 Structure* structure = m_state.forNode(child).bestProvenStructure();
                 if (!structure)
                     break;
-                
+
                 for (unsigned i = data.variants.size(); i--;) {
                     const GetByIdVariant& variant = data.variants[i];
                     if (!variant.structureSet().contains(structure))
                         continue;
-                    
+
                     if (variant.chain())
                         break;
-                    
+
                     emitGetByOffset(indexInBlock, node, structure, variant, data.identifierNumber);
                     eliminated = true;
                     break;
                 }
                 break;
             }
-        
+
             case GetById:
             case GetByIdFlush: {
                 Edge childEdge = node->child1();
                 Node* child = childEdge.node();
                 unsigned identifierNumber = node->identifierNumber();
-                
+
                 if (childEdge.useKind() != CellUse)
                     break;
-                
+
                 Structure* structure = m_state.forNode(child).bestProvenStructure();
                 if (!structure)
                     break;
-                
+
                 GetByIdStatus status = GetByIdStatus::computeFor(
                     vm(), structure, m_graph.identifiers()[identifierNumber]);
-                
+
                 if (!status.isSimple() || status.numVariants() != 1) {
                     // FIXME: We could handle prototype cases.
                     // https://bugs.webkit.org/show_bug.cgi?id=110386
                     break;
                 }
-                
+
                 emitGetByOffset(indexInBlock, node, structure, status[0], identifierNumber);
                 eliminated = true;
                 break;
             }
-                
+
             case PutById:
             case PutByIdDirect: {
                 NodeOrigin origin = node->origin;
                 Edge childEdge = node->child1();
                 Node* child = childEdge.node();
                 unsigned identifierNumber = node->identifierNumber();
-                
+
                 ASSERT(childEdge.useKind() == CellUse);
-                
+
                 Structure* structure = m_state.forNode(child).bestProvenStructure();
                 if (!structure)
                     break;
-                
+
                 bool needsWatchpoint = !m_state.forNode(child).m_currentKnownStructure.hasSingleton();
                 bool needsCellCheck = m_state.forNode(child).m_type & ~SpecCell;
-                
+
                 PutByIdStatus status = PutByIdStatus::computeFor(
                     vm(),
                     m_graph.globalObjectFor(origin.semantic),
                     structure,
                     m_graph.identifiers()[identifierNumber],
                     node->op() == PutByIdDirect);
-                
+
                 if (!status.isSimpleReplace() && !status.isSimpleTransition())
                     break;
-                
+
                 ASSERT(status.oldStructure() == structure);
-                
+
                 // Now before we do anything else, push the CFA forward over the PutById
                 // and make sure we signal to the loop that it should continue and not
                 // do any eliminations.
                 m_interpreter.execute(indexInBlock);
                 eliminated = true;
-                
+
                 if (needsWatchpoint) {
                     m_insertionSet.insertNode(
                         indexInBlock, SpecNone, StructureTransitionWatchpoint, origin,
@@ -244,23 +244,23 @@ private:
                     m_insertionSet.insertNode(
                         indexInBlock, SpecNone, Phantom, origin, childEdge);
                 }
-                
+
                 childEdge.setUseKind(KnownCellUse);
-                
+
                 StructureTransitionData* transitionData = 0;
                 if (status.isSimpleTransition()) {
                     transitionData = m_graph.addStructureTransitionData(
                         StructureTransitionData(structure, status.newStructure()));
-                    
+
                     if (node->op() == PutById) {
                         if (!structure->storedPrototype().isNull()) {
                             addStructureTransitionCheck(
                                 origin, indexInBlock,
                                 structure->storedPrototype().asCell());
                         }
-                        
+
                         m_graph.chains().addLazily(status.structureChain());
-                        
+
                         for (unsigned i = 0; i < status.structureChain()->size(); ++i) {
                             JSValue prototype = status.structureChain()->at(i)->storedPrototype();
                             if (prototype.isNull())
@@ -271,9 +271,9 @@ private:
                         }
                     }
                 }
-                
+
                 Edge propertyStorage;
-                
+
                 if (isInlineOffset(status.offset()))
                     propertyStorage = childEdge;
                 else if (status.isSimpleReplace() || structure->outOfLineCapacity() == status.newStructure()->outOfLineCapacity()) {
@@ -291,7 +291,7 @@ private:
                     ASSERT(structure->outOfLineCapacity());
                     ASSERT(status.newStructure()->outOfLineCapacity() > structure->outOfLineCapacity());
                     ASSERT(!isInlineOffset(status.offset()));
-                    
+
                     Node* reallocatePropertyStorage = m_insertionSet.insertNode(
                         indexInBlock, SpecNone, ReallocatePropertyStorage, origin,
                         OpInfo(transitionData), childEdge,
@@ -300,7 +300,7 @@ private:
                     m_insertionSet.insertNode(indexInBlock, SpecNone, StoreBarrier, origin, Edge(node->child1().node(), KnownCellUse));
                     propertyStorage = Edge(reallocatePropertyStorage);
                 }
-                
+
                 if (status.isSimpleTransition()) {
                     Node* putStructure = m_graph.addNode(SpecNone, PutStructure, origin, OpInfo(transitionData), childEdge);
                     m_insertionSet.insertNode(indexInBlock, SpecNone, StoreBarrier, origin, Edge(node->child1().node(), KnownCellUse));
@@ -308,9 +308,9 @@ private:
                 }
 
                 node->convertToPutByOffset(m_graph.m_storageAccessData.size(), propertyStorage);
-                m_insertionSet.insertNode(indexInBlock, SpecNone, ConditionalStoreBarrier, origin, 
+                m_insertionSet.insertNode(indexInBlock, SpecNone, ConditionalStoreBarrier, origin,
                     Edge(node->child2().node(), KnownCellUse), Edge(node->child3().node(), UntypedUse));
-                
+
                 StorageAccessData storageAccessData;
                 storageAccessData.offset = status.offset();
                 storageAccessData.identifierNumber = identifierNumber;
@@ -329,7 +329,7 @@ private:
             case ToPrimitive: {
                 if (m_state.forNode(node->child1()).m_type & ~(SpecFullNumber | SpecBoolean | SpecString))
                     break;
-                
+
                 node->convertToIdentity();
                 break;
             }
@@ -337,12 +337,12 @@ private:
             default:
                 break;
             }
-                
+
             if (eliminated) {
                 changed = true;
                 continue;
             }
-                
+
             m_interpreter.execute(indexInBlock);
             if (!m_state.isValid()) {
                 // If we invalidated then we shouldn't attempt to constant-fold. Here's an
@@ -364,7 +364,7 @@ private:
             JSValue value = m_state.forNode(node).value();
             if (!value)
                 continue;
-            
+
             // Check if merging the abstract value of the constant into the abstract value
             // we've proven for this node wouldn't widen the proof. If it widens the proof
             // (i.e. says that the set contains more things in it than it previously did)
@@ -374,27 +374,27 @@ private:
             constantValue.set(m_graph, value);
             if (oldValue.merge(constantValue))
                 continue;
-                
+
             NodeOrigin origin = node->origin;
             AdjacencyList children = node->children;
-            
+
             if (node->op() == GetLocal)
                 m_graph.dethread();
             else
                 ASSERT(!node->hasVariableAccessData(m_graph));
-            
+
             m_graph.convertToConstant(node, value);
             m_insertionSet.insertNode(
                 indexInBlock, SpecNone, Phantom, origin, children);
-            
+
             changed = true;
         }
         m_state.reset();
         m_insertionSet.execute(block);
-        
+
         return changed;
     }
-        
+
     void emitGetByOffset(unsigned indexInBlock, Node* node, Structure* structure, const GetByIdVariant& variant, unsigned identifierNumber)
     {
         NodeOrigin origin = node->origin;
@@ -403,15 +403,15 @@ private:
 
         bool needsWatchpoint = !m_state.forNode(child).m_currentKnownStructure.hasSingleton();
         bool needsCellCheck = m_state.forNode(child).m_type & ~SpecCell;
-        
+
         ASSERT(!variant.chain());
         ASSERT(variant.structureSet().contains(structure));
-        
+
         // Now before we do anything else, push the CFA forward over the GetById
         // and make sure we signal to the loop that it should continue and not
         // do any eliminations.
         m_interpreter.execute(indexInBlock);
-        
+
         if (needsWatchpoint) {
             m_insertionSet.insertNode(
                 indexInBlock, SpecNone, StructureTransitionWatchpoint, origin,
@@ -420,25 +420,25 @@ private:
             m_insertionSet.insertNode(
                 indexInBlock, SpecNone, Phantom, origin, childEdge);
         }
-        
+
         if (variant.specificValue()) {
             m_graph.convertToConstant(node, variant.specificValue());
             return;
         }
-        
+
         childEdge.setUseKind(KnownCellUse);
-        
+
         Edge propertyStorage;
-        
+
         if (isInlineOffset(variant.offset()))
             propertyStorage = childEdge;
         else {
             propertyStorage = Edge(m_insertionSet.insertNode(
                 indexInBlock, SpecNone, GetButterfly, origin, childEdge));
         }
-        
+
         node->convertToGetByOffset(m_graph.m_storageAccessData.size(), propertyStorage);
-        
+
         StorageAccessData storageAccessData;
         storageAccessData.offset = variant.offset();
         storageAccessData.identifierNumber = identifierNumber;
@@ -449,7 +449,7 @@ private:
     {
         Node* weakConstant = m_insertionSet.insertNode(
             indexInBlock, speculationFromValue(cell), WeakJSConstant, origin, OpInfo(cell));
-        
+
         if (m_graph.watchpoints().isStillValid(cell->structure()->transitionWatchpointSet())) {
             m_insertionSet.insertNode(
                 indexInBlock, SpecNone, StructureTransitionWatchpoint, origin,
@@ -461,7 +461,7 @@ private:
             indexInBlock, SpecNone, CheckStructure, origin,
             OpInfo(m_graph.addStructureSet(cell->structure())), Edge(weakConstant, CellUse));
     }
-    
+
     InPlaceAbstractState m_state;
     AbstractInterpreter<InPlaceAbstractState> m_interpreter;
     InsertionSet m_insertionSet;

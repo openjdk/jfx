@@ -136,7 +136,7 @@ bool JSDOMWindow::getOwnPropertySlot(JSObject* object, ExecState* exec, Property
         }
 
         // FIXME: We should have a message here that explains why the property access/function call was
-        // not allowed. 
+        // not allowed.
         slot.setUndefined();
         return true;
     }
@@ -146,12 +146,12 @@ bool JSDOMWindow::getOwnPropertySlot(JSObject* object, ExecState* exec, Property
     // is allowed.
     String errorMessage;
     bool allowsAccess = shouldAllowAccessToDOMWindow(exec, thisObject->impl(), errorMessage);
-    
+
     // Look for overrides before looking at any of our own properties, but ignore overrides completely
     // if this is cross-domain access.
     if (allowsAccess && JSGlobalObject::getOwnPropertySlot(thisObject, exec, propertyName, slot))
         return true;
-    
+
     // We need this code here because otherwise JSDOMWindowBase will stop the search before we even get to the
     // prototype due to the blanket same origin (shouldAllowAccessToDOMWindow) check at the end of getOwnPropertySlot.
     // Also, it's important to get the implementation straight out of the DOMWindow prototype regardless of
@@ -213,7 +213,7 @@ bool JSDOMWindow::getOwnPropertySlot(JSObject* object, ExecState* exec, Property
     }
 
     // Do prototype lookup early so that functions and attributes in the prototype can have
-    // precedence over the index and name getters.  
+    // precedence over the index and name getters.
     JSValue proto = thisObject->prototype();
     if (proto.isObject()) {
         if (asObject(proto)->getPropertySlot(exec, propertyName, slot)) {
@@ -258,10 +258,10 @@ bool JSDOMWindow::getOwnPropertySlot(JSObject* object, ExecState* exec, Property
 bool JSDOMWindow::getOwnPropertySlotByIndex(JSObject* object, ExecState* exec, unsigned index, PropertySlot& slot)
 {
     JSDOMWindow* thisObject = jsCast<JSDOMWindow*>(object);
-    
+
     if (!thisObject->impl().frame()) {
         // FIXME: We should have a message here that explains why the property access/function call was
-        // not allowed. 
+        // not allowed.
         slot.setUndefined();
         return true;
     }
@@ -276,9 +276,9 @@ bool JSDOMWindow::getOwnPropertySlotByIndex(JSObject* object, ExecState* exec, u
     // if this is cross-domain access.
     if (allowsAccess && JSGlobalObject::getOwnPropertySlotByIndex(thisObject, exec, index, slot))
         return true;
-    
+
     PropertyName propertyName = Identifier::from(exec, index);
-    
+
     // Check for child frames by name before built-in properties to
     // match Mozilla. This does not match IE, but some sites end up
     // naming frames things that conflict with window properties that
@@ -288,9 +288,9 @@ bool JSDOMWindow::getOwnPropertySlotByIndex(JSObject* object, ExecState* exec, u
         slot.setCustom(thisObject, ReadOnly | DontDelete | DontEnum, childFrameGetter);
         return true;
     }
-    
+
     // Do prototype lookup early so that functions and attributes in the prototype can have
-    // precedence over the index and name getters.  
+    // precedence over the index and name getters.
     JSValue proto = thisObject->prototype();
     if (proto.isObject()) {
         if (asObject(proto)->getPropertySlot(exec, index, slot)) {
@@ -356,7 +356,7 @@ void JSDOMWindow::putByIndex(JSCell* cell, ExecState* exec, unsigned index, JSVa
     JSDOMWindow* thisObject = jsCast<JSDOMWindow*>(cell);
     if (!thisObject->impl().frame())
         return;
-    
+
     PropertyName propertyName = Identifier::from(exec, index);
 
     // Optimization: access JavaScript global variables directly before involving the DOM.
@@ -365,7 +365,7 @@ void JSDOMWindow::putByIndex(JSCell* cell, ExecState* exec, unsigned index, JSVa
             JSGlobalObject::putByIndex(thisObject, exec, index, value, shouldThrow);
         return;
     }
-    
+
     if (BindingSecurity::shouldAllowAccessToDOMWindow(exec, thisObject->impl()))
         Base::putByIndex(thisObject, exec, index, value, shouldThrow);
 }
@@ -507,7 +507,7 @@ private:
 inline void DialogHandler::dialogCreated(DOMWindow& dialog)
 {
     m_frame = dialog.frame();
-    
+
     // FIXME: This looks like a leak between the normal world and an isolated
     //        world if dialogArguments comes from an isolated world.
     JSDOMWindow* globalObject = toJSDOMWindow(m_frame.get(), normalWorld(m_exec->vm()));

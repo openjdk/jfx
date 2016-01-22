@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef GraphicsLayerCA_h
@@ -110,10 +110,10 @@ public:
     virtual void setNeedsDisplay();
     virtual void setNeedsDisplayInRect(const FloatRect&, ShouldClipToLayer = ClipToLayer);
     virtual void setContentsNeedsDisplay();
-    
+
     virtual void setContentsRect(const IntRect&);
     virtual void setContentsClippingRect(const IntRect&) override;
-    
+
     virtual void suspendAnimations(double time);
     virtual void resumeAnimations();
 
@@ -130,7 +130,7 @@ public:
     virtual void setContentsToSolidColor(const Color&);
 
     virtual bool hasContentsLayer() const { return m_contentsLayer; }
-    
+
     virtual void setShowDebugBorder(bool) override;
     virtual void setShowRepaintCounter(bool) override;
 
@@ -200,7 +200,7 @@ private:
     virtual bool shouldRepaintOnSizeChange() const override;
 
     void updateOpacityOnLayer();
-    
+
 #if ENABLE(CSS_FILTERS)
     void updateFilters();
 #endif
@@ -234,15 +234,15 @@ private:
     PassRefPtr<PlatformCAAnimation> createBasicAnimation(const Animation*, const String& keyPath, bool additive);
     PassRefPtr<PlatformCAAnimation> createKeyframeAnimation(const Animation*, const String&, bool additive);
     void setupAnimation(PlatformCAAnimation*, const Animation*, bool additive);
-    
+
     const TimingFunction* timingFunctionForAnimationValue(const AnimationValue&, const Animation&);
-    
+
     bool setAnimationEndpoints(const KeyframeValueList&, const Animation*, PlatformCAAnimation*);
     bool setAnimationKeyframes(const KeyframeValueList&, const Animation*, PlatformCAAnimation*);
 
     bool setTransformAnimationEndpoints(const KeyframeValueList&, const Animation*, PlatformCAAnimation*, int functionIndex, TransformOperation::OperationType, bool isMatrixAnimation, const IntSize& boxSize, Vector<TransformationMatrix>& matrixes);
     bool setTransformAnimationKeyframes(const KeyframeValueList&, const Animation*, PlatformCAAnimation*, int functionIndex, TransformOperation::OperationType, bool isMatrixAnimation, const IntSize& boxSize, Vector<TransformationMatrix>& matrixes);
-    
+
 #if ENABLE(CSS_FILTERS)
     bool setFilterAnimationEndpoints(const KeyframeValueList&, const Animation*, PlatformCAAnimation*, int functionIndex, int internalFilterPropertyIndex);
     bool setFilterAnimationKeyframes(const KeyframeValueList&, const Animation*, PlatformCAAnimation*, int functionIndex, int internalFilterPropertyIndex, FilterOperation::OperationType);
@@ -264,7 +264,7 @@ private:
     void swapFromOrToTiledLayer(bool useTiledLayer);
 
     CompositingCoordinatesOrientation defaultContentsOrientation() const;
-    
+
     void setupContentsLayer(PlatformCALayer*);
     PlatformCALayer* contentsLayer() const { return m_contentsLayer.get(); }
 
@@ -287,7 +287,7 @@ private:
     typedef unsigned ComputeVisibleRectFlags;
     FloatRect computeVisibleRect(TransformState&, ComputeVisibleRectFlags = RespectAnimatingTransforms) const;
     const FloatRect& visibleRect() const { return m_visibleRect; }
-    
+
     static FloatRect adjustTiledLayerVisibleRect(TiledBacking*, const FloatRect& oldVisibleRect, const FloatRect& newVisibleRect, const FloatSize& oldSize, const FloatSize& newSize);
 
     bool recursiveVisibleRectChangeRequiresFlush(const TransformState&) const;
@@ -303,7 +303,7 @@ private:
         {
             push(firstBranch);
         }
-        
+
         // Called as we walk down the tree to build replicas.
         void push(ReplicaBranchType branchType)
         {
@@ -311,7 +311,7 @@ private:
             if (branchType == ReplicaBranch)
                 ++m_replicaDepth;
         }
-        
+
         void setBranchType(ReplicaBranchType branchType)
         {
             ASSERT(!m_replicaBranches.isEmpty());
@@ -332,11 +332,11 @@ private:
                 --m_replicaDepth;
             m_replicaBranches.removeLast();
         }
-        
+
         size_t depth() const { return m_replicaBranches.size(); }
         size_t replicaDepth() const { return m_replicaDepth; }
 
-        CloneID cloneID() const;        
+        CloneID cloneID() const;
 
     private:
         Vector<ReplicaBranchType> m_replicaBranches;
@@ -346,7 +346,7 @@ private:
 
     enum CloneLevel { RootCloneLevel, IntermediateCloneLevel };
     PassRefPtr<PlatformCALayer> fetchCloneLayers(GraphicsLayer* replicaRoot, ReplicaState&, CloneLevel);
-    
+
     PassRefPtr<PlatformCALayer> cloneLayer(PlatformCALayer *, CloneLevel);
     PassRefPtr<PlatformCALayer> findOrMakeClone(CloneID, PlatformCALayer *, LayerMap*, CloneLevel);
 
@@ -356,9 +356,9 @@ private:
     bool hasCloneLayers() const { return m_layerClones; }
     void removeCloneLayers();
     FloatPoint positionForCloneRootLayer() const;
-    
+
     void propagateLayerChangeToReplicas();
-    
+
     // All these "update" methods will be called inside a BEGIN_BLOCK_OBJC_EXCEPTIONS/END_BLOCK_OBJC_EXCEPTIONS block.
     void updateLayerNames();
     void updateSublayerList(bool maxLayerDepthReached = false);
@@ -389,7 +389,7 @@ private:
     void updateTiles();
     void updateContentsScale(float pageScaleFactor);
     void updateCustomAppearance();
-    
+
     enum StructuralLayerPurpose {
         NoStructuralLayer = 0,
         StructuralLayerForPreserves3D,
@@ -405,7 +405,7 @@ private:
     enum MoveOrCopy { Move, Copy };
     static void moveOrCopyLayerAnimation(MoveOrCopy, const String& animationIdentifier, PlatformCALayer *fromLayer, PlatformCALayer *toLayer);
     void moveOrCopyAnimations(MoveOrCopy, PlatformCALayer * fromLayer, PlatformCALayer * toLayer);
-    
+
     bool appendToUncommittedAnimations(const KeyframeValueList&, const TransformOperations*, const Animation*, const String& animationName, const IntSize& boxSize, int animationIndex, double timeOffset, bool isMatrixAnimation);
 #if ENABLE(CSS_FILTERS)
     bool appendToUncommittedAnimations(const KeyframeValueList&, const FilterOperation*, const Animation*, const String& animationName, int animationIndex, double timeOffset);
@@ -413,7 +413,7 @@ private:
 
     // Returns true if any transform animations are running.
     bool getTransformFromAnimationsWithMaxScaleImpact(const TransformationMatrix& parentTransformFromRoot, TransformationMatrix&, float& maxScale) const;
-    
+
     enum LayerChange {
         NoChange = 0,
         NameChanged = 1 << 1,
@@ -473,7 +473,7 @@ private:
 #endif
     FloatRect m_visibleRect;
     FloatSize m_sizeAtLastVisibleRectUpdate;
-    
+
     enum ContentsLayerPurpose {
         NoContentsLayer = 0,
         ContentsLayerForImage,
@@ -481,18 +481,18 @@ private:
         ContentsLayerForCanvas,
         ContentsLayerForBackgroundColor
     };
-    
+
     ContentsLayerPurpose m_contentsLayerPurpose;
     bool m_allowTiledLayer : 1;
     bool m_isPageTiledBackingLayer : 1;
-    
+
     float m_rootRelativeScaleFactor;
-    
+
     Color m_contentsSolidColor;
 
     RetainPtr<CGImageRef> m_uncorrectedContentsImage;
     RetainPtr<CGImageRef> m_pendingContentsImage;
-    
+
     // This represents the animation of a single property. There may be multiple transform animations for
     // a single transition or keyframe animation, so index is used to distinguish these.
     struct LayerPropertyAnimation {
@@ -512,10 +512,10 @@ private:
         int m_subIndex;
         double m_timeOffset;
     };
-    
+
     // Uncommitted transitions and animations.
     Vector<LayerPropertyAnimation> m_uncomittedAnimations;
-    
+
     enum Action { Remove, Pause };
     struct AnimationProcessingAction {
         AnimationProcessingAction(Action action = Remove, double timeOffset = 0)
@@ -540,7 +540,7 @@ private:
 
     Vector<FloatRect> m_dirtyRects;
     FloatSize m_pixelAlignmentOffset;
-    
+
     LayerChangeFlags m_uncommittedChanges;
     bool m_isCommittingChanges;
 };

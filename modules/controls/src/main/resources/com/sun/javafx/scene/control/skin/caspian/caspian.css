@@ -187,7 +187,7 @@
      */
     -fx-outer-border: linear-gradient(
         to bottom,
-        derive(-fx-color,-9%) 0%, 
+        derive(-fx-color,-9%) 0%,
         derive(-fx-color,-33%) 100%
     );
 
@@ -198,31 +198,31 @@
      */
     -fx-inner-border: linear-gradient(
         to bottom,
-        ladder(-fx-color, 
-               derive(-fx-color,80%) 60%, 
+        ladder(-fx-color,
+               derive(-fx-color,80%) 60%,
                white 82%) 0%,
-        ladder(-fx-color, 
-               derive(-fx-color,20%) 10%, 
+        ladder(-fx-color,
+               derive(-fx-color,20%) 10%,
                derive(-fx-color,-10%) 80%) 100%
     );
 
     -fx-inner-border-horizontal: linear-gradient(
         to right,
-        ladder(-fx-color, 
-               derive(-fx-color,80%) 60%, 
+        ladder(-fx-color,
+               derive(-fx-color,80%) 60%,
                white 82%) 0%,
-        ladder(-fx-color, 
-               derive(-fx-color,20%) 10%, 
+        ladder(-fx-color,
+               derive(-fx-color,20%) 10%,
                derive(-fx-color,-10%) 80%) 100%
     );
 
     -fx-inner-border-bottomup: linear-gradient(
         to top,
-        ladder(-fx-color, 
-               derive(-fx-color,80%) 60%, 
+        ladder(-fx-color,
+               derive(-fx-color,80%) 60%,
                white 82%) 0%,
-        ladder(-fx-color, 
-               derive(-fx-color,20%) 10%, 
+        ladder(-fx-color,
+               derive(-fx-color,20%) 10%,
                derive(-fx-color,-10%) 80%) 100%);
 
     /* A gradient that goes from a little lighter than -fx-color at the top to
@@ -236,7 +236,7 @@
         derive(-fx-color,34%) 0%,
         derive(-fx-color,-18%) 100%
     );
-        
+
     -fx-body-color-bottomup:  linear-gradient(
         to top,
         derive(-fx-color,34%) 0%,
@@ -318,17 +318,17 @@
     -fx-background-radius: inherit;
     -fx-background-insets: inherit;
     -fx-padding: inherit;
-    
+
     /* The color to use in ListView/TreeView/TableView to indicate hover. */
     -fx-cell-hover-color: #cce3f4;
-    
+
     -fx-cell-focus-inner-border: #85b9de;
-    
+
     /* The colors to use in Pagination */
-    -fx-page-bullet-border: #acacac;    
+    -fx-page-bullet-border: #acacac;
     -fx-page-indicator-hover-border: #accee5;
-    
-    
+
+
 }
 
 .mnemonic-underline {
@@ -476,7 +476,7 @@
 
 .label:show-mnemonics > .mnemonic-underline {
     -fx-stroke: -fx-text-fill;
-} 
+}
 
 /* The opacity of the parent is applied to the children.  So we make the
  * opacity 1.0 here to avoid double translucency.
@@ -515,7 +515,7 @@
 .button:armed {
     -fx-color: -fx-pressed-base;
 }
- 
+
 .button:default {
     -fx-base: -fx-accent;
 }
@@ -588,7 +588,7 @@
 
 .toggle-button:show-mnemonics > .mnemonic-underline {
     -fx-stroke: -fx-text-fill;
-} 
+}
 
 /*******************************************************************************
  *                                                                             *
@@ -643,7 +643,7 @@
 
 .radio-button:show-mnemonics > .mnemonic-underline {
     -fx-stroke: -fx-text-fill;
-} 
+}
 
 /*******************************************************************************
  *                                                                             *
@@ -707,7 +707,7 @@
 
 .check-box:show-mnemonics > .mnemonic-underline {
     -fx-stroke: -fx-text-fill;
-} 
+}
 
 /*******************************************************************************
  *                                                                             *
@@ -745,7 +745,7 @@
 
 .hyperlink:show-mnemonics > .mnemonic-underline {
     -fx-stroke: -fx-text-fill;
-} 
+}
 
 
 /*******************************************************************************
@@ -872,7 +872,7 @@
 .menu-bar > .container > .menu-button {
     -fx-background-radius: 0;
     -fx-background-color: transparent;
-    -fx-background-insets: 0; 
+    -fx-background-insets: 0;
 }
 /* Change padding of menu buttons when in menu bar */
 .menu-bar > .container > .menu-button > .label {
@@ -945,7 +945,7 @@
 
 .menu-item:show-mnemonics > .mnemonic-underline {
     -fx-stroke: -fx-text-fill;
-} 
+}
 
 .radio-menu-item:checked > .left-container > .radio {
     -fx-background-color: -fx-mark-color;
@@ -971,7 +971,7 @@
     -fx-background-color: -fx-mark-color;
     -fx-padding: 0.666667em;  8
     -fx-shape: "M7,3.5C7,5.433,5.433,7,3.5,7C1.567,7,0,5.433,0,3.5C0,1.567,1.63,0,3.5,0C5.433,0,7,1.567,7,3.5z";
-    -fx-scale-shape: false; 
+    -fx-scale-shape: false;
 }*/
 
 /*.check.checked {
@@ -1120,7 +1120,7 @@
 
 .slider > .axis {
     -fx-tick-mark-stroke: ladder(-fx-background, derive(-fx-background,30%) 40%, derive(-fx-background,-30%) 41%);
-    -fx-tick-label-font-size: 0.833333em; 
+    -fx-tick-label-font-size: 0.833333em;
     -fx-tick-label-fill: -fx-text-background-color;
 }
 
@@ -1408,7 +1408,7 @@
 }
 
 .text-area .content {
-    -fx-padding: 3 5 3 5; 
+    -fx-padding: 3 5 3 5;
     -fx-cursor: text;
 }
 
@@ -1523,7 +1523,7 @@
     -fx-text-fill: -fx-selection-bar-text;
 }
 
-.list-view:focused > .virtual-flow > .clipped-container > .sheet > .list-cell:filled:selected, 
+.list-view:focused > .virtual-flow > .clipped-container > .sheet > .list-cell:filled:selected,
 .list-view:focused > .virtual-flow > .clipped-container > .sheet > .list-cell:filled:selected:hover {
     -fx-background: -fx-accent;
     -fx-background-color: -fx-selection-bar;
@@ -1545,7 +1545,7 @@
     -fx-text-fill: -fx-selection-bar-text;
 }
 
-.list-cell:filled:selected:focused:disabled, 
+.list-cell:filled:selected:focused:disabled,
 .list-cell:filled:selected:disabled {
     -fx-opacity: -fx-disabled-opacity;
 }
@@ -1633,7 +1633,7 @@
     -fx-text-fill: -fx-selection-bar-text;
 }
 
-.tree-view:focused > .virtual-flow > .clipped-container > .sheet > .tree-cell:filled:selected, 
+.tree-view:focused > .virtual-flow > .clipped-container > .sheet > .tree-cell:filled:selected,
 .tree-view:focused > .virtual-flow > .clipped-container > .sheet > .tree-cell:filled:selected:hover {
     -fx-background: -fx-accent;
     -fx-background-color: -fx-selection-bar;
@@ -1648,13 +1648,13 @@
 }
 
 /* When the TreeView is _not_ focused, we show alternate selection colors */
-.tree-cell:filled:selected:focused, 
+.tree-cell:filled:selected:focused,
 .tree-cell:filled:selected {
     -fx-background-color: lightgray;
     -fx-text-fill: -fx-selection-bar-text;
 }
 
-.tree-cell:filled:selected:focused:disabled, 
+.tree-cell:filled:selected:focused:disabled,
 .tree-cell:filled:selected:disabled {
     -fx-opacity: -fx-disabled-opacity;
 }
@@ -1724,10 +1724,10 @@
     -fx-text-fill: -fx-text-base-color;
 }
 
-.menu-button > .label { 
+.menu-button > .label {
     /* TODO workaround for RT-19062 */
-    -fx-text-fill: -fx-text-base-color; 
-    
+    -fx-text-fill: -fx-text-base-color;
+
     /* The MenuButton skin uses an inner Label part */
     -fx-padding: 0.166667em 0.667em 0.25em 0.833333em; /* 2 8 3 10 */
 }
@@ -1771,7 +1771,7 @@
 
 .menu-button:show-mnemonics > .mnemonic-underline {
     -fx-stroke: -fx-text-fill;
-} 
+}
 
 
 
@@ -1845,7 +1845,7 @@
 
 .split-menu-button:show-mnemonics > .mnemonic-underline {
     -fx-stroke: -fx-text-fill;
-} 
+}
 
 
 
@@ -1904,7 +1904,7 @@
 }
 
 .tool-bar:vertical > .container > .separator {
-    -fx-orientation: horizontal;    
+    -fx-orientation: horizontal;
     -fx-padding: 0.0em 0.0835em 0.0em 0.0835em; /* 0 1 0 1 */
 }
 
@@ -2163,7 +2163,7 @@
     -fx-text-fill: -fx-selection-bar-text;
 }
 
-.table-view:focused > .virtual-flow > .clipped-container > .sheet > .table-row-cell:filled:selected, 
+.table-view:focused > .virtual-flow > .clipped-container > .sheet > .table-row-cell:filled:selected,
 .tree-table-view:focused > .virtual-flow > .clipped-container > .sheet > .tree-table-row-cell:filled:selected {
     -fx-background: -fx-accent;
     -fx-background-color: -fx-selection-bar;
@@ -2179,9 +2179,9 @@
 }
 
 /* When the TableView is _not_ focused, we show alternate selection colors */
-.table-row-cell:filled:selected:focused, 
+.table-row-cell:filled:selected:focused,
 .table-row-cell:filled:selected,
-.tree-table-row-cell:filled:selected:focused, 
+.tree-table-row-cell:filled:selected:focused,
 .tree-table-row-cell:filled:selected {
     -fx-background-color: lightgray;
     -fx-text-fill: -fx-selection-bar-text;
@@ -2192,7 +2192,7 @@
     -fx-opacity: -fx-disabled-opacity;
 }
 
-.table-view:row-selection > .virtual-flow > .clipped-container > .sheet > .table-row-cell:filled:hover { 
+.table-view:row-selection > .virtual-flow > .clipped-container > .sheet > .table-row-cell:filled:hover {
     -fx-background-color: -fx-table-cell-border-color, -fx-cell-hover-color;
     -fx-background-insets: 0, 0 0 1 0;
     -fx-text-fill: -fx-text-inner-color;
@@ -2206,7 +2206,7 @@
 }
 
 .table-view:row-selection > .virtual-flow > .clipped-container > .sheet > .table-row-cell:filled:focused:hover,
-.tree-table-view:row-selection > .virtual-flow > .clipped-container > .sheet > .tree-table-row-cell:filled:focused:hover { 
+.tree-table-view:row-selection > .virtual-flow > .clipped-container > .sheet > .tree-table-row-cell:filled:focused:hover {
     -fx-background-color: -fx-table-cell-border-color, -fx-focus-color, -fx-cell-focus-inner-border, -fx-cell-hover-color;
     -fx-background-insets: 0, 0 0 1 0, 1 1 2 1, 2 2 3 2, 3 3 4 3;
     -fx-text-fill: -fx-text-inner-color;
@@ -2235,10 +2235,10 @@
 }
 .table-view:constrained-resize .filler,
 .tree-table-view:constrained-resize .filler {
-    -fx-border-color: 
-        derive(-fx-base, 80%) 
+    -fx-border-color:
+        derive(-fx-base, 80%)
         linear-gradient(to bottom, derive(-fx-base,80%) 20%, derive(-fx-base,-10%) 90%)
-        derive(-fx-base, 10%) 
+        derive(-fx-base, 10%)
         linear-gradient(to bottom, derive(-fx-base,80%) 20%, derive(-fx-base,-10%) 90%),
         /* Outer border: */
         transparent -fx-table-header-border-color -fx-table-header-border-color -fx-table-header-border-color;
@@ -2259,9 +2259,9 @@
     -fx-text-fill: -fx-selection-bar-text;
 }
 
-.table-view:focused > .virtual-flow > .clipped-container > .sheet > .table-row-cell:filled > .table-cell:selected, 
+.table-view:focused > .virtual-flow > .clipped-container > .sheet > .table-row-cell:filled > .table-cell:selected,
 .table-view:cell-selection > .virtual-flow > .clipped-container > .sheet > .table-row-cell:filled > .table-cell:hover:selected,
-.tree-table-view:focused > .virtual-flow > .clipped-container > .sheet > .tree-table-row-cell:filled > .tree-table-cell:selected, 
+.tree-table-view:focused > .virtual-flow > .clipped-container > .sheet > .tree-table-row-cell:filled > .tree-table-cell:selected,
 .tree-table-view:cell-selection > .virtual-flow > .clipped-container > .sheet > .tree-table-row-cell:filled > .tree-table-cell:hover:selected {
     -fx-background: -fx-accent;
     -fx-background-color: -fx-selection-bar;
@@ -2278,9 +2278,9 @@
 }
 
 /* When the TableView is _not_ focused, we show alternate selection colors */
- .table-row-cell:filled > .table-cell:selected:focused, 
+ .table-row-cell:filled > .table-cell:selected:focused,
  .table-row-cell:filled > .table-cell:selected,
- .tree-table-row-cell:filled > .tree-table-cell:selected:focused, 
+ .tree-table-row-cell:filled > .tree-table-cell:selected:focused,
  .tree-table-row-cell:filled > .tree-table-cell:selected {
     -fx-background-color: lightgray;
     -fx-text-fill: -fx-selection-bar-text;
@@ -2337,14 +2337,14 @@
     -fx-font-size: 1.083333em; /* 13pt - 1 more than the default font */
     -fx-size: 25;
     -fx-border-style: solid;
-    -fx-border-color: 
-        /* 
+    -fx-border-color:
+        /*
           Inner border: we have different colours along the top, right, bottom and left.
           Refer to RT-12298 for the spec.
         */
-        derive(-fx-base, 80%) 
+        derive(-fx-base, 80%)
         linear-gradient(to bottom, derive(-fx-base,80%) 20%, derive(-fx-base,-10%) 90%)
-        derive(-fx-base, 10%) 
+        derive(-fx-base, 10%)
         linear-gradient(to bottom, derive(-fx-base,80%) 20%, derive(-fx-base,-10%) 90%),
         /* Outer border: */
         transparent -fx-table-header-border-color -fx-table-header-border-color transparent;
@@ -2356,14 +2356,14 @@
 .tree-table-view .filler {
     -fx-size: 25;
     -fx-border-style: solid;
-    -fx-border-color: 
-        /* 
+    -fx-border-color:
+        /*
           Inner border: we have different colours along the top, right, bottom and left.
           Refer to RT-12298 for the spec.
         */
-        derive(-fx-base, 80%) 
+        derive(-fx-base, 80%)
         linear-gradient(to bottom, derive(-fx-base,80%) 20%, derive(-fx-base,-10%) 90%)
-        derive(-fx-base, 10%) 
+        derive(-fx-base, 10%)
         linear-gradient(to bottom, derive(-fx-base,80%) 20%, derive(-fx-base,-10%) 90%),
         /* Outer border: */
         transparent transparent -fx-table-header-border-color transparent;
@@ -2389,12 +2389,12 @@
 
 .table-view .column-header .sort-order-dot.ascending,
 .tree-table-view .column-header .sort-order-dot.ascending {
-    -fx-background-insets: -1 0 1 0, 0; 
+    -fx-background-insets: -1 0 1 0, 0;
 }
 
 .table-view .column-header .sort-order-dot.descending,
 .tree-table-view .column-header .sort-order-dot.descending {
-    -fx-background-insets: 1 0 -1 0, 0; 
+    -fx-background-insets: 1 0 -1 0, 0;
 }
 
 .table-view .column-header .label,
@@ -2408,9 +2408,9 @@
 
     -fx-border-color:
         /* inner border: A copy of the inner border used above in the general column header area. */
-        derive(-fx-base, 80%) 
+        derive(-fx-base, 80%)
         linear-gradient(to bottom, derive(-fx-base,80%) 20%, derive(-fx-base,-10%) 90%),
-        derive(-fx-base, 10%) 
+        derive(-fx-base, 10%)
         linear-gradient(to bottom, derive(-fx-base,80%) 20%, derive(-fx-base,-10%) 90%),
         /* outer border: Slightly different to the above*/
         transparent transparent -fx-table-header-border-color -fx-table-header-border-color;
@@ -2423,7 +2423,7 @@
     -fx-background-insets: 1 0 -1 0, 0;
 
     -fx-padding: 0.25em; /* 3px */
-    -fx-shape: "M398.902,298.045c0.667,0,1.333,0,2,0c0,0.667,0,1.333,0,2c0.667,0,1.333,0,2,0c0,0.667,0,1.333,0,2c-0.667,0-1.333,0-2,0c0,0.666,0,1.332,0,1.999c-0.667,0-1.333,0-2,0c0-0.667,0-1.333,0-1.999c-0.666,0-1.333,0-1.999,0c0-0.667,0-1.334,0-2c0.666,0,1.333,0,1.999,0C398.902,299.378,398.902,298.711,398.902,298.045z"; 
+    -fx-shape: "M398.902,298.045c0.667,0,1.333,0,2,0c0,0.667,0,1.333,0,2c0.667,0,1.333,0,2,0c0,0.667,0,1.333,0,2c-0.667,0-1.333,0-2,0c0,0.666,0,1.332,0,1.999c-0.667,0-1.333,0-2,0c0-0.667,0-1.333,0-1.999c-0.666,0-1.333,0-1.999,0c0-0.667,0-1.334,0-2c0.666,0,1.333,0,1.999,0C398.902,299.378,398.902,298.711,398.902,298.045z";
 }
 
 /*.nested-column-header .column-header {
@@ -2637,7 +2637,7 @@
 }
 
 .tab-pane > .tab-header-area > .headers-region > .tab > .tab-container > .tab-label {
-    -fx-background-color: transparent;    
+    -fx-background-color: transparent;
     -fx-alignment: CENTER;
     -fx-text-fill: -fx-text-base-color;
 }
@@ -2837,7 +2837,7 @@
 
 /* ====== AXIS ============================================================================ */
 .axis {
-    -fx-tick-label-font-size: 0.833333em;  /* 10 pix */ 
+    -fx-tick-label-font-size: 0.833333em;  /* 10 pix */
     -fx-tick-label-fill: -fx-text-background-color;
 }
 .axis:top {
@@ -3150,7 +3150,7 @@
 .combo-box-base:showing > .arrow-button,
 .date-picker:showing > .arrow-button {
     -fx-color: -fx-pressed-base;
-} 
+}
 
 /* ------- ARROW* ------- */
 .combo-box-base > .arrow-button > .arrow,
@@ -3212,12 +3212,12 @@ Only the properties with values that are different from the TextBox are specifie
 
 .combo-box-popup > .list-view > .virtual-flow > .clipped-container > .sheet > .list-cell {
     -fx-padding: 4 0 4 5;
-    
+
     /* No alternate highlighting */
     -fx-background-color: -fx-control-inner-background;
 }
 
-.combo-box-popup > .list-view > .virtual-flow > .clipped-container > .sheet > .list-cell:filled:selected, 
+.combo-box-popup > .list-view > .virtual-flow > .clipped-container > .sheet > .list-cell:filled:selected,
 .combo-box-popup  > .list-view > .virtual-flow > .clipped-container > .sheet > .list-cell:filled:selected:hover {
     -fx-background: -fx-accent;
     -fx-background-color: -fx-selection-bar;
@@ -3294,10 +3294,10 @@ Only the properties with values that are different from the TextBox are specifie
      -fx-background-color:
         derive(-fx-color,-40%),
         derive(-fx-color,100%),
-        linear-gradient(to bottom, 
-        derive(-fx-color,100%) 0%, 
-        derive(-fx-color,50%) 12%, 
-        derive(-fx-color,65%) 88%, 
+        linear-gradient(to bottom,
+        derive(-fx-color,100%) 0%,
+        derive(-fx-color,50%) 12%,
+        derive(-fx-color,65%) 88%,
         derive(-fx-color,23%) 100%);
     -fx-background-insets: 0, 1, 2;
     -fx-background-radius: 0 6 6 6, 0 5 5 5, 0 4 4 4;
@@ -3317,7 +3317,7 @@ Only the properties with values that are different from the TextBox are specifie
 
 .color-palette > .color-picker-grid > .color-square {
     -fx-background-color: transparent;
-    -fx-background-insets: -1, 0;   
+    -fx-background-insets: -1, 0;
     -fx-padding: 0.5;
     -fx-border: black;
 }
@@ -3416,8 +3416,8 @@ Only the properties with values that are different from the TextBox are specifie
 .custom-color-dialog .controls-pane .toggle-button:selected {
     -fx-background-color:
         -fx-shadow-highlight-color,
-        linear-gradient( to bottom, derive(-fx-color,-90%) 0%, derive(-fx-color,-60%) 100% ),        
-        linear-gradient( to bottom, derive(-fx-color,-60%) 0%, derive(-fx-color,-35%) 50%, derive(-fx-color,-30%) 98%, derive(-fx-color,-50%) 100% ),    
+        linear-gradient( to bottom, derive(-fx-color,-90%) 0%, derive(-fx-color,-60%) 100% ),
+        linear-gradient( to bottom, derive(-fx-color,-60%) 0%, derive(-fx-color,-35%) 50%, derive(-fx-color,-30%) 98%, derive(-fx-color,-50%) 100% ),
         linear-gradient( to right, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0) 10%, rgba(0,0,0,0) 90%, rgba(0,0,0,0.3) 100% );
     -fx-background-insets: 0 0 -0.083333em 0, 0, 0.083333em, 0.083333em;
     /* TODO: -fx-text-fill should be derived */
@@ -3483,7 +3483,7 @@ Only the properties with values that are different from the TextBox are specifie
 }
 
 .custom-color-dialog .transparent-pattern {
-    -fx-background-image: url("pattern-transparent.png"); 
+    -fx-background-image: url("pattern-transparent.png");
     -fx-background-repeat: repeat;
     -fx-background-size: auto;
 }
@@ -3543,7 +3543,7 @@ Only the properties with values that are different from the TextBox are specifie
 
 .custom-color-dialog .controls-pane .customcolor-controls-background {
     -fx-background-color: -fx-text-box-border, -fx-control-inner-background;
-    -fx-background-insets: 
+    -fx-background-insets:
         0.8333333em 0 0.4166667em 0,
         1em 0.166667em 0.5833333em 0.166667em;
     -fx-background-radius: 0.3333333em, 0.166667em;
@@ -3736,18 +3736,18 @@ Only the properties with values that are different from the TextBox are specifie
 
 /* -------------------------- STYLES FOR PAGINATION CONTROL ----- */
 .pagination {
-    -fx-padding: 0;        
+    -fx-padding: 0;
     -fx-arrows-visible: true;
     -fx-tooltip-visible: true;
     -fx-page-information-visible: true;
-    -fx-page-information-alignment: bottom;        
+    -fx-page-information-alignment: bottom;
 }
 .pagination > .page {
     -fx-background-color: transparent;
 }
 
 .pagination > .pagination-control {
-    -fx-background-color: transparent;    
+    -fx-background-color: transparent;
     -fx-padding: 0.833333em 0em 0.833333em 0em;
 }
 
@@ -3781,22 +3781,22 @@ Only the properties with values that are different from the TextBox are specifie
     -fx-scale-shape: true;
 }
 
-.pagination > .pagination-control > .control-box > .bullet-button {   
+.pagination > .pagination-control > .control-box > .bullet-button {
    -fx-background-radius: 0, 4em, 4em, 4em, 4em;
    -fx-padding: 0.333em;
-   
+
    -fx-background-color: transparent, -fx-shadow-highlight-color, -fx-outer-border, -fx-inner-border, -fx-body-color;
    -fx-background-insets: 0, 4 4 3 4,  5,  6,  7;
 }
 
-.pagination > .pagination-control > .control-box > .bullet-button:selected {   
+.pagination > .pagination-control > .control-box > .bullet-button:selected {
     -fx-base: -fx-selection-bar-text;
 }
-.pagination:focused > .pagination-control > .control-box > .bullet-button:selected {   
+.pagination:focused > .pagination-control > .control-box > .bullet-button:selected {
     -fx-base: -fx-accent;
 }
 
-.pagination.bullet > .pagination-control > .control-box > .left-arrow-button, 
+.pagination.bullet > .pagination-control > .control-box > .left-arrow-button,
 .pagination.bullet > .pagination-control > .control-box > .right-arrow-button {
     -fx-background-radius: 4em;
 }
@@ -3807,13 +3807,13 @@ Only the properties with values that are different from the TextBox are specifie
     -fx-background-color: -fx-shadow-highlight-color, -fx-outer-border, -fx-inner-border, -fx-body-color;
 }
 
-.pagination > .pagination-control > .control-box > .number-button:selected {   
+.pagination > .pagination-control > .control-box > .number-button:selected {
     -fx-base: -fx-selection-bar-text;
 }
-.pagination:focused > .pagination-control > .control-box > .number-button:selected {   
+.pagination:focused > .pagination-control > .control-box > .number-button:selected {
     -fx-base: -fx-accent;
 }
-.pagination > .pagination-control > .page-information {   
+.pagination > .pagination-control > .page-information {
     -fx-padding: 0.416em 0 0 0;
 }
 
@@ -3866,7 +3866,7 @@ Only the properties with values that are different from the TextBox are specifie
 
 .cell-span-tree-table-view > .virtual-flow > .clipped-container > .sheet > .tree-table-row-cell {
     -fx-background-color: transparent;
-} 
+}
 
 /* All table-row-cells - we don't care if they are even or odd */
 .cell-span-tree-table-view > .virtual-flow > .clipped-container > .sheet > .tree-table-row-cell > .tree-table-cell {
@@ -3891,13 +3891,13 @@ Only the properties with values that are different from the TextBox are specifie
 
 /** Hover styles */
 /** --- Row selection mode hover */
-.cell-span-tree-table-view:row-selection > .virtual-flow > .clipped-container > .sheet > .tree-table-row-cell:filled:hover > .tree-table-cell { 
+.cell-span-tree-table-view:row-selection > .virtual-flow > .clipped-container > .sheet > .tree-table-row-cell:filled:hover > .tree-table-cell {
     -fx-background-color: -fx-table-cell-border-color, -fx-cell-hover-color;
     -fx-background-insets: 0, 0 0 1 0;
     -fx-text-fill: -fx-text-inner-color;
 }
 
-.cell-span-tree-table-view:row-selection > .virtual-flow > .clipped-container > .sheet > .tree-table-row-cell:filled:focused:hover > .tree-table-cell { 
+.cell-span-tree-table-view:row-selection > .virtual-flow > .clipped-container > .sheet > .tree-table-row-cell:filled:focused:hover > .tree-table-cell {
     -fx-background-color: -fx-table-cell-border-color, -fx-focus-color, -fx-cell-focus-inner-border, -fx-cell-hover-color;
     -fx-background-insets: 0, 0 0 1 0, 1 1 2 1, 2 2 3 2, 3 3 4 3;
     -fx-text-fill: -fx-text-inner-color;

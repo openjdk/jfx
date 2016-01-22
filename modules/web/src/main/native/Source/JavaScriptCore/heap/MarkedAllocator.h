@@ -34,22 +34,22 @@ public:
         m_lastActiveBlock = 0;
         return block;
     }
-    
+
     template<typename Functor> void forEachBlock(Functor&);
-    
+
     void addBlock(MarkedBlock*);
     void removeBlock(MarkedBlock*);
     void init(Heap*, MarkedSpace*, size_t cellSize, MarkedBlock::DestructorType);
 
     bool isPagedOut(double deadline);
-   
+
 private:
     JS_EXPORT_PRIVATE void* allocateSlowCase(size_t);
     void* tryAllocate(size_t);
     void* tryAllocateHelper(size_t);
     void* tryPopFreeList(size_t);
     MarkedBlock* allocateBlock(size_t);
-    
+
     MarkedBlock::FreeList m_freeList;
     MarkedBlock* m_currentBlock;
     MarkedBlock* m_lastActiveBlock;
@@ -97,7 +97,7 @@ inline void* MarkedAllocator::allocate(size_t bytes)
 #endif
         return result;
     }
-    
+
     m_freeList.head = head->next;
 #ifndef NDEBUG
     memset(head, 0xCD, bytes);
@@ -112,7 +112,7 @@ inline void MarkedAllocator::stopAllocating()
         ASSERT(!m_freeList.head);
         return;
     }
-    
+
     m_currentBlock->stopAllocating(m_freeList);
     m_lastActiveBlock = m_currentBlock;
     m_currentBlock = 0;

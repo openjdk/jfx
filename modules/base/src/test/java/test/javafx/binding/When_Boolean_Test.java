@@ -42,7 +42,7 @@ public class When_Boolean_Test extends WhenTestBase<Boolean, BooleanProperty> {
     @Override
     public Binding<Boolean>[] generatePropertyPropertyList(BooleanProperty p0, BooleanProperty[] probs) {
         return new Binding[] {
-        		Bindings.when(cond).then(p0).otherwise(probs[0])
+                Bindings.when(cond).then(p0).otherwise(probs[0])
         };
     }
 
@@ -55,21 +55,21 @@ public class When_Boolean_Test extends WhenTestBase<Boolean, BooleanProperty> {
     @Override
     public Binding<Boolean>[] generatePropertyPrimitive(BooleanProperty op0, Boolean op1) {
         return new Binding[] {
-        		Bindings.when(cond).then(op0).otherwise(op1)
+                Bindings.when(cond).then(op0).otherwise(op1)
         };
     }
     @SuppressWarnings("unchecked")
     @Override
     public Binding<Boolean>[] generatePrimitiveProperty(Boolean op0, BooleanProperty op1) {
         return new Binding[] {
-        		Bindings.when(cond).then(op0.booleanValue()).otherwise(op1)
+                Bindings.when(cond).then(op0.booleanValue()).otherwise(op1)
         };
     }
     @SuppressWarnings("unchecked")
     @Override
     public Binding<Boolean>[] generatePrimitivePrimitive(Boolean op0, Boolean op1) {
         return new Binding[] {
-        		Bindings.when(cond).then(op0.booleanValue()).otherwise(op1)
+                Bindings.when(cond).then(op0.booleanValue()).otherwise(op1)
         };
     }
     @Override

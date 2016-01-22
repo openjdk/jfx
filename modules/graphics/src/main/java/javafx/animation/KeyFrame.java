@@ -46,11 +46,11 @@ import javafx.util.Duration;
  * time. An {@link #onFinished} function is invoked on each {@code KeyFrame} if one
  * is provided. A {@code KeyFrame} can optionally have a {@link #name}, which
  * will result in a cuepoint that is automatically added to the {@code Timeline}.
- * 
+ *
  * @see Timeline
  * @see KeyValue
  * @see Interpolator
- * 
+ *
  * @since JavaFX 2.0
  */
 public final class KeyFrame {
@@ -60,7 +60,7 @@ public final class KeyFrame {
 
     /**
      * Returns the time offset of this {@code KeyFrame}.
-     * 
+     *
      * The returned {@link javafx.util.Duration} defines the time offset within
      * a single cycle of a {@link Timeline} at which the {@link KeyValue
      * KeyValues} will be set and at which the {@link #onFinished} function
@@ -69,7 +69,7 @@ public final class KeyFrame {
      * The {@code time} of a {@code KeyFrame} has to be greater than or equal to
      * {@link javafx.util.Duration#ZERO} and it cannot be
      * {@link javafx.util.Duration#UNKNOWN}.
-     * 
+     *
      * Note: While the unit of {@code time} is a millisecond, the granularity
      * depends on the underlying operating system and will in general be larger.
      * For example animations on desktop systems usually run with a maximum of
@@ -81,8 +81,8 @@ public final class KeyFrame {
     private final Duration time;
 
     /**
-     * Returns an immutable {@code Set} of {@link KeyValue} instances. 
-     * 
+     * Returns an immutable {@code Set} of {@link KeyValue} instances.
+     *
      * A {@code KeyValue} defines a target and the desired value that should be
      * interpolated at the specified time of this {@code KeyFrame}.
      */
@@ -93,7 +93,7 @@ public final class KeyFrame {
 
     /**
      * Returns the {@code onFinished} event handler of this {@code KeyFrame}.
-     * 
+     *
      * The {@code onFinished} event handler is a function that is called when
      * the elapsed time on a cycle passes the specified time of this
      * {@code KeyFrame}. The {@code onFinished} function variable will be called
@@ -107,7 +107,7 @@ public final class KeyFrame {
 
     /**
      * Returns the {@code name} of this {@code KeyFrame}.
-     * 
+     *
      * If a named {@code KeyFrame} is added to a {@link Timeline}, a cuepoint
      * with the {@code name} and the {@link #time} of the {@code KeyFrame} will
      * be added automatically. If the {@code KeyFrame} is removed, the cuepoint
@@ -123,7 +123,7 @@ public final class KeyFrame {
      * <p>
      * If a passed in {@code KeyValue} is {@code null} or a duplicate, it will
      * be ignored.
-     * 
+     *
      * @param time
      *            the {@link #time}
      * @param name
@@ -166,7 +166,7 @@ public final class KeyFrame {
      * <p>
      * If a passed in {@code KeyValue} is {@code null} or a duplicate, it will
      * be ignored.
-     * 
+     *
      * @param time
      *            the {@link #time}
      * @param name
@@ -209,7 +209,7 @@ public final class KeyFrame {
 
     /**
      * Constructor of {@code KeyFrame}
-     * 
+     *
      * @param time
      *            the {@link #time}
      * @param onFinished
@@ -228,7 +228,7 @@ public final class KeyFrame {
 
     /**
      * Constructor of {@code KeyFrame}
-     * 
+     *
      * @param time
      *            the {@link #time}
      * @param name
@@ -246,7 +246,7 @@ public final class KeyFrame {
 
     /**
      * Constructor of {@code KeyFrame}
-     * 
+     *
      * @param time
      *            the {@link #time}
      * @param values
@@ -260,20 +260,20 @@ public final class KeyFrame {
         this(time, DEFAULT_NAME, DEFAULT_ON_FINISHED, values);
     }
 
-    /** 
-     * Returns a string representation of this {@code KeyFrame} object. 
-     * @return a string representation of this {@code KeyFrame} object. 
-     */ 
+    /**
+     * Returns a string representation of this {@code KeyFrame} object.
+     * @return a string representation of this {@code KeyFrame} object.
+     */
     @Override
     public String toString() {
         return "KeyFrame [time=" + time + ", values=" + values
                 + ", onFinished=" + onFinished + ", name=" + name + "]";
     }
 
-    /** 
-     * Returns a hash code for this {@code KeyFrame} object. 
-     * @return a hash code for this {@code KeyFrame} object. 
-     */ 
+    /**
+     * Returns a hash code for this {@code KeyFrame} object.
+     * @return a hash code for this {@code KeyFrame} object.
+     */
     @Override
     public int hashCode() {
         assert (time != null) && (values != null);
@@ -288,7 +288,7 @@ public final class KeyFrame {
     }
 
     /**
-     * Indicates whether some other object is "equal to" this one. 
+     * Indicates whether some other object is "equal to" this one.
      * Two {@code KeyFrames} are considered equal, if their {@link #getTime()
      * time}, {@link #onFinished onFinished}, and {@link #getValues() values}
      * are equal.

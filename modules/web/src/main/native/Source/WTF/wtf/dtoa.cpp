@@ -1288,7 +1288,7 @@ const char* numberToFixedWidthString(double d, unsigned decimalPlaces, NumberToS
     // the number of digits after the decimal point depends on the requested precision.
     // "precision": The precision value specifies the number of digits after the decimal point.
     // If a decimal point appears, at least one digit appears before it.
-    // The value is rounded to the appropriate number of digits.    
+    // The value is rounded to the appropriate number of digits.
     double_conversion::StringBuilder builder(buffer, NumberToStringBufferLength);
     const double_conversion::DoubleToStringConverter& converter = double_conversion::DoubleToStringConverter::EcmaScriptConverter();
     converter.ToFixed(d, decimalPlaces, &builder);

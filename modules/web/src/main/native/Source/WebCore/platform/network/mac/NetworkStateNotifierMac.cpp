@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -37,26 +37,26 @@ void NetworkStateNotifier::updateState()
 {
     // Assume that we're offline until proven otherwise.
     m_isOnLine = false;
-    
+
     RetainPtr<CFStringRef> str = adoptCF(SCDynamicStoreKeyCreateNetworkInterface(0, kSCDynamicStoreDomainState));
-    
+
     RetainPtr<CFPropertyListRef> propertyList = adoptCF(SCDynamicStoreCopyValue(m_store.get(), str.get()));
-    
+
     if (!propertyList)
         return;
-    
+
     if (CFGetTypeID(propertyList.get()) != CFDictionaryGetTypeID())
         return;
-    
+
     CFArrayRef netInterfaces = (CFArrayRef)CFDictionaryGetValue((CFDictionaryRef)propertyList.get(), kSCDynamicStorePropNetInterfaces);
     if (CFGetTypeID(netInterfaces) != CFArrayGetTypeID())
         return;
-    
+
     for (CFIndex i = 0; i < CFArrayGetCount(netInterfaces); i++) {
         CFStringRef interface = (CFStringRef)CFArrayGetValueAtIndex(netInterfaces, i);
         if (CFGetTypeID(interface) != CFStringGetTypeID())
             continue;
-        
+
         // Ignore the loopback interface.
         if (CFStringFind(interface, CFSTR("lo"), kCFCompareAnchored).location != kCFNotFound)
             continue;
@@ -64,7 +64,7 @@ void NetworkStateNotifier::updateState()
         RetainPtr<CFStringRef> key = adoptCF(SCDynamicStoreKeyCreateNetworkInterfaceEntity(0, kSCDynamicStoreDomainState, interface, kSCEntNetIPv4));
 
         RetainPtr<CFArrayRef> keyList = adoptCF(SCDynamicStoreCopyKeyList(m_store.get(), key.get()));
-    
+
         if (keyList && CFArrayGetCount(keyList.get())) {
             m_isOnLine = true;
             break;
@@ -72,11 +72,11 @@ void NetworkStateNotifier::updateState()
     }
 }
 
-void NetworkStateNotifier::dynamicStoreCallback(SCDynamicStoreRef, CFArrayRef, void* info) 
+void NetworkStateNotifier::dynamicStoreCallback(SCDynamicStoreRef, CFArrayRef, void* info)
 {
     NetworkStateNotifier* notifier = static_cast<NetworkStateNotifier*>(info);
-    
-    // Calling updateState() could be expensive so we schedule a timer that will do it 
+
+    // Calling updateState() could be expensive so we schedule a timer that will do it
     // when things have cooled down.
     notifier->m_networkStateChangeTimer.startOneShot(StateChangeTimerInterval);
 }
@@ -84,9 +84,9 @@ void NetworkStateNotifier::dynamicStoreCallback(SCDynamicStoreRef, CFArrayRef, v
 void NetworkStateNotifier::networkStateChangeTimerFired(Timer<NetworkStateNotifier>&)
 {
     bool oldOnLine = m_isOnLine;
-    
+
     updateState();
-    
+
     if (m_isOnLine == oldOnLine)
         return;
 
@@ -98,7 +98,7 @@ NetworkStateNotifier::NetworkStateNotifier()
     , m_networkStateChangeTimer(this, &NetworkStateNotifier::networkStateChangeTimerFired)
 {
     SCDynamicStoreContext context = { 0, this, 0, 0, 0 };
-    
+
     m_store = adoptCF(SCDynamicStoreCreate(0, CFSTR("com.apple.WebCore"), dynamicStoreCallback, &context));
     if (!m_store)
         return;
@@ -108,7 +108,7 @@ NetworkStateNotifier::NetworkStateNotifier()
         return;
 
     CFRunLoopAddSource(CFRunLoopGetMain(), configSource.get(), kCFRunLoopCommonModes);
-    
+
     RetainPtr<CFMutableArrayRef> keys = adoptCF(CFArrayCreateMutable(0, 0, &kCFTypeArrayCallBacks));
     RetainPtr<CFMutableArrayRef> patterns = adoptCF(CFArrayCreateMutable(0, 0, &kCFTypeArrayCallBacks));
 
@@ -125,8 +125,8 @@ NetworkStateNotifier::NetworkStateNotifier()
     CFArrayAppendValue(keys.get(), key.get());
 
     SCDynamicStoreSetNotificationKeys(m_store.get(), keys.get(), patterns.get());
-    
+
     updateState();
 }
-    
+
 }

@@ -44,23 +44,23 @@ import javafx.scene.ImageCursor;
 
 /**
  *
- * 
+ *
  */
 public class CursorPropertyMetadata extends ComplexPropertyMetadata<Cursor> {
-    
+
     private final DoublePropertyMetadata hotspotXMetadata
-            = new DoublePropertyMetadata(new PropertyName("hotspotX"), 
+            = new DoublePropertyMetadata(new PropertyName("hotspotX"),
             DoublePropertyMetadata.DoubleKind.COORDINATE, true, 0.0, InspectorPath.UNUSED);
     private final DoublePropertyMetadata hotspotYMetadata
-            = new DoublePropertyMetadata(new PropertyName("hotspotY"), 
+            = new DoublePropertyMetadata(new PropertyName("hotspotY"),
             DoublePropertyMetadata.DoubleKind.COORDINATE, true, 0.0, InspectorPath.UNUSED);
     private final ImagePropertyMetadata imageMetadata
-            = new ImagePropertyMetadata(new PropertyName("image"), 
+            = new ImagePropertyMetadata(new PropertyName("image"),
             true, null, InspectorPath.UNUSED);
 
     private static Map<Cursor, String> cursorMap;
-    
-    public CursorPropertyMetadata(PropertyName name, boolean readWrite, 
+
+    public CursorPropertyMetadata(PropertyName name, boolean readWrite,
             Cursor defaultValue, InspectorPath inspectorPath) {
         super(name, Cursor.class, readWrite, defaultValue, inspectorPath);
     }
@@ -90,18 +90,18 @@ public class CursorPropertyMetadata extends ComplexPropertyMetadata<Cursor> {
             cursorMap.put(Cursor.W_RESIZE,      "W_RESIZE"      );
             cursorMap = Collections.unmodifiableMap(cursorMap);
         }
-        
+
         return cursorMap;
     }
-    
-    
+
+
     /*
      * ComplexPropertyMetadata
      */
     @Override
     public FXOMInstance makeFxomInstanceFromValue(Cursor value, FXOMDocument fxomDocument) {
         final FXOMInstance result;
-        
+
         final String cursorName = getCursorMap().get(value);
         if (cursorName != null) {
             // It's a standard cursor
@@ -119,7 +119,7 @@ public class CursorPropertyMetadata extends ComplexPropertyMetadata<Cursor> {
             result = new FXOMInstance(fxomDocument, Cursor.class);
             result.setFxConstant(getCursorMap().get(Cursor.DEFAULT));
         }
-        
+
         return result;
     }
 }

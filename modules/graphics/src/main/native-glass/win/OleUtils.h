@@ -87,7 +87,7 @@ inline void raise_error_empty(HRESULT hr) { }
 
 #define OLE_REPORT_ERR(msg)\
         OLE_WINERROR2HR(msg, ::GetLastError())
-        
+
 #define OLE_THROW_LASTERROR(msg)\
         OLE_WINERROR2HR(msg, ::GetLastError())\
         RAISE_ERROR(_hr_);
@@ -207,7 +207,7 @@ inline HRESULT checkJavaException(JNIEnv *env)
         JLocalRef<jthrowable> ex(env, env->ExceptionOccurred());
         if(ex){
             env->ExceptionClear();
-            jclass cls = env->FindClass("java/lang/Throwable");    
+            jclass cls = env->FindClass("java/lang/Throwable");
             if (env->ExceptionCheck()) {
                 env->ExceptionDescribe();
                 env->ExceptionClear();
@@ -216,7 +216,7 @@ inline HRESULT checkJavaException(JNIEnv *env)
             static jmethodID s_jcidThrowable_getMessage = env->GetMethodID(
                 JLClass(env, cls),
                 "getMessage",
-                "()Ljava/lang/String;");            
+                "()Ljava/lang/String;");
             if (env->ExceptionCheck()) {
                 env->ExceptionDescribe();
                 env->ExceptionClear();

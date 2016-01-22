@@ -60,7 +60,7 @@ public class AudioClipApp extends Application {
         final double xStart = 12;
         final double xOffset = 30.0;
         final double barWidth = 22.0;
-       
+
         Rectangle r1 = new Rectangle(0, 15, barWidth * 11.5, 10);
         r1.setFill(new Color(0.2, 0.12, 0.1, 1.0));
         Rectangle r2 = new Rectangle(0, -25, barWidth * 11.5, 10);
@@ -78,8 +78,8 @@ public class AudioClipApp extends Application {
                 createKey(Color.ORANGE, xStart + 6 * xOffset, barWidth, 70, "/ensemble/samples/shared-resources/Note7.wav"),
                 createKey(Color.RED, xStart + 7 * xOffset, barWidth, 65, "/ensemble/samples/shared-resources/Note8.wav"));
 
-        // A StackPane by default centers its children, here we extend it to 
-        // scale the content to fill the StackPane first. 
+        // A StackPane by default centers its children, here we extend it to
+        // scale the content to fill the StackPane first.
         StackPane root = new StackPane() {
             @Override protected void layoutChildren() {
                 // find biggest scale that will fit while keeping proportions
@@ -100,7 +100,7 @@ public class AudioClipApp extends Application {
         // create a audio clip that this key will play
         final AudioClip barNote = new AudioClip(
                 AudioClipApp.class.getResource(sound).toExternalForm());
-        // create the rectangle that draws the key                
+        // create the rectangle that draws the key
         Rectangle rectangle = new Rectangle(x, -(height / 2), width, height);
         rectangle.setFill(color);
         Lighting lighting = new Lighting(new Light.Point(-20, -20, 100, Color.WHITE));
@@ -116,9 +116,9 @@ public class AudioClipApp extends Application {
         primaryStage.setScene(new Scene(createContent()));
         primaryStage.show();
     }
-    
-    /** 
-     * Java main for when running without JavaFX launcher 
+
+    /**
+     * Java main for when running without JavaFX launcher
      * @param args command line arguments
      */
     public static void main(String[] args) { launch(args); }

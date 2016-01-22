@@ -46,7 +46,7 @@ double HeapStatistics::s_endTime = 0.0;
 Vector<double>* HeapStatistics::s_pauseTimeStarts = 0;
 Vector<double>* HeapStatistics::s_pauseTimeEnds = 0;
 
-#if OS(UNIX) 
+#if OS(UNIX)
 
 void HeapStatistics::initialize()
 {
@@ -79,8 +79,8 @@ void HeapStatistics::logStatistics()
     if (!vmName || !suiteName || !benchmarkName)
         dataLogF("HeapStatistics: {\"max_rss\": %ld", usage.ru_maxrss);
     else
-        dataLogF("HeapStatistics: {\"max_rss\": %ld, \"vm_name\": \"%s\", \"suite_name\": \"%s\", \"benchmark_name\": \"%s\"", 
-            usage.ru_maxrss, vmName, suiteName, benchmarkName); 
+        dataLogF("HeapStatistics: {\"max_rss\": %ld, \"vm_name\": \"%s\", \"suite_name\": \"%s\", \"benchmark_name\": \"%s\"",
+            usage.ru_maxrss, vmName, suiteName, benchmarkName);
 
     if (Options::recordGCPauseTimes()) {
         dataLogF(", \"pause_times\": [");
@@ -205,7 +205,7 @@ inline void StorageStatistics::operator()(JSCell* cell)
     if (!object->hasInlineStorage())
         ++m_objectWithOutOfLineStorageCount;
     m_storageSize += object->structure()->totalStorageSize() * sizeof(WriteBarrierBase<Unknown>);
-    m_storageCapacity += object->structure()->totalStorageCapacity() * sizeof(WriteBarrierBase<Unknown>); 
+    m_storageCapacity += object->structure()->totalStorageCapacity() * sizeof(WriteBarrierBase<Unknown>);
 }
 
 inline size_t StorageStatistics::objectWithOutOfLineStorageCount()

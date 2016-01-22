@@ -30,7 +30,7 @@
 
 @interface GlassHelper : NSObject
 {
-    
+
 }
 
 /*

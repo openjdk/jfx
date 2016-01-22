@@ -24,8 +24,8 @@
 #define _PLATFORM_H
 
 /**
- * \file 
- * \brief Basic types for the platform 
+ * \file
+ * \brief Basic types for the platform
  */
 
 /* This file should be included before uvernum.h. */
@@ -34,7 +34,7 @@
 #endif
 
 /**
- * Determine wheter to enable auto cleanup of libraries. 
+ * Determine wheter to enable auto cleanup of libraries.
  * @internal
  */
 #ifndef UCLN_NO_AUTO_CLEANUP
@@ -51,7 +51,7 @@
 
 /**
  * \def U_HAVE_DIRENT_H
- * Define whether dirent.h is available 
+ * Define whether dirent.h is available
  * @internal
  */
 #ifndef U_HAVE_DIRENT_H
@@ -147,7 +147,7 @@
 #endif
 
 /* 1 or 0 to enable or disable threads.  If undefined, default is: enable threads. */
-#ifndef ICU_USE_THREADS 
+#ifndef ICU_USE_THREADS
 #define ICU_USE_THREADS 1
 #endif
 
@@ -301,7 +301,7 @@
 #if 1
 #define U_EXPORT __attribute__((visibility("default")))
 #elif (defined(__SUNPRO_CC) && __SUNPRO_CC >= 0x550) \
-   || (defined(__SUNPRO_C) && __SUNPRO_C >= 0x550) 
+   || (defined(__SUNPRO_C) && __SUNPRO_C >= 0x550)
 #define U_EXPORT __global
 /*#elif defined(__HP_aCC) || defined(__HP_cc)
 #define U_EXPORT __declspec(dllexport)*/
@@ -316,7 +316,7 @@
 #if defined(U_CYGWIN) && !defined(__GNUC__)
 #define U_IMPORT __declspec(dllimport)
 #else
-#define U_IMPORT 
+#define U_IMPORT
 #endif
 
 /* @} */
@@ -334,7 +334,7 @@
 #endif
 
 #ifndef U_ALIGN_CODE
-#define U_ALIGN_CODE(n) 
+#define U_ALIGN_CODE(n)
 #endif
 
 /** @} */
@@ -377,7 +377,7 @@
  * Define the library suffix with C syntax.
  * @internal
  */
-# define U_LIB_SUFFIX_C_NAME 
+# define U_LIB_SUFFIX_C_NAME
 /**
  * Define the library suffix as a string with C syntax
  * @internal
@@ -392,7 +392,7 @@
 #if U_HAVE_LIB_SUFFIX
 # ifndef U_ICU_ENTRY_POINT_RENAME
 /* Renaming pattern:    u_strcpy_41_suffix */
-#  define U_ICU_ENTRY_POINT_RENAME(x)    x ## _ ## 46 ## 
+#  define U_ICU_ENTRY_POINT_RENAME(x)    x ## _ ## 46 ##
 #  define U_DEF_ICUDATA_ENTRY_POINT(major, minor) icudt####major##minor##_dat
 
 # endif

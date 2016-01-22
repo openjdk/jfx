@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef DFGCommonData_h
@@ -54,7 +54,7 @@ struct Plan;
 
 struct WeakReferenceTransition {
     WeakReferenceTransition() { }
-    
+
     WeakReferenceTransition(VM& vm, JSCell* owner, JSCell* codeOrigin, JSCell* from, JSCell* to)
         : m_from(vm, owner, from)
         , m_to(vm, owner, to)
@@ -62,12 +62,12 @@ struct WeakReferenceTransition {
         if (!!codeOrigin)
             m_codeOrigin.set(vm, owner, codeOrigin);
     }
-    
+
     WriteBarrier<JSCell> m_codeOrigin;
     WriteBarrier<JSCell> m_from;
     WriteBarrier<JSCell> m_to;
 };
-        
+
 class CommonData {
     WTF_MAKE_NONCOPYABLE(CommonData);
 public:
@@ -77,14 +77,14 @@ public:
         , frameRegisterCount(std::numeric_limits<unsigned>::max())
         , requiredRegisterCountForExit(std::numeric_limits<unsigned>::max())
     { }
-    
+
     void notifyCompilingStructureTransition(Plan&, CodeBlock*, Node*);
     unsigned addCodeOrigin(CodeOrigin codeOrigin);
-    
+
     void shrinkToFit();
-    
+
     bool invalidate(); // Returns true if we did invalidate, or false if the code block was already invalidated.
-    
+
     unsigned requiredRegisterCountForExecutionAndExit() const
     {
         return std::max(frameRegisterCount, requiredRegisterCountForExit);
@@ -92,22 +92,22 @@ public:
 
     OwnPtr<InlineCallFrameSet> inlineCallFrames;
     Vector<CodeOrigin, 0, UnsafeVectorOverflow> codeOrigins;
-    
+
     Vector<Identifier> dfgIdentifiers;
     Vector<WeakReferenceTransition> transitions;
     Vector<WriteBarrier<JSCell>> weakReferences;
     SegmentedVector<CodeBlockJettisoningWatchpoint, 1, 0> watchpoints;
     SegmentedVector<ProfiledCodeBlockJettisoningWatchpoint, 1, 0> profiledWatchpoints;
     Vector<JumpReplacement> jumpReplacements;
-    
+
     RefPtr<Profiler::Compilation> compilation;
     bool livenessHasBeenProved; // Initialized and used on every GC.
     bool allTransitionsHaveBeenMarked; // Initialized and used on every GC.
     bool isStillValid;
-    
+
     int machineCaptureStart;
     std::unique_ptr<SlowArgument[]> slowArguments;
-    
+
     unsigned frameRegisterCount;
     unsigned requiredRegisterCountForExit;
 };

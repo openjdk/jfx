@@ -46,7 +46,7 @@ public:
         , m_state(o->selectionState())
     {
     }
-    
+
     RenderObject* object() const { return m_object; }
     RenderLayerModelObject* repaintContainer() const { return m_repaintContainer; }
     RenderObject::SelectionState state() const { return m_state; }
@@ -65,7 +65,7 @@ public:
         , m_rect(o->canUpdateSelectionOnRootLineBoxes() ? o->selectionRectForRepaint(m_repaintContainer, clipToVisibleContent) : LayoutRect())
     {
     }
-    
+
     void repaint()
     {
         m_object->repaintUsingContainer(m_repaintContainer, enclosingIntRect(m_rect));
@@ -84,14 +84,14 @@ public:
     explicit RenderBlockSelectionInfo(RenderBlock* b)
         : RenderSelectionInfoBase(b)
         , m_rects(b->canUpdateSelectionOnRootLineBoxes() ? block()->selectionGapRectsForRepaint(m_repaintContainer) : GapRects())
-    { 
+    {
     }
 
     void repaint()
     {
         m_object->repaintUsingContainer(m_repaintContainer, enclosingIntRect(m_rects));
     }
-    
+
     RenderBlock* block() const { return toRenderBlock(m_object); }
     GapRects rects() const { return m_rects; }
 

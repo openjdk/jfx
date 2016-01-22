@@ -72,34 +72,34 @@ public class TableViewMouseInputTest {
     private final TableColumn<String, String> col2 = new TableColumn<>("col2");
     private final TableColumn<String, String> col3 = new TableColumn<>("col3");
     private final TableColumn<String, String> col4 = new TableColumn<>("col4");
-    
+
     @Before public void setup() {
         tableView = new TableView<>();
         sm = tableView.getSelectionModel();
         fm = tableView.getFocusModel();
-        
+
         sm.setSelectionMode(SelectionMode.MULTIPLE);
         sm.setCellSelectionEnabled(false);
-        
+
         tableView.getItems().setAll("1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12");
         tableView.getColumns().setAll(col0, col1, col2, col3, col4);
-        
+
         sm.clearAndSelect(0);
     }
-    
+
     @After public void tearDown() {
         if (tableView.getSkin() != null) {
             tableView.getSkin().dispose();
         }
     }
-    
+
     /***************************************************************************
      * Util methods
      **************************************************************************/
-    
+
     private String debug() {
         StringBuilder sb = new StringBuilder("Selected Cells: [");
-        
+
         List<TablePosition> cells = sm.getSelectedCells();
         for (TablePosition<String,?> tp : cells) {
             sb.append("(");
@@ -108,12 +108,12 @@ public class TableViewMouseInputTest {
             sb.append(tp.getColumn());
             sb.append("), ");
         }
-        
+
         sb.append("] \nFocus: (" + fm.getFocusedCell().getRow() + ", " + fm.getFocusedCell().getColumn() + ")");
         sb.append(" \nAnchor: (" + getAnchor().getRow() + ", " + getAnchor().getColumn() + ")");
         return sb.toString();
     }
-    
+
     // Returns true if ALL indices are selected
     private boolean isSelected(int... indices) {
         for (int index : indices) {
@@ -121,7 +121,7 @@ public class TableViewMouseInputTest {
         }
         return true;
     }
-    
+
     // Returns true if ALL indices are NOT selected
     private boolean isNotSelected(int... indices) {
         for (int index : indices) {
@@ -129,51 +129,51 @@ public class TableViewMouseInputTest {
         }
         return true;
     }
-    
+
     private TablePosition getAnchor() {
         return TableViewAnchorRetriever.getAnchor(tableView);
     }
-    
+
     private boolean isAnchor(int row) {
         TablePosition tp = new TablePosition(tableView, row, null);
         return getAnchor() != null && getAnchor().equals(tp);
     }
-    
+
     private boolean isAnchor(int row, int col) {
         TablePosition tp = new TablePosition(tableView, row, tableView.getColumns().get(col));
         return getAnchor() != null && getAnchor().equals(tp);
     }
-    
-    
+
+
     /***************************************************************************
      * Tests for specific bug reports
      **************************************************************************/
-    
+
     @Test public void test_rt29833_mouse_select_upwards() {
         sm.setCellSelectionEnabled(false);
         sm.setSelectionMode(SelectionMode.MULTIPLE);
-        
+
         sm.clearAndSelect(9);
-        
+
         // select all from 9 - 7
         VirtualFlowTestUtils.clickOnRow(tableView, 7, KeyModifier.SHIFT);
         assertTrue(debug(), isSelected(7,8,9));
-        
+
         // select all from 9 - 7 - 5
         VirtualFlowTestUtils.clickOnRow(tableView, 5, KeyModifier.SHIFT);
         assertTrue(debug(),isSelected(5,6,7,8,9));
     }
-    
+
     @Test public void test_rt29833_mouse_select_downwards() {
         sm.setCellSelectionEnabled(false);
         sm.setSelectionMode(SelectionMode.MULTIPLE);
-        
+
         sm.clearAndSelect(5);
-        
+
         // select all from 5 - 7
         VirtualFlowTestUtils.clickOnRow(tableView, 7, KeyModifier.SHIFT);
         assertTrue(debug(), isSelected(5,6,7));
-        
+
         // select all from 5 - 7 - 9
         VirtualFlowTestUtils.clickOnRow(tableView, 9, KeyModifier.SHIFT);
         assertTrue(debug(),isSelected(5,6,7,8,9));

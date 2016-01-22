@@ -8,13 +8,13 @@
  * are met:
  *
  * 1.  Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer. 
+ *     notice, this list of conditions and the following disclaimer.
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
- *     documentation and/or other materials provided with the distribution. 
+ *     documentation and/or other materials provided with the distribution.
  * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
- *     from this software without specific prior written permission. 
+ *     from this software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY APPLE AND ITS CONTRIBUTORS "AS IS" AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
@@ -58,11 +58,11 @@ inline float determinant(const FloatSize& a, const FloatSize& b)
 
 inline bool isPointInTriangle(const FloatPoint& p, const FloatPoint& t1, const FloatPoint& t2, const FloatPoint& t3)
 {
-    // Compute vectors        
+    // Compute vectors
     FloatSize v0 = t3 - t1;
     FloatSize v1 = t2 - t1;
     FloatSize v2 = p - t1;
-    
+
     // Compute dot products
     float dot00 = dot(v0, v0);
     float dot01 = dot(v0, v1);
@@ -86,7 +86,7 @@ FloatRect FloatQuad::boundingBox() const
 
     float right  = max4(m_p1.x(), m_p2.x(), m_p3.x(), m_p4.x());
     float bottom = max4(m_p1.y(), m_p2.y(), m_p3.y(), m_p4.y());
-    
+
     return FloatRect(left, top, right - left, bottom - top);
 }
 
@@ -104,7 +104,7 @@ bool FloatQuad::isRectilinear() const
 bool FloatQuad::containsPoint(const FloatPoint& p) const
 {
     return isPointInTriangle(p, m_p1, m_p2, m_p3) || isPointInTriangle(p, m_p1, m_p3, m_p4);
-} 
+}
 
 // Note that we only handle convex quads here.
 bool FloatQuad::containsQuad(const FloatQuad& other) const

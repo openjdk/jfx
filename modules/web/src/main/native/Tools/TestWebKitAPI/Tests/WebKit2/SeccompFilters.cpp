@@ -78,7 +78,7 @@ public:
 
         // Create files for the file policy tests. File policies precedes the
         // directory policy. In this case, we create a file with read and write
-        // policies inside a directory that is not allowed, and vice versa. 
+        // policies inside a directory that is not allowed, and vice versa.
         fd = open(testFileNotAllowed.utf8().data(), O_RDWR | O_CREAT, defaultMode);
         ASSERT_NE(close(fd), -1);
         fd = open(testFileReadAndWrite.utf8().data(), O_RDWR | O_CREAT, defaultMode);

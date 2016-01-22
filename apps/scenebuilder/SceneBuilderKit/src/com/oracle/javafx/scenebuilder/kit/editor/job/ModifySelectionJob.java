@@ -60,7 +60,7 @@ public class ModifySelectionJob extends BatchDocumentJob {
         this.propertyMetadata = propertyMetadata;
         this.newValue = newValue;
     }
-    
+
     @Override
     protected List<Job> makeSubJobs() {
 
@@ -105,7 +105,7 @@ public class ModifySelectionJob extends BatchDocumentJob {
                 result.add(subJob);
             }
         }
-        
+
         return result;
     }
 
@@ -128,7 +128,7 @@ public class ModifySelectionJob extends BatchDocumentJob {
                         subJobCount);
                 break;
         }
-        
+
         return result;
     }
 }

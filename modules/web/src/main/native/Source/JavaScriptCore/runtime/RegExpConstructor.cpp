@@ -152,12 +152,12 @@ JSValue RegExpConstructor::getRightContext(ExecState* exec)
 {
     return m_cachedResult.lastResult(exec, this)->rightContext(exec);
 }
-    
+
 bool RegExpConstructor::getOwnPropertySlot(JSObject* object, ExecState* exec, PropertyName propertyName, PropertySlot& slot)
 {
     return getStaticValueSlot<RegExpConstructor, InternalFunction>(exec, ExecState::regExpConstructorTable(exec->vm()), jsCast<RegExpConstructor*>(object), propertyName, slot);
 }
-    
+
 EncodedJSValue regExpConstructorDollar1(ExecState* exec, JSObject* slotBase, EncodedJSValue, PropertyName)
 {
     return JSValue::encode(asRegExpConstructor(slotBase)->getBackref(exec, 1));

@@ -36,9 +36,9 @@ NavigatorContentUtilsClient::NavigatorContentUtilsClient()
 }
 
 void NavigatorContentUtilsClient::registerProtocolHandler(const String& scheme, const String& baseURL, const String& url, const String& title)
-{ 
-    notImplemented(); 
-} 
+{
+    notImplemented();
+}
 
 }
 #endif // ENABLE(NAVIGATOR_CONTENT_UTILS)

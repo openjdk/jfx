@@ -40,8 +40,8 @@ public final class KeyCharacterCombination extends KeyCombination {
     /** The key character associated with this key combination. */
     private String character = "";
 
-    /** 
-     * Gets the key character associated with this key combination. 
+    /**
+     * Gets the key character associated with this key combination.
      * @return The key character associated with this key combination
      */
     public final String getCharacter() {

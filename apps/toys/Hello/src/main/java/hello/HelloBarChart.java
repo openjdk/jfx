@@ -43,7 +43,7 @@ public class HelloBarChart extends Application {
     static double[] anvilsSold = { 567, 1292, 2423 };
     static double[] skatesSold = { 956, 1665, 2559 };
     static double[] pillsSold = { 1154, 1927, 2774 };
-    
+
     @Override public void start(Stage stage) {
         stage.setTitle("Hello BarChart");
         Scene scene = new Scene(createBarChart(), 500, 500);
@@ -85,7 +85,7 @@ public class HelloBarChart extends Application {
         bc.getData().add(series3);
         return bc;
     }
-    
+
     /**
      * @param args the command line arguments
      */

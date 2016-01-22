@@ -60,7 +60,7 @@ struct DateTimeChooserParameters;
 struct FrameLoadRequest;
 struct ViewportArguments;
 struct WindowFeatures;
-    
+
 class Chrome : public HostWindow {
 public:
     Chrome(Page&, ChromeClient&);

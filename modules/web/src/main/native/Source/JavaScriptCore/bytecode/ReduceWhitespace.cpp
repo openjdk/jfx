@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -34,9 +34,9 @@ namespace JSC {
 CString reduceWhitespace(const CString& input)
 {
     StringPrintStream out;
-    
+
     const char* data = input.data();
-    
+
     for (unsigned i = 0; i < input.length();) {
         if (isASCIISpace(data[i])) {
             while (i < input.length() && isASCIISpace(data[i]))
@@ -47,7 +47,7 @@ CString reduceWhitespace(const CString& input)
         out.print(CharacterDump(data[i]));
         ++i;
     }
-    
+
     return out.toCString();
 }
 

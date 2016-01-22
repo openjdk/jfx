@@ -55,7 +55,7 @@ void AudioDSPKernelProcessor::initialize()
     // Create processing kernels, one per channel.
     for (unsigned i = 0; i < numberOfChannels(); ++i)
         m_kernels.append(createKernel());
-        
+
     m_initialized = true;
     m_hasJustReset = true;
 }
@@ -64,7 +64,7 @@ void AudioDSPKernelProcessor::uninitialize()
 {
     if (!isInitialized())
         return;
-        
+
     m_kernels.clear();
 
     m_initialized = false;
@@ -75,7 +75,7 @@ void AudioDSPKernelProcessor::process(const AudioBus* source, AudioBus* destinat
     ASSERT(source && destination);
     if (!source || !destination)
         return;
-        
+
     if (!isInitialized()) {
         destination->zero();
         return;
@@ -85,7 +85,7 @@ void AudioDSPKernelProcessor::process(const AudioBus* source, AudioBus* destinat
     ASSERT(channelCountMatches);
     if (!channelCountMatches)
         return;
-        
+
     for (unsigned i = 0; i < m_kernels.size(); ++i)
         m_kernels[i]->process(source->channel(i)->data(), destination->channel(i)->mutableData(), framesToProcess);
 }
@@ -108,7 +108,7 @@ void AudioDSPKernelProcessor::setNumberOfChannels(unsigned numberOfChannels)
 {
     if (numberOfChannels == m_numberOfChannels)
         return;
-        
+
     ASSERT(!isInitialized());
     if (!isInitialized())
         m_numberOfChannels = numberOfChannels;

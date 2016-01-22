@@ -24,7 +24,7 @@
 
 /**
  * \file
- * \brief C API: Unicode Normalization 
+ * \brief C API: Unicode Normalization
  *
  * <h2>Unicode normalization API</h2>
  *
@@ -57,7 +57,7 @@
  *
  * To a user of your program, however, both of these sequences should be
  * treated as the same "user-level" character "A with acute accent".  When you are searching or
- * comparing text, you must ensure that these two sequences are treated 
+ * comparing text, you must ensure that these two sequences are treated
  * equivalently.  In addition, you must handle characters with more than one
  * accent.  Sometimes the order of a character's combining accents is
  * significant, while in other cases accent sequences in different orders are
@@ -85,8 +85,8 @@
  * will often want to use these mappings.
  *
  * <code>unorm_normalize</code> helps solve these problems by transforming text into the
- * canonical composed and decomposed forms as shown in the first example above.  
- * In addition, you can have it perform compatibility decompositions so that 
+ * canonical composed and decomposed forms as shown in the first example above.
+ * In addition, you can have it perform compatibility decompositions so that
  * you can treat compatibility characters the same as their equivalents.
  * Finally, <code>unorm_normalize</code> rearranges accents into the proper canonical
  * order, so that you do not have to worry about accent rearrangement on your
@@ -132,7 +132,7 @@
  */
 typedef enum {
   /** No decomposition/composition. @stable ICU 2.0 */
-  UNORM_NONE = 1, 
+  UNORM_NONE = 1,
   /** Canonical decomposition. @stable ICU 2.0 */
   UNORM_NFD = 2,
   /** Compatibility decomposition. @stable ICU 2.0 */
@@ -140,7 +140,7 @@ typedef enum {
   /** Canonical decomposition followed by canonical composition. @stable ICU 2.0 */
   UNORM_NFC = 4,
   /** Default normalization. @stable ICU 2.0 */
-  UNORM_DEFAULT = UNORM_NFC, 
+  UNORM_DEFAULT = UNORM_NFC,
   /** Compatibility decomposition followed by canonical composition. @stable ICU 2.0 */
   UNORM_NFKC =5,
   /** "Fast C or D" form. @stable ICU 2.0 */
@@ -192,7 +192,7 @@ enum {
  *
  * @param source The string to normalize.
  * @param sourceLength The length of source, or -1 if NUL-terminated.
- * @param mode The normalization mode; one of UNORM_NONE, 
+ * @param mode The normalization mode; one of UNORM_NONE,
  *             UNORM_NFD, UNORM_NFC, UNORM_NFKC, UNORM_NFKD, UNORM_DEFAULT.
  * @param options The normalization options, ORed together (0 for no options).
  * @param result A pointer to a buffer to receive the result string.
@@ -203,21 +203,21 @@ enum {
  *         the output was truncated, and the error code is set to U_BUFFER_OVERFLOW_ERROR.
  * @stable ICU 2.0
  */
-U_STABLE int32_t U_EXPORT2 
+U_STABLE int32_t U_EXPORT2
 unorm_normalize(const UChar *source, int32_t sourceLength,
                 UNormalizationMode mode, int32_t options,
                 UChar *result, int32_t resultLength,
                 UErrorCode *status);
 
 /**
- * Performing quick check on a string, to quickly determine if the string is 
+ * Performing quick check on a string, to quickly determine if the string is
  * in a particular normalization format.
  * Three types of result can be returned UNORM_YES, UNORM_NO or
  * UNORM_MAYBE. Result UNORM_YES indicates that the argument
  * string is in the desired normalized format, UNORM_NO determines that
- * argument string is not in the desired normalized format. A 
- * UNORM_MAYBE result indicates that a more thorough check is required, 
- * the user may have to put the string in its normalized form and compare the 
+ * argument string is not in the desired normalized format. A
+ * UNORM_MAYBE result indicates that a more thorough check is required,
+ * the user may have to put the string in its normalized form and compare the
  * results.
  *
  * @param source       string for determining if it is in a normalized format
@@ -251,7 +251,7 @@ unorm_quickCheck(const UChar *source, int32_t sourcelength,
  * @stable ICU 2.6
  */
 U_STABLE UNormalizationCheckResult U_EXPORT2
-unorm_quickCheckWithOptions(const UChar *src, int32_t srcLength, 
+unorm_quickCheckWithOptions(const UChar *src, int32_t srcLength,
                             UNormalizationMode mode, int32_t options,
                             UErrorCode *pErrorCode);
 

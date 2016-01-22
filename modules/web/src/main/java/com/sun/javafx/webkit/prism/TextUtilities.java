@@ -37,7 +37,7 @@ final class TextUtilities {
         layout.setContent(text, font);
         return layout;
     }
-    
+
     static BaseBounds getLayoutBounds(String str, Object font) {
         return createLayout(str, font).getBounds();
     }

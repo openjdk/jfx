@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -196,7 +196,7 @@ ScrollbarPainter ScrollbarThemeMac::painterForScrollbar(ScrollbarThemeClient* sc
 }
 
 static bool g_isCurrentlyDrawingIntoLayer;
-    
+
 bool ScrollbarThemeMac::isCurrentlyDrawingIntoLayer()
 {
     return g_isCurrentlyDrawingIntoLayer;
@@ -280,7 +280,7 @@ double ScrollbarThemeMac::autoscrollTimerDelay()
 {
     return gAutoscrollButtonDelay;
 }
-    
+
 ScrollbarButtonsPlacement ScrollbarThemeMac::buttonsPlacement() const
 {
     return gButtonPlacement;
@@ -302,8 +302,8 @@ bool ScrollbarThemeMac::hasThumb(ScrollbarThemeClient* scrollbar)
     minLengthForThumb = [painter knobMinLength] + [painter trackOverlapEndInset] + [painter knobOverlapEndInset]
         + 2 * ([painter trackEndInset] + [painter knobEndInset]);
 
-    return scrollbar->enabled() && (scrollbar->orientation() == HorizontalScrollbar ? 
-             scrollbar->width() : 
+    return scrollbar->enabled() && (scrollbar->orientation() == HorizontalScrollbar ?
+             scrollbar->width() :
              scrollbar->height()) >= minLengthForThumb;
 }
 
@@ -328,13 +328,13 @@ static IntRect buttonRepaintRect(const IntRect& buttonRect, ScrollbarOrientation
 IntRect ScrollbarThemeMac::backButtonRect(ScrollbarThemeClient* scrollbar, ScrollbarPart part, bool painting)
 {
     IntRect result;
-    
+
     if (part == BackButtonStartPart && (buttonsPlacement() == ScrollbarButtonsNone || buttonsPlacement() == ScrollbarButtonsDoubleEnd))
         return result;
-    
+
     if (part == BackButtonEndPart && (buttonsPlacement() == ScrollbarButtonsNone || buttonsPlacement() == ScrollbarButtonsDoubleStart || buttonsPlacement() == ScrollbarButtonsSingle))
         return result;
-        
+
     int thickness = scrollbarThickness(scrollbar->controlSize());
     bool outerButton = part == BackButtonStartPart && (buttonsPlacement() == ScrollbarButtonsDoubleStart || buttonsPlacement() == ScrollbarButtonsDoubleBoth);
     if (outerButton) {
@@ -344,7 +344,7 @@ IntRect ScrollbarThemeMac::backButtonRect(ScrollbarThemeClient* scrollbar, Scrol
             result = IntRect(scrollbar->x(), scrollbar->y(), thickness, cOuterButtonLength[scrollbar->controlSize()] + (painting ? cOuterButtonOverlap : 0));
         return result;
     }
-    
+
     // Our repaint rect is slightly larger, since we are a button that is adjacent to the track.
     if (scrollbar->orientation() == HorizontalScrollbar) {
         int start = part == BackButtonStartPart ? scrollbar->x() : scrollbar->x() + scrollbar->width() - cOuterButtonLength[scrollbar->controlSize()] - cButtonLength[scrollbar->controlSize()];
@@ -353,7 +353,7 @@ IntRect ScrollbarThemeMac::backButtonRect(ScrollbarThemeClient* scrollbar, Scrol
         int start = part == BackButtonStartPart ? scrollbar->y() : scrollbar->y() + scrollbar->height() - cOuterButtonLength[scrollbar->controlSize()] - cButtonLength[scrollbar->controlSize()];
         result = IntRect(scrollbar->x(), start, thickness, cButtonLength[scrollbar->controlSize()]);
     }
-    
+
     if (painting)
         return buttonRepaintRect(result, scrollbar->orientation(), scrollbar->controlSize(), part == BackButtonStartPart);
     return result;
@@ -362,17 +362,17 @@ IntRect ScrollbarThemeMac::backButtonRect(ScrollbarThemeClient* scrollbar, Scrol
 IntRect ScrollbarThemeMac::forwardButtonRect(ScrollbarThemeClient* scrollbar, ScrollbarPart part, bool painting)
 {
     IntRect result;
-    
+
     if (part == ForwardButtonEndPart && (buttonsPlacement() == ScrollbarButtonsNone || buttonsPlacement() == ScrollbarButtonsDoubleStart))
         return result;
-    
+
     if (part == ForwardButtonStartPart && (buttonsPlacement() == ScrollbarButtonsNone || buttonsPlacement() == ScrollbarButtonsDoubleEnd || buttonsPlacement() == ScrollbarButtonsSingle))
         return result;
-        
+
     int thickness = scrollbarThickness(scrollbar->controlSize());
     int outerButtonLength = cOuterButtonLength[scrollbar->controlSize()];
     int buttonLength = cButtonLength[scrollbar->controlSize()];
-    
+
     bool outerButton = part == ForwardButtonEndPart && (buttonsPlacement() == ScrollbarButtonsDoubleEnd || buttonsPlacement() == ScrollbarButtonsDoubleBoth);
     if (outerButton) {
         if (scrollbar->orientation() == HorizontalScrollbar) {
@@ -386,7 +386,7 @@ IntRect ScrollbarThemeMac::forwardButtonRect(ScrollbarThemeClient* scrollbar, Sc
         }
         return result;
     }
-    
+
     if (scrollbar->orientation() == HorizontalScrollbar) {
         int start = part == ForwardButtonEndPart ? scrollbar->x() + scrollbar->width() - buttonLength : scrollbar->x() + outerButtonLength;
         result = IntRect(start, scrollbar->y(), buttonLength, thickness);
@@ -403,7 +403,7 @@ IntRect ScrollbarThemeMac::trackRect(ScrollbarThemeClient* scrollbar, bool paint
 {
     if (painting || !hasButtons(scrollbar))
         return scrollbar->frameRect();
-    
+
     IntRect result;
     int thickness = scrollbarThickness(scrollbar->controlSize());
     int startWidth = 0;
@@ -429,7 +429,7 @@ IntRect ScrollbarThemeMac::trackRect(ScrollbarThemeClient* scrollbar, bool paint
         default:
             break;
     }
-    
+
     int totalWidth = startWidth + endWidth;
     if (scrollbar->orientation() == HorizontalScrollbar)
         return IntRect(scrollbar->x() + startWidth, scrollbar->y(), scrollbar->width() - totalWidth, thickness);
@@ -519,7 +519,7 @@ bool ScrollbarThemeMac::paint(ScrollbarThemeClient* scrollbar, GraphicsContext* 
 
     if (!scrollbar->supportsUpdateOnSecondaryThread()) {
         TemporaryChange<bool> isCurrentlyDrawingIntoLayer(g_isCurrentlyDrawingIntoLayer, context->isCALayerContext());
-    
+
         GraphicsContextStateSaver stateSaver(*context);
         context->clip(damageRect);
         context->translate(scrollbar->frameRect().x(), scrollbar->frameRect().y());

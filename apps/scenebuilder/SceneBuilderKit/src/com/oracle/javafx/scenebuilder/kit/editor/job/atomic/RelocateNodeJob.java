@@ -55,31 +55,31 @@ public class RelocateNodeJob extends Job {
     private Double oldRightAnchor;
     private Double oldTopAnchor;
     private Double oldBottomAnchor;
-    
+
     private double newLayoutX;
     private double newLayoutY;
     private Double newLeftAnchor;
     private Double newRightAnchor;
     private Double newTopAnchor;
     private Double newBottomAnchor;
-    
+
     private final DoublePropertyMetadata layoutXMeta;
     private final DoublePropertyMetadata layoutYMeta;
     private final DoublePropertyMetadata leftAnchorMeta;
     private final DoublePropertyMetadata rightAnchorMeta;
     private final DoublePropertyMetadata topAnchorMeta;
     private final DoublePropertyMetadata bottomAnchorMeta;
-    
+
     public RelocateNodeJob(FXOMInstance fxomInstance, double newLayoutX, double newLayoutY, EditorController editorController) {
         super(editorController);
-        
+
         assert fxomInstance != null;
         assert fxomInstance.getSceneGraphObject() instanceof Node;
-        
+
         this.fxomInstance = fxomInstance;
         this.newLayoutX = newLayoutX; // Root scene coordinates
         this.newLayoutY = newLayoutY; // Root scene coordinates
-        
+
         final Metadata metadata = Metadata.getMetadata();
         final Class<?> sgoClass = fxomInstance.getSceneGraphObject().getClass();
         final PropertyName layoutXName = new PropertyName("layoutX"); //NOI18N
@@ -107,15 +107,15 @@ public class RelocateNodeJob extends Job {
     public double getNewLayoutY() {
         return newLayoutY;
     }
-    
+
     public void mergeWith(RelocateNodeJob youngerJob) {
-        assert ! (MathUtils.equals(this.newLayoutX, youngerJob.newLayoutX) 
+        assert ! (MathUtils.equals(this.newLayoutX, youngerJob.newLayoutX)
                && MathUtils.equals(this.newLayoutY, youngerJob.newLayoutY));
         this.newLayoutX = youngerJob.newLayoutX;
         this.newLayoutY = youngerJob.newLayoutY;
         updateNewAnchors();
     }
-    
+
     /*
      * Job
      */
@@ -132,9 +132,9 @@ public class RelocateNodeJob extends Job {
         this.oldRightAnchor  = rightAnchorMeta.getValue(fxomInstance);
         this.oldTopAnchor    = topAnchorMeta.getValue(fxomInstance);
         this.oldBottomAnchor = bottomAnchorMeta.getValue(fxomInstance);
-        
+
         updateNewAnchors();
-        
+
         redo();
     }
 
@@ -178,12 +178,12 @@ public class RelocateNodeJob extends Job {
     public String getDescription() {
         return getClass().getSimpleName(); // Not expected to reach the user
     }
-    
-    
+
+
     /*
      * Private
      */
-    
+
     private void updateNewAnchors() {
         if ((this.oldLeftAnchor == null) && (this.oldRightAnchor == null)) {
             this.newLeftAnchor = null;

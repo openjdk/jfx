@@ -117,7 +117,7 @@ public:
     virtual bool handleEvent(SQLTransaction*, SQLError* error) override
     {
         reportTransactionFailed(m_requestCallback.get(), error);
-        return true;  
+        return true;
     }
 
 private:

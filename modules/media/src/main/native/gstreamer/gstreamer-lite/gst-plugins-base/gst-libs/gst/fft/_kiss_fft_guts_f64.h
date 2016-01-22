@@ -34,7 +34,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
       ((offset + (STRUCT_ALIGNMENT - 1)) & -STRUCT_ALIGNMENT)
 
 #define MAXFACTORS 32
-/* e.g. an fft of length 128 has 4 factors 
+/* e.g. an fft of length 128 has 4 factors
  as far as kissfft is concerned
  4*4*4*2
  */
@@ -71,28 +71,28 @@ struct kiss_fft_f64_state{
 
 #define  C_ADD( res, a,b)\
     do { \
-	    CHECK_OVERFLOW_OP((a).r,+,(b).r)\
-	    CHECK_OVERFLOW_OP((a).i,+,(b).i)\
-	    (res).r=(a).r+(b).r;  (res).i=(a).i+(b).i; \
+        CHECK_OVERFLOW_OP((a).r,+,(b).r)\
+        CHECK_OVERFLOW_OP((a).i,+,(b).i)\
+        (res).r=(a).r+(b).r;  (res).i=(a).i+(b).i; \
     }while(0)
 #define  C_SUB( res, a,b)\
     do { \
-	    CHECK_OVERFLOW_OP((a).r,-,(b).r)\
-	    CHECK_OVERFLOW_OP((a).i,-,(b).i)\
-	    (res).r=(a).r-(b).r;  (res).i=(a).i-(b).i; \
+        CHECK_OVERFLOW_OP((a).r,-,(b).r)\
+        CHECK_OVERFLOW_OP((a).i,-,(b).i)\
+        (res).r=(a).r-(b).r;  (res).i=(a).i-(b).i; \
     }while(0)
 #define C_ADDTO( res , a)\
     do { \
-	    CHECK_OVERFLOW_OP((res).r,+,(a).r)\
-	    CHECK_OVERFLOW_OP((res).i,+,(a).i)\
-	    (res).r += (a).r;  (res).i += (a).i;\
+        CHECK_OVERFLOW_OP((res).r,+,(a).r)\
+        CHECK_OVERFLOW_OP((res).i,+,(a).i)\
+        (res).r += (a).r;  (res).i += (a).i;\
     }while(0)
 
 #define C_SUBFROM( res , a)\
     do {\
-	    CHECK_OVERFLOW_OP((res).r,-,(a).r)\
-	    CHECK_OVERFLOW_OP((res).i,-,(a).i)\
-	    (res).r -= (a).r;  (res).i -= (a).i; \
+        CHECK_OVERFLOW_OP((res).r,-,(a).r)\
+        CHECK_OVERFLOW_OP((res).i,-,(a).i)\
+        (res).r -= (a).r;  (res).i -= (a).i; \
     }while(0)
 
 
@@ -101,10 +101,10 @@ struct kiss_fft_f64_state{
 #define HALF_OF(x) ((x)*.5)
 
 #define  kf_cexp(x,phase) \
-	do{ \
-		(x)->r = KISS_FFT_F64_COS(phase);\
-		(x)->i = KISS_FFT_F64_SIN(phase);\
-	}while(0)
+    do{ \
+        (x)->r = KISS_FFT_F64_COS(phase);\
+        (x)->i = KISS_FFT_F64_SIN(phase);\
+    }while(0)
 
 
 /* a debugging function */

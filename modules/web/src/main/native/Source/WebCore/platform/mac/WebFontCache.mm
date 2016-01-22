@@ -7,13 +7,13 @@
  * are met:
  *
  * 1.  Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer. 
+ *     notice, this list of conditions and the following disclaimer.
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
- *     documentation and/or other materials provided with the distribution. 
+ *     documentation and/or other materials provided with the distribution.
  * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
- *     from this software without specific prior written permission. 
+ *     from this software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY APPLE AND ITS CONTRIBUTORS "AS IS" AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
@@ -142,7 +142,7 @@ static inline FontTraitsMask toTraitsMask(NSFontTraitMask appKitTraits, NSIntege
         return;
     }
 
-    NSArray *fonts = [fontManager availableMembersOfFontFamily:availableFamily];    
+    NSArray *fonts = [fontManager availableMembersOfFontFamily:availableFamily];
     unsigned n = [fonts count];
     unsigned i;
     for (i = 0; i < n; i++) {
@@ -187,7 +187,7 @@ static inline FontTraitsMask toTraitsMask(NSFontTraitMask appKitTraits, NSIntege
             if ([desiredFamily caseInsensitiveCompare:availableFont] == NSOrderedSame) {
                 nameMatchedFont = [NSFont fontWithName:availableFont size:size];
 
-                // Special case Osaka-Mono.  According to <rdar://problem/3999467>, we need to 
+                // Special case Osaka-Mono.  According to <rdar://problem/3999467>, we need to
                 // treat Osaka-Mono as fixed pitch.
                 if ([desiredFamily caseInsensitiveCompare:@"Osaka-Mono"] == NSOrderedSame && desiredTraitsForNameMatch == 0)
                     return nameMatchedFont;
@@ -208,7 +208,7 @@ static inline FontTraitsMask toTraitsMask(NSFontTraitMask appKitTraits, NSIntege
     NSFontTraitMask chosenTraits = 0;
     NSString *chosenFullName = 0;
 
-    NSArray *fonts = [fontManager availableMembersOfFontFamily:availableFamily];    
+    NSArray *fonts = [fontManager availableMembersOfFontFamily:availableFamily];
     unsigned n = [fonts count];
     unsigned i;
     for (i = 0; i < n; i++) {
@@ -253,9 +253,9 @@ static inline FontTraitsMask toTraitsMask(NSFontTraitMask appKitTraits, NSIntege
     bool syntheticOblique = (desiredTraits & NSFontItalicTrait) && !(actualTraits & NSFontItalicTrait);
 
     // There are some malformed fonts that will be correctly returned by -fontWithFamily:traits:weight:size: as a match for a particular trait,
-    // though -[NSFontManager traitsOfFont:] incorrectly claims the font does not have the specified trait. This could result in applying 
+    // though -[NSFontManager traitsOfFont:] incorrectly claims the font does not have the specified trait. This could result in applying
     // synthetic bold on top of an already-bold font, as reported in <http://bugs.webkit.org/show_bug.cgi?id=6146>. To work around this
-    // problem, if we got an apparent exact match, but the requested traits aren't present in the matched font, we'll try to get a font from 
+    // problem, if we got an apparent exact match, but the requested traits aren't present in the matched font, we'll try to get a font from
     // the same family without those traits (to apply the synthetic traits to later).
     NSFontTraitMask nonSyntheticTraits = desiredTraits;
 

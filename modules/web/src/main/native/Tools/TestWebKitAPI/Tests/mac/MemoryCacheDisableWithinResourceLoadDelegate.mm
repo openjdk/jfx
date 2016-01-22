@@ -82,7 +82,7 @@ TEST(WebKit1, MemoryCacheDisableWithinResourceLoadDelegate)
     [[webView.get() mainFrame] loadRequest:[NSURLRequest requestWithURL:[[NSBundle mainBundle] URLForResource:@"MemoryCacheDisableWithinResourceLoadDelegate" withExtension:@"html" subdirectory:@"TestWebKitAPI.resources"]]];
 
     Util::run(&didFinishLoad);
-    
+
     [pool drain];
     // If we finished without crashing, the test passed.
 }

@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -44,12 +44,12 @@ Dominators::~Dominators()
 void Dominators::compute(Graph& graph)
 {
     // This implements a naive dominator solver.
-    
+
     ASSERT(graph.block(0)->predecessors.isEmpty());
-    
+
     unsigned numBlocks = graph.numBlocks();
-    
-    // Allocate storage for the dense dominance matrix. 
+
+    // Allocate storage for the dense dominance matrix.
     if (numBlocks > m_results.size()) {
         m_results.grow(numBlocks);
         for (unsigned i = numBlocks; i--;)
@@ -68,7 +68,7 @@ void Dominators::compute(Graph& graph)
             continue;
         m_scratch.set(i);
     }
-    
+
     // Mark all nodes as dominated by everything.
     for (unsigned i = numBlocks; i-- > 1;) {
         if (!graph.block(i) || graph.block(i)->predecessors.isEmpty())

@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef StructureInlines_h
@@ -98,7 +98,7 @@ inline PropertyOffset Structure::get(VM& vm, const WTF::String& name)
     PropertyMapEntry* entry = propertyTable()->findWithString(name.impl()).first;
     return entry ? entry->offset : invalidOffset;
 }
-    
+
 inline PropertyOffset Structure::getConcurrently(VM& vm, StringImpl* uid)
 {
     unsigned attributesIgnored;
@@ -111,10 +111,10 @@ inline bool Structure::hasIndexingHeader(const JSCell* cell) const
 {
     if (hasIndexedProperties(indexingType()))
         return true;
-    
+
     if (!isTypedView(m_classInfo->typedArrayStorageType))
         return false;
-    
+
     return jsCast<const JSArrayBufferView*>(cell)->mode() == WastefulTypedArray;
 }
 
@@ -238,7 +238,7 @@ ALWAYS_INLINE bool Structure::checkOffsetConsistency() const
     // get around this by grabbing a lock here, but I think that would be overkill.
     if (isCompilationThread())
         return true;
-    
+
     RELEASE_ASSERT(numberOfSlotsForLastOffset(m_offset, m_inlineCapacity) == propertyTable->propertyStorageSize());
     unsigned totalSize = propertyTable->propertyStorageSize();
     RELEASE_ASSERT((totalSize < inlineCapacity() ? 0 : totalSize - inlineCapacity()) == numberOfOutOfLineSlotsForLastOffset(m_offset));

@@ -64,7 +64,7 @@ public class ColorPickerApp extends Application {
         coloredText.setTextFill(c);
         coloredButton.setStyle(createRGBString(c));
 
-        colorPicker.setOnAction(new EventHandler() {            
+        colorPicker.setOnAction(new EventHandler() {
             @Override public void handle(Event t) {
                 Color newColor = colorPicker.getValue();
                 coloredText.setTextFill(newColor);
@@ -76,7 +76,7 @@ public class ColorPickerApp extends Application {
         outerVBox.setAlignment(Pos.CENTER);
         outerVBox.setSpacing(20);
         outerVBox.setMaxSize(VBox.USE_PREF_SIZE, VBox.USE_PREF_SIZE);
-        
+
         return outerVBox;
     }
 

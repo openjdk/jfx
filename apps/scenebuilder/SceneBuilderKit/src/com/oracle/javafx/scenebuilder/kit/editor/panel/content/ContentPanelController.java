@@ -126,11 +126,11 @@ import javafx.scene.SubScene;
 
 /**
  * This class creates and controls the <b>Content Panel</b> of Scene Builder Kit.
- * 
+ *
  */
-public class ContentPanelController extends AbstractFxmlPanelController 
+public class ContentPanelController extends AbstractFxmlPanelController
                                     implements FXOMDocument.SceneGraphHolder {
-    
+
     @FXML private ScrollPane scrollPane;
     @FXML private Pane workspacePane;
     @FXML private Rectangle extensionRect;
@@ -143,48 +143,48 @@ public class ContentPanelController extends AbstractFxmlPanelController
     @FXML private Group pringLayer;
     @FXML private Group handleLayer;
     @FXML private Group rudderLayer;
-    
+
     private boolean guidesVisible = true;
     private Paint pringColor = Color.rgb(238, 168, 47);
     private Paint guidesColor = Color.RED;
-    
+
     private final WorkspaceController workspaceController
             = new WorkspaceController();
     private final HudWindowController hudWindowController
             = new HudWindowController();
-    
+
     private final EditModeController editModeController;
     private final PickModeController pickModeController;
     private AbstractModeController currentModeController;
-    
+
     private boolean tracingEvents; // For debugging purpose
-    
+
     private final Picker picker = new Picker();
     private final List<NodeOutline> outlines = new ArrayList<>();
-    
+
     /*
      * Public
      */
-    
+
     /**
      * Creates a content panel controller for the specified editor controller.
-     * 
+     *
      * @param editorController the editor controller (never null).
      */
     public ContentPanelController(EditorController editorController) {
         super(ContentPanelController.class.getResource("ContentPanel.fxml"), I18N.getBundle(), editorController); //NOI18N
         this.editModeController = new EditModeController(this);
         this.pickModeController = new PickModeController(this);
-        
+
         editorController.getDragController().dragSourceProperty().addListener((ChangeListener<AbstractDragSource>) (ov, t, t1) -> dragSourceDidChange()
         );
-        
+
         editorController.getDragController().dropTargetProperty().addListener((ChangeListener<AbstractDropTarget>) (ov, t, t1) -> dropTargetDidChange()
         );
-        
+
         editorController.themeProperty().addListener((ChangeListener<Theme>) (ov, t, t1) -> themeDidChange()
         );
-        
+
         editorController.sceneStyleSheetProperty().addListener((ListChangeListener<File>) change -> sceneStyleSheetsDidChange()
         );
         editorController.pickModeEnabledProperty().addListener((ChangeListener<Boolean>) (ov, t, t1) -> pickModeDidChange()
@@ -193,7 +193,7 @@ public class ContentPanelController extends AbstractFxmlPanelController
 
     /**
      * Returns true if this content panel displays outlines.
-     * 
+     *
      * @return true if this content panel displays outlines.
      */
     public boolean isOutlinesVisible() {
@@ -216,7 +216,7 @@ public class ContentPanelController extends AbstractFxmlPanelController
 
     /**
      * Returns true if this content panel displays alignment guides.
-     * 
+     *
      * @return true if this content panel displays alignment guides.
      */
     public boolean isGuidesVisible() {
@@ -225,16 +225,16 @@ public class ContentPanelController extends AbstractFxmlPanelController
 
     /**
      * Enables or disables alignment guide display in this content panel.
-     * 
+     *
      * @param guidesVisible  true if alignment guides should be visible.
      */
     public void setGuidesVisible(boolean guidesVisible) {
         this.guidesVisible = guidesVisible;
     }
-    
+
     /**
      * Returns the color used by this content panel to draw parent rings.
-     * 
+     *
      * @return the color used by this content panel to draw parent rings.
      */
     public Paint getPringColor() {
@@ -243,7 +243,7 @@ public class ContentPanelController extends AbstractFxmlPanelController
 
     /**
      * Sets the color used by this content panel to draw parent rings.
-     * 
+     *
      * @param pringColor the color used by this content panel to draw parent rings.
      */
     public void setPringColor(Paint pringColor) {
@@ -252,7 +252,7 @@ public class ContentPanelController extends AbstractFxmlPanelController
 
     /**
      * Returns the color used by this content panel to draw alignment guides.
-     * 
+     *
      * @return the color used by this content panel to draw alignment guides.
      */
     public Paint getGuidesColor() {
@@ -261,35 +261,35 @@ public class ContentPanelController extends AbstractFxmlPanelController
 
     /**
      * Sets the color used by this content panel to draw alignment guides.
-     * 
+     *
      * @param guidesColor the color used by this content panel to draw alignment guides.
      */
     public void setGuidesColor(Paint guidesColor) {
         this.guidesColor = guidesColor;
     }
-    
+
     /**
      * Return the scaling factor used by this content panel.
-     * 
+     *
      * @return the scaling factor used by this content panel.
      */
     public double getScaling() {
         return workspaceController.getScaling();
     }
-    
+
     /**
      * Sets the scaling factor to be used by this content panel.
-     * 
+     *
      * @param scaling the scaling factor to be used by this content panel.
      */
     public void setScaling(double scaling) {
         this.workspaceController.setScaling(scaling);
     }
-    
-    
+
+
     /**
      * Returns true if this content panel automatically resize 3D content.
-     * 
+     *
      * @return  true if this content panel automatically resize 3D content.
      */
     public boolean isAutoResize3DContent() {
@@ -298,21 +298,21 @@ public class ContentPanelController extends AbstractFxmlPanelController
 
     /**
      * Enables or disables autoresizing of 3D content.
-     * 
+     *
      * @param autoResize3DContent  true if this content panel should autoresize 3D content.
      */
     public void setAutoResize3DContent(boolean autoResize3DContent) {
         workspaceController.setAutoResize3DContent(autoResize3DContent);
     }
-    
+
     /**
      * Returns null or the image used for tiling the background of this content panel.
-     * 
+     *
      * @return null or the image used for tiling the background of this content panel.
      */
     public Image getWorkspaceBackground() {
         final Image result;
-        
+
         final Background bg = workspacePane.getBackground();
         if (bg == null) {
             result = null;
@@ -320,13 +320,13 @@ public class ContentPanelController extends AbstractFxmlPanelController
             assert bg.getImages().size() == 1;
             result = bg.getImages().get(0).getImage();
         }
-        
+
         return result;
     }
-    
+
     /**
      * Sets the image used for tiling the background of this content panel.
-     * 
+     *
      * @param image null or the image for tiling the background of this content panel.
      */
     public void setWorkspaceBackground(Image image) {
@@ -341,17 +341,17 @@ public class ContentPanelController extends AbstractFxmlPanelController
         }
         workspacePane.setBackground(bg);
     }
-    
+
     /**
      * Returns URL of the default workspace background.
-     * 
+     *
      * @return URL of the default workspace background (never null).
      */
     public static URL getDefaultWorkspaceBackgroundURL() {
         assert ImageUtils.getUIURL("Background-Neutral-Uniform.png") != null;
         return ImageUtils.getUIURL("Background-Neutral-Uniform.png"); //NOI18N
     }
-    
+
     /**
      * Scrolls this content panel so that the selected objects are visible.
      */
@@ -386,13 +386,13 @@ public class ContentPanelController extends AbstractFxmlPanelController
         }
     }
 
-    
+
     public void reveal(FXOMObject targetFxomObject) {
         FXOMObject fxomObject = targetFxomObject;
-        
+
         while (fxomObject != null) {
             final Object sceneGraphObject = fxomObject.getSceneGraphObject();
-            
+
             if (sceneGraphObject instanceof Tab) {
                 final Tab tab = (Tab) sceneGraphObject;
                 final TabPane tabPane = tab.getTabPane();
@@ -405,15 +405,15 @@ public class ContentPanelController extends AbstractFxmlPanelController
                     accordion.setExpandedPane(titledPane);
                 }
             }
-            
+
             DesignHierarchyMask mask = new DesignHierarchyMask(fxomObject);
             fxomObject = mask.getParentFXOMObject();
         }
     }
-    
+
     /**
      * Returns the topmost FXOMObject at (sceneX, sceneY) in this content panel.
-     * 
+     *
      * @param sceneX x coordinate of a scene point
      * @param sceneY y coordinate of a scene point
      * @return null or the topmost FXOMObject located at (sceneX, sceneY)
@@ -421,12 +421,12 @@ public class ContentPanelController extends AbstractFxmlPanelController
     public FXOMObject pick(double sceneX, double sceneY) {
         return pick(sceneX, sceneY, Collections.emptySet());
     }
-    
-    
+
+
     /**
      * Returns the topmost FXOMObject at (sceneX, sceneY) but ignoring
      * objects from the exclude set.
-     * 
+     *
      * @param sceneX x coordinate of a scene point
      * @param sceneY y coordinate of a scene point
      * @param excludes null or a set of FXOMObject to be excluded from the pick.
@@ -434,11 +434,11 @@ public class ContentPanelController extends AbstractFxmlPanelController
      */
     public FXOMObject pick(double sceneX, double sceneY, Set<FXOMObject> excludes) {
         final FXOMObject result;
-        
+
         if (isContentDisplayable()) {
             final FXOMDocument fxomDocument = getEditorController().getFxomDocument();
             assert fxomDocument != null;
-            if ((fxomDocument.getFxomRoot() == null) 
+            if ((fxomDocument.getFxomRoot() == null)
                     || excludes.contains(fxomDocument.getFxomRoot())) {
                 result = null;
             } else {
@@ -448,15 +448,15 @@ public class ContentPanelController extends AbstractFxmlPanelController
         } else {
             result = null;
         }
-        
+
         return result;
     }
-    
-    
+
+
     /**
      * Returns the topmost FXOMObject at (sceneX, sceneY) but ignoring
      * objects from the exclude set and starting the search from startObject.
-     * 
+     *
      * @param startObject starting point of the search
      * @param sceneX x coordinate of a scene point
      * @param sceneY y coordinate of a scene point
@@ -464,19 +464,19 @@ public class ContentPanelController extends AbstractFxmlPanelController
      * @return null or the topmost FXOMObject located at (sceneX, sceneY)
      */
     public FXOMObject pick(
-            FXOMObject startObject, 
-            double sceneX, 
+            FXOMObject startObject,
+            double sceneX,
             double sceneY,
             Set<FXOMObject> excludes) {
-        
+
         final FXOMObject result;
-        
+
         assert isContentDisplayable();
         assert startObject != null;
         assert startObject.getSceneGraphObject() instanceof Node;
         assert excludes != null;
         assert excludes.contains(startObject) == false;
-        
+
         picker.getExcludes().clear();
         for (FXOMObject exclude : excludes) {
             if (exclude.getSceneGraphObject() instanceof Node) {
@@ -502,13 +502,13 @@ public class ContentPanelController extends AbstractFxmlPanelController
             }
             result = hitObject;
         }
-        
+
         return result;
     }
-    
+
     /**
      * Returns the FXOMObject which matches (sceneGraphNode, sceneX, sceneY).
-     * 
+     *
      * @param sceneGraphNode scene graph node
      * @param sceneX x coordinate of a scene point
      * @param sceneY y coordinate of a scene point
@@ -516,8 +516,8 @@ public class ContentPanelController extends AbstractFxmlPanelController
      */
     public FXOMObject searchWithNode(Node sceneGraphNode, double sceneX, double sceneY) {
        final FXOMObject result;
-        
-        final FXOMDocument fxomDocument 
+
+        final FXOMDocument fxomDocument
                 = getEditorController().getFxomDocument();
         final FXOMObject match
                 = fxomDocument.searchWithSceneGraphObject(sceneGraphNode);
@@ -535,7 +535,7 @@ public class ContentPanelController extends AbstractFxmlPanelController
         } else {
             result = null;
         }
-        
+
         return result;
     }
 
@@ -549,24 +549,24 @@ public class ContentPanelController extends AbstractFxmlPanelController
             setupEventTracingFilter();
         }
     }
-    
+
     public void layoutContent(boolean applyCSS) {
         workspaceController.layoutContent(applyCSS);
     }
-    
+
     public void beginInteraction() {
         workspaceController.beginInteraction();
     }
-    
+
     public void endInteraction() {
         workspaceController.endInteraction();
     }
-    
-    
+
+
     /*
      * Public which are *private*...
      */
-    
+
     /**
      * @treatAsPrivate Returns the background object of this content panel.
      * @return the background object of this content panel.
@@ -574,8 +574,8 @@ public class ContentPanelController extends AbstractFxmlPanelController
     public Pane getWorkspacePane() {
         return workspacePane;
     }
-    
-    
+
+
     /**
      * @treatAsPrivate Returns the glass layer container.
      * @return the glass layer container.
@@ -583,8 +583,8 @@ public class ContentPanelController extends AbstractFxmlPanelController
     public Pane getGlassLayer() {
         return glassLayer;
     }
-    
-    
+
+
     /**
      * @treatAsPrivate Returns the outline layer container.
      * @return the outline layer container.
@@ -592,8 +592,8 @@ public class ContentPanelController extends AbstractFxmlPanelController
     public Group getOutlineLayer() {
         return outlineLayer;
     }
-    
-    
+
+
     /**
      * @treatAsPrivate Returns the parent ring layer container.
      * @return the parent ring layer container.
@@ -601,8 +601,8 @@ public class ContentPanelController extends AbstractFxmlPanelController
     public Group getPringLayer() {
         return pringLayer;
     }
-    
-    
+
+
     /**
      * @treatAsPrivate Returns the handle layer container.
      * @return the handle layer container.
@@ -619,7 +619,7 @@ public class ContentPanelController extends AbstractFxmlPanelController
         return rudderLayer;
     }
 
-    
+
     /**
      * @treatAsPrivate Returns the sub scene holding the user scene graph.
      * @return the sub scene holding the user scene graph.
@@ -628,9 +628,9 @@ public class ContentPanelController extends AbstractFxmlPanelController
         return contentSubScene;
     }
 
-    
+
     /**
-     * Computes the transform that projects from local coordinates of a 
+     * Computes the transform that projects from local coordinates of a
      * scene graph object to the rudder layer local coordinates.
      * @param sceneGraphObject a scene graph object
      * @return transform from sceneGraphObject local coordinates to rudder local coordinates
@@ -638,23 +638,23 @@ public class ContentPanelController extends AbstractFxmlPanelController
     public Transform computeSceneGraphToRudderLayerTransform(Node sceneGraphObject) {
         assert sceneGraphObject != null;
         assert sceneGraphObject.getScene() == rudderLayer.getScene();
-        
+
         final Transform t1 = sceneGraphObject.getLocalToSceneTransform();
         final Transform t2 = contentSubScene.getLocalToSceneTransform();
         final Transform t3 = rudderLayer.getLocalToSceneTransform();
         final Transform result;
-        
+
         try {
             final Transform i3 = t3.createInverse();
             result = i3.createConcatenation(t2).createConcatenation(t1);
         } catch(NonInvertibleTransformException x) {
             throw new RuntimeException(x);
         }
-        
+
         return result;
     }
-    
-    
+
+
     /**
      * @treatAsPrivate Returns the hud window controller.
      * @return the hud window controller.
@@ -662,7 +662,7 @@ public class ContentPanelController extends AbstractFxmlPanelController
     public HudWindowController getHudWindowController() {
         return hudWindowController;
     }
-    
+
     /**
      * @treatAsPrivate Returns true if pick mode is enabled.
      * @return true if pick mode is enabled.
@@ -670,7 +670,7 @@ public class ContentPanelController extends AbstractFxmlPanelController
     public boolean isPickModeEnabled() {
         return currentModeController == pickModeController;
     }
-    
+
     /**
      * @treatAsPrivate Returns the handles associated an fxom object.
      * Returns null if the fxom object is currently not selected or
@@ -680,28 +680,28 @@ public class ContentPanelController extends AbstractFxmlPanelController
      */
     public AbstractHandles<?> lookupHandles(FXOMObject fxomObject) {
         final AbstractHandles<?> result;
-        
+
         if (currentModeController != editModeController) {
             result = null;
         } else {
             result = editModeController.lookupHandles(fxomObject);
         }
-        
+
         return result;
     }
-    
+
     /**
      * @treatAsPrivate
      * Returns true if this content panel is able to display the content ie
      * 1) fxomDocument != null
      * 2) (fxomDocument.getFxomRoot() == null) or fxomDocument.getFxomRoot().isNode()
      * 3) workspaceController.getLayoutException() == null
-     * 
+     *
      * @return true if this content panel is able to display the content
      */
     public boolean isContentDisplayable() {
         final boolean result;
-        
+
         final FXOMDocument fxomDocument = getEditorController().getFxomDocument();
         if (fxomDocument == null) {
             result = false;
@@ -711,10 +711,10 @@ public class ContentPanelController extends AbstractFxmlPanelController
             result = fxomDocument.getFxomRoot().isNode()
                     && workspaceController.getLayoutException() == null;
         }
-        
+
         return result;
     }
-    
+
     /*
      * AbstractPanelController<TreeView>
      */
@@ -734,7 +734,7 @@ public class ContentPanelController extends AbstractFxmlPanelController
             assert fxomDocument.getSceneGraphHolder() == null;
             fxomDocument.beginHoldingSceneGraph(this);
         }
-        
+
         final Exception currentLayoutException
                 = workspaceController.getLayoutException();
         workspaceController.setFxomDocument(fxomDocument);
@@ -744,7 +744,7 @@ public class ContentPanelController extends AbstractFxmlPanelController
             getEditorController().getMessageLog().logWarningMessage(
                     "log.warning.layout.failed", newLayoutException.getMessage());
         }
-        
+
         if (isOutlinesVisible()) {
             updateOutlines();
         }
@@ -793,13 +793,13 @@ public class ContentPanelController extends AbstractFxmlPanelController
     /*
      * AbstractFxmlPanelController
      */
-   
+
     /**
      * @treatAsPrivate controller did load fxml
      */
     @Override
     protected void controllerDidLoadFxml() {
-        
+
         // Sanity checks
         assert scrollPane != null;
         assert workspacePane != null;
@@ -842,51 +842,51 @@ public class ContentPanelController extends AbstractFxmlPanelController
         assert rudderLayer != null;
         assert rudderLayer.isMouseTransparent() == true;
         assert rudderLayer.isFocusTraversable() == false;
-        
+
         outlineLayer.setManaged(false);
         pringLayer.setManaged(false);
         handleLayer.setManaged(false);
         rudderLayer.setManaged(false);
-        
+
         // Remove fake content used to help design
         backgroundPane.setText(""); //NOI18N
-        
+
         // Setup our workspace controller
         workspaceController.panelControllerDidLoadFxml(
                 scrollPane,
                 scalingGroup,
                 contentSubScene,
-                contentGroup, 
-                backgroundPane, 
+                contentGroup,
+                backgroundPane,
                 extensionRect);
         themeDidChange(); // To setup initial value of WorkspaceController.themeStyleSheet
-        
+
 
         // Setup the mode controller
         pickModeDidChange();
 
         resetViewport();
         setupEventTracingFilter();
-        
+
         // Setup the context menu
         final ContextMenuController contextMenuController
                 = getEditorController().getContextMenuController();
         scrollPane.setContextMenu(contextMenuController.getContextMenu());
-        
+
         // Setup default workspace background
         setWorkspaceBackground(ImageUtils.getImage(getDefaultWorkspaceBackgroundURL()));
     }
-    
+
     /*
      * FXOMDocument.SceneGraphHolder
      */
-    
+
     /**
      * @treatAsPrivate fxom document will reconstruct the user scene graph
      */
     @Override
     public void fxomDocumentWillRefreshSceneGraph(FXOMDocument fxomDocument) {
-        // Nothing special to do 
+        // Nothing special to do
     }
 
     /**
@@ -905,16 +905,16 @@ public class ContentPanelController extends AbstractFxmlPanelController
             currentModeController.fxomDocumentDidRefreshSceneGraph();
         }
    }
-    
-    
+
+
     /*
      * Private
      */
-    
+
     private void changeModeController(AbstractModeController nextModeController) {
         assert nextModeController != currentModeController;
         assert nextModeController != null;
-        
+
         if (currentModeController != null) {
             currentModeController.willResignActive(nextModeController);
         }
@@ -922,7 +922,7 @@ public class ContentPanelController extends AbstractFxmlPanelController
         currentModeController = nextModeController;
         currentModeController.didBecomeActive(previousModeController);
     }
-    
+
     /**
      * @treatAsPrivate lookup the driver adapted to an fxom object
      * @param fxomObject an fxom object (never null)
@@ -931,7 +931,7 @@ public class ContentPanelController extends AbstractFxmlPanelController
     public AbstractDriver lookupDriver(FXOMObject fxomObject) {
         final Object sceneGraphObject = fxomObject.getSceneGraphObject();
         final AbstractDriver result;
-        
+
         if (sceneGraphObject instanceof HBox) {
             result = new HBoxDriver(this);
         } else if (sceneGraphObject instanceof VBox) {
@@ -967,18 +967,18 @@ public class ContentPanelController extends AbstractFxmlPanelController
         } else {
             result = null;
         }
-        
+
         return result;
     }
-    
-    
+
+
     private void resetViewport() {
         if (scrollPane != null) {
             scrollPane.setHvalue(0.5);
             scrollPane.setVvalue(0.5);
         }
     }
-    
+
     private void setupEventTracingFilter() {
         if (glassLayer != null) {
             if (tracingEvents) {
@@ -988,10 +988,10 @@ public class ContentPanelController extends AbstractFxmlPanelController
             }
         }
     }
-    
+
     private void traceEvent(Event e) {
         final StringBuilder sb = new StringBuilder();
-        
+
         sb.append("ContentPanelController: eventType="); //NOI18N
         sb.append(e.getEventType());
         sb.append(", target="); //NOI18N
@@ -1001,26 +1001,26 @@ public class ContentPanelController extends AbstractFxmlPanelController
             sb.append(", keyCode="); //NOI18N
             sb.append(ke.getCode());
         }
-        
+
         System.out.println(sb.toString());
     }
-    
+
     private final EventHandler<Event> eventTracingFilter
             = e -> traceEvent(e);
-    
-    
+
+
     private void dragSourceDidChange() {
         getEditorController().setPickModeEnabled(false);
     }
-    
-    
+
+
     private void dropTargetDidChange() {
         if (currentModeController != null) {
             currentModeController.dropTargetDidChange();
         }
     }
-    
-    
+
+
     private void themeDidChange() {
         if (contentGroup != null) {
             final EditorPlatform.Theme theme = getEditorController().getTheme();
@@ -1028,8 +1028,8 @@ public class ContentPanelController extends AbstractFxmlPanelController
             workspaceController.setThemeStyleSheet(themeStyleSheet);
         }
     }
-    
-    
+
+
     private void sceneStyleSheetsDidChange() {
         if (contentGroup != null) {
             final List<File> sceneStyleSheets = getEditorController().getSceneStyleSheets();
@@ -1040,7 +1040,7 @@ public class ContentPanelController extends AbstractFxmlPanelController
             workspaceController.setPreviewStyleSheets(sceneStyleSheetURLs);
         }
     }
-    
+
     private void pickModeDidChange() {
         final AbstractModeController newModeController;
         if (getEditorController().isPickModeEnabled()) {
@@ -1050,18 +1050,18 @@ public class ContentPanelController extends AbstractFxmlPanelController
         }
         changeModeController(newModeController);
     }
-    
+
     /*
      * Private (outline layer)
      */
-    
+
     private void beginShowingOutlines() {
         assert contentGroup.isVisible();
-        
+
         contentGroup.setVisible(false);
         updateOutlines();
     }
-    
+
     private void endShowingOutlines() {
         assert contentGroup.isVisible() == false;
 
@@ -1073,13 +1073,13 @@ public class ContentPanelController extends AbstractFxmlPanelController
         outlines.clear();
         contentGroup.setVisible(true);
     }
-    
+
     private void updateOutlines() {
         assert isOutlinesVisible();
-        
+
         // Collects fxom objects associated to a node in the fxom document
         final List<FXOMObject> allNodes = collectNodes();
-        
+
         for (int i = 0, count = allNodes.size(); i < count; i++) {
             assert allNodes.get(i) instanceof FXOMInstance;
             final FXOMInstance nodeInstance = (FXOMInstance) allNodes.get(i);
@@ -1096,7 +1096,7 @@ public class ContentPanelController extends AbstractFxmlPanelController
                             currentOutline.reconcile();
                             break;
                         case NEEDS_REPLACE:
-                            // currentOutline is no longer compatible with the new scene graph object 
+                            // currentOutline is no longer compatible with the new scene graph object
                             replaceOutline(i, nodeInstance);
                             break;
                     }
@@ -1110,43 +1110,43 @@ public class ContentPanelController extends AbstractFxmlPanelController
         }
         assert outlines.size() == allNodes.size();
     }
-    
+
     private void addOutline(int i, FXOMInstance nodeInstance) {
         assert outlines.size() == outlineLayer.getChildren().size();
-        
+
         final NodeOutline newOutline = new NodeOutline(this, nodeInstance);
         outlines.add(i, newOutline);
         outlineLayer.getChildren().add(i, newOutline.getRootNode());
-        
+
         assert outlines.size() == outlineLayer.getChildren().size();
         assert outlines.get(i).getRootNode() == outlineLayer.getChildren().get(i);
     }
-    
+
     private void replaceOutline(int i, FXOMInstance nodeInstance) {
         removeOutline(i);
         addOutline(i, nodeInstance);
     }
-    
-    
+
+
     private void removeOutline(int i) {
         assert outlines.size() == outlineLayer.getChildren().size();
         assert outlines.get(i).getRootNode() == outlineLayer.getChildren().get(i);
-        
+
         outlines.remove(i);
         outlineLayer.getChildren().remove(i);
-        
+
         assert outlines.size() == outlineLayer.getChildren().size();
     }
-    
+
     private List<FXOMObject> collectNodes() {
         final List<FXOMObject> result = new ArrayList<>();
-        
+
         final List<FXOMObject> candidates = new ArrayList<>();
         final FXOMDocument fxomDocument = getEditorController().getFxomDocument();
         if ((fxomDocument != null) && (fxomDocument.getFxomRoot() != null)) {
             candidates.add(fxomDocument.getFxomRoot());
-        } 
-        
+        }
+
         while (candidates.isEmpty() == false) {
             final FXOMObject candidate = candidates.get(0);
             candidates.remove(0);
@@ -1172,7 +1172,7 @@ public class ContentPanelController extends AbstractFxmlPanelController
                 }
             }
         }
-        
+
         return result;
     }
 }

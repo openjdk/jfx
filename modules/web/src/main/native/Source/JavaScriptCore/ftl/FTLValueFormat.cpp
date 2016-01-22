@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -41,7 +41,7 @@ void reboxAccordingToFormat(
         jit.or64(GPRInfo::tagTypeNumberRegister, value);
         break;
     }
-    
+
     case ValueFormatInt52: {
         jit.rshift64(AssemblyHelpers::TrustedImm32(JSValue::int52ShiftAmount), value);
         jit.moveDoubleTo64(FPRInfo::fpRegT0, scratch2);
@@ -49,25 +49,25 @@ void reboxAccordingToFormat(
         jit.move64ToDouble(scratch2, FPRInfo::fpRegT0);
         break;
     }
-    
+
     case ValueFormatStrictInt52: {
         jit.moveDoubleTo64(FPRInfo::fpRegT0, scratch2);
         jit.boxInt52(value, value, scratch1, FPRInfo::fpRegT0);
         jit.move64ToDouble(scratch2, FPRInfo::fpRegT0);
         break;
     }
-    
+
     case ValueFormatBoolean: {
         jit.zeroExtend32ToPtr(value, value);
         jit.or32(MacroAssembler::TrustedImm32(ValueFalse), value);
         break;
     }
-    
+
     case ValueFormatJSValue: {
         // Done already!
         break;
     }
-    
+
     case ValueFormatDouble: {
         jit.moveDoubleTo64(FPRInfo::fpRegT0, scratch1);
         jit.move64ToDouble(value, FPRInfo::fpRegT0);
@@ -75,7 +75,7 @@ void reboxAccordingToFormat(
         jit.move64ToDouble(scratch1, FPRInfo::fpRegT0);
         break;
     }
-    
+
     default:
         RELEASE_ASSERT_NOT_REACHED();
         break;
@@ -113,7 +113,7 @@ void printInternal(PrintStream& out, ValueFormat format)
         out.print("Double");
         return;
     }
-    
+
     RELEASE_ASSERT_NOT_REACHED();
 }
 

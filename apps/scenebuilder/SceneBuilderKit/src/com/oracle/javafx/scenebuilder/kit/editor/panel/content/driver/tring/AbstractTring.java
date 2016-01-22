@@ -38,18 +38,18 @@ import javafx.scene.paint.Paint;
 
 /**
  *
- * 
+ *
  */
 public abstract class AbstractTring<T> extends AbstractDecoration<T> {
-    
+
     public static final String TARGET_RING_CLASS = "target-ring"; //NOI18N
     public static final String TARGET_CRACK_CLASS = "target-crack"; //NOI18N
-    
+
     public AbstractTring(ContentPanelController contentPanelController,
             FXOMObject fxomObject, Class<T> sceneGraphClass) {
         super(contentPanelController, fxomObject, sceneGraphClass);
     }
-    
+
     public abstract void changeStroke(Paint stroke);
-    
+
 }

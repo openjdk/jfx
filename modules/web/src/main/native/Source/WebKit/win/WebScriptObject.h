@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef WebScriptObject_H
@@ -40,35 +40,35 @@ public:
     virtual ULONG STDMETHODCALLTYPE Release(void);
 
     // IWebScriptObject
-    virtual HRESULT STDMETHODCALLTYPE throwException( 
+    virtual HRESULT STDMETHODCALLTYPE throwException(
         /* [in] */ BSTR exceptionMessage,
         /* [retval][out] */ BOOL *result);
-    
-    virtual HRESULT STDMETHODCALLTYPE callWebScriptMethod( 
+
+    virtual HRESULT STDMETHODCALLTYPE callWebScriptMethod(
         /* [in] */ BSTR name,
         /* [size_is][in] */ const VARIANT args[  ],
         /* [in] */ int cArgs,
         /* [retval][out] */ VARIANT *result);
-    
-    virtual HRESULT STDMETHODCALLTYPE evaluateWebScript( 
+
+    virtual HRESULT STDMETHODCALLTYPE evaluateWebScript(
         /* [in] */ BSTR script,
         /* [retval][out] */ VARIANT *result);
-    
-    virtual HRESULT STDMETHODCALLTYPE removeWebScriptKey( 
+
+    virtual HRESULT STDMETHODCALLTYPE removeWebScriptKey(
         /* [in] */ BSTR name);
-    
-    virtual HRESULT STDMETHODCALLTYPE stringRepresentation( 
+
+    virtual HRESULT STDMETHODCALLTYPE stringRepresentation(
         /* [retval][out] */ BSTR* stringRepresentation);
-    
-    virtual HRESULT STDMETHODCALLTYPE webScriptValueAtIndex( 
+
+    virtual HRESULT STDMETHODCALLTYPE webScriptValueAtIndex(
         /* [in] */ unsigned int index,
         /* [retval][out] */ VARIANT *result);
-    
-    virtual HRESULT STDMETHODCALLTYPE setWebScriptValueAtIndex( 
+
+    virtual HRESULT STDMETHODCALLTYPE setWebScriptValueAtIndex(
         /* [in] */ unsigned int index,
         /* [in] */ VARIANT val);
-    
-    virtual HRESULT STDMETHODCALLTYPE setException( 
+
+    virtual HRESULT STDMETHODCALLTYPE setException(
         /* [in] */ BSTR description);
 
 protected:

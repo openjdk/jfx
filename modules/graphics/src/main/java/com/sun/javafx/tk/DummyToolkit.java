@@ -392,12 +392,12 @@ final public class DummyToolkit extends Toolkit {
 
     @Override
     public long getMultiClickTime() {
-	return 0L;
+    return 0L;
     }
 
     @Override
     public int getMultiClickMaxX() {
-	return 0;
+    return 0;
     }
 
     @Override

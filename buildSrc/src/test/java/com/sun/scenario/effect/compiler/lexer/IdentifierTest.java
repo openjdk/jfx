@@ -30,7 +30,7 @@ import org.antlr.runtime.RecognitionException;
 import org.junit.Test;
 
 public class IdentifierTest extends LexerBase {
-    
+
     @Test
     public void basic() throws Exception {
         assertRecognized("foo");

@@ -357,7 +357,7 @@ SelectorQuery* SelectorQueryCache::add(const AtomicString& selectors, Document& 
     const int maximumSelectorQueryCacheSize = 256;
     if (m_entries.size() == maximumSelectorQueryCacheSize)
         m_entries.remove(m_entries.begin());
-    
+
     return m_entries.add(selectors, std::make_unique<SelectorQuery>(selectorList)).iterator->value.get();
 }
 

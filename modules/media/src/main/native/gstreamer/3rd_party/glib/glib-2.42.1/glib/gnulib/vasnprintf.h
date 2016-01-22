@@ -36,7 +36,7 @@
 # endif
 #endif
 
-#ifdef	__cplusplus
+#ifdef  __cplusplus
 extern "C" {
 #endif
 
@@ -52,7 +52,7 @@ extern char * asnprintf (char *resultbuf, size_t *lengthp, const char *format, .
 extern char * vasnprintf (char *resultbuf, size_t *lengthp, const char *format, va_list args)
        __attribute__ ((__format__ (__printf__, 3, 0)));
 
-#ifdef	__cplusplus
+#ifdef  __cplusplus
 }
 #endif
 

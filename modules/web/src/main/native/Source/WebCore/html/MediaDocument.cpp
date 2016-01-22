@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -56,7 +56,7 @@ public:
     {
         return adoptRef(new MediaDocumentParser(document));
     }
-    
+
 private:
     MediaDocumentParser(Document& document)
         : RawDataDocumentParser(document)
@@ -70,7 +70,7 @@ private:
 
     HTMLMediaElement* m_mediaElement;
 };
-    
+
 void MediaDocumentParser::createDocumentStructure()
 {
     RefPtr<Element> rootElement = document()->createElement(htmlTag, false);
@@ -117,7 +117,7 @@ void MediaDocumentParser::appendBytes(DocumentWriter&, const char*, size_t)
     createDocumentStructure();
     finish();
 }
-    
+
 MediaDocument::MediaDocument(Frame* frame, const URL& url)
     : HTMLDocument(frame, url, MediaDocumentClass)
     , m_replaceMediaElementTimer(this, &MediaDocument::replaceMediaElementTimerFired)
@@ -142,7 +142,7 @@ static inline HTMLVideoElement* descendentVideoElement(ContainerNode& node)
         return toHTMLVideoElement(&node);
 
     RefPtr<NodeList> nodeList = node.getElementsByTagNameNS(videoTag.namespaceURI(), videoTag.localName());
-   
+
     if (nodeList.get()->length() > 0)
         return toHTMLVideoElement(nodeList.get()->item(0));
 
@@ -159,7 +159,7 @@ static inline HTMLVideoElement* ancestorVideoElement(Node* node)
 
 void MediaDocument::defaultEventHandler(Event* event)
 {
-    // Match the default Quicktime plugin behavior to allow 
+    // Match the default Quicktime plugin behavior to allow
     // clicking and double-clicking to pause and play the media.
     Node* targetNode = event->target()->toNode();
     if (!targetNode)
@@ -201,10 +201,10 @@ void MediaDocument::defaultEventHandler(Event* event)
 
 void MediaDocument::mediaElementSawUnsupportedTracks()
 {
-    // The HTMLMediaElement was told it has something that the underlying 
-    // MediaPlayer cannot handle so we should switch from <video> to <embed> 
-    // and let the plugin handle this. Don't do it immediately as this 
-    // function may be called directly from a media engine callback, and 
+    // The HTMLMediaElement was told it has something that the underlying
+    // MediaPlayer cannot handle so we should switch from <video> to <embed>
+    // and let the plugin handle this. Don't do it immediately as this
+    // function may be called directly from a media engine callback, and
     // replaceChild will destroy the element, media player, and media engine.
     m_replaceMediaElementTimer.startOneShot(0);
 }

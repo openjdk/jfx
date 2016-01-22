@@ -262,7 +262,7 @@ public abstract class Cursor {
         } else if (uName.equals(NONE.name)) {
             return NONE;
         }
-        
+
         throw new IllegalArgumentException("Invalid cursor specification");
     }
 

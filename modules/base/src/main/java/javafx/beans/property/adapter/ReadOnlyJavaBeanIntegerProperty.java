@@ -40,17 +40,17 @@ import sun.reflect.misc.MethodUtil;
 
 /**
  * A {@code ReadOnlyJavaBeanIntegerProperty} provides an adapter between a regular
- * read only Java Bean property of type {@code int} or {@code Integer} and a JavaFX 
- * {@code ReadOnlyIntegerProperty}. It cannot be created directly, but a 
+ * read only Java Bean property of type {@code int} or {@code Integer} and a JavaFX
+ * {@code ReadOnlyIntegerProperty}. It cannot be created directly, but a
  * {@link ReadOnlyJavaBeanIntegerPropertyBuilder} has to be used.
  * <p>
  * As a minimum, the Java Bean must implement a getter for the
- * property. If the getter of an instance of this class is called, the property of 
+ * property. If the getter of an instance of this class is called, the property of
  * the Java Bean is returned. If the Java Bean property is bound (i.e. it supports
- * PropertyChangeListeners), this {@code ReadOnlyJavaBeanIntegerProperty} will be 
+ * PropertyChangeListeners), this {@code ReadOnlyJavaBeanIntegerProperty} will be
  * aware of changes in the Java Bean. Otherwise it can be notified about
  * changes by calling {@link #fireValueChangedEvent()}.
- * 
+ *
  * @see javafx.beans.property.ReadOnlyIntegerProperty
  * @see ReadOnlyJavaBeanIntegerPropertyBuilder
  * @since JavaFX 2.1
@@ -71,9 +71,9 @@ public final class ReadOnlyJavaBeanIntegerProperty extends ReadOnlyIntegerProper
 
     /**
      * {@inheritDoc}
-     * 
+     *
      * @throws UndeclaredThrowableException if calling the getter of the Java Bean
-     * property throws an {@code IllegalAccessException} or an 
+     * property throws an {@code IllegalAccessException} or an
      * {@code InvocationTargetException}.
      */
     @Override

@@ -1980,7 +1980,7 @@ static GstStaticCaps multipart_caps =
 GST_STATIC_CAPS ("multipart/x-mixed-replace");
 #define MULTIPART_CAPS gst_static_caps_get(&multipart_caps)
 
-/* multipart/x-mixed replace is: 
+/* multipart/x-mixed replace is:
  *   <maybe some whitespace>--<some ascii chars>[\r]\n
  *   <more ascii chars>[\r]\nContent-type:<more ascii>[\r]\n */
 static void
@@ -2037,7 +2037,7 @@ static GstStaticCaps mpeg_sys_caps = GST_STATIC_CAPS ("video/mpeg, "
 #define IS_MPEG_PES_HEADER(data)        (IS_MPEG_HEADER (data) &&            \
                                          IS_MPEG_PES_CODE (((guint8 *)(data))[3]))
 
-#define MPEG2_MAX_PROBE_LENGTH (128 * 1024)     /* 128kB should be 64 packs of the 
+#define MPEG2_MAX_PROBE_LENGTH (128 * 1024)     /* 128kB should be 64 packs of the
                                                  * most common 2kB pack size. */
 
 #define MPEG2_MIN_SYS_HEADERS 2
@@ -2257,7 +2257,7 @@ mpeg_sys_type_find (GstTypeFind * tf, gpointer unused)
   }
 
   /* If we at least saw MIN headers, and *some* were pes headers (pack headers
-   * are optional in an mpeg system stream) then return a lower-probability 
+   * are optional in an mpeg system stream) then return a lower-probability
    * result */
   if (pes_headers > 0 && (pack_headers + pes_headers) > MPEG2_MIN_SYS_HEADERS)
     goto suggest;
@@ -2344,7 +2344,7 @@ mpeg_ts_probe_headers (GstTypeFind * tf, guint64 offset, gint packet_size)
 static void
 mpeg_ts_type_find (GstTypeFind * tf, gpointer unused)
 {
-  /* TS packet sizes to test: normal, DVHS packet size and 
+  /* TS packet sizes to test: normal, DVHS packet size and
    * FEC with 16 or 20 byte codes packet size. */
   const gint pack_sizes[] = { 188, 192, 204, 208 };
   const guint8 *data = NULL;
@@ -2373,7 +2373,7 @@ mpeg_ts_type_find (GstTypeFind * tf, gpointer unused)
         if (found >= GST_MPEGTS_TYPEFIND_MIN_HEADERS) {
           gint probability;
 
-          /* found at least 4 headers. 10 headers = MAXIMUM probability. 
+          /* found at least 4 headers. 10 headers = MAXIMUM probability.
            * Arbitrarily, I assigned 10% probability for each header we
            * found, 40% -> 100% */
           probability = MIN (10 * found, GST_TYPE_FIND_MAXIMUM);
@@ -2609,7 +2609,7 @@ h264_video_type_find (GstTypeFind * tf, gpointer unused)
 {
   DataScanCtx c = { 0, NULL, 0 };
 
-  /* Stream consists of: a series of sync codes (00 00 00 01) followed 
+  /* Stream consists of: a series of sync codes (00 00 00 01) followed
    * by NALs
    */
   gboolean seen_idr = FALSE;

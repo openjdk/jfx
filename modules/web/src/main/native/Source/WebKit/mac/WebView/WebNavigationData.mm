@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #import "WebNavigationData.h"
@@ -61,14 +61,14 @@
     if (!self)
         return nil;
     _private = [[WebNavigationDataPrivate alloc] init];
-    
+
     _private->url = [url retain];
     _private->title = [title retain];
     _private->originalRequest = [request retain];
     _private->response = [response retain];
     _private->hasSubstituteData = hasSubstituteData;
     _private->clientRedirectSource = [redirectSource retain];
-    
+
     return self;
 }
 

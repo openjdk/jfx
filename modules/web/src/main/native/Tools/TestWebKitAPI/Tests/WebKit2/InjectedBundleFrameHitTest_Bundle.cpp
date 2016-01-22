@@ -60,7 +60,7 @@ void InjectedBundleFrameHitTestTest::didCreatePage(WKBundleRef bundle, WKBundleP
 
     WKBundlePageLoaderClientV1 pageLoaderClient;
     memset(&pageLoaderClient, 0, sizeof(pageLoaderClient));
-    
+
     pageLoaderClient.base.version = 1;
     pageLoaderClient.base.clientInfo = this;
     pageLoaderClient.didFinishLoadForFrame = didFinishLoadForFrameCallback;

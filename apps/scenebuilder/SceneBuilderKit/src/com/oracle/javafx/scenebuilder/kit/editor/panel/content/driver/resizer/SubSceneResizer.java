@@ -43,7 +43,7 @@ import javafx.scene.SubScene;
 
 /**
  *
- * 
+ *
  */
 public class SubSceneResizer extends AbstractResizer<SubScene> {
 
@@ -52,7 +52,7 @@ public class SubSceneResizer extends AbstractResizer<SubScene> {
     private final PropertyName widthName = new PropertyName("width"); //NOI18N
     private final PropertyName heightName = new PropertyName("height"); //NOI18N
     private final List<PropertyName> propertyNames = new ArrayList<>();
-    
+
     public SubSceneResizer(SubScene sceneGraphObject) {
         super(sceneGraphObject);
         originalWidth   = sceneGraphObject.getWidth();
@@ -64,7 +64,7 @@ public class SubSceneResizer extends AbstractResizer<SubScene> {
     /*
      * AbstractResizer
      */
-    
+
     @Override
     public final Bounds computeBounds(double width, double height) {
         return new BoundingBox(0, 0, Math.round(width), Math.round(height));
@@ -100,7 +100,7 @@ public class SubSceneResizer extends AbstractResizer<SubScene> {
     public Object getValue(PropertyName propertyName) {
         assert propertyName != null;
         assert propertyNames.contains(propertyName);
-        
+
         final Object result;
         if (propertyName.equals(widthName)) {
             result = sceneGraphObject.getWidth();
@@ -110,7 +110,7 @@ public class SubSceneResizer extends AbstractResizer<SubScene> {
             // Emergency code
             result = null;
         }
-        
+
         return result;
     }
 

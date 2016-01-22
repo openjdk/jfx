@@ -40,7 +40,7 @@ template<bool isInteger, typename T> struct GenericHashTraitsBase;
 template<typename T> struct GenericHashTraitsBase<false, T> {
     // The emptyValueIsZero flag is used to optimize allocation of empty hash tables with zeroed memory.
     static const bool emptyValueIsZero = false;
-    
+
     // The hasIsEmptyValueFunction flag allows the hash table to automatically generate code to check
     // for the empty value when it can be done with the equality operator, but allows custom functions
     // for cases like String that need them.
@@ -222,22 +222,22 @@ template<typename T>
 struct CustomHashTraits : public GenericHashTraits<T> {
     static const bool emptyValueIsZero = false;
     static const bool hasIsEmptyValueFunction = true;
-    
+
     static void constructDeletedValue(T& slot)
     {
         new (NotNull, &slot) T(T::DeletedValue);
     }
-    
+
     static bool isDeletedValue(const T& value)
     {
         return value.isDeletedValue();
     }
-    
+
     static T emptyValue()
     {
         return T(T::EmptyValue);
     }
-    
+
     static bool isEmptyValue(const T& value)
     {
         return value.isEmptyValue();

@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -125,10 +125,10 @@ void MediaPlayerPrivateAVFoundation::setUpVideoRendering()
     if (currentMode == preferredMode && currentMode != MediaRenderingNone)
         return;
 
-    LOG(Media, "MediaPlayerPrivateAVFoundation::setUpVideoRendering(%p) - current mode = %d, preferred mode = %d", 
+    LOG(Media, "MediaPlayerPrivateAVFoundation::setUpVideoRendering(%p) - current mode = %d, preferred mode = %d",
         this, static_cast<int>(currentMode), static_cast<int>(preferredMode));
 
-    if (currentMode != MediaRenderingNone)  
+    if (currentMode != MediaRenderingNone)
         tearDownVideoRendering();
 
     switch (preferredMode) {
@@ -208,8 +208,8 @@ void MediaPlayerPrivateAVFoundation::playabilityKnown()
         return;
     }
 
-    // At this point we are supposed to load metadata. It is OK to ask the asset to load the same 
-    // information multiple times, because if it has already been loaded the completion handler 
+    // At this point we are supposed to load metadata. It is OK to ask the asset to load the same
+    // information multiple times, because if it has already been loaded the completion handler
     // will just be called synchronously.
     m_loadingMetadata = true;
     beginLoadingMetadata();
@@ -282,7 +282,7 @@ void MediaPlayerPrivateAVFoundation::seekWithTolerance(double time, double negat
 
     if (currentTrack())
         currentTrack()->beginSeeking();
-    
+
     LOG(Media, "MediaPlayerPrivateAVFoundation::seek(%p) - seeking to %f", this, time);
 
     seekToTime(time, negativeTolerance, positiveTolerance);
@@ -317,11 +317,11 @@ IntSize MediaPlayerPrivateAVFoundation::naturalSize() const
     if (!metaDataAvailable())
         return IntSize();
 
-    // In spite of the name of this method, return the natural size transformed by the 
+    // In spite of the name of this method, return the natural size transformed by the
     // initial movie scale because the spec says intrinsic size is:
     //
-    //    ... the dimensions of the resource in CSS pixels after taking into account the resource's 
-    //    dimensions, aspect ratio, clean aperture, resolution, and so forth, as defined for the 
+    //    ... the dimensions of the resource in CSS pixels after taking into account the resource's
+    //    dimensions, aspect ratio, clean aperture, resolution, and so forth, as defined for the
     //    format used by the resource
 
     return m_cachedNaturalSize;
@@ -378,7 +378,7 @@ void MediaPlayerPrivateAVFoundation::setDelayCharacteristicsChangedNotification(
         m_delayCharacteristicsChangedNotification++;
         return;
     }
-    
+
     ASSERT(m_delayCharacteristicsChangedNotification);
     m_delayCharacteristicsChangedNotification--;
     if (!m_delayCharacteristicsChangedNotification && m_characteristicsChanged)
@@ -402,7 +402,7 @@ double MediaPlayerPrivateAVFoundation::maxTimeSeekableDouble() const
         m_cachedMaxTimeSeekable = platformMaxTimeSeekable();
 
     LOG(Media, "MediaPlayerPrivateAVFoundation::maxTimeSeekable(%p) - returning %f", this, m_cachedMaxTimeSeekable);
-    return m_cachedMaxTimeSeekable;   
+    return m_cachedMaxTimeSeekable;
 }
 
 double MediaPlayerPrivateAVFoundation::minTimeSeekable() const
@@ -425,7 +425,7 @@ float MediaPlayerPrivateAVFoundation::maxTimeLoaded() const
     if (!m_cachedMaxTimeLoaded)
         m_cachedMaxTimeLoaded = platformMaxTimeLoaded();
 
-    return m_cachedMaxTimeLoaded;   
+    return m_cachedMaxTimeLoaded;
 }
 
 bool MediaPlayerPrivateAVFoundation::didLoadingProgress() const
@@ -487,7 +487,7 @@ void MediaPlayerPrivateAVFoundation::updateStates()
         // -loadValuesAsynchronouslyForKeys:completionHandler: has invoked its handler; test status of keys and determine state.
         AssetStatus assetStatus = this->assetStatus();
         ItemStatus itemStatus = playerItemStatus();
-        
+
         m_assetIsPlayable = (assetStatus == MediaPlayerAVAssetStatusPlayable);
         if (m_readyState < MediaPlayer::HaveMetadata && assetStatus > MediaPlayerAVAssetStatusLoading) {
             if (m_assetIsPlayable) {
@@ -503,12 +503,12 @@ void MediaPlayerPrivateAVFoundation::updateStates()
                         m_networkState = MediaPlayer::Idle;
                 }
             } else {
-                // FIX ME: fetch the error associated with the @"playable" key to distinguish between format 
+                // FIX ME: fetch the error associated with the @"playable" key to distinguish between format
                 // and network errors.
                 m_networkState = MediaPlayer::FormatError;
             }
         }
-        
+
         if (assetStatus >= MediaPlayerAVAssetStatusLoaded && itemStatus > MediaPlayerAVPlayerItemStatusUnknown) {
             switch (itemStatus) {
             case MediaPlayerAVPlayerItemStatusDoesNotExist:
@@ -576,8 +576,8 @@ void MediaPlayerPrivateAVFoundation::updateStates()
 #endif
 }
 
-void MediaPlayerPrivateAVFoundation::setSize(const IntSize&) 
-{ 
+void MediaPlayerPrivateAVFoundation::setSize(const IntSize&)
+{
 }
 
 void MediaPlayerPrivateAVFoundation::setVisible(bool visible)
@@ -588,7 +588,7 @@ void MediaPlayerPrivateAVFoundation::setVisible(bool visible)
     m_visible = visible;
     if (visible)
         setUpVideoRendering();
-    
+
     platformSetVisible(visible);
 }
 
@@ -675,7 +675,7 @@ void MediaPlayerPrivateAVFoundation::didEnd()
 void MediaPlayerPrivateAVFoundation::invalidateCachedDuration()
 {
     LOG(Media, "MediaPlayerPrivateAVFoundation::invalidateCachedDuration(%p)", this);
-    
+
     m_cachedDuration = MediaPlayer::invalidTime();
 
     // For some media files, reported duration is estimated and updated as media is loaded
@@ -686,7 +686,7 @@ void MediaPlayerPrivateAVFoundation::invalidateCachedDuration()
             m_player->durationChanged();
         m_reportedDuration = duration;
     }
-    
+
 }
 
 void MediaPlayerPrivateAVFoundation::repaint()
@@ -774,14 +774,14 @@ static const char* notificationName(MediaPlayerPrivateAVFoundation::Notification
 #undef DEFINE_TYPE_STRING_CASE
 }
 #endif // !LOG_DISABLED
-    
+
 
 void MediaPlayerPrivateAVFoundation::scheduleMainThreadNotification(Notification notification)
 {
     LOG(Media, "MediaPlayerPrivateAVFoundation::scheduleMainThreadNotification(%p) - notification %s", this, notificationName(notification));
     m_queueMutex.lock();
 
-    // It is important to always process the properties in the order that we are notified, 
+    // It is important to always process the properties in the order that we are notified,
     // so always go through the queue because notifications happen on different threads.
     m_queuedNotifications.append(notification);
 
@@ -808,16 +808,16 @@ void MediaPlayerPrivateAVFoundation::dispatchNotification()
     Notification notification = Notification();
     {
         MutexLocker lock(m_queueMutex);
-        
+
         if (m_queuedNotifications.isEmpty())
             return;
-        
+
         if (!m_delayCallbacks) {
             // Only dispatch one notification callback per invocation because they can cause recursion.
             notification = m_queuedNotifications.first();
             m_queuedNotifications.remove(0);
         }
-        
+
         if (!m_queuedNotifications.isEmpty() && !m_mainThreadCallPending)
             callOnMainThread(mainThreadCallback, this);
 
@@ -950,19 +950,19 @@ void MediaPlayerPrivateAVFoundation::processNewAndRemovedTextTracks(const Vector
         for (unsigned i = 0; i < m_textTracks.size(); ++i) {
             if (!removedTextTracks.contains(m_textTracks[i]))
                 continue;
-            
+
             player()->removeTextTrack(removedTextTracks[i].get());
             m_textTracks.remove(i);
         }
     }
-    
+
     for (unsigned i = 0; i < m_textTracks.size(); ++i) {
         RefPtr<InbandTextTrackPrivateAVF> track = m_textTracks[i];
-        
+
         track->setTextTrackIndex(i);
         if (track->hasBeenReported())
             continue;
-        
+
         track->setHasBeenReported(true);
         player()->addTextTrack(track.get());
     }

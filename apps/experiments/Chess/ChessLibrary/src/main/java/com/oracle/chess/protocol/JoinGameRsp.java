@@ -35,10 +35,10 @@ import java.util.List;
 public class JoinGameRsp extends GameRsp {
 
     private List<String> moves;
-    
+
     public JoinGameRsp() {
     }
-    
+
     public JoinGameRsp(String gameId) {
         super(gameId);
     }

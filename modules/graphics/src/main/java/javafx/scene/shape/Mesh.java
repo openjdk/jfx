@@ -42,7 +42,7 @@ import sun.util.logging.PlatformLogger;
  * Note that this is a conditional feature. See
  * {@link javafx.application.ConditionalFeature#SCENE3D ConditionalFeature.SCENE3D}
  * for more information.
- * 
+ *
  * @since JavaFX 8.0
  */
 public abstract class Mesh {
@@ -54,13 +54,13 @@ public abstract class Mesh {
                                                       + "ConditionalFeature.SCENE3D");
         }
     }
-    
-    // Mesh isn't a Node. It can't use the standard dirtyBits pattern that is 
+
+    // Mesh isn't a Node. It can't use the standard dirtyBits pattern that is
     // in Node
     // TODO: 3D - Material and Mesh have similar pattern. We should look into creating
     // a "NodeComponent" class if more non-Node classes are needed.
-    
-    // Material isn't a Node. It can't use the standard dirtyBits pattern that is 
+
+    // Material isn't a Node. It can't use the standard dirtyBits pattern that is
     // in Node
     private final BooleanProperty dirty = new SimpleBooleanProperty(true);
 

@@ -699,12 +699,12 @@ void DumpRenderTreeChrome::onFrameProvisionalLoad(void*, Evas_Object* frame, voi
 
     if (!topLoadingFrame && !done)
         topLoadingFrame = frame;
-  
-    if (!done && gTestRunner->stopProvisionalFrameLoads()) { 
+
+    if (!done && gTestRunner->stopProvisionalFrameLoads()) {
         const String frameName(DumpRenderTreeSupportEfl::suitableDRTFrameName(frame));
         printf("%s - stopping load in didStartProvisionalLoadForFrame callback\n", frameName.utf8().data());
         ewk_frame_stop(frame);
-    }   
+    }
 }
 
 void DumpRenderTreeChrome::onFrameProvisionalLoadFailed(void*, Evas_Object* frame, void*)
@@ -853,7 +853,7 @@ void DumpRenderTreeChrome::onDownloadRequest(void*, Evas_Object*, void* eventInf
     Ewk_Download* download = static_cast<Ewk_Download*>(eventInfo);
     ewk_view_theme_set(newView, TEST_THEME_DIR "/default.edj");
     ewk_view_uri_set(newView, download->url);
- 
+
     browser->m_extraViews.append(newView);
 }
 

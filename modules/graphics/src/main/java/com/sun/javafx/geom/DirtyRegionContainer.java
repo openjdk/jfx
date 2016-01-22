@@ -40,7 +40,7 @@ public final class DirtyRegionContainer {
 
     private RectBounds[] dirtyRegions;
     private int emptyIndex;
-    
+
     public DirtyRegionContainer(int count) {
         initDirtyRegions(count);
     }
@@ -65,7 +65,7 @@ public final class DirtyRegionContainer {
         hash = 97 * hash + this.emptyIndex;
         return hash;
     }
-    
+
     public DirtyRegionContainer deriveWithNewRegion(RectBounds region) {
         if (region == null) {
             return this;
@@ -93,14 +93,14 @@ public final class DirtyRegionContainer {
     public DirtyRegionContainer deriveWithNewContainer(DirtyRegionContainer other) {
         if (other == null ||
             other.maxSpace() == 0) {
-            
+
             return this;
         }
 
         if (other.maxSpace() > maxSpace()) {
             initDirtyRegions(other.maxSpace());
         }
-        
+
         regioncopy(other.dirtyRegions, 0, dirtyRegions, 0, other.emptyIndex);
         emptyIndex = other.emptyIndex;
         return this;
@@ -124,7 +124,7 @@ public final class DirtyRegionContainer {
     public int maxSpace() {
         return dirtyRegions.length;
     }
-    
+
     /**
      * Gets the dirty region at given index.
      * @param index the index of requested dirty region
@@ -133,14 +133,14 @@ public final class DirtyRegionContainer {
     public RectBounds getDirtyRegion(int index) {
         return dirtyRegions[index];
     }
-    
+
     public void setDirtyRegion(int index, RectBounds region) {
         dirtyRegions[index] = region;
     }
 
     /**
      * Adds new dirty region to the array.
-     * @param region the dirty region. 
+     * @param region the dirty region.
      */
     public void addDirtyRegion(final RectBounds region) {
             if (region.isEmpty())
@@ -196,7 +196,7 @@ public final class DirtyRegionContainer {
         addDirtyRegion(region);
         return region;
     }
-    
+
     /**
      * If there are empty regions in the dirty regions array.
      * @return true if there is empty region in the array; false otherwise
@@ -216,15 +216,15 @@ public final class DirtyRegionContainer {
             }
         }
     }
-    
+
     public boolean checkAndClearRegion(int index) {
         boolean removed = false;
         if (dirtyRegions[index].isEmpty()) {
             System.arraycopy(dirtyRegions, index + 1, dirtyRegions, index, emptyIndex - index - 1);
             --emptyIndex;
             removed = true;
-        }        
-        
+        }
+
         return removed;
     }
 
@@ -251,13 +251,13 @@ public final class DirtyRegionContainer {
         }
         return sb.toString();
     }
-    
+
     /***************************************************************************
      * Shared for all compressing algorithms
      ***************************************************************************/
     private int[][] heap; // heap used for compressing dirty regions
     private int heapSize;
-    private long invalidMask; 
+    private long invalidMask;
 
     private void heapCompress() {
         invalidMask = 0;
@@ -265,7 +265,7 @@ public final class DirtyRegionContainer {
         for (int i = 0; i < map.length; ++i) {
             map[i] = i;
         }
-        
+
         int[] min;
         for (int i = 0; i < dirtyRegions.length / 2; ++i) { //compress to 1/2
             min = takeMinWithMap(map);
@@ -278,7 +278,7 @@ public final class DirtyRegionContainer {
                 invalidMask |= 1 << idx1;
             }
         }
-        
+
         // move the unused regions to the end
         RectBounds tmp;
         for (int i = 0; i < emptyIndex; ++i) {
@@ -319,7 +319,7 @@ public final class DirtyRegionContainer {
             i = child;
         }
     }
-    
+
     private int[] takeMinWithMap(int[] map) {
         int[] temp = heap[0];
 
@@ -334,7 +334,7 @@ public final class DirtyRegionContainer {
             }
             temp = heap[0];
         }
-        
+
         heap[heapSize - 1] = temp;
         siftDown(0);
         heapSize--;
@@ -349,7 +349,7 @@ public final class DirtyRegionContainer {
         heapSize--;
         return temp;
     }
-        
+
     private int resolveMap(int[] map, int idx) {
         while(map[idx] != idx) idx = map[idx];
         return idx;
@@ -388,11 +388,11 @@ public final class DirtyRegionContainer {
         heapify();
         heapCompress();
     }
-    
+
     /***************************************************************************
      * Simple Monte-Carlo variant of compressing algorithm
      ***************************************************************************/
-    
+
 //    private void compress_mc() {
 //        assert dirtyRegions.length == emptyIndex; // call only when there is no space left
 //        heapSize = dirtyRegions.length;
@@ -410,7 +410,7 @@ public final class DirtyRegionContainer {
 //        heapify();
 //        heapCompress();
 //    }
-//    
+//
 //    private static long rnd = System.currentTimeMillis();
 //    // XOR Random generator by George Marsaglia http://www.jstatsoft.org/v08/i14/
 //    // The LCG algorithm of Random() has an upleasant trait that the numbers generated in

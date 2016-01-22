@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef SQLiteStatement_h
@@ -39,7 +39,7 @@ class SQLiteStatement {
 public:
     SQLiteStatement(SQLiteDatabase&, const String&);
     ~SQLiteStatement();
-    
+
     int prepare();
     int bindBlob(int index, const void* blob, int size);
     int bindBlob(int index, const String&);
@@ -54,15 +54,15 @@ public:
     int step();
     int finalize();
     int reset();
-    
+
     int prepareAndStep() { if (int error = prepare()) return error; return step(); }
-    
+
     // prepares, steps, and finalizes the query.
     // returns true if all 3 steps succeed with step() returning SQLITE_DONE
-    // returns false otherwise  
+    // returns false otherwise
     bool executeCommand();
-    
-    // prepares, steps, and finalizes.  
+
+    // prepares, steps, and finalizes.
     // returns true is step() returns SQLITE_ROW
     // returns false otherwise
     bool returnsAtLeastOneResult();
@@ -72,7 +72,7 @@ public:
     // Returns -1 on last-step failing.  Otherwise, returns number of rows
     // returned in the last step()
     int columnCount();
-    
+
     bool isColumnNull(int col);
     bool isColumnDeclaredAsBlob(int col);
     String getColumnName(int col);
@@ -91,9 +91,9 @@ public:
     bool returnDoubleResults(int col, Vector<double>&);
 
     SQLiteDatabase* database() { return &m_database; }
-    
+
     const String& query() const { return m_query; }
-    
+
 private:
     SQLiteDatabase& m_database;
     String m_query;

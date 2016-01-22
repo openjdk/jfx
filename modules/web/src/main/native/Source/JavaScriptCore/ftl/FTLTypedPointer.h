@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef FTLTypedPointer_h
@@ -42,19 +42,19 @@ public:
         , m_value(0)
     {
     }
-    
+
     TypedPointer(const AbstractHeap& heap, LValue value)
         : m_heap(&heap)
         , m_value(value)
     {
     }
-    
+
     bool operator!() const
     {
         ASSERT(!m_heap == !m_value);
         return !m_heap;
     }
-    
+
     const AbstractHeap& heap() const { return *m_heap; }
     LValue value() const { return m_value; }
 

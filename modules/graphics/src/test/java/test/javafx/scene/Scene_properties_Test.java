@@ -61,11 +61,11 @@ public final class Scene_properties_Test extends PropertiesTestBase {
 
         final TestStage testStage1 = new TestStage("STAGE_1");
         final TestStage testStage2 = new TestStage("STAGE_2");
-        
+
         final EventHandler testEventHandler =
                 event -> {
                 };
-        
+
         final Configuration windowCfg =
             new Configuration(testScene,
                               "_window", testStage1, testStage2,

@@ -78,7 +78,7 @@ int StyleRuleKeyframes::findKeyframeIndex(const String& key) const
         percentageString = ASCIILiteral("100%");
     else
         percentageString = key;
-    
+
     for (unsigned i = 0; i < m_keyframes.size(); ++i) {
         if (m_keyframes[i]->keyText() == percentageString)
             return i;
@@ -168,12 +168,12 @@ String WebKitCSSKeyframesRule::cssText() const
 }
 
 unsigned WebKitCSSKeyframesRule::length() const
-{ 
-    return m_keyframesRule->keyframes().size(); 
+{
+    return m_keyframesRule->keyframes().size();
 }
 
 WebKitCSSKeyframeRule* WebKitCSSKeyframesRule::item(unsigned index) const
-{ 
+{
     if (index >= length())
         return 0;
 
@@ -182,7 +182,7 @@ WebKitCSSKeyframeRule* WebKitCSSKeyframesRule::item(unsigned index) const
     if (!rule)
         rule = adoptRef(new WebKitCSSKeyframeRule(m_keyframesRule->keyframes()[index].get(), const_cast<WebKitCSSKeyframesRule*>(this)));
 
-    return rule.get(); 
+    return rule.get();
 }
 
 CSSRuleList* WebKitCSSKeyframesRule::cssRules()

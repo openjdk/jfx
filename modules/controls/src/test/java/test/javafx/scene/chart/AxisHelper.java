@@ -39,11 +39,11 @@ public class AxisHelper {
 
     public AxisHelper() {
     }
-    
+
     public void setAxis(Axis axis) {
         this.axis = axis;
     }
-    
+
     public Axis getDummyAxis() {
         return new Axis() {
                 @Override
@@ -76,11 +76,11 @@ public class AxisHelper {
             axis = getDummyAxis();
         }
     }
-    
+
     /*********************************************************************
      * Currently nothing                                                 *
      ********************************************************************/
-    
+
     void defaultRange() {}
     void defaultCalculateTickValues() {}
     void defaultTickMarkLabel() {}
@@ -91,6 +91,6 @@ public class AxisHelper {
     void defaultValueOnAxis() {}
     void defaultNumericValue() {}
     void defaultRealValue() {}
-   
-    
+
+
 }

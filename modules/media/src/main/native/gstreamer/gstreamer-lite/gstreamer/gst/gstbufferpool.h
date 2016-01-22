@@ -143,7 +143,7 @@ struct _GstBufferPool {
  * @release_buffer: release a buffer back in the pool. The default
  *        implementation will put the buffer back in the queue and notify any
  *        blocking acquire_buffer calls when the #GST_BUFFER_FLAG_TAG_MEMORY
- *        is not set on the buffer. If #GST_BUFFER_FLAG_TAG_MEMORY is set, the 
+ *        is not set on the buffer. If #GST_BUFFER_FLAG_TAG_MEMORY is set, the
  *        buffer will be freed with @free_buffer.
  * @free_buffer: free a buffer. The default implementation unrefs the buffer.
  * @flush_start: enter the flushing state. Since: 1.4

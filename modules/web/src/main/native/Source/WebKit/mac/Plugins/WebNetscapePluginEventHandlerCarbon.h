@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #if ENABLE(NETSCAPE_PLUGIN_API) && !defined(__LP64__)
@@ -35,7 +35,7 @@
 
 class WebNetscapePluginEventHandlerCarbon : public WebNetscapePluginEventHandler {
 public:
-    WebNetscapePluginEventHandlerCarbon(WebNetscapePluginView*); 
+    WebNetscapePluginEventHandlerCarbon(WebNetscapePluginView*);
 
     virtual void drawRect(CGContextRef, const NSRect&);
 
@@ -46,31 +46,31 @@ public:
     virtual void mouseMoved(NSEvent*);
     virtual void mouseUp(NSEvent*);
     virtual bool scrollWheel(NSEvent*);
-    
+
     virtual void keyDown(NSEvent*);
     virtual void keyUp(NSEvent*);
     virtual void flagsChanged(NSEvent*);
     virtual void syntheticKeyDownWithCommandModifier(int keyCode, char character);
 
-    virtual void windowFocusChanged(bool hasFocus);    
+    virtual void windowFocusChanged(bool hasFocus);
     virtual void focusChanged(bool hasFocus);
 
     virtual void startTimers(bool throttleTimers);
     virtual void stopTimers();
 
     virtual void* platformWindow(NSWindow*);
-    
+
 private:
     void sendNullEvent();
 
     void installKeyEventHandler();
     void removeKeyEventHandler();
-    
+
     static OSStatus TSMEventHandler(EventHandlerCallRef, EventRef, void *eventHandler);
     static void nullEventTimerFired(CFRunLoopTimerRef, void *context);
 
     bool sendEvent(EventRecord*);
-    
+
     EventHandlerRef m_keyEventHandler;
     bool m_suspendKeyUpEvents;
     RetainPtr<CFRunLoopTimerRef> m_nullEventTimer;

@@ -45,7 +45,7 @@ class DOMImplementation : public ScriptWrappable {
     WTF_MAKE_FAST_ALLOCATED;
 public:
     static PassOwnPtr<DOMImplementation> create(Document& document) { return adoptPtr(new DOMImplementation(document)); }
-    
+
     void ref() { m_document.ref(); }
     void deref() { m_document.deref(); }
     Document* document() { return &m_document; }

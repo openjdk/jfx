@@ -29,15 +29,15 @@ import java.lang.reflect.Method;
 import javafx.beans.property.ReadOnlyObjectProperty;
 
 public final class JavaBeanAccessHelper {
-    
+
     private static Method JAVA_BEAN_QUICK_ACCESSOR_CREATE_RO;
-    
+
     private static boolean initialized;
-    
+
     private JavaBeanAccessHelper() {
-        
+
     }
-    
+
     public static <T> ReadOnlyObjectProperty<T> createReadOnlyJavaBeanProperty(Object bean, String propertyName) throws NoSuchMethodException{
         init();
         if (JAVA_BEAN_QUICK_ACCESSOR_CREATE_RO == null) {
@@ -54,14 +54,14 @@ public final class JavaBeanAccessHelper {
             throw new UnsupportedOperationException("Java beans are not supported.");
         }
     }
-    
+
     private static void init() {
         if (!initialized) {
             try {
                 Class accessor = Class.forName(
                         "com.sun.javafx.property.adapter.JavaBeanQuickAccessor",
                         true, JavaBeanAccessHelper.class.getClassLoader());
-                JAVA_BEAN_QUICK_ACCESSOR_CREATE_RO = 
+                JAVA_BEAN_QUICK_ACCESSOR_CREATE_RO =
                         accessor.getDeclaredMethod("createReadOnlyJavaBeanObjectProperty",
                         Object.class, String.class);
             } catch (ClassNotFoundException ex) {
@@ -72,5 +72,5 @@ public final class JavaBeanAccessHelper {
             initialized = true;
         }
     }
-    
+
 }

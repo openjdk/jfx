@@ -75,7 +75,7 @@ void DesiredWriteBarrier::visitChildren(SlotVisitor& visitor)
         visitor.append(&barrier);
         return;
     }
-        
+
     case InlineCallFrameExecutableType: {
         InlineCallFrame* inlineCallFrame = m_which.inlineCallFrame;
         WriteBarrier<ScriptExecutable>& executable = inlineCallFrame->executable;

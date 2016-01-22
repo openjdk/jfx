@@ -50,18 +50,18 @@ import javafx.scene.input.Clipboard;
  *
  */
 public class ClipboardDecoder {
-    
+
     final Clipboard clipboard;
 
     public ClipboardDecoder(Clipboard clipboard) {
         this.clipboard = clipboard;
     }
-    
+
     public List<FXOMObject> decode(FXOMDocument targetDocument) {
         assert targetDocument != null;
-        
+
         List<FXOMObject> result = null;
-        
+
         // SB_DATA_FORMAT
         if (clipboard.hasContent(ClipboardEncoder.SB_DATA_FORMAT)) {
             final Object content = clipboard.getContent(ClipboardEncoder.SB_DATA_FORMAT);
@@ -74,9 +74,9 @@ public class ClipboardDecoder {
                 }
             }
         }
-        
+
         // FXML_DATA_FORMAT
-        if ((result == null) 
+        if ((result == null)
                 && clipboard.hasContent(ClipboardEncoder.FXML_DATA_FORMAT)) {
             final Object content = clipboard.getContent(ClipboardEncoder.FXML_DATA_FORMAT);
             if (content instanceof String) {
@@ -93,7 +93,7 @@ public class ClipboardDecoder {
                 }
             }
         }
-        
+
         // DataFormat.FILES
         if ((result == null) && clipboard.hasFiles()) {
             result = new ArrayList<>();
@@ -110,12 +110,12 @@ public class ClipboardDecoder {
                 }
             }
         }
-        
+
         // If nothing is exploitable, we return a list.
         if (result == null) {
             result = Collections.emptyList();
         }
-        
+
         return result;
     }
 }

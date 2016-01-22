@@ -211,8 +211,8 @@ public final class RadialGradient extends Paint {
      * to the focus point to which the first color is mapped
      * @param focusDistance the distance from the center of the gradient to the
      * focus point to which the first color is mapped
-     * @param centerX the X coordinate of the center point of the gradient's circle 
-     * @param centerY the Y coordinate of the center point of the gradient's circle 
+     * @param centerX the X coordinate of the center point of the gradient's circle
+     * @param centerY the Y coordinate of the center point of the gradient's circle
      * @param radius the radius of the circle defining the extents of the color gradient
      * @param proportional whether the coordinates and sizes are proportional
      * to the shape which this gradient fills
@@ -245,8 +245,8 @@ public final class RadialGradient extends Paint {
      * to the focus point to which the first color is mapped
      * @param focusDistance the distance from the center of the gradient to the
      * focus point to which the first color is mapped
-     * @param centerX the X coordinate of the center point of the gradient's circle 
-     * @param centerY the Y coordinate of the center point of the gradient's circle 
+     * @param centerX the X coordinate of the center point of the gradient's circle
+     * @param centerY the Y coordinate of the center point of the gradient's circle
      * @param radius the radius of the circle defining the extents of the color gradient
      * @param proportional whether the coordinates and sizes are proportional
      * to the shape which this gradient fills
@@ -323,7 +323,7 @@ public final class RadialGradient extends Paint {
     /**
      * Returns a hash code for this {@code RadialGradient} object.
      * @return a hash code for this {@code RadialGradient} object.
-     */ 
+     */
     @Override public int hashCode() {
         // We should be able to just call focusAngle.hashCode(),
         // see http://javafx-jira.kenai.com/browse/JFXC-4247
@@ -347,14 +347,14 @@ public final class RadialGradient extends Paint {
     /**
      * Returns a string representation of this {@code RadialGradient} object.
      * @return a string representation of this {@code RadialGradient} object.
-     */ 
+     */
     @Override public String toString() {
         final StringBuilder s = new StringBuilder("radial-gradient(focus-angle ").append(focusAngle)
                 .append("deg, focus-distance ").append(focusDistance * 100)
                 .append("% , center ").append(GradientUtils.lengthToString(centerX, proportional))
                 .append(" ").append(GradientUtils.lengthToString(centerY, proportional))
                 .append(", radius ").append(GradientUtils.lengthToString(radius, proportional))
-                .append(", ");                
+                .append(", ");
 
         switch (cycleMethod) {
             case REFLECT:
@@ -376,16 +376,16 @@ public final class RadialGradient extends Paint {
     }
 
     /**
-     * Creates a radial gradient value from a string representation. 
-     * <p>The format of the string representation is based on 
-     * JavaFX CSS specification for radial gradient which is 
+     * Creates a radial gradient value from a string representation.
+     * <p>The format of the string representation is based on
+     * JavaFX CSS specification for radial gradient which is
      * <pre>
-     * radial-gradient([focus-angle &lt;angle&gt;, ]? 
-     *                 [focus-distance &lt;percentage&gt;, ]? 
-     *                 [center &lt;point&gt;, ]? 
-     *                 radius [&lt;length&gt; | &lt;percentage&gt;], 
-     *                 [[repeat | reflect],]? 
-     *                 &lt;color-stop&gt;[, &lt;color-stop&gt;]+) 
+     * radial-gradient([focus-angle &lt;angle&gt;, ]?
+     *                 [focus-distance &lt;percentage&gt;, ]?
+     *                 [center &lt;point&gt;, ]?
+     *                 radius [&lt;length&gt; | &lt;percentage&gt;],
+     *                 [[repeat | reflect],]?
+     *                 &lt;color-stop&gt;[, &lt;color-stop&gt;]+)
      * </pre>
      * where
      * <pre>
@@ -396,10 +396,10 @@ public final class RadialGradient extends Paint {
      * <p>Currently length can be only specified in px, the specification of unit can be omited.
      * Format of color representation is the one used in {@link Color#web(String color)}.
      * The radial-gradient keyword can be omited.
-     * For additional information about the format of string representation, see the 
+     * For additional information about the format of string representation, see the
      * <a href="../doc-files/cssref.html">CSS Reference Guide</a>.
      * </p>
-     * 
+     *
      * Examples:
      * <pre><code>
      * RadialGradient g
@@ -415,7 +415,7 @@ public final class RadialGradient extends Paint {
      * @param value the string to convert
      * @throws NullPointerException if the {@code value} is {@code null}
      * @throws IllegalArgumentException if the {@code value} cannot be parsed
-     * @return a {@code RadialGradient} object holding the value represented 
+     * @return a {@code RadialGradient} object holding the value represented
      * by the string argument.
      * @since JavaFX 2.1
      */
@@ -432,13 +432,13 @@ public final class RadialGradient extends Paint {
                         + " must end with \"" + end + '"');
             }
             value = value.substring(start.length(), value.length() - end.length());
-        }        
+        }
 
         GradientUtils.Parser parser = new GradientUtils.Parser(value);
         if (parser.getSize() < 2) {
             throw new IllegalArgumentException("Invalid gradient specification");
         }
-        
+
         double angle = 0, distance = 0;
         GradientUtils.Point centerX, centerY, radius;
 
@@ -448,7 +448,7 @@ public final class RadialGradient extends Paint {
             angle = GradientUtils.Parser.parseAngle(tokens[1]);
             parser.shift();
         }
-        
+
         tokens = parser.splitCurrentToken();
         if ("focus-distance".equals(tokens[0])) {
             GradientUtils.Parser.checkNumberOfArguments(tokens, 1);
@@ -477,7 +477,7 @@ public final class RadialGradient extends Paint {
             throw new IllegalArgumentException("Invalid gradient specification: "
                     + "radius must be specified");
         }
-        
+
         CycleMethod method = CycleMethod.NO_CYCLE;
         String currentToken = parser.getCurrentToken();
         if ("repeat".equals(currentToken)) {
@@ -487,11 +487,11 @@ public final class RadialGradient extends Paint {
             method = CycleMethod.REFLECT;
             parser.shift();
         }
-        
+
         Stop[] stops = parser.parseStops(radius.proportional, radius.value);
 
         return new RadialGradient(angle, distance, centerX.value, centerY.value,
                                   radius.value, radius.proportional, method, stops);
     }
-    
+
 }

@@ -12,7 +12,7 @@
  *    copyright notice, this list of conditions and the following
  *    disclaimer in the documentation and/or other materials
  *    provided with the distribution.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDER "AS IS" AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
@@ -81,7 +81,7 @@ static inline bool inFlowThread(RenderObject* renderer, RenderNamedFlowThread* f
         return true;
     if (renderer->flowThreadState() != RenderObject::InsideInFlowThread)
         return false;
-    
+
     // An in-flow flow thread can be nested inside an out-of-flow one, so we have to recur up to check.
     return inFlowThread(currentFlowThread->containingBlock(), flowThread);
 }
@@ -214,11 +214,11 @@ void WebKitNamedFlow::dispatchRegionLayoutUpdateEvent()
 
     dispatchEvent(UIEvent::create(eventNames().webkitregionlayoutupdateEvent, false, false, m_flowManager->document()->defaultView(), 0));
 }
-    
+
 void WebKitNamedFlow::dispatchRegionOversetChangeEvent()
 {
     ASSERT(!NoEventDispatchAssertion::isEventDispatchForbidden());
-    
+
     // If the flow is in the "NULL" state the event should not be dispatched any more.
     if (flowState() == FlowStateNull)
         return;

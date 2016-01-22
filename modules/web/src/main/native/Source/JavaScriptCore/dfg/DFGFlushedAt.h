@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef DFGFlushedAt_h
@@ -41,13 +41,13 @@ public:
         : m_format(DeadFlush)
     {
     }
-    
+
     explicit FlushedAt(FlushFormat format)
         : m_format(format)
     {
         ASSERT(format == DeadFlush || format == ConflictingFlush);
     }
-    
+
     FlushedAt(FlushFormat format, VirtualRegister virtualRegister)
         : m_format(format)
         , m_virtualRegister(virtualRegister)
@@ -57,20 +57,20 @@ public:
         else
             ASSERT(virtualRegister.isValid());
     }
-    
+
     bool operator!() const { return m_format == DeadFlush; }
-    
+
     FlushFormat format() const { return m_format; }
     VirtualRegister virtualRegister() const { return m_virtualRegister; }
-    
+
     bool operator==(const FlushedAt& other) const
     {
         return m_format == other.m_format
             && m_virtualRegister == other.m_virtualRegister;
     }
-    
+
     bool operator!=(const FlushedAt& other) const { return !(*this == other); }
-    
+
     FlushedAt merge(const FlushedAt& other) const
     {
         if (!*this)
@@ -81,10 +81,10 @@ public:
             return *this;
         return FlushedAt(ConflictingFlush);
     }
-    
+
     void dump(PrintStream&) const;
     void dumpInContext(PrintStream&, DumpContext*) const;
-    
+
 private:
     FlushFormat m_format;
     VirtualRegister m_virtualRegister;

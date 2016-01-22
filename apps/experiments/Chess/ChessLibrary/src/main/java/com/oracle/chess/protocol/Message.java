@@ -66,11 +66,11 @@ public abstract class Message {
     }
 
     protected String msg;
-    
+
     protected String gameId;
 
     protected Color color;
-    
+
     private String username;
 
     private String password;

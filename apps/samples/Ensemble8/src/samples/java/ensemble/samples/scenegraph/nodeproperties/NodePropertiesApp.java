@@ -79,7 +79,7 @@ public class NodePropertiesApp extends Application {
         rectC.setY(20);
         //opacity of node can be set
         rectC.setOpacity(0.8);
-        
+
         Pane root = new Pane(rectA, rectB, rectC);
         root.setPrefSize(130, 100);
         root.setMinSize(130, 100);

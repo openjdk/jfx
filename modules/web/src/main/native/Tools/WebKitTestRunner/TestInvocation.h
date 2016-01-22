@@ -62,7 +62,7 @@ private:
 
     WKRetainPtr<WKURLRef> m_url;
     std::string m_pathOrURL;
-    
+
     bool m_dumpPixels;
     std::string m_expectedPixelHash;
 

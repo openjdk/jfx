@@ -93,9 +93,9 @@ namespace JSC {
         return static_cast<RegExpConstructor*>(asObject(value));
     }
 
-    /* 
+    /*
       To facilitate result caching, exec(), test(), match(), search(), and replace() dipatch regular
-      expression matching through the performMatch function. We use cached results to calculate, 
+      expression matching through the performMatch function. We use cached results to calculate,
       e.g., RegExp.lastMatch and RegExp.leftParen.
     */
     ALWAYS_INLINE MatchResult RegExpConstructor::performMatch(VM& vm, RegExp* regExp, JSString* string, const String& input, int startOffset, int** ovector)

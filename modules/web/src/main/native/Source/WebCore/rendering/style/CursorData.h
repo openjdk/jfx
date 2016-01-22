@@ -48,12 +48,12 @@ public:
         return !(*this == o);
     }
 
-    StyleImage* image() const { return m_image.get(); }    
-    void setImage(PassRefPtr<StyleImage> image) { m_image = image; }    
+    StyleImage* image() const { return m_image.get(); }
+    void setImage(PassRefPtr<StyleImage> image) { m_image = image; }
 
     // Hot spot in the image in logical pixels.
     const IntPoint& hotSpot() const { return m_hotSpot; }
-    
+
 private:
     RefPtr<StyleImage> m_image;
     IntPoint m_hotSpot; // for CSS3 support

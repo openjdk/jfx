@@ -42,7 +42,7 @@ public:
 
 private:
     virtual void didCreatePage(WKBundleRef, WKBundlePageRef);
-    
+
 };
 
 static InjectedBundleTest::Register<ParentFrameTest> registrar("ParentFrameTest");
@@ -58,7 +58,7 @@ static void didFinishLoadForFrame(WKBundlePageRef page, WKBundleFrameRef frame, 
         childFrame = frame;
         return;
     }
-    
+
     bool isParentFrameCheckSuccessful = childFrame ? WKBundleFrameGetParentFrame(childFrame.get()) == frame : false;
     WKBundlePostMessage(testBundle.get(), Util::toWK("DidCheckParentFrame").get(), adoptWK(WKBooleanCreate(isParentFrameCheckSuccessful)).get());
 }
@@ -66,13 +66,13 @@ static void didFinishLoadForFrame(WKBundlePageRef page, WKBundleFrameRef frame, 
 void ParentFrameTest::didCreatePage(WKBundleRef bundle, WKBundlePageRef page)
 {
     testBundle = bundle;
-    
+
     WKBundlePageLoaderClientV1 pageLoaderClient;
     memset(&pageLoaderClient, 0, sizeof(pageLoaderClient));
-    
+
     pageLoaderClient.base.version = 1;
     pageLoaderClient.didFinishLoadForFrame = didFinishLoadForFrame;
-    
+
     WKBundlePageSetPageLoaderClient(page, &pageLoaderClient.base);
 }
 

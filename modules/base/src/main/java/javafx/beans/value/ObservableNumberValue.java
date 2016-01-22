@@ -28,17 +28,17 @@ package javafx.beans.value;
 /**
  * A common interface of all sub-interfaces of {@link ObservableValue} that wrap
  * a number.
- * 
+ *
  * @param T
  *            The type of the wrapped value (a {@code Number}).
- * 
+ *
  * @see ObservableValue
  * @see ObservableDoubleValue
  * @see ObservableFloatValue
  * @see ObservableIntegerValue
  * @see ObservableLongValue
- * 
- * 
+ *
+ *
  * @since JavaFX 2.0
  */
 public interface ObservableNumberValue extends ObservableValue<Number> {
@@ -46,7 +46,7 @@ public interface ObservableNumberValue extends ObservableValue<Number> {
     /**
      * Returns the value of this {@code ObservableNumberValue} as an {@code int}
      * . If the value is not an {@code int}, a standard cast is performed.
-     * 
+     *
      * @return The value of this {@code ObservableNumberValue} as an {@code int}
      */
     int intValue();
@@ -54,7 +54,7 @@ public interface ObservableNumberValue extends ObservableValue<Number> {
     /**
      * Returns the value of this {@code ObservableNumberValue} as a {@code long}
      * . If the value is not a {@code long}, a standard cast is performed.
-     * 
+     *
      * @return The value of this {@code ObservableNumberValue} as a {@code long}
      */
     long longValue();
@@ -63,7 +63,7 @@ public interface ObservableNumberValue extends ObservableValue<Number> {
      * Returns the value of this {@code ObservableNumberValue} as a
      * {@code float}. If the value is not a {@code float}, a standard cast is
      * performed.
-     * 
+     *
      * @return The value of this {@code ObservableNumberValue} as a
      *         {@code float}
      */
@@ -73,7 +73,7 @@ public interface ObservableNumberValue extends ObservableValue<Number> {
      * Returns the value of this {@code ObservableNumberValue} as a
      * {@code double}. If the value is not a {@code double}, a standard cast is
      * performed.
-     * 
+     *
      * @return The value of this {@code ObservableNumberValue} as a
      *         {@code double}
      */

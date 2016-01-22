@@ -51,7 +51,7 @@ struct VectorDestructor<false, T>
 template<typename T>
 struct VectorDestructor<true, T>
 {
-    static void destruct(T* begin, T* end) 
+    static void destruct(T* begin, T* end)
     {
         for (T* cur = begin; cur != end; ++cur)
             cur->~T();
@@ -70,7 +70,7 @@ struct VectorInitializer<false, ignore, T>
 template<typename T>
 struct VectorInitializer<true, false, T>
 {
-    static void initialize(T* begin, T* end) 
+    static void initialize(T* begin, T* end)
     {
         for (T* cur = begin; cur != end; ++cur)
             new (NotNull, cur) T;
@@ -80,7 +80,7 @@ struct VectorInitializer<true, false, T>
 template<typename T>
 struct VectorInitializer<true, true, T>
 {
-    static void initialize(T* begin, T* end) 
+    static void initialize(T* begin, T* end)
     {
         memset(begin, 0, reinterpret_cast<char*>(end) - reinterpret_cast<char*>(begin));
     }
@@ -120,11 +120,11 @@ struct VectorMover<false, T>
 template<typename T>
 struct VectorMover<true, T>
 {
-    static void move(const T* src, const T* srcEnd, T* dst) 
+    static void move(const T* src, const T* srcEnd, T* dst)
     {
         memcpy(dst, src, reinterpret_cast<const char*>(srcEnd) - reinterpret_cast<const char*>(src));
     }
-    static void moveOverlapping(const T* src, const T* srcEnd, T* dst) 
+    static void moveOverlapping(const T* src, const T* srcEnd, T* dst)
     {
         memmove(dst, src, reinterpret_cast<const char*>(srcEnd) - reinterpret_cast<const char*>(src));
     }
@@ -167,7 +167,7 @@ struct VectorFiller;
 template<typename T>
 struct VectorFiller<false, T>
 {
-    static void uninitializedFill(T* dst, T* dstEnd, const T& val) 
+    static void uninitializedFill(T* dst, T* dstEnd, const T& val)
     {
         while (dst != dstEnd) {
             new (NotNull, dst) T(val);
@@ -179,7 +179,7 @@ struct VectorFiller<false, T>
 template<typename T>
 struct VectorFiller<true, T>
 {
-    static void uninitializedFill(T* dst, T* dstEnd, const T& val) 
+    static void uninitializedFill(T* dst, T* dstEnd, const T& val)
     {
         static_assert(sizeof(T) == 1, "Size of type T should be equal to one!");
 #if COMPILER(GCC) && defined(_FORTIFY_SOURCE)
@@ -245,7 +245,7 @@ struct VectorTypeOperations
     {
         VectorFiller<VectorTraits<T>::canFillWithMemset, T>::uninitializedFill(dst, dstEnd, val);
     }
-    
+
     static bool compare(const T* a, const T* b, size_t size)
     {
         return VectorComparer<VectorTraits<T>::canCompareWithMemcmp, T>::compare(a, b, size);
@@ -301,7 +301,7 @@ public:
     {
         if (!bufferToDeallocate)
             return;
-        
+
         if (m_buffer == bufferToDeallocate) {
             m_buffer = 0;
             m_capacity = 0;
@@ -373,13 +373,13 @@ public:
     {
         deallocateBuffer(buffer());
     }
-    
+
     void swap(VectorBuffer<T, 0>& other, size_t, size_t)
     {
         std::swap(m_buffer, other.m_buffer);
         std::swap(m_capacity, other.m_capacity);
     }
-    
+
     void restoreInlineBufferIfNeeded() { }
 
     using Base::allocateBuffer;
@@ -510,26 +510,26 @@ protected:
 private:
     using Base::m_buffer;
     using Base::m_capacity;
-    
+
     void swapInlineBuffer(VectorBuffer& other, size_t mySize, size_t otherSize)
     {
         // FIXME: We could make swap part of VectorTypeOperations
         // https://bugs.webkit.org/show_bug.cgi?id=128863
-        
+
         if (std::is_pod<T>::value)
             std::swap(m_inlineBuffer, other.m_inlineBuffer);
         else
             swapInlineBuffers(inlineBuffer(), other.inlineBuffer(), mySize, otherSize);
     }
-    
+
     static void swapInlineBuffers(T* left, T* right, size_t leftSize, size_t rightSize)
     {
         if (left == right)
             return;
-        
+
         ASSERT(leftSize <= inlineCapacity);
         ASSERT(rightSize <= inlineCapacity);
-        
+
         size_t swapBound = std::min(leftSize, rightSize);
         for (unsigned i = 0; i < swapBound; ++i)
             std::swap(left[i], right[i]);
@@ -619,7 +619,7 @@ public:
             OverflowHandler::overflowed();
         return Base::buffer()[i];
     }
-    const T& at(size_t i) const 
+    const T& at(size_t i) const
     {
         if (UNLIKELY(i >= size()))
             OverflowHandler::overflowed();
@@ -659,14 +659,14 @@ public:
     const T& first() const { return at(0); }
     T& last() { return at(size() - 1); }
     const T& last() const { return at(size() - 1); }
-    
+
     T takeLast()
     {
         T result = last();
         removeLast();
         return result;
     }
-    
+
     template<typename U> bool contains(const U&) const;
     template<typename U> size_t find(const U&) const;
     template<typename U> size_t reverseFind(const U&) const;
@@ -696,11 +696,11 @@ public:
     void remove(size_t position);
     void remove(size_t position, size_t length);
 
-    void removeLast() 
+    void removeLast()
     {
         if (UNLIKELY(isEmpty()))
             OverflowHandler::overflowed();
-        shrink(size() - 1); 
+        shrink(size() - 1);
     }
 
     void fill(const T&, size_t);
@@ -725,7 +725,7 @@ private:
     T* expandCapacity(size_t newMinCapacity, T*);
     bool tryExpandCapacity(size_t newMinCapacity);
     const T* tryExpandCapacity(size_t newMinCapacity, const T*);
-    template<typename U> U* expandCapacity(size_t newMinCapacity, U*); 
+    template<typename U> U* expandCapacity(size_t newMinCapacity, U*);
     template<typename U> void appendSlowCase(U&&);
 
     using Base::m_size;
@@ -763,7 +763,7 @@ Vector<T, inlineCapacity, OverflowHandler>& Vector<T, inlineCapacity, OverflowHa
 {
     if (&other == this)
         return *this;
-    
+
     if (size() > other.size())
         shrink(other.size());
     else if (other.size() > capacity()) {
@@ -771,7 +771,7 @@ Vector<T, inlineCapacity, OverflowHandler>& Vector<T, inlineCapacity, OverflowHa
         reserveCapacity(other.size());
         ASSERT(begin());
     }
-    
+
 // Works around an assert in VS2010. See https://connect.microsoft.com/VisualStudio/feedback/details/558044/std-copy-should-not-check-dest-when-first-last
 #if COMPILER(MSVC) && defined(_ITERATOR_DEBUG_LEVEL) && _ITERATOR_DEBUG_LEVEL
     if (!begin())
@@ -803,7 +803,7 @@ Vector<T, inlineCapacity, OverflowHandler>& Vector<T, inlineCapacity, OverflowHa
         reserveCapacity(other.size());
         ASSERT(begin());
     }
-    
+
 // Works around an assert in VS2010. See https://connect.microsoft.com/VisualStudio/feedback/details/558044/std-copy-should-not-check-dest-when-first-last
 #if COMPILER(MSVC) && defined(_ITERATOR_DEBUG_LEVEL) && _ITERATOR_DEBUG_LEVEL
     if (!begin())
@@ -870,7 +870,7 @@ void Vector<T, inlineCapacity, OverflowHandler>::fill(const T& val, size_t newSi
         reserveCapacity(newSize);
         ASSERT(begin());
     }
-    
+
     std::fill(begin(), end(), val);
     TypeOperations::uninitializedFill(end(), begin() + newSize, val);
     m_size = newSize;
@@ -940,7 +940,7 @@ inline void Vector<T, inlineCapacity, OverflowHandler>::resize(size_t size)
         if (begin())
             TypeOperations::initialize(end(), begin() + size);
     }
-    
+
     m_size = size;
 }
 
@@ -1013,7 +1013,7 @@ void Vector<T, inlineCapacity, OverflowHandler>::shrinkCapacity(size_t newCapaci
     if (newCapacity >= capacity())
         return;
 
-    if (newCapacity < size()) 
+    if (newCapacity < size())
         shrink(newCapacity);
 
     T* oldBuffer = begin();
@@ -1129,7 +1129,7 @@ void Vector<T, inlineCapacity, OverflowHandler>::insert(size_t position, const U
     VectorCopier<std::is_trivial<T>::value, U>::uninitializedCopy(data, &data[dataSize], spot);
     m_size = newSize;
 }
- 
+
 template<typename T, size_t inlineCapacity, typename OverflowHandler> template<typename U>
 inline void Vector<T, inlineCapacity, OverflowHandler>::insert(size_t position, U&& value)
 {
@@ -1170,7 +1170,7 @@ inline void Vector<T, inlineCapacity, OverflowHandler>::remove(size_t position, 
     ASSERT_WITH_SECURITY_IMPLICATION(position + length <= size());
     T* beginSpot = begin() + position;
     T* endSpot = beginSpot + length;
-    TypeOperations::destruct(beginSpot, endSpot); 
+    TypeOperations::destruct(beginSpot, endSpot);
     TypeOperations::moveOverlapping(endSpot, end(), beginSpot);
     m_size -= length;
 }

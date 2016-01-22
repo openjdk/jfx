@@ -307,7 +307,7 @@ SYMBOL_STRING(ctiMasmProbeTrampoline) ":" "\n"
     // trashing the copied values. To prevent that, we must first allocate the
     // needed stack memory by adjusting the sp before the copying.
 
-    "sub       lr, lr, #(6 * " STRINGIZE_VALUE_OF(PTR_SIZE) 
+    "sub       lr, lr, #(6 * " STRINGIZE_VALUE_OF(PTR_SIZE)
                          " + " STRINGIZE_VALUE_OF(PROBE_CPU_IP_OFFSET) ")" "\n"
 
     "mov       ip, sp" "\n"

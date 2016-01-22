@@ -56,7 +56,7 @@ public class Point3D {
     public final double getX() {
         return x;
     }
-    
+
     /**
      * The y coordinate.
      *
@@ -71,7 +71,7 @@ public class Point3D {
     public final double getY() {
         return y;
     }
-    
+
     /**
      * The z coordinate.
      *
@@ -290,7 +290,7 @@ public class Point3D {
      * as a vertex.
      * @param p1 one point
      * @param p2 other point
-     * @return angle between the vectors (this, p1) and (this, p2) measured 
+     * @return angle between the vectors (this, p1) and (this, p2) measured
      *         in degrees, {@code NaN} if the three points are not different
      *         from one another
      * @throws NullPointerException if the {@code p1} or {@code p2} is null
@@ -407,7 +407,7 @@ public class Point3D {
     /**
      * Returns a hash code for this {@code Point3D} object.
      * @return a hash code for this {@code Point3D} object.
-     */ 
+     */
     @Override public int hashCode() {
         if (hash == 0) {
             long bits = 7L;

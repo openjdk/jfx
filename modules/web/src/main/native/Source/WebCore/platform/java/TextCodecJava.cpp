@@ -26,7 +26,7 @@ static PassOwnPtr<TextCodec> newTextCodecJava(const TextEncoding& encoding, cons
 
 static JNIEnv* setUpCodec() {
     JNIEnv* env = WebCore_GetJavaEnv();
-    
+
     if (!textCodecClass) {
         textCodecClass =  JLClass(env->FindClass("com/sun/webkit/text/TextCodec"));
         ASSERT(textCodecClass);
@@ -56,7 +56,7 @@ static Vector<AliasNamePair>* buildPairs()
     CheckAndClearException(env);
     ASSERT(arr);
     jsize length = env->GetArrayLength(arr);
-    
+
     Vector<AliasNamePair>* pairs = new Vector<AliasNamePair>;
     for (int i = 0; i < length; i += 2) {
         jstring s0 = static_cast<jstring>(env->GetObjectArrayElement(arr, i));

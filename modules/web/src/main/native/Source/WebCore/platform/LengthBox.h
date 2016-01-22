@@ -58,7 +58,7 @@ struct LengthBox {
         , m_bottom(std::move(b))
     {
     }
-    
+
     LengthBox(int t, int r, int b, int l)
         : m_left(Length(l, Fixed))
         , m_right(Length(r, Fixed))

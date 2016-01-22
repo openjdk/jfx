@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef DFGDisassembler_h
@@ -46,7 +46,7 @@ class Disassembler {
     WTF_MAKE_FAST_ALLOCATED;
 public:
     Disassembler(Graph&);
-    
+
     void setStartOfCode(MacroAssembler::Label label) { m_startOfCode = label; }
     void setForBlockIndex(BlockIndex blockIndex, MacroAssembler::Label label)
     {
@@ -65,29 +65,29 @@ public:
     {
         m_endOfCode = label;
     }
-    
+
     void dump(PrintStream&, LinkBuffer&);
     void dump(LinkBuffer&);
     void reportToProfiler(Profiler::Compilation*, LinkBuffer&);
-    
+
 private:
     void dumpHeader(PrintStream&, LinkBuffer&);
-    
+
     struct DumpedOp {
         DumpedOp(CodeOrigin codeOrigin, CString text)
             : codeOrigin(codeOrigin)
             , text(text)
         {
         }
-        
+
         CodeOrigin codeOrigin;
         CString text;
     };
     void append(Vector<DumpedOp>&, StringPrintStream&, CodeOrigin&);
     Vector<DumpedOp> createDumpList(LinkBuffer&);
-    
+
     void dumpDisassembly(PrintStream&, const char* prefix, LinkBuffer&, MacroAssembler::Label& previousLabel, MacroAssembler::Label currentLabel, Node* context);
-    
+
     Graph& m_graph;
     DumpContext m_dumpContext;
     MacroAssembler::Label m_startOfCode;

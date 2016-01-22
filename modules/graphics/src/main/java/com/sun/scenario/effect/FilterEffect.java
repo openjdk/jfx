@@ -144,7 +144,7 @@ public abstract class FilterEffect<T extends RenderState> extends Effect {
      * {@link FilterContext} object may be null.
      * {@code outputClip} and {@code renderHelper} may always be null just
      * as they may be null for a given filter operation.
-     * 
+     *
      * @param fctx the context object that would be used by the Renderer
      *             if this call is preparing for a render operation, or null
      * @param transform the transform for the output of this operation
@@ -152,7 +152,7 @@ public abstract class FilterEffect<T extends RenderState> extends Effect {
      * @param renderHelper the rendering helper object that can be used to shortcut
      *                     this operation under certain conditions, or null
      * @param defaultInput the {@link Effect} to be used in place of any null inputs
-     * @return 
+     * @return
      */
     public abstract T getRenderState(FilterContext fctx,
                                      BaseTransform transform,

@@ -28,9 +28,9 @@ package javafx.beans.property;
 /**
  * This class provides a full implementation of a {@link Property} wrapping a
  * {@code int} value.
- * 
+ *
  * @see IntegerPropertyBase
- * 
+ *
  * @since JavaFX 2.0
  */
 public class SimpleIntegerProperty extends IntegerPropertyBase {
@@ -66,7 +66,7 @@ public class SimpleIntegerProperty extends IntegerPropertyBase {
 
     /**
      * The constructor of {@code IntegerProperty}
-     * 
+     *
      * @param initialValue
      *            the initial value of the wrapped value
      */
@@ -76,7 +76,7 @@ public class SimpleIntegerProperty extends IntegerPropertyBase {
 
     /**
      * The constructor of {@code IntegerProperty}
-     * 
+     *
      * @param bean
      *            the bean of this {@code IntegerProperty}
      * @param name
@@ -89,7 +89,7 @@ public class SimpleIntegerProperty extends IntegerPropertyBase {
 
     /**
      * The constructor of {@code IntegerProperty}
-     * 
+     *
      * @param bean
      *            the bean of this {@code IntegerProperty}
      * @param name

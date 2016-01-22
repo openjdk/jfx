@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -90,7 +90,7 @@ static String localizedShortDescriptionForStatusCode(int statusCode)
             default:
                 result = WEB_UI_STRING("success", "HTTP result code string");
                 break;
-        } 
+        }
     } else if (statusCode >= 300 && statusCode <= 399) {
         switch (statusCode) {
             case 300:
@@ -281,14 +281,14 @@ ULONG STDMETHODCALLTYPE WebURLResponse::Release(void)
 
 // IWebURLResponse --------------------------------------------------------------------
 
-HRESULT STDMETHODCALLTYPE WebURLResponse::expectedContentLength( 
+HRESULT STDMETHODCALLTYPE WebURLResponse::expectedContentLength(
     /* [retval][out] */ long long* result)
 {
     *result = m_response.expectedContentLength();
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE WebURLResponse::initWithURL( 
+HRESULT STDMETHODCALLTYPE WebURLResponse::initWithURL(
     /* [in] */ BSTR url,
     /* [in] */ BSTR mimeType,
     /* [in] */ int expectedContentLength,
@@ -298,7 +298,7 @@ HRESULT STDMETHODCALLTYPE WebURLResponse::initWithURL(
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE WebURLResponse::MIMEType( 
+HRESULT STDMETHODCALLTYPE WebURLResponse::MIMEType(
     /* [retval][out] */ BSTR* result)
 {
     BString mimeType(m_response.mimeType());
@@ -309,7 +309,7 @@ HRESULT STDMETHODCALLTYPE WebURLResponse::MIMEType(
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE WebURLResponse::suggestedFilename( 
+HRESULT STDMETHODCALLTYPE WebURLResponse::suggestedFilename(
     /* [retval][out] */ BSTR* result)
 {
     if (!result) {
@@ -326,7 +326,7 @@ HRESULT STDMETHODCALLTYPE WebURLResponse::suggestedFilename(
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE WebURLResponse::textEncodingName( 
+HRESULT STDMETHODCALLTYPE WebURLResponse::textEncodingName(
     /* [retval][out] */ BSTR* result)
 {
     if (!result)
@@ -340,7 +340,7 @@ HRESULT STDMETHODCALLTYPE WebURLResponse::textEncodingName(
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE WebURLResponse::URL( 
+HRESULT STDMETHODCALLTYPE WebURLResponse::URL(
     /* [retval][out] */ BSTR* result)
 {
     if (!result)
@@ -356,7 +356,7 @@ HRESULT STDMETHODCALLTYPE WebURLResponse::URL(
 
 // IWebHTTPURLResponse --------------------------------------------------------
 
-HRESULT STDMETHODCALLTYPE WebURLResponse::allHeaderFields( 
+HRESULT STDMETHODCALLTYPE WebURLResponse::allHeaderFields(
     /* [retval][out] */ IPropertyBag** headerFields)
 {
     ASSERT(m_response.isHTTP());
@@ -365,7 +365,7 @@ HRESULT STDMETHODCALLTYPE WebURLResponse::allHeaderFields(
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE WebURLResponse::localizedStringForStatusCode( 
+HRESULT STDMETHODCALLTYPE WebURLResponse::localizedStringForStatusCode(
     /* [in] */ int statusCode,
     /* [retval][out] */ BSTR* statusString)
 {
@@ -380,7 +380,7 @@ HRESULT STDMETHODCALLTYPE WebURLResponse::localizedStringForStatusCode(
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE WebURLResponse::statusCode( 
+HRESULT STDMETHODCALLTYPE WebURLResponse::statusCode(
     /* [retval][out] */ int* statusCode)
 {
     ASSERT(m_response.isHTTP());
@@ -389,7 +389,7 @@ HRESULT STDMETHODCALLTYPE WebURLResponse::statusCode(
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE WebURLResponse::isAttachment( 
+HRESULT STDMETHODCALLTYPE WebURLResponse::isAttachment(
     /* [retval][out] */ BOOL *attachment)
 {
     *attachment = m_response.isAttachment();
@@ -397,7 +397,7 @@ HRESULT STDMETHODCALLTYPE WebURLResponse::isAttachment(
 }
 
 
-HRESULT STDMETHODCALLTYPE WebURLResponse::sslPeerCertificate( 
+HRESULT STDMETHODCALLTYPE WebURLResponse::sslPeerCertificate(
     /* [retval][out] */ OLE_HANDLE* result)
 {
     if (!result)

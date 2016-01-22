@@ -506,7 +506,7 @@ Java_com_sun_javafx_font_PrismFontFactory_populateFontFileNameMap
     ret = RegQueryInfoKeyW(hkeyFonts, NULL, NULL, NULL, NULL, NULL, NULL,
                            &dwNumValues, &dwMaxValueNameLen,
                            &dwMaxValueDataLen, NULL, NULL);
-    
+
     if (ret != ERROR_SUCCESS ||
         dwMaxValueNameLen >= MAX_BUFFER ||
         dwMaxValueDataLen >= MAX_BUFFER) {
@@ -559,10 +559,10 @@ Java_com_sun_javafx_font_PrismFontFactory_regReadFontLink(JNIEnv *env, jclass ob
 
     LPWSTR lpSubKey = L"SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\FontLink\\SystemLink";
     lResult = RegOpenKeyExW (HKEY_LOCAL_MACHINE, lpSubKey, 0, KEY_READ, &hKey);
-    if (lResult != ERROR_SUCCESS) 
+    if (lResult != ERROR_SUCCESS)
     {
         return (jstring)NULL;
-    } 
+    }
 
     fontpath = (*env)->GetStringChars(env, lpFontName, (jboolean*) NULL);
 
@@ -575,15 +575,15 @@ Java_com_sun_javafx_font_PrismFontFactory_regReadFontLink(JNIEnv *env, jclass ob
             RegCloseKey (hKey);
             return (jstring)NULL;
         }
-        lResult = RegQueryValueExW(hKey, fontpath, 0, &dwType, (BYTE*)buf, 
+        lResult = RegQueryValueExW(hKey, fontpath, 0, &dwType, (BYTE*)buf,
                                    &dwBufSize);
         (*env)->ReleaseStringChars(env, lpFontName, fontpath);
         RegCloseKey (hKey);
-        
+
         if (lResult != ERROR_SUCCESS) {
             free(buf);
-            return (jstring)NULL;                       
-        }       
+            return (jstring)NULL;
+        }
     } else {
         return (jstring)NULL;
     }
@@ -665,7 +665,7 @@ Java_com_sun_javafx_font_PrismFontFactory_getEUDCFontFile(JNIEnv *env, jclass cl
         //if the fontPath includes %SystemRoot%
         LPWSTR systemRoot = _wgetenv(L"SystemRoot");
         // Subtract 12, being the length of "SystemRoot".
-        if ((systemRoot == NULL) || 
+        if ((systemRoot == NULL) ||
            (fontPathLen-12 +wcslen(systemRoot) > MAX_PATH)) {
                 return NULL;
         }
@@ -677,7 +677,7 @@ Java_com_sun_javafx_font_PrismFontFactory_getEUDCFontFile(JNIEnv *env, jclass cl
     } else if (wcscmp(fontPath, L"EUDC.TTE") == 0) {
         //else to see if it only inludes "EUDC.TTE"
         WCHAR systemRoot[MAX_PATH];
-        UINT ret = GetWindowsDirectoryW(systemRoot, MAX_PATH); 
+        UINT ret = GetWindowsDirectoryW(systemRoot, MAX_PATH);
         if ( ret != 0) {
             if (ret + 16 > MAX_PATH) {
                 return NULL;
@@ -703,7 +703,7 @@ static BOOL getSysParams(NONCLIENTMETRICSW* ncmetrics) {
     if (!(GetVersionEx((OSVERSIONINFO *)&osvi))) {
         return FALSE;
     }
-  
+
     // See JDK bug 6944516: specify correct size for ncmetrics on Windows XP
     // Microsoft recommend to subtract the size of the 'iPaddedBorderWidth'
     // field when running on XP. Yuck.

@@ -49,34 +49,34 @@ import org.junit.Ignore;
  */
 public class ButtonBaseTest {
     private ButtonBase btn;
-    
+
     @Before public void setup() {
         btn = new ButtonBaseMock();
     }
-    
+
     /*********************************************************************
      * Tests for the constructors                                        *
      ********************************************************************/
-    
+
     @Test public void defaultConstructorShouldHaveNoGraphicAndEmptyString() {
         assertNull(btn.getGraphic());
         assertEquals("", btn.getText());
     }
-    
+
     @Test public void oneArgConstructorShouldHaveNoGraphicAndSpecifiedString() {
         ButtonBase b2 = new ButtonBaseMock(null);
         assertNull(b2.getGraphic());
         assertNull(b2.getText());
-        
+
         b2 = new ButtonBaseMock("");
         assertNull(b2.getGraphic());
         assertEquals("", b2.getText());
-        
+
         b2 = new ButtonBaseMock("Hello");
         assertNull(b2.getGraphic());
         assertEquals("Hello", b2.getText());
     }
-    
+
     @Test public void twoArgConstructorShouldHaveSpecifiedGraphicAndSpecifiedString() {
         ButtonBase b2 = new ButtonBaseMock(null, null);
         assertNull(b2.getGraphic());
@@ -91,39 +91,39 @@ public class ButtonBaseTest {
     /*********************************************************************
      * Tests for the armed state                                         *
      ********************************************************************/
-    
+
     @Test public void armedIsFalseByDefault() {
         assertFalse(btn.isArmed());
     }
-    
+
     @Test public void armedCanBeSet() {
         btn.arm();
         assertTrue(btn.isArmed());
     }
-    
+
     @Test public void armedCanBeCleared() {
         btn.arm();
         btn.disarm();
         assertFalse(btn.isArmed());
     }
-    
+
     @Ignore("impl_cssSet API removed")
     @Test public void cannotSpecifyArmedViaCSS() {
 //        btn.impl_cssSet("-fx-armed", true);
         assertFalse(btn.isArmed());
     }
-    
+
     @Test public void settingArmedSetsPseudoClass() {
         btn.arm();
         assertPseudoClassExists(btn, "armed");
     }
-    
+
     @Test public void clearingArmedClearsPseudoClass() {
         btn.arm();
         btn.disarm();
         assertPseudoClassDoesNotExist(btn, "armed");
     }
-    
+
     @Test public void armedPropertyHasBeanReference() {
         assertSame(btn, btn.armedProperty().getBean());
     }

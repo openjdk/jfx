@@ -60,9 +60,9 @@ public:
     void append(CFDataRef);
 #endif
     void clear();
-    
+
     unsigned getSomeData(const char*& data, unsigned position = 0) const;
-    
+
     SharedBuffer* sharedBuffer() const;
 #if USE(FOUNDATION)
     void tryReplaceSharedBufferContents(SharedBuffer*);

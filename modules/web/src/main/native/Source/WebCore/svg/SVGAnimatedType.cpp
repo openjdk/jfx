@@ -300,7 +300,7 @@ bool SVGAnimatedType::setValueAsString(const QualifiedName& attrName, const Stri
         *m_data.string = value;
         break;
 
-    // These types don't appear in the table in SVGElement::cssPropertyToTypeMap() and thus don't need setValueAsString() support. 
+    // These types don't appear in the table in SVGElement::cssPropertyToTypeMap() and thus don't need setValueAsString() support.
     case AnimatedAngle:
     case AnimatedBoolean:
     case AnimatedEnumeration:

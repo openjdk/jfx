@@ -37,5 +37,5 @@ public class ReadOnlyMapPropertyBaseShim {
             MapChangeListener.Change change) {
         base.fireValueChangedEvent(change);
     }
-    
+
 }

@@ -52,7 +52,7 @@ public class BallsPane extends Parent{
         for (int i = 0; i < NR_OF_BALLS; i++) {
             balls.add(new Ball(i));
         }
-        
+
         getChildren().add(createBackground());
         getChildren().addAll(balls);
 

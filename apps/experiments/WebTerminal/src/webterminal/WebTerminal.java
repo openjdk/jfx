@@ -57,10 +57,10 @@ import java.util.ArrayList;
  */
 public abstract class WebTerminal extends VBox // FIXME should extend Control
       implements javafx.event.EventHandler, org.w3c.dom.events.EventListener
-                      /*implements KeyListener, ChangeListener*/ 
+                      /*implements KeyListener, ChangeListener*/
 {
     WebView webView;
-    protected WebView getWebView() { return webView; } 
+    protected WebView getWebView() { return webView; }
 
     protected WebEngine webEngine;
 
@@ -95,25 +95,25 @@ public abstract class WebTerminal extends VBox // FIXME should extend Control
     Element inputLine;
 
     public String getPendingInput() {
-	String text = null;
-	while (pendingInput != getInputLine() && text == null) {
-	    if (isSpanNode(pendingInput)) {
-		text = grabInput((Element) pendingInput);
-		if (text.length() == 0)
-		    text = null;
-	    } else if (isBreakNode(pendingInput)) {
-		text = "\n";
-	    } else if (pendingInput instanceof Text) {
-		text = ((Text) pendingInput).getData();
-		if (text.length() == 0)
-		    text = null;
-	    } else {
-		//WTDebug.println("UNEXPECTED NODE: "+WTDebug.pnode(pendingInput));
-	    }
-	    pendingInput = pendingInput.getNextSibling();
-	}
-	setOutputPosition(pendingInput);
-	return text;
+    String text = null;
+    while (pendingInput != getInputLine() && text == null) {
+        if (isSpanNode(pendingInput)) {
+        text = grabInput((Element) pendingInput);
+        if (text.length() == 0)
+            text = null;
+        } else if (isBreakNode(pendingInput)) {
+        text = "\n";
+        } else if (pendingInput instanceof Text) {
+        text = ((Text) pendingInput).getData();
+        if (text.length() == 0)
+            text = null;
+        } else {
+        //WTDebug.println("UNEXPECTED NODE: "+WTDebug.pnode(pendingInput));
+        }
+        pendingInput = pendingInput.getNextSibling();
+    }
+    setOutputPosition(pendingInput);
+    return text;
     }
 
     Document documentNode;
@@ -225,11 +225,11 @@ public abstract class WebTerminal extends VBox // FIXME should extend Control
         savedCursorLine = getCursorLine();
         savedCursorColumn = getCursorColumn();
     }
- 
+
     public void restoreCursor() {
         moveTo(savedCursorLine, savedCursorColumn);
     }
- 
+
     /** The output position (cursor).
      * Insert output before this node.
      * Usually equal to inputLine except for temporary updates.
@@ -356,11 +356,11 @@ public abstract class WebTerminal extends VBox // FIXME should extend Control
     protected void setEditable(Element element, boolean editable) {
         ((JSObject) element).setMember("contentEditable", editable);
     }
-    
+
     protected void setEditable(boolean editable) {
         setEditable(getInputLine(), editable);
     }
-    
+
     /** Add an input span as the last child of outputContainer.
      */
     public void addInputLine () {
@@ -398,7 +398,7 @@ public abstract class WebTerminal extends VBox // FIXME should extend Control
         text = text.replace((char) 160, ' ');
         int tlen = text.length();
         // See comment in addInputLine.
-        if (tlen > 0 && text.charAt(tlen-1) == (char) 0x200B) // OLD? 
+        if (tlen > 0 && text.charAt(tlen-1) == (char) 0x200B) // OLD?
             text = text.substring(0, --tlen);
         if (tlen > 0 && text.charAt(0) == (char) 0x200B) // NEW?
         { tlen--; text = text.substring(1);}
@@ -498,7 +498,7 @@ public abstract class WebTerminal extends VBox // FIXME should extend Control
                 currentCursorColumn = 0;
                 currentCursorLine = 0;
                 setFocus();
-            } else { 
+            } else {
                 outputContainer.removeChild(inputLine);
                 cursorHome.getParentNode().removeChild(cursorHome);
                 cursorHome = savedCursorHome;
@@ -794,7 +794,7 @@ public abstract class WebTerminal extends VBox // FIXME should extend Control
                 if (k >= 0)
                     keptStyles += k;
                 else
-                    break;                   
+                    break;
             }
         }
         int popCount = j+1;
@@ -1154,7 +1154,7 @@ public abstract class WebTerminal extends VBox // FIXME should extend Control
     public Text createText(String data) {
         return documentNode.createTextNode(data);
     }
-    
+
     public Element createElement(String tag) {
         return USE_XHTML ? documentNode.createElementNS(htmlNamespace, tag)
             : documentNode.createElement(tag);
@@ -1291,14 +1291,14 @@ public abstract class WebTerminal extends VBox // FIXME should extend Control
                     curColumn = currentCursorColumn;
                     break;
                 case '\b':
-                    insertSimpleOutput(str, prevEnd, i, kind, curColumn); 
+                    insertSimpleOutput(str, prevEnd, i, kind, curColumn);
                     cursorLeft(1);
                     //WTDebug.println("BACKSPACE after DOM["+getHTMLText()+"]");
-                    prevEnd = i + 1; 
+                    prevEnd = i + 1;
                     curColumn = currentCursorColumn;
                     break;
                 case '\007': // Bell
-                    insertSimpleOutput(str, prevEnd, i, kind, curColumn); 
+                    insertSimpleOutput(str, prevEnd, i, kind, curColumn);
                     //currentCursorColumn = column;
                     handleBell();
                     prevEnd = i + 1;
@@ -1489,7 +1489,7 @@ public abstract class WebTerminal extends VBox // FIXME should extend Control
     public void handle(javafx.event.ActionEvent ke) {
         //WTDebug.println("handle2 action "+ke+" INPUT:"+inputAsString());
     }
-    
+
     public boolean isApplicationMode() { return true; }
 
     private void processArrowKey(char ch) {
@@ -1738,7 +1738,7 @@ public abstract class WebTerminal extends VBox // FIXME should extend Control
             for (;;) {
                 if (parent == cursorHome || parent == bodyNode) {
                     current = null;
-                    if (true) { 
+                    if (true) {
                         if (line < goalLine) {
                             StringBuilder sb = new StringBuilder();
                             while (line++ < goalLine)

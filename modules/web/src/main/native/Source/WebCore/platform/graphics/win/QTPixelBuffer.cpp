@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "config.h"
 
@@ -37,11 +37,11 @@
 static OSStatus SetNumberValue(CFMutableDictionaryRef inDict, CFStringRef inKey, SInt32 inValue)
 {
     CFNumberRef number;
- 
+
     number = CFNumberCreate(kCFAllocatorDefault, kCFNumberSInt32Type, &inValue);
-    if (!number) 
+    if (!number)
         return coreFoundationUnknownErr;
- 
+
     CFDictionarySetValue(inDict, inKey, number);
     CFRelease(number);
 
@@ -60,8 +60,8 @@ CFDictionaryRef QTPixelBuffer::createPixelBufferAttributesDictionary(QTPixelBuff
         // Use the k32BGRAPixelFormat, as QuartzCore will be able to use the pixels directly,
         // without needing an additional copy or rendering pass.
         SetNumberValue(pixelBufferAttributes, kCVPixelBufferPixelFormatTypeKey, k32BGRAPixelFormat);
-            
-        // Set kCVPixelBufferBytesPerRowAlignmentKey to 16 to ensure that each row of pixels 
+
+        // Set kCVPixelBufferBytesPerRowAlignmentKey to 16 to ensure that each row of pixels
         // starts at a 16 byte aligned address for most efficient data reading.
         SetNumberValue(pixelBufferAttributes, kCVPixelBufferBytesPerRowAlignmentKey, 16);
         CFDictionarySetValue(pixelBufferAttributes, kCVPixelBufferCGImageCompatibilityKey, kCFBooleanTrue);
@@ -69,29 +69,29 @@ CFDictionaryRef QTPixelBuffer::createPixelBufferAttributesDictionary(QTPixelBuff
     return pixelBufferAttributes;
 }
 
-QTPixelBuffer::QTPixelBuffer() 
-    : m_pixelBuffer(0) 
+QTPixelBuffer::QTPixelBuffer()
+    : m_pixelBuffer(0)
 {
 }
 
-QTPixelBuffer::QTPixelBuffer(const QTPixelBuffer& p) 
-    : m_pixelBuffer(p.m_pixelBuffer) 
+QTPixelBuffer::QTPixelBuffer(const QTPixelBuffer& p)
+    : m_pixelBuffer(p.m_pixelBuffer)
 {
     CVPixelBufferRetain(m_pixelBuffer);
 }
 
-QTPixelBuffer::QTPixelBuffer(CVPixelBufferRef ref) 
+QTPixelBuffer::QTPixelBuffer(CVPixelBufferRef ref)
     : m_pixelBuffer(ref)
 {
     CVPixelBufferRetain(m_pixelBuffer);
 }
 
-QTPixelBuffer::~QTPixelBuffer() 
+QTPixelBuffer::~QTPixelBuffer()
 {
     clear();
 }
 
-QTPixelBuffer& QTPixelBuffer::operator=(const QTPixelBuffer& p) 
+QTPixelBuffer& QTPixelBuffer::operator=(const QTPixelBuffer& p)
 {
     set(p.m_pixelBuffer);
     return *this;

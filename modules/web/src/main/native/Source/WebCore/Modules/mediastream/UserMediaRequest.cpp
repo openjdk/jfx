@@ -108,7 +108,7 @@ SecurityOrigin* UserMediaRequest::securityOrigin() const
 
     return nullptr;
 }
-    
+
 void UserMediaRequest::start()
 {
     // 1 - make sure the system is capable of supporting the audio and video constraints. We don't want to ask for
@@ -116,7 +116,7 @@ void UserMediaRequest::start()
     MediaStreamCenter::shared().validateRequestConstraints(this, m_audioConstraints, m_videoConstraints);
 }
 
-    
+
 void UserMediaRequest::constraintsValidated()
 {
     if (m_controller)
@@ -207,7 +207,7 @@ void UserMediaRequest::callErrorHandler(PassRefPtr<NavigatorUserMediaError> prpE
     RefPtr<NavigatorUserMediaError> error = prpError;
 
     ASSERT(error);
-    
+
     m_errorCallback->handleEvent(error.get());
 }
 

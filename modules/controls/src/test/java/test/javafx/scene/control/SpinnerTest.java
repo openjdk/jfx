@@ -88,12 +88,12 @@ public class SpinnerTest {
 
         // minimum is today minus 10 days, maximum is today plus 10 days
         localDateSpinner = SpinnerShim.getSpinnerLocalDate(
-                nowPlusDays(-10), nowPlusDays(10), 
+                nowPlusDays(-10), nowPlusDays(10),
                 LocalDate.now(), 1, ChronoUnit.DAYS);
         localDateValueFactory = localDateSpinner.getValueFactory();
 
         localTimeSpinner = SpinnerShim.getSpinnerLocalTime(
-                LocalTime.MIN, LocalTime.MAX, 
+                LocalTime.MIN, LocalTime.MAX,
                 LocalTime.now(), 1, ChronoUnit.HOURS);
         localTimeValueFactory = localTimeSpinner.getValueFactory();
     }

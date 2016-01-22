@@ -271,7 +271,7 @@ bool parseHTMLNonNegativeInteger(const String& input, unsigned& value)
         const LChar* start = input.characters8();
         return parseHTMLNonNegativeIntegerInternal(start, start + length, value);
     }
-    
+
     const UChar* start = input.deprecatedCharacters();
     return parseHTMLNonNegativeIntegerInternal(start, start + length, value);
 }

@@ -66,7 +66,7 @@ public class WritableImage extends Image {
      * so the corresponding getPixelReader() and getPixelWriter() will
      * always return valid objects.
      * The dimensions must both be positive numbers <code>(&gt;&nbsp;0)</code>.
-     * 
+     *
      * @param width the desired width of the writable image
      * @param height the desired height of the desired image
      * @throws IllegalArgumentException if either dimension is negative or zero.
@@ -87,7 +87,7 @@ public class WritableImage extends Image {
      * so the corresponding getPixelReader() and getPixelWriter() will
      * always return valid objects.
      * The dimensions must both be positive numbers <code>(&gt;&nbsp;0)</code>.
-     * 
+     *
      * @param width the desired width of the writable image and the
      *        width of the region to be read from the {@code reader}
      * @param height the desired height of the desired image and the
@@ -113,7 +113,7 @@ public class WritableImage extends Image {
      * so the corresponding getPixelReader() and getPixelWriter() will
      * always return valid objects.
      * The dimensions must both be positive numbers <code>(&gt;&nbsp;0)</code>.
-     * 
+     *
      * @param x the X coordinate of the upper left corner of the region to
      *        read from the {@code reader}
      * @param y the Y coordinate of the upper left corner of the region to
@@ -147,7 +147,7 @@ public class WritableImage extends Image {
     /**
      * This method returns a {@code PixelWriter} that provides access to
      * write the pixels of the image.
-     * 
+     *
      * @return the {@code PixelWriter} for writing pixels to the image
      */
     public final PixelWriter getPixelWriter() {

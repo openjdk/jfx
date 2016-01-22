@@ -21,7 +21,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -159,7 +159,7 @@ void BitmapImage::cacheFrame(size_t index)
 {
     size_t numFrames = frameCount();
     ASSERT(m_decodedSize == 0 || numFrames > 1);
-    
+
     if (m_frames.size() < numFrames)
         m_frames.grow(numFrames);
 
@@ -333,7 +333,7 @@ bool BitmapImage::dataChanged(bool allDataReceived)
     }
     destroyMetadataAndNotify(deltaBytes);
 #endif
-    
+
     // Feed all the data we've seen so far to the image decoder.
     m_allDataReceived = allDataReceived;
 #if PLATFORM(IOS)
@@ -655,7 +655,7 @@ void BitmapImage::resetAnimation()
     m_repetitionsComplete = 0;
     m_desiredFrameStartTime = 0;
     m_animationFinished = false;
-    
+
     // For extremely large animations, when the animation is reset, we just throw everything away.
     destroyDecodedDataIfNecessary(true);
 }
@@ -708,7 +708,7 @@ bool BitmapImage::internalAdvanceAnimation(bool skippingFrames)
 {
     // Stop the animation.
     stopAnimation();
-    
+
     ++m_currentFrame;
     bool advancedAnimation = true;
     bool destroyAll = false;
@@ -756,7 +756,7 @@ Color BitmapImage::solidColor() const
 {
     return m_solidColor;
 }
-    
+
 bool BitmapImage::canAnimate()
 {
     return shouldAnimate() && frameCount() > 1;

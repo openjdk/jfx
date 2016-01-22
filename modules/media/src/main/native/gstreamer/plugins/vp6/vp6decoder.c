@@ -85,7 +85,7 @@ GType vp6decoder_get_type (void)
                sizeof (VP6DecoderClass),
                (GClassInitFunc) vp6decoder_class_intern_init,
                sizeof(VP6Decoder),
-               (GInstanceInitFunc) vp6decoder_init,               
+               (GInstanceInitFunc) vp6decoder_init,
                (GTypeFlags) 0);
         g_once_init_leave (&gonce_data, (gsize) _type);
     }
@@ -253,12 +253,12 @@ static gboolean check_vp6_decoders(VP6Decoder *filter, guint8 *probePacket, int 
             return FALSE;
         }
     }
-    else if ((stream_width > 0 && stream_width != filter->encoded_width) || 
+    else if ((stream_width > 0 && stream_width != filter->encoded_width) ||
              (stream_height > 0 && stream_height != filter->encoded_height) ||
-             vp6Algo != filter->decoder->iface || 
-             filter->alphaDecoder && ((alpha_stream_width > 0 && alpha_stream_width != filter->encoded_width) || 
+             vp6Algo != filter->decoder->iface ||
+             filter->alphaDecoder && ((alpha_stream_width > 0 && alpha_stream_width != filter->encoded_width) ||
                                       (alpha_stream_height > 0 && alpha_stream_height != filter->encoded_height) ||
-                                      vp6aAlgo != filter->alphaDecoder->iface))    
+                                      vp6aAlgo != filter->alphaDecoder->iface))
     {
         GST_ERROR("Dynamic resolution or interface are not supported!");
         return FALSE;
@@ -348,7 +348,7 @@ vp6decoder_init (VP6Decoder * filter)
 
     filter->decoder = NULL;
     filter->alphaDecoder = NULL;
-    
+
     //Segment
     gst_segment_init(&filter->segment, GST_FORMAT_TIME);
     filter->segment_event = NULL;
@@ -403,7 +403,7 @@ static GstStateChangeReturn vp6decoder_change_state (GstElement* element, GstSta
                 filter->tmp_input_buf = NULL;
                 filter->tmp_input_buf_size = 0;
             }
-            
+
             if (filter->segment_event != NULL) {
                 // INLINE - gst_event_unref()
                 gst_event_unref (filter->segment_event);
@@ -464,7 +464,7 @@ static gboolean vp6decoder_sink_event (GstPad * pad, GstObject *parent, GstEvent
         } else {
             ret = gst_pad_push_event (filter->srcpad, event);
         }
-        
+
         break;
     }
     case GST_EVENT_CAPS: {
@@ -491,7 +491,7 @@ static gboolean vp6decoder_set_caps (GstPad * pad, GstObject *parent, GstCaps * 
     VP6Decoder *filter = NULL;
     GstStructure *s = NULL;
     const gchar *sinkCapsName = NULL;
-    
+
     filter = VP6_DECODER (parent);
     if (pad == filter->sinkpad) {
         s = gst_caps_get_structure (caps, 0);
@@ -573,7 +573,7 @@ static GstFlowReturn vp6decoder_chain (GstPad * pad, GstObject *parent, GstBuffe
 
     guchar *dest = NULL;        //Destination buffer
     gboolean is_keyframe = FALSE;
-    
+
     GstEvent *caps_event = NULL;
 
     filter = VP6_DECODER (parent);
@@ -587,7 +587,7 @@ static GstFlowReturn vp6decoder_chain (GstPad * pad, GstObject *parent, GstBuffe
         gst_element_message_full(GST_ELEMENT(filter), GST_MESSAGE_ERROR, GST_STREAM_ERROR, GST_STREAM_ERROR_DECODE, g_strdup("Failed to check or create decoder context!"), NULL, ("vp6decoder.c"), ("vp6decoder_chain"), 0);
         return GST_FLOW_ERROR;
     }
-    
+
     // probe and allocate proper decoder context
     if (!check_vp6_decoders(filter, info.data, info.size)) {
         gst_buffer_unmap(buf, &info);
@@ -647,7 +647,7 @@ static GstFlowReturn vp6decoder_chain (GstPad * pad, GstObject *parent, GstBuffe
     if (on2_codec_decode(filter->decoder, colorBits, colorSize, NULL, 0)) {
 // INLINE - gst_buffer_unref()
         gst_buffer_unref (buf);
-        
+
         gst_element_message_full(GST_ELEMENT(filter), GST_MESSAGE_ERROR, GST_STREAM_ERROR, GST_STREAM_ERROR_DECODE, g_strdup("Failed to decode VP6 stream"), NULL, ("vp6decoder.c"), ("vp6decoder_chain"), 0);
         return GST_FLOW_ERROR;
     }
@@ -690,16 +690,16 @@ static GstFlowReturn vp6decoder_chain (GstPad * pad, GstObject *parent, GstBuffe
 
     if (filter->height == 0)
         filter->height = (gint)img->d_h;
- 
+
     if ((filter->encoded_height == 0) || (filter->encoded_height != (gint)img->d_h)) {
         filter->encoded_height = img->d_h + (img->d_h & 1); // add a row for odd height
         filter->need_set_caps = TRUE;
     }
-     
+
     if (filter->width == 0)
         filter->width = (gint)img->d_w;
- 
-    if ((filter->encoded_width == 0) || (filter->encoded_width != (gint)img->d_w)) { 
+
+    if ((filter->encoded_width == 0) || (filter->encoded_width != (gint)img->d_w)) {
         filter->encoded_width = img->d_w + (img->d_w & 1); // add a pixel for odd width
         filter->need_set_caps = TRUE;
     }
@@ -789,12 +789,12 @@ static GstFlowReturn vp6decoder_chain (GstPad * pad, GstObject *parent, GstBuffe
                                         NULL);
         }
 
-        
+
         caps_event = gst_event_new_caps(caps);
         if (caps_event)
             gst_pad_push_event(filter->srcpad, caps_event);
         gst_caps_unref (caps);
-        
+
         if (filter->segment_event != NULL) {
             gst_pad_push_event (filter->srcpad, filter->segment_event);
             filter->segment_event = NULL;
@@ -828,7 +828,7 @@ static GstFlowReturn vp6decoder_chain (GstPad * pad, GstObject *parent, GstBuffe
             if (alphaImg) {
                 memcpy(dest + offset_a, alphaImg->planes[PLANE_Y], out_size_a);
             }
-            
+
             gst_buffer_unmap(out, &info);
 
             //Push decoded frame
@@ -879,7 +879,7 @@ static gboolean vp6decoder_src_event (GstPad * pad, GstObject *parent, GstEvent 
     filter = VP6_DECODER (parent);
 
     switch (GST_EVENT_TYPE(event)) {
-    case GST_EVENT_QOS:        
+    case GST_EVENT_QOS:
         gst_event_parse_qos(event, &type, &proportion, &diff, &ts);
         vp6decoder_update_qos(filter, proportion, diff, ts);
         res = gst_pad_push_event (filter->sinkpad, event);

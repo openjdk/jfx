@@ -229,7 +229,7 @@ public final class KeyCodeMap {
     {
         map.put(keyCode, new Entry(windowsVirtualKeyCode, keyIdentifier));
     }
-    
+
     private static void put(Map<KeyCode,Entry> map, KeyCode keyCode,
                             int windowsVirtualKeyCode)
     {

@@ -54,7 +54,7 @@ public:
         PLAYING_STATE = 2,
         FINISHED_STATE = 3
     };
-    
+
     AudioScheduledSourceNode(AudioContext*, float sampleRate);
 
     // Scheduling.

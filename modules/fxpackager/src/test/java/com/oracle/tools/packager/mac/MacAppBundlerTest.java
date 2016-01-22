@@ -73,7 +73,7 @@ public class MacAppBundlerTest {
     static boolean signingKeysPresent = false;
 
     static final File FAKE_CERT_ROOT = new File("build/tmp/tests/cert/").getAbsoluteFile();
-    
+
     @BeforeClass
     public static void prepareApp() {
         // only run on mac
@@ -299,7 +299,7 @@ public class MacAppBundlerTest {
         bundleParams.put(CLASSPATH.getID(), "mainApp.jar");
         bundleParams.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
         bundleParams.put(VERBOSE.getID(), true);
-        bundleParams.put(SIGN_BUNDLE.getID(), false); 
+        bundleParams.put(SIGN_BUNDLE.getID(), false);
 
         if (runtimeJdk != null) {
             bundleParams.put(MAC_RUNTIME.getID(), runtimeJdk);
@@ -325,9 +325,9 @@ public class MacAppBundlerTest {
         Assume.assumeTrue(Boolean.parseBoolean(System.getProperty("FULL_TEST")));
 
         testFileAssociation("FASmoke 1", "Bogus File", "bogus", "application/x-vnd.test-bogus",
-                            new File(appResourcesDir, "test.icns"));        
+                            new File(appResourcesDir, "test.icns"));
     }
-    
+
     @Test
     public void testFileAssociationWithNullExtension()
         throws IOException, ConfigException, UnsupportedPlatformException
@@ -801,7 +801,7 @@ public class MacAppBundlerTest {
         assertTrue(MacBaseInstallerBundler.findKey("Developer", null, true) == null);
         assertTrue(MacBaseInstallerBundler.findKey("A completely bogus key that should never realistically exist unless we are attempting to falsely break the tests", null, true) == null);
     }
-    
+
     public void validateSignatures(File appLocation) throws IOException {
         // shallow validation
         ProcessBuilder pb = new ProcessBuilder(
@@ -817,7 +817,7 @@ public class MacAppBundlerTest {
                 "-v", // single verbose
                 appLocation.getCanonicalPath());
         IOUtils.exec(pb, true);
-        
+
         // only run spctl for pre-existing keys
         if (signingKeysPresent) {
             //spctl, this verifies gatekeeper
@@ -827,7 +827,7 @@ public class MacAppBundlerTest {
                     appLocation.getCanonicalPath());
             IOUtils.exec(pb, true);
         }
-    }    
+    }
 
 
 }

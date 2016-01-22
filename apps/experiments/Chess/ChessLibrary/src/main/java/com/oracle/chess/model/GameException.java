@@ -39,7 +39,7 @@ public class GameException extends Exception {
         ILLEGAL_MOVE(400),
         ILLEGAL_MOVE_KING_CHECK(500),
         GAME_OVER(600);
-        
+
         int code;
 
         ErrorCode(int code) {

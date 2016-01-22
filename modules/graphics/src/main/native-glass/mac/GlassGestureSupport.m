@@ -50,7 +50,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacGestureSupport__1initIDs
 
     if (javaIDs.GestureSupport.rotateGesturePerformed == NULL)
     {
-        javaIDs.GestureSupport.rotateGesturePerformed = 
+        javaIDs.GestureSupport.rotateGesturePerformed =
                     (*env)->GetStaticMethodID(env, jClass,
                                 "rotateGesturePerformed",
                                 "(Lcom/sun/glass/ui/View;IIIIIF)V");
@@ -59,7 +59,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacGestureSupport__1initIDs
 
     if (javaIDs.GestureSupport.scrollGesturePerformed == NULL)
     {
-        javaIDs.GestureSupport.scrollGesturePerformed = 
+        javaIDs.GestureSupport.scrollGesturePerformed =
                     (*env)->GetStaticMethodID(env, jClass,
                                 "scrollGesturePerformed",
                                 "(Lcom/sun/glass/ui/View;IIIIIIFF)V");
@@ -68,7 +68,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacGestureSupport__1initIDs
 
     if (javaIDs.GestureSupport.swipeGesturePerformed == NULL)
     {
-        javaIDs.GestureSupport.swipeGesturePerformed = 
+        javaIDs.GestureSupport.swipeGesturePerformed =
                     (*env)->GetStaticMethodID(env, jClass,
                                 "swipeGesturePerformed",
                                 "(Lcom/sun/glass/ui/View;IIIIII)V");
@@ -77,7 +77,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacGestureSupport__1initIDs
 
     if (javaIDs.GestureSupport.magnifyGesturePerformed == NULL)
     {
-        javaIDs.GestureSupport.magnifyGesturePerformed = 
+        javaIDs.GestureSupport.magnifyGesturePerformed =
                     (*env)->GetStaticMethodID(env, jClass,
                                 "magnifyGesturePerformed",
                                 "(Lcom/sun/glass/ui/View;IIIIIF)V");
@@ -86,7 +86,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacGestureSupport__1initIDs
 
     if (javaIDs.GestureSupport.gestureFinished == NULL)
     {
-        javaIDs.GestureSupport.gestureFinished = 
+        javaIDs.GestureSupport.gestureFinished =
                     (*env)->GetStaticMethodID(env, jClass,
                                 "gestureFinished",
                                 "(Lcom/sun/glass/ui/View;IIIII)V");
@@ -95,7 +95,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacGestureSupport__1initIDs
 
     if (javaIDs.GestureSupport.notifyBeginTouchEvent == NULL)
     {
-        javaIDs.GestureSupport.notifyBeginTouchEvent = 
+        javaIDs.GestureSupport.notifyBeginTouchEvent =
                     (*env)->GetStaticMethodID(env, jClass,
                                 "notifyBeginTouchEvent",
                                 "(Lcom/sun/glass/ui/View;II)V");
@@ -104,7 +104,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacGestureSupport__1initIDs
 
     if (javaIDs.GestureSupport.notifyNextTouchEvent == NULL)
     {
-        javaIDs.GestureSupport.notifyNextTouchEvent = 
+        javaIDs.GestureSupport.notifyNextTouchEvent =
                     (*env)->GetStaticMethodID(env, jClass,
                                 "notifyNextTouchEvent",
                                 "(Lcom/sun/glass/ui/View;IJFF)V");
@@ -113,7 +113,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacGestureSupport__1initIDs
 
     if (javaIDs.GestureSupport.notifyEndTouchEvent == NULL)
     {
-        javaIDs.GestureSupport.notifyEndTouchEvent = 
+        javaIDs.GestureSupport.notifyEndTouchEvent =
                     (*env)->GetStaticMethodID(env, jClass,
                                 "notifyEndTouchEvent",
                                 "(Lcom/sun/glass/ui/View;)V");

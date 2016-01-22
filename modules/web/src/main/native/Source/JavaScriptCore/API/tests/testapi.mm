@@ -660,7 +660,7 @@ void testObjectiveCAPI()
     }
 
     @autoreleasepool {
-        JSContext *context = [[JSContext alloc] init];        
+        JSContext *context = [[JSContext alloc] init];
         JSValue *array = [JSValue valueWithNewArrayInContext:context];
         checkResult(@"arrayLengthEmpty", [[array[@"length"] toNumber] unsignedIntegerValue] == 0);
         JSValue *value1 = [JSValue valueWithInt32:42 inContext:context];
@@ -935,7 +935,7 @@ void testObjectiveCAPI()
             [context evaluateScript:@"var constructor = Object.getPrototypeOf(testObject).constructor; constructor.prototype = undefined;"];
             [context evaluateScript:@"testObject = undefined"];
         }
-        
+
         JSSynchronousGarbageCollectForDebugging([context JSGlobalContextRef]);
 
         @autoreleasepool {
@@ -1151,7 +1151,7 @@ void testObjectiveCAPI()
         };
         JSValue *result = [context evaluateScript:@"new MyClass()"];
         checkResult(@"result === undefined", [result isUndefined]);
-        checkResult(@"exception.message is correct'", context.exception 
+        checkResult(@"exception.message is correct'", context.exception
             && [@"Objective-C blocks called as constructors must return an object." isEqualToString:[context.exception[@"message"] toString]]);
     }
 
@@ -1231,7 +1231,7 @@ void testObjectiveCAPI()
         JSContext *context = [[JSContext alloc] init];
         context[@"ClassD"] = [ClassD class];
         context[@"ClassE"] = [ClassE class];
-       
+
         JSValue *d = [context evaluateScript:@"(new ClassD())"];
         checkResult(@"Returning instance of ClassE from ClassD's init has correct class", [d isInstanceOf:context[@"ClassE"]]);
     }

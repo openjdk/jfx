@@ -33,7 +33,7 @@
 namespace WTF {
 
 namespace double_conversion {
-    
+
     enum FastDtoaMode {
         // Computes the shortest representation of the given input. The returned
         // result will be the most accurate number of this length. Longer
@@ -43,11 +43,11 @@ namespace double_conversion {
         // given as input. The precision is independent of the decimal point.
         FAST_DTOA_PRECISION
     };
-    
+
     // FastDtoa will produce at most kFastDtoaMaximalLength digits. This does not
     // include the terminating '\0' character.
     static const int kFastDtoaMaximalLength = 17;
-    
+
     // Provides a decimal representation of v.
     // The result should be interpreted as buffer * 10^(point - length).
     //
@@ -80,7 +80,7 @@ namespace double_conversion {
                   BufferReference<char> buffer,
                   int* length,
                   int* decimal_point);
-    
+
 }  // namespace double_conversion
 
 } // namespace WTF

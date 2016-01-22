@@ -36,10 +36,10 @@ import java.util.Objects;
 
 /**
  *
- * 
+ *
  */
 public class PropertyMetadata implements Comparable<PropertyMetadata> {
-    
+
     private final PropertyName name;
 
     public PropertyMetadata(PropertyName name) {
@@ -49,8 +49,8 @@ public class PropertyMetadata implements Comparable<PropertyMetadata> {
     public PropertyName getName() {
         return name;
     }
-    
-    
+
+
     /*
      * Comparable
      */
@@ -62,7 +62,7 @@ public class PropertyMetadata implements Comparable<PropertyMetadata> {
     /*
      * Object
      */
-    
+
     @Override
     public int hashCode() {
         int hash = 5;
@@ -84,5 +84,5 @@ public class PropertyMetadata implements Comparable<PropertyMetadata> {
         }
         return true;
     }
-    
+
 }

@@ -50,12 +50,12 @@ import static com.oracle.tools.packager.windows.WindowsBundlerParam.WIN_RUNTIME;
 
 public class WinAppBundler extends AbstractImageBundler {
 
-    private static final ResourceBundle I18N = 
+    private static final ResourceBundle I18N =
             ResourceBundle.getBundle(WinAppBundler.class.getName());
 
     public static final BundlerParamInfo<File> CONFIG_ROOT = new WindowsBundlerParam<>(
             I18N.getString("param.config-root.name"),
-            I18N.getString("param.config-root.description"), 
+            I18N.getString("param.config-root.description"),
             "configRoot",
             File.class,
             params -> {
@@ -150,7 +150,7 @@ public class WinAppBundler extends AbstractImageBundler {
         if (!System.getProperty("os.name").toLowerCase().startsWith("win")) {
             throw new UnsupportedPlatformException();
         }
-        
+
         imageBundleValidation(p);
 
         if (WinResources.class.getResource(TOOL_ICON_SWAP) == null ||
@@ -314,7 +314,7 @@ public class WinAppBundler extends AbstractImageBundler {
             // copy the jars
             copyApplication(p, appDirectory);
 
-            // Copy runtime 
+            // Copy runtime
             File runtimeDirectory = new File(rootDirectory, "runtime");
             copyRuntime(p, runtimeDirectory);
 
@@ -570,7 +570,7 @@ public class WinAppBundler extends AbstractImageBundler {
                     new File(srcdir, fname), new File(runtimeDirectory, fname));
         }
     }
-    
+
     public void extractRuntimeFlags(Map<String, ? super Object> params) {
         extractFlagsFromRuntime(params);
     }

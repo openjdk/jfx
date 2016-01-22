@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -64,7 +64,7 @@ int SQLiteStatement::prepare()
         return SQLITE_INTERRUPT;
 
     CString query = m_query.stripWhiteSpace().utf8();
-    
+
     LOG(SQLDatabase, "SQL - prepare - %s", query.data());
 
     // Pass the length of the string including the null character to sqlite3_prepare_v2;
@@ -103,13 +103,13 @@ int SQLiteStatement::step()
     LOG(SQLDatabase, "SQL - step - %s", m_query.ascii().data());
     int error = sqlite3_step(m_statement);
     if (error != SQLITE_DONE && error != SQLITE_ROW) {
-        LOG(SQLDatabase, "sqlite3_step failed (%i)\nQuery - %s\nError - %s", 
+        LOG(SQLDatabase, "sqlite3_step failed (%i)\nQuery - %s\nError - %s",
             error, m_query.ascii().data(), sqlite3_errmsg(m_database.sqlite3Handle()));
     }
 
     return error;
 }
-    
+
 int SQLiteStatement::finalize()
 {
 #ifndef NDEBUG
@@ -123,7 +123,7 @@ int SQLiteStatement::finalize()
     return result;
 }
 
-int SQLiteStatement::reset() 
+int SQLiteStatement::reset()
 {
     ASSERT(m_isPrepared);
     if (!m_statement)
@@ -346,7 +346,7 @@ String SQLiteStatement::getColumnText(int col)
         return String();
     return String(reinterpret_cast<const UChar*>(sqlite3_column_text16(m_statement, col)), sqlite3_column_bytes16(m_statement, col) / sizeof(UChar));
 }
-    
+
 double SQLiteStatement::getColumnDouble(int col)
 {
     ASSERT(col >= 0);
@@ -421,7 +421,7 @@ void SQLiteStatement::getColumnBlobAsVector(int col, Vector<char>& result)
         result.clear();
         return;
     }
-        
+
     int size = sqlite3_column_bytes(m_statement, col);
     result.resize((size_t)size);
     for (int i = 0; i < size; ++i)
@@ -447,7 +447,7 @@ void SQLiteStatement::getColumnBlobAsVector(int col, Vector<uint8_t>& result)
         result.clear();
         return;
     }
-        
+
     int size = sqlite3_column_bytes(m_statement, col);
     result.resize((size_t)size);
     for (int i = 0; i < size; ++i)
@@ -484,7 +484,7 @@ bool SQLiteStatement::returnIntResults(int col, Vector<int>& v)
         finalize();
     if (prepare() != SQLITE_OK)
         return false;
-        
+
     while (step() == SQLITE_ROW)
         v.append(getColumnInt(col));
     bool result = true;
@@ -504,7 +504,7 @@ bool SQLiteStatement::returnInt64Results(int col, Vector<int64_t>& v)
         finalize();
     if (prepare() != SQLITE_OK)
         return false;
-        
+
     while (step() == SQLITE_ROW)
         v.append(getColumnInt64(col));
     bool result = true;

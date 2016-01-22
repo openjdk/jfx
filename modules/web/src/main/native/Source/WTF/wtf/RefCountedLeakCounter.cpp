@@ -61,7 +61,7 @@ void RefCountedLeakCounter::cancelMessageSuppression(const char* reason)
 RefCountedLeakCounter::RefCountedLeakCounter(const char* description)
     : m_description(description)
 {
-}    
+}
 
 RefCountedLeakCounter::~RefCountedLeakCounter()
 {

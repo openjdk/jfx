@@ -61,11 +61,11 @@ public abstract class PrDrawable extends PrTexture<RTTexture> implements PoolFil
     @Override public int getMaxContentWidth() {
         return getTextureObject().getMaxContentWidth();
     }
-    
+
     @Override public int getMaxContentHeight() {
         return getTextureObject().getMaxContentHeight();
     }
-    
+
     @Override public void setContentWidth(int contentW) {
         getTextureObject().setContentWidth(contentW);
     }
@@ -73,7 +73,7 @@ public abstract class PrDrawable extends PrTexture<RTTexture> implements PoolFil
     @Override public void setContentHeight(int contentH) {
         getTextureObject().setContentHeight(contentH);
     }
- 
+
     public abstract Graphics createGraphics();
 
     public void clear() {

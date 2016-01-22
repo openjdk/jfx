@@ -195,9 +195,9 @@ static HashSet<String> mimeTypeCache()
     NSArray *types = [getAVURLAssetClass() audiovisualMIMETypes];
     for (NSString *mimeType in types)
         cache.add(mimeType);
-    
+
     return cache;
-} 
+}
 
 void MediaPlayerPrivateMediaSourceAVFObjC::getSupportedTypes(HashSet<String>& types)
 {

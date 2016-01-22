@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #import "config.h"
@@ -94,7 +94,7 @@ InbandTextTrackPrivate::Kind InbandTextTrackPrivateAVFObjC::kind() const
         return InbandTextTrackPrivate::None;
 
     NSString *mediaType = [m_mediaSelectionOption mediaType];
-    
+
     if ([mediaType isEqualToString:AVMediaTypeClosedCaption])
         return InbandTextTrackPrivate::Captions;
     if ([mediaType isEqualToString:AVMediaTypeSubtitle]) {
@@ -108,7 +108,7 @@ InbandTextTrackPrivate::Kind InbandTextTrackPrivateAVFObjC::kind() const
             return InbandTextTrackPrivate::Captions;
         if ([m_mediaSelectionOption hasMediaCharacteristic:AVMediaCharacteristicDescribesMusicAndSoundForAccessibility])
             return InbandTextTrackPrivate::Captions;
-        
+
         return InbandTextTrackPrivate::Subtitles;
     }
 
@@ -119,7 +119,7 @@ bool InbandTextTrackPrivateAVFObjC::isClosedCaptions() const
 {
     if (!m_mediaSelectionOption)
         return false;
-    
+
     return [[m_mediaSelectionOption mediaType] isEqualToString:AVMediaTypeClosedCaption];
 }
 
@@ -127,7 +127,7 @@ bool InbandTextTrackPrivateAVFObjC::isSDH() const
 {
     if (!m_mediaSelectionOption)
         return false;
-    
+
     if (![[m_mediaSelectionOption mediaType] isEqualToString:AVMediaTypeSubtitle])
         return false;
 
@@ -136,12 +136,12 @@ bool InbandTextTrackPrivateAVFObjC::isSDH() const
 
     return false;
 }
-    
+
 bool InbandTextTrackPrivateAVFObjC::containsOnlyForcedSubtitles() const
 {
     if (!m_mediaSelectionOption)
         return false;
-    
+
     return [m_mediaSelectionOption hasMediaCharacteristic:AVMediaCharacteristicContainsOnlyForcedSubtitles];
 }
 
@@ -149,7 +149,7 @@ bool InbandTextTrackPrivateAVFObjC::isMainProgramContent() const
 {
     if (!m_mediaSelectionOption)
         return false;
-    
+
     return [m_mediaSelectionOption hasMediaCharacteristic:AVMediaCharacteristicIsMainProgramContent];
 }
 

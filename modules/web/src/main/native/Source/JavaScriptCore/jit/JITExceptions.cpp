@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -46,7 +46,7 @@ void genericUnwind(VM* vm, ExecState* callFrame, JSValue exceptionValue)
         dataLog("In call frame ", RawPointer(callFrame), " for code block ", *callFrame->codeBlock(), "\n");
         CRASH();
     }
-    
+
     RELEASE_ASSERT(exceptionValue);
     HandlerInfo* handler = vm->interpreter->unwind(callFrame, exceptionValue); // This may update callFrame.
 
@@ -61,11 +61,11 @@ void genericUnwind(VM* vm, ExecState* callFrame, JSValue exceptionValue)
 #endif
     } else
         catchRoutine = LLInt::getCodePtr(handleUncaughtException);
-    
+
     vm->callFrameForThrow = callFrame;
     vm->targetMachinePCForThrow = catchRoutine;
     vm->targetInterpreterPCForThrow = catchPCForInterpreter;
-    
+
     RELEASE_ASSERT(catchRoutine);
 }
 

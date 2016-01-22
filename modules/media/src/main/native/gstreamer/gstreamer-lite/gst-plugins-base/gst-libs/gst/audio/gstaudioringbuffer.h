@@ -130,21 +130,21 @@ struct _GstAudioRingBufferSpec
 
 
   guint64  latency_time;        /* the required/actual latency time, this is the
-				 * actual the size of one segment and the
-				 * minimum possible latency we can achieve. */
+                 * actual the size of one segment and the
+                 * minimum possible latency we can achieve. */
   guint64  buffer_time;         /* the required/actual time of the buffer, this is
-				 * the total size of the buffer and maximum
-				 * latency we can compensate for. */
+                 * the total size of the buffer and maximum
+                 * latency we can compensate for. */
   gint     segsize;             /* size of one buffer segment in bytes, this value
-				 * should be chosen to match latency_time as
-				 * well as possible. */
+                 * should be chosen to match latency_time as
+                 * well as possible. */
   gint     segtotal;            /* total number of segments, this value is the
-				 * number of segments of @segsize and should be
-				 * chosen so that it matches buffer_time as
-				 * close as possible. */
+                 * number of segments of @segsize and should be
+                 * chosen so that it matches buffer_time as
+                 * close as possible. */
   /* ABI added 0.10.20 */
   gint     seglatency;          /* number of segments queued in the lower
-				 * level device, defaults to segtotal. */
+                 * level device, defaults to segtotal. */
 
   /*< private >*/
   gpointer _gst_reserved[GST_PADDING];
@@ -319,7 +319,7 @@ guint           gst_audio_ring_buffer_read            (GstAudioRingBuffer *buf, 
                                                        guint8 *data, guint len, GstClockTime *timestamp);
 
 /* Set timestamp on buffer */
-void            gst_audio_ring_buffer_set_timestamp   (GstAudioRingBuffer * buf, gint readseg, GstClockTime 
+void            gst_audio_ring_buffer_set_timestamp   (GstAudioRingBuffer * buf, gint readseg, GstClockTime
                                                        timestamp);
 
 /* mostly protected */

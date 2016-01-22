@@ -158,7 +158,7 @@ public class Locator {
         }
         return locatorConnection;
     }
-    
+
     private static long getContentLengthLong(URLConnection connection) {
         Method method = AccessController.doPrivileged((PrivilegedAction<Method>) () -> {
             try {
@@ -167,7 +167,7 @@ public class Locator {
                 return null;
             }
         });
-        
+
         try {
             if (method != null) {
                 return (long) method.invoke(connection);
@@ -518,7 +518,7 @@ public class Locator {
         }
         return contentLength;
     }
-    
+
     /**
      * Blocks until locator is ready (connection is established or failed).
      */

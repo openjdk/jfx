@@ -88,7 +88,7 @@ class SimpleClipInterpolator extends ClipInterpolator {
     void validate(boolean forceSync) {
         if (invalid) {
             ticks = endTicks;
-            
+
             final Map<WritableValue<?>, KeyValue> map = new HashMap<>();
             // create a map from target => keyValues of endFrame
             for (final KeyValue keyValue : endKeyFrame.getValues()) {

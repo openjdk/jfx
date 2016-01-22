@@ -55,7 +55,7 @@ public class Point2D {
     public final double getX() {
         return x;
     }
-    
+
     /**
      * The y coordinate.
      *
@@ -356,7 +356,7 @@ public class Point2D {
 
     /**
      * Indicates whether some other object is "equal to" this one.
-     * 
+     *
      * @param obj the reference object with which to compare
      * @return true if this point is the same as the obj argument; false otherwise
       */

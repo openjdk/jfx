@@ -29,11 +29,11 @@ import javafx.beans.binding.StringExpression;
 
 /**
  * Super class for all readonly properties wrapping an {@code String}.
- * 
+ *
  * @see javafx.beans.value.ObservableStringValue
  * @see javafx.beans.binding.StringExpression
  * @see ReadOnlyProperty
- * 
+ *
  * @since JavaFX 2.0
  */
 public abstract class ReadOnlyStringProperty extends StringExpression implements
@@ -48,7 +48,7 @@ public abstract class ReadOnlyStringProperty extends StringExpression implements
     /**
      * Returns a string representation of this {@code ReadOnlyStringProperty} object.
      * @return a string representation of this {@code ReadOnlyStringProperty} object.
-     */ 
+     */
     @Override
     public String toString() {
         final Object bean = getBean();

@@ -44,7 +44,7 @@ WaveShaperNode::WaveShaperNode(AudioContext* context)
 
 void WaveShaperNode::setCurve(Float32Array* curve)
 {
-    ASSERT(isMainThread()); 
+    ASSERT(isMainThread());
     waveShaperProcessor()->setCurve(curve);
 }
 

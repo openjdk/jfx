@@ -29,16 +29,16 @@ import java.lang.reflect.Array;
 
 
 class JSONEncoder {
-    
+
     private final JS2JavaBridge owner;
-    
+
     public JSONEncoder(JS2JavaBridge owner) {
         this.owner = owner;
     }
-    
-    
+
+
     private static char[] hexChars = "0123456789abcdef".toCharArray();
-    
+
     private static void encodeString(StringBuilder sb, String s) {
         sb.append('"');
         for (int i=0; i<s.length(); i++) {
@@ -84,7 +84,7 @@ class JSONEncoder {
         }
         sb.append('"');
     }
-    
+
     public void encode(StringBuilder sb, Object object) {
         if (object == null) {
             sb.append("null");
@@ -110,7 +110,7 @@ class JSONEncoder {
         }
     }
 
-    //return true if we were able to find index into exportedJSObjects[] for 
+    //return true if we were able to find index into exportedJSObjects[] for
     //passed object; false otherwise
     private boolean encodedJavaObject(Object object, StringBuilder sb) {
         String jsId = owner.getjsIdForJavaObject(object);
@@ -120,7 +120,7 @@ class JSONEncoder {
         }
         return false;
     }
-    
+
     private void encodeJavaObject(Object object, StringBuilder sb) {
         if (!encodedJavaObject(object, sb)) {
             owner.exportObject("anyname",object);

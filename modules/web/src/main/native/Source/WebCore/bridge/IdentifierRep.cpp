@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -42,7 +42,7 @@ static IdentifierSet& identifierSet()
     DEFINE_STATIC_LOCAL(IdentifierSet, identifierSet, ());
     return identifierSet;
 }
-    
+
 typedef HashMap<int, IdentifierRep*> IntIdentifierMap;
 
 static IntIdentifierMap& intIdentifierMap()
@@ -62,18 +62,18 @@ IdentifierRep* IdentifierRep::get(int intID)
 
             negativeOneAndZeroIdentifiers[intID + 1] = identifier;
         }
-        
+
         return identifier;
     }
-    
+
     IntIdentifierMap::AddResult result = intIdentifierMap().add(intID, nullptr);
     if (result.isNewEntry) {
         ASSERT(!result.iterator->value);
         result.iterator->value = new IdentifierRep(intID);
-        
+
         identifierSet().add(result.iterator->value);
     }
-    
+
     return result.iterator->value;
 }
 
@@ -90,16 +90,16 @@ IdentifierRep* IdentifierRep::get(const char* name)
     ASSERT(name);
     if (!name)
         return 0;
-  
+
     String string = String::fromUTF8WithLatin1Fallback(name, strlen(name));
     StringIdentifierMap::AddResult result = stringIdentifierMap().add(string.impl(), nullptr);
     if (result.isNewEntry) {
         ASSERT(!result.iterator->value);
         result.iterator->value = new IdentifierRep(name);
-        
+
         identifierSet().add(result.iterator->value);
     }
-    
+
     return result.iterator->value;
 }
 
@@ -107,5 +107,5 @@ bool IdentifierRep::isValid(IdentifierRep* identifier)
 {
     return identifierSet().contains(identifier);
 }
-    
+
 } // namespace WebCore

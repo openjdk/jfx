@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -387,49 +387,49 @@ const Cursor& middlePanningCursor()
     DEFINE_STATIC_LOCAL(Cursor, c, (Cursor::MiddlePanning));
     return c;
 }
-    
+
 const Cursor& eastPanningCursor()
 {
     DEFINE_STATIC_LOCAL(Cursor, c, (Cursor::EastPanning));
     return c;
 }
-    
+
 const Cursor& northPanningCursor()
 {
     DEFINE_STATIC_LOCAL(Cursor, c, (Cursor::NorthPanning));
     return c;
 }
-    
+
 const Cursor& northEastPanningCursor()
 {
     DEFINE_STATIC_LOCAL(Cursor, c, (Cursor::NorthEastPanning));
     return c;
 }
-    
+
 const Cursor& northWestPanningCursor()
 {
     DEFINE_STATIC_LOCAL(Cursor, c, (Cursor::NorthWestPanning));
     return c;
 }
-    
+
 const Cursor& southPanningCursor()
 {
     DEFINE_STATIC_LOCAL(Cursor, c, (Cursor::SouthPanning));
     return c;
 }
-    
+
 const Cursor& southEastPanningCursor()
 {
     DEFINE_STATIC_LOCAL(Cursor, c, (Cursor::SouthEastPanning));
     return c;
 }
-    
+
 const Cursor& southWestPanningCursor()
 {
     DEFINE_STATIC_LOCAL(Cursor, c, (Cursor::SouthWestPanning));
     return c;
 }
-    
+
 const Cursor& westPanningCursor()
 {
     DEFINE_STATIC_LOCAL(Cursor, c, (Cursor::WestPanning));

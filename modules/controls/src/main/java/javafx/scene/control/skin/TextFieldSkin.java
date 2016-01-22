@@ -239,7 +239,7 @@ public class TextFieldSkin extends TextInputControlSkin<TextField> {
         caretPath.setStrokeWidth(1);
         caretPath.fillProperty().bind(textFillProperty());
         caretPath.strokeProperty().bind(textFillProperty());
-        
+
         // modifying visibility of the caret forces a layout-pass (RT-32373), so
         // instead we modify the opacity.
         caretPath.opacityProperty().bind(new DoubleBinding() {

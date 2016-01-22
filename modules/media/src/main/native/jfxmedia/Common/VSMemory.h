@@ -44,6 +44,6 @@
 #pragma warning(default:4005)
 #endif // _DEBUG
 
-#endif // ENABLE_VISUAL_STUDIO_MEMORY_LEAKS_DETECTION 
+#endif // ENABLE_VISUAL_STUDIO_MEMORY_LEAKS_DETECTION
 
 #endif // VS_MEMORY

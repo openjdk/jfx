@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -75,7 +75,7 @@ void RenderVideo::intrinsicSizeChanged()
 {
     if (videoElement().shouldDisplayPosterImage())
         RenderMedia::intrinsicSizeChanged();
-    updateIntrinsicSize(); 
+    updateIntrinsicSize();
 }
 
 void RenderVideo::updateIntrinsicSize()
@@ -94,17 +94,17 @@ void RenderVideo::updateIntrinsicSize()
     setPreferredLogicalWidthsDirty(true);
     setNeedsLayout();
 }
-    
+
 LayoutSize RenderVideo::calculateIntrinsicSize()
 {
     // Spec text from 4.8.6
     //
-    // The intrinsic width of a video element's playback area is the intrinsic width 
-    // of the video resource, if that is available; otherwise it is the intrinsic 
+    // The intrinsic width of a video element's playback area is the intrinsic width
+    // of the video resource, if that is available; otherwise it is the intrinsic
     // width of the poster frame, if that is available; otherwise it is 300 CSS pixels.
     //
-    // The intrinsic height of a video element's playback area is the intrinsic height 
-    // of the video resource, if that is available; otherwise it is the intrinsic 
+    // The intrinsic height of a video element's playback area is the intrinsic height
+    // of the video resource, if that is available; otherwise it is the intrinsic
     // height of the poster frame, if that is available; otherwise it is 150 CSS pixels.
     MediaPlayer* player = videoElement().player();
     if (player && videoElement().readyState() >= HTMLVideoElement::HAVE_METADATA) {
@@ -202,7 +202,7 @@ void RenderVideo::layout()
     RenderMedia::layout();
     updatePlayer();
 }
-    
+
 HTMLVideoElement& RenderVideo::videoElement() const
 {
     return toHTMLVideoElement(RenderMedia::mediaElement());
@@ -231,8 +231,8 @@ void RenderVideo::updatePlayer()
     }
 
     contentChanged(VideoChanged);
-    
-    IntRect videoBounds = videoBox(); 
+
+    IntRect videoBounds = videoBox();
     mediaPlayer->setFrameView(&view().frameView());
     mediaPlayer->setSize(IntSize(videoBounds.width(), videoBounds.height()));
     mediaPlayer->setVisible(true);
@@ -249,9 +249,9 @@ LayoutUnit RenderVideo::computeReplacedLogicalHeight() const
     return RenderReplaced::computeReplacedLogicalHeight();
 }
 
-LayoutUnit RenderVideo::minimumReplacedHeight() const 
+LayoutUnit RenderVideo::minimumReplacedHeight() const
 {
-    return RenderReplaced::minimumReplacedHeight(); 
+    return RenderReplaced::minimumReplacedHeight();
 }
 
 bool RenderVideo::supportsAcceleratedRendering() const
@@ -279,11 +279,11 @@ static const RenderBlock* rendererPlaceholder(const RenderObject* renderer)
     RenderObject* parent = renderer->parent();
     if (!parent)
         return 0;
-    
+
     RenderFullScreen* fullScreen = parent->isRenderFullScreen() ? toRenderFullScreen(parent) : 0;
     if (!fullScreen)
         return 0;
-    
+
     return fullScreen->placeholder();
 }
 

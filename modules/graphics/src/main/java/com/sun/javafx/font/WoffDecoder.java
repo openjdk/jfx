@@ -33,7 +33,7 @@ import com.sun.javafx.font.FontFileReader.Buffer;
 class WoffDecoder extends FontFileWriter {
     WoffHeader woffHeader;
     WoffDirectoryEntry[] woffTableDirectory;
-    
+
     public WoffDecoder() {
         super();
     }
@@ -62,10 +62,10 @@ class WoffDecoder extends FontFileWriter {
         for (int i = 0; i < woffTableDirectory.length; i++) {
             WoffDirectoryEntry table = woffTableDirectory[i];
 
-            /* write directory entry (in the same order as it appeared in the 
+            /* write directory entry (in the same order as it appeared in the
              * woff file).
              */
-            writeDirectoryEntry(table.index, table.tag, table.origChecksum, 
+            writeDirectoryEntry(table.index, table.tag, table.origChecksum,
                                 offset, table.origLength);
 
             /* write table */
@@ -189,5 +189,5 @@ class WoffDecoder extends FontFileWriter {
             this.index = index;
         }
     }
-    
+
 }

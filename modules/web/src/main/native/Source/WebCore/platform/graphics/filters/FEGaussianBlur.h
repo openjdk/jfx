@@ -46,7 +46,7 @@ public:
 
     virtual void platformApplySoftware();
     virtual void dump();
-    
+
     virtual void determineAbsolutePaintRect();
     static void calculateKernelSize(Filter*, unsigned& kernelSizeX, unsigned& kernelSizeY, float stdX, float stdY);
     static void calculateUnscaledKernelSize(unsigned& kernelSizeX, unsigned& kernelSizeY, float stdX, float stdY);

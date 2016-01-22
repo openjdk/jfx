@@ -42,10 +42,10 @@ public class BaselineTest {
     // test isResizable on key base classes
 
     @Test public void testShapeBaselineAtBottom() {
-        Rectangle rect = new Rectangle(100,200);       
+        Rectangle rect = new Rectangle(100,200);
         assertEquals(200, rect.getBaselineOffset(),1e-100);
     }
-    
+
     @Test public void testTextBaseline() {
         Text text = new Text("Graphically");
         float size = (float) text.getFont().getSize();

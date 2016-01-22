@@ -48,17 +48,17 @@ public class ColumnConstraintsListPropertyMetadata extends ListValuePropertyMeta
     private static final ColumnConstraintsPropertyMetadata itemMetadata
             = new ColumnConstraintsPropertyMetadata(new PropertyName("unused"), //NOI18N
             true /* readWrite */, null, InspectorPath.UNUSED);
-    
-    public ColumnConstraintsListPropertyMetadata(PropertyName name, boolean readWrite, 
+
+    public ColumnConstraintsListPropertyMetadata(PropertyName name, boolean readWrite,
             List<ColumnConstraints> defaultValue, InspectorPath inspectorPath) {
         super(name, ColumnConstraints.class, itemMetadata, readWrite, defaultValue, inspectorPath);
     }
-    
+
     public ColumnConstraintsListPropertyMetadata() {
-        this(new PropertyName("columnConstraints"), true /* readWrite */, 
+        this(new PropertyName("columnConstraints"), true /* readWrite */,
                 Collections.emptyList(), InspectorPath.UNUSED);
     }
-    
+
     public void pack(FXOMInstance fxomInstance) {
         final ColumnConstraints def = new ColumnConstraints();
         final List<ColumnConstraints> v = new ArrayList<>(getValue(fxomInstance));
@@ -75,7 +75,7 @@ public class ColumnConstraintsListPropertyMetadata extends ListValuePropertyMeta
             setValue(fxomInstance, v);
         }
     }
-    
+
     public void unpack(FXOMInstance fxomInstance, int columnCount) {
         final List<ColumnConstraints> value = new ArrayList<>(getValue(fxomInstance));
         if (value.size() < columnCount) {
@@ -87,12 +87,12 @@ public class ColumnConstraintsListPropertyMetadata extends ListValuePropertyMeta
             setValue(fxomInstance, newValue);
         }
     }
-    
+
     public static boolean equals(List<ColumnConstraints> l1, List<ColumnConstraints> l2) {
-        
+
         assert l1 != null;
         assert l2 != null;
-        
+
         boolean result;
         if (l1.size() != l2.size()) {
             result = false;
@@ -104,8 +104,8 @@ public class ColumnConstraintsListPropertyMetadata extends ListValuePropertyMeta
                 result = ColumnConstraintsPropertyMetadata.equals(c1, c2);
             }
         }
-        
+
         return result;
     }
-    
+
 }

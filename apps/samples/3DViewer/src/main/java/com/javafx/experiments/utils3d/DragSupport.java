@@ -55,19 +55,19 @@ public class DragSupport {
     private Scene target;
 
     /**
-     * Creates DragSupport instance that attaches EventHandlers to the given scene 
-     * and responds to mouse and keyboard events in order to change given 
+     * Creates DragSupport instance that attaches EventHandlers to the given scene
+     * and responds to mouse and keyboard events in order to change given
      * property values according to mouse drag events of given orientation
      * @param target scene
      * @param modifier null if no modifier needed
      * @param orientation vertical or horizontal
      * @param property number property to control
-     * @see #DragSupport(javafx.scene.Scene, javafx.scene.input.KeyCode, javafx.geometry.Orientation, javafx.beans.property.Property, double) 
+     * @see #DragSupport(javafx.scene.Scene, javafx.scene.input.KeyCode, javafx.geometry.Orientation, javafx.beans.property.Property, double)
      */
     public DragSupport(Scene target, final KeyCode modifier, final Orientation orientation, final Property<Number> property) {
         this(target, modifier, MouseButton.PRIMARY, orientation, property, 1);
     }
-    
+
     public DragSupport(Scene target, final KeyCode modifier, MouseButton mouseButton, final Orientation orientation, final Property<Number> property) {
         this(target, modifier, mouseButton, orientation, property, 1);
     }
@@ -81,8 +81,8 @@ public class DragSupport {
     }
 
     /**
-     * Creates DragSupport instance that attaches EventHandlers to the given scene 
-     * and responds to mouse and keyboard events in order to change given 
+     * Creates DragSupport instance that attaches EventHandlers to the given scene
+     * and responds to mouse and keyboard events in order to change given
      * property values according to mouse drag events of given orientation.
      * Mouse movement amount is multiplied by given factor.
      * @param target scene
@@ -142,16 +142,16 @@ public class DragSupport {
     }
 
     private boolean isModifierCorrect(KeyEvent t, KeyCode keyCode) {
-        return (keyCode != KeyCode.ALT ^ t.isAltDown()) 
-                && (keyCode != KeyCode.CONTROL ^ t.isControlDown()) 
-                && (keyCode != KeyCode.SHIFT ^ t.isShiftDown()) 
+        return (keyCode != KeyCode.ALT ^ t.isAltDown())
+                && (keyCode != KeyCode.CONTROL ^ t.isControlDown())
+                && (keyCode != KeyCode.SHIFT ^ t.isShiftDown())
                 && (keyCode != KeyCode.META ^ t.isMetaDown());
     }
 
     private boolean isModifierCorrect(MouseEvent t, KeyCode keyCode) {
-        return (keyCode != KeyCode.ALT ^ t.isAltDown()) 
-                && (keyCode != KeyCode.CONTROL ^ t.isControlDown()) 
-                && (keyCode != KeyCode.SHIFT ^ t.isShiftDown()) 
+        return (keyCode != KeyCode.ALT ^ t.isAltDown())
+                && (keyCode != KeyCode.CONTROL ^ t.isControlDown())
+                && (keyCode != KeyCode.SHIFT ^ t.isShiftDown())
                 && (keyCode != KeyCode.META ^ t.isMetaDown());
     }
 
@@ -165,5 +165,5 @@ public class DragSupport {
                 throw new IllegalArgumentException("This orientation is not supported: " + orientation);
         }
     }
-    
+
 }

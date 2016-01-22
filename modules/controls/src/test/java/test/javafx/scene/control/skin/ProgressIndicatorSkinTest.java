@@ -64,7 +64,7 @@ public class ProgressIndicatorSkinTest {
 
         assertEquals(Color.GREEN, skin.getProgressColor());
     }
-    
+
     public static final class ProgressIndicatorSkinMock extends ProgressIndicatorSkin {
         boolean propertyChanged = false;
         int propertyChangeCount = 0;

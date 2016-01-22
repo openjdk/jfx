@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -45,10 +45,10 @@ void AbstractValue::setMostSpecific(Graph& graph, JSValue value)
         m_futurePossibleStructure.clear();
         m_arrayModes = 0;
     }
-        
+
     m_type = speculationFromValue(value);
     m_value = value;
-        
+
     checkConsistency();
 }
 
@@ -65,12 +65,12 @@ void AbstractValue::set(Graph& graph, JSValue value)
         m_futurePossibleStructure.clear();
         m_arrayModes = 0;
     }
-    
+
     m_type = speculationFromValue(value);
     if (m_type == SpecInt52AsDouble)
         m_type = SpecInt52;
     m_value = value;
-    
+
     checkConsistency();
 }
 
@@ -81,7 +81,7 @@ void AbstractValue::set(Graph& graph, Structure* structure)
     m_arrayModes = asArrayModes(structure->indexingType());
     m_type = speculationFromStructure(structure);
     m_value = JSValue();
-    
+
     checkConsistency();
 }
 
@@ -89,25 +89,25 @@ FiltrationResult AbstractValue::filter(Graph& graph, const StructureSet& other)
 {
     if (isClear())
         return FiltrationOK;
-    
+
     // FIXME: This could be optimized for the common case of m_type not
     // having structures, array modes, or a specific value.
     // https://bugs.webkit.org/show_bug.cgi?id=109663
-    
+
     m_type &= other.speculationFromStructures();
     m_arrayModes &= other.arrayModesFromStructures();
     m_currentKnownStructure.filter(other);
-    
+
     // It's possible that prior to the above two statements we had (Foo, TOP), where
     // Foo is a SpeculatedType that is disjoint with the passed StructureSet. In that
     // case, we will now have (None, [someStructure]). In general, we need to make
     // sure that new information gleaned from the SpeculatedType needs to be fed back
     // into the information gleaned from the StructureSet.
     m_currentKnownStructure.filter(m_type);
-    
+
     if (m_currentKnownStructure.hasSingleton())
         setFuturePossibleStructure(graph, m_currentKnownStructure.singleton());
-        
+
     filterArrayModesByType();
     filterValueByType();
     return normalizeClarity();
@@ -116,10 +116,10 @@ FiltrationResult AbstractValue::filter(Graph& graph, const StructureSet& other)
 FiltrationResult AbstractValue::filterArrayModes(ArrayModes arrayModes)
 {
     ASSERT(arrayModes);
-    
+
     if (isClear())
         return FiltrationOK;
-    
+
     m_type &= SpecCell;
     m_arrayModes &= arrayModes;
     return normalizeClarity();
@@ -129,9 +129,9 @@ FiltrationResult AbstractValue::filter(SpeculatedType type)
 {
     if ((m_type & type) == m_type)
         return FiltrationOK;
-    
+
     m_type &= type;
-    
+
     // It's possible that prior to this filter() call we had, say, (Final, TOP), and
     // the passed type is Array. At this point we'll have (None, TOP). The best way
     // to ensure that the structure filtering does the right thing is to filter on
@@ -173,7 +173,7 @@ void AbstractValue::filterValueByType()
             clear();
         return;
     }
-    
+
     // The type has been rendered empty. That means that the value must now be invalid,
     // as well.
     ASSERT(!m_value || !validateType(m_value));
@@ -186,7 +186,7 @@ void AbstractValue::filterArrayModesByType()
         m_arrayModes = 0;
     else if (!(m_type & ~SpecArray))
         m_arrayModes &= ALL_ARRAY_ARRAY_MODES;
-    
+
     // NOTE: If m_type doesn't have SpecArray set, that doesn't mean that the
     // array modes have to be a subset of ALL_NON_ARRAY_ARRAY_MODES, since
     // in the speculated type type-system, RegExpMatchesArry and ArrayPrototype
@@ -203,12 +203,12 @@ bool AbstractValue::shouldBeClear() const
 {
     if (m_type == SpecNone)
         return true;
-    
+
     if (!(m_type & ~SpecCell)
         && (!m_arrayModes
             || m_currentKnownStructure.isClear()))
         return true;
-    
+
     return false;
 }
 
@@ -216,9 +216,9 @@ FiltrationResult AbstractValue::normalizeClarity()
 {
     // It's useful to be able to quickly check if an abstract value is clear.
     // This normalizes everything to make that easy.
-    
+
     FiltrationResult result;
-    
+
     if (shouldBeClear()) {
         clear();
         result = Contradiction;
@@ -226,7 +226,7 @@ FiltrationResult AbstractValue::normalizeClarity()
         result = FiltrationOK;
 
     checkConsistency();
-    
+
     return result;
 }
 
@@ -238,17 +238,17 @@ void AbstractValue::checkConsistency() const
         ASSERT(m_futurePossibleStructure.isClear());
         ASSERT(!m_arrayModes);
     }
-    
+
     if (isClear())
         ASSERT(!m_value);
-    
+
     if (!!m_value) {
         SpeculatedType type = m_type;
         if (type & SpecInt52)
             type |= SpecInt52AsDouble;
         ASSERT(mergeSpeculations(type, speculationFromValue(m_value)) == type);
     }
-    
+
     // Note that it's possible for a prediction like (Final, []). This really means that
     // the value is bottom and that any code that uses the value is unreachable. But
     // we don't want to get pedantic about this as it would only increase the computational

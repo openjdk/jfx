@@ -45,7 +45,7 @@ struct QuadraticBezier {
         , splitDepth(0)
     {
     }
-    
+
     double magnitudeSquared() const
     {
         return ((double)(start.dot(start)) + (double)(control.dot(control)) + (double)(end.dot(end))) / 9.0;
@@ -55,12 +55,12 @@ struct QuadraticBezier {
     {
         return distanceLine(start, control) + distanceLine(control, end);
     }
-    
+
     void split(QuadraticBezier& left, QuadraticBezier& right) const
     {
         left.control = midPoint(start, control);
         right.control = midPoint(control, end);
-        
+
         FloatPoint leftControlToRightControl = midPoint(left.control, right.control);
         left.end = leftControlToRightControl;
         right.start = leftControlToRightControl;
@@ -70,7 +70,7 @@ struct QuadraticBezier {
 
         left.splitDepth = right.splitDepth = splitDepth + 1;
     }
-    
+
     FloatPoint start;
     FloatPoint control;
     FloatPoint end;
@@ -87,7 +87,7 @@ struct CubicBezier {
         , splitDepth(0)
     {
     }
-    
+
     double magnitudeSquared() const
     {
         return ((double)(start.dot(start)) + (double)(control1.dot(control1)) + (double)(control2.dot(control2)) + (double)(end.dot(end))) / 16.0;
@@ -97,26 +97,26 @@ struct CubicBezier {
     {
         return distanceLine(start, control1) + distanceLine(control1, control2) + distanceLine(control2, end);
     }
-        
+
     void split(CubicBezier& left, CubicBezier& right) const
-    {    
+    {
         FloatPoint startToControl1 = midPoint(control1, control2);
-        
+
         left.start = start;
         left.control1 = midPoint(start, control1);
         left.control2 = midPoint(left.control1, startToControl1);
-        
+
         right.control2 = midPoint(control2, end);
         right.control1 = midPoint(right.control2, startToControl1);
         right.end = end;
-        
+
         FloatPoint leftControl2ToRightControl1 = midPoint(left.control2, right.control1);
         left.end = leftControl2ToRightControl1;
         right.start = leftControl2ToRightControl1;
 
         left.splitDepth = right.splitDepth = splitDepth + 1;
     }
-    
+
     FloatPoint start;
     FloatPoint control1;
     FloatPoint control2;
@@ -160,7 +160,7 @@ static float curveLength(PathTraversalState& traversalState, CurveType curve)
             curveStack.removeLast();
         }
     } while (!curveStack.isEmpty());
-    
+
     return totalLength;
 }
 
@@ -198,7 +198,7 @@ float PathTraversalState::quadraticBezierTo(const FloatPoint& newControl, const 
 {
     float distance = curveLength<QuadraticBezier>(*this, QuadraticBezier(m_current, newControl, newEnd));
 
-    if (m_action != TraversalPointAtLength && m_action != TraversalNormalAngleAtLength) 
+    if (m_action != TraversalPointAtLength && m_action != TraversalNormalAngleAtLength)
         m_current = newEnd;
 
     return distance;
@@ -207,8 +207,8 @@ float PathTraversalState::quadraticBezierTo(const FloatPoint& newControl, const 
 float PathTraversalState::cubicBezierTo(const FloatPoint& newControl1, const FloatPoint& newControl2, const FloatPoint& newEnd)
 {
     float distance = curveLength<CubicBezier>(*this, CubicBezier(m_current, newControl1, newControl2, newEnd));
- 
-    if (m_action != TraversalPointAtLength && m_action != TraversalNormalAngleAtLength) 
+
+    if (m_action != TraversalPointAtLength && m_action != TraversalNormalAngleAtLength)
         m_current = newEnd;
 
     return distance;
@@ -218,7 +218,7 @@ void PathTraversalState::processSegment()
 {
     if (m_action == TraversalSegmentAtLength && m_totalLength >= m_desiredLength)
         m_success = true;
-        
+
     if ((m_action == TraversalPointAtLength || m_action == TraversalNormalAngleAtLength) && m_totalLength >= m_desiredLength) {
         float slope = FloatPoint(m_current - m_previous).slopeAngleRadians();
         if (m_action == TraversalPointAtLength) {

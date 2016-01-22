@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -85,7 +85,7 @@ bool AuthenticationChallenge::platformCompare(const AuthenticationChallenge& a, 
 
     if (a.cfURLAuthChallengeRef() != b.cfURLAuthChallengeRef())
         return false;
-        
+
     return true;
 }
 
@@ -95,7 +95,7 @@ CFURLAuthChallengeRef createCF(const AuthenticationChallenge& coreChallenge)
 
     CFURLProtectionSpaceRef protectionSpace = createCF(coreChallenge.protectionSpace());
     CFURLCredentialRef credential = createCF(coreChallenge.proposedCredential());
-    
+
     CFURLAuthChallengeRef result = CFURLAuthChallengeCreate(0, protectionSpace, credential,
                                         coreChallenge.previousFailureCount(),
                                         coreChallenge.failureResponse().cfURLResponse(),
@@ -120,7 +120,7 @@ CFURLCredentialRef createCF(const Credential& coreCredential)
     default:
         ASSERT_NOT_REACHED();
     }
-    
+
 #if CERTIFICATE_CREDENTIALS_SUPPORTED
     if (coreCredential.type() == CredentialTypeClientCertificate)
         return CFURLCredentialCreateWithIdentityAndCertificateArray(kCFAllocatorDefault, coreCredential.identity(), coreCredential.certificates(), persistence);
@@ -228,7 +228,7 @@ Credential core(CFURLCredentialRef cfCredential)
 ProtectionSpace core(CFURLProtectionSpaceRef cfSpace)
 {
     ProtectionSpaceServerType serverType = ProtectionSpaceServerHTTP;
-    
+
     switch (CFURLProtectionSpaceGetServerType(cfSpace)) {
     case kCFURLProtectionSpaceServerHTTP:
         break;
@@ -258,7 +258,7 @@ ProtectionSpace core(CFURLProtectionSpaceRef cfSpace)
     }
 
     ProtectionSpaceAuthenticationScheme scheme = ProtectionSpaceAuthenticationSchemeDefault;
-    
+
     switch (CFURLProtectionSpaceGetAuthenticationScheme(cfSpace)) {
     case kCFURLProtectionSpaceAuthenticationSchemeDefault:
         scheme = ProtectionSpaceAuthenticationSchemeDefault;
@@ -290,8 +290,8 @@ ProtectionSpace core(CFURLProtectionSpaceRef cfSpace)
         scheme = ProtectionSpaceAuthenticationSchemeUnknown;
         ASSERT_NOT_REACHED();
     }
-        
-    return ProtectionSpace(CFURLProtectionSpaceGetHost(cfSpace), 
+
+    return ProtectionSpace(CFURLProtectionSpaceGetHost(cfSpace),
                            CFURLProtectionSpaceGetPort(cfSpace),
                            serverType,
                            CFURLProtectionSpaceGetRealm(cfSpace),

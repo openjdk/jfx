@@ -70,7 +70,7 @@ public class ArcApp extends Application {
         root.setMaxSize(Region.USE_PREF_SIZE, Region.USE_PREF_SIZE);
         // Red arc
         arc1.setFill(Color.RED);
-        // Blue stroked arc       
+        // Blue stroked arc
         arc2.setStroke(Color.DODGERBLUE);
         arc2.setFill(null);
         root.getChildren().addAll(arc1, arc2);

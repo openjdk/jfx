@@ -34,7 +34,7 @@ public final class MappingChange<E, F> extends Change<F>{
     private final Map<E, F> map;
     private final Change<? extends E> original;
     private List<F> removed;
-    
+
     public static final Map NOOP_MAP = new Map() {
 
         @Override
@@ -46,7 +46,7 @@ public final class MappingChange<E, F> extends Change<F>{
     public static interface Map<E, F> {
         F map(E original);
     }
-    
+
     public MappingChange(Change<? extends E> original, Map<E, F> map, ObservableList<F> list) {
         super(list);
         this.original = original;
@@ -121,7 +121,7 @@ public final class MappingChange<E, F> extends Change<F>{
         while (next()) {
             posToEnd++;
         }
-        
+
         int size = 0;
         reset();
         while (next()) {
@@ -144,14 +144,14 @@ public final class MappingChange<E, F> extends Change<F>{
             }
         }
         b.append(" }");
-        
+
         reset();
         pos = size - posToEnd;
         while (pos-- > 0) {
             next();
         }
-        
+
         return b.toString();
     }
-    
+
 }

@@ -81,13 +81,13 @@ public final class ImageCursor_getCurrentFrame_Test {
         toolkit.setAnimationTime(1000);
         currCursorFrame = CursorShim.getCurrentFrame(animatedImageCursor);
         assertSame(lastCursorFrame, currCursorFrame);
-        
+
         lastCursorFrame = currCursorFrame;
 
         toolkit.setAnimationTime(2500);
         currCursorFrame = CursorShim.getCurrentFrame(animatedImageCursor);
         assertNotSame(lastCursorFrame, currCursorFrame);
-        
+
         lastCursorFrame = currCursorFrame;
 
         toolkit.setAnimationTime(4500);

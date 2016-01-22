@@ -79,7 +79,7 @@ JNIEXPORT jfloat JNICALL Java_com_sun_javafx_font_MacFontFinder_getSystemFontSiz
   (JNIEnv *env, jclass obj)
 {
     CTFontRef font = CTFontCreateUIFontForLanguage(
-                         kCTFontSystemFontType, 
+                         kCTFontSystemFontType,
                          0.0, //get system font with default size
                          NULL);
     jfloat systemFontDefaultSize = (jfloat) CTFontGetSize (font);

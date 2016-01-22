@@ -294,7 +294,7 @@ public class MaxLoader extends Importer {
         for (Map.Entry<String, MaxData.Node> n : maxData.roots.entrySet()) {
             Node node = loadMaxNode(n.getValue(), maxData);
 
-            if (node instanceof PointLight) { // or LightBase ? 
+            if (node instanceof PointLight) { // or LightBase ?
                 lroot.getChildren().add(node);
             } else if (node != null) {
                 root.getChildren().add(node);
@@ -325,16 +325,16 @@ public class MaxLoader extends Importer {
 
         return new MaxScene(root, lroot);
     }
-    
+
     private MaxScene root;
-    
+
     @Override
     public void load(String fileUrl, boolean asPolygonMesh) throws IOException {
         loadMaxUrl(fileUrl);
         if (asPolygonMesh) {
-            throw new RuntimeException("Polygon Mesh is not supported");          
+            throw new RuntimeException("Polygon Mesh is not supported");
         } else {
-            root = loadMaxUrl(fileUrl);          
+            root = loadMaxUrl(fileUrl);
         }
     }
 
@@ -347,5 +347,5 @@ public class MaxLoader extends Importer {
     public boolean isSupported(String extension) {
         return extension != null && extension.equals("ase");
     }
-    
+
 }

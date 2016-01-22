@@ -74,12 +74,12 @@ static double propertyValueDouble(JSContextRef context, JSObjectRef object, cons
     JSValueRef value = propertyValue(context, object, propertyName);
     if (!value)
         return 0;
-    return JSValueToNumber(context, value, 0);    
+    return JSValueToNumber(context, value, 0);
 }
 
 static int propertyValueInt(JSContextRef context, JSObjectRef object, const char* propertyName)
 {
-    return static_cast<int>(propertyValueDouble(context, object, propertyName));    
+    return static_cast<int>(propertyValueDouble(context, object, propertyName));
 }
 
 static double numericWindowPropertyValue(WKBundleFrameRef frame, const char* propertyName)
@@ -126,7 +126,7 @@ static WTF::String rangeToStr(WKBundlePageRef page, WKBundleScriptWorldRef world
 {
     if (!rangeRef)
         return "(null)";
- 
+
     WKBundleFrameRef frame = WKBundlePageGetMainFrame(page);
 
     JSGlobalContextRef context = WKBundleFrameGetJavaScriptContextForWorld(frame, world);
@@ -220,7 +220,7 @@ static WTF::String frameToStr(WKBundleFrameRef frame)
         else
             stringBuilder.appendLiteral("frame (anonymous)");
     }
-    
+
     return stringBuilder.toString();
 }
 
@@ -248,7 +248,7 @@ static inline WTF::String pathSuitableForTestResult(WKURLRef fileUrl)
     String pathString = toWTFString(adoptWK(WKURLCopyPath(fileUrl)));
     String mainFrameURLPathString = toWTFString(adoptWK(WKURLCopyPath(mainFrameURL.get())));
     String basePath = mainFrameURLPathString.substring(0, mainFrameURLPathString.reverseFind(divider) + 1);
-    
+
     if (!basePath.isEmpty() && pathString.startsWith(basePath))
         return pathString.substring(basePath.length());
     return toWTFString(adoptWK(WKURLCopyLastPathComponent(fileUrl))); // We lose some information here, but it's better than exposing a full path, which is always machine specific.
@@ -410,7 +410,7 @@ void InjectedBundlePage::prepare()
     m_previousTestBackForwardListItem = adoptWK(WKBundleBackForwardListCopyItemAtIndex(WKBundlePageGetBackForwardList(m_page), 0));
 
     WKBundleFrameClearOpener(WKBundlePageGetMainFrame(m_page));
-    
+
     WKBundlePageSetTracksRepaints(m_page, false);
 }
 
@@ -1637,9 +1637,9 @@ bool InjectedBundlePage::shouldChangeSelectedRange(WKBundleRangeHandleRef fromRa
         stringBuilder.appendLiteral(" toDOMRange:");
         stringBuilder.append(rangeToStr(m_page, m_world.get(), toRange));
         stringBuilder.appendLiteral(" affinity:");
-        stringBuilder.append(affinitystring[affinity]); 
+        stringBuilder.append(affinitystring[affinity]);
         stringBuilder.appendLiteral(" stillSelecting:");
-        stringBuilder.append(boolstring[stillSelecting]); 
+        stringBuilder.append(boolstring[stillSelecting]);
         stringBuilder.append('\n');
         InjectedBundle::shared().outputText(stringBuilder.toString());
     }

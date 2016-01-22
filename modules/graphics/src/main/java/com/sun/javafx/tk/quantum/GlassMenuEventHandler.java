@@ -36,17 +36,17 @@ class GlassMenuEventHandler extends Menu.EventHandler {
     public GlassMenuEventHandler(final MenuBase mb) {
         this.menuBase = mb;
     }
-    
+
     @Override public void handleMenuOpening(Menu menu, long time) {
         menuBase.show();
         menuOpen = true;
     }
-    
+
     @Override public void handleMenuClosed(Menu menu, long time) {
         menuBase.hide();
         menuOpen = false;
     }
-    
+
     protected boolean isMenuOpen() {
         return menuOpen;
     }

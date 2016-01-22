@@ -22,7 +22,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef HTMLCanvasElement_h
@@ -79,10 +79,10 @@ public:
     void setHeight(int);
 
     void setSize(const IntSize& newSize)
-    { 
+    {
         if (newSize == size() && targetDeviceScaleFactor() == m_deviceScaleFactor)
             return;
-        m_ignoreReset = true; 
+        m_ignoreReset = true;
         setWidth(newSize.width());
         setHeight(newSize.height());
         m_ignoreReset = false;
@@ -135,7 +135,7 @@ public:
 
     AffineTransform baseTransform() const;
 
-#if ENABLE(WEBGL)    
+#if ENABLE(WEBGL)
     bool is3D() const;
 #endif
 
@@ -191,7 +191,7 @@ private:
     mutable bool m_didClearImageBuffer;
     mutable std::unique_ptr<ImageBuffer> m_imageBuffer;
     mutable OwnPtr<GraphicsContextStateSaver> m_contextStateSaver;
-    
+
     mutable RefPtr<Image> m_presentedImage;
     mutable RefPtr<Image> m_copiedImage; // FIXME: This is temporary for platforms that have to copy the image buffer to render (and for CSSCanvasValue).
 };

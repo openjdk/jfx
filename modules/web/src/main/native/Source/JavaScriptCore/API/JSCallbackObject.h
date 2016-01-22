@@ -21,7 +21,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef JSCallbackObject_h
@@ -41,26 +41,26 @@ struct JSCallbackObjectData : WeakHandleOwner {
     {
         JSClassRetain(jsClass);
     }
-    
+
     virtual ~JSCallbackObjectData()
     {
         JSClassRelease(jsClass);
     }
-    
+
     JSValue getPrivateProperty(const Identifier& propertyName) const
     {
         if (!m_privateProperties)
             return JSValue();
         return m_privateProperties->getPrivateProperty(propertyName);
     }
-    
+
     void setPrivateProperty(VM& vm, JSCell* owner, const Identifier& propertyName, JSValue value)
     {
         if (!m_privateProperties)
             m_privateProperties = adoptPtr(new JSPrivatePropertyMap);
         m_privateProperties->setPrivateProperty(vm, owner, propertyName, value);
     }
-    
+
     void deletePrivateProperty(const Identifier& propertyName)
     {
         if (!m_privateProperties)
@@ -85,13 +85,13 @@ struct JSCallbackObjectData : WeakHandleOwner {
                 return JSValue();
             return location->value.get();
         }
-        
+
         void setPrivateProperty(VM& vm, JSCell* owner, const Identifier& propertyName, JSValue value)
         {
             WriteBarrier<Unknown> empty;
             m_propertyMap.add(propertyName.impl(), empty).iterator->value.set(vm, owner, value);
         }
-        
+
         void deletePrivateProperty(const Identifier& propertyName)
         {
             m_propertyMap.remove(propertyName.impl());
@@ -113,7 +113,7 @@ struct JSCallbackObjectData : WeakHandleOwner {
     virtual void finalize(Handle<Unknown>, void*) override;
 };
 
-    
+
 template <class Parent>
 class JSCallbackObject : public Parent {
 protected:
@@ -150,17 +150,17 @@ public:
     bool inherits(JSClassRef) const;
 
     static Structure* createStructure(VM&, JSGlobalObject*, JSValue);
-    
+
     JSValue getPrivateProperty(const Identifier& propertyName) const
     {
         return m_callbackObjectData->getPrivateProperty(propertyName);
     }
-    
+
     void setPrivateProperty(VM& vm, const Identifier& propertyName, JSValue value)
     {
         m_callbackObjectData->setPrivateProperty(vm, this, propertyName, value);
     }
-    
+
     void deletePrivateProperty(const Identifier& propertyName)
     {
         m_callbackObjectData->deletePrivateProperty(propertyName);
@@ -178,7 +178,7 @@ private:
 
     static bool getOwnPropertySlot(JSObject*, ExecState*, PropertyName, PropertySlot&);
     static bool getOwnPropertySlotByIndex(JSObject*, ExecState*, unsigned propertyName, PropertySlot&);
-    
+
     static void put(JSCell*, ExecState*, PropertyName, JSValue, PutPropertySlot&);
     static void putByIndex(JSCell*, ExecState*, unsigned, JSValue, bool shouldThrow);
 
@@ -203,13 +203,13 @@ private:
     }
 
     void init(ExecState*);
- 
+
     static JSCallbackObject* asCallbackObject(JSValue);
     static JSCallbackObject* asCallbackObject(EncodedJSValue);
- 
+
     static EncodedJSValue JSC_HOST_CALL call(ExecState*);
     static EncodedJSValue JSC_HOST_CALL construct(ExecState*);
-   
+
     JSValue getStaticValue(ExecState*, PropertyName);
     static EncodedJSValue staticFunctionGetter(ExecState*, JSObject*, EncodedJSValue, PropertyName);
     static EncodedJSValue callbackGetter(ExecState*, JSObject*, EncodedJSValue, PropertyName);

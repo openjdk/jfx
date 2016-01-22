@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef ProfilerOSRExit_h
@@ -36,15 +36,15 @@ class OSRExit {
 public:
     OSRExit(unsigned id, const OriginStack&, ExitKind, bool isWatchpoint);
     ~OSRExit();
-    
+
     unsigned id() const { return m_id; }
     const OriginStack& origin() const { return m_origin; }
     ExitKind exitKind() const { return m_exitKind; }
     bool isWatchpoint() const { return m_isWatchpoint; }
-    
+
     uint64_t* counterAddress() { return &m_counter; }
     uint64_t count() const { return m_counter; }
-    
+
     JSValue toJS(ExecState*) const;
 
 private:

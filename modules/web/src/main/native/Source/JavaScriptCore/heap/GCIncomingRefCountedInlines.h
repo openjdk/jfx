@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef GCIncomingRefCountedInlines_h
@@ -40,9 +40,9 @@ bool GCIncomingRefCounted<T>::addIncomingReference(JSCell* cell)
         ASSERT(hasSingleton());
         return true;
     }
-    
+
     ASSERT(Heap::heap(incomingReferenceAt(0)) == Heap::heap(cell));
-    
+
     if (hasSingleton()) {
         Vector<JSCell*>* vector = new Vector<JSCell*>();
         vector->append(singleton());
@@ -51,7 +51,7 @@ bool GCIncomingRefCounted<T>::addIncomingReference(JSCell* cell)
         ASSERT(hasVectorOfCells());
         return false;
     }
-    
+
     vectorOfCells()->append(cell);
     return false;
 }
@@ -61,10 +61,10 @@ template<typename FilterFunctionType>
 bool GCIncomingRefCounted<T>::filterIncomingReferences(FilterFunctionType& filterFunction)
 {
     const bool verbose = false;
-    
+
     if (verbose)
         dataLog("Filtering incoming references.\n");
-    
+
     if (!hasAnyIncoming()) {
         ASSERT(!this->isDeferred());
         ASSERT(this->refCount());
@@ -72,16 +72,16 @@ bool GCIncomingRefCounted<T>::filterIncomingReferences(FilterFunctionType& filte
             dataLog("    Has no incoming.\n");
         return false;
     }
-    
+
     ASSERT(this->isDeferred());
-    
+
     if (hasSingleton()) {
         if (filterFunction(singleton())) {
             if (verbose)
                 dataLog("   Singleton passed.\n");
             return false;
         }
-        
+
         if (verbose)
             dataLog("   Removing singleton.\n");
         m_encodedPointer = 0;
@@ -89,7 +89,7 @@ bool GCIncomingRefCounted<T>::filterIncomingReferences(FilterFunctionType& filte
         this->setIsDeferred(false);
         return true;
     }
-    
+
     if (verbose)
         dataLog("   Has ", vectorOfCells()->size(), " entries.\n");
     for (size_t i = 0; i < vectorOfCells()->size(); ++i) {
@@ -98,13 +98,13 @@ bool GCIncomingRefCounted<T>::filterIncomingReferences(FilterFunctionType& filte
         vectorOfCells()->at(i--) = vectorOfCells()->last();
         vectorOfCells()->removeLast();
     }
-    
+
     if (vectorOfCells()->size() >= 2) {
         if (verbose)
             dataLog("   Still has ", vectorOfCells()->size(), " entries.\n");
         return false;
     }
-    
+
     if (vectorOfCells()->isEmpty()) {
         if (verbose)
             dataLog("   Removing.\n");
@@ -114,7 +114,7 @@ bool GCIncomingRefCounted<T>::filterIncomingReferences(FilterFunctionType& filte
         this->setIsDeferred(false);
         return true;
     }
-    
+
     if (verbose)
         dataLog("   Shrinking to singleton.\n");
     JSCell* singleton = vectorOfCells()->at(0);

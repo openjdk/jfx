@@ -53,7 +53,7 @@ namespace JSC {
         Register& operator=(const JSValue&);
         JSValue jsValue() const;
         EncodedJSValue encodedJSValue() const;
-        
+
         Register& operator=(CallFrame*);
         Register& operator=(CodeBlock*);
         Register& operator=(JSScope*);
@@ -146,7 +146,7 @@ namespace JSC {
     {
         return u.callFrame;
     }
-    
+
     ALWAYS_INLINE CodeBlock* Register::codeBlock() const
     {
         return u.codeBlock;

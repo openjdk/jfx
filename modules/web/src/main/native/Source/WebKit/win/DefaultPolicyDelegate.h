@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef DefaultPolicyDelegate_h
@@ -42,28 +42,28 @@ public:
     virtual ULONG STDMETHODCALLTYPE Release(void);
 
     // IWebPolicyDelegate
-    virtual HRESULT STDMETHODCALLTYPE decidePolicyForNavigationAction( 
+    virtual HRESULT STDMETHODCALLTYPE decidePolicyForNavigationAction(
         /* [in] */ IWebView *webView,
         /* [in] */ IPropertyBag *actionInformation,
         /* [in] */ IWebURLRequest *request,
         /* [in] */ IWebFrame *frame,
         /* [in] */ IWebPolicyDecisionListener *listener);
-    
-    virtual HRESULT STDMETHODCALLTYPE decidePolicyForNewWindowAction( 
+
+    virtual HRESULT STDMETHODCALLTYPE decidePolicyForNewWindowAction(
         /* [in] */ IWebView *webView,
         /* [in] */ IPropertyBag *actionInformation,
         /* [in] */ IWebURLRequest *request,
         /* [in] */ BSTR frameName,
         /* [in] */ IWebPolicyDecisionListener *listener);
-    
-    virtual HRESULT STDMETHODCALLTYPE decidePolicyForMIMEType( 
+
+    virtual HRESULT STDMETHODCALLTYPE decidePolicyForMIMEType(
         /* [in] */ IWebView *webView,
         /* [in] */ BSTR type,
         /* [in] */ IWebURLRequest *request,
         /* [in] */ IWebFrame *frame,
         /* [in] */ IWebPolicyDecisionListener *listener);
-    
-    virtual HRESULT STDMETHODCALLTYPE unableToImplementPolicyWithError( 
+
+    virtual HRESULT STDMETHODCALLTYPE unableToImplementPolicyWithError(
         /* [in] */ IWebView *webView,
         /* [in] */ IWebError *error,
         /* [in] */ IWebFrame *frame);

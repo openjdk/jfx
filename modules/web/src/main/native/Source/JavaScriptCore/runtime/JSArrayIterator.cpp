@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -57,15 +57,15 @@ void JSArrayIterator::finishCreation(VM& vm, JSGlobalObject* globalObject, Array
     }
 
 }
-    
-    
+
+
 void JSArrayIterator::visitChildren(JSCell* cell, SlotVisitor& visitor)
 {
     JSArrayIterator* thisObject = jsCast<JSArrayIterator*>(cell);
     ASSERT_GC_OBJECT_INHERITS(thisObject, info());
     COMPILE_ASSERT(StructureFlags & OverridesVisitChildren, OverridesVisitChildrenWithoutSettingFlag);
     ASSERT(thisObject->structure()->typeInfo().overridesVisitChildren());
-        
+
     Base::visitChildren(thisObject, visitor);
     visitor.append(&thisObject->m_iteratedObject);
 
@@ -75,21 +75,21 @@ static EncodedJSValue createIteratorResult(CallFrame* callFrame, ArrayIterationK
 {
     if (done)
         return JSValue::encode(callFrame->vm().iterationTerminator.get());
-    
+
     switch (kind & ~ArrayIterateSparseTag) {
     case ArrayIterateKey:
         return JSValue::encode(jsNumber(index));
-        
+
     case ArrayIterateValue:
         return JSValue::encode(result);
-        
+
     case ArrayIterateKeyValue: {
         MarkedArgumentBuffer args;
         args.append(jsNumber(index));
         args.append(result);
         JSGlobalObject* globalObject = callFrame->callee()->globalObject();
         return JSValue::encode(constructArray(callFrame, 0, globalObject, args));
-        
+
     }
     default:
         RELEASE_ASSERT_NOT_REACHED();
@@ -110,11 +110,11 @@ static inline EncodedJSValue JSC_HOST_CALL arrayIteratorNext(CallFrame* callFram
     JSValue jsLength = JSValue(iteratedObject).get(callFrame, callFrame->propertyNames().length);
     if (callFrame->hadException())
         return JSValue::encode(jsNull());
-    
+
     size_t length = jsLength.toUInt32(callFrame);
     if (callFrame->hadException())
         return JSValue::encode(jsNull());
-    
+
     if (index >= length) {
         iterator->finish();
         return createIteratorResult(callFrame, kind, index, jsUndefined(), true);
@@ -123,7 +123,7 @@ static inline EncodedJSValue JSC_HOST_CALL arrayIteratorNext(CallFrame* callFram
         iterator->setNextIndex(index + 1);
         return createIteratorResult(callFrame, kind, index, result, false);
     }
-    
+
     JSValue result = jsUndefined();
     PropertySlot slot(iteratedObject);
     if (kind > ArrayIterateSparseTag) {
@@ -143,24 +143,24 @@ static inline EncodedJSValue JSC_HOST_CALL arrayIteratorNext(CallFrame* callFram
         }
     } else if (iteratedObject->getPropertySlot(callFrame, index, slot))
         result = slot.getValue(callFrame, index);
-    
+
     if (index == length)
         iterator->finish();
     else
         iterator->setNextIndex(index + 1);
     return createIteratorResult(callFrame, kind, index, jsUndefined(), index == length);
 }
-    
+
 EncodedJSValue JSC_HOST_CALL arrayIteratorNextKey(CallFrame* callFrame)
 {
     return arrayIteratorNext(callFrame);
 }
-    
+
 EncodedJSValue JSC_HOST_CALL arrayIteratorNextValue(CallFrame* callFrame)
 {
     return arrayIteratorNext(callFrame);
 }
-    
+
 EncodedJSValue JSC_HOST_CALL arrayIteratorNextGeneric(CallFrame* callFrame)
 {
     return arrayIteratorNext(callFrame);

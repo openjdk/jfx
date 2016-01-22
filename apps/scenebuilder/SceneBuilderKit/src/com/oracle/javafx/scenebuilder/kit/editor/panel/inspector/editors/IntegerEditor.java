@@ -60,7 +60,7 @@ public class IntegerEditor extends AutoSuggestEditor {
         super(propMeta, selectedClasses, new ArrayList<>(constants.keySet()), AutoSuggestEditor.Type.INTEGER);
         initialize(constants, minVal, maxVal);
     }
-    
+
     private void initialize(Map<String, Object> constants, int minVal, int maxVal) {
         this.constants = constants;
         this.min = minVal;

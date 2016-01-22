@@ -60,7 +60,7 @@ import javafx.scene.shape.Rectangle;
  * Helper class for creating table views for testing
  */
 public class SamplePageTableHelper {
-    
+
     public static class Person {
 
         private BooleanProperty invited;
@@ -68,7 +68,7 @@ public class SamplePageTableHelper {
         private StringProperty lastName;
         private StringProperty name;
         private StringProperty email;
-        
+
         private final String country = "New Zealand";
 
         public Person(String fName, String lName) {
@@ -78,7 +78,7 @@ public class SamplePageTableHelper {
         public Person(String fName, String lName, String email) {
             this(fName, lName, email, false);
         }
-        
+
         public Person(String fName, String lName, String email, boolean invited) {
             this.firstName = new SimpleStringProperty(fName);
             this.lastName = new SimpleStringProperty(lName);
@@ -93,7 +93,7 @@ public class SamplePageTableHelper {
             });
             this.invited.addListener((ov, t, t1) -> System.out.println(getFirstName() + " invited: " + t1));
         }
-        
+
         public Boolean isInvited() { return invited.get(); }
         public BooleanProperty invitedProperty() { return invited; }
 
@@ -140,7 +140,7 @@ public class SamplePageTableHelper {
         public StringProperty emailProperty() {
             return email;
         }
-        
+
         public String getCountry() {
             return country;
         }
@@ -151,7 +151,7 @@ public class SamplePageTableHelper {
     }
 
     private static ObservableList<Person> data = FXCollections.<Person>observableArrayList();
-    
+
     static {
         // Data
         data.addAll(
@@ -290,8 +290,8 @@ public class SamplePageTableHelper {
         invitedCol.setMaxWidth(55);
         invitedCol.setCellValueFactory(new PropertyValueFactory("invited"));
         invitedCol.setCellFactory(p -> new CheckBoxTableCell<Person, Boolean>());
-        
-        
+
+
         TableView<Person> tableView = new TableView<Person>();
         tableView.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
         tableView.getSelectionModel().setCellSelectionEnabled(!rowSelection);

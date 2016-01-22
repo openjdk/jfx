@@ -110,7 +110,7 @@ bool ScriptDebugServer::evaluateBreakpointAction(const ScriptBreakpointAction& b
         JSValue result = debuggerCallFrame->evaluate(breakpointAction.data, exception);
         if (exception)
             reportException(debuggerCallFrame->exec(), exception);
-        
+
         JSC::ExecState* state = debuggerCallFrame->scope()->globalObject()->globalExec();
         Deprecated::ScriptValue wrappedResult = Deprecated::ScriptValue(state->vm(), exception ? exception : result);
         dispatchBreakpointActionProbe(state, breakpointAction, wrappedResult);
@@ -330,7 +330,7 @@ const Vector<ScriptBreakpointAction>& ScriptDebugServer::getActionsForBreakpoint
 
     if (m_breakpointIDToActions.contains(breakpointID))
         return m_breakpointIDToActions.find(breakpointID)->value;
-    
+
     static NeverDestroyed<Vector<ScriptBreakpointAction>> emptyActionVector = Vector<ScriptBreakpointAction>();
     return emptyActionVector;
 }

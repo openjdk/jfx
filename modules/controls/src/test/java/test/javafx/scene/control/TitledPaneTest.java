@@ -70,7 +70,7 @@ public class TitledPaneTest {
     private Toolkit tk;
     private Scene scene;
     private Stage stage;
-    private StackPane root;  
+    private StackPane root;
 
     @Before public void setup() {
         node = new Rectangle();
@@ -81,39 +81,39 @@ public class TitledPaneTest {
         root = new StackPane();
         scene = new Scene(root);
         stage = new Stage();
-        stage.setScene(scene);        
+        stage.setScene(scene);
     }
-    
+
     /*********************************************************************
      * Helper methods                                                    *
      ********************************************************************/
     private void show() {
         stage.show();
         stage.requestFocus();
-    }   
-   
+    }
+
     /*********************************************************************
      * Tests for default values                                         *
      ********************************************************************/
-    
+
     @Test public void defaultConstructorShouldSetStyleClassTo_titledpane() {
         assertStyleClassContains(titledPane, "titled-pane");
     }
-    
+
     @Test public void defaultConstructorShouldEmptyTitleAndNullContent() {
         assertEquals(titledPane.textProperty().get(), "");
         assertNull(titledPane.contentProperty().get());
     }
-    
+
     @Test public void twoArgConstructorShouldSetStyleClassTo_titledpane() {
         assertStyleClassContains(titledPane, "titled-pane");
     }
-    
+
     @Test public void twoArgConstructorShouldEmptyTitleAndNullContent() {
         assertEquals(titledPaneWithTitleAndNode.textProperty().get(), "title");
         assertSame(titledPaneWithTitleAndNode.contentProperty().getValue(), node);
     }
-    
+
     @Test public void defaultExpandedIsTrue() {
         assertTrue(titledPane.isExpanded());
     }
@@ -130,7 +130,7 @@ public class TitledPaneTest {
     /*********************************************************************
      * Tests for property binding                                        *
      ********************************************************************/
-    
+
     @Test public void checkContentPropertyBind() {
         ObjectProperty objPr = new SimpleObjectProperty<Node>(null);
         titledPane.contentProperty().bind(objPr);
@@ -139,7 +139,7 @@ public class TitledPaneTest {
         objPr.setValue(nde);
         assertEquals("ContentProperty cannot be bound", titledPane.contentProperty().getValue(), nde);
     }
-    
+
     @Test public void checkExpandedPropertyBind() {
         BooleanProperty objPr = new SimpleBooleanProperty(true);
         titledPane.expandedProperty().bind(objPr);
@@ -147,7 +147,7 @@ public class TitledPaneTest {
         objPr.setValue(false);
         assertEquals("Expanded cannot be bound", titledPane.expandedProperty().getValue(), false);
     }
-    
+
     @Test public void checkAnimatedPropertyBind() {
         BooleanProperty objPr = new SimpleBooleanProperty(true);
         titledPane.animatedProperty().bind(objPr);
@@ -155,7 +155,7 @@ public class TitledPaneTest {
         objPr.setValue(false);
         assertEquals("Animated cannot be bound", titledPane.animatedProperty().getValue(), false);
     }
-    
+
     @Test public void checkCollapsiblePropertyBind() {
         BooleanProperty objPr = new SimpleBooleanProperty(true);
         titledPane.collapsibleProperty().bind(objPr);
@@ -163,7 +163,7 @@ public class TitledPaneTest {
         objPr.setValue(false);
         assertEquals("Collapsible cannot be bound", titledPane.collapsibleProperty().getValue(), false);
     }
-    
+
 
     @Test public void contentPropertyHasBeanReference() {
         assertSame(titledPane, titledPane.contentProperty().getBean());
@@ -189,7 +189,7 @@ public class TitledPaneTest {
         assertEquals("collapsible", titledPane.collapsibleProperty().getName());
     }
 
-    
+
     /*********************************************************************
      * Check for Pseudo classes                                          *
      ********************************************************************/
@@ -206,7 +206,7 @@ public class TitledPaneTest {
         assertPseudoClassExists(titledPane, "collapsed");
     }
 
-    
+
     /*********************************************************************
      * CSS related Tests                                                 *
      ********************************************************************/
@@ -247,71 +247,71 @@ public class TitledPaneTest {
         titledPane.setContent(nde);
         assertSame(titledPane.contentProperty().getValue(), nde);
     }
-    
+
     @Test public void setContentAndSeeValue() {
         Node nde = new Rectangle();
         titledPane.setContent(nde);
         assertSame(titledPane.getContent(), nde);
     }
-    
+
     @Test public void setExpandedAndSeeValueIsReflectedInModel() {
         titledPane.setExpanded(true);
         assertTrue(titledPane.expandedProperty().getValue());
     }
-    
+
     @Test public void setExpandedAndSeeValue() {
         titledPane.setExpanded(false);
         assertFalse(titledPane.isExpanded());
     }
-    
+
     @Test public void setAnimatedAndSeeValueIsReflectedInModel() {
         titledPane.setAnimated(true);
         assertTrue(titledPane.animatedProperty().getValue());
     }
-    
+
     @Test public void setAnimatedAndSeeValue() {
         titledPane.setAnimated(false);
         assertFalse(titledPane.isAnimated());
     }
-    
+
     @Test public void setCollapsibleAndSeeValueIsReflectedInModel() {
         titledPane.setCollapsible(true);
         assertTrue(titledPane.collapsibleProperty().getValue());
     }
-    
+
     @Test public void setCollapsibleAndSeeValue() {
         titledPane.setCollapsible(false);
         assertFalse(titledPane.isCollapsible());
     }
-    
-    @Test public void setAlignment_RT20069() {        
+
+    @Test public void setAlignment_RT20069() {
         titledPane.setExpanded(false);
         titledPane.setAnimated(false);
         titledPane.setStyle("-fx-alignment: BOTTOM_RIGHT;");
-                
+
         root.getChildren().add(titledPane);
-        show();    
-        
-        assertEquals(Pos.BOTTOM_RIGHT, titledPane.getAlignment());              
+        show();
+
+        assertEquals(Pos.BOTTOM_RIGHT, titledPane.getAlignment());
     }
-    
+
     @Test public void keyboardFocusOnNonCollapsibleTitledPane_RT19660() {
         Button button = new Button("Button");
-        
+
         titledPane.setCollapsible(false);
         titledPane.setExpanded(true);
         titledPane.setAnimated(false);
         titledPane.setContent(button);
-        
+
         root.getChildren().add(titledPane);
         show();
 
-        tk.firePulse();        
+        tk.firePulse();
         assertTrue(titledPane.isFocused());
 
-        KeyEventFirer keyboard = new KeyEventFirer(titledPane);        
+        KeyEventFirer keyboard = new KeyEventFirer(titledPane);
         keyboard.doKeyPress(KeyCode.ENTER);
-        
+
         tk.firePulse();
         assertTrue(titledPane.isExpanded());
         assertTrue(titledPane.isFocused());
@@ -320,39 +320,39 @@ public class TitledPaneTest {
         tk.firePulse();
         assertFalse(titledPane.isFocused());
         assertTrue(button.isFocused());
-    }    
-    
+    }
+
     @Test public void mouseFocusOnNonCollapsibleTitledPane_RT19660() {
         Button button = new Button("Button");
-        
+
         titledPane.setCollapsible(false);
         titledPane.setExpanded(true);
         titledPane.setAnimated(false);
         titledPane.setContent(button);
-        
+
         root.getChildren().add(titledPane);
         show();
 
-        tk.firePulse();        
+        tk.firePulse();
         assertTrue(titledPane.isFocused());
 
         double xval = (titledPane.localToScene(titledPane.getLayoutBounds())).getMinX();
         double yval = (titledPane.localToScene(titledPane.getLayoutBounds())).getMinY();
-   
+
         final MouseEventGenerator generator = new MouseEventGenerator();
         scene.impl_processMouseEvent(
             generator.generateMouseEvent(MouseEvent.MOUSE_PRESSED, xval+20, yval+20));
         scene.impl_processMouseEvent(
             generator.generateMouseEvent(MouseEvent.MOUSE_RELEASED, xval+20, yval+20));
-        
+
         tk.firePulse();
         assertTrue(titledPane.isExpanded());
         assertTrue(titledPane.isFocused());
 
-        KeyEventFirer keyboard = new KeyEventFirer(titledPane);        
+        KeyEventFirer keyboard = new KeyEventFirer(titledPane);
         keyboard.doKeyPress(KeyCode.TAB);
         tk.firePulse();
         assertFalse(titledPane.isFocused());
         assertTrue(button.isFocused());
-    }          
+    }
 }

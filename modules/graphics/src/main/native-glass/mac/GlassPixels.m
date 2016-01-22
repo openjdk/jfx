@@ -46,12 +46,12 @@ JNIEXPORT jint JNICALL Java_com_sun_glass_ui_mac_MacPixels__1initIDs
 (JNIEnv *env, jclass jClass)
 {
     LOG("Java_com_sun_glass_ui_mac_MacPixels__1initIDs");
-    
+
     if (jPixelsAttachData == NULL)
     {
         jPixelsAttachData =  (*env)->GetMethodID(env, jClass, "attachData", "(J)V");
     }
-    
+
     // http://developer.apple.com/library/mac/#documentation/GraphicsImaging/Conceptual/OpenGL-MacProgGuide/opengl_designstrategies/opengl_designstrategies.html%23//apple_ref/doc/uid/TP40001987-CH2-SW17
     // GL_BGRA + GL_UNSIGNED_INT_8_8_8_8_REV == ARGB (big) == BGRA (little)
     return com_sun_glass_ui_Pixels_Format_BYTE_BGRA_PRE;
@@ -66,9 +66,9 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacPixels__1copyPixels
 (JNIEnv *env, jobject jPixels, jobject jSrc, jobject jDst, jint jSize)
 {
     LOG("Java_com_sun_glass_ui_mac_MacPixels__1copyPixels");
-    
+
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
-    
+
     void *src = (*env)->GetDirectBufferAddress(env, jSrc);
     void *dst = (*env)->GetDirectBufferAddress(env, jDst);
     if ((src != NULL) && (src != NULL) && (jSize > 0))
@@ -87,7 +87,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacPixels__1attachInt
 (JNIEnv *env, jobject jPixels, jlong jPtr, jint jWidth, jint jHeight, jobject jBuffer, jintArray jArray, jint jOffset)
 {
     LOG("Java_com_sun_glass_ui_mac_MacPixels__1attachInt");
-    
+
     Java_com_sun_glass_ui_mac_MacPixels__1attachByte(env, jPixels, jPtr, jWidth, jHeight, jBuffer, jArray, 4*jOffset);
 }
 
@@ -100,7 +100,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacPixels__1attachByte
 (JNIEnv *env, jobject jPixels, jlong jPtr, jint jWidth, jint jHeight, jobject jBuffer, jbyteArray jArray, jint jOffset)
 {
     LOG("Java_com_sun_glass_ui_mac_MacPixels__1attachByte");
-    
+
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
     {
         u_int8_t *data = NULL;
@@ -113,7 +113,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacPixels__1attachByte
         {
             data = (*env)->GetDirectBufferAddress(env, jBuffer);
         }
-        
+
         CGImageRef cgImage = NULL;
         if ((data != NULL) && (jWidth > 0) && (jHeight > 0))
         {
@@ -130,17 +130,17 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacPixels__1attachByte
             }
             CGColorSpaceRelease(colorSpace);
         }
-        
+
         if (jArray != NULL)
         {
             (*env)->ReleasePrimitiveArrayCritical(env, jArray, data, JNI_ABORT);
         }
-        
+
         NSImage **nsImage = (NSImage**)jlong_to_ptr(jPtr);
         if (cgImage != NULL)
         {
             *nsImage = [[NSImage alloc] initWithCGImage:cgImage size:NSMakeSize(jWidth, jHeight)];
-            
+
             CGImageRelease(cgImage);
         }
         else

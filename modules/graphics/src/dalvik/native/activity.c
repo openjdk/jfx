@@ -40,7 +40,7 @@
                 __FUNCTION__, __FILE__, __LINE__);                \
         (*env)->ExceptionDescribe(env);                           \
         (*env)->ExceptionClear(env);                              \
-    }; 
+    };
 
 #define GET_WINDOW_FROM_SURFACE(p, s) \
     (!s) ? NULL : ANativeWindow_fromSurface(p, s)
@@ -66,40 +66,40 @@ jmethodID   jFXDalvikEntity_notifyGlassStartup;
 jmethodID   jFXDalvikEntity_notifyShowIME;
 jmethodID   jFXDalvikEntity_notifyHideIME;
 
-/* 
+/*
  * prism-es2 gets initialized earlier than glass-lens.
  * We need to provide NativeWindow and application data dir where
  * we can load libraries from.
  */
 
-jint JNI_OnLoad(JavaVM *vm, void *reserved) { 
+jint JNI_OnLoad(JavaVM *vm, void *reserved) {
     LOGV(TAG, "Loading JavaFXDalvik library");
     jvm = vm;
     JNIEnv *env;
     if ((*vm)->GetEnv(vm, (void **) &env, JNI_VERSION_1_6)) {
         return JNI_ERR; /* JNI version not supported */
     }
-    
+
     jFXDalvikEntityClass = (*env)->NewGlobalRef(env, (*env)->FindClass(env, "javafxports/android/FXDalvikEntity"));
     CHECK_EXCEPTION(env);
-    
+
     jFXDalvikEntity_notifyGlassStartup = (*env)->GetStaticMethodID(env, jFXDalvikEntityClass, "notify_glassHasStarted", "()V");
     CHECK_EXCEPTION(env);
-    
+
     jFXDalvikEntity_notifyGlassShutdown = (*env)->GetStaticMethodID(env, jFXDalvikEntityClass, "notify_glassShutdown", "()V");
     CHECK_EXCEPTION(env);
-    
+
     jFXDalvikEntity_notifyShowIME = (*env)->GetStaticMethodID(env, jFXDalvikEntityClass, "notify_showIME", "()V");
     CHECK_EXCEPTION(env);
-    
+
     jFXDalvikEntity_notifyHideIME = (*env)->GetStaticMethodID(env, jFXDalvikEntityClass, "notify_hideIME", "()V");
     CHECK_EXCEPTION(env);
-    
+
     return JNI_VERSION_1_6;
 }
 
 void JNI_OnUnload(JavaVM *vm, void *reserved) {
-    eventq->stop();    
+    eventq->stop();
 }
 
 /*
@@ -127,7 +127,7 @@ JNIEXPORT void JNICALL Java_javafxports_android_FXDalvikEntity__1jfxEventsLoop
   (JNIEnv *env, jobject that) {
     eventq = eventq_getInstance();
     eventq->process = &eventHandler_process;
-    eventq->start(env);    
+    eventq->start(env);
 }
 
 /*
@@ -136,11 +136,11 @@ JNIEXPORT void JNICALL Java_javafxports_android_FXDalvikEntity__1jfxEventsLoop
  * Signature: (Ljava/lang/String;)V
  */
 JNIEXPORT void JNICALL Java_javafxports_android_FXActivity__1setDataDir
-  (JNIEnv *env, jobject that, jstring jdir) {    
+  (JNIEnv *env, jobject that, jstring jdir) {
     const char *cdir = (*env)->GetStringUTFChars(env, jdir, 0);
     int len = strlen(cdir);
     appDataDir = (char *)malloc(len + 1);
-    strcpy(appDataDir, cdir);            
+    strcpy(appDataDir, cdir);
     LOGV(TAG, "appDataDir: %s", appDataDir);
 }
 
@@ -158,13 +158,13 @@ const char *android_getDataDir() {
 
 void android_notifyGlassStarted() {
     SignalEvent sevent = createSignalEvent(JFX_SIGNAL_STARTUP);
-    eventq->push((Event)sevent); 
+    eventq->push((Event)sevent);
 }
 
 void android_notifyGlassShutdown() {
     SignalEvent sevent = createSignalEvent(JFX_SIGNAL_SHUTDOWN);
     eventq->push((Event)sevent);
-    eventq->stop();    
+    eventq->stop();
 }
 
 void android_notifyShowIME() {
@@ -178,8 +178,8 @@ void android_notifyHideIME() {
 }
 
 
-void eventHandler_process(JNIEnv *env, Event e) {    
-    if (e->event == JFX_SIGNAL_EVENT) {        
+void eventHandler_process(JNIEnv *env, Event e) {
+    if (e->event == JFX_SIGNAL_EVENT) {
         SignalEvent sevent = (SignalEvent)e;
         if (sevent->type == JFX_SIGNAL_STARTUP) {
             (*env)->CallStaticVoidMethod(env, jFXDalvikEntityClass, jFXDalvikEntity_notifyGlassStartup);
@@ -190,6 +190,6 @@ void eventHandler_process(JNIEnv *env, Event e) {
         } else if (sevent->type == JFX_SIGNAL_HIDE_IME) {
             (*env)->CallStaticVoidMethod(env, jFXDalvikEntityClass, jFXDalvikEntity_notifyHideIME);
         }
-    }    
+    }
     free(e);
 }

@@ -42,9 +42,9 @@ void ErrorInstance::finishCreation(VM& vm, const String& message, Vector<StackFr
     ASSERT(inherits(info()));
     if (!message.isNull())
         putDirect(vm, vm.propertyNames->message, jsString(&vm, message), DontEnum);
-    
+
     if (!stackTrace.isEmpty())
         putDirect(vm, vm.propertyNames->stack, vm.interpreter->stackTraceAsString(vm.topCallFrame, stackTrace), DontEnum);
 }
-    
+
 } // namespace JSC

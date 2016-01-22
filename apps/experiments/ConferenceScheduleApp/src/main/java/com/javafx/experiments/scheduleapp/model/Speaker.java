@@ -57,7 +57,7 @@ public class Speaker {
     public Speaker(String firstName, String lastName, String fullName, String jobTitle, String company, String bio, String imageUrl, String twitter,boolean rockStar) {
         this(-1, firstName,lastName,fullName,jobTitle,company,bio,imageUrl,twitter,rockStar);
     }
-    
+
     public Speaker(int id, String firstName, String lastName, String fullName, String jobTitle, String company, String bio, String imageUrl, String twitter,boolean rockStar) {
         this.id = id;
         this.firstName = firstName;
@@ -114,7 +114,7 @@ public class Speaker {
     public List<Session> getSessions() {
         return sessions;
     }
-    
+
     @Override public String toString() {
         return fullName;
     }

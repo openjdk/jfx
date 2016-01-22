@@ -52,7 +52,7 @@ public class BindingsBooleanTest {
     }
 
     @SuppressWarnings("unused")
-	@Test
+    @Test
     public void testAnd() {
         final BooleanBinding binding = Bindings.and(op1, op2);
         binding.addListener(observer);
@@ -98,7 +98,7 @@ public class BindingsBooleanTest {
     }
 
     @SuppressWarnings("unused")
-	@Test
+    @Test
     public void testAnd_Self() {
         final BooleanBinding binding = Bindings.and(op1, op1);
         binding.addListener(observer);
@@ -118,7 +118,7 @@ public class BindingsBooleanTest {
         assertEquals(true && true, binding.get());
         observer.check(binding, 1);
     }
-    
+
     @Test
     public void testAnd_WeakReference() {
         final ObservableBooleanValueMock op1 = new ObservableBooleanValueMock();
@@ -147,7 +147,7 @@ public class BindingsBooleanTest {
     }
 
     @SuppressWarnings("unused")
-	@Test
+    @Test
     public void testOr() {
         final BooleanBinding binding = Bindings.or(op1, op2);
         binding.addListener(observer);
@@ -193,7 +193,7 @@ public class BindingsBooleanTest {
     }
 
     @SuppressWarnings("unused")
-	@Test
+    @Test
     public void testOr_Self() {
         final BooleanBinding binding = Bindings.or(op1, op1);
         binding.addListener(observer);
@@ -373,7 +373,7 @@ public class BindingsBooleanTest {
         assertEquals(true != true, binding.get());
         observer.check(binding, 1);
     }
-    
+
     private static class ObservableBooleanValueMock implements ObservableBooleanValue {
         private InvalidationListener listener;
 
@@ -381,7 +381,7 @@ public class BindingsBooleanTest {
         public boolean get() {
             return false;
         }
-        
+
         @Override
         public Boolean getValue() {
             return Boolean.FALSE;

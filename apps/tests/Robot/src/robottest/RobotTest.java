@@ -44,7 +44,7 @@ public class RobotTest extends Application {
     public static void main(String[] args) {
         launch(args);
     }
-    
+
     //@Override
     public void start(final Stage primaryStage) {
 
@@ -62,10 +62,10 @@ public class RobotTest extends Application {
 
         Button bRobot = new Button("Robot");
         bRobot.setOnAction(e -> builder.robotTest(globalScene, mainBox, primaryStage));
-        
+
         Button bquit = new Button("Quit");
         bquit.setOnAction(e -> primaryStage.close());
-        
+
         mainBox.getChildren().addAll(welcome, bRobot, bquit);
         globalScene.setRoot(mainBox);
         globalScene.getStylesheets().add("robottest/RobotTestStyles.css");

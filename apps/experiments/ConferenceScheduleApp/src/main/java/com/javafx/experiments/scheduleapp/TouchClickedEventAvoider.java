@@ -40,14 +40,14 @@ import javafx.scene.input.ScrollEvent;
 public class TouchClickedEventAvoider {
     boolean scrolling;
     double pressX, pressY;
-    
+
     public TouchClickedEventAvoider(Node node) {
         node.addEventFilter(ActionEvent.ACTION, new EventHandler<ActionEvent>() {
             public void handle(ActionEvent event) {
                 if (scrolling) event.consume();
             }
         });
-        
+
         node.addEventFilter(MouseEvent.MOUSE_PRESSED, new EventHandler<MouseEvent>() {
             public void handle(MouseEvent event) {
                 pressX = event.getScreenX();

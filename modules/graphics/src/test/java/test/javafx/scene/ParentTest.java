@@ -522,7 +522,7 @@ public class ParentTest {
         lroot.assertAndClear(true);
         sub.assertAndClear(true);
     }
-    
+
     @Test
     public void unmanagedParentTest() {
         final LGroup innerGroup = new LGroup();

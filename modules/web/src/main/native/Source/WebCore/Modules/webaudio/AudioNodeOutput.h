@@ -48,7 +48,7 @@ public:
     // Can be called from any thread.
     AudioNode* node() const { return m_node; }
     AudioContext* context() { return m_node->context(); }
-    
+
     // Causes our AudioNode to process if it hasn't already for this render quantum.
     // It returns the bus containing the processed audio for this output, returning inPlaceBus if in-place processing was possible.
     // Called from context's audio thread.
@@ -84,13 +84,13 @@ public:
     // updateRenderingState() is called in the audio thread at the start or end of the render quantum to handle any recent changes to the graph state.
     // It must be called with the context's graph lock.
     void updateRenderingState();
-    
+
 private:
     AudioNode* m_node;
 
     friend class AudioNodeInput;
     friend class AudioParam;
-    
+
     // These are called from AudioNodeInput.
     // They must be called with the context's graph lock.
     void addInput(AudioNodeInput*);
@@ -128,7 +128,7 @@ private:
     // The main thread sets m_desiredNumberOfChannels which will later get picked up in the audio thread in updateNumberOfChannels().
     unsigned m_numberOfChannels;
     unsigned m_desiredNumberOfChannels;
-    
+
     // m_internalBus and m_inPlaceBus must only be changed in the audio thread with the context's graph lock (or constructor).
     RefPtr<AudioBus> m_internalBus;
     RefPtr<AudioBus> m_inPlaceBus;

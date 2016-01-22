@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef LayoutState_h
@@ -70,13 +70,13 @@ public:
     void clearPaginationInformation();
     bool isPaginatingColumns() const { return m_columnInfo && m_columnInfo->paginationUnit() == ColumnInfo::Column; }
     bool isPaginated() const { return m_isPaginated; }
-    
+
     // The page logical offset is the object's offset from the top of the page in the page progression
     // direction (so an x-offset in vertical text and a y-offset for horizontal text).
     LayoutUnit pageLogicalOffset(RenderBox*, LayoutUnit childLogicalOffset) const;
 
     void addForcedColumnBreak(RenderBox*, LayoutUnit childLogicalOffset);
-    
+
     LayoutUnit pageLogicalHeight() const { return m_pageLogicalHeight; }
     bool pageLogicalHeightChanged() const { return m_pageLogicalHeightChanged; }
 
@@ -88,7 +88,7 @@ public:
 
     LayoutSize pageOffset() const { return m_pageOffset; }
     void setLineGridPaginationOrigin(const LayoutSize& origin) { m_lineGridPaginationOrigin = origin; }
-    
+
     bool needsBlockDirectionLocationSetBeforeLayout() const { return m_lineGrid || (m_isPaginated && m_pageLogicalHeight); }
 
 #if ENABLE(CSS_SHAPES) && ENABLE(CSS_SHAPE_INSIDE)
@@ -123,14 +123,14 @@ public:
     // FIXME: Distinguish between the layout clip rect and the paint clip rect which may be larger,
     // e.g., because of composited scrolling.
     LayoutRect m_clipRect;
-    
+
     // x/y offset from container. Includes relative positioning and scroll offsets.
     LayoutSize m_paintOffset;
     // x/y offset from container. Does not include relative positioning or scroll offsets.
     LayoutSize m_layoutOffset;
     // Transient offset from the final position of the object
     // used to ensure that repaints happen in the correct place.
-    // This is a total delta accumulated from the root. 
+    // This is a total delta accumulated from the root.
     LayoutSize m_layoutDelta;
 
     // The current page height for the pagination model that encloses us.

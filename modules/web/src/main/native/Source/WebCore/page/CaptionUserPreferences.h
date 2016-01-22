@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef CaptionUserPreferences_h
@@ -62,7 +62,7 @@ public:
 
     virtual bool userPrefersSubtitles() const;
     virtual void setUserPrefersSubtitles(bool preference);
-    
+
     virtual bool userPrefersTextDescriptions() const;
     virtual void setUserPrefersTextDescriptions(bool preference);
 
@@ -86,7 +86,7 @@ public:
 
     virtual bool testingMode() const { return m_testingMode; }
     virtual void setTestingMode(bool override) { m_testingMode = override; }
-    
+
     PageGroup& pageGroup() const { return m_pageGroup; }
 
 protected:
@@ -105,7 +105,7 @@ private:
     bool m_testingMode;
     bool m_havePreferences;
 };
-    
+
 }
 #endif
 

@@ -44,7 +44,7 @@ import javafx.scene.shape.Arc;
 
 /**
  *
- * 
+ *
  */
 public class ArcResizer extends AbstractResizer<Arc> {
 
@@ -54,7 +54,7 @@ public class ArcResizer extends AbstractResizer<Arc> {
     private final PropertyName radiusXName  = new PropertyName("radiusX"); //NOI18N
     private final PropertyName radiusYName = new PropertyName("radiusY"); //NOI18N
     private final List<PropertyName> propertyNames = new ArrayList<>();
-    
+
     public ArcResizer(Arc sceneGraphObject) {
         super(sceneGraphObject);
         originalRadiusX = sceneGraphObject.getRadiusX();
@@ -67,20 +67,20 @@ public class ArcResizer extends AbstractResizer<Arc> {
     /*
      * AbstractResizer
      */
-    
+
     @Override
     public final Bounds computeBounds(double width, double height) {
         final double radiusX = Math.round(computeRadiusXForWidth(width));
         final double radiusY = Math.round(computeRadiusYForHeight(height));
-        
+
         final double minX = canonicalBounds.getMinX() * radiusX;
         final double maxX = canonicalBounds.getMaxX() * radiusX;
         final double minY = canonicalBounds.getMinY() * radiusY;
         final double maxY = canonicalBounds.getMaxY() * radiusY;
-        
+
         return new BoundingBox(minX, minY, maxX- minX, maxY - minY);
     }
- 
+
     @Override
     public Feature getFeature() {
         return Feature.FREE;
@@ -113,7 +113,7 @@ public class ArcResizer extends AbstractResizer<Arc> {
     public Object getValue(PropertyName propertyName) {
         assert propertyName != null;
         assert propertyNames.contains(propertyName);
-        
+
         final Object result;
         if (propertyName.equals(radiusXName)) {
             result = sceneGraphObject.getRadiusX();
@@ -123,7 +123,7 @@ public class ArcResizer extends AbstractResizer<Arc> {
             // Emergency code
             result = null;
         }
-        
+
         return result;
     }
 
@@ -139,20 +139,20 @@ public class ArcResizer extends AbstractResizer<Arc> {
         return result;
     }
 
-    
+
     /*
      * Private
      */
-    
+
     private double computeRadiusXForWidth(double width) {
         return width / canonicalBounds.getWidth();
     }
-    
+
     private double computeRadiusYForHeight(double height) {
         return height / canonicalBounds.getHeight();
     }
-    
-    
+
+
     private Bounds computeCanonicalBounds() {
         final Arc arc = new Arc();
         arc.setStartAngle(sceneGraphObject.getStartAngle());

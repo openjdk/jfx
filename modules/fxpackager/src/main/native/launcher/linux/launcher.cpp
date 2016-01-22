@@ -47,16 +47,16 @@ typedef void (*stop_launcher)();
 std::string GetProgramPath() {
     std::string result;
     char *buffer = new char[MAX_PATH];
-    
+
     if (buffer != NULL) {
         if (readlink("/proc/self/exe", buffer, MAX_PATH - 1) != -1) {
             buffer[MAX_PATH - 1] = '\0';
             result = buffer;
         }
-        
+
         delete[] buffer;
     }
-    
+
     return result;
 }
 
@@ -64,33 +64,33 @@ int main(int argc, char *argv[]) {
     int result = 1;
     setlocale(LC_ALL, "en_US.utf8");
     void* library = NULL;
-    
+
     {
         std::string programPath = GetProgramPath();
         std::string libraryName = dirname((char*)programPath.c_str());
         libraryName += "/libpackager.so";
         library = dlopen(libraryName.c_str(), RTLD_LAZY);
-        
+
         if (library == NULL) {
             printf("%s not found.\n", libraryName.c_str());
         }
     }
-    
+
     if (library != NULL) {
         start_launcher start = (start_launcher)dlsym(library, "start_launcher");
         stop_launcher stop = (stop_launcher)dlsym(library, "stop_launcher");
-        
+
         if (start(argc, argv) == true) {
             result = 0;
-            
+
             if (stop != NULL) {
                 stop();
             }
         }
-        
+
         dlclose(library);
     }
-    
-    
+
+
     return result;
 }

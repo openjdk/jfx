@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -117,14 +117,14 @@ ULONG STDMETHODCALLTYPE WebBackForwardList::Release(void)
 
 // IWebBackForwardList ---------------------------------------------------------
 
-HRESULT STDMETHODCALLTYPE WebBackForwardList::addItem( 
+HRESULT STDMETHODCALLTYPE WebBackForwardList::addItem(
     /* [in] */ IWebHistoryItem* item)
 {
     COMPtr<WebHistoryItem> webHistoryItem;
- 
+
     if (!item || FAILED(item->QueryInterface(&webHistoryItem)))
         return E_FAIL;
- 
+
     m_backForwardList->addItem(webHistoryItem->historyItem());
     return S_OK;
 }
@@ -141,11 +141,11 @@ HRESULT STDMETHODCALLTYPE WebBackForwardList::goForward( void)
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE WebBackForwardList::goToItem( 
+HRESULT STDMETHODCALLTYPE WebBackForwardList::goToItem(
     /* [in] */ IWebHistoryItem* item)
 {
     COMPtr<WebHistoryItem> webHistoryItem;
- 
+
     if (!item || FAILED(item->QueryInterface(&webHistoryItem)))
         return E_FAIL;
 
@@ -153,7 +153,7 @@ HRESULT STDMETHODCALLTYPE WebBackForwardList::goToItem(
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE WebBackForwardList::backItem( 
+HRESULT STDMETHODCALLTYPE WebBackForwardList::backItem(
     /* [retval][out] */ IWebHistoryItem** item)
 {
     if (!item)
@@ -168,7 +168,7 @@ HRESULT STDMETHODCALLTYPE WebBackForwardList::backItem(
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE WebBackForwardList::currentItem( 
+HRESULT STDMETHODCALLTYPE WebBackForwardList::currentItem(
     /* [retval][out] */ IWebHistoryItem** item)
 {
     if (!item)
@@ -183,7 +183,7 @@ HRESULT STDMETHODCALLTYPE WebBackForwardList::currentItem(
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE WebBackForwardList::forwardItem( 
+HRESULT STDMETHODCALLTYPE WebBackForwardList::forwardItem(
     /* [retval][out] */ IWebHistoryItem** item)
 {
     if (!item)
@@ -198,7 +198,7 @@ HRESULT STDMETHODCALLTYPE WebBackForwardList::forwardItem(
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE WebBackForwardList::backListWithLimit( 
+HRESULT STDMETHODCALLTYPE WebBackForwardList::backListWithLimit(
     /* [in] */ int limit,
     /* [out] */ int* listCount,
     /* [retval][out] */ IWebHistoryItem** list)
@@ -215,7 +215,7 @@ HRESULT STDMETHODCALLTYPE WebBackForwardList::backListWithLimit(
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE WebBackForwardList::forwardListWithLimit( 
+HRESULT STDMETHODCALLTYPE WebBackForwardList::forwardListWithLimit(
     /* [in] */ int limit,
     /* [out] */ int* listCount,
     /* [retval][out] */ IWebHistoryItem** list)
@@ -232,38 +232,38 @@ HRESULT STDMETHODCALLTYPE WebBackForwardList::forwardListWithLimit(
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE WebBackForwardList::capacity( 
+HRESULT STDMETHODCALLTYPE WebBackForwardList::capacity(
     /* [retval][out] */ int* result)
 {
     *result = (int)m_backForwardList->capacity();
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE WebBackForwardList::setCapacity( 
+HRESULT STDMETHODCALLTYPE WebBackForwardList::setCapacity(
     /* [in] */ int size)
 {
     if (size < 0)
         return E_FAIL;
-    
+
     m_backForwardList->setCapacity(size);
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE WebBackForwardList::backListCount( 
+HRESULT STDMETHODCALLTYPE WebBackForwardList::backListCount(
     /* [retval][out] */ int* count)
 {
     *count = m_backForwardList->backListCount();
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE WebBackForwardList::forwardListCount( 
+HRESULT STDMETHODCALLTYPE WebBackForwardList::forwardListCount(
     /* [retval][out] */ int* count)
 {
     *count = m_backForwardList->forwardListCount();
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE WebBackForwardList::containsItem( 
+HRESULT STDMETHODCALLTYPE WebBackForwardList::containsItem(
     /* [in] */ IWebHistoryItem* item,
     /* [retval][out] */ BOOL* result)
 {
@@ -276,7 +276,7 @@ HRESULT STDMETHODCALLTYPE WebBackForwardList::containsItem(
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE WebBackForwardList::itemAtIndex( 
+HRESULT STDMETHODCALLTYPE WebBackForwardList::itemAtIndex(
     /* [in] */ int index,
     /* [retval][out] */ IWebHistoryItem** item)
 {
@@ -287,21 +287,21 @@ HRESULT STDMETHODCALLTYPE WebBackForwardList::itemAtIndex(
 
     if (!historyItem)
         return E_FAIL;
- 
+
     *item = WebHistoryItem::createInstance(historyItem);
     return S_OK;
 }
 
 // IWebBackForwardListPrivate --------------------------------------------------------
 
-HRESULT STDMETHODCALLTYPE WebBackForwardList::removeItem( 
+HRESULT STDMETHODCALLTYPE WebBackForwardList::removeItem(
     /* [in] */ IWebHistoryItem* item)
 {
     COMPtr<WebHistoryItem> webHistoryItem;
- 
+
     if (!item || FAILED(item->QueryInterface(&webHistoryItem)))
         return E_FAIL;
- 
+
     m_backForwardList->removeItem(webHistoryItem->historyItem());
     return S_OK;
 }

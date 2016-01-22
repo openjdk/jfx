@@ -67,7 +67,7 @@ int32_t DebugLineInterpreter::parseSLEB128(const char*& offset)
         result |= (byte & ~0x80) << shiftAmount;
         shiftAmount += 7;
     } while (byte & 0x80);
-    
+
     // If the sign bit (in this case, the second MSB) on the last byte is set we need to zero extend.
     if (byte & 0x40)
         result |= -(1 << shiftAmount);
@@ -93,13 +93,13 @@ void DebugLineInterpreter::parsePrologue()
     } else
         m_prologue.format = ThirtyTwoBit;
     m_prologue.version = read<uint16_t>(currentProgramOffset);
-    
+
     if (m_prologue.format == ThirtyTwoBit)
         m_prologue.prologueLength = read<uint32_t>(currentProgramOffset);
     else
         m_prologue.prologueLength = read<uint64_t>(currentProgramOffset);
     const char* afterLengthOffset = currentProgramOffset;
-    
+
     m_prologue.minimumInstructionLength = read<uint8_t>(currentProgramOffset);
     m_prologue.defaultIsStatement = read<uint8_t>(currentProgramOffset);
     m_prologue.lineBase = read<int8_t>(currentProgramOffset);
@@ -109,7 +109,7 @@ void DebugLineInterpreter::parsePrologue()
         m_prologue.standardOpcodeLengths.append(read<uint8_t>(currentProgramOffset));
     parseIncludeDirectories(currentProgramOffset);
     parseFileEntries(currentProgramOffset);
-    
+
     m_program = afterLengthOffset + m_prologue.prologueLength;
 
     if (!m_logResults)
@@ -124,15 +124,15 @@ void DebugLineInterpreter::parsePrologue()
     dataLog("lineBase = ", m_prologue.lineBase, "\n");
     dataLog("lineRange = ", m_prologue.lineRange, "\n");
     dataLog("opcodeBase = ", m_prologue.opcodeBase, "\n");
-    
+
     dataLog("\nStandard Opcode Lengths:\n");
     for (unsigned i = 1; i < m_prologue.opcodeBase; ++i)
         dataLog("standardOpcodeLengths[", i - 1, "] = ", m_prologue.standardOpcodeLengths[i - 1], "\n");
-    
+
     dataLog("\nInclude Directories:\n");
     for (unsigned i = 0; i < m_prologue.includeDirectories.size(); ++i)
         dataLog("includeDirectories[", i, "] = ", m_prologue.includeDirectories[i], "\n");
-    
+
     dataLog("\nFiles:\n");
     for (unsigned i = 0; i < m_prologue.fileEntries.size(); ++i) {
         FileEntry& entry = m_prologue.fileEntries[i];
@@ -147,7 +147,7 @@ void DebugLineInterpreter::parseIncludeDirectories(const char*& offset)
         m_prologue.includeDirectories.append(offset);
         offset += length + 1;
     }
-    
+
     // Extra increment to get past the last null byte.
     offset += 1;
 }
@@ -174,7 +174,7 @@ bool DebugLineInterpreter::parseFileEntry(const char*& offset, FileEntry& entry)
     entry.directoryIndex = parseULEB128(offset);
     entry.lastModified = parseULEB128(offset);
     entry.size = parseULEB128(offset);
-    
+
     return true;
 }
 

@@ -21,7 +21,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -42,7 +42,7 @@ inline const ResourceResponse& ResourceResponseBase::asResourceResponse() const
     return *static_cast<const ResourceResponse*>(this);
 }
 
-ResourceResponseBase::ResourceResponseBase()  
+ResourceResponseBase::ResourceResponseBase()
     : m_expectedContentLength(0)
     , m_httpStatusCode(0)
     , m_connectionID(0)
@@ -140,7 +140,7 @@ const URL& ResourceResponseBase::url() const
 {
     lazyInit(CommonFieldsOnly);
 
-    return m_url; 
+    return m_url;
 }
 
 void ResourceResponseBase::setURL(const URL& url)
@@ -157,7 +157,7 @@ const String& ResourceResponseBase::mimeType() const
 {
     lazyInit(CommonFieldsOnly);
 
-    return m_mimeType; 
+    return m_mimeType;
 }
 
 void ResourceResponseBase::setMimeType(const String& mimeType)
@@ -171,7 +171,7 @@ void ResourceResponseBase::setMimeType(const String& mimeType)
     // FIXME: Should invalidate or update platform response if present.
 }
 
-long long ResourceResponseBase::expectedContentLength() const 
+long long ResourceResponseBase::expectedContentLength() const
 {
     lazyInit(CommonFieldsOnly);
 
@@ -184,7 +184,7 @@ void ResourceResponseBase::setExpectedContentLength(long long expectedContentLen
     m_isNull = false;
 
     // FIXME: Content length is determined by HTTP Content-Length header. We should update the header, so that it doesn't disagree with m_expectedContentLength.
-    m_expectedContentLength = expectedContentLength; 
+    m_expectedContentLength = expectedContentLength;
 
     // FIXME: Should invalidate or update platform response if present.
 }
@@ -221,7 +221,7 @@ void ResourceResponseBase::setSuggestedFilename(const String& suggestedName)
     m_isNull = false;
 
     // FIXME: Suggested file name is calculated based on other headers. There should not be a setter for it.
-    m_suggestedFilename = suggestedName; 
+    m_suggestedFilename = suggestedName;
 
     // FIXME: Should invalidate or update platform response if present.
 }
@@ -242,18 +242,18 @@ void ResourceResponseBase::setHTTPStatusCode(int statusCode)
     // FIXME: Should invalidate or update platform response if present.
 }
 
-const String& ResourceResponseBase::httpStatusText() const 
+const String& ResourceResponseBase::httpStatusText() const
 {
     lazyInit(CommonAndUncommonFields);
 
-    return m_httpStatusText; 
+    return m_httpStatusText;
 }
 
-void ResourceResponseBase::setHTTPStatusText(const String& statusText) 
+void ResourceResponseBase::setHTTPStatusText(const String& statusText)
 {
     lazyInit(CommonAndUncommonFields);
 
-    m_httpStatusText = statusText; 
+    m_httpStatusText = statusText;
 
     // FIXME: Should invalidate or update platform response if present.
 }
@@ -264,12 +264,12 @@ String ResourceResponseBase::httpHeaderField(const AtomicString& name) const
 
     // If we already have the header, just return it instead of consuming memory by grabing all headers.
     String value = m_httpHeaderFields.get(name);
-    if (!value.isEmpty())        
+    if (!value.isEmpty())
         return value;
 
     lazyInit(CommonAndUncommonFields);
 
-    return m_httpHeaderFields.get(name); 
+    return m_httpHeaderFields.get(name);
 }
 
 String ResourceResponseBase::httpHeaderField(const char* name) const
@@ -283,7 +283,7 @@ String ResourceResponseBase::httpHeaderField(const char* name) const
 
     lazyInit(CommonAndUncommonFields);
 
-    return m_httpHeaderFields.get(name); 
+    return m_httpHeaderFields.get(name);
 }
 
 void ResourceResponseBase::updateHeaderParsedState(const AtomicString& name)
@@ -392,7 +392,7 @@ void ResourceResponseBase::parseCacheControlDirectives() const
         m_cacheControlContainsNoCache = pragmaValue.lower().contains(noCacheDirective);
     }
 }
-    
+
 bool ResourceResponseBase::cacheControlContainsNoCache() const
 {
     if (!m_haveParsedCacheControlHeader)
@@ -434,7 +434,7 @@ static double parseDateValueInHeader(const HTTPHeaderMap& headers, const AtomicS
 {
     String headerValue = headers.get(headerName);
     if (headerValue.isEmpty())
-        return std::numeric_limits<double>::quiet_NaN(); 
+        return std::numeric_limits<double>::quiet_NaN();
     // This handles all date formats required by RFC2616:
     // Sun, 06 Nov 1994 08:49:37 GMT  ; RFC 822, updated by RFC 1123
     // Sunday, 06-Nov-94 08:49:37 GMT ; RFC 850, obsoleted by RFC 1036
@@ -510,7 +510,7 @@ bool ResourceResponseBase::isAttachment() const
     DEFINE_STATIC_LOCAL(const AtomicString, attachmentString, ("attachment", AtomicString::ConstructFromLiteral));
     return equalIgnoringCase(value, attachmentString);
 }
-  
+
 bool ResourceResponseBase::wasCached() const
 {
     lazyInit(CommonAndUncommonFields);
@@ -573,7 +573,7 @@ void ResourceResponseBase::lazyInit(InitLevel initLevel) const
 bool ResourceResponseBase::compare(const ResourceResponse& a, const ResourceResponse& b)
 {
     if (a.isNull() != b.isNull())
-        return false;  
+        return false;
     if (a.url() != b.url())
         return false;
     if (a.mimeType() != b.mimeType())

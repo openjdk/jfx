@@ -36,7 +36,7 @@ import javafx.scene.paint.Color;
 import javafx.stage.Stage;
 
 public class HelloSimpleCheckBox extends Application {
-        
+
     @Override public void start(Stage stage) {
         CheckBox cbox = new CheckBox("Choose this item");
         cbox.setIndeterminate(true);
@@ -55,7 +55,7 @@ public class HelloSimpleCheckBox extends Application {
         VBox vbox = new VBox(7);
         vbox.setAlignment(Pos.CENTER);
         vbox.getChildren().addAll(label, cbox, new Button("OK"));
-        
+
         Scene scene = new Scene(vbox, 400, 400);
         scene.setFill(Color.SKYBLUE);
         stage.setTitle("Hello CheckBox");

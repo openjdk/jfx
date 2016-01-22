@@ -41,5 +41,5 @@ public class GenericDriver extends AbstractNodeDriver {
     public GenericDriver(ContentPanelController contentPanelController) {
         super(contentPanelController);
     }
-    
+
 }

@@ -54,10 +54,10 @@ public final class PrismGraphicsManager extends WCGraphicsManager {
     static BaseTransform getPixelScaleTransform() {
         return pixelScaleTransform;
     }
-    
+
     @Override public float getDevicePixelScale() {
         return highestPixelScale;
-    } 
+    }
 
     @Override protected WCImageDecoder getImageDecoder() {
         return new WCImageDecoderImpl();

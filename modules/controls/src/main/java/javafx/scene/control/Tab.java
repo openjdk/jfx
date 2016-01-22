@@ -112,7 +112,7 @@ public class Tab implements EventTarget, Styleable {
         setContent(content);
         styleClass.addAll(DEFAULT_STYLE_CLASS);
     }
-    
+
 
     /***************************************************************************
      *                                                                         *
@@ -157,7 +157,7 @@ public class Tab implements EventTarget, Styleable {
      * <p>
      * Parsing this style might not be supported on some limited
      * platforms. It is recommended to use a standalone CSS file instead.
-     *     
+     *
      */
    public final void setStyle(String value) { styleProperty().set(value); }
 
@@ -178,7 +178,7 @@ public class Tab implements EventTarget, Styleable {
         }
         return style;
     }
-    
+
     private ReadOnlyBooleanWrapper selected;
 
     final void setSelected(boolean value) {
@@ -248,7 +248,7 @@ public class Tab implements EventTarget, Styleable {
         if (tabPane == null) {
             tabPane = new ReadOnlyObjectWrapper<TabPane>(this, "tabPane") {
                 private WeakReference<TabPane> oldParent;
-                                
+
                 @Override protected void invalidated() {
                     if(oldParent != null && oldParent.get() != null) {
                         oldParent.get().disabledProperty().removeListener(parentDisabledChangedListener);
@@ -269,7 +269,7 @@ public class Tab implements EventTarget, Styleable {
     private final InvalidationListener parentDisabledChangedListener = valueModel -> {
         updateDisabled();
     };
-    
+
     private StringProperty text;
 
     /**
@@ -323,7 +323,7 @@ public class Tab implements EventTarget, Styleable {
 
     /**
      * The graphic in the tab.
-     * 
+     *
      * @return The graphic in the tab.
      */
     public final ObjectProperty<Node> graphicProperty() {
@@ -449,7 +449,7 @@ public class Tab implements EventTarget, Styleable {
     /**
      * <p>Called when the tab becomes selected or unselected.</p>
      */
-    public static final EventType<Event> SELECTION_CHANGED_EVENT = 
+    public static final EventType<Event> SELECTION_CHANGED_EVENT =
             new EventType<Event> (Event.ANY, "SELECTION_CHANGED_EVENT");
     private ObjectProperty<EventHandler<Event>> onSelectionChanged;
 
@@ -561,20 +561,20 @@ public class Tab implements EventTarget, Styleable {
         }
         return tooltip;
     }
-    
+
     private final ObservableList<String> styleClass = FXCollections.observableArrayList();
 
     private BooleanProperty disable;
-    
+
     /**
      * Sets the disabled state of this tab.
-     * 
+     *
      * @param value the state to set this tab
-     * 
+     *
      * @defaultValue false
      * @since JavaFX 2.2
      */
-    public final void setDisable(boolean value) { 
+    public final void setDisable(boolean value) {
         disableProperty().set(value);
     }
 
@@ -586,9 +586,9 @@ public class Tab implements EventTarget, Styleable {
 
     /**
      * Sets the disabled state of this tab. A disable tab is no longer interactive
-     * or traversable, but the contents remain interactive.  A disable tab 
+     * or traversable, but the contents remain interactive.  A disable tab
      * can be selected using {@link TabPane#getSelectionModel()}.
-     * 
+     *
      * @defaultValue false
      * @since JavaFX 2.2
      */
@@ -613,7 +613,7 @@ public class Tab implements EventTarget, Styleable {
         }
         return disable;
     }
-    
+
     private ReadOnlyBooleanWrapper disabled;
 
     private final void setDisabled(boolean value) {
@@ -633,7 +633,7 @@ public class Tab implements EventTarget, Styleable {
      * Indicates whether or not this {@code Tab} is disabled.  A {@code Tab}
      * will become disabled if {@link #disableProperty disable} is set to {@code true} on either
      * itself or if the {@code TabPane} is disabled.
-     * 
+     *
      * @defaultValue false
      * @since JavaFX 2.2
      */
@@ -657,7 +657,7 @@ public class Tab implements EventTarget, Styleable {
         }
         return disabled;
     }
-    
+
     private void updateDisabled() {
         boolean disabled = isDisable() || (getTabPane() != null && getTabPane().isDisabled());
         setDisabled(disabled);
@@ -668,7 +668,7 @@ public class Tab implements EventTarget, Styleable {
             content.setDisable(disabled);
         }
     }
-    
+
      /**
      * Called when there is an external request to close this {@code Tab}.
      * The installed event handler can prevent tab closing by consuming the
@@ -676,7 +676,7 @@ public class Tab implements EventTarget, Styleable {
      * @since JavaFX 8.0
      */
     public static final EventType<Event> TAB_CLOSE_REQUEST_EVENT = new EventType<Event> (Event.ANY, "TAB_CLOSE_REQUEST_EVENT");
-   
+
     /**
      * Called when there is an external request to close this {@code Tab}.
      * The installed event handler can prevent tab closing by consuming the
@@ -690,7 +690,7 @@ public class Tab implements EventTarget, Styleable {
                 @Override protected void invalidated() {
                     setEventHandler(TAB_CLOSE_REQUEST_EVENT, get());
                 }
-                
+
                 @Override public Object getBean() {
                     return Tab.this;
                 }
@@ -702,22 +702,22 @@ public class Tab implements EventTarget, Styleable {
         }
         return onCloseRequest;
     }
-    
+
     public EventHandler<Event> getOnCloseRequest() {
         if( onCloseRequest == null ) {
             return null;
         }
         return onCloseRequest.get();
     }
-    
+
     public void setOnCloseRequest(EventHandler<Event> value) {
         onCloseRequestProperty().set(value);
     }
 
-    
+
     // --- Properties
     private static final Object USER_DATA_KEY = new Object();
-    
+
     // A map containing a set of properties for this Tab
     private ObservableMap<Object, Object> properties;
 
@@ -735,7 +735,7 @@ public class Tab implements EventTarget, Styleable {
         }
         return properties;
     }
-    
+
     /**
      * Tests if this Tab has properties.
      * @return true if this tab has properties.
@@ -745,7 +745,7 @@ public class Tab implements EventTarget, Styleable {
         return properties != null && !properties.isEmpty();
     }
 
-     
+
     // --- UserData
     /**
      * Convenience method for setting a single Object property that can be
@@ -772,7 +772,7 @@ public class Tab implements EventTarget, Styleable {
     public Object getUserData() {
         return getProperties().get(USER_DATA_KEY);
     }
-    
+
     /**
      * A list of String identifiers which can be used to logically group
      * Nodes, specifically for an external style engine. This variable is
@@ -785,7 +785,7 @@ public class Tab implements EventTarget, Styleable {
     public ObservableList<String> getStyleClass() {
         return styleClass;
     }
-    
+
     private final EventHandlerManager eventHandlerManager =
             new EventHandlerManager(this);
 
@@ -794,7 +794,7 @@ public class Tab implements EventTarget, Styleable {
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Override
-    public EventDispatchChain buildEventDispatchChain(EventDispatchChain tail) {        
+    public EventDispatchChain buildEventDispatchChain(EventDispatchChain tail) {
         return tail.prepend(eventHandlerManager);
     }
 
@@ -849,7 +849,7 @@ public class Tab implements EventTarget, Styleable {
      **************************************************************************/
 
     private static final String DEFAULT_STYLE_CLASS = "tab";
-    
+
     /**
      * {@inheritDoc}
      * @return "Tab"
@@ -885,7 +885,7 @@ public class Tab implements EventTarget, Styleable {
     @Override
     public List<CssMetaData<? extends Styleable, ?>> getCssMetaData() {
         return getClassCssMetaData();
-    }                
+    }
 
     /**
      * @return The CssMetaData associated with this class, which may include the

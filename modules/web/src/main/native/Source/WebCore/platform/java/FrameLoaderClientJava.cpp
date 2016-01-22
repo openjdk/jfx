@@ -161,7 +161,7 @@ FrameLoaderClientJava::FrameLoaderClientJava(const JLObject &webPage)
 void FrameLoaderClientJava::destroyIfNeeded() {
     if (m_FrameLoaderClientDestroyed && m_ProgressTrackerClientDestroyed) {
 
-	WC_GETJAVAENV_CHKRET(env);
+    WC_GETJAVAENV_CHKRET(env);
         initRefs(env);
 
         ASSERT(m_webPage);
@@ -244,10 +244,10 @@ void FrameLoaderClientJava::postLoadEvent(Frame* f, int state,
         state == com_sun_webkit_LoadListenerClient_CONTENT_RECEIVED)
     {
         DocumentLoader* dl = f->loader().activeDocumentLoader();
-	    unsigned size = 0;
-	    if (dl && dl->mainResourceData()) {
-	        size = dl->mainResourceData()->sharedBuffer()->size();
-	    }
+        unsigned size = 0;
+        if (dl && dl->mainResourceData()) {
+            size = dl->mainResourceData()->sharedBuffer()->size();
+        }
     }
 
     // Second, send a load event
@@ -401,7 +401,7 @@ void FrameLoaderClientJava::dispatchDecidePolicyForNewWindowAction(const Navigat
                                                                    const ResourceRequest& req,
                                                                    PassRefPtr<FormState>,
                                                                    const String&,
-								   FramePolicyFunction policyFunction)
+                                   FramePolicyFunction policyFunction)
 {
     JNIEnv* env = WebCore_GetJavaEnv();
     initRefs(env);

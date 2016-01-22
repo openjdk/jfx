@@ -134,7 +134,7 @@ public class TemplateDialogController extends AbstractModalDialog {
     public void chooseButtonPressed(ActionEvent e) {
         final DirectoryChooser directoryChooser = new DirectoryChooser();
         final File selectedDir = directoryChooser.showDialog(getStage().getOwner());
-        // Directory is null when pressing cancel button 
+        // Directory is null when pressing cancel button
         if (selectedDir != null) {
             locationTextField.setText(selectedDir.getAbsolutePath());
         }

@@ -83,7 +83,7 @@ void SymbolTableEntry::notifyWriteSlow(JSValue value)
     VariableWatchpointSet* watchpoints = fatEntry()->m_watchpoints.get();
     if (!watchpoints)
         return;
-    
+
     watchpoints->notifyWrite(value);
 }
 
@@ -113,7 +113,7 @@ void SymbolTable::visitChildren(JSCell* thisCell, SlotVisitor& visitor)
         thisSymbolTable->m_watchpointCleanup =
             std::make_unique<WatchpointCleanup>(thisSymbolTable);
     }
-    
+
     visitor.addUnconditionalFinalizer(thisSymbolTable->m_watchpointCleanup.get());
 }
 
@@ -137,7 +137,7 @@ void SymbolTable::WatchpointCleanup::finalizeUnconditionally()
 SymbolTable* SymbolTable::cloneCapturedNames(VM& vm)
 {
     SymbolTable* result = SymbolTable::create(vm);
-    
+
     result->m_parameterCountIncludingThis = m_parameterCountIncludingThis;
     result->m_usesNonStrictEval = m_usesNonStrictEval;
     result->m_captureStart = m_captureStart;
@@ -150,13 +150,13 @@ SymbolTable* SymbolTable::cloneCapturedNames(VM& vm)
             iter->key,
             SymbolTableEntry(iter->value.getIndex(), iter->value.getAttributes()));
     }
-    
+
     if (m_slowArguments) {
         result->m_slowArguments = std::make_unique<SlowArgument[]>(parameterCount());
         for (unsigned i = parameterCount(); i--;)
             result->m_slowArguments[i] = m_slowArguments[i];
     }
-    
+
     return result;
 }
 

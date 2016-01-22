@@ -42,7 +42,7 @@ public interface TKScene {
     public void dispose();
 
     public void waitForRenderingToComplete();
-    
+
     /**
      * Waits until the render thread is available for synchronization
      * from the scene graph. Once this method returns, the caller has

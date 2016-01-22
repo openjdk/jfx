@@ -59,11 +59,11 @@ public class CylinderTest {
         Cylinder cylinder = new Cylinder(0, 0);
         cylinder.impl_updatePeer(); // should not throw NPE
         assertEquals(cylinder.getBoundsInLocal(), new BoundingBox(0, 0, 0, 0, 0, 0));
-        
+
         cylinder = new Cylinder(10, 0);
         cylinder.impl_updatePeer(); // should not throw NPE
         assertEquals(cylinder.getBoundsInLocal(), new BoundingBox(-10.0, 0, -10.0, 20, 0, 20));
-        
+
         cylinder = new Cylinder(0, 10);
         cylinder.impl_updatePeer(); // should not throw NPE
         assertEquals(cylinder.getBoundsInLocal(), new BoundingBox(0, -5.0, 0, 0, 10, 0));

@@ -31,12 +31,12 @@ import javafx.beans.property.SimpleBooleanProperty;
 /**
  * The abstract base class for MultipleSelectionModel implementations that are used within
  * table-like controls (most notably {@link TableView} and {@link TreeTableView}.
- * 
+ *
  * @param <T> The type of the underlying data model for the UI control.
  * @since JavaFX 8.0
  */
 public abstract class TableSelectionModel<T> extends MultipleSelectionModelBase<T> {
-    
+
     /**
      * Convenience function which tests whether the given row and column index
      * is currently selected in this table instance. If the table control is in its
@@ -107,7 +107,7 @@ public abstract class TableSelectionModel<T> extends MultipleSelectionModelBase<
      * <code>cellSelectionEnabled</code> to be true results in cells being
      * able to be selected (but not rows).
      */
-    private BooleanProperty cellSelectionEnabled = 
+    private BooleanProperty cellSelectionEnabled =
            new SimpleBooleanProperty(this, "cellSelectionEnabled");
     public final BooleanProperty cellSelectionEnabledProperty() {
        return cellSelectionEnabled;

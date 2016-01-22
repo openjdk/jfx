@@ -132,7 +132,7 @@ template<typename T, typename U> inline bool operator==(const RenderPtr<T>& a, U
     return a.get() == b;
 }
 
-template<typename T, typename U> inline bool operator==(T* a, const RenderPtr<U>& b) 
+template<typename T, typename U> inline bool operator==(T* a, const RenderPtr<U>& b)
 {
     return a == b.get();
 }

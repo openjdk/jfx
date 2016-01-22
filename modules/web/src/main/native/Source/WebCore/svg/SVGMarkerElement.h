@@ -138,7 +138,7 @@ private:
 
     static const AtomicString& orientTypeIdentifier();
     static const AtomicString& orientAngleIdentifier();
- 
+
     BEGIN_DECLARE_ANIMATED_PROPERTIES(SVGMarkerElement)
         DECLARE_ANIMATED_LENGTH(RefX, refX)
         DECLARE_ANIMATED_LENGTH(RefY, refY)
@@ -150,7 +150,7 @@ private:
         DECLARE_ANIMATED_RECT(ViewBox, viewBox)
         DECLARE_ANIMATED_PRESERVEASPECTRATIO(PreserveAspectRatio, preserveAspectRatio)
     END_DECLARE_ANIMATED_PROPERTIES
-  
+
 public:
     // Custom 'orientType' property.
     static void synchronizeOrientType(SVGElement* contextElement);

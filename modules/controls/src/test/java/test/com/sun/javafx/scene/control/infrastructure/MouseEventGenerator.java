@@ -40,7 +40,7 @@ public final class MouseEventGenerator {
                 type == MouseEvent.MOUSE_DRAGGED) {
             button = MouseButton.PRIMARY;
         }
-        
+
         boolean primaryButtonDown = false;
 
         if (type == MouseEvent.MOUSE_PRESSED ||

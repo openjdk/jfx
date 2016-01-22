@@ -61,7 +61,7 @@ public class AddRowConstraintsJob extends BatchDocumentJob {
     // Value = list of target row indexes for this GridPane
     private final Map<FXOMObject, Set<Integer>> targetGridPanes;
     private final Position position;
-    // If the selected row is associated to an existing constraints, 
+    // If the selected row is associated to an existing constraints,
     // we duplicate the existing constraints.
     // Otherwise, we use the default values below.
     private static final double defaultMinHeight = 10.0;
@@ -88,10 +88,10 @@ public class AddRowConstraintsJob extends BatchDocumentJob {
             final Set<Integer> targetIndexes = targetGridPanes.get(targetGridPane);
             result.addAll(addRowConstraints((FXOMInstance) targetGridPane, targetIndexes));
         }
-        
+
         return result;
     }
-    
+
     @Override
     protected String makeDescription() {
         return "Add Row Constraints"; //NOI18N
@@ -177,7 +177,7 @@ public class AddRowConstraintsJob extends BatchDocumentJob {
                     -1, getEditorController());
             result.add(addPropertyJob);
         }
-        
+
         return result;
     }
 

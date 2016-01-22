@@ -45,7 +45,7 @@ import javafx.scene.shape.Rectangle;
 import javafx.stage.Stage;
 
 /**
- * A sample that demonstrates two circles, one filled with a simple radial 
+ * A sample that demonstrates two circles, one filled with a simple radial
  * gradient and one filled with a more complex radial gradient.
  *
  *
@@ -77,21 +77,21 @@ public class RadialGradientApp extends Application {
                     new Stop(1, Color.GOLD)
                 });
         Circle circle2 = new Circle(145, 45, 40, gradient2);
-        
+
         HBox hb = new HBox(10);
         hb.setAlignment(Pos.CENTER);
         hb.getChildren().addAll(circle1, circle2);
-        
+
         return hb;
     }
-    
+
     private Rectangle createRectangle(Color color) {
         Rectangle rect1 = new Rectangle(0, 45, 20, 20);
         //Fill rectangle with color
         rect1.setFill(color);
         return rect1;
     }
-    
+
     @Override
     public void start(Stage primaryStage) throws Exception {
         primaryStage.setScene(new Scene(createContent()));

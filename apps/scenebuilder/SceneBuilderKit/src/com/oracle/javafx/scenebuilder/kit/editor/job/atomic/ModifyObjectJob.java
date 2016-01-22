@@ -50,9 +50,9 @@ public class ModifyObjectJob extends Job {
     private final String description;
 
     public ModifyObjectJob(
-            FXOMInstance fxomInstance, 
-            ValuePropertyMetadata propertyMetadata, 
-            Object newValue, 
+            FXOMInstance fxomInstance,
+            ValuePropertyMetadata propertyMetadata,
+            Object newValue,
             EditorController editorController) {
         super(editorController);
 

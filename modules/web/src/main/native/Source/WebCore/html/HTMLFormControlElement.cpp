@@ -203,7 +203,7 @@ static bool shouldAutofocus(HTMLFormControlElement* element)
 }
 
 static void focusPostAttach(Node& element, unsigned)
-{ 
+{
     toElement(element).focus();
     element.deref();
 }

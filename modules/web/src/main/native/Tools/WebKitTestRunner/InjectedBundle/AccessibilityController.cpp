@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -66,16 +66,16 @@ PassRefPtr<AccessibilityUIElement> AccessibilityController::rootElement()
 {
     WKBundlePageRef page = InjectedBundle::shared().page()->page();
     void* root = WKAccessibilityRootObject(page);
-    
-    return AccessibilityUIElement::create(static_cast<PlatformUIElement>(root));    
+
+    return AccessibilityUIElement::create(static_cast<PlatformUIElement>(root));
 }
 
 PassRefPtr<AccessibilityUIElement> AccessibilityController::focusedElement()
 {
     WKBundlePageRef page = InjectedBundle::shared().page()->page();
     void* root = WKAccessibilityFocusedObject(page);
-    
-    return AccessibilityUIElement::create(static_cast<PlatformUIElement>(root));    
+
+    return AccessibilityUIElement::create(static_cast<PlatformUIElement>(root));
 }
 #endif
 

@@ -39,8 +39,8 @@ import javafx.scene.media.MediaPlayer;
 import javafx.stage.Stage;
 
 /**
- * A media player with controls for play, pause, stop, seek, and volume. This 
- * media player also demonstrates overlaying the player controls on top of the 
+ * A media player with controls for play, pause, stop, seek, and volume. This
+ * media player also demonstrates overlaying the player controls on top of the
  * media.
  *
  * @sampleName Overlay Media Player

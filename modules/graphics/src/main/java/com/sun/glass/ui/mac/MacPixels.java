@@ -48,7 +48,7 @@ final class MacPixels extends Pixels {
     static int getNativeFormat_impl() {
         return nativeFormat;
     }
-    
+
     protected MacPixels(int width, int height, ByteBuffer data) {
         super(width, height, data);
     }
@@ -56,7 +56,7 @@ final class MacPixels extends Pixels {
     protected MacPixels(int width, int height, IntBuffer data) {
         super(width, height, data);
     }
-    
+
     protected MacPixels(int width, int height, IntBuffer data, float scale) {
         super(width, height, data, scale);
     }
@@ -90,7 +90,7 @@ final class MacPixels extends Pixels {
     native protected void _copyPixels(Buffer src, Buffer dst, int size);
     @Override native protected void _attachInt(long ptr, int w, int h, IntBuffer ints, int[] array, int offset);
     @Override native protected void _attachByte(long ptr, int w, int h, ByteBuffer bytes, byte[] array, int offset);
-    
+
     @Override
     public String toString() {
         return "MacPixels ["+getWidth()+"x"+getHeight()+"]: "+super.toString();

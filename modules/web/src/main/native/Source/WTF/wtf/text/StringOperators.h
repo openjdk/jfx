@@ -75,7 +75,7 @@ public:
         StringTypeAdapter<StringType1> adapter1(m_string1);
         StringTypeAdapter<StringType2> adapter2(m_string2);
         return adapter1.length() + adapter2.length();
-    }    
+    }
 
 private:
     StringType1 m_string1;

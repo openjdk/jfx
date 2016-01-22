@@ -123,7 +123,7 @@ public class EffectPicker extends Pane {
     public ReadOnlyIntegerProperty revisionProperty() {
         return controller.revisionProperty();
     }
-    
+
     public final ReadOnlyBooleanProperty liveUpdateProperty() {
         return controller.liveUpdateProperty();
     }
@@ -131,7 +131,7 @@ public class EffectPicker extends Pane {
     public boolean isLiveUpdate() {
         return controller.isLiveUpdate();
     }
-    
+
     public String getEffectPath() {
         return controller.getEffectPath();
     }
@@ -149,7 +149,7 @@ public class EffectPicker extends Pane {
         }
         return menuItems;
     }
-    
+
     public static interface Delegate {
         public void handleError(String warningKey, Object... arguments);
     }

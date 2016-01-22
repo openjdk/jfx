@@ -283,12 +283,12 @@ public class ButtonTypeEditor extends InlineListEditor {
         public void reset() {
             buttonTypeCb.getSelectionModel().clearSelection();
         }
-        
+
         public void reset(Collection<ButtonType> buttonList) {
             buttonTypeCb.getItems().clear();
             updateButtonList(buttonList);
         }
-        
+
 
         // Please findBugs
         public void requestFocus() {

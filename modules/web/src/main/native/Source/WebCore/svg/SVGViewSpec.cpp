@@ -285,7 +285,7 @@ bool SVGViewSpec::parseViewSpec(const String& viewSpec)
         if (currViewSpec < end && *currViewSpec == ';')
             currViewSpec++;
     }
-    
+
     if (currViewSpec >= end || *currViewSpec != ')')
         return false;
 

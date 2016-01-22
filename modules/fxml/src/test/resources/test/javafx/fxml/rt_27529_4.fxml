@@ -32,8 +32,8 @@ questions.
         <String fx:id="str" fx:value="ABC"/>
         <Float fx:id="flt" fx:value="1.0f"/>
     </fx:define>
-    <Widget fx:id="widget1" 
-            styles="$str, $str" 
+    <Widget fx:id="widget1"
+            styles="$str, $str"
             names="$str, $str"
             ratios="$flt, $flt"/>
 </Widget>

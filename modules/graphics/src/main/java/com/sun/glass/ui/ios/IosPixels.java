@@ -41,7 +41,7 @@ final class IosPixels extends Pixels {
     protected IosPixels(int width, int height, IntBuffer data) {
         super(width, height, data);
     }
-    
+
     protected IosPixels(int width, int height, IntBuffer data, float scale) {
         super(width, height, data, scale);
     }

@@ -21,7 +21,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #define _USE_MATH_DEFINES 1
@@ -268,7 +268,7 @@ void GraphicsContext::drawNativeImage(PassNativeImagePtr imagePtr, const FloatSi
             adjustedDestRect = FloatRect(adjustedDestRect.x(), adjustedDestRect.y(), adjustedDestRect.height(), adjustedDestRect.width());
         }
     }
-    
+
     // Flip the coords.
     CGContextTranslateCTM(context, 0, adjustedDestRect.height());
     CGContextScaleCTM(context, 1, -1);
@@ -327,7 +327,7 @@ void GraphicsContext::drawLine(const FloatPoint& point1, const FloatPoint& point
     FloatPoint p1 = point1;
     FloatPoint p2 = point2;
     bool isVerticalLine = (p1.x() == p2.x());
-    
+
     // For odd widths, we add in 0.5 to the appropriate x/y so that the float arithmetic
     // works out.  For example, with a border width of 3, KHTML will pass us (y1+y2)/2, e.g.,
     // (50+53)/2 = 103/2 = 51 when we want 51.5. It is always true that an even width gave
@@ -341,7 +341,7 @@ void GraphicsContext::drawLine(const FloatPoint& point1, const FloatPoint& point
             p2.move(-width, 0);
         }
     }
-    
+
     if (((int)width) % 2) {
         if (isVerticalLine) {
             // We're a vertical line.  Adjust our x.
@@ -353,7 +353,7 @@ void GraphicsContext::drawLine(const FloatPoint& point1, const FloatPoint& point
             p2.move(0.0f, 0.5f);
         }
     }
-    
+
     int patWidth = 0;
     switch (strokeStyle()) {
     case NoStroke:
@@ -449,17 +449,17 @@ void GraphicsContext::drawJoinedLines(CGPoint points[], unsigned count, bool ant
     float width = CGContextGetLineWidth(context);
 
     CGContextSaveGState(context);
-    
+
     CGContextSetShouldAntialias(context, antialias);
 
     CGContextSetLineWidth(context, width < 1 ? 1 : width);
 
     CGContextBeginPath(context);
-    
+
     CGContextSetLineCap(context, lineCap);
-    
+
     CGContextMoveToPoint(context, points[0].x, points[0].y);
-    
+
     for (unsigned i = 1; i < count; ++i)
         CGContextAddLineToPoint(context, points[i].x, points[i].y);
 
@@ -494,13 +494,13 @@ void GraphicsContext::drawEllipse(const FloatRect& rect)
     setCGStrokeColor(context, strokeColor(), strokeColorSpace());
 
     CGContextSetLineWidth(context, strokeThickness());
-    
+
     CGContextBeginPath(context);
     CGContextAddEllipseInRect(context, rect);
 
     CGContextFillPath(context);
     CGContextStrokePath(context);
-    
+
     CGContextRestoreGState(context);
 }
 #endif
@@ -841,7 +841,7 @@ void GraphicsContext::fillRect(const FloatRect& rect, const Color& color, ColorS
     }
 
     CGContextFillRect(context, rect);
-    
+
     if (drawOwnShadow)
         CGContextRestoreGState(context);
 
@@ -907,7 +907,7 @@ void GraphicsContext::fillRectWithRoundedHole(const FloatRect& rect, const Round
     WindRule oldFillRule = fillRule();
     Color oldFillColor = fillColor();
     ColorSpace oldFillColorSpace = fillColorSpace();
-    
+
     setFillRule(RULE_EVENODD);
     setFillColor(color, colorSpace);
 
@@ -926,7 +926,7 @@ void GraphicsContext::fillRectWithRoundedHole(const FloatRect& rect, const Round
 
     if (drawOwnShadow)
         CGContextRestoreGState(context);
-    
+
     setFillRule(oldFillRule);
     setFillColor(oldFillColor, oldFillColorSpace);
 }
@@ -1042,7 +1042,7 @@ void GraphicsContext::setPlatformShadow(const FloatSize& offset, float blur, con
 {
     if (paintingDisabled())
         return;
-    
+
     // FIXME: we could avoid the shadow setup cost when we know we'll render the shadow ourselves.
 
     CGFloat xOffset = offset.width();
@@ -1212,7 +1212,7 @@ void GraphicsContext::clip(const Path& path, WindRule fillRule)
 
     // CGContextClip does nothing if the path is empty, so in this case, we
     // instead clip against a zero rect to reduce the clipping region to
-    // nothing - which is the intended behavior of clip() if the path is empty.    
+    // nothing - which is the intended behavior of clip() if the path is empty.
     if (path.isEmpty())
         CGContextClipToRect(context, CGRectZero);
     else {
@@ -1437,7 +1437,7 @@ void GraphicsContext::drawLinesForText(const FloatPoint& point, const DashArray&
     bool shouldAntialiasLine;
     FloatRect bounds = computeLineBoundsAndAntialiasingModeForText(*this, point, widths.last(), printing, shouldAntialiasLine, localStrokeColor);
     bool fillColorIsNotEqualToStrokeColor = fillColor() != localStrokeColor;
-    
+
     Vector<CGRect, 4> dashBounds;
     ASSERT(!(widths.size() % 2));
     dashBounds.reserveInitialCapacity(dashBounds.size() / 2);

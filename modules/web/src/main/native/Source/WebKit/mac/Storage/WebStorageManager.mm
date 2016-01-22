@@ -55,9 +55,9 @@ static pthread_once_t registerLocalStoragePath = PTHREAD_ONCE_INIT;
 {
     if (!(self = [super init]))
         return nil;
-    
+
     WebKitInitializeStorageIfNecessary();
-    
+
     return self;
 }
 #endif
@@ -142,9 +142,9 @@ void WebKitInitializeStorageIfNecessary()
     static BOOL initialized = NO;
     if (initialized)
         return;
-    
+
     StorageTracker::initializeTracker([WebStorageManager _storageDirectoryPath], WebStorageTrackerClient::sharedWebStorageTrackerClient());
-        
+
     initialized = YES;
 }
 

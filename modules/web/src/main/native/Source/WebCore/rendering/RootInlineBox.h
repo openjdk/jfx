@@ -54,7 +54,7 @@ public:
 
     LayoutUnit lineTopWithLeading() const { return m_lineTopWithLeading; }
     LayoutUnit lineBottomWithLeading() const { return m_lineBottomWithLeading; }
-    
+
     LayoutUnit paginationStrut() const { return m_paginationStrut; }
     void setPaginationStrut(LayoutUnit strut) { m_paginationStrut = strut; }
 
@@ -81,8 +81,8 @@ public:
 
     LayoutUnit alignBoxesInBlockDirection(LayoutUnit heightOfBlock, GlyphOverflowAndFallbackFontsMap&, VerticalPositionCache&);
     void setLineTopBottomPositions(LayoutUnit top, LayoutUnit bottom, LayoutUnit topWithLeading, LayoutUnit bottomWithLeading)
-    { 
-        m_lineTop = top; 
+    {
+        m_lineTop = top;
         m_lineBottom = bottom;
         m_lineTopWithLeading = topWithLeading;
         m_lineBottomWithLeading = bottomWithLeading;
@@ -150,7 +150,7 @@ public:
     virtual void extractLineBoxFromRenderObject() override final;
     virtual void attachLineBoxToRenderObject() override final;
     virtual void removeLineBoxFromRenderObject() override final;
-    
+
     FontBaseline baselineType() const { return static_cast<FontBaseline>(m_baselineType); }
 
     bool hasAnnotationsBefore() const { return m_hasAnnotationsBefore; }
@@ -166,7 +166,7 @@ public:
     bool includeMarginForBox(InlineBox*) const;
     bool fitsToGlyphs() const;
     bool includesRootLineBoxFontOrLeading() const;
-    
+
     LayoutUnit logicalTopVisualOverflow() const
     {
         return InlineFlowBox::logicalTopVisualOverflow(lineTop());

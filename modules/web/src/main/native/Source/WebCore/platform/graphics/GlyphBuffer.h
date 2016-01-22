@@ -7,13 +7,13 @@
  * are met:
  *
  * 1.  Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer. 
+ *     notice, this list of conditions and the following disclaimer.
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
- *     documentation and/or other materials provided with the distribution. 
+ *     documentation and/or other materials provided with the distribution.
  * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
- *     from this software without specific prior written permission. 
+ *     from this software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY APPLE AND ITS CONTRIBUTORS "AS IS" AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
@@ -79,7 +79,7 @@ class GlyphBuffer {
 public:
     bool isEmpty() const { return m_fontData.isEmpty(); }
     int size() const { return m_fontData.size(); }
-    
+
     void clear()
     {
         m_fontData.clear();
@@ -96,10 +96,10 @@ public:
     const GlyphBufferAdvance* advances(int from) const { return m_advances.data() + from; }
 
     const SimpleFontData* fontDataAt(int index) const { return m_fontData[index]; }
-    
+
     void setInitialAdvance(GlyphBufferAdvance initialAdvance) { m_initialAdvance = initialAdvance; }
     const GlyphBufferAdvance& initialAdvance() const { return m_initialAdvance; }
-    
+
     Glyph glyphAt(int index) const
     {
 #if USE(CAIRO)
@@ -152,7 +152,7 @@ public:
         UNUSED_PARAM(offset);
 #endif
     }
-    
+
 #if !USE(WINGDI)
     void add(Glyph glyph, const SimpleFontData* font, GlyphBufferAdvance advance)
     {

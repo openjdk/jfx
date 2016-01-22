@@ -26,7 +26,7 @@
 package com.sun.pisces;
 
 public final class Transform6 {
-    
+
     public int m00, m01, m10, m11;
     public int m02, m12;
 
@@ -39,7 +39,7 @@ public final class Transform6 {
                       int m02, int m12)
     {
         initialize();
-     
+
         this.m00 = m00;
         this.m01 = m01;
         this.m10 = m10;
@@ -123,7 +123,7 @@ public final class Transform6 {
 
 
     public String toString() {
-        return "Transform6[" + 
+        return "Transform6[" +
             "m00=" + (m00/65536.0) + ", " +
             "m01=" + (m01/65536.0) + ", " +
             "m02=" + (m02/65536.0) + ", " +
@@ -131,6 +131,6 @@ public final class Transform6 {
             "m11=" + (m11/65536.0) + ", " +
             "m12=" + (m12/65536.0) + "]";
     }
-    
+
     private native void initialize();
 }

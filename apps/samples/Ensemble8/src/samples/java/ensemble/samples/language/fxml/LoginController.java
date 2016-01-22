@@ -59,21 +59,21 @@ public class LoginController extends AnchorPane implements Initializable {
     Label errorMessage;
 
     private FXMLLoginDemoApp application;
-    
-    
+
+
     public void setApp(FXMLLoginDemoApp application){
         this.application = application;
     }
-    
+
     @Override
     public void initialize(URL location, ResourceBundle resources) {
         errorMessage.setText("");
         userId.setPromptText("demo");
         password.setPromptText("demo");
-        
+
     }
-    
-    
+
+
     public void processLogin(ActionEvent event) {
         if (application == null){
             // We are running in isolated FXML, possibly in Scene Builder.

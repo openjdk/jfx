@@ -5,7 +5,7 @@
  ******************************************************************************/
  /* For the text displayed above command-link buttons (but below the header) */
 .dialog-pane > .content-pane .command-link-message {
-    -fx-font-size: 1.25em; 
+    -fx-font-size: 1.25em;
 }
 
 .dialog-pane .command-link-button {
@@ -19,39 +19,39 @@
 
 .dialog-pane .command-link-button:hover {
     -fx-border-color: -fx-box-border;
-    -fx-background-color: linear-gradient(to bottom, 
-        white, 
+    -fx-background-color: linear-gradient(to bottom,
+        white,
         derive(-fx-box-border, 60%)
     );
 }
 
 .dialog-pane .command-link-button:armed  {
-    -fx-background-color: linear-gradient(to bottom, 
-        white, 
+    -fx-background-color: linear-gradient(to bottom,
+        white,
         derive(-fx-box-border, 40%)
     );
 }
 
 .dialog-pane .command-link-button:default {
     -fx-border-color: -fx-default-button;
-    -fx-background-color: linear-gradient(to bottom, 
-        white, 
+    -fx-background-color: linear-gradient(to bottom,
+        white,
         derive(-fx-default-button, 80%)
     );
 }
 
 .dialog-pane .command-link-button:default:hover {
     -fx-border-color: -fx-default-button;
-    -fx-background-color: linear-gradient(to bottom, 
-        white, 
+    -fx-background-color: linear-gradient(to bottom,
+        white,
         derive(-fx-default-button, 60%)
     );
 }
 
 .dialog-pane .command-link-button:default:armed {
     -fx-border-color: -fx-default-button;
-    -fx-background-color: linear-gradient(to bottom, 
-        white, 
+    -fx-background-color: linear-gradient(to bottom,
+        white,
         derive(-fx-default-button, 40%)
     );
 }
@@ -62,7 +62,7 @@
 }
 
 .dialog-pane .command-link-button > .container > .line-2 {
-    -fx-font-size: 1em; 
+    -fx-font-size: 1em;
     -fx-padding: 0 0 0 5;
 }
 

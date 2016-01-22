@@ -22,7 +22,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef BackForwardClient_h
@@ -36,7 +36,7 @@ namespace WebCore {
 class HistoryItem;
 
 class BackForwardClient : public RefCounted<BackForwardClient> {
-public: 
+public:
     virtual ~BackForwardClient()
     {
     }
@@ -44,7 +44,7 @@ public:
     virtual void addItem(PassRefPtr<HistoryItem>) = 0;
 
     virtual void goToItem(HistoryItem*) = 0;
-        
+
     virtual HistoryItem* itemAtIndex(int) = 0;
     virtual int backListCount() = 0;
     virtual int forwardListCount() = 0;

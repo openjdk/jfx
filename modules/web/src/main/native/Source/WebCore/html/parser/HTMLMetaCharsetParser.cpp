@@ -82,7 +82,7 @@ String HTMLMetaCharsetParser::extractCharset(const String& value)
             quoteMark = static_cast<char>(value[pos++]);
             ASSERT(!(quoteMark & 0x80));
         }
-            
+
         if (pos == length)
             break;
 
